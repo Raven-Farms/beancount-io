@@ -8,4 +8,4 @@
 
 ## Inbox
 
-No open inbox notes.
+- [005](./005.md) — Stop using the first chart bucket's end as the income statement's start (major; backend-v2; 45–60m).
