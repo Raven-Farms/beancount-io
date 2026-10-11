@@ -11,3 +11,4 @@
 - [005](./005.md) — Stop using the first chart bucket's end as the income statement's start (major; backend-v2; 45–60m).
 - [006](./006.md) — Preserve account balances in a zero-net balance-sheet summary (major; backend-v2; 35–50m).
 - [007](./007.md) — Validate journal pagination before GraphQL reaches array slicing (minor; backend-v2; 40–55m).
+- [008](./008.md) — Give tool-only clients a read path to canonical entry hashes (major; backend-v2; 50–60m).
