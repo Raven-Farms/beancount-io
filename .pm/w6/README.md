@@ -9,3 +9,4 @@
 ## Inbox
 
 - [005](./005.md) — Stop using the first chart bucket's end as the income statement's start (major; backend-v2; 45–60m).
+- [006](./006.md) — Preserve account balances in a zero-net balance-sheet summary (major; backend-v2; 35–50m).
