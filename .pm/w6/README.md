@@ -12,3 +12,4 @@
 - [006](./006.md) — Preserve account balances in a zero-net balance-sheet summary (major; backend-v2; 35–50m).
 - [007](./007.md) — Validate journal pagination before GraphQL reaches array slicing (minor; backend-v2; 40–55m).
 - [008](./008.md) — Give tool-only clients a read path to canonical entry hashes (major; backend-v2; 50–60m).
+- [009](./009.md) — Keep balance-sheet summary totals on one valuation basis (major; backend-v2; 45–60m).
