@@ -13,3 +13,5 @@
 - [007](./007.md) — Validate journal pagination before GraphQL reaches array slicing (minor; backend-v2; 40–55m).
 - [008](./008.md) — Give tool-only clients a read path to canonical entry hashes (major; backend-v2; 50–60m).
 - [009](./009.md) — Keep balance-sheet summary totals on one valuation basis (major; backend-v2; 45–60m).
+
+- [010](./010.md) — Correct the archive reference example in the public API contract (minor; backend-v2; 25–40m).
