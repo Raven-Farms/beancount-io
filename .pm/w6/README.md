@@ -16,3 +16,4 @@
 
 - [010](./010.md) — Align the public archive contract with native downloads (minor; backend-v2; 30–45m).
 - [011](./011.md) — Start default quarterly reports in the quarter containing their first activity (minor; ledger; 35–50m).
+- [012](./012.md) — Normalize recognized interval names before selecting report grouping (minor; ledger; 25–40m).
