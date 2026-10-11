@@ -35,6 +35,45 @@
 
 ## Inbox
 
+- [067 — Read-only commands delete ledger files when the Beancount cache variable aliases them](./067.md) — major CLI data-loss bug with a narrow trigger; six read commands repeated on root and include with safe-cache and check-guard controls, 45–60m.
+- [068 — Ingest extract replaces the source document or its own script when `-o` names it](./068.md) — minor CLI source-file loss; file, directory, symlink and script cases repeated with ledger-refusal and treeify controls, 25–40m.
+- [069 — Format check and in-place formatting fail on every ledger with a managed price include](./069.md) — major CLI gate bug; `--check`, `-i`, `--dry-run` and JSON repeated offline with a local-include control, 30–45m.
+- [070 — `list price --on-disk` returns managed-feed prices that no ledger file contains](./070.md) — minor CLI listing bug; text and JSON repeated against a simulated loopback feed with a plugin control, 25–40m.
+- [071 — Format resolves a missing include against the working directory and rewrites the wrong file](./071.md) — major CLI gate and write-scope bug; false-green `--check` and an unrelated-file rewrite repeated with a clean-directory control, 30–45m.
+- [072 — An export written into a directory an include glob matches silently joins the ledger](./072.md) — major CLI wrong-balance bug; doubled balance with passing check repeated, five louder variants and three controls, 45–60m.
+- [073 — A flag-free `import --apply` drops options typed on the remembered preview and writes different rows](./073.md) — major CLI import bug; wrong dates written after a reviewed preview, repeated with a full-mapping control, 45–60m.
+- [074 — Import crashes on an importer row whose counter-posting has no amount](./074.md) — major CLI importer crash; restricted and unopened counter accounts repeated with an unrestricted control, 20–30m.
+- [075 — Import silently skips a later row that repeats an inferred bank reference, and says it is already in the ledger](./075.md) — major CLI missing-transaction bug with an identity-policy owner call; repeated with a renamed-header control, 30–45m.
+- [076 — The `add open` remedy for blocked import rows is dated per row, so the first one dead-ends a newest-first export](./076.md) — minor CLI onboarding bug; three-step journey repeated with an earliest-date control, 20–30m.
+- [077 — A detected CSV delimiter is remembered and then overrides detection for the next export](./077.md) — minor CLI import bug; comma-then-semicolon exports repeated with fresh-memory and explicit-flag controls, 20–30m.
+- [078 — The advised `--csv sign=ledger` discards the remembered mapping instead of applying on top of it](./078.md) — minor CLI import bug; the tool's own advice fails, repeated with a full-mapping control, 30–45m.
+- [079 — A multi-file include glob shifts line numbers during write validation, so `--allow-errors` refuses every write](./079.md) — major CLI write bug; root and `--into` refusals repeated with one-match and reordered controls, 45–60m.
+- [080 — `add custom --value account:…` is always refused on a ledger with renamed root accounts](./080.md) — major CLI write bug; refusal repeated with default-root and other-directive controls, 30–45m.
+- [081 — `--allow-errors` lets a write introduce an Unused Pad error and still exit 0](./081.md) — major CLI exit-contract bug; two shapes leave `check` failing, repeated with flag-free controls, 30–45m.
+- [082 — `--meta` drops a leading `#` from a text value and misreports a `name:` value as a bad key](./082.md) — minor CLI metadata bug; silent alteration and false refusal repeated with quoted and bulk controls, 20–30m.
+- [083 — Report balance series leave out `U`-flagged transactions that the headline includes](./083.md) — major CLI wrong-number bug; headline and series disagree, checked against BQL with a `!` control, 30m.
+- [084 — `bea check` fails with a traceback on the bundled `fava.plugins.*` plugins while `--json check` says valid](./084.md) — major CLI gate bug; human and JSON verdicts split, repeated with an upstream-plugin control, 45m.
+- [085 — A `PRINT` export of a ledger with a pad does not pass `bea check`](./085.md) — minor CLI export bug; repeated with a pad-free round-trip control, 30m.
+- [086 — A currency conversion in the period keeps the empty trailing interval row the guide says is dropped](./086.md) — minor CLI report bug; repeated with a single-currency control, 20m.
+- [087 — Format reads a symlinked root's includes beside the link target, so `-o` overwrites an included file](./087.md) — major CLI output-guard bug; overwrite and false missing-include repeated with regular-file and `query -o` controls, 40–60m.
+- [088 — `bea check --auto` fails a ledger that `bean-check --auto` accepts](./088.md) — major CLI regression; compared with upstream and an opened-accounts control, 20–30m.
+- [089 — `bea example` and `bea treeify` report upstream usage errors as exit 1](./089.md) — minor CLI exit-code bug; three inputs repeated with exit-2 controls, 20m.
+- [090 — `init DIR` and `format -o` leak raw OS errors as exit 1 when the destination cannot be created](./090.md) — minor CLI diagnostics bug; three commands repeated with clean exit-3 controls, 25–35m.
+- [091 — `balance` and every report crash with `NotImplementedError` on a ledger carrying Fava's `default-file` option](./091.md) — major CLI report crash; five commands repeated with a fiscal-year option control, 20–30m.
+- [092 — A managed price include plus a multi-file include glob shifts line numbers on every read](./092.md) — major CLI silent-wrong-result bug, read twin of 079; hidden entries and duplicate prices repeated against a simulated feed with two controls, 45–60m.
+- [093 — A purchase with an omitted cash leg makes every report amount in that currency print the cost's decimals](./093.md) — minor CLI display bug; repeated with an explicit-leg control, 20–30m.
+- [094 — `price export` exits 0 for a ledger with a local plugin, and the snapshot fails stock `bean-check`](./094.md) — minor CLI export bug; repeated with a plugin-free control, 30–40m.
+- [095 — Read commands need a writable ledger directory once the ledger has a managed price include](./095.md) — minor CLI design-adjacent bug with an owner call; repeated against a simulated feed with a no-include control, 30–45m.
+- [096 — A write into a file reached through a `..` include names a nonexistent staging file and `--allow-errors` refuses it](./096.md) — major CLI write bug; repeated with root-write and plain-include controls, 30–45m.
+- [097 — `--into` naming a glob-included file in another letter case or Unicode form is reported as a concurrent edit](./097.md) — minor CLI exit-category bug; case and Unicode variants repeated with exact-spelling and literal-include controls, 20–30m.
+- [098 — `add transaction` fills a missing commodity on a cost or priced posting with the operating currency](./098.md) — minor CLI silent-wrong-lot bug with an owner call; cost and price variants repeated with an explicit-commodity control, 20–30m.
+- [099 — BQL `filename` names vanished staging files on every ledger with a managed price include](./099.md) — major CLI silent-wrong-result bug; offline repro repeated with an include-free control, 30–45m.
+- [100 — `price export` of a feed included from two files writes a snapshot that fails `bean-check`](./100.md) — minor CLI export bug against a simulated feed; single-include control passes, 30–40m.
+- [101 — `doctor linked` / `region` round the balance tree when the scope mixes whole and fractional amounts](./101.md) — minor CLI display bug with an owner call; remaining half of w3/352, 20–30m.
+- [102 — A `PRINT` query that matches no directives exits 2 and tells the user to "use PRINT"](./102.md) — minor CLI exit-category bug; text and JSON modes disagree, empty `SELECT` control passes, 20–30m.
+- [103 — An invalid regex in a BQL query exits 1 as a ledger validation failure, and only when a row is scanned](./103.md) — minor CLI exit-category bug; escaped-pattern control passes, 30–40m.
+- [104 — `--json query PRINT` emits Python object reprs for `custom` values and `open` booking](./104.md) — minor CLI machine-output bug; `list custom` control shows the clean shape, 30–45m.
+- [105 — Set-valued query cells change order between identical runs in JSON and CSV](./105.md) — minor CLI determinism bug; repeated across hash seeds, 15–20m.
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
