@@ -35,7 +35,6 @@
 
 ## Inbox
 
-- [091 — `balance` and every report crash with `NotImplementedError` on a ledger carrying Fava's `default-file` option](./091.md) — major CLI report crash; five commands repeated with a fiscal-year option control, 20–30m.
 - [092 — A managed price include plus a multi-file include glob shifts line numbers on every read](./092.md) — major CLI silent-wrong-result bug, read twin of 079; hidden entries and duplicate prices repeated against a simulated feed with two controls, 45–60m.
 - [093 — A purchase with an omitted cash leg makes every report amount in that currency print the cost's decimals](./093.md) — minor CLI display bug; repeated with an explicit-leg control, 20–30m.
 - [094 — `price export` exits 0 for a ledger with a local plugin, and the snapshot fails stock `bean-check`](./094.md) — minor CLI export bug; repeated with a plugin-free control, 30–40m.
