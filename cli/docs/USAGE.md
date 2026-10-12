@@ -520,6 +520,11 @@ points you at `PRINT` or at `--format text`/`csv`. A `PRINT` that matches no
 directives is an empty result like any other: exit 0, `(no rows)` on stderr,
 and with `-o` an empty file, as an empty `SELECT -o` writes.
 
+A directive in query JSON (`PRINT`, `SELECT entry`) spells an `open`'s booking
+method as the ledger does (`"FIFO"`) and gives each `custom` value the tagged
+shape `bea list custom` answers — `{"kind": "text", "value": …}`,
+`{"kind": "amount", "number": …, "currency": …}` and so on — never a Python type name.
+
 Under `--json`, `--format` is refused (exit 2): the envelope already selects
 JSON output, so `--json` and `--format` cannot be combined. Drop `--format`
 or drop `--json`.

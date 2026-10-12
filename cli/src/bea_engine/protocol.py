@@ -17,6 +17,7 @@ category straight through instead of translating one table into another.
 from __future__ import annotations
 
 import dataclasses
+import enum
 import json
 import os
 import sys
@@ -258,6 +259,11 @@ def _jsonable(value: Any) -> Any:
         return value.isoformat()
     if isinstance(value, Path):
         return str(value)
+    if isinstance(value, enum.Enum):
+        # `Booking.FIFO` is a Python spelling; the ledger says `"FIFO"`.
+        return value.name
+    if getattr(value, "_fields", None) == ("value", "dtype"):
+        return _custom_value_jsonable(value)
     if isinstance(value, type) and value.__module__ == "beancount.core.number" and value.__name__ == "MISSING":
         return None
     if hasattr(value, "number_per") and hasattr(value, "number_total"):
@@ -285,6 +291,30 @@ def _jsonable(value: Any) -> Any:
     if isinstance(value, list | tuple | set | frozenset):
         return [_jsonable(v) for v in value]
     return str(value)
+
+
+def _custom_value_jsonable(item: Any) -> dict[str, Any]:
+    """One value of a `custom` directive, in the tagged shape `bea list custom` answers.
+
+    Dumped field by field it carried its Python type along — `"<class 'str'>"`,
+    `"<AccountDummy>"`, and for an amount the two property reprs of the Amount
+    class — into machine output (w5/104). The kind says what the type did.
+    """
+    from datetime import date
+    from decimal import Decimal
+
+    value, dtype = item.value, item.dtype
+    if isinstance(value, bool):
+        return {"kind": "bool", "value": value}
+    if isinstance(value, str) and dtype is str:
+        return {"kind": "text", "value": value}
+    if getattr(value, "number", None) is not None and getattr(value, "currency", None) is not None:
+        return {"kind": "amount", "number": _jsonable(value.number), "currency": value.currency}
+    if isinstance(value, Decimal):
+        return {"kind": "number", "value": format(value, "f")}
+    if isinstance(value, date):
+        return {"kind": "date", "value": value.isoformat()}
+    return {"kind": "account", "value": str(value)}
 
 
 def _version() -> str:
