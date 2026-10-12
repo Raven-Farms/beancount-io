@@ -21,6 +21,7 @@ be recovered by any flag. `bea format -i .` is the old `bea format .`.
 
 from __future__ import annotations
 
+import os
 import shlex
 import sys
 from pathlib import Path
@@ -133,8 +134,8 @@ def format_beans(
     if output_file is not None:
         # Upstream reads the target and writes this path; naming the target
         # itself would truncate the file before it is read.
-        for ledger_file in files:
-            output.refuse_ledger_alias(output_file, ledger_file)
+        for ledger_file in _named(paths, ctx.file):
+            output.refuse_ledger_alias(output_file, Path(os.path.abspath(ledger_file.expanduser())))
 
     _render(files[0], alignment, output_file)
     if ctx.json_output and output_file is not None:
@@ -419,7 +420,11 @@ def _targets(
             if resolved.suffix not in SUFFIXES:
                 raise UsageError("Expected a .bean or .beancount file, or a directory.")
             files.add(resolved)
-            roots.append(resolved)
+            # The closure is walked from the path as named: a symlinked root's
+            # includes sit beside the link, as the loader and every other
+            # command read them, not beside its target (w5/087). The resolved
+            # path stays the write target and the deduplication key.
+            roots.append(Path(os.path.abspath(path.expanduser())))
         else:
             raise UsageError(f"Not a regular file or directory: {resolved}")
     if not expand_includes:
@@ -431,7 +436,9 @@ def _targets(
     members, _ = output.walk_closure(*roots)
     files.update(member.resolve() for member in members)
     missing: dict[tuple[str, Path], output.MissingInclude] = {}
-    for item in output.walk_closure(*sorted(files))[1]:
+    # Named roots first, so each is read under the name it was given; the
+    # walk skips a file it has already seen through another spelling.
+    for item in output.walk_closure(*roots, *sorted(files))[1]:
         missing[(item.include, item.source)] = item
     return sorted(files), list(missing.values())
 
