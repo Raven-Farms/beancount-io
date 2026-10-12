@@ -204,6 +204,7 @@ def file_target(path: Path) -> dict[str, Any]:
 # Spelled the way Beancount's lexer reads it: the keyword may touch its string
 # (`include"x"`), and the string may carry backslash escapes (w1/159).
 _INCLUDE_DIRECTIVE = re.compile(r'^\s*include\s*"((?:[^"\\]|\\.)+)"', re.MULTILINE | re.DOTALL)
+_REMOTE_INCLUDE = re.compile(r"https?://", re.IGNORECASE)
 _STRING_ESCAPE = re.compile(r"\\(.)", re.DOTALL)
 _ESCAPED = {"n": "\n", "t": "\t", "r": "\r", "f": "\f", "b": "\b"}
 
@@ -279,6 +280,10 @@ def walk_closure(*roots: Path) -> tuple[list[Path], list[MissingInclude]]:
             continue
         for match in _INCLUDE_DIRECTIVE.finditer(text):
             raw = match.group(1)
+            if _REMOTE_INCLUDE.match(_unescape(raw)):
+                # A managed price feed: the loader fetches it, so there is no
+                # file here to read, format, alias, or report as missing.
+                continue
             matches = _include_matches(current, _unescape(raw))
             if matches:
                 stack.extend(matches)

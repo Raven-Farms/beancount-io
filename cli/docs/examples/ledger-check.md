@@ -35,6 +35,13 @@ with the results below unchanged.
 | Unbalanced transaction in included file | 1 | 0 | Yes |
 | Formatting drift in included file | 0 | 1 | Yes |
 
+A ledger that carries a managed price include
+(`include "https://beancount.io/prices/BTC-USD"`) passes `bea format --check`
+like any other formatted ledger from the release after 0.3.1: the formatter
+does not treat the feed URL as a missing file, and needs neither the network
+nor a login. On 0.3.1 and earlier that gate fails on such a ledger. This was
+checked on a source checkout, not on a published release.
+
 Both commands were run independently for each case to establish their distinct
 failure behavior. File hashes, including Git state, were unchanged after every
 pair of checks. YAML structure and action pins were checked against the official

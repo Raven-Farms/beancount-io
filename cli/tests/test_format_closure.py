@@ -36,6 +36,58 @@ def test_check_fails_on_missing_include_and_names_it(tmp_path: Path) -> None:
     assert error["result"]["missing"] == [{"include": "missing.bean", "from": str(root)}]
 
 
+MANAGED = 'include "https://beancount.io/prices/BTC-USD"\n'
+
+
+@pytest.mark.parametrize("shape", ["named-file", "directory", "child"])
+def test_a_managed_price_include_is_not_a_missing_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, shape: str
+) -> None:
+    """The formatter globbed the feed URL, so the gate failed on every such ledger (w5/069)."""
+    monkeypatch.setenv("MANAGED_PRICE_OFFLINE", "1")
+    books = tmp_path / "books"
+    books.mkdir()
+    root = books / "main.bean"
+    if shape == "child":
+        root.write_text('include "prices.bean"\n2020-01-01 open Assets:Cash USD\n')
+        (books / "prices.bean").write_text(MANAGED)
+    else:
+        root.write_text(f'option "operating_currency" "USD"\n{MANAGED}\n2020-01-01 open Assets:Cash USD\n')
+    target = str(books if shape == "directory" else root)
+    before = {path: path.read_bytes() for path in books.iterdir()}
+
+    for mode in (["--check"], ["--dry-run"], ["-i"]):
+        result = runner.invoke(app, ["format", target, *mode])
+        assert result.exit_code == 0, result.output
+        assert "missing include" not in result.output
+    as_json = runner.invoke(app, ["--json", "format", target, "--check"])
+    assert as_json.exit_code == 0, as_json.output
+    assert json.loads(as_json.stdout)["data"]["missing"] == []
+    assert {path: path.read_bytes() for path in books.iterdir()} == before
+
+
+def test_a_misaligned_ledger_with_a_managed_include_is_formatted_in_place(tmp_path: Path) -> None:
+    root = tmp_path / "main.bean"
+    root.write_text(MANAGED + MISALIGNED_CHILD)
+
+    result = runner.invoke(app, ["format", "-i", str(root)])
+
+    assert result.exit_code == 0, result.output
+    assert root.read_text().startswith(MANAGED)
+    assert root.read_text() != MANAGED + MISALIGNED_CHILD
+    assert runner.invoke(app, ["format", str(root), "--check"]).exit_code == 0
+
+
+def test_a_missing_local_include_beside_a_managed_one_is_still_named_alone(tmp_path: Path) -> None:
+    root = tmp_path / "main.bean"
+    root.write_text(MANAGED + 'include "missing.bean"\n2020-01-01 open Assets:Cash USD\n')
+
+    result = runner.invoke(app, ["--json", "format", str(root), "--check"])
+
+    assert result.exit_code == 1, result.output
+    assert json.loads(result.stderr)["error"]["result"]["missing"] == [{"include": "missing.bean", "from": str(root)}]
+
+
 def test_check_fails_on_unparseable_files_and_leaves_them_untouched(tmp_path: Path) -> None:
     garbage = tmp_path / "garbage.bean"
     garbage.write_text("not beancount\n")
