@@ -438,6 +438,34 @@ def import_entries(
                 recalled_date_format = remembered["date_format"]
             if csv_delimiter is None and isinstance(remembered.get("delimiter"), str):
                 csv_delimiter = remembered["delimiter"]
+            # An option typed on a recalled run wins for this run, so it must
+            # also be what the next flag-free run replays: otherwise `--apply`
+            # recomputes without it and writes rows nobody reviewed (w5/073).
+            typed = {
+                "date_format": ("--date-format", chosen_date_format),
+                "rules": ("--rules", str(csv_rules_arg) if rules_file is not None else None),
+                "default_account": ("--default-account", chosen_default_account),
+                "delimiter": ("--delimiter", flag_delimiter),
+            }
+            updates = {
+                key: (flag, value)
+                for key, (flag, value) in typed.items()
+                if value is not None and remembered.get(key) != value
+            }
+            if updates:
+                shown = {"\t": "tab"}
+                changes = []
+                for key, (flag, value) in updates.items():
+                    change = f"{flag} {shown.get(value, value)}"
+                    prior_value = remembered.get(key)
+                    if isinstance(prior_value, str):
+                        change += f" (was {shown.get(prior_value, prior_value)})"
+                    changes.append(change)
+                csv_to_remember = {**remembered, **{key: value for key, (_, value) in updates.items()}}
+                discarded_note = (
+                    f"Updated remembered settings for {source.name}: {', '.join(changes)}. "
+                    "A flag-free run of this header now uses them."
+                )
             sign_file = remembered.get("sign_ledger_sha256")
             if isinstance(sign_file, str):
                 # `sign=ledger` belongs to the file it was chosen for. Replaying

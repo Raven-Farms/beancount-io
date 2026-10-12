@@ -242,7 +242,11 @@ For a remembered mapping, human output reports
 `config_source` `remembered --csv` plus a `remembered` object with the same
 fields (`null` when the run used no memory). A successful explicit `--csv`
 preview or apply replaces the remembered settings; settings it drops are named,
-never silently discarded. Failed runs leave the saved settings unchanged,
+never silently discarded. An option typed on a run that used the remembered
+mapping — `--date-format`, `--rules`, `--default-account`, `--delimiter` — is
+saved with it once that run succeeds, and the run says so
+(`Updated remembered settings for <file>`), so a flag-free `--apply` writes the
+rows the last preview showed. Failed runs leave the saved settings unchanged,
 including an apply rejected for review with exit 4. A successful preview can
 remember its mapping even when some rows need review. Only a `--date-format`
 you passed is remembered, and even that is re-validated per file: when the new
