@@ -1030,8 +1030,21 @@ def _compiled(
     """
     from beanquery import Error as BeanqueryError
 
+    # Beanquery compiles a `~` pattern only while it evaluates a row, so a
+    # malformed one failed as a ledger validation error (exit 1) — or not at
+    # all, when the window held no rows. A constant pattern is checked here,
+    # before anything runs, so both shapes are the same usage error (w5/103).
+    for pattern in _PATTERN_LITERAL.findall(statement):
+        try:
+            re.compile(pattern[1:-1])
+        except re.error as exc:
+            raise _pattern_error(pattern[1:-1], exc, statement, ledger_errors()) from None
     try:
         return run()
+    except re.error as exc:
+        # A pattern that is not a constant — built by an expression — can only
+        # fail here.
+        raise _pattern_error(str(exc.pattern), exc, statement, ledger_errors()) from None
     except BeanqueryError as exc:
         if context is None:
             raise
@@ -1078,6 +1091,19 @@ def _compiled(
                 ledger_errors=ledger_errors(),
             ) from None
         raise
+
+
+#: The string literal on the right of BQL's regex operators, quotes included.
+_PATTERN_LITERAL = re.compile(r"""!?~\s*('[^']*'|"[^"]*")""")
+
+
+def _pattern_error(pattern: str, exc: re.error, statement: str, ledger_errors: list[str]) -> protocol.UsageError:
+    where = f" at position {exc.pos}" if exc.pos is not None else ""
+    return protocol.UsageError(
+        f"Cannot run this BQL query: {pattern!r} is not a valid regular expression: {exc.msg}{where}.",
+        details=[f"  {statement}", "Escape a literal (, [, * or + with a backslash, for example '\\(partial'."],
+        ledger_errors=ledger_errors,
+    )
 
 
 _SET_COLUMNS = ("tags", "links")
