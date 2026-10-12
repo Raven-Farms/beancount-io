@@ -14,6 +14,7 @@ import glob
 import json
 import os
 import re
+import stat
 import sys
 import unicodedata
 from collections.abc import Mapping, Sequence
@@ -25,7 +26,7 @@ import typer
 
 from cli import context
 from cli.config import package_version
-from cli.errors import BeaError, LedgerError, UsageError, to_bea_error
+from cli.errors import AuthError, BeaError, LedgerError, UsageError, to_bea_error
 from cli.utils import atomic_write, inert_text, single_line
 
 
@@ -536,6 +537,31 @@ def check_output_destination(destination: Path, flag: str = "--output") -> None:
     if not destination.parent.exists():
         raise UsageError(
             f"{flag} parent directory does not exist ({destination.parent}); create it or choose another path."
+        )
+
+
+def require_writable_destination(destination: Path, flag: str = "--output") -> None:
+    """Refuse an output destination the filesystem will not let this command write.
+
+    A read-only directory or file used to surface as a raw `[Errno 13]` with
+    exit 1 — or, through an atomic writer, as a complaint about a hidden
+    staging file the user never named. It is the filesystem refusing (exit 3),
+    reported before anything runs. A device or FIFO is left to the open call.
+    """
+    if str(destination) == "-":
+        return
+    try:
+        existing = destination.stat()
+    except OSError:
+        existing = None
+    if existing is not None and not stat.S_ISREG(existing.st_mode):
+        return
+    if existing is not None and not os.access(destination, os.W_OK):
+        raise AuthError(f"{flag} {destination} is read-only and cannot be replaced. Nothing was written.")
+    parent = destination.parent
+    if existing is None and parent.is_dir() and not os.access(parent, os.W_OK | os.X_OK):
+        raise AuthError(
+            f"Cannot write {destination}: the directory {parent.resolve()} is not writable. Nothing was written."
         )
 
 

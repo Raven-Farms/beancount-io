@@ -41,6 +41,7 @@ STDIN = "-"
 def _require_output_file(path: Path) -> None:
     """Refuse -o when the path cannot become a fresh file."""
     output.check_output_destination(path)
+    output.require_writable_destination(path)
 
 
 def format_beans(

@@ -126,6 +126,7 @@ def treeify(ctx: typer.Context) -> None:
         if parsed.input is not None:
             output.refuse_input_alias(destination, Path(parsed.input).expanduser())
         output.check_output_destination(destination)
+        output.require_writable_destination(destination)
         forwarded = _without_output(parsed)
     completed = launch.capture_native("treeify", forwarded)
     if completed.returncode == 0 and _NO_COLUMN in (completed.stderr or ""):

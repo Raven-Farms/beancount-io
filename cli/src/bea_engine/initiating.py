@@ -15,7 +15,7 @@ from typing import Any
 from bea_engine import stopping
 from bea_engine.amounts import parse_decimal_number
 from bea_engine.ledger import write as ledger_write
-from bea_engine.protocol import ConflictError, UsageError
+from bea_engine.protocol import AuthError, ConflictError, UsageError
 
 ACCOUNTS = (
     "Assets:Checking",
@@ -100,7 +100,7 @@ def answer(
     from beancount.scripts.format import align_beancount
 
     content = align_beancount(content)  # type: ignore[no-untyped-call]
-    file.parent.mkdir(parents=True, exist_ok=True)
+    _make_parent(file)
     with ledger_write.candidate_file(file, content) as candidate:
         ledger_write.validate_candidate(candidate, file)
         stopping.check()
@@ -116,3 +116,28 @@ def answer(
         "date": day.isoformat(),
         "accounts": list(ACCOUNTS),
     }
+
+
+def _make_parent(file: Path) -> None:
+    """Create the new ledger's directory, or say plainly what stands in the way.
+
+    `mkdir` raised straight through: a regular file where a directory was
+    named read as `FileExistsError: [Errno 17]`, and a read-only parent as
+    `PermissionError: [Errno 13]`, each with exit 1 as if a ledger had failed
+    validation. The first is a bad argument and the second the filesystem
+    refusing — on the first command a newcomer runs.
+    """
+    parent = file.parent
+    try:
+        parent.mkdir(parents=True, exist_ok=True)
+    except (FileExistsError, NotADirectoryError) as exc:
+        blocker = next((path for path in (parent, *parent.parents) if path.exists()), parent)
+        raise UsageError(
+            f"Cannot create a ledger in {parent}: {blocker} is a file, not a directory. "
+            "Choose another directory. Nothing was written."
+        ) from exc
+    except PermissionError as exc:
+        existing = next((path for path in parent.parents if path.exists()), parent)
+        raise AuthError(
+            f"Cannot create {parent}: the directory {existing} is not writable. Nothing was written."
+        ) from exc
