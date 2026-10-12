@@ -694,6 +694,18 @@ def _transaction(
                     f"Currency is ambiguous for {posting.account}; specify NUMBER CURRENCY explicitly.",
                     details=write.root_ledger_hints(file),
                 )
+            # A commodity held at a cost in itself, or priced in itself, is
+            # never what was meant: `3 {80 USD}` forgot its commodity, and
+            # defaulting it wrote three dollars held at eighty dollars each,
+            # exit 0 and a passing check (w5/098). A default that differs from
+            # the rate's currency — an account opened for HOOL alone — stands.
+            rate = posting.cost if posting.cost is not None else posting.price
+            if rate is not None and getattr(rate, "currency", None) == choices[0]:
+                raise protocol.UsageError(
+                    f"--posting {number} gives a cost or price in {choices[0]} but no commodity, and "
+                    f"{posting.account} would default to {choices[0]} itself. Name the commodity: "
+                    f"'{posting.account} NUMBER COMMODITY {{…}}' or '… NUMBER COMMODITY @ …'. Nothing was written."
+                )
             units = units._replace(currency=choices[0])
         # Parsed postings keep the input order, so the raw line with the `@@`
         # spelling sits at the same index; incomplete prices raised above.

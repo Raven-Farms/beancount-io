@@ -860,7 +860,9 @@ bea add document --date 2026-04-30 --account Assets:Cash --filename "receipts/ap
 Beancount infers the balancing amount. When a numbered posting omits its
 currency, the CLI uses the account's sole allowed currency, otherwise the
 ledger's sole operating currency. Ambiguous currencies require an explicit
-symbol. Other directive types keep their explicit dates. Only `add transaction`
+symbol, and so does a posting with a cost or a price when that default would be
+the rate's own currency: `3 {80 USD}` is refused (exit 2) rather than written as
+`3 USD {80 USD}`. Other directive types keep their explicit dates. Only `add transaction`
 defaults the date to today; the other types require it. The transaction flag
 defaults to `*`; `!` marks an entry for review.
 
