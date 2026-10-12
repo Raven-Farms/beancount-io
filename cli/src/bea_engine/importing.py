@@ -339,6 +339,23 @@ def answer(
                     status, reason = "duplicate", f"import-id {stored} is already in the ledger."
                 else:
                     status, reason = "duplicate", f"import-id {matched_value} is already in the ledger."
+                if status == "duplicate" and id(match) in batch_rows:
+                    # The match is an earlier row of this export, so nothing is
+                    # "already in the ledger". Two bank lines sharing a native
+                    # ID on different dates — a monthly autopay reference — are
+                    # evidence the column is not a unique transaction ID:
+                    # review them, never drop one (w5/075). A same-day repeat
+                    # with a tidier description stays one transaction.
+                    earlier = batch_rows[id(match)]
+                    reused = kind in {"bank", "import-id"} and not _is_generated_identity(hits[0][0])
+                    if reused and match.date != entry.date:
+                        status = "possible_duplicate"
+                        reason = (
+                            f"Stable ID {matched_value} repeats row {earlier} of this import on a different date; "
+                            "a reference shared by separate transactions is not a unique ID."
+                        )
+                    else:
+                        reason = f"Repeats row {earlier} of this import."
             elif _candidate_key(entry, account) in fingerprints:
                 status, reason, match = (
                     "possible_duplicate",

@@ -341,7 +341,13 @@ skills deduplicate against each other: the ledger itself is the dedup database.
   reused native IDs with different source amounts or commodities are conflicts
   requiring review. An ID repeated within one export with different data is a
   conflict too; it names the earlier row of the import, and the fix is in the
-  source file rather than the ledger. Payee, narration, date, flag, and counter-account edits do
+  source file rather than the ledger. An ID repeated within one export with the
+  same amount on another date — a monthly autopay reusing one
+  reference — is a possible duplicate naming the earlier row, never a silent
+  skip: choose
+  `--duplicates include` to keep both, or map that column to something other
+  than `id`. A same-day repeat that differs only in its description is still one
+  transaction and is written once. Payee, narration, date, flag, and counter-account edits to an entry already in the ledger do
   not change that identity (generated ids: see below). The preview's `ID` column names each row's
   identifier source: `bank` for a bank column, `hash` for a content hash, or
   `importer` for an `import-id` the importer supplied.
