@@ -35,7 +35,6 @@
 
 ## Inbox
 
-- [067 — Read-only commands delete ledger files when the Beancount cache variable aliases them](./067.md) — major CLI data-loss bug with a narrow trigger; six read commands repeated on root and include with safe-cache and check-guard controls, 45–60m.
 - [068 — Ingest extract replaces the source document or its own script when `-o` names it](./068.md) — minor CLI source-file loss; file, directory, symlink and script cases repeated with ledger-refusal and treeify controls, 25–40m.
 - [069 — Format check and in-place formatting fail on every ledger with a managed price include](./069.md) — major CLI gate bug; `--check`, `-i`, `--dry-run` and JSON repeated offline with a local-include control, 30–45m.
 - [070 — `list price --on-disk` returns managed-feed prices that no ledger file contains](./070.md) — minor CLI listing bug; text and JSON repeated against a simulated loopback feed with a plugin control, 25–40m.
