@@ -35,7 +35,6 @@
 
 ## Inbox
 
-- [075 — Import silently skips a later row that repeats an inferred bank reference, and says it is already in the ledger](./075.md) — major CLI missing-transaction bug with an identity-policy owner call; repeated with a renamed-header control, 30–45m.
 - [076 — The `add open` remedy for blocked import rows is dated per row, so the first one dead-ends a newest-first export](./076.md) — minor CLI onboarding bug; three-step journey repeated with an earliest-date control, 20–30m.
 - [077 — A detected CSV delimiter is remembered and then overrides detection for the next export](./077.md) — minor CLI import bug; comma-then-semicolon exports repeated with fresh-memory and explicit-flag controls, 20–30m.
 - [078 — The advised `--csv sign=ledger` discards the remembered mapping instead of applying on top of it](./078.md) — minor CLI import bug; the tool's own advice fails, repeated with a full-mapping control, 30–45m.
