@@ -1077,6 +1077,10 @@ uses for it, so a whole-dollar ledger prints `10 USD` rather than `10.00`.
 That precision comes from posting amounts and balance assertions (or
 `option "display_precision"`), not from price quotes or cost numbers, so a
 `price AAPL 191.559998 USD` does not make a cents ledger print six decimals.
+An amount Beancount inferred for an omitted leg — units times a cost or a price
+— counts only for a currency the ledger never writes with decimals itself, so
+an omitted cash leg on a `{191.559998 USD}` purchase leaves a cents ledger in
+cents, while an inferred `31.5 USD` in a whole-dollar ledger is not rounded away.
 A currency no posting names — usually a `--conversion` target — has no
 precision to infer and renders with two decimals; `--json` keeps the exact
 value either way.

@@ -603,21 +603,34 @@ def _display_precision(filtered: Any) -> dict[str, int]:
     from beancount.core.data import Balance, Transaction
 
     precision: dict[str, int] = {}
+    # A leg Beancount interpolated holds units times cost or price, with that
+    # rate's digits: an amount nobody wrote. Once the ledger writes fractional
+    # amounts in a currency, those are its precision and such a leg adds
+    # nothing — one `{191.559998 USD}` purchase with an omitted cash leg made
+    # every USD figure print seven decimals (w5/093). Where the ledger writes
+    # that currency only in whole numbers, or not at all, the inferred amount
+    # is the one evidence of its subunits: rounding a 31.5 cash leg to 32
+    # would misstate the balance, so it still counts.
+    inferred: dict[str, int] = {}
 
-    def learn(number: Any, currency: Any) -> None:
+    def learn(number: Any, currency: Any, into: dict[str, int]) -> None:
         if not isinstance(number, Decimal) or not number.is_finite() or not isinstance(currency, str):
             return
         exponent = number.as_tuple().exponent
         digits = max(0, -exponent) if isinstance(exponent, int) else 0
-        precision[currency] = max(digits, precision.get(currency, 0))
+        into[currency] = max(digits, into.get(currency, 0))
 
     for entry in filtered.ledger.all_entries:
         if isinstance(entry, Transaction):
             for posting in entry.postings:
                 if posting.units is not None:
-                    learn(posting.units.number, posting.units.currency)
+                    interpolated = bool((posting.meta or {}).get("__automatic__"))
+                    learn(posting.units.number, posting.units.currency, inferred if interpolated else precision)
         elif isinstance(entry, Balance):
-            learn(entry.amount.number, entry.amount.currency)
+            learn(entry.amount.number, entry.amount.currency, precision)
+    for currency, digits in inferred.items():
+        if not precision.get(currency):
+            precision[currency] = digits
     for currency, example in (filtered.ledger.options.get("display_precision") or {}).items():
         exponent = example.as_tuple().exponent
         precision[str(currency)] = max(0, -exponent) if isinstance(exponent, int) else 0
