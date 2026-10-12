@@ -74,7 +74,21 @@ def _context_of(entries: Any, options_map: Any) -> Any:
     """
     from beancount.core import data, display_context
 
-    context = display_context.DisplayContext()
+    class _ExactInScope(display_context.DisplayContext):
+        """Formats at each currency's finest in-scope precision.
+
+        Upstream renders the tree with this context's default `build()`, which
+        picks the *most common* precision. With two whole-number postings and
+        one in cents, the tree dropped the cents and disagreed with the
+        `Net Income` line beneath it: `Checking 1755 USD` over
+        `Net Income: (1754.75 USD)` (w5/101). No scoped amount is rounded.
+        """
+
+        def build(self, *args: Any, **kwargs: Any) -> Any:
+            kwargs["precision"] = display_context.Precision.MAXIMUM
+            return super().build(*args, **kwargs)
+
+    context = _ExactInScope()
     seen = False
     for entry in data.filter_txns(entries):
         for posting in entry.postings:

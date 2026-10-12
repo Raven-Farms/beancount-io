@@ -112,3 +112,52 @@ def test_conversion_is_still_forwarded(tmp_path: Path) -> None:
     result = _bea(tmp_path, "doctor", "region", str(_ledger(tmp_path, CENTS_IN_SCOPE)), "6:8", "--conversion", "cost")
     assert result.returncode == 0, result.stdout + result.stderr
     assert _tree_amounts(result.stdout) == {"-5.50", "5.50"}
+
+
+# Two whole-number postings and one in cents under one link: the fractional
+# amounts are the minority, so a "most common" precision drops them (w5/101).
+MIXED_SCOPE = """option "operating_currency" "USD"
+2026-01-01 open Assets:Checking USD
+2026-01-01 open Income:Salary USD
+2026-01-01 open Expenses:Food USD
+2026-01-01 open Expenses:Rent USD
+
+2026-01-15 * "Acme" "Salary" ^jan
+  Assets:Checking  3000 USD
+  Income:Salary
+
+2026-01-20 * "Grocer" "Food" ^jan
+  Expenses:Food  45.25 USD
+  Assets:Checking
+
+2026-02-01 * "Landlord" "Rent" ^jan
+  Expenses:Rent  1200 USD
+  Assets:Checking
+"""
+
+
+@pytest.mark.parametrize("scope", [["linked", "^jan"], ["region", "7:17"]], ids=["linked", "region"])
+def test_a_minority_of_fractional_postings_is_not_rounded_out_of_the_tree(tmp_path: Path, scope: list[str]) -> None:
+    ledger = tmp_path / "main.bean"
+    ledger.write_text(MIXED_SCOPE)
+    op, selector = scope
+
+    result = _bea(tmp_path, "doctor", op, str(ledger), selector)
+
+    assert result.returncode == 0, result.stderr
+    tree = " ".join(result.stdout.split())
+    assert "Checking 1754.75 USD" in tree
+    assert "Food 45.25 USD" in tree
+    assert "Net Income: (1754.75 USD)" in tree
+    assert "1755 USD" not in tree and "Food 45 USD" not in tree
+
+
+def test_an_all_whole_scope_still_prints_whole_numbers(tmp_path: Path) -> None:
+    ledger = tmp_path / "main.bean"
+    ledger.write_text(MIXED_SCOPE)
+
+    result = _bea(tmp_path, "doctor", "region", str(ledger), "7:9")
+
+    assert result.returncode == 0, result.stderr
+    tree = " ".join(result.stdout.split())
+    assert "Checking 3000 USD" in tree and "Salary -3000 USD" in tree
