@@ -35,7 +35,6 @@
 
 ## Inbox
 
-- [097 — `--into` naming a glob-included file in another letter case or Unicode form is reported as a concurrent edit](./097.md) — minor CLI exit-category bug; case and Unicode variants repeated with exact-spelling and literal-include controls, 20–30m.
 - [098 — `add transaction` fills a missing commodity on a cost or priced posting with the operating currency](./098.md) — minor CLI silent-wrong-lot bug with an owner call; cost and price variants repeated with an explicit-commodity control, 20–30m.
 - [099 — BQL `filename` names vanished staging files on every ledger with a managed price include](./099.md) — major CLI silent-wrong-result bug; offline repro repeated with an include-free control, 30–45m.
 - [100 — `price export` of a feed included from two files writes a snapshot that fails `bean-check`](./100.md) — minor CLI export bug against a simulated feed; single-include control passes, 30–40m.
