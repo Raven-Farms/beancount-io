@@ -35,7 +35,6 @@
 
 ## Inbox
 
-- [094 — `price export` exits 0 for a ledger with a local plugin, and the snapshot fails stock `bean-check`](./094.md) — minor CLI export bug; repeated with a plugin-free control, 30–40m.
 - [095 — Read commands need a writable ledger directory once the ledger has a managed price include](./095.md) — minor CLI design-adjacent bug with an owner call; repeated against a simulated feed with a no-include control, 30–45m.
 - [096 — A write into a file reached through a `..` include names a nonexistent staging file and `--allow-errors` refuses it](./096.md) — major CLI write bug; repeated with root-write and plain-include controls, 30–45m.
 - [097 — `--into` naming a glob-included file in another letter case or Unicode form is reported as a concurrent edit](./097.md) — minor CLI exit-category bug; case and Unicode variants repeated with exact-spelling and literal-include controls, 20–30m.
