@@ -288,7 +288,17 @@ def _jsonable(value: Any) -> Any:
         if type(value).__module__ == "beancount.core.inventory":
             return [_jsonable(position) for position in value]
         return {str(k): _jsonable(v) for k, v in value.items()}
-    if isinstance(value, list | tuple | set | frozenset):
+    if isinstance(value, set | frozenset):
+        # A set has no order of its own; iterating it follows the process's
+        # string hash seed, so `tags` and `links` came out differently from
+        # one identical run to the next (w5/105). Sorted, as the text table
+        # and `bea list` already print them.
+        members = [_jsonable(v) for v in value]
+        try:
+            return sorted(members)
+        except TypeError:
+            return sorted(members, key=lambda member: json.dumps(member, sort_keys=True, default=str))
+    if isinstance(value, list | tuple):
         return [_jsonable(v) for v in value]
     return str(value)
 
