@@ -35,7 +35,6 @@
 
 ## Inbox
 
-- [082 — `--meta` drops a leading `#` from a text value and misreports a `name:` value as a bad key](./082.md) — minor CLI metadata bug; silent alteration and false refusal repeated with quoted and bulk controls, 20–30m.
 - [083 — Report balance series leave out `U`-flagged transactions that the headline includes](./083.md) — major CLI wrong-number bug; headline and series disagree, checked against BQL with a `!` control, 30m.
 - [084 — `bea check` fails with a traceback on the bundled `fava.plugins.*` plugins while `--json check` says valid](./084.md) — major CLI gate bug; human and JSON verdicts split, repeated with an upstream-plugin control, 45m.
 - [085 — A `PRINT` export of a ledger with a pad does not pass `bea check`](./085.md) — minor CLI export bug; repeated with a pad-free round-trip control, 30m.
