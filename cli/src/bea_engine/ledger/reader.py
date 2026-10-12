@@ -113,6 +113,17 @@ def _source_lines(filename: str) -> tuple[str, ...] | None:
         return None
 
 
+@lru_cache(maxsize=64)
+def _in_managed_cache(filename: str) -> bool:
+    """Whether a source path is a managed price feed's cached revision."""
+    from bea_engine.managed_price_cache import cache_root
+
+    try:
+        return Path(filename).resolve().is_relative_to(cache_root().resolve())
+    except OSError:
+        return False
+
+
 def entry_generated(entry: Any, directive_type: str) -> bool:
     """Whether a plugin synthesized this entry rather than the ledger declaring it.
 
@@ -123,11 +134,17 @@ def entry_generated(entry: Any, directive_type: str) -> bool:
     plugin). So the entry is on disk only when its file exists and the line
     there starts this directive on this entry's date — exactly what `grep`
     would find.
+
+    A managed price feed's entry is not on disk either: its line is real, but
+    it sits in the price cache, not in any file of the ledger. An exported
+    snapshot is an ordinary local file and its rows are written.
     """
     meta = getattr(entry, "meta", None) or {}
     filename = meta.get("filename")
     lineno = meta.get("lineno")
     if not filename or not isinstance(lineno, int) or isinstance(lineno, bool) or lineno < 1:
+        return True
+    if _in_managed_cache(str(filename)):
         return True
     lines = _source_lines(str(filename))
     if lines is None or lineno > len(lines):
