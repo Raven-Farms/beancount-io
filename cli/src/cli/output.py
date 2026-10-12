@@ -230,17 +230,14 @@ class MissingInclude:
 def _include_matches(source: Path, raw: str) -> list[Path]:
     """The files one `include` string resolves to, beancount's way.
 
-    Every include is a glob, matched first against the including file's
-    directory — the base the loader uses — then against the working directory.
-    Only files count: a match that is not a regular file resolves nothing.
+    Every include is a glob, matched against the including file's directory —
+    the only base the loader uses for a ledger read from a file. The working
+    directory is the base for a ledger parsed from a string alone, and no such
+    source is walked here; falling back to it adopted an unrelated same-named
+    file as a member of the ledger (w5/071). Only files count: a match that is
+    not a regular file resolves nothing.
     """
-    if Path(raw).is_absolute():
-        return _glob_files(raw)
-    for base in (source.parent, Path.cwd()):
-        matches = _glob_files(str(base / raw))
-        if matches:
-            return matches
-    return []
+    return _glob_files(raw if Path(raw).is_absolute() else str(source.parent / raw))
 
 
 def _glob_files(pattern: str) -> list[Path]:

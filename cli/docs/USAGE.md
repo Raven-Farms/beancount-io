@@ -592,7 +592,8 @@ scanned files are formatted.
 a named file stands for its whole include closure — every file an `include`
 reaches, whatever its suffix (`entries.inc` too) — a file the parser rejects
 fails instead of reading as "already formatted", and an include that matches
-nothing fails naming the directive. A managed price include (an `http(s)://`
+nothing fails naming the directive. A relative include resolves beside the file
+that names it, never against the working directory. A managed price include (an `http(s)://`
 URL) is not a file: it is neither formatted nor reported missing, and the gate
 needs no network or login for it. `--in-place` formats every reachable file
 and skips the unparseable ones, exiting nonzero when anything was skipped.

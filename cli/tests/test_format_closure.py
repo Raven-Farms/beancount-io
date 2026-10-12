@@ -88,6 +88,76 @@ def test_a_missing_local_include_beside_a_managed_one_is_still_named_alone(tmp_p
     assert json.loads(result.stderr)["error"]["result"]["missing"] == [{"include": "missing.bean", "from": str(root)}]
 
 
+def _stray_namesake(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, text: str) -> tuple[Path, Path]:
+    """A ledger whose include is missing, run from a directory holding a same-named file."""
+    books, other = tmp_path / "books", tmp_path / "other"
+    books.mkdir()
+    other.mkdir()
+    root = books / "main.bean"
+    root.write_text('2026-01-01 open Assets:Cash USD\ninclude "y2026.bean"\n')
+    stray = other / "y2026.bean"
+    stray.write_text(text)
+    monkeypatch.chdir(other)
+    return root, stray
+
+
+@pytest.mark.parametrize("spelling", ["absolute", "relative"])
+def test_a_missing_include_is_not_found_in_the_working_directory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, spelling: str
+) -> None:
+    """The walk fell back to the cwd, so the gate passed a ledger `bea check` rejects (w5/071)."""
+    root, stray = _stray_namesake(tmp_path, monkeypatch, "2026-01-02 open Assets:Unrelated USD\n")
+    target = str(root) if spelling == "absolute" else "../books/main.bean"
+
+    result = runner.invoke(app, ["format", "--check", target])
+    as_json = runner.invoke(app, ["--json", "format", "--check", target])
+
+    assert result.exit_code == 1, result.output
+    assert 'missing include: "y2026.bean"' in result.output
+    assert str(stray) not in result.output
+    payload = json.loads(as_json.stderr)["error"]["result"]
+    assert payload["scanned"] == 1
+    assert payload["missing"] == [{"include": "y2026.bean", "from": str(root)}]
+
+
+def test_in_place_never_rewrites_a_working_directory_namesake(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    root, stray = _stray_namesake(tmp_path, monkeypatch, MISALIGNED_CHILD)
+
+    result = runner.invoke(app, ["format", "-i", str(root)])
+
+    assert result.exit_code == 1, result.output
+    assert stray.read_text() == MISALIGNED_CHILD
+    assert str(stray) not in result.output
+
+
+def test_a_working_directory_namesake_is_not_a_ledger_alias_for_query_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root, _ = _stray_namesake(tmp_path, monkeypatch, "2026-01-02 open Assets:Unrelated USD\n")
+
+    result = runner.invoke(app, ["--file", str(root), "query", "SELECT 1 AS one", "-o", "y2026.bean", "--allow-errors"])
+
+    assert "would overwrite the ledger it reads" not in result.output
+
+
+def test_a_real_include_resolves_from_any_working_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    books = tmp_path / "books"
+    (books / "sub").mkdir(parents=True)
+    root = books / "main.bean"
+    root.write_text('include "sub/child.bean"\n2020-01-01 open Assets:Cash USD\n')
+    (books / "sub" / "child.bean").write_text('include "leaf.bean"\n')
+    (books / "sub" / "leaf.bean").write_text("2020-01-02 open Assets:Bank USD\n")
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    monkeypatch.chdir(elsewhere)
+
+    result = runner.invoke(app, ["--json", "format", "--check", str(root)])
+
+    assert result.exit_code == 0, result.output
+    data = json.loads(result.stdout)["data"]
+    assert data["scanned"] == 3 and data["missing"] == []
+
+
 def test_check_fails_on_unparseable_files_and_leaves_them_untouched(tmp_path: Path) -> None:
     garbage = tmp_path / "garbage.bean"
     garbage.write_text("not beancount\n")
