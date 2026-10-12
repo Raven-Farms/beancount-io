@@ -31,8 +31,8 @@ import re
 import shutil
 import sys
 import time
-from collections.abc import Callable
-from contextlib import ExitStack
+from collections.abc import Callable, Iterator
+from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from hashlib import sha256
@@ -269,7 +269,6 @@ def _load_with_sources(
 
     from bea_engine.ledger.write import (
         LedgerSnapshot,
-        candidate_file,
         is_candidate_file,
         refuse_cache_over_ledger,
     )
@@ -343,13 +342,13 @@ def _load_with_sources(
                 if ephemeral or problem is not None:
                     if problem is not None:
                         cache_problems[url] = problem
-                    stand_in = stack.enter_context(candidate_file(snapshot.root, precedence.text))
+                    stand_in = stack.enter_context(_shadow(snapshot.root, precedence.text, entry, managed))
                     staged_feeds[str(stand_in)] = str(path)
                     effective[url] = (blob, precedence, stand_in)
                     continue
             effective[url] = (blob, precedence, path)
 
-        staged = {path: stack.enter_context(candidate_file(path, "")) for path in snapshot.contents}
+        staged = {path: stack.enter_context(_shadow(path, "", entry, managed)) for path in snapshot.contents}
         unavailable: list[Any] = []
         for path, original in snapshot.contents.items():
             content = _rewrite_includes(
@@ -519,6 +518,36 @@ def _collect_managed(snapshot: Any, origins: tuple[str, ...]) -> list[_PendingSo
             else:
                 by_url[decision.url] = _PendingSource(url=decision.url, alias=decision.alias, includes=[include])
     return list(by_url.values())
+
+
+@contextmanager
+def _shadow(path: Path, content: str, entry: Path, managed: list[_PendingSource]) -> Iterator[Path]:
+    """A staged copy beside `path` for this load, with a refusal that describes a read.
+
+    Resolving a managed price include parses shadow copies of the closure, each
+    beside its source so relative paths keep their meaning. In a read-only
+    directory that failed with the write path's message — "bea validates a
+    write on a staged copy…" — on `list`, `check` and `balance`, commands that
+    write nothing (w5/095). A load that is itself validating a write keeps
+    that message; a read says what it needed the directory for and why.
+    """
+    from bea_engine.ledger.write import candidate_file, is_candidate_file
+    from bea_engine.protocol import AuthError
+
+    with ExitStack() as stack:
+        try:
+            staged = stack.enter_context(candidate_file(path, content))
+        except AuthError as exc:
+            if is_candidate_file(entry):
+                raise
+            includes = ", ".join(sorted({source.url for source in managed})) or "a managed price include"
+            raise AuthError(
+                f"Cannot read {entry}: its managed price include ({includes}) is resolved on a temporary copy "
+                f"beside each ledger file, and the directory {path.parent} is not writable. Make that directory "
+                "writable, or read a snapshot made with bea price export, which needs no temporary copy. "
+                "Nothing was changed."
+            ) from exc
+        yield staged
 
 
 def _rewrite_includes(

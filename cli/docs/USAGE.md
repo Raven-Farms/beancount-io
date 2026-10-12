@@ -1222,7 +1222,10 @@ include "https://beancount.io/prices/BTC-USD"
 ```
 
 `check`, `list`, `query`, `report`, `import`, and write validation all see
-the same resolved prices. The URL is a registered price request, not a
+the same resolved prices. Resolving the include parses a temporary copy beside
+each ledger file, so these reads need the ledger's directories to be writable;
+in a read-only one they exit **3** naming the include and the directory. A
+`bea price export` snapshot has no such need. The URL is a registered price request, not a
 general remote include: only allowlisted origins and exact
 `/prices/<ALIAS>` paths resolve, redirects are refused, and the request
 carries no ledger name or ledger content. Sign in with `bea cloud login` or
