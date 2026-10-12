@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field, fields
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from ..beans.funcs import get_position
@@ -117,8 +118,15 @@ class FavaOptions:
         self.collapse_pattern.append(pattern)  # type: ignore[attr-defined]
 
     def set_default_file(self, value: str, filename: str) -> None:
-        """Set the default_file option."""
-        raise NotImplementedError
+        """Set the default_file option.
+
+        Beancount.io change: the vendored subset left this a stub that raised
+        `NotImplementedError`, which escaped option parsing and failed every
+        report on a ledger carrying this editor-only option. It is recorded as
+        upstream Fava records it: the given path, relative to the file that
+        declares it, or that file itself when no value is given.
+        """
+        self.default_file = str(Path(filename).parent / value) if value else filename
 
     def set_fiscal_year_end(self, value: str) -> None:
         """Set the fiscal_year_end option."""
