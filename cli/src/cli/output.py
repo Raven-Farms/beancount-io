@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import dataclasses
 import datetime
+import fnmatch
 import glob
 import json
 import os
@@ -354,12 +355,69 @@ def refuse_ledger_alias(destination: Path, ledger: Path) -> None:
     still says success. Call this before any temp file is created or any
     stream is opened, so a refusal leaves the destination byte-identical.
     """
-    for member in ledger_closure(ledger):
+    members = ledger_closure(ledger)
+    for member in members:
         if same_file(destination, member):
             raise UsageError(
                 f"--output {destination} would overwrite the ledger it reads ({member}); "
                 "choose a different destination."
             )
+    _refuse_include_claim(destination, members)
+
+
+def refuse_include_claim(destination: Path, ledger: Path) -> None:
+    """Refuse a destination one of the ledger's `include` patterns would claim once written.
+
+    A file that does not exist yet has no identity to compare, but a path an
+    include glob matches becomes part of the books the moment the write lands:
+    a `PRINT` backup saved under `include "txns/*.bean"` doubled every exported
+    transaction on the next load, with `check` still passing (w5/072).
+    """
+    _refuse_include_claim(destination, ledger_closure(ledger))
+
+
+def _refuse_include_claim(destination: Path, members: Sequence[Path]) -> None:
+    try:
+        target = destination.expanduser().resolve()
+    except OSError:
+        return
+    for member in members:
+        try:
+            text = member.read_text(encoding="utf-8", errors="replace").removeprefix("\ufeff")
+        except OSError:
+            continue
+        for match in _INCLUDE_DIRECTIVE.finditer(text):
+            raw = _unescape(match.group(1))
+            if _REMOTE_INCLUDE.match(raw):
+                continue
+            pattern = raw if Path(raw).is_absolute() else str(member.parent / raw)
+            if _glob_would_match(target, pattern):
+                raise UsageError(
+                    f'--output {destination} would become part of the ledger it reads: include "{match.group(1)}" '
+                    f"in {member} matches that path. Choose a destination outside the ledger's includes."
+                )
+
+
+def _glob_would_match(target: Path, pattern: str) -> bool:
+    """Whether `glob` would return `target` for `pattern` once the file exists.
+
+    The directory part is expanded as it stands today; the leaf follows glob's
+    own name and hidden-file rules, including a trailing `**`.
+    """
+    parent, name = os.path.split(pattern)
+    if target.name.startswith(".") and not name.startswith("."):
+        return False
+    if not fnmatch.fnmatch(target.name, name):
+        return False
+    if name == "**":
+        parent = os.path.join(parent, "**")
+    for directory in glob.glob(parent or ".", recursive=True):
+        try:
+            if Path(directory).resolve() == target.parent:
+                return True
+        except OSError:
+            continue
+    return False
 
 
 def refuse_input_alias(destination: Path, source: Path) -> None:

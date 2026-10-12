@@ -8,9 +8,10 @@ from pathlib import Path
 
 import typer
 
+from cli import context
 from cli.engine import launch
 from cli.errors import ConflictError, UsageError, refuse_json
-from cli.output import forwarded_option
+from cli.output import forwarded_option, refuse_include_claim
 
 _FORCE = "--force"
 
@@ -38,6 +39,16 @@ def example(ctx: typer.Context) -> None:
             f"Already exists: {output}. Pass --force to overwrite it with a generated example; "
             "without it, example never overwrites."
         )
+    if output is not None:
+        # No ledger is read here, so `--force` may replace any file — but a
+        # path the working ledger's includes would claim merges a generated
+        # history into the books, forced or not.
+        try:
+            ledger = context.current().entry_file()
+        except UsageError:
+            ledger = None
+        if ledger is not None:
+            refuse_include_claim(output.expanduser(), ledger)
     _check_date_order(forwarded)
     completed = launch.capture_native("bean-example", forwarded)
     launch.check_native(completed, "bean-example")

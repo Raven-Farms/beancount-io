@@ -270,12 +270,30 @@ def _find_alias(destination: Path, root: Path, context: Any) -> Path | None:
     return None
 
 
+def _claiming_include(destination: Path, root: Path) -> str | None:
+    """The include pattern that would make a destination part of the ledger once written (w5/072)."""
+    from bea_engine.ledger.write import LedgerSnapshot, _included_new_file
+
+    try:
+        target = destination.expanduser().resolve()
+        patterns = LedgerSnapshot.capture(root).patterns
+    except OSError:
+        return None
+    return next((pattern for pattern in patterns if _included_new_file(target, pattern)), None)
+
+
 def _refuse_alias(destination: Path, root: Path, context: Any) -> None:
     """Fail a destination that is one of the files this query reads."""
     member = _find_alias(destination, root, context)
     if member is not None:
         raise protocol.UsageError(
             f"--output {destination} would overwrite the ledger it reads ({member}); choose a different destination."
+        )
+    pattern = _claiming_include(destination, root)
+    if pattern is not None:
+        raise protocol.UsageError(
+            f"--output {destination} would become part of the ledger it reads: the include pattern {pattern} "
+            "matches that path. Choose a destination outside the ledger's includes."
         )
 
 
@@ -286,6 +304,13 @@ def _redirect_output(shell: Any, arg: str, stream: TextIO, file: Path | None) ->
         if member is not None:
             protocol.note(
                 f"Refusing to write query output to {arg}: it is one of the ledger files under query ({member})."
+            )
+            return
+        pattern = _claiming_include(Path(arg), file)
+        if pattern is not None:
+            protocol.note(
+                f"Refusing to write query output to {arg}: the include pattern {pattern} would make it "
+                "part of the ledger under query."
             )
             return
     try:
