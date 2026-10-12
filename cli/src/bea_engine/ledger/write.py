@@ -15,7 +15,7 @@ import sys
 import time
 import unicodedata
 from collections import Counter
-from collections.abc import Callable, Iterable, Iterator
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from contextlib import ExitStack, contextmanager, nullcontext
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -174,10 +174,6 @@ class LedgerSnapshot:
         directory elsewhere in the include graph does not block the write
         (w1/073).
         """
-        from beancount.utils import misc_utils
-
-        escape_string: Callable[[str], str] = misc_utils.escape_string
-
         with ExitStack() as stack:
             paths = {path: stack.enter_context(candidate_file(path, "")) for path in self._includers(target)}
             for path, staged in paths.items():
@@ -185,10 +181,30 @@ class LedgerSnapshot:
                 for start, end, name in reversed(list(_includes(content))):
                     matches = self.patterns.get(str(path.parent / name), ())
                     if matches:
-                        replacement = "\ninclude ".join(f'"{escape_string(str(paths.get(p, p)))}"' for p in matches)
+                        replacement = staged_include(stack, path, [paths.get(p, p) for p in matches])
                         content = content[:start] + replacement.encode() + content[end:]
                 staged.write_bytes(content)
             yield paths[self.root], {staged: original for original, staged in paths.items()}
+
+
+def staged_include(stack: ExitStack, includer: Path, targets: Sequence[Path]) -> str:
+    """The quoted target that makes one `include` line reach every staged match of its glob.
+
+    A staged includer must keep the line numbering of the file it stands for:
+    errors are paired with their pre-write twins by line, and entries are
+    judged written or synthesized by reading the real file at their line. An
+    include line takes one target, and writing a glob's N matches as N lines
+    moved everything below it down N-1 (w5/079). Several matches therefore go
+    through one staged file beside the includer that only lists them, in
+    order, so the includer's own line count never changes.
+    """
+    from beancount.utils import misc_utils
+
+    escape_string: Callable[[str], str] = misc_utils.escape_string
+    if len(targets) == 1:
+        return f'"{escape_string(str(targets[0]))}"'
+    listing = "".join(f'include "{escape_string(str(target))}"\n' for target in targets)
+    return f'"{escape_string(str(stack.enter_context(candidate_file(includer, listing))))}"'
 
 
 def _included_new_file(target: Path, pattern: str) -> bool:
