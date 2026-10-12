@@ -35,7 +35,6 @@
 
 ## Inbox
 
-- [078 — The advised `--csv sign=ledger` discards the remembered mapping instead of applying on top of it](./078.md) — minor CLI import bug; the tool's own advice fails, repeated with a full-mapping control, 30–45m.
 - [079 — A multi-file include glob shifts line numbers during write validation, so `--allow-errors` refuses every write](./079.md) — major CLI write bug; root and `--into` refusals repeated with one-match and reordered controls, 45–60m.
 - [080 — `add custom --value account:…` is always refused on a ledger with renamed root accounts](./080.md) — major CLI write bug; refusal repeated with default-root and other-directive controls, 30–45m.
 - [081 — `--allow-errors` lets a write introduce an Unused Pad error and still exit 0](./081.md) — major CLI exit-contract bug; two shapes leave `check` failing, repeated with flag-free controls, 30–45m.
