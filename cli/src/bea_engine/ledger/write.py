@@ -103,6 +103,18 @@ class LedgerSnapshot:
         for path, content in self.contents.items():
             if path.resolve() == resolved:
                 return content
+        # The same file under another letter case or Unicode form — what a
+        # case- and normalization-insensitive volume answers to. Compared as
+        # text it matched nothing, the glob below then took it for a new
+        # file, and its existing on disk read as a concurrent edit that no
+        # retry could clear (w5/097).
+        folded = unicodedata.normalize("NFC", str(resolved)).casefold()
+        for path in self.contents:
+            if unicodedata.normalize("NFC", str(path.resolve())).casefold() == folded and same_file(resolved, path):
+                raise UsageError(
+                    f"Write destination {target} is the ledger file {path} spelled in another letter case or "
+                    f"Unicode form. Pass --into with the name as it is on disk ({path.name}). Nothing was written."
+                )
         matching = [pattern for pattern in self.patterns if _included_new_file(resolved, pattern)]
         if matching:
             if resolved.exists() or resolved.is_symlink():
