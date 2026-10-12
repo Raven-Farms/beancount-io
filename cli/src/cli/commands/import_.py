@@ -412,6 +412,8 @@ def import_entries(
         except UsageError:
             chosen_delimiter = None
     carried_delimiter = chosen_delimiter
+    typed_keys: Any = None
+    typed_key_names: set[str] = set()
     if csv_request is not None and csv_request.strip().casefold() == "auto":
         csv_request = _inferred_mapping(
             source, explicit=True, notes=inferred_notes, delimiter=csv_delimiter, encoding=csv_encoding
@@ -428,17 +430,27 @@ def import_entries(
                 # decodes with it; the merge below re-applies it idempotently.
                 csv_encoding = peek.encoding
             if not peek.columns:
-                # Keys without columns (`encoding=`, `delimiter=`, `sign=` alone):
-                # decode with the keys, then infer the mapping like `auto`.
+                # Keys without columns (`encoding=`, `delimiter=`, `sign=` alone)
+                # apply on top of the mapping remembered for this header and
+                # account: `--csv sign=ledger` is what bea itself advises for
+                # the next file, and re-inferring instead discarded the saved
+                # mapping or failed on headers inference cannot read (w5/078).
+                # With nothing remembered, decode with the keys and infer the
+                # mapping like `auto`.
                 _check_delimiter_conflict(flag_delimiter, peek.delimiter)
                 if peek.delimiter is not None:
                     csv_delimiter = peek.delimiter
-                csv_request = _inferred_mapping(
-                    source, explicit=True, notes=inferred_notes, delimiter=csv_delimiter, encoding=csv_encoding
-                )
-                if peek.sign != "bank" and csv_request is not None:
-                    csv_request = f"{csv_request},sign={peek.sign}"
-                csv_origin = "inferred --csv"
+                if _recall_csv(file, source, csv_account, notes=[]) is not None:
+                    typed_keys = peek
+                    typed_key_names = {part.partition("=")[0].strip() for part in csv_request.split(",")}
+                    csv_request = None
+                else:
+                    csv_request = _inferred_mapping(
+                        source, explicit=True, notes=inferred_notes, delimiter=csv_delimiter, encoding=csv_encoding
+                    )
+                    if peek.sign != "bank" and csv_request is not None:
+                        csv_request = f"{csv_request},sign={peek.sign}"
+                    csv_origin = "inferred --csv"
     if csv_request is None and config is None:
         remembered = _recall_csv(file, source, csv_account, notes=recall_notes)
         if remembered is not None:
@@ -465,7 +477,11 @@ def import_entries(
                 recalled_spec = None
             if recalled_spec is not None:
                 stored_delimiter = stored_delimiter or recalled_spec.delimiter
-                if recalled_spec.encoding is not None:
+                if "encoding" in typed_key_names:
+                    # A typed decoding wins over the remembered one, for this
+                    # run and — saved below — for the next flag-free one.
+                    csv_request = f"{_strip_spec_keys(csv_request, {'encoding'})},encoding={csv_encoding}"
+                elif recalled_spec.encoding is not None:
                     # Detection below decodes the file, so the remembered
                     # decoding has to be in force before it runs.
                     csv_encoding = recalled_spec.encoding
@@ -487,7 +503,7 @@ def import_entries(
                 "date_format": ("--date-format", chosen_date_format),
                 "rules": ("--rules", str(csv_rules_arg) if rules_file is not None else None),
                 "default_account": ("--default-account", chosen_default_account),
-                "delimiter": ("--delimiter", flag_delimiter),
+                "delimiter": ("--delimiter", chosen_delimiter),
             }
             updates = {
                 key: (flag, value)
@@ -509,7 +525,27 @@ def import_entries(
                     "A flag-free run of this header now uses them."
                 )
             sign_file = remembered.get("sign_ledger_sha256")
-            if isinstance(sign_file, str):
+            if typed_keys is not None:
+                # The keys typed on this run are part of what the next
+                # flag-free run of this file must replay. Sign stays out of
+                # the mapping; only the file it was chosen for is recorded.
+                if "sign" in typed_key_names:
+                    csv_request = _strip_spec_keys(csv_request, {"sign"})
+                    recalled_sign_ledger = typed_keys.sign == "ledger"
+                    if recalled_sign_ledger:
+                        csv_request = f"{csv_request},sign=ledger"
+                    sign_file = _source_sha256(source) if recalled_sign_ledger else None
+                    csv_to_remember = {
+                        **(csv_to_remember or remembered),
+                        "source": source.name,
+                        "sign_ledger_sha256": sign_file,
+                    }
+                if "encoding" in typed_key_names:
+                    csv_to_remember = {
+                        **(csv_to_remember or remembered),
+                        "mapping": _strip_spec_keys(csv_request, {"sign", "delimiter"}),
+                    }
+            if isinstance(sign_file, str) and "sign" not in typed_key_names:
                 # `sign=ledger` belongs to the file it was chosen for. Replaying
                 # that same file keeps it, so `--apply` writes what the preview
                 # showed; any other file sharing the header must say its sign.

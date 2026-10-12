@@ -233,7 +233,11 @@ reads the header gives way to detection with a note) — but never `sign=`, whic
 always needs passed explicitly. The one exception keeps a preview honest: after
 `sign=ledger`, a flag-free `--apply` of the byte-identical file re-applies it
 and says so; another file sharing the header is read bank-signed, with a note
-naming the file that used `sign=ledger`. When only one account uses those headers, the next import needs
+naming the file that used `sign=ledger`. A `--csv` that carries only keys —
+`--csv sign=ledger`, `--csv encoding=cp1252`, `--csv delimiter=';'` — applies them
+on top of the mapping remembered for that header and account, keeping its
+columns, rules, default account and date format; it infers from the header only
+when nothing is remembered. When only one account uses those headers, the next import needs
 no flags. If checking and savings exports share headers, their mappings are
 kept separately and subsequent previews and applies require
 `--account ACCOUNT`; bea refuses to choose between them. Always specify
