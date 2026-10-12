@@ -35,7 +35,6 @@
 
 ## Inbox
 
-- [079 — A multi-file include glob shifts line numbers during write validation, so `--allow-errors` refuses every write](./079.md) — major CLI write bug; root and `--into` refusals repeated with one-match and reordered controls, 45–60m.
 - [080 — `add custom --value account:…` is always refused on a ledger with renamed root accounts](./080.md) — major CLI write bug; refusal repeated with default-root and other-directive controls, 30–45m.
 - [081 — `--allow-errors` lets a write introduce an Unused Pad error and still exit 0](./081.md) — major CLI exit-contract bug; two shapes leave `check` failing, repeated with flag-free controls, 30–45m.
 - [082 — `--meta` drops a leading `#` from a text value and misreports a `name:` value as a bad key](./082.md) — minor CLI metadata bug; silent alteration and false refusal repeated with quoted and bulk controls, 20–30m.
