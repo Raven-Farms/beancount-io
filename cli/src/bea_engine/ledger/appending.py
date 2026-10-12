@@ -19,7 +19,7 @@ from typing import Any
 
 from bea_engine import protocol
 from bea_engine.ledger import write as ledger_write
-from bea_engine.ledger.text import refuse_control_characters
+from bea_engine.ledger.text import refuse_control_characters, without_root_name_errors
 from bea_engine.query import format_error
 
 
@@ -60,6 +60,8 @@ def _parse_directives(text: str) -> list[Any]:
             "Write rejected: provide dated ledger directives only; configure options, plugins and includes separately."
         )
     entries, errors, _ = parser.parse_string(text)
+    # Root names are ledger options; the validated append that follows checks them.
+    errors = without_root_name_errors(errors)
     if errors or not entries:
         detail = "; ".join(format_error(error) for error in errors) or "No dated directives were supplied."
         raise protocol.LedgerError(f"Write rejected: {detail}")

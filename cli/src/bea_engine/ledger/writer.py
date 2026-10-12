@@ -512,7 +512,11 @@ def _require_custom_roundtrip(values: list[_ValueType], text: str) -> None:
     """
     from beancount.parser import parser
 
+    from bea_engine.ledger.text import without_root_name_errors
+
     entries, errors, _ = parser.parse_string(text)
+    # An account value under a renamed root is the ledger's to judge (w5/080).
+    errors = without_root_name_errors(errors)
     reloaded = entries[0].values if len(entries) == 1 and isinstance(entries[0], Custom) and not errors else None
     if reloaded is None:
         raise protocol.UsageError(

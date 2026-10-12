@@ -8,6 +8,7 @@ import unicodedata
 from collections.abc import Collection, Iterator, Mapping
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from bea_engine import protocol
 
@@ -210,6 +211,24 @@ def ledger_roots(options: Mapping[str, object]) -> tuple[str, ...]:
     """The five root account names a loaded ledger accepts (its `name_*` options)."""
     defaults = ("Assets", "Liabilities", "Equity", "Income", "Expenses")
     return tuple(str(options.get(key) or default) for key, default in zip(_ROOT_OPTIONS, defaults, strict=True))
+
+
+def without_root_name_errors(errors: list[Any]) -> list[Any]:
+    """A standalone parse's errors, minus the ones only the ledger's options can judge.
+
+    `parser.parse_string` on a rendered directive runs with default options,
+    so on a ledger that renames its roots (`option "name_expenses" "Aufwand"`)
+    every account in it reads as `Invalid account name`. A probe that checks
+    how text will reload is asking about syntax; whether a root exists is
+    decided by the whole-ledger validation every write goes through next.
+    """
+    from beancount.parser.grammar import ParserError
+
+    return [
+        error
+        for error in errors
+        if not (isinstance(error, ParserError) and error.message.startswith("Invalid account name:"))
+    ]
 
 
 def parse_account(name: str, roots: Collection[str] | None = None) -> str:

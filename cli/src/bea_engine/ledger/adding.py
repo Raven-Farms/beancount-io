@@ -26,7 +26,7 @@ from typing import Any
 from bea_engine import protocol
 from bea_engine.amounts import parse_decimal_number
 from bea_engine.ledger import write, writer
-from bea_engine.ledger.text import outside_ledger_tree, parse_account, single_line
+from bea_engine.ledger.text import outside_ledger_tree, parse_account, single_line, without_root_name_errors
 
 TYPES = (
     "transaction",
@@ -618,7 +618,6 @@ def _transaction(
     from beancount.core.data import Open, Transaction
     from beancount.core.number import MISSING
     from beancount.parser import parser
-    from beancount.parser.grammar import ParserError
 
     from bea_engine import managed_load
     from bea_engine.ledger.models import WRITE_INPUT, TransactionHeader
@@ -649,7 +648,7 @@ def _transaction(
     entries, errors, _ = parser.parse_string(text)
     # Root names are ledger options. The full candidate validation below
     # checks them in that context; this standalone parse only checks syntax.
-    errors = [e for e in errors if not (isinstance(e, ParserError) and e.message.startswith("Invalid account name:"))]
+    errors = without_root_name_errors(errors)
     if errors or len(entries) != 1 or not isinstance(entries[0], Transaction):
         details = []
         for error in errors:
@@ -752,6 +751,8 @@ def _directive_infers_zero(directive: Any) -> bool:
     if sum(1 for posting in directive.postings if posting.units is None) != 1:
         return False
     entries, errors, _ = parser.parse_string(writer.format_transaction(directive))
+    # Renamed roots read as invalid here, which used to skip this guard entirely.
+    errors = without_root_name_errors(errors)
     if errors or len(entries) != 1 or not isinstance(entries[0], Transaction):
         return False  # Ledger validation reports what is wrong with it.
     parsed = []
@@ -898,6 +899,7 @@ def _parse_metadata(items: list[str]) -> dict[str, Any]:
         # `--meta cleared:true` matches bulk JSON bool meta instead of quoting.
         parsed_raw = raw.upper() if raw.lower() in {"true", "false"} else raw
         entries, errors, _ = parser.parse_string(f'2000-01-01 * ""\n  {key}: {parsed_raw}\n')
+        errors = without_root_name_errors(errors)
         if not errors and len(entries) == 1 and isinstance(entries[0], Transaction) and key in entries[0].meta:
             metadata[key] = entries[0].meta[key]
         elif raw.startswith('"'):
