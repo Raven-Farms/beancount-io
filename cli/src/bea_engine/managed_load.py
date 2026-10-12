@@ -840,6 +840,11 @@ def export_portable(
     by_target = {
         include.target: feed_files[source.url] for source in loaded.sources for include in source.included_from
     }
+    repeats = {
+        (include.target, include.file, include.line)
+        for source in loaded.sources
+        for include in source.included_from[1:]
+    }
     # Checked as a whole plan before the first write. A destination that is
     # already one of the ledger's own files — through a symlink, or a hard
     # link no path comparison can see — would be written straight through
@@ -902,7 +907,7 @@ def export_portable(
     for path, original in snapshot.contents.items():
         dest = destinations[path]
         dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.write_bytes(_rewrite_export_includes(original, path, snapshot.patterns, destinations, by_target))
+        dest.write_bytes(_rewrite_export_includes(original, path, snapshot.patterns, destinations, by_target, repeats))
         written.append(str(dest))
     for dest, document in attachments.items():
         dest.parent.mkdir(parents=True, exist_ok=True)
@@ -1066,12 +1071,14 @@ def _rewrite_export_includes(
     patterns: dict[str, tuple[Path, ...]],
     destinations: dict[Path, Path],
     by_target: dict[str, Path],
+    repeats: set[tuple[str, str, int]],
 ) -> bytes:
     """Rewrite one copied file's includes as portable relative targets.
 
     Local includes follow their files to the new tree, managed URLs become
-    the sibling price files, and anything the loader left unresolved stays
-    byte-identical so stock tools report it the same way.
+    the sibling price files — the first include of each feed; a repeat becomes
+    a comment on its own line, as the load treats it — and anything the loader
+    left unresolved stays byte-identical so stock tools report it the same way.
     """
     from beancount.utils import misc_utils
 
@@ -1083,6 +1090,12 @@ def _rewrite_export_includes(
     for span in sorted(iter_includes(content), key=lambda item: item.start, reverse=True):
         feed = by_target.get(span.target)
         if feed is not None:
+            if (span.target, str(path), span.line) in repeats:
+                # The load keeps a feed's first include and ignores repeats.
+                # Pointing every one at the same local file made a snapshot
+                # stock Beancount refuses as a duplicate filename (w5/100).
+                content = _swap_line(content, span.line, f"{_ALREADY_INCLUDED_LINE}\n".encode())
+                continue
             replacement = f'"{escape_string(os.path.relpath(feed, dest.parent))}"'
             content = content[: span.start] + replacement.encode() + content[span.end :]
             continue
