@@ -35,7 +35,6 @@
 
 ## Inbox
 
-- [093 — A purchase with an omitted cash leg makes every report amount in that currency print the cost's decimals](./093.md) — minor CLI display bug; repeated with an explicit-leg control, 20–30m.
 - [094 — `price export` exits 0 for a ledger with a local plugin, and the snapshot fails stock `bean-check`](./094.md) — minor CLI export bug; repeated with a plugin-free control, 30–40m.
 - [095 — Read commands need a writable ledger directory once the ledger has a managed price include](./095.md) — minor CLI design-adjacent bug with an owner call; repeated against a simulated feed with a no-include control, 30–45m.
 - [096 — A write into a file reached through a `..` include names a nonexistent staging file and `--allow-errors` refuses it](./096.md) — major CLI write bug; repeated with root-write and plain-include controls, 30–45m.
