@@ -35,7 +35,6 @@
 
 ## Inbox
 
-- [101 — `doctor linked` / `region` round the balance tree when the scope mixes whole and fractional amounts](./101.md) — minor CLI display bug with an owner call; remaining half of w3/352, 20–30m.
 - [102 — A `PRINT` query that matches no directives exits 2 and tells the user to "use PRINT"](./102.md) — minor CLI exit-category bug; text and JSON modes disagree, empty `SELECT` control passes, 20–30m.
 - [103 — An invalid regex in a BQL query exits 1 as a ledger validation failure, and only when a row is scanned](./103.md) — minor CLI exit-category bug; escaped-pattern control passes, 30–40m.
 - [104 — `--json query PRINT` emits Python object reprs for `custom` values and `open` booking](./104.md) — minor CLI machine-output bug; `list custom` control shows the clean shape, 30–45m.
