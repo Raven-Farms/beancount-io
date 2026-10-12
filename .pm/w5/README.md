@@ -35,7 +35,6 @@
 
 ## Inbox
 
-- [098 — `add transaction` fills a missing commodity on a cost or priced posting with the operating currency](./098.md) — minor CLI silent-wrong-lot bug with an owner call; cost and price variants repeated with an explicit-commodity control, 20–30m.
 - [099 — BQL `filename` names vanished staging files on every ledger with a managed price include](./099.md) — major CLI silent-wrong-result bug; offline repro repeated with an include-free control, 30–45m.
 - [100 — `price export` of a feed included from two files writes a snapshot that fails `bean-check`](./100.md) — minor CLI export bug against a simulated feed; single-include control passes, 30–40m.
 - [101 — `doctor linked` / `region` round the balance tree when the scope mixes whole and fractional amounts](./101.md) — minor CLI display bug with an owner call; remaining half of w3/352, 20–30m.
