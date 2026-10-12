@@ -35,7 +35,6 @@
 
 ## Inbox
 
-- [103 — An invalid regex in a BQL query exits 1 as a ledger validation failure, and only when a row is scanned](./103.md) — minor CLI exit-category bug; escaped-pattern control passes, 30–40m.
 - [104 — `--json query PRINT` emits Python object reprs for `custom` values and `open` booking](./104.md) — minor CLI machine-output bug; `list custom` control shows the clean shape, 30–45m.
 - [105 — Set-valued query cells change order between identical runs in JSON and CSV](./105.md) — minor CLI determinism bug; repeated across hash seeds, 15–20m.
 
