@@ -168,6 +168,11 @@ its file list included. `--force` is the only way past the second case
 `bea check --cache-filename` follows the first case as well: bean-check
 deletes a cache file it cannot read, so a cache path that is the ledger or one
 of its includes is refused before bean-check runs, with or without `--no-cache`.
+The same holds for `BEANCOUNT_LOAD_CACHE_FILENAME` on every local command that
+loads the ledger — `list`, `query`, `balance`, `report`, `price`, `doctor`,
+`add`, `import` and the rest: a value that resolves to the root or an include is
+refused with exit 2 before the loader starts, and a cache path outside the
+ledger's own files keeps working.
 `price export` also plans the directories it needs: a file standing where the
 export needs a directory (or a directory where it needs a file) is refused the
 same way, and `--force` does not remove it.

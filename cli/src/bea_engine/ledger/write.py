@@ -16,14 +16,14 @@ import time
 import unicodedata
 from collections import Counter
 from collections.abc import Callable, Iterable, Iterator
-from contextlib import ExitStack, contextmanager
+from contextlib import ExitStack, contextmanager, nullcontext
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 from bea_engine import stopping
 from bea_engine.protocol import AuthError, ConflictError, LedgerError, UsageError
-from bea_engine.query import format_error
+from bea_engine.query import format_error, same_file
 
 
 def cache_dir() -> Path:
@@ -244,6 +244,49 @@ def pickle_cache_of(candidate: Path) -> Path:
     return Path(get_cache_filename(pattern, str(candidate)))
 
 
+def _sidecar_of(candidate: Path) -> Path | None:
+    """The cache file that belongs to this staged candidate alone, if any.
+
+    A relocated cache whose name does not vary with the file loaded is the
+    user's shared cache — or, misconfigured, one of the ledger's own files —
+    and is never this candidate's to remove.
+    """
+    cache = pickle_cache_of(candidate)
+    if cache in (candidate, pickle_cache_of(candidate.with_name(f"other-{candidate.name}"))):
+        return None
+    return cache
+
+
+CACHE_ENV = "BEANCOUNT_LOAD_CACHE_FILENAME"
+
+
+def refuse_cache_over_ledger(loaded: Path, members: Iterable[Path]) -> None:
+    """Refuse a relocated pickle cache that is one of the ledger's own files.
+
+    Beancount treats its cache path as disposable: a file there that does not
+    unpickle is removed before the ledger is parsed. So a
+    `BEANCOUNT_LOAD_CACHE_FILENAME` that resolves to the root or an include —
+    by any spelling, a `{filename}` pattern, a symlink or a hard link — made
+    every read delete the books. Checked here, at the one boundary every load
+    crosses, before the loader starts.
+    """
+    pattern = os.getenv(CACHE_ENV)
+    if not pattern:
+        return
+    try:
+        cache = pickle_cache_of(loaded)
+    except (LookupError, ValueError):
+        # A pattern upstream cannot format fails there before anything is removed.
+        return
+    for member in members:
+        if same_file(cache, member):
+            raise UsageError(
+                f"{CACHE_ENV} {pattern} names {member}, a file of the ledger being read. Beancount deletes a "
+                "cache file it cannot read, so this would delete the ledger. Choose a cache path outside the "
+                "ledger's own files. Nothing was changed."
+            )
+
+
 def sweep_abandoned_candidates(directory: Path) -> None:
     """Remove staging files an interrupted write could not remove itself.
 
@@ -372,9 +415,11 @@ def candidate_file(file: Path, content: str, *, mode: int = 0o600) -> Iterator[P
                     "bea validates a write on a staged copy beside each changed file; make the directory "
                     "writable before retrying. Nothing was written."
                 ) from exc
+            sidecar: Path | None = None
             try:
                 # The sidecar's name may import Beancount, so it is registered second.
-                with stopping.staged(pickle_cache_of(candidate)):
+                sidecar = _sidecar_of(candidate)
+                with stopping.staged(sidecar) if sidecar else nullcontext():
                     # Preserve the supplied bytes: Windows newline translation would turn
                     # existing CRLF into CRCRLF on every append.
                     with os.fdopen(fd, "w", encoding="utf-8", newline="") as stream:
@@ -384,7 +429,8 @@ def candidate_file(file: Path, content: str, *, mode: int = 0o600) -> Iterator[P
                     yield candidate
             finally:
                 candidate.unlink(missing_ok=True)
-                pickle_cache_of(candidate).unlink(missing_ok=True)
+                if sidecar:
+                    sidecar.unlink(missing_ok=True)
             return
 
 
@@ -634,6 +680,9 @@ def validate_candidate(
 
     from bea_engine import managed_load
 
+    # The staged copy has a private name, so the guard inside the load would
+    # name that; a `{filename}` cache pattern is about the ledger file itself.
+    refuse_cache_over_ledger(file, snapshot.contents if snapshot else [file])
     if snapshot is None:
         entries, errors, options = managed_load.load_file(candidate)
         filenames = {candidate: file}

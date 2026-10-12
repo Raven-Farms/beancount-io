@@ -249,7 +249,7 @@ def _loaded_files(root: Path, context: Any) -> list[Path]:
     return files
 
 
-def _same_file(left: Path, right: Path) -> bool:
+def same_file(left: Path, right: Path) -> bool:
     """True when two paths name one file, through symlinks and hard links alike."""
     try:
         first, second = left.stat(), right.stat()
@@ -265,7 +265,7 @@ def _same_file(left: Path, right: Path) -> bool:
 def _find_alias(destination: Path, root: Path, context: Any) -> Path | None:
     """The ledger file a destination would overwrite, or None when it is safe."""
     for member in _loaded_files(root, context):
-        if _same_file(destination, member):
+        if same_file(destination, member):
             return member
     return None
 

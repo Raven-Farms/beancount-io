@@ -267,7 +267,12 @@ def _load_with_sources(
     from beancount import loader
     from beancount.loader import LoadError
 
-    from bea_engine.ledger.write import LedgerSnapshot, candidate_file, is_candidate_file
+    from bea_engine.ledger.write import (
+        LedgerSnapshot,
+        candidate_file,
+        is_candidate_file,
+        refuse_cache_over_ledger,
+    )
 
     _record_plugin_configs(loader)
 
@@ -280,6 +285,7 @@ def _load_with_sources(
     cache = root or cache_root()
 
     snapshot = snapshot or LedgerSnapshot.capture(entry)
+    refuse_cache_over_ledger(entry, snapshot.contents)
     managed = _collect_managed(snapshot, allowed_origins)
     if not managed and all(state is not None for state in snapshot.stats.values()):
         entries, errors, options = _load_fresh(entry, snapshot)

@@ -394,6 +394,11 @@ def _register(op: str) -> None:
     )
     def _cmd(ctx: typer.Context) -> None:
         assert forwarder is not None
+        # Every operation that loads its ledger starts upstream's loader, which
+        # deletes an unreadable file at the cache path the environment names.
+        positionals = _positionals(list(ctx.args))
+        if positionals and Path(positionals[0]).is_file():
+            output.refuse_cache_over_ledger(Path(positionals[0]))
         forwarder(ctx)
 
 

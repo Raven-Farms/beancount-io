@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 import re
 import unicodedata
 from pathlib import Path
@@ -71,20 +70,15 @@ def check(ctx: typer.Context) -> None:
 
 
 _CACHE_FLAG = "--cache-filename"
-_CACHE_ENV = "BEANCOUNT_LOAD_CACHE_FILENAME"
 
 
 def _refuse_cache_over_ledger(file: Path, args: list[str]) -> None:
-    """Refuse a load-cache path that is one of the ledger's own files.
+    """Apply the load-cache guard to `--cache-filename`, last one winning as upstream reads it.
 
-    Upstream's loader treats the cache path as disposable: a file there that
-    does not unpickle is removed before the ledger is read, and `--no-cache`
-    removes it unconditionally. Naming the root or an include — by any
-    spelling, a `{filename}` pattern, a symlink or a hard link — therefore
-    deleted the books during a validation. The path is derived exactly as
-    `beancount.loader.get_cache_filename` derives it and compared by identity.
+    `--no-cache` removes the cache path unconditionally, so the guard holds
+    with or without it; the environment default applies when no flag is given.
     """
-    pattern, source = None, _CACHE_FLAG
+    pattern = None
     index = 0
     while index < len(args) and args[index] != "--":
         if args[index] == _CACHE_FLAG and index + 1 < len(args):
@@ -93,23 +87,7 @@ def _refuse_cache_over_ledger(file: Path, args: list[str]) -> None:
         elif args[index].startswith(f"{_CACHE_FLAG}="):
             pattern = args[index].split("=", 1)[1]
         index += 1
-    if not pattern:
-        pattern, source = os.environ.get(_CACHE_ENV), _CACHE_ENV
-    if not pattern:
-        return
-    try:
-        cache = Path(os.path.join(os.path.dirname(os.path.abspath(file)), pattern).format(filename=file.name))
-        members = output.ledger_closure(file)
-    except (OSError, LookupError, ValueError):
-        # A pattern upstream cannot format fails there before anything is removed.
-        return
-    for member in members:
-        if output.same_file(cache, member):
-            raise UsageError(
-                f"{source} {pattern} names {member}, a file of the ledger being checked. bean-check deletes a "
-                "cache file it cannot read, so this would delete the ledger. Choose a cache path outside the "
-                "ledger's own files. Nothing was changed."
-            )
+    output.refuse_cache_over_ledger(file, pattern, _CACHE_FLAG)
 
 
 def _closure_needs_compat(file: Path) -> tuple[str, str] | None:
