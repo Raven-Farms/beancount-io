@@ -253,7 +253,11 @@ def check_native(
         traceback_text: str | None = diagnostic or None
     else:
         details, traceback_text = tail[:-1], None
-    raise BeaError(
+    # Status 2 is the usage status of both Click and argparse: a bad option or
+    # argument to the upstream program is the caller's, not the ledger's, and
+    # the message already quotes that status (w5/089).
+    error = UsageError if completed.returncode == 2 and traceback_text is None else BeaError
+    raise error(
         f"{name} failed (exit {completed.returncode}): {reason}",
         details=details,
         result=result,
