@@ -826,9 +826,14 @@ def _require_entries(description: Any, rows: Any) -> None:
     )
 
 
+def _source_location(entry: Any) -> tuple[Any, Any]:
+    meta = getattr(entry, "meta", None) or {}
+    return (meta.get("filename"), meta.get("lineno"))
+
+
 def _render_beancount(rows: Any, out: TextIO) -> None:
     """Use the writer's syntax fixes with upstream's grouping and exact precision."""
-    from beancount.core.data import Commodity, Transaction
+    from beancount.core.data import Commodity, Pad, Transaction
     from beancount.core.display_context import DisplayContext
 
     from bea_engine.ledger.writer import DirectivePrinter
@@ -836,6 +841,17 @@ def _render_beancount(rows: Any, out: TextIO) -> None:
     # Like upstream's Beancount renderer, a fresh display context retains each
     # number's natural precision instead of rounding to a result-column width.
     printer = DirectivePrinter(DisplayContext())  # type: ignore[no-untyped-call]
+    # Beancount synthesizes a `P` transaction at each used pad's own location.
+    # Printed beside the pad that produced it, the reloaded export books the
+    # padding twice over and reports that pad unused, so the export of a valid
+    # ledger failed `check` (w5/085). The pad derives it again on reload; a
+    # padding transaction selected without its pad is still printed.
+    pads = {_source_location(entry) for (entry,) in rows if isinstance(entry, Pad)}
+    rows = [
+        (entry,)
+        for (entry,) in rows
+        if not (isinstance(entry, Transaction) and entry.flag == "P" and _source_location(entry) in pads)
+    ]
     previous_type = type(rows[0][0]) if rows else None
     for (entry,) in rows:
         entry_type = type(entry)
