@@ -1282,7 +1282,10 @@ include is rewritten relative. `document` attachments under the root's
 directory are copied to the same relative place, under the name the
 directive uses — a path through a symlinked file or folder becomes a plain
 copy at that path; one outside that tree (including a symlink pointing out of
-it), or named by an absolute path, refuses the export before anything is written. An
+it), or named by an absolute path, refuses the export before anything is written.
+With `option "insert_pythonpath"`, a plugin module or package that sits beside
+the root ledger is copied to the same relative place too, so the snapshot's
+`plugin` lines still resolve; a plugin installed elsewhere is not copied. An
 unavailable source refuses the export unless `--allow-errors` carries its
 marker alone. The destination follows
 [Output destinations](#output-destinations): a file already at any path the

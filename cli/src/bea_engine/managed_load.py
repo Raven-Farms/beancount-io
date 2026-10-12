@@ -799,6 +799,7 @@ def export_portable(
     # link no path comparison can see — would be written straight through
     # into the books, so identity is compared, not spelling.
     attachments = _export_attachments(loaded, snapshot, destinations, target, home)
+    attachments.update(_export_plugin_modules(loaded, snapshot, target))
     planned = [*destinations.values(), *feed_files.values(), *attachments]
     for dest in planned:
         if not dest.exists():
@@ -966,6 +967,36 @@ def _export_attachments(
             + ". Keep documents beside the ledger and name them by relative path. Nothing was written."
         )
     return attachments
+
+
+def _export_plugin_modules(loaded: LoadedLedger, snapshot: LedgerSnapshot, target: Path) -> dict[Path, Path]:
+    """Where each plugin module that lives beside the ledger goes in the export.
+
+    `option "insert_pythonpath"` puts the root's directory on the module path,
+    so `plugin "myplug"` may name a `myplug.py` — or a package — sitting next
+    to `main.bean`. The export copied the ledger text and not the module, so
+    it reported success for a snapshot stock `bean-check` could not load
+    (w5/094). Such a module travels to the same relative place, where the
+    copied option finds it again; a plugin installed elsewhere is not the
+    export's to carry. Keyed by destination like the document attachments,
+    so the same collision and overwrite rules apply.
+    """
+    if not loaded.options.get("insert_pythonpath"):
+        return {}
+    home = snapshot.root.parent
+    modules: dict[Path, Path] = {}
+    for name, _config in loaded.options.get("plugin") or []:
+        top = str(name).split(".", 1)[0]
+        module, package = home / f"{top}.py", home / top
+        if package.is_dir():
+            sources = [path for path in sorted(package.rglob("*.py")) if "__pycache__" not in path.parts]
+        elif module.is_file():
+            sources = [module]
+        else:
+            continue
+        for source in sources:
+            modules[target / source.relative_to(home)] = source
+    return modules
 
 
 def _free_feed_path(directory: Path, alias: str, taken: set[Path]) -> Path:
