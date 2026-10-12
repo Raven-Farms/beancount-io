@@ -35,7 +35,6 @@
 
 ## Inbox
 
-- [069 — Format check and in-place formatting fail on every ledger with a managed price include](./069.md) — major CLI gate bug; `--check`, `-i`, `--dry-run` and JSON repeated offline with a local-include control, 30–45m.
 - [070 — `list price --on-disk` returns managed-feed prices that no ledger file contains](./070.md) — minor CLI listing bug; text and JSON repeated against a simulated loopback feed with a plugin control, 25–40m.
 - [071 — Format resolves a missing include against the working directory and rewrites the wrong file](./071.md) — major CLI gate and write-scope bug; false-green `--check` and an unrelated-file rewrite repeated with a clean-directory control, 30–45m.
 - [072 — An export written into a directory an include glob matches silently joins the ledger](./072.md) — major CLI wrong-balance bug; doubled balance with passing check repeated, five louder variants and three controls, 45–60m.
