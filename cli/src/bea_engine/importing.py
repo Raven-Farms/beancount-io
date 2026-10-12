@@ -675,6 +675,28 @@ def _known_currencies(existing: list[Any], operating: list[str]) -> frozenset[st
     return frozenset(currency for currency in known if isinstance(currency, str))
 
 
+def _posting_currency(posting: Any, entry: Any) -> str | None:
+    """The currency a posting carries, or the one Beancount will infer for an amountless leg.
+
+    An importer may leave the categorized leg without an amount. Interpolation
+    fills it with the balancing weight, so its currency is the single weight
+    currency of the other legs; with several, it cannot be told before booking.
+    """
+    if posting.units is not None:
+        return str(posting.units.currency)
+    weights = set()
+    for other in entry.postings:
+        if other.units is None:
+            continue
+        if other.cost is not None and getattr(other.cost, "currency", None):
+            weights.add(other.cost.currency)
+        elif other.price is not None:
+            weights.add(other.price.currency)
+        else:
+            weights.add(other.units.currency)
+    return str(next(iter(weights))) if len(weights) == 1 else None
+
+
 def _blocked_reason(entry: Any, open_currencies: dict[str, set[str] | None], roots: tuple[str, ...]) -> str | None:
     """Why a transaction cannot be written, or None when its accounts allow it.
 
@@ -690,27 +712,32 @@ def _blocked_reason(entry: Any, open_currencies: dict[str, set[str] | None], roo
     if missing:
         remedies = []
         for name in missing:
-            currency = next(p.units.currency for p in entry.postings if p.account == name)
+            currency = next(
+                (found for p in entry.postings if p.account == name and (found := _posting_currency(p, entry))), None
+            )
             # Quoted so the line survives a paste into a shell. Valid account
             # names hold no spaces, so this is belt-and-braces now that invalid
             # names are refused up front — but a suggestion that only sometimes
             # pastes cleanly is worse than one that always does.
-            remedies.append(f"bea add open --account {shlex.quote(name)} --date {entry.date.isoformat()} -c {currency}")
+            constraint = f" -c {currency}" if currency else ""
+            remedies.append(f"bea add open --account {shlex.quote(name)} --date {entry.date.isoformat()}{constraint}")
         quoted = ", ".join(f"'{name}'" for name in missing)
         noun = "Account" if len(missing) == 1 else "Accounts"
         verb = "is" if len(missing) == 1 else "are"
         return f"{noun} {quoted} {verb} not open. Run: {'; '.join(remedies)}."
     for posting in entry.postings:
         allowed = open_currencies.get(posting.account)
-        if allowed is not None and posting.units.currency not in allowed:
+        currency = _posting_currency(posting, entry)
+        # A currency that cannot be told before booking is validation's to judge.
+        if allowed is not None and currency is not None and currency not in allowed:
             choices = ", ".join(sorted(allowed))
             instead = choices if len(allowed) == 1 else f"one of {choices}"
             # Widening the open directive is the last remedy offered, not the
             # first: following it relabels foreign money as the wrong commodity.
             return (
-                f"Cannot post {posting.units.currency} to '{posting.account}' "
+                f"Cannot post {currency} to '{posting.account}' "
                 f"(open for {choices} only). Post {instead} instead — name the row's commodity with "
-                f"--csv currency=CODE — or add {posting.units.currency} to its open directive."
+                f"--csv currency=CODE — or add {currency} to its open directive."
             )
     return None
 
