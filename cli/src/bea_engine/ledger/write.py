@@ -79,7 +79,12 @@ class LedgerSnapshot:
             content = snapshot.contents[path] = path.read_bytes()
             for _, _, name in _includes(content):
                 pattern = str(path.parent / name)
-                matches = tuple(sorted(Path(p).absolute() for p in glob.glob(pattern, recursive=True)))
+                # Normalized the way the loader names an included file —
+                # `normpath`, without resolving links. Left as `2026/../shared`,
+                # a member's key never matched the name errors came back under,
+                # so messages quoted the staged copy and an error already in
+                # that file read as newly introduced (w5/096).
+                matches = _glob_members(pattern)
                 snapshot.patterns[pattern] = matches
                 pending.extend(matches)
         return snapshot
@@ -139,7 +144,7 @@ class LedgerSnapshot:
             if changed:
                 raise ConflictError(f"The ledger changed during the operation: {path}. Nothing was written; retry.")
         for pattern, before_paths in self.patterns.items():
-            current_paths = tuple(sorted(Path(p).absolute() for p in glob.glob(pattern, recursive=True)))
+            current_paths = _glob_members(pattern)
             existing_paths = tuple(path for path in before_paths if self.stats[path] is not None)
             missing_still_included = all(
                 _included_new_file(path, pattern) for path in before_paths if self.stats[path] is None
@@ -185,6 +190,11 @@ class LedgerSnapshot:
                         content = content[:start] + replacement.encode() + content[end:]
                 staged.write_bytes(content)
             yield paths[self.root], {staged: original for original, staged in paths.items()}
+
+
+def _glob_members(pattern: str) -> tuple[Path, ...]:
+    """The files an include pattern matches now, each named as the loader names it."""
+    return tuple(sorted(Path(os.path.normpath(os.path.abspath(p))) for p in glob.glob(pattern, recursive=True)))
 
 
 def staged_include(stack: ExitStack, includer: Path, targets: Sequence[Path]) -> str:
