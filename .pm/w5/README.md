@@ -35,7 +35,6 @@
 
 ## Inbox
 
-- [080 — `add custom --value account:…` is always refused on a ledger with renamed root accounts](./080.md) — major CLI write bug; refusal repeated with default-root and other-directive controls, 30–45m.
 - [081 — `--allow-errors` lets a write introduce an Unused Pad error and still exit 0](./081.md) — major CLI exit-contract bug; two shapes leave `check` failing, repeated with flag-free controls, 30–45m.
 - [082 — `--meta` drops a leading `#` from a text value and misreports a `name:` value as a bad key](./082.md) — minor CLI metadata bug; silent alteration and false refusal repeated with quoted and bulk controls, 20–30m.
 - [083 — Report balance series leave out `U`-flagged transactions that the headline includes](./083.md) — major CLI wrong-number bug; headline and series disagree, checked against BQL with a `!` control, 30m.
