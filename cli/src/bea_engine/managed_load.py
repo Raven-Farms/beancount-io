@@ -622,13 +622,30 @@ def _swap_line(content: bytes, line: int, replacement: bytes) -> bytes:
 
 
 def _remap_entry(entry: Any, back: dict[str, str]) -> Any:
-    meta = getattr(entry, "meta", None)
+    """Name the original file wherever an entry — or one of its postings — names a staged twin.
+
+    A posting carries its own source location, and Beanquery's postings table
+    reads `filename` from it. Left on the staged copy, `SELECT filename` named
+    a `.bea-*.tmp` file that changed every run and was gone when the command
+    returned, so a query filtering or grouping by source file silently matched
+    nothing (w5/099).
+    """
+    postings = getattr(entry, "postings", None)
+    if postings:
+        remapped = [_remap_meta(posting, back) for posting in postings]
+        if any(new is not old for new, old in zip(remapped, postings, strict=True)):
+            entry = entry._replace(postings=remapped)
+    return _remap_meta(entry, back)
+
+
+def _remap_meta(item: Any, back: dict[str, str]) -> Any:
+    meta = getattr(item, "meta", None)
     if not isinstance(meta, dict) or "filename" not in meta:
-        return entry
+        return item
     mapped = _remap(str(meta["filename"]), back)
     if mapped == meta["filename"]:
-        return entry
-    return entry._replace(meta={**meta, "filename": mapped})
+        return item
+    return item._replace(meta={**meta, "filename": mapped})
 
 
 def _remap_error(error: Any, back: dict[str, str]) -> Any:
