@@ -35,7 +35,6 @@
 
 ## Inbox
 
-- [073 — A flag-free `import --apply` drops options typed on the remembered preview and writes different rows](./073.md) — major CLI import bug; wrong dates written after a reviewed preview, repeated with a full-mapping control, 45–60m.
 - [074 — Import crashes on an importer row whose counter-posting has no amount](./074.md) — major CLI importer crash; restricted and unopened counter accounts repeated with an unrestricted control, 20–30m.
 - [075 — Import silently skips a later row that repeats an inferred bank reference, and says it is already in the ledger](./075.md) — major CLI missing-transaction bug with an identity-policy owner call; repeated with a renamed-header control, 30–45m.
 - [076 — The `add open` remedy for blocked import rows is dated per row, so the first one dead-ends a newest-first export](./076.md) — minor CLI onboarding bug; three-step journey repeated with an earliest-date control, 20–30m.
