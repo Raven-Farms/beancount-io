@@ -144,7 +144,9 @@ Rows that would post to an account the ledger never opened — or a currency
 the open directive disallows — are shown `blocked`, not ready: the row names
 the missing account and the `bea add open` line that fixes it, stays in the
 diff so the proposal stays visible, and `--apply` refuses with exit **4**
-while any row is blocked. A currency mismatch offers the currency setting
+while any row is blocked. Every row blocked on the same account prints the same
+line — dated for the earliest row of the import that posts there and allowing
+each currency the import posts — so running it once unblocks them all. A currency mismatch offers the currency setting
 first and widening the `open` directive last: widening it would book the
 foreign amounts as the wrong commodity. An account under a root the ledger
 does not use (`Foo:Bar`; the roots are its `name_*` options) can never be

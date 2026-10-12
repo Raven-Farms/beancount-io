@@ -263,6 +263,7 @@ def answer(
     hashed = _hash_rows(entries, account, keys, Transaction)
     claimed = _claim_payeeless_ids(hashed, identities, account)
     batch_rows: dict[int, int] = {}
+    first_uses = _first_uses(entries, Transaction)
     for index, entry in enumerate(entries):
         entry = normalize_entry_strings(entry)
         status, reason, match = "new", None, None
@@ -377,7 +378,7 @@ def answer(
             other_entries.add(text)
         include = status == "new" or (status == "possible_duplicate" and duplicates == "include")
         if include and isinstance(entry, Transaction):
-            blocked_reason = _blocked_reason(entry, open_currencies, roots)
+            blocked_reason = _blocked_reason(entry, open_currencies, roots, first_uses)
             if blocked_reason is not None:
                 status, reason, include = "blocked", blocked_reason, False
         if include:
@@ -714,13 +715,44 @@ def _posting_currency(posting: Any, entry: Any) -> str | None:
     return str(next(iter(weights))) if len(weights) == 1 else None
 
 
-def _blocked_reason(entry: Any, open_currencies: dict[str, set[str] | None], roots: tuple[str, ...]) -> str | None:
+def _first_uses(entries: list[Any], transaction: Any) -> dict[str, tuple[Any, list[str] | None]]:
+    """Per account, the earliest date any row of this import posts to it, and the currencies posted.
+
+    A blocked row's `add open` remedy has to fix the import it was printed
+    for. Dated per row, the first suggestion of a newest-first export opened
+    the account after the older rows, and the retry failed on an inactive
+    account that only a hand edit could clear (w5/076). The currencies are
+    None when any posting's cannot be told before booking.
+    """
+    uses: dict[str, tuple[Any, list[str] | None]] = {}
+    for entry in entries:
+        if not isinstance(entry, transaction):
+            continue
+        for posting in entry.postings:
+            currency = _posting_currency(posting, entry)
+            date, currencies = uses.get(posting.account, (entry.date, []))
+            if currency is None or currencies is None:
+                currencies = None
+            elif currency not in currencies:
+                currencies = [*currencies, currency]
+            uses[posting.account] = (min(date, entry.date), currencies)
+    return uses
+
+
+def _blocked_reason(
+    entry: Any,
+    open_currencies: dict[str, set[str] | None],
+    roots: tuple[str, ...],
+    first_uses: dict[str, tuple[Any, list[str] | None]],
+) -> str | None:
     """Why a transaction cannot be written, or None when its accounts allow it.
 
     Names each unopened account with the `bea add open` line that fixes it,
-    and each currency the account's open directive does not allow. An account
-    under a root the ledger does not use (from a Python importer) gets no
-    `add open` remedy: that command would refuse it too.
+    and each currency the account's open directive does not allow. The line is
+    one command per account, dated and constrained for every row of the import
+    that posts there. An account under a root the ledger does not use (from a
+    Python importer) gets no `add open` remedy: that command would refuse it
+    too.
     """
     missing = sorted({posting.account for posting in entry.postings if posting.account not in open_currencies})
     foreign = [name for name in missing if name.split(":", 1)[0] not in roots]
@@ -729,15 +761,13 @@ def _blocked_reason(entry: Any, open_currencies: dict[str, set[str] | None], roo
     if missing:
         remedies = []
         for name in missing:
-            currency = next(
-                (found for p in entry.postings if p.account == name and (found := _posting_currency(p, entry))), None
-            )
+            opened, currencies = first_uses.get(name, (entry.date, None))
             # Quoted so the line survives a paste into a shell. Valid account
             # names hold no spaces, so this is belt-and-braces now that invalid
             # names are refused up front — but a suggestion that only sometimes
             # pastes cleanly is worse than one that always does.
-            constraint = f" -c {currency}" if currency else ""
-            remedies.append(f"bea add open --account {shlex.quote(name)} --date {entry.date.isoformat()}{constraint}")
+            constraint = "".join(f" -c {currency}" for currency in sorted(currencies or ()))
+            remedies.append(f"bea add open --account {shlex.quote(name)} --date {opened.isoformat()}{constraint}")
         quoted = ", ".join(f"'{name}'" for name in missing)
         noun = "Account" if len(missing) == 1 else "Accounts"
         verb = "is" if len(missing) == 1 else "are"
