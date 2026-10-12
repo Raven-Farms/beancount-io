@@ -903,16 +903,24 @@ def _parse_metadata(items: list[str]) -> dict[str, Any]:
         entries, errors, _ = parser.parse_string(f'2000-01-01 * ""\n  {key}: {parsed_raw}\n')
         errors = without_root_name_errors(errors)
         if not errors and len(entries) == 1 and isinstance(entries[0], Transaction) and key in entries[0].meta:
-            metadata[key] = entries[0].meta[key]
+            value = entries[0].meta[key]
+            # Only the documented kinds keep the parser's reading. Unquoted
+            # text the lexer happens to recognize — `#1042` as a tag, `NULL`,
+            # an account — is still the text that was typed: taking the parsed
+            # value dropped the `#` from a check number (w5/082).
+            metadata[key] = raw if not raw.startswith('"') and (value is None or isinstance(value, str)) else value
         elif raw.startswith('"'):
             raise protocol.UsageError(
                 f"Invalid --meta {key!r}; close the quoted string or supply a bare value such as '{key}:hello'.",
                 details=[str(error.message) for error in errors],
             )
-        elif errors and any(f"{key}:" in str(error.message) for error in errors):
+        elif errors and (key_errors := parser.parse_string(f'2000-01-01 * ""\n  {key}: "x"\n')[1]):
+            # Judged on the key alone, with a value that cannot fail: testing
+            # for `key:` inside the message blamed the key `name` for any
+            # value Beancount reported as an "Invalid account name: …".
             raise protocol.UsageError(
-                f"Invalid --meta key {key!r}; Beancount rejected it ({errors[0].message}).",
-                details=[str(error.message) for error in errors],
+                f"Invalid --meta key {key!r}; Beancount rejected it ({key_errors[0].message}).",
+                details=[str(error.message) for error in key_errors],
             )
         elif re.fullmatch(r"[0-9]{4}[-/][0-9]{1,2}[-/][0-9]{1,2}", raw):
             # Beancount's date grammar: a slash or unpadded spelling of an
