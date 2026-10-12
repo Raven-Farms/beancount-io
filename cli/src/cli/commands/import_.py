@@ -260,6 +260,17 @@ def _recall_csv(file: Path, source: Path, account: str | None = None, *, notes: 
     return entry
 
 
+def _reads_header(source: Path, delimiter: str, headers: Any) -> bool:
+    """Whether a remembered delimiter still reads this file's header as the remembered one."""
+    from cli.csv_mapper import header_signature, probe_decoding, read_header
+
+    try:
+        found = read_header(source, delimiter=delimiter, encoding=probe_decoding(source))
+    except (UsageError, OSError):
+        return False
+    return found is not None and header_signature(found) == header_signature(headers)
+
+
 def _remember_csv(file: Path, spec: dict[str, Any]) -> bool:
     """Persist captured settings without re-reading a source already imported."""
     from cli.csv_mapper import header_signature
@@ -391,6 +402,16 @@ def import_entries(
     # row without sharing a date convention.
     chosen_date_format = date_format
     chosen_default_account = default_account
+    # Likewise a delimiter: one detected for this file belongs to this file,
+    # and forcing it onto the next export sharing the header refused a re-save
+    # with another separator for "lacking" a column it plainly had (w5/077).
+    chosen_delimiter = flag_delimiter
+    if chosen_delimiter is None and csv_mapping is not None and csv_mapping.strip().casefold() != "auto":
+        try:
+            chosen_delimiter = parse_mapping(csv_mapping).delimiter
+        except UsageError:
+            chosen_delimiter = None
+    carried_delimiter = chosen_delimiter
     if csv_request is not None and csv_request.strip().casefold() == "auto":
         csv_request = _inferred_mapping(
             source, explicit=True, notes=inferred_notes, delimiter=csv_delimiter, encoding=csv_encoding
@@ -436,8 +457,29 @@ def import_entries(
             if date_format is None and isinstance(remembered.get("date_format"), str):
                 date_format = remembered["date_format"]
                 recalled_date_format = remembered["date_format"]
-            if csv_delimiter is None and isinstance(remembered.get("delimiter"), str):
-                csv_delimiter = remembered["delimiter"]
+            # Older records also kept a detected separator inside the mapping.
+            stored_delimiter = remembered.get("delimiter")
+            try:
+                recalled_spec = parse_mapping(csv_request)
+            except UsageError:
+                recalled_spec = None
+            if recalled_spec is not None:
+                stored_delimiter = stored_delimiter or recalled_spec.delimiter
+                if recalled_spec.encoding is not None:
+                    # Detection below decodes the file, so the remembered
+                    # decoding has to be in force before it runs.
+                    csv_encoding = recalled_spec.encoding
+            csv_request = _strip_spec_keys(csv_request, {"delimiter"})
+            if csv_delimiter is None and isinstance(stored_delimiter, str):
+                # Re-validated per file: the header matched under detection, so
+                # a remembered separator that reads it differently is stale.
+                if _reads_header(source, stored_delimiter, remembered.get("headers")):
+                    csv_delimiter = carried_delimiter = stored_delimiter
+                else:
+                    recall_notes.append(
+                        f"Remembered --delimiter {_display_delimiter(stored_delimiter)} does not read "
+                        f"{source.name}; detected its separator instead."
+                    )
             # An option typed on a recalled run wins for this run, so it must
             # also be what the next flag-free run replays: otherwise `--apply`
             # recomputes without it and writes rows nobody reviewed (w5/073).
@@ -453,13 +495,13 @@ def import_entries(
                 if value is not None and remembered.get(key) != value
             }
             if updates:
-                shown = {"\t": "tab"}
                 changes = []
                 for key, (flag, value) in updates.items():
-                    change = f"{flag} {shown.get(value, value)}"
+                    show = _display_delimiter if key == "delimiter" else str
+                    change = f"{flag} {show(value)}"
                     prior_value = remembered.get(key)
                     if isinstance(prior_value, str):
-                        change += f" (was {shown.get(prior_value, prior_value)})"
+                        change += f" (was {show(prior_value)})"
                     changes.append(change)
                 csv_to_remember = {**remembered, **{key: value for key, (_, value) in updates.items()}}
                 discarded_note = (
@@ -587,8 +629,8 @@ def import_entries(
                 settings.append(f"--rules {csv_rules_arg}")
             if default_account is not None:
                 settings.append(f"--default-account {default_account}")
-            if csv_delimiter is not None and csv_delimiter != ",":
-                settings.append(f"--delimiter {_display_delimiter(csv_delimiter)}")
+            if carried_delimiter is not None:
+                settings.append(f"--delimiter {_display_delimiter(carried_delimiter)}")
             if csv_encoding != "utf-8":
                 settings.append(f"--csv encoding={csv_encoding}")
             if recalled_source is not None and recalled_source != source.name:
@@ -622,7 +664,8 @@ def import_entries(
         if not remembered_run:
             # Sign is never remembered: a ledger-signed export must not flip
             # a later bank-signed file that merely shares its headers.
-            stored_mapping = _strip_spec_keys(csv_request or "", {"sign"})
+            # Nor a separator, which travels in its own field and only when chosen.
+            stored_mapping = _strip_spec_keys(csv_request or "", {"sign", "delimiter"})
             try:
                 from cli.csv_mapper import read_header
 
@@ -660,7 +703,7 @@ def import_entries(
                 "rules": str(csv_rules_arg) if csv_rules_arg is not None else None,
                 "default_account": default_account,
                 "date_format": chosen_date_format,
-                "delimiter": csv_delimiter,
+                "delimiter": chosen_delimiter,
                 # Sign itself is never remembered; only which file it was
                 # chosen for, so replaying that file cannot flip its sign.
                 "sign_ledger_sha256": _source_sha256(source) if mapping.sign == "ledger" else None,
@@ -707,7 +750,7 @@ def import_entries(
                 "source": recalled_source,
                 "account": csv_run_account,
                 "date_format": date_format,
-                "delimiter": csv_delimiter,
+                "delimiter": carried_delimiter,
                 "encoding": csv_encoding,
                 "rules": str(csv_rules_arg) if csv_rules_arg is not None else None,
                 "default_account": default_account,

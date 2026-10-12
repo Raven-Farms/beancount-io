@@ -227,7 +227,9 @@ bea --file books/main.bean import category.csv --csv date=Date,amount=Amount,nar
 
 The mapping is remembered per root ledger, CSV header row, and source account,
 along with the `--rules` path, `--default-account`, an explicit
-`--date-format`, and the delimiter — but never `sign=`, which a different file
+`--date-format`, and a delimiter you passed (`--delimiter` or `delimiter=`; a
+detected one is re-detected for each file, and a remembered one that no longer
+reads the header gives way to detection with a note) — but never `sign=`, which a different file
 always needs passed explicitly. The one exception keeps a preview honest: after
 `sign=ledger`, a flag-free `--apply` of the byte-identical file re-applies it
 and says so; another file sharing the header is read bank-signed, with a note
