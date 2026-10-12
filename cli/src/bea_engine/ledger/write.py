@@ -676,7 +676,12 @@ def unknown_account_is_normalization(account: str, accounts: Iterable[str]) -> s
 
 
 def validate_candidate(
-    candidate: Path, file: Path, *, allow_errors: bool = False, snapshot: LedgerSnapshot | None = None
+    candidate: Path,
+    file: Path,
+    *,
+    allow_errors: bool = False,
+    snapshot: LedgerSnapshot | None = None,
+    stages_pad: bool = False,
 ) -> list[str]:
     """Refuse a candidate that fails validation, naming what it would break.
 
@@ -687,7 +692,11 @@ def validate_candidate(
     rejects for reasons absent before it. Three categories always refuse, flag
     or no flag: syntax errors, pad references to unknown or inactive accounts,
     and newly introduced errors. The one carve-out is a newly staged pad,
-    whose `Unused Pad` the documented two-step pad-then-balance flow needs.
+    whose `Unused Pad` the documented two-step pad-then-balance flow needs:
+    `stages_pad` says the request appends nothing but pads, and only an unused
+    pad inside that appended text is exempt. Any other write that leaves a pad
+    unused — its own alongside a balance, or one that was valid before —
+    introduced an error like any other (w5/081).
     """
     from beancount.core import interpolate
     from beancount.core.data import Balance, Close, Document, Open, Pad, Transaction
@@ -736,13 +745,14 @@ def validate_candidate(
         # before-error, so duplicates are only tolerated while they last.
         # A staged pad's `Unused Pad` is the documented carve-out — the
         # two-step pad-then-balance flow cannot start without it.
+        appended = isinstance(lineno, int) and lineno > original_line_counts.get(source.resolve(), lineno)
         is_new = False
         if before_keys is not None:
             key = _error_key(error, filenames)
             if before_keys[key] > 0:
                 before_keys[key] -= 1
             else:
-                is_new = "Unused Pad" not in getattr(error, "message", "")
+                is_new = not (stages_pad and appended and "Unused Pad" in getattr(error, "message", ""))
         introduced.append(is_new)
         # Candidate validation invents line numbers past EOF when the append
         # is rejected. Do not send agents to a line that will not exist.
@@ -816,7 +826,7 @@ def validate_candidate(
             )
         if "Unused Pad" in message:
             pad_entry = error.entry if isinstance(error.entry, Pad) else None
-            message += _unused_pad_hint(pad_entry, entries, errors, filenames)
+            message += _unused_pad_hint(pad_entry, entries, errors, filenames, appended=appended)
         elif isinstance(error.entry, Balance) and "Balance failed" in error.message:
             if allow_errors:
                 hints.append(
@@ -862,7 +872,9 @@ def validate_candidate(
     return messages
 
 
-def _unused_pad_hint(pad: Any, entries: list[Any], errors: list[Any], filenames: dict[Path, Path]) -> str:
+def _unused_pad_hint(
+    pad: Any, entries: list[Any], errors: list[Any], filenames: dict[Path, Path], *, appended: bool = True
+) -> str:
     """Why Beancount found nothing for this pad to fill, as a next step.
 
     Beancount applies a pad to the first assertion in each currency that
@@ -915,6 +927,15 @@ def _unused_pad_hint(pad: Any, entries: list[Any], errors: list[Any], filenames:
                 f"{_location(first, filenames)} already holds and consumes it, so the {balance.date} assertion "
                 f"stays unpadded. Date the pad after {first.date}."
             )
+    if not appended:
+        # A pad already in the books, orphaned by this write: no option of the
+        # command at hand put it there, so `--pad-from` advice does not apply.
+        first = reached[0]
+        return (
+            f" With this change the book balance already matches the {first.date} assertion at "
+            f"{_location(first, filenames)}, so this existing pad would have nothing to fill. "
+            "Remove that pad first, or leave the balance to it."
+        )
     return " Book balance already matches the assertion; omit --pad-from and add the balance alone."
 
 
@@ -1142,9 +1163,19 @@ def validate_append(
     target = destination(file, into)
     original = snapshot.require_target(target)
     with candidate_file(target, _appended_or_report(target, original, texts)) as candidate:
-        warnings = validate_candidate(candidate, target, allow_errors=allow_errors, snapshot=snapshot)
+        warnings = validate_candidate(
+            candidate, target, allow_errors=allow_errors, snapshot=snapshot, stages_pad=_only_pads(texts)
+        )
     snapshot.verify()
     return warnings
+
+
+_PAD_TEXT = re.compile(r"\s*\d{4}[-/]\d+[-/]\d+\s*pad\b")
+
+
+def _only_pads(texts: list[str]) -> bool:
+    """Whether a request appends pads and nothing else — the first half of the two-step pad flow."""
+    return bool(texts) and all(_PAD_TEXT.match(text) for text in texts)
 
 
 def require_writable(file: Path) -> None:
@@ -1288,7 +1319,9 @@ def append(
         if expected is not None and original != expected:
             raise ConflictError("The ledger changed since the preview was prepared; nothing was written. Retry.")
         with candidate_file(target, _appended_or_report(target, original, texts)) as candidate:
-            warnings = validate_candidate(candidate, target, allow_errors=allow_errors, snapshot=snapshot)
+            warnings = validate_candidate(
+                candidate, target, allow_errors=allow_errors, snapshot=snapshot, stages_pad=_only_pads(texts)
+            )
             snapshot.verify()
             if original_stat is None:
                 stopping.check()

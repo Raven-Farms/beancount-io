@@ -311,7 +311,9 @@ def _balance(
     except protocol.LedgerError as exc:
         # The only failure worth a retry is a pad Beancount reports unused;
         # anything else stands. Why it went unused decides what happens next.
-        if allow_errors or not _unused_pad_only(exc):
+        # `--allow-errors` takes the same path: the flag tolerates errors
+        # already in the books, never an unused pad this write would add.
+        if not _unused_pad_only(exc):
             raise
         source_account = parse_account(str(pad_from))
         loaded, before_errors, options = managed_load.load_file(file)
