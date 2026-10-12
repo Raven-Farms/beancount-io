@@ -35,7 +35,6 @@
 
 ## Inbox
 
-- [072 — An export written into a directory an include glob matches silently joins the ledger](./072.md) — major CLI wrong-balance bug; doubled balance with passing check repeated, five louder variants and three controls, 45–60m.
 - [073 — A flag-free `import --apply` drops options typed on the remembered preview and writes different rows](./073.md) — major CLI import bug; wrong dates written after a reviewed preview, repeated with a full-mapping control, 45–60m.
 - [074 — Import crashes on an importer row whose counter-posting has no amount](./074.md) — major CLI importer crash; restricted and unopened counter accounts repeated with an unrestricted control, 20–30m.
 - [075 — Import silently skips a later row that repeats an inferred bank reference, and says it is already in the ledger](./075.md) — major CLI missing-transaction bug with an identity-policy owner call; repeated with a renamed-header control, 30–45m.
