@@ -65,8 +65,16 @@ def check(ctx: typer.Context) -> None:
         raise typer.Exit(code)
     # bean-check does not cover document paths that resolve outside the ledger tree;
     # the helper check does, so copies that still resolve against another tree fail.
-    launch.helper_json(["check", "--file", str(file)])
+    # Only that rule: this second load knows none of bean-check's options, so
+    # re-judging validity failed a ledger `--auto` had just accepted, and
+    # `--version` — which loads nothing — went on to check the ledger (w5/088).
+    if not _INFORMATIONAL & set(ctx.args):
+        launch.helper_json(["check", "--file", str(file), "--documents-only"])
     raise typer.Exit(0)
+
+
+#: bean-check options that print and exit without reading the ledger.
+_INFORMATIONAL = frozenset({"--version", "--help", "-h"})
 
 
 _CACHE_FLAG = "--cache-filename"

@@ -34,16 +34,25 @@ app = typer.Typer(
 @app.command()
 def check(
     file: Annotated[Path, typer.Option("--file", "-f", help="Root ledger file to parse and validate.")],
+    documents_only: Annotated[
+        bool,
+        typer.Option(
+            "--documents-only",
+            help="Report only document paths outside the ledger tree; validity was judged by bean-check.",
+        ),
+    ] = False,
 ) -> None:
     """Parse, validate and realize a ledger.
 
     Answers `{"valid": true, "errors": []}`. A ledger that does not load is a
     `validation` failure whose `details` hold one line per loader error; unlike
     the rest of the helper there is no lenient mode, because reporting the
-    errors is the whole job.
+    errors is the whole job. `--documents-only` is for the pass that follows a
+    native `bean-check` the user ran with its own options: it must not re-judge
+    a ledger bean-check already accepted under them.
     """
     with protocol.answering("check") as answer:
-        answer.data = _validate(_ledger(file))
+        answer.data = _validate(_ledger(file), documents_only=documents_only)
 
 
 @app.command()
@@ -792,7 +801,7 @@ def _written_document_path(entry: Any) -> str | None:
     return match.group(1).replace('\\"', '"').replace("\\\\", "\\") if match else None
 
 
-def _validate(file: Path) -> dict[str, Any]:
+def _validate(file: Path, *, documents_only: bool = False) -> dict[str, Any]:
     from beancount.core.data import Document
 
     from bea_engine.query import format_error
@@ -800,7 +809,7 @@ def _validate(file: Path) -> dict[str, Any]:
 
     entries, errors, _options = load_file(str(file))
 
-    if errors:
+    if errors and not documents_only:
         raise protocol.LedgerError(
             f"{file}: {len(errors)} error(s).",
             details=[format_error(error, ledger_file=file) for error in errors],
