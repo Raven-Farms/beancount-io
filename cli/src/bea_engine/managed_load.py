@@ -363,6 +363,7 @@ def _load_with_sources(
                 primary,
                 unavailable,
                 LoadError,
+                stack,
             )
             staged[path].write_bytes(content)
         entries, errors, options = loader.load_file(str(staged[snapshot.root]))
@@ -531,6 +532,7 @@ def _rewrite_includes(
     primary: set[tuple[str, int]],
     unavailable: list[Any],
     load_error: Any,
+    stack: ExitStack,
 ) -> bytes:
     """Rewrite one closure file's includes for its staged twin.
 
@@ -544,6 +546,7 @@ def _rewrite_includes(
     from beancount.utils import misc_utils
 
     from bea_engine.ledger.text import iter_includes
+    from bea_engine.ledger.write import staged_include
 
     escape_string: Callable[[str], str] = misc_utils.escape_string
     by_target = {include.target: source for source in pending for include in source.includes}
@@ -553,7 +556,9 @@ def _rewrite_includes(
         if source is None:
             matches = patterns.get(str(path.parent / span.target), ())
             if matches:
-                replacement = "\ninclude ".join(f'"{escape_string(str(staged[p]))}"' for p in matches)
+                # One line stays one line, so every later line of this file
+                # keeps its number (w5/092, the read twin of w5/079).
+                replacement = staged_include(stack, path, [staged[p] for p in matches])
                 content = content[: span.start] + replacement.encode() + content[span.end :]
             continue
         result = resolved.get(source.url)
