@@ -116,10 +116,26 @@ def run_native(name: str, args: Sequence[str], *, env: dict[str, str] | None = N
     gets this process's stdin, stdout and stderr, so the shell it was started from
     sees upstream's own output and status; an interactive program keeps its terminal.
 
-    `env` replaces the child's environment when set; otherwise the process inherits
-    (or, for checkout helpers, gets the checkout `PYTHONPATH` via other entry points).
+    `env` replaces the child's environment when set; otherwise the child gets
+    `_native_env`, so a ledger's plugins resolve as they do in the helper.
     """
-    return _spawn([str(native_command(name)), *args], env)
+    return _spawn([str(native_command(name)), *args], env if env is not None else _native_env())
+
+
+def _native_env() -> dict[str, str]:
+    """The environment for an upstream executable: the helper's module search path, and nothing else of it.
+
+    The bundled sources — the vendored `fava` package among them — are
+    importable only where this path names them. Without it `bean-check` and
+    `bean-doctor` failed with `No module named 'fava'` on a ledger using
+    `fava.plugins.forecast` or `link_documents`, while the helper check, the
+    reports and every query loaded the same ledger (w5/084). Appended after an
+    inherited `PYTHONPATH`, so it only supplies what would otherwise be
+    missing; the managed-price settings `_helper_env` adds stay helper-only.
+    """
+    root = paths.helper_source_root()
+    inherited = os.environ.get("PYTHONPATH", "")
+    return {**os.environ, "PYTHONPATH": os.pathsep.join([inherited, str(root)]) if inherited else str(root)}
 
 
 def require_feature(name: str) -> None:
@@ -212,7 +228,9 @@ def capture_native(name: str, args: Sequence[str]) -> subprocess.CompletedProces
     and `bea format --check` compares the formatter's output against the file.
     Everything else should use `run_native` and let upstream own the streams.
     """
-    return subprocess.run([str(native_command(name)), *args], capture_output=True, text=True, check=False)
+    return subprocess.run(
+        [str(native_command(name)), *args], env=_native_env(), capture_output=True, text=True, check=False
+    )
 
 
 def check_native(
