@@ -733,10 +733,16 @@ def build_shell(
                 line = "." + command + stripped[len(command) :]
             return super().onecmd(line)
 
+        _printing = False
+
         def on_Select(self, statement: Any) -> Any:  # noqa: N802 - beanquery dispatch name
             cursor = self.context.execute(statement)
             description, rows = cursor.description, cursor.fetchall()
-            if self.settings.format == "beancount":
+            # A `PRINT` returns entries by construction. With no rows its lone
+            # column is typed `object`, which the guard below read as a column
+            # `SELECT`: an empty year was refused, with the advice to "use
+            # PRINT" (w5/102).
+            if self.settings.format == "beancount" and not self._printing:
                 _require_entries(description, rows)
             if not rows:
                 protocol.note("(no rows)")
@@ -764,7 +770,11 @@ def build_shell(
                     "PRINT renders Beancount directives; --format csv cannot represent them. "
                     "Use --format text or --format beancount, or SELECT for a CSV table."
                 )
-            return super().on_Print(statement)
+            self._printing = True
+            try:
+                return super().on_Print(statement)
+            finally:
+                self._printing = False
 
     # The override above drops upstream's SELECT help; without it, `help
     # select` crashes formatting a missing docstring.

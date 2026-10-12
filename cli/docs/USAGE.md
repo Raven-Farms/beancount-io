@@ -516,7 +516,9 @@ of a valid ledger passes `bea check`; selected without its `pad`, it is printed.
 These rules also apply to stored queries
 and the interactive shell; explicit `--source` uses native Beanquery rendering.
 A column result such as `SELECT date, account` is a usage error (exit 2) that
-points you at `PRINT` or at `--format text`/`csv`.
+points you at `PRINT` or at `--format text`/`csv`. A `PRINT` that matches no
+directives is an empty result like any other: exit 0, `(no rows)` on stderr,
+and with `-o` an empty file, as an empty `SELECT -o` writes.
 
 Under `--json`, `--format` is refused (exit 2): the envelope already selects
 JSON output, so `--json` and `--format` cannot be combined. Drop `--format`
