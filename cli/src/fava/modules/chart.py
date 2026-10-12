@@ -54,7 +54,12 @@ def _flow_ranges(
         return ranges
     last = ranges[-1]
     whole = interval.get_prev(last.begin) == last.begin and interval.get_next(last.begin) == last.end
-    if whole or slice_entry_dates(filtered.entries, last.begin, last.end):
+    # Beancount.io change: only entries the ledger declares count. Clamping to
+    # the time filter synthesizes summarize, transfer and conversion entries —
+    # a `C "Conversion for (…)"` on the period's last day whenever the period
+    # holds a currency exchange — which made every such fragment look busy.
+    declared = [entry for entry in filtered.entries if not str(entry.meta.get("filename", "")).startswith("<")]
+    if whole or slice_entry_dates(declared, last.begin, last.end):
         return ranges
     return ranges[:-1]
 
