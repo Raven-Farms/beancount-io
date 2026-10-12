@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING
 
 from ..beans.abc import Transaction
 from ..beans.account import account_tester
-from ..beans.flags import FLAG_UNREALIZED
 from ..beans.helpers import slice_entry_dates
 from ..core.conversion import cost_or_value
 from ..core.filters import account_predicate
@@ -217,13 +216,18 @@ class ChartModule:
         """Get cumulative end-of-interval balance (stock) for an account.
 
         Computes the running balance for ``account_name`` (including child
-        accounts) and yields the value at each interval end. Unrealized
-        transactions are excluded. Use this for line charts of account balances
-        over time. In contrast, :meth:`interval_totals` returns per-interval
+        accounts) and yields the value at each interval end. Use this for line
+        charts of account balances over time. In contrast, :meth:`interval_totals` returns per-interval
         totals (flows), not cumulative balances.
         """
         transactions = (
-            entry for entry in filtered.entries if (isinstance(entry, Transaction) and entry.flag != FLAG_UNREALIZED)
+            # Beancount.io change: upstream Fava skipped `U`-flagged entries here,
+            # which Beancount v2's `unrealized` plugin synthesized. The managed
+            # engine has no such plugin, so a `U` flag is a transaction the user
+            # wrote; dropping it made the series disagree with the headline.
+            entry
+            for entry in filtered.entries
+            if isinstance(entry, Transaction)
         )
 
         is_child_account = account_tester(account_name, with_children=True)
@@ -321,7 +325,13 @@ class ChartModule:
             operating currencies.
         """
         transactions = (
-            entry for entry in filtered.entries if (isinstance(entry, Transaction) and entry.flag != FLAG_UNREALIZED)
+            # Beancount.io change: upstream Fava skipped `U`-flagged entries here,
+            # which Beancount v2's `unrealized` plugin synthesized. The managed
+            # engine has no such plugin, so a `U` flag is a transaction the user
+            # wrote; dropping it made the series disagree with the headline.
+            entry
+            for entry in filtered.entries
+            if isinstance(entry, Transaction)
         )
 
         types = (
