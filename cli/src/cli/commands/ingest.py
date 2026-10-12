@@ -8,6 +8,7 @@ interpreter, requires `bea engine enable beangulp`, and forwards the subcommand.
 
 from __future__ import annotations
 
+import os
 import re
 from pathlib import Path
 from typing import Annotated
@@ -70,6 +71,8 @@ def _forward(operation: str, ctx: typer.Context, config: Path | None) -> None:
         # `identify` writes nothing at all.
         output.guard_forwarded_output(list(ctx.args), _extract_ledgers(ctx), flags=_EXTRACT_FLAGS)
     script = _ingest_script(config)
+    if operation == "extract":
+        _refuse_output_over_inputs(list(ctx.args), script)
     _refuse_config_only_script(script)
     code = launch.run_optional_script("beangulp", script, [operation, *ctx.args])
     raise typer.Exit(code)
@@ -90,6 +93,56 @@ def _extract_ledgers(ctx: typer.Context) -> list[Path]:
     if existing is not None:
         ledgers.append(Path(existing).expanduser())
     return ledgers
+
+
+def _refuse_output_over_inputs(args: list[str], script: Path) -> None:
+    """Refuse an extract destination that is a source document or the ingest script.
+
+    Beangulp opens `-o` for writing once extraction is done, so a destination
+    that is one of the run's own inputs replaced the bank export — the only
+    evidence for the extracted entries — or the script, and exited 0. Compared
+    by identity, so a symlink or hard link to an input counts, and a source
+    directory covers every file Beangulp would walk inside it.
+    """
+    value = output.forwarded_option(args, "-o", "--output", flags=_EXTRACT_FLAGS)
+    if value is None:
+        return
+    destination = Path(value).expanduser()
+    if not destination.exists():
+        return  # Nothing there to lose; `-o -` and a fresh file pass through.
+    output.refuse_input_alias(destination, script)
+    for source in _positional_sources(args):
+        if source.is_dir():
+            for directory, _, names in os.walk(source):
+                for name in names:
+                    output.refuse_input_alias(destination, Path(directory, name))
+        else:
+            output.refuse_input_alias(destination, source)
+
+
+def _positional_sources(args: list[str]) -> list[Path]:
+    """Every forwarded argument that may be a source document or directory.
+
+    Read generously: an option's value is harmless to include — it is either
+    the ledger, already refused, or not a file the destination could alias —
+    while a source mistaken for an option value would escape the guard. Only
+    the destination itself is left out, in the spellings `forwarded_option`
+    reads.
+    """
+    sources: list[Path] = []
+    index = 0
+    while index < len(args):
+        arg = args[index]
+        if arg == "--":
+            sources.extend(Path(rest).expanduser() for rest in args[index + 1 :])
+            break
+        if arg == "--output" or re.fullmatch(rf"-[{_EXTRACT_FLAGS}]*o", arg):
+            index += 2
+            continue
+        if not arg.startswith("-"):
+            sources.append(Path(arg).expanduser())
+        index += 1
+    return sources
 
 
 def _refuse_config_only_script(script: Path) -> None:

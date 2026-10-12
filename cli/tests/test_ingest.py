@@ -114,6 +114,9 @@ INGEST_SCRIPT = textwrap.dedent(
 )
 
 
+_ONE_BEANS = '1970-01-01 * "Hooked"\n  Assets:Tests  1.00 USD\n  Equity:Opening-Balances -1.00 USD\n'
+
+
 def _write_ingest(directory: Path) -> Path:
     script = directory / "ingest.py"
     script.write_text(INGEST_SCRIPT)
@@ -195,6 +198,58 @@ class TestIngestLifecycle:
         assert "one.beans" in text
         assert "Hooked" in text
         assert "hooked:" in text.lower()
+
+    @pytest.mark.parametrize(
+        "case",
+        ["source-file", "source-directory", "nested-in-directory", "symlink", "hard-link", "script", "clustered"],
+    )
+    def test_extract_refuses_a_destination_that_is_one_of_its_inputs(self, tmp_path: Path, case: str) -> None:
+        """`-o` naming a source document or the script replaced it and exited 0 (w5/068)."""
+        script = _write_ingest(tmp_path)
+        downloads = tmp_path / "downloads"
+        (downloads / "deep").mkdir(parents=True)
+        beans = downloads / "one.beans"
+        beans.write_text(_ONE_BEANS)
+        nested = downloads / "deep" / "one.beans"
+        nested.write_text(_ONE_BEANS)
+        source, destination, named = str(beans), ["-o", str(beans)], beans
+        if case == "source-directory":
+            source = str(downloads)
+        elif case == "nested-in-directory":
+            source, destination, named = str(downloads), [f"--output={nested}"], nested
+        elif case == "symlink":
+            (tmp_path / "link.beans").symlink_to(beans)
+            destination = ["-o", str(tmp_path / "link.beans")]
+        elif case == "hard-link":
+            os.link(beans, tmp_path / "hard.beans")
+            source, destination = str(downloads), ["-o", str(tmp_path / "hard.beans")]
+        elif case == "script":
+            destination, named = [f"--output={script}"], script
+        elif case == "clustered":
+            destination = ["-qo", str(beans)]
+        before = {path: path.read_bytes() for path in (beans, nested, script)}
+
+        result = runner.invoke(app, ["ingest", "extract", "--config", str(script), source, *destination])
+
+        assert result.exit_code == 2, result.output
+        assert "would overwrite the file it reads" in result.output.replace("\n", " ")
+        assert named.name in result.output
+        assert {path: path.read_bytes() for path in before} == before
+
+    def test_extract_still_replaces_an_unrelated_existing_export(self, tmp_path: Path) -> None:
+        script = _write_ingest(tmp_path)
+        downloads = tmp_path / "downloads"
+        downloads.mkdir()
+        beans = downloads / "one.beans"
+        beans.write_text(_ONE_BEANS)
+        earlier = tmp_path / "out.beancount"
+        earlier.write_text("; an earlier extract\n")
+
+        result = runner.invoke(app, ["ingest", "extract", "--config", str(script), str(beans), "-o", str(earlier)])
+
+        assert result.exit_code == 0, result.output
+        assert "Hooked" in earlier.read_text()
+        assert beans.read_text() == _ONE_BEANS
 
     def test_archive_dry_run_does_not_move_files(self, tmp_path: Path) -> None:
         script = _write_ingest(tmp_path)

@@ -158,6 +158,9 @@ destination is refused with exit **2**, before anything is written, when it
   `--output=X`, boolean flags clustered in front such as `-qo X`, and
   treeify's abbreviations such as `--outp X`), through a symlink or a hard
   link — including the `-e/--existing` ledger `ingest extract` reads, or
+- is another input of the same run: for `ingest extract`, a source document
+  (named directly or found inside a source directory) or the ingest script
+  itself, through a symlink or a hard link, or
 - would replace a file that did not come from this command: an existing
   `.bean`/`.beancount` file for `treeify -o`, and any pre-existing file at a
   path `price export` would write inside the destination directory.
