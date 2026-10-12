@@ -35,7 +35,6 @@
 
 ## Inbox
 
-- [077 — A detected CSV delimiter is remembered and then overrides detection for the next export](./077.md) — minor CLI import bug; comma-then-semicolon exports repeated with fresh-memory and explicit-flag controls, 20–30m.
 - [078 — The advised `--csv sign=ledger` discards the remembered mapping instead of applying on top of it](./078.md) — minor CLI import bug; the tool's own advice fails, repeated with a full-mapping control, 30–45m.
 - [079 — A multi-file include glob shifts line numbers during write validation, so `--allow-errors` refuses every write](./079.md) — major CLI write bug; root and `--into` refusals repeated with one-match and reordered controls, 45–60m.
 - [080 — `add custom --value account:…` is always refused on a ledger with renamed root accounts](./080.md) — major CLI write bug; refusal repeated with default-root and other-directive controls, 30–45m.
