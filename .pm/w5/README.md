@@ -35,7 +35,6 @@
 
 ## Inbox
 
-- [086 — A currency conversion in the period keeps the empty trailing interval row the guide says is dropped](./086.md) — minor CLI report bug; repeated with a single-currency control, 20m.
 - [087 — Format reads a symlinked root's includes beside the link target, so `-o` overwrites an included file](./087.md) — major CLI output-guard bug; overwrite and false missing-include repeated with regular-file and `query -o` controls, 40–60m.
 - [088 — `bea check --auto` fails a ledger that `bean-check --auto` accepts](./088.md) — major CLI regression; compared with upstream and an opened-accounts control, 20–30m.
 - [089 — `bea example` and `bea treeify` report upstream usage errors as exit 1](./089.md) — minor CLI exit-code bug; three inputs repeated with exit-2 controls, 20m.
