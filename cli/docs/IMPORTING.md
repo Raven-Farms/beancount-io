@@ -276,6 +276,13 @@ and an unruled import rather than failing; that repair is saved only after a
 successful preview or apply. A changed header row matches
 nothing remembered, and bea falls back to reading that header directly.
 
+Remembered settings live in `importers/` under the config directory. When
+that directory cannot be read (wrong modes after a restore, or left
+root-owned by a privileged run), the import still runs — on the options you
+typed, an `importers.py` beside the root ledger, or the header row — with a
+stderr note (`Cannot read remembered import settings in <directory>`) that is
+also in the JSON `notes`, and that run is not remembered.
+
 ## A Python importer (`--config`)
 
 For formats the column mapping cannot express, `bea import` calls configured

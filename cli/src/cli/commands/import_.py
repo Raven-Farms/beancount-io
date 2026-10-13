@@ -35,6 +35,34 @@ def _config_record(file: Path) -> Path:
     return config_dir() / "importers" / f"{key}.json"
 
 
+def _is_record(record: Path) -> bool:
+    """Whether a memory record exists; one that cannot be probed reads as no memory."""
+    try:
+        return record.is_file()
+    except OSError:
+        return False
+
+
+def _memory_unreadable(file: Path) -> str | None:
+    """The note for an import-memory directory this user cannot search (w5/215).
+
+    Memory is a convenience: an import that cannot read it runs on its flags,
+    the `importers.py` beside the ledger, or the header row, and remembers
+    nothing, instead of stopping on the directory's permissions.
+    """
+    record = _csv_record(file)
+    try:
+        record.is_file()
+        _config_record(file).is_file()
+    except OSError as exc:
+        return (
+            f"Cannot read remembered import settings in {record.parent} ({exc.strerror or exc}); "
+            "continuing without them, and this run is not remembered. "
+            "Make that directory readable and writable to restore them."
+        )
+    return None
+
+
 def _config_available(file: Path, notes: list[str]) -> tuple[Path, str] | None:
     """The Python importer this ledger already selects, if it selects one.
 
@@ -43,10 +71,10 @@ def _config_available(file: Path, notes: list[str]) -> tuple[Path, str] | None:
     they do for a ledger with no saved path (w5/141).
     """
     record = _config_record(file)
-    if record.is_file():
+    if _is_record(record):
         try:
             remembered = Path(json.loads(record.read_text())["config"])
-        except (ValueError, KeyError, TypeError) as exc:
+        except (OSError, ValueError, KeyError, TypeError) as exc:
             raise UsageError("Cannot read the saved importer path; select one with --config FILE.") from exc
         if remembered.is_file():
             return remembered, "remembered"
@@ -205,7 +233,7 @@ def _find_csv_entry(file: Path, headers: list[str] | None, account: str) -> dict
     if not headers:
         return None
     record = _csv_record(file)
-    if not record.is_file():
+    if not _is_record(record):
         return None
     wanted = header_signature(headers)
     for entry in _stored_sources(record):
@@ -231,7 +259,7 @@ def _recall_csv(file: Path, source: Path, account: str | None = None, *, notes: 
     from cli.csv_mapper import header_signature, load_rules, parse_mapping, read_header
 
     record = _csv_record(file)
-    if not record.is_file():
+    if not _is_record(record):
         return None
     sources = _stored_sources(record)
     try:
@@ -432,6 +460,9 @@ def import_entries(
     inferred_notes: list[str] = []
     recall_notes: list[str] = []
     config_notes: list[str] = []
+    memory_note = _memory_unreadable(file)
+    if memory_note is not None:
+        config_notes.append(memory_note)
     recalled_date_format: str | None = None
     recalled_source: str | None = None
     # Only a date format the caller chose is worth remembering. An inferred one
@@ -837,6 +868,8 @@ def import_entries(
         raise
     # Only a successful preview/apply commits settings. A rejected apply may
     # carry a preview in error.result, but must preserve the previous memory.
+    if memory_note is not None:
+        csv_to_remember = config_to_remember = None
     if csv_to_remember is not None and _remember_csv(file, csv_to_remember) and discarded_note is not None:
         frontend_notes.append(discarded_note)
         output.note(discarded_note)
