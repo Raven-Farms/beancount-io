@@ -51,6 +51,27 @@ def _stderr_is_a_terminal() -> bool:
         return False
 
 
+def _child_ledger() -> Path | None:
+    """The first root ledger one directory below the working directory, by name.
+
+    Hidden directories are skipped; an unreadable directory counts as none.
+    """
+    from cli.config import DEFAULT_ENTRY_FILE_FALLBACKS
+
+    try:
+        children = sorted(entry.name for entry in os.scandir() if not entry.name.startswith(".") and entry.is_dir())
+    except OSError:
+        return None
+    for child in children:
+        for name in DEFAULT_ENTRY_FILE_FALLBACKS:
+            try:
+                if (Path(child) / name).is_file():
+                    return Path(child) / name
+            except OSError:
+                break
+    return None
+
+
 @dataclass
 class RunContext:
     """Global options, resolved once by the root callback."""
@@ -122,10 +143,19 @@ class RunContext:
                     f"Unset or fix BEA_FILE, or pass --file PATH to override it. "
                     f"Cwd discovery of main.bean/main.beancount is skipped while BEA_FILE is set."
                 )
+            # Suggesting `init books` one directory above existing books
+            # names a command that can only refuse (w5/219).
+            nearby = _child_ledger() if source == "the working directory" else None
+            start = (
+                f"Found {shlex.quote(str(nearby))} here: run cd {shlex.quote(str(nearby.parent))}, "
+                f"or pass --file {shlex.quote(str(nearby))}."
+                if nearby
+                else "To start new books, run bea init books --currency USD."
+            )
             raise UsageError(
                 f"No ledger file at '{candidate}' (from {source}). "
                 f"Name one with --file PATH, set BEA_FILE, or run from a directory containing "
-                f"main.bean or main.beancount. To start new books, run bea init books --currency USD."
+                f"main.bean or main.beancount. {start}"
             )
         if candidate.is_dir():
             hint = next(
