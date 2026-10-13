@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import os
 import re
 import subprocess
@@ -264,6 +265,47 @@ def _refuse_roundtrip_collisions(ledger: str) -> None:
     )
 
 
+def _load_cache_of(filename: Path) -> Path | None:
+    """Where Beancount keeps the load cache of an absolute `filename`.
+
+    Derived as `beancount.loader.get_cache_filename` does: the default pattern
+    or `BEANCOUNT_LOAD_CACHE_FILENAME`, relative to the file's directory unless
+    absolute, with `{filename}` standing for the base name.
+    """
+    pattern = os.environ.get("BEANCOUNT_LOAD_CACHE_FILENAME") or ".{filename}.picklecache"
+    try:
+        return Path(os.path.join(filename.parent, pattern).format(filename=filename.name))
+    except (IndexError, KeyError, ValueError):
+        return None
+
+
+def _roundtrip_load_cache(ledger: str) -> Path | None:
+    """The load cache upstream's `roundtrip` leaves behind for its first scratch file.
+
+    Upstream reads `<stem>.roundtrip1<suffix>` back through the cached loader
+    and removes only the two scratch files, so a ledger slow enough to be
+    cached kept a hidden cache of a file that no longer existed, about three
+    times the ledger's size (w5/118). Switching the cache off for the child is
+    no answer: Beancount then deletes the ledger's own cache.
+
+    None when a pattern without `{filename}` gives the scratch file the
+    ledger's own cache path, which is not this command's to remove.
+    """
+    cache = _load_cache_of(_roundtrip_artifacts(ledger)[0])
+    return None if cache == _load_cache_of(Path(os.path.realpath(ledger))) else cache
+
+
+def _signature(path: Path | None) -> tuple[int, int, int] | None:
+    """What tells a file this run wrote from one that was already there; None when absent."""
+    if path is None:
+        return None
+    try:
+        found = path.lstat()
+    except OSError:
+        return None
+    return (found.st_ino, found.st_mtime_ns, found.st_size)
+
+
 def _forward_roundtrip(ctx: typer.Context) -> None:
     """Compare entry sets, without congratulations on unparseable input."""
     _refuse_json()
@@ -272,7 +314,12 @@ def _forward_roundtrip(ctx: typer.Context) -> None:
     if positionals:
         _refuse_roundtrip_collisions(positionals[0])
     errors = _closure_syntax_errors_of(positionals[0]) if positionals else []
+    scratch_cache = _roundtrip_load_cache(positionals[0]) if positionals else None
+    before = _signature(scratch_cache)
     completed = launch.capture_native("bean-doctor", ["roundtrip", *args])
+    if scratch_cache is not None and _signature(scratch_cache) not in (None, before):
+        with contextlib.suppress(OSError):
+            scratch_cache.unlink()
     if errors:
         _replay_without_congratulations(completed)
         raise LedgerError(f"doctor roundtrip cannot compare {positionals[0]}: {errors[0]}")
