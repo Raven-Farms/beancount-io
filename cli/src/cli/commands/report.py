@@ -115,7 +115,10 @@ def _print_tree(
     precision: Mapping[str, int] | None = None,
 ) -> None:
     label = node["account"].rsplit(":", 1)[-1] if depth else node["account"]
-    typer.echo(f"  {'  ' * depth + label:<46}  {_amounts(node['balance_children'], conversion, precision)}")
+    # Padded by display column, not code point: a CJK account component is
+    # two columns per character and would otherwise push its amount right.
+    row = output.pad("  " * depth + label, 46)
+    typer.echo(f"  {row}  {_amounts(node['balance_children'], conversion, precision)}")
     for child in node["children"]:
         _print_tree(child, depth + 1, conversion=conversion, precision=precision)
 
