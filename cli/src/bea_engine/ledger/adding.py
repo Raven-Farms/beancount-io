@@ -26,7 +26,13 @@ from typing import Any
 from bea_engine import protocol
 from bea_engine.amounts import parse_decimal_number
 from bea_engine.ledger import write, writer
-from bea_engine.ledger.text import outside_ledger_tree, parse_account, single_line, without_root_name_errors
+from bea_engine.ledger.text import (
+    is_commodity,
+    outside_ledger_tree,
+    parse_account,
+    single_line,
+    without_root_name_errors,
+)
 
 TYPES = (
     "transaction",
@@ -1057,6 +1063,15 @@ def _bulk_meta_problems(location: str, meta: dict[str, Any]) -> list[str]:
                 keys = ", ".join(sorted(expected))
                 problems.append(f"{path}: A {kind!r} metadata object takes exactly the keys {keys}.")
                 continue
+            currency = value.get("currency")
+            if kind == "amount" and not (isinstance(currency, str) and is_commodity(currency)):
+                # Printed bare, so `usd` only failed on read-back and a
+                # non-string tripped an assertion in Beancount (w5/184).
+                problems.append(
+                    f"{path}: Invalid 'amount' metadata for {key!r}: currency must be one commodity "
+                    f"such as 'USD'; got {currency!r}."
+                )
+                continue
             number = value.get("value" if kind == "number" else "number")
             if kind != "date" and isinstance(number, str):
                 # Amounts' spelling rule: `Decimal()` alone reads `1_000`, `1e3`
@@ -1110,13 +1125,26 @@ def _transactions(
             *((f"postings.{n}.meta", p.meta) for n, p in enumerate(directive.postings)),
         ]:
             meta_errors.extend(f"Row {index + 1}, {problem}" for problem in _bulk_meta_problems(location, meta))
+        # The schema takes any string for an account, and the printer writes
+        # it bare: `expenses:food` or `Expenses:Food Court` only failed when
+        # the batch was read back (w5/184). The root is the ledger's to judge.
+        for n, posting in enumerate(directive.postings):
+            try:
+                parse_account(posting.account)
+            except protocol.UsageError as exc:
+                meta_errors.append(f"Row {index + 1}, postings.{n}.account: {exc}")
         if not meta_errors:
             # Every later step renders the row; a failure there would abort
-            # the whole batch and ignore --partial, so it is judged here.
+            # the whole batch and ignore --partial, so it is judged here. So
+            # would text that does not read back as one transaction — a
+            # keyword for a currency, say — which no field check above names.
             try:
-                writer.format_transaction(directive)
+                problem = write.one_entry_problem(writer.format_transaction(directive))
             except (protocol.LedgerError, ValueError, TypeError) as exc:
                 meta_errors.append(f"Row {index + 1}: {exc}")
+            else:
+                if problem is not None:
+                    meta_errors.append(f"Row {index + 1}: This row {problem}")
         if meta_errors:
             rejected.extend(meta_errors)
             rejected_rows.append(index)

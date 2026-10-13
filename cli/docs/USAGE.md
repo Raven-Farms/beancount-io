@@ -1078,6 +1078,11 @@ Omit `units`/`amount` for a balancing posting. Supplying both forms or unknown
 fields — at the transaction or posting level, or inside `units`, `cost`,
 `price` and `price_total` — is rejected. Schema errors show a human row number, field path,
 and example; `bea add transactions --help` contains a complete minimal batch.
+An account name Beancount cannot read (`expenses:food`, `Expenses:Food Court`)
+rejects its row as `Row N, postings.<i>.account`, and any other row whose text
+would not read back as one transaction — a keyword such as `TRUE` for a
+currency, a total cost with no currency — is rejected as `Row N` with
+Beancount's reason, so `--partial` still writes the others.
 
 Validation includes accounting errors, not just JSON shape. The whole batch is
 tried first so a sale can use a purchase appearing later in the input. Partial

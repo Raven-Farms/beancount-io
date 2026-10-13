@@ -1355,17 +1355,35 @@ def require_one_entry_each(texts: list[str]) -> None:
     each text back on its own is the last line of defence: it costs one parse
     per directive and never consults the ledger.
     """
+    for number, text in enumerate(texts, start=1):
+        problem = one_entry_problem(text)
+        if problem is not None:
+            raise UsageError(f"Directive {number} of {len(texts)} {problem} Nothing was written.")
+
+
+def one_entry_problem(text: str) -> str | None:
+    """Why a rendered directive would not read back as exactly one, or None when it would.
+
+    A predicate phrase, for a caller that can name the directive itself: bulk
+    rows ask per row, so one unreadable row is rejected as that row instead of
+    refusing the batch with a usage error no `--partial` can recover (w5/184).
+    """
     from beancount.parser import lexer, parser
 
-    for number, text in enumerate(texts, start=1):
-        entries, _, _ = parser.parse_string(text)
-        kinds = {kind for kind, *_ in lexer.lex_iter_string(text)}  # type: ignore[no-untyped-call]
-        if len(entries) != 1 or kinds & CONFIG_TOKENS:
-            raise UsageError(
-                f"Directive {number} of {len(texts)} would be written as {len(entries)} directive(s)"
-                f"{' plus ledger configuration' if kinds & CONFIG_TOKENS else ''}; a field holds a line break "
-                "or a value that is not one token. Nothing was written."
-            )
+    from bea_engine.ledger.text import without_root_name_errors
+
+    entries, errors, _ = parser.parse_string(text)
+    kinds = {kind for kind, *_ in lexer.lex_iter_string(text)}  # type: ignore[no-untyped-call]
+    if len(entries) == 1 and not kinds & CONFIG_TOKENS:
+        return None
+    # The parser's own reason names the offending token; a renamed root is
+    # never it, since that leaves the directive intact.
+    reasons = [error.message for error in without_root_name_errors(errors)]
+    return (
+        f"would be written as {len(entries)} directive(s)"
+        f"{' plus ledger configuration' if kinds & CONFIG_TOKENS else ''}; a field holds a line break "
+        f"or a value that is not one token{f' (Beancount: {reasons[0]})' if reasons else ''}."
+    )
 
 
 def validate_append(
