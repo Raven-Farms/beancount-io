@@ -1240,7 +1240,11 @@ def _grouped_columns(query_string: str) -> list[str]:
     except Exception:  # noqa: BLE001 - the query already failed; advice is best effort
         return []
     group_by = getattr(parsed, "group_by", None)
-    return [column.name for column in getattr(group_by, "columns", None) or []]
+    # `GROUP BY 1` is an int and `GROUP BY root(account, 1)` a function node;
+    # neither has a name, and reading one here replaced the real error with
+    # this handler's own AttributeError (w5/177).
+    names = [getattr(column, "name", None) for column in getattr(group_by, "columns", None) or []]
+    return [name for name in names if isinstance(name, str)]
 
 
 def _refuse_empty_window(query_string: str, ledger_errors: list[str]) -> None:
@@ -1265,10 +1269,21 @@ def _refuse_empty_window(query_string: str, ledger_errors: list[str]) -> None:
 
 
 def _refuse_window(begin: Any, end: Any, ledger_errors: list[str]) -> None:
-    """Refuse one `OPEN ON begin CLOSE ON end` window that spans no days."""
+    """Refuse one `OPEN ON begin CLOSE ON end` window that spans no days, or has no end date."""
     from datetime import date, timedelta
 
     # A bare `CLOSE` is `True`, not a date, and closes at the end of the ledger.
+    # Beside a dated `OPEN` Beanquery orders the two as dates and escapes with
+    # a raw TypeError, which read as a ledger failure (exit 1) (w5/177).
+    if isinstance(begin, date) and end is True:
+        raise protocol.UsageError(
+            f"BQL cannot run OPEN ON {begin} with a bare CLOSE: Beanquery needs the closing date here.",
+            details=[
+                "Add the date: CLOSE ON YYYY-MM-DD is exclusive, so name the day after the last one you want.",
+                f"Or drop CLOSE: FROM OPEN ON {begin} alone already runs to the end of the ledger.",
+            ],
+            ledger_errors=ledger_errors,
+        )
     if not isinstance(begin, date) or not isinstance(end, date) or begin < end:
         return
     if begin == end:

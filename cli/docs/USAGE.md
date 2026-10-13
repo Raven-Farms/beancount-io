@@ -643,8 +643,9 @@ a window of zero days. That is refused (exit **2**) rather than answered with an
 empty result that reads like an empty day: the error names the exclusive bound
 and points at `CLOSE ON D+1` and at
 `bea list transaction --from-date D --to-date D`. A reversed window
-(`OPEN ON` after `CLOSE ON`) is refused the same way. Windows that cover at
-least one day are untouched.
+(`OPEN ON` after `CLOSE ON`) is refused the same way. So is `OPEN ON D` with a
+bare `CLOSE`, which Beanquery cannot compile: give `CLOSE ON` a date, or drop
+`CLOSE`. Windows that cover at least one day are untouched.
 
 Reads are lenient in a terminal and strict everywhere else. `query`, `list`,
 and `report` print the data with the loader errors as a banner on stderr and
