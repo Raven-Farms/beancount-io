@@ -424,6 +424,10 @@ the same text; `--check` and `--dry-run` compare the exact bytes `-i` would writ
 Stdout and `-o` remain text filters that accept syntax errors; the walking modes
 check parseability as described below. Run `bea check` to validate the ledger.
 
+Ledger text and query results on stdout are UTF-8 whatever the locale, so
+`bea format FILE > out.bean` and `bea query … > out.csv` write the bytes `-o`
+would. Only messages are escaped (`\xfc`) when the locale cannot show them.
+
 Writes match the file they append to: new lines use CRLF in a CRLF ledger and
 LF elsewhere, a missing final newline is repaired as part of the append, and
 existing bytes are never renormalised as a side effect. `format -i` is the

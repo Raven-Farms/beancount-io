@@ -524,7 +524,7 @@ def _render(file: Path | None, alignment: list[str], destination: Path | None) -
     )
     text = str(data["text"])
     if destination is None or str(destination) == STDIN:
-        sys.stdout.write(text)
+        output.write_data(text)
     else:
         destination.write_text(text, encoding="utf-8")
 

@@ -7,6 +7,7 @@ category and exit code from `cli.errors`.
 
 from __future__ import annotations
 
+import codecs
 import dataclasses
 import datetime
 import fnmatch
@@ -51,6 +52,25 @@ def success(message: str | None = None) -> None:
     """Print a human-readable confirmation. Silent in JSON mode — the envelope says it."""
     if message and not _json_mode():
         print(message)
+
+
+def write_data(text: str) -> None:
+    """Write ledger text or a query result to stdout as UTF-8, whatever the locale.
+
+    A confirmation line may escape what the locale cannot show; data may not.
+    Under an ASCII or cp1252 stdout `bea format FILE > out.bean` exited 0 with
+    `"Müller"` rewritten as the literal text `"M\\xfcller"`, a different
+    payee that still passes `bea check` (w5/121). `-o` and `-i` always write
+    UTF-8, so stdout does too. The stream stays UTF-8 afterwards rather than
+    mixing two encodings in one output.
+    """
+    stream = sys.stdout
+    if stream is None:  # fd 1 closed: prints go nowhere, and so does this.
+        return
+    reconfigure = getattr(stream, "reconfigure", None)
+    if reconfigure is not None and codecs.lookup(stream.encoding).name != "utf-8":
+        reconfigure(encoding="utf-8", errors=stream.errors)
+    stream.write(text)
 
 
 def note(message: str) -> None:

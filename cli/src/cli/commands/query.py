@@ -348,4 +348,4 @@ def query(
     text = str(data.get("text", ""))
     if text:
         # `end=""`: the renderer's own trailing newline is part of the table.
-        typer.echo(text, nl=False)
+        output.write_data(text)
