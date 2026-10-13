@@ -604,7 +604,9 @@ only after the query succeeds.
 With no query argument, `--file` and `--source` alike read BQL from piped
 stdin and open the interactive shell only on a terminal where prompting is
 allowed; under `--no-input` (or `CI`), or with empty stdin, a missing query is
-refused with exit 2 instead of waiting at a prompt. In the shell, `Ctrl-C`
+refused with exit 2 instead of waiting at a prompt. Piped BQL must be UTF-8 (a
+BOM is fine); anything else is refused with exit 2, naming `stdin` and the
+offending byte offset, whatever the locale. In the shell, `Ctrl-C`
 cancels the current line and returns to `beanquery>`, as under `bean-query`;
 `.exit` (or `Ctrl-D`) ends the session with exit 0 and saves its history.
 

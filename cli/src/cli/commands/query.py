@@ -24,6 +24,7 @@ import typer
 from cli import context, output
 from cli.engine import launch
 from cli.errors import UsageError
+from cli.utils import decode_error_message
 
 FORMATS = ("text", "csv", "beancount")
 
@@ -33,6 +34,32 @@ _SHELL_ALIASES = frozenset({"clear", "errors", "exit", "help", "history", "parse
 
 #: `--output` spellings that name this process's own stdout.
 _STDOUT_PATHS = frozenset({"-", "/dev/stdout", "/dev/fd/1", "/proc/self/fd/1"})
+
+
+def _stdin_query() -> str:
+    """Piped BQL, held to the UTF-8 rule `format -` and `--from -` apply (w5/155).
+
+    Text-mode stdin decodes with surrogateescape under a C locale, so a
+    Latin-1 byte arrives as a lone surrogate that matches nothing and the
+    query answers "(no rows)" with exit 0. A BOM is accepted, as elsewhere.
+    """
+    stream = getattr(sys.stdin, "buffer", None)
+    if stream is None:
+        return sys.stdin.read()
+    data = bytes(stream.read())
+    utf16 = "'stdin' looks like UTF-16 text; re-save the query as UTF-8 and retry."
+    try:
+        text = data.decode("utf-8-sig")
+    except UnicodeDecodeError as exc:
+        message = decode_error_message("stdin", exc)
+        if data.startswith((b"\xff\xfe", b"\xfe\xff")):
+            message = f"{message} {utf16}"
+        raise UsageError(message) from exc
+    if "\x00" in text:
+        # BOM-less UTF-16 decodes as UTF-8 with a NUL beside every ASCII byte;
+        # a query can never hold one (it travels to the engine as an argument).
+        raise UsageError(utf16)
+    return text
 
 
 #: Schemes `bean-query` resolves to `beanquery.sources.<scheme>`; anything else
@@ -263,7 +290,7 @@ def query(
             # Only an omitted argument asks for either; an explicit "" is a
             # blank query, refused below like a whitespace-only one.
             if not sys.stdin.isatty():
-                query_string = sys.stdin.read()
+                query_string = _stdin_query()
             elif ctx.no_input:
                 raise UsageError("A query is required with --no-input. Pass it as an argument or on stdin.")
             else:
@@ -287,7 +314,7 @@ def query(
         output.refuse_ledger_alias(Path(output_file), file)
     if query_string is None:
         if not sys.stdin.isatty():
-            query_string = sys.stdin.read()
+            query_string = _stdin_query()
             if not query_string.strip():
                 raise UsageError("A query is required as an argument or on stdin.")
         elif ctx.no_input:
