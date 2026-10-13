@@ -842,6 +842,9 @@ def _print_load_errors(errors: Any, out: TextIO) -> None:
         out.write(CONTROL_CHARACTERS.sub(lambda m: f"\\x{ord(m.group()):02x}", block.replace("\r", "\\x0d")))
 
 
+_BARE_CARRIAGE_RETURN = re.compile(r"\r(?!\n)")
+
+
 def _inert_cell(value: Any) -> Any:
     """A text-table cell whose control characters print as visible `\\xNN`.
 
@@ -849,10 +852,15 @@ def _inert_cell(value: Any) -> Any:
     reader's terminal, because the table goes straight to a TTY (Click only
     strips such sequences on a pipe). Line breaks stay, so a multi-line value
     keeps its shape; JSON, CSV and `beancount` output keep the exact value.
+
+    A carriage return is a line break only as part of CRLF. On its own it is
+    cursor movement: the rest of the cell was drawn over the row's first
+    columns, so a narration could replace the date and payee beside it (w5/108).
     """
     from bea_engine.ledger.text import CONTROL_CHARACTERS
 
     if isinstance(value, str):
+        value = _BARE_CARRIAGE_RETURN.sub(r"\\x0d", value)
         return CONTROL_CHARACTERS.sub(lambda m: f"\\x{ord(m.group()):02x}", value)
     if isinstance(value, frozenset | set):
         return type(value)(_inert_cell(item) for item in value)
