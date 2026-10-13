@@ -26,7 +26,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from hashlib import sha256
-from http.client import IncompleteRead
+from http.client import HTTPException, IncompleteRead
 from typing import BinaryIO, Literal
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
@@ -252,6 +252,9 @@ def _is_login_redirect(location: str, url: str) -> bool:
     return not target.netloc or target.hostname == urlsplit(url).hostname
 
 
+_MALFORMED_REPLY = "the price service sent a malformed HTTP response"
+
+
 def fetch_managed_price_feed(
     url: str,
     *,
@@ -322,6 +325,12 @@ def fetch_managed_price_feed(
         if isinstance(reason, TimeoutError) or "timed out" in str(reason):
             return FetchFailed(reason="timeout", message=f"timed out after {timeout_seconds} seconds")
         return FetchFailed(reason="network", message="Could not reach the price service")
+    except HTTPException:
+        # Not HTTP at all, or headers past http.client's limits: a captive
+        # portal, a broken proxy, the wrong service on the port. urllib wraps
+        # none of these, and an escape here would skip the failure record that
+        # lets the cached revision keep serving.
+        return FetchFailed(reason="network", message=_MALFORMED_REPLY)
     # Only 200 arrives here: any other status raises HTTPError above, and the
     # redirect handler turns 3xx into that error instead of following it.
     try:
@@ -331,6 +340,8 @@ def fetch_managed_price_feed(
         return FetchFailed(reason="timeout", message=f"timed out after {timeout_seconds} seconds")
     except (OSError, IncompleteRead):
         return FetchFailed(reason="network", message="Could not read the price response")
+    except HTTPException:
+        return FetchFailed(reason="network", message=_MALFORMED_REPLY)
     if body is None:
         return FetchFailed(reason="too-large", message=f"body exceeds {max_body_bytes} bytes")
     # A connection that closes early reads as a short body, not an error, so
