@@ -764,6 +764,9 @@ def validate_candidate(
     locations: list[tuple[Path, int | None]] = []
     introduced: list[bool] = []
     invalid_pad_accounts = False
+    # Finding an including root lexes every sibling ledger's include closure,
+    # so it is looked up once, on the first unknown account, not per error.
+    root_hints: list[str] | None = None
     for error in errors:
         hints = []
         message = format_error(error, ledger_file=file)
@@ -807,7 +810,9 @@ def validate_candidate(
                 if matches:
                     message += f" Did you mean {', '.join(matches)}?"
                 message += f" To create it, use bea add open --account {shlex.quote(account)} --date YYYY-MM-DD."
-            hints.extend(root_ledger_hints(snapshot.root if snapshot else file))
+            if root_hints is None:
+                root_hints = root_ledger_hints(snapshot.root if snapshot else file)
+            hints.extend(root_hints)
         if "inactive account '" in message:
             account = message.split("inactive account '", 1)[1].split("'", 1)[0]
             for entry in entries:
