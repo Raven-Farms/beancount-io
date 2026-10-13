@@ -1353,7 +1353,9 @@ def _usage_error(exc: Exception, query_string: str, conn: Any, ledger_errors: li
     details.extend(_column_suggestions(str(exc), conn))
     if "non-hashable" in str(exc) and _set_columns(query_string):
         details.extend(_SET_COLUMN_ADVICE)
-    details.append("Run bea query with no argument for the interactive shell, where .tables lists what you can query.")
+    # Not the interactive shell: under `--json` or without a terminal `bea query`
+    # with no argument is itself a usage error, and `.tables` runs one-shot (w5/198).
+    details.append("Run bea query .tables to list what you can query.")
     return protocol.UsageError(f"Cannot run this BQL query: {exc}.", details=details, ledger_errors=ledger_errors)
 
 
