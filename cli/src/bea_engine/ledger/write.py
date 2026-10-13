@@ -787,6 +787,7 @@ def validate_candidate(
     from beancount.parser.lexer import LexerError
 
     from bea_engine import managed_load
+    from bea_engine.ledger.text import ledger_roots, unknown_root_message
 
     # The staged copy has a private name, so the guard inside the load would
     # name that; a `{filename}` cache pattern is about the ledger file itself.
@@ -819,6 +820,7 @@ def validate_candidate(
     lifecycles: dict[str, list[Any]] | None = None
     cost_holders: dict[str, set[int]] | None = None
     source_line_counts: dict[Path, int] = {}
+    roots = ledger_roots(options)
     records: list[_ErrorRecord] = []
     locations: list[tuple[Path, int | None]] = []
     introduced: list[bool] = []
@@ -861,7 +863,14 @@ def validate_candidate(
                 if suggestion is None:
                     matches = difflib.get_close_matches(account, accounts, n=3, cutoff=0.6)
                     suggestion = f" Did you mean {', '.join(matches)}?" if matches else ""
-                    suggestion += f" To create it, use bea add open --account {shlex.quote(account)} --date YYYY-MM-DD."
+                    # An `open` under a root the ledger does not use can never
+                    # load, so the remedy is the root, not the directive (w5/154).
+                    if account.split(":", 1)[0] in roots:
+                        suggestion += (
+                            f" To create it, use bea add open --account {shlex.quote(account)} --date YYYY-MM-DD."
+                        )
+                    else:
+                        suggestion += f" {unknown_root_message(account, roots)}"
                 account_suggestions[account] = suggestion
             message += suggestion
             if root_hints is None:
