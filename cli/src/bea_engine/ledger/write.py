@@ -775,8 +775,13 @@ def validate_candidate(
     write even with the flag, so an exit-0 write never leaves a ledger `check`
     rejects for reasons absent before it. Three categories always refuse, flag
     or no flag: syntax errors, pad references to unknown or inactive accounts,
-    and newly introduced errors. The one carve-out is a newly staged pad,
-    whose `Unused Pad` the documented two-step pad-then-balance flow needs:
+    and newly introduced errors. A syntax error is text the lexer or grammar
+    could not read; upstream's `ParserError` is not one — it is what a grammar
+    action says about text that did parse (an invalid option, a duplicate
+    metadata key, an unbalanced pushtag), so an existing one is tolerated like
+    any other and only a new one refuses (w5/200). The one carve-out is a
+    newly staged pad, whose `Unused Pad` the documented two-step
+    pad-then-balance flow needs:
     `stages_pad` says the request appends nothing but pads, and only an unused
     pad inside that appended text is exempt. Any other write that leaves a pad
     unused — its own alongside a balance, or one that was valid before —
@@ -784,7 +789,7 @@ def validate_candidate(
     """
     from beancount.core import interpolate
     from beancount.core.data import Balance, Close, Document, Open, Pad, Transaction
-    from beancount.parser.grammar import ParserError, ParserSyntaxError
+    from beancount.parser.grammar import ParserSyntaxError
     from beancount.parser.lexer import LexerError
 
     from bea_engine import managed_load
@@ -959,7 +964,7 @@ def validate_candidate(
         )
         locations.append((source, lineno if isinstance(lineno, int) else None))
     messages = _collapse_repeats(records)
-    syntax_errors = [err for err in errors if isinstance(err, ParserError | ParserSyntaxError | LexerError)]
+    syntax_errors = [err for err in errors if isinstance(err, ParserSyntaxError | LexerError)]
     new_records = [record for record, is_new in zip(records, introduced, strict=True) if is_new]
     if errors and (not allow_errors or syntax_errors or invalid_pad_accounts or new_records):
         if not allow_errors:
@@ -976,7 +981,7 @@ def validate_candidate(
             index
             for index, (error, is_new) in enumerate(zip(errors, introduced, strict=True))
             if is_new
-            or isinstance(error, ParserError | ParserSyntaxError | LexerError)
+            or isinstance(error, ParserSyntaxError | LexerError)
             or (isinstance(error.entry, Pad) and str(getattr(error, "message", "")).startswith("Invalid reference to "))
         ]
         if new_records:

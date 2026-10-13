@@ -864,8 +864,10 @@ balance assertion that still fails. An error the write itself would introduce �
 an unknown account, a currency violation, a new balance failure — is refused
 even with the flag; the staged-pad half of the two-step pad flow below is the
 one exception. Syntax errors and pad references to unknown or inactive accounts
-are always rejected. For an opening adjustment, prefer an explicit atomic pad
-and balance:
+are always rejected. A syntax error is text Beancount could not read; what it
+reports about text it did read — an unknown option, a duplicate metadata key, an
+unbalanced `pushtag` — is tolerated like any other existing error. For an
+opening adjustment, prefer an explicit atomic pad and balance:
 
 ```bash
 bea add balance --date 2026-01-02 --account Assets:Checking \
