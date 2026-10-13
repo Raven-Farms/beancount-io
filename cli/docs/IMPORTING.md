@@ -111,7 +111,8 @@ rather than relabelled; `$` and `¥` name several commodities each and are
 accepted as before. `--account` names the source account and
 is required. The file may start with a BOM and with blank lines before the
 header (error line numbers still count them); header cells are stripped before
-matching. Field separators are detected from the header among comma,
+matching and compared NFC-normalized, as `--account` is for a remembered
+mapping, so a composed `Descripción` names a decomposed one. Field separators are detected from the header among comma,
 semicolon, tab, and pipe — the one on which the header and the first rows
 split into the same number of fields, so quoted `;` or dates like
 `Jan 05, 2026` cannot outvote the real separator; pass `--delimiter ','`, `--delimiter ';'`, or

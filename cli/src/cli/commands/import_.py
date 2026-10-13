@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import json
 import shlex
+import unicodedata
 from enum import StrEnum
 from itertools import groupby
 from pathlib import Path
@@ -192,6 +193,11 @@ def _source_sha256(source: Path) -> str | None:
         return None
 
 
+def _same_account(stored: Any, account: str) -> bool:
+    """Whether a remembered account is the one named now, in either Unicode form."""
+    return isinstance(stored, str) and unicodedata.normalize("NFC", stored) == unicodedata.normalize("NFC", account)
+
+
 def _find_csv_entry(file: Path, headers: list[str] | None, account: str) -> dict[str, Any] | None:
     """The remembered entry for a header row and account, without side effects."""
     from cli.csv_mapper import header_signature
@@ -205,7 +211,7 @@ def _find_csv_entry(file: Path, headers: list[str] | None, account: str) -> dict
     for entry in _stored_sources(record):
         if (
             header_signature(entry.get("headers")) == wanted
-            and entry.get("account") == account
+            and _same_account(entry.get("account"), account)
             and isinstance(entry.get("mapping"), str)
         ):
             return entry
@@ -249,7 +255,7 @@ def _recall_csv(file: Path, source: Path, account: str | None = None, *, notes: 
             and isinstance(entry.get("mapping"), str)
             and isinstance(entry.get("account"), str)
         ):
-            if account is None or entry["account"] == account:
+            if account is None or _same_account(entry["account"], account):
                 matches.append(entry)
     if len(matches) > 1:
         accounts = ", ".join(sorted({entry["account"] for entry in matches}))
@@ -310,7 +316,10 @@ def _remember_csv(file: Path, spec: dict[str, Any]) -> bool:
         sources = [
             entry
             for entry in _stored_sources(record)
-            if not (header_signature(entry.get("headers")) == wanted and entry.get("account") == spec["account"])
+            if not (
+                header_signature(entry.get("headers")) == wanted
+                and _same_account(entry.get("account"), spec["account"])
+            )
         ]
         payload = json.dumps({"sources": [*sources, spec]})
         record.parent.mkdir(parents=True, exist_ok=True)

@@ -143,7 +143,8 @@ def parse_mapping(spec: str) -> CsvMapping:
         elif name in columns:
             raise UsageError(f"Duplicate --csv field {name!r}.")
         else:
-            columns[name] = column
+            # NFC, like the header names `open_records` returns.
+            columns[name] = unicodedata.normalize("NFC", column)
     if columns:
         # Keys without columns (`encoding=`/`delimiter=`/`sign=` alone) parse:
         # the caller infers the mapping instead of failing it.
@@ -522,7 +523,9 @@ def open_records(
             raise _malformed(source, header_start, exc) from None
         except UnicodeDecodeError as exc:
             raise _decode_usage_error(source, exc, encoding) from None
-        headers = [cell.strip() for cell in first or []]
+        # NFC, like the mapping that names them: a header typed composed must
+        # find a bank's decomposed spelling of the same name, and vice versa.
+        headers = [unicodedata.normalize("NFC", cell.strip()) for cell in first or []]
 
         def rows() -> Iterator[tuple[int, dict[str, str]]]:
             # As in the engine's reader: a record starts one line past wherever
@@ -623,7 +626,9 @@ def header_signature(headers: list[str] | None) -> str | None:
     """Identify a CSV source by its header row without storing file contents."""
     if not headers:
         return None
-    return hashlib.sha256("\0".join(headers).encode("utf-8")).hexdigest()
+    # NFC here too: a record stored before headers were read NFC keeps matching.
+    joined = unicodedata.normalize("NFC", "\0".join(headers))
+    return hashlib.sha256(joined.encode("utf-8")).hexdigest()
 
 
 def read_header(source: Path, *, delimiter: str | None = None, encoding: str = "utf-8") -> list[str] | None:
