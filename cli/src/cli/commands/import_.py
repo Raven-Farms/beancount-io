@@ -32,31 +32,45 @@ def _config_record(file: Path) -> Path:
     return config_dir() / "importers" / f"{key}.json"
 
 
-def _config_available(file: Path) -> tuple[Path, str] | None:
-    """The Python importer this ledger already selects, if it selects one."""
+def _config_available(file: Path, notes: list[str]) -> tuple[Path, str] | None:
+    """The Python importer this ledger already selects, if it selects one.
+
+    A remembered path whose file was moved or deleted selects nothing: it is
+    named in `notes` and the `importers.py` and header-row fallbacks apply, as
+    they do for a ledger with no saved path (w5/141).
+    """
     record = _config_record(file)
     if record.is_file():
         try:
-            return Path(json.loads(record.read_text())["config"]), "remembered"
+            remembered = Path(json.loads(record.read_text())["config"])
         except (ValueError, KeyError, TypeError) as exc:
             raise UsageError("Cannot read the saved importer path; select one with --config FILE.") from exc
+        if remembered.is_file():
+            return remembered, "remembered"
+        missing = (
+            f"The remembered importer {remembered} is missing; ignoring it. "
+            "Pass --config FILE to select a Python importer again."
+        )
+        if missing not in notes:
+            notes.append(missing)
     conventional = file.parent / "importers.py"
     if conventional.is_file():
         return conventional, "default beside root ledger"
     return None
 
 
-def _config_path(file: Path, supplied: Path | None) -> tuple[Path, str]:
+def _config_path(file: Path, supplied: Path | None, notes: list[str]) -> tuple[Path, str]:
     if supplied is not None:
         return supplied.expanduser().resolve(), "--config"
-    available = _config_available(file)
+    available = _config_available(file, notes)
     if available is not None:
         return available
     raise UsageError(
         "Choose a Python importer with --config FILE, or place importers.py beside the root ledger. "
         "The selected path is remembered for this ledger. "
         "For a CSV export whose header row bea could not read, map the columns directly with "
-        "--csv date=Date,amount=Amount,narration=Description --account Assets:Checking."
+        "--csv date=Date,amount=Amount,narration=Description --account Assets:Checking.",
+        details=notes,
     )
 
 
@@ -395,6 +409,7 @@ def import_entries(
     recalled_sign_ledger = False
     inferred_notes: list[str] = []
     recall_notes: list[str] = []
+    config_notes: list[str] = []
     recalled_date_format: str | None = None
     recalled_source: str | None = None
     # Only a date format the caller chose is worth remembering. An inferred one
@@ -562,7 +577,7 @@ def import_entries(
                         f"{seeded_from} was imported with sign=ledger, but sign is never carried to another "
                         f"file: {source.name} is read bank-signed. Pass --csv sign=ledger if it is ledger-signed."
                     )
-        elif config is None and _config_available(file) is None:
+        elif config is None and _config_available(file, config_notes) is None:
             csv_request = _inferred_mapping(
                 source, explicit=False, notes=inferred_notes, delimiter=csv_delimiter, encoding=csv_encoding
             )
@@ -653,7 +668,7 @@ def import_entries(
         if csv_delimiter is not None and csv_delimiter != ",":
             delimiter_note = f", delimiter {_display_delimiter(csv_delimiter)}"
         encoding_note = f", encoding {csv_encoding}" if csv_encoding != "utf-8" else ""
-        frontend_notes: list[str] = []
+        frontend_notes: list[str] = [*config_notes]
         if remembered_run:
             columns_only = _strip_spec_keys(csv_request or "", {"delimiter", "encoding", "sign"})
             if recalled_sign_ledger:
@@ -745,8 +760,8 @@ def import_entries(
                 "sign_ledger_sha256": _source_sha256(source) if mapping.sign == "ledger" else None,
             }
     else:
-        frontend_notes = []
-        config_path, config_source = _config_path(file, config)
+        config_path, config_source = _config_path(file, config, config_notes)
+        frontend_notes = [*config_notes]
         # A Python importer names its own account and categories and never
         # reads the column-mapping options, so one typed here would be dropped
         # and the rows written wherever the importer says (w5/131).
@@ -768,11 +783,13 @@ def import_entries(
                 f"{', '.join(ignored)} {applies} only to --csv rows, but this import uses the Python importers "
                 f"from {config_path} ({config_source}), which choose the account and categories themselves. "
                 f"Remove {'it' if len(ignored) == 1 else 'them'} to use the importer, or {instead} to read "
-                f"{source.name} by its header row."
+                f"{source.name} by its header row.",
+                details=config_notes,
             )
         config_to_remember = config_path
         frontend_notes.append(f"Using importers from {config_path} ({config_source})")
-        output.note(frontend_notes[0])
+        for line in frontend_notes:
+            output.note(line)
         argv += ["--config", str(config_path), "--config-source", config_source]
         if importer_name is not None:
             argv += ["--importer", importer_name]
