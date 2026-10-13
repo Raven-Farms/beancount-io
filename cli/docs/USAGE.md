@@ -115,6 +115,11 @@ If the resolved file does not exist, the command exits **2** and names those sou
 Passing a directory also exits **2** with a hint to select its root ledger file.
 An unreadable ledger exits **2**, naming the path and the source that selected
 it. Choose a readable ledger or correct its permissions.
+An `include` that reaches a file without read permission, a directory, or a
+broken symbolic link also exits **2** on every command, `bea check` included,
+in one line naming the include and the file that includes it; `--allow-errors`
+does not skip it. An include that matches nothing stays an ordinary ledger
+error.
 A root ledger that is a symlink keeps the path you named, as `bean-check` does:
 its relative `include` and `--into` paths resolve beside the link, not beside
 the file it points to, and writes such as `add` land in that file through the

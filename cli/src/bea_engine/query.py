@@ -277,7 +277,7 @@ def _claiming_include(destination: Path, root: Path) -> str | None:
     try:
         target = destination.expanduser().resolve()
         patterns = LedgerSnapshot.capture(root).patterns
-    except OSError:
+    except (OSError, protocol.UsageError):
         return None
     return next((pattern for pattern in patterns if _included_new_file(target, pattern)), None)
 

@@ -60,6 +60,10 @@ def check(ctx: typer.Context) -> None:
         output.emit(data, target=output.file_target(file))
         return
     _refuse_cache_over_ledger(file, ctx.args)
+    if output.has_unreadable_include(file):
+        # bean-check answers an include it cannot open with a traceback; the
+        # helper names the include and the file that includes it (w5/120).
+        launch.helper_json(["check", "--file", str(file)])
     # bean-check keys its load cache on the files read, not on the plugin set,
     # and every later read trusts that cache. A load made with the auto plugins
     # must neither be stored there nor answered from a default load's entry (w5/111).

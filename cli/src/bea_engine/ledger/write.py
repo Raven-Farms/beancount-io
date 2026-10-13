@@ -71,12 +71,31 @@ class LedgerSnapshot:
         # beside the link, not beside its target (w1/056).
         snapshot = cls(Path(os.path.abspath(root)))
         pending = [snapshot.root]
+        includers: dict[Path, Path] = {}
         while pending:
             path = pending.pop(0)
             if path in snapshot.contents:
                 continue
-            snapshot.stats[path] = path.stat()
-            content = snapshot.contents[path] = path.read_bytes()
+            try:
+                snapshot.stats[path] = path.stat()
+                content = snapshot.contents[path] = path.read_bytes()
+            except OSError as exc:
+                if path not in includers:
+                    # The root: the frontend names it and the source that selected it.
+                    raise
+                # An include is part of the ledger, so it fails as an unreadable
+                # root does, in one line, rather than as a bare exception — a
+                # traceback from native `check` (w5/120).
+                if path.is_symlink() and not path.exists():
+                    reason = "it is a broken symbolic link"
+                elif path.is_dir():
+                    reason = "it is a directory, not a file"
+                else:
+                    reason = exc.strerror or type(exc).__name__
+                raise UsageError(
+                    f"Included file '{path}' (included from '{includers[path]}') is not readable: {reason}. "
+                    "Correct the file or its permissions, or remove the include."
+                ) from None
             for _, _, name in _includes(content):
                 pattern = str(path.parent / name)
                 # Normalized the way the loader names an included file —
@@ -86,6 +105,8 @@ class LedgerSnapshot:
                 # that file read as newly introduced (w5/096).
                 matches = _glob_members(pattern)
                 snapshot.patterns[pattern] = matches
+                for match in matches:
+                    includers.setdefault(match, path)
                 pending.extend(matches)
         return snapshot
 

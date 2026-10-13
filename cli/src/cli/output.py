@@ -229,26 +229,38 @@ class MissingInclude:
     source: Path
 
 
-def _include_matches(source: Path, raw: str) -> list[Path]:
-    """The files one `include` string resolves to, beancount's way.
+def _include_matches(source: Path, raw: str) -> tuple[list[Path], list[Path]]:
+    """What one `include` string resolves to, beancount's way: the files, then the rest.
 
     Every include is a glob, matched against the including file's directory —
     the only base the loader uses for a ledger read from a file. The working
     directory is the base for a ledger parsed from a string alone, and no such
     source is walked here; falling back to it adopted an unrelated same-named
     file as a member of the ledger (w5/071). Only files count: a match that is
-    not a regular file resolves nothing.
+    not a regular file resolves nothing, and the loader cannot read it.
     """
-    return _glob_files(raw if Path(raw).is_absolute() else str(source.parent / raw))
-
-
-def _glob_files(pattern: str) -> list[Path]:
-    """The regular files one glob pattern matches, sorted."""
-    return [path for path in sorted(Path(p) for p in glob.glob(pattern, recursive=True)) if path.is_file()]
+    pattern = raw if Path(raw).is_absolute() else str(source.parent / raw)
+    found = sorted(Path(p) for p in glob.glob(pattern, recursive=True))
+    return [path for path in found if path.is_file()], [path for path in found if not path.is_file()]
 
 
 def walk_closure(*roots: Path) -> tuple[list[Path], list[MissingInclude]]:
-    """The roots plus every reachable file, with the includes that resolve nowhere.
+    """The roots plus every reachable file, with the includes that resolve nowhere."""
+    members, missing, _ = _walk_closure(*roots)
+    return members, missing
+
+
+def has_unreadable_include(root: Path) -> bool:
+    """Whether an `include` reaches something the loader cannot read (w5/120).
+
+    A file without read permission, or a directory or broken symlink where a
+    file should be: the loader opens every match of the glob, files or not.
+    """
+    return bool(_walk_closure(root)[2])
+
+
+def _walk_closure(*roots: Path) -> tuple[list[Path], list[MissingInclude], list[Path]]:
+    """The roots plus every reachable file, the includes that resolve nowhere, and the unreadable matches.
 
     Several roots share one walk, so a file reachable from many of them is
     read once: walking each root separately is quadratic on a long include
@@ -261,6 +273,7 @@ def walk_closure(*roots: Path) -> tuple[list[Path], list[MissingInclude]]:
     """
     members: list[Path] = []
     missing: list[MissingInclude] = []
+    unreadable: list[Path] = []
     seen: set[Path] = set()
     stack = list(reversed(roots))
     while stack:
@@ -276,6 +289,8 @@ def walk_closure(*roots: Path) -> tuple[list[Path], list[MissingInclude]]:
         try:
             text = current.read_text(encoding="utf-8", errors="replace").removeprefix("\ufeff")
         except OSError:
+            if current not in roots:
+                unreadable.append(current)
             continue
         for match in _INCLUDE_DIRECTIVE.finditer(text):
             raw = match.group(1)
@@ -283,12 +298,13 @@ def walk_closure(*roots: Path) -> tuple[list[Path], list[MissingInclude]]:
                 # A managed price feed: the loader fetches it, so there is no
                 # file here to read, format, alias, or report as missing.
                 continue
-            matches = _include_matches(current, _unescape(raw))
+            matches, others = _include_matches(current, _unescape(raw))
             if matches:
                 stack.extend(matches)
             else:
                 missing.append(MissingInclude(include=raw, source=current))
-    return members, missing
+            unreadable.extend(others)
+    return members, missing, unreadable
 
 
 def ledger_closure(root: Path) -> list[Path]:
