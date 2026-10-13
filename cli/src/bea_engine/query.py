@@ -555,13 +555,26 @@ def _run_stored(shell: Any, arg: str) -> None:
             print(file=shell.outfile)
             print(file=shell.outfile)
         return
-    parts = shlex.split(cleaned)
-    if len(parts) != 1:
-        raise protocol.UsageError('too many arguments for "run" command')
-    name = parts[0]
-    query = shell.queries.get(name)
+    known = ", ".join(sorted(shell.queries)) or "(none)"
+    # A name works exactly as `.run` lists it: `this month's food` is one
+    # stored query, not an unterminated shell quote (w5/237).
+    query = shell.queries.get(cleaned)
     if query is None:
-        known = ", ".join(sorted(shell.queries)) or "(none)"
+        try:
+            parts = shlex.split(cleaned)
+        except ValueError as exc:
+            raise protocol.UsageError(
+                f'cannot read the "run" query name: {exc}.',
+                details=[
+                    'Wrap a name containing a quote character in the other kind, e.g. .run "it\'s mine".',
+                    f"Stored queries in this ledger: {known}.",
+                ],
+            ) from None
+        if len(parts) != 1:
+            raise protocol.UsageError('too many arguments for "run" command')
+        name = parts[0]
+        query = shell.queries.get(name)
+    if query is None:
         raise protocol.UsageError(
             f'query "{name}" not found.',
             details=[f"Stored queries in this ledger: {known}."],
