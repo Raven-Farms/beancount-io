@@ -35,7 +35,6 @@
 
 ## Inbox
 
-- [108 — A carriage return in ledger text reaches the terminal raw in query tables and overwrites the row](./108.md) — minor CLI terminal-safety bug; `list` control flattens it, 15–20m.
 - [109 — The query shell prints Python tracebacks for a mistyped date and an out-of-range ORDER BY index](./109.md) — minor CLI interactive-shell bug; one-shot control explains both, 20–30m.
 - [110 — `bea query ""` on a terminal opens the interactive shell instead of exiting 2](./110.md) — minor CLI usage bug; whitespace-only control exits 2, 10m.
 - [112 — A write re-reads every sibling ledger once per "unknown account" error, so one missing `open` stalls writes for minutes](./112.md) — major CLI quadratic-time bug; 2.3 s at 1,000 errors, 30.8 s at 4,000, `check` control 0.3 s, 30–45m.
