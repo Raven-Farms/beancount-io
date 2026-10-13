@@ -248,6 +248,13 @@ def query(
                 f"--output {output_file} looks like TSV; pass --format csv (or rename the file) "
                 "so the destination is not an ASCII text table."
             )
+        elif suffix == ".json":
+            # `--json` is global, so it is easy to leave off before the command.
+            raise UsageError(
+                f"--output {output_file} looks like JSON; put --json before the command "
+                f"(bea --json query … -o {output_file}) or rename the file, "
+                "so the destination is not an ASCII text table."
+            )
     if output_format is not None and output_format not in FORMATS:
         raise UsageError(f"Unknown query format '{output_format}'. Choose one of: {', '.join(FORMATS)}.")
     if ctx.json_output and explicit_format is not None:
