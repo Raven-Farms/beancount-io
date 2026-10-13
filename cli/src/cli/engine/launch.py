@@ -52,6 +52,7 @@ import json
 import os
 import select
 import signal
+import stat
 import subprocess
 import sys
 import threading
@@ -574,7 +575,8 @@ def _spawn(command: list[str], env: dict[str, str] | None) -> int:
     tests, or anything else without a fileno), inheritance would write past
     those objects to the process's original fds — so we capture and write
     through `sys.stdout` / `sys.stderr` instead, which is what the caller is
-    actually reading.
+    actually reading. The one exception to inheritance is stderr beside a
+    stdout pipe; see `_stderr_minus_flush_epilogue`.
     """
     if _stream_is_captured(sys.stdout) or _stream_is_captured(sys.stderr):
         captured = subprocess.run(command, env=env, capture_output=True, text=True, check=False)
@@ -584,7 +586,8 @@ def _spawn(command: list[str], env: dict[str, str] | None) -> int:
             sys.stderr.write(captured.stderr)
         returncode = captured.returncode
     else:
-        inherited = subprocess.run(command, env=env, check=False)
+        with _stderr_minus_flush_epilogue() as stderr:
+            inherited = subprocess.run(command, env=env, check=False, stderr=stderr)
         returncode = inherited.returncode
         if returncode > 0 and _downstream_pipe_closed():
             # The child wrote to the same closed pipe we would have. Upstream is
@@ -595,6 +598,101 @@ def _spawn(command: list[str], env: dict[str, str] | None) -> int:
     if returncode < 0:
         return _died_on_signal(-returncode, command)
     return returncode
+
+
+@contextmanager
+def _stderr_minus_flush_epilogue() -> Iterator[int | None]:
+    """The child's stderr: ours, or a relay onto ours that drops one interpreter epilogue.
+
+    A Python child that only buffered its output meets the closed pipe when the
+    interpreter flushes stdout on the way out, after every handler upstream
+    wrote has unwound. CPython then prints `Exception ignored … BrokenPipeError`
+    itself, so `bea doctor print-options … | head` exited 141 with two lines of
+    noise where the exit table promises none (w5/160). Nothing can ask the
+    child to die of SIGPIPE instead: Python ignores the signal again at startup
+    whatever disposition it was handed.
+
+    Only a stdout that can hang up, with stderr going somewhere else, gets the
+    relay. A terminal session keeps its terminal, and under `2>&1` the epilogue
+    already lands in the closed pipe, where relaying would only reorder the two
+    streams.
+    """
+    if not _stdout_can_hang_up_apart_from_stderr():
+        yield None
+        return
+    reader, writer = os.pipe()
+    relay = threading.Thread(target=_relay_stderr, args=(reader,), daemon=True)
+    relay.start()
+    try:
+        yield writer
+    finally:
+        os.close(writer)  # The child's copy is gone with it, so the relay sees the end.
+        relay.join()
+
+
+def _stdout_can_hang_up_apart_from_stderr() -> bool:
+    if getattr(select, "poll", None) is None:  # Windows: `_downstream_pipe_closed` cannot tell.
+        return False
+    try:
+        out, err = os.fstat(sys.stdout.fileno()), os.fstat(sys.stderr.fileno())
+    except (OSError, ValueError, AttributeError):
+        return False
+    return (stat.S_ISFIFO(out.st_mode) or stat.S_ISSOCK(out.st_mode)) and not os.path.samestat(out, err)
+
+
+#: How CPython opens its report of a failed shutdown flush, and the line after it.
+#: The header names the stream differently by version (`in: <… name='<stdout>' …>`,
+#: `on flushing sys.stdout:`, `while flushing sys.stdout:`).
+_EPILOGUE_HEADER = b"Exception ignored"
+_EPILOGUE_REASON = b"BrokenPipeError"
+
+
+def _relay_stderr(reader: int) -> None:
+    """Copy the child's stderr to ours as it arrives, minus a closing flush epilogue.
+
+    Everything is forwarded the moment it cannot be that epilogue, a prompt
+    with no newline included. The two lines are dropped only when they are the
+    last thing the child wrote and our reader really has gone; the same words
+    anywhere else are the child's own report and pass through.
+    """
+    held: list[bytes] = []  # The epilogue so far: its header, then its reason.
+    partial = b""  # An unfinished line that may still turn into either.
+    passing = False  # In the middle of a line that is already being forwarded.
+    with os.fdopen(reader, "rb", buffering=0) as stream:
+        while chunk := stream.read(65536):
+            *lines, partial = (partial + chunk).split(b"\n")
+            for bare in lines:
+                line = bare + b"\n"
+                if passing:
+                    passing = False
+                    _write_stderr(line)
+                elif len(held) == 1 and line.startswith(_EPILOGUE_REASON):
+                    held.append(line)
+                else:
+                    _write_stderr(b"".join(held))
+                    held.clear()
+                    if line.startswith(_EPILOGUE_HEADER) and b"stdout" in line:
+                        held.append(line)
+                    else:
+                        _write_stderr(line)
+            expected = _EPILOGUE_REASON if len(held) == 1 else _EPILOGUE_HEADER
+            if partial and (passing or not (partial.startswith(expected) or expected.startswith(partial))):
+                _write_stderr(b"".join(held) + partial)
+                held.clear()
+                partial = b""
+                passing = True
+    if len(held) == 2 and not partial and _downstream_pipe_closed():
+        return
+    _write_stderr(b"".join(held) + partial)
+
+
+def _write_stderr(data: bytes) -> None:
+    try:
+        descriptor = sys.stderr.fileno()
+        while data:
+            data = data[os.write(descriptor, data) :]
+    except (OSError, ValueError):  # Our own stderr is gone; there is nowhere to relay to.
+        pass
 
 
 def _downstream_pipe_closed() -> bool:
