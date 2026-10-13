@@ -410,8 +410,14 @@ def _balance(
 def _balance_match(
     entries: list[Any], date: Any, account: str, number: Decimal, currency: str, tolerance: Decimal | None
 ) -> Any | None:
-    """An identical balance assertion already in the ledger, or None."""
+    """An identical balance assertion already written in the ledger, or None.
+
+    Only written assertions count: one a plugin synthesizes (`check_drained`
+    stamps a zero balance with its `close` line) is on no line to cite.
+    """
     from beancount.core.data import Balance
+
+    from bea_engine.ledger.reader import entry_generated
 
     return next(
         (
@@ -422,6 +428,7 @@ def _balance_match(
             and entry.account == account
             and entry.amount.currency == currency
             and _same_assertion(entry, number, tolerance)
+            and not entry_generated(entry, "balance")
         ),
         None,
     )
@@ -430,8 +437,10 @@ def _balance_match(
 def _balance_conflict(
     entries: list[Any], date: Any, account: str, number: Decimal, currency: str, tolerance: Decimal | None
 ) -> Any | None:
-    """A same-key assertion with a different value, or None."""
+    """A written same-key assertion with a different value, or None."""
     from beancount.core.data import Balance
+
+    from bea_engine.ledger.reader import entry_generated
 
     return next(
         (
@@ -442,6 +451,7 @@ def _balance_conflict(
             and entry.account == account
             and entry.amount.currency == currency
             and not _same_assertion(entry, number, tolerance)
+            and not entry_generated(entry, "balance")
         ),
         None,
     )
