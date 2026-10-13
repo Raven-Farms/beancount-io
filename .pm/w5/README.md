@@ -36,7 +36,6 @@
 ## Inbox
 
 - [109 — The query shell prints Python tracebacks for a mistyped date and an out-of-range ORDER BY index](./109.md) — minor CLI interactive-shell bug; one-shot control explains both, 20–30m.
-- [114 — With `BEA_FILE` set, `init`'s "Next:" command checks a different ledger than the one just created](./114.md) — minor CLI onboarding-hint bug, 15–20m.
 - [115 — Two concurrent `add balance` runs both exit 0, bypassing the duplicate and `--force` checks](./115.md) — minor CLI concurrency bug; sequential control refuses, repeated on two fresh copies, 20–30m.
 - [116 — The load cache does not notice a `document` file appearing or vanishing: `check` says valid while every write is refused](./116.md) — major CLI cache-staleness bug; both directions repeated with a cache-disabled control, fix with w5/111, 45–60m.
 - [117 — `price export` on a ledger with a missing `document` file dies with a raw `FileNotFoundError` after writing part of the export](./117.md) — minor CLI partial-write bug; present-file control passes, 20–30m.
