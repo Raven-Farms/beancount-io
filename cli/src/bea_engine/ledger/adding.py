@@ -71,7 +71,13 @@ def answer(
     build = builders.get(directive_type)
     try:
         if build is not None:
-            return build(file, request, into=into, allow_errors=allow_errors, strict_read=strict_read)
+            # These read the ledger to decide what to write. Reading before the
+            # lock made the append refuse whatever the writer it had just
+            # waited for committed, so unrelated `bea` writes started together
+            # mostly failed with "the ledger changed" (w5/183). Queue first; an
+            # edit that takes no lock is still caught by the snapshot.
+            with write.lock_files([file, write.destination(file, into)], deciding=True):
+                return build(file, request, into=into, allow_errors=allow_errors, strict_read=strict_read)
         if directive_type not in TYPES:
             raise protocol.UsageError(f"Unknown directive type {directive_type!r}. Use one of: {', '.join(TYPES)}.")
         directive = _simple(directive_type, request)

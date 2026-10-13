@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import json
 import os
+from contextlib import nullcontext
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -482,26 +483,33 @@ def import_entries(
     """
     with protocol.answering("import") as answer:
         from bea_engine import importing
+        from bea_engine.ledger import write
 
-        answer.data = importing.answer(
-            _ledger(file),
-            source,
-            csv_mapping=csv_mapping,
-            csv_account=csv_account,
-            date_format=date_format,
-            delimiter=delimiter,
-            encoding=encoding,
-            rules_file=rules_file,
-            default_account=default_account,
-            config=config,
-            importer_name=importer_name,
-            apply=apply,
-            duplicates=duplicates,
-            id_keys=list(id_key) if id_key else None,
-            into=into,
-            allow_errors=allow_errors,
-            config_source=config_source,
-        )
+        ledger = _ledger(file)
+        # An apply decides its rows against the ledger it read, so it queues
+        # behind other `bea` writers before that read rather than refusing
+        # what one of them committed meanwhile (w5/183). A preview writes
+        # nothing and takes no lock.
+        with write.lock_files([ledger, write.destination(ledger, into)], deciding=True) if apply else nullcontext():
+            answer.data = importing.answer(
+                ledger,
+                source,
+                csv_mapping=csv_mapping,
+                csv_account=csv_account,
+                date_format=date_format,
+                delimiter=delimiter,
+                encoding=encoding,
+                rules_file=rules_file,
+                default_account=default_account,
+                config=config,
+                importer_name=importer_name,
+                apply=apply,
+                duplicates=duplicates,
+                id_keys=list(id_key) if id_key else None,
+                into=into,
+                allow_errors=allow_errors,
+                config_source=config_source,
+            )
 
 
 @app.command()

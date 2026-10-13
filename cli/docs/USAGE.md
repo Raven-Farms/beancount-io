@@ -907,7 +907,12 @@ directory plus its case-folded name, so every spelling of one path — `Books`
 and `books` on a case-insensitive volume, a symlinked directory — takes the
 same lock. No lock files are created in ledger directories. Locks remain in
 the cache after release so waiting writers always coordinate through the same
-file. When that directory cannot be created or written — a read-only cache
+file. Writers queue rather than refuse one another: a command that reads the
+ledger to decide what to write — `add price`, `add balance`, `add transaction`
+with an inferred currency, `add transactions`, `import --apply` — takes the
+lock before that read, so unrelated `bea` writes started together all land,
+and a repeated price or balance is reported as already recorded. One of these
+that ends up writing nothing removes a lock file it created itself. When that directory cannot be created or written — a read-only cache
 root, a file in the way — the write is refused with exit **3** naming it;
 make it writable or set `XDG_CACHE_HOME`. Stop any older CLI writers before
 deleting their leftover

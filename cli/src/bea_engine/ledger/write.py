@@ -454,11 +454,11 @@ def _lock_key(file: Path) -> str:
 
 
 @contextmanager
-def lock_files(files: Iterable[Path]) -> Iterator[None]:
+def lock_files(files: Iterable[Path], *, deciding: bool = False) -> Iterator[None]:
     """Lock every file, each once, in one global order so writers queue instead of deadlocking."""
     with ExitStack() as stack:
         for file in lock_order(files):
-            stack.enter_context(lock_file(file))
+            stack.enter_context(lock_file(file, deciding=deciding))
         yield
 
 
@@ -468,42 +468,90 @@ def lock_order(files: Iterable[Path]) -> list[Path]:
     return [keyed[key] for key in sorted(keyed)]
 
 
+_HELD_LOCKS: set[str] = set()
+# Appends this process committed; a deciding lock compares it to learn whether anything was written.
+_COMMITS = [0]
+
+
+def _open_lock(path: Path) -> tuple[int, bool]:
+    """The lock file's descriptor, and whether this call created the file."""
+    try:
+        return os.open(path, os.O_RDWR | os.O_CREAT | os.O_EXCL, 0o600), True
+    except FileExistsError:
+        return os.open(path, os.O_RDWR | os.O_CREAT, 0o600), False
+
+
 @contextmanager
-def lock_file(file: Path) -> Iterator[None]:
+def lock_file(file: Path, *, deciding: bool = False) -> Iterator[None]:
     """Serialize CLI writers across atomic replacements of the ledger inode.
 
-    The cached lock must stay in place: unlinking it would let another process
-    lock a different inode while a waiting writer still holds the old one.
+    The cached lock stays in place after a write, so waiting writers keep
+    coordinating through the same file.
+
+    A command that reads the ledger to decide what to write takes the lock
+    before that read (`deciding`) and keeps it through `append`, which asks
+    for it again; a second `flock` on a new descriptor would wait on this
+    process forever, so a lock this process already holds is simply kept
+    (w5/183). Such a command may decide to write nothing — a duplicate, a
+    refusal — and must then leave nothing behind either, so it removes a lock
+    file it created itself, while still holding it. That is why every locker
+    checks, once it holds the lock, that the path still names the file it
+    locked, and opens it again otherwise: a writer that queued on a removed
+    file must not run beside one that locked its replacement.
     """
     directory = cache_dir() / "locks"
     key = _lock_key(file)
-    try:
-        directory.mkdir(mode=0o700, parents=True, exist_ok=True)
-        fd = os.open(directory / f"{key}.lock", os.O_RDWR | os.O_CREAT, 0o600)
-    except OSError as exc:
-        # The filesystem refusing, not a broken ledger: exit 3 like the staging
-        # refusal below, whether the cache is read-only or a file is in the way.
-        raise AuthError(
-            f"Cannot take the write lock: the lock directory {directory} cannot be created or is not "
-            f"writable ({exc.strerror or exc}). Make it a writable directory or set XDG_CACHE_HOME to one "
-            "before retrying. Nothing was written."
-        ) from exc
-    with os.fdopen(fd, "r+b") as stream:
-        if sys.platform == "win32":
-            import msvcrt
+    if key in _HELD_LOCKS:
+        yield
+        return
+    path = directory / f"{key}.lock"
+    created = False
+    with ExitStack() as stack:
+        while True:
+            try:
+                directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+                fd, made = _open_lock(path)
+            except OSError as exc:
+                # The filesystem refusing, not a broken ledger: exit 3 like the staging
+                # refusal below, whether the cache is read-only or a file is in the way.
+                raise AuthError(
+                    f"Cannot take the write lock: the lock directory {directory} cannot be created or is not "
+                    f"writable ({exc.strerror or exc}). Make it a writable directory or set XDG_CACHE_HOME to one "
+                    "before retrying. Nothing was written."
+                ) from exc
+            created = created or made
+            stream = os.fdopen(fd, "r+b")
+            if sys.platform == "win32":
+                import msvcrt
 
-            if not os.fstat(stream.fileno()).st_size:
-                stream.write(b"\0")
-                stream.flush()
-            stream.seek(0)
-            msvcrt.locking(stream.fileno(), msvcrt.LK_LOCK, 1)
-        else:
-            import fcntl
+                if not os.fstat(stream.fileno()).st_size:
+                    stream.write(b"\0")
+                    stream.flush()
+                stream.seek(0)
+                msvcrt.locking(stream.fileno(), msvcrt.LK_LOCK, 1)
+            else:
+                import fcntl
 
-            fcntl.flock(stream.fileno(), fcntl.LOCK_EX)
+                fcntl.flock(stream.fileno(), fcntl.LOCK_EX)
+            try:
+                current = os.path.samestat(os.fstat(stream.fileno()), os.stat(path))
+            except OSError:
+                current = False
+            if current:
+                stack.enter_context(stream)
+                break
+            stream.close()
+        _HELD_LOCKS.add(key)
+        commits = _COMMITS[0]
         try:
             yield
         finally:
+            _HELD_LOCKS.discard(key)
+            if deciding and created and _COMMITS[0] == commits:
+                try:
+                    os.unlink(path)
+                except OSError:
+                    pass
             if sys.platform == "win32":
                 stream.seek(0)
                 msvcrt.locking(stream.fileno(), msvcrt.LK_UNLCK, 1)
@@ -1633,6 +1681,7 @@ def append(
                     raise AuthError(f"The filesystem refused to create {target}; nothing was written.") from exc
             else:
                 replace_checked(target, candidate, original, original_stat)
+            _COMMITS[0] += 1
     return warnings
 
 
