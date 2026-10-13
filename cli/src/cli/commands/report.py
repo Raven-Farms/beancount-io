@@ -98,6 +98,11 @@ def _amounts(
         if value is None:
             return f"Unavailable {currency}"
         shown = _quantize(value, currency, precision)
+        # `quantize` keeps the sign of what it rounded away: -0.40 at whole
+        # dollars is `Decimal("-0")`, which would print as `-0 USD`. A
+        # rounded zero has no sign.
+        if shown.is_zero():
+            shown = shown.copy_abs()
         # The floor is the currency's own precision: a zero-fraction ledger
         # prints whole dollars, while unknown currencies keep the fallback
         # floor the quantize just rounded them to.

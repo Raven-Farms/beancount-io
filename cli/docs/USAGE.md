@@ -1362,7 +1362,9 @@ key.
 
 Text amounts are rounded to the display precision the ledger uses for each
 currency (half up, so `4.9050 USD` of converted dining reads `4.91 USD`);
-JSON keeps the full-precision decimal string (`"4.9050"`).
+an amount that rounds to zero prints unsigned (`-0.40 USD` at whole-dollar
+precision reads `0 USD`). JSON keeps the full-precision decimal string
+(`"4.9050"`, `"-0.40"`).
 
 ## Managed price includes
 
