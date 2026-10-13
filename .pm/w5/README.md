@@ -36,7 +36,6 @@
 ## Inbox
 
 - [109 — The query shell prints Python tracebacks for a mistyped date and an out-of-range ORDER BY index](./109.md) — minor CLI interactive-shell bug; one-shot control explains both, 20–30m.
-- [120 — An unreadable included file fails every command with a raw Python exception, and `bea check` prints a traceback](./120.md) — minor CLI error-reporting bug; unreadable-root control exits 2 cleanly, 30–40m.
 - [121 — `bea format FILE > out.bean` exits 0 with non-ASCII text rewritten as literal escapes when stdout is not UTF-8](./121.md) — minor CLI silent-rewrite bug with a narrow trigger; UTF-8 control correct, Windows inferred, 20–30m.
 - [123 — `add transactions --partial` reloads the ledger once per row, so the retry the CLI recommends takes minutes](./123.md) — major CLI quadratic-time bug; 4.0 s at 250 rows, 13.7 s at 500, all-valid control 0.5 s, 45–60m.
 - [124 — Write validation rescans the whole ledger for each "inactive account", unbalanced-conversion and failed-assertion error](./124.md) — major CLI quadratic-time bug, sibling of w5/112; 18.4 s at 40,000 transactions against a 2.6 s control, 30–45m.
