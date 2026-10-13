@@ -185,6 +185,16 @@ def note(message: str) -> None:
     print(message, file=sys.stderr)
 
 
+#: Opens a stderr line the frontend shows while the command is still running,
+#: instead of holding it for the end with the rest. `cli.engine.launch` matches it.
+NOTICE_PREFIX = "bea-engine-notice: "
+
+
+def notice(message: str) -> None:
+    """Tell a person the command is waiting on something, before the answer exists."""
+    print(f"{NOTICE_PREFIX}{message}", file=sys.stderr, flush=True)
+
+
 def _failure(command: str, exc: EngineError) -> dict[str, Any]:
     error: dict[str, Any] = {
         "category": exc.category,

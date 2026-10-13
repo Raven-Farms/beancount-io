@@ -491,7 +491,8 @@ whole pass, so `format -i` is serialized against every other `bea` write —
 `add`, `add transactions`, `import --apply`, `ask` — and against another
 `format -i`: a concurrent append either lands before the formatting reads the
 file or waits for it, and can no longer be discarded by it. Two `format -i` runs
-on the same ledger both finish, and the second reports nothing to do. A lock
+on the same ledger both finish, and the second reports nothing to do. The wait
+is bounded like every writer's (see [`BEA_LOCK_TIMEOUT`](#environment-variables)). A lock
 is an open file, so a directory with more targets than the process may hold
 open (macOS starts at 256) first raises its own limit, and past the hard limit
 locks each file only while that file is read and replaced; the number of files
@@ -947,7 +948,12 @@ a directory the writer can read: on Windows, or on a filesystem without it,
 writers must share `XDG_CACHE_HOME` to be serialized. When the lock directory
 cannot be created or written — a read-only cache
 root, a file in the way — the write is refused with exit **3** naming it;
-make it writable or set `XDG_CACHE_HOME`. Stop any older CLI writers before
+make it writable or set `XDG_CACHE_HOME`. A writer that finds either lock held
+waits for it, but not forever: after about a second it prints `Waiting up to 60
+seconds for another bea write on PATH ...` on stderr (JSON mode stays silent, so
+stderr remains one object), and after 60 seconds it gives up with exit **4**,
+having written nothing. `BEA_LOCK_TIMEOUT` sets a different number of seconds;
+`0` refuses at once instead of waiting. Stop any older CLI writers before
 deleting their leftover
 `.FILENAME.bea.lock` sidecars. An external edit detected before replacement
 produces exit **4** and is preserved. The locks coordinate `bea` writers only:
@@ -1772,6 +1778,7 @@ select targets, endpoints, and state directories:
 | `BEA_CONFIG_DIR` | `$XDG_CONFIG_HOME/bea`, else `~/.config/bea` | Per-user state: credentials, `ask` history, user skills |
 | `XDG_DATA_HOME` | `~/.local/share` | Root for the managed PyPI engine under `…/bea/engine/<version>` |
 | `XDG_CACHE_HOME` | `~/.cache` | Root for ledger write locks under `…/bea/locks`, managed price feeds under `…/bea/managed-prices` and Beancount's load cache under `…/bea/load-cache` |
+| `BEA_LOCK_TIMEOUT` | `60` | Seconds a write waits for another `bea` write on the same file before exiting 4; `0` does not wait, and anything but a number zero or greater is a usage error (exit 2) |
 | `BEA_API_URL` | `https://api.v3.beancount.io` | API base URL; empty means the default, and a value that is not an `http(s)://` URL with a host is a usage error (exit 2) |
 | `BEA_DASHBOARD_URL` | `https://beancount.io` | Dashboard URL, used by the device login flow; validated like `BEA_API_URL` |
 | `BEA_NO_UPDATE_NOTIFIER` | — | Truthy disables the update notice entirely |

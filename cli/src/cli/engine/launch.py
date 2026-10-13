@@ -61,7 +61,7 @@ from collections.abc import Callable, Iterator, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, TextIO
 
 from cli import config, context, output
 from cli.auth.credentials import load_credentials
@@ -436,8 +436,44 @@ def _run_helper(command: list[str], env: dict[str, str] | None, stdin: str | Non
             start_new_session=sys.platform != "win32" and threading.current_thread() is threading.main_thread(),
         ) as child:
             attach(child)
-            out, err = child.communicate(stdin)
-    return subprocess.CompletedProcess(command, child.returncode, out, err)
+            # Read stderr here rather than in `communicate`, which hands it over
+            # only once the child has exited: a notice has to show while it waits.
+            stream, child.stderr = child.stderr, None
+            assert stream is not None
+            kept: list[str] = []
+            relay = threading.Thread(target=_relay_notices, args=(stream, kept), daemon=True)
+            relay.start()
+            try:
+                out, _ = child.communicate(stdin)
+            finally:
+                relay.join()
+                stream.close()
+    return subprocess.CompletedProcess(command, child.returncode, out, "".join(kept))
+
+
+#: Opens a stderr line the engine wants shown while it is still running
+#: (`bea_engine.protocol.NOTICE_PREFIX`); every other line is kept for the end.
+_NOTICE_PREFIX = "bea-engine-notice: "
+
+
+def _relay_notices(stream: TextIO, kept: list[str]) -> None:
+    """Show the helper's notices as they arrive and keep the rest of its stderr.
+
+    A writer queued behind another `bea` write says so here, before any
+    envelope exists (w5/182). `output.note` keeps JSON mode silent, where
+    stderr must stay one parseable object.
+    """
+    try:
+        for line in stream:
+            if line.startswith(_NOTICE_PREFIX):
+                output.note(line[len(_NOTICE_PREFIX) :].rstrip("\n"))
+            else:
+                kept.append(line)
+    except (OSError, ValueError):
+        # Undecodable diagnostics, or our own stderr gone: keep draining so the
+        # child never blocks on a full pipe.
+        while stream.buffer.read(65536):
+            pass
 
 
 @contextmanager

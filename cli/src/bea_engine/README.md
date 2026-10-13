@@ -45,7 +45,9 @@ exactly one of `data` or `error` accompanies them.
 
 **stderr** is unstructured diagnostics — progress notes, loader warnings, and
 whatever the engine's own dependencies print. It is never parsed and never
-carries the result.
+carries the result. A line opening with `bea-engine-notice: ` is one the
+frontend shows while the command is still running — a writer queued behind
+another write says so that way — instead of holding it for the end.
 
 **Exit codes** repeat what the envelope says, so a shell caller needs no JSON
 parser. They are the frontend's `cli.errors` codes, which lets `bea` pass a

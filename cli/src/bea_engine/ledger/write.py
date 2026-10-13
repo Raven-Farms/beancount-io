@@ -18,11 +18,13 @@ from collections import Counter
 from collections.abc import Callable, Iterable, Iterator, Sequence
 from contextlib import ExitStack, contextmanager, nullcontext
 from dataclasses import dataclass, field
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
 from bea_engine import stopping
-from bea_engine.protocol import AuthError, ConflictError, LedgerError, UsageError
+from bea_engine.ledger.text import single_line
+from bea_engine.protocol import AuthError, ConflictError, LedgerError, UsageError, notice
 from bea_engine.query import format_error, same_file
 
 
@@ -521,10 +523,16 @@ def _lock_directory(directory: Path) -> Iterator[None]:
             # Kept, like a lock file this process already holds: `append` asks again (w5/183).
             yield
             return
-        try:
-            fcntl.flock(fd, fcntl.LOCK_EX)
-        except OSError:
-            pass
+        wait = _LockWait(directory)
+        while True:
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                wait.pause()
+                continue
+            except OSError:
+                pass
+            break
         _HELD_DIRECTORIES.add(key)
         try:
             yield
@@ -555,6 +563,59 @@ def _open_lock(path: Path) -> tuple[int, bool]:
         return os.open(path, os.O_RDWR | os.O_CREAT, 0o600), False
 
 
+#: How long a writer queues behind another `bea` write before it gives up, and
+#: the variable that overrides it. Long enough for a large import to finish.
+LOCK_TIMEOUT_SECONDS = Decimal(60)
+LOCK_TIMEOUT_VARIABLE = "BEA_LOCK_TIMEOUT"
+_LOCK_NOTICE_SECONDS = 1.0
+_LOCK_POLL_SECONDS = 0.05
+
+
+def _lock_timeout() -> Decimal:
+    raw = os.environ.get(LOCK_TIMEOUT_VARIABLE, "").strip()
+    if not raw:
+        return LOCK_TIMEOUT_SECONDS
+    try:
+        seconds = Decimal(raw)
+    except InvalidOperation:
+        seconds = Decimal(-1)
+    if not seconds.is_finite() or seconds < 0:
+        raise UsageError(
+            f"{LOCK_TIMEOUT_VARIABLE} must be a number of seconds, zero or more, not {single_line(raw)!r}. "
+            "Correct it or unset it. Nothing was written."
+        )
+    return seconds
+
+
+class _LockWait:
+    """One writer's wait for a lock another `bea` write holds: a notice, then a limit.
+
+    Polled rather than blocking: a holder that never finishes (a hung plugin,
+    a stalled filesystem) must not hang every later writer behind it without a
+    word (w5/182).
+    """
+
+    def __init__(self, target: Path) -> None:
+        self._target = single_line(str(target))
+        self._timeout = _lock_timeout()
+        self._started = time.monotonic()
+        self._announced = False
+
+    def pause(self) -> None:
+        """After a refused attempt: sleep before the next one, or give up."""
+        waited = time.monotonic() - self._started
+        if self._timeout <= waited:
+            raise ConflictError(
+                f"Timed out after {self._timeout:g} seconds waiting for another bea write to release "
+                f"{self._target}. Nothing was written. Retry once that write has finished, or set "
+                f"{LOCK_TIMEOUT_VARIABLE} to a number of seconds to wait longer."
+            )
+        if not self._announced and waited >= _LOCK_NOTICE_SECONDS:
+            self._announced = True
+            notice(f"Waiting up to {self._timeout:g} seconds for another bea write on {self._target} ...")
+        time.sleep(_LOCK_POLL_SECONDS)
+
+
 @contextmanager
 def lock_file(file: Path, *, deciding: bool = False) -> Iterator[None]:
     """Serialize CLI writers across atomic replacements of the ledger inode.
@@ -580,6 +641,7 @@ def lock_file(file: Path, *, deciding: bool = False) -> Iterator[None]:
         return
     path = directory / f"{key}.lock"
     created = False
+    wait = _LockWait(file)
     with ExitStack() as stack:
         while True:
             try:
@@ -601,12 +663,25 @@ def lock_file(file: Path, *, deciding: bool = False) -> Iterator[None]:
                 if not os.fstat(stream.fileno()).st_size:
                     stream.write(b"\0")
                     stream.flush()
-                stream.seek(0)
-                msvcrt.locking(stream.fileno(), msvcrt.LK_LOCK, 1)
             else:
                 import fcntl
-
-                fcntl.flock(stream.fileno(), fcntl.LOCK_EX)
+            while True:
+                try:
+                    if sys.platform == "win32":
+                        stream.seek(0)
+                        msvcrt.locking(stream.fileno(), msvcrt.LK_NBLCK, 1)
+                    else:
+                        fcntl.flock(stream.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    break
+                except OSError as exc:
+                    if sys.platform != "win32" and not isinstance(exc, BlockingIOError):
+                        stream.close()
+                        raise
+                try:
+                    wait.pause()
+                except BaseException:
+                    stream.close()
+                    raise
             try:
                 current = os.path.samestat(os.fstat(stream.fileno()), os.stat(path))
             except OSError:
