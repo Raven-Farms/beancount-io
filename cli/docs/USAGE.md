@@ -202,7 +202,8 @@ gains or loses a file, the next `check` or write sees it without a ledger file
 being touched. A cached load that still matches the disk is served as before.
 `price export` also plans the directories it needs: a file standing where the
 export needs a directory (or a directory where it needs a file) is refused the
-same way, and `--force` does not remove it.
+same way, and `--force` does not remove it. So is a plan that collides with
+itself — one copied file landing where another copied file needs a directory.
 The exceptions are both narrow: `ingest archive -o DIR` files source documents
 into a directory tree rather than writing a ledger, so it keeps upstream's own
 collision handling (exit 1 naming the document), and `example -o` reports its
@@ -1392,7 +1393,8 @@ forwards to `bean-price`, so name a quotes job file `status` by path
 `price export` snapshots a self-contained copy for stock tools: each feed
 lands at `prices/<ALIAS>.beancount` as a `custom "bea-managed-source"`
 marker directive plus the exact effective text the load parsed, and every
-include is rewritten relative. `document` attachments under the root's
+include is rewritten relative. When the ledger includes a file of its own
+named `prices`, the feeds go in `prices-managed/` instead. `document` attachments under the root's
 directory are copied to the same relative place, under the name the
 directive uses — a path through a symlinked file or folder becomes a plain
 copy at that path; one outside that tree (including a symlink pointing out of

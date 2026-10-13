@@ -887,9 +887,13 @@ def export_portable(
     # that is what makes the export portable, so the generated file is the one
     # that moves.
     taken = set(destinations.values())
+    # The directory moves for the same reason. An included file literally named
+    # `prices` is copied to `prices`, where the feeds wanted a directory: the
+    # copy was written, then `mkdir` died on a raw `FileExistsError` (w5/191).
+    feed_dir = _free_feed_directory(target, taken)
     feed_files: dict[str, Path] = {}
     for source in loaded.sources:
-        feed_files[source.url] = _free_feed_path(target / "prices", source.alias, taken)
+        feed_files[source.url] = _free_feed_path(feed_dir, source.alias, taken)
         taken.add(feed_files[source.url])
     by_target = {
         include.target: feed_files[source.url] for source in loaded.sources for include in source.included_from
@@ -944,6 +948,18 @@ def export_portable(
             raise UsageError(
                 f"Cannot export into {target}: {blocker} is in the way of {dest}, where the export needs {needs}. "
                 "Move it or choose another directory; --force does not remove it. Nothing was written."
+            )
+    # The plan is checked against itself as well as the disk: one planned file
+    # standing where another needs a directory (an included file named
+    # `_shared` beside an include from outside the tree) is on no disk yet, so
+    # the loop above passes it and the second write fails after the first.
+    files = set(planned)
+    for dest in planned:
+        inside = next((parent for parent in dest.parents if parent in files), None)
+        if inside is not None:
+            raise UsageError(
+                f"Cannot export into {target}: the export would write {inside} as a file and {dest} inside it. "
+                f"Rename the ledger file that becomes {inside.name}. Nothing was written."
             )
     # A file already at a planned destination is a file the export was never
     # given: the directory the user picked may be somebody else's ledger, and
@@ -1117,6 +1133,19 @@ def _export_plugin_modules(loaded: LoadedLedger, snapshot: LedgerSnapshot, targe
         for source in sources:
             modules[target / source.relative_to(home)] = source
     return modules
+
+
+def _free_feed_directory(target: Path, taken: set[Path]) -> Path:
+    """The directory the generated feeds go in: `prices`, unless a copied file has that name.
+
+    Deterministic like the feed names: `prices`, then `prices-managed`, then numbered.
+    """
+    candidate = target / "prices"
+    suffix = 0
+    while candidate in taken:
+        suffix += 1
+        candidate = target / ("prices-managed" if suffix == 1 else f"prices-managed-{suffix}")
+    return candidate
 
 
 def _free_feed_path(directory: Path, alias: str, taken: set[Path]) -> Path:
