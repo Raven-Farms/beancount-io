@@ -87,6 +87,7 @@ def test_readonly_destination_refuses_add_and_preserves_bytes(book: Path, split:
 
 def test_init_reprompts_without_losing_valid_answers(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("cli.context._stdin_is_a_terminal", lambda: True)
+    monkeypatch.setattr("cli.context._stderr_is_a_terminal", lambda: True)
     result = runner.invoke(
         app, ["init", str(tmp_path / "books")], input="?\nEUR\nbad date\n2026-01-01\noops\nNaN\n1538.25\n"
     )

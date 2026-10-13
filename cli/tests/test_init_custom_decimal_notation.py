@@ -87,6 +87,7 @@ def test_opening_balance_prompt_retries_instead_of_silently_normalizing(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, invalid: str, valid: str
 ) -> None:
     monkeypatch.setattr("cli.context._stdin_is_a_terminal", lambda: True)
+    monkeypatch.setattr("cli.context._stderr_is_a_terminal", lambda: True)
     destination = tmp_path / "books"
 
     result = runner.invoke(

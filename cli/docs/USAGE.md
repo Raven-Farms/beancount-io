@@ -141,7 +141,7 @@ pass the ledger as upstream's positional argument, as in
 
 ### Non-interactive behavior
 
-`--no-input` is implied whenever stdin is not a terminal, whenever `--json` is set, and when `CI` is truthy. In that mode nothing waits for a human. Import duplicate decisions still require `--duplicates`, and AI writes still require their own interactive permission:
+`--no-input` is implied whenever stdin is not a terminal, whenever `--json` is set, and when `CI` is truthy. In that mode nothing waits for a human. Questions are written to stderr, so a redirected or piped stdout carries only results; when stderr is not a terminal either, nobody could see the question and the command fails with exit 2 as under `--no-input`. Import duplicate decisions still require `--duplicates`, and AI writes still require their own interactive permission:
 
 ```bash norun
 # Needs hosted credentials; demonstrates the unattended refusal.

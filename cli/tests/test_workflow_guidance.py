@@ -215,6 +215,7 @@ def test_interactive_init_warns_about_an_unusual_currency_before_the_next_questi
         note(message)
 
     monkeypatch.setattr("cli.context._stdin_is_a_terminal", lambda: True)
+    monkeypatch.setattr("cli.context._stderr_is_a_terminal", lambda: True)
     monkeypatch.setattr("typer.prompt", recording_prompt)
     monkeypatch.setattr("cli.output.note", recording_note)
     result = runner.invoke(app, ["init", str(tmp_path / "books")], input="US D\nusdd\n2026-01-01\n0\n")

@@ -538,6 +538,7 @@ class TestNoInput:
 
     def test_a_terminal_is_still_asked(self, logged_in: None, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr("cli.context._stdin_is_a_terminal", lambda: True)
+        monkeypatch.setattr("cli.context._stderr_is_a_terminal", lambda: True)
 
         with patch("typer.confirm", return_value=False) as confirm:
             result = runner.invoke(app, ["cloud", "ledger", "delete", "alice/books"])

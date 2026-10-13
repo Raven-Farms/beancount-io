@@ -229,8 +229,9 @@ def test_declining_a_confirmation_is_not_an_interrupt(monkeypatch: pytest.Monkey
     # `no_input` is also implied by a non-terminal stdin, which is exactly what
     # pytest gives us, so the prompt has to be reached with a terminal claimed.
     monkeypatch.setattr(context, "_stdin_is_a_terminal", lambda: True)
+    monkeypatch.setattr(context, "_stderr_is_a_terminal", lambda: True)
     context.configure(no_input=False, yes=False)
-    monkeypatch.setattr(typer, "confirm", lambda prompt: False)
+    monkeypatch.setattr(typer, "confirm", lambda prompt, err: False)
 
     assert context.current().confirm("Permanently delete something?") is False
 

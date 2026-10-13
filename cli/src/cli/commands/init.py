@@ -125,9 +125,9 @@ def init(
                 )
     prompted = currency is None
     if currency is None:
-        if ctx.no_input:
+        if not ctx.can_prompt:
             raise UsageError("Choose an operating currency with --currency USD (or EUR, etc.).")
-        currency = typer.prompt("Operating currency", default="USD", value_proc=_currency)
+        currency = ctx.prompt("Operating currency", default="USD", value_proc=_currency)
     currency = _currency(currency)
     warnings = []
     if not re.fullmatch(r"[A-Z]{3}", currency):
@@ -139,8 +139,8 @@ def init(
             # Beside the answer it is about, before the next question, so a
             # typo can be caught before the ledger exists.
             output.note(warnings[-1])
-    if date is None and not ctx.no_input:
-        day = typer.prompt(
+    if date is None and ctx.can_prompt:
+        day = ctx.prompt(
             "Earliest date you will record (opening balances must be as of this date)",
             default=datetime.date.today().isoformat(),
             value_proc=parse_date,
@@ -158,8 +158,8 @@ def init(
         if account in balances:
             raise UsageError(f"Opening balance specified twice for {account}.")
         balances[account] = _opening_amount(number)
-    if not ctx.no_input and opening_balance is None:
-        balances["Assets:Checking"] = typer.prompt(
+    if ctx.can_prompt and opening_balance is None:
+        balances["Assets:Checking"] = ctx.prompt(
             f"Checking opening balance on {day} (negative for an overdraft)", default="0", value_proc=_opening_amount
         )
 

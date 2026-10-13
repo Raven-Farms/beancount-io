@@ -77,6 +77,7 @@ def test_onboarding_never_overwrites_and_requires_currency_unattended(book: Path
 
 def test_interactive_onboarding(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("cli.context._stdin_is_a_terminal", lambda: True)
+    monkeypatch.setattr("cli.context._stderr_is_a_terminal", lambda: True)
     result = runner.invoke(app, ["init", str(tmp_path / "books"), "--date", "2026-08-01"], input="EUR\n123.45\n")
     assert result.exit_code == 0, result.output
     data = report(tmp_path / "books/main.bean", "balance-sheet")

@@ -10,8 +10,11 @@ from __future__ import annotations
 import os
 import shlex
 import sys
+from collections.abc import Callable
+from contextlib import redirect_stdout
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from cli.config import DEFAULT_ENTRY_FILE
 from cli.errors import UsageError
@@ -40,6 +43,14 @@ def _stdout_is_a_terminal() -> bool:
         return False
 
 
+def _stderr_is_a_terminal() -> bool:
+    """Whether a person would see a question. Prompts go to stderr, so stdout carries only results."""
+    try:
+        return sys.stderr.isatty()
+    except (AttributeError, ValueError):
+        return False
+
+
 @dataclass
 class RunContext:
     """Global options, resolved once by the root callback."""
@@ -62,6 +73,16 @@ class RunContext:
         still never hangs on a prompt.
         """
         return self._no_input or self.json_output or not _stdin_is_a_terminal() or env_flag("CI")
+
+    @property
+    def can_prompt(self) -> bool:
+        """True when a question can be both seen and answered.
+
+        Prompts are written to stderr, so a redirected stdout does not hide
+        them; with stderr redirected too nobody would see the question, and
+        the run behaves as under `--no-input` instead of waiting (w5/163).
+        """
+        return not self.no_input and _stderr_is_a_terminal()
 
     def strict_reads(self) -> bool:
         """True when a read must refuse partial answers.
@@ -129,11 +150,23 @@ class RunContext:
         """Ask before something destructive; refuse to guess when nobody can answer."""
         if self.yes:
             return True
-        if self.no_input:
+        if not self.can_prompt:
             raise UsageError(f"{prompt} Refusing to ask — pass --yes to confirm without a prompt.")
         import typer
 
-        return typer.confirm(prompt)
+        with redirect_stdout(sys.stderr):
+            return typer.confirm(prompt, err=True)
+
+    def prompt(self, text: str, *, default: str, value_proc: Callable[[str], Any]) -> Any:
+        """Ask a question on stderr; callers check `can_prompt` first.
+
+        Click still writes the space after the question on stdout under
+        `err=True`, so stdout is pointed at stderr for the duration.
+        """
+        import typer
+
+        with redirect_stdout(sys.stderr):
+            return typer.prompt(text, default=default, value_proc=value_proc, err=True)
 
 
 _context = RunContext()
