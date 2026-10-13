@@ -106,7 +106,7 @@ Usage: bea import [OPTIONS] {source}
 | `--date-format` | str |  | strptime date format for --csv; inferred from the file if unset |
 | `--delimiter` | str |  | CSV field delimiter for --csv: ',', ';', '\|', or 'tab' (detected from the header when omitted) |
 | `--rules` | path |  | TOML categorization rules for --csv rows |
-| `--default-account` | str |  | Counter account for --csv rows no rule matches [default: Expenses:Uncategorized] |
+| `--default-account` | str |  | Counter account for --csv rows no rule matches [default: Expenses:Uncategorized, under the ledger's own expenses root] |
 | `--config` | path |  | Python CONFIG file; defaults to the saved path or root-ledger/importers.py |
 | `--importer` | str |  | Importer name when multiple match |
 | `--apply` | flag |  | Validate and write the previewed entries |

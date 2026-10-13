@@ -211,7 +211,9 @@ categorizes rows the rules skip, but only when the value is a full account
 name such as `Expenses:Groceries`. A bank's own label such as `Groceries`
 is not an account; rows no rule matches join the review queue and the
 preview says so once, naming the labels it saw. Rows nothing matches post to
-`--default-account` (`Expenses:Uncategorized`) with flag `!`, while matched
+`--default-account` with flag `!` — by default `Uncategorized` under the
+ledger's expenses root, so `Expenses:Uncategorized` unless the ledger sets
+`name_expenses` (`Aufwand:Uncategorized` for `"Aufwand"`) — while matched
 rows carry `*`. The preview's `RULE` column names the winning pattern (or
 the category value, or `unmatched`), and JSON rows carry the same value in
 `rule`. List the categorization queue with

@@ -171,7 +171,12 @@ def answer(
         # Before the preview, not after: an invalid name would otherwise block
         # every row with the wrong diagnosis instead of failing on the typo.
         csv_account = _valid_account(csv_account, "--account", roots)
-        default_account = _valid_account(default_account or "Expenses:Uncategorized", "--default-account", roots)
+        # The built-in fallback follows the ledger's expenses root: the literal
+        # `Expenses:` name is refused on a ledger that sets `name_expenses`.
+        if default_account is None:
+            default_account = f"{roots[-1]}:Uncategorized"
+        else:
+            default_account = _valid_account(default_account, "--default-account", roots)
         resolved_date_format = date_format or "%Y-%m-%d"
         resolved_delimiter = parse_delimiter(delimiter) if delimiter is not None else None
         resolved_encoding = parse_encoding(encoding) if encoding is not None else "utf-8"

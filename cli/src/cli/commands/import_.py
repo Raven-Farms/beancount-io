@@ -339,7 +339,8 @@ def import_entries(
         str | None,
         typer.Option(
             "--default-account",
-            help="Counter account for --csv rows no rule matches [default: Expenses:Uncategorized]",
+            help="Counter account for --csv rows no rule matches "
+            "[default: Expenses:Uncategorized, under the ledger's own expenses root]",
         ),
     ] = None,
     config: Annotated[
@@ -663,7 +664,6 @@ def import_entries(
                     "for this file.",
                     details=recall_notes,
                 )
-        default_account = default_account or "Expenses:Uncategorized"
         delimiter_note = ""
         if csv_delimiter is not None and csv_delimiter != ",":
             delimiter_note = f", delimiter {_display_delimiter(csv_delimiter)}"
@@ -707,7 +707,11 @@ def import_entries(
         argv += ["--csv", forward_spec, "--account", csv_run_account, "--config-source", csv_origin]
         if csv_encoding != "utf-8":
             argv += ["--encoding", csv_encoding]
-        argv += ["--date-format", date_format, "--default-account", default_account]
+        argv += ["--date-format", date_format]
+        if default_account is not None:
+            # Unset, the engine derives it from the ledger's expenses root,
+            # which only the loaded options can name.
+            argv += ["--default-account", default_account]
         if csv_delimiter is not None:
             argv += ["--delimiter", "tab" if csv_delimiter == "\t" else csv_delimiter]
         if csv_rules_arg is not None:
@@ -732,7 +736,9 @@ def import_entries(
                 if (
                     isinstance(prior.get("default_account"), str)
                     and chosen_default_account is None
-                    and prior["default_account"] != default_account
+                    # Records written before the default followed the
+                    # ledger's root stored the built-in name itself.
+                    and prior["default_account"] != "Expenses:Uncategorized"
                 ):
                     discarded.append(f"--default-account {prior['default_account']}")
                 if (
