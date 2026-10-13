@@ -302,6 +302,13 @@ upstream's output unchanged; these are the failure modes:
 `context`, `display-context`, and `list-options` forward upstream's exit
 unchanged. A nonzero upstream status is never rewritten.
 
+Every operation reads a BOM-marked file, and NFC and NFD spellings of one
+account, as the rest of `bea` does: such a ledger runs the same upstream
+operation inside the helper instead of the stock executable, so
+`print-options` shows its real options and `missing-open` proposes no `open`
+for an account that is already open. `lex` then dumps the tokens of the text
+as loaded — without the mark, account names in NFC.
+
 ## Creating a ledger
 
 ```bash

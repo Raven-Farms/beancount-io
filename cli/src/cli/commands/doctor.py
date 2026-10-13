@@ -7,6 +7,7 @@ import os
 import re
 import subprocess
 import sys
+import unicodedata
 from pathlib import Path
 
 import typer
@@ -16,6 +17,7 @@ from cli.engine import launch
 from cli.errors import BeaError, ConflictError, LedgerError, refuse_json
 from cli.native_command import ForwardingCommand
 from cli.native_help import native_help
+from cli.utils import has_bom
 
 doctor_app = typer.Typer(
     name="doctor",
@@ -164,6 +166,60 @@ def _closure_syntax_errors_of(filename: str) -> list[str]:
     return [str(error) for member in members for error in files.get(member, [])]
 
 
+#: String literals, `;` comments and org-mode headings never name an account,
+#: so their normalization cannot split one; `bea check` routes on the same rule.
+_PROSE_RE = re.compile(r'"(?:[^"\\]|\\.)*"|;[^\n]*|^\*[^\n]*', re.MULTILINE)
+
+#: Operations upstream runs on the named file alone; the rest load its includes.
+_SINGLE_FILE_OPS = frozenset({"lex", "parse"})
+
+
+def _needs_compat(op: str, args: list[str]) -> bool:
+    """Whether stock `bean-doctor` would misread what this operation reads.
+
+    Upstream lexes a UTF-8 BOM as an error token glued to the first directive
+    and keeps NFC and NFD spellings of one account apart, so on a ledger
+    `bea check` accepts it printed default options and an `open` for an
+    account already open, all with exit 0 (w5/135). The helper reads both
+    shapes as the rest of `bea` does. Any other ledger keeps the upstream
+    executable, and its output byte for byte.
+    """
+    positionals = _positionals(args)
+    if not positionals:
+        return False
+    root = Path(positionals[0]).expanduser()
+    if not root.is_file():
+        return False
+    try:
+        members = [root] if op in _SINGLE_FILE_OPS else output.ledger_closure(root)
+    except OSError:
+        return False
+    for member in members:
+        if has_bom(member):
+            return True
+        try:
+            text = member.read_bytes().decode("utf-8", errors="ignore")
+        except OSError:
+            continue
+        if not unicodedata.is_normalized("NFC", _PROSE_RE.sub("", text)):
+            return True
+    return False
+
+
+def _run(op: str, args: list[str]) -> int:
+    """Run one operation with the streams inherited, where it reads the ledger right."""
+    if _needs_compat(op, args):
+        return launch.run_engine_argv(["scoped", op, *args])
+    return launch.run_native("bean-doctor", [op, *args])
+
+
+def _capture(op: str, args: list[str]) -> subprocess.CompletedProcess[str]:
+    """`_run`, keeping the output for an operation that has to read its own answer."""
+    if _needs_compat(op, args):
+        return launch.capture_engine(["scoped", op, *args])
+    return launch.capture_native("bean-doctor", [op, *args])
+
+
 def _refuse_json() -> None:
     """Doctor has no JSON output; every operation says so the same way."""
     refuse_json(
@@ -183,7 +239,7 @@ def _replayed(completed: subprocess.CompletedProcess[str]) -> subprocess.Complet
 def _forward(op: str, ctx: typer.Context) -> None:
     """Pass remaining argv through to bean-doctor, resolving a relative location."""
     _refuse_json()
-    code = launch.run_native("bean-doctor", [op, *_located_against_ledger(op, list(ctx.args))])
+    code = _run(op, _located_against_ledger(op, list(ctx.args)))
     raise typer.Exit(code)
 
 
@@ -205,7 +261,7 @@ def _forward_parse(op: str, ctx: typer.Context) -> None:
     args = list(ctx.args)
     positionals = _positionals(args)
     errors = _syntax_errors_of(positionals[0]) if positionals else []
-    code = launch.run_native("bean-doctor", [op, *args])
+    code = _run(op, args)
     if code == 0 and errors:
         raise LedgerError(f"doctor {op} recovered from syntax errors in {positionals[0]} (see above).")
     raise typer.Exit(code)
@@ -220,7 +276,7 @@ def _forward_print_options(ctx: typer.Context) -> None:
         errors = _closure_syntax_errors_of(positionals[0])
         if errors:
             raise LedgerError(f"doctor print-options cannot load {positionals[0]}: {errors[0]}")
-    code = launch.run_native("bean-doctor", ["print-options", *args])
+    code = _run("print-options", args)
     raise typer.Exit(code)
 
 
@@ -316,7 +372,7 @@ def _forward_roundtrip(ctx: typer.Context) -> None:
     errors = _closure_syntax_errors_of(positionals[0]) if positionals else []
     scratch_cache = _roundtrip_load_cache(positionals[0]) if positionals else None
     before = _signature(scratch_cache)
-    completed = launch.capture_native("bean-doctor", ["roundtrip", *args])
+    completed = _capture("roundtrip", args)
     if scratch_cache is not None and _signature(scratch_cache) not in (None, before):
         with contextlib.suppress(OSError):
             scratch_cache.unlink()
@@ -356,7 +412,7 @@ def _forward_directories(ctx: typer.Context) -> None:
     """Map upstream's ERROR lines to the exit status gates need."""
     _refuse_json()
     args = list(ctx.args)
-    completed = _replayed(launch.capture_native("bean-doctor", ["directories", *args]))
+    completed = _replayed(_capture("directories", args))
     problems = [
         line
         for stream in (completed.stdout, completed.stderr)
@@ -395,7 +451,7 @@ def _forward_missing_open(ctx: typer.Context) -> None:
     """Print upstream's missing opens, then name the inactive ones it omits."""
     _refuse_json()
     args = list(ctx.args)
-    _replayed(launch.capture_native("bean-doctor", ["missing-open", *args]))
+    _replayed(_capture("missing-open", args))
     positionals = _positionals(args)
     if not positionals:
         raise typer.Exit(0)

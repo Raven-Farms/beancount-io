@@ -48,6 +48,30 @@ def install() -> None:
 
     parse_file.__bea_bom_wrapped__ = True  # type: ignore[attr-defined]
     beancount_parser.parse_file = parse_file
+    _install_lexer()
+
+
+def _install_lexer() -> None:
+    """Give `lexer.lex_iter` the same reading, for `doctor lex`.
+
+    The token dump is the one diagnostic that never reaches `parse_file`, so
+    it alone reported the mark as an error token glued to the first keyword
+    while every other command read the file cleanly (w5/135).
+    """
+    from beancount.parser import lexer
+
+    original: Any = lexer.lex_iter
+
+    def lex_iter(file: Any, *args: Any, **kwargs: Any) -> Any:
+        if not isinstance(file, io.IOBase):
+            try:
+                with open(file, "rb") as stream:
+                    file = io.BytesIO(_canonical_bytes(stream.read()))
+            except OSError:
+                pass
+        return original(file, *args, **kwargs)
+
+    lexer.lex_iter = lex_iter
 
 
 def _canonical_bytes(raw: bytes) -> bytes:

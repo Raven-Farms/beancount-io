@@ -606,12 +606,15 @@ def source_query(
 )
 def scoped_command(
     ctx: typer.Context,
-    op: Annotated[str, typer.Argument(help="bean-doctor operation: region or linked.")],
+    op: Annotated[str, typer.Argument(help="bean-doctor operation, such as region or linked.")],
 ) -> None:
     """Run `bean-doctor region` / `linked`, numbering balances from the scope.
 
     Like `shell`, this streams upstream's own output rather than an envelope:
     `bea` captures it, and the tree upstream prints is the answer.
+
+    Any other operation runs here unchanged when its ledger carries a BOM or a
+    non-NFC account name, which only this process reads as `bea` does (w5/135).
     """
     from bea_engine import scoped
 
