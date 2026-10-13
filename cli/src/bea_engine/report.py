@@ -443,6 +443,29 @@ def _metadata(filtered: Any, conversion: str, ledger_errors: list[str], interval
     return data
 
 
+def _routed_since(currency: str, conversion: str, prices: Any, unvalued: list[date | None]) -> date | None:
+    """The first date a holding with no direct quote is valued through its cost currency.
+
+    A lot held at cost converts in two hops (ACME → USD → EUR) once both legs
+    are quoted, so "no price at any date" would sit above a report that values
+    it. The price map does not say which lots carry a cost, so the route counts
+    only when every row the report left in units precedes it; a row still
+    unvalued on or after that date means the route is not the one in use.
+    """
+    firsts = []
+    for pair in prices.commodity_pairs(()):
+        if currency not in pair:
+            continue
+        via = pair[1] if pair[0] == currency else pair[0]
+        legs = [prices.get_all_prices((currency, via)), prices.get_all_prices((via, conversion))]
+        if all(legs):
+            firsts.append(max(min(point[0] for point in leg) for leg in legs))
+    if not firsts:
+        return None
+    first: date = min(firsts)
+    return first if all(when is not None and when < first for when in unvalued) else None
+
+
 def _price_summary_lines(
     missing: list[str], dated: list[dict[str, Any]], conversion: str, prices: Any | None
 ) -> list[str]:
@@ -451,10 +474,14 @@ def _price_summary_lines(
     for currency in missing:
         if prices is not None:
             all_prices = prices.get_all_prices((currency, conversion))
-            if not all_prices:
+            if all_prices:
+                earliest = min(point[0] for point in all_prices)
+            else:
+                unvalued = [item["date"] for item in dated if item["from"] == currency]
+                earliest = _routed_since(currency, conversion, prices, unvalued)
+            if earliest is None:
                 lines.append(f"{currency} has no {conversion} price at any date; shown in units")
                 continue
-            earliest = min(point[0] for point in all_prices)
             lines.append(f"{currency} → {conversion} has no price before {earliest}; earlier rows shown in {currency}")
             continue
         dates = [item["date"] for item in dated if item["from"] == currency and item["date"]]

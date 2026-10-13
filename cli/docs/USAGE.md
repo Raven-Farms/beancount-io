@@ -1210,7 +1210,9 @@ interval: earlier rows stay in the source commodity while later rows convert.
 A missing price never fails a terminal report — stderr carries one summary
 line per commodity, for example `VACHR has no USD price at any date; shown in
 units` or `EUR → USD has no price before 2026-08-31; earlier rows shown in
-EUR`. Under `--json`, with piped stdout, under `CI`, or with `--strict`, a
+EUR`. A holding valued through its cost currency (a USD-cost stock in a EUR
+ledger) gets the dated wording from the first date both legs are quoted.
+Under `--json`, with piped stdout, under `CI`, or with `--strict`, a
 missing price exits **1** unless `--allow-errors` is passed; the error's
 `details` carry the same per-commodity summary, and `error.result` keeps the
 dated triples in `missing_price_dates` (`from`, `to`, `date`) alongside
