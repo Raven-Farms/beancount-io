@@ -317,6 +317,10 @@ The importer chooses the account and categories itself, so `--account`,
 and default ones; pass `--csv auto` with them to read the file by its header
 row instead.
 If multiple importers recognize the export, select one with `--importer NAME`.
+Importers that share a name, such as two instances of one class configured for
+different accounts, are listed as `NAME#1`, `NAME#2` in `CONFIG` order with the
+account each files under; pass that selector, or give each importer a distinct
+`name`.
 An unknown name lists the available importer names; a recognized name whose
 importer rejects the file reports that separately.
 The configuration can import sibling modules. It runs as a script, so import

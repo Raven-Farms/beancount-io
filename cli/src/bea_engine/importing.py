@@ -18,7 +18,7 @@ import shlex
 import sys
 import tempfile
 import unicodedata
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from dataclasses import dataclass
 from decimal import Context, Decimal
@@ -584,18 +584,48 @@ def _importer(config: Path, source: Path, name: str | None) -> Any:
     configured = namespace.get("CONFIG")
     if not isinstance(configured, list | tuple):
         raise UsageError("Importer configuration must export CONFIG = [importer, ...]. See docs/IMPORTING.md.")
+    # Two instances of one class share a name, so each also answers to NAME#N,
+    # its position among the importers of that name.
+    selectors = _selectors(configured)
+    chosen = list(zip(selectors, configured, strict=True))
     if name is not None:
-        available = [_name(importer) for importer in configured]
-        if name not in available:
-            raise UsageError(f"No importer named {name!r}; available: {', '.join(available) or '(none)'}.")
-        configured = [importer for importer in configured if _name(importer) == name]
-    matches = [importer for importer in configured if importer.identify(str(source))]
+        named = [pair for pair in chosen if _name(pair[1]) == name] or [pair for pair in chosen if pair[0] == name]
+        if not named:
+            raise UsageError(f"No importer named {name!r}; available: {', '.join(selectors) or '(none)'}.")
+        chosen = named
+    matches = [pair for pair in chosen if pair[1].identify(str(source))]
     if not matches:
         selected = f"Importer {name!r} does not recognize" if name else "No configured importer recognizes"
         raise UsageError(f"{selected} {source.name}. Check --config and the export format.")
     if len(matches) > 1:
-        raise UsageError("Multiple importers match; choose one with --importer.", details=[_name(i) for i in matches])
-    return matches[0]
+        if all(selector == _name(importer) for selector, importer in matches):
+            raise UsageError("Multiple importers match; choose one with --importer.", details=[s for s, _ in matches])
+        raise UsageError(
+            "Multiple importers match and share a name; choose one with --importer NAME#N as listed, "
+            "or give each importer a distinct name.",
+            details=[_described(selector, importer, source) for selector, importer in matches],
+        )
+    return matches[0][1]
+
+
+def _selectors(configured: Sequence[Any]) -> list[str]:
+    names = [_name(importer) for importer in configured]
+    seen: dict[str, int] = {}
+    selectors = []
+    for name in names:
+        seen[name] = seen.get(name, 0) + 1
+        selectors.append(name if names.count(name) == 1 else f"{name}#{seen[name]}")
+    return selectors
+
+
+def _described(selector: str, importer: Any, source: Path) -> str:
+    """The selector with the account it files under, which is what tells two
+    instances of one class apart."""
+    try:
+        account = importer.account(str(source))
+    except Exception:
+        return selector
+    return f"{selector} ({account})" if isinstance(account, str) and account else selector
 
 
 def _name(importer: Any) -> str:
