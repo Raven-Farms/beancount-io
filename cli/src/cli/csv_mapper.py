@@ -51,6 +51,13 @@ class CsvMapping:
         return self.columns.get(name)
 
 
+# In a double-quoted TOML string a backslash starts a TOML escape, so the regex
+# `\b` arrives as a backspace. Both rule errors that this causes name the way out.
+_LITERAL_STRING_HINT = (
+    "TOML reads a backslash in a double-quoted string as its own escape; write the regex in single quotes "
+    "(match = '\\bshell\\b') or double each backslash (\"\\\\bshell\\\\b\")."
+)
+
 # The spellings of "match every row" a rules file may use on purpose.
 _EXPLICIT_CATCH_ALL = frozenset({".*", "^.*", ".*$", "^.*$"})
 
@@ -69,6 +76,15 @@ class CsvRule:
         account = raw.get("account") if isinstance(raw, dict) else None
         if not isinstance(match, str) or not isinstance(account, str):
             raise UsageError(f'Rule {index + 1} must be {{ match = "<regex>", account = "..." }}; got {raw!r}.')
+        # `"\bshell\b"` parses to backspaces and `"\t"` to a tab: a pattern no
+        # bank text can match, so every row would fall through to the default
+        # account with nothing said.
+        control = next((character for character in match if character < " " or character == "\x7f"), None)
+        if control is not None:
+            raise UsageError(
+                f"Rule {index + 1} match {match!r} contains the control character {control!r}, "
+                f"so it can never match. {_LITERAL_STRING_HINT}"
+            )
         if not match.strip():
             raise UsageError(f"Rule {index + 1} has an empty match; write a regex, or .* for a catch-all.")
         try:
@@ -192,7 +208,8 @@ def load_rules(path: Path) -> list[CsvRule]:
     except OSError as exc:
         raise UsageError(f"Cannot read rules file {path}: {exc}.") from exc
     except ValueError as exc:
-        raise UsageError(f"Cannot parse rules file {path} as TOML: {exc}.") from exc
+        hint = f" {_LITERAL_STRING_HINT}" if "Unescaped '\\'" in str(exc) else ""
+        raise UsageError(f"Cannot parse rules file {path} as TOML: {exc}.{hint}") from exc
     entries = raw.get("rule")
     if not isinstance(entries, list) or not entries:
         raise UsageError(f"Rules file {path} must hold a [[rule]] list with match and account each.")
