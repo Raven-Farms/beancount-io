@@ -37,7 +37,6 @@
 
 - [182 — A writer behind a held lock waits forever with no message](./182.md) — minor CLI concurrency bug; silent after 15 s under `--json`, completes on release, 30–45m.
 - [205 — Remembered import settings are keyed by the typed spelling of the ledger path](./205.md) — minor CLI import bug; `books/` forgets what `Books/` remembered on a case-insensitive volume, 20m.
-- [213 — Bulk `"amount": "1,234.56 USD"` is refused, though `--posting` and longer bulk amounts accept the same comma grouping](./213.md) — minor CLI consistency bug; flag and cost-bearing bulk controls accept it, 15m.
 - [214 — Two `bea import` runs at once lose one remembered mapping, and a later flag-free `--apply` writes rows to the wrong account](./214.md) — major CLI import bug; mapping lost in 4 of 8 races, sequential control refuses with exit 2, 45–60m.
 - [215 — An unreadable `importers/` directory fails every `bea import` with a raw `[Errno 13]`, even when all settings are on the command line](./215.md) — minor CLI bug; exit 1 `validation`, read-only control proceeds, 20m.
 - [216 — `bea check` fails a valid ledger whose `option "documents"` folder is outside the ledger directory, once per file, at line 0, with a remedy that does not apply](./216.md) — minor CLI bug; stock bean-check passes, in-tree control passes, 30–40m.
