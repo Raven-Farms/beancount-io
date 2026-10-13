@@ -9,6 +9,7 @@ as strings — and owns every decision about how to show it.
 from __future__ import annotations
 
 import datetime
+import os
 from pathlib import Path
 from typing import Any
 
@@ -95,7 +96,9 @@ def answer(
         filters |= {"flag": flag, "search": search, "tags": tags, "links": links}
     if directive_type == "document":
         # The tree a document may live in, so its path lists as the ledger spells it.
-        filters["root"] = Path(str(file)).resolve().parent
+        # Named lexically: a symlinked root's attachments sit beside the link,
+        # not beside its target.
+        filters["root"] = Path(os.path.abspath(str(file))).parent
 
     entries, errors = reader.load_file(file)
     if on_disk_only:
