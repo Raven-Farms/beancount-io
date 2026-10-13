@@ -26,7 +26,7 @@ from pathlib import Path
 from typing import Any
 
 from bea_engine.ledger import write as ledger_write
-from bea_engine.ledger.text import ledger_roots, unknown_root_message
+from bea_engine.ledger.text import ledger_roots, reports_unused_accounts, unknown_root_message
 from bea_engine.ledger.writer import format_entry, normalize_entry_strings
 from bea_engine.protocol import ConflictError, EngineError, LedgerError, UsageError
 from bea_engine.query import format_error
@@ -151,7 +151,9 @@ def answer(
     target = ledger_write.destination(file, into)
     original = snapshot.require_target(target)
     existing, errors, options = managed_load.load_file(file, snapshot=snapshot)
-    if not allow_errors and errors:
+    # An account staged for this import under `nounused` is the one error the
+    # import itself clears; validation still refuses a result that leaves it.
+    if not allow_errors and not all(ledger_write.is_unused_open(error) for error in errors):
         raise LedgerError(
             f"Ledger has {len(errors)} error(s). Pass --allow-errors to preview and apply anyway.",
             details=[format_error(error, ledger_file=file) for error in errors],
@@ -287,6 +289,7 @@ def answer(
     claimed, owners = _claim_payeeless_ids(hashed, identities, account)
     batch_rows: dict[int, int] = {}
     first_uses = _first_uses(entries, Transaction)
+    stage_opens = reports_unused_accounts(options)
     # Blocked rows with what they were before the block, for the second look below.
     held: list[tuple[dict[str, Any], Any, str, str | None]] = []
     for index, entry in enumerate(entries):
@@ -407,7 +410,7 @@ def answer(
         include = status == "new" or (status == "possible_duplicate" and duplicates == "include")
         unblocked = (status, reason)
         if include and isinstance(entry, Transaction):
-            blocked_reason = _blocked_reason(entry, open_currencies, roots, first_uses)
+            blocked_reason = _blocked_reason(entry, open_currencies, roots, first_uses, stage_opens)
             if blocked_reason is not None:
                 status, reason, include = "blocked", blocked_reason, False
         if include:
@@ -450,7 +453,7 @@ def answer(
         proposal = [row["entry"] for row in rows if row["include"] or row["status"] == "blocked"]
         after = _open_currencies(_entries_after(snapshot, target, original, proposal), Open)
         for row_dict, entry, was, why in held:
-            still = _blocked_reason(entry, after, roots, first_uses)
+            still = _blocked_reason(entry, after, roots, first_uses, stage_opens)
             if still is None:
                 row_dict.update(status=was, reason=why, include=True)
             else:
@@ -876,15 +879,17 @@ def _blocked_reason(
     open_currencies: dict[str, set[str] | None],
     roots: tuple[str, ...],
     first_uses: dict[str, tuple[Any, list[str] | None]],
+    stage_opens: bool = False,
 ) -> str | None:
     """Why a transaction cannot be written, or None when its accounts allow it.
 
     Names each unopened account with the `bea add open` line that fixes it,
     and each currency the account's open directive does not allow. The line is
     one command per account, dated and constrained for every row of the import
-    that posts there. An account under a root the ledger does not use (from a
-    Python importer) gets no `add open` remedy: that command would refuse it
-    too.
+    that posts there. `stage_opens` is a ledger loading `nounused`, where the
+    open is refused until used unless staged with `--allow-errors`. An account
+    under a root the ledger does not use (from a Python importer) gets no
+    `add open` remedy: that command would refuse it too.
     """
     missing = sorted({posting.account for posting in entry.postings if posting.account not in open_currencies})
     foreign = [name for name in missing if name.split(":", 1)[0] not in roots]
@@ -892,6 +897,7 @@ def _blocked_reason(
         return unknown_root_message(foreign[0], roots)
     if missing:
         remedies = []
+        flag = " --allow-errors" if stage_opens else ""
         for name in missing:
             opened, currencies = first_uses.get(name, (entry.date, None))
             # Quoted so the line survives a paste into a shell. Valid account
@@ -899,7 +905,7 @@ def _blocked_reason(
             # names are refused up front — but a suggestion that only sometimes
             # pastes cleanly is worse than one that always does.
             constraint = "".join(f" -c {currency}" for currency in sorted(currencies or ()))
-            remedies.append(f"bea add open --account {shlex.quote(name)} --date {opened.isoformat()}{constraint}")
+            remedies.append(f"bea add open --account {shlex.quote(name)} --date {opened.isoformat()}{constraint}{flag}")
         quoted = ", ".join(f"'{name}'" for name in missing)
         noun = "Account" if len(missing) == 1 else "Accounts"
         verb = "is" if len(missing) == 1 else "are"

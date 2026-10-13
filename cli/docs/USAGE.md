@@ -886,8 +886,13 @@ and document paths are valid for your ledger. Every add command, and `import`,
 accepts `--allow-errors` for a semantic error already in the books, such as a
 balance assertion that still fails. An error the write itself would introduce —
 an unknown account, a currency violation, a new balance failure — is refused
-even with the flag; the staged-pad half of the two-step pad flow below is the
-one exception. Syntax errors and pad references to unknown or inactive accounts
+even with the flag. The two exceptions are the first halves of a two-step: the
+staged pad of the pad flow below, and an account opened on a ledger that loads
+`beancount.plugins.nounused` (alone or through `pedantic`). That plugin reports
+an account until something uses it, so there `add open` needs `--allow-errors`,
+reports `Unused account` as staged, and the account's first `add transaction`,
+`add transactions` or `import` clears it without the flag; the refusals for a
+missing account print the `add open` line with the flag. Syntax errors and pad references to unknown or inactive accounts
 are always rejected. A syntax error is text Beancount could not read; what it
 reports about text it did read — an unknown option, a duplicate metadata key, an
 unbalanced `pushtag` — is tolerated like any other existing error. For an

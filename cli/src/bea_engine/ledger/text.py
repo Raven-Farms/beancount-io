@@ -226,6 +226,16 @@ def ledger_roots(options: Mapping[str, object]) -> tuple[str, ...]:
     return tuple(str(options.get(key) or default) for key, default in zip(_ROOT_OPTIONS, defaults, strict=True))
 
 
+#: Plugins that report an account opened but not yet used; `pedantic` bundles `nounused`.
+_UNUSED_ACCOUNT_PLUGINS = frozenset({"beancount.plugins.nounused", "beancount.plugins.pedantic"})
+
+
+def reports_unused_accounts(options: Mapping[str, object]) -> bool:
+    """Whether the ledger loads `nounused`, under which an `open` is an error until something uses the account."""
+    plugins = options.get("plugin")
+    return isinstance(plugins, list) and any(plugin[0] in _UNUSED_ACCOUNT_PLUGINS for plugin in plugins)
+
+
 def without_root_name_errors(errors: list[Any]) -> list[Any]:
     """A standalone parse's errors, minus the ones only the ledger's options can judge.
 

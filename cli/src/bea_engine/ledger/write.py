@@ -986,6 +986,7 @@ def validate_candidate(
     allow_errors: bool = False,
     snapshot: LedgerSnapshot | None = None,
     stages_pad: bool = False,
+    stages_open: bool = False,
 ) -> list[str]:
     """Refuse a candidate that fails validation, naming what it would break.
 
@@ -1005,7 +1006,11 @@ def validate_candidate(
     `stages_pad` says the request appends nothing but pads, and only an unused
     pad inside that appended text is exempt. Any other write that leaves a pad
     unused — its own alongside a balance, or one that was valid before —
-    introduced an error like any other (w5/081).
+    introduced an error like any other (w5/081). A newly staged `open` on a
+    ledger loading `nounused` is the same first half of a two-step: the plugin
+    reports the account until something uses it, and nothing can use it before
+    it is open. `stages_open` says the request appends nothing but opens, and
+    only an `Unused account` on one of those is exempt (w5/221).
     """
     from beancount.core import interpolate
     from beancount.core.data import Balance, Close, Document, Open, Pad, Transaction
@@ -1013,7 +1018,7 @@ def validate_candidate(
     from beancount.parser.lexer import LexerError
 
     from bea_engine import managed_load
-    from bea_engine.ledger.text import ledger_roots, unknown_root_message
+    from bea_engine.ledger.text import ledger_roots, reports_unused_accounts, unknown_root_message
 
     # The staged copy has a private name, so the guard inside the load would
     # name that; a `{filename}` cache pattern is about the ledger file itself.
@@ -1063,11 +1068,14 @@ def validate_candidate(
         source = filenames.get(source, source)
         lineno = error.source.get("lineno")
         # A staged pad's `Unused Pad` is the documented carve-out — the
-        # two-step pad-then-balance flow cannot start without it.
+        # two-step pad-then-balance flow cannot start without it. A staged
+        # open's `Unused account` is the other, for the same reason.
         appended = isinstance(lineno, int) and lineno > original_line_counts.get(source.resolve(), lineno)
+        unused_open = is_unused_open(error)
         is_new = False
         if allow_errors and index not in tolerated:
-            is_new = not (stages_pad and appended and "Unused Pad" in getattr(error, "message", ""))
+            exempt = (stages_pad and "Unused Pad" in getattr(error, "message", "")) or (stages_open and unused_open)
+            is_new = not (appended and exempt)
         introduced.append(is_new)
         # Candidate validation invents line numbers past EOF when the append
         # is rejected. Do not send agents to a line that will not exist.
@@ -1093,8 +1101,16 @@ def validate_candidate(
                     # load, so the remedy is the root, not the directive (w5/154).
                     if account.split(":", 1)[0] in roots:
                         suggestion += (
-                            f" To create it, use bea add open --account {shlex.quote(account)} --date YYYY-MM-DD."
+                            f" To create it, use bea add open --account {shlex.quote(account)} --date YYYY-MM-DD"
                         )
+                        # Under `nounused` the plain command is refused: the
+                        # open is an error until this very write uses it.
+                        if reports_unused_accounts(options):
+                            suggestion += (
+                                " --allow-errors, then retry; this ledger's nounused plugin reports the open"
+                                " until the account is used"
+                            )
+                        suggestion += "."
                     else:
                         suggestion += f" {unknown_root_message(account, roots)}"
                 account_suggestions[account] = suggestion
@@ -1159,6 +1175,19 @@ def validate_candidate(
             hints.append(
                 f"Relative document paths resolve from {source.parent}, the directory containing {source.name}."
             )
+        if unused_open:
+            if not appended:
+                hints.append(
+                    "The account is open but nothing uses it yet, which this ledger's nounused plugin reports."
+                    " Add its first transaction."
+                )
+            elif not allow_errors:
+                hints.append(
+                    "This ledger's nounused plugin reports an account until something uses it."
+                    " Stage the open with --allow-errors, then add the account's first transaction."
+                )
+            elif not is_new:
+                hints.append("Staged: add the account's first transaction to clear this.")
         if "Unused Pad" in message:
             pad_entry = error.entry if isinstance(error.entry, Pad) else None
             message += _unused_pad_hint(pad_entry, entries, errors, filenames, appended=appended)
@@ -1215,6 +1244,13 @@ def validate_candidate(
             records=[records[index] for index in blocking],
         )
     return messages
+
+
+def is_unused_open(error: Any) -> bool:
+    """Whether a loader error is `nounused` reporting an `open` nothing uses yet."""
+    from beancount.core.data import Open
+
+    return isinstance(error.entry, Open) and str(getattr(error, "message", "")).startswith("Unused account '")
 
 
 def _unused_pad_hint(
@@ -1632,7 +1668,12 @@ def validate_append(
     original = snapshot.require_target(target)
     with candidate_file(target, _appended_or_report(target, original, texts)) as candidate:
         warnings = validate_candidate(
-            candidate, target, allow_errors=allow_errors, snapshot=snapshot, stages_pad=_only_pads(texts)
+            candidate,
+            target,
+            allow_errors=allow_errors,
+            snapshot=snapshot,
+            stages_pad=_only_pads(texts),
+            stages_open=_only_opens(texts),
         )
     snapshot.verify()
     return warnings + respelled_account_notes(texts, snapshot)
@@ -1644,6 +1685,14 @@ _PAD_TEXT = re.compile(r"\s*\d{4}[-/]\d+[-/]\d+\s*pad\b")
 def _only_pads(texts: list[str]) -> bool:
     """Whether a request appends pads and nothing else — the first half of the two-step pad flow."""
     return bool(texts) and all(_PAD_TEXT.match(text) for text in texts)
+
+
+_OPEN_TEXT = re.compile(r"\s*\d{4}[-/]\d+[-/]\d+\s*open\b")
+
+
+def _only_opens(texts: list[str]) -> bool:
+    """Whether a request appends opens and nothing else — an account staged ahead of its first use."""
+    return bool(texts) and all(_OPEN_TEXT.match(text) for text in texts)
 
 
 def require_writable(file: Path) -> None:
@@ -1788,7 +1837,12 @@ def append(
             raise ConflictError("The ledger changed since the preview was prepared; nothing was written. Retry.")
         with candidate_file(target, _appended_or_report(target, original, texts)) as candidate:
             warnings = validate_candidate(
-                candidate, target, allow_errors=allow_errors, snapshot=snapshot, stages_pad=_only_pads(texts)
+                candidate,
+                target,
+                allow_errors=allow_errors,
+                snapshot=snapshot,
+                stages_pad=_only_pads(texts),
+                stages_open=_only_opens(texts),
             )
             snapshot.verify()
             if original_stat is None:

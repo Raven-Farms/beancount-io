@@ -150,7 +150,11 @@ line — dated for the earliest row of the import that posts there and allowing
 each currency the import posts — so running it once unblocks them all. "Opened"
 is read from the ledger as the import would leave it: an account a plugin such
 as `auto_accounts` opens on first use, or one whose `open` the importer returns
-in the same batch, does not block its rows. A currency mismatch offers the currency setting
+in the same batch, does not block its rows. On a ledger that loads
+`beancount.plugins.nounused` (or `pedantic`) the printed line ends in
+`--allow-errors`, because that plugin reports an account until something uses
+it; the account staged that way does not block the import that first posts to
+it. A currency mismatch offers the currency setting
 first and widening the `open` directive last: widening it would book the
 foreign amounts as the wrong commodity. An account under a root the ledger
 does not use (`Foo:Bar`; the roots are its `name_*` options) can never be
