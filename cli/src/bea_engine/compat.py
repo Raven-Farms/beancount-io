@@ -39,11 +39,14 @@ def install() -> None:
                     raw = stream.read()
             except OSError:
                 return original(file, *args, **kwargs)
-            raw = _canonical_bytes(raw)
+            canonical = _canonical_bytes(raw)
             name = os.fspath(file)
             if isinstance(name, str):
                 kwargs.setdefault("report_filename", name)
-            return original(io.BytesIO(raw), *args, **kwargs)
+            result = original(io.BytesIO(canonical), *args, **kwargs)
+            if b"include" in raw and not raw.endswith(canonical):
+                _restore_include_paths(raw, result[2])
+            return result
         return original(file, *args, **kwargs)
 
     parse_file.__bea_bom_wrapped__ = True  # type: ignore[attr-defined]
@@ -72,6 +75,29 @@ def _install_lexer() -> None:
         return original(file, *args, **kwargs)
 
     lexer.lex_iter = lex_iter
+
+
+def _restore_include_paths(raw: bytes, options: dict[str, Any]) -> None:
+    """Put each parsed include target back in the spelling the file has it in.
+
+    Normalization is for the names a ledger declares; an include target names
+    a file, and the loader opens and reports it under exactly that string.
+    Read as NFC, a path with a decomposed component came back respelled: the
+    include lines `bea` stages with absolute paths then reported every
+    included file under a name no map-back table held, so a write took an
+    error already in the books for a new one and quoted the staged copy
+    (w5/144), and a normalization-sensitive volume could not open it at all.
+    """
+    from bea_engine.ledger.text import iter_includes
+
+    written = [span.target for span in iter_includes(raw)]
+    restored = []
+    for target in options.get("include") or ():
+        same = next((name for name in written if unicodedata.normalize("NFC", name) == target), None)
+        if same is not None:
+            written.remove(same)
+        restored.append(target if same is None else same)
+    options["include"] = restored
 
 
 def _canonical_bytes(raw: bytes) -> bytes:
