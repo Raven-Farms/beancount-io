@@ -1235,7 +1235,7 @@ class TestCsvBlankRowsAndTies:
         )
         assert result.exit_code == 2
         assert "narration (Description, Memo)" in result.stderr
-        assert "--csv date=Transaction Date,amount=Transaction Amount,narration=Description" in result.stderr
+        assert "--csv 'date=Transaction Date,amount=Transaction Amount,narration=Description'" in result.stderr
 
     def test_original_description_alone_is_narration(self, book: Path, isolated_config: Path) -> None:
         source = book.parent / "bank.csv"

@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shlex
 from enum import StrEnum
+from itertools import groupby
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -93,6 +95,16 @@ def _strip_spec_keys(spec: str, keys: set[str]) -> str:
     return ",".join(part for part in spec.split(",") if part.partition("=")[0].strip() not in keys)
 
 
+def _shell_spec(spec: str) -> str:
+    """A `--csv` spec as it is typed in a shell, so the echoed line pastes back.
+
+    Bank headers such as "Posting Date" carry spaces. An echoed `delimiter=';'`
+    is already quoted by `_display_delimiter` and is joined on as written.
+    """
+    runs = groupby(spec.split(","), key=lambda part: part.partition("=")[0].strip() == "delimiter")
+    return ",".join(",".join(parts) if quoted else shlex.quote(",".join(parts)) for quoted, parts in runs)
+
+
 def _inferred_mapping(
     source: Path, *, explicit: bool, notes: list[str], delimiter: str | None = None, encoding: str = "utf-8"
 ) -> str | None:
@@ -109,7 +121,7 @@ def _inferred_mapping(
         # No trailing period: the example pastes back verbatim.
         notes.append(
             f"Several columns could be {', '.join(inferred.ambiguities)}; none was chosen. "
-            f"For example: --csv {inferred.example}"
+            f"For example: --csv {shlex.quote(inferred.example)}"
         )
     if inferred is None or inferred.spec is None:
         if inferred is None and not explicit:
@@ -267,7 +279,7 @@ def _recall_csv(file: Path, source: Path, account: str | None = None, *, notes: 
             load_rules(Path(rules_path))
         except UsageError as exc:
             notes.append(
-                f"Remembered --rules {rules_path} cannot be used ({exc}); importing without rules. "
+                f"Remembered --rules {shlex.quote(rules_path)} cannot be used ({exc}); importing without rules. "
                 "Re-pass --rules to restore it."
             )
             entry["rules"] = None
@@ -529,7 +541,7 @@ def import_entries(
             if updates:
                 changes = []
                 for key, (flag, value) in updates.items():
-                    show = _display_delimiter if key == "delimiter" else str
+                    show = _display_delimiter if key == "delimiter" else shlex.quote
                     change = f"{flag} {show(value)}"
                     prior_value = remembered.get(key)
                     if isinstance(prior_value, str):
@@ -608,9 +620,9 @@ def import_entries(
         if csv_run_account is None or csv_request is None:
             if csv_origin == "inferred --csv":
                 raise UsageError(
-                    f"Read a column mapping from the header row of {source.name} (--csv {csv_request}), but not "
-                    "which account the export belongs to. Add --account Assets:Checking, or choose a Python "
-                    "importer with --config FILE.",
+                    f"Read a column mapping from the header row of {source.name} "
+                    f"(--csv {_shell_spec(csv_request or '')}), but not which account the export belongs to. "
+                    "Add --account Assets:Checking, or choose a Python importer with --config FILE.",
                     details=inferred_notes,
                 )
             raise UsageError(
@@ -659,9 +671,9 @@ def import_entries(
             )
             if inferred_format is not None and not ambiguous and inferred_format != recalled_date_format:
                 raise UsageError(
-                    f"Remembered --date-format {recalled_date_format} does not match {source.name}, whose "
-                    f"dates look like {inferred_format}. Pass --date-format {inferred_format} (or --csv) "
-                    "for this file.",
+                    f"Remembered --date-format {shlex.quote(recalled_date_format)} does not match {source.name}, "
+                    f"whose dates look like {inferred_format}. Pass --date-format {shlex.quote(inferred_format)} "
+                    "(or --csv) for this file.",
                     details=recall_notes,
                 )
         delimiter_note = ""
@@ -673,11 +685,11 @@ def import_entries(
             columns_only = _strip_spec_keys(csv_request or "", {"delimiter", "encoding", "sign"})
             if recalled_sign_ledger:
                 columns_only = f"{columns_only},sign=ledger"
-            settings = [f"--csv {columns_only}"]
+            settings = [f"--csv {_shell_spec(columns_only)}"]
             if date_format is not None:
-                settings.append(f"--date-format {date_format}")
+                settings.append(shlex.join(["--date-format", date_format]))
             if csv_rules_arg is not None:
-                settings.append(f"--rules {csv_rules_arg}")
+                settings.append(shlex.join(["--rules", str(csv_rules_arg)]))
             if default_account is not None:
                 settings.append(f"--default-account {default_account}")
             if carried_delimiter is not None:
@@ -692,7 +704,8 @@ def import_entries(
                 frontend_notes.append(f"Using remembered settings for {source.name}: {' '.join(settings)}.")
         elif csv_origin == "inferred --csv":
             frontend_notes.append(
-                f"Read the column mapping from the header row: --csv {csv_request} --date-format {date_format}. "
+                f"Read the column mapping from the header row: --csv {_shell_spec(csv_request or '')} "
+                f"--date-format {shlex.quote(date_format)}. "
                 "Pass --csv to override."
             )
         else:
@@ -732,7 +745,7 @@ def import_entries(
             if prior is not None:
                 discarded: list[str] = []
                 if isinstance(prior.get("rules"), str) and csv_rules_arg is None:
-                    discarded.append(f"--rules {prior['rules']}")
+                    discarded.append(shlex.join(["--rules", prior["rules"]]))
                 if (
                     isinstance(prior.get("default_account"), str)
                     and chosen_default_account is None
@@ -746,7 +759,7 @@ def import_entries(
                     and chosen_date_format is None
                     and prior["date_format"] != date_format
                 ):
-                    discarded.append(f"--date-format {prior['date_format']}")
+                    discarded.append(shlex.join(["--date-format", prior["date_format"]]))
                 if discarded:
                     discarded_note = (
                         f"Discarded remembered settings for {source.name}: "
