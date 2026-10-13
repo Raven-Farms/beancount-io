@@ -81,7 +81,13 @@ def format_beans(
         raise UsageError(f"{mode} writes nothing, so it cannot be combined with --in-place or --output.")
 
     walking = reporting or in_place
-    files, missing = _targets(paths, ctx.file, expand_includes=walking)
+    asked = [
+        *(["--check"] if check else []),
+        *(["--dry-run"] if dry_run else []),
+        *(["-i"] if in_place else []),
+        *(["-o", str(output_file)] if output_file is not None else []),
+    ]
+    files, missing = _targets(paths, ctx.file, asked, alignment, expand_includes=walking)
     if files is None:
         if reporting or in_place:
             raise UsageError("Name the files to format: reading stdin has nothing to compare or rewrite.")
@@ -359,7 +365,7 @@ def _named(paths: list[Path] | None, default: Path | None) -> list[Path]:
 
 
 def _targets(
-    paths: list[Path] | None, default: Path | None, *, expand_includes: bool
+    paths: list[Path] | None, default: Path | None, asked: list[str], alignment: list[str], *, expand_includes: bool
 ) -> tuple[list[Path] | None, list[output.MissingInclude]]:
     """The files to format, or None for upstream's stdin filter, plus missing includes.
 
@@ -374,13 +380,18 @@ def _targets(
     every reachable ledger file joins the scan, and every include that
     resolves nowhere is reported. Directory walks keep their on-disk set —
     naming a directory must not rewrite files outside it.
+
+    A directory in the global `--file` is refused with the command that names
+    it positionally, in the mode `asked` for: a `--check` must not be answered
+    with advice that rewrites the tree (w5/196).
     """
     named = _named(paths, default)
     if not paths and default is not None and default.expanduser().is_dir():
         directory = default.expanduser().resolve()
+        positional = shlex.join(["bea", "format", *asked, str(directory), *alignment])
         raise UsageError(
             f"Ledger path '{directory}' (from --file) is a directory; expected a ledger file. "
-            f"To format this directory, run bea format -i {shlex.quote(str(directory))}."
+            f"Name the directory as an argument instead: {positional}."
         )
     if any(str(path) == STDIN for path in named):
         if len(named) > 1:

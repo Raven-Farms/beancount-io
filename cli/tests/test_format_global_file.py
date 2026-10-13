@@ -50,7 +50,40 @@ def test_global_file_directory_is_refused_before_any_formatting(tmp_path: Path, 
     else:
         message = result.stderr
     assert f"Ledger path '{directory}' (from --file) is a directory; expected a ledger file." in message
-    assert shlex.join(["bea", "format", "-i", str(directory)]) in message
+    # The remedy keeps the mode that was asked for: a read-only check must not
+    # be answered with a command that rewrites the tree (w5/196).
+    assert message.rstrip().endswith(f"instead: {shlex.join(['bea', 'format', mode, str(directory)])}.")
+    assert ("format -i " in message) == (mode == "-i")
+    assert _tree(directory) == before
+
+
+@pytest.mark.parametrize("mode", ["--check", "--dry-run"])
+def test_global_file_directory_remedy_runs_read_only_as_printed(tmp_path: Path, mode: str) -> None:
+    directory = _make_tree(tmp_path / "books tree")
+    before = _tree(directory)
+
+    refused = runner.invoke(app, ["--file", str(directory), "format", mode, "--prefix-width", "40"])
+
+    assert refused.exit_code == 2, refused.output
+    remedy = shlex.split(refused.stderr.rstrip().removesuffix(".").split("instead: ", 1)[1])
+    assert remedy == ["bea", "format", mode, str(directory), "--prefix-width", "40"]
+    followed = runner.invoke(app, remedy[1:])
+    assert followed.exit_code == (1 if mode == "--check" else 0), followed.output
+    assert followed.output.count("would format: ") == 2
+    assert _tree(directory) == before
+
+
+@pytest.mark.parametrize("extra", [[], ["--output", "out.bean"]], ids=["stdout", "output"])
+def test_global_file_directory_remedy_without_a_mode_does_not_add_in_place(tmp_path: Path, extra: list[str]) -> None:
+    directory = _make_tree(tmp_path / "books")
+    before = _tree(directory)
+
+    result = runner.invoke(app, ["--file", str(directory), "format", *extra])
+
+    assert result.exit_code == 2, result.output
+    asked = ["-o", "out.bean"] if extra else []
+    assert f"instead: {shlex.join(['bea', 'format', *asked, str(directory)])}." in result.stderr
+    assert "-i" not in shlex.split(result.stderr)
     assert _tree(directory) == before
 
 
