@@ -503,7 +503,13 @@ def candidate_file(file: Path, content: str, *, mode: int = 0o600) -> Iterator[P
 
 
 def _balance_recovery_hints(
-    balance: Any, source: Path, root: Path, entries: list[Any], options: dict[str, Any], snapshot: LedgerSnapshot | None
+    balance: Any,
+    source: Path,
+    root: Path,
+    entries: list[Any],
+    options: dict[str, Any],
+    snapshot: LedgerSnapshot | None,
+    line_counts: dict[Path, int],
 ) -> list[str]:
     import datetime
 
@@ -514,8 +520,11 @@ def _balance_recovery_hints(
         "For a statement closing balance, use the following day's date. "
         "Review missing or duplicate transactions and record known fees as transactions before adjusting."
     )
-    original = snapshot.contents.get(source, b"") if snapshot else b""
-    if balance.meta.get("lineno", 0) <= len(original.splitlines()):
+    # Counted once per file (w5/124): a ledger failing thousands of existing
+    # assertions otherwise re-splits the whole source for each of them.
+    if source not in line_counts:
+        line_counts[source] = len(snapshot.contents.get(source, b"").splitlines()) if snapshot else 0
+    if balance.meta.get("lineno", 0) <= line_counts[source]:
         return [
             date_hint,
             f"Review transactions against the existing assertion at {source}:{balance.meta['lineno']}. "
@@ -793,6 +802,14 @@ def validate_candidate(
         _, before_errors, _ = managed_load.load_file(snapshot.root if snapshot else file, snapshot=snapshot)
         before_keys = Counter(_error_key(before, {}) for before in before_errors)
     accounts = [entry.account for entry in entries if isinstance(entry, Open)]
+    # What the per-error hints below look up, each built on first use and then
+    # shared (w5/124). One mis-dated `open` makes thousands of errors, and a
+    # pass over the whole ledger for each took a refusal from seconds to
+    # minutes.
+    account_suggestions: dict[str, str] = {}
+    lifecycles: dict[str, list[Any]] | None = None
+    cost_holders: dict[str, set[int]] | None = None
+    source_line_counts: dict[Path, int] = {}
     records: list[_ErrorRecord] = []
     locations: list[tuple[Path, int | None]] = []
     introduced: list[bool] = []
@@ -835,26 +852,28 @@ def validate_candidate(
                 message = f"Proposed append (not written): {message}"
         if "unknown account '" in message:
             account = message.split("unknown account '", 1)[1].split("'", 1)[0]
-            normalization = unknown_account_is_normalization(account, accounts)
-            if normalization is not None:
-                message += normalization
-            else:
-                matches = difflib.get_close_matches(account, accounts, n=3, cutoff=0.6)
-                if matches:
-                    message += f" Did you mean {', '.join(matches)}?"
-                message += f" To create it, use bea add open --account {shlex.quote(account)} --date YYYY-MM-DD."
+            suggestion = account_suggestions.get(account)
+            if suggestion is None:
+                suggestion = unknown_account_is_normalization(account, accounts)
+                if suggestion is None:
+                    matches = difflib.get_close_matches(account, accounts, n=3, cutoff=0.6)
+                    suggestion = f" Did you mean {', '.join(matches)}?" if matches else ""
+                    suggestion += f" To create it, use bea add open --account {shlex.quote(account)} --date YYYY-MM-DD."
+                account_suggestions[account] = suggestion
+            message += suggestion
             if root_hints is None:
                 root_hints = root_ledger_hints(snapshot.root if snapshot else file)
             hints.extend(root_hints)
         if "inactive account '" in message:
             account = message.split("inactive account '", 1)[1].split("'", 1)[0]
-            for entry in entries:
-                if isinstance(entry, Open | Close) and entry.account == account:
-                    location = str(entry.meta.get("filename", ""))
-                    for staged, original in filenames.items():
-                        location = location.replace(str(staged), str(original))
-                    state = "opened" if isinstance(entry, Open) else "closed"
-                    message += f" Account {state} {entry.date} at {location}:{entry.meta.get('lineno')}."
+            if lifecycles is None:
+                lifecycles = {}
+                for entry in entries:
+                    if isinstance(entry, Open | Close):
+                        lifecycles.setdefault(entry.account, []).append(entry)
+            for entry in lifecycles.get(account, []):
+                state = "opened" if isinstance(entry, Open) else "closed"
+                message += f" Account {state} {entry.date} at {_location(entry, filenames)}."
             message += (
                 " Correct the transaction date or edit that directive; for new books use bea init --date YYYY-MM-DD."
             )
@@ -864,12 +883,16 @@ def validate_candidate(
         if isinstance(error.entry, Transaction) and "does not balance" in error.message:
             residual = interpolate.compute_residual(error.entry.postings)  # type: ignore[no-untyped-call]
             if len(residual.currencies()) > 1:
+                # Which entries hold each commodity at cost, so "held by an
+                # entry other than this one" is a lookup.
+                if cost_holders is None:
+                    cost_holders = {}
+                    for prior in entries:
+                        for posting in getattr(prior, "postings", []) or []:
+                            if posting.cost is not None and posting.units is not None:
+                                cost_holders.setdefault(posting.units.currency, set()).add(id(prior))
                 held_with_cost = {
-                    posting.units.currency
-                    for prior in entries
-                    if prior is not error.entry
-                    for posting in getattr(prior, "postings", []) or []
-                    if posting.cost is not None and posting.units is not None
+                    currency for currency, holders in cost_holders.items() if holders != {id(error.entry)}
                 }
                 reducing_held_lot = any(
                     posting.units is not None
@@ -904,7 +927,13 @@ def validate_candidate(
             else:
                 hints.extend(
                     _balance_recovery_hints(
-                        error.entry, source, snapshot.root if snapshot else file, entries, options, snapshot
+                        error.entry,
+                        source,
+                        snapshot.root if snapshot else file,
+                        entries,
+                        options,
+                        snapshot,
+                        source_line_counts,
                     )
                 )
         records.append(_ErrorRecord(getattr(error, "message", str(error)), message, error.source.get("lineno"), hints))
