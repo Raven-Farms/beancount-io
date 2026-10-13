@@ -35,7 +35,6 @@
 
 ## Inbox
 
-- [157 — `bea --json format … -o /dev/stdout` puts ledger text and the JSON envelope on the same stdout, exit 0](./157.md) — minor CLI automation bug; `-o -` control is refused with exit 2, 10m.
 - [163 — Prompts go to stdout, so a redirected stdout hides the question while `bea` waits](./163.md) — minor CLI interaction bug; `bea init b1 > log` shows a blank terminal and captures the prompt text, on-terminal control shows prompts, 20–30m.
 - [165 — `bea format --currency-column N` deletes a no-break space beside an amount and merges two accounts](./165.md) — major CLI format bug (narrow trigger); three accounts become two with exit 0, the same file without `-c` is refused, 30–40m.
 - [168 — Docs and `engine status` say Beangulp needs the system libmagic library; `bea ingest` runs without it](./168.md) — minor CLI docs drift (owner call); `import magic` fails in the engine yet ingest works, 10m.
