@@ -822,13 +822,30 @@ def _written_document_path(entry: Any) -> str | None:
     return match.group(1).replace('\\"', '"').replace("\\\\", "\\") if match else None
 
 
+def _documents_option_line(file: Path, value: str) -> int | None:
+    """The line of the root ledger's `option "documents"` that spells `value`, or None."""
+    import re
+
+    try:
+        lines = file.read_bytes().decode("utf-8-sig").split("\n")
+    except (OSError, UnicodeDecodeError):
+        return None
+    for lineno, line in enumerate(lines, start=1):
+        match = re.match(r'\s*option\s+"documents"\s+"((?:[^"\\]|\\.)*)"', line)
+        if match and match.group(1).replace('\\"', '"').replace("\\\\", "\\") == value:
+            return lineno
+    return None
+
+
 def _validate(file: Path, *, documents_only: bool = False) -> dict[str, Any]:
+    import os.path
+
     from beancount.core.data import Document
 
     from bea_engine.query import format_error
     from fava.core.loader import load_file
 
-    entries, errors, _options = load_file(str(file))
+    entries, errors, options = load_file(str(file))
 
     if errors and not documents_only:
         raise protocol.LedgerError(
@@ -839,6 +856,10 @@ def _validate(file: Path, *, documents_only: bool = False) -> dict[str, Any]:
     from bea_engine.ledger.text import outside_ledger_tree
 
     root = file.parent.resolve()
+    # Where Beancount searches each `option "documents"` value: relative to
+    # the root ledger, the only file whose options it reads.
+    folders = {value: Path(os.path.abspath(os.path.join(file.parent, value))) for value in options.get("documents", [])}
+    discovered: dict[str, int] = {}
     portable: list[str] = []
     for entry in entries:
         if not isinstance(entry, Document):
@@ -849,11 +870,27 @@ def _validate(file: Path, *, documents_only: bool = False) -> dict[str, Any]:
         # one `add document` applies, and the message quotes the source text.
         if not path.is_absolute() or not outside_ledger_tree(path, root):
             continue
+        # A document Beancount found in an `option "documents"` folder has no
+        # directive and no written path, only line 0 of the root ledger: the
+        # finding belongs to the option, once, however many files it holds.
+        option = next((v for v, folder in folders.items() if path.is_relative_to(folder)), None)
+        if entry.meta.get("lineno") == 0 and option is not None:
+            discovered[option] = discovered.get(option, 0) + 1
+            continue
         written = _written_document_path(entry) or entry.filename
         portable.append(
             f"{entry.meta.get('filename', file)}:{entry.meta.get('lineno', '?')}: "
             f"Document path {written!r} resolves to {str(path.resolve())!r}, outside the ledger "
             f"directory {root}. Move the file under the ledger directory and use a relative path "
+            "so copies stay portable."
+        )
+    for value, count in discovered.items():
+        lineno = _documents_option_line(file, value)
+        where = f"{file}:{lineno}" if lineno is not None else str(file)
+        portable.append(
+            f'{where}: option "documents" {json.dumps(value, ensure_ascii=False)} resolves to '
+            f"{str(folders[value].resolve())!r}, outside the ledger directory {root} "
+            f"({count} document(s) found there). Move the folder under the ledger directory "
             "so copies stay portable."
         )
     if portable:

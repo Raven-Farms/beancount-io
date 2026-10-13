@@ -1009,7 +1009,9 @@ beside that included file. Missing-document errors name this directory.
 `add document` takes a relative path that stays inside the root ledger's
 directory: an absolute path or one that climbs out with `..` is refused, and
 `bea check` reports any document that resolves outside that directory,
-quoting the path as written.
+quoting the path as written. Documents Beancount finds through an
+`option "documents"` folder outside that directory are reported once, at the
+option's line, however many files the folder holds.
 
 Use repeated `--meta` options for native Beancount transaction metadata:
 
