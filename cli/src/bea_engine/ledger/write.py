@@ -632,6 +632,7 @@ class _ErrorRecord:
     message: str
     lineno: int | None
     hints: list[str]
+    source: Path
 
 
 def _collapse_repeats(records: list[_ErrorRecord]) -> list[str]:
@@ -645,13 +646,17 @@ def _collapse_repeats(records: list[_ErrorRecord]) -> list[str]:
     hints attached. Those are one record, line or no line, carrying every hint
     either had — otherwise the output names the line as "1 more line" of
     itself, or prints the same paragraph twice.
+
+    The repeats can sit in other included files. A bare number reads as a line
+    of the file the message names, so an occurrence elsewhere carries its own
+    file (w5/146).
     """
-    distinct: dict[tuple[str, str, int | None], _ErrorRecord] = {}
+    distinct: dict[tuple[str, str, int | None, Path], _ErrorRecord] = {}
     for record in records:
-        same = distinct.get((record.kind, record.message, record.lineno))
+        same = distinct.get((record.kind, record.message, record.lineno, record.source))
         if same is None:
-            distinct[(record.kind, record.message, record.lineno)] = _ErrorRecord(
-                record.kind, record.message, record.lineno, list(record.hints)
+            distinct[(record.kind, record.message, record.lineno, record.source)] = _ErrorRecord(
+                record.kind, record.message, record.lineno, list(record.hints), record.source
             )
         else:
             same.hints.extend(hint for hint in record.hints if hint not in same.hints)
@@ -667,7 +672,12 @@ def _collapse_repeats(records: list[_ErrorRecord]) -> list[str]:
     for key in order:
         occurrences = grouped[key]
         message = occurrences[0].message
-        others = [str(record.lineno) for record in occurrences[1:] if record.lineno is not None]
+        first = occurrences[0].source
+        others = [
+            str(record.lineno) if record.source == first else f"{record.source}:{record.lineno}"
+            for record in occurrences[1:]
+            if record.lineno is not None
+        ]
         if len(others) == len(occurrences) - 1 and others:
             plural = "" if len(others) == 1 else "s"
             message += f" Same problem on {len(others)} more line{plural}: {', '.join(others)}."
@@ -936,7 +946,9 @@ def validate_candidate(
                         source_line_counts,
                     )
                 )
-        records.append(_ErrorRecord(getattr(error, "message", str(error)), message, error.source.get("lineno"), hints))
+        records.append(
+            _ErrorRecord(getattr(error, "message", str(error)), message, error.source.get("lineno"), hints, source)
+        )
         locations.append((source, lineno if isinstance(lineno, int) else None))
     messages = _collapse_repeats(records)
     syntax_errors = [err for err in errors if isinstance(err, ParserError | ParserSyntaxError | LexerError)]
