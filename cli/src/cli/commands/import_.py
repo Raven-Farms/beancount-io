@@ -709,6 +709,19 @@ def import_entries(
         argv += ["--id-key", key]
 
     if csv_mode:
+        if importer_name is not None:
+            # The mirror of the refusal below: the column mapping has no named
+            # importers, so the name would be dropped and the rows written (w5/240).
+            mapping_source = {
+                "inferred --csv": "the column mapping read from its header row",
+                "remembered --csv": "the column mapping remembered for its header row",
+            }.get(csv_origin, "the --csv column mapping")
+            raise UsageError(
+                f"--importer selects a Python importer by name, but this import reads {source.name} with "
+                f"{mapping_source}, which has no named importers. Remove --importer, or choose a Python "
+                "importer with --config FILE.",
+                details=config_notes,
+            )
         if csv_run_account is None or csv_request is None:
             if csv_origin == "inferred --csv":
                 raise UsageError(

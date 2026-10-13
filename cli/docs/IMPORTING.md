@@ -336,6 +336,9 @@ account each files under; pass that selector, or give each importer a distinct
 `name`.
 An unknown name lists the available importer names; a recognized name whose
 importer rejects the file reports that separately.
+`--importer` names a Python importer only: on a run that resolves to the column
+mapping (`--csv`, the header row, or a remembered mapping) it is refused (exit
+2) rather than ignored.
 The configuration can import sibling modules. It runs as a script, so import
 them by plain name (`import helper`), not relatively; a wrong name or a relative
 import is reported as `Importer failed (ImportError)`, and only a module that
