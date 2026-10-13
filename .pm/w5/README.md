@@ -36,7 +36,6 @@
 ## Inbox
 
 - [182 — A writer behind a held lock waits forever with no message](./182.md) — minor CLI concurrency bug; silent after 15 s under `--json`, completes on release, 30–45m.
-- [205 — Remembered import settings are keyed by the typed spelling of the ledger path](./205.md) — minor CLI import bug; `books/` forgets what `Books/` remembered on a case-insensitive volume, 20m.
 - [214 — Two `bea import` runs at once lose one remembered mapping, and a later flag-free `--apply` writes rows to the wrong account](./214.md) — major CLI import bug; mapping lost in 4 of 8 races, sequential control refuses with exit 2, 45–60m.
 - [218 — A read that overlaps a `bea add` on a slow-loading ledger freezes a stale load cache: the write is invisible to later reads, and a later import double-books it](./218.md) — major CLI data-integrity bug; stale in 3 of 4 offsets on a 50,000-transaction ledger, sequential control correct, 45–60m.
 - [220 — Plain `bea check` or `bea doctor` leaves a load cache that later commands trust: a BQL literal stops matching, and a valid BOM ledger starts failing](./220.md) — major CLI correctness bug; exit-0 empty query after `check`, uncached and engine-first controls correct, fix with 111, 45–60m.
