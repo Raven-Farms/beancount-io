@@ -86,6 +86,25 @@ def answer(
     return _trial_balance(filtered, resolved_conversion, allow_errors, ledger_errors)
 
 
+def too_deep(file: Path) -> protocol.LedgerError:
+    """The refusal for a ledger whose account tree outruns Python's recursion limit.
+
+    A report nests one level per account component, and building the tree and
+    encoding the answer both walk it recursively, so an account several
+    hundred components deep cannot be reported. Loading does not recurse, which
+    is how the deepest account can still be named.
+    """
+    from beancount.core.getters import get_accounts
+
+    from fava.core.loader import load_file
+
+    entries: Any = load_file(str(file))[0]
+    deepest = max(sorted(get_accounts(entries)), key=lambda name: name.count(":"), default="")
+    parts = deepest.split(":")
+    shown = deepest if len(parts) <= 4 else f"{':'.join(parts[:3])}:…:{parts[-1]}"
+    return protocol.LedgerError(f"Account nesting is too deep to report: '{shown}' is {len(parts)} levels deep.")
+
+
 def _balances(
     file: Path,
     accounts: list[str],

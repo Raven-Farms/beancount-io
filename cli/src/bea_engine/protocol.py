@@ -22,10 +22,10 @@ import json
 import os
 import sys
 import traceback
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, NoReturn
 
 EXIT_OK = 0
 EXIT_VALIDATION = 1
@@ -95,6 +95,9 @@ class Answer:
     """The business result a command fills in, published when its block exits."""
 
     data: dict[str, Any] = field(default_factory=dict)
+    # The refusal to publish when the answer outruns Python's recursion limit.
+    # Only the command knows what was nested — for a report, which account.
+    too_deep: Callable[[], EngineError] | None = None
 
 
 @contextmanager
@@ -113,13 +116,32 @@ def answering(command: str) -> Iterator[Answer]:
         _write(_failure(command, exc))
         raise SystemExit(exc.exit_code) from None
     except Exception as exc:  # noqa: BLE001 - the protocol owes the caller an envelope
+        if isinstance(exc, RecursionError) and answer.too_deep is not None:
+            _refuse_nesting(command, answer)
         # The type and the engine-side traceback travel too: without them a
         # bare "month must be in 1..12" names neither what failed nor where,
         # and `--debug` could only show the frontend's own frames (w1/085).
         message = f"{type(exc).__name__}: {exc}" if str(exc) else type(exc).__name__
         _write(_failure(command, EngineError(message, traceback=traceback.format_exc())))
         raise SystemExit(EXIT_VALIDATION) from None
-    _write({"engine": _version(), "command": command, "ok": True, "data": answer.data})
+    try:
+        _write({"engine": _version(), "command": command, "ok": True, "data": answer.data})
+    except RecursionError:
+        # Encoding walks the answer one frame per level, after the body has
+        # returned; unanswered, the frontend could only report an engine that
+        # "did not answer" and print this traceback as its evidence (w5/209).
+        _refuse_nesting(command, answer)
+
+
+def _refuse_nesting(command: str, answer: Answer) -> NoReturn:
+    """Publish the failure for an answer too deeply nested to compute or encode."""
+    error = (
+        answer.too_deep()
+        if answer.too_deep is not None
+        else EngineError("The result nests too deeply to encode as an answer.")
+    )
+    _write(_failure(command, error))
+    raise SystemExit(error.exit_code)
 
 
 @contextmanager

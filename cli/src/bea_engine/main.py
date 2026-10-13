@@ -362,8 +362,10 @@ def report(
     with protocol.answering("report") as answer:
         from bea_engine import report as reports
 
+        ledger = _ledger(file)
+        answer.too_deep = lambda: reports.too_deep(ledger)
         answer.data = reports.answer(
-            _ledger(file),
+            ledger,
             kind,
             conversion=conversion,
             time=time,
@@ -398,8 +400,10 @@ def balance(
     with protocol.answering("balance") as answer:
         from bea_engine import report as reports
 
+        ledger = _ledger(file)
+        answer.too_deep = lambda: reports.too_deep(ledger)
         answer.data = reports.answer(
-            _ledger(file),
+            ledger,
             "balances",
             conversion=conversion,
             time=time,
