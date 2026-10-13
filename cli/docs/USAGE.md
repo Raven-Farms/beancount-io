@@ -411,6 +411,11 @@ untouched.
 `bea example` exits 2 before generating when its date range is inverted or
 shorter than 31 days; a missing `--date-begin` or `--date-end` takes
 upstream's default (January 1 two years back, and today) for that check.
+It exits 1 when the history `bean-example` generated fails upstream's own
+validation — a range that starts mid-year and crosses January 1 does, as does
+a `--date-birth` after the begin year's January 1 — naming the errors and
+writing nothing: `-o` is written by `bea`, only after the run validates, so a
+failed run leaves no new file and an existing `--force` target untouched.
 `bea treeify` exits 2 when its input has no hierarchical column to render,
 naming what it looked for — piping plain text is not a tree. Its `-o`
 destination follows [Output destinations](#output-destinations): the ledger

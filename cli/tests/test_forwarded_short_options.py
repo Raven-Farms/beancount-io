@@ -64,7 +64,6 @@ def test_ingest_preserves_glued_native_options_around_frontend_config(
 @pytest.mark.parametrize(
     ("command", "native", "seam", "program", "prefix"),
     [
-        (["example"], ["-o./help/example.bean"], "capture_native", "bean-example", []),
         (["price"], ["-eUSD:help/source"], "run_optional_native", "bean-price", []),
         (["check"], ["-f./help/check.log"], "run_native", "bean-check", ["{root}"]),
         (["doctor", "list-options"], ["-x./help/options"], "run_native", "bean-doctor", ["list-options"]),
@@ -76,7 +75,7 @@ def test_ingest_preserves_glued_native_options_around_frontend_config(
             ["lex"],
         ),
     ],
-    ids=["example", "price", "check-global-short-f", "doctor-leaf", "doctor-alias"],
+    ids=["price", "check-global-short-f", "doctor-leaf", "doctor-alias"],
 )
 def test_other_forwarders_preserve_the_complete_unknown_short_token(
     books: Path,
@@ -121,6 +120,17 @@ def test_existing_output_spellings_still_reach_the_destination(
     recorded_engine["capture_native"].assert_called_once_with("treeify", [ANY, "--", "input.txt"])
     assert recorded_engine["capture_native"].call_args.args[1][0].startswith("--pattern=")
     assert (books / written).read_text() == "native result\n"
+
+
+def test_example_glued_output_reaches_the_destination(books: Path, recorded_engine: dict[str, Mock]) -> None:
+    """bea writes example's destination itself, after upstream validates (w5/136)."""
+    (books / "help").mkdir()
+
+    result = runner.invoke(app, ["-f", str(books / "history.bean"), "example", "-o./help/example.bean", "-s7"])
+
+    assert result.exit_code == 0, result.output
+    recorded_engine["capture_native"].assert_called_once_with("bean-example", ["-s7"])
+    assert (books / "help" / "example.bean").read_text() == "native result\n"
 
 
 @pytest.mark.parametrize("command", [["treeify"], ["ingest", "extract"], ["doctor", "dump-lexer"]])

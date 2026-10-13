@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import sys
 from datetime import date
 from pathlib import Path
@@ -10,10 +11,15 @@ import typer
 
 from cli import context
 from cli.engine import launch
-from cli.errors import ConflictError, UsageError, refuse_json
-from cli.output import forwarded_option, refuse_include_claim
+from cli.errors import BeaError, ConflictError, UsageError, refuse_json
+from cli.output import check_output_destination, forwarded_option, refuse_include_claim, require_writable_destination
+from cli.utils import atomic_write
 
 _FORCE = "--force"
+
+#: How upstream reports an error in the history it just generated: it loads the
+#: text from a string, so every diagnostic starts `<string>:LINE:`.
+_VALIDATION_ERROR = re.compile(r"^<string>:\d+:\s*(\S.*)$", re.MULTILINE)
 
 
 def _split_output(args: list[str]) -> tuple[list[str], Path | None, bool]:
@@ -28,6 +34,48 @@ def _split_output(args: list[str]) -> tuple[list[str], Path | None, bool]:
     forwarded = [arg for index, arg in enumerate(args) if arg != _FORCE or index > stop]
     value = forwarded_option(forwarded, "-o", "--output")
     return forwarded, None if value is None else Path(value), force
+
+
+def _without_output(args: list[str]) -> list[str]:
+    """The same invocation with stdout as the destination.
+
+    Drops the spellings `forwarded_option` reads — `-o X`, `-oX`, `--output X`,
+    `--output=X` — and leaves a value-less `-o` for upstream to reject.
+    """
+    kept: list[str] = []
+    index = 0
+    while index < len(args):
+        arg = args[index]
+        if arg == "--":
+            kept += args[index:]
+            break
+        if arg in ("-o", "--output") and index + 1 < len(args):
+            index += 2
+            continue
+        if not (arg.startswith("--output=") or (arg.startswith("-o") and len(arg) > 2)):
+            kept.append(arg)
+        index += 1
+    return kept
+
+
+def _refuse_invalid(diagnostic: str, destination: Path | None) -> None:
+    """Fail a run whose generated history upstream's own validation rejected.
+
+    `bean-example` validates what it generated, logs the loader's errors and
+    still exits 0 — after writing the file. Its rules assume whole calendar
+    years: a range starting mid-year leaves a `balance ... 0 IRAUSD` assertion
+    that fails, so the "example" does not pass `bea check` (w5/136).
+    """
+    errors = _VALIDATION_ERROR.findall(diagnostic)
+    if not errors:
+        return
+    kept = "nothing was printed" if destination is None else f"{destination} was not written"
+    raise BeaError(
+        f"bean-example generated a ledger that fails validation ({len(errors)} "
+        f"error{'' if len(errors) == 1 else 's'}), so {kept}. "
+        "Its rules assume whole calendar years: start --date-begin on January 1, with --date-birth before it.",
+        details=errors[:5],
+    )
 
 
 def example(ctx: typer.Context) -> None:
@@ -50,9 +98,21 @@ def example(ctx: typer.Context) -> None:
         if ledger is not None:
             refuse_include_claim(output.expanduser(), ledger)
     _check_date_order(forwarded)
+    destination: Path | None = None
+    if output is not None and str(output) != "-":
+        # Upstream writes `-o` first and validates afterwards, so a history it
+        # rejects is already on disk. bea keeps the destination itself and
+        # writes it only once the run and its validation have succeeded.
+        destination = output
+        check_output_destination(destination)
+        require_writable_destination(destination)
+        forwarded = _without_output(forwarded)
     completed = launch.capture_native("bean-example", forwarded)
     launch.check_native(completed, "bean-example")
-    if completed.stdout:
+    _refuse_invalid(completed.stderr or "", destination)
+    if destination is not None:
+        atomic_write(destination, completed.stdout or "", export=True)
+    elif completed.stdout:
         sys.stdout.write(completed.stdout)
     if completed.stderr:
         sys.stderr.write(completed.stderr)
