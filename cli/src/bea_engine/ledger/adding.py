@@ -364,7 +364,7 @@ def _balance(
                 "written": 0,
                 "directive": directive.model_dump(mode="json"),
                 "warnings": [
-                    f"Book balance already matches {number} {currency}; omitted the pad from "
+                    f"Book balance already matches {_plain(number)} {currency}; omitted the pad from "
                     f"--pad-from (assertion already recorded at {source['filename']}:{source['lineno']})."
                 ],
                 "duplicate": True,
@@ -376,7 +376,7 @@ def _balance(
             result = _appended(file, directive, allow_errors=allow_errors, into=into, snapshot=snapshot)
             warnings = list(result.get("warnings") or [])
             warnings.append(
-                f"Book balance already matches {number} {currency}; omitted the pad from "
+                f"Book balance already matches {_plain(number)} {currency}; omitted the pad from "
                 "--pad-from and wrote the assertion alone."
             )
             result["warnings"] = warnings
@@ -393,7 +393,7 @@ def _balance(
                 f"The existing pad at {pad_at} ({cover.date} from {cover.source_account}) already fills this "
                 f"assertion, so a pad from {source_account} would go unused; nothing was written.",
                 details=[
-                    f"Add the balance without --pad-from to let that pad insert {difference} {currency} "
+                    f"Add the balance without --pad-from to let that pad insert {_plain(difference)} {currency} "
                     f"from {cover.source_account}, or edit that pad first."
                 ],
             ) from exc
@@ -401,7 +401,7 @@ def _balance(
         warnings = list(result.get("warnings") or [])
         warnings.append(
             f"The existing pad at {pad_at} ({cover.date} from {cover.source_account}) fills this assertion, "
-            f"inserting {difference} {currency}; omitted the pad from --pad-from and wrote the assertion alone."
+            f"inserting {_plain(difference)} {currency}; omitted the pad from --pad-from and wrote the assertion alone."
         )
         result["warnings"] = warnings
         return result
@@ -477,7 +477,14 @@ def _same_assertion(entry: Any, number: Decimal, tolerance: Decimal | None) -> b
 
 def _balance_amount(number: Decimal, currency: str, tolerance: Decimal | None) -> str:
     """A balance amount as the user typed it, tolerance included."""
-    return f"{number} {currency}" if tolerance is None else f"{number} ~ {tolerance} {currency}"
+    if tolerance is None:
+        return f"{_plain(number)} {currency}"
+    return f"{_plain(number)} ~ {_plain(tolerance)} {currency}"
+
+
+def _plain(number: Any) -> str:
+    """A Decimal in the fixed-point spelling `bea` accepts back: `0.00000001`, never `1E-8`."""
+    return format(number, "f")
 
 
 def _book_units(entries: list[Any], account: str, currency: str, date: datetime.date) -> Decimal:
@@ -626,8 +633,8 @@ def _price(
         where = conflict.meta.get("filename"), conflict.meta.get("lineno")
         raise protocol.UsageError(
             f"{currency} already has a {directive.date.isoformat()} price of "
-            f"{conflict.amount.number} {amount_currency} (at {where[0]}:{where[1]}); "
-            f"refusing {number} {amount_currency}. Pass --force to record another quote."
+            f"{_plain(conflict.amount.number)} {amount_currency} (at {where[0]}:{where[1]}); "
+            f"refusing {_plain(number)} {amount_currency}. Pass --force to record another quote."
         )
 
     entry = Price({}, directive.date, currency, BcAmount(number, amount_currency))
