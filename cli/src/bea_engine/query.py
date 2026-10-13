@@ -1086,7 +1086,9 @@ def _executed(conn: Any, query_string: str, run: Any, ledger_errors: list[str]) 
     try:
         return _compiled(lambda: run(statement), statement, lambda: ledger_errors)
     except BeanqueryError as exc:
-        raise _usage_error(exc, query_string, conn, ledger_errors) from None
+        # Against the statement the parser saw: its offset counts the quotes
+        # added around `accounts`/`balances`, not the text as typed (w5/178).
+        raise _usage_error(exc, statement, conn, ledger_errors) from None
 
 
 def _compiled(
@@ -1320,13 +1322,33 @@ def _usage_error(exc: Exception, query_string: str, conn: Any, ledger_errors: li
     details = []
     position = getattr(getattr(exc, "parseinfo", None), "pos", None)
     if isinstance(position, int) and 0 <= position <= len(query_string):
-        details.append(f"  {query_string}")
-        details.append(f"  {' ' * position}^")
+        details.extend(_caret_lines(query_string, position))
     details.extend(_column_suggestions(str(exc), conn))
     if "non-hashable" in str(exc) and _set_columns(query_string):
         details.extend(_SET_COLUMN_ADVICE)
     details.append("Run bea query with no argument for the interactive shell, where .tables lists what you can query.")
     return protocol.UsageError(f"Cannot run this BQL query: {exc}.", details=details, ledger_errors=ledger_errors)
+
+
+def _caret_lines(statement: str, position: int) -> list[str]:
+    """The statement a line per detail, with a caret under the character at `position`.
+
+    The parser's offset is absolute, so for a query spanning lines it has to
+    become a column of the line it falls on; indented by the whole offset the
+    caret sat alone, far to the right of every line shown. A tab is shown as
+    one space so the caret's column is the token's.
+    """
+    lines = statement.splitlines(keepends=True) or [""]
+    details = []
+    start = 0
+    for index, raw in enumerate(lines):
+        text = raw.rstrip("\r\n").replace("\t", " ")
+        details.append(f"  {text}")
+        end = start + len(raw)
+        if start <= position and (position < end or index == len(lines) - 1):
+            details.append(f"  {' ' * min(position - start, len(text))}^")
+        start = end
+    return details
 
 
 def _column_suggestions(message: str, conn: Any) -> list[str]:
