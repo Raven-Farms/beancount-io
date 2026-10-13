@@ -36,7 +36,6 @@
 ## Inbox
 
 - [140 — A CSV row with a payee is skipped as an "exact duplicate" of a payee-less ledger entry, so a new transaction is dropped with exit 0](./140.md) — major CLI import bug (narrow trigger); `--duplicates skip --apply` writes nothing, reversed-row control writes it, 45–60m.
-- [143 — What an importer printed is discarded when it then raises, even with `--debug`](./143.md) — minor CLI import bug; printed lines vanish on failure and appear on success, 15–20m.
 - [148 — Bidirectional override characters pass the control-character sanitizer into the import preview and `list` tables](./148.md) — minor CLI output-safety bug; U+202E reaches the preview raw while ESC in the next row is escaped, 30m.
 - [149 — Report and balance account trees pad by character count, so a wide-character account name shifts its amount](./149.md) — minor CLI cosmetic bug; a CJK account's amount sits four columns right, accented control aligns, 15m.
 - [150 — `--allow-errors` refuses a backdated purchase when the account already has a failing sale](./150.md) — major CLI write bug; the existing line-16 booking error is counted as new because its text lists lots, later-dated control exits 0, 30–45m.
