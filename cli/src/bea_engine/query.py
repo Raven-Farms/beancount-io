@@ -1186,6 +1186,10 @@ def _compiled(
                 details=_SET_COLUMN_ADVICE,
                 ledger_errors=ledger_errors(),
             ) from None
+        # A subquery joined by AND or OR is called as a row predicate, which
+        # an EvalQuery node does not accept.
+        if "EvalQuery" in str(exc):
+            raise _scalar_subquery_error(ledger_errors()) from None
         raise
     except AttributeError as exc:
         # A scalar subquery in the SELECT list reaches scalar evaluation as an
@@ -1196,7 +1200,19 @@ def _compiled(
                 details=["Filter with it instead: SELECT ... WHERE column IN (SELECT ...)"],
                 ledger_errors=ledger_errors(),
             ) from None
+        # Compared, negated or computed with, the same node is asked for the
+        # dtype only a scalar expression has.
+        if "EvalQuery" in str(exc):
+            raise _scalar_subquery_error(ledger_errors()) from None
         raise
+
+
+def _scalar_subquery_error(ledger_errors: list[str]) -> protocol.UsageError:
+    return protocol.UsageError(
+        "BQL cannot use a subquery as a single value.",
+        details=["Filter with it instead: SELECT ... WHERE column IN (SELECT ...)"],
+        ledger_errors=ledger_errors,
+    )
 
 
 #: The string literal on the right of BQL's regex operators, quotes included.
