@@ -37,7 +37,6 @@
 
 - [109 — The query shell prints Python tracebacks for a mistyped date and an out-of-range ORDER BY index](./109.md) — minor CLI interactive-shell bug; one-shot control explains both, 20–30m.
 - [116 — The load cache does not notice a `document` file appearing or vanishing: `check` says valid while every write is refused](./116.md) — major CLI cache-staleness bug; both directions repeated with a cache-disabled control, fix with w5/111, 45–60m.
-- [117 — `price export` on a ledger with a missing `document` file dies with a raw `FileNotFoundError` after writing part of the export](./117.md) — minor CLI partial-write bug; present-file control passes, 20–30m.
 - [118 — `bea doctor roundtrip` leaves a full-size load cache for its scratch file beside a slow-loading ledger](./118.md) — minor CLI leftover-file bug, 15–20m.
 - [119 — `--json query -o` to an unwritable destination exits 1 "validation" with a raw errno, while text mode exits 3 or 0](./119.md) — minor CLI exit-category bug; four-command comparison of text and JSON modes, 20–30m.
 - [120 — An unreadable included file fails every command with a raw Python exception, and `bea check` prints a traceback](./120.md) — minor CLI error-reporting bug; unreadable-root control exits 2 cleanly, 30–40m.
