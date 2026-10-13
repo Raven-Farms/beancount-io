@@ -390,7 +390,10 @@ skills deduplicate against each other: the ledger itself is the dedup database.
   account. A row with both a payee and a narration hashes both, as
   `date|amount|payee|narration|account`, so rows that differ only in payee
   keep distinct ids however the export orders them. Identical rows within one
-  file take an occurrence suffix, so re-importing the same file skips every row. Keep this metadata when editing
+  file take an occurrence suffix, so re-importing the same file skips every row.
+  A row with one description is counted among the one-description rows only, so
+  a blank payee cell beside rows that name a payee gives the same id wherever
+  the row falls. Keep this metadata when editing
   entries. New writes no longer carry the pre-release `bea_import_id` key, but
   existing entries with it still match on re-import.
 - A generated id matches by its digest under any documented prefix, so a bank
@@ -416,8 +419,10 @@ skills deduplicate against each other: the ledger itself is the dedup database.
 - Ids written before payees were hashed (narration only) also stay
   lookup-only. Because their occurrence suffixes followed the old export's row
   order, every such id that a group of same-narration rows reaches is given to
-  the row with that entry's payee; an id whose payee no row has (edited since)
-  stays with the row at its old position.
+  the row with that entry's payee — an entry with no payee to a row with no
+  payee; an id whose payee no row has (edited since) stays with the row at its
+  old position. One-description ids that an earlier release numbered behind
+  payee-bearing rows are matched the same way.
 - Date, normalized payee, and signed source amount/currency identify a *possible*
   duplicate even when bank IDs or narration differ. A row with no payee (the
   one-description mapping) is compared by its normalized narration instead, so

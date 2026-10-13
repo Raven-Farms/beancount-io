@@ -279,7 +279,7 @@ def answer(
     ledger_conflicts = False
     batch_conflicts = False
     hashed = _hash_rows(entries, account, keys, Transaction)
-    claimed = _claim_payeeless_ids(hashed, identities, account)
+    claimed, owners = _claim_payeeless_ids(hashed, identities, account)
     batch_rows: dict[int, int] = {}
     first_uses = _first_uses(entries, Transaction)
     # Blocked rows with what they were before the block, for the second look below.
@@ -303,7 +303,7 @@ def answer(
                 else:
                     row_ids = hashed[index]
                     entry.meta["import-id"] = row_ids.canonical
-                    legacy_ids = [*row_ids.older, *claimed.get(index, [])]
+                    legacy_ids = claimed.get(index, [])
                     id_source = "hash"
             ids = _identities(entry, account, keys)
             legacy_keys = [(account, "import-id", value) for value in legacy_ids]
@@ -321,6 +321,9 @@ def answer(
                 (key, found, same)
                 for key in ids
                 if (found := identities.get(key)) is not None
+                # A stored narration-only id belongs to the row that claimed its
+                # entry, whichever other row's own id happens to spell it.
+                and not (id_source == "hash" and _is_generated_identity(key) and owners.get(id(found), index) != index)
                 and (
                     (same := _same_row(key, found, account, fingerprint, lookup_only=key in lookup_only))
                     or key not in lookup_only
@@ -938,21 +941,20 @@ def _digest_import_id(base: str, occurrence: int) -> str:
 class _HashedRow:
     """One hashed row's generated ids.
 
-    `canonical` is written; `older` are lookup-only spellings at the row's own
-    occurrence. A row with both a payee and a narration hashes both, so the
-    ids older releases wrote for it (from the narration alone) are `payeeless`:
-    those numbered occurrences over every row sharing the narration-only base
-    (`group`), so which stored id belongs to which row is settled for the
-    whole group by `_claim_payeeless_ids`, not by row order.
+    `canonical` is written. `narration_only` are the ids that may already be
+    stored for the row under the narration-only base (`group`): the canonical
+    id itself for a row with one description, and every older spelling. Older
+    spellings numbered occurrences over every row sharing that base, so which
+    stored id belongs to which row is settled for the whole group by
+    `_claim_payeeless_ids`, not by row order.
     """
 
     canonical: str
-    older: list[str]
-    group: str | None = None
-    payeeless: tuple[str, ...] = ()
-    payee: str = ""
-    date: Any = None
-    amounts: tuple[str, ...] = ()
+    group: str
+    narration_only: tuple[str, ...]
+    payee: str
+    date: Any
+    amounts: tuple[str, ...]
 
 
 def _hash_rows(entries: list[Any], account: str, keys: list[str], transaction: type[Any]) -> dict[int, _HashedRow]:
@@ -976,53 +978,64 @@ def _hash_rows(entries: list[Any], account: str, keys: list[str], transaction: t
 
 def _claim_payeeless_ids(
     hashed: dict[int, _HashedRow], identities: dict[tuple[str, str, str], Any], account: str
-) -> dict[int, list[str]]:
+) -> tuple[dict[int, list[str]], dict[int, int]]:
     """Give each stored narration-only id to the row it was written for.
 
     Ids written before payees were hashed number identical narrations in
     export order, so with a reordered export occurrence K is a different row:
     `PEETS` then `STARBUCKS`, both `CARD PURCHASE -5.00`, would have `PEETS`
     match the id stored for `STARBUCKS`. Every stored entry any row of a group
-    reaches is therefore claimed by the group's row with that entry's payee
-    first; an entry whose payee no row has (edited later) keeps the meaning
-    the old id had — the row at its occurrence — or, if that row was claimed,
-    the next unclaimed row in export order. A row left without a claim has no
-    older id at all.
+    reaches is therefore claimed by a row of the group with that entry's payee
+    first — the row that reached it when that is one, so a row keeps the entry
+    its own id names. An entry with no payee goes to a row with no payee the
+    same way, never to a payee-bearing row that merely shares its narration.
+    An entry whose payee no row has (edited later) keeps the meaning the old
+    id had — the row at its occurrence — or, if that row was claimed, the next
+    unclaimed row in export order. A row left without a claim has no older id
+    at all.
+
+    Returns each row's claimed older ids, and the claiming row of every stored
+    entry by `id()`: no other row of the batch may match that entry through a
+    generated id.
     """
     groups: dict[str, list[int]] = {}
     for index, row in hashed.items():
-        if row.group is not None:
-            groups.setdefault(row.group, []).append(index)
+        groups.setdefault(row.group, []).append(index)
     claimed: dict[int, list[str]] = {}
+    owners: dict[int, int] = {}
     for indices in groups.values():
         stored: list[tuple[Any, str, int]] = []
-        for index in indices:
-            row = hashed[index]
-            for value in row.payeeless:
-                digest = value.rsplit(":", 1)[1]
-                found = identities.get((account, "import-id", value)) or identities.get((account, "digest", digest))
-                if found is None or any(found is entry for entry, _, _ in stored):
-                    continue
-                found_print = _fingerprint(found, account)
-                if (found_print[0], found_print[3]) == (row.date, row.amounts):
-                    stored.append((found, value, index))
+        # A row's own id reaches first, so an older spelling — numbered
+        # differently — cannot take an entry from the row it is canonical for.
+        for own in (True, False):
+            for index in indices:
+                row = hashed[index]
+                for value in row.narration_only:
+                    if (value == row.canonical) is not own:
+                        continue
+                    digest = value.rsplit(":", 1)[1]
+                    found = identities.get((account, "import-id", value)) or identities.get((account, "digest", digest))
+                    if found is None or any(found is entry for entry, _, _ in stored):
+                        continue
+                    found_print = _fingerprint(found, account)
+                    if (found_print[0], found_print[3]) == (row.date, row.amounts):
+                        stored.append((found, value, index))
         unclaimed = list(indices)
-        leftover: list[tuple[str, int]] = []
-        for found, value, reached_by in stored:
-            payee = _match_text(found.payee)
-            owner = next((index for index in unclaimed if payee and hashed[index].payee == payee), None)
-            if owner is None:
-                leftover.append((value, reached_by))
-                continue
-            unclaimed.remove(owner)
-            claimed[owner] = [value]
-        for value, reached_by in leftover:
-            if not unclaimed:
-                break
-            owner = reached_by if reached_by in unclaimed else unclaimed[0]
-            unclaimed.remove(owner)
-            claimed[owner] = [value]
-    return claimed
+        leftover: list[tuple[Any, str, int]] = []
+        for legacy in (False, True):
+            for found, value, reached_by in leftover if legacy else stored:
+                payee = _match_text(found.payee)
+                candidates = unclaimed if legacy else [index for index in unclaimed if hashed[index].payee == payee]
+                if not candidates:
+                    if not legacy:
+                        leftover.append((found, value, reached_by))
+                    continue
+                owner = reached_by if reached_by in candidates else candidates[0]
+                unclaimed.remove(owner)
+                owners[id(found)] = owner
+                if value != hashed[owner].canonical:
+                    claimed[owner] = [value]
+    return claimed, owners
 
 
 def _hash_import_ids(entry: Any, account: str, seen: dict[str, int]) -> _HashedRow:
@@ -1040,15 +1053,17 @@ def _hash_import_ids(entry: Any, account: str, seen: dict[str, int]) -> _HashedR
     exactness, or predate both, but there is no exact-amount/un-normalized
     combination in the wild to look for.
 
-    Occurrence numbering stays keyed on the narration-only base, so N
-    identical rows keep their 1..N suffixes and every older spelling of row K
-    is that format's digest at occurrence K.
+    Older spellings stay numbered over every row sharing the narration-only
+    base, as the releases that wrote them numbered it: the older spelling of
+    the K-th such row is that format's digest at occurrence K.
 
     A row with both a payee and a narration hashes both
     (`date|amount|payee|narration|account`): `STARBUCKS / CARD PURCHASE` and
     `PEETS / CARD PURCHASE` are different rows, and the occurrence suffix is
-    only for identical ones. Its narration-only spellings are returned as
-    `payeeless` for the group-wide claim instead of as plain lookups.
+    only for identical ones. A row with one description is numbered among the
+    one-description rows alone, so a payee-bearing row ahead of it in the
+    export does not change its id. Either way the narration-only spellings are
+    returned for the group-wide claim instead of as plain lookups.
     """
     amounts = sorted((p.units.number, p.units.currency) for p in _source_postings(entry, account))
     raw_description = " ".join(str(entry.narration or entry.payee or "").upper().split())
@@ -1085,18 +1100,21 @@ def _hash_import_ids(entry: Any, account: str, seen: dict[str, int]) -> _HashedR
     single = _digest_import_id(single_base, occurrence)
 
     payee = unicodedata.normalize("NFC", " ".join(str(entry.payee or "").upper().split()))
-    if not (payee and str(entry.narration or "").strip()):
-        return _HashedRow(canonical=single, older=older)
-    paired_base = _hash_base(date, exact, f"{payee}|{description}", nfc_account)
-    # Keyed apart from the narration-only counter, so a paired base can never
-    # share an occurrence count with a narration that happens to contain `|`.
-    counter = f"paired\0{paired_base}"
+    if payee and str(entry.narration or "").strip():
+        base = _hash_base(date, exact, f"{payee}|{description}", nfc_account)
+        # Keyed apart from the narration-only counter, so a paired base can never
+        # share an occurrence count with a narration that happens to contain `|`.
+        counter = f"paired\0{base}"
+    else:
+        # Numbered apart from payee-bearing rows. Releases that counted those
+        # too wrote `single`, which stays one of the spellings to look for.
+        base, counter = single_base, f"single\0{single_base}"
     seen[counter] = seen.get(counter, 0) + 1
+    canonical = _digest_import_id(base, seen[counter])
     return _HashedRow(
-        canonical=_digest_import_id(paired_base, seen[counter]),
-        older=[],
+        canonical=canonical,
         group=single_base,
-        payeeless=(single, *older),
+        narration_only=tuple(dict.fromkeys([*([canonical] if base == single_base else []), single, *older])),
         payee=_match_text(entry.payee),
         date=entry.date,
         amounts=tuple(sorted(_exact_amount(number, currency) for number, currency in amounts)),
