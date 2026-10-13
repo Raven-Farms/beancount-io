@@ -747,6 +747,29 @@ def import_entries(
     else:
         frontend_notes = []
         config_path, config_source = _config_path(file, config)
+        # A Python importer names its own account and categories and never
+        # reads the column-mapping options, so one typed here would be dropped
+        # and the rows written wherever the importer says (w5/131).
+        ignored = [
+            flag
+            for flag, value in (
+                ("--account", csv_account),
+                ("--date-format", chosen_date_format),
+                ("--delimiter", delimiter),
+                ("--rules", rules_file),
+                ("--default-account", chosen_default_account),
+            )
+            if value is not None
+        ]
+        if ignored:
+            applies = "applies" if len(ignored) == 1 else "apply"
+            instead = "replace --config with --csv auto" if config is not None else "add --csv auto"
+            raise UsageError(
+                f"{', '.join(ignored)} {applies} only to --csv rows, but this import uses the Python importers "
+                f"from {config_path} ({config_source}), which choose the account and categories themselves. "
+                f"Remove {'it' if len(ignored) == 1 else 'them'} to use the importer, or {instead} to read "
+                f"{source.name} by its header row."
+            )
         config_to_remember = config_path
         frontend_notes.append(f"Using importers from {config_path} ({config_source})")
         output.note(frontend_notes[0])

@@ -290,6 +290,11 @@ It does not search the working directory or parent directories for Python files.
 Human output reports `Using importers from <path> (<source>)` on stderr. The
 source is `--config`, `remembered`, or `default beside root ledger`. JSON
 includes the path in `config` and its source in `config_source`.
+The importer chooses the account and categories itself, so `--account`,
+`--rules`, `--default-account`, `--date-format` and `--delimiter` are refused
+(exit 2) on a run that resolves to a Python importer, including the remembered
+and default ones; pass `--csv auto` with them to read the file by its header
+row instead.
 If multiple importers recognize the export, select one with `--importer NAME`.
 An unknown name lists the available importer names; a recognized name whose
 importer rejects the file reports that separately.
