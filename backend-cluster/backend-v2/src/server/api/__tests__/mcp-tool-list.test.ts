@@ -94,6 +94,19 @@ describe("MCP tool list", () => {
     }
   });
 
+  it("carries every tool's title in its annotations, where the directory reads it", async () => {
+    // Claude's connector portal flags a tool whose `annotations.title` is
+    // missing even when the top-level `title` is set.
+    const { tools } = await listTools();
+    for (const tool of tools) {
+      expect({ name: tool.name, title: tool.annotations?.title }).toEqual({
+        name: tool.name,
+        title: tool.title,
+      });
+      expect(tool.title?.trim().length).toBeGreaterThan(0);
+    }
+  });
+
   // Directory policy withholds these from MCP (ADR 019, 2026-10-09
   // amendment); GraphQL and REST keep them. One table instead of a case per
   // parity suite: nothing is registered, so nothing can reach a service.

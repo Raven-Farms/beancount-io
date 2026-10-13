@@ -520,7 +520,10 @@ export function assembleMcpRegistry(
         description: descriptor.description,
         inputSchema: descriptor.inputSchema,
         outputSchema: descriptor.outputSchema,
-        annotations: descriptor.annotations,
+        // The title is mirrored into the annotations: the MCP spec allows it in
+        // both places, and Claude's directory portal reads `annotations.title`
+        // (ADR 019, 2026-10-09 amendment).
+        annotations: { ...descriptor.annotations, title: descriptor.title },
         // OpenAI's back-compat mirror; `publishToolSecuritySchemes` adds the
         // top-level field the SDK's descriptor has no slot for.
         _meta: { securitySchemes: mcpToolSecuritySchemes(descriptor.name) },
