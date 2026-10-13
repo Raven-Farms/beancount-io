@@ -301,8 +301,14 @@ def format_entry(entry: Any) -> str:
     return first + separator + rest
 
 
-def _append(file_path: Path, *texts: str, allow_errors: bool = False, into: Path | None = None) -> list[str]:
-    return ledger_write.append(file_path, list(texts), allow_errors=allow_errors, into=into)
+def _append(
+    file_path: Path,
+    *texts: str,
+    allow_errors: bool = False,
+    into: Path | None = None,
+    snapshot: ledger_write.LedgerSnapshot | None = None,
+) -> list[str]:
+    return ledger_write.append(file_path, list(texts), allow_errors=allow_errors, into=into, snapshot=snapshot)
 
 
 def format_transaction(directive: TransactionHeader) -> str:
@@ -389,7 +395,12 @@ def write_close(
 
 
 def write_balance(
-    file_path: Path, directive: BalanceDirective, *, allow_errors: bool = False, into: Path | None = None
+    file_path: Path,
+    directive: BalanceDirective,
+    *,
+    allow_errors: bool = False,
+    into: Path | None = None,
+    snapshot: ledger_write.LedgerSnapshot | None = None,
 ) -> list[str]:
     entry = Balance(
         meta={},
@@ -399,7 +410,7 @@ def write_balance(
         tolerance=directive.tolerance,
         diff_amount=None,
     )
-    return _append(file_path, format_entry(entry), allow_errors=allow_errors, into=into)
+    return _append(file_path, format_entry(entry), allow_errors=allow_errors, into=into, snapshot=snapshot)
 
 
 def write_pad(

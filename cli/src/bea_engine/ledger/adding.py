@@ -219,12 +219,24 @@ def _simple(directive_type: str, request: dict[str, Any]) -> Any:
     )
 
 
-def _appended(file: Path, directive: Any, *, allow_errors: bool, into: Path | None) -> dict[str, Any]:
-    """Append one model-shaped directive; which writer to call follows from its type."""
+def _appended(
+    file: Path,
+    directive: Any,
+    *,
+    allow_errors: bool,
+    into: Path | None,
+    snapshot: write.LedgerSnapshot | None = None,
+) -> dict[str, Any]:
+    """Append one model-shaped directive; which writer to call follows from its type.
+
+    `snapshot` is the ledger a caller already decided against (balance only):
+    the write then conflicts if the ledger changed since that decision.
+    """
     from bea_engine.ledger.reader import metadata_to_json
 
     name = type(directive).__name__.removesuffix("Directive").lower()
-    warnings = getattr(writer, f"write_{name}")(file, directive, allow_errors=allow_errors, into=into)
+    decided = {} if snapshot is None else {"snapshot": snapshot}
+    warnings = getattr(writer, f"write_{name}")(file, directive, allow_errors=allow_errors, into=into, **decided)
     written = directive.model_dump(mode="json")
     # Metadata holds Beancount values, and a plain JSON dump would flatten a
     # number or a date into text. Answer with the tagged shape the rest of the
@@ -296,7 +308,9 @@ def _balance(
                 f"(at {where[0]}:{where[1]}); refusing {_balance_amount(number, currency, tolerance)}. "
                 "Pass --force to record another assertion."
             )
-        return _appended(file, directive, allow_errors=allow_errors, into=into)
+        # The snapshot the checks above read: a writer that landed since then
+        # is a conflict, not a second assertion appended beside it (w5/115).
+        return _appended(file, directive, allow_errors=allow_errors, into=into, snapshot=snapshot)
 
     from beancount.core.amount import Amount as BcAmount
     from beancount.core.data import Pad
@@ -316,7 +330,11 @@ def _balance(
         if not _unused_pad_only(exc):
             raise
         source_account = parse_account(str(pad_from))
-        loaded, before_errors, options = managed_load.load_file(file)
+        # Decide against one snapshot and write against the same one, as the
+        # plain path does, so concurrent retries cannot each append (w5/115).
+        snapshot = write.LedgerSnapshot.capture(file)
+        snapshot.require_target(write.destination(file, into))
+        loaded, before_errors, options = managed_load.load_file(file, snapshot=snapshot)
         staged = [
             f"{format_error(error, ledger_file=file)} "
             f"({error.entry.date} pad {error.entry.account} {error.entry.source_account})"
@@ -347,7 +365,7 @@ def _balance(
             }
         difference = number - _book_units(loaded, account, currency, date)
         if abs(difference) <= _balance_tolerance(entries[1], options):
-            result = _appended(file, directive, allow_errors=allow_errors, into=into)
+            result = _appended(file, directive, allow_errors=allow_errors, into=into, snapshot=snapshot)
             warnings = list(result.get("warnings") or [])
             warnings.append(
                 f"Book balance already matches {number} {currency}; omitted the pad from "
@@ -371,7 +389,7 @@ def _balance(
                     f"from {cover.source_account}, or edit that pad first."
                 ],
             ) from exc
-        result = _appended(file, directive, allow_errors=allow_errors, into=into)
+        result = _appended(file, directive, allow_errors=allow_errors, into=into, snapshot=snapshot)
         warnings = list(result.get("warnings") or [])
         warnings.append(
             f"The existing pad at {pad_at} ({cover.date} from {cover.source_account}) fills this assertion, "
