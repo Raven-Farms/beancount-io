@@ -465,7 +465,7 @@ Usage: bea add open [OPTIONS]
 | `--date` | str | required | Date in YYYY-MM-DD format |
 | `--account, -a` | str | required | Account name |
 | `--currency, -c` | str (repeatable) |  | Allowed currency (repeat) |
-| `--booking` | str |  | Lot booking method: FIFO, LIFO, STRICT, NONE, AVERAGE, … |
+| `--booking` | str |  | Lot booking method: STRICT, STRICT_WITH_SIZE, NONE, FIFO, LIFO, HIFO |
 | `--allow-errors` | flag |  | Allow semantic ledger errors; syntax and pad account references must be valid |
 | `--into` | path |  | Write to an included file, relative to the root ledger |
 

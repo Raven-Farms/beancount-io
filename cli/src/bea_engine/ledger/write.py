@@ -867,6 +867,11 @@ def validate_candidate(
             if root_hints is None:
                 root_hints = root_ledger_hints(snapshot.root if snapshot else file)
             hints.extend(root_hints)
+        if "AVERAGE method is not supported" in message:
+            message += (
+                '. Beancount cannot reduce a position in an account opened with "AVERAGE" booking;'
+                " edit that account's open directive to use FIFO, LIFO, HIFO, STRICT or NONE."
+            )
         if "inactive account '" in message:
             account = message.split("inactive account '", 1)[1].split("'", 1)[0]
             if lifecycles is None:

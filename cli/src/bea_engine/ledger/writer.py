@@ -370,10 +370,17 @@ def write_open(
 ) -> list[str]:
     booking = None
     if directive.booking is not None:
+        # Beancount declares AVERAGE but rejects every reduction booked with
+        # it, so an account opened that way could buy and never sell.
+        choices = ", ".join(member.name for member in Booking if member is not Booking.AVERAGE)
+        if directive.booking == Booking.AVERAGE.name:
+            raise protocol.UsageError(
+                "Booking method 'AVERAGE' is not supported by Beancount: an account opened with it "
+                f"can never reduce a position. Choose one of: {choices}."
+            )
         try:
             booking = Booking[directive.booking]
         except KeyError as exc:
-            choices = ", ".join(member.name for member in Booking)
             raise protocol.UsageError(
                 f"Unknown booking method {directive.booking!r}. Choose one of: {choices}."
             ) from exc

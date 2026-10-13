@@ -163,7 +163,7 @@ def add_open(
     currency: Annotated[list[str] | None, typer.Option("--currency", "-c", help="Allowed currency (repeat)")] = None,
     booking: Annotated[
         str | None,
-        typer.Option("--booking", help="Lot booking method: FIFO, LIFO, STRICT, NONE, AVERAGE, …"),
+        typer.Option("--booking", help="Lot booking method: STRICT, STRICT_WITH_SIZE, NONE, FIFO, LIFO, HIFO"),
     ] = None,
     allow_errors: AllowErrorsOpt = False,
     into: IntoOpt = None,
