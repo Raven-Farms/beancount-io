@@ -153,7 +153,17 @@ class _GuardedGroup(TyperGroup):
         ctx.meta["completion_shell"] = opts.get("shell")
         try:
             return super().parse_args(ctx, list(args))
-        except (typer.Exit, typer.Abort):
+        except BrokenPipeError:
+            # The eager options (--version, --help, --show-completion) print
+            # and exit from in here, before `invoke` and its guard ever run.
+            _exit_on_broken_pipe()
+        except typer.Exit:
+            try:
+                _settle_stdout()
+            except BrokenPipeError:
+                _exit_on_broken_pipe()
+            raise
+        except typer.Abort:
             raise
         except Exception as exc:
             if not args:  # Keep the normal no-arguments help page.
