@@ -244,6 +244,46 @@ def without_root_name_errors(errors: list[Any]) -> list[Any]:
     ]
 
 
+def _loads_as_account(name: str) -> bool:
+    """Whether the loader reads ``name`` as one account, by its own two steps.
+
+    The lexer takes any non-ASCII character inside a segment, and the grammar
+    then matches the account pattern from the start without anchoring the end,
+    so `Expenses:Kค่า` — whose tone mark is neither a letter nor a digit —
+    loads, opens and reports. `is_valid` anchors both ends and refuses it.
+
+    The lexer would take a C1 control or a bidirectional override the same
+    way; those stay refused, as everywhere else a write is checked.
+    """
+    import regex
+    from beancount.core.account import ACCOUNT_RE
+    from beancount.parser.lexer import lex_iter_string
+
+    try:
+        encoded = name.encode("utf-8")
+    except UnicodeEncodeError:
+        return False
+    if CONTROL_CHARACTERS.search(name):
+        return False
+    tokens = [(kind, text) for kind, _, text, _ in lex_iter_string(encoded)]  # type: ignore[no-untyped-call]
+    return tokens == [("ACCOUNT", encoded)] and regex.match(ACCOUNT_RE, name) is not None
+
+
+def _refused_character(name: str) -> str:
+    """A sentence naming the first character no account name may hold, or nothing.
+
+    Empty when every character is allowed and it is their arrangement that
+    fails — a lowercase root, a segment that starts with a mark.
+    """
+    for character in name:
+        if character in ":-" or (character.isascii() and character.isalnum()):
+            continue
+        if character.isascii() or CONTROL_CHARACTERS.match(character) or "\ud800" <= character <= "\udfff":
+            label = unicodedata.name(character, "")
+            return f" The character U+{ord(character):04X}{f' ({label})' if label else ''} is not allowed."
+    return ""
+
+
 def parse_account(name: str, roots: Collection[str] | None = None) -> str:
     """Validate an account name the way the loader will, or explain the rules.
 
@@ -252,7 +292,11 @@ def parse_account(name: str, roots: Collection[str] | None = None) -> str:
     NFC-normalized first, because the loader reads the ledger NFC-normalized
     and `is_valid` rejects the identical NFD spelling outright.
 
-    `is_valid` checks only the shape, so `Foo:Bar` passes it and then every
+    `is_valid` alone is stricter than the loader (w5/203): a ledger could open
+    an account, pass `check` and report on it, and `add` then refused to post
+    to it. A name `is_valid` refuses is therefore put to the loader itself.
+
+    Both check only the shape, so `Foo:Bar` passes and then every
     `open` for it fails to load. With the ledger's ``roots`` the root is
     checked too, so a caller can refuse the name instead of suggesting an
     `add open` that can never succeed.
@@ -260,12 +304,13 @@ def parse_account(name: str, roots: Collection[str] | None = None) -> str:
     from beancount.core.account import is_valid
 
     name = unicodedata.normalize("NFC", name)
-    if not is_valid(name):
+    if not is_valid(name) and not _loads_as_account(name):
         raise protocol.UsageError(
             f"Invalid account {name!r}. Account names use colon-separated segments, such as Assets:Checking. "
             "The root starts with an uppercase letter; each subaccount starts with an uppercase letter or digit. "
             "Use letters, digits and hyphens within segments. Standard roots are "
             "Assets, Liabilities, Equity, Income and Expenses; configured root names are also supported."
+            + _refused_character(name)
         )
     if roots is not None and name.split(":", 1)[0] not in roots:
         raise protocol.UsageError(unknown_root_message(name, roots))

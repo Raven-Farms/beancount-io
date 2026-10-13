@@ -784,7 +784,9 @@ accounts, invalid currencies, unavailable cost lots, and unbalanced transactions
 leave the original bytes unchanged. Account typos include suggested matches.
 Account syntax follows Beancount: colon-separated segments with an uppercase
 root; each subaccount starts with an uppercase letter or digit. Unicode
-letters and configured root names are supported. An account name written in a
+letters and configured root names are supported, and so is any other non-ASCII
+character Beancount itself loads after a segment's first character, such as a
+combining mark that has no precomposed letter. An account name written in a
 different Unicode normalization than the ledger uses — NFC where the ledger has
 NFD, which is what a name taken from a macOS file path looks like — resolves to
 the same account instead of a false unknown-account error, and the new
