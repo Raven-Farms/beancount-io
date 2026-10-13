@@ -31,6 +31,7 @@ import re
 import shutil
 import sys
 import time
+import unicodedata
 from collections.abc import Callable, Iterator
 from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass
@@ -1142,9 +1143,10 @@ def _free_feed_directory(target: Path, taken: set[Path]) -> Path:
 
     Deterministic like the feed names: `prices`, then `prices-managed`, then numbered.
     """
+    owned = {_name_key(path) for path in taken}
     candidate = target / "prices"
     suffix = 0
-    while candidate in taken:
+    while _name_key(candidate) in owned:
         suffix += 1
         candidate = target / ("prices-managed" if suffix == 1 else f"prices-managed-{suffix}")
     return candidate
@@ -1156,13 +1158,24 @@ def _free_feed_path(directory: Path, alias: str, taken: set[Path]) -> Path:
     Deterministic, so re-exporting the same tree produces the same names: the
     plain `<alias>.beancount` when it is free, then `-managed`, then numbered.
     """
+    # Compared as a case-insensitive, normalization-insensitive volume compares
+    # names — the macOS default. `prices/btc-usd.beancount` and the `BTC-USD`
+    # feed's file are one file there, and an exact-path test let the feed text
+    # replace the copy (w5/189). Folded on every platform, so the names do not
+    # depend on where the export ran and the snapshot survives moving.
+    owned = {_name_key(path) for path in taken}
     candidate = directory / f"{alias}.beancount"
     suffix = 0
-    while candidate in taken:
+    while _name_key(candidate) in owned:
         suffix += 1
         stem = f"{alias}-managed" if suffix == 1 else f"{alias}-managed-{suffix}"
         candidate = directory / f"{stem}.beancount"
     return candidate
+
+
+def _name_key(path: Path) -> str:
+    """One key for every spelling a case-insensitive volume reads as `path`."""
+    return unicodedata.normalize("NFC", unicodedata.normalize("NFD", str(path)).casefold())
 
 
 def _rewrite_export_includes(

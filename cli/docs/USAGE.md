@@ -1412,7 +1412,11 @@ forwards to `bean-price`, so name a quotes job file `status` by path
 lands at `prices/<ALIAS>.beancount` as a `custom "bea-managed-source"`
 marker directive plus the exact effective text the load parsed, and every
 include is rewritten relative. When the ledger includes a file of its own
-named `prices`, the feeds go in `prices-managed/` instead. `document` attachments under the root's
+named `prices`, the feeds go in `prices-managed/` instead. A feed never
+replaces a file the ledger already keeps under that name: it lands at
+`<ALIAS>-managed.beancount` instead, and names that differ only by letter case
+count as the same name, since they are one file on a case-insensitive volume.
+`document` attachments under the root's
 directory are copied to the same relative place, under the name the
 directive uses — a path through a symlinked file or folder becomes a plain
 copy at that path; one outside that tree (including a symlink pointing out of
