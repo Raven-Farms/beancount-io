@@ -62,7 +62,8 @@ category through instead of translating between two tables:
 A failed write that had already applied part of its work adds `result` to the
 error, holding the same fields the successful answer would have: a batch that
 appended three of five rows says which three. It is the one thing a caller
-cannot recover by rereading the ledger.
+cannot recover by rereading the ledger. An `import` whose importer raised uses
+it for `importer_output` alone — what the importer printed before it failed.
 
 Amounts are strings in JSON, never floats: every consumer of this envelope is
 doing money arithmetic, and a float would silently round.

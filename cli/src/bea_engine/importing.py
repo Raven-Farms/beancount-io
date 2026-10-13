@@ -72,6 +72,20 @@ def _capturing(logs: io.StringIO) -> Iterator[None]:
             logs.write(sink.read().decode("utf-8", "replace"))
 
 
+def _with_output(error: EngineError, logs: io.StringIO) -> EngineError:
+    """Attach what the importer printed before it failed to the failure.
+
+    The prints leading up to an exception are what an importer author needs to
+    find the bad row, and the capture that keeps them out of the envelope was
+    also the only copy: they reached neither stderr nor `--debug` (w5/143).
+    They travel as `result.importer_output`, the field a preview carries.
+    """
+    printed = logs.getvalue()
+    if printed and error.result is None:
+        error.result = {"importer_output": printed}
+    return error
+
+
 def _effective_id_keys(id_keys: list[str] | None) -> list[str]:
     """Resolve `--id-key` values to metadata keys the CSV mapper actually writes.
 
@@ -179,12 +193,12 @@ def answer(
             account = str(importer.account(str(source)))
             with _capturing(logs):
                 entries = copy.deepcopy(list(importer.extract(str(source), existing)))
-        except EngineError:
+        except EngineError as exc:
+            _with_output(exc, logs)
             raise
         except Exception as exc:
-            raise LedgerError(
-                f"Importer failed ({type(exc).__name__}): {exc}.",
-                traceback=_traceback(exc),
+            raise _with_output(
+                LedgerError(f"Importer failed ({type(exc).__name__}): {exc}.", traceback=_traceback(exc)), logs
             ) from exc
         skipped_blank = importer.skipped_blank_rows
         if importer.constant_currency is not None:
@@ -211,7 +225,8 @@ def answer(
                 importer = _importer(config, source, importer_name)
                 account = str(importer.account(str(source)))
                 entries = copy.deepcopy(list(importer.extract(str(source), existing)))
-        except EngineError:
+        except EngineError as exc:
+            _with_output(exc, logs)
             raise
         except ImportError as exc:
             if not _is_missing_dependency(exc, config.parent):
@@ -225,17 +240,19 @@ def answer(
             # This handler runs inside the engine, so the module is missing from
             # the engine's environment — not from whatever launched `bea`.
             # Installing it beside the frontend changes nothing here.
-            raise UsageError(
-                f"Importer dependency is unavailable: {exc}. Importer configurations are executed by the "
-                "managed engine, not the environment you run bea from, so the package has to be installed "
-                "there; 'bea engine status' prints which engine serves and where it lives. "
-                "See docs/IMPORTING.md.",
-                traceback=_traceback(exc),
+            raise _with_output(
+                UsageError(
+                    f"Importer dependency is unavailable: {exc}. Importer configurations are executed by the "
+                    "managed engine, not the environment you run bea from, so the package has to be installed "
+                    "there; 'bea engine status' prints which engine serves and where it lives. "
+                    "See docs/IMPORTING.md.",
+                    traceback=_traceback(exc),
+                ),
+                logs,
             ) from exc
         except Exception as exc:
-            raise LedgerError(
-                f"Importer failed ({type(exc).__name__}): {exc}.",
-                traceback=_traceback(exc),
+            raise _with_output(
+                LedgerError(f"Importer failed ({type(exc).__name__}): {exc}.", traceback=_traceback(exc)), logs
             ) from exc
         finally:
             sys.path.pop(0)

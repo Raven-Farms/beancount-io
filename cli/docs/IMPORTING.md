@@ -314,7 +314,9 @@ them by plain name (`import helper`), not relatively; a wrong name or a relative
 import is reported as `Importer failed (ImportError)`, and only a module that
 cannot be found is reported as a missing engine dependency. Importer output — including what a child
 process it runs prints — is captured in the preview's `importer_output` field
-so it does not corrupt JSON.
+so it does not corrupt JSON. If the importer then raises, what it printed first
+is kept: human output shows it on stderr ahead of the error, and JSON carries
+it as `error.result.importer_output`.
 For importer exceptions, put `--debug` before the command to see the traceback:
 
 ```bash norun

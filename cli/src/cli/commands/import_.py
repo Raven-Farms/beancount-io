@@ -799,9 +799,13 @@ def import_entries(
     except BeaError as exc:
         # Extraction finished far enough to build a preview (conflict / invalid
         # apply). Surface the engine's notes the same way a successful preview does.
+        # An importer that raised has no preview, only what it printed first —
+        # shown ahead of the error it leads up to; JSON keeps it in error.result.
         if isinstance(exc.result, dict):
             for note in exc.result.get("notes") or []:
                 output.note(str(note))
+            if exc.result.get("importer_output"):
+                output.note(str(exc.result["importer_output"]).rstrip("\n"))
         raise
     # Only a successful preview/apply commits settings. A rejected apply may
     # carry a preview in error.result, but must preserve the previous memory.
