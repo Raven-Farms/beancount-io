@@ -48,6 +48,7 @@ Optional features (`beangulp`, `beanprice`) must be enabled first; see
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import select
@@ -62,7 +63,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
-from cli import context, output
+from cli import config, context, output
 from cli.auth.credentials import load_credentials
 from cli.engine import paths, provision
 from cli.errors import BY_CATEGORY, AuthError, BeaError, ConflictError, UsageError
@@ -109,7 +110,9 @@ def _terminal_child_owns_interrupts() -> Iterator[None]:
         signal.signal(signal.SIGINT, previous)
 
 
-def run_native(name: str, args: Sequence[str], *, env: dict[str, str] | None = None) -> int:
+def run_native(
+    name: str, args: Sequence[str], *, env: dict[str, str] | None = None, ledger: Path | str | None = None
+) -> int:
     """Run an upstream executable from the engine environment, streams inherited.
 
     `name` is the program as upstream installs it — `bean-check`, `bean-format`,
@@ -118,12 +121,42 @@ def run_native(name: str, args: Sequence[str], *, env: dict[str, str] | None = N
     sees upstream's own output and status; an interactive program keeps its terminal.
 
     `env` replaces the child's environment when set; otherwise the child gets
-    `_native_env`, so a ledger's plugins resolve as they do in the helper.
+    `_native_env`, so a ledger's plugins resolve as they do in the helper, and
+    the load cache of the `ledger` it reads stays out of the ledger's directory.
     """
-    return _spawn([str(native_command(name)), *args], env if env is not None else _native_env())
+    return _spawn([str(native_command(name)), *args], env if env is not None else _native_env(ledger))
 
 
-def _native_env() -> dict[str, str]:
+LOAD_CACHE_ENV = "BEANCOUNT_LOAD_CACHE_FILENAME"
+
+
+def load_cache_pattern(ledger: Path | str) -> str:
+    """The load-cache pattern an upstream executable reading `ledger` runs with.
+
+    Beancount's default leaves `.<name>.picklecache` beside a ledger whose load
+    took a second: all of its contents again, at the process umask rather than
+    the ledger's mode, and trusted by the next read (w5/175). The helper
+    resolves that default under the cache home instead, in a directory only
+    its owner can enter; this is the same path as a pattern, which is all
+    `bean-check` and `bean-doctor` can be told. A pattern the user set wins.
+    """
+    chosen = os.environ.get(LOAD_CACHE_ENV)
+    if chosen:
+        return chosen
+    directory = config.cache_dir() / "load-cache"
+    try:
+        directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+        if stat.S_IMODE(directory.stat().st_mode) & 0o077:
+            directory.chmod(0o700)
+    except OSError:
+        # Upstream then finds no cache there and says so if it cannot write one.
+        pass
+    digest = hashlib.sha256(os.fsencode(os.path.dirname(os.path.realpath(ledger)))).hexdigest()[:32]
+    literal = str(directory).replace("{", "{{").replace("}", "}}")
+    return os.path.join(literal, f"{digest}.{{filename}}.picklecache")
+
+
+def _native_env(ledger: Path | str | None = None) -> dict[str, str]:
     """The environment for an upstream executable: the helper's module search path, and nothing else of it.
 
     The bundled sources — the vendored `fava` package among them — are
@@ -136,7 +169,10 @@ def _native_env() -> dict[str, str]:
     """
     root = paths.helper_source_root()
     inherited = os.environ.get("PYTHONPATH", "")
-    return {**os.environ, "PYTHONPATH": os.pathsep.join([inherited, str(root)]) if inherited else str(root)}
+    env = {**os.environ, "PYTHONPATH": os.pathsep.join([inherited, str(root)]) if inherited else str(root)}
+    if ledger is not None:
+        env[LOAD_CACHE_ENV] = load_cache_pattern(ledger)
+    return env
 
 
 def require_feature(name: str) -> None:
@@ -221,7 +257,9 @@ def engine_python() -> Path:
     return provision.ensure_engine()
 
 
-def capture_native(name: str, args: Sequence[str]) -> subprocess.CompletedProcess[str]:
+def capture_native(
+    name: str, args: Sequence[str], *, ledger: Path | str | None = None
+) -> subprocess.CompletedProcess[str]:
     """Run an upstream executable and keep its output instead of inheriting the streams.
 
     For the two commands that must read the answer before they can render one:
@@ -230,7 +268,7 @@ def capture_native(name: str, args: Sequence[str]) -> subprocess.CompletedProces
     Everything else should use `run_native` and let upstream own the streams.
     """
     return subprocess.run(
-        [str(native_command(name)), *args], env=_native_env(), capture_output=True, text=True, check=False
+        [str(native_command(name)), *args], env=_native_env(ledger), capture_output=True, text=True, check=False
     )
 
 

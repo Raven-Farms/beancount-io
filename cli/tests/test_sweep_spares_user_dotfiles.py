@@ -130,11 +130,21 @@ def test_the_sweep_ignores_a_name_bea_never_generates(tmp_path: Path, name: str)
 
 
 def test_the_sweep_still_takes_a_candidate_and_the_sidecar_beancount_names(tmp_path: Path) -> None:
+    """Both places a candidate's load cache can be.
+
+    Beside it, under Beancount's own name: what versions before w5/175 left,
+    and what a relative `BEANCOUNT_LOAD_CACHE_FILENAME` still produces. And
+    under the `bea` cache home, where the default cache is kept now.
+    """
     candidate = _aged(tmp_path / CANDIDATE)
-    sidecar = _aged(pickle_cache_of(candidate))
-    assert sidecar.name == SIDECAR
+    sidecar = _aged(tmp_path / SIDECAR)
+    relocated = pickle_cache_of(candidate)
+    assert relocated.name.endswith(SIDECAR)
+    assert relocated.parent != tmp_path
+    _aged(relocated)
 
     sweep_abandoned_candidates(tmp_path)
 
     assert not candidate.exists()
+    assert not relocated.exists()
     assert not sidecar.exists()

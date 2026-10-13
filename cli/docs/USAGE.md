@@ -200,6 +200,17 @@ The cache does not track attachments either, so every local read re-checks
 them: when a `document` file appears or vanishes, or a `documents` directory
 gains or loses a file, the next `check` or write sees it without a ledger file
 being touched. A cached load that still matches the disk is served as before.
+That cache is a full copy of the ledger, written once a load has taken a second.
+`bea` keeps it out of the ledger's directory: under `$XDG_CACHE_HOME/bea/load-cache`
+(default `~/.cache/bea/load-cache`), a directory only its owner can enter
+(`0700` on POSIX), one file per ledger file. So no read — `list`, `query`,
+`balance`, `report`, `check`, `doctor` — adds a file beside a ledger, whatever
+the umask, and a `.<name>.picklecache` already beside one (left by an earlier
+version or by Beancount's own tools) is neither read nor removed; delete it
+when you no longer run those tools there. A `BEANCOUNT_LOAD_CACHE_FILENAME` or
+`bea check --cache-filename` you set is used exactly as Beancount defines it,
+relative paths beside the ledger included. The optional `bea price` and
+`bea ingest` forwarders run upstream programs that place their own cache.
 `price export` also plans the directories it needs: a file standing where the
 export needs a directory (or a directory where it needs a file) is refused the
 same way, and `--force` does not remove it. So is a plan that collides with
@@ -1709,7 +1720,7 @@ select targets, endpoints, and state directories:
 | `BEA_TOKEN` | — | Hosted credential for unattended jobs; never written to disk |
 | `BEA_CONFIG_DIR` | `$XDG_CONFIG_HOME/bea`, else `~/.config/bea` | Per-user state: credentials, `ask` history, user skills |
 | `XDG_DATA_HOME` | `~/.local/share` | Root for the managed PyPI engine under `…/bea/engine/<version>` |
-| `XDG_CACHE_HOME` | `~/.cache` | Root for ledger write locks under `…/bea/locks` and managed price feeds under `…/bea/managed-prices` |
+| `XDG_CACHE_HOME` | `~/.cache` | Root for ledger write locks under `…/bea/locks`, managed price feeds under `…/bea/managed-prices` and Beancount's load cache under `…/bea/load-cache` |
 | `BEA_API_URL` | `https://api.v3.beancount.io` | API base URL; empty means the default, and a value that is not an `http(s)://` URL with a host is a usage error (exit 2) |
 | `BEA_DASHBOARD_URL` | `https://beancount.io` | Dashboard URL, used by the device login flow; validated like `BEA_API_URL` |
 | `BEA_NO_UPDATE_NOTIFIER` | — | Truthy disables the update notice entirely |

@@ -95,7 +95,8 @@ def test_other_forwarders_preserve_the_complete_unknown_short_token(
     if seam == "run_optional_native":
         recorded_engine[seam].assert_called_once_with("beanprice", program, forwarded)
     else:
-        recorded_engine[seam].assert_called_once_with(program, forwarded)
+        recorded_engine[seam].assert_called_once()
+        assert recorded_engine[seam].call_args.args == (program, forwarded)
 
 
 @pytest.mark.parametrize(

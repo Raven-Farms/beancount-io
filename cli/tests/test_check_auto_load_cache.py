@@ -16,6 +16,7 @@ import pytest
 from typer.testing import CliRunner
 
 from cli.commands.check import _enables_auto
+from cli.engine import launch
 from cli.main import app
 
 runner = CliRunner()
@@ -50,7 +51,7 @@ def _bea(ledger: Path, *args: str, as_json: bool = False) -> Any:
 
 
 def _cache(ledger: Path) -> Path:
-    return ledger.with_name(f".{ledger.name}.picklecache")
+    return Path(launch.load_cache_pattern(ledger).format(filename=ledger.name))
 
 
 @pytest.mark.parametrize(

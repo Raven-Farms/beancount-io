@@ -276,10 +276,12 @@ def _load_with_sources(
     from bea_engine.ledger.write import (
         LedgerSnapshot,
         is_candidate_file,
+        keep_load_cache_private,
         refuse_cache_over_ledger,
     )
     from bea_engine.protocol import LedgerError
 
+    keep_load_cache_private()
     _record_plugin_configs(loader)
 
     at = time.time() if now is None else now

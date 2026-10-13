@@ -237,14 +237,20 @@ def _run(op: str, args: list[str]) -> int:
     """Run one operation with the streams inherited, where it reads the ledger right."""
     if _needs_compat(op, args):
         return launch.run_engine_argv(["scoped", op, *args])
-    return launch.run_native("bean-doctor", [op, *args])
+    return launch.run_native("bean-doctor", [op, *args], ledger=_ledger_operand(args))
 
 
 def _capture(op: str, args: list[str]) -> subprocess.CompletedProcess[str]:
     """`_run`, keeping the output for an operation that has to read its own answer."""
     if _needs_compat(op, args):
         return launch.capture_engine(["scoped", op, *args])
-    return launch.capture_native("bean-doctor", [op, *args])
+    return launch.capture_native("bean-doctor", [op, *args], ledger=_ledger_operand(args))
+
+
+def _ledger_operand(args: list[str]) -> str | None:
+    """The ledger an operation reads — upstream's first operand — whose load cache `bea` places."""
+    positionals = _positionals(args)
+    return positionals[0] if positionals else None
 
 
 def _refuse_json() -> None:
@@ -351,11 +357,12 @@ def _refuse_roundtrip_collisions(ledger: str) -> None:
 def _load_cache_of(filename: Path) -> Path | None:
     """Where Beancount keeps the load cache of an absolute `filename`.
 
-    Derived as `beancount.loader.get_cache_filename` does: the default pattern
-    or `BEANCOUNT_LOAD_CACHE_FILENAME`, relative to the file's directory unless
-    absolute, with `{filename}` standing for the base name.
+    Derived as `beancount.loader.get_cache_filename` does from the pattern the
+    child runs with — `BEANCOUNT_LOAD_CACHE_FILENAME`, or `bea`'s own place
+    under the cache home: relative to the file's directory unless absolute,
+    with `{filename}` standing for the base name.
     """
-    pattern = os.environ.get("BEANCOUNT_LOAD_CACHE_FILENAME") or ".{filename}.picklecache"
+    pattern = launch.load_cache_pattern(filename)
     try:
         return Path(os.path.join(filename.parent, pattern).format(filename=filename.name))
     except (IndexError, KeyError, ValueError):

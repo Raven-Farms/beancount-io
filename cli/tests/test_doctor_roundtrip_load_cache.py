@@ -7,6 +7,9 @@ On a ledger slow enough to be cached, Beancount therefore also wrote
 the ledger's size — and nothing ever removed it. `bea` now removes it, and
 leaves the ledger's own cache alone (switching the cache off for the child
 would make Beancount delete that one).
+
+Since w5/175 the default cache is kept under the `bea` cache home, so the
+ledger's directory holds the ledger alone and the same holds one level over.
 """
 
 from __future__ import annotations
@@ -88,12 +91,18 @@ def _listing(books: Path) -> list[str]:
     return sorted(path.name for path in books.iterdir())
 
 
+def _cached(tmp_path: Path) -> list[str]:
+    """What the cache home holds, each name without its directory key."""
+    home = tmp_path / "cache" / "bea" / "load-cache"
+    return sorted(path.name.split(".", 1)[1] for path in home.iterdir()) if home.is_dir() else []
+
+
 def test_a_cached_ledger_keeps_only_its_own_cache(tmp_path: Path) -> None:
     books = _books(tmp_path)
     ledger = books / "main.bean"
-    own_cache = books / ".main.bean.picklecache"
     assert _bea(tmp_path, "--file", str(ledger), "check").returncode == 0
-    assert own_cache.exists(), "the fixture must be slow enough to be cached"
+    assert _cached(tmp_path) == ["main.bean.picklecache"], "the fixture must be slow enough to be cached"
+    (own_cache,) = (tmp_path / "cache" / "bea" / "load-cache").iterdir()
     before = _listing(books)
     written = own_cache.stat().st_mtime_ns
 
@@ -101,7 +110,8 @@ def test_a_cached_ledger_keeps_only_its_own_cache(tmp_path: Path) -> None:
 
     assert done.returncode == 0, done.stderr
     assert "Entries are the same. Congratulations." in done.stderr
-    assert _listing(books) == before
+    assert _listing(books) == before == ["main.bean"]
+    assert _cached(tmp_path) == ["main.bean.picklecache"]
     assert own_cache.stat().st_mtime_ns == written
 
 
@@ -112,7 +122,8 @@ def test_an_uncached_slow_ledger_gains_only_its_own_cache(tmp_path: Path) -> Non
 
     assert done.returncode == 0, done.stderr
     assert "Entries are the same. Congratulations." in done.stderr
-    assert _listing(books) == [".main.bean.picklecache", "main.bean"]
+    assert _listing(books) == ["main.bean"]
+    assert _cached(tmp_path) == ["main.bean.picklecache"]
 
 
 def test_a_symlinked_ledger_leaves_nothing_beside_its_target(tmp_path: Path) -> None:
@@ -123,7 +134,8 @@ def test_a_symlinked_ledger_leaves_nothing_beside_its_target(tmp_path: Path) -> 
     done = _bea(tmp_path, "doctor", "roundtrip", str(link))
 
     assert done.returncode == 0, done.stderr
-    assert _listing(books) == [".main.bean.picklecache", "main.bean"]
+    assert _listing(books) == ["main.bean"]
+    assert _cached(tmp_path) == ["main.bean.picklecache"]
     assert sorted(path.name for path in tmp_path.iterdir() if "roundtrip" in path.name) == []
 
 

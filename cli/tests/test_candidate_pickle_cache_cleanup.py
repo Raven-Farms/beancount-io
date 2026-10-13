@@ -22,6 +22,9 @@ proven without needing a multi-second fixture.
 The ledger's *own* cache (`.main.bean.picklecache`, one dot) is legitimate and
 makes large ledgers usable. Deleting every `*.picklecache` would have "fixed"
 the leak by throwing that away, so it is pinned here as a control.
+
+Since w5/175 the default cache lives under the `bea` cache home rather than
+beside the file, under a name that still ends in Beancount's own.
 """
 
 from __future__ import annotations
@@ -59,10 +62,10 @@ def test_the_sidecar_name_is_beancounts_own(tmp_path: Path) -> None:
 
     computed = pickle_cache_of(candidate)
 
-    assert computed.name == PICKLE_CACHE_FILENAME.format(filename=candidate.name)
-    assert computed.name == "..bea-acdn4plk.tmp.picklecache", "the prepended dot is the whole bug"
+    assert computed.name.endswith(PICKLE_CACHE_FILENAME.format(filename=candidate.name))
+    assert computed.name.endswith("..bea-acdn4plk.tmp.picklecache"), "the prepended dot is the whole bug"
     assert computed != Path(str(candidate) + ".picklecache"), "the old, never-matching spelling"
-    assert computed.parent == candidate.parent
+    assert computed.parent == Path(os.environ["XDG_CACHE_HOME"]) / "bea" / "load-cache"
 
 
 def test_candidate_file_removes_the_sidecar_it_leaves_behind(tmp_path: Path) -> None:
@@ -76,7 +79,8 @@ def test_candidate_file_removes_the_sidecar_it_leaves_behind(tmp_path: Path) -> 
         assert sidecar.exists()
 
     assert not sidecar.exists(), "the staged file's cache is garbage once it is renamed away"
-    assert sorted(p.name for p in tmp_path.iterdir()) == ["main.bean"]
+    assert sorted(p.name for p in sidecar.parent.iterdir()) == []
+    assert sorted(p.name for p in tmp_path.iterdir() if p.is_file()) == ["main.bean"]
 
 
 def test_the_sweep_reclaims_previously_abandoned_sidecars(tmp_path: Path) -> None:
@@ -159,6 +163,7 @@ def test_a_real_load_leaves_nothing_behind(tmp_path: Path, apply_write: bool) ->
 
     env = {k: v for k, v in os.environ.items() if not k.startswith("BEA_")}
     env.update(PYTHONPATH=str(ROOT / "src"))
+    caches = Path(env["XDG_CACHE_HOME"]) / "bea" / "load-cache"
     done = subprocess.run(
         [sys.executable, str(driver)], env=env, cwd=tmp_path, capture_output=True, text=True, timeout=180
     )
@@ -167,6 +172,8 @@ def test_a_real_load_leaves_nothing_behind(tmp_path: Path, apply_write: bool) ->
     left = json.loads(done.stdout)
     orphans = [name for name in left if name.startswith("..bea-")]
     assert orphans == [], f"a staged write left {orphans} beside the ledger"
+    orphans = sorted(path.name for path in caches.iterdir() if "..bea-" in path.name)
+    assert orphans == [], f"a staged write left {orphans} in the cache home"
     assert "main.bean" in left
     if apply_write:
         assert "single" in ledger.read_text(encoding="utf-8"), "the write itself must still land"

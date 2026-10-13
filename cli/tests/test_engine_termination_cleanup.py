@@ -94,7 +94,7 @@ def _interrupt_during_validation(
             candidate = Path(state["candidate"])
             sidecar = Path(state["sidecar"])
             assert candidate.name.startswith(".bea-")
-            assert sidecar.name.startswith("..bea-")
+            assert sidecar.name.endswith(f".{candidate.name}.picklecache")
             assert sidecar.read_bytes() == candidate.read_bytes()
 
             process.send_signal(number)

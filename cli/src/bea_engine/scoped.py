@@ -23,6 +23,9 @@ def run(op: str, argv: list[str]) -> int:
     """Run `bean-doctor <op>` in this process, formatting balances in scope."""
     from beancount.scripts import doctor as upstream
 
+    from bea_engine.ledger.write import keep_load_cache_private
+
+    keep_load_cache_private()
     original = getattr(upstream, "render_mini_balances", None)
     if original is None:  # pragma: no cover - upstream renamed it; run unchanged
         return _invoke(upstream, op, argv)

@@ -297,10 +297,58 @@ def pickle_cache_of(candidate: Path) -> Path:
     `BEANCOUNT_LOAD_CACHE_FILENAME`, which `loader.initialize` honours and a
     hand-written template would have ignored.
     """
+    keep_load_cache_private()
     from beancount.loader import PICKLE_CACHE_FILENAME, get_cache_filename
 
     pattern = os.getenv("BEANCOUNT_LOAD_CACHE_FILENAME") or PICKLE_CACHE_FILENAME
     return Path(get_cache_filename(pattern, str(candidate)))
+
+
+def _private_load_cache(filename: str) -> str:
+    """The load cache of `filename` under the `bea` cache home, in a directory only its owner can enter.
+
+    Keyed by the file's directory and named after the file, which is as much as
+    a `BEANCOUNT_LOAD_CACHE_FILENAME` pattern can say: `cli.engine.launch`
+    hands the same path to `bean-check` and `bean-doctor` that way.
+    """
+    directory = cache_dir() / "load-cache"
+    try:
+        directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+        if stat.S_IMODE(directory.stat().st_mode) & 0o077:
+            directory.chmod(0o700)
+    except OSError:
+        # Upstream then finds no cache there and says so if it cannot write one.
+        pass
+    resolved = os.path.realpath(filename)
+    digest = hashlib.sha256(os.fsencode(os.path.dirname(resolved))).hexdigest()[:32]
+    return str(directory / f"{digest}.{os.path.basename(filename)}.picklecache")
+
+
+def keep_load_cache_private() -> None:
+    """Move Beancount's default load cache out of the ledger's directory.
+
+    A load that takes a second leaves `.<name>.picklecache` beside the file it
+    read: every directive of the ledger again, created with the process umask
+    — `0644` beside books kept `0600` — through whatever link already sits at
+    that name, and unpickled by the next read before anything is checked
+    (w5/175). The default now resolves under the cache home instead; a
+    location the user chose keeps upstream's meaning.
+    """
+    from beancount import loader
+
+    upstream = loader.get_cache_filename
+    if getattr(upstream, "_bea_private", False):
+        return
+
+    def get_cache_filename(pattern: str, filename: str) -> str:
+        if pattern != loader.PICKLE_CACHE_FILENAME:
+            return str(upstream(pattern, filename))
+        return _private_load_cache(filename)
+
+    get_cache_filename._bea_private = True  # type: ignore[attr-defined]
+    loader.get_cache_filename = get_cache_filename
+    # The loader bound the resolver it had when it was imported.
+    loader.initialize(os.getenv("BEANCOUNT_DISABLE_LOAD_CACHE") is None)
 
 
 def _sidecar_of(candidate: Path) -> Path | None:
@@ -372,7 +420,11 @@ def sweep_abandoned_candidates(directory: Path) -> None:
         try:
             if path.is_file() and path.stat().st_mtime < cutoff:
                 path.unlink(missing_ok=True)
-        except OSError:
+                # Its load cache is kept under the cache home rather than beside it (w5/175).
+                relocated = _sidecar_of(path) if is_candidate_file(path) else None
+                if relocated is not None and relocated.parent != directory:
+                    relocated.unlink(missing_ok=True)
+        except (OSError, ImportError):
             continue
 
 

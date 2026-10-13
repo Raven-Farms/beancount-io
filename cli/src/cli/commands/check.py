@@ -85,7 +85,7 @@ def check(ctx: typer.Context) -> None:
             launch.helper_json(["check", "--file", str(file), "--documents-only"])
         except BeaError as error:
             portable = error
-    code = launch.run_native("bean-check", [*isolate, str(file), *ctx.args])
+    code = launch.run_native("bean-check", [*isolate, str(file), *ctx.args], ledger=file)
     if code != 0:
         raise typer.Exit(code)
     if portable is not None:
