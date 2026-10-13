@@ -598,9 +598,21 @@ class CandidateRejected(LedgerError):
     from the one load it already paid for, instead of reloading per row.
     """
 
-    def __init__(self, message: str, *, details: list[str], locations: list[tuple[Path, int | None]]) -> None:
+    def __init__(
+        self,
+        message: str,
+        *,
+        details: list[str],
+        locations: list[tuple[Path, int | None]],
+        records: list[_ErrorRecord],
+    ) -> None:
         super().__init__(message, details=details)
         self.locations = locations
+        self._records = records
+
+    def details_at(self, positions: Iterable[int]) -> list[str]:
+        """The detail lines for the errors at these positions in `locations` alone."""
+        return _collapse_repeats([self._records[position] for position in positions])
 
 
 @dataclass(frozen=True)
@@ -906,6 +918,7 @@ def validate_candidate(
                 "The change would leave the ledger invalid; nothing was written.",
                 details=messages,
                 locations=locations,
+                records=records,
             )
         # A refused `--allow-errors` write names what forced the refusal —
         # the introduced errors, any syntax failure, any invalid pad — and
@@ -925,6 +938,7 @@ def validate_candidate(
             message,
             details=_collapse_repeats([records[index] for index in blocking]),
             locations=[locations[index] for index in blocking],
+            records=[records[index] for index in blocking],
         )
     return messages
 

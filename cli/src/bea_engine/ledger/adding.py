@@ -1106,7 +1106,8 @@ def _transactions(
         )
 
     # Validate the entire batch first: an earlier sale may depend on a buy that
-    # appears later in the input. Only partial recovery needs sequential trials.
+    # appears later in the input. Partial recovery drops the rows that load's
+    # errors name; only errors it cannot place need sequential trials.
     batch_texts = [writer.format_transaction(d) for _, d in valid]
     try:
         write.validate_append(file, batch_texts, allow_errors=allow_errors, into=into)
@@ -1128,20 +1129,29 @@ def _transactions(
                     "unwritten_rows": [index for index, _ in valid],
                 },
             ) from batch_error
+        named = _named_rows(file, batch_texts, batch_error, allow_errors=allow_errors, into=into)
         accepted: list[tuple[int, Any]] = []
-        texts: list[str] = []
-        for index, directive in valid:
-            try:
-                text = writer.format_transaction(directive)
-                write.validate_append(file, [*texts, text], allow_errors=allow_errors, into=into)
-            except protocol.LedgerError as err:
-                # Human labels count from 1, like the schema rejections above;
-                # `rejected_rows` stays a zero-based index for scripts.
-                rejected.append(f"Row {index + 1}: {'; '.join(err.details) or str(err)}")
-                rejected_rows.append(index)
-            else:
-                accepted.append((index, directive))
-                texts.append(text)
+        # Human labels count from 1, like the schema rejections above;
+        # `rejected_rows` stays a zero-based index for scripts.
+        if named is not None:
+            for number, (index, directive) in enumerate(valid):
+                if number in named:
+                    rejected.append(f"Row {index + 1}: {'; '.join(named[number])}")
+                    rejected_rows.append(index)
+                else:
+                    accepted.append((index, directive))
+        else:
+            texts: list[str] = []
+            for index, directive in valid:
+                try:
+                    text = writer.format_transaction(directive)
+                    write.validate_append(file, [*texts, text], allow_errors=allow_errors, into=into)
+                except protocol.LedgerError as err:
+                    rejected.append(f"Row {index + 1}: {'; '.join(err.details) or str(err)}")
+                    rejected_rows.append(index)
+                else:
+                    accepted.append((index, directive))
+                    texts.append(text)
         valid = accepted
 
     warnings = writer.write_transactions(file, [d for _, d in valid], allow_errors=allow_errors, into=into)
@@ -1179,24 +1189,44 @@ def _recoverable_rows(
     are confirmed with one more load. None means the errors could not be
     attributed to rows (or the rest still fail), so no count is promised.
     """
+    named = _named_rows(file, texts, batch_error, allow_errors=allow_errors, into=into)
+    if named is None:
+        return None
+    return [index for number, (index, _) in enumerate(valid) if number not in named]
+
+
+def _named_rows(
+    file: Path, texts: list[str], batch_error: protocol.LedgerError, *, allow_errors: bool, into: Path | None
+) -> dict[int, list[str]] | None:
+    """Positions in `texts` the refused batch's errors name, each with its own detail lines.
+
+    The rows left over are confirmed with one more load, so `--partial` costs
+    a fixed number of loads however long the batch is, where a trial per row
+    cost a full ledger load and a re-parse of every accepted row (w5/123).
+    None means the errors could not be attributed to rows, or the rest still fail.
+    """
+    if not isinstance(batch_error, write.CandidateRejected):
+        return None
     rows = _rows_with_errors(file, texts, batch_error, into=into)
     if rows is None:
         return None
-    kept = [(valid[number][0], text) for number, text in enumerate(texts) if number not in rows]
-    if not kept:
-        return []
-    try:
-        write.validate_append(file, [text for _, text in kept], allow_errors=allow_errors, into=into)
-    except protocol.LedgerError:
-        return None
-    return [index for index, _ in kept]
+    kept = [text for number, text in enumerate(texts) if number not in rows]
+    if kept:
+        try:
+            write.validate_append(file, kept, allow_errors=allow_errors, into=into)
+        except protocol.LedgerError:
+            return None
+    return {number: batch_error.details_at(rows[number]) for number in sorted(rows)}
 
 
 def _rows_with_errors(
-    file: Path, texts: list[str], batch_error: protocol.LedgerError, *, into: Path | None
-) -> set[int] | None:
-    """Positions in `texts` whose appended lines carry an error, or None when one cannot be placed."""
-    locations = getattr(batch_error, "locations", None)
+    file: Path, texts: list[str], batch_error: write.CandidateRejected, *, into: Path | None
+) -> dict[int, list[int]] | None:
+    """Positions in `texts` whose appended lines carry an error, or None when one cannot be placed.
+
+    Each maps to the positions of its errors in the batch error's `locations`.
+    """
+    locations = batch_error.locations
     if not locations:
         return None
     target = write.destination(file, into)
@@ -1214,14 +1244,14 @@ def _rows_with_errors(
         spans.append((end - size + 1, end))
         end -= size + 1
     spans.reverse()
-    rows: set[int] = set()
-    for source, lineno in locations:
+    rows: dict[int, list[int]] = {}
+    for position, (source, lineno) in enumerate(locations):
         if lineno is None or Path(source).resolve() != target:
             return None
         hits = [number for number, (first, last) in enumerate(spans) if first <= lineno <= last]
         if not hits:
             return None
-        rows.add(hits[0])
+        rows.setdefault(hits[0], []).append(position)
     return rows
 
 
