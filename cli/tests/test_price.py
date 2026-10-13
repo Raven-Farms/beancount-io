@@ -1149,7 +1149,7 @@ include "prices.bean"
         assert load_with_sources(ledger, root=root).sources != ()
         assert _FeedHandler.hits == []
 
-    def test_seventeenth_url_is_left_for_the_engine(self, feed_server: str, tmp_path: Path) -> None:
+    def test_seventeenth_url_is_an_unavailable_source(self, feed_server: str, tmp_path: Path) -> None:
         for index in range(17):
             alias = f"F-{index:02d}"
             base = f"F{index:02d}"
@@ -1163,10 +1163,13 @@ include "prices.bean"
         lines += ["2024-01-01 open Assets:Broker", "2024-01-01 open Expenses:Food"]
         loaded = _load(feed_server, tmp_path, "\n".join(lines) + "\n")
 
-        assert len(loaded.sources) == 16
-        assert [source.alias for source in loaded.sources] == [f"F-{index:02d}" for index in range(16)]
+        assert [source.alias for source in loaded.sources] == [f"F-{index:02d}" for index in range(17)]
+        assert [source.revision is None for source in loaded.sources] == [False] * 16 + [True]
+        assert loaded.sources[16].freshness == "unavailable"
+        assert "limit of 16" in (loaded.sources[16].error or "")
         assert _price_numbers(loaded) == ["10"] * 16
         assert any("F-16" in getattr(error, "message", "") for error in loaded.errors)
+        assert "/prices/F-16" not in _FeedHandler.hits
 
     def test_load_never_rewrites_customer_files(self, feed_server: str, tmp_path: Path) -> None:
         books = tmp_path / "books"

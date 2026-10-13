@@ -43,6 +43,8 @@ from urllib.request import OpenerDirector
 from bea_engine.managed_price_cache import (
     CACHE_WRITE_PROBLEM,
     PriceFeedBlob,
+    PriceFeedHead,
+    ResolvedFeed,
     cache_root,
     cache_write_problem,
     feed_dir,
@@ -83,6 +85,10 @@ _METADATA_LINE_RE = re.compile(r"^[ \t]+[a-z][A-Za-z0-9_-]*\s*:")
 _SHADOWED_LINE = "; shadowed by a ledger-authored price for the same date"
 _ALREADY_INCLUDED_LINE = "; managed price feed already included from another file"
 _NO_CACHED_REVISION = "no cached revision"
+_OVER_LIMIT = (
+    f"over the limit of {MAX_URLS_PER_LOAD} managed price sources per ledger load; "
+    "remove a managed include to bring the ledger within it"
+)
 
 
 @dataclass(frozen=True)
@@ -272,6 +278,7 @@ def _load_with_sources(
         is_candidate_file,
         refuse_cache_over_ledger,
     )
+    from bea_engine.protocol import LedgerError
 
     _record_plugin_configs(loader)
 
@@ -290,10 +297,23 @@ def _load_with_sources(
         entries, errors, options = _load_fresh(entry, snapshot)
         return LoadedLedger(list(entries), list(errors), dict(options), ())
 
+    # A source past the per-load cap is never fetched, and it is not dropped
+    # either: left as written, Beancount read the URL as a file glob that
+    # "does not match any files" at `<load>:0`, and `price export` judged the
+    # ledger from the sixteen it had loaded (w5/190). It resolves as an
+    # unavailable source whose cause is the limit, so the load error, `price
+    # status` and the export all name it.
     budget = ManagedPriceBudget(limit=MAX_URLS_PER_LOAD)
-    pending = [source for source in managed if budget.claim(source.url)]
-    resolved = {
-        source.url: resolve_feed(
+    pending = managed
+    resolved: dict[str, ResolvedFeed] = {}
+    for source in pending:
+        if not budget.claim(source.url):
+            if want_strict:
+                raise LedgerError(f"managed price source {source.url} is unavailable in strict mode: {_OVER_LIMIT}.")
+            over_limit = PriceFeedHead(revision=None, next_refresh_at=0.0, last_error=_OVER_LIMIT)
+            resolved[source.url] = ResolvedFeed(blob=None, head=over_limit)
+            continue
+        resolved[source.url] = resolve_feed(
             source.url,
             source.alias,
             root=cache,
@@ -302,8 +322,6 @@ def _load_with_sources(
             now=at,
             opener=opener,
         )
-        for source in pending
-    }
     blobs = {url: result.blob for url, result in resolved.items() if result.blob is not None}
     texts = [content.decode("utf-8", errors="replace") for content in snapshot.contents.values()]
     pairs = collect_ledger_price_pairs(*texts) if blobs else set()
@@ -534,7 +552,8 @@ def _collect_managed(snapshot: Any, origins: tuple[str, ...]) -> list[_PendingSo
 
     Disallowed URLs are left for Beancount to report, exactly as today.
     Nested includes, globs, and cycles are already handled by the snapshot's
-    closure walk. The per-load cap applies later, when the budget claims.
+    closure walk. The per-load cap applies later, when the budget claims;
+    a source past it stays in the list and resolves as unavailable.
     """
     from bea_engine.ledger.text import iter_includes
 
