@@ -296,6 +296,12 @@ importers using the modern
 The importer owns bank-specific parsing and categorization. The importer must
 supply explicit amounts on source-account postings so duplicate matching uses
 actual bank amounts.
+`account()` names the source account: either an account every transaction row
+posts to, or a parent of one, as a brokerage importer that returns
+`Assets:Broker` and posts to `Assets:Broker:Cash` and `Assets:Broker:HOOL`
+does. A row's source postings are the ones to that exact account when it has
+any, otherwise every posting under it. A row with neither stops the import
+(exit 1, nothing written) with the accounts it does post to.
 
 ```bash norun
 # Needs a Python importer file; the runnable example below provides one.

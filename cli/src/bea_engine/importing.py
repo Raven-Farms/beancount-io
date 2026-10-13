@@ -270,7 +270,7 @@ def answer(
     open_currencies = _open_currencies(existing, Open)
     for entry in existing:
         entry = normalize_entry_strings(entry)
-        if isinstance(entry, Transaction) and any(p.account == account for p in entry.postings):
+        if isinstance(entry, Transaction) and _source_legs(entry, account):
             for identity in _identities(entry, account, keys):
                 identities[identity] = entry
             fingerprints[_candidate_key(entry, account)] = entry
@@ -297,8 +297,13 @@ def answer(
         status, reason, match = "new", None, None
         id_source: str | None = None
         if isinstance(entry, Transaction):
-            if not any(p.account == account for p in entry.postings):
-                raise LedgerError(f"Importer row {index + 1} has no posting to its source account {account}.")
+            if not _source_legs(entry, account):
+                posted = ", ".join(dict.fromkeys(p.account for p in entry.postings)) or "no account"
+                raise LedgerError(
+                    f"Importer row {index + 1} has no posting to its source account {account} or to an account "
+                    f"under it; it posts to {posted}. The importer's account() must return an account the row "
+                    "posts to, or a parent of one."
+                )
             fingerprint = _fingerprint(entry, account)
             legacy_ids: list[str] = []
             if entry.meta.get("import-id"):
@@ -643,12 +648,26 @@ def _has_explicit_units(posting: Any) -> bool:
     return units is not None and isinstance(getattr(units, "number", None), Decimal)
 
 
+def _source_legs(entry: Any, account: str) -> list[Any]:
+    """The postings of an entry that belong to the importer's source account.
+
+    Beangulp defines `account()` as where the document is filed, so a brokerage
+    importer returns one root (`Assets:Broker`) and posts to `Assets:Broker:Cash`
+    and `Assets:Broker:HOOL`. Matching the name exactly refused that whole
+    batch (w5/223). A posting to the account itself still decides alone when
+    there is one, so a row that also moves money to a sub-account keeps the
+    source amounts, and the generated id, it always had.
+    """
+    exact = [p for p in entry.postings if p.account == account]
+    return exact or [p for p in entry.postings if p.account.startswith(f"{account}:")]
+
+
 def _source_postings(entry: Any, account: str) -> list[Any]:
-    return [p for p in entry.postings if p.account == account and _has_explicit_units(p)]
+    return [p for p in _source_legs(entry, account) if _has_explicit_units(p)]
 
 
 def _fingerprint(entry: Any, account: str) -> tuple[Any, ...]:
-    if any(not _has_explicit_units(p) for p in entry.postings if p.account == account):
+    if any(not _has_explicit_units(p) for p in _source_legs(entry, account)):
         raise LedgerError(f"The importer must supply explicit source amounts for {account} before duplicate matching.")
     # The same rendering the generated id uses, so "is this the same amount"
     # has one answer in this module. `str(number.normalize())` would say
@@ -1022,7 +1041,7 @@ def _hash_rows(entries: list[Any], account: str, keys: list[str], transaction: t
     hashed: dict[int, _HashedRow] = {}
     for index, raw in enumerate(entries):
         entry = normalize_entry_strings(raw)
-        if not isinstance(entry, transaction) or not any(p.account == account for p in entry.postings):
+        if not isinstance(entry, transaction) or not _source_legs(entry, account):
             continue
         if entry.meta.get("import-id") or _native_import_id(entry.meta, keys) is not None:
             continue
