@@ -41,10 +41,21 @@ def install() -> dict[int, Any]:
 
 
 def interactive() -> None:
-    """Give Ctrl-C back to an interactive session, which cancels a line with it."""
+    """Give Ctrl-C back to an interactive session, and let the kernel end one.
+
+    Ctrl-C cancels a line there. SIGTERM and SIGHUP go back to their default
+    disposition (w5/234): a Python-level handler only runs once the interpreter
+    regains control, and the line editor does not hand it back while there is
+    text on the line — on a closed terminal it spun on end-of-file at full CPU,
+    deaf to SIGTERM. A query session stages nothing that would need unwinding.
+    """
     sigint = getattr(signal, "SIGINT", None)
     if sigint is not None and signal.getsignal(sigint) is _terminate:
         signal.signal(sigint, signal.default_int_handler)
+    for name in ("SIGTERM", "SIGHUP"):
+        number = getattr(signal, name, None)
+        if number is not None and signal.getsignal(number) is _terminate:
+            signal.signal(number, signal.SIG_DFL)
 
 
 def _terminate(number: int, _frame: FrameType | None) -> None:
