@@ -1182,7 +1182,9 @@ Bulk `amount` shorthand accepts the same lot spelling: `"amount": "5 HOOL
 {10 USD}"`, with optional date, label, and `@`/`@@` price, and the partial
 selectors `{USD}`, `{2026-01-02}`, `{"label"}` and `{}` for a sale. The shorthand
 cannot spell a total cost (`{{...}}`); use `units` with a structured `cost`
-carrying `number_total` instead.
+carrying `number_total` instead. A plain two-token amount reads the same
+numbers as the flag too: comma grouping (`"1,234.56 USD"`) and arithmetic
+(`"84/2 EUR"`) are written as `1234.56 USD` and `42 EUR`.
 
 Round-trip guarantee: the `units`, `cost`, `price`, and `price_total` shapes
 in `add transaction --json` output are valid `add transactions` input, so a

@@ -150,14 +150,16 @@ class Posting(BaseModel):
             try:
                 Decimal(number)
             except InvalidOperation:
-                raise ValueError(
-                    f"Could not parse amount {amount!r} as 'NUMBER CURRENCY': {number!r} is not a number. "
-                    f"{_FRAGMENT_HELP}"
-                ) from None
-            # A number Decimal reads but the flag path refuses (`1e3`, `1_000`,
-            # `٤٥`) is refused by `units.number`'s spelling rule, at that path.
-            value["units"] = {"number": number, "currency": currency}
-            return value
+                # Not a bare decimal, but `--posting` still reads `1,234.56 USD`
+                # and `84/2 USD`: let Beancount's grammar decide, as it does
+                # for every longer amount.
+                pass
+            else:
+                # A number Decimal reads but the flag path refuses (`1e3`,
+                # `1_000`, `٤٥`) is refused by `units.number`'s spelling rule,
+                # at that path.
+                value["units"] = {"number": number, "currency": currency}
+                return value
         value |= _posting_fragment(amount)
         return value
 
@@ -183,8 +185,9 @@ _FRAGMENT_HELP = (
 def _posting_fragment(amount: str) -> dict[str, Any]:
     """Expand a cost/price shorthand fragment to structured posting fields.
 
-    Plain two-token amounts never reach here; this is the lot spelling ('3
-    HOOL {100 USD}'), parsed by Beancount's own grammar so the shorthand
+    A plain decimal and a currency never reach here; this is the lot spelling
+    ('3 HOOL {100 USD}') and any number the grammar has to read ('1,234.56
+    USD', '84/2 EUR'), parsed by Beancount's own grammar so the shorthand
     accepts exactly the native syntax. Numbers are formatted back to plain
     decimals: str() of a tiny Decimal would spell an exponent the schema
     refuses. A `@@` total is read from the raw text for the same reason the
