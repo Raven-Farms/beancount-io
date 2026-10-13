@@ -181,6 +181,9 @@ loads the ledger — `list`, `query`, `balance`, `report`, `price`, `doctor`,
 `add`, `import` and the rest: a value that resolves to the root or an include is
 refused with exit 2 before the loader starts, and a cache path outside the
 ledger's own files keeps working.
+`bea check --auto` (`-a`) always runs bean-check with `--no-cache`: the load
+cache does not record which plugins produced it, so a load made with the auto
+plugins is never stored for, or answered from, the cache other commands read.
 `price export` also plans the directories it needs: a file standing where the
 export needs a directory (or a directory where it needs a file) is refused the
 same way, and `--force` does not remove it.

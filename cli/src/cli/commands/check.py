@@ -60,7 +60,11 @@ def check(ctx: typer.Context) -> None:
         output.emit(data, target=output.file_target(file))
         return
     _refuse_cache_over_ledger(file, ctx.args)
-    code = launch.run_native("bean-check", [str(file), *ctx.args])
+    # bean-check keys its load cache on the files read, not on the plugin set,
+    # and every later read trusts that cache. A load made with the auto plugins
+    # must neither be stored there nor answered from a default load's entry (w5/111).
+    isolate = ["--no-cache"] if _enables_auto(ctx.args) else []
+    code = launch.run_native("bean-check", [*isolate, str(file), *ctx.args])
     if code != 0:
         raise typer.Exit(code)
     # bean-check does not cover document paths that resolve outside the ledger tree;
@@ -78,6 +82,19 @@ _INFORMATIONAL = frozenset({"--version", "--help", "-h"})
 
 
 _CACHE_FLAG = "--cache-filename"
+
+
+def _enables_auto(args: list[str]) -> bool:
+    """Whether bean-check will read `--auto` / `-a` from these arguments, clustered or not."""
+    index = 0
+    while index < len(args) and args[index] != "--":
+        arg = args[index]
+        if arg == _CACHE_FLAG:
+            index += 1  # its value, whatever it looks like
+        elif arg == "--auto" or (arg.startswith("-") and not arg.startswith("--") and "a" in arg):
+            return True
+        index += 1
+    return False
 
 
 def _refuse_cache_over_ledger(file: Path, args: list[str]) -> None:
