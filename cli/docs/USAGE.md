@@ -1069,7 +1069,9 @@ cat transactions.json | bea add transactions --from -
 
 The file or stdin must be UTF-8 JSON (a BOM is fine). Undecodable or UTF-16
 input, a key repeated within one object, absurdly deep nesting, or an integer
-too long to convert is a usage error (exit **2**) naming the problem.
+too long to convert is a usage error (exit **2**) naming the problem. A string
+holding half a surrogate pair — a lone `\ud83d` escape, usually an emoji cut in
+two — rejects its own row, naming the field, like any other invalid row.
 
 Every row is validated before anything is written. If any row is invalid the ledger is left byte-identical and the command exits **1**, listing the rejected rows. `--partial` appends the valid rows instead — and still exits **1**, so a partial write can never look like a clean one.
 

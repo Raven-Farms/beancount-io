@@ -1094,6 +1094,47 @@ def _bulk_meta_problems(location: str, meta: dict[str, Any]) -> list[str]:
     return problems
 
 
+_SURROGATE = re.compile(r"[\ud800-\udfff]")
+
+
+def _surrogate_problems(value: Any, path: str = "") -> list[str]:
+    """Each string in a bulk row holding half a surrogate pair, as `field.path: reason`.
+
+    JSON may spell a lone `\\ud83d` — what a tool leaves when it cuts text in
+    the middle of an emoji — and the parser keeps it, but no UTF-8 file can
+    hold one. It used to reach the first encode of the staged batch, a raw
+    codec error that named no row and wrote nothing even under `--partial`.
+    """
+
+    def escaped(text: str) -> str:
+        return _SURROGATE.sub(lambda match: f"\\u{ord(match[0]):04x}", text)
+
+    if isinstance(value, str):
+        found = _SURROGATE.search(value)
+        if found is None:
+            return []
+        return [
+            f"{path or 'transaction'}: Text holds an unpaired surrogate (\\u{ord(found[0]):04x}), usually half "
+            "of a cut-off emoji, which cannot be written as UTF-8; send the whole character or remove it."
+        ]
+    if isinstance(value, dict):
+        problems = []
+        for key, item in value.items():
+            name = str(key)
+            here = f"{path}.{escaped(name)}" if path else escaped(name)
+            if _SURROGATE.search(name):
+                problems.extend(_surrogate_problems(name, f"{here} (key)"))
+            problems.extend(_surrogate_problems(item, here))
+        return problems
+    if isinstance(value, list):
+        return [
+            problem
+            for n, item in enumerate(value)
+            for problem in _surrogate_problems(item, f"{path}.{n}" if path else str(n))
+        ]
+    return []
+
+
 def _transactions(
     file: Path, request: dict[str, Any], *, into: Path | None, allow_errors: bool, strict_read: bool
 ) -> dict[str, Any]:
@@ -1109,6 +1150,11 @@ def _transactions(
     rejected: list[str] = []
     rejected_rows: list[int] = []
     for index, item in enumerate(rows):
+        surrogates = _surrogate_problems(item)
+        if surrogates:
+            rejected.extend(f"Row {index + 1}, {problem}" for problem in surrogates)
+            rejected_rows.append(index)
+            continue
         try:
             directive = TransactionDirective.model_validate(item, context=WRITE_INPUT)
         except ValidationError as exc:
