@@ -37,7 +37,6 @@
 
 - [109 — The query shell prints Python tracebacks for a mistyped date and an out-of-range ORDER BY index](./109.md) — minor CLI interactive-shell bug; one-shot control explains both, 20–30m.
 - [124 — Write validation rescans the whole ledger for each "inactive account", unbalanced-conversion and failed-assertion error](./124.md) — major CLI quadratic-time bug, sibling of w5/112; 18.4 s at 40,000 transactions against a 2.6 s control, 30–45m.
-- [131 — `bea import x.csv --account … --rules …` silently drops both when an `importers.py` sits beside the ledger, and writes to the importer's account](./131.md) — major CLI import bug; a savings row lands in `Assets:Checking` with exit 0, control without `importers.py` honours both options, 30–45m.
 - [132 — An import rule written `match = "\bshell\b"` never matches and says nothing](./132.md) — minor CLI import bug; TOML turns `\b` into a backspace and every row goes to `Expenses:Uncategorized`, single-quoted control matches, 20–30m.
 - [133 — Import rules are matched against the raw multi-line CSV cell, not the one-line text the preview and ledger show](./133.md) — minor CLI import bug; two rows displaying identical text get different categories, one-line control matches, 15–20m.
 - [134 — On an `auto_accounts` ledger, import blocks every row that posts to an account not yet used](./134.md) — minor CLI import bug; exit 4 with an `add open` remedy while `bea add transaction` to the same account succeeds, 30–45m.
