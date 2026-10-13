@@ -796,21 +796,20 @@ def validate_candidate(
         filenames = {candidate: file}
         # `bea init` validates a candidate before the destination exists; treat
         # a missing original as zero lines so creation still works.
-        original_line_counts = {file.resolve(): len(file.read_bytes().splitlines())} if file.exists() else {}
+        original_lines = {file.resolve(): file.read_bytes().splitlines()} if file.exists() else {}
     else:
         with snapshot.staged(candidate, file) as (root, filenames):
             entries, errors, options = managed_load.load_file(root)
-        original_line_counts = {
-            path.resolve(): len(content.splitlines()) for path, content in snapshot.contents.items()
-        }
-    # The error set before the write, keyed so an identical failure after the
+        original_lines = {path.resolve(): content.splitlines() for path, content in snapshot.contents.items()}
+    original_line_counts = {path: len(lines) for path, lines in original_lines.items()}
+    # The error set before the write, matched so the same failure after the
     # append reads as the same error. Appends land at end of file over
-    # verbatim existing bytes, so a pre-existing error keeps its file, line,
-    # and message; anything else in the after set is newly introduced.
-    before_keys: Counter[tuple[str, int | None, str]] | None = None
+    # verbatim existing bytes, so a pre-existing error keeps its file and
+    # line; anything unmatched in the after set is newly introduced.
+    tolerated: set[int] = set()
     if allow_errors:
         _, before_errors, _ = managed_load.load_file(snapshot.root if snapshot else file, snapshot=snapshot)
-        before_keys = Counter(_error_key(before, {}) for before in before_errors)
+        tolerated = _preexisting_errors(errors, before_errors, filenames, original_lines)
     accounts = [entry.account for entry in entries if isinstance(entry, Open)]
     # What the per-error hints below look up, each built on first use and then
     # shared (w5/124). One mis-dated `open` makes thousands of errors, and a
@@ -827,7 +826,7 @@ def validate_candidate(
     # Finding an including root lexes every sibling ledger's include closure,
     # so it is looked up once, on the first unknown account, not per error.
     root_hints: list[str] | None = None
-    for error in errors:
+    for index, error in enumerate(errors):
         hints = []
         message = format_error(error, ledger_file=file)
         for staged, original in filenames.items():
@@ -835,18 +834,12 @@ def validate_candidate(
         source = Path(error.source.get("filename", str(candidate)))
         source = filenames.get(source, source)
         lineno = error.source.get("lineno")
-        # Multiset consumption: each after-error spends one matching
-        # before-error, so duplicates are only tolerated while they last.
         # A staged pad's `Unused Pad` is the documented carve-out — the
         # two-step pad-then-balance flow cannot start without it.
         appended = isinstance(lineno, int) and lineno > original_line_counts.get(source.resolve(), lineno)
         is_new = False
-        if before_keys is not None:
-            key = _error_key(error, filenames)
-            if before_keys[key] > 0:
-                before_keys[key] -= 1
-            else:
-                is_new = not (stages_pad and appended and "Unused Pad" in getattr(error, "message", ""))
+        if allow_errors and index not in tolerated:
+            is_new = not (stages_pad and appended and "Unused Pad" in getattr(error, "message", ""))
         introduced.append(is_new)
         # Candidate validation invents line numbers past EOF when the append
         # is rejected. Do not send agents to a line that will not exist.
@@ -1089,6 +1082,70 @@ def _error_key(error: Any, filenames: dict[Path, Path]) -> tuple[str, int | None
         for staged, original in filenames.items():
             message = message.replace(str(staged), str(original))
     return (name, error.source.get("lineno"), message)
+
+
+def _preexisting_errors(
+    after: list[Any], before: list[Any], filenames: dict[Path, Path], original_lines: dict[Path, list[bytes]]
+) -> set[int]:
+    """Positions in `after` of the errors the ledger already had in `before`.
+
+    Multiset consumption: each after-error spends one matching before-error,
+    so duplicates are only tolerated while they last.
+
+    An identical key matches first. What is left is matched by anchor — the
+    same kind of error on the same pre-existing directive. Some messages
+    describe the books around the entry rather than the entry (a booking
+    failure lists the account's lots, an unbalanced sale its residual), so a
+    backdated append rewords an error it did not cause, and keyed on the
+    message alone that error read as new and a ledger with one failing sale
+    could never be backfilled a purchase at a time (w5/150). An append never
+    alters an existing line, so the same kind of error on the same directive
+    is the same entry still failing. Errors on appended lines or without a
+    line have no such anchor and keep the exact key.
+    """
+
+    def anchor(error: Any, key: tuple[str, int | None, str]) -> tuple[str, int, str] | None:
+        name, lineno = key[0], key[1]
+        lines = original_lines.get(Path(name), [])
+        if not isinstance(lineno, int) or not 1 <= lineno <= len(lines):
+            return None
+        # Upstream reports some failures at a posting and others at the
+        # transaction, so anchor both to the directive's first line.
+        while lineno > 1 and lines[lineno - 1][:1] in (b" ", b"\t"):
+            lineno -= 1
+        return (name, lineno, _error_kind(error))
+
+    remaining: dict[tuple[str, int | None, str], list[tuple[str, int, str] | None]] = {}
+    for error in before:
+        key = _error_key(error, {})
+        remaining.setdefault(key, []).append(anchor(error, key))
+    matched: set[int] = set()
+    unmatched: list[tuple[int, tuple[str, int, str]]] = []
+    for index, error in enumerate(after):
+        key = _error_key(error, filenames)
+        if remaining.get(key):
+            remaining[key].pop()
+            matched.add(index)
+        elif (anchored := anchor(error, key)) is not None:
+            unmatched.append((index, anchored))
+    anchors = Counter(anchored for anchoreds in remaining.values() for anchored in anchoreds if anchored is not None)
+    for index, anchored in unmatched:
+        if anchors[anchored] > 0:
+            anchors[anchored] -= 1
+            matched.add(index)
+    return matched
+
+
+def _error_kind(error: Any) -> str:
+    """The error's class, with every booking failure counted as one kind.
+
+    Booking reports one entry's failure under several classes depending on
+    what the account holds: a sale with no lots at all is an interpolation
+    error ("Too many missing numbers") and the same sale with too few is a
+    reduction error ("Not enough lots").
+    """
+    kind = type(error)
+    return "booking" if kind.__module__.startswith("beancount.parser.booking") else kind.__name__
 
 
 def _destination_indent(content: str) -> str:
