@@ -42,7 +42,6 @@
 - [165 — `bea format --currency-column N` deletes a no-break space beside an amount and merges two accounts](./165.md) — major CLI format bug (narrow trigger); three accounts become two with exit 0, the same file without `-c` is refused, 30–40m.
 - [168 — Docs and `engine status` say Beangulp needs the system libmagic library; `bea ingest` runs without it](./168.md) — minor CLI docs drift (owner call); `import magic` fails in the engine yet ingest works, 10m.
 - [169 — A lone carriage return in the ledger marks every later directive "generated": `--on-disk` hides them and `add price` loses its conflict guard](./169.md) — major CLI read/write bug; a conflicting price is written with exit 0, space-instead-of-CR control exits 2, residual of w1/049, 20–30m.
-- [170 — `list document` returns absolute paths when the root ledger is a symlink](./170.md) — minor CLI list bug; regular-file control shows `receipts/r.pdf`, 20–30m.
 - [171 — `list note` drops a note's tags and links](./171.md) — minor CLI list bug; `list document` control shows them for the same line shape, 20–30m.
 - [172 — `list custom --allow-errors` dies with a raw `TypeError` on a `custom` directive that has no values](./172.md) — minor CLI hardening bug; `list event --allow-errors` control exits 0, 10–15m.
 - [173 — Any write, even a refused one, deletes the user's own files named `.bea-*` beside the ledger](./173.md) — major CLI data-safety bug (narrow naming trigger); an aged `.bea-rules.yaml` vanishes after `add note`, `check`/`list` control deletes nothing, 20–30m.
