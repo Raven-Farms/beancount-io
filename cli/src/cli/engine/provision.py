@@ -40,6 +40,7 @@ from typing import Any
 from cli import output
 from cli.engine import paths
 from cli.errors import BeaError, UsageError
+from cli.utils import exclusive_lock
 
 UV_ENV = "BEA_UV"
 FEATURES_FILE = "bea-features.json"
@@ -70,28 +71,8 @@ def provisioning_lock(root: Path) -> Iterator[None]:
     root and is never removed, so every waiter locks the same inode.
     """
     root.parent.mkdir(parents=True, exist_ok=True)
-    fd = os.open(root.with_name(f"{root.name}.lock"), os.O_RDWR | os.O_CREAT, 0o600)
-    with os.fdopen(fd, "r+b") as stream:
-        if sys.platform == "win32":
-            import msvcrt
-
-            if not os.fstat(stream.fileno()).st_size:
-                stream.write(b"\0")
-                stream.flush()
-            stream.seek(0)
-            msvcrt.locking(stream.fileno(), msvcrt.LK_LOCK, 1)
-        else:
-            import fcntl
-
-            fcntl.flock(stream.fileno(), fcntl.LOCK_EX)
-        try:
-            yield
-        finally:
-            if sys.platform == "win32":
-                stream.seek(0)
-                msvcrt.locking(stream.fileno(), msvcrt.LK_UNLCK, 1)
-            else:
-                fcntl.flock(stream.fileno(), fcntl.LOCK_UN)
+    with exclusive_lock(root.with_name(f"{root.name}.lock")):
+        yield
 
 
 def provision(root: Path) -> None:

@@ -4,7 +4,10 @@ import os
 import re
 import secrets
 import stat
+import sys
 import unicodedata
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import date as Date
 from pathlib import Path
 from typing import Any
@@ -247,3 +250,35 @@ def atomic_write(path: Path, content: str, *, export: bool = False) -> None:
         os.replace(candidate, path)
     finally:
         candidate.unlink(missing_ok=True)
+
+
+@contextmanager
+def exclusive_lock(lock: Path) -> Iterator[None]:
+    """Hold the exclusive advisory lock on `lock` across a read-modify-write.
+
+    An atomic replace keeps a file whole but still loses an update when two
+    processes read the same old contents. The lock file is created if missing
+    and never removed, so every waiter locks the same inode.
+    """
+    fd = os.open(lock, os.O_RDWR | os.O_CREAT, 0o600)
+    with os.fdopen(fd, "r+b") as stream:
+        if sys.platform == "win32":
+            import msvcrt
+
+            if not os.fstat(stream.fileno()).st_size:
+                stream.write(b"\0")
+                stream.flush()
+            stream.seek(0)
+            msvcrt.locking(stream.fileno(), msvcrt.LK_LOCK, 1)
+        else:
+            import fcntl
+
+            fcntl.flock(stream.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            if sys.platform == "win32":
+                stream.seek(0)
+                msvcrt.locking(stream.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                fcntl.flock(stream.fileno(), fcntl.LOCK_UN)

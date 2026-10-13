@@ -22,7 +22,7 @@ import typer
 from cli import context, output
 from cli.config import config_dir
 from cli.errors import BeaError, UsageError
-from cli.utils import atomic_write
+from cli.utils import atomic_write, exclusive_lock
 
 
 class Duplicates(StrEnum):
@@ -387,17 +387,23 @@ def _remember_csv(file: Path, spec: dict[str, Any]) -> bool:
     record = _csv_record(file)
     try:
         wanted = header_signature(headers)
-        sources = [
-            entry
-            for entry in _stored_sources(_csv_record(file, reading=True))
-            if not (
-                header_signature(entry.get("headers")) == wanted
-                and _same_account(entry.get("account"), spec["account"])
-            )
-        ]
-        payload = json.dumps({"sources": [*sources, spec]})
         record.parent.mkdir(parents=True, exist_ok=True)
-        atomic_write(record, payload)
+        # Imports run side by side each add an entry here; without the lock the
+        # later replace drops the earlier one, and a shared header then looks
+        # like it belongs to a single account (w5/214). The record to read is
+        # chosen under the lock: a legacy one stops applying once a concurrent
+        # writer has saved the memory under the stored spelling. The lock file
+        # sits beside the directory, which holds nothing but records.
+        with exclusive_lock(record.parent.with_name(f"{record.parent.name}.lock")):
+            sources = [
+                entry
+                for entry in _stored_sources(_csv_record(file, reading=True))
+                if not (
+                    header_signature(entry.get("headers")) == wanted
+                    and _same_account(entry.get("account"), spec["account"])
+                )
+            ]
+            atomic_write(record, json.dumps({"sources": [*sources, spec]}))
         return True
     except OSError as exc:
         output.note(f"Could not remember the column mapping: {exc}. Pass --csv on the next import.")
