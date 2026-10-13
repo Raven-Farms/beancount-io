@@ -495,6 +495,14 @@ def _load_fresh(entry: Path, snapshot: LedgerSnapshot) -> tuple[Any, Any, Any]:
     Nor is an attachment among those files, though the load judged whether each
     `document` file exists and listed what a `documents` root holds. A cached
     answer that no longer matches the disk is dropped the same way (w5/116).
+
+    And the loader fingerprints the files only after it has parsed them, so a
+    write that lands while a slow load runs is cached as the old entries under
+    the new fingerprint, which every later read then trusts: the transaction
+    was in the file and missing from `balance`, `list` and `query`, and an
+    import wrote it again (w5/218). The snapshot's stats predate the load; a
+    file that no longer matches them means the load overlapped a change, so
+    its cache is not kept and the next read parses the files as they are.
     """
     from beancount import loader
 
@@ -509,7 +517,25 @@ def _load_fresh(entry: Path, snapshot: LedgerSnapshot) -> tuple[Any, Any, Any]:
         if not on_disk <= read or _documents_moved(entries, errors, options):
             cache.unlink(missing_ok=True)
             entries, errors, options = loader.load_file(str(entry))
+    if _changed_since(snapshot):
+        cache.unlink(missing_ok=True)
     return entries, errors, options
+
+
+def _changed_since(snapshot: LedgerSnapshot) -> bool:
+    """Whether any file of the snapshot differs on disk from the stat it was captured with."""
+    for path, before in snapshot.stats.items():
+        try:
+            current = path.stat()
+        except OSError:
+            return True
+        if before is None or (current.st_ino, current.st_mtime_ns, current.st_size) != (
+            before.st_ino,
+            before.st_mtime_ns,
+            before.st_size,
+        ):
+            return True
+    return False
 
 
 def _documents_moved(entries: Any, errors: Any, options: Any) -> bool:
