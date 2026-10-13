@@ -121,9 +121,12 @@ class DirectivePrinter(EntryPrinter):
         total = (posting.meta or {}).get(TOTAL_PRICE_META)
         if total is None:
             return flag_account, position_str, weight_str
-        head, separator, _unit = position_str.rpartition(" @ ")
-        base = head if separator else position_str
-        return flag_account, f"{base} @@ {total.to_string(self.dformat_max)}", weight_str
+        # Only a posting that holds a unit price has one to strip, and it is
+        # the trailing one. A structured row carries the total alone, and
+        # splitting there landed inside a lot label such as "AAPL @ Schwab".
+        if posting.price is not None:
+            position_str = position_str.rpartition(" @ ")[0] or position_str
+        return flag_account, f"{position_str} @@ {total.to_string(self.dformat_max)}", weight_str
 
 
 class _FixedPointDecimal(Decimal):
