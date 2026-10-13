@@ -35,7 +35,6 @@
 
 ## Inbox
 
-- [107 — The query shell's error banner prints ledger text raw, so a ledger can erase the notice that it is invalid](./107.md) — minor CLI terminal-safety bug; raw escape bytes captured from the PTY, one-shot control clean, 30m.
 - [108 — A carriage return in ledger text reaches the terminal raw in query tables and overwrites the row](./108.md) — minor CLI terminal-safety bug; `list` control flattens it, 15–20m.
 - [109 — The query shell prints Python tracebacks for a mistyped date and an out-of-range ORDER BY index](./109.md) — minor CLI interactive-shell bug; one-shot control explains both, 20–30m.
 - [110 — `bea query ""` on a terminal opens the interactive shell instead of exiting 2](./110.md) — minor CLI usage bug; whitespace-only control exits 2, 10m.
