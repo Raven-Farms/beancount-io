@@ -7,7 +7,7 @@ import os
 import re
 import unicodedata
 from decimal import Decimal
-from functools import lru_cache
+from functools import cache
 from pathlib import Path
 from typing import Any
 
@@ -95,12 +95,14 @@ _DATE_TOKEN = re.compile(r"^\s*(\d{4})[-/](\d+)[-/](\d+)\s*(\S+)")
 _TXN_TOKEN = re.compile(r"txn|[*!&#?%]|[A-Z]\Z")
 
 
-@lru_cache(maxsize=64)
+@cache
 def _source_lines(filename: str) -> tuple[str, ...] | None:
     """The ledger file's lines, or None when they cannot be read.
 
     The engine answers one invocation per process, so a cached read cannot
-    outlive the file it came from.
+    outlive the file it came from. The cache is unbounded for the same reason:
+    entries arrive in date order, so a ledger split into more include files
+    than a bounded cache holds would evict and re-read a file per entry (w5/206).
     """
     try:
         # Decoded from bytes: `read_text` translates newlines, turning a lone
@@ -115,7 +117,7 @@ def _source_lines(filename: str) -> tuple[str, ...] | None:
         return None
 
 
-@lru_cache(maxsize=64)
+@cache
 def _in_managed_cache(filename: str) -> bool:
     """Whether a source path is a managed price feed's cached revision."""
     from bea_engine.managed_price_cache import cache_root
