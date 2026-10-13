@@ -182,8 +182,9 @@ described under [Duplicate decisions](#duplicate-decisions).
 
 A TOML rules file categorizes rows by regex over three fields — payee,
 narration, then the category label (case-insensitive, with pattern and text
-compared NFC-normalized, so a composed `café` matches a decomposed one); the
-first matching rule wins:
+compared NFC-normalized, so a composed `café` matches a decomposed one, and
+with a multi-line cell's CR/LF line breaks read as the single space the
+preview shows); the first matching rule wins:
 
 ```toml
 [[rule]]

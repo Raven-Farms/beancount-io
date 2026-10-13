@@ -1115,7 +1115,13 @@ class CsvImporter:
         category_text = row.get(category_header, "").strip() if category_header is not None else ""
         # Bank exports mix Unicode normalization forms; rules compare NFC
         # text, as `list --search` does, so equal-looking text matches.
-        texts = [unicodedata.normalize("NFC", text) for text in (payee or "", narration, category_text)]
+        # A quoted multi-line cell is previewed and written with its CR/LF runs
+        # as one space, so rules see that text too: it is the only text a user
+        # can read a pattern off.
+        texts = [
+            unicodedata.normalize("NFC", re.sub(r"[\r\n]+", " ", text))
+            for text in (payee or "", narration, category_text)
+        ]
         for rule in self._rules:
             if any(rule.expression.search(text) for text in texts):
                 return rule.account, "*", rule.pattern
