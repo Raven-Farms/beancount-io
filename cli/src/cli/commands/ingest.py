@@ -37,9 +37,14 @@ ingest_app = typer.Typer(
 
 
 def _ingest_script(supplied: Path | None) -> Path:
-    """Resolve the user's ingest script: --config, else ingest.py beside the ledger or cwd."""
+    """Locate the user's ingest script: --config, else ingest.py beside the ledger or cwd.
+
+    Made absolute without following links: Beangulp files `archive` documents
+    beside the script path it was started with, so a symlinked `ingest.py`
+    must stay the link, not become the shared script it points to.
+    """
     if supplied is not None:
-        return supplied.expanduser().resolve()
+        return supplied.expanduser().absolute()
     try:
         ledger = context.current().entry_file()
     except UsageError:
@@ -50,7 +55,7 @@ def _ingest_script(supplied: Path | None) -> Path:
     candidates.append(Path.cwd() / "ingest.py")
     for candidate in candidates:
         if candidate.is_file():
-            return candidate.resolve()
+            return candidate.absolute()
     raise UsageError(
         "Choose an ingest script with --config FILE, or place ingest.py beside the root ledger "
         "(or in the current directory). The script should call beangulp.Ingest(...)()."
