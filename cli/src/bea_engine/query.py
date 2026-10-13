@@ -374,7 +374,73 @@ def _native_shell(source: str, *, interactive: bool, format: str, numberify: boo
             return super().onecmd(line)
 
     # Load before replaying init commands, so .output sees the include closure.
-    return GuardedShell(dsn, sys.stdout, interactive, False, format, numberify, show_errors)
+    make = partial(GuardedShell, dsn, sys.stdout, interactive, False, format, numberify, show_errors)
+    return _with_line_editor(make) if interactive else make()
+
+
+def _with_line_editor(make: Callable[[], Any]) -> Any:
+    """An interactive shell whose history is bea's to load and save (w5/235).
+
+    Upstream's constructor loads `~/.config/beanquery/history` guarded only
+    against a missing file and registers an unguarded write at exit. libedit
+    refuses a history with no entries, which is exactly what that write left
+    when nothing was typed, so one empty session crashed every later one before
+    its first prompt. The constructor therefore runs without the line editor,
+    which is then set up here as upstream does it, except that a history
+    problem costs the history and one line rather than the session.
+    """
+    import atexit
+
+    import beanquery.shell as upstream
+
+    readline = upstream.readline
+    upstream.readline = None
+    try:
+        shell = make()
+    finally:
+        upstream.readline = readline
+    if readline is None:
+        return shell
+    if "libedit" in (readline.__doc__ or ""):
+        readline.parse_and_bind("bind ^I rl_complete")
+    else:
+        readline.parse_and_bind("tab: complete")
+    readline.set_completer_delims(" \t\n\"\\'`@$><=;|&{(")
+    history = Path(upstream.HISTORY_FILENAME).expanduser()
+    reason = None
+    try:
+        history.parent.mkdir(parents=True, exist_ok=True)
+        # Python's own open names the real problem; libedit answers EPERM for
+        # anything it could not load.
+        history.open("rb").close()
+    except FileNotFoundError:
+        pass
+    except OSError as exc:
+        reason = exc.strerror or type(exc).__name__
+    else:
+        try:
+            readline.read_history_file(history)
+        except OSError:
+            reason = "not a history the line editor can read"
+    if reason is not None:
+        protocol.note(f"Cannot load query history {history}: {reason}; starting with an empty history.")
+    readline.set_history_length(2048)
+    atexit.register(_save_history, readline, history, reason is None)
+    return shell
+
+
+def _save_history(readline: Any, history: Path, loaded: bool) -> None:
+    """Save the session's history at exit, never leaving a file the next load refuses."""
+    try:
+        if readline.get_current_history_length():
+            readline.write_history_file(history)
+        elif loaded:
+            # Written out, an empty history is the header-only file libedit
+            # cannot load. A file that did not load is left for its owner.
+            history.unlink(missing_ok=True)
+    except OSError:
+        if loaded:  # Otherwise the session already said so when it opened.
+            protocol.note(f"Cannot save query history to {history}.")
 
 
 def _replay_init(shell: Any, output: TextIO | None = None) -> None:
@@ -867,7 +933,8 @@ def build_shell(
     # `runinit=False`: upstream would replay the init file inside the
     # constructor, before `self.context` exists, so a guarded `.output` there
     # failed every query. Callers replay it once the ledger is loaded.
-    shell = PreciseShell(LEDGER_DSN, stream, interactive, False, format, numberify, show_errors)
+    make = partial(PreciseShell, LEDGER_DSN, stream, interactive, False, format, numberify, show_errors)
+    shell = _with_line_editor(make) if interactive else make()
     # Both one-shot and interactive tables keep full headers by default.
     # Upstream narrow=True treats the boolean as width 1 and cuts count(*)
     # to c/co. Interactive users can still explicitly `.set narrow true`.
