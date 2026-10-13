@@ -37,7 +37,6 @@
 
 - [140 — A CSV row with a payee is skipped as an "exact duplicate" of a payee-less ledger entry, so a new transaction is dropped with exit 0](./140.md) — major CLI import bug (narrow trigger); `--duplicates skip --apply` writes nothing, reversed-row control writes it, 45–60m.
 - [148 — Bidirectional override characters pass the control-character sanitizer into the import preview and `list` tables](./148.md) — minor CLI output-safety bug; U+202E reaches the preview raw while ESC in the next row is escaped, 30m.
-- [149 — Report and balance account trees pad by character count, so a wide-character account name shifts its amount](./149.md) — minor CLI cosmetic bug; a CJK account's amount sits four columns right, accented control aligns, 15m.
 - [150 — `--allow-errors` refuses a backdated purchase when the account already has a failing sale](./150.md) — major CLI write bug; the existing line-16 booking error is counted as new because its text lists lots, later-dated control exits 0, 30–45m.
 - [151 — CSV import on a ledger with a renamed expenses root fails unless `--default-account` is passed, blaming a flag the user never typed](./151.md) — minor CLI import bug; exit 2 over the built-in `Expenses:Uncategorized` default, explicit-flag control works, 20–30m.
 - [152 — `add balance` treats a plugin-generated assertion as "already recorded" and writes nothing](./152.md) — minor CLI write bug; `check_drained` ledger exits 0 citing the `close` line, control without the plugin writes it, 20–30m.
