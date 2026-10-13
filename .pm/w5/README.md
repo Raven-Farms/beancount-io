@@ -35,7 +35,6 @@
 
 ## Inbox
 
-- [109 — The query shell prints Python tracebacks for a mistyped date and an out-of-range ORDER BY index](./109.md) — minor CLI interactive-shell bug; one-shot control explains both, 20–30m.
 - [124 — Write validation rescans the whole ledger for each "inactive account", unbalanced-conversion and failed-assertion error](./124.md) — major CLI quadratic-time bug, sibling of w5/112; 18.4 s at 40,000 transactions against a 2.6 s control, 30–45m.
 - [134 — On an `auto_accounts` ledger, import blocks every row that posts to an account not yet used](./134.md) — minor CLI import bug; exit 4 with an `add open` remedy while `bea add transaction` to the same account succeeds, 30–45m.
 - [136 — `bea example` exits 0 with a ledger that fails `bea check` when the range starts mid-year and crosses January 1](./136.md) — major CLI example bug; `--date-begin 2024-06-01 --date-end 2025-06-01` writes a failing balance assertion, January 1 control passes, 30–45m.
