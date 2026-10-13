@@ -37,7 +37,6 @@
 
 - [181 — Writers with different `XDG_CACHE_HOME` do not lock each other: both exit 0 and one write is lost](./181.md) — major CLI concurrency bug; 29 of 44 exit-0 writes missing across 12 eight-writer runs, shared-cache control loses none, 60–90m.
 - [182 — A writer behind a held lock waits forever with no message](./182.md) — minor CLI concurrency bug; silent after 15 s under `--json`, completes on release, 30–45m.
-- [183 — Unrelated concurrent writes fail with exit 4 when the command reads the ledger before taking the lock](./183.md) — minor CLI concurrency bug (owner call); 35 of 40 `add price` writers for different commodities exit 4, explicit-currency `add transaction` control all exit 0, 45–60m.
 - [189 — `price export` silently drops a local price file whose name differs from the feed's file name only by case](./189.md) — major CLI export bug on case-insensitive volumes (loopback simulation); manual prices vanish with exit 0, exact-case control keeps both files, 40m.
 - [199 — A successful `add` on a ledger with decomposed (NFD) account names makes stock `bean-check` fail](./199.md) — minor CLI interoperability gap (owner call; the NFC write is documented); stock `bean-check` passes before and fails after, NFC control stays valid, 30–45m.
 - [203 — `add` refuses accounts that the ledger already opens and that `bea check` and stock Beancount accept](./203.md) — minor CLI write bug; exit 2 "Invalid account" for a name with a combining mark, ASCII control posts, 30m.
