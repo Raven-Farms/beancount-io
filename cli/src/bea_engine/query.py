@@ -641,8 +641,6 @@ def build_shell(
             """Reload the Beancount input file."""
             # Upstream attaches by DSN and therefore inherits its urlparse()
             # path mangling; attach the freshly loaded entries instead.
-            from beancount.parser import printer
-
             # Load first, swap on success. Clearing the errors before a load
             # that then raised — the file unreadable or gone — left the old
             # entries beside an empty error list: the strict gate passed and
@@ -668,7 +666,7 @@ def build_shell(
             self.context.attach(LEDGER_DSN, **loaded)
             self._extract_queries(self.context.tables["entries"].entries)
             if self.context.errors and self.show_load_errors:
-                printer.print_errors(self.context.errors, file=sys.stderr)  # type: ignore[no-untyped-call]
+                _print_load_errors(self.context.errors, sys.stderr)
             if self.context.errors and not self.allow_errors:
                 # Said even under `--no-errors`: that flag quietens the banner,
                 # it does not waive the strict read the session opened with.
@@ -681,8 +679,10 @@ def build_shell(
             """Print the errors that occurred during Beancount input file parsing."""
             if self.reload_failure:
                 print(self.reload_failure, file=self.outfile)
-                return
-            super().do_errors(arg)
+            elif self.context.errors:
+                _print_load_errors(self.context.errors, sys.stdout)
+            else:
+                super().do_errors(arg)
 
         def do_help(self, arg: str) -> None:
             """List commands, writing to outfile so one-shot JSON stays clean."""
@@ -821,6 +821,25 @@ def build_shell(
     # to c/co. Interactive users can still explicitly `.set narrow true`.
     shell.settings.narrow = False
     return shell
+
+
+def _print_load_errors(errors: Any, out: TextIO) -> None:
+    """Upstream's load-error block, with control characters as visible `\\xNN`.
+
+    `printer.print_errors` renders each offending entry verbatim, and the shell
+    owns the terminal, so the frontend's inert-text filter never sees it: a
+    payee carrying `\\x1b[2J` erased the "does not balance" line printed just
+    above it — the only sign in a lenient session that answers are partial.
+    Line feeds keep the block's shape; a carriage return would redraw over the
+    line it sits on, so it is escaped with the rest.
+    """
+    from beancount.parser import printer
+
+    from bea_engine.ledger.text import CONTROL_CHARACTERS
+
+    for error in errors:
+        block = printer.format_error(error) + "\n"  # type: ignore[no-untyped-call]
+        out.write(CONTROL_CHARACTERS.sub(lambda m: f"\\x{ord(m.group()):02x}", block.replace("\r", "\\x0d")))
 
 
 def _inert_cell(value: Any) -> Any:
