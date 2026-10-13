@@ -301,7 +301,10 @@ bea --file books/main.bean import statement.csv --apply
 
 The Python configuration must export `CONFIG = [importer, ...]`. An import
 executes this Python file, so use your own local configuration. The selected
-path is remembered per root ledger. An explicit `--config` overrides it;
+path is remembered per root ledger. Both this path and a `--csv` mapping
+belong to the ledger file, not to the spelling typed for it: on a
+case-insensitive volume `Books/main.bean` and `books/main.bean` share one
+memory. An explicit `--config` overrides it;
 without a saved path, the CLI uses `importers.py` beside the root ledger.
 A saved path whose file has since been moved or deleted is ignored with a
 stderr note (`The remembered importer <path> is missing; ignoring it.`), and the

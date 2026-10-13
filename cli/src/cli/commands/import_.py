@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import shlex
 import unicodedata
 from enum import StrEnum
@@ -30,17 +31,63 @@ class Duplicates(StrEnum):
     include = "include"
 
 
-def _config_record(file: Path) -> Path:
-    key = hashlib.sha256(str(file.resolve()).encode()).hexdigest()
-    return config_dir() / "importers" / f"{key}.json"
-
-
 def _is_record(record: Path) -> bool:
     """Whether a memory record exists; one that cannot be probed reads as no memory."""
     try:
         return record.is_file()
     except OSError:
         return False
+
+
+def _stored_spelling(file: Path) -> Path:
+    """The resolved path, each name spelled the way its directory stores it.
+
+    `resolve()` keeps the caller's spelling on a case- and
+    normalization-insensitive volume (macOS's default), so `Books/main.bean`
+    and `books/main.bean` named one ledger with two memories (w5/205). A name
+    its directory does not list exactly is replaced by the one listed name that
+    folds to it and is the same file; on a case-sensitive volume the typed
+    name is listed, so two ledgers there never share a memory. The write
+    lock's directory inode is not used: a memory has to outlive a remount.
+    """
+    resolved = file.resolve()
+    spelled = Path(resolved.anchor)
+    for part in resolved.parts[1:]:
+        try:
+            names = os.listdir(spelled)
+        except OSError:
+            names = [part]
+        if part not in names:
+            folded = unicodedata.normalize("NFD", part).casefold()
+            matches = [name for name in names if unicodedata.normalize("NFD", name).casefold() == folded]
+            try:
+                if len(matches) == 1 and os.path.samefile(spelled / matches[0], spelled / part):
+                    part = matches[0]
+            except OSError:
+                pass
+        spelled /= part
+    return spelled
+
+
+def _record(file: Path, prefix: str, *, reading: bool = False) -> Path:
+    """Where this root ledger's memory is kept, however its path is spelled.
+
+    A record saved before w5/205 is keyed by the spelling that was typed; a
+    read falls back to it until the next successful import rewrites the
+    memory under the stored spelling.
+    """
+    directory = config_dir() / "importers"
+    typed = file.resolve()
+    record = directory / f"{prefix}{hashlib.sha256(str(_stored_spelling(typed)).encode()).hexdigest()}.json"
+    if reading and not _is_record(record):
+        legacy = directory / f"{prefix}{hashlib.sha256(str(typed).encode()).hexdigest()}.json"
+        if _is_record(legacy):
+            return legacy
+    return record
+
+
+def _config_record(file: Path, *, reading: bool = False) -> Path:
+    return _record(file, "", reading=reading)
 
 
 def _memory_unreadable(file: Path) -> str | None:
@@ -70,7 +117,7 @@ def _config_available(file: Path, notes: list[str]) -> tuple[Path, str] | None:
     named in `notes` and the `importers.py` and header-row fallbacks apply, as
     they do for a ledger with no saved path (w5/141).
     """
-    record = _config_record(file)
+    record = _config_record(file, reading=True)
     if _is_record(record):
         try:
             remembered = Path(json.loads(record.read_text())["config"])
@@ -185,9 +232,8 @@ def _remember_config(file: Path, config: Path) -> None:
         output.note(f"Could not remember the importer path: {exc}. Pass --config on the next import.")
 
 
-def _csv_record(file: Path) -> Path:
-    key = hashlib.sha256(str(file.resolve()).encode()).hexdigest()
-    return config_dir() / "importers" / f"csv-{key}.json"
+def _csv_record(file: Path, *, reading: bool = False) -> Path:
+    return _record(file, "csv-", reading=reading)
 
 
 def _stored_sources(record: Path) -> list[dict[str, Any]]:
@@ -232,7 +278,7 @@ def _find_csv_entry(file: Path, headers: list[str] | None, account: str) -> dict
 
     if not headers:
         return None
-    record = _csv_record(file)
+    record = _csv_record(file, reading=True)
     if not _is_record(record):
         return None
     wanted = header_signature(headers)
@@ -258,7 +304,7 @@ def _recall_csv(file: Path, source: Path, account: str | None = None, *, notes: 
     """
     from cli.csv_mapper import header_signature, load_rules, parse_mapping, read_header
 
-    record = _csv_record(file)
+    record = _csv_record(file, reading=True)
     if not _is_record(record):
         return None
     sources = _stored_sources(record)
@@ -343,7 +389,7 @@ def _remember_csv(file: Path, spec: dict[str, Any]) -> bool:
         wanted = header_signature(headers)
         sources = [
             entry
-            for entry in _stored_sources(record)
+            for entry in _stored_sources(_csv_record(file, reading=True))
             if not (
                 header_signature(entry.get("headers")) == wanted
                 and _same_account(entry.get("account"), spec["account"])
