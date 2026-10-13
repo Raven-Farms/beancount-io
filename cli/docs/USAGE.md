@@ -62,10 +62,11 @@ Beangulp and Beanprice are **not** in the base engine or the frontend. Enable
 them explicitly into the managed engine:
 
 ```bash norun
-# Needs network once to download Beangulp/Beanprice into the managed engine;
-# Beangulp also needs the system libmagic library.
+# Needs network once to download Beangulp/Beanprice into the managed engine.
+# The system libmagic library is optional: only importers that call
+# python-magic themselves need it.
 bea engine status
-bea engine enable beangulp    # ingest helpers; needs system libmagic
+bea engine enable beangulp    # ingest helpers
 bea engine enable beanprice   # bean-price quote fetching
 bea ingest identify|extract|archive --config ingest.py [PATH…]
 bea price --no-cache -e USD:yahoo/AAPL   # fetch quotes (not bea add price)

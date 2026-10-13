@@ -451,10 +451,11 @@ itself. Configurations that `import beangulp` (or other importer packages) need
 those packages in the **managed engine**, not the bea frontend:
 
 ```bash norun
-# Needs network to provision Beangulp into the managed engine, system libmagic,
-# a Python importer, and a real OFX/QIF (or similar) bank export.
+# Needs network to provision Beangulp into the managed engine, a Python importer,
+# and a real OFX/QIF (or similar) bank export.
 bea engine enable beangulp
-# Beangulp needs the system libmagic library (python-magic).
+# The system libmagic library is optional: only importers that call
+# python-magic themselves need it.
 bea --file books/main.bean import bank.ofx --config importers.py
 # Standalone Beangulp lifecycle (not bea import --apply):
 bea ingest identify --config ingest.py downloads/

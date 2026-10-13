@@ -32,7 +32,7 @@ explicitly into the managed engine when you need ingest helpers or quote
 fetching:
 
 ```bash norun
-# Needs network once; Beangulp also needs system libmagic.
+# Needs network once. System libmagic is optional (python-magic importers only).
 bea engine enable beangulp    # then: bea ingest identify|extract|archive …
 bea engine enable beanprice   # then: bea price …  (not bea add price)
 ```

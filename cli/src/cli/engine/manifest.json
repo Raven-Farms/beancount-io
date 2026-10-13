@@ -26,7 +26,7 @@
         "beangulp"
       ],
       "license": "GPL-2.0-only",
-      "notes": "Needs the system libmagic library (python-magic). CSV import via --csv does not need this feature."
+      "notes": "The system libmagic library is optional: only importers that call python-magic themselves need it. CSV import via --csv does not need this feature."
     },
     "beanprice": {
       "requirements": [
