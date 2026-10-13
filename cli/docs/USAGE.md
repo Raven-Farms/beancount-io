@@ -388,6 +388,12 @@ bea query "PRINT"          # parseable directives, not a table
 bea query                  # needs a terminal; exits 2 without one
 ```
 
+`bea treeify` reads account names with Beancount's own grammar unless `-r`, `-F`
+or `-A` chooses another pattern, so a component with an accented or CJK
+character (`Assets:Bank:Épargne`, `Assets:B银行`) is drawn in the tree like any
+other. Upstream's default pattern, the one `--help` prints, takes ASCII only
+and left those rows flat between the branches.
+
 `bea doctor region` and `bea doctor linked` number their balance tree from the
 amounts in scope, so a `5.50 USD` region reads `5.50 USD` in a ledger whose other
 amounts are whole numbers — upstream formats that tree with the whole ledger's

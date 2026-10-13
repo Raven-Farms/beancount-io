@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import ANY, Mock
 
 import pytest
 from typer.testing import CliRunner
@@ -117,7 +117,9 @@ def test_existing_output_spellings_still_reach_the_destination(
     result = runner.invoke(app, ["treeify", *native, "input.txt"])
 
     assert result.exit_code == 0, result.output
-    recorded_engine["capture_native"].assert_called_once_with("treeify", ["--", "input.txt"])
+    # No `-r`/`-F`/`-A` was given, so bea's account pattern leads the argv (w5/137).
+    recorded_engine["capture_native"].assert_called_once_with("treeify", [ANY, "--", "input.txt"])
+    assert recorded_engine["capture_native"].call_args.args[1][0].startswith("--pattern=")
     assert (books / written).read_text() == "native result\n"
 
 

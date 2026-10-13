@@ -17,6 +17,14 @@ from cli.utils import atomic_write
 
 _NO_COLUMN = "Could not find any valid column in input"
 _FORCE = "--force"
+# Upstream's default pattern with Beancount's own account grammar: the lexer
+# takes any non-ASCII character in a component, upstream's default only ASCII,
+# so `Assets:Bank:Épargne` or `Assets:银行` stayed flat in the middle of the
+# tree. Written with escapes so the argument itself is plain ASCII.
+_ACCOUNT_PATTERN = (
+    r"(Assets|Liabilities|Equity|Income|Expenses)"
+    r"(:(?:[A-Z0-9]|[^\x00-\x7F\s])(?:[A-Za-z0-9-_']|[^\x00-\x7F\s])*)*"
+)
 
 
 class _Unparsed(Exception):
@@ -128,6 +136,8 @@ def treeify(ctx: typer.Context) -> None:
         output.check_output_destination(destination)
         output.require_writable_destination(destination)
         forwarded = _without_output(parsed)
+    if parsed is not None and not (parsed.help or parsed.pattern or parsed.filenames or parsed.loose_accounts):
+        forwarded = [f"--pattern={_ACCOUNT_PATTERN}", *forwarded]
     completed = launch.capture_native("treeify", forwarded)
     if completed.returncode == 0 and _NO_COLUMN in (completed.stderr or ""):
         # Upstream echoes the input unchanged and calls that success; the
