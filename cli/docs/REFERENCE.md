@@ -168,6 +168,12 @@ Usage: bea price [OPTIONS]
 ```
 
 ```text
+bea options (bea price export; read by bea, not forwarded):
+
+  -o, --output DIR  Export into DIR (default: <ledger>-export/ beside the ledger).
+  --allow-errors    Export even when a managed source is unavailable.
+  --force           Overwrite files already at the paths the export writes.
+
 Native interface (arguments/options are forwarded by bea):
 
 usage: bean-price [-h] [-e] [-v] [-d DATE] [--update]
@@ -255,6 +261,10 @@ Usage: bea example [OPTIONS]
 ```
 
 ```text
+bea options (read by bea, not forwarded):
+
+  --force  Overwrite an existing -o/--output file.
+
 Native interface (arguments/options are forwarded by bea):
 
 Usage: bean-example [OPTIONS]
@@ -287,6 +297,10 @@ Usage: bea treeify [OPTIONS]
 ```
 
 ```text
+bea options (read by bea, not forwarded):
+
+  --force  Overwrite an existing .bean/.beancount file named by -o/--output.
+
 Native interface (arguments/options are forwarded by bea):
 
 usage: treeify [-h] [-o OUTPUT] [-r PATTERN] [-d DELIMITER] [-s SPLIT] [-F]
