@@ -40,7 +40,6 @@
 - [199 — A successful `add` on a ledger with decomposed (NFD) account names makes stock `bean-check` fail](./199.md) — minor CLI interoperability gap (owner call; the NFC write is documented); stock `bean-check` passes before and fails after, NFC control stays valid, 30–45m.
 - [204 — `import --csv` compares column names byte for byte across Unicode normalizations, with no hint](./204.md) — minor CLI import bug; an identical-looking column "lacks", same-form control previews, 20m.
 - [205 — Remembered import settings are keyed by the typed spelling of the ledger path](./205.md) — minor CLI import bug; `books/` forgets what `Books/` remembered on a case-insensitive volume, 20m.
-- [207 — `bea format -i DIR` fails with "Too many open files" once the directory holds more files than the descriptor limit](./207.md) — minor CLI bug; 260 files fail under the default macOS limit of 256, 250 pass, 20–30m.
 - [208 — SIGTERM or SIGHUP to `bea check`, `bea doctor` or `bea query --source` kills the frontend but leaves the engine child running](./208.md) — minor CLI bug; orphan runs to completion, helper-path control cleans up, 20–30m.
 - [209 — An account 492 or more levels deep makes `bea balance` and reports fail with a raw `RecursionError` traceback](./209.md) — minor CLI bug (contrived limit); 491 levels pass, 15–20m.
 - [210 — `bea --no-input format`, `add transactions --from -` and `treeify` wait on the terminal forever instead of exiting 2](./210.md) — minor CLI automation bug; five PTY runs still blocked after 8 s, `query` control exits 2, 20–30m.
