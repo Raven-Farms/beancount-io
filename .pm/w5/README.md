@@ -38,7 +38,6 @@
 - [181 — Writers with different `XDG_CACHE_HOME` do not lock each other: both exit 0 and one write is lost](./181.md) — major CLI concurrency bug; 29 of 44 exit-0 writes missing across 12 eight-writer runs, shared-cache control loses none, 60–90m.
 - [182 — A writer behind a held lock waits forever with no message](./182.md) — minor CLI concurrency bug; silent after 15 s under `--json`, completes on release, 30–45m.
 - [199 — A successful `add` on a ledger with decomposed (NFD) account names makes stock `bean-check` fail](./199.md) — minor CLI interoperability gap (owner call; the NFC write is documented); stock `bean-check` passes before and fails after, NFC control stays valid, 30–45m.
-- [203 — `add` refuses accounts that the ledger already opens and that `bea check` and stock Beancount accept](./203.md) — minor CLI write bug; exit 2 "Invalid account" for a name with a combining mark, ASCII control posts, 30m.
 - [204 — `import --csv` compares column names byte for byte across Unicode normalizations, with no hint](./204.md) — minor CLI import bug; an identical-looking column "lacks", same-form control previews, 20m.
 - [205 — Remembered import settings are keyed by the typed spelling of the ledger path](./205.md) — minor CLI import bug; `books/` forgets what `Books/` remembered on a case-insensitive volume, 20m.
 - [206 — With more than 64 include files, `list --on-disk` and full listings re-read a source file for every entry](./206.md) — minor CLI performance bug; 40k transactions take 4.5 s in 100 files against 2.1 s in 50, 20–30m.
