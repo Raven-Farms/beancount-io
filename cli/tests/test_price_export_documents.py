@@ -36,7 +36,7 @@ def _run(tmp_path: Path, *argv: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(list(argv), env=env, cwd=tmp_path, capture_output=True, text=True, timeout=120)
 
 
-def _export(tmp_path: Path, main: Path, out: Path) -> subprocess.CompletedProcess[str]:
+def _export(tmp_path: Path, main: Path, out: Path, *options: str) -> subprocess.CompletedProcess[str]:
     return _run(
         tmp_path,
         sys.executable,
@@ -49,6 +49,7 @@ def _export(tmp_path: Path, main: Path, out: Path) -> subprocess.CompletedProces
         "export",
         "--output",
         str(out),
+        *options,
     )
 
 
@@ -136,6 +137,35 @@ def test_an_absolute_document_path_refuses_after_a_unicode_line_separator(tmp_pa
     assert refused.returncode == 2, refused.stdout
     assert "main.bean:3" in refused.stderr
     assert not out.exists()
+
+
+def test_a_missing_document_refuses_before_writing_and_again_on_a_rerun(tmp_path: Path) -> None:
+    """w5/117: the ledger was written, then the copy died on a raw `FileNotFoundError`."""
+    source = tmp_path / "source"
+    source.mkdir()
+    main = source / "main.bean"
+    main.write_text('2000-01-01 open Assets:Bank USD\n2021-03-01 document Assets:Bank "receipts/stmt.pdf"\n')
+    before = _snapshot(source)
+
+    out = tmp_path / "out"
+    for allow_errors in ((), (), ("--allow-errors",)):
+        refused = _export(tmp_path, main, out, *allow_errors)
+        assert refused.returncode == 2, refused.stdout
+        message = json.loads(refused.stderr)["error"]["message"]
+        assert "main.bean:2" in message
+        assert str(source.resolve() / "receipts" / "stmt.pdf") in message
+        assert "Nothing was written" in message
+        assert "Error" not in message and "Errno" not in message
+        assert not out.exists()
+    assert _snapshot(source) == before
+
+    # Control: with the file present the same ledger exports both files.
+    (source / "receipts").mkdir()
+    (source / "receipts" / "stmt.pdf").write_bytes(RECEIPT)
+    exported = _export(tmp_path, main, out)
+    assert exported.returncode == 0, exported.stderr
+    files = sorted(Path(f).relative_to(out).as_posix() for f in json.loads(exported.stdout)["data"]["files"])
+    assert files == ["main.bean", "receipts/stmt.pdf"]
 
 
 def test_symlinked_documents_keep_the_name_the_directive_uses(tmp_path: Path) -> None:

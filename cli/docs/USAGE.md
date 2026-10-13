@@ -1306,6 +1306,8 @@ directory are copied to the same relative place, under the name the
 directive uses — a path through a symlinked file or folder becomes a plain
 copy at that path; one outside that tree (including a symlink pointing out of
 it), or named by an absolute path, refuses the export before anything is written.
+So does a `document` whose file is missing, naming the directive's file and
+line, with or without `--allow-errors`.
 With `option "insert_pythonpath"`, a plugin module or package that sits beside
 the root ledger is copied to the same relative place too, so the snapshot's
 `plugin` lines still resolve; a plugin installed elsewhere is not copied. An

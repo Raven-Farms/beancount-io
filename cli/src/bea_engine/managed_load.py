@@ -960,7 +960,8 @@ def _export_attachments(
     resolving as before. What cannot travel that way is refused before
     anything is written rather than left pointing back at this machine: a
     file outside that tree, an absolute path in the directive, or a directive
-    in an included file that the export relocates.
+    in an included file that the export relocates. So is a document whose
+    file is not there at all, with or without `allow_errors`.
     """
     from beancount.core.data import Document
 
@@ -980,10 +981,18 @@ def _export_attachments(
     # single copy that neither name reached. The resolved file still decides
     # containment and what bytes travel; the copy is a plain file.
     attachments: dict[Path, Path] = {}
+    # Beancount reports a `document` whose file is absent as a load error and
+    # keeps the entry, so the plan held a source that was not there: the ledger
+    # was written, then the copy died on a raw `FileNotFoundError` (w5/117).
+    missing: list[str] = []
     for entry in loaded.entries:
         if not isinstance(entry, Document):
             continue
         document = Path(entry.filename).resolve()
+        if not document.is_file():
+            where = f"{Path(str(entry.meta.get('filename', ''))).name}:{int(entry.meta.get('lineno') or 0)}"
+            missing.append(f"{document} (named by {where})")
+            continue
         try:
             canonical = target / document.relative_to(home)
         except ValueError:
@@ -1011,6 +1020,12 @@ def _export_attachments(
             unsupported.append(f"{document} (named by {ledger.name}:{line})")
             continue
         attachments[dest] = document
+    if missing:
+        raise UsageError(
+            "Cannot export: these document attachments do not exist as files: "
+            + "; ".join(missing)
+            + ". Restore them or remove the directives. Nothing was written."
+        )
     if unsupported:
         raise UsageError(
             "Cannot export: these document attachments would not travel with the export: "
