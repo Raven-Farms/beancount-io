@@ -35,7 +35,6 @@
 
 ## Inbox
 
-- [165 — `bea format --currency-column N` deletes a no-break space beside an amount and merges two accounts](./165.md) — major CLI format bug (narrow trigger); three accounts become two with exit 0, the same file without `-c` is refused, 30–40m.
 - [168 — Docs and `engine status` say Beangulp needs the system libmagic library; `bea ingest` runs without it](./168.md) — minor CLI docs drift (owner call); `import magic` fails in the engine yet ingest works, 10m.
 - [169 — A lone carriage return in the ledger marks every later directive "generated": `--on-disk` hides them and `add price` loses its conflict guard](./169.md) — major CLI read/write bug; a conflicting price is written with exit 0, space-instead-of-CR control exits 2, residual of w1/049, 20–30m.
 - [172 — `list custom --allow-errors` dies with a raw `TypeError` on a `custom` directive that has no values](./172.md) — minor CLI hardening bug; `list event --allow-errors` control exits 0, 10–15m.
