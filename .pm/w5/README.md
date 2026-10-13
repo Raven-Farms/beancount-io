@@ -38,7 +38,6 @@
 - [182 — A writer behind a held lock waits forever with no message](./182.md) — minor CLI concurrency bug; silent after 15 s under `--json`, completes on release, 30–45m.
 - [214 — Two `bea import` runs at once lose one remembered mapping, and a later flag-free `--apply` writes rows to the wrong account](./214.md) — major CLI import bug; mapping lost in 4 of 8 races, sequential control refuses with exit 2, 45–60m.
 - [220 — Plain `bea check` or `bea doctor` leaves a load cache that later commands trust: a BQL literal stops matching, and a valid BOM ledger starts failing](./220.md) — major CLI correctness bug; exit-0 empty query after `check`, uncached and engine-first controls correct, fix with 111, 45–60m.
-- [227 — An integer metadata value from a Python importer fails the import with a bare `ValueError: Unexpected value`](./227.md) — minor CLI import bug; Decimal control imports, 15–20m.
 - [228 — Import preview prints small amounts in scientific notation (`-5.0E-7 BTC`) in the table and in JSON `amount`](./228.md) — minor CLI output bug; diff and row 2 print fixed-point, 15m.
 - [229 — `query PRINT -f beancount` rewrites a relative document path as absolute, so the export fails `bea check` when moved](./229.md) — minor CLI export bug; export without the document passes `check`, 30m.
 - [230 — CSV `meta` cells are Python reprs: `Decimal('1E-8')`, `datetime.date(2026, 1, 7)`, `True`](./230.md) — minor CLI output bug (owner call, matches stock); scalar lookups and JSON are typed, 20–30m.
