@@ -24,6 +24,7 @@ from pathlib import Path
 
 from cli.config import config_dir, package_version
 from cli.context import env_flag
+from cli.errors import UsageError
 
 PROJECT = "beancount-io"
 
@@ -112,7 +113,8 @@ def read_cache(channel: str = "pypi", *, cache_file: Path | None = None) -> tupl
     try:
         entry = json.loads((cache_file or cache_path(channel)).read_text())
         return float(entry["checked_at"]), str(entry["version"])
-    except (OSError, ValueError, KeyError, TypeError):
+    except (OSError, ValueError, KeyError, TypeError, UsageError):
+        # UsageError: a refused `BEA_CONFIG_DIR` must not fail `bea --version`.
         return None
 
 

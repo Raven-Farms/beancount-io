@@ -30,6 +30,7 @@ from cli.commands.treeify import treeify
 from cli.commands.upgrade import current_channel, upgrade
 from cli.completion import install as install_completion_callback
 from cli.completion import show as show_completion_callback
+from cli.config import config_dir
 from cli.native_command import ForwardingCommand
 from cli.native_help import native_help
 
@@ -315,6 +316,9 @@ def main(
         offline=offline,
         strict_prices=strict_prices,
     )
+    # Checked for every command, not only the ones that reach per-user state,
+    # so a bad `BEA_CONFIG_DIR` fails the same way with or without a terminal.
+    config_dir()
     # Started here, where the machine-mode options are already resolved, so the
     # check overlaps the command instead of delaying it.
     update.start(json_output=ctx.json_output, no_input=ctx.no_input, channel=current_channel().name)

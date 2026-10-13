@@ -26,10 +26,22 @@ def config_dir() -> Path:
 
     Resolved on every call rather than at import: the environment is what tests
     and CI jobs set, and a value frozen at import time would ignore them.
+
+    A relative `$BEA_CONFIG_DIR` is refused rather than ignored like a relative
+    XDG value: it was set for bea alone, and falling back would quietly put
+    credentials somewhere other than where the user pointed.
     """
     override = os.environ.get("BEA_CONFIG_DIR")
     if override:
-        return Path(override).expanduser()
+        directory = Path(override).expanduser()
+        if not directory.is_absolute():
+            from cli.errors import UsageError
+
+            raise UsageError(
+                f"BEA_CONFIG_DIR must be an absolute path, got {override!r}. "
+                "A relative one would keep separate state in every working directory."
+            )
+        return directory
     return _xdg_home("XDG_CONFIG_HOME", Path.home() / ".config") / "bea"
 
 
