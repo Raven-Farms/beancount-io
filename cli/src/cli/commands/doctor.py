@@ -465,8 +465,13 @@ def _forward_missing_open(ctx: typer.Context) -> None:
     if inactive:
         for line in inactive:
             typer.echo(line)
+        # Beancount says "inactive" for a posting dated before the open as
+        # well as after the close, and reports one line per posting.
+        accounts = {line.split("inactive account '", 1)[1].split("'", 1)[0] for line in inactive if "'" in line}
         raise LedgerError(
-            f"doctor missing-open still references {len(inactive)} closed account(s); reopen them or fix the postings."
+            f"doctor missing-open found {len(inactive)} reference(s) to {len(accounts) or len(inactive)} "
+            "inactive account(s) (posted before the open date or after the close); "
+            "move the open earlier, reopen the account, or fix the postings."
         )
     raise typer.Exit(0)
 
