@@ -455,11 +455,84 @@ def _lock_key(file: Path) -> str:
 
 @contextmanager
 def lock_files(files: Iterable[Path], *, deciding: bool = False) -> Iterator[None]:
-    """Lock every file, each once, in one global order so writers queue instead of deadlocking."""
+    """Lock every file, each once, in one global order so writers queue instead of deadlocking.
+
+    The cache locks only serialize writers that share a cache directory. Two
+    OS users, containers or sandboxes on one ledger each have their own, so
+    each file's directory is locked as well — after every cache lock, so a
+    writer holding a directory never waits on a cache lock (w5/181).
+    """
+    files = list(files)
     with ExitStack() as stack:
         for file in lock_order(files):
             stack.enter_context(lock_file(file, deciding=deciding))
+        stack.enter_context(lock_directories(files))
         yield
+
+
+@contextmanager
+def lock_directories(files: Iterable[Path]) -> Iterator[None]:
+    """Lock the directory of every file, each once; taken only after every `lock_file`."""
+    with ExitStack() as stack:
+        for directory in _directory_order(files):
+            stack.enter_context(_lock_directory(directory))
+        yield
+
+
+def _directory_order(files: Iterable[Path]) -> list[Path]:
+    """One path per directory holding a file, in the global order every writer locks them.
+
+    Keyed by device and inode: a second descriptor on a directory this process
+    already locked would wait on itself.
+    """
+    keyed: dict[tuple[int, int], Path] = {}
+    for file in files:
+        directory = file.resolve().parent
+        try:
+            status = directory.stat()
+        except OSError:
+            continue
+        keyed.setdefault((status.st_dev, status.st_ino), directory)
+    return [keyed[key] for key in sorted(keyed)]
+
+
+@contextmanager
+def _lock_directory(directory: Path) -> Iterator[None]:
+    """Hold an advisory lock on the directory itself, which every cache shares and adds no file to.
+
+    Best effort: Windows cannot open a directory to lock it, and a directory
+    this user may not read or a filesystem without `flock` leaves the cache
+    lock and the compare-before-replace check, as before.
+    """
+    if sys.platform == "win32":
+        yield
+        return
+    import fcntl
+
+    try:
+        fd = os.open(directory, os.O_RDONLY | os.O_DIRECTORY | os.O_CLOEXEC)
+    except OSError:
+        yield
+        return
+    try:
+        status = os.fstat(fd)
+        key = (status.st_dev, status.st_ino)
+        if key in _HELD_DIRECTORIES:
+            # Kept, like a lock file this process already holds: `append` asks again (w5/183).
+            yield
+            return
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX)
+        except OSError:
+            pass
+        _HELD_DIRECTORIES.add(key)
+        try:
+            yield
+        finally:
+            _HELD_DIRECTORIES.discard(key)
+    finally:
+        # Closing the descriptor releases the lock.
+        os.close(fd)
 
 
 def lock_order(files: Iterable[Path]) -> list[Path]:
@@ -469,6 +542,7 @@ def lock_order(files: Iterable[Path]) -> list[Path]:
 
 
 _HELD_LOCKS: set[str] = set()
+_HELD_DIRECTORIES: set[tuple[int, int]] = set()
 # Appends this process committed; a deciding lock compares it to learn whether anything was written.
 _COMMITS = [0]
 

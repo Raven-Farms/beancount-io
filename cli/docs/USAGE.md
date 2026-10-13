@@ -918,7 +918,13 @@ ledger to decide what to write — `add price`, `add balance`, `add transaction`
 with an inferred currency, `add transactions`, `import --apply` — takes the
 lock before that read, so unrelated `bea` writes started together all land,
 and a repeated price or balance is reported as already recorded. One of these
-that ends up writing nothing removes a lock file it created itself. When that directory cannot be created or written — a read-only cache
+that ends up writing nothing removes a lock file it created itself. Each
+writer also holds an advisory lock on the directory of every file it writes,
+so writers whose `XDG_CACHE_HOME` differs — two OS users, containers or
+sandboxes sharing one ledger — still queue. That second lock needs `flock` on
+a directory the writer can read: on Windows, or on a filesystem without it,
+writers must share `XDG_CACHE_HOME` to be serialized. When the lock directory
+cannot be created or written — a read-only cache
 root, a file in the way — the write is refused with exit **3** naming it;
 make it writable or set `XDG_CACHE_HOME`. Stop any older CLI writers before
 deleting their leftover

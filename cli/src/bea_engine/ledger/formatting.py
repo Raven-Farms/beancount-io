@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import sys
 from collections.abc import Callable, Iterator
-from contextlib import ExitStack, nullcontext
+from contextlib import ExitStack
 from pathlib import Path
 from typing import Any
 
@@ -101,15 +101,21 @@ def format_files(
     try:
         with ExitStack() as stack:
             locks = write.lock_order(targets)
-            together = _descriptors_allow(len(locks))
+            # Each file's directory is locked as well, always after its lock file (w5/181).
+            together = _descriptors_allow(2 * len(locks))
             for file in locks if together else ():
                 stack.enter_context(write.lock_file(file))
+            if together:
+                stack.enter_context(write.lock_directories(targets))
             # Once per directory, not per file: a sweep lists the whole
             # directory, so a flat one of thousands of files went quadratic.
             for directory in dict.fromkeys(file.parent for file in targets):
                 write.sweep_abandoned_candidates(directory)
             for file in targets:
-                with nullcontext() if together else write.lock_file(file):
+                with ExitStack() as each:
+                    if not together:
+                        each.enter_context(write.lock_file(file))
+                        each.enter_context(write.lock_directories([file]))
                     raw, text = _read(file)
                     aligned = _aligned(file, text, widths)
                     if aligned.encode("utf-8") == raw:
