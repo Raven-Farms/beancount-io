@@ -822,7 +822,7 @@ def build_shell(
                     # unpadded machine cells so spreadsheets and Decimal() parse.
                     return _render_csv(description, rows, out, spreadsheet_safe=self.spreadsheet_safe)
                 if self.settings.format == "beancount":
-                    return _render_beancount(rows, out)
+                    return _render_beancount(rows, out, file)
                 if self.settings.format == "text":
                     rows = [tuple(_inert_cell(_public_value(value)) for value in row) for row in rows]
                     # Upstream renders `set` sorted and separated but has no
@@ -945,9 +945,9 @@ def _source_location(entry: Any) -> tuple[Any, Any]:
     return (meta.get("filename"), meta.get("lineno"))
 
 
-def _render_beancount(rows: Any, out: TextIO) -> None:
+def _render_beancount(rows: Any, out: TextIO, file: Path) -> None:
     """Use the writer's syntax fixes with upstream's grouping and exact precision."""
-    from beancount.core.data import Commodity, Pad, Transaction
+    from beancount.core.data import Commodity, Document, Pad, Transaction
     from beancount.core.display_context import DisplayContext
 
     from bea_engine.ledger.writer import DirectivePrinter
@@ -972,7 +972,32 @@ def _render_beancount(rows: Any, out: TextIO) -> None:
         if entry_type in (Transaction, Commodity) or entry_type is not previous_type:
             out.write("\n")
             previous_type = entry_type
+        if isinstance(entry, Document):
+            entry = entry._replace(filename=_portable_document_path(str(entry.filename), file))
         out.write(printer(entry))
+
+
+def _portable_document_path(filename: str, file: Path) -> str:
+    """A document path as an export beside the root ledger has to spell it.
+
+    The loader makes every document path absolute. Printed that way, the export
+    names the machine it ran on, and `check` reports it once the file is saved
+    anywhere but beside the ledger (w5/229). A path inside the root ledger's
+    directory prints relative to that directory: the export is one flat file,
+    so a path an included file wrote relative to itself is respelled from the
+    root. The name is the one written, so a symlinked attachment keeps it; a
+    path outside the directory stays absolute.
+    """
+    root = os.path.dirname(os.path.abspath(file))
+    try:
+        resolved, base = Path(filename).resolve(), Path(root).resolve()
+        if not os.path.isabs(filename) or not resolved.is_relative_to(base):
+            return filename
+        named = os.path.relpath(filename, root)
+        # The loader may name the file through a different link than `--file`.
+        return str(resolved.relative_to(base)) if named.startswith(os.pardir) else named
+    except (OSError, ValueError):
+        return filename
 
 
 def _render_csv(description: Any, rows: Any, out: TextIO, *, spreadsheet_safe: bool = False) -> None:

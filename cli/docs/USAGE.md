@@ -587,6 +587,10 @@ values as separate values, decimal precision, and complete cost specifications.
 Existing multiline text stays intact. A padding transaction Beancount derived
 from a `pad` is left out when that `pad` is in the same result, so the export
 of a valid ledger passes `bea check`; selected without its `pad`, it is printed.
+A `document` path inside the root ledger's directory is printed relative to
+that directory, whichever file of the ledger wrote it, so the export never
+names the machine it ran on and reloads when saved beside the ledger; a path
+outside that directory stays absolute.
 These rules also apply to stored queries
 and the interactive shell; explicit `--source` uses native Beanquery rendering.
 A column result such as `SELECT date, account` is a usage error (exit 2) that
