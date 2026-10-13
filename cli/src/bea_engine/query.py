@@ -36,7 +36,7 @@ from collections.abc import Callable, Mapping
 from decimal import Decimal, localcontext
 from functools import partial
 from pathlib import Path
-from typing import Any, TextIO
+from typing import Any, TextIO, get_origin
 
 from bea_engine import protocol
 
@@ -647,6 +647,7 @@ def build_shell(
     show_errors: bool = True,
 ) -> Any:
     """Upstream's `BQLShell`, attached to the exact file and rendering at result precision."""
+    from beanquery.cursor import Column
     from beanquery.numberify import numberify_results
     from beanquery.shell import FORMATS, BQLShell
 
@@ -824,6 +825,16 @@ def build_shell(
                     return _render_beancount(rows, out)
                 if self.settings.format == "text":
                     rows = [tuple(_inert_cell(_public_value(value)) for value in row) for row in rows]
+                    # Upstream renders `set` sorted and separated but has no
+                    # renderer for `frozenset[str]`, the type of `tags` and
+                    # `links` on `#notes` and `#documents`: those cells printed
+                    # the Python repr in hash order (w5/179).
+                    description = [
+                        Column(column.name, set)
+                        if (get_origin(column.datatype) or column.datatype) is frozenset
+                        else column
+                        for column in description
+                    ]
                 renderer = FORMATS[self.settings.format]
                 return renderer(description, rows, out, dcontext=dcontext, **self.settings.todict())
 
