@@ -160,8 +160,18 @@ def display_width(text: str) -> int:
     Precomposed accented Latin (`Ünïcödé`) is one column per character and was
     always fine, which is what makes the rule precise: the issue is display
     width, not "non-ASCII".
+
+    Format characters — a zero-width space or joiner, a directional mark — draw
+    nothing either, so they take no column; the soft hyphen is the one terminals
+    do give a cell.
     """
-    return sum(0 if unicodedata.combining(c) else 2 if unicodedata.east_asian_width(c) in "WF" else 1 for c in text)
+    return sum(_columns(c) for c in text)
+
+
+def _columns(char: str) -> int:
+    if unicodedata.combining(char) or (unicodedata.category(char) == "Cf" and char != "\u00ad"):
+        return 0
+    return 2 if unicodedata.east_asian_width(char) in "WF" else 1
 
 
 def pad(text: str, width: int) -> str:

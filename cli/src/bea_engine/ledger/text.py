@@ -17,7 +17,20 @@ from bea_engine import protocol
 #: and the C1 range. ESC is the one that matters — a crafted bank description
 #: carrying `\x1b[1A\x1b[2K` erases the row printed above it, so an import
 #: preview can show something other than what `--apply` will write.
-CONTROL_CHARACTERS = re.compile(r"[\x00-\x09\x0b\x0c\x0e-\x1f\x7f-\x9f]")
+#:
+#: The Unicode bidirectional overrides, embeddings and isolates (U+202A–202E,
+#: U+2066–2069) belong here for the same reason: a right-to-left override
+#: ahead of an amount reorders how the rest of the row reads without one ESC
+#: byte. Right-to-left *letters* carry their direction themselves and are
+#: ordinary text, and the line and paragraph separators (U+2028/2029) are
+#: string content that a write keeps exactly (w1/136).
+CONTROL_CHARACTERS = re.compile(r"[\x00-\x09\x0b\x0c\x0e-\x1f\x7f-\x9f\u202a-\u202e\u2066-\u2069]")
+
+
+def visible_escape(match: re.Match[str]) -> str:
+    """One control character as `\\xNN`, or `\\uNNNN` when it is past Latin-1."""
+    code = ord(match.group())
+    return f"\\x{code:02x}" if code < 0x100 else f"\\u{code:04x}"
 
 
 def single_line(text: str) -> str:
@@ -39,7 +52,7 @@ def single_line(text: str) -> str:
     Neither side can import the other, so the two must be kept in step; a test
     pins that they agree.
     """
-    return CONTROL_CHARACTERS.sub(lambda m: f"\\x{ord(m.group()):02x}", re.sub(r"[\r\n]+", " ", text))
+    return CONTROL_CHARACTERS.sub(visible_escape, re.sub(r"[\r\n]+", " ", text))
 
 
 ISO_DATE = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}")
@@ -97,7 +110,7 @@ def refuse_control_characters(text: str, *, what: str) -> None:
         return
     raise protocol.UsageError(
         f"Write rejected: {what} contains the control character "
-        f"\\x{ord(offender.group()):02x} at offset {offender.start()}; nothing was written. "
+        f"{visible_escape(offender)} at offset {offender.start()}; nothing was written. "
         "Ledger text may only use ordinary characters, tabs and newlines."
     )
 

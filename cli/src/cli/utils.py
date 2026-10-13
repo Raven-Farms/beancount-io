@@ -15,7 +15,7 @@ from cli.errors import AuthError, UsageError
 
 #: The engine twin (`bea_engine.ledger.text.CONTROL_CHARACTERS`) carries the
 #: same pattern and the full reasoning; neither side may import the other.
-CONTROL_CHARACTERS = re.compile(r"[\x00-\x09\x0b\x0c\x0e-\x1f\x7f-\x9f]")
+CONTROL_CHARACTERS = re.compile(r"[\x00-\x09\x0b\x0c\x0e-\x1f\x7f-\x9f\u202a-\u202e\u2066-\u2069]")
 
 
 def single_line(text: str) -> str:
@@ -53,8 +53,13 @@ def inert_text(text: str) -> str:
 
 
 def _escape_controls(text: str) -> str:
-    """Every control character as a visible `\\xNN`. The one place that mapping lives."""
-    return CONTROL_CHARACTERS.sub(lambda m: f"\\x{ord(m.group()):02x}", text)
+    """Every control character as a visible `\\xNN` (`\\uNNNN` past Latin-1). The one place that mapping lives."""
+    return CONTROL_CHARACTERS.sub(_visible_escape, text)
+
+
+def _visible_escape(match: re.Match[str]) -> str:
+    code = ord(match.group())
+    return f"\\x{code:02x}" if code < 0x100 else f"\\u{code:04x}"
 
 
 UTF8_BOM = b"\xef\xbb\xbf"

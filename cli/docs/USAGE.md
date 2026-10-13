@@ -829,7 +829,12 @@ in single adds, bulk JSON, and imports, so a pasted multi-line value can never
 write a directive that breaks the file. Every other control character —
 `ESC`, the rest of the C0 range including tab, `DEL`, and C1 — is replaced by
 a visible `\xNN` rather than passed through, so text from an untrusted source
-such as an imported bank export cannot drive your terminal. That matters most
+such as an imported bank export cannot drive your terminal. The Unicode
+bidirectional overrides, embeddings and isolates (U+202A–202E, U+2066–2069) are
+escaped the same way, as `\uNNNN`: a right-to-left override ahead of an amount
+could otherwise reorder how the rest of a row reads. Arabic, Hebrew and other
+right-to-left text is left as it is, and so are the line and paragraph
+separators (U+2028, U+2029) inside a string. That matters most
 in the `import` preview, which is the surface `--apply` is gated on: a
 description carrying a cursor-movement sequence could otherwise redraw over the
 rows above it and show you something other than what would be written. The
