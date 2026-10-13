@@ -4,7 +4,7 @@ from datetime import date, timedelta
 from functools import cached_property
 from typing import TYPE_CHECKING
 
-from .beans.abc import Close, Commodity, Directive, Open
+from .beans.abc import Close, Commodity, Custom, Directive, Open, Query
 from .beans.account import account_tester, get_entry_accounts
 from .beans.prices import FavaPriceMap
 from .core.bcio_options import BcioOptionError, BcioOptions, parse_bcio_options
@@ -34,6 +34,11 @@ if TYPE_CHECKING:  # pragma: no cover
     from .core.inventory import SimpleCounterInventory
     from .helpers import BeancountError
     from .util.date import Interval
+
+# Directives that declare rather than date activity, so they never bound the
+# report period: a commodity, a `custom "fava-option"` or a stored query
+# conventionally carries a placeholder date decades before the first entry.
+PERIOD_DECLARATIONS = Open | Close | Commodity | Custom | Query
 
 
 class FavaLedger:
@@ -193,18 +198,18 @@ class FilteredLedger:
         self._date_first = None
         self._date_last = None
         # The report period (`bea_engine.report._metadata` reads it through
-        # `period`): every dated fact except Open/Close/Commodity declarations
-        # (notes, balances, events, …). An account filter narrows balances,
+        # `period`): every dated fact except declarations (notes, balances,
+        # events, …; see PERIOD_DECLARATIONS). An account filter narrows balances,
         # not the calendar, so it is bounded by the whole ledger — otherwise
         # interval series stopped at the filtered account's last entry while
         # the headline covered the full period.
         period_entries = ledger.all_entries if account else self.entries
         for entry in period_entries:
-            if not isinstance(entry, Open | Close | Commodity):
+            if not isinstance(entry, PERIOD_DECLARATIONS):
                 self._date_first = entry.date
                 break
         for entry in reversed(period_entries):
-            if not isinstance(entry, Open | Close | Commodity):
+            if not isinstance(entry, PERIOD_DECLARATIONS):
                 self._date_last = entry.date + timedelta(1)
                 break
 

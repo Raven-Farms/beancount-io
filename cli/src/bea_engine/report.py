@@ -427,16 +427,16 @@ def _unreportable_boundary(entries: Any) -> date | None:
     overflow used to surface as `Invalid time filter None`, naming an option
     the caller never passed and no ledger fact at all.
 
-    Open, Close and Commodity are skipped for the same reason the period
-    bounds skip them: they declare an account rather than date activity.
+    Declarations (Open, Close, Commodity, Custom, Query) are skipped for the
+    same reason the period bounds skip them: they do not date activity.
 
     Returning None means the failure was something else, and the caller falls
     back to its ordinary filter diagnostic rather than inventing a date story.
     """
-    from beancount.core.data import Close, Commodity, Open
+    from fava.ledger import PERIOD_DECLARATIONS
 
     for entry in reversed(entries or ()):
-        if isinstance(entry, Open | Close | Commodity):
+        if isinstance(entry, PERIOD_DECLARATIONS):
             continue
         return entry.date if entry.date >= date.max else None
     return None
@@ -452,8 +452,9 @@ def _metadata(filtered: Any, conversion: str, ledger_errors: list[str], interval
     # Every dated fact the report covers sets the period, not transactions
     # alone: a period-end balance assertion is the last thing a close writes,
     # and a report that stopped before it would omit its own evidence. Opens,
-    # closes and commodities are declarations — a commodity conventionally
-    # carries a placeholder date decades before any activity. Account filters
+    # closes, commodities, customs and stored queries are declarations — they
+    # conventionally carry a placeholder date decades before any activity
+    # (`1970-01-01 custom "fava-option" …`). Account filters
     # narrow balances, not the calendar: an over-narrow `--account` that
     # matches nothing must not read as "no dated activity". The interval
     # series are cut from the same bounds, so they cover exactly this period.
