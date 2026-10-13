@@ -37,7 +37,6 @@
 
 - [109 — The query shell prints Python tracebacks for a mistyped date and an out-of-range ORDER BY index](./109.md) — minor CLI interactive-shell bug; one-shot control explains both, 20–30m.
 - [124 — Write validation rescans the whole ledger for each "inactive account", unbalanced-conversion and failed-assertion error](./124.md) — major CLI quadratic-time bug, sibling of w5/112; 18.4 s at 40,000 transactions against a 2.6 s control, 30–45m.
-- [126 — The missing-price notice says "no price at any date; shown in units" for a holding the same report values through its cost currency](./126.md) — minor CLI wrong-notice bug; amounts correct, single-hop control worded right, 30–40m.
 - [127 — A price gap in an earlier interval row removes the balance sheet's valuation adjustment and total equity](./127.md) — minor CLI reporting bug with an owner call on doc wording; quarterly control reconciles, 30–45m.
 - [128 — `--meta` stores identifiers as arithmetic results, strips leading zeros, and drops text after `;`](./128.md) — minor CLI silent-alteration bug; quoted-value control keeps the string, fix with w5/082, 30–40m.
 - [129 — A bulk row with an invalid metadata key aborts the whole batch, defeats `--partial`, and does not name the row](./129.md) — minor CLI bulk-validation bug; bad-value control rejects only its row, 30–45m.
