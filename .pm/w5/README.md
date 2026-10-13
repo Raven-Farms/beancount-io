@@ -36,7 +36,6 @@
 ## Inbox
 
 - [175 — Read-only commands leave a world-readable full copy beside a private ledger once a load takes a second](./175.md) — major CLI privacy bug; `list note` on a 0600 60k-transaction ledger leaves a 0644 `.main.bean.picklecache`, small-ledger control leaves none, 45–60m.
-- [177 — `FROM OPEN ON <date> CLOSE` fails with a raw Python `TypeError`, and with `GROUP BY 1` the error is masked by an internal `AttributeError`](./177.md) — minor CLI query bug; exit 1 `validation` for valid BQL, `CLOSE ON <date>` control runs, 30–40m.
 - [178 — The BQL syntax-error caret points at the wrong place for multi-line queries and after `FROM accounts`](./178.md) — minor CLI query diagnostics bug; caret 62 spaces into its own line, or two columns right in JSON, `#accounts` control is exact, 20–30m.
 - [179 — The query text table prints Python `frozenset({...})` for tags and links of notes and documents, in unstable order](./179.md) — minor CLI query rendering bug; `#transactions` control prints `tax  trip  work`, 15–20m.
 - [180 — A scalar subquery in a `WHERE` comparison exits 1 as a ledger validation failure with a raw `AttributeError`](./180.md) — minor CLI query bug; the SELECT-list control exits 2 with guidance, 10–15m.
