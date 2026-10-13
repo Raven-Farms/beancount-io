@@ -5,6 +5,7 @@ from __future__ import annotations
 import contextlib
 import os
 import re
+import shlex
 import subprocess
 import sys
 import unicodedata
@@ -13,8 +14,9 @@ from pathlib import Path
 import typer
 
 from cli import output
+from cli.config import DEFAULT_ENTRY_FILE_FALLBACKS
 from cli.engine import launch
-from cli.errors import BeaError, ConflictError, LedgerError, refuse_json
+from cli.errors import BeaError, ConflictError, LedgerError, UsageError, refuse_json
 from cli.native_command import ForwardingCommand
 from cli.native_help import native_help
 from cli.utils import has_bom
@@ -80,6 +82,31 @@ def _operand_indices(args: list[str]) -> list[int]:
 def _positionals(args: list[str]) -> list[str]:
     """The operands bean-doctor will see, in order."""
     return [args[index] for index in _operand_indices(args)]
+
+
+def _refuse_directory_ledger(op: str, args: list[str]) -> None:
+    """Refuse a directory where the operation expects its ledger file.
+
+    Upstream's ledger argument accepts any existing path, so a directory got as
+    far as `open()` and came back as a raw `IsADirectoryError` traceback with
+    exit 1 (w5/138). Said here the way `--file DIRECTORY` is said everywhere
+    else. `list-options` takes no ledger; its stray operand is upstream's to
+    reject.
+    """
+    positionals = _positionals(args)
+    if op == "list-options" or not positionals:
+        return
+    ledger = Path(positionals[0])
+    if not ledger.is_dir():
+        return
+    hint = next(
+        (ledger / name for name in DEFAULT_ENTRY_FILE_FALLBACKS if (ledger / name).is_file()),
+        ledger / DEFAULT_ENTRY_FILE_FALLBACKS[0],
+    )
+    raise UsageError(
+        f"Ledger path '{ledger}' is a directory; expected a ledger file. "
+        f"Pass its root ledger instead, for example bea doctor {op} {shlex.quote(str(hint))}."
+    )
 
 
 # `context` and `linked` take `FILENAME LOCATION`; `region` takes
@@ -502,6 +529,7 @@ def _register(op: str) -> None:
     )
     def _cmd(ctx: typer.Context) -> None:
         assert forwarder is not None
+        _refuse_directory_ledger(op, list(ctx.args))
         # Every operation that loads its ledger starts upstream's loader, which
         # deletes an unreadable file at the cache path the environment names.
         positionals = _positionals(list(ctx.args))
@@ -522,4 +550,5 @@ for _op in _OPS:
 )
 def dump_lexer(ctx: typer.Context) -> None:
     """Alias for bean-doctor lex."""
+    _refuse_directory_ledger("dump-lexer", list(ctx.args))
     _forward_parse("lex", ctx)

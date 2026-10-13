@@ -309,6 +309,11 @@ operation inside the helper instead of the stock executable, so
 for an account that is already open. `lex` then dumps the tokens of the text
 as loaded — without the mark, account names in NFC.
 
+A directory where an operation expects its ledger file exits **2** before
+upstream runs, with the same one-line message `--file DIRECTORY` gets
+elsewhere: `bea doctor lex books` names `books` and suggests
+`bea doctor lex books/main.bean`.
+
 ## Creating a ledger
 
 ```bash
