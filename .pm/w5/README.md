@@ -36,7 +36,6 @@
 ## Inbox
 
 - [182 — A writer behind a held lock waits forever with no message](./182.md) — minor CLI concurrency bug; silent after 15 s under `--json`, completes on release, 30–45m.
-- [204 — `import --csv` compares column names byte for byte across Unicode normalizations, with no hint](./204.md) — minor CLI import bug; an identical-looking column "lacks", same-form control previews, 20m.
 - [205 — Remembered import settings are keyed by the typed spelling of the ledger path](./205.md) — minor CLI import bug; `books/` forgets what `Books/` remembered on a case-insensitive volume, 20m.
 - [212 — A bulk posting with `cost` but no `units` is written with the cost silently discarded, exit 0](./212.md) — minor CLI bug; lot becomes 1,000 USD cash, `price_total` control is refused, 15–20m.
 - [213 — Bulk `"amount": "1,234.56 USD"` is refused, though `--posting` and longer bulk amounts accept the same comma grouping](./213.md) — minor CLI consistency bug; flag and cost-bearing bulk controls accept it, 15m.
