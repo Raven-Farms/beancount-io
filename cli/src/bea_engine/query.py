@@ -540,6 +540,10 @@ def _write_export(output: Path, text: str) -> None:
                 stream.write(text)
             return
         mode = stat.S_IMODE(status.st_mode)
+        if not os.access(output, os.W_OK):
+            # The rename would succeed in a writable directory; a read-only
+            # export is refused the way the frontend's JSON writer refuses it.
+            raise protocol.AuthError(f"Output file {output} is read-only and cannot be replaced. Nothing was written.")
     with candidate_file(output, text, mode=0o666 if mode is None else 0o600) as candidate:
         if mode is not None:
             candidate.chmod(mode)

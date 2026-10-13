@@ -11,7 +11,7 @@ from typing import Any
 
 import typer
 
-from cli.errors import UsageError
+from cli.errors import AuthError, UsageError
 
 #: The engine twin (`bea_engine.ledger.text.CONTROL_CHARACTERS`) carries the
 #: same pattern and the full reasoning; neither side may import the other.
@@ -213,6 +213,8 @@ def atomic_write(path: Path, content: str, *, export: bool = False) -> None:
             return
         mode = stat.S_IMODE(status.st_mode)
     if mode is not None and not mode & 0o222:
+        if export:
+            raise AuthError(f"Output file {path} is read-only and cannot be replaced. Nothing was written.")
         raise PermissionError(f"Output file is read-only: {path}")
     creation_mode = 0o666 if export and mode is None else 0o600
     while True:
@@ -222,6 +224,14 @@ def atomic_write(path: Path, content: str, *, export: bool = False) -> None:
             break
         except FileExistsError:
             continue
+        except PermissionError as exc:
+            if not export:
+                raise
+            # The filesystem refusing (exit 3), named by the destination the
+            # user chose rather than the hidden staging file beside it (w5/119).
+            raise AuthError(
+                f"Cannot write {path}: the directory {path.parent} is not writable. Nothing was written."
+            ) from exc
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as stream:
             stream.write(content)

@@ -173,6 +173,11 @@ destination is refused with exit **2**, before anything is written, when it
 A refusal names the colliding path and leaves the destination byte-identical,
 its file list included. `--force` is the only way past the second case
 (`treeify -o`, `price export`, `example -o`); nothing gets past the first.
+A destination the filesystem will not let the command write is a permission
+failure, exit **3**, in text and under `--json` alike: `query -o`, `format -o`
+and `treeify -o` refuse a read-only existing file rather than replacing it, and
+a new file in a directory that is not writable, naming the path and leaving
+everything as it was.
 `bea check --cache-filename` follows the first case as well: bean-check
 deletes a cache file it cannot read, so a cache path that is the ledger or one
 of its includes is refused before bean-check runs, with or without `--no-cache`.

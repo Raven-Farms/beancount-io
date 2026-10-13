@@ -240,6 +240,9 @@ def query(
         # the engine and JSON writer even if the original link changes.
         output_file = str(Path(output_file).resolve())
         output.check_output_destination(Path(output_file))
+        # One rule for text and `--json`, which are written by different
+        # processes: an unwritable destination is refused before the query runs.
+        output.require_writable_destination(Path(output_file))
 
     rendering = ["--format", output_format]
     if output_file is not None:
