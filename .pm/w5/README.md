@@ -36,7 +36,6 @@
 ## Inbox
 
 - [148 — Bidirectional override characters pass the control-character sanitizer into the import preview and `list` tables](./148.md) — minor CLI output-safety bug; U+202E reaches the preview raw while ESC in the next row is escaped, 30m.
-- [151 — CSV import on a ledger with a renamed expenses root fails unless `--default-account` is passed, blaming a flag the user never typed](./151.md) — minor CLI import bug; exit 2 over the built-in `Expenses:Uncategorized` default, explicit-flag control works, 20–30m.
 - [153 — `--allow-errors` refuses an ordinary transaction into an account that already has a `onecommodity` violation](./153.md) — minor CLI write bug; the existing error moves to the appended entry and is counted as new, other-account control exits 0, fix with 150, 30–45m.
 - [154 — `add` suggests `bea add open --account …` for an account whose root the ledger does not have](./154.md) — minor CLI message bug; the suggested command fails with "Invalid account name", 15–20m.
 - [155 — `bea query` reading BQL from stdin skips the UTF-8 rule: a silent empty answer under a C locale, a raw codec error otherwise](./155.md) — minor CLI query bug; Latin-1 query exits 0 `(no rows)` under `LC_ALL=C`, `format -` control names `stdin`, 25m.
