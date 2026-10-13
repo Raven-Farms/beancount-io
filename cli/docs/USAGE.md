@@ -562,8 +562,11 @@ exports preserve an existing file's permissions and follow destination symlinks.
 New exports use the caller's umask (for example, `0644` with umask `022`).
 Metadata cells (`meta`, `entry.meta`, and the metadata inside a directive) hold
 only the keys written in the ledger — never the loader's `filename`, `lineno`
-or `__`-prefixed keys — in text, CSV, and JSON alike; a CSV metadata cell is
-the text table's cell, and a CSV directive cell is the directive's Beancount
+or `__`-prefixed keys — in text, CSV, and JSON alike. A text or CSV metadata
+cell is the JSON output's object written on one line
+(`{"fee-rate": "0.00000001", "settled": "2026-01-07", "cleared": true}`), so
+it parses as JSON and never shows a Python `Decimal('1E-8')` or
+`datetime.date(...)`; a CSV directive cell is the directive's Beancount
 text. Native `--source` queries keep upstream's rendering.
 
 CSV cells hold the ledger's values verbatim, as `bean-query` writes them, so a

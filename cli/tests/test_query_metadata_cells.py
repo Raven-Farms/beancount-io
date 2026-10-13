@@ -86,7 +86,7 @@ def _text_cells(text: str) -> list[str]:
 @pytest.mark.parametrize(
     ("query", "expected"),
     [
-        ("SELECT entry.meta AS m WHERE account = 'Assets:Cash'", "{'note': 'hi'}"),
+        ("SELECT entry.meta AS m WHERE account = 'Assets:Cash'", '{"note": "hi"}'),
         ("SELECT meta WHERE account = 'Assets:Cash'", "{}"),
     ],
     ids=["entry-meta", "posting-meta"],

@@ -27,6 +27,7 @@ below need Beancount objects, which is why they live here and not in `bea`:
 from __future__ import annotations
 
 import difflib
+import json
 import os
 import re
 import stat
@@ -650,6 +651,7 @@ def build_shell(
     from beanquery.cursor import Column
     from beanquery.numberify import numberify_results
     from beanquery.shell import FORMATS, BQLShell
+    from beanquery.sources.beancount import Metadata
 
     class PreciseShell(BQLShell):  # type: ignore[misc]  # beanquery does not ship type annotations
         outfile: TextIO
@@ -824,7 +826,7 @@ def build_shell(
                 if self.settings.format == "beancount":
                     return _render_beancount(rows, out, file)
                 if self.settings.format == "text":
-                    rows = [tuple(_inert_cell(_public_value(value)) for value in row) for row in rows]
+                    rows = [tuple(_inert_cell(_text_cell(value)) for value in row) for row in rows]
                     # Upstream renders `set` sorted and separated but has no
                     # renderer for `frozenset[str]`, the type of `tags` and
                     # `links` on `#notes` and `#documents`: those cells printed
@@ -833,6 +835,12 @@ def build_shell(
                         Column(column.name, set)
                         if (get_origin(column.datatype) or column.datatype) is frozenset
                         else column
+                        for column in description
+                    ]
+                    # A metadata cell is already its text (`_metadata_cell`);
+                    # upstream's renderers for these columns expect the dict.
+                    description = [
+                        Column(column.name, str) if column.datatype in (dict, Metadata) else column
                         for column in description
                     ]
                 renderer = FORMATS[self.settings.format]
@@ -1040,8 +1048,8 @@ def _csv_cell(value: Any) -> str:
 
     if value is None:
         return ""
-    if _is_metadata(value):
-        return str(_user_metadata(value))
+    if type(value) is dict:
+        return _metadata_cell(value)
     if isinstance(value, ALL_DIRECTIVES):
         from beancount.core.display_context import DisplayContext
 
@@ -1060,6 +1068,23 @@ def _is_metadata(value: Any) -> bool:
 def _user_metadata(meta: Mapping[str, Any]) -> dict[str, Any]:
     """The keys a ledger author wrote: upstream's `MetadataRenderer` filter."""
     return {key: item for key, item in meta.items() if key not in {"filename", "lineno"} and not key.startswith("__")}
+
+
+def _metadata_cell(meta: Mapping[str, Any]) -> str:
+    """A metadata dictionary as one text or CSV cell: the JSON output's object.
+
+    `str()` of the dict was a Python repr — `Decimal('1E-8')`,
+    `datetime.date(2026, 1, 7)`, `True` — which no consumer can parse and which
+    spelled a tiny number with the exponent the rest of the output never uses
+    (w5/230). The JSON walk gives fixed-point numbers, ISO dates and amounts as
+    `number`/`currency` objects, exactly as `--json` returns the same cell.
+    """
+    return json.dumps(protocol._jsonable(_user_metadata(meta)), ensure_ascii=False)
+
+
+def _text_cell(value: Any) -> Any:
+    """A text-table cell: metadata as its JSON text, anything else without internal keys."""
+    return _metadata_cell(value) if type(value) is dict else _public_value(value)
 
 
 def _public_value(value: Any) -> Any:
