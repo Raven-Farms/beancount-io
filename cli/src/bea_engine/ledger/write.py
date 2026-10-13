@@ -1526,18 +1526,22 @@ def _moved_error_key(error: Any) -> tuple[str, str]:
     return (kind, " ".join(sorted(re.split(r"[\s,]+", getattr(error, "message", str(error))))))
 
 
-def _destination_indent(content: str) -> str:
+def _destination_indent(lines: list[str], postings: set[int]) -> str:
     """Posting indentation observed in the existing entries; two spaces when there are none.
+
+    Only the posting lines vote. Posting metadata is nested at twice the
+    indent, so counting every indented line let two metadata lines outvote the
+    postings they sit under and doubled the indent of the next entry (w5/231).
+    A tab is not a style to follow: `bea format` rewrites it as two spaces.
 
     Amount columns are not measured here: `appended_content` hands the whole
     draft to bean-format's aligner and keeps its rendering of the new lines.
     """
     indents: Counter[str] = Counter()
-    for line in _lines(content):
-        match = re.match(r"^(\s+)(\S+)( +).*$", line)
-        if not match or "\t" in match.group(1):
-            continue
-        indents[match.group(1)] += 1
+    for index in sorted(postings):
+        indent = lines[index][: len(lines[index]) - len(lines[index].lstrip(" \t"))]
+        if "\t" not in indent:
+            indents[indent] += 1
     return indents.most_common(1)[0][0] if indents else "  "
 
 
@@ -1615,7 +1619,13 @@ def appended_content(original: bytes, texts: list[str]) -> str:
         return original.decode("utf-8")
     text = original.decode("utf-8")
     ending = _dominant_ending(original)
-    blocks = _indent_block(texts, _destination_indent(text))
+    from bea_engine.ledger.formatting import align_protected, posting_lines
+
+    # The lexer and the aligner both read universal newlines.
+    existing = text.replace("\r\n", "\n").replace("\r", "\n")
+    postings = posting_lines(existing)
+    indent = _destination_indent(existing.split("\n"), postings)
+    blocks = _indent_block(texts, indent)
     # Terminate the last line first: otherwise the separator's newline only
     # ends it, and the first entry lands with no blank line before it (w1/100).
     terminated = text if not text or text.endswith(("\n", "\r")) else text + "\n"
@@ -1623,13 +1633,18 @@ def appended_content(original: bytes, texts: list[str]) -> str:
     kept = len(_lines(text))
     tail = _lines(draft)[kept:]
     try:
-        from bea_engine.ledger.formatting import align_protected
-
         # The aligner emits one line per input line, so the appended lines are
         # the tail of its output. Line endings are normalised first because its
         # own whitespace-only safety check cannot account for a carriage return,
-        # and string content is kept out of its reach (w1/136).
-        aligned = align_protected(draft.replace("\r\n", "\n").replace("\r", "\n"))
+        # and string content is kept out of its reach (w1/136). Existing
+        # postings are aligned from the indent `bea format` would give them:
+        # upstream settles on the most frequent indent length, and a tab is
+        # one character, so tab-indented entries pulled the new one to a
+        # single space.
+        aligning = draft.replace("\r\n", "\n").replace("\r", "\n").split("\n")
+        for index in postings:
+            aligning[index] = indent + aligning[index].lstrip(" \t")
+        aligned = align_protected("\n".join(aligning))
         tail = _lines(aligned)[kept:]
     except AssertionError:
         pass  # The aligner refused the text; alignment is cosmetic, the append is not.

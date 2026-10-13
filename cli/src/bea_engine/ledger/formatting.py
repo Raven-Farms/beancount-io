@@ -201,28 +201,15 @@ def _read(file: Path) -> tuple[bytes, str]:
 
 def _aligned(file: Path, text: str, widths: tuple[int | None, int | None, int | None]) -> str:
     """Align real postings while preserving metadata indents and string content."""
-    from beancount.parser.lexer import lex_iter_string
-
     text = text.removeprefix(BOM_CHARACTER).replace("\r\n", "\n").replace("\r", "\n")
     lines = _split_lines(text)
-    protected: dict[int, str] = {}
-    indented: int | None = None
-    lex: Callable[[str], Iterator[tuple[str, int, bytes, object]]] = lex_iter_string
-    for kind, lineno, raw, _ in lex(text):
-        if kind == "STRING":
-            # A STRING token names its closing line. Shield continuation lines
-            # even when they look like postings, so upstream's regex aligner
-            # neither rewrites them nor uses them to choose alignment widths.
-            for index in range(lineno - raw.count(b"\n"), lineno):
-                protected[index] = lines[index]
-        if kind == "INDENT":
-            indented = lineno
-        elif kind in {"FLAG", "ASTERISK", "HASH", "CAPITAL"} and indented == lineno:
-            continue
-        else:
-            if kind == "ACCOUNT" and indented == lineno:
-                lines[lineno - 1] = "  " + lines[lineno - 1].lstrip(" \t")
-            indented = None
+    continued, postings = _string_and_posting_lines(text)
+    for index in postings:
+        lines[index] = "  " + lines[index].lstrip(" \t")
+    # Shield continuation lines even when they look like postings, so
+    # upstream's regex aligner neither rewrites them nor uses them to choose
+    # alignment widths.
+    protected = {index: lines[index] for index in continued}
     for index, line in enumerate(lines):
         if _aligner_would_misread(line):
             # Upstream would split this line where the lexer does not, or
@@ -247,20 +234,45 @@ def _aligned(file: Path, text: str, widths: tuple[int | None, int | None, int | 
     return "".join(formatted)
 
 
+def _string_and_posting_lines(text: str) -> tuple[set[int], set[int]]:
+    """Zero-based indices (lines split on `\\n`) that continue a multi-line string, and that open a posting.
+
+    A STRING token names its closing line, so the lines before it back to its
+    opening one are string content. A posting is an indented line whose first
+    token, after any flag, is an account: metadata nested under it is not one.
+    """
+    from beancount.parser.lexer import lex_iter_string
+
+    lex: Callable[[str], Iterator[tuple[str, int, bytes, object]]] = lex_iter_string
+    continued: set[int] = set()
+    postings: set[int] = set()
+    indented: int | None = None
+    for kind, lineno, raw, _ in lex(text):
+        if kind == "STRING":
+            continued.update(range(lineno - raw.count(b"\n"), lineno))
+        if kind == "INDENT":
+            indented = lineno
+        elif kind in {"FLAG", "ASTERISK", "HASH", "CAPITAL"} and indented == lineno:
+            continue
+        else:
+            if kind == "ACCOUNT" and indented == lineno:
+                postings.add(lineno - 1)
+            indented = None
+    return continued, postings
+
+
 def string_continuation_lines(text: str) -> set[int]:
     """Zero-based indices (lines split on `\\n`) that continue a multi-line string.
 
     Text there is string content, however much it looks like a posting, so
     neither indentation nor alignment may touch it.
     """
-    from beancount.parser.lexer import lex_iter_string
+    return _string_and_posting_lines(text)[0]
 
-    lex: Callable[[str], Iterator[tuple[str, int, bytes, object]]] = lex_iter_string
-    continued: set[int] = set()
-    for kind, lineno, raw, _ in lex(text):
-        if kind == "STRING":
-            continued.update(range(lineno - raw.count(b"\n"), lineno))
-    return continued
+
+def posting_lines(text: str) -> set[int]:
+    """Zero-based indices (lines split on `\\n`) of the posting lines `bea format` indents by two spaces."""
+    return _string_and_posting_lines(text)[1]
 
 
 def align_protected(text: str) -> str:
