@@ -324,7 +324,7 @@ The clauses that decide something:
 | Server instructions, tool descriptions, error text | **Reword** | C-rev prompt injection and O-gl commerce. Imperatives addressed to the model ("Start with…", "Use this, not…", "Use when…") become statements of what each tool does. "Upgrade the plan" error text becomes a neutral statement of the limit. |
 | Every other tool | **Keep** | Each reads or writes ledger data, and its annotations already match O-gl's and C-rev's definitions. None moves money (C-pol, O-gl). |
 
-REST and GraphQL keep every removed operation. The parity table records each removal as directory-policy-withheld on MCP. The frozen parity baseline names the three API-key verbs as an explicit exception, and ADR 0008's Amendments record the contract change.
+REST and GraphQL keep every removed operation. Verified on production 2026-10-13: `tools/list` serves 26 tools and 63 resource templates matching this table (`.pm/w1/done/m36`). The parity table records each removal as directory-policy-withheld on MCP. The frozen parity baseline names the three API-key verbs as an explicit exception, and ADR 0008's Amendments record the contract change.
 
 ### 2026-10-06 — Facts re-verified, and accepted
 
