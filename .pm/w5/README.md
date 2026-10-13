@@ -35,7 +35,6 @@
 
 ## Inbox
 
-- [173 — Any write, even a refused one, deletes the user's own files named `.bea-*` beside the ledger](./173.md) — major CLI data-safety bug (narrow naming trigger); an aged `.bea-rules.yaml` vanishes after `add note`, `check`/`list` control deletes nothing, 20–30m.
 - [174 — The optional-feature probe imports Python modules from the current directory](./174.md) — major CLI trust-boundary bug; `engine status` executes a cwd `beanprice.py` and reports the feature present, clean-directory control does not, residual of w1/098, 15–20m.
 - [175 — Read-only commands leave a world-readable full copy beside a private ledger once a load takes a second](./175.md) — major CLI privacy bug; `list note` on a 0600 60k-transaction ledger leaves a 0644 `.main.bean.picklecache`, small-ledger control leaves none, 45–60m.
 - [176 — A relative `BEA_CONFIG_DIR` resolves against each working directory, scattering state](./176.md) — minor CLI config bug; each cwd gets its own state directory, absolute-path control shares state, 10m.
