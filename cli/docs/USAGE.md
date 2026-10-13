@@ -311,7 +311,9 @@ its mode, group, ACL entries, extended attributes and user file flags such as
 `nodump`. A group the writing user cannot assign refuses the write with exit
 **3** instead of silently changing who can read the ledger.
 `BEA_FILE` does not redirect
-`init`. Without a terminal, `--currency` is required and the date defaults to
+`init`; while it is set, the printed next steps name the new ledger with
+`--file`, because a bare `bea` would open the one `BEA_FILE` points at.
+Without a terminal, `--currency` is required and the date defaults to
 today. Interactively, choose the earliest date you intend to record. Use
 `--date` when importing older history; opening balances must be as of that date.
 An inactive-account error shows the account's opening/closing date and file

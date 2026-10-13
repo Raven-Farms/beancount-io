@@ -7,6 +7,7 @@ Starter content, alignment, validation, and atomic creation run in
 from __future__ import annotations
 
 import datetime
+import os
 import re
 import shlex
 from decimal import Decimal
@@ -181,15 +182,18 @@ def init(
             shown = f"~/{file.relative_to(Path.home())}"
         except ValueError:
             shown = str(file)
-        if file == Path.cwd() / "main.bean":
-            next_command = "bea check"
-        elif file.name == "main.bean":
-            next_command = f"cd {_shell_path(shown.rpartition('/')[0])} && bea check"
-        else:
+        # `$BEA_FILE` outranks cwd discovery, so a bare `bea` would open the
+        # ledger it names rather than the one just created; name the new one.
+        bea = f"bea --file {_shell_path(shown)}" if os.environ.get("BEA_FILE") else "bea"
+        if bea != "bea" or file.name != "main.bean":
             next_command = f"bea --file {_shell_path(shown)} check"
+        elif file == Path.cwd() / "main.bean":
+            next_command = "bea check"
+        else:
+            next_command = f"cd {_shell_path(shown.rpartition('/')[0])} && bea check"
         typer.echo(f"Next: {next_command}")
         typer.echo(
             f"Accounts open on {day}. To record earlier history, edit their open dates; "
             "new ledgers can use init --date YYYY-MM-DD."
         )
-        typer.echo("Record purchases with bea add transaction, or preview a bank export with bea import.")
+        typer.echo(f"Record purchases with {bea} add transaction, or preview a bank export with {bea} import.")
