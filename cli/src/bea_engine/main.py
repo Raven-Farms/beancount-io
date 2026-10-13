@@ -519,6 +519,7 @@ def shell(
     spreadsheet_safe: Annotated[
         bool, typer.Option("--spreadsheet-safe", help="Prefix formula-looking CSV text cells with '.")
     ] = False,
+    debug: Annotated[bool, typer.Option("--debug", help="Print a traceback after a query's explanation.")] = False,
 ) -> None:
     """Open the interactive query shell on this terminal.
 
@@ -545,6 +546,7 @@ def shell(
             show_errors=not no_errors,
             allow_errors=allow_errors,
             spreadsheet_safe=spreadsheet_safe,
+            debug=debug,
         )
     except protocol.EngineError as exc:
         # No envelope to put it in, so it reads like any other program's
@@ -563,6 +565,7 @@ def source_shell(
     output: Annotated[Path | None, typer.Option("--output", "-o", help="Query output file.", readable=False)] = None,
     numberify: Annotated[bool, typer.Option("--numberify", "-m")] = False,
     no_errors: Annotated[bool, typer.Option("--no-errors", "-q")] = False,
+    debug: Annotated[bool, typer.Option("--debug")] = False,
 ) -> None:
     """Stream a native query shell with protection for its input files."""
     from bea_engine import query as bql
@@ -570,7 +573,9 @@ def source_shell(
 
     stopping.interactive()
     try:
-        bql.native_interactive(source, format=format, output=output, numberify=numberify, show_errors=not no_errors)
+        bql.native_interactive(
+            source, format=format, output=output, numberify=numberify, show_errors=not no_errors, debug=debug
+        )
     except protocol.EngineError as exc:
         protocol.note(str(exc))
         raise SystemExit(exc.exit_code) from None

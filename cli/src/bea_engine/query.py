@@ -342,6 +342,7 @@ def _native_shell(source: str, *, interactive: bool, format: str, numberify: boo
 
     class GuardedShell(BQLShell):  # type: ignore[misc]
         source_file = file
+        debug = False
 
         def do_output(self, arg: str) -> None:
             """Send output to FILE or restore stdout, preserving source files."""
@@ -403,12 +404,14 @@ def native_interactive(
     output: Path | None = None,
     numberify: bool = False,
     show_errors: bool = True,
+    debug: bool = False,
 ) -> None:
     """Native Beanquery sources and rendering, with bea's destination protection."""
     import warnings
 
     warnings.filterwarnings("always")
     shell = _native_shell(source, interactive=True, format=format, numberify=numberify, show_errors=show_errors)
+    shell.debug = debug
     try:
         if output is not None:
             if shell.source_file is not None:
@@ -503,7 +506,13 @@ def _recovering(shell: Any, dispatch: Callable[[str], Any], line: str) -> Any:
 
     One-shot execution must still propagate: its exit code and its JSON error
     envelope are built from this exception.
+
+    Upstream renders its own errors well only when they carry a parse
+    position. One without — `ORDER BY 3` over two columns — got the same
+    traceback, so it is said here in the one-shot's words (w5/109).
     """
+    from beanquery import Error as BeanqueryError
+
     try:
         return dispatch(line)
     except protocol.EngineError as exc:
@@ -512,7 +521,23 @@ def _recovering(shell: Any, dispatch: Callable[[str], Any], line: str) -> Any:
         protocol.note(str(exc))
         for detail in exc.details or ():
             protocol.note(detail)
+        # The translation raised `from None`; the mistake's own stack is the context.
+        _debug_traceback(shell, exc.__context__ or exc)
         return False
+    except BeanqueryError as exc:
+        if not shell.interactive or getattr(exc, "parseinfo", None):
+            raise
+        protocol.note(f"Cannot run this BQL query: {exc}.")
+        _debug_traceback(shell, exc)
+        return False
+
+
+def _debug_traceback(shell: Any, exc: BaseException) -> None:
+    """Under `bea --debug`, follow a prompt explanation with the stack behind it."""
+    import traceback
+
+    if shell.debug:
+        protocol.note("".join(traceback.format_exception(exc)).rstrip())
 
 
 def _write_export(output: Path, text: str) -> None:
@@ -574,6 +599,7 @@ def interactive(
     show_errors: bool = True,
     allow_errors: bool = False,
     spreadsheet_safe: bool = False,
+    debug: bool = False,
 ) -> None:
     """Upstream's interactive shell, on this process's terminal.
 
@@ -593,6 +619,7 @@ def interactive(
     warnings.filterwarnings("always")
     shell = build_shell(file, sys.stdout, interactive=True, format=format, numberify=numberify, show_errors=show_errors)
     shell.spreadsheet_safe = spreadsheet_safe
+    shell.debug = debug
     # After build_shell, which is what loads the ledger, and before cmdloop.
     _gate([format_error(error, ledger_file=file) for error in shell.context.errors], allow_errors)
     # The policy outlives startup: `.reload` swaps in whatever the file holds
@@ -633,6 +660,8 @@ def build_shell(
         spreadsheet_safe: bool = False
         # Why the last `.reload` could not read the ledger, until one can.
         reload_failure: str | None = None
+        # `bea --debug`: a mistake at the prompt also prints its traceback.
+        debug: bool = False
 
         def do_output(self, arg: str) -> None:
             """Send output to FILE or restore the original output stream."""
@@ -1058,22 +1087,6 @@ def _executed(conn: Any, query_string: str, run: Any, ledger_errors: list[str]) 
         return _compiled(lambda: run(statement), statement, lambda: ledger_errors)
     except BeanqueryError as exc:
         raise _usage_error(exc, query_string, conn, ledger_errors) from None
-    except ValueError as exc:
-        # The parser converts literals as it reads them, so `2020-99-01`
-        # surfaces as a bare ValueError from `date.fromisoformat` — a typo in
-        # the query, not an engine failure (w1/085). Only an error raised
-        # inside the parser is the query's; anything later propagates.
-        literal = _parse_literal_error(exc)
-        if literal is None:
-            raise
-        details = [f"  {query_string}"]
-        if literal == "date":
-            details.append("Write dates as YYYY-MM-DD with a real month and day, for example 2020-02-29.")
-        raise protocol.UsageError(
-            f"Cannot run this BQL query: invalid {literal} literal: {exc}.",
-            details=details,
-            ledger_errors=ledger_errors,
-        ) from None
 
 
 def _compiled(
@@ -1113,6 +1126,22 @@ def _compiled(
         if context is None:
             raise
         raise _usage_error(exc, statement, context, ledger_errors()) from None
+    except ValueError as exc:
+        # The parser converts literals as it reads them, so `2020-99-01`
+        # surfaces as a bare ValueError from `date.fromisoformat` — a typo in
+        # the query, not an engine failure (w1/085). Only an error raised
+        # inside the parser is the query's; anything later propagates.
+        literal = _parse_literal_error(exc)
+        if literal is None:
+            raise
+        details = [f"  {statement}"]
+        if literal == "date":
+            details.append("Write dates as YYYY-MM-DD with a real month and day, for example 2020-02-29.")
+        raise protocol.UsageError(
+            f"Cannot run this BQL query: invalid {literal} literal: {exc}.",
+            details=details,
+            ledger_errors=ledger_errors(),
+        ) from None
     except SyntaxError as exc:
         # Beanquery compiles a query to Python. `SELECT DISTINCT tags` makes it
         # emit code it cannot parse, and the SyntaxError that escapes says only

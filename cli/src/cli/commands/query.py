@@ -267,7 +267,9 @@ def query(
             elif ctx.no_input:
                 raise UsageError("A query is required with --no-input. Pass it as an argument or on stdin.")
             else:
-                raise typer.Exit(launch.run_engine_argv(["source-shell", *rendering, "--", source], interactive=True))
+                # `--debug` reaches the prompt, where a mistake is otherwise only explained.
+                shell_argv = ["source-shell", *rendering, *(["--debug"] if ctx.debug else []), "--", source]
+                raise typer.Exit(launch.run_engine_argv(shell_argv, interactive=True))
         if not query_string.strip():
             raise UsageError("A query is required as an argument or on stdin.")
         _refuse_one_shot_output(query_string)
@@ -300,6 +302,8 @@ def query(
                 shell_argv.append("--allow-errors")
             if spreadsheet_safe:
                 shell_argv.append("--spreadsheet-safe")
+            if ctx.debug:
+                shell_argv.append("--debug")
             raise typer.Exit(launch.run_engine_argv(shell_argv, interactive=True))
     if not query_string.strip():
         raise UsageError("A query is required as an argument or on stdin.")
