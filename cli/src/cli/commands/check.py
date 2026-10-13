@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import shlex
 import unicodedata
 from pathlib import Path
 
@@ -140,17 +141,18 @@ def _closure_needs_compat(file: Path) -> tuple[str, str] | None:
     """
     from cli.utils import has_bom
 
-    strip_bom = "Run bea format -i to strip the mark, then retry."
     try:
         members = output.ledger_closure(file)
     except OSError:
         return None
-    for member in members:
-        if has_bom(member):
-            return (
-                "a file in its include closure starts with a UTF-8 BOM bean-check cannot parse",
-                strip_bom,
-            )
+    marked = [str(member) for member in members if has_bom(member)]
+    if marked:
+        # Bare `bea format -i` reads stdin and is refused, so the remedy names
+        # every marked file: one run of the printed command clears the closure (w5/197).
+        return (
+            "a file in its include closure starts with a UTF-8 BOM bean-check cannot parse",
+            f"Run {shlex.join(['bea', 'format', '-i', *marked])} to strip the mark, then retry.",
+        )
     for member in members:
         try:
             raw = member.read_bytes()
