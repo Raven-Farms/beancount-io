@@ -446,6 +446,8 @@ including string lines that look like postings. Stdout, `-o`, and `-i` produce
 the same text; `--check` and `--dry-run` compare the exact bytes `-i` would write.
 Stdout and `-o` remain text filters that accept syntax errors; the walking modes
 check parseability as described below. Run `bea check` to validate the ledger.
+`-o` replaces its destination only once the whole formatted text is written: a
+write that fails part-way preserves an existing export and leaves no partial file.
 
 Ledger text and query results on stdout are UTF-8 whatever the locale, so
 `bea format FILE > out.bean` and `bea query … > out.csv` write the bytes `-o`

@@ -32,7 +32,7 @@ import typer
 from cli import context, output
 from cli.engine import launch
 from cli.errors import BeaError, LedgerError, UsageError
-from cli.utils import decode_error_message, single_line
+from cli.utils import atomic_write, decode_error_message, single_line
 
 SUFFIXES = {".bean", ".beancount"}
 STDIN = "-"
@@ -526,7 +526,9 @@ def _render(file: Path | None, alignment: list[str], destination: Path | None) -
     if destination is None or str(destination) == STDIN:
         output.write_data(text)
     else:
-        destination.write_text(text, encoding="utf-8")
+        # Staged beside the destination and swapped in, so a write that fails
+        # part-way keeps the previous export instead of a fragment (w5/156).
+        atomic_write(destination, text, export=True)
 
 
 def _stdin_text() -> str:
