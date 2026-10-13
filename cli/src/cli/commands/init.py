@@ -146,7 +146,7 @@ def init(
             value_proc=parse_date,
         )
     else:
-        day = parse_date(date) if date else datetime.date.today()
+        day = datetime.date.today() if date is None else parse_date(date)
     balances: dict[str, Decimal] = {}
     for balance in opening_balance or []:
         parts = balance.split()

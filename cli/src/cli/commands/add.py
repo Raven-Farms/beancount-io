@@ -143,7 +143,7 @@ def add_transaction(
     for posting_text in postings:
         check_decimal_notation(posting_text)
     request = {
-        "date": (parse_date(date) if date else datetime.date.today()).isoformat(),
+        "date": (datetime.date.today() if date is None else parse_date(date)).isoformat(),
         "flag": flag,
         "payee": payee,
         "narration": narration,
@@ -259,7 +259,7 @@ def add_balance(
 
     if day == datetime.date.min and pad_date is None:
         raise UsageError("The balance date must allow an earlier pad date.")
-    padded = parse_date(pad_date) if pad_date else day - datetime.timedelta(days=1)
+    padded = day - datetime.timedelta(days=1) if pad_date is None else parse_date(pad_date)
     if padded >= day:
         raise UsageError("--pad-date must be earlier than the balance date (assertions run at the start of the day).")
     request |= {"pad_from": pad_from, "pad_date": padded.isoformat()}
