@@ -267,13 +267,13 @@ def _included_new_file(target: Path, pattern: str) -> bool:
 #: live one and this can only ever catch a file whose owner is gone.
 _ABANDONED_CANDIDATE_SECONDS = 3600
 
-#: Candidate files, and the pickle-cache sidecars Beancount writes beside them.
-#: The sidecar name *prepends* a dot to the file it caches, so a candidate
-#: already named `.bea-xxxx.tmp` gets `..bea-xxxx.tmp.picklecache` — two
-#: leading dots, which a `.bea-*` glob cannot reach.
-_CANDIDATE_GLOBS = (".bea-*", "..bea-*")
-
 _CANDIDATE_NAME = re.compile(r"\.bea-[0-9a-f]{16}\.tmp")
+
+#: What the sweep may remove: a candidate, or the pickle-cache sidecar Beancount
+#: writes beside one. The sidecar name *prepends* a dot to the file it caches,
+#: so `.bea-xxxx.tmp` gets `..bea-xxxx.tmp.picklecache` — two leading dots.
+#: Nothing looser will do: `.bea-rules.yaml` is the user's file, not ours.
+_SWEEPABLE_NAME = re.compile(rf"{_CANDIDATE_NAME.pattern}|\.{_CANDIDATE_NAME.pattern}\.picklecache")
 
 
 def is_candidate_file(path: Path) -> bool:
@@ -358,13 +358,14 @@ def sweep_abandoned_candidates(directory: Path) -> None:
 
     Only files old enough that no live write could still own them are removed,
     which is what makes this safe to do while another `bea` may be running in
-    the same directory. Sweeping is best effort: a file someone else removes
-    first, or one this user may not delete, must not fail the write that was
-    actually asked for.
+    the same directory. Only names `candidate_file` itself generates are
+    considered, so a user's own `.bea-notes.md` is never taken for one.
+    Sweeping is best effort: a file someone else removes first, or one this
+    user may not delete, must not fail the write that was actually asked for.
     """
     cutoff = time.time() - _ABANDONED_CANDIDATE_SECONDS
     try:
-        stale = [path for pattern in _CANDIDATE_GLOBS for path in directory.glob(pattern)]
+        stale = [path for path in directory.iterdir() if _SWEEPABLE_NAME.fullmatch(path.name)]
     except OSError:
         return
     for path in stale:

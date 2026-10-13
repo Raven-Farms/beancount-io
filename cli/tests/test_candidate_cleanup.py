@@ -38,7 +38,7 @@ def _aged(path: Path, seconds: float) -> Path:
 
 class TestSweepAbandonedCandidates:
     def test_it_removes_a_candidate_no_live_write_could_own(self, tmp_path: Path) -> None:
-        stale = _aged(tmp_path / ".bea-abandoned.tmp", _ABANDONED_CANDIDATE_SECONDS * 2)
+        stale = _aged(tmp_path / ".bea-0123456789abcdef.tmp", _ABANDONED_CANDIDATE_SECONDS * 2)
 
         sweep_abandoned_candidates(tmp_path)
 
@@ -46,7 +46,7 @@ class TestSweepAbandonedCandidates:
 
     def test_it_keeps_a_candidate_a_running_write_may_still_be_using(self, tmp_path: Path) -> None:
         """Another bea may be mid-write in the same directory; only age makes this safe."""
-        fresh = tmp_path / ".bea-in-flight.tmp"
+        fresh = tmp_path / ".bea-fedcba9876543210.tmp"
         fresh.touch()
 
         sweep_abandoned_candidates(tmp_path)
@@ -54,7 +54,7 @@ class TestSweepAbandonedCandidates:
         assert fresh.exists()
 
     def test_it_removes_an_abandoned_picklecache_too(self, tmp_path: Path) -> None:
-        cache = _aged(tmp_path / ".bea-abandoned.tmp.picklecache", _ABANDONED_CANDIDATE_SECONDS * 2)
+        cache = _aged(tmp_path / "..bea-0123456789abcdef.tmp.picklecache", _ABANDONED_CANDIDATE_SECONDS * 2)
 
         sweep_abandoned_candidates(tmp_path)
 
@@ -86,8 +86,8 @@ def test_a_write_clears_abandoned_candidates_beside_the_ledger(tmp_path: Path) -
     created = runner.invoke(app, ["--json", "init", str(tmp_path), "--currency", "USD", "--date", "2026-01-01"])
     assert created.exit_code == 0, created.output
     ledger = tmp_path / "main.bean"
-    stale = _aged(tmp_path / ".bea-left-by-a-kill.tmp", _ABANDONED_CANDIDATE_SECONDS * 2)
-    fresh = tmp_path / ".bea-in-flight.tmp"
+    stale = _aged(tmp_path / ".bea-0123456789abcdef.tmp", _ABANDONED_CANDIDATE_SECONDS * 2)
+    fresh = tmp_path / ".bea-fedcba9876543210.tmp"
     fresh.touch()
 
     result = runner.invoke(

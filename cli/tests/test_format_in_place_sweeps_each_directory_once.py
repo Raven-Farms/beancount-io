@@ -99,9 +99,9 @@ def test_format_in_place_still_clears_abandoned_candidates_in_every_directory(tm
     targets = _books(tmp_path, files=3)
     rewritten = targets[1]
     rewritten.write_text(MISALIGNED.format(index=0), encoding="utf-8")
-    stale_beside_main = _aged(tmp_path / ".bea-left-by-a-kill.tmp")
-    stale_beside_include = _aged(tmp_path / "inc" / ".bea-left-by-a-kill.tmp")
-    fresh = tmp_path / "inc" / ".bea-in-flight.tmp"
+    stale_beside_main = _aged(tmp_path / ".bea-0123456789abcdef.tmp")
+    stale_beside_include = _aged(tmp_path / "inc" / ".bea-0123456789abcdef.tmp")
+    fresh = tmp_path / "inc" / ".bea-fedcba9876543210.tmp"
     fresh.touch()
 
     result = runner.invoke(app, ["format", "-i", str(tmp_path)])
@@ -117,7 +117,7 @@ def test_format_in_place_still_clears_abandoned_candidates_in_every_directory(tm
 def test_check_leaves_abandoned_candidates_alone(tmp_path: Path) -> None:
     """The control: `--check` writes nothing, so it has nothing to tidy up after."""
     _books(tmp_path, files=3)
-    stale = _aged(tmp_path / "inc" / ".bea-left-by-a-kill.tmp")
+    stale = _aged(tmp_path / "inc" / ".bea-0123456789abcdef.tmp")
 
     result = runner.invoke(app, ["format", "--check", str(tmp_path)])
 

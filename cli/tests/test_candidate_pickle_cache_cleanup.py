@@ -82,7 +82,7 @@ def test_candidate_file_removes_the_sidecar_it_leaves_behind(tmp_path: Path) -> 
 def test_the_sweep_reclaims_previously_abandoned_sidecars(tmp_path: Path) -> None:
     """Orphans already on disk from before the fix must be collectable."""
     old = 1.0  # Comfortably older than the sweep's one-hour cutoff.
-    orphans = [tmp_path / "..bea-acdn4plk.tmp.picklecache", tmp_path / ".bea-acdn4plk.tmp"]
+    orphans = [tmp_path / "..bea-0123456789abcdef.tmp.picklecache", tmp_path / ".bea-0123456789abcdef.tmp"]
     for path in orphans:
         path.write_bytes(b"x")
         os.utime(path, (old, old))
@@ -112,7 +112,7 @@ def test_the_sweep_leaves_the_ledgers_own_cache_alone(tmp_path: Path) -> None:
 
 def test_the_sweep_spares_a_candidate_a_live_write_may_still_own(tmp_path: Path) -> None:
     """Freshness is what makes the sweep safe beside a concurrent `bea`."""
-    fresh = tmp_path / "..bea-live.tmp.picklecache"
+    fresh = tmp_path / "..bea-fedcba9876543210.tmp.picklecache"
     fresh.write_bytes(b"x")
 
     sweep_abandoned_candidates(tmp_path)
