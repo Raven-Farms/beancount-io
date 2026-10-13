@@ -36,7 +36,6 @@
 ## Inbox
 
 - [109 — The query shell prints Python tracebacks for a mistyped date and an out-of-range ORDER BY index](./109.md) — minor CLI interactive-shell bug; one-shot control explains both, 20–30m.
-- [119 — `--json query -o` to an unwritable destination exits 1 "validation" with a raw errno, while text mode exits 3 or 0](./119.md) — minor CLI exit-category bug; four-command comparison of text and JSON modes, 20–30m.
 - [120 — An unreadable included file fails every command with a raw Python exception, and `bea check` prints a traceback](./120.md) — minor CLI error-reporting bug; unreadable-root control exits 2 cleanly, 30–40m.
 - [121 — `bea format FILE > out.bean` exits 0 with non-ASCII text rewritten as literal escapes when stdout is not UTF-8](./121.md) — minor CLI silent-rewrite bug with a narrow trigger; UTF-8 control correct, Windows inferred, 20–30m.
 - [123 — `add transactions --partial` reloads the ledger once per row, so the retry the CLI recommends takes minutes](./123.md) — major CLI quadratic-time bug; 4.0 s at 250 rows, 13.7 s at 500, all-valid control 0.5 s, 45–60m.
