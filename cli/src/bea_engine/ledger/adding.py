@@ -1015,7 +1015,8 @@ def _bulk_meta_problems(location: str, meta: dict[str, Any]) -> list[str]:
     Write input only — listings convert loaded metadata without this check.
     Reserved source-location keys used to be dropped silently, and a value the
     printer cannot render (an array) escaped per-row handling, aborting the
-    whole batch with no row number even under `--partial`.
+    whole batch with no row number even under `--partial`. A key outside
+    Beancount's grammar did the same when the batch was read back (w5/129).
     """
     problems = []
     for key, value in meta.items():
@@ -1023,6 +1024,15 @@ def _bulk_meta_problems(location: str, meta: dict[str, Any]) -> list[str]:
         if key in {"filename", "lineno"}:
             problems.append(
                 f"{path}: Metadata key {key!r} is reserved for Beancount source location; choose another key."
+            )
+            continue
+        if not re.fullmatch(r"[a-z][A-Za-z0-9_-]+", key):
+            # `--meta`'s rule. The printer renders any key, so a bad one only
+            # failed when the batch was read back — a usage error naming no
+            # row, even under `--partial` — and a `__` key was dropped silently.
+            problems.append(
+                f"{path}: Invalid metadata key {key!r}; keys must match [a-z][A-Za-z0-9_-]+ "
+                "(start with a lowercase letter, at least two characters)."
             )
             continue
         if isinstance(value, dict):
