@@ -306,6 +306,8 @@ def list_notes(
                 date=entry.date,
                 account=entry.account,
                 comment=entry.comment,
+                tags=sorted(entry.tags) if entry.tags else [],
+                links=sorted(entry.links) if entry.links else [],
                 meta=metadata_to_json(entry.meta),
                 generated=entry_generated(entry, "note"),
             )

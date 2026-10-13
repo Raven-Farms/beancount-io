@@ -309,6 +309,8 @@ class NoteDirective(BaseModel):
     date: LedgerDate
     account: str
     comment: str
+    tags: list[Tag] = Field(default_factory=list)
+    links: list[Link] = Field(default_factory=list)
     meta: dict[str, Any] = Field(default_factory=dict)
     generated: bool = Field(default=False, exclude=True)
 

@@ -151,8 +151,14 @@ SPECS: dict[str, _Spec] = {
         filter="account",
     ),
     "note": _Spec(
-        headers=["DATE", "ACCOUNT", "COMMENT"],
-        row=lambda n: [n["date"], n["account"], n["comment"]],
+        headers=["DATE", "ACCOUNT", "COMMENT", "TAGS", "LINKS"],
+        row=lambda n: [
+            n["date"],
+            n["account"],
+            n["comment"],
+            " ".join(f"#{tag}" for tag in n.get("tags") or []),
+            " ".join(f"^{link}" for link in n.get("links") or []),
+        ],
         empty="No notes found.",
         filter="account",
     ),
