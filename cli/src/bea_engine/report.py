@@ -278,10 +278,12 @@ def _balance_sheet(
     trees = (sections["assets"], sections["liabilities"], sections["equity"])
     balances = [(filtered.end_date, balance) for tree in trees if tree is not None for balance in _tree_balances(tree)]
     balances.append((filtered.end_date, earnings))
+    # The equity lines are as-of figures like the headline: only a commodity
+    # still unvalued at the report date withholds them, not an earlier row's gap.
+    incomplete = any(_unvalued(balance, conversion) for _, balance in balances)
     balances.extend((point.date, point.balance) for point in data.net_worth_data)
     valuation = _valuation(conversion, balances, allow_errors, filtered.ledger.prices, ledger_errors)
     metadata = _metadata(filtered, conversion, ledger_errors, interval) | valuation
-    incomplete = bool(valuation["missing_prices"])
     empty = type(data.assets_hierarchy.balance_children)()
     assets = trees[0].balance_children if trees[0] is not None else empty
     liabilities = trees[1].balance_children if trees[1] is not None else empty

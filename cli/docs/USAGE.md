@@ -1227,8 +1227,12 @@ rows. The same rule applies row by row: an income
 statement period and a net-worth series point whose balance still holds a
 commodity the report could not value read `null` too, so no interval series
 contradicts the headline above it with per-unit amounts. Rows that did convert
-keep their number. It also withholds the derived equity adjustment and equity
-total. Text shows the source amounts and says the total is unavailable.
+keep their number. The balance sheet's derived equity adjustment and equity
+total are as-of figures and follow the headline: they are withheld
+(`equity_reconciled: false`) only when a balance at the report's as-of date
+still holds a commodity it could not value, never for a gap only in an earlier
+row, so the interval chosen does not decide whether the sheet reconciles. Text
+shows the source amounts and says the total is unavailable.
 `--conversion units` shows quantities; `at_cost` shows acquisition costs and
 `at_value` uses market values with Fava's cost fallback when no price exists.
 Holdings without a cost basis (cash, `@`-priced lots) keep amounts already in
