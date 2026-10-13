@@ -35,7 +35,6 @@
 
 ## Inbox
 
-- [136 — `bea example` exits 0 with a ledger that fails `bea check` when the range starts mid-year and crosses January 1](./136.md) — major CLI example bug; `--date-begin 2024-06-01 --date-end 2025-06-01` writes a failing balance assertion, January 1 control passes, 30–45m.
 - [138 — `bea doctor <op> DIRECTORY` dumps a raw upstream traceback](./138.md) — minor CLI doctor bug; exit 1 with `IsADirectoryError` where `bea check` exits 2 with one line, 20m.
 - [140 — A CSV row with a payee is skipped as an "exact duplicate" of a payee-less ledger entry, so a new transaction is dropped with exit 0](./140.md) — major CLI import bug (narrow trigger); `--duplicates skip --apply` writes nothing, reversed-row control writes it, 45–60m.
 - [141 — A remembered importer path that no longer exists blocks both `importers.py` beside the ledger and the plain CSV import](./141.md) — minor CLI import bug; flag-free runs exit 2 after the file is moved, `--csv auto` control works, 20–30m.
