@@ -35,7 +35,6 @@
 
 ## Inbox
 
-- [138 — `bea doctor <op> DIRECTORY` dumps a raw upstream traceback](./138.md) — minor CLI doctor bug; exit 1 with `IsADirectoryError` where `bea check` exits 2 with one line, 20m.
 - [140 — A CSV row with a payee is skipped as an "exact duplicate" of a payee-less ledger entry, so a new transaction is dropped with exit 0](./140.md) — major CLI import bug (narrow trigger); `--duplicates skip --apply` writes nothing, reversed-row control writes it, 45–60m.
 - [142 — Any `ImportError` in an importer config is reported as a missing engine package](./142.md) — minor CLI import message bug; a misspelled sibling import says to install a package, `import helper` control loads, 15–20m.
 - [143 — What an importer printed is discarded when it then raises, even with `--debug`](./143.md) — minor CLI import bug; printed lines vanish on failure and appear on success, 15–20m.
