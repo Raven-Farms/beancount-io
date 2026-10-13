@@ -895,6 +895,32 @@ def _nfc(text: str) -> str:
     return unicodedata.normalize("NFC", text)
 
 
+_PLAIN_NUMBER = r"-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?"
+_META_DATE = r"[0-9]{4}[-/][0-9]{1,2}[-/][0-9]{1,2}"
+
+
+def _is_typed_literal(raw: str, value: Any) -> bool:
+    """Whether unquoted `raw` is, in full, one literal of the kind Beancount read it as.
+
+    The metadata grammar evaluates arithmetic (`555-1234`, `1/3`), `Decimal`
+    drops a zero-padded code's zeros (`02134`), a `,` is a digit separator,
+    `5USD` lexes as an amount and everything after `;` is a comment. Each of
+    those parses cleanly into a value nobody typed.
+    """
+    from beancount.core.amount import Amount
+
+    if isinstance(value, bool):
+        return raw.lower() in {"true", "false"}
+    if isinstance(value, Decimal):
+        return re.fullmatch(_PLAIN_NUMBER, raw) is not None
+    if isinstance(value, Amount):
+        match = re.fullmatch(rf"{_PLAIN_NUMBER}[ \t]+(\S+)", raw)
+        return match is not None and match.group(1) == value.currency
+    if isinstance(value, datetime.date):
+        return re.fullmatch(_META_DATE, raw) is not None
+    return False
+
+
 def _parse_metadata(items: list[str]) -> dict[str, Any]:
     """`key:value` pairs, with native typed values read by Beancount's own parser."""
     from beancount.core.data import Transaction
@@ -938,7 +964,9 @@ def _parse_metadata(items: list[str]) -> dict[str, Any]:
             # text the lexer happens to recognize — `#1042` as a tag, `NULL`,
             # an account — is still the text that was typed: taking the parsed
             # value dropped the `#` from a check number (w5/082).
-            metadata[key] = raw if not raw.startswith('"') and (value is None or isinstance(value, str)) else value
+            # The same holds for a value the grammar had to compute, normalize
+            # or cut short to get there (w5/128): `2024-001` is not 2023.
+            metadata[key] = value if raw.startswith('"') or _is_typed_literal(raw, value) else raw
         elif raw.startswith('"'):
             raise protocol.UsageError(
                 f"Invalid --meta {key!r}; close the quoted string or supply a bare value such as '{key}:hello'.",
@@ -952,7 +980,7 @@ def _parse_metadata(items: list[str]) -> dict[str, Any]:
                 f"Invalid --meta key {key!r}; Beancount rejected it ({key_errors[0].message}).",
                 details=[str(error.message) for error in key_errors],
             )
-        elif re.fullmatch(r"[0-9]{4}[-/][0-9]{1,2}[-/][0-9]{1,2}", raw):
+        elif re.fullmatch(_META_DATE, raw):
             # Beancount's date grammar: a slash or unpadded spelling of an
             # impossible day used to fall through and be stored as text.
             raise protocol.UsageError(

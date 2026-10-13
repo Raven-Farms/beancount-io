@@ -941,7 +941,13 @@ bea add transaction -p 'Expenses:Groceries 30 USD' -p 'Assets:Checking' \
 Each argument contains one `key:value` pair. Bare text such as `note:hello`
 or `receipt:IMG_1234.jpg` becomes a string. Valid native numbers, booleans,
 dates and amounts retain their types, including when single-add JSON is reused
-for bulk entry. Inner quotes force a string, e.g. `--meta 'code:"1234"'`;
+for bulk entry. A type is kept only when the whole value is one plain literal:
+a decimal such as `3`, `-5` or `1.25`, `NUMBER CURRENCY` such as `5 USD`, a
+date, or `TRUE`/`FALSE`. Anything Beancount would have to compute, normalize
+or cut short is the text typed — an invoice number `2024-001`, a zip code
+`02134`, a phone number `555-1234`, `1/3`, `1,000`, `5USD`, or a memo with a
+`;` in it — so a reference number is never stored as arithmetic. Inner quotes
+force a string, e.g. `--meta 'code:"1234"'`;
 `--meta 'note:""'` writes an empty string. Repeat `--meta` for different keys;
 keys must be distinct and cannot use the reserved source fields `filename` or
 `lineno`. A date-shaped value in any spelling Beancount reads (`2026-02-30`,
