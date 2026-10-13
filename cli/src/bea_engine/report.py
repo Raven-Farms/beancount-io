@@ -373,7 +373,8 @@ def _load(
                 f"This ledger's latest dated entry is {boundary.isoformat()}, and a report has to look one "
                 f"day past the period it covers — which {date.max.isoformat()} has no room for.",
                 details=[
-                    f"Name the period explicitly and it reports fine, as in --time {boundary.year}.",
+                    f"Name the period explicitly, as in --time {boundary.year}, and it reports everything before "
+                    f"{boundary.isoformat()}, noting that entries dated {boundary.isoformat()} itself are left out.",
                     "`bea check`, `bea list` and `bea query` read this ledger without a period and are unaffected.",
                 ],
                 ledger_errors=ledger_errors,
@@ -474,6 +475,11 @@ def _metadata(filtered: Any, conversion: str, ledger_errors: list[str], interval
     }
     if interval:
         data["interval"] = interval
+    # The exclusive end cannot pass the calendar's last day, so a period that
+    # reaches it (`--time 9999` clamps there) stops one day short. Say so when
+    # the ledger has activity on that day instead of reporting without it.
+    if end == date.max and _unreportable_boundary(filtered.ledger.all_entries):
+        data["excluded_date"] = end
     return data
 
 

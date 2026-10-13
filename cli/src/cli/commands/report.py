@@ -140,6 +140,11 @@ def _heading(title: str, metadata: dict[str, Any], *, profit_line: bool = False)
                 f"Price source {source['alias']}: {source['freshness']}; "
                 f"observed {source['observed_at'] or 'unknown'}; revision {source['revision'] or 'none'}{detail}."
             )
+    if metadata.get("excluded_date"):
+        output.note(
+            f"Entries dated {metadata['excluded_date']} are not included: "
+            "a report period cannot reach the calendar's last day."
+        )
     if metadata.get("account_filter_empty"):
         output.note(f"No accounts match {metadata['account_filter']}.")
     if metadata["missing_prices"]:
