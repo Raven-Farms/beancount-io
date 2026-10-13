@@ -209,9 +209,11 @@ def _simple(directive_type: str, request: dict[str, Any]) -> Any:
         )
     for value in values:
         # Only this side knows what a valid account is, so an account-typed
-        # custom value is checked here rather than where it was typed.
+        # custom value is checked here rather than where it was typed. The
+        # NFC name it returns is kept, as for every other account argument:
+        # the line is written NFC, and the reload check compares against it.
         if isinstance(value, dict) and value.get("kind") == "account":
-            parse_account(str(value.get("value", "")))
+            value["value"] = parse_account(str(value.get("value", "")))
         if isinstance(value, dict) and value.get("kind") == "text" and isinstance(value.get("value"), str):
             value["value"] = single_line(value["value"])
     return CustomDirective.model_validate(
