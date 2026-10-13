@@ -275,7 +275,7 @@ def answer(
     if source.read_bytes() != source_bytes:
         raise ConflictError("The export changed during extraction; nothing was written. Retry.")
     source_hash = hashlib.sha256(source_bytes).hexdigest()
-    other_entries = {format_entry(entry) for entry in existing if not isinstance(entry, Transaction)}
+    other_entries = {_directive_text(entry) for entry in existing if not isinstance(entry, Transaction)}
     rows: list[dict[str, Any]] = []
     texts: list[str] = []
     conflicts = False
@@ -399,7 +399,7 @@ def answer(
                 fingerprints[_candidate_key(entry, account)] = entry
                 batch_rows[id(entry)] = index + 1
         rule = entry.meta.pop("_csv_rule", None) if isinstance(entry, Transaction) else None
-        text = format_entry(entry)
+        text = format_entry(entry) if isinstance(entry, Transaction) else _directive_text(entry)
         if not isinstance(entry, Transaction):
             if text in other_entries:
                 status, reason = "duplicate", "Identical directive already exists."
@@ -632,6 +632,19 @@ def _fingerprint(entry: Any, account: str) -> tuple[Any, ...]:
         _match_text(entry.narration),
         amounts,
     )
+
+
+def _directive_text(entry: Any) -> str:
+    """A non-transaction directive as it prints once it is in the ledger.
+
+    This text is both what is appended and what "identical directive" compares,
+    so it has to survive a reload unchanged. The loader reads ledger text as
+    NFC, and a balance that currently fails loads with its computed difference
+    attached, which the printer would append as a `; Diff:` comment (w5/224).
+    """
+    if getattr(entry, "diff_amount", None) is not None:
+        entry = entry._replace(diff_amount=None)
+    return unicodedata.normalize("NFC", format_entry(entry))
 
 
 def _match_text(value: str | None) -> str:

@@ -441,7 +441,9 @@ skills deduplicate against each other: the ledger itself is the dedup database.
   `--duplicates skip` or `--duplicates include`; choose include to preserve
   legitimate repeated purchases. Review the rows before choosing;
   the choice applies to all possible matches in that invocation.
-- Identical nontransaction directives are skipped. Import does not change the
+- Identical nontransaction directives are skipped. They are compared, and
+  written, as the ledger reads them back: text in Unicode NFC, and a balance
+  assertion without the difference a failing one reports. Import does not change the
   meaning of existing transactions or delete them, and never modifies existing
   lines: appended entries are written where `bea format` would put them, and
   `bea format` remains the only command that realigns a file.
