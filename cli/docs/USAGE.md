@@ -600,7 +600,10 @@ always exits 1 on errors — reporting them is its whole job, so it has no
 `--allow-errors` flag.
 The same validation gate runs before the interactive BQL shell opens, and a
 strict session keeps it: after a `.reload` that introduces errors, typed and
-stored (`.run`) queries are refused until a clean `.reload`. Missing
+stored (`.run`) queries are refused until a clean `.reload`. A `.reload` that
+cannot read the ledger at all (a file or include unreadable or gone) says so in
+one line and refuses queries in every session, strict or not, until a `.reload`
+succeeds; `.errors` shows the reason. Missing
 format targets are usage errors. `format --dry-run` previews changes without
 writing and exits **0** even when formatting is needed. `format --check` leaves
 files untouched and exits **1** when formatting is needed, **0** when all

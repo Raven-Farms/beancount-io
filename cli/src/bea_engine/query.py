@@ -627,6 +627,8 @@ def build_shell(
         allow_errors: bool = True
         # `--spreadsheet-safe`: neutralise formula-looking text in CSV cells.
         spreadsheet_safe: bool = False
+        # Why the last `.reload` could not read the ledger, until one can.
+        reload_failure: str | None = None
 
         def do_output(self, arg: str) -> None:
             """Send output to FILE or restore the original output stream."""
@@ -641,9 +643,29 @@ def build_shell(
             # path mangling; attach the freshly loaded entries instead.
             from beancount.parser import printer
 
+            # Load first, swap on success. Clearing the errors before a load
+            # that then raised — the file unreadable or gone — left the old
+            # entries beside an empty error list: the strict gate passed and
+            # the session answered from the earlier load (w5/106).
+            try:
+                loaded = load(file)
+            except Exception as exc:
+                if "entries" not in self.context.tables:
+                    # The constructor's first load: there is no session to
+                    # keep open, and its failure keeps its own exit status.
+                    raise
+                reason = str(exc)
+                if isinstance(exc, OSError) and exc.strerror:
+                    # Name an include that failed; the root is already named.
+                    inner = "" if str(exc.filename or file) == str(file) else f": {exc.filename}"
+                    reason = exc.strerror + inner
+                reason = (reason.strip().splitlines() or [type(exc).__name__])[0]
+                self.reload_failure = f"Cannot reload {file}: {reason}; queries are refused until a .reload succeeds."
+                raise protocol.LedgerError(self.reload_failure) from None
+            self.reload_failure = None
             self.context.errors.clear()
             self.context.options.clear()
-            self.context.attach(LEDGER_DSN, **load(file))
+            self.context.attach(LEDGER_DSN, **loaded)
             self._extract_queries(self.context.tables["entries"].entries)
             if self.context.errors and self.show_load_errors:
                 printer.print_errors(self.context.errors, file=sys.stderr)  # type: ignore[no-untyped-call]
@@ -654,6 +676,13 @@ def build_shell(
                     f"Ledger has {len(self.context.errors)} error(s); queries are refused until "
                     "it loads cleanly. Fix the ledger and .reload, or reopen with --allow-errors."
                 )
+
+        def do_errors(self, arg: Any = None) -> None:
+            """Print the errors that occurred during Beancount input file parsing."""
+            if self.reload_failure:
+                print(self.reload_failure, file=self.outfile)
+                return
+            super().do_errors(arg)
 
         def do_help(self, arg: str) -> None:
             """List commands, writing to outfile so one-shot JSON stays clean."""
@@ -697,6 +726,10 @@ def build_shell(
             in an invalid ledger that typed and stored queries then answered
             from as if nothing had changed.
             """
+            if self.reload_failure:
+                # Lenient sessions too: what is attached is the load before
+                # the failed one, not a partial answer to opt into.
+                raise protocol.LedgerError(self.reload_failure)
             if not self.allow_errors:
                 _gate([format_error(error, ledger_file=file) for error in self.context.errors], False)
             statement = ""
