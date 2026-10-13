@@ -309,7 +309,10 @@ row instead.
 If multiple importers recognize the export, select one with `--importer NAME`.
 An unknown name lists the available importer names; a recognized name whose
 importer rejects the file reports that separately.
-The configuration can import sibling modules. Importer output — including what a child
+The configuration can import sibling modules. It runs as a script, so import
+them by plain name (`import helper`), not relatively; a wrong name or a relative
+import is reported as `Importer failed (ImportError)`, and only a module that
+cannot be found is reported as a missing engine dependency. Importer output — including what a child
 process it runs prints — is captured in the preview's `importer_output` field
 so it does not corrupt JSON.
 For importer exceptions, put `--debug` before the command to see the traceback:

@@ -214,6 +214,14 @@ def answer(
         except EngineError:
             raise
         except ImportError as exc:
+            if not _is_missing_dependency(exc, config.parent):
+                # A wrong name or a relative import is a mistake in the
+                # configuration; nothing is missing, so nothing is to install.
+                raise LedgerError(
+                    f"Importer failed ({type(exc).__name__}): {exc}. The configuration runs as a script, so "
+                    "a module beside it is imported by its plain name ('import helper'), not relatively.",
+                    traceback=_traceback(exc),
+                ) from exc
             # This handler runs inside the engine, so the module is missing from
             # the engine's environment — not from whatever launched `bea`.
             # Installing it beside the frontend changes nothing here.
@@ -533,6 +541,15 @@ def answer(
         ledger_write.append(file, texts, allow_errors=allow_errors, expected=original, into=into, snapshot=snapshot)
         preview["written"] = len(texts)
     return preview
+
+
+def _is_missing_dependency(exc: ImportError, beside: Path) -> bool:
+    """Whether `exc` reports a module that cannot be found, rather than a
+    module beside the configuration that was imported the wrong way."""
+    if not isinstance(exc, ModuleNotFoundError):
+        return False
+    top = (exc.name or "").partition(".")[0]
+    return not top or not ((beside / f"{top}.py").is_file() or (beside / top).is_dir())
 
 
 def _importer(config: Path, source: Path, name: str | None) -> Any:
