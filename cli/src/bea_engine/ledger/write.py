@@ -1106,7 +1106,8 @@ def _preexisting_errors(
     could never be backfilled a purchase at a time (w5/150). An append never
     alters an existing line, so the same kind of error on the same directive
     is the same entry still failing. Errors on appended lines or without a
-    line have no such anchor and keep the exact key.
+    line have no such anchor; they match what is still left by the looser
+    identity of an account-level plugin error the append moved (w5/153).
     """
 
     def anchor(error: Any, key: tuple[str, int | None, str]) -> tuple[str, int, str] | None:
@@ -1120,12 +1121,13 @@ def _preexisting_errors(
             lineno -= 1
         return (name, lineno, _error_kind(error))
 
-    remaining: dict[tuple[str, int | None, str], list[tuple[str, int, str] | None]] = {}
+    remaining: dict[tuple[str, int | None, str], list[tuple[tuple[str, int, str] | None, tuple[str, str]]]] = {}
     for error in before:
         key = _error_key(error, {})
-        remaining.setdefault(key, []).append(anchor(error, key))
+        remaining.setdefault(key, []).append((anchor(error, key), _moved_error_key(error)))
     matched: set[int] = set()
     unmatched: list[tuple[int, tuple[str, int, str]]] = []
+    unanchored: list[tuple[int, tuple[str, str]]] = []
     for index, error in enumerate(after):
         key = _error_key(error, filenames)
         if remaining.get(key):
@@ -1133,10 +1135,25 @@ def _preexisting_errors(
             matched.add(index)
         elif (anchored := anchor(error, key)) is not None:
             unmatched.append((index, anchored))
-    anchors = Counter(anchored for anchoreds in remaining.values() for anchored in anchoreds if anchored is not None)
+        else:
+            unanchored.append((index, _moved_error_key(error)))
+    left = [pair for pairs in remaining.values() for pair in pairs]
+    anchors = Counter(anchored for anchored, _ in left if anchored is not None)
     for index, anchored in unmatched:
         if anchors[anchored] > 0:
             anchors[anchored] -= 1
+            matched.add(index)
+    # Only a before-error no anchored after-error spent can have moved.
+    moved: Counter[tuple[str, str]] = Counter()
+    for anchored, moved_key in left:
+        if anchored is None:
+            moved[moved_key] += 1
+        elif anchors[anchored] > 0:
+            anchors[anchored] -= 1
+            moved[moved_key] += 1
+    for index, moved_key in unanchored:
+        if moved[moved_key] > 0:
+            moved[moved_key] -= 1
             matched.add(index)
     return matched
 
@@ -1151,6 +1168,30 @@ def _error_kind(error: Any) -> str:
     """
     kind = type(error)
     return "booking" if kind.__module__.startswith("beancount.parser.booking") else kind.__name__
+
+
+def _unanchored(error: Any) -> bool:
+    """Whether a plugin reported this error against no ledger line at all (`<check_commodity>:0`)."""
+    lineno = error.source.get("lineno")
+    return not isinstance(lineno, int) or lineno <= 0
+
+
+def _moved_error_key(error: Any) -> tuple[str, str]:
+    """Identity of an account-level plugin error whose anchor an append moves.
+
+    `onecommodity` reports an account's violation at the account's latest
+    posting, so a later-dated transaction becomes the source of an error the
+    books already had; it matches on class and message wherever it now sits,
+    its words sorted because the plugin joins a set of currencies in arbitrary
+    order. `check_commodity` reports against no line and names whichever
+    account sorts first, so the message moves too: there the class and the
+    pseudo-file are all that is stable, and the before-count still caps how
+    many such errors a write may leave.
+    """
+    kind = type(error).__name__
+    if _unanchored(error):
+        return (kind, str(error.source.get("filename", "")))
+    return (kind, " ".join(sorted(re.split(r"[\s,]+", getattr(error, "message", str(error))))))
 
 
 def _destination_indent(content: str) -> str:
