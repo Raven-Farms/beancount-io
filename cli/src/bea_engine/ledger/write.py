@@ -402,9 +402,18 @@ def lock_file(file: Path) -> Iterator[None]:
     lock a different inode while a waiting writer still holds the old one.
     """
     directory = cache_dir() / "locks"
-    directory.mkdir(mode=0o700, parents=True, exist_ok=True)
     key = _lock_key(file)
-    fd = os.open(directory / f"{key}.lock", os.O_RDWR | os.O_CREAT, 0o600)
+    try:
+        directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+        fd = os.open(directory / f"{key}.lock", os.O_RDWR | os.O_CREAT, 0o600)
+    except OSError as exc:
+        # The filesystem refusing, not a broken ledger: exit 3 like the staging
+        # refusal below, whether the cache is read-only or a file is in the way.
+        raise AuthError(
+            f"Cannot take the write lock: the lock directory {directory} cannot be created or is not "
+            f"writable ({exc.strerror or exc}). Make it a writable directory or set XDG_CACHE_HOME to one "
+            "before retrying. Nothing was written."
+        ) from exc
     with os.fdopen(fd, "r+b") as stream:
         if sys.platform == "win32":
             import msvcrt

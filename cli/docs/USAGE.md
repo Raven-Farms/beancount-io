@@ -830,7 +830,10 @@ directory plus its case-folded name, so every spelling of one path — `Books`
 and `books` on a case-insensitive volume, a symlinked directory — takes the
 same lock. No lock files are created in ledger directories. Locks remain in
 the cache after release so waiting writers always coordinate through the same
-file. Stop any older CLI writers before deleting their leftover
+file. When that directory cannot be created or written — a read-only cache
+root, a file in the way — the write is refused with exit **3** naming it;
+make it writable or set `XDG_CACHE_HOME`. Stop any older CLI writers before
+deleting their leftover
 `.FILENAME.bea.lock` sidecars. An external edit detected before replacement
 produces exit **4** and is preserved. The locks coordinate `bea` writers only:
 an editor or script that does not take them is caught by the final
