@@ -689,7 +689,7 @@ without a Beancount.io login and never formats or commits them automatically.
 | Option | Description |
 |---|---|
 | `--limit / -l` | Positive maximum results (default 50). The envelope reports `truncated` when more exist. |
-| `--sort oldest/newest` | Transaction order, applied before the limit; default `newest`. Specify `oldest` in scripts that depend on ascending order. |
+| `--sort oldest/newest` | Date order, applied before the limit, so it also decides which end of the ledger a truncated listing keeps. `transaction` defaults to `newest`; the other ten types default to `oldest`, so pass `--sort newest` for the latest prices or balance assertions. Specify the order in scripts that depend on it. |
 | `--details` | Transactions: render Beancount syntax with every posting, cost/price, metadata, and source location |
 | `--flag` | Transactions: select a flag, such as `!` for entries needing review; applied before the limit. |
 | `--search TEXT` | Transactions: case-insensitive substring over payee and narration; repeatable (AND — every term must match a row), applied before the limit. |
@@ -707,7 +707,7 @@ without a Beancount.io login and never formats or commits them automatically.
 bea list transaction
 bea list transaction --sort newest --details --limit 10
 bea list transaction --account Expenses:Food --from-date 2026-01-01 --to-date 2026-03-31
-bea list price --currency BTC
+bea list price --currency BTC --sort newest
 bea list open
 bea list transaction --flag '!' --details
 bea list transaction --search netflix --tag trip
@@ -1632,8 +1632,8 @@ The envelope is always:
 Bounded lists also carry `limit`, and paged hosted lists (`cloud ledger list`) also carry the `page` that was served. Amounts use decimal **strings** — never floats — and dates are ISO `YYYY-MM-DD`.
 
 These run against a ledger with a 1000 USD opening balance in
-`Assets:Checking` and one 12.50 USD expense recorded first. Listings are newest
-first, and `net_profit` is positive for a gain (`data.net_profit_signs` says
+`Assets:Checking` and one 12.50 USD expense recorded first. Transaction listings
+are newest first, and `net_profit` is positive for a gain (`data.net_profit_signs` says
 `positive_for_gain`), so a period of spending only is negative:
 
 ```bash

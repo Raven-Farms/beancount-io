@@ -102,9 +102,10 @@ dropped statement tail still exits 2.
 bounds the answer and `truncated` says it cut something off. `--from-date` and
 `--to-date` bound the dates; `--account` is a case-insensitive substring on the
 types that name an account and `--currency` an exact match on the ones that name
-a currency. Transactions additionally take `--flag`, repeatable `--search`,
-`--tag` and `--link`, `--newest` to take the most recent rather than the
-earliest, and `--details` to add a `rendered` array of Beancount syntax.
+a currency. `--newest` takes the most recent rows of any type rather than the
+earliest. Transactions additionally take `--flag`, repeatable `--search`,
+`--tag` and `--link`, and `--details` to add a `rendered` array of Beancount
+syntax.
 
 Unlike `check`, a ledger that fails to load still answers: the load errors come
 back in `errors` alongside whatever was readable. Whether a partial listing is

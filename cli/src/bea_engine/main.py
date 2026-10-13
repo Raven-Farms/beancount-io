@@ -199,7 +199,7 @@ def list_directives(
     ] = None,
     newest: Annotated[
         bool,
-        typer.Option("--newest", help="Take the most recent transactions, not the earliest."),
+        typer.Option("--newest", help="Take the most recent directives, not the earliest."),
     ] = False,
     details: Annotated[
         bool, typer.Option("--details", help="Also render each transaction as Beancount syntax.")

@@ -253,7 +253,6 @@ def list_transactions(
     to_date: datetime.date | None = None,
     account: str | None = None,
     limit: int = 50,
-    newest: bool = False,
     flag: str | None = None,
     search: list[str] | None = None,
     tags: list[str] | None = None,
@@ -264,7 +263,7 @@ def list_transactions(
     wanted_tags = {_nfc(tag.lstrip("#")) for tag in tags or []}
     wanted_links = {_nfc(link.lstrip("^")) for link in links or []}
     results = []
-    for entry in reversed(entries) if newest else entries:
+    for entry in entries:
         if not isinstance(entry, Transaction):
             continue
         if flag is not None and entry.flag != flag:

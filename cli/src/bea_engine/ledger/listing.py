@@ -92,7 +92,7 @@ def answer(
     elif supported_filter == "type":
         filters["type_filter"] = kind
     if directive_type == "transaction":
-        filters |= {"flag": flag, "search": search, "tags": tags, "links": links, "newest": newest}
+        filters |= {"flag": flag, "search": search, "tags": tags, "links": links}
     if directive_type == "document":
         # The tree a document may live in, so its path lists as the ledger spells it.
         filters["root"] = Path(str(file)).resolve().parent
@@ -102,6 +102,10 @@ def answer(
         # Before the limit: truncation must count answerable rows, not rows
         # the filter is about to drop.
         entries = [entry for entry in entries if not reader.entry_generated(entry, directive_type)]
+    if newest:
+        # Every lister walks in order and stops at the limit, so the walk
+        # itself is what decides which end of the ledger a cut listing keeps.
+        entries = entries[::-1]
     items = getattr(reader, lister_name)(entries, limit=limit + 1, **filters)
     truncated = len(items) > limit
     items = items[:limit]

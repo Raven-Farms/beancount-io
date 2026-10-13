@@ -46,6 +46,14 @@ OnDiskOpt = Annotated[
 ]
 
 
+class ListSort(StrEnum):
+    oldest = "oldest"
+    newest = "newest"
+
+
+SortOpt = Annotated[ListSort, typer.Option("--sort", help="Date order, applied before the limit")]
+
+
 @dataclass(frozen=True)
 class _Spec:
     """One directive type: how to show it, and what filter it takes."""
@@ -403,6 +411,7 @@ def _account_command(name: str, spec: _Spec) -> Callable[..., None]:
         account: AccountFilterOpt = None,
         allow_errors: AllowErrorsOpt = False,
         on_disk: OnDiskOpt = False,
+        sort: SortOpt = ListSort.oldest,
     ) -> None:
         _run(
             name,
@@ -413,6 +422,7 @@ def _account_command(name: str, spec: _Spec) -> Callable[..., None]:
             to_date=parse_opt_date(to_date),
             account=account,
             on_disk=on_disk,
+            newest=sort == ListSort.newest,
         )
 
     return command
@@ -426,6 +436,7 @@ def _currency_command(name: str, spec: _Spec) -> Callable[..., None]:
         currency: CurrencyFilterOpt = None,
         allow_errors: AllowErrorsOpt = False,
         on_disk: OnDiskOpt = False,
+        sort: SortOpt = ListSort.oldest,
     ) -> None:
         _run(
             name,
@@ -436,6 +447,7 @@ def _currency_command(name: str, spec: _Spec) -> Callable[..., None]:
             to_date=parse_opt_date(to_date),
             currency=currency,
             on_disk=on_disk,
+            newest=sort == ListSort.newest,
         )
 
     return command
@@ -449,6 +461,7 @@ def _type_command(name: str, spec: _Spec) -> Callable[..., None]:
         type: TypeFilterOpt = None,
         allow_errors: AllowErrorsOpt = False,
         on_disk: OnDiskOpt = False,
+        sort: SortOpt = ListSort.oldest,
     ) -> None:
         _run(
             name,
@@ -459,6 +472,7 @@ def _type_command(name: str, spec: _Spec) -> Callable[..., None]:
             to_date=parse_opt_date(to_date),
             kind=type,
             on_disk=on_disk,
+            newest=sort == ListSort.newest,
         )
 
     return command
@@ -471,6 +485,7 @@ def _plain_command(name: str, spec: _Spec) -> Callable[..., None]:
         to_date: ToDateOpt = None,
         allow_errors: AllowErrorsOpt = False,
         on_disk: OnDiskOpt = False,
+        sort: SortOpt = ListSort.oldest,
     ) -> None:
         _run(
             name,
@@ -480,6 +495,7 @@ def _plain_command(name: str, spec: _Spec) -> Callable[..., None]:
             from_date=parse_opt_date(from_date),
             to_date=parse_opt_date(to_date),
             on_disk=on_disk,
+            newest=sort == ListSort.newest,
         )
 
     return command
@@ -498,11 +514,6 @@ for _name, _spec in SPECS.items():
     if _name == "transaction":
         continue
     list_app.command(_name, help=f"List {_name} directives from a .bean file.")(_COMMANDS[_spec.filter](_name, _spec))
-
-
-class TransactionSort(StrEnum):
-    oldest = "oldest"
-    newest = "newest"
 
 
 @list_app.command("transaction")
@@ -528,8 +539,8 @@ def transactions(
         typer.Option("--details", help="Render Beancount syntax with every posting, metadata, and source location"),
     ] = False,
     sort: Annotated[
-        TransactionSort, typer.Option("--sort", help="Transaction date order, applied before the limit")
-    ] = TransactionSort.newest,
+        ListSort, typer.Option("--sort", help="Transaction date order, applied before the limit")
+    ] = ListSort.newest,
 ) -> None:
     """List recent transactions and their amounts; --details adds metadata and source."""
     if flag is not None and len(flag) != 1:
@@ -547,6 +558,6 @@ def transactions(
         search=search,
         tags=tag,
         links=link,
-        newest=sort == TransactionSort.newest,
+        newest=sort == ListSort.newest,
         on_disk=on_disk,
     )

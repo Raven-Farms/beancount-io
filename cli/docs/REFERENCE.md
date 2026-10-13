@@ -649,6 +649,7 @@ Usage: bea list note [OPTIONS]
 | `--account, -a` | str |  | Filter by account (case-insensitive substring) |
 | `--allow-errors` | flag |  | Report partial data with errors on stderr; opts strict reads into partial answers |
 | `--on-disk` | flag |  | Only directives written in a ledger file (hide plugin-synthesized rows) |
+| `--sort` | choice: oldest \| newest | oldest | Date order, applied before the limit |
 
 ### `bea list balance`
 
@@ -666,6 +667,7 @@ Usage: bea list balance [OPTIONS]
 | `--account, -a` | str |  | Filter by account (case-insensitive substring) |
 | `--allow-errors` | flag |  | Report partial data with errors on stderr; opts strict reads into partial answers |
 | `--on-disk` | flag |  | Only directives written in a ledger file (hide plugin-synthesized rows) |
+| `--sort` | choice: oldest \| newest | oldest | Date order, applied before the limit |
 
 ### `bea list open`
 
@@ -683,6 +685,7 @@ Usage: bea list open [OPTIONS]
 | `--account, -a` | str |  | Filter by account (case-insensitive substring) |
 | `--allow-errors` | flag |  | Report partial data with errors on stderr; opts strict reads into partial answers |
 | `--on-disk` | flag |  | Only directives written in a ledger file (hide plugin-synthesized rows) |
+| `--sort` | choice: oldest \| newest | oldest | Date order, applied before the limit |
 
 ### `bea list close`
 
@@ -700,6 +703,7 @@ Usage: bea list close [OPTIONS]
 | `--account, -a` | str |  | Filter by account (case-insensitive substring) |
 | `--allow-errors` | flag |  | Report partial data with errors on stderr; opts strict reads into partial answers |
 | `--on-disk` | flag |  | Only directives written in a ledger file (hide plugin-synthesized rows) |
+| `--sort` | choice: oldest \| newest | oldest | Date order, applied before the limit |
 
 ### `bea list document`
 
@@ -717,6 +721,7 @@ Usage: bea list document [OPTIONS]
 | `--account, -a` | str |  | Filter by account (case-insensitive substring) |
 | `--allow-errors` | flag |  | Report partial data with errors on stderr; opts strict reads into partial answers |
 | `--on-disk` | flag |  | Only directives written in a ledger file (hide plugin-synthesized rows) |
+| `--sort` | choice: oldest \| newest | oldest | Date order, applied before the limit |
 
 ### `bea list pad`
 
@@ -734,6 +739,7 @@ Usage: bea list pad [OPTIONS]
 | `--account, -a` | str |  | Filter by account (case-insensitive substring) |
 | `--allow-errors` | flag |  | Report partial data with errors on stderr; opts strict reads into partial answers |
 | `--on-disk` | flag |  | Only directives written in a ledger file (hide plugin-synthesized rows) |
+| `--sort` | choice: oldest \| newest | oldest | Date order, applied before the limit |
 
 ### `bea list price`
 
@@ -751,6 +757,7 @@ Usage: bea list price [OPTIONS]
 | `--currency, -c` | str |  | Exact currency (case-insensitive) |
 | `--allow-errors` | flag |  | Report partial data with errors on stderr; opts strict reads into partial answers |
 | `--on-disk` | flag |  | Only directives written in a ledger file (hide plugin-synthesized rows) |
+| `--sort` | choice: oldest \| newest | oldest | Date order, applied before the limit |
 
 ### `bea list commodity`
 
@@ -768,6 +775,7 @@ Usage: bea list commodity [OPTIONS]
 | `--currency, -c` | str |  | Exact currency (case-insensitive) |
 | `--allow-errors` | flag |  | Report partial data with errors on stderr; opts strict reads into partial answers |
 | `--on-disk` | flag |  | Only directives written in a ledger file (hide plugin-synthesized rows) |
+| `--sort` | choice: oldest \| newest | oldest | Date order, applied before the limit |
 
 ### `bea list event`
 
@@ -785,6 +793,7 @@ Usage: bea list event [OPTIONS]
 | `--type, -t` | str |  | Exact event/custom type (case-insensitive) |
 | `--allow-errors` | flag |  | Report partial data with errors on stderr; opts strict reads into partial answers |
 | `--on-disk` | flag |  | Only directives written in a ledger file (hide plugin-synthesized rows) |
+| `--sort` | choice: oldest \| newest | oldest | Date order, applied before the limit |
 
 ### `bea list custom`
 
@@ -802,6 +811,7 @@ Usage: bea list custom [OPTIONS]
 | `--type, -t` | str |  | Exact event/custom type (case-insensitive) |
 | `--allow-errors` | flag |  | Report partial data with errors on stderr; opts strict reads into partial answers |
 | `--on-disk` | flag |  | Only directives written in a ledger file (hide plugin-synthesized rows) |
+| `--sort` | choice: oldest \| newest | oldest | Date order, applied before the limit |
 
 ### `bea list transaction`
 
