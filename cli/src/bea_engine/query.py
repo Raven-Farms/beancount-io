@@ -344,6 +344,10 @@ def _native_shell(source: str, *, interactive: bool, format: str, numberify: boo
     class GuardedShell(BQLShell):  # type: ignore[misc]
         source_file = file
         debug = False
+        replaying_init = False
+
+        def error(self, message: str) -> None:
+            _shell_error(self, message, super().error)
 
         def do_output(self, arg: str) -> None:
             """Send output to FILE or restore stdout, preserving source files."""
@@ -456,8 +460,12 @@ def _replay_init(shell: Any, output: TextIO | None = None) -> None:
     default = shell.outfile
     init = Path(INIT_FILENAME).expanduser()
     if init.is_file():
-        for line in init.read_text(encoding="utf-8").splitlines():
-            shell.onecmd(line)
+        shell.replaying_init = True
+        try:
+            for line in init.read_text(encoding="utf-8").splitlines():
+                shell.onecmd(line)
+        finally:
+            shell.replaying_init = False
     if output is not None:
         if shell.outfile is not default:
             shell.outfile.close()
@@ -559,6 +567,23 @@ def _run_stored(shell: Any, arg: str) -> None:
             details=[f"Stored queries in this ledger: {known}."],
         )
     shell.execute(query.query_string, default_close_date=query.date)
+
+
+def _shell_error(shell: Any, message: str, report: Callable[[str], None]) -> None:
+    """A shell command's own complaint; in a one-shot it is a usage error (w5/236).
+
+    Upstream prints `error: …` and returns — an unknown command, a bad
+    `.set` or `.format` — which is right at the prompt and while the init file
+    replays. A one-shot then reported success: exit 0, an empty JSON success
+    envelope, and an `--output` export replaced with nothing.
+    """
+    if shell.interactive or shell.replaying_init:
+        report(message)
+        return
+    raise protocol.UsageError(
+        f"Cannot run this shell command: {message}.",
+        details=["Run bea query .help to list the shell commands."],
+    )
 
 
 def _recovering(shell: Any, dispatch: Callable[[str], Any], line: str) -> Any:
@@ -731,6 +756,11 @@ def build_shell(
         reload_failure: str | None = None
         # `bea --debug`: a mistake at the prompt also prints its traceback.
         debug: bool = False
+        # The init file is being replayed: its mistakes stay upstream's notes.
+        replaying_init: bool = False
+
+        def error(self, message: str) -> None:
+            _shell_error(self, message, super().error)
 
         def do_output(self, arg: str) -> None:
             """Send output to FILE or restore the original output stream."""

@@ -170,8 +170,22 @@ def _refuse_multi_statement(query_string: str) -> None:
     Dot-commands are not BQL statements — `.run` legitimately replays a file
     of them — so only plain queries are split. A trailing `;` is not a second
     statement.
+
+    A shell command is one line, and everything after its name is its
+    argument: `.format csv` followed by a query never ran the query, printed
+    `error:` and exited 0 over an emptied `--output` (w5/236). Only `.explain`
+    and `.parse` take BQL, which may span lines.
     """
-    if query_string.strip().startswith("."):
+    stripped = query_string.strip()
+    if _is_shell_utility(stripped):
+        command = stripped.split(maxsplit=1)[0]
+        lines = [line for line in stripped.splitlines() if line.strip()]
+        if len(lines) > 1 and command.lstrip(".").lower() not in {"explain", "parse"}:
+            raise UsageError(
+                f"One command per invocation: `{command}` is a shell command and takes one line; "
+                f"got {len(lines)} lines. Run each command or query in its own `bea query` call."
+            )
+    if stripped.startswith("."):
         return
     statements = _split_statements(query_string)
     if len(statements) > 1:

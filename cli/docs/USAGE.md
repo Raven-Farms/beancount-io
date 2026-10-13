@@ -633,6 +633,10 @@ One-shot queries carry exactly one statement: an empty or whitespace-only
 query, a `.output` with no query, a `.run` naming no stored query, and two
 statements joined by `;` are each refused with exit 2 and the supported form.
 A trailing `;`, and semicolons inside quotes, are not second statements.
+A shell command such as `.tables` or `.format` is one line: further lines
+after it are refused the same way (only `.explain` and `.parse` take BQL that
+may span lines), and a command the shell rejects (an unknown name, a bad
+`.set` or `.format`) exits 2 without writing an `--output` export.
 The same one-statement rule covers native `--source` one-shots, the body of a
 stored `query` directive replayed by `.run NAME` or `.run *`, and BQL typed at
 the interactive prompt, where the refusal is an ordinary error and the shell
