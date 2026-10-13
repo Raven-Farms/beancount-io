@@ -625,8 +625,7 @@ def _spawn(command: list[str], env: dict[str, str] | None) -> int:
         returncode = captured.returncode
     else:
         with _stderr_minus_flush_epilogue() as stderr:
-            inherited = subprocess.run(command, env=env, check=False, stderr=stderr)
-        returncode = inherited.returncode
+            returncode = _run_inherited(command, env, stderr)
         if returncode > 0 and _downstream_pipe_closed():
             # The child wrote to the same closed pipe we would have. Upstream is
             # Python too, so it never sees SIGPIPE either and reports its own
@@ -636,6 +635,60 @@ def _spawn(command: list[str], env: dict[str, str] | None) -> int:
     if returncode < 0:
         return _died_on_signal(-returncode, command)
     return returncode
+
+
+def _run_inherited(command: list[str], env: dict[str, str] | None, stderr: int | None) -> int:
+    """`subprocess.run` on our own streams, except a request to stop us stops the child too.
+
+    A supervisor's SIGTERM or a hangup aimed at `bea` alone ended the frontend
+    at once and left `bean-check` or the helper loading the ledger to the end,
+    holding the inherited pipes open (w5/208). The signal is passed on, the
+    child gets `_CLEANUP_GRACE_SECONDS` to go, and we then die of the same
+    signal, so the caller sees the status it always did.
+
+    Not `_forwarding_teardown`: its handler waits for the child itself, which
+    cannot work while this thread is already blocked in that child's `wait`.
+    The child also stays in our process group, because it may own the terminal,
+    and Ctrl-C is left alone: the terminal delivers it to the child directly.
+    """
+    child: subprocess.Popen[bytes] | None = None
+    stopped: list[int] = []
+
+    def stop(started: subprocess.Popen[bytes], number: int) -> None:
+        started.send_signal(number)
+        reaper = threading.Timer(_CLEANUP_GRACE_SECONDS, started.kill)
+        reaper.daemon = True
+        reaper.start()
+
+    def forward(number: int, _frame: Any) -> None:
+        stopped.append(number)
+        if child is not None:
+            stop(child, number)
+
+    installed: list[tuple[int, Any]] = []
+    try:
+        for number in _STOP_SIGNALS:
+            try:
+                installed.append((number, signal.signal(number, forward)))
+            except (OSError, ValueError):  # As in `_forwarding_teardown`: an improvement, never a requirement.
+                continue
+        with subprocess.Popen(command, env=env, stderr=stderr) as child:
+            if stopped:  # Asked to stop while the child was still being started.
+                stop(child, stopped[0])
+            try:
+                return child.wait()
+            except BaseException:
+                child.kill()
+                raise
+    finally:
+        for number, previous in installed:
+            try:
+                signal.signal(number, previous)
+            except (OSError, ValueError):
+                pass
+        if stopped:
+            signal.signal(stopped[0], signal.SIG_DFL)
+            os.kill(os.getpid(), stopped[0])
 
 
 @contextmanager
@@ -775,6 +828,9 @@ _CRASH_SIGNALS = _signals("SIGSEGV", "SIGBUS", "SIGABRT", "SIGFPE", "SIGILL")
 #: Signals a supervisor, a container stop or `timeout` uses to end a command,
 #: and which the engine child has to hear about to clean up after itself.
 _FORWARDED_SIGNALS = _signals("SIGINT", "SIGTERM", "SIGHUP")
+
+#: The same for a child on inherited streams, which hears a terminal's Ctrl-C itself.
+_STOP_SIGNALS = _signals("SIGTERM", "SIGHUP")
 
 
 def _died_on_signal(number: int, command: list[str]) -> int:
