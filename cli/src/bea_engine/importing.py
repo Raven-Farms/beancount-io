@@ -264,6 +264,7 @@ def answer(
         finally:
             sys.path.pop(0)
 
+    entries = [_writable(entry, index + 1, importer, logs) for index, entry in enumerate(entries)]
     keys = _effective_id_keys(id_keys)
     identities: dict[tuple[str, str, str], Any] = {}
     fingerprints: dict[tuple[Any, ...], Any] = {}
@@ -574,6 +575,50 @@ def answer(
         ledger_write.append(file, texts, allow_errors=allow_errors, expected=original, into=into, snapshot=snapshot)
         preview["written"] = len(texts)
     return preview
+
+
+def _writable(entry: Any, row: int, importer: Any, logs: io.StringIO) -> Any:
+    """One importer row with integer metadata as numbers, proven printable.
+
+    An importer builds its entries in Python, where `check_number=1042` is an
+    `int`; Beancount's printer writes only `Decimal` numbers, so the row failed
+    as a bare `ValueError: Unexpected value: '1042'` (w5/227). A non-boolean
+    integer is the number it says, as `bea add transactions` already reads it.
+    Whatever still cannot be printed — a float, an object, a `custom` whose
+    values are plain tuples — is the importer's to fix, so the failure names
+    the importer and the row instead of reaching the generic handler.
+    """
+
+    def numbers(meta: Any) -> Any:
+        if not isinstance(meta, dict):
+            return meta
+        return {
+            key: Decimal(value)
+            if isinstance(value, int) and not isinstance(value, bool) and key != "lineno" and not key.startswith("__")
+            else value
+            for key, value in meta.items()
+        }
+
+    try:
+        entry = entry._replace(meta=numbers(entry.meta))
+        if hasattr(entry, "postings"):
+            entry = entry._replace(
+                postings=[posting._replace(meta=numbers(posting.meta)) for posting in entry.postings]
+            )
+        format_entry(entry)
+    except EngineError as exc:
+        _with_output(exc, logs)
+        raise
+    except Exception as exc:
+        raise _with_output(
+            LedgerError(
+                f"Importer {_name(importer)} row {row} cannot be written as a ledger entry "
+                f"({type(exc).__name__}): {exc}.",
+                traceback=_traceback(exc),
+            ),
+            logs,
+        ) from exc
+    return entry
 
 
 def _is_missing_dependency(exc: ImportError, beside: Path) -> bool:

@@ -499,7 +499,11 @@ archive naming, use `bea ingest` with an ingest script that calls
 `beangulp.Ingest(...)()`. Preview/apply into the ledger remains `bea import`.
 
 Native transaction and posting metadata are retained, including booleans,
-decimal numbers, dates, and amounts. Custom directive boolean/date values also
+decimal numbers, dates, and amounts. A Python `int` metadata value is written
+as a number (`check_number=1042` becomes `check_number: 1042`); a value
+Beancount cannot print, such as a `float` or an arbitrary object, stops the
+import with `Importer NAME row N cannot be written as a ledger entry` and
+writes nothing. Custom directive boolean/date values also
 survive listing and serialization. See [the JSON reference](USAGE.md#investment-postings-and-metadata)
 for the typed metadata representation used by `bea list transaction` and
 `bea add transactions`.
