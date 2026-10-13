@@ -93,6 +93,9 @@ def format_beans(
             raise UsageError("Name the files to format: reading stdin has nothing to compare or rewrite.")
         if ctx.json_output:
             _require_json_destination(in_place, output_file)
+        context.refuse_terminal_stdin(
+            "A ledger is required with --no-input. Name the files to format or pipe the ledger on stdin."
+        )
         _render(None, alignment, output_file)
         if ctx.json_output and output_file is not None:
             output.emit(_wrote(0, output_file), target={"stdin": STDIN})

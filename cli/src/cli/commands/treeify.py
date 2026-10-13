@@ -138,6 +138,11 @@ def treeify(ctx: typer.Context) -> None:
         forwarded = _without_output(parsed)
     if parsed is not None and not (parsed.help or parsed.pattern or parsed.filenames or parsed.loose_accounts):
         forwarded = [f"--pattern={_ACCOUNT_PATTERN}", *forwarded]
+    if parsed is not None and not parsed.help and not parsed.input:
+        # Upstream reads stdin when no file is named, a terminal included.
+        context.refuse_terminal_stdin(
+            "Input is required with --no-input. Name the file to treeify or pipe the text on stdin."
+        )
     completed = launch.capture_native("treeify", forwarded)
     if completed.returncode == 0 and _NO_COLUMN in (completed.stderr or ""):
         # Upstream echoes the input unchanged and calls that success; the

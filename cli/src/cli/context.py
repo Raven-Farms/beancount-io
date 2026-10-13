@@ -199,3 +199,14 @@ def configure(
 
 def current() -> RunContext:
     return _context
+
+
+def refuse_terminal_stdin(message: str) -> None:
+    """Refuse to read stdin when it is a terminal and nothing may wait for a human.
+
+    A pipe or a redirect is read as before, and an interactive run may still
+    type the input and end it with Ctrl-D; only the unattended run on a
+    terminal (`--no-input`, `--json`, `CI`) would otherwise sit there (w5/210).
+    """
+    if _stdin_is_a_terminal() and _context.no_input:
+        raise UsageError(message)

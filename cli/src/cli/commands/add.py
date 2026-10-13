@@ -484,6 +484,9 @@ def _load_transactions_json(from_file: Path) -> Any:
     stdin = str(from_file) == "-"
     name = "stdin" if stdin else str(from_file)
     if stdin:
+        context.refuse_terminal_stdin(
+            "Transactions are required with --no-input. Pipe the JSON array on stdin or name a file with --from PATH."
+        )
         buffer = getattr(sys.stdin, "buffer", None)
         data = buffer.read() if buffer is not None else sys.stdin.read().encode("utf-8")
     else:
