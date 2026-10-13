@@ -8,6 +8,7 @@ interpreter, requires `bea engine enable beangulp`, and forwards the subcommand.
 
 from __future__ import annotations
 
+import ast
 import os
 import re
 from pathlib import Path
@@ -158,6 +159,11 @@ def _refuse_config_only_script(script: Path) -> None:
     `bea import --config`; `bea ingest` needs a script whose `__main__`
     calls the Beangulp entrypoint. Anything else passes through untouched:
     only the known-silent shape is refused.
+
+    The shape is read from the syntax tree, not the spelling: an annotated
+    `CONFIG: list = [...]` is the same module, and a script with a `__main__`
+    block runs something even when the `Ingest` call sits in a module it
+    imports. A file Python cannot parse is left for Python to report.
     """
     try:
         text = script.read_text(encoding="utf-8", errors="replace")
@@ -165,12 +171,41 @@ def _refuse_config_only_script(script: Path) -> None:
         return
     if re.search(r"Ingest\s*\(", text):
         return
-    if re.search(r"^CONFIG\s*=", text, re.MULTILINE):
+    try:
+        body = ast.parse(text).body
+    except (SyntaxError, ValueError):
+        return
+    if any(_binds_config(node) for node in body) and not any(_is_main_guard(node) for node in body):
         raise UsageError(
             f"{script} looks like a `bea import --config` module (CONFIG = [...]). "
             "`bea ingest` needs a script that calls beangulp.Ingest(...)(); "
             "run `bea import --config` for this file instead."
         )
+
+
+def _binds_config(node: ast.stmt) -> bool:
+    """Whether a module-level statement assigns `CONFIG`, annotated or not."""
+    if isinstance(node, ast.Assign):
+        targets = node.targets
+    elif isinstance(node, ast.AnnAssign) and node.value is not None:
+        targets = [node.target]
+    else:
+        return False
+    return any(
+        isinstance(name, ast.Name) and isinstance(name.ctx, ast.Store) and name.id == "CONFIG"
+        for target in targets
+        for name in ast.walk(target)
+    )
+
+
+def _is_main_guard(node: ast.stmt) -> bool:
+    """Whether a module-level statement is `if __name__ == "__main__":`, either way round."""
+    if not isinstance(node, ast.If) or not isinstance(node.test, ast.Compare):
+        return False
+    operands = [node.test.left, *node.test.comparators]
+    return any(isinstance(operand, ast.Name) and operand.id == "__name__" for operand in operands) and any(
+        isinstance(operand, ast.Constant) and operand.value == "__main__" for operand in operands
+    )
 
 
 @ingest_app.command("identify", cls=ForwardingCommand, epilog=native_help("ingest identify"), context_settings=_EXTRA)
