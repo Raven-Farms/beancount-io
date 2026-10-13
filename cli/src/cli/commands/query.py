@@ -254,9 +254,11 @@ def query(
         _check_source_scheme(source)
         if output_file is not None:
             _refuse_source_alias(source, Path(output_file))
-        if not query_string:
+        if query_string is None:
             # The same missing-query policy as `--file`: a terminal opens the
             # shell only when prompting is allowed, and a pipe must carry BQL.
+            # Only an omitted argument asks for either; an explicit "" is a
+            # blank query, refused below like a whitespace-only one.
             if not sys.stdin.isatty():
                 query_string = sys.stdin.read()
             elif ctx.no_input:
@@ -278,7 +280,7 @@ def query(
         # Before anything is forwarded: the engine opens this path for write,
         # and opening the ledger under read would truncate the books.
         output.refuse_ledger_alias(Path(output_file), file)
-    if not query_string:
+    if query_string is None:
         if not sys.stdin.isatty():
             query_string = sys.stdin.read()
             if not query_string.strip():
