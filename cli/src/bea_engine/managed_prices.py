@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import os
 import re
+import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -268,7 +269,44 @@ def fetch_managed_price_feed(
     A frontend-supplied bearer is sent only to the canonical HTTPS price
     endpoint. No cookie or ledger identity is sent and redirects are refused.
     An unchanged feed answers 304 against `etag` without a body.
+
+    The exchange runs on a worker joined for `timeout_seconds`, because that
+    is the only place one wall-clock limit can cover all of it: the socket
+    timeout bounds a single read, and the status line and headers are read
+    inside the opener, where a server sending one header line every few
+    seconds keeps every read short for as long as it likes. An abandoned
+    worker closes its own response once the server lets go of it.
     """
+    outcome: list[NotModified | FetchedFeed | FetchFailed | BaseException] = []
+
+    def exchange() -> None:
+        try:
+            outcome.append(
+                _exchange(url, etag=etag, timeout_seconds=timeout_seconds, max_body_bytes=max_body_bytes, opener=opener)
+            )
+        except BaseException as error:
+            outcome.append(error)
+
+    worker = threading.Thread(target=exchange, name="managed-price-fetch", daemon=True)
+    worker.start()
+    worker.join(timeout_seconds)
+    if not outcome:
+        return FetchFailed(reason="timeout", message=f"timed out after {timeout_seconds} seconds")
+    result = outcome[0]
+    if isinstance(result, BaseException):
+        raise result
+    return result
+
+
+def _exchange(
+    url: str,
+    *,
+    etag: str | None,
+    timeout_seconds: int,
+    max_body_bytes: int,
+    opener: OpenerDirector | None,
+) -> NotModified | FetchedFeed | FetchFailed:
+    """The request, the answer and the capped body, each read bounded by the socket timeout."""
     request = Request(url, method="GET", headers={"Accept": "text/plain", "User-Agent": _USER_AGENT})
     trusted = isinstance(parse_managed_price_url(url, DEFAULT_ORIGINS), AllowedUrl)
     token = os.environ.get("BEA_MANAGED_PRICE_TOKEN", "") if trusted else ""
