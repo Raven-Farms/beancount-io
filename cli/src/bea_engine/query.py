@@ -1434,7 +1434,8 @@ def _plugin_directive(
         return None
     directive = re.compile(rf"""^\s*plugin\s+"{re.escape(name)}"(?:\s+"((?:[^"\\]|\\.)*)")?""")
     try:
-        lines = Path(ledger_file).read_text(encoding="utf-8", errors="replace").split("\n")
+        # From bytes: `read_text` would turn a lone `\r` into an extra line.
+        lines = Path(ledger_file).read_bytes().decode("utf-8", errors="replace").split("\n")
     except OSError:
         return None
     first: tuple[str, int] | None = None

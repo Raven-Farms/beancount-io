@@ -103,8 +103,10 @@ def _source_lines(filename: str) -> tuple[str, ...] | None:
     outlive the file it came from.
     """
     try:
+        # Decoded from bytes: `read_text` translates newlines, turning a lone
+        # `\r` (pasted text, `\r\r\n` endings) into a line the lexer never counted.
         text = (
-            Path(filename).read_text(encoding="utf-8", errors="replace").removeprefix("\ufeff")
+            Path(filename).read_bytes().decode("utf-8", errors="replace").removeprefix("\ufeff")
         )  # a BOM glued to the first line
         # The lexer numbers lines by `\n` alone; `splitlines` would also break
         # on U+2028, U+0085, form feed and friends inside strings or comments.

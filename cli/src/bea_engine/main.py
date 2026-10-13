@@ -800,7 +800,8 @@ def _written_document_path(entry: Any) -> str | None:
     if not isinstance(source, str) or not isinstance(lineno, int) or lineno < 1:
         return None
     try:
-        lines = Path(source).read_text(encoding="utf-8-sig").split("\n")
+        # From bytes: `read_text` would turn a lone `\r` into an extra line.
+        lines = Path(source).read_bytes().decode("utf-8-sig").split("\n")
     except (OSError, UnicodeDecodeError):
         return None
     if lineno > len(lines):
