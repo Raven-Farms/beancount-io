@@ -1114,7 +1114,8 @@ two — rejects its own row, naming the field, like any other invalid row.
 Every row is validated before anything is written. If any row is invalid the ledger is left byte-identical and the command exits **1**, listing the rejected rows. `--partial` appends the valid rows instead — and still exits **1**, so a partial write can never look like a clean one.
 
 A posting can also use `{"account":"Assets:Cash","amount":"-45 USD"}`.
-Omit `units`/`amount` for a balancing posting. Supplying both forms or unknown
+Omit `units`/`amount` for a balancing posting; it carries no `cost`, so a
+`cost` without `units`/`amount` rejects its row. Supplying both forms or unknown
 fields — at the transaction or posting level, or inside `units`, `cost`,
 `price` and `price_total` — is rejected. Schema errors show a human row number, field path,
 and example; `bea add transactions --help` contains a complete minimal batch.

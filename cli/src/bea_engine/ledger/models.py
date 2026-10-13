@@ -161,6 +161,19 @@ class Posting(BaseModel):
         value |= _posting_fragment(amount)
         return value
 
+    @model_validator(mode="after")
+    def cost_needs_units(self, info: ValidationInfo) -> Posting:
+        # Beancount's printer renders nothing for a cost beside missing units,
+        # so the lot would be dropped and the posting written as a bare
+        # balancing leg. Only a write is refused; a loaded row is never.
+        context = info.context
+        if isinstance(context, dict) and context.get("write_input") and self.cost is not None and self.units is None:
+            raise ValueError(
+                "cost on a posting without units: add units (or amount) for the lot, "
+                "or omit cost for a balancing posting."
+            )
+        return self
+
 
 _FRAGMENT_HELP = (
     "Use 'NUMBER CURRENCY' such as '-30 USD', optionally with a cost and price such as '3 HOOL {100 USD} @ 11 USD'."
