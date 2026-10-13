@@ -35,7 +35,6 @@
 
 ## Inbox
 
-- [154 — `add` suggests `bea add open --account …` for an account whose root the ledger does not have](./154.md) — minor CLI message bug; the suggested command fails with "Invalid account name", 15–20m.
 - [157 — `bea --json format … -o /dev/stdout` puts ledger text and the JSON envelope on the same stdout, exit 0](./157.md) — minor CLI automation bug; `-o -` control is refused with exit 2, 10m.
 - [163 — Prompts go to stdout, so a redirected stdout hides the question while `bea` waits](./163.md) — minor CLI interaction bug; `bea init b1 > log` shows a blank terminal and captures the prompt text, on-terminal control shows prompts, 20–30m.
 - [165 — `bea format --currency-column N` deletes a no-break space beside an amount and merges two accounts](./165.md) — major CLI format bug (narrow trigger); three accounts become two with exit 0, the same file without `-c` is refused, 30–40m.
