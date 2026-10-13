@@ -235,16 +235,9 @@ def answer(
     keys = _effective_id_keys(id_keys)
     identities: dict[tuple[str, str, str], Any] = {}
     fingerprints: dict[tuple[Any, ...], Any] = {}
-    open_currencies: dict[str, set[str] | None] = {}
+    open_currencies = _open_currencies(existing, Open)
     for entry in existing:
         entry = normalize_entry_strings(entry)
-        if isinstance(entry, Open):
-            if not entry.currencies:
-                open_currencies[entry.account] = None
-            else:
-                previous = open_currencies.get(entry.account, set())
-                if previous is not None:
-                    open_currencies[entry.account] = previous | set(entry.currencies)
         if isinstance(entry, Transaction) and any(p.account == account for p in entry.postings):
             for identity in _identities(entry, account, keys):
                 identities[identity] = entry
@@ -264,6 +257,8 @@ def answer(
     claimed = _claim_payeeless_ids(hashed, identities, account)
     batch_rows: dict[int, int] = {}
     first_uses = _first_uses(entries, Transaction)
+    # Blocked rows with what they were before the block, for the second look below.
+    held: list[tuple[dict[str, Any], Any, str, str | None]] = []
     for index, entry in enumerate(entries):
         entry = normalize_entry_strings(entry)
         status, reason, match = "new", None, None
@@ -377,6 +372,7 @@ def answer(
                 status, reason = "duplicate", "Identical directive already exists."
             other_entries.add(text)
         include = status == "new" or (status == "possible_duplicate" and duplicates == "include")
+        unblocked = (status, reason)
         if include and isinstance(entry, Transaction):
             blocked_reason = _blocked_reason(entry, open_currencies, roots, first_uses)
             if blocked_reason is not None:
@@ -407,6 +403,26 @@ def answer(
         if csv_mode:
             row_dict["rule"] = rule
         rows.append(row_dict)
+        if status == "blocked":
+            held.append((row_dict, entry, *unblocked))
+
+    # The ledger before the import is not the whole answer to "is this account
+    # open": `auto_accounts` opens whatever a transaction posts to, and an
+    # importer may return the `open` beside its first transaction. Blocking on
+    # the earlier ledger alone refused every row of a first import into such a
+    # ledger, with an `add open` remedy its convention never writes, while
+    # `bea add transaction` to the same account succeeded (w5/134). So the
+    # accounts are read again from the ledger as the import would leave it.
+    if any(posting.account not in open_currencies for _, entry, _, _ in held for posting in entry.postings):
+        proposal = [row["entry"] for row in rows if row["include"] or row["status"] == "blocked"]
+        after = _open_currencies(_entries_after(snapshot, target, original, proposal), Open)
+        for row_dict, entry, was, why in held:
+            still = _blocked_reason(entry, after, roots, first_uses)
+            if still is None:
+                row_dict.update(status=was, reason=why, include=True)
+            else:
+                row_dict["reason"] = still
+        texts = [row["entry"] for row in rows if row["include"]]
 
     shown = [row["entry"] for row in rows if row["include"] or row["status"] == "blocked"]
     proposed = ledger_write.appended_content(original, shown)
@@ -713,6 +729,37 @@ def _posting_currency(posting: Any, entry: Any) -> str | None:
         else:
             weights.add(other.units.currency)
     return str(next(iter(weights))) if len(weights) == 1 else None
+
+
+def _open_currencies(entries: list[Any], open_type: Any) -> dict[str, set[str] | None]:
+    """Per opened account, the currencies its `open` directives allow; None for any."""
+    opened: dict[str, set[str] | None] = {}
+    for entry in entries:
+        if not isinstance(entry, open_type):
+            continue
+        entry = normalize_entry_strings(entry)
+        if not entry.currencies:
+            opened[entry.account] = None
+        else:
+            previous = opened.get(entry.account, set())
+            if previous is not None:
+                opened[entry.account] = previous | set(entry.currencies)
+    return opened
+
+
+def _entries_after(snapshot: ledger_write.LedgerSnapshot, target: Path, original: bytes, texts: list[str]) -> list[Any]:
+    """The ledger's entries with `texts` appended, plugins applied; nothing is written.
+
+    Errors are not this load's business: an account nothing opens is simply
+    absent from the result, and the append is validated on its own afterwards.
+    """
+    from bea_engine import managed_load
+
+    ledger_write.refuse_cache_over_ledger(target, snapshot.contents)
+    with ledger_write.candidate_file(target, ledger_write.appended_content(original, texts)) as candidate:
+        with snapshot.staged(candidate, target) as (root, _):
+            entries, _, _ = managed_load.load_file(root)
+    return entries
 
 
 def _first_uses(entries: list[Any], transaction: Any) -> dict[str, tuple[Any, list[str] | None]]:
