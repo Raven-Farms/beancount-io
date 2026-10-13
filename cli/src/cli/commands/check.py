@@ -12,12 +12,14 @@ from cli import context, output
 from cli.engine import launch
 from cli.errors import BeaError, UsageError
 
-_URL_INCLUDE_RE = re.compile(r'^\s*include\s+"https?://', re.MULTILINE)
+_URL_INCLUDE_RE = re.compile(r'^\s*include\s*"(?i:https?)://', re.MULTILINE)
 """An include line native bean-check cannot resolve (w1/m29).
 
 A posting line can never match: account names cannot start with the lowercase
 `include` keyword, and a `;` comment never has the keyword first. Close
-enough to exact for routing the closure to the helper check.
+enough to exact for routing the closure to the helper check. The scheme is
+matched in any case and the keyword may touch its string, the way the loader
+and the include scanner read it (w5/192).
 """
 
 _PROSE_RE = re.compile(r'"(?:[^"\\]|\\.)*"|;[^\n]*|^\*[^\n]*', re.MULTILINE)
