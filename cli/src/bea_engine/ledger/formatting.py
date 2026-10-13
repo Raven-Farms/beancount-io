@@ -44,6 +44,25 @@ _MAX_ALIGNMENT_WIDTH = 200
 _FOREIGN_LINE_BREAKS = frozenset("\x0b\x0c\x1c\x1d\x1e\x85\u2028\u2029")
 
 
+def _aligner_would_misread(line: str) -> bool:
+    """Whether upstream's aligner sees whitespace in `line` that the lexer does not.
+
+    Besides the foreign line breaks, that is a space other than ` ` or tab
+    ahead of any comment or string: U+00A0, U+3000 and the like are part of
+    an account name to Beancount, while upstream's `\\s+` between account,
+    number and currency swallows them — merging two accounts (w5/165). Past a
+    `;` or `"` upstream copies the text through, so it stays alignable.
+    """
+    if not _FOREIGN_LINE_BREAKS.isdisjoint(line):
+        return True
+    for char in line:
+        if char in ';"':
+            break
+        if char.isspace() and char not in " \t\n":
+            return True
+    return False
+
+
 def _split_lines(text: str) -> list[str]:
     """Split on `\n` alone, keeping the ends — the lexer's idea of a line."""
     lines = [line + "\n" for line in text.split("\n")]
@@ -165,9 +184,10 @@ def _aligned(file: Path, text: str, widths: tuple[int | None, int | None, int | 
                 lines[lineno - 1] = "  " + lines[lineno - 1].lstrip(" \t")
             indented = None
     for index, line in enumerate(lines):
-        if not _FOREIGN_LINE_BREAKS.isdisjoint(line):
-            # Upstream would split this line where the lexer does not; keep it
-            # whole and out of the aligner instead.
+        if _aligner_would_misread(line):
+            # Upstream would split this line where the lexer does not, or
+            # delete a space the lexer reads as text; keep it whole and out
+            # of the aligner instead.
             protected[index] = line
     for index in protected:
         lines[index] = ";\n"
@@ -204,15 +224,16 @@ def string_continuation_lines(text: str) -> set[int]:
 
 
 def align_protected(text: str) -> str:
-    """`align_text` for `\\n`-separated text, leaving string content and foreign line breaks alone.
+    """`align_text` for `\\n`-separated text, leaving string content and foreign whitespace alone.
 
     String continuation lines and lines holding a character `splitlines`
-    would break on are swapped for a comment while upstream aligns, then put
-    back verbatim — the line count is unchanged either way (w1/136).
+    would break on, or a foreign space upstream would swallow, are swapped for
+    a comment while upstream aligns, then put back verbatim — the line count
+    is unchanged either way (w1/136).
     """
     lines = text.split("\n")
     protected = string_continuation_lines(text) | {
-        index for index, line in enumerate(lines) if not _FOREIGN_LINE_BREAKS.isdisjoint(line)
+        index for index, line in enumerate(lines) if _aligner_would_misread(line)
     }
     shielded = [";" if index in protected else line for index, line in enumerate(lines)]
     aligned = align_text("\n".join(shielded)).split("\n")

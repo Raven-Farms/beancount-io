@@ -446,7 +446,11 @@ old `bea format .`.
 The engine uses `bean-format`'s alignment for every destination, with two-space
 posting indents. Beancount's lexer distinguishes postings from metadata and
 multiline strings: metadata indentation and string contents are preserved,
-including string lines that look like postings. Stdout, `-o`, and `-i` produce
+including string lines that look like postings. A line holding a space other
+than a plain space or tab ahead of any comment or string — a pasted no-break
+space (U+00A0) or ideographic space (U+3000) beside an account, say — is kept
+byte for byte under every width option, because Beancount reads that character
+as part of the name; the rest of the file is still aligned. Stdout, `-o`, and `-i` produce
 the same text; `--check` and `--dry-run` compare the exact bytes `-i` would write.
 Stdout and `-o` remain text filters that accept syntax errors; the walking modes
 check parseability as described below. Run `bea check` to validate the ledger.
