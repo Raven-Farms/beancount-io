@@ -25,6 +25,7 @@ from beancount.core.data import (
     Pad,
     Posting,
     Price,
+    Query,
     Transaction,
 )
 from beancount.core.position import CostSpec, cost_to_str
@@ -89,6 +90,7 @@ class DirectivePrinter(EntryPrinter):
             Document: ("filename",),
             Event: ("type", "description"),
             Custom: ("type",),
+            Query: ("name", "query_string"),
         }.get(type(entry), ())
         if fields:
             entry = entry._replace(**{field: escape_string(getattr(entry, field)) for field in fields})
