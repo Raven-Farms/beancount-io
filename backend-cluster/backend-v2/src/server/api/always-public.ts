@@ -92,6 +92,11 @@ export const ALWAYS_PUBLIC: readonly AlwaysPublicEntry[] = [
     reason:
       "Domain-ownership proof for the official MCP Registry; the registry fetches it anonymously to check that whoever signs a publish under io.beancount/* controls this domain.",
   },
+  {
+    opId: "REST GET /.well-known/openai-apps-challenge",
+    reason:
+      "Domain-ownership proof for OpenAI's app directory; OpenAI fetches it anonymously to confirm the submitter controls this domain. It serves only the dashboard-issued token, never user data.",
+  },
 
   // --- Probes and operator surfaces -------------------------------------
   {

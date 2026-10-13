@@ -139,4 +139,17 @@ export function setWellKnownRoutes(router: Router, config: AppConfig): void {
     ctx.set("Cache-Control", "public, max-age=3600");
     ctx.body = `${proof}\n`;
   });
+
+  // Domain proof OpenAI's Plugins dashboard checks during an app submission:
+  // the issued token, verbatim. Unset → 404, like the registry proof.
+  router.get("/.well-known/openai-apps-challenge", (ctx) => {
+    const token = config.openAiApps.challengeToken;
+    if (!token) {
+      ctx.status = 404;
+      return;
+    }
+    ctx.type = "text/plain";
+    ctx.set("Cache-Control", "no-store");
+    ctx.body = token;
+  });
 }

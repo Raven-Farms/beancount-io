@@ -224,6 +224,14 @@ Unset either variable and its route returns 404, so a self-host without a
 store build does not advertise Beancount.io's apps. Beancount.io production
 uses `APP_LINKS_APPLE_TEAM_ID=PTLM7BZQMM`.
 
+### OpenAI apps domain proof
+
+Optional. `OPENAI_APPS_CHALLENGE` holds the token the OpenAI Plugins dashboard
+issues while it verifies the domain of an app submission. When set, this server
+answers `GET /.well-known/openai-apps-challenge` with exactly that token as
+`text/plain`. A value with whitespace inside it fails startup. Unset → 404;
+leave it unset on a self-host.
+
 ### MCP Registry domain proof
 
 Optional. `MCP_REGISTRY_AUTH_PROOF` holds the public half of the key that

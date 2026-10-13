@@ -12,6 +12,9 @@ import { setWellKnownRoutes } from "../well-known-route";
 const MCP_REGISTRY_AUTH_PROOF =
   "v=MCPv1; k=ed25519; p=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
 
+// A made-up token in the dashboard's shape — not Beancount.io's.
+const OPENAI_APPS_CHALLENGE = "oai-apps-challenge-0123456789abcdef";
+
 const config = {
   dashboard: { url: "https://beancount.io" },
   oauth: { issuer: "https://beancount.io" },
@@ -22,6 +25,7 @@ const config = {
     ],
   },
   mcpRegistry: { authProof: MCP_REGISTRY_AUTH_PROOF },
+  openAiApps: { challengeToken: OPENAI_APPS_CHALLENGE },
 } as unknown as AppConfig;
 
 /**
@@ -41,6 +45,7 @@ const unsetAppLinksConfig = {
     androidSha256Fingerprints: [],
   },
   mcpRegistry: { authProof: null },
+  openAiApps: { challengeToken: null },
 } as unknown as AppConfig;
 describe("well-known routes", () => {
   let server: http.Server;
@@ -207,6 +212,15 @@ describe("well-known routes", () => {
     expect(body).toBe(`${MCP_REGISTRY_AUTH_PROOF}\n`);
   });
 
+  it("serves the OpenAI apps challenge token verbatim as plain text", async () => {
+    const response = await fetch(`${origin}/.well-known/openai-apps-challenge`);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toMatch(/^text\/plain/);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    // The bare token: no newline, no wrapper.
+    expect(await response.text()).toBe(OPENAI_APPS_CHALLENGE);
+  });
+
   it("serves Android assetlinks as JSON", async () => {
     const response = await fetch(`${origin}/.well-known/assetlinks.json`);
     const body = (await response.json()) as Array<{
@@ -273,6 +287,11 @@ describe("well-known app-link routes without config", () => {
 
   it("returns 404 for the MCP Registry proof when none is configured", async () => {
     const response = await fetch(`${origin}/.well-known/mcp-registry-auth`);
+    expect(response.status).toBe(404);
+  });
+
+  it("returns 404 for the OpenAI apps challenge when none is configured", async () => {
+    const response = await fetch(`${origin}/.well-known/openai-apps-challenge`);
     expect(response.status).toBe(404);
   });
 });
