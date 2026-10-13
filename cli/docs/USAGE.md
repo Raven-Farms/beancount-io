@@ -519,7 +519,8 @@ alignment rule.
 In `--json` mode the destination has to be explicit, because stdout carries the
 envelope and nothing else: pass `-i`, `-o FILE`, `--check` or `--dry-run`.
 `-o -` is refused there for the same reason — it names the stream the envelope
-already owns — while plain `bea format -o -` remains the text export.
+already owns — and so are its device spellings `-o /dev/stdout` and
+`-o /dev/fd/1`, while plain `bea format -o -` remains the text export.
 
 A successful `-o FILE` answers with the envelope, so a script can confirm what
 was written without re-reading the directory:

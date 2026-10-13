@@ -32,9 +32,6 @@ FORMATS = ("text", "csv", "beancount")
 # the undotted forms). Any leading-`.` token also goes through the shell.
 _SHELL_ALIASES = frozenset({"clear", "errors", "exit", "help", "history", "parse", "quit", "run", "set"})
 
-#: `--output` spellings that name this process's own stdout.
-_STDOUT_PATHS = frozenset({"-", "/dev/stdout", "/dev/fd/1", "/proc/self/fd/1"})
-
 
 def _stdin_query() -> str:
     """Piped BQL, held to the UTF-8 rule `format -` and `--from -` apply (w5/155).
@@ -232,7 +229,7 @@ def query(
     or open the interactive shell when stdin is a terminal.
     """
     ctx = context.current()
-    if output_file in _STDOUT_PATHS:
+    if output_file in output.STDOUT_PATHS:
         # The engine's stdout is the envelope pipe, not the caller's, so a
         # device path for stdout means what `-` means: print the result here.
         output_file = None

@@ -54,6 +54,10 @@ def success(message: str | None = None) -> None:
         print(message)
 
 
+#: `--output` spellings that name this process's own stdout.
+STDOUT_PATHS = frozenset({"-", "/dev/stdout", "/dev/fd/1", "/proc/self/fd/1"})
+
+
 def write_data(text: str) -> None:
     """Write ledger text or a query result to stdout as UTF-8, whatever the locale.
 

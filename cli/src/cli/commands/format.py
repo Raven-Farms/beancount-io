@@ -523,7 +523,7 @@ def _render(file: Path | None, alignment: list[str], destination: Path | None) -
         stdin=_stdin_text() if file is None else None,
     )
     text = str(data["text"])
-    if destination is None or str(destination) == STDIN:
+    if destination is None or str(destination) in output.STDOUT_PATHS:
         output.write_data(text)
     else:
         # Staged beside the destination and swapped in, so a write that fails
@@ -552,12 +552,12 @@ def _require_json_destination(in_place: bool, output_file: Path | None) -> None:
 
     In `--json` mode stdout carries the envelope and nothing else, so the text
     needs a destination named outright rather than one guessed here — including
-    when that destination is upstream's `-`, which means the very stream the
-    envelope owns.
+    when that destination is upstream's `-` or a device path such as
+    `/dev/stdout`, which means the very stream the envelope owns.
     """
-    if output_file is not None and str(output_file) == STDIN:
+    if output_file is not None and str(output_file) in output.STDOUT_PATHS:
         raise UsageError(
-            "In --json mode, --output - would mix formatted ledger text into the JSON on stdout. "
+            f"In --json mode, --output {output_file} would mix formatted ledger text into the JSON on stdout. "
             "Name a file with --output FILE, or drop --json to write the text to stdout."
         )
     if not in_place and output_file is None:
