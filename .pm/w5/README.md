@@ -40,7 +40,6 @@
 - [109 — The query shell prints Python tracebacks for a mistyped date and an out-of-range ORDER BY index](./109.md) — minor CLI interactive-shell bug; one-shot control explains both, 20–30m.
 - [110 — `bea query ""` on a terminal opens the interactive shell instead of exiting 2](./110.md) — minor CLI usage bug; whitespace-only control exits 2, 10m.
 - [112 — A write re-reads every sibling ledger once per "unknown account" error, so one missing `open` stalls writes for minutes](./112.md) — major CLI quadratic-time bug; 2.3 s at 1,000 errors, 30.8 s at 4,000, `check` control 0.3 s, 30–45m.
-- [113 — Every write fails with a raw `PermissionError` reported as validation when the lock directory cannot be created](./113.md) — minor CLI exit-category bug; writable-cache and read controls pass, 20–30m.
 - [114 — With `BEA_FILE` set, `init`'s "Next:" command checks a different ledger than the one just created](./114.md) — minor CLI onboarding-hint bug, 15–20m.
 - [115 — Two concurrent `add balance` runs both exit 0, bypassing the duplicate and `--force` checks](./115.md) — minor CLI concurrency bug; sequential control refuses, repeated on two fresh copies, 20–30m.
 - [116 — The load cache does not notice a `document` file appearing or vanishing: `check` says valid while every write is refused](./116.md) — major CLI cache-staleness bug; both directions repeated with a cache-disabled control, fix with w5/111, 45–60m.
