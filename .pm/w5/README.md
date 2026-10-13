@@ -36,7 +36,6 @@
 ## Inbox
 
 - [175 — Read-only commands leave a world-readable full copy beside a private ledger once a load takes a second](./175.md) — major CLI privacy bug; `list note` on a 0600 60k-transaction ledger leaves a 0644 `.main.bean.picklecache`, small-ledger control leaves none, 45–60m.
-- [180 — A scalar subquery in a `WHERE` comparison exits 1 as a ledger validation failure with a raw `AttributeError`](./180.md) — minor CLI query bug; the SELECT-list control exits 2 with guidance, 10–15m.
 - [181 — Writers with different `XDG_CACHE_HOME` do not lock each other: both exit 0 and one write is lost](./181.md) — major CLI concurrency bug; 29 of 44 exit-0 writes missing across 12 eight-writer runs, shared-cache control loses none, 60–90m.
 - [182 — A writer behind a held lock waits forever with no message](./182.md) — minor CLI concurrency bug; silent after 15 s under `--json`, completes on release, 30–45m.
 - [183 — Unrelated concurrent writes fail with exit 4 when the command reads the ledger before taking the lock](./183.md) — minor CLI concurrency bug (owner call); 35 of 40 `add price` writers for different commodities exit 4, explicit-currency `add transaction` control all exit 0, 45–60m.
