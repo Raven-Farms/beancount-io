@@ -10,7 +10,7 @@ import typer
 
 from cli import context, output
 from cli.engine import launch
-from cli.errors import UsageError
+from cli.errors import BeaError, UsageError
 
 _URL_INCLUDE_RE = re.compile(r'^\s*include\s+"https?://', re.MULTILINE)
 """An include line native bean-check cannot resolve (w1/m29).
@@ -64,16 +64,25 @@ def check(ctx: typer.Context) -> None:
     # and every later read trusts that cache. A load made with the auto plugins
     # must neither be stored there nor answered from a default load's entry (w5/111).
     isolate = ["--no-cache"] if _enables_auto(ctx.args) else []
-    code = launch.run_native("bean-check", [*isolate, str(file), *ctx.args])
-    if code != 0:
-        raise typer.Exit(code)
     # bean-check does not cover document paths that resolve outside the ledger tree;
     # the helper check does, so copies that still resolve against another tree fail.
     # Only that rule: this second load knows none of bean-check's options, so
     # re-judging validity failed a ledger `--auto` had just accepted, and
     # `--version` — which loads nothing — went on to check the ledger (w5/088).
+    # It loads first because the helper drops a load cache that an attachment
+    # appearing or vanishing has made stale, which bean-check would trust (w5/116);
+    # its own finding still waits for bean-check to accept the ledger.
+    portable: BeaError | None = None
     if not _INFORMATIONAL & set(ctx.args):
-        launch.helper_json(["check", "--file", str(file), "--documents-only"])
+        try:
+            launch.helper_json(["check", "--file", str(file), "--documents-only"])
+        except BeaError as error:
+            portable = error
+    code = launch.run_native("bean-check", [*isolate, str(file), *ctx.args])
+    if code != 0:
+        raise typer.Exit(code)
+    if portable is not None:
+        raise portable
     raise typer.Exit(0)
 
 

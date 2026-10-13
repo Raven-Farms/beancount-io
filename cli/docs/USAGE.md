@@ -184,6 +184,10 @@ ledger's own files keeps working.
 `bea check --auto` (`-a`) always runs bean-check with `--no-cache`: the load
 cache does not record which plugins produced it, so a load made with the auto
 plugins is never stored for, or answered from, the cache other commands read.
+The cache does not track attachments either, so every local read re-checks
+them: when a `document` file appears or vanishes, or a `documents` directory
+gains or loses a file, the next `check` or write sees it without a ledger file
+being touched. A cached load that still matches the disk is served as before.
 `price export` also plans the directories it needs: a file standing where the
 export needs a directory (or a directory where it needs a file) is refused the
 same way, and `--force` does not remove it.

@@ -470,6 +470,10 @@ def _load_fresh(entry: Path, snapshot: LedgerSnapshot) -> tuple[Any, Any, Any]:
     that now exists, never invalidates it (w1/083). The snapshot has already
     expanded every include on disk; when it holds a file the cached load never
     read, the cache is stale — drop it and load again.
+
+    Nor is an attachment among those files, though the load judged whether each
+    `document` file exists and listed what a `documents` root holds. A cached
+    answer that no longer matches the disk is dropped the same way (w5/116).
     """
     from beancount import loader
 
@@ -481,10 +485,41 @@ def _load_fresh(entry: Path, snapshot: LedgerSnapshot) -> tuple[Any, Any, Any]:
     if cached:
         read = {os.path.normpath(name) for name in options.get("include") or ()}
         on_disk = {os.path.normpath(path) for path in snapshot.contents}
-        if not on_disk <= read:
+        if not on_disk <= read or _documents_moved(entries, errors, options):
             cache.unlink(missing_ok=True)
             entries, errors, options = loader.load_file(str(entry))
     return entries, errors, options
+
+
+def _documents_moved(entries: Any, errors: Any, options: Any) -> bool:
+    """Whether a load's document findings disagree with the files on disk now.
+
+    True when a `document` file's existence differs from what the load
+    reported, or a `documents` root would yield a file or an error the load
+    does not hold. A load made just now always answers False.
+    """
+    from beancount.core import getters
+    from beancount.core.data import Document
+    from beancount.ops import documents
+
+    declared = {item.filename for item in entries if isinstance(item, Document)}
+    findings = [error for error in errors if isinstance(error, documents.DocumentError)]
+    reported = {error.entry.filename for error in findings if isinstance(error.entry, Document)}
+    if reported != {name for name in declared | reported if not os.path.exists(name)}:
+        return True
+    roots = options.get("documents")
+    if not roots:
+        return False
+    accounts = getters.get_accounts(entries)
+    problems: set[str] = set()
+    for directory in map(os.path.normpath, roots):
+        found, root_errors = documents.find_documents(  # type: ignore[no-untyped-call]
+            directory, options["filename"], accounts
+        )
+        if not {item.filename for item in found} <= declared:
+            return True
+        problems.update(error.message for error in root_errors)
+    return problems != {error.message for error in findings if error.entry is None}
 
 
 @dataclass
