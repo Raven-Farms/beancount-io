@@ -58,6 +58,31 @@ def interactive() -> None:
             signal.signal(number, signal.SIG_DFL)
 
 
+@contextmanager
+def deferring_interrupt() -> Iterator[None]:
+    """Hold an interactive session's Ctrl-C until a ledger load has finished.
+
+    Python's handler raises inside whichever parser callback is running, and
+    the parser drops that directive and parses on: the session then answered
+    from a ledger one transaction short, and the load cache kept it for every
+    later command (w5/233). So the signal is only noted while the load runs,
+    and raised once the whole result exists, for the caller to throw away.
+    """
+    sigint = getattr(signal, "SIGINT", None)
+    if sigint is None or signal.getsignal(sigint) is not signal.default_int_handler:
+        # Not a session `interactive()` opened, or a load inside a guarded one.
+        yield
+        return
+    pressed: list[int] = []
+    signal.signal(sigint, lambda number, _frame: pressed.append(number))
+    try:
+        yield
+    finally:
+        signal.signal(sigint, signal.default_int_handler)
+    if pressed:
+        raise KeyboardInterrupt
+
+
 def _terminate(number: int, _frame: FrameType | None) -> None:
     global _received
     _received = number

@@ -666,6 +666,9 @@ cancels the current line and returns to `beanquery>`, as under `bean-query`;
 `.exit` (or `Ctrl-D`) ends the session with exit 0 and saves its history.
 A history file that cannot be loaded costs the history, not the session: the
 shell says so in one line on stderr and opens with an empty history.
+Pressed while the ledger is still loading, `Ctrl-C` takes effect once that load
+completes, so no session answers from a partly read ledger: at startup the
+shell exits 130 without opening, and a `.reload` returns to the prompt.
 
 Query tables preserve the precision of result values, including calculated
 amounts and commodity quantities. Interactive queries and the `ask` BQL tool

@@ -39,7 +39,7 @@ from functools import partial
 from pathlib import Path
 from typing import Any, TextIO, get_origin
 
-from bea_engine import protocol
+from bea_engine import protocol, stopping
 
 LEDGER_DSN = "beancount:"
 """A pathless beanquery DSN: the source attaches the entries handed to it instead of loading a file."""
@@ -360,6 +360,12 @@ def _native_shell(source: str, *, interactive: bool, format: str, numberify: boo
         def do_output(self, arg: str) -> None:
             """Send output to FILE or restore stdout, preserving source files."""
             _redirect_output(self, arg, sys.stdout, file)
+
+        def do_reload(self, arg: Any = None) -> None:
+            """Reload the Beancount input file."""
+            # Upstream loads the source itself; a Ctrl-C mid-parse waits for it.
+            with stopping.deferring_interrupt():
+                super().do_reload(arg)
 
         def do_run(self, arg: str) -> None:
             """Run a named stored query, or list them; missing names are usage errors."""
@@ -799,7 +805,10 @@ def build_shell(
             # entries beside an empty error list: the strict gate passed and
             # the session answered from the earlier load (w5/106).
             try:
-                loaded = load(file)
+                # A Ctrl-C mid-parse is raised here, after the load: the
+                # startup load ends the session and this one is not swapped in.
+                with stopping.deferring_interrupt():
+                    loaded = load(file)
             except Exception as exc:
                 if "entries" not in self.context.tables:
                     # The constructor's first load: there is no session to
