@@ -577,7 +577,7 @@ def list_customs(
         if wanted and wanted != _nfc(entry.type or "").casefold():
             continue
         values: list[CustomDirectiveValue] = []
-        for v in entry.values:
+        for v in entry.values or []:
             if isinstance(v.value, str) and v.dtype is str:
                 values.append(CustomDirectiveValueText(kind="text", value=v.value))
             elif isinstance(v.value, BcAmount):
