@@ -36,7 +36,6 @@
 ## Inbox
 
 - [182 — A writer behind a held lock waits forever with no message](./182.md) — minor CLI concurrency bug; silent after 15 s under `--json`, completes on release, 30–45m.
-- [199 — A successful `add` on a ledger with decomposed (NFD) account names makes stock `bean-check` fail](./199.md) — minor CLI interoperability gap (owner call; the NFC write is documented); stock `bean-check` passes before and fails after, NFC control stays valid, 30–45m.
 - [204 — `import --csv` compares column names byte for byte across Unicode normalizations, with no hint](./204.md) — minor CLI import bug; an identical-looking column "lacks", same-form control previews, 20m.
 - [205 — Remembered import settings are keyed by the typed spelling of the ledger path](./205.md) — minor CLI import bug; `books/` forgets what `Books/` remembered on a case-insensitive volume, 20m.
 - [212 — A bulk posting with `cost` but no `units` is written with the cost silently discarded, exit 0](./212.md) — minor CLI bug; lot becomes 1,000 USD cash, `price_total` control is refused, 15–20m.
