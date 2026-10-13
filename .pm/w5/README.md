@@ -40,7 +40,6 @@
 - [154 — `add` suggests `bea add open --account …` for an account whose root the ledger does not have](./154.md) — minor CLI message bug; the suggested command fails with "Invalid account name", 15–20m.
 - [157 — `bea --json format … -o /dev/stdout` puts ledger text and the JSON envelope on the same stdout, exit 0](./157.md) — minor CLI automation bug; `-o -` control is refused with exit 2, 10m.
 - [158 — `bea query -o out.json` without `--json` writes an ASCII text table into the `.json` file, exit 0](./158.md) — minor CLI export bug; `.tsv` control is refused with exit 2, 15m.
-- [159 — `treeify -o LINK` overwrites an existing `.bean` ledger without `--force` when the symlink's own name lacks the suffix](./159.md) — minor CLI data-safety bug; the ledger becomes an ASCII tree with exit 0, direct-path control is refused, 15m.
 - [160 — Forwarded `doctor` commands print Python's "Exception ignored … BrokenPipeError" on a closed pipe](./160.md) — minor CLI output bug; exit 141 is right but stderr is not silent, `list` control is, 20m.
 - [161 — Non-transaction listings are oldest-first, so the default `--limit` keeps the oldest rows and drops the current ones](./161.md) — minor CLI list bug (owner call on default order); `list price` on 60 quotes omits the ten newest and has no `--sort`, `list transaction` control is newest first, 30–60m.
 - [162 — `add open --booking` advertises AVERAGE, which the engine cannot book](./162.md) — minor CLI help bug; an AVERAGE account accepts buys and refuses every sale, FIFO control sells, 15–20m.
