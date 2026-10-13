@@ -503,12 +503,20 @@ def _load_fresh(entry: Path, snapshot: LedgerSnapshot) -> tuple[Any, Any, Any]:
     import wrote it again (w5/218). The snapshot's stats predate the load; a
     file that no longer matches them means the load overlapped a change, so
     its cache is not kept and the next read parses the files as they are.
+
+    Nor does the cache say who loaded it. `bean-check`, `bean-doctor` and an
+    editor's own Beancount read the bytes as they are, so a cache they wrote
+    still holds a decomposed payee, a BOM's syntax error and plugin errors
+    without their configs; served here, an NFC literal stopped matching until
+    a ledger file changed (w5/220). Only a cache this function wrote is trusted.
     """
     from beancount import loader
 
     from bea_engine.ledger.write import pickle_cache_of
 
     cache = pickle_cache_of(entry)
+    if cache.is_file() and not _engine_wrote(cache):
+        cache.unlink(missing_ok=True)
     cached = cache.exists()
     entries, errors, options = loader.load_file(str(entry))
     if cached:
@@ -519,6 +527,7 @@ def _load_fresh(entry: Path, snapshot: LedgerSnapshot) -> tuple[Any, Any, Any]:
             entries, errors, options = loader.load_file(str(entry))
     if _changed_since(snapshot):
         cache.unlink(missing_ok=True)
+    _mark_engine_cache(cache)
     return entries, errors, options
 
 
@@ -536,6 +545,34 @@ def _changed_since(snapshot: LedgerSnapshot) -> bool:
         ):
             return True
     return False
+
+
+#: What ends a load cache `_load_fresh` wrote. Unpickling stops at the pickle's
+#: own end, so upstream tools read a marked cache exactly as they did, and one
+#: they write themselves replaces the file, mark included.
+_ENGINE_CACHE_MARK = b"\nbea-engine-load\n"
+
+
+def _engine_wrote(cache: Path) -> bool:
+    """Whether a load cache ends with the mark of this module's own load."""
+    try:
+        with cache.open("rb") as stream:
+            stream.seek(-len(_ENGINE_CACHE_MARK), os.SEEK_END)
+            return stream.read() == _ENGINE_CACHE_MARK
+    except OSError:
+        return False
+
+
+def _mark_engine_cache(cache: Path) -> None:
+    """Mark the cache the load just made, if it was slow enough to leave one."""
+    if not cache.is_file() or _engine_wrote(cache):
+        return
+    try:
+        with cache.open("ab") as stream:
+            stream.write(_ENGINE_CACHE_MARK)
+    except OSError:
+        # Unmarked, it is loaded again next time rather than trusted.
+        pass
 
 
 def _documents_moved(entries: Any, errors: Any, options: Any) -> bool:

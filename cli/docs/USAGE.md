@@ -200,6 +200,10 @@ The cache does not track attachments either, so every local read re-checks
 them: when a `document` file appears or vanishes, or a `documents` directory
 gains or loses a file, the next `check` or write sees it without a ledger file
 being touched. A cached load that still matches the disk is served as before.
+Nor does it record who loaded it: `bea` reads a ledger BOM-stripped and
+NFC-normalized, Beancount's own tools read the bytes as they are. So `bea`'s
+reads serve only a cache they wrote themselves and load again over one left by
+`bean-check`, `bean-doctor` or an editor; those tools still read `bea`'s cache.
 That cache is a full copy of the ledger, written once a load has taken a second.
 `bea` keeps it out of the ledger's directory: under `$XDG_CACHE_HOME/bea/load-cache`
 (default `~/.cache/bea/load-cache`), a directory only its owner can enter
