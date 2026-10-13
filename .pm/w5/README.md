@@ -36,7 +36,6 @@
 ## Inbox
 
 - [148 — Bidirectional override characters pass the control-character sanitizer into the import preview and `list` tables](./148.md) — minor CLI output-safety bug; U+202E reaches the preview raw while ESC in the next row is escaped, 30m.
-- [150 — `--allow-errors` refuses a backdated purchase when the account already has a failing sale](./150.md) — major CLI write bug; the existing line-16 booking error is counted as new because its text lists lots, later-dated control exits 0, 30–45m.
 - [151 — CSV import on a ledger with a renamed expenses root fails unless `--default-account` is passed, blaming a flag the user never typed](./151.md) — minor CLI import bug; exit 2 over the built-in `Expenses:Uncategorized` default, explicit-flag control works, 20–30m.
 - [153 — `--allow-errors` refuses an ordinary transaction into an account that already has a `onecommodity` violation](./153.md) — minor CLI write bug; the existing error moves to the appended entry and is counted as new, other-account control exits 0, fix with 150, 30–45m.
 - [154 — `add` suggests `bea add open --account …` for an account whose root the ledger does not have](./154.md) — minor CLI message bug; the suggested command fails with "Invalid account name", 15–20m.
