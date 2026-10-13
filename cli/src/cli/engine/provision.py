@@ -319,7 +319,10 @@ def _packages_importable(python: Path, packages: list[str]) -> bool:
     if not packages:
         return False
     probe = ";".join(f"import {package}" for package in packages)
-    completed = subprocess.run([str(python), "-c", probe], capture_output=True, text=True, check=False)
+    # `-P`: `-c` would otherwise put the working directory first on the module
+    # path, so a `beanprice.py` in whatever folder bea ran from was executed
+    # and a folder of that name made the feature look installed (w5/174).
+    completed = subprocess.run([str(python), "-P", "-c", probe], capture_output=True, text=True, check=False)
     return completed.returncode == 0
 
 
