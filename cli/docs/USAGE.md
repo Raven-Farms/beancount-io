@@ -1043,7 +1043,9 @@ or cut short is the text typed — an invoice number `2024-001`, a zip code
 `02134`, a phone number `555-1234`, `1/3`, `1,000`, `5USD`, or a memo with a
 `;` in it — so a reference number is never stored as arithmetic. Inner quotes
 force a string, e.g. `--meta 'code:"1234"'`;
-`--meta 'note:""'` writes an empty string. Repeat `--meta` for different keys;
+`--meta 'note:""'` writes an empty string. The quoted text is stored as typed:
+only `\"` and `\\` are escapes, for a quote and a backslash, so a quoted
+Windows path or regular expression keeps every other backslash. Repeat `--meta` for different keys;
 keys must be distinct and cannot use the reserved source fields `filename` or
 `lineno`. A date-shaped value in any spelling Beancount reads (`2026-02-30`,
 `2026/02/30`, `2026-2-30`) that is not a real calendar day is refused rather

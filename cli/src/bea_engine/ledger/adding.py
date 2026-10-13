@@ -999,7 +999,14 @@ def _parse_metadata(items: list[str]) -> dict[str, Any]:
             # value dropped the `#` from a check number (w5/082).
             # The same holds for a value the grammar had to compute, normalize
             # or cut short to get there (w5/128): `2024-001` is not 2023.
-            metadata[key] = value if raw.startswith('"') or _is_typed_literal(raw, value) else raw
+            if literal := re.fullmatch(r'"((?:[^"\\]|\\.)*)"', raw):
+                # One whole quoted literal is the text between its quotes.
+                # The lexer's C-style escapes turned the `\t`, `\n` and `\f`
+                # of a Windows path into control characters and dropped every
+                # other backslash (w5/232); only `\"` and `\\` are escapes.
+                metadata[key] = re.sub(r'\\(["\\])', r"\1", literal.group(1))
+            else:
+                metadata[key] = value if raw.startswith('"') or _is_typed_literal(raw, value) else raw
         elif raw.startswith('"'):
             raise protocol.UsageError(
                 f"Invalid --meta {key!r}; close the quoted string or supply a bare value such as '{key}:hello'.",
