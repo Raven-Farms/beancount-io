@@ -243,7 +243,10 @@ def _transaction_table(headers: list[str], rows: list[tuple[list[str], list[tupl
         output.table(headers, single)
         return
     width = shutil.get_terminal_size().columns
-    if all(sum(output.display_width(cell) for cell in row) + 2 * (len(row) - 1) <= width for row in single):
+    # The table pads every column to its widest cell, so it is the padded
+    # width that has to fit, not each row by itself (w5/164).
+    padded = [max(output.display_width(cell) for cell in column) for column in zip(headers, *single, strict=True)]
+    if sum(padded) + 2 * (len(headers) - 1) <= width:
         output.table(headers, single)
         return
     # Columns, not code points: a CJK character takes two (w1/106).
