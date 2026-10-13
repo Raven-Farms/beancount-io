@@ -794,7 +794,14 @@ combining mark that has no precomposed letter. An account name written in a
 different Unicode normalization than the ledger uses — NFC where the ledger has
 NFD, which is what a name taken from a macOS file path looks like — resolves to
 the same account instead of a false unknown-account error, and the new
-directive is written NFC. Amount strings use decimal notation
+directive is written NFC. Only `bea` reads the two spellings as one account:
+when the ledger spells the name in another normalization than the new line,
+other Beancount tools such as stock `bean-check` report that line as an unknown
+account, so a ledger they accepted stops being valid for them. The write still
+succeeds, and says so in a note on stderr (`warnings` under `--json`) naming
+both spellings as escapes, for every `add`, bulk row, and import; re-save the
+ledger as NFC to keep it valid elsewhere — `format -i` does not renormalize.
+Amount strings use decimal notation
 (e.g. `1000`, not `1e3`) in command arguments, bulk JSON, and imports,
 including units, costs, and prices; scientific notation is refused on every
 path with the same message. Bulk JSON amounts and tagged `number`/`amount`

@@ -933,6 +933,52 @@ def unknown_account_is_normalization(account: str, accounts: Iterable[str]) -> s
     return None
 
 
+_PROSE_RE = re.compile(r'"(?:[^"\\]|\\.)*"|;[^\n]*|^\*[^\n]*', re.MULTILINE)
+"""String literals, `;` comments, and org-mode `*` heading lines: text that names no account."""
+
+
+def _account_tokens(text: str) -> set[str]:
+    """Non-ASCII tokens shaped like an account name, outside strings and comments."""
+    return {token for token in _PROSE_RE.sub(" ", text).split() if ":" in token.strip(":") and not token.isascii()}
+
+
+def respelled_account_notes(texts: Iterable[str], snapshot: LedgerSnapshot) -> list[str]:
+    """Say when new text spells an account in another normalization than the ledger does.
+
+    `bea` reads the NFC and NFD spellings of one name as one account, and the
+    writer emits NFC, so the write is valid here. Stock Beancount compares
+    code points: on a ledger that spells the account NFD, the new NFC line
+    refers to an account nobody opened, and `bean-check` fails on a file it
+    passed before the write (w5/199). Existing bytes are never renormalized
+    as a side effect, so the caller is told instead.
+
+    The snapshot is the ledger before the write, so every such write is
+    reported, not only the first one.
+    """
+    new = {token for text in texts for token in _account_tokens(text)}
+    if not new:
+        return []
+    used: set[str] = set()
+    for content in snapshot.contents.values():
+        if not content.isascii():
+            used |= _account_tokens(content.decode("utf-8", errors="ignore"))
+    notes = []
+    for account in sorted(new):
+        canonical = unicodedata.normalize("NFC", account)
+        other = next(
+            (name for name in sorted(used) if name != account and unicodedata.normalize("NFC", name) == canonical),
+            None,
+        )
+        if other is not None:
+            notes.append(
+                f"The new directive spells {canonical} as {ascii(account)} ({_normal_form(account)}) where the "
+                f"ledger has {ascii(other)} ({_normal_form(other)}). bea reads both as one account, but other "
+                f"Beancount tools such as bean-check read two and report the new line as an unknown account. "
+                f"Re-save the ledger in Unicode NFC to keep it valid for them."
+            )
+    return notes
+
+
 def validate_candidate(
     candidate: Path,
     file: Path,
@@ -1589,7 +1635,7 @@ def validate_append(
             candidate, target, allow_errors=allow_errors, snapshot=snapshot, stages_pad=_only_pads(texts)
         )
     snapshot.verify()
-    return warnings
+    return warnings + respelled_account_notes(texts, snapshot)
 
 
 _PAD_TEXT = re.compile(r"\s*\d{4}[-/]\d+[-/]\d+\s*pad\b")
@@ -1756,7 +1802,7 @@ def append(
             else:
                 replace_checked(target, candidate, original, original_stat)
             _COMMITS[0] += 1
-    return warnings
+    return warnings + respelled_account_notes(texts, snapshot)
 
 
 def _exact_metadata_number(number: Any) -> Any:
