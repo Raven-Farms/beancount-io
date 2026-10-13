@@ -76,8 +76,11 @@ def format_files(
         with ExitStack() as stack:
             for file in write.lock_order(targets):
                 stack.enter_context(write.lock_file(file))
+            # Once per directory, not per file: a sweep lists the whole
+            # directory, so a flat one of thousands of files went quadratic.
+            for directory in dict.fromkeys(file.parent for file in targets):
+                write.sweep_abandoned_candidates(directory)
             for file in targets:
-                write.sweep_abandoned_candidates(file.parent)
                 raw, text = _read(file)
                 aligned = _aligned(file, text, widths)
                 if aligned.encode("utf-8") == raw:
