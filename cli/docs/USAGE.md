@@ -172,8 +172,9 @@ destination is refused with exit **2**, before anything is written, when it
   entries. The refusal names the path and the include; `--force` does not get
   past it, and another suffix or a directory no include reaches is fine, or
 - would replace a file that did not come from this command: an existing
-  `.bean`/`.beancount` file for `treeify -o`, and any pre-existing file at a
-  path `price export` would write inside the destination directory.
+  `.bean`/`.beancount` file for `treeify -o` (named directly or reached
+  through a symlink), and any pre-existing file at a path `price export`
+  would write inside the destination directory.
 
 A refusal names the colliding path and leaves the destination byte-identical,
 its file list included. `--force` is the only way past the second case

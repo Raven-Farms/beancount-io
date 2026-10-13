@@ -549,14 +549,19 @@ def guard_output_destination(
     """`guard_forwarded_output` for a destination the caller already parsed."""
     for ledger in ledgers:
         refuse_ledger_alias(destination, ledger)
-    if (
-        refuse_existing_ledger_file
-        and not force
-        and destination.suffix.lower() in _LEDGER_SUFFIXES
-        and (destination.exists() or destination.is_symlink())
-    ):
+    if not refuse_existing_ledger_file or force:
+        return
+    # The write follows a link and replaces its target, so a link whose own
+    # name has no ledger suffix is judged by the file it resolves to.
+    existing = destination
+    if destination.suffix.lower() not in _LEDGER_SUFFIXES and destination.is_symlink():
+        try:
+            existing = destination.resolve()
+        except (OSError, RuntimeError):
+            return
+    if existing.suffix.lower() in _LEDGER_SUFFIXES and (existing.exists() or existing.is_symlink()):
         raise UsageError(
-            f"Already exists: {destination}. Pass --force to overwrite it; "
+            f"Already exists: {existing}. Pass --force to overwrite it; "
             "without it, an existing ledger file is never replaced."
         )
 
