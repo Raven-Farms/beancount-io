@@ -215,6 +215,48 @@ def test_bulk_partial_writes_the_other_rows_and_reports_the_zero_one(tmp_path: P
     assert _postings(tmp_path, ledger) == [["Lunch", "Expenses:Food", "12"], ["Lunch", "Assets:Cash", "-12"]]
 
 
+# A lone posting with no amount has nothing to balance against, so it is an
+# inferred zero too: it used to be written, then read back with no postings
+# (w5/186).
+LONE_ROW = {"date": "2024-03-01", "narration": "Only", "postings": [{"account": "Expenses:Food"}]}
+
+
+def test_single_add_refuses_a_lone_posting_without_an_amount(tmp_path: Path) -> None:
+    ledger = tmp_path / "main.bean"
+    ledger.write_text(FOOD)
+    before = ledger.read_bytes()
+    args = ("--json", "--file", str(ledger), "add", "transaction", "Only", "--date", "2024-03-01")
+    refused = _bea(tmp_path, *args, "-p", "Expenses:Food")
+    assert refused.returncode == 2, refused.stdout
+    assert "Refusing a zero-net transaction" in refused.stderr
+    assert ledger.read_bytes() == before
+
+    control = _bea(tmp_path, *args, "-p", "Expenses:Food 0 USD", "-p", "Assets:Cash")
+    assert control.returncode == 2, control.stdout
+    assert "Refusing a zero-net transaction" in control.stderr
+    assert ledger.read_bytes() == before
+
+
+def test_bulk_refuses_a_lone_posting_without_an_amount(tmp_path: Path) -> None:
+    ledger = tmp_path / "main.bean"
+    ledger.write_text(FOOD)
+    before = ledger.read_bytes()
+    refused = _bulk(tmp_path, ledger, [LONE_ROW])
+    assert refused.returncode == 1, refused.stdout
+    assert "Row 1: Refusing a zero-net transaction" in refused.stderr
+    assert ledger.read_bytes() == before
+
+    control = _bulk(tmp_path, ledger, [ZERO_ROW])
+    assert control.returncode == 1, control.stdout
+    assert "Row 1: Refusing a zero-net transaction" in control.stderr
+    assert ledger.read_bytes() == before
+
+    # A lone posting that does carry an amount is not this guard's business,
+    # and an ordinary inferred leg still writes.
+    assert "zero-net" not in _bulk(tmp_path, ledger, [{**LONE_ROW, "postings": [LUNCH_ROW["postings"][0]]}]).stderr
+    assert _bulk(tmp_path, ledger, [LUNCH_ROW]).returncode == 0
+
+
 def test_bulk_keeps_explicit_zeros_and_cost_aware_inference(tmp_path: Path) -> None:
     ledger = tmp_path / "main.bean"
     ledger.write_text(BROKER)

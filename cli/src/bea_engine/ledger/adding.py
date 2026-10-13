@@ -854,7 +854,9 @@ def _inferred_leg_is_zero(postings: list[Any]) -> bool:
                 weights[price.currency] += units.number * price.number
         else:
             weights[units.currency] += units.number
-    return bool(weights) and all(weight == 0 for weight in weights.values())
+    # No posting with an amount leaves nothing to balance against, so the lone
+    # amount-less leg is inferred as zero as well (w5/186).
+    return all(weight == 0 for weight in weights.values())
 
 
 def _total_price(posting_text: str) -> Any | None:
