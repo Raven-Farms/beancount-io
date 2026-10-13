@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import sys
 from collections.abc import Callable, Iterator
-from contextlib import ExitStack
+from contextlib import ExitStack, nullcontext
 from pathlib import Path
 from typing import Any
 
@@ -36,6 +36,10 @@ BOM_CHARACTER = "\ufeff"
 
 # Match the frontend's explicit-width ceiling without importing frontend code.
 _MAX_ALIGNMENT_WIDTH = 200
+
+#: Descriptors an in-place run needs besides its locks: the standard streams,
+#: the file being read, its staging copy, a directory listing, lazy imports.
+_DESCRIPTOR_HEADROOM = 64
 
 #: Characters `str.splitlines` treats as line breaks besides `\n` and `\r`.
 #: Beancount's lexer counts only `\n`, and upstream's aligner splits with
@@ -83,6 +87,9 @@ def format_files(
     Targets are resolved and sorted, and every lock is taken before the first
     byte is written, in the same global order `append` uses — so two
     concurrent runs, or a run racing an append, queue instead of deadlocking.
+    A lock is an open descriptor, so a run with more targets than the process
+    may hold open locks each file only while it is read and replaced instead:
+    one lock at a time cannot deadlock either (w5/207).
     """
     widths = (prefix_width, num_width, currency_column)
     targets = sorted({file.expanduser().resolve() for file in files})
@@ -93,23 +100,26 @@ def format_files(
     unchanged: list[str] = []
     try:
         with ExitStack() as stack:
-            for file in write.lock_order(targets):
+            locks = write.lock_order(targets)
+            together = _descriptors_allow(len(locks))
+            for file in locks if together else ():
                 stack.enter_context(write.lock_file(file))
             # Once per directory, not per file: a sweep lists the whole
             # directory, so a flat one of thousands of files went quadratic.
             for directory in dict.fromkeys(file.parent for file in targets):
                 write.sweep_abandoned_candidates(directory)
             for file in targets:
-                raw, text = _read(file)
-                aligned = _aligned(file, text, widths)
-                if aligned.encode("utf-8") == raw:
-                    unchanged.append(str(file))
-                    continue
-                original_stat = file.stat()
-                with write.candidate_file(file, aligned) as candidate:
-                    write.replace_checked(file, candidate, raw, original_stat)
-                    # Record the commit before staging cleanup can fail.
-                    changed.append(str(file))
+                with nullcontext() if together else write.lock_file(file):
+                    raw, text = _read(file)
+                    aligned = _aligned(file, text, widths)
+                    if aligned.encode("utf-8") == raw:
+                        unchanged.append(str(file))
+                        continue
+                    original_stat = file.stat()
+                    with write.candidate_file(file, aligned) as candidate:
+                        write.replace_checked(file, candidate, raw, original_stat)
+                        # Record the commit before staging cleanup can fail.
+                        changed.append(str(file))
     except (EngineError, OSError) as exc:
         error = exc if isinstance(exc, EngineError) else LedgerError(f"Could not finish in-place formatting: {exc}.")
         completed = {*changed, *unchanged}
@@ -123,6 +133,30 @@ def format_files(
             raise
         raise error from exc
     return {"changed": changed}
+
+
+def _descriptors_allow(locks: int) -> bool:
+    """Whether `locks` lock files can be open at once, raising the soft limit when that is all it takes.
+
+    macOS starts a process with a soft limit of 256 descriptors, well under
+    what a directory of ledger files can ask for, and a hard limit far above.
+    """
+    if sys.platform == "win32":
+        return True
+    import resource
+
+    needed = locks + _DESCRIPTOR_HEADROOM
+    soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+    if soft == resource.RLIM_INFINITY or needed <= soft:
+        return True
+    if hard != resource.RLIM_INFINITY and needed > hard:
+        return False
+    try:
+        resource.setrlimit(resource.RLIMIT_NOFILE, (needed, hard))
+    except (OSError, ValueError):
+        # An "unlimited" hard limit is still capped by the kernel's per-process maximum.
+        return False
+    return True
 
 
 def render_file(file: Path, widths: tuple[int | None, int | None, int | None]) -> str:

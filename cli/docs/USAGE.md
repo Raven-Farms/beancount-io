@@ -491,7 +491,11 @@ whole pass, so `format -i` is serialized against every other `bea` write —
 `add`, `add transactions`, `import --apply`, `ask` — and against another
 `format -i`: a concurrent append either lands before the formatting reads the
 file or waits for it, and can no longer be discarded by it. Two `format -i` runs
-on the same ledger both finish, and the second reports nothing to do.
+on the same ledger both finish, and the second reports nothing to do. A lock
+is an open file, so a directory with more targets than the process may hold
+open (macOS starts at 256) first raises its own limit, and past the hard limit
+locks each file only while that file is read and replaced; the number of files
+is not bounded either way.
 `--check` and `--dry-run` take no lock because they write nothing.
 
 A ledger saved with a UTF-8 BOM loads like any other: the mark is skipped on
