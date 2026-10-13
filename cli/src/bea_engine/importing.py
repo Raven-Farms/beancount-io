@@ -1252,7 +1252,9 @@ def _candidate_key(entry: Any, account: str) -> tuple[Any, ...]:
 
 
 def _source_amounts(entry: Any, account: str) -> str:
-    return ", ".join(f"{p.units.number} {p.units.currency}" for p in _source_postings(entry, account))
+    # `:f` keeps the digits as written and out of scientific notation, which
+    # `str()` chooses below one millionth (`-5.0E-7`) — a spelling input refuses.
+    return ", ".join(f"{p.units.number:f} {p.units.currency}" for p in _source_postings(entry, account))
 
 
 def _traceback(exc: BaseException) -> str:

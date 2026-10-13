@@ -811,8 +811,8 @@ integers — a JSON float such as `0.3` is refused naming the field, the row,
 and the string form to send, because the double already carries binary
 error. Bulk notation errors follow the normal row-validation and
 `--partial` rules. JSON output — listings, `add` results (custom values and
-balance tolerances included), typed metadata, query JSON and CSV, and balance
-and report JSON — spells amounts in fixed-point decimal notation
+balance tolerances included), typed metadata, import row amounts, query JSON
+and CSV, and balance and report JSON — spells amounts in fixed-point decimal notation
 (`0.00000001`, never `1E-8`) so tiny values can be fed back into input without
 losing precision. Native posting
 arithmetic such as `84/2 EUR` works. A literal zero divisor (`100/0`) is
