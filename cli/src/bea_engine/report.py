@@ -383,8 +383,39 @@ def _load(
             f"or a date range such as '2026-01 - 2026-06'. {exc}",
             ledger_errors=ledger_errors,
         ) from exc
+    if time is not None and _FISCAL_FILTER_RE.search(time):
+        _require_fiscal_year_end(ledger, file, time, ledger_errors)
     currencies = options["operating_currency"]
     return filtered, conversion or (currencies[0] if len(currencies) == 1 else "units"), ledger_errors
+
+
+# Fava's fiscal spellings: `FY2026`, `FY2026-Q1`, and the relative
+# `fiscal_year` / `fiscal_quarter`, alone or inside a range.
+_FISCAL_FILTER_RE = re.compile(r"\bfy\d{4}|fiscal_(?:year|quarter)", re.IGNORECASE)
+
+
+def _require_fiscal_year_end(ledger: Any, file: Path, time: str, ledger_errors: list[str]) -> None:
+    """Refuse a fiscal period when the ledger's `fiscal-year-end` did not parse.
+
+    Option parsing collects a bad value rather than raising and leaves the
+    calendar-year default in place, so `FY2026` would report January through
+    December with nothing saying the declared year end was dropped. Only a
+    fiscal filter reads the option; every other report is unaffected.
+    """
+    invalid = [
+        format_error(error, ledger_file=file)
+        for error in ledger.fava_options_errors
+        if error.entry.values and str(error.entry.values[0].value).replace("-", "_") == "fiscal_year_end"
+    ]
+    if invalid:
+        raise protocol.LedgerError(
+            f"The ledger's fiscal-year-end option is invalid, so the fiscal period in --time {time!r} is undefined.",
+            details=[
+                *invalid,
+                'Declare the year end as MM-DD, such as "06-30", or name the period by calendar dates.',
+            ],
+            ledger_errors=ledger_errors,
+        )
 
 
 def _unreportable_boundary(entries: Any) -> date | None:

@@ -1199,6 +1199,14 @@ whitespace-only `--account`, `--time`, or `--conversion` — or a blank `bea
 balance` argument — is refused (exit 2) naming the flag rather than silently
 falling back to the unfiltered default.
 
+A fiscal period (`--time FY2026`, `FY2026-Q1`, `fiscal_year`, `fiscal_quarter`)
+follows the ledger's `custom "fava-option" "fiscal-year-end" "MM-DD"`, and the
+calendar year when none is declared. If that option is declared but is not a
+real month and day (`"06-31"`, `"6-30"`), a fiscal period is refused (exit 1)
+naming the option's line, with or without `--allow-errors`, rather than
+reporting the calendar year under the fiscal label. Calendar periods are
+unaffected.
+
 A parent whose children cancel under the conversion — a long and a short lot at
 the same cost, two funds whose cost bases offset, or a 10.00 USD expense and its
 -10.00 USD refund — reports an explicit zero, in filtered views too,
