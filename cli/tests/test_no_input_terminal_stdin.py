@@ -80,18 +80,21 @@ def _on_a_terminal(
             if select.select([master], [], [], 0.1)[0]:
                 try:
                     chunk = os.read(master, 4096)
-                except OSError:  # The PTY closes when the child exits.
+                except OSError:  # Linux: EIO once the child has closed the terminal.
                     break
-                if not chunk:
+                if not chunk:  # macOS reports the same as end-of-file.
                     break
                 screen += chunk
             elif process.poll() is not None:
                 break
-        if process.poll() is None:
+        # The terminal closes while the child is still exiting, before it can be
+        # reaped, so only the wait decides whether the run ended.
+        try:
+            process.wait(timeout=max(deadline - time.monotonic(), 10))
+        except subprocess.TimeoutExpired:
             process.kill()
             process.wait(timeout=10)
-            raise AssertionError(f"bea {args} waited on the terminal: {screen!r}")
-        process.wait(timeout=10)
+            raise AssertionError(f"bea {args} waited on the terminal: {screen!r}") from None
     finally:
         os.close(master)
     return process.returncode, screen.decode().replace("\r\n", "\n")

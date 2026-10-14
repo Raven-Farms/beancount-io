@@ -131,8 +131,27 @@ def _read_until(master: int, expected: str) -> None:
 
 def _naming(ledger: Path) -> list[str]:
     """Live processes whose command line names the ledger."""
+    if sys.platform == "linux":
+        # procps reads `pid=,stat=,command=` as one column with a long header;
+        # /proc has the arguments whole, and a zombie's are empty.
+        found = []
+        for entry in Path("/proc").iterdir():
+            if not entry.name.isdigit():
+                continue
+            try:
+                arguments = (entry / "cmdline").read_bytes().split(b"\0")
+            except OSError:  # Gone since the directory was listed.
+                continue
+            command = " ".join(os.fsdecode(argument) for argument in arguments)
+            if str(ledger) in command:
+                found.append(f"{entry.name} {command}")
+        return found
     listing = subprocess.run(
-        ["ps", "-axo", "pid=,stat=,command="], capture_output=True, text=True, check=True, timeout=30
+        ["ps", "-axww", "-o", "pid=", "-o", "stat=", "-o", "command="],
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=30,
     ).stdout
     return [
         line.strip() for line in listing.splitlines() if str(ledger) in line and not line.split()[1].startswith("Z")

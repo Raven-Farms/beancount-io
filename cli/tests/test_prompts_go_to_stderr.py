@@ -79,7 +79,7 @@ def _init_on_a_terminal(
             if ready:
                 try:
                     screen += os.read(master, 4096)
-                except OSError:  # The PTY closes when the child exits.
+                except OSError:  # Linux: EIO once the child has closed the terminal.
                     break
             if answered < len(script):
                 marker, answer = script[answered]
@@ -88,11 +88,14 @@ def _init_on_a_terminal(
                     matched = found + len(marker)
                     os.write(master, (answer + "\n").encode())
                     answered += 1
-        if process.poll() is None:
+        # Linux closes the terminal (EIO) while the child is still exiting, before
+        # it can be reaped, so only the wait decides whether the run ended.
+        try:
+            out, err = process.communicate(timeout=max(deadline - time.monotonic(), 10))
+        except subprocess.TimeoutExpired:
             process.kill()
-            process.wait(timeout=10)
-            raise AssertionError(f"bea init {args} waited with nothing asked on the terminal: {screen!r}")
-        out, err = process.communicate(timeout=10)
+            process.communicate(timeout=10)
+            raise AssertionError(f"bea init {args} waited with nothing asked on the terminal: {screen!r}") from None
         while select.select([master], [], [], 0.1)[0]:
             try:
                 chunk = os.read(master, 4096)
