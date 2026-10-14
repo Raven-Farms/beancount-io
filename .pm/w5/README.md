@@ -36,7 +36,6 @@
 ## Inbox
 
 - [268 — Under a currency conversion, quiet interval rows give `{}` / `—` for income and expenses instead of the documented `{"USD": "0"}` / `0.00 USD`](./268.md) — minor CLI report bug; net profit zero-filled in the same row but income/expenses are `{}`, 20–30m.
-- [271 — `add balance` with a `~` tolerance leaves a formatted ledger failing `format --check`](./271.md) — minor CLI formatting bug; plain-amount control stays formatted, 30–40m.
 - [273 — Ctrl-C during `bea check` prints `Aborted!`, though the docs say an interrupt exits 130 without a message](./273.md) — minor CLI cosmetic bug; `query` control is silent, 20–30m.
 - [274 — `bea format --check DIR` silently skips a subdirectory it cannot read and reports the tree formatted](./274.md) — minor CLI bug; exit 0 "All 1 file(s) are formatted" with a skipped subtree, readable control exits 1, 30m.
 - [275 — `bea example` skips its date-range check for non-ISO dates and fails with `IndexError`](./275.md) — minor CLI bug; ISO-date control exits 2 with the documented message, 15–20m.
