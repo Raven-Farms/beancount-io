@@ -377,6 +377,21 @@ def _reads_header(source: Path, delimiter: str, headers: Any) -> bool:
     return found is not None and header_signature(found) == header_signature(headers)
 
 
+def _is_multibyte_utf8(source: Path) -> bool:
+    """Whether the file is valid UTF-8 that uses multi-byte sequences.
+
+    Such a file is not cp1252 or latin-1 text: decoding it with either
+    turns every accented letter into two or three wrong ones. Pure ASCII
+    reads the same under all three, so it settles nothing.
+    """
+    try:
+        data = source.read_bytes()
+        data.decode("utf-8")
+    except (UnicodeDecodeError, OSError):
+        return False
+    return not data.isascii()
+
+
 def _remember_csv(file: Path, spec: dict[str, Any]) -> bool:
     """Persist captured settings without re-reading a source already imported."""
     from cli.csv_mapper import header_signature
@@ -601,6 +616,17 @@ def import_entries(
                     # A typed decoding wins over the remembered one, for this
                     # run and — saved below — for the next flag-free one.
                     csv_request = f"{_strip_spec_keys(csv_request, {'encoding'})},encoding={csv_encoding}"
+                elif recalled_spec.encoding not in (None, "utf-8") and _is_multibyte_utf8(source):
+                    # Re-validated per file, like the date format: two exports
+                    # can share a header row without sharing an encoding, and
+                    # the remembered codec would write mojibake here (w5/281).
+                    # Only this run changes; the saved mapping keeps its key.
+                    csv_request = _strip_spec_keys(csv_request, {"encoding"})
+                    recall_notes.append(
+                        f"Remembered --csv encoding={recalled_spec.encoding} does not match {source.name}, "
+                        "which is UTF-8; read it as UTF-8. The remembered encoding still applies to files "
+                        "that are not UTF-8."
+                    )
                 elif recalled_spec.encoding is not None:
                     # Detection below decodes the file, so the remembered
                     # decoding has to be in force before it runs.

@@ -279,6 +279,10 @@ you passed is remembered, and even that is re-validated per file: when the new
 export unambiguously uses another convention, the import refuses and names the
 expected format, since two
 exports can share a header row without sharing a date convention. A
+remembered `encoding=cp1252` or `encoding=latin-1` is re-validated the same
+way: a later file that is valid UTF-8 with accented or other non-ASCII text is
+read as UTF-8 for that run, with a note, and the remembered encoding stays
+saved for files that are not UTF-8. A
 remembered `--rules` path that is missing or unreadable degrades to a warning
 and an unruled import rather than failing; that repair is saved only after a
 successful preview or apply. A changed header row matches
