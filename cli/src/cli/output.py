@@ -21,7 +21,7 @@ import unicodedata
 from collections.abc import Mapping, Sequence
 from decimal import Decimal
 from pathlib import Path
-from typing import Any, NoReturn
+from typing import Any, NoReturn, TextIO
 
 import typer
 
@@ -75,6 +75,18 @@ def write_data(text: str) -> None:
     if reconfigure is not None and codecs.lookup(stream.encoding).name != "utf-8":
         reconfigure(encoding="utf-8", errors=stream.errors)
     stream.write(text)
+
+
+def replay(text: str | None, stream: TextIO | None) -> None:
+    """Write a child's captured output to `stream`, if that stream exists.
+
+    Python sets `sys.stdout` / `sys.stderr` to None when the descriptor is
+    closed (`>&-`, as some schedulers start jobs). Prints already go nowhere
+    then; a direct `.write` raised `'NoneType' object has no attribute 'write'`
+    and turned a command that had succeeded into exit 1 (w5/258).
+    """
+    if text and stream is not None:
+        stream.write(text)
 
 
 def note(message: str) -> None:

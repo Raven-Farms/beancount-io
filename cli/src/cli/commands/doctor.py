@@ -283,14 +283,13 @@ def _forward(op: str, ctx: typer.Context) -> None:
 
 def _replay(completed: subprocess.CompletedProcess[str]) -> None:
     """Print captured upstream output back to its own streams, verbatim."""
-    if completed.stdout:
-        sys.stdout.write(completed.stdout)
-    if completed.stderr:
-        sys.stderr.write(completed.stderr)
+    output.replay(completed.stdout, sys.stdout)
+    output.replay(completed.stderr, sys.stderr)
     # A failure line follows on stderr; flush first so redirected streams keep
     # upstream's output ahead of the error that refers to it.
-    sys.stdout.flush()
-    sys.stderr.flush()
+    for stream in (sys.stdout, sys.stderr):
+        if stream is not None:  # A closed descriptor (`>&-`) holds nothing to flush.
+            stream.flush()
 
 
 def _forward_parse(op: str, ctx: typer.Context) -> None:
@@ -441,10 +440,9 @@ def _entries_differ(stderr: str) -> bool:
 
 def _replay_without_congratulations(completed: subprocess.CompletedProcess[str]) -> None:
     """Upstream's trace minus its success copy, which the errors above belie."""
-    for stream, write in ((completed.stdout, sys.stdout.write), (completed.stderr, sys.stderr.write)):
-        kept = "".join(line for line in stream.splitlines(keepends=True) if "Congratulations" not in line)
-        if kept:
-            write(kept)
+    for text, stream in ((completed.stdout, sys.stdout), (completed.stderr, sys.stderr)):
+        kept = "".join(line for line in text.splitlines(keepends=True) if "Congratulations" not in line)
+        output.replay(kept, stream)
 
 
 def _forward_directories(ctx: typer.Context) -> None:

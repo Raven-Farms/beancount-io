@@ -147,7 +147,7 @@ def treeify(ctx: typer.Context) -> None:
     if completed.returncode == 0 and _NO_COLUMN in (completed.stderr or ""):
         # Upstream echoes the input unchanged and calls that success; the
         # echo is not a tree, so it is not printed.
-        sys.stderr.write(completed.stderr or "")
+        output.replay(completed.stderr, sys.stderr)
         raise UsageError(
             "treeify found no hierarchical column to render (colon-separated names like Assets:Cash). "
             "Pipe balances or an account listing, not plain text."
@@ -155,10 +155,9 @@ def treeify(ctx: typer.Context) -> None:
     launch.check_native(completed, "treeify")
     if destination is not None:
         atomic_write(destination, completed.stdout or "", export=True)
-    elif completed.stdout:
-        sys.stdout.write(completed.stdout)
-    if completed.stderr:
-        sys.stderr.write(completed.stderr)
+    else:
+        output.replay(completed.stdout, sys.stdout)
+    output.replay(completed.stderr, sys.stderr)
 
 
 def _ledgers() -> list[Path]:

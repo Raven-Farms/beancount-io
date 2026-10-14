@@ -12,7 +12,13 @@ import typer
 from cli import context
 from cli.engine import launch
 from cli.errors import BeaError, ConflictError, UsageError, refuse_json
-from cli.output import check_output_destination, forwarded_option, refuse_include_claim, require_writable_destination
+from cli.output import (
+    check_output_destination,
+    forwarded_option,
+    refuse_include_claim,
+    replay,
+    require_writable_destination,
+)
 from cli.utils import atomic_write
 
 _FORCE = "--force"
@@ -112,10 +118,9 @@ def example(ctx: typer.Context) -> None:
     _refuse_invalid(completed.stderr or "", destination)
     if destination is not None:
         atomic_write(destination, completed.stdout or "", export=True)
-    elif completed.stdout:
-        sys.stdout.write(completed.stdout)
-    if completed.stderr:
-        sys.stderr.write(completed.stderr)
+    else:
+        replay(completed.stdout, sys.stdout)
+    replay(completed.stderr, sys.stderr)
 
 
 #: The shortest range bean-example reliably generates. Its rules schedule

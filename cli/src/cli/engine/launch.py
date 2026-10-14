@@ -673,10 +673,8 @@ def _spawn(command: list[str], env: dict[str, str] | None) -> int:
     """
     if _stream_is_captured(sys.stdout) or _stream_is_captured(sys.stderr):
         captured = subprocess.run(command, env=env, capture_output=True, text=True, check=False)
-        if captured.stdout:
-            sys.stdout.write(captured.stdout)
-        if captured.stderr:
-            sys.stderr.write(captured.stderr)
+        output.replay(captured.stdout, sys.stdout)
+        output.replay(captured.stderr, sys.stderr)
         returncode = captured.returncode
     else:
         with _stderr_minus_flush_epilogue() as stderr:
