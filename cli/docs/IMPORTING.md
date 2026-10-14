@@ -293,7 +293,12 @@ that directory cannot be read (wrong modes after a restore, or left
 root-owned by a privileged run), the import still runs — on the options you
 typed, an `importers.py` beside the root ledger, or the header row — with a
 stderr note (`Cannot read remembered import settings in <directory>`) that is
-also in the JSON `notes`, and that run is not remembered.
+also in the JSON `notes`, and that run is not remembered. When it cannot be
+written (a read-only config directory in a container or sandbox), the import
+still succeeds and says what to pass next time — `Could not remember the
+column mapping: <reason>. Pass --csv on the next import.`, or `Could not
+remember the importer path: <reason>. Pass --config on the next import.` — on
+stderr and in the JSON `notes` alike.
 
 ## A Python importer (`--config`)
 

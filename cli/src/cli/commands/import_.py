@@ -223,13 +223,15 @@ def _inferred_mapping(
     return inferred.spec
 
 
-def _remember_config(file: Path, config: Path) -> None:
+def _remember_config(file: Path, config: Path, notes: list[str]) -> None:
+    """Persist the importer path; a failed save is named in `notes` as well as on stderr."""
     record = _config_record(file)
     try:
         record.parent.mkdir(parents=True, exist_ok=True)
         atomic_write(record, json.dumps({"config": str(config)}))
     except OSError as exc:
-        output.note(f"Could not remember the importer path: {exc}. Pass --config on the next import.")
+        notes.append(f"Could not remember the importer path: {exc}. Pass --config on the next import.")
+        output.note(notes[-1])
 
 
 def _csv_record(file: Path, *, reading: bool = False) -> Path:
@@ -392,8 +394,12 @@ def _is_multibyte_utf8(source: Path) -> bool:
     return not data.isascii()
 
 
-def _remember_csv(file: Path, spec: dict[str, Any]) -> bool:
-    """Persist captured settings without re-reading a source already imported."""
+def _remember_csv(file: Path, spec: dict[str, Any], notes: list[str]) -> bool:
+    """Persist captured settings without re-reading a source already imported.
+
+    A failed save is named in `notes` as well as on stderr, so the JSON
+    envelope of the import that succeeded says its settings were not kept.
+    """
     from cli.csv_mapper import header_signature
 
     headers = spec.get("headers")
@@ -421,7 +427,8 @@ def _remember_csv(file: Path, spec: dict[str, Any]) -> bool:
             atomic_write(record, json.dumps({"sources": [*sources, spec]}))
         return True
     except OSError as exc:
-        output.note(f"Could not remember the column mapping: {exc}. Pass --csv on the next import.")
+        notes.append(f"Could not remember the column mapping: {exc}. Pass --csv on the next import.")
+        output.note(notes[-1])
         return False
 
 
@@ -997,14 +1004,18 @@ def import_entries(
     # carry a preview in error.result, but must preserve the previous memory.
     if memory_note is not None:
         csv_to_remember = config_to_remember = None
-    if csv_to_remember is not None and _remember_csv(file, csv_to_remember) and discarded_note is not None:
+    if (
+        csv_to_remember is not None
+        and _remember_csv(file, csv_to_remember, frontend_notes)
+        and discarded_note is not None
+    ):
         frontend_notes.append(discarded_note)
         output.note(discarded_note)
     engine_notes = [str(note) for note in preview.pop("notes", []) or []]
     for note in engine_notes:
         output.note(note)
     if config_to_remember is not None:
-        _remember_config(file, config_to_remember)
+        _remember_config(file, config_to_remember, engine_notes)
 
     if context.current().json_output:
         notes = [*frontend_notes, *engine_notes]

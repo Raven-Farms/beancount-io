@@ -63,7 +63,7 @@ def test_overlapping_writers_each_keep_their_entry(
     writers = [
         threading.Thread(
             target=lambda account=account: results.append(
-                import_._remember_csv(ledger, {"headers": HEADERS, "account": account, "mapping": MAPPING})
+                import_._remember_csv(ledger, {"headers": HEADERS, "account": account, "mapping": MAPPING}, [])
             )
         )
         for account in ACCOUNTS[:2]
@@ -82,9 +82,9 @@ def test_one_writer_after_another_keeps_both_entries(tmp_path: Path, bea_config_
     ledger.write_text(LEDGER)
 
     for account in ACCOUNTS[:2]:
-        assert import_._remember_csv(ledger, {"headers": HEADERS, "account": account, "mapping": MAPPING})
+        assert import_._remember_csv(ledger, {"headers": HEADERS, "account": account, "mapping": MAPPING}, [])
     # Re-remembering an account replaces its entry rather than adding one.
-    assert import_._remember_csv(ledger, {"headers": HEADERS, "account": ACCOUNTS[0], "mapping": MAPPING})
+    assert import_._remember_csv(ledger, {"headers": HEADERS, "account": ACCOUNTS[0], "mapping": MAPPING}, [])
 
     assert _remembered_accounts(_record(bea_config_dir)) == ["Assets:Checking", "Assets:Savings"]
 
