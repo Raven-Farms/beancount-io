@@ -36,7 +36,6 @@
 ## Inbox
 
 - [268 — Under a currency conversion, quiet interval rows give `{}` / `—` for income and expenses instead of the documented `{"USD": "0"}` / `0.00 USD`](./268.md) — minor CLI report bug; net profit zero-filled in the same row but income/expenses are `{}`, 20–30m.
-- [269 — `BEA_ENGINE_PYTHON` naming an interpreter without Beancount gives a raw traceback that never names the variable, and `bea add` exits 4 "outcome is unknown"](./269.md) — minor CLI bug; traceback and a false exit 4, `check` control names the variable, 30–45m.
 - [270 — Under `--json`, plugin output is discarded, although the docs say it goes to stderr](./270.md) — minor CLI docs/behaviour mismatch (owner call); text-mode control shows both markers on stderr, 15m.
 - [271 — `add balance` with a `~` tolerance leaves a formatted ledger failing `format --check`](./271.md) — minor CLI formatting bug; plain-amount control stays formatted, 30–40m.
 - [272 — `--meta 'check:1045/0'` crashes the engine: exit 4 "the outcome is unknown"](./272.md) — minor CLI bug; engine crash at exit 4, posting-path control exits 2, fix with 128, 15m.
