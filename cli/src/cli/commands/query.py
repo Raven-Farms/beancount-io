@@ -59,10 +59,12 @@ def _stdin_query() -> str:
     return text
 
 
-#: Schemes `bean-query` resolves to `beanquery.sources.<scheme>`; anything else
-#: dies there with a ModuleNotFoundError traceback, so the frontend refuses it
-#: first. A bare path (no scheme) loads as a ledger.
-_SOURCE_SCHEMES = ("beancount", "csv", "memory", "test")
+#: Schemes `bean-query` can attach from `beanquery.sources.<scheme>`; anything
+#: else dies there with a ModuleNotFoundError traceback, so the frontend refuses
+#: it first. `memory` is left out: upstream ships the module without an
+#: `attach`, so it ended in an AttributeError traceback while the refusal for
+#: any other scheme recommended it (w5/288). A bare path loads as a ledger.
+_SOURCE_SCHEMES = ("beancount", "csv", "test")
 
 
 def _check_source_scheme(source: str) -> None:
@@ -113,8 +115,8 @@ def _refuse_source_alias(source: str, destination: Path) -> None:
     Native Beanquery opens the output itself, so the guard `--file` runs never
     ran here: `--source main.bean --output main.bean` replaced the books with a
     text table and exited 0. The file is resolved the way upstream does — a
-    bare path, or the path of a `beancount:` / `csv:` URI; `memory:` and
-    `test:` name no file — and a Beancount ledger is checked with its includes.
+    bare path, or the path of a `beancount:` / `csv:` URI; `test:` names no
+    file — and a Beancount ledger is checked with its includes.
     """
     from urllib.parse import urlparse
 
