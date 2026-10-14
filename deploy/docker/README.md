@@ -19,9 +19,9 @@ published on the host and obtains and renews TLS certificates automatically.
 - Inbound TCP 80 and 443. UDP 443 enables HTTP/3 but is optional.
 - Enough resources to build three Node images and run eight long-lived
   containers. Start with 4 GB RAM and monitor the host under your workload.
-- At least 50 GB of free disk before the first build. The current backend
-  Dockerfile installs its full dependency tree, so its image and BuildKit cache
-  alone can consume tens of gigabytes; budget additional space for ledger data.
+- At least 20 GB of free disk before the first build. The backend image
+  carries its full dependency tree (about 4.5 GB), and the build needs headroom
+  for intermediate layers; budget additional space for ledger data.
 
 Caddy's public certificate flow requires the DNS records to resolve to this
 host and ports 80/443 to be reachable. If another reverse proxy already owns

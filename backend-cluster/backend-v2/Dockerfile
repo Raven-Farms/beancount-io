@@ -11,7 +11,11 @@
 
  # Install dependencies (generate lockfile if needed)
  # Note: Peer dependency warnings for @as-integrations/koa are expected and non-blocking
- RUN yarn install
+ # Clear the download caches in the same layer: they are never read at runtime
+ # and otherwise add ~10 GB to the image.
+ RUN yarn install && \
+     yarn cache clean && \
+     rm -rf /usr/local/share/.cache /root/.cache /tmp/*
 
  # Copy source code
  COPY . .
