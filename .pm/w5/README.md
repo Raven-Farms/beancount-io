@@ -36,7 +36,6 @@
 ## Inbox
 
 - [233 — Ctrl-C while the query shell loads the ledger drops a transaction, and the damaged load is cached so every later command fails](./233.md) — major CLI data-integrity bug; shell answers 39,999 of 40,000 and later `check` exits 1, no-interrupt control correct, 60–90m.
-- [243 — `--offline`, `--strict` and `--strict-prices` placed after the command get no "place it before the command" hint](./243.md) — minor CLI cosmetic bug; `--json` control gets the hint, 5–10m.
 - [244 — The import preview diff prints existing ledger lines raw, so escape sequences in the ledger's last lines reach the terminal](./244.md) — minor CLI output-safety bug; six raw ESC bytes on a PTY, clean-ledger control emits none, 20–30m.
 - [245 — `bea query -f csv` piped or redirected silently strips escape sequences from the data, while `-o FILE` keeps them and a terminal receives them raw](./245.md) — minor CLI export bug; pipe drops three sequences that `-o` keeps, text-format control consistent, 20–30m.
 - [246 — Tables count zero-width marks as one column: Thai, Devanagari and emoji rows are padded short, and truncation cuts inside emoji sequences](./246.md) — minor CLI cosmetic bug; columns shift 1–3 cells and a ZWJ emoji is cut mid-sequence, ASCII control aligned, 20–30m.
