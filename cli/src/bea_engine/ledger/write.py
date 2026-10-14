@@ -243,13 +243,24 @@ def staged_include(stack: ExitStack, includer: Path, targets: Sequence[Path]) ->
     through one staged file beside the includer that only lists them, in
     order, so the includer's own line count never changes.
     """
+    if len(targets) == 1:
+        return literal_include(targets[0])
+    listing = "".join(f"include {literal_include(target)}\n" for target in targets)
+    return literal_include(stack.enter_context(candidate_file(includer, listing)))
+
+
+def literal_include(path: Path | str) -> str:
+    """The quoted `include` target that reaches exactly the file at `path`.
+
+    Beancount globs every include string, so a resolved path written back as
+    it is spelled stops naming its file once the name holds `[`, `*` or `?`:
+    `2024 [old].bean` read as a character class that matched nothing, and
+    `q?.bean` also took in the `q2.bean` beside it (w5/247).
+    """
     from beancount.utils import misc_utils
 
     escape_string: Callable[[str], str] = misc_utils.escape_string
-    if len(targets) == 1:
-        return f'"{escape_string(str(targets[0]))}"'
-    listing = "".join(f'include "{escape_string(str(target))}"\n' for target in targets)
-    return f'"{escape_string(str(stack.enter_context(candidate_file(includer, listing))))}"'
+    return f'"{escape_string(glob.escape(str(path)))}"'
 
 
 def _included_new_file(target: Path, pattern: str) -> bool:

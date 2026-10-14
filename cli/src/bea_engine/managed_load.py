@@ -32,7 +32,7 @@ import shutil
 import sys
 import time
 import unicodedata
-from collections.abc import Callable, Iterator
+from collections.abc import Iterator
 from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
@@ -692,12 +692,9 @@ def _rewrite_includes(
     unavailable comment with a loader error naming the include as written,
     its file and line, and the cause. Anything else stays byte-identical.
     """
-    from beancount.utils import misc_utils
-
     from bea_engine.ledger.text import iter_includes
-    from bea_engine.ledger.write import staged_include
+    from bea_engine.ledger.write import literal_include, staged_include
 
-    escape_string: Callable[[str], str] = misc_utils.escape_string
     by_target = {include.target: source for source in pending for include in source.includes}
     content = original
     for span in sorted(iter_includes(content), key=lambda item: item.start, reverse=True):
@@ -715,7 +712,7 @@ def _rewrite_includes(
         if blob is not None:
             if (str(path), span.line) in primary:
                 _, _, feed_path = effective[source.url]
-                replacement = f'"{escape_string(str(feed_path))}"'
+                replacement = literal_include(feed_path)
                 content = content[: span.start] + replacement.encode() + content[span.end :]
             else:
                 content = _swap_line(content, span.line, f"{_ALREADY_INCLUDED_LINE}\n".encode())
@@ -1256,11 +1253,9 @@ def _rewrite_export_includes(
     a comment on its own line, as the load treats it — and anything the loader
     left unresolved stays byte-identical so stock tools report it the same way.
     """
-    from beancount.utils import misc_utils
-
     from bea_engine.ledger.text import iter_includes
+    from bea_engine.ledger.write import literal_include
 
-    escape_string: Callable[[str], str] = misc_utils.escape_string
     content = original
     dest = destinations[path]
     for span in sorted(iter_includes(content), key=lambda item: item.start, reverse=True):
@@ -1272,13 +1267,13 @@ def _rewrite_export_includes(
                 # stock Beancount refuses as a duplicate filename (w5/100).
                 content = _swap_line(content, span.line, f"{_ALREADY_INCLUDED_LINE}\n".encode())
                 continue
-            replacement = f'"{escape_string(os.path.relpath(feed, dest.parent))}"'
+            replacement = literal_include(os.path.relpath(feed, dest.parent))
             content = content[: span.start] + replacement.encode() + content[span.end :]
             continue
         matches = patterns.get(str(path.parent / span.target), ())
         if matches:
             replacement = "\ninclude ".join(
-                f'"{escape_string(os.path.relpath(destinations[p], dest.parent))}"' for p in matches
+                literal_include(os.path.relpath(destinations[p], dest.parent)) for p in matches
             )
             content = content[: span.start] + replacement.encode() + content[span.end :]
     return content
