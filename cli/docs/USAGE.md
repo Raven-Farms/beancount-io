@@ -660,7 +660,10 @@ may span lines), and a command the shell rejects (an unknown name, a bad
 The same one-statement rule covers native `--source` one-shots, the body of a
 stored `query` directive replayed by `.run NAME` or `.run *`, and BQL typed at
 the interactive prompt, where the refusal is an ordinary error and the shell
-stays usable. `.run *` still runs several separate stored queries.
+stays usable. `.run *` still runs several separate stored queries. A stored
+`query` directive whose body is empty, blank or only a comment is refused by
+name under `.run NAME`; `.run *` skips it with a line on stderr and answers the
+rest.
 Native `--source` one-shots keep upstream's rendering but not its exit status:
 `.run` naming a missing stored query, and BQL that does not parse or compile,
 exit 2 with the reason on stderr, and an existing `--output` export is replaced

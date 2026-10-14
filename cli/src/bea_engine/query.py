@@ -577,6 +577,10 @@ def _run_stored(shell: Any, arg: str) -> None:
         return
     if cleaned == "*":
         for name, query in sorted(shell.queries.items()):
+            if _stored_body_is_empty(query.query_string):
+                # One placeholder must not stop every other stored query answering.
+                protocol.note(f'Skipped stored query "{name}": its body is empty.')
+                continue
             print(f"{name}:", file=shell.outfile)
             shell.execute(query.query_string, default_close_date=query.date)
             print(file=shell.outfile)
@@ -585,7 +589,8 @@ def _run_stored(shell: Any, arg: str) -> None:
     known = ", ".join(sorted(shell.queries)) or "(none)"
     # A name works exactly as `.run` lists it: `this month's food` is one
     # stored query, not an unterminated shell quote (w5/237).
-    query = shell.queries.get(cleaned)
+    name = cleaned
+    query = shell.queries.get(name)
     if query is None:
         try:
             parts = shlex.split(cleaned)
@@ -606,7 +611,21 @@ def _run_stored(shell: Any, arg: str) -> None:
             f'query "{name}" not found.',
             details=[f"Stored queries in this ledger: {known}."],
         )
+    if _stored_body_is_empty(query.query_string):
+        raise protocol.UsageError(
+            f'stored query "{name}" has an empty body.',
+            details=["Write its BQL between the second pair of quotes of the query directive."],
+        )
     shell.execute(query.query_string, default_close_date=query.date)
+
+
+def _stored_body_is_empty(body: str) -> bool:
+    """Whether a stored `query` directive holds no BQL: blank, or only comments.
+
+    The parser raises a bare `IndexError` on `""` and a caret under nothing on
+    whitespace, neither of which says which directive to fix (w5/276).
+    """
+    return not _code_mask(body, literals=False).strip("; \t\r\n")
 
 
 def _shell_error(shell: Any, message: str, report: Callable[[str], None]) -> None:
