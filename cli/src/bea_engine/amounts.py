@@ -13,11 +13,23 @@ _QUOTED_OR_COMMENT = re.compile(r'"(?:[^"\\]|\\.)*"|;[^\r\n]*')
 """Quoted strings and comments, inside which an `@@` is text, not a price."""
 
 
-def parse_decimal_number(value: str) -> Decimal:
-    """The frontend's finite ASCII decimal rule, repeated across the engine boundary."""
+def parse_decimal_number(value: str, *, grouping: bool = True) -> Decimal:
+    """The frontend's finite ASCII decimal rule, repeated across the engine boundary.
+
+    Comma grouping in threes (`1,538.25`) is the flag spelling Beancount's own
+    grammar reads; a structured field passes `grouping=False`, because its
+    text is converted as written rather than through this result.
+    """
     text = value.strip()
     require_decimal_notation(text)
+    if grouping and re.fullmatch(r"[+-]?[0-9]{1,3}(?:,[0-9]{3})+(?:\.[0-9]*)?", text):
+        return Decimal(text.replace(",", ""))
     if not re.fullmatch(r"[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)", text):
+        if grouping and "," in text:
+            raise ValueError(
+                f"Invalid amount {value!r}. A comma is read only as a thousands separator between groups of "
+                "three digits, such as '1,538.25'; write the fraction after a decimal point, or remove the separators."
+            )
         raise ValueError(f"Invalid amount {value!r}. Use finite decimal notation with ASCII digits, such as '1538.25'.")
     return Decimal(text)
 
@@ -31,7 +43,7 @@ def require_plain_decimal(value: Any) -> Any:
     """
     require_decimal_notation(value)
     if isinstance(value, str):
-        parse_decimal_number(value)
+        parse_decimal_number(value, grouping=False)
     return value
 
 

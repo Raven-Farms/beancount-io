@@ -364,9 +364,13 @@ An inactive-account error shows the account's opening/closing date and file
 location so you can correct the date without creating another open directive.
 Invalid answers re-prompt the current question while keeping earlier answers.
 Invalid command-line options still fail with exit **2**.
-Opening balances and custom `number:`/`amount:` values accept finite decimal
-notation with ASCII digits and an optional sign and decimal point. Exponents,
-underscores, and non-ASCII digits are refused before anything is written.
+Opening balances, `add price --amount` and custom `number:`/`amount:` values
+accept finite decimal notation with ASCII digits and an optional sign and
+decimal point. Comma grouping in threes (`1,000.00`, `65,432.10`) is read as
+`add balance` and `--posting` read it and written without the commas; any
+other comma (`1,50`, `12,34,567`) is refused naming the thousands separators.
+Exponents, underscores, and non-ASCII digits are refused before anything is
+written.
 
 The personal template opens checking, savings, cash, credit card, salary,
 interest, groceries, dining, rent, transport, utilities, fees, and opening

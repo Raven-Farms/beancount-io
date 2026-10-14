@@ -1118,7 +1118,7 @@ def _bulk_meta_problems(location: str, meta: dict[str, Any]) -> list[str]:
                 # Amounts' spelling rule: `Decimal()` alone reads `1_000`, `1e3`
                 # and non-ASCII digits that no other write path accepts.
                 try:
-                    parse_decimal_number(number)
+                    parse_decimal_number(number, grouping=False)
                 except ValueError:
                     problems.append(
                         f"{path}: Invalid {kind!r} metadata for {key!r}: expected a decimal string with "

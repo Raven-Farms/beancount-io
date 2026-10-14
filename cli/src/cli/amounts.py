@@ -11,20 +11,31 @@ _SCIENTIFIC_NOTATION_MESSAGE = (
     "Scientific notation {!r} is not supported in Beancount amounts. "
     "Use decimal notation, such as '1000' instead of '1e3'."
 )
+_GROUPING_MESSAGE = (
+    "Invalid amount {!r}. A comma is read only as a thousands separator between groups of three digits, "
+    "such as '1,538.25'; write the fraction after a decimal point, or remove the separators."
+)
 
 
 def parse_decimal_number(value: str) -> Decimal:
     """Parse a finite ASCII decimal without Python's extra numeric spellings.
 
-    The engine twin in `bea_engine.amounts` has the same grammar and diagnostic;
-    the two execution environments cannot import each other's modules.
+    Comma grouping is read as Beancount's own grammar reads it for
+    `add balance` and `--posting`: groups of exactly three digits, dropped
+    from the result. The engine twin in `bea_engine.amounts` has the same
+    grammar and diagnostic; the two execution environments cannot import each
+    other's modules.
     """
     text = value.strip()
     # Match the engine's scalar check, including Python's underscore forms.
     # The native-expression check below instead looks for individual tokens.
     if re.fullmatch(r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)[eE][+-]?\d+", text.replace("_", "")):
         raise UsageError(_SCIENTIFIC_NOTATION_MESSAGE.format(text))
+    if re.fullmatch(r"[+-]?[0-9]{1,3}(?:,[0-9]{3})+(?:\.[0-9]*)?", text):
+        return Decimal(text.replace(",", ""))
     if not re.fullmatch(r"[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)", text):
+        if "," in text:
+            raise UsageError(_GROUPING_MESSAGE.format(value))
         raise UsageError(f"Invalid amount {value!r}. Use finite decimal notation with ASCII digits, such as '1538.25'.")
     return Decimal(text)
 
