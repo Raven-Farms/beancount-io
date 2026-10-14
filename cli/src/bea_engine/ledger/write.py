@@ -16,7 +16,7 @@ import time
 import unicodedata
 from collections import Counter
 from collections.abc import Callable, Iterable, Iterator, Sequence
-from contextlib import ExitStack, contextmanager, nullcontext
+from contextlib import ExitStack, contextmanager, nullcontext, suppress
 from dataclasses import dataclass, field
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
@@ -757,10 +757,34 @@ def candidate_file(file: Path, content: str, *, mode: int = 0o600) -> Iterator[P
                         os.fsync(stream.fileno())
                     yield candidate
             finally:
-                candidate.unlink(missing_ok=True)
+                _discard_candidate(candidate)
                 if sidecar:
                     sidecar.unlink(missing_ok=True)
             return
+
+
+def _discard_candidate(candidate: Path) -> None:
+    """Remove a staged copy, even one carrying the ledger's own deny-delete ACL.
+
+    `keep_file_metadata` gives the copy the ledger's ACL before the rename, so
+    when that ACL is what refused the rename it refuses this unlink too
+    (w5/257): the copy stayed behind and its `Errno 13` replaced the refusal
+    being reported. The copy is bea's own, so its ACL and flags are dropped
+    and the unlink retried; a cleanup that still fails never masks the error
+    that is already on its way out.
+    """
+    try:
+        candidate.unlink(missing_ok=True)
+        return
+    except OSError:
+        pass
+    if sys.platform == "darwin":
+        _clear_acl_darwin(candidate)
+    if hasattr(os, "chflags"):
+        with suppress(OSError):
+            os.chflags(candidate, 0)
+    with suppress(OSError):
+        candidate.unlink(missing_ok=True)
 
 
 def _balance_recovery_hints(
@@ -1920,6 +1944,24 @@ def _copy_acl_and_xattrs_darwin(file: Path, candidate: Path) -> None:
             f"Cannot keep {file}'s ACL and extended attributes on the rewritten file "
             f"({os.strerror(number)}); nothing was written."
         )
+
+
+def _clear_acl_darwin(candidate: Path) -> None:
+    """Best effort: an ACL that stays simply leaves the unlink refused as before."""
+    import ctypes
+
+    libc = ctypes.CDLL("libc.dylib", use_errno=True)
+    libc.acl_init.argtypes = [ctypes.c_int]
+    libc.acl_init.restype = ctypes.c_void_p
+    libc.acl_set_file.argtypes = [ctypes.c_char_p, ctypes.c_int, ctypes.c_void_p]
+    libc.acl_set_file.restype = ctypes.c_int
+    libc.acl_free.argtypes = [ctypes.c_void_p]
+    libc.acl_free.restype = ctypes.c_int
+    empty = libc.acl_init(0)
+    if empty:
+        # ACL_TYPE_EXTENDED, the only type macOS has.
+        libc.acl_set_file(os.fsencode(candidate), 0x00000100, empty)
+        libc.acl_free(empty)
 
 
 def _copy_xattrs_linux(file: Path, candidate: Path) -> None:
