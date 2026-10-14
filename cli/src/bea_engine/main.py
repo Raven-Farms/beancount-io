@@ -570,6 +570,19 @@ def shell(
         raise SystemExit(exc.exit_code) from None
 
 
+def _source_io_failure(exc: OSError) -> int:
+    """Report an I/O failure on a native source in one line; the exit status to use (w5/250).
+
+    Upstream opens what `--source` names with no guard of its own, so an
+    unreadable file reached the helper's exception printer as a traceback
+    through bea's engine files. A refused permission is the filesystem's
+    answer (3); anything else is a source that cannot be read (1).
+    """
+    named = f": '{exc.filename}'" if exc.filename else ""
+    protocol.note(f"error: Cannot read the --source{named}: {exc.strerror or type(exc).__name__}.")
+    return protocol.EXIT_AUTH if isinstance(exc, PermissionError) else protocol.EXIT_VALIDATION
+
+
 @app.command("source-shell")
 def source_shell(
     source: Annotated[str, typer.Argument(help="Native Beanquery source URI or ledger path.")],
@@ -591,6 +604,10 @@ def source_shell(
     except protocol.EngineError as exc:
         protocol.note(str(exc))
         raise SystemExit(exc.exit_code) from None
+    except OSError as exc:
+        if debug or isinstance(exc, BrokenPipeError):
+            raise
+        raise SystemExit(_source_io_failure(exc)) from None
 
 
 @app.command("source-query")
@@ -615,6 +632,10 @@ def source_query(
         for detail in exc.details or ():
             protocol.note(f"  {detail}")
         raise SystemExit(exc.exit_code) from None
+    except BrokenPipeError:
+        raise
+    except OSError as exc:
+        raise SystemExit(_source_io_failure(exc)) from None
 
 
 @app.command(

@@ -84,19 +84,27 @@ def _require_source_ledger(source: str) -> None:
     engine will hand the loader (`bea_engine.query._native_shell` restates this
     rule and checks again): a lower-case scheme makes a URI, anything else is a
     bare path, and either way the URL parser has the last word on the name.
+
+    A `csv:` source is opened by upstream directly, so a missing file, a
+    directory, or no path at all (`--source ""` from an unset shell variable)
+    ended in a traceback through the engine instead (w5/250); those are refused
+    here in the same words.
     """
     import re
     from urllib.parse import urlparse
 
     parts = urlparse(source if re.match("[a-z]{2,}:", source) else "beancount:" + source)
-    if parts.scheme != "beancount" or not parts.path:
+    if parts.scheme not in {"beancount", "csv"}:
         return
+    if not parts.path:
+        raise UsageError(f"--source '{source}' names no file; pass a ledger path, beancount:<path> or csv:<path>.")
     path = Path(parts.path)
     named = "" if parts.path == source else f" {source}"
+    kind, label = ("ledger", "Ledger") if parts.scheme == "beancount" else ("CSV", "CSV")
     if not path.exists():
-        raise UsageError(f"No ledger file at '{path}' (from --source{named}).")
+        raise UsageError(f"No {kind} file at '{path}' (from --source{named}).")
     if path.is_dir():
-        raise UsageError(f"Ledger path '{path}' (from --source{named}) is a directory; expected a ledger file.")
+        raise UsageError(f"{label} path '{path}' (from --source{named}) is a directory; expected a {kind} file.")
 
 
 def _refuse_source_alias(source: str, destination: Path) -> None:

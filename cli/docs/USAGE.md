@@ -655,7 +655,11 @@ exit 2 with the reason on stderr, and an existing `--output` export is replaced
 only after the query succeeds. A Beancount `--source` (a bare path or
 `beancount:<path>`) naming a file that does not exist, or a directory, exits 2
 naming the path before anything runs, for a one-shot and the shell alike;
-load errors inside a ledger that exists keep upstream's behaviour.
+load errors inside a ledger that exists keep upstream's behaviour. A
+`csv:<path>` source that is missing or a directory, and a source with no path
+at all (`--source ""`), exit 2 the same way; a source the filesystem will not
+let `bea` read is one line on stderr (exit 3 for a refused permission), with
+no traceback.
 With no query argument, `--file` and `--source` alike read BQL from piped
 stdin and open the interactive shell only on a terminal where prompting is
 allowed; under `--no-input` (or `CI`), or with empty stdin, a missing query is
