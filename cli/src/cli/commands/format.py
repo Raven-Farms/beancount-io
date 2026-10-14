@@ -58,13 +58,16 @@ def format_beans(
     check: Annotated[bool, typer.Option("--check", help="Write nothing; exit 1 if any file needs formatting")] = False,
     dry_run: Annotated[bool, typer.Option("--dry-run", help="Write nothing; report what would change")] = False,
     prefix_width: Annotated[
-        int | None, typer.Option("--prefix-width", "-w", help="Force fixed prefix width (max 200)")
+        int | None,
+        typer.Option("--prefix-width", "-w", help="Force fixed prefix width (max 200); ignored with -c"),
     ] = None,
     num_width: Annotated[
-        int | None, typer.Option("--num-width", "-W", help="Force fixed numbers width (max 200)")
+        int | None,
+        typer.Option("--num-width", "-W", help="Force fixed numbers width (max 200); ignored with -c"),
     ] = None,
     currency_column: Annotated[
-        int | None, typer.Option("--currency-column", "-c", help="Align currencies to this column (max 200)")
+        int | None,
+        typer.Option("--currency-column", "-c", help="Align currencies to this column (max 200); overrides -w and -W"),
     ] = None,
 ) -> None:
     """Format ledger files to stdout; rewrite them with --in-place."""

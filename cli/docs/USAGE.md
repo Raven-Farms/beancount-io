@@ -539,8 +539,10 @@ Automatic alignment chooses account-prefix and number widths from values up
 to 200 characters wide. Longer values retain their full text on their own
 lines without forcing every other posting to that column. Explicit
 `--prefix-width`, `--num-width`, and `--currency-column` values are also capped
-at 200; zero keeps automatic sizing. Appended entries use the same automatic
-alignment rule.
+at 200; zero keeps automatic sizing. A nonzero `--currency-column` lays every
+amount out against that one column, as `bean-format` does, so `--prefix-width`
+and `--num-width` given beside it are accepted and have no effect. Appended
+entries use the same automatic alignment rule.
 
 In `--json` mode the destination has to be explicit, because stdout carries the
 envelope and nothing else: pass `-i`, `-o FILE`, `--check` or `--dry-run`.

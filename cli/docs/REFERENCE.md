@@ -133,9 +133,9 @@ Usage: bea format [OPTIONS] [paths]...
 | `--output, -o` | path |  | Write to this file instead of stdout |
 | `--check` | flag |  | Write nothing; exit 1 if any file needs formatting |
 | `--dry-run` | flag |  | Write nothing; report what would change |
-| `--prefix-width, -w` | int |  | Force fixed prefix width (max 200) |
-| `--num-width, -W` | int |  | Force fixed numbers width (max 200) |
-| `--currency-column, -c` | int |  | Align currencies to this column (max 200) |
+| `--prefix-width, -w` | int |  | Force fixed prefix width (max 200); ignored with -c |
+| `--num-width, -W` | int |  | Force fixed numbers width (max 200); ignored with -c |
+| `--currency-column, -c` | int |  | Align currencies to this column (max 200); overrides -w and -W |
 
 ### `bea query`
 
