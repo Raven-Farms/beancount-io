@@ -561,23 +561,30 @@ def _parse(completed: subprocess.CompletedProcess[str], args: Sequence[str], *, 
         # not the program we think it is. Its own output is the only evidence,
         # so it becomes the details rather than being swallowed.
         printed = [line for line in (completed.stderr or completed.stdout).splitlines() if line.strip()][-20:]
+        number = -completed.returncode
+        if number > 0:
+            # Killed by a signal: the child printed nothing to carry the
+            # explanation, so name the signal and what usually causes it.
+            try:
+                name = signal.Signals(number).name
+            except ValueError:
+                name = f"signal {number}"
         if writes:
             # A writer that produced no envelope may or may not have written.
             # Exit 4 says exactly that, and stops a caller from retrying a
             # command whose first attempt may already have changed the file.
+            if number > 0:
+                raise ConflictError(
+                    f"The Beancount engine was killed by {name} answering 'bea-engine {' '.join(args)}'; "
+                    "the outcome is unknown. Inspect the file before retrying.",
+                    details=[*printed, _signal_hint(number)],
+                ) from None
             raise ConflictError(
                 f"The Beancount engine did not answer 'bea-engine {' '.join(args)}' "
                 f"(exit {completed.returncode}); the outcome is unknown. Inspect the file before retrying.",
                 details=printed,
             ) from None
-        if completed.returncode < 0:
-            # Killed by a signal: the child printed nothing to carry the
-            # explanation, so name the signal and what usually causes it.
-            number = -completed.returncode
-            try:
-                name = signal.Signals(number).name
-            except ValueError:
-                name = f"signal {number}"
+        if number > 0:
             raise BeaError(
                 f"The Beancount engine was killed by {name} answering "
                 f"'bea-engine {' '.join(args)}' and produced no result.",
