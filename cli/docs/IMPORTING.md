@@ -83,7 +83,8 @@ not `1e3`); a notation error names the row and column before anything is written
 Cells may carry currency symbols (`$4.50`, `4,50 €`), thousands separators,
 accounting parentheses or a trailing minus for negatives (one marker per cell:
 `(-5.00)` is refused rather than read as `+5.00`; the typographic minus `−`,
-U+2212, reads as `-`), and comma decimals —
+U+2212, reads as `-`; the marker may stand on either side of the symbol, so
+`-$1,234.56`, `$-1,234.56` and `$(1,234.56)` are one amount), and comma decimals —
 the point-vs-comma convention is resolved from the whole column, and a column
 mixing `1,000.00` with `1.000,00` is refused rather than guessed. A lone
 `1,234` stays a thousands group, but `0,125` and `1613,030` cannot be one,

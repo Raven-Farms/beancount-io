@@ -108,7 +108,9 @@ def _split_amount_sign(value: str) -> tuple[str, str, int]:
     """Split the sign, currency symbols, and parentheses off an amount cell.
 
     Returns the leading +/- sign (kept for Decimal), the bare core, and how
-    many parentheses/trailing-minus negations the cell carries.
+    many parentheses/trailing-minus negations the cell carries. The sign and
+    the parentheses are read on either side of a leading symbol, so the
+    grouping checks always see an unsigned core.
 
     The typographic minus (U+2212) some bank and spreadsheet exports write is
     read as `-` wherever it stands: on screen the two are the same sign.
@@ -138,6 +140,15 @@ def _split_amount_sign(value: str) -> tuple[str, str, int]:
             text = text[:-1]
         else:
             break
+    text = text.strip()
+    # A symbol written first hides what follows it from the checks above:
+    # `$(1,234.56)` and `$-1,234.56` carry their negative marker after it.
+    if len(text) >= 2 and text.startswith("(") and text.endswith(")"):
+        negations += 1
+        text = text[1:-1].strip()
+    if not sign and text[:1] in ("+", "-"):
+        # A second sign (`-$-5`) stays on the core, where it is refused.
+        sign, text = text[0], text[1:]
     return sign, text.strip(), negations
 
 
