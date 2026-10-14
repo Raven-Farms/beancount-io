@@ -216,6 +216,9 @@ def to_bea_error(exc: BaseException | str) -> BeaError:
             "--no-input": "bea --no-input check",
             "--yes": "bea --yes COMMAND",
             "-y": "bea -y COMMAND",
+            "--strict": "bea --strict balance",
+            "--offline": "bea --offline balance",
+            "--strict-prices": "bea --strict-prices check",
         }
         hint = f" Place {option} before the command, for example: {examples[option]}." if option in examples else ""
         return UsageError(str(exc) + hint)
