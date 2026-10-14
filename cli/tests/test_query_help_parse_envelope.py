@@ -96,6 +96,47 @@ def test_help_select_answers_without_crash(tmp_path: Path) -> None:
         assert "NoneType" not in result.stderr
 
 
+def _help_topics(listing: str) -> list[str]:
+    """Every topic named under a `====` rule in the `.help` listing."""
+    lines = listing.splitlines()
+    topics: list[str] = []
+    for index, line in enumerate(lines):
+        if line and not line.strip("="):
+            for row in lines[index + 1 :]:
+                if not row.strip():
+                    break
+                topics.extend(row.split())
+    return topics
+
+
+def test_every_listed_help_topic_answers(tmp_path: Path) -> None:
+    """`help print` crashed on a missing docstring although `.help` lists it (w5/253)."""
+    ledger = tmp_path / "main.bean"
+    ledger.write_text(LEDGER)
+    listing = _bea(tmp_path, "--file", str(ledger), "query", ".help")
+    assert listing.returncode == 0, listing.stderr
+    topics = _help_topics(listing.stdout)
+    assert {"print", "select", "targets", "set", "run"} <= set(topics)
+    for topic in topics:
+        result = _bea(tmp_path, "--file", str(ledger), "query", f"help {topic}")
+        assert result.returncode == 0, (topic, result.stderr)
+        assert result.stdout.strip(), topic
+        assert "Error" not in result.stderr, (topic, result.stderr)
+
+
+def test_help_print_answers_in_text_and_json(tmp_path: Path) -> None:
+    ledger = tmp_path / "main.bean"
+    ledger.write_text(LEDGER)
+    for query in ("help print", ".help print"):
+        result = _bea(tmp_path, "--file", str(ledger), "query", query)
+        assert result.returncode == 0, result.stderr
+        assert "PRINT [FROM" in result.stdout
+        assert "NoneType" not in result.stderr
+    result = _bea(tmp_path, "--json", "--file", str(ledger), "query", ".help print")
+    assert result.returncode == 0, result.stderr
+    assert "PRINT [FROM" in json.loads(result.stdout)["data"]["text"]
+
+
 def test_help_select_stays_in_json_envelope(tmp_path: Path) -> None:
     ledger = tmp_path / "main.bean"
     ledger.write_text(LEDGER)

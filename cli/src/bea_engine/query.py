@@ -995,9 +995,12 @@ def build_shell(
             finally:
                 self._printing = False
 
-    # The override above drops upstream's SELECT help; without it, `help
-    # select` crashes formatting a missing docstring.
-    PreciseShell.on_Select.__doc__ = BQLShell.on_Select.__doc__
+    # Upstream builds each statement's help topic from the docstring of the
+    # handler defined on this class; an override without one crashes `help
+    # select` and `help print` formatting a missing docstring.
+    for name, handler in vars(PreciseShell).items():
+        if name.startswith("on_") and handler.__doc__ is None:
+            handler.__doc__ = getattr(BQLShell, name).__doc__
     # `runinit=False`: upstream would replay the init file inside the
     # constructor, before `self.context` exists, so a guarded `.output` there
     # failed every query. Callers replay it once the ledger is loaded.
