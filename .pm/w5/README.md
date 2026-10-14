@@ -36,7 +36,6 @@
 ## Inbox
 
 - [278 — A ledger that is not UTF-8 gets the documented decode error from `format` and `add`, but a raw codec message from read commands](./278.md) — minor CLI message bug; `format` control gives path, offset and remedy, 20–30m.
-- [279 — `price export` and `example -o` into an unwritable directory exit 1 with a raw OS error instead of the documented exit 3](./279.md) — minor CLI bug; raw errno at exit 1, `query -o` control exits 3 with the staged-copy message, fix with 090/119, 20–30m.
 - [280 — USAGE says `price` rejects JSON mode, but `price status` and `price export` answer with the envelope](./280.md) — minor CLI docs bug; `--json price status` returns an envelope, 5–10m.
 - [281 — A remembered `encoding=cp1252` is replayed onto a later UTF-8 export, writing mojibake (`CafÃ© ZÃ¼rich`) with exit 0](./281.md) — major CLI import bug; mojibake written at exit 0, fresh-config control writes the text correctly, 30–45m.
 - [282 — Under `--json`, a refused flag-free import does not report the remembered settings it used](./282.md) — minor CLI JSON bug; preview has `remembered`/`date_format`/notes, refused apply has none, 20–30m.
