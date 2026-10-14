@@ -524,7 +524,9 @@ the options, or re-save the file as NFC — `format -i` does not renormalize.
 Non-NFC text in comments and strings does not count. A file that
 is not UTF-8 at all fails with its path, the offending byte offset, and a hint
 to re-save as UTF-8; piped input to `bea format -` fails the same way, naming
-`stdin`, before anything is written.
+`stdin`, before anything is written. Reads and `bea check` give that same
+message for a string the parser cannot decode, in the root ledger or an
+include, and `--allow-errors` does not report past it.
 
 A directory is walked for `.bean` and `.beancount` files, and a walked entry it
 cannot read stops the run (exit **2**) naming the path and where it points — a

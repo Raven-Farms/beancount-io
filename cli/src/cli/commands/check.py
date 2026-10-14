@@ -84,6 +84,11 @@ def check(ctx: typer.Context) -> None:
         try:
             loaded = launch.helper_json(["check", "--file", str(file), "--documents-only"])
         except BeaError as error:
+            if str(error).startswith(_UNDECODABLE):
+                # bean-check reports a file that is not UTF-8 as a codec message
+                # at a line; the helper names the file, the byte and the remedy,
+                # and no bean-check option makes those bytes decode (w5/278).
+                raise
             portable = error
         else:
             failed = [str(line) for line in loaded.get("plugin_failures") or []]
@@ -106,6 +111,9 @@ def check(ctx: typer.Context) -> None:
 
 #: bean-check options that print and exit without reading the ledger.
 _INFORMATIONAL = frozenset({"--version", "--help", "-h"})
+
+#: How `cli.utils.decode_error_message` and its engine twin open their refusal.
+_UNDECODABLE = "Cannot decode '"
 
 
 _CACHE_FLAG = "--cache-filename"

@@ -298,6 +298,7 @@ def _load_with_sources(
     managed = _collect_managed(snapshot, allowed_origins)
     if not managed and all(state is not None for state in snapshot.stats.values()):
         entries, errors, options = _load_fresh(entry, snapshot)
+        _refuse_undecodable(errors, snapshot)
         return LoadedLedger(list(entries), list(errors), dict(options), ())
 
     # A source past the per-load cap is never fetched, and it is not dropped
@@ -391,6 +392,7 @@ def _load_with_sources(
         back.update(staged_feeds)
         entries = [_remap_entry(entry, back) for entry in entries]
         errors = [_remap_error(error, back) for error in errors]
+    _refuse_undecodable(errors, snapshot)
     errors.extend(unavailable)
 
     for url, result in resolved.items():
@@ -438,6 +440,31 @@ def _load_with_sources(
     if isinstance(remapped_options.get("include"), list):
         remapped_options["include"] = [_remap(str(item), back) for item in remapped_options["include"]]
     return LoadedLedger(entries, errors, remapped_options, tuple(sources))
+
+
+def _refuse_undecodable(errors: list[Any], snapshot: LedgerSnapshot) -> None:
+    """Refuse a load whose error is a file that is not UTF-8, naming path, offset and remedy.
+
+    The parser reports a string it cannot decode as an ordinary error at a
+    line — `UnicodeDecodeError: 'utf-8' codec can't decode byte 0xe9 in
+    position 3` — so every read counted it among the ledger's errors and
+    suggested `--allow-errors`, while `format` and `add` named the file, the
+    byte and the fix (w5/278). Only a load that already holds that error is
+    refused: bytes outside UTF-8 in a comment parse as they always did.
+    """
+    from bea_engine.ledger.text import decode_error_message
+    from bea_engine.protocol import LedgerError
+
+    contents = {os.path.normpath(path): content for path, content in snapshot.contents.items()}
+    for error in errors:
+        source = getattr(error, "source", None)
+        if not isinstance(source, dict) or not str(getattr(error, "message", "")).startswith("UnicodeDecodeError:"):
+            continue
+        name = os.path.normpath(str(source.get("filename")))
+        try:
+            contents.get(name, b"").decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise LedgerError(decode_error_message(name, exc)) from exc
 
 
 #: Source-meta key naming the config of the `plugin` directive whose run or
