@@ -68,8 +68,12 @@ def _stub_engine(tmp_path: Path, signal_name: str) -> Path:
     if not python.exists():
         python.symlink_to(sys.executable)
     check = bin_dir / "bean-check"
+    # A forwarded program is started with SIGINT blocked (w5/273), so the stub
+    # unblocks it to die of it; the frontend's answer to that death is the subject.
     check.write_text(
-        f"#!{sys.executable}\nimport os, signal\nos.kill(os.getpid(), signal.{signal_name})\n",
+        f"#!{sys.executable}\nimport os, signal\n"
+        "signal.pthread_sigmask(signal.SIG_UNBLOCK, {signal.SIGINT})\n"
+        f"os.kill(os.getpid(), signal.{signal_name})\n",
         encoding="utf-8",
     )
     check.chmod(0o755)

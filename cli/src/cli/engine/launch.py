@@ -123,8 +123,13 @@ def run_native(
     `env` replaces the child's environment when set; otherwise the child gets
     `_native_env`, so a ledger's plugins resolve as they do in the helper, and
     the load cache of the `ledger` it reads stays out of the ledger's directory.
+
+    The child never hears Ctrl-C: upstream's programs answer it with Click's
+    `Aborted!` or a traceback, and an interrupt is documented as silent. This
+    process still hears it, and stops the child on its way out.
     """
-    return _spawn([str(native_command(name)), *args], env if env is not None else _native_env(ledger))
+    command = [str(native_command(name)), *args]
+    return _spawn(command, env if env is not None else _native_env(ledger), deaf_to_interrupt=True)
 
 
 LOAD_CACHE_ENV = "BEANCOUNT_LOAD_CACHE_FILENAME"
@@ -699,7 +704,7 @@ def _helper_env(source_root: Path | None = None) -> dict[str, str] | None:
     return env
 
 
-def _spawn(command: list[str], env: dict[str, str] | None) -> int:
+def _spawn(command: list[str], env: dict[str, str] | None, *, deaf_to_interrupt: bool = False) -> int:
     """Run a child with the caller's streams and working directory, and report its status.
 
     Streams are inherited when they are real OS file descriptors so an
@@ -718,7 +723,7 @@ def _spawn(command: list[str], env: dict[str, str] | None) -> int:
         returncode = captured.returncode
     else:
         with _stderr_minus_flush_epilogue() as stderr:
-            returncode = _run_inherited(command, env, stderr)
+            returncode = _run_inherited(command, env, stderr, deaf_to_interrupt=deaf_to_interrupt)
         if returncode > 0 and _downstream_pipe_closed():
             # The child wrote to the same closed pipe we would have. Upstream is
             # Python too, so it never sees SIGPIPE either and reports its own
@@ -730,7 +735,9 @@ def _spawn(command: list[str], env: dict[str, str] | None) -> int:
     return returncode
 
 
-def _run_inherited(command: list[str], env: dict[str, str] | None, stderr: int | None) -> int:
+def _run_inherited(
+    command: list[str], env: dict[str, str] | None, stderr: int | None, *, deaf_to_interrupt: bool = False
+) -> int:
     """`subprocess.run` on our own streams, except a request to stop us stops the child too.
 
     A supervisor's SIGTERM or a hangup aimed at `bea` alone ended the frontend
@@ -742,7 +749,8 @@ def _run_inherited(command: list[str], env: dict[str, str] | None, stderr: int |
     Not `_forwarding_teardown`: its handler waits for the child itself, which
     cannot work while this thread is already blocked in that child's `wait`.
     The child also stays in our process group, because it may own the terminal,
-    and Ctrl-C is left alone: the terminal delivers it to the child directly.
+    and Ctrl-C is left alone: the terminal delivers it to the child directly —
+    unless the child is `deaf_to_interrupt`, when ours alone ends the run.
     """
     child: subprocess.Popen[bytes] | None = None
     stopped: list[int] = []
@@ -765,10 +773,14 @@ def _run_inherited(command: list[str], env: dict[str, str] | None, stderr: int |
                 installed.append((number, signal.signal(number, forward)))
             except (OSError, ValueError):  # As in `_forwarding_teardown`: an improvement, never a requirement.
                 continue
-        with subprocess.Popen(command, env=env, stderr=stderr) as child:
+        with (
+            _interrupt_withheld(deaf_to_interrupt) as hear_interrupts,
+            subprocess.Popen(command, env=env, stderr=stderr) as child,
+        ):
             if stopped:  # Asked to stop while the child was still being started.
                 stop(child, stopped[0])
             try:
+                hear_interrupts()
                 return child.wait()
             except BaseException:
                 child.kill()
@@ -782,6 +794,52 @@ def _run_inherited(command: list[str], env: dict[str, str] | None, stderr: int |
         if stopped:
             signal.signal(stopped[0], signal.SIG_DFL)
             os.kill(os.getpid(), stopped[0])
+
+
+@contextmanager
+def _interrupt_withheld(wanted: bool) -> Iterator[Callable[[], None]]:
+    """Start a child that never hears Ctrl-C, without losing one pressed meanwhile.
+
+    The terminal sends SIGINT to the child as well as to us. `bean-check` and
+    `bean-doctor` are Click programs, so they answered it with `Aborted!`
+    before our own interrupt could stop them, on a Ctrl-C the exit table
+    promises is silent (w5/273). A blocked signal stays blocked across `exec`
+    and a handler does not, so the child is started with SIGINT blocked and
+    never raises `KeyboardInterrupt`; it is ours that ends the run, and
+    `_run_inherited` kills the child for it.
+
+    The call this yields gives the signal back to this process. A Ctrl-C from
+    the moments in between is recorded rather than raised — raised inside
+    `Popen` it would leave a child nothing can interrupt — and is delivered
+    then, where the caller is ready to stop the child.
+    """
+    mask = getattr(signal, "pthread_sigmask", None)
+    if not wanted or mask is None:  # Windows has no signal mask to hand a child.
+        yield lambda: None
+        return
+    heard: list[int] = []
+    try:
+        previous = signal.signal(signal.SIGINT, lambda number, _frame: heard.append(number))
+    except (OSError, ValueError):  # Not the main thread: the child keeps hearing it.
+        yield lambda: None
+        return
+    blocked = mask(signal.SIG_BLOCK, {signal.SIGINT})
+    held = True
+
+    def release() -> None:
+        nonlocal held
+        if not held:
+            return
+        held = False
+        mask(signal.SIG_SETMASK, blocked)  # A pending Ctrl-C reaches the recorder here.
+        signal.signal(signal.SIGINT, previous)
+        if heard:
+            signal.raise_signal(signal.SIGINT)
+
+    try:
+        yield release
+    finally:
+        release()
 
 
 @contextmanager
