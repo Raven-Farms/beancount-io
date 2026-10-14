@@ -36,7 +36,6 @@
 ## Inbox
 
 - [244 — The import preview diff prints existing ledger lines raw, so escape sequences in the ledger's last lines reach the terminal](./244.md) — minor CLI output-safety bug; six raw ESC bytes on a PTY, clean-ledger control emits none, 20–30m.
-- [251 — Four `bea doctor` operations exit 245 with no message when the engine crashes on the ledger (regression of w5/done/010)](./251.md) — minor CLI regression; silent exit 245, `doctor context` control names SIGSEGV at exit 1, 20–30m.
 - [252 — A write whose engine dies on a signal still reports the raw `(exit -11)` instead of naming the signal](./252.md) — minor CLI message bug; read-path control names SIGSEGV, fix with 251, 15m.
 - [253 — `bea query 'help print'` fails with `TypeError: … got 'NoneType'` (the w3/done/299 crash, for the other overridden statement)](./253.md) — minor CLI bug; `help select` control prints help, 10–15m.
 - [254 — `import --id-key ID` silently turns off bank-ID matching; only the lowercase spelling `id` is aliased](./254.md) — minor CLI import bug; reused bank id written twice with exit 0, lowercase control exits 4, 15–25m.
