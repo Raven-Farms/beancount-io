@@ -9,7 +9,7 @@ import { normalizeAgentDirPath } from "./agent-repo-path";
 const toolLogger = logger.child({ module: "tool:list-ledger-files" });
 
 export const description =
-  "List files and directories in the ledger repo. Use to discover structure before reading or editing.";
+  "List files and directories in the ledger repo, one directory level at a time, directories first.";
 
 export const listLedgerFilesInputSchema = z.object({
   dir_path: z
@@ -51,7 +51,11 @@ export function createListLedgerFilesTool(ctx: ToolContext) {
     outputSchema: listLedgerFilesOutputSchema,
     execute: (input) =>
       executeListLedgerFiles(
-        { services: ctx.services, identity: ctx.identity, ledgerId: ctx.ledgerId },
+        {
+          services: ctx.services,
+          identity: ctx.identity,
+          ledgerId: ctx.ledgerId,
+        },
         input,
       ),
   });

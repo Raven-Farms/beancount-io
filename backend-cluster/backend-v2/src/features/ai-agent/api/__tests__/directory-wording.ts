@@ -12,4 +12,4 @@ export const PLAN_WORDING =
 
 /** Directions to the model: Claude rejects text that tells it how to behave. */
 export const STEERING_WORDING =
-  /\b(use this|use when|start with|start here|call after|prefer|follow|branch on|do not|don't|always|never call)\b/i;
+  /\b(use this|use when|use to|start with|start here|call after|prefer|follow|branch on|do not|don't|always|never call)\b/i;

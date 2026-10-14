@@ -13,7 +13,8 @@ export const description =
   "BQL: SELECT cols [WHERE expr] [GROUP BY] [ORDER BY] [LIMIT n] | JOURNAL | BALANCES. " +
   "Columns: date, year, month, flag, payee, narration, account, number, currency, cost, change, " +
   "balance, position, tags, links, meta. " +
-  "Rows are postings, not transactions: LIMIT 5 can return 3 transactions.";
+  "Rows are postings, not transactions: LIMIT 5 can return 3 transactions. " +
+  "Reference: https://beancount.github.io/docs/beancount_query_language/";
 
 export const bqlQueryInputSchema = z.object({
   query: z.string().describe("The BQL query to execute"),

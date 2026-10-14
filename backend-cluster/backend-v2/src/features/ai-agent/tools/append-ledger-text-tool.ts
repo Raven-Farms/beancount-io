@@ -19,7 +19,8 @@ export const appendLedgerTextDescription =
   `inserts it in date order. Max ${MAX_APPENDED_DIRECTIVES} directives. Non-directive text, and ` +
   "text introducing new bean-check errors (UNBALANCED when a transaction does not balance), are " +
   "refused unless allowInvalid. dry_run returns the diff and projected errors without " +
-  "committing. Adds directives without rewriting files, unlike editLedgerFiles.";
+  "committing. Adds directives without rewriting files, unlike editLedgerFiles. Syntax: " +
+  "https://beancount.github.io/docs/beancount_language_syntax/";
 
 /**
  * The tool's input, built from the REST body so the two dialects of one
