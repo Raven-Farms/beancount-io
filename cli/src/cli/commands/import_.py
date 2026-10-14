@@ -847,7 +847,14 @@ def import_entries(
             except UsageError:
                 headers = None
                 prior = None
+            # A refresh that types no --date-format keeps the remembered one
+            # when this file reads the same way: nothing was replaced, and
+            # erasing it unannounced booked the next ambiguous export
+            # month-first (w5/267).
+            kept_date_format = chosen_date_format
             if prior is not None:
+                if chosen_date_format is None and prior.get("date_format") == date_format:
+                    kept_date_format = date_format
                 discarded: list[str] = []
                 if isinstance(prior.get("rules"), str) and csv_rules_arg is None:
                     discarded.append(shlex.join(["--rules", prior["rules"]]))
@@ -877,7 +884,7 @@ def import_entries(
                 "account": csv_run_account,
                 "rules": str(csv_rules_arg) if csv_rules_arg is not None else None,
                 "default_account": default_account,
-                "date_format": chosen_date_format,
+                "date_format": kept_date_format,
                 "delimiter": chosen_delimiter,
                 # Sign itself is never remembered; only which file it was
                 # chosen for, so replaying that file cannot flip its sign.

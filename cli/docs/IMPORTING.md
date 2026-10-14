@@ -266,7 +266,9 @@ For a remembered mapping, human output reports
 `config_source` `remembered --csv` plus a `remembered` object with the same
 fields (`null` when the run used no memory). A successful explicit `--csv`
 preview or apply replaces the remembered settings; settings it drops are named,
-never silently discarded. An option typed on a run that used the remembered
+never silently discarded. A remembered `--date-format` the refresh does not
+repeat is kept when the new file's dates read the same way, and named as
+discarded otherwise. An option typed on a run that used the remembered
 mapping — `--date-format`, `--rules`, `--default-account`, `--delimiter` — is
 saved with it once that run succeeds, and the run says so
 (`Updated remembered settings for <file>`), so a flag-free `--apply` writes the
