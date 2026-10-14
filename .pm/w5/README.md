@@ -35,7 +35,6 @@
 
 ## Inbox
 
-- [281 — A remembered `encoding=cp1252` is replayed onto a later UTF-8 export, writing mojibake (`CafÃ© ZÃ¼rich`) with exit 0](./281.md) — major CLI import bug; mojibake written at exit 0, fresh-config control writes the text correctly, 30–45m.
 - [282 — Under `--json`, a refused flag-free import does not report the remembered settings it used](./282.md) — minor CLI JSON bug; preview has `remembered`/`date_format`/notes, refused apply has none, 20–30m.
 - [283 — The remembered-settings line prints `--csv` twice when an encoding is in force, so pasting it runs a different mapping](./283.md) — minor CLI bug; pasted line swaps payee for an inferred narration mapping, single-`--csv` control keeps it, fix with 195, 15–20m.
 - [284 — Under `--json`, a successful `import` does not say that it could not save the import memory](./284.md) — minor CLI JSON bug; text-mode control warns, next flag-free JSON import exits 2, same mechanism as 270/282, 15–20m.
