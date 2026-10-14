@@ -36,7 +36,11 @@ def price(ctx: typer.Context) -> None:
     if args[:1] == ["export"]:
         _export(args[1:])
         return
-    refuse_json("price", hint="Run without --json to print price directives.")
+    refuse_json(
+        "price",
+        when="when it forwards to bean-price",
+        hint="Run without --json to print price directives; bea price status, refresh and export answer in JSON.",
+    )
     code = launch.run_optional_native("beanprice", "bean-price", args)
     raise typer.Exit(code)
 

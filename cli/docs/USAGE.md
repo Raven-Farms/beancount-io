@@ -1755,7 +1755,7 @@ advertised to a Homebrew installation before the tap can install them.
 
 ## JSON output
 
-Global `--json` provides structured results for `check`, local-file `query`, `list <type>`, `balance`, `report`, `engine status`, and hosted reads such as `cloud status`, `cloud ledger list`, and `cloud ledger show`. `init`, `import`, `format`, `add`, `engine enable`, `cloud ledger create`, and `cloud ledger delete` also emit an envelope so a script can confirm what was written (create returns the new ledger's metadata with the same fields as `cloud ledger show`, delete the deleted ledger's id). Usage failures, including unknown commands and missing global option values, follow the same JSON error contract.
+Global `--json` provides structured results for `check`, local-file `query`, `list <type>`, `balance`, `report`, `price status`, `engine status`, and hosted reads such as `cloud status`, `cloud ledger list`, and `cloud ledger show`. `init`, `import`, `format`, `add`, `price refresh`, `price export`, `engine enable`, `cloud ledger create`, and `cloud ledger delete` also emit an envelope so a script can confirm what was written (create returns the new ledger's metadata with the same fields as `cloud ledger show`, delete the deleted ledger's id). Usage failures, including unknown commands and missing global option values, follow the same JSON error contract.
 
 The envelope is always:
 
@@ -1818,7 +1818,9 @@ $ bea --json cloud status | jq '{source: .data.source, tier: .data.tier}'
 Report JSON carries the same tree the text renderer walks — `account`, `balance`, `balance_children`, `has_txns`, `children` — not a rendering of it.
 
 Commands that cannot produce JSON keep their own shapes: `ask`, `doctor`,
-`example`, `treeify`, `price`, `ingest`, and `query --source` reject JSON mode, `cloud login` requires interaction,
+`example`, `treeify`, `ingest`, `query --source`, and `price` when it forwards to
+`bean-price` reject JSON mode (`price status`, `refresh` and `export` answer
+with the envelope), `cloud login` requires interaction,
 successful `cloud logout` and `cloud ledger clone` emit no JSON success object
 (use their exit status), and help and completion output stay textual.
 `upgrade` can stream package-manager output to stderr even in JSON mode. The
