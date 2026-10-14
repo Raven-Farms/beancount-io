@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import stat
 import sys
 from datetime import date
 from pathlib import Path
@@ -40,6 +41,19 @@ def _split_output(args: list[str]) -> tuple[list[str], Path | None, bool]:
     forwarded = [arg for index, arg in enumerate(args) if arg != _FORCE or index > stop]
     value = forwarded_option(forwarded, "-o", "--output")
     return forwarded, None if value is None else Path(value), force
+
+
+def _is_written_through(output: Path) -> bool:
+    """Whether `-o` names a device or FIFO, which is written through, not replaced.
+
+    `-o /dev/null` exists, but there is no file to overwrite and so nothing for
+    `--force` to consent to (w5/277). A directory stays a conflict.
+    """
+    try:
+        mode = output.stat().st_mode
+    except OSError:
+        return False
+    return not stat.S_ISREG(mode) and not stat.S_ISDIR(mode)
 
 
 def _without_output(args: list[str]) -> list[str]:
@@ -88,7 +102,12 @@ def example(ctx: typer.Context) -> None:
     """Generate an example ledger (delegates to bean-example)."""
     refuse_json("example", hint="Run without --json to print the sample ledger.")
     forwarded, output, force = _split_output(list(ctx.args))
-    if output is not None and not force and (output.exists() or output.is_symlink()):
+    if (
+        output is not None
+        and not force
+        and (output.exists() or output.is_symlink())
+        and not _is_written_through(output)
+    ):
         raise ConflictError(
             f"Already exists: {output}. Pass --force to overwrite it with a generated example; "
             "without it, example never overwrites."
