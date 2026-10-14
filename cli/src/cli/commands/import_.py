@@ -22,7 +22,7 @@ import typer
 from cli import context, output
 from cli.config import config_dir
 from cli.errors import BeaError, UsageError
-from cli.utils import atomic_write, exclusive_lock
+from cli.utils import atomic_write, exclusive_lock, inert_text
 
 
 class Duplicates(StrEnum):
@@ -1010,7 +1010,10 @@ def import_entries(
                 typer.echo(match["entry"])
             elif row["status"] == "blocked":
                 typer.echo(f"\nRow {row['row']}: {row['reason']}")
-        typer.echo(preview["diff"])
+        # The diff's context lines are the existing ledger's own tail, byte for
+        # byte, so a hand-edited or third-party file's escape sequences would
+        # otherwise repaint the table above (w5/244); JSON keeps the exact value.
+        typer.echo(inert_text(preview["diff"]))
         for error in preview["validation_errors"]:
             output.note(error)
         for warning in preview["validation_warnings"]:

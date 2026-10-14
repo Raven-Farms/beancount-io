@@ -923,7 +923,8 @@ breaks from existing entries without modifying the ledger. Diagnostics get the
 same treatment in text mode: loader errors and warnings, error details, format
 progress lines, and `list transaction --details` source lines show a document
 name or include path's control characters as `\xNN`, while `--json` keeps the
-exact value. Native `bea check` output is upstream's own and passes through.
+exact value. The `import` preview's diff does the same for the existing ledger
+lines it shows as context. Native `bea check` output is upstream's own and passes through.
 
 Examples below assume their accounts were opened and their dates, balances,
 and document paths are valid for your ledger. Every add command, and `import`,
