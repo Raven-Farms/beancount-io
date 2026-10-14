@@ -772,12 +772,22 @@ def _discard_candidate(candidate: Path) -> None:
     being reported. The copy is bea's own, so its ACL and flags are dropped
     and the unlink retried; a cleanup that still fails never masks the error
     that is already on its way out.
+
+    A new file is installed by hard-linking the copy, so from then on the
+    copy's name is a second name for the ledger itself, and an ACL the
+    directory made both inherit must stay: only a copy nothing else links to
+    is still bea's own to strip.
     """
     try:
         candidate.unlink(missing_ok=True)
         return
     except OSError:
         pass
+    try:
+        if candidate.lstat().st_nlink != 1:
+            return
+    except OSError:
+        return
     if sys.platform == "darwin":
         _clear_acl_darwin(candidate)
     if hasattr(os, "chflags"):

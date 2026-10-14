@@ -50,7 +50,7 @@ def books(tmp_path: Path) -> Iterator[Path]:
     (directory / "main.bean").write_text(LEDGER)
     yield directory
     # Whatever a failing run left carries the ACL too, and pytest could not clear it.
-    for path in directory.iterdir():
+    for path in [*directory.iterdir(), directory]:
         subprocess.run(["chmod", "-N", str(path)], check=False)
 
 
@@ -120,3 +120,22 @@ def test_a_ledger_without_the_acl_is_written_as_before(books: Path, write: str) 
     assert result.returncode == 0, result.stderr
     assert _staged(books) == []
     assert file.read_text() != LEDGER
+
+
+def test_a_new_file_keeps_the_acl_its_directory_gave_it(books: Path) -> None:
+    """A new file is the staged copy under a second name, so the cleanup must not strip it.
+
+    The directory makes every file created in it undeletable. Removing the
+    staging name is refused, and clearing "the copy's" ACL to get rid of it
+    cleared the ACL of the file that had just been written.
+    """
+    (books / "main.bean").write_text(LEDGER + '\ninclude "notes-*.bean"\n')
+    subprocess.run(["chmod", "+a", "everyone deny delete,file_inherit", str(books)], check=True)
+
+    result = _bea(books, "--file", "main.bean", *WRITES["add note"], "--into", "notes-2026.bean")
+
+    assert result.returncode == 0, result.stderr
+    created = books / "notes-2026.bean"
+    assert "note Assets:Checking" in created.read_text()
+    listing = subprocess.run(["ls", "-le", str(created)], check=True, capture_output=True, text=True).stdout
+    assert "deny delete" in listing
