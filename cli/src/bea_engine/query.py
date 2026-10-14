@@ -340,6 +340,14 @@ def _native_shell(source: str, *, interactive: bool, format: str, numberify: boo
     dsn = source if re.match("[a-z]{2,}:", source) else "beancount:" + source
     parts = urlparse(dsn)
     file = Path(parts.path) if parts.scheme in {"beancount", "csv"} and parts.path else None
+    if file is not None and parts.scheme == "beancount":
+        # Upstream records a missing root as one more load error and answers
+        # from an empty database, which a one-shot exported with exit 0 (w5/249).
+        # The frontend refuses first; this is the path the loader really gets.
+        if not file.exists():
+            raise protocol.UsageError(f"No ledger file at '{file}' (from --source).")
+        if file.is_dir():
+            raise protocol.UsageError(f"Ledger path '{file}' (from --source) is a directory; expected a ledger file.")
 
     class GuardedShell(BQLShell):  # type: ignore[misc]
         source_file = file

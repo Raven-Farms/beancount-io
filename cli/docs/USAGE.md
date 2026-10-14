@@ -652,7 +652,10 @@ stays usable. `.run *` still runs several separate stored queries.
 Native `--source` one-shots keep upstream's rendering but not its exit status:
 `.run` naming a missing stored query, and BQL that does not parse or compile,
 exit 2 with the reason on stderr, and an existing `--output` export is replaced
-only after the query succeeds.
+only after the query succeeds. A Beancount `--source` (a bare path or
+`beancount:<path>`) naming a file that does not exist, or a directory, exits 2
+naming the path before anything runs, for a one-shot and the shell alike;
+load errors inside a ledger that exists keep upstream's behaviour.
 With no query argument, `--file` and `--source` alike read BQL from piped
 stdin and open the interactive shell only on a terminal where prompting is
 allowed; under `--no-input` (or `CI`), or with empty stdin, a missing query is

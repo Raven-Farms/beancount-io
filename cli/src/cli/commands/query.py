@@ -75,6 +75,30 @@ def _check_source_scheme(source: str) -> None:
         raise UsageError(f"--source scheme '{scheme}' is not supported; use {supported}, or a bare path.")
 
 
+def _require_source_ledger(source: str) -> None:
+    """Refuse a native Beancount `--source` whose ledger file is not there (w5/249).
+
+    Upstream records `File "…" does not exist` as an ordinary load error and
+    answers from an empty database, so a typo in the path exited 0 and replaced
+    an existing `--output` export with a header row. The path is the one the
+    engine will hand the loader (`bea_engine.query._native_shell` restates this
+    rule and checks again): a lower-case scheme makes a URI, anything else is a
+    bare path, and either way the URL parser has the last word on the name.
+    """
+    import re
+    from urllib.parse import urlparse
+
+    parts = urlparse(source if re.match("[a-z]{2,}:", source) else "beancount:" + source)
+    if parts.scheme != "beancount" or not parts.path:
+        return
+    path = Path(parts.path)
+    named = "" if parts.path == source else f" {source}"
+    if not path.exists():
+        raise UsageError(f"No ledger file at '{path}' (from --source{named}).")
+    if path.is_dir():
+        raise UsageError(f"Ledger path '{path}' (from --source{named}) is a directory; expected a ledger file.")
+
+
 def _refuse_source_alias(source: str, destination: Path) -> None:
     """Refuse `--output` onto the local file a native `--source` reads.
 
@@ -300,6 +324,7 @@ def query(
         if ctx.json_output or ctx.strict:
             raise UsageError("--source uses native Beanquery output; --json and --strict require a local --file.")
         _check_source_scheme(source)
+        _require_source_ledger(source)
         if output_file is not None:
             _refuse_source_alias(source, Path(output_file))
         if query_string is None:
