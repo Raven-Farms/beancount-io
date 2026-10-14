@@ -327,6 +327,14 @@ operation inside the helper instead of the stock executable, so
 for an account that is already open. `lex` then dumps the tokens of the text
 as loaded — without the mark, account names in NFC.
 
+A ledger with a [managed price include](#managed-price-includes) runs inside
+the helper too, for every operation that loads it (all but `lex` and `parse`,
+which read the named file alone): `region --conversion value` values a holding
+from the feed as `balance` does, and `roundtrip` compares the entries with the
+feed's prices among them. `--offline` and `--strict-prices` apply as they do
+elsewhere. An unavailable source is a load error like any other, which only
+`roundtrip` prints; pass `--strict-prices` to fail on one instead.
+
 A directory where an operation expects its ledger file exits **2** before
 upstream runs, with the same one-line message `--file DIRECTORY` gets
 elsewhere: `bea doctor lex books` names `books` and suggests

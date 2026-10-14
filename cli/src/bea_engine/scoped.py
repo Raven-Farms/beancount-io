@@ -16,36 +16,76 @@ upstream itself chose, so the tree is numbered like the postings it is a tree of
 from __future__ import annotations
 
 import sys
+from pathlib import Path
 from typing import Any
 
 
 def run(op: str, argv: list[str]) -> int:
     """Run `bean-doctor <op>` in this process, formatting balances in scope."""
-    from beancount.scripts import doctor as upstream
+    from beancount.scripts import doctor
 
     from bea_engine.ledger.write import keep_load_cache_private
 
     keep_load_cache_private()
-    original = getattr(upstream, "render_mini_balances", None)
-    if original is None:  # pragma: no cover - upstream renamed it; run unchanged
-        return _invoke(upstream, op, argv)
-
-    def in_scope(entries: Any, options_map: Any, conversion: Any = None, price_map: Any = None) -> Any:
-        return original(entries, {**options_map, "dcontext": _context_of(entries, options_map)}, conversion, price_map)
-
-    upstream.render_mini_balances = in_scope
+    upstream: Any = doctor
+    plain_loader = upstream.loader
+    upstream.loader = _ManagedLoader(plain_loader)
     try:
-        return _invoke(upstream, op, argv)
+        original = getattr(upstream, "render_mini_balances", None)
+        if original is None:  # pragma: no cover - upstream renamed it; run unchanged
+            return _invoke(upstream, op, argv)
+
+        def in_scope(entries: Any, options_map: Any, conversion: Any = None, price_map: Any = None) -> Any:
+            scoped = {**options_map, "dcontext": _context_of(entries, options_map)}
+            return original(entries, scoped, conversion, price_map)
+
+        upstream.render_mini_balances = in_scope
+        try:
+            return _invoke(upstream, op, argv)
+        finally:
+            upstream.render_mini_balances = original
     finally:
-        upstream.render_mini_balances = original
+        upstream.loader = plain_loader
+
+
+class _ManagedLoader:
+    """`beancount.loader` as upstream's doctor uses it, with managed price includes resolved.
+
+    Upstream loads the ledger itself, and its loader reads a managed include
+    as a file glob that matches nothing: `region --conversion value` left a
+    holding `balance` valued at market unvalued, and `roundtrip` congratulated
+    over the glob error (w5/286). A ledger naming a managed source loads the
+    way every other command loads it; any other keeps upstream's own load.
+    """
+
+    def __init__(self, plain: Any) -> None:
+        self._plain = plain
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._plain, name)
+
+    def load_file(self, filename: Any, *args: Any, **kwargs: Any) -> Any:
+        from bea_engine import managed_load
+
+        entry = Path(filename)
+        if not managed_load.names_managed_source(entry):
+            return self._plain.load_file(filename, *args, **kwargs)
+        loaded = managed_load.load_with_sources(entry)
+        return loaded.entries, loaded.errors, loaded.options
 
 
 def _invoke(upstream: Any, op: str, argv: list[str]) -> int:
     """Upstream's own command line, so its usage errors and status are its own."""
+    from bea_engine import protocol
+
     try:
         upstream.doctor.main(args=[op, *argv], prog_name="bean-doctor")
     except SystemExit as exit_status:
         return _status(exit_status.code)
+    except protocol.EngineError as exc:
+        # Only the managed load raises one: strict prices, or a directory it cannot stage in.
+        protocol.note(f"error: {exc}")
+        return exc.exit_code
     return 0
 
 

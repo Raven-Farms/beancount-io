@@ -833,6 +833,24 @@ def source_json(source: ManagedSource) -> dict[str, Any]:
     }
 
 
+def names_managed_source(entry: Path) -> bool:
+    """Whether the include closure of `entry` holds a managed price include.
+
+    For a caller that runs upstream's own command and must decide whether its
+    plain load would see the ledger every other command sees. A closure that
+    cannot be read answers no, leaving that failure to the load itself.
+    """
+    from bea_engine.ledger.write import LedgerSnapshot
+    from bea_engine.protocol import EngineError
+
+    origins = _env_origins()
+    try:
+        snapshot = LedgerSnapshot.capture(entry)
+    except (OSError, EngineError):
+        return False
+    return bool(_collect_managed(snapshot, DEFAULT_ORIGINS if origins is None else origins))
+
+
 def load_file(
     entry: Path | str,
     *,

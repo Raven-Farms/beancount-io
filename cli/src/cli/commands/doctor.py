@@ -200,6 +200,9 @@ _PROSE_RE = re.compile(r'"(?:[^"\\]|\\.)*"|;[^\n]*|^\*[^\n]*', re.MULTILINE)
 #: Operations upstream runs on the named file alone; the rest load its includes.
 _SINGLE_FILE_OPS = frozenset({"lex", "parse"})
 
+#: A managed price include, which only the helper's load resolves (w5/286).
+_MANAGED_INCLUDE_RE = re.compile(r'^\s*include\s*"https?://', re.MULTILINE | re.IGNORECASE)
+
 
 def _needs_compat(op: str, args: list[str]) -> bool:
     """Whether stock `bean-doctor` would misread what this operation reads.
@@ -210,6 +213,10 @@ def _needs_compat(op: str, args: list[str]) -> bool:
     account already open, all with exit 0 (w5/135). The helper reads both
     shapes as the rest of `bea` does. Any other ledger keeps the upstream
     executable, and its output byte for byte.
+
+    Upstream also reads a managed price include as a file glob that matches
+    nothing, so an operation that loads the ledger saw none of the prices
+    `balance` values a holding with (w5/286). The helper resolves it.
     """
     positionals = _positionals(args)
     if not positionals:
@@ -229,6 +236,8 @@ def _needs_compat(op: str, args: list[str]) -> bool:
         except OSError:
             continue
         if not unicodedata.is_normalized("NFC", _PROSE_RE.sub("", text)):
+            return True
+        if op not in _SINGLE_FILE_OPS and _MANAGED_INCLUDE_RE.search(text):
             return True
     return False
 
