@@ -36,7 +36,6 @@
 ## Inbox
 
 - [244 — The import preview diff prints existing ledger lines raw, so escape sequences in the ledger's last lines reach the terminal](./244.md) — minor CLI output-safety bug; six raw ESC bytes on a PTY, clean-ledger control emits none, 20–30m.
-- [255 — CSV amounts written with a Unicode minus sign (U+2212) are refused, though w3/done/256 listed them among the spellings to accept](./255.md) — minor CLI import bug; clear exit 2, ASCII-minus control imports, 10–15m.
 - [256 — Plain `bea check` still prints a Python traceback for a broken `plugin` line (w3/done/359's own reproduction)](./256.md) — minor CLI bug (owner call, forwarded stock output); `--json check` and `list` controls give the one-line form, 30–40m.
 - [257 — A ledger with a deny-delete ACL fails every write with a raw `PermissionError` and leaves a staged copy behind each time (regression of w1/done/073)](./257.md) — minor CLI regression; exit 1 `validation` with a leaked staging copy per attempt, no-ACL control writes, 30m.
 - [258 — With stdout closed, `format`, `doctor` and `query --source` exit 1 with `'NoneType' object has no attribute 'write'`](./258.md) — minor CLI bug; `>/dev/null` and `list` controls exit 0, 15m.
