@@ -18,6 +18,8 @@ from pathlib import Path
 from typing import Annotated, Any
 
 import typer
+from typer._click.parser import _OptionParser
+from typer.core import TyperCommand
 
 from cli import context, output
 from cli.amounts import check_decimal_notation, parse_decimal_number
@@ -27,6 +29,46 @@ from cli.utils import decode_error_message, parse_date
 add_app = typer.Typer(
     help="Add beancount directives to a local .bean file", no_args_is_help=True, rich_markup_mode=None
 )
+
+
+class _SingleValueParser(_OptionParser):
+    """Refuse two different values for one single-valued option.
+
+    Click keeps the last value of a repeated scalar option, so `-a One -a Two`
+    or an alias pair such as `--commodity HOOL --currency USD` would write one
+    directive and report success while dropping the other value.
+    """
+
+    def __init__(self, ctx: Any = None) -> None:
+        super().__init__(ctx)
+        self._given: dict[str, tuple[str, Any]] = {}
+
+    def _get_value_from_state(self, option_name: str, option: Any, state: Any) -> Any:
+        value = super()._get_value_from_state(option_name, option, state)
+        if option.action != "store" or option.dest is None:
+            return value
+        earlier_name, earlier = self._given.setdefault(option.dest, (option_name, value))
+        if earlier != value:
+            command = self.ctx.command.name if self.ctx is not None else None
+            hint = (
+                " Both name the commodity being priced; the quote currency belongs in --amount."
+                if command == "price" and option.dest == "currency"
+                else ""
+            )
+            raise UsageError(
+                f"Conflicting values for one option: {earlier_name} {earlier!r} and {option_name} {value!r}. "
+                f"Pass it once; repeat the command for another directive.{hint}"
+            )
+        return value
+
+
+class _SingleValueCommand(TyperCommand):
+    def make_parser(self, ctx: Any) -> _OptionParser:
+        parser = _SingleValueParser(ctx)
+        for param in self.get_params(ctx):
+            param.add_to_parser(parser, ctx)
+        return parser
+
 
 IntoOpt = Annotated[Path | None, typer.Option("--into", help="Write to an included file, relative to the root ledger")]
 DateOpt = Annotated[str, typer.Option("--date", help="Date in YYYY-MM-DD format")]
@@ -102,7 +144,7 @@ def _appended(name: str, file: Path, data: dict[str, Any]) -> None:
         output.success(f"Added 1 {name} to {target}.")
 
 
-@add_app.command("transaction")
+@add_app.command("transaction", cls=_SingleValueCommand)
 def add_transaction(
     postings: Annotated[
         list[str],
@@ -156,7 +198,7 @@ def add_transaction(
     _appended("transaction", file, data)
 
 
-@add_app.command("open")
+@add_app.command("open", cls=_SingleValueCommand)
 def add_open(
     date: DateOpt,
     account: Annotated[str, typer.Option("--account", "-a", help="Account name")],
@@ -180,7 +222,7 @@ def add_open(
     _appended("open", file, data)
 
 
-@add_app.command("close")
+@add_app.command("close", cls=_SingleValueCommand)
 def add_close(
     date: DateOpt,
     account: Annotated[str, typer.Option("--account", "-a", help="Account name")],
@@ -194,7 +236,7 @@ def add_close(
     _appended("close", file, data)
 
 
-@add_app.command("balance")
+@add_app.command("balance", cls=_SingleValueCommand)
 def add_balance(
     date: DateOpt,
     account: Annotated[str, typer.Option("--account", "-a", help="Account name")],
@@ -281,7 +323,7 @@ def add_balance(
             output.success(f"Added 1 pad and 1 balance to {target}.")
 
 
-@add_app.command("pad")
+@add_app.command("pad", cls=_SingleValueCommand)
 def add_pad(
     date: DateOpt,
     account: Annotated[str, typer.Option("--account", "-a", help="Account to pad")],
@@ -295,7 +337,7 @@ def add_pad(
     _appended("pad", file, data)
 
 
-@add_app.command("note")
+@add_app.command("note", cls=_SingleValueCommand)
 def add_note(
     date: DateOpt,
     account: Annotated[str, typer.Option("--account", "-a", help="Account name")],
@@ -309,7 +351,7 @@ def add_note(
     _appended("note", file, data)
 
 
-@add_app.command("event")
+@add_app.command("event", cls=_SingleValueCommand)
 def add_event(
     date: DateOpt,
     type: Annotated[str, typer.Option("--type", "-t", help="Event type")],
@@ -323,7 +365,7 @@ def add_event(
     _appended("event", file, data)
 
 
-@add_app.command("price")
+@add_app.command("price", cls=_SingleValueCommand)
 def add_price(
     date: DateOpt,
     currency: Annotated[str, typer.Option("--currency", "--commodity", "-c", help="Commodity being priced")],
@@ -371,7 +413,7 @@ def add_price(
             output.success(f"Added 1 price to {target}.")
 
 
-@add_app.command("commodity")
+@add_app.command("commodity", cls=_SingleValueCommand)
 def add_commodity(
     date: DateOpt,
     currency: Annotated[str, typer.Option("--currency", "--commodity", "-c", help="Commodity symbol")],
@@ -391,7 +433,7 @@ def add_commodity(
     _appended("commodity", file, data)
 
 
-@add_app.command("document")
+@add_app.command("document", cls=_SingleValueCommand)
 def add_document(
     date: DateOpt,
     account: Annotated[str, typer.Option("--account", "-a", help="Account name")],
@@ -416,7 +458,7 @@ def add_document(
     _appended("document", file, data)
 
 
-@add_app.command("custom")
+@add_app.command("custom", cls=_SingleValueCommand)
 def add_custom(
     date: DateOpt,
     type: Annotated[str, typer.Option("--type", "-t", help="Custom directive type name")],
@@ -544,7 +586,7 @@ def _json_value_problem(exc: ValueError) -> str:
     return message
 
 
-@add_app.command("transactions")
+@add_app.command("transactions", cls=_SingleValueCommand)
 def add_transactions(
     from_file: Annotated[Path, typer.Option("--from", help="JSON file with a list of transactions; - reads stdin")],
     partial: Annotated[

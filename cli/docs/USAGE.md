@@ -1089,6 +1089,12 @@ each hold one amount.
 
 Aliases: `price` and `commodity` accept `--commodity`; `document` accepts
 `--path`; `note` accepts `--message`. Existing option names remain supported.
+An alias is the same option, and every `add` option that holds one value
+refuses two different ones — `-a Assets:One -a Assets:Two`, or `add price
+--commodity HOOL --currency USD` (the quote currency belongs in `--amount`) —
+with exit **2** naming both and nothing written, instead of keeping the last.
+Repeating the same value is accepted; `--posting`, `--tag`, `--link`,
+`--meta`, `--value` and `add open --currency` still repeat.
 
 ### Custom directives
 
