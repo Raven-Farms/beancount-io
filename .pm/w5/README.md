@@ -35,7 +35,6 @@
 
 ## Inbox
 
-- [275 — `bea example` skips its date-range check for non-ISO dates and fails with `IndexError`](./275.md) — minor CLI bug; ISO-date control exits 2 with the documented message, 15–20m.
 - [276 — A stored `query` directive with an empty body makes `.run NAME` and `.run *` fail with `IndexError`](./276.md) — minor CLI bug (contrived); `.run one` control works, 20m.
 - [277 — `bea example -o /dev/null` is refused with exit 4 "Already exists", unlike every other `-o` command](./277.md) — minor CLI consistency bug; `query -o /dev/null` control exits 0, 10m.
 - [278 — A ledger that is not UTF-8 gets the documented decode error from `format` and `add`, but a raw codec message from read commands](./278.md) — minor CLI message bug; `format` control gives path, offset and remedy, 20–30m.
