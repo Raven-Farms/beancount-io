@@ -262,7 +262,9 @@ identify a bank account. For example:
 `bea import checking.csv --account Assets:Checking --apply`.
 For a remembered mapping, human output reports
 `Using remembered settings for <file>` (or `Using settings remembered from
-<seeding file> for <file>`) listing every setting in force, and JSON reports
+<seeding file> for <file>`) listing every setting in force as flags that paste
+back: one `--csv` carrying the columns and any `encoding=`, then `--account`
+and the rest. JSON reports
 `config_source` `remembered --csv` plus a `remembered` object with the same
 fields (`null` when the run used no memory). A successful explicit `--csv`
 preview or apply replaces the remembered settings; settings it drops are named,

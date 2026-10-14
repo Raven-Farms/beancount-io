@@ -146,10 +146,16 @@ def test_remembered_settings_quote_a_spaced_date_format_and_rules_path(book: Pat
     recalled = _import(book, source)
     prefix = "Using remembered settings for bank3.csv: "
     settings = _note(recalled, prefix).removeprefix(prefix).removesuffix(".")
-    replayed = _import(book, source, "--account", "Assets:Checking", *shlex.split(settings))
+    replayed = _import(book, source, *shlex.split(settings))
 
-    assert settings == f"--csv '{SPACED_SPEC}' --date-format '%d %b %Y' --rules {shlex.quote(str(rules.resolve()))}"
-    assert shlex.split(settings) == ["--csv", SPACED_SPEC, "--date-format", "%d %b %Y", "--rules", str(rules.resolve())]
+    assert settings == (
+        f"--csv '{SPACED_SPEC}' --account Assets:Checking "
+        f"--date-format '%d %b %Y' --rules {shlex.quote(str(rules.resolve()))}"
+    )
+    assert shlex.split(settings) == [
+        *("--csv", SPACED_SPEC, "--account", "Assets:Checking"),
+        *("--date-format", "%d %b %Y", "--rules", str(rules.resolve())),
+    ]
     assert replayed["diff"] == first["diff"] and "Expenses:Food" in replayed["diff"]
 
     # A fresh `--csv` drops what it does not repeat; the dropped flags are named as shell words too.

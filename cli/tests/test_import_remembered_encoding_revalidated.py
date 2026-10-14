@@ -73,7 +73,7 @@ def test_a_utf8_export_is_not_decoded_with_the_remembered_codec(book: Path, bea_
     assert "Ã" not in book.read_text()
     assert feb["remembered"]["encoding"] == "utf-8"
     assert any(f"Remembered --csv encoding={codec} does not match feb.csv" in note for note in feb["notes"])
-    assert not any(f"--csv encoding={codec}." in note for note in feb["notes"])
+    assert not any(f",encoding={codec} " in note for note in feb["notes"])
     # Only that run changed: the saved mapping still names the codec.
     assert _stored_mapping(bea_config_dir) == f"{MAPPING},encoding={codec}"
 
@@ -95,7 +95,7 @@ def test_a_later_cp1252_export_is_still_read_with_the_remembered_codec(book: Pat
 
     assert mar["rows"][0]["narration"] == "Café Genève"
     assert mar["remembered"]["encoding"] == "cp1252"
-    assert any("--csv encoding=cp1252." in note for note in mar["notes"])
+    assert any(f"--csv {MAPPING},encoding=cp1252 " in note for note in mar["notes"])
     assert not any("does not match" in note for note in mar["notes"])
 
 

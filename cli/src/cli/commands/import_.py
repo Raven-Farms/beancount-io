@@ -823,7 +823,11 @@ def import_entries(
             columns_only = _strip_spec_keys(csv_request or "", {"delimiter", "encoding", "sign"})
             if recalled_sign_ledger:
                 columns_only = f"{columns_only},sign=ledger"
-            settings = [f"--csv {_shell_spec(columns_only)}"]
+            if csv_encoding != "utf-8":
+                # One `--csv`: a second one would replace the columns when the
+                # line is pasted back, since the last `--csv` wins (w5/283).
+                columns_only = f"{columns_only},encoding={csv_encoding}"
+            settings = [f"--csv {_shell_spec(columns_only)}", shlex.join(["--account", csv_run_account])]
             if date_format is not None:
                 settings.append(shlex.join(["--date-format", date_format]))
             if csv_rules_arg is not None:
@@ -832,8 +836,6 @@ def import_entries(
                 settings.append(f"--default-account {default_account}")
             if carried_delimiter is not None:
                 settings.append(f"--delimiter {_display_delimiter(carried_delimiter)}")
-            if csv_encoding != "utf-8":
-                settings.append(f"--csv encoding={csv_encoding}")
             if recalled_source is not None and recalled_source != source.name:
                 frontend_notes.append(
                     f"Using settings remembered from {recalled_source} for {source.name}: {' '.join(settings)}."
