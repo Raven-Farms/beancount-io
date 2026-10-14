@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
 from pydantic_ai import Agent
 from pydantic_ai.models.test import TestModel
 from typer.testing import CliRunner
@@ -241,6 +242,27 @@ class TestAgentSkills:
 
         parked.rename(skills_root / "test-skill")
         assert [s.name for s in load_skills(cwd=tmp_path)] == ["test-skill"]
+
+    @pytest.mark.parametrize("scope", ["project", "user"])
+    def test_skill_saved_with_a_bom_is_discovered_like_its_plain_twin(
+        self, tmp_path: Path, bea_config_dir: Path, scope: str
+    ) -> None:
+        # w5/287: a UTF-8 BOM (Windows Notepad) hid the opening `---` fence, so
+        # the skill was skipped silently. The BOM-less twin is the control.
+        skills_root = tmp_path / ".agents" / "skills" if scope == "project" else bea_config_dir / "skills"
+        text = "---\nname: {name}\ndescription: Saved by an editor.\n---\n\nDo the thing.\n"
+        for name, prefix in (("no-bom", b""), ("with-bom", b"\xef\xbb\xbf")):
+            skill_dir = skills_root / name
+            skill_dir.mkdir(parents=True)
+            (skill_dir / "SKILL.md").write_bytes(prefix + text.format(name=name).encode("utf-8"))
+
+        skills = load_skills(cwd=tmp_path)
+
+        assert [s.name for s in skills] == ["no-bom", "with-bom"]
+        plain, with_bom = skills
+        assert with_bom.description == plain.description == "Saved by an editor."
+        assert with_bom.body == plain.body == "Do the thing."
+        assert with_bom.path == skills_root / "with-bom" / "SKILL.md"
 
     def test_load_skills_project_takes_precedence(self, tmp_path: Path, bea_config_dir: Path) -> None:
         project_root = tmp_path / ".agents" / "skills"

@@ -21,7 +21,8 @@ class AgentSkill:
 def _parse_skill(path: Path) -> AgentSkill | None:
     """Parse a SKILL.md file. Returns None on any parse or validation failure."""
     try:
-        post = _fm.load(str(path))
+        # utf-8-sig: a leading BOM would otherwise hide the opening `---` fence.
+        post = _fm.load(str(path), encoding="utf-8-sig")
     except Exception:
         return None
 
