@@ -387,7 +387,9 @@ def helper_json(args: Sequence[str], *, stdin: str | None = None, writes: bool =
     `writes` says the command may change a file. An engine that dies without an
     envelope then leaves an unknown outcome — the write may already have
     happened — so it is reported as `conflict`/4 rather than a plain failure,
-    which invites a retry that would append the directive a second time.
+    which invites a retry that would append the directive a second time. The
+    exception is a `$BEA_ENGINE_PYTHON` that cannot load the helper: no command
+    ran, so that is a plain failure naming the variable.
 
     `stdin` carries a request the argument list cannot hold — a batch of
     transactions for `bea-engine add --request -`. Nothing is read back from
@@ -569,6 +571,8 @@ def _parse(completed: subprocess.CompletedProcess[str], args: Sequence[str], *, 
                 name = signal.Signals(number).name
             except ValueError:
                 name = f"signal {number}"
+        else:
+            _refuse_unusable_override(completed)
         if writes:
             # A writer that produced no envelope may or may not have written.
             # Exit 4 says exactly that, and stops a caller from retrying a
@@ -597,6 +601,42 @@ def _parse(completed: subprocess.CompletedProcess[str], args: Sequence[str], *, 
     if not isinstance(envelope, dict):
         raise BeaError(f"The Beancount engine answered with {type(envelope).__name__}, not a result object.")
     return envelope
+
+
+def _refuse_unusable_override(completed: subprocess.CompletedProcess[str]) -> None:
+    """Blame `$BEA_ENGINE_PYTHON` when the interpreter it names cannot load the helper at all.
+
+    An override without Beancount died on the helper's first import, which
+    `_parse` could only report as an engine that "did not answer", traceback
+    and all, and for a writer as an unknown outcome (w5/269). Asking that
+    interpreter for the import alone settles it: when even that fails no
+    command body ran, so nothing was written and the variable is what to fix,
+    as `native_command` already says of a missing executable. An override that
+    does load the helper falls through to the caller's own report.
+    """
+    override = paths.python_override()
+    if override is None:
+        return
+    try:
+        probe = subprocess.run(
+            [str(override), "-P", "-c", "import bea_engine.main"],
+            env=_helper_env(),
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except (OSError, ValueError):
+        return
+    if probe.returncode == 0:
+        return
+    lines = [line.strip() for line in probe.stderr.splitlines() if line.strip()]
+    reason = f" ({lines[-1]})" if lines else ""
+    raise BeaError(
+        f"{paths.PYTHON_ENV}={override} names an environment that cannot run the Beancount engine{reason}. "
+        f"Correct or unset {paths.PYTHON_ENV}, or run 'bea engine status' to see which engine would serve.",
+        traceback=completed.stderr or probe.stderr or None,
+    ) from None
 
 
 def helper_command() -> tuple[list[str], dict[str, str] | None]:

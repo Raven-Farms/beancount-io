@@ -1849,8 +1849,9 @@ Homebrew sets `BEA_ENGINE_DIR` to the keg-local engine so installs never look
 for a separately provisioned copy. Advanced overrides (`BEA_ENGINE_PYTHON`,
 `BEA_UV`) exist for tests and recovery tooling; ordinary installs do not need
 them. Both are checked before use: one that names a path which does not exist,
-or an environment missing the tool being run, fails with a message naming the
-variable and telling you to correct or unset it. `bea engine status` reports
+or an environment missing the tool being run or unable to load the engine,
+fails with a message naming the variable and telling you to correct or unset
+it; a write refused this way exits 1, since nothing ran. `bea engine status` reports
 which engine would serve.
 
 Truthy values are `1`, `true`, `yes`, and `on`, ignoring case and surrounding
