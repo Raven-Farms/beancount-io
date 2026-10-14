@@ -36,7 +36,6 @@
 ## Inbox
 
 - [244 — The import preview diff prints existing ledger lines raw, so escape sequences in the ledger's last lines reach the terminal](./244.md) — minor CLI output-safety bug; six raw ESC bytes on a PTY, clean-ledger control emits none, 20–30m.
-- [257 — A ledger with a deny-delete ACL fails every write with a raw `PermissionError` and leaves a staged copy behind each time (regression of w1/done/073)](./257.md) — minor CLI regression; exit 1 `validation` with a leaked staging copy per attempt, no-ACL control writes, 30m.
 - [258 — With stdout closed, `format`, `doctor` and `query --source` exit 1 with `'NoneType' object has no attribute 'write'`](./258.md) — minor CLI bug; `>/dev/null` and `list` controls exit 0, 15m.
 - [259 — `bea query --source` with an impossible date literal prints a long traceback instead of the usage error the `--file` path gives](./259.md) — minor CLI bug; traceback at exit 1, `--file` control exits 2 with one line, fix with 250, 15m.
 - [260 — A list-valued column next to an aggregate with no `GROUP BY` fails with `TypeError: unhashable type`](./260.md) — minor CLI bug; explicit `GROUP BY` control exits 2 with a clear message, 20m.
