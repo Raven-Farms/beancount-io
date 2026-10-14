@@ -85,7 +85,7 @@ def _refuse_invalid(diagnostic: str, destination: Path | None) -> None:
 
 
 def example(ctx: typer.Context) -> None:
-    """Generate an example Beancount history (delegates to bean-example)."""
+    """Generate an example ledger (delegates to bean-example)."""
     refuse_json("example", hint="Run without --json to print the sample ledger.")
     forwarded, output, force = _split_output(list(ctx.args))
     if output is not None and not force and (output.exists() or output.is_symlink()):

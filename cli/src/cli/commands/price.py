@@ -18,7 +18,7 @@ from cli.errors import LedgerError, UsageError, refuse_json
 
 
 def price(ctx: typer.Context) -> None:
-    """Inspect managed price includes (status, refresh, export), or fetch quotes via bean-price.
+    """Inspect managed price includes, or fetch bean-price quotes.
 
     `status` lists every managed source with its freshness, revision, and
     errors; `refresh` re-resolves now and reports what changed; `export`

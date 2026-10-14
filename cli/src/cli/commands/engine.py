@@ -16,7 +16,7 @@ from cli.engine import launch, paths, provision
 
 engine_app = typer.Typer(
     name="engine",
-    help="Manage the managed Beancount engine and optional accounting features.",
+    help="Manage the Beancount engine and its optional features.",
     no_args_is_help=True,
 )
 

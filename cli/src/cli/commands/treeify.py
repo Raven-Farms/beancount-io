@@ -104,7 +104,7 @@ def _check_regexes(parsed: argparse.Namespace) -> None:
 
 
 def treeify(ctx: typer.Context) -> None:
-    """Render a hierarchical column as an ASCII tree (delegates to treeify)."""
+    """Render a column as an ASCII tree (delegates to treeify)."""
     refuse_json("treeify", hint="Run without --json to print the ASCII tree.")
     # Upstream treeify knows no `--force`, so bea's own opt-in is stripped
     # before forwarding; without it an existing ledger file is never replaced.

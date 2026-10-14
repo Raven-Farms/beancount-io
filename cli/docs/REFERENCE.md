@@ -161,7 +161,7 @@ Usage: bea query [OPTIONS] [query_string]
 
 ### `bea price`
 
-Inspect managed price includes (status, refresh, export), or fetch quotes via bean-price.
+Inspect managed price includes, or fetch bean-price quotes.
 
 ```text
 Usage: bea price [OPTIONS]
@@ -254,7 +254,7 @@ Usage: bea ask [OPTIONS] [question]
 
 ### `bea example`
 
-Generate an example Beancount history (delegates to bean-example).
+Generate an example ledger (delegates to bean-example).
 
 ```text
 Usage: bea example [OPTIONS]
@@ -290,7 +290,7 @@ Options:
 
 ### `bea treeify`
 
-Render a hierarchical column as an ASCII tree (delegates to treeify).
+Render a column as an ASCII tree (delegates to treeify).
 
 ```text
 Usage: bea treeify [OPTIONS]

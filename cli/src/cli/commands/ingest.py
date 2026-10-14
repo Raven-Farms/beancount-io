@@ -30,9 +30,7 @@ _CONFIG = Annotated[
 
 ingest_app = typer.Typer(
     name="ingest",
-    help=(
-        "Run Beangulp identify/extract/archive via the user's ingest script (requires 'bea engine enable beangulp')."
-    ),
+    help=("Run Beangulp identify/extract/archive via your ingest script.\n\nRequires 'bea engine enable beangulp'."),
     no_args_is_help=True,
 )
 
