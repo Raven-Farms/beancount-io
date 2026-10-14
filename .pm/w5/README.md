@@ -36,7 +36,6 @@
 ## Inbox
 
 - [286 — `bea doctor` does not resolve managed price includes: `region --conversion value` leaves the holding unvalued and `roundtrip` reports success over a "File glob" error](./286.md) — minor CLI bug (offline simulation); `balance` control values the holding at 82,000 USD, 30–45m.
-- [290 — `add price` and `init --opening-balance` refuse comma-grouped numbers (`65,432.10 USD`) that `add balance`, `--posting` and stock Beancount accept](./290.md) — minor CLI consistency bug; clear exit 2, `add balance` control accepts the same grouping, same class as 213, 20–30m.
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
