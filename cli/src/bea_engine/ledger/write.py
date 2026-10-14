@@ -1946,7 +1946,7 @@ def keep_file_metadata(file: Path, candidate: Path, original_stat: os.stat_resul
     flags = getattr(original_stat, "st_flags", 0) & _KEPT_FILE_FLAGS
     if flags and hasattr(os, "chflags"):
         try:
-            os.chflags(candidate, os.stat(candidate).st_flags | flags)
+            os.chflags(candidate, getattr(os.stat(candidate), "st_flags", 0) | flags)
         except OSError as exc:
             raise AuthError(f"Cannot keep {file}'s file flags on the rewritten file; nothing was written.") from exc
 
