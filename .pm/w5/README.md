@@ -35,7 +35,6 @@
 
 ## Inbox
 
-- [260 — A list-valued column next to an aggregate with no `GROUP BY` fails with `TypeError: unhashable type`](./260.md) — minor CLI bug; explicit `GROUP BY` control exits 2 with a clear message, 20m.
 - [261 — Without `--time`, report series end on a date after the report's own `as_of`, and the date moves with `--interval`](./261.md) — minor CLI report bug; yearly net-worth point dated 2026-12-31 against `as_of` 2026-02-10, `--time` control dated correctly, 45–60m.
 - [262 — A comment after the closing `;` makes a one-statement query fail with "One BQL statement per invocation; got 2"](./262.md) — minor CLI bug; comment-before-semicolon control runs, 20–30m.
 - [263 — `add transaction --posting` rounds a negative amount wider than 28 significant digits; the positive twin is written exactly](./263.md) — minor CLI precision bug; negative leg loses a digit at exit 0, 28-digit and bulk controls exact, 40–60m.
