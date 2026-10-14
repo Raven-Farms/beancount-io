@@ -1861,4 +1861,6 @@ mappings under `importers/`, and channel-specific update-check caches.
 Ledger plugins and importer configurations run their own Python code and
 control any I/O they perform. What they print — including from a child process
 or a raw write to descriptor 1 — never reaches bea's machine output: plugin
-output goes to stderr and importer output to `importer_output`.
+output goes to stderr and importer output to `importer_output`. Under `--json`
+a successful command prints the plugin output on stderr after the envelope; a
+failed one keeps stderr to its single error object and drops it.

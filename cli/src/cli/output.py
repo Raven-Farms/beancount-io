@@ -41,11 +41,18 @@ def _json_mode() -> bool:
 _pending_warnings: list[str] = []
 
 
+# What ledger plugins printed during a JSON command's successful engine calls.
+# It waits for the same reason: after the envelope on a clean exit, and dropped
+# by a failure, whose error object has stderr to itself.
+_pending_engine_output: list[str] = []
+
+
 def flush_warnings() -> None:
-    """Print deferred loader warnings; called on the way out of a successful command."""
-    for line in _pending_warnings:
+    """Print deferred loader warnings and plugin output; called on the way out of a successful command."""
+    for line in _pending_warnings + _pending_engine_output:
         print(inert_text(line), file=sys.stderr)
     _pending_warnings.clear()
+    _pending_engine_output.clear()
 
 
 def success(message: str | None = None) -> None:
@@ -95,6 +102,19 @@ def note(message: str) -> None:
         print(inert_text(message), file=sys.stderr)
 
 
+def engine_output(text: str) -> None:
+    """Show what the engine's stderr held after a call that succeeded: plugin output.
+
+    The documented destination is stderr in both modes. JSON mode used to drop
+    it, so a plugin's diagnostics vanished from automated runs (w5/270); there
+    it now follows the envelope, like a tolerated loader warning.
+    """
+    if _json_mode():
+        _pending_engine_output.append(text)
+    else:
+        note(text)
+
+
 def error(exc: BaseException | str) -> NoReturn:
     """Fail with a documented category and exit code, rendered for the active mode."""
     err = to_bea_error(exc)
@@ -123,6 +143,7 @@ def error(exc: BaseException | str) -> NoReturn:
         if _pending_warnings:
             payload["ledger_warnings"] = list(_pending_warnings)
             _pending_warnings.clear()
+        _pending_engine_output.clear()
         if trace:
             payload["traceback"] = trace
         print(json.dumps({"error": payload}), file=sys.stderr)

@@ -426,7 +426,7 @@ def helper_json(args: Sequence[str], *, stdin: str | None = None, writes: bool =
         raise error
 
     if completed.stderr.strip():
-        output.note(completed.stderr.rstrip())
+        output.engine_output(completed.stderr.rstrip())
     return dict(envelope.get("data") or {})
 
 
