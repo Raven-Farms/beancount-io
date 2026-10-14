@@ -37,7 +37,6 @@
 
 - [244 — The import preview diff prints existing ledger lines raw, so escape sequences in the ledger's last lines reach the terminal](./244.md) — minor CLI output-safety bug; six raw ESC bytes on a PTY, clean-ledger control emits none, 20–30m.
 - [258 — With stdout closed, `format`, `doctor` and `query --source` exit 1 with `'NoneType' object has no attribute 'write'`](./258.md) — minor CLI bug; `>/dev/null` and `list` controls exit 0, 15m.
-- [259 — `bea query --source` with an impossible date literal prints a long traceback instead of the usage error the `--file` path gives](./259.md) — minor CLI bug; traceback at exit 1, `--file` control exits 2 with one line, fix with 250, 15m.
 - [260 — A list-valued column next to an aggregate with no `GROUP BY` fails with `TypeError: unhashable type`](./260.md) — minor CLI bug; explicit `GROUP BY` control exits 2 with a clear message, 20m.
 - [261 — Without `--time`, report series end on a date after the report's own `as_of`, and the date moves with `--interval`](./261.md) — minor CLI report bug; yearly net-worth point dated 2026-12-31 against `as_of` 2026-02-10, `--time` control dated correctly, 45–60m.
 - [262 — A comment after the closing `;` makes a one-statement query fail with "One BQL statement per invocation; got 2"](./262.md) — minor CLI bug; comment-before-semicolon control runs, 20–30m.
