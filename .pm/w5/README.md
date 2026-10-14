@@ -35,7 +35,6 @@
 
 ## Inbox
 
-- [283 — The remembered-settings line prints `--csv` twice when an encoding is in force, so pasting it runs a different mapping](./283.md) — minor CLI bug; pasted line swaps payee for an inferred narration mapping, single-`--csv` control keeps it, fix with 195, 15–20m.
 - [286 — `bea doctor` does not resolve managed price includes: `region --conversion value` leaves the holding unvalued and `roundtrip` reports success over a "File glob" error](./286.md) — minor CLI bug (offline simulation); `balance` control values the holding at 82,000 USD, 30–45m.
 - [290 — `add price` and `init --opening-balance` refuse comma-grouped numbers (`65,432.10 USD`) that `add balance`, `--posting` and stock Beancount accept](./290.md) — minor CLI consistency bug; clear exit 2, `add balance` control accepts the same grouping, same class as 213, 20–30m.
 
