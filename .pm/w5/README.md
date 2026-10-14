@@ -36,7 +36,6 @@
 ## Inbox
 
 - [214 — Two `bea import` runs at once lose one remembered mapping, and a later flag-free `--apply` writes rows to the wrong account](./214.md) — major CLI import bug; mapping lost in 4 of 8 races, sequential control refuses with exit 2, 45–60m.
-- [220 — Plain `bea check` or `bea doctor` leaves a load cache that later commands trust: a BQL literal stops matching, and a valid BOM ledger starts failing](./220.md) — major CLI correctness bug; exit-0 empty query after `check`, uncached and engine-first controls correct, fix with 111, 45–60m.
 - [233 — Ctrl-C while the query shell loads the ledger drops a transaction, and the damaged load is cached so every later command fails](./233.md) — major CLI data-integrity bug; shell answers 39,999 of 40,000 and later `check` exits 1, no-interrupt control correct, 60–90m.
 - [236 — A dot command at the start of a one-shot query swallows the lines after it and exits 0, emptying the `-o` export](./236.md) — minor CLI bug; exit 0 with the export emptied, syntax-error and two-statement controls exit 2, 40–50m.
 - [237 — `.run` with an apostrophe in the stored query name fails with `ValueError: No closing quotation`](./237.md) — minor CLI bug; exit 1 `ValueError`, quoted-name control prints 7.00 USD, 15–20m.
