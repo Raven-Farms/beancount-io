@@ -36,7 +36,6 @@
 ## Inbox
 
 - [233 — Ctrl-C while the query shell loads the ledger drops a transaction, and the damaged load is cached so every later command fails](./233.md) — major CLI data-integrity bug; shell answers 39,999 of 40,000 and later `check` exits 1, no-interrupt control correct, 60–90m.
-- [236 — A dot command at the start of a one-shot query swallows the lines after it and exits 0, emptying the `-o` export](./236.md) — minor CLI bug; exit 0 with the export emptied, syntax-error and two-statement controls exit 2, 40–50m.
 - [237 — `.run` with an apostrophe in the stored query name fails with `ValueError: No closing quotation`](./237.md) — minor CLI bug; exit 1 `ValueError`, quoted-name control prints 7.00 USD, 15–20m.
 - [238 — `add price --commodity HOOL --currency USD --amount '130 USD'` writes `price USD 130 USD`; repeated single-valued `add` options silently keep only the last](./238.md) — major CLI bug; exit-0 `price USD 130 USD`, single-option and repeated-`--amount` controls correct, 30–45m.
 - [239 — `add transaction --date ""` books the entry on today's date with exit 0](./239.md) — minor CLI bug; `add open --date ''` control exits 2, 15–20m.
