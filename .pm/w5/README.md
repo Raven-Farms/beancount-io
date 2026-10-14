@@ -35,7 +35,6 @@
 
 ## Inbox
 
-- [274 — `bea format --check DIR` silently skips a subdirectory it cannot read and reports the tree formatted](./274.md) — minor CLI bug; exit 0 "All 1 file(s) are formatted" with a skipped subtree, readable control exits 1, 30m.
 - [275 — `bea example` skips its date-range check for non-ISO dates and fails with `IndexError`](./275.md) — minor CLI bug; ISO-date control exits 2 with the documented message, 15–20m.
 - [276 — A stored `query` directive with an empty body makes `.run NAME` and `.run *` fail with `IndexError`](./276.md) — minor CLI bug (contrived); `.run one` control works, 20m.
 - [277 — `bea example -o /dev/null` is refused with exit 4 "Already exists", unlike every other `-o` command](./277.md) — minor CLI consistency bug; `query -o /dev/null` control exits 0, 10m.
