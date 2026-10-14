@@ -162,9 +162,15 @@ def _split_statements(query_string: str) -> list[str]:
     purpose; the frontend may not import the engine, so the rules are restated
     rather than shared, and `tests/test_query_statement_comments.py` pins that
     the two agree.
+
+    A fragment holding only whitespace and comments is not a statement either:
+    `SELECT …; /* note */` is one query to Beanquery, and counting its tail
+    refused it as two (w5/262).
     """
     statements: list[str] = []
     current: list[str] = []
+    code: list[bool] = []  # Per fragment: whether it holds anything but whitespace and comments.
+    has_code = False
     index = 0
     length = len(query_string)
     while index < length:
@@ -182,17 +188,24 @@ def _split_statements(query_string: str) -> list[str]:
         elif query_string.startswith("/*", index):
             end = query_string.find("*/", index + 2)
             end = length if end == -1 else end + 2
+            current.append(query_string[index:end])
+            index = end
+            continue
         elif char == ";":
             statements.append("".join(current))
+            code.append(has_code)
             current = []
+            has_code = False
             index += 1
             continue
         else:
             end = index + 1
+        has_code = has_code or not char.isspace()
         current.append(query_string[index:end])
         index = end
     statements.append("".join(current))
-    return [part for part in (piece.strip() for piece in statements) if part]
+    code.append(has_code)
+    return [piece.strip() for piece, is_code in zip(statements, code, strict=True) if is_code]
 
 
 def _refuse_multi_statement(query_string: str) -> None:

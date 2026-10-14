@@ -648,7 +648,8 @@ reason on stderr, keeps the current output destination, and leaves the shell usa
 One-shot queries carry exactly one statement: an empty or whitespace-only
 query, a `.output` with no query, a `.run` naming no stored query, and two
 statements joined by `;` are each refused with exit 2 and the supported form.
-A trailing `;`, and semicolons inside quotes, are not second statements.
+A trailing `;`, a `/* comment */` after it, and semicolons inside quotes or
+comments, are not second statements.
 A shell command such as `.tables` or `.format` is one line: further lines
 after it are refused the same way (only `.explain` and `.parse` take BQL that
 may span lines), and a command the shell rejects (an unknown name, a bad

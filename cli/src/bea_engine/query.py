@@ -49,8 +49,11 @@ LEDGER_DSN = "beancount:"
 _RESERVED_TABLE_FROM = re.compile(r'(?i)\b(FROM|JOIN)\s+(?<!")(accounts|balances)\b(?!")')
 
 
-def _code_mask(text: str) -> str:
+def _code_mask(text: str, *, literals: bool = True) -> str:
     """The query with every string literal and comment blanked to spaces.
+
+    `literals=False` blanks only the comments, for a caller asking whether any
+    code is there at all rather than where the keywords are.
 
     Exactly as long as the input, so a match found in the mask has the offsets
     of the real thing. That is what lets the relation rewrite below see only
@@ -80,7 +83,7 @@ def _code_mask(text: str) -> str:
                     end += 1
                     break
                 end += 1
-            out.append(" " * (end - index))
+            out.append(" " * (end - index) if literals else text[index:end])
             index = end
         elif text.startswith("/*", index):
             end = text.find("*/", index + 2)
@@ -101,13 +104,15 @@ def _refuse_statement_tail(query_string: str, ledger_errors: list[str] | None = 
     in a `query` directive, or typed at the prompt, answered half and exited 0.
     Separators are found in the code mask, so a `;` inside a literal or a
     comment does not count, and a trailing `;` is not a second statement: the
-    same rules as the frontend's one-shot `_split_statements`.
+    same rules as the frontend's one-shot `_split_statements`. Nor is a
+    fragment of only whitespace and comments, so `SELECT 1; /* note */` is one.
     """
     masked = _code_mask(query_string)
+    uncommented = _code_mask(query_string, literals=False)
     statements = 0
     start = 0
     for index in [*(i for i, char in enumerate(masked) if char == ";"), len(masked)]:
-        if query_string[start:index].strip():
+        if uncommented[start:index].strip():
             statements += 1
         start = index + 1
     if statements > 1:
