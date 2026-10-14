@@ -33,7 +33,7 @@ import re
 import stat
 import sys
 import unicodedata
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Hashable, Mapping
 from decimal import Decimal, localcontext
 from functools import partial
 from pathlib import Path
@@ -1378,6 +1378,12 @@ def _compiled(
         # an EvalQuery node does not accept.
         if "EvalQuery" in str(exc):
             raise _scalar_subquery_error(ledger_errors()) from None
+        # Beside an aggregate with no GROUP BY, every other column is grouped
+        # by implicitly, and nothing checks it can be hashed until the first
+        # row is aggregated (w5/260).
+        ungroupable = _ungroupable_columns(exc)
+        if ungroupable is not None:
+            raise _implicit_group_error(ungroupable, ledger_errors()) from None
         raise
     except AttributeError as exc:
         # A scalar subquery in the SELECT list reaches scalar evaluation as an
@@ -1399,6 +1405,52 @@ def _scalar_subquery_error(ledger_errors: list[str]) -> protocol.UsageError:
     return protocol.UsageError(
         "BQL cannot use a subquery as a single value.",
         details=["Filter with it instead: SELECT ... WHERE column IN (SELECT ...)"],
+        ledger_errors=ledger_errors,
+    )
+
+
+def _ungroupable_columns(exc: TypeError) -> list[tuple[str, str]] | None:
+    """The implicitly grouped `(column, type)` pairs Beanquery's aggregation could not hash.
+
+    None unless the TypeError is that failure: an unhashable group key inside
+    Beanquery's `execute_select`. The explicit `GROUP BY` form is refused when
+    it compiles, with the column's name; here the name is read back from the
+    frame that failed, since only the row's values say which column it was.
+    """
+    if "unhashable type" not in str(exc):
+        return None
+    tb = exc.__traceback__
+    while tb is not None and tb.tb_next is not None:
+        tb = tb.tb_next
+    if tb is None:
+        return None
+    code = tb.tb_frame.f_code
+    if code.co_name != "execute_select" or Path(code.co_filename).parent.name != "beanquery":
+        return None
+    scope = tb.tb_frame.f_locals
+    query, key = scope.get("query"), scope.get("key") or ()
+    targets = getattr(query, "c_targets", None) or []
+    found: list[tuple[str, str]] = []
+    for index, value in zip(getattr(query, "group_indexes", None) or [], key, strict=False):
+        name = getattr(targets[index], "name", None) if index < len(targets) else None
+        if isinstance(name, str) and not isinstance(value, Hashable) and (name, type(value).__name__) not in found:
+            found.append((name, type(value).__name__))
+    return found
+
+
+def _implicit_group_error(columns: list[tuple[str, str]], ledger_errors: list[str]) -> protocol.UsageError:
+    named = ", ".join(f"{name} ({kind})" for name, kind in columns) or "a selected column"
+    details = ["A column selected beside an aggregate is grouped by, as if it were listed in GROUP BY."]
+    for name, kind in columns:
+        # `joinstr` reads a list and `str` most other values; no function can
+        # read the parameterized set behind `accounts`, so it gets no recipe.
+        if kind != "set":
+            wrapped = f"joinstr({name})" if kind == "list" else f"str({name})"
+            details.append(f"Group by its text instead: SELECT {wrapped}, ... GROUP BY {wrapped}")
+    details.append("Or select it without the aggregate.")
+    return protocol.UsageError(
+        f"Cannot run this BQL query: BQL cannot group by {named}, which it cannot hash.",
+        details=details,
         ledger_errors=ledger_errors,
     )
 

@@ -693,6 +693,10 @@ recipes that work — `SELECT DISTINCT joinstr(tags)` for distinct combinations,
 `WHERE 'grocery' IN tags` for one tag at a time. `joinstr` returns a string,
 which behaves like any other column; the order of the tags inside that string is
 not stable, so compare sets by membership rather than by the joined text.
+A column selected beside an aggregate with no `GROUP BY` is grouped by
+implicitly, so one BQL cannot hash — `other_accounts`, `balance`, `meta` — is
+the same usage error (exit **2**), named with its type:
+`SELECT joinstr(other_accounts), count(*)` or `str(meta)` groups by its text.
 
 An empty result prints `(no rows)` on stderr. JSON mode keeps the usual
 envelope with an empty `rows` array and no human notice.
