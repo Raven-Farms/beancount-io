@@ -414,26 +414,27 @@ def _targets(
             raise UsageError(f"Formatting target does not exist: {resolved}")
         if resolved.is_dir():
             root = resolved
-            for pattern in ("*.bean", "*.beancount"):
-                for match in root.rglob(pattern):
-                    if match.is_dir():
+            for match in _walk(root):
+                if match.is_dir():
+                    continue
+                if not match.is_file():
+                    if _editor_lock(match):
                         continue
-                    if not match.is_file():
-                        if _editor_lock(match):
-                            continue
-                        # A walked entry the scan cannot read is not one it may
-                        # drop: naming the same path explicitly is an error, and
-                        # a `--check` that skips it reports a tree it never
-                        # looked at — green while `bea check` fails on the very
-                        # include the entry stands for.
-                        raise UsageError(_unreadable(match))
-                    target = match.resolve()
-                    try:
-                        target.relative_to(root)
-                    except ValueError:
-                        # Outbound symlink: stay inside the requested directory tree.
-                        continue
-                    files.add(target)
+                    # A walked entry the scan cannot read is not one it may
+                    # drop: naming the same path explicitly is an error, and
+                    # a `--check` that skips it reports a tree it never
+                    # looked at — green while `bea check` fails on the very
+                    # include the entry stands for.
+                    raise UsageError(_unreadable(match))
+                target = match.resolve()
+                try:
+                    target.relative_to(root)
+                except ValueError:
+                    # Outbound symlink: stay inside the requested directory tree.
+                    continue
+                if not os.access(target, os.R_OK):
+                    raise UsageError(_denied(match, "Permission denied"))
+                files.add(target)
         elif resolved.is_file():
             if resolved.suffix not in SUFFIXES:
                 raise UsageError("Expected a .bean or .beancount file, or a directory.")
@@ -500,6 +501,30 @@ def _editor_lock(path: Path) -> bool:
     return path.name.startswith(".#") and path.is_symlink() and not path.exists()
 
 
+def _walk(root: Path) -> list[Path]:
+    """Every `.bean` and `.beancount` entry under `root`, in path order.
+
+    `Path.rglob` swallows the error from a directory it cannot list, which
+    made `--check` exit 0 for a subtree it never opened (w5/274). The walk
+    stops on that directory instead. Like `rglob`, it does not descend through
+    directory symlinks.
+    """
+
+    def stop(exc: OSError) -> None:
+        raise UsageError(_denied(Path(exc.filename or root), exc.strerror or str(exc)))
+
+    suffixes = tuple(SUFFIXES)
+    found: list[Path] = []
+    for directory, _, names in os.walk(root, onerror=stop):
+        found.extend(Path(directory, name) for name in names if name.endswith(suffixes))
+    return sorted(found)
+
+
+def _denied(path: Path, reason: str) -> str:
+    """Why the directory walk stopped at an entry the user may not read."""
+    return f"Could not read {path}: {reason}. A directory scan cannot format what it cannot read."
+
+
 def _unreadable(path: Path) -> str:
     """Why a `*.bean` entry found by the directory walk could not be formatted."""
     if path.is_symlink():
@@ -507,6 +532,10 @@ def _unreadable(path: Path) -> str:
             f"Formatting target does not exist: {path} → {path.readlink()}. "
             "Repair or remove the broken link; a directory scan cannot format what it cannot read."
         )
+    try:
+        path.stat()
+    except OSError as exc:
+        return _denied(path, exc.strerror or str(exc))
     return f"Not a regular file: {path}."
 
 

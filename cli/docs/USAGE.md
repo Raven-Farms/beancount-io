@@ -526,7 +526,8 @@ to re-save as UTF-8; piped input to `bea format -` fails the same way, naming
 
 A directory is walked for `.bean` and `.beancount` files, and a walked entry it
 cannot read stops the run (exit **2**) naming the path and where it points — a
-broken `include` symlink is the shape this usually takes. Silently dropping it
+broken `include` symlink is the shape this usually takes; a subdirectory it may
+not list, or a ledger file it may not read, stops it the same way. Silently dropping it
 would let `--check` report a tree it never looked at, green while `bea check`
 fails on the very include the entry stands for. The dangling `.#name` lock
 links Emacs keeps beside files with unsaved edits are not ledger files and are
