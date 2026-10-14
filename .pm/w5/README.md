@@ -43,7 +43,6 @@
 - [288 — `bea query --source memory:` prints a long traceback, and the bad-scheme error recommends `memory:...`](./288.md) — minor CLI bug; traceback at exit 1 for a scheme the error message itself recommends, fix with 250, 10–15m.
 - [289 — `bea query --source F -o FILE ".help"` prints to stdout and replaces the export with an empty file](./289.md) — minor CLI bug; export emptied at exit 0, `--file` control writes the help into the file, fix with 236, 15–20m.
 - [290 — `add price` and `init --opening-balance` refuse comma-grouped numbers (`65,432.10 USD`) that `add balance`, `--posting` and stock Beancount accept](./290.md) — minor CLI consistency bug; clear exit 2, `add balance` control accepts the same grouping, same class as 213, 20–30m.
-- [291 — The first write into a not-yet-existing `--into` file hides a `../` include: `add price` writes a conflicting quote, and `--allow-errors` refuses over the old error](./291.md) — major CLI write-guard bug; exit 0 with two quotes for one day, existing-file and in-tree include controls refuse correctly, 15–20m with 285.
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
