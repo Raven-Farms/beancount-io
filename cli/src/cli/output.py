@@ -168,12 +168,22 @@ def display_width(text: str) -> int:
     Format characters — a zero-width space or joiner, a directional mark — draw
     nothing either, so they take no column; the soft hyphen is the one terminals
     do give a cell.
+
+    "Combining" is the general category, not the canonical combining class: the
+    class is 0 for many marks that still draw onto their base — Thai and
+    Devanagari vowel signs, the emoji variation selector — and a payee holding
+    them was padded short (w5/246). An emoji skin-tone modifier recolours the
+    emoji before it and takes no column either.
     """
     return sum(_columns(c) for c in text)
 
 
 def _columns(char: str) -> int:
-    if unicodedata.combining(char) or (unicodedata.category(char) == "Cf" and char != "\u00ad"):
+    if char == "\u00ad":
+        return 1
+    if unicodedata.combining(char) or unicodedata.category(char) in {"Mn", "Me", "Cf"}:
+        return 0
+    if "\U0001f3fb" <= char <= "\U0001f3ff":
         return 0
     return 2 if unicodedata.east_asian_width(char) in "WF" else 1
 
@@ -184,15 +194,32 @@ def pad(text: str, width: int) -> str:
 
 
 def truncate(text: str, width: int) -> str:
-    """`text` cut to at most `width` columns, ending in `...` when it was cut."""
+    """`text` cut to at most `width` columns, ending in `...` when it was cut.
+
+    The cut falls between clusters, never inside one: a base stays with the
+    marks drawn onto it, and a zero-width joiner stays with both the emoji it
+    joins, so a family is kept whole or dropped whole rather than left as one
+    man and a dangling joiner.
+    """
     if display_width(text) <= width:
         return text
     kept = ""
-    for char in text:
-        if display_width(kept + char) > width - 3:
+    for cluster in _clusters(text):
+        if display_width(kept + cluster) > width - 3:
             break
-        kept += char
+        kept += cluster
     return f"{kept}..."
+
+
+def _clusters(text: str) -> list[str]:
+    """`text` split where a cut is safe: before a character with a column of its own, unless a joiner precedes it."""
+    clusters: list[str] = []
+    for char in text:
+        if clusters and (not _columns(char) or clusters[-1].endswith("\u200d")):
+            clusters[-1] += char
+        else:
+            clusters.append(char)
+    return clusters
 
 
 def table(headers: list[str], rows: list[list[str]]) -> None:
