@@ -24,7 +24,7 @@ import typer
 from cli import context, output
 from cli.engine import launch
 from cli.errors import UsageError
-from cli.utils import decode_error_message
+from cli.utils import decode_error_message, inert_text
 
 FORMATS = ("text", "csv", "beancount")
 
@@ -396,5 +396,11 @@ def query(
         return
     text = str(data.get("text", ""))
     if text:
-        # `end=""`: the renderer's own trailing newline is part of the table.
+        # A redirect or pipe gets the engine's bytes, the same ones `-o` writes.
+        # A terminal is a person reading: CSV cells and `PRINT` directives hold
+        # the ledger's strings verbatim, so a raw ESC in a payee would drive the
+        # terminal. Show it as `\xNN`, as the text table already does (w5/245).
+        if sys.stdout is not None and sys.stdout.isatty():
+            text = inert_text(text)
+        # The renderer's own trailing newline is part of the result.
         output.write_data(text)

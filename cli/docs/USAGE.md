@@ -584,6 +584,12 @@ opened in a spreadsheet. Pass `--spreadsheet-safe` with `--format csv` (local
 or a carriage return with `'`; numbers and amounts keep their sign. Leave it
 off for files a program reads back, since it changes those text values.
 
+A redirect, a pipe and `-o FILE` receive the same bytes for the same result.
+Only a result printed straight to a terminal differs: control characters in a
+CSV cell or a `PRINT` directive are shown as a visible `\xNN` there, as the
+text table shows them everywhere, so a stray escape sequence in a payee cannot
+drive the terminal.
+
 An `-o` destination that is the ledger under read is refused with exit 2 before
 anything is written, in one-shots and in the interactive shell's `.output`
 alike, including a `.output` line in Beanquery's `~/.config/beanquery/init`
