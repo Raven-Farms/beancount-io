@@ -36,7 +36,6 @@
 ## Inbox
 
 - [244 — The import preview diff prints existing ledger lines raw, so escape sequences in the ledger's last lines reach the terminal](./244.md) — minor CLI output-safety bug; six raw ESC bytes on a PTY, clean-ledger control emits none, 20–30m.
-- [253 — `bea query 'help print'` fails with `TypeError: … got 'NoneType'` (the w3/done/299 crash, for the other overridden statement)](./253.md) — minor CLI bug; `help select` control prints help, 10–15m.
 - [254 — `import --id-key ID` silently turns off bank-ID matching; only the lowercase spelling `id` is aliased](./254.md) — minor CLI import bug; reused bank id written twice with exit 0, lowercase control exits 4, 15–25m.
 - [255 — CSV amounts written with a Unicode minus sign (U+2212) are refused, though w3/done/256 listed them among the spellings to accept](./255.md) — minor CLI import bug; clear exit 2, ASCII-minus control imports, 10–15m.
 - [256 — Plain `bea check` still prints a Python traceback for a broken `plugin` line (w3/done/359's own reproduction)](./256.md) — minor CLI bug (owner call, forwarded stock output); `--json check` and `list` controls give the one-line form, 30–40m.
