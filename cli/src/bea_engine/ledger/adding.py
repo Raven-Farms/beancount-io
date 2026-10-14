@@ -952,6 +952,24 @@ def _is_typed_literal(raw: str, value: Any) -> bool:
     return False
 
 
+def _may_be_typed(raw: str) -> bool:
+    """Whether `raw` has the shape of a value whose reading is Beancount's to give.
+
+    Everything else is stored as the text typed whatever the grammar makes of
+    it, so it is never handed over: upstream's parser segfaults evaluating a
+    zero divisor, and the cheque number `1045/0` took the engine down with
+    "the outcome is unknown" (w5/272).
+    """
+    from beancount.core.amount import CURRENCY_RE
+
+    if raw.startswith('"') or raw.lower() in {"true", "false"}:
+        return True
+    if re.fullmatch(rf"{_PLAIN_NUMBER}|{_META_DATE}", raw):
+        return True
+    amount = re.fullmatch(rf"{_PLAIN_NUMBER}[ \t]+(\S+)", raw)
+    return amount is not None and re.fullmatch(CURRENCY_RE, amount.group(1)) is not None
+
+
 def _parse_metadata(items: list[str]) -> dict[str, Any]:
     """`key:value` pairs, with native typed values read by Beancount's own parser."""
     from beancount.core.data import Transaction
@@ -987,6 +1005,9 @@ def _parse_metadata(items: list[str]) -> dict[str, Any]:
         # Beancount booleans are TRUE/FALSE; accept the usual spellings so
         # `--meta cleared:true` matches bulk JSON bool meta instead of quoting.
         parsed_raw = raw.upper() if raw.lower() in {"true", "false"} else raw
+        if not _may_be_typed(raw):
+            # Text either way; the stand-in still lets Beancount judge the key.
+            parsed_raw = '"x"'
         entries, errors, _ = parser.parse_string(f'2000-01-01 * ""\n  {key}: {parsed_raw}\n')
         errors = without_root_name_errors(errors)
         if not errors and len(entries) == 1 and isinstance(entries[0], Transaction) and key in entries[0].meta:
