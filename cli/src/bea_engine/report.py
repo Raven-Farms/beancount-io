@@ -198,10 +198,10 @@ def _overview(
             "net_worth": worth,
         },
         "series": {
-            "assets": _series_json(data.assets_data),
-            "liabilities": _series_json(data.liabilities_data),
-            "income": _series_json(data.income_interval_data),
-            "expenses": _series_json(data.expenses_interval_data),
+            "assets": _series_json(data.assets_data, conversion),
+            "liabilities": _series_json(data.liabilities_data, conversion),
+            "income": _series_json(data.income_interval_data, conversion),
+            "expenses": _series_json(data.expenses_interval_data, conversion),
         },
     }
 
@@ -228,8 +228,8 @@ def _income_statement(
     periods: list[dict[str, Any]] = [
         {
             "date": profit.date,
-            "income": income.balance,
-            "expenses": expenses.balance,
+            "income": _cell(income.balance, conversion),
+            "expenses": _cell(expenses.balance, conversion),
             "net_profit": _summary(
                 -profit.balance,
                 conversion,
@@ -605,8 +605,23 @@ def _tree_json(node: Any) -> dict[str, Any]:
     }
 
 
-def _series_json(series: Iterable[Any]) -> list[dict[str, Any]]:
-    return [{"date": point.date, "balance": _balance_map(point.balance)} for point in series]
+def _cell(balance: Mapping[str, Decimal], conversion: str) -> dict[str, Decimal]:
+    """One interval row's amounts, a quiet row spelled the way its conversion spells zero.
+
+    A currency conversion names that currency in every row, so a row holding
+    nothing reads zero in it, as the net profit and net worth beside it do. A
+    row that holds anything keeps exactly what it holds: amounts the report
+    could not value stay in their source commodity. A per-unit conversion names
+    only the commodities a row actually holds, so a quiet row there stays empty.
+    """
+    amounts = _balance_map(balance)
+    if not amounts and conversion not in CONVERSIONS:
+        return {conversion: Decimal(0)}
+    return amounts
+
+
+def _series_json(series: Iterable[Any], conversion: str) -> list[dict[str, Any]]:
+    return [{"date": point.date, "balance": _cell(point.balance, conversion)} for point in series]
 
 
 def _unvalued(balance: Mapping[str, Decimal], conversion: str) -> bool:

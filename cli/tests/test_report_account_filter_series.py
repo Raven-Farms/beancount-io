@@ -110,7 +110,8 @@ def test_overview_series_agree_with_the_headline(tmp_path: Path, ledger: Path, a
     assert data["totals"]["assets"] == {"USD": "800.00"}
     assert [point["balance"] for point in data["series"]["assets"]] == [{"USD": "800.00"}]
     assert data["totals"]["expenses"] == {}
-    assert [point["balance"] for point in data["series"]["expenses"]] == [{}]
+    # A filtered-out flow is a quiet row: zero in the conversion currency (w5/268).
+    assert [point["balance"] for point in data["series"]["expenses"]] == [{"USD": "0"}]
 
 
 def test_balance_sheet_net_worth_series_agrees_with_its_headline(tmp_path: Path, ledger: Path) -> None:
