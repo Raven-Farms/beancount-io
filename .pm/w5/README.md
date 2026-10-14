@@ -35,7 +35,6 @@
 
 ## Inbox
 
-- [266 — A typed `--delimiter` is refused after a header-inferred import of a semicolon file has been remembered](./266.md) — minor CLI import bug; documented override exits 2, fresh-config control works, fix with 077, 20–30m.
 - [267 — An explicit `--csv` re-run silently forgets a remembered `--date-format`, and the next ambiguous export is booked month-first](./267.md) — minor CLI import bug; 4 October written as 2026-04-10 after an unannounced drop, ambiguous-file control names the drop, 20–30m.
 - [268 — Under a currency conversion, quiet interval rows give `{}` / `—` for income and expenses instead of the documented `{"USD": "0"}` / `0.00 USD`](./268.md) — minor CLI report bug; net profit zero-filled in the same row but income/expenses are `{}`, 20–30m.
 - [269 — `BEA_ENGINE_PYTHON` naming an interpreter without Beancount gives a raw traceback that never names the variable, and `bea add` exits 4 "outcome is unknown"](./269.md) — minor CLI bug; traceback and a false exit 4, `check` control names the variable, 30–45m.
