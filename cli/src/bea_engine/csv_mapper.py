@@ -29,6 +29,9 @@ _MAPPING_FIELDS = frozenset(
 )
 
 _THOUSAND_SEPARATOR_FILLER = re.compile(r"[\s'\u2019]")
+# Invisible in every viewer, and no part of a number: zero-width space, word
+# joiner, and the zero-width no-break space (a stray byte-order mark).
+_ZERO_WIDTH = re.compile("[\u200b\u2060\ufeff]")
 _NON_FINITE_AMOUNT = re.compile(r"[+-]?(?:nan|inf(?:inity)?)\Z", re.IGNORECASE)
 _EU_GROUPING = re.compile(r"\d{1,3}(?:\.\d{3})+")
 # One comma followed by any digit count but three: never a thousands group
@@ -106,8 +109,11 @@ def _split_amount_sign(value: str) -> tuple[str, str, int]:
 
     Returns the leading +/- sign (kept for Decimal), the bare core, and how
     many parentheses/trailing-minus negations the cell carries.
+
+    The typographic minus (U+2212) some bank and spreadsheet exports write is
+    read as `-` wherever it stands: on screen the two are the same sign.
     """
-    text = value.strip()
+    text = _ZERO_WIDTH.sub("", value).replace("\u2212", "-").strip()
     negations = 0
     if len(text) >= 2 and text.startswith("(") and text.endswith(")"):
         negations += 1
