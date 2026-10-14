@@ -77,6 +77,18 @@ def _shell_path(shown: str) -> str:
     return shlex.quote(shown)
 
 
+def _in_working_directory(file: Path) -> bool:
+    """Whether `file` is the `main.bean` a bare `bea` run here would discover.
+
+    A working directory that was deleted or cannot be read holds no ledger;
+    the one just created is then reached by its path.
+    """
+    try:
+        return file == Path.cwd() / "main.bean"
+    except OSError:
+        return False
+
+
 def init(
     directory: Annotated[Path, typer.Argument(help="New ledger directory, or a .bean/.beancount file")] = Path("."),
     currency: Annotated[
@@ -187,7 +199,7 @@ def init(
         bea = f"bea --file {_shell_path(shown)}" if os.environ.get("BEA_FILE") else "bea"
         if bea != "bea" or file.name != "main.bean":
             next_command = f"bea --file {_shell_path(shown)} check"
-        elif file == Path.cwd() / "main.bean":
+        elif _in_working_directory(file):
             next_command = "bea check"
         else:
             next_command = f"cd {_shell_path(shown.rpartition('/')[0])} && bea check"
