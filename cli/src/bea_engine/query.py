@@ -227,7 +227,7 @@ def text_answer(
     if output is not None:
         # Rendered whole, then swapped in atomically. w3/380 moved this past
         # the *query*; the write itself still had to become atomic.
-        _write_export(output, buffer.getvalue())
+        _export(shell, output, buffer.getvalue())
         # The export is the result; the frontend has nothing left to print.
         return {"text": "", "errors": errors}
     return {"text": buffer.getvalue(), "errors": errors}
@@ -366,6 +366,7 @@ def _native_shell(source: str, *, interactive: bool, format: str, numberify: boo
         source_file = file
         debug = False
         replaying_init = False
+        ran_query = False
 
         def error(self, message: str) -> None:
             _shell_error(self, message, super().error)
@@ -373,6 +374,14 @@ def _native_shell(source: str, *, interactive: bool, format: str, numberify: boo
         def do_output(self, arg: str) -> None:
             """Send output to FILE or restore stdout, preserving source files."""
             _redirect_output(self, arg, sys.stdout, file)
+
+        def do_help(self, arg: str) -> None:
+            """List commands, writing to outfile like every other command."""
+            _help_to_outfile(self, super().do_help, arg)
+
+        def do_parse(self, arg: str) -> None:
+            """Print the parsed sexp to outfile (not process stdout)."""
+            print(self.parse(arg).tosexp(), file=self.outfile)
 
         def do_reload(self, arg: Any = None) -> None:
             """Reload the Beancount input file."""
@@ -385,6 +394,7 @@ def _native_shell(source: str, *, interactive: bool, format: str, numberify: boo
             _run_stored(self, arg)
 
         def execute(self, query: Any, **kwargs: Any) -> Any:
+            self.ran_query = True
             statement = query if isinstance(query, str) else ""
             if statement:
                 _refuse_statement_tail(statement)
@@ -559,7 +569,7 @@ def native_one_shot(
         # `bean-query` let these escape as a Python traceback; name the problem instead.
         raise _usage_error(exc, query_string, shell.context, []) from None
     if output is not None:
-        _write_export(output, buffer.getvalue())
+        _export(shell, output, buffer.getvalue())
 
 
 def _run_stored(shell: Any, arg: str) -> None:
@@ -645,6 +655,22 @@ def _shell_error(shell: Any, message: str, report: Callable[[str], None]) -> Non
     )
 
 
+def _help_to_outfile(shell: Any, show: Callable[[str], None], arg: str) -> None:
+    """Run upstream's `.help` with its stream pointed at the shell's outfile.
+
+    Upstream `cmd.Cmd.do_help` writes to `self.stdout`, which starts as process
+    stdout. That put a second document on the engine's stdout beside the JSON
+    envelope, and under `--output` printed the help to the terminal while the
+    empty buffer replaced the export (w5/289).
+    """
+    previous = shell.stdout
+    shell.stdout = shell.outfile
+    try:
+        show(arg)
+    finally:
+        shell.stdout = previous
+
+
 def _recovering(shell: Any, dispatch: Callable[[str], Any], line: str) -> Any:
     """Dispatch one shell line; an interactive mistake is reported, not raised.
 
@@ -689,6 +715,21 @@ def _debug_traceback(shell: Any, exc: BaseException) -> None:
 
     if shell.debug:
         protocol.note("".join(traceback.format_exception(exc)).rstrip())
+
+
+def _export(shell: Any, output: Path, text: str) -> None:
+    """Write a one-shot's `--output` export, unless a shell command printed nothing.
+
+    `.history`, `.reload`, `.run` over a ledger with no stored queries, and
+    `.errors` over one that has errors (upstream prints those to the terminal)
+    leave the buffer empty, and writing it replaced the last good export with a
+    zero-byte file under exit 0 (w5/289). A query that renders nothing is still
+    an answer and is written.
+    """
+    if not text and not shell.ran_query:
+        protocol.note(f"Nothing was written to {output}: this shell command printed no result to export.")
+        return
+    _write_export(output, text)
 
 
 def _write_export(output: Path, text: str) -> None:
@@ -817,6 +858,8 @@ def build_shell(
         debug: bool = False
         # The init file is being replayed: its mistakes stay upstream's notes.
         replaying_init: bool = False
+        # BQL reached `execute`: an empty rendering is then a result, not silence.
+        ran_query: bool = False
 
         def error(self, message: str) -> None:
             _shell_error(self, message, super().error)
@@ -880,15 +923,7 @@ def build_shell(
 
         def do_help(self, arg: str) -> None:
             """List commands, writing to outfile so one-shot JSON stays clean."""
-            # Upstream `cmd.Cmd.do_help` writes to `self.stdout`, which starts as
-            # process stdout. Point it at outfile for the duration so `bea query
-            # '.help'` keeps a single JSON object on the engine's stdout.
-            previous: TextIO = self.stdout  # type: ignore[has-type]
-            self.stdout = self.outfile
-            try:
-                super().do_help(arg)
-            finally:
-                self.stdout = previous
+            _help_to_outfile(self, super().do_help, arg)
 
         def do_parse(self, arg: str) -> None:
             """Print the parsed sexp to outfile (not process stdout)."""
@@ -920,6 +955,7 @@ def build_shell(
             in an invalid ledger that typed and stored queries then answered
             from as if nothing had changed.
             """
+            self.ran_query = True
             if self.reload_failure:
                 # Lenient sessions too: what is attached is the load before
                 # the failed one, not a partial answer to opt into.

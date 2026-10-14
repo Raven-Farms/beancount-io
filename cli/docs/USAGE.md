@@ -659,6 +659,11 @@ A shell command such as `.tables` or `.format` is one line: further lines
 after it are refused the same way (only `.explain` and `.parse` take BQL that
 may span lines), and a command the shell rejects (an unknown name, a bad
 `.set` or `.format`) exits 2 without writing an `--output` export.
+`.help` and `.parse` go to `--output` like every other command, on `--file`
+and `--source` alike. A shell command that prints nothing there (`.history`,
+`.reload`, `.run` with no stored queries, `.errors` over a ledger with errors)
+says so on stderr and leaves the destination as it was; a query with no rows
+still writes its empty result.
 The same one-statement rule covers native `--source` one-shots, the body of a
 stored `query` directive replayed by `.run NAME` or `.run *`, and BQL typed at
 the interactive prompt, where the refusal is an ordinary error and the shell
