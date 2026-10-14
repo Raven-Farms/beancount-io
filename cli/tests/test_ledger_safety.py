@@ -534,9 +534,13 @@ def test_add_balance_carries_no_printer_padding(tmp_path: Path) -> None:
     tolerant = invoke(book, "add", "balance", "--date", "2026-01-03", "-a", "Assets:Checking", "--amount", amount)
     assert tolerant.exit_code == 0, tolerant.output
     line = next(line for line in book.read_text().splitlines() if line.startswith("2026-01-03 balance"))
-    assert "Assets:Checking" + " " * 10 not in line
-    assert line.startswith("2026-01-03 balance Assets:Checking 1000 ~") and line.endswith("0.5 USD")
-    _assert_appended_lines_are_formatted(book, before)
+    # Upstream's aligner would pad the tolerance and widen every other line to
+    # match; `bea format` keeps the assertion out of alignment instead (w5/271).
+    assert line == "2026-01-03 balance Assets:Checking 1000 ~ 0.5 USD"
+    added = book.read_bytes()[len(before) :]
+    formatted = invoke(book, "format", str(book), "--in-place")
+    assert formatted.exit_code == 0, formatted.output
+    assert book.read_bytes().endswith(added)
 
 
 def test_one_missing_account_reads_as_one_problem_not_one_per_row(book: Path) -> None:

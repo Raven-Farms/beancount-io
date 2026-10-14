@@ -56,13 +56,21 @@ def _aligner_would_misread(line: str) -> bool:
     an account name to Beancount, while upstream's `\\s+` between account,
     number and currency swallows them — merging two accounts (w5/165). Past a
     `;` or `"` upstream copies the text through, so it stays alignable.
+
+    A balance tolerance is misread the other way: in `balance A 1538 ~ 1 USD`
+    upstream takes everything up to the `~` as the prefix and the tolerance as
+    the number, so one assertion set the prefix column of the whole file
+    (w5/271). Only a dated line can carry a `~` outside a comment or string.
     """
     if not _FOREIGN_LINE_BREAKS.isdisjoint(line):
         return True
+    dated = line[:1].isdigit()
     for char in line:
         if char in ';"':
             break
         if char.isspace() and char not in " \t\n":
+            return True
+        if char == "~" and dated:
             return True
     return False
 

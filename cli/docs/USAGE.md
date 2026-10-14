@@ -901,6 +901,8 @@ Successful additions never modify existing lines. Appended lines are written
 where `bea format` would put them given the file's current contents, so a
 formatted file stays formatted after an add; when a new amount or account is
 wider than any before it, a later `bea format` realigns only the older lines.
+A balance assertion with a `~` tolerance takes no part in alignment: an add
+writes it single-spaced and `bea format` leaves it as written.
 Writes respect the destination file's permissions: a read-only file produces
 exit **3**, even when its directory permits replacement. This also applies to
 import and to `bea format -i`, which replaces the file itself rather than
