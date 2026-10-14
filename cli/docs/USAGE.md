@@ -442,6 +442,8 @@ untouched.
 `bea example` exits 2 before generating when its date range is inverted or
 shorter than 31 days; a missing `--date-begin` or `--date-end` takes
 upstream's default (January 1 two years back, and today) for that check.
+Both dates must be written `YYYY-MM-DD`; any other spelling (`2026/03/01`,
+`March 1 2026`) exits 2 as well, since the range could not be checked.
 It exits 1 when the history `bean-example` generated fails upstream's own
 validation — a range that starts mid-year and crosses January 1 does, as does
 a `--date-birth` after the begin year's January 1 — naming the errors and

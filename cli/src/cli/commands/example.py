@@ -128,14 +128,19 @@ def example(ctx: typer.Context) -> None:
 #: StopIteration (30 days still fails for some seeds; 31 never did).
 _MIN_SPAN_DAYS = 31
 
+#: `date.fromisoformat` also reads `20260301` and week dates; the range check
+#: takes the one spelling bea and upstream are certain to read alike.
+_ISO_DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
+
 
 def _check_date_order(args: list[str], today: date | None = None) -> None:
     """Refuse a date range bean-example cannot generate before upstream dies on it.
 
     A missing side takes upstream's default (January 1 two years back, and
     today), so a lone `--date-end` in the past or `--date-begin` in the
-    future is caught as inverted too. Only ISO dates are compared; anything
-    else passes through to upstream's own parsing.
+    future is caught as inverted too. Only `YYYY-MM-DD` is accepted: upstream
+    reads looser spellings (`2026/03/01`, `March 1 2026`) with a parser the
+    frontend does not carry, so those would reach it unchecked (w5/275).
     """
     values: dict[str, str] = {}
     index = 0
@@ -155,11 +160,8 @@ def _check_date_order(args: list[str], today: date | None = None) -> None:
     if not values:
         return
     today = today or date.today()
-    try:
-        begin = date.fromisoformat(values["--date-begin"]) if "--date-begin" in values else date(today.year - 2, 1, 1)
-        end = date.fromisoformat(values["--date-end"]) if "--date-end" in values else today
-    except ValueError:
-        return
+    begin = _iso_date("--date-begin", values) or date(today.year - 2, 1, 1)
+    end = _iso_date("--date-end", values) or today
     shown_begin = f"--date-begin {begin.isoformat()}" + ("" if "--date-begin" in values else " (default)")
     shown_end = f"--date-end {end.isoformat()}" + ("" if "--date-end" in values else " (default: today)")
     if begin > end:
@@ -169,3 +171,16 @@ def _check_date_order(args: list[str], today: date | None = None) -> None:
             f"{shown_begin} to {shown_end} spans {(end - begin).days} days; "
             f"bean-example needs at least {_MIN_SPAN_DAYS}."
         )
+
+
+def _iso_date(option: str, values: dict[str, str]) -> date | None:
+    """The option's value as a date, or None when the option was not given."""
+    if option not in values:
+        return None
+    value = values[option]
+    try:
+        if not _ISO_DATE.fullmatch(value):
+            raise ValueError(value)
+        return date.fromisoformat(value)
+    except ValueError:
+        raise UsageError(f"{option} {value!r} is not a calendar date in ISO form; write it as YYYY-MM-DD.") from None
