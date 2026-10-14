@@ -37,7 +37,6 @@
 
 - [233 — Ctrl-C while the query shell loads the ledger drops a transaction, and the damaged load is cached so every later command fails](./233.md) — major CLI data-integrity bug; shell answers 39,999 of 40,000 and later `check` exits 1, no-interrupt control correct, 60–90m.
 - [244 — The import preview diff prints existing ledger lines raw, so escape sequences in the ledger's last lines reach the terminal](./244.md) — minor CLI output-safety bug; six raw ESC bytes on a PTY, clean-ledger control emits none, 20–30m.
-- [247 — An included file named with `[…]`, `*` or `?` makes every `bea add` and `import --apply` fail, and `price export` writes a copy that does not load](./247.md) — major CLI bug; valid ledger refuses every write and exports an unloadable copy, plain-name control works, 45–60m.
 - [248 — With a deleted working directory, `bea init /abs/dir` creates the ledger and then exits 2 with a bare `[Errno 2]`; `format` and `query -o` on a split ledger fail the same way](./248.md) — minor CLI bug; ledger created then exit 2, normal-cwd control exits 0, fix include half with 071, 20–30m.
 - [249 — `bea query --source <missing file>` exits 0 and replaces an existing `-o` export with a header-only file](./249.md) — major CLI bug; exit 0 with the export emptied, `--file` and bad-BQL controls exit 2 and keep it, 30–40m.
 - [250 — `bea query --source DIR` (or `csv:<missing>`) prints a long traceback of engine source instead of a usage error](./250.md) — minor CLI bug; traceback at exit 1, `--file DIR` control gives a one-line exit 2, fix with 249, 20m.
