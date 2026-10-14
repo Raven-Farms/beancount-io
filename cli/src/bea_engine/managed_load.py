@@ -871,7 +871,7 @@ def export_portable(
     marker alone.
     """
     from bea_engine.ledger.write import LedgerSnapshot
-    from bea_engine.protocol import UsageError
+    from bea_engine.protocol import AuthError, LedgerError, UsageError
 
     loaded = load_with_sources(
         entry, offline=offline, strict=strict, origins=origins, root=root, now=now, opener=opener
@@ -1036,22 +1036,53 @@ def export_portable(
             f"Cannot export into {target}: it already holds {first}, which the export would overwrite{more}. "
             "Choose an empty or dedicated directory, or pass --force to overwrite. Nothing was written."
         )
+    # Whether the filesystem will take the plan is part of the plan too. A
+    # read-only directory surfaced as a raw `PermissionError: [Errno 13]` from
+    # the first `mkdir`, with exit 1 as if the ledger had failed validation; it
+    # is the filesystem refusing (exit 3), said before anything is written
+    # (w5/279).
+    for dest in planned:
+        if dest.is_file() and not os.access(dest, os.W_OK):
+            raise AuthError(
+                f"Cannot export into {target}: {dest} is read-only and cannot be replaced. Nothing was written."
+            )
+        holder = next((parent for parent in dest.parents if parent.is_dir()), None)
+        if not dest.exists() and holder is not None and not os.access(holder, os.W_OK | os.X_OK):
+            raise AuthError(
+                f"Cannot export into {target}: the directory {holder.resolve()} is not writable. Nothing was written."
+            )
     written: list[str] = []
-    for path, original in snapshot.contents.items():
-        dest = destinations[path]
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.write_bytes(_rewrite_export_includes(original, path, snapshot.patterns, destinations, by_target, repeats))
-        written.append(str(dest))
-    for dest, document in attachments.items():
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(document, dest)
-        written.append(str(dest))
     at = time.time() if now is None else now
-    for source in loaded.sources:
-        dest = feed_files[source.url]
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.write_text(_export_feed_text(source, at), encoding="utf-8")
-        written.append(str(dest))
+    try:
+        for path, original in snapshot.contents.items():
+            dest = destinations[path]
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_bytes(
+                _rewrite_export_includes(original, path, snapshot.patterns, destinations, by_target, repeats)
+            )
+            written.append(str(dest))
+        for dest, document in attachments.items():
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(document, dest)
+            written.append(str(dest))
+        for source in loaded.sources:
+            dest = feed_files[source.url]
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_text(_export_feed_text(source, at), encoding="utf-8")
+            written.append(str(dest))
+    except OSError as exc:
+        # The checks above cannot see everything (a full disk, a directory
+        # locked mid-run), so a failed write still says how far it got.
+        done = (
+            f"{len(written)} of {len(planned)} files were already written ({', '.join(sorted(written))}); "
+            "the export is incomplete."
+            if written
+            else "Nothing was written."
+        )
+        error = AuthError if isinstance(exc, PermissionError) else LedgerError
+        raise error(
+            f"Cannot export into {target}: writing {dest} failed ({exc.strerror or type(exc).__name__}). {done}"
+        ) from exc
     return PortableExport(
         output=target,
         files=tuple(sorted(written)),
