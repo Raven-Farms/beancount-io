@@ -1295,6 +1295,11 @@ Report interval breakdowns cover the complete requested period, including more
 than 100 daily or monthly intervals. The interval selects the aggregation
 grain, not a limit on the returned history.
 
+No series point is dated after the report's as-of date. Without `--time` the
+last bucket ends on the as-of date — a ledger whose last entry is `2026-02-10`
+closes its `-i yearly` series on `2026-02-10`, not `2026-12-31` — and earlier
+buckets end on their interval boundary.
+
 When `--time` ends partway through an interval, the last bucket is a fragment
 of it — `-t 2020-03 -i weekly` ends on the Monday–Tuesday tail of an ISO week
 that runs into April. Flow series (income statement periods, the overview's

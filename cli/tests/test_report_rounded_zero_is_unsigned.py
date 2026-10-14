@@ -79,8 +79,8 @@ def test_income_statement_rounds_net_profit_to_an_unsigned_zero(tmp_path: Path) 
     out = _bea(tmp_path, PRECISION + LEDGER, "report", "income-statement", "-i", "yearly")
 
     assert "Net Profit: 0 USD" in out
-    (row,) = [line.split() for line in out.splitlines() if line.startswith("2026-12-31")]
-    assert row == ["2026-12-31", "-25", "USD", "25", "USD", "0", "USD"]
+    (row,) = [line.split() for line in out.splitlines() if line.startswith("2026-01-31")]
+    assert row == ["2026-01-31", "-25", "USD", "25", "USD", "0", "USD"]
     assert not NEGATIVE_ZERO.search(out)
 
 
@@ -89,7 +89,7 @@ def test_income_statement_rounds_net_profit_to_an_unsigned_zero(tmp_path: Path) 
     [
         (
             ("report", "balance-sheet", "-i", "yearly"),
-            [r"Checking\s+0 USD", r"Net Profit is 0 USD\.", r"Net Worth: 0 USD", r"2026-12-31\s+0 USD"],
+            [r"Checking\s+0 USD", r"Net Profit is 0 USD\.", r"Net Worth: 0 USD", r"2026-01-31\s+0 USD"],
         ),
         (("report", "overview"), [r"Assets:\s+0 USD", r"Net Worth:\s+0 USD", r"2026-01-31\s+0 USD"]),
         (("report", "trial-balance"), [r"Checking\s+0 USD"]),
@@ -118,8 +118,8 @@ def test_an_amount_the_precision_can_show_keeps_its_sign(tmp_path: Path) -> None
     out = _bea(tmp_path, LEDGER, "report", "income-statement", "-i", "yearly")
 
     assert "Net Profit: -0.40 USD" in out
-    (row,) = [line.split() for line in out.splitlines() if line.startswith("2026-12-31")]
-    assert row == ["2026-12-31", "-25.00", "USD", "25.40", "USD", "-0.40", "USD"]
+    (row,) = [line.split() for line in out.splitlines() if line.startswith("2026-01-31")]
+    assert row == ["2026-01-31", "-25.00", "USD", "25.40", "USD", "-0.40", "USD"]
 
 
 def test_json_keeps_the_exact_signed_value(tmp_path: Path) -> None:

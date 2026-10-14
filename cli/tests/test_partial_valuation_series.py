@@ -66,7 +66,7 @@ def test_net_worth_series_is_unavailable_where_the_headline_is(tmp_path: Path) -
     # January held USD only, so it converted; the later months kept EUR/BTC.
     assert series["2020-01-31"] == {"USD": "100.00"}
     assert series["2020-02-29"] == {"USD": None}
-    assert series["2020-03-31"] == {"USD": None}
+    assert series["2020-03-05"] == {"USD": None}
 
 
 def test_text_never_pairs_an_unavailable_headline_with_per_unit_rows(tmp_path: Path) -> None:

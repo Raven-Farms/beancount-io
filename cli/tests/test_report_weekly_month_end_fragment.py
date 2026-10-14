@@ -104,6 +104,7 @@ def test_a_sole_quiet_fragment_is_still_reported(tmp_path: Path) -> None:
 def test_unfiltered_weekly_series_is_unchanged(tmp_path: Path) -> None:
     data = _json(tmp_path, "report", "income-statement", "-i", "weekly")
     dates = [period["date"] for period in data["periods"]]
-    # Whole intervals only, so nothing is dropped at either end.
+    # Nothing is dropped at either end; the last week stops at the as-of date
+    # rather than running into January (w5/261).
     assert dates[0] == "2020-03-08"
-    assert dates[-1] == "2021-01-03"
+    assert dates[-1] == "2020-12-31"

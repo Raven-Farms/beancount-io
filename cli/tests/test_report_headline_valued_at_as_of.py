@@ -81,7 +81,7 @@ def test_late_first_quote_keeps_the_headlines(tmp_path: Path) -> None:
     assert sheet["net_worth"] == {"USD": "155.00"}
     assert sheet["net_profit"] == {"USD": "55.00"}
     assert sheet["net_worth_series"][0] == {"date": "2026-01-31", "balance": {"USD": None}}
-    assert sheet["net_worth_series"][-1] == {"date": "2026-03-31", "balance": {"USD": "155.00"}}
+    assert sheet["net_worth_series"][-1] == {"date": "2026-03-15", "balance": {"USD": "155.00"}}
     # The rows still say what they could not value.
     assert sheet["valuation"] == "partial"
     assert sheet["missing_price_dates"] == [{"from": "EUR", "to": "USD", "date": "2026-01-31"}]

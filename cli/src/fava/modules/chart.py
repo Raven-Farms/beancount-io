@@ -50,7 +50,9 @@ def _flow_ranges(
     end of the filtered period.
     """
     ranges = filtered.interval_ranges(interval)
-    if len(ranges) < 2:
+    # Without a time filter the last range ends at the report's as-of date, not
+    # at a boundary the user chose, so it is the current period and stays.
+    if len(ranges) < 2 or not filtered.date_range:
         return ranges
     last = ranges[-1]
     whole = interval.get_prev(last.begin) == last.begin and interval.get_next(last.begin) == last.end
