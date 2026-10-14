@@ -37,7 +37,6 @@
 
 - [233 — Ctrl-C while the query shell loads the ledger drops a transaction, and the damaged load is cached so every later command fails](./233.md) — major CLI data-integrity bug; shell answers 39,999 of 40,000 and later `check` exits 1, no-interrupt control correct, 60–90m.
 - [244 — The import preview diff prints existing ledger lines raw, so escape sequences in the ledger's last lines reach the terminal](./244.md) — minor CLI output-safety bug; six raw ESC bytes on a PTY, clean-ledger control emits none, 20–30m.
-- [249 — `bea query --source <missing file>` exits 0 and replaces an existing `-o` export with a header-only file](./249.md) — major CLI bug; exit 0 with the export emptied, `--file` and bad-BQL controls exit 2 and keep it, 30–40m.
 - [250 — `bea query --source DIR` (or `csv:<missing>`) prints a long traceback of engine source instead of a usage error](./250.md) — minor CLI bug; traceback at exit 1, `--file DIR` control gives a one-line exit 2, fix with 249, 20m.
 - [251 — Four `bea doctor` operations exit 245 with no message when the engine crashes on the ledger (regression of w5/done/010)](./251.md) — minor CLI regression; silent exit 245, `doctor context` control names SIGSEGV at exit 1, 20–30m.
 - [252 — A write whose engine dies on a signal still reports the raw `(exit -11)` instead of naming the signal](./252.md) — minor CLI message bug; read-path control names SIGSEGV, fix with 251, 15m.
