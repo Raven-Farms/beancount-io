@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from decimal import Decimal
+from decimal import Decimal, Inexact, Rounded, localcontext
 from typing import Any
 
 _PLAIN_DECIMAL = re.compile(r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)")
@@ -33,6 +33,45 @@ def require_plain_decimal(value: Any) -> Any:
     if isinstance(value, str):
         parse_decimal_number(value)
     return value
+
+
+def parse_exact(text: str) -> tuple[list[Any], list[Any], dict[str, Any]]:
+    """Beancount's `parser.parse_string`, with every typed number kept digit for digit.
+
+    The grammar evaluates a leading minus as arithmetic under the active
+    decimal context, so `-12345678901.123456789012345678` came back rounded to
+    28 significant digits while its positive twin was read exactly, and the
+    rounded figure was what `bea` then wrote (w5/263). A parse that rounded is
+    repeated under a context wide enough for any number the text can spell.
+    Only a quotient that does not terminate (`1/3`) fills that precision, and
+    it keeps Beancount's own 28-digit reading.
+    """
+    from beancount.parser import parser as beancount_parser
+
+    with localcontext() as narrow:
+        narrow.clear_flags()
+        parsed: tuple[list[Any], list[Any], dict[str, Any]] = beancount_parser.parse_string(text)
+        if not narrow.flags[Rounded]:
+            return parsed
+    with localcontext() as wide:
+        # No literal, sum or product in the text has more digits than the text has characters.
+        wide.prec = max(wide.prec, len(text)) + 2
+        wide.clear_flags()
+        exact: tuple[list[Any], list[Any], dict[str, Any]] = beancount_parser.parse_string(text)
+        if not wide.flags[Inexact]:
+            return exact
+        return _typed_digits(parsed[0], exact[0], wide.prec), parsed[1], parsed[2]
+
+
+def _typed_digits(rounded: Any, exact: Any, precision: int) -> Any:
+    """`rounded`, with each number the wider parse read exactly taken from `exact`."""
+    if isinstance(exact, Decimal):
+        return rounded if len(exact.as_tuple().digits) >= precision else exact
+    if isinstance(exact, list) and isinstance(rounded, list) and len(exact) == len(rounded):
+        return [_typed_digits(*pair, precision) for pair in zip(rounded, exact, strict=True)]
+    if isinstance(exact, tuple) and hasattr(exact, "_fields") and type(exact) is type(rounded):
+        return type(exact)(*(_typed_digits(*pair, precision) for pair in zip(rounded, exact, strict=True)))
+    return rounded
 
 
 def split_total_price(text: str) -> tuple[str, str] | None:

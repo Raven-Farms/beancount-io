@@ -1133,16 +1133,26 @@ def validate_candidate(
     # The staged copy has a private name, so the guard inside the load would
     # name that; a `{filename}` cache pattern is about the ledger file itself.
     refuse_cache_over_ledger(file, snapshot.contents if snapshot else [file])
-    if snapshot is None:
-        entries, errors, options = managed_load.load_file(candidate)
-        filenames = {candidate: file}
-        # `bea init` validates a candidate before the destination exists; treat
-        # a missing original as zero lines so creation still works.
-        original_lines = {file.resolve(): file.read_bytes().splitlines()} if file.exists() else {}
-    else:
-        with snapshot.staged(candidate, file) as (root, filenames):
-            entries, errors, options = managed_load.load_file(root)
-        original_lines = {path.resolve(): content.splitlines() for path, content in snapshot.contents.items()}
+    try:
+        if snapshot is None:
+            entries, errors, options = managed_load.load_file(candidate)
+            filenames = {candidate: file}
+            # `bea init` validates a candidate before the destination exists; treat
+            # a missing original as zero lines so creation still works.
+            original_lines = {file.resolve(): file.read_bytes().splitlines()} if file.exists() else {}
+        else:
+            with snapshot.staged(candidate, file) as (root, filenames):
+                entries, errors, options = managed_load.load_file(root)
+            original_lines = {path.resolve(): content.splitlines() for path, content in snapshot.contents.items()}
+    except InvalidOperation as exc:
+        # Booking quantizes an interpolated amount under the 28-digit decimal
+        # context and raises, instead of reporting, when it does not fit (w5/263).
+        raise UsageError(
+            "Beancount cannot load the ledger with this write: it has to calculate an amount wider than the "
+            "28 significant digits its arithmetic keeps, which happens when a posting's amount is left for it "
+            "to infer beside a number that wide. Give every posting an explicit amount, or use a number of at "
+            "most 28 significant digits. Nothing was written."
+        ) from exc
     original_line_counts = {path: len(lines) for path, lines in original_lines.items()}
     # The error set before the write, matched so the same failure after the
     # append reads as the same error. Appends land at end of file over

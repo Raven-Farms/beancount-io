@@ -24,7 +24,7 @@ from pathlib import Path
 from typing import Any
 
 from bea_engine import protocol
-from bea_engine.amounts import parse_decimal_number
+from bea_engine.amounts import parse_decimal_number, parse_exact
 from bea_engine.ledger import write, writer
 from bea_engine.ledger.text import (
     is_commodity,
@@ -546,11 +546,10 @@ def _unused_pad_only(exc: protocol.LedgerError) -> bool:
 def _parse_balance_amount(text: str) -> tuple[Decimal, str, Decimal | None]:
     """`NUMBER [~ TOLERANCE] CURRENCY`, read by the parser that will read it back."""
     from beancount.core.data import Balance
-    from beancount.parser import parser
 
     if "\n" in text or "\r" in text:
         raise protocol.UsageError("Balance amount must be one line: 'NUMBER [~ TOLERANCE] CURRENCY'.")
-    entries, errors, _ = parser.parse_string(f"2000-01-01 balance Assets:Balance {text}\n")
+    entries, errors, _ = parse_exact(f"2000-01-01 balance Assets:Balance {text}\n")
     if errors or len(entries) != 1 or not isinstance(entries[0], Balance):
         raise protocol.UsageError(
             "Balance amount must be 'NUMBER [~ TOLERANCE] CURRENCY', for example '1538 ~ 1 EUR'.",
@@ -668,7 +667,6 @@ def _transaction(
     del strict_read  # Only an ambiguous currency reads the ledger, and it says so itself.
     from beancount.core.data import Open, Transaction
     from beancount.core.number import MISSING
-    from beancount.parser import parser
 
     from bea_engine import managed_load
     from bea_engine.ledger.models import WRITE_INPUT, TransactionHeader
@@ -696,7 +694,7 @@ def _transaction(
     )
     header_text = writer.format_transaction(header)
     text = header_text + "".join(f"  {item.strip()}\n" for item in postings)
-    entries, errors, _ = parser.parse_string(text)
+    entries, errors, _ = parse_exact(text)
     # Root names are ledger options. The full candidate validation below
     # checks them in that context; this standalone parse only checks syntax.
     errors = without_root_name_errors(errors)

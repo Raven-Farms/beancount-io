@@ -18,7 +18,7 @@ from pydantic import (
     model_validator,
 )
 
-from bea_engine.amounts import refuse_zero_divisor, require_plain_decimal, split_total_price
+from bea_engine.amounts import parse_exact, refuse_zero_divisor, require_plain_decimal, split_total_price
 from bea_engine.ledger.text import parse_iso_date, require_commodity, require_flag, require_tag_or_link
 
 
@@ -194,7 +194,6 @@ def _posting_fragment(amount: str) -> dict[str, Any]:
     flag path reads it there: the parser divides it into a unit price.
     """
     from beancount.core.number import MISSING
-    from beancount.parser import parser as beancount_parser
 
     def refuse(reason: str) -> NoReturn:
         raise ValueError(f"Could not parse amount {amount!r} as a posting fragment: {reason}. {_FRAGMENT_HELP}")
@@ -202,9 +201,7 @@ def _posting_fragment(amount: str) -> dict[str, Any]:
     if "\n" in amount or "\r" in amount:
         raise ValueError(f"amount {amount!r} must be one posting fragment without line breaks. {_FRAGMENT_HELP}")
     refuse_zero_divisor(amount)
-    entries, errors, _ = beancount_parser.parse_string(
-        f'2026-01-02 * "probe"\n  Assets:Probe {amount}\n  Equity:Probe\n'
-    )
+    entries, errors, _ = parse_exact(f'2026-01-02 * "probe"\n  Assets:Probe {amount}\n  Equity:Probe\n')
     entry: Any = entries[0] if len(entries) == 1 and not errors else None
     posting: Any = entry.postings[0] if entry is not None else None
     if posting is None:
