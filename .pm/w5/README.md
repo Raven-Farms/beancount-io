@@ -36,7 +36,6 @@
 ## Inbox
 
 - [233 — Ctrl-C while the query shell loads the ledger drops a transaction, and the damaged load is cached so every later command fails](./233.md) — major CLI data-integrity bug; shell answers 39,999 of 40,000 and later `check` exits 1, no-interrupt control correct, 60–90m.
-- [238 — `add price --commodity HOOL --currency USD --amount '130 USD'` writes `price USD 130 USD`; repeated single-valued `add` options silently keep only the last](./238.md) — major CLI bug; exit-0 `price USD 130 USD`, single-option and repeated-`--amount` controls correct, 30–45m.
 - [242 — `bea format --currency-column N` silently ignores `--prefix-width` and `--num-width`](./242.md) — minor CLI bug (owner call, matches stock); `-c 60` and `-c 60 -w 40 -W 20` byte-identical, 10–20m.
 - [243 — `--offline`, `--strict` and `--strict-prices` placed after the command get no "place it before the command" hint](./243.md) — minor CLI cosmetic bug; `--json` control gets the hint, 5–10m.
 - [244 — The import preview diff prints existing ledger lines raw, so escape sequences in the ledger's last lines reach the terminal](./244.md) — minor CLI output-safety bug; six raw ESC bytes on a PTY, clean-ledger control emits none, 20–30m.
