@@ -86,19 +86,24 @@ def _with_output(error: EngineError, logs: io.StringIO) -> EngineError:
     return error
 
 
-def _effective_id_keys(id_keys: list[str] | None) -> list[str]:
+def _effective_id_keys(id_keys: list[str] | None, *, csv_id_mapped: bool = False) -> list[str]:
     """Resolve `--id-key` values to metadata keys the CSV mapper actually writes.
 
     CSV `id=` always lands in `bank_id` metadata. Agents often pass `--id-key id`
     after naming the column that way; treat that alias as `bank_id` so bank-ID
     dedupe stays on instead of falling back to content hashes.
+
+    The alias ignores case: a metadata key starts lowercase, so `ID` (the usual
+    header spelling) can name nothing else. And a mapping with `id=` keeps
+    `bank_id` whatever keys were typed, since that is the only key its rows
+    carry: a list without it would turn the mapped ids off (w5/254).
     """
     if not id_keys:
         return list(_DEFAULT_ID_KEYS)
     resolved: list[str] = []
     seen: set[str] = set()
-    for key in id_keys:
-        mapped = "bank_id" if key == "id" else key
+    for key in [*id_keys, *(["bank_id"] if csv_id_mapped else [])]:
+        mapped = "bank_id" if key.lower() == "id" else key
         if mapped not in seen:
             seen.add(mapped)
             resolved.append(mapped)
@@ -164,12 +169,14 @@ def answer(
     roots = ledger_roots(options)
     csv_mode = csv_mapping is not None
     skipped_blank = 0
+    csv_id_mapped = False
     if csv_mode:
         if csv_account is None or csv_mapping is None:
             raise UsageError(
                 "--csv needs --account ACCOUNT for the source account, for example --account Assets:Checking."
             )
         mapping = parse_mapping(csv_mapping)
+        csv_id_mapped = mapping.column("id") is not None
         # Before the preview, not after: an invalid name would otherwise block
         # every row with the wrong diagnosis instead of failing on the typo.
         csv_account = _valid_account(csv_account, "--account", roots)
@@ -265,7 +272,7 @@ def answer(
             sys.path.pop(0)
 
     entries = [_writable(entry, index + 1, importer, logs) for index, entry in enumerate(entries)]
-    keys = _effective_id_keys(id_keys)
+    keys = _effective_id_keys(id_keys, csv_id_mapped=csv_id_mapped)
     identities: dict[tuple[str, str, str], Any] = {}
     fingerprints: dict[tuple[Any, ...], Any] = {}
     open_currencies = _open_currencies(existing, Open)

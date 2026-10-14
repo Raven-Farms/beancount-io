@@ -394,8 +394,10 @@ skills deduplicate against each other: the ledger itself is the dedup database.
   scoped to the importer's source account, and always checks `import-id` and
   `import-id-2`. Use repeated `--id-key KEY` options to replace the native-ID
   list for your importer (a custom key uses its own name as the namespace).
-  `--id-key id` is accepted as an alias for `bank_id`, the canonical key the
-  `--csv` path writes, so it never silently disables bank-ID dedupe.
+  `--id-key id` is accepted in any case (`ID`, `Id`) as an alias for `bank_id`,
+  the canonical key the `--csv` path writes, and a `--csv` mapping with `id=`
+  keeps `bank_id` in the list whatever keys you name, so `--id-key` never
+  silently disables bank-ID dedupe.
   IDs must be stable and unique within that account. An exact match is skipped;
   reused native IDs with different source amounts or commodities are conflicts
   requiring review. An ID repeated within one export with different data is a
