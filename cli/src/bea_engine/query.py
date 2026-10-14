@@ -1600,6 +1600,12 @@ _PLUGIN_FAILURE = re.compile(r'^Error (importing|applying plugin) "([^"]+)":\s*(
 _TXN_LOCATION = re.compile(r"Transaction\(meta=\{'filename': '([^']*)', 'lineno': (\d+)")
 
 
+def is_plugin_failure(error: Any) -> bool:
+    """Whether a loader error is a plugin that could not be imported or raised while running."""
+    message = getattr(error, "message", error)
+    return isinstance(message, str) and _PLUGIN_FAILURE.match(message) is not None
+
+
 def format_error(error: Any, ledger_file: Path | str | None = None) -> str:
     """One loader error as `file:line: message` — the frontend's detail line.
 

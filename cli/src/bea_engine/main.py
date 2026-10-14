@@ -50,7 +50,9 @@ def check(
     the rest of the helper there is no lenient mode, because reporting the
     errors is the whole job. `--documents-only` is for the pass that follows a
     native `bean-check` the user ran with its own options: it must not re-judge
-    a ledger bean-check already accepted under them.
+    a ledger bean-check already accepted under them. A plugin that failed to
+    load fails under any of those options, so that pass answers
+    `{"valid": false, "errors": [...], "plugin_failures": [...]}` for one.
     """
     with protocol.answering("check") as answer:
         answer.data = _validate(_ledger(file), documents_only=documents_only)
@@ -863,7 +865,7 @@ def _validate(file: Path, *, documents_only: bool = False) -> dict[str, Any]:
 
     from beancount.core.data import Document
 
-    from bea_engine.query import format_error
+    from bea_engine.query import format_error, is_plugin_failure
     from fava.core.loader import load_file
 
     entries, errors, options = load_file(str(file))
@@ -873,6 +875,15 @@ def _validate(file: Path, *, documents_only: bool = False) -> dict[str, Any]:
             f"{file}: {len(errors)} error(s).",
             details=[format_error(error, ledger_file=file) for error in errors],
         )
+    failed = [format_error(error, ledger_file=file) for error in errors if is_plugin_failure(error)]
+    if failed:
+        # bean-check prints these as a traceback at `<load>:0`; the caller, which
+        # knows the options bean-check was given, picks the lines to show (w5/256).
+        return {
+            "valid": False,
+            "errors": [format_error(error, ledger_file=file) for error in errors],
+            "plugin_failures": failed,
+        }
 
     from bea_engine.ledger.text import outside_ledger_tree
 

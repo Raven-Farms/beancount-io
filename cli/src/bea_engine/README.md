@@ -74,7 +74,7 @@ doing money arithmetic, and a float would silently round.
 
 | command                             | answers                                                    |
 | ----------------------------------- | ---------------------------------------------------------- |
-| `check --file PATH`                 | `{"valid": true, "errors": []}`                            |
+| `check --file PATH`                 | `{"valid": true, "errors": []}`; with `--documents-only`, a failed plugin answers `{"valid": false, "errors": [...], "plugin_failures": [...]}` |
 | `query --file PATH --query BQL`     | the query's columns and rows                               |
 | `list --file PATH --type TYPE`      | `{"items": [...], "truncated": false, "errors": []}`       |
 | `add --file PATH --type TYPE --request JSON` | `{"written": 1, "directive": {...}, "warnings": [], "target": "..."}` |

@@ -11,7 +11,7 @@ import typer
 
 from cli import context, output
 from cli.engine import launch
-from cli.errors import BeaError, UsageError
+from cli.errors import BeaError, LedgerError, UsageError
 
 _URL_INCLUDE_RE = re.compile(r'^\s*include\s*"(?i:https?)://', re.MULTILINE)
 """An include line native bean-check cannot resolve (w1/m29).
@@ -82,9 +82,20 @@ def check(ctx: typer.Context) -> None:
     portable: BeaError | None = None
     if not _INFORMATIONAL & set(ctx.args):
         try:
-            launch.helper_json(["check", "--file", str(file), "--documents-only"])
+            loaded = launch.helper_json(["check", "--file", str(file), "--documents-only"])
         except BeaError as error:
             portable = error
+        else:
+            failed = [str(line) for line in loaded.get("plugin_failures") or []]
+            if failed and not current.debug:
+                # bean-check reports a plugin that cannot load as a traceback at
+                # `<load>:0`; the helper names the directive's file and line, as
+                # `--json check` and every other read do. The other load errors
+                # are listed only when no option could have changed them (w5/256).
+                if ctx.args:
+                    raise LedgerError(f"{file}: {len(failed)} plugin(s) failed to load.", details=failed)
+                errors = [str(line) for line in loaded.get("errors") or failed]
+                raise LedgerError(f"{file}: {len(errors)} error(s).", details=errors)
     code = launch.run_native("bean-check", [*isolate, str(file), *ctx.args], ledger=file)
     if code != 0:
         raise typer.Exit(code)
