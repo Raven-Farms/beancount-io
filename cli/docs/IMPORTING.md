@@ -529,6 +529,9 @@ typed metadata retains its type.
 
 In global `--json` mode, preview and successful application return the normal
 envelope. An application blocked by conflicts or validation exits **4** or
-**1** and includes the full preview in `error.result`, with `written: 0`.
+**1** and includes the full preview in `error.result`, with `written: 0` and
+the same `notes`, `date_format` and `remembered` fields a preview carries. A
+failure with no preview, on a run whose column mapping was remembered or read
+from the header row, lists those settings notes first in the error details.
 Review refusals also list the affected preview row numbers and reasons in
 the error details, including in human `--apply` output.

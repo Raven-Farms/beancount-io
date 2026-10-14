@@ -951,6 +951,20 @@ def import_entries(
         if importer_name is not None:
             argv += ["--importer", importer_name]
 
+    json_remembered = (
+        {
+            "mapping": csv_request,
+            "source": recalled_source,
+            "account": csv_run_account,
+            "date_format": date_format,
+            "delimiter": carried_delimiter,
+            "encoding": csv_encoding,
+            "rules": str(csv_rules_arg) if csv_rules_arg is not None else None,
+            "default_account": default_account,
+        }
+        if remembered_run
+        else None
+    )
     try:
         preview = launch.helper_json(argv, writes="--apply" in argv)
     except BeaError as exc:
@@ -963,6 +977,21 @@ def import_entries(
                 output.note(str(note))
             if exc.result.get("importer_output"):
                 output.note(str(exc.result["importer_output"]).rstrip("\n"))
+        if context.current().json_output:
+            # The settings this run resolved were only ever notes on stderr,
+            # which JSON mode does not print: a refused import reports them as
+            # a preview does (w5/282). With no preview, details name them only
+            # where the mapping was recalled or inferred, never typed: other
+            # failures keep their details to what the error itself lists.
+            if isinstance(exc.result, dict):
+                refused_notes = [*frontend_notes, *(str(note) for note in exc.result.get("notes") or [])]
+                if refused_notes:
+                    exc.result["notes"] = refused_notes
+                if csv_mode and date_format is not None:
+                    exc.result["date_format"] = date_format
+                exc.result["remembered"] = json_remembered
+            elif csv_mode and csv_origin != "--csv":
+                exc.details = [*frontend_notes, *exc.details]
         raise
     # Only a successful preview/apply commits settings. A rejected apply may
     # carry a preview in error.result, but must preserve the previous memory.
@@ -983,20 +1012,7 @@ def import_entries(
             preview["notes"] = notes
         if csv_mode and date_format is not None:
             preview["date_format"] = date_format
-        preview["remembered"] = (
-            {
-                "mapping": csv_request,
-                "source": recalled_source,
-                "account": csv_run_account,
-                "date_format": date_format,
-                "delimiter": carried_delimiter,
-                "encoding": csv_encoding,
-                "rules": str(csv_rules_arg) if csv_rules_arg is not None else None,
-                "default_account": default_account,
-            }
-            if remembered_run
-            else None
-        )
+        preview["remembered"] = json_remembered
         output.emit(preview, target=output.file_target(file))
     else:
         summary = (
