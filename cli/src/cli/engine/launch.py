@@ -315,6 +315,18 @@ def capture_engine(argv: Sequence[str]) -> subprocess.CompletedProcess[str]:
     return _run_helper([*command, *argv], env, None)
 
 
+def captured_status(completed: subprocess.CompletedProcess[str]) -> int:
+    """The exit status of a captured child, with a signal death reported as `_spawn` reports one.
+
+    `subprocess` hands back a signal death as a negative return code. Passed to
+    the shell as it stands, -11 comes out as exit 245 with nothing on either
+    stream (w5/251).
+    """
+    if completed.returncode < 0:
+        return _died_on_signal(-completed.returncode, [str(part) for part in completed.args])
+    return completed.returncode
+
+
 def native_command(name: str) -> Path:
     """The upstream executable `name`, resolved inside the engine environment.
 

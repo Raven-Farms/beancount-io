@@ -262,10 +262,15 @@ def _refuse_json() -> None:
 
 
 def _replayed(completed: subprocess.CompletedProcess[str]) -> subprocess.CompletedProcess[str]:
-    """Replay captured upstream output, passing a nonzero status straight through."""
+    """Replay captured upstream output, passing a nonzero status straight through.
+
+    Except a death on a signal, which is reported as the streamed operations
+    report one rather than leaving the shell an undocumented status.
+    """
     _replay(completed)
-    if completed.returncode != 0:
-        raise typer.Exit(completed.returncode)
+    code = launch.captured_status(completed)
+    if code != 0:
+        raise typer.Exit(code)
     return completed
 
 
