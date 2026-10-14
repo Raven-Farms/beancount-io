@@ -36,7 +36,6 @@
 ## Inbox
 
 - [261 — Without `--time`, report series end on a date after the report's own `as_of`, and the date moves with `--interval`](./261.md) — minor CLI report bug; yearly net-worth point dated 2026-12-31 against `as_of` 2026-02-10, `--time` control dated correctly, 45–60m.
-- [263 — `add transaction --posting` rounds a negative amount wider than 28 significant digits; the positive twin is written exactly](./263.md) — minor CLI precision bug; negative leg loses a digit at exit 0, 28-digit and bulk controls exact, 40–60m.
 - [264 — `bea --help` truncates five command summaries with `...` again (regression of w1/m15/t005)](./264.md) — minor CLI cosmetic regression; five root-help rows end in `...`, originally shortened commands print in full, 15–20m.
 - [265 — CSV amounts with the currency symbol before the minus sign (`$-1,234.56`, `€ -1.234,56`) are refused once the number has a separator](./265.md) — minor CLI import bug; clear exit 2, sign-before-symbol control imports, 20–30m.
 - [266 — A typed `--delimiter` is refused after a header-inferred import of a semicolon file has been remembered](./266.md) — minor CLI import bug; documented override exits 2, fresh-config control works, fix with 077, 20–30m.
