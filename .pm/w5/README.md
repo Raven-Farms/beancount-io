@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [356 — `beancount-close` flag sweep groups by content, so same-day same-merchant `!` entries count once](./356.md) — CLI QA 2026-10-14
 - [357 — Skills still say Beangulp requires libmagic (w5/168 leftover)](./357.md) — CLI QA 2026-10-14
 - [358 — ask/close spending recipes sum `cost(position)`, leaving `@`-priced foreign charges unconverted](./358.md) — CLI QA 2026-10-14
 - [359 — reconcile skill never negates a liability statement's ending balance; card tie-out is off by twice the balance](./359.md) — CLI QA 2026-10-14
