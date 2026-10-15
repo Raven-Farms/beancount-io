@@ -53,7 +53,6 @@
 - [396 — With a pre-existing error, adds are refused as "would leave the ledger invalid" with no `--allow-errors` hint](./396.md) — CLI QA 2026-10-14
 - [397 — Under `unique_prices`, `add price` advises `--force`, which can never succeed](./397.md) — CLI QA 2026-10-14
 - [398 — `check_commodity` add refusal: bare `<check_commodity>:0`, no label or `add commodity` remedy](./398.md) — CLI QA 2026-10-14
-- [399 — `check_drained` close refusal gets statement-assertion advice instead of "drain first"](./399.md) — CLI QA 2026-10-14
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
