@@ -20,7 +20,7 @@ from cli.engine import launch
 from cli.errors import BeaError, ConflictError, LedgerError, UsageError, refuse_json
 from cli.native_command import ForwardingCommand
 from cli.native_help import native_help
-from cli.utils import has_bom
+from cli.utils import decode_error_message, has_bom
 
 doctor_app = typer.Typer(
     name="doctor",
@@ -171,6 +171,33 @@ def _syntax_errors_of(filename: str) -> list[str]:
     except BeaError:
         return []
     return [str(error) for error in data.get("files", {}).get(filename, [])]
+
+
+#: Operations that never load the ledger: `lex` and `parse` trace the named
+#: file's tokens, and `list-options` takes no ledger at all.
+_NON_LOADING_OPS = frozenset({"lex", "parse", "list-options"})
+
+
+def _refuse_undecodable(ledger: str) -> None:
+    """Refuse a ledger the loader cannot decode, as every read does (w5/278).
+
+    Upstream logs the parser's `UnicodeDecodeError` and carries on, so
+    `missing-open` and `context` exited 0 with nothing to say and
+    `print-options` relayed the class name (w5/440). Only a file that fails
+    to decode is checked further, and only an error the parser reports is
+    refused: a byte outside UTF-8 in a comment loads as it always did.
+    """
+    root = Path(ledger)
+    if not root.is_file():
+        return
+    for member in output.ledger_closure(root):
+        try:
+            member.read_bytes().decode("utf-8")
+        except OSError:
+            continue
+        except UnicodeDecodeError as exc:
+            if any("UnicodeDecodeError:" in error for error in _syntax_errors_of(str(member))):
+                raise LedgerError(decode_error_message(member, exc)) from exc
 
 
 def _closure_syntax_errors_of(filename: str) -> list[str]:
@@ -584,6 +611,8 @@ def _register(op: str) -> None:
         # Upstream's loader expands `$NAME` in the ledger path (w5/315).
         if positionals and op != "list-options":
             refuse_expanding_ledger_path(os.path.abspath(positionals[0]))
+        if positionals and op not in _NON_LOADING_OPS:
+            _refuse_undecodable(positionals[0])
         forwarder(ctx)
 
 
