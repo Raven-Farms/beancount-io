@@ -800,7 +800,11 @@ def _run_inherited(
 
 
 def run_captured(
-    command: list[str], *, env: dict[str, str] | None = None, pass_fds: Sequence[int] = ()
+    command: list[str],
+    *,
+    env: dict[str, str] | None = None,
+    pass_fds: Sequence[int] = (),
+    stdin_closed: bool = False,
 ) -> subprocess.CompletedProcess[str]:
     """`subprocess.run` keeping the output, except a request to stop us stops the child too.
 
@@ -808,12 +812,19 @@ def run_captured(
     `bean-doctor` or a `git clone` running after a SIGTERM or hangup aimed at
     `bea` alone; an orphaned clone then finished and failed the retry (w5/437).
     As `_run_inherited` does, the child stays in our process group, where it can
-    still prompt on the terminal and hears a terminal's Ctrl-C itself.
+    still prompt on the terminal and hears a terminal's Ctrl-C itself;
+    `stdin_closed` takes stdin away from an unattended child.
     """
     with (
         _stop_passed_on() as attach,
         subprocess.Popen(
-            command, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, pass_fds=pass_fds
+            command,
+            env=env,
+            stdin=subprocess.DEVNULL if stdin_closed else None,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            pass_fds=pass_fds,
         ) as child,
     ):
         attach(child)

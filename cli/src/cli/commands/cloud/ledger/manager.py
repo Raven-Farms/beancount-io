@@ -72,14 +72,64 @@ def ensure_git_available() -> None:
         raise UsageError("git executable not found on PATH; install Git before using --clone")
 
 
+# SSH programs git drives with their own option syntax (git's `ssh.variant`);
+# `-o BatchMode=yes` is OpenSSH's, so these are left as configured.
+_NON_OPENSSH = {"plink", "putty", "tortoiseplink"}
+
+
+def _ssh_command_in_effect(env: dict[str, str]) -> str:
+    """The SSH command `git clone` would run, in git's own precedence order.
+
+    `GIT_SSH_COMMAND`, then `core.sshCommand`, then the `GIT_SSH` program,
+    then `ssh`. The config is read the way clone reads it: global, system and
+    `-c`/`GIT_CONFIG_*` values, never the repository the caller stands in.
+    """
+    import subprocess
+
+    if command := env.get("GIT_SSH_COMMAND"):
+        return command
+    try:
+        configured = subprocess.run(
+            ["git", f"--git-dir={os.devnull}", "config", "--get", "core.sshCommand"],
+            env=env,
+            capture_output=True,
+            text=True,
+            stdin=subprocess.DEVNULL,
+            timeout=30,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        configured = None
+    if configured is not None and configured.returncode == 0 and configured.stdout.strip():
+        return configured.stdout.strip()
+    if program := env.get("GIT_SSH"):
+        import shlex
+
+        return shlex.quote(program)
+    return "ssh"
+
+
+def _ssh_program(command: str) -> str:
+    """The SSH command's program name, as git's variant detection reads it."""
+    import shlex
+
+    try:
+        words = shlex.split(command)
+    except ValueError:
+        words = command.split()
+    return Path(words[0]).name.removesuffix(".exe").lower() if words else ""
+
+
 def _git_env(*, unattended: bool) -> dict[str, str]:
     env = os.environ.copy()
     if not unattended:
         return env
     # BatchMode refuses host-key and password prompts so --no-input/--json never
-    # hang on a PTY-owned ssh child (RFC-friendly for agents).
-    existing = env.get("GIT_SSH_COMMAND", "ssh")
-    env["GIT_SSH_COMMAND"] = f"{existing} -o BatchMode=yes"
+    # hang on a PTY-owned ssh child (RFC-friendly for agents). It is appended
+    # to the command git would use anyway: GIT_SSH_COMMAND outranks
+    # core.sshCommand and GIT_SSH, so setting it to a bare `ssh` dropped the
+    # user's key or agent wrapper in exactly these modes (w5/370).
+    command = _ssh_command_in_effect(env)
+    env["GIT_SSH_COMMAND"] = command if _ssh_program(command) in _NON_OPENSSH else f"{command} -o BatchMode=yes"
     env.setdefault("GIT_TERMINAL_PROMPT", "0")
     return env
 
@@ -155,6 +205,7 @@ def clone_ledger(
             # `--` ends option parsing: the URL and directory are operands only.
             ["git", "clone", "--", git_remote_url, str(target_dir)],
             env=_git_env(unattended=unattended or quiet),
+            stdin_closed=unattended or quiet,
         )
     except OSError as exc:
         raise CloneError(
