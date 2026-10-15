@@ -301,6 +301,10 @@ def query(
         suffix = Path(output_file).suffix.casefold()
         if suffix == ".csv":
             output_format = "csv"
+        elif suffix in {".bean", ".beancount"}:
+            # A ledger name holds directives: a SELECT's text table there is a
+            # file that later fails to parse when a glob includes it (w5/459).
+            output_format = "beancount"
         elif suffix == ".tsv":
             raise UsageError(
                 f"--output {output_file} looks like TSV; pass --format csv (or rename the file) "
