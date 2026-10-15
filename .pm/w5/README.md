@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [341 — `balance --json` joins several filter terms into one `account_filter` string](./341.md) — CLI QA 2026-10-14
 - [342 — Ctrl-C during startup prints a `KeyboardInterrupt` traceback instead of a silent 130](./342.md) — CLI QA 2026-10-14
 - [343 — `--file` on an included leaf says `add open` accounts the root opens; following it breaks the root](./343.md) — CLI QA 2026-10-14
 - [344 — `doctor context|region|linked DIR LOC` hint drops the location operand](./344.md) — CLI QA 2026-10-14
