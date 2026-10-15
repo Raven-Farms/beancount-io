@@ -78,7 +78,13 @@ def _forward(operation: str, ctx: typer.Context, config: Path | None) -> None:
     if operation == "extract":
         _refuse_output_over_inputs(list(ctx.args), script)
     _refuse_config_only_script(script)
-    code = launch.run_optional_script("beangulp", script, [operation, *ctx.args])
+    existing = (
+        output.forwarded_option(list(ctx.args), "-e", "--existing", flags=_EXTRACT_FLAGS)
+        if operation == "extract"
+        else None
+    )
+    placed = {"ledger": os.path.abspath(os.path.expanduser(existing))} if existing else {}
+    code = launch.run_optional_script("beangulp", script, [operation, *ctx.args], **placed)
     raise typer.Exit(code)
 
 

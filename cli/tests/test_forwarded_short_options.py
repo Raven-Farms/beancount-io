@@ -55,8 +55,10 @@ def test_ingest_preserves_glued_native_options_around_frontend_config(
     result = runner.invoke(app, ["-f", str(books / "history.bean"), "ingest", operation, *args])
 
     assert result.exit_code == 0, result.output
+    # `extract -e` also names the ledger whose load cache bea places (w5/456).
+    placed = {"ledger": str(books / "history.bean")} if operation == "extract" else {}
     recorded_engine["run_optional_script"].assert_called_once_with(
-        "beangulp", (books / "other-ingest.py").resolve(), [operation, *native]
+        "beangulp", (books / "other-ingest.py").resolve(), [operation, *native], **placed
     )
     assert not (books / "help").exists()
 

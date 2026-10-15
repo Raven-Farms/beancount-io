@@ -42,7 +42,13 @@ def price(ctx: typer.Context) -> None:
         when="when it forwards to bean-price",
         hint="Run without --json to print price directives; bea price status, refresh and export answer in JSON.",
     )
-    code = launch.run_optional_native("beanprice", "bean-price", args)
+    # bean-price loads a ledger named as a source file; its load cache goes
+    # where every other load's does, not beside the ledger (w5/456).
+    ledger = next((arg for arg in args if not arg.startswith("-") and os.path.isfile(arg)), None)
+    if ledger:
+        code = launch.run_optional_native("beanprice", "bean-price", args, ledger=os.path.abspath(ledger))
+    else:
+        code = launch.run_optional_native("beanprice", "bean-price", args)
     raise typer.Exit(code)
 
 

@@ -204,24 +204,35 @@ def run_optional_native(
     args: Sequence[str],
     *,
     env: dict[str, str] | None = None,
+    ledger: str | None = None,
 ) -> int:
-    """Require an optional feature, then run its upstream executable."""
+    """Require an optional feature, then run its upstream executable.
+
+    `ledger` places the load cache of a ledger the executable reads, as for
+    every native (w5/456).
+    """
     require_feature(feature)
-    return run_native(name, args, env=env)
+    return run_native(name, args, env=env, ledger=ledger)
 
 
-def run_optional_script(feature: str, script: Path, args: Sequence[str]) -> int:
+def run_optional_script(feature: str, script: Path, args: Sequence[str], *, ledger: str | None = None) -> int:
     """Require an optional feature, then run a user script with the engine interpreter.
 
     Beangulp's lifecycle lives in the user's ingest script (`Ingest(...)()`): we
     only choose the interpreter and forward `identify` / `extract` / `archive`
     plus the rest of the argv. The frontend never imports Beangulp.
+
+    `ledger` is a ledger the script loads (`extract -e`): its load cache goes
+    where every other load's does, not beside a private ledger as a
+    world-readable pickle of every entry (w5/456).
     """
     require_feature(feature)
     if not script.is_file():
         raise UsageError(f"Ingest script not found: {script}")
     python = engine_python()
     env = _helper_env()
+    if ledger is not None:
+        env = {**(env if env is not None else os.environ), LOAD_CACHE_ENV: load_cache_pattern(ledger)}
     return _spawn([str(python), str(script), *args], env)
 
 
