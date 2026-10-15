@@ -1490,7 +1490,7 @@ def _csv_from_jsonable(value: Any) -> str:
             units = _csv_from_jsonable(value["units"])
             cost = value.get("cost")
             if cost:
-                return f"{units} {{{_csv_from_jsonable(cost)}}}"
+                return f"{units} {{{_csv_cost(cost)}}}"
             return units
         if "number" in value and "currency" in value:
             return f"{value['number']} {value['currency']}"
@@ -1498,6 +1498,23 @@ def _csv_from_jsonable(value: Any) -> str:
     if isinstance(value, list):
         return ", ".join(_csv_from_jsonable(item) for item in value)
     return str(value)
+
+
+def _csv_cost(cost: dict[str, Any]) -> str:
+    """A lot's cost spec as Beancount writes it: number and currency, then date and label.
+
+    Rendered as a bare amount, two lots at the same price became the same
+    cell — `10 HOOL {100 USD}` twice — though the ledger, `--json` and every
+    other machine-readable surface kept their dates and labels apart
+    (w5/465).
+    """
+    parts = [_csv_from_jsonable(cost)]
+    if cost.get("date"):
+        parts.append(str(cost["date"]))
+    if cost.get("label"):
+        label = str(cost["label"]).replace("\\", "\\\\").replace('"', '\\"')
+        parts.append(f'"{label}"')
+    return ", ".join(parts)
 
 
 def _executed(conn: Any, query_string: str, run: Any, ledger_errors: list[str], *, file: Path) -> Any:
