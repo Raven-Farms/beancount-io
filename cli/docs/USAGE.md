@@ -1422,7 +1422,10 @@ follows the ledger's `custom "fava-option" "fiscal-year-end" "MM-DD"`, and the
 calendar year when none is declared. If that option is declared but is not a
 real month and day (`"06-31"`, `"6-30"`), a fiscal period is refused (exit 1)
 naming the option's line, with or without `--allow-errors`, rather than
-reporting the calendar year under the fiscal label. Calendar periods are
+reporting the calendar year under the fiscal label. Fiscal quarters need a
+fiscal year that starts on the first of a month: with a year end such as
+`"04-05"`, `FY2027-Q2` and `fiscal_quarter` exit **2** naming the option and
+its line, while `FY2027` still reports the whole year. Calendar periods are
 unaffected.
 
 A parent whose children cancel under the conversion — a long and a short lot at

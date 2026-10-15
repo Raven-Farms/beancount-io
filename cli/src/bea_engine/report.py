@@ -398,6 +398,8 @@ def _load(
                 ],
                 ledger_errors=ledger_errors,
             ) from exc
+        if time is not None and _FISCAL_QUARTER_RE.search(time):
+            _refuse_quarter_without_quarters(ledger, entries, time, ledger_errors)
         raise protocol.UsageError(
             f"Invalid time filter {time!r}. Use month, year, YYYY, YYYY-MM, "
             f"or a date range such as '2026-01 - 2026-06'. {exc}",
@@ -414,6 +416,41 @@ def _load(
 # Fava's fiscal spellings: `FY2026`, `FY2026-Q1`, and the relative
 # `fiscal_year` / `fiscal_quarter`, alone or inside a range.
 _FISCAL_FILTER_RE = re.compile(r"\bfy\d{4}|fiscal_(?:year|quarter)", re.IGNORECASE)
+
+
+_FISCAL_QUARTER_RE = re.compile(r"\bfy\d{4}-q\d|fiscal_quarter", re.IGNORECASE)
+
+
+def _refuse_quarter_without_quarters(ledger: Any, entries: Any, time: str, ledger_errors: list[str]) -> None:
+    """Refuse a fiscal quarter, in any spelling, on a fiscal year that does not start on the 1st.
+
+    Fava defines no quarters then. `fiscal_quarter` said so, but Fava's
+    explicit `FY2027-Q2` came back as `Failed to parse date`, which blamed
+    the spelling of a period that does not exist (w5/329).
+    """
+    end = ledger.fava_options.fiscal_year_end
+    if end.has_quarters():
+        return
+    declared = next(
+        (
+            entry
+            for entry in entries
+            if type(entry).__name__ == "Custom"
+            and entry.type == "fava-option"
+            and entry.values
+            and str(entry.values[0].value).replace("_", "-") == "fiscal-year-end"
+        ),
+        None,
+    )
+    where = f" at {declared.meta.get('filename')}:{declared.meta.get('lineno')}" if declared is not None else ""
+    value = f"{end.month_of_year:02d}-{end.day:02d}"
+    raise protocol.UsageError(
+        f"--time {time!r} names a fiscal quarter, but this ledger's fiscal year ends on {value} "
+        f'(custom "fava-option" "fiscal-year-end"{where}), so it does not start on the first of a month and '
+        "has no fiscal quarters.",
+        details=["Report the whole fiscal year (FY2027), or name the months by calendar dates."],
+        ledger_errors=ledger_errors,
+    )
 
 
 def _require_fiscal_year_end(ledger: Any, file: Path, time: str, ledger_errors: list[str]) -> None:
