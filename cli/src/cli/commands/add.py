@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import datetime
 import json
+import re
 import sys
 from decimal import Decimal
 from pathlib import Path
@@ -111,6 +112,47 @@ def _appended(name: str, file: Path, data: dict[str, Any]) -> None:
         output.success(f"Added 1 {name} to {target}.")
 
 
+# Positional narrations that are almost certainly something else (w5/443):
+# a date dated the entry today, and an account or amount belonged in -p.
+_ISO_DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
+_YEAR_FIRST_DATE = re.compile(r"(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})")
+_DATE_SHAPED = re.compile(r"\d{4}[-/.]\d{1,2}[-/.]\d{1,2}|\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4}")
+_ACCOUNT_SHAPED = re.compile(r"[A-Z][A-Za-z0-9-]*(?::[A-Z0-9][A-Za-z0-9-]*)+")
+_AMOUNT_SHAPED = re.compile(r"[-+]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?(?:\s+[A-Z][A-Z0-9'._-]*)?")
+
+
+def _refuse_date_narration(narration: str) -> None:
+    """A date in the narration's place, with no --date, would date the entry today."""
+    text = narration.strip()
+    if not _DATE_SHAPED.fullmatch(text):
+        return
+    year_first = _YEAR_FIRST_DATE.fullmatch(text)
+    if _ISO_DATE.fullmatch(text):
+        suggested = text
+    elif year_first:
+        suggested = "{}-{:0>2}-{:0>2}".format(*year_first.groups())
+    else:
+        suggested = "YYYY-MM-DD"
+    raise UsageError(
+        f"{narration!r} looks like a date, but the positional argument is the narration, and without --date "
+        f"the entry is dated today. Pass --date {suggested}, or add --date to keep it as the narration."
+    )
+
+
+def _shape_warning(narration: str) -> str | None:
+    text = narration.strip()
+    if _ACCOUNT_SHAPED.fullmatch(text):
+        shape = "an account"
+    elif _AMOUNT_SHAPED.fullmatch(text):
+        shape = "an amount"
+    else:
+        return None
+    return (
+        f"Narration {narration!r} looks like {shape}. Postings go in -p, each quoted whole, "
+        "as in -p 'Expenses:Food 5 USD'; the positional argument is the narration."
+    )
+
+
 @add_app.command("transaction", cls=_SingleValueCommand)
 def add_transaction(
     postings: Annotated[
@@ -146,6 +188,10 @@ def add_transaction(
             f"Conflicting narrations: positional {narration_arg!r} and --narration {narration!r}. Pass one of them."
         )
     narration = narration_arg if narration_arg is not None else narration
+    shape_warning = None
+    if narration_arg is not None and date is None:
+        _refuse_date_narration(narration_arg)
+        shape_warning = _shape_warning(narration_arg)
 
     if any("\n" in p or "\r" in p for p in postings):
         raise UsageError("Each --posting must be one line; repeat -p for another posting.")
@@ -162,6 +208,8 @@ def add_transaction(
         "meta": list(meta or []),
     }
     file, data = _write("transaction", request, allow_errors=allow_errors, into=into)
+    if shape_warning is not None:
+        data["warnings"] = [shape_warning, *data.get("warnings", [])]
     _appended("transaction", file, data)
 
 

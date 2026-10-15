@@ -1091,7 +1091,11 @@ bea add commodity --date 2026-01-01 --currency VFINX --meta 'name:Vanguard 500 I
 bea add document --date 2026-04-30 --account Assets:Cash --filename "receipts/april.pdf" --tag trip --link "^inv-001"
 ```
 
-`add transaction` defaults to today's date. One posting may omit its amount;
+`add transaction` defaults to today's date. Its positional argument is the
+narration, so without `--date` a narration that is a date (`2026-01-05`,
+`01/05/2026`) is refused (exit 2) rather than written today, and one that is
+an account or an amount is written with a warning that postings go in `-p`.
+One posting may omit its amount;
 Beancount infers the balancing amount. When a numbered posting omits its
 currency, the CLI uses the account's sole allowed currency, otherwise the
 ledger's sole operating currency. Ambiguous currencies require an explicit
