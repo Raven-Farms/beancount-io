@@ -2671,6 +2671,17 @@ def replace_checked(file: Path, candidate: Path, original: bytes, original_stat:
         raise ConflictError(
             "The ledger changed while the operation was running; nothing was written. Retry the command."
         )
+    if original_stat.st_nlink > 1:
+        # The validated copy is installed by rename, so the other names would
+        # keep the old bytes: a ledger hard-linked into a backup folder
+        # silently diverged on the first write (w5/391). Like a group bea
+        # cannot keep (w1/099), a property the write would drop is refused.
+        others = original_stat.st_nlink - 1
+        raise AuthError(
+            f"{file} has {others} other hard link{'s' if others > 1 else ''}; bea writes a ledger by replacing it "
+            "with a validated copy, which would leave the other name holding the old ledger. Nothing was written. "
+            "Replace the extra name with a symbolic link (writes land in the real file) or remove it, then retry."
+        )
     keep_file_metadata(file, candidate, original_stat)
     stopping.check()
     try:

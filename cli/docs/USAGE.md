@@ -407,7 +407,10 @@ For group-readable books, explicitly run `chmod 640 books/main.bean` after
 creation. Subsequent add/import/format writes preserve the file's permissions:
 its mode, group, ACL entries, extended attributes and user file flags such as
 `nodump`. A group the writing user cannot assign refuses the write with exit
-**3** instead of silently changing who can read the ledger.
+**3** instead of silently changing who can read the ledger. So does a ledger
+file with another hard link: the validated copy replaces the name being
+written, which would leave the other name holding the old ledger. Use a
+symbolic link for a second name instead; writes land in the real file.
 `BEA_FILE` does not redirect
 `init`; while it is set, the printed next steps name the new ledger with
 `--file`, because a bare `bea` would open the one `BEA_FILE` points at.
