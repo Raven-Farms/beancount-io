@@ -8,6 +8,7 @@ need Beanprice.
 
 from __future__ import annotations
 
+import os
 from typing import Any
 
 import typer
@@ -162,7 +163,8 @@ def _export(args: list[str]) -> None:
                 "overwritten": data.get("overwritten") or [],
                 "sources": data["sources"],
             },
-            target={**output.file_target(file), "into": data["output"]},
+            # Absolute, as every target path is: `-o exp` came back as `exp` (w5/324).
+            target={**output.file_target(file), "into": os.path.abspath(data["output"])},
         )
         return
     files: list[str] = data["files"]

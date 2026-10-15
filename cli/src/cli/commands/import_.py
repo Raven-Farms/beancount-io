@@ -1026,7 +1026,9 @@ def import_entries(
         if csv_mode and date_format is not None:
             preview["date_format"] = date_format
         preview["remembered"] = json_remembered
-        output.emit(preview, target=output.file_target(file))
+        # The write destination sits in `target.into` for every writer, as
+        # `add` and `price export` report it (w5/324).
+        output.emit(preview, target={**output.file_target(file), "into": str(preview.get("into") or file)})
     else:
         summary = (
             f"{preview['importer']} → {preview['account']}: {preview['ready']} ready, "

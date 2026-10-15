@@ -1844,6 +1844,7 @@ The envelope is always:
 | Shape | Scope |
 |---|---|
 | `{"file": "<absolute path>"}` | A resolved ledger, including formatting one file |
+| `{"file": "<absolute path>", "into": "<absolute path>"}` | A write into the ledger: `add` and `import` (preview and apply) name the file appended to — the root itself unless `--into` names an include — and `price export` the directory written |
 | `{"files": ["<absolute path>", "…"]}` | Formatting multiple named files or a root's include closure; paths are sorted and deduplicated |
 | `{"directory": "<absolute path>"}` | Formatting a directory |
 | `{"stdin": "-"}` | Formatting stdin to an explicit output file |
