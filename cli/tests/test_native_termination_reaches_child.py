@@ -74,7 +74,8 @@ def _alive(pid: int) -> bool:
 @pytest.mark.parametrize(
     ("command", "program"),
     [
-        pytest.param(["--file", "{ledger}", "check"], "bean-check", id="check"),
+        # A bean-check option keeps the native run a clean ledger skips (w5/430).
+        pytest.param(["--file", "{ledger}", "check", "--no-cache"], "bean-check", id="check"),
         pytest.param(["query", "--source", "{ledger}", "SELECT count(*)"], "source-query", id="query-source"),
         pytest.param(["doctor", "print-options", "{ledger}"], "bean-doctor", id="doctor"),
         # Control: the JSON-helper path already took its child with it.

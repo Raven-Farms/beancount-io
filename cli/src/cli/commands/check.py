@@ -105,6 +105,12 @@ def check(ctx: typer.Context) -> None:
                     raise LedgerError(f"{file}: {len(failed)} plugin(s) failed to load.", details=failed)
                 errors = [str(line) for line in loaded.get("errors") or failed]
                 raise LedgerError(f"{file}: {len(errors)} error(s).", details=errors)
+            if not ctx.args and loaded.get("clean"):
+                # That load ran bean-check's own loader and validations and found
+                # nothing, and bean-check prints nothing for a clean ledger: a
+                # native run would only load it again, every plugin twice (w5/430).
+                # Errors still come from bean-check, in its own words.
+                raise typer.Exit(0)
     code = launch.run_native("bean-check", [*isolate, str(file), *ctx.args], ledger=file)
     if code != 0:
         # An included leaf fails on accounts its root opens; say which root

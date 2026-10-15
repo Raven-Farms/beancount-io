@@ -66,7 +66,8 @@ def _gone(pid: int, *, within: float = 10.0) -> bool:
 @pytest.mark.parametrize(
     "argv",
     [
-        pytest.param(["--file", "main.bean", "check"], id="check"),
+        # A plain `check` of a clean ledger answers from the helper's load and
+        # never starts bean-check (w5/430); an option keeps the forwarded run.
         pytest.param(["--file", "main.bean", "check", "--verbose"], id="check-native-option"),
         pytest.param(["doctor", "context", "main.bean", "3"], id="doctor"),
     ],

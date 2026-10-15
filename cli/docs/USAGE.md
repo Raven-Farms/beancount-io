@@ -453,6 +453,12 @@ ledger's other load errors are listed beside it; with options such as `-v` or
 `--auto`, which can change those, only the plugin failures are.
 `bea --debug check` runs bean-check as is and keeps its traceback.
 
+`bea check` loads the ledger once in its helper, which applies bean-check's own
+validations. With no bean-check options, a ledger that passes is answered from
+that load, so each plugin runs once. A ledger with errors, or a run with
+options, also goes through native bean-check, which loads it again so that its
+errors print in bean-check's own form; plugins run twice there.
+
 `bea treeify` reads account names with Beancount's own grammar unless `-r`, `-F`
 or `-A` chooses another pattern, so a component with an accented or CJK
 character (`Assets:Bank:Épargne`, `Assets:B银行`) is drawn in the tree like any

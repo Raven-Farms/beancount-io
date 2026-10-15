@@ -53,6 +53,8 @@ def check(
     a ledger bean-check already accepted under them. A plugin that failed to
     load fails under any of those options, so that pass answers
     `{"valid": false, "errors": [...], "plugin_failures": [...]}` for one.
+    `clean` says whether bean-check itself would find nothing: no loader
+    error and none from the validations it adds.
     """
     with protocol.answering("check") as answer:
         answer.data = _validate(_ledger(file), documents_only=documents_only)
@@ -868,6 +870,13 @@ def _validate(file: Path, *, documents_only: bool = False) -> dict[str, Any]:
     from fava.core.loader import load_file
 
     entries, errors, options = load_file(str(file))
+    # Whether native `bean-check` would accept this ledger as loaded: its own
+    # loader errors plus the validations it adds for `check`. With no
+    # bean-check option to honor, a clean answer spares the frontend a second
+    # load that would run every plugin again (w5/430).
+    from beancount.ops.validation import HARDCORE_VALIDATIONS
+
+    clean = not errors and not any(validate(entries, options) for validate in HARDCORE_VALIDATIONS)  # type: ignore[no-untyped-call]
 
     from bea_engine.ledger.write import root_read_hint
 
@@ -886,6 +895,7 @@ def _validate(file: Path, *, documents_only: bool = False) -> dict[str, Any]:
             "errors": [format_error(error, ledger_file=file) for error in errors],
             "plugin_failures": failed,
             "root_hint": hint,
+            "clean": False,
         }
 
     from bea_engine.ledger.text import outside_ledger_tree
@@ -933,4 +943,9 @@ def _validate(file: Path, *, documents_only: bool = False) -> dict[str, Any]:
             f"{file}: {len(portable)} portable-document warning(s).",
             details=portable,
         )
-    return {"valid": True, "errors": [], **({"root_hint": hint} if hint else {})}
+    return {
+        "valid": True,
+        "errors": [],
+        **({"root_hint": hint} if hint else {}),
+        **({"clean": clean} if documents_only else {}),
+    }
