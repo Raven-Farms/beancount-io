@@ -13,7 +13,6 @@
 ## Inbox
 
 
-- [010](./010.md) — Align the public archive contract with native downloads (minor; backend-v2; 30–45m).
 - [013](./013.md) — Apply the context tool's payee limit to its nested vocabulary too (minor; backend-v2; 30–45m).
 - [014](./014.md) — Distinguish BQL output rows from input postings in MCP text and schemas (minor; backend-v2; 30–45m).
 - [015](./015.md) — Remove unsupported addLedgerEntries descriptions from served playbooks (minor; backend-v2; 20–35m).
