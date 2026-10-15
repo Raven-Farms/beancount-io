@@ -13,6 +13,7 @@ Parsing rules:
 - **Amounts are signed**: negative = money out, positive = money in, from the account's perspective. Verify once against a recognizable row, then map to ledger signs.
 - **`Merchant`** → payee; **`Original Statement`** → narration when different, and the `import-id` hash input.
 - **`Account`** — drives account mapping; one file covers all accounts.
+- **Split transactions** may appear as several rows sharing the date, account and `Original Statement` with different categories. Ask whether each group is one split purchase and convert it per mapping.md's "Split purchases" (one transaction, one id over the total).
 - **Transfers**: category `Transfer` (Monarch also auto-pairs "Credit Card Payment" under Transfer in most setups). Both sides appear; pair per mapping.md.
 - **`Tags`** — carry as `#tag` beancount tags (sanitize to beancount tag charset) if present.
 - Categories are user-editable in Monarch, so expect a messier distinct-category list than Mint; the merge-near-duplicates rule in mapping.md matters here.

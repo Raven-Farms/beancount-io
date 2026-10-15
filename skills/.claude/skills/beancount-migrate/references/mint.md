@@ -17,4 +17,5 @@ Parsing rules:
 - **`Labels`/`Notes`** — carry into the narration or as `label:`/`note:` metadata if non-empty; drop if empty.
 - Mint categories are a fixed taxonomy (~90 categories) plus user-defined ones; the mapping table will typically be 20–40 distinct values in practice.
 - **No balances anywhere in the file** — opening-balance math per mapping.md is mandatory.
+- **Split transactions** may appear as several rows sharing the date, account and `Original Description` with different categories and amounts. Ask whether each group is one split purchase and convert it per mapping.md's "Split purchases" (one transaction, one id over the total).
 - Duplicates: Mint aggregation sometimes double-recorded a transaction (same date/amount/description, same account). Flag exact duplicate rows and ask, don't auto-drop — some are legitimate (two identical coffees).

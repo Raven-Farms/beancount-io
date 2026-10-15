@@ -1,6 +1,6 @@
 {
   "skill_name": "beancount-migrate",
-  "notes": "Each eval runs in an empty scratch dir with the fixture export copied in as ./export.csv. Validate with `bea check` when bea is installed; oracle/CI uses `uv run --project cli bean-check` separately. Do not `pip install beancount` as the customer path. eval1-3 are per-source happy paths (Mint, Monarch, QBO); eval4-6 are failure-mode checks; eval7 checks the identities later bank imports depend on (docs/examples/migration); eval8 states a card balance without a sign, which must be negated (or confirmed) before the derived opening (balance delta surfaced, unmapped category never guessed, no conversion before mapping confirm). Fixture arithmetic: eval1 Chase flows sum +1935.81 (opening 1000.00 -> stated 2935.81), Amex flows +370.76 in ledger sign (opening -500.00 -> stated -129.24); eval2 Checking +1945.80 (opening 500.00 -> 2445.80), Savings +501.25 (opening 1000.00 -> 1501.25).",
+  "notes": "Each eval runs in an empty scratch dir with the fixture export copied in as ./export.csv. Validate with `bea check` when bea is installed; oracle/CI uses `uv run --project cli bean-check` separately. Do not `pip install beancount` as the customer path. eval1-3 are per-source happy paths (Mint, Monarch, QBO); eval4-6 are failure-mode checks; eval7 checks the identities later bank imports depend on (docs/examples/migration); eval8 states a card balance without a sign, which must be negated (or confirmed) before the derived opening; eval9 exports a split purchase as one row per category, which must become one transaction with one id over the total (balance delta surfaced, unmapped category never guessed, no conversion before mapping confirm). Fixture arithmetic: eval1 Chase flows sum +1935.81 (opening 1000.00 -> stated 2935.81), Amex flows +370.76 in ledger sign (opening -500.00 -> stated -129.24); eval2 Checking +1945.80 (opening 500.00 -> 2445.80), Savings +501.25 (opening 1000.00 -> 1501.25).",
   "evals": [
     {
       "id": 1,
@@ -128,6 +128,22 @@
         "The Amex endpoint assertion is -129.24 USD, dated the day after its last row",
         "The ledger never records the Amex card as a +129.24 credit balance",
         "bea check passes on the final ledger"
+      ]
+    },
+    {
+      "id": 9,
+      "name": "split-purchase-one-transaction",
+      "prompt": "Migrate my Monarch export ./export.csv to a new beancount ledger. Chase Checking was 500.00 at the start and is 2825.80 now. I'll import Chase's own CSV afterwards.",
+      "expected_output": "The two 2026-03-12 COSTCO WHSE #0123 rows share date, account and Original Statement with different categories (Groceries -80.00, Household -40.00), so the skill asks whether they are one split purchase. Once confirmed, it writes ONE transaction: Assets:Bank:ChaseChecking -120.00 USD, Expenses:Food:Groceries 80.00 USD, Expenses:Household 40.00 USD, with one import-id monarch:sha256:<16-hex> hashed over 2026-03-12|-120 USD|COSTCO WHSE #0123|Assets:Bank:ChaseChecking, the single row Chase's export will show. Opening 500.00, three transactions from four source rows (the split group of 2 counted on the source-row side), endpoint assertion 2026-03-13 2825.80 USD, bea check passes.",
+      "files": [
+        "evals/files/eval9_monarch_split.csv"
+      ],
+      "expectations": [
+        "The two COSTCO WHSE #0123 rows are identified as a possible split purchase and the user is asked before conversion",
+        "After confirmation, Costco is one transaction with a -120.00 USD source posting and two expense postings (80.00 and 40.00), not two transactions",
+        "That transaction carries one import-id hashed over the -120 total, not one id per category row",
+        "Row-count math accounts for the 2-row split group as one transaction: 4 source rows = 2 single-row transactions + 2 rows in one split group",
+        "The endpoint assertion is 2825.80 USD and bea check passes"
       ]
     }
   ]

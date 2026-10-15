@@ -33,6 +33,8 @@ Six phases, in order: **Identify → Scaffold → Map → Convert → Verify →
 
 Inspect the export's header row and a few data rows. Recognize the source (Mint / Monarch / QBO — see references) or fall back to the generic category-tagged-CSV path. Establish: the distinct **source accounts** in the file, the **distinct categories**, the **date range**, the **row count**, and the sign/type convention. Ask for anything ambiguous — never guess signs or dates.
 
+Look for **split purchases** too: rows that share the date, source account and raw description (`Original Statement` / `Original Description`) but carry different categories may be one purchase split across categories. List each such group and ask whether it is one split purchase (see mapping.md); never merge or keep them apart silently.
+
 Also ask up front for each source account's **current balance** (from the old app or the real bank) — opening balances depend on it (see mapping.md). Record each in ledger sign: an app shows a card or loan as the positive amount owed, which is negative on `Liabilities:…`. When a liability balance comes without a sign or "owed", confirm it ("Amex shows 129.24 owed → ledger −129.24, right?"), since a derived opening cannot catch a flipped sign. If the user also knows the balance at the **start of the export period**, collect it: anchoring on a stated opening (instead of back-deriving one) makes the endpoint assertion a real check rather than a tautology.
 
 ### 2. Scaffold
@@ -51,7 +53,7 @@ Present all three tables together as one review; the user edits them in place an
 
 ### 4. Convert
 
-- One transaction per non-transfer row: source-account posting at the row amount (ledger sign), counter-account from the confirmed category mapping.
+- One transaction per non-transfer row: source-account posting at the row amount (ledger sign), counter-account from the confirmed category mapping. A **confirmed split group** is the exception: one transaction with one source posting for the group's total and one counter-posting per category, and one `import-id` hashed over that total — the single row the bank's own export will show (mapping.md).
 - **Transfer pairs** (same amount, opposite direction, ≤3 days apart, transfer-mapped categories, different source accounts) merge into **one** two-posting transaction. Unpaired transfer rows go to a `transfers to review` list, converted against `Equity:Transfers-Review` so totals still tie.
 - Every entry carries `import-id` metadata per the `beancount-import` convention (`references/dedup.md` there): native row ID if the export has one, else `<source>:sha256:<16-hex>` with the same normalization. A merged transfer pair covers **two** source rows — record one row's id as `import-id` and the other as `import-id-2` so a later `beancount-import` of either account exact-matches its side and doesn't double-book the transfer.
 - **Opening balances**: prefer a stated opening when available; otherwise derive `opening = stated current balance (ledger sign) − Σ(converted rows)` and label it as derived. Date it the day before the earliest row and post against the existing opening-equity account (`bea init` creates `Equity:OpeningBalances`). An endpoint assertion **dated the day after the last row** pins the stated ending balance; with a derived opening this is a consistency check, not independent evidence that source rows are complete.
@@ -63,7 +65,7 @@ Present all three tables together as one review; the user edits them in place an
 
 Run the checks; a migration that can't show its math didn't happen:
 
-- **Row count**: source rows = non-transfer transactions written + 2×(transfer pairs merged) + skipped rows (each listed with a reason) — a merged pair is 2 source rows but 1 transaction, so count it on the pairs side, not the transactions side.
+- **Row count**: source rows = single-row transactions written + 2×(transfer pairs merged) + rows in confirmed split groups + skipped rows (each listed with a reason) — a merged pair is 2 source rows but 1 transaction, and a split group of k rows is 1 transaction, so count both on the source-row side, not the transactions side.
 - **Balances**: per account, opening + Σ(rows) must equal the stated current balance in ledger sign (negative for an owed liability) — this is what the appended `balance` assertion enforces via `bea check`.
 - **`bea --file "$ledger" --json --no-input check`** on the root ledger. Any failure: surface the exact output, do not report success.
 

@@ -1,0 +1,5 @@
+"Date","Merchant","Category","Account","Original Statement","Notes","Amount","Tags"
+"2026-03-05","Paycheck","Paycheck","Chase Checking","ACME CORP PAYROLL","","2500.00",""
+"2026-03-08","Trader Joes","Groceries","Chase Checking","TRADER JOES #123 SEATTLE WA","","-54.20",""
+"2026-03-12","Costco","Groceries","Chase Checking","COSTCO WHSE #0123","","-80.00",""
+"2026-03-12","Costco","Household","Chase Checking","COSTCO WHSE #0123","","-40.00",""

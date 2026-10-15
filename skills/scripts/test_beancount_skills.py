@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import contextlib
 import csv
+import hashlib
 import importlib.util
 import io
 import json
@@ -808,6 +809,47 @@ class TestBeaRecipes(unittest.TestCase):
         )
         self.recipe("balance")
         self.recipe("check")
+
+    def test_migrated_split_purchase_is_a_duplicate_of_the_banks_single_row(self):
+        # A split exported as one row per category is one bank charge; written
+        # as one transaction with one id over the total, the bank's later row
+        # is a duplicate instead of a second Costco (w5/362).
+        mapping = (SUITE / "beancount-migrate" / "references" / "mapping.md").read_text()
+        split = re.search(r"<!-- recipe: split-purchase -->\n```beancount\n(.*?)\n```", mapping, re.DOTALL)
+        self.assertIsNotNone(split, "mapping.md must show the split-purchase transaction")
+        entry = split.group(1)
+        date, payee, narration = re.match(r'(\S+) \* "([^"]*)" "([^"]*)"', entry).groups()
+        account, total = re.search(r"^  (Assets:\S+)\s+(-?\d+\.\d+) USD$", entry, re.M).groups()
+        pieces = [Decimal(amount) for amount in re.findall(r"^  Expenses:\S+\s+(\d+\.\d+) USD$", entry, re.M)]
+        self.assertEqual(sum(pieces), -Decimal(total))
+        hashed = re.search(r'import-id: "monarch:sha256:<16-hex of ([^>]+)>"', entry).group(1)
+        self.assertEqual(hashed, f"{date}|{format(Decimal(total).normalize(), 'f')} USD|{narration}|{account}")
+
+        def migrated_id(text):
+            return "monarch:sha256:" + hashlib.sha256(text.encode()).hexdigest()[:16]
+
+        opens = "".join(
+            f"2026-01-01 open {name} USD\n"
+            for name in (account, "Expenses:Food:Groceries", "Expenses:Household", "Expenses:Uncategorized")
+        )
+        one = re.sub(r"<16-hex of [^>]+>", migrated_id(hashed)[len("monarch:sha256:"):], entry)
+        separate = "".join(
+            f'{date} * "{payee}" "{narration}"\n'
+            f'  import-id: "{migrated_id(f"{date}|-{format(piece.normalize(), "f")} USD|{narration}|{account}")}"\n'
+            f"  {account}  -{piece} USD\n  Expenses:Uncategorized\n"
+            for piece in pieces
+        )
+        self.csv(
+            f"Date,Description,Amount\n{date},{narration},{total}\n",
+            "date=Date,amount=Amount,narration=Description,sign=bank",
+        )
+        self.values["account"] = account
+        statuses = {}
+        for name, migrated in (("one", one), ("separate", separate)):
+            self.target.write_text(opens + migrated + "\n")
+            statuses[name] = [row["status"] for row in self.recipe("csv-preview")["rows"]]
+        self.assertEqual(statuses["one"], ["duplicate"])
+        self.assertNotEqual(statuses["separate"], ["duplicate"])
 
     def test_recurring_recipes_find_a_gap_in_a_payee_less_import(self):
         # A one-description bank CSV, imported through the shipped recipe: bea

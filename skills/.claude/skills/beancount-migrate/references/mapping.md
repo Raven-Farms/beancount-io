@@ -61,6 +61,28 @@ opening = current − Σ rows        opening = -500.00
 
 A failing endpoint assertion is the migration's smoke detector — it means rows are missing from the export, pending transactions aren't in it, or the stated balance was wrong. Report the delta with those candidate causes. Only with the user's explicit acceptance, book the residual to `Equity:Migration-Residual` so the assertion passes *visibly* — never invisibly massage amounts.
 
+## Split purchases
+
+Some apps let the user split one purchase across categories, and an export may then show it as one row per category, each with the same date, source account and raw description:
+
+```
+"2026-03-12","Costco","Groceries","Chase Checking","COSTCO WHSE #0123","","-80.00",""
+"2026-03-12","Costco","Household","Chase Checking","COSTCO WHSE #0123","","-40.00",""
+```
+
+The bank saw one charge, and its own export (what `beancount-import` reads after the migration) shows one row for `-120.00`. Converted row by row, the two pieces get two ids that match no bank row, so that later import books Costco again, or fails on the migration's own endpoint assertion by exactly the purchase amount. Ask the user about each such group (same date + source account + raw description, different categories; not a transfer pair). When they confirm a split, write **one** transaction: one source posting for the total, one counter-posting per category, and one `import-id` hashed over the **total** with the same normalization as any row:
+
+<!-- recipe: split-purchase -->
+```beancount
+2026-03-12 * "Costco" "COSTCO WHSE #0123"
+  import-id: "monarch:sha256:<16-hex of 2026-03-12|-120 USD|COSTCO WHSE #0123|Assets:Bank:ChaseChecking>"
+  Assets:Bank:ChaseChecking  -120.00 USD
+  Expenses:Food:Groceries      80.00 USD
+  Expenses:Household           40.00 USD
+```
+
+When the user says the rows are separate purchases (two identical receipts on one day), keep them separate and say that a later bank import may list them as possible duplicates.
+
 ## import-id on migrated entries
 
 Every converted entry carries `import-id` metadata using the `beancount-import` skill's convention (see that skill's `references/dedup.md`): native row ID if the export has one, else `<source>:sha256:<16-hex>` over the same normalized `date|amount|description|source-account` input (e.g. `mint:sha256:…`). A merged transfer pair records the second row's id as `import-id-2`. This makes migration and ongoing imports one continuous, deduplicated history: the user's first `beancount-import` run after migrating won't double-book overlap rows.
