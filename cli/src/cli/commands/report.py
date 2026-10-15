@@ -141,6 +141,7 @@ def _filter_text(metadata: dict[str, Any]) -> str:
 
 
 def _heading(title: str, metadata: dict[str, Any], *, profit_line: bool = False) -> None:
+    output.utf8_stdout()
     period = metadata["period"]
     dates = f"{period['start']} through {metadata['as_of']}" if period["start"] else "no dated activity"
     typer.echo(f"{title} — {dates}")

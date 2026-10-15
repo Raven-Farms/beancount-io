@@ -546,7 +546,8 @@ write that fails part-way preserves an existing export and leaves no partial fil
 
 Ledger text and query results on stdout are UTF-8 whatever the locale, so
 `bea format FILE > out.bean` and `bea query … > out.csv` write the bytes `-o`
-would. Only messages are escaped (`\xfc`) when the locale cannot show them.
+would; so are the `list`, `balance` and `report` tables and `list --details`.
+Only messages are escaped (`\xfc`) when the locale cannot show them.
 
 Writes match the file they append to: new lines use CRLF in a CRLF ledger and
 LF elsewhere, a missing final newline is repaired as part of the append, and

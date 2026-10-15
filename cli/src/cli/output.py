@@ -75,13 +75,25 @@ def write_data(text: str) -> None:
     UTF-8, so stdout does too. The stream stays UTF-8 afterwards rather than
     mixing two encodings in one output.
     """
+    utf8_stdout()
+    if sys.stdout is not None:  # fd 1 closed: prints go nowhere, and so does this.
+        sys.stdout.write(text)
+
+
+def utf8_stdout() -> None:
+    """Make stdout UTF-8 for a command that prints ledger data, whatever the locale.
+
+    `list`, `balance` and `report` tables, and `list --details` "in Beancount
+    syntax", printed in the locale's codec with `\u0130`-style escapes, so a
+    saved `--details` named a different payee and account (w5/405). Called
+    before a command's first line of data, so its output is one encoding.
+    """
     stream = sys.stdout
-    if stream is None:  # fd 1 closed: prints go nowhere, and so does this.
+    if stream is None:
         return
     reconfigure = getattr(stream, "reconfigure", None)
     if reconfigure is not None and codecs.lookup(stream.encoding).name != "utf-8":
         reconfigure(encoding="utf-8", errors=stream.errors)
-    stream.write(text)
 
 
 def replay(text: str | None, stream: TextIO | None) -> None:

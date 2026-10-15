@@ -399,6 +399,7 @@ def _run(name: str, spec: _Spec, limit: int, allow_errors: bool, *, details: boo
         )
         return
 
+    output.utf8_stdout()
     if not items:
         typer.echo(spec.empty)
         return
