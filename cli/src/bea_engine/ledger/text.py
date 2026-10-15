@@ -366,7 +366,8 @@ def iter_includes(content: bytes) -> Iterator[IncludeSpan]:
     pending = False
     for kind, line, text, value in lex_iter_string(content):  # type: ignore[no-untyped-call]
         if pending and kind == "STRING":
-            start = content.find(text, starts[line - 1])
+            # The lexer reports a string that spans lines at its last line.
+            start = content.find(text, starts[max(0, line - 1 - text.count(b"\n"))])
             if start < 0:
                 raise protocol.UsageError("Cannot locate an include path in the ledger.")
             yield IncludeSpan(start, start + len(text), line, value)

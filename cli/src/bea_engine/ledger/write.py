@@ -260,7 +260,11 @@ def literal_include(path: Path | str) -> str:
     from beancount.utils import misc_utils
 
     escape_string: Callable[[str], str] = misc_utils.escape_string
-    return f'"{escape_string(glob.escape(str(path)))}"'
+    # `escape_string` leaves line breaks and tabs raw; a raw newline inside
+    # the string split the include over two lines, which no later rewrite of
+    # the staged copy or an exported root could locate (w5/301).
+    quoted = escape_string(glob.escape(str(path)))
+    return '"' + quoted.replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t") + '"'
 
 
 def _included_new_file(target: Path, pattern: str) -> bool:
