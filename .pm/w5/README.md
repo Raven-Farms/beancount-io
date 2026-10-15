@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [386 — Empty `--into ''`/`--rules ''` resolve to the working directory and give directory errors](./386.md) — CLI QA 2026-10-14
 - [387 — Path options turn `''` into `.`: `format -i ''` rewrites the cwd, `price export -o ''` writes into it](./387.md) — CLI QA 2026-10-14
 - [388 — `treeify --filler ''` crashes with `ZeroDivisionError`](./388.md) — CLI QA 2026-10-14
 - [389 — `example -o ''` skips bea's output checks (`forwarded_option` drops `''`)](./389.md) — CLI QA 2026-10-14
