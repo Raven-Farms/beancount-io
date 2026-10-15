@@ -183,7 +183,9 @@ class RunContext:
         # entry path, and every include is resolved against this one. Lexical
         # like the loader's own `abspath`: a symlinked root resolves its
         # includes beside the link, as `bean-check` does (w1/056).
-        return Path(os.path.abspath(candidate))
+        entry = os.path.abspath(candidate)
+        refuse_expanding_ledger_path(entry, f" (from {source})")
+        return Path(entry)
 
     def confirm(self, prompt: str) -> bool:
         """Ask before something destructive; refuse to guess when nobody can answer."""
@@ -249,3 +251,21 @@ def refuse_terminal_stdin(message: str) -> None:
     """
     if _stdin_is_a_terminal() and _context.no_input:
         raise UsageError(message)
+
+
+def refuse_expanding_ledger_path(entry: str, source: str = "") -> None:
+    """Refuse a root ledger path that Beancount would read as another file.
+
+    Beancount's loader and `bean-check` run `expandvars` on the root path, so
+    `$X.bean` with X set read a different ledger while `add` wrote this one,
+    and every read reported that other ledger with exit 0 (w5/315). Only an
+    expansion that changes the path is refused: `$X` with X unset loads as
+    written.
+    """
+    expanded = os.path.expandvars(entry)
+    if expanded != entry:
+        raise UsageError(
+            f"Ledger path '{entry}'{source} contains an environment variable that Beancount "
+            f"would expand, reading '{expanded}' instead. "
+            "Rename the file or directory without '$', or unset that variable."
+        )

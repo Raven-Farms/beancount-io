@@ -15,6 +15,7 @@ import typer
 
 from cli import output
 from cli.config import DEFAULT_ENTRY_FILE_FALLBACKS
+from cli.context import refuse_expanding_ledger_path
 from cli.engine import launch
 from cli.errors import BeaError, ConflictError, LedgerError, UsageError, refuse_json
 from cli.native_command import ForwardingCommand
@@ -554,6 +555,9 @@ def _register(op: str) -> None:
         positionals = _positionals(list(ctx.args))
         if positionals and Path(positionals[0]).is_file():
             output.refuse_cache_over_ledger(Path(positionals[0]))
+        # Upstream's loader expands `$NAME` in the ledger path (w5/315).
+        if positionals and op != "list-options":
+            refuse_expanding_ledger_path(os.path.abspath(positionals[0]))
         forwarder(ctx)
 
 
