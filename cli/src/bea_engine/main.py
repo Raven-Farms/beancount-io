@@ -869,10 +869,13 @@ def _validate(file: Path, *, documents_only: bool = False) -> dict[str, Any]:
 
     entries, errors, options = load_file(str(file))
 
+    from bea_engine.ledger.write import root_read_hint
+
+    hint = root_read_hint(file) if errors else None
     if errors and not documents_only:
         raise protocol.LedgerError(
             f"{file}: {len(errors)} error(s).",
-            details=[format_error(error, ledger_file=file) for error in errors],
+            details=[*(format_error(error, ledger_file=file) for error in errors), *([hint] if hint else [])],
         )
     failed = [format_error(error, ledger_file=file) for error in errors if is_plugin_failure(error)]
     if failed:
@@ -882,6 +885,7 @@ def _validate(file: Path, *, documents_only: bool = False) -> dict[str, Any]:
             "valid": False,
             "errors": [format_error(error, ledger_file=file) for error in errors],
             "plugin_failures": failed,
+            "root_hint": hint,
         }
 
     from bea_engine.ledger.text import outside_ledger_tree
@@ -929,4 +933,4 @@ def _validate(file: Path, *, documents_only: bool = False) -> dict[str, Any]:
             f"{file}: {len(portable)} portable-document warning(s).",
             details=portable,
         )
-    return {"valid": True, "errors": []}
+    return {"valid": True, "errors": [], **({"root_hint": hint} if hint else {})}

@@ -1218,6 +1218,35 @@ def _same_file(left: Path, right: Path) -> bool:
         return False
 
 
+def top_root(file: Path) -> Path | None:
+    """The ledger nothing includes, above `file` through its includers, or None for a root."""
+    root = including_root(file)
+    seen = {file.resolve()}
+    while root is not None and root.resolve() not in seen:
+        seen.add(root.resolve())
+        above = including_root(root)
+        if above is None:
+            break
+        root = above
+    return root
+
+
+def root_read_hint(file: Path) -> str | None:
+    """For a read that failed on an included leaf: the root to read instead, or None.
+
+    `check` and the reads refused a per-year file with `Pass --allow-errors`,
+    which answers for part of the ledger, never naming the root that loads
+    the accounts it uses (w5/348).
+    """
+    root = top_root(file)
+    if root is None:
+        return None
+    return (
+        f"{file.name} is included by {root}; on its own it lacks the accounts and options that root provides. "
+        f"Run with --file {shlex.quote(str(root))} to read the whole ledger."
+    )
+
+
 def write_through_root(file: Path, into: Path | None) -> tuple[Path, Path | None]:
     """The root and `--into` a write aimed at an included leaf is validated through.
 
@@ -1235,14 +1264,7 @@ def write_through_root(file: Path, into: Path | None) -> tuple[Path, Path | None
     # was checked against `extra.bean` alone, and the root's own entries —
     # what a balance or a close contradicts, what import dedupes against —
     # stayed out of the check (w5/346). Climb to the file nothing includes.
-    root = including_root(file)
-    seen = {file.resolve()}
-    while root is not None and root.resolve() not in seen:
-        seen.add(root.resolve())
-        above = including_root(root)
-        if above is None:
-            break
-        root = above
+    root = top_root(file)
     if root is None:
         return file, into
     note(f"{file.name} is included by {root}; the write goes to {file.name} and is checked against that whole ledger.")

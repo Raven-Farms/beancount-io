@@ -117,6 +117,7 @@ def answer(
         "items": [_row(item) for item in items],
         "truncated": truncated,
         "errors": [format_error(error, ledger_file=file) for error in errors],
+        "root_hint": _root_hint(file) if errors else None,
     }
     if details:
         # Beancount syntax for each row, which only this side can render. Asked
@@ -125,3 +126,10 @@ def answer(
 
         data["rendered"] = [format_transaction(item) for item in items]
     return data
+
+
+def _root_hint(file: Path) -> str | None:
+    """The root to read instead, when `file` is a leaf that fails on its own (w5/348)."""
+    from bea_engine.ledger.write import root_read_hint
+
+    return root_read_hint(file)

@@ -381,7 +381,7 @@ def _run(name: str, spec: _Spec, limit: int, allow_errors: bool, *, details: boo
 
     data = launch.helper_json(argv)
     ledger_errors = data.get("errors") or []
-    output.render_ledger_errors(ledger_errors, allow=allow_errors)
+    output.render_ledger_errors(ledger_errors, allow=allow_errors, hint=data.get("root_hint"))
     items: list[dict[str, Any]] = list(data["items"])
     truncated = bool(data["truncated"])
 

@@ -874,7 +874,12 @@ def jsonable(value: Any) -> Any:
 
 
 def render_ledger_errors(
-    errors: list[Any], *, allow: bool, message: str | None = None, always_strict: bool = False
+    errors: list[Any],
+    *,
+    allow: bool,
+    message: str | None = None,
+    always_strict: bool = False,
+    hint: str | None = None,
 ) -> None:
     """Report loader errors instead of quietly analysing a ledger that does not load.
 
@@ -887,6 +892,9 @@ def render_ledger_errors(
     if not errors:
         return
     formatted = [format_ledger_error(err) for err in errors]
+    if hint:
+        # The root that loads this included file's accounts (w5/348).
+        formatted.append(hint)
     if not allow and (always_strict or context.current().strict_reads()):
         raise LedgerError(
             message or f"Ledger has {len(formatted)} error(s). Pass --allow-errors to report anyway.",

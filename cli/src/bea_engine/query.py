@@ -167,7 +167,7 @@ def rows_answer(
     date and label that tell it from another lot at the same price.
     """
     conn = connect(file)
-    errors = _gate([format_error(error, ledger_file=file) for error in conn.errors], allow_errors)
+    errors = _gate([format_error(error, ledger_file=file) for error in conn.errors], allow_errors, file)
     cursor = _executed(conn, query_string, conn.execute, errors, file=file)
     rows = cursor.fetchall() if cursor.description is not None else []
     description = cursor.description
@@ -219,7 +219,7 @@ def text_answer(
     # upstream printing them to stderr too would report each one twice.
     shell = build_shell(file, buffer, format=format, numberify=numberify, show_errors=False)
     shell.spreadsheet_safe = spreadsheet_safe
-    errors = _gate([format_error(error, ledger_file=file) for error in shell.context.errors], allow_errors)
+    errors = _gate([format_error(error, ledger_file=file) for error in shell.context.errors], allow_errors, file)
     if output is not None:
         # Still before the query: refusing to write over the ledger being read
         # is a refusal, and a refusal has to happen before any work is done.
@@ -859,7 +859,7 @@ def _write_export(output: Path, text: str) -> None:
         os.replace(candidate, output)
 
 
-def _gate(errors: list[str], allow_errors: bool) -> list[str]:
+def _gate(errors: list[str], allow_errors: bool, file: Path | None = None) -> list[str]:
     """Refuse to answer from a ledger that does not load, unless told otherwise.
 
     A total computed from a ledger with errors reads as authoritative and is
@@ -868,8 +868,12 @@ def _gate(errors: list[str], allow_errors: bool) -> list[str]:
     stdout is a terminal and whether `--allow-errors` was passed.
     """
     if errors and not allow_errors:
+        from bea_engine.ledger.write import root_read_hint
+
+        hint = root_read_hint(file) if file is not None else None
         raise protocol.LedgerError(
-            f"Ledger has {len(errors)} error(s). Pass --allow-errors to report anyway.", details=errors
+            f"Ledger has {len(errors)} error(s). Pass --allow-errors to report anyway.",
+            details=[*errors, *([hint] if hint else [])],
         )
     return errors
 
@@ -905,7 +909,7 @@ def interactive(
     shell.spreadsheet_safe = spreadsheet_safe
     shell.debug = debug
     # After build_shell, which is what loads the ledger, and before cmdloop.
-    _gate([format_error(error, ledger_file=file) for error in shell.context.errors], allow_errors)
+    _gate([format_error(error, ledger_file=file) for error in shell.context.errors], allow_errors, file)
     # The policy outlives startup: `.reload` swaps in whatever the file holds
     # now, and every later query re-checks it (see PreciseShell.execute).
     shell.allow_errors = allow_errors
@@ -1063,7 +1067,7 @@ def build_shell(
                 # the failed one, not a partial answer to opt into.
                 raise protocol.LedgerError(self.reload_failure)
             if not self.allow_errors:
-                _gate([format_error(error, ledger_file=file) for error in self.context.errors], False)
+                _gate([format_error(error, ledger_file=file) for error in self.context.errors], False, file)
             statement = ""
             if isinstance(query, str):
                 _refuse_statement_tail(query)

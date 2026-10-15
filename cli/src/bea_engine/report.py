@@ -372,9 +372,12 @@ def _load(
     entries, errors, options = load_file(str(file))
     ledger_errors = [format_error(error, ledger_file=file) for error in errors]
     if ledger_errors and not allow_errors:
+        from bea_engine.ledger.write import root_read_hint
+
+        hint = root_read_hint(file)
         raise protocol.LedgerError(
             f"Ledger has {len(ledger_errors)} error(s). Pass --allow-errors to report anyway.",
-            details=ledger_errors,
+            details=[*ledger_errors, *([hint] if hint else [])],
         )
     ledger = FavaLedger(entries, errors, options)
     try:

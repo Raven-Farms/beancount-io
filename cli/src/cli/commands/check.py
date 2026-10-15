@@ -82,6 +82,7 @@ def check(ctx: typer.Context) -> None:
     # appearing or vanishing has made stale, which bean-check would trust (w5/116);
     # its own finding still waits for bean-check to accept the ledger.
     portable: BeaError | None = None
+    root_hint: str | None = None
     if not _INFORMATIONAL & set(ctx.args):
         try:
             loaded = launch.helper_json(["check", "--file", str(file), "--documents-only"])
@@ -93,6 +94,7 @@ def check(ctx: typer.Context) -> None:
                 raise
             portable = error
         else:
+            root_hint = loaded.get("root_hint")
             failed = [str(line) for line in loaded.get("plugin_failures") or []]
             if failed and not current.debug:
                 # bean-check reports a plugin that cannot load as a traceback at
@@ -105,6 +107,10 @@ def check(ctx: typer.Context) -> None:
                 raise LedgerError(f"{file}: {len(errors)} error(s).", details=errors)
     code = launch.run_native("bean-check", [*isolate, str(file), *ctx.args], ledger=file)
     if code != 0:
+        # An included leaf fails on accounts its root opens; say which root
+        # to check instead (w5/348).
+        if root_hint:
+            output.note(root_hint)
         raise typer.Exit(code)
     if portable is not None:
         raise portable
