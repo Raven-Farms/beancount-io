@@ -154,7 +154,9 @@ def _simple(directive_type: str, request: dict[str, Any]) -> Any:
         if booking is not None:
             booking = str(booking).strip().upper() or None
         raw_currencies = list(request.get("currencies") or [])
-        currencies = [str(item).strip() for item in raw_currencies if str(item).strip()]
+        # A repeat is written once, in first-seen order, as repeated tags and
+        # links are; `-c USD -c USD` wrote `USD,USD` (w5/448).
+        currencies = list(dict.fromkeys(str(item).strip() for item in raw_currencies if str(item).strip()))
         if raw_currencies and not currencies:
             raise protocol.UsageError(
                 "Every --currency value is blank after trimming; supply a currency symbol or omit -c."
