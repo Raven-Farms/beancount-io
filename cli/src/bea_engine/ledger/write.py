@@ -940,6 +940,8 @@ def candidate_file(file: Path, content: str, *, mode: int = 0o600) -> Iterator[P
                     "bea validates a write on a staged copy beside each changed file; make the directory "
                     "writable before retrying. Nothing was written."
                 ) from exc
+            except OSError as exc:
+                raise LedgerError(_stage_failed(file, exc)) from exc
             sidecar: Path | None = None
             try:
                 # The sidecar's name may import Beancount, so it is registered second.
@@ -947,10 +949,13 @@ def candidate_file(file: Path, content: str, *, mode: int = 0o600) -> Iterator[P
                 with stopping.staged(sidecar) if sidecar else nullcontext():
                     # Preserve the supplied bytes: Windows newline translation would turn
                     # existing CRLF into CRCRLF on every append.
-                    with os.fdopen(fd, "w", encoding="utf-8", newline="") as stream:
-                        stream.write(content)
-                        stream.flush()
-                        os.fsync(stream.fileno())
+                    try:
+                        with os.fdopen(fd, "w", encoding="utf-8", newline="") as stream:
+                            stream.write(content)
+                            stream.flush()
+                            os.fsync(stream.fileno())
+                    except OSError as exc:
+                        raise LedgerError(_stage_failed(file, exc)) from exc
                     yield candidate
             finally:
                 _discard_candidate(candidate)
@@ -960,6 +965,18 @@ def candidate_file(file: Path, content: str, *, mode: int = 0o600) -> Iterator[P
                     with suppress(OSError):
                         sidecar.unlink(missing_ok=True)
             return
+
+
+def _stage_failed(file: Path, exc: OSError) -> str:
+    """A staged copy the filesystem would not take (a full disk, a size limit), in bea's words.
+
+    Only a permission refusal had a sentence: the rest surfaced as `OSError:
+    [Errno 27] File too large`, with nothing saying the file was untouched (w5/410).
+    """
+    return (
+        f"Cannot write a staged copy of {file.name} in {file.parent} "
+        f"({exc.strerror or type(exc).__name__}); nothing was written."
+    )
 
 
 def _discard_candidate(candidate: Path) -> None:
@@ -2494,6 +2511,11 @@ def replace_checked(file: Path, candidate: Path, original: bytes, original_stat:
         raise AuthError(
             f"The filesystem refused to replace {file} (an ACL, file flag or directory permission "
             "forbids it); nothing was written."
+        ) from exc
+    except OSError as exc:
+        raise LedgerError(
+            f"Could not replace {file} with its validated copy ({exc.strerror or type(exc).__name__}); "
+            "nothing was written."
         ) from exc
 
 

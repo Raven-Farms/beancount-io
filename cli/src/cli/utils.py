@@ -16,7 +16,7 @@ from typing import Any
 import typer
 from typer._click.types import ParamType
 
-from cli.errors import AuthError, UsageError
+from cli.errors import AuthError, LedgerError, UsageError
 
 #: The engine twin (`bea_engine.ledger.text.CONTROL_CHARACTERS`) carries the
 #: same pattern and the full reasoning; neither side may import the other.
@@ -320,6 +320,12 @@ def atomic_write(path: Path, content: str, *, export: bool = False) -> None:
         if export and mode is not None:
             candidate.chmod(mode)
         os.replace(candidate, path)
+    except OSError as exc:
+        if not export or isinstance(exc, PermissionError):
+            raise
+        # A full disk or a size limit read `[Errno 27] File too large`, not
+        # saying the destination was untouched (w5/410).
+        raise LedgerError(f"Cannot write {path} ({exc.strerror or type(exc).__name__}); nothing was written.") from exc
     finally:
         candidate.unlink(missing_ok=True)
 
