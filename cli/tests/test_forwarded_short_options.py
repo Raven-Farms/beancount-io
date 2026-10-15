@@ -115,6 +115,8 @@ def test_existing_output_spellings_still_reach_the_destination(
 ) -> None:
     """bea writes treeify's destination itself, after upstream succeeds (w1/084)."""
     (books / "help").mkdir()
+    # The input has to exist: treeify refuses a missing one up front (w5/352).
+    (books / "input.txt").write_text("Assets:Cash 1\n")
 
     result = runner.invoke(app, ["treeify", *native, "input.txt"])
 

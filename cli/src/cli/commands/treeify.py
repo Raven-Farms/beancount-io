@@ -13,7 +13,7 @@ import typer
 
 from cli import context, output
 from cli.engine import launch
-from cli.errors import UsageError, refuse_json
+from cli.errors import AuthError, UsageError, refuse_json
 from cli.utils import atomic_write, regex_reads_otherwise
 
 _NO_COLUMN = "Could not find any valid column in input"
@@ -109,6 +109,24 @@ def _check_regexes(parsed: argparse.Namespace) -> None:
             ) from None
 
 
+def _check_input(name: str | None) -> None:
+    """Refuse an input path upstream can only fail on, the way `format` does.
+
+    A missing path or a directory exited 1 (`validation`) and an unreadable
+    file was not exit 3, each behind upstream's exception class (w5/352).
+    stdin and a held `/dev/fd/N` pass through untouched.
+    """
+    if name is None or name == "-" or _held_descriptor(name):
+        return
+    path = Path(name).expanduser()
+    if not os.path.lexists(path):
+        raise UsageError(f"treeify input '{path}' does not exist. Pass a text file, or omit it to read stdin.")
+    if path.is_dir():
+        raise UsageError(f"treeify input '{path}' is a directory. Pass a text file, or omit it to read stdin.")
+    if path.is_file() and not os.access(path, os.R_OK):
+        raise AuthError(f"Cannot read treeify input '{path}': permission denied.")
+
+
 def _held_descriptor(name: str | None) -> tuple[int, ...]:
     """The descriptor a `/dev/fd/N` input names, when this process holds it open.
 
@@ -146,6 +164,7 @@ def treeify(ctx: typer.Context) -> None:
         )
     if parsed is not None and not parsed.help:
         _check_regexes(parsed)
+        _check_input(parsed.input)
     if parsed is not None and parsed.output is not None and not parsed.help:
         # Upstream opens `-o` for writing before it reads the input, so a run
         # that then fails — or reads the same file — has already truncated
