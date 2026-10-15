@@ -288,6 +288,40 @@ def _quota_refusal(body: object, written: str = "nothing was written to your led
     )
 
 
+_ROOT_OPTION = re.compile(r'^option[ \t]+"name_(assets|liabilities|equity|income|expenses)"[ \t]+"([^"\\\n]+)"', re.M)
+_DEFAULT_ROOTS = {"assets": "Assets", "liabilities": "Liabilities", "equity": "Equity", "income": "Income"}
+_DEFAULT_ROOTS["expenses"] = "Expenses"
+
+
+def ledger_root_names(file: Path) -> dict[str, str]:
+    """The account roots this ledger renames, default name to its own, from the root file's options.
+
+    The prompt's recipes filter on `^Expenses` and `^(Assets|Liabilities)`, so
+    on a ledger with `option "name_expenses" "Aufwand"` a model following them
+    queried roots that hold nothing and read the 0 rows as no data (w5/403).
+    Read as text: the frontend never loads the ledger, and Beancount takes
+    these options from the root file, the last one winning.
+    """
+    try:
+        text = file.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return {}
+    named = {_DEFAULT_ROOTS[key]: name for key, name in _ROOT_OPTION.findall(text)}
+    return {default: name for default, name in named.items() if name != default}
+
+
+def roots_prompt(renamed: dict[str, str]) -> str:
+    """The system-prompt line naming this ledger's account roots, or nothing for the defaults."""
+    if not renamed:
+        return ""
+    pairs = ", ".join(f"{name} (for {default})" for default, name in renamed.items())
+    default, name = next(iter(renamed.items()))
+    return (
+        f"This ledger renames its account roots: {pairs}. Use those names wherever the examples above say "
+        f"{', '.join(renamed)}, as in account ~ '^{name}' rather than '^{default}'."
+    )
+
+
 class UnreadableModelReply(Exception):
     """A successful model response whose body the SDK could not read (w5/373)."""
 
@@ -348,6 +382,10 @@ def make_agent(
     @agent.system_prompt
     def todays_date() -> str:
         return f"Today's date is {date.today().isoformat()}."
+
+    @agent.system_prompt
+    def account_roots(ctx: RunContext[BqlDeps]) -> str:
+        return roots_prompt(ledger_root_names(ctx.deps.file))
 
     @agent.tool(retries=2)
     def run_bql_query(ctx: RunContext[BqlDeps], query: str) -> str:
