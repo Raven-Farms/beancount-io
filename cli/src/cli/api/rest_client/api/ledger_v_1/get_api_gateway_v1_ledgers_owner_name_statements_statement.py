@@ -146,7 +146,8 @@ def sync_detailed(
 
      Renders the balance sheet or the income statement for the period, with optional currency conversion
     and interval bucketing. `shape=summary` (the default) returns totals and non-zero accounts;
-    `shape=fava` returns the full chart payload.
+    `shape=fava` returns the full chart payload. Balance-sheet equity and its series include current
+    earnings under the configured account names without writing closing transactions.
 
     Args:
         owner (str): Ledger owner's username Example: alice.
@@ -210,7 +211,8 @@ def sync(
 
      Renders the balance sheet or the income statement for the period, with optional currency conversion
     and interval bucketing. `shape=summary` (the default) returns totals and non-zero accounts;
-    `shape=fava` returns the full chart payload.
+    `shape=fava` returns the full chart payload. Balance-sheet equity and its series include current
+    earnings under the configured account names without writing closing transactions.
 
     Args:
         owner (str): Ledger owner's username Example: alice.
@@ -269,7 +271,8 @@ async def asyncio_detailed(
 
      Renders the balance sheet or the income statement for the period, with optional currency conversion
     and interval bucketing. `shape=summary` (the default) returns totals and non-zero accounts;
-    `shape=fava` returns the full chart payload.
+    `shape=fava` returns the full chart payload. Balance-sheet equity and its series include current
+    earnings under the configured account names without writing closing transactions.
 
     Args:
         owner (str): Ledger owner's username Example: alice.
@@ -331,7 +334,8 @@ async def asyncio(
 
      Renders the balance sheet or the income statement for the period, with optional currency conversion
     and interval bucketing. `shape=summary` (the default) returns totals and non-zero accounts;
-    `shape=fava` returns the full chart payload.
+    `shape=fava` returns the full chart payload. Balance-sheet equity and its series include current
+    earnings under the configured account names without writing closing transactions.
 
     Args:
         owner (str): Ledger owner's username Example: alice.
