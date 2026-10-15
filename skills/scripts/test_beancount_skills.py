@@ -147,6 +147,29 @@ class TestInstall(Workspace):
         self.assertIn("(target missing), not this checkout", err)
         self.assertIn("move it out of the skills directory", err)
 
+    def test_a_file_or_dangling_destination_is_refused_and_the_rest_install(self):
+        stray = self.root / "file"
+        stray.write_text("keep\n")
+        dangling = self.root / "dangling"
+        dangling.symlink_to(self.root / "nowhere")
+        refused = [
+            (stray, f"FAIL {stray} is a file, not a directory. Nothing was installed there."),
+            (
+                dangling,
+                f"FAIL {dangling} links to {self.root / 'nowhere'} (target missing). Nothing was installed there.",
+            ),
+            (stray / "sub", f"FAIL {stray / 'sub'}: {stray} is a file, not a directory. Nothing was installed there."),
+        ]
+        code, _, err = run("install", *(dest for dest, _ in refused), self.dest)
+
+        self.assertEqual(code, 1)
+        self.assertNotIn("Traceback", err)
+        for _, line in refused:
+            self.assertIn(line + "\n", err)
+        self.assertEqual(stray.read_text(), "keep\n")
+        self.assertFalse((self.root / "nowhere").exists())
+        self.assertEqual(run("verify", self.dest)[0], 0, "the destination after the refused ones installs")
+
     def test_documented_conflict_recovery_preserves_the_edited_copy(self):
         self.dest.mkdir(parents=True, exist_ok=True)
         shutil.copytree(SUITE / "beancount-ask", self.dest / "beancount-ask")
@@ -245,6 +268,20 @@ class TestVerify(Workspace):
         code, _, err = run("verify", self.root / "absent")
         self.assertEqual(code, 1)
         self.assertIn("does not exist", err)
+
+    def test_a_destination_that_is_not_a_directory_is_named(self):
+        stray = self.root / "file"
+        stray.write_text("")
+        (self.root / "dangling").symlink_to(self.root / "nowhere")
+        for dest, reason in [
+            (stray, f"FAIL {stray} is a file, not a directory\n"),
+            (self.root / "dangling", f"links to {self.root / 'nowhere'} (target missing)\n"),
+        ]:
+            with self.subTest(dest=dest.name):
+                code, _, err = run("verify", dest)
+                self.assertEqual(code, 1)
+                self.assertTrue(err.endswith(reason), err)
+                self.assertNotIn("does not exist", err)
 
 
 class TestUninstall(Workspace):

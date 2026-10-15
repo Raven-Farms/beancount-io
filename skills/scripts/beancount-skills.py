@@ -60,12 +60,32 @@ def is_linked(entry: Path) -> bool:
     return entry.is_symlink() and entry.resolve() == (SOURCE_DIR / entry.name).resolve()
 
 
+def destination_problem(dest: Path) -> str | None:
+    """Why DEST cannot be a skills directory: it, or its nearest existing parent, is not one.
+
+    Unchecked, `mkdir` raised a traceback for a stray file or a link into a
+    dotfiles repo not yet cloned, and the destinations after it never ran.
+    """
+    for path in (dest, *dest.parents):
+        if not os.path.lexists(path):
+            continue
+        if path.is_dir():
+            return None
+        where = "" if path == dest else f"{dest}: "
+        if path.is_symlink():
+            state = " (target missing)" if not path.exists() else ", not a directory"
+            return f"{where}{path} links to {os.readlink(path)}{state}"
+        return f"{where}{path} is a file, not a directory"
+    return None
+
+
 def verify(dest: Path) -> int:
     """Report whether DEST holds a complete, usable suite. Read-only."""
     names = expected_skills()
     problems: list[str] = []
     if not dest.is_dir():
-        print(f"FAIL {dest}: directory does not exist; run install first", file=sys.stderr)
+        problem = destination_problem(dest) or f"{dest}: directory does not exist; run install first"
+        print(f"FAIL {problem}", file=sys.stderr)
         return 1
 
     installed = []
@@ -166,6 +186,10 @@ def tree_changes(source: Path, copy: Path) -> list[str]:
 
 
 def install(dest: Path) -> int:
+    problem = destination_problem(dest)
+    if problem:
+        print(f"FAIL {problem}. Nothing was installed there.", file=sys.stderr)
+        return 1
     entries = [dest / name for name in expected_skills()]
     conflicts = [describe_conflict(entry) for entry in entries if os.path.lexists(entry) and not is_linked(entry)]
     if conflicts:
