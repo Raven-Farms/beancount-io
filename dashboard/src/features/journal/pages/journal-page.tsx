@@ -279,10 +279,11 @@ const JournalContent = () => {
                       ...previous,
                       ...NEW_TRANSACTION_ACTION_SEARCH,
                     })}
-                    aria-label={t("journal.addNewJournalEntry")}
                   >
-                    <Plus className="h-4 w-4" />
-                    <span className="hidden sm:inline">
+                    <Plus className="h-4 w-4" aria-hidden />
+                    {/* The visible label names the link at every width (WCAG
+                        2.5.3); below `sm` it stays for screen readers only. */}
+                    <span className="sr-only sm:not-sr-only">
                       {t("journal.newEntry")}
                     </span>
                   </Link>

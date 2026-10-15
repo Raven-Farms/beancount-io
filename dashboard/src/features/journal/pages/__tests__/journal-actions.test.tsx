@@ -202,7 +202,7 @@ describe("journal action URLs", () => {
     render(<LedgerJournalPage />);
 
     expect(
-      screen.getByRole("link", { name: "journal.addNewJournalEntry" }),
+      screen.getByRole("link", { name: "journal.newEntry" }),
     ).toHaveAttribute("data-to", "/ledger/$ledgerOwner/$ledgerName/journal");
     expect(typeof capturedLinkSearch).toBe("function");
     expect(
@@ -230,7 +230,7 @@ describe("journal action URLs", () => {
       "false",
     );
     expect(
-      screen.queryByRole("link", { name: "journal.addNewJournalEntry" }),
+      screen.queryByRole("link", { name: "journal.newEntry" }),
     ).not.toBeInTheDocument();
   });
 });

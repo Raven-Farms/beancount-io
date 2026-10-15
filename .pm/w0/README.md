@@ -12,7 +12,6 @@
 
 ## Inbox
 
-- [006](./006.md) — Make the Journal "New Entry" button's accessible name contain its visible label (minor; dashboard; 15–25m).
 - [007](./007.md) — Accept the bank amount spellings the CLI already imports in dashboard Smart Import CSV (minor; dashboard; 45–60m).
 - [008](./008.md) — Return focus to the opener when the Journal New Entry dialog closes (minor; dashboard; 40–55m).
 - [009](./009.md) — Bound the precision of Holdings' derived average cost (minor; dashboard; 25–40m).
