@@ -229,6 +229,8 @@ def load_rules(path: Path) -> list[CsvRule]:
     except ValueError as exc:
         hint = f" {_LITERAL_STRING_HINT}" if "Unescaped '\\'" in str(exc) else ""
         raise UsageError(f"Cannot parse rules file {path} as TOML: {exc}.{hint}") from exc
+    if isinstance(raw, dict):
+        _refuse_unknown_rule_keys(path, raw)
     entries = raw.get("rule")
     if not isinstance(entries, list) or not entries:
         raise UsageError(f"Rules file {path} must hold a [[rule]] list with match and account each.")
@@ -236,6 +238,31 @@ def load_rules(path: Path) -> list[CsvRule]:
         return [CsvRule.compile(index, entry) for index, entry in enumerate(entries)]
     except UsageError as exc:
         raise UsageError(f"Rules file {path}: {exc}") from exc
+
+
+def _refuse_unknown_rule_keys(path: Path, raw: dict[str, Any]) -> None:
+    """Refuse a table or key a rules file does not define, rather than ignore it.
+
+    A misspelled `[[rules]]` block dropped every rule under it and booked those
+    rows to the default account with exit 0, and a rule's `field`, `flag` or
+    `narration` read like restrictions but did nothing (w5/338).
+    """
+    for name, value in raw.items():
+        if name == "rule":
+            continue
+        shown = f"[[{name}]]" if isinstance(value, list) else f"[{name}]" if isinstance(value, dict) else name
+        kind = "key" if shown == name else "table"
+        near = " — did you mean [[rule]]?" if name.casefold().rstrip("s") == "rule" else "."
+        raise UsageError(f"Rules file {path}: unknown {kind} {shown}; a rules file holds only [[rule]] entries{near}")
+    for index, entry in enumerate(raw.get("rule") or []):
+        if not isinstance(entry, dict):
+            continue
+        extra = sorted(set(entry) - {"match", "account"})
+        if extra:
+            raise UsageError(
+                f"Rules file {path}: rule {index + 1} has unknown key {extra[0]!r}; each rule holds only "
+                "match and account."
+            )
 
 
 # Header names, lowercased, that identify a field beyond doubt. A role is only

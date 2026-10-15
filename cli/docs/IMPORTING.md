@@ -212,8 +212,10 @@ account = "Expenses:Groceries"
 ```
 
 See the bundled [rules example](examples/rules.toml). Each entry needs
-`match` and `account`; a bad regex or a file without a `[[rule]]` list fails
-naming the rule number. An empty or whitespace-only `match` is refused, and
+`match` and `account` and holds nothing else; a bad regex, a file without a
+`[[rule]]` list, any other table (a misspelled `[[rules]]`) or any other key in
+a rule (`field`, `flag`) fails with exit 2 naming the rule or the table, and
+nothing is written or remembered. An empty or whitespace-only `match` is refused, and
 so is any pattern that matches empty text (a trailing `|` as in
 `"whole foods|"`, `(cafe)?`), since it would match every row — write
 `match = ".*"` for an explicit catch-all. A regex that uses a backslash goes
