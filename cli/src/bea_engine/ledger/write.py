@@ -282,7 +282,9 @@ def include_claims(patterns: Iterable[str]) -> Callable[[Path], str | None]:
             wildcards.append(pattern)
         else:
             parent, name = os.path.split(pattern)
-            literal.setdefault(Path(parent).resolve() / name, pattern)
+            # Lexically first, as the loader does: `link/..` is the includer's
+            # directory, not the symlink target's parent (w5/451).
+            literal.setdefault(Path(os.path.normpath(parent)).resolve() / name, pattern)
 
     def claim(target: Path) -> str | None:
         return literal.get(target) or next(
@@ -301,7 +303,9 @@ def _included_new_file(target: Path, pattern: str) -> bool:
         return False
     if name == "**":
         parent = os.path.join(parent, "**")
-    if any(Path(directory).resolve() == target.parent for directory in glob.glob(parent, recursive=True)):
+    if any(
+        Path(os.path.normpath(directory)).resolve() == target.parent for directory in glob.glob(parent, recursive=True)
+    ):
         return True
     # A directory the write would create is not on disk for `glob` to list:
     # `price export` into a new `snap/` under `include "*/*.bean"` wrote a
@@ -314,7 +318,7 @@ def _directory_matches(directory: Path, pattern: str) -> bool:
     parts = Path(pattern).parts
     fixed = next((i for i, part in enumerate(parts) if glob.has_magic(part)), len(parts))
     try:
-        names = directory.relative_to(Path(*parts[:fixed]).resolve()).parts
+        names = directory.relative_to(Path(os.path.normpath(Path(*parts[:fixed]))).resolve()).parts
     except ValueError:
         return False
     return _components_match(names, parts[fixed:])

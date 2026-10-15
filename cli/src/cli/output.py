@@ -334,7 +334,10 @@ def _include_matches(source: Path, raw: str) -> tuple[list[Path], list[Path]]:
     not a regular file resolves nothing, and the loader cannot read it.
     """
     pattern = raw if Path(raw).is_absolute() else str(source.parent / raw)
-    found = sorted(Path(p) for p in glob.glob(pattern, recursive=True))
+    # Named as the loader names them: it `normpath`s each match, so
+    # `link/../other.bean` through a symlinked `link` is the `other.bean`
+    # beside the includer, not the one beside the link's target (w5/451).
+    found = sorted(Path(os.path.normpath(p)) for p in glob.glob(pattern, recursive=True))
     return [path for path in found if path.is_file()], [path for path in found if not path.is_file()]
 
 
@@ -524,7 +527,7 @@ def _glob_would_match(target: Path, pattern: str) -> bool:
         parent = os.path.join(parent, "**")
     for directory in glob.glob(parent or ".", recursive=True):
         try:
-            if Path(directory).resolve() == target.parent:
+            if Path(os.path.normpath(directory)).resolve() == target.parent:
                 return True
         except OSError:
             continue
