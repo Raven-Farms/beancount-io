@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [365 — Income-statement series keeps an empty leading interval fragment (`-t 2026-03 -i weekly` opens with a 1-day week)](./365.md) — CLI QA 2026-10-14
 - [366 — `cloud status` shows `'dict' object has no attribute 'username'` on a partial profile body](./366.md) — CLI QA 2026-10-14
 - [367 — `cloud status` reports a redirect/204 as a rejected credential (exit 3, "log in again")](./367.md) — CLI QA 2026-10-14
 - [368 — `cloud ledger create/delete` call a refused connection "outcome unknown" (exit 4)](./368.md) — CLI QA 2026-10-14
