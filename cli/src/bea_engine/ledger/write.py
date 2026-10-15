@@ -1750,6 +1750,9 @@ def validate_candidate(
                     f"Review the transactions on {error.entry.account} before {error.entry.date}, "
                     "or the ledger line the plugin reads."
                 )
+            elif closing := _drained_close(error.entry, entries):
+                # The close this write appends is what the plugin read (w5/399).
+                hints.append(_drained_close_hint(error.entry, closing, error.message, options))
             else:
                 hints.extend(
                     _balance_recovery_hints(
@@ -1883,6 +1886,46 @@ def _unused_pad_hint(
     return (
         f" The {first.date} assertion at {_location(first, filenames)} already holds, "
         "so this pad would have nothing to fill; it need not be added."
+    )
+
+
+_ACCUMULATED = re.compile(r"accumulated (?P<amount>-?[\d.,]+ \S+)")
+
+
+def _drained_close(balance: Any, entries: list[Any]) -> Any | None:
+    """The `close` a plugin's zero assertion checks, when it shares that close's location.
+
+    `check_drained` stamps its assertion with the close's own line. A close
+    already in the ledger is `_plugin_origin`'s case; one this write appends
+    read as a balance the user typed and got statement-date and fee advice
+    (w5/399).
+    """
+    from beancount.core.data import Close
+
+    meta = balance.meta or {}
+    return next(
+        (
+            entry
+            for entry in entries
+            if isinstance(entry, Close)
+            and entry.account == balance.account
+            and (entry.meta or {}).get("filename") == meta.get("filename")
+            and (entry.meta or {}).get("lineno") == meta.get("lineno")
+        ),
+        None,
+    )
+
+
+def _drained_close_hint(balance: Any, closing: Any, message: str, options: dict[str, Any]) -> str:
+    """What the account still holds at its close, and how to get it to zero."""
+    plugins = [str(name) for name, _ in options.get("plugin") or ()]
+    plugin = "check_drained" if any(name.endswith("check_drained") for name in plugins) else "a plugin"
+    held = _ACCUMULATED.search(message)
+    holding = f"still holds {held.group('amount')}" if held else "is not empty"
+    return (
+        f"This zero assertion is added by {plugin} for the close of {balance.account} on {closing.date}: the "
+        f"account {holding} then. Move that balance out of {balance.account} with a transaction dated on or "
+        f"before {closing.date}, then close it."
     )
 
 
