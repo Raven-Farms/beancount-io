@@ -209,7 +209,7 @@ def to_bea_error(exc: BaseException | str) -> BeaError:
         return UsageError(exc.format_message())
     # The parent class works with both standalone Click (older Typer) and
     # Typer's vendored Click, without a dependency on either private module.
-    click_usage_error = typer.BadParameter.__bases__[0]
+    click_usage_error: type[Any] = typer.BadParameter.__bases__[0]
     if isinstance(exc, click_usage_error):
         option = getattr(exc, "option_name", None)
         examples = {
@@ -225,7 +225,9 @@ def to_bea_error(exc: BaseException | str) -> BeaError:
             "--strict-prices": "bea --strict-prices check",
         }
         hint = f" Place {option} before the command, for example: {examples[option]}." if option in examples else ""
-        return UsageError(str(exc) + hint)
+        # `format_message`, not `str`: only it carries Click's "(Possible
+        # options: --account)" for a misspelled option (w5/444).
+        return UsageError(exc.format_message() + hint + _unknown_command_hint(exc))
 
     import httpx
 
@@ -240,6 +242,44 @@ def to_bea_error(exc: BaseException | str) -> BeaError:
         return UsageError(_redact_secrets(str(exc)))
 
     return BeaError(_redact_secrets(str(exc) or f"{type(exc).__name__} (no detail)."))
+
+
+# Names other tools and docs use for a bea subcommand, suggested only where
+# the group has that command (w5/444).
+_COMMAND_ALIASES = {
+    "bs": "balance-sheet",
+    "is": "income-statement",
+    "pnl": "income-statement",
+    "tb": "trial-balance",
+    "account": "open",
+    "accounts": "open",
+    "txn": "transaction",
+    "txns": "transaction",
+    "transactions": "transaction",
+}
+
+
+def _unknown_command_hint(exc: Any) -> str:
+    """A next step for "No such command" when Click found no close match.
+
+    `bea report bs` and `bea help` ended at a bare "No such command" (w5/444).
+    """
+    import ast
+    import re
+
+    match = re.fullmatch(r"No such command ('.*'|\".*\")\.", exc.message)
+    ctx = getattr(exc, "ctx", None)
+    if match is None or ctx is None:
+        return ""
+    name = ast.literal_eval(match.group(1))
+    # Named `bea` however it was started (`python -m cli.main` in a checkout).
+    path = " ".join(["bea", *ctx.command_path.split()[len(ctx.find_root().command_path.split()) :]])
+    if name.lower() == "help":
+        return f" Did you mean '{path} --help'?"
+    alias = _COMMAND_ALIASES.get(name.lower())
+    if alias is not None and alias in ctx.command.list_commands(ctx):
+        return f" Did you mean '{alias}'?"
+    return f" Run '{path} --help' to list its commands."
 
 
 def _redact_secrets(text: str) -> str:
