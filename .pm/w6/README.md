@@ -24,7 +24,6 @@
 
 - [018](./blocked/018.md) — Adopt upstream MIN/MAX support for posting amounts (minor; ledger; 35–50m after release) — **blocked:** awaiting a published WASM artifact containing upstream 25fc6be5.
 
-- [019](./019.md) — Return ordinary empty results for unmatched GraphQL transaction lookups (minor; backend-v2; 35–50m).
 - [020](./020.md) — Preserve JSON null in modern REST value responses (minor; backend-v2; 35–50m).
 
 - [021](./021.md) — Preserve event filters in REST and MCP reads (minor; backend-v2; 35–50m).
