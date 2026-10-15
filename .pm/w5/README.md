@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [329 — `-t FY2027-Q2` on a mid-month fiscal year says "Failed to parse date"](./329.md) — CLI QA 2026-10-14
 - [330 — Nonexistent but well-formed date told to "Use YYYY-MM-DD format"](./330.md) — CLI QA 2026-10-14
 - [331 — `balance`/`report` tree prints raw bidi overrides in account names (148 gap)](./331.md) — CLI QA 2026-10-14
 - [332 — Unsupported `--csv encoding=` on a non-UTF-8 file is masked by the generic decode error](./332.md) — CLI QA 2026-10-14
