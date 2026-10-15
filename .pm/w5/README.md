@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [383 — Duplicate-entry summary prints `5.0E-7 BTC` (w5/228 leftover)](./383.md) — CLI QA 2026-10-14
 - [384 — Bulk `number_total` cost without currency gets the generic "not one token" error](./384.md) — CLI QA 2026-10-14
 - [385 — `import --date-format ''` is saved to memory as `""` and breaks the next plain import](./385.md) — CLI QA 2026-10-14
 - [386 — Empty `--into ''`/`--rules ''` resolve to the working directory and give directory errors](./386.md) — CLI QA 2026-10-14
