@@ -35,7 +35,6 @@
 
 ## Inbox
 
-- [306 — agent-skills.md's checkout `uv run python` fails outside `cli/`; no Homebrew interpreter](./306.md) — CLI QA 2026-10-14
 - [307 — `add custom --help` folds its Examples into one paragraph](./307.md) — CLI QA 2026-10-14
 - [308 — With stderr closed, diagnostics land in stdout (CSV/JSON corrupted, exit 0)](./308.md) — CLI QA 2026-10-14
 - [309 — `BEA_ENGINE_PYTHON` dir / non-exec / non-Python escapes the 269 check](./309.md) — CLI QA 2026-10-14
