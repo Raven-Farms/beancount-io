@@ -1409,11 +1409,12 @@ last bucket ends on the as-of date — a ledger whose last entry is `2026-02-10`
 closes its `-i yearly` series on `2026-02-10`, not `2026-12-31` — and earlier
 buckets end on their interval boundary.
 
-When `--time` ends partway through an interval, the last bucket is a fragment
-of it — `-t 2020-03 -i weekly` ends on the Monday–Tuesday tail of an ISO week
-that runs into April. Flow series (income statement periods, the overview's
-income and expense series) drop that fragment when no entries fall in it, so a
-clipped boundary does not read as one more quiet week; a fragment holding
+When `--time` starts or ends partway through an interval, the first or last
+bucket is a fragment of it — `-t 2020-03 -i weekly` starts on Sunday
+`2020-03-01`, the last day of an ISO week, and ends on the Monday–Tuesday tail
+of one that runs into April. Flow series (income statement periods, the
+overview's income and expense series) drop such a fragment when no entries fall
+in it, so a clipped boundary does not read as one more quiet week; a fragment holding
 entries — a transaction on `2020-12-31` — stays, and so does the only bucket of
 a short filter. Balance series (net worth, assets, liabilities, equity) keep
 every bucket, because their value is real whether or not the fragment saw

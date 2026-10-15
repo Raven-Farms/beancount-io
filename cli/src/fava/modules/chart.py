@@ -38,10 +38,11 @@ def _flow_ranges(
 ) -> Sequence[DateRange]:
     """The interval ranges a flow series should report.
 
-    A time filter clips the last range to whatever part of the interval falls
-    inside the filter: `-t 2020-03 -i weekly` ends on the Mon-Tue tail of an
-    ISO week that runs into April. With no entries in it, that fragment reads
-    as one more quiet week rather than the boundary it is, so it is dropped —
+    A time filter clips the first and last ranges to whatever part of their
+    interval falls inside the filter: `-t 2020-03 -i weekly` starts on the
+    Sunday that ends an ISO week and ends on the Mon-Tue tail of one that runs
+    into April. With no entries in it, such a fragment reads as one more quiet
+    week rather than the boundary it is, so it is dropped —
     but a fragment that carries entries (a transaction on 2020-12-31) is a real
     period and stays, as does the sole range of a short filter.
 
@@ -54,16 +55,25 @@ def _flow_ranges(
     # at a boundary the user chose, so it is the current period and stays.
     if len(ranges) < 2 or not filtered.date_range:
         return ranges
-    last = ranges[-1]
-    whole = interval.get_prev(last.begin) == last.begin and interval.get_next(last.begin) == last.end
     # Beancount.io change: only entries the ledger declares count. Clamping to
     # the time filter synthesizes summarize, transfer and conversion entries —
     # a `C "Conversion for (…)"` on the period's last day whenever the period
     # holds a currency exchange — which made every such fragment look busy.
     declared = [entry for entry in filtered.entries if not str(entry.meta.get("filename", "")).startswith("<")]
-    if whole or slice_entry_dates(declared, last.begin, last.end):
-        return ranges
-    return ranges[:-1]
+
+    def quiet_fragment(period: DateRange) -> bool:
+        whole = interval.get_prev(period.begin) == period.begin and interval.get_next(period.begin) == period.end
+        return not whole and not slice_entry_dates(declared, period.begin, period.end)
+
+    kept = list(ranges)
+    if quiet_fragment(kept[-1]):
+        kept.pop()
+    # A filter that starts partway through an interval clips the first range
+    # the same way: `-t 2026-03 -i weekly` opened with a one-day Sunday "week"
+    # (w5/365). It goes too, unless it is all that is left.
+    if len(kept) > 1 and quiet_fragment(kept[0]):
+        kept.pop(0)
+    return kept
 
 
 def _omit_empty_clamp_phantoms(
@@ -157,7 +167,7 @@ class ChartModule:
         returning both the aggregated total across the provided accounts and a
         per-account breakdown for the same interval. Useful for bar charts like
         monthly income/expenses. Covers every interval in the filtered period,
-        except an empty trailing fragment of one (see :func:`_flow_ranges`).
+        except an empty leading or trailing fragment of one (see :func:`_flow_ranges`).
 
         Args:
             filtered: The filtered ledger.
