@@ -52,6 +52,33 @@ export function BudgetHistoryTable({
     () => [...group.budgetHistory].reverse(),
     [group.budgetHistory],
   );
+  const intervalLabel = (interval: string) => {
+    const known = toIntervalEnum(interval);
+    return known ? intervalLabels[known] : interval;
+  };
+  // Each Delete names the directive it removes; rows that would read the same
+  // (same date, amount and interval) also get their position, so no two
+  // buttons share a name.
+  const describe = (entry: (typeof history)[number]) =>
+    [entry.date, entry.amount, entry.interval].join("\0");
+  const counts = new Map<string, number>();
+  for (const entry of history) {
+    counts.set(describe(entry), (counts.get(describe(entry)) ?? 0) + 1);
+  }
+  const deleteLabels = history.map((entry, index) => {
+    const account = group.account;
+    const interval = intervalLabel(entry.interval);
+    const { date, amount } = entry;
+    return (counts.get(describe(entry)) ?? 0) > 1
+      ? t("page.budget.budgetDeleteEntryNumbered", {
+          account,
+          date,
+          amount,
+          interval,
+          position: index + 1,
+        })
+      : t("page.budget.budgetDeleteEntry", { account, date, amount, interval });
+  });
 
   return (
     <div className="overflow-x-auto rounded-lg border">
@@ -76,7 +103,6 @@ export function BudgetHistoryTable({
         </TableHeader>
         <TableBody>
           {history.map((entry, index) => {
-            const interval = toIntervalEnum(entry.interval);
             return (
               <TableRow
                 key={entry.entry_hash}
@@ -87,7 +113,7 @@ export function BudgetHistoryTable({
                 </TableCell>
                 <TableCell>
                   <Badge variant="outline" className="text-xs">
-                    {interval ? intervalLabels[interval] : entry.interval}
+                    {intervalLabel(entry.interval)}
                   </Badge>
                 </TableCell>
                 <TableCell className="whitespace-nowrap text-right font-mono text-sm font-medium tabular-nums">
@@ -108,7 +134,7 @@ export function BudgetHistoryTable({
                           date: entry.date,
                         })
                       }
-                      aria-label={t("common.delete")}
+                      aria-label={deleteLabels[index]}
                     >
                       <Trash2 className="size-3.5" />
                     </Button>

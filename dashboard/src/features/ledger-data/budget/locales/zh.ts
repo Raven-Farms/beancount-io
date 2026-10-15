@@ -4,6 +4,17 @@ export interface TranslationEntry {
 }
 
 const zhBudget: Record<string, TranslationEntry> = {
+  "page.budget.budgetDeleteEntry": {
+    message: "删除预算：{account}，{date}，{amount}，{interval}",
+    description:
+      "Accessible name of a budget history row's delete button, naming the directive it removes",
+  },
+  "page.budget.budgetDeleteEntryNumbered": {
+    message:
+      "删除预算：{account}，{date}，{amount}，{interval}（第 {position} 条）",
+    description:
+      "Same as budgetDeleteEntry, with the row's position when other rows read identically",
+  },
   "page.budget.budget": {
     message: "预算",
     description: "Page title and label for the budget feature",

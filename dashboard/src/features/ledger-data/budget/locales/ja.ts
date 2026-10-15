@@ -4,6 +4,17 @@ export interface TranslationEntry {
 }
 
 const jaBudget: Record<string, TranslationEntry> = {
+  "page.budget.budgetDeleteEntry": {
+    message: "予算を削除: {account}、{date}、{amount}、{interval}",
+    description:
+      "Accessible name of a budget history row's delete button, naming the directive it removes",
+  },
+  "page.budget.budgetDeleteEntryNumbered": {
+    message:
+      "予算を削除: {account}、{date}、{amount}、{interval}（{position} 件目）",
+    description:
+      "Same as budgetDeleteEntry, with the row's position when other rows read identically",
+  },
   "page.budget.budget": {
     message: "予算",
     description: "Page title and label for the budget feature",

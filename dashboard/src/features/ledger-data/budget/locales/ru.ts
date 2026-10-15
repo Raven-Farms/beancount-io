@@ -4,6 +4,17 @@ export interface TranslationEntry {
 }
 
 const ruBudget: Record<string, TranslationEntry> = {
+  "page.budget.budgetDeleteEntry": {
+    message: "Удалить бюджет: {account}, {date}, {amount}, {interval}",
+    description:
+      "Accessible name of a budget history row's delete button, naming the directive it removes",
+  },
+  "page.budget.budgetDeleteEntryNumbered": {
+    message:
+      "Удалить бюджет: {account}, {date}, {amount}, {interval} (запись {position})",
+    description:
+      "Same as budgetDeleteEntry, with the row's position when other rows read identically",
+  },
   "page.budget.budget": {
     message: "Бюджет",
     description: "Page title and label for the budget feature",
