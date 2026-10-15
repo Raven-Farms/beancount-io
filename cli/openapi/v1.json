@@ -14921,7 +14921,7 @@
     "/api-gateway/v1/ledgers/{owner}/{name}/narration-transactions": {
       "get": {
         "summary": "Get a narration's most recent transaction",
-        "description": "The single most recent transaction recorded against this narration string, or null if there is none. Fava's autocomplete lookup, like payee-transactions.",
+        "description": "The single most recent transaction recorded against this narration string, or null if there is none. Fava's autocomplete lookup, like payee-transactions. An explicit empty narration is valid. In MCP, read `beancount://{owner}/{name}/narration-transactions?narration=` for empty text. Nonempty values also support the existing path alias `beancount://{owner}/{name}/narration-transactions/{narration}`; percent-encode the value once.",
         "tags": [
           "Ledger v1"
         ],
@@ -14961,10 +14961,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "The narration to look up"
+              "description": "The exact narration to look up. Supply it explicitly; an empty string is valid.",
+              "example": ""
             },
             "required": true,
-            "description": "The narration to look up",
+            "description": "The exact narration to look up. Supply it explicitly; an empty string is valid.",
             "name": "narration",
             "in": "query"
           }

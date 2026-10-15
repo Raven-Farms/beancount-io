@@ -110,12 +110,16 @@ def sync_detailed(
     """Get a narration's most recent transaction
 
      The single most recent transaction recorded against this narration string, or null if there is none.
-    Fava's autocomplete lookup, like payee-transactions.
+    Fava's autocomplete lookup, like payee-transactions. An explicit empty narration is valid. In MCP,
+    read `beancount://{owner}/{name}/narration-transactions?narration=` for empty text. Nonempty values
+    also support the existing path alias `beancount://{owner}/{name}/narration-
+    transactions/{narration}`; percent-encode the value once.
 
     Args:
         owner (str): Ledger owner's username Example: alice.
         name (str): Ledger (repository) name Example: main-ledger.
-        narration (str): The narration to look up
+        narration (str): The exact narration to look up. Supply it explicitly; an empty string is
+            valid.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -148,12 +152,16 @@ def sync(
     """Get a narration's most recent transaction
 
      The single most recent transaction recorded against this narration string, or null if there is none.
-    Fava's autocomplete lookup, like payee-transactions.
+    Fava's autocomplete lookup, like payee-transactions. An explicit empty narration is valid. In MCP,
+    read `beancount://{owner}/{name}/narration-transactions?narration=` for empty text. Nonempty values
+    also support the existing path alias `beancount://{owner}/{name}/narration-
+    transactions/{narration}`; percent-encode the value once.
 
     Args:
         owner (str): Ledger owner's username Example: alice.
         name (str): Ledger (repository) name Example: main-ledger.
-        narration (str): The narration to look up
+        narration (str): The exact narration to look up. Supply it explicitly; an empty string is
+            valid.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -181,12 +189,16 @@ async def asyncio_detailed(
     """Get a narration's most recent transaction
 
      The single most recent transaction recorded against this narration string, or null if there is none.
-    Fava's autocomplete lookup, like payee-transactions.
+    Fava's autocomplete lookup, like payee-transactions. An explicit empty narration is valid. In MCP,
+    read `beancount://{owner}/{name}/narration-transactions?narration=` for empty text. Nonempty values
+    also support the existing path alias `beancount://{owner}/{name}/narration-
+    transactions/{narration}`; percent-encode the value once.
 
     Args:
         owner (str): Ledger owner's username Example: alice.
         name (str): Ledger (repository) name Example: main-ledger.
-        narration (str): The narration to look up
+        narration (str): The exact narration to look up. Supply it explicitly; an empty string is
+            valid.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -217,12 +229,16 @@ async def asyncio(
     """Get a narration's most recent transaction
 
      The single most recent transaction recorded against this narration string, or null if there is none.
-    Fava's autocomplete lookup, like payee-transactions.
+    Fava's autocomplete lookup, like payee-transactions. An explicit empty narration is valid. In MCP,
+    read `beancount://{owner}/{name}/narration-transactions?narration=` for empty text. Nonempty values
+    also support the existing path alias `beancount://{owner}/{name}/narration-
+    transactions/{narration}`; percent-encode the value once.
 
     Args:
         owner (str): Ledger owner's username Example: alice.
         name (str): Ledger (repository) name Example: main-ledger.
-        narration (str): The narration to look up
+        narration (str): The exact narration to look up. Supply it explicitly; an empty string is
+            valid.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
