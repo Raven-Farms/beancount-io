@@ -10,6 +10,8 @@ from pathlib import Path
 
 from pydantic_ai import Agent, ModelRetry, RunContext
 from pydantic_ai.exceptions import AgentRunError, ModelAPIError, ModelHTTPError, UsageLimitExceeded
+from pydantic_ai.messages import ModelMessage, ModelResponse
+from pydantic_ai.models import ModelRequestParameters
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_ai.settings import ModelSettings
@@ -206,6 +208,13 @@ def translated_failures(deps: BqlDeps | None = None) -> Iterator[None]:
         # `USAGE.md` promises those read the same, so the same translation the
         # rest of the CLI uses is applied to whatever the SDK was hiding.
         raise _naming_writes(_unreachable(exc), deps) from exc
+    except UnreadableModelReply as exc:
+        # The sentence every other unreadable success gets (USAGE.md), with
+        # what this question wrote, never the parser's own words.
+        raise BeaError(
+            f"Unexpected server response (HTTP {exc.status}) from the assistant; {written_so_far(deps)}. "
+            "Retry the question, or run the query yourself with 'bea query'."
+        ) from exc
     except UsageLimitExceeded as exc:
         raise BeaError(
             f"The assistant kept querying without reaching an answer and stopped at this question's "
@@ -279,13 +288,50 @@ def _quota_refusal(body: object, written: str = "nothing was written to your led
     )
 
 
+class UnreadableModelReply(Exception):
+    """A successful model response whose body the SDK could not read (w5/373)."""
+
+    def __init__(self, status: int) -> None:
+        super().__init__(f"HTTP {status}")
+        self.status = status
+
+
+class _ProxyChatModel(OpenAIChatModel):
+    """The chat model, with a reply its SDK cannot read raised as one exception.
+
+    An empty `choices` array (what some OpenAI-compatible gateways send for a
+    filtered prompt) is an `IndexError` in the SDK's response handling, and an
+    empty, HTML or truncated JSON body a `JSONDecodeError` in its parser. Both
+    reached the catch-all in `main.py` and printed `list index out of range`.
+    Only the model call is wrapped, so a fault in bea's own tools is never
+    reported as the server's.
+    """
+
+    async def request(
+        self,
+        messages: list[ModelMessage],
+        model_settings: ModelSettings | None,
+        model_request_parameters: ModelRequestParameters,
+    ) -> ModelResponse:
+        from openai import APIResponseValidationError
+
+        try:
+            return await super().request(messages, model_settings, model_request_parameters)
+        except APIResponseValidationError as exc:
+            raise UnreadableModelReply(exc.response.status_code) from exc
+        except (json.JSONDecodeError, IndexError, KeyError, TypeError) as exc:
+            # The SDK parses only a successful body; any other status raises its
+            # status error, which arrives as `ModelHTTPError`.
+            raise UnreadableModelReply(200) from exc
+
+
 def make_agent(
     model_name: str,
     base_url: str,
     api_key: str,
     skills: list[AgentSkill] | None = None,
 ) -> Agent[BqlDeps, str]:
-    model = OpenAIChatModel(
+    model = _ProxyChatModel(
         model_name,
         provider=OpenAIProvider(base_url=base_url, api_key=api_key),
     )

@@ -21,7 +21,7 @@ from typing import Any
 import pytest
 from pydantic_ai.exceptions import ModelHTTPError, UnexpectedModelBehavior, UsageLimitExceeded
 
-from cli.ask.agent import BqlDeps, translated_failures
+from cli.ask.agent import BqlDeps, UnreadableModelReply, translated_failures
 from cli.errors import BeaError
 from tests.conftest import StubModel, model_answer, model_tool_call
 
@@ -152,6 +152,7 @@ def test_ctrl_c_after_a_write_names_it_and_keeps_it(
             ModelHTTPError(status_code=429, model_name="m", body={"error": {"code": "QUOTA_EXCEEDED"}}), id="quota"
         ),
         pytest.param(ModelHTTPError(status_code=500, model_name="m", body={"message": "boom"}), id="server-error"),
+        pytest.param(UnreadableModelReply(200), id="unreadable-reply"),
     ],
 )
 def test_a_write_recorded_this_turn_is_named_instead_of_denied(exc: Exception, tmp_path: Path) -> None:
