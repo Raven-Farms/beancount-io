@@ -345,6 +345,47 @@ class CsvRule:
         return CsvRule(pattern=match, account=account, expression=expression)
 
 
+def split_spec(spec: str) -> list[str]:
+    """`--csv`'s comma-separated parts, a double-quoted stretch kept whole.
+
+    A bank header such as `Amount (USD, net)` holds a comma, and splitting on
+    every one left no way to name it: `amount="Amount (USD, net)"` failed as
+    `Bad --csv mapping ' net)"'` (w5/428). The quotes stay in the part, for
+    `spec_value` to take off.
+    """
+    parts: list[str] = []
+    current: list[str] = []
+    quoted = False
+    for character in spec:
+        if character == '"':
+            quoted = not quoted
+        elif character == "," and not quoted:
+            parts.append("".join(current))
+            current = []
+            continue
+        current.append(character)
+    if quoted:
+        raise UsageError(f"--csv {spec!r} has an unclosed double quote; close it after the column name.")
+    parts.append("".join(current))
+    return parts
+
+
+def spec_value(column: str) -> str:
+    """A `--csv` value without the double quotes that let it hold a comma."""
+    column = column.strip()
+    if len(column) >= 2 and column[0] == column[-1] == '"':
+        return column[1:-1].strip()
+    return column
+
+
+def _missing_pair(part: str) -> str:
+    """Why a `--csv` part is not a `field=Column` pair, and the likeliest cause."""
+    return (
+        f"Bad --csv mapping {part!r}: use field=Column pairs like date=Date,amount=Amount,payee=Payee. "
+        'A column name with a comma in it must be double-quoted, as in amount="Amount (USD, net)".'
+    )
+
+
 def parse_mapping(spec: str) -> CsvMapping:
     """Parse `--csv field=Column,...` into a validated mapping (exit 2 on misuse).
 
@@ -354,13 +395,11 @@ def parse_mapping(spec: str) -> CsvMapping:
     """
     columns: dict[str, str] = {}
     sign = "bank"
-    for part in spec.split(","):
+    for part in split_spec(spec):
         name, separator, column = part.partition("=")
-        name, column = name.strip(), column.strip()
+        name, column = name.strip(), spec_value(column)
         if not separator or not name or not column:
-            raise UsageError(
-                f"Bad --csv mapping {part!r}: use field=Column pairs like date=Date,amount=Amount,payee=Payee."
-            )
+            raise UsageError(_missing_pair(part))
         if name not in _MAPPING_FIELDS:
             raise UsageError(f"Unknown --csv field {name!r}; expected one of {sorted(_MAPPING_FIELDS)}.")
         if name == "sign":

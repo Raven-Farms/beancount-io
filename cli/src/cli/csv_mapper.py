@@ -103,6 +103,47 @@ class CsvRule:
         return CsvRule(pattern=match, account=account, expression=expression)
 
 
+def split_spec(spec: str) -> list[str]:
+    """`--csv`'s comma-separated parts, a double-quoted stretch kept whole.
+
+    A bank header such as `Amount (USD, net)` holds a comma, and splitting on
+    every one left no way to name it: `amount="Amount (USD, net)"` failed as
+    `Bad --csv mapping ' net)"'` (w5/428). The quotes stay in the part, for
+    `spec_value` to take off.
+    """
+    parts: list[str] = []
+    current: list[str] = []
+    quoted = False
+    for character in spec:
+        if character == '"':
+            quoted = not quoted
+        elif character == "," and not quoted:
+            parts.append("".join(current))
+            current = []
+            continue
+        current.append(character)
+    if quoted:
+        raise UsageError(f"--csv {spec!r} has an unclosed double quote; close it after the column name.")
+    parts.append("".join(current))
+    return parts
+
+
+def spec_value(column: str) -> str:
+    """A `--csv` value without the double quotes that let it hold a comma."""
+    column = column.strip()
+    if len(column) >= 2 and column[0] == column[-1] == '"':
+        return column[1:-1].strip()
+    return column
+
+
+def _missing_pair(part: str) -> str:
+    """Why a `--csv` part is not a `field=Column` pair, and the likeliest cause."""
+    return (
+        f"Bad --csv mapping {part!r}: use field=Column pairs like date=Date,amount=Amount,payee=Payee. "
+        'A column name with a comma in it must be double-quoted, as in amount="Amount (USD, net)".'
+    )
+
+
 def parse_mapping(spec: str) -> CsvMapping:
     """Parse `--csv field=Column,...` into a validated mapping (exit 2 on misuse).
 
@@ -114,18 +155,16 @@ def parse_mapping(spec: str) -> CsvMapping:
     sign = "bank"
     delimiter: str | None = None
     encoding: str | None = None
-    for part in spec.split(","):
+    for part in split_spec(spec):
         name, separator, column = part.partition("=")
-        name, column = name.strip(), column.strip()
+        name, column = name.strip(), spec_value(column)
         if not separator or not name or not column:
             if name == "delimiter" and separator:
                 raise UsageError(
                     "Bad --csv delimiter '': a bare comma separates fields, so write delimiter=comma "
                     "(or semicolon, tab, pipe — or ';', '|', a literal tab)."
                 )
-            raise UsageError(
-                f"Bad --csv mapping {part!r}: use field=Column pairs like date=Date,amount=Amount,payee=Payee."
-            )
+            raise UsageError(_missing_pair(part))
         if name not in _MAPPING_FIELDS:
             raise UsageError(f"Unknown --csv field {name!r}; expected one of {sorted(_MAPPING_FIELDS)}.")
         if name == "sign":
@@ -175,7 +214,7 @@ def validate_reading_keys(spec: str) -> None:
     dropped `encoding=sjis` became a generic decode refusal that told the user
     to force an encoding — what they had just tried (w5/332).
     """
-    for part in spec.split(","):
+    for part in split_spec(spec):
         name, separator, column = part.partition("=")
         if not separator or not column.strip():
             continue
@@ -317,6 +356,11 @@ class InferredMapping:
     example: str
 
 
+def _spec_column(column: str) -> str:
+    """A header as a `--csv` value: double-quoted when it holds a comma (w5/428)."""
+    return f'"{column}"' if "," in column else column
+
+
 def infer_mapping(headers: list[str] | None) -> InferredMapping | None:
     """Recognized columns and ambiguities, or None for an unrecognized header.
 
@@ -344,7 +388,9 @@ def infer_mapping(headers: list[str] | None) -> InferredMapping | None:
     if "amount" in example_columns:
         example_columns.pop("debit", None)
         example_columns.pop("credit", None)
-    example = ",".join(f"{role}={example_columns[role]}" for role in _HEADER_SYNONYMS if role in example_columns)
+    example = ",".join(
+        f"{role}={_spec_column(example_columns[role])}" for role in _HEADER_SYNONYMS if role in example_columns
+    )
     if "amount" in columns:
         columns.pop("debit", None)
         columns.pop("credit", None)
@@ -354,7 +400,7 @@ def infer_mapping(headers: list[str] | None) -> InferredMapping | None:
         return InferredMapping(spec=None, ambiguities=ambiguities, example=example)
     order = [role for role in _HEADER_SYNONYMS if role in columns]
     return InferredMapping(
-        spec=",".join(f"{role}={columns[role]}" for role in order),
+        spec=",".join(f"{role}={_spec_column(columns[role])}" for role in order),
         ambiguities=ambiguities,
         example=example,
     )

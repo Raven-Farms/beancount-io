@@ -168,7 +168,9 @@ def _check_delimiter_conflict(flag: str | None, key: str | None) -> None:
 
 def _strip_spec_keys(spec: str, keys: set[str]) -> str:
     """A `--csv` spec without its `key=` control parts (delimiter/encoding/sign)."""
-    return ",".join(part for part in spec.split(",") if part.partition("=")[0].strip() not in keys)
+    from cli.csv_mapper import split_spec
+
+    return ",".join(part for part in split_spec(spec) if part.partition("=")[0].strip() not in keys)
 
 
 def _shell_spec(spec: str) -> str:
@@ -177,7 +179,9 @@ def _shell_spec(spec: str) -> str:
     Bank headers such as "Posting Date" carry spaces. An echoed `delimiter=';'`
     is already quoted by `_display_delimiter` and is joined on as written.
     """
-    runs = groupby(spec.split(","), key=lambda part: part.partition("=")[0].strip() == "delimiter")
+    from cli.csv_mapper import split_spec
+
+    runs = groupby(split_spec(spec), key=lambda part: part.partition("=")[0].strip() == "delimiter")
     return ",".join(",".join(parts) if quoted else shlex.quote(",".join(parts)) for quoted, parts in runs)
 
 
@@ -516,6 +520,7 @@ def import_entries(
         inspect_date_column,
         parse_delimiter,
         parse_mapping,
+        split_spec,
         validate_reading_keys,
     )
     from cli.engine import launch
@@ -598,7 +603,7 @@ def import_entries(
                     csv_delimiter = peek.delimiter
                 if _recall_csv(file, source, csv_account, notes=[]) is not None:
                     typed_keys = peek
-                    typed_key_names = {part.partition("=")[0].strip() for part in csv_request.split(",")}
+                    typed_key_names = {part.partition("=")[0].strip() for part in split_spec(csv_request)}
                     csv_request = None
                 else:
                     csv_request = _inferred_mapping(

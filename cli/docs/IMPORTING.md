@@ -66,7 +66,9 @@ importer, so preview, duplicate matching, validation, diff, and apply are
 unchanged. The walkthrough above is the whole interface; this section is the
 reference:
 
-`--csv` takes `field=Column` pairs. `date` is required, as is at least one of
+`--csv` takes `field=Column` pairs separated by commas; double-quote a column
+name that holds a comma itself, as in `--csv 'date=Date,payee=Payee,amount="Amount (USD, net)"'`.
+`date` is required, as is at least one of
 `payee` and `narration` — a single bank description column belongs in
 `narration`, which keeps the payee field free for the merchant that
 payee-based reporting groups by. `id` and `currency` are optional. Amounts
