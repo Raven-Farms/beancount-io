@@ -404,3 +404,112 @@ describe("complete report intervals", () => {
     },
   );
 });
+
+/**
+ * w6/011. The quarter floor compared `m > boundary`, so a report whose first
+ * activity fell in April, July, or October began a quarter early with an
+ * empty bucket. Fava floors to the quarter containing the date.
+ */
+describe("quarter floor", () => {
+  const quarterStart = (month: number) =>
+    [1, 1, 1, 4, 4, 4, 7, 7, 7, 10, 10, 10][month - 1];
+  const days = (month: number) =>
+    [1, 15, new Date(Date.UTC(2024, month, 0)).getUTCDate()].map(
+      (day) =>
+        `2024-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
+    );
+
+  it.each(["quarter", "quarterly"] as const)(
+    "opens the %s containing every day of every month",
+    (key) => {
+      for (let month = 1; month <= 12; month += 1) {
+        for (const date of days(month)) {
+          // The chart span's end is exclusive: the last activity plus a day.
+          const next = new Date(`${date}T00:00:00Z`);
+          next.setUTCDate(next.getUTCDate() + 1);
+          const [first] = intervalRanges(
+            date,
+            next.toISOString().slice(0, 10),
+            key,
+          );
+          expect({ date, begin: first.begin }).toEqual({
+            date,
+            begin: `2024-${String(quarterStart(month)).padStart(2, "0")}-01`,
+          });
+        }
+      }
+    },
+  );
+
+  const rent = (date: string): DirectiveJson => ({
+    type: "transaction",
+    date,
+    flag: "*",
+    narration: "Rent",
+    tags: [],
+    links: [],
+    postings: [
+      { account: "Assets:Bank", units: { number: "2400", currency: "USD" } },
+      {
+        account: "Income:RealEstate:Rent",
+        units: { number: "-2400", currency: "USD" },
+      },
+    ],
+  });
+
+  it("starts a default report in the quarter of its first activity", () => {
+    const rows = intervalTotals(
+      [rent("2024-04-01")],
+      "quarter",
+      ["Income"],
+      "USD",
+      usdMap,
+    );
+    expect(rows).toEqual([
+      {
+        date: "2024-06-30",
+        balance: { USD: "-2400" },
+        account_balances: { "Income:RealEstate:Rent": { USD: "-2400" } },
+      },
+    ]);
+  });
+
+  it("keeps an empty quarter inside the activity span", () => {
+    const rows = intervalTotals(
+      [rent("2024-04-01"), rent("2024-10-01")],
+      "quarterly",
+      ["Income"],
+      "USD",
+      usdMap,
+    );
+    expect(rows.map((row) => [row.date, row.balance])).toEqual([
+      ["2024-06-30", { USD: "-2400" }],
+      ["2024-09-30", {}],
+      ["2024-12-31", { USD: "-2400" }],
+    ]);
+  });
+
+  it("leaves an explicit window's boundaries alone", () => {
+    const rows = intervalTotals(
+      [rent("2024-04-01")],
+      "quarter",
+      ["Income"],
+      "USD",
+      usdMap,
+      { begin: "2024-04-01", end: "2025-10-01" },
+    );
+    expect(rows[0].date).toBe("2024-06-30");
+    expect(rows).toHaveLength(6);
+  });
+
+  it("starts the cumulative series in the same quarter", () => {
+    const rows = accountBalanceSeries(
+      [rent("2024-07-01")],
+      "quarter",
+      ["Assets"],
+      "USD",
+      usdMap,
+    );
+    expect(rows).toEqual([{ date: "2024-09-30", balance: { USD: "2400" } }]);
+  });
+});

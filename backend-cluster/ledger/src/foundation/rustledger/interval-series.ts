@@ -63,9 +63,12 @@ const INTERVALS: Record<string, Interval> = {
     getNext: (s) => iso(parts(s)[0] + 1, 1, 1),
   },
   quarter: {
+    // The containing quarter includes its first month: Fava floors with
+    // `(month - 1) // 3 * 3 + 1`, so April 1 opens Q2 rather than rounding a
+    // report back into an empty Q1 (w6/011).
     getPrev: (s) => {
       const [y, m] = parts(s);
-      for (const i of [10, 7, 4]) if (m > i) return iso(y, i, 1);
+      for (const i of [10, 7, 4]) if (m >= i) return iso(y, i, 1);
       return iso(y, 1, 1);
     },
     getNext: (s) => {
