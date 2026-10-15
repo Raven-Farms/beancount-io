@@ -475,6 +475,7 @@ def add_custom(
 ) -> None:
     """Append a custom directive.
 
+    \b
     Examples:
       --value 'text:hello'
       --value 'number:1000'
