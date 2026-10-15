@@ -1672,10 +1672,7 @@ def validate_candidate(
         if "inactive account '" in message:
             account = message.split("inactive account '", 1)[1].split("'", 1)[0]
             if lifecycles is None:
-                lifecycles = {}
-                for entry in entries:
-                    if isinstance(entry, Open | Close):
-                        lifecycles.setdefault(entry.account, []).append(entry)
+                lifecycles = _lifecycles(entries)
             # A plugin's open or close is not a line anyone can edit (w5/222).
             remedy = "edit that directive"
             for entry in lifecycles.get(account, []):
@@ -1705,12 +1702,25 @@ def validate_candidate(
                     remedy = f"edit the close of {parent.account}"
                 message += "."
             message += f" Correct the transaction date or {remedy}; for new books use bea init --date YYYY-MM-DD."
+        if isinstance(error.entry, Close) and error.message.endswith(" is being closed"):
+            # Upstream calls the account unopened whether it never was or
+            # opens after the close; say which, as every other directive's
+            # refusal does (w5/394).
+            if lifecycles is None:
+                lifecycles = _lifecycles(entries)
+            opened = next((e for e in lifecycles.get(error.entry.account, []) if isinstance(e, Open)), None)
+            if opened is not None:
+                message += (
+                    f". Account opened {opened.date} at {_location(opened, filenames)}; "
+                    f"date the close on or after {opened.date}."
+                )
+            elif matches := difflib.get_close_matches(error.entry.account, accounts, n=3, cutoff=0.6):
+                message += f". Did you mean {', '.join(matches)}?"
+            else:
+                message += f". The ledger never opens {error.entry.account}; check the account name."
         if isinstance(error.entry, Transaction) and (invalid := _POSTING_CURRENCY.fullmatch(error.message)):
             if lifecycles is None:
-                lifecycles = {}
-                for entry in entries:
-                    if isinstance(entry, Open | Close):
-                        lifecycles.setdefault(entry.account, []).append(entry)
+                lifecycles = _lifecycles(entries)
             opened = next((e for e in lifecycles.get(invalid["account"], []) if isinstance(e, Open)), None)
             if opened is not None and opened.currencies:
                 hints.append(_currency_widen_hint(invalid["currency"], opened, filenames, original_lines))
@@ -2047,6 +2057,17 @@ def _currency_widen_hint(
         f"'{opened.date} open {opened.account} {widened}' (bea add open cannot change an existing open); "
         f"otherwise record this posting in {allowed}, converted at the rate paid."
     )
+
+
+def _lifecycles(entries: list[Any]) -> dict[str, list[Any]]:
+    """Each account's opens and closes, in ledger order."""
+    from beancount.core.data import Close, Open
+
+    lifecycles: dict[str, list[Any]] = {}
+    for entry in entries:
+        if isinstance(entry, Open | Close):
+            lifecycles.setdefault(entry.account, []).append(entry)
+    return lifecycles
 
 
 def _location(entry: Any, filenames: dict[Path, Path]) -> str:
