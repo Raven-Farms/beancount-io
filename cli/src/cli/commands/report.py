@@ -7,6 +7,7 @@ as ISO, and trees as ordinary dicts — nothing here imports Beancount or Fava.
 
 from __future__ import annotations
 
+import shlex
 from collections.abc import Mapping
 from decimal import ROUND_HALF_UP, Decimal, localcontext
 from enum import StrEnum
@@ -161,7 +162,9 @@ def _heading(title: str, metadata: dict[str, Any], *, profit_line: bool = False)
             "it parses that file, so no report section holds them; query still lists their balances."
         )
     if metadata.get("account_filter_empty"):
-        output.note(f"No accounts match {metadata['account_filter']}.")
+        periods = metadata.get("account_filter_periods") or []
+        hint = f" For the period {periods[0]}, pass -t {shlex.quote(periods[0])}." if periods else ""
+        output.note(f"No accounts match {metadata['account_filter']}.{hint}")
     if metadata["missing_prices"]:
         typer.echo("Partial valuation: some prices are missing; a total that cannot be valued reads Unavailable.")
         for line in metadata["missing_price_summary"]:

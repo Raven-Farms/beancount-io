@@ -140,7 +140,8 @@ def _balances(
         # never sets; here the filter is the substring terms.
         | {
             "account_filter": " ".join(accounts) if accounts else None,
-            "account_filter_empty": bool(accounts) and all(tree is None for tree in pruned.values()),
+            "account_filter_empty": (empty := bool(accounts) and all(tree is None for tree in pruned.values())),
+            "account_filter_periods": _period_terms(accounts) if empty else [],
         }
         | _valuation(
             resolved_conversion,
@@ -421,6 +422,25 @@ _FISCAL_FILTER_RE = re.compile(r"\bfy\d{4}|fiscal_(?:year|quarter)", re.IGNORECA
 _FISCAL_QUARTER_RE = re.compile(r"\bfy\d{4}-q\d|fiscal_quarter", re.IGNORECASE)
 
 
+def _period_terms(terms: Iterable[str]) -> list[str]:
+    """The account filter terms `--time` reads as a period.
+
+    `bea balance 2026-01` matched no account and said only so, with exit 0,
+    to a user used to another tool's period argument (w5/445).
+    """
+    from fava.util.date import parse_date
+
+    periods = []
+    for term in terms:
+        try:
+            start, end = parse_date(term)
+        except (ValueError, OverflowError):
+            continue
+        if start is not None or end is not None:
+            periods.append(term)
+    return periods
+
+
 def _refuse_quarter_without_quarters(ledger: Any, entries: Any, time: str, ledger_errors: list[str]) -> None:
     """Refuse a fiscal quarter, in any spelling, on a fiscal year that does not start on the 1st.
 
@@ -525,7 +545,8 @@ def _metadata(filtered: Any, conversion: str, ledger_errors: list[str], interval
         "period": {"start": start, "end_exclusive": end},
         "as_of": end - timedelta(days=1) if end else None,
         "account_filter": filtered.account,
-        "account_filter_empty": bool(filtered.account) and not filtered.entries,
+        "account_filter_empty": (empty := bool(filtered.account) and not filtered.entries),
+        "account_filter_periods": _period_terms([filtered.account]) if empty else [],
         "balance_signs": "beancount",
         "ledger_valid": not filtered.ledger.load_errors,
         "ledger_errors": ledger_errors,
