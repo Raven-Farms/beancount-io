@@ -283,7 +283,14 @@ describe("transaction lookup adapter parity", () => {
     try {
       await expect(f.client.readResource({ uri })).rejects.toMatchObject({
         code: -32602,
-        data: { code: "BAD_USER_INPUT", hint: expect.stringMatching(/\S/) },
+        data: {
+          code: "BAD_USER_INPUT",
+          message:
+            uri === base || uri === `${base}?`
+              ? expect.stringContaining("narration")
+              : expect.any(String),
+          hint: expect.stringMatching(/\S/),
+        },
       });
       expect(f.check).not.toHaveBeenCalled();
       expect(f.factory.getPublicApiClient).not.toHaveBeenCalled();
