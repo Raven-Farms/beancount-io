@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [318 — Currency-mismatch hint always suggests `--csv currency=` (wrong for importers and counter accounts)](./318.md) — CLI QA 2026-10-14
 - [319 — Non-directive `extract()` output reported as `'str' object has no attribute '_replace'`](./319.md) — CLI QA 2026-10-14
 - [320 — Damaged managed engine still `Provisioned: yes`; writes exit 4 "outcome unknown"](./320.md) — CLI QA 2026-10-14
 - [321 — Unwritable config dir: update check waits 3 s on every command offline](./321.md) — CLI QA 2026-10-14
