@@ -142,6 +142,110 @@ describe("summarizeBalanceSheet", () => {
     // liabilities — which is the identity, not a guess.
     expect(summary.netWorth).toBe(1150);
   });
+
+  /**
+   * w6/006. A filter that selects one transfer cancels every aggregate — the
+   * net-worth point and the Assets root are empty maps — while both accounts
+   * still hold money. The currency then came from the request alone: a
+   * strategy name or a currency nothing carries, under which every account
+   * read as zero and vanished.
+   */
+  describe("when a transfer cancels every aggregate", () => {
+    const transfer = (currency: string) =>
+      ({
+        net_worth_data: [{ date: "2026-03-31", balance: {} }],
+        assets_data: [],
+        liabilities_data: [],
+        equity_data: [],
+        assets_hierarchy_data: node("Assets", {}, [
+          node("Assets:Bank", {}, [
+            node("Assets:Bank:Checking", { [currency]: "-500" }),
+            node("Assets:Bank:Savings", { [currency]: "500" }),
+            node("Assets:Bank:Unused", {}),
+          ]),
+        ]),
+        liabilities_hierarchy_data: node("Liabilities", {}),
+        equity_hierarchy_data: node("Equity", {}),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      }) as any;
+    const summary = (currency: string) => ({
+      asOf: "2026-03-31",
+      currency,
+      assets: 0,
+      liabilities: 0,
+      equity: 0,
+      netWorth: 0,
+      byAccount: [
+        { account: "Assets:Bank:Checking", balance: -500 },
+        { account: "Assets:Bank:Savings", balance: 500 },
+      ],
+    });
+
+    it.each(["units", "at_cost", "at_value", "USD", undefined])(
+      "keeps both signed accounts in USD with conversion=%s",
+      (conversion) => {
+        expect(summarizeBalanceSheet(transfer("USD"), conversion)).toEqual(
+          summary("USD"),
+        );
+      },
+    );
+
+    it("reports the accounts' currency, not one the request names but nothing carries", () => {
+      expect(summarizeBalanceSheet(transfer("USD"), "EUR")).toEqual(
+        summary("USD"),
+      );
+    });
+
+    it("reads a non-USD ledger's currency from its accounts", () => {
+      expect(summarizeBalanceSheet(transfer("CHF"), "units")).toEqual(
+        summary("CHF"),
+      );
+    });
+
+    it("honours a requested currency the accounts do carry", () => {
+      const mixed = transfer("USD");
+      mixed.assets_hierarchy_data.children[0].children[0].balance = {
+        USD: "-500",
+        EUR: "-40",
+      };
+      mixed.assets_hierarchy_data.children[0].children[1].balance = {
+        USD: "500",
+        EUR: "40",
+      };
+      expect(summarizeBalanceSheet(mixed, "EUR")).toEqual({
+        ...summary("EUR"),
+        byAccount: [
+          { account: "Assets:Bank:Checking", balance: -40 },
+          { account: "Assets:Bank:Savings", balance: 40 },
+        ],
+      });
+    });
+
+    it("never labels a truly empty sheet with a strategy name", () => {
+      const empty = {
+        ...transfer("USD"),
+        assets_hierarchy_data: node("Assets", {}),
+      };
+      expect(summarizeBalanceSheet(empty, "units")).toMatchObject({
+        currency: "USD",
+        byAccount: [],
+      });
+      // An explicit currency keeps its existing default.
+      expect(summarizeBalanceSheet(empty, "EUR").currency).toBe("EUR");
+    });
+
+    it("keeps the aggregate policy whenever an aggregate names a currency", () => {
+      // EUR is the aggregates' only currency, so it wins even though the
+      // accounts hold more USD — the evidence order is unchanged.
+      const withAggregate = {
+        ...transfer("USD"),
+        net_worth_data: [{ date: "2026-03-31", balance: { EUR: "0.01" } }],
+      };
+      expect(summarizeBalanceSheet(withAggregate, "units").currency).toBe(
+        "EUR",
+      );
+    });
+  });
 });
 
 describe("summarizeIncomeStatement", () => {

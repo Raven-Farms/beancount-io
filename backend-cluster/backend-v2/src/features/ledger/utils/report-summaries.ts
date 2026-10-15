@@ -140,6 +140,48 @@ function amount(balance: Balance | null | undefined, currency: string): number {
 }
 
 /**
+ * The balances a summary chooses its currency from.
+ *
+ * Transfers can cancel every aggregate while their accounts still move, and
+ * a currency read off nothing falls back to whatever was requested — a
+ * strategy name or a currency the data never carries — so every account then
+ * reads as zero and disappears (w6/004, w6/006). The aggregates keep their
+ * policy whenever they name a currency; only when none does are the
+ * accounts' own balances consulted.
+ */
+function currencyEvidence(
+  aggregates: readonly Balance[],
+  accounts: () => readonly Balance[],
+): readonly Balance[] {
+  return aggregates.some(
+    (balance) =>
+      balance && typeof balance === "object" && Object.keys(balance).length > 0,
+  )
+    ? aggregates
+    : accounts();
+}
+
+/** A conversion strategy describes how to value postings, not their currency. */
+function requestedCurrency(conversion?: string): string | undefined {
+  return conversion === "units" ||
+    conversion === "at_cost" ||
+    conversion === "at_value"
+    ? undefined
+    : conversion;
+}
+
+/** Every node's own balance in a hierarchy, descendants included. */
+function ownBalances(
+  node: SerializableTreeNodePublic | null | undefined,
+  into: Balance[] = [],
+): Balance[] {
+  if (!node) return into;
+  into.push(node.balance);
+  for (const child of node.children ?? []) ownBalances(child, into);
+  return into;
+}
+
+/**
  * Every account in a hierarchy that holds something, with its own balance.
  *
  * The node's own `balance` rather than `balance_children`: a parent's children
@@ -182,11 +224,18 @@ export function summarizeBalanceSheet(
   conversion?: string,
 ): BalanceSheetSummary {
   const currency = resolveCurrency(
-    [
-      ...data.net_worth_data.map((point) => point.balance),
-      data.assets_hierarchy_data?.balance_children ?? {},
-    ],
-    conversion,
+    currencyEvidence(
+      [
+        ...data.net_worth_data.map((point) => point.balance),
+        data.assets_hierarchy_data?.balance_children ?? {},
+      ],
+      () => [
+        ...ownBalances(data.assets_hierarchy_data),
+        ...ownBalances(data.liabilities_hierarchy_data),
+        ...ownBalances(data.equity_hierarchy_data),
+      ],
+    ),
+    requestedCurrency(conversion),
   );
   const assets = total(data.assets_hierarchy_data, currency);
   const liabilities = total(data.liabilities_hierarchy_data, currency);
@@ -265,23 +314,14 @@ export function summarizeIntervalTotals(
   data: readonly DateAndBalanceWithAccountBalancePublic[],
   conversion?: string,
 ): IntervalTotalsSummary {
-  const aggregateBalances = data.map((point) => point.balance);
-  // Transfers can cancel every aggregate while their accounts still move.
-  // Keep the aggregate's currency policy whenever it provides evidence.
-  const balances = aggregateBalances.some(
-    (balance) =>
-      balance && typeof balance === "object" && Object.keys(balance).length > 0,
-  )
-    ? aggregateBalances
-    : data.flatMap((point) => Object.values(point.account_balances ?? {}));
-  // A conversion strategy describes how to value postings, not their currency.
-  const requested =
-    conversion === "units" ||
-    conversion === "at_cost" ||
-    conversion === "at_value"
-      ? undefined
-      : conversion;
-  const currency = resolveCurrency(balances, requested);
+  const currency = resolveCurrency(
+    currencyEvidence(
+      data.map((point) => point.balance),
+      () =>
+        data.flatMap((point) => Object.values(point.account_balances ?? {})),
+    ),
+    requestedCurrency(conversion),
+  );
   return {
     currency,
     intervals: data.map((point) => ({
