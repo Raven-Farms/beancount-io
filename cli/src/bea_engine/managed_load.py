@@ -394,7 +394,17 @@ def _load_with_sources(
                 refused,
                 duplicates,
             )
-            staged[path].write_bytes(content)
+            try:
+                staged[path].write_bytes(content)
+            except OSError as exc:
+                if is_candidate_file(entry):
+                    raise LedgerError(
+                        f"Cannot write a staged copy of {path.name} in {path.parent} "
+                        f"({exc.strerror or type(exc).__name__}); nothing was written."
+                    ) from exc
+                raise LedgerError(
+                    _staging_refused(entry, path.parent, managed, _cause(exc), "Free space there")
+                ) from exc
         entries, errors, options = loader.load_file(str(staged[snapshot.root]))
         back = {str(staged_path): str(original) for original, staged_path in staged.items()}
         back.update(staged_feeds)
@@ -814,7 +824,7 @@ def _shadow(path: Path, content: str, entry: Path, managed: list[_PendingSource]
     that message; a read says what it needed the directory for and why.
     """
     from bea_engine.ledger.write import candidate_file, is_candidate_file
-    from bea_engine.protocol import AuthError
+    from bea_engine.protocol import AuthError, LedgerError
 
     with ExitStack() as stack:
         try:
@@ -822,14 +832,33 @@ def _shadow(path: Path, content: str, entry: Path, managed: list[_PendingSource]
         except AuthError as exc:
             if is_candidate_file(entry):
                 raise
-            includes = ", ".join(sorted({source.url for source in managed})) or "a managed price include"
             raise AuthError(
-                f"Cannot read {entry}: its managed price include ({includes}) is resolved on a temporary copy "
-                f"beside each ledger file, and the directory {path.parent} is not writable. Make that directory "
-                "writable, or read a snapshot made with bea price export, which needs no temporary copy. "
-                "Nothing was changed."
+                _staging_refused(entry, path.parent, managed, "is not writable", "Make that directory writable")
             ) from exc
+        except LedgerError as exc:
+            # A full disk or quota (w5/408): the staged write's own words say
+            # "nothing was written", which a read never meant to do.
+            if is_candidate_file(entry):
+                raise
+            raise LedgerError(_staging_refused(entry, path.parent, managed, _cause(exc), "Free space there")) from exc
         yield staged
+
+
+def _cause(exc: BaseException) -> str:
+    """What the filesystem said, from an error or the OSError behind one."""
+    origin = exc.__cause__ if isinstance(exc.__cause__, OSError) else exc
+    reason = origin.strerror if isinstance(origin, OSError) else None
+    return f"could not take it ({reason or type(origin).__name__})"
+
+
+def _staging_refused(entry: Path, directory: Path, managed: list[_PendingSource], why: str, remedy: str) -> str:
+    """Why a read of a ledger with managed price includes could not stage its temporary copy."""
+    includes = ", ".join(sorted({source.url for source in managed})) or "a managed price include"
+    return (
+        f"Cannot read {entry}: its managed price include ({includes}) is resolved on a temporary copy "
+        f"beside each ledger file, and the directory {directory} {why}. {remedy}, or read a snapshot made "
+        "with bea price export, which needs no temporary copy. Nothing was changed."
+    )
 
 
 def _rewrite_includes(
