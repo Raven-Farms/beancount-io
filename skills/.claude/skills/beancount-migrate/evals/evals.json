@@ -102,13 +102,13 @@
       "id": 7,
       "name": "migrated-ids-survive-later-imports",
       "prompt": "Migrate my Monarch export ./export.csv to a new beancount ledger. Chase Checking opened March at 500.00 per my February statement and ended at 2445.80 per the March statement; Ally Savings shows 1501.25 today and I have no older statement. I'll keep importing each bank's own CSV afterwards, so make sure those imports won't duplicate anything.",
-      "expected_output": "Same data as eval2 with the balances of docs/examples/migration/balances.md. Each non-transfer row carries import-id monarch:sha256:<first 16 hex of sha256('<date>|<exact amount> USD|<Original Statement>|<account>')>. The merged 2026-03-10 transfer carries the checking row's id as import-id and the savings row's id as import-id-2, so a later bank CSV of either account matches its side. Checking's 500.00 opening is labelled independent; savings' 1000.00 opening is derived and its 2026-03-16 assertion is described as a consistency check only.",
+      "expected_output": "Same data as eval2 with the balances of docs/examples/migration/balances.md. Each non-transfer row carries import-id monarch:sha256:<first 16 hex of sha256('<date>|<exact amount> USD|<Original Statement>|<account>')>, where <account> is the ledger account the confirmed mapping gives that row; the prompt does not fix the names, so the ids follow whichever mapping the run confirmed. The merged 2026-03-10 transfer carries the checking row's id as import-id and the savings row's id as import-id-2, so a later bank CSV of either account matches its side. Checking's 500.00 opening is labelled independent; savings' 1000.00 opening is derived and its 2026-03-16 assertion is described as a consistency check only.",
       "files": [
         "evals/files/eval2_monarch.csv"
       ],
       "expectations": [
-        "The merged transfer keeps both source identities: import-id monarch:sha256:89784d830e9af8e2 (checking) and import-id-2 monarch:sha256:0218b42481730d49 (savings)",
-        "Non-transfer ids are monarch:sha256:957422234a9fc7b5, 9b811ad4dd24f37f and 33fe274b8cc7a957 — computed, not invented",
+        "The merged transfer keeps both source identities: import-id is the checking row's id and import-id-2 the savings row's, each hashed over the account the confirmed mapping gives it — monarch:sha256:99771e6b03cac78a and 1ff08bfed3cf531a under mapping.md's Assets:Bank:ChaseChecking and Assets:Bank:AllySavings, or 89784d830e9af8e2 and 0218b42481730d49 under the sample guide's Assets:Checking and Assets:Savings",
+        "Non-transfer ids are computed, not invented, over the confirmed accounts — monarch:sha256:db3fdc64c4d06f82, 50096ff9ebd98410 and 6b7accbc2f23f60b under Assets:Bank:ChaseChecking and Assets:Bank:AllySavings, or 957422234a9fc7b5, 9b811ad4dd24f37f and 33fe274b8cc7a957 under Assets:Checking and Assets:Savings; any other confirmed names must match the same hash recomputed over them",
         "Row accounting reads 5 = 3 transactions + 2 x 1 merged pair + 0 skipped",
         "Checking's opening is labelled independent; savings' opening 1000.00 is labelled derived and its assertion is not claimed as evidence of a complete export",
         "Both endpoint assertions are dated 2026-03-16 and bea check passes"
