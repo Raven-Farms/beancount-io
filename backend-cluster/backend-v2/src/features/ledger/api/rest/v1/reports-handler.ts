@@ -90,7 +90,7 @@ export async function fetchStatement(
   const data = await services.ledgerFinance.getIncomeStatement(args);
   return shape === "fava"
     ? data
-    : summarizeIncomeStatement(data, rest.conversion);
+    : summarizeIncomeStatement(data, rest.conversion, rest.time);
 }
 
 /**

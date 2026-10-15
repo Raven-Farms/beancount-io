@@ -146,29 +146,40 @@ describe("summarizeBalanceSheet", () => {
 
 describe("summarizeIncomeStatement", () => {
   it("derives profit from beancount's signs rather than subtracting", () => {
-    const summary = summarizeIncomeStatement({
-      net_profit_data: [
-        { date: "2026-01-01", balance: { USD: "-40" } },
-        { date: "2026-12-31", balance: { USD: "-40" } },
-      ],
-      income_data: [],
-      expenses_data: [],
-      income_hierarchy_data: node(
-        "Income",
-        {},
-        [node("Income:Salary", { USD: "-100" })],
-        { USD: "-100" },
-      ),
-      expenses_hierarchy_data: node(
-        "Expenses",
-        {},
-        [node("Expenses:Food", { USD: "60" })],
-        { USD: "60" },
-      ),
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any);
+    const summary = summarizeIncomeStatement(
+      {
+        // Chart points are dated by their bucket's inclusive end.
+        net_profit_data: [
+          { date: "2026-01-31", balance: { USD: "-40" } },
+          { date: "2026-12-31", balance: { USD: "-40" } },
+        ],
+        income_data: [],
+        expenses_data: [],
+        income_hierarchy_data: node(
+          "Income",
+          {},
+          [node("Income:Salary", { USD: "-100" })],
+          { USD: "-100" },
+        ),
+        expenses_hierarchy_data: node(
+          "Expenses",
+          {},
+          [node("Expenses:Food", { USD: "60" })],
+          { USD: "60" },
+        ),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any,
+      "USD",
+      "2026",
+    );
 
-    expect(summary.period).toEqual({ from: "2026-01-01", to: "2026-12-31" });
+    // January 31 ends the first bucket; it is not where 2026's totals start,
+    // and the payload names no start, so the summary claims none (w6/005).
+    expect(summary.period).toEqual({
+      from: null,
+      to: "2026-12-31",
+      time: "2026",
+    });
     expect(summary.income).toBe(-100);
     expect(summary.expenses).toBe(60);
     // Income is negative in beancount, so profit is the negated sum — 40, not

@@ -321,7 +321,12 @@ describe("statement adapter contracts", () => {
       const f = await fixture();
       try {
         const summary = await f.mcp("statements/income-statement");
-        expect(summary.period).toEqual({ from: "2026-01-01", to: "2026-12-31" });
+        // Chart points carry bucket ends, never a start (w6/005).
+        expect(summary.period).toEqual({
+          from: null,
+          to: "2026-12-31",
+          time: null,
+        });
         expect(summary.currency).toBe("USD");
         expect(summary.income).toBe(2 * usd);
         expect(summary.expenses).toBe(2 * usd);

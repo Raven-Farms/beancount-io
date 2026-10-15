@@ -49,7 +49,22 @@ export interface BalanceSheetSummary {
 }
 
 export interface IncomeStatementSummary {
-  readonly period: { readonly from: string | null; readonly to: string | null };
+  /**
+   * Which dates the totals cover.
+   *
+   * `to` is the last chart bucket's inclusive end, which is the statement's
+   * end. `from` is `null`: every chart point is dated by its bucket's **end**,
+   * so the first point names the end of the first month or quarter rather than
+   * the day the totals start — August's results are not August 31's — and the
+   * payload carries no other start (w6/005). `time` is the selection exactly
+   * as the caller made it, `null` for the whole history, so the scope stays
+   * legible without a second time-expression parser guessing at its start.
+   */
+  readonly period: {
+    readonly from: string | null;
+    readonly to: string | null;
+    readonly time: string | null;
+  };
   readonly currency: string;
   readonly income: number;
   readonly expenses: number;
@@ -197,6 +212,7 @@ export function summarizeBalanceSheet(
 export function summarizeIncomeStatement(
   data: IncomeStatementDataPublic,
   conversion?: string,
+  time?: string,
 ): IncomeStatementSummary {
   const currency = resolveCurrency(
     [
@@ -209,8 +225,9 @@ export function summarizeIncomeStatement(
   const expenses = total(data.expenses_hierarchy_data, currency);
   return {
     period: {
-      from: data.net_profit_data[0]?.date ?? null,
+      from: null,
       to: lastDate(data.net_profit_data),
+      time: time ?? null,
     },
     currency,
     income,
