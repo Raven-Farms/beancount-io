@@ -28,7 +28,7 @@ from __future__ import annotations
 
 import os
 import re
-import shutil
+import stat
 import sys
 import time
 import unicodedata
@@ -1110,21 +1110,21 @@ def export_portable(
     written: list[str] = []
     at = time.time() if now is None else now
     try:
+        root_mode = _permission_bits(entry)
         for path, original in snapshot.contents.items():
             dest = destinations[path]
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            dest.write_bytes(
-                _rewrite_export_includes(original, path, snapshot.patterns, destinations, by_target, repeats)
+            _write_export(
+                dest,
+                _rewrite_export_includes(original, path, snapshot.patterns, destinations, by_target, repeats),
+                _permission_bits(path),
             )
             written.append(str(dest))
         for dest, document in attachments.items():
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(document, dest)
+            _write_export(dest, Path(document).read_bytes(), _permission_bits(Path(document)))
             written.append(str(dest))
         for source in loaded.sources:
             dest = feed_files[source.url]
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            dest.write_text(_export_feed_text(source, at), encoding="utf-8")
+            _write_export(dest, _export_feed_text(source, at).encode("utf-8"), root_mode)
             written.append(str(dest))
     except OSError as exc:
         # The checks above cannot see everything (a full disk, a directory
@@ -1323,6 +1323,29 @@ def _free_feed_path(directory: Path, alias: str, taken: set[Path]) -> Path:
 def _name_key(path: Path) -> str:
     """One key for every spelling a case-insensitive volume reads as `path`."""
     return unicodedata.normalize("NFC", unicodedata.normalize("NFD", str(path)).casefold())
+
+
+def _permission_bits(path: Path) -> int:
+    """A source's permission bits, which its exported copy keeps."""
+    return stat.S_IMODE(path.stat().st_mode)
+
+
+def _write_export(dest: Path, content: bytes, mode: int) -> None:
+    """Write one exported file no more readable than its source (w5/316).
+
+    `write_bytes` and `copyfile` applied the umask: a `0600` ledger, its
+    includes and its receipts came out `0644` beside the private originals,
+    under directories at `0755`. New directories are created `0700`; the file
+    is created private and then given its source's bits, so it is never
+    briefly open to others.
+    """
+    missing = [parent for parent in [dest.parent, *dest.parent.parents] if not parent.exists()]
+    for parent in reversed(missing):
+        parent.mkdir(mode=0o700)
+    fd = os.open(dest, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "wb") as stream:
+        os.fchmod(stream.fileno(), mode)
+        stream.write(content)
 
 
 def _rewrite_export_includes(

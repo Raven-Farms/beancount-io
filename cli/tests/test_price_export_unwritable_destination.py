@@ -180,7 +180,9 @@ def test_a_write_that_fails_midway_names_what_was_already_written(
     assert "1 of 2 files were already written" in message
     assert str(output / "main.bean") in message
     assert "Nothing was written" not in message
-    assert set(_listing(output)) == {"main.bean", "sub"}
+    # The include's directory is created only once its content exists (w5/316),
+    # so the failed rewrite leaves no empty `sub/` behind.
+    assert set(_listing(output)) == {"main.bean"}
 
 
 def test_a_writable_destination_still_exports_a_ledger_that_checks(tmp_path: Path, source: Path) -> None:

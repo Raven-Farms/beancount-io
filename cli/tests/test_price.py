@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import os
+import stat
 import subprocess
 import sys
 import textwrap
@@ -2362,6 +2363,23 @@ class TestOfflineAndReadOnlyCache:
 
         assert "113500.50" in (tmp_path / "out" / "prices" / "BTC-USD.beancount").read_text()
         assert exported.errors == []
+
+    @pytest.mark.skipif(sys.platform == "win32", reason="POSIX permission bits")
+    def test_export_copies_are_no_more_readable_than_the_ledger(self, feed_server: str, tmp_path: Path) -> None:
+        # A feed file takes the root ledger's mode, not the umask (w5/316).
+        from bea_engine.managed_load import export_portable
+
+        ledger, _ = self._seed(feed_server, tmp_path)
+        ledger.chmod(0o600)
+        origins = (f"http://127.0.0.1:{feed_server.rsplit(':', 1)[1]}",)
+        previous = os.umask(0o022)
+        try:
+            export_portable(ledger, tmp_path / "out", offline=True, origins=origins, root=tmp_path / "cache")
+        finally:
+            os.umask(previous)
+
+        assert stat.S_IMODE((tmp_path / "out" / "prices" / "BTC-USD.beancount").stat().st_mode) == 0o600
+        assert stat.S_IMODE((tmp_path / "out" / "prices").stat().st_mode) == 0o700
 
     def test_cli_commands_exit_zero_on_a_read_only_cache(
         self, feed_server: str, tmp_path: Path, read_only: Any

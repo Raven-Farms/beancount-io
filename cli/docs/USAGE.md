@@ -1557,7 +1557,10 @@ forwards to `bean-price`, so name a quotes job file `status` by path
 `price export` snapshots a self-contained copy for stock tools: each feed
 lands at `prices/<ALIAS>.beancount` as a `custom "bea-managed-source"`
 marker directive plus the exact effective text the load parsed, and every
-include is rewritten relative. When the ledger includes a file of its own
+include is rewritten relative. Each copy keeps its source's permission bits
+whatever the umask — a `0600` ledger, include or receipt stays `0600`, a feed
+file takes the root ledger's — and directories the export creates are `0700`.
+When the ledger includes a file of its own
 named `prices`, the feeds go in `prices-managed/` instead. A feed never
 replaces a file the ledger already keeps under that name: it lands at
 `<ALIAS>-managed.beancount` instead, and names that differ only by letter case
