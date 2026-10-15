@@ -35,7 +35,6 @@
 
 ## Inbox
 
-- [315 — `$NAME` in the ledger path: reads load the env-expanded file, writes the literal one](./315.md) — CLI QA 2026-10-14
 - [316 — `price export` copies private ledgers/receipts world-readable](./316.md) — CLI QA 2026-10-14
 - [317 — `price export` is quadratic in the number of included files](./317.md) — CLI QA 2026-10-14
 - [318 — Currency-mismatch hint always suggests `--csv currency=` (wrong for importers and counter accounts)](./318.md) — CLI QA 2026-10-14
