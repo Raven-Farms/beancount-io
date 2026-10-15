@@ -22,6 +22,7 @@ from typing import Annotated
 import typer
 
 from cli import context, output
+from cli.completion import fixed_values
 from cli.engine import launch
 from cli.errors import UsageError
 from cli.utils import decode_error_message, inert_text
@@ -266,7 +267,13 @@ def query(
         typer.Option("--allow-errors", help="Answer with errors on stderr; opts strict reads into partial answers"),
     ] = False,
     output_format: Annotated[
-        str | None, typer.Option("--format", "-f", help=f"Rendering for a printed result: {', '.join(FORMATS)}")
+        str | None,
+        typer.Option(
+            "--format",
+            "-f",
+            help=f"Rendering for a printed result: {', '.join(FORMATS)}",
+            autocompletion=fixed_values(FORMATS),
+        ),
     ] = None,
     output_file: Annotated[
         str | None, typer.Option("--output", "-o", help="Write the result to this file instead of stdout")

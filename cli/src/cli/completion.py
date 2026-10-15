@@ -1,10 +1,28 @@
 """Completion callbacks with an explicit shell when detection is unavailable."""
 
+from collections.abc import Callable, Iterable
 from typing import Any
 
 from cli.errors import UsageError
 
 _SHELLS = ("bash", "zsh", "fish", "powershell", "pwsh")
+
+
+def fixed_values(values: Iterable[str]) -> Callable[[str], list[str]]:
+    """Shell completion for an option that takes one of a fixed set of words.
+
+    Such options are plain strings validated by hand, so completion fell back
+    to file names (w5/421).
+    """
+    words = tuple(values)
+
+    def complete(incomplete: str) -> list[str]:
+        return [word for word in words if word.startswith(incomplete)]
+
+    return complete
+
+
+complete_shell = fixed_values(_SHELLS)
 
 
 def _shell(ctx: Any) -> str:

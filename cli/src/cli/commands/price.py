@@ -16,6 +16,26 @@ import typer
 from cli import context, output
 from cli.engine import launch
 from cli.errors import LedgerError, UsageError, refuse_json
+from cli.native_command import ForwardingCommand
+
+#: `price`'s own verbs; anything else is forwarded to bean-price.
+_VERBS = {
+    "status": "List managed price sources with their freshness",
+    "refresh": "Re-resolve managed price sources now",
+    "export": "Snapshot a portable copy with local price files",
+}
+
+
+class PriceCommand(ForwardingCommand):
+    """The `price` command, whose own verbs complete in place of file names (w5/421)."""
+
+    def shell_complete(self, ctx: Any, incomplete: str) -> list[Any]:
+        from typer._click.shell_completion import CompletionItem
+
+        items: list[Any] = super().shell_complete(ctx, incomplete)
+        if ctx.args or incomplete.startswith("-"):
+            return items
+        return [CompletionItem(verb, help=text) for verb, text in _VERBS.items() if verb.startswith(incomplete)] + items
 
 
 def price(ctx: typer.Context) -> None:

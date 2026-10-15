@@ -23,11 +23,12 @@ from cli.commands.import_ import import_entries
 from cli.commands.ingest import ingest_app
 from cli.commands.init import init
 from cli.commands.list import list_app
-from cli.commands.price import price
+from cli.commands.price import PriceCommand, price
 from cli.commands.query import query
 from cli.commands.report import balance, report_app
 from cli.commands.treeify import treeify
 from cli.commands.upgrade import current_channel, upgrade
+from cli.completion import complete_shell
 from cli.completion import install as install_completion_callback
 from cli.completion import show as show_completion_callback
 from cli.config import config_dir
@@ -306,7 +307,10 @@ def main(
         typer.Option("--strict-prices", help="Fail the load when a managed price source is stale or unavailable"),
     ] = False,
     shell: Annotated[
-        str | None, typer.Option("--shell", help="Completion shell: bash, zsh, fish, powershell or pwsh")
+        str | None,
+        typer.Option(
+            "--shell", help="Completion shell: bash, zsh, fish, powershell or pwsh", autocompletion=complete_shell
+        ),
     ] = None,
     show_completion: Annotated[
         bool,
@@ -377,7 +381,7 @@ app.command("format", rich_help_panel=_LOCAL_PANEL)(format_beans)
 app.command("query", rich_help_panel=_LOCAL_PANEL)(query)
 app.command(
     "price",
-    cls=ForwardingCommand,
+    cls=PriceCommand,
     rich_help_panel=_LOCAL_PANEL,
     context_settings=_CHECK_CTX,
     epilog=native_help("price"),

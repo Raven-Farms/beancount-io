@@ -77,11 +77,18 @@ def engine_status() -> None:
             typer.echo(f"    {notes}")
 
 
+def _complete_feature(incomplete: str) -> list[str]:
+    """The optional features the shipped manifest defines (w5/421)."""
+    return [name for name in sorted(provision.optional_features()) if name.startswith(incomplete)]
+
+
 @engine_app.command("enable")
 def engine_enable(
     feature: Annotated[
         str,
-        typer.Argument(help="Optional engine feature to provision: beangulp or beanprice"),
+        typer.Argument(
+            help="Optional engine feature to provision: beangulp or beanprice", autocompletion=_complete_feature
+        ),
     ],
 ) -> None:
     """Install a reviewed optional package into the managed engine (not the frontend)."""

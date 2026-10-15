@@ -22,6 +22,7 @@ import typer
 
 from cli import context, output
 from cli.amounts import check_decimal_notation, parse_decimal_number
+from cli.completion import fixed_values
 from cli.errors import UsageError
 from cli.single_value import SingleValueCommand
 from cli.utils import IntoPath, decode_error_message, parse_date
@@ -34,6 +35,11 @@ add_app = typer.Typer(
 class _SingleValueCommand(SingleValueCommand):
     advice = "Pass it once; repeat the command for another directive."
 
+
+_BOOKING_METHODS = ("STRICT", "STRICT_WITH_SIZE", "NONE", "FIFO", "LIFO", "HIFO")
+#: Completed for `--flag`: complete and incomplete. Beancount's other
+#: one-character flags are accepted, but rarely what a user is after.
+_TRANSACTION_FLAGS = ("*", "!")
 
 IntoOpt = Annotated[
     Path | None,
@@ -161,7 +167,9 @@ def add_transaction(
     ],
     narration_arg: Annotated[str | None, typer.Argument(help="Narration; --narration means the same")] = None,
     date: Annotated[str | None, typer.Option("--date", help="Transaction date YYYY-MM-DD; defaults to today")] = None,
-    flag: Annotated[str, typer.Option("--flag", help="Transaction flag")] = "*",
+    flag: Annotated[
+        str, typer.Option("--flag", help="Transaction flag", autocompletion=fixed_values(_TRANSACTION_FLAGS))
+    ] = "*",
     payee: Annotated[str | None, typer.Option("--payee", help="Payee")] = None,
     narration: Annotated[
         str | None, typer.Option("--narration", "-n", help="Optional narration; defaults to empty text")
@@ -220,7 +228,11 @@ def add_open(
     currency: Annotated[list[str] | None, typer.Option("--currency", "-c", help="Allowed currency (repeat)")] = None,
     booking: Annotated[
         str | None,
-        typer.Option("--booking", help="Lot booking method: STRICT, STRICT_WITH_SIZE, NONE, FIFO, LIFO, HIFO"),
+        typer.Option(
+            "--booking",
+            help=f"Lot booking method: {', '.join(_BOOKING_METHODS)}",
+            autocompletion=fixed_values(_BOOKING_METHODS),
+        ),
     ] = None,
     allow_errors: AllowErrorsOpt = False,
     into: IntoOpt = None,
