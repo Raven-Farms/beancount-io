@@ -266,6 +266,28 @@ export function getLatestActiveIntervalDate(
   );
 }
 
+/**
+ * The month Money movement opens on when the Overview is filtered: the latest
+ * month with activity that has already begun, else the latest begun month, so
+ * a selection reaching past today (`time=year`) never opens on an empty future
+ * month. A selection wholly in the future keeps its last month.
+ */
+export function getFilteredDefaultIntervalDate(
+  income: IntervalDataSeries,
+  expenses: IntervalDataSeries,
+  now = new Date(),
+): string | undefined {
+  const today = toLocalISODate(now);
+  const begun = (date: string) => `${date.slice(0, 8)}01` <= today;
+  const dates = getIntervalDates(income, expenses);
+  const latestActive = [...income, ...expenses]
+    .filter((point) => begun(point.date) && pointHasActivity(point))
+    .map((point) => point.date)
+    .sort((a, b) => a.localeCompare(b))
+    .at(-1);
+  return latestActive ?? dates.filter(begun).at(-1) ?? dates.at(-1);
+}
+
 function averageBalances(
   points: IntervalDataSeries,
   inverted: boolean,

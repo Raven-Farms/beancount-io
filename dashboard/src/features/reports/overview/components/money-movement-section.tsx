@@ -25,6 +25,7 @@ import type {
 import {
   formatPeriodMonth,
   getIntervalDates,
+  getFilteredDefaultIntervalDate,
   getLatestActiveIntervalDate,
   getMovementSnapshot,
   isPartialMonthlyPeriod,
@@ -189,15 +190,17 @@ export function MoneyMovementSection({
   const hasFilters = Boolean(
     searchParams.account || searchParams.filter || searchParams.time,
   );
-  const defaultDate = useMemo(
-    () =>
-      (preferActiveMonth && !hasFilters
+  const defaultDate = useMemo(() => {
+    if (hasFilters)
+      return getFilteredDefaultIntervalDate(income, expenses) ?? "";
+    return (
+      (preferActiveMonth
         ? getLatestActiveIntervalDate(income, expenses)
         : undefined) ??
       dates.at(-1) ??
-      "",
-    [income, expenses, preferActiveMonth, hasFilters, dates],
-  );
+      ""
+    );
+  }, [income, expenses, preferActiveMonth, hasFilters, dates]);
   const selectedDate = dates.includes(requestedDate)
     ? requestedDate
     : defaultDate;

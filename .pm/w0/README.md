@@ -12,5 +12,4 @@
 
 ## Inbox
 
-- [029](./029.md) — Don't open Overview Money movement on an empty future month when a time filter is set (minor; dashboard; 25–35m).
 - [030](./030.md) — Give the Overview Net Worth table view table semantics and a keyboard-scrollable region (minor; dashboard; 25–35m).
