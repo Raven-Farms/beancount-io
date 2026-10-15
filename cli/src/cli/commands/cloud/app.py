@@ -43,9 +43,22 @@ def cloud_logout() -> None:
     """Revoke the token and clear stored credentials."""
     from cli.api.client import bearer_client, call, unwrap_or_none
     from cli.api.rest_client.api.ledger_v_1 import logout
-    from cli.auth.credentials import ENVIRONMENT, clear_credentials, load_credentials
+    from cli.auth.credentials import ENVIRONMENT, UnusableCredentials, clear_credentials, load_credentials
+    from cli.errors import BeaError
 
-    creds = load_credentials()
+    try:
+        creds = load_credentials()
+    except UnusableCredentials as exc:
+        # Without a readable token nothing can be revoked, but the file still
+        # holds whatever it holds: remove it, and do not call that a logout.
+        try:
+            clear_credentials()
+        except OSError as error:
+            raise BeaError(f"{exc} It could not be removed either: {error.strerror}.") from error
+        raise BeaError(
+            f"Removed the unusable credential file {exc.path}; it could not be revoked. "
+            "If it held a live session, revoke it from the dashboard."
+        ) from exc
     if creds is None:
         output.success("Already logged out.")
         return
@@ -61,7 +74,7 @@ def cloud_logout() -> None:
         return
     import httpx
 
-    from cli.errors import BeaError, ConflictError, to_bea_error
+    from cli.errors import ConflictError, to_bea_error
 
     failure: BeaError | None = None
     try:

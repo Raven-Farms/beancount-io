@@ -6,6 +6,7 @@ import re
 import stat
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from pathlib import Path
 
 from cli.config import config_dir, credentials_path
 from cli.errors import AuthError
@@ -93,22 +94,43 @@ def load_credentials() -> Credentials | None:
     # (or "Not logged in"), rather than a whitespace-oriented auth error.
     if token:
         return Credentials(token=_validate_token(token), expire_at=None, source=ENVIRONMENT)
+    path = credentials_path()
     try:
-        data = json.loads(credentials_path().read_text())
-        expire_at = data["expireAt"]
-        if not isinstance(expire_at, str):
-            # Malformed stored state is treated as expired so require_credentials
-            # prompts for a fresh login rather than comparing incompatible types.
-            expire_at = "invalid"
-        return Credentials(
-            token=_validate_token(str(data["token"])),
-            expire_at=expire_at,
-            source=FILE,
-        )
-    except AuthError:
-        raise
-    except Exception:
+        text = path.read_text()
+    except FileNotFoundError:
         return None
+    except (OSError, UnicodeDecodeError) as exc:
+        raise UnusableCredentials(path, f"it cannot be read ({type(exc).__name__})") from exc
+    # A file that is present but unusable is not "logged out": that answer let
+    # `bea cloud logout` report success over a token left on disk (w5/297).
+    try:
+        data = json.loads(text)
+    except ValueError as exc:
+        raise UnusableCredentials(path, "it is not valid JSON") from exc
+    if not isinstance(data, dict):
+        raise UnusableCredentials(path, "it is not a JSON object")
+    token = data.get("token")
+    if not isinstance(token, str):
+        raise UnusableCredentials(path, "its token is missing or not a string")
+    if "expireAt" not in data:
+        raise UnusableCredentials(path, "its expireAt is missing")
+    expire_at = data["expireAt"]
+    if not isinstance(expire_at, str):
+        # Malformed stored state is treated as expired so require_credentials
+        # prompts for a fresh login rather than comparing incompatible types.
+        expire_at = "invalid"
+    return Credentials(token=_validate_token(token), expire_at=expire_at, source=FILE)
+
+
+class UnusableCredentials(AuthError):
+    """A stored credential file that exists but cannot be used."""
+
+    def __init__(self, path: Path, reason: str) -> None:
+        self.path = path
+        super().__init__(
+            f"The stored credential {path} is unusable: {reason}. "
+            "Run 'bea cloud login' to replace it, or 'bea cloud logout' to remove it."
+        )
 
 
 def clear_credentials() -> None:
