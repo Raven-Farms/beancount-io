@@ -12,7 +12,6 @@
 
 ## Inbox
 
-- [016](./016.md) — Raise the contrast of the "Related Pages" heading (minor; dashboard; 10–15m).
 - [017](./017.md) — Say why an Open Account name is invalid instead of one catch-all message (minor; dashboard; 30–40m).
 - [018](./018.md) — Answer missing receipt assets and malformed OAuth links with 404/400, not a 500 "unexpected error" (minor; dashboard; 45–60m).
 - [019](./019.md) — Tell `bea login` users their device code is unknown or expired, not "information provided is invalid" (minor; dashboard; 20–30m).

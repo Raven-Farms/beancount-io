@@ -27,7 +27,7 @@ export function RelatedLinks({ links }: RelatedLinksProps) {
       className="mt-12 pt-6 border-t border-border/50"
       aria-label={t("common.relatedPages")}
     >
-      <h2 className="text-xs font-medium text-muted-foreground/70">
+      <h2 className="text-xs font-medium text-muted-foreground">
         {t("common.seeAlso")}
       </h2>
       <div className="flex flex-wrap gap-x-4 py-4">
