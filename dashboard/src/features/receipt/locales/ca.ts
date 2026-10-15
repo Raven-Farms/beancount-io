@@ -6,215 +6,215 @@ export interface TranslationEntry {
 const caReceipt: Record<string, TranslationEntry> = {
   // Page
   "receipt.page.title": {
-    message: "Upload Receipt",
+    message: "Pujar rebut",
     description: "Page title for the receipt upload page",
   },
   "receipt.page.description": {
     message:
-      "Upload a receipt image or PDF to record a transaction in your ledger",
+      "Puja una imatge o un PDF d'un rebut per registrar una transacció al teu llibre",
     description: "Page description for the receipt upload page",
   },
   "receipt.page.parsing": {
-    message: "Analyzing receipt with AI...",
+    message: "Analitzant el rebut amb IA...",
     description: "Loading message while AI parses the receipt",
   },
   "receipt.page.parsingHint": {
-    message: "This may take up to 30 seconds.",
+    message: "Això pot trigar fins a 30 segons.",
     description: "Hint text shown while AI is parsing the receipt",
   },
   "receipt.page.errorTitle": {
-    message: "Something went wrong",
+    message: "Alguna cosa ha anat malament",
     description: "Alert title shown when an error occurs",
   },
   "receipt.page.tryAgain": {
-    message: "Try Again",
+    message: "Torna-ho a provar",
     description: "Button text to retry after an error",
   },
 
   // Upload Zone
   "receipt.upload.fileTooLarge": {
-    message: "File is too large. Maximum size is 5MB.",
+    message: "El fitxer és massa gran. La mida màxima és de 5MB.",
     description: "Validation error when uploaded file exceeds 5MB size limit",
   },
   "receipt.upload.unsupportedType": {
     message:
-      "Unsupported file type. Please upload a PDF, PNG, JPG, JPEG, or WebP.",
+      "Tipus de fitxer no compatible. Puja un PDF, PNG, JPG, JPEG o WebP.",
     description: "Validation error when file type is not supported",
   },
   "receipt.upload.uploading": {
-    message: "Uploading...",
+    message: "Pujant...",
     description: "Status text shown while file is being uploaded",
   },
   "receipt.upload.chooseDifferentFile": {
-    message: "Choose Different File",
+    message: "Tria un altre fitxer",
     description: "Button text to replace the currently selected file",
   },
   "receipt.upload.dragAndDrop": {
-    message: "Drag and drop your receipt here",
+    message: "Arrossega i deixa anar el rebut aquí",
     description: "Instruction text in the drag-and-drop upload zone",
   },
   "receipt.upload.supports": {
-    message: "Supports PDF, PNG, JPG, JPEG, WebP — max 5MB",
+    message: "Admet PDF, PNG, JPG, JPEG, WebP — màx. 5MB",
     description: "Hint text showing supported file formats and size limit",
   },
   "receipt.upload.chooseFile": {
-    message: "Choose File",
+    message: "Tria un fitxer",
     description: "Button text to open the file picker",
   },
 
   // Review Form — validation messages
   "receipt.review.dateRequired": {
-    message: "Date is required",
+    message: "La data és obligatòria",
     description: "Validation error when date field is empty",
   },
   "receipt.review.payeeRequired": {
-    message: "Payee is required",
+    message: "El beneficiari és obligatori",
     description: "Validation error when payee field is empty",
   },
   "receipt.review.descriptionRequired": {
-    message: "Description is required",
+    message: "La descripció és obligatòria",
     description: "Validation error when description field is empty",
   },
   "receipt.review.amountPositive": {
-    message: "Amount must be a positive number",
+    message: "L'import ha de ser un nombre positiu",
     description: "Validation error when amount is not a positive number",
   },
   "receipt.review.currencyRequired": {
-    message: "Currency is required",
+    message: "La moneda és obligatòria",
     description: "Validation error when currency field is empty",
   },
   "receipt.review.expenseAccountRequired": {
-    message: "Expense account is required",
+    message: "El compte de despeses és obligatori",
     description: "Validation error when expense account is not selected",
   },
   "receipt.review.paymentAccountRequired": {
-    message: "Payment account is required",
+    message: "El compte de pagament és obligatori",
     description: "Validation error when payment account is not selected",
   },
   "receipt.review.documentAccountRequired": {
-    message: "Document account is required",
+    message: "El compte de documents és obligatori",
     description: "Validation error when document account is not selected",
   },
 
   // Review Form — labels and placeholders
   "receipt.review.receiptDetails": {
-    message: "Receipt Details",
+    message: "Detalls del rebut",
     description: "Card title for the receipt details section",
   },
   "receipt.review.date": {
-    message: "Date",
+    message: "Data",
     description: "Label for the date field",
   },
   "receipt.review.payee": {
-    message: "Payee",
+    message: "Beneficiari",
     description: "Label for the payee field",
   },
   "receipt.review.merchantName": {
-    message: "Merchant name",
+    message: "Nom del comerç",
     description: "Placeholder for the payee input field",
   },
   "receipt.review.description": {
-    message: "Description",
+    message: "Descripció",
     description: "Label for the description field",
   },
   "receipt.review.transactionDescription": {
-    message: "Transaction description",
+    message: "Descripció de la transacció",
     description: "Placeholder for the description input field",
   },
   "receipt.review.amount": {
-    message: "Amount",
+    message: "Import",
     description: "Label for the amount field",
   },
   "receipt.review.currency": {
-    message: "Currency",
+    message: "Moneda",
     description: "Label for the currency field",
   },
   "receipt.review.accounts": {
-    message: "Accounts",
+    message: "Comptes",
     description: "Card title for the accounts section",
   },
   "receipt.review.expenseAccount": {
-    message: "Expense Account",
+    message: "Compte de despeses",
     description: "Label for the expense account field",
   },
   "receipt.review.selectExpenseAccount": {
-    message: "Select expense account",
+    message: "Selecciona el compte de despeses",
     description: "Placeholder for the expense account combobox",
   },
   "receipt.review.paymentAccount": {
-    message: "Payment Account",
+    message: "Compte de pagament",
     description: "Label for the payment account field",
   },
   "receipt.review.selectPaymentAccount": {
-    message: "Select payment account",
+    message: "Selecciona el compte de pagament",
     description: "Placeholder for the payment account combobox",
   },
   "receipt.review.documentAccount": {
-    message: "Document Account",
+    message: "Compte de documents",
     description: "Label for the document account field",
   },
   "receipt.review.selectDocumentAccount": {
-    message: "Select document account",
+    message: "Selecciona el compte de documents",
     description: "Placeholder for the document account combobox",
   },
   "receipt.review.preview": {
-    message: "Preview",
+    message: "Previsualització",
     description: "Card title for the Beancount transaction preview",
   },
   "receipt.review.uploadDifferentReceipt": {
-    message: "Upload Different Receipt",
+    message: "Puja un altre rebut",
     description: "Button text to go back and upload a different receipt",
   },
   "receipt.review.recordTransaction": {
-    message: "Record Transaction",
+    message: "Registra la transacció",
     description: "Submit button text to record the transaction",
   },
 
   // Success Card
   "receipt.success.title": {
-    message: "Transaction Recorded",
+    message: "Transacció registrada",
     description: "Heading shown after transaction is successfully recorded",
   },
   "receipt.success.description": {
-    message: "Your receipt has been saved to your ledger.",
+    message: "El teu rebut s'ha desat al teu llibre.",
     description: "Description shown after transaction is successfully recorded",
   },
   "receipt.success.payee": {
-    message: "Payee",
+    message: "Beneficiari",
     description: "Label for payee in the success summary",
   },
   "receipt.success.date": {
-    message: "Date",
+    message: "Data",
     description: "Label for date in the success summary",
   },
   "receipt.success.amount": {
-    message: "Amount",
+    message: "Import",
     description: "Label for amount in the success summary",
   },
   "receipt.success.expense": {
-    message: "Expense",
+    message: "Despesa",
     description: "Label for expense account in the success summary",
   },
   "receipt.success.payment": {
-    message: "Payment",
+    message: "Pagament",
     description: "Label for payment account in the success summary",
   },
   "receipt.success.viewJournal": {
-    message: "View Journal",
+    message: "Veure el diari",
     description: "Button text to navigate to the journal after success",
   },
   "receipt.success.uploadAnother": {
-    message: "Upload Another Receipt",
+    message: "Puja un altre rebut",
     description: "Button text to upload another receipt after success",
   },
 
   // Workflow error messages
   "receipt.workflow.failedToParse": {
-    message: "Failed to parse receipt",
+    message: "No s'ha pogut analitzar el rebut",
     description: "Error message when AI fails to parse the receipt",
   },
   "receipt.workflow.failedToRecord": {
-    message: "Failed to record receipt transaction",
+    message: "No s'ha pogut registrar la transacció del rebut",
     description: "Error message when recording the transaction fails",
   },
 };

@@ -6,215 +6,215 @@ export interface TranslationEntry {
 const nlReceipt: Record<string, TranslationEntry> = {
   // Page
   "receipt.page.title": {
-    message: "Upload Receipt",
+    message: "Bon uploaden",
     description: "Page title for the receipt upload page",
   },
   "receipt.page.description": {
     message:
-      "Upload a receipt image or PDF to record a transaction in your ledger",
+      "Upload een afbeelding of PDF van een bon om een transactie in je grootboek vast te leggen",
     description: "Page description for the receipt upload page",
   },
   "receipt.page.parsing": {
-    message: "Analyzing receipt with AI...",
+    message: "Bon wordt geanalyseerd met AI...",
     description: "Loading message while AI parses the receipt",
   },
   "receipt.page.parsingHint": {
-    message: "This may take up to 30 seconds.",
+    message: "Dit kan tot 30 seconden duren.",
     description: "Hint text shown while AI is parsing the receipt",
   },
   "receipt.page.errorTitle": {
-    message: "Something went wrong",
+    message: "Er is iets misgegaan",
     description: "Alert title shown when an error occurs",
   },
   "receipt.page.tryAgain": {
-    message: "Try Again",
+    message: "Opnieuw proberen",
     description: "Button text to retry after an error",
   },
 
   // Upload Zone
   "receipt.upload.fileTooLarge": {
-    message: "File is too large. Maximum size is 5MB.",
+    message: "Het bestand is te groot. De maximale grootte is 5MB.",
     description: "Validation error when uploaded file exceeds 5MB size limit",
   },
   "receipt.upload.unsupportedType": {
     message:
-      "Unsupported file type. Please upload a PDF, PNG, JPG, JPEG, or WebP.",
+      "Niet-ondersteund bestandstype. Upload een PDF, PNG, JPG, JPEG of WebP.",
     description: "Validation error when file type is not supported",
   },
   "receipt.upload.uploading": {
-    message: "Uploading...",
+    message: "Bezig met uploaden...",
     description: "Status text shown while file is being uploaded",
   },
   "receipt.upload.chooseDifferentFile": {
-    message: "Choose Different File",
+    message: "Ander bestand kiezen",
     description: "Button text to replace the currently selected file",
   },
   "receipt.upload.dragAndDrop": {
-    message: "Drag and drop your receipt here",
+    message: "Sleep je bon hierheen",
     description: "Instruction text in the drag-and-drop upload zone",
   },
   "receipt.upload.supports": {
-    message: "Supports PDF, PNG, JPG, JPEG, WebP — max 5MB",
+    message: "Ondersteunt PDF, PNG, JPG, JPEG, WebP — max. 5MB",
     description: "Hint text showing supported file formats and size limit",
   },
   "receipt.upload.chooseFile": {
-    message: "Choose File",
+    message: "Bestand kiezen",
     description: "Button text to open the file picker",
   },
 
   // Review Form — validation messages
   "receipt.review.dateRequired": {
-    message: "Date is required",
+    message: "Datum is verplicht",
     description: "Validation error when date field is empty",
   },
   "receipt.review.payeeRequired": {
-    message: "Payee is required",
+    message: "Begunstigde is verplicht",
     description: "Validation error when payee field is empty",
   },
   "receipt.review.descriptionRequired": {
-    message: "Description is required",
+    message: "Omschrijving is verplicht",
     description: "Validation error when description field is empty",
   },
   "receipt.review.amountPositive": {
-    message: "Amount must be a positive number",
+    message: "Bedrag moet een positief getal zijn",
     description: "Validation error when amount is not a positive number",
   },
   "receipt.review.currencyRequired": {
-    message: "Currency is required",
+    message: "Valuta is verplicht",
     description: "Validation error when currency field is empty",
   },
   "receipt.review.expenseAccountRequired": {
-    message: "Expense account is required",
+    message: "Kostenrekening is verplicht",
     description: "Validation error when expense account is not selected",
   },
   "receipt.review.paymentAccountRequired": {
-    message: "Payment account is required",
+    message: "Betaalrekening is verplicht",
     description: "Validation error when payment account is not selected",
   },
   "receipt.review.documentAccountRequired": {
-    message: "Document account is required",
+    message: "Documentrekening is verplicht",
     description: "Validation error when document account is not selected",
   },
 
   // Review Form — labels and placeholders
   "receipt.review.receiptDetails": {
-    message: "Receipt Details",
+    message: "Bongegevens",
     description: "Card title for the receipt details section",
   },
   "receipt.review.date": {
-    message: "Date",
+    message: "Datum",
     description: "Label for the date field",
   },
   "receipt.review.payee": {
-    message: "Payee",
+    message: "Begunstigde",
     description: "Label for the payee field",
   },
   "receipt.review.merchantName": {
-    message: "Merchant name",
+    message: "Naam van handelaar",
     description: "Placeholder for the payee input field",
   },
   "receipt.review.description": {
-    message: "Description",
+    message: "Omschrijving",
     description: "Label for the description field",
   },
   "receipt.review.transactionDescription": {
-    message: "Transaction description",
+    message: "Omschrijving van transactie",
     description: "Placeholder for the description input field",
   },
   "receipt.review.amount": {
-    message: "Amount",
+    message: "Bedrag",
     description: "Label for the amount field",
   },
   "receipt.review.currency": {
-    message: "Currency",
+    message: "Valuta",
     description: "Label for the currency field",
   },
   "receipt.review.accounts": {
-    message: "Accounts",
+    message: "Rekeningen",
     description: "Card title for the accounts section",
   },
   "receipt.review.expenseAccount": {
-    message: "Expense Account",
+    message: "Kostenrekening",
     description: "Label for the expense account field",
   },
   "receipt.review.selectExpenseAccount": {
-    message: "Select expense account",
+    message: "Kostenrekening selecteren",
     description: "Placeholder for the expense account combobox",
   },
   "receipt.review.paymentAccount": {
-    message: "Payment Account",
+    message: "Betaalrekening",
     description: "Label for the payment account field",
   },
   "receipt.review.selectPaymentAccount": {
-    message: "Select payment account",
+    message: "Betaalrekening selecteren",
     description: "Placeholder for the payment account combobox",
   },
   "receipt.review.documentAccount": {
-    message: "Document Account",
+    message: "Documentrekening",
     description: "Label for the document account field",
   },
   "receipt.review.selectDocumentAccount": {
-    message: "Select document account",
+    message: "Documentrekening selecteren",
     description: "Placeholder for the document account combobox",
   },
   "receipt.review.preview": {
-    message: "Preview",
+    message: "Voorbeeld",
     description: "Card title for the Beancount transaction preview",
   },
   "receipt.review.uploadDifferentReceipt": {
-    message: "Upload Different Receipt",
+    message: "Andere bon uploaden",
     description: "Button text to go back and upload a different receipt",
   },
   "receipt.review.recordTransaction": {
-    message: "Record Transaction",
+    message: "Transactie vastleggen",
     description: "Submit button text to record the transaction",
   },
 
   // Success Card
   "receipt.success.title": {
-    message: "Transaction Recorded",
+    message: "Transactie vastgelegd",
     description: "Heading shown after transaction is successfully recorded",
   },
   "receipt.success.description": {
-    message: "Your receipt has been saved to your ledger.",
+    message: "Je bon is opgeslagen in je grootboek.",
     description: "Description shown after transaction is successfully recorded",
   },
   "receipt.success.payee": {
-    message: "Payee",
+    message: "Begunstigde",
     description: "Label for payee in the success summary",
   },
   "receipt.success.date": {
-    message: "Date",
+    message: "Datum",
     description: "Label for date in the success summary",
   },
   "receipt.success.amount": {
-    message: "Amount",
+    message: "Bedrag",
     description: "Label for amount in the success summary",
   },
   "receipt.success.expense": {
-    message: "Expense",
+    message: "Kosten",
     description: "Label for expense account in the success summary",
   },
   "receipt.success.payment": {
-    message: "Payment",
+    message: "Betaling",
     description: "Label for payment account in the success summary",
   },
   "receipt.success.viewJournal": {
-    message: "View Journal",
+    message: "Dagboek bekijken",
     description: "Button text to navigate to the journal after success",
   },
   "receipt.success.uploadAnother": {
-    message: "Upload Another Receipt",
+    message: "Nog een bon uploaden",
     description: "Button text to upload another receipt after success",
   },
 
   // Workflow error messages
   "receipt.workflow.failedToParse": {
-    message: "Failed to parse receipt",
+    message: "Bon kon niet worden geanalyseerd",
     description: "Error message when AI fails to parse the receipt",
   },
   "receipt.workflow.failedToRecord": {
-    message: "Failed to record receipt transaction",
+    message: "Transactie van bon kon niet worden vastgelegd",
     description: "Error message when recording the transaction fails",
   },
 };

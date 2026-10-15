@@ -1,12 +1,12 @@
 # w0 · m1 — Translate the English copies shipped in non-English catalogs, and guard against them
 
-**Worker:** worker1 **Goal:** a German, Russian, or Chinese user sees Receipt upload, Bank Connections, and Settings billing in their language, and CI fails the next time a whole message ships as an English copy **Status:** todo
+**Worker:** worker1 **Goal:** a German, Russian, or Chinese user sees Receipt upload, Bank Connections, and Settings billing in their language, and CI fails the next time a whole message ships as an English copy **Status:** in progress (t001 done)
 
 ## Tasks (in order)
 
 | id   | title                                                          | est | depends_on       |
 | ---- | -------------------------------------------------------------- | --- | ---------------- |
-| t001 | Translate the Receipt catalog in its 11 untranslated locales   | 45m | —                |
+| t001 | Translate the Receipt catalog in its 11 untranslated locales   | 45m | —                | — **DONE**
 | t002 | Translate the Plaid catalog in all 14 non-English locales       | 60m | —                |
 | t003 | Translate the remaining residual keys across 14 feature catalogs | 45m | —                |
 | t004 | Fail CI on whole-message English copies in non-English catalogs  | 45m | —                |
