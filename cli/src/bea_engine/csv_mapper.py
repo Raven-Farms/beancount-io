@@ -653,6 +653,27 @@ def parse_encoding(value: str) -> str:
     raise UsageError(f"Bad --encoding {value!r}: use utf-8, cp1252, or latin-1.")
 
 
+def _mixed_lines(source: Path) -> tuple[int, int] | None:
+    """The first line that is multi-byte UTF-8 and the first that is not UTF-8, when a file holds both."""
+    try:
+        data = source.read_bytes()
+    except OSError:
+        return None
+    utf8: int | None = None
+    other: int | None = None
+    for number, line in enumerate(data.splitlines(), start=1):
+        try:
+            line.decode("utf-8")
+        except UnicodeDecodeError:
+            other = other or number
+        else:
+            if not line.isascii():
+                utf8 = utf8 or number
+        if utf8 and other:
+            return utf8, other
+    return None
+
+
 def _decode_usage_error(source: Path, exc: UnicodeDecodeError, encoding: str) -> UsageError:
     """Name a decode failure instead of pretending the CSV had no columns.
 
@@ -667,6 +688,16 @@ def _decode_usage_error(source: Path, exc: UnicodeDecodeError, encoding: str) ->
         winner = probe_decoding(source)
     except OSError:
         winner = "latin-1"
+    mixed = _mixed_lines(source)
+    if mixed is not None:
+        # cp1252 reads every byte, so it was suggested for a file whose other
+        # lines are UTF-8, and following it turned `é` into `Ã©` (w5/406).
+        utf8, other = mixed
+        return UsageError(
+            f"{source.name} mixes encodings: line {utf8} is UTF-8 with accented characters, while line {other} "
+            f"is not UTF-8 ({exc.reason} at byte {exc.start}). No single --csv encoding reads both correctly; "
+            "re-save the export in one encoding (UTF-8) and import it again."
+        )
     if winner == "cp1252":
         return UsageError(
             f"{source.name} is not valid UTF-8 ({exc.reason} at byte {exc.start}); "
