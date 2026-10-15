@@ -206,6 +206,9 @@ def emit_command(cmd: Command, spec: dict[str, Any]) -> str:
         lines.append("")
         lines.append("    try:")
         lines.append(f"        result = unwrap({call})")
+        lines.append("    except (httpx.ConnectError, httpx.ConnectTimeout):")
+        lines.append("        # No request left the machine, so nothing happened: not unknown.")
+        lines.append("        raise")
         lines.append("    except (httpx.TimeoutException, httpx.TransportError, UnreadableSuccess) as e:")
         lines.append(f'        raise unknown_write_outcome(f"{esc(cmd.write_action or "")}", e) from e')
 

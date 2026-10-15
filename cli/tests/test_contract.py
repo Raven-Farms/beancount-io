@@ -198,7 +198,9 @@ class TestExitCodes:
         assert "bea cloud login" in result.stderr
 
     def test_4_when_a_write_times_out_with_an_unknown_outcome(self, logged_in: None, httpx_mock: HTTPXMock) -> None:
-        httpx_mock.add_exception(httpx.ConnectTimeout("timed out"))
+        # A read timeout: the request was sent. A connect timeout sent nothing
+        # and exits 1 (w5/368, tests/test_cloud_write_connect_failure.py).
+        httpx_mock.add_exception(httpx.ReadTimeout("timed out"))
 
         result = runner.invoke(app, ["--yes", "cloud", "ledger", "delete", "alice/books"])
 
