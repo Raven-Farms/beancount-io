@@ -636,6 +636,11 @@ def native_one_shot(
     except BeanqueryError as exc:
         # `bean-query` let these escape as a Python traceback; name the problem instead.
         raise _usage_error(exc, query_string, shell.context, []) from None
+    except (ValueError, OverflowError) as exc:
+        evaluation = _evaluation_error(exc, query_string, [])
+        if evaluation is None:
+            raise
+        raise evaluation from None
     if output is not None:
         _export(shell, output, buffer.getvalue())
 
@@ -1553,14 +1558,23 @@ def _compiled(
         if context is None:
             raise
         raise _usage_error(exc, statement, context, ledger_errors()) from None
+    except OverflowError as exc:
+        evaluation = _evaluation_error(exc, statement, ledger_errors())
+        if evaluation is None:
+            raise
+        raise evaluation from None
     except ValueError as exc:
         # The parser converts literals as it reads them, so `2020-99-01`
         # surfaces as a bare ValueError from `date.fromisoformat` — a typo in
         # the query, not an engine failure (w1/085). Only an error raised
-        # inside the parser is the query's; anything later propagates.
+        # inside the parser, or one `_evaluation_error` recognizes as the
+        # query's, is the query's; anything else propagates.
         literal = _parse_literal_error(exc)
         if literal is None:
-            raise
+            evaluation = _evaluation_error(exc, statement, ledger_errors())
+            if evaluation is None:
+                raise
+            raise evaluation from None
         details = [f"  {statement}"]
         if literal == "date":
             details.append("Write dates as YYYY-MM-DD with a real month and day, for example 2020-02-29.")
@@ -1683,6 +1697,31 @@ def _implicit_group_error(columns: list[tuple[str, str]], ledger_errors: list[st
 
 #: The string literal on the right of BQL's regex operators, quotes included.
 _PATTERN_LITERAL = re.compile(r"""!?~\s*('[^']*'|"[^"]*")""")
+
+
+def _evaluation_error(exc: Exception, statement: str, ledger_errors: list[str]) -> protocol.UsageError | None:
+    """A value the query's own text asked for that Python refused, as a usage error, or None.
+
+    `parse_date('x')`, date arithmetic past the calendar and a `LIMIT` beyond
+    `sys.maxsize` are typos in the query, but they fail only while rows are
+    evaluated — as dateutil's `ParserError`, an `OverflowError`, or islice's
+    `ValueError` — so they reached the user as a ledger validation failure
+    behind a Python class name (w5/314). Any other `ValueError` is not
+    recognizably the query's and keeps propagating.
+    """
+    details = [f"  {statement}"]
+    if isinstance(exc, OverflowError):
+        if "date" in str(exc):
+            details.append("Date arithmetic must stay between 0001-01-01 and 9999-12-31.")
+        reason = str(exc)
+    elif type(exc).__name__ == "ParserError" and type(exc).__module__.startswith("dateutil"):
+        reason = f"cannot read a date: {exc}"
+        details.append("parse_date reads text such as '2026-01-05'.")
+    elif "islice()" in str(exc):
+        reason = f"LIMIT must be at most {sys.maxsize}"
+    else:
+        return None
+    return protocol.UsageError(f"Cannot run this BQL query: {reason}.", details=details, ledger_errors=ledger_errors)
 
 
 def _pattern_error(pattern: str, exc: re.error, statement: str, ledger_errors: list[str]) -> protocol.UsageError:
