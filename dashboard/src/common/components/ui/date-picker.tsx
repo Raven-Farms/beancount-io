@@ -67,8 +67,36 @@ export function DatePicker({
   // Keep the typed draft while the parent echoes an invalid/empty value.
   const [isEditing, setIsEditing] = React.useState(false);
 
+  // The draft as last typed, read by the sync effect without re-running it.
+  const draftRef = React.useRef(inputValue);
+  // Declared before the sync effect so it runs first in the same commit.
+  React.useEffect(() => {
+    draftRef.current = inputValue;
+  }, [inputValue]);
+  const syncedValueRef = React.useRef(value);
+  const syncedPatternRef = React.useRef(displayPattern);
+
   React.useEffect(() => {
     if (isEditing) return;
+    // An invalid draft stays visible until the value itself changes. After
+    // we publish `undefined`, react-hook-form hands back the form's default
+    // as `field.value`; overwriting the draft with it showed a valid-looking
+    // date beside "Invalid input" (w0/005). An external reset still lands,
+    // because it arrives as a different value.
+    const valueChanged = syncedValueRef.current !== value;
+    // The draft was written in the pattern in force before this run; judge
+    // it there, so a language switch still re-renders a valid date (m22).
+    const draftPattern = syncedPatternRef.current;
+    syncedValueRef.current = value;
+    syncedPatternRef.current = displayPattern;
+    const draft = draftRef.current.trim();
+    if (
+      !valueChanged &&
+      draft.length > 0 &&
+      !parseStrictCalendarDate(draft, draftPattern)
+    ) {
+      return;
+    }
     // A language change re-renders the same selected Date in the new
     // pattern; the stored date is never reinterpreted (m22), and a
     // mid-edit draft is left untouched until blur or commit.
@@ -132,7 +160,13 @@ export function DatePicker({
           onChange={handleInputChange}
           onBlur={() => {
             setIsEditing(false);
-            if (value && isValid(value)) {
+            // Normalize only a draft that parses; invalid text stays for the
+            // user to correct.
+            if (
+              value &&
+              isValid(value) &&
+              parseStrictCalendarDate(inputValue, displayPattern)
+            ) {
               setInputValue(formatDate(value, displayPattern));
             }
           }}

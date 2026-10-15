@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
+import { Controller, useForm } from "react-hook-form";
 import { format } from "date-fns";
 import { enUS } from "react-day-picker/locale/en-US";
 import { fr } from "react-day-picker/locale/fr";
@@ -236,5 +237,59 @@ describe("DatePicker locale ordering", () => {
 
     expect(screen.getByRole("textbox")).toHaveValue("06/1");
     expect(onValue.mock.calls.length).toBe(callsBeforeSwitch);
+  });
+});
+
+/**
+ * react-hook-form's `field.value` falls back to the form's default when the
+ * stored value is `undefined`, so after invalid text the picker is handed the
+ * default date back (w0/005). Mirrors the journal forms' wiring.
+ */
+function FormDatePicker({ defaultDate }: { defaultDate: Date }) {
+  const form = useForm<{ date: Date | undefined }>({
+    defaultValues: { date: defaultDate },
+  });
+  return (
+    <Controller
+      control={form.control}
+      name="date"
+      render={({ field }) => (
+        <DatePicker
+          id="date"
+          value={field.value}
+          onChange={(next) => field.onChange(next)}
+          required
+        />
+      )}
+    />
+  );
+}
+
+describe("DatePicker inside react-hook-form", () => {
+  it("keeps an invalid draft visible after blur instead of reverting to the default", async () => {
+    const user = userEvent.setup();
+    render(<FormDatePicker defaultDate={new Date(2026, 9, 15)} />);
+
+    const input = screen.getByRole("textbox");
+    expect(input).toHaveValue("10/15/2026");
+    await user.clear(input);
+    await user.type(input, "2026-02-30");
+    await user.tab();
+
+    expect(input).toHaveValue("2026-02-30");
+    expect(input).toHaveAttribute("aria-invalid", "true");
+  });
+
+  it("still normalizes a valid ISO draft on blur", async () => {
+    const user = userEvent.setup();
+    render(<FormDatePicker defaultDate={new Date(2026, 9, 15)} />);
+
+    const input = screen.getByRole("textbox");
+    await user.clear(input);
+    await user.type(input, "2026-02-28");
+    await user.tab();
+
+    expect(input).toHaveValue("02/28/2026");
+    expect(input).not.toHaveAttribute("aria-invalid");
   });
 });
