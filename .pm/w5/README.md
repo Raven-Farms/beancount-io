@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [357 — Skills still say Beangulp requires libmagic (w5/168 leftover)](./357.md) — CLI QA 2026-10-14
 - [358 — ask/close spending recipes sum `cost(position)`, leaving `@`-priced foreign charges unconverted](./358.md) — CLI QA 2026-10-14
 - [359 — reconcile skill never negates a liability statement's ending balance; card tie-out is off by twice the balance](./359.md) — CLI QA 2026-10-14
 - [360 — reconcile skill takes the last row's balance, wrong for newest-first exports](./360.md) — CLI QA 2026-10-14
