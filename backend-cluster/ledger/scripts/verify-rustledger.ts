@@ -426,6 +426,42 @@ ${custom ? 'option "name_equity" "Capital"\noption "name_income" "Revenue"\nopti
         -3000,
     "actual service honors custom equity, income, expense and current-earnings names",
   );
+  for (const [label, expenses, assets, equity, earnings] of [
+    ["loss", "23000", 17000, -7000, 3000],
+    ["zero profit", "20000", 20000, -10000, 0],
+  ] as const) {
+    const caseSource = companySource(expenses);
+    const parsed = await parseLedgerFiles(
+      { "main.bean": caseSource },
+      "main.bean",
+    );
+    assert(
+      parsed.valid && parsed.errors.length === 0,
+      `${label} company fixture is valid in the installed WASM`,
+    );
+    const report = await services(caseSource).finance.getBalanceSheet({
+      ...params,
+      time: "2025",
+    });
+    assert(
+      value(report.assets_hierarchy_data) === assets &&
+        value(report.liabilities_hierarchy_data) === -10000 &&
+        value(report.equity_hierarchy_data) === equity &&
+        value(find(report.equity_hierarchy_data, "Equity:Earnings:Current")) ===
+          earnings,
+      `${label} closes the actual income and expense amounts into signed equity`,
+    );
+    deepStrictEqual(report.equity_data.slice(0, 2), [
+      { date: "2025-01-31", balance: { MUSD: "-10000" } },
+      { date: "2025-02-28", balance: { MUSD: String(equity) } },
+    ]);
+    assert(
+      Number(report.equity_data.at(-1)?.balance.MUSD) ===
+        value(report.equity_hierarchy_data),
+      `${label} equity series changes when earned and ends at the hierarchy total`,
+    );
+  }
+
   const costSource = `option "operating_currency" "MUSD"
 2024-01-01 open Assets:Shares HOOL
 2024-01-01 open Equity:Capital MUSD

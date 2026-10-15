@@ -1,6 +1,6 @@
 # w6 · m5 — Include current earnings in balance-sheet equity
 
-**Worker:** worker1 **Goal:** An unfiltered balance sheet includes the selected period's earnings in its equity hierarchy and series, so the same books reconcile in their active year and the following year. **Status:** todo (t001, t002, t003, t004 done)
+**Worker:** worker1 **Goal:** An unfiltered balance sheet includes the selected period's earnings in its equity hierarchy and series, so the same books reconcile in their active year and the following year. **Status:** todo (t001, t002, t003, t004, t005 done)
 
 ## Tasks (in order)
 
@@ -10,7 +10,7 @@
 | t002 | Apply the same earnings policy to equity chart points — **DONE** | 25m | t001 |
 | t003 | Adoption surface — **DONE** | 15m | t002 |
 | t004 | Simplify — **DONE** | 10m | t003 |
-| t005 | Test coverage | 35m | t003 |
+| t005 | Test coverage — **DONE** | 35m | t003 |
 | t006 | Closeout | 10m | t004, t005 |
 
 ## Definition of done
