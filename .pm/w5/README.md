@@ -164,7 +164,6 @@
 - [451 — `../` include behind a symlinked dir: `format -o` overwrites the loaded include (exit 0), `-i` formats the wrong file](./451.md) — CLI QA 2026-10-14
 - [452 — A mistyped `--account` preview is remembered; flag-free imports then refuse forever](./452.md) — CLI QA 2026-10-14
 - [453 — `ask` write panel: typing `n`/`2` + Enter approves (default Yes, keys unbound)](./453.md) — CLI QA 2026-10-14
-- [454 — `ask` loads cwd `.agents/skills` silently, overriding user skills, with no size limit](./454.md) — CLI QA 2026-10-14
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
