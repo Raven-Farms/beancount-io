@@ -80,7 +80,6 @@
 - [409 — Failed `price export` says "Nothing was written" but leaves a truncated `main.bean`](./409.md) — CLI QA 2026-10-14
 - [410 — Full-disk write failures report `OSError: [Errno 27]` as `validation`](./410.md) — CLI QA 2026-10-14
 - [411 — Failed load-cache write leaks `WARNING:root:` to stderr](./411.md) — CLI QA 2026-10-14
-- [412 — Relative or file-typed `BEA_ENGINE_DIR` accepted unchecked (relative `BEA_CONFIG_DIR` is refused)](./412.md) — CLI QA 2026-10-14
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
