@@ -32,7 +32,7 @@ Candidate subscriptions = merchants present in each of the prior 2–3 months wi
 
 <!-- recipe: recurring-grid -->
 ```sql
-SELECT coalesce(payee, narration) as merchant, year(date) as year, month(date) as month, sum(cost(position)) as total
+SELECT coalesce(payee, narration) as merchant, year(date) as year, month(date) as month, sum(weight) as total
 WHERE account ~ '^Expenses:' GROUP BY merchant, year, month ORDER BY merchant, year, month
 ```
 

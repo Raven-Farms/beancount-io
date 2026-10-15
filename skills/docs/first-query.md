@@ -45,7 +45,7 @@ The agent uses `beancount-ask` and answers with these figures for 2026-06-01 to 
 The 500.00 USD savings transfer and the credit-card payment are not expenses, so they do not appear. The answer includes the query it ran, which you can re-run. The agent may word its query differently, but the figures must match. This one returns the same rows:
 
 ```sh
-bea --file ledger.beancount --json query "SELECT account, sum(cost(position)) AS total WHERE account ~ '^Expenses:' AND date >= 2026-06-01 AND date < 2026-07-01 GROUP BY account ORDER BY total DESC"
+bea --file ledger.beancount --json query "SELECT account, sum(weight) AS total WHERE account ~ '^Expenses:' AND date >= 2026-06-01 AND date < 2026-07-01 GROUP BY account ORDER BY total DESC"
 ```
 
 Confirm the ledger is byte-for-byte unchanged:

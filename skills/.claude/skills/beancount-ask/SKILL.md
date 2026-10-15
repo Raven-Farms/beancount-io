@@ -52,7 +52,7 @@ Run the query. Answer format:
 - **Say what the data can't show** when relevant (e.g. "transfers excluded; card payments are not spending").
 - Point at the matching **Fava view** for browsing (Income Statement / Balance Sheet / Journal with a filter) when one exists.
 
-Interpretation rules (the classic sign traps are in the recipes reference): Income accounts accumulate negative; Expenses positive; `cost(position)` for USD totals; transfers and credit-card payments are **not** spending — recipes exclude them by selecting `^Expenses:` only.
+Interpretation rules (the classic sign traps are in the recipes reference): Income accounts accumulate negative; Expenses positive; `sum(weight)` for USD spending totals (it counts an `@`-priced foreign charge at the USD paid; `cost(position)` leaves it in the foreign currency); transfers and credit-card payments are **not** spending — recipes exclude them by selecting `^Expenses:` only.
 
 ### 4. When the data can't answer
 

@@ -782,6 +782,47 @@ class TestBeaRecipes(unittest.TestCase):
         payees = [payee for row in rows for payee in row if payee in {"WHOLE FOODS", "Split", "Cleared"}]
         self.assertEqual(payees, ["WHOLE FOODS", "WHOLE FOODS", "Split"])
 
+    def test_spending_recipes_count_priced_foreign_charges_at_the_usd_paid(self):
+        self.ledger.write_text(
+            'option "operating_currency" "USD"\n'
+            "2026-01-01 open Liabilities:Card USD\n"
+            "2026-01-01 open Assets:Checking USD\n"
+            "2026-01-01 open Assets:Brokerage\n"
+            "2026-01-01 open Expenses:Travel\n"
+            "2026-01-01 open Expenses:Food USD\n"
+            '2026-05-30 * "TOKYO RAMEN" "lunch"\n  Expenses:Travel 1500 JPY @ 0.0070 USD\n  Liabilities:Card -10.50 USD\n'
+            '2026-06-01 * "HOTEL PARIS" "room"\n  Expenses:Travel 300 EUR @ 1.10 USD\n  Liabilities:Card -330 USD\n'
+            '2026-06-03 * "TOKYO RAMEN" "lunch"\n  Expenses:Travel 1500 JPY @@ 10.50 USD\n  Liabilities:Card -10.50 USD\n'
+            '2026-06-04 * "MARKET" "groceries"\n  Expenses:Food 40 USD\n  Assets:Checking\n'
+            '2026-06-05 * "BROKER" "buy"\n  Assets:Brokerage 10 AAPL {150 USD}\n  Assets:Checking -1500 USD\n'
+        )
+
+        def usd(inventory):
+            self.assertEqual({lot["units"]["currency"] for lot in inventory}, {"USD"}, inventory)
+            return sum(Decimal(lot["units"]["number"]) for lot in inventory)
+
+        # A card charge with an `@`/`@@` price counts at the USD paid, not as
+        # 300 EUR or 1500 JPY (w5/358).
+        top = {account: usd(total) for account, total in self.query_recipe("top-expenses")}
+        self.assertEqual(top, {"Expenses:Travel": Decimal("340.50"), "Expenses:Food": Decimal("40")})
+        trend = self.query_recipe("category-trend", **{"'Expenses:Food:Groceries'": "'Expenses:Travel'"})
+        self.assertEqual([(m, usd(total)) for _, m, total in trend], [(5, Decimal("10.50")), (6, Decimal("340.50"))])
+        burn = {month: usd(spent) for _, month, spent in self.query_recipe("monthly-burn")}
+        self.assertEqual(burn, {5: Decimal("10.50"), 6: Decimal("380.50")})
+        candidates = {merchant: usd(total) for merchant, _, total in self.query_recipe("recurring-candidates")}
+        self.assertEqual(candidates["TOKYO RAMEN"], Decimal("21.00"))
+        grid = {(row[0], row[2]): usd(row[3]) for row in self.query_recipe("recurring-grid")}
+        self.assertEqual(grid[("HOTEL PARIS", 6)], Decimal("330"))
+        history = self.query_recipe("merchant-history", **{"'NETFLIX'": "'TOKYO RAMEN'"})
+        self.assertEqual([amount["currency"] for _, amount in history], ["USD", "USD"])
+        # Only the 330 USD hotel crosses the 200 threshold; 1500 JPY is $10.50.
+        anomalies = self.query_recipe("anomalies")
+        self.assertEqual([(row[1], row[3]["number"], row[3]["currency"]) for row in anomalies],
+                         [("HOTEL PARIS", "330.00", "USD")])
+        # Book value still reads the at-cost lot at cost.
+        net_worth = self.query_recipe("net-worth")
+        self.assertEqual(usd(net_worth[0][0]), Decimal("-391.00"))
+
 
 def load_tests(loader, tests, pattern):
     """Keep the focused journey checks in the existing skills CI entrypoint."""
