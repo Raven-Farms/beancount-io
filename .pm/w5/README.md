@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [372 — `cloud ledger clone` without git exits 1 with an Errno instead of the exit-2 precheck](./372.md) — CLI QA 2026-10-14
 - [373 — `ask` shows raw `list index out of range`/`Expecting value` on a malformed proxy 200](./373.md) — CLI QA 2026-10-14
 - [374 — `ask` approval panel shows tabs as `\x09` but writes realigned spaces](./374.md) — CLI QA 2026-10-14
 - [375 — Update check timeout is per-read: trickling index hangs `upgrade --check`, notice costs 3 s every run uncached](./375.md) — CLI QA 2026-10-14
