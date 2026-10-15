@@ -1,6 +1,6 @@
 # w6 · m3 — Expose core ledger options consistently across API surfaces
 
-**Worker:** worker1 **Goal:** Agents and API clients can read effective bookkeeping options without reconstructing defaults from source files. **Status:** todo
+**Worker:** worker1 **Goal:** Agents and API clients can read effective bookkeeping options without reconstructing defaults from source files. **Status:** done
 
 **Severity:** minor. **Owner:** backend-v2. **Estimate:** 3–4 hours across seven tasks, including explicit operation coverage and cross-adapter validation.
 
@@ -8,13 +8,13 @@
 
 | id | title | est | depends_on |
 | --- | --- | --- | --- |
-| t001 | Define and inventory the existing core-options read | 35m | — |
-| t002 | Expose shared REST and MCP resource adapters | 55m | t001 |
-| t003 | Verify effective options and failures across all surfaces | 35m | t002 |
-| t004 | Adoption surface | 20m | t003 |
-| t005 | Simplify | 15m | t004 |
-| t006 | Test coverage | 35m | t004, t005 |
-| t007 | Closeout | 10m | t006 |
+| t001 | Define and inventory the existing core-options read — **DONE** | 35m | — |
+| t002 | Expose shared REST and MCP resource adapters — **DONE** | 55m | t001 |
+| t003 | Verify effective options and failures across all surfaces — **DONE** | 35m | t002 |
+| t004 | Adoption surface — **DONE** | 20m | t003 |
+| t005 | Simplify — **DONE** | 15m | t004 |
+| t006 | Test coverage — **DONE** | 35m | t004, t005 |
+| t007 | Closeout — **DONE** | 10m | t006 |
 
 ## Live finding
 
