@@ -262,11 +262,17 @@ export const ANALYSIS_READS: readonly AnalysisRead[] = [
     summary: "Get a narration's most recent transaction",
     description:
       "The single most recent transaction recorded against this narration string, or null if " +
-      "there is none. Fava's autocomplete lookup, like payee-transactions.",
+      "there is none. Fava's autocomplete lookup, like payee-transactions. " +
+      "An explicit empty narration is valid. In MCP, read " +
+      "`beancount://{owner}/{name}/narration-transactions?narration=` for empty text. " +
+      "Nonempty values also support the existing path alias " +
+      "`beancount://{owner}/{name}/narration-transactions/{narration}`; percent-encode the value once.",
     query: z.object({
-      narration: z
-        .string()
-        .openapi({ description: "The narration to look up" }),
+      narration: z.string().openapi({
+        description:
+          "The exact narration to look up. Supply it explicitly; an empty string is valid.",
+        example: "",
+      }),
     }),
     uriPath: "",
     uriPathAliases: ["/{narration}"],

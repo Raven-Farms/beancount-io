@@ -141,6 +141,12 @@ describe("transaction lookup adapter parity", () => {
       );
       expect(advertised).toHaveLength(1);
       expect(advertised[0].uriTemplate).toBe(canonical);
+      expect(advertised[0].description).toContain(
+        "beancount://{owner}/{name}/narration-transactions?narration=",
+      );
+      expect(advertised[0].description).toContain(
+        "beancount://{owner}/{name}/narration-transactions/{narration}",
+      );
       const uri = new UriTemplate(advertised[0].uriTemplate).expand({
         owner: "alice",
         name: "main",

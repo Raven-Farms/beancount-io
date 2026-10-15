@@ -518,7 +518,7 @@ lists the accounting and bank suffixes; replace the braces with your ledger and 
 | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Vocabulary (11)                         | `payees`, `narrations`, `currencies`, `tags`, `links`, `years`, `commodities`, `events`, `errors`, `attributes`, `managed-prices`                         |
 | Analysis without required arguments (6) | `trial-balance`, `interval-totals`, `account-last-entries`, `entries-count`, `postings-per-account`, `account-directives`                                 |
-| Analysis with required arguments (5)    | `account-report/{accountName}`, `payee-transactions/{payee}`, `narration-transactions/{narration}`, `payee-accounts/{payee}`, `entry-context/{entryHash}` |
+| Analysis with required arguments (5)    | `account-report/{accountName}`, `payee-transactions/{payee}`, `narration-transactions{?narration}`, `payee-accounts/{payee}`, `entry-context/{entryHash}` |
 | Bank connections and accounts (4)       | `banks`, `banks/{itemId}`, `banks/{itemId}/accounts`, `bank-accounts`                                                                                     |
 | Bank staging and suggestions (3)        | `bank-transactions/unsynced{?accountId}`, `bank-transactions/suggested-categories{?accountId}`, `banks/{itemId}/suggested-mapping`                        |
 | File contents (1)                       | `files/{+path}`                                                                                                                                           |
@@ -636,8 +636,8 @@ resource template advertises each read's accepted names. For example:
 beancount://alice/books/trial-balance?time=2026&interval=month&conversion=USD
 ```
 
-Encode path values and query values using standard URL encoding. Required
-arguments retain their existing path position, such as
+Encode path values and query values using standard URL encoding. Some required
+arguments occupy a path position, such as
 `account-report/Expenses%3AGroceries?time=2026`. Unknown or repeated query
 parameters are refused before the report runs.
 
@@ -648,6 +648,33 @@ authority. A read resource can invoke suggestion services; do not assume every
 resource is a static stored document.
 See [`mcp-resources.ts`](../src/features/ai-agent/api/mcp-resources.ts) for the
 catalog and service calls.
+
+### Transaction lookups
+
+`narration-transactions{?narration}` returns the latest exact narration match,
+or JSON `null` when no transaction matches. Supply `narration` explicitly:
+an empty string is a valid narration, and a matching transaction keeps
+`narration:""` in its result. Omitting the parameter is an argument error.
+For example, read this URI through `resources/read`, replacing `alice/main`
+with your selected ledger:
+
+```text
+beancount://alice/main/narration-transactions?narration=
+```
+
+For nonempty text, percent-encode the value once. Both the query form and the
+existing path alias remain supported:
+
+```text
+beancount://alice/main/narration-transactions?narration=Buying%20groceries
+beancount://alice/main/narration-transactions/Buying%20groceries
+```
+
+Both forms use the same read permissions and return one latest transaction,
+including its date, payee, narration and postings. The REST query parameter and
+GraphQL `narration` argument accept the same explicit empty string. Discover the
+canonical template with `resources/templates/list` in Claude Code, Codex or any
+other MCP client.
 
 ## Prompts
 

@@ -569,6 +569,11 @@ result rows. If the ledger service supplies no count, the readable text says
 `row count unavailable`. See [the result envelope](./docs/mcp.md#the-result-envelope)
 for text and structured-query behavior.
 
+For a blank narration, read
+`beancount://{owner}/{name}/narration-transactions?narration=`. The
+[transaction lookup examples](./docs/mcp.md#transaction-lookups) explain explicit
+values and the retained nonempty path alias.
+
 The [Beancount.io MCP guide](./docs/mcp.md) explains setup, OAuth and API-key
 permissions, how requests reach the ledger, all 27 tools and 64 resource
 templates, the four accounting prompts and how Claude Code and Codex use them,
