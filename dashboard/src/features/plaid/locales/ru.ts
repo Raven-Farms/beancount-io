@@ -6,7 +6,7 @@ export interface TranslationEntry {
 const ruPlaid: Record<string, TranslationEntry> = {
   // Common
   "plaid.connectedSuccessfully": {
-    message: "✓ Connected Successfully",
+    message: "✓ Успешно подключено",
     description: "Success message shown when bank is connected",
   },
   "plaid.sidebar.label": {
@@ -22,107 +22,108 @@ const ruPlaid: Record<string, TranslationEntry> = {
   },
   "plaid.onboarding.subtitle": {
     message:
-      "Automatically import transactions with secure bank-level encryption",
+      "Автоматический импорт транзакций с надёжным шифрованием банковского уровня",
     description: "Subtitle for onboarding page",
   },
 
   // Onboarding State - Hero Section
   "plaid.onboarding.hero.title": {
-    message: "Streamline Your Accounting Workflow",
+    message: "Упростите ведение учёта",
     description: "Hero section title",
   },
   "plaid.onboarding.hero.description": {
     message:
-      "Connect your bank accounts through Plaid to automatically import transactions, save hours of manual data entry, and keep your ledger up-to-date in real-time.",
+      "Подключите банковские счета через Plaid, чтобы автоматически импортировать транзакции, экономить часы ручного ввода данных и поддерживать книгу в актуальном состоянии в реальном времени.",
     description: "Hero section description",
   },
   "plaid.onboarding.hero.institutionsCount": {
-    message: "11,000+ institutions",
+    message: "Более 11 000 учреждений",
     description: "Feature highlight - number of supported institutions",
   },
   "plaid.onboarding.hero.bankLevelSecurity": {
-    message: "Bank-level security",
+    message: "Безопасность банковского уровня",
     description: "Feature highlight - security feature",
   },
   "plaid.onboarding.hero.realTimeSync": {
-    message: "Real-time sync",
+    message: "Синхронизация в реальном времени",
     description: "Feature highlight - real-time syncing",
   },
   "plaid.onboarding.getStarted": {
-    message: "Get Started",
+    message: "Начать",
     description: "Button text to start connecting bank",
   },
 
   // Onboarding State - Benefits
   "plaid.onboarding.benefits.title": {
-    message: "Why Connect Your Bank?",
+    message: "Зачем подключать банк?",
     description: "Benefits section title",
   },
   "plaid.onboarding.benefits.automaticImport.title": {
-    message: "Automatic Import",
+    message: "Автоматический импорт",
     description: "Benefit card title for automatic import",
   },
   "plaid.onboarding.benefits.automaticImport.description": {
     message:
-      "Save hours of manual entry by automatically importing transactions from your bank accounts in real-time. Focus on analysis, not data entry.",
+      "Экономьте часы ручного ввода: транзакции с ваших банковских счетов импортируются автоматически в реальном времени. Сосредоточьтесь на анализе, а не на вводе данных.",
     description: "Benefit card description for automatic import",
   },
   "plaid.onboarding.benefits.bankLevelSecurity.title": {
-    message: "Bank-Level Security",
+    message: "Безопасность банковского уровня",
     description: "Benefit card title for security",
   },
   "plaid.onboarding.benefits.bankLevelSecurity.description": {
     message:
-      "Plaid uses 256-bit encryption and is trusted by thousands of financial institutions. Your credentials are never stored on our servers.",
+      "Plaid использует 256-битное шифрование, и ему доверяют тысячи финансовых учреждений. Ваши учётные данные никогда не хранятся на наших серверах.",
     description: "Benefit card description for security",
   },
   "plaid.onboarding.benefits.privacyFirst.title": {
-    message: "Privacy First",
+    message: "Конфиденциальность прежде всего",
     description: "Benefit card title for privacy",
   },
   "plaid.onboarding.benefits.privacyFirst.description": {
     message:
-      "We never store your bank credentials or sell your data. Your financial information is protected by industry-leading privacy standards.",
+      "Мы никогда не храним ваши банковские учётные данные и не продаём ваши данные. Ваша финансовая информация защищена ведущими отраслевыми стандартами конфиденциальности.",
     description: "Benefit card description for privacy",
   },
 
   // Onboarding State - How It Works
   "plaid.onboarding.howItWorks.title": {
-    message: "How It Works",
+    message: "Как это работает",
     description: "How it works section title",
   },
   "plaid.onboarding.howItWorks.description": {
-    message: "Connect your bank account in just a few simple steps",
+    message: "Подключите банковский счёт за несколько простых шагов",
     description: "How it works section description",
   },
   "plaid.onboarding.howItWorks.step1.title": {
-    message: "Select Your Bank",
+    message: "Выберите банк",
     description: "Step 1 title",
   },
   "plaid.onboarding.howItWorks.step1.description": {
-    message: "Search from over 11,000 supported financial institutions",
+    message:
+      "Ищите среди более чем 11 000 поддерживаемых финансовых учреждений",
     description: "Step 1 description",
   },
   "plaid.onboarding.howItWorks.step2.title": {
-    message: "Secure Authentication",
+    message: "Безопасная аутентификация",
     description: "Step 2 title",
   },
   "plaid.onboarding.howItWorks.step2.description": {
-    message: "Log in securely through your bank's authentication system",
+    message: "Безопасно войдите через систему аутентификации вашего банка",
     description: "Step 2 description",
   },
   "plaid.onboarding.howItWorks.step3.title": {
-    message: "Start Importing",
+    message: "Начните импорт",
     description: "Step 3 title",
   },
   "plaid.onboarding.howItWorks.step3.description": {
-    message: "Your transactions will automatically sync to your ledger",
+    message: "Ваши транзакции будут автоматически синхронизироваться с книгой",
     description: "Step 3 description",
   },
 
   // Management State
   "plaid.management.connectAnother": {
-    message: "Connect Another Bank",
+    message: "Подключить ещё один банк",
     description:
       "Button text to connect another bank, shown when at least one bank is already connected",
   },
@@ -132,11 +133,12 @@ const ruPlaid: Record<string, TranslationEntry> = {
       "Button text to connect a bank, shown on the connections page when no bank is connected yet",
   },
   "plaid.management.connectionsTitle": {
-    message: "Bank Connections",
+    message: "Подключения к банкам",
     description: "Section title for the list of connected banks",
   },
   "plaid.management.connectionsSubtitle": {
-    message: "Manage account mappings, sync, and disconnect banks.",
+    message:
+      "Управляйте сопоставлением счетов, синхронизацией и отключением банков.",
     description: "Section subtitle for the list of connected banks",
   },
   "plaid.management.noConnectionsTitle": {
@@ -150,136 +152,136 @@ const ruPlaid: Record<string, TranslationEntry> = {
       "Empty state description on the connections page when no bank is connected",
   },
   "plaid.management.sync": {
-    message: "Sync",
+    message: "Синхронизировать",
     description: "Button text to sync transactions across every connected bank",
   },
   "plaid.management.syncing": {
-    message: "Syncing...",
+    message: "Синхронизация...",
     description: "Button text while syncing every connected bank",
   },
   "plaid.management.manageBanks": {
-    message: "Manage Banks",
+    message: "Управление банками",
     description:
       "Button text linking to the dedicated bank-connection management page",
   },
   "plaid.management.backToTransactions": {
-    message: "Back to Transactions",
+    message: "Назад к транзакциям",
     description:
       "Back button text on the manage-banks page, returning to the transaction review page",
   },
   "plaid.management.toast.error": {
-    message: "Error",
+    message: "Ошибка",
     description: "Generic error toast title",
   },
   "plaid.management.toast.syncAllComplete": {
-    message: "Sync Complete",
+    message: "Синхронизация завершена",
     description: "Toast title after syncing every connected bank",
   },
   "plaid.management.toast.syncAllCompleteDescription": {
     message:
-      "{count} new transaction(s) synced across {institutionCount} bank(s).",
+      "Синхронизировано новых транзакций: {count}, банков: {institutionCount}.",
     description:
       "Toast description after syncing every connected bank - interpolation: {count}, {institutionCount}",
   },
   "plaid.management.toast.syncAllSkipped": {
-    message: "{count} bank(s) need reconnecting",
+    message: "Банков, требующих повторного подключения: {count}",
     description:
       "Toast title noting banks skipped by Sync All because they require reauthentication - interpolation: {count}",
   },
   "plaid.management.toast.syncAllFailedDescription": {
-    message: "Failed to sync transactions. Please try again.",
+    message: "Не удалось синхронизировать транзакции. Попробуйте ещё раз.",
     description: "Toast description when Sync All fails",
   },
 
   // Bank Account List
   "plaid.bankAccount.linkedOn": {
-    message: "Linked on {date}",
+    message: "Привязан {date}",
     description:
       "Date when bank was linked - interpolation: {date} for formatted date",
   },
   "plaid.bankAccount.status.active": {
-    message: "Active",
+    message: "Активен",
     description: "Status badge for active bank connection",
   },
   "plaid.bankAccount.status.reauthRequired": {
-    message: "Reauth Required",
+    message: "Требуется повторная авторизация",
     description: "Status badge when reauthentication is required",
   },
   "plaid.bankAccount.status.disabled": {
-    message: "Disabled",
+    message: "Отключён",
     description: "Status badge for disabled bank connection",
   },
 
   // Institution Detail - Header
   "plaid.institutionDetail.lastSynced": {
-    message: "Last synced",
+    message: "Последняя синхронизация",
     description: "Label for last sync timestamp",
   },
   "plaid.institutionDetail.transactionsCount": {
-    message: "{count} transactions",
+    message: "Транзакций: {count}",
     description: "Transaction count display - interpolation: {count}",
   },
   "plaid.institutionDetail.syncFailed": {
-    message: "Failed",
+    message: "Ошибка",
     description: "Label when sync fails",
   },
   "plaid.institutionDetail.reconnecting": {
-    message: "Reconnecting...",
+    message: "Повторное подключение...",
     description: "Button text while reconnecting",
   },
   "plaid.institutionDetail.reconnectBank": {
-    message: "Reconnect Bank",
+    message: "Переподключить банк",
     description: "Button text to reconnect bank",
   },
   "plaid.institutionDetail.disconnecting": {
-    message: "Disconnecting...",
+    message: "Отключение...",
     description: "Button text while disconnecting",
   },
   "plaid.institutionDetail.disconnect": {
-    message: "Disconnect",
+    message: "Отключить",
     description: "Button text to disconnect bank",
   },
   "plaid.institutionDetail.disconnectTitle": {
-    message: "Disconnect Bank Account",
+    message: "Отключить банковский счёт",
     description: "Alert dialog title for disconnect confirmation",
   },
   "plaid.institutionDetail.disconnectDescription": {
     message:
-      "Are you sure you want to disconnect {institutionName}? This will remove all connected accounts and stop automatic transaction syncing.",
+      "Вы уверены, что хотите отключить {institutionName}? Все подключённые счета будут удалены, а автоматическая синхронизация транзакций остановится.",
     description:
       "Alert dialog description for disconnect - interpolation: {institutionName}",
   },
   "plaid.institutionDetail.cancel": {
-    message: "Cancel",
+    message: "Отмена",
     description: "Cancel button text",
   },
 
   // Institution Detail - Toast Messages
   "plaid.institutionDetail.toast.bankDisconnected": {
-    message: "Bank Disconnected",
+    message: "Банк отключён",
     description: "Toast title when bank is disconnected",
   },
   "plaid.institutionDetail.toast.bankDisconnectedDescription": {
-    message: "{institutionName} has been disconnected.",
+    message: "{institutionName} отключён.",
     description:
       "Toast description for disconnect - interpolation: {institutionName}",
   },
   "plaid.institutionDetail.toast.error": {
-    message: "Error",
+    message: "Ошибка",
     description: "Generic error toast title",
   },
   "plaid.institutionDetail.toast.disconnectError": {
-    message: "Failed to disconnect bank account.",
+    message: "Не удалось отключить банковский счёт.",
     description: "Toast description for disconnect error",
   },
 
   // Account Mapping
   "plaid.accountMapping.selectAccount": {
-    message: "Select a bank account to configure account mappings",
+    message: "Выберите банковский счёт, чтобы настроить сопоставление счетов",
     description: "Placeholder message when no account is selected",
   },
   "plaid.accountMapping.noAccounts": {
-    message: "No accounts found for this bank",
+    message: "Для этого банка счета не найдены",
     description: "Message when no accounts are available",
   },
   "plaid.accountMapping.manageAccounts": {
@@ -358,11 +360,11 @@ const ruPlaid: Record<string, TranslationEntry> = {
       "Section label for the account mapping list within a bank card",
   },
   "plaid.accountMapping.currency": {
-    message: "Currency",
+    message: "Валюта",
     description: "Label for the account's ledger currency selector",
   },
   "plaid.accountMapping.beancountAccount": {
-    message: "Beancount Account",
+    message: "Счёт Beancount",
     description: "Label for beancount account input",
   },
   "plaid.accountMapping.placeholder": {
@@ -370,84 +372,84 @@ const ruPlaid: Record<string, TranslationEntry> = {
     description: "Placeholder for account input",
   },
   "plaid.accountMapping.saving": {
-    message: "Saving...",
+    message: "Сохранение...",
     description: "Button text while saving",
   },
   "plaid.accountMapping.save": {
-    message: "Save",
+    message: "Сохранить",
     description: "Save button text",
   },
   "plaid.accountMapping.cancel": {
-    message: "Cancel",
+    message: "Отмена",
     description: "Cancel button text",
   },
   "plaid.accountMapping.notMapped": {
-    message: "Not mapped",
+    message: "Не сопоставлен",
     description: "Label for unmapped account",
   },
   "plaid.accountMapping.edit": {
-    message: "Edit",
+    message: "Изменить",
     description: "Edit button text",
   },
   "plaid.accountMapping.setMapping": {
-    message: "Set Mapping",
+    message: "Задать сопоставление",
     description: "Button text to set mapping for unmapped account",
   },
   "plaid.accountMapping.aiSuggested": {
-    message: "AI suggested",
+    message: "Предложено ИИ",
     description: "Badge/hint shown next to an AI-prefilled account mapping",
   },
   "plaid.accountMapping.suggestedAccount": {
-    message: "AI suggests: {account}",
+    message: "ИИ предлагает: {account}",
     description:
       "Inline hint showing the AI-suggested account for an unmapped account - interpolation: {account}",
   },
   "plaid.accountMapping.suggesting": {
-    message: "Getting AI suggestions...",
+    message: "Получение предложений ИИ...",
     description: "Loading label while AI mapping suggestions are fetched",
   },
   "plaid.accountMapping.acceptAllSuggestions": {
-    message: "Accept All Suggestions ({count})",
+    message: "Принять все предложения ({count})",
     description:
       "Button text to accept every AI-suggested mapping at once - interpolation: {count}",
   },
   "plaid.accountMapping.accepting": {
-    message: "Accepting...",
+    message: "Принятие...",
     description: "Button text while accepting all suggestions",
   },
 
   // Account Mapping - Toast Messages
   "plaid.accountMapping.toast.invalidAccount": {
-    message: "Invalid Account",
+    message: "Недопустимый счёт",
     description: "Toast title for invalid account",
   },
   "plaid.accountMapping.toast.invalidAccountDescription": {
-    message: "Please enter a valid Beancount account name.",
+    message: "Введите допустимое имя счёта Beancount.",
     description: "Toast description for invalid account",
   },
   "plaid.accountMapping.toast.mappingSaved": {
-    message: "Mapping Saved",
+    message: "Сопоставление сохранено",
     description: "Toast title for successful mapping save",
   },
   "plaid.accountMapping.toast.mappingSavedDescription": {
-    message: "{accountName} mapped to {ledgerAccount} ({currency})",
+    message: "{accountName} сопоставлен с {ledgerAccount} ({currency})",
     description:
       "Toast description for mapping save - interpolation: {accountName}, {ledgerAccount}, {currency}",
   },
   "plaid.accountMapping.toast.error": {
-    message: "Error",
+    message: "Ошибка",
     description: "Generic error toast title",
   },
   "plaid.accountMapping.toast.errorDescription": {
-    message: "Failed to save account mapping.",
+    message: "Не удалось сохранить сопоставление счёта.",
     description: "Toast description for save error",
   },
   "plaid.accountMapping.toast.acceptedAll": {
-    message: "Suggestions Accepted",
+    message: "Предложения приняты",
     description: "Toast title after accepting all AI mapping suggestions",
   },
   "plaid.accountMapping.toast.acceptedAllDescription": {
-    message: "Mapped {count} account(s) using AI suggestions.",
+    message: "Счетов сопоставлено по предложениям ИИ: {count}.",
     description:
       "Toast description after accepting all AI mapping suggestions - interpolation: {count}",
   },
@@ -462,7 +464,7 @@ const ruPlaid: Record<string, TranslationEntry> = {
   },
   "plaid.transactionReview.noPendingDescription": {
     message:
-      "All transactions have been synced to your ledger or there are no new transactions.",
+      "Все транзакции синхронизированы с вашей книгой, или новых транзакций нет.",
     description: "Description when no pending transactions",
   },
   "plaid.transactionReview.title": {
@@ -471,20 +473,20 @@ const ruPlaid: Record<string, TranslationEntry> = {
       "Card title for the list of unsynced bank transactions awaiting review before submission to the ledger",
   },
   "plaid.transactionReview.description": {
-    message: "Review and submit {count} transaction{plural} to your ledger",
+    message: "Проверьте и отправьте в книгу транзакции ({count}){plural}",
     description:
       "Card description - interpolation: {count} for number, {plural} for 's' or empty",
   },
   "plaid.transactionReview.submitting": {
-    message: "Submitting...",
+    message: "Отправка...",
     description: "Button text while submitting",
   },
   "plaid.transactionReview.submit": {
-    message: "Submit",
+    message: "Отправить",
     description: "Submit button text",
   },
   "plaid.transactionReview.searchPlaceholder": {
-    message: "Search by merchant or description...",
+    message: "Поиск по продавцу или описанию...",
     description: "Search input placeholder",
   },
   "plaid.transactionReview.filterByBank": {
@@ -532,106 +534,106 @@ const ruPlaid: Record<string, TranslationEntry> = {
   },
   "plaid.transactionReview.missingAccountsAlert": {
     message:
-      "{count} selected transaction(s) need target accounts before submission.",
+      "Выбранным транзакциям нужны целевые счета перед отправкой: {count}.",
     description:
       "Alert message for missing target accounts - interpolation: {count}",
   },
   "plaid.transactionReview.selectAll": {
-    message: "Select all",
+    message: "Выбрать все",
     description: "Checkbox label to select all transactions",
   },
   "plaid.transactionReview.date": {
-    message: "Date",
+    message: "Дата",
     description: "Table header for date column",
   },
   "plaid.transactionReview.source": {
-    message: "Bank",
+    message: "Банк",
     description: "Table header for the source institution/account column",
   },
   "plaid.transactionReview.sourceAccount": {
-    message: "Source Account",
+    message: "Исходный счёт",
     description:
       "Table header for the editable Beancount source-account column, defaults from the account mapping",
   },
   "plaid.transactionReview.merchant": {
-    message: "Merchant",
+    message: "Продавец",
     description: "Table header for merchant column",
   },
   "plaid.transactionReview.descriptionColumn": {
-    message: "Description",
+    message: "Описание",
     description: "Table header for description column",
   },
   "plaid.transactionReview.amount": {
-    message: "Amount",
+    message: "Сумма",
     description: "Table header for amount column",
   },
   "plaid.transactionReview.targetAccount": {
-    message: "Target Account",
+    message: "Целевой счёт",
     description: "Table header for target account column",
   },
   "plaid.transactionReview.aiProcessing": {
-    message: "AI...",
+    message: "ИИ...",
     description: "Button text while AI is processing",
   },
   "plaid.transactionReview.aiFill": {
-    message: "AI Fill",
+    message: "Заполнить с ИИ",
     description: "Button text for AI categorization",
   },
   "plaid.transactionReview.selectAccountPlaceholder": {
-    message: "Select account...",
+    message: "Выберите счёт...",
     description: "Placeholder for account selection dropdown",
   },
 
   // Transaction Review - Toast Messages
   "plaid.transactionReview.toast.categorizationComplete": {
-    message: "Categorization Complete",
+    message: "Категоризация завершена",
     description: "Toast title when AI categorization completes",
   },
   "plaid.transactionReview.toast.categorizationCompleteDescription": {
-    message: "AI suggested accounts for {count} transactions.",
+    message: "ИИ предложил счета для транзакций: {count}.",
     description:
       "Toast description for categorization complete - interpolation: {count}",
   },
   "plaid.transactionReview.toast.categorizationFailed": {
-    message: "Categorization Failed",
+    message: "Ошибка категоризации",
     description: "Toast title when AI categorization fails",
   },
   "plaid.transactionReview.toast.categorizationFailedDescription": {
-    message: "Failed to categorize transactions. Please try again.",
+    message: "Не удалось категоризировать транзакции. Попробуйте ещё раз.",
     description: "Toast description for categorization failure",
   },
   "plaid.transactionReview.toast.noTransactionsSelected": {
-    message: "No Transactions Selected",
+    message: "Транзакции не выбраны",
     description: "Toast title when no transactions are selected",
   },
   "plaid.transactionReview.toast.noTransactionsSelectedDescription": {
-    message: "Please select at least one transaction to submit.",
+    message: "Выберите хотя бы одну транзакцию для отправки.",
     description: "Toast description for no transactions selected",
   },
   "plaid.transactionReview.toast.missingTargetAccounts": {
-    message: "Missing Target Accounts",
+    message: "Не указаны целевые счета",
     description: "Toast title for missing target accounts",
   },
   "plaid.transactionReview.toast.missingTargetAccountsDescription": {
-    message: "{count} selected transaction(s) need target accounts.",
+    message: "Выбранным транзакциям нужны целевые счета: {count}.",
     description:
       "Toast description for missing accounts - interpolation: {count}",
   },
   "plaid.transactionReview.toast.transactionsSubmitted": {
-    message: "Transactions Submitted",
+    message: "Транзакции отправлены",
     description: "Toast title when transactions are submitted",
   },
   "plaid.transactionReview.toast.transactionsSubmittedDescription": {
-    message: "{count} transactions added to your ledger.",
+    message: "Транзакций добавлено в книгу: {count}.",
     description:
       "Toast description for submitted transactions - interpolation: {count}",
   },
   "plaid.transactionReview.toast.submissionFailed": {
-    message: "Submission Failed",
+    message: "Ошибка отправки",
     description: "Toast title when submission fails",
   },
   "plaid.transactionReview.toast.submissionFailedDescription": {
-    message: "Failed to submit transactions. Please try again.",
+    message: "Не удалось отправить транзакции. Попробуйте ещё раз.",
     description: "Toast description for submission failure",
   },
   "plaid.transactionReview.delete": {

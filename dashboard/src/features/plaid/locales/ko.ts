@@ -128,11 +128,11 @@ const koPlaid: Record<string, TranslationEntry> = {
       "Button text to connect a bank, shown on the connections page when no bank is connected yet",
   },
   "plaid.management.connectionsTitle": {
-    message: "Bank Connections",
+    message: "은행 연결",
     description: "Section title for the list of connected banks",
   },
   "plaid.management.connectionsSubtitle": {
-    message: "Manage account mappings, sync, and disconnect banks.",
+    message: "계좌 매핑을 관리하고, 동기화하고, 은행 연결을 해제하세요.",
     description: "Section subtitle for the list of connected banks",
   },
   "plaid.management.noConnectionsTitle": {
@@ -146,44 +146,44 @@ const koPlaid: Record<string, TranslationEntry> = {
       "Empty state description on the connections page when no bank is connected",
   },
   "plaid.management.sync": {
-    message: "Sync",
+    message: "동기화",
     description: "Button text to sync transactions across every connected bank",
   },
   "plaid.management.syncing": {
-    message: "Syncing...",
+    message: "동기화 중...",
     description: "Button text while syncing every connected bank",
   },
   "plaid.management.manageBanks": {
-    message: "Manage Banks",
+    message: "은행 관리",
     description:
       "Button text linking to the dedicated bank-connection management page",
   },
   "plaid.management.backToTransactions": {
-    message: "Back to Transactions",
+    message: "거래로 돌아가기",
     description:
       "Back button text on the manage-banks page, returning to the transaction review page",
   },
   "plaid.management.toast.error": {
-    message: "Error",
+    message: "오류",
     description: "Generic error toast title",
   },
   "plaid.management.toast.syncAllComplete": {
-    message: "Sync Complete",
+    message: "동기화 완료",
     description: "Toast title after syncing every connected bank",
   },
   "plaid.management.toast.syncAllCompleteDescription": {
     message:
-      "{count} new transaction(s) synced across {institutionCount} bank(s).",
+      "은행 {institutionCount}곳에서 새 거래 {count}건을 동기화했습니다.",
     description:
       "Toast description after syncing every connected bank - interpolation: {count}, {institutionCount}",
   },
   "plaid.management.toast.syncAllSkipped": {
-    message: "{count} bank(s) need reconnecting",
+    message: "은행 {count}곳을 다시 연결해야 합니다",
     description:
       "Toast title noting banks skipped by Sync All because they require reauthentication - interpolation: {count}",
   },
   "plaid.management.toast.syncAllFailedDescription": {
-    message: "Failed to sync transactions. Please try again.",
+    message: "거래를 동기화하지 못했습니다. 다시 시도해 주세요.",
     description: "Toast description when Sync All fails",
   },
 
@@ -390,25 +390,25 @@ const koPlaid: Record<string, TranslationEntry> = {
     description: "Button text to set mapping for unmapped account",
   },
   "plaid.accountMapping.aiSuggested": {
-    message: "AI suggested",
+    message: "AI 추천",
     description: "Badge/hint shown next to an AI-prefilled account mapping",
   },
   "plaid.accountMapping.suggestedAccount": {
-    message: "AI suggests: {account}",
+    message: "AI 추천: {account}",
     description:
       "Inline hint showing the AI-suggested account for an unmapped account - interpolation: {account}",
   },
   "plaid.accountMapping.suggesting": {
-    message: "Getting AI suggestions...",
+    message: "AI 추천을 가져오는 중...",
     description: "Loading label while AI mapping suggestions are fetched",
   },
   "plaid.accountMapping.acceptAllSuggestions": {
-    message: "Accept All Suggestions ({count})",
+    message: "모든 추천 수락 ({count})",
     description:
       "Button text to accept every AI-suggested mapping at once - interpolation: {count}",
   },
   "plaid.accountMapping.accepting": {
-    message: "Accepting...",
+    message: "수락하는 중...",
     description: "Button text while accepting all suggestions",
   },
 
@@ -440,11 +440,11 @@ const koPlaid: Record<string, TranslationEntry> = {
     description: "Toast description for save error",
   },
   "plaid.accountMapping.toast.acceptedAll": {
-    message: "Suggestions Accepted",
+    message: "추천 수락됨",
     description: "Toast title after accepting all AI mapping suggestions",
   },
   "plaid.accountMapping.toast.acceptedAllDescription": {
-    message: "Mapped {count} account(s) using AI suggestions.",
+    message: "AI 추천을 사용해 계좌 {count}개를 매핑했습니다.",
     description:
       "Toast description after accepting all AI mapping suggestions - interpolation: {count}",
   },
@@ -540,11 +540,11 @@ const koPlaid: Record<string, TranslationEntry> = {
     description: "Table header for date column",
   },
   "plaid.transactionReview.source": {
-    message: "Bank",
+    message: "은행",
     description: "Table header for the source institution/account column",
   },
   "plaid.transactionReview.sourceAccount": {
-    message: "Source Account",
+    message: "원본 계좌",
     description:
       "Table header for the editable Beancount source-account column, defaults from the account mapping",
   },

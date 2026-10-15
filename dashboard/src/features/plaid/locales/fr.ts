@@ -135,11 +135,12 @@ const frPlaid: Record<string, TranslationEntry> = {
       "Button text to connect a bank, shown on the connections page when no bank is connected yet",
   },
   "plaid.management.connectionsTitle": {
-    message: "Bank Connections",
+    message: "Connexions Bancaires",
     description: "Section title for the list of connected banks",
   },
   "plaid.management.connectionsSubtitle": {
-    message: "Manage account mappings, sync, and disconnect banks.",
+    message:
+      "Gérez les mappages de comptes, la synchronisation et la déconnexion des banques.",
     description: "Section subtitle for the list of connected banks",
   },
   "plaid.management.noConnectionsTitle": {
@@ -154,44 +155,45 @@ const frPlaid: Record<string, TranslationEntry> = {
       "Empty state description on the connections page when no bank is connected",
   },
   "plaid.management.sync": {
-    message: "Sync",
+    message: "Synchroniser",
     description: "Button text to sync transactions across every connected bank",
   },
   "plaid.management.syncing": {
-    message: "Syncing...",
+    message: "Synchronisation...",
     description: "Button text while syncing every connected bank",
   },
   "plaid.management.manageBanks": {
-    message: "Manage Banks",
+    message: "Gérer les Banques",
     description:
       "Button text linking to the dedicated bank-connection management page",
   },
   "plaid.management.backToTransactions": {
-    message: "Back to Transactions",
+    message: "Retour aux transactions",
     description:
       "Back button text on the manage-banks page, returning to the transaction review page",
   },
   "plaid.management.toast.error": {
-    message: "Error",
+    message: "Erreur",
     description: "Generic error toast title",
   },
   "plaid.management.toast.syncAllComplete": {
-    message: "Sync Complete",
+    message: "Synchronisation Terminée",
     description: "Toast title after syncing every connected bank",
   },
   "plaid.management.toast.syncAllCompleteDescription": {
     message:
-      "{count} new transaction(s) synced across {institutionCount} bank(s).",
+      "{count} nouvelle(s) transaction(s) synchronisée(s) depuis {institutionCount} banque(s).",
     description:
       "Toast description after syncing every connected bank - interpolation: {count}, {institutionCount}",
   },
   "plaid.management.toast.syncAllSkipped": {
-    message: "{count} bank(s) need reconnecting",
+    message: "{count} banque(s) à reconnecter",
     description:
       "Toast title noting banks skipped by Sync All because they require reauthentication - interpolation: {count}",
   },
   "plaid.management.toast.syncAllFailedDescription": {
-    message: "Failed to sync transactions. Please try again.",
+    message:
+      "Échec de la synchronisation des transactions. Veuillez réessayer.",
     description: "Toast description when Sync All fails",
   },
 
@@ -399,25 +401,25 @@ const frPlaid: Record<string, TranslationEntry> = {
     description: "Button text to set mapping for unmapped account",
   },
   "plaid.accountMapping.aiSuggested": {
-    message: "AI suggested",
+    message: "Suggéré par l'IA",
     description: "Badge/hint shown next to an AI-prefilled account mapping",
   },
   "plaid.accountMapping.suggestedAccount": {
-    message: "AI suggests: {account}",
+    message: "Suggestion de l'IA : {account}",
     description:
       "Inline hint showing the AI-suggested account for an unmapped account - interpolation: {account}",
   },
   "plaid.accountMapping.suggesting": {
-    message: "Getting AI suggestions...",
+    message: "Récupération des suggestions de l'IA...",
     description: "Loading label while AI mapping suggestions are fetched",
   },
   "plaid.accountMapping.acceptAllSuggestions": {
-    message: "Accept All Suggestions ({count})",
+    message: "Accepter toutes les suggestions ({count})",
     description:
       "Button text to accept every AI-suggested mapping at once - interpolation: {count}",
   },
   "plaid.accountMapping.accepting": {
-    message: "Accepting...",
+    message: "Acceptation...",
     description: "Button text while accepting all suggestions",
   },
 
@@ -448,11 +450,11 @@ const frPlaid: Record<string, TranslationEntry> = {
     description: "Toast description for save error",
   },
   "plaid.accountMapping.toast.acceptedAll": {
-    message: "Suggestions Accepted",
+    message: "Suggestions Acceptées",
     description: "Toast title after accepting all AI mapping suggestions",
   },
   "plaid.accountMapping.toast.acceptedAllDescription": {
-    message: "Mapped {count} account(s) using AI suggestions.",
+    message: "{count} compte(s) mappé(s) à l'aide des suggestions de l'IA.",
     description:
       "Toast description after accepting all AI mapping suggestions - interpolation: {count}",
   },
@@ -551,11 +553,11 @@ const frPlaid: Record<string, TranslationEntry> = {
     description: "Table header for date column",
   },
   "plaid.transactionReview.source": {
-    message: "Bank",
+    message: "Banque",
     description: "Table header for the source institution/account column",
   },
   "plaid.transactionReview.sourceAccount": {
-    message: "Source Account",
+    message: "Compte Source",
     description:
       "Table header for the editable Beancount source-account column, defaults from the account mapping",
   },

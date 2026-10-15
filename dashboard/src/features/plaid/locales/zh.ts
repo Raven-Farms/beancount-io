@@ -131,11 +131,11 @@ const zhPlaid: Record<string, TranslationEntry> = {
       "Button text to connect a bank, shown on the connections page when no bank is connected yet",
   },
   "plaid.management.connectionsTitle": {
-    message: "Bank Connections",
+    message: "银行连接",
     description: "Section title for the list of connected banks",
   },
   "plaid.management.connectionsSubtitle": {
-    message: "Manage account mappings, sync, and disconnect banks.",
+    message: "管理账户映射、同步以及断开银行连接。",
     description: "Section subtitle for the list of connected banks",
   },
   "plaid.management.noConnectionsTitle": {
@@ -149,44 +149,43 @@ const zhPlaid: Record<string, TranslationEntry> = {
       "Empty state description on the connections page when no bank is connected",
   },
   "plaid.management.sync": {
-    message: "Sync",
+    message: "同步",
     description: "Button text to sync transactions across every connected bank",
   },
   "plaid.management.syncing": {
-    message: "Syncing...",
+    message: "正在同步...",
     description: "Button text while syncing every connected bank",
   },
   "plaid.management.manageBanks": {
-    message: "Manage Banks",
+    message: "管理银行",
     description:
       "Button text linking to the dedicated bank-connection management page",
   },
   "plaid.management.backToTransactions": {
-    message: "Back to Transactions",
+    message: "返回交易",
     description:
       "Back button text on the manage-banks page, returning to the transaction review page",
   },
   "plaid.management.toast.error": {
-    message: "Error",
+    message: "错误",
     description: "Generic error toast title",
   },
   "plaid.management.toast.syncAllComplete": {
-    message: "Sync Complete",
+    message: "同步完成",
     description: "Toast title after syncing every connected bank",
   },
   "plaid.management.toast.syncAllCompleteDescription": {
-    message:
-      "{count} new transaction(s) synced across {institutionCount} bank(s).",
+    message: "已从 {institutionCount} 家银行同步 {count} 笔新交易。",
     description:
       "Toast description after syncing every connected bank - interpolation: {count}, {institutionCount}",
   },
   "plaid.management.toast.syncAllSkipped": {
-    message: "{count} bank(s) need reconnecting",
+    message: "{count} 家银行需要重新连接",
     description:
       "Toast title noting banks skipped by Sync All because they require reauthentication - interpolation: {count}",
   },
   "plaid.management.toast.syncAllFailedDescription": {
-    message: "Failed to sync transactions. Please try again.",
+    message: "同步交易失败，请重试。",
     description: "Toast description when Sync All fails",
   },
 
@@ -392,25 +391,25 @@ const zhPlaid: Record<string, TranslationEntry> = {
     description: "Button text to set mapping for unmapped account",
   },
   "plaid.accountMapping.aiSuggested": {
-    message: "AI suggested",
+    message: "AI 推荐",
     description: "Badge/hint shown next to an AI-prefilled account mapping",
   },
   "plaid.accountMapping.suggestedAccount": {
-    message: "AI suggests: {account}",
+    message: "AI 建议：{account}",
     description:
       "Inline hint showing the AI-suggested account for an unmapped account - interpolation: {account}",
   },
   "plaid.accountMapping.suggesting": {
-    message: "Getting AI suggestions...",
+    message: "正在获取 AI 建议...",
     description: "Loading label while AI mapping suggestions are fetched",
   },
   "plaid.accountMapping.acceptAllSuggestions": {
-    message: "Accept All Suggestions ({count})",
+    message: "接受全部建议（{count}）",
     description:
       "Button text to accept every AI-suggested mapping at once - interpolation: {count}",
   },
   "plaid.accountMapping.accepting": {
-    message: "Accepting...",
+    message: "正在接受...",
     description: "Button text while accepting all suggestions",
   },
 
@@ -441,11 +440,11 @@ const zhPlaid: Record<string, TranslationEntry> = {
     description: "Toast description for save error",
   },
   "plaid.accountMapping.toast.acceptedAll": {
-    message: "Suggestions Accepted",
+    message: "已接受建议",
     description: "Toast title after accepting all AI mapping suggestions",
   },
   "plaid.accountMapping.toast.acceptedAllDescription": {
-    message: "Mapped {count} account(s) using AI suggestions.",
+    message: "已根据 AI 建议映射 {count} 个账户。",
     description:
       "Toast description after accepting all AI mapping suggestions - interpolation: {count}",
   },
@@ -540,11 +539,11 @@ const zhPlaid: Record<string, TranslationEntry> = {
     description: "Table header for date column",
   },
   "plaid.transactionReview.source": {
-    message: "Bank",
+    message: "银行",
     description: "Table header for the source institution/account column",
   },
   "plaid.transactionReview.sourceAccount": {
-    message: "Source Account",
+    message: "来源账户",
     description:
       "Table header for the editable Beancount source-account column, defaults from the account mapping",
   },

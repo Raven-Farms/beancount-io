@@ -6,7 +6,7 @@ export interface TranslationEntry {
 const nlPlaid: Record<string, TranslationEntry> = {
   // Common
   "plaid.connectedSuccessfully": {
-    message: "✓ Connected Successfully",
+    message: "✓ Verbonden",
     description: "Success message shown when bank is connected",
   },
   "plaid.sidebar.label": {
@@ -22,107 +22,108 @@ const nlPlaid: Record<string, TranslationEntry> = {
   },
   "plaid.onboarding.subtitle": {
     message:
-      "Automatically import transactions with secure bank-level encryption",
+      "Importeer automatisch transacties met veilige versleuteling op bankniveau",
     description: "Subtitle for onboarding page",
   },
 
   // Onboarding State - Hero Section
   "plaid.onboarding.hero.title": {
-    message: "Streamline Your Accounting Workflow",
+    message: "Stroomlijn je boekhoudproces",
     description: "Hero section title",
   },
   "plaid.onboarding.hero.description": {
     message:
-      "Connect your bank accounts through Plaid to automatically import transactions, save hours of manual data entry, and keep your ledger up-to-date in real-time.",
+      "Verbind je bankrekeningen via Plaid om automatisch transacties te importeren, uren handmatige invoer te besparen en je grootboek in realtime actueel te houden.",
     description: "Hero section description",
   },
   "plaid.onboarding.hero.institutionsCount": {
-    message: "11,000+ institutions",
+    message: "Meer dan 11.000 instellingen",
     description: "Feature highlight - number of supported institutions",
   },
   "plaid.onboarding.hero.bankLevelSecurity": {
-    message: "Bank-level security",
+    message: "Beveiliging op bankniveau",
     description: "Feature highlight - security feature",
   },
   "plaid.onboarding.hero.realTimeSync": {
-    message: "Real-time sync",
+    message: "Realtime synchronisatie",
     description: "Feature highlight - real-time syncing",
   },
   "plaid.onboarding.getStarted": {
-    message: "Get Started",
+    message: "Aan de slag",
     description: "Button text to start connecting bank",
   },
 
   // Onboarding State - Benefits
   "plaid.onboarding.benefits.title": {
-    message: "Why Connect Your Bank?",
+    message: "Waarom je bank verbinden?",
     description: "Benefits section title",
   },
   "plaid.onboarding.benefits.automaticImport.title": {
-    message: "Automatic Import",
+    message: "Automatisch importeren",
     description: "Benefit card title for automatic import",
   },
   "plaid.onboarding.benefits.automaticImport.description": {
     message:
-      "Save hours of manual entry by automatically importing transactions from your bank accounts in real-time. Focus on analysis, not data entry.",
+      "Bespaar uren handmatige invoer door transacties van je bankrekeningen automatisch en in realtime te importeren. Richt je op analyse, niet op gegevensinvoer.",
     description: "Benefit card description for automatic import",
   },
   "plaid.onboarding.benefits.bankLevelSecurity.title": {
-    message: "Bank-Level Security",
+    message: "Beveiliging op bankniveau",
     description: "Benefit card title for security",
   },
   "plaid.onboarding.benefits.bankLevelSecurity.description": {
     message:
-      "Plaid uses 256-bit encryption and is trusted by thousands of financial institutions. Your credentials are never stored on our servers.",
+      "Plaid gebruikt 256-bits versleuteling en wordt vertrouwd door duizenden financiële instellingen. Je inloggegevens worden nooit op onze servers opgeslagen.",
     description: "Benefit card description for security",
   },
   "plaid.onboarding.benefits.privacyFirst.title": {
-    message: "Privacy First",
+    message: "Privacy voorop",
     description: "Benefit card title for privacy",
   },
   "plaid.onboarding.benefits.privacyFirst.description": {
     message:
-      "We never store your bank credentials or sell your data. Your financial information is protected by industry-leading privacy standards.",
+      "We slaan je bankinloggegevens nooit op en verkopen je gegevens niet. Je financiële informatie wordt beschermd volgens toonaangevende privacynormen.",
     description: "Benefit card description for privacy",
   },
 
   // Onboarding State - How It Works
   "plaid.onboarding.howItWorks.title": {
-    message: "How It Works",
+    message: "Zo werkt het",
     description: "How it works section title",
   },
   "plaid.onboarding.howItWorks.description": {
-    message: "Connect your bank account in just a few simple steps",
+    message: "Verbind je bankrekening in een paar eenvoudige stappen",
     description: "How it works section description",
   },
   "plaid.onboarding.howItWorks.step1.title": {
-    message: "Select Your Bank",
+    message: "Kies je bank",
     description: "Step 1 title",
   },
   "plaid.onboarding.howItWorks.step1.description": {
-    message: "Search from over 11,000 supported financial institutions",
+    message: "Zoek tussen meer dan 11.000 ondersteunde financiële instellingen",
     description: "Step 1 description",
   },
   "plaid.onboarding.howItWorks.step2.title": {
-    message: "Secure Authentication",
+    message: "Veilige verificatie",
     description: "Step 2 title",
   },
   "plaid.onboarding.howItWorks.step2.description": {
-    message: "Log in securely through your bank's authentication system",
+    message: "Log veilig in via het verificatiesysteem van je bank",
     description: "Step 2 description",
   },
   "plaid.onboarding.howItWorks.step3.title": {
-    message: "Start Importing",
+    message: "Begin met importeren",
     description: "Step 3 title",
   },
   "plaid.onboarding.howItWorks.step3.description": {
-    message: "Your transactions will automatically sync to your ledger",
+    message:
+      "Je transacties worden automatisch met je grootboek gesynchroniseerd",
     description: "Step 3 description",
   },
 
   // Management State
   "plaid.management.connectAnother": {
-    message: "Connect Another Bank",
+    message: "Nog een bank verbinden",
     description:
       "Button text to connect another bank, shown when at least one bank is already connected",
   },
@@ -132,11 +133,11 @@ const nlPlaid: Record<string, TranslationEntry> = {
       "Button text to connect a bank, shown on the connections page when no bank is connected yet",
   },
   "plaid.management.connectionsTitle": {
-    message: "Bank Connections",
+    message: "Bankverbindingen",
     description: "Section title for the list of connected banks",
   },
   "plaid.management.connectionsSubtitle": {
-    message: "Manage account mappings, sync, and disconnect banks.",
+    message: "Beheer rekeningkoppelingen, synchroniseer en ontkoppel banken.",
     description: "Section subtitle for the list of connected banks",
   },
   "plaid.management.noConnectionsTitle": {
@@ -150,136 +151,136 @@ const nlPlaid: Record<string, TranslationEntry> = {
       "Empty state description on the connections page when no bank is connected",
   },
   "plaid.management.sync": {
-    message: "Sync",
+    message: "Synchroniseren",
     description: "Button text to sync transactions across every connected bank",
   },
   "plaid.management.syncing": {
-    message: "Syncing...",
+    message: "Synchroniseren...",
     description: "Button text while syncing every connected bank",
   },
   "plaid.management.manageBanks": {
-    message: "Manage Banks",
+    message: "Banken beheren",
     description:
       "Button text linking to the dedicated bank-connection management page",
   },
   "plaid.management.backToTransactions": {
-    message: "Back to Transactions",
+    message: "Terug naar transacties",
     description:
       "Back button text on the manage-banks page, returning to the transaction review page",
   },
   "plaid.management.toast.error": {
-    message: "Error",
+    message: "Fout",
     description: "Generic error toast title",
   },
   "plaid.management.toast.syncAllComplete": {
-    message: "Sync Complete",
+    message: "Synchronisatie voltooid",
     description: "Toast title after syncing every connected bank",
   },
   "plaid.management.toast.syncAllCompleteDescription": {
     message:
-      "{count} new transaction(s) synced across {institutionCount} bank(s).",
+      "{count} nieuwe transactie(s) gesynchroniseerd van {institutionCount} bank(en).",
     description:
       "Toast description after syncing every connected bank - interpolation: {count}, {institutionCount}",
   },
   "plaid.management.toast.syncAllSkipped": {
-    message: "{count} bank(s) need reconnecting",
+    message: "{count} bank(en) moeten opnieuw worden verbonden",
     description:
       "Toast title noting banks skipped by Sync All because they require reauthentication - interpolation: {count}",
   },
   "plaid.management.toast.syncAllFailedDescription": {
-    message: "Failed to sync transactions. Please try again.",
+    message: "Synchroniseren van transacties mislukt. Probeer het opnieuw.",
     description: "Toast description when Sync All fails",
   },
 
   // Bank Account List
   "plaid.bankAccount.linkedOn": {
-    message: "Linked on {date}",
+    message: "Gekoppeld op {date}",
     description:
       "Date when bank was linked - interpolation: {date} for formatted date",
   },
   "plaid.bankAccount.status.active": {
-    message: "Active",
+    message: "Actief",
     description: "Status badge for active bank connection",
   },
   "plaid.bankAccount.status.reauthRequired": {
-    message: "Reauth Required",
+    message: "Opnieuw verifiëren vereist",
     description: "Status badge when reauthentication is required",
   },
   "plaid.bankAccount.status.disabled": {
-    message: "Disabled",
+    message: "Uitgeschakeld",
     description: "Status badge for disabled bank connection",
   },
 
   // Institution Detail - Header
   "plaid.institutionDetail.lastSynced": {
-    message: "Last synced",
+    message: "Laatst gesynchroniseerd",
     description: "Label for last sync timestamp",
   },
   "plaid.institutionDetail.transactionsCount": {
-    message: "{count} transactions",
+    message: "{count} transacties",
     description: "Transaction count display - interpolation: {count}",
   },
   "plaid.institutionDetail.syncFailed": {
-    message: "Failed",
+    message: "Mislukt",
     description: "Label when sync fails",
   },
   "plaid.institutionDetail.reconnecting": {
-    message: "Reconnecting...",
+    message: "Opnieuw verbinden...",
     description: "Button text while reconnecting",
   },
   "plaid.institutionDetail.reconnectBank": {
-    message: "Reconnect Bank",
+    message: "Bank opnieuw verbinden",
     description: "Button text to reconnect bank",
   },
   "plaid.institutionDetail.disconnecting": {
-    message: "Disconnecting...",
+    message: "Ontkoppelen...",
     description: "Button text while disconnecting",
   },
   "plaid.institutionDetail.disconnect": {
-    message: "Disconnect",
+    message: "Ontkoppelen",
     description: "Button text to disconnect bank",
   },
   "plaid.institutionDetail.disconnectTitle": {
-    message: "Disconnect Bank Account",
+    message: "Bankrekening ontkoppelen",
     description: "Alert dialog title for disconnect confirmation",
   },
   "plaid.institutionDetail.disconnectDescription": {
     message:
-      "Are you sure you want to disconnect {institutionName}? This will remove all connected accounts and stop automatic transaction syncing.",
+      "Weet je zeker dat je {institutionName} wilt ontkoppelen? Hiermee worden alle verbonden rekeningen verwijderd en stopt de automatische synchronisatie van transacties.",
     description:
       "Alert dialog description for disconnect - interpolation: {institutionName}",
   },
   "plaid.institutionDetail.cancel": {
-    message: "Cancel",
+    message: "Annuleren",
     description: "Cancel button text",
   },
 
   // Institution Detail - Toast Messages
   "plaid.institutionDetail.toast.bankDisconnected": {
-    message: "Bank Disconnected",
+    message: "Bank ontkoppeld",
     description: "Toast title when bank is disconnected",
   },
   "plaid.institutionDetail.toast.bankDisconnectedDescription": {
-    message: "{institutionName} has been disconnected.",
+    message: "{institutionName} is ontkoppeld.",
     description:
       "Toast description for disconnect - interpolation: {institutionName}",
   },
   "plaid.institutionDetail.toast.error": {
-    message: "Error",
+    message: "Fout",
     description: "Generic error toast title",
   },
   "plaid.institutionDetail.toast.disconnectError": {
-    message: "Failed to disconnect bank account.",
+    message: "Ontkoppelen van bankrekening mislukt.",
     description: "Toast description for disconnect error",
   },
 
   // Account Mapping
   "plaid.accountMapping.selectAccount": {
-    message: "Select a bank account to configure account mappings",
+    message: "Selecteer een bankrekening om rekeningkoppelingen in te stellen",
     description: "Placeholder message when no account is selected",
   },
   "plaid.accountMapping.noAccounts": {
-    message: "No accounts found for this bank",
+    message: "Geen rekeningen gevonden voor deze bank",
     description: "Message when no accounts are available",
   },
   "plaid.accountMapping.manageAccounts": {
@@ -358,11 +359,11 @@ const nlPlaid: Record<string, TranslationEntry> = {
       "Section label for the account mapping list within a bank card",
   },
   "plaid.accountMapping.currency": {
-    message: "Currency",
+    message: "Valuta",
     description: "Label for the account's ledger currency selector",
   },
   "plaid.accountMapping.beancountAccount": {
-    message: "Beancount Account",
+    message: "Beancount-rekening",
     description: "Label for beancount account input",
   },
   "plaid.accountMapping.placeholder": {
@@ -370,84 +371,84 @@ const nlPlaid: Record<string, TranslationEntry> = {
     description: "Placeholder for account input",
   },
   "plaid.accountMapping.saving": {
-    message: "Saving...",
+    message: "Opslaan...",
     description: "Button text while saving",
   },
   "plaid.accountMapping.save": {
-    message: "Save",
+    message: "Opslaan",
     description: "Save button text",
   },
   "plaid.accountMapping.cancel": {
-    message: "Cancel",
+    message: "Annuleren",
     description: "Cancel button text",
   },
   "plaid.accountMapping.notMapped": {
-    message: "Not mapped",
+    message: "Niet gekoppeld",
     description: "Label for unmapped account",
   },
   "plaid.accountMapping.edit": {
-    message: "Edit",
+    message: "Bewerken",
     description: "Edit button text",
   },
   "plaid.accountMapping.setMapping": {
-    message: "Set Mapping",
+    message: "Koppeling instellen",
     description: "Button text to set mapping for unmapped account",
   },
   "plaid.accountMapping.aiSuggested": {
-    message: "AI suggested",
+    message: "Voorgesteld door AI",
     description: "Badge/hint shown next to an AI-prefilled account mapping",
   },
   "plaid.accountMapping.suggestedAccount": {
-    message: "AI suggests: {account}",
+    message: "AI stelt voor: {account}",
     description:
       "Inline hint showing the AI-suggested account for an unmapped account - interpolation: {account}",
   },
   "plaid.accountMapping.suggesting": {
-    message: "Getting AI suggestions...",
+    message: "AI-suggesties ophalen...",
     description: "Loading label while AI mapping suggestions are fetched",
   },
   "plaid.accountMapping.acceptAllSuggestions": {
-    message: "Accept All Suggestions ({count})",
+    message: "Alle suggesties accepteren ({count})",
     description:
       "Button text to accept every AI-suggested mapping at once - interpolation: {count}",
   },
   "plaid.accountMapping.accepting": {
-    message: "Accepting...",
+    message: "Accepteren...",
     description: "Button text while accepting all suggestions",
   },
 
   // Account Mapping - Toast Messages
   "plaid.accountMapping.toast.invalidAccount": {
-    message: "Invalid Account",
+    message: "Ongeldige rekening",
     description: "Toast title for invalid account",
   },
   "plaid.accountMapping.toast.invalidAccountDescription": {
-    message: "Please enter a valid Beancount account name.",
+    message: "Voer een geldige Beancount-rekeningnaam in.",
     description: "Toast description for invalid account",
   },
   "plaid.accountMapping.toast.mappingSaved": {
-    message: "Mapping Saved",
+    message: "Koppeling opgeslagen",
     description: "Toast title for successful mapping save",
   },
   "plaid.accountMapping.toast.mappingSavedDescription": {
-    message: "{accountName} mapped to {ledgerAccount} ({currency})",
+    message: "{accountName} gekoppeld aan {ledgerAccount} ({currency})",
     description:
       "Toast description for mapping save - interpolation: {accountName}, {ledgerAccount}, {currency}",
   },
   "plaid.accountMapping.toast.error": {
-    message: "Error",
+    message: "Fout",
     description: "Generic error toast title",
   },
   "plaid.accountMapping.toast.errorDescription": {
-    message: "Failed to save account mapping.",
+    message: "Opslaan van rekeningkoppeling mislukt.",
     description: "Toast description for save error",
   },
   "plaid.accountMapping.toast.acceptedAll": {
-    message: "Suggestions Accepted",
+    message: "Suggesties geaccepteerd",
     description: "Toast title after accepting all AI mapping suggestions",
   },
   "plaid.accountMapping.toast.acceptedAllDescription": {
-    message: "Mapped {count} account(s) using AI suggestions.",
+    message: "{count} rekening(en) gekoppeld met AI-suggesties.",
     description:
       "Toast description after accepting all AI mapping suggestions - interpolation: {count}",
   },
@@ -462,7 +463,7 @@ const nlPlaid: Record<string, TranslationEntry> = {
   },
   "plaid.transactionReview.noPendingDescription": {
     message:
-      "All transactions have been synced to your ledger or there are no new transactions.",
+      "Alle transacties zijn met je grootboek gesynchroniseerd of er zijn geen nieuwe transacties.",
     description: "Description when no pending transactions",
   },
   "plaid.transactionReview.title": {
@@ -471,20 +472,21 @@ const nlPlaid: Record<string, TranslationEntry> = {
       "Card title for the list of unsynced bank transactions awaiting review before submission to the ledger",
   },
   "plaid.transactionReview.description": {
-    message: "Review and submit {count} transaction{plural} to your ledger",
+    message:
+      "Controleer {count} transactie{plural} en dien ze in bij je grootboek",
     description:
       "Card description - interpolation: {count} for number, {plural} for 's' or empty",
   },
   "plaid.transactionReview.submitting": {
-    message: "Submitting...",
+    message: "Indienen...",
     description: "Button text while submitting",
   },
   "plaid.transactionReview.submit": {
-    message: "Submit",
+    message: "Indienen",
     description: "Submit button text",
   },
   "plaid.transactionReview.searchPlaceholder": {
-    message: "Search by merchant or description...",
+    message: "Zoeken op handelaar of omschrijving...",
     description: "Search input placeholder",
   },
   "plaid.transactionReview.filterByBank": {
@@ -532,16 +534,16 @@ const nlPlaid: Record<string, TranslationEntry> = {
   },
   "plaid.transactionReview.missingAccountsAlert": {
     message:
-      "{count} selected transaction(s) need target accounts before submission.",
+      "{count} geselecteerde transactie(s) hebben een doelrekening nodig voordat ze kunnen worden ingediend.",
     description:
       "Alert message for missing target accounts - interpolation: {count}",
   },
   "plaid.transactionReview.selectAll": {
-    message: "Select all",
+    message: "Alles selecteren",
     description: "Checkbox label to select all transactions",
   },
   "plaid.transactionReview.date": {
-    message: "Date",
+    message: "Datum",
     description: "Table header for date column",
   },
   "plaid.transactionReview.source": {
@@ -549,89 +551,90 @@ const nlPlaid: Record<string, TranslationEntry> = {
     description: "Table header for the source institution/account column",
   },
   "plaid.transactionReview.sourceAccount": {
-    message: "Source Account",
+    message: "Bronrekening",
     description:
       "Table header for the editable Beancount source-account column, defaults from the account mapping",
   },
   "plaid.transactionReview.merchant": {
-    message: "Merchant",
+    message: "Handelaar",
     description: "Table header for merchant column",
   },
   "plaid.transactionReview.descriptionColumn": {
-    message: "Description",
+    message: "Omschrijving",
     description: "Table header for description column",
   },
   "plaid.transactionReview.amount": {
-    message: "Amount",
+    message: "Bedrag",
     description: "Table header for amount column",
   },
   "plaid.transactionReview.targetAccount": {
-    message: "Target Account",
+    message: "Doelrekening",
     description: "Table header for target account column",
   },
   "plaid.transactionReview.aiProcessing": {
-    message: "AI...",
+    message: "AI bezig...",
     description: "Button text while AI is processing",
   },
   "plaid.transactionReview.aiFill": {
-    message: "AI Fill",
+    message: "AI-invulling",
     description: "Button text for AI categorization",
   },
   "plaid.transactionReview.selectAccountPlaceholder": {
-    message: "Select account...",
+    message: "Rekening selecteren...",
     description: "Placeholder for account selection dropdown",
   },
 
   // Transaction Review - Toast Messages
   "plaid.transactionReview.toast.categorizationComplete": {
-    message: "Categorization Complete",
+    message: "Categorisering voltooid",
     description: "Toast title when AI categorization completes",
   },
   "plaid.transactionReview.toast.categorizationCompleteDescription": {
-    message: "AI suggested accounts for {count} transactions.",
+    message: "AI heeft rekeningen voorgesteld voor {count} transacties.",
     description:
       "Toast description for categorization complete - interpolation: {count}",
   },
   "plaid.transactionReview.toast.categorizationFailed": {
-    message: "Categorization Failed",
+    message: "Categorisering mislukt",
     description: "Toast title when AI categorization fails",
   },
   "plaid.transactionReview.toast.categorizationFailedDescription": {
-    message: "Failed to categorize transactions. Please try again.",
+    message: "Categoriseren van transacties mislukt. Probeer het opnieuw.",
     description: "Toast description for categorization failure",
   },
   "plaid.transactionReview.toast.noTransactionsSelected": {
-    message: "No Transactions Selected",
+    message: "Geen transacties geselecteerd",
     description: "Toast title when no transactions are selected",
   },
   "plaid.transactionReview.toast.noTransactionsSelectedDescription": {
-    message: "Please select at least one transaction to submit.",
+    message: "Selecteer ten minste één transactie om in te dienen.",
     description: "Toast description for no transactions selected",
   },
   "plaid.transactionReview.toast.missingTargetAccounts": {
-    message: "Missing Target Accounts",
+    message: "Doelrekeningen ontbreken",
     description: "Toast title for missing target accounts",
   },
   "plaid.transactionReview.toast.missingTargetAccountsDescription": {
-    message: "{count} selected transaction(s) need target accounts.",
+    message:
+      "{count} geselecteerde transactie(s) hebben een doelrekening nodig.",
     description:
       "Toast description for missing accounts - interpolation: {count}",
   },
   "plaid.transactionReview.toast.transactionsSubmitted": {
-    message: "Transactions Submitted",
+    message: "Transacties ingediend",
     description: "Toast title when transactions are submitted",
   },
   "plaid.transactionReview.toast.transactionsSubmittedDescription": {
-    message: "{count} transactions added to your ledger.",
+    message: "{count} transacties toegevoegd aan je grootboek.",
     description:
       "Toast description for submitted transactions - interpolation: {count}",
   },
   "plaid.transactionReview.toast.submissionFailed": {
-    message: "Submission Failed",
+    message: "Indienen mislukt",
     description: "Toast title when submission fails",
   },
   "plaid.transactionReview.toast.submissionFailedDescription": {
-    message: "Failed to submit transactions. Please try again.",
+    message: "Indienen van transacties mislukt. Probeer het opnieuw.",
     description: "Toast description for submission failure",
   },
   "plaid.transactionReview.delete": {
