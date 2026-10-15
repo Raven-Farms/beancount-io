@@ -77,6 +77,8 @@ export interface McpResourceDescriptor {
   readonly mimeType: string;
   /** RFC 6570 template. `{owner}/{name}` addresses the ledger, as everywhere else. */
   readonly uriTemplate: string;
+  /** Backward-compatible paths that use this resource's reader and gates. */
+  readonly uriAliases?: readonly string[];
   readonly queryNames?: readonly string[];
   /**
    * Static per-ledger path emitted into `resources/list` (w2/m27:t004), e.g.
@@ -190,8 +192,8 @@ const vocabularyResources: readonly McpResourceDescriptor[] =
  * Same construction as the vocabulary ones and the same reason: one
  * `ANALYSIS_READS` list, two adapters.
  *
- * Required parameters retain their existing path spelling. Optional arguments
- * are advertised as RFC 6570 query expansions and matched by the MCP adapter.
+ * Arguments outside the canonical path use RFC 6570 query expansions matched
+ * by the MCP adapter. Existing path aliases reach the same reader.
  * The same Zod query schema validates REST and MCP inputs before domain work.
  */
 const analysisResources: readonly McpResourceDescriptor[] = ANALYSIS_READS.map(
@@ -201,6 +203,11 @@ const analysisResources: readonly McpResourceDescriptor[] = ANALYSIS_READS.map(
     description: read.description,
     mimeType: "application/json",
     uriTemplate: `${RESOURCE_SCHEME}://{owner}/{name}/${read.segment}${read.uriPath}`,
+    ...(read.uriPathAliases && {
+      uriAliases: read.uriPathAliases.map(
+        (path) => `${RESOURCE_SCHEME}://{owner}/{name}/${read.segment}${path}`,
+      ),
+    }),
     queryNames: Object.keys(read.query.shape).filter(
       (name) => !read.uriPath.includes(`{${name}}`),
     ),
@@ -854,6 +861,7 @@ export const queryTemplateFor = (
   const template = queryTemplate(
     descriptor.uriTemplate,
     descriptor.queryNames ?? [],
+    descriptor.uriAliases,
   );
   templateCache.set(descriptor, template);
   return template;

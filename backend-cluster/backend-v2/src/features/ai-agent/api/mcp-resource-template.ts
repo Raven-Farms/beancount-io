@@ -26,20 +26,27 @@ function refuseUri(message: string, hint: string): never {
  * A query can never overwrite a ledger or required path argument.
  */
 export class QueryResourceTemplate extends UriTemplate {
-  private readonly pathTemplate: UriTemplate;
+  private readonly pathTemplates: readonly UriTemplate[];
 
   constructor(
     path: string,
     private readonly queryNames: readonly string[],
+    pathAliases: readonly string[] = [],
   ) {
     super(`${path}${queryNames.length ? `{?${queryNames.join(",")}}` : ""}`);
-    this.pathTemplate = new UriTemplate(path);
+    this.pathTemplates = [path, ...pathAliases].map(
+      (template) => new UriTemplate(template),
+    );
   }
 
   override match(uri: string): Variables | null {
     const url = new URL(uri);
     const path = uri.split("?")[0].split("#")[0];
-    const variables = this.pathTemplate.match(path);
+    let variables: Variables | null = null;
+    for (const template of this.pathTemplates) {
+      variables = template.match(path);
+      if (variables) break;
+    }
     if (!variables) return null;
     try {
       for (const [name, value] of Object.entries(variables)) {
@@ -76,6 +83,7 @@ export class QueryResourceTemplate extends UriTemplate {
 export function queryTemplate(
   path: string,
   queryNames: readonly string[],
+  pathAliases?: readonly string[],
 ): QueryResourceTemplate {
-  return new QueryResourceTemplate(path, queryNames);
+  return new QueryResourceTemplate(path, queryNames, pathAliases);
 }

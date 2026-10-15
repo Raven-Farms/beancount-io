@@ -89,13 +89,15 @@ export interface AnalysisRead {
   readonly description: string;
   readonly query: z.ZodObject;
   /**
-   * The MCP template's path suffix, for reads whose parameter is required —
-   * e.g. `/{payee}`. Empty when the read takes only optional filters.
+   * The MCP template's path suffix, e.g. `/{payee}`. Empty when arguments
+   * travel as query parameters, including a required explicit empty narration.
    *
-   * Optional parameters are advertised as RFC 6570 query expansions by MCP's
-   * resource adapter; required parameters retain these existing path bindings.
+   * The resource adapter advertises the remaining arguments as RFC 6570 query
+   * expansions; this read's schema still decides which are required.
    */
   readonly uriPath: string;
+  /** Existing MCP path forms accepted by the same read and validation. */
+  readonly uriPathAliases?: readonly string[];
   readonly fetch: (
     services: AnalysisServices,
     params: ReadParams,
@@ -266,7 +268,8 @@ export const ANALYSIS_READS: readonly AnalysisRead[] = [
         .string()
         .openapi({ description: "The narration to look up" }),
     }),
-    uriPath: "/{narration}",
+    uriPath: "",
+    uriPathAliases: ["/{narration}"],
     fetch: (s, { ledgerId, identity, query }) =>
       s.ledgerData.getNarrationTransactions({
         ledgerId,

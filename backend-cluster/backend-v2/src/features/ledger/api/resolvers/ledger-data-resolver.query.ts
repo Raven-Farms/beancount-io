@@ -383,7 +383,7 @@ export class LedgerDataQueryResolver {
     return {
       date: data.date,
       payee: data.payee || undefined,
-      narration: data.narration || undefined,
+      narration: data.narration ?? undefined,
       postings: data.postings.map((posting) => ({
         account: posting.account,
         amount: posting.amount,
@@ -415,7 +415,7 @@ export class LedgerDataQueryResolver {
     return {
       date: data.date,
       payee: data.payee || undefined,
-      narration: data.narration || undefined,
+      narration: data.narration ?? undefined,
       postings: data.postings.map((posting) => ({
         account: posting.account,
         amount: posting.amount,
