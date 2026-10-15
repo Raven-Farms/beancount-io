@@ -32,6 +32,7 @@ from bea_engine.ledger.text import (
     is_commodity,
     outside_ledger_tree,
     parse_account,
+    root_names_of,
     single_line,
     without_root_name_errors,
 )
@@ -82,7 +83,10 @@ def answer(
                 return build(file, request, into=into, allow_errors=allow_errors, strict_read=strict_read)
         if directive_type not in TYPES:
             raise protocol.UsageError(f"Unknown directive type {directive_type!r}. Use one of: {', '.join(TYPES)}.")
-        directive = _simple(directive_type, request)
+        # The root file's roots, for a write to the root itself: Beancount
+        # applies `name_*` per file as it parses (w5/462), so an included
+        # destination may accept other roots and is left to the load.
+        directive = _simple(directive_type, request, root_names_of(file) if into is None else None)
         if directive_type == "document":
             _require_document_in_tree(file, into, directive.filename)
         return _appended(file, directive, allow_errors=allow_errors, into=into)
@@ -136,7 +140,7 @@ def _validation_details(exc: Any) -> list[str]:
 # --------------------------------------------------------------------------- #
 
 
-def _simple(directive_type: str, request: dict[str, Any]) -> Any:
+def _simple(directive_type: str, request: dict[str, Any], roots: tuple[str, ...] | None) -> Any:
     from bea_engine.ledger.models import (
         WRITE_INPUT,
         CloseDirective,
@@ -165,24 +169,24 @@ def _simple(directive_type: str, request: dict[str, Any]) -> Any:
         return OpenDirective.model_validate(
             {
                 "date": date,
-                "account": parse_account(_text(request, "account")),
+                "account": parse_account(_text(request, "account"), roots),
                 "currencies": currencies,
                 "booking": booking,
             },
             context=WRITE_INPUT,
         )
     if directive_type == "close":
-        return CloseDirective(date=date, account=parse_account(_text(request, "account")))
+        return CloseDirective(date=date, account=parse_account(_text(request, "account"), roots))
     if directive_type == "pad":
         return PadDirective(
             date=date,
-            account=parse_account(_text(request, "account")),
-            source_account=parse_account(_text(request, "source_account")),
+            account=parse_account(_text(request, "account"), roots),
+            source_account=parse_account(_text(request, "source_account"), roots),
         )
     if directive_type == "note":
         return NoteDirective(
             date=date,
-            account=parse_account(_text(request, "account")),
+            account=parse_account(_text(request, "account"), roots),
             comment=single_line(_text(request, "comment")),
         )
     if directive_type == "event":
@@ -210,7 +214,7 @@ def _simple(directive_type: str, request: dict[str, Any]) -> Any:
         return DocumentDirective.model_validate(
             {
                 "date": date,
-                "account": parse_account(_text(request, "account")),
+                "account": parse_account(_text(request, "account"), roots),
                 "filename": filename,
                 "tags": list(request.get("tags") or []),
                 "links": list(request.get("links") or []),
@@ -229,7 +233,7 @@ def _simple(directive_type: str, request: dict[str, Any]) -> Any:
         # NFC name it returns is kept, as for every other account argument:
         # the line is written NFC, and the reload check compares against it.
         if isinstance(value, dict) and value.get("kind") == "account":
-            value["value"] = parse_account(str(value.get("value", "")))
+            value["value"] = parse_account(str(value.get("value", "")), roots)
         if isinstance(value, dict) and value.get("kind") == "text" and isinstance(value.get("value"), str):
             value["value"] = single_line(value["value"])
     return CustomDirective.model_validate(

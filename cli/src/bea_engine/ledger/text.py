@@ -323,6 +323,27 @@ _ROOT_OPTIONS = ("name_assets", "name_liabilities", "name_equity", "name_income"
 _DEFAULT_ROOTS = ("Assets", "Liabilities", "Equity", "Income", "Expenses")
 
 
+_ROOT_NAME_LINE = re.compile(
+    r'^option[ \t]+"(name_(?:assets|liabilities|equity|income|expenses))"[ \t]+"([^"\\\n]*)"', re.MULTILINE
+)
+
+
+def root_names_of(file: Path) -> tuple[str, ...]:
+    """The five account roots a ledger's root file declares, read without loading it.
+
+    For refusing an account under a root the ledger does not use before
+    anything loads: `add open Expenses:X` on a ledger whose expenses root is
+    `Aufwand` ended at Beancount's bare "Invalid account name" (w5/402).
+    Beancount takes these options from the root file, the last one winning.
+    """
+    try:
+        text = file.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return _DEFAULT_ROOTS
+    named = dict(_ROOT_NAME_LINE.findall(text))
+    return tuple(named.get(key) or default for key, default in zip(_ROOT_OPTIONS, _DEFAULT_ROOTS, strict=True))
+
+
 def ledger_roots(options: Mapping[str, object]) -> tuple[str, ...]:
     """The five root account names a loaded ledger accepts (its `name_*` options)."""
     return tuple(str(options.get(key) or default) for key, default in zip(_ROOT_OPTIONS, _DEFAULT_ROOTS, strict=True))
