@@ -793,7 +793,10 @@ def candidate_file(file: Path, content: str, *, mode: int = 0o600) -> Iterator[P
             finally:
                 _discard_candidate(candidate)
                 if sidecar:
-                    sidecar.unlink(missing_ok=True)
+                    # In an unreachable load-cache directory there is no
+                    # sidecar to remove; the load ran uncached (w5/312).
+                    with suppress(OSError):
+                        sidecar.unlink(missing_ok=True)
             return
 
 

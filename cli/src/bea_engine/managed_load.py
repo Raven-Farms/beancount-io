@@ -542,20 +542,31 @@ def _load_fresh(entry: Path, snapshot: LedgerSnapshot) -> tuple[Any, Any, Any]:
     from bea_engine.ledger.write import pickle_cache_of
 
     cache = pickle_cache_of(entry)
-    if cache.is_file() and not _engine_wrote(cache):
-        cache.unlink(missing_ok=True)
-    cached = cache.exists()
+    # `os.path` probes: the cache is an optimisation, and `Path.is_file`
+    # raised EACCES from an untraversable `load-cache` directory, failing
+    # every read and write with a bare PermissionError (w5/312).
+    if os.path.isfile(cache) and not _engine_wrote(cache):
+        _drop(cache)
+    cached = os.path.exists(cache)
     entries, errors, options = loader.load_file(str(entry))
     if cached:
         read = {os.path.normpath(name) for name in options.get("include") or ()}
         on_disk = {os.path.normpath(path) for path in snapshot.contents}
         if not on_disk <= read or _documents_moved(entries, errors, options):
-            cache.unlink(missing_ok=True)
+            _drop(cache)
             entries, errors, options = loader.load_file(str(entry))
     if _changed_since(snapshot):
-        cache.unlink(missing_ok=True)
+        _drop(cache)
     _mark_engine_cache(cache)
     return entries, errors, options
+
+
+def _drop(cache: Path) -> None:
+    """Remove a pickle cache; one that cannot be reached is no cache to serve."""
+    try:
+        cache.unlink(missing_ok=True)
+    except OSError:
+        pass
 
 
 def _changed_since(snapshot: LedgerSnapshot) -> bool:
@@ -592,7 +603,7 @@ def _engine_wrote(cache: Path) -> bool:
 
 def _mark_engine_cache(cache: Path) -> None:
     """Mark the cache the load just made, if it was slow enough to leave one."""
-    if not cache.is_file() or _engine_wrote(cache):
+    if not os.path.isfile(cache) or _engine_wrote(cache):
         return
     try:
         with cache.open("ab") as stream:
