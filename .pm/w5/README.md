@@ -123,7 +123,6 @@
 - [430 — `bea check` loads twice: plugin output and side effects happen twice](./430.md) — CLI QA 2026-10-14
 - [431 — `add balance`/`add price`/bare-number adds load the ledger twice for pre-checks](./431.md) — CLI QA 2026-10-14
 - [432 — `price refresh` loads the ledger twice even with no managed includes](./432.md) — CLI QA 2026-10-14
-- [433 — One file included under two names (case, NFC/NFD, symlink, hard link) loads twice and double-counts; `check` passes](./433.md) — CLI QA 2026-10-14
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
