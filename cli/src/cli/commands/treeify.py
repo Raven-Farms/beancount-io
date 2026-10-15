@@ -171,6 +171,10 @@ def treeify(ctx: typer.Context) -> None:
             forwarded, _ledgers(), refuse_existing_ledger_file=True, force=_FORCE in args[:stop], flags="FA"
         )
     if parsed is not None and not parsed.help:
+        if parsed.filler is not None and not parsed.filler:
+            # Upstream pads with `filler * (width // len(filler) + 1)`, so an
+            # empty one was a ZeroDivisionError (w5/388).
+            raise UsageError("--filler '' is empty; it needs at least one character, such as --filler '.'.")
         _check_regexes(parsed)
         _check_input(parsed.input)
     if parsed is not None and parsed.output is not None and not parsed.help:

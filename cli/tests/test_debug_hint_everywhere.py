@@ -45,13 +45,16 @@ def _bea(tmp_path: Path, *args: str) -> subprocess.CompletedProcess[str]:
 
 
 def test_a_crashed_upstream_program_carries_the_hint(tmp_path: Path) -> None:
-    plain = _bea(tmp_path, "treeify", "bal.txt", "--filler", "")
+    # Upstream treeify reads its input as UTF-8 and crashes on anything else.
+    # (`--filler ''` was the crash used here until bea refused it, w5/388.)
+    (tmp_path / "latin1.txt").write_bytes(b"Assets:Caf\xe9  5\n")
+    plain = _bea(tmp_path, "treeify", "latin1.txt")
     assert plain.returncode == 1, plain.stderr
-    assert "ZeroDivisionError" in plain.stderr
+    assert "UnicodeDecodeError" in plain.stderr
     assert plain.stderr.rstrip().endswith(f". {HINT}")
     assert "Traceback" not in plain.stderr
 
-    debug = _bea(tmp_path, "--debug", "treeify", "bal.txt", "--filler", "")
+    debug = _bea(tmp_path, "--debug", "treeify", "latin1.txt")
     assert "Traceback (most recent call last)" in debug.stderr
     assert HINT not in debug.stderr
 
