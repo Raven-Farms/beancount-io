@@ -50,6 +50,8 @@ class DocPlan:
     mode: str = "sequential"  # or "isolated": fresh directory and setup per fence
     setup: list[str] = field(default_factory=list)
     setup_skip: frozenset[int] = frozenset()
+    # Isolated mode: a fence whose prose describes another ledger gets that one.
+    fence_setup: dict[int, list[str]] = field(default_factory=dict)
     expect: dict[int, tuple[int, list[str]]] = field(default_factory=dict)
 
 
@@ -72,6 +74,14 @@ USAGE_SETUP = [
     "EOF",
 ]
 
+# The README quick start verbatim, up to its first `check`: the ledger the
+# USAGE JSON transcript says it reads (w5/304).
+QUICK_START = [
+    'bea --no-input init books --currency USD --date 2026-08-01 --opening-balance "Assets:Checking 1000"',
+    "cd books",
+    'bea add transaction "Coffee" --date 2026-08-02 --posting "Expenses:Dining 12.50" --posting "Assets:Checking"',
+]
+
 PLANS = {
     # Quick start builds books/; the command map reuses it.
     "README.md": DocPlan(expect={2: (0, ["987.50"])}),
@@ -83,6 +93,7 @@ PLANS = {
         mode="isolated",
         setup=USAGE_SETUP,
         setup_skip=frozenset({3}),
+        fence_setup={23: QUICK_START},
         expect={
             4: (2, ["A query is required"]),
             # The JSON automation transcript: the values agents copy (w1/127).
@@ -245,12 +256,13 @@ def run_doc(doc: str, path: Path, plan: DocPlan, tmp_path: Path, env: dict[str, 
             fence_root = root / f"fence-{fence.index}"
             fence_root.mkdir()
             cwd = fence_root
-            if fence.index not in plan.setup_skip and setup:
-                result = run_script("\n".join(setup), cwd, env)
+            fence_setup = plan.fence_setup.get(fence.index, setup)
+            if fence.index not in plan.setup_skip and fence_setup:
+                result = run_script("\n".join(fence_setup), cwd, env)
                 assert result.returncode == 0, (
                     f"{doc} setup failed before fence {fence.index}:\n{result.stderr[-2000:]}"
                 )
-                for line in setup:
+                for line in fence_setup:
                     cwd = apply_cd(line, cwd, fence_root)
         result = run_script(FAILED_LINE_TRAP + script, cwd, env)
         expected, fragments = plan.expect.get(fence.index, (0, []))

@@ -1817,15 +1817,13 @@ The envelope is always:
 
 Bounded lists also carry `limit`, and paged hosted lists (`cloud ledger list`) also carry the `page` that was served. Amounts use decimal **strings** — never floats — and dates are ISO `YYYY-MM-DD`.
 
-These run against a ledger with a 1000 USD opening balance in
-`Assets:Checking` and one 12.50 USD expense recorded first. Transaction listings
-are newest first, and `net_profit` is positive for a gain (`data.net_profit_signs` says
-`positive_for_gain`), so a period of spending only is negative:
+These run in the `books/` directory the [README quick start](../README.md#quick-start)
+builds: a 1000 USD opening balance in `Assets:Checking` and its 12.50 USD coffee
+in `Expenses:Dining`. Transaction listings are newest first, and `net_profit` is
+positive for a gain (`data.net_profit_signs` says `positive_for_gain`), so a
+period of spending only is negative:
 
 ```bash
-$ bea add transaction Coffee --date 2026-08-02 --posting "Expenses:Food 12.50" --posting Assets:Checking
-Added 1 transaction to /tmp/books/main.bean.
-
 $ bea --json check
 {"bea": "0.1.0", "target": {"file": "/tmp/books/main.bean"}, "data": {"valid": true, "errors": []}, "truncated": false}
 
