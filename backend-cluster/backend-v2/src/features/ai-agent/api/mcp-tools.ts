@@ -60,6 +60,10 @@ import {
   listStagedBankTransactionsInput,
   listStagedBankTransactionsOutput,
   executeListStagedBankTransactions,
+  listLedgerEntriesDescription,
+  listLedgerEntriesInput,
+  listLedgerEntriesOutput,
+  executeListLedgerEntries,
 } from "./mcp-list-tools";
 import { z, type ZodTypeAny } from "zod";
 import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
@@ -312,6 +316,15 @@ export const MCP_TOOLS: readonly McpToolDescriptor[] = [
     execute: withLedger(executeGetEntryContext),
   },
   {
+    name: "listLedgerEntries",
+    title: "List Journal Entries",
+    description: listLedgerEntriesDescription,
+    inputSchema: listLedgerEntriesInput.extend({ ledger: ledgerSelection }),
+    outputSchema: mcpOutputSchema(listLedgerEntriesOutput),
+    annotations: READ_ONLY,
+    execute: withLedger(executeListLedgerEntries),
+  },
+  {
     name: "listLedgerFiles",
     title: "List Ledger Files & Directories",
     annotations: READ_ONLY,
@@ -500,7 +513,7 @@ export const MCP_TOOLS: readonly McpToolDescriptor[] = [
     title: "Update or Delete Entry Source",
     annotations: DESTRUCTIVE,
     description:
-      "Use operation update or delete with entryHash and sha256sum from entry context; update also requires newContent. delete_many accepts only entries [{entryHash,sha256sum}]. An update returns the entry's new hash — the request's entryHash is stale after the commit, so use newEntryHash for the next edit; delete_many returns the deleted count.",
+      "Use operation update or delete with entryHash (listLedgerEntries' entry_hash) and sha256sum from getEntryContext; update also requires newContent. delete_many accepts only entries [{entryHash,sha256sum}]. An update returns the entry's new hash — the request's entryHash is stale after the commit, so use newEntryHash for the next edit; delete_many returns the deleted count.",
     inputSchema: sourceSliceInput,
     outputSchema: sourceSliceOutput,
     execute: executeSourceSlice,

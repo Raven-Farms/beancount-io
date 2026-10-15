@@ -1085,9 +1085,11 @@ const LEDGER_READ_VERBS: readonly VerbEntry[] = (
       class: "read",
       gql: "Query.getLedgerJournal",
       rest: "GET /api-gateway/v1/ledgers/{owner}/{name}/journal",
+      // A tool as well as the resource under ADR 019 D7: getEntryContext and
+      // editEntrySource take an entry hash, and a host that never reads
+      // resources gets one only from this tool's output (w6/008).
+      mcp: "listLedgerEntries",
       mcpResource: "ledgerJournal",
-      mcpExempt:
-        "Reachable as the ledgerJournal resource with the corresponding journal/source contract (ADR 0008 D2).",
     },
     {
       verb: "Query.getLedgerEntryContext",

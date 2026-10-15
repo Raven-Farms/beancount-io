@@ -235,8 +235,10 @@ describe("op-class coverage", () => {
     // The 30th, listPublicKeys, lists the keyId managePublicKeys delete needs.
     // w1/m36 withdrew manageApiKeys, listPublicKeys, managePublicKeys, and
     // deleteAccount by directory policy (ADR 019, 2026-10-09 amendment),
-    // leaving 26.
-    expect(tools).toHaveLength(26);
+    // leaving 26. w6/008 adds the 27th, listLedgerEntries, under ADR 019 D7:
+    // getEntryContext and editEntrySource take an existing entry's hash, and
+    // without it no tool output carried one — BQL's `id` is a directive index.
+    expect(tools).toHaveLength(27);
 
     // Resources are counted apart on purpose. They do not compete for tool
     // selection (ADR 0008 D2), which is the entire reason 50 in-scope reads can

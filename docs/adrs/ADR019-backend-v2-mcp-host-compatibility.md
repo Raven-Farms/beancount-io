@@ -291,6 +291,10 @@ Ledger scope is settled in ADR 0007: [every credential reaches all the ledgers i
 
 ## Amendments
 
+### 2026-10-15 — Existing entry hashes come from a tool too (w6/008)
+
+D7's inventory missed a fourth case. `getEntryContext` and `editEntrySource` address an existing entry by its canonical hash. The `journal` resource lists hashes, but no tool did: BQL's `id` is a directive index, which the context tool refuses, and file reads have no entries. A tools-only host could inspect or edit only entries it had just written itself. `listLedgerEntries` is the journal verb's tool binding. It is a read-only tool beside the `ledgerJournal` resource, over the same `LedgerJournalService.getJournal` call as REST `journal` and GraphQL `getLedgerJournal`. It takes the account, filter, time, and directive-type narrowing and bounded pagination; the resource keeps the subtype filters. `tools-only-journey.test.ts` finds an older filtered occurrence among duplicates and reads its context from the listed hash without `resources/read`. `tools/list` serves 27 tools.
+
 ### 2026-10-09 — The MCP surface is trimmed to what the Claude and ChatGPT directories accept (w1/m36)
 
 The owner decided on 2026-10-09 that a public listing in Claude's connector directory and ChatGPT's app directory outranks every other goal. An operation either directory would refuse leaves MCP rather than being defended, and when the policy text is ambiguous, refusal is assumed. Every decision below applies to every host: the single endpoint of D1 stands, and nothing is hidden per host.

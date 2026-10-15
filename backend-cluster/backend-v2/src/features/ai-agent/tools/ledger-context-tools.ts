@@ -167,7 +167,7 @@ export async function executeGetLedgerContext(
 // --- getEntryContext ------------------------------------------------------
 
 export const getEntryContextDescription =
-  "Read the source context around one entry, addressed by its hash; editEntrySource takes the same hash. Same data as the entry-context resource.";
+  "Read the source context around one entry, addressed by the entry_hash listLedgerEntries returns; editEntrySource takes the same hash and this result's sha256sum. Same data as the entry-context resource.";
 
 export const getEntryContextInputSchema = z.object({
   entryHash: z.string().describe("The entry's hash."),

@@ -247,7 +247,8 @@ the principal inputs; inspect the schema before constructing a call.
 | `listLedgers`                | Optional `page`, `limit` (at most 100); omit both for every ledger. A pinned credential returns its one ledger. Start here, then `getLedgerContext`.                      | Read       |
 | `checkLedger`                | `{}`; bean-check errors with file and line, entry counts, and the latest commit, in one call. Call after any write.                                                       | Read       |
 | `getLedgerContext`           | Optional `payeeLimit`; attributes, open accounts, currencies, payees, years, and source files with counts.                                                                | Read       |
-| `getEntryContext`            | `entryHash`; the source context around one entry — read before editing it.                                                                                                | Read       |
+| `listLedgerEntries`          | Optional `account`, `filter`, `time`, `directiveTypes`, `limit`, `offset`; journal entries with the `entry_hash` other tools take.                                        | Read       |
+| `getEntryContext`            | `entryHash` from `listLedgerEntries`; the source context around one entry — read before editing it.                                                                       | Read       |
 | `listLedgerFiles`            | Optional `dir_path`; lists one directory level, directories first.                                                                                                        | Read       |
 | `readLedgerFiles`            | `files: [{ path, start_line?, end_line? }]`; returns text and line-range metadata.                                                                                        | Read       |
 | `appendLedgerText`           | `text`, optional `path`, `dry_run`, `allowInvalid`; appends Beancount directive text, routed by type and date and inserted in date order.                                 | Write      |
@@ -794,7 +795,7 @@ mean the tool succeeded.
 Each tool advertises an object `outputSchema`: `ok` is required, with optional
 `result` and `error`. Its fields are intentionally undocumented there — the
 envelope is identical on every tool, so describing it once here costs one copy
-instead of twenty-six in each `tools/list`. The runtime success/failure
+instead of twenty-seven in each `tools/list`. The runtime success/failure
 convention is stronger than that published schema because the SDK requires an
 object schema here. See
 [`types.ts`](../src/features/ai-agent/tools/types.ts) and MCP's

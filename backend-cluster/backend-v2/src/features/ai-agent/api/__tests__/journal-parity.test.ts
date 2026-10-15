@@ -117,6 +117,8 @@ async function fixture() {
       if (!("text" in content)) throw new Error("Expected JSON");
       return JSON.parse(content.text);
     },
+    tool: (args: Record<string, unknown>) =>
+      client.callTool({ name: "listLedgerEntries", arguments: args }),
     gql: (source: string) =>
       graphql({
         schema,
@@ -459,4 +461,79 @@ describe("journal pagination contract", () => {
       await f.close();
     }
   });
+});
+
+/**
+ * w6/008. `listLedgerEntries` is the journal verb's tool binding, so a host
+ * that never reads resources can find an entry's hash. It answers exactly
+ * what REST `journal` and GraphQL `getLedgerJournal` answer for the same
+ * query, through the same service call.
+ */
+describe("listLedgerEntries tool", () => {
+  const toolQuery = {
+    account: "Assets:Bank",
+    filter: "#travel",
+    time: "2026",
+    directiveTypes: ["Transaction"],
+    limit: 7,
+    offset: 2,
+  };
+
+  it("returns the journal REST and GraphQL return for the same query", async () => {
+    const f = await fixture();
+    try {
+      const tool = await f.tool(toolQuery);
+      expect(tool.isError).toBeFalsy();
+      const result = (tool.structuredContent as { result: unknown }).result;
+      const rest = await (await f.rest(`journal?${encode(toolQuery)}`)).json();
+      const gql = await f.gql(
+        `getLedgerJournal(ledgerId: "alice/main", query: { ${gqlInput(toolQuery)} }) { total data is_empty }`,
+      );
+      expect(result).toEqual(rest);
+      expect(gql.data?.getLedgerJournal).toEqual(rest);
+      expect(result).toEqual({ total: 1, data: [entry], is_empty: false });
+      expect(f.journal.getJournal).toHaveBeenCalledTimes(3);
+      const [first, ...others] = f.journal.getJournal.mock.calls;
+      for (const call of others) expect(call).toEqual(first);
+      expect(f.authorize).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: AUTHORIZATION_ACTIONS.LEDGER_JOURNAL_READ,
+        }),
+      );
+    } finally {
+      await f.close();
+    }
+  });
+
+  it("reports an empty match as an empty page, not an error", async () => {
+    const f = await fixture();
+    f.journal.getJournal.mockResolvedValue(
+      envelope({ total: 0, items: [], is_empty: true }),
+    );
+    try {
+      const tool = await f.tool({ filter: "payee:nobody" });
+      expect(tool.isError).toBeFalsy();
+      expect((tool.structuredContent as { result: unknown }).result).toEqual({
+        total: 0,
+        data: [],
+        is_empty: true,
+      });
+    } finally {
+      await f.close();
+    }
+  });
+
+  it.each([{ limit: -1 }, { limit: 1.5 }, { limit: 1001 }, { offset: -1 }])(
+    "refuses page %p before reading",
+    async (page) => {
+      const f = await fixture();
+      try {
+        const tool = await f.tool(page);
+        expect(tool.isError).toBe(true);
+        expect(f.journal.getJournal).not.toHaveBeenCalled();
+      } finally {
+        await f.close();
+      }
+    },
+  );
 });
