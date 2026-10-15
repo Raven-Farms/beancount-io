@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [320 — Damaged managed engine still `Provisioned: yes`; writes exit 4 "outcome unknown"](./320.md) — CLI QA 2026-10-14
 - [321 — Unwritable config dir: update check waits 3 s on every command offline](./321.md) — CLI QA 2026-10-14
 - [322 — `upgrade --check` offline exits 0 with `Latest release: unknown`](./322.md) — CLI QA 2026-10-14
 - [323 — `--json add balance --pad-from` returns raw `directives` with `diff_amount`](./323.md) — CLI QA 2026-10-14
