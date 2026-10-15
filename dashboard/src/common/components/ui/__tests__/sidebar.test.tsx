@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import { SidebarMenuSubButton, SidebarProvider, useSidebar } from "../sidebar";
+import {
+  SidebarMenuAction,
+  SidebarMenuSubButton,
+  SidebarProvider,
+  useSidebar,
+} from "../sidebar";
 import { MOBILE_BREAKPOINT } from "@/common/hooks/use-mobile";
 
 // Test component that uses the useSidebar hook
@@ -123,5 +128,18 @@ describe("Sidebar", () => {
         screen.getByRole("button", { name: "Nested destination" }),
       ).toHaveClass("w-full");
     });
+  });
+});
+
+describe("SidebarMenuAction target size (w0/015)", () => {
+  it("renders a 24px (size-6) target rather than the old 20px (w-5) one", () => {
+    // jsdom has no layout, so the Tailwind size utility is the contract here;
+    // axe-core's target-size rule failed every ledger route on the old w-5.
+    render(<SidebarMenuAction aria-label="Add new journal entry" />);
+    const action = screen.getByRole("button", {
+      name: "Add new journal entry",
+    });
+    expect(action).toHaveClass("size-6");
+    expect(action).not.toHaveClass("w-5");
   });
 });

@@ -74,7 +74,7 @@ function LedgerSwitcherButtonContent({
           <Link
             to="/ledger/$username"
             params={{ username: owner ?? "" }}
-            className="text-xs text-muted-foreground truncate hover:text-foreground transition-colors"
+            className="flex min-h-6 items-center text-xs text-muted-foreground truncate hover:text-foreground transition-colors"
             {...EXACT_PAGE_LINK}
           >
             {owner ?? ""}
@@ -227,7 +227,7 @@ function LedgerAuthenticatedSwitcher({
             <Link
               to="/ledger/$username"
               params={{ username: owner }}
-              className="text-xs text-muted-foreground truncate hover:text-foreground transition-colors"
+              className="flex min-h-6 items-center text-xs text-muted-foreground truncate hover:text-foreground transition-colors"
               {...EXACT_PAGE_LINK}
             >
               {owner}
@@ -240,7 +240,7 @@ function LedgerAuthenticatedSwitcher({
                 role="combobox"
                 aria-expanded={open}
                 aria-label={t("page.dashboard.selectLedger")}
-                className="justify-start min-w-0 px-0 py-0 h-auto has-[>svg]:px-0 hover:bg-transparent"
+                className="justify-start min-w-0 min-h-6 px-0 py-0 h-auto has-[>svg]:px-0 hover:bg-transparent"
               >
                 <span className="text-sm font-medium truncate">
                   {repo || fullName}
