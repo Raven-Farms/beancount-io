@@ -521,6 +521,57 @@ ${custom ? 'option "name_equity" "Capital"\noption "name_income" "Revenue"\nopti
   );
 }
 
+/**
+ * A date-windowed plaintext export must load on its own: the window's opening
+ * summaries carry a pre-window cost lot that an in-window sale reduces, and
+ * the pad directives back the assertions that follow them.
+ */
+async function verifyWindowedPlaintextExport(): Promise<void> {
+  const source = `option "operating_currency" "USD"
+2015-01-01 open Assets:Cash USD
+2015-01-01 open Assets:Brokerage
+2015-01-01 open Equity:Opening
+2015-01-01 open Income:Gains USD
+2015-06-01 * "Buy pre-window lot"
+  Assets:Brokerage   10 VHT {100 USD}
+  Assets:Cash      -1000 USD
+2015-12-01 pad Assets:Cash Equity:Opening
+2016-01-02 balance Assets:Cash 500 USD
+2016-03-01 pad Assets:Cash Equity:Opening
+2016-03-02 balance Assets:Cash 800 USD
+2016-04-01 * "Sell part of the pre-window lot"
+  Assets:Brokerage   -4 VHT {100 USD} @ 120 USD
+  Assets:Cash        480 USD
+  Income:Gains       -80 USD
+2016-05-02 balance Assets:Cash 1280 USD
+2016-05-02 balance Assets:Brokerage 6 VHT
+`;
+  const journal = new LedgerJournalService(
+    singleFileRepoFactory(source) as never,
+    {} as never,
+  );
+  const { content } = await journal.plaintextJournal({
+    ledgerId: "synthetic/export",
+    userId: undefined,
+    query: { time: "2016" },
+  });
+  const reloaded = await parseLedgerFiles(
+    { "main.beancount": content },
+    "main.beancount",
+  );
+  assert(
+    reloaded.valid && reloaded.errors.length === 0,
+    `a time-windowed journal export reloads without errors (got ${JSON.stringify(
+      reloaded.errors.map((error) => error.message),
+    )})`,
+  );
+  assert(
+    content.includes(' S "Opening balance for \'Assets:Brokerage\'') &&
+      content.includes("2016-03-01 pad Assets:Cash Equity:Opening"),
+    "the export carries the window's opening lots and its pad directives",
+  );
+}
+
 async function main(): Promise<void> {
   const version = await getRustledgerVersion();
   assert(
@@ -546,6 +597,7 @@ async function main(): Promise<void> {
 
   await verifyTransactionLookups();
   await verifyBalanceSheetCurrentEarnings();
+  await verifyWindowedPlaintextExport();
 
   const paddedSnapshot = await parseLedgerFiles(
     PAD_FILES,

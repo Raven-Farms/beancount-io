@@ -215,6 +215,27 @@ function makeReplaceTransform(
 // Transaction flags that plaintextJournal excludes (padding/summarize/transfer/
 // conversion/unrealized/etc.) — matches journal.py generate_beancount_content.
 const PLAINTEXT_EXCLUDED_FLAGS = new Set(["P", "S", "T", "C", "U", "R", "M"]);
+const FLAG_SUMMARIZE = "S";
+
+/**
+ * The directives a plaintext journal export writes, in stream order: source
+ * transactions, balance assertions, and the pad directives those assertions
+ * may depend on (the loader regenerates each pad's `P` transaction, so the
+ * synthetic one stays out). With a `time` window the clamp's `S` opening
+ * summaries are kept too: they carry every pre-window balance and cost lot,
+ * without which in-window assertions and lot reductions cannot hold on load.
+ */
+export function plaintextExportDirectives(
+  directives: DirectiveJson[],
+  opts: { windowed: boolean },
+): DirectiveJson[] {
+  return directives.filter((directive) => {
+    if (directive.type === "balance" || directive.type === "pad") return true;
+    if (directive.type !== "transaction") return false;
+    if (opts.windowed && directive.flag === FLAG_SUMMARIZE) return true;
+    return !PLAINTEXT_EXCLUDED_FLAGS.has(directive.flag);
+  });
+}
 
 export type JournalResult = {
   total: number;
@@ -592,7 +613,9 @@ export class LedgerJournalService implements ILedgerJournalService {
       .reverse()
       .map((d) => this.serialize(d, entryIds.get(d) ?? hashEntry(d)));
 
-    items = items.filter((item) => matchesJournalDisplayFilters(item, query ?? {}));
+    items = items.filter((item) =>
+      matchesJournalDisplayFilters(item, query ?? {}),
+    );
 
     const total = items.length;
     const offset = query?.offset ?? 0;
@@ -684,11 +707,10 @@ export class LedgerJournalService implements ILedgerJournalService {
     content += `option "name_expenses" "${roots.expenses}"\n`;
     content += 'plugin "beancount.plugins.auto_accounts"\n\n';
 
-    for (const directive of filtered) {
-      const isTxn = directive.type === "transaction";
-      const isBalance = directive.type === "balance";
-      if (!isTxn && !isBalance) continue;
-      if (isTxn && PLAINTEXT_EXCLUDED_FLAGS.has(directive.flag)) continue;
+    const exported = plaintextExportDirectives(filtered, {
+      windowed: Boolean(query?.time),
+    });
+    for (const directive of exported) {
       content += `${directiveToText(directive)}\n`;
     }
 

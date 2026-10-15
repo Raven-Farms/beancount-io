@@ -12,7 +12,6 @@
 
 ## Inbox
 
-- [026](./026.md) — Make a date-filtered Journal export load: carry opening balances or drop dependent assertions (minor; ledger; 45–60m).
 - [027](./027.md) — Budget "This year" headline describes a future month, and "Last 12 months" prorates the current one (minor; dashboard; 40–55m).
 - [028](./028.md) — Name each Budget history Delete button after the directive it removes (minor; dashboard; 15–25m).
 - [029](./029.md) — Don't open Overview Money movement on an empty future month when a time filter is set (minor; dashboard; 25–35m).
