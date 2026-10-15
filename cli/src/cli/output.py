@@ -497,6 +497,29 @@ def same_file(left: Path, right: Path) -> bool:
 CACHE_ENV = "BEANCOUNT_LOAD_CACHE_FILENAME"
 
 
+def not_a_load_cache(cache: Path) -> str | None:
+    """Why the file at a load-cache path is no Beancount cache, or None.
+
+    Beancount removes a cache it cannot unpickle before it parses the ledger,
+    so a note, a CSV or a mistyped path to anything named as the cache was
+    deleted by the next read, with exit 0 (w5/418); a FIFO hung the load and
+    a device was opened as one. A cache is a regular file that starts with a
+    pickle header. One that cannot be read is upstream's to report.
+    """
+    if not os.path.lexists(cache):
+        return None
+    if not os.path.isfile(cache):
+        return "which is not a regular file, and Beancount would read it and try to delete it as a stale cache"
+    try:
+        with open(cache, "rb") as stream:
+            head = stream.read(1)
+    except OSError:
+        return None
+    if head != b"\x80":
+        return "which is not a Beancount load cache, and Beancount deletes a cache file it cannot read"
+    return None
+
+
 def refuse_cache_over_ledger(file: Path, pattern: str | None = None, source: str = CACHE_ENV) -> None:
     """Refuse a load-cache path that is one of the ledger's own files.
 
@@ -524,6 +547,12 @@ def refuse_cache_over_ledger(file: Path, pattern: str | None = None, source: str
                 "cache file it cannot read, so this would delete the ledger. Choose a cache path outside the "
                 "ledger's own files. Nothing was changed."
             )
+    problem = not_a_load_cache(cache)
+    if problem is not None:
+        raise UsageError(
+            f"{source} {pattern} names {cache}, {problem}. Point {source} at a new file or an existing "
+            "cache, or unset it. Nothing was changed."
+        )
 
 
 def refuse_ledger_alias(destination: Path, ledger: Path) -> None:
