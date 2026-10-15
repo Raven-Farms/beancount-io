@@ -108,7 +108,6 @@
 - [422 — `cloud ledger create/delete` call an unreadable 2xx "unexpected response" (exit 1), not unknown outcome](./422.md) — CLI QA 2026-10-14
 - [423 — Price-cache blobs from bea 0.3.0/0.3.1 (no digest) are trusted; a truncated one is pinned by 304s](./423.md) — CLI QA 2026-10-14
 - [424 — "Pass --debug … for a traceback" shown only for engine-side errors](./424.md) — CLI QA 2026-10-14
-- [425 — `add price/commodity -c ''` name internal "Request field 'currency'"](./425.md) — CLI QA 2026-10-14
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
