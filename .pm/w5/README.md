@@ -35,7 +35,6 @@
 
 ## Inbox
 
-- [297 — Unusable `credentials.json` reads as logged out; logout leaves the token](./297.md) — CLI QA 2026-10-14
 - [298 — `add transaction -p` silently drops a `;` comment / turns a `;`-led amount into an inferred leg](./298.md) — CLI QA 2026-10-14
 - [299 — `add pad` refusal says "omit --pad-from", an option it does not have](./299.md) — CLI QA 2026-10-14
 - [300 — **Major:** `kill -9` on a writing `bea` leaves the engine to land the write later; a retry doubles it](./300.md) — CLI QA 2026-10-14
