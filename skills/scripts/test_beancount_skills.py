@@ -10,6 +10,7 @@ effects; the Git tests rehearse the documented clone and update commands.
 from __future__ import annotations
 
 import contextlib
+import csv
 import importlib.util
 import io
 import json
@@ -21,6 +22,7 @@ import sys
 import tempfile
 import unittest
 from collections import defaultdict
+from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
 from string import Template
@@ -749,6 +751,28 @@ class TestBeaRecipes(unittest.TestCase):
         self.assertIn("2026-06-01 balance Liabilities:CreditCard", ledger.read_text())
         self.assertIn("-342.20 USD", ledger.read_text())
         self.recipe("check")
+
+    def test_newest_first_export_ends_at_the_latest_dated_row(self):
+        # The ending balance is the running balance on the latest-dated row,
+        # which a newest-first export lists first (w5/360).
+        formats = (SUITE / "beancount-reconcile" / "references" / "statement-formats.md").read_text()
+        self.assertTrue("latest-dated row" in formats, "statement-formats.md must name the latest-dated row")
+        self.assertFalse("last row's balance is the ending balance" in formats)
+        files = SUITE / "beancount-reconcile" / "evals" / "files"
+        ledger = self.books / "checking.bean"
+        ledger.write_text((files / "eval15_ledger.beancount").read_text())
+        rows = list(csv.DictReader((files / "eval15_statement.csv").open()))
+        latest = max(rows, key=lambda row: datetime.strptime(row["Date"], "%m/%d/%Y"))
+        self.assertIs(latest, rows[0])
+
+        self.values.update(
+            ledger=str(ledger), account="Assets:Checking", currency="USD",
+            assertion_date="2026-06-01", statement_ending=latest["Balance"], proposed_net="-12.00",
+        )
+        self.assertEqual(self.recipe("tie-out")["rows"], [["3395.80", "3383.80", "0.00"]])
+        # The last row of the file is the oldest: its balance leaves the reported residual.
+        self.values.update(statement_ending=rows[-1]["Balance"])
+        self.assertEqual(self.recipe("tie-out")["rows"], [["3395.80", "3383.80", "-2383.80"]])
 
     def test_recurring_recipes_find_a_gap_in_a_payee_less_import(self):
         # A one-description bank CSV, imported through the shipped recipe: bea

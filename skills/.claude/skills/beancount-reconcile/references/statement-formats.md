@@ -18,7 +18,7 @@ The common shape is one row per transaction with a date, a description/payee, an
 
 1. **Signed amount column** — one `Amount` column, negative for money leaving the account. Closest to ledger convention already.
 2. **Separate Debit / Credit columns** — two columns; each row fills one. You must combine them into a single signed amount (see sign rules below).
-3. **Amount + running balance** — an `Amount` and a `Balance` column. The `Balance` column is a gift: the last row's balance is the ending balance, and you can cross-check each line by walking the running balance.
+3. **Amount + running balance** — an `Amount` and a `Balance` column. The `Balance` column is a gift: the ending balance is the balance on the **latest-dated row**, and you can cross-check each line by walking the running balance **in date order**. Many banks export newest-first, so the latest row is often the *first* one, and the last row is then the oldest (an opening deposit, say). Read the dates rather than the row position. When several rows share the latest date, take the one at the newest end of the file.
 
 A transaction-row CSV carries no period bounds. Infer the period as the **calendar month of the row dates** (state the inference in the proposal; the last row's date is *not* the period end), or ask when the rows span a month boundary and the user's words don't pin the month.
 
@@ -68,7 +68,7 @@ Credit-card CSVs frequently list **purchases as positive numbers** ("Amount = 54
 2026-06-01 balance Liabilities:CreditCard  -342.20 USD
 ```
 
-> Sanity check after normalizing: `opening_balance + sum(normalized amounts) == ending_balance`, with both balances in ledger sign (negated for a liability). If it doesn't, your sign mapping (or a missing/extra line) is wrong. This walk is the cheapest way to catch a flipped column before you ever diff against the ledger. Record the confirmed convention in the config block so re-runs skip the detection.
+> Sanity check after normalizing: `opening_balance + sum(normalized amounts) == ending_balance`, with both balances in ledger sign (negated for a liability) and the ending balance taken from the latest-dated row. If it doesn't, your sign mapping (or a missing/extra line) is wrong. This walk is the cheapest way to catch a flipped column before you ever diff against the ledger. Record the confirmed convention in the config block so re-runs skip the detection.
 
 ## Date normalization
 

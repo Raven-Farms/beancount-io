@@ -1,0 +1,25 @@
+;; fixture — beancount-reconcile eval15 (newest-first export with a running balance)
+option "operating_currency" "USD"
+
+2026-01-01 open Assets:Checking USD
+2026-01-01 open Income:Salary USD
+2026-01-01 open Expenses:Food:Groceries USD
+2026-01-01 open Expenses:Bank:Fees USD
+2026-01-01 open Liabilities:CreditCard USD
+2026-01-01 open Equity:Opening-Balances
+
+2026-05-01 * "OPENING DEPOSIT"
+  Assets:Checking   1000.00 USD
+  Equity:Opening-Balances
+
+2026-05-03 * "TRADER JOES #123"
+  Assets:Checking          -54.20 USD
+  Expenses:Food:Groceries   54.20 USD
+
+2026-05-05 * "ACME PAYROLL"
+  Assets:Checking   2500.00 USD
+  Income:Salary
+
+2026-05-15 * "CARD PAYMENT"
+  Assets:Checking         -50.00 USD
+  Liabilities:CreditCard   50.00 USD

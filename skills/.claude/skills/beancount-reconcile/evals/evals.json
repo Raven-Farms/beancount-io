@@ -1,6 +1,6 @@
 {
   "skill_name": "beancount-reconcile",
-  "notes": "Each eval maps the fixture ledger to ./ledger.beancount and the fixture statement to ./statement.csv in a scratch dir. Expectations are graded against the skill's reported diff and any appended entries. Validate with `bea check` when bea is installed; oracle/CI uses `uv run --project cli bean-check` separately. Do not `pip install beancount` as the customer path. eval1-7 cover the happy path and each mismatch class; eval8-10 are failure-mode checks; eval12-13 replay the first-month rehearsal's reconcile preview (reproducible tie-out arithmetic and a signed unresolved residual); eval14 is a card statement whose running Balance prints the amount owed as positive, which must be negated into ledger sign.",
+  "notes": "Each eval maps the fixture ledger to ./ledger.beancount and the fixture statement to ./statement.csv in a scratch dir. Expectations are graded against the skill's reported diff and any appended entries. Validate with `bea check` when bea is installed; oracle/CI uses `uv run --project cli bean-check` separately. Do not `pip install beancount` as the customer path. eval1-7 cover the happy path and each mismatch class; eval8-10 are failure-mode checks; eval12-13 replay the first-month rehearsal's reconcile preview (reproducible tie-out arithmetic and a signed unresolved residual); eval14 is a card statement whose running Balance prints the amount owed as positive, which must be negated into ledger sign; eval15 is a newest-first export whose ending balance is on the first (latest-dated) row.",
   "evals": [
     {
       "id": 1,
@@ -234,6 +234,23 @@
         "The missing UNITED AIRLINES charge is proposed as a -290.00 posting to Liabilities:CreditCard",
         "The proposed balance assertion is 2026-06-01 balance Liabilities:CreditCard -342.20 USD, and bea check passes after the confirmed writes",
         "The skill does not blame the sign mapping or a missing line for a mismatch that is only the unflipped ending balance"
+      ]
+    },
+    {
+      "id": 15,
+      "name": "newest-first-running-balance",
+      "prompt": "Reconcile Assets:Checking in ./ledger.beancount against my May bank export ./statement.csv.",
+      "expected_output": "The export lists the newest row first, so the ending balance is the Balance on the latest-dated row (05/31/2026, 3383.80), not the last row's 1000.00 opening deposit, and the running balance is walked in date order. CARD PAYMENT, ACME PAYROLL, TRADER JOES and OPENING DEPOSIT match; MONTHLY FEE 12.00 is missing and is proposed as Assets:Checking -12.00 / Expenses:Bank:Fees 12.00. The executed tie-out with $statement_ending 3383.80 and $proposed_net -12.00 gives ledger 3395.80, projected 3383.80, residual 0.00, so the skill proposes 2026-06-01 balance Assets:Checking 3383.80 USD.",
+      "files": [
+        "evals/files/eval15_ledger.beancount",
+        "evals/files/eval15_statement.csv"
+      ],
+      "expectations": [
+        "The ending balance is taken from the latest-dated row (3383.80 on 05/31/2026), not from the last row's 1000.00",
+        "The tie-out query output shows ledger 3395.80, projected 3383.80 and residual 0.00",
+        "The missing MONTHLY FEE is proposed as a -12.00 posting to Assets:Checking",
+        "The proposed balance assertion is 2026-06-01 balance Assets:Checking 3383.80 USD",
+        "The skill does not report an unexplained residual or blame the sign mapping"
       ]
     }
   ]
