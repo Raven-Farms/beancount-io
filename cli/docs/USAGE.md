@@ -1363,7 +1363,9 @@ amount metadata use tagged objects: `{"kind":"number","value":"1.125"}`,
 `{"kind":"date","value":"2026-08-03"}`, or
 `{"kind":"amount","number":"5.25","currency":"USD"}`. A JSON float in a
 tagged `value` or `number` rejects the row, because the float cannot hold the
-decimal exactly; send a decimal string. An array, an untagged object, a tagged
+decimal exactly; send a decimal string. An untagged float (`"rate": 0.3`) is
+refused the same way, naming the tagged number to send, while an untagged JSON
+integer is exact and is written as is. An array, an untagged object, a tagged
 object with other keys, the reserved keys `filename`/`lineno`, or a key that
 does not match `[a-z][A-Za-z0-9_-]+` (`Category`, `a.b`, `__x`) likewise
 reject their row, reported as `Row N, meta.<key>` (or

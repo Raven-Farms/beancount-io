@@ -16,6 +16,7 @@ date arithmetic, and the messages a person reads.
 from __future__ import annotations
 
 import datetime
+import math
 import os
 import re
 import unicodedata
@@ -1082,9 +1083,20 @@ _TAGGED_META_KEYS = {
 }
 
 _META_VALUE_HELP = (
-    'use text, a boolean, a number, or a tagged object such as {"kind":"number","value":"1.25"}, '
+    'use text, a boolean, a whole number, or a tagged object such as {"kind":"number","value":"1.25"}, '
     '{"kind":"date","value":"2026-08-03"} or {"kind":"amount","number":"5.25","currency":"USD"}.'
 )
+
+
+def _untagged_float_problem(value: float) -> str:
+    """Why an untagged JSON float is no metadata value, and the tagged number to send."""
+    if not math.isfinite(value):
+        return f"{value!r} is not a finite number, so it has no decimal form; send it as text or leave it out."
+    exact = format(Decimal(repr(value)), "f")
+    return (
+        f"JSON float {value!r} cannot represent a decimal exactly. Send a tagged number instead, "
+        f'such as {{"kind":"number","value":"{exact}"}}.'
+    )
 
 
 def _bulk_meta_problems(location: str, meta: dict[str, Any]) -> list[str]:
@@ -1144,7 +1156,14 @@ def _bulk_meta_problems(location: str, meta: dict[str, Any]) -> list[str]:
                         f"ASCII digits and no exponent or underscores, such as '1.25'; got {number!r}."
                     )
                     continue
-        elif value is not None and not isinstance(value, str | bool | int | float):
+        elif isinstance(value, float):
+            # Written through `Decimal(str(value))` (w3/230), a float recorded
+            # its binary value: 12345678901234567890.123 became
+            # 12345678901234567000, and 0.3-style values kept their noise
+            # (w5/420). A JSON integer is exact and stays accepted.
+            problems.append(f"{path}: {_untagged_float_problem(value)}")
+            continue
+        elif value is not None and not isinstance(value, str | bool | int):
             problems.append(f"{path}: Unsupported metadata value of type {type(value).__name__}; {_META_VALUE_HELP}")
             continue
         try:

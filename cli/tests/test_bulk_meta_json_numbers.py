@@ -1,4 +1,8 @@
-"""Bulk JSON meta may use bare numbers; coerce to Decimal (w3/230)."""
+"""Bulk JSON meta may use bare integers; coerce to Decimal (w3/230).
+
+An untagged float is refused since w5/420: it was written with its binary
+error, so a decimal goes in as a tagged number instead.
+"""
 
 from __future__ import annotations
 
@@ -52,7 +56,7 @@ def test_bare_json_number_meta_writes(tmp_path: Path) -> None:
                 {
                     "date": "2024-03-21",
                     "narration": "tm",
-                    "meta": {"count": 1, "rate": 1.5, "cleared": True},
+                    "meta": {"count": 1, "rate": {"kind": "number", "value": "1.5"}, "cleared": True},
                     "postings": [
                         {"account": "Expenses:Food:Groceries", "amount": "1 USD"},
                         {"account": "Assets:Bank:Checking"},
