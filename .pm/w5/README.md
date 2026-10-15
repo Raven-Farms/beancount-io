@@ -100,7 +100,6 @@
 - [418 — `BEANCOUNT_LOAD_CACHE_FILENAME` naming a non-ledger file: every read silently deletes it](./418.md) — CLI QA 2026-10-14
 - [419 — Provisioning `rmtree`s an existing non-engine `BEA_ENGINE_DIR` (code-confirmed)](./419.md) — CLI QA 2026-10-14
 - [420 — Untagged JSON float metadata is written with binary error (`…890.123` → `…567000`)](./420.md) — CLI QA 2026-10-14
-- [421 — Completion: fixed-value options complete as files; fish gets wrapped-help fragments as candidates](./421.md) — CLI QA 2026-10-14
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
