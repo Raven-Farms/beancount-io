@@ -952,6 +952,7 @@ def _balance_recovery_hints(
     options: dict[str, Any],
     snapshot: LedgerSnapshot | None,
     line_counts: dict[Path, int],
+    filenames: dict[Path, Path] | None = None,
 ) -> list[str]:
     import datetime
 
@@ -997,6 +998,15 @@ def _balance_recovery_hints(
         elif isinstance(entry, Close):
             active.pop(entry.account, None)
     if balance.account not in active:
+        # Already opened, only too late: `bea add open` could only be refused
+        # as a duplicate, so name the open to move instead (w5/345).
+        opened = next((e for e in entries if isinstance(e, Open) and e.account == balance.account), None)
+        if opened is not None and opened.date > pad_date:
+            return [
+                f"Review the assertion date: {balance.account} opens {opened.date} at "
+                f"{_location(opened, filenames or {})}, not before this {balance.date} assertion. "
+                "Move that open earlier, or use a later --date. Balance assertions run at the start of the day."
+            ]
         return [
             f"Review the assertion date: {balance.account} must be open on an earlier day "
             "before this balance assertion (bea add open, or a later --date). "
@@ -1558,6 +1568,7 @@ def validate_candidate(
                         options,
                         snapshot,
                         source_line_counts,
+                        filenames,
                     )
                 )
         records.append(
