@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [325 — Import treats forecast-plugin projections as duplicates; `--duplicates skip` drops real payments](./325.md) — CLI QA 2026-10-14
 - [326 — Editing a local plugin does not invalidate the load cache; `check` stays green](./326.md) — CLI QA 2026-10-14
 - [327 — `price export` omits a plugin's sibling helper module; snapshot cannot load](./327.md) — CLI QA 2026-10-14
 - [328 — `option "operating_currency" "usd"` typo never named (missing prices / token error / `column None`)](./328.md) — CLI QA 2026-10-14
