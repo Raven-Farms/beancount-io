@@ -157,7 +157,6 @@
 - [448 — `add open -c USD -c EUR -c USD` writes `USD,EUR,USD`](./448.md) — CLI QA 2026-10-14
 - [449 — `--into` a managed price URL writes to an orphan local `https:/…` file (exit 0)](./449.md) — CLI QA 2026-10-14
 - [450 — A refused URL include silently loads a local `./https:/…` file as ledger data](./450.md) — CLI QA 2026-10-14
-- [451 — `../` include behind a symlinked dir: `format -o` overwrites the loaded include (exit 0), `-i` formats the wrong file](./451.md) — CLI QA 2026-10-14
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
