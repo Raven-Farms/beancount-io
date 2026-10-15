@@ -1,4 +1,5 @@
 import { useId, useMemo, useState } from "react";
+import { format } from "date-fns";
 import { useQuery } from "@apollo/client/react";
 import { AlertCircle, Loader2, Plus } from "lucide-react";
 import type {
@@ -44,6 +45,7 @@ import {
 import { AddBudgetDialog } from "./add-budget-dialog";
 import { BudgetHistoryTable } from "./budget-history-table";
 import {
+  budgetHeadlinePeriod,
   calculateBudgetForInterval,
   parseBudgetAmount,
   readSparseBalanceAmount,
@@ -154,40 +156,53 @@ export function BudgetChartCard({
     ],
   );
 
+  // The headline describes the period containing today, not whichever bucket
+  // the selected span happens to end on: "This year" ends in December, and a
+  // rolling window clips (and so prorates) the current month.
+  const spanEnded = time === "year-1";
+  const today = format(new Date(), "yyyy-MM-dd");
+  const headline = useMemo(
+    () =>
+      budgetHeadlinePeriod(
+        chartData.map((item) => item.date),
+        group.interval,
+        today,
+        spanEnded,
+      ),
+    [chartData, group.interval, today, spanEnded],
+  );
+
   const latestActual = useMemo(() => {
-    if (chartData.length === 0) return null;
-    const last = chartData[chartData.length - 1];
+    if (chartData.length === 0 || headline === null) return null;
+    // A bucket missing for the current period means nothing was posted yet.
+    if (headline.bucket === null) return 0;
     return readSparseBalanceAmount(
-      last.balance,
+      chartData[headline.bucket].balance,
       displayCurrency,
       displayDirection,
     );
-  }, [chartData, displayCurrency, displayDirection]);
+  }, [chartData, headline, displayCurrency, displayDirection]);
 
   // Under "Last year" the header claims that period's target, which only the
   // period's own read can supply. While that read is pending or has failed,
   // the latest configured budget is not an answer — it showed 200 USD for a
   // year whose target was 0 — so the value stays unknown instead.
-  const periodTarget = time === "year-1";
   const comparisonBudgetValue = useMemo((): number | null => {
-    if (periodTarget && (loading || error)) return null;
-    if (chartData.length === 0) {
-      return periodTarget ? null : displayBudgetValue;
-    }
-    const last = chartData[chartData.length - 1];
+    if (spanEnded && (loading || error)) return null;
+    if (headline === null) return spanEnded ? null : displayBudgetValue;
     return Math.abs(
       calculateBudgetForInterval(
-        last.date,
+        headline.end,
         group.interval,
         group.budgetHistory,
       ),
     );
   }, [
-    chartData,
+    headline,
     displayBudgetValue,
     group.interval,
     group.budgetHistory,
-    periodTarget,
+    spanEnded,
     loading,
     error,
   ]);
@@ -357,7 +372,7 @@ export function BudgetChartCard({
         <div className="mt-5 grid gap-4 sm:grid-cols-3">
           <div className="space-y-1">
             <p className="text-xs font-medium text-muted-foreground">
-              {periodTarget
+              {spanEnded
                 ? t("page.budget.budget")
                 : t("page.budget.budgetCurrentBudget")}
             </p>

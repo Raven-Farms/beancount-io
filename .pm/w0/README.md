@@ -12,7 +12,6 @@
 
 ## Inbox
 
-- [027](./027.md) — Budget "This year" headline describes a future month, and "Last 12 months" prorates the current one (minor; dashboard; 40–55m).
 - [028](./028.md) — Name each Budget history Delete button after the directive it removes (minor; dashboard; 15–25m).
 - [029](./029.md) — Don't open Overview Money movement on an empty future month when a time filter is set (minor; dashboard; 25–35m).
 - [030](./030.md) — Give the Overview Net Worth table view table semantics and a keyboard-scrollable region (minor; dashboard; 25–35m).

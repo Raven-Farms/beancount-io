@@ -195,6 +195,43 @@ export function calculateBudgetForInterval(
 }
 
 /**
+ * The period a Budget card's headline describes, as its inclusive end date and
+ * the index of the interval-totals bucket that covers it (`null` when no
+ * bucket does, i.e. nothing was posted in it).
+ *
+ * A span still running ("This year", "All time", a rolling year) headlines
+ * the whole interval containing `today`: never a bucket that starts later,
+ * and never a window edge that clips the period and so prorates its target.
+ * A span that has ended ("Last year") headlines its final bucket.
+ */
+export function budgetHeadlinePeriod(
+  bucketEnds: string[],
+  interval: string,
+  today: string,
+  spanEnded: boolean,
+): { end: string; bucket: number | null } | null {
+  if (spanEnded) {
+    if (bucketEnds.length === 0) return null;
+    return {
+      end: bucketEnds[bucketEnds.length - 1],
+      bucket: bucketEnds.length - 1,
+    };
+  }
+  const day = parseISO(today);
+  const end = format(
+    addDays(getNextIntervalStart(day, interval), -1),
+    "yyyy-MM-dd",
+  );
+  const bucket = bucketEnds.findIndex(
+    (bucketEnd) =>
+      bucketEnd >= today &&
+      format(getIntervalStart(parseISO(bucketEnd), interval), "yyyy-MM-dd") <=
+        today,
+  );
+  return { end, bucket: bucket === -1 ? null : bucket };
+}
+
+/**
  * The longest period the chart prorates over, in days. One leap year plus
  * slack — the tolerance below allows one unit in the last place per day
  * summed, and this bounds that day count.
