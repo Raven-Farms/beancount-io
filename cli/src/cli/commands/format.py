@@ -287,7 +287,11 @@ def _partial_message(
 def _problem_lines(failed: dict[str, list[str]], missing: list[output.MissingInclude]) -> list[str]:
     """One human line per file that could not be processed, naming each one."""
     lines = [f"cannot parse: {errors[0]}" for _, errors in sorted(failed.items()) if errors]
-    lines.extend(f'missing include: "{item.include}" (included by {item.source})' for item in missing)
+    for item in missing:
+        if item.reason:
+            lines.append(f'unreadable include: "{item.include}" (included by {item.source}): {item.reason}')
+        else:
+            lines.append(f'missing include: "{item.include}" (included by {item.source})')
     return lines
 
 
@@ -296,8 +300,11 @@ def _problem_parts(failed: dict[str, list[str]], missing: list[output.MissingInc
     parts = []
     if failed:
         parts.append(f"{len(failed)} file(s) cannot be parsed")
-    if missing:
-        parts.append(f"{len(missing)} include(s) are missing")
+    absent = sum(1 for item in missing if item.reason is None)
+    if absent:
+        parts.append(f"{absent} include(s) are missing")
+    if len(missing) > absent:
+        parts.append(f"{len(missing) - absent} include(s) name no readable file")
     return parts
 
 
@@ -629,7 +636,10 @@ def _result(
         "scanned": len(files),
         "formatted": changed,
         "failed": [{"file": name, "errors": errors} for name, errors in sorted(failed.items())],
-        "missing": [{"include": item.include, "from": str(item.source)} for item in missing],
+        "missing": [
+            {"include": item.include, "from": str(item.source), **({"reason": item.reason} if item.reason else {})}
+            for item in missing
+        ],
     }
 
 
