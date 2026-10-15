@@ -195,16 +195,49 @@ const faAiAgent: Record<string, TranslationEntry> = {
     description: "Status while AI tools inspect a ledger",
   },
   "aiAgent.checkedFiles": {
-    message: "فایل(های) {count} بررسی شد",
-    description: "Summary of files inspected by AI tools",
+    message: "{count} فایل بررسی شد",
+    description:
+      "Summary of files inspected by AI tools - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.checkedFiles_one": {
+    message: "{count} فایل بررسی شد",
+    description:
+      "Summary of files inspected by AI tools - interpolation: {count} - singular form",
+  },
+  "aiAgent.checkedFiles_other": {
+    message: "{count} فایل بررسی شد",
+    description:
+      "Summary of files inspected by AI tools - interpolation: {count} - plural form",
   },
   "aiAgent.ranQueries": {
-    message: "پرس و جو یا جستارهای {count} را اجرا کرد",
-    description: "Summary of queries run by AI tools",
+    message: "{count} پرس‌وجو اجرا شد",
+    description:
+      "Summary of queries run by AI tools - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.ranQueries_one": {
+    message: "{count} پرس‌وجو اجرا شد",
+    description:
+      "Summary of queries run by AI tools - interpolation: {count} - singular form",
+  },
+  "aiAgent.ranQueries_other": {
+    message: "{count} پرس‌وجو اجرا شد",
+    description:
+      "Summary of queries run by AI tools - interpolation: {count} - plural form",
   },
   "aiAgent.usedTools": {
-    message: "ابزار(های) {count} استفاده شده",
-    description: "Summary of tools used by the AI",
+    message: "{count} ابزار استفاده شد",
+    description:
+      "Summary of tools used by the AI - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.usedTools_one": {
+    message: "{count} ابزار استفاده شد",
+    description:
+      "Summary of tools used by the AI - interpolation: {count} - singular form",
+  },
+  "aiAgent.usedTools_other": {
+    message: "{count} ابزار استفاده شد",
+    description:
+      "Summary of tools used by the AI - interpolation: {count} - plural form",
   },
   "aiAgent.unknownBlock": {
     message: "بلوک ناشناخته",
@@ -215,8 +248,19 @@ const faAiAgent: Record<string, TranslationEntry> = {
     description: "Status while AI file changes are prepared",
   },
   "aiAgent.editApproval.appliedOperations": {
-    message: "عملیات (های) {count} اعمال شد",
-    description: "Success status for applied AI file operations",
+    message: "{count} عملیات اعمال شد",
+    description:
+      "Success status for applied AI file operations - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.editApproval.appliedOperations_one": {
+    message: "{count} عملیات اعمال شد",
+    description:
+      "Success status for applied AI file operations - interpolation: {count} - singular form",
+  },
+  "aiAgent.editApproval.appliedOperations_other": {
+    message: "{count} عملیات اعمال شد",
+    description:
+      "Success status for applied AI file operations - interpolation: {count} - plural form",
   },
   "aiAgent.editApproval.failed": {
     message: "ویرایش انجام نشد",

@@ -192,16 +192,34 @@ const jaAiAgent: Record<string, TranslationEntry> = {
     description: "Status while AI tools inspect a ledger",
   },
   "aiAgent.checkedFiles": {
-    message: "{count} ファイルをチェックしました",
-    description: "Summary of files inspected by AI tools",
+    message: "{count} 件のファイルを確認しました",
+    description:
+      "Summary of files inspected by AI tools - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.checkedFiles_other": {
+    message: "{count} 件のファイルを確認しました",
+    description:
+      "Summary of files inspected by AI tools - interpolation: {count} - the only form; this language has no plural inflection",
   },
   "aiAgent.ranQueries": {
-    message: "{count} クエリを実行しました",
-    description: "Summary of queries run by AI tools",
+    message: "{count} 件のクエリを実行しました",
+    description:
+      "Summary of queries run by AI tools - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.ranQueries_other": {
+    message: "{count} 件のクエリを実行しました",
+    description:
+      "Summary of queries run by AI tools - interpolation: {count} - the only form; this language has no plural inflection",
   },
   "aiAgent.usedTools": {
-    message: "{count} ツールを使用しました",
-    description: "Summary of tools used by the AI",
+    message: "{count} 個のツールを使用しました",
+    description:
+      "Summary of tools used by the AI - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.usedTools_other": {
+    message: "{count} 個のツールを使用しました",
+    description:
+      "Summary of tools used by the AI - interpolation: {count} - the only form; this language has no plural inflection",
   },
   "aiAgent.unknownBlock": {
     message: "不明なブロック",
@@ -212,8 +230,14 @@ const jaAiAgent: Record<string, TranslationEntry> = {
     description: "Status while AI file changes are prepared",
   },
   "aiAgent.editApproval.appliedOperations": {
-    message: "適用された {count} 操作",
-    description: "Success status for applied AI file operations",
+    message: "{count} 件の操作を適用しました",
+    description:
+      "Success status for applied AI file operations - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.editApproval.appliedOperations_other": {
+    message: "{count} 件の操作を適用しました",
+    description:
+      "Success status for applied AI file operations - interpolation: {count} - the only form; this language has no plural inflection",
   },
   "aiAgent.editApproval.failed": {
     message: "編集に失敗しました",

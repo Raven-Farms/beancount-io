@@ -195,16 +195,49 @@ const nlAiAgent: Record<string, TranslationEntry> = {
     description: "Status while AI tools inspect a ledger",
   },
   "aiAgent.checkedFiles": {
-    message: "{count} bestand(en) gecontroleerd",
-    description: "Summary of files inspected by AI tools",
+    message: "{count} bestanden gecontroleerd",
+    description:
+      "Summary of files inspected by AI tools - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.checkedFiles_one": {
+    message: "{count} bestand gecontroleerd",
+    description:
+      "Summary of files inspected by AI tools - interpolation: {count} - singular form",
+  },
+  "aiAgent.checkedFiles_other": {
+    message: "{count} bestanden gecontroleerd",
+    description:
+      "Summary of files inspected by AI tools - interpolation: {count} - plural form",
   },
   "aiAgent.ranQueries": {
-    message: "Heeft {count} zoekopdracht of zoekopdrachten uitgevoerd",
-    description: "Summary of queries run by AI tools",
+    message: "{count} zoekopdrachten uitgevoerd",
+    description:
+      "Summary of queries run by AI tools - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.ranQueries_one": {
+    message: "{count} zoekopdracht uitgevoerd",
+    description:
+      "Summary of queries run by AI tools - interpolation: {count} - singular form",
+  },
+  "aiAgent.ranQueries_other": {
+    message: "{count} zoekopdrachten uitgevoerd",
+    description:
+      "Summary of queries run by AI tools - interpolation: {count} - plural form",
   },
   "aiAgent.usedTools": {
-    message: "Gebruikte {count} gereedschap(pen)",
-    description: "Summary of tools used by the AI",
+    message: "{count} hulpmiddelen gebruikt",
+    description:
+      "Summary of tools used by the AI - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.usedTools_one": {
+    message: "{count} hulpmiddel gebruikt",
+    description:
+      "Summary of tools used by the AI - interpolation: {count} - singular form",
+  },
+  "aiAgent.usedTools_other": {
+    message: "{count} hulpmiddelen gebruikt",
+    description:
+      "Summary of tools used by the AI - interpolation: {count} - plural form",
   },
   "aiAgent.unknownBlock": {
     message: "Onbekend blok",
@@ -215,8 +248,19 @@ const nlAiAgent: Record<string, TranslationEntry> = {
     description: "Status while AI file changes are prepared",
   },
   "aiAgent.editApproval.appliedOperations": {
-    message: "Toegepaste {count} bewerking(en)",
-    description: "Success status for applied AI file operations",
+    message: "{count} bewerkingen toegepast",
+    description:
+      "Success status for applied AI file operations - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.editApproval.appliedOperations_one": {
+    message: "{count} bewerking toegepast",
+    description:
+      "Success status for applied AI file operations - interpolation: {count} - singular form",
+  },
+  "aiAgent.editApproval.appliedOperations_other": {
+    message: "{count} bewerkingen toegepast",
+    description:
+      "Success status for applied AI file operations - interpolation: {count} - plural form",
   },
   "aiAgent.editApproval.failed": {
     message: "Bewerken mislukt",

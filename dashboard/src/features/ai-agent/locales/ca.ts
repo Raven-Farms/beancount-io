@@ -195,16 +195,64 @@ const caAiAgent: Record<string, TranslationEntry> = {
     description: "Status while AI tools inspect a ledger",
   },
   "aiAgent.checkedFiles": {
-    message: "S'han comprovat els fitxers {count}",
-    description: "Summary of files inspected by AI tools",
+    message: "S'han comprovat {count} fitxers",
+    description:
+      "Summary of files inspected by AI tools - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.checkedFiles_one": {
+    message: "S'ha comprovat {count} fitxer",
+    description:
+      "Summary of files inspected by AI tools - interpolation: {count} - singular form",
+  },
+  "aiAgent.checkedFiles_many": {
+    message: "S'han comprovat {count} fitxers",
+    description:
+      "Summary of files inspected by AI tools - interpolation: {count} - form for large round counts such as millions",
+  },
+  "aiAgent.checkedFiles_other": {
+    message: "S'han comprovat {count} fitxers",
+    description:
+      "Summary of files inspected by AI tools - interpolation: {count} - plural form",
   },
   "aiAgent.ranQueries": {
-    message: "Ha executat la consulta o consultes {count}",
-    description: "Summary of queries run by AI tools",
+    message: "S'han executat {count} consultes",
+    description:
+      "Summary of queries run by AI tools - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.ranQueries_one": {
+    message: "S'ha executat {count} consulta",
+    description:
+      "Summary of queries run by AI tools - interpolation: {count} - singular form",
+  },
+  "aiAgent.ranQueries_many": {
+    message: "S'han executat {count} consultes",
+    description:
+      "Summary of queries run by AI tools - interpolation: {count} - form for large round counts such as millions",
+  },
+  "aiAgent.ranQueries_other": {
+    message: "S'han executat {count} consultes",
+    description:
+      "Summary of queries run by AI tools - interpolation: {count} - plural form",
   },
   "aiAgent.usedTools": {
-    message: "Eines {count} utilitzades",
-    description: "Summary of tools used by the AI",
+    message: "S'han utilitzat {count} eines",
+    description:
+      "Summary of tools used by the AI - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.usedTools_one": {
+    message: "S'ha utilitzat {count} eina",
+    description:
+      "Summary of tools used by the AI - interpolation: {count} - singular form",
+  },
+  "aiAgent.usedTools_many": {
+    message: "S'han utilitzat {count} eines",
+    description:
+      "Summary of tools used by the AI - interpolation: {count} - form for large round counts such as millions",
+  },
+  "aiAgent.usedTools_other": {
+    message: "S'han utilitzat {count} eines",
+    description:
+      "Summary of tools used by the AI - interpolation: {count} - plural form",
   },
   "aiAgent.unknownBlock": {
     message: "Bloc desconegut",
@@ -215,8 +263,24 @@ const caAiAgent: Record<string, TranslationEntry> = {
     description: "Status while AI file changes are prepared",
   },
   "aiAgent.editApproval.appliedOperations": {
-    message: "Operacions aplicades {count}",
-    description: "Success status for applied AI file operations",
+    message: "S'han aplicat {count} operacions",
+    description:
+      "Success status for applied AI file operations - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.editApproval.appliedOperations_one": {
+    message: "S'ha aplicat {count} operació",
+    description:
+      "Success status for applied AI file operations - interpolation: {count} - singular form",
+  },
+  "aiAgent.editApproval.appliedOperations_many": {
+    message: "S'han aplicat {count} operacions",
+    description:
+      "Success status for applied AI file operations - interpolation: {count} - form for large round counts such as millions",
+  },
+  "aiAgent.editApproval.appliedOperations_other": {
+    message: "S'han aplicat {count} operacions",
+    description:
+      "Success status for applied AI file operations - interpolation: {count} - plural form",
   },
   "aiAgent.editApproval.failed": {
     message: "L'edició ha fallat",

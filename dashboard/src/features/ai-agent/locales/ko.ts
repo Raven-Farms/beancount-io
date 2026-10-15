@@ -192,16 +192,34 @@ const koAiAgent: Record<string, TranslationEntry> = {
     description: "Status while AI tools inspect a ledger",
   },
   "aiAgent.checkedFiles": {
-    message: "{count} 파일을 확인함",
-    description: "Summary of files inspected by AI tools",
+    message: "파일 {count}개를 확인했습니다",
+    description:
+      "Summary of files inspected by AI tools - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.checkedFiles_other": {
+    message: "파일 {count}개를 확인했습니다",
+    description:
+      "Summary of files inspected by AI tools - interpolation: {count} - the only form; this language has no plural inflection",
   },
   "aiAgent.ranQueries": {
-    message: "{count} 쿼리를 실행했습니다.",
-    description: "Summary of queries run by AI tools",
+    message: "쿼리 {count}개를 실행했습니다",
+    description:
+      "Summary of queries run by AI tools - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.ranQueries_other": {
+    message: "쿼리 {count}개를 실행했습니다",
+    description:
+      "Summary of queries run by AI tools - interpolation: {count} - the only form; this language has no plural inflection",
   },
   "aiAgent.usedTools": {
-    message: "사용된 {count} 도구",
-    description: "Summary of tools used by the AI",
+    message: "도구 {count}개를 사용했습니다",
+    description:
+      "Summary of tools used by the AI - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.usedTools_other": {
+    message: "도구 {count}개를 사용했습니다",
+    description:
+      "Summary of tools used by the AI - interpolation: {count} - the only form; this language has no plural inflection",
   },
   "aiAgent.unknownBlock": {
     message: "알 수 없는 블록",
@@ -212,8 +230,14 @@ const koAiAgent: Record<string, TranslationEntry> = {
     description: "Status while AI file changes are prepared",
   },
   "aiAgent.editApproval.appliedOperations": {
-    message: "{count} 작업 적용됨",
-    description: "Success status for applied AI file operations",
+    message: "작업 {count}개를 적용했습니다",
+    description:
+      "Success status for applied AI file operations - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.editApproval.appliedOperations_other": {
+    message: "작업 {count}개를 적용했습니다",
+    description:
+      "Success status for applied AI file operations - interpolation: {count} - the only form; this language has no plural inflection",
   },
   "aiAgent.editApproval.failed": {
     message: "편집 실패",

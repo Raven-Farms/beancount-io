@@ -196,15 +196,78 @@ const ruAiAgent: Record<string, TranslationEntry> = {
   },
   "aiAgent.checkedFiles": {
     message: "Проверено {count} файлов",
-    description: "Summary of files inspected by AI tools",
+    description:
+      "Summary of files inspected by AI tools - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.checkedFiles_one": {
+    message: "Проверен {count} файл",
+    description:
+      "Summary of files inspected by AI tools - interpolation: {count} - singular form",
+  },
+  "aiAgent.checkedFiles_few": {
+    message: "Проверено {count} файла",
+    description:
+      "Summary of files inspected by AI tools - interpolation: {count} - form for counts like 2-4",
+  },
+  "aiAgent.checkedFiles_many": {
+    message: "Проверено {count} файлов",
+    description:
+      "Summary of files inspected by AI tools - interpolation: {count} - form for counts like 5-20",
+  },
+  "aiAgent.checkedFiles_other": {
+    message: "Проверено {count} файла",
+    description:
+      "Summary of files inspected by AI tools - interpolation: {count} - form for fractional counts",
   },
   "aiAgent.ranQueries": {
-    message: "Выполнил запрос или запросы {count}",
-    description: "Summary of queries run by AI tools",
+    message: "Выполнено {count} запросов",
+    description:
+      "Summary of queries run by AI tools - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.ranQueries_one": {
+    message: "Выполнен {count} запрос",
+    description:
+      "Summary of queries run by AI tools - interpolation: {count} - singular form",
+  },
+  "aiAgent.ranQueries_few": {
+    message: "Выполнено {count} запроса",
+    description:
+      "Summary of queries run by AI tools - interpolation: {count} - form for counts like 2-4",
+  },
+  "aiAgent.ranQueries_many": {
+    message: "Выполнено {count} запросов",
+    description:
+      "Summary of queries run by AI tools - interpolation: {count} - form for counts like 5-20",
+  },
+  "aiAgent.ranQueries_other": {
+    message: "Выполнено {count} запроса",
+    description:
+      "Summary of queries run by AI tools - interpolation: {count} - form for fractional counts",
   },
   "aiAgent.usedTools": {
     message: "Использовано {count} инструментов",
-    description: "Summary of tools used by the AI",
+    description:
+      "Summary of tools used by the AI - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.usedTools_one": {
+    message: "Использован {count} инструмент",
+    description:
+      "Summary of tools used by the AI - interpolation: {count} - singular form",
+  },
+  "aiAgent.usedTools_few": {
+    message: "Использовано {count} инструмента",
+    description:
+      "Summary of tools used by the AI - interpolation: {count} - form for counts like 2-4",
+  },
+  "aiAgent.usedTools_many": {
+    message: "Использовано {count} инструментов",
+    description:
+      "Summary of tools used by the AI - interpolation: {count} - form for counts like 5-20",
+  },
+  "aiAgent.usedTools_other": {
+    message: "Использовано {count} инструмента",
+    description:
+      "Summary of tools used by the AI - interpolation: {count} - form for fractional counts",
   },
   "aiAgent.unknownBlock": {
     message: "Неизвестный блок",
@@ -215,8 +278,29 @@ const ruAiAgent: Record<string, TranslationEntry> = {
     description: "Status while AI file changes are prepared",
   },
   "aiAgent.editApproval.appliedOperations": {
-    message: "Применено {count} операций(й)",
-    description: "Success status for applied AI file operations",
+    message: "Применено {count} операций",
+    description:
+      "Success status for applied AI file operations - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.editApproval.appliedOperations_one": {
+    message: "Применена {count} операция",
+    description:
+      "Success status for applied AI file operations - interpolation: {count} - singular form",
+  },
+  "aiAgent.editApproval.appliedOperations_few": {
+    message: "Применено {count} операции",
+    description:
+      "Success status for applied AI file operations - interpolation: {count} - form for counts like 2-4",
+  },
+  "aiAgent.editApproval.appliedOperations_many": {
+    message: "Применено {count} операций",
+    description:
+      "Success status for applied AI file operations - interpolation: {count} - form for counts like 5-20",
+  },
+  "aiAgent.editApproval.appliedOperations_other": {
+    message: "Применено {count} операции",
+    description:
+      "Success status for applied AI file operations - interpolation: {count} - form for fractional counts",
   },
   "aiAgent.editApproval.failed": {
     message: "Не удалось изменить",

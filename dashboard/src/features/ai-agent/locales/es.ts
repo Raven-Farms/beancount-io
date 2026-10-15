@@ -195,16 +195,64 @@ const esAiAgent: Record<string, TranslationEntry> = {
     description: "Status while AI tools inspect a ledger",
   },
   "aiAgent.checkedFiles": {
-    message: "{count} archivo(s) marcado(s)",
-    description: "Summary of files inspected by AI tools",
+    message: "{count} archivos revisados",
+    description:
+      "Summary of files inspected by AI tools - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.checkedFiles_one": {
+    message: "{count} archivo revisado",
+    description:
+      "Summary of files inspected by AI tools - interpolation: {count} - singular form",
+  },
+  "aiAgent.checkedFiles_many": {
+    message: "{count} archivos revisados",
+    description:
+      "Summary of files inspected by AI tools - interpolation: {count} - form for large round counts such as millions",
+  },
+  "aiAgent.checkedFiles_other": {
+    message: "{count} archivos revisados",
+    description:
+      "Summary of files inspected by AI tools - interpolation: {count} - plural form",
   },
   "aiAgent.ranQueries": {
-    message: "Ejecutó {count} consulta o consultas",
-    description: "Summary of queries run by AI tools",
+    message: "{count} consultas ejecutadas",
+    description:
+      "Summary of queries run by AI tools - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.ranQueries_one": {
+    message: "{count} consulta ejecutada",
+    description:
+      "Summary of queries run by AI tools - interpolation: {count} - singular form",
+  },
+  "aiAgent.ranQueries_many": {
+    message: "{count} consultas ejecutadas",
+    description:
+      "Summary of queries run by AI tools - interpolation: {count} - form for large round counts such as millions",
+  },
+  "aiAgent.ranQueries_other": {
+    message: "{count} consultas ejecutadas",
+    description:
+      "Summary of queries run by AI tools - interpolation: {count} - plural form",
   },
   "aiAgent.usedTools": {
-    message: "{count} herramienta(s) usada(s)",
-    description: "Summary of tools used by the AI",
+    message: "{count} herramientas usadas",
+    description:
+      "Summary of tools used by the AI - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.usedTools_one": {
+    message: "{count} herramienta usada",
+    description:
+      "Summary of tools used by the AI - interpolation: {count} - singular form",
+  },
+  "aiAgent.usedTools_many": {
+    message: "{count} herramientas usadas",
+    description:
+      "Summary of tools used by the AI - interpolation: {count} - form for large round counts such as millions",
+  },
+  "aiAgent.usedTools_other": {
+    message: "{count} herramientas usadas",
+    description:
+      "Summary of tools used by the AI - interpolation: {count} - plural form",
   },
   "aiAgent.unknownBlock": {
     message: "Bloque desconocido",
@@ -215,8 +263,24 @@ const esAiAgent: Record<string, TranslationEntry> = {
     description: "Status while AI file changes are prepared",
   },
   "aiAgent.editApproval.appliedOperations": {
-    message: "Operación(es) {count} aplicada(s)",
-    description: "Success status for applied AI file operations",
+    message: "{count} operaciones aplicadas",
+    description:
+      "Success status for applied AI file operations - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.editApproval.appliedOperations_one": {
+    message: "{count} operación aplicada",
+    description:
+      "Success status for applied AI file operations - interpolation: {count} - singular form",
+  },
+  "aiAgent.editApproval.appliedOperations_many": {
+    message: "{count} operaciones aplicadas",
+    description:
+      "Success status for applied AI file operations - interpolation: {count} - form for large round counts such as millions",
+  },
+  "aiAgent.editApproval.appliedOperations_other": {
+    message: "{count} operaciones aplicadas",
+    description:
+      "Success status for applied AI file operations - interpolation: {count} - plural form",
   },
   "aiAgent.editApproval.failed": {
     message: "Edición fallida",

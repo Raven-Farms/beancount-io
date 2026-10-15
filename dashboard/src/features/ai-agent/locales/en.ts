@@ -194,16 +194,49 @@ const enAiAgent: Record<string, TranslationEntry> = {
     description: "Status while AI tools inspect a ledger",
   },
   "aiAgent.checkedFiles": {
-    message: "Checked {count} file(s)",
-    description: "Summary of files inspected by AI tools",
+    message: "Checked {count} files",
+    description:
+      "Summary of files inspected by AI tools - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.checkedFiles_one": {
+    message: "Checked {count} file",
+    description:
+      "Summary of files inspected by AI tools - interpolation: {count} - singular form",
+  },
+  "aiAgent.checkedFiles_other": {
+    message: "Checked {count} files",
+    description:
+      "Summary of files inspected by AI tools - interpolation: {count} - plural form",
   },
   "aiAgent.ranQueries": {
-    message: "Ran {count} query or queries",
-    description: "Summary of queries run by AI tools",
+    message: "Ran {count} queries",
+    description:
+      "Summary of queries run by AI tools - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.ranQueries_one": {
+    message: "Ran {count} query",
+    description:
+      "Summary of queries run by AI tools - interpolation: {count} - singular form",
+  },
+  "aiAgent.ranQueries_other": {
+    message: "Ran {count} queries",
+    description:
+      "Summary of queries run by AI tools - interpolation: {count} - plural form",
   },
   "aiAgent.usedTools": {
-    message: "Used {count} tool(s)",
-    description: "Summary of tools used by the AI",
+    message: "Used {count} tools",
+    description:
+      "Summary of tools used by the AI - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.usedTools_one": {
+    message: "Used {count} tool",
+    description:
+      "Summary of tools used by the AI - interpolation: {count} - singular form",
+  },
+  "aiAgent.usedTools_other": {
+    message: "Used {count} tools",
+    description:
+      "Summary of tools used by the AI - interpolation: {count} - plural form",
   },
   "aiAgent.unknownBlock": {
     message: "Unknown block",
@@ -214,8 +247,19 @@ const enAiAgent: Record<string, TranslationEntry> = {
     description: "Status while AI file changes are prepared",
   },
   "aiAgent.editApproval.appliedOperations": {
-    message: "Applied {count} operation(s)",
-    description: "Success status for applied AI file operations",
+    message: "Applied {count} operations",
+    description:
+      "Success status for applied AI file operations - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.editApproval.appliedOperations_one": {
+    message: "Applied {count} operation",
+    description:
+      "Success status for applied AI file operations - interpolation: {count} - singular form",
+  },
+  "aiAgent.editApproval.appliedOperations_other": {
+    message: "Applied {count} operations",
+    description:
+      "Success status for applied AI file operations - interpolation: {count} - plural form",
   },
   "aiAgent.editApproval.failed": {
     message: "Edit failed",

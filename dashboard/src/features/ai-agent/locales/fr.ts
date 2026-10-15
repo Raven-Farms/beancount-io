@@ -195,16 +195,64 @@ const frAiAgent: Record<string, TranslationEntry> = {
     description: "Status while AI tools inspect a ledger",
   },
   "aiAgent.checkedFiles": {
-    message: "Fichier(s) {count} vérifié(s)",
-    description: "Summary of files inspected by AI tools",
+    message: "{count} fichiers vérifiés",
+    description:
+      "Summary of files inspected by AI tools - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.checkedFiles_one": {
+    message: "{count} fichier vérifié",
+    description:
+      "Summary of files inspected by AI tools - interpolation: {count} - singular form",
+  },
+  "aiAgent.checkedFiles_many": {
+    message: "{count} fichiers vérifiés",
+    description:
+      "Summary of files inspected by AI tools - interpolation: {count} - form for large round counts such as millions",
+  },
+  "aiAgent.checkedFiles_other": {
+    message: "{count} fichiers vérifiés",
+    description:
+      "Summary of files inspected by AI tools - interpolation: {count} - plural form",
   },
   "aiAgent.ranQueries": {
-    message: "a exécuté {count} requête(s)",
-    description: "Summary of queries run by AI tools",
+    message: "{count} requêtes exécutées",
+    description:
+      "Summary of queries run by AI tools - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.ranQueries_one": {
+    message: "{count} requête exécutée",
+    description:
+      "Summary of queries run by AI tools - interpolation: {count} - singular form",
+  },
+  "aiAgent.ranQueries_many": {
+    message: "{count} requêtes exécutées",
+    description:
+      "Summary of queries run by AI tools - interpolation: {count} - form for large round counts such as millions",
+  },
+  "aiAgent.ranQueries_other": {
+    message: "{count} requêtes exécutées",
+    description:
+      "Summary of queries run by AI tools - interpolation: {count} - plural form",
   },
   "aiAgent.usedTools": {
-    message: "Outil(s) {count} utilisé(s)",
-    description: "Summary of tools used by the AI",
+    message: "{count} outils utilisés",
+    description:
+      "Summary of tools used by the AI - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.usedTools_one": {
+    message: "{count} outil utilisé",
+    description:
+      "Summary of tools used by the AI - interpolation: {count} - singular form",
+  },
+  "aiAgent.usedTools_many": {
+    message: "{count} outils utilisés",
+    description:
+      "Summary of tools used by the AI - interpolation: {count} - form for large round counts such as millions",
+  },
+  "aiAgent.usedTools_other": {
+    message: "{count} outils utilisés",
+    description:
+      "Summary of tools used by the AI - interpolation: {count} - plural form",
   },
   "aiAgent.unknownBlock": {
     message: "Bloc inconnu",
@@ -215,8 +263,24 @@ const frAiAgent: Record<string, TranslationEntry> = {
     description: "Status while AI file changes are prepared",
   },
   "aiAgent.editApproval.appliedOperations": {
-    message: "{count} opération(s) appliquée(s)",
-    description: "Success status for applied AI file operations",
+    message: "{count} opérations appliquées",
+    description:
+      "Success status for applied AI file operations - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.editApproval.appliedOperations_one": {
+    message: "{count} opération appliquée",
+    description:
+      "Success status for applied AI file operations - interpolation: {count} - singular form",
+  },
+  "aiAgent.editApproval.appliedOperations_many": {
+    message: "{count} opérations appliquées",
+    description:
+      "Success status for applied AI file operations - interpolation: {count} - form for large round counts such as millions",
+  },
+  "aiAgent.editApproval.appliedOperations_other": {
+    message: "{count} opérations appliquées",
+    description:
+      "Success status for applied AI file operations - interpolation: {count} - plural form",
   },
   "aiAgent.editApproval.failed": {
     message: "Échec de la modification",

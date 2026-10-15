@@ -195,16 +195,64 @@ const ptAiAgent: Record<string, TranslationEntry> = {
     description: "Status while AI tools inspect a ledger",
   },
   "aiAgent.checkedFiles": {
-    message: "arquivo(s) {count} verificado(s)",
-    description: "Summary of files inspected by AI tools",
+    message: "{count} arquivos verificados",
+    description:
+      "Summary of files inspected by AI tools - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.checkedFiles_one": {
+    message: "{count} arquivo verificado",
+    description:
+      "Summary of files inspected by AI tools - interpolation: {count} - singular form",
+  },
+  "aiAgent.checkedFiles_many": {
+    message: "{count} arquivos verificados",
+    description:
+      "Summary of files inspected by AI tools - interpolation: {count} - form for large round counts such as millions",
+  },
+  "aiAgent.checkedFiles_other": {
+    message: "{count} arquivos verificados",
+    description:
+      "Summary of files inspected by AI tools - interpolation: {count} - plural form",
   },
   "aiAgent.ranQueries": {
-    message: "executou consulta ou consultas {count}",
-    description: "Summary of queries run by AI tools",
+    message: "{count} consultas executadas",
+    description:
+      "Summary of queries run by AI tools - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.ranQueries_one": {
+    message: "{count} consulta executada",
+    description:
+      "Summary of queries run by AI tools - interpolation: {count} - singular form",
+  },
+  "aiAgent.ranQueries_many": {
+    message: "{count} consultas executadas",
+    description:
+      "Summary of queries run by AI tools - interpolation: {count} - form for large round counts such as millions",
+  },
+  "aiAgent.ranQueries_other": {
+    message: "{count} consultas executadas",
+    description:
+      "Summary of queries run by AI tools - interpolation: {count} - plural form",
   },
   "aiAgent.usedTools": {
-    message: "Ferramentas {count} usadas",
-    description: "Summary of tools used by the AI",
+    message: "{count} ferramentas usadas",
+    description:
+      "Summary of tools used by the AI - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.usedTools_one": {
+    message: "{count} ferramenta usada",
+    description:
+      "Summary of tools used by the AI - interpolation: {count} - singular form",
+  },
+  "aiAgent.usedTools_many": {
+    message: "{count} ferramentas usadas",
+    description:
+      "Summary of tools used by the AI - interpolation: {count} - form for large round counts such as millions",
+  },
+  "aiAgent.usedTools_other": {
+    message: "{count} ferramentas usadas",
+    description:
+      "Summary of tools used by the AI - interpolation: {count} - plural form",
   },
   "aiAgent.unknownBlock": {
     message: "Bloco desconhecido",
@@ -215,8 +263,24 @@ const ptAiAgent: Record<string, TranslationEntry> = {
     description: "Status while AI file changes are prepared",
   },
   "aiAgent.editApproval.appliedOperations": {
-    message: "Operação(ões) {count} aplicadas",
-    description: "Success status for applied AI file operations",
+    message: "{count} operações aplicadas",
+    description:
+      "Success status for applied AI file operations - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.editApproval.appliedOperations_one": {
+    message: "{count} operação aplicada",
+    description:
+      "Success status for applied AI file operations - interpolation: {count} - singular form",
+  },
+  "aiAgent.editApproval.appliedOperations_many": {
+    message: "{count} operações aplicadas",
+    description:
+      "Success status for applied AI file operations - interpolation: {count} - form for large round counts such as millions",
+  },
+  "aiAgent.editApproval.appliedOperations_other": {
+    message: "{count} operações aplicadas",
+    description:
+      "Success status for applied AI file operations - interpolation: {count} - plural form",
   },
   "aiAgent.editApproval.failed": {
     message: "Falha na edição",

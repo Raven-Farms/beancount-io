@@ -195,16 +195,79 @@ const skAiAgent: Record<string, TranslationEntry> = {
     description: "Status while AI tools inspect a ledger",
   },
   "aiAgent.checkedFiles": {
-    message: "skontrolovaných {count} súborov",
-    description: "Summary of files inspected by AI tools",
+    message: "Skontrolovaných {count} súborov",
+    description:
+      "Summary of files inspected by AI tools - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.checkedFiles_one": {
+    message: "Skontrolovaný {count} súbor",
+    description:
+      "Summary of files inspected by AI tools - interpolation: {count} - singular form",
+  },
+  "aiAgent.checkedFiles_few": {
+    message: "Skontrolované {count} súbory",
+    description:
+      "Summary of files inspected by AI tools - interpolation: {count} - form for counts like 2-4",
+  },
+  "aiAgent.checkedFiles_many": {
+    message: "Skontrolovaného {count} súboru",
+    description:
+      "Summary of files inspected by AI tools - interpolation: {count} - form for fractional counts",
+  },
+  "aiAgent.checkedFiles_other": {
+    message: "Skontrolovaných {count} súborov",
+    description:
+      "Summary of files inspected by AI tools - interpolation: {count} - form for counts like 0 and 5 or more",
   },
   "aiAgent.ranQueries": {
-    message: "Zadal {count} dopyt alebo dopyty",
-    description: "Summary of queries run by AI tools",
+    message: "Spustených {count} dopytov",
+    description:
+      "Summary of queries run by AI tools - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.ranQueries_one": {
+    message: "Spustený {count} dopyt",
+    description:
+      "Summary of queries run by AI tools - interpolation: {count} - singular form",
+  },
+  "aiAgent.ranQueries_few": {
+    message: "Spustené {count} dopyty",
+    description:
+      "Summary of queries run by AI tools - interpolation: {count} - form for counts like 2-4",
+  },
+  "aiAgent.ranQueries_many": {
+    message: "Spusteného {count} dopytu",
+    description:
+      "Summary of queries run by AI tools - interpolation: {count} - form for fractional counts",
+  },
+  "aiAgent.ranQueries_other": {
+    message: "Spustených {count} dopytov",
+    description:
+      "Summary of queries run by AI tools - interpolation: {count} - form for counts like 0 and 5 or more",
   },
   "aiAgent.usedTools": {
-    message: "Použité nástroje {count}",
-    description: "Summary of tools used by the AI",
+    message: "Použitých {count} nástrojov",
+    description:
+      "Summary of tools used by the AI - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.usedTools_one": {
+    message: "Použitý {count} nástroj",
+    description:
+      "Summary of tools used by the AI - interpolation: {count} - singular form",
+  },
+  "aiAgent.usedTools_few": {
+    message: "Použité {count} nástroje",
+    description:
+      "Summary of tools used by the AI - interpolation: {count} - form for counts like 2-4",
+  },
+  "aiAgent.usedTools_many": {
+    message: "Použitého {count} nástroja",
+    description:
+      "Summary of tools used by the AI - interpolation: {count} - form for fractional counts",
+  },
+  "aiAgent.usedTools_other": {
+    message: "Použitých {count} nástrojov",
+    description:
+      "Summary of tools used by the AI - interpolation: {count} - form for counts like 0 and 5 or more",
   },
   "aiAgent.unknownBlock": {
     message: "Neznámy blok",
@@ -215,8 +278,29 @@ const skAiAgent: Record<string, TranslationEntry> = {
     description: "Status while AI file changes are prepared",
   },
   "aiAgent.editApproval.appliedOperations": {
-    message: "Použité operácie ({count})",
-    description: "Success status for applied AI file operations",
+    message: "Použitých {count} operácií",
+    description:
+      "Success status for applied AI file operations - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.editApproval.appliedOperations_one": {
+    message: "Použitá {count} operácia",
+    description:
+      "Success status for applied AI file operations - interpolation: {count} - singular form",
+  },
+  "aiAgent.editApproval.appliedOperations_few": {
+    message: "Použité {count} operácie",
+    description:
+      "Success status for applied AI file operations - interpolation: {count} - form for counts like 2-4",
+  },
+  "aiAgent.editApproval.appliedOperations_many": {
+    message: "Použitej {count} operácie",
+    description:
+      "Success status for applied AI file operations - interpolation: {count} - form for fractional counts",
+  },
+  "aiAgent.editApproval.appliedOperations_other": {
+    message: "Použitých {count} operácií",
+    description:
+      "Success status for applied AI file operations - interpolation: {count} - form for counts like 0 and 5 or more",
   },
   "aiAgent.editApproval.failed": {
     message: "Úprava zlyhala",

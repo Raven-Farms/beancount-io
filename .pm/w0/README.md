@@ -12,7 +12,6 @@
 
 ## Inbox
 
-- [011](./011.md) — Turn the Ask AI tool-activity counts into real plural messages (minor; dashboard; 35–50m).
 - [012](./012.md) — Replace "(s)" count strings in Settings plan and Plaid flows with plural messages (minor; dashboard; 45–60m).
 - [013](./013.md) — Give the ledger visibility switch an accessible name (major; dashboard; 20–30m).
 - [014](./014.md) — Let keyboard users reach the clipped Other column in statement tables (minor; dashboard; 30–45m).

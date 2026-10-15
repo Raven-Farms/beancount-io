@@ -196,15 +196,78 @@ const ukAiAgent: Record<string, TranslationEntry> = {
   },
   "aiAgent.checkedFiles": {
     message: "Перевірено {count} файлів",
-    description: "Summary of files inspected by AI tools",
+    description:
+      "Summary of files inspected by AI tools - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.checkedFiles_one": {
+    message: "Перевірено {count} файл",
+    description:
+      "Summary of files inspected by AI tools - interpolation: {count} - singular form",
+  },
+  "aiAgent.checkedFiles_few": {
+    message: "Перевірено {count} файли",
+    description:
+      "Summary of files inspected by AI tools - interpolation: {count} - form for counts like 2-4",
+  },
+  "aiAgent.checkedFiles_many": {
+    message: "Перевірено {count} файлів",
+    description:
+      "Summary of files inspected by AI tools - interpolation: {count} - form for counts like 5-20",
+  },
+  "aiAgent.checkedFiles_other": {
+    message: "Перевірено {count} файлу",
+    description:
+      "Summary of files inspected by AI tools - interpolation: {count} - form for fractional counts",
   },
   "aiAgent.ranQueries": {
-    message: "Виконано {count} запит або запити",
-    description: "Summary of queries run by AI tools",
+    message: "Виконано {count} запитів",
+    description:
+      "Summary of queries run by AI tools - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.ranQueries_one": {
+    message: "Виконано {count} запит",
+    description:
+      "Summary of queries run by AI tools - interpolation: {count} - singular form",
+  },
+  "aiAgent.ranQueries_few": {
+    message: "Виконано {count} запити",
+    description:
+      "Summary of queries run by AI tools - interpolation: {count} - form for counts like 2-4",
+  },
+  "aiAgent.ranQueries_many": {
+    message: "Виконано {count} запитів",
+    description:
+      "Summary of queries run by AI tools - interpolation: {count} - form for counts like 5-20",
+  },
+  "aiAgent.ranQueries_other": {
+    message: "Виконано {count} запиту",
+    description:
+      "Summary of queries run by AI tools - interpolation: {count} - form for fractional counts",
   },
   "aiAgent.usedTools": {
-    message: "Використано {count} інструмент(ів)",
-    description: "Summary of tools used by the AI",
+    message: "Використано {count} інструментів",
+    description:
+      "Summary of tools used by the AI - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.usedTools_one": {
+    message: "Використано {count} інструмент",
+    description:
+      "Summary of tools used by the AI - interpolation: {count} - singular form",
+  },
+  "aiAgent.usedTools_few": {
+    message: "Використано {count} інструменти",
+    description:
+      "Summary of tools used by the AI - interpolation: {count} - form for counts like 2-4",
+  },
+  "aiAgent.usedTools_many": {
+    message: "Використано {count} інструментів",
+    description:
+      "Summary of tools used by the AI - interpolation: {count} - form for counts like 5-20",
+  },
+  "aiAgent.usedTools_other": {
+    message: "Використано {count} інструмента",
+    description:
+      "Summary of tools used by the AI - interpolation: {count} - form for fractional counts",
   },
   "aiAgent.unknownBlock": {
     message: "Невідомий блок",
@@ -216,7 +279,28 @@ const ukAiAgent: Record<string, TranslationEntry> = {
   },
   "aiAgent.editApproval.appliedOperations": {
     message: "Застосовано {count} операцій",
-    description: "Success status for applied AI file operations",
+    description:
+      "Success status for applied AI file operations - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.editApproval.appliedOperations_one": {
+    message: "Застосовано {count} операцію",
+    description:
+      "Success status for applied AI file operations - interpolation: {count} - singular form",
+  },
+  "aiAgent.editApproval.appliedOperations_few": {
+    message: "Застосовано {count} операції",
+    description:
+      "Success status for applied AI file operations - interpolation: {count} - form for counts like 2-4",
+  },
+  "aiAgent.editApproval.appliedOperations_many": {
+    message: "Застосовано {count} операцій",
+    description:
+      "Success status for applied AI file operations - interpolation: {count} - form for counts like 5-20",
+  },
+  "aiAgent.editApproval.appliedOperations_other": {
+    message: "Застосовано {count} операції",
+    description:
+      "Success status for applied AI file operations - interpolation: {count} - form for fractional counts",
   },
   "aiAgent.editApproval.failed": {
     message: "Помилка редагування",

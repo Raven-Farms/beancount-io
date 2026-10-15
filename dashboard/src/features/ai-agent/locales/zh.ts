@@ -194,16 +194,34 @@ const zhAiAgent: Record<string, TranslationEntry> = {
     description: "Status while AI tools inspect a ledger",
   },
   "aiAgent.checkedFiles": {
-    message: "已检查 {count} 文件",
-    description: "Summary of files inspected by AI tools",
+    message: "已检查 {count} 个文件",
+    description:
+      "Summary of files inspected by AI tools - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.checkedFiles_other": {
+    message: "已检查 {count} 个文件",
+    description:
+      "Summary of files inspected by AI tools - interpolation: {count} - the only form; this language has no plural inflection",
   },
   "aiAgent.ranQueries": {
-    message: "执行 {count} 查询或查询",
-    description: "Summary of queries run by AI tools",
+    message: "已执行 {count} 个查询",
+    description:
+      "Summary of queries run by AI tools - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.ranQueries_other": {
+    message: "已执行 {count} 个查询",
+    description:
+      "Summary of queries run by AI tools - interpolation: {count} - the only form; this language has no plural inflection",
   },
   "aiAgent.usedTools": {
-    message: "使用过 {count} 工具",
-    description: "Summary of tools used by the AI",
+    message: "已使用 {count} 个工具",
+    description:
+      "Summary of tools used by the AI - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.usedTools_other": {
+    message: "已使用 {count} 个工具",
+    description:
+      "Summary of tools used by the AI - interpolation: {count} - the only form; this language has no plural inflection",
   },
   "aiAgent.unknownBlock": {
     message: "未知块",
@@ -214,8 +232,14 @@ const zhAiAgent: Record<string, TranslationEntry> = {
     description: "Status while AI file changes are prepared",
   },
   "aiAgent.editApproval.appliedOperations": {
-    message: "应用了 {count} 操作",
-    description: "Success status for applied AI file operations",
+    message: "已应用 {count} 项操作",
+    description:
+      "Success status for applied AI file operations - interpolation: {count} (base key for pluralization)",
+  },
+  "aiAgent.editApproval.appliedOperations_other": {
+    message: "已应用 {count} 项操作",
+    description:
+      "Success status for applied AI file operations - interpolation: {count} - the only form; this language has no plural inflection",
   },
   "aiAgent.editApproval.failed": {
     message: "编辑失败",
