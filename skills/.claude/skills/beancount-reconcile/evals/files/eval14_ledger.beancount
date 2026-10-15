@@ -1,0 +1,32 @@
+;; fixture — beancount-reconcile eval14 (card statement prints the owed balance positive)
+option "operating_currency" "USD"
+
+2026-01-01 open Liabilities:CreditCard USD
+2026-01-01 open Expenses:Food:Groceries USD
+2026-01-01 open Expenses:Transport:Gas USD
+2026-01-01 open Expenses:Food:Coffee USD
+2026-01-01 open Expenses:Travel USD
+2026-01-01 open Assets:Bank:Checking USD
+2026-01-01 open Equity:Opening-Balances
+
+2026-04-30 * "Opening checking"
+  Assets:Bank:Checking   5000.00 USD
+  Equity:Opening-Balances
+
+2026-05-01 balance Liabilities:CreditCard   0.00 USD
+
+2026-05-03 * "TRADER JOES #123"
+  Liabilities:CreditCard   -54.20 USD
+  Expenses:Food:Groceries   54.20 USD
+
+2026-05-10 * "SHELL OIL 5544"
+  Liabilities:CreditCard   -40.00 USD
+  Expenses:Transport:Gas    40.00 USD
+
+2026-05-15 * "ONLINE PAYMENT THANK YOU"
+  Liabilities:CreditCard    50.00 USD
+  Assets:Bank:Checking     -50.00 USD
+
+2026-05-21 * "BLUE BOTTLE COFFEE"
+  Liabilities:CreditCard    -8.00 USD
+  Expenses:Food:Coffee       8.00 USD

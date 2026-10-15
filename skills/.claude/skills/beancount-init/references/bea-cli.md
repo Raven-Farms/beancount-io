@@ -137,7 +137,9 @@ Confirm unfamiliar shapes with `bea add transactions --help` before writing.
 ## Assert the statement balance
 
 Set `assertion_date` to the day **after** the statement end, and `amount` to
-the signed statement ending amount including its currency (e.g. `987.50 USD`).
+the statement ending amount in ledger sign, including its currency (e.g.
+`987.50 USD`). A liability statement prints the amount owed as positive, so a
+card's "New Balance 342.20" is asserted as `-342.20 USD`.
 Only write an assertion that the proposed ledger will satisfy.
 
 <!-- recipe: balance -->

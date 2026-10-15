@@ -1,6 +1,6 @@
 {
   "skill_name": "beancount-reconcile",
-  "notes": "Each eval maps the fixture ledger to ./ledger.beancount and the fixture statement to ./statement.csv in a scratch dir. Expectations are graded against the skill's reported diff and any appended entries. Validate with `bea check` when bea is installed; oracle/CI uses `uv run --project cli bean-check` separately. Do not `pip install beancount` as the customer path. eval1-7 cover the happy path and each mismatch class; eval8-10 are failure-mode checks; eval12-13 replay the first-month rehearsal's reconcile preview (reproducible tie-out arithmetic and a signed unresolved residual).",
+  "notes": "Each eval maps the fixture ledger to ./ledger.beancount and the fixture statement to ./statement.csv in a scratch dir. Expectations are graded against the skill's reported diff and any appended entries. Validate with `bea check` when bea is installed; oracle/CI uses `uv run --project cli bean-check` separately. Do not `pip install beancount` as the customer path. eval1-7 cover the happy path and each mismatch class; eval8-10 are failure-mode checks; eval12-13 replay the first-month rehearsal's reconcile preview (reproducible tie-out arithmetic and a signed unresolved residual); eval14 is a card statement whose running Balance prints the amount owed as positive, which must be negated into ledger sign.",
   "evals": [
     {
       "id": 1,
@@ -217,6 +217,23 @@
         "No passing-looking balance assertion is proposed for 2941.00 or 2945.00 USD",
         "No fee, pad, or adjustment transaction is invented to absorb the difference",
         "./ledger.beancount is unchanged and the account is not described as reconciled"
+      ]
+    },
+    {
+      "id": 14,
+      "name": "liability-printed-positive-balance",
+      "prompt": "Reconcile Liabilities:CreditCard in ./ledger.beancount against my May card statement ./statement.csv. Purchases are positive and payments negative on the statement, and the Balance column is what I owe.",
+      "expected_output": "This is a LIABILITY account, so positive purchases normalize to negative postings, the payment to positive, and the running Balance (the amount owed) is negated too: the statement ending balance 342.20 is -342.20 in ledger sign. The first four lines match; UNITED AIRLINES 290.00 is missing and is proposed as Liabilities:CreditCard -290.00 / Expenses:Travel 290.00 (or Expenses:Uncategorized, flagged), and the sanity walk 0.00 + -342.20 equals -342.20. The executed tie-out with $statement_ending -342.20 and $proposed_net -290.00 gives ledger -52.20, projected -342.20, residual 0.00, so the skill proposes 2026-06-01 balance Liabilities:CreditCard -342.20 USD, which passes bea check after the confirmed writes.",
+      "files": [
+        "evals/files/eval14_ledger.beancount",
+        "evals/files/eval14_statement.csv"
+      ],
+      "expectations": [
+        "The statement's positive ending balance 342.20 is used as -342.20 (ledger sign for a liability) in the tie-out and the assertion; the skill does not report a 684.40 residual",
+        "The tie-out query output shows ledger -52.20, projected -342.20 and residual 0.00",
+        "The missing UNITED AIRLINES charge is proposed as a -290.00 posting to Liabilities:CreditCard",
+        "The proposed balance assertion is 2026-06-01 balance Liabilities:CreditCard -342.20 USD, and bea check passes after the confirmed writes",
+        "The skill does not blame the sign mapping or a missing line for a mismatch that is only the unflipped ending balance"
       ]
     }
   ]

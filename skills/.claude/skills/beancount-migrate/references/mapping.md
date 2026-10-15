@@ -34,7 +34,7 @@ Merged-pair transaction text: payee = the **outflow side's** description; keep t
 
 Exports carry flows, not balances, so anchor both ends per account:
 
-1. Ask the user for the **current balance** (from the old app's account screen or the real bank). Also ask for the **balance at the start of the export period** if they know it (or read it from the export when it states one).
+1. Ask the user for the **current balance** (from the old app's account screen or the real bank). Also ask for the **balance at the start of the export period** if they know it (or read it from the export when it states one). Put both in ledger sign: a credit card or loan is shown as the positive amount owed (`1,250.00`), which is `-1250.00` on a `Liabilities:` account; a credit balance becomes positive.
 2. `opening = current − Σ(converted rows for that account)`. **But when a stated opening exists, use it as-is instead** — then the endpoint assertion is a genuine check of the conversion (rows missing from the export, pending transactions, wrong stated balance make it fail by exactly the delta), not a tautology. Never nudge either number to force a pass; a real delta is a report finding.
 3. Initialize with opens dated on/before the **day before the earliest row**, then include the opening entry in the confirmed `bea` batch. Reuse the existing opening-equity account; `bea init` creates `Equity:OpeningBalances`:
 

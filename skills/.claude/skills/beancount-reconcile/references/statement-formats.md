@@ -60,7 +60,15 @@ Ledger convention: a **charge** makes the balance more negative (`−`, you owe 
 
 Credit-card CSVs frequently list **purchases as positive numbers** ("Amount = 54.20" for a $54.20 charge). For a liability account that must become `−54.20`. Watch for this explicitly; if a card's export convention is unclear, ask.
 
-> Sanity check after normalizing: `opening_balance + sum(normalized amounts) == ending_balance`. If it doesn't, your sign mapping (or a missing/extra line) is wrong. This walk is the cheapest way to catch a flipped column before you ever diff against the ledger. Record the confirmed convention in the config block so re-runs skip the detection.
+**The balances flip too.** A card or credit-line statement prints what you owe as a positive number: "New Balance 342.20", "Previous Balance", or a running `Balance` column ending at `342.20`. In ledger sign that is `−342.20`. Negate the opening balance, the ending balance and every running-balance value before the sanity walk, the tie-out query (`$statement_ending`) and the `balance` assertion. A credit balance (printed negative, or marked `CR`: the issuer owes you) becomes positive. Leaving the printed figure positive gives a residual of exactly twice the balance on a statement that does tie out.
+
+<!-- recipe: liability-ending -->
+```beancount
+; Card statement for May 2026: "New Balance 342.20" (amount owed)
+2026-06-01 balance Liabilities:CreditCard  -342.20 USD
+```
+
+> Sanity check after normalizing: `opening_balance + sum(normalized amounts) == ending_balance`, with both balances in ledger sign (negated for a liability). If it doesn't, your sign mapping (or a missing/extra line) is wrong. This walk is the cheapest way to catch a flipped column before you ever diff against the ledger. Record the confirmed convention in the config block so re-runs skip the detection.
 
 ## Date normalization
 

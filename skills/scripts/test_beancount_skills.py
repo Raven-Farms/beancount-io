@@ -471,6 +471,7 @@ class TestBeaRecipes(unittest.TestCase):
                 "beancount-init/references/bea-cli.md",
                 "beancount-import/references/bea-import.md",
                 "beancount-reconcile/SKILL.md",
+                "beancount-reconcile/references/statement-formats.md",
                 "beancount-close/references/close-checklist.md",
                 "beancount-ask/references/bql-recipes.md",
             )
@@ -716,6 +717,38 @@ class TestBeaRecipes(unittest.TestCase):
         self.values.update(statement_ending="2940.00", proposed_net="(-3.00 + -1.00)")
         self.assertEqual(self.recipe("tie-out")["rows"], [["2945.00", "2941.00", "-1.00"]])
         self.assertEqual(ledger.read_bytes(), before)
+
+    def test_liability_tie_out_negates_the_printed_ending_balance(self):
+        # A card statement prints the amount owed as a positive running
+        # balance; the documented rule negates it into ledger sign (w5/359).
+        files = SUITE / "beancount-reconcile" / "evals" / "files"
+        ledger = self.books / "card.bean"
+        ledger.write_text((files / "eval14_ledger.beancount").read_text())
+        printed = Decimal(
+            (files / "eval14_statement.csv").read_text().strip().splitlines()[-1].rsplit(",", 1)[1]
+        )
+        example = self.block("liability-ending", "beancount")
+        example_printed = Decimal(re.search(r"New Balance (\d+\.\d+)", example).group(1))
+        example_signed = Decimal(re.search(r"balance Liabilities:\S+\s+(-?\d+\.\d+) USD", example).group(1))
+        ending = printed * (example_signed / example_printed)
+        self.assertEqual(ending, Decimal("-342.20"))
+
+        self.values.update(
+            ledger=str(ledger), target=ledger.name, account="Liabilities:CreditCard", currency="USD",
+            assertion_date="2026-06-01", statement_ending=str(ending), proposed_net="-290.00",
+            amount=f"{ending} USD",
+        )
+        self.assertEqual(self.recipe("tie-out")["rows"], [["-52.20", "-342.20", "0.00"]])
+        # The unflipped printed figure is off by exactly twice the balance.
+        self.values.update(statement_ending=str(printed))
+        self.assertEqual(self.recipe("tie-out")["rows"], [["-52.20", "-342.20", "684.40"]])
+
+        with ledger.open("a") as handle:
+            handle.write('\n2026-05-28 * "UNITED AIRLINES"\n  Liabilities:CreditCard  -290.00 USD\n  Expenses:Travel  290.00 USD\n')
+        self.recipe("balance")
+        self.assertIn("2026-06-01 balance Liabilities:CreditCard", ledger.read_text())
+        self.assertIn("-342.20 USD", ledger.read_text())
+        self.recipe("check")
 
     def test_recurring_recipes_find_a_gap_in_a_payee_less_import(self):
         # A one-description bank CSV, imported through the shipped recipe: bea

@@ -70,7 +70,7 @@ Turn the statement into normalized lines. **Read `references/statement-formats.m
 - Accept a **CSV export** or **pasted PDF text**. Extract three things: the **statement period** (start and end dates), the **ending balance**, and the **transaction lines** (date, amount, description).
 - Map every amount to the **ledger's sign convention for the target account**:
   - **Asset** account: money in `= +`, money out `= −`.
-  - **Liability** account: a charge `= −` (you owe more), a payment `= +` (you owe less).
+  - **Liability** account: a charge `= −` (you owe more), a payment `= +` (you owe less). The **balances flip too**: a card statement prints the amount owed as positive ("New Balance 342.20", or a running `Balance` column), which is `−342.20` in ledger sign. Use that signed figure as the ending balance in the tie-out and the assertion (see the liability section of `references/statement-formats.md`).
 - Statements vary (separate debit/credit columns, signed amounts, MDY vs DMY dates, running-balance columns). When the sign or date convention is ambiguous, **ask — never guess**; a flipped sign silently corrupts the reconciliation.
 
 If the statement's ending balance or period bounds can't be found, ask for them. They are required — the balance assertion depends on them.
@@ -115,6 +115,7 @@ Every balance, sum, and residual in the proposal must be reproducible by the use
 bea --file "$ledger" --json --no-input query "SELECT sum(number) AS ledger, sum(number) + $proposed_net AS projected, $statement_ending - (sum(number) + $proposed_net) AS residual WHERE account = '$account' AND currency = '$currency' AND date < $assertion_date"
 ```
 
+- `$statement_ending` is the statement's ending balance in ledger sign: negated for a liability, so a card's printed "New Balance 342.20" is `-342.20`.
 - `$proposed_net` is the signed sum of the proposed missing-in-ledger target postings, written as decimal literals (e.g. `-3.00`, or `(-54.20 + -12.00)`); use `0.00` when nothing is proposed. `$assertion_date` is the day after the statement's last day.
 - Show the command and its `rows` in the proposal. Any arithmetic you restate in prose — e.g. `2945.00 − 3.00 = 2942.00` — must copy the operands and result from that output. If the query returns no row or null, the account has no postings before that date; state that rather than assuming zero silently.
 - If a figure you wrote disagrees with the output, correct it before asking for approval. After any revision, rerun the query; never carry numbers over from an earlier draft.
