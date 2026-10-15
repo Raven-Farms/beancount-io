@@ -42,3 +42,5 @@
 - [027](./blocked/027.md) — Preserve GETPRICE currency argument normalization (minor; ledger; 35–50m after upstream support) — **blocked:** needs a published Beanquery-compatible WASM lookup.
 
 - [028](./blocked/028.md) — Preserve negative SPLITCOMP component indices (minor; ledger; 35–50m after upstream support) — **blocked:** needs a published signed-index WASM implementation.
+
+- [029](./blocked/029.md) — Preserve Beanquery SUBST replacement semantics (minor; ledger; 35–50m after upstream support) — **blocked:** needs a compatible published WASM replacement implementation.
