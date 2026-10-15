@@ -71,6 +71,8 @@ class LedgerSnapshot:
     def capture(cls, root: Path) -> LedgerSnapshot:
         # Lexical, like Beancount's loader: a symlinked root's includes sit
         # beside the link, not beside its target (w1/056).
+        from bea_engine.managed_prices import is_url_include_target
+
         snapshot = cls(Path(os.path.abspath(root)))
         pending = [snapshot.root]
         includers: dict[Path, Path] = {}
@@ -99,6 +101,11 @@ class LedgerSnapshot:
                     "Correct the file or its permissions, or remove the include."
                 ) from None
             for _, _, name in _includes(content):
+                if is_url_include_target(name):
+                    # A URL is a managed price request or a refusal the load
+                    # reports, never a local file glob: `https://example.com/x`
+                    # otherwise matched `./https:/example.com/x` (w5/450).
+                    continue
                 pattern = str(path.parent / name)
                 # Normalized the way the loader names an included file —
                 # `normpath`, without resolving links. Left as `2026/../shared`,

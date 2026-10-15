@@ -296,8 +296,9 @@ def _load_with_sources(
 
     snapshot = snapshot or LedgerSnapshot.capture(entry)
     refuse_cache_over_ledger(entry, snapshot.contents)
-    managed = _collect_managed(snapshot, allowed_origins)
-    if not managed and all(state is not None for state in snapshot.stats.values()):
+    refused: dict[str, str] = {}
+    managed = _collect_managed(snapshot, allowed_origins, refused)
+    if not managed and not refused and all(state is not None for state in snapshot.stats.values()):
         entries, errors, options = _load_fresh(entry, snapshot)
         _refuse_undecodable(errors, snapshot)
         return LoadedLedger(list(entries), list(errors), dict(options), ())
@@ -386,6 +387,7 @@ def _load_with_sources(
                 unavailable,
                 LoadError,
                 stack,
+                refused,
             )
             staged[path].write_bytes(content)
         entries, errors, options = loader.load_file(str(staged[snapshot.root]))
@@ -720,10 +722,15 @@ class _PendingSource:
     includes: list[IncludeRef]
 
 
-def _collect_managed(snapshot: Any, origins: tuple[str, ...]) -> list[_PendingSource]:
+def _collect_managed(
+    snapshot: Any, origins: tuple[str, ...], refused: dict[str, str] | None = None
+) -> list[_PendingSource]:
     """Group the closure's allowed managed includes by canonical feed URL.
 
-    Disallowed URLs are left for Beancount to report, exactly as today.
+    A disallowed URL goes into `refused` with its reason, for the load to
+    report at the include. Left to Beancount, its glob read the URL as a
+    local path: `include "https://example.com/x.bean"` silently loaded a
+    `./https:/example.com/x.bean` beside the ledger (w5/450).
     Nested includes, globs, and cycles are already handled by the snapshot's
     closure walk. The per-load cap applies later, when the budget claims;
     a source past it stays in the list and resolves as unavailable.
@@ -737,6 +744,8 @@ def _collect_managed(snapshot: Any, origins: tuple[str, ...]) -> list[_PendingSo
                 continue
             decision = parse_managed_price_url(span.target, origins)
             if not isinstance(decision, AllowedUrl):
+                if refused is not None:
+                    refused[span.target] = decision.detail
                 continue
             include = IncludeRef(file=str(path), line=span.line, target=span.target)
             existing = by_url.get(decision.url)
@@ -789,6 +798,7 @@ def _rewrite_includes(
     unavailable: list[Any],
     load_error: Any,
     stack: ExitStack,
+    refused: dict[str, str],
 ) -> bytes:
     """Rewrite one closure file's includes for its staged twin.
 
@@ -805,6 +815,16 @@ def _rewrite_includes(
     by_target = {include.target: source for source in pending for include in source.includes}
     content = original
     for span in sorted(iter_includes(content), key=lambda item: item.start, reverse=True):
+        if span.target in refused:
+            # Not handed to Beancount's glob, which read it as a local path.
+            content = _swap_line(content, span.line, f"; refused URL include: {span.target}\n".encode())
+            unavailable.append(
+                load_error(
+                    {"filename": str(path), "lineno": span.line},
+                    f'include "{span.target}": {refused[span.target]}.',
+                )
+            )
+            continue
         source = by_target.get(span.target)
         if source is None:
             matches = patterns.get(str(path.parent / span.target), ())
