@@ -98,9 +98,9 @@ async function fixture(
     reports,
     factory,
     client,
-    rest: (query: string, ledgerId = "alice/main", kind = "narration") =>
+    rest: (query: string, kind: "narration" | "payee" = "narration") =>
       fetch(
-        `${rest.url}/api-gateway/v1/ledgers/${ledgerId}/${kind}-transactions${query}`,
+        `${rest.url}/api-gateway/v1/ledgers/alice/main/${kind}-transactions${query}`,
       ),
     mcp: async (uri: string) => {
       const result = await client.readResource({ uri });
@@ -110,17 +110,13 @@ async function fixture(
       if (!("text" in content)) throw new Error("Expected JSON resource");
       return JSON.parse(content.text);
     },
-    gql: (
-      kind: "narration" | "payee",
-      value?: string,
-      ledgerId = "alice/main",
-    ) =>
+    gql: (kind: "narration" | "payee", value?: string) =>
       graphql({
         schema,
         source: `query($ledgerId: String!, $${kind}: String!) {
           getLedger${kind === "narration" ? "Narration" : "Payee"}Transactions(ledgerId: $ledgerId, ${kind}: $${kind}) { ${fields} }
         }`,
-        variableValues: { ledgerId, [kind]: value },
+        variableValues: { ledgerId: "alice/main", [kind]: value },
         contextValue: { identity },
       }),
     close: async () => {
@@ -167,11 +163,7 @@ describe("transaction lookup adapter parity", () => {
       const payee = await f.gql("payee", "Wine-Tarner Cable");
       expect(payee.errors).toBeUndefined();
       expect(payee.data?.getLedgerPayeeTransactions).toEqual(blank);
-      const payeeRest = await f.rest(
-        "?payee=Wine-Tarner+Cable",
-        "alice/main",
-        "payee",
-      );
+      const payeeRest = await f.rest("?payee=Wine-Tarner+Cable", "payee");
       expect(payeeRest.status).toBe(200);
       expect(await payeeRest.json()).toEqual(blank);
       expect(
