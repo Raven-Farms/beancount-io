@@ -272,7 +272,37 @@ def _included_new_file(target: Path, pattern: str) -> bool:
         return False
     if name == "**":
         parent = os.path.join(parent, "**")
-    return any(Path(directory).resolve() == target.parent for directory in glob.glob(parent, recursive=True))
+    if any(Path(directory).resolve() == target.parent for directory in glob.glob(parent, recursive=True)):
+        return True
+    # A directory the write would create is not on disk for `glob` to list:
+    # `price export` into a new `snap/` under `include "*/*.bean"` wrote a
+    # copy the next load read back as part of the books (w5/296).
+    return _directory_matches(target.parent, parent)
+
+
+def _directory_matches(directory: Path, pattern: str) -> bool:
+    """Whether `glob` would list `directory` for `pattern` once it exists."""
+    parts = Path(pattern).parts
+    fixed = next((i for i, part in enumerate(parts) if glob.has_magic(part)), len(parts))
+    try:
+        names = directory.relative_to(Path(*parts[:fixed]).resolve()).parts
+    except ValueError:
+        return False
+    return _components_match(names, parts[fixed:])
+
+
+def _components_match(names: tuple[str, ...], patterns: tuple[str, ...]) -> bool:
+    """Glob's component rules: `**` spans any depth, and wildcards skip hidden names."""
+    if not patterns:
+        return not names
+    head, rest = patterns[0], patterns[1:]
+    if head == "**":
+        if _components_match(names, rest):
+            return True
+        return bool(names) and not names[0].startswith(".") and _components_match(names[1:], patterns)
+    if not names or (names[0].startswith(".") and not head.startswith(".")):
+        return False
+    return fnmatch.fnmatch(names[0], head) and _components_match(names[1:], rest)
 
 
 #: How long a staged candidate must have been sitting before another write
