@@ -364,7 +364,7 @@ def _include_matches(source: Path, raw: str) -> tuple[list[Path], list[Path]]:
 
 def walk_closure(*roots: Path) -> tuple[list[Path], list[MissingInclude]]:
     """The roots plus every reachable file, with the includes that resolve nowhere."""
-    members, missing, _ = _walk_closure(*roots)
+    members, missing, _, _ = _walk_closure(*roots)
     return members, missing
 
 
@@ -377,8 +377,20 @@ def has_unreadable_include(root: Path) -> bool:
     return bool(_walk_closure(root)[2])
 
 
-def _walk_closure(*roots: Path) -> tuple[list[Path], list[MissingInclude], list[Path]]:
-    """The roots plus every reachable file, the includes that resolve nowhere, and the unreadable matches.
+def has_duplicate_member(root: Path) -> bool:
+    """Whether the ledger reaches one file under two names (w5/433).
+
+    A link, or another letter case or Unicode form on a volume that ignores
+    them: Beancount compares include paths as text and loads such a file
+    twice, counting its entries twice, where the helper loads it once and
+    names both.
+    """
+    return bool(_walk_closure(root)[3])
+
+
+def _walk_closure(*roots: Path) -> tuple[list[Path], list[MissingInclude], list[Path], list[Path]]:
+    """The roots plus every reachable file, the includes that resolve nowhere, the unreadable matches,
+    and the files reached again under another name.
 
     Several roots share one walk, so a file reachable from many of them is
     read once: walking each root separately is quadratic on a long include
@@ -392,7 +404,9 @@ def _walk_closure(*roots: Path) -> tuple[list[Path], list[MissingInclude], list[
     members: list[Path] = []
     missing: list[MissingInclude] = []
     unreadable: list[Path] = []
-    seen: set[Path] = set()
+    again: list[Path] = []
+    seen: dict[Path, str] = {}
+    inodes: set[tuple[int, int]] = set()
     stack = list(reversed(roots))
     while stack:
         current = stack.pop()
@@ -401,9 +415,22 @@ def _walk_closure(*roots: Path) -> tuple[list[Path], list[MissingInclude], list[
         except OSError:
             continue
         if key in seen:
+            # The same file through a symbolic link: the loader, comparing
+            # names, reads it twice (w5/433).
+            if os.path.normpath(current) != seen[key]:
+                again.append(current)
             continue
-        seen.add(key)
+        seen[key] = os.path.normpath(current)
         members.append(current)
+        try:
+            status = current.stat()
+        except OSError:
+            pass
+        else:
+            # A hard link, or another letter case or Unicode form of the name.
+            if (status.st_dev, status.st_ino) in inodes:
+                again.append(current)
+            inodes.add((status.st_dev, status.st_ino))
         try:
             text = current.read_text(encoding="utf-8", errors="replace").removeprefix("\ufeff")
         except OSError:
@@ -423,7 +450,7 @@ def _walk_closure(*roots: Path) -> tuple[list[Path], list[MissingInclude], list[
                 reason = not_a_file(others[0]) if others else None
                 missing.append(MissingInclude(include=raw, source=current, reason=reason))
             unreadable.extend(others)
-    return members, missing, unreadable
+    return members, missing, unreadable, again
 
 
 def ledger_closure(root: Path) -> list[Path]:

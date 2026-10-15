@@ -128,7 +128,10 @@ An `include` that reaches a file without read permission, a directory, or a
 broken symbolic link also exits **2** on every command, `bea check` included,
 in one line naming the include and the file that includes it; `--allow-errors`
 does not skip it. An include that matches nothing stays an ordinary ledger
-error.
+error. One file reached under two names (a symbolic or hard link, or another
+letter case or Unicode form on a volume that ignores them) is loaded once, from
+its first include, and each repeat is a `Duplicate include` ledger error naming
+both names; `price export` copies it once and comments out the repeat.
 A root ledger that is a symlink keeps the path you named, as `bean-check` does:
 its relative `include` and `--into` paths resolve beside the link, not beside
 the file it points to, and writes such as `add` land in that file through the

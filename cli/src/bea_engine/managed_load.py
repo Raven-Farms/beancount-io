@@ -298,7 +298,8 @@ def _load_with_sources(
     refuse_cache_over_ledger(entry, snapshot.contents)
     refused: dict[str, str] = {}
     managed = _collect_managed(snapshot, allowed_origins, refused)
-    if not managed and not refused and all(state is not None for state in snapshot.stats.values()):
+    duplicates = _duplicate_members(snapshot)
+    if not managed and not refused and not duplicates and all(state is not None for state in snapshot.stats.values()):
         entries, errors, options = _load_fresh(entry, snapshot)
         _refuse_undecodable(errors, snapshot)
         return LoadedLedger(list(entries), list(errors), dict(options), ())
@@ -384,10 +385,13 @@ def _load_with_sources(
                 resolved,
                 effective,
                 primary,
-                unavailable,
+                # A file reached again under another name is never loaded,
+                # so what its own lines would report is not reported.
+                [] if path in duplicates else unavailable,
                 LoadError,
                 stack,
                 refused,
+                duplicates,
             )
             staged[path].write_bytes(content)
         entries, errors, options = loader.load_file(str(staged[snapshot.root]))
@@ -756,6 +760,28 @@ def _collect_managed(
     return list(by_url.values())
 
 
+def _duplicate_members(snapshot: Any) -> dict[Path, Path]:
+    """Each closure file reached again under another name, mapped to the name that reached it first.
+
+    Beancount spots a repeated include by its path text alone, so `include
+    "Sub/X.bean"` beside `include "SUB/x.bean"` on a case-insensitive volume,
+    two Unicode forms of one name, or a hard or symbolic link loaded one file
+    twice and counted every entry in it twice, while `check` passed (w5/433).
+    The snapshot lists files in the order the loader reaches them.
+    """
+    first: dict[tuple[int, int], Path] = {}
+    duplicates: dict[Path, Path] = {}
+    for path, status in snapshot.stats.items():
+        if status is None:
+            continue
+        key = (status.st_dev, status.st_ino)
+        if key in first:
+            duplicates[path] = first[key]
+        else:
+            first[key] = path
+    return duplicates
+
+
 @contextmanager
 def _shadow(path: Path, content: str, entry: Path, managed: list[_PendingSource]) -> Iterator[Path]:
     """A staged copy beside `path` for this load, with a refusal that describes a read.
@@ -799,6 +825,7 @@ def _rewrite_includes(
     load_error: Any,
     stack: ExitStack,
     refused: dict[str, str],
+    duplicates: dict[Path, Path],
 ) -> bytes:
     """Rewrite one closure file's includes for its staged twin.
 
@@ -814,6 +841,7 @@ def _rewrite_includes(
 
     by_target = {include.target: source for source in pending for include in source.includes}
     content = original
+    reported = len(unavailable)
     for span in sorted(iter_includes(content), key=lambda item: item.start, reverse=True):
         if span.target in refused:
             # Not handed to Beancount's glob, which read it as a local path.
@@ -829,9 +857,18 @@ def _rewrite_includes(
         if source is None:
             matches = patterns.get(str(path.parent / span.target), ())
             if matches:
+                for again in (match for match in matches if match in duplicates):
+                    unavailable.append(
+                        load_error(
+                            {"filename": str(path), "lineno": span.line},
+                            f"Duplicate include: {again} is {duplicates[again]} under another name "
+                            "(letter case, Unicode form or a link); its entries are loaded once.",
+                        )
+                    )
                 # One line stays one line, so every later line of this file
                 # keeps its number (w5/092, the read twin of w5/079).
-                replacement = staged_include(stack, path, [staged[p] for p in matches])
+                kept = [staged[p] for p in matches if p not in duplicates]
+                replacement = staged_include(stack, path, kept)
                 content = content[: span.start] + replacement.encode() + content[span.end :]
             continue
         result = resolved.get(source.url)
@@ -855,6 +892,8 @@ def _rewrite_includes(
                 "Run bea price status to inspect the source.",
             )
         )
+    # Found last line first, so that rewrites keep earlier offsets; reported in file order.
+    unavailable[reported:] = sorted(unavailable[reported:], key=lambda error: error.source["lineno"])
     return content
 
 
@@ -1055,7 +1094,13 @@ def export_portable(
     # export instead of in it, over whatever lived there, and the include kept
     # pointing outside the snapshot.
     home = snapshot.root.parent.resolve()
+    # A file the ledger reaches again under another name is loaded once, from
+    # its first include (w5/433), so the export copies it once and comments
+    # out the repeat: two plain copies would load it twice.
+    duplicates = _duplicate_members(snapshot)
     for path in snapshot.contents:
+        if path in duplicates:
+            continue
         if path == snapshot.root:
             # The root keeps its own name even when it is a link elsewhere.
             destinations[path] = target / path.name
@@ -1065,28 +1110,6 @@ def export_portable(
         except ValueError:
             external += 1
             destinations[path] = target / "_shared" / f"{external:02d}-{path.name}"
-    # The resolved file decides containment, but not how many files there are.
-    # `a.bean` and `b.bean` linked to one `tx.bean` are two includes the loader
-    # reads twice; both resolved to `tx.bean`, so the export wrote one file,
-    # pointed both includes at it, and stock Beancount refused the snapshot as
-    # a duplicate filename with half the transactions. Each alias keeps the
-    # name the ledger spells when that stays inside the export.
-    sharing: dict[Path, list[Path]] = {}
-    for path, dest in destinations.items():
-        sharing.setdefault(dest, []).append(path)
-    claimed = set(sharing)
-    lexical_home = Path(os.path.normpath(snapshot.root.parent))
-    for dest, paths in sharing.items():
-        for path in paths if len(paths) > 1 else ():
-            spelled = Path(os.path.normpath(path))
-            own = target / spelled.relative_to(lexical_home) if spelled.is_relative_to(lexical_home) else None
-            if own == dest:
-                continue
-            if own is None or own in claimed:
-                external += 1
-                own = target / "_shared" / f"{external:02d}-{path.name}"
-            destinations[path] = own
-            claimed.add(own)
     # Allocated against the copied files, not independently of them. A ledger
     # may legitimately keep its own `prices/BTC-USD.beancount` beside a managed
     # `BTC-USD` feed; the two maps used to be built in isolation, so the feed
@@ -1202,10 +1225,14 @@ def export_portable(
     try:
         root_mode = _permission_bits(entry)
         for path, original in snapshot.contents.items():
+            if path in duplicates:
+                continue
             dest = destinations[path]
             _write_export(
                 dest,
-                _rewrite_export_includes(original, path, snapshot.patterns, destinations, by_target, repeats),
+                _rewrite_export_includes(
+                    original, path, snapshot.patterns, destinations, by_target, repeats, duplicates
+                ),
                 _permission_bits(path),
             )
             written.append(str(dest))
@@ -1482,6 +1509,7 @@ def _rewrite_export_includes(
     destinations: dict[Path, Path],
     by_target: dict[str, Path],
     repeats: set[tuple[str, str, int]],
+    duplicates: dict[Path, Path],
 ) -> bytes:
     """Rewrite one copied file's includes as portable relative targets.
 
@@ -1507,12 +1535,15 @@ def _rewrite_export_includes(
             replacement = literal_include(os.path.relpath(feed, dest.parent))
             content = content[: span.start] + replacement.encode() + content[span.end :]
             continue
-        matches = patterns.get(str(path.parent / span.target), ())
+        matches = [match for match in patterns.get(str(path.parent / span.target), ()) if match not in duplicates]
         if matches:
             replacement = "\ninclude ".join(
                 literal_include(os.path.relpath(destinations[p], dest.parent)) for p in matches
             )
             content = content[: span.start] + replacement.encode() + content[span.end :]
+        elif patterns.get(str(path.parent / span.target)):
+            # Every match is a file already included under another name.
+            content = _swap_line(content, span.line, f"; already included under another name: {span.target}\n".encode())
     return content
 
 

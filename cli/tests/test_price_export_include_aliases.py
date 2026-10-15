@@ -1,10 +1,11 @@
-"""`price export` keeps distinct include paths distinct, even when they name one file (w5/058).
+"""`price export` loads the same ledger as its source when includes name one file (w5/058, w5/433).
 
-`a.bean` and `b.bean` linked to one `tx.bean` are two includes, and the loader
-reads the transaction twice. The planner placed every copy by its resolved
-path, so both landed on `tx.bean`: the export exited 0 with one file listed
-twice, both includes rewritten to it, and stock Beancount refused the
-snapshot ("Duplicate filename parsed") while reporting half the balance.
+`a.bean` and `b.bean` linked to one `tx.bean` name one file. The planner once
+placed both copies on `tx.bean`, and stock Beancount refused the snapshot
+("Duplicate filename parsed") while reporting half the balance (w5/058). The
+load now reads such a file once and reports the repeat (w5/433), so the export
+copies it once and comments out the repeated include: both load the
+transaction once. Regular copies are two files and stay two.
 """
 
 from __future__ import annotations
@@ -78,13 +79,16 @@ def _regular_copies(source: Path) -> list[str]:
     return ["a.bean", "b.bean"]
 
 
-def _loaded(tmp_path: Path, ledger: Path) -> tuple[object, int]:
-    """What stock validation and a query see: the balances and the posting count."""
+def _loaded(tmp_path: Path, ledger: Path, *, valid: bool = True) -> tuple[object, int]:
+    """What validation and a query see: the balances and the posting count."""
     check = _bea(tmp_path, "--json", "--file", str(ledger), "check")
-    assert check.returncode == 0, check.stderr or check.stdout
-    balances = _bea(tmp_path, "--json", "--file", str(ledger), "query", BALANCES)
+    assert (check.returncode == 0) is valid, check.stderr or check.stdout
+    if not valid:
+        assert "Duplicate include" in check.stderr
+    tolerant = [] if valid else ["--allow-errors"]
+    balances = _bea(tmp_path, "--json", "--file", str(ledger), "query", BALANCES, *tolerant)
     assert balances.returncode == 0, balances.stderr or balances.stdout
-    postings = _bea(tmp_path, "--json", "--file", str(ledger), "query", "SELECT count(*) AS postings")
+    postings = _bea(tmp_path, "--json", "--file", str(ledger), "query", "SELECT count(*) AS postings", *tolerant)
     assert postings.returncode == 0, postings.stderr or postings.stdout
     return json.loads(balances.stdout)["data"]["rows"], int(json.loads(postings.stdout)["data"]["rows"][0][0])
 
@@ -99,18 +103,23 @@ def test_export_loads_the_same_ledger_as_its_source(tmp_path: Path, arrange: Cal
     source = tmp_path / "source"
     source.mkdir()
     includes = arrange(source)
+    aliased = arrange is not _regular_copies
     main = source / "main.bean"
     main.write_text(OPENS + "".join(f'include "{name}"\n' for name in includes), encoding="utf-8")
-    before = _loaded(tmp_path, main)
-    assert before[1] == 4
+    before = _loaded(tmp_path, main, valid=not aliased)
+    assert before[1] == (2 if aliased else 4)
 
     output = tmp_path / "output"
     result = _bea(tmp_path, "--json", "--offline", "--file", str(main), "price", "export", "--output", str(output))
     assert result.returncode == 0, result.stderr or result.stdout
     files = json.loads(result.stdout)["data"]["files"]
-    assert len(files) == len(set(files)) == 3, files
+    assert len(files) == len(set(files)) == (2 if aliased else 3), files
     assert all(Path(name).is_file() and not Path(name).is_symlink() for name in files)
 
+    # The snapshot loads what its source loads, and is valid on its own.
     assert _loaded(tmp_path, output / "main.bean") == before
-    # Both names survive in the copy; neither include was folded into the other.
-    assert (output / "main.bean").read_text(encoding="utf-8") == main.read_text(encoding="utf-8")
+    exported = (output / "main.bean").read_text(encoding="utf-8")
+    if aliased:
+        assert exported.endswith(f"; already included under another name: {includes[1]}\n"), exported
+    else:
+        assert exported == main.read_text(encoding="utf-8")
