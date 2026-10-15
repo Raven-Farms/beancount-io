@@ -173,6 +173,7 @@ export function VisibilitySection({
               </Label>
             </div>
             <p
+              id="visibility-description"
               className={cn(
                 "text-sm",
                 // The red warning is for the admin who made it public.
@@ -191,8 +192,12 @@ export function VisibilitySection({
             </p>
           </div>
           <LedgerAdminPermission>
+            {/* Named for what "on" means and constant across states, so the
+                switch reads "Private ledger, on/off" (w0/013). */}
             <Switch
               id="visibility-toggle"
+              aria-label={t("page.settings.privateLedger")}
+              aria-describedby="visibility-description"
               checked={isPrivate}
               onCheckedChange={handleVisibilityChange}
               disabled={updatingVisibility}

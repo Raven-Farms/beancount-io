@@ -81,3 +81,33 @@ describe("VisibilitySection sharing copy buttons", () => {
     ).toBeInTheDocument();
   });
 });
+
+describe("VisibilitySection switch name (w0/013)", () => {
+  it("names the switch for what on means, in both states, with its description", () => {
+    const { unmount } = render(
+      <VisibilitySection ledger={publicLedger as never} ledgerId="ledger-1" />,
+    );
+    const publicSwitch = screen.getByRole("switch", {
+      name: "page.settings.privateLedger",
+    });
+    expect(publicSwitch).not.toBeChecked();
+    expect(publicSwitch).toHaveAccessibleDescription(
+      "page.settings.publicLedgerDescription",
+    );
+    unmount();
+
+    render(
+      <VisibilitySection
+        ledger={{ ...publicLedger, private: true } as never}
+        ledgerId="ledger-1"
+      />,
+    );
+    const privateSwitch = screen.getByRole("switch", {
+      name: "page.settings.privateLedger",
+    });
+    expect(privateSwitch).toBeChecked();
+    expect(privateSwitch).toHaveAccessibleDescription(
+      "page.settings.privateLedgerDescription",
+    );
+  });
+});

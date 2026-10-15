@@ -12,7 +12,6 @@
 
 ## Inbox
 
-- [013](./013.md) — Give the ledger visibility switch an accessible name (major; dashboard; 20–30m).
 - [014](./014.md) — Let keyboard users reach the clipped Other column in statement tables (minor; dashboard; 30–45m).
 - [015](./015.md) — Meet the 24px target size for the ledger sidebar's inline actions and switcher (minor; dashboard; 40–55m).
 - [016](./016.md) — Raise the contrast of the "Related Pages" heading (minor; dashboard; 10–15m).
