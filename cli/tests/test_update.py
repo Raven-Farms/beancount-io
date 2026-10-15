@@ -8,6 +8,7 @@ asked, not only on what got printed.
 from __future__ import annotations
 
 import json
+import sys
 import threading
 import time
 from collections.abc import Iterator
@@ -381,3 +382,67 @@ def test_checkout_explicit_upgrade_check_still_asks_the_index(
     assert "Latest release: 9.9.9" in result.stdout
     assert "git pull" in result.stdout
     assert "is available" not in result.stderr
+
+
+class TestAnUnwritableConfigDirectory:
+    """An outcome that cannot be remembered must not be fetched by every command (w5/321).
+
+    With `update-check.json` unwritable, every interactive command queried the
+    index again; offline, each stalled the full timeout.
+    """
+
+    @pytest.fixture
+    def fetches(self, monkeypatch: pytest.MonkeyPatch) -> list[str]:
+        asked: list[str] = []
+
+        def fetch(channel: str) -> str:
+            asked.append(channel)
+            return ""
+
+        monkeypatch.delenv(update.DISABLE_ENV, raising=False)
+        monkeypatch.delenv("CI", raising=False)
+        monkeypatch.setattr(update, "package_version", lambda: "0.1.0")
+        monkeypatch.setattr(update, "_fetch_latest", fetch)
+        return asked
+
+    @staticmethod
+    def run_twice() -> None:
+        for _ in range(2):
+            assert check_ledger().exit_code == 0
+            if update._pending is not None:
+                update._pending[1].join(5)
+
+    @pytest.mark.skipif(sys.platform == "win32", reason="POSIX directory modes")
+    def test_the_outcome_falls_back_to_the_cache_directory(
+        self, bea_config_dir: Path, in_a_terminal: None, fetches: list[str], tmp_path: Path
+    ) -> None:
+        bea_config_dir.mkdir()
+        bea_config_dir.chmod(0o500)
+        try:
+            self.run_twice()
+        finally:
+            bea_config_dir.chmod(0o700)
+        assert len(fetches) == 1
+        assert json.loads((tmp_path / "xdg-cache" / "bea" / "update-check.json").read_text())["version"] == ""
+
+    @pytest.mark.skipif(sys.platform == "win32", reason="POSIX directory modes")
+    def test_with_nowhere_to_remember_it_nothing_is_fetched(
+        self, bea_config_dir: Path, in_a_terminal: None, fetches: list[str], tmp_path: Path
+    ) -> None:
+        cache = tmp_path / "xdg-cache"
+        for directory in (bea_config_dir, cache):
+            directory.mkdir()
+            directory.chmod(0o500)
+        try:
+            self.run_twice()
+        finally:
+            for directory in (bea_config_dir, cache):
+                directory.chmod(0o700)
+        assert fetches == []
+
+    def test_a_writable_config_directory_still_caches_there(
+        self, bea_config_dir: Path, in_a_terminal: None, fetches: list[str]
+    ) -> None:
+        self.run_twice()
+        assert len(fetches) == 1
+        assert json.loads((bea_config_dir / "update-check.json").read_text())["version"] == ""

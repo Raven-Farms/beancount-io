@@ -1809,7 +1809,10 @@ so they stay silent in `--version` too. `bea upgrade --check` still asks, since
 that check is the explicit request. Every outcome — including a failure — is
 cached for 24 hours in `~/.config/bea/update-check.json` (or
 `update-check-homebrew.json` for Homebrew), so an offline machine waits at most
-once a day and prints nothing. `bea --version` adds the same line from that
+once a day and prints nothing. When that directory cannot be written (left
+root-owned by `sudo bea`, a read-only home), the outcome goes to
+`~/.cache/bea/` instead, and with neither writable the check is skipped rather
+than repeated by every command. `bea --version` adds the same line from that
 cache only, and makes no network call.
 Homebrew checks the published tap formula; PyPI-only releases are never
 advertised to a Homebrew installation before the tap can install them.

@@ -22,7 +22,7 @@ import time
 from collections.abc import Sequence
 from pathlib import Path
 
-from cli.config import config_dir, package_version
+from cli.config import cache_dir, config_dir, package_version
 from cli.context import env_flag
 from cli.errors import UsageError
 
@@ -43,8 +43,12 @@ CACHE_MAX_AGE_SECONDS = 24 * 60 * 60
 TIMEOUT_SECONDS = 3.0
 
 
+def _cache_name(channel: str) -> str:
+    return "update-check-homebrew.json" if channel == "homebrew" else "update-check.json"
+
+
 def cache_path(channel: str = "pypi") -> Path:
-    return config_dir() / ("update-check-homebrew.json" if channel == "homebrew" else "update-check.json")
+    return config_dir() / _cache_name(channel)
 
 
 def release_parts(version: str) -> tuple[int, int, int] | None:
@@ -116,6 +120,28 @@ def read_cache(channel: str = "pypi", *, cache_file: Path | None = None) -> tupl
     except (OSError, ValueError, KeyError, TypeError, UsageError):
         # UsageError: a refused `BEA_CONFIG_DIR` must not fail `bea --version`.
         return None
+
+
+def _writable_cache(channel: str) -> Path | None:
+    """Where this check's outcome can be remembered: the config directory, else the cache directory.
+
+    A config directory left root-owned by `sudo bea`, or a read-only home,
+    turned "at most once a day" into once per command, since nothing ever
+    recorded the outcome (w5/321). None when neither place takes a write.
+    """
+    candidates = [cache_dir() / _cache_name(channel)]
+    try:
+        candidates.insert(0, cache_path(channel))
+    except UsageError:  # A refused `BEA_CONFIG_DIR`: the cache directory still serves.
+        pass
+    return next((path.absolute() for path in candidates if _can_write(path.absolute())), None)
+
+
+def _can_write(path: Path) -> bool:
+    if path.exists():
+        return path.is_file() and os.access(path, os.W_OK)
+    holder = next((parent for parent in path.parents if parent.exists()), None)
+    return holder is not None and holder.is_dir() and os.access(holder, os.W_OK | os.X_OK)
 
 
 def write_cache(checked_at: float, version: str, channel: str = "pypi", *, cache_file: Path | None = None) -> None:
@@ -196,7 +222,11 @@ def start(*, json_output: bool, no_input: bool, channel: str = "pypi") -> None:
     found: list[str | None] = [None]
     # Resolve before starting the worker: a command can finish (or fail)
     # before the fetch does, and an embedding process may restore its env.
-    cache_file = cache_path(channel).absolute()
+    cache_file = _writable_cache(channel)
+    if cache_file is None:
+        # An outcome that cannot be remembered would be fetched again by
+        # every command: offline, each one stalled the full timeout (w5/321).
+        return
 
     def check() -> None:
         found[0] = latest_version(channel=channel, cache_file=cache_file)
