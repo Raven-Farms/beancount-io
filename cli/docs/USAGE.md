@@ -47,7 +47,11 @@ provision; global `bean-check` decoys on `PATH` are ignored. Commands started
 together on a fresh install share one provision: the first builds the engine
 under a lock file beside it (`<version>.lock`) and the rest wait and reuse it.
 A build killed mid-install (closed terminal, `SIGTERM`) leaves a
-`<version>.partial.<pid>` directory that the next provision removes.
+`<version>.partial.<pid>` directory that the next provision removes. An engine
+whose packages are present but damaged (a quarantined compiled extension, a
+half-deleted package) cannot be repaired in place: `bea engine status` reports
+it as damaged, and every local command exits 1 naming the engine directory —
+remove it and rerun, and a fresh engine is provisioned.
 
 `bea engine status` names the engine that local commands would actually use:
 a `BEA_ENGINE_PYTHON` override, the provisioned managed engine, or a source

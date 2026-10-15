@@ -36,6 +36,11 @@ def engine_status() -> None:
         **provision.feature_status(),
         "serving": {"tier": source.tier, "location": str(source.location)},
     }
+    # Present is not usable: package directories whose contents were damaged
+    # still read as provisioned while every command failed to import (w5/320).
+    damaged = launch.engine_load_failure(source.python) if source.tier == "managed" and source.python else None
+    if damaged is not None:
+        status["damaged"] = damaged
     if context.current().json_output:
         output.emit(status)
         return
@@ -45,7 +50,12 @@ def engine_status() -> None:
         typer.echo(f"Engine interpreter override: {override}")
     else:
         typer.echo(f"Engine {status['engine_version']} at {status['engine_root']}")
-        if status["provisioned"]:
+        if damaged is not None:
+            typer.echo(
+                f"Provisioned: damaged — the engine cannot load ({damaged}). "
+                f"Remove {paths.engine_root()} and rerun; bea provisions a fresh engine."
+            )
+        elif status["provisioned"]:
             typer.echo("Provisioned: yes")
         elif paths.engine_root().exists():
             typer.echo("Provisioned: no (the engine there is incomplete; the next local command rebuilds it)")

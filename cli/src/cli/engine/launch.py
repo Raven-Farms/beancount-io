@@ -579,7 +579,7 @@ def _parse(completed: subprocess.CompletedProcess[str], args: Sequence[str], *, 
             except ValueError:
                 name = f"signal {number}"
         else:
-            _refuse_unusable_override(completed)
+            _refuse_unusable_engine(completed)
         if writes:
             # A writer that produced no envelope may or may not have written.
             # Exit 4 says exactly that, and stops a caller from retrying a
@@ -610,27 +610,17 @@ def _parse(completed: subprocess.CompletedProcess[str], args: Sequence[str], *, 
     return envelope
 
 
-def _refuse_unusable_override(completed: subprocess.CompletedProcess[str]) -> None:
-    """Blame `$BEA_ENGINE_PYTHON` when the interpreter it names cannot load the helper at all.
+def engine_load_failure(python: Path) -> str | None:
+    """Why `python` cannot load the helper, or None when it can.
 
-    An override without Beancount died on the helper's first import, which
-    `_parse` could only report as an engine that "did not answer", traceback
-    and all, and for a writer as an unknown outcome (w5/269). Asking that
-    interpreter for the import alone settles it: when even that fails no
-    command body ran, so nothing was written and the variable is what to fix,
-    as `native_command` already says of a missing executable. An override that
-    does load the helper falls through to the caller's own report.
+    The probe must say so itself: `/bin/echo` or a stale wrapper exits 0
+    without running anything, and a writer then reported an unknown outcome
+    (exit 4) for a write that never started (w5/309).
     """
-    override = paths.python_override()
-    if override is None:
-        return
-    # The probe must say so itself: `/bin/echo` or a stale wrapper exits 0
-    # without running anything, and a writer then reported an unknown outcome
-    # (exit 4) for a write that never started (w5/309).
     sentinel = "bea-engine-loaded"
     try:
         probe = subprocess.run(
-            [str(override), "-P", "-c", f"import bea_engine.main; print({sentinel!r})"],
+            [str(python), "-P", "-c", f"import bea_engine.main; print({sentinel!r})"],
             env=_helper_env(),
             stdin=subprocess.DEVNULL,
             capture_output=True,
@@ -638,16 +628,44 @@ def _refuse_unusable_override(completed: subprocess.CompletedProcess[str]) -> No
             check=False,
         )
     except (OSError, ValueError) as exc:
-        probe = subprocess.CompletedProcess([str(override)], 126, "", str(exc))
+        return str(exc) or type(exc).__name__
     if probe.returncode == 0 and probe.stdout.strip().endswith(sentinel):
-        return
+        return None
     lines = [line.strip() for line in probe.stderr.splitlines() if line.strip()]
-    reason = f" ({lines[-1]})" if lines else " (it is not a Python that loads the engine)"
-    raise BeaError(
-        f"{paths.PYTHON_ENV}={override} names an environment that cannot run the Beancount engine{reason}. "
-        f"Correct or unset {paths.PYTHON_ENV}, or run 'bea engine status' to see which engine would serve.",
-        traceback=completed.stderr or probe.stderr or None,
-    ) from None
+    return lines[-1] if lines else "it is not a Python that loads the engine"
+
+
+def _refuse_unusable_engine(completed: subprocess.CompletedProcess[str]) -> None:
+    """Blame the engine itself when the interpreter that served cannot load the helper at all.
+
+    An override without Beancount died on the helper's first import, which
+    `_parse` could only report as an engine that "did not answer", traceback
+    and all, and for a writer as an unknown outcome (w5/269). A managed engine
+    whose package directories exist but whose contents are damaged — a
+    compiled extension quarantined, a half-deleted package — did the same
+    while `engine status` said "Provisioned: yes" (w5/320). Asking that
+    interpreter for the import alone settles it: when even that fails no
+    command body ran, so nothing was written, and the engine is what to fix.
+    An engine that does load the helper falls through to the caller's report.
+    """
+    source = resolve_engine()
+    if source.tier not in ("override", "managed") or source.python is None:
+        return
+    reason = engine_load_failure(source.python)
+    if reason is None:
+        return
+    if source.tier == "override":
+        message = (
+            f"{paths.PYTHON_ENV}={source.python} names an environment that cannot run the Beancount engine "
+            f"({reason}). Correct or unset {paths.PYTHON_ENV}, or run 'bea engine status' to see which engine "
+            "would serve."
+        )
+    else:
+        message = (
+            f"The managed Beancount engine at {source.location} is damaged and cannot load ({reason}). "
+            f"Remove {source.location} and rerun; bea provisions a fresh engine."
+        )
+    raise BeaError(message, traceback=completed.stderr or None) from None
 
 
 def helper_command() -> tuple[list[str], dict[str, str] | None]:

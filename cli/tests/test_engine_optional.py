@@ -17,7 +17,7 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from cli.engine import paths, provision
+from cli.engine import launch, paths, provision
 from cli.errors import UsageError
 from cli.main import app
 
@@ -208,6 +208,9 @@ class TestEngineStatusReportsTheServingTier:
         monkeypatch.setenv(paths.DIR_ENV, str(root))
         monkeypatch.delenv(paths.PYTHON_ENV, raising=False)
         monkeypatch.setattr(provision, "_feature_present", lambda _root, _name: False)
+        # The fake venv stands in for a working engine; the load probe (w5/320)
+        # would find it cannot import the helper.
+        monkeypatch.setattr(launch, "engine_load_failure", lambda _python: None)
 
         text = self.status()
         assert "Provisioned: yes" in text
