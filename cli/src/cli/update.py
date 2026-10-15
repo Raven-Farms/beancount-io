@@ -173,13 +173,39 @@ def check_latest(channel: str = "pypi") -> str | None:
     from urllib.parse import urlparse
 
     try:
-        version = _fetch_latest(channel)
+        version = _fetch_within_budget(channel)
     except Exception as exc:
         reason = exc.reason if isinstance(exc, URLError) else exc
         host = urlparse(_index_url(channel)).netloc or _index_url(channel)
         raise BeaError(f"Could not check {host} for a newer release: {str(reason) or type(exc).__name__}.") from exc
     write_cache(time.time(), version, channel)
     return version or None
+
+
+def _fetch_within_budget(channel: str) -> str:
+    """`_fetch_latest`, given up on once `TIMEOUT_SECONDS` have passed in all.
+
+    The socket timeout bounds each read, not the request, so an index that
+    trickles its answer kept `upgrade --check` waiting half a minute (w5/375).
+    The fetch runs on a daemon thread that the deadline abandons; its own read
+    loop stops soon after.
+    """
+    outcome: list[str | BaseException] = []
+
+    def fetch() -> None:
+        try:
+            outcome.append(_fetch_latest(channel))
+        except Exception as exc:
+            outcome.append(exc)
+
+    worker = threading.Thread(target=fetch, name="bea-update-fetch", daemon=True)
+    worker.start()
+    worker.join(TIMEOUT_SECONDS)
+    if not outcome:
+        raise TimeoutError(f"no answer within {TIMEOUT_SECONDS:g} s")
+    if isinstance(outcome[0], BaseException):
+        raise outcome[0]
+    return outcome[0]
 
 
 def _fetch_latest(channel: str) -> str:
@@ -192,14 +218,23 @@ def _fetch_latest(channel: str) -> str:
         _index_url(channel),
         headers={"Accept": "application/json", "User-Agent": f"bea/{package_version()}"},
     )
+    deadline = time.monotonic() + TIMEOUT_SECONDS
     with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:
-        if channel == "homebrew":
-            formula = response.read().decode("utf-8")
-            match = re.search(r'^\s*version "(\d+\.\d+\.\d+)"\s*$', formula, re.MULTILINE)
-            if not match:
-                match = re.search(r"beancount_io-(\d+\.\d+\.\d+)\.tar\.gz", formula)
-            return match.group(1) if match else ""
-        payload = json.load(response)
+        # Whatever has arrived, chunk by chunk, against one deadline for the
+        # whole body: `read()` would wait out a trickle byte by byte (w5/375).
+        chunks: list[bytes] = []
+        while chunk := response.read1(65536):
+            chunks.append(chunk)
+            if time.monotonic() > deadline:
+                raise TimeoutError(f"no complete answer within {TIMEOUT_SECONDS:g} s")
+    body = b"".join(chunks)
+    if channel == "homebrew":
+        formula = body.decode("utf-8")
+        match = re.search(r'^\s*version "(\d+\.\d+\.\d+)"\s*$', formula, re.MULTILINE)
+        if not match:
+            match = re.search(r"beancount_io-(\d+\.\d+\.\d+)\.tar\.gz", formula)
+        return match.group(1) if match else ""
+    payload = json.loads(body)
     return str(payload["info"]["version"])
 
 
@@ -230,7 +265,7 @@ def latest_version(
     return version or None
 
 
-_pending: tuple[str, threading.Thread, list[str | None]] | None = None
+_pending: tuple[str, threading.Thread, list[str | None], str, Path] | None = None
 
 
 def start(*, json_output: bool, no_input: bool, channel: str = "pypi", offline: bool = False) -> None:
@@ -261,7 +296,7 @@ def start(*, json_output: bool, no_input: bool, channel: str = "pypi", offline: 
 
     thread = threading.Thread(target=check, name="bea-update-check", daemon=True)
     thread.start()
-    _pending = (version, thread, found)
+    _pending = (version, thread, found, channel, cache_file)
 
 
 def suppress() -> None:
@@ -280,15 +315,20 @@ def print_notice() -> None:
 
     Only a run that missed the day's cache can wait here at all, and it waits no
     longer than the fetch's own timeout: a hung index costs the timeout once a
-    day and simply skips the notice, because the thread still writes the cache
-    that the next run reads.
+    day and simply skips the notice. The failure is cached here when the check
+    is still running, because the daemon thread dies at exit before it writes
+    the cache, and a trickling index otherwise cost every command the timeout,
+    every run (w5/375).
     """
     global _pending
     pending, _pending = _pending, None
     if pending is None:
         return
-    version, thread, found = pending
+    version, thread, found, channel, cache_file = pending
     thread.join(TIMEOUT_SECONDS)
+    if thread.is_alive():
+        write_cache(time.time(), "", channel, cache_file=cache_file)
+        return
     latest = found[0]
     if latest is not None and newer(version, latest):
         print(hint(version, latest), file=sys.stderr)

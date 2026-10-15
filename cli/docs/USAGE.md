@@ -1894,7 +1894,9 @@ so they stay silent in `--version` too. `bea upgrade --check` still asks, since
 that check is the explicit request. Every outcome — including a failure — is
 cached for 24 hours in `~/.config/bea/update-check.json` (or
 `update-check-homebrew.json` for Homebrew), so an offline machine waits at most
-once a day and prints nothing. When that directory cannot be written (left
+once a day and prints nothing. The check gets 3 seconds in all, however slowly
+an index or proxy trickles its answer, and `bea upgrade --check` reports a
+check that ran out of time as a failure. When that directory cannot be written (left
 root-owned by `sudo bea`, a read-only home), the outcome goes to
 `~/.cache/bea/` instead, and with neither writable the check is skipped rather
 than repeated by every command. `bea --version` adds the same line from that

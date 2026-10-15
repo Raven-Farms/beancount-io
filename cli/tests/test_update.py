@@ -179,6 +179,19 @@ class TestDailyCache:
 
         assert update.latest_version(use_cache=False, now=1_000.0) == "10.0.0"
 
+    def test_an_explicit_check_of_a_trickling_index_gives_up_at_the_budget(
+        self, fake_index: FakeIndex, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """`upgrade --check` waited for the whole trickle: 29 s at one byte a second (w5/375)."""
+        monkeypatch.setattr("cli.update.TIMEOUT_SECONDS", 0.5)
+        fake_index.trickle = 0.2
+
+        started = time.monotonic()
+        with pytest.raises(update.BeaError, match="no answer within 0.5 s"):
+            update.check_latest()
+
+        assert time.monotonic() - started < 1.5
+
     def test_an_unwritable_cache_does_not_break_the_check(
         self, fake_index: FakeIndex, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
@@ -268,6 +281,26 @@ class TestTheNotice:
 
         assert result.exit_code == 0
         assert "is available" not in result.stderr
+
+    def test_a_trickling_index_costs_the_budget_once_and_is_cached(
+        self, fake_index: FakeIndex, in_a_terminal: None, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The timeout bounds the whole check, and its failure is remembered (w5/375)."""
+        monkeypatch.setattr("cli.update.package_version", lambda: "0.1.0")
+        monkeypatch.setattr("cli.update.TIMEOUT_SECONDS", 0.5)
+        fake_index.trickle = 0.2  # a ~28-byte answer takes ~6 s to arrive
+
+        started = time.monotonic()
+        first = check_ledger()
+        elapsed = time.monotonic() - started
+
+        assert first.exit_code == 0
+        assert "is available" not in first.stderr
+        assert elapsed < 2.5, elapsed
+        assert update.read_cache("pypi") is not None, "the timed-out check is remembered"
+        second = check_ledger()
+        assert second.exit_code == 0
+        assert len(fake_index.requests) == 1, "the next run the same day asks nothing"
 
     def test_a_failing_command_is_not_followed_by_a_notice(
         self, fake_index: FakeIndex, in_a_terminal: None, monkeypatch: pytest.MonkeyPatch

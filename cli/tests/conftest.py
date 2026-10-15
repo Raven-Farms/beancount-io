@@ -112,7 +112,7 @@ def bea_config_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[
     # Error paths and timeouts can leave the notifier running after the CLI
     # returns. Finish it before monkeypatch restores cache paths and endpoints.
     for worker in threading.enumerate():
-        if worker.name == "bea-update-check":
+        if worker.name in {"bea-update-check", "bea-update-fetch"}:
             worker.join(timeout=5)
             assert not worker.is_alive(), "Update check outlived its isolated test environment"
 
@@ -123,6 +123,8 @@ class FakeIndex:
 
     version: str | None = "9.9.9"
     delay: float = 0.0
+    #: Seconds between the body's bytes: a slow link or an inspecting proxy.
+    trickle: float = 0.0
     requests: list[str] = field(default_factory=list)
 
 
@@ -144,7 +146,12 @@ class _IndexHandler(BaseHTTPRequestHandler):
             self.send_header("Content-Type", "application/json")
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
-            self.wfile.write(body)
+            if not index.trickle:
+                self.wfile.write(body)
+            for byte in body if index.trickle else b"":
+                self.wfile.write(bytes([byte]))
+                self.wfile.flush()
+                time.sleep(index.trickle)
         except (BrokenPipeError, ConnectionResetError):
             # The timeout test hangs up mid-answer on purpose. That is the
             # behavior under test, not a failure, and the default handler would
