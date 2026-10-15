@@ -12,7 +12,6 @@
 
 ## Inbox
 
-- [014](./014.md) — Let keyboard users reach the clipped Other column in statement tables (minor; dashboard; 30–45m).
 - [015](./015.md) — Meet the 24px target size for the ledger sidebar's inline actions and switcher (minor; dashboard; 40–55m).
 - [016](./016.md) — Raise the contrast of the "Related Pages" heading (minor; dashboard; 10–15m).
 - [017](./017.md) — Say why an Open Account name is invalid instead of one catch-all message (minor; dashboard; 30–40m).

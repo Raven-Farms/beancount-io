@@ -462,8 +462,16 @@ export function HierarchyList({
         }}
       />
 
+      {/* The table is wider than a half-width card (40rem), so its Other
+          column often sits past the edge. A named, focusable region lets
+          keyboard users scroll to it even when the table has no links, as
+          in summary-only cards (w0/014). */}
       <div
-        className={`hierarchy-scroll overflow-x-auto ${className || ""}`}
+        role="region"
+        tabIndex={0}
+        aria-label={tableLabel}
+        aria-labelledby={ariaLabelledBy}
+        className={`hierarchy-scroll overflow-x-auto rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${className || ""}`}
         style={{
           scrollbarWidth: "thin",
           scrollbarColor:

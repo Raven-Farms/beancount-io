@@ -1046,3 +1046,23 @@ describe("HierarchyList", () => {
     });
   });
 });
+
+describe("HierarchyList scroll region (w0/014)", () => {
+  it("is a named, keyboard-focusable region even without any links", async () => {
+    const user = userEvent.setup();
+    render(
+      <HierarchyList
+        data={[]}
+        ariaLabel="Net Profit"
+        summaryRows={[
+          { label: "Net Profit", balance: { USD: -100, VACHR: 13 } },
+        ]}
+      />,
+    );
+    const region = screen.getByRole("region", { name: "Net Profit" });
+    expect(region).toHaveClass("overflow-x-auto");
+
+    await user.tab();
+    expect(region).toHaveFocus();
+  });
+});
