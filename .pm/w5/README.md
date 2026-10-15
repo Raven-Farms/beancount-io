@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [391 — Every ledger write silently splits a hard link to the file (new inode, other name stale)](./391.md) — CLI QA 2026-10-14
 - [392 — `bea query` shell history ignores `BEA_CONFIG_DIR`, writes `~/.config/beanquery/history` undocumented](./392.md) — CLI QA 2026-10-14
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
