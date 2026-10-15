@@ -137,7 +137,6 @@
 - [437 — SIGTERM/SIGHUP leave `example`/`treeify`/`doctor` captures and `git clone` running (w5/208 leftover)](./437.md) — CLI QA 2026-10-14
 - [438 — `doctor` (and `ingest extract -e`) print a raw traceback for an unreadable/directory include (w5/120 leftover)](./438.md) — CLI QA 2026-10-14
 - [439 — `doctor roundtrip` congratulates (exit 0) after a plugin import/run traceback](./439.md) — CLI QA 2026-10-14
-- [440 — `doctor` on a non-UTF-8 ledger: raw `UnicodeDecodeError` or silent exit 0](./440.md) — CLI QA 2026-10-14
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
