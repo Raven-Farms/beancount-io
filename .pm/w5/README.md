@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [359 — reconcile skill never negates a liability statement's ending balance; card tie-out is off by twice the balance](./359.md) — CLI QA 2026-10-14
 - [360 — reconcile skill takes the last row's balance, wrong for newest-first exports](./360.md) — CLI QA 2026-10-14
 - [361 — migrate skill never negates a card's stated balance; derived opening hides it](./361.md) — CLI QA 2026-10-14
 - [362 — migrate skill splits a split purchase into per-category transactions; bank import double-books](./362.md) — CLI QA 2026-10-14
