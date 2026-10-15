@@ -105,7 +105,23 @@ def _bea(ledger: Path, mode: str, *args: str, strict: bool = False) -> subproces
     ],
     ids=["terminal-report", "piped-balance", "json-report"],
 )
-@pytest.mark.parametrize(("conversion", "suggestion"), [("at-cost", "at_cost"), ("usd", "USD"), ("US D", None)])
+@pytest.mark.parametrize(
+    ("conversion", "suggestion"),
+    [
+        ("at-cost", "at_cost"),
+        ("usd", "USD"),
+        ("US D", None),
+        # A keyword in upper case lexes as a currency, and a near miss used to
+        # be upper-cased into one (w5/364).
+        ("AT_COST", "at_cost"),
+        ("AT_VALUE", "at_value"),
+        ("UNITS", "units"),
+        ("cost", "at_cost"),
+        ("value", "at_value"),
+        ("market", "at_value"),
+        ("at_market", "at_value"),
+    ],
+)
 def test_invalid_conversion_is_a_usage_error_without_a_report(
     ledger: Path, mode: str, command: tuple[str, ...], conversion: str, suggestion: str | None
 ) -> None:

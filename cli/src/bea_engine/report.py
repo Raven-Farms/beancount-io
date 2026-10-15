@@ -26,6 +26,22 @@ from bea_engine.query import format_error
 KINDS = ("overview", "income-statement", "balance-sheet", "trial-balance")
 INTERVALS = ("monthly", "quarterly", "yearly", "weekly", "daily")
 CONVERSIONS = ("units", "at_cost", "at_value")
+# Words people reach for that name a conversion mode rather than a currency;
+# upper-casing them, as the hint used to, made a fake currency (w5/364).
+_CONVERSION_WORDS = {"cost": "at_cost", "value": "at_value", "market": "at_value", "at_market": "at_value"}
+
+
+def _conversion_hint(value: str) -> str:
+    """The keyword a refused `--conversion` most likely meant, else its upper case."""
+    folded = value.strip().lower().replace("-", "_")
+    if folded in CONVERSIONS:
+        return folded
+    if folded in _CONVERSION_WORDS:
+        return _CONVERSION_WORDS[folded]
+    import difflib
+
+    close = difflib.get_close_matches(folded, CONVERSIONS, n=1, cutoff=0.75)
+    return close[0] if close else value.strip().upper()
 
 
 def _valid_conversion(value: str) -> bool:
@@ -60,10 +76,13 @@ def answer(
     allow_errors: bool = False,
 ) -> dict[str, Any]:
     """Compute one report or a filtered balance tree and return its JSON-ready payload."""
-    if conversion is not None and not _valid_conversion(conversion):
-        suggestion = conversion.strip().lower().replace("-", "_")
-        if suggestion not in CONVERSIONS:
-            suggestion = conversion.strip().upper()
+    # `AT_COST` lexes as a currency, so a keyword in another case is refused
+    # before the currency grammar is consulted (w5/364).
+    folded = None if conversion is None else conversion.strip().lower().replace("-", "_")
+    if conversion is not None and (
+        (folded in CONVERSIONS and conversion not in CONVERSIONS) or not _valid_conversion(conversion)
+    ):
+        suggestion = _conversion_hint(conversion)
         hint = f" Did you mean {suggestion!r}?" if _valid_conversion(suggestion) else ""
         raise protocol.UsageError(
             f"Invalid --conversion {conversion!r}. Use units, at_cost, at_value, "
