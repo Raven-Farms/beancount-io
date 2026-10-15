@@ -113,7 +113,6 @@
 - [425 — `add price/commodity -c ''` name internal "Request field 'currency'"](./425.md) — CLI QA 2026-10-14
 - [426 — Repeated `sign=` in `--csv` is accepted; the last wins and flips every row's sign](./426.md) — CLI QA 2026-10-14
 - [427 — POSIX class in a `--rules` regex leaks `FutureWarning` and matches nothing](./427.md) — CLI QA 2026-10-14
-- [428 — A CSV header containing a comma cannot be named in `--csv`](./428.md) — CLI QA 2026-10-14
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
