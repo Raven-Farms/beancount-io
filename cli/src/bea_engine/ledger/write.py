@@ -1535,6 +1535,7 @@ def validate_candidate(
     # verbatim existing bytes, so a pre-existing error keeps its file and
     # line; anything unmatched in the after set is newly introduced.
     tolerated: set[int] = set()
+    before_errors: list[Any] | None = None
     if allow_errors:
         _, before_errors, _ = managed_load.load_file(snapshot.root if snapshot else file, snapshot=snapshot)
         tolerated = _preexisting_errors(errors, before_errors, filenames, original_lines)
@@ -1552,6 +1553,8 @@ def validate_candidate(
     locations: list[tuple[Path, int | None]] = []
     introduced: list[bool] = []
     invalid_pad_accounts = False
+    # Currencies check_commodity reported before the write (w5/398).
+    missing_before: set[str] | None = None
     # Finding an including root lexes every sibling ledger's include closure,
     # so it is looked up once, on the first unknown account, not per error.
     root_hints: list[str] | None = None
@@ -1586,6 +1589,26 @@ def validate_candidate(
                 message = "Proposed append (not written): " + message[len(prefix) :]
             else:
                 message = f"Proposed append (not written): {message}"
+        if _unanchored(error) and (missing := _MISSING_COMMODITY.search(message)):
+            # check_commodity reports against no line, so the location test
+            # above cannot tell the write's own currency from one the books
+            # already lacked; the ledger before the write can (w5/398).
+            message = message.removeprefix(f"{error.source.get('filename')}:{lineno}: ")
+            if missing_before is None:
+                if before_errors is None:
+                    root = snapshot.root if snapshot else file
+                    before_errors = managed_load.load_file(root, snapshot=snapshot)[1] if root.exists() else []
+                missing_before = {
+                    found.group(1)
+                    for before in before_errors
+                    if _unanchored(before) and (found := _MISSING_COMMODITY.search(getattr(before, "message", "")))
+                }
+            if missing.group(1) not in missing_before:
+                message = f"Proposed append (not written): {message}"
+            hints.append(
+                "Plugin check_commodity requires a commodity directive for every currency the ledger uses. "
+                f"Declare it first: bea add commodity --date YYYY-MM-DD --currency {missing.group(1)}, then retry."
+            )
         if "unknown account '" in message:
             account = message.split("unknown account '", 1)[1].split("'", 1)[0]
             suggestion = account_suggestions.get(account)
@@ -1889,6 +1912,7 @@ def _unused_pad_hint(
     )
 
 
+_MISSING_COMMODITY = re.compile(r"Missing Commodity directive for '([^']+)'")
 _ACCUMULATED = re.compile(r"accumulated (?P<amount>-?[\d.,]+ \S+)")
 
 
