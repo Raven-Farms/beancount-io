@@ -521,6 +521,12 @@ const koAuth: Record<string, TranslationEntry> = {
     message: "세션이 만료되었거나 찾을 수 없습니다.",
     description: "Error shown when the CLI auth session is expired or missing",
   },
+  "auth.cliAuthCodeUnknown": {
+    message:
+      "이 코드를 알 수 없거나 만료되었습니다. 터미널에서 `bea login`을 다시 실행해 새 코드를 받으세요.",
+    description:
+      "Error when the entered CLI one-time code is unknown or expired; tells the user to rerun bea login",
+  },
   "auth.cliAuthSuccessTitle": {
     message: "승인이 완료되었습니다",
     description: "Title shown after the CLI session was authorized",

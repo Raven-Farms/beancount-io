@@ -529,6 +529,12 @@ const nlAuth: Record<string, TranslationEntry> = {
     message: "Sessie verlopen of niet gevonden.",
     description: "Error shown when the CLI auth session is expired or missing",
   },
+  "auth.cliAuthCodeUnknown": {
+    message:
+      "Deze code is onbekend of verlopen. Voer `bea login` opnieuw uit in je terminal om een nieuwe code te krijgen.",
+    description:
+      "Error when the entered CLI one-time code is unknown or expired; tells the user to rerun bea login",
+  },
   "auth.cliAuthSuccessTitle": {
     message: "Autorisatie geslaagd",
     description: "Title shown after the CLI session was authorized",

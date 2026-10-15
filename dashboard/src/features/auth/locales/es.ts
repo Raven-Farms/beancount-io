@@ -535,6 +535,12 @@ const esAuth: Record<string, TranslationEntry> = {
     message: "La sesión ha caducado o no se ha encontrado.",
     description: "Error shown when the CLI auth session is expired or missing",
   },
+  "auth.cliAuthCodeUnknown": {
+    message:
+      "Este código es desconocido o ha caducado. Vuelve a ejecutar `bea login` en tu terminal para obtener uno nuevo.",
+    description:
+      "Error when the entered CLI one-time code is unknown or expired; tells the user to rerun bea login",
+  },
   "auth.cliAuthSuccessTitle": {
     message: "Autorización correcta",
     description: "Title shown after the CLI session was authorized",

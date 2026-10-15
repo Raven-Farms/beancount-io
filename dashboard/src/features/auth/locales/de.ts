@@ -530,6 +530,12 @@ const deAuth: Record<string, TranslationEntry> = {
     message: "Sitzung abgelaufen oder nicht gefunden.",
     description: "Error shown when the CLI auth session is expired or missing",
   },
+  "auth.cliAuthCodeUnknown": {
+    message:
+      "Dieser Code ist unbekannt oder abgelaufen. Führen Sie `bea login` im Terminal erneut aus, um einen neuen Code zu erhalten.",
+    description:
+      "Error when the entered CLI one-time code is unknown or expired; tells the user to rerun bea login",
+  },
   "auth.cliAuthSuccessTitle": {
     message: "Autorisierung erfolgreich",
     description: "Title shown after the CLI session was authorized",

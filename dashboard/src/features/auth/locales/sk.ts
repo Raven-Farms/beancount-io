@@ -527,6 +527,12 @@ const skAuth: Record<string, TranslationEntry> = {
     message: "Relácia vypršala alebo sa nenašla.",
     description: "Error shown when the CLI auth session is expired or missing",
   },
+  "auth.cliAuthCodeUnknown": {
+    message:
+      "Tento kód je neznámy alebo jeho platnosť vypršala. Znova spustite `bea login` v termináli a získajte nový kód.",
+    description:
+      "Error when the entered CLI one-time code is unknown or expired; tells the user to rerun bea login",
+  },
   "auth.cliAuthSuccessTitle": {
     message: "Autorizácia úspešná",
     description: "Title shown after the CLI session was authorized",

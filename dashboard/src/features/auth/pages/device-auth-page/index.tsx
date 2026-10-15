@@ -10,6 +10,7 @@ import {
 import { useTranslations } from "@/common/hooks/use-translations";
 import { getErrorMessageKey } from "@/common/lib/errors/error-message";
 import { DeviceAuthCard } from "./device-auth-card";
+import { isUnknownCliCodeError } from "./cli-auth-errors";
 import { CliAuthCodeEntryView } from "./cli-auth-code-entry-view";
 import { CliAuthPendingView } from "./cli-auth-pending-view";
 
@@ -68,7 +69,13 @@ function CliAuthRequest({
 
   if (error) {
     return (
-      <DeviceAuthCard error={t(getErrorMessageKey(error))}>
+      <DeviceAuthCard
+        error={
+          isUnknownCliCodeError(error)
+            ? t("auth.cliAuthCodeUnknown")
+            : t(getErrorMessageKey(error))
+        }
+      >
         <RestartFooter onRestart={onRestart} label={restartLabel} />
       </DeviceAuthCard>
     );

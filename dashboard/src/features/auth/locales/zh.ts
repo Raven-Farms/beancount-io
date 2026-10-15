@@ -518,6 +518,11 @@ const zhAuth: Record<string, TranslationEntry> = {
     message: "会话已过期或不存在。",
     description: "Error shown when the CLI auth session is expired or missing",
   },
+  "auth.cliAuthCodeUnknown": {
+    message: "此代码未知或已过期。请在终端中重新运行 `bea login` 获取新代码。",
+    description:
+      "Error when the entered CLI one-time code is unknown or expired; tells the user to rerun bea login",
+  },
   "auth.cliAuthSuccessTitle": {
     message: "授权成功",
     description: "Title shown after the CLI session was authorized",

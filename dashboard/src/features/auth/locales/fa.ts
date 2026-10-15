@@ -528,6 +528,12 @@ const faAuth: Record<string, TranslationEntry> = {
     message: "جلسه منقضی شده یا یافت نشد.",
     description: "Error shown when the CLI auth session is expired or missing",
   },
+  "auth.cliAuthCodeUnknown": {
+    message:
+      "این کد ناشناخته است یا منقضی شده است. برای گرفتن کد جدید، دوباره `bea login` را در ترمینال اجرا کنید.",
+    description:
+      "Error when the entered CLI one-time code is unknown or expired; tells the user to rerun bea login",
+  },
   "auth.cliAuthSuccessTitle": {
     message: "مجوز با موفقیت انجام شد",
     description: "Title shown after the CLI session was authorized",

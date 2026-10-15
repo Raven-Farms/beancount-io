@@ -535,6 +535,12 @@ const frAuth: Record<string, TranslationEntry> = {
     message: "Session expirée ou introuvable.",
     description: "Error shown when the CLI auth session is expired or missing",
   },
+  "auth.cliAuthCodeUnknown": {
+    message:
+      "Ce code est inconnu ou a expiré. Relancez `bea login` dans votre terminal pour obtenir un nouveau code.",
+    description:
+      "Error when the entered CLI one-time code is unknown or expired; tells the user to rerun bea login",
+  },
   "auth.cliAuthSuccessTitle": {
     message: "Autorisation réussie",
     description: "Title shown after the CLI session was authorized",

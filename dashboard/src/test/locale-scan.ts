@@ -156,6 +156,9 @@ const ALLOWED_LATIN = [
   "KB",
   "GB",
   "UTC",
+  // The CLI command a hint tells the reader to run (`bea login`)
+  "bea",
+  "login",
   // Literal protocol text, e.g. a PEM header quoted in a hint
   "BEGIN",
   "END",

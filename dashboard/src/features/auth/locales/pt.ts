@@ -530,6 +530,12 @@ const ptAuth: Record<string, TranslationEntry> = {
     message: "Sessão expirada ou não encontrada.",
     description: "Error shown when the CLI auth session is expired or missing",
   },
+  "auth.cliAuthCodeUnknown": {
+    message:
+      "Este código é desconhecido ou expirou. Execute `bea login` novamente no terminal para obter um novo código.",
+    description:
+      "Error when the entered CLI one-time code is unknown or expired; tells the user to rerun bea login",
+  },
   "auth.cliAuthSuccessTitle": {
     message: "Autorização concluída",
     description: "Title shown after the CLI session was authorized",

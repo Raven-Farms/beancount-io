@@ -524,6 +524,12 @@ const enAuth: Record<string, TranslationEntry> = {
     message: "Session expired or not found.",
     description: "Error shown when the CLI auth session is expired or missing",
   },
+  "auth.cliAuthCodeUnknown": {
+    message:
+      "This code is unknown or has expired. Run `bea login` again in your terminal to get a new code.",
+    description:
+      "Error when the entered CLI one-time code is unknown or expired; tells the user to rerun bea login",
+  },
   "auth.cliAuthSuccessTitle": {
     message: "Authorization successful",
     description: "Title shown after the CLI session was authorized",

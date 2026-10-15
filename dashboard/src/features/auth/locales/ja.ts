@@ -526,6 +526,12 @@ const jaAuth: Record<string, TranslationEntry> = {
     message: "セッションの有効期限が切れているか、見つかりません。",
     description: "Error shown when the CLI auth session is expired or missing",
   },
+  "auth.cliAuthCodeUnknown": {
+    message:
+      "このコードは不明か、有効期限が切れています。ターミナルで `bea login` をもう一度実行して新しいコードを取得してください。",
+    description:
+      "Error when the entered CLI one-time code is unknown or expired; tells the user to rerun bea login",
+  },
   "auth.cliAuthSuccessTitle": {
     message: "許可が完了しました",
     description: "Title shown after the CLI session was authorized",

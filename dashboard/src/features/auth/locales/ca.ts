@@ -532,6 +532,12 @@ const caAuth: Record<string, TranslationEntry> = {
     message: "La sessió ha caducat o no s'ha trobat.",
     description: "Error shown when the CLI auth session is expired or missing",
   },
+  "auth.cliAuthCodeUnknown": {
+    message:
+      "Aquest codi és desconegut o ha caducat. Torneu a executar `bea login` al terminal per obtenir-ne un de nou.",
+    description:
+      "Error when the entered CLI one-time code is unknown or expired; tells the user to rerun bea login",
+  },
   "auth.cliAuthSuccessTitle": {
     message: "Autorització correcta",
     description: "Title shown after the CLI session was authorized",

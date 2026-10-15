@@ -529,6 +529,12 @@ const bgAuth: Record<string, TranslationEntry> = {
     message: "Сесията е изтекла или не е намерена.",
     description: "Error shown when the CLI auth session is expired or missing",
   },
+  "auth.cliAuthCodeUnknown": {
+    message:
+      "Този код е непознат или е изтекъл. Изпълнете отново `bea login` в терминала, за да получите нов код.",
+    description:
+      "Error when the entered CLI one-time code is unknown or expired; tells the user to rerun bea login",
+  },
   "auth.cliAuthSuccessTitle": {
     message: "Успешно разрешаване",
     description: "Title shown after the CLI session was authorized",

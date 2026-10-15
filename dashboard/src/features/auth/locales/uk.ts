@@ -528,6 +528,12 @@ const ukAuth: Record<string, TranslationEntry> = {
     message: "Сеанс завершився або не знайдений.",
     description: "Error shown when the CLI auth session is expired or missing",
   },
+  "auth.cliAuthCodeUnknown": {
+    message:
+      "Цей код невідомий або його термін дії минув. Знову запустіть `bea login` у терміналі, щоб отримати новий код.",
+    description:
+      "Error when the entered CLI one-time code is unknown or expired; tells the user to rerun bea login",
+  },
   "auth.cliAuthSuccessTitle": {
     message: "Авторизація успішна",
     description: "Title shown after the CLI session was authorized",

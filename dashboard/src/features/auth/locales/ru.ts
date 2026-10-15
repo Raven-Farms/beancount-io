@@ -530,6 +530,12 @@ const ruAuth: Record<string, TranslationEntry> = {
     message: "Сеанс истёк или не найден.",
     description: "Error shown when the CLI auth session is expired or missing",
   },
+  "auth.cliAuthCodeUnknown": {
+    message:
+      "Этот код неизвестен или срок его действия истёк. Снова запустите `bea login` в терминале, чтобы получить новый код.",
+    description:
+      "Error when the entered CLI one-time code is unknown or expired; tells the user to rerun bea login",
+  },
   "auth.cliAuthSuccessTitle": {
     message: "Авторизация выполнена",
     description: "Title shown after the CLI session was authorized",
