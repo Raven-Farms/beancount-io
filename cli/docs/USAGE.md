@@ -1702,7 +1702,8 @@ skills with the same name. Each file needs YAML frontmatter with a nonempty
 `name` and `description`, followed by Markdown instructions; invalid files are
 skipped. Names and descriptions are supplied up front and full instructions
 load on demand. Interactive prompt history is saved in `ask_history` in the
-configuration directory.
+configuration directory, owner-only (`0600` in a `0700` directory, like
+`credentials.json`); set `BEA_NO_ASK_HISTORY=1` to keep it in memory only.
 
 ## Cloud: authentication
 
@@ -1913,6 +1914,7 @@ select targets, endpoints, and state directories:
 | `BEA_API_URL` | `https://api.v3.beancount.io` | API base URL; empty means the default, and a value that is not an `http(s)://` URL with a host is a usage error (exit 2) |
 | `BEA_DASHBOARD_URL` | `https://beancount.io` | Dashboard URL, used by the device login flow; validated like `BEA_API_URL` |
 | `BEA_NO_UPDATE_NOTIFIER` | — | Truthy disables the update notice entirely |
+| `BEA_NO_ASK_HISTORY` | — | Truthy keeps `bea ask`'s prompt history in memory; no `ask_history` file is written |
 | `CI` | — | Truthy implies `--no-input`, and disables the update notice |
 | `MANAGED_PRICE_ORIGINS` | `https://beancount.io` | Comma-separated origin allowlist for managed price includes; empty disables them |
 | `MANAGED_PRICE_OFFLINE` | — | Truthy resolves managed includes from the cache only, like `--offline` |

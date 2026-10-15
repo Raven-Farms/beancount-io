@@ -1,13 +1,15 @@
 from __future__ import annotations
 
+import os
 import random
 import shutil
+import stat
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.formatted_text import FormattedText
-from prompt_toolkit.history import FileHistory
+from prompt_toolkit.history import FileHistory, History, InMemoryHistory
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.styles import Style
 from rich.console import Console
@@ -22,6 +24,7 @@ if TYPE_CHECKING:
 
 from cli import output
 from cli.config import history_path
+from cli.context import env_flag
 from cli.errors import AuthError
 from cli.utils import inert_text
 
@@ -68,14 +71,32 @@ def _toolbar_tokens() -> FormattedText:
     )
 
 
-def _make_session(hint: str, key_bindings: KeyBindings | None = None) -> PromptSession[str]:
+def _history() -> History:
+    """Where typed questions are kept: an owner-only file, or nowhere under `BEA_NO_ASK_HISTORY`.
+
+    Questions are about the user's finances and may hold pasted account
+    numbers, yet prompt_toolkit created the file at `0666 & ~umask` in a
+    default-mode directory — readable by any local user, with no way to turn
+    it off (w5/455). It is created `0600` in a `0700` directory, as
+    `credentials.json` is, before prompt_toolkit opens it.
+    """
+    if env_flag("BEA_NO_ASK_HISTORY"):
+        return InMemoryHistory()
     history_file = history_path()
-    history_file.parent.mkdir(parents=True, exist_ok=True)
+    directory = history_file.parent
+    directory.mkdir(parents=True, exist_ok=True)
+    directory.chmod(stat.S_IRWXU)
+    os.close(os.open(history_file, os.O_WRONLY | os.O_CREAT | os.O_APPEND, stat.S_IRUSR | stat.S_IWUSR))
+    history_file.chmod(stat.S_IRUSR | stat.S_IWUSR)
+    return FileHistory(str(history_file))
+
+
+def _make_session(hint: str, key_bindings: KeyBindings | None = None) -> PromptSession[str]:
     return PromptSession(
         message=_prompt_tokens,
         bottom_toolbar=_toolbar_tokens,
         placeholder=FormattedText([("class:placeholder", f" {hint}")]),
-        history=FileHistory(str(history_file)),
+        history=_history(),
         style=_STYLE,
         mouse_support=False,
         key_bindings=key_bindings,
