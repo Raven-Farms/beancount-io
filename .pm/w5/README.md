@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [322 — `upgrade --check` offline exits 0 with `Latest release: unknown`](./322.md) — CLI QA 2026-10-14
 - [323 — `--json add balance --pad-from` returns raw `directives` with `diff_amount`](./323.md) — CLI QA 2026-10-14
 - [324 — Undocumented `target.into` on `add`/`price export`; `import` reports it in `data`](./324.md) — CLI QA 2026-10-14
 - [325 — Import treats forecast-plugin projections as duplicates; `--duplicates skip` drops real payments](./325.md) — CLI QA 2026-10-14
