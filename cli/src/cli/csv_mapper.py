@@ -159,6 +159,7 @@ def parse_mapping(spec: str) -> CsvMapping:
     """
     columns: dict[str, str] = {}
     sign = "bank"
+    signed = False
     delimiter: str | None = None
     encoding: str | None = None
     for part in split_spec(spec):
@@ -176,7 +177,11 @@ def parse_mapping(spec: str) -> CsvMapping:
         if name == "sign":
             if column not in ("bank", "ledger"):
                 raise UsageError(f"Bad --csv sign {column!r}: use sign=bank or sign=ledger.")
-            sign = column
+            if signed:
+                # The last one silently won, so `sign=ledger,sign=bank` and the
+                # reverse booked every row with opposite signs (w5/426).
+                raise UsageError("Duplicate --csv field 'sign'.")
+            sign, signed = column, True
         elif name == "delimiter":
             if delimiter is not None:
                 raise UsageError("Duplicate --csv field 'delimiter'.")
