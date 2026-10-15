@@ -4,6 +4,8 @@
 
 ## Milestones
 
+- [ ] **m4** — [Complete empty-narration transaction lookups across APIs](./m4/README.md) (6 tasks; minor; ledger and backend-v2).
+
 - [x] **m3** — [Expose core ledger options consistently across API surfaces](./done/m3/README.md) (7 tasks; minor; backend-v2).
 
 - [ ] **m2** — [Preserve BQL expression types across projection aliases](./blocked/m2/README.md) (7 tasks; minor; ledger with backend-v2 validation) — **blocked:** the engine query result has no column types; needs a published `@rustledger/wasm` release that exposes them
