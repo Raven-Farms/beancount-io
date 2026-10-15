@@ -1341,8 +1341,8 @@ def _export_plugin_modules(loaded: LoadedLedger, snapshot: LedgerSnapshot, targe
         return {}
     home = snapshot.root.parent
     modules: dict[Path, Path] = {}
-    for name, _config in loaded.options.get("plugin") or []:
-        top = str(name).split(".", 1)[0]
+    plugins = [str(name) for name, _config in loaded.options.get("plugin") or []]
+    for top in sorted({name.split(".", 1)[0] for name in plugins} | _sibling_imports(home, plugins)):
         module, package = home / f"{top}.py", home / top
         if package.is_dir():
             sources = [path for path in sorted(package.rglob("*.py")) if "__pycache__" not in path.parts]
@@ -1353,6 +1353,43 @@ def _export_plugin_modules(loaded: LoadedLedger, snapshot: LedgerSnapshot, targe
         for source in sources:
             modules[target / source.relative_to(home)] = source
     return modules
+
+
+def _sibling_imports(home: Path, plugins: list[str]) -> set[str]:
+    """Top-level modules beside the root that the local plugins import.
+
+    A plugin importing `helper.py` from its own directory exported without
+    it, and the snapshot failed with `No module named 'helper'` (w5/327).
+    Importing each plugin as the load does (a cached load ran none of them)
+    leaves its imports in `sys.modules`; those whose file sits at the top of
+    the root's directory travel too.
+    """
+    import importlib
+
+    saved = list(sys.path)
+    sys.path.insert(0, str(home))
+    try:
+        for name in plugins:
+            try:
+                importlib.import_module(name)
+            except Exception:  # noqa: BLE001 - the load reports a plugin that cannot import
+                continue
+    finally:
+        sys.path[:] = saved
+    base = home.resolve()
+    tops: set[str] = set()
+    for name, module in list(sys.modules.items()):
+        location = getattr(module, "__file__", None)
+        if not location:
+            continue
+        try:
+            relative = Path(location).resolve().relative_to(base)
+        except (OSError, ValueError):
+            continue
+        top = name.split(".", 1)[0]
+        if relative.parts[0] in (f"{top}.py", top):
+            tops.add(top)
+    return tops
 
 
 def _free_feed_directory(target: Path, taken: set[Path]) -> Path:
