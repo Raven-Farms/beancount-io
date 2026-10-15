@@ -138,7 +138,45 @@ def forget_source_lines() -> None:
     _source_lines.cache_clear()
 
 
-def entry_generated(entry: Any, directive_type: str) -> bool:
+_QUOTED = re.compile(r'"((?:[^"\\]|\\.)*)"')
+
+
+def shared_locations(entries: list[Any]) -> frozenset[tuple[str, int]]:
+    """The source locations two or more transactions claim on one date, of which at most one is written.
+
+    A plugin may stamp a new entry with its source's `filename` and `lineno`
+    on the source's own date; that entry passed every on-disk test, so
+    `--on-disk` kept a row `grep` cannot find (w5/401). Copies on other dates
+    (forecast, amortize) are already told apart by their date, and the copy
+    such a plugin keeps may carry a rewritten narration, so only a same-date
+    claim is settled by the line's text.
+    """
+    seen: set[tuple[str, int, Any]] = set()
+    shared: set[tuple[str, int]] = set()
+    for entry in entries:
+        if not isinstance(entry, Transaction):
+            continue
+        meta = entry.meta or {}
+        lineno = meta.get("lineno")
+        if not isinstance(lineno, int):
+            continue
+        key = (str(meta.get("filename")), lineno, entry.date)
+        if key in seen:
+            shared.add(key[:2])
+        seen.add(key)
+    return frozenset(shared)
+
+
+def _declares(entry: Any, line: str) -> bool:
+    """Whether a transaction header line carries this entry's payee and narration."""
+    strings = [
+        unicodedata.normalize("NFC", text.replace('\\"', '"').replace("\\\\", "\\")) for text in _QUOTED.findall(line)
+    ][:2]
+    payee, narration = (strings[0], strings[1]) if len(strings) == 2 else (None, strings[0] if strings else "")
+    return (entry.payee or None, entry.narration or "") == (payee or None, narration)
+
+
+def entry_generated(entry: Any, directive_type: str, shared: frozenset[tuple[str, int]] = frozenset()) -> bool:
     """Whether a plugin synthesized this entry rather than the ledger declaring it.
 
     A synthesized entry either points nowhere real (`<auto_accounts>`) or
@@ -175,7 +213,10 @@ def entry_generated(entry: Any, directive_type: str) -> bool:
         except ValueError:
             return True
     if directive_type == "transaction":
-        return _TXN_TOKEN.match(token) is None
+        if _TXN_TOKEN.match(token) is None:
+            return True
+        # Two transactions at one location: only the one the line spells is written.
+        return (str(filename), lineno) in shared and not _declares(entry, lines[lineno - 1])
     return not token.startswith(directive_type)
 
 
@@ -212,7 +253,7 @@ def metadata_to_json(meta: dict[str, Any] | None) -> dict[str, Any]:
     return result
 
 
-def _to_transaction(entry: Any) -> TransactionHeader:
+def _to_transaction(entry: Any, shared: frozenset[tuple[str, int]] = frozenset()) -> TransactionHeader:
     # A loaded transaction may legitimately have no postings (Beancount accepts
     # one), so reads use the header model; only input requires a posting.
     postings = []
@@ -246,7 +287,7 @@ def _to_transaction(entry: Any) -> TransactionHeader:
         links=sorted(entry.links),
         meta=metadata_to_json(entry.meta),
         source=SourceLocation(filename=entry.meta["filename"], lineno=entry.meta["lineno"]),
-        generated=entry_generated(entry, "transaction"),
+        generated=entry_generated(entry, "transaction", shared),
     )
 
 
@@ -271,6 +312,7 @@ def list_transactions(
     search: list[str] | None = None,
     tags: list[str] | None = None,
     links: list[str] | None = None,
+    shared: frozenset[tuple[str, int]] = frozenset(),
 ) -> list[TransactionHeader]:
     # The same fold account filters use, so Turkish `İ`/`ı` match `i` (w1/132).
     terms = [fold_account(term or "") for term in search or []]
@@ -294,7 +336,7 @@ def list_transactions(
             continue
         if wanted_links and not wanted_links.issubset({_nfc(link) for link in entry.links or ()}):
             continue
-        results.append(_to_transaction(entry))
+        results.append(_to_transaction(entry, shared))
         if len(results) >= limit:
             break
     return results

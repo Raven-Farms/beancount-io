@@ -101,10 +101,13 @@ def answer(
         filters["root"] = Path(os.path.abspath(str(file))).parent
 
     entries, errors = reader.load_file(file)
+    shared = reader.shared_locations(entries) if directive_type == "transaction" else frozenset()
+    if shared:
+        filters["shared"] = shared
     if on_disk_only:
         # Before the limit: truncation must count answerable rows, not rows
         # the filter is about to drop.
-        entries = [entry for entry in entries if not reader.entry_generated(entry, directive_type)]
+        entries = [entry for entry in entries if not reader.entry_generated(entry, directive_type, shared)]
     if newest:
         # Every lister walks in order and stops at the limit, so the walk
         # itself is what decides which end of the ledger a cut listing keeps.
