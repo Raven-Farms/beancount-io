@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [388 — `treeify --filler ''` crashes with `ZeroDivisionError`](./388.md) — CLI QA 2026-10-14
 - [389 — `example -o ''` skips bea's output checks (`forwarded_option` drops `''`)](./389.md) — CLI QA 2026-10-14
 - [390 — `example` accepts any date span; year 1 or 9999 runs minutes then fails with a class name](./390.md) — CLI QA 2026-10-14
 - [391 — Every ledger write silently splits a hard link to the file (new inode, other name stale)](./391.md) — CLI QA 2026-10-14
