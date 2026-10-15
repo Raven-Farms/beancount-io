@@ -157,7 +157,16 @@ def _simple(directive_type: str, request: dict[str, Any], roots: tuple[str, ...]
     if directive_type == "open":
         booking = request.get("booking")
         if booking is not None:
-            booking = str(booking).strip().upper() or None
+            raw_booking, booking = booking, str(booking).strip().upper()
+            if not booking:
+                # An empty value is not an omitted one: it wrote an open with no
+                # booking method (w5/382), the w5/239 rule for other options.
+                from beancount.core.data import Booking
+
+                choices = ", ".join(member.name for member in Booking if member is not Booking.AVERAGE)
+                raise protocol.UsageError(
+                    f"--booking {raw_booking!r} is blank; omit --booking for the default, or choose one of: {choices}."
+                )
         raw_currencies = list(request.get("currencies") or [])
         # A repeat is written once, in first-seen order, as repeated tags and
         # links are; `-c USD -c USD` wrote `USD,USD` (w5/448).
@@ -706,7 +715,9 @@ def _transaction(
     header = TransactionHeader.model_validate(
         {
             "date": _date(request),
-            "flag": str(request.get("flag") or "*"),
+            # Only an omitted flag defaults: `--flag ''` wrote `*` while bulk
+            # add refused the same empty flag (w5/382).
+            "flag": "*" if request.get("flag") is None else str(request.get("flag")),
             "payee": request.get("payee"),
             "narration": request.get("narration"),
             "postings": [],
