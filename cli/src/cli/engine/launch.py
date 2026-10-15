@@ -177,6 +177,10 @@ def _native_env(ledger: Path | str | None = None) -> dict[str, str]:
     env = {**os.environ, "PYTHONPATH": os.pathsep.join([inherited, str(root)]) if inherited else str(root)}
     if ledger is not None:
         env[LOAD_CACHE_ENV] = load_cache_pattern(ledger)
+    # Ledger text out of upstream is UTF-8 whatever the locale, as bea's own is:
+    # under a Latin-1 or cp1252 locale `treeify` and `doctor context` crashed on
+    # `İstanbul` with a UnicodeEncodeError (w5/404).
+    env["PYTHONIOENCODING"] = "utf-8"
     return env
 
 
@@ -750,7 +754,9 @@ def _spawn(command: list[str], env: dict[str, str] | None, *, deaf_to_interrupt:
     stdout pipe; see `_stderr_minus_flush_epilogue`.
     """
     if _stream_is_captured(sys.stdout) or _stream_is_captured(sys.stderr):
-        captured = subprocess.run(command, env=env, capture_output=True, text=True, check=False)
+        captured = subprocess.run(
+            command, env=env, capture_output=True, encoding="utf-8", errors="replace", check=False
+        )
         output.replay(captured.stdout, sys.stdout)
         output.replay(captured.stderr, sys.stderr)
         returncode = captured.returncode
@@ -834,7 +840,8 @@ def run_captured(
             stdin=subprocess.DEVNULL if stdin_closed else None,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            text=True,
+            encoding="utf-8",
+            errors="replace",
             pass_fds=pass_fds,
         ) as child,
     ):

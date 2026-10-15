@@ -358,6 +358,7 @@ def _forward(op: str, ctx: typer.Context) -> None:
 
 def _replay(completed: subprocess.CompletedProcess[str]) -> None:
     """Print captured upstream output back to its own streams, verbatim."""
+    output.utf8_stdout()
     output.replay(completed.stdout, sys.stdout)
     output.replay(completed.stderr, sys.stderr)
     # A failure line follows on stderr; flush first so redirected streams keep

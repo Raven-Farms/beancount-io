@@ -21,6 +21,7 @@ from cli.output import (
     refuse_include_claim,
     replay,
     require_writable_destination,
+    utf8_stdout,
 )
 from cli.utils import atomic_write
 
@@ -162,6 +163,7 @@ def example(ctx: typer.Context) -> None:
             raise BeaError(f"bean-example printed no ledger, so {destination} was not written.")
         atomic_write(destination, completed.stdout or "", export=True)
     else:
+        utf8_stdout()
         replay(completed.stdout, sys.stdout)
     replay(completed.stderr, sys.stderr)
 

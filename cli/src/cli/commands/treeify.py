@@ -211,6 +211,7 @@ def treeify(ctx: typer.Context) -> None:
     if destination is not None:
         atomic_write(destination, completed.stdout or "", export=True)
     else:
+        output.utf8_stdout()
         output.replay(completed.stdout, sys.stdout)
     output.replay(completed.stderr, sys.stderr)
 
