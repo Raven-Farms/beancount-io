@@ -349,3 +349,27 @@ export function untranslatedEnglishTail(
     shared.some((word) => /^[A-Z][a-z]{2,}$/.test(word));
   return isSentence || isTitleCased ? shared : [];
 }
+
+/**
+ * The English words of a message copied into another catalog without being
+ * translated at all, or an empty array when the copy is legitimate.
+ *
+ * `untranslatedEnglishTail` returns early on an exact copy on purpose — it
+ * looks for a translation abandoned halfway — so a whole message pasted from
+ * `en` passed every guard. More than 600 such copies shipped across Receipt,
+ * Plaid and Settings before this check existed (w0/m1). A copy counts once it
+ * keeps two or more English words after the allowlisted brand, format and
+ * notation terms are removed: `Plaid`, `CSV`, `Beancount.io` or `Status`
+ * alone are identical in many languages, `Upload Receipt` is not.
+ */
+export function untranslatedWholeMessage(
+  message: string,
+  english: string,
+): string[] {
+  if (message !== english) return [];
+  const words = english
+    .replace(/\{[^}]*\}/g, " ")
+    .replace(ALLOWED_PATTERN, " ")
+    .match(/(?<![0-9A-Za-z])[A-Za-z]{2,}(?![0-9A-Za-z])/g);
+  return words && words.length >= 2 ? words : [];
+}
