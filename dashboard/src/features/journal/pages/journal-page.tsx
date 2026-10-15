@@ -174,6 +174,9 @@ const JournalContent = () => {
   const [selectedEntry, setSelectedEntry] =
     useState<JournalDirectiveType | null>(null);
   const entryOpenerRef = useRef<HTMLElement | null>(null);
+  // The persistent toolbar New Entry link: every New Entry opener (toolbar,
+  // sidebar, Overview, a bookmarked ?action=new-entry) returns focus here.
+  const newEntryLinkRef = useRef<HTMLAnchorElement | null>(null);
   const entryFallbackRef = useRef<HTMLDivElement | null>(null);
 
   const { data, loading, error, refetch } = useQuery(GetLedgerJournalDocument, {
@@ -273,6 +276,7 @@ const JournalContent = () => {
               {canWrite && (
                 <Button asChild className="flex items-center gap-2">
                   <Link
+                    ref={newEntryLinkRef}
                     to="/ledger/$ledgerOwner/$ledgerName/journal"
                     params={{ ledgerOwner, ledgerName }}
                     search={(previous) => ({
@@ -337,6 +341,7 @@ const JournalContent = () => {
       </div>
 
       <NewDirectiveDialog
+        returnFocusRef={newEntryLinkRef}
         open={canWrite && actionSearch.action === NEW_ENTRY_ACTION}
         onOpenChange={(open) => {
           if (!open) {

@@ -12,7 +12,6 @@
 
 ## Inbox
 
-- [008](./008.md) — Return focus to the opener when the Journal New Entry dialog closes (minor; dashboard; 40–55m).
 - [009](./009.md) — Bound the precision of Holdings' derived average cost (minor; dashboard; 25–40m).
 - [010](./010.md) — Render report money at one precision per currency, independent of render_commas (minor; dashboard; ~60m).
 - [011](./011.md) — Turn the Ask AI tool-activity counts into real plural messages (minor; dashboard; 35–50m).

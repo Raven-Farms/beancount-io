@@ -18,6 +18,8 @@ import { OpenAccountForm } from "@/features/journal/components/new-directive-dia
 import { useApolloCacheClear } from "@/common/hooks/use-apollo-cache";
 import { useTranslations } from "@/common/hooks/use-translations";
 import type { JournalDirectiveAction } from "@/common/lib/ledger-action-search";
+import type { RefObject } from "react";
+import { restoreFocusOnDialogClose } from "@/common/lib/focus/restore-focus-on-dialog-close";
 
 interface NewDirectiveDialogProps {
   open: boolean;
@@ -26,6 +28,12 @@ interface NewDirectiveDialogProps {
   activeTab: JournalDirectiveAction;
   onActiveTabChange: (tab: JournalDirectiveAction) => void;
   onSuccess?: () => void;
+  /**
+   * Where focus lands when the dialog closes. The dialog is opened by a route
+   * link (and by the sidebar or Overview, which may be unmounted by then), so
+   * Radix has no trigger to return to and would drop focus on the body.
+   */
+  returnFocusRef?: RefObject<HTMLElement | null>;
 }
 
 /**
@@ -39,6 +47,7 @@ export function NewDirectiveDialog({
   activeTab,
   onActiveTabChange,
   onSuccess,
+  returnFocusRef,
 }: NewDirectiveDialogProps) {
   const { t } = useTranslations();
   const clearCache = useApolloCacheClear();
@@ -51,7 +60,12 @@ export function NewDirectiveDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="!max-w-full sm:!max-w-[600px] lg:!max-w-[1000px] top-[2%] sm:top-[10%] translate-y-0 max-h-[96vh] sm:max-h-[85vh] flex flex-col">
+      <DialogContent
+        className="!max-w-full sm:!max-w-[600px] lg:!max-w-[1000px] top-[2%] sm:top-[10%] translate-y-0 max-h-[96vh] sm:max-h-[85vh] flex flex-col"
+        onCloseAutoFocus={(event) => {
+          restoreFocusOnDialogClose(event, returnFocusRef?.current);
+        }}
+      >
         <VisuallyHidden>
           <DialogDescription className="text-left">
             {t("journal.createNewJournalEntry")}
