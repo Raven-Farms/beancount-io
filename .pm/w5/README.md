@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [378 — Managed-price shadowing misses arithmetic authored prices and matches price text inside strings](./378.md) — CLI QA 2026-10-14
 - [379 — `price refresh` failure detail reads "….; serving revision none"](./379.md) — CLI QA 2026-10-14
 - [380 — A lone CR in the ledger misclassifies add-time errors (plugin blame, lost prefix, pad refused)](./380.md) — CLI QA 2026-10-14
 - [381 — Read commands keep the last of a repeated single-valued option (`-a Food -a Rent` lists Rent)](./381.md) — CLI QA 2026-10-14
