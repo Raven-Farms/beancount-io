@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [334 — Parser diagnostics (duplicate cost/meta, tags after posting) show raw reprs](./334.md) — CLI QA 2026-10-14
 - [335 — Bulk float refusal suggests `'1e+20'`/`'nan'`, which are refused too](./335.md) — CLI QA 2026-10-14
 - [336 — Bulk JSON nested ~1k–few-k levels crashes with `RecursionError`](./336.md) — CLI QA 2026-10-14
 - [337 — Atomic bulk refusal never names the invalid row; JSON lists all as unwritten](./337.md) — CLI QA 2026-10-14
