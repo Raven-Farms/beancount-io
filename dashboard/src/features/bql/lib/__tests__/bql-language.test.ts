@@ -109,3 +109,27 @@ describe("BQL editor comments", () => {
     );
   });
 });
+
+function typeInto(text: string): string {
+  editor.setValue("");
+  editor.setPosition(new monaco.Position(1, 1));
+  for (const char of text) {
+    editor.trigger("keyboard", "type", { text: char });
+  }
+  return editor.getValue();
+}
+
+describe("BQL editor auto-closing", () => {
+  it("keeps brackets typed inside a string literal as typed", () => {
+    expect(typeInto("SELECT account WHERE account ~ '('")).toBe(
+      "SELECT account WHERE account ~ '('",
+    );
+    expect(typeInto("SELECT 'a(b'")).toBe("SELECT 'a(b'");
+    expect(typeInto('SELECT "x["')).toBe('SELECT "x["');
+  });
+
+  it("still pairs brackets typed outside strings", () => {
+    expect(typeInto("SELECT sum(position)")).toBe("SELECT sum(position)");
+    expect(typeInto("SELECT sum(")).toBe("SELECT sum()");
+  });
+});

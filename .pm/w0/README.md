@@ -12,7 +12,6 @@
 
 ## Inbox
 
-- [003](./003.md) — Stop the BQL editor auto-closing brackets inside string literals (minor; dashboard; 20–30m).
 - [004](./004.md) — Give the Upload Receipt route a document title (minor; dashboard; 30–40m).
 - [005](./005.md) — Keep an invalid typed date visible instead of reverting the field to today (minor; dashboard; 40–55m).
 - [006](./006.md) — Make the Journal "New Entry" button's accessible name contain its visible label (minor; dashboard; 15–25m).

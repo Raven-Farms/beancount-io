@@ -22,12 +22,15 @@ export const BQL_LANGUAGE_CONFIGURATION: monacoType.languages.LanguageConfigurat
       ["[", "]"],
       ["(", ")"],
     ],
+    // `notIn` keeps a bracket or quote typed inside a string literal or a
+    // comment as typed: without it `'a(b'` became `'a(b')'`, a different
+    // regex that quietly matched nothing.
     autoClosingPairs: [
-      { open: "{", close: "}" },
-      { open: "[", close: "]" },
-      { open: "(", close: ")" },
-      { open: '"', close: '"' },
-      { open: "'", close: "'" },
+      { open: "{", close: "}", notIn: ["string", "comment"] },
+      { open: "[", close: "]", notIn: ["string", "comment"] },
+      { open: "(", close: ")", notIn: ["string", "comment"] },
+      { open: '"', close: '"', notIn: ["string", "comment"] },
+      { open: "'", close: "'", notIn: ["string", "comment"] },
     ],
     surroundingPairs: [
       { open: "{", close: "}" },
