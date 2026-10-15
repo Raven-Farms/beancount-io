@@ -1738,7 +1738,14 @@ def _grouped_columns(query_string: str) -> list[str]:
     # `GROUP BY 1` is an int and `GROUP BY root(account, 1)` a function node;
     # neither has a name, and reading one here replaced the real error with
     # this handler's own AttributeError (w5/177).
-    names = [getattr(column, "name", None) for column in getattr(group_by, "columns", None) or []]
+    targets = getattr(parsed, "targets", None) or []
+    names = []
+    for column in getattr(group_by, "columns", None) or []:
+        # A position names its 1-based SELECT target: `GROUP BY 1` on
+        # `accounts` still raised the raw `issubclass` TypeError (w5/313).
+        if isinstance(column, int) and 0 < column <= len(targets):
+            column = getattr(targets[column - 1], "expression", None)
+        names.append(getattr(column, "name", None))
     return [name for name in names if isinstance(name, str)]
 
 
