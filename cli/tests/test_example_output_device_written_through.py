@@ -94,14 +94,18 @@ def test_existing_regular_file_is_still_a_conflict(tmp_path: Path) -> None:
     assert victim.read_text(encoding="utf-8") == "; mine\n"
 
 
-def test_existing_directory_and_dangling_symlink_are_still_conflicts(tmp_path: Path) -> None:
+def test_a_dangling_symlink_is_still_a_conflict_and_a_directory_is_refused(tmp_path: Path) -> None:
     directory = tmp_path / "out"
     directory.mkdir()
     dangling = tmp_path / "dangling.bean"
     dangling.symlink_to(tmp_path / "missing.bean")
 
-    for target in (directory, dangling):
-        result = _bea(tmp_path, "example", *RANGE, "-o", str(target))
-        assert result.returncode == 4, result.stderr
-        assert "Already exists" in result.stderr
+    result = _bea(tmp_path, "example", *RANGE, "-o", str(dangling))
+    assert result.returncode == 4, result.stderr
+    assert "Already exists" in result.stderr
     assert not (tmp_path / "missing.bean").exists()
+    # A directory is no file to overwrite, so `--force` advice could never
+    # help: it is refused as a directory (w5/353).
+    result = _bea(tmp_path, "example", *RANGE, "-o", str(directory))
+    assert result.returncode == 2, result.stderr
+    assert "not a directory" in result.stderr

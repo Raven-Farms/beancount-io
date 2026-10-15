@@ -102,10 +102,14 @@ def example(ctx: typer.Context) -> None:
     """Generate an example ledger (delegates to bean-example)."""
     refuse_json("example", hint="Run without --json to print the sample ledger.")
     forwarded, output, force = _split_output(list(ctx.args))
+    # A directory is never a file to overwrite: the conflict and its
+    # `--force` advice led to a directory refusal that --force cannot pass;
+    # it now gets that refusal straight away (w5/353).
     if (
         output is not None
         and not force
         and (output.exists() or output.is_symlink())
+        and not output.is_dir()
         and not _is_written_through(output)
     ):
         raise ConflictError(
