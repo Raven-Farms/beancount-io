@@ -24,7 +24,7 @@ from pathlib import Path
 
 from cli.config import cache_dir, config_dir, package_version
 from cli.context import env_flag
-from cli.errors import UsageError
+from cli.errors import BeaError, UsageError
 
 PROJECT = "beancount-io"
 
@@ -154,18 +154,42 @@ def write_cache(checked_at: float, version: str, channel: str = "pypi", *, cache
         pass
 
 
+def _index_url(channel: str) -> str:
+    base = os.environ.get(INDEX_URL_ENV) or DEFAULT_INDEX_URL
+    if channel == "homebrew":
+        return os.environ.get(TAP_URL_ENV) or TAP_URL
+    return f"{base.rstrip('/')}/pypi/{PROJECT}/json"
+
+
+def check_latest(channel: str = "pypi") -> str | None:
+    """`bea upgrade --check`'s answer: a fresh fetch whose failure is reported, not swallowed.
+
+    `latest_version` turns every failure into "nothing to report" for the
+    silent notice; the explicit check printed `Latest release: unknown` with
+    exit 0, so a failed check read as a successful one (w5/322). Only an
+    answer is cached here.
+    """
+    from urllib.error import URLError
+    from urllib.parse import urlparse
+
+    try:
+        version = _fetch_latest(channel)
+    except Exception as exc:
+        reason = exc.reason if isinstance(exc, URLError) else exc
+        host = urlparse(_index_url(channel)).netloc or _index_url(channel)
+        raise BeaError(f"Could not check {host} for a newer release: {str(reason) or type(exc).__name__}.") from exc
+    write_cache(time.time(), version, channel)
+    return version or None
+
+
 def _fetch_latest(channel: str) -> str:
     """Ask the index for the newest published version. Raises on any failure."""
     # Imported here so that `bea --help` never loads urllib, and so nothing in
     # this module pulls in an HTTP client the default install would rather skip.
     import urllib.request
 
-    base = os.environ.get(INDEX_URL_ENV) or DEFAULT_INDEX_URL
-    url = (
-        (os.environ.get(TAP_URL_ENV) or TAP_URL) if channel == "homebrew" else f"{base.rstrip('/')}/pypi/{PROJECT}/json"
-    )
     request = urllib.request.Request(
-        url,
+        _index_url(channel),
         headers={"Accept": "application/json", "User-Agent": f"bea/{package_version()}"},
     )
     with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:

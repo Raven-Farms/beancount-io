@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -129,16 +130,34 @@ class TestCheck:
 
         assert "10.0.0" in result.stdout
 
-    def test_an_unreachable_index_still_reports_the_command(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_an_unreachable_index_is_a_failed_check_that_still_names_the_command(
+        self, monkeypatch: pytest.MonkeyPatch, bea_config_dir: Path
+    ) -> None:
         # No `fake_index`: the endpoint is a closed port, as it is offline.
+        # "Latest release: unknown" with exit 0 read as a successful check (w5/322).
         monkeypatch.setattr("cli.commands.upgrade.current_channel", lambda: upgrade_command.HOMEBREW)
         _refuse_to_run(monkeypatch)
 
         result = runner.invoke(app, ["upgrade", "--check"])
 
-        assert result.exit_code == 0
-        assert "Latest release: unknown" in result.stdout
-        assert "brew upgrade bea" in result.stdout
+        assert result.exit_code == 1
+        assert "Could not check" in result.stderr and "for a newer release" in result.stderr
+        assert "Would run: brew upgrade bea" in result.stderr
+        assert not (bea_config_dir / "update-check-homebrew.json").exists()
+
+    def test_json_reports_a_failed_check_as_an_error(
+        self, fake_index: FakeIndex, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr("cli.commands.upgrade.current_channel", lambda: upgrade_command.UV_TOOL)
+        _refuse_to_run(monkeypatch)
+        fake_index.version = None  # the index answers HTTP 500
+
+        result = runner.invoke(app, ["--json", "upgrade", "--check"])
+
+        assert result.exit_code == 1
+        error = json.loads(result.stderr)["error"]
+        assert error["message"].startswith("Could not check 127.0.0.1:")
+        assert "Would run: uv tool upgrade beancount-io" in error["details"]
 
     def test_json_reports_the_same_answer_as_an_envelope(
         self, fake_index: FakeIndex, monkeypatch: pytest.MonkeyPatch

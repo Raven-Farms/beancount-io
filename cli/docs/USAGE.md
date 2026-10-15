@@ -1791,7 +1791,10 @@ $ bea upgrade
 Uninstalling the executable leaves ledgers and user state in place.
 
 If the manager itself fails, the command exits **1** and says so; nothing about
-the installation is changed. `--check` reports and runs nothing.
+the installation is changed. `--check` reports and runs nothing; when the
+index cannot be reached it exits **1** naming the host and the reason, still
+listing the installed version and the command `bea upgrade` would run, and
+caches nothing.
 
 ### The update notice
 

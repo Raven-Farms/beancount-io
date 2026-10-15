@@ -105,7 +105,12 @@ def upgrade(
     if check:
         # The user asked, so this is the one path that goes past the daily
         # cache: a stale answer is exactly what they are trying to rule out.
-        latest = update.latest_version(use_cache=False, channel=channel.name)
+        try:
+            latest = update.check_latest(channel.name)
+        except BeaError as exc:
+            # Still the answer a user offline can act on: what is installed and
+            # what `bea upgrade` would run (w5/322).
+            raise BeaError(str(exc), details=_check_lines(channel, current)) from exc
         if ctx.json_output:
             output.emit(
                 {
@@ -213,10 +218,17 @@ def _refresh_engine(channel: Channel, before: str) -> bool:
     return True
 
 
+def _check_lines(channel: Channel, current: str) -> list[str]:
+    would = (
+        " ".join(channel.command)
+        if channel.command
+        else f"nothing — upgrade it yourself with: {'; '.join(channel.advice)}"
+    )
+    return [f"bea {current} (installed by: {channel.name})", f"Would run: {would}"]
+
+
 def _report(channel: Channel, current: str, latest: str | None) -> None:
-    typer.echo(f"bea {current} (installed by: {channel.name})")
+    installed, would = _check_lines(channel, current)
+    typer.echo(installed)
     typer.echo(f"Latest release: {latest or 'unknown'}")
-    if channel.command:
-        typer.echo(f"Would run: {' '.join(channel.command)}")
-    else:
-        typer.echo(f"Would run: nothing — upgrade it yourself with: {'; '.join(channel.advice)}")
+    typer.echo(would)
