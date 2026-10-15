@@ -35,7 +35,6 @@
 
 ## Inbox
 
-- [310 — `init --opening-balance` rounds a >28-digit equity leg](./310.md) — CLI QA 2026-10-14
 - [311 — Repeated `import --account/--csv/--rules` and `init -c` keep the last value silently](./311.md) — CLI QA 2026-10-14
 - [312 — Untraversable `load-cache` dir fails every local command with raw `PermissionError` (220 regression)](./312.md) — CLI QA 2026-10-14
 - [313 — `SELECT accounts … GROUP BY 1` still crashes with `issubclass` TypeError](./313.md) — CLI QA 2026-10-14
