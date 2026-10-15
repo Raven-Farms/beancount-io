@@ -52,10 +52,19 @@ def price(ctx: typer.Context) -> None:
     raise typer.Exit(code)
 
 
-def _answer(argv: list[str]) -> dict[str, Any]:
-    """The helper answer, with the load's own errors bannered, never raised."""
+def _answer(argv: list[str], *, table_covers_sources: bool = False) -> dict[str, Any]:
+    """The helper answer, with the load's own errors bannered, never raised.
+
+    `price status` and `price refresh` show each managed source's state in
+    their own table, so the load's "source unavailable … Run bea price status
+    to inspect the source." told the user to run the command they had just
+    run, and repeated the row below it (w5/354). There it is left out.
+    """
     data = launch.helper_json(argv)
-    output.render_ledger_errors(data.get("errors") or [], allow=True)
+    errors = data.get("errors") or []
+    if table_covers_sources:
+        errors = [error for error in errors if "managed price source unavailable" not in str(error)]
+    output.render_ledger_errors(errors, allow=True)
     return data
 
 
@@ -64,7 +73,7 @@ def _status(extra: list[str]) -> None:
         raise UsageError(f"bea price status takes no arguments; got: {' '.join(extra)}.")
     current = context.current()
     file = current.entry_file()
-    sources: list[dict[str, Any]] = _answer(["price-status", "--file", str(file)])["sources"]
+    sources: list[dict[str, Any]] = _answer(["price-status", "--file", str(file)], table_covers_sources=True)["sources"]
     if current.json_output:
         output.emit({"sources": sources}, target=output.file_target(file))
         return
@@ -93,7 +102,7 @@ def _refresh(extra: list[str]) -> None:
         raise UsageError(f"bea price refresh takes no arguments; got: {' '.join(extra)}.")
     current = context.current()
     file = current.entry_file()
-    data = _answer(["price-refresh", "--file", str(file)])
+    data = _answer(["price-refresh", "--file", str(file)], table_covers_sources=True)
     sources: list[dict[str, Any]] = data["sources"]
     failed = [
         source

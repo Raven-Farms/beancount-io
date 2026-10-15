@@ -1485,7 +1485,9 @@ class TestPriceStatus:
         machine = _run_bea(tmp_path, feed_server, "--offline", "--json", "--file", str(ledger), "price", "status")
 
         assert human.returncode == 0, human.stderr
-        assert "no cached revision" in human.stderr
+        # The table names the cause; the load warning that pointed back at
+        # `price status` is left out of its own output (w5/354).
+        assert "Run bea price status" not in human.stderr
         assert "1970" not in human.stdout
         assert "no cached revision" in human.stdout
         assert machine.returncode == 0, machine.stderr
@@ -1542,8 +1544,13 @@ class TestManagedPriceFailureText:
         result = _run_bea(tmp_path, feed_server, "--offline", "--file", str(ledger), *command)
 
         assert result.returncode == (1 if command == ("check",) else 0), result.stderr
-        assert f"{cause.rstrip('.')}. Run bea price status to inspect the source." in result.stderr
-        assert url in result.stderr
+        if command == ("check",):
+            assert f"{cause.rstrip('.')}. Run bea price status to inspect the source." in result.stderr
+            assert url in result.stderr
+        else:
+            # `price status` shows the cause in its table and does not point at itself (w5/354).
+            assert cause.rstrip(".")[:30] in " ".join(result.stdout.split())
+            assert "Run bea price status" not in result.stderr
         assert "None" not in result.stderr
         assert ledger.read_bytes() == original
         assert {path: path.read_bytes() for path in cache.rglob("*") if path.is_file()} == cached
