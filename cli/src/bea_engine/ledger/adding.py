@@ -1210,7 +1210,12 @@ def _transactions(
     rejected: list[str] = []
     rejected_rows: list[int] = []
     for index, item in enumerate(rows):
-        surrogates = _surrogate_problems(item)
+        try:
+            surrogates = _surrogate_problems(item)
+        except RecursionError:
+            # The frontend refuses this depth first; a direct engine caller
+            # gets the same usage error rather than a bare RecursionError.
+            raise protocol.UsageError(f"Row {index + 1} nests JSON too deeply; send a flat array of rows.") from None
         if surrogates:
             rejected.extend(f"Row {index + 1}, {problem}" for problem in surrogates)
             rejected_rows.append(index)

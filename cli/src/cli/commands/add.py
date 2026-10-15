@@ -487,6 +487,26 @@ def _parse_custom_value(raw: str) -> dict[str, Any]:
     raise typer.BadParameter(f"Invalid value kind or value {raw!r}. Use: text, number, amount, account, bool, date")
 
 
+_MAX_JSON_DEPTH = 100
+
+
+def _nesting_depth(value: Any) -> int:
+    """How deep lists and objects nest in a parsed JSON value, without recursing."""
+    deepest = 0
+    pending: list[tuple[Any, int]] = [(value, 1)]
+    while pending:
+        item, depth = pending.pop()
+        if isinstance(item, dict):
+            children: Any = item.values()
+        elif isinstance(item, list):
+            children = item
+        else:
+            continue
+        deepest = max(deepest, depth)
+        pending.extend((child, depth + 1) for child in children)
+    return deepest
+
+
 def _load_transactions_json(from_file: Path) -> Any:
     """Read and parse `--from`; unreadable input is a usage error, phrased like `--file`'s.
 
@@ -529,15 +549,22 @@ def _load_transactions_json(from_file: Path) -> Any:
         # BOM-less UTF-16 decodes as UTF-8 with a NUL beside every ASCII byte;
         # JSON text can never hold a raw NUL.
         raise UsageError(utf16)
+    too_deep = f"'{name}' (from --from) nests JSON too deeply; send a flat array of rows."
     try:
-        return json.loads(text, object_pairs_hook=_unique_keys)
+        loaded = json.loads(text, object_pairs_hook=_unique_keys)
     except json.JSONDecodeError as exc:
         raise UsageError(f"Invalid JSON at line {exc.lineno}, column {exc.colno}: {exc.msg}.") from exc
     except RecursionError as exc:
-        raise UsageError(f"'{name}' (from --from) nests JSON too deeply; send a flat array of rows.") from exc
+        raise UsageError(too_deep) from exc
     except ValueError as exc:
         # A duplicate key, or an integer longer than Python will convert.
         raise UsageError(f"Invalid JSON in '{name}' (from --from): {_json_value_problem(exc)}") from exc
+    # The C decoder takes far deeper input than the engine's recursive walks:
+    # 2,000 levels parsed here and died there as a bare RecursionError, exit 1
+    # (w5/336). A row nests a handful of levels; this is generous and finite.
+    if _nesting_depth(loaded) > _MAX_JSON_DEPTH:
+        raise UsageError(too_deep)
+    return loaded
 
 
 def _unique_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
