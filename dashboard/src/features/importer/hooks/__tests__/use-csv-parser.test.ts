@@ -415,7 +415,7 @@ describe("useCSVParser", () => {
       expect(parsed.hasErrors).toBe(true);
     });
 
-    it("preserves invalid amount tokens and rejects grouped/truncated junk", () => {
+    it("preserves invalid amount tokens, rejects junk, and reads grouped amounts whole", () => {
       const { result } = renderHook(() => useCSVParser());
       const csv = [
         "Date,Payee,Description,Amount",
@@ -427,11 +427,62 @@ describe("useCSVParser", () => {
       ].join("\n");
 
       const parsed = result.current.parseCSV(csv);
-      expect(parsed.validCount).toBe(1);
-      expect(parsed.errorCount).toBe(4);
+      expect(parsed.validCount).toBe(2);
+      expect(parsed.errorCount).toBe(3);
       expect(parsed.rows[2].amountInput).toBe("abc");
       expect(parsed.rows[3].amountInput).toBe("-1,234.56");
+      expect(parsed.rows[3].amount).toBe(-1234.56);
       expect(parsed.rows[4].amountInput).toBe("12oops");
+    });
+
+    it("imports a US bank export as written (w0/007)", () => {
+      const { result } = renderHook(() => useCSVParser());
+      const parsed = result.current.parseCSV(
+        [
+          "Date,Payee,Description,Amount",
+          '2026-09-01,"Acme, Inc.","Salary",2500.00',
+          '2026-09-03,Store,"Big purchase","-1,234.56"',
+          "2026-09-04,Refund,Return,(12.00)",
+          "2026-09-05,Cafe,Coffee,$4.50",
+          "2026-09-06,Fee,Bank fee,4.50-",
+        ].join("\n"),
+      );
+      expect(parsed.errorCount).toBe(0);
+      expect(parsed.rows.map((row) => row.amount)).toEqual([
+        2500, -1234.56, -12, 4.5, -4.5,
+      ]);
+    });
+
+    it("resolves comma decimals from the whole column", () => {
+      const { result } = renderHook(() => useCSVParser());
+      const parsed = result.current.parseCSV(
+        [
+          "Date,Payee,Description,Amount",
+          '2026-09-01,Arbeitgeber,Gehalt,"1.000,00"',
+          '2026-09-02,Cafe,Kaffee,"-4,50"',
+          // `1,234` alone would be a thousands group; in this column it is
+          // a comma decimal, so it must not be multiplied by a thousand.
+          '2026-09-03,Laden,Einkauf,"-1,234"',
+        ].join("\n"),
+      );
+      expect(parsed.errorCount).toBe(0);
+      expect(parsed.rows.map((row) => row.amount)).toEqual([
+        1000, -4.5, -1.234,
+      ]);
+      expect(parsed.rows.every((row) => row.decimalComma)).toBe(true);
+    });
+
+    it("refuses a column that mixes point and comma decimals", () => {
+      const { result } = renderHook(() => useCSVParser());
+      const parsed = result.current.parseCSV(
+        [
+          "Date,Payee,Description,Amount",
+          '2026-09-01,US,Point,"1,234.56"',
+          '2026-09-02,EU,Comma,"1.234,56"',
+        ].join("\n"),
+      );
+      expect(parsed.validCount).toBe(0);
+      expect(parsed.rows[0].errors?.join(" ")).toMatch(/mixes point decimals/);
     });
 
     it("keeps all field errors when only payee is rebuilt", () => {

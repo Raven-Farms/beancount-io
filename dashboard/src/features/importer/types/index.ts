@@ -29,6 +29,8 @@ export type ParsedRow = {
    * fallback without matching English error strings.
    */
   amountFailureReason?: "empty" | "invalid" | "unsupported-precision";
+  /** The source column writes comma decimals (`1.000,00`); edits re-parse with it. */
+  decimalComma?: boolean;
   errors?: string[];
 };
 

@@ -74,13 +74,16 @@ export function EditablePreviewRow({
     const values = getValues();
     onChange(
       index,
-      buildParsedRow({
-        id: row.id,
-        date: values.date,
-        payee: values.payee,
-        description: values.description,
-        amountInput: values.amount,
-      }),
+      buildParsedRow(
+        {
+          id: row.id,
+          date: values.date,
+          payee: values.payee,
+          description: values.description,
+          amountInput: values.amount,
+        },
+        { decimalComma: row.decimalComma },
+      ),
     );
   };
 

@@ -212,9 +212,50 @@ describe("csv-validator", () => {
       expect(result.amount).toBe(0);
     });
 
-    it("rejects grouped tokens instead of truncating to a prefix", () => {
-      expect(parseAmount("-1,234.56").valid).toBe(false);
-      expect(parseAmount("1,000").valid).toBe(false);
+    it("reads well-formed thousands groups as the full amount, never a prefix", () => {
+      expect(parseAmount("-1,234.56")).toEqual({
+        valid: true,
+        amount: -1234.56,
+      });
+      expect(parseAmount("1,000")).toEqual({ valid: true, amount: 1000 });
+      expect(parseAmount("12,34,567.50")).toEqual({
+        valid: true,
+        amount: 1234567.5,
+      });
+      // A comma that is not a group in a point-decimal column is refused
+      // rather than deleted, which would multiply the amount.
+      expect(parseAmount("0,5").valid).toBe(false);
+      expect(parseAmount("1,23.45").valid).toBe(false);
+    });
+
+    it("accepts the bank spellings the CLI importer accepts (w0/007)", () => {
+      expect(parseAmount("$1,000.00")).toEqual({ valid: true, amount: 1000 });
+      expect(parseAmount("$4.50")).toEqual({ valid: true, amount: 4.5 });
+      expect(parseAmount("(12.00)")).toEqual({ valid: true, amount: -12 });
+      expect(parseAmount("4.50-")).toEqual({ valid: true, amount: -4.5 });
+      expect(parseAmount("$(1,234.56)")).toEqual({
+        valid: true,
+        amount: -1234.56,
+      });
+      expect(parseAmount("\u221212.00")).toEqual({ valid: true, amount: -12 });
+      expect(parseAmount("€ 4,50", { decimalComma: true })).toEqual({
+        valid: true,
+        amount: 4.5,
+      });
+      expect(parseAmount("1.000,00", { decimalComma: true })).toEqual({
+        valid: true,
+        amount: 1000,
+      });
+      expect(parseAmount("-4,50", { decimalComma: true })).toEqual({
+        valid: true,
+        amount: -4.5,
+      });
+    });
+
+    it("refuses an amount marked negative twice", () => {
+      for (const token of ["(-5.00)", "-5.00-", "(5.00-)"]) {
+        expect(parseAmount(token).valid, token).toBe(false);
+      }
     });
 
     it("rejects trailing junk instead of accepting a numeric prefix", () => {
@@ -258,8 +299,8 @@ describe("csv-validator", () => {
       }
     });
 
-    it("still rejects grouping, junk, and overflow", () => {
-      expect(parseAmount("-1,234.56").reason).toBe("invalid");
+    it("still rejects malformed grouping, junk, and overflow", () => {
+      expect(parseAmount("-1,23,4.56").reason).toBe("invalid");
       expect(parseAmount("12oops").reason).toBe("invalid");
       expect(parseAmount("1e309").reason).toBe("invalid");
     });

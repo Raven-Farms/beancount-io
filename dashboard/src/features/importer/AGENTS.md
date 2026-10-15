@@ -58,6 +58,14 @@ Preview. It clears on a new upload or reset/finish — never via localStorage.
   CSV with that structured `unsupported-precision` failure stays in the client
   preview for repair — multi-stage parsing must not fall through to LLM solely
   because `validCount` is 0.
+- `parseAmount` accepts the bank spellings the CLI importer does (`cli`'s
+  `csv_mapper.py`): currency symbols, well-formed thousands groups, accounting
+  parentheses and a trailing minus. `resolveDecimalConvention` decides each
+  file's amount column once — comma decimals (`1.000,00`) only when the column
+  proves them — and refuses a column mixing both conventions. The resolved
+  `decimalComma` rides on each `ParsedRow`, so inline edits and configuration
+  re-parse with the same convention; a grouping comma is never deleted when it
+  could be a decimal mark.
 
 ## Premium Gating
 

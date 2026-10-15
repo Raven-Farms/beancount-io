@@ -104,19 +104,161 @@ function decimalsHaveSameValue(a: string, b: string): boolean {
   return left !== null && right !== null && left === right;
 }
 
+// Bank amount spellings, ported from the CLI's `csv_mapper.py` so one export
+// imports the same way through `bea import --csv` and Smart Import (w0/007).
+const ZERO_WIDTH = /[\u200b\u2060\ufeff]/g;
+const THOUSAND_FILLER = /[\s'\u2019]/g;
+const CURRENCY_SYMBOL = /^\p{Sc}$/u;
+const EU_GROUPING = /^\d{1,3}(?:\.\d{3})+$/;
+// One comma and any digit count but three: never a thousands group.
+const COMMA_DECIMAL_TAIL = /^[^,]*,(?:\d{1,2}|\d{4,})$/;
+// Point-decimal comma groupings: 1,234,567 and Indian 12,34,567.
+const COMMA_GROUPING =
+  /^(?:[1-9]\d{0,2}(?:,\d{3})+|[1-9]\d?(?:,\d{2})*,\d{3})$/;
+const SINGLE_COMMA_THREE = /^\d+,\d{3}$/;
+
+type SplitAmount = { sign: string; core: string; negations: number };
+
+/**
+ * Split the sign, currency symbols, accounting parentheses and a trailing
+ * minus off an amount cell, leaving an unsigned core for the grouping checks.
+ */
+function splitAmountSign(value: string): SplitAmount {
+  let text = value
+    .replace(ZERO_WIDTH, "")
+    .replace(/\u2212/g, "-")
+    .trim();
+  let negations = 0;
+  if (text.length >= 2 && text.startsWith("(") && text.endsWith(")")) {
+    negations += 1;
+    text = text.slice(1, -1).trim();
+  }
+  let sign = "";
+  if (text[0] === "+" || text[0] === "-") {
+    sign = text[0];
+    text = text.slice(1);
+  }
+  let trailingMinusSeen = false;
+  for (let i = 0; i < 4; i += 1) {
+    text = text.trim();
+    if (!text) break;
+    if (CURRENCY_SYMBOL.test(text[0])) {
+      text = text.slice(1);
+    } else if (CURRENCY_SYMBOL.test(text[text.length - 1])) {
+      text = text.slice(0, -1);
+    } else if (text.endsWith("-") && !trailingMinusSeen) {
+      trailingMinusSeen = true;
+      negations += 1;
+      text = text.slice(0, -1);
+    } else {
+      break;
+    }
+  }
+  text = text.trim();
+  if (text.length >= 2 && text.startsWith("(") && text.endsWith(")")) {
+    negations += 1;
+    text = text.slice(1, -1).trim();
+  }
+  if (!sign && (text[0] === "+" || text[0] === "-")) {
+    sign = text[0];
+    text = text.slice(1);
+  }
+  return { sign, core: text.trim(), negations };
+}
+
+type SeparatorVote = "us" | "eu" | "eu-weak" | null;
+
+function separatorVote(core: string): SeparatorVote {
+  if (core.includes(".") && core.includes(",")) {
+    return core.lastIndexOf(",") > core.lastIndexOf(".") ? "eu" : "us";
+  }
+  if (COMMA_DECIMAL_TAIL.test(core)) return "eu-weak";
+  if (SINGLE_COMMA_THREE.test(core) && !COMMA_GROUPING.test(core)) return "eu";
+  return null;
+}
+
+export type DecimalConvention =
+  | { decimalComma: boolean; mixed: false }
+  | { decimalComma: false; mixed: true };
+
+/**
+ * Decide one amount column's decimal mark from every cell, as the CLI does:
+ * any cell that proves comma decimals (`1.000,00`, `0,125`) makes the column
+ * comma-decimal, weak evidence (`-4,50`) counts only when no cell proves
+ * point decimals, and a column with both proofs is refused as mixed.
+ */
+export function resolveDecimalConvention(values: string[]): DecimalConvention {
+  let us = false;
+  let eu = false;
+  let weakEu = false;
+  for (const value of values) {
+    if (!value.trim()) continue;
+    const vote = separatorVote(splitAmountSign(value).core);
+    if (vote === "us") us = true;
+    else if (vote === "eu") eu = true;
+    else if (vote === "eu-weak") weakEu = true;
+  }
+  if (us && eu) return { decimalComma: false, mixed: true };
+  return { decimalComma: eu || (!us && weakEu), mixed: false };
+}
+
+/** The plain decimal a bank spelling denotes, or null when it is not one. */
+function normalizeBankAmount(
+  value: string,
+  decimalComma: boolean,
+): string | null {
+  const { sign, core, negations } = splitAmountSign(value);
+  if (negations > 1 || (negations && (sign === "-" || core.startsWith("-")))) {
+    return null;
+  }
+  let text = core.replace(THOUSAND_FILLER, "");
+  if (decimalComma) {
+    const [whole, ...rest] = text.split(",");
+    if (rest.length > 1) return null;
+    const fraction = rest[0];
+    let wholeDigits = whole;
+    if (whole.includes(".")) {
+      if (!EU_GROUPING.test(whole)) return null;
+      wholeDigits = whole.replace(/\./g, "");
+    }
+    if (fraction !== undefined && !/^\d+$/.test(fraction)) return null;
+    text =
+      fraction === undefined
+        ? wholeDigits
+        : `${wholeDigits || "0"}.${fraction}`;
+  } else {
+    const [whole, fraction = ""] = text.split(".", 2);
+    if (whole.includes(",") && !COMMA_GROUPING.test(whole)) return null;
+    if (fraction.includes(",")) return null;
+    text = text.replace(/,/g, "");
+  }
+  const signed = sign + text;
+  if (!negations) return signed;
+  return signed.startsWith("-")
+    ? signed.slice(1)
+    : `-${signed.replace(/^\+/, "")}`;
+}
+
 /**
  * Validate and parse amount.
  *
- * Accepts only a complete signed decimal token (optional fraction/exponent).
- * Rejects grouping commas and trailing junk that `parseFloat` would silently
- * strip (`"-1,234.56"` → -1, `"12oops"` → 12).
+ * Accepts a complete signed decimal token (optional fraction/exponent), plus
+ * the spellings bank exports use: currency symbols, well-formed thousands
+ * groups (`-1,234.56`), accounting parentheses and a trailing minus. With
+ * `decimalComma` the column's comma is the decimal mark (`1.000,00`). Trailing
+ * junk that `parseFloat` would silently strip (`"12oops"` → 12) is rejected.
  *
  * Also rejects tokens whose `Number` conversion changes the exact decimal
  * value (unsafe integers, excess fraction digits, nonzero underflow to 0).
  * Equivalent spellings (`1.2500`, `+2.5e1`, signed zero) remain valid.
  */
-export function parseAmount(amountStr: string): AmountParseResult {
-  const trimmed = amountStr.trim();
+export function parseAmount(
+  amountStr: string,
+  { decimalComma = false }: { decimalComma?: boolean } = {},
+): AmountParseResult {
+  const raw = amountStr.trim();
+  const trimmed =
+    raw === "" ? "" : (normalizeBankAmount(raw, decimalComma) ?? raw);
 
   if (trimmed === "") {
     return {
@@ -127,7 +269,8 @@ export function parseAmount(amountStr: string): AmountParseResult {
   }
 
   // Whole-token grammar: optional sign, digits with optional fraction, or
-  // leading-dot fraction; optional scientific exponent. No commas/grouping.
+  // leading-dot fraction; optional scientific exponent, after bank spellings
+  // have been normalized above.
   if (!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(trimmed)) {
     return {
       valid: false,
@@ -168,13 +311,16 @@ export function createParsedRowId(): string {
  * Build a ParsedRow from editable field strings, applying the same validators
  * used by the CSV parser so upload and inline edit share one contract.
  */
-export function buildParsedRow(fields: {
-  date: string;
-  payee: string;
-  description: string;
-  amountInput: string;
-  id?: string;
-}): ParsedRow {
+export function buildParsedRow(
+  fields: {
+    date: string;
+    payee: string;
+    description: string;
+    amountInput: string;
+    id?: string;
+  },
+  { decimalComma = false }: { decimalComma?: boolean } = {},
+): ParsedRow {
   const errors: string[] = [];
 
   const dateResult = parseDate(fields.date);
@@ -192,7 +338,7 @@ export function buildParsedRow(fields: {
     errors.push(descResult.error!);
   }
 
-  const amountResult = parseAmount(fields.amountInput);
+  const amountResult = parseAmount(fields.amountInput, { decimalComma });
   if (!amountResult.valid) {
     errors.push(amountResult.error!);
   }
@@ -205,6 +351,7 @@ export function buildParsedRow(fields: {
     amountInput: fields.amountInput,
     amount: amountResult.valid ? amountResult.amount! : 0,
     amountFailureReason: amountResult.valid ? undefined : amountResult.reason,
+    ...(decimalComma ? { decimalComma } : {}),
     errors: errors.length > 0 ? errors : undefined,
   };
 }

@@ -42,7 +42,10 @@ export type ImportConfigFormValues = {
 export function getValidImportRows(rows: ParsedRow[]): ParsedRow[] {
   return rows.filter((row) => {
     if (row.errors && row.errors.length > 0) return false;
-    return parseDate(row.date).valid && parseAmount(row.amountInput).valid;
+    return (
+      parseDate(row.date).valid &&
+      parseAmount(row.amountInput, { decimalComma: row.decimalComma }).valid
+    );
   });
 }
 
@@ -61,7 +64,9 @@ export function buildImportConfigFormValues(
     defaultCurrency: draft?.defaultCurrency || primaryCurrency,
     transactions: validRows.map((row, index) => {
       const dateResult = parseDate(row.date);
-      const amountResult = parseAmount(row.amountInput);
+      const amountResult = parseAmount(row.amountInput, {
+        decimalComma: row.decimalComma,
+      });
       const rowDraft = draft?.rows[row.id];
       return {
         id: row.id,
