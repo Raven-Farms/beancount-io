@@ -41,11 +41,18 @@ _MAX_ALIGNMENT_WIDTH = 200
 #: the file being read, its staging copy, a directory listing, lazy imports.
 _DESCRIPTOR_HEADROOM = 64
 
-#: Characters `str.splitlines` treats as line breaks besides `\n` and `\r`.
+#: Characters `str.splitlines` treats as line breaks besides `\n`.
 #: Beancount's lexer counts only `\n`, and upstream's aligner splits with
 #: `splitlines`, so a line holding one of these is numbered differently by
-#: each — and upstream would turn the character into a newline.
-_FOREIGN_LINE_BREAKS = frozenset("\x0b\x0c\x1c\x1d\x1e\x85\u2028\u2029")
+#: each — and upstream would turn the character into a newline. A lone `\r`
+#: is one of them: inside a comment or a string the lexer reads it as text,
+#: and turning it into a line break broke a ledger or changed a payee (w5/355).
+_FOREIGN_LINE_BREAKS = frozenset("\r\x0b\x0c\x1c\x1d\x1e\x85\u2028\u2029")
+
+
+def _universal(text: str) -> str:
+    """The text without its BOM and with `\r\n` as `\n`; a lone `\r` is text the lexer reads, so it stays."""
+    return text.removeprefix(BOM_CHARACTER).replace("\r\n", "\n")
 
 
 def _aligner_would_misread(line: str) -> bool:
@@ -204,12 +211,12 @@ def _read(file: Path) -> tuple[bytes, str]:
         text = raw.decode("utf-8")
     except UnicodeDecodeError as exc:
         raise LedgerError(decode_error_message(file, exc)) from exc
-    return raw, text.removeprefix(BOM_CHARACTER).replace("\r\n", "\n").replace("\r", "\n")
+    return raw, _universal(text)
 
 
 def _aligned(file: Path, text: str, widths: tuple[int | None, int | None, int | None]) -> str:
     """Align real postings while preserving metadata indents and string content."""
-    text = text.removeprefix(BOM_CHARACTER).replace("\r\n", "\n").replace("\r", "\n")
+    text = _universal(text)
     lines = _split_lines(text)
     continued, postings = _string_and_posting_lines(text)
     for index in postings:

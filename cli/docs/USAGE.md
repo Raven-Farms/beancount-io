@@ -534,9 +534,11 @@ would. Only messages are escaped (`\xfc`) when the locale cannot show them.
 Writes match the file they append to: new lines use CRLF in a CRLF ledger and
 LF elsewhere, a missing final newline is repaired as part of the append, and
 existing bytes are never renormalised as a side effect. `format -i` is the
-convergence path instead — it rewrites the file to LF, strips a UTF-8 BOM, and
-reports the file as formatted even when alignment alone did not change — so
-`--check` fails on a BOM-marked or carriage-return file until `-i` has run.
+convergence path instead — it rewrites CRLF line endings to LF, strips a UTF-8
+BOM, and reports the file as formatted even when alignment alone did not change
+— so `--check` fails on a BOM-marked or CRLF file until `-i` has run. A lone
+carriage return inside a line is text to Beancount (in a comment or a string),
+so the formatter keeps it and leaves that line unaligned.
 
 `-i` is a write like any other here, with the same guarantee: each target ends
 up either exactly as it was or completely formatted, never partially written.
