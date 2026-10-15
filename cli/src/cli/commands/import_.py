@@ -22,7 +22,7 @@ import typer
 from cli import context, output
 from cli.config import config_dir
 from cli.errors import BeaError, UsageError
-from cli.utils import atomic_write, exclusive_lock, inert_text
+from cli.utils import IntoPath, atomic_write, exclusive_lock, inert_text
 
 
 class Duplicates(StrEnum):
@@ -490,7 +490,8 @@ def import_entries(
         ),
     ] = None,
     into: Annotated[
-        Path | None, typer.Option("--into", help="Write to an included file, relative to the root ledger")
+        Path | None,
+        typer.Option("--into", click_type=IntoPath(), help="Write to an included file, relative to the root ledger"),
     ] = None,
     allow_errors: Annotated[
         bool,

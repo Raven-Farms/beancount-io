@@ -23,7 +23,7 @@ from cli import context, output
 from cli.amounts import check_decimal_notation, parse_decimal_number
 from cli.errors import UsageError
 from cli.single_value import SingleValueCommand
-from cli.utils import decode_error_message, parse_date
+from cli.utils import IntoPath, decode_error_message, parse_date
 
 add_app = typer.Typer(
     help="Add beancount directives to a local .bean file", no_args_is_help=True, rich_markup_mode=None
@@ -34,7 +34,10 @@ class _SingleValueCommand(SingleValueCommand):
     advice = "Pass it once; repeat the command for another directive."
 
 
-IntoOpt = Annotated[Path | None, typer.Option("--into", help="Write to an included file, relative to the root ledger")]
+IntoOpt = Annotated[
+    Path | None,
+    typer.Option("--into", click_type=IntoPath(), help="Write to an included file, relative to the root ledger"),
+]
 DateOpt = Annotated[str, typer.Option("--date", help="Date in YYYY-MM-DD format")]
 TagOpt = Annotated[list[str] | None, typer.Option("--tag", help="Tag (repeat for multiple)")]
 LinkOpt = Annotated[list[str] | None, typer.Option("--link", help="Link (repeat for multiple)")]

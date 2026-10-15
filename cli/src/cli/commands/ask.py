@@ -14,6 +14,7 @@ import typer
 
 from cli import context, output
 from cli.errors import UsageError
+from cli.utils import IntoPath
 
 _MISSING_EXTRA = (
     "bea ask needs the optional AI dependencies and a Beancount.io login. "
@@ -29,7 +30,8 @@ def ask(
         bool, typer.Option("--print", "-p", help="Print mode: answer once and exit (non-interactive)")
     ] = False,
     into: Annotated[
-        Path | None, typer.Option("--into", help="Write to an included file, relative to the root ledger")
+        Path | None,
+        typer.Option("--into", click_type=IntoPath(), help="Write to an included file, relative to the root ledger"),
     ] = None,
 ) -> None:
     """Ask about a local ledger via hosted AI.

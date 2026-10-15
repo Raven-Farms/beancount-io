@@ -929,7 +929,7 @@ commits, with or without `--allow-errors`.
 
 For split ledgers, keep `--file` pointed at the root and choose the included
 destination with `--into`. Its path is relative to the root ledger's directory
-and must match a literal include or include glob. An absent destination is
+and must match a literal include or include glob; a URL is refused with exit 2. An absent destination is
 created only when a validated write succeeds; its parent directory must already
 exist. Previews, rejected writes, and duplicate-only imports leave it absent.
 New destinations are private (`0600` on POSIX).
@@ -1547,7 +1547,8 @@ ledgers do not require login. Select supported pairs at
 A price you declare yourself wins: a ledger-authored price for the same date
 and pair shadows the managed point, and the shadowed count is reported. Feed
 entries are read-only — a write targeting one fails naming the managed
-source — and your files are never rewritten to accommodate a feed.
+source, and `--into` naming the include's URL fails with exit 2 — and your
+files are never rewritten to accommodate a feed.
 `bea add price` writes your supplied quote even when it matches a managed
 point, pinning that price in your ledger. A different supplied quote also
 shadows the managed point without `--force`; the result names the managed

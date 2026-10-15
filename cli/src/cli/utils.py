@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 import typer
+from typer._click.types import ParamType
 
 from cli.errors import AuthError, UsageError
 
@@ -193,6 +194,34 @@ def parse_date(date_str: str) -> Date:
         # Already YYYY-MM-DD: a format hint sent `2027-02-29` back to the
         # format it had (w5/330). Say the day does not exist.
         raise typer.BadParameter(f"Invalid date '{date_str}': not a calendar date ({err}).") from err
+
+
+_URL = re.compile(r"[a-z][a-z0-9+.-]*://", re.IGNORECASE)
+
+
+class IntoPath(ParamType):
+    """`--into`: a local file relative to the root ledger; a URL is refused.
+
+    As a `Path`, `--into https://beancount.io/prices/BTC-USD` collapsed to
+    the local `https:/beancount.io/prices/BTC-USD`: bea advised creating that
+    directory, then wrote the entry into a file the ledger never loads, since
+    the include fetches the feed (w5/449).
+    """
+
+    name = "path"
+
+    def convert(self, value: Any, param: Any, ctx: Any) -> Path:
+        match = _URL.match(str(value))
+        if match is None:
+            return Path(value)
+        if match.group().lower() in ("http://", "https://"):
+            reason = (
+                "A managed price feed is read-only; declare a price directive in your own ledger file to override "
+                "it, or pass --into a local file the root ledger includes."
+            )
+        else:
+            reason = "Pass --into a local file path, relative to the root ledger."
+        raise UsageError(f"--into '{value}' names a URL. {reason}")
 
 
 def parse_opt_date(date_str: str | None) -> Date | None:
