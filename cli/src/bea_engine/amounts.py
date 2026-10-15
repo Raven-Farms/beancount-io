@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import re
 from decimal import Decimal, Inexact, Rounded, localcontext
 from typing import Any
@@ -142,6 +143,18 @@ def refuse_zero_divisor(text: str) -> None:
         )
 
 
+def decimal_string_hint(value: float, noun: str) -> str:
+    """What to send instead of a JSON float: a string this same input accepts.
+
+    `str()` of a float is scientific for large or tiny values (`1e+20`,
+    `1e-08`) and `nan`/`inf` for the rest, each refused on the next run; an
+    agent following the hint looped between two errors (w5/335).
+    """
+    if not math.isfinite(value):
+        return f"{value!r} is not a finite number, so it has no decimal form."
+    return f"Send the {noun} as a decimal string, such as '{format(Decimal(repr(value)), 'f')}'."
+
+
 def require_decimal_notation(value: Any) -> Any:
     """Reject exponent notation and JSON floats before conversion; internal Decimals remain valid.
 
@@ -152,7 +165,7 @@ def require_decimal_notation(value: Any) -> Any:
     if isinstance(value, float):
         raise ValueError(
             f"JSON number {value!r} is not supported in Beancount amounts; "
-            f"floats cannot represent decimals exactly. Send the amount as a decimal string, such as '{value}'."
+            f"floats cannot represent decimals exactly. {decimal_string_hint(value, 'amount')}"
         )
     if isinstance(value, str) and re.fullmatch(
         r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)[eE][+-]?\d+", value.strip().replace("_", "")

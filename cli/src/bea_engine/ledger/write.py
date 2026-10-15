@@ -2264,9 +2264,10 @@ def _exact_metadata_number(number: Any) -> Any:
     if isinstance(number, bool):
         raise ValueError(f"expected a decimal string, got {number!r}")
     if isinstance(number, float):
+        from bea_engine.amounts import decimal_string_hint
+
         raise ValueError(
-            f"JSON float {number!r} cannot represent a decimal exactly. "
-            f"Send the number as a decimal string, such as '{number}'."
+            f"JSON float {number!r} cannot represent a decimal exactly. {decimal_string_hint(number, 'number')}"
         )
     return number
 
