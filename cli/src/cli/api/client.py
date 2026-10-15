@@ -9,13 +9,16 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import httpx
 
 from cli.api.rest_client.client import AuthenticatedClient, Client
 from cli.api.rest_client.models.v1_error import V1Error
 from cli.api.rest_client.types import Response
+
+if TYPE_CHECKING:
+    from cli.errors import BeaError
 
 # Bound every cloud HTTP call so unattended agents fail instead of hanging when
 # a server accepts the TCP connection and stops responding. Device-flow polling
@@ -185,6 +188,8 @@ def unwrap_or_none[T](response: Response[T | V1Error], *, model: type | None = N
     from cli.errors import UnreadableSuccess, error_from_status, request_id_from
 
     parsed = response.parsed
+    if 300 <= response.status_code < 400:
+        raise _redirect_error(response)
     if response.status_code < 400 and not isinstance(parsed, V1Error):
         if model is not None and parsed is not None and not isinstance(parsed, model):
             raise UnreadableSuccess(
@@ -196,6 +201,32 @@ def unwrap_or_none[T](response: Response[T | V1Error], *, model: type | None = N
     raise error_from_status(
         response.status_code,
         _error_message(parsed, response.content),
+        request_id=request_id_from(response.headers),
+    )
+
+
+def _redirect_error(response: Response[Any]) -> BeaError:
+    """A redirect answered instead of the API: not a credential problem (w5/367).
+
+    bea does not follow redirects (a bearer token must not travel to another
+    origin), and the generated parsers read a 3xx as an empty body, which
+    `cloud status` took for a revoked credential. Name the target without its
+    query, where a portal or proxy may carry its own session.
+    """
+    from urllib.parse import urlsplit, urlunsplit
+
+    from cli.errors import BeaError, request_id_from
+    from cli.utils import single_line
+
+    location = response.headers.get("location")
+    target = ""
+    if location:
+        parts = urlsplit(location)
+        target = f" to {single_line(urlunsplit((parts.scheme, parts.netloc, parts.path, '', '')))}"
+    return BeaError(
+        f"Unexpected redirect (HTTP {response.status_code}){target}; bea does not follow redirects. "
+        "Check that BEA_API_URL, if set, names the API with https:// and the right host, "
+        "and that no proxy or captive portal is answering for it.",
         request_id=request_id_from(response.headers),
     )
 

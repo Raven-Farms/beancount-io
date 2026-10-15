@@ -114,9 +114,18 @@ def cloud_status() -> None:
     from cli.errors import error_from_status
 
     creds = require_credentials()
-    user = unwrap_or_none(
-        call(get_user_profile.sync_detailed, client=bearer_client(creds.token)), model=GetUserProfileResponse200Type0
-    )
+    response = call(get_user_profile.sync_detailed, client=bearer_client(creds.token))
+    user = unwrap_or_none(response, model=GetUserProfileResponse200Type0)
+    if user is None and response.status_code != 200:
+        # Only a 200 with a null profile means an unrecognized bearer; a 204 or
+        # another status the parser skips is not the credential's fault (w5/367).
+        from cli.errors import UnreadableSuccess, request_id_from
+
+        raise UnreadableSuccess(
+            f"Unexpected server response (HTTP {response.status_code}).",
+            status=response.status_code,
+            request_id=request_id_from(response.headers),
+        )
     if user is None:
         # A revoked or unknown bearer answers this endpoint with an empty
         # profile rather than a 401. Report it exactly the way every other

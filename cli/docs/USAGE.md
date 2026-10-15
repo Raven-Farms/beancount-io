@@ -324,6 +324,13 @@ the CLI does not expose parser exceptions or the raw response body. On a write
 most likely took effect, so it exits **4** instead and says the outcome is
 unknown: check the current state before retrying.
 
+bea does not follow redirects, so a credential never travels to another
+origin. A `3xx` answer exits **1** with `Unexpected redirect (HTTP 302) to
+<target>` (the target without its query string) and asks you to check that
+`BEA_API_URL`, if set, uses `https://` and the right host, and that no proxy or
+captive portal is answering for the API. It is not reported as a rejected
+credential.
+
 ### `bea doctor` exit contract
 
 `doctor` delegates to upstream `bean-doctor` but maps its diagnostics onto the
