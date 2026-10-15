@@ -130,7 +130,7 @@ def _read_blob(directory: Path, revision: str) -> PriceFeedBlob | None:
             # so the next refresh fetches in full (no ETag) and heals it.
             return None
         feed = raw["feed"]
-        return PriceFeedBlob(
+        blob = PriceFeedBlob(
             url=raw["url"],
             revision=raw["revision"],
             etag=raw.get("etag"),
@@ -157,6 +157,15 @@ def _read_blob(directory: Path, revision: str) -> PriceFeedBlob | None:
         )
     except (OSError, ValueError, TypeError, KeyError, AttributeError):
         return None
+    if digest is None:
+        # Written by bea 0.3.0/0.3.1, before revisions carried a digest, and by
+        # the very versions that could cache a truncated download: re-validate
+        # the text against the prices recorded for it, or a broken blob is
+        # trusted and its ETag pins it with 304s forever (w5/423).
+        validation = validate_managed_price_text(text)
+        if not isinstance(validation, ValidFeed) or validation.feed.prices != blob.feed.prices:
+            return None
+    return blob
 
 
 def _digest(text: str) -> str:
