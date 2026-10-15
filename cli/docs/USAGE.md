@@ -302,7 +302,8 @@ In `--json` mode a failure writes nothing to stdout and one object to stderr:
 }
 ```
 
-`request_id` is included when the backend supplied one. `result` carries
+`request_id` is included when the backend supplied one; a text-mode error
+prints it as a last `  Request ID: …` line, for support. `result` carries
 the partial effects when the command wrote some of what it promised (the
 `formatted` paths for `format`, the `written` rows for `add transactions`);
 `ledger_warnings` carries loader errors a `--json` command tolerated before

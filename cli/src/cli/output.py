@@ -196,6 +196,10 @@ def _print_failure(err: BeaError, trace: str | None) -> None:
     print(f"Error: {inert_text(_message(err))}", file=sys.stderr)
     for detail in err.details:
         print(f"  {inert_text(detail)}", file=sys.stderr)
+    if err.request_id:
+        # What support asks for, and a 5xx may not recur for a `--json` rerun:
+        # only the JSON envelope carried it (w5/369).
+        print(f"  Request ID: {inert_text(err.request_id)}", file=sys.stderr)
     if trace:
         print(inert_text(trace), file=sys.stderr, end="")
 
