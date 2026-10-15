@@ -4,6 +4,8 @@
 
 ## Milestones
 
+- [ ] **m2** — Preserve BQL expression types across projection aliases (7 tasks; minor; ledger with backend-v2 validation).
+
 - [x] **m1** — Count canonical BQL rows in MCP text summaries (7 tasks) ← from [003](./done/003.md).
 
 ## Inbox
