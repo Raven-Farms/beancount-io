@@ -57,4 +57,4 @@
 
 - [035](./blocked/035.md) — Adopt FILTER_CURRENCY Position overload (minor; ledger; 35–50m after upstream support) — **blocked:** needs a compatible published native overload.
 
-- [036](./blocked/036.md) — Preserve BOOL string truthiness in BQL (minor; ledger; 35–50m after upstream support) — **blocked:** needs a published native string-truthiness correction.
+- [036](./blocked/036.md) — Preserve BOOL string and tag-set truthiness in BQL (minor; ledger; 35–50m after upstream support) — **blocked:** needs a published native string/set truthiness correction.
