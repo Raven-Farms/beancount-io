@@ -333,12 +333,11 @@ const koUserSettings: Record<string, TranslationEntry> = {
   },
   "userSettings.publicKeyDescription": {
     message:
-      '여기에 공개 키 내용을 붙여넣으세요. "-----BEGIN PUBLIC KEY-----"로 시작해야 합니다.',
+      "여기에 공개 키를 붙여넣으세요. 보통 ssh-ed25519 또는 ssh-rsa로 시작하며 cat ~/.ssh/id_ed25519.pub로 출력할 수 있습니다. PEM 공개 키도 사용할 수 있습니다.",
     description: "Description for public key field",
   },
   "userSettings.publicKeyPlaceholder": {
-    message:
-      "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...\n-----END PUBLIC KEY-----",
+    message: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA…",
     description: "Placeholder for public key textarea",
   },
   "userSettings.publicKeyRequired": {

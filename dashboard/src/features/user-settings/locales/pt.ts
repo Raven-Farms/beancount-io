@@ -359,12 +359,11 @@ const ptUserSettings: Record<string, TranslationEntry> = {
   },
   "userSettings.publicKeyDescription": {
     message:
-      'Cole o conteúdo da sua chave pública aqui. Deve começar com "-----BEGIN PUBLIC KEY-----".',
+      "Cole sua chave pública aqui. Ela normalmente começa com ssh-ed25519 ou ssh-rsa; exiba-a com cat ~/.ssh/id_ed25519.pub. Chaves públicas PEM também são aceitas.",
     description: "Description for public key field",
   },
   "userSettings.publicKeyPlaceholder": {
-    message:
-      "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...\n-----END PUBLIC KEY-----",
+    message: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA…",
     description: "Placeholder for public key textarea",
   },
   "userSettings.publicKeyRequired": {

@@ -353,12 +353,12 @@ const zhUserSettings: Record<string, TranslationEntry> = {
     description: "Label for public key field",
   },
   "userSettings.publicKeyDescription": {
-    message: '在此粘贴你的公钥内容。它应以 "-----BEGIN PUBLIC KEY-----" 开头。',
+    message:
+      "在此粘贴你的公钥。它通常以 ssh-ed25519 或 ssh-rsa 开头；可用 cat ~/.ssh/id_ed25519.pub 打印。也接受 PEM 格式的公钥。",
     description: "Description for public key field",
   },
   "userSettings.publicKeyPlaceholder": {
-    message:
-      "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...\n-----END PUBLIC KEY-----",
+    message: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA…",
     description: "Placeholder for public key textarea",
   },
   "userSettings.publicKeyRequired": {

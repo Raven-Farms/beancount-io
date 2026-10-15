@@ -334,12 +334,11 @@ const jaUserSettings: Record<string, TranslationEntry> = {
   },
   "userSettings.publicKeyDescription": {
     message:
-      "公開鍵の内容をここに貼り付けてください。「-----BEGIN PUBLIC KEY-----」で始まる必要があります。",
+      "公開鍵をここに貼り付けてください。通常は ssh-ed25519 または ssh-rsa で始まり、cat ~/.ssh/id_ed25519.pub で表示できます。PEM 形式の公開鍵も使用できます。",
     description: "Description for public key field",
   },
   "userSettings.publicKeyPlaceholder": {
-    message:
-      "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...\n-----END PUBLIC KEY-----",
+    message: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA…",
     description: "Placeholder for public key textarea",
   },
   "userSettings.publicKeyRequired": {

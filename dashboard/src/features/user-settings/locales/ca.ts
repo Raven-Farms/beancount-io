@@ -360,12 +360,11 @@ const caUserSettings: Record<string, TranslationEntry> = {
   },
   "userSettings.publicKeyDescription": {
     message:
-      'Enganxeu aquí el contingut de la vostra clau pública. Ha de començar per "-----BEGIN PUBLIC KEY-----".',
+      "Enganxeu aquí la vostra clau pública. Normalment comença per ssh-ed25519 o ssh-rsa; la podeu mostrar amb cat ~/.ssh/id_ed25519.pub. També s’accepten claus públiques PEM.",
     description: "Description for public key field",
   },
   "userSettings.publicKeyPlaceholder": {
-    message:
-      "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...\n-----END PUBLIC KEY-----",
+    message: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA…",
     description: "Placeholder for public key textarea",
   },
   "userSettings.publicKeyRequired": {

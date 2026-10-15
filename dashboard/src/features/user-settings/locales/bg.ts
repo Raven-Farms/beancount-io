@@ -359,12 +359,11 @@ const bgUserSettings: Record<string, TranslationEntry> = {
   },
   "userSettings.publicKeyDescription": {
     message:
-      'Поставете съдържанието на вашия публичен ключ тук. Трябва да започва с "-----BEGIN PUBLIC KEY-----".',
+      "Поставете тук публичния си ключ. Обикновено започва с ssh-ed25519 или ssh-rsa; можете да го изведете с cat ~/.ssh/id_ed25519.pub. Приемат се и публични ключове във формат PEM.",
     description: "Description for public key field",
   },
   "userSettings.publicKeyPlaceholder": {
-    message:
-      "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...\n-----END PUBLIC KEY-----",
+    message: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA…",
     description: "Placeholder for public key textarea",
   },
   "userSettings.publicKeyRequired": {

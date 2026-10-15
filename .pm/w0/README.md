@@ -12,7 +12,6 @@
 
 ## Inbox
 
-- [025](./025.md) — Show the OpenSSH key format (ssh-ed25519 …) in the New SSH key dialog, not a PEM block (minor; dashboard; 20–30m).
 - [026](./026.md) — Make a date-filtered Journal export load: carry opening balances or drop dependent assertions (minor; ledger; 45–60m).
 - [027](./027.md) — Budget "This year" headline describes a future month, and "Last 12 months" prorates the current one (minor; dashboard; 40–55m).
 - [028](./028.md) — Name each Budget history Delete button after the directive it removes (minor; dashboard; 15–25m).

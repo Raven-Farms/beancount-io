@@ -359,12 +359,11 @@ const skUserSettings: Record<string, TranslationEntry> = {
   },
   "userSettings.publicKeyDescription": {
     message:
-      'Vložte sem obsah vášho verejného klúča. Mal by začínať s "-----BEGIN PUBLIC KEY-----".',
+      "Vložte sem svoj verejný kľúč. Zvyčajne začína na ssh-ed25519 alebo ssh-rsa; vypíšete ho príkazom cat ~/.ssh/id_ed25519.pub. Akceptujú sa aj verejné kľúče PEM.",
     description: "Description for public key field",
   },
   "userSettings.publicKeyPlaceholder": {
-    message:
-      "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...\n-----END PUBLIC KEY-----",
+    message: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA…",
     description: "Placeholder for public key textarea",
   },
   "userSettings.publicKeyRequired": {

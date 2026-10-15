@@ -359,12 +359,11 @@ const ukUserSettings: Record<string, TranslationEntry> = {
   },
   "userSettings.publicKeyDescription": {
     message:
-      'Вставте вміст вашого публічного ключа тут. Він має починатися з "-----BEGIN PUBLIC KEY-----".',
+      "Вставте сюди публічний ключ. Зазвичай він починається з ssh-ed25519 або ssh-rsa; вивести його можна командою cat ~/.ssh/id_ed25519.pub. Публічні ключі PEM також приймаються.",
     description: "Description for public key field",
   },
   "userSettings.publicKeyPlaceholder": {
-    message:
-      "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...\n-----END PUBLIC KEY-----",
+    message: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA…",
     description: "Placeholder for public key textarea",
   },
   "userSettings.publicKeyRequired": {

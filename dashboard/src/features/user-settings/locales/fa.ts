@@ -357,12 +357,11 @@ const faUserSettings: Record<string, TranslationEntry> = {
   },
   "userSettings.publicKeyDescription": {
     message:
-      'محتوای کلید عمومی خود را اینجا جایگذاری کنید. باید با "-----BEGIN PUBLIC KEY-----" شروع شود.',
+      "کلید عمومی خود را اینجا جایگذاری کنید. معمولاً با ssh-ed25519 یا ssh-rsa شروع می‌شود؛ با cat ~/.ssh/id_ed25519.pub می‌توانید آن را نمایش دهید. کلیدهای عمومی PEM نیز پذیرفته می‌شوند.",
     description: "Description for public key field",
   },
   "userSettings.publicKeyPlaceholder": {
-    message:
-      "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...\n-----END PUBLIC KEY-----",
+    message: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA…",
     description: "Placeholder for public key textarea",
   },
   "userSettings.publicKeyRequired": {

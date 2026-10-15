@@ -336,12 +336,11 @@ const enUserSettings: Record<string, TranslationEntry> = {
   },
   "userSettings.publicKeyDescription": {
     message:
-      'Paste your public key content here. It should start with "-----BEGIN PUBLIC KEY-----".',
+      "Paste your public key here. It usually starts with ssh-ed25519 or ssh-rsa; print it with cat ~/.ssh/id_ed25519.pub. PEM public keys are also accepted.",
     description: "Description for public key field",
   },
   "userSettings.publicKeyPlaceholder": {
-    message:
-      "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...\n-----END PUBLIC KEY-----",
+    message: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA…",
     description: "Placeholder for public key textarea",
   },
   "userSettings.publicKeyRequired": {

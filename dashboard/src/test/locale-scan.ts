@@ -170,6 +170,11 @@ const ALLOWED_LATIN = [
   "PRIVATE",
   "KEY",
   "OPENSSH",
+  // OpenSSH key types and the command that prints a public key
+  "ssh-ed25519",
+  "ssh-rsa",
+  "cat ~/\\.ssh/id_ed25519\\.pub",
+  "PEM",
   // Notation: date patterns, sort order, currency and account names
   "YYYY",
   "MM",
