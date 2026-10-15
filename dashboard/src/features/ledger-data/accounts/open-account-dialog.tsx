@@ -29,7 +29,10 @@ import {
   FormMessage,
 } from "@/common/components/ui/form";
 import { DatePicker } from "@/common/components/ui/date-picker";
-import { buildOpenAccountSchema } from "@/common/lib/beancount/open-account-schema";
+import {
+  accountProblemMessage,
+  buildOpenAccountSchema,
+} from "@/common/lib/beancount/open-account-schema";
 
 type OpenAccountFormData = {
   date: Date;
@@ -80,7 +83,7 @@ export function OpenAccountDialog({
         mustStartWith: t("page.accounts.accountMustStartWith", {
           prefixes: accountPrefixes.join(", "),
         }),
-        invalid: t("page.accounts.accountNameInvalid"),
+        invalid: accountProblemMessage(t),
       }),
     [accountPrefixes, t],
   );

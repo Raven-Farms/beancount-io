@@ -26,6 +26,28 @@ const deAccounts: Record<string, TranslationEntry> = {
     description:
       "Validation error when the account name is not a complete Beancount account token",
   },
+  "page.accounts.accountNameWhitespace": {
+    message: "Kontonamen dürfen keine Leerzeichen enthalten.",
+    description: "Validation error when the account name contains whitespace",
+  },
+  "page.accounts.accountNameEmptyComponent": {
+    message:
+      "Entfernen Sie den leeren Teil: kein „::“ und kein „:“ am Anfang oder Ende.",
+    description:
+      "Validation error when the account name has an empty colon-separated part",
+  },
+  "page.accounts.accountNameComponentStart": {
+    message:
+      "Jeder Teil muss mit einem Großbuchstaben oder einer Ziffer beginnen – „{component}“ tut das nicht (zum Beispiel Assets:Bank).",
+    description:
+      "Validation error when a part does not start with an uppercase letter or digit; {component} is that part",
+  },
+  "page.accounts.accountNameInvalidCharacter": {
+    message:
+      "„{component}“ darf nur Buchstaben, Ziffern und Bindestriche enthalten.",
+    description:
+      "Validation error when a part contains a character other than letters, digits and hyphens; {component} is that part",
+  },
   "page.accounts.accountSubAccountPlaceholder": {
     message: "Account:SubAccount",
     description:

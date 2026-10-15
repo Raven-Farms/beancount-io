@@ -26,6 +26,27 @@ const bgAccounts: Record<string, TranslationEntry> = {
     description:
       "Validation error when the account name is not a complete Beancount account token",
   },
+  "page.accounts.accountNameWhitespace": {
+    message: "Имената на сметки не може да съдържат интервали.",
+    description: "Validation error when the account name contains whitespace",
+  },
+  "page.accounts.accountNameEmptyComponent": {
+    message:
+      "Премахнете празната част: без „::“ и без „:“ в началото или края.",
+    description:
+      "Validation error when the account name has an empty colon-separated part",
+  },
+  "page.accounts.accountNameComponentStart": {
+    message:
+      "Всяка част трябва да започва с главна буква или цифра — „{component}“ не започва така (например Assets:Bank).",
+    description:
+      "Validation error when a part does not start with an uppercase letter or digit; {component} is that part",
+  },
+  "page.accounts.accountNameInvalidCharacter": {
+    message: "„{component}“ може да съдържа само букви, цифри и тирета.",
+    description:
+      "Validation error when a part contains a character other than letters, digits and hyphens; {component} is that part",
+  },
   "page.accounts.accountSubAccountPlaceholder": {
     message: "Account:SubAccount",
     description:

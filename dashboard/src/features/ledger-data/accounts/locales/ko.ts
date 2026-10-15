@@ -25,6 +25,26 @@ const koAccounts: Record<string, TranslationEntry> = {
     description:
       "Validation error when the account name is not a complete Beancount account token",
   },
+  "page.accounts.accountNameWhitespace": {
+    message: "계정 이름에는 공백을 사용할 수 없습니다.",
+    description: "Validation error when the account name contains whitespace",
+  },
+  "page.accounts.accountNameEmptyComponent": {
+    message: "빈 부분을 제거하세요. “::”이나 앞뒤의 “:”는 사용할 수 없습니다.",
+    description:
+      "Validation error when the account name has an empty colon-separated part",
+  },
+  "page.accounts.accountNameComponentStart": {
+    message:
+      "각 부분은 대문자나 숫자로 시작해야 합니다. “{component}”은(는) 그렇지 않습니다(예: Assets:Bank).",
+    description:
+      "Validation error when a part does not start with an uppercase letter or digit; {component} is that part",
+  },
+  "page.accounts.accountNameInvalidCharacter": {
+    message: "“{component}”에는 문자, 숫자, 하이픈만 사용할 수 있습니다.",
+    description:
+      "Validation error when a part contains a character other than letters, digits and hyphens; {component} is that part",
+  },
   "page.accounts.accountSubAccountPlaceholder": {
     message: "계정:하위계정",
     description:

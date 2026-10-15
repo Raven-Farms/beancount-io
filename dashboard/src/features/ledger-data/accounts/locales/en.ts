@@ -26,6 +26,26 @@ const enAccounts: Record<string, TranslationEntry> = {
     description:
       "Validation error when the account name is not a complete Beancount account token",
   },
+  "page.accounts.accountNameWhitespace": {
+    message: "Account names can't contain spaces.",
+    description: "Validation error when the account name contains whitespace",
+  },
+  "page.accounts.accountNameEmptyComponent": {
+    message: "Remove the empty part: no “::”, and no “:” at the start or end.",
+    description:
+      "Validation error when the account name has an empty colon-separated part",
+  },
+  "page.accounts.accountNameComponentStart": {
+    message:
+      "Each part must start with a capital letter or digit — “{component}” doesn't (for example Assets:Bank).",
+    description:
+      "Validation error when a part does not start with an uppercase letter or digit; {component} is that part",
+  },
+  "page.accounts.accountNameInvalidCharacter": {
+    message: "“{component}” can contain only letters, digits and hyphens.",
+    description:
+      "Validation error when a part contains a character other than letters, digits and hyphens; {component} is that part",
+  },
   "page.accounts.accountSubAccountPlaceholder": {
     message: "Account:SubAccount",
     description:

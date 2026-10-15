@@ -26,6 +26,27 @@ const skAccounts: Record<string, TranslationEntry> = {
     description:
       "Validation error when the account name is not a complete Beancount account token",
   },
+  "page.accounts.accountNameWhitespace": {
+    message: "Názvy účtov nemôžu obsahovať medzery.",
+    description: "Validation error when the account name contains whitespace",
+  },
+  "page.accounts.accountNameEmptyComponent": {
+    message:
+      "Odstráňte prázdnu časť: bez „::“ a bez „:“ na začiatku alebo konci.",
+    description:
+      "Validation error when the account name has an empty colon-separated part",
+  },
+  "page.accounts.accountNameComponentStart": {
+    message:
+      "Každá časť musí začínať veľkým písmenom alebo číslicou — „{component}“ tak nezačína (napríklad Assets:Bank).",
+    description:
+      "Validation error when a part does not start with an uppercase letter or digit; {component} is that part",
+  },
+  "page.accounts.accountNameInvalidCharacter": {
+    message: "„{component}“ môže obsahovať iba písmená, číslice a spojovníky.",
+    description:
+      "Validation error when a part contains a character other than letters, digits and hyphens; {component} is that part",
+  },
   "page.accounts.accountSubAccountPlaceholder": {
     message: "Account:SubAccount",
     description:

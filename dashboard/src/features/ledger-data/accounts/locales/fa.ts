@@ -26,6 +26,26 @@ const faAccounts: Record<string, TranslationEntry> = {
     description:
       "Validation error when the account name is not a complete Beancount account token",
   },
+  "page.accounts.accountNameWhitespace": {
+    message: "نام حساب نمی‌تواند فاصله داشته باشد.",
+    description: "Validation error when the account name contains whitespace",
+  },
+  "page.accounts.accountNameEmptyComponent": {
+    message: "بخش خالی را حذف کنید: بدون «::» و بدون «:» در ابتدا یا انتها.",
+    description:
+      "Validation error when the account name has an empty colon-separated part",
+  },
+  "page.accounts.accountNameComponentStart": {
+    message:
+      "هر بخش باید با حرف بزرگ یا رقم شروع شود — «{component}» این‌طور نیست (برای نمونه Assets:Bank).",
+    description:
+      "Validation error when a part does not start with an uppercase letter or digit; {component} is that part",
+  },
+  "page.accounts.accountNameInvalidCharacter": {
+    message: "«{component}» فقط می‌تواند حرف، رقم و خط تیره داشته باشد.",
+    description:
+      "Validation error when a part contains a character other than letters, digits and hyphens; {component} is that part",
+  },
   "page.accounts.accountSubAccountPlaceholder": {
     message: "Account:SubAccount",
     description:

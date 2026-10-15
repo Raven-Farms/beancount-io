@@ -30,7 +30,10 @@ describe("buildOpenAccountSchema", () => {
   const schema = buildOpenAccountSchema(prefixes, {
     required: "required",
     mustStartWith: "prefix",
-    invalid: "invalid",
+    invalid: (problem) =>
+      "component" in problem
+        ? `${problem.kind}:${problem.component}`
+        : problem.kind,
   });
 
   it("blocks malformed tokens before a mutation can be prepared", () => {
@@ -42,7 +45,7 @@ describe("buildOpenAccountSchema", () => {
         date: new Date(),
         account: "Assets:Emergency Fund",
       }).error?.issues[0]?.message,
-    ).toBe("invalid");
+    ).toBe("whitespace");
   });
 
   it("keeps the configured-prefix rule and accepts valid names", () => {
@@ -68,5 +71,36 @@ describe("buildOpenAccountSchema", () => {
         account: "Assets:Emergency-Fund",
       }).success,
     ).toBe(true);
+  });
+});
+
+describe("account name reasons (w0/017)", () => {
+  const schema = buildOpenAccountSchema(["Assets", "Expenses"], {
+    required: "required",
+    mustStartWith: "prefix",
+    invalid: (problem) =>
+      "component" in problem
+        ? `${problem.kind}:${problem.component}`
+        : problem.kind,
+  });
+  const message = (account: string) =>
+    schema.safeParse({ date: new Date(), account }).error?.issues[0]?.message;
+
+  it("names the actual reason instead of one catch-all", () => {
+    expect(message("Assets:bank")).toBe("component-start:bank");
+    expect(message("Assets:Bank Account")).toBe("whitespace");
+    expect(message("Assets::Bank")).toBe("empty-component");
+    expect(message("Assets:Bank:")).toBe("empty-component");
+    expect(message("Assets:Bank_1")).toBe("invalid-character:Bank_1");
+  });
+
+  it("still accepts Unicode, digit-led and hyphenated components", () => {
+    for (const account of [
+      "Assets:Café",
+      "Assets:1Bank",
+      "Expenses:Food:Coffee-Shop",
+    ]) {
+      expect(message(account), account).toBeUndefined();
+    }
   });
 });

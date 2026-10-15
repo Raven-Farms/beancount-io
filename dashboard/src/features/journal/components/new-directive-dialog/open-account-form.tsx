@@ -22,7 +22,10 @@ import { DatePicker } from "@/common/components/ui/date-picker";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { track } from "@/common/analytics";
 import { useErrorMessage } from "@/common/lib/errors/error-message";
-import { buildOpenAccountSchema } from "@/common/lib/beancount/open-account-schema";
+import {
+  accountProblemMessage,
+  buildOpenAccountSchema,
+} from "@/common/lib/beancount/open-account-schema";
 
 interface OpenAccountFormProps {
   ledgerId: string;
@@ -59,7 +62,7 @@ export function OpenAccountForm({ ledgerId, onSuccess }: OpenAccountFormProps) {
         mustStartWith: t("page.accounts.accountMustStartWith", {
           prefixes: accountPrefixes.join(", "),
         }),
-        invalid: t("page.accounts.accountNameInvalid"),
+        invalid: accountProblemMessage(t),
       }),
     [accountPrefixes, t],
   );

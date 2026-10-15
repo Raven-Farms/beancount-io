@@ -1,12 +1,13 @@
 import { z } from "zod";
-import { isCompleteAccountToken } from "./account-token";
+import { accountTokenProblem, type AccountTokenProblem } from "./account-token";
 
 export function buildOpenAccountSchema(
   prefixes: string[],
   messages: {
     required: string;
     mustStartWith: string;
-    invalid: string;
+    /** Message for each reason the name is not a complete account token. */
+    invalid: (problem: AccountTokenProblem) => string;
   },
 ) {
   return z.object({
@@ -20,6 +21,38 @@ export function buildOpenAccountSchema(
           prefixes.some((prefix) => val.startsWith(`${prefix}:`)),
         messages.mustStartWith,
       )
-      .refine(isCompleteAccountToken, messages.invalid),
+      .superRefine((val, ctx) => {
+        const problem = accountTokenProblem(val);
+        if (problem) {
+          ctx.addIssue({ code: "custom", message: messages.invalid(problem) });
+        }
+      }),
   });
+}
+
+/**
+ * The localized message for each `AccountTokenProblem`, shared by the Accounts
+ * dialog and the Journal "Account" tab so both name the same reason.
+ */
+export function accountProblemMessage(
+  t: (key: string, params?: Record<string, string>) => string,
+): (problem: AccountTokenProblem) => string {
+  return (problem) => {
+    switch (problem.kind) {
+      case "whitespace":
+        return t("page.accounts.accountNameWhitespace");
+      case "empty-component":
+        return t("page.accounts.accountNameEmptyComponent");
+      case "component-start":
+        return t("page.accounts.accountNameComponentStart", {
+          component: problem.component,
+        });
+      case "invalid-character":
+        return t("page.accounts.accountNameInvalidCharacter", {
+          component: problem.component,
+        });
+      default:
+        return t("page.accounts.accountNameInvalid");
+    }
+  };
 }
