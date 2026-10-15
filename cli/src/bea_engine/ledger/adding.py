@@ -1303,21 +1303,31 @@ def _transactions(
     except protocol.LedgerError as batch_error:
         if not partial:
             message = str(batch_error)
-            recoverable = _recoverable_rows(file, valid, batch_texts, batch_error, allow_errors=allow_errors, into=into)
-            if recoverable:
-                noun = "row" if len(recoverable) == 1 else "rows"
-                message = f"{message} Pass --partial to append the {len(recoverable)} valid {noun}."
-            elif recoverable is None and len(valid) > 1:
+            details = list(batch_error.details)
+            result: dict[str, Any] = {
+                "written": 0,
+                "written_rows": [],
+                "unwritten_rows": [index for index, _ in valid],
+            }
+            # The rows the hint counts as valid are known, so the rest are
+            # named here as `--partial` names them: the refusal said "the 49
+            # valid rows" and left the user to bisect for the 50th (w5/337).
+            named = _named_rows(file, batch_texts, batch_error, allow_errors=allow_errors, into=into)
+            if named is not None:
+                details = [
+                    f"Row {index + 1}: {'; '.join(named[number])}"
+                    for number, (index, _) in enumerate(valid)
+                    if number in named
+                ]
+                result["rejected_rows"] = [index for number, (index, _) in enumerate(valid) if number in named]
+                recoverable = len(valid) - len(named)
+                if recoverable:
+                    noun = "row" if recoverable == 1 else "rows"
+                    message = f"{message} Pass --partial to append the {recoverable} valid {noun}."
+            elif len(valid) > 1:
                 message = f"{message} Pass --partial to append the rows that validate."
             raise protocol.LedgerError(
-                message,
-                details=list(batch_error.details),
-                ledger_errors=list(batch_error.ledger_errors),
-                result={
-                    "written": 0,
-                    "written_rows": [],
-                    "unwritten_rows": [index for index, _ in valid],
-                },
+                message, details=details, ledger_errors=list(batch_error.ledger_errors), result=result
             ) from batch_error
         named = _named_rows(file, batch_texts, batch_error, allow_errors=allow_errors, into=into)
         accepted: list[tuple[int, Any]] = []
@@ -1361,29 +1371,6 @@ def _transactions(
             },
         )
     return {"written": len(valid), "rejected": [], "warnings": warnings, "target": target}
-
-
-def _recoverable_rows(
-    file: Path,
-    valid: list[tuple[int, Any]],
-    texts: list[str],
-    batch_error: protocol.LedgerError,
-    *,
-    allow_errors: bool,
-    into: Path | None,
-) -> list[int] | None:
-    """The rows `--partial` could append, from the refused batch's own errors.
-
-    Probing row by row cost a full ledger load per row — over a minute for a
-    dozen rows on a large ledger — just to word a hint. Instead the batch
-    error's line numbers are mapped back to the appended rows, and the rest
-    are confirmed with one more load. None means the errors could not be
-    attributed to rows (or the rest still fail), so no count is promised.
-    """
-    named = _named_rows(file, texts, batch_error, allow_errors=allow_errors, into=into)
-    if named is None:
-        return None
-    return [index for number, (index, _) in enumerate(valid) if number not in named]
 
 
 def _named_rows(
