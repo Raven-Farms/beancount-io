@@ -200,6 +200,36 @@ def _refuse_undecodable(ledger: str) -> None:
                 raise LedgerError(decode_error_message(member, exc)) from exc
 
 
+_PLUGIN_DIRECTIVE = re.compile(rb"^plugin[ \t]", re.MULTILINE)
+#: How `bea check` words a plugin that cannot be imported or crashes.
+_PLUGIN_FAILURES = ('Cannot import plugin "', '" failed while running: ')
+
+
+def _refuse_plugin_failures(op: str, ledger: str) -> None:
+    """Refuse a ledger whose plugin cannot be imported or crashes, in check's one-line form.
+
+    Upstream logs the traceback and carries on without the plugin, so
+    `roundtrip` printed it and then "Congratulations" with exit 0, and
+    `missing-open` answered for entries the plugin never ran on (w5/439).
+    Only a closure that declares a plugin pays for the check load.
+    """
+    root = Path(ledger)
+    if not root.is_file():
+        return
+    declared = False
+    for member in output.ledger_closure(root):
+        with contextlib.suppress(OSError):
+            declared = declared or bool(_PLUGIN_DIRECTIVE.search(member.read_bytes()))
+    if not declared:
+        return
+    try:
+        launch.helper_json(["check", "--file", ledger])
+    except BeaError as exc:
+        failures = [line for line in exc.details if any(mark in line for mark in _PLUGIN_FAILURES)]
+        if failures:
+            raise LedgerError(f"doctor {op} cannot load {ledger}: {failures[0]}", details=failures[1:]) from None
+
+
 def _closure_syntax_errors_of(filename: str) -> list[str]:
     """Syntax errors anywhere in the ledger's include closure, root first.
 
@@ -613,6 +643,7 @@ def _register(op: str) -> None:
             refuse_expanding_ledger_path(os.path.abspath(positionals[0]))
         if positionals and op not in _NON_LOADING_OPS:
             _refuse_undecodable(positionals[0])
+            _refuse_plugin_failures(op, positionals[0])
         forwarder(ctx)
 
 
