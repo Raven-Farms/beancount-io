@@ -28,10 +28,10 @@ describe("renderToolText", () => {
     expect(text).not.toContain("\\n");
   });
 
-  it("says why an empty result is empty", () => {
-    expect(renderToolText("runBqlQuery", bqlResult("", 0))).toBe(
-      "0 rows — no postings matched",
-    );
+  it("states an empty result's count without guessing its cause", () => {
+    // LIMIT 0 or a HAVING that drops every group also returns zero rows from
+    // postings that did match, so "no postings matched" overclaimed (w6/014).
+    expect(renderToolText("runBqlQuery", bqlResult("", 0))).toBe("0 rows");
   });
 
   it("counts one row in the singular", () => {

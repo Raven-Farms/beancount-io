@@ -73,7 +73,7 @@ export function buildInstructions(identity: Identity): string {
     "Most reads are also resources, which cost less than a tool call.",
     "Multi-step jobs have playbooks: prompts/list offers close-month, reconcile-account, categorize-imports, spending-report.",
     "Write results include `validation.newErrors`; `checkLedger` reports every bean-check error.",
-    "BQL rows are postings: LIMIT counts postings, not transactions; `runBqlQueryStructured` returns typed numbers.",
+    "BQL returns result rows: one per posting for an unaggregated query (not per transaction), one per group with GROUP BY; LIMIT bounds result rows. `runBqlQueryStructured` returns typed numbers.",
     "Every tool returns {ok, result} or {ok:false, error:{code,message,hint}} with isError.",
     // Interpolated, not restated: the instruction string is the contract every
     // session reads, and a retuned budget must not leave it advertising a

@@ -13,7 +13,7 @@ export const description =
   "BQL: SELECT cols [WHERE expr] [GROUP BY] [ORDER BY] [LIMIT n] | JOURNAL | BALANCES. " +
   "Columns: date, year, month, flag, payee, narration, account, number, currency, cost, change, " +
   "balance, position, tags, links, meta. " +
-  "Rows are postings, not transactions: LIMIT 5 can return 3 transactions. " +
+  "An unaggregated query returns one row per posting, not per transaction, so LIMIT 5 can span 3 transactions; GROUP BY and DISTINCT return one row per group or value. LIMIT bounds the returned rows. " +
   "Reference: https://beancount.github.io/docs/beancount_query_language/";
 
 export const bqlQueryInputSchema = z.object({
@@ -72,7 +72,7 @@ export const structuredBqlOutputSchema = toolOutputSchema(
       .number()
       .int()
       .describe(
-        "Rows returned. BQL rows are postings, so this counts postings, not transactions.",
+        "Result rows returned, after LIMIT. An unaggregated query returns one row per posting (not per transaction); GROUP BY and DISTINCT return one row per group or value.",
       ),
     truncated: z
       .boolean()

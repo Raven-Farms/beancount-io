@@ -301,6 +301,59 @@ const textCases: {
     table: { types: [{ name: "account", dtype: "str" }], rows: [], t: "table" },
     text: "",
   },
+  // w6/014: postings match both of these, yet no row is returned — the
+  // summary must not say nothing matched.
+  {
+    name: "LIMIT 0 over matching postings",
+    query:
+      "SELECT DISTINCT payee WHERE payee IS NOT NULL ORDER BY payee LIMIT 0",
+    table: { types: [{ name: "payee", dtype: "str" }], rows: [], t: "table" },
+    text: "",
+  },
+  {
+    name: "HAVING that removes every group",
+    query:
+      "SELECT payee, COUNT(*) AS postings GROUP BY payee HAVING COUNT(*) > 10000",
+    table: {
+      types: [
+        { name: "payee", dtype: "str" },
+        { name: "postings", dtype: "int" },
+      ],
+      rows: [],
+      t: "table",
+    },
+    text: "",
+  },
+  {
+    // Five result rows standing for 656 postings: rows count groups here.
+    name: "grouped top five",
+    query:
+      "SELECT account, COUNT(*) AS postings WHERE account ~ '^Expenses:' GROUP BY account ORDER BY postings DESC, account LIMIT 5",
+    table: {
+      types: [
+        { name: "account", dtype: "str" },
+        { name: "postings", dtype: "int" },
+      ],
+      rows: [
+        ["Expenses:Food:Groceries", 370],
+        ["Expenses:Food:Restaurant", 73],
+        ["Expenses:Home:Electricity", 71],
+        ["Expenses:Home:Internet", 71],
+        ["Expenses:Home:Phone", 71],
+      ],
+      t: "table",
+    },
+    text: [
+      "         account          postings",
+      "------------------------- --------",
+      "Expenses:Food:Groceries        370",
+      "Expenses:Food:Restaurant        73",
+      "Expenses:Home:Electricity       71",
+      "Expenses:Home:Internet          71",
+      "Expenses:Home:Phone             71",
+      "",
+    ].join("\n"),
+  },
   {
     name: "one-dash separator",
     query: "SELECT 1 AS qa_count LIMIT 1",
@@ -393,7 +446,7 @@ describe("canonical BQL text counts through the actual service and adapters", ()
         ]);
         const summary =
           table.rows.length === 0
-            ? "0 rows — no postings matched"
+            ? "0 rows"
             : `${table.rows.length} ${table.rows.length === 1 ? "row" : "rows"}\n${text.replace(/\s+$/, "")}`;
         expect(mcp.content).toEqual([{ type: "text", text: summary }]);
         // The count belongs to this text response; obtaining it must never

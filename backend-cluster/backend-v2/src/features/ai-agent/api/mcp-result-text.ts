@@ -52,11 +52,13 @@ export function renderToolText(toolName: string, result: unknown): string {
  * A BQL result as the shell rendered it, with the row count in front.
  *
  * Counts come from the same executed query as the text. Rendered cells may
- * contain newlines, so text boundaries cannot reveal canonical rows.
+ * contain newlines, so text boundaries cannot reveal canonical rows. An empty
+ * result says only that it is empty: LIMIT 0, a HAVING that removes every
+ * group, and a WHERE nothing matches all return zero rows, and the count
+ * cannot tell them apart (w6/014).
  */
 function renderBqlTable(table: string, rows: unknown): string {
   const known = typeof rows === "number" && Number.isInteger(rows) && rows >= 0;
-  if (known && rows === 0) return "0 rows — no postings matched";
   const summary = known
     ? countNoun(rows, "row")
     : "BQL result — row count unavailable";
