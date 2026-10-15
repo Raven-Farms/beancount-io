@@ -74,7 +74,6 @@
 - [406 — Mixed UTF-8/cp1252 CSV is advised `encoding=cp1252`, which mangles the UTF-8 rows](./406.md) — CLI QA 2026-10-14
 - [407 — A failed stdout write exits 120 with "Exception ignored on flushing sys.stdout"](./407.md) — CLI QA 2026-10-14
 - [408 — Full disk: every read of a managed-price ledger fails with raw `OSError`](./408.md) — CLI QA 2026-10-14
-- [409 — Failed `price export` says "Nothing was written" but leaves a truncated `main.bean`](./409.md) — CLI QA 2026-10-14
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
