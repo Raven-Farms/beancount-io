@@ -765,7 +765,18 @@ def _spawn(command: list[str], env: dict[str, str] | None, *, deaf_to_interrupt:
             return 128 + signal.SIGPIPE
     if returncode < 0:
         return _died_on_signal(-returncode, command)
+    if returncode == _FLUSH_FAILED:
+        # CPython's own status when the last flush of stdout failed on the way
+        # out (a full disk, a size limit): undocumented, so the run says what
+        # failed and exits 1, as bea's own commands do (w5/407). Upstream's
+        # report, on the stream it shares with us, is already above.
+        print("Error: Could not write output: the upstream program's stdout refused the write.", file=sys.stderr)
+        return 1
     return returncode
+
+
+#: The exit status CPython substitutes when flushing stdout at shutdown fails.
+_FLUSH_FAILED = 120
 
 
 def _run_inherited(

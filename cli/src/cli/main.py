@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import errno
 import os
 import sys
 from pathlib import Path
@@ -32,6 +33,7 @@ from cli.completion import complete_shell
 from cli.completion import install as install_completion_callback
 from cli.completion import show as show_completion_callback
 from cli.config import config_dir
+from cli.errors import BeaError
 from cli.native_command import ForwardingCommand
 from cli.native_help import native_help
 from cli.single_value import SingleValueCommand
@@ -113,6 +115,35 @@ def _exit_on_broken_pipe() -> NoReturn:
     sys.exit(141)
 
 
+#: What a full disk, a quota, a size limit or a failing device says to a write.
+_OUTPUT_ERRNOS = frozenset({errno.EFBIG, errno.ENOSPC, errno.EDQUOT, errno.EIO})
+
+
+def _output_failed(exc: BaseException) -> bool:
+    """Whether `exc` is stdout refusing a write, rather than a failure of the command itself.
+
+    Ledger and `-o` writes report these in their own words before they get
+    here (w5/410), so one that arrives raw is the output stream's.
+    """
+    return isinstance(exc, OSError) and not isinstance(exc, BrokenPipeError) and exc.errno in _OUTPUT_ERRNOS
+
+
+def _exit_on_output_failure(exc: OSError) -> NoReturn:
+    """Leave with exit 1 and bea's sentence when stdout cannot take the output.
+
+    The raw `[Errno 27] File too large` was reported, and the bytes still
+    buffered failed again at the shutdown flush: CPython printed `Exception
+    ignored on flushing sys.stdout` and exited with the undocumented 120
+    (w5/407). As on a broken pipe, the descriptor goes to devnull first.
+    """
+    try:
+        devnull = os.open(os.devnull, os.O_WRONLY)
+        os.dup2(devnull, sys.stdout.fileno())
+    except (OSError, ValueError, AttributeError):
+        pass
+    output.error(BeaError(f"Could not write output: {exc.strerror or type(exc).__name__}."))
+
+
 def _exit_on_interrupt() -> NoReturn:
     """Leave the way a shell expects after Ctrl-C: 130, silent.
 
@@ -187,10 +218,16 @@ class _GuardedGroup(TyperGroup):
                 _settle_stdout()
             except BrokenPipeError:
                 _exit_on_broken_pipe()
+            except OSError as failure:
+                if not _output_failed(failure):
+                    raise
+                _exit_on_output_failure(failure)
             raise
         except typer.Abort:
             raise
         except Exception as exc:
+            if isinstance(exc, OSError) and _output_failed(exc):
+                _exit_on_output_failure(exc)
             if not args:  # Keep the normal no-arguments help page.
                 raise
             output.error(exc)
@@ -212,6 +249,10 @@ class _GuardedGroup(TyperGroup):
                 _settle_stdout()
             except BrokenPipeError:
                 _exit_on_broken_pipe()
+            except OSError as failure:
+                if not _output_failed(failure):
+                    raise
+                _exit_on_output_failure(failure)
             output.flush_warnings()
             if (exc.exit_code or 0) == 0:
                 update.print_notice()
@@ -219,6 +260,8 @@ class _GuardedGroup(TyperGroup):
         except (typer.Abort, KeyboardInterrupt):
             _exit_on_interrupt()
         except Exception as e:
+            if isinstance(e, OSError) and _output_failed(e):
+                _exit_on_output_failure(e)
             output.error(e)
         # After the command's own output, and only on the way out cleanly: a
         # courtesy line has no business interleaving with an error report.
