@@ -348,7 +348,8 @@ def _run(name: str, spec: _Spec, limit: int, allow_errors: bool, *, details: boo
         argv.append("--details")
 
     data = launch.helper_json(argv)
-    output.render_ledger_errors(data.get("errors") or [], allow=allow_errors)
+    ledger_errors = data.get("errors") or []
+    output.render_ledger_errors(ledger_errors, allow=allow_errors)
     items: list[dict[str, Any]] = list(data["items"])
     truncated = bool(data["truncated"])
 
@@ -357,7 +358,13 @@ def _run(name: str, spec: _Spec, limit: int, allow_errors: bool, *, details: boo
         # to read it. `--account` adds the narrowed list the human column shows.
         if name == "transaction" and (folded := fold_account(filters.get("account") or "")):
             items = [{**item, "matching_postings": _matching_postings(item, folded)} for item in items]
-        output.emit(items, target=output.file_target(file), truncated=truncated, limit=limit)
+        output.emit(
+            items,
+            target=output.file_target(file),
+            truncated=truncated,
+            limit=limit,
+            ledger_errors=[output.format_ledger_error(error) for error in ledger_errors],
+        )
         return
 
     if not items:

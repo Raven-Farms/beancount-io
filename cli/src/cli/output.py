@@ -694,14 +694,24 @@ def emit(
     limit: int | None = None,
     page: int | None = None,
     destination: Path | None = None,
+    ledger_errors: list[str] | None = None,
 ) -> None:
-    """Write the documented JSON envelope to stdout or a file."""
+    """Write the documented JSON envelope to stdout or a file.
+
+    A read whose `data` is a list cannot hold `ledger_valid` the way a
+    report's object does, so `ledger_errors` puts it beside `data`: a partial
+    answer under `--allow-errors` says so in the envelope, not only in
+    stderr text an agent discards (w5/460).
+    """
     envelope: dict[str, Any] = {
         "bea": package_version(),
         "target": target,
         "data": jsonable(data),
         "truncated": truncated,
     }
+    if ledger_errors is not None:
+        envelope["ledger_valid"] = not ledger_errors
+        envelope["ledger_errors"] = ledger_errors
     if limit is not None:
         envelope["limit"] = limit
     if page is not None:

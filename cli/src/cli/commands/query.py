@@ -427,8 +427,9 @@ def query(
     args += ["--", query_string]
 
     data = launch.helper_json(args)
+    ledger_errors = [str(error) for error in data.get("errors", [])]
     if not no_errors:
-        output.render_ledger_errors([str(error) for error in data.get("errors", [])], allow=True)
+        output.render_ledger_errors(ledger_errors, allow=True)
 
     if ctx.json_output:
         payload: dict[str, object]
@@ -440,6 +441,7 @@ def query(
             payload,
             target=output.file_target(file),
             destination=Path(output_file) if output_file is not None else None,
+            ledger_errors=[output.format_ledger_error(error) for error in ledger_errors],
         )
         return
     text = str(data.get("text", ""))
