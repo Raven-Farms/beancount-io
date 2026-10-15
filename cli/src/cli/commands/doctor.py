@@ -108,9 +108,13 @@ def _refuse_directory_ledger(op: str, args: list[str]) -> None:
         (ledger / name for name in DEFAULT_ENTRY_FILE_FALLBACKS if (ledger / name).is_file()),
         ledger / DEFAULT_ENTRY_FILE_FALLBACKS[0],
     )
+    # Every other operand and option stays: `context DIR 3` suggested
+    # `context DIR/main.bean`, which upstream refused for its LOCATION (w5/344).
+    rebuilt = list(args)
+    rebuilt[_operand_indices(args)[0]] = str(hint)
     raise UsageError(
         f"Ledger path '{ledger}' is a directory; expected a ledger file. "
-        f"Pass its root ledger instead, for example bea doctor {op} {shlex.quote(str(hint))}."
+        f"Pass its root ledger instead, for example {shlex.join(['bea', 'doctor', op, *rebuilt])}."
     )
 
 
