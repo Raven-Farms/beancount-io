@@ -522,7 +522,7 @@ def answer(
         texts = [row["entry"] for row in rows if row["include"]]
 
     shown = [row["entry"] for row in rows if row["include"] or row["status"] == "blocked"]
-    proposed = ledger_write.appended_content(original, shown)
+    proposed = ledger_write.decoded_append(target, original, shown)
     validation_errors: list[str] = []
     validation_warnings: list[str] = []
     try:
@@ -1052,7 +1052,7 @@ def _entries_after(snapshot: ledger_write.LedgerSnapshot, target: Path, original
     from bea_engine import managed_load
 
     ledger_write.refuse_cache_over_ledger(target, snapshot.contents)
-    with ledger_write.candidate_file(target, ledger_write.appended_content(original, texts)) as candidate:
+    with ledger_write.candidate_file(target, ledger_write.decoded_append(target, original, texts)) as candidate:
         with snapshot.staged(candidate, target) as (root, _):
             entries, _, _ = managed_load.load_file(root)
     return entries

@@ -1902,19 +1902,25 @@ def _dominant_ending(content: bytes) -> str:
     return "\r\n" if crlf > content.count(b"\n") - crlf else "\n"
 
 
-def _appended_or_report(target: Path, original: bytes, texts: list[str]) -> str:
+def decoded_append(target: Path, original: bytes, texts: list[str]) -> str:
     """The append candidate, or a decode failure naming path, offset, and encoding.
 
     A ledger that is not UTF-8 cannot take an append, and the raw codec error
-    names none of what the caller needs to fix it. The ledger itself is left
+    names none of what the caller needs to fix it: the import preview died
+    with a bare `UnicodeDecodeError` (w5/441). The ledger itself is left
     untouched either way: this runs before any candidate is written.
     """
     from bea_engine.ledger.text import decode_error_message
 
     try:
-        content = appended_content(original, texts)
+        return appended_content(original, texts)
     except UnicodeDecodeError as exc:
         raise LedgerError(decode_error_message(target, exc)) from exc
+
+
+def _appended_or_report(target: Path, original: bytes, texts: list[str]) -> str:
+    """The append candidate, refusing a file that is not UTF-8 or leaves a push open."""
+    content = decoded_append(target, original, texts)
     _refuse_open_push(target, original)
     return content
 
