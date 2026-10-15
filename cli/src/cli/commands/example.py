@@ -17,6 +17,7 @@ from cli.native_help import native_options
 from cli.output import (
     check_output_destination,
     forwarded_option,
+    note,
     refuse_include_claim,
     replay,
     require_writable_destination,
@@ -28,6 +29,9 @@ _FORCE = "--force"
 #: How upstream reports an error in the history it just generated: it loads the
 #: text from a string, so every diagnostic starts `<string>:LINE:`.
 _VALIDATION_ERROR = re.compile(r"^<string>:\d+:\s*(\S.*)$", re.MULTILINE)
+
+#: A line only a ledger holds: a dated directive or an option.
+_DIRECTIVE = re.compile(r"^(?:\d{4}-\d{2}-\d{2}\s|option\s)", re.MULTILINE)
 
 
 def _split_output(args: list[str]) -> tuple[list[str], Path | None, bool]:
@@ -104,6 +108,16 @@ def example(ctx: typer.Context) -> None:
     refuse_json("example", hint="Run without --json to print the sample ledger.")
     refuse_misplaced_global("example", list(ctx.args), native_options("example"))
     forwarded, output, force = _split_output(list(ctx.args))
+    if "--version" in forwarded[: forwarded.index("--") if "--" in forwarded else None]:
+        # Informational: bean-example prints its version and exits 0, which
+        # with -o wrote "Beancount 3.2.3" as the generated ledger, and with
+        # --force replaced one (w5/415).
+        if output is not None:
+            note(f"--version prints bean-example's version; {output} was not written.")
+        version = launch.capture_native("bean-example", ["--version"])
+        launch.check_native(version, "bean-example")
+        replay(version.stdout, sys.stdout)
+        return
     # A directory is never a file to overwrite: the conflict and its
     # `--force` advice led to a directory refusal that --force cannot pass;
     # it now gets that refusal straight away (w5/353).
@@ -142,6 +156,10 @@ def example(ctx: typer.Context) -> None:
     launch.check_native(completed, "bean-example")
     _refuse_invalid(completed.stderr or "", destination)
     if destination is not None:
+        if not _DIRECTIVE.search(completed.stdout or ""):
+            # Whatever else upstream printed and called success, it is not a
+            # ledger to write over the destination (w5/415).
+            raise BeaError(f"bean-example printed no ledger, so {destination} was not written.")
         atomic_write(destination, completed.stdout or "", export=True)
     else:
         replay(completed.stdout, sys.stdout)

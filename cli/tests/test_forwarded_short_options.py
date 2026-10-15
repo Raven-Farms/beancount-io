@@ -130,12 +130,15 @@ def test_existing_output_spellings_still_reach_the_destination(
 def test_example_glued_output_reaches_the_destination(books: Path, recorded_engine: dict[str, Mock]) -> None:
     """bea writes example's destination itself, after upstream validates (w5/136)."""
     (books / "help").mkdir()
+    # Only a ledger is written to -o (w5/415).
+    generated = "2026-01-01 open Assets:Cash\n"
+    recorded_engine["capture_native"].return_value = subprocess.CompletedProcess([], 0, generated, "")
 
     result = runner.invoke(app, ["-f", str(books / "history.bean"), "example", "-o./help/example.bean", "-s7"])
 
     assert result.exit_code == 0, result.output
     recorded_engine["capture_native"].assert_called_once_with("bean-example", ["-s7"])
-    assert (books / "help" / "example.bean").read_text() == "native result\n"
+    assert (books / "help" / "example.bean").read_text() == generated
 
 
 @pytest.mark.parametrize("command", [["treeify"], ["ingest", "extract"], ["doctor", "dump-lexer"]])
