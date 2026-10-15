@@ -516,7 +516,7 @@ lists the accounting and bank suffixes; replace the braces with your ledger and 
 
 | Family                                  | URI suffixes                                                                                                                                              |
 | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Vocabulary (11)                         | `payees`, `narrations`, `currencies`, `tags`, `links`, `years`, `commodities`, `events`, `errors`, `attributes`, `managed-prices`                         |
+| Vocabulary (11)                         | `payees`, `narrations`, `currencies`, `tags`, `links`, `years`, `commodities`, `events{?account,filter,time}`, `errors`, `attributes`, `managed-prices`   |
 | Analysis without required arguments (6) | `trial-balance`, `interval-totals`, `account-last-entries`, `entries-count`, `postings-per-account`, `account-directives`                                 |
 | Analysis with required arguments (5)    | `account-report/{accountName}`, `payee-transactions/{payee}`, `narration-transactions{?narration}`, `payee-accounts/{payee}`, `entry-context/{entryHash}` |
 | Bank connections and accounts (4)       | `banks`, `banks/{itemId}`, `banks/{itemId}/accounts`, `bank-accounts`                                                                                     |
@@ -544,7 +544,9 @@ Additional report resources are `overview`, `documents`, `accounts`,
 `statements/income-statement`, and `statements/balance-sheet` under
 `beancount://{owner}/{name}/`. Statements and overview accept `account`, `filter`,
 `time`, `conversion`, and `interval`; defaults are `USD` and `monthly`, matching
-GraphQL. Documents accept `account`, `filter`, and `time`. Accounts accept
+GraphQL. Events and documents accept `account`, `filter`, and `time`. Event
+reads retain date order; omitting filters returns every Event directive. For
+example, `beancount://alice/main/events?time=2016` selects that year. Accounts accept
 `status=open` or `status=closed`; other values return all accounts as in GraphQL.
 
 `entries-count` and `postings-per-account` accept the same optional `account`,

@@ -169,18 +169,21 @@ const vocabularyResources: readonly McpResourceDescriptor[] =
     title: read.summary,
     description: read.description,
     mimeType: "application/json",
+    ...(read.query && { queryNames: Object.keys(read.query.shape) }),
     uriTemplate: `${RESOURCE_SCHEME}://{owner}/{name}/${read.segment}`,
     ...(LISTED_VOCABULARY.has(read.segment)
       ? { listSegment: read.segment }
       : {}),
     read: async (toolCtx, variables) => {
       const ledgerId = resolveLedgerId(toolCtx, variables);
+      const { owner: _owner, name: _name, ...query } = variables;
       // The same service instance the REST route calls — `read.fetch` takes the
       // service rather than a surface's wrapper around it, so neither side has
       // to fake the other's shape.
       const result = await read.fetch(toolCtx.services.ledgerData, {
         ledgerId,
         identity: toolCtx.identity,
+        ...read.query?.parse(query),
       });
       return JSON.stringify(result);
     },

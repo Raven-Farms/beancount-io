@@ -4,7 +4,11 @@ import {
   summarizeOverview,
 } from "@/features/ledger/utils/report-summaries";
 import { z } from "@/shared/zod-openapi-setup";
-import { ledgerIdOf, ledgerPathSchema } from "./schemas";
+import {
+  ledgerIdOf,
+  ledgerPathSchema,
+  filterQuerySchema as filterQuery,
+} from "./schemas";
 import { v1Route } from "@/server/rest/v1-route";
 import type { ServiceLayer } from "@/foundation/composition";
 import type { Identity } from "@/server/api/identity";
@@ -27,22 +31,6 @@ import type { Identity } from "@/server/api/identity";
  * `interval`, `conversion` — because a verb should behave the same everywhere,
  * and that includes what its arguments are called (ADR 0008 D5a).
  */
-
-/** Fava's own narrowing expressions, as `/journal` already publishes them. */
-const filterQuery = z.object({
-  account: z.string().optional().openapi({
-    description: "Restrict to one account and its children",
-    example: "Assets:Bank:Checking",
-  }),
-  filter: z.string().optional().openapi({
-    description: "Fava filter expression",
-    example: "#travel",
-  }),
-  time: z.string().optional().openapi({
-    description: "Fava time expression",
-    example: "2026",
-  }),
-});
 
 /** Filtering plus period grouping and currency conversion. */
 const conversionQuery = filterQuery.extend({

@@ -1,5 +1,5 @@
 import { z } from "@/shared/zod-openapi-setup";
-import { ledgerIdOf, ledgerPathSchema } from "./schemas";
+import { filterQuerySchema, ledgerIdOf, ledgerPathSchema } from "./schemas";
 import { v1Route } from "@/server/rest/v1-route";
 import type { Identity } from "@/server/api/identity";
 import type { ILedgerDataService } from "@/features/ledger/service/ledger-data-service";
@@ -30,6 +30,7 @@ interface VocabularyRead {
   readonly summary: string;
   readonly description: string;
   readonly schema: z.ZodTypeAny;
+  readonly query?: typeof filterQuerySchema;
   /**
    * Narrowed to the one service it needs, rather than taking `AppLayers`.
    * Both surfaces hold that service and neither holds the same wrapper around
@@ -37,7 +38,9 @@ interface VocabularyRead {
    */
   readonly fetch: (
     data: ILedgerDataService,
-    params: { ledgerId: string; identity: Identity | undefined },
+    params: { ledgerId: string; identity: Identity | undefined } & z.infer<
+      typeof filterQuerySchema
+    >,
   ) => Promise<unknown>;
 }
 
@@ -140,7 +143,9 @@ export const VOCABULARY_READS: readonly VocabularyRead[] = [
   {
     segment: "events",
     summary: "List event directives",
-    description: "Every `event` directive in the ledger, in date order.",
+    description:
+      "Event directives in date order, with optional account, time, and Fava-expression filters.",
+    query: filterQuerySchema,
     schema: z.array(z.unknown()),
     fetch: (data, p) => data.getEvents(p),
   },
@@ -169,14 +174,16 @@ export const VOCABULARY_ROUTES = VOCABULARY_READS.map((read) =>
     summary: read.summary,
     description: read.description,
     params: ledgerPathSchema,
+    query: read.query,
     responses: {
       200: {
         description: read.summary,
         content: { "application/json": { schema: read.schema } },
       },
     },
-    handler: async ({ layers }, { identity, params }) =>
+    handler: async ({ layers }, { identity, params, query }) =>
       read.fetch(layers.services.ledgerData, {
+        ...(read.query ? query : {}),
         ledgerId: ledgerIdOf(params),
         identity,
       }),

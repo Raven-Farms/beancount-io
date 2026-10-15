@@ -109,16 +109,20 @@ describe("ledger vocabulary reads", () => {
 
   it("publishes a template for every ported read", async () => {
     const { client, close } = await connect(ctx(fakeLedgerData()));
+    try {
+      const { resourceTemplates } = await client.listResourceTemplates();
+      const uris = resourceTemplates.map((t) => t.uriTemplate);
 
-    const { resourceTemplates } = await client.listResourceTemplates();
-    const uris = resourceTemplates.map((t) => t.uriTemplate);
-
-    for (const read of VOCABULARY_READS) {
-      expect(uris).toContain(
-        `${RESOURCE_SCHEME}://{owner}/{name}/${read.segment}`,
-      );
+      for (const read of VOCABULARY_READS) {
+        const query = read.segment === "events" ? "{?account,filter,time}" : "";
+        expect(uris).toContain(
+          `${RESOURCE_SCHEME}://{owner}/{name}/${read.segment}${query}`,
+        );
+      }
+      expect(uris).not.toContain(`${RESOURCE_SCHEME}://{owner}/{name}/events`);
+    } finally {
+      await close();
     }
-    await close();
   });
 
   it("still does not grow the tool list", async () => {

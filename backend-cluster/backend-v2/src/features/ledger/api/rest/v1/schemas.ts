@@ -37,3 +37,19 @@ export type LedgerPath = z.infer<typeof ledgerPathSchema>;
 /** `owner/name` from the path, in the form the service layer takes. */
 export const ledgerIdOf = (params: LedgerPath): string =>
   createLedgerId(params.owner, params.name);
+
+/** Fava's own narrowing expressions, as `/journal` already publishes them. */
+export const filterQuerySchema = z.object({
+  account: z.string().optional().openapi({
+    description: "Restrict to one account and its children",
+    example: "Assets:Bank:Checking",
+  }),
+  filter: z.string().optional().openapi({
+    description: "Fava filter expression",
+    example: "#travel",
+  }),
+  time: z.string().optional().openapi({
+    description: "Fava time expression",
+    example: "2026",
+  }),
+});

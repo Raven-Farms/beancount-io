@@ -12309,7 +12309,7 @@
     "/api-gateway/v1/ledgers/{owner}/{name}/events": {
       "get": {
         "summary": "List event directives",
-        "description": "Every `event` directive in the ledger, in date order.",
+        "description": "Event directives in date order, with optional account, time, and Fava-expression filters.",
         "tags": [
           "Ledger v1"
         ],
@@ -12345,6 +12345,39 @@
             "description": "Ledger (repository) name",
             "name": "name",
             "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Restrict to one account and its children",
+              "example": "Assets:Bank:Checking"
+            },
+            "required": false,
+            "description": "Restrict to one account and its children",
+            "name": "account",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Fava filter expression",
+              "example": "#travel"
+            },
+            "required": false,
+            "description": "Fava filter expression",
+            "name": "filter",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Fava time expression",
+              "example": "2026"
+            },
+            "required": false,
+            "description": "Fava time expression",
+            "name": "time",
+            "in": "query"
           }
         ],
         "responses": {
