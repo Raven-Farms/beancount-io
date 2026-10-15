@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import datetime
 import os
-from decimal import Decimal
+from decimal import MAX_PREC, Decimal, localcontext
 from pathlib import Path
 from typing import Any
 
@@ -88,7 +88,12 @@ def answer(
         # Fixed-point text: str(Decimal) turns a one-satoshi balance into
         # `1E-8`, which Beancount cannot parse as an amount.
         content += "".join(f"  {account}  {amount:f} {currency}\n" for account, amount in nonzero.items())
-        content += f"  Equity:OpeningBalances  {-sum(nonzero.values()):f} {currency}\n"
+        # Exact, like the typed legs: the default 28-digit context rounded a
+        # wider balance's negation, so the equity leg did not cancel it (w5/310).
+        with localcontext() as exact:
+            exact.prec = MAX_PREC
+            total = sum(nonzero.values(), Decimal(0))
+        content += f"  Equity:OpeningBalances  {total.copy_negate():f} {currency}\n"
     else:
         content += (
             "\n; Record opening balances with a transaction against Equity:OpeningBalances.\n"
