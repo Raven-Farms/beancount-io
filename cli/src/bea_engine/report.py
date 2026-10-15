@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Any
 
 from bea_engine import protocol
-from bea_engine.ledger.text import fold_account
+from bea_engine.ledger.text import checked_operating_currencies, fold_account
 from bea_engine.query import format_error
 
 KINDS = ("overview", "income-statement", "balance-sheet", "trial-balance")
@@ -405,8 +405,10 @@ def _load(
         ) from exc
     if time is not None and _FISCAL_FILTER_RE.search(time):
         _require_fiscal_year_end(ledger, file, time, ledger_errors)
-    currencies = options["operating_currency"]
-    return filtered, conversion or (currencies[0] if len(currencies) == 1 else "units"), ledger_errors
+    if conversion is not None:
+        return filtered, conversion, ledger_errors
+    currencies = checked_operating_currencies(options)
+    return filtered, currencies[0] if len(currencies) == 1 else "units", ledger_errors
 
 
 # Fava's fiscal spellings: `FY2026`, `FY2026-Q1`, and the relative

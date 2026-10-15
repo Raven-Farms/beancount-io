@@ -26,7 +26,13 @@ from pathlib import Path
 from typing import Any
 
 from bea_engine.ledger import write as ledger_write
-from bea_engine.ledger.text import bea_command, ledger_roots, reports_unused_accounts, unknown_root_message
+from bea_engine.ledger.text import (
+    bea_command,
+    checked_operating_currencies,
+    ledger_roots,
+    reports_unused_accounts,
+    unknown_root_message,
+)
 from bea_engine.ledger.writer import format_entry, normalize_entry_strings
 from bea_engine.protocol import ConflictError, EngineError, LedgerError, UsageError
 from bea_engine.query import format_error
@@ -197,7 +203,7 @@ def answer(
             date_format=resolved_date_format,
             rules=load_rules(Path(rules_file), roots) if rules_file is not None else None,
             default_account=default_account,
-            currency=_row_currency(existing, csv_account, operating),
+            currency=_row_currency(existing, csv_account, options, checked="currency" not in mapping.columns),
             known_currencies=_known_currencies(existing, operating),
             delimiter=resolved_delimiter,
             encoding=resolved_encoding,
@@ -940,7 +946,7 @@ def _valid_account(name: str, option: str, roots: tuple[str, ...]) -> str:
         raise UsageError(f"{option}: {exc}") from None
 
 
-def _row_currency(existing: list[Any], account: str, operating: list[str]) -> str | None:
+def _row_currency(existing: list[Any], account: str, options: Any, *, checked: bool = True) -> str | None:
     """The commodity an imported row posts when no currency column names one.
 
     The source account decides before the ledger does: an account opened for a
@@ -961,6 +967,9 @@ def _row_currency(existing: list[Any], account: str, operating: list[str]) -> st
             opened = (opened or set()) | set(entry.currencies)
     if opened is not None and len(opened) == 1:
         return next(iter(opened))
+    # Checked only when nothing else can name the row's commodity: a mapped
+    # currency column makes this fallback one no row may need.
+    operating = checked_operating_currencies(options) if checked else list(options.get("operating_currency") or ())
     return operating[0] if len(operating) == 1 else None
 
 

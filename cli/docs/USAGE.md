@@ -1497,7 +1497,10 @@ price, and otherwise stay in their units. Other values must be valid uppercase B
 such as `at-cost`, `usd`, and `US D` exit **2** before loading the ledger, in
 terminals and automation alike. Valid symbols need not already appear in the
 ledger: an unpriced target such as `GBP` follows the partial-valuation policy
-above.
+above. The same rule holds for the ledger's own `option "operating_currency"`
+wherever a command falls back to it — a report or `balance` without
+`--conversion`, a bare `add` amount, a CSV import with no currency column: a
+value such as `"usd"` exits **2** naming the option line and suggesting `USD`.
 
 The conversion decides how an interval row spells itself, and a quiet row keeps
 its place in the series either way. A currency conversion names that currency in

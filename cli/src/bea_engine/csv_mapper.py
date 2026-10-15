@@ -1098,9 +1098,16 @@ class CsvImporter:
                     # write accounting syntax the bank row never meant.
                     require_commodity(currency)
                 except ValueError as exc:
-                    raise UsageError(
-                        f"{where}, column {columns.get('currency')!r}: {exc} Nothing was written."
-                    ) from None
+                    # Name where the value came from: the fallback has no
+                    # column, and "column None" named nothing (w5/328).
+                    origin = (
+                        f"column {columns['currency']!r}"
+                        if columns.get("currency") and not self._constant_currency
+                        else f"--csv currency={currency}"
+                        if self._constant_currency
+                        else "the ledger's operating_currency"
+                    )
+                    raise UsageError(f"{where}, {origin}: {exc} Nothing was written.") from None
                 self._check_cell_symbols(row, where, currency, amount_columns)
                 # An unmapped or blank payee is absent, not empty: a bare `""`
                 # payee would be printed into every entry the mapping writes.

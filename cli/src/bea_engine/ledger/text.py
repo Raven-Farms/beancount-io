@@ -155,6 +155,42 @@ def is_commodity(text: str) -> bool:
     return bool(_COMMODITY.fullmatch(text))
 
 
+def checked_operating_currencies(options: Mapping[str, Any]) -> list[str]:
+    """The ledger's operating currencies, refusing one that is not a Beancount currency.
+
+    Beancount accepts any string there, so `option "operating_currency" "usd"`
+    passed `check` and then surfaced as `Missing prices for USD → usd`, a
+    token error from `add`, or `column None` from `import` (w5/328). Callers
+    ask only where they fall back to it, so an explicit currency still works.
+    """
+    currencies = [str(value) for value in options.get("operating_currency") or ()]
+    for value in currencies:
+        if is_commodity(value):
+            continue
+        where = _option_location(options, "operating_currency", value)
+        suggestion = value.strip().upper()
+        hint = f" Did you mean {suggestion!r}?" if is_commodity(suggestion) else ""
+        raise protocol.UsageError(
+            f'option "operating_currency" "{value}"{where} is not a Beancount currency: currencies are '
+            f"uppercase, such as USD.{hint} Correct the option line."
+        )
+    return currencies
+
+
+def _option_location(options: Mapping[str, Any], name: str, value: str) -> str:
+    """` at FILE:LINE` for the option line setting `value`, or nothing when no file shows it."""
+    line = re.compile(rf'^\s*option\s+"{re.escape(name)}"\s+"{re.escape(value)}"')
+    for filename in options.get("include") or ():
+        try:
+            lines = Path(filename).read_text(encoding="utf-8", errors="replace").splitlines()
+        except OSError:
+            continue
+        for number, text in enumerate(lines, start=1):
+            if line.match(text):
+                return f" at {filename}:{number}"
+    return ""
+
+
 def require_tag_or_link(value: str) -> str:
     """One tag or link body, or a ValueError naming the allowed characters."""
     if not _TAG_OR_LINK.fullmatch(value):

@@ -27,6 +27,7 @@ from bea_engine import protocol
 from bea_engine.amounts import parse_decimal_number, parse_exact
 from bea_engine.ledger import write, writer
 from bea_engine.ledger.text import (
+    checked_operating_currencies,
     is_commodity,
     outside_ledger_tree,
     parse_account,
@@ -737,7 +738,7 @@ def _transaction(
     if any(p.units is not MISSING and p.units.currency is MISSING for p in raw_postings):
         snapshot = write.LedgerSnapshot.capture(file)
         existing, _, options = managed_load.load_file(file)
-        currencies = options["operating_currency"]
+        currencies = checked_operating_currencies(options)
         allowed = {e.account: e.currencies for e in existing if isinstance(e, Open)}
     normalized = []
     elided = 0
