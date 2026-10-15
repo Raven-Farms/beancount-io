@@ -136,7 +136,7 @@ def answer(
     always skipped. Nothing is written unless `--apply` is set and the preview
     is free of conflicts / unresolved possible duplicates / validation errors.
     """
-    from beancount.core.data import Open, Transaction
+    from beancount.core.data import Open, Price, Transaction
 
     from bea_engine import managed_load
     from bea_engine.csv_mapper import CsvImporter, load_rules, parse_delimiter, parse_encoding, parse_mapping
@@ -285,7 +285,9 @@ def answer(
     if source.read_bytes() != source_bytes:
         raise ConflictError("The export changed during extraction; nothing was written. Retry.")
     source_hash = hashlib.sha256(source_bytes).hexdigest()
-    other_entries = {_directive_text(entry) for entry in existing if not isinstance(entry, Transaction)}
+    other_entries = {_directive_text(entry) for entry in existing if not isinstance(entry, Transaction | Price)}
+    quotes = _written_quotes(existing)
+    price_conflicts = False
     rows: list[dict[str, Any]] = []
     texts: list[str] = []
     conflicts = False
@@ -416,7 +418,28 @@ def answer(
                 batch_rows[id(entry)] = index + 1
         rule = entry.meta.pop("_csv_rule", None) if isinstance(entry, Transaction) else None
         text = format_entry(entry) if isinstance(entry, Transaction) else _directive_text(entry)
-        if not isinstance(entry, Transaction):
+        if isinstance(entry, Price):
+            # One quote per commodity and day, by value, as `add price` keeps
+            # it: the text test wrote `111.00` beside a recorded `110.00`, and
+            # `110.0` as if new, but skipped a quote `implicit_prices` made up
+            # (w5/302).
+            key = (entry.date, entry.currency, entry.amount.currency)
+            recorded = quotes.setdefault(key, [])
+            match = next((quote for quote in recorded if quote.amount.number == entry.amount.number), None)
+            other = next((quote for quote in recorded if quote.amount.number != entry.amount.number), None)
+            if match is not None:
+                status, reason = "duplicate", f"Price already recorded at {_quote_origin(match, batch_rows)}."
+            elif other is not None:
+                status, conflicts, price_conflicts = "conflict", True, True
+                match = other
+                reason = (
+                    f"{entry.currency} already has a {entry.date} price of {_plain_amount(other.amount)} at "
+                    f"{_quote_origin(other, batch_rows)}; refusing {_plain_amount(entry.amount)}."
+                )
+            else:
+                recorded.append(entry)
+                batch_rows[id(entry)] = index + 1
+        elif not isinstance(entry, Transaction):
             if text in other_entries:
                 status, reason = "duplicate", "Identical directive already exists."
             other_entries.add(text)
@@ -545,6 +568,11 @@ def answer(
                 fixes.append(
                     "a stable ID repeats within this export with different data — correct or drop one of "
                     "those rows in the source file, or map a different id column"
+                )
+            if price_conflicts:
+                fixes.append(
+                    "a price differs from the quote already recorded for that commodity and day — drop the row, "
+                    "or record a second quote deliberately with bea add price --force"
                 )
             conflict_fix = "; ".join(fixes)
             if conflicts and not (preview["possible_duplicates"] and duplicates == "review"):
@@ -736,6 +764,39 @@ def _fingerprint(entry: Any, account: str) -> tuple[Any, ...]:
         _match_text(entry.narration),
         amounts,
     )
+
+
+def _written_quotes(existing: Sequence[Any]) -> dict[tuple[Any, str, str], list[Any]]:
+    """The ledger's own price directives by day and pair, as `add price` counts them.
+
+    A price a plugin such as `implicit_prices` generates, or one from the
+    managed quote cache, is no quote the ledger records.
+    """
+    from beancount.core.data import Price
+
+    from bea_engine.ledger.reader import entry_generated
+    from bea_engine.managed_price_cache import managed_source_for_path
+
+    quotes: dict[tuple[Any, str, str], list[Any]] = {}
+    for entry in existing:
+        if not isinstance(entry, Price) or entry_generated(entry, "price"):
+            continue
+        filename = entry.meta.get("filename")
+        if isinstance(filename, str) and filename and managed_source_for_path(Path(filename)) is not None:
+            continue
+        quotes.setdefault((entry.date, entry.currency, entry.amount.currency), []).append(entry)
+    return quotes
+
+
+def _quote_origin(quote: Any, batch_rows: dict[int, int]) -> str:
+    row = batch_rows.get(id(quote))
+    if row is not None:
+        return f"row {row} of this import"
+    return f"{quote.meta.get('filename')}:{quote.meta.get('lineno')}"
+
+
+def _plain_amount(amount: Any) -> str:
+    return f"{format(amount.number, 'f')} {amount.currency}"
 
 
 def _directive_text(entry: Any) -> str:

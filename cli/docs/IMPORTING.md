@@ -480,7 +480,13 @@ skills deduplicate against each other: the ledger itself is the dedup database.
   the choice applies to all possible matches in that invocation.
 - Identical nontransaction directives are skipped. They are compared, and
   written, as the ledger reads them back: text in Unicode NFC, and a balance
-  assertion without the difference a failing one reports. Import does not change the
+  assertion without the difference a failing one reports. A `price` directive
+  follows `bea add price` instead: the ledger keeps one quote per commodity and
+  day, so a price equal in value to a recorded one (`110.0` against `110.00`)
+  is a duplicate, and a different amount for that day — recorded in the
+  ledger or in an earlier row of the import — is a conflict naming both
+  values, which `--apply` refuses with exit **4**. A price a plugin such as
+  `implicit_prices` generates counts as neither. Import does not change the
   meaning of existing transactions or delete them, and never modifies existing
   lines: appended entries are written where `bea format` would put them, and
   `bea format` remains the only command that realigns a file.
