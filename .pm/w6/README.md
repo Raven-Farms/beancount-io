@@ -22,5 +22,5 @@
 - [011](./011.md) — Start default quarterly reports in the quarter containing their first activity (minor; ledger; 35–50m).
 - [012](./012.md) — Normalize recognized interval names before selecting report grouping (minor; ledger; 25–40m).
 - [013](./013.md) — Apply the context tool's payee limit to its nested vocabulary too (minor; backend-v2; 30–45m).
-- [014](./014.md) — Describe empty BQL output without claiming no postings matched (minor; backend-v2; 15–25m).
+- [014](./014.md) — Distinguish BQL output rows from input postings in MCP text and schemas (minor; backend-v2; 30–45m).
 - [015](./015.md) — Remove unsupported addLedgerEntries descriptions from served playbooks (minor; backend-v2; 20–35m).
