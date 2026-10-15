@@ -272,6 +272,9 @@ def add_balance(
     file, data = _write("balance", request, allow_errors=allow_errors, into=into)
     target = data.pop("target")
     warnings = data.pop("warnings", [])
+    # One shape for every branch, as the plain path answers (w5/323).
+    data.setdefault("duplicate", False)
+    data.setdefault("source", None)
     written = int(data.get("written") or 0)
     source = data.get("source")
     if ctx.json_output:

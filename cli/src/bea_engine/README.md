@@ -149,7 +149,9 @@ Two answers are not a plain append. A `price` that the ledger already records
 exactly answers `{"written": 0, "duplicate": true, "source": {...}}` and touches
 nothing; `--strict-read` makes it refuse a ledger that does not load instead of
 reporting the errors in `ledger_errors`. A `balance` with `pad_from` writes both
-directives atomically and answers `{"written": 2, "directives": [...]}`.
+directives atomically and answers `{"written": 2, "directive": {...}, "pad": {...}}`:
+the assertion and the inserted pad in the `list balance`/`list pad` model
+shape. Every other `balance` answer carries `"pad": null`.
 
 ```zsh
 bea-engine add --file main.bean --type transaction --request '{

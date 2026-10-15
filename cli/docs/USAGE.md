@@ -1008,6 +1008,10 @@ book already holds the asserted amount, `--pad-from` writes the assertion alone
 and says so. When an existing pad on the account already fills the assertion
 from the same source, it writes the assertion alone with a warning naming that
 pad and the amount it inserts; an existing pad from a different source refuses.
+Under `--json` every `add balance` answer has one layout: `directive` is the
+assertion and `pad` the inserted pad (or `null` when none was written), each in
+the shape `list balance` and `list pad` return, beside `written`, `duplicate`
+and `source`.
 A staged pad still waiting for its balance refuses the write, naming it. A pad
 fills only the first later assertion in each currency, so an assertion between
 `--pad-date` and `--date` is named as the reason the pad went unused. Ordinary

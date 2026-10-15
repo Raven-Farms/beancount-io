@@ -276,7 +276,7 @@ def _balance(
     from beancount.core.data import Balance
 
     from bea_engine import managed_load
-    from bea_engine.ledger.models import Amount, BalanceDirective
+    from bea_engine.ledger.models import Amount, BalanceDirective, PadDirective
     from bea_engine.query import format_error
 
     date = _date(request)
@@ -307,6 +307,7 @@ def _balance(
             return {
                 "written": 0,
                 "directive": directive.model_dump(mode="json"),
+                "pad": None,
                 "warnings": ledger_errors,
                 "duplicate": True,
                 "source": source,
@@ -324,7 +325,7 @@ def _balance(
             )
         # The snapshot the checks above read: a writer that landed since then
         # is a conflict, not a second assertion appended beside it (w5/115).
-        return _appended(file, directive, allow_errors=allow_errors, into=into, snapshot=snapshot)
+        return _appended(file, directive, allow_errors=allow_errors, into=into, snapshot=snapshot) | {"pad": None}
 
     from beancount.core.amount import Amount as BcAmount
     from beancount.core.data import Pad
@@ -369,6 +370,7 @@ def _balance(
             return {
                 "written": 0,
                 "directive": directive.model_dump(mode="json"),
+                "pad": None,
                 "warnings": [
                     f"Book balance already matches {_plain(number)} {currency}; omitted the pad from "
                     f"--pad-from (assertion already recorded at {source['filename']}:{source['lineno']})."
@@ -379,7 +381,7 @@ def _balance(
             }
         difference = number - _book_units(loaded, account, currency, date)
         if abs(difference) <= _balance_tolerance(entries[1], options):
-            result = _appended(file, directive, allow_errors=allow_errors, into=into, snapshot=snapshot)
+            result = _appended(file, directive, allow_errors=allow_errors, into=into, snapshot=snapshot) | {"pad": None}
             warnings = list(result.get("warnings") or [])
             warnings.append(
                 f"Book balance already matches {_plain(number)} {currency}; omitted the pad from "
@@ -403,7 +405,7 @@ def _balance(
                     f"from {cover.source_account}, or edit that pad first."
                 ],
             ) from exc
-        result = _appended(file, directive, allow_errors=allow_errors, into=into, snapshot=snapshot)
+        result = _appended(file, directive, allow_errors=allow_errors, into=into, snapshot=snapshot) | {"pad": None}
         warnings = list(result.get("warnings") or [])
         warnings.append(
             f"The existing pad at {pad_at} ({cover.date} from {cover.source_account}) fills this assertion, "
@@ -411,10 +413,18 @@ def _balance(
         )
         result["warnings"] = warnings
         return result
+    # The model shape every other branch and `list pad`/`list balance` use:
+    # this answer was a raw-namedtuple `directives` array carrying Beancount's
+    # internal `diff_amount`, so `data.directive` vanished exactly when the
+    # pad was written (w5/323).
+    pad = PadDirective(date=padded, account=account, source_account=parse_account(str(pad_from)))
     return {
         "written": 2,
-        "directives": entries,
+        "directive": directive.model_dump(mode="json"),
+        "pad": pad.model_dump(mode="json"),
         "warnings": warnings,
+        "duplicate": False,
+        "source": None,
         "target": str(write.destination(file, into)),
     }
 
