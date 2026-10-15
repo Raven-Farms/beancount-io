@@ -117,7 +117,6 @@
 - [427 — POSIX class in a `--rules` regex leaks `FutureWarning` and matches nothing](./427.md) — CLI QA 2026-10-14
 - [428 — A CSV header containing a comma cannot be named in `--csv`](./428.md) — CLI QA 2026-10-14
 - [429 — POSIX classes in `query ~`, `report -a`, `treeify -r` silently change meaning and leak `FutureWarning`](./429.md) — CLI QA 2026-10-14
-- [430 — `bea check` loads twice: plugin output and side effects happen twice](./430.md) — CLI QA 2026-10-14
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
