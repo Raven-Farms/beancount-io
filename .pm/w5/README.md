@@ -35,7 +35,6 @@
 
 ## Inbox
 
-- [301 — Newline in an include file name breaks every root-staged `add`](./301.md) — CLI QA 2026-10-14
 - [302 — Importer prices bypass `add price`'s conflict/duplicate rules](./302.md) — CLI QA 2026-10-14
 - [303 — Import's "Run: bea add open …" remedy drops `--file`](./303.md) — CLI QA 2026-10-14
 - [304 — USAGE JSON transcript fails on the README quick-start ledger (`Expenses:Food` unopened)](./304.md) — CLI QA 2026-10-14
