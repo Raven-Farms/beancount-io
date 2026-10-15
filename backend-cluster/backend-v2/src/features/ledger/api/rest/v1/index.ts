@@ -26,6 +26,7 @@ import { REPORT_ROUTES } from "./reports-handler";
 import { FILE_ROUTES } from "./files-handler";
 import { ENTRY_ROUTES } from "./entries-handler";
 import { VOCABULARY_ROUTES } from "./vocabulary-handler";
+import { LEDGER_OPTIONS_ROUTE } from "./options-handler";
 import { ANALYSIS_ROUTES } from "./analysis-handler";
 import { BANK_ROUTES } from "./banks-handler";
 import { ARCHIVE_DOWNLOAD_ROUTES } from "./archive-handler";
@@ -66,6 +67,7 @@ const V1_SCOPED_ROUTES: Parameters<typeof registerV1Routes>[2] = [
   legacyEntryRoute,
   ...SOURCE_SLICE_ROUTES,
   ...VOCABULARY_ROUTES,
+  LEDGER_OPTIONS_ROUTE,
   REFRESH_MANAGED_PRICES_ROUTE,
   ...ANALYSIS_ROUTES,
   ...BANK_ROUTES,

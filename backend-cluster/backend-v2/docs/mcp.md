@@ -573,6 +573,20 @@ permission request omits that member from listing, while a failed standalone
 permission request fails the call.
 
 Ledger metadata is available at `beancount://{owner}/{name}/metadata`.
+
+The ledger's effective core options are at `beancount://{owner}/{name}/options`
+(REST `GET /api-gateway/v1/ledgers/{owner}/{name}/options`; GraphQL
+`getLedgerOptions(ledgerId)` or the nested `Ledger.options`). All three return
+the same ten camel-case fields: `title`, `nameAssets`, `nameEquity`,
+`nameExpenses`, `nameIncome`, `nameLiabilities`, `accountCurrentConversions`,
+`accountCurrentEarnings`, `renderCommas`, and `operatingCurrency`. Values are
+what the ledger resolves, Beancount's defaults included, so no option lines
+need parsing. `operatingCurrency` lists the currencies the ledger declares it
+reports in, and may be empty. It is not the `currencies` vocabulary, which
+lists every currency a posting uses. The read follows the same reports-read
+access as the statements. It is a resource only: no tool returns it, and the
+`getLedgerContext` vocabulary does not include it.
+
 Account discovery resources need no ledger target:
 
 - `beancount://catalog/ledgers{?page,limit}` lists accessible ledgers.

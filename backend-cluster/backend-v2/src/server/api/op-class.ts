@@ -777,6 +777,7 @@ const LEDGER_READ_ACTION_BY_VERB = {
   "Query.getLedgerBalanceSheet": AUTHORIZATION_ACTIONS.LEDGER_REPORTS_READ,
   "Query.getLedgerTrialBalance": AUTHORIZATION_ACTIONS.LEDGER_REPORTS_READ,
   "Query.getLedgerAttributes": AUTHORIZATION_ACTIONS.LEDGER_REPORTS_READ,
+  "Query.getLedgerOptions": AUTHORIZATION_ACTIONS.LEDGER_REPORTS_READ,
   "Query.getLedgerCommodities": AUTHORIZATION_ACTIONS.LEDGER_REPORTS_READ,
   "Query.getLedgerEvents": AUTHORIZATION_ACTIONS.LEDGER_REPORTS_READ,
   "Query.getLedgerDocuments": AUTHORIZATION_ACTIONS.LEDGER_REPORTS_READ,
@@ -891,6 +892,19 @@ const LEDGER_READ_VERBS: readonly VerbEntry[] = (
       rest: "GET /api-gateway/v1/ledgers/{owner}/{name}/attributes",
       mcp: "getLedgerContext",
       mcpResource: "ledgerAttributes",
+    },
+    {
+      // GraphQL also nests this read as `Ledger.options` under
+      // `Query.getLedger`. Only root fields are op ids, so the root twin is
+      // what binds the capability: dropping the REST route or the resource
+      // leaves a stale row the coverage test names (w6/m3).
+      verb: "Query.getLedgerOptions",
+      class: "read",
+      gql: "Query.getLedgerOptions",
+      rest: "GET /api-gateway/v1/ledgers/{owner}/{name}/options",
+      mcpResource: "ledgerOptions",
+      mcpExempt:
+        "Reachable as the `ledgerOptions` resource rather than a tool: ledger configuration is context a client fetches, not an action a model decides to take (ADR 0008 D2).",
     },
     {
       verb: "Query.getLedgerCommodities",

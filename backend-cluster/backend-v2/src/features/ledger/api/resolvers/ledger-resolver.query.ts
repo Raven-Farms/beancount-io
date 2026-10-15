@@ -82,6 +82,19 @@ export class LedgerQueryResolver {
     return this.workflow.getLedger({ ledgerId, identity: ctx.identity });
   }
 
+  /** The root twin of `Ledger.options` that REST and MCP bind to (w6/m3). */
+  @AllowAnonymous()
+  @Query(() => LedgerOptions, {
+    description:
+      "Get the effective beancount options of a ledger: title, account-root names, conversion and earnings accounts, comma rendering, and operating currencies",
+  })
+  async getLedgerOptions(
+    @Arg("ledgerId", () => String) ledgerId: string,
+    @Ctx() ctx: IContext,
+  ): Promise<LedgerOptions> {
+    return this.workflow.getLedgerOptions({ ledgerId, identity: ctx.identity });
+  }
+
   @AllowAnonymous()
   @Query(() => LedgerFileContent, {
     description: "Get the content of a specific ledger file",

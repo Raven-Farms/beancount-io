@@ -89,9 +89,11 @@ describe("op-class coverage", () => {
     // rows the reverse check would then have to catch alone.
     // 78 since w3/m44 added `introspectToken`, the GraphQL twin of the RFC 7662
     // introspection endpoint (ADR 0017); 79 since w2/m32 added
-    // `getLedgerManagedPrices` (ADR 015 managed price status).
+    // `getLedgerManagedPrices` (ADR 015 managed price status); 80 since w6/m3
+    // added `getLedgerOptions`, the root twin of the nested `Ledger.options`
+    // that REST `/options` and the `ledgerOptions` resource bind to.
     expect(graphqlOps.filter((op) => op.startsWith("GQL Query.")).length).toBe(
-      79,
+      80,
     );
     // 63 since w2/m28:t005 added `appendLedgerText`, the Beancount-text
     // dialect of `bulkEntries`, on all three surfaces; 64 since w2/m32 added
@@ -248,9 +250,10 @@ describe("op-class coverage", () => {
     // exemption, REST twins kept). w2/m32 adds `ledgerManagedPrices`.
     // Account-wide OAuth feed access adds `getFeed`. w1/m36 withdraws
     // `publicKeys`, `publicKey`, `allTierQuotas`, and `aiCfoUsage` by
-    // directory policy.
+    // directory policy. w6/m3 adds `ledgerOptions`, the effective core
+    // options GraphQL already served.
     const resources = mcpOps.filter((op) => op.startsWith("MCP resource:"));
-    expect(resources).toHaveLength(62);
+    expect(resources).toHaveLength(63);
   });
 });
 

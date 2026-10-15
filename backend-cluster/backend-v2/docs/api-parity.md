@@ -519,3 +519,20 @@ denials; capability, revoked-relationship, and pin refusals before any effect;
 and a failed entry write that keeps the temporary asset (the existing
 partial-failure boundary, unchanged). Live Gitea/S3 behavior remains deployment
 verification.
+
+Core ledger options (w6/m3) were reachable only as GraphQL's nested
+`Ledger.options`; REST had the six-field legacy projection and MCP had none.
+The verb table binds root operations only, so a nested field has no op id to
+anchor a parity row. `Query.getLedgerOptions` follows the precedent of
+`Query.getLedgerAttributes` beside `Ledger.attributes`: it is the root twin, and
+`GET /api-gateway/v1/ledgers/{owner}/{name}/options` and the `ledgerOptions`
+resource bind to it. Unlike that pair, whose root query reads through a
+different service than its nested field, all four entry points here call
+`LedgerWorkflow.getLedgerOptions`, which makes the reports-read decision and
+maps the engine's effective values; no adapter parses an option or supplies a
+default. Removing the REST route or the resource leaves a stale row that
+`op-class-coverage.test.ts` names. `ledger-options-parity.test.ts` drives REST
+over HTTP, GraphQL (root and nested), and an MCP client through the real
+workflow and PDP. It compares all ten fields with non-default values and an
+empty operating-currency list, and checks revoked access, a widened pin, and
+a ledger-service outage. The legacy `ledgerMeta` projection is unchanged.

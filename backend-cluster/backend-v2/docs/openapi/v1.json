@@ -12747,6 +12747,208 @@
         }
       }
     },
+    "/api-gateway/v1/ledgers/{owner}/{name}/options": {
+      "get": {
+        "summary": "Get the ledger's core options",
+        "description": "The effective Beancount options: title, the five account-root names, the current conversions and earnings accounts, comma rendering, and the operating currencies. Values are what the ledger resolves, defaults included, so a client need not parse option lines. `operatingCurrency` is what the ledger reports in; the currencies its postings use are a separate vocabulary read.",
+        "tags": [
+          "Ledger v1"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "apiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^(?!\\.{1,2}$)[A-Za-z0-9_.-]+(?![\\s\\S])",
+              "description": "Ledger owner's username",
+              "example": "alice"
+            },
+            "required": true,
+            "description": "Ledger owner's username",
+            "name": "owner",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9_-]{1,100}(?![\\s\\S])",
+              "description": "Ledger (repository) name",
+              "example": "main-ledger"
+            },
+            "required": true,
+            "description": "Ledger (repository) name",
+            "name": "name",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Get the ledger's core options",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "title": {
+                      "type": "string"
+                    },
+                    "nameAssets": {
+                      "type": "string",
+                      "example": "Assets"
+                    },
+                    "nameEquity": {
+                      "type": "string",
+                      "example": "Equity"
+                    },
+                    "nameExpenses": {
+                      "type": "string",
+                      "example": "Expenses"
+                    },
+                    "nameIncome": {
+                      "type": "string",
+                      "example": "Income"
+                    },
+                    "nameLiabilities": {
+                      "type": "string",
+                      "example": "Liabilities"
+                    },
+                    "accountCurrentConversions": {
+                      "type": "string",
+                      "example": "Conversions:Current"
+                    },
+                    "accountCurrentEarnings": {
+                      "type": "string",
+                      "example": "Earnings:Current"
+                    },
+                    "renderCommas": {
+                      "type": "boolean"
+                    },
+                    "operatingCurrency": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "example": [
+                        "USD"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "title",
+                    "nameAssets",
+                    "nameEquity",
+                    "nameExpenses",
+                    "nameIncome",
+                    "nameLiabilities",
+                    "accountCurrentConversions",
+                    "accountCurrentEarnings",
+                    "renderCommas",
+                    "operatingCurrency"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request failed validation against the documented schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/V1Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No credential, or a credential that no longer resolves",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/V1Error"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "The action needs a paid plan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/V1Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The credential lacks the permission this business action requires",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/V1Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such ledger, or no access to it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/V1Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The change conflicts with the resource's current state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/V1Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/V1Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The server failed; the request may be retried",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/V1Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "A dependency is unavailable; retry later",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/V1Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api-gateway/v1/ledgers/{owner}/{name}/managed-prices/refresh": {
       "post": {
         "summary": "Refresh the ledger's managed price feeds",

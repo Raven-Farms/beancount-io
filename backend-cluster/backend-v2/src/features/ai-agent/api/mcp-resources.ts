@@ -38,6 +38,7 @@ import {
 import { type McpRequestContext, resolveMcpLedger } from "./mcp-context";
 import { createLedgerId, parseLedgerId } from "@/shared/str";
 import { VOCABULARY_READS } from "@/features/ledger/api/rest/v1/vocabulary-handler";
+import { LEDGER_OPTIONS_READ } from "@/features/ledger/api/rest/v1/options-handler";
 import { ANALYSIS_READS } from "@/features/ledger/api/rest/v1/analysis-handler";
 import { NotFoundError } from "@/shared/errors";
 
@@ -682,6 +683,20 @@ export const MCP_RESOURCES: readonly McpResourceDescriptor[] = [
         ),
       );
     },
+  },
+  {
+    name: "ledgerOptions",
+    title: LEDGER_OPTIONS_READ.summary,
+    description: LEDGER_OPTIONS_READ.description,
+    mimeType: "application/json",
+    uriTemplate: `${RESOURCE_SCHEME}://{owner}/{name}/options`,
+    read: async (context, variables) =>
+      JSON.stringify(
+        await context.ledgerWorkflow.getLedgerOptions({
+          ledgerId: resolveLedgerId(context, variables),
+          identity: context.identity,
+        }),
+      ),
   },
   ...CATALOG_READS.map((read): McpResourceDescriptor => ({
     name: read.name,
