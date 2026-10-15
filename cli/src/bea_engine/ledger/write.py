@@ -1175,7 +1175,18 @@ def write_through_root(file: Path, into: Path | None) -> tuple[Path, Path | None
     """
     if into is not None:
         return file, into
+    # The nearest includer may itself be included: a leaf under `sub/extra.bean`
+    # was checked against `extra.bean` alone, and the root's own entries —
+    # what a balance or a close contradicts, what import dedupes against —
+    # stayed out of the check (w5/346). Climb to the file nothing includes.
     root = including_root(file)
+    seen = {file.resolve()}
+    while root is not None and root.resolve() not in seen:
+        seen.add(root.resolve())
+        above = including_root(root)
+        if above is None:
+            break
+        root = above
     if root is None:
         return file, into
     note(f"{file.name} is included by {root}; the write goes to {file.name} and is checked against that whole ledger.")
