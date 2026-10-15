@@ -764,6 +764,24 @@ class TestBeaRecipes(unittest.TestCase):
         }
         self.assertEqual(balances, {"Assets:Checking": [("2814.25", "USD")]})
 
+    def test_flag_sweep_counts_each_flagged_transaction_once(self):
+        self.ledger.write_text(
+            'option "operating_currency" "USD"\n'
+            "2026-01-01 open Assets:Checking USD\n"
+            "2026-01-01 open Expenses:Food USD\n"
+            '2026-06-21 ! "WHOLE FOODS" "groceries"\n  Expenses:Food 30 USD\n  Assets:Checking\n'
+            '2026-06-21 ! "WHOLE FOODS" "groceries"\n  Expenses:Food 12 USD\n  Assets:Checking\n'
+            '2026-06-22 ! "Split" "three legs"\n  Expenses:Food 5 USD\n  Expenses:Food 5 USD\n  Assets:Checking\n'
+            '2026-06-23 * "Cleared"\n  Expenses:Food 1 USD\n  Assets:Checking\n'
+        )
+
+        # Two same-day charges at one merchant are two carried flags, and a
+        # transaction with several postings is still one (w5/356).
+        rows = self.query_recipe("flag-sweep", **{"<period-end+1>": "2026-07-01"})
+
+        payees = [payee for row in rows for payee in row if payee in {"WHOLE FOODS", "Split", "Cleared"}]
+        self.assertEqual(payees, ["WHOLE FOODS", "WHOLE FOODS", "Split"])
+
 
 def load_tests(loader, tests, pattern):
     """Keep the focused journey checks in the existing skills CI entrypoint."""
