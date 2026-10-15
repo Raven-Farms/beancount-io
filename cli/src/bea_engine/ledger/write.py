@@ -979,6 +979,22 @@ def _stage_failed(file: Path, exc: OSError) -> str:
     )
 
 
+def lexer_lines(content: bytes) -> list[bytes]:
+    """The file's lines as Beancount's lexer numbers them: split on `\\n` alone.
+
+    `bytes.splitlines()` also breaks on a lone `\\r`, so a stray carriage
+    return (pasted text, `\\r\\r\\n` endings) made a file look longer than
+    the lexer counts it. The entry being appended then sat inside the
+    "original" range: its balance failure was blamed on a plugin, its errors
+    lost `Proposed append (not written)`, and a staged pad's `Unused Pad` was
+    no longer exempt (w5/380). The reader counts this way since w5/169.
+    """
+    lines = content.split(b"\n")
+    if lines and lines[-1] == b"":
+        lines.pop()
+    return lines
+
+
 def _discard_candidate(candidate: Path) -> None:
     """Remove a staged copy, even one carrying the ledger's own deny-delete ACL.
 
@@ -1044,7 +1060,7 @@ def _balance_recovery_hints(
     # Counted once per file (w5/124): a ledger failing thousands of existing
     # assertions otherwise re-splits the whole source for each of them.
     if source not in line_counts:
-        line_counts[source] = len(snapshot.contents.get(source, b"").splitlines()) if snapshot else 0
+        line_counts[source] = len(lexer_lines(snapshot.contents.get(source, b""))) if snapshot else 0
     if balance.meta.get("lineno", 0) <= line_counts[source]:
         return [
             date_hint,
@@ -1499,11 +1515,11 @@ def validate_candidate(
             filenames = {candidate: file}
             # `bea init` validates a candidate before the destination exists; treat
             # a missing original as zero lines so creation still works.
-            original_lines = {file.resolve(): file.read_bytes().splitlines()} if file.exists() else {}
+            original_lines = {file.resolve(): lexer_lines(file.read_bytes())} if file.exists() else {}
         else:
             with snapshot.staged(candidate, file) as (root, filenames):
                 entries, errors, options = managed_load.load_file(root)
-            original_lines = {path.resolve(): content.splitlines() for path, content in snapshot.contents.items()}
+            original_lines = {path.resolve(): lexer_lines(content) for path, content in snapshot.contents.items()}
     except InvalidOperation as exc:
         # Booking quantizes an interpolated amount under the 28-digit decimal
         # context and raises, instead of reporting, when it does not fit (w5/263).
