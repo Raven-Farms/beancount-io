@@ -28,15 +28,48 @@ describe("getQueryErrorFeedback", () => {
     expect(enBql["bql.errors.unknownColumn"].message).toContain("{column}");
   });
 
-  it("keeps generic feedback for other bad-input diagnostics", () => {
+  it("names the unexpected token and its 1-based position for a syntax error", () => {
     expect(
       getQueryErrorFeedback(
         graphQLError(
-          "Invalid BQL query: syntax error at 'FROM'",
+          "Invalid BQL query: syntax error at position 16: unexpected token 'FROM'",
           "BAD_USER_INPUT",
         ),
       ),
-    ).toEqual({ key: "common.errors.badUserInput" });
+    ).toEqual({
+      key: "bql.errors.syntaxError",
+      params: { token: "FROM", position: "17" },
+    });
+    expect(
+      getQueryErrorFeedback(
+        graphQLError(
+          "Invalid BQL query: syntax error at position 0: unexpected token 'SELEC'",
+          "BAD_USER_INPUT",
+        ),
+      ),
+    ).toEqual({
+      key: "bql.errors.syntaxError",
+      params: { token: "SELEC", position: "1" },
+    });
+  });
+
+  it("has an English syntax message that shows the token and position", () => {
+    const message = enBql["bql.errors.syntaxError"].message;
+    expect(message).toContain("{token}");
+    expect(message).toContain("{position}");
+  });
+
+  it("keeps generic feedback for other bad-input diagnostics", () => {
+    for (const message of [
+      "Invalid BQL query: syntax error at 'FROM'",
+      "Invalid BQL query: Query execution error: type error: cannot compare values",
+      "Invalid BQL query: syntax error at position 3: unexpected token '<img src=x>'",
+      "Invalid BQL query: syntax error at position 3: unexpected token 'a'b'",
+    ]) {
+      expect(
+        getQueryErrorFeedback(graphQLError(message, "BAD_USER_INPUT")),
+      ).toEqual({ key: "common.errors.badUserInput" });
+    }
   });
 
   it("ignores the diagnostic shape outside BAD_USER_INPUT", () => {

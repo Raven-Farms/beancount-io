@@ -44,6 +44,12 @@ const deBql: Record<string, TranslationEntry> = {
     description:
       "Query error naming a column the query referenced that does not exist; {column} is the identifier from the query",
   },
+  "bql.errors.syntaxError": {
+    message:
+      "Syntaxfehler bei „{token}“ an Zeichen {position}. Prüfen Sie die Abfrage ab dieser Stelle.",
+    description:
+      "Query error for a BQL parse failure; {token} is the unexpected token and {position} its 1-based character position in the query",
+  },
   "page.bql.query": {
     message: "Abfrage",
     description: "Sidebar navigation label for the BQL query page",

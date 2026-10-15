@@ -12,7 +12,6 @@
 
 ## Inbox
 
-- [002](./002.md) — Show the position and token of a BQL syntax error in the query editor (minor; dashboard; 40–55m).
 - [003](./003.md) — Stop the BQL editor auto-closing brackets inside string literals (minor; dashboard; 20–30m).
 - [004](./004.md) — Give the Upload Receipt route a document title (minor; dashboard; 30–40m).
 - [005](./005.md) — Keep an invalid typed date visible instead of reverting the field to today (minor; dashboard; 40–55m).

@@ -41,6 +41,12 @@ const zhBql: Record<string, TranslationEntry> = {
     description:
       "Query error naming a column the query referenced that does not exist; {column} is the identifier from the query",
   },
+  "bql.errors.syntaxError": {
+    message:
+      "第 {position} 个字符的“{token}”附近存在语法错误。请从该位置开始检查查询。",
+    description:
+      "Query error for a BQL parse failure; {token} is the unexpected token and {position} its 1-based character position in the query",
+  },
   "page.bql.query": {
     message: "查询",
     description: "Sidebar navigation label for the BQL query page",

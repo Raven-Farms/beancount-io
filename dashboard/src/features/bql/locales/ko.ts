@@ -39,6 +39,12 @@ const koBql: Record<string, TranslationEntry> = {
     description:
       "Query error naming a column the query referenced that does not exist; {column} is the identifier from the query",
   },
+  "bql.errors.syntaxError": {
+    message:
+      "{position}번째 문자의 “{token}” 근처에 구문 오류가 있습니다. 그 위치부터 쿼리를 확인하세요.",
+    description:
+      "Query error for a BQL parse failure; {token} is the unexpected token and {position} its 1-based character position in the query",
+  },
   "page.bql.query": {
     message: "쿼리",
     description: "Sidebar navigation label for the BQL query page",

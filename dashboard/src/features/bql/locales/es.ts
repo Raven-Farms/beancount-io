@@ -44,6 +44,12 @@ const esBql: Record<string, TranslationEntry> = {
     description:
       "Query error naming a column the query referenced that does not exist; {column} is the identifier from the query",
   },
+  "bql.errors.syntaxError": {
+    message:
+      "Error de sintaxis cerca de «{token}» en el carácter {position}. Revisa la consulta desde ese punto.",
+    description:
+      "Query error for a BQL parse failure; {token} is the unexpected token and {position} its 1-based character position in the query",
+  },
   "page.bql.query": {
     message: "Consulta",
     description: "Sidebar navigation label for the BQL query page",
