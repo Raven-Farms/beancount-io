@@ -7,6 +7,15 @@ export interface TranslationEntry {
 }
 
 const zhOverview: Record<string, TranslationEntry> = {
+  "page.overview.netWorthByMonth": {
+    message: "每月净资产",
+    description:
+      "Caption of the Net Worth card's table view, one row per month",
+  },
+  "page.overview.netWorthMonth": {
+    message: "月份",
+    description: "Column header for the month in the Net Worth table view",
+  },
   ...dashboardOverviewTranslations.zh,
   ...emptyLedgerOverviewTranslations.zh,
   "page.overview.assetsDistribution": {

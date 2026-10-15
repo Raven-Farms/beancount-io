@@ -12,4 +12,3 @@
 
 ## Inbox
 
-- [030](./030.md) — Give the Overview Net Worth table view table semantics and a keyboard-scrollable region (minor; dashboard; 25–35m).

@@ -7,6 +7,15 @@ export interface TranslationEntry {
 }
 
 const koOverview: Record<string, TranslationEntry> = {
+  "page.overview.netWorthByMonth": {
+    message: "월별 순자산",
+    description:
+      "Caption of the Net Worth card's table view, one row per month",
+  },
+  "page.overview.netWorthMonth": {
+    message: "월",
+    description: "Column header for the month in the Net Worth table view",
+  },
   ...dashboardOverviewTranslations.ko,
   ...emptyLedgerOverviewTranslations.ko,
   "page.overview.assetsDistribution": {

@@ -165,7 +165,11 @@ describe("Net Worth view hydration", () => {
         expect(chart).toBeDisabled();
         expect(table).toBeDisabled();
         expectView(initialView);
-        expect(queries.getByText(en["common.netWorth"])).toBeVisible();
+        expect(
+          queries.getByText(en["common.netWorth"], {
+            selector: '[data-slot="card-title"]',
+          }),
+        ).toBeVisible();
         expect(queries.getAllByText("2,100.25 USD").length).toBeGreaterThan(0);
 
         const client = makeRouter(url, false);

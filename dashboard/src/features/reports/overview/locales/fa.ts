@@ -7,6 +7,15 @@ export interface TranslationEntry {
 }
 
 const faOverview: Record<string, TranslationEntry> = {
+  "page.overview.netWorthByMonth": {
+    message: "دارایی خالص به تفکیک ماه",
+    description:
+      "Caption of the Net Worth card's table view, one row per month",
+  },
+  "page.overview.netWorthMonth": {
+    message: "ماه",
+    description: "Column header for the month in the Net Worth table view",
+  },
   ...dashboardOverviewTranslations.fa,
   ...emptyLedgerOverviewTranslations.fa,
   "page.overview.assetsDistribution": {

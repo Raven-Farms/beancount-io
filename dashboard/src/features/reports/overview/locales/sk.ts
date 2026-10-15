@@ -7,6 +7,15 @@ export interface TranslationEntry {
 }
 
 const skOverview: Record<string, TranslationEntry> = {
+  "page.overview.netWorthByMonth": {
+    message: "Čisté imanie podľa mesiacov",
+    description:
+      "Caption of the Net Worth card's table view, one row per month",
+  },
+  "page.overview.netWorthMonth": {
+    message: "Mesiac",
+    description: "Column header for the month in the Net Worth table view",
+  },
   ...dashboardOverviewTranslations.sk,
   ...emptyLedgerOverviewTranslations.sk,
   "page.overview.assetsDistribution": {

@@ -7,6 +7,15 @@ export interface TranslationEntry {
 }
 
 const bgOverview: Record<string, TranslationEntry> = {
+  "page.overview.netWorthByMonth": {
+    message: "Нетна стойност по месеци",
+    description:
+      "Caption of the Net Worth card's table view, one row per month",
+  },
+  "page.overview.netWorthMonth": {
+    message: "Месец",
+    description: "Column header for the month in the Net Worth table view",
+  },
   ...dashboardOverviewTranslations.bg,
   ...emptyLedgerOverviewTranslations.bg,
   "page.overview.assetsDistribution": {

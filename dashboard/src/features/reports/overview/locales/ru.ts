@@ -7,6 +7,15 @@ export interface TranslationEntry {
 }
 
 const ruOverview: Record<string, TranslationEntry> = {
+  "page.overview.netWorthByMonth": {
+    message: "Чистые активы по месяцам",
+    description:
+      "Caption of the Net Worth card's table view, one row per month",
+  },
+  "page.overview.netWorthMonth": {
+    message: "Месяц",
+    description: "Column header for the month in the Net Worth table view",
+  },
   ...dashboardOverviewTranslations.ru,
   ...emptyLedgerOverviewTranslations.ru,
   "page.overview.assetsDistribution": {

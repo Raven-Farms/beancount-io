@@ -7,6 +7,15 @@ export interface TranslationEntry {
 }
 
 const deOverview: Record<string, TranslationEntry> = {
+  "page.overview.netWorthByMonth": {
+    message: "Nettovermögen nach Monat",
+    description:
+      "Caption of the Net Worth card's table view, one row per month",
+  },
+  "page.overview.netWorthMonth": {
+    message: "Monat",
+    description: "Column header for the month in the Net Worth table view",
+  },
   ...dashboardOverviewTranslations.de,
   ...emptyLedgerOverviewTranslations.de,
   "page.overview.assetsDistribution": {

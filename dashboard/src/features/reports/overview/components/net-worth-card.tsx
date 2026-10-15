@@ -252,6 +252,7 @@ export function NetWorthCard({
   ledgerName: string;
 }) {
   const { t, i18n } = useTranslations();
+  const tableCaptionId = useId();
   const hydrated = useHydrated();
   const language = i18n.language;
   const formatNumber = useFormatNumber();
@@ -442,24 +443,50 @@ export function NetWorthCard({
             style={{ height: "230px", width: "100%" }}
           />
         ) : (
-          <div className="mt-5 max-h-[230px] divide-y overflow-y-auto rounded-lg border">
-            {[...visibleData].reverse().map((point) => (
-              <div
-                key={point.date}
-                className="flex items-center justify-between gap-4 px-3 py-2.5 text-sm"
-              >
-                <span className="text-muted-foreground">
-                  {formatMonth(point.date, language)}
-                </span>
-                <FormattedAmounts
-                  amounts={prioritizeCurrency(
-                    getBalanceAmounts(point.balance),
-                    primaryCurrency,
-                  )}
-                  className="text-right font-medium"
-                />
-              </div>
-            ))}
+          // A named, focusable region: the months overflow the box and the
+          // table holds nothing focusable, so keyboard users scroll it here.
+          <div
+            role="region"
+            tabIndex={0}
+            aria-labelledby={tableCaptionId}
+            className="mt-5 max-h-[230px] overflow-y-auto rounded-lg border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <table className="w-full text-sm">
+              <caption id={tableCaptionId} className="sr-only">
+                {t("page.overview.netWorthByMonth")}
+              </caption>
+              <thead className="sticky top-0 bg-card text-xs text-muted-foreground">
+                <tr className="border-b">
+                  <th scope="col" className="px-3 py-2 text-left font-medium">
+                    {t("page.overview.netWorthMonth")}
+                  </th>
+                  <th scope="col" className="px-3 py-2 text-right font-medium">
+                    {t("common.netWorth")}
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {[...visibleData].reverse().map((point) => (
+                  <tr key={point.date}>
+                    <th
+                      scope="row"
+                      className="px-3 py-2.5 text-left font-normal text-muted-foreground"
+                    >
+                      {formatMonth(point.date, language)}
+                    </th>
+                    <td className="px-3 py-2.5">
+                      <FormattedAmounts
+                        amounts={prioritizeCurrency(
+                          getBalanceAmounts(point.balance),
+                          primaryCurrency,
+                        )}
+                        className="text-right font-medium"
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </CardContent>

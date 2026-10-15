@@ -7,6 +7,15 @@ export interface TranslationEntry {
 }
 
 const jaOverview: Record<string, TranslationEntry> = {
+  "page.overview.netWorthByMonth": {
+    message: "月別の純資産",
+    description:
+      "Caption of the Net Worth card's table view, one row per month",
+  },
+  "page.overview.netWorthMonth": {
+    message: "月",
+    description: "Column header for the month in the Net Worth table view",
+  },
   ...dashboardOverviewTranslations.ja,
   ...emptyLedgerOverviewTranslations.ja,
   "page.overview.assetsDistribution": {

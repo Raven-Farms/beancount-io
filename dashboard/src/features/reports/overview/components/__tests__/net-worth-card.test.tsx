@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { EChartsOption, LineSeriesOption } from "echarts";
 import { NetWorthCard } from "../net-worth-card";
@@ -365,6 +365,50 @@ describe("NetWorthCard view toggle semantics", () => {
     // The table view really rendered: the last month's balance is on screen.
     expect(screen.getByText("Mar 2026")).toBeInTheDocument();
     expect(screen.getAllByText(/120/).length).toBeGreaterThan(0);
+  });
+});
+
+describe("NetWorthCard table view semantics (w0/030)", () => {
+  it("renders a named table with month and net-worth columns, newest first, in a focusable region", async () => {
+    render(
+      <NetWorthCard
+        ledgerOwner="owner"
+        ledgerName="book"
+        valuation={null}
+        data={multiMonth}
+        primaryCurrency="USD"
+      />,
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "page.overview.tableView" }),
+    );
+
+    const table = screen.getByRole("table", {
+      name: "page.overview.netWorthByMonth",
+    });
+    expect(
+      within(table)
+        .getAllByRole("columnheader")
+        .map((header) => header.textContent),
+    ).toEqual(["page.overview.netWorthMonth", "common.netWorth"]);
+    expect(
+      within(table)
+        .getAllByRole("rowheader")
+        .map((header) => header.textContent),
+    ).toEqual(["Mar 2026", "Feb 2026", "Jan 2026"]);
+    const [, newest] = within(table).getAllByRole("row");
+    expect(within(newest).getByRole("cell")).toHaveTextContent("120");
+
+    const region = screen.getByRole("region", {
+      name: "page.overview.netWorthByMonth",
+    });
+    expect(region).toContainElement(table);
+    expect(region).toHaveAttribute("tabindex", "0");
+    // Tab from the pressed toggle reaches the region without a pointer.
+    for (let step = 0; step < 10 && document.activeElement !== region; step++) {
+      await userEvent.tab();
+    }
+    expect(region).toHaveFocus();
   });
 });
 
