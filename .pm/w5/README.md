@@ -35,7 +35,6 @@
 
 ## Inbox
 
-- [293 — `query --source` tracebacks on bad `csv:` params, `-m`, `-f beancount`, `.describe`](./293.md) — CLI QA 2026-10-14
 - [294 — `query` text table prints `1E-8` and directive reprs](./294.md) — CLI QA 2026-10-14
 - [295 — Dangling `main.bean` symlink: discovery silently writes `main.beancount`](./295.md) — CLI QA 2026-10-14
 - [296 — `price export` into a new dir that a `*/…` include glob reads back](./296.md) — CLI QA 2026-10-14
