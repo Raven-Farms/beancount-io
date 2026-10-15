@@ -549,9 +549,10 @@ def refuse_cache_over_ledger(file: Path, pattern: str | None = None, source: str
             )
     problem = not_a_load_cache(cache)
     if problem is not None:
+        remove = "unset it" if source == CACHE_ENV else "leave it out"
         raise UsageError(
             f"{source} {pattern} names {cache}, {problem}. Point {source} at a new file or an existing "
-            "cache, or unset it. Nothing was changed."
+            f"cache, or {remove}. Nothing was changed."
         )
 
 

@@ -62,7 +62,14 @@ def check(ctx: typer.Context) -> None:
         data = launch.helper_json(["check", "--file", str(file)])
         output.emit(data, target=output.file_target(file))
         return
+    # Judged as given, with or without --no-cache, as USAGE promises.
     _refuse_cache_over_ledger(file, ctx.args)
+    args = list(ctx.args)
+    if _disables_cache(args) and _names_cache_file(args):
+        # bean-check ignores the path under --no-cache and says so through
+        # Python's root logger, a raw `WARNING:root:` line (w5/417).
+        output.note("--no-cache turns the load cache off, so --cache-filename is ignored.")
+        args = _without_cache_file(args)
     if output.has_unreadable_include(file) or output.has_duplicate_member(file):
         # bean-check answers an include it cannot open with a traceback, and
         # loads a file reached under two names twice without a word; the
@@ -72,7 +79,7 @@ def check(ctx: typer.Context) -> None:
     # bean-check keys its load cache on the files read, not on the plugin set,
     # and every later read trusts that cache. A load made with the auto plugins
     # must neither be stored there nor answered from a default load's entry (w5/111).
-    isolate = ["--no-cache"] if _enables_auto(ctx.args) else []
+    isolate = ["--no-cache"] if _enables_auto(args) else []
     # bean-check does not cover document paths that resolve outside the ledger tree;
     # the helper check does, so copies that still resolve against another tree fail.
     # Only that rule: this second load knows none of bean-check's options, so
@@ -83,7 +90,7 @@ def check(ctx: typer.Context) -> None:
     # its own finding still waits for bean-check to accept the ledger.
     portable: BeaError | None = None
     root_hint: str | None = None
-    if not _INFORMATIONAL & set(ctx.args):
+    if not _INFORMATIONAL & set(args):
         try:
             loaded = launch.helper_json(["check", "--file", str(file), "--documents-only"])
         except BeaError as error:
@@ -101,17 +108,17 @@ def check(ctx: typer.Context) -> None:
                 # `<load>:0`; the helper names the directive's file and line, as
                 # `--json check` and every other read do. The other load errors
                 # are listed only when no option could have changed them (w5/256).
-                if ctx.args:
+                if args:
                     raise LedgerError(f"{file}: {len(failed)} plugin(s) failed to load.", details=failed)
                 errors = [str(line) for line in loaded.get("errors") or failed]
                 raise LedgerError(f"{file}: {len(errors)} error(s).", details=errors)
-            if not ctx.args and loaded.get("clean"):
+            if not args and loaded.get("clean"):
                 # That load ran bean-check's own loader and validations and found
                 # nothing, and bean-check prints nothing for a clean ledger: a
                 # native run would only load it again, every plugin twice (w5/430).
                 # Errors still come from bean-check, in its own words.
                 raise typer.Exit(0)
-    code = launch.run_native("bean-check", [*isolate, str(file), *ctx.args], ledger=file)
+    code = launch.run_native("bean-check", [*isolate, str(file), *args], ledger=file)
     if code != 0:
         # An included leaf fails on accounts its root opens; say which root
         # to check instead (w5/348).
@@ -144,6 +151,41 @@ def _enables_auto(args: list[str]) -> bool:
             return True
         index += 1
     return False
+
+
+def _disables_cache(args: list[str]) -> bool:
+    """Whether bean-check will read `--no-cache` / `-C` from these arguments, clustered or not."""
+    index = 0
+    while index < len(args) and args[index] != "--":
+        arg = args[index]
+        if arg == _CACHE_FLAG:
+            index += 1  # its value, whatever it looks like
+        elif arg == "--no-cache" or (arg.startswith("-") and not arg.startswith("--") and "C" in arg):
+            return True
+        index += 1
+    return False
+
+
+def _names_cache_file(args: list[str]) -> bool:
+    return _without_cache_file(args) != args
+
+
+def _without_cache_file(args: list[str]) -> list[str]:
+    """The arguments without `--cache-filename` and its value, before any `--`."""
+    kept: list[str] = []
+    index = 0
+    while index < len(args):
+        arg = args[index]
+        if arg == "--":
+            kept.extend(args[index:])
+            break
+        if arg == _CACHE_FLAG:
+            index += 2
+            continue
+        if not arg.startswith(f"{_CACHE_FLAG}="):
+            kept.append(arg)
+        index += 1
+    return kept
 
 
 def _refuse_cache_over_ledger(file: Path, args: list[str]) -> None:
