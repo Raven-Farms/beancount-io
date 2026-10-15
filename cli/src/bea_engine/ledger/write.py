@@ -971,8 +971,9 @@ class CandidateRejected(LedgerError):
         details: list[str],
         locations: list[tuple[Path, int | None]],
         records: list[_ErrorRecord],
+        ledger_errors: list[str] | None = None,
     ) -> None:
-        super().__init__(message, details=details)
+        super().__init__(message, details=details, ledger_errors=ledger_errors)
         self.locations = locations
         self._records = records
 
@@ -1483,11 +1484,15 @@ def validate_candidate(
             message = f"The change would introduce {len(new_records)} new ledger error(s); nothing was written."
         else:
             message = "The change would leave the ledger invalid; nothing was written."
+        # The errors the flag tolerated travel with the refusal, so a `--json`
+        # caller still learns the ledger was already broken (w5/461).
+        tolerated_records = [record for index, record in enumerate(records) if index not in set(blocking)]
         raise CandidateRejected(
             message,
             details=_collapse_repeats([records[index] for index in blocking]),
             locations=[locations[index] for index in blocking],
             records=[records[index] for index in blocking],
+            ledger_errors=_collapse_repeats(tolerated_records),
         )
     return messages
 

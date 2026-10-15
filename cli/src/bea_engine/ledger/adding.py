@@ -1293,6 +1293,7 @@ def _transactions(
             raise protocol.LedgerError(
                 message,
                 details=list(batch_error.details),
+                ledger_errors=list(batch_error.ledger_errors),
                 result={
                     "written": 0,
                     "written_rows": [],
@@ -1333,6 +1334,7 @@ def _transactions(
         raise protocol.LedgerError(
             f"Added {len(valid)} of {len(rows)} transactions; {count} {noun} rejected.",
             details=rejected,
+            ledger_errors=warnings,
             result={
                 "written": len(valid),
                 "written_rows": [index for index, _ in valid],

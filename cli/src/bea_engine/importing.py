@@ -525,6 +525,8 @@ def answer(
         # wrapper keyed on exit 4 worked about half the time. An auth or usage
         # failure from the same call loses its category the same way.
         validation_errors = exc.details or [str(exc)]
+        # What `--allow-errors` tolerated still travels with the failure (w5/461).
+        validation_warnings = list(exc.ledger_errors)
 
     preview: dict[str, Any] = {
         "source": str(source),
@@ -608,12 +610,14 @@ def answer(
             raise ConflictError(
                 guidance,
                 details=review,
+                ledger_errors=validation_warnings,
                 result=preview,
             )
         if validation_errors:
             raise LedgerError(
                 "Import would leave the ledger invalid; nothing was written.",
                 details=validation_errors,
+                ledger_errors=validation_warnings,
                 result=preview,
             )
         snapshot.verify()

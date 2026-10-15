@@ -409,8 +409,10 @@ def helper_json(args: Sequence[str], *, stdin: str | None = None, writes: bool =
         failure = envelope.get("error") or {}
         category = str(failure.get("category", "validation"))
         # Load errors tolerated before a different failure — surface as warnings.
+        # A refused write names only what forced the refusal on a terminal; its
+        # `--json` envelope still carries what the flag tolerated (w5/461).
         tolerated = [str(error) for error in failure.get("ledger_errors", [])]
-        if tolerated:
+        if tolerated and (not writes or context.current().json_output):
             output.render_ledger_errors(tolerated, allow=True)
         message = str(failure.get("message", "The engine reported a failure."))
         trace = failure.get("traceback")
