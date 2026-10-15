@@ -156,7 +156,7 @@ def test_git_is_told_where_options_end(monkeypatch: pytest.MonkeyPatch, tmp_path
         calls.append(argv)
         return subprocess.CompletedProcess(argv, 0, "", "")
 
-    monkeypatch.setattr(manager.subprocess, "run", fake_run)
+    monkeypatch.setattr(manager.launch, "run_captured", fake_run)
 
     manager.clone_ledger("git@example.test:alice/books.git", tmp_path / "books")
 

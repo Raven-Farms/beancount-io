@@ -283,9 +283,7 @@ def capture_native(
     and `bea format --check` compares the formatter's output against the file.
     Everything else should use `run_native` and let upstream own the streams.
     """
-    return subprocess.run(
-        [str(native_command(name)), *args], env=_native_env(ledger), capture_output=True, text=True, check=False
-    )
+    return run_captured([str(native_command(name)), *args], env=_native_env(ledger))
 
 
 def check_native(
@@ -787,10 +785,55 @@ def _run_inherited(
     and Ctrl-C is left alone: the terminal delivers it to the child directly —
     unless the child is `deaf_to_interrupt`, when ours alone ends the run.
     """
-    child: subprocess.Popen[bytes] | None = None
+    with (
+        _stop_passed_on() as attach,
+        _interrupt_withheld(deaf_to_interrupt) as hear_interrupts,
+        subprocess.Popen(command, env=env, stderr=stderr) as child,
+    ):
+        attach(child)
+        try:
+            hear_interrupts()
+            return child.wait()
+        except BaseException:
+            child.kill()
+            raise
+
+
+def run_captured(command: list[str], *, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
+    """`subprocess.run` keeping the output, except a request to stop us stops the child too.
+
+    A bare `subprocess.run` left `bean-example`, `treeify`, a captured
+    `bean-doctor` or a `git clone` running after a SIGTERM or hangup aimed at
+    `bea` alone; an orphaned clone then finished and failed the retry (w5/437).
+    As `_run_inherited` does, the child stays in our process group, where it can
+    still prompt on the terminal and hears a terminal's Ctrl-C itself.
+    """
+    with (
+        _stop_passed_on() as attach,
+        subprocess.Popen(command, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) as child,
+    ):
+        attach(child)
+        try:
+            out, err = child.communicate()
+        except BaseException:
+            child.kill()
+            raise
+    return subprocess.CompletedProcess(command, child.returncode, out, err)
+
+
+@contextmanager
+def _stop_passed_on() -> Iterator[Callable[[subprocess.Popen[Any]], None]]:
+    """Pass a SIGTERM or SIGHUP aimed at us on to the `attach`ed child, then die of it.
+
+    The child gets `_CLEANUP_GRACE_SECONDS` before it is killed; once it is
+    gone, the signal is raised again with its default disposition, keeping the
+    status the shell reports. A signal that arrives before the child is
+    attached is passed on as soon as it is.
+    """
+    child: subprocess.Popen[Any] | None = None
     stopped: list[int] = []
 
-    def stop(started: subprocess.Popen[bytes], number: int) -> None:
+    def stop(started: subprocess.Popen[Any], number: int) -> None:
         started.send_signal(number)
         reaper = threading.Timer(_CLEANUP_GRACE_SECONDS, started.kill)
         reaper.daemon = True
@@ -801,6 +844,12 @@ def _run_inherited(
         if child is not None:
             stop(child, number)
 
+    def attach(started: subprocess.Popen[Any]) -> None:
+        nonlocal child
+        child = started
+        if stopped:  # Asked to stop while the child was still being started.
+            stop(started, stopped[0])
+
     installed: list[tuple[int, Any]] = []
     try:
         for number in _STOP_SIGNALS:
@@ -808,18 +857,7 @@ def _run_inherited(
                 installed.append((number, signal.signal(number, forward)))
             except (OSError, ValueError):  # As in `_forwarding_teardown`: an improvement, never a requirement.
                 continue
-        with (
-            _interrupt_withheld(deaf_to_interrupt) as hear_interrupts,
-            subprocess.Popen(command, env=env, stderr=stderr) as child,
-        ):
-            if stopped:  # Asked to stop while the child was still being started.
-                stop(child, stopped[0])
-            try:
-                hear_interrupts()
-                return child.wait()
-            except BaseException:
-                child.kill()
-                raise
+        yield attach
     finally:
         for number, previous in installed:
             try:

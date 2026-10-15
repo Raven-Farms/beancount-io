@@ -3,7 +3,6 @@ from __future__ import annotations
 import os
 import re
 import shutil
-import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -20,6 +19,7 @@ from cli.api.rest_client.client import AuthenticatedClient
 from cli.api.rest_client.models.create_ledger_body import CreateLedgerBody
 from cli.api.rest_client.models.create_ledger_response_200 import CreateLedgerResponse200
 from cli.api.rest_client.models.get_ledger_response_200 import GetLedgerResponse200
+from cli.engine import launch
 from cli.errors import BeaError, UsageError
 from cli.utils import ledger_name, owner_and_name, single_line, snake_keys
 
@@ -148,11 +148,12 @@ def clone_ledger(
     """Clone the ledger's repository, keeping git's chatter off stdout when it is a JSON channel."""
     check_clone_url(git_remote_url)
     try:
-        result = subprocess.run(
+        # Stopping `bea` stops git too, which then removes the half-made
+        # directory itself; left running, it finished the clone and the
+        # retry failed on an existing directory (w5/437).
+        result = launch.run_captured(
             # `--` ends option parsing: the URL and directory are operands only.
             ["git", "clone", "--", git_remote_url, str(target_dir)],
-            capture_output=True,
-            text=True,
             env=_git_env(unattended=unattended or quiet),
         )
     except OSError as exc:
