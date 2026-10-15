@@ -106,6 +106,12 @@ const bgCashFlow: Record<string, TranslationEntry> = {
     description:
       "Recovery guidance when conversion or filtering prevents cash-flow reconciliation",
   },
+  "page.cashFlow.reconciliationDescriptionAtCost": {
+    message:
+      "Записаните движения за този период не се равняват с паричните сметки по себестойност. Променете филтрите на отчета или проверете книгата за грешки. Експортът е недостъпен, докато отчетът не се равни.",
+    description:
+      "Recovery guidance when cash flow does not reconcile while At Cost is already selected",
+  },
   "page.cashFlow.reconciliationTitle": {
     message: "Паричният поток не може да бъде съгласуван",
     description: "Title for the unsupported cash-flow reconciliation state",

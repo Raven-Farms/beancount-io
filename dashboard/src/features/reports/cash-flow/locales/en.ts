@@ -104,6 +104,12 @@ const enCashFlow: Record<string, TranslationEntry> = {
     description:
       "Recovery guidance when conversion or filtering prevents cash-flow reconciliation",
   },
+  "page.cashFlow.reconciliationDescriptionAtCost": {
+    message:
+      "The recorded movements in this period do not reconcile with the cash accounts at cost. Adjust the report filters or check the ledger for errors. Export is unavailable until the statement reconciles.",
+    description:
+      "Recovery guidance when cash flow does not reconcile while At Cost is already selected",
+  },
   "page.cashFlow.reconciliationTitle": {
     message: "Cash flow cannot be reconciled",
     description: "Title for the unsupported cash-flow reconciliation state",

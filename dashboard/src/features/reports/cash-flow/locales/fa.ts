@@ -105,6 +105,12 @@ const faCashFlow: Record<string, TranslationEntry> = {
     description:
       "Recovery guidance when conversion or filtering prevents cash-flow reconciliation",
   },
+  "page.cashFlow.reconciliationDescriptionAtCost": {
+    message:
+      "گردش‌های ثبت‌شده در این دوره با حساب‌های نقد به بهای تمام‌شده تطبیق نمی‌کنند. فیلترهای گزارش را تغییر دهید یا دفتر را از نظر خطا بررسی کنید. تا تطبیق صورت، خروجی گرفتن ممکن نیست.",
+    description:
+      "Recovery guidance when cash flow does not reconcile while At Cost is already selected",
+  },
   "page.cashFlow.reconciliationTitle": {
     message: "جریان نقدی قابل تطبیق نیست",
     description: "Title for the unsupported cash-flow reconciliation state",

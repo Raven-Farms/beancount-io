@@ -105,6 +105,12 @@ const ptCashFlow: Record<string, TranslationEntry> = {
     description:
       "Recovery guidance when conversion or filtering prevents cash-flow reconciliation",
   },
+  "page.cashFlow.reconciliationDescriptionAtCost": {
+    message:
+      "Os movimentos registrados neste período não conferem com as contas de caixa ao custo. Ajuste os filtros do relatório ou verifique se o livro tem erros. A exportação fica indisponível até a demonstração conferir.",
+    description:
+      "Recovery guidance when cash flow does not reconcile while At Cost is already selected",
+  },
   "page.cashFlow.reconciliationTitle": {
     message: "Não é possível reconciliar o fluxo de caixa",
     description: "Title for the unsupported cash-flow reconciliation state",

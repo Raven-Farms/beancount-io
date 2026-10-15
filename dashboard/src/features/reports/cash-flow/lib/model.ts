@@ -175,6 +175,40 @@ function isZeroAmounts(amounts: Record<string, string>): boolean {
   return Object.values(amounts).every((amount) => isZeroDecimal(amount));
 }
 
+/**
+ * Beancount accepts each transaction within a tolerance (half a cent for
+ * two-decimal amounts), so at-cost movements over an interval carry small
+ * residuals that the ledger itself books to `Equity:Conversions` only at the
+ * end of a clamped period (w0/022). An interval's residual is tolerated up to
+ * that half-cent per contributing account change; a valuation difference —
+ * the 60 USD w4/198 guards against — stays far outside it.
+ */
+const BALANCING_TOLERANCE_PER_CHANGE = 0.005;
+
+function postingsInUnit(
+  changes: Record<string, unknown>[],
+  unit: string,
+): number {
+  return changes.filter((change) => {
+    const value = change[unit];
+    return typeof value === "string" && !isZeroDecimal(value);
+  }).length;
+}
+
+/** `|residual| <= 0.005 * count`, compared exactly on decimal strings. */
+function withinBalancingTolerance(residual: string, count: number): boolean {
+  if (isZeroDecimal(residual)) return true;
+  const match = /^[+-]?(\d+)(?:\.(\d+))?$/.exec(residual.trim());
+  if (!match) return false;
+  const [, whole, fraction = ""] = match;
+  const scale = Math.max(fraction.length, 3);
+  const magnitude = BigInt(whole + fraction.padEnd(scale, "0"));
+  const bound =
+    BigInt(Math.round(BALANCING_TOLERANCE_PER_CHANGE * 1000) * count) *
+    10n ** BigInt(scale - 3);
+  return magnitude <= bound;
+}
+
 function invertBalanceRecord(
   balance: Record<string, unknown>,
 ): Record<string, unknown> {
@@ -290,11 +324,16 @@ export function buildCashFlowStatement(input: {
   // Check every interval and unit independently before deriving cash from
   // non-cash activity; discrepancies in different chart points cannot cancel.
   input.intervals.forEach((interval) => {
-    const differences = sumBalanceRecords(
-      Object.values(interval.accountChanges),
+    const changes = Object.values(interval.accountChanges);
+    const differences = sumBalanceRecords(changes);
+    const beyondTolerance = Object.fromEntries(
+      Object.entries(differences).filter(
+        ([unit, residual]) =>
+          !withinBalancingTolerance(residual, postingsInUnit(changes, unit)),
+      ),
     );
-    if (!isZeroAmounts(differences)) {
-      throw new CashFlowReconciliationError(interval.date, differences);
+    if (!isZeroAmounts(beyondTolerance)) {
+      throw new CashFlowReconciliationError(interval.date, beyondTolerance);
     }
   });
 

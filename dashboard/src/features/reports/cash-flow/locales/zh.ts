@@ -101,6 +101,12 @@ const zhCashFlow: Record<string, TranslationEntry> = {
     description:
       "Recovery guidance when conversion or filtering prevents cash-flow reconciliation",
   },
+  "page.cashFlow.reconciliationDescriptionAtCost": {
+    message:
+      "此期间记录的变动与按成本计算的现金账户不一致。请调整报表筛选或检查账本错误。报表核对一致前无法导出。",
+    description:
+      "Recovery guidance when cash flow does not reconcile while At Cost is already selected",
+  },
   "page.cashFlow.reconciliationTitle": {
     message: "现金流无法核对",
     description: "Title for the unsupported cash-flow reconciliation state",

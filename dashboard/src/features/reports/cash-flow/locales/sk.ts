@@ -105,6 +105,12 @@ const skCashFlow: Record<string, TranslationEntry> = {
     description:
       "Recovery guidance when conversion or filtering prevents cash-flow reconciliation",
   },
+  "page.cashFlow.reconciliationDescriptionAtCost": {
+    message:
+      "Zaznamenané pohyby v tomto období sa pri obstarávacej cene nezhodujú s peňažnými účtami. Upravte filtre výkazu alebo skontrolujte chyby v knihe. Export nie je dostupný, kým sa výkaz nezhoduje.",
+    description:
+      "Recovery guidance when cash flow does not reconcile while At Cost is already selected",
+  },
   "page.cashFlow.reconciliationTitle": {
     message: "Peňažný tok nie je možné zosúladiť",
     description: "Title for the unsupported cash-flow reconciliation state",

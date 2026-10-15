@@ -60,6 +60,11 @@ describe("formatNumber with a currency (w0/010)", () => {
     expect(formatNumber(0.5, true, "en", "BTC")).toBe("0.5");
   });
 
+  it("never prints a negative zero for a sub-cent residue", () => {
+    expect(formatNumber(-0.003, true, "en", "USD")).toBe("0.00");
+    expect(formatNumber(-0.005, true, "en", "USD")).toBe("-0.01");
+  });
+
   it("is unchanged without a currency", () => {
     expect(formatNumber(4559.8, true, "en")).toBe("4,559.8");
   });

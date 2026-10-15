@@ -107,6 +107,12 @@ const esCashFlow: Record<string, TranslationEntry> = {
     description:
       "Recovery guidance when conversion or filtering prevents cash-flow reconciliation",
   },
+  "page.cashFlow.reconciliationDescriptionAtCost": {
+    message:
+      "Los movimientos registrados en este periodo no cuadran con las cuentas de efectivo al coste. Ajusta los filtros del informe o revisa si el libro tiene errores. La exportación no estará disponible hasta que el estado cuadre.",
+    description:
+      "Recovery guidance when cash flow does not reconcile while At Cost is already selected",
+  },
   "page.cashFlow.reconciliationTitle": {
     message: "No se puede conciliar el flujo de caja",
     description: "Title for the unsupported cash-flow reconciliation state",

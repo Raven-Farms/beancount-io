@@ -106,6 +106,12 @@ const nlCashFlow: Record<string, TranslationEntry> = {
     description:
       "Recovery guidance when conversion or filtering prevents cash-flow reconciliation",
   },
+  "page.cashFlow.reconciliationDescriptionAtCost": {
+    message:
+      "De geboekte bewegingen in deze periode sluiten niet aan op de kasrekeningen tegen kostprijs. Pas de rapportfilters aan of controleer het grootboek op fouten. Exporteren is pas mogelijk als het overzicht aansluit.",
+    description:
+      "Recovery guidance when cash flow does not reconcile while At Cost is already selected",
+  },
   "page.cashFlow.reconciliationTitle": {
     message: "De kasstroom kan niet worden afgestemd",
     description: "Title for the unsupported cash-flow reconciliation state",

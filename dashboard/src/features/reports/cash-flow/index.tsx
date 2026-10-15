@@ -180,9 +180,15 @@ export default function LedgerCashFlowPage() {
         </div>
         <ReportErrorState
           title={t("page.cashFlow.reconciliationTitle")}
-          message={t("page.cashFlow.reconciliationDescription", {
-            atCost: t("component.conversionSelect.atCost"),
-          })}
+          message={
+            // Suggesting At Cost when it is already selected sent readers in
+            // a circle (w0/022).
+            conversion === "at_cost"
+              ? t("page.cashFlow.reconciliationDescriptionAtCost")
+              : t("page.cashFlow.reconciliationDescription", {
+                  atCost: t("component.conversionSelect.atCost"),
+                })
+          }
         />
       </div>
     );

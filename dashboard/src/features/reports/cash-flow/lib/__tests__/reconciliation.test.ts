@@ -109,18 +109,63 @@ describe("cash flow reconciliation precondition", () => {
     expect(error.differences).toEqual({ USD: "100", EUR: "-100" });
   });
 
-  it("rejects a discrepancy below floating-point precision without a rounding tolerance", () => {
+  it("tolerates Beancount's per-posting balancing residual and nothing more (w0/022)", () => {
+    // Three postings allow up to 0.015 USD: the half-cent per posting a
+    // balanced Beancount transaction may leave. Exact decimals, no floats.
+    const accepted = buildCashFlowStatement({
+      intervals: [
+        {
+          date: "2026-05-01",
+          accountChanges: {
+            "Expenses:Fees": { USD: "0.1" },
+            "Income:Salary": { USD: "-0.3" },
+            "Assets:Bank:Checking": { USD: "0.214" },
+          },
+        },
+      ],
+      closingCashAccounts: [],
+      primaryCurrency: "USD",
+    });
+    expect(accepted.intervals).toHaveLength(1);
+
     const error = rejection([
       {
         date: "2026-05-01",
         accountChanges: {
           "Expenses:Fees": { USD: "0.1" },
           "Income:Salary": { USD: "-0.3" },
-          "Assets:Bank:Checking": { USD: "0.20000000000000000001" },
+          "Assets:Bank:Checking": { USD: "0.216" },
         },
       },
     ]);
-    expect(error.differences).toEqual({ USD: "0.00000000000000000001" });
+    expect(error.differences).toEqual({ USD: "0.016" });
+  });
+
+  it("accepts the public example's at-cost monthly residuals across a year", () => {
+    // Bucket residuals measured on open_ledger/example at_cost, time=2016:
+    // each interval leaves sub-cent tolerance residue, booked to
+    // Equity:Conversions:Current only in the last bucket.
+    const residuals = ["0.00057", "0.00426", "-0.0099", "0.00192", "-0.00638"];
+    const intervals: IntervalAccountChanges[] = residuals.map(
+      (residual, index) => ({
+        date: `2016-0${index + 1}-28`,
+        accountChanges: {
+          "Expenses:Food": { USD: "100" },
+          "Income:Salary": { USD: "-500" },
+          "Assets:US:Vanguard:RGAGX": { USD: "250" },
+          "Assets:US:BofA:Checking": {
+            USD: (150 + Number(residual)).toFixed(5),
+          },
+        },
+      }),
+    );
+    expect(() =>
+      buildCashFlowStatement({
+        intervals,
+        closingCashAccounts: [],
+        primaryCurrency: "USD",
+      }),
+    ).not.toThrow();
   });
 
   it("accepts exact mixed-scale decimal conservation including zero-only units", () => {

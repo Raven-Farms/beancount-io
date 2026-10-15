@@ -104,6 +104,12 @@ const deCashFlow: Record<string, TranslationEntry> = {
     description:
       "Recovery guidance when conversion or filtering prevents cash-flow reconciliation",
   },
+  "page.cashFlow.reconciliationDescriptionAtCost": {
+    message:
+      "Die erfassten Bewegungen dieses Zeitraums stimmen zu Anschaffungskosten nicht mit den Geldkonten überein. Passen Sie die Berichtsfilter an oder prüfen Sie das Hauptbuch auf Fehler. Der Export ist erst verfügbar, wenn der Bericht abgestimmt ist.",
+    description:
+      "Recovery guidance when cash flow does not reconcile while At Cost is already selected",
+  },
   "page.cashFlow.reconciliationTitle": {
     message: "Der Cashflow lässt sich nicht abstimmen",
     description: "Title for the unsupported cash-flow reconciliation state",

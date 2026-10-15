@@ -106,6 +106,12 @@ const frCashFlow: Record<string, TranslationEntry> = {
     description:
       "Recovery guidance when conversion or filtering prevents cash-flow reconciliation",
   },
+  "page.cashFlow.reconciliationDescriptionAtCost": {
+    message:
+      "Les mouvements enregistrés sur cette période ne concordent pas avec les comptes de trésorerie au coût. Ajustez les filtres du rapport ou vérifiez les erreurs du registre. L'export reste indisponible tant que l'état ne concorde pas.",
+    description:
+      "Recovery guidance when cash flow does not reconcile while At Cost is already selected",
+  },
   "page.cashFlow.reconciliationTitle": {
     message: "Le flux de trésorerie ne peut pas être rapproché",
     description: "Title for the unsupported cash-flow reconciliation state",

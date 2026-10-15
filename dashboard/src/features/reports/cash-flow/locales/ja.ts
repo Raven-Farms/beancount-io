@@ -103,6 +103,12 @@ const jaCashFlow: Record<string, TranslationEntry> = {
     description:
       "Recovery guidance when conversion or filtering prevents cash-flow reconciliation",
   },
+  "page.cashFlow.reconciliationDescriptionAtCost": {
+    message:
+      "この期間に記録された動きが、取得原価ベースの現金勘定と一致しません。レポートのフィルターを調整するか、台帳のエラーを確認してください。一致するまでエクスポートは利用できません。",
+    description:
+      "Recovery guidance when cash flow does not reconcile while At Cost is already selected",
+  },
   "page.cashFlow.reconciliationTitle": {
     message: "キャッシュフローを照合できません",
     description: "Title for the unsupported cash-flow reconciliation state",

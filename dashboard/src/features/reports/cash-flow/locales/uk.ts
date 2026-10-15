@@ -106,6 +106,12 @@ const ukCashFlow: Record<string, TranslationEntry> = {
     description:
       "Recovery guidance when conversion or filtering prevents cash-flow reconciliation",
   },
+  "page.cashFlow.reconciliationDescriptionAtCost": {
+    message:
+      "Записані рухи за цей період не збігаються з грошовими рахунками за собівартістю. Змініть фільтри звіту або перевірте книгу на помилки. Експорт недоступний, доки звіт не збігатиметься.",
+    description:
+      "Recovery guidance when cash flow does not reconcile while At Cost is already selected",
+  },
   "page.cashFlow.reconciliationTitle": {
     message: "Грошовий потік не вдається звірити",
     description: "Title for the unsupported cash-flow reconciliation state",

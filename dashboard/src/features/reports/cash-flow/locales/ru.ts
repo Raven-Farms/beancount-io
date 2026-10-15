@@ -107,6 +107,12 @@ const ruCashFlow: Record<string, TranslationEntry> = {
     description:
       "Recovery guidance when conversion or filtering prevents cash-flow reconciliation",
   },
+  "page.cashFlow.reconciliationDescriptionAtCost": {
+    message:
+      "Записанные движения за этот период не сходятся с денежными счетами по себестоимости. Измените фильтры отчёта или проверьте книгу на ошибки. Экспорт недоступен, пока отчёт не сойдётся.",
+    description:
+      "Recovery guidance when cash flow does not reconcile while At Cost is already selected",
+  },
   "page.cashFlow.reconciliationTitle": {
     message: "Денежный поток не удаётся сверить",
     description: "Title for the unsupported cash-flow reconciliation state",

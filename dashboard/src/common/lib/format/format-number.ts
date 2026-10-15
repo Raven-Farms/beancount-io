@@ -22,7 +22,9 @@ export const formatNumber = (
   // `109,529.339` — so the option controls grouping only (w0/010).
   const digits = currency ? currencyMinorDigits(currency) : undefined;
   if (digits !== undefined) {
-    return value.toLocaleString(locale, {
+    // A residue that rounds to zero is zero, not "-0.00".
+    const shown = Math.abs(value) < 0.5 * 10 ** -digits ? 0 : value;
+    return shown.toLocaleString(locale, {
       minimumFractionDigits: digits,
       maximumFractionDigits: digits,
       useGrouping: renderCommas,

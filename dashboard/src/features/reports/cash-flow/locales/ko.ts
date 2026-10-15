@@ -101,6 +101,12 @@ const koCashFlow: Record<string, TranslationEntry> = {
     description:
       "Recovery guidance when conversion or filtering prevents cash-flow reconciliation",
   },
+  "page.cashFlow.reconciliationDescriptionAtCost": {
+    message:
+      "이 기간에 기록된 움직임이 원가 기준 현금 계정과 맞지 않습니다. 보고서 필터를 조정하거나 원장의 오류를 확인하세요. 대사가 맞을 때까지 내보내기를 사용할 수 없습니다.",
+    description:
+      "Recovery guidance when cash flow does not reconcile while At Cost is already selected",
+  },
   "page.cashFlow.reconciliationTitle": {
     message: "현금 흐름을 대사할 수 없습니다",
     description: "Title for the unsupported cash-flow reconciliation state",
