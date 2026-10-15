@@ -77,6 +77,22 @@ describe("validateManagedPriceText", () => {
     expect(result.line).toBe(GOOD.split("\n").length - 1 + line);
   });
 
+  // Beancount reads `BTC-` as `BTC` and a minus sign (a negative price), and
+  // `BTC.`/`BTC_`/`BTC'`/`USD-` as invalid tokens (w5/377). Each is a whole
+  // feed on its own, so no mixed-pair check can be what refuses it.
+  it.each([
+    ["BTC-", "2026-09-15 price BTC- 100000 USD"],
+    ["BTC.", "2026-09-15 price BTC. 100000 USD"],
+    ["BTC_", "2026-09-15 price BTC_ 100000 USD"],
+    ["BTC'", "2026-09-15 price BTC' 100000 USD"],
+    ["USD-", "2026-09-15 price BTC 100000 USD-"],
+  ])("rejects a commodity ending in a symbol: %s", (_label, line) => {
+    const result = validateManagedPriceText(`; alias: BTC-USD\n${line}\n`);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.line).toBe(2);
+  });
+
   it("rejects metadata that precedes any price directive", () => {
     expect(
       validateManagedPriceText('  provisional: TRUE\n2026-09-15 price BTC 1 USD\n'),

@@ -146,8 +146,16 @@ const HEADER_KEYS = new Set(["alias", "commodity", "quote", "source", "revision"
 const BLANK_RE = /^[ \t]*$/u;
 const COMMENT_RE = /^[ \t]*;/u;
 const HEADER_RE = /^;\s*([a-z][a-z0-9_-]*)\s*:\s*(.+?)\s*$/u;
+// A commodity ends in a letter or digit, as Beancount's lexer reads one:
+// `BTC-` lexed as `BTC` and a minus sign, a negative price, and `BTC.` broke
+// every load (w5/377).
 const PRICE_RE =
-  /^(\d{4}-\d{2}-\d{2})[ \t]+price[ \t]+([A-Z][A-Z0-9'._-]*)[ \t]+([0-9]+(?:\.[0-9]+)?)[ \t]+([A-Z][A-Z0-9'._-]*)[ \t]*(?:;.*)?$/u;
+  /^(\d{4}-\d{2}-\d{2})[ \t]+price[ \t]+([A-Z](?:[A-Z0-9'._-]*[A-Z0-9])?)[ \t]+([0-9]+(?:\.[0-9]+)?)[ \t]+([A-Z](?:[A-Z0-9'._-]*[A-Z0-9])?)[ \t]*(?:;.*)?$/u;
+const FEED_COMMODITY_RE = /^[A-Z](?:[A-Z0-9'._-]*[A-Z0-9])?$/u;
+
+/** Whether `text` is a commodity the feed grammar accepts. */
+export const isFeedCommodity = (text: string): boolean =>
+  FEED_COMMODITY_RE.test(text);
 const METADATA_RE = /^[ \t]+([a-z][A-Za-z0-9_-]*):[ \t]*(.*?)[ \t]*$/u;
 const METADATA_VALUE_RE =
   /^(?:"[^"\\]*"|TRUE|FALSE|\d{4}-\d{2}-\d{2}|-?[0-9]+(?:\.[0-9]+)?)$/u;

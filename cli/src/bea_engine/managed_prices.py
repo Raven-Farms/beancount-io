@@ -61,9 +61,13 @@ _URL_TARGET_RE = re.compile(r"^[a-z][a-z0-9+.-]*://", re.IGNORECASE)
 _BLANK_RE = re.compile(r"^[ \t]*$")
 _COMMENT_RE = re.compile(r"^[ \t]*;")
 _HEADER_RE = re.compile(r"^;\s*([a-z][a-z0-9_-]*)\s*:\s*(.+?)\s*$")
+# A commodity ends in a letter or digit, as Beancount's lexer reads one:
+# `BTC-` lexed as `BTC` and a minus sign, a negative price, and `BTC.` broke
+# every load (w5/377).
+_FEED_COMMODITY = r"[A-Z](?:[A-Z0-9'._-]*[A-Z0-9])?"
 _PRICE_RE = re.compile(
-    r"^([0-9]{4}-[0-9]{2}-[0-9]{2})[ \t]+price[ \t]+([A-Z][A-Z0-9'._-]*)[ \t]+([0-9]+(?:\.[0-9]+)?)[ \t]+"
-    r"([A-Z][A-Z0-9'._-]*)[ \t]*(?:;.*)?$"
+    rf"^([0-9]{{4}}-[0-9]{{2}}-[0-9]{{2}})[ \t]+price[ \t]+({_FEED_COMMODITY})[ \t]+([0-9]+(?:\.[0-9]+)?)[ \t]+"
+    rf"({_FEED_COMMODITY})[ \t]*(?:;.*)?$"
 )
 _METADATA_RE = re.compile(r"^[ \t]+([a-z][A-Za-z0-9_-]*):[ \t]*(.*?)[ \t]*$")
 _METADATA_VALUE_RE = re.compile(r'^(?:"[^"\\]*"|TRUE|FALSE|[0-9]{4}-[0-9]{2}-[0-9]{2}|-?[0-9]+(?:\.[0-9]+)?)$')
@@ -574,6 +578,11 @@ def validate_managed_price_text(text: str) -> ValidFeed | InvalidFeed:
 def _canonical_alias(alias: str) -> str:
     """The alias with case and separators removed, so `BTC-USD` meets `btc_usd`."""
     return re.sub(r"[^A-Za-z0-9]", "", alias).upper()
+
+
+def is_feed_commodity(text: str) -> bool:
+    """Whether `text` is a commodity the feed grammar accepts."""
+    return re.fullmatch(_FEED_COMMODITY, text) is not None
 
 
 def check_feed_identity(

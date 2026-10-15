@@ -1,5 +1,5 @@
 import { asyncContext } from "@/shared/async-context";
-import { CACHE_KEYS } from "@/shared/cache";
+import { CACHE_KEYS, TTL } from "@/shared/cache";
 import {
   managedPriceUrlHash,
   requestManagedPriceRefresh,
@@ -300,6 +300,27 @@ describe("resolveManagedPriceFeed", () => {
     expect(calls).toHaveLength(2);
     // No stale ETag is offered for a blob that no longer exists.
     expect(calls[1].init.headers).not.toHaveProperty("if-none-match");
+  });
+
+  it("replaces a revision cached under the looser commodity grammar (w5/377)", async () => {
+    const { deps, cache, calls } = feedDeps([
+      feedResponse(T1, '"e1"'),
+      feedResponse(T1, '"e2"'),
+    ]);
+    await resolve(deps);
+    const key = CACHE_KEYS.ledger.priceFeedBlob(HASH, "e1");
+    const cached = await cache.get<{ feed: { commodity: string } }>(key);
+    // What a `BTC-` feed validated as before the grammar required a final
+    // letter or digit: served, it breaks loads, and its pair pinned the feed.
+    await cache.set(
+      key,
+      { ...cached, feed: { ...cached?.feed, commodity: "BTC-" } },
+      TTL.HOUR_24,
+    );
+    const again = await resolve(deps);
+    expect(calls).toHaveLength(2);
+    expect(again.blob?.feed.commodity).toBe("BTC");
+    expect(again.head.lastError).toBeNull();
   });
 
   it("coalesces concurrent loads for one URL into a single fetch", async () => {

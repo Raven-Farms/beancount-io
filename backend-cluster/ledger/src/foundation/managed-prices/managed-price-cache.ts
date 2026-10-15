@@ -6,6 +6,7 @@ import { lock } from "@/shared/lock";
 import { logger } from "@/shared/logger";
 import {
   fetchManagedPriceFeed,
+  isFeedCommodity,
   validateManagedPriceText,
   type ManagedPriceFeedSummary,
   type ManagedPriceValidation,
@@ -133,6 +134,15 @@ async function readBlob(
   const blob = await cache.get<PriceFeedBlob>(
     CACHE_KEYS.ledger.priceFeedBlob(urlHash, head.revision),
   );
+  // Validated under the looser grammar before w5/377 (`BTC-`): serving it
+  // breaks loads, and its pair would refuse the corrected feed. Treat it as
+  // missing so the next refresh replaces it.
+  if (
+    blob &&
+    !(isFeedCommodity(blob.feed.commodity) && isFeedCommodity(blob.feed.quote))
+  ) {
+    return null;
+  }
   return blob ?? null;
 }
 

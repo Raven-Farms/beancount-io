@@ -49,6 +49,7 @@ from bea_engine.managed_prices import (
     check_feed_identity,
     feed_revision_id,
     fetch_managed_price_feed,
+    is_feed_commodity,
     observed_instant,
     validate_managed_price_text,
 )
@@ -130,6 +131,11 @@ def _read_blob(directory: Path, revision: str) -> PriceFeedBlob | None:
             # so the next refresh fetches in full (no ETag) and heals it.
             return None
         feed = raw["feed"]
+        if not (is_feed_commodity(feed["commodity"]) and is_feed_commodity(feed["quote"])):
+            # Validated under the looser grammar before w5/377 (`BTC-`): serving
+            # it breaks loads, and its pair would refuse the corrected feed.
+            # Treat it as missing so the next refresh replaces it.
+            return None
         blob = PriceFeedBlob(
             url=raw["url"],
             revision=raw["revision"],

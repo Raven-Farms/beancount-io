@@ -8,6 +8,7 @@ suite.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import stat
@@ -492,6 +493,13 @@ class TestManagedPriceValidation:
             ('include "other.bean"', "only price directives"),
             ("2026-09-10 price BTC 0 USD", "finite positive decimal"),
             ("2026-09-10 price BTC 0.00 USD", "finite positive decimal"),
+            # Beancount reads `BTC-` as `BTC` and a minus sign (a negative
+            # price), and `BTC.`/`BTC_`/`BTC'`/`USD-` as invalid tokens (w5/377).
+            ("2026-09-10 price BTC- 100000 USD", "only price directives"),
+            ("2026-09-10 price BTC. 100000 USD", "only price directives"),
+            ("2026-09-10 price BTC_ 100000 USD", "only price directives"),
+            ("2026-09-10 price BTC' 100000 USD", "only price directives"),
+            ("2026-09-10 price BTC 100000 USD-", "only price directives"),
             ("2026-09-10 price USD 5 USD", "quotes USD in itself"),
             ("2026-13-10 price BTC 5 USD", "invalid date 2026-13-10"),
             ("2026-02-30 price BTC 5 USD", "invalid date 2026-02-30"),
@@ -658,6 +666,28 @@ def _resolve(
 
 
 class TestFeedCache:
+    def test_a_revision_cached_under_the_looser_grammar_is_replaced(self, feed_server: str, tmp_path: Path) -> None:
+        """A `BTC-` revision cached before w5/377 neither serves nor pins its pair."""
+        now = time.time()
+        first = _resolve(feed_server, tmp_path, now=now)
+        directory = feed_dir(f"{feed_server}/prices/BTC-USD", tmp_path)
+        bad = FEED.replace("price BTC ", "price BTC- ")
+        (directory / "r1.beancount").write_text(bad)
+        meta = json.loads((directory / "r1.json").read_text())
+        meta["feed"]["commodity"] = "BTC-"
+        meta["sha256"] = hashlib.sha256(bad.encode("utf-8")).hexdigest()
+        (directory / "r1.json").write_text(json.dumps(meta))
+        _FeedHandler.routes["/prices/BTC-USD"].pop("etag_match")
+
+        # Inside the refresh window the bad revision used to be served as is.
+        resolved = _resolve(feed_server, tmp_path, now=now + 1)
+
+        assert resolved.blob is not None
+        assert resolved.blob.feed.commodity == "BTC"
+        assert resolved.blob.text == FEED
+        assert resolved.head.last_error is None
+        assert first.blob is not None and resolved.blob.revision == first.blob.revision
+
     def test_first_fetch_writes_blob_and_head(self, feed_server: str, tmp_path: Path) -> None:
         now = time.time()
         resolved = _resolve(feed_server, tmp_path, now=now)
