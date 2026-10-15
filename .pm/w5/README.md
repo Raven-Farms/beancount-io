@@ -35,7 +35,6 @@
 
 ## Inbox
 
-- [313 — `SELECT accounts … GROUP BY 1` still crashes with `issubclass` TypeError](./313.md) — CLI QA 2026-10-14
 - [314 — BQL `parse_date('x')` / date overflow exit 1 "validation" with class names](./314.md) — CLI QA 2026-10-14
 - [315 — `$NAME` in the ledger path: reads load the env-expanded file, writes the literal one](./315.md) — CLI QA 2026-10-14
 - [316 — `price export` copies private ledgers/receipts world-readable](./316.md) — CLI QA 2026-10-14
