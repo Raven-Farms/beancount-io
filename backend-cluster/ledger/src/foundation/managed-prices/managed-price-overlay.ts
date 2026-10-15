@@ -70,8 +70,14 @@ export const MANAGED_PRICE_PLACEHOLDER =
 const SHADOWED_LINE = "; shadowed by a ledger-authored price for the same date";
 // Ledger dates may be spelled `YYYY-M-D` or `YYYY/M/D` (mixed separators, one
 // or two digit month and day); feed dates are always ISO, so normalise first.
+// The amount is any number expression (`90000 * 1`, `(90000 + 0)`), so it
+// runs up to the quote commodity rather than to the first space (w5/378).
 const LEDGER_PRICE_RE =
-  /^([0-9]{4})[-/]([0-9]{1,2})[-/]([0-9]{1,2})[ \t]+price[ \t]+([A-Z][A-Z0-9'._-]*)[ \t]+\S+[ \t]+([A-Z][A-Z0-9'._-]*)/gmu;
+  /^([0-9]{4})[-/]([0-9]{1,2})[-/]([0-9]{1,2})[ \t]+price[ \t]+([A-Z](?:[A-Z0-9'._-]*[A-Z0-9])?)[ \t]+[-+*/(),.0-9 \t]+?([A-Z](?:[A-Z0-9'._-]*[A-Z0-9])?)(?![A-Za-z0-9'._-])/gmu;
+// What Beancount's lexer reads as one token before a line could start: a
+// string, which may span lines, and a comment, which may hold a `"`. A
+// price-shaped line inside a multi-line note is not a price (w5/378).
+const STRING_OR_COMMENT_RE = /"(?:[^"\\]|\\.)*"|;[^\n]*/gu;
 const METADATA_LINE_RE = /^[ \t]+[a-z][A-Za-z0-9_-]*\s*:/u;
 
 const pairKey = (date: string, base: string, quote: string): string =>
@@ -88,7 +94,12 @@ export function collectLedgerPricePairs(
 ): Set<string> {
   const pairs = new Set<string>();
   for (const path of paths) {
-    for (const match of (files[path] ?? "").matchAll(LEDGER_PRICE_RE)) {
+    // Each string collapses to one character, newlines and all, so none of
+    // its lines can be read as the start of a directive.
+    const directives = (files[path] ?? "").replace(STRING_OR_COMMENT_RE, (token) =>
+      token.startsWith('"') ? "x" : token,
+    );
+    for (const match of directives.matchAll(LEDGER_PRICE_RE)) {
       const [, year, month, day, base, quote] = match;
       const date = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
       // An impossible date is a parse error for the engine too: nothing to shadow.

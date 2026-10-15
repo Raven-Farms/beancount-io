@@ -255,6 +255,40 @@ describe("precedence helpers", () => {
     ]);
   });
 
+  // w5/378: any price the ledger authors shadows the feed; text inside a
+  // string never does. The CLI collector pins the same cases.
+  it.each(["90000", "90000 * 1", "(90000 + 0)", "180000 / 2", "90,000.00"])(
+    "reads a price whose amount is the expression %s",
+    (amount) => {
+      const pairs = collectLedgerPricePairs(
+        { "a.bean": `2026-01-10 price BTC ${amount} USD\n` },
+        ["a.bean"],
+      );
+      expect([...pairs]).toEqual(["2026-01-10\0BTC\0USD"]);
+    },
+  );
+
+  it.each([
+    [
+      "a price-shaped line inside a multi-line string",
+      '2026-01-09 note Assets:Crypto "pasted:\n2026-01-10 price BTC 1 USD\nend"\n',
+      [],
+    ],
+    [
+      "a quote inside a comment",
+      '; she said "hold\n2026-01-10 price BTC 90000 USD\n',
+      ["2026-01-10\0BTC\0USD"],
+    ],
+    [
+      "an escaped quote inside a string",
+      '2026-01-09 note Assets:Crypto "a \\" b\n2026-01-10 price BTC 1 USD\n"\n2026-01-11 price BTC 2 USD\n',
+      ["2026-01-11\0BTC\0USD"],
+    ],
+  ])("reads only directives around %s", (_label, text, expected) => {
+    const pairs = collectLedgerPricePairs({ "a.bean": text }, ["a.bean"]);
+    expect([...pairs]).toEqual(expected);
+  });
+
   it("normalises slash and unpadded ledger dates and skips impossible ones (w1/163)", () => {
     const pairs = collectLedgerPricePairs(
       {

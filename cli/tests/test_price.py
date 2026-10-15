@@ -2688,6 +2688,44 @@ class TestObservedAtInstants:
         assert resolved.blob.feed.latest_observed_at == _stamp(now - 60)
 
 
+class TestLedgerPriceDetection:
+    """w5/378: any price the ledger authors shadows the feed; text in a string never does."""
+
+    @pytest.mark.parametrize("amount", ["90000", "90000 * 1", "(90000 + 0)", "180000 / 2", "90,000.00"])
+    def test_every_number_expression_is_an_authored_price(self, amount: str) -> None:
+        assert collect_ledger_price_pairs(f"2026-01-10 price BTC {amount} USD\n") == {("2026-01-10", "BTC", "USD")}
+
+    def test_a_price_shaped_line_inside_a_multi_line_string_is_not_a_price(self) -> None:
+        text = '2026-01-09 note Assets:Crypto "pasted:\n2026-01-10 price BTC 1 USD\nend"\n'
+
+        assert collect_ledger_price_pairs(text) == set()
+
+    def test_a_quote_in_a_comment_does_not_hide_the_next_price(self) -> None:
+        text = '; she said "hold\n2026-01-10 price BTC 90000 USD\n'
+
+        assert collect_ledger_price_pairs(text) == {("2026-01-10", "BTC", "USD")}
+
+    def test_an_escaped_quote_does_not_end_the_string(self) -> None:
+        text = '2026-01-09 note Assets:Crypto "a \\" b\n2026-01-10 price BTC 1 USD\n"\n2026-01-11 price BTC 2 USD\n'
+
+        assert collect_ledger_price_pairs(text) == {("2026-01-11", "BTC", "USD")}
+
+    def test_an_arithmetic_price_shadows_the_feed_point(self, feed_server: str, tmp_path: Path) -> None:
+        loaded = _load(feed_server, tmp_path, _managed_ledger(feed_server) + "2026-09-10 price BTC 90000 * 1 USD\n")
+
+        assert loaded.errors == []
+        assert _price_numbers(loaded) == ["113500.50", "90000"]
+        assert loaded.sources[0].shadowed_count == 1
+
+    def test_a_price_inside_a_note_leaves_the_feed_point(self, feed_server: str, tmp_path: Path) -> None:
+        note = '2026-09-09 note Assets:Broker "pasted:\n2026-09-10 price BTC 1 USD\n"\n'
+        loaded = _load(feed_server, tmp_path, _managed_ledger(feed_server) + note)
+
+        assert loaded.errors == []
+        assert loaded.sources[0].shadowed_count == 0
+        assert loaded.sources[0].effective_dates == ("2026-09-10", "2026-09-11")
+
+
 class TestLedgerPriceDateSpellings:
     """w1/163: a ledger price wins however Beancount lets it spell the date."""
 

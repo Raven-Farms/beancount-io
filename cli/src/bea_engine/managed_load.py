@@ -79,11 +79,18 @@ STRICT_ENV = "MANAGED_PRICE_STRICT"
 # Beancount spells a date `YYYY-M-D` or `YYYY/M/D` (mixed separators, one or
 # two digit month and day); feed dates are always ISO, so normalise before
 # comparing.
+# The amount is any number expression (`90000 * 1`, `(90000 + 0)`), so it
+# runs up to the quote commodity rather than to the first space (w5/378).
+_LEDGER_COMMODITY = r"[A-Z](?:[A-Z0-9'._-]*[A-Z0-9])?"
 _LEDGER_PRICE_RE = re.compile(
-    r"^([0-9]{4})[-/]([0-9]{1,2})[-/]([0-9]{1,2})[ \t]+price[ \t]+([A-Z][A-Z0-9'._-]*)[ \t]+\S+[ \t]+"
-    r"([A-Z][A-Z0-9'._-]*)",
+    rf"^([0-9]{{4}})[-/]([0-9]{{1,2}})[-/]([0-9]{{1,2}})[ \t]+price[ \t]+({_LEDGER_COMMODITY})[ \t]+"
+    rf"[-+*/(),.0-9 \t]+?({_LEDGER_COMMODITY})(?![A-Za-z0-9'._-])",
     re.MULTILINE,
 )
+# What Beancount's lexer reads as one token before a line could start: a
+# string, which may span lines, and a comment, which may hold a `"`. A
+# price-shaped line inside a multi-line note is not a price (w5/378).
+_STRING_OR_COMMENT_RE = re.compile(r'"(?:[^"\\]|\\.)*"|;[^\n]*')
 _METADATA_LINE_RE = re.compile(r"^[ \t]+[a-z][A-Za-z0-9_-]*\s*:")
 _SHADOWED_LINE = "; shadowed by a ledger-authored price for the same date"
 _ALREADY_INCLUDED_LINE = "; managed price feed already included from another file"
@@ -145,7 +152,10 @@ def collect_ledger_price_pairs(*texts: str) -> set[tuple[str, str, str]]:
     """
     pairs: set[tuple[str, str, str]] = set()
     for text in texts:
-        for match in _LEDGER_PRICE_RE.finditer(text):
+        # Each string collapses to one character, newlines and all, so none
+        # of its lines can be read as the start of a directive.
+        directives = _STRING_OR_COMMENT_RE.sub(lambda m: "x" if m.group(0).startswith('"') else m.group(0), text)
+        for match in _LEDGER_PRICE_RE.finditer(directives):
             year, month, day, base, quote = match.groups()
             try:
                 when = date(int(year), int(month), int(day))
