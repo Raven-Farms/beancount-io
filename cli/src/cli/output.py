@@ -699,7 +699,11 @@ def forwarded_option(args: Sequence[str], short: str, long: str, *, flags: str =
                     index += 2
                     continue
         index += 1
-    return value or None
+    if value is not None and not value.strip():
+        # `return value or None` read `-o ''` as "no option": the guards were
+        # skipped and upstream failed to open '' (w5/389).
+        raise UsageError(f"{long} {value!r} is empty; name a path, or omit {long}.")
+    return value
 
 
 def guard_forwarded_output(
