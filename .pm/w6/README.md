@@ -44,3 +44,5 @@
 - [028](./blocked/028.md) — Preserve negative SPLITCOMP component indices (minor; ledger; 35–50m after upstream support) — **blocked:** needs a published signed-index WASM implementation.
 
 - [029](./blocked/029.md) — Preserve Beanquery SUBST replacement semantics (minor; ledger; 35–50m after upstream support) — **blocked:** needs a compatible published WASM replacement implementation.
+
+- [030](./030.md) — Keep conversion strategies out of empty income and overview currency labels (minor; backend-v2; 45–60m).
