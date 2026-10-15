@@ -228,6 +228,28 @@ const skCommon: Record<string, TranslationEntry> = {
     message: "Ostatné",
     description: "Table column header for other currencies/amounts",
   },
+  "common.authorizationLinkInvalid": {
+    message: "Odkaz na prihlásenie je neúplný",
+    description:
+      "Title of the 404 page for a malformed or expired OAuth authorization link",
+  },
+  "common.authorizationLinkInvalidDescription": {
+    message:
+      "V tomto autorizačnom odkaze chýbajú údaje alebo jeho platnosť vypršala. Začnite znova v aplikácii alebo službe, ktorá vás sem poslala.",
+    description:
+      "Explanation on the 404 page for a malformed or expired OAuth authorization link",
+  },
+  "common.attachmentUnavailable": {
+    message: "Príloha nie je dostupná",
+    description:
+      "Title of the 404 page for a ledger attachment link that is missing or not accessible",
+  },
+  "common.attachmentUnavailableDescription": {
+    message:
+      "Tento súbor nie je v účtovnej knihe alebo k nemu nemáte prístup. Otvorte účtovnú knihu a nájdite jej aktuálne prílohy.",
+    description:
+      "Explanation on the 404 page for a ledger attachment link that is missing or not accessible",
+  },
   "common.pageNotFound": {
     message: "Stránka nenájdená",
     description: "Title for 404 page",

@@ -9,6 +9,21 @@ import { PageSEO } from "@/common/components/seo/page-seo";
  * Displays a modern and clean error page when a route is not found
  */
 export default function NotFoundPage() {
+  return (
+    <NotFoundView
+      titleKey="common.pageNotFound"
+      descriptionKey="common.pageNotFoundDescription"
+    />
+  );
+}
+
+function NotFoundView({
+  titleKey,
+  descriptionKey,
+}: {
+  titleKey: string;
+  descriptionKey: string;
+}) {
   const { t } = useTranslations();
 
   const handleGoBack = () => {
@@ -30,10 +45,10 @@ export default function NotFoundPage() {
               404
             </h1>
             <h2 className="text-3xl font-semibold text-foreground">
-              {t("common.pageNotFound")}
+              {t(titleKey)}
             </h2>
             <p className="text-lg text-muted-foreground max-w-md mx-auto">
-              {t("common.pageNotFoundDescription")}
+              {t(descriptionKey)}
             </p>
           </div>
 
@@ -63,5 +78,25 @@ export default function NotFoundPage() {
         </div>
       </main>
     </>
+  );
+}
+
+/** 404 for an OAuth link whose authorization parameters are missing or malformed. */
+export function InvalidAuthorizationLinkPage() {
+  return (
+    <NotFoundView
+      titleKey="common.authorizationLinkInvalid"
+      descriptionKey="common.authorizationLinkInvalidDescription"
+    />
+  );
+}
+
+/** 404 for a ledger attachment link whose ledger or file is unavailable. */
+export function AttachmentUnavailablePage() {
+  return (
+    <NotFoundView
+      titleKey="common.attachmentUnavailable"
+      descriptionKey="common.attachmentUnavailableDescription"
+    />
   );
 }

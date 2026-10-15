@@ -228,6 +228,28 @@ const faCommon: Record<string, TranslationEntry> = {
     message: "سایر",
     description: "Table column header for other currencies/amounts",
   },
+  "common.authorizationLinkInvalid": {
+    message: "پیوند ورود ناقص است",
+    description:
+      "Title of the 404 page for a malformed or expired OAuth authorization link",
+  },
+  "common.authorizationLinkInvalidDescription": {
+    message:
+      "این پیوند مجوز اطلاعات کافی ندارد یا منقضی شده است. دوباره از برنامه یا سرویسی که شما را به اینجا فرستاد شروع کنید.",
+    description:
+      "Explanation on the 404 page for a malformed or expired OAuth authorization link",
+  },
+  "common.attachmentUnavailable": {
+    message: "پیوست در دسترس نیست",
+    description:
+      "Title of the 404 page for a ledger attachment link that is missing or not accessible",
+  },
+  "common.attachmentUnavailableDescription": {
+    message:
+      "این فایل در دفتر نیست یا به آن دسترسی ندارید. دفتر را باز کنید تا پیوست‌های فعلی آن را پیدا کنید.",
+    description:
+      "Explanation on the 404 page for a ledger attachment link that is missing or not accessible",
+  },
   "common.pageNotFound": {
     message: "صفحه یافت نشد",
     description: "Title for 404 page",

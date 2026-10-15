@@ -228,6 +228,28 @@ const jaCommon: Record<string, TranslationEntry> = {
     message: "その他",
     description: "Table column header for other currencies/amounts",
   },
+  "common.authorizationLinkInvalid": {
+    message: "サインインリンクが不完全です",
+    description:
+      "Title of the 404 page for a malformed or expired OAuth authorization link",
+  },
+  "common.authorizationLinkInvalidDescription": {
+    message:
+      "この認可リンクには情報が不足しているか、有効期限が切れています。ここに案内したアプリまたはサービスからやり直してください。",
+    description:
+      "Explanation on the 404 page for a malformed or expired OAuth authorization link",
+  },
+  "common.attachmentUnavailable": {
+    message: "添付ファイルを利用できません",
+    description:
+      "Title of the 404 page for a ledger attachment link that is missing or not accessible",
+  },
+  "common.attachmentUnavailableDescription": {
+    message:
+      "このファイルは台帳にないか、アクセス権がありません。台帳を開いて現在の添付ファイルを確認してください。",
+    description:
+      "Explanation on the 404 page for a ledger attachment link that is missing or not accessible",
+  },
   "common.pageNotFound": {
     message: "ページが見つかりません",
     description: "Title for 404 page",

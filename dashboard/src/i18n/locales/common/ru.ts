@@ -228,6 +228,28 @@ const ruCommon: Record<string, TranslationEntry> = {
     message: "Прочее",
     description: "Table column header for other currencies/amounts",
   },
+  "common.authorizationLinkInvalid": {
+    message: "Ссылка для входа неполная",
+    description:
+      "Title of the 404 page for a malformed or expired OAuth authorization link",
+  },
+  "common.authorizationLinkInvalidDescription": {
+    message:
+      "В этой ссылке авторизации не хватает данных, или срок её действия истёк. Начните заново из приложения или сервиса, который вас сюда направил.",
+    description:
+      "Explanation on the 404 page for a malformed or expired OAuth authorization link",
+  },
+  "common.attachmentUnavailable": {
+    message: "Вложение недоступно",
+    description:
+      "Title of the 404 page for a ledger attachment link that is missing or not accessible",
+  },
+  "common.attachmentUnavailableDescription": {
+    message:
+      "Этого файла нет в книге, или у вас нет к нему доступа. Откройте книгу, чтобы найти её текущие вложения.",
+    description:
+      "Explanation on the 404 page for a ledger attachment link that is missing or not accessible",
+  },
   "common.pageNotFound": {
     message: "Страница не найдена",
     description: "Title for 404 page",

@@ -228,6 +228,28 @@ const nlCommon: Record<string, TranslationEntry> = {
     message: "Overige",
     description: "Table column header for other currencies/amounts",
   },
+  "common.authorizationLinkInvalid": {
+    message: "Aanmeldlink onvolledig",
+    description:
+      "Title of the 404 page for a malformed or expired OAuth authorization link",
+  },
+  "common.authorizationLinkInvalidDescription": {
+    message:
+      "Deze autorisatielink mist gegevens of is verlopen. Begin opnieuw vanuit de app of dienst die je hierheen stuurde.",
+    description:
+      "Explanation on the 404 page for a malformed or expired OAuth authorization link",
+  },
+  "common.attachmentUnavailable": {
+    message: "Bijlage niet beschikbaar",
+    description:
+      "Title of the 404 page for a ledger attachment link that is missing or not accessible",
+  },
+  "common.attachmentUnavailableDescription": {
+    message:
+      "Dit bestand staat niet in het grootboek of je hebt er geen toegang toe. Open het grootboek om de huidige bijlagen te vinden.",
+    description:
+      "Explanation on the 404 page for a ledger attachment link that is missing or not accessible",
+  },
   "common.pageNotFound": {
     message: "Pagina niet gevonden",
     description: "Title for 404 page",

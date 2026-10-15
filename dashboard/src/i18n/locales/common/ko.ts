@@ -228,6 +228,28 @@ const koCommon: Record<string, TranslationEntry> = {
     message: "기타",
     description: "Table column header for other currencies/amounts",
   },
+  "common.authorizationLinkInvalid": {
+    message: "로그인 링크가 불완전합니다",
+    description:
+      "Title of the 404 page for a malformed or expired OAuth authorization link",
+  },
+  "common.authorizationLinkInvalidDescription": {
+    message:
+      "이 인증 링크에 정보가 빠져 있거나 만료되었습니다. 이곳으로 안내한 앱이나 서비스에서 다시 시작하세요.",
+    description:
+      "Explanation on the 404 page for a malformed or expired OAuth authorization link",
+  },
+  "common.attachmentUnavailable": {
+    message: "첨부 파일을 사용할 수 없습니다",
+    description:
+      "Title of the 404 page for a ledger attachment link that is missing or not accessible",
+  },
+  "common.attachmentUnavailableDescription": {
+    message:
+      "이 파일은 원장에 없거나 접근 권한이 없습니다. 원장을 열어 현재 첨부 파일을 확인하세요.",
+    description:
+      "Explanation on the 404 page for a ledger attachment link that is missing or not accessible",
+  },
   "common.pageNotFound": {
     message: "페이지를 찾을 수 없습니다",
     description: "Title for 404 page",

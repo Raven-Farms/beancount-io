@@ -228,6 +228,28 @@ const ukCommon: Record<string, TranslationEntry> = {
     message: "Інше",
     description: "Table column header for other currencies/amounts",
   },
+  "common.authorizationLinkInvalid": {
+    message: "Посилання для входу неповне",
+    description:
+      "Title of the 404 page for a malformed or expired OAuth authorization link",
+  },
+  "common.authorizationLinkInvalidDescription": {
+    message:
+      "У цьому посиланні авторизації бракує даних, або його термін дії минув. Почніть знову з програми чи сервісу, що вас сюди надіслали.",
+    description:
+      "Explanation on the 404 page for a malformed or expired OAuth authorization link",
+  },
+  "common.attachmentUnavailable": {
+    message: "Вкладення недоступне",
+    description:
+      "Title of the 404 page for a ledger attachment link that is missing or not accessible",
+  },
+  "common.attachmentUnavailableDescription": {
+    message:
+      "Цього файлу немає в книзі, або ви не маєте до нього доступу. Відкрийте книгу, щоб знайти її поточні вкладення.",
+    description:
+      "Explanation on the 404 page for a ledger attachment link that is missing or not accessible",
+  },
   "common.pageNotFound": {
     message: "Сторінку не знайдено",
     description: "Title for 404 page",

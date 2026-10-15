@@ -228,6 +228,28 @@ const deCommon: Record<string, TranslationEntry> = {
     message: "Sonstige",
     description: "Table column header for other currencies/amounts",
   },
+  "common.authorizationLinkInvalid": {
+    message: "Anmeldelink unvollständig",
+    description:
+      "Title of the 404 page for a malformed or expired OAuth authorization link",
+  },
+  "common.authorizationLinkInvalidDescription": {
+    message:
+      "Diesem Autorisierungslink fehlen Angaben oder er ist abgelaufen. Beginnen Sie erneut in der App oder dem Dienst, der Sie hierher geschickt hat.",
+    description:
+      "Explanation on the 404 page for a malformed or expired OAuth authorization link",
+  },
+  "common.attachmentUnavailable": {
+    message: "Anhang nicht verfügbar",
+    description:
+      "Title of the 404 page for a ledger attachment link that is missing or not accessible",
+  },
+  "common.attachmentUnavailableDescription": {
+    message:
+      "Diese Datei ist nicht im Hauptbuch oder Sie haben keinen Zugriff darauf. Öffnen Sie das Hauptbuch, um seine aktuellen Anhänge zu finden.",
+    description:
+      "Explanation on the 404 page for a ledger attachment link that is missing or not accessible",
+  },
   "common.pageNotFound": {
     message: "Seite nicht gefunden",
     description: "Title for 404 page",

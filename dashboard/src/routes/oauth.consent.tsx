@@ -1,4 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, notFound } from "@tanstack/react-router";
+import { InvalidAuthorizationLinkPage } from "@/common/root-route/not-found-page";
 import { z } from "zod";
 import OAuthConsentPage from "@/features/oauth/pages/consent";
 import { handleConsentPost } from "@/features/oauth/funcs/handle-consent-post";
@@ -11,7 +12,21 @@ const searchSchema = z.object({
 });
 
 export const Route = createFileRoute("/oauth/consent")({
-  validateSearch: searchSchema,
+  // A malformed or truncated authorization link is a client error: answer
+  // 404 with the sign-in-link page instead of a 500 "unexpected error"
+  // (w0/018).
+  validateSearch: (search: Record<string, unknown>) => {
+    const parsed = searchSchema.safeParse(search);
+    // An empty uid marks the link invalid; `beforeLoad` turns it into the
+    // 404 (a throw here would surface as a 500 search error).
+    return parsed.success
+      ? parsed.data
+      : ({ uid: "" } as unknown as z.infer<typeof searchSchema>);
+  },
+  beforeLoad: ({ search }) => {
+    if (!search.uid) throw notFound();
+  },
+  notFoundComponent: InvalidAuthorizationLinkPage,
   component: OAuthConsentPage,
   loader: oauthConsentLoader,
   head: createNoIndexHead,

@@ -228,6 +228,28 @@ const frCommon: Record<string, TranslationEntry> = {
     message: "Autre",
     description: "Table column header for other currencies/amounts",
   },
+  "common.authorizationLinkInvalid": {
+    message: "Lien de connexion incomplet",
+    description:
+      "Title of the 404 page for a malformed or expired OAuth authorization link",
+  },
+  "common.authorizationLinkInvalidDescription": {
+    message:
+      "Il manque des informations à ce lien d'autorisation ou il a expiré. Recommencez depuis l'application ou le service qui vous a envoyé ici.",
+    description:
+      "Explanation on the 404 page for a malformed or expired OAuth authorization link",
+  },
+  "common.attachmentUnavailable": {
+    message: "Pièce jointe indisponible",
+    description:
+      "Title of the 404 page for a ledger attachment link that is missing or not accessible",
+  },
+  "common.attachmentUnavailableDescription": {
+    message:
+      "Ce fichier n'est pas dans le registre ou vous n'y avez pas accès. Ouvrez le registre pour trouver ses pièces jointes actuelles.",
+    description:
+      "Explanation on the 404 page for a ledger attachment link that is missing or not accessible",
+  },
   "common.pageNotFound": {
     message: "Page non trouvée",
     description: "Title for 404 page",

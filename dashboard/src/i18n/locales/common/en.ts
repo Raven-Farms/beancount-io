@@ -227,6 +227,28 @@ const enCommon: Record<string, TranslationEntry> = {
     message: "Other",
     description: "Table column header for other currencies/amounts",
   },
+  "common.authorizationLinkInvalid": {
+    message: "Sign-in link incomplete",
+    description:
+      "Title of the 404 page for a malformed or expired OAuth authorization link",
+  },
+  "common.authorizationLinkInvalidDescription": {
+    message:
+      "This authorization link is missing information or has expired. Start again from the app or service that sent you here.",
+    description:
+      "Explanation on the 404 page for a malformed or expired OAuth authorization link",
+  },
+  "common.attachmentUnavailable": {
+    message: "Attachment unavailable",
+    description:
+      "Title of the 404 page for a ledger attachment link that is missing or not accessible",
+  },
+  "common.attachmentUnavailableDescription": {
+    message:
+      "This file is not in the ledger, or you don't have access to it. Open the ledger to find its current attachments.",
+    description:
+      "Explanation on the 404 page for a ledger attachment link that is missing or not accessible",
+  },
   "common.pageNotFound": {
     message: "Page not found",
     description: "Title for 404 page",

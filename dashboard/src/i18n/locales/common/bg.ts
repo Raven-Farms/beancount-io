@@ -228,6 +228,28 @@ const bgCommon: Record<string, TranslationEntry> = {
     message: "Други",
     description: "Table column header for other currencies/amounts",
   },
+  "common.authorizationLinkInvalid": {
+    message: "Непълна връзка за вход",
+    description:
+      "Title of the 404 page for a malformed or expired OAuth authorization link",
+  },
+  "common.authorizationLinkInvalidDescription": {
+    message:
+      "Тази връзка за упълномощаване е непълна или е изтекла. Започнете отново от приложението или услугата, която ви изпрати тук.",
+    description:
+      "Explanation on the 404 page for a malformed or expired OAuth authorization link",
+  },
+  "common.attachmentUnavailable": {
+    message: "Прикаченият файл не е наличен",
+    description:
+      "Title of the 404 page for a ledger attachment link that is missing or not accessible",
+  },
+  "common.attachmentUnavailableDescription": {
+    message:
+      "Този файл не е в книгата или нямате достъп до него. Отворете книгата, за да намерите текущите ѝ прикачени файлове.",
+    description:
+      "Explanation on the 404 page for a ledger attachment link that is missing or not accessible",
+  },
   "common.pageNotFound": {
     message: "Страницата не е намерена",
     description: "Title for 404 page",

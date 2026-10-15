@@ -224,6 +224,27 @@ const zhCommon: Record<string, TranslationEntry> = {
     message: "其他",
     description: "Table column header for other currencies/amounts",
   },
+  "common.authorizationLinkInvalid": {
+    message: "登录链接不完整",
+    description:
+      "Title of the 404 page for a malformed or expired OAuth authorization link",
+  },
+  "common.authorizationLinkInvalidDescription": {
+    message:
+      "此授权链接缺少信息或已过期。请从将你带到这里的应用或服务重新开始。",
+    description:
+      "Explanation on the 404 page for a malformed or expired OAuth authorization link",
+  },
+  "common.attachmentUnavailable": {
+    message: "附件不可用",
+    description:
+      "Title of the 404 page for a ledger attachment link that is missing or not accessible",
+  },
+  "common.attachmentUnavailableDescription": {
+    message: "此文件不在账本中，或你没有访问权限。请打开账本查看当前的附件。",
+    description:
+      "Explanation on the 404 page for a ledger attachment link that is missing or not accessible",
+  },
   "common.pageNotFound": {
     message: "页面未找到",
     description: "Title for 404 page",

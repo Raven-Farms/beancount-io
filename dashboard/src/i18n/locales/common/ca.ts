@@ -228,6 +228,28 @@ const caCommon: Record<string, TranslationEntry> = {
     message: "Altres",
     description: "Table column header for other currencies/amounts",
   },
+  "common.authorizationLinkInvalid": {
+    message: "Enllaç d'inici de sessió incomplet",
+    description:
+      "Title of the 404 page for a malformed or expired OAuth authorization link",
+  },
+  "common.authorizationLinkInvalidDescription": {
+    message:
+      "A aquest enllaç d'autorització li falta informació o ha caducat. Torneu a començar des de l'aplicació o el servei que us hi ha enviat.",
+    description:
+      "Explanation on the 404 page for a malformed or expired OAuth authorization link",
+  },
+  "common.attachmentUnavailable": {
+    message: "Fitxer adjunt no disponible",
+    description:
+      "Title of the 404 page for a ledger attachment link that is missing or not accessible",
+  },
+  "common.attachmentUnavailableDescription": {
+    message:
+      "Aquest fitxer no és al llibre o no hi teniu accés. Obriu el llibre per trobar-ne els fitxers adjunts actuals.",
+    description:
+      "Explanation on the 404 page for a ledger attachment link that is missing or not accessible",
+  },
   "common.pageNotFound": {
     message: "Pàgina no trobada",
     description: "Title for 404 page",

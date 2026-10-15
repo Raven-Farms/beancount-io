@@ -12,7 +12,6 @@
 
 ## Inbox
 
-- [018](./018.md) — Answer missing receipt assets and malformed OAuth links with 404/400, not a 500 "unexpected error" (minor; dashboard; 45–60m).
 - [019](./019.md) — Tell `bea login` users their device code is unknown or expired, not "information provided is invalid" (minor; dashboard; 20–30m).
 - [020](./020.md) — Name the header filter that failed to parse on reports and Journal (minor; dashboard; 45–60m).
 - [021](./021.md) — Pluralize the profile follower count and call ledgers "ledgers" on profiles (minor; dashboard; 30–40m).
