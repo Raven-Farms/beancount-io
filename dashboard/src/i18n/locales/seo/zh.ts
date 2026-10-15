@@ -264,6 +264,14 @@ const zhSeo: Record<string, TranslationEntry> = {
     message: "管理银行连接 - {ledgerName}",
     description: "Plaid connections management page title with ledger name",
   },
+  "seo.ledgerReceipt.description": {
+    message: "上传收据图片或 PDF，将交易记录到你的账本 — {ledgerName}",
+    description: "Upload Receipt page meta description",
+  },
+  "seo.ledgerReceipt.title": {
+    message: "上传收据 - {ledgerName}",
+    description: "Upload Receipt page title with ledger name",
+  },
   "seo.ledgerQuery.description": {
     message: "使用BQL语法查询{ledgerName}。运行自定义查询并分析你的财务数据。",
     description: "BQL query page meta description",

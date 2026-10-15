@@ -283,6 +283,15 @@ const nlSeo: Record<string, TranslationEntry> = {
     message: "Bankkoppelingen beheren - {ledgerName}",
     description: "Plaid connections management page title with ledger name",
   },
+  "seo.ledgerReceipt.description": {
+    message:
+      "Upload een afbeelding of PDF van een bon om een transactie in je grootboek vast te leggen — {ledgerName}",
+    description: "Upload Receipt page meta description",
+  },
+  "seo.ledgerReceipt.title": {
+    message: "Bon uploaden - {ledgerName}",
+    description: "Upload Receipt page title with ledger name",
+  },
   "seo.ledgerQuery.description": {
     message:
       "Bevraag {ledgerName} met BQL-syntax. Voer aangepaste queries uit en analyseer uw financiële gegevens.",

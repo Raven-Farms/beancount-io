@@ -215,6 +215,15 @@ const koSeo: Record<string, TranslationEntry> = {
     message: "개요 - {ledgerName}",
     description: "Ledger overview page title with ledger name",
   },
+  "seo.ledgerReceipt.description": {
+    message:
+      "영수증 이미지 또는 PDF를 업로드하여 장부에 거래를 기록하세요 — {ledgerName}",
+    description: "Upload Receipt page meta description",
+  },
+  "seo.ledgerReceipt.title": {
+    message: "영수증 업로드 - {ledgerName}",
+    description: "Upload Receipt page title with ledger name",
+  },
   "seo.ledgerQuery.description": {
     message:
       "BQL 구문으로 {ledgerName}을 조회합니다. 사용자 지정 쿼리를 실행하고 재무 데이터를 분석할 수 있습니다.",

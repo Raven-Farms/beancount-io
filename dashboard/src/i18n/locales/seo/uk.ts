@@ -283,6 +283,15 @@ const ukSeo: Record<string, TranslationEntry> = {
     message: "Керування банківськими підключеннями - {ledgerName}",
     description: "Plaid connections management page title with ledger name",
   },
+  "seo.ledgerReceipt.description": {
+    message:
+      "Завантажте зображення або PDF чека, щоб записати транзакцію у свою книгу — {ledgerName}",
+    description: "Upload Receipt page meta description",
+  },
+  "seo.ledgerReceipt.title": {
+    message: "Завантажити чек - {ledgerName}",
+    description: "Upload Receipt page title with ledger name",
+  },
   "seo.ledgerQuery.description": {
     message:
       "Запитайте {ledgerName} із синтаксисом BQL. Виконуйте власні запити та аналізуйте свої фінансові дані.",

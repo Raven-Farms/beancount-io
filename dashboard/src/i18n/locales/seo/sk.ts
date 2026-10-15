@@ -283,6 +283,15 @@ const skSeo: Record<string, TranslationEntry> = {
     message: "Správa bankových pripojení - {ledgerName}",
     description: "Plaid connections management page title with ledger name",
   },
+  "seo.ledgerReceipt.description": {
+    message:
+      "Nahrajte obrázok alebo PDF bločku a zaznamenajte transakciu do svojej knihy — {ledgerName}",
+    description: "Upload Receipt page meta description",
+  },
+  "seo.ledgerReceipt.title": {
+    message: "Nahrať bloček - {ledgerName}",
+    description: "Upload Receipt page title with ledger name",
+  },
   "seo.ledgerQuery.description": {
     message:
       "Dotazujte sa {ledgerName} so syntaxou BQL. Spúšťajte vlastné dopyty a analyzujte svoje finančné údaje.",

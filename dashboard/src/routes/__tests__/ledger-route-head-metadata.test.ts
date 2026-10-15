@@ -31,7 +31,12 @@ describe("ledger route head metadata", () => {
       const source = readFileSync(join(ROUTES_DIR, name), "utf8");
       if (isRedirectOnlyRoute(source)) continue;
       if (!/\bcomponent\s*:/.test(source)) continue;
-      if (!/\bhead\s*:/.test(source)) {
+      // A robots-only head (`createNoIndexHead`) emits no title, so the tab
+      // and history read the site name; it does not count as head metadata.
+      if (
+        !/\bhead\s*:/.test(source) ||
+        /\bhead\s*:\s*createNoIndexHead\b/.test(source)
+      ) {
         missing.push(name);
       }
     }

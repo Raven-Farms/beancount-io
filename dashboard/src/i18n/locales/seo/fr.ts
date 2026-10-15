@@ -283,6 +283,15 @@ const frSeo: Record<string, TranslationEntry> = {
     message: "Gérer les connexions bancaires - {ledgerName}",
     description: "Plaid connections management page title with ledger name",
   },
+  "seo.ledgerReceipt.description": {
+    message:
+      "Téléchargez une image ou un PDF de reçu pour enregistrer une transaction dans votre registre — {ledgerName}",
+    description: "Upload Receipt page meta description",
+  },
+  "seo.ledgerReceipt.title": {
+    message: "Télécharger un reçu - {ledgerName}",
+    description: "Upload Receipt page title with ledger name",
+  },
   "seo.ledgerQuery.description": {
     message:
       "Interrogez {ledgerName} avec la syntaxe BQL. Exécutez des requêtes personnalisées et analysez vos données financières.",

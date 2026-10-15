@@ -283,6 +283,15 @@ const bgSeo: Record<string, TranslationEntry> = {
     message: "Управление на банкови връзки - {ledgerName}",
     description: "Plaid connections management page title with ledger name",
   },
+  "seo.ledgerReceipt.description": {
+    message:
+      "Качете изображение или PDF на разписка, за да запишете транзакция в книгата си — {ledgerName}",
+    description: "Upload Receipt page meta description",
+  },
+  "seo.ledgerReceipt.title": {
+    message: "Качи разписка - {ledgerName}",
+    description: "Upload Receipt page title with ledger name",
+  },
   "seo.ledgerQuery.description": {
     message:
       "Запитайте {ledgerName} със синтаксис BQL. Изпълнявайте персонализирани заявки и анализирайте финансовите си данни.",

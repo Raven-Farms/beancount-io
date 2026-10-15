@@ -284,6 +284,15 @@ const deSeo: Record<string, TranslationEntry> = {
     message: "Bankverbindungen verwalten - {ledgerName}",
     description: "Plaid connections management page title with ledger name",
   },
+  "seo.ledgerReceipt.description": {
+    message:
+      "Laden Sie ein Belegbild oder PDF hoch, um eine Buchung in Ihrem Hauptbuch zu erfassen — {ledgerName}",
+    description: "Upload Receipt page meta description",
+  },
+  "seo.ledgerReceipt.title": {
+    message: "Beleg hochladen - {ledgerName}",
+    description: "Upload Receipt page title with ledger name",
+  },
   "seo.ledgerQuery.description": {
     message:
       "Fragen Sie {ledgerName} mit BQL-Syntax ab. Führen Sie benutzerdefinierte Abfragen aus und analysieren Sie Ihre Finanzdaten.",

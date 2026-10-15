@@ -282,6 +282,15 @@ const faSeo: Record<string, TranslationEntry> = {
     message: "مدیریت اتصال‌های بانکی - {ledgerName}",
     description: "Plaid connections management page title with ledger name",
   },
+  "seo.ledgerReceipt.description": {
+    message:
+      "تصویر یا PDF رسید را آپلود کنید تا تراکنشی در دفتر شما ثبت شود — {ledgerName}",
+    description: "Upload Receipt page meta description",
+  },
+  "seo.ledgerReceipt.title": {
+    message: "آپلود رسید - {ledgerName}",
+    description: "Upload Receipt page title with ledger name",
+  },
   "seo.ledgerQuery.description": {
     message:
       "{ledgerName} را با نحو BQL جستجو کنید. پرس‌وجوهای سفارشی را اجرا کنید و داده‌های مالی خود را تجزیه و تحلیل کنید.",

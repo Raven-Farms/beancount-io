@@ -283,6 +283,15 @@ const ruSeo: Record<string, TranslationEntry> = {
     message: "Управление банковскими подключениями - {ledgerName}",
     description: "Plaid connections management page title with ledger name",
   },
+  "seo.ledgerReceipt.description": {
+    message:
+      "Загрузите изображение или PDF чека, чтобы записать транзакцию в свою книгу — {ledgerName}",
+    description: "Upload Receipt page meta description",
+  },
+  "seo.ledgerReceipt.title": {
+    message: "Загрузить чек - {ledgerName}",
+    description: "Upload Receipt page title with ledger name",
+  },
   "seo.ledgerQuery.description": {
     message:
       "Запросите {ledgerName} с синтаксисом BQL. Выполняйте пользовательские запросы и анализируйте ваши финансовые данные.",

@@ -217,6 +217,15 @@ const enSeo: Record<string, TranslationEntry> = {
     message: "Overview - {ledgerName}",
     description: "Ledger overview page title with ledger name",
   },
+  "seo.ledgerReceipt.description": {
+    message:
+      "Upload a receipt image or PDF to record a transaction in your ledger — {ledgerName}",
+    description: "Upload Receipt page meta description",
+  },
+  "seo.ledgerReceipt.title": {
+    message: "Upload Receipt - {ledgerName}",
+    description: "Upload Receipt page title with ledger name",
+  },
   "seo.ledgerQuery.description": {
     message:
       "Query {ledgerName} with BQL syntax. Run custom queries and analyze your financial data.",

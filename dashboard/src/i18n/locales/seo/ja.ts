@@ -216,6 +216,15 @@ const jaSeo: Record<string, TranslationEntry> = {
     message: "概要 - {ledgerName}",
     description: "Ledger overview page title with ledger name",
   },
+  "seo.ledgerReceipt.description": {
+    message:
+      "レシートの画像またはPDFをアップロードして元帳に取引を記録する — {ledgerName}",
+    description: "Upload Receipt page meta description",
+  },
+  "seo.ledgerReceipt.title": {
+    message: "レシートをアップロード - {ledgerName}",
+    description: "Upload Receipt page title with ledger name",
+  },
   "seo.ledgerQuery.description": {
     message:
       "BQL構文で{ledgerName}を照会します。カスタムクエリを実行して財務データを分析できます。",

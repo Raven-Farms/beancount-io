@@ -283,6 +283,15 @@ const caSeo: Record<string, TranslationEntry> = {
     message: "Gestiona les connexions bancàries - {ledgerName}",
     description: "Plaid connections management page title with ledger name",
   },
+  "seo.ledgerReceipt.description": {
+    message:
+      "Puja una imatge o un PDF d'un rebut per registrar una transacció al teu llibre — {ledgerName}",
+    description: "Upload Receipt page meta description",
+  },
+  "seo.ledgerReceipt.title": {
+    message: "Pujar rebut - {ledgerName}",
+    description: "Upload Receipt page title with ledger name",
+  },
   "seo.ledgerQuery.description": {
     message:
       "Consulteu {ledgerName} amb sintaxi BQL. Executeu consultes personalitzades i analitzeu les vostres dades financeres.",
