@@ -302,12 +302,31 @@ def _redact_secrets(text: str) -> str:
     return re.sub(r"Bearer [^\s'\"]+", "Bearer [redacted]", redacted)
 
 
+class UnreadableSuccess(BeaError):
+    """A success status whose body bea could not read.
+
+    A read reports it like any other unreadable answer. A write most likely
+    took effect, so the write paths say the outcome is unknown instead: called
+    a plain failure, the natural retry hit 409 or 404 (w5/422).
+    """
+
+    def __init__(self, message: str, *, status: int, request_id: str | None = None) -> None:
+        super().__init__(message, request_id=request_id)
+        self.status = status
+
+
 def unknown_write_outcome(operation: str, exc: BaseException) -> ConflictError:
-    """A write that timed out or lost its connection: never retried automatically.
+    """A write that timed out, lost its connection, or got an answer bea could not read.
 
     The caller is told the outcome is unknown, and how to find out, rather than
     being handed a success or a plain failure that invites a blind retry.
     """
+    if isinstance(exc, UnreadableSuccess):
+        return ConflictError(
+            f"{operation} was answered with HTTP {exc.status}, but the response could not be read. "
+            "It most likely took effect, but the outcome is unknown — check the current state before retrying.",
+            request_id=exc.request_id,
+        )
     return ConflictError(
         f"{operation} did not complete cleanly ({type(exc).__name__}). "
         f"The outcome is unknown — check the current state before retrying."

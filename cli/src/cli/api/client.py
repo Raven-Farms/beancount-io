@@ -113,7 +113,7 @@ def call[T](
     for another endpoint. Commands validate their arguments first; this is
     the backstop for every path parameter, present and future.
     """
-    from cli.errors import BeaError, UsageError, request_id_from
+    from cli.errors import UnreadableSuccess, UsageError, request_id_from
 
     for arg in args:
         if isinstance(arg, str) and arg in {".", ".."}:
@@ -151,8 +151,9 @@ def call[T](
                 _error_message(None, response.content),
                 request_id=request_id_from(response.headers),
             ) from exc
-        raise BeaError(
+        raise UnreadableSuccess(
             f"Unexpected server response (HTTP {response.status_code}).",
+            status=response.status_code,
             request_id=request_id_from(response.headers),
         ) from exc
     finally:
@@ -163,9 +164,13 @@ def unwrap[T](response: Response[T | V1Error]) -> T:
     """The success payload, or the documented error category — nothing else."""
     result = unwrap_or_none(response)
     if result is None:
-        from cli.errors import BeaError
+        from cli.errors import UnreadableSuccess, request_id_from
 
-        raise BeaError(f"Empty response (HTTP {response.status_code}).")
+        raise UnreadableSuccess(
+            f"Empty response (HTTP {response.status_code}).",
+            status=response.status_code,
+            request_id=request_id_from(response.headers),
+        )
     return result
 
 

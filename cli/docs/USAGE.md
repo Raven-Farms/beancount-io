@@ -316,7 +316,10 @@ keeps the server's not-found message.
 A successful HTTP response that the generated parser cannot read exits **1**
 with `Unexpected server response (HTTP 200).` (using the actual status code)
 and preserves the request ID when supplied. This is a server-response error;
-the CLI does not expose parser exceptions or the raw response body.
+the CLI does not expose parser exceptions or the raw response body. On a write
+(`cloud ledger create`, `cloud ledger delete`), an unreadable or empty success
+most likely took effect, so it exits **4** instead and says the outcome is
+unknown: check the current state before retrying.
 
 ### `bea doctor` exit contract
 

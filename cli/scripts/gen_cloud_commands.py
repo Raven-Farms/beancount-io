@@ -202,11 +202,11 @@ def emit_command(cmd: Command, spec: dict[str, Any]) -> str:
     else:
         lines.append("    import httpx")
         lines.append("")
-        lines.append("    from cli.errors import unknown_write_outcome")
+        lines.append("    from cli.errors import UnreadableSuccess, unknown_write_outcome")
         lines.append("")
         lines.append("    try:")
         lines.append(f"        result = unwrap({call})")
-        lines.append("    except (httpx.TimeoutException, httpx.TransportError) as e:")
+        lines.append("    except (httpx.TimeoutException, httpx.TransportError, UnreadableSuccess) as e:")
         lines.append(f'        raise unknown_write_outcome(f"{esc(cmd.write_action or "")}", e) from e')
 
     lines.append("    data = result if isinstance(result, list) else [result]")
