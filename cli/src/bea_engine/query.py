@@ -1993,6 +1993,7 @@ _NO_LOT = re.compile(
     r"against balance (?P<held>.*)\Z",
     re.DOTALL,
 )
+_BALANCE_CURRENCY = re.compile(r"Invalid currency '(?P<currency>[^']*)' for Balance directive: ?\Z")
 _NEGATIVE_COST = re.compile(
     r"Cost is negative: \"Cost\(number=Decimal\('(?P<number>[^']*)'\), currency='(?P<currency>[^']*)'"
 )
@@ -2082,6 +2083,11 @@ def _booking_message(error: Any, message: str) -> str:
     parsed = readable_parser_message(message)
     if parsed != message:
         return parsed
+    currency = _BALANCE_CURRENCY.match(message)
+    account = getattr(getattr(error, "entry", None), "account", None)
+    if currency is not None and isinstance(account, str):
+        # Upstream ends this with `: `, expecting the entry printed after it (w5/350).
+        return f"Invalid currency {currency['currency']} for account '{account}': its open does not allow it."
     negative = _NEGATIVE_COST.match(message)
     if negative is not None:
         return f"Cost is negative: {negative['number']} {negative['currency']}"

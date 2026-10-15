@@ -958,6 +958,15 @@ def _balance_recovery_hints(
 
     from beancount.core.data import Close, Open, Transaction
 
+    # A currency the account's open excludes: no missing transaction or pad
+    # can put it there, so that advice would only mislead (w5/350).
+    opened = next((e for e in entries if isinstance(e, Open) and e.account == balance.account), None)
+    if opened is not None and opened.currencies and balance.amount.currency not in opened.currencies:
+        allowed = ", ".join(opened.currencies)
+        return [
+            f"{balance.account}'s open allows {allowed} only, so a {balance.amount.currency} balance cannot hold "
+            f"there; assert it in {allowed}, or add {balance.amount.currency} to that open."
+        ]
     date_hint = (
         "Balance assertions run at the start of the day, before that day's transactions. "
         "For a statement closing balance, use the following day's date. "
