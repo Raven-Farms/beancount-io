@@ -173,7 +173,7 @@ class LedgerSnapshot:
             if unicodedata.normalize("NFC", str(path.resolve())).casefold() == folded and same_file(resolved, path):
                 raise UsageError(
                     f"Write destination {target} is the ledger file {path} spelled in another letter case or "
-                    f"Unicode form. Pass --into with the name as it is on disk ({path.name}). Nothing was written."
+                    f"Unicode form. {self._respelling(path, resolved)} Nothing was written."
                 )
         matching = [pattern for pattern in self.patterns if _included_new_file(resolved, pattern)]
         if matching:
@@ -184,6 +184,13 @@ class LedgerSnapshot:
             for pattern in matching:
                 self.patterns[pattern] = tuple(sorted({*self.patterns[pattern], resolved}))
             return b""
+        claimed = self._glob_claim_in_another_spelling(resolved)
+        if claimed is not None:
+            raise UsageError(
+                f"Write destination {target} is in the directory {claimed.parent} spelled in another letter case "
+                f"or Unicode form, and the include pattern matches only that spelling. "
+                f"{self._respelling(claimed, resolved)} Nothing was written."
+            )
         if not resolved.parent.is_dir():
             raise UsageError(
                 f"Write destination directory {resolved.parent} does not exist. Create the directory first."
@@ -192,6 +199,43 @@ class LedgerSnapshot:
             f"Write destination {target} is not included by {self.root}. "
             "Create it and add an include directive to the root first."
         )
+
+    def _respelling(self, accepted: Path, given: Path) -> str:
+        """Which spelling `--into` takes: the include's, relative to the root, which is what bea matches.
+
+        Naming the file's base name read as "the name on disk" even when the
+        user had passed the on-disk name, and a Unicode-form difference looks
+        identical in a terminal, so it is named too (w5/434).
+        """
+        spelled = os.path.relpath(accepted, self.root.parent)
+        advice = f"Pass --into {shlex.quote(spelled)} as the include line spells it."
+        if unicodedata.normalize("NFC", str(accepted)) == unicodedata.normalize("NFC", str(given)):
+            if unicodedata.normalize("NFC", spelled) == spelled:
+                form = "NFC"
+            elif unicodedata.normalize("NFD", spelled) == spelled:
+                form = "NFD"
+            else:
+                form = "mixed"
+            advice += f" The two differ only in Unicode form; the include line is {form}."
+        return advice
+
+    def _glob_claim_in_another_spelling(self, resolved: Path) -> Path | None:
+        """The new destination an include glob would claim, were its directory spelled as the glob finds it.
+
+        `--into MONTHS/feb.bean` under `include "months/*.bean"` on a
+        case-insensitive volume names that directory, but the glob, which
+        lists `months`, never matches it (w5/434).
+        """
+        if not resolved.parent.is_dir():
+            return None
+        for pattern in self.patterns:
+            for directory in glob.glob(os.path.dirname(pattern), recursive=True):
+                listed = Path(os.path.normpath(directory)).resolve()
+                if listed != resolved.parent and same_file(listed, resolved.parent):
+                    claimed = listed / resolved.name
+                    if _included_new_file(claimed, pattern):
+                        return claimed
+        return None
 
     def verify(self) -> None:
         for path, original in self.contents.items():
