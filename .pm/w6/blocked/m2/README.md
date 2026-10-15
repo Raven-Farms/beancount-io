@@ -1,6 +1,6 @@
 # w6 · m2 — Preserve BQL expression types across projection aliases
 
-**Worker:** worker1 **Goal:** Agents can trust query column types without interpreting identifiers as money or dates. **Status:** todo
+**Worker:** worker1 **Goal:** Agents can trust query column types without interpreting identifiers as money or dates. **Status:** blocked (t001 found no engine type provenance)
 
 **Severity:** minor. **Owner:** ledger, with backend-v2 adapter validation. **Estimate:** 3–4 hours across seven tasks; the current engine result has no cursor schema, so a general repair needs a type-provenance design rather than another alias allowlist.
 
@@ -15,6 +15,15 @@
 | t005 | Simplify | 15m | t004 |
 | t006 | Test coverage | 35m | t004, t005 |
 | t007 | Closeout | 10m | t006 |
+
+## Blocked
+
+**Blocked 2026-10-15** — t001's triage found no type provenance at the engine boundary, and every later task depends on t001. Nothing was shipped; the baseline is unchanged `main`.
+
+- **The engine erases expression types before the boundary.** Locally installed `@rustledger/wasm` 0.24.0 (the lockfile pin and the npm `latest` tag; the `1.0.0-rc.*` builds are older January 2026 artifacts) declares `QueryResult` as `{columns, rows, errors}` with an untagged `CellValue`. Upstream `main`'s `crates/rustledger-wasm/src/types.rs` is the same. A direct engine probe returns `SELECT '00123'` → `"00123"`, `SELECT 1.25` → `"1.25"`, `SELECT '2025-01-01'` → `"2025-01-01"`, and `SELECT 2026-01-01` → `"2026-01-01"`. String, Decimal and Date cells are identical JSON strings, and a zero-row result carries no cell at all. The only remaining signal is the output name, which is the accident this milestone removes.
+- **No narrow existing facility substitutes.** The engine has no BQL type-of function (`TYPEOF`, `TYPE_OF`, `TYPENAME`, `TYPE` all fail with "no function matches"). `bqlCompletions` describes syntax, not result types. A per-column type would therefore need a second BQL parser, a name allowlist, or value guesses, all of which the repair boundary forbids.
+
+**Unblock:** a published `@rustledger/wasm` release whose query result carries per-column types, or tagged cells that distinguish String from Number/Date, including for zero-row results. Upstream already derives column datatypes from its tagged `Value` for the FFI (rustledger#1703), so the request is to expose the same metadata through the WASM `QueryResult`. Raising that request upstream is an outward-facing action left to the user. Once a release carries it, unblock, bump the ledger dependency through its package manager (user approval per the repo rules), and resume at t002. **Who can clear it:** the user (to file or approve the upstream request) and the rustledger maintainers (to release it).
 
 ## Live finding
 

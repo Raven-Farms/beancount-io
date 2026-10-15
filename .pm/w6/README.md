@@ -6,7 +6,7 @@
 
 - [ ] **m3** — Expose core ledger options consistently across API surfaces (7 tasks; minor; backend-v2).
 
-- [ ] **m2** — Preserve BQL expression types across projection aliases (7 tasks; minor; ledger with backend-v2 validation).
+- [ ] **m2** — [Preserve BQL expression types across projection aliases](./blocked/m2/README.md) (7 tasks; minor; ledger with backend-v2 validation) — **blocked:** the engine query result has no column types; needs a published `@rustledger/wasm` release that exposes them
 
 - [x] **m1** — Count canonical BQL rows in MCP text summaries (7 tasks) ← from [003](./done/003.md).
 
