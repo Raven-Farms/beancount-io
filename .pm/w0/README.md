@@ -12,7 +12,6 @@
 
 ## Inbox
 
-- [010](./010.md) — Render report money at one precision per currency, independent of render_commas (minor; dashboard; ~60m).
 - [011](./011.md) — Turn the Ask AI tool-activity counts into real plural messages (minor; dashboard; 35–50m).
 - [012](./012.md) — Replace "(s)" count strings in Settings plan and Plaid flows with plural messages (minor; dashboard; 45–60m).
 - [013](./013.md) — Give the ledger visibility switch an accessible name (major; dashboard; 20–30m).

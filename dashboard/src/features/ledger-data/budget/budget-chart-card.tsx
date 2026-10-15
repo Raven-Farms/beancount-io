@@ -244,7 +244,7 @@ export function BudgetChartCard({
           const value = param.value as number;
           const formatted =
             typeof value === "number"
-              ? `${formatNum(value)} ${displayCurrency}`
+              ? `${formatNum(value, displayCurrency)} ${displayCurrency}`
               : "0";
           result += `<div style="color:${param.color}">
             <span style="display:inline-block;margin-right:4px;border-radius:10px;width:10px;height:10px;background-color:${param.color};"></span>
@@ -364,7 +364,7 @@ export function BudgetChartCard({
             <p className="font-mono text-lg font-semibold tabular-nums">
               {comparisonBudgetValue === null
                 ? "—"
-                : `${formatNum(comparisonBudgetValue)} ${displayCurrency}`}
+                : `${formatNum(comparisonBudgetValue, displayCurrency)} ${displayCurrency}`}
             </p>
           </div>
           {latestActual !== null && variance !== null && (
@@ -374,7 +374,7 @@ export function BudgetChartCard({
                   {t("page.budget.budgetLatestSpending")}
                 </p>
                 <p className="font-mono text-lg font-semibold tabular-nums">
-                  {formatNum(latestActual)} {displayCurrency}
+                  {formatNum(latestActual, displayCurrency)} {displayCurrency}
                 </p>
               </div>
               <div className="space-y-1">
@@ -415,7 +415,7 @@ export function BudgetChartCard({
                   )}
                 >
                   {variance > 0 ? "+" : ""}
-                  {formatNum(variance)} {displayCurrency}
+                  {formatNum(variance, displayCurrency)} {displayCurrency}
                 </p>
               </div>
             </>
@@ -493,10 +493,12 @@ export function BudgetChartCard({
                         {row.date}
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-right font-mono text-sm tabular-nums">
-                        {formatNum(row.budget)} {displayCurrency}
+                        {formatNum(row.budget, displayCurrency)}{" "}
+                        {displayCurrency}
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-right font-mono text-sm tabular-nums">
-                        {formatNum(row.actual)} {displayCurrency}
+                        {formatNum(row.actual, displayCurrency)}{" "}
+                        {displayCurrency}
                       </TableCell>
                     </TableRow>
                   ))}

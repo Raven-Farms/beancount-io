@@ -78,7 +78,7 @@ function PrimaryCurrencyColumn({
   const value = Number(raw);
   return (
     <span className="text-sm font-mono tabular-nums whitespace-nowrap [overflow-wrap:normal]">
-      {formatNum(inverted ? -value : value)}
+      {formatNum(inverted ? -value : value, primaryCurrency)}
     </span>
   );
 }
@@ -130,7 +130,7 @@ function OtherBalancesColumn({
           className="text-sm whitespace-nowrap [overflow-wrap:normal]"
         >
           <span className="text-muted-foreground font-mono tabular-nums">
-            {formatNum(inverted ? -value : value)}
+            {formatNum(inverted ? -value : value, commodity)}
           </span>{" "}
           <span className="text-muted-foreground">{commodity}</span>
         </div>

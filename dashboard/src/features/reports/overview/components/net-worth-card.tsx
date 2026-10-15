@@ -213,11 +213,11 @@ function NetWorthValuationNote({
       {showCostBasis && (
         <p className="tabular-nums">
           {t("page.overview.costBasis", {
-            amount: `${formatNumber(costBasis)} ${currency}`,
+            amount: `${formatNumber(costBasis, currency)} ${currency}`,
           })}
           {" · "}
           {t("page.overview.unrealized", {
-            amount: `${unrealized > 0 ? "+" : ""}${formatNumber(unrealized)} ${currency}`,
+            amount: `${unrealized > 0 ? "+" : ""}${formatNumber(unrealized, currency)} ${currency}`,
           })}
         </p>
       )}
@@ -413,7 +413,8 @@ export function NetWorthCard({
               )}
               <span className="tabular-nums">
                 {change > 0 ? "+" : ""}
-                {formatNumber(change)} {latestComparable.currency}
+                {formatNumber(change, latestComparable.currency)}{" "}
+                {latestComparable.currency}
               </span>
               <span className="text-muted-foreground">
                 {t("page.overview.fromPreviousMonth")}

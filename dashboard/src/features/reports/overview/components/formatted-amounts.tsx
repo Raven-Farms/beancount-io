@@ -22,7 +22,7 @@ export function FormattedAmounts({
       {amounts.map((amount) => (
         <span key={amount.currency} className="block whitespace-nowrap">
           {showPositiveSign && amount.value > 0 ? "+" : ""}
-          {formatNumber(amount.value)} {amount.currency}
+          {formatNumber(amount.value, amount.currency)} {amount.currency}
         </span>
       ))}
     </span>

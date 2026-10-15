@@ -9,14 +9,19 @@ import { formatNumber } from "@/common/lib/format/format-number";
  * Usage:
  *   const formatNum = useFormatNumber();
  *   formatNum(1234567.89) // "1,234,567.89" or "1234567.89" depending on the option
+ *   formatNum(4559.8, "USD") // "4,559.80": ISO currencies use their minor units
  */
-export function useFormatNumber(): (value: number) => string {
+export function useFormatNumber(): (
+  value: number,
+  currency?: string,
+) => string {
   const { ledgerData } = useLedger();
   const { i18n } = useTranslations();
   const renderCommas = ledgerData.options.renderCommas ?? true;
   const language = i18n.language;
   return useCallback(
-    (value: number) => formatNumber(value, renderCommas, language),
+    (value: number, currency?: string) =>
+      formatNumber(value, renderCommas, language, currency),
     [renderCommas, language],
   );
 }

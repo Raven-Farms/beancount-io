@@ -15,7 +15,19 @@ export const formatNumber = (
   value: number,
   renderCommas: boolean,
   locale: string,
+  currency?: string,
 ): string => {
+  // An ISO 4217 currency is written at its minor-unit precision in both
+  // render_commas modes — `4,559.80` and `109,529.34 USD`, never `4,559.8` or
+  // `109,529.339` — so the option controls grouping only (w0/010).
+  const digits = currency ? currencyMinorDigits(currency) : undefined;
+  if (digits !== undefined) {
+    return value.toLocaleString(locale, {
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits,
+      useGrouping: renderCommas,
+    });
+  }
   if (renderCommas) {
     return value.toLocaleString(locale);
   }
@@ -25,6 +37,33 @@ export const formatNumber = (
   // Preserve up to 2 decimal places, strip trailing zeros
   return value.toFixed(2).replace(/\.?0+$/, "");
 };
+
+let isoCurrencies: Set<string> | null = null;
+const minorDigitsCache = new Map<string, number | undefined>();
+
+/**
+ * The fraction digits an ISO 4217 currency is written with (USD 2, JPY 0,
+ * KWD 3), or `undefined` for a commodity that is not one — tickers (`VHT`,
+ * `GLD`), crypto (`BTC`) and ledger-defined units (`MUSD`, `VACHR`) keep the
+ * source-driven formatting, so their recorded precision is never cut.
+ */
+export function currencyMinorDigits(currency: string): number | undefined {
+  if (minorDigitsCache.has(currency)) return minorDigitsCache.get(currency);
+  let digits: number | undefined;
+  try {
+    isoCurrencies ??= new Set(Intl.supportedValuesOf("currency"));
+    if (isoCurrencies.has(currency)) {
+      digits = new Intl.NumberFormat("en", {
+        style: "currency",
+        currency,
+      }).resolvedOptions().maximumFractionDigits;
+    }
+  } catch {
+    digits = undefined;
+  }
+  minorDigitsCache.set(currency, digits);
+  return digits;
+}
 
 /**
  * How many fraction digits a source decimal carries — `"4.00995"` → 5.
