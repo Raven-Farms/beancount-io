@@ -152,7 +152,6 @@
 - [446 — Skills installer crashes with a traceback on a file or dangling-symlink destination](./446.md) — CLI QA 2026-10-14
 - [447 — migrate eval 7 pins import-ids that need an unstated `Assets:Checking` mapping](./447.md) — CLI QA 2026-10-14
 - [448 — `add open -c USD -c EUR -c USD` writes `USD,EUR,USD`](./448.md) — CLI QA 2026-10-14
-- [449 — `--into` a managed price URL writes to an orphan local `https:/…` file (exit 0)](./449.md) — CLI QA 2026-10-14
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
