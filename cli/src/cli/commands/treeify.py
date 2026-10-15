@@ -23,9 +23,15 @@ _FORCE = "--force"
 # takes any non-ASCII character in a component, upstream's default only ASCII,
 # so `Assets:Bank:Épargne` or `Assets:银行` stayed flat in the middle of the
 # tree. Written with escapes so the argument itself is plain ASCII.
+_LETTERS = r"(?:[A-Za-z0-9-_']|[^\x00-\x7F\s])*"
+_COMPONENT = r"(?:[A-Z0-9]|[^\x00-\x7F\s])" + _LETTERS
+# Any root the grammar allows, not only the five English names: a ledger with
+# `option "name_assets" "Aktiva"` found "no hierarchical column" (w5/414). A
+# root needs a component after it, so a capitalized word or a currency is not
+# taken for an account; the English roots still match on their own.
 _ACCOUNT_PATTERN = (
-    r"(Assets|Liabilities|Equity|Income|Expenses)"
-    r"(:(?:[A-Z0-9]|[^\x00-\x7F\s])(?:[A-Za-z0-9-_']|[^\x00-\x7F\s])*)*"
+    rf"(?:(?:[A-Z]|[^\x00-\x7F\s]){_LETTERS}(?::{_COMPONENT})+"
+    r"|Assets|Liabilities|Equity|Income|Expenses)"
 )
 
 
@@ -198,7 +204,8 @@ def treeify(ctx: typer.Context) -> None:
         output.replay(completed.stderr, sys.stderr)
         raise UsageError(
             "treeify found no hierarchical column to render (colon-separated names like Assets:Cash). "
-            "Pipe balances or an account listing, not plain text."
+            "Pipe balances or an account listing, not plain text; for names outside Beancount's account "
+            "grammar, pass -A (loose accounts) or your own -r pattern."
         )
     launch.check_native(completed, "treeify")
     if destination is not None:
