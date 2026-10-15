@@ -7,6 +7,10 @@ import {
   AlertTitle,
 } from "@/common/components/ui/alert";
 import { PageHeader } from "@/common/components/page-header";
+import { RelatedLinks } from "@/common/components/related-links";
+import { LedgerWriteAccessNotice } from "@/common/components/ledger-write-access-notice";
+import { getLedgerFilesRootPath } from "@/common/hooks/use-file-navigate";
+import { useLedgerPermission } from "@/common/hooks/use-ledger-permission";
 import { useLedger } from "@/common/hooks/use-ledger";
 import { createLedgerId } from "@/common/lib/utils/encode";
 import { useTranslations } from "@/common/hooks/use-translations";
@@ -16,6 +20,57 @@ import { ReceiptReviewForm } from "../components/receipt-review-form";
 import { ReceiptSuccessCard } from "../components/receipt-success-card";
 
 export default function ReceiptPage() {
+  const { t } = useTranslations();
+  const { canWrite } = useLedgerPermission();
+
+  return (
+    <div className="space-y-6 pb-6">
+      <PageHeader
+        className="space-y-1"
+        title={t("receipt.page.title")}
+        description={t("receipt.page.description")}
+      />
+      {canWrite ? <ReceiptWorkflow /> : <ReadOnlyReceiptPage />}
+    </div>
+  );
+}
+
+function ReadOnlyReceiptPage() {
+  const { t } = useTranslations();
+  const { ledgerOwner, ledgerName } = useParams({
+    from: "/ledger/$ledgerOwner/$ledgerName/receipt",
+  });
+
+  return (
+    <>
+      <LedgerWriteAccessNotice
+        title={t("receipt.access.title")}
+        signedOut={t("receipt.access.signedOut")}
+        readOnly={t("receipt.access.readOnly")}
+        unresolved={t("receipt.access.unresolved")}
+      />
+      <RelatedLinks
+        links={[
+          {
+            label: t("common.relatedLinks.journal"),
+            to: `/ledger/${ledgerOwner}/${ledgerName}/journal`,
+          },
+          {
+            label: t("common.relatedLinks.files"),
+            to: getLedgerFilesRootPath(ledgerOwner, ledgerName),
+          },
+          {
+            label: t("common.relatedLinks.query"),
+            to: `/ledger/${ledgerOwner}/${ledgerName}/query`,
+          },
+        ]}
+      />
+    </>
+  );
+}
+
+// Mounted only for writers, so a reader never starts an upload it cannot book.
+function ReceiptWorkflow() {
   const { ledgerOwner, ledgerName } = useParams({
     from: "/ledger/$ledgerOwner/$ledgerName/receipt",
   });
@@ -26,13 +81,7 @@ export default function ReceiptPage() {
   const { t } = useTranslations();
 
   return (
-    <div className="space-y-6 pb-6">
-      <PageHeader
-        className="space-y-1"
-        title={t("receipt.page.title")}
-        description={t("receipt.page.description")}
-      />
-
+    <>
       {(state.step === "idle" || state.step === "uploading") && (
         <ReceiptUploadZone
           onFileAccepted={(file) => void workflow.startUpload(file)}
@@ -82,6 +131,6 @@ export default function ReceiptPage() {
           </AlertDescription>
         </Alert>
       )}
-    </div>
+    </>
   );
 }

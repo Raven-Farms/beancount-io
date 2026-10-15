@@ -4,6 +4,24 @@ export interface TranslationEntry {
 }
 
 const ukReceipt: Record<string, TranslationEntry> = {
+  "receipt.access.title": {
+    message: "Завантаження чеків недоступне",
+    description: "Title when the receipt upload cannot be used",
+  },
+  "receipt.access.signedOut": {
+    message: "Увійдіть, щоб завантажувати чеки до цієї книги.",
+    description: "Explanation when a signed-out visitor opens receipt upload",
+  },
+  "receipt.access.readOnly": {
+    message:
+      "Ця книга доступна вам лише для читання. Щоб провести чек, потрібен доступ на запис. Ви й надалі можете переглядати її журнал, файли та запити.",
+    description: "Explanation when the user cannot write to the ledger",
+  },
+  "receipt.access.unresolved": {
+    message:
+      "Не вдалося підтвердити доступ на запис. Завантаження чеків недоступне, доки права доступу до книги не буде визначено.",
+    description: "Explanation when ledger write permissions are unavailable",
+  },
   // Page
   "receipt.page.title": {
     message: "Завантажити чек",

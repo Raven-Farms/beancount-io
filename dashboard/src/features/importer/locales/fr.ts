@@ -4,6 +4,10 @@ export interface TranslationEntry {
 }
 
 const frImporter: Record<string, TranslationEntry> = {
+  "importer.access.signedOut": {
+    message: "Connectez-vous pour importer des transactions dans ce registre.",
+    description: "Explanation when a signed-out visitor opens the importer",
+  },
   "importer.access.title": {
     message: "Importation indisponible",
     description: "Title when the importer cannot be used",

@@ -4,6 +4,10 @@ export interface TranslationEntry {
 }
 
 const nlImporter: Record<string, TranslationEntry> = {
+  "importer.access.signedOut": {
+    message: "Meld u aan om transacties in dit grootboek te importeren.",
+    description: "Explanation when a signed-out visitor opens the importer",
+  },
   "importer.access.title": {
     message: "Importeren niet beschikbaar",
     description: "Title when the importer cannot be used",

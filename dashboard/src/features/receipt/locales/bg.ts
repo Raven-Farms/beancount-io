@@ -4,6 +4,24 @@ export interface TranslationEntry {
 }
 
 const bgReceipt: Record<string, TranslationEntry> = {
+  "receipt.access.title": {
+    message: "Качването на касови бележки не е налично",
+    description: "Title when the receipt upload cannot be used",
+  },
+  "receipt.access.signedOut": {
+    message: "Влезте, за да качвате касови бележки в тази книга.",
+    description: "Explanation when a signed-out visitor opens receipt upload",
+  },
+  "receipt.access.readOnly": {
+    message:
+      "Тази книга е само за четене за вас. За осчетоводяване на касова бележка е нужен достъп за запис. Все още можете да разглеждате нейния дневник, файлове и заявки.",
+    description: "Explanation when the user cannot write to the ledger",
+  },
+  "receipt.access.unresolved": {
+    message:
+      "Достъпът за запис не можа да бъде потвърден. Качването на касови бележки не е налично, докато правата ви за книгата не бъдат изяснени.",
+    description: "Explanation when ledger write permissions are unavailable",
+  },
   // Page
   "receipt.page.title": {
     message: "Качи разписка",

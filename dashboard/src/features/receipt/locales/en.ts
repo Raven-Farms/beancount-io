@@ -4,6 +4,24 @@ export interface TranslationEntry {
 }
 
 const enReceipt: Record<string, TranslationEntry> = {
+  "receipt.access.title": {
+    message: "Receipt upload unavailable",
+    description: "Title when the receipt upload cannot be used",
+  },
+  "receipt.access.signedOut": {
+    message: "Sign in to upload receipts to this ledger.",
+    description: "Explanation when a signed-out visitor opens receipt upload",
+  },
+  "receipt.access.readOnly": {
+    message:
+      "This ledger is read-only for you. Booking a receipt requires write access. You can still explore its journal, files, and queries.",
+    description: "Explanation when the user cannot write to the ledger",
+  },
+  "receipt.access.unresolved": {
+    message:
+      "Write access could not be confirmed. Receipt upload is unavailable until your ledger permissions are resolved.",
+    description: "Explanation when ledger write permissions are unavailable",
+  },
   // Page
   "receipt.page.title": {
     message: "Upload Receipt",

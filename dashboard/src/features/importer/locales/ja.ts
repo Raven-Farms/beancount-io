@@ -1,6 +1,10 @@
 import type { TranslationEntry } from "@/i18n";
 
 const jaImporter: Record<string, TranslationEntry> = {
+  "importer.access.signedOut": {
+    message: "ログインすると、この台帳に取引をインポートできます。",
+    description: "Explanation when a signed-out visitor opens the importer",
+  },
   "importer.access.title": {
     message: "インポートできません",
     description: "Title when the importer cannot be used",

@@ -4,6 +4,24 @@ export interface TranslationEntry {
 }
 
 const ptReceipt: Record<string, TranslationEntry> = {
+  "receipt.access.title": {
+    message: "Envio de recibos indisponível",
+    description: "Title when the receipt upload cannot be used",
+  },
+  "receipt.access.signedOut": {
+    message: "Entre para enviar recibos para este livro-razão.",
+    description: "Explanation when a signed-out visitor opens receipt upload",
+  },
+  "receipt.access.readOnly": {
+    message:
+      "Este livro-razão é somente leitura para você. Registrar um recibo exige acesso de escrita. Você ainda pode explorar o diário, os arquivos e as consultas.",
+    description: "Explanation when the user cannot write to the ledger",
+  },
+  "receipt.access.unresolved": {
+    message:
+      "Não foi possível confirmar o acesso de escrita. O envio de recibos fica indisponível até que suas permissões do livro-razão sejam resolvidas.",
+    description: "Explanation when ledger write permissions are unavailable",
+  },
   // Page
   "receipt.page.title": {
     message: "Carregar recibo",

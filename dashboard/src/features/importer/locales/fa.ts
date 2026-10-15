@@ -4,6 +4,10 @@ export interface TranslationEntry {
 }
 
 const faImporter: Record<string, TranslationEntry> = {
+  "importer.access.signedOut": {
+    message: "برای وارد کردن تراکنش‌ها به این دفتر وارد حساب شوید.",
+    description: "Explanation when a signed-out visitor opens the importer",
+  },
   "importer.access.title": {
     message: "درون‌ریزی در دسترس نیست",
     description: "Title when the importer cannot be used",

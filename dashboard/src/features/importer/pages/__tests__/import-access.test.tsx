@@ -19,12 +19,27 @@ vi.mock("@tanstack/react-router", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@tanstack/react-router")>()),
   useParams: () => ({ ledgerOwner: "open_ledger", ledgerName: "example" }),
   useNavigate: () => vi.fn(),
-  useLocation: () => ({ pathname: "/ledger/open_ledger/example/import" }),
+  useLocation: () => ({
+    pathname: "/ledger/open_ledger/example/import",
+    href: "/ledger/open_ledger/example/import",
+  }),
   useRouterState: () => false,
   Outlet: () => <ImportPage />,
   ClientOnly: ({ children }: { children: ReactNode }) => <>{children}</>,
-  Link: ({ to, children }: { to: string; children: ReactNode }) => (
-    <a href={to}>{children}</a>
+  Link: ({
+    to,
+    search,
+    children,
+  }: {
+    to: string;
+    search?: { next?: string };
+    children: ReactNode;
+  }) => (
+    <a
+      href={search?.next ? `${to}?next=${encodeURIComponent(search.next)}` : to}
+    >
+      {children}
+    </a>
   ),
 }));
 
@@ -242,12 +257,21 @@ describe("Smart Import ledger access", () => {
     expect(mocks.refetch).toHaveBeenCalledOnce();
   });
 
-  it("does not expose import controls for an unauthenticated reader", () => {
+  it("invites an unauthenticated visitor to sign in instead of exposing import controls", () => {
     mocks.authenticated = false;
-    setAccess({ ...ledger.permissions, push: true });
+    setAccess(null);
     const { container } = render(<LedgerLayout />);
 
-    expect(screen.getByRole("status")).toHaveTextContent("Import unavailable");
+    const status = screen.getByRole("status");
+    expect(status).toHaveTextContent("Import unavailable");
+    expect(status).toHaveTextContent(
+      "Sign in to import transactions into this ledger.",
+    );
+    expect(status).not.toHaveTextContent("could not be confirmed");
+    expect(screen.getByRole("link", { name: "Sign in" })).toHaveAttribute(
+      "href",
+      "/auth/login?next=%2Fledger%2Fopen_ledger%2Fexample%2Fimport",
+    );
     expectNoWriteWorkflow(container);
   });
 

@@ -4,6 +4,10 @@ export interface TranslationEntry {
 }
 
 const enImporter: Record<string, TranslationEntry> = {
+  "importer.access.signedOut": {
+    message: "Sign in to import transactions into this ledger.",
+    description: "Explanation when a signed-out visitor opens the importer",
+  },
   "importer.access.title": {
     message: "Import unavailable",
     description: "Title when the importer cannot be used",

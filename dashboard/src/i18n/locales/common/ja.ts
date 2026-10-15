@@ -4,6 +4,10 @@ export interface TranslationEntry {
 }
 
 const jaCommon: Record<string, TranslationEntry> = {
+  "common.writeAccess.signIn": {
+    message: "ログイン",
+    description: "Link to sign in from a write-only page",
+  },
   "common.accountColumn": {
     message: "アカウント",
     description: "Table column header for account names",

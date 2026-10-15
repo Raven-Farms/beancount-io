@@ -4,6 +4,10 @@ export interface TranslationEntry {
 }
 
 const ptCommon: Record<string, TranslationEntry> = {
+  "common.writeAccess.signIn": {
+    message: "Entrar",
+    description: "Link to sign in from a write-only page",
+  },
   "common.accountColumn": {
     message: "Conta",
     description: "Table column header for account names",

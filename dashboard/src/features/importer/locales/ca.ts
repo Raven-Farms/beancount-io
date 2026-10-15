@@ -4,6 +4,11 @@ export interface TranslationEntry {
 }
 
 const caImporter: Record<string, TranslationEntry> = {
+  "importer.access.signedOut": {
+    message:
+      "Inicia la sessió per importar transaccions a aquest llibre comptable.",
+    description: "Explanation when a signed-out visitor opens the importer",
+  },
   "importer.access.title": {
     message: "Importació no disponible",
     description: "Title when the importer cannot be used",

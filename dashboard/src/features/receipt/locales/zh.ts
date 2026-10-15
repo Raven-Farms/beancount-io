@@ -4,6 +4,23 @@ export interface TranslationEntry {
 }
 
 const zhReceipt: Record<string, TranslationEntry> = {
+  "receipt.access.title": {
+    message: "无法上传收据",
+    description: "Title when the receipt upload cannot be used",
+  },
+  "receipt.access.signedOut": {
+    message: "登录后即可向此账本上传收据。",
+    description: "Explanation when a signed-out visitor opens receipt upload",
+  },
+  "receipt.access.readOnly": {
+    message:
+      "此账本对你只读。记录收据需要写入权限。你仍可浏览其日记账、文件和查询。",
+    description: "Explanation when the user cannot write to the ledger",
+  },
+  "receipt.access.unresolved": {
+    message: "无法确认写入权限。在你的账本权限确认之前，无法上传收据。",
+    description: "Explanation when ledger write permissions are unavailable",
+  },
   // Page
   "receipt.page.title": {
     message: "上传收据",

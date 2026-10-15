@@ -4,6 +4,24 @@ export interface TranslationEntry {
 }
 
 const nlReceipt: Record<string, TranslationEntry> = {
+  "receipt.access.title": {
+    message: "Bon uploaden niet beschikbaar",
+    description: "Title when the receipt upload cannot be used",
+  },
+  "receipt.access.signedOut": {
+    message: "Meld u aan om bonnen naar dit grootboek te uploaden.",
+    description: "Explanation when a signed-out visitor opens receipt upload",
+  },
+  "receipt.access.readOnly": {
+    message:
+      "Dit grootboek is voor u alleen-lezen. Voor het boeken van een bon is schrijftoegang nodig. U kunt het journaal, de bestanden en de query's nog steeds bekijken.",
+    description: "Explanation when the user cannot write to the ledger",
+  },
+  "receipt.access.unresolved": {
+    message:
+      "Schrijftoegang kon niet worden bevestigd. Bonnen uploaden is niet beschikbaar totdat uw grootboekrechten zijn vastgesteld.",
+    description: "Explanation when ledger write permissions are unavailable",
+  },
   // Page
   "receipt.page.title": {
     message: "Bon uploaden",

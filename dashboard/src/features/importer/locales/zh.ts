@@ -4,6 +4,10 @@ export interface TranslationEntry {
 }
 
 const zhImporter: Record<string, TranslationEntry> = {
+  "importer.access.signedOut": {
+    message: "登录后即可向此账本导入交易。",
+    description: "Explanation when a signed-out visitor opens the importer",
+  },
   "importer.access.title": {
     message: "无法导入",
     description: "Title when the importer cannot be used",

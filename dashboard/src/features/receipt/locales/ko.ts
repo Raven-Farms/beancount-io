@@ -1,6 +1,24 @@
 import type { TranslationEntry } from "@/i18n";
 
 const koReceipt: Record<string, TranslationEntry> = {
+  "receipt.access.title": {
+    message: "영수증을 업로드할 수 없음",
+    description: "Title when the receipt upload cannot be used",
+  },
+  "receipt.access.signedOut": {
+    message: "로그인하면 이 원장에 영수증을 업로드할 수 있습니다.",
+    description: "Explanation when a signed-out visitor opens receipt upload",
+  },
+  "receipt.access.readOnly": {
+    message:
+      "이 원장은 읽기 전용입니다. 영수증을 기록하려면 쓰기 권한이 필요합니다. 분개장, 파일, 쿼리는 계속 살펴볼 수 있습니다.",
+    description: "Explanation when the user cannot write to the ledger",
+  },
+  "receipt.access.unresolved": {
+    message:
+      "쓰기 권한을 확인할 수 없습니다. 원장 권한이 확인될 때까지 영수증을 업로드할 수 없습니다.",
+    description: "Explanation when ledger write permissions are unavailable",
+  },
   "receipt.page.title": {
     message: "영수증 업로드",
     description: "Page title for the receipt upload page",

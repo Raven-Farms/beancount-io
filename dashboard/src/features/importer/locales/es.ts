@@ -4,6 +4,10 @@ export interface TranslationEntry {
 }
 
 const esImporter: Record<string, TranslationEntry> = {
+  "importer.access.signedOut": {
+    message: "Inicia sesión para importar transacciones a este libro contable.",
+    description: "Explanation when a signed-out visitor opens the importer",
+  },
   "importer.access.title": {
     message: "Importación no disponible",
     description: "Title when the importer cannot be used",

@@ -4,6 +4,10 @@ export interface TranslationEntry {
 }
 
 const ukImporter: Record<string, TranslationEntry> = {
+  "importer.access.signedOut": {
+    message: "Увійдіть, щоб імпортувати транзакції до цієї книги.",
+    description: "Explanation when a signed-out visitor opens the importer",
+  },
   "importer.access.title": {
     message: "Імпорт недоступний",
     description: "Title when the importer cannot be used",

@@ -4,6 +4,10 @@ export interface TranslationEntry {
 }
 
 const caCommon: Record<string, TranslationEntry> = {
+  "common.writeAccess.signIn": {
+    message: "Inicia la sessió",
+    description: "Link to sign in from a write-only page",
+  },
   "common.accountColumn": {
     message: "Compte",
     description: "Table column header for account names",

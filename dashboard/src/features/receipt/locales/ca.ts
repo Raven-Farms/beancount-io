@@ -4,6 +4,24 @@ export interface TranslationEntry {
 }
 
 const caReceipt: Record<string, TranslationEntry> = {
+  "receipt.access.title": {
+    message: "La pujada de rebuts no està disponible",
+    description: "Title when the receipt upload cannot be used",
+  },
+  "receipt.access.signedOut": {
+    message: "Inicia la sessió per pujar rebuts a aquest llibre comptable.",
+    description: "Explanation when a signed-out visitor opens receipt upload",
+  },
+  "receipt.access.readOnly": {
+    message:
+      "Aquest llibre comptable és només de lectura per a tu. Registrar un rebut requereix accés d’escriptura. Encara pots explorar-ne el diari, els fitxers i les consultes.",
+    description: "Explanation when the user cannot write to the ledger",
+  },
+  "receipt.access.unresolved": {
+    message:
+      "No s’ha pogut confirmar l’accés d’escriptura. La pujada de rebuts no estarà disponible fins que es resolguin els teus permisos del llibre comptable.",
+    description: "Explanation when ledger write permissions are unavailable",
+  },
   // Page
   "receipt.page.title": {
     message: "Pujar rebut",

@@ -4,6 +4,24 @@ export interface TranslationEntry {
 }
 
 const frReceipt: Record<string, TranslationEntry> = {
+  "receipt.access.title": {
+    message: "Envoi de reçu indisponible",
+    description: "Title when the receipt upload cannot be used",
+  },
+  "receipt.access.signedOut": {
+    message: "Connectez-vous pour envoyer des reçus dans ce registre.",
+    description: "Explanation when a signed-out visitor opens receipt upload",
+  },
+  "receipt.access.readOnly": {
+    message:
+      "Ce registre est en lecture seule pour vous. Enregistrer un reçu nécessite un accès en écriture. Vous pouvez toujours consulter son journal, ses fichiers et ses requêtes.",
+    description: "Explanation when the user cannot write to the ledger",
+  },
+  "receipt.access.unresolved": {
+    message:
+      "L’accès en écriture n’a pas pu être confirmé. L’envoi de reçus est indisponible tant que vos autorisations sur le registre ne sont pas résolues.",
+    description: "Explanation when ledger write permissions are unavailable",
+  },
   // Page
   "receipt.page.title": {
     message: "Télécharger un reçu",

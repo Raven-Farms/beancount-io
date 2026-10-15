@@ -4,6 +4,10 @@ export interface TranslationEntry {
 }
 
 const ukCommon: Record<string, TranslationEntry> = {
+  "common.writeAccess.signIn": {
+    message: "Увійти",
+    description: "Link to sign in from a write-only page",
+  },
   "common.accountColumn": {
     message: "Рахунок",
     description: "Table column header for account names",

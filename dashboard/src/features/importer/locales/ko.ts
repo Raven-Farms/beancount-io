@@ -1,6 +1,10 @@
 import type { TranslationEntry } from "@/i18n";
 
 const koImporter: Record<string, TranslationEntry> = {
+  "importer.access.signedOut": {
+    message: "로그인하면 이 원장으로 거래를 가져올 수 있습니다.",
+    description: "Explanation when a signed-out visitor opens the importer",
+  },
   "importer.access.title": {
     message: "가져오기를 사용할 수 없습니다",
     description: "Title when the importer cannot be used",

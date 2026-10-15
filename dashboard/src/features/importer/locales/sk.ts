@@ -4,6 +4,11 @@ export interface TranslationEntry {
 }
 
 const skImporter: Record<string, TranslationEntry> = {
+  "importer.access.signedOut": {
+    message:
+      "Prihláste sa, aby ste mohli importovať transakcie do tejto knihy.",
+    description: "Explanation when a signed-out visitor opens the importer",
+  },
   "importer.access.title": {
     message: "Import nie je dostupný",
     description: "Title when the importer cannot be used",

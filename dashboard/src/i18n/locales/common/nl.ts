@@ -4,6 +4,10 @@ export interface TranslationEntry {
 }
 
 const nlCommon: Record<string, TranslationEntry> = {
+  "common.writeAccess.signIn": {
+    message: "Aanmelden",
+    description: "Link to sign in from a write-only page",
+  },
   "common.accountColumn": {
     message: "Rekening",
     description: "Table column header for account names",

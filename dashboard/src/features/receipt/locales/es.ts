@@ -4,6 +4,24 @@ export interface TranslationEntry {
 }
 
 const esReceipt: Record<string, TranslationEntry> = {
+  "receipt.access.title": {
+    message: "Subida de recibos no disponible",
+    description: "Title when the receipt upload cannot be used",
+  },
+  "receipt.access.signedOut": {
+    message: "Inicia sesión para subir recibos a este libro contable.",
+    description: "Explanation when a signed-out visitor opens receipt upload",
+  },
+  "receipt.access.readOnly": {
+    message:
+      "Este libro contable es de solo lectura para ti. Registrar un recibo requiere acceso de escritura. Aún puedes explorar su diario, archivos y consultas.",
+    description: "Explanation when the user cannot write to the ledger",
+  },
+  "receipt.access.unresolved": {
+    message:
+      "No se pudo confirmar el acceso de escritura. La subida de recibos no estará disponible hasta que se resuelvan tus permisos del libro contable.",
+    description: "Explanation when ledger write permissions are unavailable",
+  },
   // Page
   "receipt.page.title": {
     message: "Subir recibo",

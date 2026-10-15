@@ -4,6 +4,10 @@ export interface TranslationEntry {
 }
 
 const bgImporter: Record<string, TranslationEntry> = {
+  "importer.access.signedOut": {
+    message: "Влезте, за да импортирате трансакции в тази книга.",
+    description: "Explanation when a signed-out visitor opens the importer",
+  },
   "importer.access.title": {
     message: "Импортирането не е налично",
     description: "Title when the importer cannot be used",

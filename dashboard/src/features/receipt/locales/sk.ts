@@ -4,6 +4,24 @@ export interface TranslationEntry {
 }
 
 const skReceipt: Record<string, TranslationEntry> = {
+  "receipt.access.title": {
+    message: "Nahrávanie bločkov nie je dostupné",
+    description: "Title when the receipt upload cannot be used",
+  },
+  "receipt.access.signedOut": {
+    message: "Prihláste sa, aby ste mohli nahrávať bločky do tejto knihy.",
+    description: "Explanation when a signed-out visitor opens receipt upload",
+  },
+  "receipt.access.readOnly": {
+    message:
+      "Táto kniha je pre vás len na čítanie. Zaúčtovanie bločku vyžaduje prístup na zápis. Jej denník, súbory a dopyty si môžete naďalej prezerať.",
+    description: "Explanation when the user cannot write to the ledger",
+  },
+  "receipt.access.unresolved": {
+    message:
+      "Prístup na zápis sa nepodarilo potvrdiť. Nahrávanie bločkov nie je dostupné, kým sa vaše oprávnenia ku knihe nevyriešia.",
+    description: "Explanation when ledger write permissions are unavailable",
+  },
   // Page
   "receipt.page.title": {
     message: "Nahrať bloček",

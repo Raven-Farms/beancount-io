@@ -4,6 +4,10 @@ export interface TranslationEntry {
 }
 
 const bgCommon: Record<string, TranslationEntry> = {
+  "common.writeAccess.signIn": {
+    message: "Вход",
+    description: "Link to sign in from a write-only page",
+  },
   "common.accountColumn": {
     message: "Сметка",
     description: "Table column header for account names",

@@ -4,6 +4,10 @@ export interface TranslationEntry {
 }
 
 const koCommon: Record<string, TranslationEntry> = {
+  "common.writeAccess.signIn": {
+    message: "로그인",
+    description: "Link to sign in from a write-only page",
+  },
   "common.accountColumn": {
     message: "계정",
     description: "Table column header for account names",

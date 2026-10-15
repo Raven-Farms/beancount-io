@@ -1,6 +1,24 @@
 import type { TranslationEntry } from "@/i18n";
 
 const jaReceipt: Record<string, TranslationEntry> = {
+  "receipt.access.title": {
+    message: "レシートをアップロードできません",
+    description: "Title when the receipt upload cannot be used",
+  },
+  "receipt.access.signedOut": {
+    message: "ログインすると、この台帳にレシートをアップロードできます。",
+    description: "Explanation when a signed-out visitor opens receipt upload",
+  },
+  "receipt.access.readOnly": {
+    message:
+      "この台帳はあなたにとって読み取り専用です。レシートを記帳するには書き込み権限が必要です。仕訳帳、ファイル、クエリは引き続き閲覧できます。",
+    description: "Explanation when the user cannot write to the ledger",
+  },
+  "receipt.access.unresolved": {
+    message:
+      "書き込み権限を確認できませんでした。台帳の権限が確認されるまで、レシートはアップロードできません。",
+    description: "Explanation when ledger write permissions are unavailable",
+  },
   "receipt.page.title": {
     message: "レシートをアップロード",
     description: "Page title for the receipt upload page",

@@ -4,6 +4,10 @@ export interface TranslationEntry {
 }
 
 const zhCommon: Record<string, TranslationEntry> = {
+  "common.writeAccess.signIn": {
+    message: "登录",
+    description: "Link to sign in from a write-only page",
+  },
   "common.accountColumn": {
     message: "账户",
     description: "Table column header for account names",

@@ -4,6 +4,10 @@ export interface TranslationEntry {
 }
 
 const ptImporter: Record<string, TranslationEntry> = {
+  "importer.access.signedOut": {
+    message: "Entre para importar transações para este livro-razão.",
+    description: "Explanation when a signed-out visitor opens the importer",
+  },
   "importer.access.title": {
     message: "Importação indisponível",
     description: "Title when the importer cannot be used",

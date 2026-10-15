@@ -4,6 +4,10 @@ export interface TranslationEntry {
 }
 
 const skCommon: Record<string, TranslationEntry> = {
+  "common.writeAccess.signIn": {
+    message: "Prihlásiť sa",
+    description: "Link to sign in from a write-only page",
+  },
   "common.accountColumn": {
     message: "Účet",
     description: "Table column header for account names",

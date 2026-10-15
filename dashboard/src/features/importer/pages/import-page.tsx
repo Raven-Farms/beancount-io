@@ -8,12 +8,7 @@ import { createLedgerId } from "@/common/lib/utils/encode";
 import { useLedger } from "@/common/hooks/use-ledger";
 import { useLedgerPermission } from "@/common/hooks/use-ledger-permission";
 import { useTranslations } from "@/common/hooks/use-translations";
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from "@/common/components/ui/alert";
-import { LockKeyhole } from "lucide-react";
+import { LedgerWriteAccessNotice } from "@/common/components/ledger-write-access-notice";
 
 export default function ImportPage() {
   const { t } = useTranslations();
@@ -22,7 +17,7 @@ export default function ImportPage() {
     ledgerName: string;
   };
   const ledgerId = createLedgerId(ledgerOwner, ledgerName);
-  const { ledgerName: ledgerDisplayName, ledgerData } = useLedger();
+  const { ledgerName: ledgerDisplayName } = useLedger();
   const { canWrite } = useLedgerPermission();
 
   return (
@@ -49,17 +44,12 @@ export default function ImportPage() {
             />
           </>
         ) : (
-          <Alert role="status">
-            <LockKeyhole aria-hidden />
-            <AlertTitle>{t("importer.access.title")}</AlertTitle>
-            <AlertDescription>
-              {t(
-                ledgerData.permissions
-                  ? "importer.access.readOnly"
-                  : "importer.access.unresolved",
-              )}
-            </AlertDescription>
-          </Alert>
+          <LedgerWriteAccessNotice
+            title={t("importer.access.title")}
+            signedOut={t("importer.access.signedOut")}
+            readOnly={t("importer.access.readOnly")}
+            unresolved={t("importer.access.unresolved")}
+          />
         )}
       </div>
 

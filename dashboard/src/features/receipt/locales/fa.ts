@@ -4,6 +4,24 @@ export interface TranslationEntry {
 }
 
 const faReceipt: Record<string, TranslationEntry> = {
+  "receipt.access.title": {
+    message: "بارگذاری رسید در دسترس نیست",
+    description: "Title when the receipt upload cannot be used",
+  },
+  "receipt.access.signedOut": {
+    message: "برای بارگذاری رسید در این دفتر وارد حساب شوید.",
+    description: "Explanation when a signed-out visitor opens receipt upload",
+  },
+  "receipt.access.readOnly": {
+    message:
+      "این دفتر برای شما فقط‌خواندنی است. ثبت رسید به دسترسی نوشتن نیاز دارد. همچنان می‌توانید دفتر روزنامه، فایل‌ها و پرس‌وجوهای آن را مرور کنید.",
+    description: "Explanation when the user cannot write to the ledger",
+  },
+  "receipt.access.unresolved": {
+    message:
+      "دسترسی نوشتن تأیید نشد. تا زمانی که مجوزهای دفتر شما مشخص نشود، بارگذاری رسید در دسترس نیست.",
+    description: "Explanation when ledger write permissions are unavailable",
+  },
   // Page
   "receipt.page.title": {
     message: "آپلود رسید",

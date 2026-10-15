@@ -4,6 +4,24 @@ export interface TranslationEntry {
 }
 
 const deReceipt: Record<string, TranslationEntry> = {
+  "receipt.access.title": {
+    message: "Beleg-Upload nicht verfügbar",
+    description: "Title when the receipt upload cannot be used",
+  },
+  "receipt.access.signedOut": {
+    message: "Melden Sie sich an, um Belege in dieses Hauptbuch hochzuladen.",
+    description: "Explanation when a signed-out visitor opens receipt upload",
+  },
+  "receipt.access.readOnly": {
+    message:
+      "Dieses Hauptbuch ist für Sie schreibgeschützt. Zum Buchen eines Belegs ist Schreibzugriff erforderlich. Journal, Dateien und Abfragen können Sie weiterhin ansehen.",
+    description: "Explanation when the user cannot write to the ledger",
+  },
+  "receipt.access.unresolved": {
+    message:
+      "Der Schreibzugriff konnte nicht bestätigt werden. Der Beleg-Upload ist erst verfügbar, wenn Ihre Hauptbuch-Berechtigungen geklärt sind.",
+    description: "Explanation when ledger write permissions are unavailable",
+  },
   // Page
   "receipt.page.title": {
     message: "Beleg hochladen",

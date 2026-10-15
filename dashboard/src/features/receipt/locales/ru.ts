@@ -4,6 +4,24 @@ export interface TranslationEntry {
 }
 
 const ruReceipt: Record<string, TranslationEntry> = {
+  "receipt.access.title": {
+    message: "Загрузка чеков недоступна",
+    description: "Title when the receipt upload cannot be used",
+  },
+  "receipt.access.signedOut": {
+    message: "Войдите, чтобы загружать чеки в эту книгу.",
+    description: "Explanation when a signed-out visitor opens receipt upload",
+  },
+  "receipt.access.readOnly": {
+    message:
+      "Эта книга доступна вам только для чтения. Чтобы провести чек, нужен доступ на запись. Вы по-прежнему можете просматривать её журнал, файлы и запросы.",
+    description: "Explanation when the user cannot write to the ledger",
+  },
+  "receipt.access.unresolved": {
+    message:
+      "Не удалось подтвердить доступ на запись. Загрузка чеков недоступна, пока права доступа к книге не будут определены.",
+    description: "Explanation when ledger write permissions are unavailable",
+  },
   // Page
   "receipt.page.title": {
     message: "Загрузить чек",

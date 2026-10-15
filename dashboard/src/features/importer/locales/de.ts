@@ -4,6 +4,11 @@ export interface TranslationEntry {
 }
 
 const deImporter: Record<string, TranslationEntry> = {
+  "importer.access.signedOut": {
+    message:
+      "Melden Sie sich an, um Buchungen in dieses Hauptbuch zu importieren.",
+    description: "Explanation when a signed-out visitor opens the importer",
+  },
   "importer.access.title": {
     message: "Import nicht verfügbar",
     description: "Title when the importer cannot be used",
