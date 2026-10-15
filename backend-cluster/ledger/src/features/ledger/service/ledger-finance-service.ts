@@ -11,6 +11,7 @@ import {
   accountHierarchy,
   buildPriceMap,
   clampDirectives,
+  closeCurrentEarnings,
   deriveReportAccounts,
   filterDirectivesAsync,
   formatFiscalYearEnd,
@@ -203,6 +204,7 @@ export class LedgerFinanceService implements ILedgerFinanceService {
       window,
       operatingCurrency,
       roots,
+      clamp,
     } = await this.loadReportDirectives(ledgerId, userId, {
       account,
       filter,
@@ -213,6 +215,7 @@ export class LedgerFinanceService implements ILedgerFinanceService {
       rawDirectives,
       operatingCurrency,
     );
+    const equityDirectives = closeCurrentEarnings(directives, clamp);
     const key = (interval ?? "month") as IntervalKey;
     const cumulative = (prefixes: string[]) =>
       accountBalanceSeries(directives, key, prefixes, target, priceMap, window);
@@ -234,7 +237,7 @@ export class LedgerFinanceService implements ILedgerFinanceService {
         priceMap,
       ),
       equity_hierarchy_data: accountHierarchy(
-        directives,
+        equityDirectives,
         roots.equity,
         target,
         priceMap,
@@ -357,11 +360,12 @@ export class LedgerFinanceService implements ILedgerFinanceService {
     priceMap: PriceMap;
     operatingCurrency: string;
     roots: ReportAccounts["roots"];
+    clamp: ReportAccounts["clamp"];
     window?: IntervalWindow;
   }> {
     const { directives, options, reportAccounts, fiscalYearEnd } =
       await this.loadSnapshot(ledgerId, userId);
-    const roots = reportAccounts.roots;
+    const { roots, clamp } = reportAccounts;
     // Fava's `at_value`/default valuation converts to the ledger's operating
     // currency; use the first declared one (bean-example: "USD"), defaulting to
     // "USD" when a ledger declares none.
@@ -383,7 +387,13 @@ export class LedgerFinanceService implements ILedgerFinanceService {
       // dashboard sends an empty string for "no time filter", so treat that (and
       // undefined) as no filter rather than trying to parse "".
       if (!selectors.time) {
-        return { directives: filtered, priceMap, operatingCurrency, roots };
+        return {
+          directives: filtered,
+          priceMap,
+          operatingCurrency,
+          roots,
+          clamp,
+        };
       }
       const range = parseDateRange(selectors.time, fiscalYearEnd);
       if (!range) throw new TimeFilterParseError(selectors.time);
@@ -402,6 +412,7 @@ export class LedgerFinanceService implements ILedgerFinanceService {
         priceMap,
         operatingCurrency,
         roots,
+        clamp,
         window: { begin: range.begin, end: range.end },
       };
     } catch (error) {

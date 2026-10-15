@@ -245,10 +245,9 @@ export interface ReportAccounts {
     expenses: string;
   };
   /**
-   * The clamp account names {@link ClampAccountOptions} the `time`-filter
-   * summarization needs — the income-statement predicate roots plus the
-   * synthetic opening-balance / retained-earnings / conversion targets, which
-   * are `<name_equity>:<leaf>`.
+   * The account names {@link ClampAccountOptions} used by time-filter
+   * summarization and report closing: income-statement roots and the derived
+   * equity targets, each `<name_equity>:<leaf>`.
    */
   clamp: ClampAccountOptions;
 }
@@ -261,8 +260,8 @@ export interface ReportAccounts {
  *
  * The synthetic-entry equity accounts are `<name_equity>` joined with the
  * beancount default leaves (`Earnings:Previous`, `Opening-Balances`), except the
- * current-conversions leaf, which `deriveBeancountOptions` surfaces (so an
- * `option "account_current_conversions" …` override is respected). The rarer
+ * current-earnings and current-conversions leaves, which
+ * `deriveBeancountOptions` surfaces and honors when overridden. The rarer
  * `account_previous_*` / `conversion_currency` overrides keep beancount defaults.
  */
 export function deriveReportAccounts(input: {
@@ -287,6 +286,7 @@ export function deriveReportAccounts(input: {
     clamp: {
       nameIncome: opts.name_income,
       nameExpenses: opts.name_expenses,
+      accountCurrentEarnings: `${equity}:${opts.account_current_earnings}`,
       accountPreviousEarnings: `${equity}:Earnings:Previous`,
       accountPreviousBalances: `${equity}:Opening-Balances`,
       accountCurrentConversions: `${equity}:${opts.account_current_conversions}`,

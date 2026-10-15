@@ -121,6 +121,7 @@ function formatScaled(decimal: ScaledDecimal): string {
  *
  * beancount defaults (`beancount/parser/options.py`):
  *   name_equity                    = "Equity"
+ *   account_current_earnings       = "Earnings:Current"     → Equity:Earnings:Current
  *   account_previous_earnings      = "Earnings:Previous"    → Equity:Earnings:Previous
  *   account_previous_balances      = "Opening-Balances"     → Equity:Opening-Balances
  *   account_current_conversions    = "Conversions:Current"  → Equity:Conversions:Current
@@ -134,6 +135,8 @@ export interface ClampAccountOptions {
   nameIncome: string;
   /** `name_expenses` — expenses root (income-statement predicate). */
   nameExpenses: string;
+  /** `Equity:Earnings:Current` — report-only current-earnings target. */
+  accountCurrentEarnings: string;
   /** `Equity:Earnings:Previous` — retained-earnings transfer target. */
   accountPreviousEarnings: string;
   /** `Equity:Opening-Balances` — opening-balances summarization target. */
@@ -148,6 +151,7 @@ export interface ClampAccountOptions {
 export const DEFAULT_CLAMP_ACCOUNTS: ClampAccountOptions = {
   nameIncome: "Income",
   nameExpenses: "Expenses",
+  accountCurrentEarnings: "Equity:Earnings:Current",
   accountPreviousEarnings: "Equity:Earnings:Previous",
   accountPreviousBalances: "Equity:Opening-Balances",
   accountCurrentConversions: "Equity:Conversions:Current",
@@ -449,6 +453,28 @@ function isIncomeStatementAccount(
 ): boolean {
   const type = account.split(":", 1)[0];
   return type === opts.nameIncome || type === opts.nameExpenses;
+}
+
+/**
+ * Close the selected period's income and expenses into current earnings for a
+ * balance-sheet view. Account reclassification preserves the original lots and
+ * valuation inputs; the source directives remain available to other reports.
+ */
+export function closeCurrentEarnings(
+  directives: DirectiveJson[],
+  accounts: ClampAccountOptions = DEFAULT_CLAMP_ACCOUNTS,
+): DirectiveJson[] {
+  return directives.map((directive) => {
+    if (directive.type !== "transaction") return directive;
+    return {
+      ...directive,
+      postings: directive.postings.map((posting) =>
+        isIncomeStatementAccount(posting.account, accounts)
+          ? { ...posting, account: accounts.accountCurrentEarnings }
+          : posting,
+      ),
+    };
+  });
 }
 
 /**

@@ -313,6 +313,7 @@ describe("deriveReportAccounts", () => {
     expect(clamp).toEqual({
       nameIncome: "Income",
       nameExpenses: "Expenses",
+      accountCurrentEarnings: "Equity:Earnings:Current",
       accountPreviousEarnings: "Equity:Earnings:Previous",
       accountPreviousBalances: "Equity:Opening-Balances",
       accountCurrentConversions: "Equity:Conversions:Current",
@@ -338,6 +339,7 @@ describe("deriveReportAccounts", () => {
       operatingCurrencies: ["USD"],
     });
     expect(clamp.accountPreviousEarnings).toBe("Capital:Earnings:Previous");
+    expect(clamp.accountCurrentEarnings).toBe("Capital:Earnings:Current");
     expect(clamp.accountPreviousBalances).toBe("Capital:Opening-Balances");
     expect(clamp.accountCurrentConversions).toBe("Capital:Conversions:Current");
   });
@@ -349,6 +351,27 @@ describe("deriveReportAccounts", () => {
     });
     expect(clamp.accountCurrentConversions).toBe("Equity:Trading:Current");
   });
+
+  it.each([
+    {
+      source: 'option "account_current_earnings" "Annual:Result"\n',
+      expected: "Equity:Annual:Result",
+    },
+    {
+      source:
+        'option "name_equity" "Capital"\noption "account_current_earnings" "Annual:Result"\n',
+      expected: "Capital:Annual:Result",
+    },
+  ])(
+    "resolves the current-earnings target $expected",
+    ({ source, expected }) => {
+      const { clamp } = deriveReportAccounts({
+        source,
+        operatingCurrencies: ["USD"],
+      });
+      expect(clamp.accountCurrentEarnings).toBe(expected);
+    },
+  );
 
   it("falls back to defaults when the source is unavailable", () => {
     const { roots } = deriveReportAccounts({

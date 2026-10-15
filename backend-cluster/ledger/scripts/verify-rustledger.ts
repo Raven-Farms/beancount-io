@@ -35,6 +35,9 @@ import {
 } from "@/features/ledger/service/ledger-shell-mappers";
 import { stripBqlBlockComments } from "@/features/ledger/service/bql-comments";
 import { LedgerDataService } from "@/features/ledger/service/ledger-data-service";
+import { LedgerFinanceService } from "@/features/ledger/service/ledger-finance-service";
+import { LedgerJournalService } from "@/features/ledger/service/ledger-journal-service";
+import type { SerializableTreeNodePublic } from "@/foundation/ledger-api-types";
 import {
   accountBalanceSeries,
   accountHierarchy,
@@ -252,6 +255,230 @@ async function verifyTransactionLookups(): Promise<void> {
   );
 }
 
+async function verifyBalanceSheetCurrentEarnings(): Promise<void> {
+  const companySource = (expenses = "17000", custom = false): string => {
+    const equity = custom ? "Capital" : "Equity";
+    const income = custom ? "Revenue" : "Income";
+    const costs = custom ? "Costs" : "Expenses";
+    return `option "operating_currency" "MUSD"
+${custom ? 'option "name_equity" "Capital"\noption "name_income" "Revenue"\noption "name_expenses" "Costs"\noption "account_current_earnings" "Retained:Now"\n' : ""}2024-01-01 open Assets:Cash MUSD
+2024-01-01 open Liabilities:Debt MUSD
+2024-01-01 open ${equity}:Capital MUSD
+2024-01-01 open ${income}:Sales MUSD
+2024-01-01 open ${costs}:Operations MUSD
+2024-12-31 * "Opening"
+  Assets:Cash 20000 MUSD
+  Liabilities:Debt -10000 MUSD
+  ${equity}:Capital -10000 MUSD
+2025-02-01 * "Operations"
+  Assets:Cash ${20000 - Number(expenses)} MUSD
+  ${income}:Sales -20000 MUSD
+  ${costs}:Operations ${expenses} MUSD
+`;
+  };
+  const services = (source: string) => {
+    const factory = {
+      getPublicApiClient: async () => ({
+        repos: {
+          repoGetAllCommits: async () => ({ data: [] }),
+          getTree: async () => ({
+            data: {
+              tree: [{ path: "main.bean", type: "blob" }],
+              truncated: false,
+            },
+          }),
+          repoGetContents: async (
+            _owner: string,
+            _repo: string,
+            path: string,
+          ) => {
+            if (path !== "main.bean")
+              throw new Error(`Unexpected earnings fixture path: ${path}`);
+            return {
+              data: {
+                type: "file",
+                encoding: "base64",
+                content: Buffer.from(source).toString("base64"),
+              },
+            };
+          },
+        },
+      }),
+    };
+    return {
+      finance: new LedgerFinanceService(factory as never, {} as never),
+      journal: new LedgerJournalService(factory as never, {} as never),
+    };
+  };
+  const find = (
+    node: SerializableTreeNodePublic,
+    account: string,
+  ): SerializableTreeNodePublic | undefined => {
+    if (node.account === account) return node;
+    for (const child of node.children) {
+      const found = find(child, account);
+      if (found) return found;
+    }
+    return undefined;
+  };
+  const value = (node: SerializableTreeNodePublic | undefined): number =>
+    Number(node?.balance_children.MUSD ?? "0");
+  const params = {
+    ledgerId: "synthetic/earnings",
+    userId: undefined,
+    conversion: "at_cost",
+  };
+  const source = companySource();
+  const files = { "main.bean": source };
+  const native = await parseLedgerFiles(files, "main.bean", {
+    repoPaths: ["main.bean"],
+  });
+  assert(
+    native.valid && native.errors.length === 0,
+    "current-earnings company fixture is valid in the installed WASM",
+  );
+  const original = JSON.stringify(native);
+  const { finance, journal } = services(source);
+  const incomeBefore = await finance.getIncomeStatement({
+    ...params,
+    time: "2025",
+  });
+  const trialBefore = await finance.getTrialBalance({
+    ...params,
+    time: "2025",
+  });
+  const journalBefore = await journal.getJournal({
+    ...params,
+    query: { time: "2025", limit: 100 },
+  });
+  const current = await finance.getBalanceSheet({ ...params, time: "2025" });
+  assert(
+    value(current.assets_hierarchy_data) === 23000 &&
+      value(current.liabilities_hierarchy_data) === -10000 &&
+      value(current.equity_hierarchy_data) === -13000,
+    "active-year company hierarchy reconciles 23000/-10000/-13000 MUSD",
+  );
+  assert(
+    value(find(current.equity_hierarchy_data, "Equity:Earnings:Current")) ===
+      -3000,
+    "active-year equity includes -3000 MUSD current earnings",
+  );
+  const previous = await finance.getBalanceSheet({ ...params, time: "2026" });
+  assert(
+    value(previous.equity_hierarchy_data) === -13000 &&
+      value(
+        find(previous.equity_hierarchy_data, "Equity:Earnings:Previous"),
+      ) === -3000 &&
+      value(find(previous.equity_hierarchy_data, "Equity:Earnings:Current")) ===
+        0,
+    "following year retains previous earnings once without duplicate current earnings",
+  );
+  const allTime = await finance.getBalanceSheet(params);
+  assert(
+    value(allTime.equity_hierarchy_data) === -13000,
+    "balance-sheet hierarchy closes current earnings without a time filter",
+  );
+  deepStrictEqual(
+    await finance.getIncomeStatement({ ...params, time: "2025" }),
+    incomeBefore,
+  );
+  deepStrictEqual(
+    await finance.getTrialBalance({ ...params, time: "2025" }),
+    trialBefore,
+  );
+  deepStrictEqual(
+    await journal.getJournal({
+      ...params,
+      query: { time: "2025", limit: 100 },
+    }),
+    journalBefore,
+  );
+  assert(
+    value(incomeBefore.income_hierarchy_data) === -20000 &&
+      value(incomeBefore.expenses_hierarchy_data) === 17000 &&
+      value(trialBefore.equity_hierarchy_data) === -10000 &&
+      journalBefore.data.filter(
+        (entry) => entry.directive_type === "Transaction",
+      ).length === 1,
+    "income, trial balance and journal retain their original unclosed semantics",
+  );
+  assert(
+    JSON.stringify(
+      await parseLedgerFiles(files, "main.bean", { repoPaths: ["main.bean"] }),
+    ) === original && files["main.bean"] === source,
+    "report reads leave the original source and parsed directives unchanged",
+  );
+
+  const customSource = companySource("17000", true);
+  const customNative = await parseLedgerFiles(
+    { "main.bean": customSource },
+    "main.bean",
+  );
+  assert(
+    customNative.valid && customNative.errors.length === 0,
+    "custom-root current-earnings fixture is valid in the installed WASM",
+  );
+  const custom = await services(customSource).finance.getBalanceSheet({
+    ...params,
+    time: "2025",
+  });
+  assert(
+    custom.equity_hierarchy_data.account === "Capital" &&
+      value(custom.equity_hierarchy_data) === -13000 &&
+      value(find(custom.equity_hierarchy_data, "Capital:Retained:Now")) ===
+        -3000,
+    "actual service honors custom equity, income, expense and current-earnings names",
+  );
+  const costSource = `option "operating_currency" "MUSD"
+2024-01-01 open Assets:Shares HOOL
+2024-01-01 open Equity:Capital MUSD
+2024-01-01 open Expenses:Bonus HOOL
+2024-12-31 * "Opening stock"
+  Assets:Shares 10 HOOL {3 MUSD}
+  Equity:Capital -30 MUSD
+2025-02-01 ! "Stock bonus" #bonus ^lot
+  Assets:Shares -2 HOOL {3 MUSD} @ 7 MUSD
+  Expenses:Bonus 2 HOOL {3 MUSD} @ 7 MUSD
+`;
+  const costNative = await parseLedgerFiles(
+    { "main.bean": costSource },
+    "main.bean",
+  );
+  assert(
+    costNative.valid && costNative.errors.length === 0,
+    "held-at-cost earnings fixture is valid in the installed WASM",
+  );
+  const costOriginal = JSON.stringify(costNative);
+  const costServices = services(costSource);
+  const costJournalBefore = await costServices.journal.getJournal({
+    ...params,
+    query: { time: "2025" },
+  });
+  const costReport = await costServices.finance.getBalanceSheet({
+    ...params,
+    time: "2025",
+  });
+  assert(
+    value(costReport.assets_hierarchy_data) === 24 &&
+      value(costReport.equity_hierarchy_data) === -24 &&
+      value(
+        find(costReport.equity_hierarchy_data, "Equity:Earnings:Current"),
+      ) === 6,
+    "held-at-cost current earnings retain lot value rather than flattening to units or price",
+  );
+  deepStrictEqual(
+    await costServices.journal.getJournal({
+      ...params,
+      query: { time: "2025" },
+    }),
+    costJournalBefore,
+  );
+  assert(
+    JSON.stringify(costNative) === costOriginal,
+    "held-at-cost report reads preserve raw units, costs, prices, flags and dates",
+  );
+}
+
 async function main(): Promise<void> {
   const version = await getRustledgerVersion();
   assert(
@@ -276,6 +503,7 @@ async function main(): Promise<void> {
   );
 
   await verifyTransactionLookups();
+  await verifyBalanceSheetCurrentEarnings();
 
   const paddedSnapshot = await parseLedgerFiles(
     PAD_FILES,
