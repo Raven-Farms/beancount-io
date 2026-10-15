@@ -12,7 +12,7 @@ from typing import Annotated
 
 import typer
 
-from cli import context
+from cli import context, output
 from cli.errors import UsageError
 
 _MISSING_EXTRA = (
@@ -61,10 +61,12 @@ def ask(
 
     creds = require_credentials()
 
-    from cli.ask.skills import load_skills
+    from cli.ask.skills import load_skills, project_skills_notice
     from cli.config import settings
 
     skills = load_skills()
+    for line in project_skills_notice(skills):
+        output.note(line)
     agent = make_agent(
         model_name=model,
         base_url=f"{settings().api_url}/api-gateway/ai/openai/",

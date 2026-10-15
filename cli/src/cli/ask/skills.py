@@ -16,6 +16,19 @@ class AgentSkill:
     compatibility: str | None = None
     allowed_tools: list[str] = field(default_factory=list)
     metadata: dict[str, str] = field(default_factory=dict)
+    #: Loaded from the working directory's `.agents/skills/`, not the user's own.
+    project: bool = False
+    #: A project skill that replaced the user's skill of the same name.
+    shadows: bool = False
+    #: The description was longer than `MAX_DESCRIPTION` and was cut.
+    truncated: bool = False
+
+
+#: A skill's description goes to the model on every turn, so its size is the
+#: user's cost; a repository's 2 MB description was sent whole (w5/454).
+MAX_DESCRIPTION = 1024
+#: The whole skill index, for the same reason: thousands of small skills.
+MAX_INDEX = 32 * 1024
 
 
 def _parse_skill(path: Path) -> AgentSkill | None:
@@ -34,6 +47,9 @@ def _parse_skill(path: Path) -> AgentSkill | None:
         return None
     if not isinstance(description, str) or not description:
         return None
+    truncated = len(description) > MAX_DESCRIPTION
+    if truncated:
+        description = description[: MAX_DESCRIPTION - 1] + "…"
 
     raw_tools = fm.get("allowed-tools", "")
     allowed_tools = raw_tools.split() if isinstance(raw_tools, str) else []
@@ -52,6 +68,7 @@ def _parse_skill(path: Path) -> AgentSkill | None:
         compatibility=_compat if isinstance(_compat, str) else None,
         allowed_tools=allowed_tools,
         metadata=metadata,
+        truncated=truncated,
     )
 
 
@@ -86,15 +103,63 @@ def load_skills(cwd: Path | None = None) -> list[AgentSkill]:
 
     user_skills_dir = config_user_skills_dir()
 
+    project = _load_skills_from_dir(project_skills_dir)
+    user = _load_skills_from_dir(user_skills_dir)
+    user_names = {skill.name for skill in user}
+    for skill in project:
+        skill.project = True
+        skill.shadows = skill.name in user_names
+
     seen: set[str] = set()
     skills: list[AgentSkill] = []
 
-    for skill in _load_skills_from_dir(project_skills_dir) + _load_skills_from_dir(user_skills_dir):
+    for skill in project + user:
         if skill.name not in seen:
             seen.add(skill.name)
             skills.append(skill)
 
     return skills
+
+
+def project_skills_notice(skills: list[AgentSkill]) -> list[str]:
+    """What the user should know about the skills the working directory supplied.
+
+    A repository's `.agents/skills/` was loaded silently: its descriptions
+    reach the model on every turn, and a same-named one replaced the user's
+    own skill (w5/454). Nothing to say when only the user's skills loaded.
+    """
+    lines: list[str] = []
+    project = [skill for skill in skills if skill.project]
+    if project:
+        named = ", ".join(
+            f"{skill.name} (replaces your {skill.name})" if skill.shadows else skill.name for skill in project
+        )
+        lines.append(
+            f"Loaded {len(project)} project skill(s) from .agents/skills in the working directory: {named}. "
+            "Their descriptions are sent to the model on every turn; run ask only in a directory you trust."
+        )
+    for skill in skills:
+        if skill.truncated:
+            lines.append(f"Skill {skill.name!r}: description cut to {MAX_DESCRIPTION} characters.")
+    if len(build_skills_index_prompt(skills)) >= MAX_INDEX and _listed(skills) < len(skills):
+        lines.append(
+            f"Skill index limited to {MAX_INDEX} characters: {len(skills) - _listed(skills)} skill(s) not listed."
+        )
+    return lines
+
+
+def _listed(skills: list[AgentSkill]) -> int:
+    """How many skills fit the index before `MAX_INDEX`."""
+    size = 0
+    for count, skill in enumerate(skills):
+        size += len(_index_line(skill)) + 1
+        if size > MAX_INDEX:
+            return count
+    return len(skills)
+
+
+def _index_line(skill: AgentSkill) -> str:
+    return f"- **{skill.name}**: {skill.description}"
 
 
 def build_skills_index_prompt(skills: list[AgentSkill]) -> str:
@@ -116,7 +181,6 @@ def build_skills_index_prompt(skills: list[AgentSkill]) -> str:
         "full instructions before applying it.",
         "",
     ]
-    for skill in skills:
-        lines.append(f"- **{skill.name}**: {skill.description}")
+    lines.extend(_index_line(skill) for skill in skills[: _listed(skills)])
 
     return "\n".join(lines)

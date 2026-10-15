@@ -1698,7 +1698,10 @@ as anywhere else — `Could not reach the server (…)`.
 Ask discovers project skills as `NAME/SKILL.md` files in `.agents/skills/`
 under the working directory (regardless of `--file`) and user skills in
 `skills/` under the configuration directory. Project skills override user
-skills with the same name. Each file needs YAML frontmatter with a nonempty
+skills with the same name. Every run names the project skills it loaded, and
+any user skill one replaces, on stderr: their descriptions are sent to the
+model on every turn, so run `ask` only in a directory you trust. A description
+is cut to 1,024 characters and the whole skill index to 32 KiB, with a note. Each file needs YAML frontmatter with a nonempty
 `name` and `description`, followed by Markdown instructions; invalid files are
 skipped. Names and descriptions are supplied up front and full instructions
 load on demand. Interactive prompt history is saved in `ask_history` in the
