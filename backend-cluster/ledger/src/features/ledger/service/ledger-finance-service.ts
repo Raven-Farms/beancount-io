@@ -223,7 +223,14 @@ export class LedgerFinanceService implements ILedgerFinanceService {
       net_worth_data: cumulative([roots.assets, roots.liabilities]),
       assets_data: cumulative([roots.assets]),
       liabilities_data: cumulative([roots.liabilities]),
-      equity_data: cumulative([roots.equity]),
+      equity_data: accountBalanceSeries(
+        equityDirectives,
+        key,
+        [roots.equity],
+        target,
+        priceMap,
+        window,
+      ),
       assets_hierarchy_data: accountHierarchy(
         directives,
         roots.assets,

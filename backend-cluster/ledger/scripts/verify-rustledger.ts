@@ -352,6 +352,15 @@ ${custom ? 'option "name_equity" "Capital"\noption "name_income" "Revenue"\nopti
     query: { time: "2025", limit: 100 },
   });
   const current = await finance.getBalanceSheet({ ...params, time: "2025" });
+  deepStrictEqual(current.equity_data.slice(0, 2), [
+    { date: "2025-01-31", balance: { MUSD: "-10000" } },
+    { date: "2025-02-28", balance: { MUSD: "-13000" } },
+  ]);
+  assert(
+    Number(current.equity_data.at(-1)?.balance.MUSD) ===
+      value(current.equity_hierarchy_data),
+    "active-year equity points close earnings as earned and end at the hierarchy total",
+  );
   assert(
     value(current.assets_hierarchy_data) === 23000 &&
       value(current.liabilities_hierarchy_data) === -10000 &&
@@ -364,6 +373,11 @@ ${custom ? 'option "name_equity" "Capital"\noption "name_income" "Revenue"\nopti
     "active-year equity includes -3000 MUSD current earnings",
   );
   const previous = await finance.getBalanceSheet({ ...params, time: "2026" });
+  assert(
+    previous.equity_data.length === 12 &&
+      previous.equity_data.every((point) => point.balance.MUSD === "-13000"),
+    "following-year equity points retain previous earnings once throughout the year",
+  );
   assert(
     value(previous.equity_hierarchy_data) === -13000 &&
       value(
@@ -423,6 +437,12 @@ ${custom ? 'option "name_equity" "Capital"\noption "name_income" "Revenue"\nopti
     time: "2025",
   });
   assert(
+    custom.equity_data[0]?.balance.MUSD === "-10000" &&
+      Number(custom.equity_data.at(-1)?.balance.MUSD) ===
+        value(custom.equity_hierarchy_data),
+    "custom-root equity points close into the configured current-earnings account",
+  );
+  assert(
     custom.equity_hierarchy_data.account === "Capital" &&
       value(custom.equity_hierarchy_data) === -13000 &&
       value(find(custom.equity_hierarchy_data, "Capital:Retained:Now")) ===
@@ -458,6 +478,15 @@ ${custom ? 'option "name_equity" "Capital"\noption "name_income" "Revenue"\nopti
     ...params,
     time: "2025",
   });
+  deepStrictEqual(costReport.equity_data.slice(0, 2), [
+    { date: "2025-01-31", balance: { MUSD: "-30" } },
+    { date: "2025-02-28", balance: { MUSD: "-24" } },
+  ]);
+  assert(
+    Number(costReport.equity_data.at(-1)?.balance.MUSD) ===
+      value(costReport.equity_hierarchy_data),
+    "held-at-cost equity points retain lot costs and match the closing hierarchy",
+  );
   assert(
     value(costReport.assets_hierarchy_data) === 24 &&
       value(costReport.equity_hierarchy_data) === -24 &&

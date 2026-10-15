@@ -119,7 +119,7 @@ beforeEach(() => {
   configure();
 });
 
-describe("balance-sheet current earnings hierarchy", () => {
+describe("balance-sheet current earnings hierarchy and series", () => {
   it.each([undefined, "at_cost", "MUSD"])(
     "reconciles company assets, liabilities and closed equity with conversion %s",
     async (conversion) => {
@@ -131,6 +131,13 @@ describe("balance-sheet current earnings hierarchy", () => {
       expect(balance(report.assets_hierarchy_data)).toBe(23000);
       expect(balance(report.liabilities_hierarchy_data)).toBe(-10000);
       expect(balance(report.equity_hierarchy_data)).toBe(-13000);
+      expect(report.equity_data.slice(0, 2)).toEqual([
+        { date: "2025-01-31", balance: { MUSD: "-10000" } },
+        { date: "2025-02-28", balance: { MUSD: "-13000" } },
+      ]);
+      expect(Number(report.equity_data.at(-1)?.balance.MUSD)).toBe(
+        balance(report.equity_hierarchy_data),
+      );
       expect(
         balance(find(report.equity_hierarchy_data, "Equity:Earnings:Current")),
       ).toBe(-3000);
@@ -139,6 +146,30 @@ describe("balance-sheet current earnings hierarchy", () => {
           balance(report.liabilities_hierarchy_data) +
           balance(report.equity_hierarchy_data),
       ).toBe(0);
+    },
+  );
+
+  it.each([
+    { interval: "yearly", dates: ["2025-12-31"] },
+    {
+      interval: "quarterly",
+      dates: ["2025-03-31", "2025-06-30", "2025-09-30", "2025-12-31"],
+    },
+  ])(
+    "closes each $interval equity point at its existing interval boundary",
+    async ({ interval, dates }) => {
+      const report = await finance().getBalanceSheet({
+        ...params,
+        time: "2025",
+        conversion: "at_cost",
+        interval,
+      });
+      expect(report.equity_data).toEqual(
+        dates.map((date) => ({ date, balance: { MUSD: "-13000" } })),
+      );
+      expect(Number(report.equity_data.at(-1)?.balance.MUSD)).toBe(
+        balance(report.equity_hierarchy_data),
+      );
     },
   );
 
@@ -151,6 +182,10 @@ describe("balance-sheet current earnings hierarchy", () => {
     expect(balance(report.assets_hierarchy_data)).toBe(23000);
     expect(balance(report.liabilities_hierarchy_data)).toBe(-10000);
     expect(balance(report.equity_hierarchy_data)).toBe(-13000);
+    expect(report.equity_data).toHaveLength(12);
+    expect(
+      report.equity_data.every((point) => point.balance.MUSD === "-13000"),
+    ).toBe(true);
     expect(
       balance(find(report.equity_hierarchy_data, "Equity:Earnings:Previous")),
     ).toBe(-3000);
@@ -168,6 +203,13 @@ describe("balance-sheet current earnings hierarchy", () => {
     });
     expect(current.equity_hierarchy_data.account).toBe("Capital");
     expect(balance(current.equity_hierarchy_data)).toBe(-13000);
+    expect(current.equity_data.slice(0, 2)).toEqual([
+      { date: "2025-01-31", balance: { MUSD: "-10000" } },
+      { date: "2025-02-28", balance: { MUSD: "-13000" } },
+    ]);
+    expect(Number(current.equity_data.at(-1)?.balance.MUSD)).toBe(
+      balance(current.equity_hierarchy_data),
+    );
     expect(
       balance(find(current.equity_hierarchy_data, "Capital:Retained:Now")),
     ).toBe(-3000);
@@ -180,6 +222,9 @@ describe("balance-sheet current earnings hierarchy", () => {
       conversion: "at_cost",
     });
     expect(balance(previous.equity_hierarchy_data)).toBe(-13000);
+    expect(
+      previous.equity_data.every((point) => point.balance.MUSD === "-13000"),
+    ).toBe(true);
     expect(
       balance(
         find(previous.equity_hierarchy_data, "Capital:Earnings:Previous"),
@@ -216,6 +261,11 @@ describe("balance-sheet current earnings hierarchy", () => {
       });
       expect(balance(report.assets_hierarchy_data)).toBe(assets);
       expect(balance(report.equity_hierarchy_data)).toBe(equity);
+      expect(report.equity_data.slice(0, 2)).toEqual([
+        { date: "2025-01-31", balance: { MUSD: "-10000" } },
+        { date: "2025-02-28", balance: { MUSD: String(equity) } },
+      ]);
+      expect(Number(report.equity_data.at(-1)?.balance.MUSD)).toBe(equity);
       expect(
         balance(find(report.equity_hierarchy_data, "Equity:Earnings:Current")),
       ).toBe(current);
@@ -236,6 +286,7 @@ describe("balance-sheet current earnings hierarchy", () => {
         conversion: "at_cost",
       });
       expect(balance(report.equity_hierarchy_data)).toBe(-13000);
+      expect(Number(report.equity_data.at(-1)?.balance.MUSD)).toBe(-13000);
       expect(
         balance(find(report.equity_hierarchy_data, "Equity:Earnings:Current")),
       ).toBe(-3000);
@@ -317,6 +368,11 @@ describe("balance-sheet current earnings hierarchy", () => {
     expect(balance(report.assets_hierarchy_data)).toBe(3000);
     expect(balance(report.liabilities_hierarchy_data)).toBe(0);
     expect(balance(report.equity_hierarchy_data)).toBe(-3000);
+    expect(report.equity_data.slice(0, 2)).toEqual([
+      { date: "2025-01-31", balance: {} },
+      { date: "2025-02-28", balance: { MUSD: "-3000" } },
+    ]);
+    expect(Number(report.equity_data.at(-1)?.balance.MUSD)).toBe(-3000);
     expect(
       balance(find(report.equity_hierarchy_data, "Equity:Earnings:Current")),
     ).toBe(-3000);
@@ -376,6 +432,13 @@ describe("balance-sheet current earnings hierarchy", () => {
     });
     expect(balance(report.assets_hierarchy_data)).toBe(24);
     expect(balance(report.equity_hierarchy_data)).toBe(-24);
+    expect(report.equity_data.slice(0, 2)).toEqual([
+      { date: "2025-01-31", balance: { MUSD: "-30" } },
+      { date: "2025-02-28", balance: { MUSD: "-24" } },
+    ]);
+    expect(Number(report.equity_data.at(-1)?.balance.MUSD)).toBe(
+      balance(report.equity_hierarchy_data),
+    );
     expect(
       balance(find(report.equity_hierarchy_data, "Equity:Earnings:Current")),
     ).toBe(6);

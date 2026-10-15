@@ -1,13 +1,13 @@
 # w6 · m5 — Include current earnings in balance-sheet equity
 
-**Worker:** worker1 **Goal:** An unfiltered balance sheet includes the selected period's earnings in its equity hierarchy and series, so the same books reconcile in their active year and the following year. **Status:** todo (t001 done)
+**Worker:** worker1 **Goal:** An unfiltered balance sheet includes the selected period's earnings in its equity hierarchy and series, so the same books reconcile in their active year and the following year. **Status:** todo (t001, t002 done)
 
 ## Tasks (in order)
 
 | id | title | est | depends_on |
 | --- | --- | --- | --- |
 | t001 | Close current earnings into the balance-sheet equity hierarchy — **DONE** | 45m | — |
-| t002 | Apply the same earnings policy to equity chart points | 25m | t001 |
+| t002 | Apply the same earnings policy to equity chart points — **DONE** | 25m | t001 |
 | t003 | Adoption surface | 15m | t002 |
 | t004 | Simplify | 10m | t003 |
 | t005 | Test coverage | 35m | t003 |
