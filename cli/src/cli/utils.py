@@ -200,18 +200,43 @@ def parse_date(date_str: str) -> Date:
 _URL = re.compile(r"[a-z][a-z0-9+.-]*://", re.IGNORECASE)
 
 
+def refuse_empty_path(value: Any, param: Any) -> None:
+    """Refuse `''` or a blank value for a path option, naming the option.
+
+    `Path('')` is `.`, the working directory, so an unset variable in a
+    template reached commands as a directory: `--into ''` advised creating
+    the ledger's own folder as an include and `--rules ''` failed as "Is a
+    directory" (w5/386), w5/239's empty-value rule for paths.
+    """
+    if str(value).strip():
+        return
+    name = param.opts[0] if param is not None and getattr(param, "opts", None) else "The path"
+    raise UsageError(f"{name} {str(value)!r} is empty; name a path, or omit {name}.")
+
+
+class NonEmptyPath(ParamType):
+    """A path option whose empty value is refused instead of read as `.`."""
+
+    name = "path"
+
+    def convert(self, value: Any, param: Any, ctx: Any) -> Path:
+        refuse_empty_path(value, param)
+        return Path(value)
+
+
 class IntoPath(ParamType):
     """`--into`: a local file relative to the root ledger; a URL is refused.
 
     As a `Path`, `--into https://beancount.io/prices/BTC-USD` collapsed to
     the local `https:/beancount.io/prices/BTC-USD`: bea advised creating that
     directory, then wrote the entry into a file the ledger never loads, since
-    the include fetches the feed (w5/449).
+    the include fetches the feed (w5/449). An empty value is refused too.
     """
 
     name = "path"
 
     def convert(self, value: Any, param: Any, ctx: Any) -> Path:
+        refuse_empty_path(value, param)
         match = _URL.match(str(value))
         if match is None:
             return Path(value)

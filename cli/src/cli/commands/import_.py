@@ -22,7 +22,7 @@ import typer
 from cli import context, output
 from cli.config import config_dir
 from cli.errors import BeaError, UsageError
-from cli.utils import IntoPath, atomic_write, exclusive_lock, inert_text
+from cli.utils import IntoPath, NonEmptyPath, atomic_write, exclusive_lock, inert_text
 
 
 class Duplicates(StrEnum):
@@ -467,7 +467,10 @@ def import_entries(
             help="CSV field delimiter for --csv: ',', ';', '|', or 'tab' (detected from the header when omitted)",
         ),
     ] = None,
-    rules_file: Annotated[Path | None, typer.Option("--rules", help="TOML categorization rules for --csv rows")] = None,
+    rules_file: Annotated[
+        Path | None,
+        typer.Option("--rules", click_type=NonEmptyPath(), help="TOML categorization rules for --csv rows"),
+    ] = None,
     default_account: Annotated[
         str | None,
         typer.Option(
