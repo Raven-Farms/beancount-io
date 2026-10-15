@@ -179,7 +179,6 @@
 - [459 — `query -o x.beancount "SELECT …"` writes a text table under a ledger name](./459.md) — CLI QA 2026-10-14
 - [460 — `list`/`query --json --allow-errors` omit `ledger_errors` from the envelope (stderr only)](./460.md) — CLI QA 2026-10-14
 - [461 — Failing `add`/`import --apply` under `--allow-errors` drop `error.ledger_warnings`](./461.md) — CLI QA 2026-10-14
-- [462 — Renamed roots: every `--into` write to an include is refused as "Invalid account name", no hint](./462.md) — CLI QA 2026-10-14
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
