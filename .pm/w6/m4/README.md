@@ -1,6 +1,6 @@
 # w6 · m4 — Complete empty-narration transaction lookups across APIs
 
-**Worker:** worker1 **Goal:** An agent can retrieve the latest transaction whose narration is the valid empty string through REST, GraphQL and MCP. **Status:** todo
+**Worker:** worker1 **Goal:** An agent can retrieve the latest transaction whose narration is the valid empty string through REST, GraphQL and MCP. **Status:** todo (t001 done)
 
 **Severity:** minor. **Owners:** ledger producer and backend-v2 adapters, in their existing package boundaries. **Estimate:** about 2 hours across six tasks; normalization alone leaves the MCP input unaddressable and GraphQL still discards an empty result field.
 
@@ -8,7 +8,7 @@
 
 | id | title | est | depends_on |
 | --- | --- | --- | --- |
-| t001 | Match and return canonical empty narrations at the producer | 25m | — |
+| t001 | Match and return canonical empty narrations at the producer — **DONE** | 25m | — |
 | t002 | Complete MCP addressing and GraphQL field preservation | 40m | t001 |
 | t003 | Adoption surface | 15m | t002 |
 | t004 | Simplify | 10m | t003 |

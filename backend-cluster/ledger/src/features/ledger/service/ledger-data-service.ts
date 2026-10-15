@@ -352,7 +352,7 @@ export class LedgerDataService implements ILedgerDataService {
     );
     return this.lastTransaction(
       directives,
-      (t) => t.narration === params.narration,
+      (t) => (t.narration ?? "") === params.narration,
     );
   }
 
@@ -367,7 +367,7 @@ export class LedgerDataService implements ILedgerDataService {
         return {
           date: directive.date,
           payee: directive.payee ?? null,
-          narration: directive.narration ?? null,
+          narration: directive.narration ?? "",
           postings: directive.postings.map((posting) => ({
             account: posting.account,
             amount: posting.units?.number ?? "",

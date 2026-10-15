@@ -9,6 +9,7 @@
  * jest, so the fast unit tests cover only the pure mappers and this script
  * covers the end-to-end engine.
  */
+import { deepStrictEqual } from "node:assert";
 import type { BeancountError, FileMap } from "@rustledger/wasm";
 import {
   buildEntryIdMap,
@@ -33,6 +34,7 @@ import {
   queryResultToText,
 } from "@/features/ledger/service/ledger-shell-mappers";
 import { stripBqlBlockComments } from "@/features/ledger/service/bql-comments";
+import { LedgerDataService } from "@/features/ledger/service/ledger-data-service";
 import {
   accountBalanceSeries,
   accountHierarchy,
@@ -97,6 +99,159 @@ plugin "fava.plugins.forecast"
 `,
 };
 
+async function verifyTransactionLookups(): Promise<void> {
+  const source = `option "operating_currency" "USD"
+2024-01-01 open Assets:Cash USD
+2024-01-01 open Assets:Shares HOOL
+2024-01-01 open Expenses:Fees USD
+2024-01-01 open Expenses:Food USD
+2024-02-01 * "Earlier blank" ""
+  Assets:Cash -5 USD
+  Expenses:Fees 5 USD
+2024-03-01 * "Cable" ""
+  Assets:Cash -80.08 USD
+  Expenses:Fees 80.08 USD
+2024-03-01 * "Broker" ""
+  Assets:Shares 2 HOOL @ 30 USD
+  Assets:Cash -60 USD
+2024-04-01 * "Store" "Buying groceries"
+  Assets:Cash -10 USD
+  Expenses:Food 10 USD
+2024-04-01 * "Store" "Buying groceries"
+  Assets:Cash -12 USD
+  Expenses:Food 12 USD
+2024-05-01 * "Narration only"
+  Assets:Cash -1 USD
+  Expenses:Fees 1 USD
+`;
+  const native = await withLedger(
+    { "main.bean": source },
+    "main.bean",
+    (ledger) => ({
+      valid: ledger.isValid(),
+      errors: ledger.getErrors(),
+      directives: ledger.getDirectives(),
+    }),
+  );
+  assert(
+    native.valid && native.errors.length === 0,
+    "transaction lookup fixture is valid in the installed WASM",
+  );
+  const omitted = native.directives.find(
+    (directive) =>
+      directive.type === "transaction" && directive.payee === "Broker",
+  );
+  assert(
+    omitted !== undefined && !Object.hasOwn(omitted, "narration"),
+    "installed WASM omits the explicit empty narration property",
+  );
+
+  // Only repository reads are synthetic: loadSnapshot, parsing, latest-match
+  // selection and serialization all run through the actual service.
+  const service = new LedgerDataService(
+    {
+      getPublicApiClient: async () => ({
+        repos: {
+          repoGetAllCommits: async () => ({ data: [] }),
+          getTree: async () => ({
+            data: {
+              tree: [{ path: "main.bean", type: "blob" }],
+              truncated: false,
+            },
+          }),
+          repoGetContents: async (
+            _owner: string,
+            _repo: string,
+            path: string,
+          ) => {
+            if (path !== "main.bean")
+              throw new Error(`Unexpected lookup fixture path: ${path}`);
+            return {
+              data: {
+                type: "file",
+                encoding: "base64",
+                content: Buffer.from(source).toString("base64"),
+              },
+            };
+          },
+        },
+      }),
+    } as never,
+    {} as never,
+  );
+  const params = { ledgerId: "synthetic/lookup", userId: undefined };
+  const expectedBlank = {
+    date: "2024-03-01",
+    payee: "Broker",
+    narration: "",
+    postings: [
+      { account: "Assets:Shares", amount: "2", commodity: "HOOL", price: "30" },
+      { account: "Assets:Cash", amount: "-60", commodity: "USD", price: null },
+    ],
+  };
+  const blank = await service.getNarrationTransactions({
+    ...params,
+    narration: "",
+  });
+  deepStrictEqual(blank, expectedBlank);
+  assert(
+    blank?.narration === "",
+    "empty narration lookup keeps latest-date/source order and signed amounts, commodities and prices",
+  );
+  const payee = await service.getPayeeTransactions({
+    ...params,
+    payee: "Broker",
+  });
+  deepStrictEqual(payee, expectedBlank);
+  assert(
+    payee?.narration === "",
+    "payee lookup returns canonical empty narration from the real WASM parse",
+  );
+  const groceries = await service.getNarrationTransactions({
+    ...params,
+    narration: "Buying groceries",
+  });
+  deepStrictEqual(groceries, {
+    date: "2024-04-01",
+    payee: "Store",
+    narration: "Buying groceries",
+    postings: [
+      { account: "Assets:Cash", amount: "-12", commodity: "USD", price: null },
+      { account: "Expenses:Food", amount: "12", commodity: "USD", price: null },
+    ],
+  });
+  assert(
+    groceries?.narration === "Buying groceries",
+    "nonempty narration lookup retains same-date later-source ordering",
+  );
+  const noPayee = await service.getNarrationTransactions({
+    ...params,
+    narration: "Narration only",
+  });
+  assert(
+    noPayee !== null && noPayee.payee === null,
+    "narration lookup preserves an absent payee as null",
+  );
+  assert(
+    (await service.getPayeeTransactions({ ...params, payee: "" })) === null,
+    "empty payee lookup does not match an absent payee",
+  );
+  assert(
+    (await service.getNarrationTransactions({
+      ...params,
+      narration: "No such narration",
+    })) === null,
+    "unknown narration stays null despite existing empty narrations",
+  );
+  assert(
+    (await service.getPayeeTransactions({
+      ...params,
+      payee: "No such payee",
+    })) === null,
+    "unknown payee stays null",
+  );
+}
+
 async function main(): Promise<void> {
   const version = await getRustledgerVersion();
   assert(
@@ -119,6 +274,8 @@ async function main(): Promise<void> {
     types.filter((type) => type === "transaction").length === 2,
     "two transactions parsed",
   );
+
+  await verifyTransactionLookups();
 
   const paddedSnapshot = await parseLedgerFiles(
     PAD_FILES,
