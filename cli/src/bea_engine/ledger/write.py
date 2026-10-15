@@ -1139,27 +1139,83 @@ def _collapse_repeats(records: list[_ErrorRecord]) -> list[str]:
     return messages
 
 
+#: How far `including_root` looks: the leaf's directory and this many above it.
+_INCLUDER_LEVELS = 4
+#: Candidate files it will open at most, so a search from a crowded home
+#: directory stays a bounded cost (w5/112, w5/124).
+_INCLUDER_CANDIDATES = 64
+_INCLUDER_MAX_BYTES = 16 * 1024 * 1024
+
+
 def including_root(file: Path) -> Path | None:
     """A nearby ledger that includes `file`, when `file` is not itself a root.
 
     Pointing `--file` at one leaf of an include tree drops the sibling files
     that open its accounts and set its options, so the resulting failures name
     the transaction rather than the target.
+
+    The leaf's directory and a few above it are searched, with their immediate
+    subdirectories for a `../shared/x.bean` include; only `.bean`/`.beancount`
+    files that mention an include of the leaf's name or a glob are opened. A
+    leaf three directories down or reached through `../` was never found, and
+    a case-variant path never matched on macOS (w5/347).
     """
     target = file.resolve()
-    candidates = []
-    for directory in dict.fromkeys((target.parent, target.parent.parent)):
-        candidates.extend(sorted(directory.glob("*.bean")) + sorted(directory.glob("*.beancount")))
-    for candidate in dict.fromkeys(path.resolve() for path in candidates):
-        if candidate == target:
-            continue
+    directories: list[Path] = []
+    for level, directory in enumerate([target.parent, *target.parent.parents]):
+        if level >= _INCLUDER_LEVELS:
+            break
+        directories.append(directory)
+        if (directory / ".git").exists():
+            break
+    near: list[Path] = []
+    for directory in directories:
+        near.append(directory)
         try:
-            included = LedgerSnapshot.capture(candidate).contents
-        except (OSError, UsageError, ValueError):
+            near.extend(
+                sorted(child for child in directory.iterdir() if child.is_dir() and not child.name.startswith("."))
+            )
+        except OSError:
             continue
-        if any(path.resolve() == target for path in included if path.resolve() != candidate):
-            return candidate
+    # Case-folded: on a case-insensitive volume `DEEP.BEAN` names `deep.bean`.
+    name = target.name.casefold().encode()
+    opened = 0
+    for directory in dict.fromkeys(near):
+        try:
+            files = sorted(directory.glob("*.bean")) + sorted(directory.glob("*.beancount"))
+        except OSError:
+            continue
+        for candidate in files:
+            if opened >= _INCLUDER_CANDIDATES:
+                return None
+            try:
+                info = candidate.stat()
+                # Regular files only, and not huge: a `.bean` FIFO left in a
+                # nearby directory blocked this read forever.
+                if not stat.S_ISREG(info.st_mode) or info.st_size > _INCLUDER_MAX_BYTES:
+                    continue
+                if os.path.samefile(candidate, target):
+                    continue
+                text = candidate.read_bytes()
+            except OSError:
+                continue
+            if b"include" not in text or (name not in text.lower() and not any(c in text for c in (b"*", b"?", b"["))):
+                continue
+            opened += 1
+            try:
+                included = LedgerSnapshot.capture(candidate.resolve()).contents
+            except (OSError, UsageError, ValueError):
+                continue
+            if any(_same_file(path, target) for path in included if not _same_file(path, candidate)):
+                return candidate.resolve()
     return None
+
+
+def _same_file(left: Path, right: Path) -> bool:
+    try:
+        return os.path.samefile(left, right)
+    except OSError:
+        return False
 
 
 def write_through_root(file: Path, into: Path | None) -> tuple[Path, Path | None]:
