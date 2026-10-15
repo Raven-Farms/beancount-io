@@ -4,7 +4,7 @@
 
 ## Milestones
 
-- [ ] **m5** — [Include current earnings in balance-sheet equity](./m5/README.md) (6 tasks; major; ledger with backend-v2 validation).
+- [x] **m5** — [Include current earnings in balance-sheet equity](./done/m5/README.md) (6 tasks; major; ledger with backend-v2 validation).
 
 - [x] **m4** — [Complete empty-narration transaction lookups across APIs](./done/m4/README.md) (6 tasks; minor; ledger and backend-v2).
 
