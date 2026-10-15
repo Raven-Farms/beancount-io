@@ -46,3 +46,5 @@
 - [029](./blocked/029.md) — Preserve Beanquery SUBST replacement semantics (minor; ledger; 35–50m after upstream support) — **blocked:** needs a compatible published WASM replacement implementation.
 
 - [030](./030.md) — Keep conversion strategies out of empty income and overview currency labels (minor; backend-v2; 45–60m).
+
+- [031](./blocked/031.md) — Adopt floor-based DATE_BIN arithmetic before the origin (minor; ledger; 35–50m after upstream support) — **blocked:** needs a published native fixed-stride correction.
