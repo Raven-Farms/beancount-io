@@ -23,7 +23,8 @@ Read beancount-init's `references/bea-cli.md` before running ledger commands: it
   recipe, preserving `import-id` and flags. This also handles mixed per-row
   duplicate decisions that a single `--duplicates` policy cannot express.
 - **Tested Beangulp workflows:** enable with `bea engine enable beangulp`
-  (requires system libmagic), then `bea ingest identify|extract|archive` with
+  (the system libmagic library is optional: only importers that call
+  python-magic themselves need it), then `bea ingest identify|extract|archive` with
   the actual runner supplied via `--config`. Ordinary CSV needs no Beangulp.
 
 The agent interprets the source and reviews the rows; `bea` validates and

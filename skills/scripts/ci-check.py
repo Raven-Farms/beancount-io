@@ -69,6 +69,13 @@ PIP_INSTALL_BEANCOUNT = re.compile(
 PRIVATE_ENGINE_PATH = re.compile(
     r"\bBEA_ENGINE\b|\$XDG_DATA_HOME/bea/engine|~/\.local/share/bea/engine",
 )
+# Beangulp runs without the system libmagic library; only importers that call
+# python-magic themselves need it (w5/168, w5/357).
+LIBMAGIC_REQUIRED = re.compile(
+    r"\b(?:needs?|requires?)\s+(?:the\s+)?system\s+libmagic",
+    re.IGNORECASE,
+)
+CUSTOMER_DOCS = SKILLS_ROOT / "docs"
 
 
 def fail(msg: str) -> None:
@@ -323,9 +330,13 @@ def check_bea_first() -> None:
 
 def check_no_redundant_installs() -> None:
     """Customer skill text must not push a second Beancount CLI install."""
-    for path in sorted(SKILLS_DIR.rglob("*.md")):
+    docs = sorted(CUSTOMER_DOCS.rglob("*.md")) if CUSTOMER_DOCS.is_dir() else []
+    for path in [*sorted(SKILLS_DIR.rglob("*.md")), *docs]:
         rel = path.relative_to(REPO_ROOT).as_posix()
         text = path.read_text(encoding="utf-8")
+        # Joined so a claim wrapped across lines is still one sentence.
+        if LIBMAGIC_REQUIRED.search(" ".join(text.split())):
+            fail(f"{rel} says Beangulp needs system libmagic; it is optional")
         for lineno, line in enumerate(text.splitlines(), 1):
             if PIP_INSTALL_BEANCOUNT.search(line):
                 # Allowed only when telling the agent what NOT to do.
@@ -340,7 +351,7 @@ def check_no_redundant_installs() -> None:
                 line,
             ):
                 fail(f"{rel}:{lineno} documents a private engine path for agents to configure")
-        print(f"OK one-install guidance {path.relative_to(SKILLS_DIR)}")
+        print(f"OK one-install guidance {path.relative_to(SKILLS_ROOT)}")
 
 
 def main() -> None:

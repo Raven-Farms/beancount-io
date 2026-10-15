@@ -8,9 +8,10 @@ rows and expected ledger effects independently of any generated golden files.
 
 This walkthrough uses the installed customer suite, Git, Python 3.9+, uv,
 published **bea 0.3.1**, and **Beangulp 0.2.0**. These are the tested versions;
-check yours before proceeding. Beangulp also needs the system libmagic library
-(`brew install libmagic` on macOS; `sudo apt-get install libmagic1` on
-Debian/Ubuntu). Install that system prerequisite separately if it is absent.
+check yours before proceeding. The system libmagic library is optional: only
+importers that call python-magic themselves need it (`brew install libmagic` on
+macOS; `sudo apt-get install libmagic1` on Debian/Ubuntu). The example importer
+here does not.
 This shell setup targets macOS/Linux; native Windows is not covered here.
 
 ## Two environments with different jobs

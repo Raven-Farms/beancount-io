@@ -200,6 +200,40 @@ class TestOracleAndIsolation(unittest.TestCase):
                 with self.assertRaises(SystemExit):
                     ci_check.check_no_redundant_installs()
 
+    def test_libmagic_requirement_claim_is_rejected(self):
+        for text in (
+            "enable with `bea engine enable beangulp`\n(requires system libmagic), then\n",
+            "Beangulp also needs the system\nlibmagic library.\n",
+        ):
+            with self.subTest(text=text), tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                skills_dir = repo / "skills/.claude/skills"
+                docs = repo / "skills/docs"
+                (docs / "guide.md").parent.mkdir(parents=True)
+                (docs / "guide.md").write_text(text)
+                skills_dir.mkdir(parents=True)
+                with mock.patch.multiple(
+                    ci_check, REPO_ROOT=repo, SKILLS_ROOT=repo / "skills", SKILLS_DIR=skills_dir, CUSTOMER_DOCS=docs
+                ):
+                    with self.assertRaises(SystemExit):
+                        ci_check.check_no_redundant_installs()
+
+    def test_optional_libmagic_wording_passes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            skills_dir = repo / "skills/.claude/skills"
+            docs = repo / "skills/docs"
+            (docs / "guide.md").parent.mkdir(parents=True)
+            (docs / "guide.md").write_text(
+                "The system libmagic library is optional: only importers that call\n"
+                "python-magic themselves need it.\n"
+            )
+            skills_dir.mkdir(parents=True)
+            with mock.patch.multiple(
+                ci_check, REPO_ROOT=repo, SKILLS_ROOT=repo / "skills", SKILLS_DIR=skills_dir, CUSTOMER_DOCS=docs
+            ), contextlib.redirect_stdout(io.StringIO()):
+                ci_check.check_no_redundant_installs()
+
 
 class TestRawAppendMatcher(unittest.TestCase):
     def flagged(self, line: str) -> bool:

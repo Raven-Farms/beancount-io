@@ -23,7 +23,7 @@ Read `references/beangulp-api.md` before writing any code. Prefer enabling
 Beangulp in the managed engine when `bea` is installed:
 
 ```bash
-bea engine enable beangulp   # once; needs system libmagic
+bea engine enable beangulp   # once; system libmagic is optional (python-magic importers only)
 bea engine status
 ```
 
