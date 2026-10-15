@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [353 — `example -o DIR` advises `--force`, which then refuses the directory](./353.md) — CLI QA 2026-10-14
 - [354 — `price status` warning tells the user to run `price status`](./354.md) — CLI QA 2026-10-14
 - [355 — `format -i` turns a lone CR inside comments/strings into a line break, breaking or changing the ledger](./355.md) — CLI QA 2026-10-14
 - [356 — `beancount-close` flag sweep groups by content, so same-day same-merchant `!` entries count once](./356.md) — CLI QA 2026-10-14
