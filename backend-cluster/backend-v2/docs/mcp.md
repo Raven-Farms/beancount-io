@@ -554,8 +554,19 @@ on `postings-per-account` selects matching entries and counts every posting on
 those entries, including counterpart accounts; zero-count accounts are omitted
 and rows are sorted by account name.
 
-Statement and overview payloads retain the ledger service's snake-case field
-names on REST/MCP. GraphQL exposes camel-case equivalents, including
+By default (`shape=summary`) REST and MCP return each statement as totals
+and the nonzero accounts behind them, in one stated `currency`. The balance
+sheet adds `valuation`: `units` (positions unconverted), `cost` (booked cost),
+or `latest-price` (a currency conversion or `at_value`, priced at the ledger's
+most recent price). `asOf` is the position cut-off, not the price date, so a
+historical window shows its positions at the latest recorded prices. `netWorth` is always
+`assets + liabilities`, on the same basis as `byAccount`. The income
+statement's `period` gives `to`, the statement's last day, and `time`, the
+selection as requested. `from` is `null` because chart buckets carry only
+their end dates.
+
+With `shape=fava`, statement and overview payloads retain the ledger service's
+snake-case field names on REST/MCP. GraphQL exposes camel-case equivalents, including
 `balance_children` → `balanceChildren`, `has_txns` → `hasTxns`, and
 `account_balances` → `accountBalances`. Currency and account dictionary keys,
 and decimal strings inside them, are unchanged.

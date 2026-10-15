@@ -58,9 +58,10 @@ const transfer = (currency: string) => ({
   liabilities_hierarchy_data: root("Liabilities"),
   equity_hierarchy_data: root("Equity"),
 });
-const summary = (currency: string) => ({
+const summary = (currency: string, valuation = "latest-price") => ({
   asOf: "2026-03-31",
   currency,
+  valuation,
   assets: 0,
   liabilities: 0,
   equity: 0,
@@ -152,12 +153,17 @@ async function fixture(payload: unknown) {
 }
 
 describe("balance-sheet summary of a cancelling transfer (w6/006)", () => {
-  it.each(["units", "at_cost", "at_value", "USD"])(
+  it.each([
+    ["units", "units"],
+    ["at_cost", "cost"],
+    ["at_value", "latest-price"],
+    ["USD", "latest-price"],
+  ])(
     "keeps both signed accounts with conversion=%s",
-    async (conversion) => {
+    async (conversion, valuation) => {
       const f = await fixture(transfer("USD"));
       try {
-        expect(await f.read({ conversion })).toEqual(summary("USD"));
+        expect(await f.read({ conversion })).toEqual(summary("USD", valuation));
         // The filter and conversion reach the ledger unchanged.
         for (const [, , query] of f.getLedgerBalanceSheet.mock.calls)
           expect(query).toMatchObject({ filter, conversion });
@@ -179,7 +185,9 @@ describe("balance-sheet summary of a cancelling transfer (w6/006)", () => {
   it("reads a non-USD ledger's currency from its accounts", async () => {
     const f = await fixture(transfer("CHF"));
     try {
-      expect(await f.read({ conversion: "units" })).toEqual(summary("CHF"));
+      expect(await f.read({ conversion: "units" })).toEqual(
+        summary("CHF", "units"),
+      );
     } finally {
       await f.close();
     }
@@ -262,4 +270,111 @@ describe("balance-sheet summary of a cancelling transfer (w6/006)", () => {
       }
     },
   );
+});
+
+/**
+ * w6/009. The ledger values each net-worth series point at its interval end
+ * but every account tree at the latest price. A historical window therefore
+ * returns two snapshots, and the summary took net worth from one and assets
+ * from the other: January's 2 XYZ (priced 10 then, 20 now) read as assets 40
+ * beside a net worth of 5. Net worth now comes from the same trees as every
+ * other number, and the summary says which valuation that is.
+ */
+describe("balance-sheet summary valuation basis (w6/009)", () => {
+  const sheet = (
+    broker: Record<string, string>,
+    card: Record<string, string>,
+    netWorthPoint: Record<string, string>,
+  ) => ({
+    ...transfer("USD"),
+    net_worth_data: [{ date: "2026-01-31", balance: netWorthPoint }],
+    assets_hierarchy_data: {
+      ...root("Assets", [leaf("Assets:Broker", broker)]),
+      balance_children: broker,
+    },
+    liabilities_hierarchy_data: {
+      ...root("Liabilities", [leaf("Liabilities:Card", card)]),
+      balance_children: card,
+    },
+  });
+  // January's series point values 2 XYZ at January's 10 USD; the trees value
+  // them at the latest 20 USD.
+  const historical = sheet({ USD: "40" }, { USD: "-15" }, { USD: "5" });
+
+  it("derives net worth from the reported accounts, not the dated series point", async () => {
+    const f = await fixture(historical);
+    try {
+      const summary = await f.read({ conversion: "USD", time: "2026-01" });
+      expect(summary).toEqual({
+        asOf: "2026-01-31",
+        currency: "USD",
+        valuation: "latest-price",
+        assets: 40,
+        liabilities: -15,
+        equity: 0,
+        netWorth: 25,
+        byAccount: [
+          { account: "Assets:Broker", balance: 40 },
+          { account: "Liabilities:Card", balance: -15 },
+        ],
+      });
+      // The rows sum to the totals they sit under.
+      const rows = summary.byAccount.reduce(
+        (sum: number, row: { balance: number }) => sum + row.balance,
+        0,
+      );
+      expect(rows).toBe(summary.netWorth);
+    } finally {
+      await f.close();
+    }
+  });
+
+  it.each([
+    {
+      conversion: "at_cost",
+      // Booked cost is undated, so the series point and the trees agree.
+      payload: sheet({ USD: "20" }, { USD: "-15" }, { USD: "5" }),
+      expected: { valuation: "cost", currency: "USD", netWorth: 5 },
+    },
+    {
+      conversion: "units",
+      payload: sheet({ XYZ: "2" }, { USD: "-15" }, { XYZ: "2", USD: "-15" }),
+      expected: { valuation: "units", currency: "XYZ", netWorth: 2 },
+    },
+    {
+      // Unfiltered: the last series point is valued at the latest price too.
+      conversion: "USD",
+      payload: sheet({ USD: "40" }, { USD: "-15" }, { USD: "25" }),
+      expected: { valuation: "latest-price", currency: "USD", netWorth: 25 },
+    },
+  ])(
+    "keeps the identity and labels $conversion as $expected.valuation",
+    async ({ conversion, payload, expected }) => {
+      const f = await fixture(payload);
+      try {
+        const summary = await f.read({ conversion });
+        expect(summary).toMatchObject(expected);
+        expect(summary.netWorth).toBe(summary.assets + summary.liabilities);
+      } finally {
+        await f.close();
+      }
+    },
+  );
+
+  it("leaves both raw views as the ledger sent them", async () => {
+    const f = await fixture(historical);
+    try {
+      expect(
+        await f.read({ conversion: "USD", time: "2026-01", shape: "fava" }),
+      ).toEqual(historical);
+      const gql = await f.gql("USD");
+      expect(gql.errors).toBeUndefined();
+      expect(
+        (gql.data?.getLedgerBalanceSheet as { netWorthData: unknown })
+          .netWorthData,
+      ).toEqual([{ date: "2026-01-31", balance: { USD: "5" } }]);
+    } finally {
+      await f.close();
+    }
+  });
 });

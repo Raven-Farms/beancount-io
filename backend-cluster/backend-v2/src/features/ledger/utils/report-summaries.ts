@@ -41,9 +41,18 @@ export interface BalanceSheetSummary {
   /** Last date the statement covers, or `null` for an empty ledger. */
   readonly asOf: string | null;
   readonly currency: string;
+  /**
+   * How every amount below is valued (w6/009). `asOf` cuts off which
+   * positions count; it does not date the prices. `units` reports positions
+   * unconverted, `cost` at their booked cost, and `latest-price` — a currency
+   * conversion or `at_value` — at the ledger's most recent price, not the
+   * price on `asOf`.
+   */
+  readonly valuation: "units" | "cost" | "latest-price";
   readonly assets: number;
   readonly liabilities: number;
   readonly equity: number;
+  /** Always `assets + liabilities`, on the same basis as the accounts. */
   readonly netWorth: number;
   readonly byAccount: readonly AccountBalance[];
 }
@@ -240,16 +249,23 @@ export function summarizeBalanceSheet(
   const assets = total(data.assets_hierarchy_data, currency);
   const liabilities = total(data.liabilities_hierarchy_data, currency);
   const equity = total(data.equity_hierarchy_data, currency);
-  const last = data.net_worth_data[data.net_worth_data.length - 1];
   return {
     asOf: lastDate(data.net_worth_data),
     currency,
+    valuation:
+      conversion === "units"
+        ? "units"
+        : conversion === "at_cost"
+          ? "cost"
+          : "latest-price",
     assets,
     liabilities,
     equity,
-    // Prefer the series Fava computed; fall back to the identity when the
-    // ledger is too empty to have produced one.
-    netWorth: last ? amount(last.balance, currency) : assets + liabilities,
+    // From the trees, never the net-worth series: the ledger values each
+    // series point at its interval end but the trees at the latest price, so
+    // under a historical filter the series point belongs to a different
+    // snapshot than the accounts this summary reports (w6/009).
+    netWorth: assets + liabilities,
     byAccount: [
       ...flattenHierarchy(data.assets_hierarchy_data, currency),
       ...flattenHierarchy(data.liabilities_hierarchy_data, currency),

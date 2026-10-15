@@ -283,12 +283,14 @@ describe("statement adapter contracts", () => {
         expect(summary).toEqual({
           asOf: "2026-12-31",
           currency: "USD",
+          valuation: "latest-price",
           // One `tree` node stands in for each of the three hierarchies, so
           // each contributes its own balance plus its children's.
           assets: 2 * usd,
           liabilities: 2 * usd,
           equity: 2 * usd,
-          netWorth: usd,
+          // The accounts' own basis, not the series point's (w6/009).
+          netWorth: 2 * usd + 2 * usd,
           byAccount: [
             { account: "Assets", balance: usd },
             { account: "Assets", balance: usd },
@@ -307,11 +309,10 @@ describe("statement adapter contracts", () => {
     it("honours conversion when choosing the currency to report in", async () => {
       const f = await fixture();
       try {
-        const summary = await f.mcp(
-          "statements/balance-sheet?conversion=EUR",
-        );
+        const summary = await f.mcp("statements/balance-sheet?conversion=EUR");
         expect(summary.currency).toBe("EUR");
-        expect(summary.netWorth).toBe(-45.6);
+        expect(summary.assets).toBe(-91.2);
+        expect(summary.netWorth).toBe(summary.assets + summary.liabilities);
       } finally {
         await f.close();
       }

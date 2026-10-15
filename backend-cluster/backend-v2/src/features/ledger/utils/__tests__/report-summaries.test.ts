@@ -121,6 +121,7 @@ describe("summarizeBalanceSheet", () => {
     expect(summarizeBalanceSheet(data)).toEqual({
       asOf: "2026-02-28",
       currency: "USD",
+      valuation: "latest-price",
       assets: 1250,
       liabilities: -100,
       equity: 0,
@@ -168,9 +169,10 @@ describe("summarizeBalanceSheet", () => {
         equity_hierarchy_data: node("Equity", {}),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       }) as any;
-    const summary = (currency: string) => ({
+    const summary = (currency: string, valuation = "latest-price") => ({
       asOf: "2026-03-31",
       currency,
+      valuation,
       assets: 0,
       liabilities: 0,
       equity: 0,
@@ -181,11 +183,17 @@ describe("summarizeBalanceSheet", () => {
       ],
     });
 
-    it.each(["units", "at_cost", "at_value", "USD", undefined])(
+    it.each([
+      ["units", "units"],
+      ["at_cost", "cost"],
+      ["at_value", "latest-price"],
+      ["USD", "latest-price"],
+      [undefined, "latest-price"],
+    ])(
       "keeps both signed accounts in USD with conversion=%s",
-      (conversion) => {
+      (conversion, valuation) => {
         expect(summarizeBalanceSheet(transfer("USD"), conversion)).toEqual(
-          summary("USD"),
+          summary("USD", valuation),
         );
       },
     );
@@ -198,7 +206,7 @@ describe("summarizeBalanceSheet", () => {
 
     it("reads a non-USD ledger's currency from its accounts", () => {
       expect(summarizeBalanceSheet(transfer("CHF"), "units")).toEqual(
-        summary("CHF"),
+        summary("CHF", "units"),
       );
     });
 
