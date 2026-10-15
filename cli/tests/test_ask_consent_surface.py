@@ -136,7 +136,8 @@ def test_the_confirm_callback_is_given_the_into_destination(split_ledger: Path) 
 
     assert answer == "Write cancelled by user."
     directive, target, _ = seen[0]
-    assert directive == CLEAN_DIRECTIVE
+    # The engine's aligned rendering of the proposal (w5/374).
+    assert directive.split() == CLEAN_DIRECTIVE.split()
     assert Path(target) == (split_ledger.parent / "side.bean").resolve()
     assert split_ledger.read_text() == ROOT, "declining leaves the root byte-identical"
 

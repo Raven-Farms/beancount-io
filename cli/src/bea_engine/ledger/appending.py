@@ -40,11 +40,15 @@ def answer(
         file, [text], allow_errors=allow_errors, into=into, snapshot=snapshot, one_entry_each=False
     )
     if dry_run:
+        seeded = ledger_write.new_include_seed(snapshot, target) + snapshot.require_target(target)
         return {
             "count": len(entries),
             "target": str(target),
             "warnings": warnings,
             "token": _token(snapshot),
+            # The aligned lines the commit appends, so a confirmation shows what
+            # will be written rather than the proposal before alignment (w5/374).
+            "text": ledger_write.appended_lines(seeded, [text]),
         }
     ledger_write.append(file, [text], allow_errors=allow_errors, into=into, snapshot=snapshot, one_entry_each=False)
     return {"written": len(entries), "target": str(target), "warnings": warnings}

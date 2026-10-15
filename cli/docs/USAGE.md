@@ -1726,8 +1726,10 @@ Interactive write requests are validated before confirmation, then appended
 atomically only if the root ledger and included files still match the preview.
 The confirmation names the file the write will actually change — with
 `--into FILE` that is the included destination, not the root ledger — and shows
-the directive with any control character escaped to a visible `\xNN`, so what is
-on screen is what will be written. The panel starts on **No**, so Enter alone
+the directive as it will be appended, aligned as `bea format` leaves it (a
+model's tab indentation shows as the spaces that are written). Text still
+carrying a control character in a string is escaped to a visible `\xNN`, so
+what is on screen is what will be written. The panel starts on **No**, so Enter alone
 declines. Arrows, `j`/`k`, the option numbers `1`–`4` and the letters `y`, `n`,
 `a` (yes to all) and `d` (deny all) move the selection, Enter confirms it, and
 Ctrl-C declines. Raw directive text carrying a control

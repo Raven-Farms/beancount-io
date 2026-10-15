@@ -393,7 +393,11 @@ def make_agent(
             # that is an included file, not `deps.file`. The consent panel has to
             # name that file, so the preview's own answer is what it is built from.
             warnings = [str(warning) for warning in preview.get("warnings") or []]
-            answer = perm.confirm_fn(directive, str(preview["target"]), warnings)
+            # The engine's aligned rendering is what lands in the file: the
+            # proposal's tab indentation showed as `\x09` and was then written
+            # as aligned spaces (w5/374).
+            shown = preview.get("text")
+            answer = perm.confirm_fn(shown if isinstance(shown, str) else directive, str(preview["target"]), warnings)
             if answer == "a":
                 perm.approve_all = True
             elif answer == "d":

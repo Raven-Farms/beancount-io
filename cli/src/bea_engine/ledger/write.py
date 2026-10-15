@@ -2192,6 +2192,18 @@ def appended_content(original: bytes, texts: list[str]) -> str:
     return head + ending.join(tail) + ending
 
 
+def appended_lines(original: bytes, texts: list[str]) -> str:
+    """Only the lines `appended_content` adds, LF-terminated: what a write preview shows.
+
+    The aligner rewrites indentation and spacing, so text a caller proposed is
+    not the text that lands; a confirmation built from the proposal showed tab
+    indentation as `\\x09` and then wrote aligned spaces (w5/374).
+    """
+    head = original.decode("utf-8")
+    added = appended_content(original, texts)[len(head) :]
+    return added.replace("\r\n", "\n").strip("\n") + "\n"
+
+
 def _dominant_ending(content: bytes) -> str:
     """The line ending new lines should use: CRLF only when CRLF lines win.
 

@@ -168,7 +168,8 @@ everything else must parse as at least one dated entry and leave the whole
 ledger loadable, same atomic rule as `add`.
 
 `--dry-run` validates without writing and answers
-`{"count": N, "target": "...", "warnings": [], "token": {path: digest, ...}}`.
+`{"count": N, "target": "...", "warnings": [], "token": {path: digest, ...}, "text": "..."}`,
+where `text` is the lines the commit will append, aligned as written.
 A later call with the same `--text` and that `--token` commits, or answers
 `conflict` if any file in the include graph changed — which is how the
 frontend's write confirmation still detects an edit made while the user was
