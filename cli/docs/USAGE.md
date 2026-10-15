@@ -1132,6 +1132,12 @@ keys must be distinct and cannot use the reserved source fields `filename` or
 `2026/02/30`, `2026-2-30`) that is not a real calendar day is refused rather
 than stored as text.
 
+A `--posting` (or a bulk row's `amount`) has no such escape: Beancount ends a
+posting at a `;` and drops the rest, which would silently lose a note, a cost,
+a price or the amount itself. A `;` outside a quoted cost label is refused —
+exit 2 naming the `--posting`, or the row in bulk — and nothing is written;
+put the note in `--meta` instead.
+
 `add commodity` takes the same `--meta`, which is how a symbol becomes more than
 a date and a ticker — `--meta 'name:Vanguard 500 Index' --meta
 'asset-class:equity'`. The keys are written indented under the directive and come

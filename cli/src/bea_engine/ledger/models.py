@@ -182,6 +182,29 @@ _FRAGMENT_HELP = (
 )
 
 
+def comment_start(text: str) -> int | None:
+    """Where a `;` outside a quoted string starts a Beancount comment in `text`, if anywhere.
+
+    The grammar ends a posting at that `;` and drops the rest, so typed text
+    after it — a note, a price, a cost, or the amount itself — vanished from a
+    written posting without a word (w5/298). Quoted cost labels may hold one.
+    """
+    quoted = escaped = False
+    for index, char in enumerate(text):
+        if escaped:
+            escaped = False
+        elif quoted and char == "\\":
+            escaped = True
+        elif char == '"':
+            quoted = not quoted
+        elif char == ";" and not quoted:
+            return index
+    return None
+
+
+COMMENT_HELP = "Beancount would drop everything from that ';' on; put a note in metadata instead."
+
+
 def _posting_fragment(amount: str) -> dict[str, Any]:
     """Expand a cost/price shorthand fragment to structured posting fields.
 
@@ -200,6 +223,8 @@ def _posting_fragment(amount: str) -> dict[str, Any]:
 
     if "\n" in amount or "\r" in amount:
         raise ValueError(f"amount {amount!r} must be one posting fragment without line breaks. {_FRAGMENT_HELP}")
+    if comment_start(amount) is not None:
+        raise ValueError(f"amount {amount!r} contains a ';'. {COMMENT_HELP}")
     refuse_zero_divisor(amount)
     entries, errors, _ = parse_exact(f'2026-01-02 * "probe"\n  Assets:Probe {amount}\n  Equity:Probe\n')
     entry: Any = entries[0] if len(entries) == 1 and not errors else None

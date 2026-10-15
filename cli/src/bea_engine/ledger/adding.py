@@ -669,11 +669,16 @@ def _transaction(
     from beancount.core.number import MISSING
 
     from bea_engine import managed_load
-    from bea_engine.ledger.models import WRITE_INPUT, TransactionHeader
+    from bea_engine.ledger.models import COMMENT_HELP, WRITE_INPUT, TransactionHeader, comment_start
     from bea_engine.ledger.reader import metadata_to_json
 
     postings: list[str] = [str(posting) for posting in request.get("postings") or []]
-    for posting_text in postings:
+    for number, posting_text in enumerate(postings, start=1):
+        if comment_start(posting_text) is not None:
+            raise protocol.UsageError(
+                f"--posting {number} contains a ';': {posting_text!r}. {COMMENT_HELP} "
+                "Use --meta for a transaction note. Nothing was written."
+            )
         parts = posting_text.split()
         # Native posting flags are single characters; accounts never are.
         if parts and len(parts[0]) == 1:
