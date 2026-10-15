@@ -174,12 +174,24 @@ def unwrap[T](response: Response[T | V1Error]) -> T:
     return result
 
 
-def unwrap_or_none[T](response: Response[T | V1Error]) -> T | None:
-    """`unwrap` for operations whose success body is legitimately null."""
-    from cli.errors import error_from_status, request_id_from
+def unwrap_or_none[T](response: Response[T | V1Error], *, model: type | None = None) -> T | None:
+    """`unwrap` for operations whose success body is legitimately null.
+
+    `model` is the generated class a success must parse into. A union-typed
+    generated parser that cannot read the body returns the raw JSON instead
+    of raising, so `call` never sees a parser failure; without this check the
+    command then read an attribute off a dict (w5/366).
+    """
+    from cli.errors import UnreadableSuccess, error_from_status, request_id_from
 
     parsed = response.parsed
     if response.status_code < 400 and not isinstance(parsed, V1Error):
+        if model is not None and parsed is not None and not isinstance(parsed, model):
+            raise UnreadableSuccess(
+                f"Unexpected server response (HTTP {response.status_code}).",
+                status=response.status_code,
+                request_id=request_id_from(response.headers),
+            )
         return parsed
     raise error_from_status(
         response.status_code,

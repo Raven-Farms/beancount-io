@@ -109,11 +109,14 @@ def cloud_status() -> None:
     ctx = context.current()
     from cli.api.client import bearer_client, call, unwrap_or_none
     from cli.api.rest_client.api.ledger_v_1 import get_user_profile
+    from cli.api.rest_client.models import GetUserProfileResponse200Type0
     from cli.auth.credentials import require_credentials
     from cli.errors import error_from_status
 
     creds = require_credentials()
-    user = unwrap_or_none(call(get_user_profile.sync_detailed, client=bearer_client(creds.token)))
+    user = unwrap_or_none(
+        call(get_user_profile.sync_detailed, client=bearer_client(creds.token)), model=GetUserProfileResponse200Type0
+    )
     if user is None:
         # A revoked or unknown bearer answers this endpoint with an empty
         # profile rather than a 401. Report it exactly the way every other
