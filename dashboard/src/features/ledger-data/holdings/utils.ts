@@ -6,6 +6,39 @@ import {
 /** Derived ratio column — rounded for display; quantity columns stay verbatim. */
 export const UNREALIZED_PROFIT_PCT_COLUMN = "unrealized_profit_pct";
 
+/**
+ * Derived quotient (book value ÷ units) in Holdings by Currency. The engine
+ * returns it at a 28-digit division context (`268.22352941176470588235294118`),
+ * digits no source carries, so it is bounded like the percentage column while
+ * units, values and source prices stay lossless (w0/009).
+ */
+export const AVERAGE_COST_COLUMN = "average_cost";
+
+/** Fraction digits kept for `average_cost`: enough for crypto unit prices. */
+const AVERAGE_COST_MAX_FRACTION_DIGITS = 8;
+
+/**
+ * Round a plain decimal string half-up to at most `maxFraction` digits,
+ * exactly (no binary floating point), and drop trailing zeros. Text that is
+ * not a plain decimal passes through unchanged.
+ */
+export function roundDecimalString(value: string, maxFraction: number): string {
+  const match = /^([+-]?)(\d+)(?:\.(\d+))?$/.exec(value.trim());
+  if (!match) return value;
+  const [, sign, whole, fraction = ""] = match;
+  if (fraction.length <= maxFraction) {
+    const trimmed = fraction.replace(/0+$/, "");
+    return `${sign}${whole}${trimmed ? `.${trimmed}` : ""}`;
+  }
+  let scaled = BigInt(whole + fraction.slice(0, maxFraction));
+  if (fraction.charCodeAt(maxFraction) >= "5".charCodeAt(0)) scaled += 1n;
+  const digits = scaled.toString().padStart(maxFraction + 1, "0");
+  const integer = digits.slice(0, digits.length - maxFraction);
+  const kept = digits.slice(digits.length - maxFraction).replace(/0+$/, "");
+  const isZero = /^0*$/.test(integer) && !kept;
+  return `${isZero ? "" : sign}${integer}${kept ? `.${kept}` : ""}`;
+}
+
 /** Re-export for Holdings CSV callers and existing tests. */
 export const csvObjectToString = formatInventoryCellText;
 
@@ -89,6 +122,9 @@ export function formatHoldingsCell(
 ): string {
   if (columnName === UNREALIZED_PROFIT_PCT_COLUMN) {
     return formatPercentageCell(value);
+  }
+  if (columnName === AVERAGE_COST_COLUMN && typeof value === "string") {
+    return roundDecimalString(value, AVERAGE_COST_MAX_FRACTION_DIGITS);
   }
   return formatDecimalCell(value);
 }

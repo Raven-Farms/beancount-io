@@ -9,6 +9,7 @@ import {
   holdingsRowsFilter,
   unitsFirstRowsFilter,
   UNREALIZED_PROFIT_PCT_COLUMN,
+  formatHoldingsCell,
 } from "../utils";
 
 describe("Holdings Utils", () => {
@@ -515,5 +516,40 @@ describe("Holdings Utils", () => {
       const result = holdingsRowsFilter([]);
       expect(result).toHaveLength(0);
     });
+  });
+});
+
+describe("average_cost precision (w0/009)", () => {
+  it("bounds a repeating 28-digit quotient to 8 fraction digits", () => {
+    expect(
+      formatHoldingsCell("268.22352941176470588235294118", "average_cost"),
+    ).toBe("268.22352941");
+    expect(
+      formatHoldingsCell("0.0243697569951832007360502246", "average_cost"),
+    ).toBe("0.02436976");
+    expect(
+      formatHoldingsCell("1.0000567445942027158221224768", "average_cost"),
+    ).toBe("1.00005674");
+  });
+
+  it("keeps an exact quotient and rounds half up exactly", () => {
+    expect(formatHoldingsCell("122.20734375", "average_cost")).toBe(
+      "122.20734375",
+    );
+    expect(formatHoldingsCell("0.999999995", "average_cost")).toBe("1");
+    expect(formatHoldingsCell("-0.000000004", "average_cost")).toBe("0");
+  });
+
+  it("leaves units, values and prices lossless", () => {
+    expect(formatHoldingsCell("0.0225", "price")).toBe("0.0225");
+    expect(formatHoldingsCell("0.123456789012345", "units")).toBe(
+      "0.123456789012345",
+    );
+  });
+
+  it("applies the same bound in the CSV export", () => {
+    expect(
+      tableToCSV(["average_cost"], [["268.22352941176470588235294118"]]),
+    ).toContain('"268.22352941"');
   });
 });
