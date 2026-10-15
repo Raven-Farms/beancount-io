@@ -43,7 +43,6 @@
 - [392 — `bea query` shell history ignores `BEA_CONFIG_DIR`, writes `~/.config/beanquery/history` undocumented](./392.md) — CLI QA 2026-10-14
 - [393 — Inactive-account error says "Correct the transaction date" for notes/documents](./393.md) — CLI QA 2026-10-14
 - [394 — `add close` before the open or on an unknown account gets bare "Unopened account … is being closed"](./394.md) — CLI QA 2026-10-14
-- [395 — "Pad accounts must be active, even with --allow-errors" shown without the flag, repeated](./395.md) — CLI QA 2026-10-14
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
