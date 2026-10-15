@@ -25,7 +25,7 @@ const faUserProfile: Record<string, TranslationEntry> = {
     description: "Message shown when user has no recent activity",
   },
   "userProfile.noRepositories": {
-    message: "مخزنی وجود ندارد",
+    message: "هیچ دفتری نیست",
     description: "Message shown when user has no repositories",
   },
   "userProfile.private": {
@@ -77,7 +77,8 @@ const faUserProfile: Record<string, TranslationEntry> = {
     description: "SEO title for user profile page",
   },
   "seo.userProfile.description": {
-    message: "نمایه، مخازن و فعالیت {username} را در beancount.io مشاهده کنید.",
+    message:
+      "نمایه، دفترها و فعالیت {username} را در beancount.io مشاهده کنید.",
     description: "SEO description for user profile page",
   },
   "userProfile.tabs.overview": {
@@ -87,6 +88,19 @@ const faUserProfile: Record<string, TranslationEntry> = {
   "userProfile.tabs.followers": {
     message: "دنبال‌کنندگان",
     description: "Tab label for followers list",
+  },
+  "userProfile.followersCount": {
+    message: "{count} دنبال‌کننده",
+    description:
+      "Follower count in the profile header (base key for pluralization)",
+  },
+  "userProfile.followersCount_one": {
+    message: "{count} دنبال‌کننده",
+    description: "Follower count in the profile header (one plural form)",
+  },
+  "userProfile.followersCount_other": {
+    message: "{count} دنبال‌کننده",
+    description: "Follower count in the profile header (other plural form)",
   },
   "userProfile.tabs.following": {
     message: "دنبال‌شده‌ها",
@@ -105,7 +119,7 @@ const faUserProfile: Record<string, TranslationEntry> = {
     description: "Message shown when user is not following anyone",
   },
   "userProfile.noStarredRepos": {
-    message: "هیچ مخزن ستاره‌داری وجود ندارد",
+    message: "هیچ دفتر ستاره‌داری نیست",
     description: "Message shown when user has no starred repos",
   },
   "userProfile.community": {

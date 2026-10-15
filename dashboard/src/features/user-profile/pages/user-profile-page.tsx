@@ -202,9 +202,10 @@ export default function UserProfilePage() {
                       >
                         <Users aria-hidden="true" className="size-3.5" />
                         <span className="font-medium text-foreground">
-                          {profile.followersCount}
+                          {t("userProfile.followersCount", {
+                            count: profile.followersCount,
+                          })}
                         </span>
-                        {t("userProfile.tabs.followers")}
                       </Link>
                     </div>
                   </div>

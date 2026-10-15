@@ -22,7 +22,7 @@ const koUserProfile: Record<string, TranslationEntry> = {
     description: "Heading for repositories section",
   },
   "userProfile.noRepositories": {
-    message: "저장소 없음",
+    message: "장부가 없습니다",
     description: "Message shown when user has no repositories",
   },
   "userProfile.joined": {
@@ -74,7 +74,7 @@ const koUserProfile: Record<string, TranslationEntry> = {
     description: "SEO title for user profile page",
   },
   "seo.userProfile.description": {
-    message: "beancount.io에서 {username}의 프로필, 저장소, 활동을 확인하세요.",
+    message: "beancount.io에서 {username}의 프로필, 장부, 활동을 확인하세요.",
     description: "SEO description for user profile page",
   },
   "userProfile.tabs.overview": {
@@ -84,6 +84,15 @@ const koUserProfile: Record<string, TranslationEntry> = {
   "userProfile.tabs.followers": {
     message: "팔로워",
     description: "Tab label for followers list",
+  },
+  "userProfile.followersCount": {
+    message: "팔로워 {count}명",
+    description:
+      "Follower count in the profile header (base key for pluralization)",
+  },
+  "userProfile.followersCount_other": {
+    message: "팔로워 {count}명",
+    description: "Follower count in the profile header (other plural form)",
   },
   "userProfile.tabs.following": {
     message: "팔로잉",
@@ -102,7 +111,7 @@ const koUserProfile: Record<string, TranslationEntry> = {
     description: "Message shown when user is not following anyone",
   },
   "userProfile.noStarredRepos": {
-    message: "즐겨찾기한 저장소 없음",
+    message: "별표한 장부가 없습니다",
     description: "Message shown when user has no starred repos",
   },
   "userProfile.community": {

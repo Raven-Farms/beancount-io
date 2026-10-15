@@ -25,7 +25,7 @@ const deUserProfile: Record<string, TranslationEntry> = {
     description: "Message shown when user has no recent activity",
   },
   "userProfile.noRepositories": {
-    message: "Keine Repositories",
+    message: "Keine Bücher",
     description: "Message shown when user has no repositories",
   },
   "userProfile.private": {
@@ -78,7 +78,7 @@ const deUserProfile: Record<string, TranslationEntry> = {
   },
   "seo.userProfile.description": {
     message:
-      "Sehen Sie sich das Profil, die Repositories und die Aktivitäten von {username} auf beancount.io an.",
+      "Profil, Bücher und Aktivität von {username} auf beancount.io ansehen.",
     description: "SEO description for user profile page",
   },
   "userProfile.tabs.overview": {
@@ -88,6 +88,19 @@ const deUserProfile: Record<string, TranslationEntry> = {
   "userProfile.tabs.followers": {
     message: "Follower",
     description: "Tab label for followers list",
+  },
+  "userProfile.followersCount": {
+    message: "{count} Follower",
+    description:
+      "Follower count in the profile header (base key for pluralization)",
+  },
+  "userProfile.followersCount_one": {
+    message: "{count} Follower",
+    description: "Follower count in the profile header (one plural form)",
+  },
+  "userProfile.followersCount_other": {
+    message: "{count} Follower",
+    description: "Follower count in the profile header (other plural form)",
   },
   "userProfile.tabs.following": {
     message: "Folgt",
@@ -106,7 +119,7 @@ const deUserProfile: Record<string, TranslationEntry> = {
     description: "Message shown when user is not following anyone",
   },
   "userProfile.noStarredRepos": {
-    message: "Keine markierten Repositorys",
+    message: "Keine markierten Bücher",
     description: "Message shown when user has no starred repos",
   },
   "userProfile.community": {

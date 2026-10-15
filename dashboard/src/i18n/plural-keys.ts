@@ -34,6 +34,7 @@ export const PLURAL_BASE_KEYS = [
   "plaid.transactionReview.toast.transactionsDeletedDescription",
   "userSettings.collaboratorsPerLedger",
   "userSettings.includedLedgers",
+  "userProfile.followersCount",
 ] as const;
 
 export type PluralBaseKey = (typeof PLURAL_BASE_KEYS)[number];

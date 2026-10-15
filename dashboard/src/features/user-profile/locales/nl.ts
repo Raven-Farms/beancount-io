@@ -25,7 +25,7 @@ const nlUserProfile: Record<string, TranslationEntry> = {
     description: "Message shown when user has no recent activity",
   },
   "userProfile.noRepositories": {
-    message: "Geen repositories",
+    message: "Geen boekhoudingen",
     description: "Message shown when user has no repositories",
   },
   "userProfile.private": {
@@ -78,7 +78,7 @@ const nlUserProfile: Record<string, TranslationEntry> = {
   },
   "seo.userProfile.description": {
     message:
-      "Bekijk het profiel, de repository's en de activiteit van {username} op beancount.io.",
+      "Bekijk het profiel, de boekhoudingen en de activiteit van {username} op beancount.io.",
     description: "SEO description for user profile page",
   },
   "userProfile.tabs.overview": {
@@ -88,6 +88,19 @@ const nlUserProfile: Record<string, TranslationEntry> = {
   "userProfile.tabs.followers": {
     message: "Volgers",
     description: "Tab label for followers list",
+  },
+  "userProfile.followersCount": {
+    message: "{count} volgers",
+    description:
+      "Follower count in the profile header (base key for pluralization)",
+  },
+  "userProfile.followersCount_one": {
+    message: "{count} volger",
+    description: "Follower count in the profile header (one plural form)",
+  },
+  "userProfile.followersCount_other": {
+    message: "{count} volgers",
+    description: "Follower count in the profile header (other plural form)",
   },
   "userProfile.tabs.following": {
     message: "Volgend",
@@ -106,7 +119,7 @@ const nlUserProfile: Record<string, TranslationEntry> = {
     description: "Message shown when user is not following anyone",
   },
   "userProfile.noStarredRepos": {
-    message: "Geen repository's met ster",
+    message: "Geen gemarkeerde boekhoudingen",
     description: "Message shown when user has no starred repos",
   },
   "userProfile.community": {

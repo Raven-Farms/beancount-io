@@ -25,7 +25,7 @@ const skUserProfile: Record<string, TranslationEntry> = {
     description: "Message shown when user has no recent activity",
   },
   "userProfile.noRepositories": {
-    message: "Žiadne repozitáre",
+    message: "Žiadne knihy",
     description: "Message shown when user has no repositories",
   },
   "userProfile.private": {
@@ -78,7 +78,7 @@ const skUserProfile: Record<string, TranslationEntry> = {
   },
   "seo.userProfile.description": {
     message:
-      "Pozrite si profil, repozitáre a aktivitu používateľa {username} na beancount.io.",
+      "Pozrite si profil, knihy a aktivitu používateľa {username} na beancount.io.",
     description: "SEO description for user profile page",
   },
   "userProfile.tabs.overview": {
@@ -88,6 +88,27 @@ const skUserProfile: Record<string, TranslationEntry> = {
   "userProfile.tabs.followers": {
     message: "Sledujúci",
     description: "Tab label for followers list",
+  },
+  "userProfile.followersCount": {
+    message: "{count} sledujúcich",
+    description:
+      "Follower count in the profile header (base key for pluralization)",
+  },
+  "userProfile.followersCount_one": {
+    message: "{count} sledujúci",
+    description: "Follower count in the profile header (one plural form)",
+  },
+  "userProfile.followersCount_few": {
+    message: "{count} sledujúci",
+    description: "Follower count in the profile header (few plural form)",
+  },
+  "userProfile.followersCount_many": {
+    message: "{count} sledujúceho",
+    description: "Follower count in the profile header (many plural form)",
+  },
+  "userProfile.followersCount_other": {
+    message: "{count} sledujúcich",
+    description: "Follower count in the profile header (other plural form)",
   },
   "userProfile.tabs.following": {
     message: "Sleduje",
@@ -106,7 +127,7 @@ const skUserProfile: Record<string, TranslationEntry> = {
     description: "Message shown when user is not following anyone",
   },
   "userProfile.noStarredRepos": {
-    message: "Žiadne repozitáre s hviezdou",
+    message: "Žiadne označené knihy",
     description: "Message shown when user has no starred repos",
   },
   "userProfile.community": {

@@ -25,7 +25,7 @@ const enUserProfile: Record<string, TranslationEntry> = {
     description: "Heading for repositories section",
   },
   "userProfile.noRepositories": {
-    message: "No repositories",
+    message: "No ledgers",
     description: "Message shown when user has no repositories",
   },
   "userProfile.joined": {
@@ -78,7 +78,7 @@ const enUserProfile: Record<string, TranslationEntry> = {
   },
   "seo.userProfile.description": {
     message:
-      "View {username}'s profile, repositories, and activity on beancount.io.",
+      "View {username}'s profile, ledgers, and activity on beancount.io.",
     description: "SEO description for user profile page",
   },
   "userProfile.tabs.overview": {
@@ -88,6 +88,19 @@ const enUserProfile: Record<string, TranslationEntry> = {
   "userProfile.tabs.followers": {
     message: "Followers",
     description: "Tab label for followers list",
+  },
+  "userProfile.followersCount": {
+    message: "{count} followers",
+    description:
+      "Follower count in the profile header (base key for pluralization)",
+  },
+  "userProfile.followersCount_one": {
+    message: "{count} follower",
+    description: "Follower count in the profile header (one plural form)",
+  },
+  "userProfile.followersCount_other": {
+    message: "{count} followers",
+    description: "Follower count in the profile header (other plural form)",
   },
   "userProfile.tabs.following": {
     message: "Following",
@@ -106,7 +119,7 @@ const enUserProfile: Record<string, TranslationEntry> = {
     description: "Message shown when user is not following anyone",
   },
   "userProfile.noStarredRepos": {
-    message: "No starred repositories",
+    message: "No starred ledgers",
     description: "Message shown when user has no starred repos",
   },
   "userProfile.community": {

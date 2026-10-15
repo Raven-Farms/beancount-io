@@ -12,7 +12,6 @@
 
 ## Inbox
 
-- [021](./021.md) — Pluralize the profile follower count and call ledgers "ledgers" on profiles (minor; dashboard; 30–40m).
 - [022](./022.md) — Accept Beancount's tolerance residuals in the Cash Flow conservation check, since At Cost is unusable on the public example (major; dashboard; 50–60m).
 - [023](./023.md) — Explain that ledger names need Latin letters or digits when a non-Latin name is rejected (minor; dashboard; 20–30m).
 - [024](./024.md) — Gate Upload Receipt on write access like Smart Import, and invite anonymous visitors to sign in (minor; dashboard; 40–55m).

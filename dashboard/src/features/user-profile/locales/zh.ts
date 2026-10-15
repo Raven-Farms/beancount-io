@@ -25,7 +25,7 @@ const zhUserProfile: Record<string, TranslationEntry> = {
     description: "Message shown when user has no recent activity",
   },
   "userProfile.noRepositories": {
-    message: "没有仓库",
+    message: "没有账簿",
     description: "Message shown when user has no repositories",
   },
   "userProfile.private": {
@@ -77,7 +77,7 @@ const zhUserProfile: Record<string, TranslationEntry> = {
     description: "SEO title for user profile page",
   },
   "seo.userProfile.description": {
-    message: "查看 {username} 在 beancount.io 上的个人资料、仓库和动态。",
+    message: "在 beancount.io 查看 {username} 的个人资料、账簿和动态。",
     description: "SEO description for user profile page",
   },
   "userProfile.tabs.overview": {
@@ -87,6 +87,15 @@ const zhUserProfile: Record<string, TranslationEntry> = {
   "userProfile.tabs.followers": {
     message: "粉丝",
     description: "Tab label for followers list",
+  },
+  "userProfile.followersCount": {
+    message: "{count} 位关注者",
+    description:
+      "Follower count in the profile header (base key for pluralization)",
+  },
+  "userProfile.followersCount_other": {
+    message: "{count} 位关注者",
+    description: "Follower count in the profile header (other plural form)",
   },
   "userProfile.tabs.following": {
     message: "关注中",
@@ -105,7 +114,7 @@ const zhUserProfile: Record<string, TranslationEntry> = {
     description: "Message shown when user is not following anyone",
   },
   "userProfile.noStarredRepos": {
-    message: "没有加星标的仓库",
+    message: "没有加星标的账簿",
     description: "Message shown when user has no starred repos",
   },
   "userProfile.community": {

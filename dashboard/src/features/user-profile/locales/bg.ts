@@ -25,7 +25,7 @@ const bgUserProfile: Record<string, TranslationEntry> = {
     description: "Message shown when user has no recent activity",
   },
   "userProfile.noRepositories": {
-    message: "Няма хранилища",
+    message: "Няма книги",
     description: "Message shown when user has no repositories",
   },
   "userProfile.private": {
@@ -78,7 +78,7 @@ const bgUserProfile: Record<string, TranslationEntry> = {
   },
   "seo.userProfile.description": {
     message:
-      "Вижте профила, хранилищата и активността на {username} в beancount.io.",
+      "Вижте профила, книгите и активността на {username} в beancount.io.",
     description: "SEO description for user profile page",
   },
   "userProfile.tabs.overview": {
@@ -88,6 +88,19 @@ const bgUserProfile: Record<string, TranslationEntry> = {
   "userProfile.tabs.followers": {
     message: "Последователи",
     description: "Tab label for followers list",
+  },
+  "userProfile.followersCount": {
+    message: "{count} последователи",
+    description:
+      "Follower count in the profile header (base key for pluralization)",
+  },
+  "userProfile.followersCount_one": {
+    message: "{count} последовател",
+    description: "Follower count in the profile header (one plural form)",
+  },
+  "userProfile.followersCount_other": {
+    message: "{count} последователи",
+    description: "Follower count in the profile header (other plural form)",
   },
   "userProfile.tabs.following": {
     message: "Следвани",
@@ -106,7 +119,7 @@ const bgUserProfile: Record<string, TranslationEntry> = {
     description: "Message shown when user is not following anyone",
   },
   "userProfile.noStarredRepos": {
-    message: "Няма хранилища със звезда",
+    message: "Няма отбелязани книги",
     description: "Message shown when user has no starred repos",
   },
   "userProfile.community": {

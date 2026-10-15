@@ -25,7 +25,7 @@ const ukUserProfile: Record<string, TranslationEntry> = {
     description: "Message shown when user has no recent activity",
   },
   "userProfile.noRepositories": {
-    message: "Немає репозиторіїв",
+    message: "Немає книг",
     description: "Message shown when user has no repositories",
   },
   "userProfile.private": {
@@ -78,7 +78,7 @@ const ukUserProfile: Record<string, TranslationEntry> = {
   },
   "seo.userProfile.description": {
     message:
-      "Перегляньте профіль, репозиторії та активність {username} на beancount.io.",
+      "Перегляньте профіль, книги та активність {username} на beancount.io.",
     description: "SEO description for user profile page",
   },
   "userProfile.tabs.overview": {
@@ -88,6 +88,27 @@ const ukUserProfile: Record<string, TranslationEntry> = {
   "userProfile.tabs.followers": {
     message: "Підписники",
     description: "Tab label for followers list",
+  },
+  "userProfile.followersCount": {
+    message: "{count} підписника",
+    description:
+      "Follower count in the profile header (base key for pluralization)",
+  },
+  "userProfile.followersCount_one": {
+    message: "{count} підписник",
+    description: "Follower count in the profile header (one plural form)",
+  },
+  "userProfile.followersCount_few": {
+    message: "{count} підписники",
+    description: "Follower count in the profile header (few plural form)",
+  },
+  "userProfile.followersCount_many": {
+    message: "{count} підписників",
+    description: "Follower count in the profile header (many plural form)",
+  },
+  "userProfile.followersCount_other": {
+    message: "{count} підписника",
+    description: "Follower count in the profile header (other plural form)",
   },
   "userProfile.tabs.following": {
     message: "Підписки",
@@ -106,7 +127,7 @@ const ukUserProfile: Record<string, TranslationEntry> = {
     description: "Message shown when user is not following anyone",
   },
   "userProfile.noStarredRepos": {
-    message: "Немає обраних репозиторіїв",
+    message: "Немає обраних книг",
     description: "Message shown when user has no starred repos",
   },
   "userProfile.community": {

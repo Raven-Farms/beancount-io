@@ -22,7 +22,7 @@ const jaUserProfile: Record<string, TranslationEntry> = {
     description: "Heading for repositories section",
   },
   "userProfile.noRepositories": {
-    message: "リポジトリがありません",
+    message: "帳簿はありません",
     description: "Message shown when user has no repositories",
   },
   "userProfile.joined": {
@@ -75,7 +75,7 @@ const jaUserProfile: Record<string, TranslationEntry> = {
   },
   "seo.userProfile.description": {
     message:
-      "beancount.ioで{username}のプロファイル、リポジトリ、アクティビティを表示。",
+      "beancount.ioで{username}のプロファイル、帳簿、アクティビティを表示。",
     description: "SEO description for user profile page",
   },
   "userProfile.tabs.overview": {
@@ -85,6 +85,15 @@ const jaUserProfile: Record<string, TranslationEntry> = {
   "userProfile.tabs.followers": {
     message: "フォロワー",
     description: "Tab label for followers list",
+  },
+  "userProfile.followersCount": {
+    message: "フォロワー {count} 人",
+    description:
+      "Follower count in the profile header (base key for pluralization)",
+  },
+  "userProfile.followersCount_other": {
+    message: "フォロワー {count} 人",
+    description: "Follower count in the profile header (other plural form)",
   },
   "userProfile.tabs.following": {
     message: "フォロー中",
@@ -103,7 +112,7 @@ const jaUserProfile: Record<string, TranslationEntry> = {
     description: "Message shown when user is not following anyone",
   },
   "userProfile.noStarredRepos": {
-    message: "スターリポジトリがありません",
+    message: "スター付きの帳簿はありません",
     description: "Message shown when user has no starred repos",
   },
   "userProfile.community": {
