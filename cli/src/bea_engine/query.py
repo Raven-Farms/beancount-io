@@ -2126,6 +2126,10 @@ def _plugin_message(message: str, ledger_file: Path | str | None, source: Any) -
         text = f'Cannot import plugin "{name}": {cause}. Check the name is spelled right and the plugin is installed.'
     else:
         text = f'Plugin "{name}" failed while running: {cause}.'
+        if "required positional argument: 'config'" in cause:
+            # Bundled plugins such as currency_accounts take a configuration
+            # string, and the raw TypeError never said so (w5/400).
+            text += f' This plugin needs a configuration string: plugin "{name}" "CONFIG".'
     location = _plugin_directive(ledger_file, name, config)
     if location is None:
         return f"<ledger>:0: {text}"

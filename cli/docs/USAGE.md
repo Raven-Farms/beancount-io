@@ -465,10 +465,12 @@ bea query "PRINT"          # parseable directives, not a table
 bea query                  # needs a terminal; exits 2 without one
 ```
 
-`bea check` reports a `plugin` line that cannot be imported, or whose plugin
-raises while running, as `FILE:LINE: Cannot import plugin "NAME": CAUSE` — the
-line `--json check` and every other read give — instead of bean-check's
-traceback at `<load>:0`, and exits **1**. With no bean-check options the
+`bea check` reports a `plugin` line that cannot be imported as `FILE:LINE:
+Cannot import plugin "NAME": CAUSE`, and one whose plugin raises while running
+as `FILE:LINE: Plugin "NAME" failed while running: CAUSE` (with the
+`plugin "NAME" "CONFIG"` form named when the plugin needs a configuration
+string) — the lines `--json check` and every other read give — instead of
+bean-check's traceback at `<load>:0`, and exits **1**. With no bean-check options the
 ledger's other load errors are listed beside it; with options such as `-v` or
 `--auto`, which can change those, only the plugin failures are.
 `bea --debug check` runs bean-check as is and keeps its traceback.
