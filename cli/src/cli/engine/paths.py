@@ -77,6 +77,12 @@ def python_override() -> Path | None:
     python = Path(value).expanduser()
     if not python.exists():
         raise BeaError(f"{PYTHON_ENV} points at '{python}', which does not exist.")
+    # A directory or a file without the execute bit surfaced as a bare
+    # `[Errno 13] Permission denied` that named no variable (w5/309).
+    if not python.is_file() or not os.access(python, os.X_OK):
+        raise BeaError(
+            f"{PYTHON_ENV} points at '{python}', which is not an executable file. Correct or unset {PYTHON_ENV}."
+        )
     return python
 
 

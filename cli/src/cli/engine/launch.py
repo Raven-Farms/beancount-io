@@ -622,21 +622,25 @@ def _refuse_unusable_override(completed: subprocess.CompletedProcess[str]) -> No
     override = paths.python_override()
     if override is None:
         return
+    # The probe must say so itself: `/bin/echo` or a stale wrapper exits 0
+    # without running anything, and a writer then reported an unknown outcome
+    # (exit 4) for a write that never started (w5/309).
+    sentinel = "bea-engine-loaded"
     try:
         probe = subprocess.run(
-            [str(override), "-P", "-c", "import bea_engine.main"],
+            [str(override), "-P", "-c", f"import bea_engine.main; print({sentinel!r})"],
             env=_helper_env(),
             stdin=subprocess.DEVNULL,
             capture_output=True,
             text=True,
             check=False,
         )
-    except (OSError, ValueError):
-        return
-    if probe.returncode == 0:
+    except (OSError, ValueError) as exc:
+        probe = subprocess.CompletedProcess([str(override)], 126, "", str(exc))
+    if probe.returncode == 0 and probe.stdout.strip().endswith(sentinel):
         return
     lines = [line.strip() for line in probe.stderr.splitlines() if line.strip()]
-    reason = f" ({lines[-1]})" if lines else ""
+    reason = f" ({lines[-1]})" if lines else " (it is not a Python that loads the engine)"
     raise BeaError(
         f"{paths.PYTHON_ENV}={override} names an environment that cannot run the Beancount engine{reason}. "
         f"Correct or unset {paths.PYTHON_ENV}, or run 'bea engine status' to see which engine would serve.",
