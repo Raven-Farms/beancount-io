@@ -1984,7 +1984,10 @@ settings in every working directory. `bea --help` and `bea --version` still
 answer.
 
 Homebrew sets `BEA_ENGINE_DIR` to the keg-local engine so installs never look
-for a separately provisioned copy. Advanced overrides (`BEA_ENGINE_PYTHON`,
+for a separately provisioned copy. bea builds an engine there only in a
+directory that is missing, empty, or one it built before (it marks each with a
+`.bea-engine` file); a directory holding anything else is refused by name and
+left untouched, never replaced. Advanced overrides (`BEA_ENGINE_PYTHON`,
 `BEA_UV`) exist for tests and recovery tooling; ordinary installs do not need
 them. Both are checked before use: one that names a path which does not exist,
 a directory or a file without the execute bit, a program that is not a Python

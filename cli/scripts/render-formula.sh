@@ -100,6 +100,9 @@ class Bea < Formula
       "--python", "{{HOMEBREW_PREFIX}}/opt/python@3.12/bin/python3.12",
       "{{libexec}}/engine"
     ]
+    # bea's own mark: a damaged engine here may be rebuilt in place, while a
+    # directory without it is never replaced (w5/419).
+    (libexec/"engine/.bea-engine").write "bea engine (Homebrew)\n"
     run "{{HOMEBREW_PREFIX}}/opt/uv/bin/uv", network_access: true, args: [
       "pip", "install",
       "--python", "{{libexec}}/engine/bin/python",

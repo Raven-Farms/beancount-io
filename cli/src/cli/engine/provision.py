@@ -85,6 +85,7 @@ def provision(root: Path) -> None:
     engine commands were using. Optional features recorded in it are
     reinstalled into the replacement before it is published.
     """
+    _refuse_foreign_root(root)
     uv = _find_uv()
     remembered = enabled_features(root)
     version = paths.engine_version()
@@ -106,6 +107,7 @@ def provision(root: Path) -> None:
             [uv, "venv", "--relocatable", "--python", str(manifest["requires_python"]), str(partial)],
             failure=f"Could not create the engine environment in {partial}",
         )
+        (partial / ENGINE_MARKER).write_text(f"bea engine {version}\n", encoding="utf-8")
         python = str(paths.venv_python(partial))
         lock = _lockfile()
         if lock is not None:
@@ -400,6 +402,40 @@ def _process_alive(pid: int) -> bool:
     except PermissionError:
         return True
     return True
+
+
+#: Written into every engine bea builds: what tells a later rebuild that the
+#: directory is bea's to replace (w5/419).
+ENGINE_MARKER = ".bea-engine"
+
+
+def _refuse_foreign_root(root: Path) -> None:
+    """Refuse to build an engine over a directory bea did not make.
+
+    A rebuild replaces `root` and deletes what was there, and `BEA_ENGINE_DIR`
+    is taken as given: a typo naming a data folder (`~/books`) would have
+    been deleted once the install succeeded (w5/419). Only nothing, an empty
+    directory, an engine bea marked, or bea's own default location (whose
+    engines from before the marker carry none) is replaced.
+    """
+    if not os.path.lexists(root):
+        return
+    if root.is_dir():
+        if (root / ENGINE_MARKER).is_file() or not any(root.iterdir()):
+            return
+        if not os.environ.get(paths.DIR_ENV):
+            return
+        reason = "holds files but no engine bea built"
+    else:
+        reason = "is not a directory"
+    if os.environ.get(paths.DIR_ENV):
+        raise BeaError(
+            f"{paths.DIR_ENV} points at '{root}', which {reason}, so bea will not install an engine over it. "
+            f"Point {paths.DIR_ENV} at an empty or new directory, or unset it."
+        )
+    raise BeaError(
+        f"The engine location '{root}' {reason}, so bea will not install over it. Move it aside, then rerun."
+    )
 
 
 def _publish(partial: Path, root: Path) -> None:
