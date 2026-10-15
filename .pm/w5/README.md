@@ -66,7 +66,6 @@
 - [402 — `add open/close/custom` with a foreign root get bare "Invalid account name" (w5/154 leftover)](./402.md) — CLI QA 2026-10-14
 - [403 — `ask` system prompt hard-codes `^Expenses` and never names renamed roots](./403.md) — CLI QA 2026-10-14
 - [404 — Non-UTF-8 locale: `treeify`/`doctor` crash with `UnicodeEncodeError`](./404.md) — CLI QA 2026-10-14
-- [405 — Non-UTF-8 locale: `list`/`balance`/`--details` write locale bytes plus `İ` escapes](./405.md) — CLI QA 2026-10-14
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
