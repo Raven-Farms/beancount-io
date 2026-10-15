@@ -15,8 +15,9 @@ import typer
 
 from cli import context, output
 from cli.engine import launch
-from cli.errors import LedgerError, UsageError, refuse_json
+from cli.errors import LedgerError, UsageError, refuse_json, refuse_misplaced_global
 from cli.native_command import ForwardingCommand
+from cli.native_help import native_options
 
 #: `price`'s own verbs; anything else is forwarded to bean-price.
 _VERBS = {
@@ -48,6 +49,7 @@ def price(ctx: typer.Context) -> None:
     file named `status` must be passed by path.
     """
     args = list(ctx.args)
+    refuse_misplaced_global("price", args, native_options("price"))
     if args[:1] == ["status"]:
         _status(args[1:])
         return

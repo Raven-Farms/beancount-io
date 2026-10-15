@@ -11,7 +11,8 @@ import typer
 
 from cli import context, output
 from cli.engine import launch
-from cli.errors import BeaError, LedgerError, UsageError
+from cli.errors import BeaError, LedgerError, UsageError, refuse_misplaced_global
+from cli.native_help import native_options
 
 _URL_INCLUDE_RE = re.compile(r'^\s*include\s*"(?i:https?)://', re.MULTILINE)
 """An include line native bean-check cannot resolve (w1/m29).
@@ -34,6 +35,7 @@ NFC and NFD spellings could split one account in two (w1/054).
 
 def check(ctx: typer.Context) -> None:
     """Parse, check and realize a beancount ledger."""
+    refuse_misplaced_global("check", list(ctx.args), native_options("check"))
     current = context.current()
     file = current.entry_file()
     compat = _closure_needs_compat(file)

@@ -13,7 +13,8 @@ import typer
 
 from cli import context, output
 from cli.engine import launch
-from cli.errors import AuthError, UsageError, refuse_json
+from cli.errors import AuthError, UsageError, refuse_json, refuse_misplaced_global
+from cli.native_help import native_options
 from cli.utils import atomic_write, regex_reads_otherwise
 
 _NO_COLUMN = "Could not find any valid column in input"
@@ -147,6 +148,7 @@ def _held_descriptor(name: str | None) -> tuple[int, ...]:
 def treeify(ctx: typer.Context) -> None:
     """Render a column as an ASCII tree (delegates to treeify)."""
     refuse_json("treeify", hint="Run without --json to print the ASCII tree.")
+    refuse_misplaced_global("treeify", list(ctx.args), native_options("treeify"))
     # Upstream treeify knows no `--force`, so bea's own opt-in is stripped
     # before forwarding; without it an existing ledger file is never replaced.
     args = list(ctx.args)

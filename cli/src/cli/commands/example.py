@@ -12,7 +12,8 @@ import typer
 
 from cli import context
 from cli.engine import launch
-from cli.errors import BeaError, ConflictError, UsageError, refuse_json
+from cli.errors import BeaError, ConflictError, UsageError, refuse_json, refuse_misplaced_global
+from cli.native_help import native_options
 from cli.output import (
     check_output_destination,
     forwarded_option,
@@ -101,6 +102,7 @@ def _refuse_invalid(diagnostic: str, destination: Path | None) -> None:
 def example(ctx: typer.Context) -> None:
     """Generate an example ledger (delegates to bean-example)."""
     refuse_json("example", hint="Run without --json to print the sample ledger.")
+    refuse_misplaced_global("example", list(ctx.args), native_options("example"))
     forwarded, output, force = _split_output(list(ctx.args))
     # A directory is never a file to overwrite: the conflict and its
     # `--force` advice led to a directory refusal that --force cannot pass;

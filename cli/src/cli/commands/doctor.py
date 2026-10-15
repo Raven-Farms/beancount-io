@@ -17,9 +17,9 @@ from cli import output
 from cli.config import DEFAULT_ENTRY_FILE_FALLBACKS
 from cli.context import refuse_expanding_ledger_path
 from cli.engine import launch
-from cli.errors import BeaError, ConflictError, LedgerError, UsageError, refuse_json
+from cli.errors import BeaError, ConflictError, LedgerError, UsageError, refuse_json, refuse_misplaced_global
 from cli.native_command import ForwardingCommand
-from cli.native_help import native_help
+from cli.native_help import native_help, native_options
 from cli.utils import decode_error_message, has_bom
 
 doctor_app = typer.Typer(
@@ -640,6 +640,7 @@ def _register(op: str) -> None:
     )
     def _cmd(ctx: typer.Context) -> None:
         assert forwarder is not None
+        refuse_misplaced_global(f"doctor {op}", list(ctx.args), native_options(f"doctor {op}"))
         _refuse_directory_ledger(op, list(ctx.args))
         # Every operation that loads its ledger starts upstream's loader, which
         # deletes an unreadable file at the cache path the environment names.
@@ -672,5 +673,6 @@ for _op in _OPS:
 )
 def dump_lexer(ctx: typer.Context) -> None:
     """Alias for bean-doctor lex."""
+    refuse_misplaced_global("doctor dump-lexer", list(ctx.args), native_options("doctor dump-lexer"))
     _refuse_directory_ledger("dump-lexer", list(ctx.args))
     _forward_parse("lex", ctx)

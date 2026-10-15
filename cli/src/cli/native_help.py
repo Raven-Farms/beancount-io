@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from functools import cache
 from pathlib import Path
 
@@ -29,6 +30,12 @@ _BEA_OPTIONS = {
         "  --force  Overwrite an existing .bean/.beancount file named by -o/--output."
     ),
 }
+
+
+@cache
+def native_options(command: str) -> frozenset[str]:
+    """The option names a forwarded upstream command defines, read from its pinned help."""
+    return frozenset(re.findall(r"(?<![\w-])(--?[A-Za-z][\w-]*)", _commands().get(command, "")))
 
 
 def native_help(command: str) -> str:

@@ -197,6 +197,42 @@ def _auth_remedy() -> str:
     return "Run 'bea cloud login'."
 
 
+#: bea's global options, each with a command line that places it (w5/243).
+_PLACEMENTS = {
+    "-f": "bea -f main.bean check",
+    "--file": "bea --file main.bean check",
+    "--json": "bea --json list transaction",
+    "--debug": "bea --debug import statement.csv",
+    "--no-input": "bea --no-input check",
+    "--yes": "bea --yes COMMAND",
+    "-y": "bea -y COMMAND",
+    "--strict": "bea --strict balance",
+    "--offline": "bea --offline balance",
+    "--strict-prices": "bea --strict-prices check",
+}
+
+
+def placement_hint(option: str) -> str | None:
+    """Where a bea global option goes, when `option` is one."""
+    example = _PLACEMENTS.get(option)
+    return f"Place {option} before the command, for example: {example}." if example else None
+
+
+def refuse_misplaced_global(command: str, args: list[str], defined: frozenset[str]) -> None:
+    """Refuse a bea global option after a forwarded command that does not define it itself.
+
+    Upstream answered with its own "No such option" and no hint, where every
+    bea-owned command says where the option goes (w5/416).
+    """
+    for arg in args:
+        if arg == "--":
+            return
+        name = arg.split("=", 1)[0]
+        hint = placement_hint(name) if name not in defined else None
+        if hint is not None:
+            raise UsageError(f"{name} is a bea option, not one of bea {command}'s. {hint}")
+
+
 def to_bea_error(exc: BaseException | str) -> BeaError:
     """Classify anything a command can raise into one documented category."""
     if isinstance(exc, str):
@@ -215,19 +251,8 @@ def to_bea_error(exc: BaseException | str) -> BeaError:
     click_usage_error: type[Any] = typer.BadParameter.__bases__[0]
     if isinstance(exc, click_usage_error):
         option = getattr(exc, "option_name", None)
-        examples = {
-            "-f": "bea -f main.bean check",
-            "--file": "bea --file main.bean check",
-            "--json": "bea --json list transaction",
-            "--debug": "bea --debug import statement.csv",
-            "--no-input": "bea --no-input check",
-            "--yes": "bea --yes COMMAND",
-            "-y": "bea -y COMMAND",
-            "--strict": "bea --strict balance",
-            "--offline": "bea --offline balance",
-            "--strict-prices": "bea --strict-prices check",
-        }
-        hint = f" Place {option} before the command, for example: {examples[option]}." if option in examples else ""
+        placement = placement_hint(option) if isinstance(option, str) else None
+        hint = f" {placement}" if placement else ""
         # `format_message`, not `str`: only it carries Click's "(Possible
         # options: --account)" for a misspelled option (w5/444).
         return UsageError(exc.format_message() + hint + _unknown_command_hint(exc))
