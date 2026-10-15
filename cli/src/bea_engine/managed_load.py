@@ -29,6 +29,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import secrets
 import stat
 import sys
 import time
@@ -1515,10 +1516,25 @@ def _write_export(dest: Path, content: bytes, mode: int) -> None:
     missing = [parent for parent in [dest.parent, *dest.parent.parents] if not parent.exists()]
     for parent in reversed(missing):
         parent.mkdir(mode=0o700)
-    fd = os.open(dest, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-    with os.fdopen(fd, "wb") as stream:
-        os.fchmod(stream.fileno(), mode)
-        stream.write(content)
+    # Staged beside it and renamed into place: written in place, a write that
+    # failed partway (a full disk, a size limit) left a truncated copy under
+    # "Nothing was written", and the retry was refused as an overwrite
+    # (w5/409). A destination link is followed, as before.
+    final = dest.resolve() if dest.is_symlink() else dest
+    staged = final.with_name(f".bea-{secrets.token_hex(8)}.tmp")
+    from bea_engine import stopping
+
+    with stopping.staged(staged):
+        fd = os.open(staged, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        try:
+            with os.fdopen(fd, "wb") as stream:
+                os.fchmod(stream.fileno(), mode)
+                stream.write(content)
+                stream.flush()
+                os.fsync(stream.fileno())
+            os.replace(staged, final)
+        finally:
+            staged.unlink(missing_ok=True)
 
 
 def _rewrite_export_includes(
