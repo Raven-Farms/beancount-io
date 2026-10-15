@@ -28,3 +28,5 @@
 - [021](./021.md) — Preserve event filters in REST and MCP reads (minor; backend-v2; 35–50m).
 
 - [022](./blocked/022.md) — Adopt BQL JOURNAL date windows and opening summaries (major; ledger; 45–60m after release) — **blocked:** awaiting a published WASM artifact containing upstream 1324bc25.
+
+- [023](./blocked/023.md) — Adopt posting-column FROM filtering in BQL (major; ledger; 35–50m after release) — **blocked:** awaiting a published WASM artifact containing upstream a2d984d6.
