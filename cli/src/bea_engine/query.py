@@ -393,6 +393,42 @@ def _native_shell(source: str, *, interactive: bool, format: str, numberify: boo
             """Run a named stored query, or list them; missing names are usage errors."""
             _run_stored(self, arg)
 
+        def do_describe(self, arg: str) -> None:
+            """Describe table or structured type."""
+            _split_dot_arguments("describe", arg)
+            super().do_describe(arg)
+
+        def do_set(self, arg: str) -> None:
+            """Set shell settings variables."""
+            _split_dot_arguments("set", arg)
+            super().do_set(arg)
+
+        _printing = False
+
+        def on_Print(self, statement: Any) -> Any:  # noqa: N802 - beanquery dispatch name
+            # Upstream's PRINT runs through `on_Select` with the beancount
+            # format; its rows are entries by construction.
+            self._printing = True
+            try:
+                return super().on_Print(statement)
+            finally:
+                self._printing = False
+
+        def on_Select(self, statement: Any) -> Any:  # noqa: N802 - beanquery dispatch name
+            if self.settings.format != "beancount" or self._printing:
+                return super().on_Select(statement)
+            # Upstream's beancount renderer unpacks every row as a directive, so
+            # a column SELECT failed inside it with a traceback; the `--file`
+            # shell refuses it as a usage error, and so does this one (w5/293).
+            from beanquery.shell import FORMATS
+
+            cursor = self.context.execute(statement)
+            description, rows = cursor.description, cursor.fetchall()
+            _require_entries(description, rows)
+            dcontext = self.context.options.get("dcontext", None)
+            with self.output as out:
+                return FORMATS["beancount"](description, rows, out, dcontext=dcontext, **self.settings.todict())
+
         def execute(self, query: Any, **kwargs: Any) -> Any:
             self.ran_query = True
             statement = query if isinstance(query, str) else ""
@@ -414,9 +450,40 @@ def _native_shell(source: str, *, interactive: bool, format: str, numberify: boo
                 return self.execute(parsed)
             return super().onecmd(line)
 
+    # Help topics come from the handler docstrings on this class (see PreciseShell).
+    for name, handler in vars(GuardedShell).items():
+        if name.startswith("on_") and handler.__doc__ is None:
+            handler.__doc__ = getattr(BQLShell, name).__doc__
     # Load before replaying init commands, so .output sees the include closure.
-    make = partial(GuardedShell, dsn, sys.stdout, interactive, False, format, numberify, show_errors)
+    make = partial(_attach_native, GuardedShell, source, dsn, interactive, format, numberify, show_errors)
     return _with_line_editor(make) if interactive else make()
+
+
+def _attach_native(
+    shell_class: Any, source: str, dsn: str, interactive: bool, format: str, numberify: bool, show_errors: bool
+) -> Any:
+    """Open a native source, naming a bad source parameter as a usage error (w5/293).
+
+    Upstream builds the source from the URI's query string straight into its
+    reader: `csv:t.csv?header=true` passed `header` twice, `?encoding=bogus`
+    an unknown codec, `?dialect=nope` an unknown dialect, and each escaped as a
+    traceback with exit 1. `-m` on a `csv:` source then failed at the first
+    query, because only a Beancount source carries display precision.
+    """
+    import csv
+
+    try:
+        shell = shell_class(dsn, sys.stdout, interactive, False, format, numberify, show_errors)
+    except (TypeError, LookupError, csv.Error) as exc:
+        raise protocol.UsageError(
+            f"Cannot open --source '{source}': {exc}.",
+            details=["Check the parameters after `?` in the source URI against the source type."],
+        ) from None
+    if numberify and shell.context.options.get("dcontext") is None:
+        raise protocol.UsageError(
+            "--numberify (-m) needs a Beancount ledger source: this --source carries no display precision."
+        )
+    return shell
 
 
 def _with_line_editor(make: Callable[[], Any]) -> Any:
@@ -636,6 +703,24 @@ def _stored_body_is_empty(body: str) -> bool:
     whitespace, neither of which says which directive to fix (w5/276).
     """
     return not _code_mask(body, literals=False).strip("; \t\r\n")
+
+
+def _split_dot_arguments(command: str, arg: str) -> list[str]:
+    """Split a dot command's arguments, naming an unbalanced quote as a usage error.
+
+    Upstream calls `shlex.split` bare, so `.describe 'x` escaped as a Python
+    traceback under `--source` and as `ValueError: No closing quotation` on
+    `--file` (w5/293). `.run` already words this (w5/237).
+    """
+    import shlex
+
+    try:
+        return shlex.split(arg)
+    except ValueError as exc:
+        raise protocol.UsageError(
+            f'cannot read the "{command}" arguments: {exc}.',
+            details=["Close the quote, or wrap a value containing a quote character in the other kind."],
+        ) from None
 
 
 def _shell_error(shell: Any, message: str, report: Callable[[str], None]) -> None:
@@ -932,6 +1017,16 @@ def build_shell(
         def do_run(self, arg: str) -> None:
             """Run a named stored query, or list them; missing names are usage errors."""
             _run_stored(self, arg)
+
+        def do_describe(self, arg: str) -> None:
+            """Describe table or structured type."""
+            _split_dot_arguments("describe", arg)
+            super().do_describe(arg)
+
+        def do_set(self, arg: str) -> None:
+            """Set shell settings variables."""
+            _split_dot_arguments("set", arg)
+            super().do_set(arg)
 
         def execute(self, query: Any, **kwargs: Any) -> Any:
             """Prepare BQL here, where every entry path actually arrives.
