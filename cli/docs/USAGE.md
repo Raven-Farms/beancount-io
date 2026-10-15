@@ -505,8 +505,9 @@ against the root ledger's directory when the working directory has no such file.
 A location that already resolves, and an absolute one, are passed through
 untouched.
 
-`bea example` exits 2 before generating when its date range is inverted or
-shorter than 31 days; a missing `--date-begin` or `--date-end` takes
+`bea example` exits 2 before generating when its date range is inverted,
+shorter than 31 days, starts before 1970-01-01 or spans more than 100 years
+(a longer span ran for minutes, then failed upstream); a missing `--date-begin` or `--date-end` takes
 upstream's default (January 1 two years back, and today) for that check.
 Both dates must be written `YYYY-MM-DD`; any other spelling (`2026/03/01`,
 `March 1 2026`) exits 2 as well, since the range could not be checked.

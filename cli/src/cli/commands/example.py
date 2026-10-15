@@ -173,6 +173,15 @@ def example(ctx: typer.Context) -> None:
 #: StopIteration (30 days still fails for some seeds; 31 never did).
 _MIN_SPAN_DAYS = 31
 
+#: The earliest history bean-example generates: it validates nothing dated
+#: before the Unix epoch, and `0001-01-01` ran a minute, then failed with
+#: `decimal.InvalidOperation` (w5/390).
+_EARLIEST_BEGIN = date(1970, 1, 1)
+
+#: The longest span bea asks for. 26 years generate in seconds; `--date-end
+#: 9999-12-31` ran about three minutes, then failed with `OverflowError`.
+_MAX_SPAN_YEARS = 100
+
 #: `date.fromisoformat` also reads `20260301` and week dates; the range check
 #: takes the one spelling bea and upstream are certain to read alike.
 _ISO_DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
@@ -215,6 +224,18 @@ def _check_date_order(args: list[str], today: date | None = None) -> None:
         raise UsageError(
             f"{shown_begin} to {shown_end} spans {(end - begin).days} days; "
             f"bean-example needs at least {_MIN_SPAN_DAYS}."
+        )
+    if begin < _EARLIEST_BEGIN:
+        raise UsageError(
+            f"{shown_begin} is before {_EARLIEST_BEGIN.isoformat()}; bean-example cannot generate a history "
+            "that early. Choose a later --date-begin."
+        )
+    if end.year - begin.year > _MAX_SPAN_YEARS or (
+        end.year - begin.year == _MAX_SPAN_YEARS and (end.month, end.day) > (begin.month, begin.day)
+    ):
+        raise UsageError(
+            f"{shown_begin} to {shown_end} spans more than {_MAX_SPAN_YEARS} years; bea example generates at most "
+            f"{_MAX_SPAN_YEARS} (a longer span runs for minutes, then fails upstream). Narrow the range."
         )
 
 
