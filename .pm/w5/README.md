@@ -35,7 +35,6 @@
 
 ## Inbox
 
-- [299 — `add pad` refusal says "omit --pad-from", an option it does not have](./299.md) — CLI QA 2026-10-14
 - [300 — **Major:** `kill -9` on a writing `bea` leaves the engine to land the write later; a retry doubles it](./300.md) — CLI QA 2026-10-14
 - [301 — Newline in an include file name breaks every root-staged `add`](./301.md) — CLI QA 2026-10-14
 - [302 — Importer prices bypass `add price`'s conflict/duplicate rules](./302.md) — CLI QA 2026-10-14
