@@ -231,6 +231,44 @@ describe("MCP prompts", () => {
     expect(textOf(valid.messages[0].content)).toContain("2026-08");
   });
 
+  /**
+   * w6/015. The reconcile and close playbooks told an agent to pass a
+   * `description` to `addLedgerEntries`, whose strict input has none — the
+   * call they prescribed would be refused. Only `editLedgerFiles` takes one.
+   */
+  it("prescribes a description only to the write tool that accepts one", () => {
+    const accepts = (tool: string) =>
+      "description" in
+      (
+        MCP_TOOLS.find((descriptor) => descriptor.name === tool)!
+          .inputSchema as unknown as { shape: Record<string, unknown> }
+      ).shape;
+    expect(accepts("addLedgerEntries")).toBe(false);
+    expect(accepts("editLedgerFiles")).toBe(true);
+
+    const playbook = (name: string) =>
+      prose(
+        MCP_PROMPTS.find((descriptor) => descriptor.name === name)!.build(
+          {},
+          pinned,
+        ),
+      );
+    expect(playbook("reconcile-account")).not.toContain("`description`");
+
+    const close = playbook("close-month");
+    // Each sentence that hands the report over as a description names only
+    // the tool that accepts one.
+    const sentences = close
+      .split(/(?<=\.)\s/)
+      .filter((sentence) => sentence.includes("`description`"));
+    expect(sentences.length).toBeGreaterThan(0);
+    for (const sentence of sentences)
+      expect(sentence).not.toMatch(/addLedgerEntries`[^.]*`description`/);
+    expect(close).toContain("`addLedgerEntries` takes no description");
+    expect(close).toContain("never make an edit only to carry it");
+    expect(close).toContain("leave the ledger untouched");
+  });
+
   it("makes the close report state whether the month is actually closed", () => {
     const text = prose(
       MCP_PROMPTS.find(
