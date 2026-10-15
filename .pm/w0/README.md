@@ -4,7 +4,7 @@
 
 ## Milestones
 
-- [ ] **m1** — Translate the English copies shipped in non-English catalogs, and guard against them (8 tasks) ← from dashboard QA 2026-10-15
+- [ ] **m1** — [Translate the English copies shipped in non-English catalogs, and guard against them](./blocked/m1/README.md) (8 tasks) ← from dashboard QA 2026-10-15 — **blocked:** live de/ru/zh check waits for a production deploy containing `036a499b`
 
 ## Dropped
 

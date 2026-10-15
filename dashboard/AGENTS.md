@@ -101,6 +101,7 @@ The dashboard supports 15 languages: en, bg, ca, de, es, fa, fr, ja, ko, nl, pt,
 - `src/i18n/locales/` aggregates feature locale modules; `src/i18n/config.ts` is the canonical supported-language list.
 - Use `useTranslations()` from `@/common/hooks/use-translations`; do not import the i18next singleton into reactive components.
 - Add every new key to the English feature locale, then add matching keys to the other locale files. `src/test/translations.test.ts` checks locale shape.
+- Translate the message in every locale; never paste the English text into another catalog. `src/test/locale-stray-english.test.ts` fails on a whole English copy (two or more English words left after brand, format and notation terms). A message that is genuinely identical in that language goes into its `IDENTICAL_BY_DESIGN` list with the reason.
 - Keep keys feature-namespaced (for example `auth.login`) and use i18next interpolation syntax.
 - Counts are plural messages, not `Label: {count}` workarounds. Write one form per category the language uses (`{ one, other }` in English; `{ one, few, many, other }` in Russian, Ukrainian and Slovak; `{ other }` only in Chinese, Japanese and Korean), and call `t(key, { count })`. `src/i18n/plural.ts` expands the forms into i18next's `_one`/`_few`/… keys, and `src/i18n/__tests__/plural.test.ts` fails when a language's forms differ from `Intl.PluralRules`.
 
