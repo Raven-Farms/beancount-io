@@ -157,6 +157,70 @@ describe("executeGetLedgerContext", () => {
     });
   });
 
+  /**
+   * w6/013. The attributes document repeats the ledger's whole payee list, so
+   * `payeeLimit: 1` still returned every payee inside `attributes`.
+   */
+  describe("payee limit inside the attributes document", () => {
+    const payees = Array.from(
+      { length: 60 },
+      (_, i) => `payee ${String(i).padStart(2, "0")}`,
+    );
+    const attributes = () => ({
+      accounts: ["Assets:Cash", "Expenses:Food"],
+      tags: ["trip"],
+      links: ["receipt-1"],
+      years: ["2025"],
+      currencies: ["USD"],
+      payees: [...payees],
+    });
+    const run = async (input: { payeeLimit?: number }, full = attributes()) => {
+      const svc = services();
+      svc.ledgerData.getAttributes.mockResolvedValue(full);
+      svc.ledgerData.getPayees.mockResolvedValue([...payees]);
+      const result = await executeGetLedgerContext(
+        { services: svc as any, identity: IDENTITY, ledgerId: LEDGER_ID },
+        input,
+      );
+      if (!result.ok) throw new Error("Expected a context result");
+      return result.result as {
+        attributes: ReturnType<typeof attributes>;
+        payees: string[];
+        payeeCount: number;
+      };
+    };
+
+    it("holds both payee lists to the requested limit and keeps the count", async () => {
+      const result = await run({ payeeLimit: 1 });
+      expect(result.payees).toEqual(["payee 00"]);
+      expect(result.attributes.payees).toEqual(["payee 00"]);
+      expect(result.payeeCount).toBe(60);
+      // Every other attribute arrives untouched.
+      const { payees: _payees, ...rest } = result.attributes;
+      const { payees: _all, ...expected } = attributes();
+      expect(rest).toEqual(expected);
+    });
+
+    it("applies the default limit of 50 to both lists", async () => {
+      const result = await run({});
+      expect(result.payees).toHaveLength(50);
+      expect(result.attributes.payees).toEqual(payees.slice(0, 50));
+    });
+
+    it("returns every payee when the ledger has fewer than the limit", async () => {
+      const result = await run({ payeeLimit: 500 });
+      expect(result.attributes.payees).toEqual(payees);
+      expect(result.payees).toEqual(payees);
+    });
+
+    it("projects a copy and leaves the service's document intact", async () => {
+      const full = attributes();
+      const result = await run({ payeeLimit: 2 }, full);
+      expect(result.attributes).not.toBe(full);
+      expect(full.payees).toHaveLength(60);
+    });
+  });
+
   it("reads open accounts for the ledger owner and name", async () => {
     const svc = services();
     await executeGetLedgerContext(

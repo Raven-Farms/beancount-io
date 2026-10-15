@@ -151,7 +151,12 @@ export async function executeGetLedgerContext(
           services.ledgerData.getSourceFiles({ ledgerId, identity }),
         ]);
       return {
-        attributes,
+        // The attributes document carries every payee again; hold it to the
+        // same limit, in a copy, so asking for one payee returns one
+        // (w6/013). The standalone attributes and payees reads stay whole.
+        attributes: Array.isArray(attributes?.payees)
+          ? { ...attributes, payees: attributes.payees.slice(0, payeeLimit) }
+          : attributes,
         accounts,
         currencies,
         payees: payees.slice(0, payeeLimit),
