@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [361 — migrate skill never negates a card's stated balance; derived opening hides it](./361.md) — CLI QA 2026-10-14
 - [362 — migrate skill splits a split purchase into per-category transactions; bank import double-books](./362.md) — CLI QA 2026-10-14
 - [363 — `init` restricts every category to one currency; foreign charges refused with no remedy](./363.md) — CLI QA 2026-10-14
 - [364 — `-x AT_COST`/`UNITS` accepted as a fake currency; `-x cost` suggests `'COST'`](./364.md) — CLI QA 2026-10-14
