@@ -167,7 +167,7 @@ def rows_answer(
     """
     conn = connect(file)
     errors = _gate([format_error(error, ledger_file=file) for error in conn.errors], allow_errors)
-    cursor = _executed(conn, query_string, conn.execute, errors)
+    cursor = _executed(conn, query_string, conn.execute, errors, file=file)
     rows = cursor.fetchall() if cursor.description is not None else []
     description = cursor.description
     if numberify and description is not None:
@@ -224,7 +224,7 @@ def text_answer(
         # is a refusal, and a refusal has to happen before any work is done.
         _refuse_alias(output, file, shell.context)
     _replay_init(shell, buffer if output is not None else None)
-    _executed(shell.context, query_string, shell.onecmd, errors)
+    _executed(shell.context, query_string, shell.onecmd, errors, file=file)
     if output is not None:
         # Rendered whole, then swapped in atomically. w3/380 moved this past
         # the *query*; the write itself still had to become atomic.
@@ -1062,7 +1062,7 @@ def build_shell(
             if isinstance(query, str):
                 _refuse_statement_tail(query)
                 query = statement = _quote_reserved_tables(unicodedata.normalize("NFC", query))
-                _refuse_empty_window(query, [])
+                _refuse_empty_window(query, [], file=file)
             return _compiled(
                 partial(super().execute, query, **kwargs),
                 statement,
@@ -1495,7 +1495,7 @@ def _csv_from_jsonable(value: Any) -> str:
     return str(value)
 
 
-def _executed(conn: Any, query_string: str, run: Any, ledger_errors: list[str]) -> Any:
+def _executed(conn: Any, query_string: str, run: Any, ledger_errors: list[str], *, file: Path) -> Any:
     """Run a query, turning beanquery's terse complaint into one that names the problem."""
     from beanquery import Error as BeanqueryError
 
@@ -1507,7 +1507,7 @@ def _executed(conn: Any, query_string: str, run: Any, ledger_errors: list[str]) 
         # Dot commands are not BQL; a stored body `.run` reaches is checked
         # when the shell executes it.
         _refuse_statement_tail(statement, ledger_errors)
-    _refuse_empty_window(statement, ledger_errors)
+    _refuse_empty_window(statement, ledger_errors, file=file)
     try:
         return _compiled(lambda: run(statement), statement, lambda: ledger_errors)
     except BeanqueryError as exc:
@@ -1742,7 +1742,7 @@ def _grouped_columns(query_string: str) -> list[str]:
     return [name for name in names if isinstance(name, str)]
 
 
-def _refuse_empty_window(query_string: str, ledger_errors: list[str]) -> None:
+def _refuse_empty_window(query_string: str, ledger_errors: list[str], *, file: Path) -> None:
     """Refuse a `FROM OPEN ON … CLOSE ON …` window that can hold no entries.
 
     `CLOSE ON D` is exclusive, so `OPEN ON D CLOSE ON D` spans zero days while
@@ -1760,12 +1760,14 @@ def _refuse_empty_window(query_string: str, ledger_errors: list[str]) -> None:
     # CLOSE ON D` answered `(no rows)` just the same (w1/158).
     for clause in ast.walk(parsed):
         if isinstance(clause, ast.From):
-            _refuse_window(clause.open, clause.close, ledger_errors)
+            _refuse_window(clause.open, clause.close, ledger_errors, file=file)
 
 
-def _refuse_window(begin: Any, end: Any, ledger_errors: list[str]) -> None:
+def _refuse_window(begin: Any, end: Any, ledger_errors: list[str], *, file: Path) -> None:
     """Refuse one `OPEN ON begin CLOSE ON end` window that spans no days, or has no end date."""
     from datetime import date, timedelta
+
+    from bea_engine.ledger.text import bea_command
 
     # A bare `CLOSE` is `True`, not a date, and closes at the end of the ledger.
     # Beside a dated `OPEN` Beanquery orders the two as dates and escapes with
@@ -1787,7 +1789,8 @@ def _refuse_window(begin: Any, end: Any, ledger_errors: list[str]) -> None:
         )
         details = [
             f"Use CLOSE ON {end + timedelta(days=1)} to cover {begin}.",
-            f"Or run: bea list transaction --from-date {begin} --to-date {begin} — those dates are inclusive.",
+            f"Or run: {bea_command(file)} list transaction --from-date {begin} --to-date {begin}"
+            " — those dates are inclusive.",
         ]
     else:
         message = f"This BQL window covers no days: OPEN ON {begin} starts after the exclusive CLOSE ON {end}."

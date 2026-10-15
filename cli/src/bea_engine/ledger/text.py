@@ -75,6 +75,29 @@ def parse_iso_date(text: str) -> datetime.date:
     raise ValueError(f"date {text!r} must be a calendar date in YYYY-MM-DD form, such as '2026-02-01'.")
 
 
+def bea_command(file: Path | str) -> str:
+    """`bea`, with the `--file` it takes to reach `file` from the working directory.
+
+    A remedy printed to be pasted must act on the ledger it is about: a bare
+    `bea add open …` went through cwd discovery instead, and was refused, or
+    opened the account in another `main.bean` while the import stayed blocked
+    (w5/303). The bare form stays when discovery already finds this ledger.
+    """
+    import os
+    import shlex
+
+    target = Path(file)
+    cwd = Path.cwd()
+    if not os.environ.get("BEA_FILE"):
+        for name in ("main.bean", "main.beancount"):
+            if os.path.lexists(cwd / name):
+                if (cwd / name).resolve() == target.resolve():
+                    return "bea"
+                break
+    shown = os.path.relpath(target, cwd) if target.resolve().is_relative_to(cwd.resolve()) else str(target)
+    return f"bea --file {shlex.quote(shown)}"
+
+
 def outside_ledger_tree(path: Path, root: Path) -> bool:
     """Whether a document path resolves outside the root ledger's directory.
 

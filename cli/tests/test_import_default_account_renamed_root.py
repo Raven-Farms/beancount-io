@@ -78,7 +78,7 @@ def test_the_default_account_uses_the_renamed_expenses_root(book: Path, extra: t
     # The fallback is not open in this ledger, so its row waits on the remedy.
     unmatched = data["rows"][1]
     assert unmatched["status"] == "blocked"
-    assert "bea add open --account Aufwand:Uncategorized" in unmatched["reason"]
+    assert "add open --account Aufwand:Uncategorized" in unmatched["reason"]
     assert book.read_text() == RENAMED
 
 

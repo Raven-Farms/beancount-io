@@ -149,7 +149,10 @@ the missing account and the `bea add open` line that fixes it, stays in the
 diff so the proposal stays visible, and `--apply` refuses with exit **4**
 while any row is blocked. Every row blocked on the same account prints the same
 line — dated for the earliest row of the import that posts there and allowing
-each currency the import posts — so running it once unblocks them all. "Opened"
+each currency the import posts — so running it once unblocks them all. The line
+carries `--file` for the ledger being imported (`bea --file books/main.bean add
+open …`) unless the working directory's own `main.bean` is that ledger, so it
+acts on the right books wherever it is pasted. "Opened"
 is read from the ledger as the import would leave it: an account a plugin such
 as `auto_accounts` opens on first use, or one whose `open` the importer returns
 in the same batch, does not block its rows. On a ledger that loads

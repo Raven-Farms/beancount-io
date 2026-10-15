@@ -126,7 +126,7 @@ def test_without_the_plugin_the_same_rows_stay_blocked(book: Path) -> None:
     assert blocked.exit_code == 4, blocked.output
     rows = _rows(blocked)
     assert [row["status"] for row in rows] == ["possible_duplicate", "blocked", "blocked"]
-    assert "Account 'Expenses:Fuel' is not open. Run: bea add open --account Expenses:Fuel" in rows[1]["reason"]
+    assert "Account 'Expenses:Fuel' is not open. Run: bea --file " in rows[1]["reason"]
     assert "Account 'Expenses:Uncategorized' is not open." in rows[2]["reason"]
     assert book.read_text() == DECLARED
 

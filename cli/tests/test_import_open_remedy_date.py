@@ -27,7 +27,7 @@ LEDGER = (
     '2026-01-02 * "Opening balance"\n  Assets:Checking  1000.00 USD\n  Equity:Opening\n'
 )
 NEWEST_FIRST = ["2026-03-20,Shell gas,-40.00", "2026-02-10,Shell gas,-35.00", "2026-01-15,Shell gas,-30.00"]
-REMEDY = "bea add open --account Expenses:Fuel --date 2026-01-15 -c USD"
+REMEDY = "add open --account Expenses:Fuel --date 2026-01-15 -c USD"
 
 IMPORTER = """\
 import csv, datetime
@@ -102,9 +102,9 @@ def test_every_blocked_row_gives_the_one_command_that_unblocks_the_import(book: 
 
     assert blocked.exit_code == 4, blocked.output
     reasons = _reasons(blocked)
-    assert len(reasons) == 3 and all(reason.endswith(f"Run: {REMEDY}.") for reason in reasons)
+    assert len(reasons) == 3 and all(reason.endswith(f" {REMEDY}.") for reason in reasons)
     assert book.read_text() == LEDGER
-    opened = runner.invoke(app, ["--file", str(book), *shlex.split(REMEDY)[1:]])
+    opened = runner.invoke(app, ["--file", str(book), *shlex.split(REMEDY)])
     assert opened.exit_code == 0, opened.output
     applied = _import(book, rows, mode, "--apply")
     assert applied.exit_code == 0, applied.output
@@ -130,11 +130,11 @@ def test_the_human_review_lines_carry_the_same_command(book: Path) -> None:
 
 def test_the_command_allows_every_currency_the_import_posts_to_the_account(book: Path) -> None:
     rows = ["2026-03-20,Shell gas,-40.00,EUR", "2026-01-15,Shell gas,-30.00,USD"]
-    remedy = "bea add open --account Expenses:Fuel --date 2026-01-15 -c EUR -c USD"
+    remedy = "add open --account Expenses:Fuel --date 2026-01-15 -c EUR -c USD"
 
     blocked = _import(book, rows, "importer", "--apply", header="Date,Description,Amount,Currency")
 
-    assert all(reason.endswith(f"Run: {remedy}.") for reason in _reasons(blocked))
-    assert runner.invoke(app, ["--file", str(book), *shlex.split(remedy)[1:]]).exit_code == 0
+    assert all(reason.endswith(f" {remedy}.") for reason in _reasons(blocked))
+    assert runner.invoke(app, ["--file", str(book), *shlex.split(remedy)]).exit_code == 0
     applied = _import(book, rows, "importer", "--apply", header="Date,Description,Amount,Currency")
     assert applied.exit_code == 0, applied.output

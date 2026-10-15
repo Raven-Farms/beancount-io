@@ -119,10 +119,10 @@ def test_an_amountless_leg_on_an_unopened_account_is_blocked_with_a_working_reme
 
     assert blocked.exit_code != 0
     assert "AttributeError" not in blocked.output
-    remedy = "bea add open --account Expenses:Dining --date 2026-01-05 -c USD"
+    remedy = "add open --account Expenses:Dining --date 2026-01-05 -c USD"
     assert remedy in blocked.output
     assert book.read_text() == before
-    opened = runner.invoke(app, ["--file", str(book), *remedy.split()[1:]])
+    opened = runner.invoke(app, ["--file", str(book), *remedy.split()])
     assert opened.exit_code == 0, opened.output
     applied = _import(book, "Expenses:Dining", "--apply")
     assert applied.exit_code == 0, applied.output
@@ -143,4 +143,4 @@ def test_an_ambiguous_amountless_leg_is_left_to_validation(book: Path) -> None:
     assert any("Invalid currency EUR for account 'Liabilities:Card'" in line for line in error["details"])
     assert book.read_text() == before
     reason = json.loads(unopened.stdout)["data"]["rows"][0]["reason"]
-    assert reason.endswith("Run: bea add open --account Expenses:Dining --date 2026-01-05.")
+    assert reason.endswith(" add open --account Expenses:Dining --date 2026-01-05.")

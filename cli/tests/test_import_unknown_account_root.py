@@ -92,8 +92,8 @@ def test_a_known_root_still_blocks_with_a_remedy_that_works(ledger: Path) -> Non
     assert row["status"] == "blocked"
     remedy = row["reason"].split("Run: ", 1)[1].rstrip(".")
     argv = shlex.split(remedy)
-    assert argv[:2] == ["bea", "add"]
-    code, _ = _bea(ledger, *argv[1:])
+    assert argv[:2] == ["bea", "--file"] and Path(argv[2]).resolve() == ledger.resolve() and argv[3] == "add"
+    code, _ = _bea(ledger, *argv[3:])
     assert code == 0
     code, payload = _import(ledger, CSV, "--account", "Assets:Cash", "--default-account", "Expenses:New")
     assert payload["data"]["rows"][0]["status"] == "new"

@@ -26,7 +26,7 @@ from pathlib import Path
 from typing import Any
 
 from bea_engine.ledger import write as ledger_write
-from bea_engine.ledger.text import ledger_roots, reports_unused_accounts, unknown_root_message
+from bea_engine.ledger.text import bea_command, ledger_roots, reports_unused_accounts, unknown_root_message
 from bea_engine.ledger.writer import format_entry, normalize_entry_strings
 from bea_engine.protocol import ConflictError, EngineError, LedgerError, UsageError
 from bea_engine.query import format_error
@@ -446,7 +446,7 @@ def answer(
         include = status == "new" or (status == "possible_duplicate" and duplicates == "include")
         unblocked = (status, reason)
         if include and isinstance(entry, Transaction):
-            blocked_reason = _blocked_reason(entry, open_currencies, roots, first_uses, stage_opens)
+            blocked_reason = _blocked_reason(entry, open_currencies, roots, first_uses, stage_opens, ledger=file)
             if blocked_reason is not None:
                 status, reason, include = "blocked", blocked_reason, False
         if include:
@@ -489,7 +489,7 @@ def answer(
         proposal = [row["entry"] for row in rows if row["include"] or row["status"] == "blocked"]
         after = _open_currencies(_entries_after(snapshot, target, original, proposal), Open)
         for row_dict, entry, was, why in held:
-            still = _blocked_reason(entry, after, roots, first_uses, stage_opens)
+            still = _blocked_reason(entry, after, roots, first_uses, stage_opens, ledger=file)
             if still is None:
                 row_dict.update(status=was, reason=why, include=True)
             else:
@@ -1012,6 +1012,8 @@ def _blocked_reason(
     roots: tuple[str, ...],
     first_uses: dict[str, tuple[Any, list[str] | None]],
     stage_opens: bool = False,
+    *,
+    ledger: Path,
 ) -> str | None:
     """Why a transaction cannot be written, or None when its accounts allow it.
 
@@ -1030,6 +1032,7 @@ def _blocked_reason(
     if missing:
         remedies = []
         flag = " --allow-errors" if stage_opens else ""
+        bea = bea_command(ledger)
         for name in missing:
             opened, currencies = first_uses.get(name, (entry.date, None))
             # Quoted so the line survives a paste into a shell. Valid account
@@ -1037,7 +1040,9 @@ def _blocked_reason(
             # names are refused up front — but a suggestion that only sometimes
             # pastes cleanly is worse than one that always does.
             constraint = "".join(f" -c {currency}" for currency in sorted(currencies or ()))
-            remedies.append(f"bea add open --account {shlex.quote(name)} --date {opened.isoformat()}{constraint}{flag}")
+            remedies.append(
+                f"{bea} add open --account {shlex.quote(name)} --date {opened.isoformat()}{constraint}{flag}"
+            )
         quoted = ", ".join(f"'{name}'" for name in missing)
         noun = "Account" if len(missing) == 1 else "Accounts"
         verb = "is" if len(missing) == 1 else "are"

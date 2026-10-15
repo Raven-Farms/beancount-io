@@ -699,7 +699,7 @@ def test_csv_rule_naming_an_unopened_account_guides_to_add_open(book: Path, isol
     before = book.read_bytes()
     result = csv_result(book, CSV_HEADER + CSV_ROW, "--rules", str(rules), "--apply")
     assert result.exit_code == 4
-    assert "bea add open --account Expenses:Popcorn" in result.stderr
+    assert "add open --account Expenses:Popcorn" in " ".join(result.stderr.split())
     assert book.read_bytes() == before
 
 
@@ -1876,7 +1876,7 @@ class TestBlockedRows:
         assert row["status"] == "blocked"
         assert row["include"] is False
         assert "Expenses:Uncategorized" in (row["reason"] or "")
-        assert "bea add open" in (row["reason"] or "")
+        assert "add open" in (row["reason"] or "")
         assert "Expenses:Uncategorized" in data["diff"]
 
     def test_apply_refuses_blocked_rows(self, tmp_path: Path, isolated_config: Path) -> None:
@@ -1926,7 +1926,7 @@ class TestBlockedRows:
         (row,) = data["rows"]
         assert row["status"] == "blocked"
         assert "Expenses:Nope" in (row["reason"] or "")
-        assert "bea add open" in (row["reason"] or "")
+        assert "add open" in (row["reason"] or "")
 
     def test_currency_mismatch_blocks(self, book: Path, isolated_config: Path) -> None:
         result = csv_result(
@@ -1981,7 +1981,7 @@ class TestBlockedRows:
         assert "1 blocked" in result.stdout
         assert "blocked" in result.stdout
         assert "Expenses:Uncategorized" in result.stdout
-        assert "bea add open" in result.stdout
+        assert "add open" in result.stdout
 
 
 class TestImportFixtureSet:
