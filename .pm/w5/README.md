@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [348 — `check`/reads on an included leaf give no root hint, only `--allow-errors`](./348.md) — CLI QA 2026-10-14
 - [349 — Importer trades with the same shares but a different cost share an import-id; the second is silently skipped](./349.md) — CLI QA 2026-10-14
 - [350 — `add balance` in a disallowed currency: dangling upstream message plus useless pad advice](./350.md) — CLI QA 2026-10-14
 - [351 — Importer balance/note on an unopened account is counted as ready; `--apply` fails the batch](./351.md) — CLI QA 2026-10-14
