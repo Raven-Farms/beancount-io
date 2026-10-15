@@ -574,6 +574,10 @@ For a blank narration, read
 [transaction lookup examples](./docs/mcp.md#transaction-lookups) explain explicit
 values and the retained nonempty path alias.
 
+The balance-sheet [current-earnings example](./docs/mcp.md#balance-sheet-current-earnings)
+shows the same read URI for Codex and Claude Code, including report-only equity
+closing and account-filter scope.
+
 The [Beancount.io MCP guide](./docs/mcp.md) explains setup, OAuth and API-key
 permissions, how requests reach the ledger, all 27 tools and 64 resource
 templates, the four accounting prompts and how Claude Code and Codex use them,

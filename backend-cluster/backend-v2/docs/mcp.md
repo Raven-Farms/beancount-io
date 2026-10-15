@@ -649,6 +649,25 @@ resource is a static stored document.
 See [`mcp-resources.ts`](../src/features/ai-agent/api/mcp-resources.ts) for the
 catalog and service calls.
 
+### Balance-sheet current earnings
+
+Read `beancount://alice/main/statements/balance-sheet?time=2025&conversion=at_cost`
+from either Codex or Claude Code. The equivalent REST read is
+`GET /api-gateway/v1/ledgers/alice/main/statements/balance-sheet?time=2025&conversion=at_cost`.
+Add `shape=fava` for the full trees and interval series; GraphQL exposes these
+through `getLedgerBalanceSheet`.
+
+Balance-sheet equity includes the selected period's income and expenses in
+`Equity:Earnings:Current`, using the ledger's configured `name_equity` and
+`account_current_earnings` names. Time-filtered reports carry earlier earnings
+in previous earnings.
+Equity chart points include earnings through each interval end. This is a
+report-only view: it writes no closing transactions and leaves the journal,
+income statement, and trial balance unchanged. Account and advanced filters
+still select their existing scope; a filtered subset need not reconcile as a
+complete ledger. Currency conversion and price-date rules remain as described
+above.
+
 ### Transaction lookups
 
 `narration-transactions{?narration}` returns the latest exact narration match,

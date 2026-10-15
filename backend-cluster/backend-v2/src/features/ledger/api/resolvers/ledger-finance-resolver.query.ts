@@ -266,7 +266,8 @@ export class LedgerFinanceQueryResolver {
 
   @AllowAnonymous()
   @Query(() => BalanceSheetData, {
-    description: "Get the balance sheet of a specific ledger",
+    description:
+      "Get the balance sheet of a specific ledger, including report-only current earnings in equity and its interval series under the configured account names",
   })
   async getLedgerBalanceSheet(
     @Arg("ledgerId", () => String) ledgerId: string,

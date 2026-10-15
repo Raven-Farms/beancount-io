@@ -16,6 +16,10 @@ import {
   pinnedReadToken,
 } from "@/server/rest/__tests__/v1-test-server";
 import type { IFavaClientFactory } from "@/foundation/clients/fava-client-factory";
+import type {
+  BalanceSheetDataPublic,
+  SerializableTreeNodePublic,
+} from "@/foundation/fava";
 import type { AppConfig } from "@/config/config";
 import type { AppLayers } from "@/foundation/composition";
 import type { McpRequestContext } from "../mcp-context";
@@ -75,7 +79,10 @@ const summary = (currency: string, valuation = "latest-price") => ({
 let resolver: LedgerFinanceQueryResolver;
 let schemaPromise: ReturnType<typeof buildSchema> | undefined;
 
-async function fixture(payload: unknown) {
+async function fixture(
+  payload: unknown,
+  scope: Record<string, string> = { filter },
+) {
   const check = jest.fn().mockResolvedValue(true);
   const auth = new AuthorizationService({ check }, jest.fn());
   const getLedgerBalanceSheet = jest
@@ -114,18 +121,22 @@ async function fixture(payload: unknown) {
   const [a, b] = InMemoryTransport.createLinkedPair();
   await Promise.all([client.connect(a), server.connect(b)]);
   const path = (query: Record<string, string>) =>
-    `statements/balance-sheet?${new URLSearchParams({ filter, ...query })}`;
+    `statements/balance-sheet?${new URLSearchParams({ ...scope, ...query })}`;
+  const readRest = (query: Record<string, string>) =>
+    fetch(`${rest.url}/api-gateway/v1/ledgers/alice/main/${path(query)}`);
+  const readResource = (query: Record<string, string>) =>
+    client.readResource({ uri: `beancount://alice/main/${path(query)}` });
   return {
+    check,
+    factory,
     getLedgerBalanceSheet,
+    rest: readRest,
+    resource: readResource,
     /** The REST and MCP answers, asserted equal before either is returned. */
     read: async (query: Record<string, string>) => {
-      const response = await fetch(
-        `${rest.url}/api-gateway/v1/ledgers/alice/main/${path(query)}`,
-      );
+      const response = await readRest(query);
       expect(response.status).toBe(200);
-      const result = await client.readResource({
-        uri: `beancount://alice/main/${path(query)}`,
-      });
+      const result = await readResource(query);
       const content = result.contents[0];
       if (!("text" in content)) throw new Error("Expected JSON resource");
       const mcp = JSON.parse(content.text);
@@ -142,6 +153,23 @@ async function fixture(payload: unknown) {
           }
         }`,
         variableValues: { filter, conversion },
+        contextValue: { identity: pinnedReadToken },
+      }),
+    gqlStatement: (query: Record<string, string>) =>
+      graphql({
+        schema,
+        source: `query($time: String!, $conversion: String!, $interval: String!) {
+          getLedgerBalanceSheet(ledgerId: "alice/main", time: $time, conversion: $conversion, interval: $interval) {
+            netWorthData { date balance }
+            assetsData { date balance }
+            liabilitiesData { date balance }
+            equityData { date balance }
+            assetsHierarchyData { account balance balanceChildren children hasTxns }
+            liabilitiesHierarchyData { account balance balanceChildren children hasTxns }
+            equityHierarchyData { account balance balanceChildren children hasTxns }
+          }
+        }`,
+        variableValues: query,
         contextValue: { identity: pinnedReadToken },
       }),
     close: async () => {
@@ -373,6 +401,167 @@ describe("balance-sheet summary valuation basis (w6/009)", () => {
         (gql.data?.getLedgerBalanceSheet as { netWorthData: unknown })
           .netWorthData,
       ).toEqual([{ date: "2026-01-31", balance: { USD: "5" } }]);
+    } finally {
+      await f.close();
+    }
+  });
+});
+
+describe("closed balance-sheet earnings across adapters (w6/m5)", () => {
+  function companySheet(
+    time: string,
+    equityRoot: string,
+    earningsLeaf: string,
+  ): BalanceSheetDataPublic {
+    const dates = [`${time}-01-31`, `${time}-02-28`, `${time}-12-31`];
+    const current = time === "2025";
+    const series = (opening: string, closing: string) =>
+      dates.map((date, index) => ({
+        date,
+        balance: { MUSD: current && index === 0 ? opening : closing },
+      }));
+    const own = (
+      account: string,
+      amount: string,
+    ): SerializableTreeNodePublic => ({
+      account,
+      balance: { MUSD: amount },
+      balance_children: { MUSD: amount },
+      children: [],
+      has_txns: true,
+    });
+    return {
+      net_worth_data: series("10000", "13000"),
+      assets_data: series("20000", "23000"),
+      liabilities_data: series("-10000", "-10000"),
+      equity_data: series("-10000", "-13000"),
+      assets_hierarchy_data: {
+        ...root("Assets"),
+        balance_children: { MUSD: "23000" },
+        children: [own("Assets:Cash", "23000")],
+      },
+      liabilities_hierarchy_data: {
+        ...root("Liabilities"),
+        balance_children: { MUSD: "-10000" },
+        children: [own("Liabilities:Debt", "-10000")],
+      },
+      equity_hierarchy_data: {
+        ...root(equityRoot),
+        balance_children: { MUSD: "-13000" },
+        children: [
+          own(`${equityRoot}:Capital`, "-10000"),
+          {
+            ...root(`${equityRoot}:${earningsLeaf.split(":")[0]}`),
+            balance_children: { MUSD: "-3000" },
+            children: [own(`${equityRoot}:${earningsLeaf}`, "-3000")],
+          },
+        ],
+      },
+    };
+  }
+
+  // Only the documented GraphQL field aliases change; balance-map keys and
+  // numeric strings are compared against the unmodified upstream DTO.
+  const graphqlTree = (node: SerializableTreeNodePublic): unknown => ({
+    account: node.account,
+    balance: node.balance,
+    balanceChildren: node.balance_children,
+    children: node.children.map(graphqlTree),
+    hasTxns: node.has_txns,
+  });
+
+  it.each([
+    { time: "2025", equityRoot: "Equity", earningsLeaf: "Earnings:Current" },
+    { time: "2026", equityRoot: "Equity", earningsLeaf: "Earnings:Previous" },
+    { time: "2025", equityRoot: "Capital", earningsLeaf: "Retained:Now" },
+  ])(
+    "exposes $time $equityRoot:$earningsLeaf exactly once in summary, raw and GraphQL views",
+    async (entry) => {
+      const payload = companySheet(
+        entry.time,
+        entry.equityRoot,
+        entry.earningsLeaf,
+      );
+      const before = structuredClone(payload);
+      const f = await fixture(payload, {});
+      const query = {
+        time: entry.time,
+        conversion: "at_cost",
+        interval: "monthly",
+      };
+      try {
+        const result = await f.read(query);
+        expect(result).toEqual({
+          asOf: `${entry.time}-12-31`,
+          currency: "MUSD",
+          valuation: "cost",
+          assets: 23000,
+          liabilities: -10000,
+          equity: -13000,
+          netWorth: 13000,
+          byAccount: [
+            { account: "Assets:Cash", balance: 23000 },
+            { account: "Liabilities:Debt", balance: -10000 },
+            { account: `${entry.equityRoot}:Capital`, balance: -10000 },
+            {
+              account: `${entry.equityRoot}:${entry.earningsLeaf}`,
+              balance: -3000,
+            },
+          ],
+        });
+        expect(result.assets + result.liabilities + result.equity).toBe(0);
+        expect(await f.read({ ...query, shape: "fava" })).toEqual(payload);
+        const gql = await f.gqlStatement(query);
+        expect(gql.errors).toBeUndefined();
+        expect(gql.data?.getLedgerBalanceSheet).toEqual({
+          netWorthData: payload.net_worth_data,
+          assetsData: payload.assets_data,
+          liabilitiesData: payload.liabilities_data,
+          equityData: payload.equity_data,
+          assetsHierarchyData: graphqlTree(payload.assets_hierarchy_data),
+          liabilitiesHierarchyData: graphqlTree(
+            payload.liabilities_hierarchy_data,
+          ),
+          equityHierarchyData: graphqlTree(payload.equity_hierarchy_data),
+        });
+        expect(f.getLedgerBalanceSheet.mock.calls).toEqual(
+          Array.from({ length: 5 }, () => ["alice", "main", query]),
+        );
+        expect(payload).toEqual(before);
+      } finally {
+        await f.close();
+      }
+    },
+  );
+
+  it("rechecks revoked read access before fetching either closed-equity shape", async () => {
+    const f = await fixture(
+      companySheet("2025", "Equity", "Earnings:Current"),
+      {},
+    );
+    const query = { time: "2025", conversion: "at_cost", interval: "monthly" };
+    try {
+      expect((await f.read(query)).equity).toBe(-13000);
+      f.getLedgerBalanceSheet.mockClear();
+      f.factory.getPublicApiClient.mockClear();
+      f.check.mockResolvedValue(false);
+      for (const shape of ["summary", "fava"]) {
+        const response = await f.rest({ ...query, shape });
+        expect(response.status).toBe(404);
+        expect(await response.json()).toMatchObject({
+          error: { code: "NOT_FOUND" },
+        });
+        await expect(f.resource({ ...query, shape })).rejects.toMatchObject({
+          data: { code: "NOT_FOUND" },
+        });
+      }
+      const gql = await f.gqlStatement(query);
+      expect(gql.errors).toHaveLength(1);
+      expect(gql.errors?.[0].originalError).toMatchObject({
+        category: "NOT_FOUND",
+      });
+      expect(f.getLedgerBalanceSheet).not.toHaveBeenCalled();
+      expect(f.factory.getPublicApiClient).not.toHaveBeenCalled();
     } finally {
       await f.close();
     }

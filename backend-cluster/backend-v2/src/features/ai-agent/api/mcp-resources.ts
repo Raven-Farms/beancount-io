@@ -645,7 +645,9 @@ export const MCP_RESOURCES: readonly McpResourceDescriptor[] = [
       title:
         statement === "balance-sheet" ? "Balance Sheet" : "Income Statement",
       description:
-        "Financial statement with account, filter, time, conversion, and interval parameters. Returns the same structured data as REST.",
+        statement === "balance-sheet"
+          ? "Balance sheet with report-only current earnings in equity and its interval series under the configured account names. Accepts account, filter, time, conversion, interval, and shape; returns the same structured data as REST."
+          : "Financial statement with account, filter, time, conversion, and interval parameters. Returns the same structured data as REST.",
       mimeType: "application/json",
       uriTemplate: `${RESOURCE_SCHEME}://{owner}/{name}/statements/${statement}`,
       listSegment: `statements/${statement}`,

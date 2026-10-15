@@ -8781,7 +8781,7 @@
     "/api-gateway/v1/ledgers/{owner}/{name}/statements/{statement}": {
       "get": {
         "summary": "Get a financial statement",
-        "description": "Renders the balance sheet or the income statement for the period, with optional currency conversion and interval bucketing. `shape=summary` (the default) returns totals and non-zero accounts; `shape=fava` returns the full chart payload.",
+        "description": "Renders the balance sheet or the income statement for the period, with optional currency conversion and interval bucketing. `shape=summary` (the default) returns totals and non-zero accounts; `shape=fava` returns the full chart payload. Balance-sheet equity and its series include current earnings under the configured account names without writing closing transactions.",
         "tags": [
           "Ledger v1"
         ],
