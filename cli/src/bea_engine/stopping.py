@@ -19,6 +19,8 @@ from __future__ import annotations
 
 import os
 import signal
+import threading
+import time
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
@@ -28,6 +30,9 @@ from typing import Any
 _received: int | None = None
 _loading = 0
 _staged: set[Path] = set()
+#: The frontend that launched us, while we are watching for it to go.
+_parent: int | None = None
+_PARENT_POLL_SECONDS = 0.2
 
 
 def install() -> dict[int, Any]:
@@ -37,7 +42,36 @@ def install() -> dict[int, Any]:
         number = getattr(signal, name, None)
         if number is not None:
             previous[number] = signal.signal(number, _terminate)
+    _watch_parent()
     return previous
+
+
+def _watch_parent() -> None:
+    """Stop as if sent SIGTERM once the frontend that launched us is gone.
+
+    The frontend starts a writing helper in its own session, so a SIGKILL of
+    `bea` (an OOM kill, `kill -9`, a harness's `Popen.kill()`) reaches only
+    the frontend, and no signal can be forwarded from a dead process. The
+    orphan then finished validating and landed the write seconds later; a
+    caller that saw the kill and retried recorded the entry twice (w5/300).
+    Orphaning re-parents us, so polling the parent PID notices. Windows does
+    not re-parent, and has no separate session to escape from.
+    """
+    global _parent
+    if os.name != "posix" or os.getppid() == 1:
+        return
+    _parent = os.getppid()
+
+    def watch() -> None:
+        while not _orphaned():
+            time.sleep(_PARENT_POLL_SECONDS)
+        os.kill(os.getpid(), signal.SIGTERM)
+
+    threading.Thread(target=watch, name="bea-engine-parent-watch", daemon=True).start()
+
+
+def _orphaned() -> bool:
+    return _parent is not None and os.getppid() != _parent
 
 
 def interactive() -> None:
@@ -96,7 +130,14 @@ def _terminate(number: int, _frame: FrameType | None) -> None:
 
 
 def check() -> None:
-    """Refuse to go on once a termination signal arrived, even if something swallowed it."""
+    """Refuse to go on once a termination signal arrived, even if something swallowed it.
+
+    A frontend that is gone counts too: the watcher's signal may not have
+    been handled yet, and nobody is left to report a commit to.
+    """
+    if _received is None and _orphaned():
+        _discard_staged()
+        raise SystemExit(128 + signal.SIGTERM)
     if _received is not None:
         raise SystemExit(128 + _received)
 

@@ -901,7 +901,9 @@ evaluates amount arithmetic while parsing and a zero divisor crashes it.
 
 Every write is staged into a hidden `.bea-*.tmp` copy beside the ledger and
 moved into place only once it validates, so an interrupted write never leaves a
-half-written ledger. Only the destination and the files that include it,
+half-written ledger. A write whose `bea` process is killed outright (`kill -9`,
+an out-of-memory kill) is abandoned too: the helper notices its parent is gone
+and stops without committing, so a retry never records the entry twice. Only the destination and the files that include it,
 directly or through other includes, get a staging copy; the rest of the include
 graph is read in place, so a read-only shared directory of included files does
 not block a write elsewhere. When a directory that needs a staging copy is not
