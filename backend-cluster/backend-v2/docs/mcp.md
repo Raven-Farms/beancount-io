@@ -567,6 +567,11 @@ statement's `period` gives `to`, the statement's last day, and `time`, the
 selection as requested. `from` is `null` because chart buckets carry only
 their end dates.
 
+Income-statement and overview summaries use the currency observed in their
+reported balances. When those maps contain no currency, valuation strategies
+(`units`, `at_cost`, `at_value`) use the USD fallback; an explicit currency such
+as `EUR` remains the fallback requested.
+
 With `shape=fava`, statement and overview payloads retain the ledger service's
 snake-case field names on REST/MCP. GraphQL exposes camel-case equivalents, including
 `balance_children` → `balanceChildren`, `has_txns` → `hasTxns`, and

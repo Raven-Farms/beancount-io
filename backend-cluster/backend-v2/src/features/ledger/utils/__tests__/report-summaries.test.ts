@@ -8,6 +8,8 @@ import {
 } from "@/features/ledger/utils/report-summaries";
 import type {
   DateAndBalanceWithAccountBalancePublic,
+  IncomeStatementDataPublic,
+  OverviewPublic,
   SerializableTreeNodePublic,
 } from "@/foundation/fava";
 
@@ -257,6 +259,117 @@ describe("summarizeBalanceSheet", () => {
 });
 
 describe("summarizeIncomeStatement", () => {
+  const date = "2026-02-28";
+  const empty: IncomeStatementDataPublic = {
+    net_profit_data: [{ date, balance: {} }],
+    income_data: [{ date, balance: {}, account_balances: {} }],
+    expenses_data: [{ date, balance: {}, account_balances: {} }],
+    income_hierarchy_data: node("Income", {}),
+    expenses_hierarchy_data: node("Expenses", {}),
+  };
+
+  it.each(["units", "at_cost", "at_value", undefined, "EUR"])(
+    "uses the empty currency fallback rather than conversion=%s as a label",
+    (conversion) => {
+      const currency = conversion === "EUR" ? "EUR" : "USD";
+      expect(summarizeIncomeStatement(empty, conversion, "2026-02")).toEqual({
+        period: { from: null, to: date, time: "2026-02" },
+        currency,
+        income: 0,
+        expenses: 0,
+        net: -0,
+        byAccount: [],
+      });
+      expect(
+        summarizeIncomeStatement(
+          { ...empty, net_profit_data: [], income_data: [], expenses_data: [] },
+          conversion,
+        ),
+      ).toEqual({
+        period: { from: null, to: null, time: null },
+        currency,
+        income: 0,
+        expenses: 0,
+        net: -0,
+        byAccount: [],
+      });
+    },
+  );
+
+  it.each([
+    {
+      name: "profit",
+      conversion: "units",
+      income: "-100.25",
+      expenses: "60",
+      netBalance: "-40.25",
+      net: 40.25,
+      byAccount: [
+        { account: "Income:Sales", balance: -100.25 },
+        { account: "Expenses:Operations", balance: 60 },
+      ],
+    },
+    {
+      name: "loss",
+      conversion: "at_cost",
+      income: "0",
+      expenses: "3200",
+      netBalance: "3200",
+      net: -3200,
+      byAccount: [{ account: "Expenses:Operations", balance: 3200 }],
+    },
+    {
+      name: "zero net with nonzero accounts",
+      conversion: "at_value",
+      income: "-100",
+      expenses: "100",
+      netBalance: "0",
+      net: -0,
+      byAccount: [
+        { account: "Income:Sales", balance: -100 },
+        { account: "Expenses:Operations", balance: 100 },
+      ],
+    },
+  ])("preserves observed MUSD $name amounts and accounts", (entry) => {
+    const data: IncomeStatementDataPublic = {
+      net_profit_data: [{ date, balance: { MUSD: entry.netBalance } }],
+      income_data: [
+        {
+          date,
+          balance: { MUSD: entry.income },
+          account_balances: { "Income:Sales": { MUSD: entry.income } },
+        },
+      ],
+      expenses_data: [
+        {
+          date,
+          balance: { MUSD: entry.expenses },
+          account_balances: { "Expenses:Operations": { MUSD: entry.expenses } },
+        },
+      ],
+      income_hierarchy_data: node(
+        "Income",
+        {},
+        [node("Income:Sales", { MUSD: entry.income })],
+        { MUSD: entry.income },
+      ),
+      expenses_hierarchy_data: node(
+        "Expenses",
+        {},
+        [node("Expenses:Operations", { MUSD: entry.expenses })],
+        { MUSD: entry.expenses },
+      ),
+    };
+    expect(summarizeIncomeStatement(data, entry.conversion)).toEqual({
+      period: { from: null, to: date, time: null },
+      currency: "MUSD",
+      income: Number(entry.income),
+      expenses: Number(entry.expenses),
+      net: entry.net,
+      byAccount: entry.byAccount,
+    });
+  });
+
   it("derives profit from beancount's signs rather than subtracting", () => {
     const summary = summarizeIncomeStatement(
       {
@@ -305,6 +418,58 @@ describe("summarizeIncomeStatement", () => {
 });
 
 describe("summarizeOverview", () => {
+  const date = "2026-02-28";
+  const empty: OverviewPublic = {
+    net_worth_data: [{ date, balance: {} }],
+    assets_data: [{ date, balance: {} }],
+    liabilities_data: [{ date, balance: {} }],
+    income_data: [{ date, balance: {} }],
+    expenses_data: [{ date, balance: {} }],
+    income_interval_data: [{ date, balance: {}, account_balances: {} }],
+    expenses_interval_data: [{ date, balance: {}, account_balances: {} }],
+    assets_hierarchy_data: node("Assets", {}),
+    liabilities_hierarchy_data: node("Liabilities", {}),
+    income_hierarchy_data: node("Income", {}),
+    expenses_hierarchy_data: node("Expenses", {}),
+  };
+
+  it.each(["units", "at_cost", "at_value", undefined, "EUR"])(
+    "uses the empty currency fallback rather than conversion=%s as a label",
+    (conversion) => {
+      const currency = conversion === "EUR" ? "EUR" : "USD";
+      expect(summarizeOverview(empty, conversion)).toEqual({
+        currency,
+        netWorth: 0,
+        series: [{ date, netWorth: 0 }],
+      });
+      expect(
+        summarizeOverview({ ...empty, net_worth_data: [] }, conversion),
+      ).toEqual({ currency, netWorth: 0, series: [] });
+    },
+  );
+
+  it("keeps observed MUSD and all signed series amounts, including a final zero", () => {
+    const data = {
+      ...empty,
+      net_worth_data: [
+        { date: "2026-01-31", balance: { MUSD: "10.50" } },
+        { date, balance: { MUSD: "-5.25" } },
+        { date: "2026-03-31", balance: { MUSD: "0" } },
+      ],
+    };
+    for (const conversion of ["units", "at_cost", "at_value", undefined]) {
+      expect(summarizeOverview(data, conversion)).toEqual({
+        currency: "MUSD",
+        netWorth: 0,
+        series: [
+          { date: "2026-01-31", netWorth: 10.5 },
+          { date, netWorth: -5.25 },
+          { date: "2026-03-31", netWorth: 0 },
+        ],
+      });
+    }
+  });
+
   it("keeps the net-worth series and drops the eleven chart series", () => {
     expect(
       summarizeOverview({

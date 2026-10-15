@@ -284,7 +284,7 @@ export function summarizeIncomeStatement(
       ...data.net_profit_data.map((point) => point.balance),
       data.income_hierarchy_data?.balance_children ?? {},
     ],
-    conversion,
+    requestedCurrency(conversion),
   );
   const income = total(data.income_hierarchy_data, currency);
   const expenses = total(data.expenses_hierarchy_data, currency);
@@ -313,7 +313,7 @@ export function summarizeOverview(
 ): OverviewSummary {
   const currency = resolveCurrency(
     data.net_worth_data.map((point) => point.balance),
-    conversion,
+    requestedCurrency(conversion),
   );
   const series = data.net_worth_data.map((point) => ({
     date: point.date,
