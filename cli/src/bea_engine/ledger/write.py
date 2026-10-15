@@ -54,6 +54,25 @@ def _includes(content: bytes) -> Iterator[tuple[int, int, str]]:
         yield span.start, span.end, span.target
 
 
+def _not_a_regular_file(path: Path, status: os.stat_result) -> str | None:
+    """Why a ledger member cannot be read as a file, or None when it can.
+
+    `/dev/null` is the one special file allowed: it reads as empty, as it
+    always has.
+    """
+    mode = status.st_mode
+    if stat.S_ISREG(mode) or stat.S_ISDIR(mode) or os.path.realpath(path) == os.devnull:
+        # A directory fails in `read_bytes` and is named by the OSError branch.
+        return None
+    if stat.S_ISFIFO(mode):
+        return "it is a named pipe, not a file"
+    if stat.S_ISSOCK(mode):
+        return "it is a socket, not a file"
+    if stat.S_ISCHR(mode) or stat.S_ISBLK(mode):
+        return "it is a device, not a file"
+    return "it is not a regular file"
+
+
 @dataclass
 class LedgerSnapshot:
     """Freeze the root and its include graph for validation and conflict checks.
@@ -81,7 +100,18 @@ class LedgerSnapshot:
             if path in snapshot.contents:
                 continue
             try:
-                snapshot.stats[path] = path.stat()
+                status = snapshot.stats[path] = path.stat()
+                special = _not_a_regular_file(path, status)
+                if special is not None:
+                    # Refused before it is opened: opening a FIFO with no
+                    # writer never returns, and `/dev/zero` reads until memory
+                    # runs out (w5/435).
+                    if path not in includers:
+                        raise UsageError(f"Ledger file '{path}' is not readable: {special}.")
+                    raise UsageError(
+                        f"Included file '{path}' (included from '{includers[path]}') is not readable: {special}. "
+                        "Correct the file, or remove the include."
+                    )
                 content = snapshot.contents[path] = path.read_bytes()
             except OSError as exc:
                 if path not in includers:
