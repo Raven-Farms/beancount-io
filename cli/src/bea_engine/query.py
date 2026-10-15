@@ -2239,7 +2239,8 @@ def _entry_summary(entry: Any) -> str:
         if units is MISSING or getattr(units, "number", MISSING) is MISSING:
             postings.append(posting.account)
         else:
-            postings.append(f"{posting.account} {units.number} {units.currency}")
+            # Fixed-point, as import rows are since w5/228: `str` gave `5.0E-7 BTC` (w5/383).
+            postings.append(f"{posting.account} {format(units.number, 'f')} {units.currency}")
     legs = f" ({'; '.join(postings)})" if postings else ""
     words = f"transaction on {date}"
     if head:
