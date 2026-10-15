@@ -7,8 +7,8 @@ import { SAFE_ARCHIVE_NAME_PATTERN } from "../../../utils/safe-archive-name";
 const archiveParamsSchema = ledgerPathSchema.extend({
   archive: z.string().regex(SAFE_ARCHIVE_NAME_PATTERN).openapi({
     description:
-      "Archive to download. Git archives are `gitea-<branch>.zip`; `tar.gz` and `zip` are also accepted.",
-    example: "gitea-main.zip",
+      "A Git reference (branch, tag, or commit) and its format: `<ref>.zip` or `<ref>.tar.gz`, as in `main.zip` or `main.tar.gz`. The name is passed to the repository unchanged.",
+    example: "main.zip",
   }),
 });
 
@@ -29,8 +29,10 @@ export const ARCHIVE_DOWNLOAD_ROUTES = [
     params: archiveParamsSchema,
     responses: {
       200: {
-        description: "The archive bytes",
+        description:
+          "The archive bytes, with the repository's own `Content-Type` (`application/octet-stream` for both formats today) and an attachment `Content-Disposition`",
         content: {
+          "application/octet-stream": { schema: archiveBodySchema },
           "application/zip": { schema: archiveBodySchema },
           "application/gzip": { schema: archiveBodySchema },
         },

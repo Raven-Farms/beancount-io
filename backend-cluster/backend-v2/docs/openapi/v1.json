@@ -18006,19 +18006,25 @@
             "schema": {
               "type": "string",
               "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,254}$",
-              "description": "Archive to download. Git archives are `gitea-<branch>.zip`; `tar.gz` and `zip` are also accepted.",
-              "example": "gitea-main.zip"
+              "description": "A Git reference (branch, tag, or commit) and its format: `<ref>.zip` or `<ref>.tar.gz`, as in `main.zip` or `main.tar.gz`. The name is passed to the repository unchanged.",
+              "example": "main.zip"
             },
             "required": true,
-            "description": "Archive to download. Git archives are `gitea-<branch>.zip`; `tar.gz` and `zip` are also accepted.",
+            "description": "A Git reference (branch, tag, or commit) and its format: `<ref>.zip` or `<ref>.tar.gz`, as in `main.zip` or `main.tar.gz`. The name is passed to the repository unchanged.",
             "name": "archive",
             "in": "path"
           }
         ],
         "responses": {
           "200": {
-            "description": "The archive bytes",
+            "description": "The archive bytes, with the repository's own `Content-Type` (`application/octet-stream` for both formats today) and an attachment `Content-Disposition`",
             "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
               "application/zip": {
                 "schema": {
                   "type": "string",

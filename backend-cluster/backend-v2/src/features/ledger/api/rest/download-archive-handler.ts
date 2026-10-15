@@ -39,8 +39,8 @@ const downloadArchiveParamsSchema = z
     }),
     archive: z.string().regex(SAFE_ARCHIVE_NAME_PATTERN).openapi({
       description:
-        "Archive format to download. Common formats: 'tar.gz', 'zip'. For Git archives, use 'gitea-<branch>.zip'",
-      example: "gitea-main.zip",
+        "A Git reference and its format: '<ref>.zip' or '<ref>.tar.gz', e.g. 'main.zip'",
+      example: "main.zip",
     }),
   })
   .openapi("DownloadArchiveParams", {
@@ -83,10 +83,9 @@ export function registerDownloadArchiveRoute(
 OAuth bearer token, or personal API key instead. This route addresses the ledger as a single
 \`owner%2Fname\` path segment. A credential in the query string is not read by either route.
 
-Common archive formats:
-- 'gitea-main.zip' - Git archive from Gitea repository (main branch)
-- 'tar.gz' - Tarball archive
-- 'zip' - ZIP archive`,
+Archive names are a Git reference and its format:
+- 'main.zip' - ZIP of the main branch
+- 'main.tar.gz' - gzipped tarball of the main branch`,
     tags: ["Ledger"],
     request: {
       params: downloadArchiveParamsSchema,
@@ -95,6 +94,9 @@ Common archive formats:
       200: {
         description: "Archive file download stream",
         content: {
+          "application/octet-stream": {
+            schema: { type: "string", format: "binary" },
+          },
           "application/zip": {
             schema: { type: "string", format: "binary" },
           },

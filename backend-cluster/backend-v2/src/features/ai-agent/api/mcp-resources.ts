@@ -483,7 +483,7 @@ export const MCP_RESOURCES: readonly McpResourceDescriptor[] = [
     name: "ledgerArchive",
     title: "Ledger Archive",
     description:
-      "Download archive bytes as an MCP base64 blob. The archive name selects the same ZIP or tar/gzip variant as REST. Every call rechecks ledger read authority and spends the shared archive-download budget.",
+      "Download archive bytes as an MCP base64 blob. `archive` is a Git reference and its format, `<ref>.zip` or `<ref>.tar.gz` (for example `main.zip`), as on REST. Every call rechecks ledger read authority and spends the shared archive-download budget.",
     mimeType: "application/octet-stream",
     uriTemplate: "beancount://{owner}/{name}/archive/{archive}",
     read: async (context, variables) =>

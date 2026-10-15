@@ -10,6 +10,7 @@ import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { LedgerArchiveService } from "@/features/ledger/service/ledger-archive-service";
 import { registerDownloadArchiveRoute } from "@/features/ledger/api/rest/download-archive-handler";
 import { restErrorMiddleware } from "@/server/rest/error-middleware";
+import { generateV1OpenAPIDocument } from "@/server/rest/openapi-registry";
 import { AuthorizationService } from "@/server/api/authorization";
 import { assembleMcpRegistry } from "@/server/api/composition-root";
 import {
@@ -53,6 +54,8 @@ async function listen(server: http.Server) {
 async function fixture(identity = readOnlyToken) {
   const calls: string[] = [];
   let status = 200;
+  // What the hosted repository answers today for both formats (w6/010).
+  let contentType: string | undefined;
   const origin = http.createServer((req, res) => {
     calls.push(req.url!);
     if (status !== 200) {
@@ -64,7 +67,7 @@ async function fixture(identity = readOnlyToken) {
     const zipped = name.endsWith(".zip");
     res.setHeader(
       "Content-Type",
-      zipped ? "application/zip" : "application/gzip",
+      contentType ?? (zipped ? "application/zip" : "application/gzip"),
     );
     res.setHeader("Content-Disposition", `attachment; filename="${name}"`);
     res.end(zipped ? zip : gzip);
@@ -117,6 +120,9 @@ async function fixture(identity = readOnlyToken) {
     models,
     fail: (code: number) => {
       status = code;
+    },
+    serveAs: (type: string) => {
+      contentType = type;
     },
     rest: (archive: string) =>
       fetch(`${rest.url}/api-gateway/v1/ledgers/alice/main/archive/${archive}`),
@@ -224,4 +230,86 @@ describe("archive bytes through canonical adapters and the legacy REST twin", ()
       }
     },
   );
+});
+
+/**
+ * w6/010. The published v1 contract told callers to name `gitea-main.zip` and
+ * promised only zip/gzip media types, while the repository serves native
+ * reference names (`main.zip`, `main.tar.gz`) as `application/octet-stream`.
+ */
+describe("the published archive contract", () => {
+  const spec = () => {
+    const document = generateV1OpenAPIDocument() as unknown as {
+      paths: Record<
+        string,
+        {
+          get: {
+            parameters: { name: string; schema: { example?: string } }[];
+            responses: { 200: { content: Record<string, unknown> } };
+          };
+        }
+      >;
+    };
+    return document.paths[
+      "/api-gateway/v1/ledgers/{owner}/{name}/archive/{archive}"
+    ].get;
+  };
+
+  it("publishes an example that reaches the archive on REST and MCP", async () => {
+    const f = await fixture();
+    try {
+      const example = spec().parameters.find((p) => p.name === "archive")
+        ?.schema.example as string;
+      expect(example).toBe("main.zip");
+      const response = await f.rest(example);
+      expect(response.status).toBe(200);
+      expect(Buffer.from(await response.arrayBuffer())).toEqual(zip);
+      const content = (await f.read(canonical(example))).contents[0];
+      if (!("blob" in content)) throw new Error("Expected archive blob");
+      expect(Buffer.from(content.blob, "base64")).toEqual(zip);
+    } finally {
+      await f.close();
+    }
+  });
+
+  it("documents the media type the repository actually sends", async () => {
+    expect(Object.keys(spec().responses[200].content)).toContain(
+      "application/octet-stream",
+    );
+    const f = await fixture();
+    f.serveAs("application/octet-stream");
+    try {
+      for (const name of ["main.zip", "main.tar.gz"]) {
+        const response = await f.rest(name);
+        expect(response.headers.get("content-type")).toBe(
+          "application/octet-stream",
+        );
+        const content = (await f.read(canonical(name))).contents[0];
+        expect(content.mimeType).toBe("application/octet-stream");
+      }
+    } finally {
+      await f.close();
+    }
+  });
+
+  it("forwards every reference name unchanged, prefix included", async () => {
+    // `gitea-main` can itself be a branch, so nothing strips the prefix.
+    const f = await fixture();
+    try {
+      for (const name of ["main.zip", "main.tar.gz", "gitea-main.zip"]) {
+        expect((await f.rest(name)).status).toBe(200);
+        await f.read(canonical(name));
+      }
+      expect(f.calls.map((url) => url.split("/").at(-1))).toEqual([
+        "main.zip",
+        "main.zip",
+        "main.tar.gz",
+        "main.tar.gz",
+        "gitea-main.zip",
+        "gitea-main.zip",
+      ]);
+    } finally {
+      await f.close();
+    }
+  });
 });
