@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Any
 
 from cli.config import data_dir
-from cli.errors import BeaError
+from cli.errors import BeaError, UsageError
 
 PYTHON_ENV = "BEA_ENGINE_PYTHON"
 DIR_ENV = "BEA_ENGINE_DIR"
@@ -60,7 +60,21 @@ def engine_root() -> Path:
     """
     override = os.environ.get(DIR_ENV)
     if override:
-        return Path(override).expanduser()
+        root = Path(override).expanduser()
+        # Checked like BEA_CONFIG_DIR: a relative value would provision a
+        # whole engine into every working directory, and a file can never
+        # hold one, though status said the next command would rebuild it (w5/412).
+        if not root.is_absolute():
+            raise UsageError(
+                f"{DIR_ENV} must be an absolute path, got {override!r}. "
+                "A relative one would install a separate engine in every working directory."
+            )
+        if os.path.lexists(root) and not root.is_dir():
+            raise UsageError(
+                f"{DIR_ENV} points at '{root}', which is not a directory, so no engine can live there. "
+                f"Correct or unset {DIR_ENV}."
+            )
+        return root
     return data_dir() / "engine" / engine_version()
 
 

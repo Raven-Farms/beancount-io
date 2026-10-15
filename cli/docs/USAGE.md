@@ -1997,7 +1997,9 @@ A relative `XDG_CONFIG_HOME`, `XDG_DATA_HOME`, or `XDG_CACHE_HOME` is ignored,
 as the XDG Base Directory spec requires, and the default applies.
 `BEA_CONFIG_DIR` names bea's own state directory, so a relative value is a
 usage error (exit 2) instead: it would keep separate credentials and importer
-settings in every working directory. `bea --help` and `bea --version` still
+settings in every working directory. `BEA_ENGINE_DIR` is checked the same way:
+a relative value, or one that names an existing file, exits 2 naming the
+variable rather than installing an engine there. `bea --help` and `bea --version` still
 answer.
 
 Homebrew sets `BEA_ENGINE_DIR` to the keg-local engine so installs never look
