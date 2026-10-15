@@ -14,7 +14,7 @@ import typer
 from cli import context, output
 from cli.engine import launch
 from cli.errors import UsageError, refuse_json
-from cli.utils import atomic_write
+from cli.utils import atomic_write, regex_reads_otherwise
 
 _NO_COLUMN = "Could not find any valid column in input"
 _FORCE = "--force"
@@ -95,6 +95,11 @@ def _check_regexes(parsed: argparse.Namespace) -> None:
     ):
         if value is None or not used:
             continue
+        # First, so the compile below never warns: upstream would only warn,
+        # then split on something else (w5/429).
+        otherwise = regex_reads_otherwise(value)
+        if otherwise is not None:
+            raise UsageError(f"Invalid regular expression for {flag} {value!r}: {otherwise}.")
         try:
             re.compile(value)
         except re.error as exc:

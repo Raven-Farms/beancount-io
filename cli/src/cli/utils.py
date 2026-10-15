@@ -6,6 +6,7 @@ import secrets
 import stat
 import sys
 import unicodedata
+import warnings
 from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import date as Date
@@ -222,6 +223,46 @@ class IntoPath(ParamType):
         else:
             reason = "Pass --into a local file path, relative to the root ledger."
         raise UsageError(f"--into '{value}' names a URL. {reason}")
+
+
+_POSIX_CLASS = re.compile(r"\[:[a-z]+:\]")
+
+
+def regex_reads_otherwise(pattern: str, flags: int = 0) -> str | None:
+    """Why Python's regex reads `pattern` other than as written, or None.
+
+    `re` has no POSIX bracket classes: `[[:alpha:]]` is a set of `[`, `:` and
+    letters, and Python only warns "Possible nested set" (to stderr, with its
+    own source path) before matching something else, silently (w5/429). The
+    same holds for a `[` inside a set and for `--`, `&&`, `~~` or `||` there.
+    An invalid pattern is its caller's to report, so it answers None. The
+    engine twin (`bea_engine.ledger.text.regex_reads_otherwise`) says the same.
+    """
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        # A pattern compiled before in this process comes from the cache,
+        # which never warns again.
+        re.purge()
+        try:
+            re.compile(pattern, flags)
+        except re.error:
+            return None
+    changed = next(
+        (str(item.message) for item in caught if issubclass(item.category, (FutureWarning, DeprecationWarning))),
+        None,
+    )
+    if changed is None:
+        return None
+    posix = _POSIX_CLASS.search(pattern)
+    if posix is not None:
+        return (
+            f"{posix.group()} is a POSIX class, which Python's regex does not have: it reads it as a set of "
+            "characters. Write [^\\W\\d_] for letters, \\d for digits or \\s for whitespace instead"
+        )
+    return (
+        f"Python's regex reads it differently from what it says ({changed}). Escape a literal [ inside "
+        "a set as \\[, and a doubled -, &, ~ or | there with backslashes"
+    )
 
 
 def parse_opt_date(date_str: str | None) -> Date | None:

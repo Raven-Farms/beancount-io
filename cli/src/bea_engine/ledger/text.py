@@ -5,6 +5,7 @@ from __future__ import annotations
 import datetime
 import re
 import unicodedata
+import warnings
 from collections.abc import Collection, Iterator, Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -244,6 +245,46 @@ def fold_account(name: str) -> str:
     """
     turkish = unicodedata.normalize("NFC", name).replace("İ", "i").replace("ı", "i")
     return unicodedata.normalize("NFC", turkish.casefold().replace("i\u0307", "i"))
+
+
+_POSIX_CLASS = re.compile(r"\[:[a-z]+:\]")
+
+
+def regex_reads_otherwise(pattern: str, flags: int = 0) -> str | None:
+    """Why Python's regex reads `pattern` other than as written, or None.
+
+    `re` has no POSIX bracket classes: `[[:alpha:]]` is a set of `[`, `:` and
+    letters, and Python only warns "Possible nested set" (to stderr, with its
+    own source path) before matching something else, silently (w5/429). The
+    same holds for a `[` inside a set and for `--`, `&&`, `~~` or `||` there.
+    An invalid pattern is its caller's to report, so it answers None. The
+    frontend keeps its own copy (`cli.utils.regex_reads_otherwise`).
+    """
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        # A pattern compiled before in this process comes from the cache,
+        # which never warns again.
+        re.purge()
+        try:
+            re.compile(pattern, flags)
+        except re.error:
+            return None
+    changed = next(
+        (str(item.message) for item in caught if issubclass(item.category, (FutureWarning, DeprecationWarning))),
+        None,
+    )
+    if changed is None:
+        return None
+    posix = _POSIX_CLASS.search(pattern)
+    if posix is not None:
+        return (
+            f"{posix.group()} is a POSIX class, which Python's regex does not have: it reads it as a set of "
+            "characters. Write [^\\W\\d_] for letters, \\d for digits or \\s for whitespace instead"
+        )
+    return (
+        f"Python's regex reads it differently from what it says ({changed}). Escape a literal [ inside "
+        "a set as \\[, and a doubled -, &, ~ or | there with backslashes"
+    )
 
 
 def decode_error_message(path: object, exc: UnicodeDecodeError) -> str:

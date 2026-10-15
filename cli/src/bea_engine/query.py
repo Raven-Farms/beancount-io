@@ -1565,7 +1565,18 @@ def _compiled(
     # malformed one failed as a ledger validation error (exit 1) — or not at
     # all, when the window held no rows. A constant pattern is checked here,
     # before anything runs, so both shapes are the same usage error (w5/103).
+    from bea_engine.ledger.text import regex_reads_otherwise
+
     for pattern in _PATTERN_LITERAL.findall(statement):
+        # First, so no compile warns: Python reads `[[:alpha:]]` as a set and
+        # only warns, and the query then matches something else (w5/429).
+        otherwise = regex_reads_otherwise(pattern[1:-1])
+        if otherwise is not None:
+            raise protocol.UsageError(
+                f"Cannot run this BQL query: in the pattern {pattern[1:-1]!r}, {otherwise}.",
+                details=[f"  {statement}"],
+                ledger_errors=ledger_errors(),
+            )
         try:
             re.compile(pattern[1:-1])
         except re.error as exc:

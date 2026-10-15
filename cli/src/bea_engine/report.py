@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Any
 
 from bea_engine import protocol
-from bea_engine.ledger.text import checked_operating_currencies, fold_account
+from bea_engine.ledger.text import checked_operating_currencies, fold_account, regex_reads_otherwise
 from bea_engine.query import format_error
 
 KINDS = ("overview", "income-statement", "balance-sheet", "trial-balance")
@@ -380,6 +380,10 @@ def _load(
             details=[*ledger_errors, *([hint] if hint else [])],
         )
     ledger = FavaLedger(entries, errors, options)
+    otherwise = regex_reads_otherwise(account, re.IGNORECASE) if account is not None else None
+    if otherwise is not None:
+        # Before the filter compiles it, which would only warn (w5/429).
+        raise protocol.UsageError(f"Invalid account filter {account!r}: {otherwise}.", ledger_errors=ledger_errors)
     try:
         filtered = ledger.get_filtered(account=account, time=time)
     except re.error as exc:
