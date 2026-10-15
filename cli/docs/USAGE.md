@@ -1167,7 +1167,9 @@ refuses two different ones — `-a Assets:One -a Assets:Two`, or `add price
 --commodity HOOL --currency USD` (the quote currency belongs in `--amount`) —
 with exit **2** naming both and nothing written, instead of keeping the last.
 Repeating the same value is accepted; `--posting`, `--tag`, `--link`,
-`--meta`, `--value` and `add open --currency` still repeat.
+`--meta`, `--value` and `add open --currency` still repeat. `import` and `init` follow
+the same rule: a second, different `--account`, `--csv`, `--rules` or
+`init -c` is refused before anything is written or remembered.
 
 ### Custom directives
 

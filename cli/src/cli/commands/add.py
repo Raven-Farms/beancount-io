@@ -18,12 +18,11 @@ from pathlib import Path
 from typing import Annotated, Any
 
 import typer
-from typer._click.parser import _OptionParser
-from typer.core import TyperCommand
 
 from cli import context, output
 from cli.amounts import check_decimal_notation, parse_decimal_number
 from cli.errors import UsageError
+from cli.single_value import SingleValueCommand
 from cli.utils import decode_error_message, parse_date
 
 add_app = typer.Typer(
@@ -31,43 +30,8 @@ add_app = typer.Typer(
 )
 
 
-class _SingleValueParser(_OptionParser):
-    """Refuse two different values for one single-valued option.
-
-    Click keeps the last value of a repeated scalar option, so `-a One -a Two`
-    or an alias pair such as `--commodity HOOL --currency USD` would write one
-    directive and report success while dropping the other value.
-    """
-
-    def __init__(self, ctx: Any = None) -> None:
-        super().__init__(ctx)
-        self._given: dict[str, tuple[str, Any]] = {}
-
-    def _get_value_from_state(self, option_name: str, option: Any, state: Any) -> Any:
-        value = super()._get_value_from_state(option_name, option, state)
-        if option.action != "store" or option.dest is None:
-            return value
-        earlier_name, earlier = self._given.setdefault(option.dest, (option_name, value))
-        if earlier != value:
-            command = self.ctx.command.name if self.ctx is not None else None
-            hint = (
-                " Both name the commodity being priced; the quote currency belongs in --amount."
-                if command == "price" and option.dest == "currency"
-                else ""
-            )
-            raise UsageError(
-                f"Conflicting values for one option: {earlier_name} {earlier!r} and {option_name} {value!r}. "
-                f"Pass it once; repeat the command for another directive.{hint}"
-            )
-        return value
-
-
-class _SingleValueCommand(TyperCommand):
-    def make_parser(self, ctx: Any) -> _OptionParser:
-        parser = _SingleValueParser(ctx)
-        for param in self.get_params(ctx):
-            param.add_to_parser(parser, ctx)
-        return parser
+class _SingleValueCommand(SingleValueCommand):
+    advice = "Pass it once; repeat the command for another directive."
 
 
 IntoOpt = Annotated[Path | None, typer.Option("--into", help="Write to an included file, relative to the root ledger")]

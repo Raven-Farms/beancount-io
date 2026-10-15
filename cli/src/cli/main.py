@@ -33,6 +33,7 @@ from cli.completion import show as show_completion_callback
 from cli.config import config_dir
 from cli.native_command import ForwardingCommand
 from cli.native_help import native_help
+from cli.single_value import SingleValueCommand
 
 
 def _discard_diagnostics_without_stderr() -> None:
@@ -363,8 +364,8 @@ app.command(
     epilog=native_help("check"),
 )(check)
 app.command("balance", rich_help_panel=_LOCAL_PANEL)(balance)
-app.command("init", rich_help_panel=_LOCAL_PANEL)(init)
-app.command("import", rich_help_panel=_LOCAL_PANEL)(import_entries)
+app.command("init", cls=SingleValueCommand, rich_help_panel=_LOCAL_PANEL)(init)
+app.command("import", cls=SingleValueCommand, rich_help_panel=_LOCAL_PANEL)(import_entries)
 app.add_typer(ingest_app, name="ingest", rich_help_panel=_LOCAL_PANEL)
 app.command("format", rich_help_panel=_LOCAL_PANEL)(format_beans)
 app.command("query", rich_help_panel=_LOCAL_PANEL)(query)
