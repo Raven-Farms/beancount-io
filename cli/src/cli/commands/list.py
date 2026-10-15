@@ -13,6 +13,7 @@ Beancount syntax the helper already produced.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from enum import StrEnum
@@ -292,6 +293,29 @@ def _transaction_table(headers: list[str], rows: list[tuple[list[str], list[tupl
             typer.echo(f"{sep}{output.pad(account, pad)}: {amount}")
 
 
+# Beancount's lexer rules for a tag or link body and a commodity, as the engine
+# holds writers to them (`bea_engine.ledger.text`): a filter value outside them
+# can never match, and answered "No transactions found." with exit 0 (w5/340).
+_TAG_OR_LINK = re.compile(r"[A-Za-z0-9\-_/.]+")
+_COMMODITY = re.compile(r"[A-Z](?:[A-Z0-9'._-]*[A-Z0-9])?|/[A-Z0-9'._-]*[A-Z](?:[A-Z0-9'._-]*[A-Z0-9])?")
+_FLAGS = frozenset("*!&#?%ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+
+def _several(value: str, advice: str) -> str:
+    return f" {advice[:1].upper()}{advice[1:]}." if re.search(r"[,\s]", value) else ""
+
+
+def _refuse_non_token(flag: str, value: str, sigil: str) -> None:
+    body = value[1:] if value.startswith(sigil) else value
+    if _TAG_OR_LINK.fullmatch(body):
+        return
+    noun = "tags" if flag == "--tag" else "links"
+    raise UsageError(
+        f"{flag}: {value!r} is not one tag or link; use only letters, digits and - _ / . after an optional "
+        f"leading {sigil}.{_several(value, f'repeat {flag} for several {noun}')}"
+    )
+
+
 def _run(name: str, spec: _Spec, limit: int, allow_errors: bool, *, details: bool = False, **filters: Any) -> None:
     """Ask the engine for one directive type, and render it for the active mode."""
     from cli.engine import launch
@@ -313,6 +337,14 @@ def _run(name: str, spec: _Spec, limit: int, allow_errors: bool, *, details: boo
     ):
         for value in values or []:
             refuse_blank_filter(flag, value.lstrip(sigil) if sigil else value)
+            if sigil:
+                _refuse_non_token(flag, value, sigil)
+    currency = filters.get("currency")
+    if currency is not None and not _COMMODITY.fullmatch(currency.strip().upper()):
+        raise UsageError(
+            f"--currency: {currency!r} is not one commodity; a commodity is a capital letter followed by capitals, "
+            f"digits and ' . _ -.{_several(currency, 'filter one commodity per command')}"
+        )
     ctx = context.current()
     if filters.get("from_date") and filters.get("to_date") and filters["from_date"] > filters["to_date"]:
         raise UsageError("--from-date must be on or before --to-date.")
@@ -559,8 +591,10 @@ def transactions(
     ] = ListSort.newest,
 ) -> None:
     """List recent transactions and their amounts; --details adds metadata and source."""
-    if flag is not None and len(flag) != 1:
-        raise UsageError("--flag must be one character, such as '!' or '*'.")
+    if flag is not None and flag.strip() and flag not in _FLAGS:
+        raise UsageError(
+            f"--flag {flag!r} is not a transaction flag; use one of * ! & # ? % or a capital letter, such as '!'."
+        )
     _run(
         "transaction",
         SPECS["transaction"],

@@ -1118,7 +1118,10 @@ letter, or `txn`; a commodity is Beancount's commodity name, such as `USD`,
 `NT.TO` or `/6J`. Repeat the option for several values. A space, a second
 sigil (`--tag 'a ^b'`), a comma (`-c EUR,GBP`) or a line break is refused with
 exit **2** naming the option, and the file is unchanged; `add transactions`
-rejects such a row the same way it rejects any other invalid row. As a last
+rejects such a row the same way it rejects any other invalid row. `list`
+filters follow the same grammar: a `--tag`, `--link`, `--flag` or `-c` value
+that cannot be one token exits **2** rather than answering an empty list
+(`-c` still matches regardless of case). As a last
 check, every write reads each rendered directive back and refuses one that
 would land as more than one directive.
 
