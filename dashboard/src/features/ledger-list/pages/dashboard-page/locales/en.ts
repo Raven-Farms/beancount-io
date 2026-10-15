@@ -96,7 +96,8 @@ const enDashboardPage: Record<string, TranslationEntry> = {
     description: "Validation error when name is missing",
   },
   "page.dashboard.nameInvalid": {
-    message: "Name must contain at least one letter or number",
+    message:
+      "Use at least one Latin letter (A–Z) or digit: the name becomes the ledger's web address.",
     description: "Validation error when name contains only special characters",
   },
   "page.dashboard.repositoryName": {

@@ -96,7 +96,8 @@ const koDashboardPage: Record<string, TranslationEntry> = {
     description: "Validation error when name is missing",
   },
   "page.dashboard.nameInvalid": {
-    message: "이름에는 최소 하나의 문자 또는 숫자가 포함되어야 합니다",
+    message:
+      "라틴 문자(A–Z)나 숫자를 하나 이상 사용하세요. 이름은 장부의 웹 주소가 됩니다.",
     description: "Validation error when name contains only special characters",
   },
   "page.dashboard.repositoryName": {

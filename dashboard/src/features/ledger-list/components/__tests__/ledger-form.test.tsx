@@ -330,10 +330,28 @@ describe("LedgerForm", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("Name must contain at least one letter or number"),
+        screen.getByText(
+          "Use at least one Latin letter (A–Z) or digit: the name becomes the ledger's web address.",
+        ),
       ).toBeInTheDocument();
     });
 
+    expect(mockOnSubmit).not.toHaveBeenCalled();
+  });
+
+  it("explains the Latin-letter rule for an all non-Latin name (w0/023)", async () => {
+    const user = userEvent.setup();
+    render(<LedgerForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
+
+    const nameInput = screen.getByLabelText("Ledger Name");
+    await user.tripleClick(nameInput);
+    await user.keyboard("我的账本");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/at least one Latin letter/)).toBeInTheDocument();
+    });
+    expect(screen.queryByText(/letter or number/)).not.toBeInTheDocument();
     expect(mockOnSubmit).not.toHaveBeenCalled();
   });
 

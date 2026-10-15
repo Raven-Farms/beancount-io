@@ -98,7 +98,8 @@ const faDashboardPage: Record<string, TranslationEntry> = {
     description: "Description of ledger management",
   },
   "page.dashboard.nameInvalid": {
-    message: "نام باید حداقل یک حرف یا عدد داشته باشد",
+    message:
+      "دست‌کم یک حرف لاتین (A–Z) یا یک رقم به کار ببرید: نام به نشانی وب دفتر تبدیل می‌شود.",
     description: "Validation error when name contains only special characters",
   },
   "page.dashboard.nameMaxLength": {

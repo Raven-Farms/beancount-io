@@ -98,7 +98,8 @@ const skDashboardPage: Record<string, TranslationEntry> = {
     description: "Description of ledger management",
   },
   "page.dashboard.nameInvalid": {
-    message: "Názov musí obsahovať aspoň jedno písmeno alebo číslo",
+    message:
+      "Použite aspoň jedno latinské písmeno (A–Z) alebo číslicu: názov sa stane webovou adresou knihy.",
     description: "Validation error when name contains only special characters",
   },
   "page.dashboard.nameMaxLength": {

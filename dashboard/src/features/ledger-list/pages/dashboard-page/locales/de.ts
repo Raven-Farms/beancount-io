@@ -98,7 +98,8 @@ const deDashboardPage: Record<string, TranslationEntry> = {
     description: "Description of ledger management",
   },
   "page.dashboard.nameInvalid": {
-    message: "Name muss mindestens einen Buchstaben oder eine Zahl enthalten",
+    message:
+      "Verwenden Sie mindestens einen lateinischen Buchstaben (A–Z) oder eine Ziffer: Der Name wird zur Webadresse des Buches.",
     description: "Validation error when name contains only special characters",
   },
   "page.dashboard.nameMaxLength": {

@@ -98,7 +98,8 @@ const nlDashboardPage: Record<string, TranslationEntry> = {
     description: "Description of ledger management",
   },
   "page.dashboard.nameInvalid": {
-    message: "Naam moet minimaal één letter of cijfer bevatten",
+    message:
+      "Gebruik minstens één Latijnse letter (A–Z) of cijfer: de naam wordt het webadres van het grootboek.",
     description: "Validation error when name contains only special characters",
   },
   "page.dashboard.nameMaxLength": {

@@ -95,7 +95,7 @@ const zhDashboardPage: Record<string, TranslationEntry> = {
     description: "Description of ledger management",
   },
   "page.dashboard.nameInvalid": {
-    message: "名称必须至少包含一个字母或数字",
+    message: "请至少使用一个拉丁字母 (A–Z) 或数字：名称会成为账本的网址。",
     description: "Validation error when name contains only special characters",
   },
   "page.dashboard.nameMaxLength": {

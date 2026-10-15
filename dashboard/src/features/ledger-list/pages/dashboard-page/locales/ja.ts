@@ -97,7 +97,7 @@ const jaDashboardPage: Record<string, TranslationEntry> = {
   },
   "page.dashboard.nameInvalid": {
     message:
-      "名前には少なくとも1つの文字または数字が含まれている必要があります",
+      "ラテン文字 (A–Z) または数字を少なくとも 1 文字使ってください。名前は帳簿の ウェブアドレスになります。",
     description: "Validation error when name contains only special characters",
   },
   "page.dashboard.repositoryName": {

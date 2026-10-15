@@ -98,7 +98,8 @@ const ukDashboardPage: Record<string, TranslationEntry> = {
     description: "Description of ledger management",
   },
   "page.dashboard.nameInvalid": {
-    message: "Назва повинна містити принаймні одну літеру або цифру",
+    message:
+      "Використайте принаймні одну латинську літеру (A–Z) або цифру: назва стає веб-адресою книги.",
     description: "Validation error when name contains only special characters",
   },
   "page.dashboard.nameMaxLength": {

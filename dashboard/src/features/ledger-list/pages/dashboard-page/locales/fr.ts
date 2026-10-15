@@ -98,7 +98,8 @@ const frDashboardPage: Record<string, TranslationEntry> = {
     description: "Description of ledger management",
   },
   "page.dashboard.nameInvalid": {
-    message: "Le nom doit contenir au moins une lettre ou un chiffre",
+    message:
+      "Utilisez au moins une lettre latine (A–Z) ou un chiffre : le nom devient l'adresse web du registre.",
     description: "Validation error when name contains only special characters",
   },
   "page.dashboard.nameMaxLength": {

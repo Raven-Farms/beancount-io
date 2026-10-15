@@ -98,7 +98,8 @@ const bgDashboardPage: Record<string, TranslationEntry> = {
     description: "Description of ledger management",
   },
   "page.dashboard.nameInvalid": {
-    message: "Името трябва да съдържа поне една буква или число",
+    message:
+      "Използвайте поне една латинска буква (A–Z) или цифра: името става уеб адрес на книгата.",
     description: "Validation error when name contains only special characters",
   },
   "page.dashboard.nameMaxLength": {

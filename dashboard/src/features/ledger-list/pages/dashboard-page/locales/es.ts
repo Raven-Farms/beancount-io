@@ -98,7 +98,8 @@ const esDashboardPage: Record<string, TranslationEntry> = {
     description: "Description of ledger management",
   },
   "page.dashboard.nameInvalid": {
-    message: "El nombre debe contener al menos una letra o número",
+    message:
+      "Usa al menos una letra latina (A–Z) o un dígito: el nombre se convierte en la dirección web del libro.",
     description: "Validation error when name contains only special characters",
   },
   "page.dashboard.nameMaxLength": {

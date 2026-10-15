@@ -98,7 +98,8 @@ const caDashboardPage: Record<string, TranslationEntry> = {
     description: "Description of ledger management",
   },
   "page.dashboard.nameInvalid": {
-    message: "El nom ha de contenir almenys una lletra o número",
+    message:
+      "Feu servir com a mínim una lletra llatina (A–Z) o un dígit: el nom es converteix en l'adreça web del llibre.",
     description: "Validation error when name contains only special characters",
   },
   "page.dashboard.nameMaxLength": {

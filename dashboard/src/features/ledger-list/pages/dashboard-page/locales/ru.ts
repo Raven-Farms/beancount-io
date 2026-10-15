@@ -97,7 +97,8 @@ const ruDashboardPage: Record<string, TranslationEntry> = {
     description: "Description of ledger management",
   },
   "page.dashboard.nameInvalid": {
-    message: "Имя должно содержать хотя бы одну букву или цифру",
+    message:
+      "Используйте хотя бы одну латинскую букву (A–Z) или цифру: название становится веб-адресом книги.",
     description: "Validation error when name contains only special characters",
   },
   "page.dashboard.nameMaxLength": {

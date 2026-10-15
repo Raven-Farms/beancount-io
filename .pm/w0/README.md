@@ -12,7 +12,6 @@
 
 ## Inbox
 
-- [023](./023.md) — Explain that ledger names need Latin letters or digits when a non-Latin name is rejected (minor; dashboard; 20–30m).
 - [024](./024.md) — Gate Upload Receipt on write access like Smart Import, and invite anonymous visitors to sign in (minor; dashboard; 40–55m).
 - [025](./025.md) — Show the OpenSSH key format (ssh-ed25519 …) in the New SSH key dialog, not a PEM block (minor; dashboard; 20–30m).
 - [026](./026.md) — Make a date-filtered Journal export load: carry opening balances or drop dependent assertions (minor; ledger; 45–60m).
