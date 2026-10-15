@@ -85,7 +85,6 @@
 - [412 — Relative or file-typed `BEA_ENGINE_DIR` accepted unchecked (relative `BEA_CONFIG_DIR` is refused)](./412.md) — CLI QA 2026-10-14
 - [413 — Misplaced `-f LEDGER` after `ingest archive` becomes `--overwrite` and replaces filed documents](./413.md) — CLI QA 2026-10-14
 - [414 — `treeify` default pattern hard-codes English roots; documented pipeline fails on renamed roots](./414.md) — CLI QA 2026-10-14
-- [415 — `example -o FILE --version` writes the version banner as the ledger (with `--force`, over one)](./415.md) — CLI QA 2026-10-14
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
