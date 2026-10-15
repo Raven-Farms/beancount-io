@@ -24,3 +24,5 @@
 
 - [019](./019.md) — Return ordinary empty results for unmatched GraphQL transaction lookups (minor; backend-v2; 35–50m).
 - [020](./020.md) — Preserve JSON null in modern REST value responses (minor; backend-v2; 35–50m).
+
+- [021](./021.md) — Preserve event filters in REST and MCP reads (minor; backend-v2; 35–50m).
