@@ -173,9 +173,13 @@ def _export(args: list[str]) -> None:
             if not pending:
                 raise UsageError("bea price export --output needs a directory.")
             output_dir = pending.pop(0)
+            # `-o ''` exported into the working directory (w5/387), which the
+            # `--output=` spelling already refused.
+            if not output_dir.strip():
+                raise UsageError(f"bea price export {arg} {output_dir!r} is empty; name the directory to export into.")
         elif arg.startswith("--output="):
             output_dir = arg.split("=", 1)[1]
-            if not output_dir:
+            if not output_dir.strip():
                 raise UsageError("bea price export --output needs a directory.")
         elif arg == "--allow-errors":
             allow_errors = True

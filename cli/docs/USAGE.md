@@ -118,6 +118,10 @@ Local commands resolve their target in this order:
 
 If the resolved file does not exist, the command exits **2** and names those sources. Hosted targeting (`--ledger`) is not implemented yet.
 Passing a directory also exits **2** with a hint to select its root ledger file.
+An empty path (`--file ''`, or any path option or argument such as `format -i ''`,
+`--into ''`, `--from ''`, `init ''` or `price export -o ''`) exits **2** naming it
+instead of meaning the working directory, so an unset variable in a script
+never reformats, exports into or initializes the current folder.
 A `main.bean` that is present but not a readable ledger — a broken symbolic
 link or a directory — is still the working directory's choice: the command
 exits **2** naming it (and a broken link's target) rather than falling back

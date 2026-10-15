@@ -210,6 +210,10 @@ def refuse_empty_path(value: Any, param: Any) -> None:
     """
     if str(value).strip():
         return
+    if getattr(param, "param_type_name", None) == "argument":
+        # A positional has no flag to omit: name it the way usage shows it.
+        name = str(getattr(param, "human_readable_name", "PATH")).upper()
+        raise UsageError(f"The {name} argument is empty ({str(value)!r}); name a file or directory.")
     name = param.opts[0] if param is not None and getattr(param, "opts", None) else "The path"
     raise UsageError(f"{name} {str(value)!r} is empty; name a path, or omit {name}.")
 

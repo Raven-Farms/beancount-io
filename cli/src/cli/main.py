@@ -168,6 +168,32 @@ def _exit_on_interrupt() -> NoReturn:
     sys.exit(130)
 
 
+def _refuse_empty_paths(command: Any) -> None:
+    """Make every path parameter under `command` refuse `''` instead of reading `.`.
+
+    Typer turns `''` into `Path('')`, the working directory, so an unset
+    variable in a script reached commands as `.`: `format -i ''` reformatted
+    the ledgers under the cwd and `init ''` initialized it, with exit 0
+    (w5/387). Each `TyperPath` becomes a subclass whose `convert` first runs
+    the shared empty-value refusal, so a new path option is covered too.
+    """
+    from typer.models import TyperPath
+
+    from cli.utils import refuse_empty_path
+
+    for param in command.params:
+        kind = type(param.type)
+        if isinstance(param.type, TyperPath) and not getattr(kind, "_refuses_empty", False):
+
+            def convert(self: Any, value: Any, param: Any, ctx: Any, *, _super: Any = kind) -> Any:
+                refuse_empty_path(value, param)
+                return _super.convert(self, value, param, ctx)
+
+            param.type.__class__ = type(kind.__name__, (kind,), {"convert": convert, "_refuses_empty": True})
+    for sub in getattr(command, "commands", {}).values():
+        _refuse_empty_paths(sub)
+
+
 class _GuardedGroup(TyperGroup):
     """Turn anything a command raises into the documented category and exit code.
 
@@ -185,6 +211,7 @@ class _GuardedGroup(TyperGroup):
         # Custom completion flags still need Typer's shell protocol handlers.
         get_completion_inspect_parameters()
         super().__init__(*args, **kwargs)
+        _refuse_empty_paths(self)
 
     # `ctx` is typer's vendored click Context; typed loosely to avoid importing
     # a private module just to restate the supertype's annotation.

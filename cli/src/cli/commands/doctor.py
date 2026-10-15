@@ -97,6 +97,10 @@ def _refuse_directory_ledger(op: str, args: list[str]) -> None:
     positionals = _positionals(args)
     if op == "list-options" or not positionals:
         return
+    if not positionals[0].strip():
+        # `Path('')` is the working directory, so `doctor lex ''` was refused
+        # as a directory it was never given (w5/387).
+        raise UsageError(f"The ledger path for bea doctor {op} is empty; name the ledger file.")
     ledger = Path(positionals[0])
     if not ledger.is_dir():
         if os.path.lexists(ledger) and not ledger.is_file():
