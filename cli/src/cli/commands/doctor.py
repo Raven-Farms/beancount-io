@@ -410,6 +410,25 @@ def _signature(path: Path | None) -> tuple[int, int, int] | None:
     return (found.st_ino, found.st_mtime_ns, found.st_size)
 
 
+def _private_roundtrip_artifacts(ledger: str) -> list[Path]:
+    """Create upstream's two scratch names first, private, and return the ones created.
+
+    Upstream writes a full printed copy of the ledger to each with the process
+    umask, so a `0600` ledger was copied out world-readable for the length of
+    the run (w5/457). Its `open(..., "w")` truncates an existing file and keeps
+    that file's mode. The collision refusal has already run, so whatever is at
+    these names afterwards is this run's to remove.
+    """
+    created: list[Path] = []
+    for path in _roundtrip_artifacts(ledger):
+        try:
+            os.close(os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600))
+        except OSError:
+            continue  # Upstream reports an unwritable directory itself.
+        created.append(path)
+    return created
+
+
 def _forward_roundtrip(ctx: typer.Context) -> None:
     """Compare entry sets, without congratulations on unparseable input."""
     _refuse_json()
@@ -420,7 +439,14 @@ def _forward_roundtrip(ctx: typer.Context) -> None:
     errors = _closure_syntax_errors_of(positionals[0]) if positionals else []
     scratch_cache = _roundtrip_load_cache(positionals[0]) if positionals else None
     before = _signature(scratch_cache)
-    completed = _capture("roundtrip", args)
+    scratch = _private_roundtrip_artifacts(positionals[0]) if positionals else []
+    try:
+        completed = _capture("roundtrip", args)
+    finally:
+        # Upstream removes only the copies it got as far as writing.
+        for path in scratch:
+            with contextlib.suppress(OSError):
+                path.unlink()
     if scratch_cache is not None and _signature(scratch_cache) not in (None, before):
         with contextlib.suppress(OSError):
             scratch_cache.unlink()
