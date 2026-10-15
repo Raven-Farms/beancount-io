@@ -7,13 +7,27 @@ import httpx
 from ... import errors
 from ...client import AuthenticatedClient, Client
 from ...models.v1_error import V1Error
-from ...types import Response
+from ...types import UNSET, Response, Unset
 
 
 def _get_kwargs(
     owner: str,
     name: str,
+    *,
+    account: str | Unset = UNSET,
+    filter_: str | Unset = UNSET,
+    time: str | Unset = UNSET,
 ) -> dict[str, Any]:
+
+    params: dict[str, Any] = {}
+
+    params["account"] = account
+
+    params["filter"] = filter_
+
+    params["time"] = time
+
+    params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
 
     _kwargs: dict[str, Any] = {
         "method": "get",
@@ -21,6 +35,7 @@ def _get_kwargs(
             owner=quote(str(owner), safe=""),
             name=quote(str(name), safe=""),
         ),
+        "params": params,
     }
 
     return _kwargs
@@ -97,14 +112,21 @@ def sync_detailed(
     name: str,
     *,
     client: AuthenticatedClient,
+    account: str | Unset = UNSET,
+    filter_: str | Unset = UNSET,
+    time: str | Unset = UNSET,
 ) -> Response[V1Error | list[Any]]:
     """List event directives
 
-     Every `event` directive in the ledger, in date order.
+     Event directives in date order, with optional account, time, and Fava-expression filters.
 
     Args:
         owner (str): Ledger owner's username Example: alice.
         name (str): Ledger (repository) name Example: main-ledger.
+        account (str | Unset): Restrict to one account and its children Example:
+            Assets:Bank:Checking.
+        filter_ (str | Unset): Fava filter expression Example: #travel.
+        time (str | Unset): Fava time expression Example: 2026.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -117,6 +139,9 @@ def sync_detailed(
     kwargs = _get_kwargs(
         owner=owner,
         name=name,
+        account=account,
+        filter_=filter_,
+        time=time,
     )
 
     response = client.get_httpx_client().request(
@@ -131,14 +156,21 @@ def sync(
     name: str,
     *,
     client: AuthenticatedClient,
+    account: str | Unset = UNSET,
+    filter_: str | Unset = UNSET,
+    time: str | Unset = UNSET,
 ) -> V1Error | list[Any] | None:
     """List event directives
 
-     Every `event` directive in the ledger, in date order.
+     Event directives in date order, with optional account, time, and Fava-expression filters.
 
     Args:
         owner (str): Ledger owner's username Example: alice.
         name (str): Ledger (repository) name Example: main-ledger.
+        account (str | Unset): Restrict to one account and its children Example:
+            Assets:Bank:Checking.
+        filter_ (str | Unset): Fava filter expression Example: #travel.
+        time (str | Unset): Fava time expression Example: 2026.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -152,6 +184,9 @@ def sync(
         owner=owner,
         name=name,
         client=client,
+        account=account,
+        filter_=filter_,
+        time=time,
     ).parsed
 
 
@@ -160,14 +195,21 @@ async def asyncio_detailed(
     name: str,
     *,
     client: AuthenticatedClient,
+    account: str | Unset = UNSET,
+    filter_: str | Unset = UNSET,
+    time: str | Unset = UNSET,
 ) -> Response[V1Error | list[Any]]:
     """List event directives
 
-     Every `event` directive in the ledger, in date order.
+     Event directives in date order, with optional account, time, and Fava-expression filters.
 
     Args:
         owner (str): Ledger owner's username Example: alice.
         name (str): Ledger (repository) name Example: main-ledger.
+        account (str | Unset): Restrict to one account and its children Example:
+            Assets:Bank:Checking.
+        filter_ (str | Unset): Fava filter expression Example: #travel.
+        time (str | Unset): Fava time expression Example: 2026.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -180,6 +222,9 @@ async def asyncio_detailed(
     kwargs = _get_kwargs(
         owner=owner,
         name=name,
+        account=account,
+        filter_=filter_,
+        time=time,
     )
 
     response = await client.get_async_httpx_client().request(**kwargs)
@@ -192,14 +237,21 @@ async def asyncio(
     name: str,
     *,
     client: AuthenticatedClient,
+    account: str | Unset = UNSET,
+    filter_: str | Unset = UNSET,
+    time: str | Unset = UNSET,
 ) -> V1Error | list[Any] | None:
     """List event directives
 
-     Every `event` directive in the ledger, in date order.
+     Event directives in date order, with optional account, time, and Fava-expression filters.
 
     Args:
         owner (str): Ledger owner's username Example: alice.
         name (str): Ledger (repository) name Example: main-ledger.
+        account (str | Unset): Restrict to one account and its children Example:
+            Assets:Bank:Checking.
+        filter_ (str | Unset): Fava filter expression Example: #travel.
+        time (str | Unset): Fava time expression Example: 2026.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -214,5 +266,8 @@ async def asyncio(
             owner=owner,
             name=name,
             client=client,
+            account=account,
+            filter_=filter_,
+            time=time,
         )
     ).parsed
