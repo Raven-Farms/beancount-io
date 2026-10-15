@@ -26,3 +26,5 @@
 - [020](./020.md) — Preserve JSON null in modern REST value responses (minor; backend-v2; 35–50m).
 
 - [021](./021.md) — Preserve event filters in REST and MCP reads (minor; backend-v2; 35–50m).
+
+- [022](./blocked/022.md) — Adopt BQL JOURNAL date windows and opening summaries (major; ledger; 45–60m after release) — **blocked:** awaiting a published WASM artifact containing upstream 1324bc25.
