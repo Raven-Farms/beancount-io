@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [370 — Unattended `cloud ledger clone` overrides the user's `core.sshCommand`/`GIT_SSH`](./370.md) — CLI QA 2026-10-14
 - [371 — `create --clone` creates the ledger before refusing a non-empty target; remedy drops `--dir`](./371.md) — CLI QA 2026-10-14
 - [372 — `cloud ledger clone` without git exits 1 with an Errno instead of the exit-2 precheck](./372.md) — CLI QA 2026-10-14
 - [373 — `ask` shows raw `list index out of range`/`Expecting value` on a malformed proxy 200](./373.md) — CLI QA 2026-10-14
