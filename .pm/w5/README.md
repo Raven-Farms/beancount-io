@@ -167,7 +167,6 @@
 - [453 — `ask` write panel: typing `n`/`2` + Enter approves (default Yes, keys unbound)](./453.md) — CLI QA 2026-10-14
 - [454 — `ask` loads cwd `.agents/skills` silently, overriding user skills, with no size limit](./454.md) — CLI QA 2026-10-14
 - [455 — `ask_history` is world-readable (0644 in a 0755 dir), stores questions verbatim, no opt-out](./455.md) — CLI QA 2026-10-14
-- [456 — `ingest extract -e` leaves a world-readable `.main.bean.picklecache` beside a private ledger](./456.md) — CLI QA 2026-10-14
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
