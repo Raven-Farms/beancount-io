@@ -596,9 +596,11 @@ def _decode_usage_error(source: Path, exc: UnicodeDecodeError, encoding: str) ->
             f"{source.name} is not valid UTF-8 ({exc.reason} at byte {exc.start}); "
             "it decodes as cp1252 — pass --csv encoding=cp1252."
         )
+    # latin-1 reads every byte, so it cannot have failed: saying it was tried
+    # sent a Shift_JIS export to the one decoding that garbles it (w5/332).
     return UsageError(
-        f"Cannot decode {source.name}: tried utf-8, cp1252, latin-1 ({exc.reason} at byte {exc.start}). "
-        "Force one with --csv encoding=latin-1."
+        f"Cannot decode {source.name} as UTF-8 or cp1252 ({exc.reason} at byte {exc.start}); only latin-1, "
+        "which reads any byte, accepts it. Pass --csv encoding=latin-1 if that is the export's encoding."
     )
 
 

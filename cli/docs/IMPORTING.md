@@ -124,8 +124,11 @@ cp1252 or latin-1 — Windows exports with accented payees need
 `encoding=cp1252`. A bare `--csv encoding=cp1252` decodes with that codec
 and then infers the mapping like `auto`. Without the key, a non-UTF-8 file
 fails before anything is read: the error names the byte offset and, when the
-file decodes as cp1252, says so with the override to pass. A file no
-candidate decodes lists the encodings tried instead. UTF-16 text (Excel's
+file decodes as cp1252, says so with the override to pass. A file that
+neither UTF-8 nor cp1252 decodes is named as such: only latin-1, which reads
+any byte, would accept it, so pass `encoding=latin-1` only if that is the
+export's encoding. An `encoding=` or `delimiter=` value outside the supported
+set is refused before the file is read, whatever its bytes. UTF-16 text (Excel's
 "Unicode Text", recognized by its byte-order mark or NUL bytes) is refused
 under any `encoding=` with a request to re-save it as UTF-8, and a `--rules`
 file may start with a UTF-8 BOM. Unknown fields, missing columns, bad dates, and bad amounts fail

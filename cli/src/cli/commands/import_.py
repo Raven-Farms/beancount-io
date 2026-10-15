@@ -515,6 +515,7 @@ def import_entries(
         inspect_date_column,
         parse_delimiter,
         parse_mapping,
+        validate_reading_keys,
     )
     from cli.engine import launch
 
@@ -571,6 +572,9 @@ def import_entries(
         try:
             peek = parse_mapping(csv_request)
         except UsageError:
+            # The mapping itself is judged later, with more context; the keys
+            # that decide how the file is read are judged now (w5/332).
+            validate_reading_keys(csv_request)
             peek = None
         if peek is not None:
             if peek.encoding is not None:

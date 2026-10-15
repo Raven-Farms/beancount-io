@@ -193,7 +193,7 @@ def test_undecodable_names_offset_and_tried(books: Path, tmp_path: Path) -> None
         "Assets:Checking",
     )
     assert result.returncode == 2, result.stdout
-    assert "tried utf-8, cp1252, latin-1" in result.stderr
+    assert "Cannot decode binary.csv as UTF-8 or cp1252" in " ".join(result.stderr.split())
     assert re.search(r"byte \d+", result.stderr)
     assert "(none)" not in result.stderr
 

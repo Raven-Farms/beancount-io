@@ -167,6 +167,24 @@ def parse_mapping(spec: str) -> CsvMapping:
     return CsvMapping(columns=columns, sign=sign, delimiter=delimiter, encoding=encoding)
 
 
+def validate_reading_keys(spec: str) -> None:
+    """Refuse a bad `encoding=` or `delimiter=` in a `--csv` spec, whatever else it holds.
+
+    They apply before the file is read, so a spec that is otherwise
+    incomplete must still not let a typo through: on a non-UTF-8 export the
+    dropped `encoding=sjis` became a generic decode refusal that told the user
+    to force an encoding — what they had just tried (w5/332).
+    """
+    for part in spec.split(","):
+        name, separator, column = part.partition("=")
+        if not separator or not column.strip():
+            continue
+        if name.strip() == "encoding":
+            _parse_encoding_value(column.strip())
+        elif name.strip() == "delimiter":
+            _parse_delimiter_value(column.strip())
+
+
 def _parse_encoding_value(column: str) -> str:
     """Normalize a `--csv encoding=` value to a codec name."""
     value = column.strip()
@@ -402,9 +420,11 @@ def _decode_usage_error(source: Path, exc: UnicodeDecodeError, encoding: str) ->
             f"{source.name} is not valid UTF-8 ({exc.reason} at byte {exc.start}); "
             "it decodes as cp1252 — pass --csv encoding=cp1252."
         )
+    # latin-1 reads every byte, so it cannot have failed: saying it was tried
+    # sent a Shift_JIS export to the one decoding that garbles it (w5/332).
     return UsageError(
-        f"Cannot decode {source.name}: tried utf-8, cp1252, latin-1 ({exc.reason} at byte {exc.start}). "
-        "Force one with --csv encoding=latin-1."
+        f"Cannot decode {source.name} as UTF-8 or cp1252 ({exc.reason} at byte {exc.start}); only latin-1, "
+        "which reads any byte, accepts it. Pass --csv encoding=latin-1 if that is the export's encoding."
     )
 
 
