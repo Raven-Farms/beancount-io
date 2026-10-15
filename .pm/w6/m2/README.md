@@ -31,6 +31,19 @@ Call `runBqlQueryStructured` with the ledger above and each query:
 
 Every call succeeds. The first query repeated fresh produces the same result. REST `POST /api-gateway/v1/ledgers/open_ledger/example/query` with `{query: <same query>}` has the identical table for all four controls. GraphQL `queryShell(ledgerId: "open_ledger/example", query: "SELECT '00123' AS reference LIMIT 1")` also declares `Decimal` and returns the same string without errors.
 
+Additional empty-result controls reproduce the same root cause without any cell values to inspect. MCP and REST both return zero rows for all four queries:
+
+| Query | Actual dtype |
+| --- | --- |
+| `SELECT COUNT(*) AS count WHERE date = 2030-01-01 GROUP BY payee` | `int` |
+| `SELECT COUNT(*) AS reference WHERE date = 2030-01-01 GROUP BY payee` | `str` |
+| `SELECT date WHERE date = 2030-01-01` | `date` |
+| `SELECT date AS reference WHERE date = 2030-01-01` | `str` |
+
+The selected expressions remain COUNT and date; only their labels change. This directly exercises the mapper's column-name fallback. Evidence: `oct14-empty-type-{count-canonical,count-alias,date-canonical,date-alias}.json` and all four REST counterparts in the same ignored evidence directory. Empty-result GraphQL controls were not repeated separately.
+
+The inverse misclassification also occurs: MCP `SELECT 1.25 AS account LIMIT 1` returns dtype `str`, while `SELECT 1.25 AS amount LIMIT 1` returns `Decimal`; both rows contain `"1.25"`. These additional MCP controls are `oct14-bql-alias-decimal-{account,amount}.json`; REST/GraphQL were not repeated for this pair. Protecting every aliased value as text would therefore leave real decimal expressions mistyped.
+
 These expressions are string literals: the live control `SELECT length('00123') AS chars, '00123' = 123 AS numeric_equal, '00123' = '00123' AS text_equal LIMIT 1` returns `[5, false, true]` with types int/bool/bool. An output label changes metadata for the same value and expression. The row text and leading zeros are preserved; actual numeric coercion by an agent or UI was not measured and is not claimed.
 
 Helper pattern: `node .agents/skills/qa-shared/scripts/qa-mcp.mjs --credentials-file .env call runBqlQueryStructured '{"ledger":"open_ledger/example","query":"SELECT ..."}'`.
@@ -58,4 +71,4 @@ The three string-literal probes declare `str` independently of aliases. Ordinary
 
 Searched all board states for dtype inference, numeric strings, aliased types, leading-zero query values and `ledger-shell-mappers`. Completed w3/m37 repairs dashboard rendering of correctly typed Inventory/Amount cells; w6/done/m1 repairs canonical row counts. Neither repairs expression typing. The mapper history still contains this inference in current main; no overlapping repair was found. Null-to-empty-string serialization is explicitly preserved compatibility and is not this finding.
 
-Unverified: complete type behavior for arbitrary expressions or zero-row aliases, real downstream identifier coercion, the available upstream metadata solution, and a deployed fix. No ledger/account data changed; no product fix implemented.
+Unverified: complete type behavior for arbitrary expressions beyond these probes, real downstream identifier coercion, the available upstream metadata solution, and a deployed fix. No ledger/account data changed; no product fix implemented.
