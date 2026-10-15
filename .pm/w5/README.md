@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [343 — `--file` on an included leaf says `add open` accounts the root opens; following it breaks the root](./343.md) — CLI QA 2026-10-14
 - [344 — `doctor context|region|linked DIR LOC` hint drops the location operand](./344.md) — CLI QA 2026-10-14
 - [345 — Balance-before-open hint suggests `add open` for an already-open account](./345.md) — CLI QA 2026-10-14
 - [346 — A `--file` leaf write validates only the leaf and silently breaks or double-books the root](./346.md) — CLI QA 2026-10-14
