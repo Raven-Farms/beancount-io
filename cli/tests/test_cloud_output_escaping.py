@@ -7,6 +7,7 @@ an output line; `single_line` turns both into visible, inert text.
 
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
 import pytest
@@ -103,12 +104,12 @@ def test_clone_escapes_the_full_name(
 def test_create_clone_failure_escapes_the_full_name(
     httpx_mock: HTTPXMock, git_remote: GitRemote, tmp_path: Path
 ) -> None:
-    occupied = tmp_path / "occupied"
-    occupied.mkdir()
-    (occupied / "keep.txt").write_text("x\n")
+    # A remote that is gone fails the clone after creation (w5/371 refuses an
+    # occupied target before it).
+    shutil.rmtree(git_remote.origin)
     httpx_mock.add_response(method="POST", url=f"{_API}/api-gateway/v1/ledgers", json=_ledger(sshUrl=git_remote.url))
 
-    result = CliRunner().invoke(app, ["cloud", "ledger", "create", "n1", "--clone", "--dir", str(occupied)])
+    result = CliRunner().invoke(app, ["cloud", "ledger", "create", "n1", "--clone", "--dir", str(tmp_path / "n1")])
 
     assert result.exit_code == 1, result.output
     _assert_inert(result.output)

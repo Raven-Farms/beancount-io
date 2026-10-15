@@ -19,7 +19,9 @@ register_ledger_commands(ledger_app)
 DirOpt = Annotated[Path | None, typer.Option("--dir", help="Local directory for the git clone")]
 
 
-def _clone_failure_message(ledger_name: str | None, error: object) -> str:
+def _clone_failure_message(ledger_name: str | None, error: object, target: Path | None = None) -> str:
+    import shlex
+
     from . import manager
 
     assert isinstance(error, manager.CloneError)
@@ -30,7 +32,10 @@ def _clone_failure_message(ledger_name: str | None, error: object) -> str:
     if ledger_name:
         return (
             f"Ledger '{single_line(ledger_name)}' was created but could not be cloned{detail}. "
+            # The target the clone was aimed at: without it the printed command
+            # cloned into `./<repo>`, not the `--dir` asked for (w5/371).
             f"Clone it manually with: git clone {remote or '<remote>'}"
+            f"{f' {single_line(shlex.quote(str(target)))}' if target is not None else ''}"
         )
     if error.diagnostic:
         return f"Clone failed for {remote}{detail}."
@@ -63,6 +68,9 @@ def ledger_create(
     name = ledger_name(name)
     if clone:
         manager.ensure_git_available()
+        # A target git is certain to refuse is refused here, before the ledger
+        # exists on the server and a retry conflicts on its name (w5/371).
+        manager.refuse_occupied_clone_target(directory or Path(name))
 
     client = authenticated_client()
     try:
@@ -101,7 +109,9 @@ def ledger_create(
         except manager.CloneError as e:
             # The ledger exists on the server. Saying "created" and exiting 0
             # here would hide a half-finished setup from a script.
-            raise LedgerError(_clone_failure_message(ledger.full_name, e), result=ledger.record) from e
+            raise LedgerError(
+                _clone_failure_message(ledger.full_name, e, directory or Path(ledger.name)), result=ledger.record
+            ) from e
 
     if ctx.json_output:
         output.emit(ledger.record, target=output.server_target())

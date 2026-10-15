@@ -1835,7 +1835,7 @@ credentials, so a malformed name exits **2** naming the rule and a slugified
 suggestion rather than exiting **3** with "Not logged in", which would say
 nothing about the name.
 
-Cloning uses `git clone` over SSH, so it needs Git and working SSH access. It uses the SSH command git would (`GIT_SSH_COMMAND`, `core.sshCommand`, then `GIT_SSH`); unattended (`--json`, `--no-input`, no terminal) it only adds `-o BatchMode=yes` to that command and closes git's stdin, so a host-key or password prompt fails instead of hanging. If a clone fails after the ledger was created, the command exits nonzero and prints the manual `git clone` command — the ledger exists either way.
+Cloning uses `git clone` over SSH, so it needs Git and working SSH access. It uses the SSH command git would (`GIT_SSH_COMMAND`, `core.sshCommand`, then `GIT_SSH`); unattended (`--json`, `--no-input`, no terminal) it only adds `-o BatchMode=yes` to that command and closes git's stdin, so a host-key or password prompt fails instead of hanging. A clone target git would refuse (`./<name>` or `--dir` naming a file or a non-empty directory) is refused with exit **2** before the ledger is created. If a clone fails after the ledger was created, the command exits nonzero and prints the manual `git clone` command, target included — the ledger exists either way.
 
 ## Updating
 

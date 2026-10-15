@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 
 import httpx
@@ -40,8 +41,9 @@ def test_create_result_survives_the_clone_step(
     httpx_mock.add_response(method="POST", url="https://api.example/api-gateway/v1/ledgers", json=wire)
     target = tmp_path / "checkout"
     if clone == "failure":
-        target.mkdir()
-        (target / "keep.txt").write_text("original\n")
+        # The remote is gone, so git fails after the ledger was created. An
+        # occupied target is refused before the request instead (w5/371).
+        shutil.rmtree(git_remote.origin)
     args = [*(["--json"] if json_output else []), "cloud", "ledger", "create", "books"]
     if clone != "none":
         args.extend(["--clone", "--dir", str(target)])
@@ -76,9 +78,8 @@ def test_create_result_survives_the_clone_step(
         assert "private:  yes" in result.stdout
     if failed:
         assert "was created but could not be cloned" in result.stderr
-        assert f"git clone {origin}" in result.stderr
-        assert list(target.iterdir()) == [target / "keep.txt"]
-        assert (target / "keep.txt").read_text() == "original\n"
+        assert f"git clone {origin} {target}" in result.stderr
+        assert not target.exists()
     elif clone == "success":
         assert (target / ".git").is_dir()
     else:

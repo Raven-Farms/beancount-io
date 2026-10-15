@@ -188,6 +188,21 @@ def default_clone_dir(name: str) -> Path:
         ) from None
 
 
+def refuse_occupied_clone_target(target: Path) -> None:
+    """Refuse a clone target `git clone` will refuse: a file, or a directory that is not empty."""
+    if not (target.exists() or target.is_symlink()):
+        return
+    try:
+        occupied = not target.is_dir() or any(target.iterdir())
+    except OSError:
+        occupied = True
+    if occupied:
+        raise UsageError(
+            f"Clone target '{single_line(str(target))}' already exists and is not an empty directory; "
+            "nothing was created. Pass --dir to choose another, or move it aside."
+        )
+
+
 def clone_ledger(
     git_remote_url: str,
     target_dir: Path,
