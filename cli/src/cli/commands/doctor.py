@@ -99,6 +99,10 @@ def _refuse_directory_ledger(op: str, args: list[str]) -> None:
         return
     ledger = Path(positionals[0])
     if not ledger.is_dir():
+        if os.path.lexists(ledger) and not ledger.is_file():
+            # `<(…)` names a pipe this process holds; upstream, which cannot
+            # open it, said the path "does not exist" (w5/436).
+            raise UsageError(f"Ledger path {output.not_a_file(ledger)}. Save it to a file and pass that file.")
         return
     hint = next(
         (ledger / name for name in DEFAULT_ENTRY_FILE_FALLBACKS if (ledger / name).is_file()),

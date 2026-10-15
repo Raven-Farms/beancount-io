@@ -528,7 +528,10 @@ def import_entries(
     if csv_mapping is not None and config is not None:
         raise UsageError("Pass --csv or --config, not both.")
     if not source.is_file():
-        raise UsageError(f"Export file not found: {source}")
+        if not os.path.lexists(source):
+            raise UsageError(f"Export file not found: {source}")
+        remedy = "Name the export file inside it." if source.is_dir() else "Save it to a file and import that file."
+        raise UsageError(f"Export {output.not_a_file(source)}. {remedy}")
 
     csv_request: str | None = csv_mapping
     config_to_remember: Path | None = None

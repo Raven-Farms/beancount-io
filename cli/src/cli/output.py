@@ -329,12 +329,18 @@ class MissingInclude:
     reason: str | None = None
 
 
-def _not_a_file(path: Path) -> str:
-    """Why a glob match is no ledger file, worded as reads word it (w5/120)."""
+def not_a_file(path: Path) -> str:
+    """Why an existing path is no file bea can read, worded as reads word it (w5/120).
+
+    A pipe is named as one: `<(…)` passes `/dev/fd/N`, which "not found" or
+    "does not exist" described wrongly (w5/436).
+    """
     if path.is_symlink() and not path.exists():
         return f"{path} is a broken symbolic link"
     if path.is_dir():
         return f"{path} is a directory, not a file"
+    if path.is_fifo():
+        return f"{path} is a pipe, not a file"
     return f"{path} is not a regular file"
 
 
@@ -414,7 +420,7 @@ def _walk_closure(*roots: Path) -> tuple[list[Path], list[MissingInclude], list[
             if matches:
                 stack.extend(matches)
             else:
-                reason = _not_a_file(others[0]) if others else None
+                reason = not_a_file(others[0]) if others else None
                 missing.append(MissingInclude(include=raw, source=current, reason=reason))
             unreadable.extend(others)
     return members, missing, unreadable

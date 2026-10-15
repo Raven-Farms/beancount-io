@@ -274,7 +274,7 @@ def engine_python() -> Path:
 
 
 def capture_native(
-    name: str, args: Sequence[str], *, ledger: Path | str | None = None
+    name: str, args: Sequence[str], *, ledger: Path | str | None = None, pass_fds: Sequence[int] = ()
 ) -> subprocess.CompletedProcess[str]:
     """Run an upstream executable and keep its output instead of inheriting the streams.
 
@@ -283,7 +283,7 @@ def capture_native(
     and `bea format --check` compares the formatter's output against the file.
     Everything else should use `run_native` and let upstream own the streams.
     """
-    return run_captured([str(native_command(name)), *args], env=_native_env(ledger))
+    return run_captured([str(native_command(name)), *args], env=_native_env(ledger), pass_fds=pass_fds)
 
 
 def check_native(
@@ -799,7 +799,9 @@ def _run_inherited(
             raise
 
 
-def run_captured(command: list[str], *, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
+def run_captured(
+    command: list[str], *, env: dict[str, str] | None = None, pass_fds: Sequence[int] = ()
+) -> subprocess.CompletedProcess[str]:
     """`subprocess.run` keeping the output, except a request to stop us stops the child too.
 
     A bare `subprocess.run` left `bean-example`, `treeify`, a captured
@@ -810,7 +812,9 @@ def run_captured(command: list[str], *, env: dict[str, str] | None = None) -> su
     """
     with (
         _stop_passed_on() as attach,
-        subprocess.Popen(command, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) as child,
+        subprocess.Popen(
+            command, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, pass_fds=pass_fds
+        ) as child,
     ):
         attach(child)
         try:

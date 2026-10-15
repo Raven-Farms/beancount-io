@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import sys
 from pathlib import Path
@@ -103,6 +104,23 @@ def _check_regexes(parsed: argparse.Namespace) -> None:
             ) from None
 
 
+def _held_descriptor(name: str | None) -> tuple[int, ...]:
+    """The descriptor a `/dev/fd/N` input names, when this process holds it open.
+
+    Process substitution (`<(…)`) names its pipe that way, and the child,
+    started with its standard streams alone, could not open it: `OSError: Bad
+    file descriptor` (w5/436). Passed on, the child reads it as a file.
+    """
+    match = re.fullmatch(r"/dev/fd/(\d+)", name or "")
+    if match is None:
+        return ()
+    try:
+        os.fstat(int(match.group(1)))
+    except OSError:
+        return ()
+    return (int(match.group(1)),)
+
+
 def treeify(ctx: typer.Context) -> None:
     """Render a column as an ASCII tree (delegates to treeify)."""
     refuse_json("treeify", hint="Run without --json to print the ASCII tree.")
@@ -143,7 +161,11 @@ def treeify(ctx: typer.Context) -> None:
         context.refuse_terminal_stdin(
             "Input is required with --no-input. Name the file to treeify or pipe the text on stdin."
         )
-    completed = launch.capture_native("treeify", forwarded)
+    descriptors = _held_descriptor(parsed.input if parsed is not None else None)
+    if descriptors:
+        completed = launch.capture_native("treeify", forwarded, pass_fds=descriptors)
+    else:
+        completed = launch.capture_native("treeify", forwarded)
     if completed.returncode == 0 and _NO_COLUMN in (completed.stderr or ""):
         # Upstream echoes the input unchanged and calls that success; the
         # echo is not a tree, so it is not printed.
