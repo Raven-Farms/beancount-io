@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [355 — `format -i` turns a lone CR inside comments/strings into a line break, breaking or changing the ledger](./355.md) — CLI QA 2026-10-14
 - [356 — `beancount-close` flag sweep groups by content, so same-day same-merchant `!` entries count once](./356.md) — CLI QA 2026-10-14
 - [357 — Skills still say Beangulp requires libmagic (w5/168 leftover)](./357.md) — CLI QA 2026-10-14
 - [358 — ask/close spending recipes sum `cost(position)`, leaving `@`-priced foreign charges unconverted](./358.md) — CLI QA 2026-10-14
