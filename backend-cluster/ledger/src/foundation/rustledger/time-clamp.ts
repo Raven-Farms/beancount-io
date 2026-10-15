@@ -466,14 +466,16 @@ export function closeCurrentEarnings(
 ): DirectiveJson[] {
   return directives.map((directive) => {
     if (directive.type !== "transaction") return directive;
-    return {
-      ...directive,
-      postings: directive.postings.map((posting) =>
-        isIncomeStatementAccount(posting.account, accounts)
-          ? { ...posting, account: accounts.accountCurrentEarnings }
-          : posting,
-      ),
-    };
+    let postings: PostingJson[] | undefined;
+    directive.postings.forEach((posting, index) => {
+      if (!isIncomeStatementAccount(posting.account, accounts)) return;
+      postings ??= directive.postings.slice();
+      postings[index] = {
+        ...posting,
+        account: accounts.accountCurrentEarnings,
+      };
+    });
+    return postings ? { ...directive, postings } : directive;
   });
 }
 

@@ -51,6 +51,37 @@ function assert(condition: boolean, message: string): asserts condition {
   console.log(`✓ ${message}`);
 }
 
+function singleFileRepoFactory(source: string) {
+  return {
+    getPublicApiClient: async () => ({
+      repos: {
+        repoGetAllCommits: async () => ({ data: [] }),
+        getTree: async () => ({
+          data: {
+            tree: [{ path: "main.bean", type: "blob" }],
+            truncated: false,
+          },
+        }),
+        repoGetContents: async (
+          _owner: string,
+          _repo: string,
+          path: string,
+        ) => {
+          if (path !== "main.bean")
+            throw new Error(`Unexpected verification fixture path: ${path}`);
+          return {
+            data: {
+              type: "file",
+              encoding: "base64",
+              content: Buffer.from(source).toString("base64"),
+            },
+          };
+        },
+      },
+    }),
+  };
+}
+
 /**
  * RAW WASM validity — deliberately BYPASSES the sanitization pre-pass
  * (`neutralizeIncludedOptionsAndPlugins` + fava-plugin stripping) that the
@@ -152,34 +183,7 @@ async function verifyTransactionLookups(): Promise<void> {
   // Only repository reads are synthetic: loadSnapshot, parsing, latest-match
   // selection and serialization all run through the actual service.
   const service = new LedgerDataService(
-    {
-      getPublicApiClient: async () => ({
-        repos: {
-          repoGetAllCommits: async () => ({ data: [] }),
-          getTree: async () => ({
-            data: {
-              tree: [{ path: "main.bean", type: "blob" }],
-              truncated: false,
-            },
-          }),
-          repoGetContents: async (
-            _owner: string,
-            _repo: string,
-            path: string,
-          ) => {
-            if (path !== "main.bean")
-              throw new Error(`Unexpected lookup fixture path: ${path}`);
-            return {
-              data: {
-                type: "file",
-                encoding: "base64",
-                content: Buffer.from(source).toString("base64"),
-              },
-            };
-          },
-        },
-      }),
-    } as never,
+    singleFileRepoFactory(source) as never,
     {} as never,
   );
   const params = { ledgerId: "synthetic/lookup", userId: undefined };
@@ -277,34 +281,7 @@ ${custom ? 'option "name_equity" "Capital"\noption "name_income" "Revenue"\nopti
 `;
   };
   const services = (source: string) => {
-    const factory = {
-      getPublicApiClient: async () => ({
-        repos: {
-          repoGetAllCommits: async () => ({ data: [] }),
-          getTree: async () => ({
-            data: {
-              tree: [{ path: "main.bean", type: "blob" }],
-              truncated: false,
-            },
-          }),
-          repoGetContents: async (
-            _owner: string,
-            _repo: string,
-            path: string,
-          ) => {
-            if (path !== "main.bean")
-              throw new Error(`Unexpected earnings fixture path: ${path}`);
-            return {
-              data: {
-                type: "file",
-                encoding: "base64",
-                content: Buffer.from(source).toString("base64"),
-              },
-            };
-          },
-        },
-      }),
-    };
+    const factory = singleFileRepoFactory(source);
     return {
       finance: new LedgerFinanceService(factory as never, {} as never),
       journal: new LedgerJournalService(factory as never, {} as never),
