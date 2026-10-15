@@ -35,7 +35,6 @@
 
 ## Inbox
 
-- [295 — Dangling `main.bean` symlink: discovery silently writes `main.beancount`](./295.md) — CLI QA 2026-10-14
 - [296 — `price export` into a new dir that a `*/…` include glob reads back](./296.md) — CLI QA 2026-10-14
 - [297 — Unusable `credentials.json` reads as logged out; logout leaves the token](./297.md) — CLI QA 2026-10-14
 - [298 — `add transaction -p` silently drops a `;` comment / turns a `;`-led amount into an inferred leg](./298.md) — CLI QA 2026-10-14
