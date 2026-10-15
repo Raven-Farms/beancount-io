@@ -500,7 +500,10 @@ skills deduplicate against each other: the ledger itself is the dedup database.
   ledger edits.
 
 Both existing entries and accepted rows in the same batch participate in
-matching. `bea add transactions --from FILE.json` remains a plain validated
+matching. Existing entries are the ones written in the ledger's files: a
+transaction a plugin generates — a `fava.plugins.forecast` projection, an
+amortization copy — is neither a duplicate nor a possible duplicate, so a real
+payment it predicted imports as new. `bea add transactions --from FILE.json` remains a plain validated
 append operation and intentionally does not deduplicate.
 
 ## Python dependencies and metadata

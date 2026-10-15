@@ -128,6 +128,16 @@ def _in_managed_cache(filename: str) -> bool:
         return False
 
 
+def forget_source_lines() -> None:
+    """Drop cached file reads, for a caller judging a load made after a write in this process.
+
+    An in-process caller that imports twice (the engine's own tests, an
+    embedding tool) otherwise judged the entries its first write appended as
+    generated, since the cached lines ended before them.
+    """
+    _source_lines.cache_clear()
+
+
 def entry_generated(entry: Any, directive_type: str) -> bool:
     """Whether a plugin synthesized this entry rather than the ledger declaring it.
 

@@ -140,6 +140,7 @@ def answer(
 
     from bea_engine import managed_load
     from bea_engine.csv_mapper import CsvImporter, load_rules, parse_delimiter, parse_encoding, parse_mapping
+    from bea_engine.ledger.reader import entry_generated, forget_source_lines
 
     if duplicates not in {"review", "skip", "include"}:
         raise UsageError(f"--duplicates must be review, skip, or include; got {duplicates!r}.")
@@ -276,7 +277,13 @@ def answer(
     identities: dict[tuple[str, str, str], Any] = {}
     fingerprints: dict[tuple[Any, ...], Any] = {}
     open_currencies = _open_currencies(existing, Open)
-    for entry in existing:
+    # Only what the ledger writes can be a duplicate: a forecast plugin's
+    # projected copy made every real payment it predicted a "possible
+    # duplicate" cited at the template's line, and `--duplicates skip` then
+    # dropped them all (w5/325).
+    forget_source_lines()
+    written = [entry for entry in existing if not entry_generated(entry, type(entry).__name__.lower())]
+    for entry in written:
         entry = normalize_entry_strings(entry)
         if isinstance(entry, Transaction) and _source_legs(entry, account):
             for identity in _identities(entry, account, keys):
@@ -285,7 +292,7 @@ def answer(
     if source.read_bytes() != source_bytes:
         raise ConflictError("The export changed during extraction; nothing was written. Retry.")
     source_hash = hashlib.sha256(source_bytes).hexdigest()
-    other_entries = {_directive_text(entry) for entry in existing if not isinstance(entry, Transaction | Price)}
+    other_entries = {_directive_text(entry) for entry in written if not isinstance(entry, Transaction | Price)}
     quotes = _written_quotes(existing)
     price_conflicts = False
     rows: list[dict[str, Any]] = []
