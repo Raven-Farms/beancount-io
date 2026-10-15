@@ -358,7 +358,7 @@ def test_blank_balance_account_is_usage_error(book: Path) -> None:
     result = invoke(book, "balance", "")
 
     assert result.exit_code == 2, result.output
-    assert "accounts" in json.loads(result.stderr)["error"]["message"]
+    assert "ACCOUNT argument 1 is empty" in json.loads(result.stderr)["error"]["message"]
 
 
 def test_blank_filter_in_combination_refuses_without_querying(book: Path) -> None:

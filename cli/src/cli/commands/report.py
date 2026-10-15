@@ -16,6 +16,7 @@ import typer
 
 from cli import context, output
 from cli.engine import launch
+from cli.errors import UsageError
 from cli.utils import refuse_blank_filter
 
 report_app = typer.Typer(help="Financial reports from a local ledger", no_args_is_help=True, rich_markup_mode=None)
@@ -172,8 +173,11 @@ def _ask(
     refuse_blank_filter("--account", account)
     refuse_blank_filter("--conversion", conversion)
     refuse_blank_filter("--time", time)
-    for term in accounts or []:
-        refuse_blank_filter("accounts", term)
+    for position, term in enumerate(accounts or [], start=1):
+        # A positional has no flag to drop: "drop accounts" named the Typer
+        # parameter, which no user can type (w5/305).
+        if not term.strip():
+            raise UsageError(f"ACCOUNT argument {position} is empty; remove it, or pass an account name or substring.")
     ctx = context.current()
     file = ctx.entry_file()
     argv: list[str]

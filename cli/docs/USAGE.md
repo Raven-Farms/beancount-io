@@ -1388,7 +1388,8 @@ matching accounts, then reports only the postings to those accounts — totals,
 trees, and the interval breakdown all describe the accounts you asked for, not
 the counterparties they happened to face. As in `list`, an empty or
 whitespace-only `--account`, `--time`, or `--conversion` — or a blank `bea
-balance` argument — is refused (exit 2) naming the flag rather than silently
+balance` argument — is refused (exit 2) naming the flag, or the position of
+the empty `ACCOUNT` argument, rather than silently
 falling back to the unfiltered default.
 
 A fiscal period (`--time FY2026`, `FY2026-Q1`, `fiscal_year`, `fiscal_quarter`)
