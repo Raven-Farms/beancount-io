@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any
 
 from bea_engine.amounts import require_decimal_notation
-from bea_engine.ledger.text import is_commodity, require_commodity
+from bea_engine.ledger.text import is_commodity, regex_reads_otherwise, require_commodity
 from bea_engine.protocol import UsageError
 
 _MAPPING_FIELDS = frozenset(
@@ -319,6 +319,11 @@ class CsvRule:
             )
         if not match.strip():
             raise UsageError(f"Rule {index + 1} has an empty match; write a regex, or .* for a catch-all.")
+        # Before the compile, which would only warn and then match something
+        # else: Python reads `[[:alpha:]]` as a set of characters (w5/427).
+        otherwise = regex_reads_otherwise(unicodedata.normalize("NFC", match), re.IGNORECASE)
+        if otherwise is not None:
+            raise UsageError(f"Rule {index + 1} match {match!r}: {otherwise}.")
         try:
             # Compiled NFC, like the cell text it searches: `café` typed
             # composed must match a bank's decomposed `café`, and vice versa.

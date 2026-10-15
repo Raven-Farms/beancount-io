@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any
 
 from cli.errors import UsageError
+from cli.utils import regex_reads_otherwise
 
 _MAPPING_FIELDS = frozenset(
     {
@@ -87,6 +88,11 @@ class CsvRule:
             )
         if not match.strip():
             raise UsageError(f"Rule {index + 1} has an empty match; write a regex, or .* for a catch-all.")
+        # Before the compile, which would only warn and then match something
+        # else: Python reads `[[:alpha:]]` as a set of characters (w5/427).
+        otherwise = regex_reads_otherwise(unicodedata.normalize("NFC", match), re.IGNORECASE)
+        if otherwise is not None:
+            raise UsageError(f"Rule {index + 1} match {match!r}: {otherwise}.")
         try:
             # NFC like the engine's copy, which matches NFC-normalized cells.
             expression = re.compile(unicodedata.normalize("NFC", match), re.IGNORECASE)
