@@ -17,7 +17,7 @@ import typer
 from cli import context, output
 from cli.engine import launch
 from cli.errors import UsageError
-from cli.utils import refuse_blank_filter
+from cli.utils import refuse_blank_filter, single_line
 
 report_app = typer.Typer(help="Financial reports from a local ledger", no_args_is_help=True, rich_markup_mode=None)
 
@@ -120,7 +120,9 @@ def _print_tree(
     conversion: str | None = None,
     precision: Mapping[str, int] | None = None,
 ) -> None:
-    label = node["account"].rsplit(":", 1)[-1] if depth else node["account"]
+    # Escaped like every table cell (w5/148): a raw bidi override in a
+    # component reordered the rest of the row on a bidi-aware terminal (w5/331).
+    label = single_line(node["account"].rsplit(":", 1)[-1] if depth else node["account"])
     # Padded by display column, not code point: a CJK account component is
     # two columns per character and would otherwise push its amount right.
     row = output.pad("  " * depth + label, 46)
@@ -133,7 +135,7 @@ def _heading(title: str, metadata: dict[str, Any], *, profit_line: bool = False)
     period = metadata["period"]
     dates = f"{period['start']} through {metadata['as_of']}" if period["start"] else "no dated activity"
     typer.echo(f"{title} — {dates}")
-    typer.echo(f"Valuation: {metadata['conversion']}; account: {metadata['account_filter'] or 'all'}")
+    typer.echo(f"Valuation: {metadata['conversion']}; account: {single_line(metadata['account_filter'] or 'all')}")
     # Only reports that print an explicit profit figure may promise its sign;
     # the balance sheet's earnings line carries the opposite (credit) sign and
     # explains itself where it is printed.
