@@ -33,4 +33,4 @@
 
 - [023](./blocked/023.md) — Adopt correct FROM predicate evaluation in BQL (major; ledger; 45–60m after release) — **blocked:** awaiting a published WASM artifact containing upstream a2d984d6.
 
-- [024](./blocked/024.md) — Adopt ordering by an unselected subquery column (minor; ledger; 35–50m after release) — **blocked:** awaiting a published WASM artifact containing upstream 05b8588b.
+- [024](./blocked/024.md) — Adopt hidden ORDER BY keys in subqueries and table groups (minor; ledger; 45–60m after release) — **blocked:** awaiting a published WASM artifact containing upstream 05b8588b.
