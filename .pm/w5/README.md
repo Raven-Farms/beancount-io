@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [346 — A `--file` leaf write validates only the leaf and silently breaks or double-books the root](./346.md) — CLI QA 2026-10-14
 - [347 — Leaf hint names the nearest includer, not the root, and looks only two dirs up](./347.md) — CLI QA 2026-10-14
 - [348 — `check`/reads on an included leaf give no root hint, only `--allow-errors`](./348.md) — CLI QA 2026-10-14
 - [349 — Importer trades with the same shares but a different cost share an import-id; the second is silently skipped](./349.md) — CLI QA 2026-10-14
