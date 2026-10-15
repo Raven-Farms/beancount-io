@@ -35,6 +35,180 @@
 
 ## Inbox
 
+- [292 — `report --account` with a parent name also matches prefix siblings](./292.md) — CLI QA 2026-10-14
+- [293 — `query --source` tracebacks on bad `csv:` params, `-m`, `-f beancount`, `.describe`](./293.md) — CLI QA 2026-10-14
+- [294 — `query` text table prints `1E-8` and directive reprs](./294.md) — CLI QA 2026-10-14
+- [295 — Dangling `main.bean` symlink: discovery silently writes `main.beancount`](./295.md) — CLI QA 2026-10-14
+- [296 — `price export` into a new dir that a `*/…` include glob reads back](./296.md) — CLI QA 2026-10-14
+- [297 — Unusable `credentials.json` reads as logged out; logout leaves the token](./297.md) — CLI QA 2026-10-14
+- [298 — `add transaction -p` silently drops a `;` comment / turns a `;`-led amount into an inferred leg](./298.md) — CLI QA 2026-10-14
+- [299 — `add pad` refusal says "omit --pad-from", an option it does not have](./299.md) — CLI QA 2026-10-14
+- [300 — **Major:** `kill -9` on a writing `bea` leaves the engine to land the write later; a retry doubles it](./300.md) — CLI QA 2026-10-14
+- [301 — Newline in an include file name breaks every root-staged `add`](./301.md) — CLI QA 2026-10-14
+- [302 — Importer prices bypass `add price`'s conflict/duplicate rules](./302.md) — CLI QA 2026-10-14
+- [303 — Import's "Run: bea add open …" remedy drops `--file`](./303.md) — CLI QA 2026-10-14
+- [304 — USAGE JSON transcript fails on the README quick-start ledger (`Expenses:Food` unopened)](./304.md) — CLI QA 2026-10-14
+- [305 — Blank `bea balance` argument says "drop accounts"](./305.md) — CLI QA 2026-10-14
+- [306 — agent-skills.md's checkout `uv run python` fails outside `cli/`; no Homebrew interpreter](./306.md) — CLI QA 2026-10-14
+- [307 — `add custom --help` folds its Examples into one paragraph](./307.md) — CLI QA 2026-10-14
+- [308 — With stderr closed, diagnostics land in stdout (CSV/JSON corrupted, exit 0)](./308.md) — CLI QA 2026-10-14
+- [309 — `BEA_ENGINE_PYTHON` dir / non-exec / non-Python escapes the 269 check](./309.md) — CLI QA 2026-10-14
+- [310 — `init --opening-balance` rounds a >28-digit equity leg](./310.md) — CLI QA 2026-10-14
+- [311 — Repeated `import --account/--csv/--rules` and `init -c` keep the last value silently](./311.md) — CLI QA 2026-10-14
+- [312 — Untraversable `load-cache` dir fails every local command with raw `PermissionError` (220 regression)](./312.md) — CLI QA 2026-10-14
+- [313 — `SELECT accounts … GROUP BY 1` still crashes with `issubclass` TypeError](./313.md) — CLI QA 2026-10-14
+- [314 — BQL `parse_date('x')` / date overflow exit 1 "validation" with class names](./314.md) — CLI QA 2026-10-14
+- [315 — `$NAME` in the ledger path: reads load the env-expanded file, writes the literal one](./315.md) — CLI QA 2026-10-14
+- [316 — `price export` copies private ledgers/receipts world-readable](./316.md) — CLI QA 2026-10-14
+- [317 — `price export` is quadratic in the number of included files](./317.md) — CLI QA 2026-10-14
+- [318 — Currency-mismatch hint always suggests `--csv currency=` (wrong for importers and counter accounts)](./318.md) — CLI QA 2026-10-14
+- [319 — Non-directive `extract()` output reported as `'str' object has no attribute '_replace'`](./319.md) — CLI QA 2026-10-14
+- [320 — Damaged managed engine still `Provisioned: yes`; writes exit 4 "outcome unknown"](./320.md) — CLI QA 2026-10-14
+- [321 — Unwritable config dir: update check waits 3 s on every command offline](./321.md) — CLI QA 2026-10-14
+- [322 — `upgrade --check` offline exits 0 with `Latest release: unknown`](./322.md) — CLI QA 2026-10-14
+- [323 — `--json add balance --pad-from` returns raw `directives` with `diff_amount`](./323.md) — CLI QA 2026-10-14
+- [324 — Undocumented `target.into` on `add`/`price export`; `import` reports it in `data`](./324.md) — CLI QA 2026-10-14
+- [325 — Import treats forecast-plugin projections as duplicates; `--duplicates skip` drops real payments](./325.md) — CLI QA 2026-10-14
+- [326 — Editing a local plugin does not invalidate the load cache; `check` stays green](./326.md) — CLI QA 2026-10-14
+- [327 — `price export` omits a plugin's sibling helper module; snapshot cannot load](./327.md) — CLI QA 2026-10-14
+- [328 — `option "operating_currency" "usd"` typo never named (missing prices / token error / `column None`)](./328.md) — CLI QA 2026-10-14
+- [329 — `-t FY2027-Q2` on a mid-month fiscal year says "Failed to parse date"](./329.md) — CLI QA 2026-10-14
+- [330 — Nonexistent but well-formed date told to "Use YYYY-MM-DD format"](./330.md) — CLI QA 2026-10-14
+- [331 — `balance`/`report` tree prints raw bidi overrides in account names (148 gap)](./331.md) — CLI QA 2026-10-14
+- [332 — Unsupported `--csv encoding=` on a non-UTF-8 file is masked by the generic decode error](./332.md) — CLI QA 2026-10-14
+- [333 — Lot-booking errors (`No position matches`, `Cost is negative`) show raw Python reprs](./333.md) — CLI QA 2026-10-14
+- [334 — Parser diagnostics (duplicate cost/meta, tags after posting) show raw reprs](./334.md) — CLI QA 2026-10-14
+- [335 — Bulk float refusal suggests `'1e+20'`/`'nan'`, which are refused too](./335.md) — CLI QA 2026-10-14
+- [336 — Bulk JSON nested ~1k–few-k levels crashes with `RecursionError`](./336.md) — CLI QA 2026-10-14
+- [337 — Atomic bulk refusal never names the invalid row; JSON lists all as unwritten](./337.md) — CLI QA 2026-10-14
+- [338 — `--rules` silently ignores unknown tables/keys (`[[rules]]`, `field =`)](./338.md) — CLI QA 2026-10-14
+- [339 — Import calls a row ready when its account is closed/not-yet-open; `--apply` fails the batch](./339.md) — CLI QA 2026-10-14
+- [340 — `list` accepts non-token `--tag`/`--link`/`--flag`/`-c` values (`trip,work`) as empty results](./340.md) — CLI QA 2026-10-14
+- [341 — `balance --json` joins several filter terms into one `account_filter` string](./341.md) — CLI QA 2026-10-14
+- [342 — Ctrl-C during startup prints a `KeyboardInterrupt` traceback instead of a silent 130](./342.md) — CLI QA 2026-10-14
+- [343 — `--file` on an included leaf says `add open` accounts the root opens; following it breaks the root](./343.md) — CLI QA 2026-10-14
+- [344 — `doctor context|region|linked DIR LOC` hint drops the location operand](./344.md) — CLI QA 2026-10-14
+- [345 — Balance-before-open hint suggests `add open` for an already-open account](./345.md) — CLI QA 2026-10-14
+- [346 — A `--file` leaf write validates only the leaf and silently breaks or double-books the root](./346.md) — CLI QA 2026-10-14
+- [347 — Leaf hint names the nearest includer, not the root, and looks only two dirs up](./347.md) — CLI QA 2026-10-14
+- [348 — `check`/reads on an included leaf give no root hint, only `--allow-errors`](./348.md) — CLI QA 2026-10-14
+- [349 — Importer trades with the same shares but a different cost share an import-id; the second is silently skipped](./349.md) — CLI QA 2026-10-14
+- [350 — `add balance` in a disallowed currency: dangling upstream message plus useless pad advice](./350.md) — CLI QA 2026-10-14
+- [351 — Importer balance/note on an unopened account is counted as ready; `--apply` fails the batch](./351.md) — CLI QA 2026-10-14
+- [352 — `treeify` on a missing/dir/unreadable input exits 1 with a class name instead of 2/3](./352.md) — CLI QA 2026-10-14
+- [353 — `example -o DIR` advises `--force`, which then refuses the directory](./353.md) — CLI QA 2026-10-14
+- [354 — `price status` warning tells the user to run `price status`](./354.md) — CLI QA 2026-10-14
+- [355 — `format -i` turns a lone CR inside comments/strings into a line break, breaking or changing the ledger](./355.md) — CLI QA 2026-10-14
+- [356 — `beancount-close` flag sweep groups by content, so same-day same-merchant `!` entries count once](./356.md) — CLI QA 2026-10-14
+- [357 — Skills still say Beangulp requires libmagic (w5/168 leftover)](./357.md) — CLI QA 2026-10-14
+- [358 — ask/close spending recipes sum `cost(position)`, leaving `@`-priced foreign charges unconverted](./358.md) — CLI QA 2026-10-14
+- [359 — reconcile skill never negates a liability statement's ending balance; card tie-out is off by twice the balance](./359.md) — CLI QA 2026-10-14
+- [360 — reconcile skill takes the last row's balance, wrong for newest-first exports](./360.md) — CLI QA 2026-10-14
+- [361 — migrate skill never negates a card's stated balance; derived opening hides it](./361.md) — CLI QA 2026-10-14
+- [362 — migrate skill splits a split purchase into per-category transactions; bank import double-books](./362.md) — CLI QA 2026-10-14
+- [363 — `init` restricts every category to one currency; foreign charges refused with no remedy](./363.md) — CLI QA 2026-10-14
+- [364 — `-x AT_COST`/`UNITS` accepted as a fake currency; `-x cost` suggests `'COST'`](./364.md) — CLI QA 2026-10-14
+- [365 — Income-statement series keeps an empty leading interval fragment (`-t 2026-03 -i weekly` opens with a 1-day week)](./365.md) — CLI QA 2026-10-14
+- [366 — `cloud status` shows `'dict' object has no attribute 'username'` on a partial profile body](./366.md) — CLI QA 2026-10-14
+- [367 — `cloud status` reports a redirect/204 as a rejected credential (exit 3, "log in again")](./367.md) — CLI QA 2026-10-14
+- [368 — `cloud ledger create/delete` call a refused connection "outcome unknown" (exit 4)](./368.md) — CLI QA 2026-10-14
+- [369 — Text-mode cloud errors drop the backend request ID](./369.md) — CLI QA 2026-10-14
+- [370 — Unattended `cloud ledger clone` overrides the user's `core.sshCommand`/`GIT_SSH`](./370.md) — CLI QA 2026-10-14
+- [371 — `create --clone` creates the ledger before refusing a non-empty target; remedy drops `--dir`](./371.md) — CLI QA 2026-10-14
+- [372 — `cloud ledger clone` without git exits 1 with an Errno instead of the exit-2 precheck](./372.md) — CLI QA 2026-10-14
+- [373 — `ask` shows raw `list index out of range`/`Expecting value` on a malformed proxy 200](./373.md) — CLI QA 2026-10-14
+- [374 — `ask` approval panel shows tabs as `\x09` but writes realigned spaces](./374.md) — CLI QA 2026-10-14
+- [375 — Update check timeout is per-read: trickling index hangs `upgrade --check`, notice costs 3 s every run uncached](./375.md) — CLI QA 2026-10-14
+- [376 — `upgrade --check` prints the index's version string unescaped (terminal injection)](./376.md) — CLI QA 2026-10-14
+- [377 — Managed price feed accepts `BTC-`/`BTC.` commodities: negative price or broken load, then pinned](./377.md) — CLI QA 2026-10-14
+- [378 — Managed-price shadowing misses arithmetic authored prices and matches price text inside strings](./378.md) — CLI QA 2026-10-14
+- [379 — `price refresh` failure detail reads "….; serving revision none"](./379.md) — CLI QA 2026-10-14
+- [380 — A lone CR in the ledger misclassifies add-time errors (plugin blame, lost prefix, pad refused)](./380.md) — CLI QA 2026-10-14
+- [381 — Read commands keep the last of a repeated single-valued option (`-a Food -a Rent` lists Rent)](./381.md) — CLI QA 2026-10-14
+- [382 — `--flag ''` writes `*` and `--booking ' '` writes no booking (w5/239 leftover)](./382.md) — CLI QA 2026-10-14
+- [383 — Duplicate-entry summary prints `5.0E-7 BTC` (w5/228 leftover)](./383.md) — CLI QA 2026-10-14
+- [384 — Bulk `number_total` cost without currency gets the generic "not one token" error](./384.md) — CLI QA 2026-10-14
+- [385 — `import --date-format ''` is saved to memory as `""` and breaks the next plain import](./385.md) — CLI QA 2026-10-14
+- [386 — Empty `--into ''`/`--rules ''` resolve to the working directory and give directory errors](./386.md) — CLI QA 2026-10-14
+- [387 — Path options turn `''` into `.`: `format -i ''` rewrites the cwd, `price export -o ''` writes into it](./387.md) — CLI QA 2026-10-14
+- [388 — `treeify --filler ''` crashes with `ZeroDivisionError`](./388.md) — CLI QA 2026-10-14
+- [389 — `example -o ''` skips bea's output checks (`forwarded_option` drops `''`)](./389.md) — CLI QA 2026-10-14
+- [390 — `example` accepts any date span; year 1 or 9999 runs minutes then fails with a class name](./390.md) — CLI QA 2026-10-14
+- [391 — Every ledger write silently splits a hard link to the file (new inode, other name stale)](./391.md) — CLI QA 2026-10-14
+- [392 — `bea query` shell history ignores `BEA_CONFIG_DIR`, writes `~/.config/beanquery/history` undocumented](./392.md) — CLI QA 2026-10-14
+- [393 — Inactive-account error says "Correct the transaction date" for notes/documents](./393.md) — CLI QA 2026-10-14
+- [394 — `add close` before the open or on an unknown account gets bare "Unopened account … is being closed"](./394.md) — CLI QA 2026-10-14
+- [395 — "Pad accounts must be active, even with --allow-errors" shown without the flag, repeated](./395.md) — CLI QA 2026-10-14
+- [396 — With a pre-existing error, adds are refused as "would leave the ledger invalid" with no `--allow-errors` hint](./396.md) — CLI QA 2026-10-14
+- [397 — Under `unique_prices`, `add price` advises `--force`, which can never succeed](./397.md) — CLI QA 2026-10-14
+- [398 — `check_commodity` add refusal: bare `<check_commodity>:0`, no label or `add commodity` remedy](./398.md) — CLI QA 2026-10-14
+- [399 — `check_drained` close refusal gets statement-assertion advice instead of "drain first"](./399.md) — CLI QA 2026-10-14
+- [400 — USAGE's plugin-failure wording differs from output; missing plugin config gets no hint](./400.md) — CLI QA 2026-10-14
+- [401 — `--on-disk` keeps a same-date plugin entry stamped with a real line](./401.md) — CLI QA 2026-10-14
+- [402 — `add open/close/custom` with a foreign root get bare "Invalid account name" (w5/154 leftover)](./402.md) — CLI QA 2026-10-14
+- [403 — `ask` system prompt hard-codes `^Expenses` and never names renamed roots](./403.md) — CLI QA 2026-10-14
+- [404 — Non-UTF-8 locale: `treeify`/`doctor` crash with `UnicodeEncodeError`](./404.md) — CLI QA 2026-10-14
+- [405 — Non-UTF-8 locale: `list`/`balance`/`--details` write locale bytes plus `İ` escapes](./405.md) — CLI QA 2026-10-14
+- [406 — Mixed UTF-8/cp1252 CSV is advised `encoding=cp1252`, which mangles the UTF-8 rows](./406.md) — CLI QA 2026-10-14
+- [407 — A failed stdout write exits 120 with "Exception ignored on flushing sys.stdout"](./407.md) — CLI QA 2026-10-14
+- [408 — Full disk: every read of a managed-price ledger fails with raw `OSError`](./408.md) — CLI QA 2026-10-14
+- [409 — Failed `price export` says "Nothing was written" but leaves a truncated `main.bean`](./409.md) — CLI QA 2026-10-14
+- [410 — Full-disk write failures report `OSError: [Errno 27]` as `validation`](./410.md) — CLI QA 2026-10-14
+- [411 — Failed load-cache write leaks `WARNING:root:` to stderr](./411.md) — CLI QA 2026-10-14
+- [412 — Relative or file-typed `BEA_ENGINE_DIR` accepted unchecked (relative `BEA_CONFIG_DIR` is refused)](./412.md) — CLI QA 2026-10-14
+- [413 — Misplaced `-f LEDGER` after `ingest archive` becomes `--overwrite` and replaces filed documents](./413.md) — CLI QA 2026-10-14
+- [414 — `treeify` default pattern hard-codes English roots; documented pipeline fails on renamed roots](./414.md) — CLI QA 2026-10-14
+- [415 — `example -o FILE --version` writes the version banner as the ledger (with `--force`, over one)](./415.md) — CLI QA 2026-10-14
+- [416 — Global options after forwarded commands get no "place it before the command" hint](./416.md) — CLI QA 2026-10-14
+- [417 — `check --cache-filename PATH` silently deletes any non-cache file at PATH](./417.md) — CLI QA 2026-10-14
+- [418 — `BEANCOUNT_LOAD_CACHE_FILENAME` naming a non-ledger file: every read silently deletes it](./418.md) — CLI QA 2026-10-14
+- [419 — Provisioning `rmtree`s an existing non-engine `BEA_ENGINE_DIR` (code-confirmed)](./419.md) — CLI QA 2026-10-14
+- [420 — Untagged JSON float metadata is written with binary error (`…890.123` → `…567000`)](./420.md) — CLI QA 2026-10-14
+- [421 — Completion: fixed-value options complete as files; fish gets wrapped-help fragments as candidates](./421.md) — CLI QA 2026-10-14
+- [422 — `cloud ledger create/delete` call an unreadable 2xx "unexpected response" (exit 1), not unknown outcome](./422.md) — CLI QA 2026-10-14
+- [423 — Price-cache blobs from bea 0.3.0/0.3.1 (no digest) are trusted; a truncated one is pinned by 304s](./423.md) — CLI QA 2026-10-14
+- [424 — "Pass --debug … for a traceback" shown only for engine-side errors](./424.md) — CLI QA 2026-10-14
+- [425 — `add price/commodity -c ''` name internal "Request field 'currency'"](./425.md) — CLI QA 2026-10-14
+- [426 — Repeated `sign=` in `--csv` is accepted; the last wins and flips every row's sign](./426.md) — CLI QA 2026-10-14
+- [427 — POSIX class in a `--rules` regex leaks `FutureWarning` and matches nothing](./427.md) — CLI QA 2026-10-14
+- [428 — A CSV header containing a comma cannot be named in `--csv`](./428.md) — CLI QA 2026-10-14
+- [429 — POSIX classes in `query ~`, `report -a`, `treeify -r` silently change meaning and leak `FutureWarning`](./429.md) — CLI QA 2026-10-14
+- [430 — `bea check` loads twice: plugin output and side effects happen twice](./430.md) — CLI QA 2026-10-14
+- [431 — `add balance`/`add price`/bare-number adds load the ledger twice for pre-checks](./431.md) — CLI QA 2026-10-14
+- [432 — `price refresh` loads the ledger twice even with no managed includes](./432.md) — CLI QA 2026-10-14
+- [433 — One file included under two names (case, NFC/NFD, symlink, hard link) loads twice and double-counts; `check` passes](./433.md) — CLI QA 2026-10-14
+- [434 — `--into` case refusal names the wrong spelling; new glob file in other case refused](./434.md) — CLI QA 2026-10-14
+- [435 — An `include` naming a FIFO hangs every ledger-loading command (`/dev/zero`: unbounded memory)](./435.md) — CLI QA 2026-10-14
+- [436 — Process-substitution inputs (`<(…)`) fail with `Bad file descriptor` / "not found"](./436.md) — CLI QA 2026-10-14
+- [437 — SIGTERM/SIGHUP leave `example`/`treeify`/`doctor` captures and `git clone` running (w5/208 leftover)](./437.md) — CLI QA 2026-10-14
+- [438 — `doctor` (and `ingest extract -e`) print a raw traceback for an unreadable/directory include (w5/120 leftover)](./438.md) — CLI QA 2026-10-14
+- [439 — `doctor roundtrip` congratulates (exit 0) after a plugin import/run traceback](./439.md) — CLI QA 2026-10-14
+- [440 — `doctor` on a non-UTF-8 ledger: raw `UnicodeDecodeError` or silent exit 0](./440.md) — CLI QA 2026-10-14
+- [441 — `import` on a ledger with a Latin-1 comment byte fails with raw `UnicodeDecodeError`](./441.md) — CLI QA 2026-10-14
+- [442 — `format` calls a directory include "missing"](./442.md) — CLI QA 2026-10-14
+- [443 — `add transaction 2026-01-05 …` writes the date as narration, dated today (exit 0)](./443.md) — CLI QA 2026-10-14
+- [444 — Misspelled options lose "Possible options"; `report bs`/`bea help` get a bare "No such command"](./444.md) — CLI QA 2026-10-14
+- [445 — `bea balance 2026-01` treats the period as an account filter: "No accounts match", no `-t` hint](./445.md) — CLI QA 2026-10-14
+- [446 — Skills installer crashes with a traceback on a file or dangling-symlink destination](./446.md) — CLI QA 2026-10-14
+- [447 — migrate eval 7 pins import-ids that need an unstated `Assets:Checking` mapping](./447.md) — CLI QA 2026-10-14
+- [448 — `add open -c USD -c EUR -c USD` writes `USD,EUR,USD`](./448.md) — CLI QA 2026-10-14
+- [449 — `--into` a managed price URL writes to an orphan local `https:/…` file (exit 0)](./449.md) — CLI QA 2026-10-14
+- [450 — A refused URL include silently loads a local `./https:/…` file as ledger data](./450.md) — CLI QA 2026-10-14
+- [451 — `../` include behind a symlinked dir: `format -o` overwrites the loaded include (exit 0), `-i` formats the wrong file](./451.md) — CLI QA 2026-10-14
+- [452 — A mistyped `--account` preview is remembered; flag-free imports then refuse forever](./452.md) — CLI QA 2026-10-14
+- [453 — `ask` write panel: typing `n`/`2` + Enter approves (default Yes, keys unbound)](./453.md) — CLI QA 2026-10-14
+- [454 — `ask` loads cwd `.agents/skills` silently, overriding user skills, with no size limit](./454.md) — CLI QA 2026-10-14
+- [455 — `ask_history` is world-readable (0644 in a 0755 dir), stores questions verbatim, no opt-out](./455.md) — CLI QA 2026-10-14
+- [456 — `ingest extract -e` leaves a world-readable `.main.bean.picklecache` beside a private ledger](./456.md) — CLI QA 2026-10-14
+- [457 — `doctor roundtrip` scratch copy of a 0600 ledger is written 0644](./457.md) — CLI QA 2026-10-14
+- [458 — `--offline` does not stop the passive update check](./458.md) — CLI QA 2026-10-14
+- [459 — `query -o x.beancount "SELECT …"` writes a text table under a ledger name](./459.md) — CLI QA 2026-10-14
+- [460 — `list`/`query --json --allow-errors` omit `ledger_errors` from the envelope (stderr only)](./460.md) — CLI QA 2026-10-14
+- [461 — Failing `add`/`import --apply` under `--allow-errors` drop `error.ledger_warnings`](./461.md) — CLI QA 2026-10-14
+- [462 — Renamed roots: every `--into` write to an include is refused as "Invalid account name", no hint](./462.md) — CLI QA 2026-10-14
+- [463 — Reports silently drop accounts whose root comes from an include's `name_*` option](./463.md) — CLI QA 2026-10-14
+- [464 — `--allow-errors` append after an unbalanced `pushtag`/`pushmeta` inherits it; echo says otherwise](./464.md) — CLI QA 2026-10-14
+- [465 — `query` CSV drops a lot's cost date and label, merging distinct lots](./465.md) — CLI QA 2026-10-14
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
