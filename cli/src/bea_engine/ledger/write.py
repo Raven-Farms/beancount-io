@@ -1615,6 +1615,15 @@ def validate_candidate(
                     remedy = f"edit the close of {parent.account}"
                 message += "."
             message += f" Correct the transaction date or {remedy}; for new books use bea init --date YYYY-MM-DD."
+        if isinstance(error.entry, Transaction) and (invalid := _POSTING_CURRENCY.fullmatch(error.message)):
+            if lifecycles is None:
+                lifecycles = {}
+                for entry in entries:
+                    if isinstance(entry, Open | Close):
+                        lifecycles.setdefault(entry.account, []).append(entry)
+            opened = next((e for e in lifecycles.get(invalid["account"], []) if isinstance(e, Open)), None)
+            if opened is not None and opened.currencies:
+                hints.append(_currency_widen_hint(invalid["currency"], opened, filenames, original_lines))
         if isinstance(error.entry, Pad) and error.message.startswith("Invalid reference to "):
             invalid_pad_accounts = True
             hints.append("Pad accounts must be active, even with --allow-errors.")
@@ -1850,6 +1859,26 @@ def _plugin_origin(
     words = lines[lineno - 1].split()
     kind = words[1].decode() if len(words) > 1 and words[1].isalpha() else "line"
     return f"a plugin reading the {kind} at {source}:{lineno}"
+
+
+# Beancount's posting check names neither the open nor a remedy, and `bea add
+# open` cannot widen an account that is already open (w5/363).
+_POSTING_CURRENCY = re.compile(r"Invalid currency (?P<currency>\S+) for account '(?P<account>[^']+)'")
+
+
+def _currency_widen_hint(
+    currency: str, opened: Any, filenames: dict[Path, Path], original_lines: dict[Path, list[bytes]]
+) -> str:
+    """Where the open that refuses `currency` is, and the two ways past it."""
+    allowed = ", ".join(opened.currencies)
+    widened = ",".join([*opened.currencies, currency])
+    origin = _plugin_origin(opened, "open", filenames, original_lines)
+    where = f"by {origin}" if origin else f"at {_location(opened, filenames)}"
+    return (
+        f"{opened.account} is opened {where} for {allowed} only. To post {currency} there, edit that open to "
+        f"'{opened.date} open {opened.account} {widened}' (bea add open cannot change an existing open); "
+        f"otherwise record this posting in {allowed}, converted at the rate paid."
+    )
 
 
 def _location(entry: Any, filenames: dict[Path, Path]) -> str:

@@ -81,7 +81,15 @@ def answer(
     content = f'option "title" "Personal ledger"\noption "operating_currency" "{currency}"\n\n'
     content += "; Add more accounts with bea add open. Amounts on credit accounts are negative.\n"
     content += "; bea import books rows it cannot categorize to Expenses:Uncategorized with flag '!'.\n"
-    content += "".join(f"{day} open {account} {currency}\n" for account in ACCOUNTS)
+    # Only the accounts that hold money are limited to the operating currency.
+    # A category records what was spent, and on a restricted one an ordinary
+    # foreign charge (`45 EUR @ 1.10 USD`) was refused (w5/363).
+    content += "".join(
+        f"{day} open {account} {currency}\n"
+        if account.startswith(("Assets:", "Liabilities:"))
+        else f"{day} open {account}\n"
+        for account in ACCOUNTS
+    )
     nonzero = {account: amount for account, amount in balances.items() if amount}
     if nonzero:
         content += f'\n{day} * "Opening balances"\n'

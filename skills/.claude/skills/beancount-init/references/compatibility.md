@@ -36,16 +36,16 @@ option "operating_currency" "{{CURRENCY}}"
 {{OPEN_DATE}} open Assets:Savings {{CURRENCY}}
 {{OPEN_DATE}} open Assets:Cash {{CURRENCY}}
 {{OPEN_DATE}} open Liabilities:CreditCard {{CURRENCY}}
-{{OPEN_DATE}} open Income:Salary {{CURRENCY}}
-{{OPEN_DATE}} open Income:Interest {{CURRENCY}}
-{{OPEN_DATE}} open Expenses:Groceries {{CURRENCY}}
-{{OPEN_DATE}} open Expenses:Dining {{CURRENCY}}
-{{OPEN_DATE}} open Expenses:Rent {{CURRENCY}}
-{{OPEN_DATE}} open Expenses:Transport {{CURRENCY}}
-{{OPEN_DATE}} open Expenses:Utilities {{CURRENCY}}
-{{OPEN_DATE}} open Expenses:Fees {{CURRENCY}}
-{{OPEN_DATE}} open Expenses:Uncategorized {{CURRENCY}}
-{{OPEN_DATE}} open Equity:OpeningBalances {{CURRENCY}}
+{{OPEN_DATE}} open Income:Salary
+{{OPEN_DATE}} open Income:Interest
+{{OPEN_DATE}} open Expenses:Groceries
+{{OPEN_DATE}} open Expenses:Dining
+{{OPEN_DATE}} open Expenses:Rent
+{{OPEN_DATE}} open Expenses:Transport
+{{OPEN_DATE}} open Expenses:Utilities
+{{OPEN_DATE}} open Expenses:Fees
+{{OPEN_DATE}} open Expenses:Uncategorized
+{{OPEN_DATE}} open Equity:OpeningBalances
 
 {{TAIL}}
 ```

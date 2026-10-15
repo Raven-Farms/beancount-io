@@ -383,7 +383,13 @@ existing file. Pass a directory (creates `main.bean`) or a `.bean`/`.beancount`
 path; the global `--file` can also name the new file, but use either that
 argument or `--file`, not both. To backfill before the chosen date, edit the
 relevant account opens and ensure the opening balances still describe that
-history. New ledger files are
+history. The asset and liability accounts are opened for the chosen currency
+only; the income, expense and equity categories take any currency, so a
+foreign charge such as `Expenses:Dining 45 EUR @ 1.10 USD` books without
+editing an open. To hold another currency in an account, add it to that
+account's open line (`2026-08-01 open Assets:Checking EUR,USD`): `bea add open`
+refuses an account that is already open, and a refused posting names the open
+to edit. New ledger files are
 private by default (`0600` on POSIX: readable and writable only by their owner).
 For group-readable books, explicitly run `chmod 640 books/main.bean` after
 creation. Subsequent add/import/format writes preserve the file's permissions:
