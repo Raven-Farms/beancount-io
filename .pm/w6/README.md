@@ -13,7 +13,6 @@
 ## Inbox
 
 
-- [015](./015.md) — Remove unsupported addLedgerEntries descriptions from served playbooks (minor; backend-v2; 20–35m).
 
 - [016](./blocked/016.md) — Adopt corrected PRINT filtering and cost-preserving rendering (major; ledger; 45–60m after release) — **blocked:** awaiting a published WASM artifact containing upstream 3ad34e07.
 
