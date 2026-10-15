@@ -35,6 +35,27 @@ from cli.native_command import ForwardingCommand
 from cli.native_help import native_help
 
 
+def _discard_diagnostics_without_stderr() -> None:
+    """With fd 2 closed, send diagnostics to devnull rather than into stdout.
+
+    `2>&-` leaves `sys.stderr` None, and `print(..., file=None)` falls back to
+    stdout: tolerated loader errors were written into a `query -f csv` export
+    and after a `--json` envelope, with exit 0, and every error message landed
+    in the results (w5/308). A descriptor at devnull also keeps an engine
+    child, which inherits fd 2, from doing the same.
+    """
+    if sys.stderr is not None:
+        return
+    try:
+        devnull = os.open(os.devnull, os.O_WRONLY)
+        if devnull != 2:
+            os.dup2(devnull, 2)
+            os.close(devnull)
+        sys.stderr = open(2, "w", errors="backslashreplace", closefd=False)  # noqa: SIM115 - lives as sys.stderr
+    except OSError:
+        pass
+
+
 def _tolerate_unencodable_output() -> None:
     """Escape what the terminal's encoding cannot show instead of failing on it.
 
@@ -135,6 +156,7 @@ class _GuardedGroup(TyperGroup):
     # `ctx` is typer's vendored click Context; typed loosely to avoid importing
     # a private module just to restate the supertype's annotation.
     def parse_args(self, ctx: Any, args: list[str]) -> list[str]:
+        _discard_diagnostics_without_stderr()
         # Parse global switches before command resolution can fail. Use Click's
         # parser so --file=--json and arguments following -- remain values.
         resilient, ignore_unknown = ctx.resilient_parsing, ctx.ignore_unknown_options
