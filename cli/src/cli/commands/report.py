@@ -151,6 +151,13 @@ def _heading(title: str, metadata: dict[str, Any], *, profit_line: bool = False)
             f"Entries dated {metadata['excluded_date']} are not included: "
             "a report period cannot reach the calendar's last day."
         )
+    unrooted = metadata.get("unrooted_accounts") or []
+    if unrooted:
+        output.note(
+            f"Not shown: {len(unrooted)} account(s) outside the root ledger's account roots: "
+            f'{", ".join(unrooted)}. Beancount applies an included file\'s option "name_*" only while '
+            "it parses that file, so no report section holds them; query still lists their balances."
+        )
     if metadata.get("account_filter_empty"):
         output.note(f"No accounts match {metadata['account_filter']}.")
     if metadata["missing_prices"]:

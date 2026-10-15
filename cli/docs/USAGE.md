@@ -1431,6 +1431,11 @@ Unconverted `units` reports do not claim an equity reconciliation or invent a
 valuation adjustment across unlike commodities. `equity_reconciled` states
 whether the derived reconciliation is available. Reports run with loader
 errors also carry `ledger_valid: false` and `ledger_errors` in JSON.
+Every report lists `unrooted_accounts`: posted accounts outside the root
+ledger's five account roots. They arise when an include sets its own
+`option "name_assets"` and its siblings, which Beancount applies only while
+parsing that file. No report section can hold them, so stderr names them;
+`query` still lists their balances.
 
 Reports convert what has a price and keep the rest in units. Each interval
 row is valued at its own date, so a later quote cannot value an earlier

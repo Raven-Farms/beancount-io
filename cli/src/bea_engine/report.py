@@ -491,6 +491,7 @@ def _metadata(filtered: Any, conversion: str, ledger_errors: list[str], interval
         "ledger_valid": not filtered.ledger.load_errors,
         "ledger_errors": ledger_errors,
         "price_sources": filtered.ledger.options.get("bea_managed_price_sources", []),
+        "unrooted_accounts": _unrooted_accounts(filtered),
     }
     if interval:
         data["interval"] = interval
@@ -500,6 +501,26 @@ def _metadata(filtered: Any, conversion: str, ledger_errors: list[str], interval
     if end == date.max and _unreportable_boundary(filtered.ledger.all_entries):
         data["excluded_date"] = end
     return data
+
+
+def _unrooted_accounts(filtered: Any) -> list[str]:
+    """Posted accounts outside the root ledger's five roots, which no report section can show.
+
+    Beancount applies `option "name_assets"` and its siblings only while it
+    parses the file that sets them, so an include can open and post to
+    `Aktiva:Bank` with the ledger loading cleanly. The report trees are cut
+    from the root file's roots and dropped that balance without a word, and
+    the trial balance and balance sheet stopped summing to zero (w5/463).
+    """
+    from beancount.core.data import Transaction
+
+    from bea_engine.ledger.text import ledger_roots
+
+    roots = set(ledger_roots(filtered.ledger.options))
+    posted = {
+        posting.account for entry in filtered.entries if isinstance(entry, Transaction) for posting in entry.postings
+    }
+    return sorted(account for account in posted if account.split(":", 1)[0] not in roots)
 
 
 def _routed_since(currency: str, conversion: str, prices: Any, unvalued: list[date | None]) -> date | None:
