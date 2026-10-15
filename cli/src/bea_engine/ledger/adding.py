@@ -622,7 +622,7 @@ def _price(
     snapshot = write.LedgerSnapshot.capture(file)
     target = write.destination(file, into)
     snapshot.require_target(target)
-    entries, errors, _ = managed_load.load_file(file, snapshot=snapshot)
+    entries, errors, options = managed_load.load_file(file, snapshot=snapshot)
     ledger_errors = [format_error(error, ledger_file=file) for error in errors]
     if ledger_errors and strict_read:
         raise protocol.LedgerError(
@@ -661,12 +661,21 @@ def _price(
             "target": str(target),
         }
     conflict = next((entry for entry in local_prices if entry.amount.number != number), None)
-    if conflict is not None and not request.get("force"):
-        where = conflict.meta.get("filename"), conflict.meta.get("lineno")
+    # unique_prices rejects a second quote for the day, so --force could only
+    # end in its bare "Disagreeing price entries" (w5/397).
+    unique = any(str(name).endswith("unique_prices") for name, _ in options.get("plugin") or ())
+    if conflict is not None and (unique or not request.get("force")):
+        where = f"{conflict.meta.get('filename')}:{conflict.meta.get('lineno')}"
+        remedy = (
+            f"This ledger loads the unique_prices plugin, which allows one {currency} price in {amount_currency} "
+            f"per day; edit the existing price at {where} instead."
+            if unique
+            else "Pass --force to record another quote."
+        )
         raise protocol.UsageError(
             f"{currency} already has a {directive.date.isoformat()} price of "
-            f"{_plain(conflict.amount.number)} {amount_currency} (at {where[0]}:{where[1]}); "
-            f"refusing {_plain(number)} {amount_currency}. Pass --force to record another quote."
+            f"{_plain(conflict.amount.number)} {amount_currency} (at {where}); "
+            f"refusing {_plain(number)} {amount_currency}. {remedy}"
         )
 
     entry = Price({}, directive.date, currency, BcAmount(number, amount_currency))
