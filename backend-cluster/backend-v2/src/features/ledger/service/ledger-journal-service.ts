@@ -15,6 +15,39 @@ import {
   AUTHORIZATION_ACTIONS,
   type AuthorizationAction,
 } from "@/server/api/authorization/authorization-contract";
+import { BadUserInputError } from "@/shared/errors";
+
+/**
+ * The page a journal read asks for: limit 1–1000 (default 20), offset 0 or
+ * more (default 0), both safe integers.
+ *
+ * Checked here because GraphQL's `Number` arguments arrive unchecked, and the
+ * ledger pages with `items.slice(offset, offset + limit)`: a negative limit
+ * silently dropped the last entries, a fraction truncated, and zero answered
+ * an empty page beside a nonzero total (w6/007). REST and MCP refuse the same
+ * values in their schemas; this holds GraphQL to that contract before any
+ * authorization or ledger work, as the commits service does for its pages.
+ */
+function journalPage(query?: { limit?: number; offset?: number }): {
+  limit: number;
+  offset: number;
+} {
+  const limit = query?.limit ?? 20;
+  const offset = query?.offset ?? 0;
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > 1000) {
+    throw new BadUserInputError(
+      "limit must be an integer from 1 to 1000",
+      "limit",
+    );
+  }
+  if (!Number.isSafeInteger(offset) || offset < 0) {
+    throw new BadUserInputError(
+      "offset must be a non-negative integer",
+      "offset",
+    );
+  }
+  return { limit, offset };
+}
 
 export type JournalResult = {
   total: number;
@@ -164,6 +197,7 @@ export class LedgerJournalService
     query?: JournalQueryParams;
   }): Promise<JournalResult> {
     const { ledgerId, identity, query } = params;
+    const page = journalPage(query);
     const { favaApiClient, ledgerOwner, ledgerName } = await this.getClient(
       ledgerId,
       identity,
@@ -176,8 +210,7 @@ export class LedgerJournalService
         filter: query?.filter || undefined,
         time: query?.time || undefined,
         directive_types: query?.directiveTypes || undefined,
-        limit: query?.limit ?? 20,
-        offset: query?.offset ?? 0,
+        ...page,
         transaction_subtypes: query?.transactionSubtypes || undefined,
         document_subtypes: query?.documentSubtypes || undefined,
         custom_subtypes: query?.customSubtypes || undefined,
@@ -249,6 +282,7 @@ export class LedgerJournalService
     query: AccountJournalQueryParams;
   }): Promise<AccountJournalResult> {
     const { ledgerId, identity, query } = params;
+    const page = journalPage(query);
     const { favaApiClient, ledgerOwner, ledgerName } = await this.getClient(
       ledgerId,
       identity,
@@ -261,8 +295,7 @@ export class LedgerJournalService
         filter_account: query.filterAccount || undefined,
         filter: query.filter || undefined,
         time: query.time || undefined,
-        limit: query.limit ?? 20,
-        offset: query.offset ?? 0,
+        ...page,
         with_children:
           query.with_children !== undefined ? query.with_children : true,
         conversion: query.conversion || "at_cost",

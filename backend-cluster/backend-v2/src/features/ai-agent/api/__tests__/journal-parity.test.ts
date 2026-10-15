@@ -14,6 +14,7 @@ import {
   AUTHORIZATION_ACTIONS,
 } from "@/server/api/authorization";
 import { graphqlScopeMiddleware } from "@/server/graphql/scope-middleware";
+import { formatError } from "@/server/graphql/format-error";
 import { assembleMcpRegistry } from "@/server/api/composition-root";
 import {
   startV1TestServer,
@@ -361,6 +362,99 @@ describe("journal access revocation", () => {
         ...Object.values(f.reports),
       ])
         expect(method).not.toHaveBeenCalled();
+    } finally {
+      await f.close();
+    }
+  });
+});
+
+/**
+ * w6/007. GraphQL published journal pagination as unconstrained `Number`s and
+ * the ledger pages with `slice(offset, offset + limit)`: `limit: -1` returned
+ * every entry but the last, `1.5` truncated, `0` answered an empty page, and
+ * `offset: -1` read from the end. REST and MCP already refused these in their
+ * schemas. Every surface now refuses them before reading — with its own
+ * envelope — and passes every valid page through unchanged.
+ */
+describe("journal pagination contract", () => {
+  const reads = [
+    {
+      name: "journal",
+      call: "getJournal" as const,
+      base: {},
+      gql: (input: string) =>
+        `getLedgerJournal(ledgerId: "alice/main", query: { ${input} }) { total }`,
+    },
+    {
+      name: "account-journal",
+      call: "getAccountJournal" as const,
+      base: { account: "Assets:Bank" },
+      gql: (input: string) =>
+        `getLedgerAccountJournal(ledgerId: "alice/main", query: { ${input} }) { total }`,
+    },
+  ];
+  const invalid = [
+    { page: { limit: -1 }, field: "limit" },
+    { page: { limit: 1.5 }, field: "limit" },
+    { page: { limit: 0 }, field: "limit" },
+    { page: { limit: 1001 }, field: "limit" },
+    { page: { offset: -1 }, field: "offset" },
+    { page: { offset: 0.5 }, field: "offset" },
+    { page: { limit: 2, offset: -1 }, field: "offset" },
+  ];
+
+  it.each(
+    reads.flatMap((read) => invalid.map((cases) => ({ ...read, ...cases }))),
+  )(
+    "refuses $name page $page on every surface before reading",
+    async (read) => {
+      const f = await fixture();
+      try {
+        const params = { ...read.base, ...read.page };
+        const path = `${read.name}?${encode(params)}`;
+        const rest = await f.rest(path);
+        expect(rest.status).toBe(400);
+        expect((await rest.json()).error.code).toBe("VALIDATION_FAILED");
+        await expect(f.mcp(path)).rejects.toMatchObject({
+          data: { code: "BAD_USER_INPUT" },
+        });
+        const gql = await f.gql(read.gql(gqlInput(params)));
+        const error = gql.errors?.[0];
+        expect(error).toBeDefined();
+        expect(formatError(error!.toJSON(), error!).extensions).toMatchObject({
+          code: "BAD_USER_INPUT",
+          field: read.field,
+        });
+        expect(f.journal[read.call]).not.toHaveBeenCalled();
+        expect(f.authorize).not.toHaveBeenCalled();
+      } finally {
+        await f.close();
+      }
+    },
+  );
+
+  it.each(
+    reads.flatMap((read) =>
+      [
+        { page: {}, sent: { limit: 20, offset: 0 } },
+        { page: { limit: 1, offset: 0 }, sent: { limit: 1, offset: 0 } },
+        { page: { limit: 1000 }, sent: { limit: 1000, offset: 0 } },
+        // Past the end is a valid, empty page — not an error.
+        { page: { limit: 2, offset: 50 }, sent: { limit: 2, offset: 50 } },
+      ].map((cases) => ({ ...read, ...cases })),
+    ),
+  )("passes $name page $page through as $sent", async (read) => {
+    const f = await fixture();
+    try {
+      const params = { ...read.base, ...read.page };
+      const path = `${read.name}?${encode(params)}`;
+      expect((await f.rest(path)).status).toBe(200);
+      await f.mcp(path);
+      const gql = await f.gql(read.gql(gqlInput(params) || 'filter: ""'));
+      expect(gql.errors).toBeUndefined();
+      expect(f.journal[read.call]).toHaveBeenCalledTimes(3);
+      for (const [, , sent] of f.journal[read.call].mock.calls)
+        expect(sent).toMatchObject(read.sent);
     } finally {
       await f.close();
     }
