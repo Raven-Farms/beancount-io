@@ -1373,7 +1373,10 @@ def validate_candidate(
                 hints.append("Staged: add the account's first transaction to clear this.")
         if "Unused Pad" in message:
             pad_entry = error.entry if isinstance(error.entry, Pad) else None
-            message += _unused_pad_hint(pad_entry, entries, errors, filenames, appended=appended)
+            # Beancount's "Unused Pad entry" has no full stop; every hint starts with a space.
+            message = (
+                message.rstrip(".") + "." + _unused_pad_hint(pad_entry, entries, errors, filenames, appended=appended)
+            )
         elif isinstance(error.entry, Balance) and "Balance failed" in error.message:
             if allow_errors:
                 hints.append(
@@ -1507,7 +1510,14 @@ def _unused_pad_hint(
             f"{_location(first, filenames)}, so this existing pad would have nothing to fill. "
             "Remove that pad first, or leave the balance to it."
         )
-    return " Book balance already matches the assertion; omit --pad-from and add the balance alone."
+    # `add balance --pad-from` drops a pad the matching balance does not need
+    # before validating, so only `add pad` gets here; it has no `--pad-from`
+    # to omit (w5/299).
+    first = reached[0]
+    return (
+        f" The {first.date} assertion at {_location(first, filenames)} already holds, "
+        "so this pad would have nothing to fill; it need not be added."
+    )
 
 
 def _plugin_origin(
