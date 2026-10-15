@@ -64,12 +64,12 @@ def get_ledger(client: AuthenticatedClient, full_name: str) -> LedgerInfo:
     return _to_info(unwrap(call(get_ledger_op.sync_detailed, owner, name, client=client)))
 
 
-def ensure_git_available() -> None:
-    """Fail before a remote mutation when Git cannot be launched for --clone."""
+def ensure_git_available(use: str = "--clone") -> None:
+    """Fail before any request when Git cannot be launched for a clone."""
     from cli.errors import UsageError
 
     if shutil.which("git") is None:
-        raise UsageError("git executable not found on PATH; install Git before using --clone")
+        raise UsageError(f"git executable not found on PATH; install Git before using {use}")
 
 
 # SSH programs git drives with their own option syntax (git's `ssh.variant`);

@@ -132,6 +132,9 @@ def ledger_clone(
     # Validate the argument before touching credentials: a malformed name is
     # a usage error on every `cloud ledger` command, signed in or not.
     owner_and_name(full_name)
+    # As `create --clone` does: a missing git is a usage error found before
+    # the server is asked anything, not an OSError after it (w5/372).
+    manager.ensure_git_available("bea cloud ledger clone")
     ledger = manager.get_ledger(authenticated_client(), full_name)
     manager.check_clone_url(ledger.ssh_url)
     target = directory or manager.default_clone_dir(ledger.name)
