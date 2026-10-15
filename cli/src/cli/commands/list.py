@@ -23,6 +23,7 @@ import typer
 
 from cli import context, output
 from cli.errors import UsageError
+from cli.single_value import SingleValueCommand
 from cli.utils import fold_account, inert_text, parse_opt_date, refuse_blank_filter, single_line
 
 list_app = typer.Typer(help="List directives from a local .bean file", no_args_is_help=True, rich_markup_mode=None)
@@ -562,10 +563,14 @@ _COMMANDS = {
 for _name, _spec in SPECS.items():
     if _name == "transaction":
         continue
-    list_app.command(_name, help=f"List {_name} directives from a .bean file.")(_COMMANDS[_spec.filter](_name, _spec))
+    # A repeated scalar filter kept only its last value: `-a Food -a Rent`
+    # listed Rent alone with exit 0 (w5/381).
+    list_app.command(_name, cls=SingleValueCommand, help=f"List {_name} directives from a .bean file.")(
+        _COMMANDS[_spec.filter](_name, _spec)
+    )
 
 
-@list_app.command("transaction")
+@list_app.command("transaction", cls=SingleValueCommand)
 def transactions(
     limit: LimitOpt = 50,
     from_date: FromDateOpt = None,

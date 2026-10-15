@@ -1244,7 +1244,11 @@ with exit **2** naming both and nothing written, instead of keeping the last.
 Repeating the same value is accepted; `--posting`, `--tag`, `--link`,
 `--meta`, `--value` and `add open --currency` still repeat. `import` and `init` follow
 the same rule: a second, different `--account`, `--csv`, `--rules` or
-`init -c` is refused before anything is written or remembered.
+`init -c` is refused before anything is written or remembered. So do the read
+commands — `list`, `report`, `balance` and `query`: `list transaction -a Food
+-a Rent` exits **2** naming both rather than listing Rent alone (an account
+filter is a regular expression, so `-a 'Food|Rent'` matches either), while
+`--search`, `--tag` and `--link` still repeat.
 
 ### Custom directives
 

@@ -416,12 +416,14 @@ app.command(
     context_settings=_CHECK_CTX,
     epilog=native_help("check"),
 )(check)
-app.command("balance", rich_help_panel=_LOCAL_PANEL)(balance)
+# Read commands refuse a repeated scalar option with two values instead of
+# silently keeping the last (w5/381), as `add`, `init` and `import` do.
+app.command("balance", cls=SingleValueCommand, rich_help_panel=_LOCAL_PANEL)(balance)
 app.command("init", cls=SingleValueCommand, rich_help_panel=_LOCAL_PANEL)(init)
 app.command("import", cls=SingleValueCommand, rich_help_panel=_LOCAL_PANEL)(import_entries)
 app.add_typer(ingest_app, name="ingest", rich_help_panel=_LOCAL_PANEL)
 app.command("format", rich_help_panel=_LOCAL_PANEL)(format_beans)
-app.command("query", rich_help_panel=_LOCAL_PANEL)(query)
+app.command("query", cls=SingleValueCommand, rich_help_panel=_LOCAL_PANEL)(query)
 app.command(
     "price",
     cls=PriceCommand,

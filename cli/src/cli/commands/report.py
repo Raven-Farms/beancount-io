@@ -18,6 +18,7 @@ import typer
 from cli import context, output
 from cli.engine import launch
 from cli.errors import UsageError
+from cli.single_value import SingleValueCommand
 from cli.utils import refuse_blank_filter, single_line
 
 report_app = typer.Typer(help="Financial reports from a local ledger", no_args_is_help=True, rich_markup_mode=None)
@@ -234,7 +235,7 @@ def _emit_json(file: Any, data: dict[str, Any]) -> None:
     output.emit(payload, target=output.file_target(file))
 
 
-@report_app.command("overview")
+@report_app.command("overview", cls=SingleValueCommand)
 def overview(
     conversion: ConversionOpt = None,
     time: TimeOpt = None,
@@ -276,7 +277,7 @@ def overview(
     )
 
 
-@report_app.command("income-statement")
+@report_app.command("income-statement", cls=SingleValueCommand)
 def income_statement(
     conversion: ConversionOpt = None,
     time: TimeOpt = None,
@@ -320,7 +321,7 @@ def income_statement(
     )
 
 
-@report_app.command("balance-sheet")
+@report_app.command("balance-sheet", cls=SingleValueCommand)
 def balance_sheet(
     conversion: ConversionOpt = None,
     time: TimeOpt = None,
@@ -367,7 +368,7 @@ def balance_sheet(
     )
 
 
-@report_app.command("trial-balance")
+@report_app.command("trial-balance", cls=SingleValueCommand)
 def trial_balance(
     conversion: ConversionOpt = None,
     time: TimeOpt = None,
