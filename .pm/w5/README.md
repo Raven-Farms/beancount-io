@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [381 — Read commands keep the last of a repeated single-valued option (`-a Food -a Rent` lists Rent)](./381.md) — CLI QA 2026-10-14
 - [382 — `--flag ''` writes `*` and `--booking ' '` writes no booking (w5/239 leftover)](./382.md) — CLI QA 2026-10-14
 - [383 — Duplicate-entry summary prints `5.0E-7 BTC` (w5/228 leftover)](./383.md) — CLI QA 2026-10-14
 - [384 — Bulk `number_total` cost without currency gets the generic "not one token" error](./384.md) — CLI QA 2026-10-14
