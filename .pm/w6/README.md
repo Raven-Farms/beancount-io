@@ -6,7 +6,7 @@
 
 - [ ] **m5** — [Include current earnings in balance-sheet equity](./m5/README.md) (6 tasks; major; ledger with backend-v2 validation).
 
-- [ ] **m4** — [Complete empty-narration transaction lookups across APIs](./m4/README.md) (6 tasks; minor; ledger and backend-v2).
+- [x] **m4** — [Complete empty-narration transaction lookups across APIs](./done/m4/README.md) (6 tasks; minor; ledger and backend-v2).
 
 - [x] **m3** — [Expose core ledger options consistently across API surfaces](./done/m3/README.md) (7 tasks; minor; backend-v2).
 
