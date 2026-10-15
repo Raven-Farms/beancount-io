@@ -446,7 +446,15 @@ def answer(
         include = status == "new" or (status == "possible_duplicate" and duplicates == "include")
         unblocked = (status, reason)
         if include and isinstance(entry, Transaction):
-            blocked_reason = _blocked_reason(entry, open_currencies, roots, first_uses, stage_opens, ledger=file)
+            blocked_reason = _blocked_reason(
+                entry,
+                open_currencies,
+                roots,
+                first_uses,
+                stage_opens,
+                ledger=file,
+                source=account if csv_mode else None,
+            )
             if blocked_reason is not None:
                 status, reason, include = "blocked", blocked_reason, False
         if include:
@@ -489,7 +497,9 @@ def answer(
         proposal = [row["entry"] for row in rows if row["include"] or row["status"] == "blocked"]
         after = _open_currencies(_entries_after(snapshot, target, original, proposal), Open)
         for row_dict, entry, was, why in held:
-            still = _blocked_reason(entry, after, roots, first_uses, stage_opens, ledger=file)
+            still = _blocked_reason(
+                entry, after, roots, first_uses, stage_opens, ledger=file, source=account if csv_mode else None
+            )
             if still is None:
                 row_dict.update(status=was, reason=why, include=True)
             else:
@@ -1014,6 +1024,7 @@ def _blocked_reason(
     stage_opens: bool = False,
     *,
     ledger: Path,
+    source: str | None = None,
 ) -> str | None:
     """Why a transaction cannot be written, or None when its accounts allow it.
 
@@ -1056,10 +1067,24 @@ def _blocked_reason(
             instead = choices if len(allowed) == 1 else f"one of {choices}"
             # Widening the open directive is the last remedy offered, not the
             # first: following it relabels foreign money as the wrong commodity.
+            # `currency=` sets every posting's commodity, so it is the fix only
+            # on a CSV run's source account; a Python importer cannot take
+            # `--csv` at all, and on a category account it moved the block to
+            # the source account (w5/318).
+            blocked = f"Cannot post {currency} to '{posting.account}' (open for {choices} only)."
+            widen = f"or add {currency} to its open directive"
+            if source is not None and posting.account == source:
+                return (
+                    f"{blocked} Post {instead} instead — name the row's commodity with --csv currency=CODE — {widen}."
+                )
+            if source is not None:
+                return (
+                    f"{blocked} Book the row to an account open for {currency} — change the rule, category "
+                    f"column or --default-account that chose '{posting.account}' — {widen}."
+                )
             return (
-                f"Cannot post {currency} to '{posting.account}' "
-                f"(open for {choices} only). Post {instead} instead — name the row's commodity with "
-                f"--csv currency=CODE — or add {currency} to its open directive."
+                f"{blocked} The importer posts {currency} there: have it post {instead}, or book the row "
+                f"to an account open for {currency} — {widen}."
             )
     return None
 

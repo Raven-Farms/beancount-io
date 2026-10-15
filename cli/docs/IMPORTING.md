@@ -159,9 +159,12 @@ in the same batch, does not block its rows. On a ledger that loads
 `beancount.plugins.nounused` (or `pedantic`) the printed line ends in
 `--allow-errors`, because that plugin reports an account until something uses
 it; the account staged that way does not block the import that first posts to
-it. A currency mismatch offers the currency setting
-first and widening the `open` directive last: widening it would book the
-foreign amounts as the wrong commodity. An account under a root the ledger
+it. A currency mismatch offers a fix the run can apply first and widening the
+`open` directive last, since widening it would book the foreign amounts as the
+wrong commodity: on a CSV run's source account, the `--csv currency=` setting;
+on a rule, category or `--default-account` account, choosing an account open
+for that currency; and for a Python importer, having the importer post a
+currency the account allows. An account under a root the ledger
 does not use (`Foo:Bar`; the roots are its `name_*` options) can never be
 opened: `--account`, `--default-account`, and rule accounts naming one exit
 **2**, a category cell naming one queues the row for review, and an importer
