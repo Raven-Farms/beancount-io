@@ -41,12 +41,8 @@ def test_recovery_advice_names_only_a_missing_root_context(
     else:
         assert "unknown account 'Assets:Nope'" in message
         assert "bea add open --account Assets:Nope" in message
-    if invoked_leaf:
-        assert f"included by {root}" in message
-        assert "Run against the root" in message
-        assert "--into parts/older.bean" in message
-    else:
-        assert "included by" not in message
-        assert "Run against the root" not in message
-        assert "<command> --into" not in message
+    # A leaf as `--file` already runs through the root that includes it, with
+    # `--into` set to the leaf (w5/343): the recipe is applied, never printed.
+    assert "Run against the root" not in message
+    assert "<command> --into" not in message
     assert _tree(root.parent) == before

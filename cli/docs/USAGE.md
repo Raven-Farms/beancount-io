@@ -938,7 +938,12 @@ destination with `--into`. Its path is relative to the root ledger's directory
 and must match a literal include or include glob; a URL is refused with exit 2. An absent destination is
 created only when a validated write succeeds; its parent directory must already
 exist. Previews, rejected writes, and duplicate-only imports leave it absent.
-New destinations are private (`0600` on POSIX).
+New destinations are private (`0600` on POSIX). When `--file` names an included file anyway, a
+write (`add`, `import`, `ask`) that has no `--into` finds the ledger that
+includes it in the same or the parent directory and runs through that root
+with `--into` set to the file: the entry still lands in the named file, but it
+is validated and deduplicated against the whole ledger, and a note on stderr
+says so.
 
 Beancount applies `option "name_assets"` and the other root-renaming options
 only while it parses the file that sets them, so an included file reads the

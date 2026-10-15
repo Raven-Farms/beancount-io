@@ -24,7 +24,7 @@ from typing import Any
 
 from bea_engine import stopping
 from bea_engine.ledger.text import single_line
-from bea_engine.protocol import AuthError, ConflictError, LedgerError, UsageError, notice
+from bea_engine.protocol import AuthError, ConflictError, LedgerError, UsageError, note, notice
 from bea_engine.query import format_error, same_file
 
 
@@ -1106,6 +1106,26 @@ def including_root(file: Path) -> Path | None:
         if any(path.resolve() == target for path in included if path.resolve() != candidate):
             return candidate
     return None
+
+
+def write_through_root(file: Path, into: Path | None) -> tuple[Path, Path | None]:
+    """The root and `--into` a write aimed at an included leaf is validated through.
+
+    A write with `--file` on a leaf validated that file alone: every account
+    the root opens looked unknown, a remedy said to `add open` one again, and
+    following it wrote a duplicate `open` with exit 0 that broke the whole
+    ledger; a balance or a close could contradict the root, and import
+    dedupe missed rows booked there (w5/343, w5/346). The write still lands
+    in the leaf, checked against the ledger that loads it — the `--into`
+    recipe, applied rather than printed.
+    """
+    if into is not None:
+        return file, into
+    root = including_root(file)
+    if root is None:
+        return file, into
+    note(f"{file.name} is included by {root}; the write goes to {file.name} and is checked against that whole ledger.")
+    return root, Path(os.path.relpath(file.resolve(), root.parent))
 
 
 def root_ledger_hints(file: Path) -> list[str]:

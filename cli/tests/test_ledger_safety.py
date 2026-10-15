@@ -601,9 +601,10 @@ def test_an_inactive_pad_source_reads_once(book: Path) -> None:
     assert "Pad accounts must be active, even with --allow-errors." in details
 
 
-def test_pointing_the_root_at_an_included_leaf_names_into_as_the_fix(book: Path) -> None:
+def test_pointing_the_root_at_an_included_leaf_writes_through_the_root(book: Path) -> None:
     # The leaf holds entries; its accounts and options live in the root's
-    # other include, so on its own the currency cannot be resolved.
+    # other include, so on its own the currency cannot be resolved. The write
+    # runs through the root that includes it, landing in the leaf (w5/343).
     leaf = book.parent / "2020.bean"
     leaf.write_text('2020-01-02 * "Prior"\n  Expenses:Food 1 USD\n  Assets:Cash -1 USD\n')
     book.write_text('include "accounts.beancount"\ninclude "2020.bean"\n')
@@ -623,9 +624,9 @@ def test_pointing_the_root_at_an_included_leaf_names_into_as_the_fix(book: Path)
             "Assets:Cash",
         ],
     )
-    assert result.exit_code == 2, result.output
+    assert result.exit_code == 0, result.output
     assert f"included by {book}" in result.stderr
-    assert "--into 2020.bean" in result.stderr
+    assert '2020-02-01 * "Tea"' in leaf.read_text()
 
 
 def test_a_standalone_ledger_gets_no_include_advice(book: Path) -> None:

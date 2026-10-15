@@ -275,10 +275,11 @@ def add(
     which is what a batch of transactions needs.
     """
     with protocol.answering("add") as answer:
-        from bea_engine.ledger import adding
+        from bea_engine.ledger import adding, write
 
+        ledger, into = write.write_through_root(_ledger(file), into)
         answer.data = adding.answer(
-            _ledger(file),
+            ledger,
             type,
             _request(request),
             into=into,
@@ -318,10 +319,11 @@ def append(
     changed while the user was confirming.
     """
     with protocol.answering("append") as answer:
-        from bea_engine.ledger import appending
+        from bea_engine.ledger import appending, write
 
+        ledger, into = write.write_through_root(_ledger(file), into)
         answer.data = appending.answer(
-            _ledger(file),
+            ledger,
             _text(text),
             into=into,
             allow_errors=allow_errors,
@@ -491,7 +493,7 @@ def import_entries(
         from bea_engine import importing
         from bea_engine.ledger import write
 
-        ledger = _ledger(file)
+        ledger, into = write.write_through_root(_ledger(file), into)
         # An apply decides its rows against the ledger it read, so it queues
         # behind other `bea` writers before that read rather than refusing
         # what one of them committed meanwhile (w5/183). A preview writes
