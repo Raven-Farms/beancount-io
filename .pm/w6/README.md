@@ -24,3 +24,5 @@
 - [013](./013.md) — Apply the context tool's payee limit to its nested vocabulary too (minor; backend-v2; 30–45m).
 - [014](./014.md) — Distinguish BQL output rows from input postings in MCP text and schemas (minor; backend-v2; 30–45m).
 - [015](./015.md) — Remove unsupported addLedgerEntries descriptions from served playbooks (minor; backend-v2; 20–35m).
+
+- [016](./blocked/016.md) — Adopt corrected all-entry PRINT filtering (major; ledger; 45–60m after release) — **blocked:** awaiting a published WASM artifact containing upstream 3ad34e07.
