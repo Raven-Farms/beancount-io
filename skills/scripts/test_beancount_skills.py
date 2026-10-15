@@ -774,6 +774,41 @@ class TestBeaRecipes(unittest.TestCase):
         self.values.update(statement_ending=rows[-1]["Balance"])
         self.assertEqual(self.recipe("tie-out")["rows"], [["3395.80", "3383.80", "-2383.80"]])
 
+    def test_migrate_negates_a_stated_card_balance_before_the_opening_math(self):
+        # An app shows a card balance as the positive amount owed; a derived
+        # opening cannot catch a flipped sign, so the rule negates it (w5/361).
+        mapping = (SUITE / "beancount-migrate" / "references" / "mapping.md").read_text()
+        example = re.search(r"<!-- recipe: liability-opening -->\n```text\n(.*?)\n```", mapping, re.DOTALL)
+        self.assertIsNotNone(example, "mapping.md must show the liability opening example")
+        self.assertTrue("right?" in mapping, "mapping.md must confirm an unsigned liability balance")
+        printed, current, flows, opening = (
+            Decimal(number) for number in re.findall(r"[-+]?\d+\.\d\d", example.group(1))[:4]
+        )
+        export = SUITE / "beancount-migrate" / "evals" / "files" / "eval1_mint.csv"
+        amex = [row for row in csv.DictReader(export.open()) if row["Account Name"] == "Amex Card"]
+        rows = [(row, Decimal(row["Amount"]) * (1 if row["Transaction Type"] == "credit" else -1)) for row in amex]
+        self.assertEqual(flows, sum(amount for _, amount in rows))
+        self.assertEqual(current, -printed)
+        self.assertEqual(opening, current - flows)
+        self.assertEqual(opening, Decimal("-500.00"))
+
+        ledger = self.books / "migrated.bean"
+        ledger.write_text(
+            "2026-01-07 open Liabilities:CreditCard:Amex USD\n2026-01-07 open Equity:OpeningBalances\n"
+            f"2026-01-07 * \"Opening balance (migrated)\"\n  Liabilities:CreditCard:Amex {opening} USD\n  Equity:OpeningBalances\n"
+            + "".join(
+                f"{datetime.strptime(row['Date'], '%m/%d/%Y').date()} * \"{row['Description']}\"\n"
+                f"  Liabilities:CreditCard:Amex {amount} USD\n  Equity:OpeningBalances\n"
+                for row, amount in rows
+            )
+        )
+        self.values.update(
+            ledger=str(ledger), target=ledger.name, account="Liabilities:CreditCard:Amex",
+            assertion_date="2026-01-23", amount=f"{current} USD",
+        )
+        self.recipe("balance")
+        self.recipe("check")
+
     def test_recurring_recipes_find_a_gap_in_a_payee_less_import(self):
         # A one-description bank CSV, imported through the shipped recipe: bea
         # maps the description to the narration and leaves the payee empty.

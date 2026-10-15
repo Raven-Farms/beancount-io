@@ -15,5 +15,5 @@ Parsing rules:
 - **Dates**: usually MDY in US exports — prove from data or ask.
 - **import-id hash input**: use `Memo/Description` as the raw-description field (fall back to `Name` when Memo is empty) — same precedent as Mint's "Original Description" and Monarch's "Original Statement", so a later `beancount-import` of the same account computes identical hashes.
 - **Amounts**: signed from the register's perspective in most layouts — verify once.
-- QBO *does* show balances (Chart of Accounts screen) — use those as the stated current balances for mapping.md's opening math.
+- QBO *does* show balances (Chart of Accounts screen) — use those as the stated current balances for mapping.md's opening math. A credit card or loan shows there as the positive amount owed; negate it into ledger sign per mapping.md.
 - Business users migrating from QBO may have equity/retained-earnings structure this skill doesn't recreate — state plainly that the migration produces cash-basis books and complex equity needs manual review.

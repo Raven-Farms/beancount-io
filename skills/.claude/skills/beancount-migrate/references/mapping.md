@@ -4,6 +4,8 @@
 
 Type usually comes from the source (`Account Name` + account-type metadata, or the user). Checking/savings/cash → `Assets:Bank:<Name>` / `Assets:Cash`; credit cards → `Liabilities:CreditCard:<Issuer>`; loans → `Liabilities:Loan:<Name>`. Keep names short, CamelCase segments, and stable — they're forever. Sign rule after mapping: asset in = `+`; liability charge = `−`, payment = `+` (canonical detail — debit/credit split columns, sanity checks — in beancount-import's `references/formats.md` and beancount-reconcile's `references/statement-formats.md`).
 
+**A liability's balance flips too.** Apps and banks show a card, loan or credit line's balance as the positive amount owed ("Amex 129.24"). On `Liabilities:…` that is `−129.24`; a card in credit (the issuer owes the user) is positive. Negate every stated current or opening balance of a liability before the opening math and the endpoint assertion.
+
 ## Category mapping (source categories → Expenses/Income)
 
 Present the full distinct-category list with proposed targets as an editable table. Shaping rules:
@@ -34,8 +36,15 @@ Merged-pair transaction text: payee = the **outflow side's** description; keep t
 
 Exports carry flows, not balances, so anchor both ends per account:
 
-1. Ask the user for the **current balance** (from the old app's account screen or the real bank). Also ask for the **balance at the start of the export period** if they know it (or read it from the export when it states one). Put both in ledger sign: a credit card or loan is shown as the positive amount owed (`1,250.00`), which is `-1250.00` on a `Liabilities:` account; a credit balance becomes positive.
-2. `opening = current − Σ(converted rows for that account)`. **But when a stated opening exists, use it as-is instead** — then the endpoint assertion is a genuine check of the conversion (rows missing from the export, pending transactions, wrong stated balance make it fail by exactly the delta), not a tautology. Never nudge either number to force a pass; a real delta is a report finding.
+1. Ask the user for the **current balance** (from the old app's account screen or the real bank). Also ask for the **balance at the start of the export period** if they know it (or read it from the export when it states one). Put both in ledger sign: a credit card or loan is shown as the positive amount owed (`1,250.00`), which is `-1250.00` on a `Liabilities:` account; a credit balance becomes positive. When a liability balance arrives without a sign or an "owed"/"credit" word, **confirm it with the user before converting** — "Amex shows 129.24 owed → ledger −129.24, right?" — because step 2 cannot catch a flipped one:
+
+<!-- recipe: liability-opening -->
+```text
+Amex balance 129.24 (owed)        current = -129.24
+Σ converted Amex rows (ledger sign)         +370.76
+opening = current − Σ rows        opening = -500.00
+```
+2. `opening = current − Σ(converted rows for that account)`. A derived opening makes the endpoint assertion pass whatever sign `current` had, so a positive card balance would migrate silently as money the bank owes the user (net worth too high by twice the balance) — the reason for step 1's confirmation. **But when a stated opening exists, use it as-is instead** — then the endpoint assertion is a genuine check of the conversion (rows missing from the export, pending transactions, wrong stated balance make it fail by exactly the delta), not a tautology. Never nudge either number to force a pass; a real delta is a report finding.
 3. Initialize with opens dated on/before the **day before the earliest row**, then include the opening entry in the confirmed `bea` batch. Reuse the existing opening-equity account; `bea init` creates `Equity:OpeningBalances`:
 
 ```
