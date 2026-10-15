@@ -1,4 +1,5 @@
 from http import HTTPStatus
+from io import BytesIO
 from typing import Any
 from urllib.parse import quote
 
@@ -7,7 +8,7 @@ import httpx
 from ... import errors
 from ...client import AuthenticatedClient, Client
 from ...models.v1_error import V1Error
-from ...types import Response
+from ...types import File, Response
 
 
 def _get_kwargs(
@@ -28,7 +29,12 @@ def _get_kwargs(
     return _kwargs
 
 
-def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> V1Error | None:
+def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> File | V1Error | None:
+    if response.status_code == 200:
+        response_200 = File(payload=BytesIO(response.content))
+
+        return response_200
+
     if response.status_code == 400:
         response_400 = V1Error.from_dict(response.json())
 
@@ -80,7 +86,7 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
         return None
 
 
-def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> Response[V1Error]:
+def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> Response[File | V1Error]:
     return Response(
         status_code=HTTPStatus(response.status_code),
         content=response.content,
@@ -95,7 +101,7 @@ def sync_detailed(
     archive: str,
     *,
     client: AuthenticatedClient,
-) -> Response[V1Error]:
+) -> Response[File | V1Error]:
     """Download a ledger archive
 
      Streams the archive for an authenticated caller with read access to the ledger. Send a session
@@ -104,15 +110,16 @@ def sync_detailed(
     Args:
         owner (str): Ledger owner's username Example: alice.
         name (str): Ledger (repository) name Example: main-ledger.
-        archive (str): Archive to download. Git archives are `gitea-<branch>.zip`; `tar.gz` and
-            `zip` are also accepted. Example: gitea-main.zip.
+        archive (str): A Git reference (branch, tag, or commit) and its format: `<ref>.zip` or
+            `<ref>.tar.gz`, as in `main.zip` or `main.tar.gz`. The name is passed to the repository
+            unchanged. Example: main.zip.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[V1Error]
+        Response[File | V1Error]
     """
 
     kwargs = _get_kwargs(
@@ -134,7 +141,7 @@ def sync(
     archive: str,
     *,
     client: AuthenticatedClient,
-) -> V1Error | None:
+) -> File | V1Error | None:
     """Download a ledger archive
 
      Streams the archive for an authenticated caller with read access to the ledger. Send a session
@@ -143,15 +150,16 @@ def sync(
     Args:
         owner (str): Ledger owner's username Example: alice.
         name (str): Ledger (repository) name Example: main-ledger.
-        archive (str): Archive to download. Git archives are `gitea-<branch>.zip`; `tar.gz` and
-            `zip` are also accepted. Example: gitea-main.zip.
+        archive (str): A Git reference (branch, tag, or commit) and its format: `<ref>.zip` or
+            `<ref>.tar.gz`, as in `main.zip` or `main.tar.gz`. The name is passed to the repository
+            unchanged. Example: main.zip.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        V1Error
+        File | V1Error
     """
 
     return sync_detailed(
@@ -168,7 +176,7 @@ async def asyncio_detailed(
     archive: str,
     *,
     client: AuthenticatedClient,
-) -> Response[V1Error]:
+) -> Response[File | V1Error]:
     """Download a ledger archive
 
      Streams the archive for an authenticated caller with read access to the ledger. Send a session
@@ -177,15 +185,16 @@ async def asyncio_detailed(
     Args:
         owner (str): Ledger owner's username Example: alice.
         name (str): Ledger (repository) name Example: main-ledger.
-        archive (str): Archive to download. Git archives are `gitea-<branch>.zip`; `tar.gz` and
-            `zip` are also accepted. Example: gitea-main.zip.
+        archive (str): A Git reference (branch, tag, or commit) and its format: `<ref>.zip` or
+            `<ref>.tar.gz`, as in `main.zip` or `main.tar.gz`. The name is passed to the repository
+            unchanged. Example: main.zip.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[V1Error]
+        Response[File | V1Error]
     """
 
     kwargs = _get_kwargs(
@@ -205,7 +214,7 @@ async def asyncio(
     archive: str,
     *,
     client: AuthenticatedClient,
-) -> V1Error | None:
+) -> File | V1Error | None:
     """Download a ledger archive
 
      Streams the archive for an authenticated caller with read access to the ledger. Send a session
@@ -214,15 +223,16 @@ async def asyncio(
     Args:
         owner (str): Ledger owner's username Example: alice.
         name (str): Ledger (repository) name Example: main-ledger.
-        archive (str): Archive to download. Git archives are `gitea-<branch>.zip`; `tar.gz` and
-            `zip` are also accepted. Example: gitea-main.zip.
+        archive (str): A Git reference (branch, tag, or commit) and its format: `<ref>.zip` or
+            `<ref>.tar.gz`, as in `main.zip` or `main.tar.gz`. The name is passed to the repository
+            unchanged. Example: main.zip.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        V1Error
+        File | V1Error
     """
 
     return (
