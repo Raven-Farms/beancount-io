@@ -148,7 +148,6 @@
 - [443 — `add transaction 2026-01-05 …` writes the date as narration, dated today (exit 0)](./443.md) — CLI QA 2026-10-14
 - [444 — Misspelled options lose "Possible options"; `report bs`/`bea help` get a bare "No such command"](./444.md) — CLI QA 2026-10-14
 - [445 — `bea balance 2026-01` treats the period as an account filter: "No accounts match", no `-t` hint](./445.md) — CLI QA 2026-10-14
-- [446 — Skills installer crashes with a traceback on a file or dangling-symlink destination](./446.md) — CLI QA 2026-10-14
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
