@@ -35,7 +35,6 @@
 
 ## Inbox
 
-- [302 — Importer prices bypass `add price`'s conflict/duplicate rules](./302.md) — CLI QA 2026-10-14
 - [303 — Import's "Run: bea add open …" remedy drops `--file`](./303.md) — CLI QA 2026-10-14
 - [304 — USAGE JSON transcript fails on the README quick-start ledger (`Expenses:Food` unopened)](./304.md) — CLI QA 2026-10-14
 - [305 — Blank `bea balance` argument says "drop accounts"](./305.md) — CLI QA 2026-10-14
