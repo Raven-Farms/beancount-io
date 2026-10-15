@@ -459,7 +459,7 @@ def answer(
             other_entries.add(text)
         include = status == "new" or (status == "possible_duplicate" and duplicates == "include")
         unblocked = (status, reason)
-        if include and isinstance(entry, Transaction):
+        if include and _entry_accounts(entry):
             blocked_reason = _blocked_reason(
                 entry,
                 open_currencies,
@@ -481,7 +481,7 @@ def answer(
             "id_source": id_source,
             "include": include,
             "entry": text,
-            "accounts": [p.account for p in entry.postings] if isinstance(entry, Transaction) else [],
+            "accounts": list(dict.fromkeys(name for name, _ in _entry_accounts(entry))),
             "date": entry.date.isoformat(),
             "payee": entry.payee if isinstance(entry, Transaction) else None,
             "narration": entry.narration if isinstance(entry, Transaction) else None,
@@ -509,7 +509,7 @@ def answer(
     # `bea add transaction` to the same account succeeded (w5/134). So the
     # accounts are read again from the ledger as the import would leave it.
     opened_after = open_currencies
-    if any(posting.account not in open_currencies for _, entry, _, _ in held for posting in entry.postings):
+    if any(name not in open_currencies for _, entry, _, _ in held for name, _ in _entry_accounts(entry)):
         proposal = [row["entry"] for row in rows if row["include"] or row["status"] == "blocked"]
         entries_after = _entries_after(snapshot, target, original, proposal)
         after = _open_currencies(entries_after, Open)
@@ -1111,6 +1111,29 @@ def _entries_after(snapshot: ledger_write.LedgerSnapshot, target: Path, original
     return entries
 
 
+def _entry_accounts(entry: Any, *, active_only: bool = False) -> list[tuple[str, str | None]]:
+    """Each account an imported directive needs open, with the currency it puts there when known.
+
+    Only transactions were checked, so an importer's closing `balance` or a
+    `note` on a never-opened account was counted ready and then failed the
+    whole `--apply` with exit 1 (w5/351). A note or document may follow a
+    close, as Beancount allows, so `active_only` leaves them out.
+    """
+    from beancount.core.data import Balance, Close, Document, Note, Pad, Transaction
+
+    if isinstance(entry, Transaction):
+        return [(posting.account, _posting_currency(posting, entry)) for posting in entry.postings]
+    if isinstance(entry, Balance):
+        return [(entry.account, entry.amount.currency)]
+    if isinstance(entry, Pad):
+        return [(entry.account, None), (entry.source_account, None)]
+    if isinstance(entry, Close):
+        return [(entry.account, None)]
+    if isinstance(entry, Note | Document) and not active_only:
+        return [(entry.account, None)]
+    return []
+
+
 def _first_uses(entries: list[Any], transaction: Any) -> dict[str, tuple[Any, list[str] | None]]:
     """Per account, the earliest date any row of this import posts to it, and the currencies posted.
 
@@ -1122,16 +1145,16 @@ def _first_uses(entries: list[Any], transaction: Any) -> dict[str, tuple[Any, li
     """
     uses: dict[str, tuple[Any, list[str] | None]] = {}
     for entry in entries:
-        if not isinstance(entry, transaction):
-            continue
-        for posting in entry.postings:
-            currency = _posting_currency(posting, entry)
-            date, currencies = uses.get(posting.account, (entry.date, []))
-            if currency is None or currencies is None:
+        posts = isinstance(entry, transaction)
+        for name, currency in _entry_accounts(entry):
+            date, currencies = uses.get(name, (entry.date, []))
+            # Only a posting's unknown currency leaves the constraint open; a
+            # note or document names no currency at all.
+            if posts and (currency is None or currencies is None):
                 currencies = None
-            elif currency not in currencies:
+            elif currency is not None and currencies is not None and currency not in currencies:
                 currencies = [*currencies, currency]
-            uses[posting.account] = (min(date, entry.date), currencies)
+            uses[name] = (min(date, entry.date), currencies)
     return uses
 
 
@@ -1156,7 +1179,8 @@ def _blocked_reason(
     under a root the ledger does not use (from a Python importer) gets no
     `add open` remedy: that command would refuse it too.
     """
-    missing = sorted({posting.account for posting in entry.postings if posting.account not in open_currencies})
+    referenced = _entry_accounts(entry)
+    missing = sorted({name for name, _ in referenced if name not in open_currencies})
     foreign = [name for name in missing if name.split(":", 1)[0] not in roots]
     if foreign:
         return unknown_root_message(foreign[0], roots)
@@ -1181,9 +1205,8 @@ def _blocked_reason(
     inactive = _inactive_reason(entry, windows or {}, first_uses, source)
     if inactive is not None:
         return inactive
-    for posting in entry.postings:
-        allowed = open_currencies.get(posting.account)
-        currency = _posting_currency(posting, entry)
+    for name, currency in referenced:
+        allowed = open_currencies.get(name)
         # A currency that cannot be told before booking is validation's to judge.
         if allowed is not None and currency is not None and currency not in allowed:
             choices = ", ".join(sorted(allowed))
@@ -1194,16 +1217,16 @@ def _blocked_reason(
             # on a CSV run's source account; a Python importer cannot take
             # `--csv` at all, and on a category account it moved the block to
             # the source account (w5/318).
-            blocked = f"Cannot post {currency} to '{posting.account}' (open for {choices} only)."
+            blocked = f"Cannot post {currency} to '{name}' (open for {choices} only)."
             widen = f"or add {currency} to its open directive"
-            if source is not None and posting.account == source:
+            if source is not None and name == source:
                 return (
                     f"{blocked} Post {instead} instead — name the row's commodity with --csv currency=CODE — {widen}."
                 )
             if source is not None:
                 return (
                     f"{blocked} Book the row to an account open for {currency} — change the rule, category "
-                    f"column or --default-account that chose '{posting.account}' — {widen}."
+                    f"column or --default-account that chose '{name}' — {widen}."
                 )
             return (
                 f"{blocked} The importer posts {currency} there: have it post {instead}, or book the row "
@@ -1224,25 +1247,25 @@ def _inactive_reason(
     row, or opened after it, previewed the row as ready and then failed the
     whole `--apply` with exit 1, valid rows and all (w5/339).
     """
-    for posting in entry.postings:
-        window = windows.get(posting.account)
+    for name, _ in _entry_accounts(entry, active_only=True):
+        window = windows.get(name)
         if window is None:
             continue
         opened, closed = window
         if entry.date < opened.date:
-            earliest = first_uses.get(posting.account, (entry.date, None))[0]
+            earliest = first_uses.get(name, (entry.date, None))[0]
             return (
-                f"Account '{posting.account}' opens {opened.date} (at {_where(opened)}), after this row's "
+                f"Account '{name}' opens {opened.date} (at {_where(opened)}), after this row's "
                 f"{entry.date}. Re-date that open to {min(earliest, entry.date)} or earlier."
             )
         if closed is not None and entry.date > closed.date:
             remedy = (
                 "Re-date the close, or import into an account that is still open."
-                if posting.account == source
+                if name == source
                 else "Point the rule, category or --default-account at an open account, or re-date the close."
             )
             return (
-                f"Account '{posting.account}' was closed {closed.date} (at {_where(closed)}), before this row's "
+                f"Account '{name}' was closed {closed.date} (at {_where(closed)}), before this row's "
                 f"{entry.date}. {remedy}"
             )
     return None

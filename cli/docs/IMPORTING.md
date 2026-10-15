@@ -148,7 +148,8 @@ it is refused naming the file, line and field counts instead of being
 truncated to fit, which silently shifted the remaining cells. Surplus cells
 that are *empty* are tolerated: a trailing separator loses no data. Misuse exits **2**.
 
-Rows that would post to an account the ledger never opened, to an account that
+Rows — transactions, and a Python importer's balance, note, document, pad or
+close alike — that would use an account the ledger never opened, an account that
 is not active on the row's date (closed before it, or opened after it), or in a
 currency the open directive disallows are shown `blocked`, not ready. An
 inactive account's row names the `close` or `open` and its line, and says to
