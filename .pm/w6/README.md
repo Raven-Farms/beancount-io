@@ -52,3 +52,5 @@
 - [032](./blocked/032.md) — Preserve calendar-month DATE_BIN origins (minor; ledger; 35–50m after upstream support) — **blocked:** needs a published native origin-preserving month-bin implementation.
 
 - [033](./blocked/033.md) — Preserve typed zero amounts from ONLY inventory extraction (minor; ledger; 35–50m after upstream support) — **blocked:** needs a published native zero-preserving extraction.
+
+- [034](./blocked/034.md) — Preserve FINDFIRST prefix and case matching (minor; ledger; 35–50m after upstream support) — **blocked:** needs a published native regex-policy correction.
