@@ -132,11 +132,19 @@ def _print_tree(
         _print_tree(child, depth + 1, conversion=conversion, precision=precision)
 
 
+def _filter_text(metadata: dict[str, Any]) -> str:
+    """The account filter as typed: several `balance` terms each quoted, so two never read as one."""
+    terms = metadata.get("account_filters") or []
+    if len(terms) > 1:
+        return " or ".join(repr(single_line(term)) for term in terms)
+    return single_line(metadata.get("account_filter") or "all")
+
+
 def _heading(title: str, metadata: dict[str, Any], *, profit_line: bool = False) -> None:
     period = metadata["period"]
     dates = f"{period['start']} through {metadata['as_of']}" if period["start"] else "no dated activity"
     typer.echo(f"{title} — {dates}")
-    typer.echo(f"Valuation: {metadata['conversion']}; account: {single_line(metadata['account_filter'] or 'all')}")
+    typer.echo(f"Valuation: {metadata['conversion']}; account: {_filter_text(metadata)}")
     # Only reports that print an explicit profit figure may promise its sign;
     # the balance sheet's earnings line carries the opposite (credit) sign and
     # explains itself where it is printed.
@@ -164,7 +172,7 @@ def _heading(title: str, metadata: dict[str, Any], *, profit_line: bool = False)
     if metadata.get("account_filter_empty"):
         periods = metadata.get("account_filter_periods") or []
         hint = f" For the period {periods[0]}, pass -t {shlex.quote(periods[0])}." if periods else ""
-        output.note(f"No accounts match {metadata['account_filter']}.{hint}")
+        output.note(f"No accounts match {_filter_text(metadata)}.{hint}")
     if metadata["missing_prices"]:
         typer.echo("Partial valuation: some prices are missing; a total that cannot be valued reads Unavailable.")
         for line in metadata["missing_price_summary"]:

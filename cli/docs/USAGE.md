@@ -1402,7 +1402,10 @@ account names contain any argument (case-insensitive, and insensitive to
 Unicode normalization), keeping ancestors for structure. Accounts closed by the `--time` end date that
 hold no balance are excluded from filtered views; a closed account still holding
 money stays, so totals agree with the trial balance. With no argument it prints the trial balance; `--conversion`, `--time`, and `--allow-errors`
-work as in reports.
+work as in reports. Under `--json` the terms are listed one by one in
+`account_filters` (`["food", "cash"]` for `balance food cash`, `["food cash"]`
+for `balance "food cash"`) beside the space-joined `account_filter`, and with
+several terms the text heading quotes each one (`'food' or 'cash'`).
 
 All four accept `--conversion / -x`, `--time / -t`, `--account / -a`, and
 `--allow-errors`. Conversion defaults to the ledger's single operating

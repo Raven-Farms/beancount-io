@@ -140,6 +140,9 @@ def _balances(
         # never sets; here the filter is the substring terms.
         | {
             "account_filter": " ".join(accounts) if accounts else None,
+            # The terms themselves: joined, `food cash` (two terms) and
+            # `"food cash"` (one, matching nothing) read the same (w5/341).
+            "account_filters": list(accounts) if accounts else None,
             "account_filter_empty": (empty := bool(accounts) and all(tree is None for tree in pruned.values())),
             "account_filter_periods": _period_terms(accounts) if empty else [],
         }
@@ -545,6 +548,7 @@ def _metadata(filtered: Any, conversion: str, ledger_errors: list[str], interval
         "period": {"start": start, "end_exclusive": end},
         "as_of": end - timedelta(days=1) if end else None,
         "account_filter": filtered.account,
+        "account_filters": [filtered.account] if filtered.account else None,
         "account_filter_empty": (empty := bool(filtered.account) and not filtered.entries),
         "account_filter_periods": _period_terms([filtered.account]) if empty else [],
         "balance_signs": "beancount",

@@ -103,7 +103,7 @@ def test_every_subcommand_shares_the_fixed_prune(tmp_path: Path, ledger: Path, k
     # `Expenses` names exactly the two accounts the alternation names, so the
     # working parent form is the oracle for the regex form — over the whole
     # payload, not just the totals, since each kind reports its own sections.
-    del regex["account_filter"], parent["account_filter"]
+    del regex["account_filter"], parent["account_filter"], regex["account_filters"], parent["account_filters"]
     assert regex == parent
 
 
