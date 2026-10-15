@@ -29,7 +29,7 @@ Homepage = "https://beancount.io"
 Repository = "https://github.com/bex-co/beancount-io"
 
 [project.scripts]
-bea = "cli.main:app"
+bea = "cli.entry:main"
 
 [build-system]
 requires = ["hatchling"]
