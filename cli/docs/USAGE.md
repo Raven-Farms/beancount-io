@@ -922,6 +922,13 @@ created only when a validated write succeeds; its parent directory must already
 exist. Previews, rejected writes, and duplicate-only imports leave it absent.
 New destinations are private (`0600` on POSIX).
 
+Beancount applies `option "name_assets"` and the other root-renaming options
+only while it parses the file that sets them, so an included file reads the
+default roots unless it repeats them. A new destination on a ledger with renamed
+roots starts with the root's `name_*` option lines. A write into an existing
+include that lacks them is refused, and the error lists the lines to add at
+the top of that file.
+
 ```bash
 bea --file main.bean add transaction --into 2026.bean \
   --date 2026-08-02 -p "Expenses:Groceries 30" -p "Assets:Checking"

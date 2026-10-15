@@ -1200,7 +1200,12 @@ def validate_candidate(
     from beancount.parser.lexer import LexerError
 
     from bea_engine import managed_load
-    from bea_engine.ledger.text import ledger_roots, reports_unused_accounts, unknown_root_message
+    from bea_engine.ledger.text import (
+        ledger_roots,
+        renamed_root_options,
+        reports_unused_accounts,
+        unknown_root_message,
+    )
 
     # The staged copy has a private name, so the guard inside the load would
     # name that; a `{filename}` cache pattern is about the ledger file itself.
@@ -1251,6 +1256,7 @@ def validate_candidate(
     # Finding an including root lexes every sibling ledger's include closure,
     # so it is looked up once, on the first unknown account, not per error.
     root_hints: list[str] | None = None
+    per_file_hinted: set[Path] = set()
     for index, error in enumerate(errors):
         hints = []
         message = format_error(error, ledger_file=file)
@@ -1310,6 +1316,21 @@ def validate_candidate(
             if root_hints is None:
                 root_hints = root_ledger_hints(snapshot.root if snapshot else file)
             hints.extend(root_hints)
+        if (
+            "Invalid account name: " in message
+            and source != (snapshot.root if snapshot else file)
+            and source not in per_file_hinted
+        ):
+            account = message.split("Invalid account name: ", 1)[1].split()[0].rstrip(".")
+            renamed = renamed_root_options(options)
+            if renamed and account.split(":", 1)[0] in roots:
+                per_file_hinted.add(source)
+                # Upstream checks names against the options of the file being
+                # parsed, so an include reads the default roots (w5/462).
+                hints.append(
+                    f'Beancount applies option "name_*" per file, so {source.name} reads the default roots. '
+                    f"Repeat the root's options at the top of {source.name}: {'; '.join(renamed)}."
+                )
         if "AVERAGE method is not supported" in message:
             message += (
                 '. Beancount cannot reduce a position in an account opened with "AVERAGE" booking;'
@@ -1882,6 +1903,27 @@ def _appended_or_report(target: Path, original: bytes, texts: list[str]) -> str:
     return content
 
 
+_ROOT_NAME_OPTION = re.compile(
+    rb'^option[ \t]+"(name_(?:assets|liabilities|equity|income|expenses))"[ \t]+"([^"\\\n]*)"', re.MULTILINE
+)
+
+
+def new_include_seed(snapshot: LedgerSnapshot, target: Path) -> bytes:
+    """The root's `name_*` option lines, for an include this write is about to create; else nothing.
+
+    Beancount applies these options per file while parsing, so a new glob
+    member started without them read the default roots, and every entry naming
+    a renamed root was refused as an invalid account (w5/462).
+    """
+    if snapshot.stats.get(target.resolve(), os.stat_result((0,) * 10)) is not None:
+        return b""
+    lines = dict.fromkeys(
+        f'option "{key.decode()}" "{name.decode()}"'
+        for key, name in _ROOT_NAME_OPTION.findall(snapshot.contents.get(snapshot.root, b""))
+    )
+    return "".join(f"{line}\n" for line in lines).encode()
+
+
 def open_pushes(text: str) -> list[tuple[int, str]]:
     """The `pushtag`/`pushmeta` directives still open at the end of `text`, as (line, directive)."""
     from beancount.parser import lexer
@@ -1988,7 +2030,8 @@ def validate_append(
     snapshot = snapshot or LedgerSnapshot.capture(file)
     target = destination(file, into)
     original = snapshot.require_target(target)
-    with candidate_file(target, _appended_or_report(target, original, texts)) as candidate:
+    seeded = new_include_seed(snapshot, target) + original
+    with candidate_file(target, _appended_or_report(target, seeded, texts)) as candidate:
         warnings = validate_candidate(
             candidate,
             target,
@@ -2175,7 +2218,8 @@ def append(
             require_writable(target)
         if expected is not None and original != expected:
             raise ConflictError("The ledger changed since the preview was prepared; nothing was written. Retry.")
-        with candidate_file(target, _appended_or_report(target, original, texts)) as candidate:
+        seeded = new_include_seed(snapshot, target) + original
+        with candidate_file(target, _appended_or_report(target, seeded, texts)) as candidate:
             warnings = validate_candidate(
                 candidate,
                 target,

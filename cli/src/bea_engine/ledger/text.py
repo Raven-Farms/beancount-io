@@ -243,10 +243,25 @@ def syntax_errors(path: Path) -> list[str]:
 _ROOT_OPTIONS = ("name_assets", "name_liabilities", "name_equity", "name_income", "name_expenses")
 
 
+_DEFAULT_ROOTS = ("Assets", "Liabilities", "Equity", "Income", "Expenses")
+
+
 def ledger_roots(options: Mapping[str, object]) -> tuple[str, ...]:
     """The five root account names a loaded ledger accepts (its `name_*` options)."""
-    defaults = ("Assets", "Liabilities", "Equity", "Income", "Expenses")
-    return tuple(str(options.get(key) or default) for key, default in zip(_ROOT_OPTIONS, defaults, strict=True))
+    return tuple(str(options.get(key) or default) for key, default in zip(_ROOT_OPTIONS, _DEFAULT_ROOTS, strict=True))
+
+
+def renamed_root_options(options: Mapping[str, object]) -> list[str]:
+    """The `option "name_*"` lines that rename a ledger's roots, as the root file states them.
+
+    Beancount applies these per file while parsing, so an included file reads
+    the default roots unless it repeats them (w5/462).
+    """
+    return [
+        f'option "{key}" "{name}"'
+        for key, name, default in zip(_ROOT_OPTIONS, ledger_roots(options), _DEFAULT_ROOTS, strict=True)
+        if name != default
+    ]
 
 
 #: Plugins that report an account opened but not yet used; `pedantic` bundles `nounused`.
