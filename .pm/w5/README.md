@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [337 — Atomic bulk refusal never names the invalid row; JSON lists all as unwritten](./337.md) — CLI QA 2026-10-14
 - [338 — `--rules` silently ignores unknown tables/keys (`[[rules]]`, `field =`)](./338.md) — CLI QA 2026-10-14
 - [339 — Import calls a row ready when its account is closed/not-yet-open; `--apply` fails the batch](./339.md) — CLI QA 2026-10-14
 - [340 — `list` accepts non-token `--tag`/`--link`/`--flag`/`-c` values (`trip,work`) as empty results](./340.md) — CLI QA 2026-10-14
