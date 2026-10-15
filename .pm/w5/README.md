@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [317 — `price export` is quadratic in the number of included files](./317.md) — CLI QA 2026-10-14
 - [318 — Currency-mismatch hint always suggests `--csv currency=` (wrong for importers and counter accounts)](./318.md) — CLI QA 2026-10-14
 - [319 — Non-directive `extract()` output reported as `'str' object has no attribute '_replace'`](./319.md) — CLI QA 2026-10-14
 - [320 — Damaged managed engine still `Provisioned: yes`; writes exit 4 "outcome unknown"](./320.md) — CLI QA 2026-10-14
