@@ -206,7 +206,7 @@ def answer(
         try:
             account = str(importer.account(str(source)))
             with _capturing(logs):
-                entries = copy.deepcopy(list(importer.extract(str(source), existing)))
+                entries = _extracted(importer, source, existing)
         except EngineError as exc:
             _with_output(exc, logs)
             raise
@@ -238,7 +238,7 @@ def answer(
             with _capturing(logs):
                 importer = _importer(config, source, importer_name)
                 account = str(importer.account(str(source)))
-                entries = copy.deepcopy(list(importer.extract(str(source), existing)))
+                entries = _extracted(importer, source, existing)
         except EngineError as exc:
             _with_output(exc, logs)
             raise
@@ -622,6 +622,27 @@ def answer(
     return preview
 
 
+def _extracted(importer: Any, source: Path, existing: Any) -> list[Any]:
+    """The importer's rows, refusing a return value that is not a list of directives.
+
+    `list()` of a returned string split it into characters, which then failed
+    as `'str' object has no attribute '_replace'`, and a returned `None`
+    failed as "not iterable" — neither saying what the importer got wrong
+    (w5/319).
+    """
+    result = importer.extract(str(source), existing)
+    if result is None or isinstance(result, str | bytes | dict):
+        raise LedgerError(
+            f"Importer {_name(importer)} extract() returned {_type_name(result)} instead of a list of "
+            "Beancount directives."
+        )
+    return copy.deepcopy(list(result))
+
+
+def _type_name(value: Any) -> str:
+    return "None" if value is None else f"a {type(value).__name__}"
+
+
 def _writable(entry: Any, row: int, importer: Any, logs: io.StringIO) -> Any:
     """One importer row with integer metadata as numbers, proven printable.
 
@@ -644,6 +665,16 @@ def _writable(entry: Any, row: int, importer: Any, logs: io.StringIO) -> Any:
             for key, value in meta.items()
         }
 
+    from beancount.core.data import ALL_DIRECTIVES
+
+    if not isinstance(entry, ALL_DIRECTIVES):
+        raise _with_output(
+            LedgerError(
+                f"Importer {_name(importer)} row {row} is {_type_name(entry)}, not a Beancount directive; "
+                "extract() must return a list of directives."
+            ),
+            logs,
+        )
     try:
         entry = entry._replace(meta=numbers(entry.meta))
         if hasattr(entry, "postings"):
