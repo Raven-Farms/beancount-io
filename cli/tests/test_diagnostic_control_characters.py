@@ -51,7 +51,7 @@ def test_loader_warnings_and_failures_are_inert(tmp_path: Path) -> None:
     )
 
     assert b"File does not exist" in listed
-    assert b"would leave the ledger invalid" in added
+    assert b"The ledger already has 1 error(s); nothing was written." in added
     _assert_no_raw(listed)
     _assert_no_raw(added)
     assert ledger.read_bytes() == before

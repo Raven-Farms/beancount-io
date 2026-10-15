@@ -314,7 +314,8 @@ def _balance(
             # the two-step pad flow stages with --allow-errors, then completes
             # with the balance. Anything else still gates strict callers.
             raise protocol.LedgerError(
-                f"Ledger has {len(ledger_errors)} error(s). Pass --allow-errors to report anyway.",
+                f"The ledger already has {len(ledger_errors)} error(s); nothing was written. "
+                "Pass --allow-errors to write anyway.",
                 details=ledger_errors,
             )
         match = _balance_match(entries, date, account, number, currency, tolerance)
@@ -626,7 +627,9 @@ def _price(
     ledger_errors = [format_error(error, ledger_file=file) for error in errors]
     if ledger_errors and strict_read:
         raise protocol.LedgerError(
-            f"Ledger has {len(ledger_errors)} error(s). Pass --allow-errors to report anyway.", details=ledger_errors
+            f"The ledger already has {len(ledger_errors)} error(s); nothing was written. "
+            "Pass --allow-errors to write anyway.",
+            details=ledger_errors,
         )
     local_prices: list[Price] = []
     managed_sources: set[str] = set()

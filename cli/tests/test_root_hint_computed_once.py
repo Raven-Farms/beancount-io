@@ -46,7 +46,10 @@ def test_many_unknown_accounts_look_for_the_root_once(tmp_path: Path, lookups: l
         ledger_write.append(main, [NOTE])
 
     assert lookups == [main]
-    assert str(refused.value) == "The change would leave the ledger invalid; nothing was written."
+    # The note adds nothing wrong: big.bean was already broken (w5/396).
+    assert str(refused.value) == (
+        f"The ledger already has {ERRORS} error(s); nothing was written. Pass --allow-errors to write anyway."
+    )
     details = "\n".join(refused.value.details)
     assert "unknown account 'Expenses:Food'" in details
     assert f"Same problem on {ERRORS - 1} more lines" in details

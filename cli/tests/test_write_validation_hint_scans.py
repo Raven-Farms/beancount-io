@@ -218,7 +218,8 @@ def test_add_refuses_the_misdated_open_with_the_same_message(tmp_path: Path) -> 
     result = runner.invoke(app, argv)
     assert result.exit_code == 1, result.output
     flat = " ".join(result.output.split())
-    assert "The change would leave the ledger invalid; nothing was written." in flat
+    # The misdated open was already there; the note adds nothing wrong (w5/396).
+    assert "The ledger already has 40 error(s); nothing was written. Pass --allow-errors to write anyway." in flat
     assert "Invalid reference to inactive account 'Assets:Wallet' Account opened 2030-01-01 at" in flat
     assert "Same problem on 39 more lines: 8, 11, 14," in flat
     assert ledger.read_text() == _inactive(40)

@@ -18,7 +18,7 @@ import unicodedata
 from collections import Counter
 from collections.abc import Callable, Iterable, Iterator, Sequence
 from contextlib import ExitStack, contextmanager, nullcontext, suppress
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
@@ -1029,6 +1029,15 @@ def _discard_candidate(candidate: Path) -> None:
         candidate.unlink(missing_ok=True)
 
 
+# How to date and reconcile an assertion being written, so not advice for one
+# a write merely finds failing in books that were already broken (w5/396).
+_BALANCE_DATE_HINT = (
+    "Balance assertions run at the start of the day, before that day's transactions. "
+    "For a statement closing balance, use the following day's date. "
+    "Review missing or duplicate transactions and record known fees as transactions before adjusting."
+)
+
+
 def _balance_recovery_hints(
     balance: Any,
     source: Path,
@@ -1052,11 +1061,7 @@ def _balance_recovery_hints(
             f"{balance.account}'s open allows {allowed} only, so a {balance.amount.currency} balance cannot hold "
             f"there; assert it in {allowed}, or add {balance.amount.currency} to that open."
         ]
-    date_hint = (
-        "Balance assertions run at the start of the day, before that day's transactions. "
-        "For a statement closing balance, use the following day's date. "
-        "Review missing or duplicate transactions and record known fees as transactions before adjusting."
-    )
+    date_hint = _BALANCE_DATE_HINT
     # Counted once per file (w5/124): a ledger failing thousands of existing
     # assertions otherwise re-splits the whole source for each of them.
     if source not in line_counts:
@@ -1553,6 +1558,7 @@ def validate_candidate(
     locations: list[tuple[Path, int | None]] = []
     introduced: list[bool] = []
     invalid_pad_accounts = False
+    any_appended = False
     # Currencies check_commodity reported before the write (w5/398).
     missing_before: set[str] | None = None
     # Finding an including root lexes every sibling ledger's include closure,
@@ -1571,6 +1577,7 @@ def validate_candidate(
         # two-step pad-then-balance flow cannot start without it. A staged
         # open's `Unused account` is the other, for the same reason.
         appended = isinstance(lineno, int) and lineno > original_line_counts.get(source.resolve(), lineno)
+        any_appended = any_appended or appended
         unused_open = is_unused_open(error)
         is_new = False
         if allow_errors and index not in tolerated:
@@ -1797,6 +1804,28 @@ def validate_candidate(
     syntax_errors = [err for err in errors if isinstance(err, ParserSyntaxError | LexerError)]
     new_records = [record for record, is_new in zip(records, introduced, strict=True) if is_new]
     if errors and (not allow_errors or syntax_errors or invalid_pad_accounts or new_records):
+        # An error on an appended line is the write's own; only books whose
+        # every error sits elsewhere are worth a load of the version before.
+        if not allow_errors and not (any_appended or syntax_errors or invalid_pad_accounts):
+            if before_errors is None:
+                root = snapshot.root if snapshot else file
+                before_errors = managed_load.load_file(root, snapshot=snapshot)[1] if root.exists() else []
+            if len(_preexisting_errors(errors, before_errors, filenames, original_lines)) == len(errors):
+                # The write adds nothing wrong; the books were already broken,
+                # which is the case --allow-errors exists for. The repair hints
+                # for those errors stand; advice on dating a new assertion
+                # does not (w5/396).
+                plain = [
+                    replace(record, hints=[hint for hint in record.hints if hint != _BALANCE_DATE_HINT])
+                    for record in records
+                ]
+                raise CandidateRejected(
+                    f"The ledger already has {len(errors)} error(s); nothing was written. "
+                    "Pass --allow-errors to write anyway.",
+                    details=_collapse_repeats(plain),
+                    locations=locations,
+                    records=plain,
+                )
         if not allow_errors:
             raise CandidateRejected(
                 "The change would leave the ledger invalid; nothing was written.",

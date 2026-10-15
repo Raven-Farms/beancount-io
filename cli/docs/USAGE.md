@@ -1033,7 +1033,9 @@ lines it shows as context. Native `bea check` output is upstream's own and passe
 Examples below assume their accounts were opened and their dates, balances,
 and document paths are valid for your ledger. Every add command, and `import`,
 accepts `--allow-errors` for a semantic error already in the books, such as a
-balance assertion that still fails. An error the write itself would introduce —
+balance assertion that still fails; without the flag such a ledger refuses
+every write with `The ledger already has N error(s); nothing was written. Pass
+--allow-errors to write anyway.` An error the write itself would introduce —
 an unknown account, a currency violation, a new balance failure — is refused
 even with the flag. The two exceptions are the first halves of a two-step: the
 staged pad of the pad flow below, and an account opened on a ledger that loads
