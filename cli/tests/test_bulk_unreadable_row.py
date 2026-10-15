@@ -26,7 +26,12 @@ BAD_ACCOUNTS = ["expenses:food", "Expenses:Food Court", "Expenses:food", "Expens
 # fragment of the reason each rejection must carry.
 UNREADABLE: dict[str, tuple[dict[str, Any], str, str]] = {
     "keyword currency": ({"amount": "11 TRUE"}, "Row 2: ", "unexpected BOOL"),
-    "total cost without currency": ({"amount": "11 USD", "cost": {"number_total": "5"}}, "Row 2: ", "RCURL"),
+    # Refused by the schema now, naming the field rather than the read-back (w5/384).
+    "total cost without currency": (
+        {"amount": "11 USD", "cost": {"number_total": "5"}},
+        "Row 2, postings.0.cost: ",
+        'a total cost needs "currency"',
+    ),
     "lowercase metadata currency": (
         {"amount": "11 USD", "meta": {"fee": {"kind": "amount", "number": "5", "currency": "usd"}}},
         "Row 2, postings.0.meta.fee: ",

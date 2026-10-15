@@ -116,6 +116,15 @@ class Cost(BaseModel):
     date: LedgerDate | None = None
     label: str | None = None
 
+    @model_validator(mode="after")
+    def total_names_its_currency(self) -> Cost:
+        # Beancount's `{# total CUR}` needs the currency, unlike a per-unit
+        # `{150}`: without it the row rendered `{# 1500}` and was refused as
+        # a field that is "not one token" (w5/384).
+        if self.number_total is not None and self.currency is None:
+            raise ValueError('a total cost needs "currency": give it alongside "number_total".')
+        return self
+
 
 class Posting(BaseModel):
     model_config = ConfigDict(extra="forbid")
