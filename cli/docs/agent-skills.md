@@ -65,7 +65,7 @@ When the user asks for a spending summary or monthly report:
 
 ## Check discovery without a model call
 
-This is the deterministic test: it lists exactly what `bea ask` would index, with no API call and no model involved. Run it from the directory you run `bea ask` from. Use the interpreter of the environment that holds `bea`; for a `uv tool` install it is `$(uv tool dir)/beancount-io/bin/python`, and from a CLI checkout `uv run python` works too.
+This is the deterministic test: it lists exactly what `bea ask` would index, with no API call and no model involved. Run it from the directory you run `bea ask` from. Use the interpreter of the environment that holds `bea`: for a Homebrew install it is `$(brew --prefix bea)/libexec/venv/bin/python`; for a `uv tool` install, `$(uv tool dir)/beancount-io/bin/python`; from a CLI checkout, `uv run --project /path/to/cli python` (plain `uv run` looks for its project above the current directory, so it does not find the checkout from your ledger's directory).
 
 ```bash
 python -c "
