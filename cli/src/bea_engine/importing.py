@@ -283,6 +283,7 @@ def answer(
     identities: dict[tuple[str, str, str], Any] = {}
     fingerprints: dict[tuple[Any, ...], Any] = {}
     open_currencies = _open_currencies(existing, Open)
+    windows = _active_windows(existing)
     # Only what the ledger writes can be a duplicate: a forecast plugin's
     # projected copy made every real payment it predicted a "possible
     # duplicate" cited at the template's line, and `--duplicates skip` then
@@ -467,6 +468,7 @@ def answer(
                 stage_opens,
                 ledger=file,
                 source=account if csv_mode else None,
+                windows=windows,
             )
             if blocked_reason is not None:
                 status, reason, include = "blocked", blocked_reason, False
@@ -509,11 +511,20 @@ def answer(
     opened_after = open_currencies
     if any(posting.account not in open_currencies for _, entry, _, _ in held for posting in entry.postings):
         proposal = [row["entry"] for row in rows if row["include"] or row["status"] == "blocked"]
-        after = _open_currencies(_entries_after(snapshot, target, original, proposal), Open)
+        entries_after = _entries_after(snapshot, target, original, proposal)
+        after = _open_currencies(entries_after, Open)
+        windows_after = _active_windows(entries_after)
         opened_after = after
         for row_dict, entry, was, why in held:
             still = _blocked_reason(
-                entry, after, roots, first_uses, stage_opens, ledger=file, source=account if csv_mode else None
+                entry,
+                after,
+                roots,
+                first_uses,
+                stage_opens,
+                ledger=file,
+                source=account if csv_mode else None,
+                windows=windows_after,
             )
             if still is None:
                 row_dict.update(status=was, reason=why, include=True)
@@ -1043,6 +1054,21 @@ def _open_currencies(entries: list[Any], open_type: Any) -> dict[str, set[str] |
     return opened
 
 
+def _active_windows(entries: list[Any]) -> dict[str, tuple[Any, Any]]:
+    """Each account's `open` and, if any, `close`: the dates a posting to it is valid."""
+    from beancount.core.data import Close, Open
+
+    windows: dict[str, tuple[Any, Any]] = {}
+    for entry in entries:
+        if isinstance(entry, Open) and entry.account not in windows:
+            windows[normalize_entry_strings(entry).account] = (entry, None)
+        elif isinstance(entry, Close):
+            account = normalize_entry_strings(entry).account
+            if account in windows:
+                windows[account] = (windows[account][0], entry)
+    return windows
+
+
 def _entries_after(snapshot: ledger_write.LedgerSnapshot, target: Path, original: bytes, texts: list[str]) -> list[Any]:
     """The ledger's entries with `texts` appended, plugins applied; nothing is written.
 
@@ -1091,6 +1117,7 @@ def _blocked_reason(
     *,
     ledger: Path,
     source: str | None = None,
+    windows: dict[str, tuple[Any, Any]] | None = None,
 ) -> str | None:
     """Why a transaction cannot be written, or None when its accounts allow it.
 
@@ -1124,6 +1151,9 @@ def _blocked_reason(
         noun = "Account" if len(missing) == 1 else "Accounts"
         verb = "is" if len(missing) == 1 else "are"
         return f"{noun} {quoted} {verb} not open. Run: {'; '.join(remedies)}."
+    inactive = _inactive_reason(entry, windows or {}, first_uses, source)
+    if inactive is not None:
+        return inactive
     for posting in entry.postings:
         allowed = open_currencies.get(posting.account)
         currency = _posting_currency(posting, entry)
@@ -1153,6 +1183,46 @@ def _blocked_reason(
                 f"to an account open for {currency} — {widen}."
             )
     return None
+
+
+def _inactive_reason(
+    entry: Any,
+    windows: dict[str, tuple[Any, Any]],
+    first_uses: dict[str, tuple[Any, list[str] | None]],
+    source: str | None,
+) -> str | None:
+    """Why a posting's account cannot take this row's date, though it is opened.
+
+    Only "is there an `open`" was asked, so a rule account closed before the
+    row, or opened after it, previewed the row as ready and then failed the
+    whole `--apply` with exit 1, valid rows and all (w5/339).
+    """
+    for posting in entry.postings:
+        window = windows.get(posting.account)
+        if window is None:
+            continue
+        opened, closed = window
+        if entry.date < opened.date:
+            earliest = first_uses.get(posting.account, (entry.date, None))[0]
+            return (
+                f"Account '{posting.account}' opens {opened.date} (at {_where(opened)}), after this row's "
+                f"{entry.date}. Re-date that open to {min(earliest, entry.date)} or earlier."
+            )
+        if closed is not None and entry.date > closed.date:
+            remedy = (
+                "Re-date the close, or import into an account that is still open."
+                if posting.account == source
+                else "Point the rule, category or --default-account at an open account, or re-date the close."
+            )
+            return (
+                f"Account '{posting.account}' was closed {closed.date} (at {_where(closed)}), before this row's "
+                f"{entry.date}. {remedy}"
+            )
+    return None
+
+
+def _where(directive: Any) -> str:
+    return f"{directive.meta.get('filename')}:{directive.meta.get('lineno')}"
 
 
 def _native_import_id(meta: dict[str, Any], keys: list[str]) -> str | None:

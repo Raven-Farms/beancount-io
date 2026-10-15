@@ -146,11 +146,15 @@ it is refused naming the file, line and field counts instead of being
 truncated to fit, which silently shifted the remaining cells. Surplus cells
 that are *empty* are tolerated: a trailing separator loses no data. Misuse exits **2**.
 
-Rows that would post to an account the ledger never opened — or a currency
-the open directive disallows — are shown `blocked`, not ready: the row names
-the missing account and the `bea add open` line that fixes it, stays in the
-diff so the proposal stays visible, and `--apply` refuses with exit **4**
-while any row is blocked. Every row blocked on the same account prints the same
+Rows that would post to an account the ledger never opened, to an account that
+is not active on the row's date (closed before it, or opened after it), or in a
+currency the open directive disallows are shown `blocked`, not ready. An
+inactive account's row names the `close` or `open` and its line, and says to
+re-date it or to point the rule, category or `--default-account` at an open
+account. A never-opened account's row names the missing account and the
+`bea add open` line that fixes it. Every blocked row stays in the diff so the
+proposal stays visible, and `--apply` refuses with exit **4** while any row is
+blocked. Every row blocked on the same account prints the same
 line — dated for the earliest row of the import that posts there and allowing
 each currency the import posts — so running it once unblocks them all. The line
 carries `--file` for the ledger being imported (`bea --file books/main.bean add
