@@ -84,6 +84,10 @@ def _forward(operation: str, ctx: typer.Context, config: Path | None) -> None:
         else None
     )
     placed = {"ledger": os.path.abspath(os.path.expanduser(existing))} if existing else {}
+    if placed and output.has_unreadable_include(Path(placed["ledger"])):
+        # Beangulp loads `-e` with Beancount, which answers an include it
+        # cannot open with a traceback; the helper names it (w5/120, w5/438).
+        launch.helper_json(["check", "--file", placed["ledger"]])
     code = launch.run_optional_script("beangulp", script, [operation, *ctx.args], **placed)
     raise typer.Exit(code)
 
