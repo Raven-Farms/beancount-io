@@ -684,6 +684,7 @@ def _transaction(
     from bea_engine import managed_load
     from bea_engine.ledger.models import COMMENT_HELP, WRITE_INPUT, TransactionHeader, comment_start
     from bea_engine.ledger.reader import metadata_to_json
+    from bea_engine.query import readable_parser_message
 
     postings: list[str] = [str(posting) for posting in request.get("postings") or []]
     for number, posting_text in enumerate(postings, start=1):
@@ -721,7 +722,7 @@ def _transaction(
         for error in errors:
             posting_number = error.source.get("lineno", 0) - len(header_text.splitlines())
             location = f"--posting {posting_number}" if 0 < posting_number <= len(postings) else "Transaction options"
-            details.append(f"{location}: {error.message}")
+            details.append(f"{location}: {readable_parser_message(error.message)}")
         if details and all(detail.startswith("Transaction options:") for detail in details):
             message = _HEADER_ERROR
         else:

@@ -19,6 +19,7 @@ from pathlib import Path
 import pytest
 
 from bea_engine.ledger import write as ledger_write
+from bea_engine.query import readable_parser_message
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -130,7 +131,10 @@ def test_an_existing_parser_diagnostic_stays_a_warning(tmp_path: Path, body: str
     done = _bea(tmp_path, "--file", str(ledger), *NOTE)
 
     assert done.returncode == 0, done.stderr
-    assert diagnostic in done.stderr
+    # Native `check` prints upstream's text; bea's own warning names the
+    # value as ledger text, not a grammar repr (w5/334).
+    location, _, message = diagnostic.partition(": ")
+    assert f"{location}: {readable_parser_message(message)}" in done.stderr
     assert "nothing was written" not in done.stderr
     assert ledger.read_text().startswith(body)
     assert '2026-02-01 note Assets:Cash "hi"' in ledger.read_text()[len(body) :]

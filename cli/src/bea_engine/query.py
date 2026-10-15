@@ -26,6 +26,7 @@ below need Beancount objects, which is why they live here and not in `bea`:
 
 from __future__ import annotations
 
+import ast
 import difflib
 import json
 import os
@@ -1982,6 +1983,78 @@ _NEGATIVE_COST = re.compile(
 )
 
 
+_PARSER_REPRS = (
+    (re.compile(r"(Duplicate cost: ')(?P<value>CompoundAmount\(.*\))('\.)\Z", re.DOTALL), "cost"),
+    (
+        re.compile(r"(Duplicate (?:metadata field on entry|posting metadata field): )(?P<value>KeyValue\(.*\))\Z"),
+        "meta",
+    ),
+    (re.compile(r"(Tags or links not allowed after first Posting: )(?P<value>TagsLinks\(.*\))\Z"), "tags"),
+    (re.compile(r"(Too many strings on transaction description: )(?P<value>\[.*\])\Z"), "strings"),
+)
+
+
+def readable_parser_message(message: str) -> str:
+    """A parser diagnostic with the grammar value it quotes written as Beancount text.
+
+    Upstream's grammar formats a `CompoundAmount`, `KeyValue`, `TagsLinks` or a
+    list with `str()`, which is their repr: `Decimal('101.00')`,
+    `datetime.date(2026, 1, 2)`, `links=set()` reached `check` details,
+    strict-read refusals and the `add` posting refusal (w5/334). A message
+    that does not parse as expected is returned unchanged.
+    """
+    for pattern, kind in _PARSER_REPRS:
+        match = pattern.match(message)
+        if match is None:
+            continue
+        value = match["value"]
+        try:
+            if kind == "cost":
+                fields = dict(re.findall(r"(\w+)=(Decimal\('[^']*'\)|'[^']*'|None)", value))
+                per, total = _repr_scalar(fields.get("number_per")), _repr_scalar(fields.get("number_total"))
+                currency = _repr_scalar(fields.get("currency"))
+                amounts = [part for part in (per, f"# {total}" if total else "", currency) if part]
+                return f"{match[1]}{' '.join(amounts)}{match[3]}"
+            if kind == "meta":
+                key = re.match(r"KeyValue\(key='([^']*)', value=(.*)\)\Z", value, re.DOTALL)
+                if key is None:
+                    break
+                return f"{match[1]}{key[1]}: {_repr_scalar(key[2])}"
+            if kind == "tags":
+                sets = re.match(r"TagsLinks\(tags=(.*), links=(.*)\)\Z", value, re.DOTALL)
+                if sets is None:
+                    break
+                tags, links = (_repr_set(sets[1]), _repr_set(sets[2]))
+                return match[1] + " ".join([*(f"#{tag}" for tag in tags), *(f"^{link}" for link in links)])
+            strings = ast.literal_eval(value)
+            return match[1] + " ".join(f'"{text}"' for text in strings)
+        except (ValueError, SyntaxError, TypeError):
+            break
+    return message
+
+
+def _repr_scalar(text: str | None) -> str:
+    """One repr'd grammar value as ledger text: a number, an ISO date, a quoted string, TRUE/FALSE."""
+    if text is None or text == "None":
+        return ""
+    decimal = re.fullmatch(r"Decimal\('([^']*)'\)", text)
+    if decimal:
+        return decimal[1]
+    day = re.fullmatch(r"datetime\.date\((\d+), (\d+), (\d+)\)", text)
+    if day:
+        return f"{int(day[1]):04d}-{int(day[2]):02d}-{int(day[3]):02d}"
+    if text in ("True", "False"):
+        return text.upper()
+    if text[:1] in "'\"":
+        value = ast.literal_eval(text)
+        return value if re.fullmatch(r"[A-Z][A-Z0-9'._-]*", value) else f'"{value}"'
+    return text
+
+
+def _repr_set(text: str) -> list[str]:
+    return [] if text.strip() == "set()" else sorted(ast.literal_eval(text))
+
+
 def _booking_message(error: Any, message: str) -> str:
     """Two lot-booking messages without the namedtuple reprs upstream formats them with.
 
@@ -1991,6 +2064,9 @@ def _booking_message(error: Any, message: str) -> str:
     Their siblings (`Not enough lots`, `Ambiguous matches`) already read as
     amounts; these now do too. Anything else passes through unchanged.
     """
+    parsed = readable_parser_message(message)
+    if parsed != message:
+        return parsed
     negative = _NEGATIVE_COST.match(message)
     if negative is not None:
         return f"Cost is negative: {negative['number']} {negative['currency']}"
