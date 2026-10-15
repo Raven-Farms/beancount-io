@@ -1473,6 +1473,7 @@ def validate_candidate(
     snapshot: LedgerSnapshot | None = None,
     stages_pad: bool = False,
     stages_open: bool = False,
+    pad_from: bool = False,
 ) -> list[str]:
     """Refuse a candidate that fails validation, naming what it would break.
 
@@ -1496,7 +1497,8 @@ def validate_candidate(
     ledger loading `nounused` is the same first half of a two-step: the plugin
     reports the account until something uses it, and nothing can use it before
     it is open. `stages_open` says the request appends nothing but opens, and
-    only an `Unused account` on one of those is exempt (w5/221).
+    only an `Unused account` on one of those is exempt (w5/221). `pad_from`
+    says the pad is `add balance --pad-from`'s, not a directive the user wrote.
     """
     from beancount.core import interpolate
     from beancount.core.data import Balance, Close, Document, Open, Pad, Transaction
@@ -1558,6 +1560,8 @@ def validate_candidate(
     locations: list[tuple[Path, int | None]] = []
     introduced: list[bool] = []
     invalid_pad_accounts = False
+    # Each pad hint once: two inactive accounts on one pad are two errors (w5/395).
+    pad_hints: set[str] = set()
     any_appended = False
     # Currencies check_commodity reported before the write (w5/398).
     missing_before: set[str] | None = None
@@ -1712,7 +1716,19 @@ def validate_candidate(
                 hints.append(_currency_widen_hint(invalid["currency"], opened, filenames, original_lines))
         if isinstance(error.entry, Pad) and error.message.startswith("Invalid reference to "):
             invalid_pad_accounts = True
-            hints.append("Pad accounts must be active, even with --allow-errors.")
+            # Worded by how the pad arrived: `add balance --pad-from` wrote no
+            # pad directive, and the flag is news only to who passed it (w5/395).
+            if pad_from and f"'{error.entry.source_account}'" in error.message:
+                pad_hint = f"The --pad-from account must be open on the pad date, {error.entry.date}" + (
+                    ", even with --allow-errors." if allow_errors else "."
+                )
+            elif allow_errors:
+                pad_hint = "Pad accounts must be active, even with --allow-errors."
+            else:
+                pad_hint = f"Pad accounts must be open on the pad date, {error.entry.date}."
+            if pad_hint not in pad_hints:
+                pad_hints.add(pad_hint)
+                hints.append(pad_hint)
         if isinstance(error.entry, Transaction) and "does not balance" in error.message:
             residual = interpolate.compute_residual(error.entry.postings)  # type: ignore[no-untyped-call]
             if len(residual.currencies()) > 1:
@@ -2652,6 +2668,7 @@ def append(
     into: Path | None = None,
     snapshot: LedgerSnapshot | None = None,
     one_entry_each: bool = True,
+    pad_from: bool = False,
 ) -> list[str]:
     if not texts:
         return []
@@ -2679,6 +2696,7 @@ def append(
                 snapshot=snapshot,
                 stages_pad=_only_pads(texts),
                 stages_open=_only_opens(texts),
+                pad_from=pad_from,
             )
             snapshot.verify()
             if original_stat is None:

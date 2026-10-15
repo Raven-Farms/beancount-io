@@ -598,7 +598,9 @@ def test_an_inactive_pad_source_reads_once(book: Path) -> None:
     assert result.exit_code == 1 and book.read_bytes() == before
     details = json.loads(result.stderr)["error"]["details"]
     assert sum("inactive account 'Equity:Old'" in detail for detail in details) == 1
-    assert "Pad accounts must be active, even with --allow-errors." in details
+    # The pad came from --pad-from, and no --allow-errors was passed (w5/395).
+    assert "The --pad-from account must be open on the pad date, 2026-01-31." in details
+    assert not any("--allow-errors" in detail for detail in details)
 
 
 def test_pointing_the_root_at_an_included_leaf_writes_through_the_root(book: Path) -> None:

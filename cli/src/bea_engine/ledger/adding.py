@@ -354,7 +354,9 @@ def _balance(
         Balance({}, date, account, BcAmount(number, currency), tolerance, None),
     ]
     try:
-        warnings = write.append(file, [writer.format_entry(e) for e in entries], allow_errors=allow_errors, into=into)
+        warnings = write.append(
+            file, [writer.format_entry(e) for e in entries], allow_errors=allow_errors, into=into, pad_from=True
+        )
     except protocol.LedgerError as exc:
         # The only failure worth a retry is a pad Beancount reports unused;
         # anything else stands. Why it went unused decides what happens next.
