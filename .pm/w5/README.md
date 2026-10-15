@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [367 — `cloud status` reports a redirect/204 as a rejected credential (exit 3, "log in again")](./367.md) — CLI QA 2026-10-14
 - [368 — `cloud ledger create/delete` call a refused connection "outcome unknown" (exit 4)](./368.md) — CLI QA 2026-10-14
 - [369 — Text-mode cloud errors drop the backend request ID](./369.md) — CLI QA 2026-10-14
 - [370 — Unattended `cloud ledger clone` overrides the user's `core.sshCommand`/`GIT_SSH`](./370.md) — CLI QA 2026-10-14
