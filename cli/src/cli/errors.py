@@ -38,6 +38,9 @@ class BeaError(Exception):
 
     category = "validation"
     exit_code = EXIT_VALIDATION
+    #: Not one of bea's own refusals: a Python exception the frontend did not
+    #: expect, whose traceback only `--debug` shows.
+    unexpected = False
 
     def __init__(
         self,
@@ -241,7 +244,9 @@ def to_bea_error(exc: BaseException | str) -> BeaError:
     if isinstance(exc, FileNotFoundError):
         return UsageError(_redact_secrets(str(exc)))
 
-    return BeaError(_redact_secrets(str(exc) or f"{type(exc).__name__} (no detail)."))
+    error = BeaError(_redact_secrets(str(exc) or f"{type(exc).__name__} (no detail)."))
+    error.unexpected = True
+    return error
 
 
 # Names other tools and docs use for a bea subcommand, suggested only where

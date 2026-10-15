@@ -131,7 +131,7 @@ def error(exc: BaseException | str) -> NoReturn:
     if _json_mode():
         payload: dict[str, Any] = {
             "category": err.category,
-            "message": str(err),
+            "message": _message(err),
             "exit_code": exit_code,
         }
         if err.request_id:
@@ -170,6 +170,22 @@ def failure(exc: BaseException | str) -> None:
     _print_failure(err, trace)
 
 
+_DEBUG_HINT = "Pass --debug before the command for a traceback."
+
+
+def _message(err: BeaError) -> str:
+    """The error's words, with the way to see its traceback whenever one is hidden.
+
+    Only engine failures said so: an unexpected frontend exception or a
+    crashed upstream program printed a bare class name, though `--debug`
+    shows a traceback for both (w5/424).
+    """
+    message = str(err)
+    if (err.traceback or err.unexpected) and not context.current().debug and _DEBUG_HINT not in message:
+        return f"{message}{' ' if message.endswith(('.', '!', '?')) else '. '}{_DEBUG_HINT}"
+    return message
+
+
 def _print_failure(err: BeaError, trace: str | None) -> None:
     """The one text rendering of an error, shared by the fatal and recoverable paths.
 
@@ -177,7 +193,7 @@ def _print_failure(err: BeaError, trace: str | None) -> None:
     so they are made inert before they reach the terminal (w1/134); JSON keeps
     the exact values.
     """
-    print(f"Error: {inert_text(str(err))}", file=sys.stderr)
+    print(f"Error: {inert_text(_message(err))}", file=sys.stderr)
     for detail in err.details:
         print(f"  {inert_text(detail)}", file=sys.stderr)
     if trace:
