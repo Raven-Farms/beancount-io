@@ -203,6 +203,7 @@ def test_an_approved_write_lands_in_the_into_file_the_panel_named(
             "add a 7 usd lunch",
             "@ENTER",
             "@WAIT:Append this directive to the ledger",
+            "y",  # The panel starts on No (w5/453).
             "@ENTER",
             "@WAIT:Done.",
             "@WAIT:❯",

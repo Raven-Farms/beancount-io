@@ -36,7 +36,8 @@ LEDGER = """option "operating_currency" "USD"
 DIRECTIVE = '2024-03-01 * "Stub" "AI write"\n  Assets:Checking  -5 USD\n  Expenses:Food  5 USD\n'
 FOLLOW_UP = "what did you just add"
 DENIAL = "nothing was written"
-APPROVE = ["add it", "@ENTER", "@WAIT:Append this directive to the ledger", "@ENTER"]
+# The panel starts on No (w5/453): `y` selects Yes before Enter confirms.
+APPROVE = ["add it", "@ENTER", "@WAIT:Append this directive to the ledger", "y", "@ENTER"]
 
 
 @pytest.fixture

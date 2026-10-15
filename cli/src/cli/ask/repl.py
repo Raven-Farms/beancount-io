@@ -104,7 +104,14 @@ def _make_session(hint: str, key_bindings: KeyBindings | None = None) -> PromptS
 
 
 def _ask_write_permission() -> str:
-    """Arrow-key navigable selector. Returns y/n/a/d."""
+    """Arrow-key navigable selector. Returns y/n/a/d.
+
+    It starts on "No", and each option's number and letter move the selection
+    to it: the panel listed "2. No", but only arrows, `j`/`k` and Enter were
+    bound, so typing `n` or `2` and Enter approved the highlighted default,
+    "Yes" (w5/453). The panel is the only gate before AI text reaches the
+    ledger, so no key someone types to mean "no" approves.
+    """
     from prompt_toolkit import Application
     from prompt_toolkit.layout import Layout
     from prompt_toolkit.layout.containers import Window
@@ -117,7 +124,7 @@ def _ask_write_permission() -> str:
         ("Yes to all", "a", "Approve all remaining writes this session"),
         ("Deny all", "d", "Reject all remaining writes this session"),
     ]
-    selected = [0]
+    selected = [1]
 
     def get_tokens() -> FormattedText:
         items: list[tuple[str, str]] = []
@@ -149,6 +156,16 @@ def _ask_write_permission() -> str:
     @kb.add("j")
     def _down(event: Any) -> None:
         selected[0] = (selected[0] + 1) % len(options)
+
+    def _choose(index: int) -> Callable[[Any], None]:
+        def choose(event: Any) -> None:
+            selected[0] = index
+
+        return choose
+
+    for index, (_, letter, _) in enumerate(options):
+        kb.add(str(index + 1))(_choose(index))
+        kb.add(letter)(_choose(index))
 
     @kb.add("enter")
     def _confirm(event: Any) -> None:
