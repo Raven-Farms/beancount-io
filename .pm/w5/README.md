@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [350 — `add balance` in a disallowed currency: dangling upstream message plus useless pad advice](./350.md) — CLI QA 2026-10-14
 - [351 — Importer balance/note on an unopened account is counted as ready; `--apply` fails the batch](./351.md) — CLI QA 2026-10-14
 - [352 — `treeify` on a missing/dir/unreadable input exits 1 with a class name instead of 2/3](./352.md) — CLI QA 2026-10-14
 - [353 — `example -o DIR` advises `--force`, which then refuses the directory](./353.md) — CLI QA 2026-10-14
