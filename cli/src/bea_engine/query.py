@@ -33,9 +33,10 @@ import re
 import stat
 import sys
 import unicodedata
-from collections.abc import Callable, Hashable, Mapping
+from collections.abc import Callable, Hashable, Iterator, Mapping
+from contextlib import contextmanager
 from decimal import Decimal, localcontext
-from functools import partial
+from functools import cache, partial
 from pathlib import Path
 from typing import Any, TextIO, get_origin
 
@@ -1133,6 +1134,9 @@ def build_shell(
                         for column in description
                     ]
                 renderer = FORMATS[self.settings.format]
+                if self.settings.format == "text":
+                    with _fixed_point_text():
+                        return renderer(description, rows, out, dcontext=dcontext, **self.settings.todict())
                 return renderer(description, rows, out, dcontext=dcontext, **self.settings.todict())
 
         def on_Print(self, statement: Any) -> Any:  # noqa: N802 - beanquery dispatch name
@@ -1376,8 +1380,75 @@ def _metadata_cell(meta: Mapping[str, Any]) -> str:
 
 
 def _text_cell(value: Any) -> Any:
-    """A text-table cell: metadata as its JSON text, anything else without internal keys."""
+    """A text-table cell: metadata as its JSON text, a directive as its Beancount text.
+
+    Anything else loses only the loader's internal keys. A directive cell was
+    its Python repr, `Decimal('1E-8')` and `datetime.date(...)` included,
+    while the CSV cell beside it was already Beancount text (w5/294).
+    """
+    from beancount.core.data import ALL_DIRECTIVES
+
+    if isinstance(value, ALL_DIRECTIVES):
+        return _csv_cell(value)
     return _metadata_cell(value) if type(value) is dict else _public_value(value)
+
+
+@contextmanager
+def _fixed_point_text() -> Iterator[None]:
+    """Render the `--file` text table with fixed-point numbers and multi-line cells.
+
+    Upstream's `DecimalRenderer` pads with an f-string and `ObjectRenderer` is
+    `str()`, so `0.00000001` printed as `1E-8` in a number column, a `-m`
+    column and an `entry_meta()` cell, while the position beside it, the CSV
+    and the JSON all said `0.00000001` (w5/294). The swap lasts one render, so
+    native `--source` keeps upstream's table.
+    """
+    from beanquery import query_render
+
+    swapped = _text_renderers()
+    saved = {dtype: query_render.RENDERERS[dtype] for dtype in swapped}
+    query_render.RENDERERS.update(swapped)
+    try:
+        yield
+    finally:
+        query_render.RENDERERS.update(saved)
+
+
+@cache
+def _text_renderers() -> dict[type, type]:
+    from beanquery import query_render
+
+    registered = dict(query_render.RENDERERS)
+
+    class FixedPointDecimalRenderer(query_render.DecimalRenderer):  # type: ignore[misc]
+        def format(self, value: Decimal) -> str:
+            if value.as_tuple().exponent > 0:  # type: ignore[operator]
+                return str(super().format(value))
+            # Upstream's padding with a fixed-point spelling: the widths it
+            # measured from `as_tuple()` already count the zeros.
+            n = value.as_tuple()
+            left = self.nintegral - (max(1, len(n.digits) + n.exponent) + n.sign)  # type: ignore[operator]
+            return f"{'':>{left}}{value:<{self.maxwidth - left}f}"
+
+    class PlainObjectRenderer(query_render.ObjectRenderer):  # type: ignore[misc]
+        def update(self, value: Any) -> None:
+            text = self.format(value)
+            lines = text if isinstance(text, list) else [text]
+            self.maxwidth: int = max(self.maxwidth, *map(len, lines))
+
+        def format(self, value: Any) -> str | list[str]:
+            if isinstance(value, Decimal):
+                return format(value, "f")
+            text = str(value)
+            # A directive's Beancount text spans lines; upstream lays a list
+            # out one line per table row.
+            return text.split("\n") if "\n" in text else text
+
+    # Subclassing registers each class in upstream's table for good; keep that
+    # table as it was and swap these in only for one text render.
+    query_render.RENDERERS.clear()
+    query_render.RENDERERS.update(registered)
+    return {Decimal: FixedPointDecimalRenderer, object: PlainObjectRenderer}
 
 
 def _public_value(value: Any) -> Any:

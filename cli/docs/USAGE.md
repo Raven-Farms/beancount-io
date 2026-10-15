@@ -598,8 +598,10 @@ or `__`-prefixed keys — in text, CSV, and JSON alike. A text or CSV metadata
 cell is the JSON output's object written on one line
 (`{"fee-rate": "0.00000001", "settled": "2026-01-07", "cleared": true}`), so
 it parses as JSON and never shows a Python `Decimal('1E-8')` or
-`datetime.date(...)`; a CSV directive cell is the directive's Beancount
-text. Native `--source` queries keep upstream's rendering.
+`datetime.date(...)`; a text or CSV directive cell is the directive's
+Beancount text, one line per table row in text. Text-table numbers, `-m`
+included, are fixed-point (`0.00000001`, never `1E-8`), aligned on the
+decimal point. Native `--source` queries keep upstream's rendering.
 
 CSV cells hold the ledger's values verbatim, as `bean-query` writes them, so a
 payee or narration such as `=HYPERLINK(...)`, `+cmd|...` or `@SUM(...)` —
