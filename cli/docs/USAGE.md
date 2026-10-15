@@ -114,6 +114,10 @@ Local commands resolve their target in this order:
 
 If the resolved file does not exist, the command exits **2** and names those sources. Hosted targeting (`--ledger`) is not implemented yet.
 Passing a directory also exits **2** with a hint to select its root ledger file.
+A `main.bean` that is present but not a readable ledger — a broken symbolic
+link or a directory — is still the working directory's choice: the command
+exits **2** naming it (and a broken link's target) rather than falling back
+to `main.beancount`.
 An unreadable ledger exits **2**, naming the path and the source that selected
 it. Choose a readable ledger or correct its permissions.
 An `include` that reaches a file without read permission, a directory, or a

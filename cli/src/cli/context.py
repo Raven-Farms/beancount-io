@@ -129,13 +129,22 @@ class RunContext:
             if env_file:
                 candidate, source = Path(env_file).expanduser(), "$BEA_FILE"
         if candidate is None:
+            # Present, not just a file: a dangling `main.bean` link or a
+            # `main.bean` directory fell through to an older `main.beancount`,
+            # silently, and writes landed there while `init` refused the same
+            # entry as an existing ledger (w5/295).
             for name in DEFAULT_ENTRY_FILE_FALLBACKS:
-                if name.is_file():
+                if os.path.lexists(name):
                     candidate, source = name, "the working directory"
                     break
             else:
                 candidate, source = DEFAULT_ENTRY_FILE, "the working directory"
 
+        if candidate.is_symlink() and not candidate.exists():
+            raise UsageError(
+                f"Ledger path '{candidate}' (from {source}) is a broken symbolic link to "
+                f"'{os.readlink(candidate)}'. Restore its target, or point --file at the ledger."
+            )
         if not candidate.exists():
             if source == "$BEA_FILE":
                 raise UsageError(
