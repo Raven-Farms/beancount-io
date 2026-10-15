@@ -93,7 +93,7 @@ Global options come before the command.
 | `--json` | Emit the JSON envelope on stdout and JSON errors on stderr. Implies `--no-input`. |
 | `--no-input` | Never prompt. Missing confirmation or input fails with exit 2 instead of waiting. |
 | `--strict` | Refuse partial answers even in a terminal; `--allow-errors` opts into them. |
-| `--offline` | Resolve managed price includes from the local cache only; never fetch. |
+| `--offline` | Never fetch: resolve managed price includes from the local cache only, and skip the update check. |
 | `--strict-prices` | Fail the load when a managed price source is stale or unavailable. |
 | `--yes / -y` | Answer confirmations with yes. |
 | `--debug` | Include exception tracebacks; JSON errors gain a `traceback` string. |
@@ -1805,7 +1805,7 @@ exists, and prints one line on stderr after the command's own output:
 bea 1.3.0 is available (you have 1.2.3) — run 'bea upgrade' to update.
 ```
 
-It never runs at all under `--json`, `--no-input`, `CI`, or
+It never runs at all under `--json`, `--no-input`, `--offline`, `CI`, or
 `BEA_NO_UPDATE_NOTIFIER=1`, without a terminal on stderr, or from a checkout or
 unrecognized install — those are the installs whose `bea upgrade` runs nothing,
 so they stay silent in `--version` too. `bea upgrade --check` still asks, since

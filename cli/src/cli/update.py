@@ -233,11 +233,15 @@ def latest_version(
 _pending: tuple[str, threading.Thread, list[str | None]] | None = None
 
 
-def start(*, json_output: bool, no_input: bool, channel: str = "pypi") -> None:
-    """Begin the daily check alongside the command, so a person waits for nothing."""
+def start(*, json_output: bool, no_input: bool, channel: str = "pypi", offline: bool = False) -> None:
+    """Begin the daily check alongside the command, so a person waits for nothing.
+
+    `--offline` means no network at all: a run on a plane or in a sandbox still
+    asked the release index and printed its notice (w5/458).
+    """
     global _pending
     _pending = None
-    if muted(json_output=json_output, no_input=no_input, channel=channel):
+    if offline or muted(json_output=json_output, no_input=no_input, channel=channel):
         return
     version = package_version()
     if not is_release(version):

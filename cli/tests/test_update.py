@@ -86,6 +86,16 @@ class TestSuppression:
         assert result.exit_code == 0
         assert fake_index.requests == []
 
+    def test_offline_never_checks(
+        self, fake_index: FakeIndex, in_a_terminal: None, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # `--offline` means no network: no request, and no notice (w5/458).
+        monkeypatch.setattr("cli.update.package_version", lambda: "0.1.0")
+        result = runner.invoke(app, ["--offline", "--file", str(VALID), "check"])
+        assert result.exit_code == 0
+        assert fake_index.requests == []
+        assert "is available" not in result.stderr
+
     def test_no_input_never_checks(self, fake_index: FakeIndex, in_a_terminal: None) -> None:
         check_ledger("--no-input")
 

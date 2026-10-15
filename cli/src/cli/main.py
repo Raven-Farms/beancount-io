@@ -295,7 +295,11 @@ def main(
         bool, typer.Option("--strict", help="Refuse partial answers even in a terminal; --allow-errors opts in")
     ] = False,
     offline: Annotated[
-        bool, typer.Option("--offline", help="Resolve managed price includes from the local cache only; never fetch")
+        bool,
+        typer.Option(
+            "--offline",
+            help="Never fetch: resolve managed price includes from the local cache only, and skip the update check",
+        ),
     ] = False,
     strict_prices: Annotated[
         bool,
@@ -344,7 +348,9 @@ def main(
     config_dir()
     # Started here, where the machine-mode options are already resolved, so the
     # check overlaps the command instead of delaying it.
-    update.start(json_output=ctx.json_output, no_input=ctx.no_input, channel=current_channel().name)
+    update.start(
+        json_output=ctx.json_output, no_input=ctx.no_input, channel=current_channel().name, offline=ctx.offline
+    )
 
 
 # `ask` is local despite its hosted model calls — the task-verb rule in

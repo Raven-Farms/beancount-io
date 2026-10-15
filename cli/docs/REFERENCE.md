@@ -15,7 +15,7 @@ with its usage line, arguments, and options.
 | `--yes, -y` | flag |  | Answer confirmations with yes |
 | `--debug` | flag |  | Include exception tracebacks in errors |
 | `--strict` | flag |  | Refuse partial answers even in a terminal; --allow-errors opts in |
-| `--offline` | flag |  | Resolve managed price includes from the local cache only; never fetch |
+| `--offline` | flag |  | Never fetch: resolve managed price includes from the local cache only, and skip the update check |
 | `--strict-prices` | flag |  | Fail the load when a managed price source is stale or unavailable |
 | `--shell` | str |  | Completion shell: bash, zsh, fish, powershell or pwsh |
 | `--show-completion` | flag |  | Print completion script; detects the shell unless --shell is supplied |
