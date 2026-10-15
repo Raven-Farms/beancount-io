@@ -1968,7 +1968,45 @@ def format_error(error: Any, ledger_file: Path | str | None = None) -> str:
         duplicate = _duplicate_message(error, message)
         if duplicate is not None:
             return duplicate
+        message = _booking_message(error, message)
     return f"{source.get('filename', '<ledger>')}:{source.get('lineno', 0)}: {message}"
+
+
+_NO_LOT = re.compile(
+    r"No position matches \"Posting\(account='(?P<account>[^']*)', units=(?P<units>[^,]+), .*\" "
+    r"against balance (?P<held>.*)\Z",
+    re.DOTALL,
+)
+_NEGATIVE_COST = re.compile(
+    r"Cost is negative: \"Cost\(number=Decimal\('(?P<number>[^']*)'\), currency='(?P<currency>[^']*)'"
+)
+
+
+def _booking_message(error: Any, message: str) -> str:
+    """Two lot-booking messages without the namedtuple reprs upstream formats them with.
+
+    `No position matches` and `Cost is negative` print a whole `Posting` or
+    `Cost` with `Decimal(...)`, `datetime.date(...)` and the posting's meta,
+    whose line number points into an append that was never written (w5/333).
+    Their siblings (`Not enough lots`, `Ambiguous matches`) already read as
+    amounts; these now do too. Anything else passes through unchanged.
+    """
+    negative = _NEGATIVE_COST.match(message)
+    if negative is not None:
+        return f"Cost is negative: {negative['number']} {negative['currency']}"
+    no_lot = _NO_LOT.match(message)
+    if no_lot is None:
+        return message
+    from beancount.core.display_context import DisplayContext
+
+    from bea_engine.ledger.writer import _cost_spec_text
+
+    account, units = no_lot["account"], no_lot["units"].strip()
+    postings = getattr(getattr(error, "entry", None), "postings", None) or []
+    posting = next((p for p in postings if p.account == account and str(p.units) == units), None)
+    cost = getattr(posting, "cost", None)
+    requested = f"{units} {{{_cost_spec_text(cost, DisplayContext().build())}}}" if cost is not None else units
+    return f"No position matches {requested} in {account}; it holds {no_lot['held'].strip()}"
 
 
 def _plugin_message(message: str, ledger_file: Path | str | None, source: Any) -> str | None:
