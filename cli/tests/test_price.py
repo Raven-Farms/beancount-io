@@ -2057,6 +2057,24 @@ class TestPriceRefreshFailures:
         assert cached.returncode == 0
         assert "r1" in cached.stdout
 
+    @pytest.mark.parametrize("json_mode", [False, True])
+    def test_a_failure_detail_has_no_full_stop_before_the_revision(
+        self, feed_server: str, tmp_path: Path, json_mode: bool
+    ) -> None:
+        """`… live-prices.; serving revision none` read badly for every 404, 403 and 5xx (w5/379)."""
+        ledger = tmp_path / "main.bean"
+        ledger.write_text(_managed_ledger(feed_server, "/prices/NOPE"))
+        args = ["--json"] if json_mode else []
+
+        result = _run_bea(tmp_path, feed_server, *args, "--file", str(ledger), "price", "refresh")
+
+        assert result.returncode == 1
+        details = json.loads(result.stderr)["error"]["details"] if json_mode else result.stderr.splitlines()
+        detail = next(line for line in details if "NOPE" in line and "serving revision" in line)
+        assert "HTTP 404" in detail
+        assert ".;" not in detail
+        assert detail.rstrip().endswith("; serving revision none")
+
     def test_offline_refresh_refuses_without_cache_writes(self, feed_server: str, tmp_path: Path) -> None:
         ledger = _write_managed_ledger(tmp_path, feed_server)
         result = _run_bea(tmp_path, feed_server, "--offline", "--file", str(ledger), "price", "refresh")

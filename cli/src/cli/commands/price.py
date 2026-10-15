@@ -137,7 +137,8 @@ def _refresh(extra: list[str]) -> None:
         raise LedgerError(
             "Price refresh failed for " + ", ".join(source["alias"] for source in failed) + ".",
             details=[
-                f"{source['alias']}: {source['error'] or source['freshness']}; "
+                # The fetch messages end in a full stop, which read `….;` here (w5/379).
+                f"{source['alias']}: {str(source['error'] or source['freshness']).rstrip('.')}; "
                 f"serving revision {source['revision'] or 'none'}"
                 for source in sources
             ],
