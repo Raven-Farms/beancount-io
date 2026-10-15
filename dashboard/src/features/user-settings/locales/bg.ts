@@ -539,8 +539,19 @@ const bgUserSettings: Record<string, TranslationEntry> = {
     description: "Unlimited ledger allowance",
   },
   "userSettings.includedLedgers": {
-    message: "{count} книга(и)",
-    description: "Ledger allowance for a subscription tier",
+    message: "{formattedCount} книги",
+    description:
+      "Ledger allowance for a subscription tier - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form (base key for pluralization)",
+  },
+  "userSettings.includedLedgers_one": {
+    message: "{formattedCount} книга",
+    description:
+      "Ledger allowance for a subscription tier - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form - singular form",
+  },
+  "userSettings.includedLedgers_other": {
+    message: "{formattedCount} книги",
+    description:
+      "Ledger allowance for a subscription tier - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form - plural form",
   },
   "userSettings.unlimitedDirectives": {
     message: "Неограничени директиви",
@@ -555,8 +566,19 @@ const bgUserSettings: Record<string, TranslationEntry> = {
     description: "Unlimited collaborator allowance",
   },
   "userSettings.collaboratorsPerLedger": {
-    message: "До {count} сътрудник(и) на книга",
-    description: "Collaborator allowance for each ledger",
+    message: "До {formattedCount} сътрудници на книга",
+    description:
+      "Collaborator allowance for each ledger - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form (base key for pluralization)",
+  },
+  "userSettings.collaboratorsPerLedger_one": {
+    message: "До {formattedCount} сътрудник на книга",
+    description:
+      "Collaborator allowance for each ledger - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form - singular form",
+  },
+  "userSettings.collaboratorsPerLedger_other": {
+    message: "До {formattedCount} сътрудници на книга",
+    description:
+      "Collaborator allowance for each ledger - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form - plural form",
   },
   "userSettings.aiUsageUpgradeNudge": {
     message:

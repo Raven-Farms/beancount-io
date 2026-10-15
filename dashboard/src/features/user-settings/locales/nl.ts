@@ -538,8 +538,19 @@ const nlUserSettings: Record<string, TranslationEntry> = {
     description: "Unlimited ledger allowance",
   },
   "userSettings.includedLedgers": {
-    message: "{count} grootboek(en)",
-    description: "Ledger allowance for a subscription tier",
+    message: "{formattedCount} grootboeken",
+    description:
+      "Ledger allowance for a subscription tier - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form (base key for pluralization)",
+  },
+  "userSettings.includedLedgers_one": {
+    message: "{formattedCount} grootboek",
+    description:
+      "Ledger allowance for a subscription tier - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form - singular form",
+  },
+  "userSettings.includedLedgers_other": {
+    message: "{formattedCount} grootboeken",
+    description:
+      "Ledger allowance for a subscription tier - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form - plural form",
   },
   "userSettings.unlimitedDirectives": {
     message: "Onbeperkte richtlijnen",
@@ -554,8 +565,19 @@ const nlUserSettings: Record<string, TranslationEntry> = {
     description: "Unlimited collaborator allowance",
   },
   "userSettings.collaboratorsPerLedger": {
-    message: "Maximaal {count} medewerker(s) per grootboek",
-    description: "Collaborator allowance for each ledger",
+    message: "Maximaal {formattedCount} medewerkers per grootboek",
+    description:
+      "Collaborator allowance for each ledger - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form (base key for pluralization)",
+  },
+  "userSettings.collaboratorsPerLedger_one": {
+    message: "Maximaal {formattedCount} medewerker per grootboek",
+    description:
+      "Collaborator allowance for each ledger - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form - singular form",
+  },
+  "userSettings.collaboratorsPerLedger_other": {
+    message: "Maximaal {formattedCount} medewerkers per grootboek",
+    description:
+      "Collaborator allowance for each ledger - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form - plural form",
   },
   "userSettings.aiUsageUpgradeNudge": {
     message:

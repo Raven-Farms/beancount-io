@@ -539,8 +539,24 @@ const ptUserSettings: Record<string, TranslationEntry> = {
     description: "Unlimited ledger allowance",
   },
   "userSettings.includedLedgers": {
-    message: "{count} razão(s)",
-    description: "Ledger allowance for a subscription tier",
+    message: "{formattedCount} livros",
+    description:
+      "Ledger allowance for a subscription tier - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form (base key for pluralization)",
+  },
+  "userSettings.includedLedgers_one": {
+    message: "{formattedCount} livro",
+    description:
+      "Ledger allowance for a subscription tier - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form - singular form",
+  },
+  "userSettings.includedLedgers_many": {
+    message: "{formattedCount} livros",
+    description:
+      "Ledger allowance for a subscription tier - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form - form for large round counts such as millions",
+  },
+  "userSettings.includedLedgers_other": {
+    message: "{formattedCount} livros",
+    description:
+      "Ledger allowance for a subscription tier - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form - plural form",
   },
   "userSettings.unlimitedDirectives": {
     message: "Diretivas ilimitadas",
@@ -555,8 +571,24 @@ const ptUserSettings: Record<string, TranslationEntry> = {
     description: "Unlimited collaborator allowance",
   },
   "userSettings.collaboratorsPerLedger": {
-    message: "Até {count} colaborador(es) por razão",
-    description: "Collaborator allowance for each ledger",
+    message: "Até {formattedCount} colaboradores por livro",
+    description:
+      "Collaborator allowance for each ledger - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form (base key for pluralization)",
+  },
+  "userSettings.collaboratorsPerLedger_one": {
+    message: "Até {formattedCount} colaborador por livro",
+    description:
+      "Collaborator allowance for each ledger - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form - singular form",
+  },
+  "userSettings.collaboratorsPerLedger_many": {
+    message: "Até {formattedCount} colaboradores por livro",
+    description:
+      "Collaborator allowance for each ledger - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form - form for large round counts such as millions",
+  },
+  "userSettings.collaboratorsPerLedger_other": {
+    message: "Até {formattedCount} colaboradores por livro",
+    description:
+      "Collaborator allowance for each ledger - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form - plural form",
   },
   "userSettings.aiUsageUpgradeNudge": {
     message:

@@ -14,7 +14,7 @@ export function CurrentPlanBanner({
   tier: UserTier;
   renewalDate: string | null;
   tierQuota: TierQuota | null;
-  t: (key: string, params?: Record<string, string>) => string;
+  t: (key: string, params?: Record<string, string | number>) => string;
 }) {
   const formatCount = useQuotaNumberFormat();
   const tierInfo = getTierInfo(tier);
@@ -39,7 +39,8 @@ export function CurrentPlanBanner({
         tierQuota.maxLedgers === -1
           ? t("userSettings.unlimitedLedgers")
           : t("userSettings.includedLedgers", {
-              count: formatCount(tierQuota.maxLedgers),
+              count: tierQuota.maxLedgers,
+              formattedCount: formatCount(tierQuota.maxLedgers),
             }),
         tierQuota.maxDirectives === -1
           ? t("userSettings.unlimitedDirectives")
@@ -49,7 +50,8 @@ export function CurrentPlanBanner({
         tierQuota.maxCollaboratorsPerLedger === -1
           ? t("userSettings.unlimitedCollaborators")
           : t("userSettings.collaboratorsPerLedger", {
-              count: formatCount(tierQuota.maxCollaboratorsPerLedger),
+              count: tierQuota.maxCollaboratorsPerLedger,
+              formattedCount: formatCount(tierQuota.maxCollaboratorsPerLedger),
             }),
       ].join(" · ")
     : isEnterprise

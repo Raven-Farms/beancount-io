@@ -537,8 +537,19 @@ const faUserSettings: Record<string, TranslationEntry> = {
     description: "Unlimited ledger allowance",
   },
   "userSettings.includedLedgers": {
-    message: "{count} دفتر(های)",
-    description: "Ledger allowance for a subscription tier",
+    message: "{formattedCount} دفتر",
+    description:
+      "Ledger allowance for a subscription tier - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form (base key for pluralization)",
+  },
+  "userSettings.includedLedgers_one": {
+    message: "{formattedCount} دفتر",
+    description:
+      "Ledger allowance for a subscription tier - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form - singular form",
+  },
+  "userSettings.includedLedgers_other": {
+    message: "{formattedCount} دفتر",
+    description:
+      "Ledger allowance for a subscription tier - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form - plural form",
   },
   "userSettings.unlimitedDirectives": {
     message: "دستورالعمل های نامحدود\nدستورالعمل های",
@@ -553,8 +564,19 @@ const faUserSettings: Record<string, TranslationEntry> = {
     description: "Unlimited collaborator allowance",
   },
   "userSettings.collaboratorsPerLedger": {
-    message: "حداکثر {count} همکار در هر دفتر",
-    description: "Collaborator allowance for each ledger",
+    message: "حداکثر {formattedCount} همکار در هر دفتر",
+    description:
+      "Collaborator allowance for each ledger - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form (base key for pluralization)",
+  },
+  "userSettings.collaboratorsPerLedger_one": {
+    message: "حداکثر {formattedCount} همکار در هر دفتر",
+    description:
+      "Collaborator allowance for each ledger - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form - singular form",
+  },
+  "userSettings.collaboratorsPerLedger_other": {
+    message: "حداکثر {formattedCount} همکار در هر دفتر",
+    description:
+      "Collaborator allowance for each ledger - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form - plural form",
   },
   "userSettings.aiUsageUpgradeNudge": {
     message:

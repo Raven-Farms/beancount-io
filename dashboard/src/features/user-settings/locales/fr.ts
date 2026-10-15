@@ -540,8 +540,24 @@ const frUserSettings: Record<string, TranslationEntry> = {
     description: "Unlimited ledger allowance",
   },
   "userSettings.includedLedgers": {
-    message: "{count} grand(x) livre(s)",
-    description: "Ledger allowance for a subscription tier",
+    message: "{formattedCount} grands livres",
+    description:
+      "Ledger allowance for a subscription tier - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form (base key for pluralization)",
+  },
+  "userSettings.includedLedgers_one": {
+    message: "{formattedCount} grand livre",
+    description:
+      "Ledger allowance for a subscription tier - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form - singular form",
+  },
+  "userSettings.includedLedgers_many": {
+    message: "{formattedCount} grands livres",
+    description:
+      "Ledger allowance for a subscription tier - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form - form for large round counts such as millions",
+  },
+  "userSettings.includedLedgers_other": {
+    message: "{formattedCount} grands livres",
+    description:
+      "Ledger allowance for a subscription tier - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form - plural form",
   },
   "userSettings.unlimitedDirectives": {
     message: "Directives illimitées",
@@ -556,8 +572,24 @@ const frUserSettings: Record<string, TranslationEntry> = {
     description: "Unlimited collaborator allowance",
   },
   "userSettings.collaboratorsPerLedger": {
-    message: "Jusqu'à {count} collaborateur(s) par grand livre",
-    description: "Collaborator allowance for each ledger",
+    message: "Jusqu'à {formattedCount} collaborateurs par grand livre",
+    description:
+      "Collaborator allowance for each ledger - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form (base key for pluralization)",
+  },
+  "userSettings.collaboratorsPerLedger_one": {
+    message: "Jusqu'à {formattedCount} collaborateur par grand livre",
+    description:
+      "Collaborator allowance for each ledger - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form - singular form",
+  },
+  "userSettings.collaboratorsPerLedger_many": {
+    message: "Jusqu'à {formattedCount} collaborateurs par grand livre",
+    description:
+      "Collaborator allowance for each ledger - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form - form for large round counts such as millions",
+  },
+  "userSettings.collaboratorsPerLedger_other": {
+    message: "Jusqu'à {formattedCount} collaborateurs par grand livre",
+    description:
+      "Collaborator allowance for each ledger - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form - plural form",
   },
   "userSettings.aiUsageUpgradeNudge": {
     message:

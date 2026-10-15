@@ -532,8 +532,14 @@ const koUserSettings: Record<string, TranslationEntry> = {
     description: "Unlimited ledger allowance",
   },
   "userSettings.includedLedgers": {
-    message: "{count} 원장",
-    description: "Ledger allowance for a subscription tier",
+    message: "원장 {formattedCount}개",
+    description:
+      "Ledger allowance for a subscription tier - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form (base key for pluralization)",
+  },
+  "userSettings.includedLedgers_other": {
+    message: "원장 {formattedCount}개",
+    description:
+      "Ledger allowance for a subscription tier - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form - the only form; this language has no plural inflection",
   },
   "userSettings.unlimitedDirectives": {
     message: "무제한 지시어",
@@ -548,8 +554,14 @@ const koUserSettings: Record<string, TranslationEntry> = {
     description: "Unlimited collaborator allowance",
   },
   "userSettings.collaboratorsPerLedger": {
-    message: "원장당 최대 {count} 협력자",
-    description: "Collaborator allowance for each ledger",
+    message: "원장당 최대 {formattedCount}명의 협업자",
+    description:
+      "Collaborator allowance for each ledger - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form (base key for pluralization)",
+  },
+  "userSettings.collaboratorsPerLedger_other": {
+    message: "원장당 최대 {formattedCount}명의 협업자",
+    description:
+      "Collaborator allowance for each ledger - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form - the only form; this language has no plural inflection",
   },
   "userSettings.aiUsageUpgradeNudge": {
     message:

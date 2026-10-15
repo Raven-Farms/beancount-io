@@ -533,8 +533,14 @@ const jaUserSettings: Record<string, TranslationEntry> = {
     description: "Unlimited ledger allowance",
   },
   "userSettings.includedLedgers": {
-    message: "{count} 元帳",
-    description: "Ledger allowance for a subscription tier",
+    message: "元帳 {formattedCount} 件",
+    description:
+      "Ledger allowance for a subscription tier - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form (base key for pluralization)",
+  },
+  "userSettings.includedLedgers_other": {
+    message: "元帳 {formattedCount} 件",
+    description:
+      "Ledger allowance for a subscription tier - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form - the only form; this language has no plural inflection",
   },
   "userSettings.unlimitedDirectives": {
     message: "無制限のディレクティブ",
@@ -549,8 +555,14 @@ const jaUserSettings: Record<string, TranslationEntry> = {
     description: "Unlimited collaborator allowance",
   },
   "userSettings.collaboratorsPerLedger": {
-    message: "元帳ごとに最大 {count} 人の共同作業者",
-    description: "Collaborator allowance for each ledger",
+    message: "元帳ごとに最大 {formattedCount} 人の共同作業者",
+    description:
+      "Collaborator allowance for each ledger - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form (base key for pluralization)",
+  },
+  "userSettings.collaboratorsPerLedger_other": {
+    message: "元帳ごとに最大 {formattedCount} 人の共同作業者",
+    description:
+      "Collaborator allowance for each ledger - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form - the only form; this language has no plural inflection",
   },
   "userSettings.aiUsageUpgradeNudge": {
     message:

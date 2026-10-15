@@ -176,15 +176,54 @@ const enPlaid: Record<string, TranslationEntry> = {
     description: "Toast title after syncing every connected bank",
   },
   "plaid.management.toast.syncAllCompleteDescription": {
-    message:
-      "{count} new transaction(s) synced across {institutionCount} bank(s).",
+    message: "{transactions} across {banks}.",
     description:
-      "Toast description after syncing every connected bank - interpolation: {count}, {institutionCount}",
+      "Toast description after syncing every connected bank - interpolation: {transactions} is plaid.management.toast.syncAllTransactionsPart, {banks} is plaid.management.toast.syncAllBanksPart; each fragment is pluralized on its own count",
+  },
+  "plaid.management.toast.syncAllTransactionsPart": {
+    message: "{count} new transactions synced",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {transactions}: the number of new transactions synced, worded to fit that sentence - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.management.toast.syncAllTransactionsPart_one": {
+    message: "{count} new transaction synced",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {transactions}: the number of new transactions synced, worded to fit that sentence - interpolation: {count} - singular form",
+  },
+  "plaid.management.toast.syncAllTransactionsPart_other": {
+    message: "{count} new transactions synced",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {transactions}: the number of new transactions synced, worded to fit that sentence - interpolation: {count} - plural form",
+  },
+  "plaid.management.toast.syncAllBanksPart": {
+    message: "{count} banks",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {banks}: the number of banks synced, in the grammatical case that sentence needs - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.management.toast.syncAllBanksPart_one": {
+    message: "{count} bank",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {banks}: the number of banks synced, in the grammatical case that sentence needs - interpolation: {count} - singular form",
+  },
+  "plaid.management.toast.syncAllBanksPart_other": {
+    message: "{count} banks",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {banks}: the number of banks synced, in the grammatical case that sentence needs - interpolation: {count} - plural form",
   },
   "plaid.management.toast.syncAllSkipped": {
-    message: "{count} bank(s) need reconnecting",
+    message: "{count} banks need reconnecting",
     description:
-      "Toast title noting banks skipped by Sync All because they require reauthentication - interpolation: {count}",
+      "Toast title noting banks skipped by Sync All because they require reauthentication - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.management.toast.syncAllSkipped_one": {
+    message: "{count} bank needs reconnecting",
+    description:
+      "Toast title noting banks skipped by Sync All because they require reauthentication - interpolation: {count} - singular form",
+  },
+  "plaid.management.toast.syncAllSkipped_other": {
+    message: "{count} banks need reconnecting",
+    description:
+      "Toast title noting banks skipped by Sync All because they require reauthentication - interpolation: {count} - plural form",
   },
   "plaid.management.toast.syncAllFailedDescription": {
     message: "Failed to sync transactions. Please try again.",
@@ -447,9 +486,19 @@ const enPlaid: Record<string, TranslationEntry> = {
     description: "Toast title after accepting all AI mapping suggestions",
   },
   "plaid.accountMapping.toast.acceptedAllDescription": {
-    message: "Mapped {count} account(s) using AI suggestions.",
+    message: "Mapped {count} accounts using AI suggestions.",
     description:
-      "Toast description after accepting all AI mapping suggestions - interpolation: {count}",
+      "Toast description after accepting all AI mapping suggestions - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.accountMapping.toast.acceptedAllDescription_one": {
+    message: "Mapped {count} account using AI suggestions.",
+    description:
+      "Toast description after accepting all AI mapping suggestions - interpolation: {count} - singular form",
+  },
+  "plaid.accountMapping.toast.acceptedAllDescription_other": {
+    message: "Mapped {count} accounts using AI suggestions.",
+    description:
+      "Toast description after accepting all AI mapping suggestions - interpolation: {count} - plural form",
   },
 
   // Transaction Review Table
@@ -469,9 +518,19 @@ const enPlaid: Record<string, TranslationEntry> = {
       "Card title for the list of unsynced bank transactions awaiting review before submission to the ledger",
   },
   "plaid.transactionReview.description": {
-    message: "Review and submit {count} transaction{plural} to your ledger",
+    message: "Review and submit {count} transactions to your ledger",
     description:
-      "Card description - interpolation: {count} for number, {plural} for 's' or empty",
+      "Card description for the transaction review table - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.description_one": {
+    message: "Review and submit {count} transaction to your ledger",
+    description:
+      "Card description for the transaction review table - interpolation: {count} - singular form",
+  },
+  "plaid.transactionReview.description_other": {
+    message: "Review and submit {count} transactions to your ledger",
+    description:
+      "Card description for the transaction review table - interpolation: {count} - plural form",
   },
   "plaid.transactionReview.submitting": {
     message: "Submitting...",
@@ -495,9 +554,21 @@ const enPlaid: Record<string, TranslationEntry> = {
   },
   "plaid.transactionReview.deleteConfirmDescription": {
     message:
-      "This will permanently remove {count} selected transaction(s) from this list. This cannot be undone.",
+      "This will permanently remove {count} selected transactions from this list. This cannot be undone.",
     description:
-      "Confirmation dialog description for bulk-deleting transactions - interpolation: {count}",
+      "Confirmation dialog description for bulk-deleting transactions - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.deleteConfirmDescription_one": {
+    message:
+      "This will permanently remove {count} selected transaction from this list. This cannot be undone.",
+    description:
+      "Confirmation dialog description for bulk-deleting transactions - interpolation: {count} - singular form",
+  },
+  "plaid.transactionReview.deleteConfirmDescription_other": {
+    message:
+      "This will permanently remove {count} selected transactions from this list. This cannot be undone.",
+    description:
+      "Confirmation dialog description for bulk-deleting transactions - interpolation: {count} - plural form",
   },
   "plaid.transactionReview.searchPlaceholder": {
     message: "Search by merchant or description...",
@@ -538,9 +609,21 @@ const enPlaid: Record<string, TranslationEntry> = {
   },
   "plaid.transactionReview.hiddenSelectedNotice": {
     message:
-      "{count} selected transaction(s) are hidden by the current filters and will still be submitted or deleted.",
+      "{count} selected transactions are hidden by the current filters and will still be submitted or deleted.",
     description:
-      "Notice shown when selected rows fall outside the active filters - they are still submitted or deleted - interpolation: {count}",
+      "Notice shown when selected rows fall outside the active filters - they are still submitted or deleted - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.hiddenSelectedNotice_one": {
+    message:
+      "{count} selected transaction is hidden by the current filters and will still be submitted or deleted.",
+    description:
+      "Notice shown when selected rows fall outside the active filters - they are still submitted or deleted - interpolation: {count} - singular form",
+  },
+  "plaid.transactionReview.hiddenSelectedNotice_other": {
+    message:
+      "{count} selected transactions are hidden by the current filters and will still be submitted or deleted.",
+    description:
+      "Notice shown when selected rows fall outside the active filters - they are still submitted or deleted - interpolation: {count} - plural form",
   },
   "plaid.transactionReview.selectFilePlaceholder": {
     message: "Choose which file to import into",
@@ -548,9 +631,21 @@ const enPlaid: Record<string, TranslationEntry> = {
   },
   "plaid.transactionReview.missingAccountsAlert": {
     message:
-      "{count} selected transaction(s) need target accounts before submission.",
+      "{count} selected transactions need target accounts before submission.",
     description:
-      "Alert message for missing target accounts - interpolation: {count}",
+      "Alert message for missing target accounts - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.missingAccountsAlert_one": {
+    message:
+      "{count} selected transaction needs a target account before submission.",
+    description:
+      "Alert message for missing target accounts - interpolation: {count} - singular form",
+  },
+  "plaid.transactionReview.missingAccountsAlert_other": {
+    message:
+      "{count} selected transactions need target accounts before submission.",
+    description:
+      "Alert message for missing target accounts - interpolation: {count} - plural form",
   },
   "plaid.transactionReview.selectAll": {
     message: "Select all",
@@ -629,9 +724,19 @@ const enPlaid: Record<string, TranslationEntry> = {
     description: "Toast title for missing target accounts",
   },
   "plaid.transactionReview.toast.missingTargetAccountsDescription": {
-    message: "{count} selected transaction(s) need target accounts.",
+    message: "{count} selected transactions need target accounts.",
     description:
-      "Toast description for missing accounts - interpolation: {count}",
+      "Toast description for missing accounts - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.toast.missingTargetAccountsDescription_one": {
+    message: "{count} selected transaction needs a target account.",
+    description:
+      "Toast description for missing accounts - interpolation: {count} - singular form",
+  },
+  "plaid.transactionReview.toast.missingTargetAccountsDescription_other": {
+    message: "{count} selected transactions need target accounts.",
+    description:
+      "Toast description for missing accounts - interpolation: {count} - plural form",
   },
   "plaid.transactionReview.toast.transactionsSubmitted": {
     message: "Transactions Submitted",
@@ -655,9 +760,19 @@ const enPlaid: Record<string, TranslationEntry> = {
     description: "Toast title when transactions are deleted",
   },
   "plaid.transactionReview.toast.transactionsDeletedDescription": {
-    message: "{count} transaction(s) removed from this list.",
+    message: "{count} transactions removed from this list.",
     description:
-      "Toast description for deleted transactions - interpolation: {count}",
+      "Toast description for deleted transactions - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.toast.transactionsDeletedDescription_one": {
+    message: "{count} transaction removed from this list.",
+    description:
+      "Toast description for deleted transactions - interpolation: {count} - singular form",
+  },
+  "plaid.transactionReview.toast.transactionsDeletedDescription_other": {
+    message: "{count} transactions removed from this list.",
+    description:
+      "Toast description for deleted transactions - interpolation: {count} - plural form",
   },
   "plaid.transactionReview.toast.deletionFailed": {
     message: "Deletion Failed",

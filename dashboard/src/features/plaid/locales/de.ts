@@ -179,15 +179,54 @@ const dePlaid: Record<string, TranslationEntry> = {
     description: "Toast title after syncing every connected bank",
   },
   "plaid.management.toast.syncAllCompleteDescription": {
-    message:
-      "{count} neue Transaktion(en) aus {institutionCount} Bank(en) synchronisiert.",
+    message: "{transactions} aus {banks} synchronisiert.",
     description:
-      "Toast description after syncing every connected bank - interpolation: {count}, {institutionCount}",
+      "Toast description after syncing every connected bank - interpolation: {transactions} is plaid.management.toast.syncAllTransactionsPart, {banks} is plaid.management.toast.syncAllBanksPart; each fragment is pluralized on its own count",
+  },
+  "plaid.management.toast.syncAllTransactionsPart": {
+    message: "{count} neue Transaktionen",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {transactions}: the number of new transactions synced, worded to fit that sentence - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.management.toast.syncAllTransactionsPart_one": {
+    message: "{count} neue Transaktion",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {transactions}: the number of new transactions synced, worded to fit that sentence - interpolation: {count} - singular form",
+  },
+  "plaid.management.toast.syncAllTransactionsPart_other": {
+    message: "{count} neue Transaktionen",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {transactions}: the number of new transactions synced, worded to fit that sentence - interpolation: {count} - plural form",
+  },
+  "plaid.management.toast.syncAllBanksPart": {
+    message: "{count} Banken",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {banks}: the number of banks synced, in the grammatical case that sentence needs - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.management.toast.syncAllBanksPart_one": {
+    message: "{count} Bank",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {banks}: the number of banks synced, in the grammatical case that sentence needs - interpolation: {count} - singular form",
+  },
+  "plaid.management.toast.syncAllBanksPart_other": {
+    message: "{count} Banken",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {banks}: the number of banks synced, in the grammatical case that sentence needs - interpolation: {count} - plural form",
   },
   "plaid.management.toast.syncAllSkipped": {
-    message: "{count} Bank(en) müssen neu verbunden werden",
+    message: "{count} Banken müssen neu verbunden werden",
     description:
-      "Toast title noting banks skipped by Sync All because they require reauthentication - interpolation: {count}",
+      "Toast title noting banks skipped by Sync All because they require reauthentication - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.management.toast.syncAllSkipped_one": {
+    message: "{count} Bank muss neu verbunden werden",
+    description:
+      "Toast title noting banks skipped by Sync All because they require reauthentication - interpolation: {count} - singular form",
+  },
+  "plaid.management.toast.syncAllSkipped_other": {
+    message: "{count} Banken müssen neu verbunden werden",
+    description:
+      "Toast title noting banks skipped by Sync All because they require reauthentication - interpolation: {count} - plural form",
   },
   "plaid.management.toast.syncAllFailedDescription": {
     message:
@@ -452,9 +491,19 @@ const dePlaid: Record<string, TranslationEntry> = {
     description: "Toast title after accepting all AI mapping suggestions",
   },
   "plaid.accountMapping.toast.acceptedAllDescription": {
-    message: "{count} Konto/Konten anhand von KI-Vorschlägen zugeordnet.",
+    message: "{count} Konten anhand von KI-Vorschlägen zugeordnet.",
     description:
-      "Toast description after accepting all AI mapping suggestions - interpolation: {count}",
+      "Toast description after accepting all AI mapping suggestions - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.accountMapping.toast.acceptedAllDescription_one": {
+    message: "{count} Konto anhand von KI-Vorschlägen zugeordnet.",
+    description:
+      "Toast description after accepting all AI mapping suggestions - interpolation: {count} - singular form",
+  },
+  "plaid.accountMapping.toast.acceptedAllDescription_other": {
+    message: "{count} Konten anhand von KI-Vorschlägen zugeordnet.",
+    description:
+      "Toast description after accepting all AI mapping suggestions - interpolation: {count} - plural form",
   },
 
   // Account Detail Page
@@ -477,9 +526,21 @@ const dePlaid: Record<string, TranslationEntry> = {
   },
   "plaid.transactionReview.description": {
     message:
-      "Überprüfen und übermitteln Sie {count} Transaktion{plural} an Ihr Hauptbuch",
+      "Überprüfen und übermitteln Sie {count} Transaktionen an Ihr Hauptbuch",
     description:
-      "Card description - interpolation: {count} for number, {plural} for 's' or empty",
+      "Card description for the transaction review table - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.description_one": {
+    message:
+      "Überprüfen und übermitteln Sie {count} Transaktion an Ihr Hauptbuch",
+    description:
+      "Card description for the transaction review table - interpolation: {count} - singular form",
+  },
+  "plaid.transactionReview.description_other": {
+    message:
+      "Überprüfen und übermitteln Sie {count} Transaktionen an Ihr Hauptbuch",
+    description:
+      "Card description for the transaction review table - interpolation: {count} - plural form",
   },
   "plaid.transactionReview.submitting": {
     message: "Übermittle...",
@@ -528,9 +589,21 @@ const dePlaid: Record<string, TranslationEntry> = {
   },
   "plaid.transactionReview.hiddenSelectedNotice": {
     message:
-      "{count} ausgewählte Transaktion(en) sind durch die aktuellen Filter ausgeblendet, werden aber trotzdem übertragen oder gelöscht.",
+      "{count} ausgewählte Transaktionen sind durch die aktuellen Filter ausgeblendet, werden aber trotzdem übertragen oder gelöscht.",
     description:
-      "Notice shown when selected rows fall outside the active filters - they are still submitted or deleted - interpolation: {count}",
+      "Notice shown when selected rows fall outside the active filters - they are still submitted or deleted - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.hiddenSelectedNotice_one": {
+    message:
+      "{count} ausgewählte Transaktion ist durch die aktuellen Filter ausgeblendet, wird aber trotzdem übertragen oder gelöscht.",
+    description:
+      "Notice shown when selected rows fall outside the active filters - they are still submitted or deleted - interpolation: {count} - singular form",
+  },
+  "plaid.transactionReview.hiddenSelectedNotice_other": {
+    message:
+      "{count} ausgewählte Transaktionen sind durch die aktuellen Filter ausgeblendet, werden aber trotzdem übertragen oder gelöscht.",
+    description:
+      "Notice shown when selected rows fall outside the active filters - they are still submitted or deleted - interpolation: {count} - plural form",
   },
   "plaid.transactionReview.selectFilePlaceholder": {
     message: "Zieldatei für den Import wählen",
@@ -538,9 +611,21 @@ const dePlaid: Record<string, TranslationEntry> = {
   },
   "plaid.transactionReview.missingAccountsAlert": {
     message:
-      "{count} ausgewählte Transaktion(en) benötigen Zielkonten vor der Übermittlung.",
+      "{count} ausgewählte Transaktionen benötigen vor der Übermittlung Zielkonten.",
     description:
-      "Alert message for missing target accounts - interpolation: {count}",
+      "Alert message for missing target accounts - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.missingAccountsAlert_one": {
+    message:
+      "{count} ausgewählte Transaktion benötigt vor der Übermittlung ein Zielkonto.",
+    description:
+      "Alert message for missing target accounts - interpolation: {count} - singular form",
+  },
+  "plaid.transactionReview.missingAccountsAlert_other": {
+    message:
+      "{count} ausgewählte Transaktionen benötigen vor der Übermittlung Zielkonten.",
+    description:
+      "Alert message for missing target accounts - interpolation: {count} - plural form",
   },
   "plaid.transactionReview.selectAll": {
     message: "Alle auswählen",
@@ -621,9 +706,19 @@ const dePlaid: Record<string, TranslationEntry> = {
     description: "Toast title for missing target accounts",
   },
   "plaid.transactionReview.toast.missingTargetAccountsDescription": {
-    message: "{count} ausgewählte Transaktion(en) benötigen Zielkonten.",
+    message: "{count} ausgewählte Transaktionen benötigen Zielkonten.",
     description:
-      "Toast description for missing accounts - interpolation: {count}",
+      "Toast description for missing accounts - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.toast.missingTargetAccountsDescription_one": {
+    message: "{count} ausgewählte Transaktion benötigt ein Zielkonto.",
+    description:
+      "Toast description for missing accounts - interpolation: {count} - singular form",
+  },
+  "plaid.transactionReview.toast.missingTargetAccountsDescription_other": {
+    message: "{count} ausgewählte Transaktionen benötigen Zielkonten.",
+    description:
+      "Toast description for missing accounts - interpolation: {count} - plural form",
   },
   "plaid.transactionReview.toast.transactionsSubmitted": {
     message: "Transaktionen Übermittelt",
@@ -659,7 +754,19 @@ const dePlaid: Record<string, TranslationEntry> = {
     message:
       "Dadurch werden {count} ausgewählte Transaktionen dauerhaft aus dieser Liste entfernt. Dies kann nicht rückgängig gemacht werden.",
     description:
-      "Confirmation dialog description for bulk-deleting transactions - interpolation: {count}",
+      "Confirmation dialog description for bulk-deleting transactions - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.deleteConfirmDescription_one": {
+    message:
+      "Dadurch wird {count} ausgewählte Transaktion dauerhaft aus dieser Liste entfernt. Dies kann nicht rückgängig gemacht werden.",
+    description:
+      "Confirmation dialog description for bulk-deleting transactions - interpolation: {count} - singular form",
+  },
+  "plaid.transactionReview.deleteConfirmDescription_other": {
+    message:
+      "Dadurch werden {count} ausgewählte Transaktionen dauerhaft aus dieser Liste entfernt. Dies kann nicht rückgängig gemacht werden.",
+    description:
+      "Confirmation dialog description for bulk-deleting transactions - interpolation: {count} - plural form",
   },
   "plaid.transactionReview.toast.transactionsDeleted": {
     message: "Transaktionen gelöscht",
@@ -668,7 +775,17 @@ const dePlaid: Record<string, TranslationEntry> = {
   "plaid.transactionReview.toast.transactionsDeletedDescription": {
     message: "{count} Transaktionen wurden aus dieser Liste entfernt.",
     description:
-      "Toast description for deleted transactions - interpolation: {count}",
+      "Toast description for deleted transactions - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.toast.transactionsDeletedDescription_one": {
+    message: "{count} Transaktion wurde aus dieser Liste entfernt.",
+    description:
+      "Toast description for deleted transactions - interpolation: {count} - singular form",
+  },
+  "plaid.transactionReview.toast.transactionsDeletedDescription_other": {
+    message: "{count} Transaktionen wurden aus dieser Liste entfernt.",
+    description:
+      "Toast description for deleted transactions - interpolation: {count} - plural form",
   },
   "plaid.transactionReview.toast.deletionFailed": {
     message: "Löschen fehlgeschlagen",

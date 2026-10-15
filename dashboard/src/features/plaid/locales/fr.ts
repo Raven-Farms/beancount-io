@@ -181,15 +181,69 @@ const frPlaid: Record<string, TranslationEntry> = {
     description: "Toast title after syncing every connected bank",
   },
   "plaid.management.toast.syncAllCompleteDescription": {
-    message:
-      "{count} nouvelle(s) transaction(s) synchronisée(s) depuis {institutionCount} banque(s).",
+    message: "{transactions} depuis {banks}.",
     description:
-      "Toast description after syncing every connected bank - interpolation: {count}, {institutionCount}",
+      "Toast description after syncing every connected bank - interpolation: {transactions} is plaid.management.toast.syncAllTransactionsPart, {banks} is plaid.management.toast.syncAllBanksPart; each fragment is pluralized on its own count",
+  },
+  "plaid.management.toast.syncAllTransactionsPart": {
+    message: "{count} nouvelles transactions synchronisées",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {transactions}: the number of new transactions synced, worded to fit that sentence - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.management.toast.syncAllTransactionsPart_one": {
+    message: "{count} nouvelle transaction synchronisée",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {transactions}: the number of new transactions synced, worded to fit that sentence - interpolation: {count} - singular form",
+  },
+  "plaid.management.toast.syncAllTransactionsPart_many": {
+    message: "{count} nouvelles transactions synchronisées",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {transactions}: the number of new transactions synced, worded to fit that sentence - interpolation: {count} - form for large round counts such as millions",
+  },
+  "plaid.management.toast.syncAllTransactionsPart_other": {
+    message: "{count} nouvelles transactions synchronisées",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {transactions}: the number of new transactions synced, worded to fit that sentence - interpolation: {count} - plural form",
+  },
+  "plaid.management.toast.syncAllBanksPart": {
+    message: "{count} banques",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {banks}: the number of banks synced, in the grammatical case that sentence needs - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.management.toast.syncAllBanksPart_one": {
+    message: "{count} banque",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {banks}: the number of banks synced, in the grammatical case that sentence needs - interpolation: {count} - singular form",
+  },
+  "plaid.management.toast.syncAllBanksPart_many": {
+    message: "{count} banques",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {banks}: the number of banks synced, in the grammatical case that sentence needs - interpolation: {count} - form for large round counts such as millions",
+  },
+  "plaid.management.toast.syncAllBanksPart_other": {
+    message: "{count} banques",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {banks}: the number of banks synced, in the grammatical case that sentence needs - interpolation: {count} - plural form",
   },
   "plaid.management.toast.syncAllSkipped": {
-    message: "{count} banque(s) à reconnecter",
+    message: "{count} banques à reconnecter",
     description:
-      "Toast title noting banks skipped by Sync All because they require reauthentication - interpolation: {count}",
+      "Toast title noting banks skipped by Sync All because they require reauthentication - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.management.toast.syncAllSkipped_one": {
+    message: "{count} banque à reconnecter",
+    description:
+      "Toast title noting banks skipped by Sync All because they require reauthentication - interpolation: {count} - singular form",
+  },
+  "plaid.management.toast.syncAllSkipped_many": {
+    message: "{count} banques à reconnecter",
+    description:
+      "Toast title noting banks skipped by Sync All because they require reauthentication - interpolation: {count} - form for large round counts such as millions",
+  },
+  "plaid.management.toast.syncAllSkipped_other": {
+    message: "{count} banques à reconnecter",
+    description:
+      "Toast title noting banks skipped by Sync All because they require reauthentication - interpolation: {count} - plural form",
   },
   "plaid.management.toast.syncAllFailedDescription": {
     message:
@@ -454,9 +508,24 @@ const frPlaid: Record<string, TranslationEntry> = {
     description: "Toast title after accepting all AI mapping suggestions",
   },
   "plaid.accountMapping.toast.acceptedAllDescription": {
-    message: "{count} compte(s) mappé(s) à l'aide des suggestions de l'IA.",
+    message: "{count} comptes mappés à l'aide des suggestions de l'IA.",
     description:
-      "Toast description after accepting all AI mapping suggestions - interpolation: {count}",
+      "Toast description after accepting all AI mapping suggestions - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.accountMapping.toast.acceptedAllDescription_one": {
+    message: "{count} compte mappé à l'aide des suggestions de l'IA.",
+    description:
+      "Toast description after accepting all AI mapping suggestions - interpolation: {count} - singular form",
+  },
+  "plaid.accountMapping.toast.acceptedAllDescription_many": {
+    message: "{count} comptes mappés à l'aide des suggestions de l'IA.",
+    description:
+      "Toast description after accepting all AI mapping suggestions - interpolation: {count} - form for large round counts such as millions",
+  },
+  "plaid.accountMapping.toast.acceptedAllDescription_other": {
+    message: "{count} comptes mappés à l'aide des suggestions de l'IA.",
+    description:
+      "Toast description after accepting all AI mapping suggestions - interpolation: {count} - plural form",
   },
 
   // Account Detail Page
@@ -479,9 +548,27 @@ const frPlaid: Record<string, TranslationEntry> = {
   },
   "plaid.transactionReview.description": {
     message:
-      "Examinez et soumettez {count} transaction{plural} à votre livre de comptes",
+      "Examinez et soumettez {count} transactions à votre livre de comptes",
     description:
-      "Card description - interpolation: {count} for number, {plural} for 's' or empty",
+      "Card description for the transaction review table - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.description_one": {
+    message:
+      "Examinez et soumettez {count} transaction à votre livre de comptes",
+    description:
+      "Card description for the transaction review table - interpolation: {count} - singular form",
+  },
+  "plaid.transactionReview.description_many": {
+    message:
+      "Examinez et soumettez {count} transactions à votre livre de comptes",
+    description:
+      "Card description for the transaction review table - interpolation: {count} - form for large round counts such as millions",
+  },
+  "plaid.transactionReview.description_other": {
+    message:
+      "Examinez et soumettez {count} transactions à votre livre de comptes",
+    description:
+      "Card description for the transaction review table - interpolation: {count} - plural form",
   },
   "plaid.transactionReview.submitting": {
     message: "Soumission...",
@@ -530,9 +617,27 @@ const frPlaid: Record<string, TranslationEntry> = {
   },
   "plaid.transactionReview.hiddenSelectedNotice": {
     message:
-      "{count} transaction(s) sélectionnée(s) sont masquées par les filtres actuels, mais seront tout de même soumises ou supprimées.",
+      "{count} transactions sélectionnées sont masquées par les filtres actuels, mais seront tout de même soumises ou supprimées.",
     description:
-      "Notice shown when selected rows fall outside the active filters - they are still submitted or deleted - interpolation: {count}",
+      "Notice shown when selected rows fall outside the active filters - they are still submitted or deleted - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.hiddenSelectedNotice_one": {
+    message:
+      "{count} transaction sélectionnée est masquée par les filtres actuels, mais sera tout de même soumise ou supprimée.",
+    description:
+      "Notice shown when selected rows fall outside the active filters - they are still submitted or deleted - interpolation: {count} - singular form",
+  },
+  "plaid.transactionReview.hiddenSelectedNotice_many": {
+    message:
+      "{count} transactions sélectionnées sont masquées par les filtres actuels, mais seront tout de même soumises ou supprimées.",
+    description:
+      "Notice shown when selected rows fall outside the active filters - they are still submitted or deleted - interpolation: {count} - form for large round counts such as millions",
+  },
+  "plaid.transactionReview.hiddenSelectedNotice_other": {
+    message:
+      "{count} transactions sélectionnées sont masquées par les filtres actuels, mais seront tout de même soumises ou supprimées.",
+    description:
+      "Notice shown when selected rows fall outside the active filters - they are still submitted or deleted - interpolation: {count} - plural form",
   },
   "plaid.transactionReview.selectFilePlaceholder": {
     message: "Choisissez dans quel fichier importer",
@@ -540,9 +645,27 @@ const frPlaid: Record<string, TranslationEntry> = {
   },
   "plaid.transactionReview.missingAccountsAlert": {
     message:
-      "{count} transaction(s) sélectionnée(s) nécessite(nt) des comptes cibles avant la soumission.",
+      "{count} transactions sélectionnées nécessitent des comptes cibles avant la soumission.",
     description:
-      "Alert message for missing target accounts - interpolation: {count}",
+      "Alert message for missing target accounts - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.missingAccountsAlert_one": {
+    message:
+      "{count} transaction sélectionnée nécessite un compte cible avant la soumission.",
+    description:
+      "Alert message for missing target accounts - interpolation: {count} - singular form",
+  },
+  "plaid.transactionReview.missingAccountsAlert_many": {
+    message:
+      "{count} transactions sélectionnées nécessitent des comptes cibles avant la soumission.",
+    description:
+      "Alert message for missing target accounts - interpolation: {count} - form for large round counts such as millions",
+  },
+  "plaid.transactionReview.missingAccountsAlert_other": {
+    message:
+      "{count} transactions sélectionnées nécessitent des comptes cibles avant la soumission.",
+    description:
+      "Alert message for missing target accounts - interpolation: {count} - plural form",
   },
   "plaid.transactionReview.selectAll": {
     message: "Tout sélectionner",
@@ -622,9 +745,26 @@ const frPlaid: Record<string, TranslationEntry> = {
   },
   "plaid.transactionReview.toast.missingTargetAccountsDescription": {
     message:
-      "{count} transaction(s) sélectionnée(s) nécessite(nt) des comptes cibles.",
+      "{count} transactions sélectionnées nécessitent des comptes cibles.",
     description:
-      "Toast description for missing accounts - interpolation: {count}",
+      "Toast description for missing accounts - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.toast.missingTargetAccountsDescription_one": {
+    message: "{count} transaction sélectionnée nécessite un compte cible.",
+    description:
+      "Toast description for missing accounts - interpolation: {count} - singular form",
+  },
+  "plaid.transactionReview.toast.missingTargetAccountsDescription_many": {
+    message:
+      "{count} transactions sélectionnées nécessitent des comptes cibles.",
+    description:
+      "Toast description for missing accounts - interpolation: {count} - form for large round counts such as millions",
+  },
+  "plaid.transactionReview.toast.missingTargetAccountsDescription_other": {
+    message:
+      "{count} transactions sélectionnées nécessitent des comptes cibles.",
+    description:
+      "Toast description for missing accounts - interpolation: {count} - plural form",
   },
   "plaid.transactionReview.toast.transactionsSubmitted": {
     message: "Transactions Soumises",
@@ -657,9 +797,27 @@ const frPlaid: Record<string, TranslationEntry> = {
   },
   "plaid.transactionReview.deleteConfirmDescription": {
     message:
-      "Cette action supprimera définitivement de cette liste les {count} transactions sélectionnées. Cette opération est irréversible.",
+      "Cette action supprimera définitivement de cette liste {count} transactions sélectionnées. Cette opération est irréversible.",
     description:
-      "Confirmation dialog description for bulk-deleting transactions - interpolation: {count}",
+      "Confirmation dialog description for bulk-deleting transactions - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.deleteConfirmDescription_one": {
+    message:
+      "Cette action supprimera définitivement de cette liste {count} transaction sélectionnée. Cette opération est irréversible.",
+    description:
+      "Confirmation dialog description for bulk-deleting transactions - interpolation: {count} - singular form",
+  },
+  "plaid.transactionReview.deleteConfirmDescription_many": {
+    message:
+      "Cette action supprimera définitivement de cette liste {count} transactions sélectionnées. Cette opération est irréversible.",
+    description:
+      "Confirmation dialog description for bulk-deleting transactions - interpolation: {count} - form for large round counts such as millions",
+  },
+  "plaid.transactionReview.deleteConfirmDescription_other": {
+    message:
+      "Cette action supprimera définitivement de cette liste {count} transactions sélectionnées. Cette opération est irréversible.",
+    description:
+      "Confirmation dialog description for bulk-deleting transactions - interpolation: {count} - plural form",
   },
   "plaid.transactionReview.toast.transactionsDeleted": {
     message: "Transactions supprimées",
@@ -668,7 +826,22 @@ const frPlaid: Record<string, TranslationEntry> = {
   "plaid.transactionReview.toast.transactionsDeletedDescription": {
     message: "{count} transactions ont été supprimées de cette liste.",
     description:
-      "Toast description for deleted transactions - interpolation: {count}",
+      "Toast description for deleted transactions - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.toast.transactionsDeletedDescription_one": {
+    message: "{count} transaction a été supprimée de cette liste.",
+    description:
+      "Toast description for deleted transactions - interpolation: {count} - singular form",
+  },
+  "plaid.transactionReview.toast.transactionsDeletedDescription_many": {
+    message: "{count} transactions ont été supprimées de cette liste.",
+    description:
+      "Toast description for deleted transactions - interpolation: {count} - form for large round counts such as millions",
+  },
+  "plaid.transactionReview.toast.transactionsDeletedDescription_other": {
+    message: "{count} transactions ont été supprimées de cette liste.",
+    description:
+      "Toast description for deleted transactions - interpolation: {count} - plural form",
   },
   "plaid.transactionReview.toast.deletionFailed": {
     message: "Échec de la suppression",

@@ -175,14 +175,39 @@ const zhPlaid: Record<string, TranslationEntry> = {
     description: "Toast title after syncing every connected bank",
   },
   "plaid.management.toast.syncAllCompleteDescription": {
-    message: "已从 {institutionCount} 家银行同步 {count} 笔新交易。",
+    message: "{banks}{transactions}。",
     description:
-      "Toast description after syncing every connected bank - interpolation: {count}, {institutionCount}",
+      "Toast description after syncing every connected bank - interpolation: {transactions} is plaid.management.toast.syncAllTransactionsPart, {banks} is plaid.management.toast.syncAllBanksPart; each fragment is pluralized on its own count",
+  },
+  "plaid.management.toast.syncAllTransactionsPart": {
+    message: "同步 {count} 笔新交易",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {transactions}: the number of new transactions synced, worded to fit that sentence - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.management.toast.syncAllTransactionsPart_other": {
+    message: "同步 {count} 笔新交易",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {transactions}: the number of new transactions synced, worded to fit that sentence - interpolation: {count} - the only form; this language has no plural inflection",
+  },
+  "plaid.management.toast.syncAllBanksPart": {
+    message: "已从 {count} 家银行",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {banks}: the number of banks synced, in the grammatical case that sentence needs - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.management.toast.syncAllBanksPart_other": {
+    message: "已从 {count} 家银行",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {banks}: the number of banks synced, in the grammatical case that sentence needs - interpolation: {count} - the only form; this language has no plural inflection",
   },
   "plaid.management.toast.syncAllSkipped": {
     message: "{count} 家银行需要重新连接",
     description:
-      "Toast title noting banks skipped by Sync All because they require reauthentication - interpolation: {count}",
+      "Toast title noting banks skipped by Sync All because they require reauthentication - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.management.toast.syncAllSkipped_other": {
+    message: "{count} 家银行需要重新连接",
+    description:
+      "Toast title noting banks skipped by Sync All because they require reauthentication - interpolation: {count} - the only form; this language has no plural inflection",
   },
   "plaid.management.toast.syncAllFailedDescription": {
     message: "同步交易失败，请重试。",
@@ -446,7 +471,12 @@ const zhPlaid: Record<string, TranslationEntry> = {
   "plaid.accountMapping.toast.acceptedAllDescription": {
     message: "已根据 AI 建议映射 {count} 个账户。",
     description:
-      "Toast description after accepting all AI mapping suggestions - interpolation: {count}",
+      "Toast description after accepting all AI mapping suggestions - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.accountMapping.toast.acceptedAllDescription_other": {
+    message: "已根据 AI 建议映射 {count} 个账户。",
+    description:
+      "Toast description after accepting all AI mapping suggestions - interpolation: {count} - the only form; this language has no plural inflection",
   },
 
   // Account Detail Page
@@ -467,9 +497,14 @@ const zhPlaid: Record<string, TranslationEntry> = {
       "Card title for the list of unsynced bank transactions awaiting review before submission to the ledger",
   },
   "plaid.transactionReview.description": {
-    message: "审核并提交 {count} 笔交易{plural}到你的账本",
+    message: "审核并提交 {count} 笔交易到你的账本",
     description:
-      "Card description - interpolation: {count} for number, {plural} for 's' or empty",
+      "Card description for the transaction review table - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.description_other": {
+    message: "审核并提交 {count} 笔交易到你的账本",
+    description:
+      "Card description for the transaction review table - interpolation: {count} - the only form; this language has no plural inflection",
   },
   "plaid.transactionReview.submitting": {
     message: "提交中...",
@@ -519,7 +554,12 @@ const zhPlaid: Record<string, TranslationEntry> = {
   "plaid.transactionReview.hiddenSelectedNotice": {
     message: "有 {count} 笔已选交易被当前筛选条件隐藏，但仍会被提交或删除。",
     description:
-      "Notice shown when selected rows fall outside the active filters - they are still submitted or deleted - interpolation: {count}",
+      "Notice shown when selected rows fall outside the active filters - they are still submitted or deleted - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.hiddenSelectedNotice_other": {
+    message: "有 {count} 笔已选交易被当前筛选条件隐藏，但仍会被提交或删除。",
+    description:
+      "Notice shown when selected rows fall outside the active filters - they are still submitted or deleted - interpolation: {count} - the only form; this language has no plural inflection",
   },
   "plaid.transactionReview.selectFilePlaceholder": {
     message: "选择导入到哪个文件",
@@ -528,7 +568,12 @@ const zhPlaid: Record<string, TranslationEntry> = {
   "plaid.transactionReview.missingAccountsAlert": {
     message: "{count} 笔已选交易需要目标账户才能提交。",
     description:
-      "Alert message for missing target accounts - interpolation: {count}",
+      "Alert message for missing target accounts - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.missingAccountsAlert_other": {
+    message: "{count} 笔已选交易需要目标账户才能提交。",
+    description:
+      "Alert message for missing target accounts - interpolation: {count} - the only form; this language has no plural inflection",
   },
   "plaid.transactionReview.selectAll": {
     message: "全选",
@@ -609,7 +654,12 @@ const zhPlaid: Record<string, TranslationEntry> = {
   "plaid.transactionReview.toast.missingTargetAccountsDescription": {
     message: "{count} 笔已选交易需要目标账户。",
     description:
-      "Toast description for missing accounts - interpolation: {count}",
+      "Toast description for missing accounts - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.toast.missingTargetAccountsDescription_other": {
+    message: "{count} 笔已选交易需要目标账户。",
+    description:
+      "Toast description for missing accounts - interpolation: {count} - the only form; this language has no plural inflection",
   },
   "plaid.transactionReview.toast.transactionsSubmitted": {
     message: "交易已提交",
@@ -643,7 +693,12 @@ const zhPlaid: Record<string, TranslationEntry> = {
   "plaid.transactionReview.deleteConfirmDescription": {
     message: "这将从列表中永久移除选中的 {count} 笔交易。此操作无法撤销。",
     description:
-      "Confirmation dialog description for bulk-deleting transactions - interpolation: {count}",
+      "Confirmation dialog description for bulk-deleting transactions - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.deleteConfirmDescription_other": {
+    message: "这将从列表中永久移除选中的 {count} 笔交易。此操作无法撤销。",
+    description:
+      "Confirmation dialog description for bulk-deleting transactions - interpolation: {count} - the only form; this language has no plural inflection",
   },
   "plaid.transactionReview.toast.transactionsDeleted": {
     message: "交易已删除",
@@ -652,7 +707,12 @@ const zhPlaid: Record<string, TranslationEntry> = {
   "plaid.transactionReview.toast.transactionsDeletedDescription": {
     message: "已从列表中移除 {count} 笔交易。",
     description:
-      "Toast description for deleted transactions - interpolation: {count}",
+      "Toast description for deleted transactions - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.toast.transactionsDeletedDescription_other": {
+    message: "已从列表中移除 {count} 笔交易。",
+    description:
+      "Toast description for deleted transactions - interpolation: {count} - the only form; this language has no plural inflection",
   },
   "plaid.transactionReview.toast.deletionFailed": {
     message: "删除失败",

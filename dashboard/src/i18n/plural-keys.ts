@@ -22,6 +22,18 @@ export const PLURAL_BASE_KEYS = [
   "page.overview.atCostCount",
   "page.overview.notInTotalCount",
   "page.overview.pricesNotUpdated",
+  "plaid.accountMapping.toast.acceptedAllDescription",
+  "plaid.management.toast.syncAllBanksPart",
+  "plaid.management.toast.syncAllSkipped",
+  "plaid.management.toast.syncAllTransactionsPart",
+  "plaid.transactionReview.deleteConfirmDescription",
+  "plaid.transactionReview.description",
+  "plaid.transactionReview.hiddenSelectedNotice",
+  "plaid.transactionReview.missingAccountsAlert",
+  "plaid.transactionReview.toast.missingTargetAccountsDescription",
+  "plaid.transactionReview.toast.transactionsDeletedDescription",
+  "userSettings.collaboratorsPerLedger",
+  "userSettings.includedLedgers",
 ] as const;
 
 export type PluralBaseKey = (typeof PLURAL_BASE_KEYS)[number];

@@ -172,15 +172,39 @@ const koPlaid: Record<string, TranslationEntry> = {
     description: "Toast title after syncing every connected bank",
   },
   "plaid.management.toast.syncAllCompleteDescription": {
-    message:
-      "은행 {institutionCount}곳에서 새 거래 {count}건을 동기화했습니다.",
+    message: "{banks}에서 {transactions} 동기화했습니다.",
     description:
-      "Toast description after syncing every connected bank - interpolation: {count}, {institutionCount}",
+      "Toast description after syncing every connected bank - interpolation: {transactions} is plaid.management.toast.syncAllTransactionsPart, {banks} is plaid.management.toast.syncAllBanksPart; each fragment is pluralized on its own count",
+  },
+  "plaid.management.toast.syncAllTransactionsPart": {
+    message: "새 거래 {count}건을",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {transactions}: the number of new transactions synced, worded to fit that sentence - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.management.toast.syncAllTransactionsPart_other": {
+    message: "새 거래 {count}건을",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {transactions}: the number of new transactions synced, worded to fit that sentence - interpolation: {count} - the only form; this language has no plural inflection",
+  },
+  "plaid.management.toast.syncAllBanksPart": {
+    message: "은행 {count}곳",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {banks}: the number of banks synced, in the grammatical case that sentence needs - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.management.toast.syncAllBanksPart_other": {
+    message: "은행 {count}곳",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {banks}: the number of banks synced, in the grammatical case that sentence needs - interpolation: {count} - the only form; this language has no plural inflection",
   },
   "plaid.management.toast.syncAllSkipped": {
     message: "은행 {count}곳을 다시 연결해야 합니다",
     description:
-      "Toast title noting banks skipped by Sync All because they require reauthentication - interpolation: {count}",
+      "Toast title noting banks skipped by Sync All because they require reauthentication - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.management.toast.syncAllSkipped_other": {
+    message: "은행 {count}곳을 다시 연결해야 합니다",
+    description:
+      "Toast title noting banks skipped by Sync All because they require reauthentication - interpolation: {count} - the only form; this language has no plural inflection",
   },
   "plaid.management.toast.syncAllFailedDescription": {
     message: "거래를 동기화하지 못했습니다. 다시 시도해 주세요.",
@@ -446,7 +470,12 @@ const koPlaid: Record<string, TranslationEntry> = {
   "plaid.accountMapping.toast.acceptedAllDescription": {
     message: "AI 추천을 사용해 계좌 {count}개를 매핑했습니다.",
     description:
-      "Toast description after accepting all AI mapping suggestions - interpolation: {count}",
+      "Toast description after accepting all AI mapping suggestions - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.accountMapping.toast.acceptedAllDescription_other": {
+    message: "AI 추천을 사용해 계좌 {count}개를 매핑했습니다.",
+    description:
+      "Toast description after accepting all AI mapping suggestions - interpolation: {count} - the only form; this language has no plural inflection",
   },
 
   // Account Detail Page
@@ -467,9 +496,14 @@ const koPlaid: Record<string, TranslationEntry> = {
       "Card title for the list of unsynced bank transactions awaiting review before submission to the ledger",
   },
   "plaid.transactionReview.description": {
-    message: "{count}건의 거래{plural}를 검토하고 원장에 제출",
+    message: "{count}건의 거래를 검토하고 원장에 제출",
     description:
-      "Card description - interpolation: {count} for number, {plural} for 's' or empty",
+      "Card description for the transaction review table - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.description_other": {
+    message: "{count}건의 거래를 검토하고 원장에 제출",
+    description:
+      "Card description for the transaction review table - interpolation: {count} - the only form; this language has no plural inflection",
   },
   "plaid.transactionReview.submitting": {
     message: "제출 중...",
@@ -520,7 +554,13 @@ const koPlaid: Record<string, TranslationEntry> = {
     message:
       "선택한 거래 {count}건이 현재 필터로 숨겨져 있지만 제출 또는 삭제 대상에 포함됩니다.",
     description:
-      "Notice shown when selected rows fall outside the active filters - they are still submitted or deleted - interpolation: {count}",
+      "Notice shown when selected rows fall outside the active filters - they are still submitted or deleted - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.hiddenSelectedNotice_other": {
+    message:
+      "선택한 거래 {count}건이 현재 필터로 숨겨져 있지만 제출 또는 삭제 대상에 포함됩니다.",
+    description:
+      "Notice shown when selected rows fall outside the active filters - they are still submitted or deleted - interpolation: {count} - the only form; this language has no plural inflection",
   },
   "plaid.transactionReview.selectFilePlaceholder": {
     message: "가져올 파일을 선택하세요",
@@ -529,7 +569,12 @@ const koPlaid: Record<string, TranslationEntry> = {
   "plaid.transactionReview.missingAccountsAlert": {
     message: "선택한 거래 {count}건은 제출 전에 대상 계좌가 필요합니다.",
     description:
-      "Alert message for missing target accounts - interpolation: {count}",
+      "Alert message for missing target accounts - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.missingAccountsAlert_other": {
+    message: "선택한 거래 {count}건은 제출 전에 대상 계좌가 필요합니다.",
+    description:
+      "Alert message for missing target accounts - interpolation: {count} - the only form; this language has no plural inflection",
   },
   "plaid.transactionReview.selectAll": {
     message: "모두 선택",
@@ -610,7 +655,12 @@ const koPlaid: Record<string, TranslationEntry> = {
   "plaid.transactionReview.toast.missingTargetAccountsDescription": {
     message: "선택한 거래 {count}건에 대상 계좌가 필요합니다.",
     description:
-      "Toast description for missing accounts - interpolation: {count}",
+      "Toast description for missing accounts - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.toast.missingTargetAccountsDescription_other": {
+    message: "선택한 거래 {count}건에 대상 계좌가 필요합니다.",
+    description:
+      "Toast description for missing accounts - interpolation: {count} - the only form; this language has no plural inflection",
   },
   "plaid.transactionReview.toast.transactionsSubmitted": {
     message: "거래가 제출되었습니다",
@@ -645,7 +695,13 @@ const koPlaid: Record<string, TranslationEntry> = {
     message:
       "선택한 거래 {count}건이 이 목록에서 영구적으로 삭제됩니다. 이 작업은 취소할 수 없습니다.",
     description:
-      "Confirmation dialog description for bulk-deleting transactions - interpolation: {count}",
+      "Confirmation dialog description for bulk-deleting transactions - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.deleteConfirmDescription_other": {
+    message:
+      "선택한 거래 {count}건이 이 목록에서 영구적으로 삭제됩니다. 이 작업은 취소할 수 없습니다.",
+    description:
+      "Confirmation dialog description for bulk-deleting transactions - interpolation: {count} - the only form; this language has no plural inflection",
   },
   "plaid.transactionReview.toast.transactionsDeleted": {
     message: "거래 삭제됨",
@@ -654,7 +710,12 @@ const koPlaid: Record<string, TranslationEntry> = {
   "plaid.transactionReview.toast.transactionsDeletedDescription": {
     message: "이 목록에서 거래 {count}건을 삭제했습니다.",
     description:
-      "Toast description for deleted transactions - interpolation: {count}",
+      "Toast description for deleted transactions - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.toast.transactionsDeletedDescription_other": {
+    message: "이 목록에서 거래 {count}건을 삭제했습니다.",
+    description:
+      "Toast description for deleted transactions - interpolation: {count} - the only form; this language has no plural inflection",
   },
   "plaid.transactionReview.toast.deletionFailed": {
     message: "삭제 실패",

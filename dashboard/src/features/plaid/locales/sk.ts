@@ -178,15 +178,84 @@ const skPlaid: Record<string, TranslationEntry> = {
     description: "Toast title after syncing every connected bank",
   },
   "plaid.management.toast.syncAllCompleteDescription": {
-    message:
-      "Synchronizované nové transakcie: {count}, banky: {institutionCount}.",
+    message: "Z {banks} {transactions}.",
     description:
-      "Toast description after syncing every connected bank - interpolation: {count}, {institutionCount}",
+      "Toast description after syncing every connected bank - interpolation: {transactions} is plaid.management.toast.syncAllTransactionsPart, {banks} is plaid.management.toast.syncAllBanksPart; each fragment is pluralized on its own count",
+  },
+  "plaid.management.toast.syncAllTransactionsPart": {
+    message: "sa synchronizovalo {count} nových transakcií",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {transactions}: the number of new transactions synced, worded to fit that sentence - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.management.toast.syncAllTransactionsPart_one": {
+    message: "sa synchronizovala {count} nová transakcia",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {transactions}: the number of new transactions synced, worded to fit that sentence - interpolation: {count} - singular form",
+  },
+  "plaid.management.toast.syncAllTransactionsPart_few": {
+    message: "sa synchronizovali {count} nové transakcie",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {transactions}: the number of new transactions synced, worded to fit that sentence - interpolation: {count} - form for counts like 2-4",
+  },
+  "plaid.management.toast.syncAllTransactionsPart_many": {
+    message: "sa synchronizovalo {count} novej transakcie",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {transactions}: the number of new transactions synced, worded to fit that sentence - interpolation: {count} - form for fractional counts",
+  },
+  "plaid.management.toast.syncAllTransactionsPart_other": {
+    message: "sa synchronizovalo {count} nových transakcií",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {transactions}: the number of new transactions synced, worded to fit that sentence - interpolation: {count} - form for counts like 0 and 5 or more",
+  },
+  "plaid.management.toast.syncAllBanksPart": {
+    message: "{count} bánk",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {banks}: the number of banks synced, in the grammatical case that sentence needs - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.management.toast.syncAllBanksPart_one": {
+    message: "{count} banky",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {banks}: the number of banks synced, in the grammatical case that sentence needs - interpolation: {count} - singular form",
+  },
+  "plaid.management.toast.syncAllBanksPart_few": {
+    message: "{count} bánk",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {banks}: the number of banks synced, in the grammatical case that sentence needs - interpolation: {count} - form for counts like 2-4",
+  },
+  "plaid.management.toast.syncAllBanksPart_many": {
+    message: "{count} banky",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {banks}: the number of banks synced, in the grammatical case that sentence needs - interpolation: {count} - form for fractional counts",
+  },
+  "plaid.management.toast.syncAllBanksPart_other": {
+    message: "{count} bánk",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {banks}: the number of banks synced, in the grammatical case that sentence needs - interpolation: {count} - form for counts like 0 and 5 or more",
   },
   "plaid.management.toast.syncAllSkipped": {
-    message: "Banky, ktoré treba znova pripojiť: {count}",
+    message: "{count} bánk treba znova pripojiť",
     description:
-      "Toast title noting banks skipped by Sync All because they require reauthentication - interpolation: {count}",
+      "Toast title noting banks skipped by Sync All because they require reauthentication - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.management.toast.syncAllSkipped_one": {
+    message: "{count} banku treba znova pripojiť",
+    description:
+      "Toast title noting banks skipped by Sync All because they require reauthentication - interpolation: {count} - singular form",
+  },
+  "plaid.management.toast.syncAllSkipped_few": {
+    message: "{count} banky treba znova pripojiť",
+    description:
+      "Toast title noting banks skipped by Sync All because they require reauthentication - interpolation: {count} - form for counts like 2-4",
+  },
+  "plaid.management.toast.syncAllSkipped_many": {
+    message: "{count} banky treba znova pripojiť",
+    description:
+      "Toast title noting banks skipped by Sync All because they require reauthentication - interpolation: {count} - form for fractional counts",
+  },
+  "plaid.management.toast.syncAllSkipped_other": {
+    message: "{count} bánk treba znova pripojiť",
+    description:
+      "Toast title noting banks skipped by Sync All because they require reauthentication - interpolation: {count} - form for counts like 0 and 5 or more",
   },
   "plaid.management.toast.syncAllFailedDescription": {
     message: "Transakcie sa nepodarilo synchronizovať. Skúste to znova.",
@@ -449,9 +518,29 @@ const skPlaid: Record<string, TranslationEntry> = {
     description: "Toast title after accepting all AI mapping suggestions",
   },
   "plaid.accountMapping.toast.acceptedAllDescription": {
-    message: "Účty priradené podľa návrhov AI: {count}.",
+    message: "Podľa návrhov AI bolo priradených {count} účtov.",
     description:
-      "Toast description after accepting all AI mapping suggestions - interpolation: {count}",
+      "Toast description after accepting all AI mapping suggestions - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.accountMapping.toast.acceptedAllDescription_one": {
+    message: "Podľa návrhov AI bol priradený {count} účet.",
+    description:
+      "Toast description after accepting all AI mapping suggestions - interpolation: {count} - singular form",
+  },
+  "plaid.accountMapping.toast.acceptedAllDescription_few": {
+    message: "Podľa návrhov AI boli priradené {count} účty.",
+    description:
+      "Toast description after accepting all AI mapping suggestions - interpolation: {count} - form for counts like 2-4",
+  },
+  "plaid.accountMapping.toast.acceptedAllDescription_many": {
+    message: "Podľa návrhov AI bolo priradeného {count} účtu.",
+    description:
+      "Toast description after accepting all AI mapping suggestions - interpolation: {count} - form for fractional counts",
+  },
+  "plaid.accountMapping.toast.acceptedAllDescription_other": {
+    message: "Podľa návrhov AI bolo priradených {count} účtov.",
+    description:
+      "Toast description after accepting all AI mapping suggestions - interpolation: {count} - form for counts like 0 and 5 or more",
   },
 
   // Account Detail Page
@@ -473,10 +562,29 @@ const skPlaid: Record<string, TranslationEntry> = {
       "Card title for the list of unsynced bank transactions awaiting review before submission to the ledger",
   },
   "plaid.transactionReview.description": {
-    message:
-      "Skontrolujte a odošlite do účtovnej knihy transakcie ({count}){plural}",
+    message: "Skontrolujte a odošlite do účtovnej knihy {count} transakcií",
     description:
-      "Card description - interpolation: {count} for number, {plural} for 's' or empty",
+      "Card description for the transaction review table - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.description_one": {
+    message: "Skontrolujte a odošlite do účtovnej knihy {count} transakciu",
+    description:
+      "Card description for the transaction review table - interpolation: {count} - singular form",
+  },
+  "plaid.transactionReview.description_few": {
+    message: "Skontrolujte a odošlite do účtovnej knihy {count} transakcie",
+    description:
+      "Card description for the transaction review table - interpolation: {count} - form for counts like 2-4",
+  },
+  "plaid.transactionReview.description_many": {
+    message: "Skontrolujte a odošlite do účtovnej knihy {count} transakcie",
+    description:
+      "Card description for the transaction review table - interpolation: {count} - form for fractional counts",
+  },
+  "plaid.transactionReview.description_other": {
+    message: "Skontrolujte a odošlite do účtovnej knihy {count} transakcií",
+    description:
+      "Card description for the transaction review table - interpolation: {count} - form for counts like 0 and 5 or more",
   },
   "plaid.transactionReview.submitting": {
     message: "Odosiela sa...",
@@ -527,7 +635,31 @@ const skPlaid: Record<string, TranslationEntry> = {
     message:
       "{count} vybraných transakcií je skrytých aktuálnymi filtrami, ale aj tak budú odoslané alebo odstránené.",
     description:
-      "Notice shown when selected rows fall outside the active filters - they are still submitted or deleted - interpolation: {count}",
+      "Notice shown when selected rows fall outside the active filters - they are still submitted or deleted - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.hiddenSelectedNotice_one": {
+    message:
+      "{count} vybraná transakcia je skrytá aktuálnymi filtrami, ale aj tak bude odoslaná alebo odstránená.",
+    description:
+      "Notice shown when selected rows fall outside the active filters - they are still submitted or deleted - interpolation: {count} - singular form",
+  },
+  "plaid.transactionReview.hiddenSelectedNotice_few": {
+    message:
+      "{count} vybrané transakcie sú skryté aktuálnymi filtrami, ale aj tak budú odoslané alebo odstránené.",
+    description:
+      "Notice shown when selected rows fall outside the active filters - they are still submitted or deleted - interpolation: {count} - form for counts like 2-4",
+  },
+  "plaid.transactionReview.hiddenSelectedNotice_many": {
+    message:
+      "{count} vybranej transakcie je skrytých aktuálnymi filtrami, ale aj tak budú odoslané alebo odstránené.",
+    description:
+      "Notice shown when selected rows fall outside the active filters - they are still submitted or deleted - interpolation: {count} - form for fractional counts",
+  },
+  "plaid.transactionReview.hiddenSelectedNotice_other": {
+    message:
+      "{count} vybraných transakcií je skrytých aktuálnymi filtrami, ale aj tak budú odoslané alebo odstránené.",
+    description:
+      "Notice shown when selected rows fall outside the active filters - they are still submitted or deleted - interpolation: {count} - form for counts like 0 and 5 or more",
   },
   "plaid.transactionReview.selectFilePlaceholder": {
     message: "Vyberte, do ktorého súboru importovať",
@@ -535,9 +667,33 @@ const skPlaid: Record<string, TranslationEntry> = {
   },
   "plaid.transactionReview.missingAccountsAlert": {
     message:
-      "Vybrané transakcie potrebujú pred odoslaním cieľové účty: {count}.",
+      "{count} vybraných transakcií potrebuje pred odoslaním cieľové účty.",
     description:
-      "Alert message for missing target accounts - interpolation: {count}",
+      "Alert message for missing target accounts - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.missingAccountsAlert_one": {
+    message:
+      "{count} vybraná transakcia potrebuje pred odoslaním cieľový účet.",
+    description:
+      "Alert message for missing target accounts - interpolation: {count} - singular form",
+  },
+  "plaid.transactionReview.missingAccountsAlert_few": {
+    message:
+      "{count} vybrané transakcie potrebujú pred odoslaním cieľové účty.",
+    description:
+      "Alert message for missing target accounts - interpolation: {count} - form for counts like 2-4",
+  },
+  "plaid.transactionReview.missingAccountsAlert_many": {
+    message:
+      "{count} vybranej transakcie potrebuje pred odoslaním cieľové účty.",
+    description:
+      "Alert message for missing target accounts - interpolation: {count} - form for fractional counts",
+  },
+  "plaid.transactionReview.missingAccountsAlert_other": {
+    message:
+      "{count} vybraných transakcií potrebuje pred odoslaním cieľové účty.",
+    description:
+      "Alert message for missing target accounts - interpolation: {count} - form for counts like 0 and 5 or more",
   },
   "plaid.transactionReview.selectAll": {
     message: "Vybrať všetko",
@@ -616,9 +772,29 @@ const skPlaid: Record<string, TranslationEntry> = {
     description: "Toast title for missing target accounts",
   },
   "plaid.transactionReview.toast.missingTargetAccountsDescription": {
-    message: "Vybrané transakcie potrebujú cieľové účty: {count}.",
+    message: "{count} vybraných transakcií potrebuje cieľové účty.",
     description:
-      "Toast description for missing accounts - interpolation: {count}",
+      "Toast description for missing accounts - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.toast.missingTargetAccountsDescription_one": {
+    message: "{count} vybraná transakcia potrebuje cieľový účet.",
+    description:
+      "Toast description for missing accounts - interpolation: {count} - singular form",
+  },
+  "plaid.transactionReview.toast.missingTargetAccountsDescription_few": {
+    message: "{count} vybrané transakcie potrebujú cieľové účty.",
+    description:
+      "Toast description for missing accounts - interpolation: {count} - form for counts like 2-4",
+  },
+  "plaid.transactionReview.toast.missingTargetAccountsDescription_many": {
+    message: "{count} vybranej transakcie potrebuje cieľové účty.",
+    description:
+      "Toast description for missing accounts - interpolation: {count} - form for fractional counts",
+  },
+  "plaid.transactionReview.toast.missingTargetAccountsDescription_other": {
+    message: "{count} vybraných transakcií potrebuje cieľové účty.",
+    description:
+      "Toast description for missing accounts - interpolation: {count} - form for counts like 0 and 5 or more",
   },
   "plaid.transactionReview.toast.transactionsSubmitted": {
     message: "Transakcie odoslané",
@@ -653,7 +829,31 @@ const skPlaid: Record<string, TranslationEntry> = {
     message:
       "Týmto sa {count} vybratých transakcií natrvalo odstráni z tohto zoznamu. Túto akciu nemožno vrátiť späť.",
     description:
-      "Confirmation dialog description for bulk-deleting transactions - interpolation: {count}",
+      "Confirmation dialog description for bulk-deleting transactions - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.deleteConfirmDescription_one": {
+    message:
+      "Týmto sa {count} vybratá transakcia natrvalo odstráni z tohto zoznamu. Túto akciu nemožno vrátiť späť.",
+    description:
+      "Confirmation dialog description for bulk-deleting transactions - interpolation: {count} - singular form",
+  },
+  "plaid.transactionReview.deleteConfirmDescription_few": {
+    message:
+      "Týmto sa {count} vybraté transakcie natrvalo odstránia z tohto zoznamu. Túto akciu nemožno vrátiť späť.",
+    description:
+      "Confirmation dialog description for bulk-deleting transactions - interpolation: {count} - form for counts like 2-4",
+  },
+  "plaid.transactionReview.deleteConfirmDescription_many": {
+    message:
+      "Týmto sa {count} vybratej transakcie natrvalo odstráni z tohto zoznamu. Túto akciu nemožno vrátiť späť.",
+    description:
+      "Confirmation dialog description for bulk-deleting transactions - interpolation: {count} - form for fractional counts",
+  },
+  "plaid.transactionReview.deleteConfirmDescription_other": {
+    message:
+      "Týmto sa {count} vybratých transakcií natrvalo odstráni z tohto zoznamu. Túto akciu nemožno vrátiť späť.",
+    description:
+      "Confirmation dialog description for bulk-deleting transactions - interpolation: {count} - form for counts like 0 and 5 or more",
   },
   "plaid.transactionReview.toast.transactionsDeleted": {
     message: "Transakcie odstránené",
@@ -662,7 +862,27 @@ const skPlaid: Record<string, TranslationEntry> = {
   "plaid.transactionReview.toast.transactionsDeletedDescription": {
     message: "Z tohto zoznamu bolo odstránených {count} transakcií.",
     description:
-      "Toast description for deleted transactions - interpolation: {count}",
+      "Toast description for deleted transactions - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.toast.transactionsDeletedDescription_one": {
+    message: "Z tohto zoznamu bola odstránená {count} transakcia.",
+    description:
+      "Toast description for deleted transactions - interpolation: {count} - singular form",
+  },
+  "plaid.transactionReview.toast.transactionsDeletedDescription_few": {
+    message: "Z tohto zoznamu boli odstránené {count} transakcie.",
+    description:
+      "Toast description for deleted transactions - interpolation: {count} - form for counts like 2-4",
+  },
+  "plaid.transactionReview.toast.transactionsDeletedDescription_many": {
+    message: "Z tohto zoznamu bolo odstránenej {count} transakcie.",
+    description:
+      "Toast description for deleted transactions - interpolation: {count} - form for fractional counts",
+  },
+  "plaid.transactionReview.toast.transactionsDeletedDescription_other": {
+    message: "Z tohto zoznamu bolo odstránených {count} transakcií.",
+    description:
+      "Toast description for deleted transactions - interpolation: {count} - form for counts like 0 and 5 or more",
   },
   "plaid.transactionReview.toast.deletionFailed": {
     message: "Odstránenie zlyhalo",

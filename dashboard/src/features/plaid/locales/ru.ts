@@ -178,15 +178,84 @@ const ruPlaid: Record<string, TranslationEntry> = {
     description: "Toast title after syncing every connected bank",
   },
   "plaid.management.toast.syncAllCompleteDescription": {
-    message:
-      "Синхронизировано новых транзакций: {count}, банков: {institutionCount}.",
+    message: "Из {banks} {transactions}.",
     description:
-      "Toast description after syncing every connected bank - interpolation: {count}, {institutionCount}",
+      "Toast description after syncing every connected bank - interpolation: {transactions} is plaid.management.toast.syncAllTransactionsPart, {banks} is plaid.management.toast.syncAllBanksPart; each fragment is pluralized on its own count",
+  },
+  "plaid.management.toast.syncAllTransactionsPart": {
+    message: "синхронизировано {count} новых транзакций",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {transactions}: the number of new transactions synced, worded to fit that sentence - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.management.toast.syncAllTransactionsPart_one": {
+    message: "синхронизирована {count} новая транзакция",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {transactions}: the number of new transactions synced, worded to fit that sentence - interpolation: {count} - singular form",
+  },
+  "plaid.management.toast.syncAllTransactionsPart_few": {
+    message: "синхронизировано {count} новые транзакции",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {transactions}: the number of new transactions synced, worded to fit that sentence - interpolation: {count} - form for counts like 2-4",
+  },
+  "plaid.management.toast.syncAllTransactionsPart_many": {
+    message: "синхронизировано {count} новых транзакций",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {transactions}: the number of new transactions synced, worded to fit that sentence - interpolation: {count} - form for counts like 5-20",
+  },
+  "plaid.management.toast.syncAllTransactionsPart_other": {
+    message: "синхронизировано {count} новой транзакции",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {transactions}: the number of new transactions synced, worded to fit that sentence - interpolation: {count} - form for fractional counts",
+  },
+  "plaid.management.toast.syncAllBanksPart": {
+    message: "{count} банков",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {banks}: the number of banks synced, in the grammatical case that sentence needs - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.management.toast.syncAllBanksPart_one": {
+    message: "{count} банка",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {banks}: the number of banks synced, in the grammatical case that sentence needs - interpolation: {count} - singular form",
+  },
+  "plaid.management.toast.syncAllBanksPart_few": {
+    message: "{count} банков",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {banks}: the number of banks synced, in the grammatical case that sentence needs - interpolation: {count} - form for counts like 2-4",
+  },
+  "plaid.management.toast.syncAllBanksPart_many": {
+    message: "{count} банков",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {banks}: the number of banks synced, in the grammatical case that sentence needs - interpolation: {count} - form for counts like 5-20",
+  },
+  "plaid.management.toast.syncAllBanksPart_other": {
+    message: "{count} банка",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {banks}: the number of banks synced, in the grammatical case that sentence needs - interpolation: {count} - form for fractional counts",
   },
   "plaid.management.toast.syncAllSkipped": {
-    message: "Банков, требующих повторного подключения: {count}",
+    message: "{count} банков требуют повторного подключения",
     description:
-      "Toast title noting banks skipped by Sync All because they require reauthentication - interpolation: {count}",
+      "Toast title noting banks skipped by Sync All because they require reauthentication - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.management.toast.syncAllSkipped_one": {
+    message: "{count} банк требует повторного подключения",
+    description:
+      "Toast title noting banks skipped by Sync All because they require reauthentication - interpolation: {count} - singular form",
+  },
+  "plaid.management.toast.syncAllSkipped_few": {
+    message: "{count} банка требуют повторного подключения",
+    description:
+      "Toast title noting banks skipped by Sync All because they require reauthentication - interpolation: {count} - form for counts like 2-4",
+  },
+  "plaid.management.toast.syncAllSkipped_many": {
+    message: "{count} банков требуют повторного подключения",
+    description:
+      "Toast title noting banks skipped by Sync All because they require reauthentication - interpolation: {count} - form for counts like 5-20",
+  },
+  "plaid.management.toast.syncAllSkipped_other": {
+    message: "{count} банка требуют повторного подключения",
+    description:
+      "Toast title noting banks skipped by Sync All because they require reauthentication - interpolation: {count} - form for fractional counts",
   },
   "plaid.management.toast.syncAllFailedDescription": {
     message: "Не удалось синхронизировать транзакции. Попробуйте ещё раз.",
@@ -449,9 +518,29 @@ const ruPlaid: Record<string, TranslationEntry> = {
     description: "Toast title after accepting all AI mapping suggestions",
   },
   "plaid.accountMapping.toast.acceptedAllDescription": {
-    message: "Счетов сопоставлено по предложениям ИИ: {count}.",
+    message: "По предложениям ИИ сопоставлено {count} счетов.",
     description:
-      "Toast description after accepting all AI mapping suggestions - interpolation: {count}",
+      "Toast description after accepting all AI mapping suggestions - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.accountMapping.toast.acceptedAllDescription_one": {
+    message: "По предложениям ИИ сопоставлен {count} счет.",
+    description:
+      "Toast description after accepting all AI mapping suggestions - interpolation: {count} - singular form",
+  },
+  "plaid.accountMapping.toast.acceptedAllDescription_few": {
+    message: "По предложениям ИИ сопоставлено {count} счета.",
+    description:
+      "Toast description after accepting all AI mapping suggestions - interpolation: {count} - form for counts like 2-4",
+  },
+  "plaid.accountMapping.toast.acceptedAllDescription_many": {
+    message: "По предложениям ИИ сопоставлено {count} счетов.",
+    description:
+      "Toast description after accepting all AI mapping suggestions - interpolation: {count} - form for counts like 5-20",
+  },
+  "plaid.accountMapping.toast.acceptedAllDescription_other": {
+    message: "По предложениям ИИ сопоставлено {count} счета.",
+    description:
+      "Toast description after accepting all AI mapping suggestions - interpolation: {count} - form for fractional counts",
   },
 
   // Account Detail Page
@@ -473,9 +562,29 @@ const ruPlaid: Record<string, TranslationEntry> = {
       "Card title for the list of unsynced bank transactions awaiting review before submission to the ledger",
   },
   "plaid.transactionReview.description": {
-    message: "Проверьте и отправьте в книгу транзакции ({count}){plural}",
+    message: "Проверьте и отправьте в книгу {count} транзакций",
     description:
-      "Card description - interpolation: {count} for number, {plural} for 's' or empty",
+      "Card description for the transaction review table - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.description_one": {
+    message: "Проверьте и отправьте в книгу {count} транзакцию",
+    description:
+      "Card description for the transaction review table - interpolation: {count} - singular form",
+  },
+  "plaid.transactionReview.description_few": {
+    message: "Проверьте и отправьте в книгу {count} транзакции",
+    description:
+      "Card description for the transaction review table - interpolation: {count} - form for counts like 2-4",
+  },
+  "plaid.transactionReview.description_many": {
+    message: "Проверьте и отправьте в книгу {count} транзакций",
+    description:
+      "Card description for the transaction review table - interpolation: {count} - form for counts like 5-20",
+  },
+  "plaid.transactionReview.description_other": {
+    message: "Проверьте и отправьте в книгу {count} транзакции",
+    description:
+      "Card description for the transaction review table - interpolation: {count} - form for fractional counts",
   },
   "plaid.transactionReview.submitting": {
     message: "Отправка...",
@@ -524,9 +633,33 @@ const ruPlaid: Record<string, TranslationEntry> = {
   },
   "plaid.transactionReview.hiddenSelectedNotice": {
     message:
-      "Выбранных транзакций скрыто текущими фильтрами: {count}. Они всё равно будут отправлены или удалены.",
+      "{count} выбранных транзакций скрыто текущими фильтрами, но они всё равно будут отправлены или удалены.",
     description:
-      "Notice shown when selected rows fall outside the active filters - they are still submitted or deleted - interpolation: {count}",
+      "Notice shown when selected rows fall outside the active filters - they are still submitted or deleted - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.hiddenSelectedNotice_one": {
+    message:
+      "{count} выбранная транзакция скрыта текущими фильтрами, но всё равно будет отправлена или удалена.",
+    description:
+      "Notice shown when selected rows fall outside the active filters - they are still submitted or deleted - interpolation: {count} - singular form",
+  },
+  "plaid.transactionReview.hiddenSelectedNotice_few": {
+    message:
+      "{count} выбранные транзакции скрыты текущими фильтрами, но всё равно будут отправлены или удалены.",
+    description:
+      "Notice shown when selected rows fall outside the active filters - they are still submitted or deleted - interpolation: {count} - form for counts like 2-4",
+  },
+  "plaid.transactionReview.hiddenSelectedNotice_many": {
+    message:
+      "{count} выбранных транзакций скрыто текущими фильтрами, но они всё равно будут отправлены или удалены.",
+    description:
+      "Notice shown when selected rows fall outside the active filters - they are still submitted or deleted - interpolation: {count} - form for counts like 5-20",
+  },
+  "plaid.transactionReview.hiddenSelectedNotice_other": {
+    message:
+      "{count} выбранной транзакции скрыто текущими фильтрами, но они всё равно будут отправлены или удалены.",
+    description:
+      "Notice shown when selected rows fall outside the active filters - they are still submitted or deleted - interpolation: {count} - form for fractional counts",
   },
   "plaid.transactionReview.selectFilePlaceholder": {
     message: "Выберите, в какой файл импортировать",
@@ -534,9 +667,32 @@ const ruPlaid: Record<string, TranslationEntry> = {
   },
   "plaid.transactionReview.missingAccountsAlert": {
     message:
-      "Выбранным транзакциям нужны целевые счета перед отправкой: {count}.",
+      "{count} выбранным транзакциям нужны целевые счета перед отправкой.",
     description:
-      "Alert message for missing target accounts - interpolation: {count}",
+      "Alert message for missing target accounts - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.missingAccountsAlert_one": {
+    message: "{count} выбранной транзакции нужен целевой счет перед отправкой.",
+    description:
+      "Alert message for missing target accounts - interpolation: {count} - singular form",
+  },
+  "plaid.transactionReview.missingAccountsAlert_few": {
+    message:
+      "{count} выбранным транзакциям нужны целевые счета перед отправкой.",
+    description:
+      "Alert message for missing target accounts - interpolation: {count} - form for counts like 2-4",
+  },
+  "plaid.transactionReview.missingAccountsAlert_many": {
+    message:
+      "{count} выбранным транзакциям нужны целевые счета перед отправкой.",
+    description:
+      "Alert message for missing target accounts - interpolation: {count} - form for counts like 5-20",
+  },
+  "plaid.transactionReview.missingAccountsAlert_other": {
+    message:
+      "{count} выбранным транзакциям нужны целевые счета перед отправкой.",
+    description:
+      "Alert message for missing target accounts - interpolation: {count} - form for fractional counts",
   },
   "plaid.transactionReview.selectAll": {
     message: "Выбрать все",
@@ -615,9 +771,29 @@ const ruPlaid: Record<string, TranslationEntry> = {
     description: "Toast title for missing target accounts",
   },
   "plaid.transactionReview.toast.missingTargetAccountsDescription": {
-    message: "Выбранным транзакциям нужны целевые счета: {count}.",
+    message: "{count} выбранным транзакциям нужны целевые счета.",
     description:
-      "Toast description for missing accounts - interpolation: {count}",
+      "Toast description for missing accounts - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.toast.missingTargetAccountsDescription_one": {
+    message: "{count} выбранной транзакции нужен целевой счет.",
+    description:
+      "Toast description for missing accounts - interpolation: {count} - singular form",
+  },
+  "plaid.transactionReview.toast.missingTargetAccountsDescription_few": {
+    message: "{count} выбранным транзакциям нужны целевые счета.",
+    description:
+      "Toast description for missing accounts - interpolation: {count} - form for counts like 2-4",
+  },
+  "plaid.transactionReview.toast.missingTargetAccountsDescription_many": {
+    message: "{count} выбранным транзакциям нужны целевые счета.",
+    description:
+      "Toast description for missing accounts - interpolation: {count} - form for counts like 5-20",
+  },
+  "plaid.transactionReview.toast.missingTargetAccountsDescription_other": {
+    message: "{count} выбранным транзакциям нужны целевые счета.",
+    description:
+      "Toast description for missing accounts - interpolation: {count} - form for fractional counts",
   },
   "plaid.transactionReview.toast.transactionsSubmitted": {
     message: "Транзакции отправлены",
@@ -650,18 +826,62 @@ const ruPlaid: Record<string, TranslationEntry> = {
   },
   "plaid.transactionReview.deleteConfirmDescription": {
     message:
-      "Выбранные транзакции ({count}) будут навсегда удалены из этого списка. Это действие нельзя отменить.",
+      "Из этого списка будет навсегда удалено {count} выбранных транзакций. Это действие нельзя отменить.",
     description:
-      "Confirmation dialog description for bulk-deleting transactions - interpolation: {count}",
+      "Confirmation dialog description for bulk-deleting transactions - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.deleteConfirmDescription_one": {
+    message:
+      "Из этого списка будет навсегда удалена {count} выбранная транзакция. Это действие нельзя отменить.",
+    description:
+      "Confirmation dialog description for bulk-deleting transactions - interpolation: {count} - singular form",
+  },
+  "plaid.transactionReview.deleteConfirmDescription_few": {
+    message:
+      "Из этого списка будут навсегда удалены {count} выбранные транзакции. Это действие нельзя отменить.",
+    description:
+      "Confirmation dialog description for bulk-deleting transactions - interpolation: {count} - form for counts like 2-4",
+  },
+  "plaid.transactionReview.deleteConfirmDescription_many": {
+    message:
+      "Из этого списка будет навсегда удалено {count} выбранных транзакций. Это действие нельзя отменить.",
+    description:
+      "Confirmation dialog description for bulk-deleting transactions - interpolation: {count} - form for counts like 5-20",
+  },
+  "plaid.transactionReview.deleteConfirmDescription_other": {
+    message:
+      "Из этого списка будет навсегда удалено {count} выбранной транзакции. Это действие нельзя отменить.",
+    description:
+      "Confirmation dialog description for bulk-deleting transactions - interpolation: {count} - form for fractional counts",
   },
   "plaid.transactionReview.toast.transactionsDeleted": {
     message: "Транзакции удалены",
     description: "Toast title when transactions are deleted",
   },
   "plaid.transactionReview.toast.transactionsDeletedDescription": {
-    message: "Из этого списка удалено транзакций: {count}.",
+    message: "Из этого списка удалено {count} транзакций.",
     description:
-      "Toast description for deleted transactions - interpolation: {count}",
+      "Toast description for deleted transactions - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.toast.transactionsDeletedDescription_one": {
+    message: "Из этого списка удалена {count} транзакция.",
+    description:
+      "Toast description for deleted transactions - interpolation: {count} - singular form",
+  },
+  "plaid.transactionReview.toast.transactionsDeletedDescription_few": {
+    message: "Из этого списка удалены {count} транзакции.",
+    description:
+      "Toast description for deleted transactions - interpolation: {count} - form for counts like 2-4",
+  },
+  "plaid.transactionReview.toast.transactionsDeletedDescription_many": {
+    message: "Из этого списка удалено {count} транзакций.",
+    description:
+      "Toast description for deleted transactions - interpolation: {count} - form for counts like 5-20",
+  },
+  "plaid.transactionReview.toast.transactionsDeletedDescription_other": {
+    message: "Из этого списка удалено {count} транзакции.",
+    description:
+      "Toast description for deleted transactions - interpolation: {count} - form for fractional counts",
   },
   "plaid.transactionReview.toast.deletionFailed": {
     message: "Не удалось удалить",

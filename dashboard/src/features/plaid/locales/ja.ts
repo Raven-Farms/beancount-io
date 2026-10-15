@@ -172,15 +172,39 @@ const jaPlaid: Record<string, TranslationEntry> = {
     description: "Toast title after syncing every connected bank",
   },
   "plaid.management.toast.syncAllCompleteDescription": {
-    message:
-      "{institutionCount}件の銀行から{count}件の新しい取引を同期しました。",
+    message: "{banks}から{transactions}を同期しました。",
     description:
-      "Toast description after syncing every connected bank - interpolation: {count}, {institutionCount}",
+      "Toast description after syncing every connected bank - interpolation: {transactions} is plaid.management.toast.syncAllTransactionsPart, {banks} is plaid.management.toast.syncAllBanksPart; each fragment is pluralized on its own count",
+  },
+  "plaid.management.toast.syncAllTransactionsPart": {
+    message: "{count} 件の新しい取引",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {transactions}: the number of new transactions synced, worded to fit that sentence - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.management.toast.syncAllTransactionsPart_other": {
+    message: "{count} 件の新しい取引",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {transactions}: the number of new transactions synced, worded to fit that sentence - interpolation: {count} - the only form; this language has no plural inflection",
+  },
+  "plaid.management.toast.syncAllBanksPart": {
+    message: "{count} 件の銀行",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {banks}: the number of banks synced, in the grammatical case that sentence needs - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.management.toast.syncAllBanksPart_other": {
+    message: "{count} 件の銀行",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {banks}: the number of banks synced, in the grammatical case that sentence needs - interpolation: {count} - the only form; this language has no plural inflection",
   },
   "plaid.management.toast.syncAllSkipped": {
-    message: "{count}件の銀行で再接続が必要です",
+    message: "{count} 件の銀行で再接続が必要です",
     description:
-      "Toast title noting banks skipped by Sync All because they require reauthentication - interpolation: {count}",
+      "Toast title noting banks skipped by Sync All because they require reauthentication - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.management.toast.syncAllSkipped_other": {
+    message: "{count} 件の銀行で再接続が必要です",
+    description:
+      "Toast title noting banks skipped by Sync All because they require reauthentication - interpolation: {count} - the only form; this language has no plural inflection",
   },
   "plaid.management.toast.syncAllFailedDescription": {
     message: "取引の同期に失敗しました。もう一度お試しください。",
@@ -445,7 +469,12 @@ const jaPlaid: Record<string, TranslationEntry> = {
   "plaid.accountMapping.toast.acceptedAllDescription": {
     message: "AIの提案を使用して{count}件の口座をマッピングしました。",
     description:
-      "Toast description after accepting all AI mapping suggestions - interpolation: {count}",
+      "Toast description after accepting all AI mapping suggestions - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.accountMapping.toast.acceptedAllDescription_other": {
+    message: "AIの提案を使用して{count}件の口座をマッピングしました。",
+    description:
+      "Toast description after accepting all AI mapping suggestions - interpolation: {count} - the only form; this language has no plural inflection",
   },
 
   // Account Detail Page
@@ -466,9 +495,14 @@ const jaPlaid: Record<string, TranslationEntry> = {
       "Card title for the list of unsynced bank transactions awaiting review before submission to the ledger",
   },
   "plaid.transactionReview.description": {
-    message: "{count}件の取引{plural}を確認して台帳に送信",
+    message: "{count}件の取引を確認して台帳に送信",
     description:
-      "Card description - interpolation: {count} for number, {plural} for 's' or empty",
+      "Card description for the transaction review table - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.description_other": {
+    message: "{count}件の取引を確認して台帳に送信",
+    description:
+      "Card description for the transaction review table - interpolation: {count} - the only form; this language has no plural inflection",
   },
   "plaid.transactionReview.submitting": {
     message: "送信中...",
@@ -519,7 +553,13 @@ const jaPlaid: Record<string, TranslationEntry> = {
     message:
       "選択した {count} 件の取引は現在のフィルターで非表示ですが、送信または削除の対象になります。",
     description:
-      "Notice shown when selected rows fall outside the active filters - they are still submitted or deleted - interpolation: {count}",
+      "Notice shown when selected rows fall outside the active filters - they are still submitted or deleted - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.hiddenSelectedNotice_other": {
+    message:
+      "選択した {count} 件の取引は現在のフィルターで非表示ですが、送信または削除の対象になります。",
+    description:
+      "Notice shown when selected rows fall outside the active filters - they are still submitted or deleted - interpolation: {count} - the only form; this language has no plural inflection",
   },
   "plaid.transactionReview.selectFilePlaceholder": {
     message: "インポート先のファイルを選択",
@@ -528,7 +568,12 @@ const jaPlaid: Record<string, TranslationEntry> = {
   "plaid.transactionReview.missingAccountsAlert": {
     message: "選択した{count}件の取引には送信前に対象口座が必要です。",
     description:
-      "Alert message for missing target accounts - interpolation: {count}",
+      "Alert message for missing target accounts - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.missingAccountsAlert_other": {
+    message: "選択した{count}件の取引には送信前に対象口座が必要です。",
+    description:
+      "Alert message for missing target accounts - interpolation: {count} - the only form; this language has no plural inflection",
   },
   "plaid.transactionReview.selectAll": {
     message: "すべて選択",
@@ -609,7 +654,12 @@ const jaPlaid: Record<string, TranslationEntry> = {
   "plaid.transactionReview.toast.missingTargetAccountsDescription": {
     message: "選択した{count}件の取引に対象口座が必要です。",
     description:
-      "Toast description for missing accounts - interpolation: {count}",
+      "Toast description for missing accounts - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.toast.missingTargetAccountsDescription_other": {
+    message: "選択した{count}件の取引に対象口座が必要です。",
+    description:
+      "Toast description for missing accounts - interpolation: {count} - the only form; this language has no plural inflection",
   },
   "plaid.transactionReview.toast.transactionsSubmitted": {
     message: "取引を送信しました",
@@ -644,7 +694,13 @@ const jaPlaid: Record<string, TranslationEntry> = {
     message:
       "選択した{count}件の取引をこのリストから完全に削除します。この操作は元に戻せません。",
     description:
-      "Confirmation dialog description for bulk-deleting transactions - interpolation: {count}",
+      "Confirmation dialog description for bulk-deleting transactions - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.deleteConfirmDescription_other": {
+    message:
+      "選択した{count}件の取引をこのリストから完全に削除します。この操作は元に戻せません。",
+    description:
+      "Confirmation dialog description for bulk-deleting transactions - interpolation: {count} - the only form; this language has no plural inflection",
   },
   "plaid.transactionReview.toast.transactionsDeleted": {
     message: "取引を削除しました",
@@ -653,7 +709,12 @@ const jaPlaid: Record<string, TranslationEntry> = {
   "plaid.transactionReview.toast.transactionsDeletedDescription": {
     message: "このリストから{count}件の取引を削除しました。",
     description:
-      "Toast description for deleted transactions - interpolation: {count}",
+      "Toast description for deleted transactions - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.toast.transactionsDeletedDescription_other": {
+    message: "このリストから{count}件の取引を削除しました。",
+    description:
+      "Toast description for deleted transactions - interpolation: {count} - the only form; this language has no plural inflection",
   },
   "plaid.transactionReview.toast.deletionFailed": {
     message: "削除に失敗しました",

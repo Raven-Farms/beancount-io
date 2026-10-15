@@ -20,7 +20,7 @@ export function UpgradeTierCards({
   upgradeTiers: TierInfo[];
   quotaByUserTier: Record<string, TierQuota>;
   hasActiveStripeSubscription: boolean;
-  t: (key: string, params?: Record<string, string>) => string;
+  t: (key: string, params?: Record<string, string | number>) => string;
   checkoutLoading: boolean;
   upgradeLoading: boolean;
   onUpgradeCheckout: (tier: SubscriptionTier) => void;
@@ -90,7 +90,8 @@ export function UpgradeTierCards({
                   {maxLedgers === -1
                     ? t("userSettings.unlimitedLedgers")
                     : t("userSettings.includedLedgers", {
-                        count: formatCount(maxLedgers),
+                        count: maxLedgers,
+                        formattedCount: formatCount(maxLedgers),
                       })}
                 </li>
                 <li className="text-xs text-muted-foreground">
@@ -104,7 +105,8 @@ export function UpgradeTierCards({
                   {maxCollaborators === -1
                     ? t("userSettings.unlimitedCollaborators")
                     : t("userSettings.collaboratorsPerLedger", {
-                        count: formatCount(maxCollaborators),
+                        count: maxCollaborators,
+                        formattedCount: formatCount(maxCollaborators),
                       })}
                 </li>
               </ul>

@@ -36,11 +36,19 @@ export function PlaidManagementState({
       const { transactionsAdded, institutionsSynced, skippedCount } =
         await syncAllTransactions(ledgerId, items);
       await Promise.all([refetchItems(), refetchTransactions()]);
+      // Two independent counts: each fragment takes its own plural form, and
+      // the sentence around them stays free to order them per language.
+      const transactions = t("plaid.management.toast.syncAllTransactionsPart", {
+        count: transactionsAdded,
+      });
+      const banks = t("plaid.management.toast.syncAllBanksPart", {
+        count: institutionsSynced,
+      });
       toast({
         title: t("plaid.management.toast.syncAllComplete"),
         description: t("plaid.management.toast.syncAllCompleteDescription", {
-          count: transactionsAdded,
-          institutionCount: institutionsSynced,
+          transactions,
+          banks,
         }),
       });
       if (skippedCount > 0) {

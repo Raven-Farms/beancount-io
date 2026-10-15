@@ -525,7 +525,6 @@ export function TransactionReviewTable({
             <CardDescription>
               {t("plaid.transactionReview.description", {
                 count: transactions.length,
-                plural: transactions.length !== 1 ? "s" : "",
               })}
             </CardDescription>
           </div>

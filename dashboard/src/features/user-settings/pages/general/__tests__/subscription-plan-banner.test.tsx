@@ -245,9 +245,22 @@ beforeEach(() => {
   setUserLimits();
 });
 
-/** Real English messages, so the rendered summary is asserted, not a key. */
-const translate = (key: string, params?: Record<string, string>): string => {
-  const entry = (en as Record<string, unknown>)[key];
+/**
+ * Real English messages, so the rendered summary is asserted, not a key. A
+ * numeric `count` picks the plural variant the way i18next does.
+ */
+const translate = (
+  key: string,
+  params?: Record<string, string | number>,
+): string => {
+  const count = params?.count;
+  const pluralKey =
+    typeof count === "number"
+      ? `${key}_${new Intl.PluralRules("en").select(count)}`
+      : key;
+  const entry = (en as Record<string, unknown>)[
+    pluralKey in en ? pluralKey : key
+  ];
   let text = key;
   if (typeof entry === "string") {
     text = entry;
@@ -259,7 +272,7 @@ const translate = (key: string, params?: Record<string, string>): string => {
     text = String((entry as { message: string }).message);
   }
   for (const [k, v] of Object.entries(params ?? {})) {
-    text = text.replace(new RegExp(`\\{${k}\\}`, "g"), v);
+    text = text.replace(new RegExp(`\\{${k}\\}`, "g"), String(v));
   }
   return text;
 };
@@ -521,11 +534,11 @@ describe("CurrentPlanBanner quota summary localization", () => {
     renderBanner(quota);
 
     expect(screen.getByTestId("feature-summary")).toHaveTextContent(
-      "500,000 AI tokens / month · 5 ledger(s) · 20,000 directives · Up to 5 collaborator(s) per ledger",
+      "500,000 AI tokens / month · 5 ledgers · 20,000 directives · Up to 5 collaborators per ledger",
     );
   });
 
-  it("uses the singular-capable ledger and collaborator copy for a count of one", () => {
+  it("uses the singular ledger and collaborator forms for a count of one", () => {
     renderBanner({
       ...quota,
       aiCfoTokensMax: 50_000,
@@ -535,8 +548,8 @@ describe("CurrentPlanBanner quota summary localization", () => {
     });
 
     const summary = screen.getByTestId("feature-summary");
-    expect(summary).toHaveTextContent("1 ledger(s)");
-    expect(summary).toHaveTextContent("Up to 1 collaborator(s) per ledger");
+    expect(summary).toHaveTextContent("1 ledger ·");
+    expect(summary).toHaveTextContent("Up to 1 collaborator per ledger");
     // No hardcoded English pluralization left behind.
     expect(summary.textContent).not.toContain("collaborators/ledger");
   });
@@ -562,6 +575,19 @@ describe("CurrentPlanBanner quota summary localization", () => {
     const summary = screen.getByTestId("feature-summary");
     expect(summary).toHaveTextContent("500.000 AI tokens / month");
     expect(summary).toHaveTextContent("20.000 directives");
+  });
+
+  it("formats plural ledger and collaborator counts in the app language", () => {
+    mockLanguage.current = "de";
+    renderBanner({
+      ...quota,
+      maxLedgers: 1000,
+      maxCollaboratorsPerLedger: 2000,
+    });
+
+    const summary = screen.getByTestId("feature-summary");
+    expect(summary).toHaveTextContent("1.000 ledgers");
+    expect(summary).toHaveTextContent("Up to 2.000 collaborators per ledger");
   });
 
   it("falls back to the enterprise unlimited label when the quota is missing", () => {

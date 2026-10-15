@@ -531,8 +531,14 @@ const zhUserSettings: Record<string, TranslationEntry> = {
     description: "Unlimited ledger allowance",
   },
   "userSettings.includedLedgers": {
-    message: "{count} 分类帐",
-    description: "Ledger allowance for a subscription tier",
+    message: "{formattedCount} 个账本",
+    description:
+      "Ledger allowance for a subscription tier - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form (base key for pluralization)",
+  },
+  "userSettings.includedLedgers_other": {
+    message: "{formattedCount} 个账本",
+    description:
+      "Ledger allowance for a subscription tier - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form - the only form; this language has no plural inflection",
   },
   "userSettings.unlimitedDirectives": {
     message: "无限指令",
@@ -547,8 +553,14 @@ const zhUserSettings: Record<string, TranslationEntry> = {
     description: "Unlimited collaborator allowance",
   },
   "userSettings.collaboratorsPerLedger": {
-    message: "个合作者 {count}",
-    description: "Collaborator allowance for each ledger",
+    message: "每个账本最多 {formattedCount} 位协作者",
+    description:
+      "Collaborator allowance for each ledger - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form (base key for pluralization)",
+  },
+  "userSettings.collaboratorsPerLedger_other": {
+    message: "每个账本最多 {formattedCount} 位协作者",
+    description:
+      "Collaborator allowance for each ledger - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form - the only form; this language has no plural inflection",
   },
   "userSettings.aiUsageUpgradeNudge": {
     message: "你正在使用每月 AI 代币的 {percentage}%。升级以避免中断。",

@@ -539,8 +539,29 @@ const ruUserSettings: Record<string, TranslationEntry> = {
     description: "Unlimited ledger allowance",
   },
   "userSettings.includedLedgers": {
-    message: "{count} реестр(ы)",
-    description: "Ledger allowance for a subscription tier",
+    message: "{formattedCount} книг",
+    description:
+      "Ledger allowance for a subscription tier - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form (base key for pluralization)",
+  },
+  "userSettings.includedLedgers_one": {
+    message: "{formattedCount} книга",
+    description:
+      "Ledger allowance for a subscription tier - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form - singular form",
+  },
+  "userSettings.includedLedgers_few": {
+    message: "{formattedCount} книги",
+    description:
+      "Ledger allowance for a subscription tier - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form - form for counts like 2-4",
+  },
+  "userSettings.includedLedgers_many": {
+    message: "{formattedCount} книг",
+    description:
+      "Ledger allowance for a subscription tier - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form - form for counts like 5-20",
+  },
+  "userSettings.includedLedgers_other": {
+    message: "{formattedCount} книги",
+    description:
+      "Ledger allowance for a subscription tier - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form - form for fractional counts",
   },
   "userSettings.unlimitedDirectives": {
     message: "Неограниченное количество директив",
@@ -555,8 +576,29 @@ const ruUserSettings: Record<string, TranslationEntry> = {
     description: "Unlimited collaborator allowance",
   },
   "userSettings.collaboratorsPerLedger": {
-    message: "До {count} соавторов на каждый реестр",
-    description: "Collaborator allowance for each ledger",
+    message: "До {formattedCount} соавторов на книгу",
+    description:
+      "Collaborator allowance for each ledger - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form (base key for pluralization)",
+  },
+  "userSettings.collaboratorsPerLedger_one": {
+    message: "До {formattedCount} соавтора на книгу",
+    description:
+      "Collaborator allowance for each ledger - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form - singular form",
+  },
+  "userSettings.collaboratorsPerLedger_few": {
+    message: "До {formattedCount} соавторов на книгу",
+    description:
+      "Collaborator allowance for each ledger - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form - form for counts like 2-4",
+  },
+  "userSettings.collaboratorsPerLedger_many": {
+    message: "До {formattedCount} соавторов на книгу",
+    description:
+      "Collaborator allowance for each ledger - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form - form for counts like 5-20",
+  },
+  "userSettings.collaboratorsPerLedger_other": {
+    message: "До {formattedCount} соавтора на книгу",
+    description:
+      "Collaborator allowance for each ledger - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form - form for fractional counts",
   },
   "userSettings.aiUsageUpgradeNudge": {
     message:

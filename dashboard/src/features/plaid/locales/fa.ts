@@ -175,14 +175,54 @@ const faPlaid: Record<string, TranslationEntry> = {
     description: "Toast title after syncing every connected bank",
   },
   "plaid.management.toast.syncAllCompleteDescription": {
-    message: "{count} تراکنش جدید از {institutionCount} بانک همگام‌سازی شد.",
+    message: "{transactions} از {banks} همگام‌سازی شد.",
     description:
-      "Toast description after syncing every connected bank - interpolation: {count}, {institutionCount}",
+      "Toast description after syncing every connected bank - interpolation: {transactions} is plaid.management.toast.syncAllTransactionsPart, {banks} is plaid.management.toast.syncAllBanksPart; each fragment is pluralized on its own count",
+  },
+  "plaid.management.toast.syncAllTransactionsPart": {
+    message: "{count} تراکنش جدید",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {transactions}: the number of new transactions synced, worded to fit that sentence - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.management.toast.syncAllTransactionsPart_one": {
+    message: "{count} تراکنش جدید",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {transactions}: the number of new transactions synced, worded to fit that sentence - interpolation: {count} - singular form",
+  },
+  "plaid.management.toast.syncAllTransactionsPart_other": {
+    message: "{count} تراکنش جدید",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {transactions}: the number of new transactions synced, worded to fit that sentence - interpolation: {count} - plural form",
+  },
+  "plaid.management.toast.syncAllBanksPart": {
+    message: "{count} بانک",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {banks}: the number of banks synced, in the grammatical case that sentence needs - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.management.toast.syncAllBanksPart_one": {
+    message: "{count} بانک",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {banks}: the number of banks synced, in the grammatical case that sentence needs - interpolation: {count} - singular form",
+  },
+  "plaid.management.toast.syncAllBanksPart_other": {
+    message: "{count} بانک",
+    description:
+      "Fragment of plaid.management.toast.syncAllCompleteDescription filling {banks}: the number of banks synced, in the grammatical case that sentence needs - interpolation: {count} - plural form",
   },
   "plaid.management.toast.syncAllSkipped": {
     message: "{count} بانک نیاز به اتصال مجدد دارد",
     description:
-      "Toast title noting banks skipped by Sync All because they require reauthentication - interpolation: {count}",
+      "Toast title noting banks skipped by Sync All because they require reauthentication - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.management.toast.syncAllSkipped_one": {
+    message: "{count} بانک نیاز به اتصال مجدد دارد",
+    description:
+      "Toast title noting banks skipped by Sync All because they require reauthentication - interpolation: {count} - singular form",
+  },
+  "plaid.management.toast.syncAllSkipped_other": {
+    message: "{count} بانک نیاز به اتصال مجدد دارد",
+    description:
+      "Toast title noting banks skipped by Sync All because they require reauthentication - interpolation: {count} - plural form",
   },
   "plaid.management.toast.syncAllFailedDescription": {
     message: "همگام‌سازی تراکنش‌ها ناموفق بود. لطفاً دوباره تلاش کنید.",
@@ -447,7 +487,17 @@ const faPlaid: Record<string, TranslationEntry> = {
   "plaid.accountMapping.toast.acceptedAllDescription": {
     message: "{count} حساب با استفاده از پیشنهادهای هوش مصنوعی نگاشت شد.",
     description:
-      "Toast description after accepting all AI mapping suggestions - interpolation: {count}",
+      "Toast description after accepting all AI mapping suggestions - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.accountMapping.toast.acceptedAllDescription_one": {
+    message: "{count} حساب با استفاده از پیشنهادهای هوش مصنوعی نگاشت شد.",
+    description:
+      "Toast description after accepting all AI mapping suggestions - interpolation: {count} - singular form",
+  },
+  "plaid.accountMapping.toast.acceptedAllDescription_other": {
+    message: "{count} حساب با استفاده از پیشنهادهای هوش مصنوعی نگاشت شد.",
+    description:
+      "Toast description after accepting all AI mapping suggestions - interpolation: {count} - plural form",
   },
 
   // Account Detail Page
@@ -469,9 +519,19 @@ const faPlaid: Record<string, TranslationEntry> = {
       "Card title for the list of unsynced bank transactions awaiting review before submission to the ledger",
   },
   "plaid.transactionReview.description": {
-    message: "{count} تراکنش{plural} را بررسی و به دفتر کل خود ارسال کنید",
+    message: "{count} تراکنش را بررسی و به دفتر کل خود ارسال کنید",
     description:
-      "Card description - interpolation: {count} for number, {plural} for 's' or empty",
+      "Card description for the transaction review table - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.description_one": {
+    message: "{count} تراکنش را بررسی و به دفتر کل خود ارسال کنید",
+    description:
+      "Card description for the transaction review table - interpolation: {count} - singular form",
+  },
+  "plaid.transactionReview.description_other": {
+    message: "{count} تراکنش را بررسی و به دفتر کل خود ارسال کنید",
+    description:
+      "Card description for the transaction review table - interpolation: {count} - plural form",
   },
   "plaid.transactionReview.submitting": {
     message: "در حال ارسال...",
@@ -522,7 +582,19 @@ const faPlaid: Record<string, TranslationEntry> = {
     message:
       "{count} تراکنش انتخاب‌شده با فیلترهای فعلی پنهان شده‌اند، اما همچنان ارسال یا حذف می‌شوند.",
     description:
-      "Notice shown when selected rows fall outside the active filters - they are still submitted or deleted - interpolation: {count}",
+      "Notice shown when selected rows fall outside the active filters - they are still submitted or deleted - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.hiddenSelectedNotice_one": {
+    message:
+      "{count} تراکنش انتخاب‌شده با فیلترهای فعلی پنهان شده است، اما همچنان ارسال یا حذف می‌شود.",
+    description:
+      "Notice shown when selected rows fall outside the active filters - they are still submitted or deleted - interpolation: {count} - singular form",
+  },
+  "plaid.transactionReview.hiddenSelectedNotice_other": {
+    message:
+      "{count} تراکنش انتخاب‌شده با فیلترهای فعلی پنهان شده‌اند، اما همچنان ارسال یا حذف می‌شوند.",
+    description:
+      "Notice shown when selected rows fall outside the active filters - they are still submitted or deleted - interpolation: {count} - plural form",
   },
   "plaid.transactionReview.selectFilePlaceholder": {
     message: "انتخاب کنید در کدام فایل وارد شود",
@@ -531,7 +603,17 @@ const faPlaid: Record<string, TranslationEntry> = {
   "plaid.transactionReview.missingAccountsAlert": {
     message: "{count} تراکنش انتخاب‌شده پیش از ارسال به حساب مقصد نیاز دارند.",
     description:
-      "Alert message for missing target accounts - interpolation: {count}",
+      "Alert message for missing target accounts - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.missingAccountsAlert_one": {
+    message: "{count} تراکنش انتخاب‌شده پیش از ارسال به حساب مقصد نیاز دارد.",
+    description:
+      "Alert message for missing target accounts - interpolation: {count} - singular form",
+  },
+  "plaid.transactionReview.missingAccountsAlert_other": {
+    message: "{count} تراکنش انتخاب‌شده پیش از ارسال به حساب مقصد نیاز دارند.",
+    description:
+      "Alert message for missing target accounts - interpolation: {count} - plural form",
   },
   "plaid.transactionReview.selectAll": {
     message: "انتخاب همه",
@@ -612,7 +694,17 @@ const faPlaid: Record<string, TranslationEntry> = {
   "plaid.transactionReview.toast.missingTargetAccountsDescription": {
     message: "{count} تراکنش انتخاب‌شده به حساب مقصد نیاز دارند.",
     description:
-      "Toast description for missing accounts - interpolation: {count}",
+      "Toast description for missing accounts - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.toast.missingTargetAccountsDescription_one": {
+    message: "{count} تراکنش انتخاب‌شده به حساب مقصد نیاز دارد.",
+    description:
+      "Toast description for missing accounts - interpolation: {count} - singular form",
+  },
+  "plaid.transactionReview.toast.missingTargetAccountsDescription_other": {
+    message: "{count} تراکنش انتخاب‌شده به حساب مقصد نیاز دارند.",
+    description:
+      "Toast description for missing accounts - interpolation: {count} - plural form",
   },
   "plaid.transactionReview.toast.transactionsSubmitted": {
     message: "تراکنش‌ها ارسال شدند",
@@ -647,7 +739,19 @@ const faPlaid: Record<string, TranslationEntry> = {
     message:
       "با این کار {count} تراکنش انتخاب‌شده برای همیشه از این فهرست حذف می‌شود. این عملیات قابل بازگشت نیست.",
     description:
-      "Confirmation dialog description for bulk-deleting transactions - interpolation: {count}",
+      "Confirmation dialog description for bulk-deleting transactions - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.deleteConfirmDescription_one": {
+    message:
+      "با این کار {count} تراکنش انتخاب‌شده برای همیشه از این فهرست حذف می‌شود. این عملیات قابل بازگشت نیست.",
+    description:
+      "Confirmation dialog description for bulk-deleting transactions - interpolation: {count} - singular form",
+  },
+  "plaid.transactionReview.deleteConfirmDescription_other": {
+    message:
+      "با این کار {count} تراکنش انتخاب‌شده برای همیشه از این فهرست حذف می‌شود. این عملیات قابل بازگشت نیست.",
+    description:
+      "Confirmation dialog description for bulk-deleting transactions - interpolation: {count} - plural form",
   },
   "plaid.transactionReview.toast.transactionsDeleted": {
     message: "تراکنش‌ها حذف شدند",
@@ -656,7 +760,17 @@ const faPlaid: Record<string, TranslationEntry> = {
   "plaid.transactionReview.toast.transactionsDeletedDescription": {
     message: "{count} تراکنش از این فهرست حذف شد.",
     description:
-      "Toast description for deleted transactions - interpolation: {count}",
+      "Toast description for deleted transactions - interpolation: {count} (base key for pluralization)",
+  },
+  "plaid.transactionReview.toast.transactionsDeletedDescription_one": {
+    message: "{count} تراکنش از این فهرست حذف شد.",
+    description:
+      "Toast description for deleted transactions - interpolation: {count} - singular form",
+  },
+  "plaid.transactionReview.toast.transactionsDeletedDescription_other": {
+    message: "{count} تراکنش از این فهرست حذف شد.",
+    description:
+      "Toast description for deleted transactions - interpolation: {count} - plural form",
   },
   "plaid.transactionReview.toast.deletionFailed": {
     message: "حذف ناموفق بود",

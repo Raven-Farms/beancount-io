@@ -538,8 +538,29 @@ const skUserSettings: Record<string, TranslationEntry> = {
     description: "Unlimited ledger allowance",
   },
   "userSettings.includedLedgers": {
-    message: "{count} účtovné knihy",
-    description: "Ledger allowance for a subscription tier",
+    message: "{formattedCount} účtovných kníh",
+    description:
+      "Ledger allowance for a subscription tier - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form (base key for pluralization)",
+  },
+  "userSettings.includedLedgers_one": {
+    message: "{formattedCount} účtovná kniha",
+    description:
+      "Ledger allowance for a subscription tier - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form - singular form",
+  },
+  "userSettings.includedLedgers_few": {
+    message: "{formattedCount} účtovné knihy",
+    description:
+      "Ledger allowance for a subscription tier - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form - form for counts like 2-4",
+  },
+  "userSettings.includedLedgers_many": {
+    message: "{formattedCount} účtovnej knihy",
+    description:
+      "Ledger allowance for a subscription tier - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form - form for fractional counts",
+  },
+  "userSettings.includedLedgers_other": {
+    message: "{formattedCount} účtovných kníh",
+    description:
+      "Ledger allowance for a subscription tier - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form - form for counts like 0 and 5 or more",
   },
   "userSettings.unlimitedDirectives": {
     message: "Neobmedzené smernice",
@@ -554,8 +575,29 @@ const skUserSettings: Record<string, TranslationEntry> = {
     description: "Unlimited collaborator allowance",
   },
   "userSettings.collaboratorsPerLedger": {
-    message: "Až {count} spolupracovníkov na jednu účtovnú knihu",
-    description: "Collaborator allowance for each ledger",
+    message: "Až {formattedCount} spolupracovníkov na účtovnú knihu",
+    description:
+      "Collaborator allowance for each ledger - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form (base key for pluralization)",
+  },
+  "userSettings.collaboratorsPerLedger_one": {
+    message: "Až {formattedCount} spolupracovník na účtovnú knihu",
+    description:
+      "Collaborator allowance for each ledger - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form - singular form",
+  },
+  "userSettings.collaboratorsPerLedger_few": {
+    message: "Až {formattedCount} spolupracovníci na účtovnú knihu",
+    description:
+      "Collaborator allowance for each ledger - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form - form for counts like 2-4",
+  },
+  "userSettings.collaboratorsPerLedger_many": {
+    message: "Až {formattedCount} spolupracovníka na účtovnú knihu",
+    description:
+      "Collaborator allowance for each ledger - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form - form for fractional counts",
+  },
+  "userSettings.collaboratorsPerLedger_other": {
+    message: "Až {formattedCount} spolupracovníkov na účtovnú knihu",
+    description:
+      "Collaborator allowance for each ledger - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form - form for counts like 0 and 5 or more",
   },
   "userSettings.aiUsageUpgradeNudge": {
     message:
