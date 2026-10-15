@@ -12,7 +12,6 @@
 
 ## Inbox
 
-- [008](./008.md) — Give tool-only clients a read path to canonical entry hashes (major; backend-v2; 50–60m).
 - [009](./009.md) — Keep balance-sheet summary totals on one valuation basis (major; backend-v2; 45–60m).
 
 - [010](./010.md) — Align the public archive contract with native downloads (minor; backend-v2; 30–45m).
