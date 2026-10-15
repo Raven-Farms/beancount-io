@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [375 — Update check timeout is per-read: trickling index hangs `upgrade --check`, notice costs 3 s every run uncached](./375.md) — CLI QA 2026-10-14
 - [376 — `upgrade --check` prints the index's version string unescaped (terminal injection)](./376.md) — CLI QA 2026-10-14
 - [377 — Managed price feed accepts `BTC-`/`BTC.` commodities: negative price or broken load, then pinned](./377.md) — CLI QA 2026-10-14
 - [378 — Managed-price shadowing misses arithmetic authored prices and matches price text inside strings](./378.md) — CLI QA 2026-10-14
