@@ -48,3 +48,5 @@
 - [030](./030.md) — Keep conversion strategies out of empty income and overview currency labels (minor; backend-v2; 45–60m).
 
 - [031](./blocked/031.md) — Adopt floor-based DATE_BIN arithmetic before the origin (minor; ledger; 35–50m after upstream support) — **blocked:** needs a published native fixed-stride correction.
+
+- [032](./blocked/032.md) — Preserve calendar-month DATE_BIN origins (minor; ledger; 35–50m after upstream support) — **blocked:** needs a published native origin-preserving month-bin implementation.
