@@ -451,7 +451,10 @@ skills deduplicate against each other: the ledger itself is the dedup database.
   `import-id: "csv:sha256:<16 hex>"` hashed from
   `date|amount|description|account` per the convention: the ISO date, the
   exact source amount with its commodity and trailing zeros stripped
-  (`-54.2 USD`), the narration (or payee when
+  (`-54.2 USD`) — with the per-unit cost (and lot label) or price of a source
+  posting held at cost or priced (`10 AAPL {100 USD}`), so two same-day buys of
+  one share count at different prices are two rows; ids written before that
+  (units only) still match, but only the same lot — the narration (or payee when
   narration is empty) uppercased with whitespace collapsed, and the source
   account. A row with both a payee and a narration hashes both, as
   `date|amount|payee|narration|account`, so rows that differ only in payee

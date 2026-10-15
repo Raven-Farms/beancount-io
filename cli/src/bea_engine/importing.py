@@ -830,6 +830,31 @@ def _source_postings(entry: Any, account: str) -> list[Any]:
     return [p for p in _source_legs(entry, account) if _has_explicit_units(p)]
 
 
+def _lot_text(posting: Any) -> str:
+    """A source posting's cost or price, as it bears on which source row this is.
+
+    Two same-day buys of `10 AAPL` at 100 and 120 USD are two rows; hashing
+    units alone gave them one id, and the second was skipped as an exact
+    duplicate with exit 0 (w5/349). The per-unit number, currency and label
+    are kept; the lot date is not, since booking fills it in on the entry
+    already in the ledger while the importer's cost spec leaves it empty.
+    """
+    parts = []
+    cost = posting.cost
+    if cost is not None:
+        per = getattr(cost, "number_per", None) if hasattr(cost, "number_per") else getattr(cost, "number", None)
+        total = getattr(cost, "number_total", None)
+        if not isinstance(per, Decimal) and isinstance(total, Decimal) and isinstance(posting.units.number, Decimal):
+            per = total / abs(posting.units.number) if posting.units.number else None
+        label = f', "{cost.label}"' if getattr(cost, "label", None) else ""
+        if isinstance(per, Decimal) and isinstance(cost.currency, str):
+            parts.append(f" {{{_exact_amount(per, cost.currency)}{label}}}")
+    price = posting.price
+    if price is not None and isinstance(price.number, Decimal) and isinstance(price.currency, str):
+        parts.append(f" @ {_exact_amount(price.number, price.currency)}")
+    return "".join(parts)
+
+
 def _fingerprint(entry: Any, account: str) -> tuple[Any, ...]:
     if any(not _has_explicit_units(p) for p in _source_legs(entry, account)):
         raise LedgerError(f"The importer must supply explicit source amounts for {account} before duplicate matching.")
@@ -838,7 +863,9 @@ def _fingerprint(entry: Any, account: str) -> tuple[Any, ...]:
     # `1E+2` where the id says `100`; both sides of a comparison are built the
     # same way, so that was consistent rather than wrong — but two spellings of
     # one rule is how they drift apart.
-    amounts = tuple(sorted(_exact_amount(p.units.number, p.units.currency) for p in _source_postings(entry, account)))
+    amounts = tuple(
+        sorted(_exact_amount(p.units.number, p.units.currency) + _lot_text(p) for p in _source_postings(entry, account))
+    )
     # Ledger text loads NFC-normalized but an export's rows arrive in whatever
     # form the bank wrote, so an accented description would otherwise compare
     # unequal to the identical entry already in the ledger.
@@ -1417,14 +1444,16 @@ def _hash_import_ids(entry: Any, account: str, seen: dict[str, int]) -> _HashedR
     export does not change its id. Either way the narration-only spellings are
     returned for the group-wide claim instead of as plain lookups.
     """
-    amounts = sorted((p.units.number, p.units.currency) for p in _source_postings(entry, account))
+    legs = sorted((p.units.number, p.units.currency, _lot_text(p)) for p in _source_postings(entry, account))
+    amounts = [(number, currency) for number, currency, _ in legs]
     raw_description = " ".join(str(entry.narration or entry.payee or "").upper().split())
     # Normalize after upper(): uppercasing NFD text can itself emit a
     # non-canonical form, and the digest has to be stable byte-for-byte.
     description = unicodedata.normalize("NFC", raw_description)
     nfc_account = unicodedata.normalize("NFC", account)
     date = entry.date.isoformat()
-    exact = _amounts_exact(amounts)
+    units_only = _amounts_exact(amounts)
+    exact = "+".join(_exact_amount(number, currency) + lot for number, currency, lot in legs)
 
     single_base = _hash_base(date, exact, description, nfc_account)
     seen[single_base] = seen.get(single_base, 0) + 1
@@ -1449,6 +1478,14 @@ def _hash_import_ids(entry: Any, account: str, seen: dict[str, int]) -> _HashedR
             continue
         known.add(base)
         older.append(_digest_import_id(base, occurrence))
+    if exact != units_only:
+        # Written before a lot or price was part of the id: lookup-only, and
+        # content-checked like every older spelling, so it matches the same
+        # lot and never a different one.
+        units_base = _hash_base(date, units_only, description, nfc_account)
+        counter = f"units\0{units_base}"
+        seen[counter] = seen.get(counter, 0) + 1
+        older.append(_digest_import_id(units_base, seen[counter]))
     single = _digest_import_id(single_base, occurrence)
 
     payee = unicodedata.normalize("NFC", " ".join(str(entry.payee or "").upper().split()))
@@ -1457,6 +1494,11 @@ def _hash_import_ids(entry: Any, account: str, seen: dict[str, int]) -> _HashedR
         # Keyed apart from the narration-only counter, so a paired base can never
         # share an occurrence count with a narration that happens to contain `|`.
         counter = f"paired\0{base}"
+        if exact != units_only:
+            units_paired = _hash_base(date, units_only, f"{payee}|{description}", nfc_account)
+            units_counter = f"paired-units\0{units_paired}"
+            seen[units_counter] = seen.get(units_counter, 0) + 1
+            older.append(_digest_import_id(units_paired, seen[units_counter]))
     else:
         # Numbered apart from payee-bearing rows. Releases that counted those
         # too wrote `single`, which stays one of the spellings to look for.
@@ -1469,7 +1511,9 @@ def _hash_import_ids(entry: Any, account: str, seen: dict[str, int]) -> _HashedR
         narration_only=tuple(dict.fromkeys([*([canonical] if base == single_base else []), single, *older])),
         payee=_match_text(entry.payee),
         date=entry.date,
-        amounts=tuple(sorted(_exact_amount(number, currency) for number, currency in amounts)),
+        # The fingerprint's amounts, lot included, so a claim's content check
+        # compares like with like (w5/349).
+        amounts=tuple(sorted(_exact_amount(number, currency) + lot for number, currency, lot in legs)),
     )
 
 
@@ -1488,7 +1532,7 @@ def _candidate_key(entry: Any, account: str) -> tuple[Any, ...]:
 def _source_amounts(entry: Any, account: str) -> str:
     # `:f` keeps the digits as written and out of scientific notation, which
     # `str()` chooses below one millionth (`-5.0E-7`) — a spelling input refuses.
-    return ", ".join(f"{p.units.number:f} {p.units.currency}" for p in _source_postings(entry, account))
+    return ", ".join(f"{p.units.number:f} {p.units.currency}{_lot_text(p)}" for p in _source_postings(entry, account))
 
 
 def _traceback(exc: BaseException) -> str:

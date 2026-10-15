@@ -116,7 +116,8 @@ def test_rows_posted_under_the_filing_root_preview_apply_and_deduplicate(book: P
     assert preview.exit_code == 0, preview.output
     data = json.loads(preview.stdout)["data"]
     assert data["account"] == "Assets:Broker" and data["ready"] == 2
-    assert [row["amount"] for row in data["rows"]] == ["10 HOOL, -1000.00 USD", "12.50 USD"]
+    # The lot is part of the source amount (w5/349).
+    assert [row["amount"] for row in data["rows"]] == ["10 HOOL {100 USD}, -1000.00 USD", "12.50 USD"]
 
     applied = _import(book, "Assets:Broker", "--apply")
     assert applied.exit_code == 0, applied.output
