@@ -12,7 +12,6 @@
 
 ## Inbox
 
-- [020](./020.md) — Name the header filter that failed to parse on reports and Journal (minor; dashboard; 45–60m).
 - [021](./021.md) — Pluralize the profile follower count and call ledgers "ledgers" on profiles (minor; dashboard; 30–40m).
 - [022](./022.md) — Accept Beancount's tolerance residuals in the Cash Flow conservation check, since At Cost is unusable on the public example (major; dashboard; 50–60m).
 - [023](./023.md) — Explain that ledger names need Latin letters or digits when a non-Latin name is rejected (minor; dashboard; 20–30m).

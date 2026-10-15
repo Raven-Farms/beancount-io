@@ -36,8 +36,27 @@ const GENERIC_ERROR_KEY = "common.errors.generic";
  * Pass the result to `t()`: `t(getErrorMessageKey(error))`, or use
  * {@link useErrorMessage} / the `error` prop on `ReportErrorState`.
  */
+/**
+ * The ledger's own filter diagnostics (`directive-filter.ts`), forwarded as
+ * BAD_USER_INPUT. They name which header filter failed, which the generic
+ * "information provided is invalid" did not (w0/020). Only the category is
+ * used; the server text itself is never shown.
+ */
+const TIME_FILTER_ERROR = /^Failed to parse date:/;
+const ADVANCED_FILTER_ERROR =
+  /^(?:Illegal character|Trailing tokens|Unexpected end of filter|Unexpected token|Expected .+, got|Expected : or comparison|Filter pattern exceeds)/;
+
 export function getErrorMessageKey(error: unknown): string {
   if (CombinedGraphQLErrors.is(error)) {
+    for (const gqlError of error.errors) {
+      if (gqlError.extensions?.code !== "BAD_USER_INPUT") continue;
+      if (TIME_FILTER_ERROR.test(gqlError.message)) {
+        return "common.errors.invalidTimeFilter";
+      }
+      if (ADVANCED_FILTER_ERROR.test(gqlError.message)) {
+        return "common.errors.invalidFilterExpression";
+      }
+    }
     for (const gqlError of error.errors) {
       const code = gqlError.extensions?.code;
       if (typeof code === "string" && code in ERROR_CODE_TO_KEY) {

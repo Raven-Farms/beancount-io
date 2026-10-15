@@ -811,6 +811,18 @@ const enCommon: Record<string, TranslationEntry> = {
       "Some of the information provided is invalid. Please check and try again.",
     description: "Error shown for invalid client input (BAD_USER_INPUT)",
   },
+  "common.errors.invalidTimeFilter": {
+    message:
+      "The Time filter isn't a date or period this ledger understands. Try 2026, 2026-08, 2026-Q3, month, or a range like 2026-01 - 2026-06.",
+    description:
+      "Error when the header Time filter cannot be parsed; examples are literal filter syntax",
+  },
+  "common.errors.invalidFilterExpression": {
+    message:
+      'The filter expression can\'t be read. Check its quotes and syntax, for example payee:"Coffee" or #trip.',
+    description:
+      "Error when the header payee/tag filter expression cannot be parsed; examples are literal filter syntax",
+  },
   "common.errors.validationFailed": {
     message: "Validation failed. Please review your input and try again.",
     description: "Error shown when input validation fails (VALIDATION_FAILED)",

@@ -803,6 +803,18 @@ const ukCommon: Record<string, TranslationEntry> = {
     message: "Деякі введені дані недійсні. Перевірте їх і спробуйте ще раз.",
     description: "Error shown for invalid client input (BAD_USER_INPUT)",
   },
+  "common.errors.invalidTimeFilter": {
+    message:
+      "Фільтр часу — не дата й не період, зрозумілі цій книзі. Спробуйте 2026, 2026-08, 2026-Q3, month або діапазон на кшталт 2026-01 - 2026-06.",
+    description:
+      "Error when the header Time filter cannot be parsed; examples are literal filter syntax",
+  },
+  "common.errors.invalidFilterExpression": {
+    message:
+      'Не вдається прочитати вираз фільтра. Перевірте лапки та синтаксис, наприклад payee:"Coffee" або #trip.',
+    description:
+      "Error when the header payee/tag filter expression cannot be parsed; examples are literal filter syntax",
+  },
   "common.errors.validationFailed": {
     message:
       "Перевірка даних не пройдена. Перевірте введені дані та спробуйте ще раз.",

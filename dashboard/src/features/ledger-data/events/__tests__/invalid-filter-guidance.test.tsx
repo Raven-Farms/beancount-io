@@ -67,7 +67,9 @@ describe("events query failures", () => {
 
     render(<LedgerEventsPage />);
 
-    expect(screen.getByText("common.errors.badUserInput")).toBeInTheDocument();
+    expect(
+      screen.getByText("common.errors.invalidTimeFilter"),
+    ).toBeInTheDocument();
   });
 
   it("no longer overrides the guidance with its own message", () => {
@@ -104,7 +106,7 @@ describe("events query failures", () => {
 
     render(<LedgerEventsPage />);
 
-    expect(screen.queryByText("common.errors.badUserInput")).toBeNull();
+    expect(screen.queryByText("common.errors.invalidTimeFilter")).toBeNull();
     expect(screen.getByText("Chicago")).toBeInTheDocument();
   });
 });

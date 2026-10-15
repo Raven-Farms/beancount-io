@@ -156,6 +156,10 @@ const ALLOWED_LATIN = [
   "KB",
   "GB",
   "UTC",
+  // Literal filter syntax quoted in hints: `month`, `payee:"Coffee"`, `#trip`
+  "month",
+  "Coffee",
+  "trip",
   // The CLI command a hint tells the reader to run (`bea login`)
   "bea",
   "login",

@@ -802,6 +802,18 @@ const jaCommon: Record<string, TranslationEntry> = {
       "入力された情報の一部が無効です。確認してからもう一度お試しください。",
     description: "Error shown for invalid client input (BAD_USER_INPUT)",
   },
+  "common.errors.invalidTimeFilter": {
+    message:
+      "期間フィルターがこの台帳で解釈できる日付や期間ではありません。2026、2026-08、2026-Q3、month、または 2026-01 - 2026-06 のような範囲を試してください。",
+    description:
+      "Error when the header Time filter cannot be parsed; examples are literal filter syntax",
+  },
+  "common.errors.invalidFilterExpression": {
+    message:
+      'フィルター式を読み取れません。引用符と構文を確認してください（例：payee:"Coffee"、#trip）。',
+    description:
+      "Error when the header payee/tag filter expression cannot be parsed; examples are literal filter syntax",
+  },
   "common.errors.validationFailed": {
     message:
       "検証に失敗しました。入力内容を確認してからもう一度お試しください。",

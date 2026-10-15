@@ -803,6 +803,18 @@ const skCommon: Record<string, TranslationEntry> = {
       "Niektoré zadané údaje sú neplatné. Skontrolujte ich a skúste to znova.",
     description: "Error shown for invalid client input (BAD_USER_INPUT)",
   },
+  "common.errors.invalidTimeFilter": {
+    message:
+      "Časový filter nie je dátum ani obdobie, ktorému táto kniha rozumie. Skúste 2026, 2026-08, 2026-Q3, month alebo rozsah ako 2026-01 - 2026-06.",
+    description:
+      "Error when the header Time filter cannot be parsed; examples are literal filter syntax",
+  },
+  "common.errors.invalidFilterExpression": {
+    message:
+      'Výraz filtra sa nedá prečítať. Skontrolujte úvodzovky a syntax, napríklad payee:"Coffee" alebo #trip.',
+    description:
+      "Error when the header payee/tag filter expression cannot be parsed; examples are literal filter syntax",
+  },
   "common.errors.validationFailed": {
     message: "Overenie zlyhalo. Skontrolujte zadané údaje a skúste to znova.",
     description: "Error shown when input validation fails (VALIDATION_FAILED)",

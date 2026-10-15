@@ -804,6 +804,18 @@ const esCommon: Record<string, TranslationEntry> = {
       "Parte de la información proporcionada no es válida. Revísala e inténtalo de nuevo.",
     description: "Error shown for invalid client input (BAD_USER_INPUT)",
   },
+  "common.errors.invalidTimeFilter": {
+    message:
+      "El filtro de tiempo no es una fecha o un periodo que este libro entienda. Prueba 2026, 2026-08, 2026-Q3, month o un rango como 2026-01 - 2026-06.",
+    description:
+      "Error when the header Time filter cannot be parsed; examples are literal filter syntax",
+  },
+  "common.errors.invalidFilterExpression": {
+    message:
+      'No se puede leer la expresión del filtro. Revisa las comillas y la sintaxis, por ejemplo payee:"Coffee" o #trip.',
+    description:
+      "Error when the header payee/tag filter expression cannot be parsed; examples are literal filter syntax",
+  },
   "common.errors.validationFailed": {
     message: "La validación falló. Revisa los datos e inténtalo de nuevo.",
     description: "Error shown when input validation fails (VALIDATION_FAILED)",

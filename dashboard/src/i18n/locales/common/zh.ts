@@ -789,6 +789,18 @@ const zhCommon: Record<string, TranslationEntry> = {
     message: "部分输入信息无效，请检查后重试。",
     description: "Error shown for invalid client input (BAD_USER_INPUT)",
   },
+  "common.errors.invalidTimeFilter": {
+    message:
+      "时间筛选不是此账本可识别的日期或期间。请尝试 2026、2026-08、2026-Q3、month，或 2026-01 - 2026-06 这样的范围。",
+    description:
+      "Error when the header Time filter cannot be parsed; examples are literal filter syntax",
+  },
+  "common.errors.invalidFilterExpression": {
+    message:
+      '无法读取筛选表达式。请检查引号和语法，例如 payee:"Coffee" 或 #trip。',
+    description:
+      "Error when the header payee/tag filter expression cannot be parsed; examples are literal filter syntax",
+  },
   "common.errors.validationFailed": {
     message: "校验失败，请检查输入内容后重试。",
     description: "Error shown when input validation fails (VALIDATION_FAILED)",

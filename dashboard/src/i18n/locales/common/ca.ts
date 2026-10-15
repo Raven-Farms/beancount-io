@@ -806,6 +806,18 @@ const caCommon: Record<string, TranslationEntry> = {
       "Part de la informació proporcionada no és vàlida. Reviseu-la i torneu-ho a provar.",
     description: "Error shown for invalid client input (BAD_USER_INPUT)",
   },
+  "common.errors.invalidTimeFilter": {
+    message:
+      "El filtre de temps no és una data o un període que aquest llibre entengui. Proveu 2026, 2026-08, 2026-Q3, month o un interval com 2026-01 - 2026-06.",
+    description:
+      "Error when the header Time filter cannot be parsed; examples are literal filter syntax",
+  },
+  "common.errors.invalidFilterExpression": {
+    message:
+      'No es pot llegir l\'expressió del filtre. Reviseu les cometes i la sintaxi, per exemple payee:"Coffee" o #trip.',
+    description:
+      "Error when the header payee/tag filter expression cannot be parsed; examples are literal filter syntax",
+  },
   "common.errors.validationFailed": {
     message: "La validació ha fallat. Reviseu les dades i torneu-ho a provar.",
     description: "Error shown when input validation fails (VALIDATION_FAILED)",

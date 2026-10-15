@@ -805,6 +805,18 @@ const nlCommon: Record<string, TranslationEntry> = {
       "Sommige ingevoerde gegevens zijn ongeldig. Controleer ze en probeer het opnieuw.",
     description: "Error shown for invalid client input (BAD_USER_INPUT)",
   },
+  "common.errors.invalidTimeFilter": {
+    message:
+      "Het tijdfilter is geen datum of periode die dit grootboek begrijpt. Probeer 2026, 2026-08, 2026-Q3, month of een bereik zoals 2026-01 - 2026-06.",
+    description:
+      "Error when the header Time filter cannot be parsed; examples are literal filter syntax",
+  },
+  "common.errors.invalidFilterExpression": {
+    message:
+      'De filterexpressie kan niet worden gelezen. Controleer de aanhalingstekens en syntaxis, bijvoorbeeld payee:"Coffee" of #trip.',
+    description:
+      "Error when the header payee/tag filter expression cannot be parsed; examples are literal filter syntax",
+  },
   "common.errors.validationFailed": {
     message: "Validatie mislukt. Controleer je invoer en probeer het opnieuw.",
     description: "Error shown when input validation fails (VALIDATION_FAILED)",

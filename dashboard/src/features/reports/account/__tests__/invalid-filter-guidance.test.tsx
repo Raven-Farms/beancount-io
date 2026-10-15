@@ -97,7 +97,7 @@ describe("account report query failures", () => {
     renderWithReportError(badUserInput);
 
     expect(
-      screen.getAllByText("common.errors.badUserInput").length,
+      screen.getAllByText("common.errors.invalidTimeFilter").length,
     ).toBeGreaterThan(0);
   });
 
@@ -162,7 +162,7 @@ describe("account report query failures", () => {
 
     render(<AccountPage />);
 
-    expect(screen.queryByText("common.errors.badUserInput")).toBeNull();
+    expect(screen.queryByText("common.errors.invalidTimeFilter")).toBeNull();
     expect(screen.getByTestId("line-chart")).toBeInTheDocument();
   });
 });

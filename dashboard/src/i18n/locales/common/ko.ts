@@ -800,6 +800,18 @@ const koCommon: Record<string, TranslationEntry> = {
     message: "입력한 정보 중 일부가 잘못되었습니다. 확인 후 다시 시도하세요.",
     description: "Error shown for invalid client input (BAD_USER_INPUT)",
   },
+  "common.errors.invalidTimeFilter": {
+    message:
+      "기간 필터가 이 원장이 이해하는 날짜나 기간이 아닙니다. 2026, 2026-08, 2026-Q3, month 또는 2026-01 - 2026-06 같은 범위를 사용해 보세요.",
+    description:
+      "Error when the header Time filter cannot be parsed; examples are literal filter syntax",
+  },
+  "common.errors.invalidFilterExpression": {
+    message:
+      '필터 식을 읽을 수 없습니다. 따옴표와 구문을 확인하세요(예: payee:"Coffee", #trip).',
+    description:
+      "Error when the header payee/tag filter expression cannot be parsed; examples are literal filter syntax",
+  },
   "common.errors.validationFailed": {
     message:
       "유효성 검사에 실패했습니다. 입력 내용을 확인하고 다시 시도하세요.",

@@ -805,6 +805,18 @@ const frCommon: Record<string, TranslationEntry> = {
       "Certaines informations fournies ne sont pas valides. Veuillez les vérifier et réessayer.",
     description: "Error shown for invalid client input (BAD_USER_INPUT)",
   },
+  "common.errors.invalidTimeFilter": {
+    message:
+      "Le filtre de période n'est pas une date ou une période que ce registre comprend. Essayez 2026, 2026-08, 2026-Q3, month ou une plage comme 2026-01 - 2026-06.",
+    description:
+      "Error when the header Time filter cannot be parsed; examples are literal filter syntax",
+  },
+  "common.errors.invalidFilterExpression": {
+    message:
+      'L\'expression du filtre est illisible. Vérifiez les guillemets et la syntaxe, par exemple payee:"Coffee" ou #trip.',
+    description:
+      "Error when the header payee/tag filter expression cannot be parsed; examples are literal filter syntax",
+  },
   "common.errors.validationFailed": {
     message:
       "La validation a échoué. Veuillez vérifier vos informations et réessayer.",

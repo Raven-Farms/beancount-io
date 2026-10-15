@@ -805,6 +805,18 @@ const deCommon: Record<string, TranslationEntry> = {
       "Einige Angaben sind ungültig. Bitte überprüfen Sie sie und versuchen Sie es erneut.",
     description: "Error shown for invalid client input (BAD_USER_INPUT)",
   },
+  "common.errors.invalidTimeFilter": {
+    message:
+      "Der Zeitfilter ist kein Datum oder Zeitraum, den dieses Hauptbuch versteht. Versuchen Sie 2026, 2026-08, 2026-Q3, month oder einen Bereich wie 2026-01 - 2026-06.",
+    description:
+      "Error when the header Time filter cannot be parsed; examples are literal filter syntax",
+  },
+  "common.errors.invalidFilterExpression": {
+    message:
+      'Der Filterausdruck kann nicht gelesen werden. Prüfen Sie Anführungszeichen und Syntax, zum Beispiel payee:"Coffee" oder #trip.',
+    description:
+      "Error when the header payee/tag filter expression cannot be parsed; examples are literal filter syntax",
+  },
   "common.errors.validationFailed": {
     message:
       "Die Validierung ist fehlgeschlagen. Bitte überprüfen Sie Ihre Eingaben und versuchen Sie es erneut.",

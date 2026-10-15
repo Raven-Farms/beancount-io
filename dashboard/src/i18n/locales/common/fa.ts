@@ -803,6 +803,18 @@ const faCommon: Record<string, TranslationEntry> = {
       "برخی از اطلاعات واردشده نامعتبر است. لطفاً بررسی کنید و دوباره تلاش کنید.",
     description: "Error shown for invalid client input (BAD_USER_INPUT)",
   },
+  "common.errors.invalidTimeFilter": {
+    message:
+      "فیلتر زمان تاریخ یا دوره‌ای نیست که این دفتر بفهمد. 2026، 2026-08، 2026-Q3، month یا بازه‌ای مثل 2026-01 - 2026-06 را امتحان کنید.",
+    description:
+      "Error when the header Time filter cannot be parsed; examples are literal filter syntax",
+  },
+  "common.errors.invalidFilterExpression": {
+    message:
+      'عبارت فیلتر قابل خواندن نیست. نقل‌قول‌ها و نحو آن را بررسی کنید، مثلاً payee:"Coffee" یا #trip.',
+    description:
+      "Error when the header payee/tag filter expression cannot be parsed; examples are literal filter syntax",
+  },
   "common.errors.validationFailed": {
     message:
       "اعتبارسنجی ناموفق بود. لطفاً اطلاعات را بررسی کنید و دوباره تلاش کنید.",

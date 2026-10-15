@@ -86,3 +86,39 @@ describe("getErrorMessageKey", () => {
     expect(getErrorMessageKey(undefined)).toBe("common.errors.generic");
   });
 });
+
+describe("header filter diagnostics (w0/020)", () => {
+  const badInput = (message: string, code = "BAD_USER_INPUT") =>
+    new CombinedGraphQLErrors({ errors: [{ message, extensions: { code } }] });
+
+  it("names the Time filter when the period cannot be parsed", () => {
+    expect(
+      getErrorMessageKey(badInput("Failed to parse date: last mnth")),
+    ).toBe("common.errors.invalidTimeFilter");
+  });
+
+  it("names the filter expression for its parser errors", () => {
+    for (const message of [
+      'Illegal character """',
+      "Trailing tokens",
+      "Unexpected end of filter",
+      "Unexpected token RPAREN",
+      "Expected STRING, got EOF",
+    ]) {
+      expect(getErrorMessageKey(badInput(message)), message).toBe(
+        "common.errors.invalidFilterExpression",
+      );
+    }
+  });
+
+  it("keeps the generic bad-input message for other diagnostics and codes", () => {
+    expect(getErrorMessageKey(badInput("Ledger option missing"))).toBe(
+      "common.errors.badUserInput",
+    );
+    expect(
+      getErrorMessageKey(
+        badInput("Failed to parse date: x", "INTERNAL_SERVER_ERROR"),
+      ),
+    ).toBe("common.errors.internal");
+  });
+});

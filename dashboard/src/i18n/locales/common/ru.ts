@@ -803,6 +803,18 @@ const ruCommon: Record<string, TranslationEntry> = {
       "Некоторые введённые данные недействительны. Проверьте их и попробуйте снова.",
     description: "Error shown for invalid client input (BAD_USER_INPUT)",
   },
+  "common.errors.invalidTimeFilter": {
+    message:
+      "Фильтр времени — не дата и не период, понятные этой книге. Попробуйте 2026, 2026-08, 2026-Q3, month или диапазон вроде 2026-01 - 2026-06.",
+    description:
+      "Error when the header Time filter cannot be parsed; examples are literal filter syntax",
+  },
+  "common.errors.invalidFilterExpression": {
+    message:
+      'Не удаётся прочитать выражение фильтра. Проверьте кавычки и синтаксис, например payee:"Coffee" или #trip.',
+    description:
+      "Error when the header payee/tag filter expression cannot be parsed; examples are literal filter syntax",
+  },
   "common.errors.validationFailed": {
     message:
       "Проверка данных не пройдена. Проверьте введённые данные и попробуйте снова.",
