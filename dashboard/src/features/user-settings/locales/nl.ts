@@ -478,55 +478,55 @@ const nlUserSettings: Record<string, TranslationEntry> = {
     description: "Description for user profile section",
   },
   "userSettings.aiCfoUsage": {
-    message: "AI Tokens",
+    message: "AI-tokens",
     description: "Label for AI CFO usage section",
   },
   "userSettings.aiCfoUsageCount": {
-    message: "{used} / {max} tokens used this month",
+    message: "{used} / {max} tokens gebruikt deze maand",
     description: "AI CFO usage count display",
   },
   "userSettings.aiCfoUsageUnlimited": {
-    message: "{used} tokens used this month (Unlimited)",
+    message: "{used} tokens gebruikt deze maand (onbeperkt)",
     description: "AI CFO usage display for unlimited tier",
   },
   "userSettings.currentPlan": {
-    message: "Current Plan",
+    message: "Huidig abonnement",
     description: "Badge label for the user's current subscription tier",
   },
   "userSettings.freePlan": {
-    message: "Free Plan",
+    message: "Gratis abonnement",
     description: "Display name for the free tier",
   },
   "userSettings.enterprisePlan": {
-    message: "Enterprise",
+    message: "Zakelijk",
     description: "Display name for the enterprise tier",
   },
   "userSettings.usage": {
-    message: "Usage",
+    message: "Gebruik",
     description: "Section header for usage overview",
   },
   "userSettings.ledgers": {
-    message: "Ledgers",
+    message: "Grootboeken",
     description: "Label for ledger usage metric",
   },
   "userSettings.ledgerUsageCount": {
-    message: "{used} / {max} ledgers",
+    message: "{used} / {max} grootboeken",
     description: "Ledger usage count display",
   },
   "userSettings.upgradeYourPlan": {
-    message: "Upgrade Your Plan",
+    message: "Upgrade uw abonnement",
     description: "Section header for upgrade tier cards",
   },
   "userSettings.billing": {
-    message: "Billing",
+    message: "Facturering",
     description: "Section header for billing management",
   },
   "userSettings.unlimited": {
-    message: "Unlimited",
+    message: "Onbeperkt",
     description: "Label for unlimited usage",
   },
   "userSettings.perMonth": {
-    message: "/month",
+    message: "/maand",
     description: "Price interval suffix",
   },
   "userSettings.aiTokensPerMonth": {

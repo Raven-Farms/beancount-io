@@ -62,15 +62,15 @@ const ruAiAgent: Record<string, TranslationEntry> = {
     description: "Button text to upgrade plan",
   },
   "aiAgent.premiumTier": {
-    message: "Premium",
+    message: "Премиум",
     description: "Premium tier name",
   },
   "aiAgent.growthTier": {
-    message: "Growth",
+    message: "Рост",
     description: "Growth tier name",
   },
   "aiAgent.organizationTier": {
-    message: "Organization",
+    message: "Организация",
     description: "Organization tier name",
   },
   "aiAgent.perMonth": {
@@ -86,35 +86,35 @@ const ruAiAgent: Record<string, TranslationEntry> = {
     description: "Badge label for the most popular tier",
   },
   "aiAgent.editApproval.title": {
-    message: "Edit Request",
+    message: "Запрос на изменение",
     description: "Title for the file edit approval card",
   },
   "aiAgent.editApproval.approve": {
-    message: "Approve",
+    message: "Одобрить",
     description: "Button to approve an AI file edit",
   },
   "aiAgent.editApproval.deny": {
-    message: "Deny",
+    message: "Отклонить",
     description: "Button to deny an AI file edit",
   },
   "aiAgent.editApproval.approved": {
-    message: "Approved",
+    message: "Одобрено",
     description: "Badge shown after user approved the edit",
   },
   "aiAgent.editApproval.denied": {
-    message: "Denied",
+    message: "Отклонено",
     description: "Badge shown after user denied the edit",
   },
   "aiAgent.editApproval.newFile": {
-    message: "New file",
+    message: "Новый файл",
     description: "Label in diff block when creating a new file",
   },
   "aiAgent.editApproval.replaceFile": {
-    message: "Replace file",
+    message: "Замена файла",
     description: "Label in diff block when replacing an entire file",
   },
   "aiAgent.editApproval.deleteFile": {
-    message: "Delete file",
+    message: "Удаление файла",
     description: "Label in diff block when deleting a file",
   },
   "aiAgent.receiptApproval.title": {

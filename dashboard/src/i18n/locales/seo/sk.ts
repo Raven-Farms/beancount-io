@@ -13,11 +13,11 @@ const skSeo: Record<string, TranslationEntry> = {
     description: "Auth callback page title",
   },
   "seo.deviceAuth.description": {
-    message: "Authorize CLI access to your Beancount account.",
+    message: "Autorizujte prístup CLI k vášmu účtu Beancount.",
     description: "Device auth page meta description",
   },
   "seo.deviceAuth.title": {
-    message: "Authorize CLI Access",
+    message: "Autorizovať prístup CLI",
     description: "Device auth page title",
   },
   "seo.dashboard.description": {
@@ -130,7 +130,7 @@ const skSeo: Record<string, TranslationEntry> = {
   },
   "seo.ledgerCommit.description": {
     message:
-      "Changes in commit {shortSha} for {ledgerName}. Review modified files and diffs.",
+      "Zmeny v commite {shortSha} pre {ledgerName}. Skontrolujte upravené súbory a rozdiely.",
     description: "Commit detail page meta description",
   },
   "seo.ledgerCommit.title": {
@@ -276,11 +276,11 @@ const skSeo: Record<string, TranslationEntry> = {
   },
   "seo.plaidConnections.description": {
     message:
-      "Manage your connected bank accounts for {ledgerName} — link new banks, update account mappings, sync, or disconnect.",
+      "Spravujte pripojené bankové účty pre {ledgerName} — prepojte nové banky, aktualizujte priradenie účtov, synchronizujte alebo odpojte.",
     description: "Plaid connections management page meta description",
   },
   "seo.plaidConnections.title": {
-    message: "Manage Bank Connections - {ledgerName}",
+    message: "Správa bankových pripojení - {ledgerName}",
     description: "Plaid connections management page title with ledger name",
   },
   "seo.ledgerQuery.description": {

@@ -13,7 +13,7 @@ const faDocuments: Record<string, TranslationEntry> = {
     description: "Table column header for filename",
   },
   "page.documents.links": {
-    message: "Links",
+    message: "پیوندها",
     description: "Table column header for links",
   },
   "page.documents.meta": {
@@ -30,7 +30,7 @@ const faDocuments: Record<string, TranslationEntry> = {
     description: "Empty state description for no documents",
   },
   "page.documents.tags": {
-    message: "Tags",
+    message: "برچسب‌ها",
     description: "Table column header for tags",
   },
 };

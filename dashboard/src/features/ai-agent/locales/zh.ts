@@ -61,15 +61,15 @@ const zhAiAgent: Record<string, TranslationEntry> = {
     description: "Button text to upgrade plan",
   },
   "aiAgent.premiumTier": {
-    message: "Premium",
+    message: "高级版",
     description: "Premium tier name",
   },
   "aiAgent.growthTier": {
-    message: "Growth",
+    message: "成长版",
     description: "Growth tier name",
   },
   "aiAgent.organizationTier": {
-    message: "Organization",
+    message: "组织版",
     description: "Organization tier name",
   },
   "aiAgent.perMonth": {
@@ -85,35 +85,35 @@ const zhAiAgent: Record<string, TranslationEntry> = {
     description: "Badge label for the most popular tier",
   },
   "aiAgent.editApproval.title": {
-    message: "Edit Request",
+    message: "编辑请求",
     description: "Title for the file edit approval card",
   },
   "aiAgent.editApproval.approve": {
-    message: "Approve",
+    message: "批准",
     description: "Button to approve an AI file edit",
   },
   "aiAgent.editApproval.deny": {
-    message: "Deny",
+    message: "拒绝",
     description: "Button to deny an AI file edit",
   },
   "aiAgent.editApproval.approved": {
-    message: "Approved",
+    message: "已批准",
     description: "Badge shown after user approved the edit",
   },
   "aiAgent.editApproval.denied": {
-    message: "Denied",
+    message: "已拒绝",
     description: "Badge shown after user denied the edit",
   },
   "aiAgent.editApproval.newFile": {
-    message: "New file",
+    message: "新文件",
     description: "Label in diff block when creating a new file",
   },
   "aiAgent.editApproval.replaceFile": {
-    message: "Replace file",
+    message: "替换文件",
     description: "Label in diff block when replacing an entire file",
   },
   "aiAgent.editApproval.deleteFile": {
-    message: "Delete file",
+    message: "删除文件",
     description: "Label in diff block when deleting a file",
   },
   "aiAgent.receiptApproval.title": {

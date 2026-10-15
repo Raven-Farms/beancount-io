@@ -8,7 +8,7 @@ export interface TranslationEntry {
 const caUserSettings: Record<string, TranslationEntry> = {
   ...apiKeyTranslations.ca,
   "userSettings.accessUntil": {
-    message: "Access until",
+    message: "Accés fins al",
     description: "Label for access remaining until date",
   },
   "userSettings.accountDeleted": {
@@ -44,20 +44,20 @@ const caUserSettings: Record<string, TranslationEntry> = {
     description: "Appearance settings section label",
   },
   "userSettings.cancelSubscription": {
-    message: "Cancel Subscription",
+    message: "Cancel·la la subscripció",
     description: "Button text to cancel subscription",
   },
   "userSettings.cancelSubscriptionDescription": {
     message:
-      "Are you sure you want to cancel your subscription? You'll continue to have access until the end of your current billing period.",
+      "Segur que voleu cancel·lar la subscripció? Continuareu tenint accés fins al final del període de facturació actual.",
     description: "Confirmation dialog description for canceling subscription",
   },
   "userSettings.cancelSubscriptionTitle": {
-    message: "Cancel Subscription?",
+    message: "Voleu cancel·lar la subscripció?",
     description: "Confirmation dialog title for canceling subscription",
   },
   "userSettings.canceling": {
-    message: "Canceling...",
+    message: "S'està cancel·lant...",
     description: "Button text while canceling subscription",
   },
   "userSettings.cannotBeUndone": {
@@ -73,7 +73,7 @@ const caUserSettings: Record<string, TranslationEntry> = {
     description: "Dialog title for changing username",
   },
   "userSettings.confirmCancel": {
-    message: "Yes, Cancel Subscription",
+    message: "Sí, cancel·la la subscripció",
     description: "Button text to confirm subscription cancellation",
   },
   "userSettings.createKey": {
@@ -99,7 +99,7 @@ const caUserSettings: Record<string, TranslationEntry> = {
     description: "Button text while creating key",
   },
   "userSettings.currentLanguage": {
-    message: "Language",
+    message: "Idioma",
     description: "Label showing current language selection",
   },
   "userSettings.customizeAppearance": {
@@ -115,7 +115,7 @@ const caUserSettings: Record<string, TranslationEntry> = {
     description: "Dark theme option",
   },
   "userSettings.deleteAccount": {
-    message: "Delete Account",
+    message: "Suprimeix el compte",
     description: "Button or menu item to delete user account",
   },
   "userSettings.deleteAccountConfirmMessage": {
@@ -179,7 +179,7 @@ const caUserSettings: Record<string, TranslationEntry> = {
     description: "Error message when settings fail to load",
   },
   "userSettings.failedToCancelSubscription": {
-    message: "Failed to cancel subscription",
+    message: "No s'ha pogut cancel·lar la subscripció",
     description: "Error message when canceling subscription fails",
   },
   "userSettings.resumeSubscription": {
@@ -212,7 +212,7 @@ const caUserSettings: Record<string, TranslationEntry> = {
     description: "Error message when resuming subscription fails",
   },
   "userSettings.failedToCreateCheckoutSession": {
-    message: "Failed to create checkout session. Please try again.",
+    message: "No s'ha pogut crear la sessió de pagament. Torneu-ho a provar.",
     description: "Error message when creating checkout session fails",
   },
   "userSettings.failedToLoadKeys": {
@@ -245,7 +245,7 @@ const caUserSettings: Record<string, TranslationEntry> = {
     description: "General settings section label",
   },
   "userSettings.invite": {
-    message: "Invite",
+    message: "Convida",
     description: "Invite action button",
   },
   "userSettings.irreversibleActions": {
@@ -314,7 +314,7 @@ const caUserSettings: Record<string, TranslationEntry> = {
     description: "Description for session section",
   },
   "userSettings.manageBilling": {
-    message: "Manage Billing",
+    message: "Gestiona la facturació",
     description: "Button text to manage billing portal",
   },
   "userSettings.manageSubscription": {
@@ -322,7 +322,7 @@ const caUserSettings: Record<string, TranslationEntry> = {
     description: "Description for subscription section",
   },
   "userSettings.monthly": {
-    message: "Monthly",
+    message: "Mensual",
     description: "Monthly frequency option",
   },
   "userSettings.name": {
@@ -351,7 +351,7 @@ const caUserSettings: Record<string, TranslationEntry> = {
     description: "Placeholder when a field has no value",
   },
   "userSettings.opening": {
-    message: "Opening...",
+    message: "S'està obrint...",
     description: "Button text while opening billing portal",
   },
   "userSettings.publicKey": {
@@ -360,7 +360,7 @@ const caUserSettings: Record<string, TranslationEntry> = {
   },
   "userSettings.publicKeyDescription": {
     message:
-      'Paste your public key content here. It should start with "-----BEGIN PUBLIC KEY-----".',
+      'Enganxeu aquí el contingut de la vostra clau pública. Ha de començar per "-----BEGIN PUBLIC KEY-----".',
     description: "Description for public key field",
   },
   "userSettings.publicKeyPlaceholder": {
@@ -373,7 +373,7 @@ const caUserSettings: Record<string, TranslationEntry> = {
     description: "Validation error for missing public key",
   },
   "userSettings.renewsOn": {
-    message: "Renews on",
+    message: "Es renova el",
     description: "Label for subscription renewal date",
   },
   "userSettings.selectColorTheme": {
@@ -401,11 +401,11 @@ const caUserSettings: Record<string, TranslationEntry> = {
     description: "Subscription section title",
   },
   "userSettings.subscriptionCanceled": {
-    message: "Subscription has been canceled",
+    message: "S'ha cancel·lat la subscripció",
     description: "Message when subscription is already canceled",
   },
   "userSettings.subscriptionCanceledSuccess": {
-    message: "Subscription canceled successfully",
+    message: "La subscripció s'ha cancel·lat correctament",
     description: "Success message after canceling subscription",
   },
   "userSettings.subscriptionUpgraded": {
@@ -423,11 +423,11 @@ const caUserSettings: Record<string, TranslationEntry> = {
     description: "System theme option",
   },
   "userSettings.testMode": {
-    message: "Test Mode",
+    message: "Mode de prova",
     description: "Label indicating Stripe is in test/development mode",
   },
   "userSettings.theme": {
-    message: "Theme",
+    message: "Tema",
     description: "Label for theme selection",
   },
   "userSettings.themeDark": {
@@ -451,7 +451,8 @@ const caUserSettings: Record<string, TranslationEntry> = {
     description: "Validation error for missing title",
   },
   "userSettings.unableToOpenBillingPortal": {
-    message: "Unable to open billing portal. Please try again later.",
+    message:
+      "No s'ha pogut obrir el portal de facturació. Torneu-ho a provar més tard.",
     description: "Error message when billing portal fails to open",
   },
   "userSettings.unknownPlan": {
@@ -467,7 +468,7 @@ const caUserSettings: Record<string, TranslationEntry> = {
     description: "Success message after updating username",
   },
   "userSettings.weekly": {
-    message: "Weekly",
+    message: "Setmanal",
     description: "Weekly frequency option",
   },
   "userSettings.yesDeleteMyAccount": {
@@ -479,55 +480,55 @@ const caUserSettings: Record<string, TranslationEntry> = {
     description: "Description for user profile section",
   },
   "userSettings.aiCfoUsage": {
-    message: "AI Tokens",
+    message: "Tokens d'IA",
     description: "Label for AI CFO usage section",
   },
   "userSettings.aiCfoUsageCount": {
-    message: "{used} / {max} tokens used this month",
+    message: "{used} / {max} tokens utilitzats aquest mes",
     description: "AI CFO usage count display",
   },
   "userSettings.aiCfoUsageUnlimited": {
-    message: "{used} tokens used this month (Unlimited)",
+    message: "{used} tokens utilitzats aquest mes (il·limitat)",
     description: "AI CFO usage display for unlimited tier",
   },
   "userSettings.currentPlan": {
-    message: "Current Plan",
+    message: "Pla actual",
     description: "Badge label for the user's current subscription tier",
   },
   "userSettings.freePlan": {
-    message: "Free Plan",
+    message: "Pla gratuït",
     description: "Display name for the free tier",
   },
   "userSettings.enterprisePlan": {
-    message: "Enterprise",
+    message: "Empresa",
     description: "Display name for the enterprise tier",
   },
   "userSettings.usage": {
-    message: "Usage",
+    message: "Ús",
     description: "Section header for usage overview",
   },
   "userSettings.ledgers": {
-    message: "Ledgers",
+    message: "Llibres",
     description: "Label for ledger usage metric",
   },
   "userSettings.ledgerUsageCount": {
-    message: "{used} / {max} ledgers",
+    message: "{used} / {max} llibres",
     description: "Ledger usage count display",
   },
   "userSettings.upgradeYourPlan": {
-    message: "Upgrade Your Plan",
+    message: "Milloreu el vostre pla",
     description: "Section header for upgrade tier cards",
   },
   "userSettings.billing": {
-    message: "Billing",
+    message: "Facturació",
     description: "Section header for billing management",
   },
   "userSettings.unlimited": {
-    message: "Unlimited",
+    message: "Il·limitat",
     description: "Label for unlimited usage",
   },
   "userSettings.perMonth": {
-    message: "/month",
+    message: "/mes",
     description: "Price interval suffix",
   },
   "userSettings.aiTokensPerMonth": {

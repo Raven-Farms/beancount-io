@@ -57,7 +57,7 @@ const caBql: Record<string, TranslationEntry> = {
     description: "Message when query result type is not recognized",
   },
   "page.bql.noDataReturnedFromQuery": {
-    message: "No data returned from query",
+    message: "La consulta no ha retornat dades",
     description: "Message when a query returns no data",
   },
 };

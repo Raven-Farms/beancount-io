@@ -66,11 +66,11 @@ const ptAiAgent: Record<string, TranslationEntry> = {
     description: "Premium tier name",
   },
   "aiAgent.growthTier": {
-    message: "Growth",
+    message: "Crescimento",
     description: "Growth tier name",
   },
   "aiAgent.organizationTier": {
-    message: "Organization",
+    message: "Organização",
     description: "Organization tier name",
   },
   "aiAgent.perMonth": {
@@ -86,35 +86,35 @@ const ptAiAgent: Record<string, TranslationEntry> = {
     description: "Badge label for the most popular tier",
   },
   "aiAgent.editApproval.title": {
-    message: "Edit Request",
+    message: "Solicitação de edição",
     description: "Title for the file edit approval card",
   },
   "aiAgent.editApproval.approve": {
-    message: "Approve",
+    message: "Aprovar",
     description: "Button to approve an AI file edit",
   },
   "aiAgent.editApproval.deny": {
-    message: "Deny",
+    message: "Negar",
     description: "Button to deny an AI file edit",
   },
   "aiAgent.editApproval.approved": {
-    message: "Approved",
+    message: "Aprovado",
     description: "Badge shown after user approved the edit",
   },
   "aiAgent.editApproval.denied": {
-    message: "Denied",
+    message: "Negado",
     description: "Badge shown after user denied the edit",
   },
   "aiAgent.editApproval.newFile": {
-    message: "New file",
+    message: "Novo arquivo",
     description: "Label in diff block when creating a new file",
   },
   "aiAgent.editApproval.replaceFile": {
-    message: "Replace file",
+    message: "Substituir arquivo",
     description: "Label in diff block when replacing an entire file",
   },
   "aiAgent.editApproval.deleteFile": {
-    message: "Delete file",
+    message: "Excluir arquivo",
     description: "Label in diff block when deleting a file",
   },
   "aiAgent.receiptApproval.title": {

@@ -13,7 +13,7 @@ const caHoldings: Record<string, TranslationEntry> = {
     description: "Holdings/investments view in ledger",
   },
   "page.holdings.holdingsByAccount": {
-    message: "Holdings by Account",
+    message: "Participacions per compte",
     description: "Tab label for holdings grouped by account",
   },
   "page.holdings.holdingsByCostCurrency": {
@@ -25,11 +25,11 @@ const caHoldings: Record<string, TranslationEntry> = {
     description: "Tab label for holdings grouped by currency",
   },
   "page.holdings.noDataReturnedFromQuery": {
-    message: "No data returned from query",
+    message: "La consulta no ha retornat dades",
     description: "Message when query returns empty result",
   },
   "page.holdings.noQueryResultsAvailable": {
-    message: "No query results available",
+    message: "No hi ha resultats de consulta disponibles",
     description: "Message when no query results exist",
   },
   "page.holdings.queryResult": {

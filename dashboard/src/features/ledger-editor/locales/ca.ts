@@ -26,7 +26,7 @@ export default {
   ...caUploadFiles,
   ...caLedgerEditor,
   "ledgerEditor.gitClone": {
-    message: "Git Clone",
+    message: "Clona amb Git",
     description: "Button for opening Git clone options",
   },
   "ledgerEditor.failedToLoadDirectory": {

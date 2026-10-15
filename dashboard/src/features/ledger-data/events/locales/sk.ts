@@ -5,7 +5,7 @@ export interface TranslationEntry {
 
 const skEvents: Record<string, TranslationEntry> = {
   "page.events.description": {
-    message: "Description",
+    message: "Popis",
     description: "Table column header for description",
   },
   "page.events.events": {

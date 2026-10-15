@@ -5,11 +5,11 @@ export interface TranslationEntry {
 
 const skGeneralSettingsSection: Record<string, TranslationEntry> = {
   "page.settings.description": {
-    message: "Description",
+    message: "Popis",
     description: "Label for ledger description field in settings",
   },
   "page.settings.settingsUpdated": {
-    message: "Settings updated successfully",
+    message: "Nastavenia boli úspešne aktualizované",
     description: "Success message when settings are saved",
   },
   "page.settings.ledgerNameDescription": {
@@ -26,11 +26,11 @@ const skGeneralSettingsSection: Record<string, TranslationEntry> = {
   },
   "page.settings.ledgerDescriptionDescription": {
     message:
-      "This description will be used for SEO meta tags and helps others understand the purpose of your ledger.",
+      "Tento popis sa použije pre SEO meta značky a pomáha ostatným pochopiť účel vašej knihy.",
     description: "Help text explaining the description field",
   },
   "page.settings.ledgerDescriptionPlaceholder": {
-    message: "Enter a description for your ledger (optional)",
+    message: "Zadajte popis vašej knihy (voliteľné)",
     description: "Placeholder text for description field",
   },
   "page.settings.generalSettingsDescriptionReadOnly": {

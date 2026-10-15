@@ -13,11 +13,11 @@ const koSeo: Record<string, TranslationEntry> = {
     description: "Auth callback page title",
   },
   "seo.deviceAuth.description": {
-    message: "Authorize CLI access to your Beancount account.",
+    message: "Beancount 계정에 대한 CLI 액세스를 승인합니다.",
     description: "Device auth page meta description",
   },
   "seo.deviceAuth.title": {
-    message: "Authorize CLI Access",
+    message: "CLI 액세스 승인",
     description: "Device auth page title",
   },
   "seo.dashboard.description": {
@@ -357,11 +357,11 @@ const koSeo: Record<string, TranslationEntry> = {
   },
   "seo.ledgerCommit.description": {
     message:
-      "Changes in commit {shortSha} for {ledgerName}. Review modified files and diffs.",
+      "{ledgerName}의 커밋 {shortSha} 변경 사항입니다. 수정된 파일과 차이점을 검토하세요.",
     description: "Commit detail page meta description",
   },
   "seo.ledgerCommit.title": {
-    message: "Commit {shortSha} - {ledgerName}",
+    message: "커밋 {shortSha} - {ledgerName}",
     description: "Commit detail page title with short hash and ledger name",
   },
 
@@ -396,11 +396,11 @@ const koSeo: Record<string, TranslationEntry> = {
   },
   "seo.plaidConnections.description": {
     message:
-      "Manage your connected bank accounts for {ledgerName} — link new banks, update account mappings, sync, or disconnect.",
+      "{ledgerName}에 연결된 은행 계좌를 관리하세요 — 새 은행 연결, 계정 매핑 업데이트, 동기화 또는 연결 해제가 가능합니다.",
     description: "Plaid connections management page meta description",
   },
   "seo.plaidConnections.title": {
-    message: "Manage Bank Connections - {ledgerName}",
+    message: "은행 연결 관리 - {ledgerName}",
     description: "Plaid connections management page title with ledger name",
   },
 };

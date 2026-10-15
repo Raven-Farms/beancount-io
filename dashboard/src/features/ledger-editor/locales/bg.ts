@@ -26,7 +26,7 @@ export default {
   ...bgUploadFiles,
   ...bgLedgerEditor,
   "ledgerEditor.gitClone": {
-    message: "Git Clone",
+    message: "Клониране с Git",
     description: "Button for opening Git clone options",
   },
   "ledgerEditor.failedToLoadDirectory": {

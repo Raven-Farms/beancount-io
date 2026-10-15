@@ -9,11 +9,11 @@ const caDocuments: Record<string, TranslationEntry> = {
     description: "Documents attached to ledger entries",
   },
   "page.documents.filename": {
-    message: "Filename",
+    message: "Nom del fitxer",
     description: "Table column header for filename",
   },
   "page.documents.links": {
-    message: "Links",
+    message: "Enllaços",
     description: "Table column header for links",
   },
   "page.documents.meta": {
@@ -25,11 +25,12 @@ const caDocuments: Record<string, TranslationEntry> = {
     description: "Empty state message for no documents",
   },
   "page.documents.noDocumentsFoundDescription": {
-    message: "Add documents to your ledger files to see them here.",
+    message:
+      "Afegiu documents als fitxers del vostre llibre per veure'ls aquí.",
     description: "Empty state description for no documents",
   },
   "page.documents.tags": {
-    message: "Tags",
+    message: "Etiquetes",
     description: "Table column header for tags",
   },
 };

@@ -5,7 +5,7 @@ export interface TranslationEntry {
 
 const caErrors: Record<string, TranslationEntry> = {
   "page.errors.allEntriesParsedSuccessfully": {
-    message: "All entries have been parsed successfully.",
+    message: "Totes les entrades s'han analitzat correctament.",
     description: "Empty state description for no errors",
   },
   "page.errors.errorMessage": {

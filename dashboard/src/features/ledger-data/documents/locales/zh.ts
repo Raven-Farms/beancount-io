@@ -13,7 +13,7 @@ const zhDocuments: Record<string, TranslationEntry> = {
     description: "Table column header for filename",
   },
   "page.documents.links": {
-    message: "Links",
+    message: "链接",
     description: "Table column header for links",
   },
   "page.documents.meta": {
@@ -29,7 +29,7 @@ const zhDocuments: Record<string, TranslationEntry> = {
     description: "Empty state description for no documents",
   },
   "page.documents.tags": {
-    message: "Tags",
+    message: "标签",
     description: "Table column header for tags",
   },
 };

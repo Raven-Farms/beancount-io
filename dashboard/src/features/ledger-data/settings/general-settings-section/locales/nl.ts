@@ -5,11 +5,11 @@ export interface TranslationEntry {
 
 const nlGeneralSettingsSection: Record<string, TranslationEntry> = {
   "page.settings.description": {
-    message: "Description",
+    message: "Beschrijving",
     description: "Label for ledger description field in settings",
   },
   "page.settings.settingsUpdated": {
-    message: "Settings updated successfully",
+    message: "Instellingen succesvol bijgewerkt",
     description: "Success message when settings are saved",
   },
   "page.settings.ledgerNameDescription": {
@@ -26,11 +26,11 @@ const nlGeneralSettingsSection: Record<string, TranslationEntry> = {
   },
   "page.settings.ledgerDescriptionDescription": {
     message:
-      "This description will be used for SEO meta tags and helps others understand the purpose of your ledger.",
+      "Deze beschrijving wordt gebruikt voor SEO-metatags en helpt anderen het doel van uw grootboek te begrijpen.",
     description: "Help text explaining the description field",
   },
   "page.settings.ledgerDescriptionPlaceholder": {
-    message: "Enter a description for your ledger (optional)",
+    message: "Voer een beschrijving in voor uw grootboek (optioneel)",
     description: "Placeholder text for description field",
   },
   "page.settings.generalSettingsDescriptionReadOnly": {

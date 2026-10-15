@@ -5,7 +5,7 @@ export interface TranslationEntry {
 
 const skCollaboration: Record<string, TranslationEntry> = {
   "collaboration.admin": {
-    message: "Admin",
+    message: "Administrátor",
     description: "Badge text for admin user",
   },
   "collaboration.permission": {

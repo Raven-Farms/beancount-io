@@ -18,7 +18,7 @@ const caStatistics: Record<string, TranslationEntry> = {
     description: "Count column or label",
   },
   "page.statistics.entriesCountByType": {
-    message: "Entries Count by Type",
+    message: "Nombre d'entrades per tipus",
     description: "Title for entries count by type section",
   },
   "page.statistics.postingsPerAccountSummary": {
@@ -32,7 +32,7 @@ const caStatistics: Record<string, TranslationEntry> = {
       "Entries Count by Type summary; {entries} is the total entry count, {types} the number of entry types",
   },
   "page.statistics.entryType": {
-    message: "Entry Type",
+    message: "Tipus d'entrada",
     description: "Table column header for entry type",
   },
   "page.statistics.error": {
@@ -68,7 +68,7 @@ const caStatistics: Record<string, TranslationEntry> = {
     description: "Message when no data available for query",
   },
   "page.statistics.noResultsFromQuery": {
-    message: "No results returned from query",
+    message: "La consulta no ha retornat resultats",
     description: "Message when query returns no results",
   },
   "page.statistics.percentage": {

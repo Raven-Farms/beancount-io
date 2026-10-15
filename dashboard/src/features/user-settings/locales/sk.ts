@@ -478,55 +478,55 @@ const skUserSettings: Record<string, TranslationEntry> = {
     description: "Description for user profile section",
   },
   "userSettings.aiCfoUsage": {
-    message: "AI Tokens",
+    message: "Tokeny AI",
     description: "Label for AI CFO usage section",
   },
   "userSettings.aiCfoUsageCount": {
-    message: "{used} / {max} tokens used this month",
+    message: "{used} / {max} tokenov využitých tento mesiac",
     description: "AI CFO usage count display",
   },
   "userSettings.aiCfoUsageUnlimited": {
-    message: "{used} tokens used this month (Unlimited)",
+    message: "{used} tokenov využitých tento mesiac (neobmedzené)",
     description: "AI CFO usage display for unlimited tier",
   },
   "userSettings.currentPlan": {
-    message: "Current Plan",
+    message: "Aktuálny plán",
     description: "Badge label for the user's current subscription tier",
   },
   "userSettings.freePlan": {
-    message: "Free Plan",
+    message: "Bezplatný plán",
     description: "Display name for the free tier",
   },
   "userSettings.enterprisePlan": {
-    message: "Enterprise",
+    message: "Podnikový",
     description: "Display name for the enterprise tier",
   },
   "userSettings.usage": {
-    message: "Usage",
+    message: "Využitie",
     description: "Section header for usage overview",
   },
   "userSettings.ledgers": {
-    message: "Ledgers",
+    message: "Knihy",
     description: "Label for ledger usage metric",
   },
   "userSettings.ledgerUsageCount": {
-    message: "{used} / {max} ledgers",
+    message: "{used} / {max} kníh",
     description: "Ledger usage count display",
   },
   "userSettings.upgradeYourPlan": {
-    message: "Upgrade Your Plan",
+    message: "Vylepšite svoj plán",
     description: "Section header for upgrade tier cards",
   },
   "userSettings.billing": {
-    message: "Billing",
+    message: "Fakturácia",
     description: "Section header for billing management",
   },
   "userSettings.unlimited": {
-    message: "Unlimited",
+    message: "Neobmedzené",
     description: "Label for unlimited usage",
   },
   "userSettings.perMonth": {
-    message: "/month",
+    message: "/mesiac",
     description: "Price interval suffix",
   },
   "userSettings.aiTokensPerMonth": {

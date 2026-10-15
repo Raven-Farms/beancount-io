@@ -102,11 +102,11 @@ const deDashboardPage: Record<string, TranslationEntry> = {
     description: "Validation error when name contains only special characters",
   },
   "page.dashboard.nameMaxLength": {
-    message: "Name must be less than 100 characters",
+    message: "Der Name muss weniger als 100 Zeichen lang sein",
     description: "Validation error when name exceeds limit",
   },
   "page.dashboard.nameRequired": {
-    message: "Name is required",
+    message: "Name ist erforderlich",
     description: "Validation error when name is missing",
   },
   "page.dashboard.noLedgersFound": {

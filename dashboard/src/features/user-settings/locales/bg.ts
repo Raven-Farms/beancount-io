@@ -479,55 +479,55 @@ const bgUserSettings: Record<string, TranslationEntry> = {
     description: "Description for user profile section",
   },
   "userSettings.aiCfoUsage": {
-    message: "AI Tokens",
+    message: "AI токени",
     description: "Label for AI CFO usage section",
   },
   "userSettings.aiCfoUsageCount": {
-    message: "{used} / {max} tokens used this month",
+    message: "{used} / {max} токена използвани този месец",
     description: "AI CFO usage count display",
   },
   "userSettings.aiCfoUsageUnlimited": {
-    message: "{used} tokens used this month (Unlimited)",
+    message: "{used} токена използвани този месец (неограничено)",
     description: "AI CFO usage display for unlimited tier",
   },
   "userSettings.currentPlan": {
-    message: "Current Plan",
+    message: "Текущ план",
     description: "Badge label for the user's current subscription tier",
   },
   "userSettings.freePlan": {
-    message: "Free Plan",
+    message: "Безплатен план",
     description: "Display name for the free tier",
   },
   "userSettings.enterprisePlan": {
-    message: "Enterprise",
+    message: "Корпоративен",
     description: "Display name for the enterprise tier",
   },
   "userSettings.usage": {
-    message: "Usage",
+    message: "Използване",
     description: "Section header for usage overview",
   },
   "userSettings.ledgers": {
-    message: "Ledgers",
+    message: "Книги",
     description: "Label for ledger usage metric",
   },
   "userSettings.ledgerUsageCount": {
-    message: "{used} / {max} ledgers",
+    message: "{used} / {max} книги",
     description: "Ledger usage count display",
   },
   "userSettings.upgradeYourPlan": {
-    message: "Upgrade Your Plan",
+    message: "Надградете плана си",
     description: "Section header for upgrade tier cards",
   },
   "userSettings.billing": {
-    message: "Billing",
+    message: "Фактуриране",
     description: "Section header for billing management",
   },
   "userSettings.unlimited": {
-    message: "Unlimited",
+    message: "Неограничено",
     description: "Label for unlimited usage",
   },
   "userSettings.perMonth": {
-    message: "/month",
+    message: "/месец",
     description: "Price interval suffix",
   },
   "userSettings.aiTokensPerMonth": {

@@ -132,7 +132,7 @@ const faAccounts: Record<string, TranslationEntry> = {
     description: "Table column header for account status (Open/Closed)",
   },
   "page.accounts.type": {
-    message: "Type",
+    message: "نوع",
     description: "Table column header for type",
   },
   "page.accounts.accountClosedToast": {

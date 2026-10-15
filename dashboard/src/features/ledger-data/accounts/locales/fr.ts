@@ -81,13 +81,14 @@ const frAccounts: Record<string, TranslationEntry> = {
     description: "Dialog title for deleting an account",
   },
   "page.accounts.deleteAccountDescriptionOpenOnly": {
-    message: "This will permanently delete the open directive for {account}.",
+    message:
+      "Cela supprimera définitivement la directive d'ouverture de {account}.",
     description:
       "Description in delete account dialog when account is not closed. {account} is replaced with the account name.",
   },
   "page.accounts.deleteAccountDescriptionWithClose": {
     message:
-      "This will permanently delete the open and close directives for {account}.",
+      "Cela supprimera définitivement les directives d'ouverture et de clôture de {account}.",
     description:
       "Description in delete account dialog when account is closed. {account} is replaced with the account name.",
   },
@@ -96,7 +97,7 @@ const frAccounts: Record<string, TranslationEntry> = {
     description: "Table column header for posting count",
   },
   "page.accounts.loadingEntryContent": {
-    message: "Loading entry content...",
+    message: "Chargement du contenu de l'écriture...",
     description: "Loading message when fetching entry content in delete dialog",
   },
   "page.accounts.new": {
@@ -122,7 +123,7 @@ const frAccounts: Record<string, TranslationEntry> = {
     description: "Dialog title and button text for opening a new account",
   },
   "page.accounts.openDate": {
-    message: "Open Date",
+    message: "Date d'ouverture",
     description: "Table column header and form label for account open date",
   },
   "page.accounts.searchAccounts": {

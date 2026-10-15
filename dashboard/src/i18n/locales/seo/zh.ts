@@ -13,11 +13,11 @@ const zhSeo: Record<string, TranslationEntry> = {
     description: "Auth callback page title",
   },
   "seo.deviceAuth.description": {
-    message: "Authorize CLI access to your Beancount account.",
+    message: "授权 CLI 访问你的 Beancount 账户。",
     description: "Device auth page meta description",
   },
   "seo.deviceAuth.title": {
-    message: "Authorize CLI Access",
+    message: "授权 CLI 访问",
     description: "Device auth page title",
   },
   "seo.dashboard.description": {
@@ -122,12 +122,11 @@ const zhSeo: Record<string, TranslationEntry> = {
     description: "Commits page title with ledger name",
   },
   "seo.ledgerCommit.description": {
-    message:
-      "Changes in commit {shortSha} for {ledgerName}. Review modified files and diffs.",
+    message: "{ledgerName} 中提交 {shortSha} 的更改。查看修改的文件和差异。",
     description: "Commit detail page meta description",
   },
   "seo.ledgerCommit.title": {
-    message: "Commit {shortSha} - {ledgerName}",
+    message: "提交 {shortSha} - {ledgerName}",
     description: "Commit detail page title with short hash and ledger name",
   },
 
@@ -258,11 +257,11 @@ const zhSeo: Record<string, TranslationEntry> = {
   },
   "seo.plaidConnections.description": {
     message:
-      "Manage your connected bank accounts for {ledgerName} — link new banks, update account mappings, sync, or disconnect.",
+      "管理 {ledgerName} 已连接的银行账户 — 关联新银行、更新账户映射、同步或断开连接。",
     description: "Plaid connections management page meta description",
   },
   "seo.plaidConnections.title": {
-    message: "Manage Bank Connections - {ledgerName}",
+    message: "管理银行连接 - {ledgerName}",
     description: "Plaid connections management page title with ledger name",
   },
   "seo.ledgerQuery.description": {

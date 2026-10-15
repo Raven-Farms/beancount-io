@@ -5,11 +5,11 @@ export interface TranslationEntry {
 
 const caGeneralSettingsSection: Record<string, TranslationEntry> = {
   "page.settings.description": {
-    message: "Description",
+    message: "Descripció",
     description: "Label for ledger description field in settings",
   },
   "page.settings.settingsUpdated": {
-    message: "Settings updated successfully",
+    message: "La configuració s'ha actualitzat correctament",
     description: "Success message when settings are saved",
   },
   "page.settings.ledgerNameDescription": {
@@ -26,11 +26,11 @@ const caGeneralSettingsSection: Record<string, TranslationEntry> = {
   },
   "page.settings.ledgerDescriptionDescription": {
     message:
-      "This description will be used for SEO meta tags and helps others understand the purpose of your ledger.",
+      "Aquesta descripció s'utilitzarà per a les metaetiquetes SEO i ajuda els altres a entendre el propòsit del vostre llibre.",
     description: "Help text explaining the description field",
   },
   "page.settings.ledgerDescriptionPlaceholder": {
-    message: "Enter a description for your ledger (optional)",
+    message: "Introduïu una descripció per al vostre llibre (opcional)",
     description: "Placeholder text for description field",
   },
   "page.settings.generalSettingsDescriptionReadOnly": {

@@ -53,17 +53,17 @@ const ptCommon: Record<string, TranslationEntry> = {
     description: "Button label to delete item",
   },
   "common.directives": {
-    message: "directives",
+    message: "diretivas",
     description:
       "Unit label for beancount directive count (e.g. '842 / 1000 directives')",
   },
   "common.directivesLimitApproaching": {
-    message: "Approaching your free plan limit",
+    message: "Você está se aproximando do limite do seu plano gratuito",
     description:
       "Secondary text shown when a ledger's directive usage is between 90% and 100% of the free-tier limit",
   },
   "common.directivesLimitReached": {
-    message: "Free plan limit reached",
+    message: "Limite do plano gratuito atingido",
     description:
       "Secondary text shown when a ledger's directive usage is at or over the free-tier limit",
   },

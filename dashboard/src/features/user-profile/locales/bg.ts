@@ -73,12 +73,12 @@ const bgUserProfile: Record<string, TranslationEntry> = {
     description: "Error message explaining user was not found",
   },
   "seo.userProfile.title": {
-    message: "{username} - User Profile",
+    message: "{username} - Потребителски профил",
     description: "SEO title for user profile page",
   },
   "seo.userProfile.description": {
     message:
-      "View {username}'s profile, repositories, and activity on beancount.io.",
+      "Вижте профила, хранилищата и активността на {username} в beancount.io.",
     description: "SEO description for user profile page",
   },
   "userProfile.tabs.overview": {

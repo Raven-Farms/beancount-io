@@ -1,6 +1,6 @@
 const deCreateFile: Record<string, { message: string; description: string }> = {
   "ledgerEditor.nameYourFile": {
-    message: "Name your file...",
+    message: "Benennen Sie Ihre Datei...",
     description: "Placeholder for file name input",
   },
   "ledgerEditor.invalidFilePath": {

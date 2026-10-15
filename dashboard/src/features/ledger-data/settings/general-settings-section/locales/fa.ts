@@ -5,11 +5,11 @@ export interface TranslationEntry {
 
 const faGeneralSettingsSection: Record<string, TranslationEntry> = {
   "page.settings.description": {
-    message: "Description",
+    message: "توضیحات",
     description: "Label for ledger description field in settings",
   },
   "page.settings.settingsUpdated": {
-    message: "Settings updated successfully",
+    message: "تنظیمات با موفقیت به‌روزرسانی شد",
     description: "Success message when settings are saved",
   },
   "page.settings.ledgerNameDescription": {
@@ -26,11 +26,11 @@ const faGeneralSettingsSection: Record<string, TranslationEntry> = {
   },
   "page.settings.ledgerDescriptionDescription": {
     message:
-      "This description will be used for SEO meta tags and helps others understand the purpose of your ledger.",
+      "این توضیحات برای متاتگ‌های SEO استفاده می‌شود و به دیگران کمک می‌کند هدف دفتر شما را درک کنند.",
     description: "Help text explaining the description field",
   },
   "page.settings.ledgerDescriptionPlaceholder": {
-    message: "Enter a description for your ledger (optional)",
+    message: "توضیحاتی برای دفتر خود وارد کنید (اختیاری)",
     description: "Placeholder text for description field",
   },
   "page.settings.generalSettingsDescriptionReadOnly": {

@@ -53,17 +53,17 @@ const koCommon: Record<string, TranslationEntry> = {
     description: "Button label to delete item",
   },
   "common.directives": {
-    message: "directives",
+    message: "지시어",
     description:
       "Unit label for beancount directive count (e.g. '842 / 1000 directives')",
   },
   "common.directivesLimitApproaching": {
-    message: "Approaching your free plan limit",
+    message: "무료 플랜 한도에 가까워지고 있습니다",
     description:
       "Secondary text shown when a ledger's directive usage is between 90% and 100% of the free-tier limit",
   },
   "common.directivesLimitReached": {
-    message: "Free plan limit reached",
+    message: "무료 플랜 한도에 도달했습니다",
     description:
       "Secondary text shown when a ledger's directive usage is at or over the free-tier limit",
   },

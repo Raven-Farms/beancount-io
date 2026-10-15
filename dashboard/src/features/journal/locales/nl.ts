@@ -5,7 +5,7 @@ export interface TranslationEntry {
 
 const nlJournal: Record<string, TranslationEntry> = {
   "journal.account": {
-    message: "Account",
+    message: "Rekening",
     description: "Singular form of account, used as tab label",
   },
   "journal.accountPlaceholder": {

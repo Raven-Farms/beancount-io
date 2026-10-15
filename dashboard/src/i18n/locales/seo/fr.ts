@@ -13,11 +13,11 @@ const frSeo: Record<string, TranslationEntry> = {
     description: "Auth callback page title",
   },
   "seo.deviceAuth.description": {
-    message: "Authorize CLI access to your Beancount account.",
+    message: "Autorisez l'accès CLI à votre compte Beancount.",
     description: "Device auth page meta description",
   },
   "seo.deviceAuth.title": {
-    message: "Authorize CLI Access",
+    message: "Autoriser l'accès CLI",
     description: "Device auth page title",
   },
   "seo.dashboard.description": {
@@ -130,7 +130,7 @@ const frSeo: Record<string, TranslationEntry> = {
   },
   "seo.ledgerCommit.description": {
     message:
-      "Changes in commit {shortSha} for {ledgerName}. Review modified files and diffs.",
+      "Modifications du commit {shortSha} pour {ledgerName}. Consultez les fichiers modifiés et les différences.",
     description: "Commit detail page meta description",
   },
   "seo.ledgerCommit.title": {
@@ -276,11 +276,11 @@ const frSeo: Record<string, TranslationEntry> = {
   },
   "seo.plaidConnections.description": {
     message:
-      "Manage your connected bank accounts for {ledgerName} — link new banks, update account mappings, sync, or disconnect.",
+      "Gérez les comptes bancaires connectés de {ledgerName} — associez de nouvelles banques, mettez à jour les correspondances de comptes, synchronisez ou déconnectez.",
     description: "Plaid connections management page meta description",
   },
   "seo.plaidConnections.title": {
-    message: "Manage Bank Connections - {ledgerName}",
+    message: "Gérer les connexions bancaires - {ledgerName}",
     description: "Plaid connections management page title with ledger name",
   },
   "seo.ledgerQuery.description": {

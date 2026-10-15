@@ -13,11 +13,11 @@ const caSeo: Record<string, TranslationEntry> = {
     description: "Auth callback page title",
   },
   "seo.deviceAuth.description": {
-    message: "Authorize CLI access to your Beancount account.",
+    message: "Autoritzeu l'accés de la CLI al vostre compte de Beancount.",
     description: "Device auth page meta description",
   },
   "seo.deviceAuth.title": {
-    message: "Authorize CLI Access",
+    message: "Autoritza l'accés de la CLI",
     description: "Device auth page title",
   },
   "seo.dashboard.description": {
@@ -130,7 +130,7 @@ const caSeo: Record<string, TranslationEntry> = {
   },
   "seo.ledgerCommit.description": {
     message:
-      "Changes in commit {shortSha} for {ledgerName}. Review modified files and diffs.",
+      "Canvis del commit {shortSha} a {ledgerName}. Reviseu els fitxers modificats i les diferències.",
     description: "Commit detail page meta description",
   },
   "seo.ledgerCommit.title": {
@@ -262,7 +262,7 @@ const caSeo: Record<string, TranslationEntry> = {
     description: "Pull request page meta description",
   },
   "seo.ledgerPullRequest.title": {
-    message: "Pull Request #{prNumber} - {ledgerName}",
+    message: "Sol·licitud de fusió #{prNumber} - {ledgerName}",
     description: "Pull request page title with PR number and ledger name",
   },
   "seo.plaidSettings.description": {
@@ -276,11 +276,11 @@ const caSeo: Record<string, TranslationEntry> = {
   },
   "seo.plaidConnections.description": {
     message:
-      "Manage your connected bank accounts for {ledgerName} — link new banks, update account mappings, sync, or disconnect.",
+      "Gestioneu els comptes bancaris connectats de {ledgerName} — vinculeu bancs nous, actualitzeu les assignacions de comptes, sincronitzeu o desconnecteu.",
     description: "Plaid connections management page meta description",
   },
   "seo.plaidConnections.title": {
-    message: "Manage Bank Connections - {ledgerName}",
+    message: "Gestiona les connexions bancàries - {ledgerName}",
     description: "Plaid connections management page title with ledger name",
   },
   "seo.ledgerQuery.description": {

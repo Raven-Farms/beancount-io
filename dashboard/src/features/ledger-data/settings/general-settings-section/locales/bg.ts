@@ -5,11 +5,11 @@ export interface TranslationEntry {
 
 const bgGeneralSettingsSection: Record<string, TranslationEntry> = {
   "page.settings.description": {
-    message: "Description",
+    message: "Описание",
     description: "Label for ledger description field in settings",
   },
   "page.settings.settingsUpdated": {
-    message: "Settings updated successfully",
+    message: "Настройките са актуализирани успешно",
     description: "Success message when settings are saved",
   },
   "page.settings.ledgerNameDescription": {
@@ -26,11 +26,11 @@ const bgGeneralSettingsSection: Record<string, TranslationEntry> = {
   },
   "page.settings.ledgerDescriptionDescription": {
     message:
-      "This description will be used for SEO meta tags and helps others understand the purpose of your ledger.",
+      "Това описание ще се използва за SEO мета тагове и помага на другите да разберат предназначението на вашата книга.",
     description: "Help text explaining the description field",
   },
   "page.settings.ledgerDescriptionPlaceholder": {
-    message: "Enter a description for your ledger (optional)",
+    message: "Въведете описание на вашата книга (по избор)",
     description: "Placeholder text for description field",
   },
   "page.settings.generalSettingsDescriptionReadOnly": {

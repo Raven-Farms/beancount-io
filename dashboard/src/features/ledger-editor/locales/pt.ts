@@ -26,7 +26,7 @@ export default {
   ...ptUploadFiles,
   ...ptLedgerEditor,
   "ledgerEditor.gitClone": {
-    message: "Git Clone",
+    message: "Clonar com Git",
     description: "Button for opening Git clone options",
   },
   "ledgerEditor.failedToLoadDirectory": {

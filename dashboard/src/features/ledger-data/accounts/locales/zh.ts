@@ -130,7 +130,7 @@ const zhAccounts: Record<string, TranslationEntry> = {
     description: "Table column header for account status (Open/Closed)",
   },
   "page.accounts.type": {
-    message: "Type",
+    message: "类型",
     description: "Table column header for type",
   },
   "page.accounts.accountClosedToast": {

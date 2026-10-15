@@ -17,7 +17,7 @@ const deCommon: Record<string, TranslationEntry> = {
     description: "Button label to go back to previous page",
   },
   "common.beancountLogo": {
-    message: "Beancount Logo",
+    message: "Beancount-Logo",
     description: "Alt text for Beancount logo",
   },
   "common.cancel": {
@@ -53,17 +53,17 @@ const deCommon: Record<string, TranslationEntry> = {
     description: "Button label to delete item",
   },
   "common.directives": {
-    message: "directives",
+    message: "Direktiven",
     description:
       "Unit label for beancount directive count (e.g. '842 / 1000 directives')",
   },
   "common.directivesLimitApproaching": {
-    message: "Approaching your free plan limit",
+    message: "Sie nähern sich dem Limit Ihres kostenlosen Plans",
     description:
       "Secondary text shown when a ledger's directive usage is between 90% and 100% of the free-tier limit",
   },
   "common.directivesLimitReached": {
-    message: "Free plan limit reached",
+    message: "Limit des kostenlosen Plans erreicht",
     description:
       "Secondary text shown when a ledger's directive usage is at or over the free-tier limit",
   },
@@ -167,7 +167,7 @@ const deCommon: Record<string, TranslationEntry> = {
     description: "Description for validation error page",
   },
   "common.ledgerNavigation": {
-    message: "Ledger",
+    message: "Hauptbuch",
     description: "Accessible name for the ledger sidebar navigation landmark",
   },
   "common.ledgerSettings": {
@@ -959,7 +959,7 @@ const deCommon: Record<string, TranslationEntry> = {
     description: "Button that clears every unread release flag",
   },
   "common.whatsNewChangelog": {
-    message: "Changelog",
+    message: "Änderungsprotokoll",
     description: "Link from the What's new block to the full changelog page",
   },
   "common.whatsNewUnreadFlag": {

@@ -13,11 +13,11 @@ const ptSeo: Record<string, TranslationEntry> = {
     description: "Auth callback page title",
   },
   "seo.deviceAuth.description": {
-    message: "Authorize CLI access to your Beancount account.",
+    message: "Autorize o acesso da CLI à sua conta Beancount.",
     description: "Device auth page meta description",
   },
   "seo.deviceAuth.title": {
-    message: "Authorize CLI Access",
+    message: "Autorizar acesso da CLI",
     description: "Device auth page title",
   },
   "seo.dashboard.description": {
@@ -130,7 +130,7 @@ const ptSeo: Record<string, TranslationEntry> = {
   },
   "seo.ledgerCommit.description": {
     message:
-      "Changes in commit {shortSha} for {ledgerName}. Review modified files and diffs.",
+      "Alterações no commit {shortSha} de {ledgerName}. Revise os arquivos modificados e as diferenças.",
     description: "Commit detail page meta description",
   },
   "seo.ledgerCommit.title": {
@@ -262,7 +262,7 @@ const ptSeo: Record<string, TranslationEntry> = {
     description: "Pull request page meta description",
   },
   "seo.ledgerPullRequest.title": {
-    message: "Pull Request #{prNumber} - {ledgerName}",
+    message: "Solicitação de mesclagem #{prNumber} - {ledgerName}",
     description: "Pull request page title with PR number and ledger name",
   },
   "seo.plaidSettings.description": {
@@ -276,11 +276,11 @@ const ptSeo: Record<string, TranslationEntry> = {
   },
   "seo.plaidConnections.description": {
     message:
-      "Manage your connected bank accounts for {ledgerName} — link new banks, update account mappings, sync, or disconnect.",
+      "Gerencie as contas bancárias conectadas de {ledgerName} — vincule novos bancos, atualize os mapeamentos de contas, sincronize ou desconecte.",
     description: "Plaid connections management page meta description",
   },
   "seo.plaidConnections.title": {
-    message: "Manage Bank Connections - {ledgerName}",
+    message: "Gerenciar conexões bancárias - {ledgerName}",
     description: "Plaid connections management page title with ledger name",
   },
   "seo.ledgerQuery.description": {

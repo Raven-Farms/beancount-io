@@ -13,11 +13,11 @@ const jaSeo: Record<string, TranslationEntry> = {
     description: "Auth callback page title",
   },
   "seo.deviceAuth.description": {
-    message: "Authorize CLI access to your Beancount account.",
+    message: "BeancountアカウントへのCLIアクセスを承認します。",
     description: "Device auth page meta description",
   },
   "seo.deviceAuth.title": {
-    message: "Authorize CLI Access",
+    message: "CLIアクセスを承認",
     description: "Device auth page title",
   },
   "seo.dashboard.description": {
@@ -359,11 +359,11 @@ const jaSeo: Record<string, TranslationEntry> = {
   },
   "seo.ledgerCommit.description": {
     message:
-      "Changes in commit {shortSha} for {ledgerName}. Review modified files and diffs.",
+      "{ledgerName} のコミット {shortSha} の変更内容。変更されたファイルと差分を確認できます。",
     description: "Commit detail page meta description",
   },
   "seo.ledgerCommit.title": {
-    message: "Commit {shortSha} - {ledgerName}",
+    message: "コミット {shortSha} - {ledgerName}",
     description: "Commit detail page title with short hash and ledger name",
   },
 
@@ -398,11 +398,11 @@ const jaSeo: Record<string, TranslationEntry> = {
   },
   "seo.plaidConnections.description": {
     message:
-      "Manage your connected bank accounts for {ledgerName} — link new banks, update account mappings, sync, or disconnect.",
+      "{ledgerName} に接続された銀行口座を管理します — 新しい銀行の連携、口座マッピングの更新、同期、接続解除が行えます。",
     description: "Plaid connections management page meta description",
   },
   "seo.plaidConnections.title": {
-    message: "Manage Bank Connections - {ledgerName}",
+    message: "銀行接続の管理 - {ledgerName}",
     description: "Plaid connections management page title with ledger name",
   },
 };

@@ -73,12 +73,12 @@ const deUserProfile: Record<string, TranslationEntry> = {
     description: "Error message explaining user was not found",
   },
   "seo.userProfile.title": {
-    message: "{username} - User Profile",
+    message: "{username} - Benutzerprofil",
     description: "SEO title for user profile page",
   },
   "seo.userProfile.description": {
     message:
-      "View {username}'s profile, repositories, and activity on beancount.io.",
+      "Sehen Sie sich das Profil, die Repositories und die Aktivitäten von {username} auf beancount.io an.",
     description: "SEO description for user profile page",
   },
   "userProfile.tabs.overview": {

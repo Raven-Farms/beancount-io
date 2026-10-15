@@ -73,12 +73,11 @@ const zhUserProfile: Record<string, TranslationEntry> = {
     description: "Error message explaining user was not found",
   },
   "seo.userProfile.title": {
-    message: "{username} - User Profile",
+    message: "{username} - 用户资料",
     description: "SEO title for user profile page",
   },
   "seo.userProfile.description": {
-    message:
-      "View {username}'s profile, repositories, and activity on beancount.io.",
+    message: "查看 {username} 在 beancount.io 上的个人资料、仓库和动态。",
     description: "SEO description for user profile page",
   },
   "userProfile.tabs.overview": {

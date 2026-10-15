@@ -18,7 +18,7 @@ const ukBudget: Record<string, TranslationEntry> = {
     description: "Placeholder for budget account input",
   },
   "page.budget.budgetAccountRequired": {
-    message: "Account is required",
+    message: "Рахунок обов'язковий",
     description: "Validation error when account field is empty",
   },
   "page.budget.budgetAddBudget": {
@@ -34,7 +34,7 @@ const ukBudget: Record<string, TranslationEntry> = {
     description: "Form label and table header for budget amount",
   },
   "page.budget.budgetAmountRequired": {
-    message: "Amount is required",
+    message: "Сума обов'язкова",
     description: "Validation error when amount field is empty",
   },
   "page.budget.budgetCurrency": {
@@ -42,7 +42,7 @@ const ukBudget: Record<string, TranslationEntry> = {
     description: "Form label for budget currency field",
   },
   "page.budget.budgetCurrencyRequired": {
-    message: "Currency is required",
+    message: "Валюта обов'язкова",
     description: "Validation error when currency field is empty",
   },
   "page.budget.budgetCurrentBudget": {

@@ -26,7 +26,7 @@ export default {
   ...ukUploadFiles,
   ...ukLedgerEditor,
   "ledgerEditor.gitClone": {
-    message: "Git Clone",
+    message: "Клонування Git",
     description: "Button for opening Git clone options",
   },
   "ledgerEditor.failedToLoadDirectory": {

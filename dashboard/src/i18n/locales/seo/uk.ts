@@ -13,11 +13,11 @@ const ukSeo: Record<string, TranslationEntry> = {
     description: "Auth callback page title",
   },
   "seo.deviceAuth.description": {
-    message: "Authorize CLI access to your Beancount account.",
+    message: "Авторизуйте доступ CLI до вашого облікового запису Beancount.",
     description: "Device auth page meta description",
   },
   "seo.deviceAuth.title": {
-    message: "Authorize CLI Access",
+    message: "Авторизувати доступ CLI",
     description: "Device auth page title",
   },
   "seo.dashboard.description": {
@@ -130,11 +130,11 @@ const ukSeo: Record<string, TranslationEntry> = {
   },
   "seo.ledgerCommit.description": {
     message:
-      "Changes in commit {shortSha} for {ledgerName}. Review modified files and diffs.",
+      "Зміни в коміті {shortSha} для {ledgerName}. Перегляньте змінені файли та відмінності.",
     description: "Commit detail page meta description",
   },
   "seo.ledgerCommit.title": {
-    message: "Commit {shortSha} - {ledgerName}",
+    message: "Коміт {shortSha} - {ledgerName}",
     description: "Commit detail page title with short hash and ledger name",
   },
 
@@ -276,11 +276,11 @@ const ukSeo: Record<string, TranslationEntry> = {
   },
   "seo.plaidConnections.description": {
     message:
-      "Manage your connected bank accounts for {ledgerName} — link new banks, update account mappings, sync, or disconnect.",
+      "Керуйте підключеними банківськими рахунками для {ledgerName} — під'єднуйте нові банки, оновлюйте зіставлення рахунків, синхронізуйте або від'єднуйте.",
     description: "Plaid connections management page meta description",
   },
   "seo.plaidConnections.title": {
-    message: "Manage Bank Connections - {ledgerName}",
+    message: "Керування банківськими підключеннями - {ledgerName}",
     description: "Plaid connections management page title with ledger name",
   },
   "seo.ledgerQuery.description": {

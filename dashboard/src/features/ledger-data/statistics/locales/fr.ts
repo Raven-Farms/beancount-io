@@ -18,7 +18,7 @@ const frStatistics: Record<string, TranslationEntry> = {
     description: "Count column or label",
   },
   "page.statistics.entriesCountByType": {
-    message: "Entries Count by Type",
+    message: "Nombre d'écritures par type",
     description: "Title for entries count by type section",
   },
   "page.statistics.postingsPerAccountSummary": {
@@ -32,7 +32,7 @@ const frStatistics: Record<string, TranslationEntry> = {
       "Entries Count by Type summary; {entries} is the total entry count, {types} the number of entry types",
   },
   "page.statistics.entryType": {
-    message: "Entry Type",
+    message: "Type d'écriture",
     description: "Table column header for entry type",
   },
   "page.statistics.error": {

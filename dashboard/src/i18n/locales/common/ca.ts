@@ -58,12 +58,12 @@ const caCommon: Record<string, TranslationEntry> = {
       "Unit label for beancount directive count (e.g. '842 / 1000 directives')",
   },
   "common.directivesLimitApproaching": {
-    message: "Approaching your free plan limit",
+    message: "Us esteu acostant al límit del pla gratuït",
     description:
       "Secondary text shown when a ledger's directive usage is between 90% and 100% of the free-tier limit",
   },
   "common.directivesLimitReached": {
-    message: "Free plan limit reached",
+    message: "S'ha assolit el límit del pla gratuït",
     description:
       "Secondary text shown when a ledger's directive usage is at or over the free-tier limit",
   },

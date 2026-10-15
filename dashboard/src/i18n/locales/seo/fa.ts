@@ -13,11 +13,11 @@ const faSeo: Record<string, TranslationEntry> = {
     description: "Auth callback page title",
   },
   "seo.deviceAuth.description": {
-    message: "Authorize CLI access to your Beancount account.",
+    message: "دسترسی CLI به حساب Beancount خود را مجاز کنید.",
     description: "Device auth page meta description",
   },
   "seo.deviceAuth.title": {
-    message: "Authorize CLI Access",
+    message: "مجوز دسترسی CLI",
     description: "Device auth page title",
   },
   "seo.dashboard.description": {
@@ -129,11 +129,11 @@ const faSeo: Record<string, TranslationEntry> = {
   },
   "seo.ledgerCommit.description": {
     message:
-      "Changes in commit {shortSha} for {ledgerName}. Review modified files and diffs.",
+      "تغییرات کامیت {shortSha} برای {ledgerName}. فایل‌های تغییریافته و تفاوت‌ها را بررسی کنید.",
     description: "Commit detail page meta description",
   },
   "seo.ledgerCommit.title": {
-    message: "Commit {shortSha} - {ledgerName}",
+    message: "کامیت {shortSha} - {ledgerName}",
     description: "Commit detail page title with short hash and ledger name",
   },
 
@@ -275,11 +275,11 @@ const faSeo: Record<string, TranslationEntry> = {
   },
   "seo.plaidConnections.description": {
     message:
-      "Manage your connected bank accounts for {ledgerName} — link new banks, update account mappings, sync, or disconnect.",
+      "حساب‌های بانکی متصل {ledgerName} را مدیریت کنید — بانک‌های جدید را پیوند دهید، نگاشت حساب‌ها را به‌روزرسانی کنید، همگام‌سازی کنید یا اتصال را قطع کنید.",
     description: "Plaid connections management page meta description",
   },
   "seo.plaidConnections.title": {
-    message: "Manage Bank Connections - {ledgerName}",
+    message: "مدیریت اتصال‌های بانکی - {ledgerName}",
     description: "Plaid connections management page title with ledger name",
   },
   "seo.ledgerQuery.description": {

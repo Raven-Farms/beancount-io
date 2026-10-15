@@ -80,13 +80,14 @@ const caAccounts: Record<string, TranslationEntry> = {
     description: "Dialog title for deleting an account",
   },
   "page.accounts.deleteAccountDescriptionOpenOnly": {
-    message: "This will permanently delete the open directive for {account}.",
+    message:
+      "Això suprimirà permanentment la directiva d'obertura de {account}.",
     description:
       "Description in delete account dialog when account is not closed. {account} is replaced with the account name.",
   },
   "page.accounts.deleteAccountDescriptionWithClose": {
     message:
-      "This will permanently delete the open and close directives for {account}.",
+      "Això suprimirà permanentment les directives d'obertura i de tancament de {account}.",
     description:
       "Description in delete account dialog when account is closed. {account} is replaced with the account name.",
   },
@@ -95,7 +96,7 @@ const caAccounts: Record<string, TranslationEntry> = {
     description: "Table column header for posting count",
   },
   "page.accounts.loadingEntryContent": {
-    message: "Loading entry content...",
+    message: "S'està carregant el contingut de l'entrada...",
     description: "Loading message when fetching entry content in delete dialog",
   },
   "page.accounts.new": {
@@ -103,7 +104,7 @@ const caAccounts: Record<string, TranslationEntry> = {
     description: "Button text to create a new account",
   },
   "page.accounts.noAccountsFound": {
-    message: "No accounts found",
+    message: "No s'han trobat comptes",
     description: "Empty state title when no accounts exist or match filters",
   },
   "page.accounts.noAccountsMatchFilters": {
@@ -121,7 +122,7 @@ const caAccounts: Record<string, TranslationEntry> = {
     description: "Dialog title and button text for opening a new account",
   },
   "page.accounts.openDate": {
-    message: "Open Date",
+    message: "Data d'obertura",
     description: "Table column header and form label for account open date",
   },
   "page.accounts.searchAccounts": {
@@ -133,7 +134,7 @@ const caAccounts: Record<string, TranslationEntry> = {
     description: "Table column header for account status (Open/Closed)",
   },
   "page.accounts.type": {
-    message: "Type",
+    message: "Tipus",
     description: "Table column header for type",
   },
   "page.accounts.accountClosedToast": {

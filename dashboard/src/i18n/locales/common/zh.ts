@@ -53,17 +53,17 @@ const zhCommon: Record<string, TranslationEntry> = {
     description: "Button label to delete item",
   },
   "common.directives": {
-    message: "directives",
+    message: "指令",
     description:
       "Unit label for beancount directive count (e.g. '842 / 1000 directives')",
   },
   "common.directivesLimitApproaching": {
-    message: "Approaching your free plan limit",
+    message: "即将达到免费计划上限",
     description:
       "Secondary text shown when a ledger's directive usage is between 90% and 100% of the free-tier limit",
   },
   "common.directivesLimitReached": {
-    message: "Free plan limit reached",
+    message: "已达到免费计划上限",
     description:
       "Secondary text shown when a ledger's directive usage is at or over the free-tier limit",
   },

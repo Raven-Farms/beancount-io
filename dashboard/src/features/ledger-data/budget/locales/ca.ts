@@ -34,7 +34,7 @@ const caBudget: Record<string, TranslationEntry> = {
     description: "Form label and table header for budget amount",
   },
   "page.budget.budgetAmountRequired": {
-    message: "Amount is required",
+    message: "L'import és obligatori",
     description: "Validation error when amount field is empty",
   },
   "page.budget.budgetCurrency": {
@@ -64,7 +64,7 @@ const caBudget: Record<string, TranslationEntry> = {
     description: "Dialog title for deleting a budget",
   },
   "page.budget.budgetDeleting": {
-    message: "Deleting...",
+    message: "S'està suprimint...",
     description: "Loading state text when deleting a budget",
   },
   "page.budget.budgetDescription": {
@@ -77,7 +77,7 @@ const caBudget: Record<string, TranslationEntry> = {
     description: "Empty state call-to-action button",
   },
   "page.budget.budgetFailedToAdd": {
-    message: "Failed to add budget",
+    message: "No s'ha pogut afegir el pressupost",
     description: "Error message when adding a budget fails",
   },
   "page.budget.budgetInterval": {
@@ -117,7 +117,7 @@ const caBudget: Record<string, TranslationEntry> = {
     description: "Label for the most recent interval's spending",
   },
   "page.budget.budgetNoBudgetsFound": {
-    message: "No budgets found",
+    message: "No s'han trobat pressupostos",
     description: "Empty state title when no budgets exist",
   },
   "page.budget.budgetNoBudgetsFoundDescription": {
@@ -150,7 +150,7 @@ const caBudget: Record<string, TranslationEntry> = {
     description: "Placeholder for budget search input",
   },
   "page.budget.budgetSelectInterval": {
-    message: "Select interval",
+    message: "Seleccioneu l'interval",
     description: "Placeholder for interval select dropdown",
   },
   "page.budget.budgetSpending": {

@@ -77,7 +77,7 @@ const frBudget: Record<string, TranslationEntry> = {
     description: "Empty state call-to-action button",
   },
   "page.budget.budgetFailedToAdd": {
-    message: "Failed to add budget",
+    message: "Échec de l'ajout du budget",
     description: "Error message when adding a budget fails",
   },
   "page.budget.budgetInterval": {
@@ -150,7 +150,7 @@ const frBudget: Record<string, TranslationEntry> = {
     description: "Placeholder for budget search input",
   },
   "page.budget.budgetSelectInterval": {
-    message: "Select interval",
+    message: "Sélectionner l'intervalle",
     description: "Placeholder for interval select dropdown",
   },
   "page.budget.budgetSpending": {

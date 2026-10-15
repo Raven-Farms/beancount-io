@@ -5,7 +5,7 @@ export interface TranslationEntry {
 
 const zhEvents: Record<string, TranslationEntry> = {
   "page.events.description": {
-    message: "Description",
+    message: "描述",
     description: "Table column header for description",
   },
   "page.events.events": {

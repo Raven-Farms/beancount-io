@@ -5,7 +5,7 @@ export interface TranslationEntry {
 
 const ptEvents: Record<string, TranslationEntry> = {
   "page.events.description": {
-    message: "Description",
+    message: "Descrição",
     description: "Table column header for description",
   },
   "page.events.events": {

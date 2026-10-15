@@ -22,7 +22,7 @@ const nlBql: Record<string, TranslationEntry> = {
     description: "Section title for query history",
   },
   "bql.downloadCSV": {
-    message: "Download CSV",
+    message: "CSV downloaden",
     description: "Button text to download query results as CSV",
   },
   "bql.noQueryHistory": {

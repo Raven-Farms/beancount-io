@@ -26,7 +26,7 @@ export default {
   ...skUploadFiles,
   ...skLedgerEditor,
   "ledgerEditor.gitClone": {
-    message: "Git Clone",
+    message: "Klonovať cez Git",
     description: "Button for opening Git clone options",
   },
   "ledgerEditor.failedToLoadDirectory": {

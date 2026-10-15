@@ -26,7 +26,7 @@ export default {
   ...faUploadFiles,
   ...faLedgerEditor,
   "ledgerEditor.gitClone": {
-    message: "Git Clone",
+    message: "کلون با Git",
     description: "Button for opening Git clone options",
   },
   "ledgerEditor.failedToLoadDirectory": {

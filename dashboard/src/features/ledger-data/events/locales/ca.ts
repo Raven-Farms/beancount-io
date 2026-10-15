@@ -5,7 +5,7 @@ export interface TranslationEntry {
 
 const caEvents: Record<string, TranslationEntry> = {
   "page.events.description": {
-    message: "Description",
+    message: "Descripció",
     description: "Table column header for description",
   },
   "page.events.events": {
@@ -17,15 +17,15 @@ const caEvents: Record<string, TranslationEntry> = {
     description: "Count of filtered events out of total",
   },
   "page.events.noEventsFound": {
-    message: "No Events Found",
+    message: "No s'han trobat esdeveniments",
     description: "Empty state title when no events exist",
   },
   "page.events.noEventsFoundForLedger": {
-    message: "No events found for this ledger.",
+    message: "No s'han trobat esdeveniments per a aquest llibre.",
     description: "Empty state description for no events",
   },
   "page.events.noEventsMatchFilters": {
-    message: "No events match your current filters.",
+    message: "Cap esdeveniment no coincideix amb els filtres actuals.",
     description: "Message when filters produce no results",
   },
   "page.events.searchEvents": {
