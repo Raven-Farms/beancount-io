@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [339 — Import calls a row ready when its account is closed/not-yet-open; `--apply` fails the batch](./339.md) — CLI QA 2026-10-14
 - [340 — `list` accepts non-token `--tag`/`--link`/`--flag`/`-c` values (`trip,work`) as empty results](./340.md) — CLI QA 2026-10-14
 - [341 — `balance --json` joins several filter terms into one `account_filter` string](./341.md) — CLI QA 2026-10-14
 - [342 — Ctrl-C during startup prints a `KeyboardInterrupt` traceback instead of a silent 130](./342.md) — CLI QA 2026-10-14
