@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [368 — `cloud ledger create/delete` call a refused connection "outcome unknown" (exit 4)](./368.md) — CLI QA 2026-10-14
 - [369 — Text-mode cloud errors drop the backend request ID](./369.md) — CLI QA 2026-10-14
 - [370 — Unattended `cloud ledger clone` overrides the user's `core.sshCommand`/`GIT_SSH`](./370.md) — CLI QA 2026-10-14
 - [371 — `create --clone` creates the ledger before refusing a non-empty target; remedy drops `--dir`](./371.md) — CLI QA 2026-10-14
