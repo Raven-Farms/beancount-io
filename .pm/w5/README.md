@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [360 — reconcile skill takes the last row's balance, wrong for newest-first exports](./360.md) — CLI QA 2026-10-14
 - [361 — migrate skill never negates a card's stated balance; derived opening hides it](./361.md) — CLI QA 2026-10-14
 - [362 — migrate skill splits a split purchase into per-category transactions; bank import double-books](./362.md) — CLI QA 2026-10-14
 - [363 — `init` restricts every category to one currency; foreign charges refused with no remedy](./363.md) — CLI QA 2026-10-14
