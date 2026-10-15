@@ -1438,11 +1438,30 @@ def _rows_with_errors(
 # --------------------------------------------------------------------------- #
 
 
+#: The `bea add` option each request field comes from. A blank value named
+#: the internal field (`Request field 'currency'`) instead of the `-c` the
+#: user typed (w5/425).
+_OPTION_FOR_FIELD = {
+    "account": "-a/--account",
+    "amount": "--amount",
+    "amount_currency": "--amount",
+    "comment": "-m/--comment",
+    "currency": "-c/--currency",
+    "description": "-d/--description",
+    "filename": "--filename",
+    "source_account": "-s/--source",
+    "type": "-t/--type",
+}
+
+
 def _text(request: dict[str, Any], field: str) -> str:
     value = request.get(field)
     if not isinstance(value, str):
         raise protocol.UsageError(f"The request is missing its {field!r}.")
     if not value.strip():
+        option = _OPTION_FOR_FIELD.get(field)
+        if option is not None:
+            raise protocol.UsageError(f"{option} must not be empty; give it a value.")
         raise protocol.UsageError(f"Request field {field!r} must be a non-empty string.")
     return value
 
