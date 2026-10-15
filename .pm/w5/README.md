@@ -183,7 +183,6 @@
 - [461 — Failing `add`/`import --apply` under `--allow-errors` drop `error.ledger_warnings`](./461.md) — CLI QA 2026-10-14
 - [462 — Renamed roots: every `--into` write to an include is refused as "Invalid account name", no hint](./462.md) — CLI QA 2026-10-14
 - [463 — Reports silently drop accounts whose root comes from an include's `name_*` option](./463.md) — CLI QA 2026-10-14
-- [464 — `--allow-errors` append after an unbalanced `pushtag`/`pushmeta` inherits it; echo says otherwise](./464.md) — CLI QA 2026-10-14
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
