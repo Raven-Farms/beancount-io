@@ -127,10 +127,15 @@ const INTERVAL_ALIASES: Record<IntervalKey, Interval> = {
 };
 
 function resolveInterval(key: IntervalKey): Interval {
-  // The fallback guards against out-of-union strings arriving at runtime
-  // (interval keys ultimately come from request params); it preserves the
-  // previous behavior of defaulting unknown values to monthly.
-  return INTERVAL_ALIASES[key] ?? INTERVALS.month;
+  // Interval keys come from request params, so any string can arrive. Fava
+  // lowercases a name before choosing (`fava/util/date.py`), which makes
+  // `Daily` the daily interval rather than an unknown one (w6/012). Only own
+  // keys count — `constructor` is not an interval — and anything else keeps
+  // the monthly fallback.
+  const name = String(key).toLowerCase();
+  return Object.hasOwn(INTERVAL_ALIASES, name)
+    ? INTERVAL_ALIASES[name as IntervalKey]
+    : INTERVALS.month;
 }
 
 export interface DateRange {

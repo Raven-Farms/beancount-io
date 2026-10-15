@@ -513,3 +513,105 @@ describe("quarter floor", () => {
     expect(rows).toEqual([{ date: "2024-09-30", balance: { USD: "2400" } }]);
   });
 });
+
+/**
+ * w6/012. Interval names were matched case-sensitively, so a capitalised
+ * `Daily` or `Weekly` fell through to the monthly fallback and a month's 31
+ * daily points came back as one aggregate. Fava lowercases the name first.
+ */
+describe("interval name case", () => {
+  const ends = (key: string) =>
+    intervalRanges("2024-02-10", "2025-03-05", key as IntervalKey).map(
+      (range) => range.endInclusive,
+    );
+  const spellings = (name: string) => [
+    name,
+    name[0].toUpperCase() + name.slice(1),
+    name.toUpperCase(),
+    name
+      .split("")
+      .map((c, i) => (i % 2 ? c.toUpperCase() : c))
+      .join(""),
+  ];
+
+  it.each([
+    "year",
+    "yearly",
+    "quarter",
+    "quarterly",
+    "month",
+    "monthly",
+    "week",
+    "weekly",
+    "day",
+    "daily",
+  ])("groups %s the same in every letter case", (name) => {
+    const expected = ends(name);
+    for (const spelling of spellings(name))
+      expect({ spelling, ends: ends(spelling) }).toEqual({
+        spelling,
+        ends: expected,
+      });
+  });
+
+  it("still tells the five groupings apart", () => {
+    expect(
+      ["Yearly", "Quarterly", "Monthly", "Weekly", "Daily"].map(
+        (key) => ends(key).length,
+      ),
+    ).toEqual([2, 5, 14, 57, 389]);
+  });
+
+  it.each(["fortnightly", "constructor", "toString", "__proto__"])(
+    "falls back to monthly for the unknown name %s",
+    (name) => {
+      expect(ends(name)).toEqual(ends("month"));
+    },
+  );
+
+  const spend = (date: string, amount: string): DirectiveJson => ({
+    type: "transaction",
+    date,
+    flag: "*",
+    narration: "Spend",
+    tags: [],
+    links: [],
+    postings: [
+      { account: "Expenses:Food", units: { number: amount, currency: "USD" } },
+      {
+        account: "Assets:Checking",
+        units: { number: `-${amount}`, currency: "USD" },
+      },
+    ],
+  });
+  const may = [
+    spend("2017-05-03", "10"),
+    spend("2017-05-17", "20"),
+    spend("2017-05-31", "30"),
+  ];
+  const window = { begin: "2017-05-01", end: "2017-06-01" };
+
+  it.each([
+    ["daily", "Daily", 31],
+    ["weekly", "Weekly", 5],
+  ] as const)(
+    "reports %s and %s over May identically",
+    (lower, title, count) => {
+      const read = (key: string) =>
+        intervalTotals(
+          may,
+          key as IntervalKey,
+          ["Expenses"],
+          "USD",
+          usdMap,
+          window,
+        );
+      const rows = read(lower);
+      expect(rows).toHaveLength(count);
+      expect(read(title)).toEqual(rows);
+      expect(
+        rows.reduce((sum, row) => sum + Number(row.balance.USD ?? 0), 0),
+      ).toBe(60);
+    },
+  );
+});
