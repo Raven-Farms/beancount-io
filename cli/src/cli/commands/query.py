@@ -24,7 +24,7 @@ import typer
 from cli import context, output
 from cli.completion import fixed_values
 from cli.engine import launch
-from cli.errors import UsageError
+from cli.errors import UsageError, placement_hint
 from cli.utils import decode_error_message, inert_text
 
 FORMATS = ("text", "csv", "beancount")
@@ -325,7 +325,11 @@ def query(
                 "so the destination is not an ASCII text table."
             )
     if output_format is not None and output_format not in FORMATS:
-        raise UsageError(f"Unknown query format '{output_format}'. Choose one of: {', '.join(FORMATS)}.")
+        message = f"Unknown query format '{output_format}'. Choose one of: {', '.join(FORMATS)}."
+        if output_format.endswith((".bean", ".beancount")) or Path(output_format).is_file():
+            # `query -f` is --format; the ledger's -f goes before the command (w5/413).
+            message += f" -f after query is --format. {placement_hint('-f')}"
+        raise UsageError(message)
     if ctx.json_output and explicit_format is not None:
         raise UsageError(
             f"--json and --format {explicit_format} cannot be combined: --json already selects JSON output. "

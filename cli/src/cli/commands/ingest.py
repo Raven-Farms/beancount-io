@@ -18,7 +18,7 @@ import typer
 
 from cli import context, output
 from cli.engine import launch
-from cli.errors import UsageError, refuse_json
+from cli.errors import UsageError, placement_hint, refuse_json
 from cli.native_command import ForwardingCommand
 from cli.native_help import native_help
 
@@ -231,4 +231,22 @@ def extract(ctx: typer.Context, config: _CONFIG = None) -> None:
 @ingest_app.command("archive", cls=ForwardingCommand, epilog=native_help("ingest archive"), context_settings=_EXTRA)
 def archive(ctx: typer.Context, config: _CONFIG = None) -> None:
     """File documents into the archive hierarchy (Beangulp archive)."""
+    _refuse_ledger_after_overwrite(list(ctx.args))
     _forward("archive", ctx, config)
+
+
+def _refuse_ledger_after_overwrite(args: list[str]) -> None:
+    """`-f` after `ingest archive` is Beangulp's `--overwrite`, not bea's ledger.
+
+    `bea ingest archive … -f main.bean` replaced documents already filed and
+    offered the ledger as one more source to archive, with exit 0 (w5/413).
+    """
+    for index, arg in enumerate(args[:-1]):
+        if arg == "--":
+            return
+        following = args[index + 1]
+        if arg in ("-f", "--overwrite") and following.endswith((".bean", ".beancount")):
+            raise UsageError(
+                f"{arg} after ingest archive is Beangulp's --overwrite, which replaces documents already filed, "
+                f"and {following} would be archived as a source. {placement_hint('-f')} Nothing was changed."
+            )
