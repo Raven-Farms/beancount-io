@@ -337,7 +337,13 @@ def _recall_csv(file: Path, source: Path, account: str | None = None, *, notes: 
         accounts = ", ".join(sorted({entry["account"] for entry in matches}))
         raise UsageError(
             f"This CSV header matches multiple source accounts: {accounts}. "
-            "Pass --account ACCOUNT to select the export's account; nothing was written."
+            "Pass --account ACCOUNT to select the export's account; nothing was written.",
+            # A mistaken account remembered once would otherwise refuse every
+            # flag-free import of this header for good (w5/452).
+            details=[
+                f"If one of them was a mistake, delete {record} to forget the settings remembered for this "
+                "ledger, then import again with --csv and the right --account."
+            ],
         )
     if not matches:
         return None
@@ -1006,6 +1012,23 @@ def import_entries(
     # carry a preview in error.result, but must preserve the previous memory.
     if memory_note is not None:
         csv_to_remember = config_to_remember = None
+    unopened = set(preview.get("unopened_accounts") or [])
+    mistaken = [
+        account
+        for account in ((csv_to_remember or {}).get("account"), (csv_to_remember or {}).get("default_account"))
+        if isinstance(account, str) and account in unopened
+    ]
+    if mistaken:
+        # A preview with a mistyped source or default account would otherwise
+        # register it beside the right one, and every later flag-free import of
+        # the header refuses to choose between them (w5/452).
+        csv_to_remember = None
+        not_remembered = (
+            f"Not remembering these settings: {', '.join(mistaken)} "
+            f"{'is' if len(mistaken) == 1 else 'are'} not open in this ledger."
+        )
+        frontend_notes.append(not_remembered)
+        output.note(not_remembered)
     if (
         csv_to_remember is not None
         and _remember_csv(file, csv_to_remember, frontend_notes)

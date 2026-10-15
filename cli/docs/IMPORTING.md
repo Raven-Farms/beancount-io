@@ -264,7 +264,11 @@ no flags. If checking and savings exports share headers, their mappings are
 kept separately and subsequent previews and applies require
 `--account ACCOUNT`; bea refuses to choose between them. Always specify
 `--account` when importing from a new account, since headers alone cannot
-identify a bank account. For example:
+identify a bank account. A run whose `--account` or `--default-account` the
+ledger does not open is not remembered — it says so — so a typo never becomes a
+second account for the header. To forget settings already remembered, delete
+the ledger's record in `importers/` under the configuration directory; the
+"matches multiple source accounts" refusal names its path. For example:
 `bea import checking.csv --account Assets:Checking --apply`.
 For a remembered mapping, human output reports
 `Using remembered settings for <file>` (or `Using settings remembered from

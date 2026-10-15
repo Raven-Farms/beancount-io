@@ -506,9 +506,11 @@ def answer(
     # ledger, with an `add open` remedy its convention never writes, while
     # `bea add transaction` to the same account succeeded (w5/134). So the
     # accounts are read again from the ledger as the import would leave it.
+    opened_after = open_currencies
     if any(posting.account not in open_currencies for _, entry, _, _ in held for posting in entry.postings):
         proposal = [row["entry"] for row in rows if row["include"] or row["status"] == "blocked"]
         after = _open_currencies(_entries_after(snapshot, target, original, proposal), Open)
+        opened_after = after
         for row_dict, entry, was, why in held:
             still = _blocked_reason(
                 entry, after, roots, first_uses, stage_opens, ledger=file, source=account if csv_mode else None
@@ -560,6 +562,19 @@ def answer(
         "conflicts": sum(row["status"] == "conflict" for row in rows),
         "blocked": sum(row["status"] == "blocked" for row in rows),
         "skipped_blank": skipped_blank,
+        # Accounts a row posts to that the ledger still does not open after
+        # this import — duplicates included, whose new text would carry them
+        # too — so the frontend never remembers a mistyped `--account` or
+        # `--default-account` as a source of this header (w5/452).
+        "unopened_accounts": sorted(
+            {
+                posting.account
+                for entry in entries
+                if isinstance(entry, Transaction)
+                for posting in entry.postings
+                if posting.account not in opened_after
+            }
+        ),
         "validation_errors": validation_errors,
         "validation_warnings": validation_warnings,
         "importer_output": logs.getvalue(),
