@@ -1850,9 +1850,53 @@ def _appended_or_report(target: Path, original: bytes, texts: list[str]) -> str:
     from bea_engine.ledger.text import decode_error_message
 
     try:
-        return appended_content(original, texts)
+        content = appended_content(original, texts)
     except UnicodeDecodeError as exc:
         raise LedgerError(decode_error_message(target, exc)) from exc
+    _refuse_open_push(target, original)
+    return content
+
+
+def open_pushes(text: str) -> list[tuple[int, str]]:
+    """The `pushtag`/`pushmeta` directives still open at the end of `text`, as (line, directive)."""
+    from beancount.parser import lexer
+
+    open_: dict[tuple[str, str], list[int]] = {}
+    pending: str | None = None
+    for kind, line, _, value in lexer.lex_iter_string(text):  # type: ignore[no-untyped-call]
+        if pending is not None and kind in {"TAG", "KEY"}:
+            key = ("tag" if kind == "TAG" else "meta", str(value))
+            if pending.startswith("PUSH"):
+                open_.setdefault(key, []).append(line)
+            elif open_.get(key):
+                open_[key].pop()
+        pending = kind if kind in {"PUSHTAG", "POPTAG", "PUSHMETA", "POPMETA"} else None
+    return sorted(
+        (line, f"pushtag #{name}" if kind == "tag" else f"pushmeta {name}:")
+        for (kind, name), lines in open_.items()
+        for line in lines
+    )
+
+
+def _refuse_open_push(target: Path, original: bytes) -> None:
+    """Refuse to append after a `pushtag`/`pushmeta` the file never closes.
+
+    Beancount applies an open push to every entry after it, so an entry
+    appended there silently carried a tag and metadata nobody asked for,
+    while the echo showed it without them. `--allow-errors` tolerated the
+    file's `Unbalanced pushed tag` as pre-existing and wrote anyway (w5/464).
+    Nothing here can be tolerated: the entry would not mean what was written.
+    """
+    if b"push" not in original:
+        return
+    pushes = open_pushes(original.decode("utf-8"))
+    if not pushes:
+        return
+    named = ", ".join(f"`{directive}` at line {line}" for line, directive in pushes)
+    raise UsageError(
+        f"{target} ends inside {named}, so an entry appended there would silently inherit it. "
+        "Nothing was written. Close it first (`poptag #tag` or `popmeta key:`), or write to another file."
+    )
 
 
 #: Lexer kinds of the lines that configure a ledger rather than record into it.

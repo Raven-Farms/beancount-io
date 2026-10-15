@@ -47,12 +47,12 @@ DIAGNOSTICS = [
         "main.bean:2: Attempting to pop absent tag: 'trip'",
         id="absent-poptag",
     ),
-    pytest.param(
-        BODY.format(directive="pushtag #trip", metadata="", tail=""),
-        "Unbalanced pushed tag: 'trip'",
-        id="unbalanced-pushtag",
-    ),
 ]
+
+# Still reported, but no longer an append target: an entry written after an
+# open push inherits it, so the write refuses even under `--allow-errors`
+# (w5/464; see test_append_after_open_push.py).
+UNBALANCED_PUSHTAG = BODY.format(directive="pushtag #trip", metadata="", tail="")
 
 # (ledger body, the error that still refuses every write)
 SYNTAX_ERRORS = [
@@ -134,6 +134,18 @@ def test_an_existing_parser_diagnostic_stays_a_warning(tmp_path: Path, body: str
     assert "nothing was written" not in done.stderr
     assert ledger.read_text().startswith(body)
     assert '2026-02-01 note Assets:Cash "hi"' in ledger.read_text()[len(body) :]
+
+
+def test_an_unbalanced_pushtag_is_reported_and_refuses_an_append(tmp_path: Path) -> None:
+    ledger = _ledger(tmp_path, UNBALANCED_PUSHTAG)
+    checked = _bea(tmp_path, "--file", str(ledger), "check")
+    assert checked.returncode == 1
+    assert "Unbalanced pushed tag: 'trip'" in checked.stderr
+
+    refused = _bea(tmp_path, "--file", str(ledger), *NOTE)
+    assert refused.returncode == 2, refused.stderr
+    assert "`pushtag #trip` at line 2" in refused.stderr
+    assert ledger.read_text() == UNBALANCED_PUSHTAG
 
 
 @pytest.mark.parametrize(("command", "written"), WRITES)
