@@ -7,34 +7,21 @@
 <h1 align="center">Beancount.io</h1>
 
 <p align="center">
-  <strong>Agentic plain-text accounting, from every surface you work in.</strong>
+  <strong>Your money in plain text forever — beautiful reports, a phone app, a terminal CLI, and AI agents that can actually do your books.</strong>
   <br>
-  Open-source web and mobile clients, a Python CLI and reporting library, and skills for coding agents.
+  No lock-in. No database you can't read. Your ledger is a <code>.bean</code> text file you own, diff, and back up with Git — Beancount.io just makes it effortless to use everywhere.
 </p>
 
 <p align="center">
-  <a href="https://github.com/bex-co/beancount-io"><strong>⭐ Star on GitHub</strong></a>
+  <a href="https://beancount.io/ledger/open_ledger/example/income-statement?utm_source=github.com&utm_medium=readme&utm_campaign=live-demo"><strong>▶ Try the live demo — no sign-up</strong></a>
   ·
-  <a href="https://beancount.io/">Web app</a>
+  <a href="#try-it-in-30-seconds">Sign up and record a transaction</a>
   ·
-  <a href="#mobile-apps">Mobile apps</a>
-  ·
-  <a href="#choose-your-entry-point">Start building</a>
-  ·
-  <a href="./CONTRIBUTING.md">Contribute</a>
-  ·
-  <a href="./.pm/README.md">Roadmap</a>
-  ·
-  <a href="https://github.com/bex-co/beancount-io/issues">Issues</a>
+  <a href="https://github.com/bex-co/beancount-io"><strong>⭐ Star to support open finance</strong></a>
 </p>
 
 <p align="center">
   <a href="https://github.com/bex-co/beancount-io"><img src="https://img.shields.io/github/stars/bex-co/beancount-io?style=social" alt="Star Beancount.io on GitHub"></a>
-  <a href="https://github.com/bex-co/beancount-io/actions/workflows/ci.yml"><img src="https://github.com/bex-co/beancount-io/actions/workflows/ci.yml/badge.svg?branch=main" alt="Mobile CI"></a>
-  <a href="https://github.com/bex-co/beancount-io/actions/workflows/ci-dashboard.yml"><img src="https://github.com/bex-co/beancount-io/actions/workflows/ci-dashboard.yml/badge.svg?branch=main" alt="Dashboard CI"></a>
-  <a href="https://github.com/bex-co/beancount-io/actions/workflows/ci-cli.yml"><img src="https://github.com/bex-co/beancount-io/actions/workflows/ci-cli.yml/badge.svg?branch=main" alt="Python CI"></a>
-  <a href="https://github.com/bex-co/beancount-io/actions/workflows/ci-skills.yml"><img src="https://github.com/bex-co/beancount-io/actions/workflows/ci-skills.yml/badge.svg?branch=main" alt="Skills CI"></a>
-  <a href="https://github.com/bex-co/beancount-io/actions/workflows/secret-scan.yml"><img src="https://github.com/bex-co/beancount-io/actions/workflows/secret-scan.yml/badge.svg?branch=main" alt="Secret scan"></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT license"></a>
 </p>
 
@@ -53,7 +40,69 @@
   <a href="https://beancount.io/ledger/open_ledger/example/income-statement"><img width="49%" src="./docs/images/income-statement-expenses-hierarchy.webp" alt="Expenses shown as an interactive account hierarchy treemap"></a>
 </p>
 
-Beancount.io is a developer-friendly workspace for [Beancount](https://beancount.github.io/docs/) ledgers. Your books remain readable plain text while the surrounding tools add polished reports, transaction entry, Git-backed collaboration, automation, and access from the browser, phone, terminal, or a coding agent.
+## Try it in 30 seconds
+
+No install. No empty-ledger setup. Just record your first real transaction:
+
+1. **Sign up** at [beancount.io/sign-up](https://beancount.io/sign-up) — already have an account? [Log in](https://beancount.io/login).
+2. **Open your ledger** (create one if prompted — it takes seconds).
+3. **Record a transaction** — on the web open your ledger's Journal and add an entry; on mobile tap **Add Transaction**. Try a coffee run: `Expenses:Dining 12.50` paid from `Assets:Checking`.
+4. **See it land** — check the journal, then watch the income statement and balance sheet update.
+
+That's the whole idea: double-entry books you can read as plain text, with reports, phone, terminal, and agents on top of the same ledger.
+
+> If Beancount.io is the kind of open, programmable finance you want more of, [⭐ star this repo](https://github.com/bex-co/beancount-io) — it genuinely helps other developers find it.
+
+<details>
+<summary><strong>Prefer the terminal? Same first transaction from the CLI</strong></summary>
+
+You don't install Beancount yourself — one command installs `bea`, which provisions its engine for you.
+
+```zsh
+brew install bex-co/tap/bea      # macOS / Linuxbrew
+# or: uv tool install beancount-io   # anywhere with uv + Python 3.12+
+```
+
+```zsh
+bea --no-input init books --currency USD --date 2026-08-01 \
+  --opening-balance "Assets:Checking 1000"
+cd books
+bea add transaction "Coffee" --date 2026-08-02 \
+  --posting "Expenses:Dining 12.50" --posting "Assets:Checking"
+bea check && bea report balance-sheet
+```
+
+Checking now holds **987.50 USD** — validated, formatted, and readable as plain text.
+
+</details>
+
+### Your first five minutes
+
+- [ ] Sign up, open your ledger, and record the transaction above — on the web or in the [mobile app](#mobile-apps).
+- [ ] Open the [live demo](https://beancount.io/ledger/open_ledger/example/income-statement) and click through the income statement, balance sheet, and account trees.
+- [ ] Add two or three real transactions, then check the updated reports.
+- [ ] Optional: automate with the [CLI tutorial](./cli/docs/TUTORIAL.md) or point your coding agent at the [skills](#agents-and-mcp).
+
+## Who this is for
+
+- **Plain-text purists** — you want double-entry accounting in files that outlive any app, work with Git, and open in any editor.
+- **Developers** — you want to script, query, and build on your finances from Python and the terminal instead of exporting CSVs from a SaaS.
+- **Agent users** — you want Claude Code, Codex, or another coding agent to import statements, reconcile accounts, and close the month, with every write checked and confirm-gated.
+
+Not sure yet? The [live demo](https://beancount.io/ledger/open_ledger/example/income-statement) needs no account — decide there.
+
+## How it compares
+
+| | Beancount.io | Plain Beancount + Fava | Spreadsheet / SaaS finance app |
+| --- | --- | --- | --- |
+| Your data | Plain-text `.bean` files you own | Plain-text `.bean` files you own | Locked in a database / their cloud |
+| Reports | Web, mobile, CLI, and Python reports | Web reports (Fava) | Built-in, but not programmable |
+| On your phone | Native iOS & Android apps | Browser only | Native app, tied to the service |
+| AI agents | CLI, skills, and MCP built in | Do it yourself | No agent access |
+| Self-host | Yes — hosted, local-only, or your server | Yes, manual | No |
+| Cost / license | Free, MIT | Free, open source | Subscription |
+
+Beancount.io stands on [Beancount](https://beancount.github.io/docs/) and Fava rather than replacing them — existing ledgers keep working. Full credits: [ACKNOWLEDGEMENTS.md](./ACKNOWLEDGEMENTS.md).
 
 ## Mobile apps
 
@@ -73,116 +122,42 @@ Review your finances, add transactions, scan receipts, and edit ledger files fro
 
 <p align="center"><sub><a href="./mobile/README.md">Explore the mobile product tour</a> or run the Expo app locally.</sub></p>
 
-## Why developers build with it
+## Every surface, one ledger
 
-- **Open, inspectable data** — ledgers are text files that work with Git, scripts, editors, and the wider Beancount ecosystem.
-- **Useful at every layer** — use the finished interfaces, automate local `.bean` files from Python, or build new workflows on the parsing and reporting library.
-- **Modern, typed stacks** — React 19, React Native, TypeScript, GraphQL, Python 3.12, strict type checking, and package-scoped CI.
-- **Agent-ready workflows** — the CLI and reusable skills give coding agents structured ways to create, validate, query, and update ledgers.
-- **MIT licensed** — clients, developer tools, and libraries can be studied, adapted, and extended.
+| You want to… | Use | Start |
+| --- | --- | --- |
+| Work from the terminal or scripts | `bea` CLI and Python library | [CLI tutorial](./cli/docs/TUTORIAL.md) · [reference](./cli/docs/USAGE.md) |
+| See polished reports in a browser | Web dashboard | [Live demo](https://beancount.io/ledger/open_ledger/example/income-statement) · [`dashboard/`](./dashboard) |
+| Track money on the go | iOS & Android apps | [Mobile apps](#mobile-apps) · [`mobile/`](./mobile) |
+| Let an agent do your books | Agent skills and MCP | [Agents and MCP](#agents-and-mcp) |
+| Self-host the whole stack | Backend cluster | [`deploy/docker/`](./deploy/docker) (one server) · [`deploy/docker-mac/`](./deploy/docker-mac) (local) |
 
-## What is here today
+Your ledger stays the same plain-text file across all of them — hosted or local-first, with no hosted service required for CLI and skills workflows.
 
-| Package                                 | Status                      | What you can build with it                                                                                                                                                                                                                                                                                                                                                     |
-| --------------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| [`dashboard/`](./dashboard)             | Active web client           | Ledgers, journal, reports, Monaco editor, imports, collaboration, and an AI assistant. React 19 + TanStack Start + Apollo.                                                                                                                                                                                                                                                     |
-| [`mobile/`](./mobile)                   | Active iOS & Android client | Public examples before sign-in, native transaction entry, account views, budgets, receipt capture, ledger editing, light/dark themes, 13 locales, and runtime selection of a compatible self-hosted server. Expo + React Native + Apollo.                                                                                                                                                                      |
-| [`cli/`](./cli)                         | Active CLI · [releases](https://github.com/bex-co/beancount-io/releases?q=bea) | One-install `bea` CLI: directives, check/format/query, reports, cloud, and local-ledger ask. Frontend never loads Beancount — a managed engine (Homebrew at install, PyPI on first use) runs natives and the helper. Python + Typer. |
-| [`skills/`](./skills)                   | Active skills               | The agent-native accounting loop: scaffold a ledger with one `bea` install (optional Fava), import bank exports with dedup, author tested beangulp importers (`bea engine enable beangulp`), reconcile against statements, migrate from Mint/Monarch/QuickBooks, query your finances in plain language, run a month-end close, and record options trades — all confirm-gated and check-verified through `bea`.                                              |
-| [`backend-cluster/`](./backend-cluster) | Active backend              | The services behind the Beancount.io API: `backend-v2` (GraphQL/REST gateway), `ledger` (rustledger-WASM ledger service), `idl` (OpenAPI specs + generated clients), and `agent-box` (Cloudflare Worker control plane for the Ask-AI sandbox). Run locally via [`deploy/docker-mac/`](./deploy/docker-mac) or self-host on one server via [`deploy/docker/`](./deploy/docker). |
+<details>
+<summary><strong>For contributors: what's in this monorepo</strong></summary>
 
-The dashboard and mobile app are clients for the Beancount.io API, served by `backend-cluster/` — hosted, or self-run via `deploy/docker-mac/`. The CLI and ledger skills also support local-first workflows that do not require the hosted service.
+| Package | What it is |
+| --- | --- |
+| [`dashboard/`](./dashboard) | Active web client: ledgers, journal, reports, Monaco editor, imports, collaboration, AI assistant (React 19 + TanStack Start + Apollo) |
+| [`mobile/`](./mobile) | Active iOS & Android client (Expo + React Native + Apollo) |
+| [`cli/`](./cli) | Active `bea` CLI and Python tooling ([releases](https://github.com/bex-co/beancount-io/releases?q=bea)) |
+| [`skills/`](./skills) | Active agent ledger skills (the eight `beancount-*` workflows) |
+| [`backend-cluster/`](./backend-cluster) | Active backend: GraphQL/REST gateway, ledger service, IDL, and agent sandbox |
 
-Skills have two audiences:
+The dashboard and mobile app are clients for the Beancount.io API served by `backend-cluster/` — hosted, or self-run. Skills have two audiences: Beancount users get [`skills/`](./skills/README.md); repository contributors get [`.agents/skills/`](./.agents/skills) (see [`.agents/AGENTS.md`](./.agents/AGENTS.md)). The root `.claude/skills` links to `.agents/skills` so Claude Code and Codex share the internal workflows.
 
-| Audience | Location | Workflows |
-| -------- | -------- | --------- |
-| Beancount users | [`skills/`](./skills/README.md), with implementations in [`skills/.claude/skills/`](./skills/.claude/skills) | The eight `beancount-*` ledger skills |
-| Repository contributors | [`.agents/skills/`](./.agents/skills), documented in [`.agents/AGENTS.md`](./.agents/AGENTS.md) | PM, shipping, mobile releases, QA, code maintenance, and Mermaid diagrams |
+</details>
 
-The root `.claude/skills` links to `.agents/skills` so Claude Code and Codex share the internal development workflows.
+## Agents and MCP
 
-## Choose your entry point
+Beancount.io is built for the agent era: your ledger is text an agent can read, and every write is validated and reversible.
 
-There is no root package to install. Each package owns its dependencies and checks.
+- **Coding-agent skills (local ledger)** — eight `beancount-*` workflows for Claude Code and Codex: scaffold a ledger, import bank exports without duplicates, reconcile against statements, migrate from Mint/Monarch/QuickBooks, query finances in plain language, and run a confirm-gated month-end close. [Install the skills](./skills/docs/installation.md) → [ask your first question](./skills/docs/first-query.md) → [first-month guide](./skills/docs/first-month.md) → [migration guide](./skills/docs/migration.md).
+- **MCP server** — point any MCP client at a deployment to query and edit a ledger from an agent. Also listed on the official [MCP Registry](https://registry.modelcontextprotocol.io) as `io.beancount/beancount` (OAuth sign-in).
 
-### Web dashboard
-
-Requires Node.js 22, Yarn 4 through Corepack, and a Beancount.io API endpoint.
-
-```zsh
-cd dashboard
-corepack enable
-yarn install --immutable
-cp .env.example .env
-yarn dev
-```
-
-The app runs at `http://localhost:5173`. See the [dashboard setup guide](./dashboard/README.md) for environment variables and architecture.
-
-Prefer everything in containers? [`deploy/docker-mac/`](./deploy/docker-mac) runs the full stack locally on macOS. For a persistent single-server installation with automatic HTTPS and durable Docker volumes, use [`deploy/docker/`](./deploy/docker).
-
-### Mobile app
-
-Requires Node.js 20.19.4 or newer and Yarn Classic.
-
-```zsh
-cd mobile
-yarn install
-yarn start
-```
-
-Expo will guide you to iOS, Android, or a connected device. See the [mobile development guide](./mobile/README.md) for the full workflow.
-
-### CLI and Python tooling
-
-The `beancount-io` package installs one command, `bea`. You do not install
-Beancount yourself — Homebrew provisions a separate engine venv at install
-time; PyPI installs provision it on first local use. Install from the
-Homebrew tap or from PyPI (choose one):
-
-```zsh
-brew install bex-co/tap/bea      # macOS and Linuxbrew
-uv tool install beancount-io     # anywhere with uv and Python 3.12+
-```
-
-From a directory without a `books` subdirectory, create a ledger and record a
-purchase:
-
-```zsh
-bea --no-input init books --currency USD --date 2026-08-01 \
-  --opening-balance "Assets:Checking 1000"
-cd books
-bea add transaction "Coffee" --date 2026-08-02 \
-  --posting "Expenses:Dining 12.50" --posting "Assets:Checking"
-bea check
-bea format -i main.bean
-bea list transaction --limit 10
-bea report balance-sheet
-```
-
-Checking now holds **987.50 USD**. `bea upgrade` updates through the package
-manager that installed it.
-
-Or from this checkout:
-
-```zsh
-cd cli
-uv sync --all-groups
-uv run bea --help
-```
-
-Start with the [first-month tutorial](./cli/docs/TUTORIAL.md), then use the [CLI reference](./cli/docs/USAGE.md) for the command tree, the `--file`/`--json`/`--no-input` automation contract, exit codes, validation, formatting, queries, reports, authentication, and ledger management. Every flag is listed in the generated [command reference](./cli/docs/REFERENCE.md).
-
-### Coding agent skills (local ledger)
-
-Give Claude Code or Codex the eight `beancount-*` ledger workflows. [Install the skills](./skills/docs/installation.md) with a sparse Git clone and one `install` command, then ask a sample ledger a first question with the [first-query walkthrough](./skills/docs/first-query.md). Continue through import, reconciliation, and an approved close with the [first-month guide](./skills/docs/first-month.md). Bringing history from another app? The [migration guide](./skills/docs/migration.md) converts a Monarch export and keeps importing without duplicating transfers.
-
-For a reusable bank importer, follow the [importer graduation guide](./skills/docs/importer-graduation.md): preserve existing CSV history, test extraction before writing, and repair changed headers through either installed agent.
-
-### Coding agent (MCP)
-
-Point an MCP client at a deployment to query and edit a ledger from an agent:
+<details>
+<summary><strong>MCP connection details</strong></summary>
 
 ```json
 {
@@ -190,62 +165,93 @@ Point an MCP client at a deployment to query and edit a ledger from an agent:
     "beancount": {
       "type": "http",
       "url": "https://your-deployment/api-gateway/mcp",
-      "headers": { "Authorization": "Bearer bcio_your_ledger_scoped_key" }
+      "headers": { "Authorization": "Bearer [REDACTED]" }
     }
   }
 }
 ```
 
-The hosted service is also listed on the official
-[MCP Registry](https://registry.modelcontextprotocol.io) as
-`io.beancount/beancount`, so clients that read the registry add it from there
-and sign in with OAuth ([details](./backend-cluster/backend-v2/docs/mcp.md#from-the-mcp-registry)).
-There are [per-host notes](./backend-cluster/backend-v2/docs/mcp.md#per-host-notes)
-for Claude, Claude Code, ChatGPT, Cursor, and GitHub Copilot in VS Code.
+Thirty tools (BQL queries, file reads/edits, entry and receipt insertion, statement parsing, bank import, and more), 64 URI-addressed resources, and four prompts (spending report, month-end close, reconciliation, import categorization — e.g. `/mcp__beancount__close-month` in Claude Code). Every write supports `dry_run`, every call re-authorizes, and failures return a machine code plus the next call to make. Per-host notes for Claude, Claude Code, ChatGPT, Cursor, and Copilot: [MCP docs](./backend-cluster/backend-v2/docs/mcp.md); contract: [ADR 0007](./docs/adrs/ADR007-backend-v2-mcp-surface.md).
 
-Twenty-six tools — BQL queries, file listing, reads, edits, entry and receipt
-insertion, appending directives as plain Beancount text, statement parsing,
-pull requests, collaborators, and bank import — plus
-sixty-three URI-addressed **resources** an agent fetches without spending a tool
-call: the ledger's vocabulary (payees, currencies, tags, …), its journals and
-analysis reads (trial balance, account reports, …), its linked banks, category
-suggestions, and file contents. Statements answer with totals and the accounts
-behind them rather than a chart payload, every failure names a machine code and
-the next call to make, and the transport's budget is sized for a whole agent
-session. Four **prompts** — spending report, month-end close, account
-reconciliation, and import categorization — hand an agent the ledger playbooks
-as workflows the user selects, such as `/mcp__beancount__close-month` in Claude
-Code. Every eligible
-GraphQL operation now has a REST and MCP twin over the same protected service
-call — the parity gap is held at zero by CI. Bank imports are drivable end to
-end after a one-time browser link, with `dry_run` on everything that writes.
-Every call re-authorizes, so access revoked mid-session is refused on the next
-one. A credential can be pinned to one ledger or select `ledger: "owner/name"`
-per call. `yarn mcp:conformance <base-url>`
-tells you whether a deployment is connectable, and `yarn mcp:agent-eval` runs
-real Claude Code and Codex sessions through onboarding tasks and scores their
-answers and ledger changes ([MCP agent journeys](./backend-cluster/backend-v2/docs/mcp-agent-eval.md)). See
-[connecting an MCP client](./backend-cluster/backend-v2/README.md#connecting-an-mcp-client)
-for the walkthrough and
-[ADR 0007](./docs/adrs/ADR007-backend-v2-mcp-surface.md) for the
-endpoint's contract.
+</details>
 
-## Quality bar
+## FAQ
 
-Every active package has path-filtered CI so unrelated changes stay fast:
+<details>
+<summary><strong>Is my financial data private?</strong></summary>
 
-| Package   | Run before opening a PR                                                           |
-| --------- | --------------------------------------------------------------------------------- |
-| Dashboard | `cd dashboard && yarn format:check && yarn lint && yarn test && yarn build`       |
-| Mobile    | `cd mobile && yarn format:check && yarn lint && yarn typecheck && yarn test:unit` |
-| CLI       | `cd cli && make check-all`                                                        |
-| Skills    | `python3 skills/scripts/ci-check.py`                                              |
+Yes. Your ledger is a plain-text file. Local CLI and skills workflows never require the hosted service; if you self-host, everything runs on your server. You choose where the file lives.
 
-A repository-wide secret scan also gates every push and pull request.
-Run `scripts/lint-deadcode.sh` from the repository root to check every executable
-package and support script for unused files and symbols. `scripts/fix-deadcode.sh`
-applies the available removals; review its diff and rerun the affected packages'
-full checks.
+</details>
+
+<details>
+<summary><strong>How is this different from plain Beancount or Fava?</strong></summary>
+
+Beancount.io builds on both (Fava ships inside the CLI). It adds native mobile apps, a one-install CLI, hosted or self-hosted collaboration, and first-class agent workflows — while your `.bean` files remain standard Beancount that Fava and other tools can still read.
+
+</details>
+
+<details>
+<summary><strong>Can I migrate from Mint, Monarch, or QuickBooks?</strong></summary>
+
+Yes — the [migration guide](./skills/docs/migration.md) converts an export and keeps importing without duplicating transfers.
+
+</details>
+
+<details>
+<summary><strong>Do I have to self-host?</strong></summary>
+
+No. Use the hosted service at [beancount.io](https://beancount.io/), run everything locally with the CLI, or self-host on one server with [`deploy/docker/`](./deploy/docker). Same ledger either way.
+
+</details>
+
+## Run from source
+
+There is no root package to install; each package owns its dependencies and checks.
+
+<details>
+<summary><strong>Web dashboard, mobile app, and CLI from this checkout</strong></summary>
+
+Web dashboard (Node.js 22, Yarn 4 via Corepack, plus a Beancount.io API endpoint):
+
+```zsh
+cd dashboard && corepack enable && yarn install --immutable
+cp .env.example .env && yarn dev   # http://localhost:5173
+```
+
+See the [dashboard setup guide](./dashboard/README.md). Containers instead? [`deploy/docker-mac/`](./deploy/docker-mac) runs the full stack locally on macOS; [`deploy/docker/`](./deploy/docker) is the persistent single-server install.
+
+Mobile app (Node.js 20.19.4+, Yarn Classic):
+
+```zsh
+cd mobile && yarn install && yarn start
+```
+
+See the [mobile development guide](./mobile/README.md).
+
+CLI from this checkout:
+
+```zsh
+cd cli && uv sync --all-groups && uv run bea --help
+```
+
+`bea upgrade` updates through whichever package manager installed it. Full command tree, automation contract, and exit codes: [CLI reference](./cli/docs/USAGE.md) and generated [command reference](./cli/docs/REFERENCE.md).
+
+</details>
+
+<details>
+<summary><strong>Quality bar (run before opening a PR)</strong></summary>
+
+| Package | Check |
+| --- | --- |
+| Dashboard | `cd dashboard && yarn format:check && yarn lint && yarn test && yarn build` |
+| Mobile | `cd mobile && yarn format:check && yarn lint && yarn typecheck && yarn test:unit` |
+| CLI | `cd cli && make check-all` |
+| Skills | `python3 skills/scripts/ci-check.py` |
+
+Every active package has path-filtered CI, and a repository-wide secret scan gates every push and pull request. Run `scripts/lint-deadcode.sh` from the repository root to check for unused files and symbols (`scripts/fix-deadcode.sh` applies removals; review the diff and rerun full checks).
+
+</details>
 
 ## Contributing
 
@@ -258,11 +264,13 @@ If Beancount.io is the kind of open, programmable finance software you want to s
 - Website: [beancount.io](https://beancount.io/)
 - Chat: [Telegram](https://t.me/beancount)
 - Mobile: [App Store](https://apps.apple.com/us/app/beancount/id1527950512) · [Google Play](https://play.google.com/store/apps/details?id=io.beancount.android)
+- Issues: [github.com/bex-co/beancount-io/issues](https://github.com/bex-co/beancount-io/issues)
 
 ## Acknowledgements
 
-Beancount.io stands on [Beancount](https://github.com/beancount/beancount) and [Fava](https://github.com/beancount/fava) — the vendored `fava` package inside `cli/src/fava` ships as bundled subprocess resources in the single `beancount-io` distribution, and the rest of the plain-text accounting stack ([beanquery](https://github.com/beancount/beanquery), [beangulp](https://github.com/beancount/beangulp), [rustledger](https://github.com/rustledger/rustledger)) is used as unmodified upstream dependencies. Full credits and how we comply with each upstream license: [ACKNOWLEDGEMENTS.md](./ACKNOWLEDGEMENTS.md).
+Beancount.io stands on [Beancount](https://github.com/beancount/beancount) and [Fava](https://github.com/beancount/fava) — the vendored `fava` package inside `cli/src/fava` ships as bundled subprocess resources in the single `beancount-io` distribution, and the rest of the plain-text accounting stack ([beanquery](https://github.com/beancount/beanquery), [beangulp](https://github.com/beancount/beangulp), [rustledger](https://github.com/rustledger/rustledger)) is used as unmodified upstream dependencies. Full credits and license compliance: [ACKNOWLEDGEMENTS.md](./ACKNOWLEDGEMENTS.md).
 
 ## License
 
 [MIT](./LICENSE) © Beancount.io — covers the code in this repository; upstream projects remain under their own licenses.
+
