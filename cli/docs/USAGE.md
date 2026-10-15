@@ -764,7 +764,10 @@ refused with exit 2 instead of waiting at a prompt. Piped BQL must be UTF-8 (a
 BOM is fine); anything else is refused with exit 2, naming `stdin` and the
 offending byte offset, whatever the locale. In the shell, `Ctrl-C`
 cancels the current line and returns to `beanquery>`, as under `bean-query`;
-`.exit` (or `Ctrl-D`) ends the session with exit 0 and saves its history.
+`.exit` (or `Ctrl-D`) ends the session with exit 0 and saves its history to
+Beanquery's `~/.config/beanquery/history`, the file `bean-query` shares. It
+follows `HOME` only: `BEA_CONFIG_DIR` and `XDG_CONFIG_HOME` do not move it, so an
+isolated setup sets `HOME` too.
 A history file that cannot be loaded costs the history, not the session: the
 shell says so in one line on stderr and opens with an empty history.
 Pressed while the ledger is still loading, `Ctrl-C` takes effect once that load
@@ -2002,7 +2005,7 @@ select targets, endpoints, and state directories:
 |---|---|---|
 | `BEA_FILE` | — | Ledger entry file, when `--file` is not passed |
 | `BEA_TOKEN` | — | Hosted credential for unattended jobs; never written to disk |
-| `BEA_CONFIG_DIR` | `$XDG_CONFIG_HOME/bea`, else `~/.config/bea` | Per-user state: credentials, `ask` history, user skills |
+| `BEA_CONFIG_DIR` | `$XDG_CONFIG_HOME/bea`, else `~/.config/bea` | Per-user state: credentials, `ask` history, user skills. The query shell's history and init file stay at Beanquery's `~/.config/beanquery/` |
 | `XDG_DATA_HOME` | `~/.local/share` | Root for the managed PyPI engine under `…/bea/engine/<version>` |
 | `XDG_CACHE_HOME` | `~/.cache` | Root for ledger write locks under `…/bea/locks`, managed price feeds under `…/bea/managed-prices` and Beancount's load cache under `…/bea/load-cache` |
 | `BEA_LOCK_TIMEOUT` | `60` | Seconds a write waits for another `bea` write on the same file before exiting 4; `0` does not wait, and anything but a number zero or greater is a usage error (exit 2) |
