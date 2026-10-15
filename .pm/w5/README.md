@@ -35,7 +35,6 @@
 
 ## Inbox
 
-- [309 — `BEA_ENGINE_PYTHON` dir / non-exec / non-Python escapes the 269 check](./309.md) — CLI QA 2026-10-14
 - [310 — `init --opening-balance` rounds a >28-digit equity leg](./310.md) — CLI QA 2026-10-14
 - [311 — Repeated `import --account/--csv/--rules` and `init -c` keep the last value silently](./311.md) — CLI QA 2026-10-14
 - [312 — Untraversable `load-cache` dir fails every local command with raw `PermissionError` (220 regression)](./312.md) — CLI QA 2026-10-14
