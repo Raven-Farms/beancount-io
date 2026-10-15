@@ -454,6 +454,13 @@ def account_predicate(value: str | None) -> Callable[[str], bool]:
     """
     if not value:
         return lambda _name: True
+    # A value spelled as an account name means that account and its
+    # descendants, component by component: `Expenses:Food` must not pick up
+    # its prefix sibling `Expenses:FoodTruck`, as an unanchored regex search
+    # would (w5/292). Anything else — a single word, lower case, or a real
+    # pattern — keeps the documented regular-expression search.
+    if account.is_valid(value):
+        return lambda name: account.has_component(name, value)
     matches_pattern = Match(value)
     return lambda name: account.has_component(name, value) or matches_pattern(name)
 
@@ -468,11 +475,10 @@ class AccountFilter(EntryFilter):
 
     def __init__(self, value: str) -> None:
         self._value = value
-        self._match = Match(value)
+        self._match = account_predicate(value)
 
     def apply(self, entries: Sequence[Directive]) -> Sequence[Directive]:
-        value = self._value
-        if not value:
+        if not self._value:
             return entries
         match = self._match
-        return [entry for entry in entries if any(account.has_component(name, value) or match(name) for name in get_entry_accounts(entry))]
+        return [entry for entry in entries if any(match(name) for name in get_entry_accounts(entry))]
