@@ -18,6 +18,15 @@ def test_parse_date_rejects_invalid_with_bad_parameter() -> None:
     assert exc.value.message == "Invalid date 'not-a-date'. Use YYYY-MM-DD format."
 
 
+@pytest.mark.parametrize("value", ["2027-02-29", "2026-04-31", "2026-13-01"])
+def test_a_well_formed_day_that_does_not_exist_is_named_as_such(value: str) -> None:
+    # It is already YYYY-MM-DD; the format hint sent it back unchanged (w5/330).
+    with pytest.raises(typer.BadParameter) as exc:
+        parse_date(value)
+    assert exc.value.message.startswith(f"Invalid date '{value}': not a calendar date (")
+    assert "Use YYYY-MM-DD format" not in exc.value.message
+
+
 def test_parse_opt_date_passes_through_none() -> None:
     assert parse_opt_date(None) is None
 

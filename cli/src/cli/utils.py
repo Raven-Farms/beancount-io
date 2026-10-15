@@ -185,12 +185,14 @@ def parse_date(date_str: str) -> Date:
     (`2026-W01-1` is 2025-12-29), so a typo could start books in another year.
     The engine holds JSON dates to the same rule (`bea_engine.ledger.text`).
     """
+    if not re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", date_str):
+        raise typer.BadParameter(f"Invalid date '{date_str}'. Use YYYY-MM-DD format.")
     try:
-        if not re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", date_str):
-            raise ValueError(date_str)
         return Date.fromisoformat(date_str)
     except ValueError as err:
-        raise typer.BadParameter(f"Invalid date '{date_str}'. Use YYYY-MM-DD format.") from err
+        # Already YYYY-MM-DD: a format hint sent `2027-02-29` back to the
+        # format it had (w5/330). Say the day does not exist.
+        raise typer.BadParameter(f"Invalid date '{date_str}': not a calendar date ({err}).") from err
 
 
 def parse_opt_date(date_str: str | None) -> Date | None:
