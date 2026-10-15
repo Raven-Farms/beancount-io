@@ -207,7 +207,12 @@ plugins is never stored for, or answered from, the cache other commands read.
 The cache does not track attachments either, so every local read re-checks
 them: when a `document` file appears or vanishes, or a `documents` directory
 gains or loses a file, the next `check` or write sees it without a ledger file
-being touched. A cached load that still matches the disk is served as before.
+being touched. Plugin code counts too: `bea` records where each plugin module
+of a cached load resolved and its file's size and modification time, so
+editing a plugin beside the ledger, removing it, or running without the
+`PYTHONPATH` that found it reloads instead of serving the old plugin's output;
+a load whose errors are types a local plugin defined is not cached at all.
+A cached load that still matches the disk is served as before.
 Nor does it record who loaded it: `bea` reads a ledger BOM-stripped and
 NFC-normalized, Beancount's own tools read the bytes as they are. So `bea`'s
 reads serve only a cache they wrote themselves and load again over one left by

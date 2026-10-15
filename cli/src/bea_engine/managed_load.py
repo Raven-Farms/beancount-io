@@ -26,6 +26,7 @@ so the portable export t005 builds reads the same bytes the load parsed.
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import stat
@@ -545,7 +546,7 @@ def _load_fresh(entry: Path, snapshot: LedgerSnapshot) -> tuple[Any, Any, Any]:
     # `os.path` probes: the cache is an optimisation, and `Path.is_file`
     # raised EACCES from an untraversable `load-cache` directory, failing
     # every read and write with a bare PermissionError (w5/312).
-    if os.path.isfile(cache) and not _engine_wrote(cache):
+    if os.path.isfile(cache) and (not _engine_wrote(cache) or _plugins_changed(cache)):
         _drop(cache)
     cached = os.path.exists(cache)
     entries, errors, options = loader.load_file(str(entry))
@@ -555,9 +556,9 @@ def _load_fresh(entry: Path, snapshot: LedgerSnapshot) -> tuple[Any, Any, Any]:
         if not on_disk <= read or _documents_moved(entries, errors, options):
             _drop(cache)
             entries, errors, options = loader.load_file(str(entry))
-    if _changed_since(snapshot):
+    if _changed_since(snapshot) or _plugin_defined(errors):
         _drop(cache)
-    _mark_engine_cache(cache)
+    _mark_engine_cache(cache, options)
     return entries, errors, options
 
 
@@ -601,16 +602,84 @@ def _engine_wrote(cache: Path) -> bool:
         return False
 
 
-def _mark_engine_cache(cache: Path) -> None:
-    """Mark the cache the load just made, if it was slow enough to leave one."""
+def _mark_engine_cache(cache: Path, options: Any) -> None:
+    """Mark the cache the load just made, if it was slow enough to leave one.
+
+    The mark carries the plugin modules the load ran: Beancount keys its cache
+    on the ledger files alone, so after a local plugin was edited, removed or
+    left the module path, `check` still said valid and every read served the
+    old plugin's output (w5/326). The unpickler stops at the pickled load, so
+    the trailing record is invisible to every other reader of the file.
+    """
     if not os.path.isfile(cache) or _engine_wrote(cache):
         return
+    names = sorted({str(name) for name, _config in options.get("plugin") or ()})
+    paths = [str(directory) for directory in options.get("pythonpath") or ()]
+    record = {"names": names, "pythonpath": paths, "modules": _plugin_fingerprint(names, paths)}
     try:
         with cache.open("ab") as stream:
-            stream.write(_ENGINE_CACHE_MARK)
+            stream.write(_PLUGIN_RECORD + json.dumps(record).encode("utf-8") + _ENGINE_CACHE_MARK)
     except OSError:
         # Unmarked, it is loaded again next time rather than trusted.
         pass
+
+
+_PLUGIN_RECORD = b"\nbea-engine-plugins "
+
+
+def _plugin_record(cache: Path) -> Any:
+    """The plugin record at the end of an engine-marked cache, or None."""
+    with cache.open("rb") as stream:
+        stream.seek(0, os.SEEK_END)
+        stream.seek(max(0, stream.tell() - 65536))
+        tail = stream.read()
+    end = len(tail) - len(_ENGINE_CACHE_MARK)
+    start = tail.rfind(_PLUGIN_RECORD, 0, end)
+    return None if start < 0 else json.loads(tail[start + len(_PLUGIN_RECORD) : end])
+
+
+def _plugin_fingerprint(names: list[str], pythonpath: list[str]) -> list[list[Any]]:
+    """Where each plugin module resolves from, as the load's module path sees it, and its file's stat."""
+    import importlib.util
+
+    saved = list(sys.path)
+    sys.path[0:0] = pythonpath
+    try:
+        fingerprint: list[list[Any]] = []
+        for name in names:
+            try:
+                spec = importlib.util.find_spec(name)
+            except (ImportError, ValueError):
+                spec = None
+            origin = getattr(spec, "origin", None)
+            try:
+                info = os.stat(origin) if origin else None
+            except OSError:
+                info = None
+            fingerprint.append([name, origin, [info.st_mtime_ns, info.st_size] if info else None])
+        return fingerprint
+    finally:
+        sys.path[:] = saved
+
+
+def _plugins_changed(cache: Path) -> bool:
+    """Whether a plugin module the cached load ran now resolves elsewhere, differs, or is gone."""
+    try:
+        record = _plugin_record(cache)
+        return bool(record["modules"] != _plugin_fingerprint(record["names"], record["pythonpath"]))
+    except (OSError, ValueError, KeyError, TypeError):
+        return True
+
+
+def _plugin_defined(errors: Any) -> bool:
+    """Whether a load error is a type a plugin defined, which no other reader of the cache can unpickle.
+
+    Native `bean-check` loads the cache without the ledger's directory on its
+    module path, so a cached error class from a local plugin printed `Cache
+    file is corrupted: No module named …` on every check.
+    """
+    known = ("beancount", "beanquery", "bea_engine", "fava", "builtins")
+    return any(type(error).__module__.split(".", 1)[0] not in known for error in errors)
 
 
 def _documents_moved(entries: Any, errors: Any, options: Any) -> bool:
