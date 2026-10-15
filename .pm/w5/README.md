@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [332 — Unsupported `--csv encoding=` on a non-UTF-8 file is masked by the generic decode error](./332.md) — CLI QA 2026-10-14
 - [333 — Lot-booking errors (`No position matches`, `Cost is negative`) show raw Python reprs](./333.md) — CLI QA 2026-10-14
 - [334 — Parser diagnostics (duplicate cost/meta, tags after posting) show raw reprs](./334.md) — CLI QA 2026-10-14
 - [335 — Bulk float refusal suggests `'1e+20'`/`'nan'`, which are refused too](./335.md) — CLI QA 2026-10-14
