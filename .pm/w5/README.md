@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [390 — `example` accepts any date span; year 1 or 9999 runs minutes then fails with a class name](./390.md) — CLI QA 2026-10-14
 - [391 — Every ledger write silently splits a hard link to the file (new inode, other name stale)](./391.md) — CLI QA 2026-10-14
 - [392 — `bea query` shell history ignores `BEA_CONFIG_DIR`, writes `~/.config/beanquery/history` undocumented](./392.md) — CLI QA 2026-10-14
 - [393 — Inactive-account error says "Correct the transaction date" for notes/documents](./393.md) — CLI QA 2026-10-14
