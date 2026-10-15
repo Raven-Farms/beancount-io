@@ -760,6 +760,25 @@ def _collect_managed(
     return list(by_url.values())
 
 
+def cached_revisions(entry: Path) -> dict[str, str | None]:
+    """Each managed source's cached serving revision, read without loading the ledger.
+
+    `price refresh` recorded them through a full offline load, which ran every
+    plugin once more than the refresh itself, even on a ledger with no managed
+    include (w5/432). The include scan and the cache are all a revision needs;
+    a source past the per-load cap serves nothing, as in a load.
+    """
+    from bea_engine.ledger.write import LedgerSnapshot
+
+    origins = _env_origins()
+    budget = ManagedPriceBudget(limit=MAX_URLS_PER_LOAD)
+    revisions: dict[str, str | None] = {}
+    for source in _collect_managed(LedgerSnapshot.capture(entry), DEFAULT_ORIGINS if origins is None else origins):
+        blob = resolve_feed(source.url, source.alias, offline=True).blob if budget.claim(source.url) else None
+        revisions[source.url] = blob.revision if blob is not None else None
+    return revisions
+
+
 def _duplicate_members(snapshot: Any) -> dict[Path, Path]:
     """Each closure file reached again under another name, mapped to the name that reached it first.
 

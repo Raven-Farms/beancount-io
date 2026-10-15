@@ -712,10 +712,7 @@ def price_refresh(
         root = _ledger(file)
         # The before-read never fails: it only records previous revisions, and
         # strict mode judges the re-resolved state below, not the stale one.
-        before = {
-            source.url: source.revision
-            for source in managed_load.load_with_sources(root, offline=True, strict=False).sources
-        }
+        before = managed_load.cached_revisions(root)
         if managed_load._env_flag(managed_load.OFFLINE_ENV):
             raise protocol.UsageError("price refresh requires network access; remove --offline.")
         for url in before:
