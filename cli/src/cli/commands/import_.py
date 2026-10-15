@@ -527,6 +527,13 @@ def import_entries(
 
     file = context.current().entry_file()
     source = source.expanduser().resolve()
+    if date_format is not None and not date_format.strip():
+        # An empty value is not an omitted one (w5/239): read as unset, it was
+        # remembered as `""` and refused every later plain import (w5/385).
+        raise UsageError(
+            f"--date-format {date_format!r} is empty; omit it to infer the file's date format, or give a strptime "
+            "format such as %Y-%m-%d. Nothing was saved."
+        )
     flag_delimiter: str | None = parse_delimiter(delimiter) if delimiter is not None else None
     csv_delimiter: str | None = flag_delimiter
     csv_encoding = "utf-8"
@@ -627,7 +634,8 @@ def import_entries(
                 csv_rules_arg = Path(remembered["rules"])
             if default_account is None and isinstance(remembered.get("default_account"), str):
                 default_account = remembered["default_account"]
-            if date_format is None and isinstance(remembered.get("date_format"), str):
+            # A `""` saved before w5/385 refused every plain import: read it as unset.
+            if date_format is None and isinstance(remembered.get("date_format"), str) and remembered["date_format"]:
                 date_format = remembered["date_format"]
                 recalled_date_format = remembered["date_format"]
             # Older records also kept a detected separator inside the mapping.

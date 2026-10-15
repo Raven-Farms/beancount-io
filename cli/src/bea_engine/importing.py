@@ -193,7 +193,7 @@ def answer(
             default_account = f"{roots[-1]}:Uncategorized"
         else:
             default_account = _valid_account(default_account, "--default-account", roots)
-        resolved_date_format = date_format or "%Y-%m-%d"
+        resolved_date_format = "%Y-%m-%d" if date_format is None else date_format
         resolved_delimiter = parse_delimiter(delimiter) if delimiter is not None else None
         resolved_encoding = parse_encoding(encoding) if encoding is not None else "utf-8"
         operating = options.get("operating_currency") or []
