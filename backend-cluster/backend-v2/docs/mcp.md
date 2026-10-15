@@ -691,7 +691,9 @@ beancount://alice/main/narration-transactions/Buying%20groceries
 
 Both forms use the same read permissions and return one latest transaction,
 including its date, payee, narration and postings. The REST query parameter and
-GraphQL `narration` argument accept the same explicit empty string. Discover the
+GraphQL `narration` argument accept the same explicit empty string. An unmatched
+payee or narration returns JSON `null` on REST/MCP and a nullable field without
+errors on GraphQL; genuine service failures remain errors. Discover the
 canonical template with `resources/templates/list` in Claude Code, Codex or any
 other MCP client.
 

@@ -212,11 +212,11 @@ describe("LedgerDataQueryResolver", () => {
           payee: "Amazon",
         }),
       );
-      expect(result.payee).toBe("Amazon");
-      expect(result.postings[0].price).toBeUndefined();
+      expect(result?.payee).toBe("Amazon");
+      expect(result?.postings[0].price).toBeUndefined();
     });
 
-    it("should throw when service returns null", async () => {
+    it("should return null when no prior transaction matches", async () => {
       mockDataService.getPayeeTransactions.mockResolvedValue(null);
 
       await expect(
@@ -225,7 +225,7 @@ describe("LedgerDataQueryResolver", () => {
           { payee: "Unknown" },
           mockContext,
         ),
-      ).rejects.toThrow(InternalServerError);
+      ).resolves.toBeNull();
     });
   });
 
@@ -247,10 +247,10 @@ describe("LedgerDataQueryResolver", () => {
       expect(mockDataService.getNarrationTransactions).toHaveBeenCalledWith(
         expect.objectContaining({ narration: "Groceries" }),
       );
-      expect(result.narration).toBe("Groceries");
+      expect(result?.narration).toBe("Groceries");
     });
 
-    it("should throw when service returns null", async () => {
+    it("should return null when no prior transaction matches", async () => {
       mockDataService.getNarrationTransactions.mockResolvedValue(null);
 
       await expect(
@@ -259,7 +259,7 @@ describe("LedgerDataQueryResolver", () => {
           { narration: "X" },
           mockContext,
         ),
-      ).rejects.toThrow(InternalServerError);
+      ).resolves.toBeNull();
     });
   });
 

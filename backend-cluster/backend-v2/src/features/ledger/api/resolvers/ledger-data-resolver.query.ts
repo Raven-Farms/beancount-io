@@ -10,7 +10,6 @@ import {
   Resolver,
 } from "type-graphql";
 import { AllowAnonymous } from "@/server/graphql/authenticated";
-import { InternalServerError } from "@/shared/errors";
 import { IContext } from "@/server/graphql/context";
 import { filterNullish } from "@/shared/tools";
 import { GraphQLJSONObject } from "graphql-scalars";
@@ -363,23 +362,21 @@ export class LedgerDataQueryResolver {
 
   @AllowAnonymous()
   @Query(() => Transaction, {
-    description: "Get the transactions for a payee",
+    nullable: true,
+    description:
+      "Get the most recent transaction for a payee, or null when none matches",
   })
   async getLedgerPayeeTransactions(
     @Arg("ledgerId", () => String) ledgerId: string,
     @Args() args: PayeeArgs,
     @Ctx() ctx: IContext,
-  ): Promise<Transaction> {
+  ): Promise<Transaction | null> {
     const data = await this.dataService.getPayeeTransactions({
       ledgerId,
       identity: ctx.identity,
       payee: args.payee,
     });
-    if (!data) {
-      throw new InternalServerError(
-        "No data returned for ledger payee transactions",
-      );
-    }
+    if (data === null) return null;
     return {
       date: data.date,
       payee: data.payee || undefined,
@@ -395,23 +392,21 @@ export class LedgerDataQueryResolver {
 
   @AllowAnonymous()
   @Query(() => Transaction, {
-    description: "Get the transactions for a narration",
+    nullable: true,
+    description:
+      "Get the most recent transaction for a narration, or null when none matches",
   })
   async getLedgerNarrationTransactions(
     @Arg("ledgerId", () => String) ledgerId: string,
     @Args() args: NarrationArgs,
     @Ctx() ctx: IContext,
-  ): Promise<Transaction> {
+  ): Promise<Transaction | null> {
     const data = await this.dataService.getNarrationTransactions({
       ledgerId,
       identity: ctx.identity,
       narration: args.narration,
     });
-    if (!data) {
-      throw new InternalServerError(
-        "No data returned for ledger narration transactions",
-      );
-    }
+    if (data === null) return null;
     return {
       date: data.date,
       payee: data.payee || undefined,

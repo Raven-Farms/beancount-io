@@ -70,7 +70,7 @@ export interface V1Route<P = unknown, Q = unknown, B = unknown> {
   /** Response documentation, minus the shared error responses. */
   readonly responses: RouteConfig["responses"];
   /**
-   * Return a value to send it as the JSON body; return `undefined` after
+   * Return a value (including null) to send as JSON; return `undefined` after
    * setting `ctx.body` yourself (streams, negotiated content types).
    */
   handler(deps: V1Deps, input: V1Input<P, Q, B>): Promise<unknown>;
@@ -177,6 +177,11 @@ function registerV1Route<P, Q, B>(
             ...input,
             identity: requireIdentity(ctx),
           });
+    if (result === null) {
+      // Koa preserves null as JSON only when its type and status are set first.
+      ctx.status = 200;
+      ctx.type = "application/json";
+    }
     if (result !== undefined) ctx.body = result;
   });
 

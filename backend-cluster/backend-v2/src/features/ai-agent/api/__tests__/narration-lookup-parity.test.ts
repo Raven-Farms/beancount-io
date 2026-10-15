@@ -10,8 +10,10 @@ import { graphql } from "graphql";
 import { LedgerDataQueryResolver } from "@/features/ledger/api/resolvers/ledger-data-resolver.query";
 import { LedgerDataService } from "@/features/ledger/service/ledger-data-service";
 import { AuthorizationService } from "@/server/api/authorization";
+import { formatError } from "@/server/graphql/format-error";
 import { graphqlScopeMiddleware } from "@/server/graphql/scope-middleware";
 import { assembleMcpRegistry } from "@/server/api/composition-root";
+import { ServiceUnavailableError } from "@/shared/errors";
 import {
   startV1TestServer,
   pinnedReadToken,
@@ -93,6 +95,10 @@ async function fixture(
   const client = new Client({ name: "narration-lookup-parity", version: "1" });
   const [a, b] = InMemoryTransport.createLinkedPair();
   await Promise.all([client.connect(a), server.connect(b)]);
+  const gqlDocument = (
+    source: string,
+    variableValues: Record<string, unknown>,
+  ) => graphql({ schema, source, variableValues, contextValue: { identity } });
   return {
     check,
     reports,
@@ -110,15 +116,14 @@ async function fixture(
       if (!("text" in content)) throw new Error("Expected JSON resource");
       return JSON.parse(content.text);
     },
+    gqlDocument,
     gql: (kind: "narration" | "payee", value?: string) =>
-      graphql({
-        schema,
-        source: `query($ledgerId: String!, $${kind}: String!) {
+      gqlDocument(
+        `query($ledgerId: String!, $${kind}: String!) {
           getLedger${kind === "narration" ? "Narration" : "Payee"}Transactions(ledgerId: $ledgerId, ${kind}: $${kind}) { ${fields} }
         }`,
-        variableValues: { ledgerId: "alice/main", [kind]: value },
-        contextValue: { identity },
-      }),
+        { ledgerId: "alice/main", [kind]: value },
+      ),
     close: async () => {
       await client.close();
       await server.close();
@@ -318,20 +323,155 @@ describe("transaction lookup adapter parity", () => {
     }
   });
 
-  it("keeps a genuinely unmatched MCP lookup null rather than substituting the blank entry", async () => {
-    const f = await fixture(null);
+  it.each(["payee", "narration"] as const)(
+    "returns JSON null for an unmatched %s on every surface",
+    async (kind) => {
+      const f = await fixture(null);
+      const missing = "__does_not_match__";
+      const method =
+        kind === "payee"
+          ? "getLedgerPayeeTransactions"
+          : "getLedgerNarrationTransactions";
+      try {
+        const response = await f.rest(
+          `?${new URLSearchParams({ [kind]: missing })}`,
+          kind,
+        );
+        expect(response.status).toBe(200);
+        expect(response.headers.get("content-type")).toMatch(
+          /^application\/json\b/,
+        );
+        expect(await response.json()).toBeNull();
+        const uri =
+          kind === "payee"
+            ? `beancount://alice/main/payee-transactions/${missing}`
+            : `${base}?narration=${missing}`;
+        expect(await f.mcp(uri)).toBeNull();
+        const gql = await f.gql(kind, missing);
+        expect(gql.errors).toBeUndefined();
+        expect(gql.data).toEqual({ [method]: null });
+        expect(f.reports[method].mock.calls).toEqual(
+          Array.from({ length: 3 }, () => [
+            "alice",
+            "main",
+            { [kind]: missing },
+          ]),
+        );
+      } finally {
+        await f.close();
+      }
+    },
+  );
+
+  it("retains known transactions beside both missing lookup fields in one GraphQL document", async () => {
+    const f = await fixture();
+    f.reports.getLedgerPayeeTransactions.mockImplementation(
+      async (_owner, _name, { payee }) => ({
+        data: { success: true, data: payee === blank.payee ? blank : null },
+      }),
+    );
+    f.reports.getLedgerNarrationTransactions.mockImplementation(
+      async (_owner, _name, { narration }) => ({
+        data: { success: true, data: narration === "" ? blank : null },
+      }),
+    );
     try {
-      expect(await f.mcp(`${base}?narration=__does_not_match__`)).toBeNull();
-      expect(f.reports.getLedgerNarrationTransactions).toHaveBeenCalledWith(
-        "alice",
-        "main",
-        { narration: "__does_not_match__" },
+      const gql = await f.gqlDocument(
+        `query($ledgerId: String!, $payee: String!, $missing: String!) {
+          knownPayee: getLedgerPayeeTransactions(ledgerId: $ledgerId, payee: $payee) { ${fields} }
+          missingPayee: getLedgerPayeeTransactions(ledgerId: $ledgerId, payee: $missing) { ${fields} }
+          knownNarration: getLedgerNarrationTransactions(ledgerId: $ledgerId, narration: "") { ${fields} }
+          missingNarration: getLedgerNarrationTransactions(ledgerId: $ledgerId, narration: $missing) { ${fields} }
+        }`,
+        {
+          ledgerId: "alice/main",
+          payee: blank.payee,
+          missing: "__does_not_match__",
+        },
       );
-      expect(f.reports.getLedgerNarrationTransactions).toHaveBeenCalledTimes(1);
+      expect(gql.errors).toBeUndefined();
+      expect(gql.data).toEqual({
+        knownPayee: blank,
+        missingPayee: null,
+        knownNarration: blank,
+        missingNarration: null,
+      });
+      expect(f.reports.getLedgerPayeeTransactions).toHaveBeenCalledTimes(2);
+      expect(f.reports.getLedgerNarrationTransactions).toHaveBeenCalledTimes(2);
     } finally {
       await f.close();
     }
   });
+
+  it.each([
+    {
+      kind: "payee",
+      failure: "domain",
+      status: 503,
+      code: "SERVICE_UNAVAILABLE",
+    },
+    {
+      kind: "narration",
+      failure: "domain",
+      status: 503,
+      code: "SERVICE_UNAVAILABLE",
+    },
+    {
+      kind: "payee",
+      failure: "envelope",
+      status: 500,
+      code: "INTERNAL_SERVER_ERROR",
+    },
+    {
+      kind: "narration",
+      failure: "envelope",
+      status: 500,
+      code: "INTERNAL_SERVER_ERROR",
+    },
+  ] as const)(
+    "preserves a $failure upstream failure for $kind on every surface",
+    async ({ kind, failure, status, code }) => {
+      const f = await fixture();
+      const value = kind === "payee" ? "Wine-Tarner Cable" : "";
+      const method =
+        kind === "payee"
+          ? "getLedgerPayeeTransactions"
+          : "getLedgerNarrationTransactions";
+      if (failure === "domain") {
+        f.reports[method].mockRejectedValue(
+          new ServiceUnavailableError("Ledger service"),
+        );
+      } else {
+        f.reports[method].mockResolvedValue({
+          data: { success: false, error: "Synthetic upstream refusal" },
+        });
+      }
+      try {
+        const response = await f.rest(
+          `?${new URLSearchParams({ [kind]: value })}`,
+          kind,
+        );
+        expect(response.status).toBe(status);
+        expect(await response.json()).toMatchObject({ error: { code } });
+        const uri =
+          kind === "payee"
+            ? `beancount://alice/main/payee-transactions/${encodeURIComponent(value)}`
+            : `${base}?narration=`;
+        await expect(f.client.readResource({ uri })).rejects.toMatchObject({
+          data: { code },
+        });
+        const gql = await f.gql(kind, value);
+        expect(gql.errors).toHaveLength(1);
+        const error = gql.errors![0];
+        expect(error.path).toEqual([method]);
+        expect(formatError(error.toJSON(), error).extensions?.code).toBe(code);
+        expect(gql.data).toEqual({ [method]: null });
+        expect(f.reports[method]).toHaveBeenCalledTimes(3);
+      } finally {
+        await f.close();
+      }
+    },
+  );
 
   it.each([
     {
