@@ -6,6 +6,7 @@ import difflib
 import fnmatch
 import glob
 import hashlib
+import logging
 import os
 import re
 import secrets
@@ -506,6 +507,28 @@ def keep_load_cache_private() -> None:
     loader.get_cache_filename = get_cache_filename
     # The loader bound the resolver it had when it was imported.
     loader.initialize(os.getenv("BEANCOUNT_DISABLE_LOAD_CACHE") is None)
+    logging.getLogger().addFilter(_quiet_cache_logs)
+
+
+#: What Beancount's loader logs about its own cache, through the root logger.
+_CACHE_LOGS = (
+    "Cache file is corrupted:",
+    "Could not remove picklecache file",
+    "Could not write to picklecache file",
+    "Cache disabled; Explicitly overridden cache filename",
+)
+
+
+def _quiet_cache_logs(record: logging.LogRecord) -> bool:
+    """Drop the loader's cache chatter; every other log line, a plugin's included, stays.
+
+    The cache is an optimisation the read never depends on: a write that
+    failed on a full disk printed a raw `WARNING:root:Could not write to
+    picklecache file …` beside a correct answer (w5/411), where a read-only
+    cache directory prints nothing. bea's own guards report the cache paths
+    that matter.
+    """
+    return not (record.module == "loader" and str(record.msg).startswith(_CACHE_LOGS))
 
 
 def _sidecar_of(candidate: Path) -> Path | None:
