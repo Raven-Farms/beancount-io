@@ -1041,11 +1041,12 @@ def export_portable(
                 )
     # Nor may a planned file land where one of the ledger's own include globs
     # would read it back: the snapshot would silently join the books (w5/072).
-    from bea_engine.ledger.write import _included_new_file
+    from bea_engine.ledger.write import include_claims
 
+    claim = include_claims(snapshot.patterns)
     for dest in planned:
-        claimed_by = next((p for p in snapshot.patterns if _included_new_file(dest.resolve(), p)), None)
-        if claimed_by is not None and not dest.exists():
+        claimed_by = None if dest.exists() else claim(dest.resolve())
+        if claimed_by is not None:
             raise UsageError(
                 f"Cannot export: {dest} would become part of the ledger being exported — its include pattern "
                 f"{claimed_by} matches that path. Choose a directory outside the ledger's includes. "

@@ -267,6 +267,31 @@ def literal_include(path: Path | str) -> str:
     return '"' + quoted.replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t") + '"'
 
 
+def include_claims(patterns: Iterable[str]) -> Callable[[Path], str | None]:
+    """The include pattern that would read a new file at a resolved path, or None, for many paths.
+
+    `_included_new_file` per path and pattern made `price export` resolve and
+    glob once per pair: 37 s for a 1,500-file ledger `check` reads in under
+    one (w5/317). A literal include names one file, so those are resolved
+    once into a lookup; only patterns with wildcards are matched one by one.
+    """
+    literal: dict[Path, str] = {}
+    wildcards: list[str] = []
+    for pattern in patterns:
+        if glob.has_magic(pattern):
+            wildcards.append(pattern)
+        else:
+            parent, name = os.path.split(pattern)
+            literal.setdefault(Path(parent).resolve() / name, pattern)
+
+    def claim(target: Path) -> str | None:
+        return literal.get(target) or next(
+            (pattern for pattern in wildcards if _included_new_file(target, pattern)), None
+        )
+
+    return claim
+
+
 def _included_new_file(target: Path, pattern: str) -> bool:
     """Match an absent leaf using the same directory and hidden-file rules as glob."""
     parent, name = os.path.split(pattern)
