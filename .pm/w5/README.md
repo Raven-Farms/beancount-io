@@ -35,7 +35,6 @@
 
 ## Inbox
 
-- [305 — Blank `bea balance` argument says "drop accounts"](./305.md) — CLI QA 2026-10-14
 - [306 — agent-skills.md's checkout `uv run python` fails outside `cli/`; no Homebrew interpreter](./306.md) — CLI QA 2026-10-14
 - [307 — `add custom --help` folds its Examples into one paragraph](./307.md) — CLI QA 2026-10-14
 - [308 — With stderr closed, diagnostics land in stdout (CSV/JSON corrupted, exit 0)](./308.md) — CLI QA 2026-10-14
