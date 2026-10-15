@@ -1502,6 +1502,7 @@ def validate_candidate(
     """
     from beancount.core import interpolate
     from beancount.core.data import Balance, Close, Document, Open, Pad, Transaction
+    from beancount.core.flags import FLAG_PADDING
     from beancount.parser.grammar import ParserSyntaxError
     from beancount.parser.lexer import LexerError
 
@@ -1701,7 +1702,13 @@ def validate_candidate(
                     message += f"; {parent.account} is closed that day at {_location(parent, filenames)}"
                     remedy = f"edit the close of {parent.account}"
                 message += "."
-            message += f" Correct the transaction date or {remedy}; for new books use bea init --date YYYY-MM-DD."
+            # Named for the directive that failed: a note or a pad is no transaction (w5/393).
+            # A pad's own padding transaction is the pad the user wrote, and
+            # naming both alike keeps them one paragraph (w1/118).
+            noun = type(error.entry).__name__.lower() if error.entry is not None else "directive"
+            if isinstance(error.entry, Transaction) and error.entry.flag == FLAG_PADDING:
+                noun = "pad"
+            message += f" Correct the {noun} date or {remedy}; for new books use bea init --date YYYY-MM-DD."
         if isinstance(error.entry, Close) and error.message.endswith(" is being closed"):
             # Upstream calls the account unopened whether it never was or
             # opens after the close; say which, as every other directive's
