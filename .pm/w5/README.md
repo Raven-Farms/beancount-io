@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [326 — Editing a local plugin does not invalidate the load cache; `check` stays green](./326.md) — CLI QA 2026-10-14
 - [327 — `price export` omits a plugin's sibling helper module; snapshot cannot load](./327.md) — CLI QA 2026-10-14
 - [328 — `option "operating_currency" "usd"` typo never named (missing prices / token error / `column None`)](./328.md) — CLI QA 2026-10-14
 - [329 — `-t FY2027-Q2` on a mid-month fiscal year says "Failed to parse date"](./329.md) — CLI QA 2026-10-14
