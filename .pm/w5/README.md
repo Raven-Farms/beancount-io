@@ -113,6 +113,13 @@
 - [541 — A `--partial` write drops the NFC/NFD notes of written rows in text mode](./541.md)
 - [542 — Cost labels are written with raw control and bidi characters](./542.md)
 - [543 — A same-day sale before its purchase is refused despite USAGE's "appearing later in the input"](./543.md)
+- [544 — Two `write_directive` calls in one `ask` reply open two approval prompts at once; approving both writes one, and it can hang](./544.md)
+- [545 — `ask` REPL sends a quick follow-up question to the proxy twice (stale keep-alive retry)](./545.md)
+- [546 — `ask` prints an answer cut off at its own output cap as complete, exit 0](./546.md)
+- [547 — `ask` reply cut mid-UTF-8 prints a raw codec error and drops the already-wrote note (gap in w5/373)](./547.md)
+- [548 — `ask` answers lose angle-bracket text and HTML blocks](./548.md)
+- [549 — `ask`'s BQL tool drops error details and calls an engine crash "Ledger is invalid"](./549.md)
+- [550 — `bea ask > out.txt` hides the REPL and approval panel in the file, yet a blind `y` writes](./550.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
