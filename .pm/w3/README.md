@@ -80,7 +80,6 @@
 
 ## Inbox
 
-- [472](./472.md) — Name repeated row and card actions after their target: Accounts "More actions", token "Revoke", Budget "Update Budget"
 - [473](./473.md) — Name Journal row controls after their entry: 60 identical "Toggle postings" buttons that also hide the posting count
 - [474](./474.md) — Profile follow hint says "Add this profile to your following list" next to Unfollow
 - [475](./475.md) — Ledger Gallery: keep the search in the URL so Back restores it, and announce the result count
