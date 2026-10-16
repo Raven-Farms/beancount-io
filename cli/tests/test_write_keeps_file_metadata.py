@@ -8,6 +8,8 @@ flags were dropped — after every add, import and `format -i`.
 
 from __future__ import annotations
 
+import ctypes
+import errno
 import os
 import stat
 import subprocess
@@ -50,6 +52,41 @@ def _other_group(directory: Path) -> int:
         if group != gid:
             return group
     pytest.skip("this user belongs to no second group to assign")
+
+
+def _acl_bytes(file: Path) -> bytes | None:
+    """Read the complete native ACL without resolving its principal names."""
+    libc = ctypes.CDLL("libc.dylib", use_errno=True)
+    libc.acl_get_file.argtypes = [ctypes.c_char_p, ctypes.c_int]
+    libc.acl_get_file.restype = ctypes.c_void_p
+    libc.acl_size.argtypes = [ctypes.c_void_p]
+    libc.acl_size.restype = ctypes.c_ssize_t
+    libc.acl_copy_ext.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_ssize_t]
+    libc.acl_copy_ext.restype = ctypes.c_ssize_t
+    libc.acl_free.argtypes = [ctypes.c_void_p]
+    libc.acl_free.restype = ctypes.c_int
+    acl = libc.acl_get_file(os.fsencode(file), 0x100)  # ACL_TYPE_EXTENDED
+    if not acl:
+        number = ctypes.get_errno()
+        if number == errno.ENOENT:
+            file.stat()  # Distinguish an absent ACL from an absent file.
+            return None
+        raise OSError(number, os.strerror(number), file)
+    try:
+        size = libc.acl_size(acl)
+        if size < 0:
+            number = ctypes.get_errno()
+            raise OSError(number, os.strerror(number), file)
+        buffer = ctypes.create_string_buffer(size)
+        written = libc.acl_copy_ext(buffer, acl, size)
+        if written < 0:
+            number = ctypes.get_errno()
+            raise OSError(number, os.strerror(number), file)
+        return buffer.raw[:written]
+    finally:
+        if libc.acl_free(acl) != 0:
+            number = ctypes.get_errno()
+            raise OSError(number, os.strerror(number), file)
 
 
 @pytest.mark.parametrize("operation", WRITES)
@@ -101,14 +138,36 @@ def test_acl_xattrs_and_flags_survive_on_macos(tmp_path: Path, operation: str) -
     subprocess.run(["chmod", "+a", "user:nobody deny read", str(file)], check=True)
     subprocess.run(["xattr", "-w", "user.tag", "keep", str(file)], check=True)
     os.chflags(file, stat.UF_NODUMP)
+    before_acl = _acl_bytes(file)
+    assert before_acl is not None
 
     WRITES[operation](file)
 
-    listing = subprocess.run(["ls", "-le", str(file)], check=True, capture_output=True, text=True).stdout
-    assert "user:nobody deny read" in listing
+    assert _acl_bytes(file) == before_acl
     tag = subprocess.run(["xattr", "-p", "user.tag", str(file)], check=True, capture_output=True, text=True)
     assert tag.stdout.strip() == "keep"
     assert file.stat().st_flags & stat.UF_NODUMP
+
+
+@pytest.mark.skipif(sys.platform != "darwin", reason="macOS extended ACL serialization")
+def test_acl_oracle_distinguishes_principals_permissions_and_removed_acls(tmp_path: Path) -> None:
+    file = _ledger(tmp_path)
+    assert _acl_bytes(file) is None
+    subprocess.run(["chmod", "+a", "user:nobody deny read", str(file)], check=True)
+    original = _acl_bytes(file)
+    assert original is not None
+    assert _acl_bytes(file) == original
+
+    subprocess.run(["chmod", "-a#", "0", str(file)], check=True)
+    subprocess.run(["chmod", "+a", "user:nobody deny write", str(file)], check=True)
+    assert _acl_bytes(file) != original
+
+    subprocess.run(["chmod", "-a#", "0", str(file)], check=True)
+    subprocess.run(["chmod", "+a", "user:daemon deny read", str(file)], check=True)
+    assert _acl_bytes(file) != original
+
+    subprocess.run(["chmod", "-N", str(file)], check=True)
+    assert _acl_bytes(file) is None
 
 
 @pytest.mark.skipif(not sys.platform.startswith("linux"), reason="Linux user xattrs")

@@ -18,6 +18,7 @@ import shutil
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 
 import pytest
 
@@ -185,15 +186,20 @@ def last_command_line(script: str) -> int:
 
 
 def run_script(script: str, cwd: Path, env: dict[str, str]) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        ["bash", "-e", "-o", "pipefail", "-c", script],
-        cwd=cwd,
-        env=env,
-        stdin=subprocess.DEVNULL,
-        text=True,
-        capture_output=True,
-        timeout=120,
-    )
+    # A script file gives every Bash version the same one-based LINENO and
+    # prevents Bash 3.2's `-c` tail exec from bypassing the final ERR trap.
+    with NamedTemporaryFile(mode="w", encoding="utf-8", dir=cwd, prefix=".bea-doc-", suffix=".sh") as script_file:
+        script_file.write(script)
+        script_file.flush()
+        return subprocess.run(
+            ["bash", "-e", "-o", "pipefail", script_file.name],
+            cwd=cwd,
+            env=env,
+            stdin=subprocess.DEVNULL,
+            text=True,
+            capture_output=True,
+            timeout=120,
+        )
 
 
 def apply_cd(line: str, cwd: Path, root: Path) -> Path:
@@ -296,6 +302,74 @@ def write_doc(tmp_path: Path, body: str) -> Path:
     path = tmp_path / "SYN.md"
     path.write_text(body)
     return path
+
+
+@pytest.fixture(
+    params=sorted(
+        {
+            Path(path).resolve()
+            for path in ("/bin/bash", shutil.which("bash"), "/opt/homebrew/bin/bash", "/usr/local/bin/bash")
+            if path and os.access(path, os.X_OK)
+        }
+    ),
+    ids=str,
+)
+def bash_runner_env(request: pytest.FixtureRequest, runner_env: dict[str, str]) -> dict[str, str]:
+    """Exercise both the system shell and any installed newer Bash."""
+    env = dict(runner_env)
+    env["PATH"] = str(request.param.parent) + os.pathsep + env["PATH"]
+    assert Path(shutil.which("bash", path=env["PATH"]) or "").resolve() == request.param
+    return env
+
+
+@pytest.mark.parametrize("command, exit_code", [("/usr/bin/false", 1), ("bea nosuchcommand", 2)])
+def test_final_external_failure_reports_its_exact_script_line(
+    tmp_path: Path, bash_runner_env: dict[str, str], command: str, exit_code: int
+) -> None:
+    script = FAILED_LINE_TRAP + "# fixture header\nprintf 'before\\n'\n\n" + command
+    result = run_script(script, tmp_path, bash_runner_env)
+    assert result.returncode == exit_code
+    assert result.stdout == "before\n"
+    assert re.findall(r"__bea_doc_failed_line=(\d+)", result.stderr) == ["5"]
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        "bea nosuchcommand",
+        "bea nosuchcommand | cat",
+        "cat <<'EOF'\nheredoc output\nEOF\n\n# failure after the heredoc\nbea nosuchcommand",
+    ],
+    ids=["external", "pipeline", "heredoc"],
+)
+def test_expected_final_failure_runs_through_its_recorded_line(
+    tmp_path: Path, bash_runner_env: dict[str, str], body: str
+) -> None:
+    path = write_doc(tmp_path, f"```bash\n{body}\n```\n")
+    run_doc("SYN.md", path, DocPlan(expect={0: (2, ["No such command"])}), tmp_path, bash_runner_env)
+
+
+def test_an_earlier_failure_with_the_expected_status_does_not_pass_the_fence(
+    tmp_path: Path, bash_runner_env: dict[str, str]
+) -> None:
+    path = write_doc(tmp_path, "```bash\nbea nosuchcommand\nprintf 'unreachable\\n'\nbea nosuchcommand\n```\n")
+    plan = DocPlan(expect={0: (2, ["No such command"])})
+    with pytest.raises(AssertionError, match=r"expected exit 2 from its last command, but it failed at script line 1;"):
+        run_doc("SYN.md", path, plan, tmp_path, bash_runner_env)
+
+
+@pytest.mark.parametrize("command, exit_code", [("true", 0), ("/usr/bin/false", 1)])
+def test_temporary_artifacts_are_cleaned_without_removing_script_output(
+    tmp_path: Path, bash_runner_env: dict[str, str], command: str, exit_code: int
+) -> None:
+    before = set(tmp_path.iterdir())
+    # stdin stays at EOF rather than supplying the script to `cat`.
+    result = run_script("cat\nprintf 'owned' > kept.txt\n" + command, tmp_path, bash_runner_env)
+    assert result.returncode == exit_code
+    assert result.stdout == ""
+    output = tmp_path / "kept.txt"
+    assert output.read_text() == "owned"
+    assert set(tmp_path.iterdir()) == before | {output}
 
 
 def test_failing_command_reports_document_and_line(tmp_path: Path, runner_env: dict[str, str]) -> None:
