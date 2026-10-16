@@ -30,6 +30,13 @@ There is no database and no user table: auth is Basic/token credentials
 forwarded verbatim to Gitea, which is the sole source of truth for identity
 and repository access.
 
+Internal JSON requests have a bounded **2 MiB** body allowance, including the
+base64 content and request envelope. This accommodates a normally encoded
+1 MiB file; it is a transport limit, separate from the gateway's decoded-file
+policy. It does not impose a decoded upload cap on generated or merged ledger
+contents. URL-encoded forms retain the parser's default **56 KiB** limit, and
+multipart routes keep their existing route-specific handling.
+
 ## Report coverage
 
 Income-statement and overview flow series, account-report interval totals,
