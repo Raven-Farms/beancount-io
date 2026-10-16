@@ -29,14 +29,20 @@ interface LedgerDirectoryViewProps {
   currentPath: string;
 }
 
+const DirectoryHeading = ({ currentPath }: { currentPath?: string }) => (
+  <h1 className="text-lg sm:text-xl font-semibold">
+    <LedgerFileBreadcrumb type="dir" path={currentPath} />
+  </h1>
+);
+
 /**
  * Loading component for directory view
  */
-const DirectoryLoading = () => {
+const DirectoryLoading = ({ currentPath }: { currentPath: string }) => {
   return (
     <div>
       <div className="flex items-center justify-between mb-2 md:mb-4">
-        <Skeleton className="h-5 w-48" />
+        <DirectoryHeading currentPath={currentPath} />
         <div className="flex items-center gap-2">
           <Skeleton className="h-8 w-8 sm:w-24" />
           <Skeleton className="h-8 w-8 sm:w-24" />
@@ -72,7 +78,7 @@ const DirectoryError = ({ currentPath }: { currentPath?: string }) => {
   return (
     <div>
       <div className="mb-4">
-        <LedgerFileBreadcrumb type="dir" path={currentPath} />
+        <DirectoryHeading currentPath={currentPath} />
       </div>
       <div className="flex items-center justify-center py-8">
         <div className="text-center">
@@ -160,7 +166,7 @@ export default function LedgerDirectoryView({
   );
 
   if (isLoading) {
-    return <DirectoryLoading />;
+    return <DirectoryLoading currentPath={currentPath} />;
   }
 
   if (error) {
@@ -170,7 +176,7 @@ export default function LedgerDirectoryView({
   return (
     <div>
       <div className="flex items-center justify-between mb-2 md:mb-4">
-        <LedgerFileBreadcrumb type="dir" path={currentPath} />
+        <DirectoryHeading currentPath={currentPath} />
         <div className="flex items-center gap-2">
           <div className="hidden sm:flex">
             <LedgerCloneUrlMenu ledgerId={ledgerId} />
@@ -309,7 +315,11 @@ export default function LedgerDirectoryView({
       )}
       {readmeFile && (
         <div className="mt-4">
-          <ReadmeCard ledgerId={ledgerId} path={readmeFile.path} />
+          <ReadmeCard
+            ledgerId={ledgerId}
+            path={readmeFile.path}
+            headingOffset={1}
+          />
         </div>
       )}
     </div>

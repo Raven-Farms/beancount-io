@@ -173,6 +173,12 @@ describe("ledger route metadata", () => {
     expect(file.meta[0]).toEqual({
       title: "accounts/stock.bean · Files - stock-example",
     });
+    expect(values(file, "og:title")).toEqual([
+      "accounts/stock.bean · Files - stock-example",
+    ]);
+    expect(values(file, "twitter:title")).toEqual([
+      "accounts/stock.bean · Files - stock-example",
+    ]);
     expect(values(file, "robots")).toEqual(["noindex, follow"]);
     expect(file.links).toEqual([
       {
@@ -181,6 +187,43 @@ describe("ledger route metadata", () => {
       },
     ]);
   });
+
+  it.each([undefined, "", "FY2024", "FY2024/Quarter 1", "帳簿/給与 明細"])(
+    "names the Files tree path %s in document and social titles without changing indexing policy",
+    (path) => {
+      const input = args();
+      const params: {
+        ledgerOwner: string;
+        ledgerName: string;
+        [key: string]: string;
+      } = {
+        ...input.params,
+        branch: "main",
+      };
+      if (path !== undefined) params._splat = path;
+      const head = createLedgerHead(
+        {
+          ...input,
+          params,
+          match: {
+            ...input.match,
+            routeId: "/ledger/$ledgerOwner/$ledgerName/files/tree/$branch/$",
+            pathname: `/ledger/open_ledger/stock-example/files/tree/main${path ? `/${path.split("/").map(encodeURIComponent).join("/")}` : ""}`,
+          },
+        },
+        "ledgerFiles",
+        { noIndex: true },
+      );
+      const title = path
+        ? `${path} · Files - stock-example`
+        : "Files - stock-example";
+      expect(head.meta.filter((item) => "title" in item)).toEqual([{ title }]);
+      expect(values(head, "og:title")).toEqual([title]);
+      expect(values(head, "twitter:title")).toEqual([title]);
+      expect(values(head, "robots")).toEqual(["noindex, follow"]);
+      expect(head.links).toEqual([]);
+    },
+  );
 
   it("keeps entry metadata generic and preserves its canonical destination", () => {
     const input = args({

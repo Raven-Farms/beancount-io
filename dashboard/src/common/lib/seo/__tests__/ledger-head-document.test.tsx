@@ -16,6 +16,7 @@ import { createLocalization } from "@/i18n/init";
 import type { RouterContext } from "@/common/types/router-context";
 import NotFoundPage from "@/common/root-route/not-found-page";
 import { Route as RootRoute } from "@/routes/__root";
+import { Route as FilesTreeRoute } from "@/routes/ledger.$ledgerOwner.$ledgerName.files.tree.$branch.$";
 import { createLedgerHead } from "../ledger-head";
 
 vi.mock("@/common/root-route/error-page", () => ({ default: () => null }));
@@ -28,7 +29,11 @@ vi.mock("@/common/root-route/root-component", () => ({
 vi.mock("@/common/server-fn", () => ({ fetchUserProfile: vi.fn() }));
 vi.mock("@/i18n/detect-language", () => ({ detectLanguage: () => "en" }));
 
-function testRouter(missingLedger = false, isServer = false) {
+function testRouter(
+  missingLedger = false,
+  isServer = false,
+  initialEntry = "/ledger/open_ledger/stock-example?time=2026",
+) {
   const context: RouterContext = {
     localization: createLocalization(),
     client: {
@@ -75,12 +80,20 @@ function testRouter(missingLedger = false, isServer = false) {
     head: (args) => createLedgerHead(args, "ledgerHoldings"),
     component: () => <main>Holdings</main>,
   });
+  const files = createRoute({
+    getParentRoute: () => ledger,
+    path: "files/tree/$branch/$",
+    head: FilesTreeRoute.options.head,
+    component: () => <main>Directory fixture</main>,
+  });
   const router = createRouter({
-    routeTree: root.addChildren([ledger.addChildren([overview, holdings])]),
+    routeTree: root.addChildren([
+      ledger.addChildren([overview, holdings, files]),
+    ]),
     context,
     isServer,
     history: createMemoryHistory({
-      initialEntries: ["/ledger/open_ledger/stock-example?time=2026"],
+      initialEntries: [initialEntry],
     }),
   });
   // Start sets this on both server and hydrated client, keeping the outer
@@ -111,6 +124,40 @@ function assertHead(
 }
 
 describe("ledger document head ownership", () => {
+  it.each(["", "帳簿/給与 明細"])(
+    "renders the actual Files tree route head for path %s in the SSR document",
+    async (path) => {
+      const pathname = `/ledger/open_ledger/stock-example/files/tree/main${path ? `/${path.split("/").map(encodeURIComponent).join("/")}` : ""}`;
+      const router = testRouter(false, true, pathname);
+      await router.load();
+      expect(router.state.matches.at(-1)?.routeId).toBe(
+        "/ledger/$ledgerOwner/$ledgerName/files/tree/$branch/$",
+      );
+      const html = renderToString(<RouterProvider router={router} />);
+      const doc = new DOMParser().parseFromString(html, "text/html");
+      const title = path
+        ? `${path} · Files - stock-example`
+        : "Files - stock-example";
+      expect(
+        Array.from(doc.querySelectorAll("title"), (node) => node.textContent),
+      ).toEqual([title]);
+      expect(
+        doc.querySelector('meta[property="og:title"]')?.getAttribute("content"),
+      ).toBe(title);
+      expect(
+        doc
+          .querySelector('meta[name="twitter:title"]')
+          ?.getAttribute("content"),
+      ).toBe(title);
+      expect(
+        doc.querySelector('meta[name="robots"]')?.getAttribute("content"),
+      ).toBe("noindex, follow");
+      expect(
+        doc.querySelectorAll('link[rel="canonical"], link[rel="alternate"]'),
+      ).toHaveLength(0);
+    },
+  );
+
   it("keeps one title and description through SSR, hydration and report/back navigation", async () => {
     const server = testRouter(false, true);
     await server.load();

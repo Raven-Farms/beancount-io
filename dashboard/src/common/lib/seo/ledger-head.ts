@@ -112,8 +112,9 @@ export function createLedgerHead(
   const metadata =
     overview && ledger?.private === false ? presentation : translated;
   const isFileBlob = match.routeId?.endsWith("/files/blob/$branch/$");
+  const isFileTree = match.routeId?.endsWith("/files/tree/$branch/$");
   const title = withLedgerFileTitlePrefix(
-    isFileBlob ? (params._splat ?? "") : "",
+    isFileBlob || isFileTree ? (params._splat ?? "") : "",
     metadata.title,
   );
   const { description } = metadata;
