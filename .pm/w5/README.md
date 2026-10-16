@@ -125,6 +125,8 @@
 - [553 — Shared `add open` recipe fails under `nounused`; the documented two-step needs `--allow-errors` the skill forbids](./553.md)
 - [554 — Reconcile diagnostic reads refuse on an already-red ledger; no skill allows `--allow-errors` on reads](./554.md)
 - [555 — `dedup.md` import-id grammar omits the lot/price `bea` now hashes (sibling of w5/349)](./555.md)
+- [556 — Same-day reciprocal prices: reports and `query` value differently and line order decides; `add price` allows it](./556.md)
+- [557 — Missing-price summary gives a misleading "no price before DATE" for cash never routed through a cost currency](./557.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
