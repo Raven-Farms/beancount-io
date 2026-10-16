@@ -81,7 +81,7 @@
 ## Inbox
 
 - [490](./490.md) — Make the advertised 1 MiB file upload reachable through the gateway request limit
-- [491](./491.md) — "Show more" buttons drop keyboard focus to the page body each time they load
+- [491](./491.md) — Paging controls ("Show more", Journal page buttons) drop keyboard focus to the page body
 
 ## Dropped
 
