@@ -7,6 +7,23 @@ export interface TranslationEntry {
 }
 
 const ukOverview: Record<string, TranslationEntry> = {
+  "page.overview.chartBreakdown": {
+    message: "Розподіл",
+    description: "Disclosure label for the distribution chart data table",
+  },
+  "page.overview.chartFlows": {
+    message: "Потоки",
+    description: "Disclosure label for the cash flow Sankey links table",
+  },
+  "page.overview.chartShare": {
+    message: "Частка від загальної суми",
+    description: "Column header for each plotted slice share of the total",
+  },
+  "page.overview.chartMagnitudeShare": {
+    message: "Частка від суми абсолютних значень",
+    description:
+      "Column header for the absolute value share of the total magnitude in a signed distribution",
+  },
   "page.overview.netWorthByMonth": {
     message: "Чисті активи за місяцями",
     description:

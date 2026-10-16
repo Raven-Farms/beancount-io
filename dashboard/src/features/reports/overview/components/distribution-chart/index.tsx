@@ -40,12 +40,14 @@ export function DistributionChart({
           title={title}
           description={description}
           items={items}
+          unit={distribution.unit}
         />
       ) : (
         <DistributionPie
           title={title}
           description={description}
           items={items}
+          unit={distribution.unit}
         />
       )}
       <ChartUnitScope unit={distribution.unit} units={distribution.units} />

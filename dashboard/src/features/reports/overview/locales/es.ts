@@ -7,6 +7,23 @@ export interface TranslationEntry {
 }
 
 const esOverview: Record<string, TranslationEntry> = {
+  "page.overview.chartBreakdown": {
+    message: "Desglose",
+    description: "Disclosure label for the distribution chart data table",
+  },
+  "page.overview.chartFlows": {
+    message: "Flujos",
+    description: "Disclosure label for the cash flow Sankey links table",
+  },
+  "page.overview.chartShare": {
+    message: "Proporción del total",
+    description: "Column header for each plotted slice share of the total",
+  },
+  "page.overview.chartMagnitudeShare": {
+    message: "Proporción del total absoluto",
+    description:
+      "Column header for the absolute value share of the total magnitude in a signed distribution",
+  },
   "page.overview.netWorthByMonth": {
     message: "Patrimonio neto por mes",
     description:

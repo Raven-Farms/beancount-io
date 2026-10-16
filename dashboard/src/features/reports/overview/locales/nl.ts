@@ -7,6 +7,23 @@ export interface TranslationEntry {
 }
 
 const nlOverview: Record<string, TranslationEntry> = {
+  "page.overview.chartBreakdown": {
+    message: "Uitsplitsing",
+    description: "Disclosure label for the distribution chart data table",
+  },
+  "page.overview.chartFlows": {
+    message: "Geldstromen",
+    description: "Disclosure label for the cash flow Sankey links table",
+  },
+  "page.overview.chartShare": {
+    message: "Aandeel van totaal",
+    description: "Column header for each plotted slice share of the total",
+  },
+  "page.overview.chartMagnitudeShare": {
+    message: "Aandeel van absoluut totaal",
+    description:
+      "Column header for the absolute value share of the total magnitude in a signed distribution",
+  },
   "page.overview.netWorthByMonth": {
     message: "Nettovermogen per maand",
     description:

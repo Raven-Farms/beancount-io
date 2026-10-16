@@ -9,17 +9,22 @@ import { ReactECharts } from "@/common/components/react-echarts";
 import { useFormatNumber } from "@/common/hooks/use-format-number";
 import { useIsDarkTheme } from "@/common/hooks/use-theme";
 import type { DistributionItem } from "./utils";
+import { useId } from "react";
+import { DistributionDataTable } from "./distribution-data-table";
 
 export function DistributionPie({
   title,
   description,
   items,
+  unit,
 }: {
   title: string;
   description?: string;
   items: DistributionItem[];
+  unit?: string | null;
 }) {
   const isDark = useIsDarkTheme();
+  const titleId = useId();
   const formatNum = useFormatNumber();
 
   const option = {
@@ -69,7 +74,7 @@ export function DistributionPie({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{title}</CardTitle>
+        <CardTitle id={titleId}>{title}</CardTitle>
         <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent>
@@ -78,6 +83,11 @@ export function DistributionPie({
           isEmpty={items.length === 0}
           style={{ height: "250px", width: "100%" }}
           className="w-full"
+        />
+        <DistributionDataTable
+          data={option.series[0].data}
+          unit={unit}
+          labelledBy={titleId}
         />
       </CardContent>
     </Card>

@@ -7,6 +7,23 @@ export interface TranslationEntry {
 }
 
 const skOverview: Record<string, TranslationEntry> = {
+  "page.overview.chartBreakdown": {
+    message: "Rozpis",
+    description: "Disclosure label for the distribution chart data table",
+  },
+  "page.overview.chartFlows": {
+    message: "Toky",
+    description: "Disclosure label for the cash flow Sankey links table",
+  },
+  "page.overview.chartShare": {
+    message: "Podiel na celku",
+    description: "Column header for each plotted slice share of the total",
+  },
+  "page.overview.chartMagnitudeShare": {
+    message: "Podiel na súčte absolútnych hodnôt",
+    description:
+      "Column header for the absolute value share of the total magnitude in a signed distribution",
+  },
   "page.overview.netWorthByMonth": {
     message: "Čisté imanie podľa mesiacov",
     description:

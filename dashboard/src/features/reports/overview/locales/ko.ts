@@ -7,6 +7,23 @@ export interface TranslationEntry {
 }
 
 const koOverview: Record<string, TranslationEntry> = {
+  "page.overview.chartBreakdown": {
+    message: "상세 내역",
+    description: "Disclosure label for the distribution chart data table",
+  },
+  "page.overview.chartFlows": {
+    message: "자금 흐름",
+    description: "Disclosure label for the cash flow Sankey links table",
+  },
+  "page.overview.chartShare": {
+    message: "합계 대비 비중",
+    description: "Column header for each plotted slice share of the total",
+  },
+  "page.overview.chartMagnitudeShare": {
+    message: "절댓값 합계 대비 비중",
+    description:
+      "Column header for the absolute value share of the total magnitude in a signed distribution",
+  },
   "page.overview.netWorthByMonth": {
     message: "월별 순자산",
     description:

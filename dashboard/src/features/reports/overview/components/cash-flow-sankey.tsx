@@ -9,6 +9,15 @@ import { ChartUnitScope } from "./chart-unit-scope";
 import type { AccountMetaMap } from "@/features/reports/cash-flow/lib/model";
 import type { SerializableTreeNode } from "@/graphql/definitions";
 import { CONFINED_TOOLTIP } from "@/common/lib/chart/tooltip";
+import { ChartDataTable } from "../../components/chart-data-table";
+import { Amount } from "@/common/components/amount";
+import {
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/common/components/ui/table";
 
 const SANKEY_HEIGHT = "400px";
 
@@ -161,6 +170,38 @@ export default function CashFlowSankey({
         className="w-full"
       />
       <ChartUnitScope unit={sankeyData.unit} units={sankeyData.units} />
+      {option.series[0].links.length > 0 && (
+        <ChartDataTable
+          label={t("page.overview.cashFlow")}
+          summary={t("page.overview.chartFlows")}
+        >
+          <TableHeader>
+            <TableRow>
+              <TableHead scope="col">{t("common.from")}</TableHead>
+              <TableHead scope="col">{t("common.to")}</TableHead>
+              <TableHead scope="col" className="text-end">
+                {t("page.accountReport.periodAmount")}
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {option.series[0].links.map((link, index) => (
+              <TableRow key={`${link.source}-${link.target}-${index}`}>
+                <TableHead scope="row" className="font-normal">
+                  {link.source}
+                </TableHead>
+                <TableCell>{link.target}</TableCell>
+                <TableCell className="text-end font-mono text-sm tabular-nums">
+                  <Amount>
+                    {String(link.value)}
+                    {sankeyData.unit ? ` ${sankeyData.unit}` : ""}
+                  </Amount>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </ChartDataTable>
+      )}
     </div>
   );
 }

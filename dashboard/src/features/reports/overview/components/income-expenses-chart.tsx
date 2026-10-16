@@ -10,6 +10,15 @@ import {
   collectUnits,
 } from "../lib/unit-amounts";
 import { ChartUnitScope } from "./chart-unit-scope";
+import { ChartDataTable } from "../../components/chart-data-table";
+import { Amount } from "@/common/components/amount";
+import {
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/common/components/ui/table";
 
 export function IncomeExpensesChart({
   income,
@@ -98,6 +107,63 @@ export function IncomeExpensesChart({
         className="w-full"
       />
       <ChartUnitScope unit={unit} units={units} />
+      {unit && dates.length > 0 && (
+        <ChartDataTable
+          label={t("page.reports.incomeVsExpenses")}
+          summary={t("page.accountReport.periodData")}
+        >
+          <TableHeader>
+            <TableRow>
+              <TableHead scope="col">
+                {t("page.accountReport.period")}
+              </TableHead>
+              <TableHead scope="col" className="text-end">
+                {t("common.income")}
+              </TableHead>
+              <TableHead scope="col" className="text-end">
+                {t("common.expenses")}
+              </TableHead>
+              <TableHead scope="col" className="text-end">
+                {t("common.netProfit")}
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {option.xAxis.data.map((date, index) => {
+              const income = option.series[0].data[index];
+              const expenses = option.series[1].data[index];
+              const net =
+                income === undefined || expenses === undefined
+                  ? undefined
+                  : income - expenses;
+              return (
+                <TableRow key={date}>
+                  <TableHead
+                    scope="row"
+                    className="whitespace-nowrap font-mono text-xs tabular-nums"
+                  >
+                    {date}
+                  </TableHead>
+                  {[income, expenses, net].map((value, column) => (
+                    <TableCell
+                      key={column}
+                      className="text-end font-mono text-sm tabular-nums"
+                    >
+                      {value === undefined ? (
+                        "—"
+                      ) : (
+                        <Amount>
+                          {String(value)} {unit}
+                        </Amount>
+                      )}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </ChartDataTable>
+      )}
     </div>
   );
 }

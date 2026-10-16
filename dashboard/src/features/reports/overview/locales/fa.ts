@@ -7,6 +7,23 @@ export interface TranslationEntry {
 }
 
 const faOverview: Record<string, TranslationEntry> = {
+  "page.overview.chartBreakdown": {
+    message: "جزئیات",
+    description: "Disclosure label for the distribution chart data table",
+  },
+  "page.overview.chartFlows": {
+    message: "جریان‌ها",
+    description: "Disclosure label for the cash flow Sankey links table",
+  },
+  "page.overview.chartShare": {
+    message: "سهم از کل",
+    description: "Column header for each plotted slice share of the total",
+  },
+  "page.overview.chartMagnitudeShare": {
+    message: "سهم از مجموع قدرمطلق‌ها",
+    description:
+      "Column header for the absolute value share of the total magnitude in a signed distribution",
+  },
   "page.overview.netWorthByMonth": {
     message: "دارایی خالص به تفکیک ماه",
     description:

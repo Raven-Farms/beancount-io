@@ -7,6 +7,23 @@ export interface TranslationEntry {
 }
 
 const ruOverview: Record<string, TranslationEntry> = {
+  "page.overview.chartBreakdown": {
+    message: "Распределение",
+    description: "Disclosure label for the distribution chart data table",
+  },
+  "page.overview.chartFlows": {
+    message: "Потоки",
+    description: "Disclosure label for the cash flow Sankey links table",
+  },
+  "page.overview.chartShare": {
+    message: "Доля от общей суммы",
+    description: "Column header for each plotted slice share of the total",
+  },
+  "page.overview.chartMagnitudeShare": {
+    message: "Доля от суммы абсолютных значений",
+    description:
+      "Column header for the absolute value share of the total magnitude in a signed distribution",
+  },
   "page.overview.netWorthByMonth": {
     message: "Чистые активы по месяцам",
     description:

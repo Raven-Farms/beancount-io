@@ -8,20 +8,24 @@ import {
 import { ReactECharts } from "@/common/components/react-echarts";
 import { defaultSplitLine } from "@/common/components/react-echarts/utils";
 import { useFormatNumber } from "@/common/hooks/use-format-number";
-import { useMemo } from "react";
+import { useId, useMemo } from "react";
 import { getChartColors, getLossColor } from "@/common/lib/chart/color";
 import type { DistributionItem } from "./utils";
+import { DistributionDataTable } from "./distribution-data-table";
 
 export function DistributionBar({
   title,
   description,
   items,
+  unit,
 }: {
   title: string;
   description?: string;
   items: DistributionItem[];
+  unit?: string | null;
 }) {
   const formatNum = useFormatNumber();
+  const titleId = useId();
   // Negative bars use the loss red, so it must not also appear as a series
   // color — the palette's own red (--chart-8) is the same value.
   const negativeColor = getLossColor();
@@ -98,7 +102,7 @@ export function DistributionBar({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{title}</CardTitle>
+        <CardTitle id={titleId}>{title}</CardTitle>
         <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent>
@@ -107,6 +111,12 @@ export function DistributionBar({
           isEmpty={sortedItems.length === 0}
           style={{ height: chartHeight, width: "100%" }}
           className="w-full"
+        />
+        <DistributionDataTable
+          data={option.series[0].data}
+          unit={unit}
+          labelledBy={titleId}
+          absoluteShare
         />
       </CardContent>
     </Card>

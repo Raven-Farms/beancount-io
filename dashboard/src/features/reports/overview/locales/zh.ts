@@ -7,6 +7,23 @@ export interface TranslationEntry {
 }
 
 const zhOverview: Record<string, TranslationEntry> = {
+  "page.overview.chartBreakdown": {
+    message: "明细",
+    description: "Disclosure label for the distribution chart data table",
+  },
+  "page.overview.chartFlows": {
+    message: "资金流",
+    description: "Disclosure label for the cash flow Sankey links table",
+  },
+  "page.overview.chartShare": {
+    message: "总额占比",
+    description: "Column header for each plotted slice share of the total",
+  },
+  "page.overview.chartMagnitudeShare": {
+    message: "绝对值总额占比",
+    description:
+      "Column header for the absolute value share of the total magnitude in a signed distribution",
+  },
   "page.overview.netWorthByMonth": {
     message: "每月净资产",
     description:

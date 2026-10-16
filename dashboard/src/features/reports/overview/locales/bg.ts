@@ -7,6 +7,23 @@ export interface TranslationEntry {
 }
 
 const bgOverview: Record<string, TranslationEntry> = {
+  "page.overview.chartBreakdown": {
+    message: "Разбивка",
+    description: "Disclosure label for the distribution chart data table",
+  },
+  "page.overview.chartFlows": {
+    message: "Потоци",
+    description: "Disclosure label for the cash flow Sankey links table",
+  },
+  "page.overview.chartShare": {
+    message: "Дял от общата сума",
+    description: "Column header for each plotted slice share of the total",
+  },
+  "page.overview.chartMagnitudeShare": {
+    message: "Дял от общата абсолютна стойност",
+    description:
+      "Column header for the absolute value share of the total magnitude in a signed distribution",
+  },
   "page.overview.netWorthByMonth": {
     message: "Нетна стойност по месеци",
     description:

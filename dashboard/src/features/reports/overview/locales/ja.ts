@@ -7,6 +7,23 @@ export interface TranslationEntry {
 }
 
 const jaOverview: Record<string, TranslationEntry> = {
+  "page.overview.chartBreakdown": {
+    message: "内訳",
+    description: "Disclosure label for the distribution chart data table",
+  },
+  "page.overview.chartFlows": {
+    message: "資金フロー",
+    description: "Disclosure label for the cash flow Sankey links table",
+  },
+  "page.overview.chartShare": {
+    message: "合計に対する割合",
+    description: "Column header for each plotted slice share of the total",
+  },
+  "page.overview.chartMagnitudeShare": {
+    message: "絶対値合計に対する割合",
+    description:
+      "Column header for the absolute value share of the total magnitude in a signed distribution",
+  },
   "page.overview.netWorthByMonth": {
     message: "月別の純資産",
     description:
