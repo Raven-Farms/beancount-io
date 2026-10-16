@@ -80,7 +80,6 @@
 
 ## Inbox
 
-- [486](./486.md) — Create File path validation: trim whitespace, explain empty segments correctly, and refuse `.git/` paths
 - [487](./487.md) — Upload Files labels a file "Exceeds 1MB limit" and then uploads it anyway
 - [488](./488.md) — Return focus to "More actions" after dismissing the Delete File dialog
 
