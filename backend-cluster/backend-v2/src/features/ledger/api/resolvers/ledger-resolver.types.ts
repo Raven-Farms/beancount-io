@@ -143,7 +143,10 @@ export class CreateLedgerFileInput {
   @Field(() => String)
   path: string;
 
-  @Field(() => String)
+  @Field(() => String, {
+    description:
+      "Base64-encoded file content, at most 1 MiB (1,048,576 decoded bytes).",
+  })
   content: string;
 
   @Field(() => String, { nullable: true })
@@ -155,7 +158,10 @@ export class UpdateLedgerFileInput {
   @Field(() => String)
   path: string;
 
-  @Field(() => String)
+  @Field(() => String, {
+    description:
+      "Base64-encoded full replacement content, at most 1 MiB (1,048,576 decoded bytes).",
+  })
   content: string;
 
   @Field(() => String)

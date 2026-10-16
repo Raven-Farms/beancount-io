@@ -344,6 +344,14 @@ own ledger:
 }
 ```
 
+Each created or replaced file, including the complete result of an `update`
+replacement, must be at most **1 MiB (1,048,576 UTF-8 bytes)**. The same size
+check applies to a preview. Reads of existing larger files remain available;
+generated directive appends are a separate operation and may grow a ledger file
+beyond this explicit-file limit. The complete JSON request has an independent
+**2 MiB** cap, including JSON escaping, the protocol envelope and all batch
+items. Split large batches into separate requests.
+
 `dry_run` defaults to `false`. With `true`, the tool reads existing files as
 needed, checks replacement matches, constructs operations, and runs the same
 write authorization and repository-path validation as the commit — a caller

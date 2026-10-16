@@ -13,6 +13,7 @@ import {
 } from "@/features/ledger/utils/authorize-ledger";
 import { AUTHORIZATION_ACTIONS } from "@/server/api/authorization/authorization-contract";
 import { assertSafeRepoPath } from "@/features/ledger/utils/safe-repo-path";
+import { assertExplicitFileContentSize } from "@/features/ledger/utils/explicit-file-size";
 import { BadUserInputError, ConflictError } from "@/shared/errors";
 
 type CommitUser = {
@@ -41,6 +42,19 @@ export type LedgerFileWithContent = {
   sha: string;
 };
 
+type FileChangesParams = {
+  ledgerId: string;
+  identity: Identity;
+  operations: LedgerChangeFileOperation[];
+  message: string;
+  dryRun?: boolean;
+};
+
+/** Internal commits of generated/merged ledger text, not explicit file uploads. */
+export interface ILedgerGeneratedFileWriter {
+  changeGeneratedFiles(params: FileChangesParams): Promise<void>;
+}
+
 export interface ILedgerRepoService {
   getLatestCommit(params: {
     ledgerId: string;
@@ -66,17 +80,12 @@ export interface ILedgerRepoService {
    * Commit a batch of file create/update/delete operations atomically.
    * `content` is plain UTF-8 text, the same as `getFilesContent` returns;
    * the base64 the ledger service wants is this service's business.
-   * `dryRun` runs the same authorization and path validation, then stops
+   * Each supplied file content is limited to 1 MiB of UTF-8 bytes.
+   * `dryRun` runs the same authorization, path and size validation, then stops
    * before the repository commit — so a preview refuses exactly what the
    * write would.
    */
-  changeFiles(params: {
-    ledgerId: string;
-    identity: Identity;
-    operations: LedgerChangeFileOperation[];
-    message: string;
-    dryRun?: boolean;
-  }): Promise<void>;
+  changeFiles(params: FileChangesParams): Promise<void>;
 
   /**
    * bean-check over projected file contents without committing: `content`
@@ -93,7 +102,7 @@ export interface ILedgerRepoService {
 
 export class LedgerRepoService
   extends AuthorizedLedgerService
-  implements ILedgerRepoService
+  implements ILedgerRepoService, ILedgerGeneratedFileWriter
 {
   async getLatestCommit(params: {
     ledgerId: string;
@@ -229,14 +238,29 @@ export class LedgerRepoService
     }));
   }
 
-  async changeFiles(params: {
-    ledgerId: string;
-    identity: Identity;
-    operations: LedgerChangeFileOperation[];
-    message: string;
-    dryRun?: boolean;
-  }): Promise<void> {
-    const { ledgerId, identity, operations, message, dryRun = false } = params;
+  async changeFiles(params: FileChangesParams): Promise<void> {
+    await this.authorizeFileChanges(params);
+    params.operations.forEach((operation, index) => {
+      if (operation.content !== null && operation.content !== undefined) {
+        assertExplicitFileContentSize(
+          operation.content,
+          "utf8",
+          `operations[${index}].content`,
+        );
+      }
+    });
+    await this.commitFileChanges(params);
+  }
+
+  // Excluded from ILedgerRepoService: only composition injects this capability
+  // into the append workflow. Generated merges retain all other write guards.
+  async changeGeneratedFiles(params: FileChangesParams): Promise<void> {
+    await this.authorizeFileChanges(params);
+    await this.commitFileChanges(params);
+  }
+
+  private async authorizeFileChanges(params: FileChangesParams): Promise<void> {
+    const { ledgerId, identity, operations } = params;
     await authorizeLedger(
       identity,
       ledgerId,
@@ -252,6 +276,10 @@ export class LedgerRepoService
         );
       }
     });
+  }
+
+  private async commitFileChanges(params: FileChangesParams): Promise<void> {
+    const { ledgerId, identity, operations, message, dryRun = false } = params;
     const { ledgerOwner, ledgerName } = parseLedgerId(ledgerId);
     const favaApiClient = await this.favaClientFactory.getPublicApiClient(
       ledgerId,

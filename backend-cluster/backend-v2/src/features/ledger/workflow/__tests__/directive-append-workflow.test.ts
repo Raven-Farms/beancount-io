@@ -47,7 +47,7 @@ function fixture(
       async ({ overlays }: { overlays: unknown[] }) =>
         overlays.length === 0 ? [] : (options.projectedErrors ?? []),
     ),
-    changeFiles: jest.fn(
+    changeGeneratedFiles: jest.fn(
       async (_params: { operations: { path: string; content?: string }[] }) =>
         undefined,
     ),
@@ -93,7 +93,7 @@ describe("DirectiveAppendWorkflow", () => {
     expect(result.success).toBe(true);
     // The path the ledger's routing rules produced — never named by the
     // caller — arrives at the guarded write, which is the whole point.
-    expect(ledgerRepo.changeFiles).toHaveBeenCalledWith(
+    expect(ledgerRepo.changeGeneratedFiles).toHaveBeenCalledWith(
       expect.objectContaining({
         ledgerId: LEDGER_ID,
         identity: IDENTITY,
@@ -115,7 +115,7 @@ describe("DirectiveAppendWorkflow", () => {
       ledgerId: LEDGER_ID,
       input: { text: TXN },
     });
-    const { operations } = ledgerRepo.changeFiles.mock.calls[0][0];
+    const { operations } = ledgerRepo.changeGeneratedFiles.mock.calls[0][0];
     expect(operations[0].content).toContain('2026-02-05 * "Cafe"');
   });
 
@@ -128,7 +128,7 @@ describe("DirectiveAppendWorkflow", () => {
       ledgerId: LEDGER_ID,
       input: { text: TXN },
     });
-    expect(ledgerRepo.changeFiles).toHaveBeenCalledWith(
+    expect(ledgerRepo.changeGeneratedFiles).toHaveBeenCalledWith(
       expect.objectContaining({
         operations: [
           expect.objectContaining({
@@ -154,7 +154,7 @@ describe("DirectiveAppendWorkflow", () => {
         input: { text: TXN },
       }),
     ).rejects.toMatchObject({ metadata: { residual: "1.00 USD" } });
-    expect(ledgerRepo.changeFiles).not.toHaveBeenCalled();
+    expect(ledgerRepo.changeGeneratedFiles).not.toHaveBeenCalled();
   });
 
   it("commits anyway when the caller says allowInvalid and means it", async () => {
@@ -168,7 +168,7 @@ describe("DirectiveAppendWorkflow", () => {
       input: { text: TXN, allowInvalid: true },
     });
     expect(result.newErrors).toHaveLength(1);
-    expect(ledgerRepo.changeFiles).toHaveBeenCalled();
+    expect(ledgerRepo.changeGeneratedFiles).toHaveBeenCalled();
   });
 
   it("leaves the repository untouched on a dry run, and returns the diff", async () => {
@@ -180,7 +180,7 @@ describe("DirectiveAppendWorkflow", () => {
       ledgerId: LEDGER_ID,
       input: { text: TXN, dryRun: true },
     });
-    expect(ledgerRepo.changeFiles).not.toHaveBeenCalled();
+    expect(ledgerRepo.changeGeneratedFiles).not.toHaveBeenCalled();
     expect(result.dryRun).toBe(true);
     expect(result.wrote).toEqual([]);
     expect(result.diff[0].diff).toContain("Cafe");

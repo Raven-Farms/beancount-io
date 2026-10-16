@@ -29,12 +29,14 @@ export interface UpdateLedgerCommand {
 
 export interface CreateLedgerFileCommand {
   path: string;
+  /** Base64 content, limited to 1 MiB of decoded bytes. */
   content: string;
   message?: string;
 }
 
 export interface UpdateLedgerFileCommand {
   path: string;
+  /** Base64 full replacement, limited to 1 MiB of decoded bytes. */
   content: string;
   sha: string;
   message?: string;

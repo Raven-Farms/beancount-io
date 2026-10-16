@@ -25,7 +25,9 @@ class BodyParseFailure extends Error {
  */
 export function bodyParserMiddleware(): Koa.Middleware {
   const parse = bodyParser({
-    jsonLimit: "1mb",
+    // A 1 MiB file needs ~1.4 MiB as base64, plus the request envelope.
+    // Explicit file-write boundaries enforce the separate decoded-byte cap.
+    jsonLimit: "2mb",
     formLimit: "56kb",
     // koa-bodyparser carries on to the next middleware after `onerror`
     // returns, so the failure is thrown to stop the request here.

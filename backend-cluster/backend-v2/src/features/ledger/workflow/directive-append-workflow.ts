@@ -14,7 +14,10 @@ import {
   toBeanCheckErrors,
 } from "@/features/ledger/utils/bean-check-errors";
 import type { IFavaClientFactory } from "@/foundation/clients/fava-client-factory";
-import type { ILedgerRepoService } from "@/features/ledger/service/ledger-repo-service";
+import type {
+  ILedgerRepoService,
+  ILedgerGeneratedFileWriter,
+} from "@/features/ledger/service/ledger-repo-service";
 import type { Identity } from "@/server/api/identity";
 import {
   MAX_APPENDED_DIRECTIVES,
@@ -36,9 +39,9 @@ import {
  * It moved here rather than into the service because it is multi-step
  * coordination — parse, route, read, project, check, commit — which is what
  * `workflow/` is for. The steps that touch the repository now go through
- * `ILedgerRepoService`, so every path is asserted per operation and the dry
- * run refuses exactly what the commit would, by construction rather than by
- * two implementations agreeing.
+ * `ILedgerRepoService` plus its internal generated-file writer, so every path
+ * is asserted per operation. Generated merges can grow past the explicit-file
+ * upload cap without changing authorization, path or repository guards.
  *
  * The reason this was deferred out of m28 — that `LEDGER_FILES_WRITE` would
  * narrow the credential ceiling alongside `LEDGER_ENTRIES_WRITE` — turned out
@@ -58,8 +61,9 @@ export interface IDirectiveAppendWorkflow {
 /** Exactly the repository capabilities an append needs, and no others. */
 type RepoDeps = Pick<
   ILedgerRepoService,
-  "getFilesContent" | "checkProjectedFiles" | "changeFiles"
->;
+  "getFilesContent" | "checkProjectedFiles"
+> &
+  ILedgerGeneratedFileWriter;
 
 export class DirectiveAppendWorkflow implements IDirectiveAppendWorkflow {
   private readonly logger = logger.child({ module: "directive-append" });
@@ -175,7 +179,7 @@ export class DirectiveAppendWorkflow implements IDirectiveAppendWorkflow {
     const noun = directives.length === 1 ? "directive" : "directives";
     const summary = `${directives.length} ${noun} to ${paths.join(", ")}`;
     if (!dryRun) {
-      await this.ledgerRepo.changeFiles({
+      await this.ledgerRepo.changeGeneratedFiles({
         ledgerId,
         identity,
         operations: targets.map((target) => ({

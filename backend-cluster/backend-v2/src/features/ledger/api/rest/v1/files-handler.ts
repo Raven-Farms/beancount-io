@@ -22,7 +22,8 @@ const listQuerySchema = z.object({
 const putBodySchema = z
   .object({
     content: z.string().openapi({
-      description: "The file's full new content, as UTF-8 text",
+      description:
+        "The file's full new content, as UTF-8 text; at most 1 MiB (1,048,576 UTF-8 bytes).",
       example: "2026-01-01 open Assets:Bank:Checking USD\n",
     }),
     message: z.string().min(1).optional().openapi({
@@ -34,7 +35,10 @@ const putBodySchema = z
         "Blob SHA the edit is based on. Send the SHA from a prior GET to update an existing file; omit it to create a new one.",
     }),
   })
-  .openapi("FileWrite", { description: "New content for one ledger file" });
+  .openapi("FileWrite", {
+    description:
+      "New content for one ledger file, at most 1 MiB of UTF-8 bytes",
+  });
 
 const deleteBodySchema = z
   .object({
@@ -130,7 +134,7 @@ export const FILE_ROUTES = [
     path: "/api-gateway/v1/ledgers/{owner}/{name}/files/{*path}",
     summary: "Create or replace a file",
     description:
-      "Writes the file and commits it. Include the `sha` from a prior GET to replace an existing file; omit it to create a new one.",
+      "Writes at most 1 MiB (1,048,576 UTF-8 bytes) and commits it. Include the `sha` from a prior GET to replace an existing file; omit it to create a new one. The complete JSON request is separately limited to 2 MiB.",
     params: filePathSchema,
     body: putBodySchema,
     responses: {

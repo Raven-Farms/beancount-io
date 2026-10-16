@@ -154,6 +154,32 @@ scope and ledger-pin denials remain forbidden; unavailable authorization
 sources remain service-unavailable errors. Denied anonymous reads keep their
 authentication-required response. No relationship grant changes.
 
+## Explicit file-write byte limits
+
+GraphQL `createLedgerFile` and `updateLedgerFile`, REST `PUT …/files/{path}`,
+and MCP `editLedgerFiles` share a **1 MiB (1,048,576 bytes) per-file limit**.
+GraphQL content is base64, so the workflow counts decoded bytes (including
+binary files); REST and MCP accept text, so the repository service counts UTF-8
+bytes. MCP `update` checks the entire resulting file after replacement, not
+only `new_string`. Dry runs enforce the same limit. Authorization precedes
+size validation, and an over-limit batch changes no files and reports
+`BAD_USER_INPUT` before any file commit.
+
+The gateway independently caps the complete JSON request at **2 MiB**. This
+allows one normally encoded 1 MiB base64 file plus its envelope. JSON escaping,
+metadata and batch items also consume that allowance; the per-file limit does
+not promise that every possible escaped representation or batch fits. Form
+requests retain their 56 KiB cap, and OAuth provider core routes retain their
+own parser. Existing parser refusals keep their transport-specific HTTP/MCP
+error envelopes.
+
+This is an explicit complete-file-write limit. Existing larger files remain
+readable and downloadable. Internal generated directive merges use a narrow
+generated-file writer, unavailable on the ordinary transport service contract;
+it retains authorization, safe-path checks and repository commit behavior
+without imposing the upload cap on the merged ledger file. No caller-supplied
+flag can select that writer.
+
 ## Contract evidence required per operation
 
 Each adapter family must record and exercise its actual arguments and defaults,
@@ -463,8 +489,10 @@ Reconcile, unlink, and delete previews were audited write-free as built.
 
 The `editLedgerFiles` preview now runs through the same protected service call
 as the commit: `LedgerRepoService.changeFiles` accepts `dryRun`, performing the
-identical write authorization and safe-path validation and stopping before the
-repository commit. Previously a create-only preview never authorized at all.
+identical write authorization, safe-path and per-file UTF-8 byte-limit validation
+and stopping before the repository commit. Internal generated directive merges
+use the separate generated-file writer and retain all other repository guards.
+Previously a create-only preview never authorized at all.
 Neither the preview nor the commit performs Beancount validation — that parity
 holds on both sides and remains the ledger service's own concern.
 

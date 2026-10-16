@@ -80,6 +80,7 @@ import {
   userResource,
 } from "@/server/api/authorization";
 import { assertSafeRepoPath } from "@/features/ledger/utils/safe-repo-path";
+import { assertExplicitFileContentSize } from "@/features/ledger/utils/explicit-file-size";
 import { decodeFileContent } from "@/shared/file-content";
 
 const workflowLogger = logger.child({ module: "ledger-workflow" });
@@ -668,6 +669,7 @@ export class LedgerWorkflow implements ILedgerWorkflow {
     });
     const userId = identity.userId;
     assertSafeRepoPath(input.path);
+    assertExplicitFileContentSize(input.content, "base64");
     const fileOptions: LedgerCreateFileOptions = {
       path: input.path,
       content: input.content,
@@ -710,6 +712,7 @@ export class LedgerWorkflow implements ILedgerWorkflow {
     });
     const userId = identity.userId;
     assertSafeRepoPath(input.path);
+    assertExplicitFileContentSize(input.content, "base64");
     const { ledgerOwner, ledgerName } = parseLedgerId(ledgerId);
     const fileOptions: LedgerUpdateFileOptions = {
       path: input.path,

@@ -24,8 +24,18 @@ describe("bodyParserMiddleware", () => {
       ctx.body = { received: ctx.request.body ?? null };
     };
     router.post(MCP_ENDPOINT_PATH, echo);
+    router.post("/api-gateway", echo);
     router.post("/api-gateway/v1/echo", echo);
     router.post("/api-gateway/oauth/token", echo);
+    router.post("/api-gateway/oauth/raw", async (ctx) => {
+      reached(ctx.path);
+      const chunks: Buffer[] = [];
+      for await (const chunk of ctx.req) chunks.push(Buffer.from(chunk));
+      ctx.body = {
+        received: ctx.request.body ?? null,
+        raw: Buffer.concat(chunks).toString("utf8"),
+      };
+    });
     router.post("/api-gateway/oauth/interaction/abc", echo);
     app.use(router.routes());
     server = http.createServer(app.callback());
@@ -40,11 +50,12 @@ describe("bodyParserMiddleware", () => {
 
   beforeEach(() => reached.mockClear());
 
-  const post = (path: string, body: string) =>
+  const post = (path: string, body: string, contentType = "application/json") =>
     fetch(`${base}${path}`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": contentType },
       body,
+      signal: AbortSignal.timeout(5000),
     });
 
   it.each([
@@ -70,7 +81,7 @@ describe("bodyParserMiddleware", () => {
   it("answers an oversized MCP body as a JSON-RPC error with the parser's status", async () => {
     const response = await post(
       MCP_ENDPOINT_PATH,
-      JSON.stringify({ pad: "x".repeat(1024 * 1024 + 1) }),
+      JSON.stringify({ pad: "x".repeat(2 * 1024 * 1024 + 1) }),
     );
     expect(response.status).toBe(413);
     expect(await response.json()).toMatchObject({
@@ -79,6 +90,67 @@ describe("bodyParserMiddleware", () => {
       id: null,
     });
     expect(reached).not.toHaveBeenCalled();
+  });
+
+  it("admits the JSON envelope for an exactly 1 MiB base64 GraphQL file upload", async () => {
+    const bytes = Buffer.alloc(1024 * 1024, "a");
+    const request = {
+      operationName: "CreateLedgerFile",
+      query:
+        "mutation CreateLedgerFile($ledgerId: String!, $path: String!, $content: String!, $message: String!) { createLedgerFile(ledgerId: $ledgerId, path: $path, content: $content, message: $message) { path sha } }",
+      variables: {
+        ledgerId: "synthetic/upload",
+        path: "at-limit.bin",
+        content: bytes.toString("base64"),
+        message: "Upload synthetic at-limit file",
+      },
+    };
+    expect(request.variables.content.length).toBe(1398104);
+    const response = await post("/api-gateway", JSON.stringify(request));
+    expect(response.status).toBe(200);
+    const received = (await response.json()).received;
+    expect(received).toEqual(request);
+    expect(Buffer.from(received.variables.content, "base64")).toEqual(bytes);
+    expect(reached).toHaveBeenCalledTimes(1);
+  });
+
+  it("retains a bounded 2 MiB JSON refusal outside MCP", async () => {
+    const response = await post(
+      "/api-gateway",
+      JSON.stringify({
+        variables: { content: "x".repeat(2 * 1024 * 1024 + 1) },
+      }),
+    );
+    expect(response.status).toBe(413);
+    expect(await response.text()).not.toContain("jsonrpc");
+    expect(reached).not.toHaveBeenCalled();
+  });
+
+  it("keeps the 56 KiB form limit independent of the larger JSON allowance", async () => {
+    const form = `value=${"x".repeat(56 * 1024 - 6)}`;
+    const accepted = await post(
+      "/api-gateway/v1/echo",
+      form,
+      "application/x-www-form-urlencoded",
+    );
+    expect(accepted.status).toBe(200);
+    expect((await accepted.json()).received).toEqual({ value: form.slice(6) });
+    const oversized = await post(
+      "/api-gateway/v1/echo",
+      `${form}x`,
+      "application/x-www-form-urlencoded",
+    );
+    expect(oversized.status).toBe(413);
+    await oversized.text();
+    expect(reached).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves the OIDC core request stream intact for its own body parser", async () => {
+    const raw = "not JSON: the OIDC provider must receive these exact bytes";
+    const response = await post("/api-gateway/oauth/raw", raw);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ received: null, raw });
+    expect(reached).toHaveBeenCalledTimes(1);
   });
 
   it("parses a well-formed MCP body and hands it to the route", async () => {

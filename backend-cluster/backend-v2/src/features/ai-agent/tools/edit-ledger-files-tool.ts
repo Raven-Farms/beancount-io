@@ -24,6 +24,7 @@ export const description =
   "  update: str_replace on a text file — old_string must appear exactly once.\n" +
   "  replace: overwrite entire text file — provide plain UTF-8 text content (NOT base64).\n" +
   "  delete: remove a file.\n" +
+  "  Each new/resulting file is limited to 1 MiB of UTF-8 bytes, including dry runs.\n" +
   "  dry_run previews without committing: same refusal as the commit, plus a " +
   "unified diff per touched file and bean-check's verdict over the projected " +
   "contents — approve only what the preview shows, then send the identical " +
