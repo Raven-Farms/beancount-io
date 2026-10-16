@@ -127,6 +127,12 @@
 - [555 — `dedup.md` import-id grammar omits the lot/price `bea` now hashes (sibling of w5/349)](./555.md)
 - [556 — Same-day reciprocal prices: reports and `query` value differently and line order decides; `add price` allows it](./556.md)
 - [557 — Missing-price summary gives a misleading "no price before DATE" for cash never routed through a cost currency](./557.md)
+- [558 — `query` regex pre-check reads `~ '…'` inside comments and string literals, refusing valid queries](./558.md)
+- [559 — A stored query whose OPEN date falls on or after its directive date answers `(no rows)` or a bogus CLOSE error (gap in w3/398)](./559.md)
+- [560 — `FROM ACCOUNTS`/`FROM Balances` rewritten to a nonexistent quoted table](./560.md)
+- [561 — `query -f csv` drops the lot date and label from `position.cost` (gap in w5/465)](./561.md)
+- [562 — `ORDER BY price` crashes with `NullType` AttributeError when unpriced postings sort first](./562.md)
+- [563 — `SELECT DISTINCT other_accounts` leaks Python syntax text and gives tags/links advice](./563.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
