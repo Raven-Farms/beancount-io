@@ -40,6 +40,10 @@
 - [468 — `bea import` writes a self-cancelling entry when a rule, category or `--default-account` names `--account`](./468.md)
 - [469 — `bea import --id-key FITID`/`''` silently disables native-ID dedupe](./469.md)
 - [470 — `bea import`'s no-importer hint suggests `--account Assets:Checking` and placeholder columns](./470.md)
+- [471 — `bea query` text tables print `1.5E+3` and crash on `NaN`/`Infinity`; CSV/JSON answer](./471.md)
+- [472 — `bea query --source` dumps a ~200-line traceback for amounts of 10^12 or more](./472.md)
+- [473 — `bea list price|commodity -c " HOOL"` validates, then matches nothing with exit 0](./473.md)
+- [474 — `bea query PRINT` export drops validity options (`name_*`, tolerance), so it fails `bea check`](./474.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
