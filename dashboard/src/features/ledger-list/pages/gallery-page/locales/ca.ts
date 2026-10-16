@@ -4,6 +4,31 @@ export interface TranslationEntry {
 }
 
 const caGalleryPage: Record<string, TranslationEntry> = {
+  "page.gallery.minimumSearchCharacters": {
+    message: "Escriviu almenys 2 caràcters per cercar.",
+    description:
+      "Polite search status when fewer than two characters have been entered",
+  },
+  "page.gallery.noMatchingLedgers": {
+    message: "Cap llibre coincideix amb {query}",
+    description:
+      "Polite status naming the completed search that found no ledgers",
+  },
+  "page.gallery.ledgersFound_one": {
+    message: "S’ha trobat {count} llibre",
+    description:
+      "Polite status announcing the number of ledgers found by the completed search",
+  },
+  "page.gallery.ledgersFound_many": {
+    message: "S’han trobat {count} llibres",
+    description:
+      "Polite status announcing the number of ledgers found by the completed search",
+  },
+  "page.gallery.ledgersFound_other": {
+    message: "S’han trobat {count} llibres",
+    description:
+      "Polite status announcing the number of ledgers found by the completed search",
+  },
   "page.gallery.failedToSearchLedgers": {
     message: "Error en cercar els llibres",
     description: "Error message when search fails",

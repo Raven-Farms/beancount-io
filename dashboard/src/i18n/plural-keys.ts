@@ -23,6 +23,7 @@ export const PLURAL_BASE_KEYS = [
   "journal.hideEntryPostings",
   "journal.showEntryPostings",
   "journal.visibleEntryPostings",
+  "page.gallery.ledgersFound",
   "page.overview.atCostCount",
   "page.overview.notInTotalCount",
   "page.overview.pricesNotUpdated",

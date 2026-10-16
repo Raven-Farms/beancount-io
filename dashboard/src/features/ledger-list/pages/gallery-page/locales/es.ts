@@ -4,6 +4,31 @@ export interface TranslationEntry {
 }
 
 const esGalleryPage: Record<string, TranslationEntry> = {
+  "page.gallery.minimumSearchCharacters": {
+    message: "Escriba al menos 2 caracteres para buscar.",
+    description:
+      "Polite search status when fewer than two characters have been entered",
+  },
+  "page.gallery.noMatchingLedgers": {
+    message: "Ningún libro mayor coincide con {query}",
+    description:
+      "Polite status naming the completed search that found no ledgers",
+  },
+  "page.gallery.ledgersFound_one": {
+    message: "Se encontró {count} libro mayor",
+    description:
+      "Polite status announcing the number of ledgers found by the completed search",
+  },
+  "page.gallery.ledgersFound_many": {
+    message: "Se encontraron {count} libros mayores",
+    description:
+      "Polite status announcing the number of ledgers found by the completed search",
+  },
+  "page.gallery.ledgersFound_other": {
+    message: "Se encontraron {count} libros mayores",
+    description:
+      "Polite status announcing the number of ledgers found by the completed search",
+  },
   "page.gallery.failedToSearchLedgers": {
     message: "Error al buscar libros mayores",
     description: "Error message when search fails",

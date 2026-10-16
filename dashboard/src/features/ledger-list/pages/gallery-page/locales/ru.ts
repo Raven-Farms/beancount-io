@@ -4,6 +4,36 @@ export interface TranslationEntry {
 }
 
 const ruGalleryPage: Record<string, TranslationEntry> = {
+  "page.gallery.minimumSearchCharacters": {
+    message: "Введите не менее 2 символов для поиска.",
+    description:
+      "Polite search status when fewer than two characters have been entered",
+  },
+  "page.gallery.noMatchingLedgers": {
+    message: "Нет книг, соответствующих запросу {query}",
+    description:
+      "Polite status naming the completed search that found no ledgers",
+  },
+  "page.gallery.ledgersFound_one": {
+    message: "Найдена {count} книга",
+    description:
+      "Polite status announcing the number of ledgers found by the completed search",
+  },
+  "page.gallery.ledgersFound_few": {
+    message: "Найдены {count} книги",
+    description:
+      "Polite status announcing the number of ledgers found by the completed search",
+  },
+  "page.gallery.ledgersFound_many": {
+    message: "Найдено {count} книг",
+    description:
+      "Polite status announcing the number of ledgers found by the completed search",
+  },
+  "page.gallery.ledgersFound_other": {
+    message: "Найдено {count} книги",
+    description:
+      "Polite status announcing the number of ledgers found by the completed search",
+  },
   "page.gallery.failedToSearchLedgers": {
     message: "Не удалось выполнить поиск книг",
     description: "Error message when search fails",

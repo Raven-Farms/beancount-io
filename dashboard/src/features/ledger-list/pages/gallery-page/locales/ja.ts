@@ -4,6 +4,21 @@ export interface TranslationEntry {
 }
 
 const jaGalleryPage: Record<string, TranslationEntry> = {
+  "page.gallery.minimumSearchCharacters": {
+    message: "検索するには2文字以上入力してください。",
+    description:
+      "Polite search status when fewer than two characters have been entered",
+  },
+  "page.gallery.noMatchingLedgers": {
+    message: "{query} に一致する台帳はありません",
+    description:
+      "Polite status naming the completed search that found no ledgers",
+  },
+  "page.gallery.ledgersFound_other": {
+    message: "{count} 件の台帳が見つかりました",
+    description:
+      "Polite status announcing the number of ledgers found by the completed search",
+  },
   "page.gallery.failedToSearchLedgers": {
     message: "台帳の検索に失敗しました",
     description: "Error message when search fails",

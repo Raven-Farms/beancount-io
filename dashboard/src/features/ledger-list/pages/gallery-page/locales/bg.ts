@@ -4,6 +4,26 @@ export interface TranslationEntry {
 }
 
 const bgGalleryPage: Record<string, TranslationEntry> = {
+  "page.gallery.minimumSearchCharacters": {
+    message: "Въведете поне 2 символа за търсене.",
+    description:
+      "Polite search status when fewer than two characters have been entered",
+  },
+  "page.gallery.noMatchingLedgers": {
+    message: "Няма книги, съответстващи на {query}",
+    description:
+      "Polite status naming the completed search that found no ledgers",
+  },
+  "page.gallery.ledgersFound_one": {
+    message: "Намерена е {count} книга",
+    description:
+      "Polite status announcing the number of ledgers found by the completed search",
+  },
+  "page.gallery.ledgersFound_other": {
+    message: "Намерени са {count} книги",
+    description:
+      "Polite status announcing the number of ledgers found by the completed search",
+  },
   "page.gallery.failedToSearchLedgers": {
     message: "Неуспешно търсене на книги",
     description: "Error message when search fails",

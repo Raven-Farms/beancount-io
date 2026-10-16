@@ -4,6 +4,26 @@ export interface TranslationEntry {
 }
 
 const deGalleryPage: Record<string, TranslationEntry> = {
+  "page.gallery.minimumSearchCharacters": {
+    message: "Geben Sie mindestens 2 Zeichen ein, um zu suchen.",
+    description:
+      "Polite search status when fewer than two characters have been entered",
+  },
+  "page.gallery.noMatchingLedgers": {
+    message: "Keine Hauptbücher entsprechen {query}",
+    description:
+      "Polite status naming the completed search that found no ledgers",
+  },
+  "page.gallery.ledgersFound_one": {
+    message: "{count} Hauptbuch gefunden",
+    description:
+      "Polite status announcing the number of ledgers found by the completed search",
+  },
+  "page.gallery.ledgersFound_other": {
+    message: "{count} Hauptbücher gefunden",
+    description:
+      "Polite status announcing the number of ledgers found by the completed search",
+  },
   "page.gallery.failedToSearchLedgers": {
     message: "Hauptbücher konnten nicht durchsucht werden",
     description: "Error message when search fails",

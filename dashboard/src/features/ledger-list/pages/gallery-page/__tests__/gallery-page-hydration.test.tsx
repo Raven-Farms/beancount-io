@@ -168,7 +168,7 @@ async function hydrateGallery() {
 }
 
 describe("Gallery search hydration", () => {
-  it("becomes ready for the first ordinary search once, then retains keyboard selection and clean Back navigation", async () => {
+  it("becomes ready for the first ordinary search once, then retains keyboard selection and restores the search on Back", async () => {
     const gallery = await hydrateGallery();
     try {
       const { input, queries, router, requests } = gallery;
@@ -205,9 +205,11 @@ describe("Gallery search hydration", () => {
       });
       const returnedInput = await queries.findByRole("combobox");
       expect(returnedInput).toBeEnabled();
-      expect(returnedInput).toHaveValue("");
+      expect(returnedInput).toHaveValue("adyen");
       expect(returnedInput).not.toHaveAttribute("aria-activedescendant");
-      expect(queries.queryByRole("option")).not.toBeInTheDocument();
+      expect(
+        await queries.findByRole("option", { name: /adyen/ }),
+      ).toBeInTheDocument();
       expect(requests).toHaveLength(1);
       expect(gallery.recoverable).not.toHaveBeenCalled();
     } finally {

@@ -1,5 +1,10 @@
 import { useState, useEffect, useRef } from "react";
-import { useHydrated, useNavigate } from "@tanstack/react-router";
+import {
+  useHydrated,
+  useLocation,
+  useNavigate,
+  useRouter,
+} from "@tanstack/react-router";
 import { useLazyQuery } from "@apollo/client/react";
 import { Search, Loader2, X } from "lucide-react";
 import { Card, CardContent } from "@/common/components/ui/card";
@@ -17,6 +22,7 @@ import { useTranslations } from "@/common/hooks/use-translations";
 import { getErrorMessageKey } from "@/common/lib/errors/error-message";
 import { PageSEO } from "@/common/components/seo/page-seo";
 import { Button } from "@/common/components/ui/button";
+import { validateGallerySearch } from "./search";
 
 /**
  * Empty state component for gallery search
@@ -43,11 +49,36 @@ function EmptyState() {
 export default function GalleryPage() {
   const { t } = useTranslations();
   const navigate = useNavigate();
+  const router = useRouter();
+  const location = useLocation();
+  // Read query and location together: route matches can still contain the
+  // previous search while the router commits a new location.
+  const urlQuery = validateGallerySearch(location.search).q ?? "";
   const hydrated = useHydrated();
-  const [searchQuery, setSearchQuery] = useState("");
+  const [draft, setDraft] = useState({ location, value: urlQuery });
+  const [isDropdownOpen, setIsDropdownOpen] = useState(urlQuery.length >= 2);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [selfWrote, setSelfWrote] = useState<string | null>(null);
+  const locationChanged = draft.location !== location;
+  const ownReplacement = locationChanged && selfWrote === urlQuery;
+  const searchQuery =
+    locationChanged && !ownReplacement ? urlQuery : draft.value;
+
+  if (locationChanged) {
+    // Our replacement acknowledges the draft without trimming it or reopening
+    // an escaped list. Back/Forward and fresh links instead restore the URL.
+    setSelfWrote(null);
+    setDraft({ location, value: searchQuery });
+    if (!ownReplacement) {
+      setIsDropdownOpen(urlQuery.length >= 2);
+      setHighlightedIndex(-1);
+    }
+  }
+
+  const setSearchQuery = (value: string) => setDraft({ location, value });
   const debouncedQuery = useDebounce(searchQuery, 300);
 
-  const [searchLedgers, { data, loading, error }] = useLazyQuery<
+  const [searchLedgers, { data, loading, error, variables }] = useLazyQuery<
     SearchLedgersQuery,
     SearchLedgersQueryVariables
   >(SearchLedgersDocument);
@@ -58,15 +89,49 @@ export default function GalleryPage() {
   // Only treat Apollo results as selectable when they belong to the live query.
   // Otherwise Clear/refocus can reopen stale highlights from a previous search.
   const resultsBelongToCurrentQuery =
-    queryIsEligible && normalizedDebounced === normalizedQuery;
+    queryIsEligible &&
+    normalizedDebounced === normalizedQuery &&
+    variables?.q === normalizedQuery;
+  const currentError = resultsBelongToCurrentQuery ? error : undefined;
+  const searchIsSettled =
+    resultsBelongToCurrentQuery &&
+    !loading &&
+    !currentError &&
+    data?.searchLedgers !== undefined;
   const searchResults =
-    resultsBelongToCurrentQuery && data?.searchLedgers
-      ? data.searchLedgers
-      : [];
+    searchIsSettled && data?.searchLedgers ? data.searchLedgers : [];
+
+  useEffect(() => {
+    if (normalizedQuery === urlQuery) return;
+    const timer = setTimeout(() => {
+      // A loader can keep this page mounted after another navigation starts.
+      // Never let its pending draft overwrite that destination or a restored URL.
+      if (
+        router.latestLocation.pathname !== "/ledger-gallery" ||
+        router.latestLocation.href !== location.href ||
+        router.latestLocation.state.__TSR_key !== location.state.__TSR_key
+      ) {
+        return;
+      }
+      setSelfWrote(normalizedQuery);
+      void navigate({
+        to: "/ledger-gallery",
+        search: (previous) => ({
+          ...previous,
+          q: normalizedQuery || undefined,
+        }),
+        replace: true,
+      });
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [normalizedQuery, urlQuery, navigate, router, location]);
 
   // Execute search when debounced query changes
   useEffect(() => {
-    if (normalizedDebounced.length >= 2) {
+    if (
+      normalizedDebounced.length >= 2 &&
+      normalizedDebounced === normalizedQuery
+    ) {
       void searchLedgers({
         variables: {
           q: normalizedDebounced,
@@ -74,10 +139,8 @@ export default function GalleryPage() {
         },
       });
     }
-  }, [normalizedDebounced, searchLedgers]);
+  }, [normalizedDebounced, normalizedQuery, searchLedgers]);
 
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -88,7 +151,6 @@ export default function GalleryPage() {
       const { ledgerOwner, ledgerName } = decodeLedgerId(ledgerId);
       setIsDropdownOpen(false);
       setHighlightedIndex(-1);
-      setSearchQuery("");
       void navigate({ to: `/ledger/${ledgerOwner}/${ledgerName}` });
     }
   };
@@ -239,7 +301,9 @@ export default function GalleryPage() {
                         aria-autocomplete="list"
                         aria-controls="ledger-search-listbox"
                         aria-activedescendant={
-                          isDropdownOpen && highlightedIndex >= 0
+                          isDropdownOpen &&
+                          highlightedIndex >= 0 &&
+                          highlightedIndex < searchResults.length
                             ? `ledger-search-option-${highlightedIndex}`
                             : undefined
                         }
@@ -271,40 +335,38 @@ export default function GalleryPage() {
                         role="listbox"
                         className="absolute z-50 w-full mt-1 bg-popover text-popover-foreground rounded-md border shadow-lg max-h-[300px] overflow-auto"
                       >
-                        {loading ||
-                        (queryIsEligible && !resultsBelongToCurrentQuery) ? (
+                        {queryIsEligible &&
+                        !searchIsSettled &&
+                        !currentError ? (
                           <div className="flex items-center justify-center py-8">
                             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                           </div>
                         ) : null}
 
-                        {error && (
+                        {currentError && (
                           <div className="p-4">
                             <Alert variant="destructive">
                               <AlertDescription>
                                 {t("page.gallery.failedToSearchLedgers")}:{" "}
-                                {t(getErrorMessageKey(error))}
+                                {t(getErrorMessageKey(currentError))}
                               </AlertDescription>
                             </Alert>
                           </div>
                         )}
 
-                        {!loading &&
-                          !error &&
-                          resultsBelongToCurrentQuery &&
-                          searchResults.length === 0 && (
-                            <div className="p-4 text-center text-sm text-muted-foreground">
-                              {t("page.gallery.noLedgersFound")}
-                            </div>
-                          )}
+                        {searchIsSettled && searchResults.length === 0 && (
+                          <div className="p-4 text-center text-sm text-muted-foreground">
+                            {t("page.gallery.noLedgersFound")}
+                          </div>
+                        )}
 
-                        {!loading && !error && normalizedQuery.length < 2 && (
+                        {normalizedQuery.length < 2 && (
                           <div className="p-4 text-center text-sm text-muted-foreground">
                             {t("collaboration.typeAtLeast2Characters")}
                           </div>
                         )}
 
-                        {!loading && !error && searchResults.length > 0 && (
+                        {searchResults.length > 0 && (
                           <div className="p-1">
                             {searchResults.map((ledger, index) => (
                               <div
@@ -347,12 +409,23 @@ export default function GalleryPage() {
                     )}
                   </div>
 
-                  {!isDropdownOpen && !loading && !error && (
-                    <>
-                      {resultsBelongToCurrentQuery &&
-                        searchResults.length === 0 && <EmptyState />}
-                    </>
-                  )}
+                  <p className="sr-only" role="status" aria-live="polite">
+                    {!queryIsEligible
+                      ? t("page.gallery.minimumSearchCharacters")
+                      : searchIsSettled
+                        ? searchResults.length > 0
+                          ? t("page.gallery.ledgersFound", {
+                              count: searchResults.length,
+                            })
+                          : t("page.gallery.noMatchingLedgers", {
+                              query: normalizedQuery,
+                            })
+                        : ""}
+                  </p>
+
+                  {!isDropdownOpen &&
+                    searchIsSettled &&
+                    searchResults.length === 0 && <EmptyState />}
                 </div>
               </CardContent>
             </Card>

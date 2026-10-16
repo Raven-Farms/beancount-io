@@ -4,6 +4,26 @@ export interface TranslationEntry {
 }
 
 const faGalleryPage: Record<string, TranslationEntry> = {
+  "page.gallery.minimumSearchCharacters": {
+    message: "حداقل ۲ کاراکتر برای جستجو تایپ کنید.",
+    description:
+      "Polite search status when fewer than two characters have been entered",
+  },
+  "page.gallery.noMatchingLedgers": {
+    message: "هیچ دفتری با {query} مطابقت ندارد",
+    description:
+      "Polite status naming the completed search that found no ledgers",
+  },
+  "page.gallery.ledgersFound_one": {
+    message: "{count} دفتر یافت شد",
+    description:
+      "Polite status announcing the number of ledgers found by the completed search",
+  },
+  "page.gallery.ledgersFound_other": {
+    message: "{count} دفتر یافت شد",
+    description:
+      "Polite status announcing the number of ledgers found by the completed search",
+  },
   "page.gallery.failedToSearchLedgers": {
     message: "جستجوی دفاتر ناموفق بود",
     description: "Error message when search fails",

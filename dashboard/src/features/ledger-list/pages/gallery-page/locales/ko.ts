@@ -4,6 +4,21 @@ export interface TranslationEntry {
 }
 
 const koGalleryPage: Record<string, TranslationEntry> = {
+  "page.gallery.minimumSearchCharacters": {
+    message: "검색하려면 2자 이상 입력하세요.",
+    description:
+      "Polite search status when fewer than two characters have been entered",
+  },
+  "page.gallery.noMatchingLedgers": {
+    message: "검색어 {query}에 맞는 장부가 없습니다",
+    description:
+      "Polite status naming the completed search that found no ledgers",
+  },
+  "page.gallery.ledgersFound_other": {
+    message: "장부 {count}개를 찾았습니다",
+    description:
+      "Polite status announcing the number of ledgers found by the completed search",
+  },
   "page.gallery.failedToSearchLedgers": {
     message: "장부 검색에 실패했습니다",
     description: "Error message when search fails",

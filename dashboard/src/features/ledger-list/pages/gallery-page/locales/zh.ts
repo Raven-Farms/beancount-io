@@ -4,6 +4,21 @@ export interface TranslationEntry {
 }
 
 const zhGalleryPage: Record<string, TranslationEntry> = {
+  "page.gallery.minimumSearchCharacters": {
+    message: "至少输入2个字符以开始搜索。",
+    description:
+      "Polite search status when fewer than two characters have been entered",
+  },
+  "page.gallery.noMatchingLedgers": {
+    message: "没有与 {query} 匹配的账本",
+    description:
+      "Polite status naming the completed search that found no ledgers",
+  },
+  "page.gallery.ledgersFound_other": {
+    message: "找到 {count} 本账本",
+    description:
+      "Polite status announcing the number of ledgers found by the completed search",
+  },
   "page.gallery.failedToSearchLedgers": {
     message: "搜索账本失败",
     description: "Error message when search fails",

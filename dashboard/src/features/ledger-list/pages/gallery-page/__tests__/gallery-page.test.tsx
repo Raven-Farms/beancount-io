@@ -1,3 +1,4 @@
+import { useCallback, useState } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -7,13 +8,29 @@ import {
   createMockLazyQueryTuple,
   type MockLazyQueryTuple,
 } from "@/test/apollo-test-utils";
-import type { SearchLedgersQuery } from "@/graphql/definitions";
+import type {
+  SearchLedgersQuery,
+  SearchLedgersQueryVariables,
+} from "@/graphql/definitions";
 
 // Type aliases
 type SearchLedgersQueryTuple = MockLazyQueryTuple<SearchLedgersQuery>;
 
 // Mock dependencies
 const mockNavigate = vi.fn();
+const mockLocation = {
+  href: "/ledger-gallery",
+  pathname: "/ledger-gallery",
+  search: {},
+  searchStr: "",
+  hash: "",
+  state: { __TSR_key: "gallery" },
+};
+const mockRouter = { latestLocation: mockLocation };
+const ledgerNavigations = () =>
+  mockNavigate.mock.calls
+    .map(([options]) => options)
+    .filter((options) => options.to?.startsWith("/ledger/"));
 
 vi.mock("@tanstack/react-router", async () => {
   const { useHydrated } = await vi.importActual<
@@ -22,6 +39,8 @@ vi.mock("@tanstack/react-router", async () => {
   return {
     useHydrated,
     useNavigate: () => mockNavigate,
+    useLocation: () => mockLocation,
+    useRouter: () => mockRouter,
   };
 });
 
@@ -33,6 +52,21 @@ vi.mock("@apollo/client/react", () => ({
 vi.mock("@/common/components/seo/page-seo", () => ({
   PageSEO: () => null,
 }));
+
+function mockQuery(tuple: SearchLedgersQueryTuple) {
+  vi.mocked(apolloClient.useLazyQuery).mockImplementation(
+    function useGalleryLazyQuery() {
+      const [variables, setVariables] = useState<SearchLedgersQueryVariables>();
+      const execute = useCallback((options?: unknown) => {
+        setVariables(
+          (options as { variables?: SearchLedgersQueryVariables })?.variables,
+        );
+        return tuple[0](options);
+      }, []);
+      return [execute, { ...tuple[1], variables }];
+    },
+  );
+}
 
 describe("GalleryPage", () => {
   const mockSearchLedgers = vi.fn();
@@ -59,7 +93,7 @@ describe("GalleryPage", () => {
         error: undefined,
       },
     );
-    vi.mocked(apolloClient.useLazyQuery).mockReturnValue(mockQueryTuple);
+    mockQuery(mockQueryTuple);
 
     const historyBack = vi
       .spyOn(window.history, "back")
@@ -113,7 +147,7 @@ describe("GalleryPage", () => {
       },
     );
 
-    vi.mocked(apolloClient.useLazyQuery).mockReturnValue(mockQueryTuple);
+    mockQuery(mockQueryTuple);
 
     const user = userEvent.setup();
     render(<GalleryPage />);
@@ -158,7 +192,7 @@ describe("GalleryPage", () => {
       },
     );
 
-    vi.mocked(apolloClient.useLazyQuery).mockReturnValue(mockQueryTuple);
+    mockQuery(mockQueryTuple);
 
     const user = userEvent.setup();
     render(<GalleryPage />);
@@ -202,7 +236,7 @@ describe("GalleryPage", () => {
       },
     );
 
-    vi.mocked(apolloClient.useLazyQuery).mockReturnValue(mockQueryTuple);
+    mockQuery(mockQueryTuple);
 
     const user = userEvent.setup();
     render(<GalleryPage />);
@@ -254,7 +288,7 @@ describe("GalleryPage", () => {
       },
     );
 
-    vi.mocked(apolloClient.useLazyQuery).mockReturnValue(mockQueryTuple);
+    mockQuery(mockQueryTuple);
 
     const user = userEvent.setup();
     render(<GalleryPage />);
@@ -297,7 +331,7 @@ describe("GalleryPage", () => {
   });
 
   it("keeps every keyboard step when scrolling emits option-entry events under a stationary pointer", async () => {
-    vi.mocked(apolloClient.useLazyQuery).mockReturnValue(
+    mockQuery(
       createMockLazyQueryTuple(mockSearchLedgers, {
         data: mixedResults,
         loading: false,
@@ -371,7 +405,7 @@ describe("GalleryPage", () => {
         });
         expect(scroll.mock.contexts[0]).toBe(options[index]);
       }
-      expect(mockNavigate).not.toHaveBeenCalled();
+      expect(ledgerNavigations()).toHaveLength(0);
       expect(mockSearchLedgers).toHaveBeenCalledExactlyOnceWith({
         variables: { q: "in", limit: 50 },
       });
@@ -381,7 +415,7 @@ describe("GalleryPage", () => {
   });
 
   it("selects on intentional pointer movement and Enter opens that ledger once", async () => {
-    vi.mocked(apolloClient.useLazyQuery).mockReturnValue(
+    mockQuery(
       createMockLazyQueryTuple(mockSearchLedgers, {
         data: mixedResults,
         loading: false,
@@ -422,16 +456,16 @@ describe("GalleryPage", () => {
     expect(searchInput).toHaveFocus();
 
     await user.keyboard("{Enter}");
-    expect(mockNavigate).toHaveBeenCalledExactlyOnceWith({
-      to: "/ledger/synthetic/gallery-8",
-    });
-    expect(searchInput).toHaveValue("");
+    expect(ledgerNavigations()).toEqual([
+      { to: "/ledger/synthetic/gallery-8" },
+    ]);
+    expect(searchInput).toHaveValue("in");
     expect(searchInput).toHaveAttribute("aria-expanded", "false");
     expect(searchInput).not.toHaveAttribute("aria-activedescendant");
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
 
     await user.keyboard("{Enter}");
-    expect(mockNavigate).toHaveBeenCalledTimes(1);
+    expect(ledgerNavigations()).toHaveLength(1);
   });
 
   it("clear button is keyboard-reachable and clears the search", async () => {
@@ -456,7 +490,7 @@ describe("GalleryPage", () => {
       },
     );
 
-    vi.mocked(apolloClient.useLazyQuery).mockReturnValue(mockQueryTuple);
+    mockQuery(mockQueryTuple);
 
     const user = userEvent.setup();
     render(<GalleryPage />);
@@ -497,7 +531,7 @@ describe("GalleryPage", () => {
       },
     );
 
-    vi.mocked(apolloClient.useLazyQuery).mockReturnValue(mockQueryTuple);
+    mockQuery(mockQueryTuple);
 
     const user = userEvent.setup();
     render(<GalleryPage />);
@@ -521,11 +555,11 @@ describe("GalleryPage", () => {
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
 
     await user.keyboard("{Enter}");
-    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(ledgerNavigations()).toHaveLength(0);
 
     await user.keyboard("{ArrowDown}");
     expect(searchInput).toHaveAttribute("aria-expanded", "false");
-    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(ledgerNavigations()).toHaveLength(0);
   });
 
   it("Escape closes an open empty-result listbox", async () => {
@@ -538,7 +572,7 @@ describe("GalleryPage", () => {
       },
     );
 
-    vi.mocked(apolloClient.useLazyQuery).mockReturnValue(mockQueryTuple);
+    mockQuery(mockQueryTuple);
 
     const user = userEvent.setup();
     render(<GalleryPage />);
@@ -569,7 +603,7 @@ describe("GalleryPage", () => {
       },
     );
 
-    vi.mocked(apolloClient.useLazyQuery).mockReturnValue(mockQueryTuple);
+    mockQuery(mockQueryTuple);
 
     const user = userEvent.setup();
     render(<GalleryPage />);
@@ -591,6 +625,6 @@ describe("GalleryPage", () => {
 
     // A closed list must not be selectable from.
     await user.keyboard("{Enter}");
-    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(ledgerNavigations()).toHaveLength(0);
   });
 });
