@@ -44,6 +44,16 @@
 - [472 — `bea query --source` dumps a ~200-line traceback for amounts of 10^12 or more](./472.md)
 - [473 — `bea list price|commodity -c " HOOL"` validates, then matches nothing with exit 0](./473.md)
 - [474 — `bea query PRINT` export drops validity options (`name_*`, tolerance), so it fails `bea check`](./474.md)
+- [475 — A stray CR above a managed include makes bea rewrite the wrong line: the user's directive vanishes from load and `price export`](./475.md)
+- [476 — An authored price loses to the managed feed after a BOM, or below an ignored line containing `"`](./476.md)
+- [477 — Shadowing a feed point with an indented comment leaves orphaned lines: `unexpected INDENT`, `add price` refused](./477.md)
+- [478 — `price refresh` accepts an unparseable feed body, replaces the good revision, exits 0](./478.md)
+- [479 — `price export` exits 0 with a refused URL include left in the snapshot](./479.md)
+- [480 — `MANAGED_PRICE_ORIGINS` entries are not normalized (trailing slash refuses the origin)](./480.md)
+- [481 — `engine status` reports an unusable `BEA_ENGINE_PYTHON` override as serving](./481.md)
+- [482 — `bea ask` prints a proxy's HTML error page as the message](./482.md)
+- [483 — `price export -o a -o b` silently exports to `b`](./483.md)
+- [484 — Price-source warnings end in `..`; `upgrade --check` shows raw parser text](./484.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
