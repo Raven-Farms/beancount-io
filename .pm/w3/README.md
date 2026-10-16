@@ -81,7 +81,8 @@
 ## Inbox
 
 - [487](./487.md) — Upload Files labels a file "Exceeds 1MB limit" and then uploads it anyway
-- [488](./488.md) — Return focus to "More actions" after dismissing the Delete File dialog
+- [488](./488.md) — Return focus to the opening menu button after dismissing menu-launched dialogs (Delete File, Edit Ledger)
+- [489](./489.md) — Name each dashboard ledger "Settings" menu after its ledger
 
 ## Dropped
 
