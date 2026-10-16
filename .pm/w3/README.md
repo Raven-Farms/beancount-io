@@ -80,7 +80,6 @@
 
 ## Inbox
 
-- [476](./476.md) — Give account Settings pages a page heading, and Danger Zone any heading at all
 - [477](./477.md) — Stop AI file parsing from inventing transaction descriptions that aren't in the source
 - [478](./478.md) — Ledger switcher: include the current ledger in its accessible name, and name its popover
 - [479](./479.md) — In Persian, amounts render as "USD 33.71-": isolate signed amounts from the right-to-left layout
