@@ -7,7 +7,7 @@
 - [x] **m34** — Preserve decimal amounts in native multi-posting drafts (6 tasks) ← from native QA 2026-09-11
 
 - [x] **m1** — [Budget read-only: Home panel + /budget page](./done/m1/README.md) (13 tasks) ← from budget-on-mobile PM spec 2026-08-09
-- [ ] **m2** — [Budget management: add, update, delete from mobile](./blocked/m2/README.md) (9 tasks) — **blocked:** needs in-app add/update/delete verification (after m1) ← from budget-on-mobile PM spec 2026-08-09 — sequenced after m1
+- [x] **m2** — [Budget management: add, update, delete from mobile](./done/m2/README.md) (9 tasks) ← from budget-on-mobile PM spec 2026-08-09 — sequenced after m1
 - [x] **m3** — Budget localization & analytics-driven iteration (7 tasks) ← from budget-on-mobile PM spec 2026-08-09 — sequenced after m2
 - [x] **m4** — Beancount MCP endpoint: make it connectable and keep it conformant (7 tasks) ← from `backend-cluster/backend-v2/docs/ADR0007-mcp-surface.md`
 - [x] **m5** — Surface parity groundwork: honest counts and the MCP resource layer (8 tasks) ← from `backend-cluster/backend-v2/docs/ADR0008-surface-parity.md`
@@ -79,7 +79,7 @@
 - [ ] **m52** — [Make Ask-AI proxy limits and failures truthful](./blocked/m52/README.md) (7 tasks) ← promoted 446 — **blocked:** provider/operator capacity contract, product decision, and near-limit verification; t001–t002 shipped
 
 ## Inbox
-
+- [494](./494.md) — Give the Balance Sheet and Income Statement over-time charts a readable data table
 
 ## Dropped
 
@@ -92,7 +92,6 @@
 
 Blocked milestones and inbox notes live under [`blocked/`](./blocked/) with their reason and **Unblock:** condition; they keep their IDs and return to the open tree when work can resume.
 
-- [ ] **m2** — see milestone lines above (in-app budget verification).
 - [003](./blocked/003.md) — Bulk entry writes are not retry-safe after a false timeout — **blocked:** needs an idempotency contract across REST, GraphQL and MCP.
 - [113](./blocked/113.md) — Lot reductions replace current market prices — **blocked:** upstream `@rustledger/wasm` (still 0.24.0); vendoring forbidden.
 

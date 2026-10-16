@@ -1,14 +1,21 @@
 # w3 · m2 — Budget management: add, update, delete from mobile
 
-**Worker:** worker3 **Goal:** Full budget lifecycle from the phone — create a budget, post a dated update, delete a history entry — without opening the web dashboard. **Status:** blocked — see [Blocked](#blocked) (t001–t008 done; t009 blocked)
+**Worker:** worker3 **Goal:** Full budget lifecycle from the phone — create a budget, post a dated update, delete a history entry — without opening the web dashboard. **Status:** done
 
-## Blocked
+## Blocker history
+
+**Cleared 2026-10-16** — Native verification against a synthetic local fixture met the definition of done; see [closeout verification](./done/t009.md#closeout-verification). Resumed through `/pm unblock w3/m2` before closing the final task.
+
+<details>
+<summary>Historical blocker (cleared)</summary>
 
 **Blocked 2026-09-15 by `/loop-worker w3`.** t001–t008 are done and mobile gates are green; only t009 Closeout remains. The definition of done requires an in-app add/update/delete round-trip against a real ledger file (plus visible failure paths). Sequenced after m1; both share the same verification session.
 
 **Unblock:** after m1's in-app check (or in the same session), exercise add → update → delete on a real ledger, confirm directives in the file, then `/pm unblock w3/m2` and close t009.
 
 When work can resume, move this directory back to `.pm/w3/m2/`.
+
+</details>
 
 ## Tasks (in order)
 
@@ -22,7 +29,7 @@ When work can resume, move this directory back to `.pm/w3/m2/`.
 | t006 | Adoption surface | 20m | t003, t005 | — **DONE**
 | t007 | Simplify | 30m | t006 | — **DONE**
 | t008 | Test coverage | 45m | t006 | — **DONE**
-| t009 | Closeout | 20m | t008 |
+| t009 | Closeout | 20m | t008 | — **DONE**
 
 ## Definition of done
 
