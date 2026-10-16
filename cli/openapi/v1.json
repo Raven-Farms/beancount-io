@@ -169,7 +169,7 @@
         "properties": {
           "content": {
             "type": "string",
-            "description": "The file's full new content, as UTF-8 text",
+            "description": "The file's full new content, as UTF-8 text; at most 1 MiB (1,048,576 UTF-8 bytes).",
             "example": "2026-01-01 open Assets:Bank:Checking USD\n"
           },
           "message": {
@@ -186,7 +186,7 @@
         "required": [
           "content"
         ],
-        "description": "New content for one ledger file"
+        "description": "New content for one ledger file, at most 1 MiB of UTF-8 bytes"
       },
       "FileDelete": {
         "type": "object",
@@ -9322,7 +9322,7 @@
       },
       "put": {
         "summary": "Create or replace a file",
-        "description": "Writes the file and commits it. Include the `sha` from a prior GET to replace an existing file; omit it to create a new one.",
+        "description": "Writes at most 1 MiB (1,048,576 UTF-8 bytes) and commits it. Include the `sha` from a prior GET to replace an existing file; omit it to create a new one. The complete JSON request is separately limited to 2 MiB.",
         "tags": [
           "Ledger v1"
         ],

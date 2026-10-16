@@ -13,10 +13,11 @@ T = TypeVar("T", bound="FileWrite")
 
 @_attrs_define
 class FileWrite:
-    """New content for one ledger file
+    """New content for one ledger file, at most 1 MiB of UTF-8 bytes
 
     Attributes:
-        content (str): The file's full new content, as UTF-8 text Example: 2026-01-01 open Assets:Bank:Checking USD
+        content (str): The file's full new content, as UTF-8 text; at most 1 MiB (1,048,576 UTF-8 bytes). Example:
+            2026-01-01 open Assets:Bank:Checking USD
             .
         message (str | Unset): Commit message; defaults to a generated one Example: Add January transactions.
         sha (str | Unset): Blob SHA the edit is based on. Send the SHA from a prior GET to update an existing file; omit

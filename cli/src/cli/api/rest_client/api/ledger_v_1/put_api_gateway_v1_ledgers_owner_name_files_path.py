@@ -119,15 +119,16 @@ def sync_detailed(
 ) -> Response[FileCommitAck | V1Error]:
     """Create or replace a file
 
-     Writes the file and commits it. Include the `sha` from a prior GET to replace an existing file; omit
-    it to create a new one.
+     Writes at most 1 MiB (1,048,576 UTF-8 bytes) and commits it. Include the `sha` from a prior GET to
+    replace an existing file; omit it to create a new one. The complete JSON request is separately
+    limited to 2 MiB.
 
     Args:
         owner (str): Ledger owner's username Example: alice.
         name (str): Ledger (repository) name Example: main-ledger.
         path (str): Path of the file within the ledger repository. May contain slashes. Example:
             2026/january.bean.
-        body (FileWrite | Unset): New content for one ledger file
+        body (FileWrite | Unset): New content for one ledger file, at most 1 MiB of UTF-8 bytes
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -161,15 +162,16 @@ def sync(
 ) -> FileCommitAck | V1Error | None:
     """Create or replace a file
 
-     Writes the file and commits it. Include the `sha` from a prior GET to replace an existing file; omit
-    it to create a new one.
+     Writes at most 1 MiB (1,048,576 UTF-8 bytes) and commits it. Include the `sha` from a prior GET to
+    replace an existing file; omit it to create a new one. The complete JSON request is separately
+    limited to 2 MiB.
 
     Args:
         owner (str): Ledger owner's username Example: alice.
         name (str): Ledger (repository) name Example: main-ledger.
         path (str): Path of the file within the ledger repository. May contain slashes. Example:
             2026/january.bean.
-        body (FileWrite | Unset): New content for one ledger file
+        body (FileWrite | Unset): New content for one ledger file, at most 1 MiB of UTF-8 bytes
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -198,15 +200,16 @@ async def asyncio_detailed(
 ) -> Response[FileCommitAck | V1Error]:
     """Create or replace a file
 
-     Writes the file and commits it. Include the `sha` from a prior GET to replace an existing file; omit
-    it to create a new one.
+     Writes at most 1 MiB (1,048,576 UTF-8 bytes) and commits it. Include the `sha` from a prior GET to
+    replace an existing file; omit it to create a new one. The complete JSON request is separately
+    limited to 2 MiB.
 
     Args:
         owner (str): Ledger owner's username Example: alice.
         name (str): Ledger (repository) name Example: main-ledger.
         path (str): Path of the file within the ledger repository. May contain slashes. Example:
             2026/january.bean.
-        body (FileWrite | Unset): New content for one ledger file
+        body (FileWrite | Unset): New content for one ledger file, at most 1 MiB of UTF-8 bytes
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -238,15 +241,16 @@ async def asyncio(
 ) -> FileCommitAck | V1Error | None:
     """Create or replace a file
 
-     Writes the file and commits it. Include the `sha` from a prior GET to replace an existing file; omit
-    it to create a new one.
+     Writes at most 1 MiB (1,048,576 UTF-8 bytes) and commits it. Include the `sha` from a prior GET to
+    replace an existing file; omit it to create a new one. The complete JSON request is separately
+    limited to 2 MiB.
 
     Args:
         owner (str): Ledger owner's username Example: alice.
         name (str): Ledger (repository) name Example: main-ledger.
         path (str): Path of the file within the ledger repository. May contain slashes. Example:
             2026/january.bean.
-        body (FileWrite | Unset): New content for one ledger file
+        body (FileWrite | Unset): New content for one ledger file, at most 1 MiB of UTF-8 bytes
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
