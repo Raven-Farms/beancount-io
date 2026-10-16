@@ -78,21 +78,32 @@ const CreateFilePage = () => {
   );
 
   // Construct full file path
-  const fullPath = dirPath ? `${dirPath}/${filename}` : filename;
+  const normalizedFilename = filename.trim();
+  const fullPath = dirPath
+    ? `${dirPath}/${normalizedFilename}`
+    : normalizedFilename;
 
-  const nameIssue = createFileNameIssue(filename, existingNames);
+  const nameIssue = createFileNameIssue(
+    normalizedFilename,
+    existingNames,
+    dirPath,
+  );
   const filenameError =
     nameIssue === "unsafe"
       ? t("ledgerEditor.invalidFilePath")
-      : nameIssue === "exists"
-        ? t("ledgerEditor.fileAlreadyExists")
-        : null;
+      : nameIssue === "emptySegment"
+        ? t("ledgerEditor.emptyFilePathSegment")
+        : nameIssue === "git"
+          ? t("ledgerEditor.gitFilePathNotAllowed")
+          : nameIssue === "exists"
+            ? t("ledgerEditor.fileAlreadyExists")
+            : null;
 
   // Save button should be disabled if filename is empty/invalid or saving,
   // or if this reader cannot write to the ledger at all.
   const isSaveDisabled = !canWrite || nameIssue !== null || isSaving;
 
-  const hasDraft = filename.trim() !== "" || content.trim() !== "";
+  const hasDraft = normalizedFilename !== "" || content.trim() !== "";
 
   const blocker = useBlocker({
     shouldBlockFn: () => {
@@ -265,7 +276,7 @@ const CreateFilePage = () => {
           <div className="h-full">
             <Editor
               height="100%"
-              language={getFileLanguage(filename)}
+              language={getFileLanguage(normalizedFilename)}
               value={content}
               onChange={(value) => setContent(value || "")}
               theme={isDarkTheme ? "vs-dark" : "light"}

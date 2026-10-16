@@ -118,6 +118,23 @@ describe("no locale ships a half-translated message", () => {
     expect(strayEnglishWords("Beancountについて", "ja")).toEqual([]);
   });
 
+  it("allows the literal .git path while still detecting untranslated prose", () => {
+    expect(strayEnglishWords("Файли в .git не можна редагувати", "uk")).toEqual(
+      [],
+    );
+    expect(strayEnglishWords("Файли в .git cannot be edited", "uk")).toEqual([
+      "cannot",
+      "be",
+      "edited",
+    ]);
+    expect(strayEnglishWords("Файли в git не можна редагувати", "uk")).toEqual([
+      "git",
+    ]);
+    expect(
+      strayEnglishWords("Файли в .github не можна редагувати", "uk"),
+    ).toEqual(["github"]);
+  });
+
   it.each(SCANNED)(
     "carries no deviation for %s — every scanned locale is clean",
     (locale) => {

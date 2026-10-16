@@ -1,21 +1,34 @@
-/**
- * Client-side path rules mirroring backend `assertSafeRepoPath`:
- * reject empty paths, null bytes, backslashes, and empty/`.`/`..` segments.
- * Nested paths like `a/b/c.bean` are allowed.
- */
-export function isSafeCreateFilePath(path: string): boolean {
-  if (typeof path !== "string" || path.length === 0) {
-    return false;
-  }
-  if (path.includes("\0") || path.includes("\\")) {
-    return false;
+export type CreateFileNameIssue =
+  | "empty"
+  | "unsafe"
+  | "emptySegment"
+  | "git"
+  | "exists"
+  | null;
+
+function createFilePathIssue(path: string): CreateFileNameIssue {
+  if (
+    typeof path !== "string" ||
+    !path ||
+    path.includes("\0") ||
+    path.includes("\\")
+  ) {
+    return "unsafe";
   }
   for (const segment of path.split("/")) {
-    if (segment === "" || segment === "." || segment === "..") {
-      return false;
-    }
+    if (segment === "") return "emptySegment";
+    if (segment === "." || segment === "..") return "unsafe";
+    if (segment.toLowerCase() === ".git") return "git";
   }
-  return true;
+  return null;
+}
+
+/**
+ * Reject empty paths, null bytes, backslashes, empty/`.`/`..` segments and
+ * reserved `.git` segments. Ordinary nested paths remain allowed.
+ */
+export function isSafeCreateFilePath(path: string): boolean {
+  return createFilePathIssue(path) === null;
 }
 
 /**
@@ -36,15 +49,16 @@ export function createFileNameCollides(
   return existingNames.some((name) => name === trimmed);
 }
 
-export type CreateFileNameIssue = "empty" | "unsafe" | "exists" | null;
-
 export function createFileNameIssue(
   filename: string,
   existingNames: ReadonlyArray<string>,
+  dirPath = "",
 ): CreateFileNameIssue {
   const trimmed = filename.trim();
   if (!trimmed) return "empty";
-  if (!isSafeCreateFilePath(trimmed)) return "unsafe";
+  const fullPath = dirPath ? `${dirPath}/${trimmed}` : trimmed;
+  const pathIssue = createFilePathIssue(fullPath);
+  if (pathIssue) return pathIssue;
   if (createFileNameCollides(trimmed, existingNames)) return "exists";
   return null;
 }
