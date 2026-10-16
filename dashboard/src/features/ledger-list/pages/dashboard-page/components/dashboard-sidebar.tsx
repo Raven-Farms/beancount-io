@@ -73,6 +73,7 @@ import { decodeLedgerId } from "@/common/lib/utils/encode";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { useFormatRelativeTime } from "@/common/hooks/use-date-locale";
 import { useErrorMessage } from "@/common/lib/errors/error-message";
+import { restoreFocusOnDialogClose } from "@/common/lib/focus/restore-focus-on-dialog-close";
 
 type ListLedgerItem = ListLedgersQuery["listLedgers"][number];
 
@@ -81,7 +82,7 @@ interface LedgerItemProps {
   ledgerOwner: string;
   ledgerName: string;
   onView: (ledgerId: string) => void;
-  onEdit: (ledgerId: string) => void;
+  onEdit: (ledgerId: string, returnFocusTo?: HTMLElement | null) => void;
   onDelete: (ledgerId: string, returnFocusTo?: HTMLElement | null) => void;
 }
 
@@ -92,7 +93,7 @@ interface ErrorStateProps {
 interface LedgerListDataProps {
   ledgers: ListLedgerItem[];
   onView: (ledgerId: string) => void;
-  onEdit: (ledgerId: string) => void;
+  onEdit: (ledgerId: string, returnFocusTo?: HTMLElement | null) => void;
   onDelete: (ledgerId: string, returnFocusTo?: HTMLElement | null) => void;
   onCreateLedger: () => void;
 }
@@ -171,7 +172,9 @@ function LedgerItem({
             </SidebarMenuAction>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" side="right">
-            <DropdownMenuItem onClick={() => onEdit(ledger.id)}>
+            <DropdownMenuItem
+              onClick={() => onEdit(ledger.id, settingsTriggerRef.current)}
+            >
               <Edit className="h-4 w-4 mr-2" />
               {t("page.dashboard.editLedger")}
             </DropdownMenuItem>
@@ -304,6 +307,8 @@ export function DashboardSidebar() {
     null,
   );
   const deleteReturnFocusRef = useRef<HTMLElement | null>(null);
+  const editReturnFocusRef = useRef<HTMLElement | null>(null);
+  const skipEditFocusRestoreRef = useRef(false);
 
   const {
     data,
@@ -381,9 +386,16 @@ export function DashboardSidebar() {
     void navigate({ to: `/ledger/${ledgerOwner}/${ledgerName}` });
   };
 
-  const handleEditLedger = (ledgerId: string) => {
+  const handleEditLedger = (
+    ledgerId: string,
+    returnFocusTo?: HTMLElement | null,
+  ) => {
     const ledger = ledgers.find((l) => l.id === ledgerId);
-    if (ledger) setEditingLedger(ledger);
+    if (ledger) {
+      editReturnFocusRef.current = returnFocusTo ?? null;
+      skipEditFocusRestoreRef.current = false;
+      setEditingLedger(ledger);
+    }
   };
 
   const handleSetDeletingLedger = (
@@ -488,7 +500,17 @@ export function DashboardSidebar() {
         open={!!editingLedger}
         onOpenChange={() => setEditingLedger(null)}
       >
-        <DialogContent>
+        <DialogContent
+          onCloseAutoFocus={(event) => {
+            if (skipEditFocusRestoreRef.current) {
+              skipEditFocusRestoreRef.current = false;
+              event.preventDefault();
+            } else {
+              restoreFocusOnDialogClose(event, editReturnFocusRef.current);
+            }
+            editReturnFocusRef.current = null;
+          }}
+        >
           <DialogHeader>
             <DialogTitle>{t("page.dashboard.editLedgerSettings")}</DialogTitle>
             <DialogDescription>
@@ -531,6 +553,7 @@ export function DashboardSidebar() {
                         // Navigate to the renamed ledger
                         const { ledgerOwner, ledgerName } =
                           decodeLedgerId(newId);
+                        skipEditFocusRestoreRef.current = true;
                         void navigate({
                           to: `/ledger/${ledgerOwner}/${ledgerName}`,
                         });

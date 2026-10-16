@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { GetLedgerFileQuery } from "@/graphql/definitions";
 import { Button } from "@/common/components/ui/button";
 import {
@@ -37,6 +37,7 @@ import LedgerFileBreadcrumb from "../../shared/components/ledger-file-breadcrumb
 import { useTranslations } from "@/common/hooks/use-translations";
 import { LedgerWritePermission } from "@/common/components/ledger-permission/write";
 import { useIsMac } from "../hooks/use-platform";
+import { restoreFocusOnDialogClose } from "@/common/lib/focus/restore-focus-on-dialog-close";
 
 export interface NonTextFileViewProps {
   filePath: string;
@@ -101,12 +102,16 @@ export const FileActionButtons = ({
   const { t } = useTranslations();
   const isMac = useIsMac();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const moreActionsTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const deleteConfirmedRef = useRef(false);
 
   const handleDeleteClick = () => {
+    deleteConfirmedRef.current = false;
     setIsDeleteDialogOpen(true);
   };
 
   const handleConfirmDelete = () => {
+    deleteConfirmedRef.current = true;
     onDelete();
     setIsDeleteDialogOpen(false);
   };
@@ -137,7 +142,12 @@ export const FileActionButtons = ({
           )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="size-8 p-0">
+              <Button
+                ref={moreActionsTriggerRef}
+                variant="outline"
+                size="sm"
+                className="size-8 p-0"
+              >
                 <EllipsisVertical className="h-4 w-4" />
                 <span className="sr-only">{t("common.moreActions")}</span>
               </Button>
@@ -167,7 +177,18 @@ export const FileActionButtons = ({
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent
+          className="sm:max-w-md"
+          onCloseAutoFocus={(event) => {
+            if (deleteConfirmedRef.current) {
+              deleteConfirmedRef.current = false;
+              // A confirmed delete owns navigation; keep its route focus.
+              event.preventDefault();
+              return;
+            }
+            restoreFocusOnDialogClose(event, moreActionsTriggerRef.current);
+          }}
+        >
           <DialogHeader>
             <DialogTitle>{t("ledgerEditor.deleteFileTitle")}</DialogTitle>
             <DialogDescription className="wrap-break-word">
