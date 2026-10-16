@@ -9,19 +9,19 @@ Identify which category this document belongs to, then apply the matching extrac
 → Extract EACH transaction as a separate row using the rules below.
 
 **BILL** — Receipt, medical bill, utility bill, electricity bill, internet bill, phone bill, mobile bill, insurance bill, subscription invoice:
-→ Return exactly ONE summarized transaction:
+→ Return exactly ONE transaction with the aggregated bill total:
   - date: bill date or invoice date (not individual line item dates)
   - payee: company or provider name (e.g. "AT&T", "Pacific Gas & Electric", "Dr. Smith Clinic")
   - amount: use the printed grand total if shown; otherwise sum ALL charges including tax and fees — as a negative number (expense)
-  - description: concise service summary, include billing period if shown (e.g. "Internet Service - Jan 2025", "Electricity Bill - Dec 2024", "Medical Bill")
+  - description: follow the DESCRIPTION FIELD rules below; aggregation does not permit inventing a memo or summarizing a plaintext bill
   - DO NOT split by line item — individual items are not separate transactions
 
 ## OUTPUT FORMAT
 
 Each transaction MUST have:
 - date: YYYY-MM-DD format (e.g., "2025-01-29")
-- payee: Merchant/vendor name (clean, no special chars)
-- description: Transaction details/memo (concise but informative)
+- payee: Merchant/vendor name (formatting may be normalized; preserve the original language)
+- description: Source memo/description for STATEMENT rows (verbatim, trim only); BILL documents follow the DESCRIPTION FIELD mode rules
 - amount: Decimal number (negative = expense/debit, positive = income/credit)
 
 ## DATE HANDLING
@@ -47,6 +47,7 @@ Parse amounts correctly:
 ## PAYEE EXTRACTION
 
 Clean and normalize payee names:
+- You may normalize formatting, but do not translate payee names.
 - Remove transaction IDs: "AMZN*AB123CD45" → "Amazon"
 - Remove extra spaces and special chars: "STARBUCKS   #1234" → "Starbucks"
 - Expand common abbreviations: "SQ *" → "Square", "TST*" → "Toast"
@@ -55,12 +56,19 @@ Clean and normalize payee names:
 
 ## DESCRIPTION FIELD
 
-Provide useful context:
-- Include original memo if available
-- Add location if shown: "Starbucks - 123 Main St"
-- Include reference numbers only if meaningful
-- For online purchases, include order number if shown
-- Keep it concise (under 100 chars)
+STATEMENT rows and all plaintext documents, including plaintext BILL documents:
+- Copy the source memo/description exactly as written; trim leading and trailing whitespace only.
+- Preserve the original language, spelling, punctuation, capitalization, internal spacing and reference numbers.
+- Do not translate, paraphrase, summarize, truncate, or invent context.
+- Do not add text from the payee, amount, filename, other rows, or inferred transaction purpose.
+- If no source memo/description is present, set description to "".
+- For a plaintext BILL, use only an explicitly printed bill-level memo/description; otherwise use "".
+- A payee alone is not a memo; do not infer a description from the merchant or counterparty.
+- Keep "Gehalt" unchanged; never replace it with "Salary payment".
+
+BILL summary exception — image/PDF attachment without plaintext ONLY:
+- Return one transaction for the bill total. Its description may summarize only services and billing periods actually printed in the source, in the original language.
+- This exception never applies to STATEMENT rows or any document supplied as plaintext.
 
 ## SKIP NON-TRANSACTIONS
 
@@ -118,7 +126,7 @@ function getFormatSpecificRules(format: string): string {
 - <TRNAMT> = amount (negative = debit)
 - <NAME> = payee
 - <MEMO> = description
-- Combine NAME and MEMO intelligently`;
+- Keep NAME and MEMO separate; never fill an absent MEMO from NAME`;
 
     case "image":
       return `IMAGE RULES:
@@ -138,11 +146,13 @@ function getFormatSpecificRules(format: string): string {
 
 const EXTRACTION_INSTRUCTIONS = `For each transaction, provide:
 1. Exact date in YYYY-MM-DD format
-2. Clean payee/merchant name
-3. Meaningful description with context
+2. Normalize payee formatting if needed, but do not translate payee names
+3. For STATEMENT rows, copy the memo/description exactly as written (trim only); preserve the original language. If it is absent, return description "". Do not paraphrase, summarize, truncate, or invent context.
 4. Accurate amount (negative for expenses, positive for income)
 
 Skip headers and totals.`;
+
+const NON_PLAINTEXT_BILL_INSTRUCTIONS = `No plaintext is supplied. Only for an image/PDF BILL, return one transaction whose description may summarize printed details in the original language. Do not invent services or billing periods. STATEMENT descriptions must still be copied verbatim (trim only), or be "" when absent.`;
 
 export function buildTransactionTextAnalysisPrompt(
   format: string,
@@ -152,13 +162,19 @@ export function buildTransactionTextAnalysisPrompt(
 
 ${textContent}
 
-Extract ALL transactions from this file. ${EXTRACTION_INSTRUCTIONS}`;
+Apply document classification: extract each STATEMENT transaction, or exactly one BILL transaction. ${EXTRACTION_INSTRUCTIONS}
+
+This message supplies plaintext. For every transaction, including a single BILL transaction, copy only the source memo/description verbatim (trim only), or return description "" when absent. Do not summarize plaintext bills.`;
 }
 
 export function buildTransactionImageAnalysisPrompt(): string {
-  return `Extract all transactions from this image. ${EXTRACTION_INSTRUCTIONS}`;
+  return `Apply document classification to this image: extract each STATEMENT transaction, or exactly one BILL transaction. ${EXTRACTION_INSTRUCTIONS}
+
+${NON_PLAINTEXT_BILL_INSTRUCTIONS}`;
 }
 
 export function buildTransactionFileAnalysisPrompt(format: string): string {
-  return `Extract all transactions from this ${format.toUpperCase()} file. ${EXTRACTION_INSTRUCTIONS}`;
+  return `Apply document classification to this ${format.toUpperCase()} file: extract each STATEMENT transaction, or exactly one BILL transaction. ${EXTRACTION_INSTRUCTIONS}
+
+${NON_PLAINTEXT_BILL_INSTRUCTIONS}`;
 }

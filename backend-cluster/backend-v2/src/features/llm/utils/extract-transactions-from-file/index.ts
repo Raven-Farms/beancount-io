@@ -2,6 +2,7 @@ import type { LLMClient } from "../llm-client";
 import { callLLM } from "../call-llm";
 import type { ExtractTransactionsResult } from "../../types";
 import { prepareLlmMessage } from "../prepare-llm-message";
+import { groundTransactionDescriptions } from "./ground-descriptions";
 import {
   buildTransactionSystemPrompt,
   buildTransactionTextAnalysisPrompt,
@@ -19,8 +20,8 @@ export async function extractTransactionsFromFile({
   fileUrl: string;
   format: string;
   mediaType?: string;
-}): Promise<ExtractTransactionsResult> {
-  const { system, messages } = await prepareLlmMessage({
+}): Promise<ExtractTransactionsResult & { removedDescriptionCount?: number }> {
+  const { system, messages, sourceText } = await prepareLlmMessage({
     fileUrl,
     format,
     mediaType,
@@ -31,5 +32,15 @@ export async function extractTransactionsFromFile({
       file: buildTransactionFileAnalysisPrompt,
     },
   });
-  return callLLM({ llmClient, system, messages });
+  const result = await callLLM({ llmClient, system, messages });
+  if (sourceText === undefined) return result;
+  return {
+    ...result,
+    ...groundTransactionDescriptions(
+      result.transactions,
+      sourceText,
+      format,
+      mediaType,
+    ),
+  };
 }

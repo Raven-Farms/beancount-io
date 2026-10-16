@@ -27,6 +27,9 @@ import {
   InternalServerError,
 } from "@/shared/errors";
 import type { RecentTransactionExample } from "../types";
+import { logger } from "@/shared/logger";
+
+const llmServiceLogger = logger.child({ module: "llm-service" });
 
 // Domain types (transport-agnostic, no TypeGraphQL decorators)
 type ParsedTransaction = {
@@ -169,12 +172,19 @@ export class LLMService implements ILLMService {
     const { downloadUrl } =
       await this.assetStorage.generateDownloadUrl(s3ObjectKey);
 
-    const { transactions, tokenUsage } = await extractTransactionsFromFile({
-      llmClient: this.llmClient,
-      fileUrl: downloadUrl,
-      format: fileFormat,
-      mediaType: contentType,
-    });
+    const { transactions, tokenUsage, removedDescriptionCount } =
+      await extractTransactionsFromFile({
+        llmClient: this.llmClient,
+        fileUrl: downloadUrl,
+        format: fileFormat,
+        mediaType: contentType,
+      });
+
+    if (removedDescriptionCount) {
+      llmServiceLogger.warn("Removed unsupported transaction descriptions", {
+        removedDescriptionCount,
+      });
+    }
 
     await this.aiCfoUsageService.addTokenUsage(
       userId,

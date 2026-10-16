@@ -19,7 +19,11 @@ export async function prepareLlmMessage({
   format: string;
   mediaType?: string;
   prompts: PromptBuilders;
-}): Promise<{ system: string; messages: ModelMessage[] }> {
+}): Promise<{
+  system: string;
+  messages: ModelMessage[];
+  sourceText?: string;
+}> {
   const system = prompts.system(format);
   const category = classifyFile(format, mediaType);
 
@@ -33,6 +37,7 @@ export async function prepareLlmMessage({
     const textContent = await response.text();
     return {
       system,
+      sourceText: textContent,
       messages: [
         {
           role: "user",

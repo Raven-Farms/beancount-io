@@ -1,11 +1,14 @@
-import { classifyFile } from "../media-type-utils";
+import { classifyFile, resolveMediaType } from "../media-type-utils";
 
 describe("classifyFile", () => {
   describe("format fallback (no mediaType)", () => {
-    it("should return text for csv, ofx, qfx, txt, json, xml", () => {
+    it("should return text for statement and plaintext format aliases", () => {
       expect(classifyFile("csv")).toBe("text");
       expect(classifyFile("ofx")).toBe("text");
       expect(classifyFile("qfx")).toBe("text");
+      expect(classifyFile("qif")).toBe("text");
+      expect(classifyFile("text")).toBe("text");
+      expect(classifyFile("plaintext")).toBe("text");
       expect(classifyFile("txt")).toBe("text");
       expect(classifyFile("json")).toBe("text");
       expect(classifyFile("xml")).toBe("text");
@@ -52,6 +55,18 @@ describe("classifyFile", () => {
       expect(classifyFile("unknown", "application/x-ofx")).toBe("text");
     });
 
+    it("recognizes QIF/QFX media types including case and parameters", () => {
+      for (const mediaType of [
+        "application/qif",
+        "application/x-qif",
+        "application/vnd.intu.qfx",
+        "APPLICATION/X-QIF; charset=UTF-8",
+      ]) {
+        expect(classifyFile("unknown", mediaType)).toBe("text");
+      }
+      expect(resolveMediaType("qif")).toBe("application/x-qif");
+    });
+
     it("should return file for application/pdf", () => {
       expect(classifyFile("unknown", "application/pdf")).toBe("file");
     });
@@ -60,6 +75,7 @@ describe("classifyFile", () => {
       expect(classifyFile("csv", "application/octet-stream")).toBe("text");
       expect(classifyFile("png", "application/octet-stream")).toBe("image");
       expect(classifyFile("pdf", "application/octet-stream")).toBe("file");
+      expect(classifyFile("qif", "application/octet-stream")).toBe("text");
     });
   });
 });

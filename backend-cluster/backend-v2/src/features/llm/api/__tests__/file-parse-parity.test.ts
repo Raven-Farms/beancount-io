@@ -5,7 +5,9 @@ jest.mock("@ai-sdk/harness-acp", () => ({ createACP: () => ({}) }));
 jest.mock("../../utils/extract-transactions-from-file", () => ({
   extractTransactionsFromFile: jest.fn(),
 }));
+jest.mock("../../utils/call-llm", () => ({ callLLM: jest.fn() }));
 import { extractTransactionsFromFile } from "../../utils/extract-transactions-from-file";
+import { callLLM } from "../../utils/call-llm";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { buildSchema } from "type-graphql";
@@ -61,11 +63,97 @@ beforeAll(async () => {
   });
 });
 beforeEach(() => {
+  jest.mocked(callLLM).mockReset();
   jest.mocked(extractTransactionsFromFile).mockReset();
   jest.mocked(extractTransactionsFromFile).mockResolvedValue({
     transactions: rows,
     tokenUsage: { inputTokens: 80, outputTokens: 20 },
   });
+});
+
+it("grounds actual model descriptions identically through REST, GraphQL, and MCP without changing public rows or charges", async () => {
+  jest
+    .mocked(extractTransactionsFromFile)
+    .mockImplementation(
+      jest.requireActual<
+        typeof import("../../utils/extract-transactions-from-file")
+      >("../../utils/extract-transactions-from-file")
+        .extractTransactionsFromFile,
+    );
+  const source = [
+    "Date,Payee,Description,Amount",
+    "2026-10-01,QA Synthetic Grocer,,-23.10",
+    "2026-10-02,QA Synthetic Payroll,QA Synthetic Gehalt,500.00",
+    "2026-10-03,QA Synthetic Bäckerei,Café Frühstück,-5.50",
+    "",
+  ].join("\n");
+  const modelRows = [
+    {
+      date: "2026-10-01",
+      payee: "QA Synthetic Grocer",
+      description: "Grocery purchase",
+      amount: -23.1,
+    },
+    {
+      date: "2026-10-02",
+      payee: "QA Synthetic Payroll",
+      description: "Salary payment",
+      amount: 500,
+    },
+    {
+      date: "2026-10-03",
+      payee: "QA Synthetic Bäckerei",
+      description: " Café Frühstück ",
+      amount: -5.5,
+    },
+  ];
+  const expectedRows = [
+    { ...modelRows[0], description: "" },
+    { ...modelRows[1], description: "" },
+    { ...modelRows[2], description: "Café Frühstück" },
+  ];
+  jest.mocked(callLLM).mockResolvedValue({
+    transactions: modelRows,
+    tokenUsage: { inputTokens: 80, outputTokens: 20 },
+  });
+  const nativeFetch = global.fetch;
+  const fetchFile = jest
+    .spyOn(global, "fetch")
+    .mockImplementation((url, init) => {
+      if (String(url) === "https://storage.invalid/fixture") {
+        return Promise.resolve(
+          new Response(source, { headers: { "content-type": "text/csv" } }),
+        );
+      }
+      return nativeFetch(url, init);
+    });
+  const f = await fixture();
+  try {
+    const r = await f.rest();
+    const g = await f.gql();
+    const m = await f.mcp();
+    expect(r.status).toBe(200);
+    expect(g.errors).toBeUndefined();
+    expect(m.isError).not.toBe(true);
+    expect(await r.json()).toEqual({ rows: expectedRows });
+    expect(g.data!.parseFile).toEqual({ rows: expectedRows });
+    expect(m.structuredContent).toEqual({
+      ok: true,
+      result: { rows: expectedRows },
+    });
+    expect(callLLM).toHaveBeenCalledTimes(3);
+    expect(
+      fetchFile.mock.calls.filter(
+        ([url]) => String(url) === "https://storage.invalid/fixture",
+      ),
+    ).toHaveLength(3);
+    expect(f.metadata).toHaveBeenCalledTimes(3);
+    expect(f.charge).toHaveBeenCalledTimes(3);
+    expect(f.charge).toHaveBeenCalledWith("usr_alice", 100);
+  } finally {
+    await f.close();
+    fetchFile.mockRestore();
+  }
 });
 
 async function fixture(caller = identity, appId?: string) {

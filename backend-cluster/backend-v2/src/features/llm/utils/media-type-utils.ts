@@ -1,6 +1,24 @@
 export type FileCategory = "text" | "image" | "file";
 
-const TEXT_FORMATS = new Set(["csv", "ofx", "qfx", "txt", "json", "xml"]);
+const TEXT_FORMATS = new Set([
+  "csv",
+  "ofx",
+  "qfx",
+  "qif",
+  "txt",
+  "text",
+  "plaintext",
+  "json",
+  "xml",
+]);
+const TEXT_MEDIA_TYPES = new Set([
+  "application/json",
+  "application/xml",
+  "application/x-ofx",
+  "application/vnd.intu.qfx",
+  "application/qif",
+  "application/x-qif",
+]);
 const IMAGE_FORMATS = new Set(["jpg", "jpeg", "png", "gif", "webp", "image"]);
 
 const MEDIA_TYPE_MAP: Record<string, string> = {
@@ -8,11 +26,14 @@ const MEDIA_TYPE_MAP: Record<string, string> = {
   pdf: "application/pdf",
   ofx: "application/x-ofx",
   qfx: "application/x-ofx",
+  qif: "application/x-qif",
   xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   xls: "application/vnd.ms-excel",
   json: "application/json",
   xml: "application/xml",
   txt: "text/plain",
+  text: "text/plain",
+  plaintext: "text/plain",
   jpg: "image/jpeg",
   jpeg: "image/jpeg",
   png: "image/png",
@@ -22,21 +43,16 @@ const MEDIA_TYPE_MAP: Record<string, string> = {
 };
 
 export function classifyFile(format: string, mediaType?: string): FileCategory {
+  const normalizedMediaType = mediaType?.split(";")[0].trim().toLowerCase();
   const mt =
-    mediaType && mediaType !== "application/octet-stream"
-      ? mediaType.toLowerCase()
+    normalizedMediaType && normalizedMediaType !== "application/octet-stream"
+      ? normalizedMediaType
       : null;
-  const fmt = format.toLowerCase();
+  const fmt = format.trim().toLowerCase();
 
   if (mt) {
     if (mt.startsWith("image/")) return "image";
-    if (
-      mt.startsWith("text/") ||
-      mt === "application/json" ||
-      mt === "application/xml" ||
-      mt === "application/x-ofx"
-    )
-      return "text";
+    if (mt.startsWith("text/") || TEXT_MEDIA_TYPES.has(mt)) return "text";
     return "file";
   }
 
