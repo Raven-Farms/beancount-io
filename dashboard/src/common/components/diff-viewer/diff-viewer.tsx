@@ -38,8 +38,10 @@ type FlattenedRow =
   | { type: "file-header"; data: FileData }
   | { type: "hunk-line"; data: ChangeType };
 
-function fileMatches(file: FileData, filename: string): boolean {
-  return file.newPath === filename || file.oldPath === filename;
+function getDiffFilePath(file?: FileData): string {
+  // Git uses /dev/null for the absent side of an added or deleted file.
+  if (file?.newPath && file.newPath !== "/dev/null") return file.newPath;
+  return file?.oldPath && file.oldPath !== "/dev/null" ? file.oldPath : "";
 }
 
 export function DiffViewer({ diff, focusRequest = null }: DiffViewerProps) {
@@ -90,7 +92,7 @@ export function DiffViewer({ diff, focusRequest = null }: DiffViewerProps) {
       }
 
       // Only apply syntax highlighting to .bean/.beancount files
-      if (!isBeancountFile(file.newPath || file.oldPath || "")) {
+      if (!isBeancountFile(getDiffFilePath(file))) {
         return { file, tokens: null };
       }
 
@@ -98,7 +100,7 @@ export function DiffViewer({ diff, focusRequest = null }: DiffViewerProps) {
         const tokens = tokenizeBeancountDiff(file.hunks);
         return { file, tokens };
       } catch (error) {
-        console.warn(`Failed to tokenize ${file.newPath}:`, error);
+        console.warn(`Failed to tokenize ${getDiffFilePath(file)}:`, error);
         return { file, tokens: null };
       }
     });
@@ -134,10 +136,10 @@ export function DiffViewer({ diff, focusRequest = null }: DiffViewerProps) {
     ) {
       const row = flattenedRows[index];
       if (row?.type === "file-header") {
-        return row.data.newPath || row.data.oldPath || t("common.unknown");
+        return getDiffFilePath(row.data) || t("common.unknown");
       }
     }
-    return files[0]?.newPath || files[0]?.oldPath || t("common.unknown");
+    return getDiffFilePath(files[0]) || t("common.unknown");
   }, [files, firstVisibleRow, flattenedRows, t]);
 
   useLayoutEffect(() => {
@@ -145,21 +147,25 @@ export function DiffViewer({ diff, focusRequest = null }: DiffViewerProps) {
     if (handledTokenRef.current === focusRequest.token) return;
 
     const filename = parseDiffFileId(focusRequest.fileId);
-    if (filename === null) {
+    if (!filename || filename === "/dev/null") {
       handledTokenRef.current = focusRequest.token;
       return;
     }
 
     if (files.length === 0) return;
 
-    if (!files.some((file) => fileMatches(file, filename))) {
+    // A current path wins over a rename alias when the old name is reused.
+    const focusedFile =
+      files.find((file) => getDiffFilePath(file) === filename) ??
+      files.find((file) => file.oldPath === filename);
+    if (!focusedFile) {
       handledTokenRef.current = focusRequest.token;
       return;
     }
 
     if (shouldVirtualize) {
       const index = flattenedRows.findIndex(
-        (row) => row.type === "file-header" && fileMatches(row.data, filename),
+        (row) => row.type === "file-header" && row.data === focusedFile,
       );
       if (index < 0) return;
 
@@ -195,7 +201,7 @@ export function DiffViewer({ diff, focusRequest = null }: DiffViewerProps) {
     }
 
     const target = rootRef.current?.ownerDocument.getElementById(
-      focusRequest.fileId,
+      getDiffFileId(getDiffFilePath(focusedFile)),
     );
     if (!target) return;
 
@@ -281,7 +287,7 @@ export function DiffViewer({ diff, focusRequest = null }: DiffViewerProps) {
 
               if (row.type === "file-header") {
                 const filename =
-                  row.data.newPath || row.data.oldPath || t("common.unknown");
+                  getDiffFilePath(row.data) || t("common.unknown");
                 return (
                   <div
                     {...ariaAttributes}
@@ -345,8 +351,7 @@ export function DiffViewer({ diff, focusRequest = null }: DiffViewerProps) {
       <div className="overflow-clip rounded-md border border-border">
         <div className="diff-viewer-container">
           {tokenizedFiles.map(({ file, tokens }) => {
-            const filename =
-              file.newPath || file.oldPath || t("common.unknown");
+            const filename = getDiffFilePath(file) || t("common.unknown");
 
             return (
               <div

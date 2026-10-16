@@ -4,8 +4,9 @@ import {
   render as renderComponent,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import type { CSSProperties, ComponentType, ReactElement } from "react";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -41,6 +42,7 @@ vi.mock("react-window", () => ({
     style,
     listRef,
     className,
+    onRowsRendered,
   }: {
     rowCount: number;
     rowComponent: ComponentType<{
@@ -52,10 +54,23 @@ vi.mock("react-window", () => ({
     style?: CSSProperties;
     listRef?: { current: unknown };
     className?: string;
+    onRowsRendered?: (range: { startIndex: number; stopIndex: number }) => void;
   }) => {
+    const [startIndex, setStartIndex] = useState(0);
     if (listRef && "current" in listRef) {
       listRef.current = listHandle;
     }
+    useEffect(() => {
+      scrollToRow.mockImplementation(({ index }: { index: number }) => {
+        setStartIndex(index);
+      });
+    }, []);
+    useEffect(() => {
+      onRowsRendered?.({
+        startIndex,
+        stopIndex: Math.min(rowCount - 1, startIndex + 19),
+      });
+    }, [onRowsRendered, rowCount, startIndex]);
     // Attach after commit, so the consumer's layout effect observes the handle
     // without an element first — the real sequencing.
     useEffect(() => {
@@ -71,15 +86,18 @@ vi.mock("react-window", () => ({
     }, []);
     return (
       <div data-testid="virtualized-diff" style={style} className={className}>
-        {Array.from({ length: Math.min(rowCount, 20) }, (_, index) => (
-          <RowComponent
-            key={index}
-            index={index}
-            style={{ height: 22 }}
-            ariaAttributes={{}}
-            {...rowProps}
-          />
-        ))}
+        {Array.from(
+          { length: Math.min(rowCount - startIndex, 20) },
+          (_, offset) => (
+            <RowComponent
+              key={startIndex + offset}
+              index={startIndex + offset}
+              style={{ height: 22 }}
+              ariaAttributes={{}}
+              {...rowProps}
+            />
+          ),
+        )}
       </div>
     );
   },
@@ -153,9 +171,67 @@ new file mode 100644
 ${second}`;
 }
 
+const deletedPath = "archives/دفتر/deleting.bean";
+
+function createDeletedDiff(filename = deletedPath, lineCount = 3) {
+  const content = [
+    '2024-01-25 * "Deleted Café" "حذف"',
+    "  Expenses:Food  33.71 USD",
+    "  Assets:Bank  -33.71 USD",
+    ...Array.from(
+      { length: Math.max(0, lineCount - 3) },
+      (_, index) => `; removed ${index}`,
+    ),
+  ];
+  return `diff --git a/${filename} b/${filename}
+deleted file mode 100644
+--- a/${filename}
++++ /dev/null
+@@ -1,${content.length} +0,0 @@
+${content.map((line) => `-${line}`).join("\n")}\n`;
+}
+
+const renamedPaths = { old: "old/ledger.bean", new: "new/ledger.bean" };
+const renameDiff = `diff --git a/${renamedPaths.old} b/${renamedPaths.new}
+similarity index 80%
+rename from ${renamedPaths.old}
+rename to ${renamedPaths.new}
+--- a/${renamedPaths.old}
++++ b/${renamedPaths.new}
+@@ -1 +1 @@
+-2024-01-25 open Assets:Cash USD
++2024-01-26 open Assets:Cash USD
+`;
+const focusCases = [
+  {
+    kind: "deleted file",
+    requested: deletedPath,
+    displayed: deletedPath,
+    diff: createDeletedDiff(),
+  },
+  {
+    kind: "renamed old-path alias",
+    requested: renamedPaths.old,
+    displayed: renamedPaths.new,
+    diff: renameDiff,
+  },
+  {
+    kind: "renamed new path",
+    requested: renamedPaths.new,
+    displayed: renamedPaths.new,
+    diff: renameDiff,
+  },
+];
+const renameWithReplacement = `${renameDiff
+  .replaceAll(renamedPaths.old, "a.bean")
+  .replaceAll(
+    renamedPaths.new,
+    "b.bean",
+  )}\n${createLargeDiff(1).replaceAll("large.bean", "a.bean")}`;
+
 describe("DiffViewer", () => {
   beforeEach(() => {
-    scrollToRow.mockClear();
+    scrollToRow.mockReset();
     listHandle.element = null;
     elementAttachMode = "async";
     const require = createRequire(`${process.cwd()}/`);
@@ -173,6 +249,180 @@ describe("DiffViewer", () => {
     elementAttachMode = "async";
     stylesheet.remove();
   });
+
+  it.each([
+    {
+      kind: "added",
+      filename: "nested/created.bean",
+      diff: createLargeDiff(3).replaceAll("large.bean", "nested/created.bean"),
+    },
+    {
+      kind: "modified",
+      filename: "transfers.bean",
+      diff: mixedSourceDiff(false),
+    },
+    { kind: "deleted", filename: deletedPath, diff: createDeletedDiff() },
+  ])(
+    "keeps the real $kind path as the file heading and encoded anchor",
+    ({ filename, diff }) => {
+      render(<DiffViewer diff={diff} />);
+      const section = document.getElementById(getDiffFileId(filename));
+      expect(section).not.toBeNull();
+      expect(section?.firstElementChild).toHaveTextContent(filename);
+      expect(screen.getByText(filename, { exact: true })).toBeInTheDocument();
+      expect(document.getElementById(getDiffFileId("/dev/null"))).toBeNull();
+      expect(
+        screen.queryByText("/dev/null", { exact: true }),
+      ).not.toBeInTheDocument();
+    },
+  );
+
+  it("tokenizes deleted Beancount source with the real syntax highlighter", () => {
+    const { container } = render(<DiffViewer diff={createDeletedDiff()} />);
+    const removed = container.querySelector(".diff-code-delete")!;
+    expect(removed.textContent).toBe('2024-01-25 * "Deleted Café" "حذف"');
+    expect(removed.querySelector(".token.date")).toHaveTextContent(
+      "2024-01-25",
+    );
+    expect(
+      Array.from(removed.querySelectorAll(".token.string")).map(
+        (token) => token.textContent,
+      ),
+    ).toEqual(['"Deleted Café"', '"حذف"']);
+  });
+
+  it.each(focusCases)(
+    "reveals the canonical small-diff section for a $kind focus request",
+    ({ requested, displayed, diff }) => {
+      const scrollIntoView = vi
+        .spyOn(Element.prototype, "scrollIntoView")
+        .mockClear();
+      try {
+        render(
+          <DiffViewer
+            diff={diff}
+            focusRequest={{ fileId: getDiffFileId(requested), token: 31 }}
+          />,
+        );
+        const target = document.getElementById(getDiffFileId(displayed));
+        expect(target).not.toBeNull();
+        expect(target?.firstElementChild).toHaveTextContent(displayed);
+        expect(scrollIntoView.mock.contexts).toEqual([target]);
+        expect(scrollIntoView).toHaveBeenCalledWith({
+          block: "start",
+          behavior: "auto",
+        });
+      } finally {
+        scrollIntoView.mockRestore();
+      }
+    },
+  );
+
+  it.each(focusCases)(
+    "waits for the virtual list before revealing a $kind and updating the current filename",
+    async ({ requested, displayed, diff }) => {
+      const focusRequest = { fileId: getDiffFileId(requested), token: 41 };
+      const combined = `${createLargeDiff(500)}\n${diff}`;
+      const { rerender } = render(
+        <DiffViewer diff={combined} focusRequest={focusRequest} />,
+      );
+      expect(listHandle.element).toBeNull();
+      expect(scrollToRow).not.toHaveBeenCalled();
+      await waitFor(() =>
+        expect(scrollToRow).toHaveBeenCalledWith({
+          index: 501,
+          align: "start",
+          behavior: "auto",
+        }),
+      );
+      const list = screen.getByTestId("virtualized-diff");
+      const header = await within(list).findByText(displayed, { exact: true });
+      expect(header).toHaveAttribute("id", getDiffFileId(displayed));
+      // The active virtual header and the persistent filename both use the real path.
+      await waitFor(() =>
+        expect(screen.getAllByText(displayed, { exact: true })).toHaveLength(2),
+      );
+      expect(
+        screen.queryByText("/dev/null", { exact: true }),
+      ).not.toBeInTheDocument();
+      expect(scrollToRow).toHaveBeenCalledTimes(1);
+      rerender(<DiffViewer diff={combined} focusRequest={focusRequest} />);
+      expect(scrollToRow).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it("prefers a replacement file's canonical path over an earlier rename alias in a small diff", () => {
+    const scrollIntoView = vi
+      .spyOn(Element.prototype, "scrollIntoView")
+      .mockClear();
+    try {
+      render(
+        <DiffViewer
+          diff={renameWithReplacement}
+          focusRequest={{ fileId: getDiffFileId("a.bean"), token: 61 }}
+        />,
+      );
+      const replacement = document.getElementById(getDiffFileId("a.bean"));
+      const renamed = document.getElementById(getDiffFileId("b.bean"));
+      expect(replacement).not.toBeNull();
+      expect(renamed).not.toBeNull();
+      expect(scrollIntoView.mock.contexts).toEqual([replacement]);
+      expect(scrollIntoView.mock.contexts).not.toContain(renamed);
+    } finally {
+      scrollIntoView.mockRestore();
+    }
+  });
+
+  it("prefers the replacement's canonical header over a rename alias after virtual readiness", async () => {
+    render(
+      <DiffViewer
+        diff={`${createLargeDiff(500)}\n${renameWithReplacement}`}
+        focusRequest={{ fileId: getDiffFileId("a.bean"), token: 62 }}
+      />,
+    );
+    expect(listHandle.element).toBeNull();
+    expect(scrollToRow).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(scrollToRow).toHaveBeenCalledWith({
+        index: 504, // 501 rows for large.bean, then a rename header and its two lines.
+        align: "start",
+        behavior: "auto",
+      }),
+    );
+    expect(
+      screen.getByTestId("virtualized-diff").firstElementChild,
+    ).toHaveAttribute("id", getDiffFileId("a.bean"));
+    await waitFor(() =>
+      expect(screen.getAllByText("a.bean", { exact: true })).toHaveLength(2),
+    );
+    expect(scrollToRow).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    { fileId: getDiffFileId("/dev/null"), virtual: false },
+    { fileId: "diff-file-", virtual: false },
+    { fileId: getDiffFileId("/dev/null"), virtual: true },
+    { fileId: "diff-file-", virtual: true },
+  ])(
+    "ignores non-file focus $fileId in virtual=$virtual mode",
+    async ({ fileId, virtual }) => {
+      const scrollIntoView = vi
+        .spyOn(Element.prototype, "scrollIntoView")
+        .mockClear();
+      try {
+        const diff = virtual
+          ? `${createLargeDiff(500)}\n${createDeletedDiff()}`
+          : createDeletedDiff();
+        render(<DiffViewer diff={diff} focusRequest={{ fileId, token: 51 }} />);
+        if (virtual)
+          await waitFor(() => expect(listHandle.element).not.toBeNull());
+        expect(scrollToRow).not.toHaveBeenCalled();
+        expect(scrollIntoView).not.toHaveBeenCalled();
+      } finally {
+        scrollIntoView.mockRestore();
+      }
+    },
+  );
 
   it.each(["en", "fa"] as const)(
     "isolates the actual small %s source table while preserving tokenized content, gutters and interface direction",
