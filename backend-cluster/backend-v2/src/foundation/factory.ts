@@ -33,7 +33,7 @@ export async function buildAppLayers(config: AppConfig): Promise<AppLayers> {
     giteaClientFactory: new GiteaClientFactory(models, postgresDb, config),
     plaidClient: new PlaidClient(config.plaid),
     sendgrid:
-      config.env === "production"
+      config.env === "production" && config.sendGrid.apiKey
         ? new SendGrid(sendGridOpts)
         : new ConsoleSendGrid(sendGridOpts),
     cacheHelper: createCacheHelper(redisCache),
