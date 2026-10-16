@@ -80,7 +80,6 @@
 
 ## Inbox
 
-- [471](./471.md) — Answer a missing account, entry, commit, pull request or user profile with a real not-found, not an indexable 200 page
 - [472](./472.md) — Name repeated row and card actions after their target: Accounts "More actions", token "Revoke", Budget "Update Budget"
 - [473](./473.md) — Name Journal row controls after their entry: 60 identical "Toggle postings" buttons that also hide the posting count
 - [474](./474.md) — Profile follow hint says "Add this profile to your following list" next to Unfollow
