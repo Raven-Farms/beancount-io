@@ -54,6 +54,14 @@
 - [482 — `bea ask` prints a proxy's HTML error page as the message](./482.md)
 - [483 — `price export -o a -o b` silently exports to `b`](./483.md)
 - [484 — Price-source warnings end in `..`; `upgrade --check` shows raw parser text](./484.md)
+- [485 — A repeated global `-f` silently uses the last ledger, so a write lands in the wrong file](./485.md)
+- [486 — `add transaction` blames an unclosed `{` on the next posting or the header](./486.md)
+- [487 — `add balance --pad-from` on a conflicting same-date assertion gives contradictory, circular advice](./487.md)
+- [488 — The w5/363 widen hint drops the booking method and fires for an amount-less leg](./488.md)
+- [489 — Futures commodity `/0J` refused as "Division by zero"](./489.md)
+- [490 — A no-break space in `add -p` becomes part of the account name; the hint offers to open it](./490.md)
+- [491 — `add open -c USD -c ""` silently drops the blank currency](./491.md)
+- [492 — `add --into` a new file in a missing directory exits 1 "validation" instead of a usage refusal](./492.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
