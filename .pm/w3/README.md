@@ -90,7 +90,8 @@
 - [480](./480.md) — Escape doesn't close the mobile navigation sheet once focus is on a menu item: an invisible tooltip swallows it
 - [481](./481.md) — On phones the account journal hides every amount and the running balance
 - [482](./482.md) — A deleted file's diff is headed "/dev/null", and its file-list link goes nowhere
-
+- [483](./483.md) — Preview plain-text files that have an extension outside the allowlist (CSV, TOML, OFX, QIF…) instead of "Unsupported file format"
+- [484](./484.md) — Remove production verification probes from the public `open_ledger/example` showcase
 
 ## Dropped
 
