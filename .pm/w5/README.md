@@ -36,6 +36,10 @@
 
 ## Inbox
 
+- [467 — `bea import` re-writes a `{}` sale already in the ledger, or exits 4 on its own entry (regression from w5/349)](./467.md)
+- [468 — `bea import` writes a self-cancelling entry when a rule, category or `--default-account` names `--account`](./468.md)
+- [469 — `bea import --id-key FITID`/`''` silently disables native-ID dedupe](./469.md)
+- [470 — `bea import`'s no-importer hint suggests `--account Assets:Checking` and placeholder columns](./470.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
