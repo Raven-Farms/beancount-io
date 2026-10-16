@@ -80,7 +80,6 @@
 
 ## Inbox
 
-- [475](./475.md) — Ledger Gallery: keep the search in the URL so Back restores it, and announce the result count
 - [476](./476.md) — Give account Settings pages a page heading, and Danger Zone any heading at all
 - [477](./477.md) — Stop AI file parsing from inventing transaction descriptions that aren't in the source
 - [478](./478.md) — Ledger switcher: include the current ledger in its accessible name, and name its popover
