@@ -85,6 +85,11 @@ const skDashboardPage: Record<string, TranslationEntry> = {
     message: "Názov knihy",
     description: "Form label for ledger name field",
   },
+  "page.dashboard.ledgerSettingsFor": {
+    message: "Nastavenia pre {ledger}",
+    description:
+      "Accessible name and tooltip for a ledger's settings menu; {ledger} is its displayed name",
+  },
   "page.dashboard.ledgerUpdatedSuccess": {
     message: "Kniha bola úspešne aktualizovaná",
     description: "Toast notification when ledger updated",

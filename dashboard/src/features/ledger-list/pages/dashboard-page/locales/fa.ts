@@ -85,6 +85,11 @@ const faDashboardPage: Record<string, TranslationEntry> = {
     message: "نام دفتر",
     description: "Form label for ledger name field",
   },
+  "page.dashboard.ledgerSettingsFor": {
+    message: "تنظیمات {ledger}",
+    description:
+      "Accessible name and tooltip for a ledger's settings menu; {ledger} is its displayed name",
+  },
   "page.dashboard.ledgerUpdatedSuccess": {
     message: "دفتر با موفقیت به‌روزرسانی شد",
     description: "Toast notification when ledger updated",

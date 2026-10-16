@@ -85,6 +85,11 @@ const ukDashboardPage: Record<string, TranslationEntry> = {
     message: "Назва книги",
     description: "Form label for ledger name field",
   },
+  "page.dashboard.ledgerSettingsFor": {
+    message: "Налаштування для {ledger}",
+    description:
+      "Accessible name and tooltip for a ledger's settings menu; {ledger} is its displayed name",
+  },
   "page.dashboard.ledgerUpdatedSuccess": {
     message: "Книгу успішно оновлено",
     description: "Toast notification when ledger updated",

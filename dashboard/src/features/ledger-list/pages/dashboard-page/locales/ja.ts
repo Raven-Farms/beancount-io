@@ -75,6 +75,11 @@ const jaDashboardPage: Record<string, TranslationEntry> = {
     message: "台帳名",
     description: "Form label for ledger name field",
   },
+  "page.dashboard.ledgerSettingsFor": {
+    message: "{ledger} の設定",
+    description:
+      "Accessible name and tooltip for a ledger's settings menu; {ledger} is its displayed name",
+  },
   "page.dashboard.ledgerUpdatedSuccess": {
     message: "台帳が正常に更新されました",
     description: "Toast notification when ledger updated",

@@ -85,6 +85,11 @@ const nlDashboardPage: Record<string, TranslationEntry> = {
     message: "Grootboeknaam",
     description: "Form label for ledger name field",
   },
+  "page.dashboard.ledgerSettingsFor": {
+    message: "Instellingen voor {ledger}",
+    description:
+      "Accessible name and tooltip for a ledger's settings menu; {ledger} is its displayed name",
+  },
   "page.dashboard.ledgerUpdatedSuccess": {
     message: "Grootboek succesvol bijgewerkt",
     description: "Toast notification when ledger updated",

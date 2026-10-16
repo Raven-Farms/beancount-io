@@ -140,6 +140,9 @@ function LedgerItem({
   const formatRelativeTime = useFormatRelativeTime();
   const settingsTriggerRef = useRef<HTMLButtonElement | null>(null);
   const displayName = ledgerName || ledger.name;
+  const settingsLabel = t("page.dashboard.ledgerSettingsFor", {
+    ledger: displayName,
+  });
   const meta =
     ledger.description || formatRelativeTime(new Date(ledger.updatedAt));
   const metaLine = ledgerOwner ? `${ledgerOwner} · ${meta}` : meta;
@@ -163,8 +166,8 @@ function LedgerItem({
           <DropdownMenuTrigger asChild>
             <SidebarMenuAction
               ref={settingsTriggerRef}
-              aria-label={t("common.settings")}
-              title={t("common.settings")}
+              aria-label={settingsLabel}
+              title={settingsLabel}
               data-testid="ledger-settings-btn"
               className="top-1/2 -translate-y-1/2 peer-data-[size=default]/menu-button:top-1/2 right-2 h-6 w-6"
             >

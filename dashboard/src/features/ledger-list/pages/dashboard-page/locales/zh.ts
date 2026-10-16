@@ -82,6 +82,11 @@ const zhDashboardPage: Record<string, TranslationEntry> = {
     message: "账本名称",
     description: "Form label for ledger name field",
   },
+  "page.dashboard.ledgerSettingsFor": {
+    message: "{ledger} 的设置",
+    description:
+      "Accessible name and tooltip for a ledger's settings menu; {ledger} is its displayed name",
+  },
   "page.dashboard.ledgerUpdatedSuccess": {
     message: "账本更新成功",
     description: "Toast notification when ledger updated",

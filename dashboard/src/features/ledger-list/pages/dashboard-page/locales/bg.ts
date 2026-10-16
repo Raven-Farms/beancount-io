@@ -85,6 +85,11 @@ const bgDashboardPage: Record<string, TranslationEntry> = {
     message: "Име на книгата",
     description: "Form label for ledger name field",
   },
+  "page.dashboard.ledgerSettingsFor": {
+    message: "Настройки за {ledger}",
+    description:
+      "Accessible name and tooltip for a ledger's settings menu; {ledger} is its displayed name",
+  },
   "page.dashboard.ledgerUpdatedSuccess": {
     message: "Книгата е актуализирана успешно",
     description: "Toast notification when ledger updated",

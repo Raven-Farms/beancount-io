@@ -75,6 +75,11 @@ const enDashboardPage: Record<string, TranslationEntry> = {
     message: "Ledger Name",
     description: "Form label for ledger name field",
   },
+  "page.dashboard.ledgerSettingsFor": {
+    message: "Settings for {ledger}",
+    description:
+      "Accessible name and tooltip for a ledger's settings menu; {ledger} is its displayed name",
+  },
   "page.dashboard.ledgerUpdatedSuccess": {
     message: "Ledger updated successfully",
     description: "Toast notification when ledger updated",

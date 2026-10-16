@@ -85,6 +85,11 @@ const caDashboardPage: Record<string, TranslationEntry> = {
     message: "Nom del llibre",
     description: "Form label for ledger name field",
   },
+  "page.dashboard.ledgerSettingsFor": {
+    message: "Configuració de {ledger}",
+    description:
+      "Accessible name and tooltip for a ledger's settings menu; {ledger} is its displayed name",
+  },
   "page.dashboard.ledgerUpdatedSuccess": {
     message: "Llibre actualitzat correctament",
     description: "Toast notification when ledger updated",

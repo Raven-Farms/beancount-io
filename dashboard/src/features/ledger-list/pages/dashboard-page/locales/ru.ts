@@ -84,6 +84,11 @@ const ruDashboardPage: Record<string, TranslationEntry> = {
     message: "Название книги",
     description: "Form label for ledger name field",
   },
+  "page.dashboard.ledgerSettingsFor": {
+    message: "Настройки для {ledger}",
+    description:
+      "Accessible name and tooltip for a ledger's settings menu; {ledger} is its displayed name",
+  },
   "page.dashboard.ledgerUpdatedSuccess": {
     message: "Книга успешно обновлена",
     description: "Toast notification when ledger updated",

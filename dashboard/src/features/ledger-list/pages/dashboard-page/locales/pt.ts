@@ -85,6 +85,11 @@ const ptDashboardPage: Record<string, TranslationEntry> = {
     message: "Nome do Livro-Razão",
     description: "Form label for ledger name field",
   },
+  "page.dashboard.ledgerSettingsFor": {
+    message: "Configurações de {ledger}",
+    description:
+      "Accessible name and tooltip for a ledger's settings menu; {ledger} is its displayed name",
+  },
   "page.dashboard.ledgerUpdatedSuccess": {
     message: "Livro-razão atualizado com sucesso",
     description: "Toast notification when ledger updated",

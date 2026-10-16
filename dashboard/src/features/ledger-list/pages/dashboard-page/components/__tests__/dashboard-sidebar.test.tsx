@@ -535,10 +535,46 @@ describe("DashboardSidebar", () => {
 
       renderSidebar();
 
-      const trigger = screen.getByRole("button", { name: "Settings" });
-      expect(trigger).toHaveAttribute("title", "Settings");
+      const trigger = screen.getByRole("button", {
+        name: "Settings for personal",
+      });
+      expect(trigger).toHaveAttribute("title", "Settings for personal");
       expect(trigger.className).toContain("h-6");
       expect(trigger.className).toContain("w-6");
+    });
+
+    it("gives two admin rows distinct ledger-specific settings names", () => {
+      setLedgerQueryResult({
+        data: {
+          listLedgers: [
+            adminLedger,
+            makeLedger({
+              id: "alice/team-books",
+              name: "Team Books",
+              fullName: "alice/team-books",
+            }),
+          ],
+        },
+        loading: false,
+      });
+
+      renderSidebar();
+
+      const personal = screen.getByRole("button", {
+        name: "Settings for personal",
+      });
+      const team = screen.getByRole("button", {
+        name: "Settings for team-books",
+      });
+      expect(personal).toHaveAttribute("title", "Settings for personal");
+      expect(team).toHaveAttribute("title", "Settings for team-books");
+      expect(screen.getAllByTestId("ledger-settings-btn")).toHaveLength(2);
+      expect(personal.closest("li")).toContainElement(
+        screen.getByText("personal"),
+      );
+      expect(team.closest("li")).toContainElement(
+        screen.getByText("team-books"),
+      );
     });
 
     it("navigates to the ledger when the row is activated by keyboard", async () => {

@@ -85,6 +85,11 @@ const deDashboardPage: Record<string, TranslationEntry> = {
     message: "Hauptbuchname",
     description: "Form label for ledger name field",
   },
+  "page.dashboard.ledgerSettingsFor": {
+    message: "Einstellungen für {ledger}",
+    description:
+      "Accessible name and tooltip for a ledger's settings menu; {ledger} is its displayed name",
+  },
   "page.dashboard.ledgerUpdatedSuccess": {
     message: "Hauptbuch erfolgreich aktualisiert",
     description: "Toast notification when ledger updated",

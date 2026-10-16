@@ -85,6 +85,11 @@ const esDashboardPage: Record<string, TranslationEntry> = {
     message: "Nombre del Libro Mayor",
     description: "Form label for ledger name field",
   },
+  "page.dashboard.ledgerSettingsFor": {
+    message: "Configuración de {ledger}",
+    description:
+      "Accessible name and tooltip for a ledger's settings menu; {ledger} is its displayed name",
+  },
   "page.dashboard.ledgerUpdatedSuccess": {
     message: "Libro mayor actualizado exitosamente",
     description: "Toast notification when ledger updated",

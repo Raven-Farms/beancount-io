@@ -75,6 +75,11 @@ const koDashboardPage: Record<string, TranslationEntry> = {
     message: "장부 이름",
     description: "Form label for ledger name field",
   },
+  "page.dashboard.ledgerSettingsFor": {
+    message: "{ledger} 설정",
+    description:
+      "Accessible name and tooltip for a ledger's settings menu; {ledger} is its displayed name",
+  },
   "page.dashboard.ledgerUpdatedSuccess": {
     message: "장부가 성공적으로 업데이트되었습니다",
     description: "Toast notification when ledger updated",

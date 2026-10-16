@@ -189,7 +189,9 @@ async function setup(language: "en" | "de", currentLedger = false) {
   const trigger = (name: "first" | "second") => {
     const row = screen.getByText(name).closest("li")!;
     return within(row).getByRole("button", {
-      name: localization.i18n.t("common.settings"),
+      name: localization.i18n.t("page.dashboard.ledgerSettingsFor", {
+        ledger: name,
+      }),
     });
   };
   return { localization, router, writes, requests, trigger };
@@ -218,6 +220,34 @@ async function openEdit(
 }
 
 describe("dashboard Edit Ledger focus return", () => {
+  it.each([
+    ["en", "Settings for first", "Settings for second"],
+    ["de", "Einstellungen für first", "Einstellungen für second"],
+  ] as const)(
+    "names both %s ledger settings triggers and titles with their own visible ledger names",
+    async (language, firstName, secondName) => {
+      const { localization, writes } = await setup(language);
+      const first = screen.getByRole("button", { name: firstName });
+      const second = screen.getByRole("button", { name: secondName });
+      expect(first).toHaveAttribute("title", firstName);
+      expect(second).toHaveAttribute("title", secondName);
+      expect(first.closest("li")).toContainElement(screen.getByText("first"));
+      expect(second.closest("li")).toContainElement(screen.getByText("second"));
+      expect(
+        screen
+          .getAllByTestId("ledger-settings-btn")
+          .map((button) => button.getAttribute("aria-label")),
+      ).toEqual([firstName, secondName]);
+      expect(
+        screen.queryByRole("button", {
+          name: localization.i18n.t("common.settings"),
+          exact: true,
+        }),
+      ).not.toBeInTheDocument();
+      expect(writes).toEqual([]);
+    },
+  );
+
   it.each(
     (["en", "de"] as const).flatMap((language) =>
       (["Escape", "Cancel", "Close"] as const).map(

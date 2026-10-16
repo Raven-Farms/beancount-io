@@ -85,6 +85,11 @@ const frDashboardPage: Record<string, TranslationEntry> = {
     message: "Nom du grand livre",
     description: "Form label for ledger name field",
   },
+  "page.dashboard.ledgerSettingsFor": {
+    message: "Paramètres de {ledger}",
+    description:
+      "Accessible name and tooltip for a ledger's settings menu; {ledger} is its displayed name",
+  },
   "page.dashboard.ledgerUpdatedSuccess": {
     message: "Grand livre mis à jour avec succès",
     description: "Toast notification when ledger updated",
