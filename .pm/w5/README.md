@@ -106,6 +106,13 @@
 - [534 — Decimal comma in `-p`/balance gives a raw `ValueError`; tag refusal says "letters"](./534.md)
 - [535 — `treeify` on non-UTF-8 input gives a raw `UnicodeDecodeError`](./535.md)
 - [536 — Only accounts are written NFC despite USAGE; `--into` creates NFD file names](./536.md)
+- [537 — `add transactions --partial` is quadratic when a row breaks an existing balance assertion (gap in w5/123)](./537.md)
+- [538 — A booking-arithmetic failure aborts a `--partial` batch naming no row; zero-unit total cost gives raw `DivisionByZero`](./538.md)
+- [539 — Bulk `amount` shorthand silently overwrites an explicit `cost`/`price`/`price_total`](./539.md)
+- [540 — Filtered `list --json` output cannot be re-fed to `add transactions` (`matching_postings`)](./540.md)
+- [541 — A `--partial` write drops the NFC/NFD notes of written rows in text mode](./541.md)
+- [542 — Cost labels are written with raw control and bidi characters](./542.md)
+- [543 — A same-day sale before its purchase is refused despite USAGE's "appearing later in the input"](./543.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
