@@ -2,6 +2,7 @@ import type { JournalTransaction } from "@/common/types/journal";
 import { Link } from "@tanstack/react-router";
 import { formatAmountWithCurrency } from "./journal-description/utils";
 import { useTranslations } from "@/common/hooks/use-translations";
+import { Amount } from "@/common/components/amount";
 
 interface JournalPostingsProps {
   directive: JournalTransaction;
@@ -46,30 +47,36 @@ export function JournalPostings({
               )}
               {posting.units && (
                 <span className="mt-0.5 block text-muted-foreground sm:hidden">
-                  {formatAmountWithCurrency(posting.units)}
+                  <Amount>{formatAmountWithCurrency(posting.units)}</Amount>
                 </span>
               )}
               {posting.cost && (
                 <span className="mt-0.5 block text-muted-foreground sm:hidden">
                   {t("journal.postingCost")}:{" "}
-                  {formatAmountWithCurrency(posting.cost)}
+                  <Amount>{formatAmountWithCurrency(posting.cost)}</Amount>
                 </span>
               )}
               {posting.price && (
                 <span className="mt-0.5 block text-muted-foreground sm:hidden">
                   {t("journal.price")}:{" "}
-                  {formatAmountWithCurrency(posting.price)}
+                  <Amount>{formatAmountWithCurrency(posting.price)}</Amount>
                 </span>
               )}
             </span>
-            <span className="w-20 sm:w-32 text-right font-mono text-xs sm:text-sm hidden sm:block">
-              {posting.units ? formatAmountWithCurrency(posting.units) : ""}
+            <span className="w-20 sm:w-32 text-end font-mono text-xs sm:text-sm hidden sm:block">
+              {posting.units && (
+                <Amount>{formatAmountWithCurrency(posting.units)}</Amount>
+              )}
             </span>
-            <span className="w-20 sm:w-32 text-right font-mono text-xs sm:text-sm hidden sm:block">
-              {posting.cost ? formatAmountWithCurrency(posting.cost) : ""}
+            <span className="w-20 sm:w-32 text-end font-mono text-xs sm:text-sm hidden sm:block">
+              {posting.cost && (
+                <Amount>{formatAmountWithCurrency(posting.cost)}</Amount>
+              )}
             </span>
-            <span className="w-20 sm:w-32 text-right font-mono text-xs sm:text-sm hidden sm:block">
-              {posting.price ? formatAmountWithCurrency(posting.price) : ""}
+            <span className="w-20 sm:w-32 text-end font-mono text-xs sm:text-sm hidden sm:block">
+              {posting.price && (
+                <Amount>{formatAmountWithCurrency(posting.price)}</Amount>
+              )}
             </span>
           </div>
         </li>

@@ -26,6 +26,7 @@ import {
   TableRow,
 } from "@/common/components/ui/table";
 import { deriveAccountUnits } from "@/features/journal/lib/derive-account-units";
+import { Amount } from "@/common/components/amount";
 
 export type JournalTableItem = {
   directive: JournalDirectiveType;
@@ -63,7 +64,9 @@ function JournalAmounts({ balance }: JournalAmountsProps) {
     <>
       {Object.entries(balance).map(([currency, amount]) => (
         <span key={currency} className="block">
-          {formatAmountWithCurrency({ number: amount, currency })}
+          <Amount>
+            {formatAmountWithCurrency({ number: amount, currency })}
+          </Amount>
         </span>
       ))}
     </>
@@ -154,34 +157,34 @@ const UNITS_COL: JournalColumnDef = {
   id: "units",
   visibility: "desktop",
   headerClassName:
-    "num hidden w-20 text-right text-xs font-medium text-muted-foreground sm:table-cell sm:w-32 sm:text-sm",
+    "num hidden w-20 text-end text-xs font-medium text-muted-foreground sm:table-cell sm:w-32 sm:text-sm",
   cellClassName:
-    "num hidden w-20 text-right font-mono text-xs sm:table-cell sm:w-32 sm:text-sm",
+    "num hidden w-20 text-end font-mono text-xs sm:table-cell sm:w-32 sm:text-sm",
 };
 
 const CHANGE_COL: JournalColumnDef = {
   id: "change",
   visibility: "desktop",
   headerClassName:
-    "num hidden w-20 text-right text-xs font-medium text-muted-foreground sm:table-cell sm:w-32 sm:text-sm",
+    "num hidden w-20 text-end text-xs font-medium text-muted-foreground sm:table-cell sm:w-32 sm:text-sm",
   cellClassName:
-    "num hidden w-20 text-right font-mono text-xs sm:table-cell sm:w-32 sm:text-sm",
+    "num hidden w-20 text-end font-mono text-xs sm:table-cell sm:w-32 sm:text-sm",
 };
 
 const BALANCE_COL: JournalColumnDef = {
   id: "balance",
   visibility: "desktop",
   headerClassName:
-    "num hidden w-20 text-right text-xs font-medium text-muted-foreground sm:table-cell sm:w-32 sm:text-sm",
+    "num hidden w-20 text-end text-xs font-medium text-muted-foreground sm:table-cell sm:w-32 sm:text-sm",
   cellClassName:
-    "num hidden w-20 text-right font-mono text-xs sm:table-cell sm:w-32 sm:text-sm",
+    "num hidden w-20 text-end font-mono text-xs sm:table-cell sm:w-32 sm:text-sm",
 };
 
 const POSTINGS_DESKTOP_COL: JournalColumnDef = {
   id: "postings",
   visibility: "desktop",
   headerClassName:
-    "hidden w-24 shrink-0 text-right text-xs font-medium text-muted-foreground sm:table-cell sm:text-sm",
+    "hidden w-24 shrink-0 text-end text-xs font-medium text-muted-foreground sm:table-cell sm:text-sm",
   cellClassName: "hidden w-24 shrink-0 sm:table-cell",
 };
 

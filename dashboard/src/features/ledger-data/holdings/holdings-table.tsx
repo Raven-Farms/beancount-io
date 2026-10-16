@@ -22,6 +22,7 @@ import { decodeLedgerId } from "@/common/lib/utils/encode";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { getErrorMessageKey } from "@/common/lib/errors/error-message";
 import { getClickableRowProps } from "@/common/components/clickable-row";
+import { Amount } from "@/common/components/amount";
 
 interface DatasetTableProps {
   query: string;
@@ -34,12 +35,22 @@ const renderObject = (obj: object) => {
   return formatInventoryEntries(obj).map(({ currency, amount }) => {
     return (
       <div key={currency} className="text-sm leading-relaxed">
-        <span>{amount}</span>
-        <span className="text-muted-foreground ml-1">{currency}</span>
+        <Amount>
+          <span>{amount}</span>
+          <span className="text-muted-foreground ml-1">{currency}</span>
+        </Amount>
       </div>
     );
   });
 };
+
+function isNumericCell(value: unknown): boolean {
+  return (
+    typeof value === "number" ||
+    (typeof value === "string" &&
+      /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(value.trim()))
+  );
+}
 
 export const DatasetTable = React.memo(
   ({ query, ledgerId, ariaLabel, rowsFilter }: DatasetTableProps) => {
@@ -84,6 +95,15 @@ export const DatasetTable = React.memo(
         rows = rowsFilter(rows);
       }
       // rows = rowsFilter ? rowsFilter(rows) : rows;
+      const numericColumns = headers.map(
+        (header, index) =>
+          header.toLowerCase() !== "account" &&
+          rows.some(
+            (row) =>
+              isNumericCell(row[index]) ||
+              (typeof row[index] === "object" && row[index] !== null),
+          ),
+      );
 
       if (rows.length === 0) {
         return (
@@ -122,10 +142,13 @@ export const DatasetTable = React.memo(
               <Table aria-label={ariaLabel}>
                 <TableHeader>
                   <TableRow className="bg-muted/50">
-                    {headers.map((header) => (
+                    {headers.map((header, index) => (
                       <TableHead
                         key={header}
-                        className="text-xs sm:text-sm text-foreground whitespace-nowrap px-2 sm:px-3 py-1.5 sm:py-2"
+                        className={cn(
+                          "text-xs sm:text-sm text-foreground whitespace-nowrap px-2 sm:px-3 py-1.5 sm:py-2",
+                          numericColumns[index] && "text-end",
+                        )}
                       >
                         {header}
                       </TableHead>
@@ -169,9 +192,13 @@ export const DatasetTable = React.memo(
                           const isAccountColumn =
                             headerName?.toLowerCase() === "account";
                           const cellValue =
-                            typeof cell === "object" && cell !== null
-                              ? renderObject(cell)
-                              : formatNumber(cell ?? "", headerName);
+                            typeof cell === "object" && cell !== null ? (
+                              renderObject(cell)
+                            ) : !isAccountColumn && isNumericCell(cell) ? (
+                              <Amount>{formatNumber(cell, headerName)}</Amount>
+                            ) : (
+                              formatNumber(cell ?? "", headerName)
+                            );
 
                           return (
                             <TableCell
@@ -181,6 +208,7 @@ export const DatasetTable = React.memo(
                                 isAccountColumn
                                   ? "font-medium text-primary"
                                   : "",
+                                numericColumns[cellIndex] && "text-end",
                               )}
                             >
                               {isAccountColumn && accountName ? (

@@ -22,6 +22,7 @@ import type {
 import { useTranslations } from "@/common/hooks/use-translations";
 import { restoreFocusOnDialogClose } from "@/common/lib/focus/restore-focus-on-dialog-close";
 import { EntryContextPanel } from "@/features/journal/components/entry-context-panel";
+import { Amount } from "@/common/components/amount";
 
 interface EntryContextDialogProps {
   open: boolean;
@@ -106,7 +107,7 @@ function GeneratedEntryPanel({
           <TableHeader>
             <TableRow>
               <TableHead scope="col">{t("common.accountColumn")}</TableHead>
-              <TableHead scope="col" className="text-right">
+              <TableHead scope="col" className="text-end">
                 {t("journal.unitsHeader")}
               </TableHead>
             </TableRow>
@@ -120,10 +121,10 @@ function GeneratedEntryPanel({
                 <TableCell className="font-mono text-sm py-2">
                   {posting.account}
                 </TableCell>
-                <TableCell className="font-mono text-sm text-right py-2">
-                  {posting.units
-                    ? `${posting.units.number} ${posting.units.currency}`
-                    : ""}
+                <TableCell className="font-mono text-sm text-end py-2">
+                  {posting.units && (
+                    <Amount>{`${posting.units.number} ${posting.units.currency}`}</Amount>
+                  )}
                 </TableCell>
               </TableRow>
             ))}

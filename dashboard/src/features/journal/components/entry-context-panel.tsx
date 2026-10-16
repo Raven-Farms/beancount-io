@@ -12,6 +12,7 @@ import {
 import { Button } from "@/common/components/ui/button";
 import { Card, CardContent } from "@/common/components/ui/card";
 import { Alert, AlertDescription } from "@/common/components/ui/alert";
+import { Amount } from "@/common/components/amount";
 import {
   Table,
   TableBody,
@@ -266,7 +267,7 @@ function EntryContextMain({
                           <TableHead scope="col">
                             {t("common.accountColumn")}
                           </TableHead>
-                          <TableHead scope="col" className="text-right">
+                          <TableHead scope="col" className="text-end">
                             {t("journal.balanceHeader")}
                           </TableHead>
                         </TableRow>
@@ -280,8 +281,8 @@ function EntryContextMain({
                             <TableCell className="font-mono text-sm py-2">
                               {balance.account}
                             </TableCell>
-                            <TableCell className="font-mono text-sm text-right text-foreground py-2">
-                              {balance.amount}
+                            <TableCell className="font-mono text-sm text-end text-foreground py-2">
+                              <Amount>{balance.amount}</Amount>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -306,7 +307,7 @@ function EntryContextMain({
                           <TableHead scope="col">
                             {t("common.accountColumn")}
                           </TableHead>
-                          <TableHead scope="col" className="text-right">
+                          <TableHead scope="col" className="text-end">
                             {t("journal.balanceHeader")}
                           </TableHead>
                         </TableRow>
@@ -320,8 +321,8 @@ function EntryContextMain({
                             <TableCell className="font-mono text-sm py-2">
                               {balance.account}
                             </TableCell>
-                            <TableCell className="font-mono text-sm text-right text-foreground py-2">
-                              {balance.amount}
+                            <TableCell className="font-mono text-sm text-end text-foreground py-2">
+                              <Amount>{balance.amount}</Amount>
                             </TableCell>
                           </TableRow>
                         ))}

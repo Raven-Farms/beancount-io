@@ -24,6 +24,7 @@ import de from "../../locales/de";
 
 vi.unmock("react-i18next");
 vi.unmock("@/common/hooks/use-translations");
+vi.unmock("@/i18n");
 
 // Actual reproduced public posting shapes, rendered in synthetic transaction
 // shells: the posting renderer does not calculate transaction totals.
@@ -81,7 +82,9 @@ async function setup(
   const root = createRootRoute({
     component: () => (
       <LocalizationProvider localization={localization}>
-        <Outlet />
+        <div dir={localization.i18n.dir()} lang={language}>
+          <Outlet />
+        </div>
       </LocalizationProvider>
     ),
   });
@@ -114,19 +117,75 @@ async function setup(
 // jsdom does not apply Tailwind breakpoints. These assertions document the
 // responsive branches; native browser checks establish computed visibility.
 function expectNarrowDetail(text: string) {
-  const detail = screen.getByText(text, { exact: true });
+  const detail = screen.getByText(
+    (_, element) =>
+      element?.classList.contains("sm:hidden") === true &&
+      element.textContent === text,
+  );
   expect(detail).toHaveClass("block", "sm:hidden");
   return detail;
 }
 
 function expectDesktopAmount(text: string) {
-  expect(screen.getByText(text, { exact: true })).toHaveClass(
-    "hidden",
-    "sm:block",
+  const detail = screen.getByText(
+    (_, element) =>
+      element?.classList.contains("sm:block") === true &&
+      element.textContent === text,
   );
+  expect(detail).toHaveClass("hidden", "sm:block");
 }
 
 describe("JournalPostings cost and price details", () => {
+  it("isolates each signed quantity, cost and price in a Persian posting without changing text or account navigation", async () => {
+    const account = "Expenses:Food:رستوران";
+    const { user, router } = await setup(
+      [
+        veaDisposal,
+        {
+          ...bitcoinDisposal,
+          units: { number: "-0.00020000", currency: "BTC" },
+          cost: {
+            number: "64504.600000",
+            currency: "USD",
+            date: "2026-08-17",
+          },
+          price: { number: "0.000000000000", currency: "USD" },
+        },
+        { account, units: { number: "33.71", currency: "USD" } },
+      ],
+      "fa",
+    );
+    for (const text of [
+      "-4 VEA",
+      "148.59 USD",
+      "145.72 USD",
+      "-0.00020000 BTC",
+      "64504.600000 USD",
+      "0.000000000000 USD",
+      "33.71 USD",
+    ]) {
+      const amounts = screen.getAllByText(text, { exact: true });
+      // Both responsive copies carry the same isolated financial text.
+      expect(amounts).toHaveLength(2);
+      amounts.forEach((amount) => {
+        const run = amount.closest("bdi");
+        expect(run).toHaveAttribute("dir", "ltr");
+        expect(run?.textContent).toBe(text);
+      });
+    }
+    const link = screen.getByRole("link", { name: account });
+    expect(link.closest("bdi")).toBeNull();
+    expect(link.closest("[dir]")).toHaveAttribute("dir", "rtl");
+    for (const row of screen.getAllByRole("listitem")) {
+      expect(row).not.toHaveAttribute("dir", "ltr");
+    }
+    await user.click(link);
+    await screen.findByRole("heading", { name: "Account details" });
+    expect(decodeURIComponent(router.state.location.pathname)).toBe(
+      `/ledger/open_ledger/crypto-example/account/${account}`,
+    );
+  });
+
   it("retains the cost-only disposal beside quantity and its actual account navigation", async () => {
     const { user, router } = await setup([bitcoinDisposal]);
     expectNarrowDetail("Cost: 64504.60 USD");

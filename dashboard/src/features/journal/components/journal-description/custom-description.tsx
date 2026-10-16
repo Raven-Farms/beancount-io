@@ -1,5 +1,6 @@
 import type { JournalCustom } from "@/common/types/journal";
 import { formatAmountWithCurrency } from "./utils";
+import { Amount } from "@/common/components/amount";
 
 interface BudgetDescriptionProps {
   directive: JournalCustom;
@@ -17,7 +18,9 @@ function BudgetDescription({ directive }: BudgetDescriptionProps) {
       <div className="flex gap-2 text-sm text-muted-foreground">
         {interval && <span>{interval}</span>}
         {amount && (
-          <span className="font-mono">{formatAmountWithCurrency(amount)}</span>
+          <Amount className="font-mono">
+            {formatAmountWithCurrency(amount)}
+          </Amount>
         )}
       </div>
     </div>

@@ -248,6 +248,12 @@ describe("EntryContextDialog", () => {
     expect(screen.getAllByText("Income:Consulting").length).toBeGreaterThan(0);
     expect(screen.getByText("-6000 USD")).toBeInTheDocument();
     expect(screen.getByText("6000 USD")).toBeInTheDocument();
+    for (const amount of ["-6000 USD", "6000 USD", "-12000 USD", "12000 USD"]) {
+      const isolated = screen.getByText(amount);
+      expect(isolated.tagName).toBe("BDI");
+      expect(isolated).toHaveAttribute("dir", "ltr");
+      expect(isolated).toHaveStyle({ unicodeBidi: "isolate" });
+    }
 
     await user.keyboard(" ");
     expect(toggle).toHaveAttribute("aria-expanded", "false");
@@ -639,6 +645,12 @@ describe("EntryContextDialog", () => {
                   .map((cell) => cell.textContent),
               ),
           ).toEqual(rows);
+          for (const [, amount] of rows) {
+            const isolated = within(table).getByText(amount);
+            expect(isolated.tagName).toBe("BDI");
+            expect(isolated).toHaveAttribute("dir", "ltr");
+            expect(isolated).toHaveStyle({ unicodeBidi: "isolate" });
+          }
           expect(screen.getByText(messages[explanation])).toBeVisible();
           expect(mocks.queryOptions).toHaveLength(0);
           expect(mocks.mutationCallCount).toBe(0);

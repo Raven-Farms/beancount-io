@@ -1,6 +1,7 @@
 import type { JournalBalance } from "@/common/types/journal";
 import { formatAmountWithCurrency } from "./utils";
 import { useTranslations } from "@/common/hooks/use-translations";
+import { Amount } from "@/common/components/amount";
 
 interface BalanceDescriptionProps {
   directive: JournalBalance;
@@ -14,7 +15,7 @@ export function BalanceDescription({ directive }: BalanceDescriptionProps) {
       {directive.diff_amount && (
         <div className="text-sm text-muted-foreground">
           {t("journal.accumulated")}{" "}
-          {formatAmountWithCurrency(directive.diff_amount)}
+          <Amount>{formatAmountWithCurrency(directive.diff_amount)}</Amount>
         </div>
       )}
     </div>
