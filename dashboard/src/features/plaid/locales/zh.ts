@@ -5,6 +5,16 @@ export interface TranslationEntry {
 
 const zhPlaid: Record<string, TranslationEntry> = {
   // Common
+  "plaid.pageTitle": {
+    message: "已连接账户",
+    description:
+      "Page heading for ledger bank connections and imported transactions",
+  },
+  "plaid.access.adminOnly": {
+    message: "只有账本所有者或管理员才能连接和管理银行。",
+    description:
+      "Notice shown when the viewer cannot administer ledger bank connections",
+  },
   "plaid.connectedSuccessfully": {
     message: "✓ 连接成功",
     description: "Success message shown when bank is connected",

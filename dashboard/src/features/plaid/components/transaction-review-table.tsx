@@ -521,7 +521,9 @@ export function TransactionReviewTable({
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>{t("plaid.transactionReview.title")}</CardTitle>
+            <CardTitle>
+              <h2>{t("plaid.transactionReview.title")}</h2>
+            </CardTitle>
             <CardDescription>
               {t("plaid.transactionReview.description", {
                 count: transactions.length,

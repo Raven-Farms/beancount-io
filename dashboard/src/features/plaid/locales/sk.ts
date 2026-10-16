@@ -5,6 +5,17 @@ export interface TranslationEntry {
 
 const skPlaid: Record<string, TranslationEntry> = {
   // Common
+  "plaid.pageTitle": {
+    message: "Pripojené účty",
+    description:
+      "Page heading for ledger bank connections and imported transactions",
+  },
+  "plaid.access.adminOnly": {
+    message:
+      "Banky môže pripájať a spravovať iba vlastník účtovnej knihy alebo správca.",
+    description:
+      "Notice shown when the viewer cannot administer ledger bank connections",
+  },
   "plaid.connectedSuccessfully": {
     message: "✓ Úspešne pripojené",
     description: "Success message shown when bank is connected",

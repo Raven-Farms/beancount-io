@@ -5,6 +5,17 @@ export interface TranslationEntry {
 
 const ptPlaid: Record<string, TranslationEntry> = {
   // Common
+  "plaid.pageTitle": {
+    message: "Contas conectadas",
+    description:
+      "Page heading for ledger bank connections and imported transactions",
+  },
+  "plaid.access.adminOnly": {
+    message:
+      "Apenas o proprietário do livro contábil ou um administrador pode conectar e gerenciar bancos.",
+    description:
+      "Notice shown when the viewer cannot administer ledger bank connections",
+  },
   "plaid.connectedSuccessfully": {
     message: "✓ Conectado com sucesso",
     description: "Success message shown when bank is connected",

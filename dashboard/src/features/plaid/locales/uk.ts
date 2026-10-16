@@ -5,6 +5,17 @@ export interface TranslationEntry {
 
 const ukPlaid: Record<string, TranslationEntry> = {
   // Common
+  "plaid.pageTitle": {
+    message: "Підключені рахунки",
+    description:
+      "Page heading for ledger bank connections and imported transactions",
+  },
+  "plaid.access.adminOnly": {
+    message:
+      "Лише власник облікової книги або адміністратор може підключати банки й керувати ними.",
+    description:
+      "Notice shown when the viewer cannot administer ledger bank connections",
+  },
   "plaid.connectedSuccessfully": {
     message: "✓ Успішно підключено",
     description: "Success message shown when bank is connected",

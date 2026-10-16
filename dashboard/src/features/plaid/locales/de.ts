@@ -5,6 +5,17 @@ export interface TranslationEntry {
 
 const dePlaid: Record<string, TranslationEntry> = {
   // Common
+  "plaid.pageTitle": {
+    message: "Verbundene Konten",
+    description:
+      "Page heading for ledger bank connections and imported transactions",
+  },
+  "plaid.access.adminOnly": {
+    message:
+      "Nur der Eigentümer des Hauptbuchs oder ein Administrator kann Banken verbinden und verwalten.",
+    description:
+      "Notice shown when the viewer cannot administer ledger bank connections",
+  },
   "plaid.connectedSuccessfully": {
     message: "✓ Erfolgreich Verbunden",
     description: "Success message shown when bank is connected",

@@ -5,6 +5,17 @@ export interface TranslationEntry {
 
 const bgPlaid: Record<string, TranslationEntry> = {
   // Common
+  "plaid.pageTitle": {
+    message: "Свързани сметки",
+    description:
+      "Page heading for ledger bank connections and imported transactions",
+  },
+  "plaid.access.adminOnly": {
+    message:
+      "Само собственикът на счетоводната книга или администратор може да свързва и управлява банки.",
+    description:
+      "Notice shown when the viewer cannot administer ledger bank connections",
+  },
   "plaid.connectedSuccessfully": {
     message: "✓ Свързването е успешно",
     description: "Success message shown when bank is connected",

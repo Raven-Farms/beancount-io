@@ -5,6 +5,17 @@ export interface TranslationEntry {
 
 const faPlaid: Record<string, TranslationEntry> = {
   // Common
+  "plaid.pageTitle": {
+    message: "حساب‌های متصل",
+    description:
+      "Page heading for ledger bank connections and imported transactions",
+  },
+  "plaid.access.adminOnly": {
+    message:
+      "فقط مالک دفتر حسابداری یا یک مدیر می‌تواند بانک‌ها را متصل و مدیریت کند.",
+    description:
+      "Notice shown when the viewer cannot administer ledger bank connections",
+  },
   "plaid.connectedSuccessfully": {
     message: "✓ با موفقیت متصل شد",
     description: "Success message shown when bank is connected",

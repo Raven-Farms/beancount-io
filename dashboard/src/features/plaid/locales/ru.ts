@@ -5,6 +5,17 @@ export interface TranslationEntry {
 
 const ruPlaid: Record<string, TranslationEntry> = {
   // Common
+  "plaid.pageTitle": {
+    message: "Подключённые счета",
+    description:
+      "Page heading for ledger bank connections and imported transactions",
+  },
+  "plaid.access.adminOnly": {
+    message:
+      "Только владелец учётной книги или администратор может подключать банки и управлять ими.",
+    description:
+      "Notice shown when the viewer cannot administer ledger bank connections",
+  },
   "plaid.connectedSuccessfully": {
     message: "✓ Успешно подключено",
     description: "Success message shown when bank is connected",

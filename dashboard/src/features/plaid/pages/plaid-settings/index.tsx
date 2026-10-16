@@ -5,7 +5,10 @@ import { PlaidManagementState } from "./components/plaid-management-state";
 import {
   PlaidLoadingState,
   PlaidErrorState,
+  PlaidPage,
+  PlaidAccessNotice,
 } from "../../components/plaid-states";
+import { isPlaidAccessError } from "../../utils/is-plaid-access-error";
 import { createLedgerId } from "@/common/lib/utils/encode";
 
 export function PlaidSettingsPage() {
@@ -13,6 +16,15 @@ export function PlaidSettingsPage() {
     from: "/ledger/$ledgerOwner/$ledgerName/link",
   });
   const ledgerId = createLedgerId(ledgerOwner, ledgerName);
+
+  return (
+    <PlaidPage ledgerId={ledgerId}>
+      <PlaidSettingsContent ledgerId={ledgerId} />
+    </PlaidPage>
+  );
+}
+
+function PlaidSettingsContent({ ledgerId }: { ledgerId: string }) {
   const { items, loading, error, refetch } = usePlaidItems(ledgerId);
 
   if (loading) {
@@ -24,6 +36,9 @@ export function PlaidSettingsPage() {
   }
 
   if (error) {
+    if (isPlaidAccessError(error)) {
+      return <PlaidAccessNotice ledgerId={ledgerId} />;
+    }
     return (
       <div className="container mx-auto py-8">
         <PlaidErrorState onRetry={() => refetch()} />

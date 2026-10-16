@@ -2,6 +2,16 @@ import type { TranslationEntry } from "@/i18n";
 
 const koPlaid: Record<string, TranslationEntry> = {
   // Common
+  "plaid.pageTitle": {
+    message: "연결된 계좌",
+    description:
+      "Page heading for ledger bank connections and imported transactions",
+  },
+  "plaid.access.adminOnly": {
+    message: "장부 소유자나 관리자만 은행을 연결하고 관리할 수 있습니다.",
+    description:
+      "Notice shown when the viewer cannot administer ledger bank connections",
+  },
   "plaid.connectedSuccessfully": {
     message: "✓ 연결되었습니다",
     description: "Success message shown when bank is connected",

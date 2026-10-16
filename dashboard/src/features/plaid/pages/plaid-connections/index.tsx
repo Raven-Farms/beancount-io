@@ -10,8 +10,11 @@ import { BankItem } from "./components/bank-item";
 import {
   PlaidLoadingState,
   PlaidErrorState,
+  PlaidPage,
+  PlaidAccessNotice,
 } from "../../components/plaid-states";
-import { createLedgerId } from "@/common/lib/utils/encode";
+import { isPlaidAccessError } from "../../utils/is-plaid-access-error";
+import { createLedgerId, decodeLedgerId } from "@/common/lib/utils/encode";
 
 function ConnectBankButton({
   ledgerId,
@@ -72,11 +75,21 @@ function NoConnectionsState() {
 }
 
 export function PlaidConnectionsPage() {
-  const { t } = useTranslations();
   const { ledgerOwner, ledgerName } = useParams({
     from: "/ledger/$ledgerOwner/$ledgerName/plaid-connections",
   });
   const ledgerId = createLedgerId(ledgerOwner, ledgerName);
+
+  return (
+    <PlaidPage ledgerId={ledgerId}>
+      <PlaidConnectionsContent ledgerId={ledgerId} />
+    </PlaidPage>
+  );
+}
+
+function PlaidConnectionsContent({ ledgerId }: { ledgerId: string }) {
+  const { t } = useTranslations();
+  const { ledgerOwner, ledgerName } = decodeLedgerId(ledgerId);
   const { items, loading, error, refetch } = usePlaidItems(ledgerId);
 
   if (loading) {
@@ -88,6 +101,9 @@ export function PlaidConnectionsPage() {
   }
 
   if (error) {
+    if (isPlaidAccessError(error)) {
+      return <PlaidAccessNotice ledgerId={ledgerId} />;
+    }
     return (
       <div className="container mx-auto">
         <PlaidErrorState onRetry={() => refetch()} />
@@ -97,7 +113,7 @@ export function PlaidConnectionsPage() {
 
   return (
     <div className="container mx-auto space-y-8">
-      <div>
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <Link
           to="/ledger/$ledgerOwner/$ledgerName/link"
           params={{ ledgerOwner, ledgerName }}
@@ -107,24 +123,17 @@ export function PlaidConnectionsPage() {
             {t("plaid.management.backToTransactions")}
           </Button>
         </Link>
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">
-              {t("plaid.management.connectionsTitle")}
-            </h1>
-            <p className="text-muted-foreground mt-2">
-              {t("plaid.management.connectionsSubtitle")}
-            </p>
-          </div>
-          <ConnectBankButton
-            ledgerId={ledgerId}
-            hasConnections={items.length > 0}
-          />
-        </div>
+        <ConnectBankButton
+          ledgerId={ledgerId}
+          hasConnections={items.length > 0}
+        />
       </div>
 
       <Separator />
 
+      <h2 className="text-xl font-semibold">
+        {t("plaid.management.connectionsTitle")}
+      </h2>
       {items.length === 0 ? (
         <NoConnectionsState />
       ) : (

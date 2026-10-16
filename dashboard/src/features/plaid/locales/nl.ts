@@ -5,6 +5,17 @@ export interface TranslationEntry {
 
 const nlPlaid: Record<string, TranslationEntry> = {
   // Common
+  "plaid.pageTitle": {
+    message: "Gekoppelde rekeningen",
+    description:
+      "Page heading for ledger bank connections and imported transactions",
+  },
+  "plaid.access.adminOnly": {
+    message:
+      "Alleen de eigenaar van het grootboek of een beheerder kan banken koppelen en beheren.",
+    description:
+      "Notice shown when the viewer cannot administer ledger bank connections",
+  },
   "plaid.connectedSuccessfully": {
     message: "✓ Verbonden",
     description: "Success message shown when bank is connected",

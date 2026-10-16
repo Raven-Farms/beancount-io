@@ -2,6 +2,16 @@ import type { TranslationEntry } from "@/i18n";
 
 const jaPlaid: Record<string, TranslationEntry> = {
   // Common
+  "plaid.pageTitle": {
+    message: "接続済み口座",
+    description:
+      "Page heading for ledger bank connections and imported transactions",
+  },
+  "plaid.access.adminOnly": {
+    message: "銀行の接続と管理ができるのは、帳簿の所有者または管理者のみです。",
+    description:
+      "Notice shown when the viewer cannot administer ledger bank connections",
+  },
   "plaid.connectedSuccessfully": {
     message: "✓ 接続しました",
     description: "Success message shown when bank is connected",
