@@ -33,6 +33,30 @@ const ptCommits: Record<string, TranslationEntry> = {
     message: "Carregar diferença grande",
     description: "Button to load and display large commit diff (1000+ lines)",
   },
+  "commits.loadOlder": {
+    message: "Carregar commits mais antigos",
+    description: "Button to load the next page of older commits",
+  },
+  "commits.selectedOutsideHistory": {
+    message: "O commit selecionado está fora do histórico carregado.",
+    description:
+      "Notice when the selected commit is absent from loaded history",
+  },
+  "commits.loadedOlder_one": {
+    message: "{count} commit mais antigo carregado",
+    description:
+      "Polite announcement after older commits are appended (one form)",
+  },
+  "commits.loadedOlder_many": {
+    message: "{count} commits mais antigos carregados",
+    description:
+      "Polite announcement after older commits are appended (many form)",
+  },
+  "commits.loadedOlder_other": {
+    message: "{count} commits mais antigos carregados",
+    description:
+      "Polite announcement after older commits are appended (other form)",
+  },
   "commits.noCommits": {
     message: "Nenhum commit encontrado",
     description: "Empty state for commits list",

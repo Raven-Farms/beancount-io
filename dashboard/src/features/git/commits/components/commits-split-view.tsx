@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@apollo/client/react";
 import { History } from "lucide-react";
@@ -26,16 +26,44 @@ export default function CommitsSplitView({
   ledgerId,
   selectedCommitSha,
 }: CommitsSplitViewProps) {
+  return (
+    <CommitsWorkspace
+      key={ledgerId}
+      ledgerId={ledgerId}
+      selectedCommitSha={selectedCommitSha}
+    />
+  );
+}
+
+function CommitsWorkspace({
+  ledgerId,
+  selectedCommitSha,
+}: CommitsSplitViewProps) {
   const { t } = useTranslations();
   const navigate = useNavigate();
   const [historyOpen, setHistoryOpen] = useState(false);
+  const page = useRef(1);
+  const paging = useRef(false);
+  const active = useRef(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [paginationError, setPaginationError] = useState(false);
+  const [lastPageSize, setLastPageSize] = useState<number | null>(null);
+  const [loadedOlderCount, setLoadedOlderCount] = useState<number | null>(null);
   const [ledgerOwner, ledgerName] = ledgerId.split("/");
+
+  useEffect(() => {
+    active.current = true;
+    return () => {
+      active.current = false;
+    };
+  }, []);
 
   // Fetch commits list to enable auto-selection
   const {
     data: commitsData,
     loading: commitsLoading,
     error: commitsError,
+    fetchMore,
   } = useQuery(ListCommitsDocument, {
     variables: {
       ledgerId,
@@ -43,7 +71,59 @@ export default function CommitsSplitView({
       page: 1,
       limit: 30,
     },
+    // A newly mounted ledger starts with a fresh first page and cursor.
+    fetchPolicy: "network-only",
+    notifyOnNetworkStatusChange: false,
   });
+
+  const commits = commitsData?.listCommits || [];
+  const hasMore = (lastPageSize ?? commits.length) >= 30;
+
+  const loadOlder = async () => {
+    if (paging.current || !hasMore) return;
+    paging.current = true;
+    setLoadingMore(true);
+    setLoadedOlderCount(null);
+    const previousShas = new Set(commits.map((commit) => commit.sha));
+    try {
+      const result = await fetchMore({
+        variables: { page: page.current + 1 },
+        // A request from an unmounted ledger must not merge into a later
+        // visit's fresh first page, even when Apollo still completes it.
+        updateQuery: (previous, { fetchMoreResult }) =>
+          active.current
+            ? {
+                ...previous,
+                listCommits: Array.from(
+                  new Map(
+                    [
+                      ...previous.listCommits,
+                      ...fetchMoreResult.listCommits,
+                    ].map((commit) => [commit.sha, commit]),
+                  ).values(),
+                ),
+              }
+            : previous,
+      });
+      if (!active.current) return;
+      if (!result.data) throw new Error("Missing commit history page");
+      page.current += 1;
+      setLastPageSize(result.data.listCommits.length);
+      setLoadedOlderCount(
+        new Set(
+          result.data.listCommits
+            .filter((commit) => !previousShas.has(commit.sha))
+            .map((commit) => commit.sha),
+        ).size,
+      );
+      setPaginationError(false);
+    } catch {
+      if (active.current) setPaginationError(true);
+    } finally {
+      paging.current = false;
+      if (active.current) setLoadingMore(false);
+    }
+  };
 
   // Auto-select first commit if none selected
   useEffect(() => {
@@ -69,9 +149,14 @@ export default function CommitsSplitView({
       ledgerId={ledgerId}
       selectedCommitSha={selectedCommitSha}
       onCommitSelect={onCommitSelect}
-      commits={commitsData?.listCommits || []}
-      loading={commitsLoading}
+      commits={commits}
+      loading={commitsLoading && !commitsData}
       error={commitsError}
+      hasMore={hasMore}
+      loadingMore={loadingMore}
+      paginationError={paginationError}
+      loadedOlderCount={loadedOlderCount}
+      onLoadMore={loadOlder}
     />
   );
 

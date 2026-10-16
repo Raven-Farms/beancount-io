@@ -34,6 +34,30 @@ const frCommits: Record<string, TranslationEntry> = {
     message: "Charger une grande différence",
     description: "Button to load and display large commit diff (1000+ lines)",
   },
+  "commits.loadOlder": {
+    message: "Charger les commits plus anciens",
+    description: "Button to load the next page of older commits",
+  },
+  "commits.selectedOutsideHistory": {
+    message: "Le commit sélectionné ne figure pas dans l'historique chargé.",
+    description:
+      "Notice when the selected commit is absent from loaded history",
+  },
+  "commits.loadedOlder_one": {
+    message: "{count} commit plus ancien chargé",
+    description:
+      "Polite announcement after older commits are appended (one form)",
+  },
+  "commits.loadedOlder_many": {
+    message: "{count} commits plus anciens chargés",
+    description:
+      "Polite announcement after older commits are appended (many form)",
+  },
+  "commits.loadedOlder_other": {
+    message: "{count} commits plus anciens chargés",
+    description:
+      "Polite announcement after older commits are appended (other form)",
+  },
   "commits.noCommits": {
     message: "Aucun commit trouvé",
     description: "Empty state for commits list",

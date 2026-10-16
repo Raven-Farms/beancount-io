@@ -33,6 +33,25 @@ const bgCommits: Record<string, TranslationEntry> = {
     message: "Зареди голяма разлика",
     description: "Button to load and display large commit diff (1000+ lines)",
   },
+  "commits.loadOlder": {
+    message: "Зареди по-стари къмити",
+    description: "Button to load the next page of older commits",
+  },
+  "commits.selectedOutsideHistory": {
+    message: "Избраният къмит е извън заредената история.",
+    description:
+      "Notice when the selected commit is absent from loaded history",
+  },
+  "commits.loadedOlder_one": {
+    message: "Зареден е {count} по-стар къмит",
+    description:
+      "Polite announcement after older commits are appended (one form)",
+  },
+  "commits.loadedOlder_other": {
+    message: "Заредени са {count} по-стари къмита",
+    description:
+      "Polite announcement after older commits are appended (other form)",
+  },
   "commits.noCommits": {
     message: "Не са намерени къмити",
     description: "Empty state for commits list",

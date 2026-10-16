@@ -33,6 +33,35 @@ const ukCommits: Record<string, TranslationEntry> = {
     message: "Завантажити велику різницю",
     description: "Button to load and display large commit diff (1000+ lines)",
   },
+  "commits.loadOlder": {
+    message: "Завантажити давніші коміти",
+    description: "Button to load the next page of older commits",
+  },
+  "commits.selectedOutsideHistory": {
+    message: "Вибраний коміт відсутній у завантаженій історії.",
+    description:
+      "Notice when the selected commit is absent from loaded history",
+  },
+  "commits.loadedOlder_one": {
+    message: "Завантажено {count} давніший коміт",
+    description:
+      "Polite announcement after older commits are appended (one form)",
+  },
+  "commits.loadedOlder_few": {
+    message: "Завантажено {count} давніші коміти",
+    description:
+      "Polite announcement after older commits are appended (few form)",
+  },
+  "commits.loadedOlder_many": {
+    message: "Завантажено {count} давніших комітів",
+    description:
+      "Polite announcement after older commits are appended (many form)",
+  },
+  "commits.loadedOlder_other": {
+    message: "Завантажено {count} давнішого коміту",
+    description:
+      "Polite announcement after older commits are appended (other form)",
+  },
   "commits.noCommits": {
     message: "Коміти не знайдено",
     description: "Empty state for commits list",

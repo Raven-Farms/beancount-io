@@ -33,6 +33,25 @@ const enCommits: Record<string, TranslationEntry> = {
     message: "Load Large Diff",
     description: "Button to load and display large commit diff (1000+ lines)",
   },
+  "commits.loadOlder": {
+    message: "Load older commits",
+    description: "Button to load the next page of older commits",
+  },
+  "commits.selectedOutsideHistory": {
+    message: "The selected commit is outside the loaded history.",
+    description:
+      "Notice when the selected commit is absent from loaded history",
+  },
+  "commits.loadedOlder_one": {
+    message: "Loaded {count} older commit",
+    description:
+      "Polite announcement after older commits are appended (one form)",
+  },
+  "commits.loadedOlder_other": {
+    message: "Loaded {count} older commits",
+    description:
+      "Polite announcement after older commits are appended (other form)",
+  },
   "commits.noCommits": {
     message: "No commits found",
     description: "Empty state for commits list",

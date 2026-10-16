@@ -33,6 +33,20 @@ const jaCommits: Record<string, TranslationEntry> = {
     message: "大きな差分を読み込む",
     description: "Button to load and display large commit diff (1000+ lines)",
   },
+  "commits.loadOlder": {
+    message: "古いコミットを読み込む",
+    description: "Button to load the next page of older commits",
+  },
+  "commits.selectedOutsideHistory": {
+    message: "選択したコミットは読み込み済みの履歴に含まれていません。",
+    description:
+      "Notice when the selected commit is absent from loaded history",
+  },
+  "commits.loadedOlder_other": {
+    message: "古いコミットを{count}件読み込みました",
+    description:
+      "Polite announcement after older commits are appended (other form)",
+  },
   "commits.noCommits": {
     message: "コミットが見つかりません",
     description: "Empty state for commits list",

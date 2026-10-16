@@ -34,6 +34,25 @@ const deCommits: Record<string, TranslationEntry> = {
     message: "Große Differenz laden",
     description: "Button to load and display large commit diff (1000+ lines)",
   },
+  "commits.loadOlder": {
+    message: "Ältere Commits laden",
+    description: "Button to load the next page of older commits",
+  },
+  "commits.selectedOutsideHistory": {
+    message: "Der ausgewählte Commit liegt außerhalb des geladenen Verlaufs.",
+    description:
+      "Notice when the selected commit is absent from loaded history",
+  },
+  "commits.loadedOlder_one": {
+    message: "{count} älterer Commit geladen",
+    description:
+      "Polite announcement after older commits are appended (one form)",
+  },
+  "commits.loadedOlder_other": {
+    message: "{count} ältere Commits geladen",
+    description:
+      "Polite announcement after older commits are appended (other form)",
+  },
   "commits.noCommits": {
     message: "Keine Commits gefunden",
     description: "Empty state for commits list",

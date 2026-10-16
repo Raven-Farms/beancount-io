@@ -33,6 +33,35 @@ const ruCommits: Record<string, TranslationEntry> = {
     message: "Загрузить большую разницу",
     description: "Button to load and display large commit diff (1000+ lines)",
   },
+  "commits.loadOlder": {
+    message: "Загрузить более ранние коммиты",
+    description: "Button to load the next page of older commits",
+  },
+  "commits.selectedOutsideHistory": {
+    message: "Выбранный коммит отсутствует в загруженной истории.",
+    description:
+      "Notice when the selected commit is absent from loaded history",
+  },
+  "commits.loadedOlder_one": {
+    message: "Загружен {count} более ранний коммит",
+    description:
+      "Polite announcement after older commits are appended (one form)",
+  },
+  "commits.loadedOlder_few": {
+    message: "Загружено {count} более ранних коммита",
+    description:
+      "Polite announcement after older commits are appended (few form)",
+  },
+  "commits.loadedOlder_many": {
+    message: "Загружено {count} более ранних коммитов",
+    description:
+      "Polite announcement after older commits are appended (many form)",
+  },
+  "commits.loadedOlder_other": {
+    message: "Загружено {count} более раннего коммита",
+    description:
+      "Polite announcement after older commits are appended (other form)",
+  },
   "commits.noCommits": {
     message: "Коммиты не найдены",
     description: "Empty state for commits list",

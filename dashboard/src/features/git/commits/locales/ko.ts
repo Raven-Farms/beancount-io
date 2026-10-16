@@ -33,6 +33,20 @@ const koCommits: Record<string, TranslationEntry> = {
     message: "큰 차이 로드",
     description: "Button to load and display large commit diff (1000+ lines)",
   },
+  "commits.loadOlder": {
+    message: "이전 커밋 불러오기",
+    description: "Button to load the next page of older commits",
+  },
+  "commits.selectedOutsideHistory": {
+    message: "선택한 커밋은 불러온 기록에 포함되어 있지 않습니다.",
+    description:
+      "Notice when the selected commit is absent from loaded history",
+  },
+  "commits.loadedOlder_other": {
+    message: "이전 커밋 {count}개를 불러왔습니다",
+    description:
+      "Polite announcement after older commits are appended (other form)",
+  },
   "commits.noCommits": {
     message: "커밋을 찾을 수 없습니다",
     description: "Empty state for commits list",

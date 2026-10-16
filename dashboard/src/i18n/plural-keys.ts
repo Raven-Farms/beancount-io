@@ -13,6 +13,7 @@ export const PLURAL_BASE_KEYS = [
   "aiAgent.editApproval.appliedOperations",
   "aiAgent.ranQueries",
   "aiAgent.usedTools",
+  "commits.loadedOlder",
   "common.whatsNewUnread",
   "importer.accountMapping.aiSuccessDescription",
   "importer.accountMapping.missingAccountAlert",

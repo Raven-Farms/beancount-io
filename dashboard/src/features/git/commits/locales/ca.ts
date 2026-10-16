@@ -33,6 +33,30 @@ const caCommits: Record<string, TranslationEntry> = {
     message: "Carregar diferència gran",
     description: "Button to load and display large commit diff (1000+ lines)",
   },
+  "commits.loadOlder": {
+    message: "Carregar commits més antics",
+    description: "Button to load the next page of older commits",
+  },
+  "commits.selectedOutsideHistory": {
+    message: "El commit seleccionat és fora de l'historial carregat.",
+    description:
+      "Notice when the selected commit is absent from loaded history",
+  },
+  "commits.loadedOlder_one": {
+    message: "S'ha carregat {count} commit més antic",
+    description:
+      "Polite announcement after older commits are appended (one form)",
+  },
+  "commits.loadedOlder_many": {
+    message: "S'han carregat {count} commits més antics",
+    description:
+      "Polite announcement after older commits are appended (many form)",
+  },
+  "commits.loadedOlder_other": {
+    message: "S'han carregat {count} commits més antics",
+    description:
+      "Polite announcement after older commits are appended (other form)",
+  },
   "commits.noCommits": {
     message: "No s'han trobat commits",
     description: "Empty state for commits list",

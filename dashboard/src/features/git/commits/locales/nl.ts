@@ -33,6 +33,25 @@ const nlCommits: Record<string, TranslationEntry> = {
     message: "Groot verschil laden",
     description: "Button to load and display large commit diff (1000+ lines)",
   },
+  "commits.loadOlder": {
+    message: "Oudere commits laden",
+    description: "Button to load the next page of older commits",
+  },
+  "commits.selectedOutsideHistory": {
+    message: "De geselecteerde commit staat buiten de geladen geschiedenis.",
+    description:
+      "Notice when the selected commit is absent from loaded history",
+  },
+  "commits.loadedOlder_one": {
+    message: "{count} oudere commit geladen",
+    description:
+      "Polite announcement after older commits are appended (one form)",
+  },
+  "commits.loadedOlder_other": {
+    message: "{count} oudere commits geladen",
+    description:
+      "Polite announcement after older commits are appended (other form)",
+  },
   "commits.noCommits": {
     message: "Geen commits gevonden",
     description: "Empty state for commits list",

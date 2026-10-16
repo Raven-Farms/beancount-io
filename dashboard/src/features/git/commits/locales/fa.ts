@@ -33,6 +33,25 @@ const faCommits: Record<string, TranslationEntry> = {
     message: "بارگذاری تفاوت بزرگ",
     description: "Button to load and display large commit diff (1000+ lines)",
   },
+  "commits.loadOlder": {
+    message: "بارگذاری کامیت‌های قدیمی‌تر",
+    description: "Button to load the next page of older commits",
+  },
+  "commits.selectedOutsideHistory": {
+    message: "کامیت انتخاب‌شده خارج از تاریخچه بارگذاری‌شده است.",
+    description:
+      "Notice when the selected commit is absent from loaded history",
+  },
+  "commits.loadedOlder_one": {
+    message: "{count} کامیت قدیمی‌تر بارگذاری شد",
+    description:
+      "Polite announcement after older commits are appended (one form)",
+  },
+  "commits.loadedOlder_other": {
+    message: "{count} کامیت قدیمی‌تر بارگذاری شد",
+    description:
+      "Polite announcement after older commits are appended (other form)",
+  },
   "commits.noCommits": {
     message: "کامیتی یافت نشد",
     description: "Empty state for commits list",

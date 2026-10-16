@@ -33,6 +33,30 @@ const esCommits: Record<string, TranslationEntry> = {
     message: "Cargar diferencia grande",
     description: "Button to load and display large commit diff (1000+ lines)",
   },
+  "commits.loadOlder": {
+    message: "Cargar commits anteriores",
+    description: "Button to load the next page of older commits",
+  },
+  "commits.selectedOutsideHistory": {
+    message: "El commit seleccionado está fuera del historial cargado.",
+    description:
+      "Notice when the selected commit is absent from loaded history",
+  },
+  "commits.loadedOlder_one": {
+    message: "Se ha cargado {count} commit anterior",
+    description:
+      "Polite announcement after older commits are appended (one form)",
+  },
+  "commits.loadedOlder_many": {
+    message: "Se han cargado {count} commits anteriores",
+    description:
+      "Polite announcement after older commits are appended (many form)",
+  },
+  "commits.loadedOlder_other": {
+    message: "Se han cargado {count} commits anteriores",
+    description:
+      "Polite announcement after older commits are appended (other form)",
+  },
   "commits.noCommits": {
     message: "No se encontraron commits",
     description: "Empty state for commits list",

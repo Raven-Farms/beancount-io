@@ -33,6 +33,20 @@ const zhCommits: Record<string, TranslationEntry> = {
     message: "加载大型差异",
     description: "Button to load and display large commit diff (1000+ lines)",
   },
+  "commits.loadOlder": {
+    message: "加载更早的提交",
+    description: "Button to load the next page of older commits",
+  },
+  "commits.selectedOutsideHistory": {
+    message: "所选提交不在已加载的历史记录中。",
+    description:
+      "Notice when the selected commit is absent from loaded history",
+  },
+  "commits.loadedOlder_other": {
+    message: "已加载 {count} 条更早的提交",
+    description:
+      "Polite announcement after older commits are appended (other form)",
+  },
   "commits.noCommits": {
     message: "未找到提交记录",
     description: "Empty state for commits list",

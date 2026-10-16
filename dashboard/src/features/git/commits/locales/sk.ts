@@ -33,6 +33,35 @@ const skCommits: Record<string, TranslationEntry> = {
     message: "Načítať veľký rozdiel",
     description: "Button to load and display large commit diff (1000+ lines)",
   },
+  "commits.loadOlder": {
+    message: "Načítať staršie commity",
+    description: "Button to load the next page of older commits",
+  },
+  "commits.selectedOutsideHistory": {
+    message: "Vybraný commit nie je v načítanej histórii.",
+    description:
+      "Notice when the selected commit is absent from loaded history",
+  },
+  "commits.loadedOlder_one": {
+    message: "Načítal sa {count} starší commit",
+    description:
+      "Polite announcement after older commits are appended (one form)",
+  },
+  "commits.loadedOlder_few": {
+    message: "Načítali sa {count} staršie commity",
+    description:
+      "Polite announcement after older commits are appended (few form)",
+  },
+  "commits.loadedOlder_many": {
+    message: "Načítalo sa {count} staršieho commitu",
+    description:
+      "Polite announcement after older commits are appended (many form)",
+  },
+  "commits.loadedOlder_other": {
+    message: "Načítalo sa {count} starších commitov",
+    description:
+      "Polite announcement after older commits are appended (other form)",
+  },
   "commits.noCommits": {
     message: "Nenašli sa žiadne commity",
     description: "Empty state for commits list",
