@@ -80,7 +80,6 @@
 
 ## Inbox
 
-- [491](./491.md) — Paging controls ("Show more", Journal page buttons) drop keyboard focus to the page body
 
 ## Dropped
 
