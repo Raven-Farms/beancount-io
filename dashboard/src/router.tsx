@@ -12,6 +12,10 @@ export function getRouter() {
   const localization = createLocalization();
   const router = createTanStackRouter({
     routeTree,
+    // Route canonicalization must serialize through URL so encoded < > " { }
+    // and backticks cannot become raw characters in a repeating redirect.
+    // Remove after adopting router-core >=1.171.14 (TanStack/router#7695).
+    rewrite: { input: ({ url }) => url },
     scrollRestoration: true,
     scrollToTopSelectors: ['[data-scroll-restoration-id="ledger-content"]'],
     defaultPreload: "intent",
