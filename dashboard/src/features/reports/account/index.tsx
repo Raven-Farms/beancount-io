@@ -32,7 +32,7 @@ import {
 } from "./search";
 import { useUrlView } from "@/common/hooks/use-url-view";
 import { selectSettledReportData } from "@/features/reports/lib/select-settled-report-data";
-import { ChartPeriodTable } from "./chart-period-table";
+import { ChartPeriodTable } from "../components/chart-period-table";
 import { ResponsiveTabTriggerList } from "@/common/components/responsive-tab-trigger-list";
 import { LineChart } from "@/features/reports/balance-sheet/line-chart";
 import {

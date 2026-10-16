@@ -15,6 +15,7 @@ export interface DateBalanceChartProps {
   primarySeries?: string;
   chartMode?: "stacked" | "single";
   inverted?: boolean;
+  labelledBy?: string;
 }
 
 export interface BaseChartProps {
@@ -22,6 +23,7 @@ export interface BaseChartProps {
   interval?: ChartInterval;
   primarySeries?: string;
   inverted?: boolean;
+  labelledBy?: string;
 }
 
 /**

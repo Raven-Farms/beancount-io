@@ -11,6 +11,10 @@ import type {
 import { getChartColors } from "@/common/lib/chart/color";
 import { formatDateAxis } from "@/common/lib/chart/chart";
 import {
+  ChartPeriodTable,
+  type ChartPeriodSeries,
+} from "../../components/chart-period-table";
+import {
   type BaseChartProps,
   createCommonAxisConfig,
   createCommonGridConfig,
@@ -28,11 +32,15 @@ export function StackDateBalanceChart({
   interval,
   primarySeries = "USD",
   inverted,
+  labelledBy,
 }: BaseChartProps) {
   const formatNum = useFormatNumber();
-  const chartOption = useMemo((): EChartsOption => {
+  const { chartOption, periodSeries } = useMemo((): {
+    chartOption: EChartsOption;
+    periodSeries: ChartPeriodSeries[];
+  } => {
     if (!data || data.length === 0) {
-      return createEmptyChartOption();
+      return { chartOption: createEmptyChartOption(), periodSeries: [] };
     }
 
     // Extract all unique currencies and accounts from accountBalances
@@ -63,6 +71,7 @@ export function StackDateBalanceChart({
     // The stack key is the currency name, grouping bars by currency.
     const chartColors = getChartColors();
     const seriesData: BarSeriesOption[] = [];
+    const periodSeries: ChartPeriodSeries[] = [];
     currencyList.forEach((currency) => {
       accountList.forEach((account, accountIndex) => {
         const values = data.map((item) => {
@@ -86,6 +95,7 @@ export function StackDateBalanceChart({
               : numericValue;
         });
 
+        periodSeries.push({ unit: currency, account, values });
         seriesData.push({
           name: currency,
           type: "bar",
@@ -158,24 +168,27 @@ export function StackDateBalanceChart({
     const { xAxis, yAxis } = createCommonAxisConfig(dates, interval);
 
     return {
-      tooltip,
-      legend: {
-        data: currencyList,
-        bottom: 0,
-        type: "scroll",
-        pageButtonItemGap: 5,
-        selected: Object.fromEntries(
-          currencyList.map((c) => [c, c === primarySeries]),
-        ),
+      periodSeries,
+      chartOption: {
+        tooltip,
+        legend: {
+          data: currencyList,
+          bottom: 0,
+          type: "scroll",
+          pageButtonItemGap: 5,
+          selected: Object.fromEntries(
+            currencyList.map((c) => [c, c === primarySeries]),
+          ),
+        },
+        grid: createCommonGridConfig(),
+        xAxis,
+        yAxis,
+        series: seriesData,
+        color: getChartColors(),
+        animation: true,
+        animationDuration: 1000,
+        animationEasing: "cubicOut",
       },
-      grid: createCommonGridConfig(),
-      xAxis,
-      yAxis,
-      series: seriesData,
-      color: getChartColors(),
-      animation: true,
-      animationDuration: 1000,
-      animationEasing: "cubicOut",
     };
   }, [data, interval, primarySeries, inverted, formatNum]);
 
@@ -186,6 +199,13 @@ export function StackDateBalanceChart({
         style={{ height: "250px", width: "100%" }}
         className="w-full"
       />
+      {labelledBy && (
+        <ChartPeriodTable
+          data={data}
+          series={periodSeries}
+          labelledBy={labelledBy}
+        />
+      )}
     </div>
   );
 }

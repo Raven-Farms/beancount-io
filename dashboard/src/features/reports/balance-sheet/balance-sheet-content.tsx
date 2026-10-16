@@ -10,7 +10,7 @@ import type {
 import { LineChart } from "./line-chart";
 import { HierarchyVisualizationCard } from "./hierarchy-visualization-card";
 import { HierarchyListCard } from "./hierarchy-list-card";
-import { useMemo } from "react";
+import { useId, useMemo } from "react";
 import type { ChartInterval, ConversionOption } from "@/common/types/chart";
 import {
   ChartsToggleButton,
@@ -86,6 +86,7 @@ export function BalanceSheetContent({
   exportReady = true,
 }: BalanceSheetContentProps) {
   const { t } = useTranslations();
+  const chartTitleId = useId();
   const tabOptions = [
     { label: t("common.netWorth"), value: "netWorth" },
     { label: t("common.assets"), value: "assets" },
@@ -225,7 +226,10 @@ export function BalanceSheetContent({
           </div>
           <TabsContent value="netWorth" className="mt-0 space-y-3">
             <div>
-              <h2 className="text-xl font-semibold flex items-center gap-2">
+              <h2
+                id={`${chartTitleId}-netWorth`}
+                className="text-xl font-semibold flex items-center gap-2"
+              >
                 <TrendingUp className="h-5 w-5" />
                 {t("common.netWorth")}
               </h2>
@@ -236,6 +240,7 @@ export function BalanceSheetContent({
               </p>
             </div>
             <LineChart
+              labelledBy={`${chartTitleId}-netWorth`}
               data={balanceSheetData.netWorthData}
               interval={timeInterval}
               primarySeries={primaryCurrency}
@@ -243,7 +248,10 @@ export function BalanceSheetContent({
           </TabsContent>
           <TabsContent value="assets" className="mt-0 space-y-3">
             <div>
-              <h2 className="text-xl font-semibold flex items-center gap-2">
+              <h2
+                id={`${chartTitleId}-assets`}
+                className="text-xl font-semibold flex items-center gap-2"
+              >
                 <Wallet className="h-5 w-5" />
                 {t("common.assets")}
               </h2>
@@ -254,6 +262,7 @@ export function BalanceSheetContent({
               </p>
             </div>
             <LineChart
+              labelledBy={`${chartTitleId}-assets`}
               data={balanceSheetData.assetsData}
               interval={timeInterval}
               primarySeries={primaryCurrency}
@@ -261,7 +270,10 @@ export function BalanceSheetContent({
           </TabsContent>
           <TabsContent value="liabilities" className="mt-0 space-y-3">
             <div>
-              <h2 className="text-xl font-semibold flex items-center gap-2">
+              <h2
+                id={`${chartTitleId}-liabilities`}
+                className="text-xl font-semibold flex items-center gap-2"
+              >
                 <TrendingDown className="h-5 w-5" />
                 {t("common.liabilities")}
               </h2>
@@ -272,6 +284,7 @@ export function BalanceSheetContent({
               </p>
             </div>
             <LineChart
+              labelledBy={`${chartTitleId}-liabilities`}
               data={balanceSheetData.liabilitiesData}
               interval={timeInterval}
               primarySeries={primaryCurrency}
@@ -280,7 +293,10 @@ export function BalanceSheetContent({
           </TabsContent>
           <TabsContent value="equity" className="mt-0 space-y-3">
             <div>
-              <h2 className="text-xl font-semibold flex items-center gap-2">
+              <h2
+                id={`${chartTitleId}-equity`}
+                className="text-xl font-semibold flex items-center gap-2"
+              >
                 <Scale className="h-5 w-5" />
                 {t("common.equity")}
               </h2>
@@ -291,6 +307,7 @@ export function BalanceSheetContent({
               </p>
             </div>
             <LineChart
+              labelledBy={`${chartTitleId}-equity`}
               data={balanceSheetData.equityData}
               interval={timeInterval}
               primarySeries={primaryCurrency}

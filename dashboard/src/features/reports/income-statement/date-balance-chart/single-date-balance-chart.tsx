@@ -18,6 +18,10 @@ import {
   createEmptyChartOption,
 } from "./utils";
 import { formatDateAxis } from "@/common/lib/chart/chart";
+import {
+  ChartPeriodTable,
+  type ChartPeriodSeries,
+} from "../../components/chart-period-table";
 /**
  * Single Date Balance Chart component
  * Displays data as a bar chart with multiple commodities shown separately
@@ -27,11 +31,15 @@ export function SingleDateBalanceChart({
   interval,
   primarySeries = "USD",
   inverted,
+  labelledBy,
 }: BaseChartProps) {
   const formatQty = useFormatQuantity();
-  const chartOption = useMemo((): EChartsOption => {
+  const { chartOption, periodSeries } = useMemo((): {
+    chartOption: EChartsOption;
+    periodSeries: ChartPeriodSeries[];
+  } => {
     if (!data || data.length === 0) {
-      return createEmptyChartOption();
+      return { chartOption: createEmptyChartOption(), periodSeries: [] };
     }
 
     // Extract all unique commodities from the data
@@ -45,7 +53,7 @@ export function SingleDateBalanceChart({
     const commodityList = sortUsdFirst(Array.from(commodities), primarySeries);
 
     // Prepare data for each commodity
-    const seriesData: BarSeriesOption[] = commodityList.map((commodity) => {
+    const seriesData = commodityList.map((commodity) => {
       const values = data.map((item) => {
         const balance = item.balance[commodity];
         if (balance === null || balance === undefined) {
@@ -68,7 +76,7 @@ export function SingleDateBalanceChart({
         emphasis: {
           focus: "series",
         },
-      };
+      } satisfies BarSeriesOption;
     });
 
     // Prepare x-axis data (dates)
@@ -131,22 +139,28 @@ export function SingleDateBalanceChart({
     const { xAxis, yAxis } = createCommonAxisConfig(dates, interval);
 
     return {
-      tooltip,
-      legend: {
-        data: commodityList,
-        bottom: 0,
-        type: "scroll",
-        pageButtonItemGap: 5,
-        selected: legendSelected,
+      periodSeries: seriesData.map((item) => ({
+        unit: item.name,
+        values: item.data,
+      })),
+      chartOption: {
+        tooltip,
+        legend: {
+          data: commodityList,
+          bottom: 0,
+          type: "scroll",
+          pageButtonItemGap: 5,
+          selected: legendSelected,
+        },
+        grid: createCommonGridConfig(),
+        xAxis,
+        yAxis,
+        series: seriesData,
+        color: getChartColors(),
+        animation: true,
+        animationDuration: 1000,
+        animationEasing: "cubicOut",
       },
-      grid: createCommonGridConfig(),
-      xAxis,
-      yAxis,
-      series: seriesData,
-      color: getChartColors(),
-      animation: true,
-      animationDuration: 1000,
-      animationEasing: "cubicOut",
     };
   }, [data, interval, primarySeries, inverted, formatQty]);
 
@@ -157,6 +171,13 @@ export function SingleDateBalanceChart({
         style={{ height: "250px", width: "100%" }}
         className="w-full"
       />
+      {labelledBy && (
+        <ChartPeriodTable
+          data={data}
+          series={periodSeries}
+          labelledBy={labelledBy}
+        />
+      )}
     </div>
   );
 }

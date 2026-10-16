@@ -14,6 +14,10 @@ import { getChartColors } from "@/common/lib/chart/color";
 import type { ChartInterval } from "@/common/types/chart";
 import { formatYAxisNumber, formatDateAxis } from "@/common/lib/chart/chart";
 import { CONFINED_TOOLTIP } from "@/common/lib/chart/tooltip";
+import {
+  ChartPeriodTable,
+  type ChartPeriodSeries,
+} from "../components/chart-period-table";
 
 interface LineChartProps {
   data: DateAndBalance[];
@@ -21,6 +25,7 @@ interface LineChartProps {
   interval?: ChartInterval;
   primarySeries?: string;
   inverted?: boolean;
+  labelledBy?: string;
 }
 
 const styles = { height: "250px", width: "100%" };
@@ -35,12 +40,17 @@ export function LineChart({
   interval,
   primarySeries = "USD",
   inverted,
+  labelledBy,
 }: LineChartProps) {
   const formatQty = useFormatQuantity();
-  const chartOption = useMemo((): EChartsOption => {
+  const { chartOption, periodSeries } = useMemo((): {
+    chartOption: EChartsOption;
+    periodSeries: ChartPeriodSeries[];
+  } => {
     if (!data || data.length === 0) {
       return {
-        series: [],
+        chartOption: { series: [] },
+        periodSeries: [],
       };
     }
 
@@ -56,7 +66,7 @@ export function LineChart({
       type: "line" as const,
       data: data.map((item) => {
         const value = parseFloat((item.balance[commodity] as string) || "0");
-        return [item.date, inverted ? -value : value];
+        return [item.date, inverted ? -value : value] as [string, number];
       }),
       step: "end" as const,
       symbol: "circle",
@@ -94,90 +104,107 @@ export function LineChart({
     })();
 
     return {
-      tooltip: {
-        ...CONFINED_TOOLTIP,
-        trigger: "axis",
-        axisPointer: {
-          type: "cross",
-          snap: true,
-        },
-        formatter: ((params: TooltipComponentFormatterCallbackParams) => {
-          if (Array.isArray(params)) {
-            // For axis tooltips, the axis value is typically the name of the first param
-            const date = formatDateAxis(params[0].name, interval ?? "monthly");
-            let tooltip = `<div style="font-weight: bold; margin-bottom: 8px;">${date}</div>`;
-            params.forEach((param) => {
-              if (
-                param.value &&
-                Array.isArray(param.value) &&
-                param.value[1] !== 0
-              ) {
-                const value = param.value[1] as number;
-                const digits =
-                  sourceDigits.get(`${param.name}\u0000${param.seriesName}`) ??
-                  0;
-                tooltip += `<div style="margin: 4px 0;">
+      periodSeries: series.map((item) => ({
+        unit: item.name,
+        values: item.data.map((point) => point[1]),
+      })),
+      chartOption: {
+        tooltip: {
+          ...CONFINED_TOOLTIP,
+          trigger: "axis",
+          axisPointer: {
+            type: "cross",
+            snap: true,
+          },
+          formatter: ((params: TooltipComponentFormatterCallbackParams) => {
+            if (Array.isArray(params)) {
+              // For axis tooltips, the axis value is typically the name of the first param
+              const date = formatDateAxis(
+                params[0].name,
+                interval ?? "monthly",
+              );
+              let tooltip = `<div style="font-weight: bold; margin-bottom: 8px;">${date}</div>`;
+              params.forEach((param) => {
+                if (
+                  param.value &&
+                  Array.isArray(param.value) &&
+                  param.value[1] !== 0
+                ) {
+                  const value = param.value[1] as number;
+                  const digits =
+                    sourceDigits.get(
+                      `${param.name}\u0000${param.seriesName}`,
+                    ) ?? 0;
+                  tooltip += `<div style="margin: 4px 0;">
                   <span style="display: inline-block; width: 10px; height: 10px; background-color: ${param.color || "#000"}; margin-right: 8px; border-radius: 50%;"></span>
                   ${param.seriesName || "Unknown"}: ${formatQty(value, digits)}
                 </div>`;
-              }
-            });
-            return tooltip;
-          }
-          return "";
-        }) as TooltipComponentFormatterCallback<TooltipComponentFormatterCallbackParams>,
-      },
-      legend: {
-        data: commodities,
-        bottom: 0,
-        type: "scroll",
-        pageButtonItemGap: 5,
-        selected: legendSelected,
-      },
-      grid: {
-        left: "0%",
-        right: "0",
-        bottom: "25",
-        top: "3%",
-        containLabel: true,
-      },
-      color: getChartColors(),
-      xAxis: {
-        type: "category",
-        data: dates,
-        axisLabel: {
-          formatter: (value: string) => {
-            return formatDateAxis(value, interval ?? "monthly");
+                }
+              });
+              return tooltip;
+            }
+            return "";
+          }) as TooltipComponentFormatterCallback<TooltipComponentFormatterCallbackParams>,
+        },
+        legend: {
+          data: commodities,
+          bottom: 0,
+          type: "scroll",
+          pageButtonItemGap: 5,
+          selected: legendSelected,
+        },
+        grid: {
+          left: "0%",
+          right: "0",
+          bottom: "25",
+          top: "3%",
+          containLabel: true,
+        },
+        color: getChartColors(),
+        xAxis: {
+          type: "category",
+          data: dates,
+          axisLabel: {
+            formatter: (value: string) => {
+              return formatDateAxis(value, interval ?? "monthly");
+            },
+          },
+          axisPointer: {
+            snap: true,
           },
         },
-        axisPointer: {
-          snap: true,
-        },
-      },
-      yAxis: {
-        type: "value",
-        splitLine: defaultSplitLine,
-        axisLabel: {
-          formatter: (value: number) => {
-            return formatYAxisNumber(value);
+        yAxis: {
+          type: "value",
+          splitLine: defaultSplitLine,
+          axisLabel: {
+            formatter: (value: number) => {
+              return formatYAxisNumber(value);
+            },
           },
+          axisPointer: {
+            snap: true,
+          },
+          min: ({ min }) => (min > 0 ? min * 0.8 : min * 1.1),
+          max: ({ max }) => (max > 0 ? max * 1.1 : max * 0.9),
         },
-        axisPointer: {
-          snap: true,
-        },
-        min: ({ min }) => (min > 0 ? min * 0.8 : min * 1.1),
-        max: ({ max }) => (max > 0 ? max * 1.1 : max * 0.9),
+        series,
+        animation: true,
+        animationDuration: 1000,
+        animationEasing: "cubicOut",
       },
-      series,
-      animation: true,
-      animationDuration: 1000,
-      animationEasing: "cubicOut",
     };
   }, [data, interval, primarySeries, inverted, formatQty]);
 
   return (
     <div className={className}>
       <ReactECharts option={chartOption} style={styles} />
+      {labelledBy && (
+        <ChartPeriodTable
+          data={data}
+          series={periodSeries}
+          labelledBy={labelledBy}
+        />
+      )}
     </div>
   );
 }

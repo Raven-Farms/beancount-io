@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useId, useMemo } from "react";
 import { PageHeader } from "@/common/components/page-header";
 import { RelatedLinks } from "@/common/components/related-links";
 import { ClientOnly } from "@tanstack/react-router";
@@ -93,6 +93,7 @@ export function IncomeStatementContent({
   exportReady = true,
 }: IncomeStatementContentProps) {
   const { t } = useTranslations();
+  const chartTitleId = useId();
   const tabOptions = [
     { label: t("common.netProfit"), value: "netProfit" },
     { label: t("common.income"), value: "income" },
@@ -251,7 +252,10 @@ export function IncomeStatementContent({
           </div>
           <TabsContent value="netProfit" className="mt-0 space-y-3">
             <div>
-              <h2 className="text-xl font-semibold flex items-center gap-2">
+              <h2
+                id={`${chartTitleId}-netProfit`}
+                className="text-xl font-semibold flex items-center gap-2"
+              >
                 <DollarSign className="h-5 w-5" />
                 {t("common.netProfit")}
               </h2>
@@ -262,6 +266,7 @@ export function IncomeStatementContent({
               </p>
             </div>
             <DateBalanceChart
+              labelledBy={`${chartTitleId}-netProfit`}
               data={incomeStatementData.netProfitData}
               interval={timeInterval}
               primarySeries={primaryCurrency}
@@ -270,7 +275,10 @@ export function IncomeStatementContent({
           </TabsContent>
           <TabsContent value="income" className="mt-0 space-y-3">
             <div>
-              <h2 className="text-xl font-semibold flex items-center gap-2">
+              <h2
+                id={`${chartTitleId}-income`}
+                className="text-xl font-semibold flex items-center gap-2"
+              >
                 <TrendingUp className="h-5 w-5" />
                 {t("common.income")}
               </h2>
@@ -281,6 +289,7 @@ export function IncomeStatementContent({
               </p>
             </div>
             <DateBalanceChart
+              labelledBy={`${chartTitleId}-income`}
               data={incomeStatementData.incomeData}
               interval={timeInterval}
               primarySeries={primaryCurrency}
@@ -290,7 +299,10 @@ export function IncomeStatementContent({
           </TabsContent>
           <TabsContent value="expenses" className="mt-0 space-y-3">
             <div>
-              <h2 className="text-xl font-semibold flex items-center gap-2">
+              <h2
+                id={`${chartTitleId}-expenses`}
+                className="text-xl font-semibold flex items-center gap-2"
+              >
                 <TrendingDown className="h-5 w-5" />
                 {t("common.expenses")}
               </h2>
@@ -301,6 +313,7 @@ export function IncomeStatementContent({
               </p>
             </div>
             <DateBalanceChart
+              labelledBy={`${chartTitleId}-expenses`}
               data={incomeStatementData.expensesData}
               interval={timeInterval}
               primarySeries={primaryCurrency}

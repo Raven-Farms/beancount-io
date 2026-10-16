@@ -12,6 +12,7 @@ export function DateBalanceChart({
   primarySeries = "USD",
   chartMode = "single",
   inverted,
+  labelledBy,
 }: DateBalanceChartProps) {
   if (chartMode === "stacked") {
     return (
@@ -20,6 +21,7 @@ export function DateBalanceChart({
         interval={interval}
         primarySeries={primarySeries}
         inverted={inverted}
+        labelledBy={labelledBy}
       />
     );
   }
@@ -30,6 +32,7 @@ export function DateBalanceChart({
       interval={interval}
       primarySeries={primarySeries}
       inverted={inverted}
+      labelledBy={labelledBy}
     />
   );
 }
