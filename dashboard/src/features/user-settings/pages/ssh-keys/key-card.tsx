@@ -80,9 +80,9 @@ export function KeyCard({ keyData }: KeyCardProps) {
           {/* Content */}
           <div className="flex-1 min-w-0 space-y-1.5">
             {/* Key Name */}
-            <h3 className="text-base font-semibold text-foreground leading-tight">
+            <h2 className="text-base font-semibold text-foreground leading-tight">
               {keyData.title}
-            </h3>
+            </h2>
 
             {/* SHA256 Hash */}
             <span className="hidden sm:block text-xs text-muted-foreground font-mono rounded truncate">

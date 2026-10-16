@@ -31,9 +31,9 @@ export function UsageOverview({
 
   return (
     <div className="space-y-4">
-      <h4 className="text-sm font-semibold text-foreground">
+      <h3 className="text-sm font-semibold text-foreground">
         {t("userSettings.usage")}
-      </h4>
+      </h3>
 
       {/* AI Tokens */}
       <div className="space-y-2">

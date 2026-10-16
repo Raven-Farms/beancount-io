@@ -35,7 +35,7 @@ function GeneralSettingsSkeleton() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <User className="h-5 w-5" />
-            {t("userSettings.userProfile")}
+            <h2>{t("userSettings.userProfile")}</h2>
           </CardTitle>
           <CardDescription>
             {t("userSettings.loadingAccountInformation")}
@@ -67,7 +67,7 @@ function GeneralSettingsSkeleton() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Palette className="h-5 w-5" />
-            {t("userSettings.appearance")}
+            <h2>{t("userSettings.appearance")}</h2>
           </CardTitle>
           <CardDescription>
             {t("userSettings.loadingThemePreferences")}
@@ -87,7 +87,7 @@ function GeneralSettingsSkeleton() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CreditCard className="h-5 w-5" />
-              {t("userSettings.subscription")}
+              <h2>{t("userSettings.subscription")}</h2>
             </CardTitle>
             <CardDescription>
               {t("userSettings.loadingSubscriptionDetails")}
@@ -104,7 +104,7 @@ function GeneralSettingsSkeleton() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Clock className="h-5 w-5" />
-            {t("userSettings.session")}
+            <h2>{t("userSettings.session")}</h2>
           </CardTitle>
           <CardDescription>
             {t("userSettings.loadingSessionInformation")}
@@ -130,7 +130,7 @@ function GeneralSettingsError({ error }: { error: unknown }) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <User className="h-5 w-5" />
-            {t("common.settings")}
+            <h2>{t("common.settings")}</h2>
           </CardTitle>
           <CardDescription>
             {t("userSettings.errorLoadingSettings")}
@@ -159,6 +159,7 @@ function GeneralSettingsError({ error }: { error: unknown }) {
  * Manage user profile, theme and language preferences, subscriptions, and security
  */
 export default function GeneralSettingsPage() {
+  const { t } = useTranslations();
   const { data, loading, error } = useQuery<GetCurrentUserQuery>(
     GetCurrentUserDocument,
     {
@@ -168,32 +169,6 @@ export default function GeneralSettingsPage() {
   );
   const { isReactNative } = useReactNativeContext();
 
-  if (loading) {
-    return (
-      <>
-        <PageSEO
-          titleKey="seo.settingsGeneral.title"
-          descriptionKey="seo.settingsGeneral.description"
-          noIndex
-        />
-        <GeneralSettingsSkeleton />
-      </>
-    );
-  }
-
-  if (error) {
-    return (
-      <>
-        <PageSEO
-          titleKey="seo.settingsGeneral.title"
-          descriptionKey="seo.settingsGeneral.description"
-          noIndex
-        />
-        <GeneralSettingsError error={error} />
-      </>
-    );
-  }
-
   return (
     <>
       <PageSEO
@@ -201,11 +176,20 @@ export default function GeneralSettingsPage() {
         descriptionKey="seo.settingsGeneral.description"
         noIndex
       />
-      <div className="space-y-4">
-        {!isReactNative && <SubscriptionSection />}
-        <UserProfileSection userData={data} />
-        <AppearanceSection />
-        <SessionSection />
+      <div className="space-y-6">
+        <h1 className="text-2xl font-semibold">{t("userSettings.general")}</h1>
+        {loading ? (
+          <GeneralSettingsSkeleton />
+        ) : error ? (
+          <GeneralSettingsError error={error} />
+        ) : (
+          <div className="space-y-4">
+            {!isReactNative && <SubscriptionSection />}
+            <UserProfileSection userData={data} />
+            <AppearanceSection />
+            <SessionSection />
+          </div>
+        )}
       </div>
     </>
   );

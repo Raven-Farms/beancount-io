@@ -77,7 +77,7 @@ export function DangerZoneSection() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-destructive">
           <AlertTriangle className="h-5 w-5" />
-          {t("userSettings.dangerZone")}
+          <h1>{t("userSettings.dangerZone")}</h1>
         </CardTitle>
         <CardDescription>
           {t("userSettings.irreversibleActions")}
@@ -87,9 +87,9 @@ export function DangerZoneSection() {
         {/* Delete Account */}
         <div className="flex items-start flex-col lg:flex-row justify-between gap-4">
           <div className="space-y-1">
-            <p className="text-sm font-medium">
+            <h2 className="text-sm font-medium">
               {t("userSettings.deleteAccount")}
-            </p>
+            </h2>
             <p className="text-sm text-muted-foreground">
               {t("userSettings.deleteAccountWarning")}
             </p>

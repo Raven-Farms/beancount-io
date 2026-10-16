@@ -32,9 +32,9 @@ export function BillingSection({
 }) {
   return (
     <div className="space-y-4">
-      <h4 className="text-sm font-semibold text-foreground">
+      <h3 className="text-sm font-semibold text-foreground">
         {t("userSettings.billing")}
-      </h4>
+      </h3>
       {subscriptions.map((subscription) => {
         const product =
           subscription.items[0]?.product?.name || t("userSettings.unknownPlan");

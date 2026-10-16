@@ -315,7 +315,7 @@ describe("KeyCard", () => {
 
       // Key name should be in a heading element
       const keyName = screen.getByText("Test SSH Key");
-      expect(keyName.tagName.toLowerCase()).toBe("h3");
+      expect(keyName.tagName.toLowerCase()).toBe("h2");
     });
 
     it("should display fingerprint as readable text", () => {

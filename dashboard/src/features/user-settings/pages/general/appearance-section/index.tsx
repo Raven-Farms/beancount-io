@@ -25,7 +25,7 @@ export function AppearanceSection() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Palette className="h-5 w-5" />
-          {t("userSettings.appearance")}
+          <h2>{t("userSettings.appearance")}</h2>
         </CardTitle>
         <CardDescription>
           {t("userSettings.customizeAppearance")}

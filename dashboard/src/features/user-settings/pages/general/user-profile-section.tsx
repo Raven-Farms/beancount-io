@@ -111,7 +111,7 @@ export function UserProfileSection({ userData }: UserProfileSectionProps) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <User className="h-5 w-5" />
-          {t("userSettings.userProfile")}
+          <h2>{t("userSettings.userProfile")}</h2>
         </CardTitle>
         <CardDescription>
           {t("userSettings.yourAccountInformation")}

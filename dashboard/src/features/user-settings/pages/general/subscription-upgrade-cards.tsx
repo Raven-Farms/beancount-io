@@ -33,9 +33,9 @@ export function UpgradeTierCards({
 
   return (
     <div className="space-y-3">
-      <h4 className="text-sm font-semibold text-foreground">
+      <h3 className="text-sm font-semibold text-foreground">
         {t("userSettings.upgradeYourPlan")}
-      </h4>
+      </h3>
       <div
         className={`grid grid-cols-1 ${
           upgradeTiers.length >= 3

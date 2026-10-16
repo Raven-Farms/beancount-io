@@ -66,7 +66,9 @@ function SubscriptionHeader({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <CreditCard className="h-5 w-5" />
-          <CardTitle>{t("userSettings.subscription")}</CardTitle>
+          <CardTitle>
+            <h2>{t("userSettings.subscription")}</h2>
+          </CardTitle>
         </div>
         {isTestMode && (
           <div className="flex items-center gap-1.5 px-2.5 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 rounded-md text-xs font-medium border border-yellow-200 dark:border-yellow-800">

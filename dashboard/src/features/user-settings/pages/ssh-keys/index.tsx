@@ -3,7 +3,6 @@ import {
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle,
 } from "@/common/components/ui/card";
 import { Button } from "@/common/components/ui/button";
 import { Key, Plus, AlertCircle, Loader2 } from "lucide-react";
@@ -29,10 +28,6 @@ function SshKeysSkeleton() {
       </div>
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Key className="h-5 w-5" />
-            {t("userSettings.sshKeys")}
-          </CardTitle>
           <CardDescription>{t("userSettings.loadingSshKeys")}</CardDescription>
         </CardHeader>
         <CardContent>
@@ -69,9 +64,9 @@ function SshKeysError() {
         <CardContent className="flex items-center gap-3 py-6">
           <AlertCircle className="h-5 w-5 text-destructive" />
           <div>
-            <h3 className="font-medium text-destructive">
+            <h2 className="font-medium text-destructive">
               {t("userSettings.failedToLoadKeys")}
-            </h3>
+            </h2>
             <p className="text-sm text-destructive/70">
               {t("userSettings.failedToLoadKeysDescription")}
             </p>
@@ -98,32 +93,6 @@ export default function KeysSettingsPage() {
   });
   const keys = data?.listPublicKeys || [];
 
-  if (isLoading) {
-    return (
-      <>
-        <PageSEO
-          titleKey="seo.settingsSshKeys.title"
-          descriptionKey="seo.settingsSshKeys.description"
-          noIndex
-        />
-        <SshKeysSkeleton />
-      </>
-    );
-  }
-
-  if (error) {
-    return (
-      <>
-        <PageSEO
-          titleKey="seo.settingsSshKeys.title"
-          descriptionKey="seo.settingsSshKeys.description"
-          noIndex
-        />
-        <SshKeysError />
-      </>
-    );
-  }
-
   return (
     <>
       <PageSEO
@@ -132,41 +101,50 @@ export default function KeysSettingsPage() {
         noIndex
       />
       <div className="space-y-6">
-        <div className="flex items-center justify-start ">
-          <KeyCreateDialog>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              {t("userSettings.newSshKey")}
-            </Button>
-          </KeyCreateDialog>
-        </div>
-
-        {keys.length > 0 ? (
-          <div className="space-y-4">
-            {keys.map((keyData) => (
-              <KeyCard key={keyData.id} keyData={keyData} />
-            ))}
-          </div>
+        <h1 className="text-2xl font-semibold">{t("userSettings.sshKeys")}</h1>
+        {isLoading ? (
+          <SshKeysSkeleton />
+        ) : error ? (
+          <SshKeysError />
         ) : (
-          <Card className="border-dashed border-2 border-muted-foreground/25 bg-muted/20">
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <div className="p-4 bg-muted/50 rounded-full mb-4">
-                <Key className="h-8 w-8 text-muted-foreground" />
-              </div>
-              <h3 className="text-xl font-medium text-foreground mb-2">
-                {t("userSettings.noSshKeys")}
-              </h3>
-              <p className="text-muted-foreground text-center mb-6 max-w-md">
-                {t("userSettings.noSshKeysDescription")}
-              </p>
+          <>
+            <div className="flex items-center justify-start ">
               <KeyCreateDialog>
-                <Button variant="outline" size="lg">
+                <Button>
                   <Plus className="h-4 w-4 mr-2" />
-                  {t("userSettings.createNewKey")}
+                  {t("userSettings.newSshKey")}
                 </Button>
               </KeyCreateDialog>
-            </CardContent>
-          </Card>
+            </div>
+
+            {keys.length > 0 ? (
+              <div className="space-y-4">
+                {keys.map((keyData) => (
+                  <KeyCard key={keyData.id} keyData={keyData} />
+                ))}
+              </div>
+            ) : (
+              <Card className="border-dashed border-2 border-muted-foreground/25 bg-muted/20">
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <div className="p-4 bg-muted/50 rounded-full mb-4">
+                    <Key className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                  <h2 className="text-xl font-medium text-foreground mb-2">
+                    {t("userSettings.noSshKeys")}
+                  </h2>
+                  <p className="text-muted-foreground text-center mb-6 max-w-md">
+                    {t("userSettings.noSshKeysDescription")}
+                  </p>
+                  <KeyCreateDialog>
+                    <Button variant="outline" size="lg">
+                      <Plus className="h-4 w-4 mr-2" />
+                      {t("userSettings.createNewKey")}
+                    </Button>
+                  </KeyCreateDialog>
+                </CardContent>
+              </Card>
+            )}
+          </>
         )}
       </div>
     </>

@@ -27,7 +27,7 @@ export function SessionSection() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Shield className="h-5 w-5" />
-          {t("userSettings.session")}
+          <h2>{t("userSettings.session")}</h2>
         </CardTitle>
         <CardDescription>
           {t("userSettings.manageActiveSession")}
