@@ -20,6 +20,10 @@ export default function ApiKeysSettingsPage() {
     ssr: false,
   });
   const apiKeys = data?.apiKeys ?? [];
+  const nameCounts = new Map<string, number>();
+  for (const apiKey of apiKeys) {
+    nameCounts.set(apiKey.name, (nameCounts.get(apiKey.name) ?? 0) + 1);
+  }
 
   return (
     <>
@@ -67,7 +71,13 @@ export default function ApiKeysSettingsPage() {
         ) : apiKeys.length > 0 ? (
           <div className="space-y-4">
             {apiKeys.map((apiKey) => (
-              <ApiKeyCard key={apiKey.id} apiKey={apiKey} />
+              <ApiKeyCard
+                key={apiKey.id}
+                apiKey={apiKey}
+                revokeIdentifier={
+                  (nameCounts.get(apiKey.name) ?? 0) > 1 ? apiKey.id : undefined
+                }
+              />
             ))}
           </div>
         ) : (

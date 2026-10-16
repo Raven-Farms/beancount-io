@@ -4,6 +4,11 @@ export interface TranslationEntry {
 }
 
 const jaBudget: Record<string, TranslationEntry> = {
+  "page.budget.budgetUpdateForAccount": {
+    message: "{account}（{currency}）の予算を更新",
+    description:
+      "Accessible name of the update button, identifying the budget card's account and currency",
+  },
   "page.budget.budgetDeleteEntry": {
     message: "予算を削除: {account}、{date}、{amount}、{interval}",
     description:

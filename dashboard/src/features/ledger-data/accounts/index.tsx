@@ -179,7 +179,11 @@ function AccountActions({
             className="text-muted-foreground hover:text-foreground"
           >
             <Ellipsis className="h-4 w-4" />
-            <span className="sr-only">{t("common.moreActions")}</span>
+            <span className="sr-only">
+              {t("page.accounts.actionsForAccount", {
+                account: account.account,
+              })}
+            </span>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="min-w-36">
@@ -631,7 +635,6 @@ export default function LedgerAccountsPage() {
         onOpenChange={(v) => {
           if (!v) {
             setDeleteTarget(null);
-            rowActionReturnFocusRef.current = null;
           }
         }}
         account={deleteTarget}
@@ -646,7 +649,6 @@ export default function LedgerAccountsPage() {
         onOpenChange={(v) => {
           if (!v) {
             setCloseTarget(null);
-            rowActionReturnFocusRef.current = null;
           }
         }}
         account={closeTarget}

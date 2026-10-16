@@ -20,9 +20,13 @@ import type { ApiKeyListItem } from "./api-key-utils";
 
 interface ApiKeyRevokeDialogProps {
   apiKey: ApiKeyListItem;
+  revokeIdentifier?: string;
 }
 
-export function ApiKeyRevokeDialog({ apiKey }: ApiKeyRevokeDialogProps) {
+export function ApiKeyRevokeDialog({
+  apiKey,
+  revokeIdentifier,
+}: ApiKeyRevokeDialogProps) {
   const { t } = useTranslations();
   const formatError = useErrorMessage();
   const [open, setOpen] = useState(false);
@@ -43,7 +47,18 @@ export function ApiKeyRevokeDialog({ apiKey }: ApiKeyRevokeDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>
-        <Button variant="destructive" size="sm">
+        <Button
+          variant="destructive"
+          size="sm"
+          aria-label={
+            revokeIdentifier !== undefined
+              ? t("userSettings.apiKeyRevokeNamedWithId", {
+                  name: apiKey.name,
+                  id: revokeIdentifier,
+                })
+              : t("userSettings.apiKeyRevokeNamed", { name: apiKey.name })
+          }
+        >
           {t("userSettings.apiKeyRevoke")}
         </Button>
       </AlertDialogTrigger>

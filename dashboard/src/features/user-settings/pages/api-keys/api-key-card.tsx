@@ -11,6 +11,7 @@ import {
 
 interface ApiKeyCardProps {
   apiKey: ApiKeyListItem;
+  revokeIdentifier?: string;
 }
 
 const statusPresentation: Record<
@@ -28,7 +29,7 @@ const statusPresentation: Record<
   revoked: { variant: "destructive", labelKey: "userSettings.apiKeyRevoked" },
 };
 
-export function ApiKeyCard({ apiKey }: ApiKeyCardProps) {
+export function ApiKeyCard({ apiKey, revokeIdentifier }: ApiKeyCardProps) {
   const { t } = useTranslations();
   const status = getApiKeyStatus(apiKey);
   const presentation = statusPresentation[status];
@@ -89,7 +90,12 @@ export function ApiKeyCard({ apiKey }: ApiKeyCardProps) {
               </div>
             </dl>
           </div>
-          {status === "active" ? <ApiKeyRevokeDialog apiKey={apiKey} /> : null}
+          {status === "active" ? (
+            <ApiKeyRevokeDialog
+              apiKey={apiKey}
+              revokeIdentifier={revokeIdentifier}
+            />
+          ) : null}
         </div>
       </CardContent>
     </Card>

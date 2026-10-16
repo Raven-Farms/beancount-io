@@ -55,7 +55,12 @@ describe("ApiKeyCard", () => {
 
   it("revokes an active token after confirmation", async () => {
     render(<ApiKeyCard apiKey={baseKey} />);
-    fireEvent.click(screen.getByRole("button", { name: "Revoke" }));
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Revoke token Reporting",
+        exact: true,
+      }),
+    );
     expect(mockRevoke).not.toHaveBeenCalled();
     const dialog = await screen.findByRole("alertdialog");
     fireEvent.click(within(dialog).getByRole("button", { name: "Revoke" }));
@@ -74,7 +79,7 @@ describe("ApiKeyCard", () => {
       />,
     );
     expect(
-      screen.queryByRole("button", { name: "Revoke" }),
+      screen.queryByRole("button", { name: /^Revoke token / }),
     ).not.toBeInTheDocument();
   });
 });

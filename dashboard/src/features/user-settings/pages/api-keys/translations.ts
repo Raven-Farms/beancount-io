@@ -67,6 +67,8 @@ const enMessages = {
   "userSettings.apiKeyExpiresAt": "Expires",
   "userSettings.apiKeyNoExpiration": "No expiration",
   "userSettings.apiKeyRevoke": "Revoke",
+  "userSettings.apiKeyRevokeNamed": "Revoke token {name}",
+  "userSettings.apiKeyRevokeNamedWithId": "Revoke token {name} (ID: {id})",
   "userSettings.apiKeyRevokeTitle": "Revoke personal access token?",
   "userSettings.apiKeyRevokeDescription":
     'Revoke "{name}" immediately? Clients using it will lose access.',
@@ -142,6 +144,9 @@ const translations: Record<SupportedLanguage, ApiKeyMessages> = {
     "userSettings.apiKeyExpiresAt": "Изтича",
     "userSettings.apiKeyNoExpiration": "Без срок",
     "userSettings.apiKeyRevoke": "Отмени",
+    "userSettings.apiKeyRevokeNamed": "Отмяна на токена {name}",
+    "userSettings.apiKeyRevokeNamedWithId":
+      "Отмяна на токена {name} (ИД: {id})",
     "userSettings.apiKeyRevokeTitle": "Отмяна на личния токен?",
     "userSettings.apiKeyRevokeDescription":
       "Да се отмени ли „{name}“ незабавно? Клиентите ще загубят достъп.",
@@ -214,6 +219,9 @@ const translations: Record<SupportedLanguage, ApiKeyMessages> = {
     "userSettings.apiKeyExpiresAt": "Caduca",
     "userSettings.apiKeyNoExpiration": "Sense caducitat",
     "userSettings.apiKeyRevoke": "Revoca",
+    "userSettings.apiKeyRevokeNamed": "Revoca el testimoni {name}",
+    "userSettings.apiKeyRevokeNamedWithId":
+      "Revoca el testimoni {name} (ID: {id})",
     "userSettings.apiKeyRevokeTitle": "Vols revocar el token?",
     "userSettings.apiKeyRevokeDescription":
       "Vols revocar «{name}» immediatament? Els clients perdran l'accés.",
@@ -289,6 +297,9 @@ const translations: Record<SupportedLanguage, ApiKeyMessages> = {
     "userSettings.apiKeyExpiresAt": "Läuft ab",
     "userSettings.apiKeyNoExpiration": "Kein Ablaufdatum",
     "userSettings.apiKeyRevoke": "Widerrufen",
+    "userSettings.apiKeyRevokeNamed": "Token {name} widerrufen",
+    "userSettings.apiKeyRevokeNamedWithId":
+      "Token {name} widerrufen (ID: {id})",
     "userSettings.apiKeyRevokeTitle": "Zugriffstoken widerrufen?",
     "userSettings.apiKeyRevokeDescription":
       "„{name}“ sofort widerrufen? Verwendende Clients verlieren den Zugriff.",
@@ -363,6 +374,9 @@ const translations: Record<SupportedLanguage, ApiKeyMessages> = {
     "userSettings.apiKeyExpiresAt": "Vence",
     "userSettings.apiKeyNoExpiration": "Sin vencimiento",
     "userSettings.apiKeyRevoke": "Revocar",
+    "userSettings.apiKeyRevokeNamed": "Revocar el token {name}",
+    "userSettings.apiKeyRevokeNamedWithId":
+      "Revocar el token {name} (ID: {id})",
     "userSettings.apiKeyRevokeTitle": "¿Revocar el token de acceso?",
     "userSettings.apiKeyRevokeDescription":
       "¿Revocar «{name}» inmediatamente? Los clientes perderán el acceso.",
@@ -437,6 +451,9 @@ const translations: Record<SupportedLanguage, ApiKeyMessages> = {
     "userSettings.apiKeyExpiresAt": "Expire",
     "userSettings.apiKeyNoExpiration": "Sans expiration",
     "userSettings.apiKeyRevoke": "Révoquer",
+    "userSettings.apiKeyRevokeNamed": "Révoquer le jeton {name}",
+    "userSettings.apiKeyRevokeNamedWithId":
+      "Révoquer le jeton {name} (ID : {id})",
     "userSettings.apiKeyRevokeTitle": "Révoquer le jeton d’accès ?",
     "userSettings.apiKeyRevokeDescription":
       "Révoquer « {name} » immédiatement ? Les clients perdront l’accès.",
@@ -506,6 +523,8 @@ const translations: Record<SupportedLanguage, ApiKeyMessages> = {
     "userSettings.apiKeyExpiresAt": "انقضا",
     "userSettings.apiKeyNoExpiration": "بدون انقضا",
     "userSettings.apiKeyRevoke": "لغو",
+    "userSettings.apiKeyRevokeNamed": "لغو توکن {name}",
+    "userSettings.apiKeyRevokeNamedWithId": "لغو توکن {name} (شناسه: {id})",
     "userSettings.apiKeyRevokeTitle": "توکن دسترسی لغو شود؟",
     "userSettings.apiKeyRevokeDescription":
       "«{name}» فوراً لغو شود؟ سرویس‌های استفاده‌کننده دسترسی را از دست می‌دهند.",
@@ -578,6 +597,9 @@ const translations: Record<SupportedLanguage, ApiKeyMessages> = {
     "userSettings.apiKeyExpiresAt": "有効期限",
     "userSettings.apiKeyNoExpiration": "期限なし",
     "userSettings.apiKeyRevoke": "取り消す",
+    "userSettings.apiKeyRevokeNamed": "トークン「{name}」を取り消す",
+    "userSettings.apiKeyRevokeNamedWithId":
+      "トークン「{name}」を取り消す（識別子: {id}）",
     "userSettings.apiKeyRevokeTitle": "個人アクセストークンを取り消しますか？",
     "userSettings.apiKeyRevokeDescription":
       "「{name}」を直ちに取り消しますか？使用中のクライアントはアクセスできなくなります。",
@@ -648,6 +670,8 @@ const translations: Record<SupportedLanguage, ApiKeyMessages> = {
     "userSettings.apiKeyExpiresAt": "만료",
     "userSettings.apiKeyNoExpiration": "만료 없음",
     "userSettings.apiKeyRevoke": "취소",
+    "userSettings.apiKeyRevokeNamed": "토큰 {name} 취소",
+    "userSettings.apiKeyRevokeNamedWithId": "토큰 {name} 취소 (식별자: {id})",
     "userSettings.apiKeyRevokeTitle": "개인 액세스 토큰을 취소할까요?",
     "userSettings.apiKeyRevokeDescription":
       "‘{name}’을 즉시 취소할까요? 사용 중인 클라이언트의 접근이 차단됩니다.",
@@ -722,6 +746,8 @@ const translations: Record<SupportedLanguage, ApiKeyMessages> = {
     "userSettings.apiKeyExpiresAt": "Verloopt",
     "userSettings.apiKeyNoExpiration": "Geen vervaldatum",
     "userSettings.apiKeyRevoke": "Intrekken",
+    "userSettings.apiKeyRevokeNamed": "Token {name} intrekken",
+    "userSettings.apiKeyRevokeNamedWithId": "Token {name} intrekken (ID: {id})",
     "userSettings.apiKeyRevokeTitle": "Toegangstoken intrekken?",
     "userSettings.apiKeyRevokeDescription":
       "‘{name}’ direct intrekken? Clients die het gebruiken verliezen toegang.",
@@ -795,6 +821,8 @@ const translations: Record<SupportedLanguage, ApiKeyMessages> = {
     "userSettings.apiKeyExpiresAt": "Expira",
     "userSettings.apiKeyNoExpiration": "Sem expiração",
     "userSettings.apiKeyRevoke": "Revogar",
+    "userSettings.apiKeyRevokeNamed": "Revogar o token {name}",
+    "userSettings.apiKeyRevokeNamedWithId": "Revogar o token {name} (ID: {id})",
     "userSettings.apiKeyRevokeTitle": "Revogar token de acesso?",
     "userSettings.apiKeyRevokeDescription":
       "Revogar “{name}” imediatamente? Os clientes perderão o acesso.",
@@ -867,6 +895,9 @@ const translations: Record<SupportedLanguage, ApiKeyMessages> = {
     "userSettings.apiKeyExpiresAt": "Истекает",
     "userSettings.apiKeyNoExpiration": "Без срока",
     "userSettings.apiKeyRevoke": "Отозвать",
+    "userSettings.apiKeyRevokeNamed": "Отозвать токен {name}",
+    "userSettings.apiKeyRevokeNamedWithId":
+      "Отозвать токен {name} (идентификатор: {id})",
     "userSettings.apiKeyRevokeTitle": "Отозвать токен доступа?",
     "userSettings.apiKeyRevokeDescription":
       "Немедленно отозвать «{name}»? Использующие его клиенты потеряют доступ.",
@@ -939,6 +970,8 @@ const translations: Record<SupportedLanguage, ApiKeyMessages> = {
     "userSettings.apiKeyExpiresAt": "Vyprší",
     "userSettings.apiKeyNoExpiration": "Bez vypršania",
     "userSettings.apiKeyRevoke": "Odvolať",
+    "userSettings.apiKeyRevokeNamed": "Odvolať token {name}",
+    "userSettings.apiKeyRevokeNamedWithId": "Odvolať token {name} (ID: {id})",
     "userSettings.apiKeyRevokeTitle": "Odvolať prístupový token?",
     "userSettings.apiKeyRevokeDescription":
       "Odvolať „{name}“ okamžite? Klienti stratia prístup.",
@@ -1011,6 +1044,9 @@ const translations: Record<SupportedLanguage, ApiKeyMessages> = {
     "userSettings.apiKeyExpiresAt": "Завершується",
     "userSettings.apiKeyNoExpiration": "Без завершення",
     "userSettings.apiKeyRevoke": "Відкликати",
+    "userSettings.apiKeyRevokeNamed": "Відкликати токен {name}",
+    "userSettings.apiKeyRevokeNamedWithId":
+      "Відкликати токен {name} (ідентифікатор: {id})",
     "userSettings.apiKeyRevokeTitle": "Відкликати токен доступу?",
     "userSettings.apiKeyRevokeDescription":
       "Негайно відкликати «{name}»? Клієнти втратять доступ.",
@@ -1075,6 +1111,8 @@ const translations: Record<SupportedLanguage, ApiKeyMessages> = {
     "userSettings.apiKeyExpiresAt": "到期时间",
     "userSettings.apiKeyNoExpiration": "永不过期",
     "userSettings.apiKeyRevoke": "撤销",
+    "userSettings.apiKeyRevokeNamed": "撤销令牌 {name}",
+    "userSettings.apiKeyRevokeNamedWithId": "撤销令牌 {name}（标识符：{id}）",
     "userSettings.apiKeyRevokeTitle": "撤销个人访问令牌？",
     "userSettings.apiKeyRevokeDescription":
       "立即撤销“{name}”？使用它的客户端将失去访问权限。",

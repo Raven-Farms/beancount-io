@@ -88,7 +88,9 @@ describe("AccountRow balance states", () => {
   it("does not treat an uncomputed balance as an emptied account", async () => {
     renderRow({ balance: null });
     expect(
-      screen.queryByRole("button", { name: "More actions" }),
+      screen.queryByRole("button", {
+        name: "Actions for Income:US:Hoogle:Salary",
+      }),
     ).not.toBeInTheDocument();
   });
 
@@ -96,7 +98,11 @@ describe("AccountRow balance states", () => {
     const user = userEvent.setup();
     renderRow({ balance: null, entryCount: 0 });
 
-    await user.click(screen.getByRole("button", { name: "More actions" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: "Actions for Income:US:Hoogle:Salary",
+      }),
+    );
 
     expect(
       await screen.findByRole("menuitem", { name: "Delete" }),
@@ -115,7 +121,11 @@ describe("AccountRow balance states", () => {
     });
 
     expect(balanceCell).toHaveTextContent(/^-$/);
-    await user.click(screen.getByRole("button", { name: "More actions" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: "Actions for Liabilities:AccountsPayable",
+      }),
+    );
     expect(
       await screen.findByRole("menuitem", { name: "Close" }),
     ).toBeInTheDocument();
@@ -130,7 +140,9 @@ describe("AccountRow balance states", () => {
 
     expect(within(balanceCell).getByText("-8123.35 USD")).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "More actions" }),
+      screen.queryByRole("button", {
+        name: "Actions for Liabilities:US:Chase:Slate",
+      }),
     ).not.toBeInTheDocument();
   });
 });

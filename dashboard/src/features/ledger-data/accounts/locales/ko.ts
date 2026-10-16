@@ -4,6 +4,11 @@ export interface TranslationEntry {
 }
 
 const koAccounts: Record<string, TranslationEntry> = {
+  "page.accounts.actionsForAccount": {
+    message: "{account} 작업",
+    description:
+      "Accessible name for account row actions; {account} is the full account name",
+  },
   "page.accounts.account": {
     message: "계정",
     description: "Table column header for account name",

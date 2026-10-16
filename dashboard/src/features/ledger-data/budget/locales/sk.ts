@@ -4,6 +4,11 @@ export interface TranslationEntry {
 }
 
 const skBudget: Record<string, TranslationEntry> = {
+  "page.budget.budgetUpdateForAccount": {
+    message: "Aktualizovať rozpočet pre {account} ({currency})",
+    description:
+      "Accessible name of the update button, identifying the budget card's account and currency",
+  },
   "page.budget.budgetDeleteEntry": {
     message: "Odstrániť rozpočet: {account}, {date}, {amount}, {interval}",
     description:

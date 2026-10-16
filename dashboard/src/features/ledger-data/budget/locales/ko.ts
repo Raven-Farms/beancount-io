@@ -4,6 +4,11 @@ export interface TranslationEntry {
 }
 
 const koBudget: Record<string, TranslationEntry> = {
+  "page.budget.budgetUpdateForAccount": {
+    message: "{account}({currency}) 예산 업데이트",
+    description:
+      "Accessible name of the update button, identifying the budget card's account and currency",
+  },
   "page.budget.budgetDeleteEntry": {
     message: "예산 삭제: {account}, {date}, {amount}, {interval}",
     description:

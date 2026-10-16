@@ -360,7 +360,15 @@ export function BudgetChartCard({
               defaultInterval={currentInterval}
               defaultCurrency={displayCurrency}
               trigger={
-                <Button variant="outline" size="sm" className="shrink-0">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0"
+                  aria-label={t("page.budget.budgetUpdateForAccount", {
+                    account: group.account,
+                    currency: displayCurrency,
+                  })}
+                >
                   <Plus className="size-3.5" />
                   {t("page.budget.budgetAddEntry")}
                 </Button>

@@ -4,6 +4,11 @@ export interface TranslationEntry {
 }
 
 const zhAccounts: Record<string, TranslationEntry> = {
+  "page.accounts.actionsForAccount": {
+    message: "{account} 的操作",
+    description:
+      "Accessible name for account row actions; {account} is the full account name",
+  },
   "page.accounts.account": {
     message: "账户",
     description: "Table column header for account name",

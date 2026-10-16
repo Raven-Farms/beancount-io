@@ -4,6 +4,11 @@ export interface TranslationEntry {
 }
 
 const zhBudget: Record<string, TranslationEntry> = {
+  "page.budget.budgetUpdateForAccount": {
+    message: "更新 {account}（{currency}）的预算",
+    description:
+      "Accessible name of the update button, identifying the budget card's account and currency",
+  },
   "page.budget.budgetDeleteEntry": {
     message: "删除预算：{account}，{date}，{amount}，{interval}",
     description:

@@ -4,6 +4,11 @@ export interface TranslationEntry {
 }
 
 const jaAccounts: Record<string, TranslationEntry> = {
+  "page.accounts.actionsForAccount": {
+    message: "{account} の操作",
+    description:
+      "Accessible name for account row actions; {account} is the full account name",
+  },
   "page.accounts.account": {
     message: "口座",
     description: "Table column header for account name",

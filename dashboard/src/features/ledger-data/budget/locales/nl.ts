@@ -4,6 +4,11 @@ export interface TranslationEntry {
 }
 
 const nlBudget: Record<string, TranslationEntry> = {
+  "page.budget.budgetUpdateForAccount": {
+    message: "Budget voor {account} ({currency}) bijwerken",
+    description:
+      "Accessible name of the update button, identifying the budget card's account and currency",
+  },
   "page.budget.budgetDeleteEntry": {
     message: "Budget verwijderen: {account}, {date}, {amount}, {interval}",
     description:

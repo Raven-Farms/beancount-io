@@ -4,6 +4,11 @@ export interface TranslationEntry {
 }
 
 const bgAccounts: Record<string, TranslationEntry> = {
+  "page.accounts.actionsForAccount": {
+    message: "Действия за {account}",
+    description:
+      "Accessible name for account row actions; {account} is the full account name",
+  },
   "page.accounts.account": {
     message: "Сметка",
     description: "Table column header for account name",

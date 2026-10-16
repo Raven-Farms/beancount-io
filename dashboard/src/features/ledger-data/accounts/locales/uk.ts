@@ -4,6 +4,11 @@ export interface TranslationEntry {
 }
 
 const ukAccounts: Record<string, TranslationEntry> = {
+  "page.accounts.actionsForAccount": {
+    message: "Дії для {account}",
+    description:
+      "Accessible name for account row actions; {account} is the full account name",
+  },
   "page.accounts.account": {
     message: "Рахунок",
     description: "Table column header for account name",

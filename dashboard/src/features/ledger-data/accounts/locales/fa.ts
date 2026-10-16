@@ -4,6 +4,11 @@ export interface TranslationEntry {
 }
 
 const faAccounts: Record<string, TranslationEntry> = {
+  "page.accounts.actionsForAccount": {
+    message: "عملیات برای {account}",
+    description:
+      "Accessible name for account row actions; {account} is the full account name",
+  },
   "page.accounts.account": {
     message: "حساب",
     description: "Table column header for account name",

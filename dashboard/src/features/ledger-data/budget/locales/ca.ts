@@ -4,6 +4,11 @@ export interface TranslationEntry {
 }
 
 const caBudget: Record<string, TranslationEntry> = {
+  "page.budget.budgetUpdateForAccount": {
+    message: "Actualitza el pressupost de {account} ({currency})",
+    description:
+      "Accessible name of the update button, identifying the budget card's account and currency",
+  },
   "page.budget.budgetDeleteEntry": {
     message: "Suprimeix el pressupost: {account}, {date}, {amount}, {interval}",
     description:

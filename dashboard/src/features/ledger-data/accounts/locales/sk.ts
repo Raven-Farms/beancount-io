@@ -4,6 +4,11 @@ export interface TranslationEntry {
 }
 
 const skAccounts: Record<string, TranslationEntry> = {
+  "page.accounts.actionsForAccount": {
+    message: "Akcie pre {account}",
+    description:
+      "Accessible name for account row actions; {account} is the full account name",
+  },
   "page.accounts.account": {
     message: "Účet",
     description: "Table column header for account name",
