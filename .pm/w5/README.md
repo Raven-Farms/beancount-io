@@ -98,6 +98,14 @@
 - [526 — `list --flag txn` refused, though `add --flag txn` works](./526.md)
 - [527 — REFERENCE marks single `--amount` options repeatable and shows `--private` default as True](./527.md)
 - [528 — `agent-skills.md` contradicts itself on skill `name` and directory](./528.md)
+- [529 — Non-Western 8-bit CSVs are told to use `encoding=cp1252`, which writes mojibake](./529.md)
+- [530 — Import skips NFC for importer-extracted accounts and CSV category cells (gap in w3/386)](./530.md)
+- [531 — A doubled BOM or zero-width character in a CSV header is invisible and breaks the advised mapping](./531.md)
+- [532 — Import preview is not UTF-8 under an 8-bit locale (gap in w5/405)](./532.md)
+- [533 — Turkish İ/ı not folded by `list --type` or the CSV column hint](./533.md)
+- [534 — Decimal comma in `-p`/balance gives a raw `ValueError`; tag refusal says "letters"](./534.md)
+- [535 — `treeify` on non-UTF-8 input gives a raw `UnicodeDecodeError`](./535.md)
+- [536 — Only accounts are written NFC despite USAGE; `--into` creates NFD file names](./536.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
