@@ -97,13 +97,20 @@ function EmptyState({ onClear }: { onClear?: () => void }) {
 
 function BalanceCell({
   balance,
+  compact = false,
 }: {
   balance?: Record<string, unknown> | null;
+  compact?: boolean;
 }) {
   const { t } = useTranslations();
   if (balance == null) {
     return (
-      <span className="whitespace-nowrap text-xs text-muted-foreground">
+      <span
+        className={cn(
+          "text-xs text-muted-foreground",
+          compact ? "block max-w-full break-words" : "whitespace-nowrap",
+        )}
+      >
         {t("page.accounts.balanceNotComputed")}
       </span>
     );
@@ -112,11 +119,19 @@ function BalanceCell({
     return <span className="text-muted-foreground">-</span>;
   }
   return (
-    <div className="flex flex-col items-end gap-0.5">
+    <div
+      className={cn(
+        "flex flex-col gap-0.5",
+        compact ? "min-w-0 items-start" : "items-end",
+      )}
+    >
       {Object.entries(balance).map(([currency, amount]) => (
         <span
           key={currency}
-          className="whitespace-nowrap font-mono text-xs tabular-nums"
+          className={cn(
+            "font-mono text-xs tabular-nums",
+            compact ? "max-w-full break-all" : "whitespace-nowrap",
+          )}
         >
           <Amount>
             {String(amount)} {currency}
@@ -224,6 +239,7 @@ export function AccountRow({
   onDelete,
   onClose,
 }: AccountRowProps) {
+  const { t } = useTranslations();
   const isClosed = account.closedAt !== null;
 
   return (
@@ -242,6 +258,14 @@ export function AccountRow({
           isClosed={isClosed}
           onAccountClick={onAccountClick}
         />
+        <dl className="mt-1 min-w-0 text-xs @xl:hidden">
+          <dt className="text-muted-foreground">
+            {t("page.accounts.balance")}
+          </dt>
+          <dd className="mt-0.5 min-w-0">
+            <BalanceCell balance={account.balance} compact />
+          </dd>
+        </dl>
       </TableCell>
       <TableCell>
         <AccountStatus isClosed={isClosed} />

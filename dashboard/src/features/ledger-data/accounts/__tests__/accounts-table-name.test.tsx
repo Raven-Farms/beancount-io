@@ -167,15 +167,15 @@ describe("Accounts table identity", () => {
       }
       expect(within(table).getAllByRole("row")).toHaveLength(3);
       expect(within(table).getAllByRole("cell")).toHaveLength(14);
-      expect(within(table).getByText("250.00 USD")).toBeInTheDocument();
+      expect(within(table).getAllByText("250.00 USD")).toHaveLength(2);
       expect(
         within(table).getByText(labels["page.accounts.closed"].message),
       ).toBeInTheDocument();
       expect(
-        within(table).getByText(
+        within(table).getAllByText(
           labels["page.accounts.balanceNotComputed"].message,
         ),
-      ).toBeInTheDocument();
+      ).toHaveLength(2);
       const account = within(table).getByRole("button", {
         name: "Assets:Bank:Checking",
       });

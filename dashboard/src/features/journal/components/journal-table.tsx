@@ -386,6 +386,12 @@ function JournalTableEntryRows({
   const units = isAccountJournal
     ? deriveAccountUnits(directive, accountName, withChildren)
     : undefined;
+  const hasCompactChange =
+    isAccountJournal && Object.keys(item.change ?? {}).length > 0;
+  const hasCompactBalance =
+    isAccountJournal &&
+    isTransaction &&
+    Object.keys(item.balance ?? {}).length > 0;
 
   const rowProps = onEntryClick
     ? getClickableRowProps<HTMLTableRowElement>(
@@ -466,7 +472,35 @@ function JournalTableEntryRows({
           </span>
         );
       case "description":
-        return <JournalDescription directive={directive} />;
+        return (
+          <>
+            <JournalDescription directive={directive} />
+            {(hasCompactChange || hasCompactBalance) && (
+              <dl className="mt-1 grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-x-2 gap-y-1 px-1 text-xs sm:hidden">
+                {hasCompactChange && (
+                  <>
+                    <dt className="text-muted-foreground">
+                      {t("journal.change")}
+                    </dt>
+                    <dd className="min-w-0 break-all text-end font-mono tabular-nums">
+                      <JournalAmounts balance={item.change} />
+                    </dd>
+                  </>
+                )}
+                {hasCompactBalance && (
+                  <>
+                    <dt className="text-muted-foreground">
+                      {t("journal.balanceHeader")}
+                    </dt>
+                    <dd className="min-w-0 break-all text-end font-mono tabular-nums">
+                      <JournalAmounts balance={item.balance} />
+                    </dd>
+                  </>
+                )}
+              </dl>
+            )}
+          </>
+        );
       case "units":
         return <JournalAmounts balance={units} />;
       case "change":

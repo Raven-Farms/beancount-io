@@ -35,7 +35,7 @@ vi.mock("@/common/hooks/use-ledger", () => ({
   useLedger: () => ({
     ledgerName: "دفتر نمونه",
     ledgerData: {
-      permissions: null,
+      permissions: { pull: true, push: true },
       options: {
         nameAssets: "Assets",
         nameLiabilities: "Liabilities",
@@ -47,7 +47,7 @@ vi.mock("@/common/hooks/use-ledger", () => ({
   }),
 }));
 vi.mock("@/common/hooks/use-is-authenticated", () => ({
-  useIsAuthenticated: () => false,
+  useIsAuthenticated: () => true,
 }));
 // Mutating account dialogs are outside this read-only balance journey.
 vi.mock("../open-account-dialog", () => ({ OpenAccountDialog: () => null }));
@@ -75,6 +75,11 @@ const accounts = [
     },
   },
   { __typename: "LedgerAccountItem", account: "Assets:Empty", balance: {} },
+  {
+    __typename: "LedgerAccountItem",
+    account: "Assets:Zero",
+    balance: { USD: "0.00" },
+  },
   { __typename: "LedgerAccountItem", account: "Income:Salary", balance: null },
 ].map((account, index) => ({
   ...account,
@@ -161,12 +166,15 @@ describe("account balance reading direction", () => {
       const context = screen.getByTestId("reading-context");
       expect(context).toHaveAttribute("dir", language === "fa" ? "rtl" : "ltr");
       for (const text of amounts) {
-        const amount = within(row).getByText(text);
-        expect(amount.textContent).toBe(text);
-        const isolated = amount.closest('bdi[dir="ltr"]');
-        expect(isolated).not.toBeNull();
-        expect(isolated?.textContent).toBe(text);
-        expect(isolated).not.toContainElement(account);
+        const copies = within(row).getAllByText(text);
+        expect(copies).toHaveLength(2);
+        for (const amount of copies) {
+          expect(amount.textContent).toBe(text);
+          const isolated = amount.closest('bdi[dir="ltr"]');
+          expect(isolated).not.toBeNull();
+          expect(isolated?.textContent).toBe(text);
+          expect(isolated).not.toContainElement(account);
+        }
       }
       // Neither a whole row nor its Persian account name is forced LTR.
       expect(account.closest("[dir]")).toBe(context);
@@ -182,7 +190,7 @@ describe("account balance reading direction", () => {
     "preserves %s native rows, unknown/empty balances, and keyboard account navigation",
     async (language) => {
       const { router, table, account, row, requests } = await setup(language);
-      expect(within(table).getAllByRole("row")).toHaveLength(4);
+      expect(within(table).getAllByRole("row")).toHaveLength(5);
       expect(within(row).getAllByRole("cell")).toHaveLength(7);
       expect(row).not.toHaveAttribute("role");
       expect(row).not.toHaveAttribute("tabindex");
@@ -194,10 +202,10 @@ describe("account balance reading direction", () => {
         .closest("tr")!;
       expect(within(emptyRow).getAllByRole("cell")[5].textContent).toBe("-");
       expect(
-        within(table).getByText(
+        within(table).getAllByText(
           language === "fa" ? "محاسبه نشده" : "Not computed",
         ),
-      ).toBeInTheDocument();
+      ).toHaveLength(2);
       act(() => account.focus());
       await userEvent.setup().keyboard("{Enter}");
       await screen.findByRole("heading", { name: "Account detail" });
@@ -208,6 +216,101 @@ describe("account balance reading direction", () => {
           accountName,
         }),
       );
+      expect(requests).toEqual([
+        {
+          name: "GetLedgerAccountDirectives",
+          variables: { ledgerId: "alice/books" },
+        },
+      ]);
+    },
+  );
+});
+
+function compactBalance(row: HTMLElement) {
+  const accountCell = within(row).getAllByRole("cell")[0];
+  const compact = [...accountCell.querySelectorAll<HTMLElement>("*")].find(
+    (element) => element.classList.contains("@xl:hidden"),
+  );
+  expect(
+    compact,
+    "balance under the account name below the @xl container breakpoint",
+  ).toBeDefined();
+  expect(compact?.tagName).toBe("DL");
+  const value = compact?.querySelector("dd");
+  expect(value).not.toBeNull();
+  return value!;
+}
+
+describe("compact Accounts balances", () => {
+  it.each(["en", "fa"] as const)(
+    "keeps every %s balance below its account name and retains the desktop balance column",
+    async (language) => {
+      const { table, row, account } = await setup(language);
+      expect(table.closest(".\\@container")).not.toBeNull();
+      const compact = compactBalance(row);
+      expect(compact.parentElement?.querySelector("dt")).toHaveTextContent(
+        language === "fa" ? "موجودی" : "Balance",
+      );
+      expect(compact.textContent).toBe(amounts.join(""));
+      expect(
+        account.compareDocumentPosition(compact) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      const desktop = within(row).getAllByRole("cell")[5];
+      expect(desktop).toHaveClass("hidden", "@xl:table-cell");
+      expect(desktop.textContent).toBe(amounts.join(""));
+      for (const text of amounts) {
+        const compactAmount = within(compact).getByText(text);
+        expect(compactAmount.closest('bdi[dir="ltr"]')?.textContent).toBe(text);
+      }
+      for (const [name, text] of [
+        ["Assets:Empty", "-"],
+        ["Assets:Zero", "0.00 USD"],
+        ["Income:Salary", language === "fa" ? "محاسبه نشده" : "Not computed"],
+      ]) {
+        const stateRow = within(table)
+          .getByRole("button", { name })
+          .closest("tr")!;
+        expect(compactBalance(stateRow).textContent).toBe(text);
+        expect(within(stateRow).getAllByRole("cell")[5].textContent).toBe(text);
+      }
+    },
+  );
+
+  it.each(["en", "fa"] as const)(
+    "preserves %s status, row action focus, and account-prefix keyboard navigation",
+    async (language) => {
+      const { router, table, row, requests } = await setup(language);
+      expect(within(row).getAllByRole("cell")[1]).toHaveTextContent(
+        language === "fa" ? "باز" : "Open",
+      );
+      const emptyRow = within(table)
+        .getByRole("button", { name: "Assets:Empty" })
+        .closest("tr")!;
+      const trigger = within(emptyRow).getByRole("button", {
+        name:
+          language === "fa"
+            ? "عملیات برای Assets:Empty"
+            : "Actions for Assets:Empty",
+      });
+      const user = userEvent.setup();
+      act(() => trigger.focus());
+      await user.keyboard("{ArrowDown}");
+      const close = await screen.findByRole("menuitem", {
+        name: language === "fa" ? "بستن" : "Close",
+      });
+      await waitFor(() => expect(close).toHaveFocus());
+      await user.keyboard("{Escape}");
+      await waitFor(() => expect(trigger).toHaveFocus());
+      const prefix = within(row).getByRole("button", { name: "Assets:بانک" });
+      act(() => prefix.focus());
+      await user.keyboard("{Enter}");
+      await screen.findByRole("heading", { name: "Account detail" });
+      expect(router.state.matches.at(-1)?.params).toMatchObject({
+        ledgerOwner: "alice",
+        ledgerName: "books",
+        accountName: "Assets:بانک",
+      });
       expect(requests).toEqual([
         {
           name: "GetLedgerAccountDirectives",
