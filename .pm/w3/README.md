@@ -90,6 +90,8 @@
 - [479](./479.md) — In Persian, amounts render as "USD 33.71-": isolate signed amounts from the right-to-left layout
 - [480](./480.md) — Escape doesn't close the mobile navigation sheet once focus is on a menu item: an invisible tooltip swallows it
 - [481](./481.md) — On phones the account journal hides every amount and the running balance
+- [482](./482.md) — A deleted file's diff is headed "/dev/null", and its file-list link goes nowhere
+
 
 ## Dropped
 
