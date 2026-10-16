@@ -70,6 +70,12 @@
 - [498 — `doctor region --conversion value` rounds the tree, disagreeing with `Net Income`](./498.md)
 - [499 — `bea format` refuses a ledger not named `.bean`/`.beancount`](./499.md)
 - [500 — `bea check books.bean` never suggests `bea --file books.bean check`](./500.md)
+- [501 — `report -a Equity -t 2025` drops previous earnings (clamp runs after the account filter)](./501.md)
+- [502 — `report -a "*Food*"` (invalid regex) silently drops `Expenses:FoodTruck`; refusals quote wrapper positions](./502.md)
+- [503 — `bea balance -- <term>` forwards dash terms as engine options (`-- -f other.bean` reports another ledger)](./503.md)
+- [504 — `report -a` on an account closed before `-t` prints a blank report and `account_filter_empty: false`](./504.md)
+- [505 — `balance-sheet -x at_cost` claims a reconciliation with a cross-currency adjustment](./505.md)
+- [506 — Zero valuation adjustment and total equity print as "—" under a conversion](./506.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
