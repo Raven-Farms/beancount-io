@@ -133,6 +133,9 @@
 - [561 — `query -f csv` drops the lot date and label from `position.cost` (gap in w5/465)](./561.md)
 - [562 — `ORDER BY price` crashes with `NullType` AttributeError when unpriced postings sort first](./562.md)
 - [563 — `SELECT DISTINCT other_accounts` leaks Python syntax text and gives tags/links advice](./563.md)
+- [564 — Text `check` exits 0 on a ledger `bean-check` rejects once loads exceed 1 s (helper cache skips validation)](./564.md)
+- [565 — `format -i DIR` aborts entirely on one file with `100/0`, naming no file](./565.md)
+- [566 — An include cycle gets a "Run with --file <itself>" root hint](./566.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
