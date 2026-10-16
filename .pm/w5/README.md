@@ -84,6 +84,20 @@
 - [512 — `bea format -o a -o b` / `-c 40 -c 70` keep the last value](./512.md)
 - [513 — `add balance --pad-from` before the open cites a nonexistent line as an assertion that "already holds"](./513.md)
 - [514 — `list` on an included leaf counts the root hint as an error](./514.md)
+- [515 — Global `--offline` is ignored by `bea cloud` (and `ask`): `--offline -y cloud ledger delete` deletes](./515.md)
+- [516 — `cloud login` with `BEA_TOKEN` set reports success, but the session is never used](./516.md)
+- [517 — Gateway timeout (504/524) on cloud writes exits 1 instead of the unknown-outcome exit 4](./517.md)
+- [518 — A SOCKS proxy in the environment breaks every cloud command with httpx's pip advice](./518.md)
+- [519 — A refused proxy tunnel (407) on cloud writes exits 4 "outcome unknown" (gap in w5/368)](./519.md)
+- [520 — `cloud ledger clone --dir` into a non-empty directory asks the server first, then exits 1 (gap in w5/371)](./520.md)
+- [521 — `cloud logout` deletes the credential on a malformed `BEA_API_URL` and misclassifies after-send failures](./521.md)
+- [522 — A closed pipe on stderr exits 120, and turns a usage exit 2 into 1](./522.md)
+- [523 — `format` aborts on a permission-denied include (gap in w5/442)](./523.md)
+- [524 — USAGE says `list -a 'Food|Rent'` matches either; `list` filters are substrings](./524.md)
+- [525 — Import refusals drop the remembered-settings notes IMPORTING.md promises](./525.md)
+- [526 — `list --flag txn` refused, though `add --flag txn` works](./526.md)
+- [527 — REFERENCE marks single `--amount` options repeatable and shows `--private` default as True](./527.md)
+- [528 — `agent-skills.md` contradicts itself on skill `name` and directory](./528.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
