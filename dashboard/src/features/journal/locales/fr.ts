@@ -4,6 +4,56 @@ export interface TranslationEntry {
 }
 
 const frJournal: Record<string, TranslationEntry> = {
+  "journal.openEntryWithContext": {
+    message: "Ouvrir l’écriture {entry} (ligne {position})",
+    description:
+      "Accessible name for opening Entry Context, including the entry identity and row position",
+  },
+  "journal.showEntryPostings_one": {
+    message: "Afficher {count} écriture pour {entry} (ligne {position})",
+    description:
+      "Accessible name for revealing this row's postings, including their count and entry identity",
+  },
+  "journal.showEntryPostings_many": {
+    message: "Afficher {count} écritures pour {entry} (ligne {position})",
+    description:
+      "Accessible name for revealing this row's postings, including their count and entry identity",
+  },
+  "journal.showEntryPostings_other": {
+    message: "Afficher {count} écritures pour {entry} (ligne {position})",
+    description:
+      "Accessible name for revealing this row's postings, including their count and entry identity",
+  },
+  "journal.hideEntryPostings_one": {
+    message: "Masquer {count} écriture pour {entry} (ligne {position})",
+    description:
+      "Accessible name for hiding this row's postings, including their count and entry identity",
+  },
+  "journal.hideEntryPostings_many": {
+    message: "Masquer {count} écritures pour {entry} (ligne {position})",
+    description:
+      "Accessible name for hiding this row's postings, including their count and entry identity",
+  },
+  "journal.hideEntryPostings_other": {
+    message: "Masquer {count} écritures pour {entry} (ligne {position})",
+    description:
+      "Accessible name for hiding this row's postings, including their count and entry identity",
+  },
+  "journal.visibleEntryPostings_one": {
+    message: "{count} écriture affichée pour {entry} (ligne {position})",
+    description:
+      "Accessible name for the static posting count when all rows are forced open",
+  },
+  "journal.visibleEntryPostings_many": {
+    message: "{count} écritures affichées pour {entry} (ligne {position})",
+    description:
+      "Accessible name for the static posting count when all rows are forced open",
+  },
+  "journal.visibleEntryPostings_other": {
+    message: "{count} écritures affichées pour {entry} (ligne {position})",
+    description:
+      "Accessible name for the static posting count when all rows are forced open",
+  },
   "journal.account": {
     message: "Compte",
     description: "Singular form of account, used as tab label",
@@ -328,11 +378,6 @@ const frJournal: Record<string, TranslationEntry> = {
   "journal.toggleMetadata": {
     message: "Basculer les métadonnées",
     description: "Filter tooltip to show/hide metadata",
-  },
-  "journal.postingsAlwaysVisible": {
-    message: "Écritures toujours visibles",
-    description:
-      "Indicateur statique lorsque le filtre global des écritures force toutes les lignes ouvertes",
   },
   "journal.togglePostings": {
     message: "Basculer les écritures",

@@ -4,6 +4,71 @@ export interface TranslationEntry {
 }
 
 const ukJournal: Record<string, TranslationEntry> = {
+  "journal.openEntryWithContext": {
+    message: "Відкрити запис {entry} (рядок {position})",
+    description:
+      "Accessible name for opening Entry Context, including the entry identity and row position",
+  },
+  "journal.showEntryPostings_one": {
+    message: "Показати {count} проведення для {entry} (рядок {position})",
+    description:
+      "Accessible name for revealing this row's postings, including their count and entry identity",
+  },
+  "journal.showEntryPostings_few": {
+    message: "Показати {count} проведення для {entry} (рядок {position})",
+    description:
+      "Accessible name for revealing this row's postings, including their count and entry identity",
+  },
+  "journal.showEntryPostings_many": {
+    message: "Показати {count} проведень для {entry} (рядок {position})",
+    description:
+      "Accessible name for revealing this row's postings, including their count and entry identity",
+  },
+  "journal.showEntryPostings_other": {
+    message: "Показати {count} проведення для {entry} (рядок {position})",
+    description:
+      "Accessible name for revealing this row's postings, including their count and entry identity",
+  },
+  "journal.hideEntryPostings_one": {
+    message: "Сховати {count} проведення для {entry} (рядок {position})",
+    description:
+      "Accessible name for hiding this row's postings, including their count and entry identity",
+  },
+  "journal.hideEntryPostings_few": {
+    message: "Сховати {count} проведення для {entry} (рядок {position})",
+    description:
+      "Accessible name for hiding this row's postings, including their count and entry identity",
+  },
+  "journal.hideEntryPostings_many": {
+    message: "Сховати {count} проведень для {entry} (рядок {position})",
+    description:
+      "Accessible name for hiding this row's postings, including their count and entry identity",
+  },
+  "journal.hideEntryPostings_other": {
+    message: "Сховати {count} проведення для {entry} (рядок {position})",
+    description:
+      "Accessible name for hiding this row's postings, including their count and entry identity",
+  },
+  "journal.visibleEntryPostings_one": {
+    message: "Показано {count} проведення для {entry} (рядок {position})",
+    description:
+      "Accessible name for the static posting count when all rows are forced open",
+  },
+  "journal.visibleEntryPostings_few": {
+    message: "Показано {count} проведення для {entry} (рядок {position})",
+    description:
+      "Accessible name for the static posting count when all rows are forced open",
+  },
+  "journal.visibleEntryPostings_many": {
+    message: "Показано {count} проведень для {entry} (рядок {position})",
+    description:
+      "Accessible name for the static posting count when all rows are forced open",
+  },
+  "journal.visibleEntryPostings_other": {
+    message: "Показано {count} проведення для {entry} (рядок {position})",
+    description:
+      "Accessible name for the static posting count when all rows are forced open",
+  },
   "journal.account": {
     message: "Рахунок",
     description: "Singular form of account, used as tab label",
@@ -328,11 +393,6 @@ const ukJournal: Record<string, TranslationEntry> = {
   "journal.toggleMetadata": {
     message: "Перемкнути метадані",
     description: "Filter tooltip to show/hide metadata",
-  },
-  "journal.postingsAlwaysVisible": {
-    message: "Проведення завжди видимі",
-    description:
-      "Статичний індикатор, коли глобальний фільтр проведень тримає всі рядки відкритими",
   },
   "journal.togglePostings": {
     message: "Перемкнути проведення",

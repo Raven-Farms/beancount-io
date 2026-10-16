@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render as renderUI, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { JournalTable } from "@/features/journal/components/journal-table";
 import type { JournalTableItem } from "@/features/journal/components/journal-table";
@@ -11,6 +11,24 @@ import type { JournalTransaction } from "@/common/types/journal";
  * render inside it, so a page of 24 entries exposed 24 empty rows to anyone
  * navigating the table.
  */
+
+import { createLocalization } from "@/i18n/init";
+import { LocalizationProvider } from "@/i18n/provider";
+
+vi.unmock("react-i18next");
+vi.unmock("@/common/hooks/use-translations");
+vi.unmock("@/i18n");
+
+function render(ui: React.ReactElement) {
+  const localization = createLocalization();
+  return renderUI(ui, {
+    wrapper: ({ children }) => (
+      <LocalizationProvider localization={localization}>
+        {children}
+      </LocalizationProvider>
+    ),
+  });
+}
 
 vi.mock("@tanstack/react-router", () => ({
   Link: ({ children }: { children: React.ReactNode }) => <a>{children}</a>,
@@ -152,7 +170,7 @@ describe("journal detail rows", () => {
     expect(count()).toBe(0);
 
     const toggle = screen.getAllByRole("button", {
-      name: "Toggle postings",
+      name: /^(Show|Hide) \d+ postings? for /,
     })[0];
     await user.click(toggle);
     expect(count()).toBe(1);

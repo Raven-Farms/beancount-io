@@ -1,6 +1,26 @@
 import type { TranslationEntry } from "@/i18n";
 
 const jaJournal: Record<string, TranslationEntry> = {
+  "journal.openEntryWithContext": {
+    message: "エントリ {entry} を開く（行 {position}）",
+    description:
+      "Accessible name for opening Entry Context, including the entry identity and row position",
+  },
+  "journal.showEntryPostings_other": {
+    message: "{entry} の仕訳明細 {count} 件を表示（行 {position}）",
+    description:
+      "Accessible name for revealing this row's postings, including their count and entry identity",
+  },
+  "journal.hideEntryPostings_other": {
+    message: "{entry} の仕訳明細 {count} 件を非表示（行 {position}）",
+    description:
+      "Accessible name for hiding this row's postings, including their count and entry identity",
+  },
+  "journal.visibleEntryPostings_other": {
+    message: "{entry} の仕訳明細 {count} 件を表示中（行 {position}）",
+    description:
+      "Accessible name for the static posting count when all rows are forced open",
+  },
   "journal.account": {
     message: "勘定科目",
     description: "Singular form of account, used as tab label",
@@ -325,11 +345,6 @@ const jaJournal: Record<string, TranslationEntry> = {
   "journal.toggleMetadata": {
     message: "メタデータを切り替え",
     description: "Filter tooltip to show/hide metadata",
-  },
-  "journal.postingsAlwaysVisible": {
-    message: "仕訳明細は常に表示",
-    description:
-      "全体の仕訳明細フィルターですべての行が開いているときの静的表示",
   },
   "journal.togglePostings": {
     message: "ポスティングを切り替え",

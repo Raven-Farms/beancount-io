@@ -4,6 +4,56 @@ export interface TranslationEntry {
 }
 
 const caJournal: Record<string, TranslationEntry> = {
+  "journal.openEntryWithContext": {
+    message: "Obre l’entrada {entry} (fila {position})",
+    description:
+      "Accessible name for opening Entry Context, including the entry identity and row position",
+  },
+  "journal.showEntryPostings_one": {
+    message: "Mostra {count} apunt de {entry} (fila {position})",
+    description:
+      "Accessible name for revealing this row's postings, including their count and entry identity",
+  },
+  "journal.showEntryPostings_many": {
+    message: "Mostra {count} apunts de {entry} (fila {position})",
+    description:
+      "Accessible name for revealing this row's postings, including their count and entry identity",
+  },
+  "journal.showEntryPostings_other": {
+    message: "Mostra {count} apunts de {entry} (fila {position})",
+    description:
+      "Accessible name for revealing this row's postings, including their count and entry identity",
+  },
+  "journal.hideEntryPostings_one": {
+    message: "Amaga {count} apunt de {entry} (fila {position})",
+    description:
+      "Accessible name for hiding this row's postings, including their count and entry identity",
+  },
+  "journal.hideEntryPostings_many": {
+    message: "Amaga {count} apunts de {entry} (fila {position})",
+    description:
+      "Accessible name for hiding this row's postings, including their count and entry identity",
+  },
+  "journal.hideEntryPostings_other": {
+    message: "Amaga {count} apunts de {entry} (fila {position})",
+    description:
+      "Accessible name for hiding this row's postings, including their count and entry identity",
+  },
+  "journal.visibleEntryPostings_one": {
+    message: "Es mostra {count} apunt de {entry} (fila {position})",
+    description:
+      "Accessible name for the static posting count when all rows are forced open",
+  },
+  "journal.visibleEntryPostings_many": {
+    message: "Es mostren {count} apunts de {entry} (fila {position})",
+    description:
+      "Accessible name for the static posting count when all rows are forced open",
+  },
+  "journal.visibleEntryPostings_other": {
+    message: "Es mostren {count} apunts de {entry} (fila {position})",
+    description:
+      "Accessible name for the static posting count when all rows are forced open",
+  },
   "journal.account": {
     message: "Compte",
     description: "Singular form of account, used as tab label",
@@ -328,11 +378,6 @@ const caJournal: Record<string, TranslationEntry> = {
   "journal.toggleMetadata": {
     message: "Alternar metadades",
     description: "Filter tooltip to show/hide metadata",
-  },
-  "journal.postingsAlwaysVisible": {
-    message: "Els apunts sempre són visibles",
-    description:
-      "Indicador estàtic quan el filtre global d'apunts força totes les files obertes",
   },
   "journal.togglePostings": {
     message: "Alternar apunts",

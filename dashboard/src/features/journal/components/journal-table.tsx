@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useId, useState, type ReactNode } from "react";
 import {
   type JournalDirectiveType,
   isJournalTransaction,
@@ -12,6 +12,7 @@ import { formatAmountWithCurrency } from "./journal-description/utils";
 import { JournalMetadata } from "./journal-metadata";
 import { displayableMetadataEntries } from "./journal-metadata-entries";
 import { JournalPostings } from "./journal-postings";
+import { journalEntryLabel } from "./journal-entry-label";
 import { Button } from "@/common/components/ui/button";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "@/common/lib/utils/utils";
@@ -215,6 +216,9 @@ function journalColumns(isAccountJournal: boolean): JournalColumnDef[] {
 
 interface JournalPostingToggleProps {
   directive: JournalDirectiveType;
+  entry: string;
+  position: number;
+  controls?: string;
   onClick?: () => void;
   expanded: boolean;
   /** When true, postings are forced visible globally — show a static indicator. */
@@ -223,6 +227,9 @@ interface JournalPostingToggleProps {
 
 function JournalPostingToggle({
   directive,
+  entry,
+  position,
+  controls,
   onClick,
   expanded,
   forcedOpen = false,
@@ -235,12 +242,18 @@ function JournalPostingToggle({
 
   if (forcedOpen) {
     return (
-      <span
-        className="inline-flex h-7 min-w-8 items-center justify-center gap-1 px-1.5 text-muted-foreground"
-        aria-label={t("journal.postingsAlwaysVisible")}
-      >
+      <span className="inline-flex h-7 min-w-8 items-center justify-center gap-1 px-1.5 text-muted-foreground">
         <ChevronDown className="size-3.5" aria-hidden />
-        <span className="text-xs tabular-nums">{amount}</span>
+        <span className="text-xs tabular-nums" aria-hidden>
+          {amount}
+        </span>
+        <span className="sr-only">
+          {t("journal.visibleEntryPostings", {
+            count: amount,
+            entry,
+            position,
+          })}
+        </span>
       </span>
     );
   }
@@ -252,8 +265,12 @@ function JournalPostingToggle({
       size="sm"
       className="h-7 min-w-8 gap-1 px-1.5 text-muted-foreground hover:text-foreground"
       onClick={onClick}
-      aria-label={t("journal.togglePostings")}
+      aria-label={t(
+        expanded ? "journal.hideEntryPostings" : "journal.showEntryPostings",
+        { count: amount, entry, position },
+      )}
       aria-expanded={expanded}
+      aria-controls={controls}
     >
       {expanded ? (
         <ChevronDown className="size-3.5" />
@@ -323,6 +340,7 @@ function JournalTableHeaderRow({ columns }: JournalTableHeaderProps) {
 
 interface JournalTableRowProps {
   item: JournalTableItem;
+  position: number;
   columns: JournalColumnDef[];
   showMetadata?: boolean;
   showPostings?: boolean;
@@ -340,6 +358,7 @@ interface JournalTableRowProps {
 
 function JournalTableEntryRows({
   item,
+  position,
   columns,
   showMetadata = true,
   showPostings = true,
@@ -351,11 +370,16 @@ function JournalTableEntryRows({
   ledgerName,
   colSpan,
 }: JournalTableRowProps) {
+  const { t } = useTranslations();
   const directive = item.directive;
+  const entryLabel = journalEntryLabel(directive);
+  const postingsRegionId = useId();
   const typeClass = getDirectiveTypeClass(directive);
   const isTransaction = isJournalTransaction(directive);
   const [isPostingsExpanded, setIsPostingsExpanded] = useState(false);
   const postingsVisible = showPostings || isPostingsExpanded;
+  const hasVisiblePostings =
+    isTransaction && postingsVisible && (directive.postings?.length ?? 0) > 0;
   const units = isAccountJournal
     ? deriveAccountUnits(directive, accountName, withChildren)
     : undefined;
@@ -393,6 +417,9 @@ function JournalTableEntryRows({
       <div className="flex justify-end">
         <JournalPostingToggle
           directive={directive}
+          entry={entryLabel}
+          position={position}
+          controls={hasVisiblePostings ? postingsRegionId : undefined}
           onClick={togglePostings}
           expanded={postingsVisible}
           forcedOpen={showPostings}
@@ -406,6 +433,10 @@ function JournalTableEntryRows({
         return onEntryClick ? (
           <button
             type="button"
+            aria-label={t("journal.openEntryWithContext", {
+              entry: entryLabel,
+              position,
+            })}
             className={cn(
               "rounded-sm text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring",
             )}
@@ -447,8 +478,6 @@ function JournalTableEntryRows({
   // A detail row exists only if something would render inside it. The global
   // Metadata preference used to create one for every transaction, so a page of
   // entries without metadata exposed an empty row after each one.
-  const hasVisiblePostings =
-    isTransaction && postingsVisible && (directive.postings?.length ?? 0) > 0;
   const hasVisibleMetadata =
     showMetadata && displayableMetadataEntries(directive).length > 0;
   const detailVisible = hasVisiblePostings || hasVisibleMetadata;
@@ -480,13 +509,15 @@ function JournalTableEntryRows({
           )}
         >
           <TableCell colSpan={colSpan} className="p-0">
-            {isTransaction && (
-              <JournalPostings
-                directive={directive}
-                showPostings={postingsVisible}
-                ledgerOwner={ledgerOwner}
-                ledgerName={ledgerName}
-              />
+            {isTransaction && hasVisiblePostings && (
+              <div id={postingsRegionId}>
+                <JournalPostings
+                  directive={directive}
+                  showPostings={postingsVisible}
+                  ledgerOwner={ledgerOwner}
+                  ledgerName={ledgerName}
+                />
+              </div>
             )}
             <JournalMetadata
               directive={directive}
@@ -528,6 +559,7 @@ export function JournalTable({
                 `${item.directive.directive_type}-${item.directive.date}-${index}`
               }
               item={item}
+              position={index + 1}
               columns={columns}
               showMetadata={showMetadata}
               showPostings={showPostings}

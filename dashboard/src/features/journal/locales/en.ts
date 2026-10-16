@@ -4,6 +4,41 @@ export interface TranslationEntry {
 }
 
 const enJournal: Record<string, TranslationEntry> = {
+  "journal.openEntryWithContext": {
+    message: "Open entry {entry} (row {position})",
+    description:
+      "Accessible name for opening Entry Context, including the entry identity and row position",
+  },
+  "journal.showEntryPostings_one": {
+    message: "Show {count} posting for {entry} (row {position})",
+    description:
+      "Accessible name for revealing this row's postings, including their count and entry identity",
+  },
+  "journal.showEntryPostings_other": {
+    message: "Show {count} postings for {entry} (row {position})",
+    description:
+      "Accessible name for revealing this row's postings, including their count and entry identity",
+  },
+  "journal.hideEntryPostings_one": {
+    message: "Hide {count} posting for {entry} (row {position})",
+    description:
+      "Accessible name for hiding this row's postings, including their count and entry identity",
+  },
+  "journal.hideEntryPostings_other": {
+    message: "Hide {count} postings for {entry} (row {position})",
+    description:
+      "Accessible name for hiding this row's postings, including their count and entry identity",
+  },
+  "journal.visibleEntryPostings_one": {
+    message: "{count} posting shown for {entry} (row {position})",
+    description:
+      "Accessible name for the static posting count when all rows are forced open",
+  },
+  "journal.visibleEntryPostings_other": {
+    message: "{count} postings shown for {entry} (row {position})",
+    description:
+      "Accessible name for the static posting count when all rows are forced open",
+  },
   "journal.account": {
     message: "Account",
     description: "Singular form of account, used as tab label",
@@ -327,11 +362,6 @@ const enJournal: Record<string, TranslationEntry> = {
   "journal.toggleMetadata": {
     message: "Toggle metadata",
     description: "Filter tooltip to show/hide metadata",
-  },
-  "journal.postingsAlwaysVisible": {
-    message: "Postings always visible",
-    description:
-      "Static indicator when the global Postings filter forces every row open",
   },
   "journal.togglePostings": {
     message: "Toggle postings",

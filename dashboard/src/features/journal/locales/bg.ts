@@ -4,6 +4,41 @@ export interface TranslationEntry {
 }
 
 const bgJournal: Record<string, TranslationEntry> = {
+  "journal.openEntryWithContext": {
+    message: "Отваряне на запис {entry} (ред {position})",
+    description:
+      "Accessible name for opening Entry Context, including the entry identity and row position",
+  },
+  "journal.showEntryPostings_one": {
+    message: "Показване на {count} проводка за {entry} (ред {position})",
+    description:
+      "Accessible name for revealing this row's postings, including their count and entry identity",
+  },
+  "journal.showEntryPostings_other": {
+    message: "Показване на {count} проводки за {entry} (ред {position})",
+    description:
+      "Accessible name for revealing this row's postings, including their count and entry identity",
+  },
+  "journal.hideEntryPostings_one": {
+    message: "Скриване на {count} проводка за {entry} (ред {position})",
+    description:
+      "Accessible name for hiding this row's postings, including their count and entry identity",
+  },
+  "journal.hideEntryPostings_other": {
+    message: "Скриване на {count} проводки за {entry} (ред {position})",
+    description:
+      "Accessible name for hiding this row's postings, including their count and entry identity",
+  },
+  "journal.visibleEntryPostings_one": {
+    message: "{count} проводка е показана за {entry} (ред {position})",
+    description:
+      "Accessible name for the static posting count when all rows are forced open",
+  },
+  "journal.visibleEntryPostings_other": {
+    message: "{count} проводки са показани за {entry} (ред {position})",
+    description:
+      "Accessible name for the static posting count when all rows are forced open",
+  },
   "journal.account": {
     message: "Сметка",
     description: "Singular form of account, used as tab label",
@@ -328,11 +363,6 @@ const bgJournal: Record<string, TranslationEntry> = {
   "journal.toggleMetadata": {
     message: "Превключване на метаданни",
     description: "Filter tooltip to show/hide metadata",
-  },
-  "journal.postingsAlwaysVisible": {
-    message: "Постингите са винаги видими",
-    description:
-      "Статичен индикатор, когато глобалният филтър за постинги държи редовете отворени",
   },
   "journal.togglePostings": {
     message: "Превключване на проводки",

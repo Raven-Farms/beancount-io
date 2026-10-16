@@ -4,6 +4,26 @@ export interface TranslationEntry {
 }
 
 const zhJournal: Record<string, TranslationEntry> = {
+  "journal.openEntryWithContext": {
+    message: "打开分录 {entry}（第 {position} 行）",
+    description:
+      "Accessible name for opening Entry Context, including the entry identity and row position",
+  },
+  "journal.showEntryPostings_other": {
+    message: "显示 {entry} 的 {count} 条过账记录（第 {position} 行）",
+    description:
+      "Accessible name for revealing this row's postings, including their count and entry identity",
+  },
+  "journal.hideEntryPostings_other": {
+    message: "隐藏 {entry} 的 {count} 条过账记录（第 {position} 行）",
+    description:
+      "Accessible name for hiding this row's postings, including their count and entry identity",
+  },
+  "journal.visibleEntryPostings_other": {
+    message: "{entry} 的 {count} 条过账记录已显示（第 {position} 行）",
+    description:
+      "Accessible name for the static posting count when all rows are forced open",
+  },
   "journal.account": {
     message: "账户",
     description: "Singular form of account, used as tab label",
@@ -327,10 +347,6 @@ const zhJournal: Record<string, TranslationEntry> = {
   "journal.toggleMetadata": {
     message: "切换元数据",
     description: "Filter tooltip to show/hide metadata",
-  },
-  "journal.postingsAlwaysVisible": {
-    message: "分录始终可见",
-    description: "全局分录筛选强制展开所有行时的静态指示",
   },
   "journal.togglePostings": {
     message: "切换过账",

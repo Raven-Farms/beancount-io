@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
-  render,
+  render as renderUI,
   screen,
   fireEvent,
   waitFor,
@@ -10,6 +10,24 @@ import userEvent from "@testing-library/user-event";
 import { JournalTable } from "@/features/journal/components/journal-table";
 import type { JournalTableItem } from "@/features/journal/components/journal-table";
 import type { JournalTransaction } from "@/common/types/journal";
+
+import { createLocalization } from "@/i18n/init";
+import { LocalizationProvider } from "@/i18n/provider";
+
+vi.unmock("react-i18next");
+vi.unmock("@/common/hooks/use-translations");
+vi.unmock("@/i18n");
+
+function render(ui: React.ReactElement) {
+  const localization = createLocalization();
+  return renderUI(ui, {
+    wrapper: ({ children }) => (
+      <LocalizationProvider localization={localization}>
+        {children}
+      </LocalizationProvider>
+    ),
+  });
+}
 
 vi.mock("@tanstack/react-router", () => ({
   Link: ({
@@ -74,7 +92,7 @@ describe("JournalTable", () => {
 
   const getPostingToggles = () =>
     screen
-      .getAllByRole("button", { name: "Toggle postings" })
+      .getAllByRole("button", { name: /^(Show|Hide) \d+ postings? for / })
       .filter((_, index) => index % 2 === 0);
 
   describe("narrow layout", () => {
@@ -113,7 +131,7 @@ describe("JournalTable", () => {
         );
       }
       for (const toggle of screen.getAllByRole("button", {
-        name: "Toggle postings",
+        name: /^(Show|Hide) \d+ postings? for /,
       })) {
         expect(toggle).toHaveTextContent("16");
       }
@@ -358,9 +376,11 @@ describe("JournalTable", () => {
 
       // Forced-open rows show a static indicator, not an enabled toggle.
       expect(
-        screen.queryAllByRole("button", { name: "Toggle postings" }),
+        screen.queryAllByRole("button", {
+          name: /^(Show|Hide) \d+ postings? for /,
+        }),
       ).toHaveLength(0);
-      const indicators = screen.getAllByLabelText("Postings always visible");
+      const indicators = screen.getAllByText(/^\d+ postings? shown for /);
       expect(indicators.length).toBeGreaterThan(0);
       fireEvent.click(indicators[0]);
 
@@ -462,7 +482,9 @@ describe("JournalTable", () => {
       expect(entryRow).toBeTruthy();
       await user.click(entryRow as HTMLElement);
 
-      const dateControl = screen.getByRole("button", { name: "2024-01-01" });
+      const dateControl = screen.getByRole("button", {
+        name: "Open entry 2024-01-01 Test Payee Test transaction (row 1)",
+      });
       dateControl.focus();
       expect(dateControl).toHaveFocus();
       await user.keyboard("{Enter}");
@@ -587,7 +609,9 @@ describe("JournalTable", () => {
       );
 
       expect(
-        screen.queryByRole("button", { name: "Toggle postings" }),
+        screen.queryByRole("button", {
+          name: /^(Show|Hide) \d+ postings? for /,
+        }),
       ).not.toBeInTheDocument();
     });
 
@@ -754,7 +778,7 @@ describe("JournalTable", () => {
       expect(
         within(cellForHeader(row as HTMLElement, "Units")).queryByRole(
           "button",
-          { name: "Toggle postings" },
+          { name: /^(Show|Hide) \d+ postings? for / },
         ),
       ).not.toBeInTheDocument();
       expect(cellForHeader(row as HTMLElement, "Change")).toHaveTextContent(
@@ -771,7 +795,7 @@ describe("JournalTable", () => {
       const desktopPostingsCell = cellForHeader(row as HTMLElement, "Postings");
       expect(
         within(desktopPostingsCell).getAllByRole("button", {
-          name: "Toggle postings",
+          name: /^(Show|Hide) \d+ postings? for /,
         }).length,
       ).toBeGreaterThan(0);
     });
@@ -811,7 +835,9 @@ describe("JournalTable", () => {
         "",
       );
       expect(
-        screen.queryByRole("button", { name: "Toggle postings" }),
+        screen.queryByRole("button", {
+          name: /^(Show|Hide) \d+ postings? for /,
+        }),
       ).not.toBeInTheDocument();
     });
 
@@ -848,7 +874,7 @@ describe("JournalTable", () => {
       expect(
         within(cellForHeader(row as HTMLElement, "Postings")).getAllByRole(
           "button",
-          { name: "Toggle postings" },
+          { name: /^(Show|Hide) \d+ postings? for / },
         )[0],
       ).toHaveTextContent("4");
     });

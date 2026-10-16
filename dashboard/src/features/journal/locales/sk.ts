@@ -4,6 +4,71 @@ export interface TranslationEntry {
 }
 
 const skJournal: Record<string, TranslationEntry> = {
+  "journal.openEntryWithContext": {
+    message: "Otvoriť záznam {entry} (riadok {position})",
+    description:
+      "Accessible name for opening Entry Context, including the entry identity and row position",
+  },
+  "journal.showEntryPostings_one": {
+    message: "Zobraziť {count} zápis pre {entry} (riadok {position})",
+    description:
+      "Accessible name for revealing this row's postings, including their count and entry identity",
+  },
+  "journal.showEntryPostings_few": {
+    message: "Zobraziť {count} zápisy pre {entry} (riadok {position})",
+    description:
+      "Accessible name for revealing this row's postings, including their count and entry identity",
+  },
+  "journal.showEntryPostings_many": {
+    message: "Zobraziť {count} zápisu pre {entry} (riadok {position})",
+    description:
+      "Accessible name for revealing this row's postings, including their count and entry identity",
+  },
+  "journal.showEntryPostings_other": {
+    message: "Zobraziť {count} zápisov pre {entry} (riadok {position})",
+    description:
+      "Accessible name for revealing this row's postings, including their count and entry identity",
+  },
+  "journal.hideEntryPostings_one": {
+    message: "Skryť {count} zápis pre {entry} (riadok {position})",
+    description:
+      "Accessible name for hiding this row's postings, including their count and entry identity",
+  },
+  "journal.hideEntryPostings_few": {
+    message: "Skryť {count} zápisy pre {entry} (riadok {position})",
+    description:
+      "Accessible name for hiding this row's postings, including their count and entry identity",
+  },
+  "journal.hideEntryPostings_many": {
+    message: "Skryť {count} zápisu pre {entry} (riadok {position})",
+    description:
+      "Accessible name for hiding this row's postings, including their count and entry identity",
+  },
+  "journal.hideEntryPostings_other": {
+    message: "Skryť {count} zápisov pre {entry} (riadok {position})",
+    description:
+      "Accessible name for hiding this row's postings, including their count and entry identity",
+  },
+  "journal.visibleEntryPostings_one": {
+    message: "Zobrazuje sa {count} zápis pre {entry} (riadok {position})",
+    description:
+      "Accessible name for the static posting count when all rows are forced open",
+  },
+  "journal.visibleEntryPostings_few": {
+    message: "Zobrazujú sa {count} zápisy pre {entry} (riadok {position})",
+    description:
+      "Accessible name for the static posting count when all rows are forced open",
+  },
+  "journal.visibleEntryPostings_many": {
+    message: "Zobrazuje sa {count} zápisu pre {entry} (riadok {position})",
+    description:
+      "Accessible name for the static posting count when all rows are forced open",
+  },
+  "journal.visibleEntryPostings_other": {
+    message: "Zobrazuje sa {count} zápisov pre {entry} (riadok {position})",
+    description:
+      "Accessible name for the static posting count when all rows are forced open",
+  },
   "journal.account": {
     message: "Účet",
     description: "Singular form of account, used as tab label",
@@ -328,11 +393,6 @@ const skJournal: Record<string, TranslationEntry> = {
   "journal.toggleMetadata": {
     message: "Prepnúť metadáta",
     description: "Filter tooltip to show/hide metadata",
-  },
-  "journal.postingsAlwaysVisible": {
-    message: "Účtovné zápisy vždy viditeľné",
-    description:
-      "Statický indikátor, keď globálny filter zápisov drží všetky riadky otvorené",
   },
   "journal.togglePostings": {
     message: "Prepnúť zápisy",

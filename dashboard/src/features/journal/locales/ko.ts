@@ -1,6 +1,26 @@
 import type { TranslationEntry } from "@/i18n";
 
 const koJournal: Record<string, TranslationEntry> = {
+  "journal.openEntryWithContext": {
+    message: "항목 {entry} 열기(행 {position})",
+    description:
+      "Accessible name for opening Entry Context, including the entry identity and row position",
+  },
+  "journal.showEntryPostings_other": {
+    message: "{entry}의 분개 내역 {count}개 표시(행 {position})",
+    description:
+      "Accessible name for revealing this row's postings, including their count and entry identity",
+  },
+  "journal.hideEntryPostings_other": {
+    message: "{entry}의 분개 내역 {count}개 숨기기(행 {position})",
+    description:
+      "Accessible name for hiding this row's postings, including their count and entry identity",
+  },
+  "journal.visibleEntryPostings_other": {
+    message: "{entry}의 분개 내역 {count}개 표시 중(행 {position})",
+    description:
+      "Accessible name for the static posting count when all rows are forced open",
+  },
   "journal.account": {
     message: "계정",
     description: "Singular form of account, used as tab label",
@@ -324,10 +344,6 @@ const koJournal: Record<string, TranslationEntry> = {
   "journal.toggleMetadata": {
     message: "메타데이터 전환",
     description: "Filter tooltip to show/hide metadata",
-  },
-  "journal.postingsAlwaysVisible": {
-    message: "분개 내역이 항상 표시됨",
-    description: "전역 분개 내역 필터가 모든 행을 열어 둘 때의 정적 표시",
   },
   "journal.togglePostings": {
     message: "전기 전환",

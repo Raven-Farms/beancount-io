@@ -4,6 +4,71 @@ export interface TranslationEntry {
 }
 
 const ruJournal: Record<string, TranslationEntry> = {
+  "journal.openEntryWithContext": {
+    message: "Открыть запись {entry} (строка {position})",
+    description:
+      "Accessible name for opening Entry Context, including the entry identity and row position",
+  },
+  "journal.showEntryPostings_one": {
+    message: "Показать {count} проводку для {entry} (строка {position})",
+    description:
+      "Accessible name for revealing this row's postings, including their count and entry identity",
+  },
+  "journal.showEntryPostings_few": {
+    message: "Показать {count} проводки для {entry} (строка {position})",
+    description:
+      "Accessible name for revealing this row's postings, including their count and entry identity",
+  },
+  "journal.showEntryPostings_many": {
+    message: "Показать {count} проводок для {entry} (строка {position})",
+    description:
+      "Accessible name for revealing this row's postings, including their count and entry identity",
+  },
+  "journal.showEntryPostings_other": {
+    message: "Показать {count} проводки для {entry} (строка {position})",
+    description:
+      "Accessible name for revealing this row's postings, including their count and entry identity",
+  },
+  "journal.hideEntryPostings_one": {
+    message: "Скрыть {count} проводку для {entry} (строка {position})",
+    description:
+      "Accessible name for hiding this row's postings, including their count and entry identity",
+  },
+  "journal.hideEntryPostings_few": {
+    message: "Скрыть {count} проводки для {entry} (строка {position})",
+    description:
+      "Accessible name for hiding this row's postings, including their count and entry identity",
+  },
+  "journal.hideEntryPostings_many": {
+    message: "Скрыть {count} проводок для {entry} (строка {position})",
+    description:
+      "Accessible name for hiding this row's postings, including their count and entry identity",
+  },
+  "journal.hideEntryPostings_other": {
+    message: "Скрыть {count} проводки для {entry} (строка {position})",
+    description:
+      "Accessible name for hiding this row's postings, including their count and entry identity",
+  },
+  "journal.visibleEntryPostings_one": {
+    message: "Показана {count} проводка для {entry} (строка {position})",
+    description:
+      "Accessible name for the static posting count when all rows are forced open",
+  },
+  "journal.visibleEntryPostings_few": {
+    message: "Показаны {count} проводки для {entry} (строка {position})",
+    description:
+      "Accessible name for the static posting count when all rows are forced open",
+  },
+  "journal.visibleEntryPostings_many": {
+    message: "Показано {count} проводок для {entry} (строка {position})",
+    description:
+      "Accessible name for the static posting count when all rows are forced open",
+  },
+  "journal.visibleEntryPostings_other": {
+    message: "Показано {count} проводки для {entry} (строка {position})",
+    description:
+      "Accessible name for the static posting count when all rows are forced open",
+  },
   "journal.account": {
     message: "Счёт",
     description: "Singular form of account, used as tab label",
@@ -328,11 +393,6 @@ const ruJournal: Record<string, TranslationEntry> = {
   "journal.toggleMetadata": {
     message: "Переключить метаданные",
     description: "Filter tooltip to show/hide metadata",
-  },
-  "journal.postingsAlwaysVisible": {
-    message: "Проводки всегда видны",
-    description:
-      "Статический индикатор, когда глобальный фильтр проводок держит все строки открытыми",
   },
   "journal.togglePostings": {
     message: "Переключить проводки",

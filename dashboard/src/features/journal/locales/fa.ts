@@ -4,6 +4,43 @@ export interface TranslationEntry {
 }
 
 const faJournal: Record<string, TranslationEntry> = {
+  "journal.openEntryWithContext": {
+    message: "باز کردن ثبت {entry} (ردیف {position})",
+    description:
+      "Accessible name for opening Entry Context, including the entry identity and row position",
+  },
+  "journal.showEntryPostings_one": {
+    message: "نمایش {count} ردیف حسابداری برای {entry} (ردیف {position})",
+    description:
+      "Accessible name for revealing this row's postings, including their count and entry identity",
+  },
+  "journal.showEntryPostings_other": {
+    message: "نمایش {count} ردیف حسابداری برای {entry} (ردیف {position})",
+    description:
+      "Accessible name for revealing this row's postings, including their count and entry identity",
+  },
+  "journal.hideEntryPostings_one": {
+    message: "پنهان کردن {count} ردیف حسابداری برای {entry} (ردیف {position})",
+    description:
+      "Accessible name for hiding this row's postings, including their count and entry identity",
+  },
+  "journal.hideEntryPostings_other": {
+    message: "پنهان کردن {count} ردیف حسابداری برای {entry} (ردیف {position})",
+    description:
+      "Accessible name for hiding this row's postings, including their count and entry identity",
+  },
+  "journal.visibleEntryPostings_one": {
+    message:
+      "{count} ردیف حسابداری برای {entry} نمایش داده شده است (ردیف {position})",
+    description:
+      "Accessible name for the static posting count when all rows are forced open",
+  },
+  "journal.visibleEntryPostings_other": {
+    message:
+      "{count} ردیف حسابداری برای {entry} نمایش داده شده است (ردیف {position})",
+    description:
+      "Accessible name for the static posting count when all rows are forced open",
+  },
   "journal.account": {
     message: "حساب",
     description: "Singular form of account, used as tab label",
@@ -328,11 +365,6 @@ const faJournal: Record<string, TranslationEntry> = {
   "journal.toggleMetadata": {
     message: "تغییر وضعیت فراداده",
     description: "Filter tooltip to show/hide metadata",
-  },
-  "journal.postingsAlwaysVisible": {
-    message: "آویزه‌ها همیشه نمایان‌اند",
-    description:
-      "نشانگر ایستا وقتی فیلتر سراسری آویزه‌ها همه ردیف‌ها را باز نگه می‌دارد",
   },
   "journal.togglePostings": {
     message: "تغییر وضعیت ثبت‌ها",

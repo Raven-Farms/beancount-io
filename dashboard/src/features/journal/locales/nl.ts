@@ -4,6 +4,41 @@ export interface TranslationEntry {
 }
 
 const nlJournal: Record<string, TranslationEntry> = {
+  "journal.openEntryWithContext": {
+    message: "Boeking {entry} openen (rij {position})",
+    description:
+      "Accessible name for opening Entry Context, including the entry identity and row position",
+  },
+  "journal.showEntryPostings_one": {
+    message: "{count} boeking voor {entry} tonen (rij {position})",
+    description:
+      "Accessible name for revealing this row's postings, including their count and entry identity",
+  },
+  "journal.showEntryPostings_other": {
+    message: "{count} boekingen voor {entry} tonen (rij {position})",
+    description:
+      "Accessible name for revealing this row's postings, including their count and entry identity",
+  },
+  "journal.hideEntryPostings_one": {
+    message: "{count} boeking voor {entry} verbergen (rij {position})",
+    description:
+      "Accessible name for hiding this row's postings, including their count and entry identity",
+  },
+  "journal.hideEntryPostings_other": {
+    message: "{count} boekingen voor {entry} verbergen (rij {position})",
+    description:
+      "Accessible name for hiding this row's postings, including their count and entry identity",
+  },
+  "journal.visibleEntryPostings_one": {
+    message: "{count} boeking getoond voor {entry} (rij {position})",
+    description:
+      "Accessible name for the static posting count when all rows are forced open",
+  },
+  "journal.visibleEntryPostings_other": {
+    message: "{count} boekingen getoond voor {entry} (rij {position})",
+    description:
+      "Accessible name for the static posting count when all rows are forced open",
+  },
   "journal.account": {
     message: "Rekening",
     description: "Singular form of account, used as tab label",
@@ -328,11 +363,6 @@ const nlJournal: Record<string, TranslationEntry> = {
   "journal.toggleMetadata": {
     message: "Metadata aan/uit",
     description: "Filter tooltip to show/hide metadata",
-  },
-  "journal.postingsAlwaysVisible": {
-    message: "Boekingen altijd zichtbaar",
-    description:
-      "Statische indicator wanneer het globale boekingenfilter alle rijen open houdt",
   },
   "journal.togglePostings": {
     message: "Boekingen aan/uit",

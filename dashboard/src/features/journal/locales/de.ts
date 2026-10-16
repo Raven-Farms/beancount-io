@@ -4,6 +4,41 @@ export interface TranslationEntry {
 }
 
 const deJournal: Record<string, TranslationEntry> = {
+  "journal.openEntryWithContext": {
+    message: "Eintrag {entry} öffnen (Zeile {position})",
+    description:
+      "Accessible name for opening Entry Context, including the entry identity and row position",
+  },
+  "journal.showEntryPostings_one": {
+    message: "{count} Buchung für {entry} anzeigen (Zeile {position})",
+    description:
+      "Accessible name for revealing this row's postings, including their count and entry identity",
+  },
+  "journal.showEntryPostings_other": {
+    message: "{count} Buchungen für {entry} anzeigen (Zeile {position})",
+    description:
+      "Accessible name for revealing this row's postings, including their count and entry identity",
+  },
+  "journal.hideEntryPostings_one": {
+    message: "{count} Buchung für {entry} ausblenden (Zeile {position})",
+    description:
+      "Accessible name for hiding this row's postings, including their count and entry identity",
+  },
+  "journal.hideEntryPostings_other": {
+    message: "{count} Buchungen für {entry} ausblenden (Zeile {position})",
+    description:
+      "Accessible name for hiding this row's postings, including their count and entry identity",
+  },
+  "journal.visibleEntryPostings_one": {
+    message: "{count} Buchung für {entry} sichtbar (Zeile {position})",
+    description:
+      "Accessible name for the static posting count when all rows are forced open",
+  },
+  "journal.visibleEntryPostings_other": {
+    message: "{count} Buchungen für {entry} sichtbar (Zeile {position})",
+    description:
+      "Accessible name for the static posting count when all rows are forced open",
+  },
   "journal.account": {
     message: "Konto",
     description: "Singular form of account, used as tab label",
@@ -328,11 +363,6 @@ const deJournal: Record<string, TranslationEntry> = {
   "journal.toggleMetadata": {
     message: "Metadaten ein-/ausblenden",
     description: "Filter tooltip to show/hide metadata",
-  },
-  "journal.postingsAlwaysVisible": {
-    message: "Buchungen immer sichtbar",
-    description:
-      "Statischer Hinweis, wenn der globale Buchungen-Filter alle Zeilen geöffnet hält",
   },
   "journal.togglePostings": {
     message: "Buchungen ein-/ausblenden",

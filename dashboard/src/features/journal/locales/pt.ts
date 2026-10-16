@@ -4,6 +4,56 @@ export interface TranslationEntry {
 }
 
 const ptJournal: Record<string, TranslationEntry> = {
+  "journal.openEntryWithContext": {
+    message: "Abrir lançamento {entry} (linha {position})",
+    description:
+      "Accessible name for opening Entry Context, including the entry identity and row position",
+  },
+  "journal.showEntryPostings_one": {
+    message: "Mostrar {count} lançamento de {entry} (linha {position})",
+    description:
+      "Accessible name for revealing this row's postings, including their count and entry identity",
+  },
+  "journal.showEntryPostings_many": {
+    message: "Mostrar {count} lançamentos de {entry} (linha {position})",
+    description:
+      "Accessible name for revealing this row's postings, including their count and entry identity",
+  },
+  "journal.showEntryPostings_other": {
+    message: "Mostrar {count} lançamentos de {entry} (linha {position})",
+    description:
+      "Accessible name for revealing this row's postings, including their count and entry identity",
+  },
+  "journal.hideEntryPostings_one": {
+    message: "Ocultar {count} lançamento de {entry} (linha {position})",
+    description:
+      "Accessible name for hiding this row's postings, including their count and entry identity",
+  },
+  "journal.hideEntryPostings_many": {
+    message: "Ocultar {count} lançamentos de {entry} (linha {position})",
+    description:
+      "Accessible name for hiding this row's postings, including their count and entry identity",
+  },
+  "journal.hideEntryPostings_other": {
+    message: "Ocultar {count} lançamentos de {entry} (linha {position})",
+    description:
+      "Accessible name for hiding this row's postings, including their count and entry identity",
+  },
+  "journal.visibleEntryPostings_one": {
+    message: "{count} lançamento de {entry} exibido (linha {position})",
+    description:
+      "Accessible name for the static posting count when all rows are forced open",
+  },
+  "journal.visibleEntryPostings_many": {
+    message: "{count} lançamentos de {entry} exibidos (linha {position})",
+    description:
+      "Accessible name for the static posting count when all rows are forced open",
+  },
+  "journal.visibleEntryPostings_other": {
+    message: "{count} lançamentos de {entry} exibidos (linha {position})",
+    description:
+      "Accessible name for the static posting count when all rows are forced open",
+  },
   "journal.account": {
     message: "Conta",
     description: "Singular form of account, used as tab label",
@@ -328,11 +378,6 @@ const ptJournal: Record<string, TranslationEntry> = {
   "journal.toggleMetadata": {
     message: "Alternar metadados",
     description: "Filter tooltip to show/hide metadata",
-  },
-  "journal.postingsAlwaysVisible": {
-    message: "Lançamentos sempre visíveis",
-    description:
-      "Indicador estático quando o filtro global de lançamentos mantém todas as linhas abertas",
   },
   "journal.togglePostings": {
     message: "Alternar lançamentos",
