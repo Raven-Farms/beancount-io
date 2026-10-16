@@ -80,7 +80,6 @@
 
 ## Inbox
 
-- [468](./468.md) — Let Version History reach commits older than the newest 30
 - [469](./469.md) — Tell non-admins they can't manage a ledger's bank connections instead of "Failed to Load Data — Retry", and give the Plaid pages a heading
 - [470](./470.md) — Stop the server redirect loop for paths containing an encoded `<`, `>`, `"`, `{`, `}` or backtick
 - [471](./471.md) — Answer a missing account, entry, commit, pull request or user profile with a real not-found, not an indexable 200 page
