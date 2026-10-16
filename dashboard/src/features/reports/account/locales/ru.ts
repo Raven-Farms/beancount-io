@@ -40,6 +40,11 @@ const ruAccountReport: Record<string, TranslationEntry> = {
     message: "Загрузка данных счёта...",
     description: "Loading message for account data",
   },
+  "page.accountReport.notFound": {
+    message: "В этой книге нет счёта с именем {accountName}.",
+    description:
+      "Missing-account message; {accountName} is the requested account name",
+  },
   "page.accountReport.noData": {
     message: "Данные счёта не найдены для этого счёта.",
     description: "Empty state message for account data",

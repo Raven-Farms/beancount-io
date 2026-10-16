@@ -40,6 +40,11 @@ const bgAccountReport: Record<string, TranslationEntry> = {
     message: "Зареждане на данните за сметката...",
     description: "Loading message for account data",
   },
+  "page.accountReport.notFound": {
+    message: "В тази счетоводна книга няма сметка с име {accountName}.",
+    description:
+      "Missing-account message; {accountName} is the requested account name",
+  },
   "page.accountReport.noData": {
     message: "Няма намерени данни за тази сметка.",
     description: "Empty state message for account data",

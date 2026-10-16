@@ -40,6 +40,11 @@ const nlAccountReport: Record<string, TranslationEntry> = {
     message: "Rekeninggegevens laden...",
     description: "Loading message for account data",
   },
+  "page.accountReport.notFound": {
+    message: "Dit grootboek bevat geen rekening met de naam {accountName}.",
+    description:
+      "Missing-account message; {accountName} is the requested account name",
+  },
   "page.accountReport.noData": {
     message: "Geen rekeninggegevens gevonden voor deze rekening.",
     description: "Empty state message for account data",

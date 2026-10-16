@@ -41,6 +41,12 @@ const caAccountReport: Record<string, TranslationEntry> = {
     message: "Carregant les dades del compte...",
     description: "Loading message for account data",
   },
+  "page.accountReport.notFound": {
+    message:
+      "No hi ha cap compte amb el nom {accountName} en aquest llibre comptable.",
+    description:
+      "Missing-account message; {accountName} is the requested account name",
+  },
   "page.accountReport.noData": {
     message: "No s'han trobat dades per a aquest compte.",
     description: "Empty state message for account data",

@@ -40,6 +40,11 @@ const ukAccountReport: Record<string, TranslationEntry> = {
     message: "Завантаження даних рахунку...",
     description: "Loading message for account data",
   },
+  "page.accountReport.notFound": {
+    message: "У цій книзі немає рахунку з назвою {accountName}.",
+    description:
+      "Missing-account message; {accountName} is the requested account name",
+  },
   "page.accountReport.noData": {
     message: "Для цього рахунку не знайдено даних.",
     description: "Empty state message for account data",

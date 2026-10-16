@@ -1,5 +1,4 @@
 import { Link, useParams, useSearch } from "@tanstack/react-router";
-import { EXACT_PAGE_LINK } from "@/common/lib/navigation/active-options";
 import { useUserProfile } from "../hooks/use-user-profile";
 import { FollowButton } from "../components/follow-button";
 import { UserProfileHeader } from "../components/user-profile-header";
@@ -18,13 +17,12 @@ import {
   Calendar,
   Globe2,
   Users,
-  ArrowLeft,
 } from "lucide-react";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { useRootContext } from "@/common/hooks/use-root-context";
-import { getErrorMessageKey } from "@/common/lib/errors/error-message";
-import { CombinedGraphQLErrors } from "@apollo/client/errors";
 import { toast } from "sonner";
+import { UserProfileUnavailable } from "../components/user-profile-unavailable";
+import { isProfileNotFound } from "../lib/profile-not-found";
 
 export default function UserProfilePage() {
   const { username } = useParams({ from: "/ledger/$username" });
@@ -46,6 +44,7 @@ export default function UserProfilePage() {
     ? repositories.find((repo) => repo.name === "example" && !repo.isPrivate)
     : undefined;
   const joined = profile?.created ? new Date(profile.created) : null;
+  const profileNotFound = isProfileNotFound(error);
 
   const copyProfileLink = async () => {
     try {
@@ -69,42 +68,15 @@ export default function UserProfilePage() {
             tab={search.tab || "overview"}
           />
         ) : error || !profile ? (
-          <div className="mx-auto max-w-xl px-5 py-24 text-center">
-            <BookOpen
-              aria-hidden="true"
-              className="mx-auto mb-6 size-10 text-muted-foreground"
-            />
-            <h1 className="text-2xl font-semibold">
-              {t(
-                !error ||
-                  (CombinedGraphQLErrors.is(error) &&
-                    error.errors.some(
-                      (item) => item.extensions?.code === "NOT_FOUND",
-                    )) ||
-                  error.message.includes("not found")
-                  ? "userProfile.userNotFound"
-                  : "userProfile.errorLoadingProfile",
-              )}
-            </h1>
-            <p className="mt-3 text-muted-foreground">
-              {error
-                ? t(getErrorMessageKey(error))
-                : t("userProfile.userNotFoundMessage", { username })}
-            </p>
-            <div className="mt-6 flex justify-center gap-3">
-              <Button variant="outline" asChild>
-                <Link to="/ledger" {...EXACT_PAGE_LINK}>
-                  <ArrowLeft aria-hidden="true" className="size-4" />
-                  {t("page.dashboard.goToDashboard")}
-                </Link>
-              </Button>
-              {error && (
-                <Button onClick={() => void refetch().catch(() => {})}>
-                  {t("userProfile.tryAgain")}
-                </Button>
-              )}
-            </div>
-          </div>
+          <UserProfileUnavailable
+            username={username}
+            error={profileNotFound ? undefined : error}
+            onRetry={
+              error && !profileNotFound
+                ? () => void refetch().catch(() => {})
+                : undefined
+            }
+          />
         ) : (
           <>
             <section

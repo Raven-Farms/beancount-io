@@ -40,6 +40,11 @@ const enAccountReport: Record<string, TranslationEntry> = {
     message: "Loading account data...",
     description: "Loading message for account data",
   },
+  "page.accountReport.notFound": {
+    message: "No account named {accountName} in this ledger.",
+    description:
+      "Missing-account message; {accountName} is the requested account name",
+  },
   "page.accountReport.noData": {
     message: "No account data found for this account.",
     description: "Empty state message for account data",

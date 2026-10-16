@@ -40,6 +40,12 @@ const ptAccountReport: Record<string, TranslationEntry> = {
     message: "Carregando dados da conta...",
     description: "Loading message for account data",
   },
+  "page.accountReport.notFound": {
+    message:
+      "Não existe nenhuma conta chamada {accountName} neste livro contábil.",
+    description:
+      "Missing-account message; {accountName} is the requested account name",
+  },
   "page.accountReport.noData": {
     message: "Nenhum dado de conta encontrado para esta conta.",
     description: "Empty state message for account data",

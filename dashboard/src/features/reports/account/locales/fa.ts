@@ -40,6 +40,11 @@ const faAccountReport: Record<string, TranslationEntry> = {
     message: "در حال بارگذاری داده‌های حساب...",
     description: "Loading message for account data",
   },
+  "page.accountReport.notFound": {
+    message: "در این دفتر کل حسابی با نام {accountName} وجود ندارد.",
+    description:
+      "Missing-account message; {accountName} is the requested account name",
+  },
   "page.accountReport.noData": {
     message: "هیچ داده حسابی برای این حساب یافت نشد.",
     description: "Empty state message for account data",

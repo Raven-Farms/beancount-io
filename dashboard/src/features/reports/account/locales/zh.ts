@@ -40,6 +40,11 @@ const zhAccountReport: Record<string, TranslationEntry> = {
     message: "加载账户数据中...",
     description: "Loading message for account data",
   },
+  "page.accountReport.notFound": {
+    message: "此账本中没有名为 {accountName} 的账户。",
+    description:
+      "Missing-account message; {accountName} is the requested account name",
+  },
   "page.accountReport.noData": {
     message: "未找到此账户的数据。",
     description: "Empty state message for account data",

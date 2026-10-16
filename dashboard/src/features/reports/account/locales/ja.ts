@@ -40,6 +40,11 @@ const jaAccountReport: Record<string, TranslationEntry> = {
     message: "口座データを読み込み中...",
     description: "Loading message for account data",
   },
+  "page.accountReport.notFound": {
+    message: "この元帳に {accountName} という名前の勘定科目はありません。",
+    description:
+      "Missing-account message; {accountName} is the requested account name",
+  },
   "page.accountReport.noData": {
     message: "この口座の口座データが見つかりません。",
     description: "Empty state message for account data",

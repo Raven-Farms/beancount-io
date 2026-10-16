@@ -40,6 +40,11 @@ const koAccountReport: Record<string, TranslationEntry> = {
     message: "계정 데이터 불러오는 중...",
     description: "Loading message for account data",
   },
+  "page.accountReport.notFound": {
+    message: "이 원장에 {accountName} 이름의 계정이 없습니다.",
+    description:
+      "Missing-account message; {accountName} is the requested account name",
+  },
   "page.accountReport.noData": {
     message: "이 계정의 계정 데이터를 찾을 수 없습니다.",
     description: "Empty state message for account data",

@@ -40,6 +40,11 @@ const frAccountReport: Record<string, TranslationEntry> = {
     message: "Chargement des données du compte...",
     description: "Loading message for account data",
   },
+  "page.accountReport.notFound": {
+    message: "Aucun compte nommé {accountName} dans ce grand livre.",
+    description:
+      "Missing-account message; {accountName} is the requested account name",
+  },
   "page.accountReport.noData": {
     message: "Aucune donnée de compte trouvée pour ce compte.",
     description: "Empty state message for account data",

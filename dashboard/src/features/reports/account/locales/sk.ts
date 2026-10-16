@@ -40,6 +40,11 @@ const skAccountReport: Record<string, TranslationEntry> = {
     message: "Načítavam údaje účtu...",
     description: "Loading message for account data",
   },
+  "page.accountReport.notFound": {
+    message: "V tejto účtovnej knihe nie je účet s názvom {accountName}.",
+    description:
+      "Missing-account message; {accountName} is the requested account name",
+  },
   "page.accountReport.noData": {
     message: "Pre tento účet sa nenašli žiadne údaje.",
     description: "Empty state message for account data",

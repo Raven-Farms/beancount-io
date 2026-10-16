@@ -40,6 +40,11 @@ const deAccountReport: Record<string, TranslationEntry> = {
     message: "Kontodaten werden geladen...",
     description: "Loading message for account data",
   },
+  "page.accountReport.notFound": {
+    message: "In diesem Hauptbuch gibt es kein Konto namens {accountName}.",
+    description:
+      "Missing-account message; {accountName} is the requested account name",
+  },
   "page.accountReport.noData": {
     message: "Keine Kontodaten für dieses Konto gefunden.",
     description: "Empty state message for account data",

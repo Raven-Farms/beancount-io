@@ -41,6 +41,12 @@ const esAccountReport: Record<string, TranslationEntry> = {
     message: "Cargando datos de la cuenta...",
     description: "Loading message for account data",
   },
+  "page.accountReport.notFound": {
+    message:
+      "No hay ninguna cuenta llamada {accountName} en este libro contable.",
+    description:
+      "Missing-account message; {accountName} is the requested account name",
+  },
   "page.accountReport.noData": {
     message: "No se encontraron datos de cuenta para esta cuenta.",
     description: "Empty state message for account data",
