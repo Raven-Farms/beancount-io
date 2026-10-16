@@ -248,6 +248,11 @@ const bgUserProfile: Record<string, TranslationEntry> = {
     message: "Копиране на връзката",
     description: "Public profile: copyLink",
   },
+  "userProfile.unfollowDescription": {
+    message: "Премахнете този профил от списъка си със следвани профили.",
+    description:
+      "Hint for the unfollow action when this profile is already followed",
+  },
   "userProfile.followDescription": {
     message: "Добавете този профил към списъка си със следвани профили.",
     description: "Public profile: followDescription",

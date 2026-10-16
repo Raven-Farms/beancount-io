@@ -239,6 +239,11 @@ const koUserProfile: Record<string, TranslationEntry> = {
     message: "링크 복사",
     description: "Public profile: copyLink",
   },
+  "userProfile.unfollowDescription": {
+    message: "이 프로필을 팔로잉 목록에서 삭제하세요.",
+    description:
+      "Hint for the unfollow action when this profile is already followed",
+  },
   "userProfile.followDescription": {
     message: "이 프로필을 팔로잉 목록에 추가하세요.",
     description: "Public profile: followDescription",

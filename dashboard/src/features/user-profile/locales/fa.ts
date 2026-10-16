@@ -247,6 +247,11 @@ const faUserProfile: Record<string, TranslationEntry> = {
     message: "کپی پیوند",
     description: "Public profile: copyLink",
   },
+  "userProfile.unfollowDescription": {
+    message: "این نمایه را از فهرست دنبال‌شوندگان خود حذف کنید.",
+    description:
+      "Hint for the unfollow action when this profile is already followed",
+  },
   "userProfile.followDescription": {
     message: "این نمایه را به فهرست دنبال‌شوندگان خود اضافه کنید.",
     description: "Public profile: followDescription",

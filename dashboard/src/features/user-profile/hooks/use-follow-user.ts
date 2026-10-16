@@ -7,11 +7,17 @@ import {
 } from "@/graphql/definitions";
 import { toast } from "sonner";
 import { useTranslations } from "@/common/hooks/use-translations";
+import { updateFollowingCache } from "./update-following-cache";
 
 export function useFollowUser() {
   const { t } = useTranslations();
 
   const [followUser, { loading }] = useMutation(FollowUserDocument, {
+    update: (cache, { data }, { variables }) => {
+      if (data?.followUser.success && variables?.username) {
+        updateFollowingCache(cache, variables.username, true);
+      }
+    },
     onCompleted: (data, options) => {
       if (data.followUser.success) {
         const username = options?.variables?.username || "";

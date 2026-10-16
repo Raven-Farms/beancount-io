@@ -256,6 +256,11 @@ const skUserProfile: Record<string, TranslationEntry> = {
     message: "Kopírovať odkaz",
     description: "Public profile: copyLink",
   },
+  "userProfile.unfollowDescription": {
+    message: "Odstráňte tento profil zo zoznamu sledovaných.",
+    description:
+      "Hint for the unfollow action when this profile is already followed",
+  },
   "userProfile.followDescription": {
     message: "Pridajte tento profil do zoznamu sledovaných.",
     description: "Public profile: followDescription",

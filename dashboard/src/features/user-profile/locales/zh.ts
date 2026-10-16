@@ -239,6 +239,11 @@ const zhUserProfile: Record<string, TranslationEntry> = {
     message: "复制链接",
     description: "Public profile: copyLink",
   },
+  "userProfile.unfollowDescription": {
+    message: "将此主页从你的关注列表中移除。",
+    description:
+      "Hint for the unfollow action when this profile is already followed",
+  },
   "userProfile.followDescription": {
     message: "将此主页添加到你的关注列表。",
     description: "Public profile: followDescription",

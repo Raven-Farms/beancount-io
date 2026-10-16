@@ -8,6 +8,8 @@ export function useUserProfile(username: string) {
     {
       variables: { username },
       skip: !username,
+      // Publish confirmed cache changes even while a profile refetch is active.
+      fetchPolicy: "cache-and-network",
       notifyOnNetworkStatusChange: true,
     },
   );

@@ -252,6 +252,11 @@ const caUserProfile: Record<string, TranslationEntry> = {
     message: "Copia l’enllaç",
     description: "Public profile: copyLink",
   },
+  "userProfile.unfollowDescription": {
+    message: "Elimina aquest perfil de la llista de perfils que segueixes.",
+    description:
+      "Hint for the unfollow action when this profile is already followed",
+  },
   "userProfile.followDescription": {
     message: "Afegeix aquest perfil a la llista de perfils que segueixes.",
     description: "Public profile: followDescription",

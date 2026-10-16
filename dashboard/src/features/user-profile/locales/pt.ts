@@ -252,6 +252,11 @@ const ptUserProfile: Record<string, TranslationEntry> = {
     message: "Copiar link",
     description: "Public profile: copyLink",
   },
+  "userProfile.unfollowDescription": {
+    message: "Remova este perfil da sua lista de perfis seguidos.",
+    description:
+      "Hint for the unfollow action when this profile is already followed",
+  },
   "userProfile.followDescription": {
     message: "Adicione este perfil à sua lista de perfis seguidos.",
     description: "Public profile: followDescription",

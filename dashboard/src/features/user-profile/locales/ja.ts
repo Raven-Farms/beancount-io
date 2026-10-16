@@ -240,6 +240,11 @@ const jaUserProfile: Record<string, TranslationEntry> = {
     message: "リンクをコピー",
     description: "Public profile: copyLink",
   },
+  "userProfile.unfollowDescription": {
+    message: "このプロフィールをフォローリストから削除します。",
+    description:
+      "Hint for the unfollow action when this profile is already followed",
+  },
   "userProfile.followDescription": {
     message: "このプロフィールをフォローリストに追加します。",
     description: "Public profile: followDescription",

@@ -77,11 +77,7 @@ export function UserProfileSkeleton({
                   </div>
                 )}
                 {!isOwnProfile && (
-                  <p className="hidden text-xs md:block">
-                    <TextSkeleton>
-                      {t("userProfile.followDescription")}
-                    </TextSkeleton>
-                  </p>
+                  <Skeleton className="hidden h-4 w-56 md:block" />
                 )}
               </div>
             </div>

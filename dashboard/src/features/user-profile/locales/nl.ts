@@ -248,6 +248,11 @@ const nlUserProfile: Record<string, TranslationEntry> = {
     message: "Link kopiëren",
     description: "Public profile: copyLink",
   },
+  "userProfile.unfollowDescription": {
+    message: "Verwijder dit profiel uit uw lijst met gevolgde profielen.",
+    description:
+      "Hint for the unfollow action when this profile is already followed",
+  },
   "userProfile.followDescription": {
     message: "Voeg dit profiel toe aan uw lijst met gevolgde profielen.",
     description: "Public profile: followDescription",

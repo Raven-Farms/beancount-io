@@ -1,4 +1,5 @@
 import { Link, useParams, useSearch } from "@tanstack/react-router";
+import { useId } from "react";
 import { useUserProfile } from "../hooks/use-user-profile";
 import { FollowButton } from "../components/follow-button";
 import { UserProfileHeader } from "../components/user-profile-header";
@@ -25,6 +26,7 @@ import { UserProfileUnavailable } from "../components/user-profile-unavailable";
 import { isProfileNotFound } from "../lib/profile-not-found";
 
 export default function UserProfilePage() {
+  const followDescriptionId = useId();
   const { username } = useParams({ from: "/ledger/$username" });
   const search = useSearch({ from: "/ledger/$username" });
   const {
@@ -185,8 +187,13 @@ export default function UserProfilePage() {
                     <div className="flex gap-3">
                       {!isOwnProfile && (
                         <FollowButton
-                          username={profile.username}
+                          username={username}
                           isFollowing={isFollowing}
+                          descriptionId={
+                            isFollowing === undefined
+                              ? undefined
+                              : followDescriptionId
+                          }
                           className="min-h-11 min-w-0 flex-1 px-5 whitespace-normal md:flex-none"
                         />
                       )}
@@ -212,9 +219,16 @@ export default function UserProfilePage() {
                         {t("userProfile.openExample")}
                       </Link>
                     )}
-                    {!isOwnProfile && (
-                      <p className="hidden text-xs text-muted-foreground md:block">
-                        {t("userProfile.followDescription")}
+                    {!isOwnProfile && isFollowing !== undefined && (
+                      <p
+                        id={followDescriptionId}
+                        className="hidden text-xs text-muted-foreground md:block"
+                      >
+                        {t(
+                          isFollowing
+                            ? "userProfile.unfollowDescription"
+                            : "userProfile.followDescription",
+                        )}
                       </p>
                     )}
                   </div>

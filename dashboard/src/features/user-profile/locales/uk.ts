@@ -256,6 +256,11 @@ const ukUserProfile: Record<string, TranslationEntry> = {
     message: "Копіювати посилання",
     description: "Public profile: copyLink",
   },
+  "userProfile.unfollowDescription": {
+    message: "Видаліть цей профіль зі списку підписок.",
+    description:
+      "Hint for the unfollow action when this profile is already followed",
+  },
   "userProfile.followDescription": {
     message: "Додайте цей профіль до списку підписок.",
     description: "Public profile: followDescription",

@@ -248,6 +248,11 @@ const deUserProfile: Record<string, TranslationEntry> = {
     message: "Link kopieren",
     description: "Public profile: copyLink",
   },
+  "userProfile.unfollowDescription": {
+    message: "Entfernen Sie dieses Profil aus Ihrer Folgen-Liste.",
+    description:
+      "Hint for the unfollow action when this profile is already followed",
+  },
   "userProfile.followDescription": {
     message: "Fügen Sie dieses Profil Ihrer Folgen-Liste hinzu.",
     description: "Public profile: followDescription",

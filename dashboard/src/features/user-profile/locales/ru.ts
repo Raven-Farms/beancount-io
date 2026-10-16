@@ -256,6 +256,11 @@ const ruUserProfile: Record<string, TranslationEntry> = {
     message: "Копировать ссылку",
     description: "Public profile: copyLink",
   },
+  "userProfile.unfollowDescription": {
+    message: "Удалите этот профиль из списка подписок.",
+    description:
+      "Hint for the unfollow action when this profile is already followed",
+  },
   "userProfile.followDescription": {
     message: "Добавьте этот профиль в список подписок.",
     description: "Public profile: followDescription",

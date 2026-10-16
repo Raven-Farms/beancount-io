@@ -2,7 +2,6 @@ import { Button } from "@/common/components/ui/button";
 import { UserPlus, UserCheck } from "lucide-react";
 import { useFollowUser } from "../hooks/use-follow-user";
 import { useUnfollowUser } from "../hooks/use-unfollow-user";
-import { useState, useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { useIsAuthenticated } from "@/common/hooks/use-is-authenticated";
@@ -11,26 +10,22 @@ import { useLoginNextPath } from "@/common/hooks/use-login-next-path";
 interface FollowButtonProps {
   username: string;
   isFollowing?: boolean;
+  descriptionId?: string;
   className?: string;
 }
 
 export function FollowButton({
   username,
-  isFollowing: initialIsFollowing,
+  isFollowing,
+  descriptionId,
   className,
 }: FollowButtonProps) {
   const navigate = useNavigate();
   const { t } = useTranslations();
   const { followUser, loading: followLoading } = useFollowUser();
   const { unfollowUser, loading: unfollowLoading } = useUnfollowUser();
-  const [localIsFollowing, setLocalIsFollowing] = useState(initialIsFollowing);
   const isUserAuthenticated = useIsAuthenticated();
   const next = useLoginNextPath();
-
-  // Sync local state with prop when it changes (e.g., after refetch)
-  useEffect(() => {
-    setLocalIsFollowing(initialIsFollowing);
-  }, [initialIsFollowing]);
 
   const loading = followLoading || unfollowLoading;
 
@@ -43,16 +38,10 @@ export function FollowButton({
 
     // Toggle follow/unfollow
     try {
-      if (localIsFollowing) {
-        const result = await unfollowUser({ variables: { username } });
-        if (result.data?.unfollowUser.success) {
-          setLocalIsFollowing(false);
-        }
+      if (isFollowing) {
+        await unfollowUser({ variables: { username } });
       } else {
-        const result = await followUser({ variables: { username } });
-        if (result.data?.followUser.success) {
-          setLocalIsFollowing(true);
-        }
+        await followUser({ variables: { username } });
       }
     } catch {
       // Mutation errors are handled by Apollo; prevent unhandled rejection
@@ -61,18 +50,19 @@ export function FollowButton({
 
   return (
     <Button
-      variant={localIsFollowing ? "outline" : "default"}
+      variant={isFollowing ? "outline" : "default"}
       size="default"
       onClick={handleClick}
       loading={loading}
       className={className}
+      aria-describedby={descriptionId}
     >
-      {localIsFollowing ? (
+      {isFollowing ? (
         <UserCheck className="size-4 mr-2" />
       ) : (
         <UserPlus className="size-4 mr-2" />
       )}
-      {localIsFollowing ? t("userProfile.unfollow") : t("userProfile.follow")}
+      {isFollowing ? t("userProfile.unfollow") : t("userProfile.follow")}
     </Button>
   );
 }
