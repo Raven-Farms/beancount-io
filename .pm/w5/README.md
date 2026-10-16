@@ -62,6 +62,14 @@
 - [490 — A no-break space in `add -p` becomes part of the account name; the hint offers to open it](./490.md)
 - [491 — `add open -c USD -c ""` silently drops the blank currency](./491.md)
 - [492 — `add --into` a new file in a missing directory exits 1 "validation" instead of a usage refusal](./492.md)
+- [493 — `bea --json check` answers valid for a ledger `bea check` rejects (extra validations skipped)](./493.md)
+- [494 — `doctor linked ROOT file:start:end` no longer resolves include-relative paths (regression from w5/062)](./494.md)
+- [495 — An encrypted `.gpg` include breaks `format` and `doctor`; format advises re-saving it as UTF-8](./495.md)
+- [496 — Native `check --json` prints `{"errors": []}` or nothing while exiting 1](./496.md)
+- [497 — A load-cache path inside an include glob breaks every later command](./497.md)
+- [498 — `doctor region --conversion value` rounds the tree, disagreeing with `Net Income`](./498.md)
+- [499 — `bea format` refuses a ledger not named `.bean`/`.beancount`](./499.md)
+- [500 — `bea check books.bean` never suggests `bea --file books.bean check`](./500.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
