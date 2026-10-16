@@ -1,11 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import * as React from "react";
 import {
   Sidebar,
   SidebarProvider,
   SidebarTrigger,
+  SidebarMenu,
+  SidebarMenuAction,
+  SidebarMenuButton,
+  SidebarMenuItem,
   useSidebar,
 } from "../sidebar";
 import { MOBILE_BREAKPOINT } from "@/common/hooks/use-mobile";
@@ -46,7 +50,12 @@ describe("narrow sidebar focus restoration", () => {
     });
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    cleanup();
+    // Radix defers focus restoration on unmount to the next task.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
     Object.defineProperty(window, "matchMedia", {
       writable: true,
       configurable: true,
@@ -60,6 +69,95 @@ describe("narrow sidebar focus restoration", () => {
   });
 
   const findSheet = () => screen.findByRole("dialog");
+
+  function Navigation({ expanded = true }: { expanded?: boolean }) {
+    return (
+      <SidebarProvider open={expanded}>
+        <Sidebar collapsible="icon">
+          <button type="button">Ledger chooser</button>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild tooltip="Accounts">
+                <a href="#accounts">Accounts</a>
+              </SidebarMenuButton>
+              <SidebarMenuAction aria-label="Search accounts">
+                Search
+              </SidebarMenuAction>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton tooltip="Advanced">Advanced</SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </Sidebar>
+        <SidebarTrigger />
+      </SidebarProvider>
+    );
+  }
+
+  it.each([
+    { role: "link", name: "Accounts", tabs: 1 },
+    { role: "button", name: "Advanced", tabs: 3 },
+    { role: "button", name: "Search accounts", tabs: 2 },
+  ] as const)(
+    "closes with one Escape from the narrow $name control and restores its opener",
+    async ({ role, name, tabs }) => {
+      Object.defineProperty(window, "innerWidth", { value: 390 });
+      const user = userEvent.setup();
+      render(<Navigation />);
+      const opener = screen.getByRole("button", { name: "Toggle Sidebar" });
+      await user.tab();
+      expect(opener).toHaveFocus();
+      await user.keyboard("{Enter}");
+      await findSheet();
+      await waitFor(() =>
+        expect(
+          screen.getByRole("button", { name: "Ledger chooser" }),
+        ).toHaveFocus(),
+      );
+      for (let index = 0; index < tabs; index++) await user.tab();
+      expect(screen.getByRole(role, { name, exact: true })).toHaveFocus();
+      await user.keyboard("{Escape}");
+      await waitFor(() =>
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+      );
+      expect(opener).toHaveFocus();
+      expect(screen.queryAllByRole("tooltip", { hidden: true })).toHaveLength(
+        0,
+      );
+    },
+  );
+
+  it("keeps collapsed desktop focus tooltips and dismisses them with one Escape", async () => {
+    Object.defineProperty(window, "innerWidth", { value: 1440 });
+    const user = userEvent.setup();
+    render(<Navigation expanded={false} />);
+    const link = screen.getByRole("link", { name: "Accounts" });
+    await user.tab();
+    await user.tab();
+    expect(link).toHaveFocus();
+    expect(
+      await screen.findByRole("tooltip", { name: "Accounts" }),
+    ).toBeInTheDocument();
+    const content = document.querySelector('[data-slot="tooltip-content"]');
+    expect(content).toBeVisible();
+    expect(content).not.toHaveAttribute("hidden");
+    await user.keyboard("{Escape}");
+    await waitFor(() =>
+      expect(screen.queryByRole("tooltip")).not.toBeInTheDocument(),
+    );
+    expect(link).toHaveFocus();
+  });
+
+  it("does not mount tooltip content for expanded desktop navigation", async () => {
+    Object.defineProperty(window, "innerWidth", { value: 1440 });
+    const user = userEvent.setup();
+    render(<Navigation />);
+    await user.tab();
+    await user.tab();
+    expect(screen.getByRole("link", { name: "Accounts" })).toHaveFocus();
+    expect(screen.queryAllByRole("tooltip", { hidden: true })).toHaveLength(0);
+    expect(document.querySelector('[data-slot="tooltip-content"]')).toBeNull();
+  });
 
   it("returns focus to the trigger that opened the sheet", async () => {
     const user = userEvent.setup();

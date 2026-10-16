@@ -762,7 +762,8 @@ function SidebarMenuButton({
     />
   );
 
-  if (!tooltip) {
+  // Hidden tooltip content still consumes Escape before the mobile sheet.
+  if (!tooltip || state !== "collapsed" || isMobile) {
     return button;
   }
 
@@ -775,12 +776,7 @@ function SidebarMenuButton({
   return (
     <Tooltip>
       <TooltipTrigger asChild>{button}</TooltipTrigger>
-      <TooltipContent
-        side="right"
-        align="center"
-        hidden={state !== "collapsed" || isMobile}
-        {...tooltip}
-      />
+      <TooltipContent side="right" align="center" {...tooltip} />
     </Tooltip>
   );
 }
