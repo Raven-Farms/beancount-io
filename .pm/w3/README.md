@@ -79,7 +79,6 @@
 - [ ] **m52** — [Make Ask-AI proxy limits and failures truthful](./blocked/m52/README.md) (7 tasks) ← promoted 446 — **blocked:** provider/operator capacity contract, product decision, and near-limit verification; t001–t002 shipped
 
 ## Inbox
-- [495](./495.md) — Give the Overview's Income vs Expenses, Distribution and Cash Flow charts a readable data alternative
 
 ## Dropped
 
