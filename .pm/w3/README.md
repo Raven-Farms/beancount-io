@@ -88,6 +88,7 @@
 - [484](./484.md) — Remove production verification probes from the public `open_ledger/example` showcase
 - [485](./485.md) — Give folder views in Files a page heading and a title that names the folder
 - [486](./486.md) — Create File path validation: trim whitespace, explain empty segments correctly, and refuse `.git/` paths
+- [487](./487.md) — Upload Files labels a file "Exceeds 1MB limit" and then uploads it anyway
 
 ## Dropped
 
