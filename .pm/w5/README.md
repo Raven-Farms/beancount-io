@@ -76,6 +76,14 @@
 - [504 — `report -a` on an account closed before `-t` prints a blank report and `account_filter_empty: false`](./504.md)
 - [505 — `balance-sheet -x at_cost` claims a reconciliation with a cross-currency adjustment](./505.md)
 - [506 — Zero valuation adjustment and total equity print as "—" under a conversion](./506.md)
+- [507 — `list --on-disk` drops real transactions when a plugin shares their location and the header has a quoted comment (regression from w5/401)](./507.md)
+- [508 — `add price`/`add balance` advise `--allow-errors` for a syntax error it cannot pass](./508.md)
+- [509 — BQL regex functions still read `[[:alpha:]]` as a set and leak a `FutureWarning` (gap in w5/429)](./509.md)
+- [510 — "No position matches" names the wrong posting when two share account and units](./510.md)
+- [511 — `add balance --amount "… ; note"` silently drops the comment, exit 0](./511.md)
+- [512 — `bea format -o a -o b` / `-c 40 -c 70` keep the last value](./512.md)
+- [513 — `add balance --pad-from` before the open cites a nonexistent line as an assertion that "already holds"](./513.md)
+- [514 — `list` on an included leaf counts the root hint as an error](./514.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
