@@ -20,6 +20,11 @@ const bgUploadFiles: Record<string, { message: string; description: string }> =
       message: "Надхвърля лимита от 1MB",
       description: "Warning message when file size exceeds the maximum limit",
     },
+    "ledgerEditor.removeOversizedFiles": {
+      message: "Премахнете файловете над 1 MB, за да качите",
+      description:
+        "Explains why upload is disabled while oversized files are selected",
+    },
     "ledgerEditor.failedToUploadFiles": {
       message: "Неуспешно качване на файлове",
       description: "Error message when file upload fails",

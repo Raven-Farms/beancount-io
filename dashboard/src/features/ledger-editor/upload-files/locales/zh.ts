@@ -20,6 +20,11 @@ const zhUploadFiles: Record<string, { message: string; description: string }> =
       message: "超过 1MB 限制",
       description: "Warning message when file size exceeds the maximum limit",
     },
+    "ledgerEditor.removeOversizedFiles": {
+      message: "请移除超过 1 MB 的文件后再上传",
+      description:
+        "Explains why upload is disabled while oversized files are selected",
+    },
     "ledgerEditor.failedToUploadFiles": {
       message: "上传文件失败",
       description: "Error message when file upload fails",

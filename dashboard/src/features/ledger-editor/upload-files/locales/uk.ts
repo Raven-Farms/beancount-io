@@ -20,6 +20,11 @@ const ukUploadFiles: Record<string, { message: string; description: string }> =
       message: "Перевищує ліміт 1MB",
       description: "Warning message when file size exceeds the maximum limit",
     },
+    "ledgerEditor.removeOversizedFiles": {
+      message: "Видаліть файли розміром понад 1 MB, щоб завантажити решту",
+      description:
+        "Explains why upload is disabled while oversized files are selected",
+    },
     "ledgerEditor.failedToUploadFiles": {
       message: "Не вдалося завантажити файли",
       description: "Error message when file upload fails",

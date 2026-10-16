@@ -20,6 +20,11 @@ const koUploadFiles: Record<string, { message: string; description: string }> =
       message: "1MB 제한 초과",
       description: "Warning message when file size exceeds the maximum limit",
     },
+    "ledgerEditor.removeOversizedFiles": {
+      message: "업로드하려면 1 MB를 초과하는 파일을 제거하세요",
+      description:
+        "Explains why upload is disabled while oversized files are selected",
+    },
     "ledgerEditor.failedToUploadFiles": {
       message: "파일 업로드 실패",
       description: "Error message when file upload fails",

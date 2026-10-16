@@ -20,6 +20,11 @@ const jaUploadFiles: Record<string, { message: string; description: string }> =
       message: "1MBの制限を超えています",
       description: "Warning message when file size exceeds the maximum limit",
     },
+    "ledgerEditor.removeOversizedFiles": {
+      message: "アップロードするには 1 MB を超えるファイルを削除してください",
+      description:
+        "Explains why upload is disabled while oversized files are selected",
+    },
     "ledgerEditor.failedToUploadFiles": {
       message: "ファイルのアップロードに失敗しました",
       description: "Error message when file upload fails",

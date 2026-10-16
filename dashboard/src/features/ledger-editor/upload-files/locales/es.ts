@@ -20,6 +20,11 @@ const esUploadFiles: Record<string, { message: string; description: string }> =
       message: "Excede el límite de 1MB",
       description: "Warning message when file size exceeds the maximum limit",
     },
+    "ledgerEditor.removeOversizedFiles": {
+      message: "Elimina los archivos de más de 1 MB para subirlos",
+      description:
+        "Explains why upload is disabled while oversized files are selected",
+    },
     "ledgerEditor.failedToUploadFiles": {
       message: "Error al cargar archivos",
       description: "Error message when file upload fails",

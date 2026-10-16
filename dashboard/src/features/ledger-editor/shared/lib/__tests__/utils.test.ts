@@ -65,6 +65,23 @@ describe("Files Utility", () => {
   });
 
   describe("formatFileSize", () => {
+    it.each([
+      [0, "0 B"],
+      [1, "1 B"],
+      [30, "30 B"],
+      [12_000_000, "11.4 MB"],
+      [1024 * 1024, "1 MB"],
+    ] as const)(
+      "formats %s bytes with the requested single decimal precision",
+      (bytes, expected) => {
+        expect(formatFileSize(bytes, 1)).toBe(expected);
+      },
+    );
+
+    it("retains two decimal precision for existing callers that omit the option", () => {
+      expect(formatFileSize(12_000_000)).toBe("11.44 MB");
+    });
+
     it("should format 0 bytes", () => {
       const result = formatFileSize(0);
       expect(result).toBe("0 B");

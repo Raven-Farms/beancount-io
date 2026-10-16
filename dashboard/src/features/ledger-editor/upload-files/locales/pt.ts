@@ -20,6 +20,11 @@ const ptUploadFiles: Record<string, { message: string; description: string }> =
       message: "Excede o limite de 1MB",
       description: "Warning message when file size exceeds the maximum limit",
     },
+    "ledgerEditor.removeOversizedFiles": {
+      message: "Remova os arquivos maiores que 1 MB para enviar",
+      description:
+        "Explains why upload is disabled while oversized files are selected",
+    },
     "ledgerEditor.failedToUploadFiles": {
       message: "Falha ao enviar arquivos",
       description: "Error message when file upload fails",

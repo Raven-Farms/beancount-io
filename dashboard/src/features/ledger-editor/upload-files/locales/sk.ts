@@ -20,6 +20,11 @@ const skUploadFiles: Record<string, { message: string; description: string }> =
       message: "Prekračuje limit 1MB",
       description: "Warning message when file size exceeds the maximum limit",
     },
+    "ledgerEditor.removeOversizedFiles": {
+      message: "Ak chcete nahrať súbory, odstráňte tie väčšie ako 1 MB",
+      description:
+        "Explains why upload is disabled while oversized files are selected",
+    },
     "ledgerEditor.failedToUploadFiles": {
       message: "Nahranie súborov zlyhalo",
       description: "Error message when file upload fails",

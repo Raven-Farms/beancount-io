@@ -1,7 +1,7 @@
 import { PageHeader } from "@/common/components/page-header";
 import { RelatedLinks } from "@/common/components/related-links";
 import { getLedgerFilesRootPath } from "@/common/hooks/use-file-navigate";
-import { useState, useRef } from "react";
+import { useState, useRef, useId } from "react";
 import type { DragEvent } from "react";
 import { useParams, useNavigate } from "@tanstack/react-router";
 import { useMutation } from "@apollo/client/react";
@@ -26,6 +26,7 @@ import { toast } from "sonner";
 import { useLedger } from "@/common/hooks/use-ledger";
 import { useLedgerPermission } from "@/common/hooks/use-ledger-permission";
 import { WriteAccessRequired } from "@/features/ledger-editor/shared/components/write-access-required";
+import { formatFileSize } from "../shared/lib/utils";
 
 // Maximum file size allowed (1MB)
 const MAX_FILE_SIZE = 1024 * 1024; // 1MB in bytes
@@ -54,16 +55,20 @@ const UploadFilesPage = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const uploadSizeLimitId = useId();
 
   const [createFileMutation] = useMutation<
     CreateLedgerFileMutation,
     CreateLedgerFileMutationVariables
   >(CreateLedgerFileDocument);
 
-  // Upload button should be disabled if no files selected, currently
-  // uploading, or if this reader cannot write to the ledger at all.
+  const hasOversizedFiles = selectedFiles.some(
+    (file) => file.size > MAX_FILE_SIZE,
+  );
+
+  // This also guards the handler before any file is read or sent.
   const isUploadDisabled =
-    !canWrite || selectedFiles.length === 0 || isUploading;
+    !canWrite || selectedFiles.length === 0 || isUploading || hasOversizedFiles;
 
   /**
    * Handle cancel button click - navigate back to files view
@@ -89,7 +94,7 @@ const UploadFilesPage = () => {
       reader.onload = () => {
         const base64 = reader.result as string;
         // Remove data:*/*;base64, prefix if present
-        const base64Content = base64.split(",")[1] || base64;
+        const base64Content = base64.slice(base64.indexOf(",") + 1);
         resolve(base64Content);
       };
       reader.onerror = reject;
@@ -329,7 +334,7 @@ const UploadFilesPage = () => {
                         <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
                         <span className="text-sm truncate">{file.name}</span>
                         <span className="text-xs text-muted-foreground shrink-0">
-                          ({(file.size / 1024).toFixed(2)} KB)
+                          ({formatFileSize(file.size, 1)})
                         </span>
                         {isOversized && (
                           <div className="flex items-center gap-1 text-destructive shrink-0">
@@ -375,27 +380,37 @@ const UploadFilesPage = () => {
           </div>
 
           {/* Action buttons */}
-          <div className="flex items-center gap-3 pt-4 border-t">
-            <Button
-              variant="default"
-              onClick={handleUpload}
-              disabled={isUploadDisabled}
-              className="flex items-center gap-2"
-            >
-              <Upload className="h-4 w-4" />
-              <span>
-                {isUploading
-                  ? t("ledgerEditor.uploading")
-                  : t("ledgerEditor.uploadFiles")}
-              </span>
-            </Button>
-            <Button
-              variant="outline"
-              onClick={handleCancel}
-              disabled={isUploading}
-            >
-              {t("common.cancel")}
-            </Button>
+          <div className="space-y-2 pt-4 border-t">
+            {hasOversizedFiles && (
+              <p id={uploadSizeLimitId} className="text-sm text-destructive">
+                {t("ledgerEditor.removeOversizedFiles")}
+              </p>
+            )}
+            <div className="flex items-center gap-3">
+              <Button
+                variant="default"
+                onClick={handleUpload}
+                disabled={isUploadDisabled}
+                aria-describedby={
+                  hasOversizedFiles ? uploadSizeLimitId : undefined
+                }
+                className="flex items-center gap-2"
+              >
+                <Upload className="h-4 w-4" />
+                <span>
+                  {isUploading
+                    ? t("ledgerEditor.uploading")
+                    : t("ledgerEditor.uploadFiles")}
+                </span>
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleCancel}
+                disabled={isUploading}
+              >
+                {t("common.cancel")}
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

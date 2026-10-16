@@ -21,6 +21,11 @@ const frUploadFiles: Record<string, { message: string; description: string }> =
       message: "Dépasse la limite de 1MB",
       description: "Warning message when file size exceeds the maximum limit",
     },
+    "ledgerEditor.removeOversizedFiles": {
+      message: "Retirez les fichiers de plus de 1 MB pour les téléverser",
+      description:
+        "Explains why upload is disabled while oversized files are selected",
+    },
     "ledgerEditor.failedToUploadFiles": {
       message: "Échec du téléversement des fichiers",
       description: "Error message when file upload fails",

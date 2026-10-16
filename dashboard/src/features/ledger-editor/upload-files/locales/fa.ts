@@ -20,6 +20,11 @@ const faUploadFiles: Record<string, { message: string; description: string }> =
       message: "از حد 1MB تجاوز می‌کند",
       description: "Warning message when file size exceeds the maximum limit",
     },
+    "ledgerEditor.removeOversizedFiles": {
+      message: "برای بارگذاری، فایل‌های بزرگ‌تر از 1 MB را حذف کنید",
+      description:
+        "Explains why upload is disabled while oversized files are selected",
+    },
     "ledgerEditor.failedToUploadFiles": {
       message: "بارگذاری فایل‌ها ناموفق بود",
       description: "Error message when file upload fails",

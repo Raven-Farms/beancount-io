@@ -20,6 +20,11 @@ const ruUploadFiles: Record<string, { message: string; description: string }> =
       message: "Превышает лимит 1MB",
       description: "Warning message when file size exceeds the maximum limit",
     },
+    "ledgerEditor.removeOversizedFiles": {
+      message: "Удалите файлы размером более 1 MB, чтобы загрузить остальные",
+      description:
+        "Explains why upload is disabled while oversized files are selected",
+    },
     "ledgerEditor.failedToUploadFiles": {
       message: "Не удалось загрузить файлы",
       description: "Error message when file upload fails",

@@ -5,7 +5,7 @@ export const getParentPath = (filePath: string) => {
 /**
  * Format file size in bytes to human readable format
  */
-export const formatFileSize = (bytes: number) => {
+export const formatFileSize = (bytes: number, decimals = 2) => {
   if (bytes === 0) return "0 B";
 
   // Handle negative numbers by using absolute value
@@ -17,7 +17,7 @@ export const formatFileSize = (bytes: number) => {
   // Ensure i is within bounds of sizes array
   const sizeIndex = Math.min(i, sizes.length - 1);
   const formattedValue = parseFloat(
-    (absBytes / Math.pow(k, sizeIndex)).toFixed(2),
+    (absBytes / Math.pow(k, sizeIndex)).toFixed(decimals),
   );
 
   return (bytes < 0 ? "-" : "") + formattedValue + " " + sizes[sizeIndex];

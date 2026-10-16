@@ -20,6 +20,11 @@ const nlUploadFiles: Record<string, { message: string; description: string }> =
       message: "Overschrijdt 1MB limiet",
       description: "Warning message when file size exceeds the maximum limit",
     },
+    "ledgerEditor.removeOversizedFiles": {
+      message: "Verwijder bestanden groter dan 1 MB om te uploaden",
+      description:
+        "Explains why upload is disabled while oversized files are selected",
+    },
     "ledgerEditor.failedToUploadFiles": {
       message: "Bestanden uploaden mislukt",
       description: "Error message when file upload fails",

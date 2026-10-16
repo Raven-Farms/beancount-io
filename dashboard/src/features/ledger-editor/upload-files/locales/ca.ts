@@ -20,6 +20,11 @@ const caUploadFiles: Record<string, { message: string; description: string }> =
       message: "Supera el límit de 1MB",
       description: "Warning message when file size exceeds the maximum limit",
     },
+    "ledgerEditor.removeOversizedFiles": {
+      message: "Elimineu els fitxers de més d'1 MB per pujar-los",
+      description:
+        "Explains why upload is disabled while oversized files are selected",
+    },
     "ledgerEditor.failedToUploadFiles": {
       message: "Error en pujar els fitxers",
       description: "Error message when file upload fails",
