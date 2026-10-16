@@ -81,19 +81,22 @@ interface LedgerUpdateBody {
 }
 
 /** Duplicate-name probe shared by create/update (Python's repo_get try/except). */
-async function repoExists(
+async function findExistingRepo(
   client: ReturnType<typeof giteaClientForRequest>,
   owner: string,
   name: string,
   onCheckError: "create" | "update",
-): Promise<boolean> {
+): Promise<Repository | undefined> {
   try {
-    await client.repos.repoGet(owner, name);
-    return true;
+    const response = await client.repos.repoGet(owner, name);
+    // A successful response without an identity still occupies the name.
+    return typeof response.data === "object" && response.data !== null
+      ? response.data
+      : {};
   } catch (err) {
     const status = (err as { status?: number }).status;
     if (status === 404) {
-      return false;
+      return undefined;
     }
     if (onCheckError === "create") {
       if (status === 403) {
@@ -139,7 +142,7 @@ export function setLedgersHandler(router: Router): void {
     }
     const client = giteaClientForRequest(ctx);
 
-    if (await repoExists(client, auth.username, repoName, "create")) {
+    if (await findExistingRepo(client, auth.username, repoName, "create")) {
       throw new BadUserInputError(
         `A ledger with the name '${repoName}' already exists. Please choose a different name.`,
       );
@@ -257,10 +260,28 @@ export function setLedgersHandler(router: Router): void {
       slugifiedName = slugify(body.name);
       validateLedgerName(slugifiedName);
       if (slugifiedName !== repoName) {
-        if (await repoExists(client, owner, slugifiedName, "update")) {
-          throw new BadUserInputError(
-            `A ledger with the name '${slugifiedName}' already exists. Please choose a different name.`,
-          );
+        const target = await findExistingRepo(
+          client,
+          owner,
+          slugifiedName,
+          "update",
+        );
+        if (target) {
+          const targetId = target.id;
+          // Gitea follows old-name redirects. A valid stable ID, rather than
+          // the requested name or returned metadata, identifies a self-redirect.
+          const validTargetId =
+            typeof targetId === "number" &&
+            Number.isSafeInteger(targetId) &&
+            targetId > 0;
+          const source = validTargetId
+            ? await client.repos.repoGet(owner, repoName)
+            : undefined;
+          if (!validTargetId || source?.data?.id !== targetId) {
+            throw new BadUserInputError(
+              `A ledger with the name '${slugifiedName}' already exists. Please choose a different name.`,
+            );
+          }
         }
       }
     }
