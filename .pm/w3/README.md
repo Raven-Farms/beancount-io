@@ -80,7 +80,6 @@
 
 ## Inbox
 
-- [469](./469.md) — Tell non-admins they can't manage a ledger's bank connections instead of "Failed to Load Data — Retry", and give the Plaid pages a heading
 - [470](./470.md) — Stop the server redirect loop for paths containing an encoded `<`, `>`, `"`, `{`, `}` or backtick
 - [471](./471.md) — Answer a missing account, entry, commit, pull request or user profile with a real not-found, not an indexable 200 page
 - [472](./472.md) — Name repeated row and card actions after their target: Accounts "More actions", token "Revoke", Budget "Update Budget"
