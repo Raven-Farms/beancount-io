@@ -80,9 +80,9 @@
 
 ## Inbox
 
-- [487](./487.md) — Upload Files labels a file "Exceeds 1MB limit" and then uploads it anyway
 - [488](./488.md) — Return focus to the opening menu button after dismissing menu-launched dialogs (Delete File, Edit Ledger)
 - [489](./489.md) — Name each dashboard ledger "Settings" menu after its ledger
+- [490](./490.md) — Make the advertised 1 MiB file upload reachable through the gateway request limit
 
 ## Dropped
 
