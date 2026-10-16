@@ -239,7 +239,9 @@ function LedgerAuthenticatedSwitcher({
                 variant="ghost"
                 role="combobox"
                 aria-expanded={open}
-                aria-label={t("page.dashboard.selectLedger")}
+                aria-label={t("page.dashboard.switchLedgerFrom", {
+                  ledger: repo || fullName,
+                })}
                 className="justify-start min-w-0 min-h-6 px-0 py-0 h-auto has-[>svg]:px-0 hover:bg-transparent"
               >
                 <span className="text-sm font-medium truncate">
@@ -248,7 +250,11 @@ function LedgerAuthenticatedSwitcher({
                 <ChevronsUpDown className="ml-auto h-4 w-4 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-[300px] p-0" align="start">
+            <PopoverContent
+              className="w-[300px] p-0"
+              align="start"
+              aria-label={t("page.dashboard.selectLedger")}
+            >
               <Command
                 label={t("page.dashboard.searchLedgers")}
                 className="max-h-[min(340px,var(--radix-popover-content-available-height))] [&_[cmdk-input-wrapper]]:shrink-0"

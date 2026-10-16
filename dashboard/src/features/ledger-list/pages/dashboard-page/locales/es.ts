@@ -150,7 +150,12 @@ const esDashboardPage: Record<string, TranslationEntry> = {
   },
   "page.dashboard.selectLedger": {
     message: "Seleccione un libro mayor",
-    description: "Aria label for ledger switcher button",
+    description: "Accessible name for the ledger selection dialog",
+  },
+  "page.dashboard.switchLedgerFrom": {
+    message: "{ledger} — cambiar de libro mayor",
+    description:
+      "Accessible name for the ledger switcher, starting with the visible ledger name ({ledger})",
   },
   "page.dashboard.showMore": {
     message: "Mostrar Más",

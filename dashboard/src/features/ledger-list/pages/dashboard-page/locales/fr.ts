@@ -151,7 +151,12 @@ const frDashboardPage: Record<string, TranslationEntry> = {
   },
   "page.dashboard.selectLedger": {
     message: "Sélectionner un grand livre",
-    description: "Aria label for ledger switcher button",
+    description: "Accessible name for the ledger selection dialog",
+  },
+  "page.dashboard.switchLedgerFrom": {
+    message: "{ledger} — changer de grand livre",
+    description:
+      "Accessible name for the ledger switcher, starting with the visible ledger name ({ledger})",
   },
   "page.dashboard.showMore": {
     message: "Afficher Plus",

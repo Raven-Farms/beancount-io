@@ -151,7 +151,12 @@ const ptDashboardPage: Record<string, TranslationEntry> = {
   },
   "page.dashboard.selectLedger": {
     message: "Selecione um livro-razão",
-    description: "Aria label for ledger switcher button",
+    description: "Accessible name for the ledger selection dialog",
+  },
+  "page.dashboard.switchLedgerFrom": {
+    message: "{ledger} — trocar de livro-razão",
+    description:
+      "Accessible name for the ledger switcher, starting with the visible ledger name ({ledger})",
   },
   "page.dashboard.showMore": {
     message: "Mostrar Mais",

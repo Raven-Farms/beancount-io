@@ -139,7 +139,12 @@ const enDashboardPage: Record<string, TranslationEntry> = {
   },
   "page.dashboard.selectLedger": {
     message: "Select a ledger",
-    description: "Aria label for ledger switcher button",
+    description: "Accessible name for the ledger selection dialog",
+  },
+  "page.dashboard.switchLedgerFrom": {
+    message: "{ledger} — switch ledger",
+    description:
+      "Accessible name for the ledger switcher, starting with the visible ledger name ({ledger})",
   },
   "page.dashboard.updateLedgerDetails": {
     message: "Update the details of your ledger.",

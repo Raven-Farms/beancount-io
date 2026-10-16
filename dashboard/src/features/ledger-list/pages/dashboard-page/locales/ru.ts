@@ -150,7 +150,12 @@ const ruDashboardPage: Record<string, TranslationEntry> = {
   },
   "page.dashboard.selectLedger": {
     message: "Выберите книгу",
-    description: "Aria label for ledger switcher button",
+    description: "Accessible name for the ledger selection dialog",
+  },
+  "page.dashboard.switchLedgerFrom": {
+    message: "{ledger} — сменить книгу",
+    description:
+      "Accessible name for the ledger switcher, starting with the visible ledger name ({ledger})",
   },
   "page.dashboard.showMore": {
     message: "Показать Больше",

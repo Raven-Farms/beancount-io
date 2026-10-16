@@ -125,7 +125,9 @@ describe("LedgerSwitcher", () => {
       </SidebarProvider>,
     );
 
-    await user.click(screen.getByRole("combobox", { name: "Select a ledger" }));
+    await user.click(
+      screen.getByRole("combobox", { name: "ledger-1 — switch ledger" }),
+    );
 
     expect(
       screen.getByRole("combobox", { name: /search ledgers/i }),
@@ -164,7 +166,9 @@ describe("LedgerSwitcher", () => {
       </SidebarProvider>,
     );
 
-    await user.click(screen.getByRole("combobox", { name: "Select a ledger" }));
+    await user.click(
+      screen.getByRole("combobox", { name: "ledger-2 — switch ledger" }),
+    );
     await screen.findByRole("listbox");
     const currentRows = () =>
       screen
@@ -238,7 +242,9 @@ describe("LedgerSwitcher", () => {
     await user.click(screen.getByRole("button", { name: "Open drawer" }));
     expect(screen.getByTestId("open-mobile")).toHaveTextContent("open");
 
-    await user.click(screen.getByRole("combobox", { name: "Select a ledger" }));
+    await user.click(
+      screen.getByRole("combobox", { name: "ledger-1 — switch ledger" }),
+    );
     const destination = await screen.findByRole("option", {
       name: (_, element) =>
         element.getAttribute("data-value") === "open_ledger/minimax minimax",
