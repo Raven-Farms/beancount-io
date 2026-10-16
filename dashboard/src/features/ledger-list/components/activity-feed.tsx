@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@apollo/client/react";
-import { AlertCircle, RefreshCw, Loader2 } from "lucide-react";
+import { AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/common/components/ui/button";
+import { ContinuationControl } from "@/common/components/continuation-control";
 import { Skeleton } from "@/common/components/ui/skeleton";
 import { FeedCard } from "./feed-card";
 import { useTranslations } from "@/common/hooks/use-translations";
@@ -15,7 +16,19 @@ const ACTIVITY_SOURCE = "LEDGER_RSS";
  * posts have their own sections, so a day of posts cannot bury a commit.
  */
 export function ActivityFeed() {
+  const { i18n } = useTranslations();
+  return <ActivityFeedWorkspace key={i18n.language} />;
+}
+
+function ActivityFeedWorkspace() {
   const { t, i18n } = useTranslations();
+  const active = useRef(false);
+  useEffect(() => {
+    active.current = true;
+    return () => {
+      active.current = false;
+    };
+  }, []);
   const [offset, setOffset] = useState(0);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [paginationError, setPaginationError] = useState(false);
@@ -65,7 +78,7 @@ export function ActivityFeed() {
           prev: GetFeedQuery,
           { fetchMoreResult }: { fetchMoreResult?: GetFeedQuery },
         ) => {
-          if (!fetchMoreResult) return prev;
+          if (!active.current || !fetchMoreResult) return prev;
           return {
             getFeed: {
               ...fetchMoreResult.getFeed,
@@ -74,12 +87,13 @@ export function ActivityFeed() {
           };
         },
       });
+      if (!active.current) return;
       setOffset(newOffset);
       setPaginationError(false);
     } catch {
-      setPaginationError(true);
+      if (active.current) setPaginationError(true);
     } finally {
-      setIsLoadingMore(false);
+      if (active.current) setIsLoadingMore(false);
     }
   };
 
@@ -159,28 +173,18 @@ export function ActivityFeed() {
         ))}
       </div>
 
-      {/* Show More button */}
-      {hasMore && (
-        <div className="flex flex-col items-center gap-3 pt-2 pb-8">
-          {paginationError && (
-            <p role="alert" className="text-center text-sm text-destructive">
-              {t("page.dashboard.feedError")}
-            </p>
-          )}
-          <Button
-            onClick={handleShowMore}
-            variant="outline"
-            disabled={loading || isLoadingMore}
-          >
-            {isLoadingMore && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            {t(
-              paginationError
-                ? "page.dashboard.retry"
-                : "page.dashboard.showMore",
-            )}
-          </Button>
-        </div>
-      )}
+      <ContinuationControl
+        className="flex flex-col items-center gap-3 pt-2 pb-8"
+        hasMore={hasMore}
+        loading={loading || isLoadingMore}
+        itemCount={items.length}
+        onLoadMore={handleShowMore}
+        label={t("page.dashboard.showMore")}
+        retryLabel={t("page.dashboard.retry")}
+        errorMessage={
+          paginationError ? t("page.dashboard.feedError") : undefined
+        }
+      />
     </div>
   );
 }

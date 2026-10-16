@@ -14,6 +14,7 @@ export const PLURAL_BASE_KEYS = [
   "aiAgent.ranQueries",
   "aiAgent.usedTools",
   "commits.loadedOlder",
+  "common.moreItemsLoaded",
   "common.whatsNewUnread",
   "importer.accountMapping.aiSuccessDescription",
   "importer.accountMapping.missingAccountAlert",

@@ -4,6 +4,31 @@ export interface TranslationEntry {
 }
 
 const ruCommon: Record<string, TranslationEntry> = {
+  "common.moreItemsLoaded_one": {
+    message: "Загружен ещё {count} элемент",
+    description: "Polite feedback with the number of newly loaded list items",
+  },
+  "common.moreItemsLoaded_few": {
+    message: "Загружено ещё {count} элемента",
+    description: "Polite feedback with the number of newly loaded list items",
+  },
+  "common.moreItemsLoaded_many": {
+    message: "Загружено ещё {count} элементов",
+    description: "Polite feedback with the number of newly loaded list items",
+  },
+  "common.moreItemsLoaded_other": {
+    message: "Загружено ещё {count} элемента",
+    description: "Polite feedback with the number of newly loaded list items",
+  },
+  "common.noMoreResults": {
+    message: "Больше результатов нет",
+    description: "Visible end-of-list feedback after all results have loaded",
+  },
+  "common.showingResultsRange": {
+    message: "Показаны {first}–{last} из {total}",
+    description: "Current pagination range and total result count",
+  },
+
   "common.writeAccess.signIn": {
     message: "Войти",
     description: "Link to sign in from a write-only page",

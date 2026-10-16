@@ -193,7 +193,9 @@ describe("commit history pagination through Apollo", () => {
       page: 2,
       limit: 30,
     });
-    expect(load).toBeDisabled();
+    expect(load).toBeEnabled();
+    expect(load).toHaveAttribute("aria-disabled", "true");
+    expect(load).toHaveFocus();
     await resolve(requests[1], page(30, 30));
     await waitFor(() => expectHistory(60));
     expect(screen.getAllByTestId("commit-list-item").slice(0, 30)).toEqual(
@@ -211,7 +213,9 @@ describe("commit history pagination through Apollo", () => {
     await user.keyboard("{Enter}");
     await waitFor(() => expect(requests).toHaveLength(3));
     expect(requests[2].variables.page).toBe(3);
-    expect(screen.getByRole("status", { name: "" })).toBeEmptyDOMElement();
+    expect(screen.getByRole("status", { name: "" })).toHaveTextContent(
+      en["common.loading"],
+    );
     await resolve(requests[2], page(60, 7));
     await waitFor(() => expectHistory(67));
     expect(
@@ -281,7 +285,9 @@ describe("commit history pagination through Apollo", () => {
     const load = screen.getByRole("button", { name: en["commits.loadOlder"] });
     await user.click(load);
     await waitFor(() => expect(requests).toHaveLength(2));
-    expect(load).toBeDisabled();
+    expect(load).toBeEnabled();
+    expect(load).toHaveAttribute("aria-disabled", "true");
+    expect(load).toHaveFocus();
     fireEvent.click(load);
     await user.keyboard("{Enter}");
     expect(requests).toHaveLength(2);
@@ -309,6 +315,22 @@ describe("commit history pagination through Apollo", () => {
     expect(
       screen.queryByRole("button", { name: en["commits.loadOlder"] }),
     ).not.toBeInTheDocument();
+  });
+
+  it("does not move focus to a new commit after the reader tabs away", async () => {
+    const { requests, user } = await mountHistory();
+    await resolve(requests[0], page(0, 30));
+    const load = screen.getByRole("button", { name: en["commits.loadOlder"] });
+    act(() => load.focus());
+    await user.keyboard("{Enter}{Shift>}{Tab}{/Shift}");
+    const destination = screen.getAllByTestId("commit-list-item")[29];
+    expect(destination).toHaveFocus();
+    await resolve(requests[1], page(30, 7));
+    await waitFor(() => expectHistory(37));
+    expect(destination).toHaveFocus();
+    expect(screen.getByRole("status", { name: "" })).toHaveTextContent(
+      "No more results",
+    );
   });
 
   it("isolates an old ledger's pending page and resets pagination when changing ledgers", async () => {

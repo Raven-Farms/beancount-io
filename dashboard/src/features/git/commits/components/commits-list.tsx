@@ -1,11 +1,11 @@
-import { useEffect, useId, useRef } from "react";
+import { useId, useRef } from "react";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { getErrorMessageKey } from "@/common/lib/errors/error-message";
 import { Skeleton } from "@/common/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/common/components/ui/alert";
 import { CommitListItem } from "./commit-list-item";
 import type { ListCommitsQuery } from "@/graphql/definitions";
-import { Button } from "@/common/components/ui/button";
+import { ContinuationControl } from "@/common/components/continuation-control";
 
 interface CommitsListProps {
   ledgerId: string;
@@ -37,34 +37,6 @@ export function CommitsList({
   const { t } = useTranslations();
   const titleId = useId();
   const section = useRef<HTMLElement>(null);
-  const loadButton = useRef<HTMLButtonElement>(null);
-  const restoreFocus = useRef<number | null>(null);
-
-  useEffect(() => {
-    if (loadingMore || restoreFocus.current === null) return;
-    if (
-      !hasMore &&
-      loadedOlderCount !== null &&
-      commits.length < restoreFocus.current + loadedOlderCount
-    ) {
-      return;
-    }
-    if (
-      document.activeElement !== loadButton.current &&
-      document.activeElement !== document.body
-    ) {
-      restoreFocus.current = null;
-      return;
-    }
-    if (hasMore) {
-      loadButton.current?.focus();
-    } else {
-      const links =
-        section.current?.querySelectorAll<HTMLAnchorElement>("nav a");
-      links?.[Math.min(restoreFocus.current, links.length - 1)]?.focus();
-    }
-    restoreFocus.current = null;
-  }, [loadingMore, hasMore, commits.length, loadedOlderCount]);
 
   if (error) {
     return (
@@ -127,31 +99,26 @@ export function CommitsList({
           {t("commits.noCommits")}
         </p>
       )}
-      <p role="status" className="sr-only">
-        {loadedOlderCount !== null &&
-          t("commits.loadedOlder", { count: loadedOlderCount })}
-      </p>
-      {hasMore && (
-        <div className="space-y-2 p-3">
-          {paginationError && (
-            <p role="alert" className="text-sm text-destructive">
-              {t("common.failedToLoadData")}
-            </p>
-          )}
-          <Button
-            ref={loadButton}
-            variant="outline"
-            className="w-full"
-            disabled={loadingMore}
-            onClick={() => {
-              restoreFocus.current = commits.length;
-              void onLoadMore();
-            }}
-          >
-            {t(loadingMore ? "common.loading" : "commits.loadOlder")}
-          </Button>
-        </div>
-      )}
+      <ContinuationControl
+        className="space-y-2 p-3"
+        buttonClassName="w-full"
+        hasMore={hasMore}
+        loading={loadingMore}
+        itemCount={commits.length}
+        loadedCount={loadedOlderCount}
+        formatLoaded={(count) => t("commits.loadedOlder", { count })}
+        getEndFocusTarget={(previousCount) => {
+          const links =
+            section.current?.querySelectorAll<HTMLAnchorElement>("nav a");
+          return links?.[Math.min(previousCount, links.length - 1)];
+        }}
+        onLoadMore={onLoadMore}
+        label={t("commits.loadOlder")}
+        loadingLabel={t("common.loading")}
+        errorMessage={
+          paginationError ? t("common.failedToLoadData") : undefined
+        }
+      />
     </section>
   );
 }

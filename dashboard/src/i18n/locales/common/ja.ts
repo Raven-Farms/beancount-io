@@ -4,6 +4,19 @@ export interface TranslationEntry {
 }
 
 const jaCommon: Record<string, TranslationEntry> = {
+  "common.moreItemsLoaded_other": {
+    message: "さらに {count} 件を読み込みました",
+    description: "Polite feedback with the number of newly loaded list items",
+  },
+  "common.noMoreResults": {
+    message: "これ以上の結果はありません",
+    description: "Visible end-of-list feedback after all results have loaded",
+  },
+  "common.showingResultsRange": {
+    message: "{total} 件中 {first}–{last} 件を表示",
+    description: "Current pagination range and total result count",
+  },
+
   "common.writeAccess.signIn": {
     message: "ログイン",
     description: "Link to sign in from a write-only page",

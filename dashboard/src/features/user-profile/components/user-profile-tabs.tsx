@@ -6,6 +6,7 @@ import {
   TabsContent,
 } from "@/common/components/ui/tabs";
 import { Button } from "@/common/components/ui/button";
+import { ContinuationControl } from "@/common/components/continuation-control";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { useUserFollowers } from "../hooks/use-user-followers";
 import { useUserFollowing } from "../hooks/use-user-following";
@@ -60,45 +61,30 @@ function SocialContinuation({
   onLoadMore,
   onRetry,
   label,
+  itemCount,
 }: {
   hasMore: boolean;
   loadingMore: boolean;
   loadMoreError: Error | null;
-  onLoadMore: () => void;
-  onRetry: () => void;
+  onLoadMore: () => Promise<void>;
+  onRetry: () => Promise<void>;
   label: string;
+  itemCount: number;
 }) {
   const { t } = useTranslations();
-  if (!hasMore && !loadMoreError) return null;
-
   return (
-    <div className="mt-6 flex flex-col items-center gap-3">
-      {loadMoreError && (
-        <div className="flex flex-col items-center gap-2">
-          <p role="alert" className="text-sm text-destructive">
-            {t("userProfile.loadMoreError")}
-          </p>
-          <Button variant="outline" onClick={onRetry} className="h-11 px-6">
-            {t("common.tryAgain")}
-          </Button>
-        </div>
-      )}
-      {hasMore && !loadMoreError && (
-        <Button
-          variant="outline"
-          onClick={onLoadMore}
-          disabled={loadingMore}
-          className="h-11 px-6"
-        >
-          {loadingMore ? (
-            <Loader2 className="mr-2 size-4 animate-spin" aria-hidden="true" />
-          ) : (
-            <ChevronDown className="mr-2 size-4" aria-hidden="true" />
-          )}
-          {label}
-        </Button>
-      )}
-    </div>
+    <ContinuationControl
+      className="mt-6 flex flex-col items-center gap-3"
+      buttonClassName="h-11 px-6"
+      hasMore={hasMore}
+      loading={loadingMore}
+      itemCount={itemCount}
+      onLoadMore={loadMoreError ? onRetry : onLoadMore}
+      label={label}
+      retryLabel={t("common.tryAgain")}
+      errorMessage={loadMoreError ? t("userProfile.loadMoreError") : undefined}
+      icon={<ChevronDown className="mr-2 size-4" aria-hidden="true" />}
+    />
   );
 }
 
@@ -268,11 +254,13 @@ export function UserProfileTabs({
                 )}
               </div>
               <SocialContinuation
+                key={`${username}:followers`}
+                itemCount={followers.length}
                 hasMore={followersHasMore}
                 loadingMore={followersLoadingMore}
                 loadMoreError={followersLoadMoreError}
-                onLoadMore={() => void loadMoreFollowers()}
-                onRetry={() => void retryFollowers()}
+                onLoadMore={loadMoreFollowers}
+                onRetry={retryFollowers}
                 label={t("userProfile.showMore")}
               />
             </>
@@ -308,11 +296,13 @@ export function UserProfileTabs({
                 )}
               </div>
               <SocialContinuation
+                key={`${username}:following`}
+                itemCount={following.length}
                 hasMore={followingHasMore}
                 loadingMore={followingLoadingMore}
                 loadMoreError={followingLoadMoreError}
-                onLoadMore={() => void loadMoreFollowing()}
-                onRetry={() => void retryFollowing()}
+                onLoadMore={loadMoreFollowing}
+                onRetry={retryFollowing}
                 label={t("userProfile.showMore")}
               />
             </>
@@ -352,11 +342,13 @@ export function UserProfileTabs({
                 )}
               </div>
               <SocialContinuation
+                key={`${username}:starred`}
+                itemCount={starredRepos.length}
                 hasMore={starredHasMore}
                 loadingMore={starredLoadingMore}
                 loadMoreError={starredLoadMoreError}
-                onLoadMore={() => void loadMoreStarred()}
-                onRetry={() => void retryStarred()}
+                onLoadMore={loadMoreStarred}
+                onRetry={retryStarred}
                 label={t("userProfile.showMore")}
               />
             </>

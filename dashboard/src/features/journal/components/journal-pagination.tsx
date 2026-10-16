@@ -1,4 +1,12 @@
-import type React from "react";
+import {
+  useLayoutEffect,
+  useRef,
+  type Dispatch,
+  type SetStateAction,
+  type MouseEvent,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import {
   Pagination,
   PaginationContent,
@@ -8,12 +16,17 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/common/components/ui/pagination";
+import { useTranslations } from "@/common/hooks/use-translations";
 
 interface JournalPaginationProps {
   total: number;
   limit: number;
   offset: number;
-  setOffset: React.Dispatch<React.SetStateAction<number>>;
+  setOffset: Dispatch<SetStateAction<number>>;
+  loading?: boolean;
+  resultCount?: number;
+  scopeKey?: string;
+  fallbackFocusRef?: RefObject<HTMLElement | null>;
 }
 
 /**
@@ -25,24 +38,81 @@ export function JournalPagination({
   limit,
   offset,
   setOffset,
+  loading = false,
+  resultCount = Math.min(limit, Math.max(0, total - offset)),
+  scopeKey = "",
+  fallbackFocusRef,
 }: JournalPaginationProps) {
-  // Show when there are more pages or we're not on the first page
-  if (!(total > limit + offset || offset > 0)) return null;
-
+  const { t } = useTranslations();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const requestRef = useRef<{
+    offset: number;
+    scopeKey: string;
+    button: HTMLButtonElement;
+    ownsFocus: boolean;
+  } | null>(null);
   const currentPage = Math.floor(offset / limit) + 1;
   const totalPages = Math.max(1, Math.ceil(total / limit));
+
+  useLayoutEffect(() => {
+    const request = requestRef.current;
+    if (!request) return;
+    if (request.scopeKey !== scopeKey) {
+      requestRef.current = null;
+      return;
+    }
+    if (loading || offset === request.offset) return;
+    requestRef.current = null;
+    const active = document.activeElement;
+    if (
+      !request.ownsFocus ||
+      (active !== request.button && active !== document.body)
+    )
+      return;
+    if (
+      !request.button.isConnected ||
+      request.button.disabled ||
+      currentPage > totalPages
+    ) {
+      const target =
+        containerRef.current?.querySelector<HTMLButtonElement>(
+          '[aria-current="page"]',
+        ) ?? fallbackFocusRef?.current;
+      target?.focus();
+    }
+  }, [loading, offset, scopeKey, currentPage, totalPages, fallbackFocusRef]);
+
+  const changePage = (
+    event: MouseEvent<HTMLButtonElement>,
+    value: SetStateAction<number>,
+  ) => {
+    const next = typeof value === "function" ? value(offset) : value;
+    if (loading || requestRef.current || next === offset) return;
+    requestRef.current = {
+      offset,
+      scopeKey,
+      button: event.currentTarget,
+      ownsFocus: document.activeElement === event.currentTarget,
+    };
+    setOffset(value);
+  };
+
+  // Show when there are more pages or we're not on the first page.
+  if (!(total > limit + offset || offset > 0)) return null;
+
   const pages: number[] = [];
   const start = Math.max(1, currentPage - 2);
   const end = Math.min(totalPages, currentPage + 2);
   for (let p = start; p <= end; p++) pages.push(p);
 
-  const items: React.ReactNode[] = [];
+  const items: ReactNode[] = [];
   if (start > 1) {
     items.push(
       <PaginationItem key={1}>
         <PaginationLink
           isActive={currentPage === 1}
-          onClick={() => setOffset(0)}
+          onClick={(event) => changePage(event, 0)}
+          aria-disabled={loading || undefined}
         >
           1
         </PaginationLink>
@@ -61,7 +131,8 @@ export function JournalPagination({
       <PaginationItem key={p}>
         <PaginationLink
           isActive={p === currentPage}
-          onClick={() => setOffset((p - 1) * limit)}
+          onClick={(event) => changePage(event, (p - 1) * limit)}
+          aria-disabled={loading || undefined}
         >
           {p}
         </PaginationLink>
@@ -80,7 +151,8 @@ export function JournalPagination({
       <PaginationItem key={totalPages}>
         <PaginationLink
           isActive={currentPage === totalPages}
-          onClick={() => setOffset((totalPages - 1) * limit)}
+          onClick={(event) => changePage(event, (totalPages - 1) * limit)}
+          aria-disabled={loading || undefined}
         >
           {totalPages}
         </PaginationLink>
@@ -89,24 +161,49 @@ export function JournalPagination({
   }
 
   return (
-    <div className="mt-4">
-      <Pagination>
+    <div
+      ref={containerRef}
+      className="mt-4"
+      onBlurCapture={(event) => {
+        if (event.relatedTarget && requestRef.current)
+          requestRef.current.ownsFocus = false;
+      }}
+    >
+      <span
+        className="sr-only"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        {!loading && resultCount > 0
+          ? t("common.showingResultsRange", {
+              first: offset + 1,
+              last: Math.min(offset + resultCount, total),
+              total,
+            })
+          : ""}
+      </span>
+      <Pagination aria-busy={loading}>
         <PaginationContent>
           <PaginationItem>
             <PaginationPrevious
-              onClick={() => setOffset((prev) => Math.max(0, prev - limit))}
-              disabled={offset === 0}
+              onClick={(event) =>
+                changePage(event, (prev) => Math.max(0, prev - limit))
+              }
+              disabled={!loading && offset === 0}
+              aria-disabled={loading || undefined}
             />
           </PaginationItem>
           {items}
           <PaginationItem>
             <PaginationNext
-              onClick={() =>
-                setOffset((prev) =>
+              onClick={(event) =>
+                changePage(event, (prev) =>
                   prev + limit >= total ? prev : prev + limit,
                 )
               }
-              disabled={offset + limit >= total}
+              disabled={!loading && offset + limit >= total}
+              aria-disabled={loading || undefined}
             />
           </PaginationItem>
         </PaginationContent>

@@ -4,6 +4,31 @@ export interface TranslationEntry {
 }
 
 const ukCommon: Record<string, TranslationEntry> = {
+  "common.moreItemsLoaded_one": {
+    message: "Завантажено ще {count} елемент",
+    description: "Polite feedback with the number of newly loaded list items",
+  },
+  "common.moreItemsLoaded_few": {
+    message: "Завантажено ще {count} елементи",
+    description: "Polite feedback with the number of newly loaded list items",
+  },
+  "common.moreItemsLoaded_many": {
+    message: "Завантажено ще {count} елементів",
+    description: "Polite feedback with the number of newly loaded list items",
+  },
+  "common.moreItemsLoaded_other": {
+    message: "Завантажено ще {count} елемента",
+    description: "Polite feedback with the number of newly loaded list items",
+  },
+  "common.noMoreResults": {
+    message: "Більше результатів немає",
+    description: "Visible end-of-list feedback after all results have loaded",
+  },
+  "common.showingResultsRange": {
+    message: "Показано {first}–{last} із {total}",
+    description: "Current pagination range and total result count",
+  },
+
   "common.writeAccess.signIn": {
     message: "Увійти",
     description: "Link to sign in from a write-only page",

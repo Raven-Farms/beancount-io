@@ -4,6 +4,19 @@ export interface TranslationEntry {
 }
 
 const koCommon: Record<string, TranslationEntry> = {
+  "common.moreItemsLoaded_other": {
+    message: "항목 {count}개를 더 불러왔습니다",
+    description: "Polite feedback with the number of newly loaded list items",
+  },
+  "common.noMoreResults": {
+    message: "더 이상 결과가 없습니다",
+    description: "Visible end-of-list feedback after all results have loaded",
+  },
+  "common.showingResultsRange": {
+    message: "전체 {total}개 중 {first}–{last}개 표시",
+    description: "Current pagination range and total result count",
+  },
+
   "common.writeAccess.signIn": {
     message: "로그인",
     description: "Link to sign in from a write-only page",

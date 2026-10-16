@@ -4,6 +4,19 @@ export interface TranslationEntry {
 }
 
 const zhCommon: Record<string, TranslationEntry> = {
+  "common.moreItemsLoaded_other": {
+    message: "已加载另外 {count} 项",
+    description: "Polite feedback with the number of newly loaded list items",
+  },
+  "common.noMoreResults": {
+    message: "没有更多结果",
+    description: "Visible end-of-list feedback after all results have loaded",
+  },
+  "common.showingResultsRange": {
+    message: "显示第 {first}–{last} 项，共 {total} 项",
+    description: "Current pagination range and total result count",
+  },
+
   "common.writeAccess.signIn": {
     message: "登录",
     description: "Link to sign in from a write-only page",

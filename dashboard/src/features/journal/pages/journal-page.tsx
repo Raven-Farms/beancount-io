@@ -227,6 +227,26 @@ const JournalContent = () => {
 
   const rawTotal = data?.getLedgerJournal.total;
   const total = typeof rawTotal === "number" ? rawTotal : 0;
+  const paginationScope = JSON.stringify({
+    ledgerId,
+    filterKey,
+    ...ledgerSearchParams.searchParams,
+  });
+  const [paginationSnapshot, setPaginationSnapshot] = useState({
+    scope: paginationScope,
+    total: 0,
+  });
+  if (
+    !loading &&
+    !error &&
+    typeof rawTotal === "number" &&
+    (paginationSnapshot.scope !== paginationScope ||
+      paginationSnapshot.total !== rawTotal)
+  ) {
+    setPaginationSnapshot({ scope: paginationScope, total: rawTotal });
+  }
+  const paginationTotal =
+    paginationSnapshot.scope === paginationScope ? paginationSnapshot.total : 0;
   const firstVisibleEntry = total === 0 ? 0 : Math.min(offset + 1, total);
   const lastVisibleEntry = Math.min(offset + journalTableData.length, total);
 
@@ -234,12 +254,19 @@ const JournalContent = () => {
   // the real total is known, fall back to the last page instead of showing an
   // empty journal.
   useEffect(() => {
-    if (loading || total === 0 || offset === 0 || offset < total) return;
-    replaceOffset(Math.floor((total - 1) / limit) * limit);
+    if (
+      loading ||
+      error ||
+      typeof rawTotal !== "number" ||
+      offset === 0 ||
+      offset < total
+    )
+      return;
+    replaceOffset(Math.max(0, Math.floor((total - 1) / limit) * limit));
     // replaceOffset is re-created per render; the guard above makes this a
     // one-shot correction.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, offset, total]);
+  }, [loading, error, rawTotal, offset, total]);
 
   return (
     <>
@@ -300,7 +327,7 @@ const JournalContent = () => {
         <div className="flex items-center justify-between border-b px-3 py-2 text-xs text-muted-foreground sm:text-sm">
           <span>{t("common.results")}</span>
           <span className="font-medium tabular-nums text-foreground">
-            {loading && journalTableData.length === 0
+            {loading
               ? "…"
               : `${firstVisibleEntry}–${lastVisibleEntry} / ${total}`}
           </span>
@@ -310,34 +337,36 @@ const JournalContent = () => {
           <div className="p-4">
             <JournalErrorState message={t(getErrorMessageKey(error))} />
           </div>
-        ) : loading && journalTableData.length === 0 ? (
+        ) : loading ? (
           <JournalLoadingState />
         ) : journalTableData.length === 0 ? (
           <JournalEmptyState />
         ) : (
-          <>
-            <JournalTable
-              data={journalTableData}
-              showMetadata={showMetadata}
-              showPostings={showPostings}
-              ledgerOwner={ledgerOwner}
-              ledgerName={ledgerName}
-              onEntryClick={(directive, opener) => {
-                entryOpenerRef.current = opener;
-                setSelectedEntry(directive);
-                setIsEntryContextDialogOpen(true);
-              }}
-            />
-            <div className="flex justify-end border-t bg-muted/10 px-3 pb-3">
-              <JournalPagination
-                total={total}
-                limit={limit}
-                offset={offset}
-                setOffset={setOffset}
-              />
-            </div>
-          </>
+          <JournalTable
+            data={journalTableData}
+            showMetadata={showMetadata}
+            showPostings={showPostings}
+            ledgerOwner={ledgerOwner}
+            ledgerName={ledgerName}
+            onEntryClick={(directive, opener) => {
+              entryOpenerRef.current = opener;
+              setSelectedEntry(directive);
+              setIsEntryContextDialogOpen(true);
+            }}
+          />
         )}
+        <div className="flex justify-end border-t bg-muted/10 px-3 pb-3">
+          <JournalPagination
+            total={paginationTotal}
+            limit={limit}
+            offset={offset}
+            setOffset={setOffset}
+            loading={loading}
+            resultCount={error ? 0 : journalTableData.length}
+            scopeKey={paginationScope}
+            fallbackFocusRef={entryFallbackRef}
+          />
+        </div>
       </div>
 
       <NewDirectiveDialog

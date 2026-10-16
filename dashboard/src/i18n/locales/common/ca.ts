@@ -4,6 +4,27 @@ export interface TranslationEntry {
 }
 
 const caCommon: Record<string, TranslationEntry> = {
+  "common.moreItemsLoaded_one": {
+    message: "S'ha carregat {count} element més",
+    description: "Polite feedback with the number of newly loaded list items",
+  },
+  "common.moreItemsLoaded_many": {
+    message: "S'han carregat {count} elements més",
+    description: "Polite feedback with the number of newly loaded list items",
+  },
+  "common.moreItemsLoaded_other": {
+    message: "S'han carregat {count} elements més",
+    description: "Polite feedback with the number of newly loaded list items",
+  },
+  "common.noMoreResults": {
+    message: "No hi ha més resultats",
+    description: "Visible end-of-list feedback after all results have loaded",
+  },
+  "common.showingResultsRange": {
+    message: "Es mostren {first}–{last} de {total}",
+    description: "Current pagination range and total result count",
+  },
+
   "common.writeAccess.signIn": {
     message: "Inicia la sessió",
     description: "Link to sign in from a write-only page",

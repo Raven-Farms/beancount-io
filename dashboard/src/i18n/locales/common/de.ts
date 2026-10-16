@@ -4,6 +4,23 @@ export interface TranslationEntry {
 }
 
 const deCommon: Record<string, TranslationEntry> = {
+  "common.moreItemsLoaded_one": {
+    message: "{count} weiterer Eintrag geladen",
+    description: "Polite feedback with the number of newly loaded list items",
+  },
+  "common.moreItemsLoaded_other": {
+    message: "{count} weitere Einträge geladen",
+    description: "Polite feedback with the number of newly loaded list items",
+  },
+  "common.noMoreResults": {
+    message: "Keine weiteren Ergebnisse",
+    description: "Visible end-of-list feedback after all results have loaded",
+  },
+  "common.showingResultsRange": {
+    message: "Ergebnisse {first}–{last} von {total}",
+    description: "Current pagination range and total result count",
+  },
+
   "common.writeAccess.signIn": {
     message: "Anmelden",
     description: "Link to sign in from a write-only page",

@@ -225,86 +225,58 @@ export function AccountJournalTable({
   }, [appliedFilterKey, filterKey, searchOffset]);
 
   const requestedTotal = journalData?.getLedgerAccountJournal.total;
+  const paginationScope = JSON.stringify([
+    ledgerId,
+    accountName,
+    conversion,
+    withChildren,
+    filterKey,
+  ]);
+  const [paginationSnapshot, setPaginationSnapshot] = useState({
+    scope: paginationScope,
+    total: 0,
+  });
+  if (
+    !journalLoading &&
+    !journalError &&
+    typeof requestedTotal === "number" &&
+    (paginationSnapshot.scope !== paginationScope ||
+      paginationSnapshot.total !== requestedTotal)
+  ) {
+    setPaginationSnapshot({ scope: paginationScope, total: requestedTotal });
+  }
+  const paginationTotal =
+    paginationSnapshot.scope === paginationScope ? paginationSnapshot.total : 0;
 
   // A URL may ask for a page past the end (stale link, deleted entries). Once
   // the real total is known, fall back to the last page instead of an empty
   // journal.
   useEffect(() => {
     const known = typeof requestedTotal === "number" ? requestedTotal : 0;
-    if (journalLoading || known === 0 || offset === 0 || offset < known) return;
-    replaceOffset(Math.floor((known - 1) / limit) * limit);
+    if (
+      journalLoading ||
+      journalError ||
+      typeof requestedTotal !== "number" ||
+      offset === 0 ||
+      offset < known
+    )
+      return;
+    replaceOffset(Math.max(0, Math.floor((known - 1) / limit) * limit));
     // replaceOffset is re-created per render; the guard above makes this a
     // one-shot correction.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [journalLoading, offset, requestedTotal]);
-
-  if (journalLoading) {
-    return (
-      <CardContent>
-        <LoadingSpinner />
-      </CardContent>
-    );
-  }
-
-  if (journalError) {
-    return (
-      <CardContent>
-        <ReportErrorState
-          message={t("page.accountReport.errorLoadingJournal")}
-        />
-      </CardContent>
-    );
-  }
-
-  if (!journalData?.getLedgerAccountJournal?.items?.length) {
-    return (
-      <>
-        <CardContent className="pb-3">
-          <JournalFilters
-            selectedDirectiveTypes={selectedDirectiveTypes}
-            onDirectiveTypesChange={setSelectedDirectiveTypes}
-            selectedTransactionSubtypes={selectedTransactionSubtypes}
-            onTransactionSubtypesChange={setSelectedTransactionSubtypes}
-            selectedDocumentSubtypes={selectedDocumentSubtypes}
-            onDocumentSubtypesChange={setSelectedDocumentSubtypes}
-            selectedCustomSubtypes={selectedCustomSubtypes}
-            onCustomSubtypesChange={setSelectedCustomSubtypes}
-            showMetadata={showMetadata}
-            onShowMetadataChange={setShowMetadata}
-            showPostings={showPostings}
-            onShowPostingsChange={setShowPostings}
-          />
-        </CardContent>
-        <CardContent>
-          <div className="flex items-center justify-center py-12">
-            <div className="text-center">
-              <Activity className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-foreground mb-2">
-                {t("page.accountReport.noJournalEntries")}
-              </h3>
-              <p className="text-muted-foreground">
-                {t("page.accountReport.noJournalEntriesForAccount")}
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </>
-    );
-  }
-
-  // Transform the account journal entries to journal directive format
-
-  const total = journalData.getLedgerAccountJournal.total || 0;
+  }, [journalLoading, journalError, offset, requestedTotal]);
 
   // Transform JournalDirectiveType[] to JournalTableItem[]
-  const journalTableData: JournalTableItem[] =
-    journalData.getLedgerAccountJournal.items.map((item) => {
-      return {
-        directive: item.entry as unknown as JournalDirectiveType,
-        change: item.change as Record<string, string>,
-        balance: item.balance as Record<string, string>,
-      };
-    });
+  const journalTableData: JournalTableItem[] = (
+    journalData?.getLedgerAccountJournal.items ?? []
+  ).map((item) => {
+    return {
+      directive: item.entry as unknown as JournalDirectiveType,
+      change: item.change as Record<string, string>,
+      balance: item.balance as Record<string, string>,
+    };
+  });
 
   return (
     <>
@@ -326,28 +298,52 @@ export function AccountJournalTable({
       </CardContent>
       <CardContent>
         <div ref={entryFallbackRef} tabIndex={-1} className="outline-none">
-          <JournalTable
-            data={journalTableData}
-            showMetadata={showMetadata}
-            showPostings={showPostings}
-            isAccountJournal
-            accountName={accountName}
-            withChildren={withChildren}
-            ledgerOwner={ledgerOwner}
-            ledgerName={ledgerName}
-            onEntryClick={(entry, opener) => {
-              entryOpenerRef.current = opener;
-              setSelectedEntry(entry);
-              setIsEntryContextDialogOpen(true);
-            }}
-          />
+          {journalLoading ? (
+            <LoadingSpinner />
+          ) : journalError ? (
+            <ReportErrorState
+              message={t("page.accountReport.errorLoadingJournal")}
+            />
+          ) : journalTableData.length === 0 ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <Activity className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-foreground mb-2">
+                  {t("page.accountReport.noJournalEntries")}
+                </h3>
+                <p className="text-muted-foreground">
+                  {t("page.accountReport.noJournalEntriesForAccount")}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <JournalTable
+              data={journalTableData}
+              showMetadata={showMetadata}
+              showPostings={showPostings}
+              isAccountJournal
+              accountName={accountName}
+              withChildren={withChildren}
+              ledgerOwner={ledgerOwner}
+              ledgerName={ledgerName}
+              onEntryClick={(entry, opener) => {
+                entryOpenerRef.current = opener;
+                setSelectedEntry(entry);
+                setIsEntryContextDialogOpen(true);
+              }}
+            />
+          )}
         </div>
         <div className="relative flex justify-end">
           <JournalPagination
-            total={total}
+            total={paginationTotal}
             limit={limit}
             offset={offset}
             setOffset={setOffset}
+            loading={journalLoading}
+            resultCount={journalError ? 0 : journalTableData.length}
+            scopeKey={paginationScope}
+            fallbackFocusRef={entryFallbackRef}
           />
         </div>
       </CardContent>

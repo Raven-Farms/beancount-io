@@ -4,6 +4,27 @@ export interface TranslationEntry {
 }
 
 const ptCommon: Record<string, TranslationEntry> = {
+  "common.moreItemsLoaded_one": {
+    message: "Mais {count} item carregado",
+    description: "Polite feedback with the number of newly loaded list items",
+  },
+  "common.moreItemsLoaded_many": {
+    message: "Mais {count} itens carregados",
+    description: "Polite feedback with the number of newly loaded list items",
+  },
+  "common.moreItemsLoaded_other": {
+    message: "Mais {count} itens carregados",
+    description: "Polite feedback with the number of newly loaded list items",
+  },
+  "common.noMoreResults": {
+    message: "Não há mais resultados",
+    description: "Visible end-of-list feedback after all results have loaded",
+  },
+  "common.showingResultsRange": {
+    message: "A mostrar {first}–{last} de {total}",
+    description: "Current pagination range and total result count",
+  },
+
   "common.writeAccess.signIn": {
     message: "Entrar",
     description: "Link to sign in from a write-only page",

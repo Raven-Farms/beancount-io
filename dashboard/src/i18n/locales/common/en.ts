@@ -4,6 +4,23 @@ export interface TranslationEntry {
 }
 
 const enCommon: Record<string, TranslationEntry> = {
+  "common.moreItemsLoaded_one": {
+    message: "Loaded {count} more item",
+    description: "Polite feedback with the number of newly loaded list items",
+  },
+  "common.moreItemsLoaded_other": {
+    message: "Loaded {count} more items",
+    description: "Polite feedback with the number of newly loaded list items",
+  },
+  "common.noMoreResults": {
+    message: "No more results",
+    description: "Visible end-of-list feedback after all results have loaded",
+  },
+  "common.showingResultsRange": {
+    message: "Showing {first}–{last} of {total}",
+    description: "Current pagination range and total result count",
+  },
+
   "common.writeAccess.signIn": {
     message: "Sign in",
     description: "Link to sign in from a write-only page",

@@ -4,6 +4,23 @@ export interface TranslationEntry {
 }
 
 const faCommon: Record<string, TranslationEntry> = {
+  "common.moreItemsLoaded_one": {
+    message: "{count} مورد دیگر بارگیری شد",
+    description: "Polite feedback with the number of newly loaded list items",
+  },
+  "common.moreItemsLoaded_other": {
+    message: "{count} مورد دیگر بارگیری شد",
+    description: "Polite feedback with the number of newly loaded list items",
+  },
+  "common.noMoreResults": {
+    message: "نتیجه دیگری وجود ندارد",
+    description: "Visible end-of-list feedback after all results have loaded",
+  },
+  "common.showingResultsRange": {
+    message: "نمایش {first}–{last} از {total}",
+    description: "Current pagination range and total result count",
+  },
+
   "common.writeAccess.signIn": {
     message: "ورود",
     description: "Link to sign in from a write-only page",

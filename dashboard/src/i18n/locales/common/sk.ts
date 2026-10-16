@@ -4,6 +4,31 @@ export interface TranslationEntry {
 }
 
 const skCommon: Record<string, TranslationEntry> = {
+  "common.moreItemsLoaded_one": {
+    message: "Načítaná ďalšia {count} položka",
+    description: "Polite feedback with the number of newly loaded list items",
+  },
+  "common.moreItemsLoaded_few": {
+    message: "Načítané ďalšie {count} položky",
+    description: "Polite feedback with the number of newly loaded list items",
+  },
+  "common.moreItemsLoaded_many": {
+    message: "Načítaných ďalších {count} položky",
+    description: "Polite feedback with the number of newly loaded list items",
+  },
+  "common.moreItemsLoaded_other": {
+    message: "Načítaných ďalších {count} položiek",
+    description: "Polite feedback with the number of newly loaded list items",
+  },
+  "common.noMoreResults": {
+    message: "Žiadne ďalšie výsledky",
+    description: "Visible end-of-list feedback after all results have loaded",
+  },
+  "common.showingResultsRange": {
+    message: "Zobrazené {first}–{last} z {total}",
+    description: "Current pagination range and total result count",
+  },
+
   "common.writeAccess.signIn": {
     message: "Prihlásiť sa",
     description: "Link to sign in from a write-only page",

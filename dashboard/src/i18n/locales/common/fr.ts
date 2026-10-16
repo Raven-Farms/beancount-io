@@ -4,6 +4,27 @@ export interface TranslationEntry {
 }
 
 const frCommon: Record<string, TranslationEntry> = {
+  "common.moreItemsLoaded_one": {
+    message: "{count} élément supplémentaire chargé",
+    description: "Polite feedback with the number of newly loaded list items",
+  },
+  "common.moreItemsLoaded_many": {
+    message: "{count} éléments supplémentaires chargés",
+    description: "Polite feedback with the number of newly loaded list items",
+  },
+  "common.moreItemsLoaded_other": {
+    message: "{count} éléments supplémentaires chargés",
+    description: "Polite feedback with the number of newly loaded list items",
+  },
+  "common.noMoreResults": {
+    message: "Aucun autre résultat",
+    description: "Visible end-of-list feedback after all results have loaded",
+  },
+  "common.showingResultsRange": {
+    message: "Affichage de {first}–{last} sur {total}",
+    description: "Current pagination range and total result count",
+  },
+
   "common.writeAccess.signIn": {
     message: "Se connecter",
     description: "Link to sign in from a write-only page",

@@ -133,7 +133,7 @@ async function mountFeed(language: "en" | "de" = "en") {
     name: "GetFeed",
     variables: { offset: 0, limit: 10, source: "LEDGER_RSS", locale: language },
   });
-  return { container, requests };
+  return { container, requests, localization };
 }
 
 async function resolvePage(
@@ -187,7 +187,9 @@ describe("Activity feed pagination through Apollo", () => {
       const pendingButton = screen.getByRole("button", {
         name: messages["page.dashboard.showMore"],
       });
-      expect(pendingButton).toBeDisabled();
+      expect(pendingButton).toBeEnabled();
+      expect(pendingButton).toHaveAttribute("aria-disabled", "true");
+      expect(pendingButton).toHaveFocus();
       fireEvent.click(pendingButton);
       expect(requests).toHaveLength(2);
 
@@ -205,7 +207,9 @@ describe("Activity feed pagination through Apollo", () => {
       await user.click(retry);
       await waitFor(() => expect(requests).toHaveLength(3));
       expect(requests[2].variables).toEqual(requests[1].variables);
-      expect(retry).toBeDisabled();
+      expect(retry).toBeEnabled();
+      expect(retry).toHaveAttribute("aria-disabled", "true");
+      expect(retry).toHaveFocus();
       expect(screen.getByRole("alert")).toHaveTextContent(
         messages["page.dashboard.feedError"],
       );
@@ -224,6 +228,12 @@ describe("Activity feed pagination through Apollo", () => {
         name: messages["page.dashboard.showMore"],
       });
       expect(showMore).toBeEnabled();
+      expect(showMore).toHaveFocus();
+      expect(screen.getByRole("status")).toHaveTextContent(
+        language === "en"
+          ? "Loaded 10 more items"
+          : "10 weitere Einträge geladen",
+      );
       expect(requests.map((request) => request.variables.offset)).toEqual([
         0, 10, 10,
       ]);
@@ -234,6 +244,10 @@ describe("Activity feed pagination through Apollo", () => {
       expect(requests[3].variables.offset).toBe(20);
       await resolvePage(requests[3], 20, false);
       await waitFor(() => expectCards(30));
+      expect(screen.getByRole("status")).toHaveFocus();
+      expect(screen.getByRole("status")).toHaveTextContent(
+        language === "en" ? "No more results" : "Keine weiteren Ergebnisse",
+      );
       expect(
         screen.queryByRole("button", {
           name: messages["page.dashboard.showMore"],
@@ -241,6 +255,59 @@ describe("Activity feed pagination through Apollo", () => {
       ).not.toBeInTheDocument();
     },
   );
+
+  it("keeps focus on a card when the reader leaves the pending control", async () => {
+    const { requests } = await mountFeed();
+    const user = userEvent.setup();
+    await resolvePage(requests[0], 0);
+    const more = screen.getByRole("button", {
+      name: en["page.dashboard.showMore"],
+    });
+    act(() => more.focus());
+    await user.keyboard("{Enter}{Shift>}{Tab}{/Shift}");
+    const destination = document.activeElement;
+    expect(destination?.tagName).toBe("A");
+    await resolvePage(requests[1], 10, false);
+    await waitFor(() => expectCards(20));
+    expect(destination).toHaveFocus();
+    expect(screen.getByRole("status")).toHaveTextContent("No more results");
+  });
+
+  it("resets the locale's offset and ignores its abandoned in-flight page", async () => {
+    const { requests, localization } = await mountFeed();
+    const user = userEvent.setup();
+    await resolvePage(requests[0], 0);
+    await user.click(
+      screen.getByRole("button", { name: en["page.dashboard.showMore"] }),
+    );
+    await waitFor(() => expect(requests).toHaveLength(2));
+    const abandoned = requests[1];
+    await act(async () => {
+      await localization.changeLanguage("de");
+    });
+    await waitFor(() => expect(requests).toHaveLength(3));
+    expect(requests[2].variables).toEqual({
+      offset: 0,
+      limit: 10,
+      source: "LEDGER_RSS",
+      locale: "de",
+    });
+    await resolvePage(requests[2], 0);
+    await waitFor(() => expectCards(10));
+    await resolvePage(abandoned, 10, false);
+    expectCards(10);
+    expect(screen.getByRole("status")).toBeEmptyDOMElement();
+    await user.click(
+      screen.getByRole("button", { name: de["page.dashboard.showMore"] }),
+    );
+    await waitFor(() => expect(requests).toHaveLength(4));
+    expect(requests[3].variables).toEqual({
+      offset: 10,
+      limit: 10,
+      source: "LEDGER_RSS",
+      locale: "de",
+    });
+  });
 
   it("keeps the initial loading and read-error recovery behavior on offset zero", async () => {
     const { container, requests } = await mountFeed();
