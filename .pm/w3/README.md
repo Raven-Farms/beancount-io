@@ -78,6 +78,23 @@
 
 - [ ] **m52** — [Make Ask-AI proxy limits and failures truthful](./blocked/m52/README.md) (7 tasks) ← promoted 446 — **blocked:** provider/operator capacity contract, product decision, and near-limit verification; t001–t002 shipped
 
+## Inbox
+
+- [468](./468.md) — Let Version History reach commits older than the newest 30
+- [469](./469.md) — Tell non-admins they can't manage a ledger's bank connections instead of "Failed to Load Data — Retry", and give the Plaid pages a heading
+- [470](./470.md) — Stop the server redirect loop for paths containing an encoded `<`, `>`, `"`, `{`, `}` or backtick
+- [471](./471.md) — Answer a missing account, entry, commit, pull request or user profile with a real not-found, not an indexable 200 page
+- [472](./472.md) — Name repeated row and card actions after their target: Accounts "More actions", token "Revoke", Budget "Update Budget"
+- [473](./473.md) — Name Journal row controls after their entry: 60 identical "Toggle postings" buttons that also hide the posting count
+- [474](./474.md) — Profile follow hint says "Add this profile to your following list" next to Unfollow
+- [475](./475.md) — Ledger Gallery: keep the search in the URL so Back restores it, and announce the result count
+- [476](./476.md) — Give account Settings pages a page heading, and Danger Zone any heading at all
+- [477](./477.md) — Stop AI file parsing from inventing transaction descriptions that aren't in the source
+- [478](./478.md) — Ledger switcher: include the current ledger in its accessible name, and name its popover
+- [479](./479.md) — In Persian, amounts render as "USD 33.71-": isolate signed amounts from the right-to-left layout
+- [480](./480.md) — Escape doesn't close the mobile navigation sheet once focus is on a menu item: an invisible tooltip swallows it
+- [481](./481.md) — On phones the account journal hides every amount and the running balance
+
 ## Dropped
 
 - ~~**446**~~ — Ask-AI quota/cap mismatch — superseded 2026-10-02 by [m52](./blocked/m52/README.md); the complete evidence is retained in its source note, public proxy fixes shipped, and shared-provider accounting has an explicit external unblock condition.
