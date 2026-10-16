@@ -1,5 +1,3 @@
-import { base64Decode } from "@/common/lib/utils/encode";
-
 export const getParentPath = (filePath: string) => {
   return filePath.split("/").slice(0, -1).join("/");
 };
@@ -114,6 +112,16 @@ export const isTextFile = (filename: string): boolean => {
     "bash",
     "beancount",
     "bean",
+    "csv",
+    "tsv",
+    "ofx",
+    "qfx",
+    "qif",
+    "toml",
+    "ini",
+    "cfg",
+    "conf",
+    "log",
   ];
   const ext = getFileExtension(filename);
   if (textExtensions.includes(ext)) return true;
@@ -151,6 +159,59 @@ export const getFileType = (filename: string): FileType => {
   return "unknown";
 };
 
+const MAX_TEXT_PREVIEW_BYTES = 1024 * 1024;
+
+const decodeBase64Bytes = (content: string) =>
+  Uint8Array.from(atob(content), (character) => character.charCodeAt(0));
+
+/** Unknown formats may be previewed only as bounded, valid UTF-8 text. */
+export const isPreviewableTextContent = (
+  content: string | null | undefined,
+  size: number,
+): boolean => {
+  if (
+    typeof content !== "string" ||
+    !Number.isFinite(size) ||
+    size < 0 ||
+    size > MAX_TEXT_PREVIEW_BYTES
+  ) {
+    return false;
+  }
+
+  // Count without allocating a whitespace-stripped copy. Repository base64
+  // may be line-wrapped; only encoded characters contribute to decoded size.
+  const maxEncodedLength = Math.ceil(MAX_TEXT_PREVIEW_BYTES / 3) * 4;
+  let encodedLength = 0;
+  let padding = 0;
+  for (let index = 0; index < content.length; index++) {
+    const code = content.charCodeAt(index);
+    if (
+      code === 9 ||
+      code === 10 ||
+      code === 12 ||
+      code === 13 ||
+      code === 32
+    ) {
+      continue;
+    }
+    if (++encodedLength > maxEncodedLength) return false;
+    padding = code === 61 ? padding + 1 : 0;
+  }
+  if (Math.floor((encodedLength * 3) / 4) - padding > MAX_TEXT_PREVIEW_BYTES) {
+    return false;
+  }
+
+  try {
+    const bytes = decodeBase64Bytes(content);
+    if (bytes.length > MAX_TEXT_PREVIEW_BYTES || bytes.includes(0))
+      return false;
+    new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 /**
  * Get Monaco editor language from filename
  * Checks well-known basenames before extension map so extensionless files
@@ -183,6 +244,11 @@ export const getFileLanguage = (filename: string): string => {
     yaml: "yaml",
     yml: "yaml",
     xml: "xml",
+    ofx: "xml",
+    qfx: "xml",
+    ini: "ini",
+    cfg: "ini",
+    conf: "ini",
     sh: "shell",
     bash: "shell",
     bean: "beancount",
@@ -275,9 +341,9 @@ export const downloadFile = (filename: string, base64Content: string): void => {
 
   // Handle text files
   if (isTextFile(filename)) {
-    const text = base64Decode(base64Content);
+    const bytes = decodeBase64Bytes(base64Content);
     const mime = `${getDownloadMimeType(filename)};charset=utf-8`;
-    const blob = new Blob([text], { type: mime });
+    const blob = new Blob([bytes], { type: mime });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;

@@ -7,6 +7,7 @@ export interface ViewModeActionsProps {
   fileContent: NonNullable<GetLedgerFileQuery["getLedgerFile"]>;
   onEdit: () => void;
   onDelete: () => void;
+  canEdit?: boolean;
 }
 
 /**
@@ -19,6 +20,7 @@ export function ViewModeActions({
   fileContent,
   onEdit,
   onDelete,
+  canEdit = true,
 }: ViewModeActionsProps) {
   const handleDownloadClick = () => {
     if (!fileContent.content) return;
@@ -31,7 +33,7 @@ export function ViewModeActions({
       fileContent={fileContent}
       onDownload={handleDownloadClick}
       onDelete={onDelete}
-      canEdit={true}
+      canEdit={canEdit}
       onEdit={onEdit}
     />
   );

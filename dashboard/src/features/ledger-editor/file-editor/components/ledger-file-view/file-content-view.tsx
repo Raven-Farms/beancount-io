@@ -1,10 +1,15 @@
+import { useMemo } from "react";
 import type { GetLedgerFileQuery, BeancountError } from "@/graphql/definitions";
 import {
   ImageFileView,
   PDFFileView,
   UnknownFileView,
 } from "../non-text-file-views";
-import { getFilename, getFileType } from "../../../shared/lib/utils";
+import {
+  getFilename,
+  getFileType,
+  isPreviewableTextContent,
+} from "../../../shared/lib/utils";
 import { TextFileView } from "./text-file-view";
 
 export interface FileContentViewProps {
@@ -23,8 +28,9 @@ export interface FileContentViewProps {
 /**
  * File content view component - coordinator component that determines file type
  * and delegates to appropriate view component
- * - Non-text files (images, PDFs, unknown) → view-only components
- * - Text files → TextFileView with edit capability
+ * - Images, PDFs and unknown binary files → view-only components
+ * - Known text files → TextFileView with edit capability
+ * - Small unknown UTF-8 files → read-only TextFileView
  */
 export function FileContentView({
   filePath,
@@ -42,6 +48,12 @@ export function FileContentView({
 
   // Determine file type based on filename
   const fileType = getFileType(filename);
+  const isUnknownText = useMemo(
+    () =>
+      fileType === "unknown" &&
+      isPreviewableTextContent(fileContent.content, fileContent.size),
+    [fileType, fileContent.content, fileContent.size],
+  );
 
   // Delegate to appropriate view component based on file type
   if (fileType === "image") {
@@ -64,7 +76,7 @@ export function FileContentView({
     );
   }
 
-  if (fileType === "unknown") {
+  if (fileType === "unknown" && !isUnknownText) {
     return (
       <UnknownFileView
         filePath={filePath}
@@ -74,7 +86,7 @@ export function FileContentView({
     );
   }
 
-  // Text files: delegate to TextFileView which handles edit/view mode
+  // Content-sniffed text is preview-only, even for writers or edit-mode URLs.
   return (
     <TextFileView
       filePath={filePath}
@@ -83,6 +95,7 @@ export function FileContentView({
       onDelete={onDelete}
       isSaving={isSaving}
       isEditMode={isEditModeInput}
+      readOnly={isUnknownText}
       lineNumber={lineNumber}
       errors={errors}
       onEnterEditMode={onEnterEditMode}

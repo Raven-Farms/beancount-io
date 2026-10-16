@@ -18,6 +18,7 @@ export interface TextFileViewProps {
   onDelete: () => void;
   isSaving: boolean;
   isEditMode?: boolean;
+  readOnly?: boolean;
   lineNumber?: number;
   errors?: BeancountError[];
   onEnterEditMode: () => void;
@@ -40,15 +41,17 @@ export const TextFileView = ({
   onDelete,
   isSaving,
   isEditMode,
+  readOnly = false,
   lineNumber,
   errors,
   onEnterEditMode,
   onExitEditMode,
 }: TextFileViewProps) => {
   const { canWrite } = useLedgerPermission();
-  // URL/search may request edit mode; only writers get an editable editor.
+  const canEdit = canWrite && !readOnly;
+  // A URL request cannot enable editing for a content-sniffed preview.
   const requestedEditMode = Boolean(isEditMode);
-  const effectiveEditMode = requestedEditMode && canWrite;
+  const effectiveEditMode = requestedEditMode && canEdit;
 
   // Decode base64 content once
   const plainContent = fileContent.content
@@ -83,7 +86,7 @@ export const TextFileView = ({
   const [lastSyncedContent, setLastSyncedContent] = useState(plainContent);
   if (plainContent !== lastSyncedContent) {
     setLastSyncedContent(plainContent);
-    if (!requestedEditMode) {
+    if (readOnly || !requestedEditMode) {
       setEditedContent(plainContent);
     }
   }
@@ -95,23 +98,23 @@ export const TextFileView = ({
     [],
   );
 
-  // Strip unauthorized ?editMode= without creating a navigation loop.
+  // Strip unauthorized or preview-only ?editMode= without a navigation loop.
   useEffect(() => {
-    if (requestedEditMode && !canWrite) {
+    if (requestedEditMode && !canEdit) {
       onExitEditMode();
     }
-  }, [requestedEditMode, canWrite, onExitEditMode]);
+  }, [requestedEditMode, canEdit, onExitEditMode]);
 
   // Enter edit mode - just flip the URL flag; the persistent editor keeps its
   // scroll position and content, so there is nothing to reset here.
   const handleEditClick = useCallback(() => {
-    if (!canWrite) return;
+    if (!canEdit) return;
     onEnterEditMode();
-  }, [canWrite, onEnterEditMode]);
+  }, [canEdit, onEnterEditMode]);
 
   // Handle Cmd+E / Ctrl+E keyboard shortcut to enter edit mode
   useEffect(() => {
-    if (effectiveEditMode || !canWrite) return;
+    if (effectiveEditMode || !canEdit) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.key === "e" || e.key === "E") && (e.ctrlKey || e.metaKey)) {
@@ -125,7 +128,7 @@ export const TextFileView = ({
 
     return () =>
       document.removeEventListener("keydown", handleKeyDown, { capture: true });
-  }, [effectiveEditMode, canWrite, handleEditClick]);
+  }, [effectiveEditMode, canEdit, handleEditClick]);
 
   // Save changes then exit edit mode. Scroll position is preserved naturally
   // because the same editor instance stays mounted in read-only mode.
@@ -135,7 +138,7 @@ export const TextFileView = ({
   const saveInFlightRef = useRef(false);
   const handleSaveClick = useCallback(
     async (contentOverride?: string) => {
-      if (!canWrite) return;
+      if (!canEdit) return;
       if (saveInFlightRef.current) return;
       saveInFlightRef.current = true;
       try {
@@ -151,7 +154,7 @@ export const TextFileView = ({
         saveInFlightRef.current = false;
       }
     },
-    [canWrite, editedContent, plainContent, onSave, onExitEditMode],
+    [canEdit, editedContent, plainContent, onSave, onExitEditMode],
   );
 
   // Cancel editing — exit edit mode without wiping the buffer first. The
@@ -166,10 +169,10 @@ export const TextFileView = ({
 
   const handleEditorContentChange = useCallback(
     (value: string) => {
-      if (!canWrite) return;
+      if (!canEdit) return;
       setEditedContent(value);
     },
-    [canWrite],
+    [canEdit],
   );
 
   return (
@@ -195,6 +198,7 @@ export const TextFileView = ({
               fileContent={fileContent}
               onEdit={handleEditClick}
               onDelete={onDelete}
+              canEdit={canEdit}
             />
           )}
         </div>
@@ -208,7 +212,7 @@ export const TextFileView = ({
               this clipped box instead of resizing the editor. */}
           <div className="min-h-0 flex-1">
             <TextEditor
-              content={editedContent}
+              content={readOnly ? plainContent : editedContent}
               filename={filename}
               setEditedContent={handleEditorContentChange}
               lineNumber={normalizedLineNumber}

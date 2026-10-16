@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { Buffer } from "node:buffer";
 import {
   getParentPath,
   formatFileSize,
@@ -12,6 +13,7 @@ import {
   getDownloadMimeType,
   getFileType,
   downloadFile,
+  isPreviewableTextContent,
 } from "../utils";
 
 describe("Files Utility", () => {
@@ -212,6 +214,30 @@ describe("Files Utility", () => {
   });
 
   describe("isTextFile", () => {
+    it.each([
+      ["bank/Statement.CSV", "plaintext"],
+      ["bank/statement.TsV", "plaintext"],
+      ["bank/statement.OFX", "xml"],
+      ["bank/statement.qfx", "xml"],
+      ["bank/statement.QIF", "plaintext"],
+      ["tools/pyproject.toml", "plaintext"],
+      ["config/settings.INI", "ini"],
+      ["config/app.cfg", "ini"],
+      ["config/service.conf", "ini"],
+      ["logs/run.log", "plaintext"],
+    ])(
+      "recognizes ledger text format %s case-insensitively through its path",
+      (filename, language) => {
+        expect(isTextFile(filename)).toBe(true);
+        expect(getFileType(filename)).toBe("text");
+        expect(getFileLanguage(filename)).toBe(language);
+        expect(getMimeTypeFromExtension(filename)).toBe(
+          "application/octet-stream",
+        );
+        expect(getDownloadMimeType(filename)).toBe("application/octet-stream");
+      },
+    );
+
     it("should return true for common text formats", () => {
       expect(isTextFile("readme.txt")).toBe(true);
       expect(isTextFile("readme.md")).toBe(true);
@@ -306,6 +332,62 @@ describe("Files Utility", () => {
       expect(isTextFile("archive.zip")).toBe(false);
       expect(isTextFile("binary")).toBe(false);
       expect(isTextFile("file.unknown")).toBe(false);
+    });
+  });
+
+  describe("bounded unknown-file text detection", () => {
+    it("accepts real UTF-8 Unicode text, BOM, CRLF and wrapped base64", () => {
+      const bytes = Buffer.from('\ufeffکلید = "Café 🌱"\r\n', "utf8");
+      const encoded = bytes.toString("base64");
+      const wrapped = encoded.match(/.{1,12}/g)!.join("\n");
+      expect(isPreviewableTextContent(encoded, bytes.length)).toBe(true);
+      expect(isPreviewableTextContent(wrapped, bytes.length)).toBe(true);
+    });
+
+    it.each([
+      { kind: "invalid UTF-8", bytes: [0xc3, 0x28] },
+      { kind: "embedded NUL", bytes: [0x61, 0x62, 0, 0x63] },
+      {
+        kind: "ZIP binary signature",
+        bytes: [0x50, 0x4b, 0x03, 0x04, 0, 0, 0xff],
+      },
+    ])(
+      "rejects $kind instead of displaying replacement characters or binary data",
+      ({ bytes }) => {
+        expect(
+          isPreviewableTextContent(
+            Buffer.from(bytes).toString("base64"),
+            bytes.length,
+          ),
+        ).toBe(false);
+      },
+    );
+
+    it.each(["%%%", "A", "Zm9v=bar"])(
+      "rejects malformed base64 %s without throwing",
+      (content) => {
+        expect(isPreviewableTextContent(content, 4)).toBe(false);
+      },
+    );
+
+    it("distinguishes an available empty file from absent content", () => {
+      expect(isPreviewableTextContent("", 0)).toBe(true);
+      expect(isPreviewableTextContent(null, 0)).toBe(false);
+      expect(isPreviewableTextContent(undefined, 0)).toBe(false);
+    });
+
+    it("bounds both declared and actual byte sizes, including an underreported body", () => {
+      const limit = 1024 * 1024;
+      const atLimit = Buffer.alloc(limit, 0x61).toString("base64");
+      expect(isPreviewableTextContent(atLimit, limit)).toBe(true);
+      const wrappedAtLimit = atLimit.match(/.{1,76}/g)!.join("\r\n");
+      expect(isPreviewableTextContent(wrappedAtLimit, limit)).toBe(true);
+      expect(isPreviewableTextContent("YQ==", limit + 1)).toBe(false);
+      const oversized = Buffer.alloc(limit + 1, 0x61).toString("base64");
+      expect(isPreviewableTextContent(oversized, 1)).toBe(false);
+      for (const size of [-1, Number.NaN, Number.POSITIVE_INFINITY]) {
+        expect(isPreviewableTextContent("YQ==", size)).toBe(false);
+      }
     });
   });
 
@@ -629,6 +711,48 @@ describe("Files Utility", () => {
       vi.restoreAllMocks();
     });
 
+    function readBytes(blob: Blob): Promise<Uint8Array> {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () =>
+          resolve(new Uint8Array(reader.result as ArrayBuffer));
+        reader.onerror = () => reject(reader.error);
+        reader.readAsArrayBuffer(blob);
+      });
+    }
+
+    it.each([
+      {
+        filename: "source.txt",
+        bytes: Buffer.from("\ufeffdate,memo\r\n2026-10-15,Café 🌱\r\n", "utf8"),
+        mime: "text/plain;charset=utf-8",
+      },
+      {
+        filename: "statement.csv",
+        bytes: Buffer.from("\ufeffdate,memo\r\n2026-10-15,Café 🌱\r\n", "utf8"),
+        mime: "application/octet-stream;charset=utf-8",
+      },
+      {
+        filename: "legacy.csv",
+        bytes: Buffer.from([0xff, 0xc3, 0x28, 0x0d, 0x0a, 0x00]),
+        mime: "application/octet-stream;charset=utf-8",
+      },
+    ])(
+      "downloads $filename without decoding or rewriting its original bytes",
+      async ({ filename, bytes, mime }) => {
+        downloadFile(filename, bytes.toString("base64"));
+        expect(createObjectURLSpy).toHaveBeenCalledTimes(1);
+        const blob = createObjectURLSpy.mock.calls[0][0] as Blob;
+        expect(blob.type).toBe(mime);
+        expect(Array.from(await readBytes(blob))).toEqual(Array.from(bytes));
+        expect(mockLink.download).toBe(filename);
+        expect(mockLink.href).toBe("blob:mock-url");
+        expect(clickSpy).toHaveBeenCalledOnce();
+        expect(removeSpy).toHaveBeenCalledOnce();
+        expect(revokeObjectURLSpy).toHaveBeenCalledWith("blob:mock-url");
+      },
+    );
+
     it("should do nothing when base64Content is empty", () => {
       downloadFile("file.txt", "");
       expect(createElementSpy).not.toHaveBeenCalled();
@@ -654,17 +778,13 @@ describe("Files Utility", () => {
       expect(revokeObjectURLSpy).toHaveBeenCalledWith("blob:mock-url");
     });
 
-    it("downloads Makefile with octet-stream so the basename stays extensionless", () => {
-      const blobSpy = vi.spyOn(globalThis, "Blob");
-      downloadFile("Makefile", btoa("all:\n\techo ok\n"));
+    it("downloads Makefile with octet-stream so the basename stays extensionless", async () => {
+      const bytes = Buffer.from("all:\n\techo ok\n", "utf8");
+      downloadFile("Makefile", bytes.toString("base64"));
       expect(mockLink.download).toBe("Makefile");
-      expect(blobSpy).toHaveBeenCalledWith(
-        [expect.any(String)],
-        expect.objectContaining({
-          type: "application/octet-stream;charset=utf-8",
-        }),
-      );
-      blobSpy.mockRestore();
+      const blob = createObjectURLSpy.mock.calls[0][0] as Blob;
+      expect(blob.type).toBe("application/octet-stream;charset=utf-8");
+      expect(Array.from(await readBytes(blob))).toEqual(Array.from(bytes));
     });
 
     it("should create a download link for unknown files as binary", () => {
