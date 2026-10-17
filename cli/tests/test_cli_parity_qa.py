@@ -435,7 +435,8 @@ def test_doctor_missing_open_names_pre_closed_accounts(tmp_path: Path) -> None:
     )
     result = bea(tmp_path, "doctor", "missing-open", str(closed_only))
     assert result.returncode == 1, result.stderr
-    assert "Assets:Bank:Checking" in result.stdout
+    # Diagnostics on stderr: stdout holds only appendable `open` lines (w5/567).
+    assert "Assets:Bank:Checking" in result.stderr and result.stdout == ""
     mixed = tmp_path / "mixed.bean"
     mixed.write_text(
         "2026-01-01 open Assets:Bank:Checking USD\n"
@@ -447,7 +448,7 @@ def test_doctor_missing_open_names_pre_closed_accounts(tmp_path: Path) -> None:
     both = bea(tmp_path, "doctor", "missing-open", str(mixed))
     assert both.returncode == 1, both.stderr
     assert "open Equity:Open" in both.stdout
-    assert "Assets:Bank:Checking" in both.stdout
+    assert "Assets:Bank:Checking" in both.stderr and "Assets:Bank:Checking" not in both.stdout
 
 
 def test_doctor_directories_maps_error_lines_to_exit_status(tmp_path: Path, ledger: Path) -> None:
