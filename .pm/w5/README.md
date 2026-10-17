@@ -213,6 +213,13 @@
 - [736 — add transactions --from ./- and format ./- read stdin instead of the file named -](./736.md)
 - [737 — --from /dev/stdin waits on the terminal under --json/--no-input (gap in w5/210)](./737.md)
 - [738 — Four input-refusal messages are wrong (BOM offset, NUL as UTF-16, --from empty advice, tagged meta TypeError)](./738.md)
+- [739 — ask answers turn &#x202E; character references into raw bidi overrides; link reference definitions vanish (gap in w5/548)](./739.md)
+- [740 — A later quote changes an earlier valuation; ties settled by line number; double-inversion residue (incomplete fix of w5/556)](./740.md)
+- [741 — Import writes a reciprocal add price refuses; add price silent against implicit_prices; exact-1 agreement (incomplete fix of w5/556)](./741.md)
+- [742 — Compound-cost buys share an import-id; dedup.md's "sorted order" differs from bea's (incomplete fix of w5/349/555)](./742.md)
+- [743 — Reconcile skill: the red-ledger batch "passes on its own" is false while a mismatch remains (incomplete fix of w5/554)](./743.md)
+- [744 — ask BQL tool: a NUL kills the question; a dash-leading query is parsed as an engine option (gap in w5/549)](./744.md)
+- [745 — ask: content_filter partial answers print as complete; false gzip sent 3x; raw Pydantic warning (incomplete fix of w5/546/547)](./745.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
