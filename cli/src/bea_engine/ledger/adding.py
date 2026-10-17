@@ -287,6 +287,18 @@ def _appended(
 # --------------------------------------------------------------------------- #
 
 
+def _conflict_refusal(
+    conflict: Any, account: str, date: Any, number: Any, currency: str, tolerance: Any
+) -> protocol.UsageError:
+    where = conflict.meta.get("filename"), conflict.meta.get("lineno")
+    return protocol.UsageError(
+        f"{account} already has a {date.isoformat()} balance of "
+        f"{_balance_amount(conflict.amount.number, currency, conflict.tolerance)} "
+        f"(at {where[0]}:{where[1]}); refusing {_balance_amount(number, currency, tolerance)}. "
+        "Pass --force to record another assertion."
+    )
+
+
 def _balance(
     file: Path, request: dict[str, Any], *, into: Path | None, allow_errors: bool, strict_read: bool
 ) -> dict[str, Any]:
@@ -334,13 +346,7 @@ def _balance(
             }
         conflict = _balance_conflict(entries, date, account, number, currency, tolerance)
         if conflict is not None and not request.get("force"):
-            where = conflict.meta.get("filename"), conflict.meta.get("lineno")
-            raise protocol.UsageError(
-                f"{account} already has a {date.isoformat()} balance of "
-                f"{_balance_amount(conflict.amount.number, currency, conflict.tolerance)} "
-                f"(at {where[0]}:{where[1]}); refusing {_balance_amount(number, currency, tolerance)}. "
-                "Pass --force to record another assertion."
-            )
+            raise _conflict_refusal(conflict, account, date, number, currency, tolerance)
         # The snapshot the checks above read: a writer that landed since then
         # is a conflict, not a second assertion appended beside it (w5/115).
         return _appended(file, directive, allow_errors=allow_errors, into=into, snapshot=snapshot) | {"pad": None}
@@ -358,6 +364,17 @@ def _balance(
             file, [writer.format_entry(e) for e in entries], allow_errors=allow_errors, into=into, pad_from=True
         )
     except protocol.LedgerError as exc:
+        # Decide against one snapshot and write against the same one, as the
+        # plain path does, so concurrent retries cannot each append (w5/115).
+        snapshot = write.LedgerSnapshot.capture(file)
+        snapshot.require_target(write.destination(file, into))
+        loaded, before_errors, options = managed_load.load_file(file, snapshot=snapshot)
+        # The plain path refuses a second, different assertion for the day
+        # before writing. Here the write failed on it instead, with advice to
+        # date the pad after that very day and to rerun this command (w5/487).
+        conflict = _balance_conflict(loaded, date, account, number, currency, tolerance)
+        if conflict is not None and not request.get("force"):
+            raise _conflict_refusal(conflict, account, date, number, currency, tolerance) from None
         # The only failure worth a retry is a pad Beancount reports unused;
         # anything else stands. Why it went unused decides what happens next.
         # `--allow-errors` takes the same path: the flag tolerates errors
@@ -365,11 +382,6 @@ def _balance(
         if not _unused_pad_only(exc):
             raise
         source_account = parse_account(str(pad_from))
-        # Decide against one snapshot and write against the same one, as the
-        # plain path does, so concurrent retries cannot each append (w5/115).
-        snapshot = write.LedgerSnapshot.capture(file)
-        snapshot.require_target(write.destination(file, into))
-        loaded, before_errors, options = managed_load.load_file(file, snapshot=snapshot)
         staged = [
             f"{format_error(error, ledger_file=file)} "
             f"({error.entry.date} pad {error.entry.account} {error.entry.source_account})"

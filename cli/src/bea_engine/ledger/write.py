@@ -1934,6 +1934,14 @@ def _unused_pad_hint(
     for balance in reached:
         first = first_by_currency.setdefault(balance.amount.currency, balance)
         if first is not balance and (balance.meta.get("filename"), balance.meta.get("lineno")) in failed:
+            if first.date == balance.date:
+                # "Date the pad after" that same day cannot be done: the day
+                # already holds an assertion, which is the conflict (w5/487).
+                return (
+                    f" The {first.date} assertion at {_location(first, filenames)} already asserts this "
+                    "account on that day and consumes the pad; two different assertions for one account and "
+                    "currency on one day cannot both hold, so remove one of the two."
+                )
             return (
                 f" A pad fills only the first later assertion in each currency; the {first.date} assertion at "
                 f"{_location(first, filenames)} already holds and consumes it, so the {balance.date} assertion "
