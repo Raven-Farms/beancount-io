@@ -82,3 +82,80 @@ def test_a_failure_writes_nothing_to_stdout(books: Path, args: tuple[str, ...], 
     result = _bea(books, *args, closed=True)
     assert result.returncode == code
     assert result.stdout == ""
+
+
+@pytest.mark.parametrize("closed", [False, True], ids=["devnull", "closed"])
+def test_a_native_source_export_holds_only_its_rows(books: Path, closed: bool) -> None:
+    """An engine child started without fd 2 wrote its errors into the export (w5/583)."""
+    env = {k: v for k, v in os.environ.items() if not k.startswith("BEA_")}
+    env.update(
+        BEA_CONFIG_DIR=str(books / "config"),
+        XDG_CACHE_HOME=str(books / "cache"),
+        BEA_NO_UPDATE_NOTIFIER="1",
+        PYTHONPATH=str(ROOT / "src"),
+        NO_COLOR="1",
+    )
+    export = books / "out.csv"
+    command = [sys.executable, "-m", "cli.main", "query", "--source", "bad.bean", "-f", "csv", "SELECT account, number"]
+    with export.open("w") as stream:
+        subprocess.run(
+            command,
+            env=env,
+            cwd=books,
+            stdout=stream,
+            stderr=subprocess.DEVNULL,
+            stdin=subprocess.DEVNULL,
+            preexec_fn=(lambda: os.close(2)) if closed else None,  # noqa: PLW1509 - no threads started yet
+            timeout=120,
+        )
+
+    assert export.read_text().splitlines() == ["account,number", "Assets:Nope, 1", "Equity:Opening,-1"]
+
+
+def test_the_query_shell_with_stderr_closed_exits_on_dot_exit(books: Path) -> None:
+    """Its `input()` raised `lost sys.stderr` in a loop that `.exit` could not end (w5/583)."""
+    import pty
+    import select
+    import time
+
+    env = {k: v for k, v in os.environ.items() if not k.startswith("BEA_")}
+    env.update(
+        BEA_CONFIG_DIR=str(books / "config"),
+        XDG_CACHE_HOME=str(books / "cache"),
+        BEA_NO_UPDATE_NOTIFIER="1",
+        PYTHONPATH=str(ROOT / "src"),
+        TERM="dumb",
+        NO_COLOR="1",
+    )
+    pid, fd = pty.fork()
+    if pid == 0:  # pragma: no cover - replaced by exec in the child
+        os.chdir(books)
+        os.close(2)
+        os.execve(sys.executable, [sys.executable, "-m", "cli.main", "-f", "good.bean", "query"], env)
+    emitted = b""
+    deadline = time.time() + 60
+    typed = False
+    try:
+        while True:
+            ready, _, _ = select.select([fd], [], [], 0.2)
+            if ready:
+                try:
+                    emitted += os.read(fd, 65536)
+                except OSError:
+                    pass
+            if not typed and (b"beanquery>" in emitted or b"> " in emitted):
+                os.write(fd, b".exit\r")
+                typed = True
+            finished, status = os.waitpid(pid, os.WNOHANG)
+            if finished:
+                break
+            if time.time() > deadline:
+                os.kill(pid, 9)
+                os.waitpid(pid, 0)
+                raise AssertionError(f"the shell never exited; it printed {len(emitted)} bytes: {emitted[-300:]!r}")
+    finally:
+        os.close(fd)
+
+    assert typed, emitted
+    assert os.waitstatus_to_exitcode(status) == 0, emitted[-500:]
+    assert b"lost sys.stderr" not in emitted

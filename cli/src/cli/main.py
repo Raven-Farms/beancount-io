@@ -55,6 +55,12 @@ def _discard_diagnostics_without_stderr() -> None:
         if devnull != 2:
             os.dup2(devnull, 2)
             os.close(devnull)
+        else:
+            # `os.open` hands back the free fd 2 itself, non-inheritable
+            # (PEP 446), so every child bea spawns started without fd 2: its
+            # errors fell back to stdout with exit 0, and the query shell's
+            # `input()` looped on `lost sys.stderr` (w5/583).
+            os.set_inheritable(2, True)
         sys.stderr = open(2, "w", errors="backslashreplace", closefd=False)  # noqa: SIM115 - lives as sys.stderr
     except OSError:
         pass
