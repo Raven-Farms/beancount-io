@@ -120,16 +120,21 @@ type Entry = {
  * The detail behind a valued total's status line (w4/m27 rule 2): every held
  * commodity with its latest price date — stale ones first and marked — then
  * those still at cost and those left out of the total, and one way to fix
- * them, the ledger's Commodities page on the web.
+ * them, the ledger's Commodities page on the web. That link is offered only
+ * to readers who can write the ledger: a read-only reader landed on a page
+ * that cannot update anything (w0/031).
  */
 export function ValuationSheet({
   valuation,
   ledgerId,
+  canWrite,
   onClose,
 }: {
   /** The holdings to show; null while the sheet is closed. */
   valuation: Valuation | null;
   ledgerId: string;
+  /** Whether the signed-in reader may write the ledger's prices. */
+  canWrite: boolean;
   onClose: () => void;
 }): JSX.Element | null {
   const { t, locale } = useTranslations();
@@ -246,21 +251,23 @@ export function ValuationSheet({
               </View>
             ))}
           </ScrollView>
-          <View style={styles.footer}>
-            <Button
-              type="outline"
-              onPress={
-                guest
-                  ? () => {
-                      onClose();
-                      guest.requestSignIn();
-                    }
-                  : openCommodities
-              }
-            >
-              {t(guest ? "signIn" : "updatePricesOnWeb")}
-            </Button>
-          </View>
+          {(guest || canWrite) && (
+            <View style={styles.footer}>
+              <Button
+                type="outline"
+                onPress={
+                  guest
+                    ? () => {
+                        onClose();
+                        guest.requestSignIn();
+                      }
+                    : openCommodities
+                }
+              >
+                {t(guest ? "signIn" : "updatePricesOnWeb")}
+              </Button>
+            </View>
+          )}
         </View>
       </View>
     </Modal>

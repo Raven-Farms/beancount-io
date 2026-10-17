@@ -253,6 +253,7 @@ const HomeScreenImpl = (): JSX.Element => {
         <ValuationSheet
           valuation={detailPage === null ? null : valuations[detailPage]}
           ledgerId={ledgerId}
+          canWrite={canWrite}
           onClose={() => setDetailPage(null)}
         />
 

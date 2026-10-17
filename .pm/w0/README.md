@@ -29,7 +29,6 @@ Mobile QA findings from 2026-10-15, triaged the same day. Order is suggested, hi
 - [033 — Income and Expenses account pages color by raw sign: salary red, spending green](./033.md) — mobile QA 2026-10-15
 - [034 — Cash flow chart draws a deficit period as money from nowhere; same-named groups both read "Crypto"](./034.md) — mobile QA 2026-10-15
 - [045 — In Persian (RTL), text inputs stay pinned to the physical left (Profile, Payee)](./045.md) — mobile QA 2026-10-15
-- [031 — Read-only ledgers offer "Update prices on the web" in the Home holdings sheet](./031.md) — mobile QA 2026-10-15
 - [039 — Marking a merchant Recurring labels two identical monthly payments "Irregular"](./039.md) — mobile QA 2026-10-15
 
 **Minors: polish**
