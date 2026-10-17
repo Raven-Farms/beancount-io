@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [572 — `doctor roundtrip` in a read-only directory prints a double traceback](./572.md)
 - [573 — `bea example` long-span failure gives calendar-year advice the user already followed](./573.md)
 - [574 — A write `--into` a file reached under two names validates against a doubled load: wrong assertion written with exit 0](./574.md)
 - [575 — Text-mode `query` takes ~2× `--json` on large ledgers (shell kept alive until shutdown)](./575.md)
