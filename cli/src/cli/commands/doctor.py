@@ -154,18 +154,21 @@ def _located_against_ledger(op: str, args: list[str]) -> list[str]:
     position = operands[1]
     # Upstream's own split: the filename is everything before the trailing
     # line fields, so a colon inside it (`tx:jan.bean:1`) belongs to the name.
-    lines = r"\d+:\d+" if op == "region" else r"\d+"
-    match = re.fullmatch(rf"(.+):({lines})", args[position])
-    if match is None:
-        return args
-    head, rest = match.groups()
-    if Path(head).is_absolute() or Path(head).exists():
-        return args
-    candidate = ledger.parent / head
-    if not candidate.exists():
-        return args
-    args = list(args)
-    args[position] = f"{candidate}:{rest}"
+    # `linked` takes a line or, like `region`, a `start:end` range; the
+    # range form was read as file `jan.bean:1` and left unresolved (w5/494).
+    forms = [r"\d+:\d+"] if op == "region" else [r"\d+:\d+", r"\d+"] if op == "linked" else [r"\d+"]
+    for lines in forms:
+        match = re.fullmatch(rf"(.+):({lines})", args[position])
+        if match is None:
+            continue
+        head, rest = match.groups()
+        if Path(head).is_absolute() or Path(head).exists():
+            return args
+        candidate = ledger.parent / head
+        if candidate.exists():
+            args = list(args)
+            args[position] = f"{candidate}:{rest}"
+            return args
     return args
 
 
