@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [542 — Cost labels are written with raw control and bidi characters](./542.md)
 - [543 — A same-day sale before its purchase is refused despite USAGE's "appearing later in the input"](./543.md)
 - [544 — Two `write_directive` calls in one `ask` reply open two approval prompts at once; approving both writes one, and it can hang](./544.md)
 - [545 — `ask` REPL sends a quick follow-up question to the proxy twice (stale keep-alive retry)](./545.md)
