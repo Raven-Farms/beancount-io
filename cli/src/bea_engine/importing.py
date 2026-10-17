@@ -281,7 +281,7 @@ def answer(
     entries = [_writable(entry, index + 1, importer, logs) for index, entry in enumerate(entries)]
     keys = _effective_id_keys(id_keys, csv_id_mapped=csv_id_mapped)
     identities: dict[tuple[str, str, str], Any] = {}
-    fingerprints: dict[tuple[Any, ...], Any] = {}
+    fingerprints: dict[tuple[Any, ...], list[Any]] = {}
     open_currencies = _open_currencies(existing, Open)
     windows = _active_windows(existing)
     # Only what the ledger writes can be a duplicate: a forecast plugin's
@@ -295,7 +295,7 @@ def answer(
         if isinstance(entry, Transaction) and _source_legs(entry, account):
             for identity in _identities(entry, account, keys):
                 identities[identity] = entry
-            fingerprints[_candidate_key(entry, account)] = entry
+            fingerprints.setdefault(_candidate_key(entry, account), []).append(entry)
     if source.read_bytes() != source_bytes:
         raise ConflictError("The export changed during extraction; nothing was written. Retry.")
     source_hash = hashlib.sha256(source_bytes).hexdigest()
@@ -417,18 +417,18 @@ def answer(
                         )
                     else:
                         reason = f"Repeats row {earlier} of this import."
-            elif _candidate_key(entry, account) in fingerprints:
+            elif (twin := _possible_twin(fingerprints, entry, account, fingerprint)) is not None:
                 status, reason, match = (
                     "possible_duplicate",
                     "Date, payee and source amount match; different bank IDs or narration do not rule out a duplicate."
                     if _match_text(entry.payee)
                     else "Date, narration and source amount match; different bank IDs do not rule out a duplicate.",
-                    fingerprints[_candidate_key(entry, account)],
+                    twin,
                 )
             if status == "new" or (status == "possible_duplicate" and duplicates == "include"):
                 for identity in ids:
                     identities[identity] = entry
-                fingerprints[_candidate_key(entry, account)] = entry
+                fingerprints.setdefault(_candidate_key(entry, account), []).append(entry)
                 batch_rows[id(entry)] = index + 1
         rule = entry.meta.pop("_csv_rule", None) if isinstance(entry, Transaction) else None
         text = format_entry(entry) if isinstance(entry, Transaction) else _directive_text(entry)
@@ -830,29 +830,88 @@ def _source_postings(entry: Any, account: str) -> list[Any]:
     return [p for p in _source_legs(entry, account) if _has_explicit_units(p)]
 
 
+_Lot = tuple[Decimal | None, str | None, str | None]
+
+
+def _lot(posting: Any) -> _Lot | None:
+    """The per-unit number, currency and label a source posting's cost states.
+
+    None for a posting held at no cost. A field the cost leaves open is None:
+    an importer's `{}` or `{USD}` states less than the ledger's copy of the
+    same entry, whose booking filled the rest in. The lot date is left out,
+    since booking always fills it in.
+    """
+    cost = posting.cost
+    if cost is None:
+        return None
+    per = getattr(cost, "number_per", None) if hasattr(cost, "number_per") else getattr(cost, "number", None)
+    total = getattr(cost, "number_total", None)
+    if not isinstance(per, Decimal) and isinstance(total, Decimal) and isinstance(posting.units.number, Decimal):
+        per = total / abs(posting.units.number) if posting.units.number else None
+    return (
+        per if isinstance(per, Decimal) else None,
+        cost.currency if isinstance(cost.currency, str) else None,
+        getattr(cost, "label", None) or None,
+    )
+
+
+def _price_text(posting: Any) -> str:
+    price = posting.price
+    if price is not None and isinstance(price.number, Decimal) and isinstance(price.currency, str):
+        return f" @ {_exact_amount(price.number, price.currency)}"
+    return ""
+
+
 def _lot_text(posting: Any) -> str:
     """A source posting's cost or price, as it bears on which source row this is.
 
     Two same-day buys of `10 AAPL` at 100 and 120 USD are two rows; hashing
     units alone gave them one id, and the second was skipped as an exact
-    duplicate with exit 0 (w5/349). The per-unit number, currency and label
-    are kept; the lot date is not, since booking fills it in on the entry
-    already in the ledger while the importer's cost spec leaves it empty.
+    duplicate with exit 0 (w5/349). A cost is written only when it states
+    both its number and currency, so an open `{}` adds nothing.
     """
-    parts = []
-    cost = posting.cost
-    if cost is not None:
-        per = getattr(cost, "number_per", None) if hasattr(cost, "number_per") else getattr(cost, "number", None)
-        total = getattr(cost, "number_total", None)
-        if not isinstance(per, Decimal) and isinstance(total, Decimal) and isinstance(posting.units.number, Decimal):
-            per = total / abs(posting.units.number) if posting.units.number else None
-        label = f', "{cost.label}"' if getattr(cost, "label", None) else ""
-        if isinstance(per, Decimal) and isinstance(cost.currency, str):
-            parts.append(f" {{{_exact_amount(per, cost.currency)}{label}}}")
-    price = posting.price
-    if price is not None and isinstance(price.number, Decimal) and isinstance(price.currency, str):
-        parts.append(f" @ {_exact_amount(price.number, price.currency)}")
-    return "".join(parts)
+    lot = _lot(posting)
+    cost = ""
+    if lot is not None and lot[0] is not None and lot[1] is not None:
+        label = f', "{lot[2]}"' if lot[2] else ""
+        cost = f" {{{_exact_amount(lot[0], lot[1])}{label}}}"
+    return cost + _price_text(posting)
+
+
+_Leg = tuple[str, _Lot | None]
+
+
+def _legs(entry: Any, account: str) -> tuple[_Leg, ...]:
+    """Each source posting's units and price as text, beside its stated lot."""
+    return tuple(
+        (_exact_amount(p.units.number, p.units.currency) + _price_text(p), _lot(p))
+        for p in _source_postings(entry, account)
+    )
+
+
+def _lots_agree(ours: _Lot | None, theirs: _Lot | None) -> bool:
+    if ours is None or theirs is None:
+        return ours is theirs
+    return all(a is None or b is None or a == b for a, b in zip(ours, theirs, strict=True))
+
+
+def _legs_agree(ours: Sequence[_Leg], theirs: Sequence[_Leg]) -> bool:
+    """Whether two rows move the same source amounts out of the same lots.
+
+    A cost field either side leaves open agrees with any value. An importer
+    that sells `-4 HOOL {}` describes the entry the ledger holds as
+    `-4 HOOL {150 USD}` once booked, and comparing the two as text made a
+    hand-entered twin new and bea's own write a conflict (w5/467). Lots both
+    sides state at 100 and 120 USD still differ (w5/349).
+    """
+    left = list(theirs)
+    # A stated lot picks first, so an open one cannot take the leg it needs.
+    for text, lot in sorted(ours, key=lambda leg: 0 if leg[1] is None else leg[1].count(None)):
+        match = next((i for i, (other, found) in enumerate(left) if other == text and _lots_agree(lot, found)), None)
+        if match is None:
+            return False
+        del left[match]
+    return not left
 
 
 def _fingerprint(entry: Any, account: str) -> tuple[Any, ...]:
@@ -862,10 +921,8 @@ def _fingerprint(entry: Any, account: str) -> tuple[Any, ...]:
     # has one answer in this module. `str(number.normalize())` would say
     # `1E+2` where the id says `100`; both sides of a comparison are built the
     # same way, so that was consistent rather than wrong — but two spellings of
-    # one rule is how they drift apart.
-    amounts = tuple(
-        sorted(_exact_amount(p.units.number, p.units.currency) + _lot_text(p) for p in _source_postings(entry, account))
-    )
+    # one rule is how they drift apart. The legs compare with `_legs_agree`,
+    # never `==`, so an open cost matches the lot booking chose.
     # Ledger text loads NFC-normalized but an export's rows arrive in whatever
     # form the bank wrote, so an accented description would otherwise compare
     # unequal to the identical entry already in the ledger.
@@ -873,7 +930,7 @@ def _fingerprint(entry: Any, account: str) -> tuple[Any, ...]:
         entry.date,
         _match_text(entry.payee),
         _match_text(entry.narration),
-        amounts,
+        _legs(entry, account),
     )
 
 
@@ -974,11 +1031,13 @@ def _same_row(
     if generated and not lookup_only:
         return True
     found_print = _fingerprint(found, account)
+    if not _legs_agree(fingerprint[3], found_print[3]):
+        return False
     if generated:
-        return (found_print[0], found_print[3]) == (fingerprint[0], fingerprint[3])
+        return bool(found_print[0] == fingerprint[0])
     if key[1] in {"bank", "import-id"}:
-        return bool(found_print[3] == fingerprint[3])
-    return found_print == fingerprint
+        return True
+    return found_print[:3] == fingerprint[:3]
 
 
 def _valid_account(name: str, option: str, roots: tuple[str, ...]) -> str:
@@ -1356,7 +1415,7 @@ class _HashedRow:
     narration_only: tuple[str, ...]
     payee: str
     date: Any
-    amounts: tuple[str, ...]
+    legs: tuple[_Leg, ...]
 
 
 def _hash_rows(entries: list[Any], account: str, keys: list[str], transaction: type[Any]) -> dict[int, _HashedRow]:
@@ -1420,7 +1479,7 @@ def _claim_payeeless_ids(
                     if found is None or any(found is entry for entry, _, _ in stored):
                         continue
                     found_print = _fingerprint(found, account)
-                    if (found_print[0], found_print[3]) == (row.date, row.amounts):
+                    if found_print[0] == row.date and _legs_agree(row.legs, found_print[3]):
                         stored.append((found, value, index))
         unclaimed = list(indices)
         leftover: list[tuple[Any, str, int]] = []
@@ -1534,22 +1593,37 @@ def _hash_import_ids(entry: Any, account: str, seen: dict[str, int]) -> _HashedR
         narration_only=tuple(dict.fromkeys([*([canonical] if base == single_base else []), single, *older])),
         payee=_match_text(entry.payee),
         date=entry.date,
-        # The fingerprint's amounts, lot included, so a claim's content check
+        # The fingerprint's legs, lot included, so a claim's content check
         # compares like with like (w5/349).
-        amounts=tuple(sorted(_exact_amount(number, currency) + lot for number, currency, lot in legs)),
+        legs=_legs(entry, account),
     )
 
 
 def _candidate_key(entry: Any, account: str) -> tuple[Any, ...]:
-    """Date, who was paid, and source amounts: what flags a possible duplicate.
+    """Date, who was paid, and source amounts: what may flag a possible duplicate.
 
-    The payee names who was paid. A row with no payee — the documented
+    The amounts leave lots out; `_possible_twin` compares those. The payee
+    names who was paid. A row with no payee — the documented
     one-description CSV mapping puts the bank text in `narration` — is named
     by its narration instead; otherwise every same-day same-amount row would
     collapse onto date + amount and `--duplicates skip` would drop real ones.
     """
-    date, payee, narration, amounts = _fingerprint(entry, account)
-    return date, payee or narration, amounts
+    date, payee, narration, legs = _fingerprint(entry, account)
+    return date, payee or narration, tuple(sorted(text for text, _ in legs))
+
+
+def _possible_twin(
+    fingerprints: dict[tuple[Any, ...], list[Any]], entry: Any, account: str, fingerprint: tuple[Any, ...]
+) -> Any:
+    """The latest entry sharing the row's candidate key whose lots agree with it, if any."""
+    return next(
+        (
+            found
+            for found in reversed(fingerprints.get(_candidate_key(entry, account), []))
+            if _legs_agree(fingerprint[3], _fingerprint(found, account)[3])
+        ),
+        None,
+    )
 
 
 def _source_amounts(entry: Any, account: str) -> str:

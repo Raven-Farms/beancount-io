@@ -457,7 +457,9 @@ skills deduplicate against each other: the ledger itself is the dedup database.
   (`-54.2 USD`) — with the per-unit cost (and lot label) or price of a source
   posting held at cost or priced (`10 AAPL {100 USD}`), so two same-day buys of
   one share count at different prices are two rows; ids written before that
-  (units only) still match, but only the same lot — the narration (or payee when
+  (units only) still match, but only the same lot. A cost the importer leaves
+  open (`-4 HOOL {}`) compares only what it states, so it matches the lot
+  booking chose for the entry already in the ledger — the narration (or payee when
   narration is empty) uppercased with whitespace collapsed, and the source
   account. A row with both a payee and a narration hashes both, as
   `date|amount|payee|narration|account`, so rows that differ only in payee
