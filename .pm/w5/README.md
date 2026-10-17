@@ -187,6 +187,8 @@
 - [627 — The no-importer hint lists a QIF/OFX first line as "its columns" (regression from w5/470)](./627.md)
 - [628 — The w5/472 decimal message blames the 12-digit limit for any decimal error and tells `--file` users to use `--file`](./628.md)
 - [629 — Hosted ledger: managed feed validator accepts metadata after a blank line or column-0 comment (follow-up of w5/478)](./629.md)
+- [630 — Entry metadata `filename:`/`lineno:` makes a written entry look plugin-made: hidden from `--on-disk`, re-imported as new, `list` crash](./630.md)
+- [631 — `list --search` cannot find a multi-line narration by the text the table shows](./631.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
