@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime
 import difflib
 import fnmatch
 import glob
@@ -1572,6 +1573,10 @@ def validate_candidate(
     # so it is looked up once, on the first unknown account, not per error.
     root_hints: list[str] | None = None
     per_file_hinted: set[Path] = set()
+    pad_invalid = any(
+        isinstance(error.entry, Pad) and str(getattr(error, "message", "")).startswith("Invalid reference to ")
+        for error in errors
+    )
     duplicate_opens = {
         error.entry.account
         for error in errors
@@ -1762,6 +1767,14 @@ def validate_candidate(
                 pad_hint = f"The --pad-from account must be open on the pad date, {error.entry.date}" + (
                     ", even with --allow-errors." if allow_errors else "."
                 )
+            elif pad_from and (opened_on := _opened_after(error.entry.account, error.entry.date, entries)):
+                # The pad date was derived, the day before the balance; the
+                # remedy is a balance dated after the open (w5/513).
+                pad_hint = (
+                    f"{error.entry.account} opens {opened_on}, after the pad date {error.entry.date}: --pad-from "
+                    "pads the day before the balance. Date the balance after the open, for example --date "
+                    f"{opened_on + datetime.timedelta(days=1)}."
+                )
             elif allow_errors:
                 pad_hint = "Pad accounts must be active, even with --allow-errors."
             else:
@@ -1818,7 +1831,10 @@ def validate_candidate(
                 )
             elif not is_new:
                 hints.append("Staged: add the account's first transaction to clear this.")
-        if "Unused Pad" in message:
+        if "Unused Pad" in message and not (pad_from and appended and pad_invalid):
+            # A `--pad-from` pad on a date its account is not open is unused
+            # because of that: the hint's "the assertion at line N already
+            # holds" cited the proposed append, past the end of the file (w5/513).
             pad_entry = error.entry if isinstance(error.entry, Pad) else None
             # Beancount's "Unused Pad entry" has no full stop; every hint starts with a space.
             message = (
@@ -1921,6 +1937,14 @@ def is_unused_open(error: Any) -> bool:
     from beancount.core.data import Open
 
     return isinstance(error.entry, Open) and str(getattr(error, "message", "")).startswith("Unused account '")
+
+
+def _opened_after(account: str, date: Any, entries: list[Any]) -> Any:
+    """The date `account` opens, when that is after `date`; otherwise None."""
+    from beancount.core.data import Open
+
+    opened = next((entry.date for entry in entries if isinstance(entry, Open) and entry.account == account), None)
+    return opened if opened is not None and opened > date else None
 
 
 def _unused_pad_hint(
