@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [544 — Two `write_directive` calls in one `ask` reply open two approval prompts at once; approving both writes one, and it can hang](./544.md)
 - [545 — `ask` REPL sends a quick follow-up question to the proxy twice (stale keep-alive retry)](./545.md)
 - [546 — `ask` prints an answer cut off at its own output cap as complete, exit 0](./546.md)
 - [547 — `ask` reply cut mid-UTF-8 prints a raw codec error and drops the already-wrote note (gap in w5/373)](./547.md)
