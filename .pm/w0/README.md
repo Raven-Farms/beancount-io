@@ -9,6 +9,31 @@
 ## Dropped
 
 - ~~**001**~~ — Close current-period earnings into equity on the hosted balance sheet — dropped 2026-10-15: superseded by [w6/m5](../w6/m5/README.md) (same root cause in the ledger balance-sheet producer). Additional evidence from this run: the Balance Sheet Markdown export labels a balanced ledger "internal draft" with a reconciliation difference equal to net profit, and the MCP `statements/balance-sheet` resource omits current earnings too.
+- ~~**041**~~ — Browse ledgers' tab labels break mid-word at the largest text size — dropped 2026-10-15: reproduces only at AX5; at AX2 the tabs wrap on word boundaries ("Your / ledgers", "Starred", "Explore"). Out of scope per the `.pm/DO_NOT_DO.md` AX2 text-size ceiling.
+- ~~**042**~~ — Settings' Invite Friends text breaks inside words at the largest text size — dropped 2026-10-15: reproduces only at AX5; at AX2 the summary breaks only between words. Out of scope per the AX2 ceiling.
+- ~~**043**~~ — Account Picker's search placeholder is clipped at the largest text size — dropped 2026-10-15: reproduces only at AX5; at AX2 "Search accounts" renders whole and centered. Out of scope per the AX2 ceiling.
+- ~~**044**~~ — Money flow shrinks accounts to ten characters at the largest text size — dropped 2026-10-15: reproduces only at AX5; at AX2 postings stay identifiable ("Assets:US…:Checking", "Income:US…le:Salary"), which is [w4/014](../w4/done/014.md)'s acceptance. Out of scope per the AX2 ceiling.
 
 ## Inbox
 
+Mobile QA findings from 2026-10-15, triaged the same day. Order is suggested, highest impact first. Every note is sub-hour and owned by `mobile`, except 036, which also needs backend-v2.
+
+**Majors: each can commit an invalid ledger in one tap**
+
+- [037 — Open Account green-lights an account that is already open; Done writes a duplicate `open`](./037.md) — mobile QA 2026-10-15
+- [038 — Add Budget accepts any amount text and writes it verbatim into an unparsable `custom "budget"` line](./038.md) — mobile QA 2026-10-15 (same file as 040; ship together)
+
+**Minors: wrong or misleading output**
+
+- [036 — Profile accepts usernames sign-up forbids; nothing server-side checks them](./036.md) — mobile QA 2026-10-15 (mobile + backend-v2)
+- [033 — Income and Expenses account pages color by raw sign: salary red, spending green](./033.md) — mobile QA 2026-10-15
+- [034 — Cash flow chart draws a deficit period as money from nowhere; same-named groups both read "Crypto"](./034.md) — mobile QA 2026-10-15
+- [045 — In Persian (RTL), text inputs stay pinned to the physical left (Profile, Payee)](./045.md) — mobile QA 2026-10-15
+- [031 — Read-only ledgers offer "Update prices on the web" in the Home holdings sheet](./031.md) — mobile QA 2026-10-15
+- [039 — Marking a merchant Recurring labels two identical monthly payments "Irregular"](./039.md) — mobile QA 2026-10-15
+
+**Minors: polish**
+
+- [032 — Recent Changes renders each commit's trailing newline as a blank line; commit detail shows raw/hard-wrapped messages](./032.md) — mobile QA 2026-10-15
+- [040 — Add Budget's header Done skips the shared font-scale cap](./040.md) — mobile QA 2026-10-15, narrowed at triage to its AX2-reproducible part (same file as 038)
+- [035 — New Transaction's "Add posting" row shows two plus signs](./035.md) — mobile QA 2026-10-15
