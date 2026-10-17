@@ -144,7 +144,15 @@ def _make_parent(file: Path) -> None:
     try:
         parent.mkdir(parents=True, exist_ok=True)
     except (FileExistsError, NotADirectoryError) as exc:
-        blocker = next((path for path in (parent, *parent.parents) if path.exists()), parent)
+        # `exists()` follows a link, so a dangling one (an unmounted drive) was
+        # skipped and its parent, a real directory, blamed instead (w5/580).
+        blocker = next((path for path in (parent, *parent.parents) if os.path.lexists(path)), parent)
+        if blocker.is_symlink() and not blocker.exists():
+            raise UsageError(
+                f"Cannot create a ledger in {parent}: {blocker} is a broken symbolic link to "
+                f"{os.readlink(blocker)}. Reconnect what it points to, or choose another directory. "
+                "Nothing was written."
+            ) from exc
         raise UsageError(
             f"Cannot create a ledger in {parent}: {blocker} is a file, not a directory. "
             "Choose another directory. Nothing was written."
