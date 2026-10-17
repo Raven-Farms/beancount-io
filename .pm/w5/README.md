@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [476 — An authored price loses to the managed feed after a BOM, or below an ignored line containing `"`](./476.md)
 - [477 — Shadowing a feed point with an indented comment leaves orphaned lines: `unexpected INDENT`, `add price` refused](./477.md)
 - [478 — `price refresh` accepts an unparseable feed body, replaces the good revision, exits 0](./478.md)
 - [479 — `price export` exits 0 with a refused URL include left in the snapshot](./479.md)
