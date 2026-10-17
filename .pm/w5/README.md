@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [576 — A ledger with a managed price include never uses the load cache](./576.md)
 - [577 — `import --apply` validates the same candidate twice (three loads vs one for `add`)](./577.md)
 - [578 — A nearby overlay that includes the root takes over write validation and dedupe (regression from w5/343/346)](./578.md)
 - [579 — `init` ignores the `$VAR` path refusal (gap in w5/315)](./579.md)
