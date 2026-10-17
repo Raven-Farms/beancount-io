@@ -389,6 +389,7 @@ export class SubscriptionService implements ISubscriptionService {
         );
       const sharedSession = {
         line_items: [{ price: priceId, quantity: 1 }],
+        allow_promotion_codes: true,
         mode: planConfig.type,
         success_url: clientConfig.successUrl,
         cancel_url: clientConfig.cancelUrl,

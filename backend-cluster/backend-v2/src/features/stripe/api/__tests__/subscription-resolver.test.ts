@@ -1328,6 +1328,7 @@ describe("SubscriptionResolver", () => {
             },
           ],
           customer_email: "test@example.com",
+          allow_promotion_codes: true,
         }),
       );
       expect(mockModels.user.getById).toHaveBeenCalledTimes(1);
@@ -1365,6 +1366,7 @@ describe("SubscriptionResolver", () => {
       expect(mockStripeCheckoutSessions.create).toHaveBeenCalledWith(
         expect.objectContaining({
           customer: "cus_existing_123",
+          allow_promotion_codes: true,
         }),
       );
       expect(mockModels.user.getById).not.toHaveBeenCalled();
