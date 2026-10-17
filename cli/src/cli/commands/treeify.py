@@ -25,13 +25,17 @@ _FORCE = "--force"
 # tree. Written with escapes so the argument itself is plain ASCII.
 _LETTERS = r"(?:[A-Za-z0-9-_']|[^\x00-\x7F\s])*"
 _COMPONENT = r"(?:[A-Z0-9]|[^\x00-\x7F\s])" + _LETTERS
+_ENGLISH_ROOT = r"(?:Assets|Liabilities|Equity|Income|Expenses)"
 # Any root the grammar allows, not only the five English names: a ledger with
 # `option "name_assets" "Aktiva"` found "no hierarchical column" (w5/414). A
 # root needs a component after it, so a capitalized word or a currency is not
-# taken for an account; the English roots still match on their own.
+# taken for an account. Upstream takes the leftmost column that matches, so
+# that wider match is a fallback: it is not tried where an English-root
+# account follows on the line, and a narration such as `NYSE:IBM dividend`
+# beside `Assets:Broker:Cash` no longer wins the column (w5/570).
 _ACCOUNT_PATTERN = (
-    rf"(?:(?:[A-Z]|[^\x00-\x7F\s]){_LETTERS}(?::{_COMPONENT})+"
-    r"|Assets|Liabilities|Equity|Income|Expenses)"
+    rf"(?:(?!.*(?<!\S){_ENGLISH_ROOT}:)(?:[A-Z]|[^\x00-\x7F\s]){_LETTERS}(?::{_COMPONENT})+"
+    rf"|{_ENGLISH_ROOT}(?::{_COMPONENT})*)"
 )
 
 
