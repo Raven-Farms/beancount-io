@@ -991,6 +991,8 @@ class CsvImporter:
         self.skipped_blank_rows = 0
         # Category values that were not account names, for the caller to report once.
         self.rejected_categories: Counter[str] = Counter()
+        # Rows whose category names the source account itself (w5/468).
+        self.source_categories = 0
 
     @property
     def constant_currency(self) -> str | None:
@@ -1267,6 +1269,11 @@ class CsvImporter:
             if category_header not in row:
                 raise UsageError(f"{where}: the CSV lacks category column {category_header!r}.")
             category = row[category_header].strip()
+            if category == self._account:
+                # Posted against itself the row cancels out, so it queues for
+                # review like a label that is no account (w5/468).
+                self.source_categories += 1
+                return self._default_account, "!", "unmatched"
             if (
                 category
                 and is_valid(category)

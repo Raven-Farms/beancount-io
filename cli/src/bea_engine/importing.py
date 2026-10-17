@@ -191,8 +191,26 @@ def answer(
         # `Expenses:` name is refused on a ledger that sets `name_expenses`.
         if default_account is None:
             default_account = f"{roots[-1]}:Uncategorized"
+            fallback = f"the built-in default account {default_account}"
         else:
             default_account = _valid_account(default_account, "--default-account", roots)
+            fallback = f"--default-account {default_account}"
+        # A counter posting to the source account cancels the bank movement:
+        # `-100 USD` and `+100 USD` on Assets:Checking, written with exit 0
+        # and gone from its balance (w5/468).
+        if default_account == csv_account:
+            raise UsageError(
+                f"{fallback} is the --account being imported; an uncategorized row would post against its "
+                "own source and cancel out. Name the account its money goes to or comes from."
+            )
+        rules = load_rules(Path(rules_file), roots) if rules_file is not None else None
+        for number, listed in enumerate(rules or [], start=1):
+            if listed.account == csv_account:
+                raise UsageError(
+                    f"Rules file {rules_file}: rule {number} (match {listed.pattern!r}) posts to {listed.account}, the "
+                    "--account being imported; a matching row would post against its own source and cancel out. "
+                    "Name the account its money goes to or comes from."
+                )
         resolved_date_format = "%Y-%m-%d" if date_format is None else date_format
         resolved_delimiter = parse_delimiter(delimiter) if delimiter is not None else None
         resolved_encoding = parse_encoding(encoding) if encoding is not None else "utf-8"
@@ -201,7 +219,7 @@ def answer(
             account=csv_account,
             mapping=mapping,
             date_format=resolved_date_format,
-            rules=load_rules(Path(rules_file), roots) if rules_file is not None else None,
+            rules=rules,
             default_account=default_account,
             currency=_row_currency(existing, csv_account, options, checked="currency" not in mapping.columns),
             known_currencies=_known_currencies(existing, operating),
@@ -234,6 +252,12 @@ def answer(
                 f"{count} row(s) carry a category that is not an account name ({examples}); they post to "
                 f"{default_account} with flag '!'. Categorize them with --rules, or map a column of full "
                 "account names with --csv category=Column."
+            )
+        if importer.source_categories:
+            notes.append(
+                f"{importer.source_categories} row(s) carry the category {csv_account}, the account being imported, "
+                f"so they post to {default_account} with flag '!' instead of cancelling out. Categorize them with "
+                "--rules."
             )
     else:
         if config is None:

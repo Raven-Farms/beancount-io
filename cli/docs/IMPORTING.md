@@ -178,7 +178,10 @@ currency the account allows. An account under a root the ledger
 does not use (`Foo:Bar`; the roots are its `name_*` options) can never be
 opened: `--account`, `--default-account`, and rule accounts naming one exit
 **2**, a category cell naming one queues the row for review, and an importer
-posting to one is blocked without an `add open` suggestion.
+posting to one is blocked without an `add open` suggestion. The same holds
+for the `--account` itself: a row posted against its own source cancels
+out, so a rule or `--default-account` naming it exits **2** and a category
+cell naming it queues the row for review.
 
 ### Reading the header row
 
