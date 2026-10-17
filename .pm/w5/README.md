@@ -201,6 +201,12 @@
 - [659 — A validating `add balance --pad-from` skips the same-day conflict and duplicate checks (incomplete fix of w5/487)](./659.md)
 - [660 — Trivial gaps in w5/487/488/490: `--force` hint loop, wrong filled-in leg, NBSP in `--amount`](./660.md)
 - [661 — `add` exits 0 on a ledger `check` rejects for data-type errors (gap next to w5/493)](./661.md)
+- [662 — On a forecast ledger, `import --duplicates skip` drops the real payment on the template date (sibling of w5/325)](./662.md)
+- [663 — Under check_commodity with `--allow-errors`, the refusal blames the pre-existing currency, not the new one](./663.md)
+- [664 — Under nounused/pedantic, plain `add balance` cannot be a staged account's first use outside a terminal (gap in w5/221)](./664.md)
+- [665 — implicit_prices + unique_prices: a second same-day FX trade gets a bare `Disagreeing price entries` (incomplete fix of w5/397)](./665.md)
+- [666 — Plugin-triggered write refusals unattributed or misattributed (leafonly, coherent_cost, close_tree, auto_accounts)](./666.md)
+- [667 — A plugin error with `source=None` makes every write crash with an AttributeError](./667.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
