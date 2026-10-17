@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [550 — `bea ask > out.txt` hides the REPL and approval panel in the file, yet a blind `y` writes](./550.md)
 - [551 — Close skill's report step fails on any unpriced commodity (`@`-priced foreign charge, option lot); skills call it an engine failure](./551.md)
 - [552 — Ask skill's anomalies/recurring/merchant recipes count postings, not transactions](./552.md)
 - [553 — Shared `add open` recipe fails under `nounused`; the documented two-step needs `--allow-errors` the skill forbids](./553.md)
