@@ -43,7 +43,7 @@ The AI will follow these instructions during the ask session.
 
 | Field | Description |
 |---|---|
-| `name` | Lowercase, hyphens only, must match the parent directory name |
+| `name` | The skill's identity; a project copy of a name wins over the global one. Lowercase with hyphens, matching the directory name, is the convention other agents' skill loaders expect, so keep it for portability; `bea ask` does not enforce it (see discovery above) |
 | `description` | Tells the agent when to apply this skill |
 
 **Optional fields:** `license`, `compatibility`, `metadata` (key-value map), `allowed-tools`.
