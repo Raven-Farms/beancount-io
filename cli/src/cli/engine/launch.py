@@ -430,9 +430,13 @@ def helper_json(args: Sequence[str], *, stdin: str | None = None, writes: bool =
         category = str(failure.get("category", "validation"))
         # Load errors tolerated before a different failure — surface as warnings.
         # A refused write names only what forced the refusal on a terminal; its
-        # `--json` envelope still carries what the flag tolerated (w5/461).
+        # `--json` envelope still carries what the flag tolerated (w5/461). A
+        # partial write that wrote rows was not refused: what their write noted
+        # prints as a clean write's notes do (w5/541).
         tolerated = [str(error) for error in failure.get("ledger_errors", [])]
-        if tolerated and (not writes or context.current().json_output):
+        result = failure.get("result")
+        wrote = isinstance(result, dict) and bool(result.get("written"))
+        if tolerated and (not writes or wrote or context.current().json_output):
             output.render_ledger_errors(tolerated, allow=True)
         message = str(failure.get("message", "The engine reported a failure."))
         trace = failure.get("traceback")
@@ -447,7 +451,6 @@ def helper_json(args: Sequence[str], *, stdin: str | None = None, writes: bool =
             message,
             details=[str(detail) for detail in failure.get("details", [])],
         )
-        result = failure.get("result")
         if isinstance(result, dict):
             error.result = result
         error.traceback = trace
