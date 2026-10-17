@@ -233,6 +233,13 @@
 - [779 — dedup.md hashes a separate payee column; migrate's QBO/Monarch references do not, so later bank imports double-book](./779.md)
 - [780 — importer-author identify() template crashes the runner on Latin-1 files; bea names no importer](./780.md)
 - [781 — Default importers.py shadows the importers/ folder importer-author proposes; the hint is wrong](./781.md)
+- [782 — The load cache freezes a date-dependent plugin's output (amortize_over): today's row stays missing until a file changes](./782.md)
+- [783 — import --date-format without a year books rows in 1900 and advises re-dating the open to 1900](./783.md)
+- [784 — First use: text check and doctor install twice after a failure, and exit 1 with a stale failure after ready](./784.md)
+- [785 — A damaged engine still gives raw tracebacks from text check, doctor and example; engine enable reports success (incomplete fix of w5/320)](./785.md)
+- [786 — SIGTERM during first-use provisioning orphans uv and leaves a 25 MB partial engine (gap in w5/437)](./786.md)
+- [787 — First-use lock: unwritable data dir gives raw Errno 13 exit 1; a waiter on another install waits silently forever](./787.md)
+- [788 — First-run polish: no remedy on failed install, uninstall leaves the engine, PyPI license links 404](./788.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
