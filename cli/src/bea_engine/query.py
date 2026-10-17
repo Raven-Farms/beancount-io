@@ -1619,6 +1619,9 @@ def _csv_from_jsonable(value: Any) -> str:
                 return f"{units} {{{_csv_cost(cost)}}}"
             return units
         if "number" in value and "currency" in value:
+            # A bare lot (`position.cost`) carries its date and label too (w5/561).
+            if "date" in value or "label" in value:
+                return _csv_cost(value)
             return f"{value['number']} {value['currency']}"
         return str(value)
     if isinstance(value, list):
@@ -1634,7 +1637,7 @@ def _csv_cost(cost: dict[str, Any]) -> str:
     other machine-readable surface kept their dates and labels apart
     (w5/465).
     """
-    parts = [_csv_from_jsonable(cost)]
+    parts = [f"{cost['number']} {cost['currency']}"]
     if cost.get("date"):
         parts.append(str(cost["date"]))
     if cost.get("label"):

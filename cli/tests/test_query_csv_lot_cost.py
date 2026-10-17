@@ -71,3 +71,19 @@ def test_csv_inventories_keep_lots_distinct(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stderr
     rows = list(csv.reader(io.StringIO(result.stdout)))
     assert rows[1] == ["Assets:Brk", f"{LOT_A}, {LOT_B}, {LOT_C}"]
+
+
+def test_a_bare_cost_column_keeps_each_lots_date_and_label(tmp_path: Path) -> None:
+    """`position.cost` is a lot without its units, rendered as bean-query writes it (w5/561)."""
+    result = _query(tmp_path, "-f", "csv", "SELECT date, position.cost WHERE account = 'Assets:Brk'")
+
+    assert result.returncode == 0, result.stderr
+    rows = list(csv.reader(io.StringIO(result.stdout)))
+    assert [row[1] for row in rows[1:]] == [
+        '100 USD, 2026-01-03, "lotA"',
+        '100 USD, 2026-01-06, "lotB"',
+        r'100 USD, 2026-01-07, "say \"hi\""',
+    ]
+    # A cost-less posting has no lot: the cell stays empty, and amounts keep their plain form.
+    cash = _query(tmp_path, "-f", "csv", "SELECT position.cost, position.units WHERE account = 'Assets:Cash'")
+    assert list(csv.reader(io.StringIO(cash.stdout)))[1] == ["", "-1000 USD"]
