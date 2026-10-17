@@ -126,7 +126,10 @@ cp1252 or latin-1 — Windows exports with accented payees need
 `encoding=cp1252`. A bare `--csv encoding=cp1252` decodes with that codec
 and then infers the mapping like `auto`. Without the key, a non-UTF-8 file
 fails before anything is read: the error names the byte offset and, when the
-file decodes as cp1252, says so with the override to pass. A file that
+file decodes as cp1252, says so with the override to pass — unless the cp1252
+reading looks like another code page (`Wp³ata` for Polish, `Ïÿò¸ðî` for
+Cyrillic, `¤` for Latin-9's euro), when it quotes that word and asks for the
+export re-saved as UTF-8 instead. A file that
 neither UTF-8 nor cp1252 decodes is named as such: only latin-1, which reads
 any byte, would accept it, so pass `encoding=latin-1` only if that is the
 export's encoding. An `encoding=` or `delimiter=` value outside the supported
