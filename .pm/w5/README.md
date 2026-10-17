@@ -201,6 +201,14 @@
 - [670 — `BEANCOUNT_LOAD_CACHE_FILENAME=main.bean bea query --source main.bean` deletes the root ledger, exit 0 (incomplete fix of w5/497)](./670.md)
 - [671 — Large encrypted includes still trip doctor and native `check` text scans; globs inside them escape the guards (incomplete fix of w5/495)](./671.md)
 - [672 — Native `check --json` prints nothing for duplicate or unreadable includes (incomplete fix of w5/496)](./672.md)
+- [673 — An unreadable `--into`/`--rules`/`-o` dir is reported as "engine did not answer" and exit 4 "outcome unknown" (gap in w5/120)](./673.md)
+- [674 — A plugin calling `sys.exit` leaks its status: exit 2/7, exit 4 on writes, silent exit 0](./674.md)
+- [675 — `query --source`, the shell and doctor compat skip the `BEA_ENGINE_PYTHON` check (gap in w5/309)](./675.md)
+- [676 — `init`/`price export` report an engine killed after writing as "produced no result" (exit 1, not 4)](./676.md)
+- [677 — The same conflicting same-day price exits 2 from `add price` but 4 from `import --apply`](./677.md)
+- [678 — `format FILE` / `-o` on an unparseable file exit 0 echoing it unchanged](./678.md)
+- [679 — `bea ask` answered with a redirect says "Could not reach the server"](./679.md)
+- [680 — Small exit-contract slips: wrong blame, `exit -11`, group-without-subcommand JSON, `--limit 0`, `price status` JSON](./680.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
