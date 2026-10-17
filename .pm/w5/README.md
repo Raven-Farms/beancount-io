@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [491 — `add open -c USD -c ""` silently drops the blank currency](./491.md)
 - [492 — `add --into` a new file in a missing directory exits 1 "validation" instead of a usage refusal](./492.md)
 - [493 — `bea --json check` answers valid for a ledger `bea check` rejects (extra validations skipped)](./493.md)
 - [494 — `doctor linked ROOT file:start:end` no longer resolves include-relative paths (regression from w5/062)](./494.md)
