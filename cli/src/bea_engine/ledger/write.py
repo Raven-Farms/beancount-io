@@ -28,7 +28,7 @@ from typing import Any
 
 from bea_engine import stopping
 from bea_engine.ledger.text import lexer_lines, single_line
-from bea_engine.protocol import AuthError, ConflictError, LedgerError, UsageError, note, notice
+from bea_engine.protocol import AuthError, ConflictError, LedgerError, StagingFailed, UsageError, note, notice
 from bea_engine.query import format_error, same_file
 
 
@@ -1129,7 +1129,7 @@ def candidate_file(file: Path, content: str, *, mode: int = 0o600) -> Iterator[P
                     "writable before retrying. Nothing was written."
                 ) from exc
             except OSError as exc:
-                raise LedgerError(_stage_failed(file, exc)) from exc
+                raise StagingFailed(_stage_failed(file, exc)) from exc
             sidecar: Path | None = None
             try:
                 # The sidecar's name may import Beancount, so it is registered second.
@@ -1143,7 +1143,7 @@ def candidate_file(file: Path, content: str, *, mode: int = 0o600) -> Iterator[P
                             stream.flush()
                             os.fsync(stream.fileno())
                     except OSError as exc:
-                        raise LedgerError(_stage_failed(file, exc)) from exc
+                        raise StagingFailed(_stage_failed(file, exc)) from exc
                     yield candidate
             finally:
                 _discard_candidate(candidate)

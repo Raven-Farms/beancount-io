@@ -69,6 +69,16 @@ class LedgerError(EngineError):
     """The ledger does not load, or a directive failed validation."""
 
 
+class StagingFailed(EngineError):
+    """The filesystem would not take a staged copy: a full disk, a size limit.
+
+    Not a `LedgerError`, though it shares the category and exit status. Batch
+    writers read a `LedgerError` from validation as rows the ledger refused,
+    so a full disk came back as "Pass --partial", every row "rejected" and an
+    import that "would leave the ledger invalid" (w5/607).
+    """
+
+
 class UsageError(EngineError):
     """The invocation is wrong: a missing ledger, a bad argument."""
 

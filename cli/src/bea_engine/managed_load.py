@@ -314,7 +314,7 @@ def _load_with_sources(
         keep_load_cache_private,
         refuse_cache_over_ledger,
     )
-    from bea_engine.protocol import LedgerError
+    from bea_engine.protocol import LedgerError, StagingFailed
 
     keep_load_cache_private()
     _record_plugin_configs(loader)
@@ -441,11 +441,11 @@ def _load_with_sources(
                     staged[path].write_bytes(content)
                 except OSError as exc:
                     if is_candidate_file(entry):
-                        raise LedgerError(
+                        raise StagingFailed(
                             f"Cannot write a staged copy of {path.name} in {path.parent} "
                             f"({exc.strerror or type(exc).__name__}); nothing was written."
                         ) from exc
-                    raise LedgerError(
+                    raise StagingFailed(
                         _staging_refused(entry, path.parent, managed, _cause(exc), "Free space there")
                     ) from exc
             entries, errors, options = loader.load_file(str(staged[snapshot.root]))
@@ -1108,7 +1108,7 @@ def _shadow(path: Path, content: str, entry: Path, managed: list[_PendingSource]
     that message; a read says what it needed the directory for and why.
     """
     from bea_engine.ledger.write import candidate_file, is_candidate_file
-    from bea_engine.protocol import AuthError, LedgerError
+    from bea_engine.protocol import AuthError, StagingFailed
 
     with ExitStack() as stack:
         try:
@@ -1119,12 +1119,12 @@ def _shadow(path: Path, content: str, entry: Path, managed: list[_PendingSource]
             raise AuthError(
                 _staging_refused(entry, path.parent, managed, "is not writable", "Make that directory writable")
             ) from exc
-        except LedgerError as exc:
+        except StagingFailed as exc:
             # A full disk or quota (w5/408): the staged write's own words say
             # "nothing was written", which a read never meant to do.
             if is_candidate_file(entry):
                 raise
-            raise LedgerError(_staging_refused(entry, path.parent, managed, _cause(exc), "Free space there")) from exc
+            raise StagingFailed(_staging_refused(entry, path.parent, managed, _cause(exc), "Free space there")) from exc
         yield staged
 
 
