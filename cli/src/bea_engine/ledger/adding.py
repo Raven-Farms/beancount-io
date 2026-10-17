@@ -382,13 +382,30 @@ def _balance(
     from beancount.core.data import Pad
 
     padded = _date(request, "pad_date")
+    # Read first, as the plain path does: the answer names what the pad
+    # inserts, and a sign a statement prints is caught before it is padded (w5/611).
+    snapshot = write.LedgerSnapshot.capture(file)
+    snapshot.require_target(write.destination(file, into))
+    before, _, before_options = managed_load.load_file(file, snapshot=snapshot)
+    held = write.book_units(before, account, currency, date)
+    sign = write.negated_credit_hint(account, number, held, currency, before_options)
+    if sign is not None and not request.get("force"):
+        raise protocol.UsageError(
+            f"{sign} Padding to {_balance_amount(number, currency, tolerance)} would insert "
+            f"{_plain(number - held)} {currency}. Pass --force to pad to it anyway. Nothing was written."
+        )
     entries = [
         Pad({}, padded, account, parse_account(str(pad_from))),
         Balance({}, date, account, BcAmount(number, currency), tolerance, None),
     ]
     try:
         warnings = write.append(
-            file, [writer.format_entry(e) for e in entries], allow_errors=allow_errors, into=into, pad_from=True
+            file,
+            [writer.format_entry(e) for e in entries],
+            allow_errors=allow_errors,
+            into=into,
+            pad_from=True,
+            snapshot=snapshot,
         )
     except protocol.LedgerError as exc:
         # Decide against one snapshot and write against the same one, as the
@@ -426,24 +443,27 @@ def _balance(
         match = _balance_match(loaded, date, account, number, currency, tolerance)
         if match is not None:
             source = {"filename": match.meta.get("filename"), "lineno": match.meta.get("lineno")}
+            stands = _already_matches(write.book_units(loaded, account, currency, date), number, currency, tolerance)
             return {
                 "written": 0,
                 "directive": directive.model_dump(mode="json"),
                 "pad": None,
                 "warnings": [
-                    f"Book balance already matches {_plain(number)} {currency}; omitted the pad from "
-                    f"--pad-from (assertion already recorded at {source['filename']}:{source['lineno']})."
+                    f"{stands}; "
+                    f"omitted the pad from --pad-from (assertion already recorded at "
+                    f"{source['filename']}:{source['lineno']})."
                 ],
                 "duplicate": True,
                 "source": source,
                 "target": str(write.destination(file, into)),
             }
-        difference = number - _book_units(loaded, account, currency, date)
+        book = write.book_units(loaded, account, currency, date)
+        difference = number - book
         if abs(difference) <= _balance_tolerance(entries[1], options):
             result = _appended(file, directive, allow_errors=allow_errors, into=into, snapshot=snapshot) | {"pad": None}
             warnings = list(result.get("warnings") or [])
             warnings.append(
-                f"Book balance already matches {_plain(number)} {currency}; omitted the pad from "
+                f"{_already_matches(book, number, currency, tolerance)}; omitted the pad from "
                 "--pad-from and wrote the assertion alone."
             )
             result["warnings"] = warnings
@@ -477,10 +497,13 @@ def _balance(
     # internal `diff_amount`, so `data.directive` vanished exactly when the
     # pad was written (w5/323).
     pad = PadDirective(date=padded, account=account, source_account=parse_account(str(pad_from)))
+    # What the pad inserts was never said: a sign error padded twice the
+    # balance with exit 0, found only by listing the padding entry (w5/611).
+    inserted = {"number": _plain(number - held), "currency": currency}
     return {
         "written": 2,
         "directive": directive.model_dump(mode="json"),
-        "pad": pad.model_dump(mode="json"),
+        "pad": pad.model_dump(mode="json") | {"amount": inserted},
         "warnings": warnings,
         "duplicate": False,
         "source": None,
@@ -562,28 +585,16 @@ def _plain(number: Any) -> str:
     return format(number, "f")
 
 
-def _book_units(entries: list[Any], account: str, currency: str, date: datetime.date) -> Decimal:
-    """Units of `currency` in `account` and its children when a `date` assertion runs.
+def _already_matches(held: Decimal, number: Decimal, currency: str, tolerance: Decimal | None) -> str:
+    """How the book stands against an assertion it satisfies: exactly, or only within tolerance.
 
-    Assertions run at the start of the day, so only earlier postings count —
-    including the padding Beancount already inserted for earlier pads.
+    "Book balance already matches 100.01 USD" overstated a book holding
+    100.004 USD, and dropped the `~ 0.004` that was typed (w5/611).
     """
-    from beancount.core.data import Transaction
-
-    prefix = f"{account}:"
-    return sum(
-        (
-            posting.units.number
-            for entry in entries
-            if isinstance(entry, Transaction) and entry.date < date
-            for posting in entry.postings
-            if (posting.account == account or posting.account.startswith(prefix))
-            and posting.units is not None
-            and posting.units.currency == currency
-            and posting.units.number is not None
-        ),
-        Decimal(0),
-    )
+    asserted = _balance_amount(number, currency, tolerance)
+    if held == number:
+        return f"Book balance already matches {asserted}"
+    return f"The book holds {_plain(held)} {currency}, within the tolerance of the {asserted} assertion"
 
 
 def _balance_tolerance(balance: Any, options: dict[str, Any]) -> Decimal:

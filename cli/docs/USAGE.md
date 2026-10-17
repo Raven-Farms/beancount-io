@@ -1113,13 +1113,21 @@ bea add balance --date 2026-01-02 --account Assets:Checking \
 The pad defaults to the preceding day; `--pad-date` can select another date
 before the assertion. Both accounts must be open by the pad date. When the
 book already holds the asserted amount, `--pad-from` writes the assertion alone
-and says so. When an existing pad on the account already fills the assertion
-from the same source, it writes the assertion alone with a warning naming that
-pad and the amount it inserts; an existing pad from a different source refuses.
+and says so. A book that holds a different amount within the assertion's
+tolerance is named with that amount. When an existing pad on the account already
+fills the assertion from the same source, it writes the assertion alone with a
+warning naming that pad and the amount it inserts; an existing pad from a
+different source refuses. A written pad says what it inserts (`the pad inserts
+154.08 USD into …`). Liabilities, equity and income balances are negative in
+Beancount, so an assertion that is exactly such an account's balance negated is
+almost always a statement's positive figure. `add balance` names the sign in
+that case. With `--pad-from`, it refuses (exit **2**) and says what the pad would
+insert, unless you pass `--force`. A generated opening adjustment for such an
+account with a positive amount also offers the negative one.
 Under `--json` every `add balance` answer has one layout: `directive` is the
 assertion and `pad` the inserted pad (or `null` when none was written), each in
 the shape `list balance` and `list pad` return, beside `written`, `duplicate`
-and `source`.
+and `source`. A written `pad` also carries `amount`, the units it inserts.
 A staged pad still waiting for its balance refuses the write, naming it. A pad
 fills only the first later assertion in each currency, so an assertion between
 `--pad-date` and `--date` is named as the reason the pad went unused. Ordinary

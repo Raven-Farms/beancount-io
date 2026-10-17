@@ -97,6 +97,9 @@ def test_every_branch_has_one_layout(tmp_path: Path, ledger_text: str, account: 
     balances = _bea(tmp_path, ledger, "list", "balance")
     assert data["directive"] in balances
     if written == 2:
-        assert data["pad"] in _bea(tmp_path, ledger, "list", "pad")
+        # The model shape `list pad` uses, plus what this pad inserts (w5/611).
+        pad = dict(data["pad"])
+        assert pad.pop("amount") == {"number": "700.00", "currency": "USD"}
+        assert pad in _bea(tmp_path, ledger, "list", "pad")
     else:
         assert data["pad"] is None

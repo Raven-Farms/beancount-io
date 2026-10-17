@@ -350,7 +350,16 @@ def add_balance(
         elif written == 1:
             output.success(f"Added 1 balance to {target}.")
         else:
-            output.success(f"Added 1 pad and 1 balance to {target}.")
+            pad = data.get("pad") or {}
+            inserted = pad.get("amount") or {}
+            if inserted:
+                # The amount was never said, so a sign error padded twice the balance unseen (w5/611).
+                output.success(
+                    f"Added 1 pad and 1 balance to {target}; the pad inserts {inserted['number']} "
+                    f"{inserted['currency']} into {pad.get('account')} from {pad.get('source_account')}."
+                )
+            else:
+                output.success(f"Added 1 pad and 1 balance to {target}.")
 
 
 @add_app.command("pad", cls=_SingleValueCommand)

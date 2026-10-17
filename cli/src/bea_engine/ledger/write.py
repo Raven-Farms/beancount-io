@@ -1265,7 +1265,74 @@ _BALANCE_DATE_HINT = (
 )
 
 
+def book_units(entries: list[Any], account: str, currency: str, date: datetime.date) -> Decimal:
+    """Units of `currency` in `account` and its children when a `date` assertion runs.
+
+    Assertions run at the start of the day, so only earlier postings count —
+    including the padding Beancount already inserted for earlier pads.
+    """
+    from beancount.core.data import Transaction
+
+    prefix = f"{account}:"
+    return sum(
+        (
+            posting.units.number
+            for entry in entries
+            if isinstance(entry, Transaction) and entry.date < date
+            for posting in entry.postings
+            if (posting.account == account or posting.account.startswith(prefix))
+            and posting.units is not None
+            and posting.units.currency == currency
+            and posting.units.number is not None
+        ),
+        Decimal(0),
+    )
+
+
+def credit_root(account: str, options: dict[str, Any]) -> str | None:
+    """The root of a credit-normal account (liabilities, equity, income), whose balances are negative, or None."""
+    from bea_engine.ledger.text import ledger_roots
+
+    root = account.split(":", 1)[0]
+    return root if root in ledger_roots(options)[1:4] else None
+
+
+def negated_credit_hint(
+    account: str, number: Decimal, held: Decimal, currency: str, options: dict[str, Any]
+) -> str | None:
+    """The sign hint for a credit-normal account asserted at exactly its balance negated, or None.
+
+    A card statement prints the balance owed as positive, and Beancount holds
+    it negative: `77.04 USD` against a book of `-77.04 USD` failed with advice
+    about missing transactions, and with `--pad-from` was padded by 154.08 USD
+    with exit 0 (w5/611).
+    """
+    root = credit_root(account, options)
+    if root is None or held == 0 or number != -held:
+        return None
+    return (
+        f"{account} holds {held:f} {currency}: {root} balances are negative in Beancount, so a statement's "
+        f"{abs(held):f} owed is {held:f} {currency}. Did you mean {held:f} {currency}?"
+    )
+
+
 def _balance_recovery_hints(
+    balance: Any,
+    source: Path,
+    root: Path,
+    entries: list[Any],
+    options: dict[str, Any],
+    snapshot: LedgerSnapshot | None,
+    line_counts: dict[Path, int],
+    filenames: dict[Path, Path] | None = None,
+) -> list[str]:
+    held = book_units(entries, balance.account, balance.amount.currency, balance.date)
+    sign = negated_credit_hint(balance.account, balance.amount.number, held, balance.amount.currency, options)
+    steps = _balance_recovery_steps(balance, source, root, entries, options, snapshot, line_counts, filenames)
+    return [sign, *steps] if sign else steps
+
+
+def _balance_recovery_steps(
     balance: Any,
     source: Path,
     root: Path,
@@ -1368,8 +1435,20 @@ def _balance_recovery_hints(
     hints = [
         date_hint,
         "Review missing transactions first. The following command creates an intentional opening adjustment.",
-        "Opening adjustment command: " + shlex.join(command),
     ]
+    owed = credit_root(balance.account, options)
+    if owed is not None and balance.amount.number > 0:
+        # Run verbatim, the positive command added a loan to net worth (w5/611).
+        negated = [*command]
+        negated[negated.index("--amount") + 1] = f"{-balance.amount.number:f}{tolerance} {balance.amount.currency}"
+        hints.append(
+            f"{owed} balances are negative in Beancount, so an amount owed of {amount} is asserted as "
+            f"{-balance.amount.number:f}{tolerance} {balance.amount.currency}. Opening adjustment command for that: "
+            + shlex.join(negated)
+        )
+        hints.append("Opening adjustment command as asserted: " + shlex.join(command))
+    else:
+        hints.append("Opening adjustment command: " + shlex.join(command))
     if source_account == "SOURCE_ACCOUNT":
         hints.append(
             f"Replace SOURCE_ACCOUNT with the intended adjustment source, active on {pad_date} "
