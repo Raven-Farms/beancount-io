@@ -214,6 +214,9 @@
 - [707 — Three paths still miss w5/522's pipe statuses: --json --allow-errors exits 1, bare bea 120, native failures 141](./707.md)
 - [708 — An include glob through an unlistable directory silently drops its files; check exits 0](./708.md)
 - [709 — A mode-000 include named by two roots is reported for the first includer only](./709.md)
+- [710 — A BOM on line 1 hides a first-line pushtag/pushmeta and option name_* from the write checks](./710.md)
+- [711 — A file ending inside an unterminated string makes add blame the new entry, not the broken line](./711.md)
+- [712 — A lone CR as the last byte does not converge under format -i](./712.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
