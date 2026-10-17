@@ -601,9 +601,13 @@ def transactions(
     ] = ListSort.newest,
 ) -> None:
     """List recent transactions and their amounts; --details adds metadata and source."""
+    if flag == "txn":
+        # `add --flag txn` writes it and Beancount reads it as `*`: the shared
+        # flag grammar includes it, so the filter does too (w5/526).
+        flag = "*"
     if flag is not None and flag.strip() and flag not in _FLAGS:
         raise UsageError(
-            f"--flag {flag!r} is not a transaction flag; use one of * ! & # ? % or a capital letter, such as '!'."
+            f"--flag {flag!r} is not a transaction flag; use one of * ! & # ? %, a capital letter or txn, such as '!'."
         )
     _run(
         "transaction",
