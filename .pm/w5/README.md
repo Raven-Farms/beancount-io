@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [596 — `doctor missing-open` exits 0 with a partial list on a ledger with a syntax error](./596.md)
 - [597 — `list price -c A -c B` gives `add price`'s `--amount` hint](./597.md)
 - [598 — A bank ID from one account dedupes another account's rows through a transfer: a real deposit is skipped as an exact duplicate](./598.md)
 - [599 — A monthly autopay reusing one reference is silently skipped across separate exports (gap in w5/075)](./599.md)
