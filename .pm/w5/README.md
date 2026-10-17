@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [608 — SIGTERM/SIGHUP during a frontend `-o` export leaves a full `.bea-*.tmp` copy behind](./608.md)
 - [609 — A macOS `._main.bean` AppleDouble file stops `format --check .` / `-i .`](./609.md)
 - [610 — Full-disk exports and `init` give non-standard messages; `init` leaves created directories](./610.md)
 - [611 — `add balance --pad-from` never reports the padded amount; a sign-flipped liability is silently padded by twice the balance](./611.md)
