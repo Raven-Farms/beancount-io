@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [469 — `bea import --id-key FITID`/`''` silently disables native-ID dedupe](./469.md)
 - [470 — `bea import`'s no-importer hint suggests `--account Assets:Checking` and placeholder columns](./470.md)
 - [471 — `bea query` text tables print `1.5E+3` and crash on `NaN`/`Infinity`; CSV/JSON answer](./471.md)
 - [472 — `bea query --source` dumps a ~200-line traceback for amounts of 10^12 or more](./472.md)
