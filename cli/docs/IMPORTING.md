@@ -273,7 +273,10 @@ reads the header gives way to detection with a note) — but never `sign=`, whic
 always needs passed explicitly. The one exception keeps a preview honest: after
 `sign=ledger`, a flag-free `--apply` of the byte-identical file re-applies it
 and says so; another file sharing the header is read bank-signed, with a note
-naming the file that used `sign=ledger`. A `--csv` that carries only keys —
+naming the file that used `sign=ledger`. Each file keeps its own sign, so
+previewing next month's export with the same header leaves this month's
+`sign=ledger` in place. Previewing a file again without it drops only that
+file's. A `--csv` that carries only keys —
 `--csv sign=ledger`, `--csv encoding=cp1252`, `--csv delimiter=';'` — applies them
 on top of the mapping remembered for that header and account, keeping its
 columns, rules, default account and date format; it infers from the header only

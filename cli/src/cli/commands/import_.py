@@ -321,6 +321,42 @@ def _source_sha256(source: Path) -> str | None:
         return None
 
 
+#: How many ledger-signed files one header remembers; the oldest fall off.
+_SIGN_LEDGER_FILES = 64
+
+
+def _sign_ledger_files(record: dict[str, Any] | None) -> dict[str, str]:
+    """The files of a header chosen as `sign=ledger`: content hash → file name, oldest first.
+
+    One hash per header was kept, so previewing next month's export with the
+    same header evicted the first file's sign, and that file's flag-free
+    `--apply` wrote every amount flipped, with no note (w5/594). A record
+    from before then holds its one hash under `sign_ledger_sha256`.
+    """
+    if record is None:
+        return {}
+    stored = record.get("sign_ledger_files")
+    files = (
+        {digest: name for digest, name in stored.items() if isinstance(digest, str) and isinstance(name, str)}
+        if isinstance(stored, dict)
+        else {}
+    )
+    legacy = record.get("sign_ledger_sha256")
+    if isinstance(legacy, str) and legacy not in files:
+        source = record.get("source")
+        files = {legacy: source if isinstance(source, str) else "the remembered file", **files}
+    return files
+
+
+def _signed(files: dict[str, str], source: Path, *, ledger: bool) -> dict[str, Any]:
+    """The sign fields of a record after a run that chose `source`'s sign: only this file's entry changes."""
+    digest = _source_sha256(source)
+    kept = {key: name for key, name in files.items() if key != digest}
+    if ledger and digest is not None:
+        kept[digest] = source.name
+    return {"sign_ledger_files": dict(list(kept.items())[-_SIGN_LEDGER_FILES:]), "sign_ledger_sha256": None}
+
+
 def _same_account(stored: Any, account: str) -> bool:
     """Whether a remembered account is the one named now, in either Unicode form."""
     return isinstance(stored, str) and unicodedata.normalize("NFC", stored) == unicodedata.normalize("NFC", account)
@@ -762,33 +798,30 @@ def import_entries(
                     f"Updated remembered settings for {source.name}: {', '.join(changes)}. "
                     "A flag-free run of this header now uses them."
                 )
-            sign_file = remembered.get("sign_ledger_sha256")
+            sign_files = _sign_ledger_files(remembered)
             if typed_keys is not None:
                 # The keys typed on this run are part of what the next
                 # flag-free run of this file must replay. Sign stays out of
-                # the mapping; only the file it was chosen for is recorded.
+                # the mapping; only the files it was chosen for are recorded.
                 if "sign" in typed_key_names:
                     csv_request = _strip_spec_keys(csv_request, {"sign"})
                     recalled_sign_ledger = typed_keys.sign == "ledger"
                     if recalled_sign_ledger:
                         csv_request = f"{csv_request},sign=ledger"
-                    sign_file = _source_sha256(source) if recalled_sign_ledger else None
-                    csv_to_remember = {
-                        **(csv_to_remember or remembered),
-                        "source": source.name,
-                        "sign_ledger_sha256": sign_file,
-                    }
+                    signed = _signed(sign_files, source, ledger=recalled_sign_ledger)
+                    sign_files = signed["sign_ledger_files"]
+                    csv_to_remember = {**(csv_to_remember or remembered), "source": source.name, **signed}
                 if "encoding" in typed_key_names:
                     csv_to_remember = {
                         **(csv_to_remember or remembered),
                         "mapping": _strip_spec_keys(csv_request, {"sign", "delimiter"}),
                     }
-            if isinstance(sign_file, str) and "sign" not in typed_key_names:
-                # `sign=ledger` belongs to the file it was chosen for. Replaying
-                # that same file keeps it, so `--apply` writes what the preview
+            if sign_files and "sign" not in typed_key_names:
+                # `sign=ledger` belongs to the files it was chosen for. Replaying
+                # one of them keeps it, so `--apply` writes what the preview
                 # showed; any other file sharing the header must say its sign.
-                seeded_from = recalled_source or "the remembered file"
-                if _source_sha256(source) == sign_file:
+                seeded_from = list(sign_files.values())[-1]
+                if _source_sha256(source) in sign_files:
                     recalled_sign_ledger = True
                     csv_request = f"{csv_request},sign=ledger"
                     recall_notes.append(
@@ -1016,9 +1049,10 @@ def import_entries(
                 "default_account": default_account,
                 "date_format": kept_date_format,
                 "delimiter": chosen_delimiter,
-                # Sign itself is never remembered; only which file it was
-                # chosen for, so replaying that file cannot flip its sign.
-                "sign_ledger_sha256": _source_sha256(source) if mapping.sign == "ledger" else None,
+                # Sign itself is never remembered; only which files it was
+                # chosen for, so replaying one of them cannot flip its sign.
+                # Another file's run leaves their entries alone (w5/594).
+                **_signed(_sign_ledger_files(prior), source, ledger=mapping.sign == "ledger"),
             }
     else:
         config_path, config_source = _config_path(
