@@ -105,6 +105,11 @@ class RunContext:
         """
         return not self.no_input and _stderr_is_a_terminal()
 
+    @property
+    def stdout_is_a_terminal(self) -> bool:
+        """True when what is drawn on stdout reaches the person at the keyboard."""
+        return _stdout_is_a_terminal()
+
     def strict_reads(self) -> bool:
         """True when a read must refuse partial answers.
 

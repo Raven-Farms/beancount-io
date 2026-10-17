@@ -44,6 +44,7 @@ def test_blank_interactive_default_leaves_the_prompt_empty(tmp_bean_file: Path, 
     session.prompt.side_effect = EOFError
     with (
         patch("cli.context._stdin_is_a_terminal", return_value=True),
+        patch("cli.context._stdout_is_a_terminal", return_value=True),
         patch("cli.ask.repl._make_session", return_value=session),
     ):
         result = runner.invoke(app, ["--file", str(tmp_bean_file), "ask", "   "])

@@ -56,6 +56,15 @@ def ask(
         if print_mode or ctx.no_input:
             raise UsageError("A question is required without a terminal (or with --print).")
         question = ""
+    if not (print_mode or ctx.no_input) and not ctx.stdout_is_a_terminal:
+        # The session draws its prompt and its write-approval panel on stdout:
+        # redirected, the person saw nothing while a keystroke still approved
+        # the AI's write (w5/550).
+        raise UsageError(
+            "bea ask's interactive session draws on the terminal, and stdout is redirected, so its "
+            "write-approval panel would not be seen. Ask one question with --print "
+            "(bea ask QUESTION --print > FILE), or run the session without redirecting stdout."
+        )
 
     # The missing extra is checked before the credential: without it the
     # command cannot run at all, and "log in first" would be misleading advice.
