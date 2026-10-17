@@ -184,6 +184,7 @@
 - [622 — A forced `--delimiter` that does not split the header is reported as a missing column (gap in w3/226)](./622.md)
 - [623 — `cloud ledger create --private --public` creates a public ledger; `--dir` without `--clone` ignored](./623.md)
 - [624 — Help/doc slips: "Try bean-check --help", login help omits XDG, USAGE treeify example unordered](./624.md)
+- [625 — Hosted ledger: an authored price below an ignored line holding a `"` loses to the managed feed (follow-up of w5/476)](./625.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
