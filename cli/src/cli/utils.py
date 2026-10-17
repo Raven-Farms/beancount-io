@@ -400,6 +400,14 @@ def _stage_and_replace(
             raise AuthError(
                 f"Cannot write {path}: the directory {path.parent} is not writable. Nothing was written."
             ) from exc
+        except OSError as exc:
+            if not export:
+                raise
+            # A full disk refused the copy itself: the stdout sentence, "Could
+            # not write output", named no file and not that nothing was written (w5/610).
+            raise LedgerError(
+                f"Cannot write {path} ({exc.strerror or type(exc).__name__}); nothing was written."
+            ) from exc
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as stream:
             stream.write(content)
