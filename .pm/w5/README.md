@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [498 — `doctor region --conversion value` rounds the tree, disagreeing with `Net Income`](./498.md)
 - [499 — `bea format` refuses a ledger not named `.bean`/`.beancount`](./499.md)
 - [500 — `bea check books.bean` never suggests `bea --file books.bean check`](./500.md)
 - [501 — `report -a Equity -t 2025` drops previous earnings (clamp runs after the account filter)](./501.md)
