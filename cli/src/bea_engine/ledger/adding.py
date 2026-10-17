@@ -617,6 +617,7 @@ def _parse_balance_amount(text: str) -> tuple[Decimal, str, Decimal | None]:
     from beancount.core.data import Balance
 
     from bea_engine.ledger.models import COMMENT_HELP, comment_start
+    from bea_engine.query import readable_parser_message
 
     if "\n" in text or "\r" in text:
         raise protocol.UsageError("Balance amount must be one line: 'NUMBER [~ TOLERANCE] CURRENCY'.")
@@ -628,7 +629,7 @@ def _parse_balance_amount(text: str) -> tuple[Decimal, str, Decimal | None]:
     if errors or len(entries) != 1 or not isinstance(entries[0], Balance):
         raise protocol.UsageError(
             "Balance amount must be 'NUMBER [~ TOLERANCE] CURRENCY', for example '1538 ~ 1 EUR'.",
-            details=[f"--amount: {error.message}" for error in errors],
+            details=[f"--amount: {readable_parser_message(error.message)}" for error in errors],
         )
     entry = entries[0]
     if entry.amount.number is None:

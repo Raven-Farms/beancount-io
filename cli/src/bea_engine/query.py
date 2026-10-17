@@ -2152,6 +2152,13 @@ def readable_parser_message(message: str) -> str:
     strict-read refusals and the `add` posting refusal (w5/334). A message
     that does not parse as expected is returned unchanged.
     """
+    # Beancount's lexer relays a decimal comma as a bare ValueError; `add price`
+    # already explains it, postings and balances now do too (w5/534).
+    comma = re.fullmatch(r"(?:ValueError: )?Invalid number format: '([^']*,[^']*)'", message)
+    if comma is not None:
+        from bea_engine.amounts import DECIMAL_COMMA_HELP
+
+        return f"Invalid amount {comma[1]!r}. {DECIMAL_COMMA_HELP}"
     for pattern, kind in _PARSER_REPRS:
         match = pattern.match(message)
         if match is None:

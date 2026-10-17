@@ -312,7 +312,7 @@ def _refuse_non_token(flag: str, value: str, sigil: str) -> None:
         return
     noun = "tags" if flag == "--tag" else "links"
     raise UsageError(
-        f"{flag}: {value!r} is not one tag or link; use only letters, digits and - _ / . after an optional "
+        f"{flag}: {value!r} is not one tag or link; use only ASCII letters, digits and - _ / . after an optional "
         f"leading {sigil}.{_several(value, f'repeat {flag} for several {noun}')}"
     )
 

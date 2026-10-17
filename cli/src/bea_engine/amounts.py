@@ -14,6 +14,12 @@ _QUOTED_OR_COMMENT = re.compile(r'"(?:[^"\\]|\\.)*"|;[^\r\n]*')
 """Quoted strings and comments, inside which an `@@` is text, not a price."""
 
 
+DECIMAL_COMMA_HELP = (
+    "A comma is read only as a thousands separator between groups of three digits, such as '1,538.25'; "
+    "write the fraction after a decimal point, or remove the separators."
+)
+
+
 def parse_decimal_number(value: str, *, grouping: bool = True) -> Decimal:
     """The frontend's finite ASCII decimal rule, repeated across the engine boundary.
 
@@ -27,10 +33,7 @@ def parse_decimal_number(value: str, *, grouping: bool = True) -> Decimal:
         return Decimal(text.replace(",", ""))
     if not re.fullmatch(r"[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)", text):
         if grouping and "," in text:
-            raise ValueError(
-                f"Invalid amount {value!r}. A comma is read only as a thousands separator between groups of "
-                "three digits, such as '1,538.25'; write the fraction after a decimal point, or remove the separators."
-            )
+            raise ValueError(f"Invalid amount {value!r}. {DECIMAL_COMMA_HELP}")
         raise ValueError(f"Invalid amount {value!r}. Use finite decimal notation with ASCII digits, such as '1538.25'.")
     return Decimal(text)
 

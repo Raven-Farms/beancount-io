@@ -196,7 +196,7 @@ def require_tag_or_link(value: str) -> str:
     """One tag or link body, or a ValueError naming the allowed characters."""
     if not _TAG_OR_LINK.fullmatch(value):
         raise ValueError(
-            f"{value!r} is not one tag or link; use only letters, digits and - _ / . "
+            f"{value!r} is not one tag or link; use only ASCII letters, digits and - _ / . "
             "after an optional leading # or ^ (no spaces, sigils or line breaks inside)."
         )
     return value
