@@ -350,7 +350,20 @@ def fields(values: Mapping[str, object], *, indent: int = 0) -> None:
 
 
 def file_target(path: Path) -> dict[str, Any]:
-    return {"file": str(path.resolve())}
+    """The ledger an answer is about, as the command named and read it.
+
+    Lexical, as `RunContext.entry_file` is (w1/056): a symlinked root's
+    target loads the includes beside the target, not beside the link, so
+    `target.file` resolved through the link named a different, broken ledger
+    to re-run on (w5/581).
+    """
+    return {"file": os.path.abspath(path)}
+
+
+def write_target(path: Path, into: str) -> dict[str, Any]:
+    """`file_target` plus where a write landed, the root itself spelled as it was named."""
+    same = os.path.realpath(into) == os.path.realpath(path)
+    return {**file_target(path), "into": os.path.abspath(path) if same else into}
 
 
 # Spelled the way Beancount's lexer reads it: the keyword may touch its string

@@ -1122,7 +1122,7 @@ def import_entries(
         preview["remembered"] = json_remembered
         # The write destination sits in `target.into` for every writer, as
         # `add` and `price export` report it (w5/324).
-        output.emit(preview, target={**output.file_target(file), "into": str(preview.get("into") or file)})
+        output.emit(preview, target=output.write_target(file, str(preview.get("into") or file)))
     else:
         # The diff is ledger text, and what `--apply` is approved on: UTF-8
         # whatever the locale, as `list` and `report` print (w5/532).

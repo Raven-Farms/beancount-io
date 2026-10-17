@@ -111,7 +111,7 @@ def _appended(name: str, file: Path, data: dict[str, Any]) -> None:
     target = data.pop("target")
     warnings = data.pop("warnings", [])
     if context.current().json_output:
-        output.emit({**data, "warnings": warnings}, target={**output.file_target(file), "into": target})
+        output.emit({**data, "warnings": warnings}, target=output.write_target(file, target))
     else:
         for warning in warnings:
             output.note(warning)
@@ -317,7 +317,7 @@ def add_balance(
         data.setdefault("source", None)
         source = data.get("source")
         if ctx.json_output:
-            output.emit(data, target={**output.file_target(file), "into": target})
+            output.emit(data, target=output.write_target(file, target))
         elif source:
             for warning in data["warnings"]:
                 output.note(warning)
@@ -341,7 +341,7 @@ def add_balance(
     written = int(data.get("written") or 0)
     source = data.get("source")
     if ctx.json_output:
-        output.emit({**data, "warnings": warnings}, target={**output.file_target(file), "into": target})
+        output.emit({**data, "warnings": warnings}, target=output.write_target(file, target))
     else:
         for warning in warnings:
             output.note(warning)
@@ -433,7 +433,7 @@ def add_price(
     target = data.pop("target")
     source = data["source"]
     if ctx.json_output:
-        output.emit(data, target={**output.file_target(file), "into": target})
+        output.emit(data, target=output.write_target(file, target))
     else:
         for warning in data["warnings"]:
             output.note(warning)
@@ -678,7 +678,7 @@ def add_transactions(
     if context.current().json_output:
         if warnings:
             data["warnings"] = warnings
-        output.emit(data, target={**output.file_target(file), "into": target})
+        output.emit(data, target=output.write_target(file, target))
     else:
         for warning in warnings:
             output.note(warning)
