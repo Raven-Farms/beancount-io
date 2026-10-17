@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [590 — `update-check.json` is written through a symlink, overwriting a file outside the config dir](./590.md)
 - [591 — Non-regular entries in bea's own load-cache and managed-price cache crash or hang reads (gap in w5/417/418)](./591.md)
 - [592 — A corrupt remembered-importer record blocks a plain CSV import with a pathless refusal](./592.md)
 - [593 — A FIFO lock file fails `add` with `UnsupportedOperation`; a directory is blamed on the lock dir](./593.md)
