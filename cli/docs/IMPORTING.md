@@ -437,7 +437,9 @@ skills deduplicate against each other: the ledger itself is the dedup database.
   `--id-key id` is accepted in any case (`ID`, `Id`) as an alias for `bank_id`,
   the canonical key the `--csv` path writes, and a `--csv` mapping with `id=`
   keeps `bank_id` in the list whatever keys you name, so `--id-key` never
-  silently disables bank-ID dedupe.
+  silently disables bank-ID dedupe. The default keys fold case the same way
+  (`FITID` is `fitid`), and a key that cannot be a metadata key — empty, or not
+  starting with a lowercase letter — exits **2**.
   IDs must be stable and unique within that account. An exact match is skipped;
   reused native IDs with different source amounts or commodities are conflicts
   requiring review. An ID repeated within one export with different data is a

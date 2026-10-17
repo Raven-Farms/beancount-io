@@ -103,13 +103,24 @@ def _effective_id_keys(id_keys: list[str] | None, *, csv_id_mapped: bool = False
     header spelling) can name nothing else. And a mapping with `id=` keeps
     `bank_id` whatever keys were typed, since that is the only key its rows
     carry: a list without it would turn the mapped ids off (w5/254).
+
+    The default keys fold case the same way, so `FITID`, as OFX spells it,
+    is `fitid`. Any other key a metadata key cannot be — empty, or not
+    starting lowercase — is refused: it would replace the defaults with a
+    key no entry carries and turn native-ID matching off (w5/469).
     """
     if not id_keys:
         return list(_DEFAULT_ID_KEYS)
     resolved: list[str] = []
     seen: set[str] = set()
     for key in [*id_keys, *(["bank_id"] if csv_id_mapped else [])]:
-        mapped = "bank_id" if key.lower() == "id" else key
+        folded = key.lower()
+        mapped = "bank_id" if folded == "id" else folded if folded in _DEFAULT_ID_KEYS else key
+        if not re.fullmatch(r"[a-z][A-Za-z0-9_-]+", mapped):
+            raise UsageError(
+                f"--id-key {key!r} is not a metadata key; a key starts with a lowercase letter and holds letters, "
+                f"digits, '-' and '_', such as {', '.join(_DEFAULT_ID_KEYS)}."
+            )
         if mapped not in seen:
             seen.add(mapped)
             resolved.append(mapped)
