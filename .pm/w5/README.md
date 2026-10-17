@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [520 — `cloud ledger clone --dir` into a non-empty directory asks the server first, then exits 1 (gap in w5/371)](./520.md)
 - [521 — `cloud logout` deletes the credential on a malformed `BEA_API_URL` and misclassifies after-send failures](./521.md)
 - [522 — A closed pipe on stderr exits 120, and turns a usage exit 2 into 1](./522.md)
 - [523 — `format` aborts on a permission-denied include (gap in w5/442)](./523.md)
