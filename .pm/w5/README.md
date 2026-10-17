@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [524 — USAGE says `list -a 'Food|Rent'` matches either; `list` filters are substrings](./524.md)
 - [525 — Import refusals drop the remembered-settings notes IMPORTING.md promises](./525.md)
 - [526 — `list --flag txn` refused, though `add --flag txn` works](./526.md)
 - [527 — REFERENCE marks single `--amount` options repeatable and shows `--private` default as True](./527.md)
