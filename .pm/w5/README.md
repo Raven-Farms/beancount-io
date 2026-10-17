@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [612 — Two import refusals still suggest `--account Assets:Checking` (gap in w5/470)](./612.md)
 - [613 — A write through an included file reports it as `target.file`, hides the root note from JSON, and keys import memory by the leaf](./613.md)
 - [614 — `bea import` cannot leave out Pending rows and the docs are silent; a pending charge that posts differently is double-booked](./614.md)
 - [615 — Possible-duplicate reason mentions bank IDs for rows that have none](./615.md)
