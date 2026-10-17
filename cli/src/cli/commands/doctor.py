@@ -596,10 +596,26 @@ def _forward_directories(ctx: typer.Context) -> None:
     raise typer.Exit(0)
 
 
+def _refuse_partial_load(op: str, ledger: str) -> None:
+    """Refuse an answer that would silently leave out what a syntax error hid.
+
+    The loader skips an unparseable directive and carries on, so
+    `missing-open` listed the opens of the entries it could parse with exit
+    0, and `linked` showed half a link group (w5/596). Refused before any
+    output: `missing-open main.bean >> main.bean` appends what it prints.
+    """
+    errors = _closure_syntax_errors_of(ledger)
+    if errors:
+        raise LedgerError(f"doctor {op} cannot load {ledger}: {errors[0]}", details=errors[1:])
+
+
 def _forward_scoped(op: str, ctx: typer.Context) -> None:
     """Fail an empty link/region scope instead of printing a blank success."""
     _refuse_json()
     args = _located_against_ledger(op, list(ctx.args))
+    located = _positionals(args)
+    if located:
+        _refuse_partial_load(op, located[0])
     # Through the helper rather than the `bean-doctor` script: same upstream
     # command, run where bea can number its balance tree from the entries in
     # scope instead of from the whole ledger's display context (w3/352).
@@ -622,8 +638,10 @@ def _forward_missing_open(ctx: typer.Context) -> None:
     """Print upstream's missing opens, then name the inactive ones it omits."""
     _refuse_json()
     args = list(ctx.args)
-    _replayed(_capture("missing-open", args))
     positionals = _positionals(args)
+    if positionals:
+        _refuse_partial_load("missing-open", positionals[0])
+    _replayed(_capture("missing-open", args))
     if not positionals:
         raise typer.Exit(0)
     try:
