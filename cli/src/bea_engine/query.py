@@ -1424,6 +1424,16 @@ def _fixed_point_text() -> Iterator[None]:
         query_render.RENDERERS.update(saved)
 
 
+def _whole(value: Decimal) -> Decimal:
+    """A positive-exponent decimal as the same number with its zeros written out.
+
+    `Decimal("1.5E+3")` becomes `Decimal("1500")`: parsed from its fixed-point
+    text, never rounded to the context's precision.
+    """
+    exponent = value.as_tuple().exponent
+    return Decimal(format(value, "f")) if isinstance(exponent, int) and exponent > 0 else value
+
+
 @cache
 def _text_renderers() -> dict[type, type]:
     from beanquery import query_render
@@ -1431,9 +1441,27 @@ def _text_renderers() -> dict[type, type]:
     registered = dict(query_render.RENDERERS)
 
     class FixedPointDecimalRenderer(query_render.DecimalRenderer):  # type: ignore[misc]
+        """Upstream's decimal-point alignment, never in scientific notation.
+
+        Upstream measures and prints a positive exponent (`round(x, -2)`) as
+        `1.5E+3`, and compares a NaN's or an infinity's exponent, a letter,
+        with `>`, a TypeError that ended the query (w5/471). Such a value is
+        measured and printed as its fixed-point digits, and a non-finite one
+        as its name, as CSV and JSON print them.
+        """
+
+        nintegral: int
+
+        def update(self, value: Decimal) -> None:
+            if not value.is_finite():
+                self.nintegral = max(self.nintegral, len(str(value)))
+                return
+            super().update(_whole(value))
+
         def format(self, value: Decimal) -> str:
-            if value.as_tuple().exponent > 0:  # type: ignore[operator]
-                return str(super().format(value))
+            if not value.is_finite():
+                return str(value).rjust(self.nintegral).ljust(self.maxwidth)
+            value = _whole(value)
             # Upstream's padding with a fixed-point spelling: the widths it
             # measured from `as_tuple()` already count the zeros.
             n = value.as_tuple()

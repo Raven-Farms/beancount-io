@@ -434,7 +434,8 @@ def helper_json(args: Sequence[str], *, stdin: str | None = None, writes: bool =
             # The engine always sends the traceback and only `bea --debug` shows
             # it, so the advice to ask for one belongs on this side of the
             # boundary, where that flag is known.
-            message = f"{message} Pass --debug before the command for a traceback."
+            stop = " " if message.endswith((".", "!", "?")) else ". "
+            message = f"{message}{stop}Pass --debug before the command for a traceback."
         error = BY_CATEGORY.get(category, BeaError)(
             message,
             details=[str(detail) for detail in failure.get("details", [])],
