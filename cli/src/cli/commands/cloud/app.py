@@ -71,6 +71,7 @@ def cloud_logout() -> None:
     from cli.api.client import bearer_client, call, unwrap_or_none
     from cli.api.rest_client.api.ledger_v_1 import logout
     from cli.auth.credentials import ENVIRONMENT, UnusableCredentials, clear_credentials, load_credentials
+    from cli.config import credentials_path
     from cli.errors import BeaError
 
     try:
@@ -81,7 +82,11 @@ def cloud_logout() -> None:
         try:
             clear_credentials()
         except OSError as error:
-            raise BeaError(f"{exc} It could not be removed either: {error.strerror}.") from error
+            # Not the unusable credential's own remedy, which names this command (w5/589).
+            raise BeaError(
+                f"The stored credential {exc.path} is unusable ({exc.reason}) and could not be removed: "
+                f"{error.strerror}. Remove it yourself."
+            ) from error
         raise BeaError(
             f"Removed the unusable credential file {exc.path}; it could not be revoked. "
             "If it held a live session, revoke it from the dashboard."
@@ -106,7 +111,10 @@ def cloud_logout() -> None:
     # Built before the request: a malformed BEA_API_URL is a usage error with
     # the credential kept, not a "failed revocation" after deleting it (w5/521).
     client = bearer_client(creds.token)
-    failure: BeaError | None = None
+    # What went wrong with the revocation: the error class, the outcome as a
+    # clause, and the server's request id. Worded only once the local removal
+    # is known, so neither half claims what the other did (w5/589).
+    failure: tuple[type[BeaError], str, str | None] | None = None
     try:
         response = call(logout.sync_detailed, client=client)
         # A 401 means the server no longer accepts this token: it is already
@@ -116,36 +124,54 @@ def cloud_logout() -> None:
     except (httpx.ConnectError, httpx.ConnectTimeout, httpx.ProxyError) as exc:
         # Nothing reached the server: a plain failure, as for the other writes (w5/368, w5/519).
         reason = to_bea_error(exc)
-        failure = BeaError(
-            f"Removed the local credential, but server revocation failed: {str(reason).rstrip('.')}. "
-            "The session may still be valid: revoke it from the dashboard."
-        )
+        failure = (BeaError, f"server revocation failed: {str(reason).rstrip('.')}. {_STILL_VALID}", None)
     except httpx.TimeoutException as exc:
-        failure = ConflictError(
-            f"Removed the local credential, but server revocation timed out ({type(exc).__name__}); "
-            "the outcome is unknown. The session may still be valid: revoke it from the dashboard."
+        failure = (
+            ConflictError,
+            f"server revocation timed out ({type(exc).__name__}); the outcome is unknown. {_STILL_VALID}",
+            None,
         )
     except (httpx.TransportError, UnreadableSuccess, GatewayTimeout) as exc:
         # The request arrived and the answer was lost or unreadable: unknown,
         # as for create and delete, never "Could not reach the server" (w5/521).
-        failure = ConflictError(
-            f"Removed the local credential, but the server's answer to the revocation was lost or unreadable "
-            f"({_failure_name(exc)}); the outcome is unknown. The session may still be valid: revoke it from the "
-            "dashboard."
+        failure = (
+            ConflictError,
+            f"the server's answer to the revocation was lost or unreadable ({_failure_name(exc)}); "
+            f"the outcome is unknown. {_STILL_VALID}",
+            None,
         )
     except Exception as exc:
         reason = to_bea_error(exc)
-        failure = BeaError(
-            f"Removed the local credential, but server revocation failed: {str(reason).rstrip('.')}. "
-            "The session may still be valid: revoke it from the dashboard.",
-            request_id=reason.request_id,
+        failure = (
+            BeaError,
+            f"server revocation failed: {str(reason).rstrip('.')}. {_STILL_VALID}",
+            reason.request_id,
         )
     # The local credential goes either way: a server that cannot be reached
     # must not leave a token sitting on this disk.
-    clear_credentials()
+    try:
+        clear_credentials()
+    except OSError as error:
+        # A read-only directory raised a bare `[Errno 13]` that said nothing of
+        # the revocation, which had already reached the server (w5/589).
+        kept = f"{credentials_path()} ({error.strerror})"
+        if failure is None:
+            raise BeaError(
+                f"Revoked the session on the server, but could not remove the local credential {kept}. "
+                "The token there no longer works; delete the file yourself."
+            ) from error
+        kind, outcome, request_id = failure
+        raise kind(
+            f"Could not remove the local credential {kept}; delete it yourself. Also, {outcome}",
+            request_id=request_id,
+        ) from error
     if failure is not None:
-        raise failure
+        kind, outcome, request_id = failure
+        raise kind(f"Removed the local credential, but {outcome}", request_id=request_id)
     output.success("Logged out.")
+
+
+_STILL_VALID = "The session may still be valid: revoke it from the dashboard."
 
 
 def _failure_name(exc: BaseException) -> str:

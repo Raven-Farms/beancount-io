@@ -83,6 +83,49 @@ def save_credentials(token: str, expire_at: str) -> None:
         tmp_path.unlink(missing_ok=True)
 
 
+#: Far beyond a token and its expiry, and small enough that a mistaken huge
+#: file is refused instead of read into memory on every engine launch.
+_MAX_STORED_BYTES = 64 * 1024
+
+
+def _read_stored(path: Path) -> str | None:
+    """The stored credential's text, or None when there is no file.
+
+    Every local command reads this at engine launch, so it must never wait:
+    `read_text()` blocked forever on a FIFO and grew without bound on a link to
+    `/dev/zero` (w5/589). The open does not block, and only a regular file of
+    sane size is read.
+    """
+    flags = os.O_RDONLY | getattr(os, "O_NONBLOCK", 0) | getattr(os, "O_CLOEXEC", 0)
+    try:
+        fd = os.open(path, flags)
+    except FileNotFoundError:
+        return None
+    except NotADirectoryError as exc:
+        raise AuthError(
+            f"The bea configuration directory {path.parent} is not a directory, so it holds no credential. "
+            "Point BEA_CONFIG_DIR at a directory."
+        ) from exc
+    except OSError as exc:
+        raise UnusableCredentials(path, f"it cannot be read ({type(exc).__name__})") from exc
+    try:
+        if not stat.S_ISREG(os.fstat(fd).st_mode):
+            raise UnusableCredentials(path, "it is not a regular file")
+        data = b""
+        while len(data) <= _MAX_STORED_BYTES and (chunk := os.read(fd, _MAX_STORED_BYTES + 1 - len(data))):
+            data += chunk
+    except OSError as exc:
+        raise UnusableCredentials(path, f"it cannot be read ({type(exc).__name__})") from exc
+    finally:
+        os.close(fd)
+    if len(data) > _MAX_STORED_BYTES:
+        raise UnusableCredentials(path, f"it is larger than {_MAX_STORED_BYTES // 1024} KiB")
+    try:
+        return data.decode()
+    except UnicodeDecodeError as exc:
+        raise UnusableCredentials(path, f"it cannot be read ({type(exc).__name__})") from exc
+
+
 def load_credentials() -> Credentials | None:
     """Return the active credential: `$BEA_TOKEN` if set, otherwise the stored one.
 
@@ -95,17 +138,15 @@ def load_credentials() -> Credentials | None:
     if token:
         return Credentials(token=_validate_token(token), expire_at=None, source=ENVIRONMENT)
     path = credentials_path()
-    try:
-        text = path.read_text()
-    except FileNotFoundError:
+    text = _read_stored(path)
+    if text is None:
         return None
-    except (OSError, UnicodeDecodeError) as exc:
-        raise UnusableCredentials(path, f"it cannot be read ({type(exc).__name__})") from exc
     # A file that is present but unusable is not "logged out": that answer let
     # `bea cloud logout` report success over a token left on disk (w5/297).
     try:
         data = json.loads(text)
-    except ValueError as exc:
+    except (ValueError, RecursionError) as exc:
+        # Deep nesting exhausts the decoder's recursion, which is still just bad JSON (w5/589).
         raise UnusableCredentials(path, "it is not valid JSON") from exc
     if not isinstance(data, dict):
         raise UnusableCredentials(path, "it is not a JSON object")
@@ -127,6 +168,7 @@ class UnusableCredentials(AuthError):
 
     def __init__(self, path: Path, reason: str) -> None:
         self.path = path
+        self.reason = reason
         super().__init__(
             f"The stored credential {path} is unusable: {reason}. "
             "Run 'bea cloud login' to replace it, or 'bea cloud logout' to remove it."

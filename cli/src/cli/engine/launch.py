@@ -66,7 +66,7 @@ from typing import Any, Literal, TextIO
 from cli import config, context, output
 from cli.auth.credentials import load_credentials
 from cli.engine import paths, provision
-from cli.errors import BY_CATEGORY, AuthError, BeaError, ConflictError, UsageError
+from cli.errors import BY_CATEGORY, BeaError, ConflictError, UsageError
 
 
 def run_engine_argv(argv: Sequence[str], *, interactive: bool = False) -> int:
@@ -740,7 +740,8 @@ def _helper_env(source_root: Path | None = None) -> dict[str, str] | None:
     if current.strict_prices:
         env["MANAGED_PRICE_STRICT"] = "1"
     # Credentials cross only in the child environment, never argv or requests
-    # describing the ledger. Missing/invalid login must not break local books.
+    # describing the ledger. Missing/invalid login must not break local books:
+    # no failure reading the credential, of any kind, stops a local command (w5/589).
     env.pop("BEA_MANAGED_PRICE_TOKEN", None)
     env.pop("BEA_MANAGED_PRICE_AUTH_ERROR", None)
     if env.get("MANAGED_PRICE_OFFLINE", "").strip().lower() not in {"1", "true", "yes", "on"}:
@@ -750,7 +751,7 @@ def _helper_env(source_root: Path | None = None) -> dict[str, str] | None:
                 env["BEA_MANAGED_PRICE_AUTH_ERROR"] = "expired"
             elif credential is not None:
                 env["BEA_MANAGED_PRICE_TOKEN"] = credential.token
-        except AuthError:
+        except Exception:
             env["BEA_MANAGED_PRICE_AUTH_ERROR"] = "invalid"
     return env
 
