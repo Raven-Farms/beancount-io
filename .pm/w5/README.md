@@ -169,6 +169,12 @@
 - [602 — A one-description row is never a possible duplicate of a ledger entry with a payee](./602.md)
 - [603 — A `{}` sale split across lots still conflicts with its booked twin (incomplete fix of w5/467)](./603.md)
 - [604 — `--id-key fitId` is folded to `fitid`, disabling dedupe for camelCase keys (regression from w5/469)](./604.md)
+- [605 — `init` and writes `--into` a new file always fail on exFAT/FAT volumes (`os.link` unsupported)](./605.md)
+- [606 — A stop just after the atomic replace kills bea silently though the write committed; a retry duplicates it](./606.md)
+- [607 — Disk-full staging failures are reported as validation failures (`--partial` advice, every row "rejected")](./607.md)
+- [608 — SIGTERM/SIGHUP during a frontend `-o` export leaves a full `.bea-*.tmp` copy behind](./608.md)
+- [609 — A macOS `._main.bean` AppleDouble file stops `format --check .` / `-i .`](./609.md)
+- [610 — Full-disk exports and `init` give non-standard messages; `init` leaves created directories](./610.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
