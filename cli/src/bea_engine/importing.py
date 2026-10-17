@@ -348,7 +348,7 @@ def answer(
                 else:
                     identities[identity] = entry
                     dated.setdefault(identity, []).append(entry)
-            fingerprints.setdefault(_candidate_key(entry, account), []).append(entry)
+            _index_twin(fingerprints, entry, account, ledger=True)
     if source.read_bytes() != source_bytes:
         raise ConflictError("The export changed during extraction; nothing was written. Retry.")
     source_hash = hashlib.sha256(source_bytes).hexdigest()
@@ -492,7 +492,7 @@ def answer(
                     f"dated {_relative_days(match.date, entry.date)}, for the same amount; a bank that shares one "
                     "reference across both legs makes this that transfer.",
                 )
-            elif (twin := _possible_twin(fingerprints, entry, account, fingerprint)) is not None:
+            elif (twin := _possible_twin(fingerprints, entry, account, fingerprint, owners, index)) is not None:
                 status, reason, match = (
                     "possible_duplicate",
                     "Date, payee and source amount match; different bank IDs or narration do not rule out a duplicate."
@@ -512,7 +512,7 @@ def answer(
                 for identity in ids:
                     identities[identity] = entry
                     dated.setdefault(identity, []).append(entry)
-                fingerprints.setdefault(_candidate_key(entry, account), []).append(entry)
+                _index_twin(fingerprints, entry, account, ledger=False)
                 batch_rows[id(entry)] = index + 1
         rule = entry.meta.pop("_csv_rule", None) if isinstance(entry, Transaction) else None
         text = format_entry(entry) if isinstance(entry, Transaction) else _directive_text(entry)
@@ -1806,16 +1806,46 @@ def _candidate_key(entry: Any, account: str) -> tuple[Any, ...]:
     return date, payee or narration, tuple(sorted(text for text, _ in legs))
 
 
+def _narration_key(entry: Any, account: str) -> tuple[Any, ...]:
+    date, _, narration, legs = _fingerprint(entry, account)
+    return "narration", date, narration, tuple(sorted(text for text, _ in legs))
+
+
+def _index_twin(fingerprints: dict[tuple[Any, ...], list[Any]], entry: Any, account: str, *, ledger: bool) -> None:
+    """File an entry under who was paid, and a ledger entry also under its narration.
+
+    Rows of one export that differ in whether they name a payee are rows the
+    bank listed apart (w5/140), so only the ledger's entries meet across it.
+    """
+    fingerprints.setdefault(_candidate_key(entry, account), []).append(entry)
+    if ledger:
+        fingerprints.setdefault(_narration_key(entry, account), []).append(entry)
+
+
 def _possible_twin(
-    fingerprints: dict[tuple[Any, ...], list[Any]], entry: Any, account: str, fingerprint: tuple[Any, ...]
+    fingerprints: dict[tuple[Any, ...], list[Any]],
+    entry: Any,
+    account: str,
+    fingerprint: tuple[Any, ...],
+    owners: dict[int, int],
+    index: int,
 ) -> Any:
-    """The latest entry sharing the row's candidate key whose lots agree with it, if any."""
+    """The latest entry sharing the row's candidate key whose lots agree with it, if any.
+
+    Payee meets payee. When either side names none, narration meets
+    narration: an entry keyed by its payee never met a one-description row
+    of the same text, so a bank export of rows beancount-migrate had written
+    as payee + statement text was booked again (w5/602). An entry another
+    row of this import owns by its id is that row's, not this one's twin.
+    """
+    by_narration = [
+        found
+        for found in fingerprints.get(_narration_key(entry, account), [])
+        if owners.get(id(found), index) == index and (not fingerprint[1] or not _match_text(found.payee))
+    ]
+    candidates = [*reversed(fingerprints.get(_candidate_key(entry, account), [])), *reversed(by_narration)]
     return next(
-        (
-            found
-            for found in reversed(fingerprints.get(_candidate_key(entry, account), []))
-            if _legs_agree(fingerprint[3], _fingerprint(found, account)[3])
-        ),
+        (found for found in candidates if _legs_agree(fingerprint[3], _fingerprint(found, account)[3])),
         None,
     )
 

@@ -531,7 +531,11 @@ skills deduplicate against each other: the ledger itself is the dedup database.
 - Date, normalized payee, and signed source amount/currency identify a *possible*
   duplicate even when bank IDs or narration differ. A row with no payee (the
   one-description mapping) is compared by its normalized narration instead, so
-  two different same-day purchases of one amount are both new. This does not prove
+  two different same-day purchases of one amount are both new. When either the
+  row or an entry already in the ledger has no payee, the two meet on their
+  narrations. So a bank export of rows a migration wrote as payee plus
+  statement text is not booked again. Two different named payees never meet on
+  a shared narration, and neither do two rows of one export. This does not prove
   duplication: two real purchases can have identical details. `--apply` requires
   `--duplicates skip` or `--duplicates include`; choose include to preserve
   legitimate repeated purchases. Review the rows before choosing;
