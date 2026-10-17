@@ -265,6 +265,16 @@ EOF
 bea --file books/main.bean import category.csv --csv date=Date,amount=Amount,narration=Description,category=Category --account Assets:Checking --rules category-rules.toml
 ```
 
+Card and bank exports often carry a `Status` column (`Pending`/`Posted`), and
+a pending charge often posts days later at another amount (a tip, a hold, a
+currency conversion). Map that column with `status=Column`, as header
+inference does for a `Status` header, and a row whose status reads `Pending`,
+`Authorized` or a hold is left out. The preview names it ("Left out 1 pending
+row(s) (…); import them from the export they post in") and counts it in
+`skipped_pending`. The posted row then arrives once, in the next export. A
+mapping without `status=` imports pending rows as they are, and a column that
+marks some rows pending is named in a note suggesting `status=` for it.
+
 The mapping is remembered per root ledger, CSV header row, and source account,
 along with the `--rules` path, `--default-account`, an explicit
 `--date-format`, and a delimiter you passed (`--delimiter` or `delimiter=`; a

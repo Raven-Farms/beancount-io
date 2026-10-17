@@ -32,6 +32,7 @@ _MAPPING_FIELDS = frozenset(
         "debit",
         "credit",
         "category",
+        "status",
         "sign",
         "delimiter",
         "encoding",
@@ -338,6 +339,7 @@ _HEADER_SYNONYMS: dict[str, tuple[str, ...]] = {
     "currency": ("currency", "currency code", "ccy"),
     "id": ("id", "transaction id", "transaction_id", "reference number", "fitid", "txn id", "txnid", "bank id"),
     "category": ("category",),
+    "status": ("status", "transaction status"),
 }
 
 # Ordered so the unambiguous ISO form wins before the day/month forms it could

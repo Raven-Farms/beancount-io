@@ -25,7 +25,7 @@ from bea_engine.ledger.text import is_commodity, regex_reads_otherwise, require_
 from bea_engine.protocol import UsageError
 
 _MAPPING_FIELDS = frozenset(
-    {"date", "amount", "payee", "narration", "id", "currency", "debit", "credit", "category", "sign"}
+    {"date", "amount", "payee", "narration", "id", "currency", "debit", "credit", "category", "status", "sign"}
 )
 
 _THOUSAND_SEPARATOR_FILLER = re.compile(r"[\s'\u2019]")
@@ -513,7 +513,36 @@ _HEADER_SYNONYMS: dict[str, tuple[str, ...]] = {
     "currency": ("currency", "currency code", "ccy"),
     "id": ("id", "transaction id", "transaction_id", "reference number", "fitid", "txn id", "txnid", "bank id"),
     "category": ("category",),
+    "status": ("status", "transaction status"),
 }
+
+
+def is_pending(value: str | None) -> bool:
+    """Whether a status cell marks a row not yet posted: `Pending`, `Authorized`, a hold."""
+    text = (value or "").strip().casefold()
+    return text.startswith("pending") or text in {"authorized", "authorised", "hold", "on hold"}
+
+
+def _row_summary(row: dict[str, str], columns: dict[str, str]) -> str:
+    cells = (
+        row.get(columns[field], "").strip()
+        for field in ("date", "payee", "narration", "amount", "debit", "credit")
+        if field in columns
+    )
+    return " ".join(cell for cell in cells if cell)
+
+
+def _pending_column(headers: list[str], rows: list[dict[str, str]], columns: dict[str, str]) -> tuple[str, int] | None:
+    """An unmapped column that marks rows pending, and how many, for a note."""
+    mapped = set(columns.values())
+    for header in headers:
+        if header in mapped:
+            continue
+        count = sum(is_pending(row.get(header)) for row in rows)
+        if count:
+            return header, count
+    return None
+
 
 # Ordered so the unambiguous ISO form wins before the day/month forms it could
 # never be confused with.
@@ -1032,6 +1061,10 @@ class CsvImporter:
         self._constant_currency: str | None = None
         self._decimal_comma = False
         self.skipped_blank_rows = 0
+        # Rows a mapped status column marks pending, each summarized for the
+        # note; and, with none mapped, a column that marks some pending (w5/614).
+        self.skipped_pending: list[str] = []
+        self.pending_column: tuple[str, int] | None = None
         # Category values that were not account names, for the caller to report once.
         self.rejected_categories: Counter[str] = Counter()
         # Rows whose category names the source account itself (w5/468).
@@ -1211,11 +1244,20 @@ class CsvImporter:
             # because a quoted cell may contain newlines and then a record is
             # no longer a line.
             numbered: list[tuple[int, int, dict[str, str]]] = []
+            status_header = columns.get("status")
             for line, row in materialized:
                 if self._is_blank_row(row, blank_headers):
                     self.skipped_blank_rows += 1
                     continue
+                if status_header is not None and is_pending(row.get(status_header)):
+                    # A pending charge often posts later at another amount (a
+                    # tip, a hold), and both were booked (w5/614). It waits
+                    # for the export it posts in.
+                    self.skipped_pending.append(_row_summary(row, columns))
+                    continue
                 numbered.append((len(numbered) + 1, line, row))
+            if status_header is None:
+                self.pending_column = _pending_column(headers, [row for _, row in materialized], columns)
             # Blank cells never voted on the decimal convention anyway, so
             # skipping blank rows here changes only which number it names.
             self._decimal_comma = _resolve_decimal_comma(

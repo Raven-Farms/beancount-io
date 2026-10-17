@@ -1232,6 +1232,9 @@ def import_entries(
         if preview["skipped_blank"]:
             noun = "row" if preview["skipped_blank"] == 1 else "rows"
             summary += f", {preview['skipped_blank']} blank {noun} skipped"
+        if preview.get("skipped_pending"):
+            noun = "row" if preview["skipped_pending"] == 1 else "rows"
+            summary += f", {preview['skipped_pending']} pending {noun} left out"
         if preview["conflicts"]:
             noun = "conflict" if preview["conflicts"] == 1 else "conflicts"
             summary += f", {preview['conflicts']} {noun}"

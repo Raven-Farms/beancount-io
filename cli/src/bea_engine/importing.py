@@ -200,6 +200,7 @@ def answer(
     roots = ledger_roots(options)
     csv_mode = csv_mapping is not None
     skipped_blank = 0
+    skipped_pending = 0
     csv_id_mapped = False
     if csv_mode:
         if csv_account is None or csv_mapping is None:
@@ -262,6 +263,19 @@ def answer(
                 LedgerError(f"Importer failed ({type(exc).__name__}): {exc}.", traceback=_traceback(exc)), logs
             ) from exc
         skipped_blank = importer.skipped_blank_rows
+        skipped_pending = len(importer.skipped_pending)
+        if importer.skipped_pending:
+            pending = "; ".join(importer.skipped_pending[:3]) + ("; …" if len(importer.skipped_pending) > 3 else "")
+            notes.append(
+                f"Left out {skipped_pending} pending row(s) ({pending}); import them from the export they post in."
+            )
+        if importer.pending_column is not None:
+            column, count = importer.pending_column
+            notes.append(
+                f"Column {column!r} marks {count} row(s) pending, and they are imported as they are: a pending "
+                f"charge that posts at another amount is then booked twice. Add status={column} to the --csv "
+                "mapping to leave pending rows out until they post."
+            )
         if importer.constant_currency is not None:
             notes.append(
                 f"currency={importer.constant_currency} names no column of {source.name}, so every row "
@@ -668,6 +682,7 @@ def answer(
         "conflicts": sum(row["status"] == "conflict" for row in rows),
         "blocked": sum(row["status"] == "blocked" for row in rows),
         "skipped_blank": skipped_blank,
+        "skipped_pending": skipped_pending,
         # Accounts a row posts to that the ledger still does not open after
         # this import — duplicates included, whose new text would carry them
         # too — so the frontend never remembers a mistyped `--account` or
