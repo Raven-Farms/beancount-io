@@ -143,4 +143,7 @@ def test_unreadable_saved_importer_record_is_a_usage_error(books: tuple[Path, Pa
 
     assert result.exit_code == 2, result.output
     assert "[Errno" not in result.output
-    assert "Cannot read the saved importer path" in json.loads(result.stderr)["error"]["message"]
+    # Named since w5/592, with remedies that work for a CSV as well.
+    message = json.loads(result.stderr)["error"]["message"]
+    assert f"Cannot read the remembered importer record {record}" in message
+    assert "--csv auto" in message

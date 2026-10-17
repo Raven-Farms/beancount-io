@@ -120,16 +120,35 @@ def _config_available(file: Path, notes: list[str]) -> tuple[Path, str] | None:
     record = _config_record(file, reading=True)
     if _is_record(record):
         try:
-            remembered = Path(json.loads(record.read_text())["config"])
-        except (OSError, ValueError, KeyError, TypeError) as exc:
-            raise UsageError("Cannot read the saved importer path; select one with --config FILE.") from exc
-        if remembered.is_file():
+            text = record.read_text()
+        except OSError as exc:
+            # Unreadable is not corrupt: it may still name the importer this
+            # ledger relies on, so it is not guessed past (w5/215). But it is
+            # named, with remedies that work for a CSV too (w5/592).
+            raise UsageError(
+                f"Cannot read the remembered importer record {record} ({exc.strerror or type(exc).__name__}). "
+                "Make it readable, or delete it to forget the importer; or choose for this run with "
+                "--config FILE (a Python importer) or --csv auto (the header row)."
+            ) from exc
+        try:
+            remembered: Path | None = Path(json.loads(text)["config"])
+        except (ValueError, KeyError, TypeError, RecursionError):
+            # Corrupt memory selects nothing, as a moved importer does: stale
+            # local state must not block an import (w1/105, w5/592).
+            remembered = None
+            corrupt = (
+                f"The remembered importer record {record} is not valid; ignoring it. "
+                "Pass --config FILE to select a Python importer again."
+            )
+            if corrupt not in notes:
+                notes.append(corrupt)
+        if remembered is not None and remembered.is_file():
             return remembered, "remembered"
         missing = (
             f"The remembered importer {remembered} is missing; ignoring it. "
             "Pass --config FILE to select a Python importer again."
         )
-        if missing not in notes:
+        if remembered is not None and missing not in notes:
             notes.append(missing)
     conventional = file.parent / "importers.py"
     if conventional.is_file():

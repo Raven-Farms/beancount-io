@@ -329,6 +329,14 @@ still succeeds and says what to pass next time — `Could not remember the
 column mapping: <reason>. Pass --csv on the next import.`, or `Could not
 remember the importer path: <reason>. Pass --config on the next import.` — on
 stderr and in the JSON `notes` alike.
+A remembered importer record that is not valid JSON, or not of the form
+`{"config": "<path>"}`, selects nothing, just like an importer that was moved
+away. The note (`The remembered importer record <file> is not valid; ignoring
+it.`) names the file, and the `importers.py` and header-row fallbacks apply.
+A record bea cannot read (wrong mode) still stops a flag-free import, since it
+may name the importer the ledger relies on. The refusal names the file. Make
+it readable or delete it, or choose for that run with `--config FILE` or
+`--csv auto`.
 
 ## A Python importer (`--config`)
 
