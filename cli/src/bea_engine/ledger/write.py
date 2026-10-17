@@ -890,6 +890,30 @@ def _open_lock(path: Path) -> tuple[int, bool]:
         return os.open(path, os.O_RDWR | os.O_CREAT, 0o600), False
 
 
+def _not_a_lock_file(mode: int) -> str | None:
+    """What sits at a lock path instead of a regular file, or None when it is one."""
+    if stat.S_ISREG(mode):
+        return None
+    if stat.S_ISDIR(mode):
+        return "a directory"
+    if stat.S_ISFIFO(mode):
+        return "a named pipe"
+    if stat.S_ISSOCK(mode):
+        return "a socket"
+    if stat.S_ISCHR(mode) or stat.S_ISBLK(mode):
+        return "a device"
+    return "something other than a file"
+
+
+def _lock_obstructed(path: Path, what: str) -> str:
+    """The refusal for a lock path something else occupies (w5/593).
+
+    Not replaced: an entry removed on a stale look could be the lock file
+    another writer has just created and holds.
+    """
+    return f"Cannot take the write lock: {path} is {what}, not a lock file. Remove it, then retry. Nothing was written."
+
+
 #: How long a writer queues behind another `bea` write before it gives up, and
 #: the variable that overrides it. Long enough for a large import to finish.
 LOCK_TIMEOUT_SECONDS = Decimal(60)
@@ -975,6 +999,12 @@ def lock_file(file: Path, *, deciding: bool = False) -> Iterator[None]:
                 directory.mkdir(mode=0o700, parents=True, exist_ok=True)
                 fd, made = _open_lock(path)
             except OSError as exc:
+                try:
+                    in_the_way = _not_a_lock_file(os.stat(path).st_mode)
+                except OSError:
+                    in_the_way = None
+                if in_the_way is not None:
+                    raise AuthError(_lock_obstructed(path, in_the_way)) from exc
                 # The filesystem refusing, not a broken ledger: exit 3 like the staging
                 # refusal below, whether the cache is read-only or a file is in the way.
                 raise AuthError(
@@ -983,6 +1013,12 @@ def lock_file(file: Path, *, deciding: bool = False) -> Iterator[None]:
                     "before retrying. Nothing was written."
                 ) from exc
             created = created or made
+            # A FIFO opens, then failed as `UnsupportedOperation: File or stream
+            # is not seekable` (exit 1), naming nothing and leaking the descriptor (w5/593).
+            in_the_way = _not_a_lock_file(os.fstat(fd).st_mode)
+            if in_the_way is not None:
+                os.close(fd)
+                raise AuthError(_lock_obstructed(path, in_the_way))
             stream = os.fdopen(fd, "r+b")
             if sys.platform == "win32":
                 import msvcrt

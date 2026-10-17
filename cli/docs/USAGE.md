@@ -1138,7 +1138,9 @@ a directory the writer can read: on Windows, or on a filesystem without it,
 writers must share `XDG_CACHE_HOME` to be serialized. When the lock directory
 cannot be created or written — a read-only cache
 root, a file in the way — the write is refused with exit **3** naming it;
-make it writable or set `XDG_CACHE_HOME`. A writer that finds either lock held
+make it writable or set `XDG_CACHE_HOME`. A lock file that is not a regular
+file (a directory, a named pipe) is refused the same way, naming the lock file;
+remove it and retry. A writer that finds either lock held
 waits for it, but not forever: after about a second it prints `Waiting up to 60
 seconds for another bea write on PATH ...` on stderr (JSON mode stays silent, so
 stderr remains one object), and after 60 seconds it gives up with exit **4**,
