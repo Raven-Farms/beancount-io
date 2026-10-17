@@ -173,6 +173,11 @@
 - [608 — SIGTERM/SIGHUP during a frontend `-o` export leaves a full `.bea-*.tmp` copy behind](./608.md)
 - [609 — A macOS `._main.bean` AppleDouble file stops `format --check .` / `-i .`](./609.md)
 - [610 — Full-disk exports and `init` give non-standard messages; `init` leaves created directories](./610.md)
+- [611 — `add balance --pad-from` never reports the padded amount; a sign-flipped liability is silently padded by twice the balance](./611.md)
+- [612 — Two import refusals still suggest `--account Assets:Checking` (gap in w5/470)](./612.md)
+- [613 — A write through an included file reports it as `target.file`, hides the root note from JSON, and keys import memory by the leaf](./613.md)
+- [614 — `bea import` cannot leave out Pending rows and the docs are silent; a pending charge that posts differently is double-booked](./614.md)
+- [615 — Possible-duplicate reason mentions bank IDs for rows that have none](./615.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
