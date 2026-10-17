@@ -48,6 +48,7 @@ Optional features (`beangulp`, `beanprice`) must be enabled first; see
 
 from __future__ import annotations
 
+import atexit
 import hashlib
 import json
 import os
@@ -451,7 +452,7 @@ def helper_json(args: Sequence[str], *, stdin: str | None = None, writes: bool =
     request and then answers.
     """
     command, env = helper_command()
-    completed = _run_helper([*command, *args], env, stdin)
+    completed = _run_helper([*command, *args], env, stdin, writes=writes)
 
     envelope = _parse(completed, args, writes=writes)
     if not envelope.get("ok"):
@@ -495,9 +496,20 @@ def helper_json(args: Sequence[str], *, stdin: str | None = None, writes: bool =
 _CLEANUP_GRACE_SECONDS = 5.0
 
 
-def _run_helper(command: list[str], env: dict[str, str] | None, stdin: str | None) -> subprocess.CompletedProcess[str]:
-    """`subprocess.run`, except the child is told when the frontend is being stopped."""
-    with _forwarding_teardown() as attach:
+def _run_helper(
+    command: list[str], env: dict[str, str] | None, stdin: str | None, *, writes: bool = False
+) -> subprocess.CompletedProcess[str]:
+    """`subprocess.run`, except the child is told when the frontend is being stopped.
+
+    A stopped write that still answered success had committed before the
+    stop. That answer is kept and reported, and so is a stop that arrives
+    while it is being rendered. Dying by the signal instead made a
+    supervisor's retry record the entry twice (w5/606). Any other stopped
+    child still takes this process down with it: a read before a write must
+    not let the write run.
+    """
+    stopped: list[int] = []
+    with _forwarding_teardown(stopped) as attach:
         with subprocess.Popen(
             command,
             env=env,
@@ -522,7 +534,72 @@ def _run_helper(command: list[str], env: dict[str, str] | None, stdin: str | Non
             finally:
                 relay.join()
                 stream.close()
-    return subprocess.CompletedProcess(command, child.returncode, out, "".join(kept))
+    completed = subprocess.CompletedProcess(command, child.returncode, out, "".join(kept))
+    committed = writes and _answered_success(completed)
+    if stopped and not committed:
+        _die_by(stopped[0])
+    if committed:
+        _hold_stops_after_commit(stopped)
+    return completed
+
+
+def _hold_stops_after_commit(stopped: list[int]) -> None:
+    """From a committed write on, a stop is noted and reported at exit, not obeyed.
+
+    The default disposition came back with the helper's return, so a stop
+    landing while the result was rendered killed bea silently over a write
+    that had landed (w5/606).
+    """
+
+    from typer._click.globals import get_current_context
+
+    def hold(number: int, _frame: Any) -> None:
+        if not stopped:
+            stopped.append(number)
+            atexit.register(_report_late_stop, number)
+
+    if stopped:
+        atexit.register(_report_late_stop, stopped[0])
+    # Held for the command that wrote, and handed back when it closes: an
+    # embedding process (CliRunner) keeps its own handlers afterwards.
+    command = get_current_context(silent=True)
+    if command is None:
+        return
+    previous: list[tuple[int, Any]] = []
+    for number in _FORWARDED_SIGNALS:
+        try:
+            previous.append((number, signal.signal(number, hold)))
+        except (OSError, ValueError):
+            continue
+    command.find_root().call_on_close(lambda: _restore_handlers(previous))
+
+
+def _restore_handlers(previous: list[tuple[int, Any]]) -> None:
+    for number, handler in previous:
+        try:
+            signal.signal(number, handler)
+        except (OSError, ValueError):
+            continue
+
+
+def _report_late_stop(number: int) -> None:
+    output.note(f"Stopped ({signal.Signals(number).name}) after the write had completed; its result stands.")
+
+
+def _answered_success(completed: subprocess.CompletedProcess[str]) -> bool:
+    if completed.returncode != 0:
+        return False
+    try:
+        envelope = json.loads(completed.stdout)
+    except ValueError:
+        return False
+    return isinstance(envelope, dict) and envelope.get("ok") is True
+
+
+def _die_by(number: int) -> None:
+    """End this process by `number` with its default disposition, keeping the status the shell reports."""
+    signal.signal(number, signal.SIG_DFL)
+    os.kill(os.getpid(), number)
 
 
 #: Opens a stderr line the engine wants shown while it is still running
@@ -551,7 +628,7 @@ def _relay_notices(stream: TextIO, kept: list[str]) -> None:
 
 
 @contextmanager
-def _forwarding_teardown() -> Iterator[Callable[[subprocess.Popen[str]], None]]:
+def _forwarding_teardown(stopped: list[int] | None = None) -> Iterator[Callable[[subprocess.Popen[str]], None]]:
     """Pass a termination signal on to `child`, and let it unwind before we go.
 
     The engine stages every write into a `.bea-*.tmp` candidate beside the
@@ -566,7 +643,9 @@ def _forwarding_teardown() -> Iterator[Callable[[subprocess.Popen[str]], None]]:
     Install before spawning and defer signals until the child handle is ready,
     so an interrupt during Popen cannot orphan an isolated helper. Handlers are
     restored after the child exits. Once the child is done we re-raise the signal
-    with its default disposition, keeping the status the shell reports.
+    with its default disposition, keeping the status the shell reports. A
+    caller passing `stopped` gets the signal recorded there instead, and
+    decides once it has read the child's answer.
     """
     child: subprocess.Popen[str] | None = None
     pending: int | None = None
@@ -581,8 +660,10 @@ def _forwarding_teardown() -> Iterator[Callable[[subprocess.Popen[str]], None]]:
             child.wait(timeout=_CLEANUP_GRACE_SECONDS)
         except subprocess.TimeoutExpired:
             child.kill()
-        signal.signal(number, signal.SIG_DFL)
-        os.kill(os.getpid(), number)
+        if stopped is not None:
+            stopped.append(number)
+            return
+        _die_by(number)
 
     def attach(started: subprocess.Popen[str]) -> None:
         nonlocal child, pending

@@ -1188,30 +1188,32 @@ def claim_new_file(candidate: Path, target: Path) -> None:
     caller as they are; anything else is said in bea's words.
     """
     try:
-        os.link(candidate, target)
+        with stopping.committing():
+            os.link(candidate, target)
         return
     except FileExistsError:
         raise
     except OSError as exc:
         if exc.errno not in _NO_HARD_LINKS:
             raise LedgerError(_create_failed(target, exc)) from exc
+    # Inside the commit section, so no stop can leave the empty placeholder behind.
+    placeholder: os.stat_result | None = None
     try:
-        fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-    except (FileExistsError, PermissionError):
-        raise
-    except OSError as exc:
-        raise LedgerError(_create_failed(target, exc)) from exc
-    placeholder = os.fstat(fd)
-    os.close(fd)
-    try:
-        os.replace(candidate, target)
+        with stopping.committing():
+            fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            try:
+                placeholder = os.fstat(fd)
+            finally:
+                os.close(fd)
+            os.replace(candidate, target)
     except BaseException as exc:
         # Only the empty placeholder this call made is removed, never a file
         # that took its place.
-        with suppress(OSError):
-            if os.path.samestat(placeholder, os.stat(target)):
-                os.unlink(target)
-        if isinstance(exc, OSError) and not isinstance(exc, PermissionError):
+        if placeholder is not None:
+            with suppress(OSError):
+                if os.path.samestat(placeholder, os.stat(target)):
+                    os.unlink(target)
+        if isinstance(exc, OSError) and not isinstance(exc, (FileExistsError, PermissionError)):
             raise LedgerError(_create_failed(target, exc)) from exc
         raise
 
@@ -3050,9 +3052,9 @@ def replace_checked(file: Path, candidate: Path, original: bytes, original_stat:
             "Replace the extra name with a symbolic link (writes land in the real file) or remove it, then retry."
         )
     keep_file_metadata(file, candidate, original_stat)
-    stopping.check()
     try:
-        os.replace(candidate, file)
+        with stopping.committing():
+            os.replace(candidate, file)
     except PermissionError as exc:
         raise AuthError(
             f"The filesystem refused to replace {file} (an ACL, file flag or directory permission "
