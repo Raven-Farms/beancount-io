@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [472 — `bea query --source` dumps a ~200-line traceback for amounts of 10^12 or more](./472.md)
 - [473 — `bea list price|commodity -c " HOOL"` validates, then matches nothing with exit 0](./473.md)
 - [474 — `bea query PRINT` export drops validity options (`name_*`, tolerance), so it fails `bea check`](./474.md)
 - [475 — A stray CR above a managed include makes bea rewrite the wrong line: the user's directive vanishes from load and `price export`](./475.md)
