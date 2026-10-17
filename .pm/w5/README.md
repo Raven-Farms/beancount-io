@@ -196,6 +196,11 @@
 - [648 — `upgrade --check` still accepts null/empty versions and Homebrew HTML with exit 0 (incomplete fix of w5/484)](./648.md)
 - [649 — A BOM-prefixed HTML error page still reaches `bea ask` (incomplete fix of w5/482)](./649.md)
 - [650 — A non-UTF-8 byte in an `add` argument gives a raw `UnicodeEncodeError`](./650.md)
+- [651 — With an included leaf (or stdin) as input, `-o` can replace the root ledger or join its include glob, exit 0 (gap in w5/072)](./651.md)
+- [652 — `price export` maps an external include and an in-tree `_shared/01-x.bean` to one destination; snapshot fails `check`, exit 0](./652.md)
+- [653 — `add document --into` a symlinked include refuses a valid receipt (path judged at the link target)](./653.md)
+- [654 — Cwd-relative `--into` from a subdirectory gets advice to create a new include instead of the root-relative rule](./654.md)
+- [655 — Reads of a ledger with a local plugin leave `__pycache__` beside the ledger](./655.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
