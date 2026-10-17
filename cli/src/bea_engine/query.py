@@ -2125,6 +2125,7 @@ _NO_LOT = re.compile(
     r"against balance (?P<held>.*)\Z",
     re.DOTALL,
 )
+_POSTING_LINE = re.compile(r"meta=\{[^}]*'lineno': (?P<lineno>\d+)")
 _BALANCE_CURRENCY = re.compile(r"Invalid currency '(?P<currency>[^']*)' for Balance directive: ?\Z")
 _NEGATIVE_COST = re.compile(
     r"Cost is negative: \"Cost\(number=Decimal\('(?P<number>[^']*)'\), currency='(?P<currency>[^']*)'"
@@ -2232,7 +2233,14 @@ def _booking_message(error: Any, message: str) -> str:
 
     account, units = no_lot["account"], no_lot["units"].strip()
     postings = getattr(getattr(error, "entry", None), "postings", None) or []
-    posting = next((p for p in postings if p.account == account and str(p.units) == units), None)
+    candidates = [p for p in postings if p.account == account and str(p.units) == units]
+    # Two lots of one size sold together share account and units; upstream's
+    # posting carries its own line, which names the one it rejected (w5/510).
+    line = _POSTING_LINE.search(message)
+    posting = next(
+        (p for p in candidates if line is not None and (p.meta or {}).get("lineno") == int(line["lineno"])),
+        candidates[0] if candidates else None,
+    )
     cost = getattr(posting, "cost", None)
     requested = f"{units} {{{_cost_spec_text(cost, DisplayContext().build())}}}" if cost is not None else units
     return f"No position matches {requested} in {account}; it holds {no_lot['held'].strip()}"
