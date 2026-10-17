@@ -351,6 +351,9 @@ class _ProxyChatModel(OpenAIChatModel):
     filtered prompt) is an `IndexError` in the SDK's response handling, and an
     empty, HTML or truncated JSON body a `JSONDecodeError` in its parser. Both
     reached the catch-all in `main.py` and printed `list index out of range`.
+    A body cut inside a UTF-8 character or sent in another charset is a
+    `UnicodeDecodeError`, one nested past the parser's depth a `RecursionError`,
+    and a `"type": "custom"` tool call the SDK's own `RuntimeError` (w5/547).
     Only the model call is wrapped, so a fault in bea's own tools is never
     reported as the server's.
     """
@@ -367,9 +370,16 @@ class _ProxyChatModel(OpenAIChatModel):
             return await super().request(messages, model_settings, model_request_parameters)
         except APIResponseValidationError as exc:
             raise UnreadableModelReply(exc.response.status_code) from exc
-        except (json.JSONDecodeError, IndexError, KeyError, TypeError) as exc:
+        except (ValueError, IndexError, KeyError, TypeError, RecursionError) as exc:
             # The SDK parses only a successful body; any other status raises its
-            # status error, which arrives as `ModelHTTPError`.
+            # status error, which arrives as `ModelHTTPError`. `ValueError`
+            # covers `JSONDecodeError` and `UnicodeDecodeError`.
+            raise UnreadableModelReply(200) from exc
+        except RuntimeError as exc:
+            # Only the SDK's refusal of a custom tool call: its own run failures
+            # (`AgentRunError`) are `RuntimeError`s too, and are reported apart.
+            if type(exc) is not RuntimeError or not str(exc).startswith("Custom tool calls"):
+                raise
             raise UnreadableModelReply(200) from exc
 
 

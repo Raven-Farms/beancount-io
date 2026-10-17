@@ -255,8 +255,9 @@ def model_answer(text: str) -> dict[str, object]:
     return {"index": 0, "finish_reason": "stop", "message": {"role": "assistant", "content": text}}
 
 
-#: A choice to answer with, a status to fail with, or a status with its body.
-StubReply = dict[str, object] | int | tuple[int, dict[str, object]]
+#: A choice to answer with, a status to fail with, a status with its body, or
+#: raw bytes to answer 200 with.
+StubReply = dict[str, object] | int | tuple[int, dict[str, object]] | bytes
 
 
 @dataclass
@@ -305,6 +306,14 @@ class _ModelHandler(BaseHTTPRequestHandler):
         except ValueError:
             stub.requests.append({})
         outcome = stub.reply(len(stub.requests))
+        if isinstance(outcome, bytes):
+            # A body sent as it is, for a test about one the client cannot read.
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(outcome)))
+            self.end_headers()
+            self.wfile.write(outcome)
+            return
         if isinstance(outcome, int):
             self._send(outcome, {"message": "Upstream model provider failed."})
             return
