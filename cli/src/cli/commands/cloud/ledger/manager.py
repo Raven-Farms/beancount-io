@@ -188,7 +188,7 @@ def default_clone_dir(name: str) -> Path:
         ) from None
 
 
-def refuse_occupied_clone_target(target: Path) -> None:
+def refuse_occupied_clone_target(target: Path, *, nothing: str = "created") -> None:
     """Refuse a clone target `git clone` will refuse: a file, or a directory that is not empty."""
     if not (target.exists() or target.is_symlink()):
         return
@@ -199,7 +199,7 @@ def refuse_occupied_clone_target(target: Path) -> None:
     if occupied:
         raise UsageError(
             f"Clone target '{single_line(str(target))}' already exists and is not an empty directory; "
-            "nothing was created. Pass --dir to choose another, or move it aside."
+            f"nothing was {nothing}. Pass --dir to choose another, or move it aside."
         )
 
 

@@ -136,9 +136,15 @@ def ledger_clone(
     # As `create --clone` does: a missing git is a usage error found before
     # the server is asked anything, not an OSError after it (w5/372).
     manager.ensure_git_available("bea cloud ledger clone")
+    # A target git is certain to refuse, as `create --clone` refuses it: a
+    # `--dir` before credentials and the request, the default `./<name>`
+    # once the lookup names it, never git's message after it (w5/520).
+    if directory is not None:
+        manager.refuse_occupied_clone_target(directory, nothing="cloned")
     ledger = manager.get_ledger(authenticated_client(), full_name)
     manager.check_clone_url(ledger.ssh_url)
     target = directory or manager.default_clone_dir(ledger.name)
+    manager.refuse_occupied_clone_target(target, nothing="cloned")
     shown_name, shown_target = single_line(ledger.full_name), single_line(str(target))
     output.note(f"Cloning '{shown_name}' to '{shown_target}'...")
     try:
