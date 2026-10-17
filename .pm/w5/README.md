@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [610 — Full-disk exports and `init` give non-standard messages; `init` leaves created directories](./610.md)
 - [611 — `add balance --pad-from` never reports the padded amount; a sign-flipped liability is silently padded by twice the balance](./611.md)
 - [612 — Two import refusals still suggest `--account Assets:Checking` (gap in w5/470)](./612.md)
 - [613 — A write through an included file reports it as `target.file`, hides the root note from JSON, and keys import memory by the leaf](./613.md)
