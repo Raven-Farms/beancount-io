@@ -214,6 +214,9 @@
 - [704 — ingest extract -e misses duplicates in a BOM or NFD ledger, with no warning](./704.md)
 - [705 — treeify treats - as a file name: -o - writes ./-, and treeify - reads it instead of stdin](./705.md)
 - [706 — ingest extract: -e DIR ends in a traceback; -o into a read-only directory exits 1 after running, not 3](./706.md)
+- [707 — Three paths still miss w5/522's pipe statuses: --json --allow-errors exits 1, bare bea 120, native failures 141](./707.md)
+- [708 — An include glob through an unlistable directory silently drops its files; check exits 0](./708.md)
+- [709 — A mode-000 include named by two roots is reported for the first includer only](./709.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
