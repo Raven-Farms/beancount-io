@@ -66,6 +66,26 @@ Only restrict currencies when that matches the account's intended holdings.
 bea --file "$ledger" --json --no-input add open --date "$open_date" --account "$account" --into "$open_target"
 ```
 
+A ledger that loads `beancount.plugins.nounused` (or `pedantic`, which runs it)
+refuses a new open until something posts to the account: `Unused account
+'…'`, with `Stage the open with --allow-errors, then add the account's first
+transaction.` That refusal, and only that one, is a documented two-step:
+
+1. Stage the open with the `open-staged` recipe below. Any other error in its
+   refusal still means fix the proposal, not stage it.
+2. In the same workflow, write the confirmed batch that first posts to the
+   account (the `batch` recipe, without `--allow-errors`), then run `check`.
+
+Between the steps the ledger is red for that account alone, so do not stop
+there or report the workflow done. If it is interrupted after step 1, resume
+by writing that batch before anything else, or tell the user the staged open
+is waiting for its first posting.
+
+<!-- recipe: open-staged -->
+```sh
+bea --file "$ledger" --json --no-input add open --date "$open_date" --account "$account" --into "$open_target" --allow-errors
+```
+
 Create the approved JSON array in `batch` (a scratch file), or pass that same
 array on stdin using `--from -`. Use decimal **strings**, not floating-point
 numbers. Each transaction has `date`, `flag`, optional `payee`, `narration`,
@@ -96,7 +116,8 @@ bea --file "$ledger" --json --no-input add transactions --from "$batch" --into "
 ```
 
 The batch is validated before writing. Do not use `--partial` or
-`--allow-errors` to get an ordinary confirmed batch through a failed check.
+`--allow-errors` to get an ordinary confirmed batch through a failed check;
+the staged open above is the one exception, and it applies to the open only.
 `add transactions` **does not deduplicate**, even when `meta.import-id` is
 present. Perform the workflow's dedup before writing and before any retry.
 Keep `import-id-2` on merged transfers, and preserve pending/uncertain `!` flags.

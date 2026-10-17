@@ -704,6 +704,38 @@ class TestBeaRecipes(unittest.TestCase):
         self.assertEqual(self.target.read_text().count('import-id: "ofx:2026050701"'), 1)
         self.recipe("check")
 
+    def test_a_nounused_ledger_stages_the_open_then_writes_its_first_posting(self):
+        self.ledger.write_text(
+            self.ledger.read_text().replace(
+                'option "operating_currency" "USD"\n',
+                'option "operating_currency" "USD"\nplugin "beancount.plugins.nounused"\n',
+            )
+        )
+        self.target.write_text(
+            '2026-01-02 * "Opening"\n  Assets:Checking 100.00 USD\n  Equity:OpeningBalances\n'
+            '2026-01-03 * "Lunch"\n  Assets:Checking -10.00 USD\n  Expenses:Dining\n'
+        )
+        self.recipe("check")
+        self.values.update(account="Expenses:Uncategorized", open_date="2026-01-01")
+        before = self.ledger.read_bytes()
+
+        # The plain open is refused only as unused; the documented two-step
+        # stages it, and the batch that posts to it clears the check (w5/553).
+        refused = self.recipe("open", succeeds=False)
+        self.assertIn("Unused account 'Expenses:Uncategorized'", refused.stdout + refused.stderr)
+        self.assertEqual(self.ledger.read_bytes(), before)
+        self.recipe("open-staged")
+        self.recipe("check", succeeds=False)
+        self.batch([{
+            "date": "2026-01-04", "flag": "*", "narration": "Parking",
+            "postings": [
+                {"account": "Assets:Checking", "units": {"number": "-5.00", "currency": "USD"}},
+                {"account": "Expenses:Uncategorized", "units": {"number": "5.00", "currency": "USD"}},
+            ],
+        }])
+        self.recipe("batch")
+        self.recipe("check")
+
     def test_option_batch_and_native_expiry_preserve_lot_booking_and_links(self):
         before = self.target.read_bytes()
         for account in ("Assets:Brokerage:Options", "Expenses:Trading:Fees", "Income:Trading:OptionPremium"):

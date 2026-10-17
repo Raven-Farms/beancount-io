@@ -1,6 +1,6 @@
 {
   "skill_name": "beancount-import",
-  "notes": "Each eval maps the fixture ledger to ./ledger.beancount and the fixture export to ./export.csv (or .ofx) in a scratch dir. Validate with `bea check` when bea is installed; oracle/CI uses `uv run --project cli bean-check` separately. Do not `pip install beancount` as the customer path. eval1-5 cover the happy paths (signed CSV, debit/credit split, OFX FITID, overlap dedup, pending rows); eval6-9 are failure-mode/guarantee checks (ambiguity must ask, no write without confirm, missing target file, idempotent re-import).",
+  "notes": "Each eval maps the fixture ledger to ./ledger.beancount and the fixture export to ./export.csv (or .ofx) in a scratch dir. Validate with `bea check` when bea is installed; oracle/CI uses `uv run --project cli bean-check` separately. Do not `pip install beancount` as the customer path. eval1-5 cover the happy paths (signed CSV, debit/credit split, OFX FITID, overlap dedup, pending rows); eval6-9 are failure-mode/guarantee checks (ambiguity must ask, no write without confirm, missing target file, idempotent re-import). eval13's ledger loads beancount.plugins.nounused, so the new Expenses:Uncategorized open is refused until something posts to it: the documented two-step stages the open with --allow-errors and writes the batch posting to it in the same run.",
   "evals": [
     {
       "id": 1,
@@ -200,6 +200,22 @@
         "Identifies the manual entry two days earlier as a suspected duplicate and asks for a decision",
         "Does not treat a zero possible_duplicates CLI count as proof that there are no fuzzy matches",
         "On skip, writes no duplicate transaction; any other accepted rows use the reviewed batch with original source IDs"
+      ]
+    },
+    {
+      "id": 13,
+      "name": "nounused-ledger-staged-open",
+      "prompt": "Import ./export.csv into ./ledger.beancount for Assets:Bank:Checking.",
+      "expected_output": "Two rows staged: TRADER JOES -> Expenses:Food from history, CITY PARKING -> Expenses:Uncategorized. After an explicit yes, the plain add open is refused as an unused account (the ledger loads nounused); the skill stages the open with --allow-errors (that refusal only), writes the confirmed batch in the same run without --allow-errors, and bea check passes. It does not stop between the two steps or report success with the ledger red.",
+      "files": [
+        "evals/files/eval13_ledger.beancount",
+        "evals/files/eval13_export.csv"
+      ],
+      "expectations": [
+        "--allow-errors is used only on the Expenses:Uncategorized open, after its refusal named only the unused account",
+        "The batch is written without --allow-errors or --partial, in the same run as the staged open",
+        "bea check passes at the end, and no step leaves the staged open without its first posting",
+        "Nothing is written before the user confirms"
       ]
     }
   ]

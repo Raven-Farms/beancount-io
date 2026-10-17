@@ -1,0 +1,14 @@
+option "operating_currency" "USD"
+plugin "beancount.plugins.nounused"
+
+2026-01-01 open Assets:Bank:Checking USD
+2026-01-01 open Expenses:Food USD
+2026-01-01 open Equity:OpeningBalances
+
+2026-01-02 * "Opening"
+  Assets:Bank:Checking  100.00 USD
+  Equity:OpeningBalances
+
+2026-01-03 * "TRADER JOES" "groceries"
+  Assets:Bank:Checking  -10.00 USD
+  Expenses:Food
