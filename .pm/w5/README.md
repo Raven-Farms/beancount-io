@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [593 — A FIFO lock file fails `add` with `UnsupportedOperation`; a directory is blamed on the lock dir](./593.md)
 - [594 — A second file's preview drops the first file's remembered `sign=ledger`; flag-free `--apply` writes the opposite sign (gap in w1/150)](./594.md)
 - [595 — `-o Txns/…` (case variant of a glob-included dir) joins the ledger and doubles balances on APFS (gap in w5/072)](./595.md)
 - [596 — `doctor missing-open` exits 0 with a partial list on a ledger with a syntax error](./596.md)
