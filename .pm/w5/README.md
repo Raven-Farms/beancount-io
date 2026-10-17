@@ -204,6 +204,10 @@
 - [681 — `list --on-disk` drops a real document (cwd-dependent) or a `pushtag` note when a plugin copies it (incomplete fix of w5/507)](./681.md)
 - [682 — `add price`/`add balance` still advise `--allow-errors` for an unopened pad account (incomplete fix of w5/508)](./682.md)
 - [683 — BQL patterns built with `&&`/`||`/`~~` at run time exit 0 with a raw FutureWarning (incomplete fix of w5/509)](./683.md)
+- [684 — `bea import` on a ledger with a syntax error still offers `--allow-errors` (gap in w5/508)](./684.md)
+- [685 — `PRINT -f beancount` export fails `check` when an include uses default roots (incomplete fix of w5/474)](./685.md)
+- [686 — `--json format` skips an encrypted include without naming it (incomplete fix of w5/495)](./686.md)
+- [687 — Five doc sentences describe behavior today's fixes changed](./687.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
