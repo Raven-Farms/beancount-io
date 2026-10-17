@@ -491,9 +491,18 @@ def validate_managed_price_text(text: str) -> ValidFeed | InvalidFeed:
     for index, raw in enumerate(text.split("\n")):
         line_number = index + 1
         line = raw.removesuffix("\r")
+        # Beancount ends a directive at a blank line or a comment at column 0,
+        # so metadata after one is an indented line under nothing: `unexpected
+        # INDENT` for every command once the body replaced the last good
+        # revision (w5/478). An indented comment belongs to the point above.
         if _BLANK_RE.match(line):
+            current = None
             continue
         if _COMMENT_RE.match(line):
+            if not line[0].isspace():
+                current = None
+            elif current is None:
+                return InvalidFeed(reason="indented comment without a preceding price directive", line=line_number)
             header = _HEADER_RE.match(line)
             if header and header.group(1) in _HEADER_KEYS and header.group(1) not in headers:
                 headers[header.group(1)] = header.group(2)
