@@ -121,6 +121,9 @@ def init(
     else:
         directory = directory.expanduser().absolute()
         file = directory if directory.suffix in {".bean", ".beancount"} else directory / "main.bean"
+    # Before anything is created: every later command refuses such a path
+    # (w5/315), and `$HOME/books` left an empty `./$HOME/books/` behind (w5/579).
+    context.refuse_expanding_ledger_path(str(file))
     if file.exists() or file.is_symlink():
         raise ConflictError(f"Already exists: {file}. Choose a new path; init never overwrites a ledger.")
     # Refuse shadowing a sibling default root ledger (cwd discovery prefers main.bean).

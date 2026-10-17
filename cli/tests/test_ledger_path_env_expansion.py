@@ -106,3 +106,20 @@ def test_an_unset_variable_reads_the_file_as_written(books: Path) -> None:
     assert result.returncode == 0, result.stderr
     assert "100.00" in result.stdout
     assert "999.00" not in result.stdout
+
+
+@pytest.mark.parametrize(
+    "args",
+    [["init", "books$X.bean"], ["--json", "init", "$X/books"], ["--file", "deep$X/main.bean", "init"]],
+    ids=["file-name", "directory", "global-file"],
+)
+def test_init_refuses_an_expanding_path_and_creates_nothing(tmp_path: Path, args: list[str]) -> None:
+    """`init` made a ledger every later command refused, or failed after creating folders (w5/579)."""
+    work = tmp_path / "work"
+    work.mkdir()
+
+    result = _bea(work, *args, "--currency", "USD", "--date", "2026-01-01", X="expanded")
+
+    assert result.returncode == 2, result.stdout + result.stderr
+    assert "contains an environment variable that Beancount would expand" in result.stdout + result.stderr
+    assert sorted(path.name for path in work.iterdir() if path.name not in {"config", "cache"}) == []
