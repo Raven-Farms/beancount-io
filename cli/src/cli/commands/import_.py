@@ -576,6 +576,13 @@ def import_entries(
             raise UsageError(f"Export file not found: {source}")
         remedy = "Name the export file inside it." if source.is_dir() else "Save it to a file and import that file."
         raise UsageError(f"Export {output.not_a_file(source)}. {remedy}")
+    # The engine child reads these, and does not inherit the descriptor a
+    # `<(…)` passes as `/dev/fd/N`: "Bad file descriptor", or a config "not
+    # found" right after "Using importers from" it (w5/582).
+    for flag, named in (("--rules", rules_file), ("--config", config)):
+        path = named.expanduser() if named is not None else None
+        if path is not None and os.path.lexists(path) and not path.is_file():
+            raise UsageError(f"{flag} {output.not_a_file(path)}. Save it to a file and pass that file.")
 
     csv_request: str | None = csv_mapping
     config_to_remember: Path | None = None
