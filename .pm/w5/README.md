@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [505 — `balance-sheet -x at_cost` claims a reconciliation with a cross-currency adjustment](./505.md)
 - [506 — Zero valuation adjustment and total equity print as "—" under a conversion](./506.md)
 - [507 — `list --on-disk` drops real transactions when a plugin shares their location and the header has a quoted comment (regression from w5/401)](./507.md)
 - [508 — `add price`/`add balance` advise `--allow-errors` for a syntax error it cannot pass](./508.md)
