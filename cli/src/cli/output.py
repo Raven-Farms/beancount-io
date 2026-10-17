@@ -206,7 +206,7 @@ def failure(exc: BaseException | str) -> None:
     _print_failure(err, trace)
 
 
-_DEBUG_HINT = "Pass --debug before the command for a traceback."
+DEBUG_HINT = "Pass --debug before the command for a traceback."
 
 
 def _message(err: BeaError) -> str:
@@ -217,8 +217,8 @@ def _message(err: BeaError) -> str:
     shows a traceback for both (w5/424).
     """
     message = str(err)
-    if (err.traceback or err.unexpected) and not context.current().debug and _DEBUG_HINT not in message:
-        return f"{message}{' ' if message.endswith(('.', '!', '?')) else '. '}{_DEBUG_HINT}"
+    if (err.traceback or err.unexpected) and not context.current().debug and DEBUG_HINT not in message:
+        return f"{message}{' ' if message.endswith(('.', '!', '?')) else '. '}{DEBUG_HINT}"
     return message
 
 

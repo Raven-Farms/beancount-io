@@ -446,7 +446,7 @@ def helper_json(args: Sequence[str], *, stdin: str | None = None, writes: bool =
             # it, so the advice to ask for one belongs on this side of the
             # boundary, where that flag is known.
             stop = " " if message.endswith((".", "!", "?")) else ". "
-            message = f"{message}{stop}Pass --debug before the command for a traceback."
+            message = f"{message}{stop}{output.DEBUG_HINT}"
         error = BY_CATEGORY.get(category, BeaError)(
             message,
             details=[str(detail) for detail in failure.get("details", [])],

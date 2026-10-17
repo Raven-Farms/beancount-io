@@ -18,6 +18,7 @@ from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_ai.settings import ModelSettings
 from pydantic_ai.usage import UsageLimits
 
+from cli import output
 from cli.ask.results import format_result
 from cli.ask.skills import AgentSkill, build_skills_index_prompt
 from cli.engine import launch
@@ -418,15 +419,14 @@ def make_agent(
         Returns the matching rows with a row count. An invalid query or an invalid
         ledger comes back as an error to fix and retry.
         """
+        if not query.strip():
+            raise ModelRetry("The query is empty. Send a BQL SELECT statement.")
         try:
             # Rows and columns, not the rendered table: the row count, a visible
             # zero and a bounded result all need the typed shape (`ask.results`).
             data = launch.helper_json(["query", "--file", str(ctx.deps.file), query, "--format", "json"])
-        except LedgerError as exc:
-            detail = "; ".join(exc.details) if exc.details else str(exc)
-            raise ModelRetry("Ledger is invalid: " + detail) from exc
         except BeaError as exc:
-            raise ModelRetry(f"BQL error: {exc}. Fix the query and retry.") from exc
+            raise ModelRetry(_query_failure(exc)) from exc
         return format_result(query, data)
 
     # Models batch independent calls ("add a coffee and a lunch"), and
@@ -499,6 +499,28 @@ def make_agent(
         return skill.body or "(no body content)"
 
     return agent
+
+
+def _query_failure(exc: BeaError) -> str:
+    """What the BQL tool tells the model about a query that did not run (w5/549).
+
+    The engine's details are what make a query fixable — the caret under the
+    failing token, the columns the table has — so they travel with it, minus
+    the lines that address a person at a shell (`bea query .tables`, `--debug`).
+    A crash in the engine carries a traceback and is the engine's failure, not
+    an invalid ledger: saying "Ledger is invalid" pushed the model to "fix" a
+    ledger that loads.
+    """
+    message = str(exc).removesuffix(output.DEBUG_HINT).rstrip().rstrip(".")
+    details = [line for line in exc.details if not line.lstrip().startswith("Run bea ")]
+    if exc.traceback is not None:
+        return (
+            f"The query engine failed on this query ({message}); the ledger is not at fault. "
+            "Rephrase the query and retry."
+        )
+    if isinstance(exc, LedgerError):
+        return "Ledger is invalid: " + ("; ".join(details) or message)
+    return "\n".join([f"BQL error: {message}.", *details, "Fix the query and retry."])
 
 
 def _write_rejection(exc: BeaError) -> str:
