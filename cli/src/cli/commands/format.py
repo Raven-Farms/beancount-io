@@ -461,6 +461,9 @@ def _targets(
     # roots — never one per file, which is quadratic on a long chain (w1/087).
     members, _ = output.walk_closure(*roots)
     files.update(member.resolve() for member in members)
+    for encrypted in sorted(file for file in files if output.is_encrypted(file)):
+        files.discard(encrypted)
+        output.note(f"Skipped {encrypted}: it is encrypted, and Beancount decrypts it only to load it.")
     missing: dict[tuple[str, Path], output.MissingInclude] = {}
     # Named roots first, so each is read under the name it was given; the
     # walk skips a file it has already seen through another spelling.

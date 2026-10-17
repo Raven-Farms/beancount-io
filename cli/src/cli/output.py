@@ -394,6 +394,25 @@ def _include_matches(source: Path, raw: str) -> tuple[list[Path], list[Path]]:
     return [path for path in found if path.is_file()], [path for path in found if not path.is_file()]
 
 
+def is_encrypted(path: Path) -> bool:
+    """Whether Beancount decrypts `path` when loading it, rather than reading it as text.
+
+    Upstream's rule (`is_encrypted_file`): a `.gpg` name, or an `.asc` name
+    whose first KiB holds an armored PGP message. Read as text, such a member
+    was "not UTF-8" to `format`, which advised re-saving the secrets as
+    plaintext, and a syntax error to doctor (w5/495).
+    """
+    if path.suffix == ".gpg":
+        return True
+    if path.suffix == ".asc":
+        try:
+            with path.open(encoding="ascii") as handle:
+                return "--BEGIN PGP MESSAGE--" in handle.read(1024)
+        except (OSError, UnicodeDecodeError):
+            return False
+    return False
+
+
 def walk_closure(*roots: Path) -> tuple[list[Path], list[MissingInclude]]:
     """The roots plus every reachable file, with the includes that resolve nowhere."""
     members, missing, _, _ = _walk_closure(*roots)
@@ -463,6 +482,10 @@ def _walk_closure(*roots: Path) -> tuple[list[Path], list[MissingInclude], list[
             if (status.st_dev, status.st_ino) in inodes:
                 again.append(current)
             inodes.add((status.st_dev, status.st_ino))
+        if is_encrypted(current):
+            # Still a member, so no output may overwrite it; its includes are
+            # ciphertext until the loader decrypts it.
+            continue
         try:
             text = current.read_text(encoding="utf-8", errors="replace").removeprefix("\ufeff")
         except OSError:

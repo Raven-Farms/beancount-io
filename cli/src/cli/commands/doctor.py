@@ -257,7 +257,8 @@ def _closure_syntax_errors_of(filename: str) -> list[str]:
     root = Path(filename)
     if not root.is_file():
         return []
-    members = [str(member) for member in output.ledger_closure(root)]
+    # An encrypted include is decrypted by the loader, never parsed as text (w5/495).
+    members = [str(member) for member in output.ledger_closure(root) if not output.is_encrypted(member)]
     try:
         data = launch.helper_json(["syntax", *members])
     except BeaError:
