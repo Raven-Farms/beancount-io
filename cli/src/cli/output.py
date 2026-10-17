@@ -586,6 +586,16 @@ def refuse_cache_over_ledger(file: Path, pattern: str | None = None, source: str
                 "cache file it cannot read, so this would delete the ledger. Choose a cache path outside the "
                 "ledger's own files. Nothing was changed."
             )
+    # A path an include glob claims becomes a member once written: the pickle
+    # loaded as ledger text, and every later command failed on it (w5/497).
+    claim = None if cache.exists() else _include_claim(cache, members)
+    if claim is not None:
+        include, member = claim
+        raise UsageError(
+            f'{source} {pattern} names {cache}, which include "{include}" in {member} would load as part of '
+            "the ledger once the cache is written. Choose a cache path outside the ledger's includes. "
+            "Nothing was changed."
+        )
     problem = not_a_load_cache(cache)
     if problem is not None:
         remove = "unset it" if source == CACHE_ENV else "leave it out"
@@ -625,10 +635,21 @@ def refuse_include_claim(destination: Path, ledger: Path) -> None:
 
 
 def _refuse_include_claim(destination: Path, members: Sequence[Path]) -> None:
+    claim = _include_claim(destination, members)
+    if claim is not None:
+        include, member = claim
+        raise UsageError(
+            f'--output {destination} would become part of the ledger it reads: include "{include}" '
+            f"in {member} matches that path. Choose a destination outside the ledger's includes."
+        )
+
+
+def _include_claim(destination: Path, members: Sequence[Path]) -> tuple[str, Path] | None:
+    """The include, as written, and the file holding it, whose pattern would match `destination`."""
     try:
         target = destination.expanduser().resolve()
     except OSError:
-        return
+        return None
     for member in members:
         try:
             text = member.read_text(encoding="utf-8", errors="replace").removeprefix("\ufeff")
@@ -640,10 +661,8 @@ def _refuse_include_claim(destination: Path, members: Sequence[Path]) -> None:
                 continue
             pattern = raw if Path(raw).is_absolute() else str(member.parent / raw)
             if _glob_would_match(target, pattern):
-                raise UsageError(
-                    f'--output {destination} would become part of the ledger it reads: include "{match.group(1)}" '
-                    f"in {member} matches that path. Choose a destination outside the ledger's includes."
-                )
+                return match.group(1), member
+    return None
 
 
 def _glob_would_match(target: Path, pattern: str) -> bool:

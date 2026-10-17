@@ -322,7 +322,7 @@ def _load_with_sources(
     cache = root or cache_root()
 
     snapshot = snapshot or LedgerSnapshot.capture(entry)
-    refuse_cache_over_ledger(entry, snapshot.contents)
+    refuse_cache_over_ledger(entry, snapshot.contents, snapshot.patterns)
     refused: dict[str, str] = {}
     managed = _collect_managed(snapshot, allowed_origins, refused)
     duplicates = _duplicate_members(snapshot)

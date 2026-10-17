@@ -578,7 +578,7 @@ def not_a_load_cache(cache: Path) -> str | None:
     return None
 
 
-def refuse_cache_over_ledger(loaded: Path, members: Iterable[Path]) -> None:
+def refuse_cache_over_ledger(loaded: Path, members: Iterable[Path], patterns: Iterable[str] = ()) -> None:
     """Refuse a relocated pickle cache that is one of the ledger's own files.
 
     Beancount treats its cache path as disposable: a file there that does not
@@ -603,6 +603,16 @@ def refuse_cache_over_ledger(loaded: Path, members: Iterable[Path]) -> None:
                 "cache file it cannot read, so this would delete the ledger. Choose a cache path outside the "
                 "ledger's own files. Nothing was changed."
             )
+    # A path an include glob claims becomes a member once written: the pickle
+    # then loads as ledger text and every later command fails (w5/497).
+    resolved = cache.resolve()
+    claim = None if cache.exists() else next((p for p in patterns if _included_new_file(resolved, p)), None)
+    if claim is not None:
+        raise UsageError(
+            f"{CACHE_ENV} {pattern} names {cache}, which the include pattern {claim} would load as part of the "
+            "ledger once the cache is written. Choose a cache path outside the ledger's includes. "
+            "Nothing was changed."
+        )
     problem = not_a_load_cache(cache)
     if problem is not None:
         raise UsageError(
@@ -1508,7 +1518,7 @@ def validate_candidate(
 
     # The staged copy has a private name, so the guard inside the load would
     # name that; a `{filename}` cache pattern is about the ledger file itself.
-    refuse_cache_over_ledger(file, snapshot.contents if snapshot else [file])
+    refuse_cache_over_ledger(file, snapshot.contents if snapshot else [file], snapshot.patterns if snapshot else ())
     try:
         if snapshot is None:
             entries, errors, options = managed_load.load_file(candidate)

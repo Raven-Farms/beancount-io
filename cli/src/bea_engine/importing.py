@@ -1198,7 +1198,7 @@ def _entries_after(snapshot: ledger_write.LedgerSnapshot, target: Path, original
     """
     from bea_engine import managed_load
 
-    ledger_write.refuse_cache_over_ledger(target, snapshot.contents)
+    ledger_write.refuse_cache_over_ledger(target, snapshot.contents, snapshot.patterns)
     with ledger_write.candidate_file(target, ledger_write.decoded_append(target, original, texts)) as candidate:
         with snapshot.staged(candidate, target) as (root, _):
             entries, _, _ = managed_load.load_file(root)
