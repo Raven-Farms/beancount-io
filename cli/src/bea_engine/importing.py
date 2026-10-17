@@ -327,11 +327,18 @@ def answer(
     # dropped them all (w5/325).
     forget_source_lines()
     written = [entry for entry in existing if not entry_generated(entry, type(entry).__name__.lower())]
+    # Bank ids another account issued, reached here only through a transfer's
+    # counter leg: never an exact match for this account's rows (w5/598).
+    transfer_ids: dict[tuple[str, str, str], Any] = {}
     for entry in written:
         entry = normalize_entry_strings(entry)
         if isinstance(entry, Transaction) and _source_legs(entry, account):
+            elsewhere = _issued_elsewhere(entry, account, roots[:2])
             for identity in _identities(entry, account, keys):
-                identities[identity] = entry
+                if elsewhere and _is_native_identity(identity):
+                    transfer_ids[identity] = entry
+                else:
+                    identities[identity] = entry
             fingerprints.setdefault(_candidate_key(entry, account), []).append(entry)
     if source.read_bytes() != source_bytes:
         raise ConflictError("The export changed during extraction; nothing was written. Retry.")
@@ -454,6 +461,14 @@ def answer(
                         )
                     else:
                         reason = f"Repeats row {earlier} of this import."
+            elif (other_side := _transfer_side(ids, transfer_ids, entry, account, fingerprint)) is not None:
+                (_, _, matched_value), match = other_side
+                status, reason = (
+                    "possible_duplicate",
+                    f"Stable ID {matched_value} is on the other side of a transfer from {match.postings[0].account} "
+                    f"dated {_relative_days(match.date, entry.date)}, for the same amount; a bank that shares one "
+                    "reference across both legs makes this that transfer.",
+                )
             elif (twin := _possible_twin(fingerprints, entry, account, fingerprint)) is not None:
                 status, reason, match = (
                     "possible_duplicate",
@@ -1064,6 +1079,61 @@ _GENERATED_ID = re.compile(r"(?:csv|mint|monarch|qbo):sha256:([0-9a-f]{16})")
 
 def _is_generated_identity(key: tuple[str, str, str]) -> bool:
     return key[1] == "digest" or (key[1] == "import-id" and _GENERATED_ID.fullmatch(key[2]) is not None)
+
+
+def _is_native_identity(key: tuple[str, str, str]) -> bool:
+    """A bank's or importer's own id, unique only within the account that issued it."""
+    return key[1] in {"bank", "import-id"} and not _is_generated_identity(key)
+
+
+#: How far apart the two sides of one transfer may post and still read as one.
+_TRANSFER_DAYS = 7
+
+
+def _issued_elsewhere(entry: Any, account: str, balance_roots: tuple[str, ...]) -> bool:
+    """Whether another account issued the native ids of an entry that posts to `account`.
+
+    bea writes the source posting first, so an entry whose first posting is
+    another balance-sheet account is that account's import, a transfer, and
+    its bank id is scoped there: checking's `1001` deduped savings' own
+    `1001`, a different deposit, as an exact duplicate (w5/598). An income or
+    expense leg first is no such evidence: some importers list it first.
+    """
+    first = entry.postings[0] if entry.postings else None
+    if first is None or any(first is leg for leg in _source_legs(entry, account)):
+        return False
+    return first.account.split(":", 1)[0] in balance_roots
+
+
+def _transfer_side(
+    ids: list[tuple[str, str, str]],
+    transfer_ids: dict[tuple[str, str, str], Any],
+    entry: Any,
+    account: str,
+    fingerprint: tuple[Any, ...],
+) -> tuple[tuple[str, str, str], Any] | None:
+    """A transfer whose other side may be this row: its issuer's id, the same amount here, days apart at most.
+
+    Some banks give both legs of a transfer one reference, so the id is kept
+    as evidence, but only for review: the same id on another date or amount
+    is another transaction.
+    """
+    for key in ids:
+        found = transfer_ids.get(key)
+        if (
+            found is not None
+            and abs((found.date - entry.date).days) <= _TRANSFER_DAYS
+            and _legs_agree(fingerprint[3], _fingerprint(found, account)[3])
+        ):
+            return key, found
+    return None
+
+
+def _relative_days(written: Any, row: Any) -> str:
+    days = (row - written).days
+    if days == 0:
+        return "the same day"
+    return f"{abs(days)} day{'s' if abs(days) != 1 else ''} {'earlier' if days > 0 else 'later'}"
 
 
 def _same_row(

@@ -454,7 +454,13 @@ skills deduplicate against each other: the ledger itself is the dedup database.
   silently disables bank-ID dedupe. The default keys fold case the same way
   (`FITID` is `fitid`), and a key that cannot be a metadata key — empty, or not
   starting with a lowercase letter — exits **2**.
-  IDs must be stable and unique within that account. An exact match is skipped;
+  IDs must be stable and unique within that account. A transfer written by
+  importing one account (its first posting) keeps that account's ID even
+  though it also posts to the other account. Importing the other account never
+  takes that ID for one of its own rows. When the row has the same amount
+  within a week, it is a possible duplicate ("on the other side of a transfer
+  from …"), for banks that give both legs one reference; otherwise it is new.
+  An exact match is skipped;
   reused native IDs with different source amounts or commodities are conflicts
   requiring review. An ID repeated within one export with different data is a
   conflict too; it names the earlier row of the import, and the fix is in the
