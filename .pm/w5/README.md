@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [500 — `bea check books.bean` never suggests `bea --file books.bean check`](./500.md)
 - [501 — `report -a Equity -t 2025` drops previous earnings (clamp runs after the account filter)](./501.md)
 - [502 — `report -a "*Food*"` (invalid regex) silently drops `Expenses:FoodTruck`; refusals quote wrapper positions](./502.md)
 - [503 — `bea balance -- <term>` forwards dash terms as engine options (`-- -f other.bean` reports another ledger)](./503.md)
