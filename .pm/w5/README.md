@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [535 — `treeify` on non-UTF-8 input gives a raw `UnicodeDecodeError`](./535.md)
 - [536 — Only accounts are written NFC despite USAGE; `--into` creates NFD file names](./536.md)
 - [537 — `add transactions --partial` is quadratic when a row breaks an existing balance assertion (gap in w5/123)](./537.md)
 - [538 — A booking-arithmetic failure aborts a `--partial` batch naming no row; zero-unit total cost gives raw `DivisionByZero`](./538.md)
