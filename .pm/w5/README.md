@@ -198,6 +198,12 @@
 - [653 — `add document --into` a symlinked include refuses a valid receipt (path judged at the link target)](./653.md)
 - [654 — Cwd-relative `--into` from a subdirectory gets advice to create a new include instead of the root-relative rule](./654.md)
 - [655 — Reads of a ledger with a local plugin leave `__pycache__` beside the ledger](./655.md)
+- [656 — `-p "Assets:Cash 10/0-5 USD"` leaks `SystemError` instead of the zero-divisor refusal (regression from w5/489)](./656.md)
+- [657 — A zero-width space in `add -p` still yields an invisible duplicate account via the printed `add open` (incomplete fix of w5/490)](./657.md)
+- [658 — An earlier-dated duplicate `add open` hint names the unwritten proposal line (incomplete fix of w5/488)](./658.md)
+- [659 — A validating `add balance --pad-from` skips the same-day conflict and duplicate checks (incomplete fix of w5/487)](./659.md)
+- [660 — Trivial gaps in w5/487/488/490: `--force` hint loop, wrong filled-in leg, NBSP in `--amount`](./660.md)
+- [661 — `add` exits 0 on a ledger `check` rejects for data-type errors (gap next to w5/493)](./661.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
