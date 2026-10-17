@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [511 — `add balance --amount "… ; note"` silently drops the comment, exit 0](./511.md)
 - [512 — `bea format -o a -o b` / `-c 40 -c 70` keep the last value](./512.md)
 - [513 — `add balance --pad-from` before the open cites a nonexistent line as an assertion that "already holds"](./513.md)
 - [514 — `list` on an included leaf counts the root hint as an error](./514.md)
