@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [561 — `query -f csv` drops the lot date and label from `position.cost` (gap in w5/465)](./561.md)
 - [562 — `ORDER BY price` crashes with `NullType` AttributeError when unpriced postings sort first](./562.md)
 - [563 — `SELECT DISTINCT other_accounts` leaks Python syntax text and gives tags/links advice](./563.md)
 - [564 — Text `check` exits 0 on a ledger `bean-check` rejects once loads exceed 1 s (helper cache skips validation)](./564.md)
