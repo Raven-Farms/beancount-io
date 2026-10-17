@@ -138,6 +138,30 @@ def init(
                     f"would prefer main.bean over main.beancount — choose a new path; init never "
                     f"shadows an existing root ledger."
                 )
+    # Every option is checked before the first question, naming itself: a bad
+    # `--date` or `--opening-balance` was refused only after the prompts were
+    # answered, as `Invalid value: …` with no option named (w5/588).
+    given_day = None
+    if date is not None:
+        try:
+            given_day = parse_date(date)
+        except typer.BadParameter as exc:
+            raise UsageError(f"--date {date!r}: {exc.message}") from None
+    balances: dict[str, Decimal] = {}
+    for balance in opening_balance or []:
+        parts = balance.split()
+        if len(parts) != 2 or parts[0] not in _ACCOUNTS or not parts[0].startswith(("Assets:", "Liabilities:")):
+            raise UsageError(
+                f"--opening-balance {balance!r}: Opening balance must be 'ACCOUNT NUMBER' for one of the "
+                "template's asset/liability accounts."
+            )
+        account, number = parts
+        if account in balances:
+            raise UsageError(f"--opening-balance {balance!r}: Opening balance specified twice for {account}.")
+        try:
+            balances[account] = _opening_amount(number)
+        except typer.BadParameter as exc:
+            raise UsageError(f"--opening-balance {balance!r}: {exc.message}") from None
     prompted = currency is None
     if currency is None:
         if not ctx.can_prompt:
@@ -161,18 +185,7 @@ def init(
             value_proc=parse_date,
         )
     else:
-        day = datetime.date.today() if date is None else parse_date(date)
-    balances: dict[str, Decimal] = {}
-    for balance in opening_balance or []:
-        parts = balance.split()
-        if len(parts) != 2 or parts[0] not in _ACCOUNTS or not parts[0].startswith(("Assets:", "Liabilities:")):
-            raise UsageError(
-                "Opening balance must be 'ACCOUNT NUMBER' for one of the template's asset/liability accounts."
-            )
-        account, number = parts
-        if account in balances:
-            raise UsageError(f"Opening balance specified twice for {account}.")
-        balances[account] = _opening_amount(number)
+        day = given_day or datetime.date.today()
     if ctx.can_prompt and opening_balance is None:
         balances["Assets:Checking"] = ctx.prompt(
             f"Checking opening balance on {day} (negative for an overdraft)", default="0", value_proc=_opening_amount
