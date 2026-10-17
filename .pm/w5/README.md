@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [540 — Filtered `list --json` output cannot be re-fed to `add transactions` (`matching_postings`)](./540.md)
 - [541 — A `--partial` write drops the NFC/NFD notes of written rows in text mode](./541.md)
 - [542 — Cost labels are written with raw control and bidi characters](./542.md)
 - [543 — A same-day sale before its purchase is refused despite USAGE's "appearing later in the input"](./543.md)
