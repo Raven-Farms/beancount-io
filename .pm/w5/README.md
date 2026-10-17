@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [490 — A no-break space in `add -p` becomes part of the account name; the hint offers to open it](./490.md)
 - [491 — `add open -c USD -c ""` silently drops the blank currency](./491.md)
 - [492 — `add --into` a new file in a missing directory exits 1 "validation" instead of a usage refusal](./492.md)
 - [493 — `bea --json check` answers valid for a ledger `bea check` rejects (extra validations skipped)](./493.md)
