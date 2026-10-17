@@ -570,6 +570,9 @@ Stdout and `-o` remain text filters that accept syntax errors; the walking modes
 check parseability as described below. Run `bea check` to validate the ledger.
 `-o` replaces its destination only once the whole formatted text is written: a
 write that fails part-way preserves an existing export and leaves no partial file.
+The same holds when it is stopped (SIGTERM, SIGHUP or Ctrl-C) while writing: the
+hidden `.bea-*.tmp` copy is removed and bea ends by that signal. This covers
+every `-o` export (`format`, `treeify`, `example`, `query`).
 
 Ledger text and query results on stdout are UTF-8 whatever the locale, so
 `bea format FILE > out.bean` and `bea query … > out.csv` write the bytes `-o`
