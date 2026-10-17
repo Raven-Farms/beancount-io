@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [564 — Text `check` exits 0 on a ledger `bean-check` rejects once loads exceed 1 s (helper cache skips validation)](./564.md)
 - [565 — `format -i DIR` aborts entirely on one file with `100/0`, naming no file](./565.md)
 - [566 — An include cycle gets a "Run with --file <itself>" root hint](./566.md)
 - [567 — `doctor missing-open` writes diagnostics to stdout, so `>> main.bean` corrupts the ledger](./567.md)
