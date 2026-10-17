@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [569 — `bea doctor` double-counts a file included under two spellings; `roundtrip` crashes (gap in w5/433)](./569.md)
 - [570 — `treeify` takes `NYSE:IBM` in a narration as the account column (regression from w5/414)](./570.md)
 - [571 — `doctor linked/region` print 26-decimal trees for interpolated legs (regression from w5/101)](./571.md)
 - [572 — `doctor roundtrip` in a read-only directory prints a double traceback](./572.md)
