@@ -224,6 +224,11 @@
 - [759 — format refuses #tag/0 and ^link/0 as division by zero; 100/(0) still kills the batch (regression/incomplete fix of w5/565)](./759.md)
 - [760 — Four query shapes still leak raw Python errors (ORDER BY mixed meta, DISTINCT subquery set, joinstr(accounts), DISTINCT meta)](./760.md)
 - [761 — check --auto --cache-filename leaks bean-check's raw WARNING:root line](./761.md)
+- [762 — price export leaves out a plugin found via an included insert_pythonpath; the snapshot fails check (gap in w5/094)](./762.md)
+- [763 — beancount-options skill: "{} matches any held lot" is false under STRICT; template refused under sellgains/pedantic](./763.md)
+- [764 — Under option booking_method AVERAGE, add open makes an unsellable account; the sale hint blames the open (gap in w5/162)](./764.md)
+- [765 — A documents-folder file dated before an open makes add open fail with main.bean:0 and no file named](./765.md)
+- [766 — Three option gaps: pedantic price --force, plugin_processing_mode raw in exports, invalid name_* value blocks adds](./766.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
