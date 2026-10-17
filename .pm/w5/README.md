@@ -210,6 +210,11 @@
 - [696 — A 0-ready import preview still says "repeat with --apply"](./696.md)
 - [697 — Zero-sum opening balances write Equity:OpeningBalances -0 USD (regression from w5/310)](./697.md)
 - [698 — Three slips in USAGE "Creating a ledger"](./698.md)
+- [699 — Other SOCKS spellings and unknown proxy schemes still fail as unexpected; refusal names the wrong variable (incomplete fix of w5/518)](./699.md)
+- [700 — An IDNA-invalid BEA_API_URL passes the URL check; logout deletes the credential without sending anything](./700.md)
+- [701 — Logout drops the request ID on a lost or unreadable answer; USAGE still gives the old exit codes (gap in w5/521)](./701.md)
+- [702 — A proxy that drops the CONNECT makes cloud writes and logout exit 4 "outcome unknown" (gap in w5/519)](./702.md)
+- [703 — A malformed BEA_TOKEN is told to run cloud login; logout exits 3 instead of the BEA_TOKEN no-op](./703.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
