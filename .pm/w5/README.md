@@ -188,6 +188,12 @@
 - [631 — `list --search` cannot find a multi-line narration by the text the table shows](./631.md)
 - [632 — Hosted ledger: shadowing a feed point with an indented comment leaves orphaned lines (follow-up of w5/477)](./632.md)
 - [633 — Trivial follow-ups to w5/475, 479, 480: "disabled" for ignored origins, stale `--allow-errors` help, BOM option location](./633.md)
+- [634 — An importer config calling `sys.exit` is reported as "engine did not answer" and, with `--apply`, exit 4 "outcome unknown"](./634.md)
+- [635 — `ingest extract -o` on a module binding `CONFIG` by import exits 0 and writes nothing (gap in w5/167)](./635.md)
+- [636 — A blocked import row's "opens after this row" names a vanished staging file](./636.md)
+- [637 — Importer rows with unopenable account names or bad currencies get remedies `bea add` refuses (gap in w3/386)](./637.md)
+- [638 — Importer row failures are not attributed to rows (unbalanced row "ready", "Directive 2 of 3", bare type errors)](./638.md)
+- [639 — Importer-shape refusals name neither the importer nor the fix (legacy entry, class entry, single directive)](./639.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
