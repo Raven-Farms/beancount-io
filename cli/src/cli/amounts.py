@@ -58,7 +58,7 @@ def check_decimal_notation(text: str) -> None:
     # which takes the whole engine process down and leaves nothing to attribute
     # to a posting. A literal zero is the case worth catching here; anything
     # computed (`100/(2-2)`) still reaches the engine.
-    divisor = re.search(r"/\s*[-+]?(?:0+(?:\.0*)?|\.0+)(?![\d.])", unquoted)
+    divisor = re.search(r"/\s*[-+]?(?:0+(?:\.0*)?|\.0+)(?![\d.A-Z'_-])", unquoted)
     if divisor:
         raise UsageError(
             f"Division by zero in {text.strip()!r}. Beancount evaluates amount arithmetic while parsing, "
