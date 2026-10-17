@@ -205,6 +205,9 @@
 - [678 — `format FILE` / `-o` on an unparseable file exit 0 echoing it unchanged](./678.md)
 - [679 — `bea ask` answered with a redirect says "Could not reach the server"](./679.md)
 - [680 — Small exit-contract slips: wrong blame, `exit -11`, group-without-subcommand JSON, `--limit 0`, `price status` JSON](./680.md)
+- [681 — `list --on-disk` drops a real document (cwd-dependent) or a `pushtag` note when a plugin copies it (incomplete fix of w5/507)](./681.md)
+- [682 — `add price`/`add balance` still advise `--allow-errors` for an unopened pad account (incomplete fix of w5/508)](./682.md)
+- [683 — BQL patterns built with `&&`/`||`/`~~` at run time exit 0 with a raw FutureWarning (incomplete fix of w5/509)](./683.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
