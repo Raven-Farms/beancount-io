@@ -1,6 +1,6 @@
 # w6 · m6 — Publish the eight ledger skills to ClawHub for OpenClaw and Hermes Agent
 
-**Worker:** worker1 **Goal:** An OpenClaw or Hermes Agent user installs any `beancount-*` skill by name from ClawHub, and it works on its own without a Git checkout or this repository's link installer. **Status:** todo (t001 blocked; t002 done)
+**Worker:** worker1 **Goal:** An OpenClaw or Hermes Agent user installs any `beancount-*` skill by name from ClawHub, and it works on its own without a Git checkout or this repository's link installer. **Status:** todo (t001 blocked; t002–t003 done)
 
 **Research date:** 2026-10-16. Sources: ClawHub's quickstart, how-it-works, and skill-format pages at `docs.openclaw.ai/clawhub/`; Hermes Agent's skills page at `hermes-agent.nousresearch.com/docs/user-guide/features/skills`. Re-check the CLI flags against `clawhub --help` and `hermes skills --help` before relying on them.
 
@@ -10,7 +10,7 @@
 | --- | --- | --- | --- |
 | t001 | Owner decision: ClawHub's MIT-0 terms and the publishing handle — **BLOCKED** | 15m | — |
 | [t002](./done/t002.md) | Bundle each skill with the shared references it reads — **DONE** | 45m | — |
-| t003 | Name the sibling skills each one hands off to, and how to get them | 30m | — |
+| [t003](./done/t003.md) | Name the sibling skills each one hands off to, and how to get them — **DONE** | 30m | — |
 | t004 | Declare `bea` and registry metadata in the frontmatter | 45m | — |
 | t005 | Dry-run publish every bundle and clear ClawHub's checks | 30m | t001, t002, t003, t004 |
 | t006 | Add the `Publish (clawhub)` workflow | 45m | t005 |

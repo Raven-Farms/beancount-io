@@ -37,6 +37,8 @@ Resolve the period (user's words or last complete month — state it). Find the 
 
 For each active account, ask the user for the period statement (CSV/pasted text). Per account **with** a statement, run the `beancount-reconcile` flow (its own confirm gate applies) — outcome **tied**, or **partial** when reconcile correctly withholds the assertion over unresolved suspects/mismatches (a reported finding with its residual, *not* a failure to retry). Per account **without** one: status **unverified** — listed in the report, never silently passed. Nothing in this phase writes except through reconcile's confirmed appends.
 
+If beancount-reconcile is not installed beside this skill (a registry can install one skill alone), say so and point the user to https://github.com/bex-co/beancount-io/blob/main/skills/docs/installation.md to add it. Do not reconcile without it; continuing marks every account **unverified**.
+
 ### 3. Assert
 
 After reconciliation, every reconciled account has a period-end `balance` assertion (reconcile appends them). Verify each active account has an assertion dated on/after period end; accounts without one are **unpinned** in the report.
@@ -54,7 +56,8 @@ List every `!`-flagged entry dated in or before the period. Each is either resol
 Generate the period's numbers with the shared report recipes, using
 `--file "$ledger" --json --no-input` and `--time "$month"` on both
 `report income-statement` and `report balance-sheet`. Use beancount-ask's BQL
-recipes for any additional figures. Assemble the close report:
+recipes for any additional figures; without beancount-ask installed, report only
+these two. Assemble the close report:
 
 ```
 Close: 2026-06 (2026-06-01 … 2026-06-30)
