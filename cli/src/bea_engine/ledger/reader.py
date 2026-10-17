@@ -138,9 +138,6 @@ def forget_source_lines() -> None:
     _source_lines.cache_clear()
 
 
-_QUOTED = re.compile(r'"((?:[^"\\]|\\.)*)"')
-
-
 def shared_locations(entries: list[Any]) -> frozenset[tuple[str, int]]:
     """The source locations two or more transactions claim on one date, of which at most one is written.
 
@@ -151,29 +148,59 @@ def shared_locations(entries: list[Any]) -> frozenset[tuple[str, int]]:
     such a plugin keeps may carry a rewritten narration, so only a same-date
     claim is settled by the line's text.
     """
-    seen: set[tuple[str, int, Any]] = set()
+    seen: set[tuple[str, int, Any, str]] = set()
     shared: set[tuple[str, int]] = set()
     for entry in entries:
-        if not isinstance(entry, Transaction):
-            continue
         meta = entry.meta or {}
         lineno = meta.get("lineno")
         if not isinstance(lineno, int):
             continue
-        key = (str(meta.get("filename")), lineno, entry.date)
+        # Every directive type: a plugin's inverse `price` stamped with the
+        # price line's location passed as on disk too (w5/507).
+        key = (str(meta.get("filename")), lineno, entry.date, type(entry).__name__)
         if key in seen:
             shared.add(key[:2])
         seen.add(key)
     return frozenset(shared)
 
 
-def _declares(entry: Any, line: str) -> bool:
-    """Whether a transaction header line carries this entry's payee and narration."""
-    strings = [
-        unicodedata.normalize("NFC", text.replace('\\"', '"').replace("\\\\", "\\")) for text in _QUOTED.findall(line)
-    ][:2]
-    payee, narration = (strings[0], strings[1]) if len(strings) == 2 else (None, strings[0] if strings else "")
-    return (entry.payee or None, entry.narration or "") == (payee or None, narration)
+@cache
+def _spelled_at(filename: str, lineno: int) -> Any:
+    """The directive the file itself spells at this line, parsed without plugins, or None.
+
+    Read with the parser, not a pattern over one line: a quoted word in a
+    trailing `;` comment was taken for the narration, and a narration
+    spanning lines never matched, so the real transaction at a shared
+    location counted as generated (w5/507).
+    """
+    from beancount.parser import parser
+
+    lines = _source_lines(filename)
+    if lines is None or lineno > len(lines):
+        return None
+    entries, _, _ = parser.parse_string("\n".join(lines[lineno - 1 : lineno - 1 + 200]) + "\n")
+    return entries[0] if entries else None
+
+
+def _declares(entry: Any) -> bool:
+    """Whether the file spells this entry at its location, rather than another entry stamped there."""
+    meta = entry.meta or {}
+    spelled = _spelled_at(str(meta.get("filename")), meta.get("lineno"))
+    if spelled is None:
+        return True
+    if type(spelled) is not type(entry):
+        return False
+    if isinstance(entry, Transaction):
+
+        def header(item: Any) -> tuple[str | None, str]:
+            return (
+                unicodedata.normalize("NFC", item.payee) if item.payee else None,
+                unicodedata.normalize("NFC", item.narration or ""),
+            )
+
+        return header(entry) == header(spelled)
+    ignored = {"meta", "postings", "diff_amount", "tolerance", "booking"}
+    return all(getattr(entry, name) == getattr(spelled, name) for name in entry._fields if name not in ignored)
 
 
 def entry_generated(entry: Any, directive_type: str, shared: frozenset[tuple[str, int]] = frozenset()) -> bool:
@@ -215,9 +242,10 @@ def entry_generated(entry: Any, directive_type: str, shared: frozenset[tuple[str
     if directive_type == "transaction":
         if _TXN_TOKEN.match(token) is None:
             return True
-        # Two transactions at one location: only the one the line spells is written.
-        return (str(filename), lineno) in shared and not _declares(entry, lines[lineno - 1])
-    return not token.startswith(directive_type)
+    elif not token.startswith(directive_type):
+        return True
+    # Two entries at one location: only the one the line spells is written.
+    return (str(filename), lineno) in shared and not _declares(entry)
 
 
 def _in_date_range(

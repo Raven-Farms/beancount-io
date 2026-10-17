@@ -101,8 +101,8 @@ def answer(
         filters["root"] = Path(os.path.abspath(str(file))).parent
 
     entries, errors = reader.load_file(file)
-    shared = reader.shared_locations(entries) if directive_type == "transaction" else frozenset()
-    if shared:
+    shared = reader.shared_locations(entries)
+    if shared and directive_type == "transaction":
         filters["shared"] = shared
     if on_disk_only:
         # Before the limit: truncation must count answerable rows, not rows
