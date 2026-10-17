@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import stat
 import sys
 import threading
 import time
@@ -25,6 +26,7 @@ from pathlib import Path
 from cli.config import cache_dir, config_dir, package_version
 from cli.context import env_flag
 from cli.errors import BeaError, UsageError
+from cli.utils import atomic_write
 
 PROJECT = "beancount-io"
 
@@ -37,6 +39,9 @@ DISABLE_ENV = "BEA_NO_UPDATE_NOTIFIER"
 
 #: One check a day, whatever the outcome was.
 CACHE_MAX_AGE_SECONDS = 24 * 60 * 60
+
+#: The cache holds one timestamp and one version; anything longer is not it.
+_MAX_CACHE_BYTES = 4096
 
 #: The whole budget for the check: the socket timeout, and the longest a
 #: command will wait for the answer before giving up and printing nothing.
@@ -115,11 +120,25 @@ def muted(*, json_output: bool, no_input: bool, channel: str = "pypi") -> bool:
 def read_cache(channel: str = "pypi", *, cache_file: Path | None = None) -> tuple[float, str] | None:
     """The last check: when it happened, and what it found (`""` for nothing)."""
     try:
-        entry = json.loads((cache_file or cache_path(channel)).read_text())
+        entry = json.loads(_read_regular(cache_file or cache_path(channel)))
         return float(entry["checked_at"]), str(entry["version"])
-    except (OSError, ValueError, KeyError, TypeError, UsageError):
+    except (OSError, ValueError, KeyError, TypeError, RecursionError, UsageError):
         # UsageError: a refused `BEA_CONFIG_DIR` must not fail `bea --version`.
         return None
+
+
+def _read_regular(path: Path) -> str:
+    """The cache's text, read without blocking: a FIFO there hung every check (w5/590).
+
+    Anything but a regular file is not a cache, which reads as "not cached".
+    """
+    fd = os.open(path, os.O_RDONLY | getattr(os, "O_NONBLOCK", 0) | getattr(os, "O_CLOEXEC", 0))
+    try:
+        if not stat.S_ISREG(os.fstat(fd).st_mode):
+            raise ValueError(f"{path} is not a regular file")
+        return os.read(fd, _MAX_CACHE_BYTES).decode()
+    finally:
+        os.close(fd)
 
 
 def _writable_cache(channel: str) -> Path | None:
@@ -138,18 +157,35 @@ def _writable_cache(channel: str) -> Path | None:
 
 
 def _can_write(path: Path) -> bool:
-    if path.exists():
-        return path.is_file() and os.access(path, os.W_OK)
+    """Whether `write_cache` can replace `path`: its directory takes a new entry.
+
+    The cache is replaced, never written in place, so a writable file in a
+    read-only directory cannot be updated. `atomic_write` also leaves a
+    read-only file alone.
+    """
     holder = next((parent for parent in path.parents if parent.exists()), None)
-    return holder is not None and holder.is_dir() and os.access(holder, os.W_OK | os.X_OK)
+    if holder is None or not holder.is_dir() or not os.access(holder, os.W_OK | os.X_OK):
+        return False
+    try:
+        status = path.stat()
+    except FileNotFoundError:
+        return True
+    except OSError:
+        return False
+    return not stat.S_ISDIR(status.st_mode) and bool(status.st_mode & 0o222)
 
 
 def write_cache(checked_at: float, version: str, channel: str = "pypi", *, cache_file: Path | None = None) -> None:
-    """Remember the outcome. Best effort: a read-only home must not break a command."""
+    """Remember the outcome. Best effort: a read-only home must not break a command.
+
+    Replaced atomically rather than written through: a symlink there had its
+    target overwritten, outside the config directory, and a FIFO hung the
+    command (w5/590).
+    """
     try:
         path = cache_file or cache_path(channel)
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps({"checked_at": checked_at, "version": version}))
+        atomic_write(path, json.dumps({"checked_at": checked_at, "version": version}))
     except OSError:
         pass
 
