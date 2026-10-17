@@ -212,6 +212,9 @@
 - [701 — Logout drops the request ID on a lost or unreadable answer; USAGE still gives the old exit codes (gap in w5/521)](./701.md)
 - [702 — A proxy that drops the CONNECT makes cloud writes and logout exit 4 "outcome unknown" (gap in w5/519)](./702.md)
 - [703 — A malformed BEA_TOKEN is told to run cloud login; logout exits 3 instead of the BEA_TOKEN no-op](./703.md)
+- [704 — ingest extract -e misses duplicates in a BOM or NFD ledger, with no warning](./704.md)
+- [705 — treeify treats - as a file name: -o - writes ./-, and treeify - reads it instead of stdin](./705.md)
+- [706 — ingest extract: -e DIR ends in a traceback; -o into a read-only directory exits 1 after running, not 3](./706.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
