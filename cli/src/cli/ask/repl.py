@@ -14,7 +14,6 @@ from prompt_toolkit.history import FileHistory, History, InMemoryHistory
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.styles import Style
 from rich.console import Console
-from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.text import Text
 
@@ -24,6 +23,7 @@ if TYPE_CHECKING:
     from cli.ask.agent import BqlDeps
 
 from cli import output
+from cli.ask.render import answer_markdown
 from cli.config import history_path
 from cli.context import env_flag
 from cli.errors import AuthError
@@ -348,9 +348,7 @@ def run_repl(agent: Agent[BqlDeps, str], deps: BqlDeps, *, default_input: str | 
                 continue
             messages = list(result.all_messages())
             console.print()
-            # No OSC 8 hyperlink: its visible text is the model's, so it could read
-            # one address and open another. The target is printed beside it instead.
-            console.print(Markdown(inert_text(result.output), hyperlinks=False))
+            console.print(answer_markdown(result.output))
             if cut_off(result):
                 console.print(Text(CUT_OFF_NOTICE, style="yellow"))
     finally:

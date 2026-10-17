@@ -93,19 +93,13 @@ def ask(
 
     if print_mode or ctx.no_input:
         from rich.console import Console
-        from rich.markdown import Markdown
 
-        from cli.utils import inert_text
+        from cli.ask.render import answer_markdown
 
         console = Console()
         with console.status("[dim]Thinking…[/dim]", spinner="dots"), translated_failures(deps):
             result = agent.run_sync(question, deps=deps, usage_limits=usage_limits())
-        # The answer is model-controlled text on its way to a terminal, so it
-        # obeys the same invariant as every other untrusted string the CLI
-        # prints (w3/392): no control character reaches the screen raw. Rich
-        # would otherwise emit one itself — an OSC 8 hyperlink whose visible
-        # text the model chose — so a link is rendered with its target shown.
-        console.print(Markdown(inert_text(result.output), hyperlinks=False))
+        console.print(answer_markdown(result.output))
         if cut_off(result):
             # Part of an answer is not the answer: a nonzero exit says so (w5/546).
             raise BeaError(CUT_OFF_NOTICE)
