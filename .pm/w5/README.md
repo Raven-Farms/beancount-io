@@ -180,6 +180,12 @@
 - [616 — `report -a Expenses:Travel` also matches `Assets:Reimbursable:Expenses:Travel` (component match anywhere; gap in w5/292)](./616.md)
 - [617 — Interval series drop plugin transactions in clipped fragments and keep assertion-only empty rows](./617.md)
 - [618 — `-t "year - year+1"` refused while `(year) - (year+1)` works (vendored Fava substitution)](./618.md)
+- [619 — `add`'s unknown-account fix-up drops `--file`, so pasting it writes another ledger (gap in w5/303)](./619.md)
+- [620 — The misplaced-global hint sends `doctor`/`treeify`/`example` users to a dead end (gap in w5/416)](./620.md)
+- [621 — A literal tab is refused as an import delimiter, though the refusal recommends it](./621.md)
+- [622 — A forced `--delimiter` that does not split the header is reported as a missing column (gap in w3/226)](./622.md)
+- [623 — `cloud ledger create --private --public` creates a public ledger; `--dir` without `--clone` ignored](./623.md)
+- [624 — Help/doc slips: "Try bean-check --help", login help omits XDG, USAGE treeify example unordered](./624.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
