@@ -228,6 +228,9 @@ NFC-normalized, Beancount's own tools read the bytes as they are. So `bea`'s
 reads serve only a cache they wrote themselves and load again over one left by
 `bean-check`, `bean-doctor` or an editor; those tools still read `bea`'s cache.
 That cache is a full copy of the ledger, written once a load has taken a second.
+A ledger with a managed price include keeps one too, beside it with a
+`.managed` suffix, answered only while the ledger's files and the feed
+revisions in use are unchanged.
 `bea` keeps it out of the ledger's directory: under `$XDG_CACHE_HOME/bea/load-cache`
 (default `~/.cache/bea/load-cache`), a directory only its owner can enter
 (`0700` on POSIX), one file per ledger file. So no read — `list`, `query`,

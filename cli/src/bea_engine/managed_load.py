@@ -26,6 +26,7 @@ so the portable export t005 builds reads the same bytes the load parsed.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import re
@@ -401,44 +402,63 @@ def _load_with_sources(
                     continue
             effective[url] = (blob, precedence, path)
 
-        staged = {path: stack.enter_context(_shadow(path, "", entry, managed)) for path in snapshot.contents}
-        unavailable: list[Any] = []
-        for path, original in snapshot.contents.items():
-            content = _rewrite_includes(
-                original,
-                path,
-                snapshot.patterns,
-                staged,
-                pending,
-                resolved,
-                effective,
-                primary,
-                # A file reached again under another name is never loaded,
-                # so what its own lines would report is not reported.
-                [] if path in duplicates else unavailable,
-                LoadError,
-                stack,
-                refused,
-                duplicates,
-            )
-            try:
-                staged[path].write_bytes(content)
-            except OSError as exc:
-                if is_candidate_file(entry):
+        # The load itself is the slow part, and its staged root is a fresh
+        # random name every time, so Beancount's own cache never answered a
+        # ledger with a managed include: every read re-parsed it (w5/576).
+        load_cache = None if is_candidate_file(entry) else _managed_cache_file(entry)
+        fingerprint = (
+            _managed_fingerprint(snapshot, resolved, effective, staged_feeds, refused, primary) if load_cache else ""
+        )
+        cached = _cached_managed_load(load_cache, fingerprint) if load_cache is not None else None
+        if cached is not None:
+            entries, errors, remapped_options = cached
+        else:
+            started = time.time()
+            staged = {path: stack.enter_context(_shadow(path, "", entry, managed)) for path in snapshot.contents}
+            unavailable: list[Any] = []
+            for path, original in snapshot.contents.items():
+                content = _rewrite_includes(
+                    original,
+                    path,
+                    snapshot.patterns,
+                    staged,
+                    pending,
+                    resolved,
+                    effective,
+                    primary,
+                    # A file reached again under another name is never loaded,
+                    # so what its own lines would report is not reported.
+                    [] if path in duplicates else unavailable,
+                    LoadError,
+                    stack,
+                    refused,
+                    duplicates,
+                )
+                try:
+                    staged[path].write_bytes(content)
+                except OSError as exc:
+                    if is_candidate_file(entry):
+                        raise LedgerError(
+                            f"Cannot write a staged copy of {path.name} in {path.parent} "
+                            f"({exc.strerror or type(exc).__name__}); nothing was written."
+                        ) from exc
                     raise LedgerError(
-                        f"Cannot write a staged copy of {path.name} in {path.parent} "
-                        f"({exc.strerror or type(exc).__name__}); nothing was written."
+                        _staging_refused(entry, path.parent, managed, _cause(exc), "Free space there")
                     ) from exc
-                raise LedgerError(
-                    _staging_refused(entry, path.parent, managed, _cause(exc), "Free space there")
-                ) from exc
-        entries, errors, options = loader.load_file(str(staged[snapshot.root]))
-        back = {str(staged_path): str(original) for original, staged_path in staged.items()}
-        back.update(staged_feeds)
-        entries = [_remap_entry(entry, back) for entry in entries]
-        errors = [_remap_error(error, back) for error in errors]
-    _refuse_undecodable(errors, snapshot)
-    errors.extend(unavailable)
+            entries, errors, options = loader.load_file(str(staged[snapshot.root]))
+            back = {str(staged_path): str(original) for original, staged_path in staged.items()}
+            back.update(staged_feeds)
+            entries = [_remap_entry(entry, back) for entry in entries]
+            errors = [_remap_error(error, back) for error in errors]
+            _refuse_undecodable(errors, snapshot)
+            errors.extend(unavailable)
+            remapped_options = dict(options)
+            if isinstance(remapped_options.get("filename"), str):
+                remapped_options["filename"] = _remap(remapped_options["filename"], back)
+            if isinstance(remapped_options.get("include"), list):
+                remapped_options["include"] = [_remap(str(item), back) for item in remapped_options["include"]]
+            if load_cache is not None and time.time() - started >= loader.PICKLE_CACHE_THRESHOLD:
+                _store_managed_load(load_cache, fingerprint, snapshot, entries, errors, remapped_options)
 
     for url, result in resolved.items():
         if result.head.last_error and result.head.last_error.startswith(CACHE_WRITE_PROBLEM):
@@ -479,12 +499,126 @@ def _load_with_sources(
                 effective_text=applied.text if applied else None,
             )
         )
-    remapped_options = dict(options)
-    if isinstance(remapped_options.get("filename"), str):
-        remapped_options["filename"] = _remap(remapped_options["filename"], back)
-    if isinstance(remapped_options.get("include"), list):
-        remapped_options["include"] = [_remap(str(item), back) for item in remapped_options["include"]]
     return LoadedLedger(entries, errors, remapped_options, tuple(sources))
+
+
+#: Bumped when what a managed load returns changes shape, so no older cache answers.
+_MANAGED_CACHE_FORMAT = 1
+
+
+def _managed_cache_file(entry: Path) -> Path | None:
+    """Where a managed-include load of `entry` keeps its cache, beside Beancount's own; None when caching is off."""
+    from beancount import loader
+
+    from bea_engine.ledger.write import pickle_cache_of
+
+    if not loader.PICKLE_CACHE_FILENAME:
+        return None
+    return Path(f"{pickle_cache_of(entry)}.managed")
+
+
+def _managed_fingerprint(
+    snapshot: LedgerSnapshot,
+    resolved: dict[str, ResolvedFeed],
+    effective: dict[str, tuple[PriceFeedBlob, EffectiveFeed, Path]],
+    staged_feeds: dict[str, str],
+    refused: dict[str, str],
+    primary: set[tuple[str, int]],
+) -> str:
+    """Everything a managed load's answer depends on that can change between reads.
+
+    The ledger's files by their captured stats, each feed by the revision it
+    served and the cause of any failure, and the effective text each one
+    contributed. A refreshed feed or an edited file changes it.
+    """
+    from importlib.metadata import PackageNotFoundError
+    from importlib.metadata import version as installed
+
+    try:
+        beancount = installed("beancount")
+    except PackageNotFoundError:
+        beancount = None
+    stats = sorted(
+        [str(path), None if status is None else [status.st_dev, status.st_ino, status.st_mtime_ns, status.st_size]]
+        for path, status in snapshot.stats.items()
+    )
+    feeds = sorted(
+        [url, result.blob.revision if result.blob else None, result.head.last_error] for url, result in resolved.items()
+    )
+    # An offline load stages a feed's text under a fresh name, which its
+    # entries are remapped from; the name they carry is what counts.
+    texts = sorted(
+        [url, _remap(str(path), staged_feeds), sha256(applied.text.encode("utf-8")).hexdigest()]
+        for url, (_, applied, path) in effective.items()
+    )
+    record = {
+        "format": _MANAGED_CACHE_FORMAT,
+        "beancount": beancount,
+        "stats": stats,
+        "feeds": feeds,
+        "effective": texts,
+        "refused": sorted(refused.items()),
+        "primary": sorted(primary),
+    }
+    return sha256(json.dumps(record, sort_keys=True).encode("utf-8")).hexdigest()
+
+
+def _cached_managed_load(cache: Path, fingerprint: str) -> tuple[list[Any], list[Any], dict[str, Any]] | None:
+    """The cached answer of an identical managed load, or None when it no longer holds.
+
+    It holds only for the same fingerprint, plugins that still resolve to the
+    same files (w5/326), and documents that are where the load found them
+    (w5/116): the same guards `_load_fresh` applies to Beancount's own cache.
+    """
+    import pickle
+
+    try:
+        with cache.open("rb") as stream:
+            stored = pickle.load(stream)
+    except Exception:  # noqa: BLE001 - a missing, partial or foreign cache is a miss
+        return None
+    if not isinstance(stored, dict) or stored.get("fingerprint") != fingerprint:
+        return None
+    plugins = stored.get("plugins") or {}
+    if plugins.get("modules") != _plugin_fingerprint(plugins.get("names", []), plugins.get("pythonpath", [])):
+        return None
+    entries, errors, options = stored["result"]
+    if _documents_moved(entries, errors, options):
+        return None
+    return list(entries), list(errors), dict(options)
+
+
+def _store_managed_load(
+    cache: Path,
+    fingerprint: str,
+    snapshot: LedgerSnapshot,
+    entries: list[Any],
+    errors: list[Any],
+    options: dict[str, Any],
+) -> None:
+    """Keep a slow managed load for the next identical read, private and replaced atomically.
+
+    Not kept when a file changed while it loaded (w5/218), or when an error is
+    a type a plugin defined, which a later process may not unpickle.
+    """
+    import pickle
+    import tempfile
+
+    if _changed_since(snapshot) or _plugin_defined(errors):
+        return
+    names = sorted({str(name) for name, _config in options.get("plugin") or ()})
+    paths = [str(directory) for directory in options.get("pythonpath") or ()]
+    plugins = {"names": names, "pythonpath": paths, "modules": _plugin_fingerprint(names, paths)}
+    try:
+        payload = pickle.dumps({"fingerprint": fingerprint, "plugins": plugins, "result": (entries, errors, options)})
+        cache.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        handle, temporary = tempfile.mkstemp(prefix=f".{cache.name}.", dir=cache.parent)
+        with os.fdopen(handle, "wb") as stream:
+            stream.write(payload)
+        os.replace(temporary, cache)
+    except Exception:  # noqa: BLE001 - a cache that cannot be written is only a slower next read
+        with contextlib.suppress(OSError, UnboundLocalError):
+            os.unlink(temporary)
 
 
 def _refuse_undecodable(errors: list[Any], snapshot: LedgerSnapshot) -> None:
