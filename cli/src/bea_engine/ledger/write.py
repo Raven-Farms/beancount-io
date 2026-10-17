@@ -45,8 +45,19 @@ def cache_dir() -> Path:
 
 
 def destination(root: Path, into: Path | None = None) -> Path:
-    """Destinations are relative to the root ledger, independently of cwd."""
-    return (root.parent / into.expanduser()).resolve() if into is not None else root.resolve()
+    """Destinations are relative to the root ledger, independently of cwd.
+
+    A file `--into` creates takes the NFC spelling of its name, as new
+    directives do: one typed NFD (pasted from Finder) was created NFD, and the
+    next keyboard-typed `--into` was refused as a respelling (w5/536).
+    Directories keep the spelling they have on disk.
+    """
+    if into is None:
+        return root.resolve()
+    target = root.parent / into.expanduser()
+    if not (target.exists() or target.is_symlink()):
+        target = target.with_name(unicodedata.normalize("NFC", target.name))
+    return target.resolve()
 
 
 def _includes(content: bytes) -> Iterator[tuple[int, int, str]]:
@@ -218,7 +229,13 @@ class LedgerSnapshot:
         identical in a terminal, so it is named too (w5/434).
         """
         spelled = os.path.relpath(accepted, self.root.parent)
-        advice = f"Pass --into {shlex.quote(spelled)} as the include line spells it."
+        # A file an include glob matched is named by the disk, not by any
+        # include line, which says only `Ausgaben/*.bean` (w5/536).
+        globbed = any(
+            accepted in matches and any(mark in pattern for mark in "*?[") for pattern, matches in self.patterns.items()
+        )
+        source = "the file is named on disk" if globbed else "the include line spells it"
+        advice = f"Pass --into {shlex.quote(spelled)} as {source}."
         if unicodedata.normalize("NFC", str(accepted)) == unicodedata.normalize("NFC", str(given)):
             if unicodedata.normalize("NFC", spelled) == spelled:
                 form = "NFC"
@@ -226,7 +243,8 @@ class LedgerSnapshot:
                 form = "NFD"
             else:
                 form = "mixed"
-            advice += f" The two differ only in Unicode form; the include line is {form}."
+            where = "the file's name" if globbed else "the include line"
+            advice += f" The two differ only in Unicode form; {where} is {form}."
         return advice
 
     def _glob_claim_in_another_spelling(self, resolved: Path) -> Path | None:

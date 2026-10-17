@@ -589,8 +589,10 @@ is not bounded either way.
 A ledger saved with a UTF-8 BOM loads like any other: the mark is skipped on
 read, kept by appends, and removed only by `format -i`. Account names, search
 terms, and BQL literals compare NFC-normalized, so NFC and NFD spellings of
-one name resolve to one account with one balance; new directives are written
-NFC while existing bytes are never renormalised as a side effect. `bea check`
+one name resolve to one account with one balance; new directives write their
+account names NFC (text — a payee, narration, comment or custom text value —
+keeps the bytes typed), and a file `--into` creates takes the NFC spelling of
+its name, while existing bytes are never renormalised as a side effect. `bea check`
 therefore runs a closure that spells an account or tag outside NFC through the
 helper, and refuses bean-check options such as `-v` for it (exit **2**): drop
 the options, or re-save the file as NFC — `format -i` does not renormalize.
