@@ -676,6 +676,7 @@ def _price(
     if ledger_errors and strict_read:
         raise _preexisting_refusal(errors, ledger_errors)
     local_prices: list[Price] = []
+    reciprocal_prices: list[Price] = []
     managed_sources: set[str] = set()
     pair = (currency, amount_currency)
     shadowed_pairs = {pair, (amount_currency, currency)}
@@ -689,10 +690,10 @@ def _price(
         managed_source = managed_source_for_path(Path(filename)) if isinstance(filename, str) and filename else None
         if managed_source is not None:
             managed_sources.add(managed_source)
-        elif entry_pair == pair and not entry_generated(entry, "price"):
+        elif not entry_generated(entry, "price"):
             # A plugin-made price (implicit_prices) borrows its transaction's
             # location; it is no ledger-authored quote to match or conflict with.
-            local_prices.append(entry)
+            (local_prices if entry_pair == pair else reciprocal_prices).append(entry)
 
     match = next((entry for entry in local_prices if entry.amount.number == number), None)
     if match is not None:
@@ -723,6 +724,20 @@ def _price(
             f"{currency} already has a {directive.date.isoformat()} price of "
             f"{_plain(conflict.amount.number)} {amount_currency} (at {where}); "
             f"refusing {_plain(number)} {amount_currency}. {remedy}"
+        )
+
+    # A same-day quote in the other direction is the same rate for the day, and
+    # one that disagrees made `balance` and `query` value the pair differently
+    # by line order; with both, Beancount values by the inverse of the
+    # direction quoted less often (w5/556).
+    crossing = next((entry for entry in reciprocal_prices if (entry.amount.number or 0) * number != 1), None)
+    if crossing is not None and not request.get("force"):
+        where = f"{crossing.meta.get('filename')}:{crossing.meta.get('lineno')}"
+        raise protocol.UsageError(
+            f"{amount_currency} already has a {directive.date.isoformat()} price of "
+            f"{_plain(crossing.amount.number)} {currency} (at {where}), the other direction of this pair, and "
+            f"{_plain(number)} {amount_currency} disagrees with it. Pass --force to record both; Beancount then "
+            "values the pair by the inverse of the direction quoted less often."
         )
 
     entry = Price({}, directive.date, currency, BcAmount(number, amount_currency))

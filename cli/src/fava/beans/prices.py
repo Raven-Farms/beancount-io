@@ -79,20 +79,35 @@ class FavaPriceMap:
         operating_currencies: Sequence[str] = (),
     ) -> None:
         self.operating_currencies = tuple(operating_currencies)
-        raw_map: dict[BaseQuote, list[PricePoint]] = defaultdict(list)
+        direct: dict[BaseQuote, list[PricePoint]] = defaultdict(list)
         counts: Counter[BaseQuote] = Counter()
 
         for price in price_entries:
-            rate = price.amount.number
             base_quote = (price.currency, price.amount.currency)
-            raw_map[base_quote].append((price.date, rate))
+            direct[base_quote].append((price.date, price.amount.number))
             counts[base_quote] += 1
-            if rate != ZERO:
-                raw_map[price.amount.currency, price.currency].append(
-                    (price.date, ONE / rate),
-                )
         self._forward_pairs = [(base, quote) for (base, quote), count in counts.items() if counts.get((quote, base), 0) < count]
-        self._map = {k: list(_keep_last_per_day(rates)) for k, rates in raw_map.items()}
+        # Beancount.io change: settle a pair quoted in both directions the way
+        # Beancount's `build_price_map` does, so a same-day reciprocal pair
+        # values a holding as BQL does, whatever the line order. Fava appended
+        # each rate and its inverse in entry order and kept the last of the
+        # day, so `balance` and `bean-query` disagreed (w5/556). The direction
+        # quoted fewer times (on a tie, the one seen second) is inverted and
+        # appended after the other's own rates, so on a shared day it wins.
+        settled: dict[BaseQuote, list[PricePoint]] = {}
+        for (base, quote), rates in direct.items():
+            if (base, quote) in settled or (quote, base) in settled:
+                continue
+            reverse = direct.get((quote, base), [])
+            keep, drop = ((quote, base), rates) if len(rates) < len(reverse) else ((base, quote), reverse)
+            settled[keep] = direct[keep] + [(date, ONE / rate) for date, rate in drop if rate != ZERO]
+        self._map: dict[BaseQuote, list[PricePoint]] = {}
+        for (base, quote), rates in settled.items():
+            kept = list(_keep_last_per_day(sorted(rates, key=lambda point: point[0])))
+            self._map[base, quote] = kept
+            inverse = [(date, ONE / rate) for date, rate in kept if rate != ZERO]
+            if inverse:
+                self._map[quote, base] = inverse
 
     def commodity_pairs(
         self,

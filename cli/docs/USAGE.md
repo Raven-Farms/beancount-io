@@ -1255,7 +1255,10 @@ response can be sent again unchanged.
 ledger's includes. It reports the existing location and exits **0** with
 `written: 0` and `duplicate: true` in JSON. A different amount for the same
 date and commodity is refused naming both values; pass `--force` to record a
-corrected quote. Only written price directives count: a price a plugin such as
+corrected quote. So is a same-day quote that disagrees with one written in the
+other direction (`EUR 1.20 USD` beside `USD 0.80 EUR`, which says 1.25); with
+both on record, every read values the pair by the inverse of the direction
+quoted less often, as `bea query` does, whatever their line order. Only written price directives count: a price a plugin such as
 `implicit_prices` generates is neither a duplicate nor a conflict. `add balance` is idempotent the same way: re-running an
 identical assertion reports the existing location and writes nothing, and a
 different value for the same date, account, and currency needs `--force`
