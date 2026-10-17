@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [468 — `bea import` writes a self-cancelling entry when a rule, category or `--default-account` names `--account`](./468.md)
 - [469 — `bea import --id-key FITID`/`''` silently disables native-ID dedupe](./469.md)
 - [470 — `bea import`'s no-importer hint suggests `--account Assets:Checking` and placeholder columns](./470.md)
 - [471 — `bea query` text tables print `1.5E+3` and crash on `NaN`/`Infinity`; CSV/JSON answer](./471.md)
