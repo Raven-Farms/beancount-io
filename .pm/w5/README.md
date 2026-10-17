@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [475 — A stray CR above a managed include makes bea rewrite the wrong line: the user's directive vanishes from load and `price export`](./475.md)
 - [476 — An authored price loses to the managed feed after a BOM, or below an ignored line containing `"`](./476.md)
 - [477 — Shadowing a feed point with an indented comment leaves orphaned lines: `unexpected INDENT`, `add price` refused](./477.md)
 - [478 — `price refresh` accepts an unparseable feed body, replaces the good revision, exits 0](./478.md)
