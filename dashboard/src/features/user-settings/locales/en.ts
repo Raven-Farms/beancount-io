@@ -397,10 +397,6 @@ const enUserSettings: Record<string, TranslationEntry> = {
     message: "System",
     description: "System theme option",
   },
-  "userSettings.testMode": {
-    message: "Test Mode",
-    description: "Label indicating Stripe is in test/development mode",
-  },
   "userSettings.theme": {
     message: "Theme",
     description: "Label for theme selection",

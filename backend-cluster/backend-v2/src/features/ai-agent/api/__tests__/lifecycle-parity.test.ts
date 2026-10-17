@@ -193,7 +193,15 @@ async function fixture(caller = identity, appId?: string) {
   };
   const getApiContext = jest.fn(async () => ({ favaApiClient: { ledgers } }));
   const getPublicApiClient = jest.fn(async () => ({ ledgers }));
-  const subscriptions = jest.fn(async () => [{ status: "active" }]);
+  const subscriptions = jest.fn(async () => [
+    {
+      status: "active",
+      livemode: true,
+      clientId: "beancount-web-prod",
+      customer: "cus_synthetic",
+      items: { data: [{ price: { id: "price_1RrSOGEqsEqs2tLVFnyB34qG" } }] },
+    },
+  ]);
   const deleteBankRows = jest.fn(async () => {
     events.push("local-bank-delete");
     bankRows = [];

@@ -53,10 +53,6 @@ async function fixture(caller = identity) {
       {} as never,
     ),
     { listSubscriptions: subscriptions } as never,
-    {
-      paidCustomer: { findByUserIdWithActivePeriod: async () => null },
-    } as never,
-    {} as never,
     new AuthorizationService(
       new SourceBackedRelationshipEvaluator(
         {} as never,

@@ -174,15 +174,14 @@ vi.mock("@/common/hooks/use-translations", () => ({
   }),
 }));
 vi.mock("../stripe-config", () => ({
-  getStripePlanConfigFromUrl: () => ({
-    environment: "development",
+  stripePlanConfig: {
     clientId: "test-client",
     premium: { monthly: "price_premium" },
     growth: { monthly: "price_growth" },
     organization: { monthly: "price_org" },
     monthly: "price_monthly",
     yearly: "price_yearly",
-  }),
+  },
 }));
 
 function setUserLimits(

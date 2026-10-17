@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { CreditCard, Loader2, AlertCircle, TestTube } from "lucide-react";
+import { CreditCard, Loader2, AlertCircle } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -19,7 +19,7 @@ import { useSubscriptionStatus } from "@/features/user-settings/hooks/use-subscr
 import { useSubscriptionPortal } from "@/features/user-settings/hooks/use-subscription-portal";
 import { useSubscriptionCancel } from "@/features/user-settings/hooks/use-subscription-cancel";
 import { useSubscriptionResume } from "@/features/user-settings/hooks/use-subscription-resume";
-import { getStripePlanConfigFromUrl } from "./stripe-config";
+import { stripePlanConfig } from "./stripe-config";
 import type { SubscriptionTier } from "./stripe-config";
 import { getUpgradeTiers } from "@/common/lib/subscription/tier-config";
 import {
@@ -54,28 +54,14 @@ function SubscriptionError({ message }: { message: string }) {
   );
 }
 
-function SubscriptionHeader({
-  isTestMode,
-  t,
-}: {
-  isTestMode: boolean;
-  t: (key: string) => string;
-}) {
+function SubscriptionHeader({ t }: { t: (key: string) => string }) {
   return (
     <CardHeader>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <CreditCard className="h-5 w-5" />
-          <CardTitle>
-            <h2>{t("userSettings.subscription")}</h2>
-          </CardTitle>
-        </div>
-        {isTestMode && (
-          <div className="flex items-center gap-1.5 px-2.5 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 rounded-md text-xs font-medium border border-yellow-200 dark:border-yellow-800">
-            <TestTube className="h-3.5 w-3.5" />
-            <span>{t("userSettings.testMode")}</span>
-          </div>
-        )}
+      <div className="flex items-center gap-2">
+        <CreditCard className="h-5 w-5" />
+        <CardTitle>
+          <h2>{t("userSettings.subscription")}</h2>
+        </CardTitle>
       </div>
       <CardDescription>{t("userSettings.manageSubscription")}</CardDescription>
     </CardHeader>
@@ -131,8 +117,7 @@ export function SubscriptionSection() {
   const { upgradeSubscription, loading: upgradeLoading } =
     useUpgradeSubscription();
 
-  const stripeConfig = useMemo(() => getStripePlanConfigFromUrl(), []);
-  const isTestMode = stripeConfig.environment === "development";
+  const stripeConfig = stripePlanConfig;
 
   const upgradeTiers = useMemo(() => getUpgradeTiers(tier), [tier]);
 
@@ -205,7 +190,7 @@ export function SubscriptionSection() {
 
   return (
     <Card>
-      <SubscriptionHeader isTestMode={isTestMode} t={t} />
+      <SubscriptionHeader t={t} />
       <CardContent className="space-y-6">
         {isLoading ? (
           <SubscriptionSkeleton />

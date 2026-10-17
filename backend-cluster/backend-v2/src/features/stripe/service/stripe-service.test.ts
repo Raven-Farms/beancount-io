@@ -2,7 +2,7 @@ import { StripeService } from "./stripe-service";
 import type { IPaidCustomerModel } from "@/features/stripe/data/paid-customer-model";
 import type { IModels } from "@/foundation/models";
 import type Stripe from "stripe";
-import { config } from "@/config/config";
+import { BILLING_CLIENT_ID, SUBSCRIPTION_CONFIG } from "./stripe";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 
 // Mock the Stripe module
@@ -95,7 +95,7 @@ describe("StripeService", () => {
 
     it("should return cached instance for same clientId", () => {
       // Config is mocked with a fallback key
-      const clientId = "test-client";
+      const clientId = BILLING_CLIENT_ID;
       const instance1 = stripeUseCase.getStripeInstance(clientId);
       const instance2 = stripeUseCase.getStripeInstance(clientId);
 
@@ -103,25 +103,26 @@ describe("StripeService", () => {
     });
 
     it("should throw error when no API key is available", () => {
-      // Temporarily override the stripe config to have no key
-      const originalPrivateKey = config.stripe.privateKey;
-      config.stripe.privateKey = "";
-
-      const clientId = "unknown-client-without-config";
-
-      expect(() => stripeUseCase.getStripeInstance(clientId)).toThrow(
-        /No Stripe API key found/,
-      );
-
-      // Restore original value
-      config.stripe.privateKey = originalPrivateKey;
+      const plan = SUBSCRIPTION_CONFIG[BILLING_CLIENT_ID];
+      const key = plan.stripePriKey;
+      plan.stripePriKey = "";
+      try {
+        expect(() =>
+          stripeUseCase.getStripeInstance(BILLING_CLIENT_ID),
+        ).toThrow(/No Stripe API key found/);
+      } finally {
+        plan.stripePriKey = key;
+      }
+      expect(() =>
+        stripeUseCase.getStripeInstance("beancount-web-dev"),
+      ).toThrow(/Invalid Stripe client ID/);
     });
   });
 
   describe("cancelSubscription", () => {
     const subscriptionId = "sub_123";
     const userId = "user_123";
-    const clientId = "client_123";
+    const clientId = BILLING_CLIENT_ID;
 
     beforeEach(() => {
       // Mock getStripeInstance to return our mock
@@ -147,9 +148,13 @@ describe("StripeService", () => {
       );
       mockStripeSubscriptions.retrieve.mockResolvedValue({
         id: subscriptionId,
+        customer: "cus_123",
+        livemode: true,
       } as Stripe.Subscription);
       mockStripeSubscriptions.update.mockResolvedValue({
         id: subscriptionId,
+        customer: "cus_123",
+        livemode: true,
         cancel_at_period_end: true,
       } as Stripe.Subscription);
 
@@ -256,6 +261,8 @@ describe("StripeService", () => {
       );
       mockStripeSubscriptions.retrieve.mockResolvedValue({
         id: subscriptionId,
+        customer: "cus_123",
+        livemode: true,
       } as Stripe.Subscription);
       mockStripeSubscriptions.update.mockRejectedValue(
         new Error("Network error"),
@@ -275,7 +282,7 @@ describe("StripeService", () => {
   describe("deleteSubscription", () => {
     const subscriptionId = "sub_123";
     const userId = "user_123";
-    const clientId = "client_123";
+    const clientId = BILLING_CLIENT_ID;
 
     beforeEach(() => {
       // Mock getStripeInstance to return our mock
@@ -301,9 +308,13 @@ describe("StripeService", () => {
       );
       mockStripeSubscriptions.retrieve.mockResolvedValue({
         id: subscriptionId,
+        customer: "cus_123",
+        livemode: true,
       } as Stripe.Subscription);
       mockStripeSubscriptions.cancel.mockResolvedValue({
         id: subscriptionId,
+        customer: "cus_123",
+        livemode: true,
       } as Stripe.Subscription);
 
       const result = await stripeUseCase.deleteSubscription(
@@ -407,6 +418,8 @@ describe("StripeService", () => {
       );
       mockStripeSubscriptions.retrieve.mockResolvedValue({
         id: subscriptionId,
+        customer: "cus_123",
+        livemode: true,
       } as Stripe.Subscription);
       mockStripeSubscriptions.cancel.mockRejectedValue(
         new Error("Network error"),
@@ -426,7 +439,7 @@ describe("StripeService", () => {
   describe("resumeSubscription", () => {
     const subscriptionId = "sub_123";
     const userId = "user_123";
-    const clientId = "client_123";
+    const clientId = BILLING_CLIENT_ID;
 
     beforeEach(() => {
       // Mock getStripeInstance to return our mock
@@ -452,9 +465,13 @@ describe("StripeService", () => {
       );
       mockStripeSubscriptions.retrieve.mockResolvedValue({
         id: subscriptionId,
+        customer: "cus_123",
+        livemode: true,
       } as Stripe.Subscription);
       mockStripeSubscriptions.update.mockResolvedValue({
         id: subscriptionId,
+        customer: "cus_123",
+        livemode: true,
         cancel_at_period_end: false,
       } as Stripe.Subscription);
 
@@ -559,6 +576,8 @@ describe("StripeService", () => {
       );
       mockStripeSubscriptions.retrieve.mockResolvedValue({
         id: subscriptionId,
+        customer: "cus_123",
+        livemode: true,
       } as Stripe.Subscription);
       mockStripeSubscriptions.update.mockRejectedValue(
         new Error("Network error"),
@@ -595,14 +614,24 @@ describe("StripeService", () => {
     it("should list subscriptions for a customer", async () => {
       const mockCustomer = {
         userId,
-        clientId: "beancount_io",
+        clientId: BILLING_CLIENT_ID,
         stripeCustomerId: "cus_123",
       };
 
       const mockSubscriptions = {
         data: [
-          { id: "sub_1", status: "active" },
-          { id: "sub_2", status: "canceled" },
+          {
+            id: "sub_1",
+            status: "active",
+            livemode: true,
+            customer: "cus_123",
+          },
+          {
+            id: "sub_2",
+            status: "canceled",
+            livemode: true,
+            customer: "cus_123",
+          },
         ],
       };
 
@@ -627,10 +656,76 @@ describe("StripeService", () => {
       );
     });
 
+    it("paginates all owned live subscriptions and supports active-only reads", async () => {
+      mockIPaidCustomerModel.findByUserIdAndClientId.mockResolvedValue({
+        userId,
+        clientId: BILLING_CLIENT_ID,
+        stripeCustomerId: "cus_123",
+      } as any);
+      mockStripeSubscriptions.list
+        .mockResolvedValueOnce({
+          has_more: true,
+          data: [
+            {
+              id: "sub_old",
+              customer: "cus_123",
+              livemode: true,
+              status: "canceled",
+            },
+          ],
+        })
+        .mockResolvedValueOnce({
+          has_more: false,
+          data: [
+            {
+              id: "sub_active",
+              customer: "cus_123",
+              livemode: true,
+              status: "active",
+            },
+          ],
+        });
+      expect(
+        (await stripeUseCase.listSubscriptions(userId)).map((sub) => sub.id),
+      ).toEqual(["sub_old", "sub_active"]);
+      expect(mockStripeSubscriptions.list).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({ starting_after: "sub_old", status: "all" }),
+      );
+      mockStripeSubscriptions.list.mockResolvedValue({
+        has_more: false,
+        data: [],
+      });
+      await stripeUseCase.listSubscriptions(userId, { status: "active" });
+      expect(mockStripeSubscriptions.list).toHaveBeenLastCalledWith(
+        expect.objectContaining({ status: "active" }),
+      );
+    });
+    it.each([
+      { customer: "cus_foreign", livemode: true },
+      { customer: "cus_123", livemode: false },
+    ])(
+      "rejects a foreign or test subscription without returning a paid result",
+      async (fields) => {
+        mockIPaidCustomerModel.findByUserIdAndClientId.mockResolvedValue({
+          userId,
+          clientId: BILLING_CLIENT_ID,
+          stripeCustomerId: "cus_123",
+        } as any);
+        mockStripeSubscriptions.list.mockResolvedValue({
+          has_more: false,
+          data: [{ id: "sub_foreign", ...fields }],
+        });
+        await expect(stripeUseCase.listSubscriptions(userId)).rejects.toThrow(
+          "does not match",
+        );
+      },
+    );
+
     it("should handle errors when listing subscriptions for a client", async () => {
       const mockCustomer = {
         userId,
-        clientId: "beancount_io",
+        clientId: BILLING_CLIENT_ID,
         stripeCustomerId: "cus_123",
       };
 
@@ -641,10 +736,9 @@ describe("StripeService", () => {
       );
       mockStripeSubscriptions.list.mockRejectedValue(new Error("API error"));
 
-      const result = await stripeUseCase.listSubscriptions(userId);
-
-      // Should return empty array on error for individual client
-      expect(result).toEqual([]);
+      await expect(stripeUseCase.listSubscriptions(userId)).rejects.toThrow(
+        "API error",
+      );
     });
 
     it("should return empty array on general error", async () => {
@@ -652,14 +746,14 @@ describe("StripeService", () => {
         new Error("Database error"),
       );
 
-      const result = await stripeUseCase.listSubscriptions(userId);
-
-      expect(result).toEqual([]);
+      await expect(stripeUseCase.listSubscriptions(userId)).rejects.toThrow(
+        "Database error",
+      );
     });
   });
 
   describe("handleCustomerEvent", () => {
-    const clientId = "test_client";
+    const clientId = BILLING_CLIENT_ID;
     const userId = "user_123";
     const customerId = "cus_123";
 
@@ -672,6 +766,7 @@ describe("StripeService", () => {
     it("should create a new customer when not found", async () => {
       const mockCustomer = {
         id: customerId,
+        livemode: true,
         email: "test@example.com",
         metadata: { clientId },
       } as unknown as Stripe.Customer;
@@ -710,6 +805,7 @@ describe("StripeService", () => {
     it("should update customer email when changed", async () => {
       const mockCustomer = {
         id: customerId,
+        livemode: true,
         email: "newemail@example.com",
         metadata: { clientId },
       } as unknown as Stripe.Customer;
@@ -757,6 +853,7 @@ describe("StripeService", () => {
     it("should not update when no changes detected", async () => {
       const mockCustomer = {
         id: customerId,
+        livemode: true,
         email: "test@example.com",
         metadata: { clientId },
       } as unknown as Stripe.Customer;
@@ -790,45 +887,27 @@ describe("StripeService", () => {
       expect(mockIPaidCustomerModel.updateCustomerById).not.toHaveBeenCalled();
     });
 
-    it("should use clientId from metadata when available", async () => {
-      const metadataClientId = "metadata_client";
-      const mockCustomer = {
-        id: customerId,
-        email: "test@example.com",
-        metadata: { clientId: metadataClientId },
-      } as unknown as Stripe.Customer;
-
-      mockIPaidCustomerModel.findByStripeCustomerIdAndClientId.mockResolvedValue(
-        null,
-      );
-      mockIPaidCustomerModel.create.mockResolvedValue({
-        userId,
-        stripeCustomerId: customerId,
-        clientId: metadataClientId,
-        email: "test@example.com",
-      } as unknown as Awaited<
-        ReturnType<typeof mockIPaidCustomerModel.create>
-      >);
-
-      await stripeUseCase.handleCustomerEvent(
-        mockCustomer,
-        "created",
-        {},
-        clientId,
-        userId,
-      );
-
-      expect(mockIPaidCustomerModel.create).toHaveBeenCalledWith(
-        expect.any(Object),
-        expect.objectContaining({
-          clientId: metadataClientId,
-        }),
-      );
+    it("rejects metadata attempting to change the trusted client", async () => {
+      await expect(
+        stripeUseCase.handleCustomerEvent(
+          {
+            id: customerId,
+            livemode: true,
+            metadata: { clientId: "beancount-web-dev" },
+          } as any,
+          "created",
+          {},
+          clientId,
+          userId,
+        ),
+      ).rejects.toThrow("Invalid live customer ownership");
+      expect(mockIPaidCustomerModel.create).not.toHaveBeenCalled();
     });
 
     it("should throw error when no clientId available", async () => {
       const mockCustomer = {
         id: customerId,
+        livemode: true,
         email: "test@example.com",
         metadata: {},
       } as unknown as Stripe.Customer;
@@ -841,12 +920,12 @@ describe("StripeService", () => {
           "", // Empty clientId
           userId,
         ),
-      ).rejects.toThrow("No client ID available for customer");
+      ).rejects.toThrow("Invalid live customer ownership");
     });
   });
 
   describe("handleCheckoutSessionCompleted", () => {
-    const clientId = "test_client";
+    const clientId = BILLING_CLIENT_ID;
     const userId = "user_123";
     const customerId = "cus_123";
 
@@ -863,6 +942,7 @@ describe("StripeService", () => {
 
       const mockCustomer = {
         id: customerId,
+        livemode: true,
         email: "test@example.com",
         deleted: false,
         metadata: { clientId },
@@ -911,6 +991,7 @@ describe("StripeService", () => {
 
       const mockCustomer = {
         id: customerId,
+        object: "customer",
         deleted: true,
       } as Stripe.DeletedCustomer;
 
@@ -961,6 +1042,7 @@ describe("StripeService", () => {
 
       const mockCustomer = {
         id: customerId,
+        livemode: true,
         email: "test@example.com",
         deleted: false,
         metadata: { clientId },
@@ -991,12 +1073,13 @@ describe("StripeService", () => {
 
   describe("handleCustomerEvent error handling", () => {
     const userId = "user_123";
-    const clientId = "test_client";
+    const clientId = BILLING_CLIENT_ID;
     const customerId = "cus_123";
 
     it("should rethrow errors from database operations", async () => {
       const mockCustomer = {
         id: customerId,
+        livemode: true,
         email: "test@example.com",
         metadata: { clientId },
       } as unknown as Stripe.Customer;
@@ -1016,51 +1099,20 @@ describe("StripeService", () => {
       ).rejects.toThrow("Database error");
     });
 
-    it("should update customer when clientId changes", async () => {
-      const mockCustomer = {
-        id: customerId,
-        email: "test@example.com",
-        metadata: { clientId: "new_client_id" },
-      } as unknown as Stripe.Customer;
-
-      const existingCustomer = {
-        id: "doc_id",
-        userId,
-        stripeCustomerId: customerId,
-        clientId: "old_client_id",
-        email: "test@example.com",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
+    it("rejects a Stripe customer already owned by another user", async () => {
       mockIPaidCustomerModel.findByStripeCustomerIdAndClientId.mockResolvedValue(
-        existingCustomer as unknown as Awaited<
-          ReturnType<
-            typeof mockIPaidCustomerModel.findByStripeCustomerIdAndClientId
-          >
-        >,
+        { userId: "other-user" } as any,
       );
-      mockIPaidCustomerModel.updateCustomerById.mockResolvedValue(
-        existingCustomer as unknown as Awaited<
-          ReturnType<typeof mockIPaidCustomerModel.updateCustomerById>
-        >,
-      );
-
-      await stripeUseCase.handleCustomerEvent(
-        mockCustomer,
-        "updated",
-        {},
-        "old_client_id",
-        userId,
-      );
-
-      expect(mockIPaidCustomerModel.updateCustomerById).toHaveBeenCalledWith(
-        expect.any(Object),
-        "doc_id",
-        expect.objectContaining({
-          clientId: "new_client_id",
-        }),
-      );
+      await expect(
+        stripeUseCase.handleCustomerEvent(
+          { id: "cus_123", livemode: true, metadata: {} } as any,
+          "updated",
+          {},
+          BILLING_CLIENT_ID,
+          "user_123",
+        ),
+      ).rejects.toThrow("belongs to another user");
+      expect(mockIPaidCustomerModel.updateCustomerById).not.toHaveBeenCalled();
     });
   });
 

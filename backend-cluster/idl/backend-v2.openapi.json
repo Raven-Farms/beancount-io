@@ -1529,8 +1529,7 @@
             "schema": {
               "type": "string",
               "enum": [
-                "prod",
-                "dev"
+                "prod"
               ],
               "default": "prod",
               "description": "Environment to filter paid users by",
@@ -1899,7 +1898,7 @@
     "/api-gateway/stripe/webhook": {
       "post": {
         "summary": "Handle Stripe webhook events",
-        "description": "Receives and processes webhook events from Stripe for payment and subscription management.\n\n**Important**: This endpoint expects raw request body for signature verification.\n\n**Event Processing**:\n- Verifies webhook signature using client-specific webhook secret\n- Extracts clientId and userId from event metadata\n- Processes events: customer.created, customer.updated, checkout.session.completed\n- Returns 200 even for ignored events (missing metadata) to prevent retries\n\n**Multi-tenant Support**:\nThe endpoint supports multiple Stripe accounts via clientId in event metadata.\n\n**Security**:\n- Signature verification prevents unauthorized events\n- Events without clientId in metadata are ignored\n- Optional user existence validation (currently disabled)",
+        "description": "Receives and processes webhook events from Stripe for payment and subscription management.\n\n**Important**: This endpoint expects raw request body for signature verification.\n\n**Event Processing**:\n- Verifies webhook signature using client-specific webhook secret\n- Verifies the live client before reading metadata; resolves subscription ownership from the customer binding\n- Processes customer, checkout and subscription lifecycle events\n- Returns 200 even for ignored events (missing metadata) to prevent retries\n\n**Billing client**:\nOnly the configured live billing client is supported; signed test events are ignored.\n\n**Security**:\n- Signature verification prevents unauthorized events\n- Retired-client metadata and test events are ignored\n- Subscription events refresh current Stripe state rather than replay stale cache values",
         "tags": [
           "Stripe Webhooks"
         ],
@@ -2029,7 +2028,7 @@
       "get": {
         "deprecated": true,
         "summary": "Download ledger archive file (deprecated)",
-        "description": "Downloads a ledger archive in the specified format (e.g., tar.gz, zip).\n\n**Deprecated.** Use\n`GET /api-gateway/v1/ledgers/{owner}/{name}/archive/{archive}` with a session cookie,\nOAuth bearer token, or personal API key instead. This route addresses the ledger as a single\n`owner%2Fname` path segment. A credential in the query string is not read by either route.\n\nCommon archive formats:\n- 'gitea-main.zip' - Git archive from Gitea repository (main branch)\n- 'tar.gz' - Tarball archive\n- 'zip' - ZIP archive",
+        "description": "Downloads a ledger archive in the specified format (e.g., tar.gz, zip).\n\n**Deprecated.** Use\n`GET /api-gateway/v1/ledgers/{owner}/{name}/archive/{archive}` with a session cookie,\nOAuth bearer token, or personal API key instead. This route addresses the ledger as a single\n`owner%2Fname` path segment. A credential in the query string is not read by either route.\n\nArchive names are a Git reference and its format:\n- 'main.zip' - ZIP of the main branch\n- 'main.tar.gz' - gzipped tarball of the main branch",
         "tags": [
           "Ledger"
         ],
@@ -2049,11 +2048,11 @@
             "schema": {
               "type": "string",
               "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,254}$",
-              "description": "Archive format to download. Common formats: 'tar.gz', 'zip'. For Git archives, use 'gitea-<branch>.zip'",
-              "example": "gitea-main.zip"
+              "description": "A Git reference and its format: '<ref>.zip' or '<ref>.tar.gz', e.g. 'main.zip'",
+              "example": "main.zip"
             },
             "required": true,
-            "description": "Archive format to download. Common formats: 'tar.gz', 'zip'. For Git archives, use 'gitea-<branch>.zip'",
+            "description": "A Git reference and its format: '<ref>.zip' or '<ref>.tar.gz', e.g. 'main.zip'",
             "name": "archive",
             "in": "path"
           }
@@ -2062,6 +2061,12 @@
           "200": {
             "description": "Archive file download stream",
             "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
               "application/zip": {
                 "schema": {
                   "type": "string",

@@ -116,8 +116,6 @@ export class AccountService implements IAccountService {
     const [tier, paidCustomers] = await Promise.all([
       getUserTier({
         stripe: this.stripe,
-        models: this.models,
-        postgresDb: this.db,
         userId,
       }),
       // A paidCustomer row is created on checkout completion and persists after

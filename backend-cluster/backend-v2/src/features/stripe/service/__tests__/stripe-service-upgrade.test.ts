@@ -104,6 +104,8 @@ describe("StripeService.upgradeSubscription", () => {
         {
           id: "sub_123",
           status: "active",
+          livemode: true,
+          customer: "cus_123",
           items: {
             data: [{ id: "si_123", price: { id: premiumPriceId } }],
           },
@@ -114,6 +116,8 @@ describe("StripeService.upgradeSubscription", () => {
     mockStripeSubscriptions.update.mockResolvedValue({
       id: "sub_123",
       status: "active",
+      livemode: true,
+      customer: "cus_123",
       items: {
         data: [
           {
@@ -166,6 +170,8 @@ describe("StripeService.upgradeSubscription", () => {
         {
           id: "sub_123",
           status: "active",
+          livemode: true,
+          customer: "cus_123",
           items: {
             data: [{ id: "si_123", price: { id: premiumPriceId } }],
           },
@@ -285,6 +291,8 @@ describe("StripeService.upgradeSubscription", () => {
         {
           id: "sub_123",
           status: "active",
+          livemode: true,
+          customer: "cus_123",
           items: {
             data: [{ id: "si_123", price: { id: premiumPriceId } }],
           },
@@ -295,6 +303,8 @@ describe("StripeService.upgradeSubscription", () => {
     mockStripeSubscriptions.update.mockResolvedValue({
       id: "sub_123",
       status: "incomplete",
+      livemode: true,
+      customer: "cus_123",
       latest_invoice: {
         payment_intent: {
           status: "requires_action",
@@ -336,6 +346,8 @@ describe("StripeService.upgradeSubscription", () => {
         {
           id: "sub_123",
           status: "active",
+          livemode: true,
+          customer: "cus_123",
           items: {
             data: [{ id: "si_123", price: { id: premiumPriceId } }],
           },
@@ -346,6 +358,8 @@ describe("StripeService.upgradeSubscription", () => {
     mockStripeSubscriptions.update.mockResolvedValue({
       id: "sub_123",
       status: "past_due",
+      livemode: true,
+      customer: "cus_123",
       latest_invoice: {
         payment_intent: {
           status: "requires_payment_method",
@@ -385,6 +399,8 @@ describe("StripeService.upgradeSubscription", () => {
         {
           id: "sub_123",
           status: "active",
+          livemode: true,
+          customer: "cus_123",
           items: {
             data: [{ id: "si_123", price: { id: premiumPriceId } }],
           },
@@ -426,6 +442,8 @@ describe("StripeService.upgradeSubscription", () => {
         {
           id: "sub_123",
           status: "active",
+          livemode: true,
+          customer: "cus_123",
           items: {
             data: [{ id: "si_123", price: { id: growthPriceId } }],
           },
@@ -436,6 +454,8 @@ describe("StripeService.upgradeSubscription", () => {
     mockStripeSubscriptions.update.mockResolvedValue({
       id: "sub_123",
       status: "active",
+      livemode: true,
+      customer: "cus_123",
       items: {
         data: [
           {
@@ -476,6 +496,8 @@ describe("StripeService.upgradeSubscription", () => {
         {
           id: "sub_123",
           status: "active",
+          livemode: true,
+          customer: "cus_123",
           items: {
             data: [{ id: "si_123", price: { id: premiumPriceId } }],
           },

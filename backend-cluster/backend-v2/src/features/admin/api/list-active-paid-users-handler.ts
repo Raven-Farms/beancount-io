@@ -8,7 +8,6 @@ import { errorResponseSchema } from "./admin-error-schema";
 
 const ENV_TO_CLIENT_ID = {
   prod: "beancount-web-prod",
-  dev: "beancount-web-dev",
 } as const;
 
 const listActivePaidUsersQuerySchema = z
@@ -21,7 +20,7 @@ const listActivePaidUsersQuerySchema = z
       description: "Number of users to skip for pagination",
       example: 0,
     }),
-    env: z.enum(["prod", "dev"]).default("prod").openapi({
+    env: z.enum(["prod"]).default("prod").openapi({
       description: "Environment to filter paid users by",
       example: "prod",
     }),

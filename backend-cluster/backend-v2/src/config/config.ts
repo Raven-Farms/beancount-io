@@ -116,11 +116,6 @@ interface StripeConfig {
   webhookSecret: string;
   publicKey: string;
   privateKey: string;
-  dev: {
-    webhookSecret: string;
-    publicKey: string;
-    privateKey: string;
-  };
 }
 
 interface RedisConfig {
@@ -479,11 +474,6 @@ export const config: AppConfig = {
     webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || "",
     publicKey: process.env.STRIPE_PUBLIC_KEY || "",
     privateKey: process.env.STRIPE_PRIVATE_KEY || "",
-    dev: {
-      webhookSecret: process.env.STRIPE_DEV_WEBHOOK_SECRET || "",
-      publicKey: process.env.STRIPE_DEV_PUBLIC_KEY || "",
-      privateKey: process.env.STRIPE_DEV_PRIVATE_KEY || "",
-    },
   },
   tempAssetS3: {
     endpoint: process.env.TEMP_ASSETS_AWS_S3_ENDPOINT || "",

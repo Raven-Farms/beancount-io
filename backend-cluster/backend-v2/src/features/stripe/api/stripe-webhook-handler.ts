@@ -1,7 +1,8 @@
 import Router from "@koa/router";
-import { SUBSCRIPTION_CONFIG } from "@/features/stripe/service/stripe";
+import { BILLING_CLIENT_ID, SUBSCRIPTION_CONFIG } from "../service/stripe";
+import { customerId } from "../service/subscription-plan";
+import { refreshSubscriptionPeriods } from "../operations/refresh-subscription-periods";
 import { type AppLayers } from "@/foundation/composition";
-import Stripe from "stripe";
 import { logger } from "@/shared/logger";
 import { registerRoute } from "@/server/rest/openapi-registry";
 import {
@@ -11,287 +12,109 @@ import {
   stripeWebhookHealthResponseSchema,
 } from "./stripe-webhook-schemas";
 
-const ENFORCE_USER_EXISTS = false;
-
-async function handleStripeEvent(
-  event: Stripe.Event,
-  layers: AppLayers,
-  clientId: string,
-  userId: string,
-): Promise<void> {
-  const stripeCase = layers.services.stripe;
-
-  switch (event.type) {
-    case "customer.created":
-    case "customer.updated": {
-      const customer = event.data.object;
-      const previousAttributes = event.data.previous_attributes || {};
-      const eventType = event.type.replace("customer.", "");
-      logger.debug(`Customer ${eventType} event received`, {
-        customerId: customer.id,
-        clientId,
-        userId,
-      });
-
-      await stripeCase.handleCustomerEvent(
-        customer,
-        eventType,
-        previousAttributes,
-        clientId,
-        userId,
-      );
-      break;
-    }
-
-    case "checkout.session.completed": {
-      const session = event.data.object;
-      logger.debug("Checkout session completed", {
-        sessionId: session.id,
-        clientId,
-        userId,
-      });
-
-      // Let the service handle the checkout session completed event
-      await stripeCase.handleCheckoutSessionCompleted(
-        session,
-        clientId,
-        userId,
-      );
-      break;
-    }
-
-    case "customer.subscription.updated": {
-      const subscription = event.data.object;
-      logger.debug("Subscription updated event received", {
-        subscriptionId: subscription.id,
-        status: subscription.status,
-        clientId,
-        userId,
-      });
-
-      // If subscription is active, update currentPeriodEnd in our database
-      if (subscription.status === "active") {
-        const periodEnd = subscription.items?.data[0]?.current_period_end;
-        if (periodEnd && userId !== "unknown") {
-          const customer =
-            await layers.database.models.paidCustomer.findByUserIdAndClientId(
-              layers.database.db,
-              userId,
-              clientId,
-            );
-          if (customer) {
-            await layers.database.models.paidCustomer.updateCustomerById(
-              layers.database.db,
-              customer.id,
-              { currentPeriodEnd: new Date(periodEnd * 1000) },
-            );
-            logger.debug("Updated currentPeriodEnd from subscription webhook", {
-              userId,
-              clientId,
-              subscriptionId: subscription.id,
-            });
-          }
-        }
-      }
-      break;
-    }
-
-    default:
-      logger.debug("Unhandled event type received", {
-        eventType: event.type,
-        clientId,
-      });
-  }
-}
-
-interface EventWithMetadata {
-  data?: {
-    object?: {
-      metadata?: {
-        clientId?: string;
-      };
-    };
-  };
-}
-
-function extractClientId(parsedEvent: EventWithMetadata): string | undefined {
-  // Only use client ID from the event metadata, no fallback
-  const clientId = parsedEvent.data?.object?.metadata?.clientId;
-  if (clientId) {
-    return clientId;
-  }
-
-  // No fallback - if no client ID in metadata, we ignore the event
-  return undefined;
-}
-
-function extractUserId(eventObject: unknown): string {
-  if (
-    eventObject &&
-    typeof eventObject === "object" &&
-    "metadata" in eventObject &&
-    eventObject.metadata &&
-    typeof eventObject.metadata === "object" &&
-    "userId" in eventObject.metadata &&
-    typeof eventObject.metadata.userId === "string"
-  ) {
-    return eventObject.metadata.userId;
-  }
-
-  return "unknown";
-}
-
 export function setStripeWebhookHandler(
   router: Router,
   layers: AppLayers,
 ): void {
-  const handleWebhook = async function (ctx: Router.RouterContext) {
+  router.post("/api-gateway/stripe/webhook", (async (ctx) => {
     const signature = ctx.request.headers["stripe-signature"] as string;
-    const eventId = ctx.request.headers["stripe-event-id"] || "unknown";
-
     if (!signature) {
-      logger.error("Stripe webhook signature missing", {
-        eventId: String(eventId),
-      });
       ctx.status = 400;
       ctx.body = { error: "No Stripe signature found" };
       return;
     }
-
+    if (!ctx.request.rawBody) {
+      ctx.status = 400;
+      ctx.body = { error: "Missing request body" };
+      return;
+    }
     try {
-      // Get and parse the raw body
-      const rawBodyString = ctx.request.rawBody;
-
-      if (!rawBodyString) {
-        ctx.status = 400;
-        ctx.body = { error: "Missing request body" };
-        return;
-      }
-
-      let parsedEvent;
-      try {
-        parsedEvent = JSON.parse(rawBodyString);
-        logger.debug("Stripe webhook event received", {
-          eventType: parsedEvent.type || "unknown",
-          eventId: parsedEvent.id || eventId,
-          parsedEvent: parsedEvent,
-        });
-      } catch (parseErr) {
-        logger.error("Failed to parse Stripe webhook payload", {
-          error:
-            parseErr instanceof Error ? parseErr.message : String(parseErr),
-        });
-        ctx.status = 400;
-        ctx.body = { error: "Invalid JSON payload" };
-        return;
-      }
-
-      // Extract client ID from the event data - no fallback to customer lookup
-      const clientId = extractClientId(parsedEvent);
-      if (!clientId) {
-        // This is expected for events without client ID, so use info level
-        logger.debug("Ignoring Stripe event without client ID in metadata", {
-          eventId: parsedEvent.id || eventId,
-        });
-        ctx.status = 200; // Return 200 to acknowledge receipt but ignore the event
+      const clientId = BILLING_CLIENT_ID;
+      const secret = SUBSCRIPTION_CONFIG[clientId].webhookSecret;
+      if (!secret) throw new Error("Live webhook secret is not configured");
+      const stripe = layers.services.stripe;
+      // Never route using unverified event metadata.
+      const event = stripe
+        .getStripeInstance(clientId)
+        .webhooks.constructEvent(ctx.request.rawBody, signature, secret);
+      const object = event.data.object;
+      const metadata = "metadata" in object ? object.metadata : undefined;
+      if (
+        !event.livemode ||
+        (metadata?.clientId && metadata.clientId !== clientId)
+      ) {
+        ctx.status = 200;
         ctx.body = {
           received: true,
           processed: false,
-          reason: "No client ID in metadata",
+          reason: "Unsupported billing client or test event",
         };
         return;
       }
-
-      logger.debug("Processing Stripe webhook event", {
-        eventId: parsedEvent.id || eventId,
-        clientId,
-      });
-
-      // Get client configuration and verify it has a webhook secret
-      const clientConfig =
-        SUBSCRIPTION_CONFIG[clientId as keyof typeof SUBSCRIPTION_CONFIG];
-      if (!clientConfig?.webhookSecret) {
-        logger.error("No webhook secret configured for client", { clientId });
-        ctx.status = 400;
-        ctx.body = { error: `Invalid client configuration for ${clientId}` };
-        return;
-      }
-
-      // Get client-specific Stripe instance
-      const stripeCase = layers.services.stripe;
-      const stripe = stripeCase.getStripeInstance(clientId);
-
-      // Verify the webhook signature and construct the event
-      const event = stripe.webhooks.constructEvent(
-        rawBodyString,
-        signature,
-        clientConfig.webhookSecret,
-      );
-
-      // Extract user ID from the event data
-      const userId = extractUserId(event.data.object);
-      logger.debug("Extracted user ID from Stripe event", {
-        eventId: event.id,
-        userId,
-      });
-
-      if (ENFORCE_USER_EXISTS) {
-        // Verify that a user with this client ID exists
-        const userExists =
-          await layers.database.models.paidCustomer.findByUserIdAndClientId(
-            layers.database.db,
-            userId,
-            clientId,
-          );
-
-        if (!userExists) {
-          // This is expected for some events, so use info level
-          logger.debug("Ignoring Stripe event - no matching user for client", {
-            eventId: event.id,
-            userId,
-            clientId,
-          });
-          ctx.status = 200; // Return 200 to acknowledge receipt but ignore the event
-          ctx.body = {
-            received: true,
-            processed: false,
-            reason: "No matching user for client ID",
-          };
-          return;
+      let processed = false;
+      switch (event.type) {
+        case "customer.subscription.created":
+        case "customer.subscription.updated":
+        case "customer.subscription.deleted": {
+          const binding =
+            await layers.database.models.paidCustomer.findByStripeCustomerIdAndClientId(
+              layers.database.db,
+              customerId(event.data.object.customer),
+              clientId,
+            );
+          if (
+            binding &&
+            (!metadata?.userId || metadata.userId === binding.userId)
+          ) {
+            // Re-read all subscriptions: delayed/deleted events must not overwrite a newer renewal.
+            await refreshSubscriptionPeriods(
+              stripe,
+              layers.database.models,
+              layers.database.db,
+              binding.userId,
+            );
+            processed = true;
+          }
+          break;
         }
+        case "customer.created":
+        case "customer.updated":
+          if (metadata?.userId) {
+            await stripe.handleCustomerEvent(
+              event.data.object,
+              event.type.replace("customer.", ""),
+              event.data.previous_attributes ?? {},
+              clientId,
+              metadata.userId,
+            );
+            processed = true;
+          }
+          break;
+        case "checkout.session.completed":
+          if (metadata?.userId) {
+            await stripe.handleCheckoutSessionCompleted(
+              event.data.object,
+              clientId,
+              metadata.userId,
+            );
+            processed = true;
+          }
+          break;
       }
-
-      // Process the event
-      await handleStripeEvent(event, layers, clientId, userId);
-      logger.debug("Successfully processed Stripe webhook event", {
-        eventId: event.id,
-        eventType: event.type,
-      });
-
-      // Acknowledge receipt of the event
       ctx.status = 200;
-      ctx.body = { received: true, processed: true };
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Unknown error";
-      const errorStack = err instanceof Error ? err.stack : undefined;
+      ctx.body = { received: true, processed };
+    } catch (error) {
       logger.error("Error processing Stripe webhook", {
-        error: errorMessage,
-        stack: errorStack,
+        errorType: error instanceof Error ? error.name : typeof error,
       });
       ctx.status = 400;
-      ctx.body = { error: `Webhook Error: ${errorMessage}` };
+      ctx.body = { error: "Webhook verification or processing failed" };
     }
-  } as Router.Middleware;
-
-  router.post("/api-gateway/stripe/webhook", handleWebhook);
-  router.get("/api-gateway/stripe/webhook", ((ctx: Router.RouterContext) => {
-    ctx.status = 200;
-    ctx.body = {
-      ok: true,
-    };
   }) as Router.Middleware);
-
-  // Register OpenAPI documentation
+  router.get("/api-gateway/stripe/webhook", (ctx) => {
+    ctx.status = 200;
+    ctx.body = { ok: true };
+  });
   registerStripeWebhookOpenAPIRoutes();
 }
 
@@ -310,17 +133,17 @@ function registerStripeWebhookOpenAPIRoutes() {
 
 **Event Processing**:
 - Verifies webhook signature using client-specific webhook secret
-- Extracts clientId and userId from event metadata
-- Processes events: customer.created, customer.updated, checkout.session.completed
+- Verifies the live client before reading metadata; resolves subscription ownership from the customer binding
+- Processes customer, checkout and subscription lifecycle events
 - Returns 200 even for ignored events (missing metadata) to prevent retries
 
-**Multi-tenant Support**:
-The endpoint supports multiple Stripe accounts via clientId in event metadata.
+**Billing client**:
+Only the configured live billing client is supported; signed test events are ignored.
 
 **Security**:
 - Signature verification prevents unauthorized events
-- Events without clientId in metadata are ignored
-- Optional user existence validation (currently disabled)`,
+- Retired-client metadata and test events are ignored
+- Subscription events refresh current Stripe state rather than replay stale cache values`,
     tags: ["Stripe Webhooks"],
     request: {
       body: {

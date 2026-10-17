@@ -421,10 +421,6 @@ const caUserSettings: Record<string, TranslationEntry> = {
     message: "Sistema",
     description: "System theme option",
   },
-  "userSettings.testMode": {
-    message: "Mode de prova",
-    description: "Label indicating Stripe is in test/development mode",
-  },
   "userSettings.theme": {
     message: "Tema",
     description: "Label for theme selection",

@@ -103,70 +103,12 @@ describe("Stripe Configuration", () => {
       });
     });
 
-    describe("beancount-web-dev configuration", () => {
-      let devConfig: StripeClientConfig;
-
-      beforeEach(() => {
-        devConfig = SUBSCRIPTION_CONFIG["beancount-web-dev"];
-      });
-
-      it("should have development configuration", () => {
-        expect(devConfig).toBeDefined();
-      });
-
-      it("should have correct product IDs", () => {
-        expect(devConfig.productIds).toEqual([
-          "prod_LrLTND5aSgNlxd",
-          "prod_TwHlbmV0ayeBpb",
-          "prod_TwHlFwtMadm2S6",
-        ]);
-      });
-
-      it("should have all plan IDs", () => {
-        expect(devConfig.planIds).toEqual([
-          "price_1L9cmbEqsEqs2tLVuCG0AcO8", // Legacy $9.99
-          "price_1L9cmbEqsEqs2tLVsGOgOQYg", // Legacy $99.99 yearly
-          "price_1RrSU7EqsEqs2tLVCQiyqgQy", // Premium $14.99
-          "price_1SyPCpEqsEqs2tLVb89308vB", // Growth monthly $99.99
-          "price_1SyPCqEqsEqs2tLV16VV8qR1", // Growth yearly $959.88
-          "price_1SyPCsEqsEqs2tLVTVk0nzEM", // Organization monthly $499.99
-          "price_1SyPCtEqsEqs2tLV3tquQGTA", // Organization yearly $4,799.88
-        ]);
-      });
-
-      it("should have seven subscription plans", () => {
-        expect(devConfig.plans).toHaveLength(7);
-      });
-
-      it("should mark plans as test plans", () => {
-        devConfig.plans.forEach((plan) => {
-          expect(plan.description).toContain("Test");
-        });
-      });
-
-      it("should have correct dev URLs", () => {
-        expect(devConfig.successUrl).toContain("env=dev");
-        expect(devConfig.cancelUrl).toContain("env=dev");
-      });
-
-      it("should have dev secrets from config", () => {
-        // These should be from config (which reads from dev environment variables)
-        expect(devConfig.webhookSecret).toBeDefined();
-        expect(devConfig.stripePubKey).toBeDefined();
-        expect(devConfig.stripePriKey).toBeDefined();
-        // Values should be strings (even if empty)
-        expect(typeof devConfig.webhookSecret).toBe("string");
-        expect(typeof devConfig.stripePubKey).toBe("string");
-        expect(typeof devConfig.stripePriKey).toBe("string");
-      });
-    });
-
     describe("configuration structure validation", () => {
-      it("should have exactly two client configurations", () => {
+      it("should expose only the supported live billing client", () => {
         const clients = Object.keys(SUBSCRIPTION_CONFIG);
-        expect(clients).toHaveLength(2);
+        expect(clients).toHaveLength(1);
         expect(clients).toContain("beancount-web-prod");
-        expect(clients).toContain("beancount-web-dev");
+        expect(clients).not.toContain("beancount-web-dev");
       });
 
       it("should have consistent structure across all clients", () => {

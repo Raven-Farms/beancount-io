@@ -1,5 +1,3 @@
-import type { IModels } from "@/foundation/models";
-import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { IStripeService } from "@/features/stripe/service/stripe-service";
 import { getTierLimits } from "@/features/stripe/service/stripe";
 import { getUserTier } from "@/features/stripe/operations/get-user-tier";
@@ -42,8 +40,6 @@ export class AiCfoUsageService implements IAiCfoUsageService {
   constructor(
     private readonly featureUsageService: IFeatureUsageService,
     private readonly stripe: IStripeService,
-    private readonly models: Pick<IModels, "paidCustomer">,
-    private readonly postgresDb: NodePgDatabase,
     private readonly authorization: IAuthorizationService,
   ) {}
 
@@ -54,8 +50,6 @@ export class AiCfoUsageService implements IAiCfoUsageService {
   async check(userId: string): Promise<UsageCheckResult> {
     const tier = await getUserTier({
       stripe: this.stripe,
-      models: this.models,
-      postgresDb: this.postgresDb,
       userId,
     });
     const tierLimits = getTierLimits(tier);
@@ -121,8 +115,6 @@ export class AiCfoUsageService implements IAiCfoUsageService {
     const { userId } = identity;
     const tier = await getUserTier({
       stripe: this.stripe,
-      models: this.models,
-      postgresDb: this.postgresDb,
       userId,
     });
     const tierLimits = getTierLimits(tier);

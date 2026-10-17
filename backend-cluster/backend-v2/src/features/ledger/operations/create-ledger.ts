@@ -83,7 +83,7 @@ export async function createLedger({
     );
 
     // Check tier-based ledger limit
-    const userTier = await getUserTier({ stripe, models, postgresDb, userId });
+    const userTier = await getUserTier({ stripe, userId });
     const tierLimits = getTierLimits(userTier);
 
     if (userLedgers.length >= tierLimits.maxLedgers) {

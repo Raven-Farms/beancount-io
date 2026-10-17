@@ -1,5 +1,3 @@
-import { type DbExecutor } from "@/drizzle/drizzle";
-import { type IModels } from "@/foundation/models";
 import { type IStripeService } from "@/features/stripe/service/stripe-service";
 import { type IFavaClientFactory } from "@/foundation/clients/fava-client-factory";
 import {
@@ -112,8 +110,6 @@ export class LedgerCollaboratorsWorkflow implements ILedgerCollaboratorsWorkflow
   constructor(
     private readonly favaClientFactory: IFavaClientFactory,
     private readonly stripe: IStripeService,
-    private readonly models: Pick<IModels, "paidCustomer">,
-    private readonly db: DbExecutor,
     private readonly authorization: IAuthorizationService,
   ) {}
 
@@ -139,8 +135,6 @@ export class LedgerCollaboratorsWorkflow implements ILedgerCollaboratorsWorkflow
 
     const userTier = await getUserTier({
       stripe: this.stripe,
-      models: this.models,
-      postgresDb: this.db,
       userId,
     });
     const tierLimits = getTierLimits(userTier);

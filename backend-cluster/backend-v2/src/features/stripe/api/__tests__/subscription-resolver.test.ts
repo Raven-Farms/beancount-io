@@ -34,6 +34,7 @@ describe("SubscriptionResolver", () => {
       findByUserIdAndClientId: jest.Mock;
       findByUserIdWithActivePeriod: jest.Mock;
       updateCustomerById: jest.Mock;
+      updatePeriodIfUnchanged: jest.Mock;
       findByUserId: jest.Mock;
     };
   };
@@ -42,7 +43,7 @@ describe("SubscriptionResolver", () => {
     jest.clearAllMocks();
 
     mockStripeService = {
-      listSubscriptions: jest.fn(),
+      listSubscriptions: jest.fn().mockResolvedValue([]),
       getStripeInstance: jest.fn(),
       cancelSubscription: jest.fn(),
       resumeSubscription: jest.fn(),
@@ -58,7 +59,8 @@ describe("SubscriptionResolver", () => {
         findByUserIdAndClientId: jest.fn(),
         findByUserIdWithActivePeriod: jest.fn(),
         updateCustomerById: jest.fn(),
-        findByUserId: jest.fn(),
+        updatePeriodIfUnchanged: jest.fn(),
+        findByUserId: jest.fn().mockResolvedValue([]),
       },
     };
 
@@ -85,7 +87,7 @@ describe("SubscriptionResolver", () => {
   });
 
   describe("subscriptionStatus", () => {
-    it("should return cached subscription status when only hasActiveSubscription requested", async () => {
+    it("should revalidate Stripe even when an old cache claims active", async () => {
       // Mock GraphQL info to indicate only hasActiveSubscription is requested
       const mockInfo = {
         fieldNodes: [
@@ -116,9 +118,12 @@ describe("SubscriptionResolver", () => {
 
       const result = await resolver.subscriptionStatus(mockContext, mockInfo);
 
-      expect(result.hasActiveSubscription).toBe(true);
+      expect(result.hasActiveSubscription).toBe(false);
       expect(result.subscriptions).toEqual([]);
-      expect(mockStripeService.listSubscriptions).not.toHaveBeenCalled();
+      expect(mockStripeService.listSubscriptions).toHaveBeenCalledWith(
+        "user-123",
+        expect.objectContaining({ status: "active" }),
+      );
     });
 
     it("should query Stripe when cached subscription is expired", async () => {
@@ -148,6 +153,8 @@ describe("SubscriptionResolver", () => {
         {
           id: "sub_123",
           status: "active",
+          livemode: true,
+          customer: "cus_test",
           clientId: "beancount-web-prod",
           start_date: Math.floor(Date.now() / 1000),
           ended_at: Math.floor((Date.now() + THIRTY_DAYS_IN_MS) / 1000), // 30 days from now
@@ -189,6 +196,7 @@ describe("SubscriptionResolver", () => {
 
       expect(mockStripeService.listSubscriptions).toHaveBeenCalledWith(
         "user-123",
+        expect.objectContaining({ status: "active" }),
       );
       expect(result.hasActiveSubscription).toBe(true);
     });
@@ -234,6 +242,8 @@ describe("SubscriptionResolver", () => {
         {
           id: "sub_123",
           status: "active",
+          livemode: true,
+          customer: "cus_test",
           clientId: "non-existent-client",
           start_date: Math.floor(Date.now() / 1000),
           ended_at: Math.floor((Date.now() + THIRTY_DAYS_IN_MS) / 1000),
@@ -250,7 +260,7 @@ describe("SubscriptionResolver", () => {
                   (Date.now() + THIRTY_DAYS_IN_MS) / 1000,
                 ),
                 price: {
-                  id: "price_123",
+                  id: "price_1L9ccEEqsEqs2tLVKPRV17wb",
                   unit_amount: 1000,
                   currency: "usd",
                   recurring: {
@@ -324,6 +334,8 @@ describe("SubscriptionResolver", () => {
         {
           id: "sub_123",
           status: "active",
+          livemode: true,
+          customer: "cus_test",
           clientId: "beancount-web-prod",
           start_date: Math.floor(Date.now() / 1000),
           cancel_at: null,
@@ -385,12 +397,15 @@ describe("SubscriptionResolver", () => {
 
       await resolver.subscriptionStatus(mockContext, mockInfo);
 
-      expect(mockModels.paidCustomer.updateCustomerById).toHaveBeenCalledWith(
+      expect(
+        mockModels.paidCustomer.updatePeriodIfUnchanged,
+      ).toHaveBeenCalledWith(
         expect.any(Object),
-        "customer-123",
-        {
-          currentPeriodEnd: new Date(newPeriodEnd * 1000),
-        },
+        expect.objectContaining({
+          id: "customer-123",
+          stripeCustomerId: "cus_test",
+        }),
+        new Date(newPeriodEnd * 1000),
       );
     });
 
@@ -415,6 +430,8 @@ describe("SubscriptionResolver", () => {
         {
           id: "sub_123",
           status: "active",
+          livemode: true,
+          customer: "cus_test",
           clientId: "beancount-web-prod",
           start_date: Math.floor(Date.now() / 1000),
           cancel_at: null,
@@ -473,7 +490,9 @@ describe("SubscriptionResolver", () => {
 
       await resolver.subscriptionStatus(mockContext, mockInfo);
 
-      expect(mockModels.paidCustomer.updateCustomerById).not.toHaveBeenCalled();
+      expect(
+        mockModels.paidCustomer.updatePeriodIfUnchanged,
+      ).not.toHaveBeenCalled();
     });
 
     it("should handle subscriptions with empty product IDs or plan IDs config", async () => {
@@ -495,6 +514,8 @@ describe("SubscriptionResolver", () => {
         {
           id: "sub_123",
           status: "active",
+          livemode: true,
+          customer: "cus_test",
           clientId: "beancount-web-prod", // This has non-empty productIds
           start_date: Math.floor(Date.now() / 1000),
           cancel_at: null,
@@ -556,6 +577,8 @@ describe("SubscriptionResolver", () => {
         {
           id: "sub_123",
           status: "active",
+          livemode: true,
+          customer: "cus_test",
           clientId: "beancount-web-prod",
           start_date: Math.floor(Date.now() / 1000),
           cancel_at: null,
@@ -627,6 +650,8 @@ describe("SubscriptionResolver", () => {
         {
           id: "sub_123",
           status: "active",
+          livemode: true,
+          customer: "cus_test",
           clientId: "beancount-web-prod",
           start_date: Math.floor(Date.now() / 1000),
           cancel_at: null,
@@ -736,6 +761,8 @@ describe("SubscriptionResolver", () => {
         {
           id: "sub_with_failing_product",
           status: "active",
+          livemode: true,
+          customer: "cus_test",
           clientId: "beancount-web-prod",
           start_date: Math.floor(Date.now() / 1000),
           cancel_at: null,
@@ -814,6 +841,8 @@ describe("SubscriptionResolver", () => {
         {
           id: "sub_1",
           status: "active",
+          livemode: true,
+          customer: "cus_test",
           clientId: "beancount-web-prod",
           start_date: Math.floor(Date.now() / 1000),
           cancel_at: null,
@@ -849,6 +878,8 @@ describe("SubscriptionResolver", () => {
         {
           id: "sub_2",
           status: "active",
+          livemode: true,
+          customer: "cus_test",
           clientId: "beancount-web-prod",
           start_date: Math.floor(Date.now() / 1000),
           cancel_at: null,
@@ -951,6 +982,8 @@ describe("SubscriptionResolver", () => {
         {
           id: "sub_mixed",
           status: "active",
+          livemode: true,
+          customer: "cus_test",
           clientId: "beancount-web-prod",
           start_date: Math.floor(Date.now() / 1000),
           cancel_at: null,
@@ -1074,6 +1107,8 @@ describe("SubscriptionResolver", () => {
         {
           id: "sub_fail_1",
           status: "active",
+          livemode: true,
+          customer: "cus_test",
           clientId: "beancount-web-prod",
           start_date: Math.floor(Date.now() / 1000),
           cancel_at: null,
@@ -1154,6 +1189,8 @@ describe("SubscriptionResolver", () => {
         {
           id: "sub_metadata",
           status: "active",
+          livemode: true,
+          customer: "cus_test",
           clientId: "beancount-web-prod",
           start_date: Math.floor(Date.now() / 1000),
           cancel_at: cancelAt,

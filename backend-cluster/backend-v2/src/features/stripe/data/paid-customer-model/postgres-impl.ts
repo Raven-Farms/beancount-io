@@ -1,4 +1,4 @@
-import { eq, and, gt, sql, desc } from "drizzle-orm";
+import { eq, and, gt, sql, desc, isNull, getTableColumns } from "drizzle-orm";
 import {
   PaidCustomer,
   ActivePaidUser,
@@ -14,7 +14,9 @@ export class PaidCustomerPostgresModel implements IPaidCustomerModel {
   constructor() {}
 
   // Convert database row to PaidCustomer interface
-  private toPlainObject(row: typeof paidCustomers.$inferSelect): PaidCustomer {
+  private toPlainObject(
+    row: typeof paidCustomers.$inferSelect & { version?: string },
+  ): PaidCustomer {
     return {
       id: row.id,
       userId: row.userId,
@@ -26,6 +28,7 @@ export class PaidCustomerPostgresModel implements IPaidCustomerModel {
       currentPeriodEnd: row.currentPeriodEnd ?? undefined,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
+      version: row.version,
     };
   }
 
@@ -35,7 +38,10 @@ export class PaidCustomerPostgresModel implements IPaidCustomerModel {
     clientId: string,
   ): Promise<PaidCustomer | null> {
     const result = await db
-      .select()
+      .select({
+        ...getTableColumns(paidCustomers),
+        version: sql<string>`${paidCustomers.updatedAt}::text`,
+      })
       .from(paidCustomers)
       .where(
         and(
@@ -54,7 +60,10 @@ export class PaidCustomerPostgresModel implements IPaidCustomerModel {
     clientId: string,
   ): Promise<PaidCustomer | null> {
     const result = await db
-      .select()
+      .select({
+        ...getTableColumns(paidCustomers),
+        version: sql<string>`${paidCustomers.updatedAt}::text`,
+      })
       .from(paidCustomers)
       .where(
         and(
@@ -73,11 +82,15 @@ export class PaidCustomerPostgresModel implements IPaidCustomerModel {
   ): Promise<PaidCustomer | null> {
     const now = new Date();
     const result = await db
-      .select()
+      .select({
+        ...getTableColumns(paidCustomers),
+        version: sql<string>`${paidCustomers.updatedAt}::text`,
+      })
       .from(paidCustomers)
       .where(
         and(
           eq(paidCustomers.userId, userId),
+          eq(paidCustomers.clientId, "beancount-web-prod"),
           gt(paidCustomers.currentPeriodEnd, now),
         ),
       )
@@ -104,7 +117,10 @@ export class PaidCustomerPostgresModel implements IPaidCustomerModel {
         createdAt: now,
         updatedAt: now,
       })
-      .returning();
+      .returning({
+        ...getTableColumns(paidCustomers),
+        version: sql<string>`${paidCustomers.updatedAt}::text`,
+      });
 
     return this.toPlainObject(result[0]);
   }
@@ -121,9 +137,37 @@ export class PaidCustomerPostgresModel implements IPaidCustomerModel {
         updatedAt: new Date(),
       })
       .where(eq(paidCustomers.id, id))
-      .returning();
+      .returning({
+        ...getTableColumns(paidCustomers),
+        version: sql<string>`${paidCustomers.updatedAt}::text`,
+      });
 
     return result[0] ? this.toPlainObject(result[0]) : null;
+  }
+
+  public async updatePeriodIfUnchanged(
+    db: DbExecutor,
+    customer: PaidCustomer,
+    currentPeriodEnd: Date | null,
+  ): Promise<boolean> {
+    if (!customer.version) return false;
+    const rows = await db
+      .update(paidCustomers)
+      .set({ currentPeriodEnd, updatedAt: new Date() })
+      .where(
+        and(
+          eq(paidCustomers.id, customer.id),
+          eq(paidCustomers.userId, customer.userId),
+          eq(paidCustomers.clientId, customer.clientId),
+          eq(paidCustomers.stripeCustomerId, customer.stripeCustomerId),
+          customer.currentPeriodEnd
+            ? eq(paidCustomers.currentPeriodEnd, customer.currentPeriodEnd)
+            : isNull(paidCustomers.currentPeriodEnd),
+          eq(sql<string>`${paidCustomers.updatedAt}::text`, customer.version),
+        ),
+      )
+      .returning({ id: paidCustomers.id });
+    return rows.length === 1;
   }
 
   public async updateByUserIdAndClientId(
@@ -144,7 +188,10 @@ export class PaidCustomerPostgresModel implements IPaidCustomerModel {
           eq(paidCustomers.clientId, clientId),
         ),
       )
-      .returning();
+      .returning({
+        ...getTableColumns(paidCustomers),
+        version: sql<string>`${paidCustomers.updatedAt}::text`,
+      });
 
     // Return modifiedCount based on number of rows returned
     const modifiedCount = result.length;
@@ -156,7 +203,10 @@ export class PaidCustomerPostgresModel implements IPaidCustomerModel {
     userId: string,
   ): Promise<PaidCustomer[]> {
     const result = await db
-      .select()
+      .select({
+        ...getTableColumns(paidCustomers),
+        version: sql<string>`${paidCustomers.updatedAt}::text`,
+      })
       .from(paidCustomers)
       .where(eq(paidCustomers.userId, userId));
 

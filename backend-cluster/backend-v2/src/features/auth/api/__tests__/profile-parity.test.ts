@@ -42,7 +42,11 @@ let resolver: AccountResolver;
 let schemaPromise: ReturnType<typeof buildSchema>;
 registerEnumType(ReportStatus, { name: "ReportStatus" });
 
-async function fixture(identity: Identity | undefined = caller, exists = true) {
+async function fixture(
+  identity: Identity | undefined = caller,
+  exists = true,
+  subscriptions: unknown[] = [],
+) {
   const getById = jest.fn(async () => (exists ? user : null));
   const models = {
     user: { getById },
@@ -65,7 +69,7 @@ async function fixture(identity: Identity | undefined = caller, exists = true) {
   const service = new AccountService(
     models as never,
     {} as never,
-    { listSubscriptions: async () => [] } as never,
+    { listSubscriptions: async () => subscriptions } as never,
     factory as never,
     {} as never,
     new AuthorizationService(
@@ -160,6 +164,29 @@ describe("profile reads through actual adapters and exact-self authorization", (
       }
     },
   );
+  it("returns Organization quotas through REST, GraphQL and the CLI/MCP profile contract despite historical rows", async () => {
+    const f = await fixture(caller, true, [
+      {
+        id: "sub_synthetic",
+        clientId: "beancount-web-prod",
+        customer: "cus_synthetic",
+        livemode: true,
+        status: "active",
+        items: { data: [{ price: { id: "price_1SyPdcEqsEqs2tLVCWEgU1PZ" } }] },
+      },
+    ]);
+    try {
+      const profile = await (await f.rest()).json();
+      expect(profile).toMatchObject({
+        tier: "ORGANIZATION",
+        limits: { ledgersMax: 100, collaboratorsPerLedgerMax: 50 },
+      });
+      expect((await f.gql()).data?.userProfile).toEqual(profile);
+      expect(await f.read()).toEqual(profile);
+    } finally {
+      await f.close();
+    }
+  });
   it("returns JSON null for a user that no longer exists", async () => {
     const f = await fixture(caller, false);
     try {

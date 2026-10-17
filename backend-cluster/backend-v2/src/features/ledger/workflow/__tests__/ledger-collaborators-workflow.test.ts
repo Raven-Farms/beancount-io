@@ -57,8 +57,6 @@ describe("LedgerCollaboratorsWorkflow authorization", () => {
     workflow = new LedgerCollaboratorsWorkflow(
       { getPublicApiClient, getApiContext, getAdminClient } as never,
       {} as never,
-      {} as never,
-      {} as never,
       { authorizeOrThrow } as never,
     );
   });

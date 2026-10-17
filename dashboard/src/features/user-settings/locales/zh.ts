@@ -414,10 +414,6 @@ const zhUserSettings: Record<string, TranslationEntry> = {
     message: "系统",
     description: "System theme option",
   },
-  "userSettings.testMode": {
-    message: "测试模式",
-    description: "Label indicating Stripe is in test/development mode",
-  },
   "userSettings.theme": {
     message: "主题",
     description: "Label for theme selection",

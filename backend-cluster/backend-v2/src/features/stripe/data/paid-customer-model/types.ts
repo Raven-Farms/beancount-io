@@ -10,6 +10,8 @@ export interface PaidCustomer {
   currentPeriodEnd?: Date;
   createdAt: Date;
   updatedAt: Date;
+  /** Opaque persistence version, retaining database timestamp precision. */
+  version?: string;
 }
 
 export interface CreatePaidCustomerInput {
@@ -26,7 +28,7 @@ export interface UpdatePaidCustomerInput {
   email?: string;
   name?: string;
   phone?: string;
-  currentPeriodEnd?: Date;
+  currentPeriodEnd?: Date | null;
   clientId?: string;
   updatedAt?: Date;
 }
@@ -60,6 +62,11 @@ export interface IPaidCustomerModel {
     id: string,
     input: UpdatePaidCustomerInput,
   ): Promise<PaidCustomer | null>;
+  updatePeriodIfUnchanged(
+    db: DbExecutor,
+    customer: PaidCustomer,
+    currentPeriodEnd: Date | null,
+  ): Promise<boolean>;
   updateByUserIdAndClientId(
     db: DbExecutor,
     userId: string,

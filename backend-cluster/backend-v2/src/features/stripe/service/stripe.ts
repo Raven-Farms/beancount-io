@@ -97,8 +97,6 @@ interface PlanConfig {
  * Interface for Stripe client configuration
  */
 export interface StripeClientConfig {
-  /** Uses Stripe test-mode keys — new payments must not be created for this client when running in production */
-  isDevOnly?: boolean;
   /** Product IDs for this client */
   productIds: string[];
   /** Plan IDs for this client */
@@ -131,8 +129,10 @@ export type SubscriptionConfigMap = {
 /**
  * Subscription configuration for all clients
  */
+export const BILLING_CLIENT_ID = "beancount-web-prod";
+
 export const SUBSCRIPTION_CONFIG: SubscriptionConfigMap = {
-  "beancount-web-prod": {
+  [BILLING_CLIENT_ID]: {
     productIds: [
       "prod_LrLIJaWkCbz2uA",
       "prod_TwIDs5ys1JPw89",
@@ -203,79 +203,6 @@ export const SUBSCRIPTION_CONFIG: SubscriptionConfigMap = {
     // The dashboard's subscription-management page — /profile/settings was a
     // legacy-dashboard route that now 404s.
     portalReturnUrl: "https://beancount.io/settings/general",
-    webhook: "https://beancount.io/api-gateway/stripe/webhook",
-  },
-  "beancount-web-dev": {
-    isDevOnly: true,
-    productIds: [
-      "prod_LrLTND5aSgNlxd",
-      "prod_TwHlbmV0ayeBpb",
-      "prod_TwHlFwtMadm2S6",
-    ],
-    planIds: [
-      "price_1L9cmbEqsEqs2tLVuCG0AcO8", // $9.99/month (legacy)
-      "price_1L9cmbEqsEqs2tLVsGOgOQYg", // $99.99/year (legacy)
-      "price_1RrSU7EqsEqs2tLVCQiyqgQy", // $14.99/month (Premium)
-      "price_1SyPCpEqsEqs2tLVb89308vB", // $99.99/month (Growth)
-      "price_1SyPCqEqsEqs2tLV16VV8qR1", // $959.88/year (Growth)
-      "price_1SyPCsEqsEqs2tLVTVk0nzEM", // $499.99/month (Organization)
-      "price_1SyPCtEqsEqs2tLV3tquQGTA", // $4,799.88/year (Organization)
-    ],
-    plans: [
-      {
-        priceId: "price_1L9cmbEqsEqs2tLVuCG0AcO8",
-        type: PaymentType.RECURRING,
-        description:
-          "Beancount.io Basic - Monthly - $9.99/month (Legacy, Test)",
-        tier: SubscriptionTier.PREMIUM,
-      },
-      {
-        priceId: "price_1L9cmbEqsEqs2tLVsGOgOQYg",
-        type: PaymentType.RECURRING,
-        description: "Beancount.io Basic - Yearly - $99.99/year (Legacy, Test)",
-        tier: SubscriptionTier.PREMIUM,
-      },
-      {
-        priceId: "price_1RrSU7EqsEqs2tLVCQiyqgQy",
-        type: PaymentType.RECURRING,
-        description: "Beancount.io Premium - Monthly - $14.99/month (Test)",
-        tier: SubscriptionTier.PREMIUM,
-      },
-      {
-        priceId: "price_1SyPCpEqsEqs2tLVb89308vB",
-        type: PaymentType.RECURRING,
-        description:
-          "Beancount.io Growth - Monthly - $99.99/month (Test, Smart Automation)",
-        tier: SubscriptionTier.GROWTH,
-      },
-      {
-        priceId: "price_1SyPCqEqsEqs2tLV16VV8qR1",
-        type: PaymentType.RECURRING,
-        description:
-          "Beancount.io Growth - Yearly - $79.99/month billed yearly (Test, Smart Automation)",
-        tier: SubscriptionTier.GROWTH,
-      },
-      {
-        priceId: "price_1SyPCsEqsEqs2tLVTVk0nzEM",
-        type: PaymentType.RECURRING,
-        description:
-          "Beancount.io Organization - Monthly - $499.99/month (Test, Multi-Entity)",
-        tier: SubscriptionTier.ORGANIZATION,
-      },
-      {
-        priceId: "price_1SyPCtEqsEqs2tLV3tquQGTA",
-        type: PaymentType.RECURRING,
-        description:
-          "Beancount.io Organization - Yearly - $399.99/month billed yearly (Test, Multi-Entity)",
-        tier: SubscriptionTier.ORGANIZATION,
-      },
-    ],
-    webhookSecret: config.stripe.dev.webhookSecret,
-    stripePubKey: config.stripe.dev.publicKey,
-    stripePriKey: config.stripe.dev.privateKey,
-    successUrl: "https://beancount.io/pricing/?success=true&env=dev",
-    cancelUrl: "https://beancount.io/pricing?env=dev",
-    portalReturnUrl: "https://beancount.io/settings/general?env=dev",
     webhook: "https://beancount.io/api-gateway/stripe/webhook",
   },
 };

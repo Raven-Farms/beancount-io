@@ -81,8 +81,6 @@ export function buildServiceLayer(input: {
       input.config.api.developmentPremiumUserIds.has(userId) ||
       (await getUserTier({
         stripe,
-        models: input.database.models,
-        postgresDb: input.database.db,
         userId,
       })) !== SubscriptionTier.FREE,
   });
@@ -99,13 +97,7 @@ export function buildServiceLayer(input: {
     input.database.models,
     input.database.db,
   );
-  const aiCfoUsage = new AiCfoUsageService(
-    featureUsage,
-    stripe,
-    input.database.models,
-    input.database.db,
-    authorization,
-  );
+  const aiCfoUsage = new AiCfoUsageService(featureUsage, stripe, authorization);
   const ledgerEntryWriter = createLedgerEntryWriter(
     input.clients.favaClientFactory,
   );
@@ -257,8 +249,6 @@ export function buildWorkflowLayer(input: {
   const ledgerCollaborators = new LedgerCollaboratorsWorkflow(
     input.clients.favaClientFactory,
     input.services.stripe,
-    input.database.models,
-    input.database.db,
     input.services.authorization,
   );
   const ledgerReceipt = new LedgerReceiptWorkflow(

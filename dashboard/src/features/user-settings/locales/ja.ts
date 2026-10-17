@@ -395,10 +395,6 @@ const jaUserSettings: Record<string, TranslationEntry> = {
     message: "システム",
     description: "System theme option",
   },
-  "userSettings.testMode": {
-    message: "テストモード",
-    description: "Label indicating Stripe is in test/development mode",
-  },
   "userSettings.theme": {
     message: "テーマ",
     description: "Label for theme selection",

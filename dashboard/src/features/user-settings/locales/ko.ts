@@ -394,10 +394,6 @@ const koUserSettings: Record<string, TranslationEntry> = {
     message: "시스템",
     description: "System theme option",
   },
-  "userSettings.testMode": {
-    message: "테스트 모드",
-    description: "Label indicating Stripe is in test/development mode",
-  },
   "userSettings.theme": {
     message: "테마",
     description: "Label for theme selection",

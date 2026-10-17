@@ -174,9 +174,19 @@ async function fixture(initialIdentity = token()) {
   const authorize = jest.spyOn(authorization, "authorizeOrThrow");
   const workflow = new LedgerCollaboratorsWorkflow(
     fava as never,
-    { listSubscriptions: async () => [{ status: "active" }] } as never,
-    models as never,
-    {} as never,
+    {
+      listSubscriptions: async () => [
+        {
+          status: "active",
+          livemode: true,
+          clientId: "beancount-web-prod",
+          customer: "cus_synthetic",
+          items: {
+            data: [{ price: { id: "price_1RrSOGEqsEqs2tLVFnyB34qG" } }],
+          },
+        },
+      ],
+    } as never,
     authorization,
   );
   resolvers = new Map<unknown, object>([
