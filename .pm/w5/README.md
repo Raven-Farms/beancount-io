@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [614 — `bea import` cannot leave out Pending rows and the docs are silent; a pending charge that posts differently is double-booked](./614.md)
 - [615 — Possible-duplicate reason mentions bank IDs for rows that have none](./615.md)
 - [616 — `report -a Expenses:Travel` also matches `Assets:Reimbursable:Expenses:Travel` (component match anywhere; gap in w5/292)](./616.md)
 - [617 — Interval series drop plugin transactions in clipped fragments and keep assertion-only empty rows](./617.md)
