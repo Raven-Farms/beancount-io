@@ -225,6 +225,9 @@
 - [756 — The csv:sha256 import-id hashes a tab as \X09, not collapsed whitespace](./756.md)
 - [757 — £ and ₩ are treated as GBP/KRW only; GIP, FKP, SHP, EGP and KPW exports are refused](./757.md)
 - [758 — Bank-export framing (preamble, sep=, repeated header, footer) cannot be imported; refusal advice cannot work](./758.md)
+- [759 — format refuses #tag/0 and ^link/0 as division by zero; 100/(0) still kills the batch (regression/incomplete fix of w5/565)](./759.md)
+- [760 — Four query shapes still leak raw Python errors (ORDER BY mixed meta, DISTINCT subquery set, joinstr(accounts), DISTINCT meta)](./760.md)
+- [761 — check --auto --cache-filename leaks bean-check's raw WARNING:root line](./761.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
