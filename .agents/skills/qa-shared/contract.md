@@ -70,14 +70,39 @@ keyboard through AppleScript, reading values from the child environment. Verify
 the intended field is focused before each call. Capture no credential
 entry screen or authentication request body.
 
-Read-only journeys can proceed immediately. Before a production ledger mutation,
-check the user's existing authorization and the owning package's rules. If
-specific write authorization is missing, prepare the exact synthetic action and
-ask once while continuing read-only work. An authenticated personal ledger is
-not a disposable fixture. Prefix authorized test resources `qa-<yyyymmdd>-`,
-record their IDs as they are created, and remove only those resources afterward.
-Never modify pre-existing entries, privacy, collaborators, bank connections,
-credentials, subscriptions, or payment details as part of a routine sweep.
+Read-only journeys can proceed immediately.
+
+**Standing write authorization (user decision 2026-10-17).** Signed in as the
+`QA_*` account, QA runs may write without asking to a *designated disposable
+ledger*: one that account owns whose name starts with `qa-` or whose
+description marks it synthetic and safe to reset (today
+`<qa-owner>/mcp-agent-eval`). Within it, entries, accounts, budgets, files,
+uploads and imports may be created, edited and deleted to exercise write
+journeys end to end. The rules:
+
+- Before the first write, snapshot every file the run may touch (path and
+  content hash, kept under `.tmp/qa-<date>/`) and run the ledger check.
+- Prefix every created entry, file, payee, narration or account segment with
+  `qa-<yyyymmdd>-` where the format allows, and record each write (commit SHA or
+  entry) as it happens.
+- Never edit or delete pre-existing content except to restore it.
+- At the end, restore each touched file **byte-for-byte** to its snapshot, not
+  merely "the added entries removed". `mcp-agent-eval` is also the
+  `yarn mcp:agent-eval` fixture (`backend-cluster/backend-v2/docs/mcp-agent-eval.md`),
+  whose expected facts depend on exact content. Then verify the hashes and a
+  clean ledger check. Extra commits in the ledger's history are acceptable.
+  If restoration fails, stop writing and report the exact residue.
+- Keep write volume at human pace, and never probe write rate limits against
+  production.
+
+The authorization does **not** cover: any other ledger (the QA account's other
+ledgers, which may hold real data; public `open_ledger/*` ledgers; other
+owners' ledgers), ledger rename/delete or visibility changes, collaborators and
+invitations, credentials (tokens, SSH keys), bank connections, subscriptions,
+billing, account deletion, outgoing email, or flows that spend shared AI quota.
+For those, prepare the exact synthetic action and ask once while continuing
+read-only work. Outside a designated ledger, an authenticated personal ledger is
+not a disposable fixture.
 
 ## Journey, triage, and research
 
