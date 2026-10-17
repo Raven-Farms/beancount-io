@@ -510,7 +510,7 @@ Usage: bea add balance [OPTIONS]
 | --- | --- | --- | --- |
 | `--date` | str | required | Date in YYYY-MM-DD format |
 | `--account, -a` | str | required | Account name |
-| `--amount` | str (repeatable) | required | 'NUMBER [~ TOLERANCE] CURRENCY' (pass once) |
+| `--amount` | str | required | 'NUMBER [~ TOLERANCE] CURRENCY' (pass once) |
 | `--allow-errors` | flag |  | Allow semantic ledger errors; syntax and pad account references must be valid |
 | `--into` | path |  | Write to an included file, relative to the root ledger |
 | `--force` | flag |  | Record another assertion when the date/account already has one |
@@ -577,7 +577,7 @@ Usage: bea add price [OPTIONS]
 | --- | --- | --- | --- |
 | `--date` | str | required | Date in YYYY-MM-DD format |
 | `--currency, --commodity, -c` | str | required | Commodity being priced |
-| `--amount` | str (repeatable) | required | 'NUMBER CURRENCY' (pass once) |
+| `--amount` | str | required | 'NUMBER CURRENCY' (pass once) |
 | `--allow-errors` | flag |  | Allow semantic ledger errors; syntax and pad account references must be valid |
 | `--into` | path |  | Write to an included file, relative to the root ledger |
 | `--force` | flag |  | Record another quote when the ledger already has one for the date/commodity |
@@ -1290,7 +1290,7 @@ Usage: bea cloud ledger create [OPTIONS] {name}
 | Option | Type | Default | Help |
 | --- | --- | --- | --- |
 | `--description, -d` | str |  | Ledger description |
-| `--private, --public` | flag | True | Ledger visibility |
+| `--private, --public` | flag | private | Ledger visibility |
 | `--clone` | flag |  | Clone the new ledger to disk after creating it |
 | `--dir` | path |  | Local directory for the git clone |
 
