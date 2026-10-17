@@ -102,6 +102,7 @@ describe("AccountService", () => {
         updateUser: jest.fn(),
         deleteByUserId: jest.fn(),
         getUserByUsername: jest.fn(),
+        findUserByEmailOrUsername: jest.fn(),
       },
       jwt: {
         deleteByUserId: jest.fn(),
@@ -168,6 +169,57 @@ describe("AccountService", () => {
         expect(mockModels.user.getById).not.toHaveBeenCalled();
       },
     );
+  });
+
+  describe("findUsersByEmailOrUsername", () => {
+    const alice = {
+      id: "user-456",
+      email: "Alice@Example.com",
+      ledger_username: "alice",
+    };
+
+    it("withholds the email when the keyword matched the username", async () => {
+      mockModels.user.findUserByEmailOrUsername.mockResolvedValue([alice]);
+
+      await expect(
+        accountService.findUsersByEmailOrUsername(
+          identity("user-123"),
+          "ALICE",
+          false,
+        ),
+      ).resolves.toEqual([{ username: "alice", email: null }]);
+    });
+
+    it("returns the email when the keyword was that email", async () => {
+      mockModels.user.findUserByEmailOrUsername.mockResolvedValue([alice]);
+
+      await expect(
+        accountService.findUsersByEmailOrUsername(
+          identity("user-123"),
+          "alice@example.com",
+          false,
+        ),
+      ).resolves.toEqual([{ username: "alice", email: "Alice@Example.com" }]);
+    });
+
+    it("excludes the caller unless asked to include them", async () => {
+      mockModels.user.findUserByEmailOrUsername.mockResolvedValue([alice]);
+
+      await expect(
+        accountService.findUsersByEmailOrUsername(
+          identity("user-456"),
+          "alice",
+          false,
+        ),
+      ).resolves.toEqual([]);
+      await expect(
+        accountService.findUsersByEmailOrUsername(
+          identity("user-456"),
+          "alice",
+          true,
+        ),
+      ).resolves.toEqual([{ username: "alice", email: null }]);
+    });
   });
 
   describe("getUserProfile", () => {

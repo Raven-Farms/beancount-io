@@ -18,7 +18,7 @@ describe("MultiUserSearch", () => {
   const mockOnUsersChange = vi.fn();
 
   const createMockSearchResult = (
-    users: Array<{ username: string; email: string }>,
+    users: Array<{ username: string; email: string | null }>,
   ): { data: GetUserByExactMatchQuery; loading: boolean; error: null } => ({
     data: {
       getUserByExactMatch: users.map((u) => ({
@@ -278,6 +278,38 @@ describe("MultiUserSearch", () => {
       await user.click(screen.getByText("johndoe"));
 
       expect(input).toHaveValue("");
+    });
+
+    it("should show and select a username match that has no email", async () => {
+      const user = userEvent.setup();
+      mockUseQuery.mockReturnValue(
+        createMockSearchResult([{ username: "johndoe", email: null }]),
+      );
+
+      const { container } = render(
+        <MultiUserSearch
+          selectedUsers={[]}
+          onUsersChange={mockOnUsersChange}
+        />,
+      );
+
+      await user.type(
+        screen.getByPlaceholderText("Type to search users..."),
+        "johndoe",
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText("johndoe")).toBeInTheDocument();
+      });
+      expect(
+        container.querySelectorAll("button p.text-muted-foreground"),
+      ).toHaveLength(0);
+
+      await user.click(screen.getByText("johndoe"));
+
+      expect(mockOnUsersChange).toHaveBeenCalledWith([
+        { username: "johndoe", email: null, __typename: "SearchUser" },
+      ]);
     });
   });
 

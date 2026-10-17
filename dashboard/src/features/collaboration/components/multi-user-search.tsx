@@ -189,9 +189,11 @@ export function MultiUserSearch({
                         </Avatar>
                         <div className="flex-1 space-y-1">
                           <p className="text-sm font-medium">{user.username}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {user.email}
-                          </p>
+                          {user.email && (
+                            <p className="text-xs text-muted-foreground">
+                              {user.email}
+                            </p>
+                          )}
                         </div>
                       </button>
                     ))}
@@ -220,9 +222,11 @@ export function MultiUserSearch({
                   </Avatar>
                   <div>
                     <p className="text-sm font-medium">{user.username}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {user.email}
-                    </p>
+                    {user.email && (
+                      <p className="text-xs text-muted-foreground">
+                        {user.email}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <Button

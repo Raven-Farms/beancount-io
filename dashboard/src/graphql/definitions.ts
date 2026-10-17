@@ -2470,7 +2470,8 @@ export type ResetPasswordResponse = {
 
 export type SearchUser = {
   __typename: 'SearchUser';
-  email: Scalars['String']['output'];
+  /** The match's email, returned only when the keyword was that email */
+  email: Maybe<Scalars['String']['output']>;
   username: Scalars['String']['output'];
 };
 
@@ -3347,7 +3348,7 @@ export type GetUserByExactMatchQueryVariables = Exact<{
 }>;
 
 
-export type GetUserByExactMatchQuery = { getUserByExactMatch: Array<{ __typename: 'SearchUser', username: string, email: string }> };
+export type GetUserByExactMatchQuery = { getUserByExactMatch: Array<{ __typename: 'SearchUser', username: string, email: string | null }> };
 
 export type LeaveLedgerMutationVariables = Exact<{
   ledgerId: Scalars['String']['input'];

@@ -6,7 +6,6 @@ import { AccountResolver, SearchUserInput } from "../account-resolver";
 import type { IContext } from "@/server/graphql/context";
 import type { IAccountService } from "@/features/auth/service/account-service";
 import { ReportStatus } from "@/features/auth/utils/report-status";
-import type { User } from "@/features/auth/data/user-model";
 
 describe("AccountResolver", () => {
   const sessionIdentity = {
@@ -128,13 +127,9 @@ describe("AccountResolver", () => {
       expect(errors[0]?.constraints).toHaveProperty("maxLength");
     });
 
-    it("maps the service result without moving authorization into the adapter", async () => {
+    it("returns the service result without moving authorization into the adapter", async () => {
       accountService.findUsersByEmailOrUsername.mockResolvedValue([
-        {
-          id: "user-1",
-          email: "john@example.com",
-          ledger_username: "john",
-        } as User,
+        { email: "john@example.com", username: "john" },
       ]);
       const result = await resolver.getUserByExactMatch(context, {
         keyword: "john@example.com",
@@ -146,6 +141,29 @@ describe("AccountResolver", () => {
         "john@example.com",
         true,
       );
+    });
+
+    it("serializes a username match without an email through the real GraphQL schema", async () => {
+      registerEnumType(ReportStatus, { name: "ReportStatus" });
+      const schema = await buildSchema({
+        resolvers: [AccountResolver],
+        container: { get: () => resolver },
+      });
+      accountService.findUsersByEmailOrUsername.mockResolvedValue([
+        { email: null, username: "john" },
+      ]);
+
+      const result = await graphql({
+        schema,
+        source:
+          'query { getUserByExactMatch(keyword: "john") { username email } }',
+        contextValue: context,
+      });
+
+      expect(result.errors).toBeUndefined();
+      expect(result.data).toEqual({
+        getUserByExactMatch: [{ username: "john", email: null }],
+      });
     });
   });
 
