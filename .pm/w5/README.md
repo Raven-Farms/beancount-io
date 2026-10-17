@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [473 — `bea list price|commodity -c " HOOL"` validates, then matches nothing with exit 0](./473.md)
 - [474 — `bea query PRINT` export drops validity options (`name_*`, tolerance), so it fails `bea check`](./474.md)
 - [475 — A stray CR above a managed include makes bea rewrite the wrong line: the user's directive vanishes from load and `price export`](./475.md)
 - [476 — An authored price loses to the managed feed after a BOM, or below an ignored line containing `"`](./476.md)
