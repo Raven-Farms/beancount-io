@@ -234,7 +234,13 @@ def _shell_spec(spec: str) -> str:
 
 
 def _inferred_mapping(
-    source: Path, *, explicit: bool, notes: list[str], delimiter: str | None = None, encoding: str = "utf-8"
+    source: Path,
+    *,
+    explicit: bool,
+    notes: list[str],
+    delimiter: str | None = None,
+    encoding: str = "utf-8",
+    account: str | None = None,
 ) -> str | None:
     """A `--csv` spec read off the export's header row.
 
@@ -266,10 +272,14 @@ def _inferred_mapping(
                 details=notes,
             )
         clause = f" (delimiter {_display_delimiter(used)})" if used != "," else ""
+        # The columns this file has, never ones it lacks, and the account
+        # that was typed: the fixed `Date,Amount,Description` failed when
+        # pasted (w5/612), as w5/470 found for the no-importer refusal.
         raise UsageError(
             f"Cannot read a column mapping from the header row of {source.name}. "
             f"Its columns are: {columns}{clause}. "
-            "Name them with --csv date=Date,amount=Amount,narration=Description.",
+            "Name them with --csv date=COLUMN,amount=COLUMN,narration=COLUMN "
+            f"--account {shlex.quote(account) if account else 'ACCOUNT'}.",
             details=notes,
         )
     return inferred.spec
@@ -675,7 +685,12 @@ def import_entries(
     typed_key_names: set[str] = set()
     if csv_request is not None and csv_request.strip().casefold() == "auto":
         csv_request = _inferred_mapping(
-            source, explicit=True, notes=inferred_notes, delimiter=csv_delimiter, encoding=csv_encoding
+            source,
+            explicit=True,
+            notes=inferred_notes,
+            delimiter=csv_delimiter,
+            encoding=csv_encoding,
+            account=csv_account,
         )
         csv_origin = "inferred --csv"
     if csv_request is not None and csv_request.strip().casefold() != "auto":
@@ -708,7 +723,12 @@ def import_entries(
                     csv_request = None
                 else:
                     csv_request = _inferred_mapping(
-                        source, explicit=True, notes=inferred_notes, delimiter=csv_delimiter, encoding=csv_encoding
+                        source,
+                        explicit=True,
+                        notes=inferred_notes,
+                        delimiter=csv_delimiter,
+                        encoding=csv_encoding,
+                        account=csv_account,
                     )
                     if peek.sign != "bank" and csv_request is not None:
                         csv_request = f"{csv_request},sign={peek.sign}"
@@ -835,7 +855,12 @@ def import_entries(
                     )
         elif config is None and _config_available(file, config_notes) is None:
             csv_request = _inferred_mapping(
-                source, explicit=False, notes=inferred_notes, delimiter=csv_delimiter, encoding=csv_encoding
+                source,
+                explicit=False,
+                notes=inferred_notes,
+                delimiter=csv_delimiter,
+                encoding=csv_encoding,
+                account=csv_account,
             )
             if csv_request is not None:
                 csv_origin = "inferred --csv"
@@ -878,13 +903,16 @@ def import_entries(
                 raise UsageError(
                     f"Read a column mapping from the header row of {source.name} "
                     f"(--csv {_shell_spec(csv_request or '')}), but not which account the export belongs to. "
-                    "Add --account Assets:Checking, or choose a Python importer with --config FILE.",
+                    "Add --account ACCOUNT, naming the account it belongs to, or choose a Python importer with "
+                    "--config FILE.",
                     # The settings notes too: an unreadable settings directory
                     # is why nothing was remembered here (w5/525).
                     details=[*config_notes, *recall_notes, *inferred_notes],
                 )
             raise UsageError(
-                "--csv needs --account ACCOUNT for the source account, for example --account Assets:Checking.",
+                # No example account: one that was never typed sent pasted
+                # savings rows into checking (w5/470, w5/612).
+                "--csv needs --account ACCOUNT, naming the account the export belongs to.",
                 details=[*config_notes, *recall_notes, *inferred_notes],
             )
         mapping = parse_mapping(csv_request)

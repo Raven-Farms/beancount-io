@@ -203,9 +203,7 @@ def answer(
     csv_id_mapped = False
     if csv_mode:
         if csv_account is None or csv_mapping is None:
-            raise UsageError(
-                "--csv needs --account ACCOUNT for the source account, for example --account Assets:Checking."
-            )
+            raise UsageError("--csv needs --account ACCOUNT, naming the account the export belongs to.")
         mapping = parse_mapping(csv_mapping)
         csv_id_mapped = mapping.column("id") is not None
         # Before the preview, not after: an invalid name would otherwise block
