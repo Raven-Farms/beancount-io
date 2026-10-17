@@ -1351,7 +1351,12 @@ currency, a total cost with no currency — is rejected as `Row N` with
 Beancount's reason, so `--partial` still writes the others.
 
 Validation includes accounting errors, not just JSON shape. The whole batch is
-tried first so a sale can use a purchase appearing later in the input. Partial
+tried first so a sale can use a purchase appearing later in the input. Beancount
+books one date's entries in file order, so within a date a row selling a
+commodity at cost that another row buys at cost into the same account that day
+is written after that day's other rows — a broker export listing a same-day
+sale first still books it against the purchase; rows otherwise keep their input
+order. Partial
 recovery tries rows in input order and validates each accepted subset. When
 some rows are written, the JSON error includes `result.written`, `written_rows`,
 and `rejected_rows` (zero-based indexes); a failed atomic batch reports zero

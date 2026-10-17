@@ -1422,6 +1422,7 @@ def _transactions(
     # Validate the entire batch first: an earlier sale may depend on a buy that
     # appears later in the input. Partial recovery drops the rows that load's
     # errors name; only errors it cannot place need a bisection of the batch.
+    valid = _same_day_purchases_first(valid)
     batch_texts = [writer.format_transaction(d) for _, d in valid]
     try:
         write.validate_append(file, batch_texts, allow_errors=allow_errors, into=into)
@@ -1432,7 +1433,7 @@ def _transactions(
             result: dict[str, Any] = {
                 "written": 0,
                 "written_rows": [],
-                "unwritten_rows": [index for index, _ in valid],
+                "unwritten_rows": sorted(index for index, _ in valid),
             }
             # The rows the hint counts as valid are known, so the rest are
             # named here as `--partial` names them: the refusal said "the 49
@@ -1488,11 +1489,55 @@ def _transactions(
             ledger_errors=warnings,
             result={
                 "written": len(valid),
-                "written_rows": [index for index, _ in valid],
+                "written_rows": sorted(index for index, _ in valid),
                 "rejected_rows": rejected_rows,
             },
         )
     return {"written": len(valid), "rejected": [], "warnings": warnings, "target": target}
+
+
+def _same_day_purchases_first(valid: list[tuple[int, Any]]) -> list[tuple[int, Any]]:
+    """`valid` with each day's sales at cost after that day's purchases of the same lots (w5/543).
+
+    Beancount books one date's entries in file order, and rows are appended
+    in input order, so a broker export or a newest-first listing that put a
+    same-day sale before the buy it closes found no lot: refused with `{}`,
+    booked as a short position with an explicit cost. A row selling a
+    commodity at cost that another row of the same date buys at cost into
+    the same account moves after that date's other rows, keeping the slots
+    each date held; nothing else changes order.
+    """
+    from collections import Counter, defaultdict
+
+    def lots(directive: Any, negative: bool) -> set[tuple[str, str]]:
+        return {
+            (posting.account, posting.units.currency)
+            for posting in directive.postings
+            if posting.cost is not None
+            and posting.units is not None
+            and (posting.units.number < 0) == negative
+            and posting.units.number != 0
+        }
+
+    slots: dict[Any, list[int]] = defaultdict(list)
+    for position, (_, directive) in enumerate(valid):
+        slots[directive.date].append(position)
+    ordered = list(valid)
+    for positions in slots.values():
+        rows = [valid[position] for position in positions]
+        bought = [lots(directive, negative=False) for _, directive in rows]
+        buyers = Counter(lot for own in bought for lot in own)
+        selling = [
+            any(buyers[lot] > (lot in own) for lot in lots(directive, negative=True))
+            for (_, directive), own in zip(rows, bought, strict=True)
+        ]
+        if not any(selling):
+            continue
+        rearranged = [row for row, sells in zip(rows, selling, strict=True) if not sells]
+        rearranged += [row for row, sells in zip(rows, selling, strict=True) if sells]
+        for position, row in zip(positions, rearranged, strict=True):
+            ordered[position] = row
+    return ordered
 
 
 def _named_rows(
