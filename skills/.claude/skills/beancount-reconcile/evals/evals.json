@@ -1,6 +1,6 @@
 {
   "skill_name": "beancount-reconcile",
-  "notes": "Each eval maps the fixture ledger to ./ledger.beancount and the fixture statement to ./statement.csv in a scratch dir. Expectations are graded against the skill's reported diff and any appended entries. Validate with `bea check` when bea is installed; oracle/CI uses `uv run --project cli bean-check` separately. Do not `pip install beancount` as the customer path. eval1-7 cover the happy path and each mismatch class; eval8-10 are failure-mode checks; eval12-13 replay the first-month rehearsal's reconcile preview (reproducible tie-out arithmetic and a signed unresolved residual); eval14 is a card statement whose running Balance prints the amount owed as positive, which must be negated into ledger sign; eval15 is a newest-first export whose ending balance is on the first (latest-dated) row.",
+  "notes": "Each eval maps the fixture ledger to ./ledger.beancount and the fixture statement to ./statement.csv in a scratch dir. Expectations are graded against the skill's reported diff and any appended entries. Validate with `bea check` when bea is installed; oracle/CI uses `uv run --project cli bean-check` separately. Do not `pip install beancount` as the customer path. eval1-7 cover the happy path and each mismatch class; eval8-10 are failure-mode checks; eval12-13 replay the first-month rehearsal's reconcile preview (reproducible tie-out arithmetic and a signed unresolved residual); eval14 is a card statement whose running Balance prints the amount owed as positive, which must be negated into ledger sign; eval15 is a newest-first export whose ending balance is on the first (latest-dated) row. eval16 is eval2's ledger plus the user's own 2026-06-01 balance assertion for 2902.70 USD, which fails because the same two rows are missing: the ledger is red before the skill starts.",
   "evals": [
     {
       "id": 1,
@@ -251,6 +251,22 @@
         "The missing MONTHLY FEE is proposed as a -12.00 posting to Assets:Checking",
         "The proposed balance assertion is 2026-06-01 balance Assets:Checking 3383.80 USD",
         "The skill does not report an unexplained residual or blame the sign mapping"
+      ]
+    },
+    {
+      "id": 16,
+      "name": "failing-assertion-red-ledger",
+      "prompt": "My June 1 balance assertion for checking fails. Find what's missing — ledger ./ledger.beancount, May statement ./statement.csv, account Assets:Bank:Checking.",
+      "expected_output": "The strict reads refuse (the ledger already has 1 error); the skill re-runs its read-only postings query and tie-out with --allow-errors, says the ledger is red because of the failing assertion, and finds the two missing rows (TRADER JOES -31.10 on 05-12, CITY PARKING -12.00 on 05-22): ledger 2945.80, projected 2902.70, residual 0.00. After confirm it writes the two rows without --allow-errors, and bea check passes. No engine repair is attempted.",
+      "files": [
+        "evals/files/eval16_ledger.beancount",
+        "evals/files/eval2_statement.csv"
+      ],
+      "expectations": [
+        "Read-only diagnostic queries are re-run with --allow-errors after the strict refusal, and the failing assertion is reported to the user",
+        "The tie-out output shows ledger 2945.80, projected 2902.70 and residual 0.00 for the two proposed rows (a 43.10 difference)",
+        "The confirmed batch is written without --allow-errors or --partial, and bea check passes afterwards",
+        "No step treats the refusal as an engine failure or tries to repair bea"
       ]
     }
   ]

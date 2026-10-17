@@ -580,7 +580,7 @@ class TestBeaRecipes(unittest.TestCase):
         self.assertIsNotNone(match, f"Missing executable recipe {name}")
         return match.group(1)
 
-    def recipe(self, name: str, *, succeeds: bool = True):
+    def recipe(self, name: str, *, succeeds: bool = True, envelope: bool = False):
         tokens = shlex.split(self.block(name))
         self.assertEqual(tokens[0], "bea")
         args = [Template(token).substitute(self.values) for token in tokens[1:]]
@@ -591,7 +591,8 @@ class TestBeaRecipes(unittest.TestCase):
         self.assertEqual(self.decoy.read_bytes(), self.decoy_before)
         if succeeds:
             self.assertEqual(result.returncode, 0, result.stderr)
-            return json.loads(result.stdout)["data"]
+            answer = json.loads(result.stdout)
+            return answer if envelope else answer["data"]
         self.assertNotEqual(result.returncode, 0, result.stdout)
         return result
 
@@ -779,6 +780,37 @@ class TestBeaRecipes(unittest.TestCase):
         self.recipe("batch")
         self.values.update(assertion_date="2023-01-02", amount="87.50 USD")
         self.recipe("balance")
+        self.recipe("check")
+
+    def test_tie_out_diagnoses_a_ledger_its_failing_assertion_made_red(self):
+        fixture = SUITE / "beancount-reconcile" / "evals" / "files" / "eval16_ledger.beancount"
+        ledger = self.books / "main.bean"
+        ledger.write_text(fixture.read_text())
+        before = ledger.read_bytes()
+        self.values.update(
+            ledger=str(ledger), account="Assets:Bank:Checking", currency="USD",
+            assertion_date="2026-06-01", statement_ending="2902.70", proposed_net="(-31.10 + -12.00)",
+        )
+
+        # The strict read refuses the red ledger; the documented read-only
+        # variant answers and says the ledger is invalid (w5/554).
+        refused = self.recipe("tie-out", succeeds=False)
+        self.assertIn("Pass --allow-errors", refused.stdout + refused.stderr)
+        answer = self.recipe("tie-out-on-a-red-ledger", envelope=True)
+        self.assertEqual(answer["data"]["rows"], [["2945.80", "2902.70", "0.00"]])
+        self.assertFalse(answer["ledger_valid"])
+        self.assertTrue(any("Balance failed for 'Assets:Bank:Checking'" in str(e) for e in answer["ledger_errors"]))
+        self.assertEqual(ledger.read_bytes(), before)
+        # The confirmed write needs no flag: the missing rows clear the assertion.
+        self.values["target"] = ledger.name
+        self.batch([
+            {"date": day, "flag": "*", "narration": what, "postings": [
+                {"account": "Assets:Bank:Checking", "units": {"number": amount, "currency": "USD"}},
+                {"account": "Expenses:Food:Groceries"},
+            ]}
+            for day, what, amount in (("2026-05-12", "TRADER JOES #123", "-31.10"), ("2026-05-22", "CITY PARKING", "-12.00"))
+        ])
+        self.recipe("batch")
         self.recipe("check")
 
     def test_tie_out_computes_preview_balance_and_signed_residual_read_only(self):

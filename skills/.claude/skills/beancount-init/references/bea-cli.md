@@ -38,6 +38,12 @@ bea --file "$ledger" --json --no-input report income-statement --time "$month"
 bea --file "$ledger" --json --no-input report balance-sheet --time "$month"
 ```
 
+A read on a ledger that already fails its check is refused under `--json`
+(`Ledger has N error(s). Pass --allow-errors to report anyway.`). When the read
+diagnoses that failure — reconciling a failing assertion — pass
+`--allow-errors` to the read, and report its `ledger_valid` and
+`ledger_errors` to the user. Never pass it to a write to get past a red check.
+
 A report values every row at market in the operating currency, so under
 `--json` it exits 1 with `result.missing_prices` when a commodity has no price
 — an `@`-priced foreign charge, an option lot. That is a valuation gap, not a

@@ -34,6 +34,7 @@ CLI_PROJECT = REPO_ROOT / "cli"
 # Ledger fixtures that must fail bean-check (failure-mode evals).
 EXPECTED_BEAN_CHECK_FAILURES = {
     "skills/.claude/skills/beancount-close/evals/files/eval5_ledger.beancount",
+    "skills/.claude/skills/beancount-reconcile/evals/files/eval16_ledger.beancount",
 }
 
 # Skills that must state a bea preference once and keep raw appends in fallbacks.
