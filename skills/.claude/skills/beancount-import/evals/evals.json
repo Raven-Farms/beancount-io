@@ -1,6 +1,6 @@
 {
   "skill_name": "beancount-import",
-  "notes": "Each eval maps the fixture ledger to ./ledger.beancount and the fixture export to ./export.csv (or .ofx) in a scratch dir. Validate with `bea check` when bea is installed; oracle/CI uses `uv run --project cli bean-check` separately. Do not `pip install beancount` as the customer path. eval1-5 cover the happy paths (signed CSV, debit/credit split, OFX FITID, overlap dedup, pending rows); eval6-9 are failure-mode/guarantee checks (ambiguity must ask, no write without confirm, missing target file, idempotent re-import). eval13's ledger loads beancount.plugins.nounused, so the new Expenses:Uncategorized open is refused until something posts to it: the documented two-step stages the open with --allow-errors and writes the batch posting to it in the same run.",
+  "notes": "Each eval maps the fixture ledger to ./ledger.beancount and the fixture export to ./export.csv (or .ofx) in a scratch dir. Validate with `bea check` when bea is installed; oracle/CI uses `uv run --project cli bean-check` separately. Do not `pip install beancount` as the customer path. eval1-5 cover the happy paths (signed CSV, debit/credit split, OFX FITID, overlap dedup, pending rows); eval6-9 are failure-mode/guarantee checks (ambiguity must ask, no write without confirm, missing target file, idempotent re-import). eval13's ledger loads beancount.plugins.nounused, so the new Expenses:Uncategorized open is refused until something posts to it: the documented two-step stages the open with --allow-errors and writes the batch posting to it in the same run. eval14 pins the other side of a transfer each bank words differently: a suspected duplicate for review, never a second booking.",
   "evals": [
     {
       "id": 1,
@@ -216,6 +216,22 @@
         "The batch is written without --allow-errors or --partial, in the same run as the staged open",
         "bea check passes at the end, and no step leaves the staged open without its first posting",
         "Nothing is written before the user confirms"
+      ]
+    },
+    {
+      "id": 14,
+      "name": "transfer-other-side-worded-differently",
+      "prompt": "Import ./export.csv into ./ledger.beancount for Assets:Bank:Savings.",
+      "expected_output": "The TRANSFER FROM CHECKING row is presented as the other side of the 2026-04-10 TRANSFER TO SAVINGS entry already in the ledger (same day, 200.00 USD to Assets:Bank:Savings), though the two descriptions share no word, and the user is asked to skip or import it; bea import reports it as a possible duplicate. INTEREST PAYMENT is staged to Income:Interest. Nothing is written before the user confirms, and the transfer is not booked a second time.",
+      "files": [
+        "evals/files/eval14_ledger.beancount",
+        "evals/files/eval14_export.csv"
+      ],
+      "expectations": [
+        "The TRANSFER FROM CHECKING row is shown as a suspected duplicate of the existing 2026-04-10 transfer, not as a new row",
+        "The user is asked to skip or import that row; the skill does not decide silently",
+        "INTEREST PAYMENT is staged with Income:Interest",
+        "Nothing is written before the user confirms, and Assets:Bank:Savings does not end at 400.00 USD"
       ]
     }
   ]

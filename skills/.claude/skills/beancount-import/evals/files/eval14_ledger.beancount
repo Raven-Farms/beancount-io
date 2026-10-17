@@ -1,0 +1,15 @@
+option "operating_currency" "USD"
+
+2026-01-01 open Assets:Bank:Checking USD
+2026-01-01 open Assets:Bank:Savings USD
+2026-01-01 open Income:Interest USD
+2026-01-01 open Equity:OpeningBalances
+
+2026-01-02 * "Opening"
+  Assets:Bank:Checking  1000.00 USD
+  Equity:OpeningBalances
+
+2026-04-10 * "TRANSFER TO SAVINGS"
+  import-id: "csv:sha256:d2d9db8164e962ee"
+  Assets:Bank:Checking  -200.00 USD
+  Assets:Bank:Savings    200.00 USD

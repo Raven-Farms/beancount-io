@@ -60,6 +60,8 @@ A canonical generated hash identifies the original source row. Keep it when revi
 
 **Layer 2 — fuzzy (legacy entries without metadata).** Manual entries predate the convention. For each surviving candidate, look for existing entries **lacking** import-id metadata that post the **same amount** to the **source account** within **±3 days**, with similar descriptions (case-insensitive token overlap; a matching leading word like a shared merchant name counts). Each hit is a **suspected duplicate**: present the candidate and the existing entry side by side and ask *skip* (already recorded manually) or *import* (genuinely distinct). Never decide silently in either direction — a wrong skip loses a real transaction, a wrong import double-books one.
 
+**Layer 2b — the other side of a transfer.** A transfer imported from one account already sits in the ledger with that account's `import-id`, and posts to the source account only as its counter posting (the first posting is the other account). Each bank words its side differently (`TRANSFER TO SAVINGS` / `TRANSFER FROM CHECKING`), so neither the description pass nor Layer 1 sees the pair. For each surviving candidate, look for such entries, with or without import-id metadata, that post the **same amount** to the source account within **±3 days**, whatever the description. Each hit is a suspected duplicate, presented and decided like the ones above; *skip* is the usual answer, since the transfer is already booked.
+
 If the user chooses *skip*, offer to add the candidate's `import-id` onto the **existing** manual entry (one metadata line — the only edit-of-existing-entries this skill ever proposes, and only with explicit consent). This makes the next re-import exact-match it in layer 1 instead of re-asking.
 
 ## Ordering
@@ -70,7 +72,9 @@ Dedup runs **before** categorization (Suggest). Skipped rows must not consume ca
 
 `bea import` auto-skips exact `import-id` matches and reports possible
 duplicates with the same date, normalized payee (the narration when the row has
-no payee) and source amount/currency.
+no payee) and source amount/currency. It also reports Layer 2b's transfer sides
+itself ("A transfer from … already posts …; this row may be its other side"),
+for a transfer whose first posting is another asset or liability account.
 It **does not implement** the ±3-day, similar-description pass above. Run that
 additional review even when the CLI reports zero possible duplicates; see
 `references/bea-import.md` for the query and write procedure.
