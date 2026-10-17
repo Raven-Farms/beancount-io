@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [545 — `ask` REPL sends a quick follow-up question to the proxy twice (stale keep-alive retry)](./545.md)
 - [546 — `ask` prints an answer cut off at its own output cap as complete, exit 0](./546.md)
 - [547 — `ask` reply cut mid-UTF-8 prints a raw codec error and drops the already-wrote note (gap in w5/373)](./547.md)
 - [548 — `ask` answers lose angle-bracket text and HTML blocks](./548.md)
