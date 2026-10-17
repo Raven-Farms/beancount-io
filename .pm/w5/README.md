@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [507 — `list --on-disk` drops real transactions when a plugin shares their location and the header has a quoted comment (regression from w5/401)](./507.md)
 - [508 — `add price`/`add balance` advise `--allow-errors` for a syntax error it cannot pass](./508.md)
 - [509 — BQL regex functions still read `[[:alpha:]]` as a set and leak a `FutureWarning` (gap in w5/429)](./509.md)
 - [510 — "No position matches" names the wrong posting when two share account and units](./510.md)
