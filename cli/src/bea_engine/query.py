@@ -34,6 +34,7 @@ import re
 import stat
 import sys
 import unicodedata
+import warnings
 from collections.abc import Callable, Hashable, Iterator, Mapping
 from contextlib import contextmanager
 from decimal import Decimal, localcontext
@@ -1677,7 +1678,7 @@ def _compiled(
     # before anything runs, so both shapes are the same usage error (w5/103).
     from bea_engine.ledger.text import regex_reads_otherwise
 
-    for pattern in _PATTERN_LITERAL.findall(statement):
+    for pattern in (next(group for group in groups if group) for groups in _PATTERN_LITERAL.findall(statement)):
         # First, so no compile warns: Python reads `[[:alpha:]]` as a set and
         # only warns, and the query then matches something else (w5/429).
         otherwise = regex_reads_otherwise(pattern[1:-1])
@@ -1692,7 +1693,19 @@ def _compiled(
         except re.error as exc:
             raise _pattern_error(pattern[1:-1], exc, statement, ledger_errors()) from None
     try:
-        return run()
+        # A pattern built by an expression is first compiled here: Python's
+        # "Possible nested set" warning reached stderr with the engine's own
+        # path, and the query matched something else (w5/509).
+        with warnings.catch_warnings():
+            warnings.filterwarnings("error", message="Possible nested set", category=FutureWarning)
+            return run()
+    except FutureWarning as exc:
+        raise protocol.UsageError(
+            f"Cannot run this BQL query: Python's regex reads a pattern differently from what it says ({exc}). "
+            "Escape a literal [ inside a set as \\[, and write [^\\W\\d_] for letters instead of [[:alpha:]].",
+            details=[f"  {statement}"],
+            ledger_errors=ledger_errors(),
+        ) from None
     except re.error as exc:
         # A pattern that is not a constant — built by an expression — can only
         # fail here.
@@ -1839,7 +1852,16 @@ def _implicit_group_error(columns: list[tuple[str, str]], ledger_errors: list[st
 
 
 #: The string literal on the right of BQL's regex operators, quotes included.
-_PATTERN_LITERAL = re.compile(r"""!?~\s*('[^']*'|"[^"]*")""")
+_PATTERN_LITERAL = re.compile(
+    r"""!?~\s*('[^']*'|"[^"]*")"""
+    # The constant pattern of beanquery's regex functions, and a `JOURNAL`
+    # account pattern, compile the same way and were unchecked (w5/509).
+    # A literal is the whole argument only when `,` or `)` follows it: a
+    # concatenated pattern is first known when it runs.
+    r"""|\b(?:grep|grepn|subst|findfirst)\s*\(\s*('[^']*'|"[^"]*")(?=\s*[,)])"""
+    r"""|\bJOURNAL\s+('[^']*'|"[^"]*")""",
+    re.IGNORECASE,
+)
 
 
 def _evaluation_error(exc: Exception, statement: str, ledger_errors: list[str]) -> protocol.UsageError | None:
