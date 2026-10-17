@@ -101,19 +101,37 @@ def cloud_logout() -> None:
         return
     import httpx
 
-    from cli.errors import ConflictError, to_bea_error
+    from cli.errors import ConflictError, GatewayTimeout, UnreadableSuccess, to_bea_error
 
+    # Built before the request: a malformed BEA_API_URL is a usage error with
+    # the credential kept, not a "failed revocation" after deleting it (w5/521).
+    client = bearer_client(creds.token)
     failure: BeaError | None = None
     try:
-        response = call(logout.sync_detailed, client=bearer_client(creds.token))
+        response = call(logout.sync_detailed, client=client)
         # A 401 means the server no longer accepts this token: it is already
         # revoked (or expired), which is the outcome logout is after.
         if response.status_code != 401:
             unwrap_or_none(response)
+    except (httpx.ConnectError, httpx.ConnectTimeout, httpx.ProxyError) as exc:
+        # Nothing reached the server: a plain failure, as for the other writes (w5/368, w5/519).
+        reason = to_bea_error(exc)
+        failure = BeaError(
+            f"Removed the local credential, but server revocation failed: {str(reason).rstrip('.')}. "
+            "The session may still be valid: revoke it from the dashboard."
+        )
     except httpx.TimeoutException as exc:
         failure = ConflictError(
             f"Removed the local credential, but server revocation timed out ({type(exc).__name__}); "
             "the outcome is unknown. The session may still be valid: revoke it from the dashboard."
+        )
+    except (httpx.TransportError, UnreadableSuccess, GatewayTimeout) as exc:
+        # The request arrived and the answer was lost or unreadable: unknown,
+        # as for create and delete, never "Could not reach the server" (w5/521).
+        failure = ConflictError(
+            f"Removed the local credential, but the server's answer to the revocation was lost or unreadable "
+            f"({_failure_name(exc)}); the outcome is unknown. The session may still be valid: revoke it from the "
+            "dashboard."
         )
     except Exception as exc:
         reason = to_bea_error(exc)
@@ -128,6 +146,11 @@ def cloud_logout() -> None:
     if failure is not None:
         raise failure
     output.success("Logged out.")
+
+
+def _failure_name(exc: BaseException) -> str:
+    status = getattr(exc, "status", None)
+    return f"HTTP {status}" if isinstance(status, int) else type(exc).__name__
 
 
 @cloud_app.command("status")
