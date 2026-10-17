@@ -465,7 +465,9 @@ def _targets(
     # `entries.inc` part of this ledger (w1/041). One shared walk per set of
     # roots — never one per file, which is quadratic on a long chain (w1/087).
     members, _ = output.walk_closure(*roots)
-    files.update(member.resolve() for member in members)
+    # A member nobody may read is reported as an unreadable include below,
+    # and the rest still formatted (w5/523).
+    files.update(member.resolve() for member in members if member in roots or os.access(member, os.R_OK))
     for encrypted in sorted(file for file in files if output.is_encrypted(file)):
         files.discard(encrypted)
         output.note(f"Skipped {encrypted}: it is encrypted, and Beancount decrypts it only to load it.")

@@ -483,6 +483,8 @@ def _walk_closure(*roots: Path) -> tuple[list[Path], list[MissingInclude], list[
     seen: dict[Path, str] = {}
     inodes: set[tuple[int, int]] = set()
     stack = list(reversed(roots))
+    # The include, as written, and the file holding it, that first reached each member.
+    named_by: dict[Path, tuple[str, Path]] = {}
     while stack:
         current = stack.pop()
         try:
@@ -512,9 +514,15 @@ def _walk_closure(*roots: Path) -> tuple[list[Path], list[MissingInclude], list[
             continue
         try:
             text = current.read_text(encoding="utf-8", errors="replace").removeprefix("\ufeff")
-        except OSError:
+        except OSError as exc:
             if current not in roots:
                 unreadable.append(current)
+                # A file the include matched but nobody may read (mode 000) is
+                # an unreadable include, as a directory there is (w5/523).
+                if current in named_by:
+                    include, source = named_by[current]
+                    why = f"{current} cannot be read: {exc.strerror or type(exc).__name__}"
+                    missing.append(MissingInclude(include=include, source=source, reason=why))
             continue
         for match in _INCLUDE_DIRECTIVE.finditer(text):
             raw = match.group(1)
@@ -524,6 +532,8 @@ def _walk_closure(*roots: Path) -> tuple[list[Path], list[MissingInclude], list[
                 continue
             matches, others = _include_matches(current, _unescape(raw))
             if matches:
+                for found in matches:
+                    named_by.setdefault(found, (raw, current))
                 stack.extend(matches)
             else:
                 reason = not_a_file(others[0]) if others else None
