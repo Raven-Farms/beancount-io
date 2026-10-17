@@ -177,6 +177,9 @@
 - [613 — A write through an included file reports it as `target.file`, hides the root note from JSON, and keys import memory by the leaf](./613.md)
 - [614 — `bea import` cannot leave out Pending rows and the docs are silent; a pending charge that posts differently is double-booked](./614.md)
 - [615 — Possible-duplicate reason mentions bank IDs for rows that have none](./615.md)
+- [616 — `report -a Expenses:Travel` also matches `Assets:Reimbursable:Expenses:Travel` (component match anywhere; gap in w5/292)](./616.md)
+- [617 — Interval series drop plugin transactions in clipped fragments and keep assertion-only empty rows](./617.md)
+- [618 — `-t "year - year+1"` refused while `(year) - (year+1)` works (vendored Fava substitution)](./618.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
