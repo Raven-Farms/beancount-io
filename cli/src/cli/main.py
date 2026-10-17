@@ -107,11 +107,8 @@ def _exit_on_broken_pipe() -> NoReturn:
     shutdown flush would fail in turn and force 120. Pointing the file
     descriptor at devnull gives that flush somewhere harmless to go.
     """
-    try:
-        devnull = os.open(os.devnull, os.O_WRONLY)
-        os.dup2(devnull, sys.stdout.fileno())
-    except (OSError, ValueError):  # No real fd to rescue (a captured stream).
-        pass
+    # Both streams: the broken one may be stderr's, under `2>&1 | head` (w5/522).
+    output.silence_broken_streams()
     sys.exit(141)
 
 

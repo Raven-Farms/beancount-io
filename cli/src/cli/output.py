@@ -140,29 +140,53 @@ def error(exc: BaseException | str) -> NoReturn:
 
             trace = "".join(traceback.format_exception(exc))
 
-    if _json_mode():
-        payload: dict[str, Any] = {
-            "category": err.category,
-            "message": _message(err),
-            "exit_code": exit_code,
-        }
-        if err.request_id:
-            payload["request_id"] = err.request_id
-        if err.details:
-            payload["details"] = err.details
-        if err.result is not None:
-            payload["result"] = jsonable(err.result)
-        if _pending_warnings:
-            payload["ledger_warnings"] = list(_pending_warnings)
-            _pending_warnings.clear()
-        _pending_engine_output.clear()
-        if trace:
-            payload["traceback"] = trace
-        print(json.dumps({"error": payload}), file=sys.stderr)
-    else:
-        _print_failure(err, trace)
+    try:
+        if _json_mode():
+            payload: dict[str, Any] = {
+                "category": err.category,
+                "message": _message(err),
+                "exit_code": exit_code,
+            }
+            if err.request_id:
+                payload["request_id"] = err.request_id
+            if err.details:
+                payload["details"] = err.details
+            if err.result is not None:
+                payload["result"] = jsonable(err.result)
+            if _pending_warnings:
+                payload["ledger_warnings"] = list(_pending_warnings)
+                _pending_warnings.clear()
+            _pending_engine_output.clear()
+            if trace:
+                payload["traceback"] = trace
+            print(json.dumps({"error": payload}), file=sys.stderr)
+        else:
+            _print_failure(err, trace)
+    except BrokenPipeError:
+        # `2>&1 | head` closed the reader: the message cannot be written, but
+        # the status is still the error's, never a generic 1 (w5/522).
+        silence_broken_streams()
 
     raise typer.Exit(exit_code)
+
+
+def silence_broken_streams() -> None:
+    """Point stdout and stderr at /dev/null after a reader went away.
+
+    Both still hold unwritten bytes, and the interpreter's shutdown flush of
+    either would fail on the closed pipe and force exit 120 (w5/522). A
+    stream that is not a real fd (captured in a test) is left alone.
+    """
+    try:
+        devnull = os.open(os.devnull, os.O_WRONLY)
+    except OSError:
+        return
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            if stream is not None:
+                os.dup2(devnull, stream.fileno())
+        except (OSError, ValueError, AttributeError):
+            continue
 
 
 def failure(exc: BaseException | str) -> None:
