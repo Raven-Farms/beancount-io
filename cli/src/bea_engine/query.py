@@ -138,7 +138,9 @@ def _quote_reserved_tables(query_string: str) -> str:
     """Rewrite `FROM accounts|balances` to the quoted form discovery documents.
 
     Matched against the code mask and spliced back by offset, so the user's own
-    text — literals, comments — is returned byte-for-byte.
+    text — literals, comments — is returned byte-for-byte. The name is matched
+    in any case but quoted in lower case: a quoted name is looked up as
+    written, and `FROM ACCOUNTS` became a table that does not exist (w5/560).
     """
     masked = _code_mask(query_string)
     pieces: list[str] = []
@@ -146,7 +148,7 @@ def _quote_reserved_tables(query_string: str) -> str:
     for match in _RESERVED_TABLE_FROM.finditer(masked):
         start, end = match.span(2)
         pieces.append(query_string[cursor:start])
-        pieces.append(f'"{query_string[start:end]}"')
+        pieces.append(f'"{query_string[start:end].lower()}"')
         cursor = end
     pieces.append(query_string[cursor:])
     return "".join(pieces)
