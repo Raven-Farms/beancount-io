@@ -749,8 +749,17 @@ def _transaction(
     errors = without_root_name_errors(errors)
     if errors or len(entries) != 1 or not isinstance(entries[0], Transaction):
         details = []
+        # Lines as the lexer counts them, on `\n` alone: a U+2028 in the
+        # narration made `splitlines` count one more header line (w5/486).
+        header_lines = header_text.count("\n")
         for error in errors:
-            posting_number = error.source.get("lineno", 0) - len(header_text.splitlines())
+            line = error.source.get("lineno", 0)
+            # A missing closing token is noticed at the end of its line, and
+            # Beancount reports that EOL on the next one: the blame moved one
+            # posting down, or off the last one onto the header (w5/486).
+            if "unexpected EOL" in error.message:
+                line -= 1
+            posting_number = line - header_lines
             location = f"--posting {posting_number}" if 0 < posting_number <= len(postings) else "Transaction options"
             details.append(f"{location}: {readable_parser_message(error.message)}")
         if details and all(detail.startswith("Transaction options:") for detail in details):
