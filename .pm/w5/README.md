@@ -212,6 +212,13 @@
 - [717 — A CSV decode error past 8 KiB names the wrong byte offset](./717.md)
 - [718 — A bea write to an include in another directory makes add/import exit 4 instead of queueing](./718.md)
 - [719 — Staging copies left by a killed engine are not cleared by the next write (one-hour sweep, target directory only)](./719.md)
+- [720 — --partial is still superlinear with several bad rows, and slower than before on a mixed batch (incomplete fix of w5/537)](./720.md)
+- [721 — The NFD --into spelling that created a file is refused the second time (regression from w5/536)](./721.md)
+- [722 — 1.234,56 and bulk amounts still get raw parser text; tag/link refusal wording (incomplete fix of w5/534)](./722.md)
+- [723 — treeify: a BOM splits the tree; /dev/stdin and FIFOs still give a raw UnicodeDecodeError (incomplete fix of w5/535)](./723.md)
+- [724 — PYTHONIOENCODING=utf-16 makes bea call a healthy engine damaged and say to delete it](./724.md)
+- [725 — A ledger with its own error is told "Pass --partial", which then blames every row](./725.md)
+- [726 — The BQL error caret ignores the display width of wide characters](./726.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
