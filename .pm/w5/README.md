@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [551 — Close skill's report step fails on any unpriced commodity (`@`-priced foreign charge, option lot); skills call it an engine failure](./551.md)
 - [552 — Ask skill's anomalies/recurring/merchant recipes count postings, not transactions](./552.md)
 - [553 — Shared `add open` recipe fails under `nounused`; the documented two-step needs `--allow-errors` the skill forbids](./553.md)
 - [554 — Reconcile diagnostic reads refuse on an already-red ledger; no skill allows `--allow-errors` on reads](./554.md)
