@@ -403,6 +403,12 @@ def _load(
     if otherwise is not None:
         # Before the filter compiles it, which would only warn (w5/429).
         raise protocol.UsageError(f"Invalid account filter {account!r}: {otherwise}.", ledger_errors=ledger_errors)
+    if account is not None and (problem := _invalid_pattern(account)) is not None:
+        raise protocol.UsageError(
+            f"Invalid account filter {account!r}: {problem}. Pass a parent account such as Expenses:Food, or a "
+            "regular expression such as 'Expenses:(Food|Rent)' or '.*Food.*'.",
+            ledger_errors=ledger_errors,
+        )
     try:
         filtered = ledger.get_filtered(account=account, time=time)
     except re.error as exc:
@@ -524,6 +530,25 @@ def _require_fiscal_year_end(ledger: Any, file: Path, time: str, ledger_errors: 
             ],
             ledger_errors=ledger_errors,
         )
+
+
+def _invalid_pattern(value: str) -> str | None:
+    """Why `value` is neither an account name nor a regular expression, or None.
+
+    The filter fell back to plain equality for a pattern that does not
+    compile, so `*Food*` (a shell-glob habit) reported with exit 0 and missed
+    accounts, and a wrapper's compile error quoted positions the user never
+    typed (w5/502). Python's message is for the user's own pattern.
+    """
+    from beancount.core import account
+
+    if account.is_valid(value):
+        return None
+    try:
+        re.compile(value, re.IGNORECASE)
+    except re.error as exc:
+        return str(exc)
+    return None
 
 
 def _unreportable_boundary(entries: Any) -> date | None:

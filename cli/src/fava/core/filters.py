@@ -461,8 +461,12 @@ def account_predicate(value: str | None) -> Callable[[str], bool]:
     # pattern — keeps the documented regular-expression search.
     if account.is_valid(value):
         return lambda name: account.has_component(name, value)
-    matches_pattern = Match(value)
-    return lambda name: account.has_component(name, value) or matches_pattern(name)
+    # Beancount.io change: the raw value was also formatted into
+    # `has_component`'s `(^|:)…(:|$)` wrapper. The case-insensitive search
+    # already matches everything that wrapper does for a valid pattern, and
+    # for an invalid one the wrapper read `*Food*` as "component Foo, then
+    # d*", silently dropping Expenses:FoodTruck (w5/502).
+    return Match(value)
 
 
 class AccountFilter(EntryFilter):
