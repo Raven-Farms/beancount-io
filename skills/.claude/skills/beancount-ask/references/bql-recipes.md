@@ -57,29 +57,35 @@ Candidates — same merchant hitting Expenses repeatedly. A merchant is the paye
 
 <!-- recipe: recurring-candidates -->
 ```sql
-SELECT coalesce(payee, narration) as merchant, count(date) as n, sum(weight) as total
-WHERE account ~ '^Expenses:' GROUP BY merchant ORDER BY n DESC
+SELECT merchant, count(id) as n, sum(total) as total
+FROM (SELECT coalesce(payee, narration) as merchant, id, sum(weight) as total
+      WHERE account ~ '^Expenses:' GROUP BY merchant, id)
+GROUP BY merchant ORDER BY n DESC
 ```
+
+BQL returns one row per posting, so the inner query first folds each transaction (its `id`) into one row: `n` counts charges, not postings — a monthly charge with a sales-tax line is still one charge a month, and a split purchase is one.
 
 A merchant with n ≈ months-in-ledger and steady amounts is a subscription; groceries/gas also recur — distinguish by *amount regularity*, and say which you excluded and why. Then per-merchant history to spot creep, using the `merchant` value from the candidates:
 
 <!-- recipe: merchant-history -->
 ```sql
-SELECT date, weight as amount
-WHERE account ~ '^Expenses:' AND coalesce(payee, narration) = 'NETFLIX' ORDER BY date
+SELECT date, sum(weight) as amount
+WHERE account ~ '^Expenses:' AND coalesce(payee, narration) = 'NETFLIX'
+GROUP BY id, date ORDER BY date
 ```
 
-Report creep as "was X through <date>, now Y (+Z%)".
+One row per charge, its expense legs summed (a 15.49 plan plus 1.40 tax is one 16.89 charge); drop the `GROUP BY` and `sum` to show the legs separately, and say so. Report creep as "was X through <date>, now Y (+Z%)".
 
 ## 6. Anomalies (unusually large transactions)
 
 <!-- recipe: anomalies -->
 ```sql
-SELECT date, payee, narration, weight as amount
-WHERE account ~ '^Expenses:' AND number(weight) > 200 ORDER BY date
+SELECT date, payee, narration, sum(weight) as amount
+WHERE account ~ '^Expenses:'
+GROUP BY id, date, payee, narration HAVING sum(number(weight)) > 200 ORDER BY date
 ```
 
-Set the threshold from context (e.g. ~3× the category's typical charge), and say what threshold you used. For "did anything unusual happen in <month>", combine with the period predicate from recipe 1.
+The threshold applies to each transaction's expense total, so a $260 purchase split across two categories still crosses $200; grouping by `id` keeps two same-day charges at one merchant apart. Set the threshold from context (e.g. ~3× the category's typical charge), and say what threshold you used. For "did anything unusual happen in <month>", combine with the period predicate from recipe 1.
 
 ## 7. Account balances / statement-style checks
 

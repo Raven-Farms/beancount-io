@@ -994,6 +994,37 @@ class TestBeaRecipes(unittest.TestCase):
         top = {account: Decimal(total[0]["units"]["number"]) for account, total in self.query_recipe("top-expenses")}
         self.assertEqual(top, {"Expenses:Travel": Decimal("330"), "Expenses:Food": Decimal("20")})
 
+    def test_merchant_recipes_count_transactions_not_postings(self):
+        self.ledger.write_text(
+            'option "operating_currency" "USD"\n'
+            "2026-01-01 open Liabilities:Card USD\n"
+            "2026-01-01 open Expenses:Entertainment:Streaming USD\n"
+            "2026-01-01 open Expenses:Taxes:Sales USD\n"
+            "2026-01-01 open Expenses:Food USD\n"
+            + "".join(
+                f'2026-{month}-15 * "NETFLIX" "plan"\n  Liabilities:Card -16.89 USD\n'
+                "  Expenses:Entertainment:Streaming 15.49 USD\n  Expenses:Taxes:Sales 1.40 USD\n"
+                for month in ("04", "05", "06")
+            )
+            + '2026-05-28 * "BEST BUY" "Monitor + cable"\n  Liabilities:Card -260.00 USD\n'
+            "  Expenses:Entertainment:Streaming 150.00 USD\n  Expenses:Food 110.00 USD\n"
+        )
+
+        def usd(inventory):
+            self.assertEqual({lot["units"]["currency"] for lot in inventory}, {"USD"}, inventory)
+            return sum(Decimal(lot["units"]["number"]) for lot in inventory)
+
+        # A charge with a tax line is one charge, and a split purchase one
+        # transaction over the threshold (w5/552).
+        counts = {merchant: n for merchant, n, _ in self.query_recipe("recurring-candidates")}
+        self.assertEqual(counts, {"NETFLIX": 3, "BEST BUY": 1})
+        history = self.query_recipe("merchant-history")
+        self.assertEqual([(day, usd(amount)) for day, amount in history],
+                         [(f"2026-{m}-15", Decimal("16.89")) for m in ("04", "05", "06")])
+        anomalies = self.query_recipe("anomalies")
+        self.assertEqual([(row[0], row[1], usd(row[3])) for row in anomalies],
+                         [("2026-05-28", "BEST BUY", Decimal("260.00"))])
+
     def test_spending_recipes_count_priced_foreign_charges_at_the_usd_paid(self):
         self.ledger.write_text(
             'option "operating_currency" "USD"\n'
@@ -1026,11 +1057,10 @@ class TestBeaRecipes(unittest.TestCase):
         grid = {(row[0], row[2]): usd(row[3]) for row in self.query_recipe("recurring-grid")}
         self.assertEqual(grid[("HOTEL PARIS", 6)], Decimal("330"))
         history = self.query_recipe("merchant-history", **{"'NETFLIX'": "'TOKYO RAMEN'"})
-        self.assertEqual([amount["currency"] for _, amount in history], ["USD", "USD"])
+        self.assertEqual([usd(amount) for _, amount in history], [Decimal("10.50"), Decimal("10.50")])
         # Only the 330 USD hotel crosses the 200 threshold; 1500 JPY is $10.50.
         anomalies = self.query_recipe("anomalies")
-        self.assertEqual([(row[1], row[3]["number"], row[3]["currency"]) for row in anomalies],
-                         [("HOTEL PARIS", "330.00", "USD")])
+        self.assertEqual([(row[1], usd(row[3])) for row in anomalies], [("HOTEL PARIS", Decimal("330"))])
         # Book value still reads the at-cost lot at cost.
         net_worth = self.query_recipe("net-worth")
         self.assertEqual(usd(net_worth[0][0]), Decimal("-391.00"))
