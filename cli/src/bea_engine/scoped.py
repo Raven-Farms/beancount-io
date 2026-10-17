@@ -144,8 +144,13 @@ def _context_of(entries: Any, options_map: Any, conversion: Any = None, price_ma
     converts it, at cost or at market value from prices the postings never
     carried: `10 HOOL` at 101.55 printed `1016 USD` over `Net Income:
     (15.50 USD)` (w5/498). Those converted balances are learned too.
+
+    An interpolated leg is not learned: it carries Beancount's whole division
+    result, and its 26 digits became the column's precision (`-112.50000…
+    USD` over `Net Income: (-12.50 USD)`). A `display_precision` the ledger
+    fixes is kept (w5/571).
     """
-    from beancount.core import convert, data, display_context, realization
+    from beancount.core import convert, data, display_context, interpolate, realization
 
     class _ExactInScope(display_context.DisplayContext):
         """Formats at each currency's finest in-scope precision.
@@ -163,11 +168,16 @@ def _context_of(entries: Any, options_map: Any, conversion: Any = None, price_ma
 
     context = _ExactInScope()
     seen = False
+    inferred: set[str] = set()
     for entry in data.filter_txns(entries):
         for posting in entry.postings:
-            if posting.units is not None and posting.units.number is not None:
-                context.update(posting.units.number, posting.units.currency)
-                seen = True
+            if posting.units is None or posting.units.number is None:
+                continue
+            if (posting.meta or {}).get(interpolate.AUTOMATIC_META):
+                inferred.add(posting.units.currency)
+                continue
+            context.update(posting.units.number, posting.units.currency)
+            seen = True
     if conversion in ("cost", "value"):
         root = realization.realize(entries)  # type: ignore[no-untyped-call]
         for real_account in realization.iter_children(root):  # type: ignore[no-untyped-call]
@@ -184,4 +194,11 @@ def _context_of(entries: Any, options_map: Any, conversion: Any = None, price_ma
     ledger_context = options_map.get("dcontext")
     if ledger_context is not None:
         context.set_commas(ledger_context.commas)
+        for currency, known in ledger_context.ccontexts.items():
+            fixed = getattr(known, "fractional_digits", None)
+            if isinstance(fixed, int):
+                context.set_fixed_precision(currency, fixed)
+            elif currency in inferred and currency not in context.ccontexts:
+                # Only an inferred leg carries it here: format it as the ledger does.
+                context.ccontexts[currency] = known
     return context
