@@ -1029,8 +1029,11 @@ New destinations are private (`0600` on POSIX). When `--file` names an included 
 write (`add`, `import`, `ask`) that has no `--into` finds the ledger that
 includes it in the same or the parent directory and runs through that root
 with `--into` set to the file: the entry still lands in the named file, but it
-is validated and deduplicated against the whole ledger, and a note on stderr
-says so. That holds only when the including ledger defines what the file
+is validated and deduplicated against the whole ledger, and a note says so (in
+`warnings`, or `notes` for import, under `--json`). Such a write is the root's:
+`target.file` names the root, as the same write with `--file` on the root and
+`--into` does, and import memory is kept under the root, so both spellings
+share one remembered mapping. That holds only when the including ledger defines what the file
 reads (an account it opens, a plugin, an option other than its title): a Fava
 or forecast overlay that includes a working ledger and only adds entries is
 not its root, so writes and failing reads stay with the ledger named.

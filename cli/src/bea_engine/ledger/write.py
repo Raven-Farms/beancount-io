@@ -28,7 +28,7 @@ from typing import Any
 
 from bea_engine import stopping
 from bea_engine.ledger.text import lexer_lines, single_line
-from bea_engine.protocol import AuthError, ConflictError, LedgerError, StagingFailed, UsageError, note, notice
+from bea_engine.protocol import AuthError, ConflictError, LedgerError, StagingFailed, UsageError, notice
 from bea_engine.query import format_error, same_file
 
 
@@ -1686,8 +1686,8 @@ def root_read_hint(file: Path) -> str | None:
     )
 
 
-def write_through_root(file: Path, into: Path | None) -> tuple[Path, Path | None]:
-    """The root and `--into` a write aimed at an included leaf is validated through.
+def write_through_root(file: Path, into: Path | None) -> tuple[Path, Path | None, str | None]:
+    """The root and `--into` a write aimed at an included leaf is validated through, and the note saying so.
 
     A write with `--file` on a leaf validated that file alone: every account
     the root opens looked unknown, a remedy said to `add open` one again, and
@@ -1696,18 +1696,23 @@ def write_through_root(file: Path, into: Path | None) -> tuple[Path, Path | None
     dedupe missed rows booked there (w5/343, w5/346). The write still lands
     in the leaf, checked against the ledger that loads it — the `--into`
     recipe, applied rather than printed.
+
+    The note is the caller's to report in its answer: printed here, it
+    reached a person but never `--json` (w5/613).
     """
     if into is not None:
-        return file, into
+        return file, into, None
     # The nearest includer may itself be included: a leaf under `sub/extra.bean`
     # was checked against `extra.bean` alone, and the root's own entries —
     # what a balance or a close contradicts, what import dedupes against —
     # stayed out of the check (w5/346). Climb to the file nothing includes.
     root = top_root(file)
     if root is None or not defines_for(file, root):
-        return file, into
-    note(f"{file.name} is included by {root}; the write goes to {file.name} and is checked against that whole ledger.")
-    return root, Path(os.path.relpath(file.resolve(), root.parent))
+        return file, into, None
+    redirect = (
+        f"{file.name} is included by {root}; the write goes to {file.name} and is checked against that whole ledger."
+    )
+    return root, Path(os.path.relpath(file.resolve(), root.parent)), redirect
 
 
 def root_ledger_hints(file: Path) -> list[str]:

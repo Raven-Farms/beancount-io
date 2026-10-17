@@ -623,6 +623,16 @@ def import_entries(
     from cli.engine import launch
 
     file = context.current().entry_file()
+    # A write through an included leaf is the root's: its memory is kept per
+    # root, and `target.file` names the root, as the same import with
+    # `--into` does. Resolved here, before memory is read (w5/613).
+    redirect: str | None = None
+    if into is None:
+        resolved = launch.helper_json(["root", "--file", str(file)])
+        if resolved.get("root"):
+            file, into, redirect = Path(resolved["root"]), Path(resolved["into"]), resolved.get("note")
+            if redirect:
+                output.note(redirect)
     source = source.expanduser().resolve()
     if date_format is not None and not date_format.strip():
         # An empty value is not an omitted one (w5/239): read as unset, it was
@@ -1202,7 +1212,7 @@ def import_entries(
         _remember_config(file, config_to_remember, engine_notes)
 
     if context.current().json_output:
-        notes = [*frontend_notes, *engine_notes]
+        notes = [*([redirect] if redirect else []), *frontend_notes, *engine_notes]
         if notes:
             preview["notes"] = notes
         if csv_mode and date_format is not None:

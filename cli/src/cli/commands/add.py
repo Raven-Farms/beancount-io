@@ -98,7 +98,11 @@ def _write(
         argv.append("--allow-errors")
     if strict_read:
         argv.append("--strict-read")
-    return file, launch.helper_json(argv, stdin=json.dumps(request), writes=True)
+    data = launch.helper_json(argv, stdin=json.dumps(request), writes=True)
+    # A write through an included leaf is the root's write: `target.file`
+    # named the leaf, and the same write with `--into` named the root (w5/613).
+    root = data.pop("root", None)
+    return (Path(root) if root else file), data
 
 
 def _already_recorded(name: str, source: dict[str, Any]) -> None:

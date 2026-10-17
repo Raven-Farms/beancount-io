@@ -17,7 +17,8 @@ from __future__ import annotations
 
 import json
 import os
-from contextlib import nullcontext
+from collections.abc import Iterator
+from contextlib import contextmanager, nullcontext
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -280,15 +281,57 @@ def add(
     with protocol.answering("add") as answer:
         from bea_engine.ledger import adding, write
 
-        ledger, into = write.write_through_root(_ledger(file), into)
-        answer.data = adding.answer(
-            ledger,
-            type,
-            _request(request),
-            into=into,
-            allow_errors=allow_errors,
-            strict_read=strict_read,
-        )
+        ledger, into, redirect = write.write_through_root(_ledger(file), into)
+        with _redirect_on_failure(redirect):
+            answer.data = adding.answer(
+                ledger,
+                type,
+                _request(request),
+                into=into,
+                allow_errors=allow_errors,
+                strict_read=strict_read,
+            )
+        _report_redirect(answer.data, ledger, redirect, "warnings")
+
+
+@contextmanager
+def _redirect_on_failure(redirect: str | None) -> Iterator[None]:
+    """Say a refused write was checked against the root, as the answer would have."""
+    try:
+        yield
+    except protocol.EngineError:
+        if redirect is not None:
+            protocol.note(redirect)
+        raise
+
+
+def _report_redirect(data: Any, ledger: Path, redirect: str | None, key: str) -> None:
+    """Put a write's redirect through its root into the answer, where `--json` sees it (w5/613)."""
+    if redirect is None or not isinstance(data, dict):
+        return
+    data[key] = [redirect, *(data.get(key) or [])]
+    data["root"] = str(ledger)
+
+
+@app.command()
+def root(
+    file: Annotated[Path, typer.Option("--file", "-f", help="The ledger file a write names.")],
+) -> None:
+    """The root ledger a write aimed at FILE is checked against, or null when FILE is the root.
+
+    Answers `{"root", "into", "note"}`. Reads include lines only, never the
+    ledger: the frontend asks before it reads import memory, which is kept
+    per root (w5/613).
+    """
+    with protocol.answering("root") as answer:
+        from bea_engine.ledger import write
+
+        ledger, into, redirect = write.write_through_root(_ledger(file), None)
+        answer.data = {
+            "root": str(ledger) if into is not None else None,
+            "into": str(into) if into is not None else None,
+            "note": redirect,
+        }
 
 
 @app.command()
@@ -324,15 +367,17 @@ def append(
     with protocol.answering("append") as answer:
         from bea_engine.ledger import appending, write
 
-        ledger, into = write.write_through_root(_ledger(file), into)
-        answer.data = appending.answer(
-            ledger,
-            _text(text),
-            into=into,
-            allow_errors=allow_errors,
-            dry_run=dry_run,
-            token=appending.parse_token(token) if token is not None else None,
-        )
+        ledger, into, redirect = write.write_through_root(_ledger(file), into)
+        with _redirect_on_failure(redirect):
+            answer.data = appending.answer(
+                ledger,
+                _text(text),
+                into=into,
+                allow_errors=allow_errors,
+                dry_run=dry_run,
+                token=appending.parse_token(token) if token is not None else None,
+            )
+        _report_redirect(answer.data, ledger, redirect, "warnings")
 
 
 @app.command()
@@ -496,7 +541,11 @@ def import_entries(
         from bea_engine import importing
         from bea_engine.ledger import write
 
-        ledger, into = write.write_through_root(_ledger(file), into)
+        ledger, into, redirect = write.write_through_root(_ledger(file), into)
+        if redirect is not None:
+            # The frontend resolves the root itself before reading its import
+            # memory, so this is a direct caller's write through a leaf.
+            protocol.note(redirect)
         # An apply decides its rows against the ledger it read, so it queues
         # behind other `bea` writers before that read rather than refusing
         # what one of them committed meanwhile (w5/183). A preview writes
