@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [549 — `ask`'s BQL tool drops error details and calls an engine crash "Ledger is invalid"](./549.md)
 - [550 — `bea ask > out.txt` hides the REPL and approval panel in the file, yet a blind `y` writes](./550.md)
 - [551 — Close skill's report step fails on any unpriced commodity (`@`-priced foreign charge, option lot); skills call it an engine failure](./551.md)
 - [552 — Ask skill's anomalies/recurring/merchant recipes count postings, not transactions](./552.md)
