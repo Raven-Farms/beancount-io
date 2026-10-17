@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [602 — A one-description row is never a possible duplicate of a ledger entry with a payee](./602.md)
 - [603 — A `{}` sale split across lots still conflicts with its booked twin (incomplete fix of w5/467)](./603.md)
 - [604 — `--id-key fitId` is folded to `fitid`, disabling dedupe for camelCase keys (regression from w5/469)](./604.md)
 - [605 — `init` and writes `--into` a new file always fail on exFAT/FAT volumes (`os.link` unsupported)](./605.md)
