@@ -229,6 +229,9 @@
 - [771 — check_drained close hint blames the parent for a subaccount's money; following it leaves wrong books](./771.md)
 - [772 — A backdated close (or late open) blames the existing entry, cites a line past EOF, and suggests --allow-errors](./772.md)
 - [773 — Closed-account hints: add open never names the close, doctor says reopen, duplicate close is bare or misblamed](./773.md)
+- [774 — An overlay is still the root with a forecast plugin, a repeated Fava option, above a leaf, and in hints (incomplete fix of w5/578)](./774.md)
+- [775 — Two roots including one leaf: writes are judged by whichever sorts first (w5/578 addendum not implemented)](./775.md)
+- [776 — With a managed price include, BEANCOUNT_DISABLE_LOAD_CACHE and check --no-cache cannot bypass a stale cache (new with w5/576)](./776.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
