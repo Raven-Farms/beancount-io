@@ -1104,9 +1104,12 @@ def _identities(entry: Any, account: str, keys: list[str]) -> list[tuple[str, st
     return identities
 
 
-# The generated-id prefixes skills/.../beancount-import/references/dedup.md
-# defines: `bea import` writes `csv:`, beancount-migrate writes the others.
-_GENERATED_ID = re.compile(r"(?:csv|mint|monarch|qbo):sha256:([0-9a-f]{16})")
+# The generated ids skills/.../beancount-import/references/dedup.md defines:
+# `bea import` writes `csv:`, beancount-migrate `mint:`/`monarch:`/`qbo:`, and
+# `<source>:` for any other source (`ynab:`, `actual:`). Listing four missed
+# the generic path, and every overlap row after such a migration was written
+# again (w5/601).
+_GENERATED_ID = re.compile(r"[a-z][a-z0-9-]*:sha256:([0-9a-f]{16})")
 
 
 def _is_generated_identity(key: tuple[str, str, str]) -> bool:
