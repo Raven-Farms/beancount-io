@@ -156,6 +156,11 @@
 - [586 — With `TERM` unset, the query shell pages every result, even one row](./586.md)
 - [587 — `bea query > out.txt` opens the shell with no visible prompt and writes prompts into the file](./587.md)
 - [588 — `bea init` prompts before validating `--date`/`--opening-balance`, then rejects without naming the option](./588.md)
+- [589 — A FIFO or deeply nested `credentials.json` hangs or fails every local command](./589.md)
+- [590 — `update-check.json` is written through a symlink, overwriting a file outside the config dir](./590.md)
+- [591 — Non-regular entries in bea's own load-cache and managed-price cache crash or hang reads (gap in w5/417/418)](./591.md)
+- [592 — A corrupt remembered-importer record blocks a plain CSV import with a pathless refusal](./592.md)
+- [593 — A FIFO lock file fails `add` with `UnsupportedOperation`; a directory is blamed on the lock dir](./593.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
