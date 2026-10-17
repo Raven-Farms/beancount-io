@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [591 — Non-regular entries in bea's own load-cache and managed-price cache crash or hang reads (gap in w5/417/418)](./591.md)
 - [592 — A corrupt remembered-importer record blocks a plain CSV import with a pathless refusal](./592.md)
 - [593 — A FIFO lock file fails `add` with `UnsupportedOperation`; a directory is blamed on the lock dir](./593.md)
 - [594 — A second file's preview drops the first file's remembered `sign=ledger`; flag-free `--apply` writes the opposite sign (gap in w1/150)](./594.md)
