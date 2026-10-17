@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [516 — `cloud login` with `BEA_TOKEN` set reports success, but the session is never used](./516.md)
 - [517 — Gateway timeout (504/524) on cloud writes exits 1 instead of the unknown-outcome exit 4](./517.md)
 - [518 — A SOCKS proxy in the environment breaks every cloud command with httpx's pip advice](./518.md)
 - [519 — A refused proxy tunnel (407) on cloud writes exits 4 "outcome unknown" (gap in w5/368)](./519.md)
