@@ -164,23 +164,37 @@ def _refresh(extra: list[str]) -> None:
 
 def _export(args: list[str]) -> None:
     output_dir: str | None = None
+    output_flag = ""
     allow_errors = False
     force = False
     pending = list(args)
+
+    def take_output(flag: str, value: str) -> None:
+        # Kept last, `-o first -o second` exported to `second` alone with exit
+        # 0; every Typer command refuses two values for one option (w5/483).
+        nonlocal output_dir, output_flag
+        if output_dir is not None and value != output_dir:
+            raise UsageError(
+                f"Conflicting values for one option: {output_flag} {output_dir!r} and {flag} {value!r}. Pass it once."
+            )
+        output_dir, output_flag = value, flag
+
     while pending:
         arg = pending.pop(0)
         if arg in ("--output", "-o"):
             if not pending:
                 raise UsageError("bea price export --output needs a directory.")
-            output_dir = pending.pop(0)
+            value = pending.pop(0)
             # `-o ''` exported into the working directory (w5/387), which the
             # `--output=` spelling already refused.
-            if not output_dir.strip():
-                raise UsageError(f"bea price export {arg} {output_dir!r} is empty; name the directory to export into.")
+            if not value.strip():
+                raise UsageError(f"bea price export {arg} {value!r} is empty; name the directory to export into.")
+            take_output(arg, value)
         elif arg.startswith("--output="):
-            output_dir = arg.split("=", 1)[1]
-            if not output_dir.strip():
+            value = arg.split("=", 1)[1]
+            if not value.strip():
                 raise UsageError("bea price export --output needs a directory.")
+            take_output("--output", value)
         elif arg == "--allow-errors":
             allow_errors = True
         elif arg == "--force":
