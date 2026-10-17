@@ -229,6 +229,11 @@
 - [774 — An overlay is still the root with a forecast plugin, a repeated Fava option, above a leaf, and in hints (incomplete fix of w5/578)](./774.md)
 - [775 — Two roots including one leaf: writes are judged by whichever sorts first (w5/578 addendum not implemented)](./775.md)
 - [776 — With a managed price include, BEANCOUNT_DISABLE_LOAD_CACHE and check --no-cache cannot bypass a stale cache (new with w5/576)](./776.md)
+- [777 — beancount-migrate derives the opening from today's balance but asserts it at the export's end; post-export activity is absorbed silently](./777.md)
+- [778 — beancount-migrate endpoint assertion fails on a lagged card payment; review/residual accounts never opened](./778.md)
+- [779 — dedup.md hashes a separate payee column; migrate's QBO/Monarch references do not, so later bank imports double-book](./779.md)
+- [780 — importer-author identify() template crashes the runner on Latin-1 files; bea names no importer](./780.md)
+- [781 — Default importers.py shadows the importers/ folder importer-author proposes; the hint is wrong](./781.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
