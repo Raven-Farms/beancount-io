@@ -33,6 +33,5 @@ Mobile QA findings from 2026-10-15, triaged the same day. Order is suggested, hi
 
 **Minors: polish**
 
-- [032 — Recent Changes renders each commit's trailing newline as a blank line; commit detail shows raw/hard-wrapped messages](./032.md) — mobile QA 2026-10-15
 - [040 — Add Budget's header Done skips the shared font-scale cap](./040.md) — mobile QA 2026-10-15, narrowed at triage to its AX2-reproducible part (same file as 038)
 - [035 — New Transaction's "Add posting" row shows two plus signs](./035.md) — mobile QA 2026-10-15

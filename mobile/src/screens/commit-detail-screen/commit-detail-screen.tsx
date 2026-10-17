@@ -13,7 +13,10 @@ import { RouteLedgerUnavailable } from "@/components/route-ledger-unavailable";
 import { bindRouteLedger, firstRouteParam } from "@/common/route-ledger";
 import { parseDiff, DiffLine } from "./diff-utils";
 import { LEADING_TEXT_ALIGN, LTR_SOURCE } from "@/common/rtl";
-import { formatCommitAuthorLine } from "@/screens/notifications-screen/formatting";
+import {
+  formatCommitAuthorLine,
+  splitCommitMessage,
+} from "@/screens/notifications-screen/formatting";
 import { CardLoadFailure } from "@/components/card-load-failure";
 import { selectCardLoadState } from "@/common/apollo/card-load-state";
 
@@ -50,6 +53,13 @@ const getStyles = (theme: ColorTheme) =>
       lineHeight: 22,
       paddingHorizontal: 16,
       paddingBottom: 4,
+    },
+    messageBody: {
+      fontSize: 15,
+      color: theme.black,
+      lineHeight: 22,
+      paddingHorizontal: 16,
+      paddingBottom: 8,
     },
     metaLine: {
       fontSize: 13,
@@ -176,6 +186,9 @@ function CommitDetailScreenImpl({
 
   const commit = data?.getCommitDetails;
   const diffLines = commit?.diff ? parseDiff(commit.diff) : null;
+  // The subject heads the summary; the body reflows below it rather than
+  // keeping git's ~72-column hard wraps (w0/032).
+  const message = splitCommitMessage(commit?.message ?? "");
   const shortSha = sha ? sha.slice(0, 7) : "";
 
   return (
@@ -198,7 +211,10 @@ function CommitDetailScreenImpl({
             <ScrollView>
               {/* Summary */}
               <View style={styles.section}>
-                <Text style={styles.messageLine}>{commit.message}</Text>
+                <Text style={styles.messageLine}>{message.subject}</Text>
+                {message.body !== null && (
+                  <Text style={styles.messageBody}>{message.body}</Text>
+                )}
                 <Text style={styles.metaLine}>
                   {t("commitDetailAuthor")}:{" "}
                   {formatCommitAuthorLine(
@@ -273,27 +289,31 @@ function CommitDetailScreenImpl({
                   {t("commitDetailDiff")}
                 </Text>
               </View>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator
-                style={LTR_SOURCE}
-                contentContainerStyle={LTR_SOURCE}
-              >
-                <View style={styles.diffContainer}>
-                  {diffLines && diffLines.length > 0 ? (
+              {diffLines && diffLines.length > 0 ? (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator
+                  style={LTR_SOURCE}
+                  contentContainerStyle={LTR_SOURCE}
+                >
+                  <View style={styles.diffContainer}>
                     <FlatList
                       data={diffLines}
                       keyExtractor={(_, i) => String(i)}
                       renderItem={({ item }) => <DiffLineView line={item} />}
                       scrollEnabled={false}
                     />
-                  ) : (
-                    <Text style={styles.emptyText}>
-                      {t("commitDetailNoDiff")}
-                    </Text>
-                  )}
+                  </View>
+                </ScrollView>
+              ) : (
+                // Outside the horizontal scroller, which sized the panel to
+                // its text: the empty state spans the row (w0/032).
+                <View style={styles.diffContainer}>
+                  <Text style={styles.emptyText}>
+                    {t("commitDetailNoDiff")}
+                  </Text>
                 </View>
-              </ScrollView>
+              )}
             </ScrollView>
           </FadeInView>
         )}

@@ -27,6 +27,7 @@ import {
   formatCommitAuthorLine,
   formatShortSha,
   LedgerError,
+  splitCommitMessage,
 } from "./formatting";
 import { LEADING_TEXT_ALIGN, directionalIcon } from "@/common/rtl";
 import { CardLoadFailure } from "@/components/card-load-failure";
@@ -217,7 +218,12 @@ function NotificationsScreenImpl(): JSX.Element {
     fetchPolicy: "cache-and-network",
   });
 
-  const commits = commitsData?.listCommits ?? [];
+  // Rows show the subject line only: git messages end in a newline, which
+  // filled the two-line slot with a blank line (w0/032).
+  const commits = (commitsData?.listCommits ?? []).map((commit) => ({
+    ...commit,
+    subject: splitCommitMessage(commit.message).subject,
+  }));
   const { errorsPending, commitsPending } = selectSectionsPending({
     errorsLoaded,
     commitsLoading,
@@ -309,7 +315,7 @@ function NotificationsScreenImpl(): JSX.Element {
                       style={styles.changeRow}
                       activeOpacity={0.7}
                       accessibilityRole="button"
-                      accessibilityLabel={commit.message}
+                      accessibilityLabel={commit.subject}
                       onPress={() =>
                         router.push({
                           pathname: "/(app)/commit-detail",
@@ -321,7 +327,7 @@ function NotificationsScreenImpl(): JSX.Element {
                     >
                       <View style={styles.changeContent}>
                         <Text style={styles.changeMessage} numberOfLines={2}>
-                          {commit.message}
+                          {commit.subject}
                         </Text>
                         <Text style={styles.changeMeta}>
                           {formatCommitAuthorLine(
