@@ -66,6 +66,29 @@ def _discard_diagnostics_without_stderr() -> None:
         pass
 
 
+def _empty_stdin_when_closed() -> None:
+    """With fd 0 closed, read stdin as empty rather than failing on `None`.
+
+    `<&-` (a CI runner, a daemon) leaves `sys.stdin` None: `query`, `format -`
+    and `add transactions --from -` exited 1 with `'NoneType' object has no
+    attribute 'isatty'` or `'read'`, and treeify's child started with no fd 0
+    (w5/584). Devnull at fd 0, inheritable, gives every command and child the
+    empty input `</dev/null` already gets.
+    """
+    if sys.stdin is not None:
+        return
+    try:
+        devnull = os.open(os.devnull, os.O_RDONLY)
+        if devnull != 0:
+            os.dup2(devnull, 0)
+            os.close(devnull)
+        else:
+            os.set_inheritable(0, True)
+        sys.stdin = open(0, errors="surrogateescape", closefd=False)  # noqa: SIM115 - lives as sys.stdin
+    except OSError:
+        pass
+
+
 def _tolerate_unencodable_output() -> None:
     """Escape what the terminal's encoding cannot show instead of failing on it.
 
@@ -220,6 +243,7 @@ class _GuardedGroup(TyperGroup):
     # a private module just to restate the supertype's annotation.
     def parse_args(self, ctx: Any, args: list[str]) -> list[str]:
         _discard_diagnostics_without_stderr()
+        _empty_stdin_when_closed()
         # Parse global switches before command resolution can fail. Use Click's
         # parser so --file=--json and arguments following -- remain values.
         resilient, ignore_unknown = ctx.resilient_parsing, ctx.ignore_unknown_options
