@@ -25,7 +25,9 @@ ROOT = Path(__file__).resolve().parents[1]
 pytestmark = pytest.mark.skipif(shutil.which("less") is None, reason="needs less as the pager")
 
 
-def test_a_long_result_prints_whole_and_the_prompt_returns(tmp_path: Path) -> None:
+@pytest.mark.parametrize("term", ["dumb", None, "xterm-ghostty"], ids=["dumb", "unset", "unknown"])
+def test_a_long_result_prints_whole_and_the_prompt_returns(tmp_path: Path, term: str | None) -> None:
+    """With `TERM` unset or unknown to terminfo the height read 0, and every result paged (w5/586)."""
     ledger = tmp_path / "main.bean"
     lines = ["2026-01-01 open Assets:Cash USD", "2026-01-01 open Expenses:Food USD"]
     for day in range(1, 13):
@@ -38,12 +40,14 @@ def test_a_long_result_prints_whole_and_the_prompt_returns(tmp_path: Path) -> No
         HOME=str(tmp_path / "home"),
         BEA_NO_UPDATE_NOTIFIER="1",
         PYTHONPATH=str(ROOT / "src"),
-        TERM="dumb",
         NO_COLOR="1",
         PAGER="less",
         LINES="6",
         COLUMNS="80",
     )
+    env.pop("TERM", None)
+    if term is not None:
+        env["TERM"] = term
     pid, fd = pty.fork()
     if pid == 0:  # pragma: no cover - replaced by exec in the child
         os.chdir(tmp_path)
