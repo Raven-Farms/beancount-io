@@ -213,6 +213,11 @@
 - [710 — A BOM on line 1 hides a first-line pushtag/pushmeta and option name_* from the write checks](./710.md)
 - [711 — A file ending inside an unterminated string makes add blame the new entry, not the broken line](./711.md)
 - [712 — A lone CR as the last byte does not converge under format -i](./712.md)
+- [713 — Code-page check misses Czech, Turkish and Shift-JIS, skips remembered cp1252, and flags Western 12m³ (incomplete fix of w5/529)](./713.md)
+- [714 — An NFD --account the ledger does not open is remembered, then blocks flag-free imports](./714.md)
+- [715 — Settings notes still missing from three flag-free refusals, now added to a typed one (incomplete fix of w5/525)](./715.md)
+- [716 — CSV headers keep direction marks, ZWJ, soft hyphen and NBSP; a zero-width mapping name is now refused (incomplete fix of w5/531)](./716.md)
+- [717 — A CSV decode error past 8 KiB names the wrong byte offset](./717.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
