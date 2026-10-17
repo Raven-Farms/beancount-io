@@ -74,12 +74,21 @@ def ask(
     skills = load_skills()
     for line in project_skills_notice(skills):
         output.note(line)
-    agent = make_agent(
-        model_name=model,
-        base_url=f"{settings().api_url}/api-gateway/ai/openai/",
-        api_key=creds.token,
-        skills=skills,
-    )
+    try:
+        agent = make_agent(
+            model_name=model,
+            base_url=f"{settings().api_url}/api-gateway/ai/openai/",
+            api_key=creds.token,
+            skills=skills,
+        )
+    except ImportError as exc:
+        # A SOCKS proxy in the environment, as for the cloud commands (w5/518).
+        from cli.errors import socks_proxy_refusal
+
+        refusal = socks_proxy_refusal(exc)
+        if refusal is None:
+            raise
+        raise refusal from None
     deps = BqlDeps(file=file, skills={s.name: s for s in skills}, into=into)
 
     if print_mode or ctx.no_input:

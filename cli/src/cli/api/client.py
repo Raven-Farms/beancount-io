@@ -74,8 +74,21 @@ def make_client() -> AuthenticatedClient:
         AuthenticatedClient,
         Client(base_url=settings().api_url, timeout=DEFAULT_TIMEOUT),
     )
-    _install_tolerant_json(client.get_httpx_client())
+    _install_tolerant_json(_httpx_client(client))
     return client
+
+
+def _httpx_client(client: Any) -> Any:
+    """The generated client's httpx client, with a SOCKS proxy refused in bea's words (w5/518)."""
+    from cli.errors import socks_proxy_refusal
+
+    try:
+        return client.get_httpx_client()
+    except ImportError as exc:
+        refusal = socks_proxy_refusal(exc)
+        if refusal is None:
+            raise
+        raise refusal from None
 
 
 def bearer_client(token: str) -> AuthenticatedClient:
@@ -86,7 +99,7 @@ def bearer_client(token: str) -> AuthenticatedClient:
         token=token,
         timeout=DEFAULT_TIMEOUT,
     )
-    _install_tolerant_json(client.get_httpx_client())
+    _install_tolerant_json(_httpx_client(client))
     return client
 
 

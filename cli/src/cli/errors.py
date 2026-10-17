@@ -18,6 +18,7 @@ category name, so a caller can branch on either and get the same answer.
 from __future__ import annotations
 
 import json
+import os
 from collections.abc import Mapping
 from typing import Any
 
@@ -393,4 +394,27 @@ def unknown_write_outcome(operation: str, exc: BaseException) -> ConflictError:
     return ConflictError(
         f"{operation} did not complete cleanly ({type(exc).__name__}). "
         f"The outcome is unknown — check the current state before retrying."
+    )
+
+
+_PROXY_VARIABLES = ("ALL_PROXY", "all_proxy", "HTTPS_PROXY", "https_proxy", "HTTP_PROXY", "http_proxy")
+
+
+def socks_proxy_refusal(exc: ImportError) -> UsageError | None:
+    """The usage error for httpx's missing-`socksio` failure, or None for any other import error.
+
+    httpx builds a transport for every proxy in the environment when a client
+    is created and raises `ImportError` for a SOCKS one without `socksio`,
+    even for a host `no_proxy` excludes; its "pip install httpx[socks]" advice
+    cannot fix a Homebrew or `uv tool` install (w5/518). The cloud client and
+    `bea ask`'s model client both fail this way. Only the variable is named: a
+    proxy URL can carry credentials.
+    """
+    if "socks" not in str(exc).lower():
+        return None
+    named = [name for name in _PROXY_VARIABLES if os.environ.get(name, "").lower().startswith("socks")]
+    setting = " and ".join(named) or "a proxy variable"
+    return UsageError(
+        f"{setting} names a SOCKS proxy, which bea's HTTP client does not support. Unset it for bea "
+        f"(for example {named[0] if named else 'ALL_PROXY'}= bea …), or use an HTTP(S) proxy instead."
     )
