@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [523 — `format` aborts on a permission-denied include (gap in w5/442)](./523.md)
 - [524 — USAGE says `list -a 'Food|Rent'` matches either; `list` filters are substrings](./524.md)
 - [525 — Import refusals drop the remembered-settings notes IMPORTING.md promises](./525.md)
 - [526 — `list --flag txn` refused, though `add --flag txn` works](./526.md)
