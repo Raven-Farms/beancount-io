@@ -152,6 +152,12 @@
 - [580 — `init` through a dangling symlink blames the working directory](./580.md)
 - [581 — `--json` `target.file` resolves a symlinked root to a path that loads a different ledger](./581.md)
 - [582 — Process substitution for `--rules`/`--config` gives misleading errors (gap in w5/436)](./582.md)
+- [583 — With `2>&-`, child processes lack fd 2: errors land in stdout with exit 0, and the query shell loops forever (gap in w5/308)](./583.md)
+- [584 — With stdin closed (`<&-`), stdin-reading commands exit 1 with raw `NoneType` attribute errors](./584.md)
+- [585 — Ctrl-C in the query shell's `less` pager leaves it running and splitting keystrokes](./585.md)
+- [586 — With `TERM` unset, the query shell pages every result, even one row](./586.md)
+- [587 — `bea query > out.txt` opens the shell with no visible prompt and writes prompts into the file](./587.md)
+- [588 — `bea init` prompts before validating `--date`/`--opening-balance`, then rejects without naming the option](./588.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
