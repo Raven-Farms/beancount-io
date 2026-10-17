@@ -616,8 +616,14 @@ def _parse_balance_amount(text: str) -> tuple[Decimal, str, Decimal | None]:
     """`NUMBER [~ TOLERANCE] CURRENCY`, read by the parser that will read it back."""
     from beancount.core.data import Balance
 
+    from bea_engine.ledger.models import COMMENT_HELP, comment_start
+
     if "\n" in text or "\r" in text:
         raise protocol.UsageError("Balance amount must be one line: 'NUMBER [~ TOLERANCE] CURRENCY'.")
+    if comment_start(text) is not None:
+        # Parsed as written, the note after `;` was dropped and the assertion
+        # written without it, exit 0 (w5/511), as `add price` already refuses.
+        raise protocol.UsageError(f"--amount contains a ';': {text!r}. {COMMENT_HELP} Nothing was written.")
     entries, errors, _ = parse_exact(f"2000-01-01 balance Assets:Balance {text}\n")
     if errors or len(entries) != 1 or not isinstance(entries[0], Balance):
         raise protocol.UsageError(
