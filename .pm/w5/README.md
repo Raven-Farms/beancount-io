@@ -242,6 +242,10 @@
 - [793 — A ledger in an untraversable directory gives raw Errno 13, exit 1, not the documented exit 2](./793.md)
 - [794 — example -o and price export -o with $VAR create a ledger every later command refuses (incomplete fix of w5/579)](./794.md)
 - [795 — Three path gaps: symlinked-root format/add targets, init loop/illegal-byte OSError, -o /dev/stdout to a file](./795.md)
+- [796 — A wrong second-currency add balance is silently filled by an old, already used pad (backdated), exit 0](./796.md)
+- [797 — add balance --pad-from blames a consumed pad as "already fills"; its remedy then fails (gap in w1/116)](./797.md)
+- [798 — import --apply --allow-errors writes a pad-only batch that leaves check failing (incomplete fix of w5/081)](./798.md)
+- [799 — Pad hints: staged-pad hint loops, pad-leg currency hint, self-pad accepted](./799.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
