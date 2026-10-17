@@ -1108,7 +1108,7 @@ def build_shell(
             if isinstance(query, str):
                 _refuse_statement_tail(query)
                 query = statement = _quote_reserved_tables(unicodedata.normalize("NFC", query))
-                _refuse_empty_window(query, [], file=file)
+                _refuse_empty_window(query, [], file=file, stored_on=kwargs.get("default_close_date"))
             return _compiled(
                 partial(super().execute, query, **kwargs),
                 statement,
@@ -1975,13 +1975,18 @@ def _grouped_columns(query_string: str) -> list[str]:
     return [name for name in names if isinstance(name, str)]
 
 
-def _refuse_empty_window(query_string: str, ledger_errors: list[str], *, file: Path) -> None:
+def _refuse_empty_window(query_string: str, ledger_errors: list[str], *, file: Path, stored_on: Any = None) -> None:
     """Refuse a `FROM OPEN ON … CLOSE ON …` window that can hold no entries.
 
     `CLOSE ON D` is exclusive, so `OPEN ON D CLOSE ON D` spans zero days while
     the `--from-date D --to-date D` filters everywhere else in `bea` span one.
     Answering `(no rows)` reads as "that day is empty" rather than "you asked
     for no days", so say which it is and how to ask for the day.
+
+    `stored_on` is a stored query's directive date, which Beanquery applies as
+    the outer window's `CLOSE ON` when the query names none: a stored query
+    opening on that date answered `(no rows)`, and one opening later failed
+    over a CLOSE nobody wrote (w5/559).
     """
     try:
         from beanquery.parser import ast, parse
@@ -1989,15 +1994,23 @@ def _refuse_empty_window(query_string: str, ledger_errors: list[str], *, file: P
         parsed = parse(query_string)
     except Exception:  # noqa: BLE001 - a dot command or a broken query; beanquery reports it
         return
+    outer: Any = parsed.from_clause if isinstance(parsed, ast.Select) else None
     # Every dated window, not just the outer one: a subquery's `FROM OPEN ON D
     # CLOSE ON D` answered `(no rows)` just the same (w1/158).
     for clause in ast.walk(parsed):
         if isinstance(clause, ast.From):
-            _refuse_window(clause.open, clause.close, ledger_errors, file=file)
+            if stored_on is not None and clause is outer and not clause.close:
+                _refuse_window(clause.open, stored_on, ledger_errors, file=file, stored=True)
+            else:
+                _refuse_window(clause.open, clause.close, ledger_errors, file=file)
 
 
-def _refuse_window(begin: Any, end: Any, ledger_errors: list[str], *, file: Path) -> None:
-    """Refuse one `OPEN ON begin CLOSE ON end` window that spans no days, or has no end date."""
+def _refuse_window(begin: Any, end: Any, ledger_errors: list[str], *, file: Path, stored: bool = False) -> None:
+    """Refuse one `OPEN ON begin CLOSE ON end` window that spans no days, or has no end date.
+
+    `stored` says `end` is a stored query's directive date rather than a
+    `CLOSE ON` in its text, so the remedy is that date or an explicit close.
+    """
     from datetime import date, timedelta
 
     from bea_engine.ledger.text import bea_command
@@ -2016,6 +2029,17 @@ def _refuse_window(begin: Any, end: Any, ledger_errors: list[str], *, file: Path
         )
     if not isinstance(begin, date) or not isinstance(end, date) or begin < end:
         return
+    if stored:
+        where = "on that same day" if begin == end else f"after it, on {begin}"
+        raise protocol.UsageError(
+            f"This stored query's window covers no days: its query directive's date, {end}, closes the window "
+            f"(exclusive), and OPEN ON starts {where}.",
+            details=[
+                f"Add CLOSE ON {begin + timedelta(days=1)} or later to the query, or re-date its query directive "
+                "after the last day it should cover."
+            ],
+            ledger_errors=ledger_errors,
+        )
     if begin == end:
         message = (
             f"This BQL window covers no days: CLOSE ON {end} is exclusive, so it ends where OPEN ON {begin} starts."

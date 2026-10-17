@@ -168,3 +168,51 @@ def test_a_valid_subquery_window_still_answers(tmp_path: Path) -> None:
 
     assert result.returncode == 0, result.stderr
     assert "Lunch" in result.stdout
+
+
+FOOD = "WHERE account = 'Expenses:Food'"
+STORED = LEDGER + (
+    f'2024-03-11 query "since-11" "SELECT date, narration FROM OPEN ON 2024-03-11 {FOOD}"\n'
+    f'2024-03-11 query "since-april" "SELECT date FROM OPEN ON 2024-04-01 {FOOD}"\n'
+    f'2024-03-11 query "since-march" "SELECT date, narration FROM OPEN ON 2024-03-01 {FOOD}"\n'
+)
+
+
+@pytest.mark.parametrize(
+    ("name", "where", "close"),
+    [("since-11", "on that same day", "2024-03-12"), ("since-april", "after it, on 2024-04-01", "2024-04-02")],
+    ids=["opens-on-the-directive-date", "opens-after-it"],
+)
+def test_a_stored_window_closed_by_its_directive_date_is_refused(
+    tmp_path: Path, name: str, where: str, close: str
+) -> None:
+    """Beanquery closes a stored query's window at its directive's date when the text names no close (w5/559)."""
+    ledger = tmp_path / "main.bean"
+    ledger.write_text(STORED)
+    message = (
+        "This stored query's window covers no days: its query directive's date, 2024-03-11, closes the window "
+        f"(exclusive), and OPEN ON starts {where}."
+    )
+
+    text = _bea(tmp_path, "--file", str(ledger), "query", f".run {name}")
+    as_json = _bea(tmp_path, "--json", "--file", str(ledger), "query", f".run {name}")
+
+    assert text.returncode == 2, text.stdout + text.stderr
+    assert message in " ".join(text.stderr.split()), text.stderr
+    assert "CLOSE date must follow OPEN date" not in text.stderr and "(no rows)" not in text.stdout
+    error = json.loads(as_json.stderr)["error"]
+    assert (error["exit_code"], error["message"]) == (2, message)
+    assert error["details"] == [
+        f"Add CLOSE ON {close} or later to the query, or re-date its query directive "
+        "after the last day it should cover."
+    ]
+
+
+def test_a_stored_window_the_directive_date_leaves_open_still_answers(tmp_path: Path) -> None:
+    ledger = tmp_path / "main.bean"
+    ledger.write_text(STORED)
+
+    result = _bea(tmp_path, "--file", str(ledger), "query", ".run since-march")
+
+    assert result.returncode == 0, result.stderr
+    assert "Lunch" in result.stdout and "Dinner" not in result.stdout
