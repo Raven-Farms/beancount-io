@@ -34,7 +34,7 @@ import stat
 import sys
 import time
 import unicodedata
-from collections.abc import Iterator
+from collections.abc import Collection, Iterator
 from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
@@ -224,6 +224,12 @@ def _env_origins() -> tuple[str, ...] | None:
     return tuple(origin.strip() for origin in raw.split(",") if origin.strip())
 
 
+def _allowed_origins(origins: tuple[str, ...] | None) -> tuple[str, ...]:
+    """The managed-price origins a load allows: the argument, else the environment, else the defaults."""
+    allowed = _env_origins() if origins is None else origins
+    return DEFAULT_ORIGINS if allowed is None else allowed
+
+
 def _env_flag(name: str) -> bool:
     return os.environ.get(name, "").strip().lower() in {"1", "true", "yes", "on"}
 
@@ -310,9 +316,7 @@ def _load_with_sources(
     at = time.time() if now is None else now
     want_offline = _env_flag(OFFLINE_ENV) if offline is None else offline
     want_strict = _env_flag(STRICT_ENV) if strict is None else strict
-    allowed_origins = _env_origins() if origins is None else origins
-    if allowed_origins is None:
-        allowed_origins = DEFAULT_ORIGINS
+    allowed_origins = _allowed_origins(origins)
     cache = root or cache_root()
 
     snapshot = snapshot or LedgerSnapshot.capture(entry)
@@ -1145,6 +1149,16 @@ def export_portable(
         )
     target = (output or entry.parent / f"{entry.stem}-export").expanduser()
     snapshot = LedgerSnapshot.capture(entry)
+    # A refused URL include is no source, so the check above never saw it, and
+    # the "self-contained" snapshot kept the URL for stock tools to fail on
+    # (w5/479). Refused alike; `--allow-errors` comments it out as the load does.
+    refused: dict[str, str] = {}
+    _collect_managed(snapshot, _allowed_origins(origins), refused)
+    if refused and not allow_errors:
+        refusals = "; ".join(f'include "{url}" was refused: {why}' for url, why in refused.items())
+        raise UsageError(
+            f"Cannot export: {refusals}. Remove it, or pass --allow-errors to export with it commented out."
+        )
     # `resolve()` for a destination that does not exist yet, too: `absolute()`
     # leaves `..` in place, so `books/not-created/..` compared unequal to
     # `books` and slipped past the guard below — then `mkdir(parents=True)`
@@ -1307,7 +1321,7 @@ def export_portable(
             _write_export(
                 dest,
                 _rewrite_export_includes(
-                    original, path, snapshot.patterns, destinations, by_target, repeats, duplicates
+                    original, path, snapshot.patterns, destinations, by_target, repeats, duplicates, refused
                 ),
                 _permission_bits(path),
             )
@@ -1601,6 +1615,7 @@ def _rewrite_export_includes(
     by_target: dict[str, Path],
     repeats: set[tuple[str, str, int]],
     duplicates: dict[Path, Path],
+    refused: Collection[str] = (),
 ) -> bytes:
     """Rewrite one copied file's includes as portable relative targets.
 
@@ -1615,6 +1630,9 @@ def _rewrite_export_includes(
     content = original
     dest = destinations[path]
     for span in sorted(iter_includes(content), key=lambda item: item.start, reverse=True):
+        if span.target in refused:
+            content = _swap_line(content, span.line, f"; refused URL include: {span.target}\n".encode())
+            continue
         feed = by_target.get(span.target)
         if feed is not None:
             if (span.target, str(path), span.line) in repeats:

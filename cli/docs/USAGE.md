@@ -1694,7 +1694,9 @@ the root ledger is copied to the same relative place too, with any module or
 package beside the root that the plugin imports, so the snapshot's `plugin`
 lines still resolve; a plugin installed elsewhere is not copied. An
 unavailable source refuses the export unless `--allow-errors` carries its
-marker alone. The destination follows
+marker alone, and a URL include the load refused (an origin that is not
+allowlisted) refuses it unless `--allow-errors` writes it as a
+`; refused URL include:` comment. The destination follows
 [Output destinations](#output-destinations): a file already at any path the
 export would write refuses it with exit 2, naming the collision and writing
 nothing, and `--force` is the opt-in that overwrites — which is what
