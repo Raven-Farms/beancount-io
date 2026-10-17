@@ -1005,10 +1005,42 @@ def _legs_agree(ours: Sequence[_Leg], theirs: Sequence[_Leg]) -> bool:
     # A stated lot picks first, so an open one cannot take the leg it needs.
     for text, lot in sorted(ours, key=lambda leg: 0 if leg[1] is None else leg[1].count(None)):
         match = next((i for i, (other, found) in enumerate(left) if other == text and _lots_agree(lot, found)), None)
-        if match is None:
+        picked = [match] if match is not None else _split_booking(text, lot, left)
+        if not picked:
             return False
-        del left[match]
+        for index in sorted(picked, reverse=True):
+            del left[index]
     return not left
+
+
+def _units_of(text: str) -> tuple[Decimal, str, str]:
+    """A leg's units number, currency and price, from the text `_legs` writes."""
+    units, _, price = text.partition(" @ ")
+    number, currency = units.split(" ", 1)
+    return Decimal(number), currency, price
+
+
+def _split_booking(text: str, lot: _Lot | None, left: list[_Leg]) -> list[int]:
+    """The legs an open-cost leg was booked into, or none.
+
+    Booking reduces as many lots as a `{}` sale spans, so the ledger holds one
+    posting per lot where the importer has one: `-20 HOOL {}` was booked as
+    `-10 HOOL {150 USD}` and `-10 HOOL {155 USD}`, re-importing bea's own
+    write was a conflict, and a hand-entered FIFO twin was written again
+    (w5/603). They are the legs of its currency and price whose lots agree
+    with what it states, and their units must add up to its own.
+    """
+    if lot is None or lot[0] is not None:
+        return []
+    number, currency, price = _units_of(text)
+    picked = [
+        index
+        for index, (other, found) in enumerate(left)
+        if found is not None and _units_of(other)[1:] == (currency, price) and _lots_agree(lot, found)
+    ]
+    if len(picked) < 2 or sum(_units_of(left[index][0])[0] for index in picked) != number:
+        return []
+    return picked
 
 
 def _fingerprint(entry: Any, account: str) -> tuple[Any, ...]:
@@ -1179,7 +1211,17 @@ _COUNTERPART_DAYS = 3
 
 
 def _amounts_key(fingerprint: tuple[Any, ...]) -> tuple[str, ...]:
-    return tuple(sorted(text for text, _ in fingerprint[3]))
+    """The source amounts, summed by currency and price: one sale booked across lots is one amount (w5/603)."""
+    totals: dict[tuple[str, str], Decimal] = {}
+    for text, _ in fingerprint[3]:
+        number, currency, price = _units_of(text)
+        totals[currency, price] = totals.get((currency, price), Decimal(0)) + number
+    return tuple(
+        sorted(
+            f"{_exact_amount(number, currency)}{f' @ {price}' if price else ''}"
+            for (currency, price), number in totals.items()
+        )
+    )
 
 
 def _transfer_counterpart(
@@ -1802,13 +1844,13 @@ def _candidate_key(entry: Any, account: str) -> tuple[Any, ...]:
     by its narration instead; otherwise every same-day same-amount row would
     collapse onto date + amount and `--duplicates skip` would drop real ones.
     """
-    date, payee, narration, legs = _fingerprint(entry, account)
-    return date, payee or narration, tuple(sorted(text for text, _ in legs))
+    fingerprint = _fingerprint(entry, account)
+    return fingerprint[0], fingerprint[1] or fingerprint[2], _amounts_key(fingerprint)
 
 
 def _narration_key(entry: Any, account: str) -> tuple[Any, ...]:
-    date, _, narration, legs = _fingerprint(entry, account)
-    return "narration", date, narration, tuple(sorted(text for text, _ in legs))
+    fingerprint = _fingerprint(entry, account)
+    return "narration", fingerprint[0], fingerprint[2], _amounts_key(fingerprint)
 
 
 def _index_twin(fingerprints: dict[tuple[Any, ...], list[Any]], entry: Any, account: str, *, ledger: bool) -> None:
