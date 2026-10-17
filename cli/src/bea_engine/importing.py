@@ -330,6 +330,9 @@ def answer(
     # Bank ids another account issued, reached here only through a transfer's
     # counter leg: never an exact match for this account's rows (w5/598).
     transfer_ids: dict[tuple[str, str, str], Any] = {}
+    # Every entry under one bank id, not only the last: a reused reference
+    # (w5/599) names several, and a row is the one nearest its date.
+    dated: dict[tuple[str, str, str], list[Any]] = {}
     for entry in written:
         entry = normalize_entry_strings(entry)
         if isinstance(entry, Transaction) and _source_legs(entry, account):
@@ -339,6 +342,7 @@ def answer(
                     transfer_ids[identity] = entry
                 else:
                     identities[identity] = entry
+                    dated.setdefault(identity, []).append(entry)
             fingerprints.setdefault(_candidate_key(entry, account), []).append(entry)
     if source.read_bytes() != source_bytes:
         raise ConflictError("The export changed during extraction; nothing was written. Retry.")
@@ -461,6 +465,20 @@ def answer(
                         )
                     else:
                         reason = f"Repeats row {earlier} of this import."
+                elif status == "duplicate" and all(_is_native_identity(key) for key, _, _ in hits):
+                    # Across exports too: a monthly autopay arrives one month
+                    # per file, and February's rent was dropped as January's
+                    # with exit 0 (w5/599). A date corrected in the ledger
+                    # moves it days, not weeks, and stays the same row.
+                    match = _nearest(dated.get(hits[0][0], [match]), entry, account, fingerprint)
+                    days = abs((entry.date - match.date).days)
+                    if days >= _REUSED_REFERENCE_DAYS:
+                        status = "possible_duplicate"
+                        reason = (
+                            f"Stable ID {matched_value} is already in the ledger on {match.date}, {days} days from "
+                            "this row; a reference reused on other dates, such as a monthly autopay's, is not a "
+                            "unique ID."
+                        )
             elif (other_side := _transfer_side(ids, transfer_ids, entry, account, fingerprint)) is not None:
                 (_, _, matched_value), match = other_side
                 status, reason = (
@@ -480,6 +498,7 @@ def answer(
             if status == "new" or (status == "possible_duplicate" and duplicates == "include"):
                 for identity in ids:
                     identities[identity] = entry
+                    dated.setdefault(identity, []).append(entry)
                 fingerprints.setdefault(_candidate_key(entry, account), []).append(entry)
                 batch_rows[id(entry)] = index + 1
         rule = entry.meta.pop("_csv_rule", None) if isinstance(entry, Transaction) else None
@@ -1088,6 +1107,16 @@ def _is_native_identity(key: tuple[str, str, str]) -> bool:
 
 #: How far apart the two sides of one transfer may post and still read as one.
 _TRANSFER_DAYS = 7
+
+#: How far a ledger entry's date may sit from its row's under one bank id and
+#: still be that row with its date corrected, rather than the id reused (w5/599).
+_REUSED_REFERENCE_DAYS = 7
+
+
+def _nearest(entries: list[Any], entry: Any, account: str, fingerprint: tuple[Any, ...]) -> Any:
+    """Of the entries under one bank id, the one with this row's source amounts dated nearest it."""
+    agreeing = [found for found in entries if _legs_agree(fingerprint[3], _fingerprint(found, account)[3])]
+    return min(agreeing or entries, key=lambda found: abs((entry.date - found.date).days))
 
 
 def _issued_elsewhere(entry: Any, account: str, balance_roots: tuple[str, ...]) -> bool:

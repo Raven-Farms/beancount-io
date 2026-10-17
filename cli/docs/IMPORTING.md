@@ -470,8 +470,13 @@ skills deduplicate against each other: the ledger itself is the dedup database.
   skip: choose
   `--duplicates include` to keep both, or map that column to something other
   than `id`. A same-day repeat that differs only in its description is still one
-  transaction and is written once. Payee, narration, date, flag, and counter-account edits to an entry already in the ledger do
-  not change that identity (generated ids: see below). The preview's `ID` column names each row's
+  transaction and is written once. The same holds across exports, where a
+  monthly autopay arrives one month per file. A ledger entry under the row's
+  native ID dated a week or more from it is a possible duplicate naming that
+  date, never a silent skip. A re-import is matched to the entry under that ID
+  dated nearest the row. Payee, narration, date, flag, and counter-account edits to an entry already in the ledger do
+  not change that identity (generated ids: see below). For a native ID, a date
+  moved by less than a week still matches. The preview's `ID` column names each row's
   identifier source: `bank` for a bank column, `hash` for a content hash, or
   `importer` for an `import-id` the importer supplied.
 - A row with a native ID is written with `import-id: "<kind>:<id>"` (`bank_id`
