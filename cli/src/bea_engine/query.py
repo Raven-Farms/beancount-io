@@ -255,24 +255,43 @@ def text_answer(
     # `USAGE.md`'s "a failed query or write preserves an existing export" — and
     # left a partial file behind if a query failed mid-render.
     buffer = io.StringIO()
-    # `show_errors=False`: the load errors travel in the envelope, and
-    # upstream printing them to stderr too would report each one twice.
-    shell = build_shell(file, buffer, format=format, numberify=numberify, show_errors=False)
-    shell.spreadsheet_safe = spreadsheet_safe
-    errors = _gate([format_error(error, ledger_file=file) for error in shell.context.errors], allow_errors, file)
-    if output is not None:
-        # Still before the query: refusing to write over the ledger being read
-        # is a refusal, and a refusal has to happen before any work is done.
-        _refuse_alias(output, file, shell.context)
-    _replay_init(shell, buffer if output is not None else None)
-    _executed(shell.context, query_string, shell.onecmd, errors, file=file)
-    if output is not None:
-        # Rendered whole, then swapped in atomically. w3/380 moved this past
-        # the *query*; the write itself still had to become atomic.
-        _export(shell, output, buffer.getvalue())
-        # The export is the result; the frontend has nothing left to print.
-        return {"text": "", "errors": errors}
-    return {"text": buffer.getvalue(), "errors": errors}
+    with _shell_warning_hook():
+        # `show_errors=False`: the load errors travel in the envelope, and
+        # upstream printing them to stderr too would report each one twice.
+        shell = build_shell(file, buffer, format=format, numberify=numberify, show_errors=False)
+        shell.spreadsheet_safe = spreadsheet_safe
+        errors = _gate([format_error(error, ledger_file=file) for error in shell.context.errors], allow_errors, file)
+        if output is not None:
+            # Still before the query: refusing to write over the ledger being read
+            # is a refusal, and a refusal has to happen before any work is done.
+            _refuse_alias(output, file, shell.context)
+        _replay_init(shell, buffer if output is not None else None)
+        _executed(shell.context, query_string, shell.onecmd, errors, file=file)
+        if output is not None:
+            # Rendered whole, then swapped in atomically. w3/380 moved this past
+            # the *query*; the write itself still had to become atomic.
+            _export(shell, output, buffer.getvalue())
+            # The export is the result; the frontend has nothing left to print.
+            return {"text": "", "errors": errors}
+        return {"text": buffer.getvalue(), "errors": errors}
+
+
+@contextmanager
+def _shell_warning_hook() -> Iterator[None]:
+    """Give `warnings.showwarning` back once a shell is done with it (w5/575).
+
+    Upstream's `BQLShell.__init__` installs its own method as the hook, which
+    kept the shell, its context and every entry reachable until interpreter
+    shutdown: a text query on a large ledger spent as long tearing down as
+    answering, about twice what `--json` took.
+    """
+    import warnings
+
+    saved = warnings.showwarning
+    try:
+        yield
+    finally:
+        warnings.showwarning = saved
 
 
 def _loaded_files(root: Path, context: Any) -> list[Path]:
@@ -973,6 +992,20 @@ def interactive(
     import warnings
 
     warnings.filterwarnings("always")
+    with _shell_warning_hook():
+        _interactive_session(file, format, numberify, show_errors, spreadsheet_safe, debug, allow_errors, output)
+
+
+def _interactive_session(
+    file: Path,
+    format: str,
+    numberify: bool,
+    show_errors: bool,
+    spreadsheet_safe: bool,
+    debug: bool,
+    allow_errors: bool,
+    output: Path | None,
+) -> None:
     shell = build_shell(file, sys.stdout, interactive=True, format=format, numberify=numberify, show_errors=show_errors)
     shell.spreadsheet_safe = spreadsheet_safe
     shell.debug = debug
