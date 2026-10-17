@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [574 — A write `--into` a file reached under two names validates against a doubled load: wrong assertion written with exit 0](./574.md)
 - [575 — Text-mode `query` takes ~2× `--json` on large ledgers (shell kept alive until shutdown)](./575.md)
 - [576 — A ledger with a managed price include never uses the load cache](./576.md)
 - [577 — `import --apply` validates the same candidate twice (three loads vs one for `add`)](./577.md)
