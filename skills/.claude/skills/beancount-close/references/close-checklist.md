@@ -51,7 +51,19 @@ Each `!` is either resolved by the user during the close (their edit, not this s
 
 ## Report numbers
 
-Income statement for the period, via the beancount-ask recipes (sum over `^Income:` negated, `^Expenses:` by account and total). Balance sheet = the period-end account-balance query above, with its `date < <period-end+1>` bound — never the unbounded query, which counts entries dated after the period. State book-value caveats exactly as beancount-ask does.
+The committed reports are both at book value, the valuation of the period-end account-balance query above (with its `date < <period-end+1>` bound — never the unbounded query, which counts entries dated after the period):
+
+<!-- recipe: close-income-statement -->
+```sh
+bea --file "$ledger" --json --no-input report income-statement --time "$month" -x at_cost
+```
+
+<!-- recipe: close-balance-sheet -->
+```sh
+bea --file "$ledger" --json --no-input report balance-sheet --time "$month" -x at_cost
+```
+
+`-x at_cost` keeps a cost-basis lot at its cost and shows a commodity with no price — an `@`-priced foreign charge, an option lot — in its own units, so neither stops the close. Without it a report values every row at market in the operating currency and, under `--json`, exits 1 with `result.missing_prices` when a price is missing: a valuation gap to disclose, never an engine failure to repair. Income and expense totals in the operating currency come from beancount-ask's `weight` recipes (sum over `^Income:` negated, `^Expenses:` by account and total), which count a priced foreign charge at the amount paid. State book-value caveats exactly as beancount-ask does.
 
 ## Commit convention
 

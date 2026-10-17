@@ -30,6 +30,11 @@ bea --file "$ledger" --json --no-input balance
 bea --file "$ledger" --json --no-input report income-statement --time "$month"
 ```
 
+`balance` and `report` value rows at market in the operating currency: under
+`--json` they exit 1 with `result.missing_prices` when a commodity has no
+price. Answer spending with the `weight` recipes, pass `-x at_cost` for book
+value, and disclose missing prices — that exit is not an engine failure.
+
 For entry searches, use root-scoped `list transaction --search/--tag/--link`;
 check truncation before treating a listing as complete. Use `report` for
 polished statements. Keep query execution here rather than delegating the

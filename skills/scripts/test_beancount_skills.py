@@ -968,6 +968,32 @@ class TestBeaRecipes(unittest.TestCase):
         payees = [payee for row in rows for payee in row if payee in {"WHOLE FOODS", "Split", "Cleared"}]
         self.assertEqual(payees, ["WHOLE FOODS", "WHOLE FOODS", "Split"])
 
+    def test_close_reports_run_at_book_value_beside_an_unpriced_foreign_charge(self):
+        self.ledger.write_text(
+            'option "operating_currency" "USD"\n'
+            "2026-01-01 open Liabilities:Card USD\n"
+            "2026-01-01 open Assets:Brokerage\n"
+            "2026-01-01 open Assets:Checking USD\n"
+            "2026-01-01 open Expenses:Travel\n"
+            "2026-01-01 open Expenses:Food USD\n"
+            '2026-06-10 * "Hotel Paris"\n  Liabilities:Card -330.00 USD\n  Expenses:Travel 300.00 EUR @ 1.10 USD\n'
+            '2026-06-12 * "Lunch"\n  Liabilities:Card -20.00 USD\n  Expenses:Food 20.00 USD\n'
+            '2026-06-15 * "BROKER" "buy"\n  Assets:Brokerage 10 AAPL {150 USD}\n  Assets:Checking -1500 USD\n'
+        )
+        self.values["month"] = "2026-06"
+
+        # Market valuation stops on the missing EUR and AAPL prices; the
+        # close's own recipes, at book value, complete (w5/551).
+        income = self.recipe("close-income-statement")
+        self.assertEqual(income["valuation"], "complete")
+        self.assertEqual(income["expenses"]["balance_children"], {"USD": "20.00", "EUR": "300.00"})
+        sheet = self.recipe("close-balance-sheet")
+        self.assertEqual(sheet["valuation"], "complete")
+        self.assertEqual(sheet["missing_prices"], [])
+        # Spending in the currency paid is the `weight` recipe's answer.
+        top = {account: Decimal(total[0]["units"]["number"]) for account, total in self.query_recipe("top-expenses")}
+        self.assertEqual(top, {"Expenses:Travel": Decimal("330"), "Expenses:Food": Decimal("20")})
+
     def test_spending_recipes_count_priced_foreign_charges_at_the_usd_paid(self):
         self.ledger.write_text(
             'option "operating_currency" "USD"\n'

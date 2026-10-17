@@ -1,0 +1,25 @@
+option "title" "Foreign charge close"
+option "operating_currency" "USD"
+
+2026-01-01 open Assets:Bank:Checking USD
+2026-01-01 open Liabilities:Card USD
+2026-01-01 open Income:Salary USD
+2026-01-01 open Expenses:Travel
+2026-01-01 open Expenses:Food USD
+2026-01-01 open Equity:Opening-Balances
+
+2026-05-01 * "Opening balance"
+  Assets:Bank:Checking      4000.00 USD
+  Equity:Opening-Balances
+
+2026-06-05 * "ACME CORP" "Salary"
+  Assets:Bank:Checking      3000.00 USD
+  Income:Salary            -3000.00 USD
+
+2026-06-10 * "Hotel Paris"
+  Liabilities:Card          -330.00 USD
+  Expenses:Travel            300.00 EUR @ 1.10 USD
+
+2026-06-12 * "Lunch"
+  Liabilities:Card           -20.00 USD
+  Expenses:Food               20.00 USD

@@ -16,7 +16,8 @@ Read beancount-init's `references/bea-cli.md` before running ledger commands: it
 
 Check the root ledger and generate the committed summary with root-scoped
 `report income-statement` and `report balance-sheet`, both using the resolved
-month. Reconciliation writes still belong to beancount-reconcile.
+month and both at book value (`-x at_cost`), the valuation the checklist's
+period-end balances use. Reconciliation writes still belong to beancount-reconcile.
 
 ## Scope
 
@@ -54,11 +55,17 @@ List every `!`-flagged entry dated in or before the period. Each is either resol
 
 ### 6. Report
 
-Generate the period's numbers with the shared report recipes, using
-`--file "$ledger" --json --no-input` and `--time "$month"` on both
-`report income-statement` and `report balance-sheet`. Use beancount-ask's BQL
-recipes for any additional figures; without beancount-ask installed, report only
-these two. Assemble the close report:
+Generate the period's numbers with the `close-income-statement` and
+`close-balance-sheet` recipes in `references/close-checklist.md`: both reports
+at book value (`-x at_cost`), so a cost-basis lot counts at its cost and a
+commodity without a price (an `@`-priced foreign charge, an option lot) appears
+in its own units instead of stopping the close. State that valuation in the
+report. Expense totals in the operating currency come from beancount-ask's
+`weight` recipes (`top-expenses` counts `300 EUR @ 1.10 USD` as the 330 USD
+paid); without beancount-ask installed, report only the two reports. A report
+that exits 1 with `result.missing_prices` is a valuation gap, not an engine
+failure: list the missing prices in the close report and use the `weight`
+recipes — never repair or reinstall the engine for it. Assemble the close report:
 
 ```
 Close: 2026-06 (2026-06-01 … 2026-06-30)

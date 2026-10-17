@@ -5,8 +5,12 @@ operations; the skill owns interpretation, review, and the user's confirmation.
 Check `command -v bea` once. If it is absent, suggest
 `brew install bex-co/tap/bea` or `uv tool install beancount-io`; the explicit
 developer fallback is in beancount-init's `references/compatibility.md`.
-If an installed `bea` fails, surface its error and repair/retry its managed
-engine. Do not install another Beancount CLI or configure private engine paths.
+If an installed `bea` cannot run its managed engine — provisioning fails, or
+the error names the engine rather than the ledger — surface that error and
+repair/retry the engine. A nonzero exit carrying bea's JSON error envelope (an
+invalid ledger, missing prices, a bad argument) is bea's answer about the
+ledger or the request: act on its `message`, `details` and `result`, not on
+the engine. Do not install another Beancount CLI or configure private engine paths.
 
 ## Bind the ledger and destination
 
@@ -33,6 +37,13 @@ bea --file "$ledger" --json --no-input query "$query"
 bea --file "$ledger" --json --no-input report income-statement --time "$month"
 bea --file "$ledger" --json --no-input report balance-sheet --time "$month"
 ```
+
+A report values every row at market in the operating currency, so under
+`--json` it exits 1 with `result.missing_prices` when a commodity has no price
+— an `@`-priced foreign charge, an option lot. That is a valuation gap, not a
+failure: pass `-x at_cost` for book value (lots at cost, unpriced commodities in
+their own units), or disclose the missing prices; spending in the currency paid
+comes from beancount-ask's `weight` recipes.
 
 Use BQL to enumerate all relevant postings/accounts; `list` defaults to only
 50 results. For a human-readable transaction, use `list transaction --details`.
