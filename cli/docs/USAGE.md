@@ -1535,8 +1535,10 @@ rule, so the two reports always give the same `net_profit`: under a currency
 conversion it names that currency, `null` when part of it could not be valued
 and `"0"` when there is no income or expense. These are report values and do not create ledger
 directives. Prices after the report date do not affect its valuation.
-Unconverted `units` reports do not claim an equity reconciliation or invent a
-valuation adjustment across unlike commodities. `equity_reconciled` states
+Unconverted `units` reports, and `at_cost` or `at_value` reports whose net
+worth or adjustment still spans more than one commodity (foreign cash has no
+cost), do not claim an equity reconciliation or invent a valuation adjustment
+across unlike commodities. `equity_reconciled` states
 whether the derived reconciliation is available. Reports run with loader
 errors also carry `ledger_valid: false` and `ledger_errors` in JSON.
 Every report lists `unrooted_accounts`: posted accounts outside the root

@@ -330,7 +330,13 @@ def _balance_sheet(
     assets = trees[0].balance_children if trees[0] is not None else empty
     liabilities = trees[1].balance_children if trees[1] is not None else empty
     worth = _headline(_sum(assets, liabilities), conversion)
-    reconciled = not incomplete and not filtered.ledger.load_errors and conversion != "units" and not filtered.account
+    # `at_cost` leaves cost-less holdings (foreign cash) in their own units, so
+    # an "adjustment" across unlike commodities was just the FX trade, claimed
+    # as reconciled (w5/505): only a single-commodity view reconciles.
+    single = len(_sum(assets, liabilities)) <= 1 and len(data.valuation_adjustment) <= 1
+    reconciled = (
+        not incomplete and not filtered.ledger.load_errors and conversion != "units" and single and not filtered.account
+    )
     return metadata | {
         "display_precision": _display_precision(filtered),
         "assets": _tree_json(trees[0]) if trees[0] is not None else None,
