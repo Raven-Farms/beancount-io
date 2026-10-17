@@ -582,6 +582,8 @@ def _interval(value: str) -> Any:
 
 
 def _metadata(filtered: Any, conversion: str, ledger_errors: list[str], interval: str | None = None) -> dict[str, Any]:
+    from beancount.core.data import Custom
+
     # Every dated fact the report covers sets the period, not transactions
     # alone: a period-end balance assertion is the last thing a close writes,
     # and a report that stopped before it would omit its own evidence. Opens,
@@ -600,7 +602,12 @@ def _metadata(filtered: Any, conversion: str, ledger_errors: list[str], interval
         "as_of": end - timedelta(days=1) if end else None,
         "account_filter": filtered.account,
         "account_filters": [filtered.account] if filtered.account else None,
-        "account_filter_empty": (empty := bool(filtered.account) and not filtered.entries),
+        # A `custom` directive naming the account (a budget line) passes the
+        # account filter but makes no tree: the report printed only its
+        # heading and said the filter matched (w5/504).
+        "account_filter_empty": (
+            empty := bool(filtered.account) and all(isinstance(entry, Custom) for entry in filtered.entries)
+        ),
         "account_filter_periods": _period_terms([filtered.account]) if empty else [],
         "balance_signs": "beancount",
         "ledger_valid": not filtered.ledger.load_errors,
