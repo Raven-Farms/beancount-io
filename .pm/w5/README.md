@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [528 — `agent-skills.md` contradicts itself on skill `name` and directory](./528.md)
 - [529 — Non-Western 8-bit CSVs are told to use `encoding=cp1252`, which writes mojibake](./529.md)
 - [530 — Import skips NFC for importer-extracted accounts and CSV category cells (gap in w3/386)](./530.md)
 - [531 — A doubled BOM or zero-width character in a CSV header is invisible and breaks the advised mapping](./531.md)
