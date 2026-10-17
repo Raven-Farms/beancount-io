@@ -245,6 +245,12 @@
 - [797 — add balance --pad-from blames a consumed pad as "already fills"; its remedy then fails (gap in w1/116)](./797.md)
 - [798 — import --apply --allow-errors writes a pad-only batch that leaves check failing (incomplete fix of w5/081)](./798.md)
 - [799 — Pad hints: staged-pad hint loops, pad-leg currency hint, self-pad accepted](./799.md)
+- [800 — A posting with a cost but no commodity (3 {80}) is written as 3 USD {80}, exit 0 (incomplete fix of w5/098)](./800.md)
+- [801 — add transaction --json answers that add transactions cannot replay (units-less, # interpolation)](./801.md)
+- [802 — @@ 100USD (glued currency) is written as a repeating unit price (gap in w5/059)](./802.md)
+- [803 — {100 # USD} beside an omitted amount crashes with AttributeError MISSING copy_sign](./803.md)
+- [804 — A defaulted currency gets FX advice for an exchange the user never made](./804.md)
+- [805 — Posting slips: {{240}} refused as not one token, empty label dropped, bulk shorthand wording](./805.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
