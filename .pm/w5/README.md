@@ -239,6 +239,11 @@
 - [788 — First-run polish: no remedy on failed install, uninstall leaves the engine, PyPI license links 404](./788.md)
 - [789 — The valuation/translation adjustment differs with and without -t: the FX gain moves to an Equity:Conversions line](./789.md)
 - [790 — A -t period holding no foreign currency is refused for a missing price left by an earlier settled trade](./790.md)
+- [791 — query --source with $VAR in the path silently queries the expanded (other) ledger; -o replaces the export](./791.md)
+- [792 — Descriptor paths after w5/582: --rules /dev/stdin is remembered as /dev/fd/0; /dev/fd/N files get misleading errors](./792.md)
+- [793 — A ledger in an untraversable directory gives raw Errno 13, exit 1, not the documented exit 2](./793.md)
+- [794 — example -o and price export -o with $VAR create a ledger every later command refuses (incomplete fix of w5/579)](./794.md)
+- [795 — Three path gaps: symlinked-root format/add targets, init loop/illegal-byte OSError, -o /dev/stdout to a file](./795.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
