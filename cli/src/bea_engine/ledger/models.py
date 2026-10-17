@@ -169,7 +169,17 @@ class Posting(BaseModel):
                 # at that path.
                 value["units"] = {"number": number, "currency": currency}
                 return value
-        value |= _posting_fragment(amount)
+        fragment = _posting_fragment(amount)
+        # The fragment's cost or price replaced the explicit field beside it,
+        # changing the cost basis and lot without a word (w5/539).
+        for key in fragment:
+            if value.get(key) is not None:
+                what = {"price_total": "a total price"}.get(key, f"a {key}")
+                raise ValueError(
+                    f"amount {amount!r} carries {what} and the posting also gives {key!r}; "
+                    "give it in one place, not both."
+                )
+        value |= fragment
         return value
 
     @model_validator(mode="after")

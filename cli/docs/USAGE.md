@@ -1338,7 +1338,9 @@ A posting can also use `{"account":"Assets:Cash","amount":"-45 USD"}`.
 Omit `units`/`amount` for a balancing posting; it carries no `cost`, so a
 `cost` without `units`/`amount` rejects its row. Supplying both forms or unknown
 fields — at the transaction or posting level, or inside `units`, `cost`,
-`price` and `price_total` — is rejected. Schema errors show a human row number, field path,
+`price` and `price_total` — is rejected, and so is an `amount` whose text
+carries a cost or price beside an explicit `cost`, `price` or `price_total`.
+Schema errors show a human row number, field path,
 and example; `bea add transactions --help` contains a complete minimal batch.
 An account name Beancount cannot read (`expenses:food`, `Expenses:Food Court`)
 rejects its row as `Row N, postings.<i>.account`, and any other row whose text
