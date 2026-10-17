@@ -667,10 +667,13 @@ def _register(op: str) -> None:
         if positionals and op != "list-options":
             refuse_expanding_ledger_path(os.path.abspath(positionals[0]))
         if positionals and op not in _NON_LOADING_OPS:
-            if output.has_unreadable_include(Path(positionals[0])):
+            ledger = Path(positionals[0])
+            if output.has_unreadable_include(ledger) or output.has_duplicate_member(ledger):
                 # Upstream answers an include it cannot open with a traceback;
                 # the helper names the include and its includer, as every
-                # read does (w5/120, w5/438).
+                # read does (w5/120, w5/438). Upstream also loads one file
+                # reached under two names twice, counting it twice, where the
+                # helper refuses with `Duplicate include` (w5/433, w5/569).
                 launch.helper_json(["check", "--file", positionals[0]])
             _refuse_undecodable(positionals[0])
             _refuse_plugin_failures(op, positionals[0])
