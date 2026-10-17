@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [546 — `ask` prints an answer cut off at its own output cap as complete, exit 0](./546.md)
 - [547 — `ask` reply cut mid-UTF-8 prints a raw codec error and drops the already-wrote note (gap in w5/373)](./547.md)
 - [548 — `ask` answers lose angle-bracket text and HTML blocks](./548.md)
 - [549 — `ask`'s BQL tool drops error details and calls an engine crash "Ledger is invalid"](./549.md)
