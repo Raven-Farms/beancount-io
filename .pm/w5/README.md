@@ -191,6 +191,12 @@
 - [637 — Importer rows with unopenable account names or bad currencies get remedies `bea add` refuses (gap in w3/386)](./637.md)
 - [638 — Importer row failures are not attributed to rows (unbalanced row "ready", "Directive 2 of 3", bare type errors)](./638.md)
 - [639 — Importer-shape refusals name neither the importer nor the fix (legacy entry, class entry, single directive)](./639.md)
+- [640 — A price refresh deletes the effective file a concurrent load is reading; racing fetches leave orphan revisions](./640.md)
+- [641 — With the cached price blob missing or corrupt, a failing fetch never backs off](./641.md)
+- [642 — Managed sources are fetched one after another: 5 s per slow source per command](./642.md)
+- [643 — `--strict-prices doctor roundtrip` prints a 184-line traceback (sibling of w5/572)](./643.md)
+- [644 — Strict/unavailable price messages give the wrong cause (future stamp, no stamp, no cache)](./644.md)
+- [645 — Price cache/URL edge cases: future `next_refresh_at`, dot-segment aliases, ETag `"head"`](./645.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
