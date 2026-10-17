@@ -39,6 +39,7 @@ NFC and NFD spellings could split one account in two (w1/054).
 def check(ctx: typer.Context) -> None:
     """Parse, check and realize a beancount ledger."""
     refuse_misplaced_global("check", list(ctx.args), native_options("check"))
+    _refuse_positional_ledger(list(ctx.args))
     current = context.current()
     file = current.entry_file()
     compat = _closure_needs_compat(file)
@@ -177,6 +178,26 @@ def _merge_json_errors(file: Path, completed: subprocess.CompletedProcess[str], 
     errors.extend(_json_error(file, detail) for detail in finding.details)
     typer.echo(json.dumps({**answer, "errors": errors}))
     raise typer.Exit(code or 1)
+
+
+def _refuse_positional_ledger(args: list[str]) -> None:
+    """Send `bea check books.bean`, the `bean-check FILE` habit, to `--file`.
+
+    The path was ignored: the check fell back to `main.bean` or failed on
+    upstream's "unexpected extra argument", and `--json` blamed it as a
+    bean-check option, none of them naming `--file` (w5/500).
+    """
+    index = 0
+    while index < len(args):
+        arg = args[index]
+        if arg == _CACHE_FLAG:
+            index += 2
+            continue
+        if arg != "--" and not arg.startswith("-") and Path(arg).expanduser().is_file():
+            raise UsageError(
+                f"bea check takes the ledger from --file, not as an argument: run bea --file {shlex.quote(arg)} check."
+            )
+        index += 1
 
 
 #: bean-check options that print and exit without reading the ledger.
