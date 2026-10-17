@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [567 — `doctor missing-open` writes diagnostics to stdout, so `>> main.bean` corrupts the ledger](./567.md)
 - [568 — `bea doctor` resolves symlinks in the ledger path: locations under a symlinked directory find nothing](./568.md)
 - [569 — `bea doctor` double-counts a file included under two spellings; `roundtrip` crashes (gap in w5/433)](./569.md)
 - [570 — `treeify` takes `NYSE:IBM` in a narration as the account column (regression from w5/414)](./570.md)
