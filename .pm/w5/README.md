@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [531 — A doubled BOM or zero-width character in a CSV header is invisible and breaks the advised mapping](./531.md)
 - [532 — Import preview is not UTF-8 under an 8-bit locale (gap in w5/405)](./532.md)
 - [533 — Turkish İ/ı not folded by `list --type` or the CSV column hint](./533.md)
 - [534 — Decimal comma in `-p`/balance gives a raw `ValueError`; tag refusal says "letters"](./534.md)
