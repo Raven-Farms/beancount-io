@@ -1417,7 +1417,7 @@ def _transactions(
 
     # Validate the entire batch first: an earlier sale may depend on a buy that
     # appears later in the input. Partial recovery drops the rows that load's
-    # errors name; only errors it cannot place need sequential trials.
+    # errors name; only errors it cannot place need a bisection of the batch.
     batch_texts = [writer.format_transaction(d) for _, d in valid]
     try:
         write.validate_append(file, batch_texts, allow_errors=allow_errors, into=into)
@@ -1462,17 +1462,14 @@ def _transactions(
                 else:
                     accepted.append((index, directive))
         else:
-            texts: list[str] = []
-            for index, directive in valid:
-                try:
-                    text = writer.format_transaction(directive)
-                    write.validate_append(file, [*texts, text], allow_errors=allow_errors, into=into)
-                except protocol.LedgerError as err:
+            refused = _refused_in_order(file, batch_texts, batch_error, allow_errors=allow_errors, into=into)
+            for number, (index, directive) in enumerate(valid):
+                err = refused.get(number)
+                if err is None:
+                    accepted.append((index, directive))
+                else:
                     rejected.append(f"Row {index + 1}: {'; '.join(err.details) or str(err)}")
                     rejected_rows.append(index)
-                else:
-                    accepted.append((index, directive))
-                    texts.append(text)
         valid = accepted
 
     warnings = writer.write_transactions(file, [d for _, d in valid], allow_errors=allow_errors, into=into)
@@ -1516,6 +1513,61 @@ def _named_rows(
         except protocol.LedgerError:
             return None
     return {number: batch_error.details_at(rows[number]) for number in sorted(rows)}
+
+
+def _refused_in_order(
+    file: Path, texts: list[str], batch_error: protocol.LedgerError, *, allow_errors: bool, into: Path | None
+) -> dict[int, protocol.LedgerError]:
+    """Positions in `texts` the rows kept before them refuse, each with the refusal it met.
+
+    A row is kept when it loads after the rows kept before it, as a trial per
+    row decided; but those trials cost a full load per row over a growing
+    batch, so an error no row can be named for (an existing balance assertion
+    the batch breaks) made `--partial` quadratic. Bisecting for the first
+    refused row instead costs a load per halving: k bad rows take O(k log n)
+    loads (w5/537). A ledger that refuses any write by itself (an error it
+    already has, without --allow-errors) would bisect down to every row, so it
+    keeps one trial per row.
+    """
+
+    def refusal(candidate: list[str]) -> protocol.LedgerError | None:
+        try:
+            write.validate_append(file, candidate, allow_errors=allow_errors, into=into)
+        except protocol.LedgerError as err:
+            return err
+        return None
+
+    refused: dict[int, protocol.LedgerError] = {}
+    kept: list[str] = []
+    rest = list(range(len(texts)))
+    error: protocol.LedgerError | None = batch_error
+    ledger_loads: bool | None = None
+    while rest and error is not None:
+        # `kept` with rest[:low] loads; `kept` with rest[:high] meets `error`.
+        low, high = 0, len(rest)
+        while high - low > 1:
+            middle = (low + high) // 2
+            found = refusal([*kept, *(texts[number] for number in rest[:middle])])
+            if found is None:
+                low = middle
+            else:
+                high, error = middle, found
+        if not kept and low == 0:
+            if ledger_loads is None:
+                ledger_loads = refusal([]) is None
+            if not ledger_loads:
+                for number in rest:
+                    found = refusal([*kept, texts[number]])
+                    if found is None:
+                        kept.append(texts[number])
+                    else:
+                        refused[number] = found
+                return refused
+        refused[rest[low]] = error
+        kept.extend(texts[number] for number in rest[:low])
+        rest = rest[low + 1 :]
+        error = refusal([*kept, *(texts[number] for number in rest)]) if rest else None
+    return refused
 
 
 def _rows_with_errors(

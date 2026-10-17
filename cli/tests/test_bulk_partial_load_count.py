@@ -4,8 +4,8 @@ A refused batch says "Pass --partial to append the N valid rows". Following
 that advice used to validate the batch one row at a time — a full staged load
 per row plus a re-parse of every row accepted so far: 51 seconds for 1,000
 rows on a two-line ledger. The rows the batch error names are now dropped, the
-rest are confirmed with one load, and row-by-row trials remain only for errors
-that cannot be placed on a row.
+rest are confirmed with one load, and errors that cannot be placed on a row are
+bisected for (w5/537).
 """
 
 from __future__ import annotations
@@ -127,7 +127,7 @@ def test_into_and_allow_errors_stay_bounded(tmp_path: Path, loads: list[Path]) -
     assert sizes[0] == sizes[1] <= 6, sizes
 
 
-def test_unplaceable_errors_still_fall_back_to_row_trials(tmp_path: Path, loads: list[Path]) -> None:
+def test_unplaceable_errors_still_find_their_rows(tmp_path: Path, loads: list[Path]) -> None:
     """An assertion the batch breaks is reported on the ledger's own line, so no row can be named."""
     ledger = tmp_path / "main.bean"
     ledger.write_text(LEDGER + "2026-03-01 balance Assets:Cash -1 ~ 1 USD\n")
