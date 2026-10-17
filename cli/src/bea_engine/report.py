@@ -174,7 +174,7 @@ def _balances(
                 for balance in _tree_balances(tree)
             ),
             allow_errors,
-            filtered.ledger.prices,
+            filtered.ledger,
             ledger_errors,
         )
     )
@@ -203,7 +203,7 @@ def _overview(
     balances = [(filtered.end_date, balance) for tree in trees if tree is not None for balance in _tree_balances(tree)]
     for series in (data.assets_data, data.liabilities_data, data.income_interval_data, data.expenses_interval_data):
         balances.extend((point.date, point.balance) for point in series)
-    valuation = _valuation(conversion, balances, allow_errors, filtered.ledger.prices, ledger_errors)
+    valuation = _valuation(conversion, balances, allow_errors, filtered.ledger, ledger_errors)
     metadata = _metadata(filtered, conversion, ledger_errors, interval) | valuation
     empty = type(data.assets_hierarchy.balance_children)()
     assets = trees[0].balance_children if trees[0] is not None else empty
@@ -243,7 +243,7 @@ def _income_statement(
     balances = [(filtered.end_date, balance) for tree in trees if tree is not None for balance in _tree_balances(tree)]
     for series in (data.income_data, data.expenses_data):
         balances.extend((point.date, point.balance) for point in series)
-    valuation = _valuation(conversion, balances, allow_errors, filtered.ledger.prices, ledger_errors)
+    valuation = _valuation(conversion, balances, allow_errors, filtered.ledger, ledger_errors)
     metadata = _metadata(filtered, conversion, ledger_errors, interval) | valuation
     empty = type(data.income_hierarchy.balance_children)()
     kept = [tree.balance_children if tree is not None else empty for tree in trees]
@@ -324,7 +324,7 @@ def _balance_sheet(
     # still unvalued at the report date withholds them, not an earlier row's gap.
     incomplete = any(_unvalued(balance, conversion) for _, balance in balances)
     balances.extend((point.date, point.balance) for point in data.net_worth_data)
-    valuation = _valuation(conversion, balances, allow_errors, filtered.ledger.prices, ledger_errors)
+    valuation = _valuation(conversion, balances, allow_errors, filtered.ledger, ledger_errors)
     metadata = _metadata(filtered, conversion, ledger_errors, interval) | valuation
     empty = type(data.assets_hierarchy.balance_children)()
     assets = trees[0].balance_children if trees[0] is not None else empty
@@ -373,7 +373,7 @@ def _trial_balance(filtered: Any, conversion: str, allow_errors: bool, ledger_er
             for balance in _tree_balances(tree)
         ),
         allow_errors,
-        filtered.ledger.prices,
+        filtered.ledger,
         ledger_errors,
     )
     return metadata | {
@@ -653,20 +653,26 @@ def _unrooted_accounts(filtered: Any) -> list[str]:
     return sorted(account for account in posted if account.split(":", 1)[0] not in roots)
 
 
-def _routed_since(currency: str, conversion: str, prices: Any, unvalued: list[date | None]) -> date | None:
+def _routed_since(
+    currency: str, conversion: str, prices: Any, unvalued: list[date | None], costs: set[str]
+) -> date | None:
     """The first date a holding with no direct quote is valued through its cost currency.
 
     A lot held at cost converts in two hops (ACME → USD → EUR) once both legs
     are quoted, so "no price at any date" would sit above a report that values
-    it. The price map does not say which lots carry a cost, so the route counts
-    only when every row the report left in units precedes it; a row still
-    unvalued on or after that date means the route is not the one in use.
+    it. Only a lot held at a cost in the route's middle currency (`costs`) takes
+    it: cost-less cash, or a lot already at a cost in the target, never does,
+    and was told a quote from the route's first date would do (w5/557). The
+    route counts only when every row the report left in units precedes it; a
+    row still unvalued on or after that date means it is not the one in use.
     """
     firsts = []
     for pair in prices.commodity_pairs(()):
         if currency not in pair:
             continue
         via = pair[1] if pair[0] == currency else pair[0]
+        if via == conversion or via not in costs:
+            continue
         legs = [prices.get_all_prices((currency, via)), prices.get_all_prices((via, conversion))]
         if all(legs):
             firsts.append(max(min(point[0] for point in leg) for leg in legs))
@@ -676,19 +682,37 @@ def _routed_since(currency: str, conversion: str, prices: Any, unvalued: list[da
     return first if all(when is not None and when < first for when in unvalued) else None
 
 
+def _cost_currencies(entries: Iterable[Any]) -> dict[str, set[str]]:
+    """Each commodity's cost currencies: those of the lots postings hold it at."""
+    from beancount.core.data import Transaction
+
+    found: dict[str, set[str]] = {}
+    for entry in entries:
+        if isinstance(entry, Transaction):
+            for posting in entry.postings:
+                currency = getattr(posting.cost, "currency", None)
+                if isinstance(currency, str) and posting.units is not None:
+                    found.setdefault(posting.units.currency, set()).add(currency)
+    return found
+
+
 def _price_summary_lines(
-    missing: list[str], dated: list[dict[str, Any]], conversion: str, prices: Any | None
+    missing: list[str], dated: list[dict[str, Any]], conversion: str, ledger: Any | None
 ) -> list[str]:
     """One line per unconverted commodity: never one line per interval date."""
     lines = []
+    costs: dict[str, set[str]] | None = None
     for currency in missing:
-        if prices is not None:
+        if ledger is not None:
+            prices = ledger.prices
             all_prices = prices.get_all_prices((currency, conversion))
             if all_prices:
                 earliest = min(point[0] for point in all_prices)
             else:
+                if costs is None:
+                    costs = _cost_currencies(ledger.all_entries)
                 unvalued = [item["date"] for item in dated if item["from"] == currency]
-                earliest = _routed_since(currency, conversion, prices, unvalued)
+                earliest = _routed_since(currency, conversion, prices, unvalued, costs.get(currency, set()))
             if earliest is None:
                 lines.append(f"{currency} has no {conversion} price at any date; shown in units")
                 continue
@@ -708,7 +732,7 @@ def _valuation(
     conversion: str,
     balances: Iterable[tuple[date | None, Mapping[str, Decimal]]],
     allow_errors: bool,
-    prices: Any | None,
+    ledger: Any | None,
     ledger_errors: list[str],
 ) -> dict[str, Any]:
     missing_dates = {
@@ -723,7 +747,7 @@ def _valuation(
         {"from": currency, "to": conversion, "date": when}
         for currency, when in sorted(missing_dates, key=lambda item: (item[1] or date.min, item[0]))
     ]
-    summary = _price_summary_lines(missing, dated, conversion, prices)
+    summary = _price_summary_lines(missing, dated, conversion, ledger)
     if pairs and not allow_errors:
         raise protocol.LedgerError(
             f"Missing prices for {', '.join(missing)} → {conversion}. "

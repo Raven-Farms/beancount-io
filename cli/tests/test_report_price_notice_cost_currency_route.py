@@ -151,3 +151,52 @@ def test_a_directly_quoted_holding_reads_as_before(tmp_path: Path) -> None:
 
     assert _partial(tmp_path, ledger, "report", "balance-sheet")["missing_price_summary"] == [line]
     assert _refusal(tmp_path, ledger, "report", "balance-sheet")["details"] == [line]
+
+
+CAD_CASH = """option "operating_currency" "EUR"
+2025-12-01 open Assets:CAD CAD
+2025-12-01 open Equity:Opening
+
+2025-12-02 * "Open"
+  Assets:CAD  1000.00 CAD
+  Equity:Opening
+
+2026-01-01 price CAD 0.75 USD
+2026-01-01 price USD 0.90 EUR
+
+2026-02-01 * "Deposit"
+  Assets:CAD  10.00 CAD
+  Equity:Opening
+"""
+# A lot already at a cost in the target never routes through the quoted USD.
+HOOL_AT_EUR_COST = """option "operating_currency" "EUR"
+2025-12-01 open Assets:Broker
+2025-12-01 open Equity:Opening
+
+2025-12-02 * "Buy"
+  Assets:Broker  5 HOOL {90.00 EUR}
+  Equity:Opening
+
+2026-01-01 price HOOL 120 USD
+2026-01-01 price USD 0.90 EUR
+"""
+
+
+def test_a_period_before_the_route_names_no_date_for_a_holding_that_never_takes_it(tmp_path: Path) -> None:
+    """Both legs of a route exist, but no lot is held at a cost in its middle currency (w5/557)."""
+    for name, text, commodity in (("cash", CAD_CASH, "CAD"), ("eur-lot", HOOL_AT_EUR_COST, "HOOL")):
+        home = tmp_path / name
+        home.mkdir()
+        ledger = _ledger(home, text)
+        never = f"{commodity} has no EUR price at any date; shown in units"
+
+        assert _partial(home, ledger, "balance", "-t", "2025-12")["missing_price_summary"] == [never], name
+        assert _refusal(home, ledger, "report", "balance-sheet", "-t", "2025-12")["details"] == [never], name
+        text_run = _bea(home, "--file", str(ledger), "balance", "-t", "2025-12", "--allow-errors")
+        assert never in text_run.stderr.splitlines(), text_run.stderr
+
+
+def test_the_routed_holding_before_its_route_still_names_the_date(tmp_path: Path) -> None:
+    ledger = _ledger(tmp_path, ROUTED)
+
+    assert ROUTED_LINE in _refusal(tmp_path, ledger, "report", "balance-sheet", "-t", "2026-01")["details"]
