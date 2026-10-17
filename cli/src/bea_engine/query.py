@@ -166,7 +166,36 @@ def connect(file: Path) -> Any:
     """A beanquery connection on the exact ledger file, includes and load errors intact."""
     import beanquery
 
+    _null_safe_ordering()
     return beanquery.connect(LEDGER_DSN, **load(file))
+
+
+def _null_safe_ordering() -> None:
+    """Sort a NULL first without comparing it to a value (w5/562).
+
+    Beanquery's ORDER BY swaps a None for a NULL meant to compare smaller than
+    anything, but the value's own `__lt__` runs first, and Beancount's
+    `Amount` reads `.currency` off its argument: `ORDER BY price` raised a bare
+    AttributeError whenever an unpriced posting sorted against a priced one,
+    and posting order decided whether it did. Each key is a (present, value)
+    pair instead, so a NULL is only ever compared with another NULL.
+    """
+    from beanquery import query_execute
+
+    if getattr(query_execute.nullitemgetter, "_bea_null_safe", False):
+        return
+
+    def present(value: Any) -> tuple[bool, Any]:
+        return (False, 0) if value is None else (True, value)
+
+    def nullitemgetter(item: int, *items: int) -> Callable[[Any], Any]:
+        if items:
+            indexes = (item, *items)
+            return lambda row: tuple(present(row[index]) for index in indexes)
+        return lambda row: present(row[item])
+
+    nullitemgetter._bea_null_safe = True  # type: ignore[attr-defined]
+    query_execute.nullitemgetter = nullitemgetter
 
 
 def rows_answer(
@@ -355,6 +384,7 @@ def _native_shell(source: str, *, interactive: bool, format: str, numberify: boo
 
     from beanquery.shell import BQLShell
 
+    _null_safe_ordering()
     dsn = source if re.match("[a-z]{2,}:", source) else "beancount:" + source
     parts = urlparse(dsn)
     file = Path(parts.path) if parts.scheme in {"beancount", "csv"} and parts.path else None
@@ -977,6 +1007,8 @@ def build_shell(
     from beanquery.numberify import numberify_results
     from beanquery.shell import FORMATS, BQLShell
     from beanquery.sources.beancount import Metadata
+
+    _null_safe_ordering()
 
     class PreciseShell(BQLShell):  # type: ignore[misc]  # beanquery does not ship type annotations
         outfile: TextIO
