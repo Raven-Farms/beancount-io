@@ -36,7 +36,7 @@ def run(op: str, argv: list[str]) -> int:
             return _invoke(upstream, op, argv)
 
         def in_scope(entries: Any, options_map: Any, conversion: Any = None, price_map: Any = None) -> Any:
-            scoped = {**options_map, "dcontext": _context_of(entries, options_map)}
+            scoped = {**options_map, "dcontext": _context_of(entries, options_map, conversion, price_map)}
             return original(entries, scoped, conversion, price_map)
 
         upstream.render_mini_balances = in_scope
@@ -109,13 +109,18 @@ def _status(code: object) -> int:
     return 1
 
 
-def _context_of(entries: Any, options_map: Any) -> Any:
-    """A display context holding only these entries' amounts.
+def _context_of(entries: Any, options_map: Any, conversion: Any = None, price_map: Any = None) -> Any:
+    """A display context holding only these entries' amounts, as the tree will show them.
 
     Falls back to the ledger's own context when the scope carries no amount to
     learn from, so an empty selection renders exactly as it did before.
+
+    A `--conversion` tree shows each balance converted the way upstream
+    converts it, at cost or at market value from prices the postings never
+    carried: `10 HOOL` at 101.55 printed `1016 USD` over `Net Income:
+    (15.50 USD)` (w5/498). Those converted balances are learned too.
     """
-    from beancount.core import data, display_context
+    from beancount.core import convert, data, display_context, realization
 
     class _ExactInScope(display_context.DisplayContext):
         """Formats at each currency's finest in-scope precision.
@@ -138,6 +143,17 @@ def _context_of(entries: Any, options_map: Any) -> Any:
             if posting.units is not None and posting.units.number is not None:
                 context.update(posting.units.number, posting.units.currency)
                 seen = True
+    if conversion in ("cost", "value"):
+        root = realization.realize(entries)  # type: ignore[no-untyped-call]
+        for real_account in realization.iter_children(root):  # type: ignore[no-untyped-call]
+            converted = [real_account.balance.reduce(convert.get_cost)]
+            if conversion == "value" and price_map is not None:
+                converted.append(real_account.balance.reduce(convert.get_value, price_map))
+            for balance in converted:
+                for position in balance:
+                    if position.units.number is not None:
+                        context.update(position.units.number, position.units.currency)
+                        seen = True
     if not seen:
         return options_map["dcontext"]
     ledger_context = options_map.get("dcontext")
