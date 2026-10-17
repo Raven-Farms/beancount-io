@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [495 — An encrypted `.gpg` include breaks `format` and `doctor`; format advises re-saving it as UTF-8](./495.md)
 - [496 — Native `check --json` prints `{"errors": []}` or nothing while exiting 1](./496.md)
 - [497 — A load-cache path inside an include glob breaks every later command](./497.md)
 - [498 — `doctor region --conversion value` rounds the tree, disagreeing with `Net Income`](./498.md)
