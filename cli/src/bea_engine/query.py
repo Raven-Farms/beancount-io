@@ -1151,7 +1151,7 @@ def build_shell(
                     # unpadded machine cells so spreadsheets and Decimal() parse.
                     return _render_csv(description, rows, out, spreadsheet_safe=self.spreadsheet_safe)
                 if self.settings.format == "beancount":
-                    return _render_beancount(rows, out, file)
+                    return _render_beancount(rows, out, file, self.context.tables["entries"].options)
                 if self.settings.format == "text":
                     rows = [tuple(_inert_cell(_text_cell(value)) for value in row) for row in rows]
                     # Upstream renders `set` sorted and separated but has no
@@ -1287,12 +1287,64 @@ def _source_location(entry: Any) -> tuple[Any, Any]:
     return (meta.get("filename"), meta.get("lineno"))
 
 
-def _render_beancount(rows: Any, out: TextIO, file: Path) -> None:
+# The options a ledger's validity rests on: the root names its accounts are
+# checked against, and how its amounts book and balance (w5/474).
+_EXPORTED_OPTIONS = (
+    "name_assets",
+    "name_liabilities",
+    "name_equity",
+    "name_income",
+    "name_expenses",
+    "account_rounding",
+    "booking_method",
+    "tolerance_multiplier",
+    "infer_tolerance_from_cost",
+)
+
+
+def _option_lines(options: Mapping[str, Any]) -> list[str]:
+    """`option` lines for each validity option the ledger changes from Beancount's default.
+
+    An export of `Activos:Banco` without `option "name_assets" "Activos"`
+    re-checked as an invalid account name, and a transaction balanced only by
+    `inferred_tolerance_default` as unbalanced.
+    """
+    from enum import Enum
+
+    from beancount.parser.options import OPTIONS_DEFAULTS
+
+    def quoted(text: str) -> str:
+        return '"' + text.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+    lines = []
+    for name in _EXPORTED_OPTIONS:
+        value = options.get(name, OPTIONS_DEFAULTS[name])
+        if value is None or value == OPTIONS_DEFAULTS[name]:
+            continue
+        if isinstance(value, Enum):
+            text = str(value.value)
+        elif isinstance(value, bool):
+            text = "TRUE" if value else "FALSE"
+        elif isinstance(value, Decimal):
+            text = format(value, "f")
+        else:
+            text = str(value)
+        lines.append(f"option {quoted(name)} {quoted(text)}\n")
+    for currency, tolerance in (options.get("inferred_tolerance_default") or {}).items():
+        lines.append(f'option "inferred_tolerance_default" {quoted(f"{currency}:{tolerance:f}")}\n')
+    return lines
+
+
+def _render_beancount(rows: Any, out: TextIO, file: Path, options: Mapping[str, Any]) -> None:
     """Use the writer's syntax fixes with upstream's grouping and exact precision."""
     from beancount.core.data import Commodity, Document, Pad, Transaction
     from beancount.core.display_context import DisplayContext
 
     from bea_engine.ledger.writer import DirectivePrinter
+
+    preamble = "".join(_option_lines(options))
+    # `write` only: the interactive pager has no `writelines`.
+    out.write(preamble)
 
     # Like upstream's Beancount renderer, a fresh display context retains each
     # number's natural precision instead of rounding to a result-column width.
@@ -1309,6 +1361,9 @@ def _render_beancount(rows: Any, out: TextIO, file: Path) -> None:
         if not (isinstance(entry, Transaction) and entry.flag == "P" and _source_location(entry) in pads)
     ]
     previous_type = type(rows[0][0]) if rows else None
+    if preamble and previous_type not in (None, Transaction, Commodity):
+        # Those two open with a blank line of their own.
+        out.write("\n")
     for (entry,) in rows:
         entry_type = type(entry)
         if entry_type in (Transaction, Commodity) or entry_type is not previous_type:

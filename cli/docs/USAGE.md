@@ -693,6 +693,11 @@ values as separate values, decimal precision, and complete cost specifications.
 Existing multiline text stays intact. A padding transaction Beancount derived
 from a `pad` is left out when that `pad` is in the same result, so the export
 of a valid ledger passes `bea check`; selected without its `pad`, it is printed.
+For the same reason the export starts with the `option` lines its validity
+rests on, wherever the ledger changes them from Beancount's defaults: renamed
+roots (`name_assets` …), `account_rounding`, `booking_method`,
+`tolerance_multiplier`, `infer_tolerance_from_cost` and each
+`inferred_tolerance_default`. Other options and `plugin` lines are not carried.
 A `document` path inside the root ledger's directory is printed relative to
 that directory, whichever file of the ledger wrote it, so the export never
 names the machine it ran on and reloads when saved beside the ledger; a path
