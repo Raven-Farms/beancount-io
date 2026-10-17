@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [571 — `doctor linked/region` print 26-decimal trees for interpolated legs (regression from w5/101)](./571.md)
 - [572 — `doctor roundtrip` in a read-only directory prints a double traceback](./572.md)
 - [573 — `bea example` long-span failure gives calendar-year advice the user already followed](./573.md)
 - [574 — A write `--into` a file reached under two names validates against a doubled load: wrong assertion written with exit 0](./574.md)
