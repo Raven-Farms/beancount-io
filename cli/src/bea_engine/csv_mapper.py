@@ -858,6 +858,9 @@ def _refuse_surplus_fields(source: Path, line: int, headers: list[str], record: 
     )
 
 
+_ZERO_WIDTH_HEADER = re.compile("[\u200b\u2060\ufeff]")
+
+
 @contextmanager
 def open_records(
     source: Path, *, delimiter: str | None = None, encoding: str = "utf-8"
@@ -892,7 +895,10 @@ def open_records(
             raise _decode_usage_error(source, exc, encoding) from None
         # NFC, like the mapping that names them: a header typed composed must
         # find a bank's decomposed spelling of the same name, and vice versa.
-        headers = [unicodedata.normalize("NFC", cell.strip()) for cell in first or []]
+        # Zero-width characters and BOMs dropped too, as amount cells drop them:
+        # a doubled BOM or a U+200B left `Date` unmatchable while the column
+        # list showed it plain (w5/531).
+        headers = [unicodedata.normalize("NFC", _ZERO_WIDTH_HEADER.sub("", cell).strip()) for cell in first or []]
 
         def rows() -> Iterator[tuple[int, dict[str, str]]]:
             # `line_num` counts lines *consumed*, so after the header it names
