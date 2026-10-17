@@ -143,6 +143,15 @@
 - [571 — `doctor linked/region` print 26-decimal trees for interpolated legs (regression from w5/101)](./571.md)
 - [572 — `doctor roundtrip` in a read-only directory prints a double traceback](./572.md)
 - [573 — `bea example` long-span failure gives calendar-year advice the user already followed](./573.md)
+- [574 — A write `--into` a file reached under two names validates against a doubled load: wrong assertion written with exit 0](./574.md)
+- [575 — Text-mode `query` takes ~2× `--json` on large ledgers (shell kept alive until shutdown)](./575.md)
+- [576 — A ledger with a managed price include never uses the load cache](./576.md)
+- [577 — `import --apply` validates the same candidate twice (three loads vs one for `add`)](./577.md)
+- [578 — A nearby overlay that includes the root takes over write validation and dedupe (regression from w5/343/346)](./578.md)
+- [579 — `init` ignores the `$VAR` path refusal (gap in w5/315)](./579.md)
+- [580 — `init` through a dangling symlink blames the working directory](./580.md)
+- [581 — `--json` `target.file` resolves a symlinked root to a path that loads a different ledger](./581.md)
+- [582 — Process substitution for `--rules`/`--config` gives misleading errors (gap in w5/436)](./582.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
