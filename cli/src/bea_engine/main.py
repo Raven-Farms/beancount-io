@@ -887,15 +887,20 @@ def _validate(file: Path, *, documents_only: bool = False) -> dict[str, Any]:
     # load that would run every plugin again (w5/430).
     from beancount.ops.validation import HARDCORE_VALIDATIONS
 
-    clean = not errors and not any(validate(entries, options) for validate in HARDCORE_VALIDATIONS)  # type: ignore[no-untyped-call]
+    validation_errors = [error for validate in HARDCORE_VALIDATIONS for error in validate(entries, options)]  # type: ignore[no-untyped-call]
+    clean = not errors and not validation_errors
 
     from bea_engine.ledger.write import root_read_hint
 
     hint = root_read_hint(file) if errors else None
-    if errors and not documents_only:
+    # bean-check's own validations count here too: a plugin's malformed
+    # entries failed text `check` and passed `--json check`, the verdict
+    # scripts gate on (w5/493). `--documents-only` leaves them to bean-check.
+    if (errors or validation_errors) and not documents_only:
+        found = [*errors, *validation_errors]
         raise protocol.LedgerError(
-            f"{file}: {len(errors)} error(s).",
-            details=[*(format_error(error, ledger_file=file) for error in errors), *([hint] if hint else [])],
+            f"{file}: {len(found)} error(s).",
+            details=[*(format_error(error, ledger_file=file) for error in found), *([hint] if hint else [])],
         )
     failed = [format_error(error, ledger_file=file) for error in errors if is_plugin_failure(error)]
     if failed:
