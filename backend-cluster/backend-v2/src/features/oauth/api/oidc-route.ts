@@ -19,6 +19,7 @@ import {
   buildStaticOAuthClients,
   isIdentityOAuthClient,
   isMobileOAuthClient,
+  isThirdPartyOAuthClient,
   oauthLifetimes,
   oauthResources,
   shouldRotateRefreshToken,
@@ -28,6 +29,7 @@ const oidcLogger = logger.child({ module: "oidc-provider" });
 
 /** The one `screen_hint` value this server forwards to the interaction page. */
 const SIGNUP_SCREEN_HINT = OAUTH_CONFIG.interaction.signupScreenHint;
+const AUTHORIZATION_ROUTE = "/api-gateway/oauth/auth";
 
 interface IdentityClaims {
   sub: string;
@@ -220,7 +222,7 @@ export function setOidcRoutes(
     },
 
     routes: {
-      authorization: "/api-gateway/oauth/auth",
+      authorization: AUTHORIZATION_ROUTE,
       token: "/api-gateway/oauth/token",
       registration: "/api-gateway/oauth/reg",
       revocation: "/api-gateway/oauth/revoke",
@@ -356,6 +358,34 @@ export function setOidcRoutes(
   // Provider extends Koa — proxy=true makes it read X-Forwarded-Host/Proto when
   // building absolute URLs (discovery endpoints, auth-flow redirects).
   provider.proxy = true;
+
+  // ADR 019 D5: oidc-provider follows OIDC and drops `offline_access` from an
+  // authorization request whose `prompt` lacks `consent`, and then issues no
+  // refresh token. A host that asks for it without that prompt (Hermes Agent)
+  // would be signed out when its first access token expires. A third-party
+  // host always sees the consent page, which lists "stay signed in" once the
+  // scope survives, so ask for that consent explicitly. `prompt=none` is a
+  // silent request and is left alone. Hosts authorize with GET.
+  provider.use(async (ctx, next) => {
+    if (ctx.method === "GET" && ctx.path === AUTHORIZATION_ROUTE) {
+      const { client_id: clientId, scope, prompt } = ctx.query;
+      const prompts = typeof prompt === "string" ? prompt.split(" ") : [];
+      if (
+        isThirdPartyOAuthClient(clientId) &&
+        typeof scope === "string" &&
+        scope.split(" ").includes("offline_access") &&
+        (prompt === undefined || typeof prompt === "string") &&
+        !prompts.includes("consent") &&
+        !prompts.includes("none")
+      ) {
+        ctx.query = {
+          ...ctx.query,
+          prompt: [...prompts.filter(Boolean), "consent"].join(" "),
+        };
+      }
+    }
+    await next();
+  });
 
   // oidc-provider writes a Grant only at authorization time, and every refresh
   // runs `validateGrant` first — so the Grant's expiry, not the refresh token's,
