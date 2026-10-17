@@ -41,10 +41,20 @@ def _refuse_offline(typer_ctx: typer.Context) -> None:
 @cloud_app.command("login")
 def cloud_login() -> None:
     """Log in via the browser device flow (stores credentials.json under $BEA_CONFIG_DIR, default ~/.config/bea)."""
+    import os
+
+    from cli.errors import UsageError
+
+    if os.environ.get("BEA_TOKEN"):
+        # BEA_TOKEN wins over the stored file unconditionally, so a login here
+        # printed success and every later command still sent the old token
+        # (w5/516). Said before the flow starts, as logout says it.
+        raise UsageError(
+            "BEA_TOKEN is set in this shell and takes precedence over a login, so the new session would never be "
+            "used. Unset BEA_TOKEN first, then run 'bea cloud login'."
+        )
     ctx = context.current()
     if ctx.no_input:
-        from cli.errors import UsageError
-
         raise UsageError("Login needs a browser and a terminal. Set BEA_TOKEN for unattended use.")
 
     from cli.api.client import make_client
