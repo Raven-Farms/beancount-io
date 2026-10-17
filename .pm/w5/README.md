@@ -206,6 +206,9 @@
 - [685 — `PRINT -f beancount` export fails `check` when an include uses default roots (incomplete fix of w5/474)](./685.md)
 - [686 — `--json format` skips an encrypted include without naming it (incomplete fix of w5/495)](./686.md)
 - [687 — Five doc sentences describe behavior today's fixes changed](./687.md)
+- [688 — An explicit `--pad-date` before the open now gets a looping "date the balance after the open" hint (regression from w5/513)](./688.md)
+- [689 — `--offline` still allows forwarded `bea price`, `engine enable` and a `-h`-valued cloud create (incomplete fix of w5/515)](./689.md)
+- [690 — Logout treats 504/524 as a plain failure; 521–523 are wrongly reported as "the request arrived" (incomplete fix of w5/517)](./690.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
