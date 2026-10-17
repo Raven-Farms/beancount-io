@@ -215,6 +215,11 @@
 - [727 — A quoted --meta value followed by "; comment" drops the comment and applies C-style escapes (incomplete fix of w5/128/232)](./727.md)
 - [728 — An importer's dict or Inventory metadata value is silently dropped on import --apply](./728.md)
 - [729 — add custom refuses a negative-zero amount or number value](./729.md)
+- [730 — Bulk add moves every same-day sale after every purchase: valid batches refused, wrong lot closed under LIFO/FIFO (regression from w5/543)](./730.md)
+- [731 — In bea ask, Ctrl-C between approval panels leaves queued writes running; a write lands after cancel and Ctrl-D hangs (incomplete fix of w5/544)](./731.md)
+- [732 — Other booking failures (HOOL {0 USD}, EUR @ 0 USD) still fail with a bare Python error (incomplete fix of w5/538)](./732.md)
+- [733 — A sale's escaped lot label no longer selects a control-character lot; JSON echo shows the raw label (incomplete fix of w5/542)](./733.md)
+- [734 — In bea ask, Ctrl-C right after Enter can end the session with exit 130](./734.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
