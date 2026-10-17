@@ -520,9 +520,7 @@ def answer(
             elif (twin := _possible_twin(fingerprints, entry, account, fingerprint, owners, index)) is not None:
                 status, reason, match = (
                     "possible_duplicate",
-                    "Date, payee and source amount match; different bank IDs or narration do not rule out a duplicate."
-                    if _match_text(entry.payee)
-                    else "Date, narration and source amount match; different bank IDs do not rule out a duplicate.",
+                    _twin_reason(entry, twin, batch_rows.get(id(twin)), ours=id_source != "hash", keys=keys),
                     twin,
                 )
             elif (counterpart := _transfer_counterpart(counterparts, entry, account, fingerprint)) is not None:
@@ -1172,6 +1170,26 @@ _GENERATED_ID = re.compile(r"[a-z][a-z0-9-]*:sha256:([0-9a-f]{16})")
 
 def _is_generated_identity(key: tuple[str, str, str]) -> bool:
     return key[1] == "digest" or (key[1] == "import-id" and _GENERATED_ID.fullmatch(key[2]) is not None)
+
+
+def _twin_reason(entry: Any, twin: Any, earlier: int | None, *, ours: bool, keys: list[str]) -> str:
+    """Why a row may repeat `twin`, naming only the bank IDs that exist.
+
+    Two same-day charges with no ID column read "different bank IDs do not
+    rule out a duplicate", about IDs neither row had (w5/615).
+    """
+    theirs = _native_import_id(twin.meta or {}, keys) is not None or (
+        bool(twin.meta.get("import-id")) and _GENERATED_ID.fullmatch(str(twin.meta["import-id"])) is None
+    )
+    if ours and theirs:
+        ids = "their bank IDs differ, which does not rule out a duplicate"
+    elif ours or theirs:
+        ids = "only one of them carries a bank ID"
+    else:
+        ids = "neither row has a bank ID" if earlier is not None else "neither has a bank ID"
+    named = "payee" if _match_text(entry.payee) else "narration"
+    where = f" row {earlier} of this import" if earlier is not None else ""
+    return f"Date, {named} and source amount match{where}; {ids}."
 
 
 def _is_native_identity(key: tuple[str, str, str]) -> bool:
