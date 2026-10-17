@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [487 — `add balance --pad-from` on a conflicting same-date assertion gives contradictory, circular advice](./487.md)
 - [488 — The w5/363 widen hint drops the booking method and fires for an amount-less leg](./488.md)
 - [489 — Futures commodity `/0J` refused as "Division by zero"](./489.md)
 - [490 — A no-break space in `add -p` becomes part of the account name; the hint offers to open it](./490.md)
