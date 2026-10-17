@@ -178,11 +178,19 @@ class Posting(BaseModel):
         # so the lot would be dropped and the posting written as a bare
         # balancing leg. Only a write is refused; a loaded row is never.
         context = info.context
-        if isinstance(context, dict) and context.get("write_input") and self.cost is not None and self.units is None:
+        if not (isinstance(context, dict) and context.get("write_input")) or self.cost is None:
+            return self
+        if self.units is None:
             raise ValueError(
                 "cost on a posting without units: add units (or amount) for the lot, "
                 "or omit cost for a balancing posting."
             )
+        if self.cost.number_total is not None and self.units.number == 0:
+            # Booking divides the total by the units and raised a bare
+            # `DivisionByZero` that aborted the whole batch (w5/538).
+            from bea_engine.managed_load import ZERO_UNITS_TOTAL_COST
+
+            raise ValueError(f"the posting {ZERO_UNITS_TOTAL_COST}")
         return self
 
 

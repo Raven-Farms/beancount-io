@@ -114,16 +114,21 @@ def check(ctx: typer.Context) -> None:
         else:
             root_hint = loaded.get("root_hint")
             failed = [str(line) for line in loaded.get("plugin_failures") or []]
-            if failed and not current.debug:
+            unbookable = [str(line) for line in loaded.get("booking_failures") or []]
+            if (failed or unbookable) and not current.debug:
                 # bean-check reports a plugin that cannot load as a traceback at
-                # `<load>:0`; the helper names the directive's file and line, as
-                # `--json check` and every other read do. The other load errors
-                # are listed only when no option could have changed them (w5/256).
+                # `<load>:0`, and a transaction booking cannot do the arithmetic
+                # for as an uncaught `DivisionByZero` or `InvalidOperation` (w5/538);
+                # the helper names the directive's file and line, as `--json check`
+                # and every other read do. The other load errors are listed only
+                # when no option could have changed them (w5/256).
+                crashed = [*failed, *unbookable]
                 if as_json:
-                    _emit_json_errors(file, failed, 1)
+                    _emit_json_errors(file, crashed, 1)
                 if args:
-                    raise LedgerError(f"{file}: {len(failed)} plugin(s) failed to load.", details=failed)
-                errors = [str(line) for line in loaded.get("errors") or failed]
+                    summary = f"{len(crashed)} error(s)" if unbookable else f"{len(failed)} plugin(s) failed to load"
+                    raise LedgerError(f"{file}: {summary}.", details=crashed)
+                errors = [str(line) for line in loaded.get("errors") or crashed]
                 raise LedgerError(f"{file}: {len(errors)} error(s).", details=errors)
             if not args and loaded.get("clean"):
                 # That load ran bean-check's own loader and validations and found

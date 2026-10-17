@@ -480,6 +480,12 @@ string) — the lines `--json check` and every other read give — instead of
 bean-check's traceback at `<load>:0`, and exits **1**. With no bean-check options the
 ledger's other load errors are listed beside it; with options such as `-v` or
 `--auto`, which can change those, only the plugin failures are.
+A transaction Beancount's booking cannot do the arithmetic for — zero units
+at a total cost (`0 HOOL {{310 USD}}`), or an amount it must infer wider than
+the 28 significant digits it keeps — is reported the same way, as `FILE:LINE:
+Beancount cannot book this transaction: …`, where bean-check raises an
+uncaught `DivisionByZero` or `InvalidOperation`; every other read reports it
+at that line too, and leaves that transaction out.
 `bea --debug check` runs bean-check as is and keeps its traceback.
 
 `bea check` loads the ledger once in its helper, which applies bean-check's own
@@ -1358,7 +1364,9 @@ bea add transaction "Buy AAPL" --date 2026-08-02 \
   -p "Assets:Brokerage 10 AAPL {100 USD}" -p "Assets:Cash -1000 USD"
 ```
 
-Per-unit and total prices (`@`, `@@`) and total costs (`{{...}}`) are supported.
+Per-unit and total prices (`@`, `@@`) and total costs (`{{...}}`) are supported;
+a total cost needs units to divide among, so zero units at one is refused
+(exit **2** for `--posting`, `Row N, postings.<i>` in bulk input).
 A `@@` total is written back with `@@` and its exact total, never divided
 into a repeating unit price. A cost is written whole: a total cost keeps its
 total (`{0 # 250.00 USD}`, the same lot as `{{250.00 USD}}`), a currency-only

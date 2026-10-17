@@ -52,7 +52,8 @@ def check(
     native `bean-check` the user ran with its own options: it must not re-judge
     a ledger bean-check already accepted under them. A plugin that failed to
     load fails under any of those options, so that pass answers
-    `{"valid": false, "errors": [...], "plugin_failures": [...]}` for one.
+    `{"valid": false, "errors": [...], "plugin_failures": [...]}` for one, as
+    it does with `booking_failures` for a transaction bean-check raises on.
     `clean` says whether bean-check itself would find nothing: no loader
     error and none from the validations it adds.
     """
@@ -877,6 +878,7 @@ def _validate(file: Path, *, documents_only: bool = False) -> dict[str, Any]:
 
     from beancount.core.data import Document
 
+    from bea_engine.managed_load import is_booking_failure
     from bea_engine.query import format_error, is_plugin_failure
     from fava.core.loader import load_file
 
@@ -903,13 +905,16 @@ def _validate(file: Path, *, documents_only: bool = False) -> dict[str, Any]:
             details=[*(format_error(error, ledger_file=file) for error in found), *([hint] if hint else [])],
         )
     failed = [format_error(error, ledger_file=file) for error in errors if is_plugin_failure(error)]
-    if failed:
-        # bean-check prints these as a traceback at `<load>:0`; the caller, which
-        # knows the options bean-check was given, picks the lines to show (w5/256).
+    unbookable = [format_error(error, ledger_file=file) for error in errors if is_booking_failure(error)]
+    if failed or unbookable:
+        # bean-check prints these as a traceback at `<load>:0`, or raises on the
+        # transaction booking cannot do the arithmetic for (w5/538); the caller,
+        # which knows the options bean-check was given, picks the lines to show (w5/256).
         return {
             "valid": False,
             "errors": [format_error(error, ledger_file=file) for error in errors],
             "plugin_failures": failed,
+            "booking_failures": unbookable,
             "root_hint": hint,
             "clean": False,
         }

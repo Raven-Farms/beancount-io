@@ -314,6 +314,7 @@ def _load_with_sources(
 
     keep_load_cache_private()
     _record_plugin_configs(loader)
+    _book_past_arithmetic_failures()
 
     at = time.time() if now is None else now
     want_offline = _env_flag(OFFLINE_ENV) if offline is None else offline
@@ -552,6 +553,118 @@ def _record_plugin_configs(loader: Any) -> None:
 
     run_transformations._bea_records_plugin_config = True  # type: ignore[attr-defined]
     loader.run_transformations = run_transformations
+
+
+#: How every booking failure `_book_past_arithmetic_failures` reports begins;
+#: bean-check raises on the same transaction, so `check` reports these itself.
+CANNOT_BOOK = "Beancount cannot book this transaction: "
+
+#: A zero-unit posting at a total cost, refused at input and reported on read.
+ZERO_UNITS_TOTAL_COST = (
+    "holds zero units at a total cost ({{…}}), and booking divides the total by the units. "
+    "Give the posting its units, or write its cost per unit in single braces."
+)
+
+#: The 28-digit failure, worded as the write refusal words it (w5/263).
+TOO_WIDE_TO_INFER = (
+    "it has to calculate an amount wider than the 28 significant digits its arithmetic keeps, which happens "
+    "when a posting's amount is left for it to infer beside a number that wide. Give every posting an "
+    "explicit amount, or use a number of at most 28 significant digits."
+)
+
+
+def is_booking_failure(error: Any) -> bool:
+    """Whether a loader error is a transaction `_book_past_arithmetic_failures` reported."""
+    message = getattr(error, "message", None)
+    return isinstance(message, str) and message.startswith(CANNOT_BOOK)
+
+
+def zero_units_at_total_cost(posting: Any) -> bool:
+    """Whether a parsed posting holds zero units at a total cost, which booking divides by."""
+    from beancount.core.number import MISSING
+    from beancount.core.position import CostSpec
+
+    units, cost = posting.units, posting.cost
+    return (
+        isinstance(cost, CostSpec)
+        and cost.number_total not in (None, MISSING)
+        and units is not MISSING
+        and units.number is not MISSING
+        and units.number == 0
+    )
+
+
+def _book_past_arithmetic_failures() -> None:
+    """Have booking report a transaction its decimal arithmetic fails on, at that transaction (w5/538).
+
+    Beancount's booking raises instead of reporting when an amount it infers
+    does not fit its 28-digit context, or a zero-unit posting divides a total
+    cost by nothing, so every read and write of the ledger failed with a bare
+    `DivisionByZero` or `InvalidOperation` naming no file or line. The raising
+    frame's locals say how far booking got — the entries booked so far, their
+    errors, the running balances and the entry that raised — so that entry
+    becomes an error at its line and is dropped, as a transaction failing
+    categorization is, and booking resumes after it from those balances. A
+    failure anywhere else still raises as before. The error is upstream's own
+    `InterpolationError`, so Beancount's load cache stays readable by
+    upstream tools.
+    """
+    from decimal import DecimalException
+
+    from beancount.parser import booking_full
+
+    if getattr(booking_full._book, "_bea_books_past_arithmetic", False):
+        return
+    original: Any = booking_full._book
+
+    def _book(entries: Any, options_map: Any, methods: Any, initial_balances: Any = None) -> Any:
+        booked: list[Any] = []
+        errors: list[Any] = []
+        balances = initial_balances
+        while True:
+            try:
+                done, found, balances = original(entries, options_map, methods, balances)
+            except DecimalException as exc:
+                state = _interrupted_booking(exc, original.__code__)
+                index = None if state is None else next((n for n, e in enumerate(entries) if e is state[3]), None)
+                if state is None or index is None:
+                    raise
+                so_far, so_far_errors, balances, culprit = state
+                booked.extend(so_far)
+                errors.extend(so_far_errors)
+                errors.append(booking_full.InterpolationError(culprit.meta, _booking_failure(culprit, exc), culprit))
+                entries = entries[index + 1 :]
+            else:
+                return [*booked, *done], [*errors, *found], balances
+
+    _book._bea_books_past_arithmetic = True  # type: ignore[attr-defined]
+    booking_full._book = _book
+
+
+def _interrupted_booking(exc: BaseException, code: Any) -> tuple[list[Any], list[Any], Any, Any] | None:
+    """Upstream `_book`'s progress when `exc` left it: booked entries, errors, balances, the raising entry."""
+    trace = exc.__traceback__
+    while trace is not None:
+        if trace.tb_frame.f_code is code:
+            local = trace.tb_frame.f_locals
+            try:
+                return local["new_entries"], local["errors"], local["balances"], local["entry"]
+            except KeyError:
+                return None
+        trace = trace.tb_next
+    return None
+
+
+def _booking_failure(entry: Any, exc: BaseException) -> str:
+    """The error for a transaction booking's decimal arithmetic raised on."""
+    from decimal import InvalidOperation
+
+    for posting in entry.postings:
+        if zero_units_at_total_cost(posting):
+            return f"{CANNOT_BOOK}{posting.account} {ZERO_UNITS_TOTAL_COST}"
+    if isinstance(exc, InvalidOperation):
+        return f"{CANNOT_BOOK}{TOO_WIDE_TO_INFER}"
+    return f"{CANNOT_BOOK}its decimal arithmetic failed ({type(exc).__name__}). Check its amounts, costs and prices."
 
 
 def _load_fresh(entry: Path, snapshot: LedgerSnapshot) -> tuple[Any, Any, Any]:
