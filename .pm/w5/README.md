@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [584 — With stdin closed (`<&-`), stdin-reading commands exit 1 with raw `NoneType` attribute errors](./584.md)
 - [585 — Ctrl-C in the query shell's `less` pager leaves it running and splitting keystrokes](./585.md)
 - [586 — With `TERM` unset, the query shell pages every result, even one row](./586.md)
 - [587 — `bea query > out.txt` opens the shell with no visible prompt and writes prompts into the file](./587.md)
