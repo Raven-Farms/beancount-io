@@ -92,6 +92,9 @@ def _with_output(error: EngineError, logs: io.StringIO) -> EngineError:
     return error
 
 
+_METADATA_KEY = re.compile(r"[a-z][A-Za-z0-9_-]+")
+
+
 def _effective_id_keys(id_keys: list[str] | None, *, csv_id_mapped: bool = False) -> list[str]:
     """Resolve `--id-key` values to metadata keys the CSV mapper actually writes.
 
@@ -115,8 +118,15 @@ def _effective_id_keys(id_keys: list[str] | None, *, csv_id_mapped: bool = False
     seen: set[str] = set()
     for key in [*id_keys, *(["bank_id"] if csv_id_mapped else [])]:
         folded = key.lower()
-        mapped = "bank_id" if folded == "id" else folded if folded in _DEFAULT_ID_KEYS else key
-        if not re.fullmatch(r"[a-z][A-Za-z0-9_-]+", mapped):
+        # Only a spelling that cannot be a key folds: `fitId` and `bank_ID` are
+        # keys a ledger may use, and folding them turned their matching off (w5/604).
+        if folded == "id":
+            mapped = "bank_id"
+        elif _METADATA_KEY.fullmatch(key) or folded not in _DEFAULT_ID_KEYS:
+            mapped = key
+        else:
+            mapped = folded
+        if not _METADATA_KEY.fullmatch(mapped):
             raise UsageError(
                 f"--id-key {key!r} is not a metadata key; a key starts with a lowercase letter and holds letters, "
                 f"digits, '-' and '_', such as {', '.join(_DEFAULT_ID_KEYS)}."
@@ -163,6 +173,9 @@ def answer(
         raise UsageError(f"--duplicates must be review, skip, or include; got {duplicates!r}.")
     if csv_mapping is not None and config is not None:
         raise UsageError("Pass --csv or --config, not both.")
+    # Refused before the ledger loads or the importer's extract() runs, which
+    # may have side effects of its own (w5/604).
+    _effective_id_keys(id_keys)
 
     file = Path(os.path.abspath(file))
     source = source.expanduser().resolve()

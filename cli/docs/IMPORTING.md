@@ -451,9 +451,11 @@ skills deduplicate against each other: the ledger itself is the dedup database.
   `--id-key id` is accepted in any case (`ID`, `Id`) as an alias for `bank_id`,
   the canonical key the `--csv` path writes, and a `--csv` mapping with `id=`
   keeps `bank_id` in the list whatever keys you name, so `--id-key` never
-  silently disables bank-ID dedupe. The default keys fold case the same way
-  (`FITID` is `fitid`), and a key that cannot be a metadata key — empty, or not
-  starting with a lowercase letter — exits **2**.
+  silently disables bank-ID dedupe. A default key spelled in a way no metadata
+  key can be folds to it (`FITID` is `fitid`). A legal key is used as typed,
+  camelCase included (`fitId`, `bank_ID`). Any other key that cannot be a
+  metadata key (empty, or not starting with a lowercase letter) exits **2**
+  before the ledger is read or the importer runs.
   IDs must be stable and unique within that account. A transfer written by
   importing one account (its first posting) keeps that account's ID even
   though it also posts to the other account. Importing the other account never
