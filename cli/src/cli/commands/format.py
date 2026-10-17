@@ -30,6 +30,7 @@ from typing import Annotated
 import typer
 
 from cli import context, output
+from cli.amounts import zero_divisor_line
 from cli.engine import launch
 from cli.errors import BeaError, LedgerError, UsageError
 from cli.utils import atomic_write, decode_error_message, single_line
@@ -487,13 +488,22 @@ def _syntax_failures(files: list[Path]) -> dict[str, list[str]]:
     are read as UTF-8 first, so an undecodable path raises the same error it
     always has instead of arriving as a parse failure.
     """
+    # A literal zero divisor segfaults upstream's parser, which took the whole
+    # batch down unnamed and formatted nothing (w5/565): that file is reported
+    # here and the rest go to the engine.
+    divided: dict[str, list[str]] = {}
     for file in files:
-        _text(file)
-    data = launch.helper_json(["syntax", *(str(file) for file in files)])
-    reported = data.get("files", {})
+        line = zero_divisor_line(_text(file))
+        if line is not None:
+            divided[str(file)] = [
+                f"{file}:{line}: Division by zero in an amount expression; Beancount's parser crashes on a "
+                "zero divisor, so this file was not parsed."
+            ]
+    parsed = [str(file) for file in files if str(file) not in divided]
+    reported = launch.helper_json(["syntax", *parsed]).get("files", {}) if parsed else {}
     failures: dict[str, list[str]] = {}
     for file in files:
-        errors = [str(error) for error in reported.get(str(file), [])]
+        errors = divided.get(str(file)) or [str(error) for error in reported.get(str(file), [])]
         if not errors:
             continue
         if len(errors) == 1 and errors[0].startswith(f"{file}: cannot read file"):

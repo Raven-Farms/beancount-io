@@ -40,6 +40,23 @@ def parse_decimal_number(value: str) -> Decimal:
     return Decimal(text)
 
 
+_ZERO_DIVISOR = re.compile(r"/\s*[-+]?(?:0+(?:\.0*)?|\.0+)(?![\d.A-Z'_-])")
+"""A literal zero divisor in amount arithmetic, which segfaults Beancount's parser."""
+
+#: Ledger text no amount arithmetic is in: strings, `;` comments, and the
+#: org-mode and other lines Beancount skips at a line start.
+_NOT_ARITHMETIC = re.compile(r'"(?:[^"\\]|\\.)*"|;[^\n]*|^[*:#!&?%][^\n]*', re.MULTILINE)
+
+
+def zero_divisor_line(text: str) -> int | None:
+    """The first line of ledger text holding a literal zero divisor outside strings and comments."""
+    code = _NOT_ARITHMETIC.sub(lambda found: re.sub(r"[^\n]", " ", found.group()), text)
+    for number, line in enumerate(code.split("\n"), start=1):
+        if _ZERO_DIVISOR.search(line):
+            return number
+    return None
+
+
 def check_decimal_notation(text: str) -> None:
     """Reject the amount spellings that never reach a useful engine answer.
 
@@ -58,7 +75,7 @@ def check_decimal_notation(text: str) -> None:
     # which takes the whole engine process down and leaves nothing to attribute
     # to a posting. A literal zero is the case worth catching here; anything
     # computed (`100/(2-2)`) still reaches the engine.
-    divisor = re.search(r"/\s*[-+]?(?:0+(?:\.0*)?|\.0+)(?![\d.A-Z'_-])", unquoted)
+    divisor = _ZERO_DIVISOR.search(unquoted)
     if divisor:
         raise UsageError(
             f"Division by zero in {text.strip()!r}. Beancount evaluates amount arithmetic while parsing, "
