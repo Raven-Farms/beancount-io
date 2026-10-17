@@ -250,6 +250,10 @@
 - [803 — {100 # USD} beside an omitted amount crashes with AttributeError MISSING copy_sign](./803.md)
 - [804 — A defaulted currency gets FX advice for an exchange the user never made](./804.md)
 - [805 — Posting slips: {{240}} refused as not one token, empty label dropped, bulk shorthand wording](./805.md)
+- [806 — A Fava collapse-pattern/insert-entry regex raising OverflowError or RecursionError blocks reports (gap in w5/091)](./806.md)
+- [807 — A misspelled fiscal-year-end option silently makes FY2026 the calendar year (gap in w5/147)](./807.md)
+- [808 — Fiscal-quarter refusals: hard-coded FY2027, first declaration cited, refused-period hint (gap in w5/329)](./808.md)
+- [809 — fiscal-year-end "00-31" accepted; USAGE never says other Fava options are ignored](./809.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
