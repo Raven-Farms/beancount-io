@@ -221,6 +221,9 @@
 - [747 — Query regex pre-check refuses ?~ subjects and concatenated ~ patterns (adjacent to w5/558)](./747.md)
 - [748 — Dated missing-price wording from a sold or later USD-cost lot (incomplete fix of w5/557)](./748.md)
 - [749 — .describe Accounts (wrong case or unknown name) exits 0 with no output](./749.md)
+- [750 — bea ask cuts digits and account names in answer tables with … at 80 columns, even in --print > FILE; COLUMNS=0 prints nothing](./750.md)
+- [751 — bea query text tables misalign rows holding CJK text (padded by character count)](./751.md)
+- [752 — import --help splits the --csv example mid-word; 13 sub-command help rows end in ...](./752.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
