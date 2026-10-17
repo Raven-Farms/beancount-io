@@ -227,6 +227,10 @@
 - [764 — Under option booking_method AVERAGE, add open makes an unsellable account; the sale hint blames the open (gap in w5/162)](./764.md)
 - [765 — A documents-folder file dated before an open makes add open fail with main.bean:0 and no file named](./765.md)
 - [766 — Three option gaps: pedantic price --force, plugin_processing_mode raw in exports, invalid name_* value blocks adds](./766.md)
+- [767 — doctor context/region with a bare line find nothing through a symlinked path (regression from w5/568)](./767.md)
+- [768 — doctor linked/region print inferred-only legs at max precision and 26 decimals under --conversion (w5/571 follow-ups)](./768.md)
+- [769 — treeify: renamed roots still lose to a narration colon; the new lookahead is quadratic (incomplete fix of w5/570)](./769.md)
+- [770 — doctor roundtrip still prints tracebacks for identical entries and an over-long scratch name](./770.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
