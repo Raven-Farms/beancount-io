@@ -1512,10 +1512,12 @@ When `--time` starts or ends partway through an interval, the first or last
 bucket is a fragment of it — `-t 2020-03 -i weekly` starts on Sunday
 `2020-03-01`, the last day of an ISO week, and ends on the Monday–Tuesday tail
 of one that runs into April. Flow series (income statement periods, the
-overview's income and expense series) drop such a fragment when no entries fall
-in it, so a clipped boundary does not read as one more quiet week; a fragment holding
-entries — a transaction on `2020-12-31` — stays, and so does the only bucket of
-a short filter. Balance series (net worth, assets, liabilities, equity) keep
+overview's income and expense series) drop such a fragment when no
+transaction in it posts to an income or expense account (within `--account`),
+so a clipped boundary does not read as one more quiet week. A fragment with
+such a transaction stays, a plugin's included (a transaction on `2020-12-31`),
+and so does the only bucket of a short filter. A balance assertion, a price or
+an open on the boundary day does not keep an empty row. Balance series (net worth, assets, liabilities, equity) keep
 every bucket, because their value is real whether or not the fragment saw
 activity and the series must still reach the as-of date.
 
