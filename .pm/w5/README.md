@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [615 — Possible-duplicate reason mentions bank IDs for rows that have none](./615.md)
 - [616 — `report -a Expenses:Travel` also matches `Assets:Reimbursable:Expenses:Travel` (component match anywhere; gap in w5/292)](./616.md)
 - [617 — Interval series drop plugin transactions in clipped fragments and keep assertion-only empty rows](./617.md)
 - [618 — `-t "year - year+1"` refused while `(year) - (year+1)` works (vendored Fava substitution)](./618.md)
