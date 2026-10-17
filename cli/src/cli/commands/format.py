@@ -543,8 +543,33 @@ def _walk(root: Path) -> list[Path]:
     suffixes = tuple(SUFFIXES)
     found: list[Path] = []
     for directory, _, names in os.walk(root, onerror=stop):
-        found.extend(Path(directory, name) for name in names if name.endswith(suffixes))
+        found.extend(
+            Path(directory, name)
+            for name in names
+            if name.endswith(suffixes) and not _apple_double(Path(directory, name))
+        )
     return sorted(found)
+
+
+#: The first bytes of the `._name` files macOS writes beside each file on
+#: exFAT, FAT and SMB volumes, and leaves in its tar and zip archives.
+_APPLE_DOUBLE_MAGIC = b"\x00\x05\x16\x07"
+
+
+def _apple_double(path: Path) -> bool:
+    """A macOS AppleDouble `._name` file: resource-fork metadata, never ledger text.
+
+    The walk took `._main.bean` for a ledger file and stopped on it with
+    "Re-save the file as UTF-8", formatting nothing (w5/609). A real ledger
+    whose name starts `._` does not start with the magic, and is kept.
+    """
+    if not path.name.startswith("._"):
+        return False
+    try:
+        with path.open("rb") as stream:
+            return stream.read(len(_APPLE_DOUBLE_MAGIC)) == _APPLE_DOUBLE_MAGIC
+    except OSError:
+        return False
 
 
 def _denied(path: Path, reason: str) -> str:

@@ -630,7 +630,9 @@ not list, or a ledger file it may not read, stops it the same way. Silently drop
 would let `--check` report a tree it never looked at, green while `bea check`
 fails on the very include the entry stands for. The dangling `.#name` lock
 links Emacs keeps beside files with unsaved edits are not ledger files and are
-skipped. A symlink resolving outside the
+skipped, as are the AppleDouble `._name` files macOS writes beside files on
+exFAT, FAT and SMB volumes and leaves in its archives. Only files that start
+with that format's magic bytes are skipped. A symlink resolving outside the
 requested directory is still skipped; one resolving inside is formatted once,
 under its real path. `format -i` over a directory with no `.bean` or
 `.beancount` files exits 2 — there was nothing to rewrite. Under `--json`
