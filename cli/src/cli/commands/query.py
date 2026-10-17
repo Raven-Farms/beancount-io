@@ -34,6 +34,21 @@ FORMATS = ("text", "csv", "beancount")
 _SHELL_ALIASES = frozenset({"clear", "errors", "exit", "help", "history", "parse", "quit", "run", "set"})
 
 
+def _refuse_shell_without_terminal_stdout() -> None:
+    """Refuse the interactive shell when its prompt would not reach the terminal (w5/587).
+
+    Upstream's `input()` writes the prompt to stdout, so with stdout
+    redirected the session showed nothing, looked hung, and wrote its
+    `beanquery>` prompts into the results file.
+    """
+    if not context.current().stdout_is_a_terminal:
+        raise UsageError(
+            "The query shell draws its prompt on stdout, and stdout is redirected, so the session would be "
+            "invisible and its prompts would land in the output. Pass the query as an argument or on stdin, "
+            "or export with -o FILE."
+        )
+
+
 def _stdin_query() -> str:
     """Piped BQL, held to the UTF-8 rule `format -` and `--from -` apply (w5/155).
 
@@ -375,6 +390,7 @@ def query(
             elif ctx.no_input:
                 raise UsageError("A query is required with --no-input. Pass it as an argument or on stdin.")
             else:
+                _refuse_shell_without_terminal_stdout()
                 # `--debug` reaches the prompt, where a mistake is otherwise only explained.
                 shell_argv = ["source-shell", *rendering, *(["--debug"] if ctx.debug else []), "--", source]
                 raise typer.Exit(launch.run_engine_argv(shell_argv, interactive=True))
@@ -402,6 +418,7 @@ def query(
         elif ctx.no_input:
             raise UsageError("A query is required with --no-input. Pass it as an argument or on stdin.")
         else:
+            _refuse_shell_without_terminal_stdout()
             # The read policy is frontend-resolved and must reach the shell:
             # a strict session answering from a ledger that does not load is
             # exactly what `--strict` exists to refuse, and suppressing the

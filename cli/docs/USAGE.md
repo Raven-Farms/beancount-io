@@ -781,7 +781,8 @@ no traceback.
 With no query argument, `--file` and `--source` alike read BQL from piped
 stdin and open the interactive shell only on a terminal where prompting is
 allowed; under `--no-input` (or `CI`), or with empty stdin, a missing query is
-refused with exit 2 instead of waiting at a prompt. Piped BQL must be UTF-8 (a
+refused with exit 2 instead of waiting at a prompt, and so is the shell with
+stdout redirected, where its prompt would land in the output. Piped BQL must be UTF-8 (a
 BOM is fine); anything else is refused with exit 2, naming `stdin` and the
 offending byte offset, whatever the locale. The shell prints results without
 a pager, as `bean-query` does (`.set pager on` turns Beanquery's pager on). In
