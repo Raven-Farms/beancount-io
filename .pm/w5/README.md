@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [586 — With `TERM` unset, the query shell pages every result, even one row](./586.md)
 - [587 — `bea query > out.txt` opens the shell with no visible prompt and writes prompts into the file](./587.md)
 - [588 — `bea init` prompts before validating `--date`/`--opening-balance`, then rejects without naming the option](./588.md)
 - [589 — A FIFO or deeply nested `credentials.json` hangs or fails every local command](./589.md)
