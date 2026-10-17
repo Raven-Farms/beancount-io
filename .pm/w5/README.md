@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [607 — Disk-full staging failures are reported as validation failures (`--partial` advice, every row "rejected")](./607.md)
 - [608 — SIGTERM/SIGHUP during a frontend `-o` export leaves a full `.bea-*.tmp` copy behind](./608.md)
 - [609 — A macOS `._main.bean` AppleDouble file stops `format --check .` / `-i .`](./609.md)
 - [610 — Full-disk exports and `init` give non-standard messages; `init` leaves created directories](./610.md)
