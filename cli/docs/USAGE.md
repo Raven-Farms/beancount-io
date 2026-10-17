@@ -1034,8 +1034,8 @@ import and to `bea format -i`, which replaces the file itself rather than
 handing it to upstream's formatter. A read-only root can still validate a
 writable `--into` file.
 
-Payees, narrations, string metadata, and the string fields of `note`, `event`,
-and `custom` are written on one line: runs of CR/LF line breaks become spaces
+Payees, narrations, lot labels, string metadata, and the string fields of
+`note`, `event`, and `custom` are written on one line: runs of CR/LF line breaks become spaces
 in single adds, bulk JSON, and imports, so a pasted multi-line value can never
 write a directive that breaks the file. Every other control character —
 `ESC`, the rest of the C0 range including tab, `DEL`, and C1 — is replaced by
