@@ -929,6 +929,14 @@ def cached_revisions(entry: Path) -> dict[str, str | None]:
     return revisions
 
 
+def duplicate_include_message(again: Path, first: Path) -> str:
+    """The load error for a file an include reaches again under another name."""
+    return (
+        f"Duplicate include: {again} is {first} under another name "
+        "(letter case, Unicode form or a link); its entries are loaded once."
+    )
+
+
 def _duplicate_members(snapshot: Any) -> dict[Path, Path]:
     """Each closure file reached again under another name, mapped to the name that reached it first.
 
@@ -1049,8 +1057,7 @@ def _rewrite_includes(
                     unavailable.append(
                         load_error(
                             {"filename": str(path), "lineno": span.line},
-                            f"Duplicate include: {again} is {duplicates[again]} under another name "
-                            "(letter case, Unicode form or a link); its entries are loaded once.",
+                            duplicate_include_message(again, duplicates[again]),
                         )
                     )
                 # One line stays one line, so every later line of this file

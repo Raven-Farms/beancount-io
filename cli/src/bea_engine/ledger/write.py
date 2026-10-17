@@ -303,7 +303,9 @@ class LedgerSnapshot:
             for _, _, name in _includes(content):
                 for match in self.patterns.get(str(path.parent / name), ()):
                     included_by.setdefault(match, set()).add(path)
-        found = {path for path in self.contents if path.resolve() == target}
+        # Every name the file goes by, a case variant or a link as much as its
+        # own: the one the load keeps first may not be the one written to.
+        found = {path for path in self.contents if self._stands_for(path, target)}
         pending = list(found)
         while pending:
             for parent in included_by.get(pending.pop(), ()):
@@ -311,6 +313,11 @@ class LedgerSnapshot:
                     found.add(parent)
                     pending.append(parent)
         return found
+
+    def _identity(self, path: Path) -> tuple[int, int] | None:
+        """The (device, inode) a closure file had when captured, or None."""
+        status = self.stats.get(path)
+        return None if status is None else (status.st_dev, status.st_ino)
 
     @contextmanager
     def staged(self, candidate: Path, target: Path) -> Iterator[tuple[Path, dict[Path, Path]]]:
@@ -322,18 +329,62 @@ class LedgerSnapshot:
         the write cannot affect is read where it is, and a read-only shared
         directory elsewhere in the include graph does not block the write
         (w1/073).
+
+        A file the ledger reaches again under another name is left out of a
+        staged include line, as a read leaves it out: the staged copy's new
+        inode hid it from that check, and the candidate was validated beside
+        a second copy of its own entries (w5/574). `duplicate_include_errors`
+        restores the error the read reports for it.
         """
+        from bea_engine.managed_load import _duplicate_members
+
+        duplicates = _duplicate_members(self)
         with ExitStack() as stack:
             paths = {path: stack.enter_context(candidate_file(path, "")) for path in self._includers(target)}
             for path, staged in paths.items():
-                content = candidate.read_bytes() if path.resolve() == target else self.contents[path]
+                content = candidate.read_bytes() if self._stands_for(path, target) else self.contents[path]
                 for start, end, name in reversed(list(_includes(content))):
                     matches = self.patterns.get(str(path.parent / name), ())
                     if matches:
-                        replacement = staged_include(stack, path, [paths.get(p, p) for p in matches])
+                        kept = [paths.get(p, p) for p in matches if p not in duplicates]
+                        replacement = staged_include(stack, path, kept)
                         content = content[:start] + replacement.encode() + content[end:]
                 staged.write_bytes(content)
             yield paths[self.root], {staged: original for original, staged in paths.items()}
+
+    def _stands_for(self, path: Path, target: Path) -> bool:
+        """Whether a closure file is the write's target under one of its names."""
+        identity = self._identity(target)
+        return path.resolve() == target or (identity is not None and self._identity(path) == identity)
+
+    def duplicate_include_errors(self, target: Path) -> list[Any]:
+        """The `Duplicate include` errors a read reports on the include lines `staged` rewrites.
+
+        Reported where the read reports them, so a ledger that already had one
+        keeps it through a write: its gate applies, and `--allow-errors` sees
+        it as the error it was, not a new one (w5/574).
+        """
+        from beancount.loader import LoadError
+
+        from bea_engine.ledger.text import iter_includes
+        from bea_engine.managed_load import _duplicate_members, duplicate_include_message
+
+        duplicates = _duplicate_members(self)
+        if not duplicates:
+            return []
+        found = []
+        for path in sorted(self._includers(target)):
+            for span in iter_includes(self.contents[path]):
+                for again in self.patterns.get(str(path.parent / span.target), ()):
+                    if again in duplicates:
+                        found.append(
+                            LoadError(
+                                {"filename": str(path), "lineno": span.line},
+                                duplicate_include_message(again, duplicates[again]),
+                                None,
+                            )
+                        )
+        return found
 
 
 def _glob_members(pattern: str) -> tuple[Path, ...]:
@@ -1555,6 +1606,7 @@ def validate_candidate(
         else:
             with snapshot.staged(candidate, file) as (root, filenames):
                 entries, errors, options = managed_load.load_file(root)
+            errors = [*errors, *snapshot.duplicate_include_errors(file)]
             original_lines = {path.resolve(): lexer_lines(content) for path, content in snapshot.contents.items()}
     except InvalidOperation as exc:
         # Booking quantizes an interpolated amount under the 28-digit decimal
