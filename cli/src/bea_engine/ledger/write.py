@@ -8,6 +8,7 @@ import fnmatch
 import glob
 import hashlib
 import logging
+import operator
 import os
 import re
 import secrets
@@ -448,14 +449,19 @@ def include_claims(patterns: Iterable[str]) -> Callable[[Path], str | None]:
 
     def claim(target: Path) -> str | None:
         return literal.get(target) or next(
-            (pattern for pattern in wildcards if _included_new_file(target, pattern)), None
+            (pattern for pattern in wildcards if _included_new_file(target, pattern, any_spelling=True)), None
         )
 
     return claim
 
 
-def _included_new_file(target: Path, pattern: str) -> bool:
-    """Match an absent leaf using the same directory and hidden-file rules as glob."""
+def _included_new_file(target: Path, pattern: str, *, any_spelling: bool = False) -> bool:
+    """Match an absent leaf using the same directory and hidden-file rules as glob.
+
+    `any_spelling` matches a directory however it is spelled, which a claim
+    check needs (w5/595); `--into` matches the spelling the glob lists, and
+    names the other one itself (w5/434).
+    """
     parent, name = os.path.split(pattern)
     if target.name.startswith(".") and not name.startswith("."):
         return False
@@ -463,25 +469,46 @@ def _included_new_file(target: Path, pattern: str) -> bool:
         return False
     if name == "**":
         parent = os.path.join(parent, "**")
+    same = _same_directory if any_spelling else operator.eq
     if any(
-        Path(os.path.normpath(directory)).resolve() == target.parent for directory in glob.glob(parent, recursive=True)
+        same(Path(os.path.normpath(directory)).resolve(), target.parent)
+        for directory in glob.glob(parent, recursive=True)
     ):
         return True
     # A directory the write would create is not on disk for `glob` to list:
     # `price export` into a new `snap/` under `include "*/*.bean"` wrote a
     # copy the next load read back as part of the books (w5/296).
-    return _directory_matches(target.parent, parent)
+    return _directory_matches(target.parent, parent, same)
 
 
-def _directory_matches(directory: Path, pattern: str) -> bool:
+def _directory_matches(directory: Path, pattern: str, same: Callable[[Path, Path], bool]) -> bool:
     """Whether `glob` would list `directory` for `pattern` once it exists."""
     parts = Path(pattern).parts
     fixed = next((i for i, part in enumerate(parts) if glob.has_magic(part)), len(parts))
-    try:
-        names = directory.relative_to(Path(os.path.normpath(Path(*parts[:fixed]))).resolve()).parts
-    except ValueError:
+    base = Path(os.path.normpath(Path(*parts[:fixed]))).resolve()
+    below = next(
+        (directory.relative_to(ancestor).parts for ancestor in (directory, *directory.parents) if same(ancestor, base)),
+        None,
+    )
+    return below is not None and _components_match(below, parts[fixed:])
+
+
+def _same_directory(found: Path, wanted: Path) -> bool:
+    """Whether two resolved directories are one, however each is spelled.
+
+    `resolve()` keeps the spelling typed, so on a case- and normalization-
+    insensitive volume (macOS's default) `Txns/` and `txns/` compared unequal
+    while naming one directory, and an output or load cache there joined the
+    books (w5/595). Spellings that fold together are compared by identity.
+    """
+    if found == wanted:
+        return True
+    if unicodedata.normalize("NFC", str(found)).casefold() != unicodedata.normalize("NFC", str(wanted)).casefold():
         return False
-    return _components_match(names, parts[fixed:])
+    try:
+        return os.path.samefile(found, wanted)
+    except OSError:
+        return False
 
 
 def _components_match(names: tuple[str, ...], patterns: tuple[str, ...]) -> bool:
@@ -708,7 +735,11 @@ def refuse_cache_over_ledger(loaded: Path, members: Iterable[Path], patterns: It
     # A path an include glob claims becomes a member once written: the pickle
     # then loads as ledger text and every later command fails (w5/497).
     resolved = cache.resolve()
-    claim = None if cache.exists() else next((p for p in patterns if _included_new_file(resolved, p)), None)
+    claim = (
+        None
+        if cache.exists()
+        else next((p for p in patterns if _included_new_file(resolved, p, any_spelling=True)), None)
+    )
     if claim is not None:
         raise UsageError(
             f"{CACHE_ENV} {pattern} names {cache}, which the include pattern {claim} would load as part of the "

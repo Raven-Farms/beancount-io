@@ -727,11 +727,33 @@ def _glob_would_match(target: Path, pattern: str) -> bool:
         parent = os.path.join(parent, "**")
     for directory in glob.glob(parent or ".", recursive=True):
         try:
-            if Path(os.path.normpath(directory)).resolve() == target.parent:
+            if _same_directory(Path(os.path.normpath(directory)).resolve(), target.parent):
                 return True
         except OSError:
             continue
     return False
+
+
+def _same_directory(found: Path, wanted: Path) -> bool:
+    """Whether a directory glob listed is `wanted`, however each is spelled.
+
+    `resolve()` keeps the spelling typed, so on a case- and normalization-
+    insensitive volume (macOS's default) `-o Txns/backup.bean` passed for
+    `include "txns/*.bean"` and the export joined the books (w5/595). Spellings
+    that fold together are compared by identity.
+    """
+    if found == wanted:
+        return True
+    if _folded(str(found)) != _folded(str(wanted)):
+        return False
+    try:
+        return os.path.samefile(found, wanted)
+    except OSError:
+        return False
+
+
+def _folded(spelling: str) -> str:
+    return unicodedata.normalize("NFC", spelling).casefold()
 
 
 def refuse_input_alias(destination: Path, source: Path) -> None:

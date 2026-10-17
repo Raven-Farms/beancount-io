@@ -346,7 +346,7 @@ def _claiming_include(destination: Path, root: Path) -> str | None:
         patterns = LedgerSnapshot.capture(root).patterns
     except (OSError, protocol.UsageError):
         return None
-    return next((pattern for pattern in patterns if _included_new_file(target, pattern)), None)
+    return next((pattern for pattern in patterns if _included_new_file(target, pattern, any_spelling=True)), None)
 
 
 def _refuse_alias(destination: Path, root: Path, context: Any) -> None:
