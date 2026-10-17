@@ -217,6 +217,9 @@
 - [724 — PYTHONIOENCODING=utf-16 makes bea call a healthy engine damaged and say to delete it](./724.md)
 - [725 — A ledger with its own error is told "Pass --partial", which then blames every row](./725.md)
 - [726 — The BQL error caret ignores the display width of wide characters](./726.md)
+- [727 — A quoted --meta value followed by "; comment" drops the comment and applies C-style escapes (incomplete fix of w5/128/232)](./727.md)
+- [728 — An importer's dict or Inventory metadata value is silently dropped on import --apply](./728.md)
+- [729 — add custom refuses a negative-zero amount or number value](./729.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
