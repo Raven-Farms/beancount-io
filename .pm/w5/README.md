@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [605 — `init` and writes `--into` a new file always fail on exFAT/FAT volumes (`os.link` unsupported)](./605.md)
 - [606 — A stop just after the atomic replace kills bea silently though the write committed; a retry duplicates it](./606.md)
 - [607 — Disk-full staging failures are reported as validation failures (`--partial` advice, every row "rejected")](./607.md)
 - [608 — SIGTERM/SIGHUP during a frontend `-o` export leaves a full `.bea-*.tmp` copy behind](./608.md)
