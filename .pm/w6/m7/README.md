@@ -1,6 +1,6 @@
 # w6 · m7 — Connect OpenClaw and Hermes Agent to the hosted MCP endpoint
 
-**Worker:** worker1 **Goal:** OpenClaw and Hermes Agent become named hosts in the sense of ADR 019 D8. Each has a fixture that registers the way the host really does, a dated real sign-in against `https://beancount.io/api-gateway/mcp`, and a per-host row in `docs/mcp.md` that tells its users exactly how to connect. **Status:** todo (t001–t004 done)
+**Worker:** worker1 **Goal:** OpenClaw and Hermes Agent become named hosts in the sense of ADR 019 D8. Each has a fixture that registers the way the host really does, a dated real sign-in against `https://beancount.io/api-gateway/mcp`, and a per-host row in `docs/mcp.md` that tells its users exactly how to connect. **Status:** todo (t001–t005 done)
 
 **Research date:** 2026-10-16. Sources: OpenClaw's `tools/mcp` and MCP transport pages at `docs.openclaw.ai`; Hermes Agent's MCP page at `hermes-agent.nousresearch.com/docs/user-guide/features/mcp`. t001 confirms every host behavior below first-hand before any fixture relies on it.
 
@@ -12,7 +12,7 @@
 | [t002](./done/t002.md) | Add OpenClaw and Hermes fixtures to the OAuth host tests — **DONE** | 45m | t001 |
 | [t003](./done/t003.md) | OpenClaw: real sign-in, one read, one `dry_run` write — **DONE** | 45m | t001 |
 | [t004](./done/t004.md) | Hermes Agent: real sign-in, one read, one `dry_run` write — **DONE** | 45m | t001 |
-| t005 | Add both hosts to the per-host notes and ADR 019 | 30m | t002, t003, t004 |
+| [t005](./done/t005.md) | Add both hosts to the per-host notes and ADR 019 — **DONE** | 30m | t002, t003, t004 |
 | t006 | Adoption surface | 30m | t005 |
 | t007 | Simplify | 30m | t006 |
 | t008 | Test coverage | 45m | t006, t007 |
