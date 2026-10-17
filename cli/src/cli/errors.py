@@ -127,8 +127,10 @@ def server_message(body: object) -> str | None:
     Bound the unwrapping; unsupported, malformed, or deeper bodies leave the
     caller's HTTP-status fallback intact.
     """
+    raw = isinstance(body, str)
     for _ in range(8):
         if isinstance(body, Mapping):
+            raw = False
             message = body.get("message")
             body = message if isinstance(message, str) and message.strip() else body.get("error")
         elif isinstance(body, str):
@@ -138,12 +140,22 @@ def server_message(body: object) -> str | None:
             try:
                 body = json.loads(sentence)
             except ValueError:
-                return None if sentence.startswith("{") else sentence
+                if sentence.startswith(("{", "<")):
+                    return None
+                # A proxy's HTML or text error page is no sentence: printed
+                # whole, the user read 18 lines of markup instead of the
+                # status (w5/482). A short plain-text line still passes.
+                if raw and ("\n" in sentence or len(sentence) > _RAW_SENTENCE_LIMIT):
+                    return None
+                return sentence
             except RecursionError:
                 return None
         else:
             return None
     return None
+
+
+_RAW_SENTENCE_LIMIT = 200
 
 
 def error_from_status(status: int, message: str | None, *, request_id: str | None = None) -> BeaError:
