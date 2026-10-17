@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [484 — Price-source warnings end in `..`; `upgrade --check` shows raw parser text](./484.md)
 - [485 — A repeated global `-f` silently uses the last ledger, so a write lands in the wrong file](./485.md)
 - [486 — `add transaction` blames an unclosed `{` on the next posting or the header](./486.md)
 - [487 — `add balance --pad-from` on a conflicting same-date assertion gives contradictory, circular advice](./487.md)
