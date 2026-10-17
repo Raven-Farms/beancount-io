@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [515 — Global `--offline` is ignored by `bea cloud` (and `ask`): `--offline -y cloud ledger delete` deletes](./515.md)
 - [516 — `cloud login` with `BEA_TOKEN` set reports success, but the session is never used](./516.md)
 - [517 — Gateway timeout (504/524) on cloud writes exits 1 instead of the unknown-outcome exit 4](./517.md)
 - [518 — A SOCKS proxy in the environment breaks every cloud command with httpx's pip advice](./518.md)
