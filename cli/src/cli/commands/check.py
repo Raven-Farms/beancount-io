@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import json
 import re
 import shlex
+import subprocess
+import sys
 import unicodedata
 from pathlib import Path
 
@@ -92,6 +95,9 @@ def check(ctx: typer.Context) -> None:
     # its own finding still waits for bean-check to accept the ledger.
     portable: BeaError | None = None
     root_hint: str | None = None
+    # bean-check's own `--json`: bea's findings join its `errors` list on
+    # stdout, or a script read "no errors" beside a failing status (w5/496).
+    as_json = "--json" in args[: args.index("--")] if "--" in args else "--json" in args
     if not _INFORMATIONAL & set(args):
         try:
             loaded = launch.helper_json(["check", "--file", str(file), "--documents-only"])
@@ -100,6 +106,8 @@ def check(ctx: typer.Context) -> None:
                 # bean-check reports a file that is not UTF-8 as a codec message
                 # at a line; the helper names the file, the byte and the remedy,
                 # and no bean-check option makes those bytes decode (w5/278).
+                if as_json:
+                    _emit_json_errors(file, [str(error), *error.details], error.exit_code)
                 raise
             portable = error
         else:
@@ -110,6 +118,8 @@ def check(ctx: typer.Context) -> None:
                 # `<load>:0`; the helper names the directive's file and line, as
                 # `--json check` and every other read do. The other load errors
                 # are listed only when no option could have changed them (w5/256).
+                if as_json:
+                    _emit_json_errors(file, failed, 1)
                 if args:
                     raise LedgerError(f"{file}: {len(failed)} plugin(s) failed to load.", details=failed)
                 errors = [str(line) for line in loaded.get("errors") or failed]
@@ -120,6 +130,9 @@ def check(ctx: typer.Context) -> None:
                 # native run would only load it again, every plugin twice (w5/430).
                 # Errors still come from bean-check, in its own words.
                 raise typer.Exit(0)
+    if as_json and portable is not None:
+        answer = launch.capture_native("bean-check", [*isolate, str(file), *args], ledger=file)
+        _merge_json_errors(file, answer, portable)
     code = launch.run_native("bean-check", [*isolate, str(file), *args], ledger=file)
     if code != 0:
         # An included leaf fails on accounts its root opens; say which root
@@ -130,6 +143,40 @@ def check(ctx: typer.Context) -> None:
     if portable is not None:
         raise portable
     raise typer.Exit(0)
+
+
+_LOCATED = re.compile(r"(?P<filename>.+?):(?P<lineno>\d+): (?P<message>.*)", re.DOTALL)
+
+
+def _json_error(file: Path, detail: str) -> dict[str, object]:
+    """One of bea's findings in bean-check's `--json` shape: message, filename, line."""
+    located = _LOCATED.fullmatch(detail)
+    if located is None:
+        return {"message": detail, "filename": str(file), "lineno": 0}
+    return {"message": located["message"], "filename": located["filename"], "lineno": int(located["lineno"])}
+
+
+def _emit_json_errors(file: Path, details: list[str], code: int) -> None:
+    """Print bea's findings as bean-check's JSON error list, and exit failing."""
+    typer.echo(json.dumps({"errors": [_json_error(file, detail) for detail in details]}))
+    raise typer.Exit(code or 1)
+
+
+def _merge_json_errors(file: Path, completed: subprocess.CompletedProcess[str], finding: BeaError) -> None:
+    """bean-check's JSON answer with bea's portable-document finding added to its list."""
+    stdout = completed.stdout or ""
+    sys.stderr.write(completed.stderr or "")
+    code = launch.captured_status(completed)
+    try:
+        answer = json.loads(stdout)
+        errors = list(answer["errors"])
+    except (ValueError, KeyError, TypeError):
+        # Not the shape documented: leave bean-check's words as they were.
+        sys.stdout.write(stdout)
+        raise typer.Exit(code or 1) from None
+    errors.extend(_json_error(file, detail) for detail in finding.details)
+    typer.echo(json.dumps({**answer, "errors": errors}))
+    raise typer.Exit(code or 1)
 
 
 #: bean-check options that print and exit without reading the ledger.
