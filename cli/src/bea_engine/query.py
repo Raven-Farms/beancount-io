@@ -799,6 +799,33 @@ def _recovering(shell: Any, dispatch: Callable[[str], Any], line: str) -> Any:
         protocol.note(f"Cannot run this BQL query: {exc}.")
         _debug_traceback(shell, exc)
         return False
+    except OSError:
+        raise
+    except Exception as exc:
+        # Upstream's loop would print this with its traceback and carry on.
+        if not shell.interactive:
+            raise
+        protocol.note(f"error: {unexpected_failure(exc)}")
+        _debug_traceback(shell, exc)
+        return False
+
+
+def unexpected_failure(exc: Exception) -> str:
+    """One line for an exception upstream's shell raised and bea has no wording for.
+
+    `query --source` hands the query to upstream, whose display context gives
+    an amount twelve integer digits at most: a 10^12 VND balance raised
+    `InvalidOperation` there and printed a 200-line traceback, where `--file`
+    answers (w5/472).
+    """
+    from decimal import DecimalException
+
+    if isinstance(exc, DecimalException):
+        return (
+            f"Decimal arithmetic failed while running or printing this query ({type(exc).__name__}). Upstream's "
+            "rendering holds an amount to twelve integer digits; query the ledger with --file to print larger ones."
+        )
+    return f"{type(exc).__name__}: {exc}".rstrip(".") + "."
 
 
 def _debug_traceback(shell: Any, exc: BaseException) -> None:

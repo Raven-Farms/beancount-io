@@ -624,8 +624,11 @@ def source_query(
     output: Annotated[Path | None, typer.Option("--output", "-o", help="Query output file.", readable=False)] = None,
     numberify: Annotated[bool, typer.Option("--numberify", "-m")] = False,
     no_errors: Annotated[bool, typer.Option("--no-errors", "-q")] = False,
+    debug: Annotated[bool, typer.Option("--debug")] = False,
 ) -> None:
     """Run one native query, streaming upstream's rendering, with a failing status for usage errors."""
+    import traceback
+
     from bea_engine import query as bql
 
     try:
@@ -642,6 +645,14 @@ def source_query(
         raise
     except OSError as exc:
         raise SystemExit(_source_io_failure(exc)) from None
+    except Exception as exc:
+        # Anything else upstream raised: one line, the stack only under `--debug` (w5/472).
+        if debug:
+            protocol.note("".join(traceback.format_exception(exc)).rstrip())
+            protocol.note(f"error: {bql.unexpected_failure(exc)}")
+        else:
+            protocol.note(f"error: {bql.unexpected_failure(exc)} Pass --debug before the command for a traceback.")
+        raise SystemExit(protocol.EXIT_VALIDATION) from None
 
 
 @app.command(

@@ -386,7 +386,8 @@ def query(
         # The engine runs upstream's shell on the native source the way
         # `bean-query` does, but a missing stored query exits 2 instead of
         # printing an error and reporting success.
-        raise typer.Exit(launch.run_engine_argv(["source-query", *rendering, "--", source, query_string]))
+        debug = ["--debug"] if ctx.debug else []
+        raise typer.Exit(launch.run_engine_argv(["source-query", *rendering, *debug, "--", source, query_string]))
 
     file = ctx.entry_file()
     if output_file is not None:
