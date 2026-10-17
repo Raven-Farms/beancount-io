@@ -94,8 +94,8 @@ def register_ledger_commands(ledger_app: typer.Typer) -> None:
 
         try:
             result = unwrap(call(delete_ledger.sync_detailed, owner, name, client=client))
-        except (httpx.ConnectError, httpx.ConnectTimeout):
-            # No request left the machine, so nothing happened: not unknown.
+        except (httpx.ConnectError, httpx.ConnectTimeout, httpx.ProxyError):
+            # No request left the machine (or the proxy), so nothing happened: not unknown.
             raise
         except (httpx.TimeoutException, httpx.TransportError, UnreadableSuccess, GatewayTimeout) as e:
             raise unknown_write_outcome(f"Deleting ledger '{full_name}'", e) from e

@@ -206,8 +206,8 @@ def emit_command(cmd: Command, spec: dict[str, Any]) -> str:
         lines.append("")
         lines.append("    try:")
         lines.append(f"        result = unwrap({call})")
-        lines.append("    except (httpx.ConnectError, httpx.ConnectTimeout):")
-        lines.append("        # No request left the machine, so nothing happened: not unknown.")
+        lines.append("    except (httpx.ConnectError, httpx.ConnectTimeout, httpx.ProxyError):")
+        lines.append("        # No request left the machine (or the proxy), so nothing happened: not unknown.")
         lines.append("        raise")
         unknown = "httpx.TimeoutException, httpx.TransportError, UnreadableSuccess, GatewayTimeout"
         lines.append(f"    except ({unknown}) as e:")

@@ -75,9 +75,10 @@ def ledger_create(
     client = authenticated_client()
     try:
         ledger = manager.create_ledger(client, name, description=description, private=private)
-    except (httpx.ConnectError, httpx.ConnectTimeout):
+    except (httpx.ConnectError, httpx.ConnectTimeout, httpx.ProxyError):
         # No request left the machine (refused, DNS failure), so nothing was
         # created: "could not reach the server", not an unknown outcome (w5/368).
+        # A proxy that refused the tunnel never forwarded it either (w5/519).
         raise
     except (httpx.TimeoutException, httpx.TransportError, UnreadableSuccess, GatewayTimeout) as e:
         raise unknown_write_outcome(f"Creating ledger '{name}'", e) from e
