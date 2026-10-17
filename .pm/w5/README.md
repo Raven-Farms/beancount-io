@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [496 — Native `check --json` prints `{"errors": []}` or nothing while exiting 1](./496.md)
 - [497 — A load-cache path inside an include glob breaks every later command](./497.md)
 - [498 — `doctor region --conversion value` rounds the tree, disagreeing with `Net Income`](./498.md)
 - [499 — `bea format` refuses a ledger not named `.bean`/`.beancount`](./499.md)
