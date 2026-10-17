@@ -510,6 +510,19 @@ class TestFirstQueryWalkthrough(unittest.TestCase):
         self.assertEqual(rows[0][0], "Expenses:Food:Groceries")
 
 
+class TestDedupConvention(unittest.TestCase):
+    def test_the_lot_example_hashes_to_the_id_bea_writes(self):
+        # bea hashes a source posting's lot with its units (w5/349); the
+        # documented grammar importers follow must give the same id (w5/555).
+        text = (SUITE / "beancount-import" / "references" / "dedup.md").read_text(encoding="utf-8")
+        example = re.search(r'With a lot \([^)]*\): `([^`]+)` → `import-id: "csv:sha256:([0-9a-f]{16})"`', text)
+        self.assertIsNotNone(example, "dedup.md must show a lot-bearing example")
+        hashed, written = example.groups()
+        self.assertEqual(hashed, "2026-05-07|10 AAPL {100 USD}|BUY AAPL|Assets:Broker:AAPL")
+        self.assertEqual(hashlib.sha256(hashed.encode()).hexdigest()[:16], written)
+        self.assertEqual(written, "d11701f46efbd599")
+
+
 class TestBeaRecipes(unittest.TestCase):
     """Execute the shipped Markdown recipes against isolated synthetic books."""
 

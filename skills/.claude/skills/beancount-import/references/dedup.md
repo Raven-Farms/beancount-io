@@ -26,7 +26,7 @@ Hash input is the UTF-8 string:
 ```
 
 - `date` — ISO `YYYY-MM-DD`.
-- `amount` — the **ledger-sign** amount followed by a space and its commodity: `-54.20 USD`. Write the exact value with trailing zeros stripped and no thousands separators, so the spellings of one amount (`-54.2`, `-54.20`, `-54.200`) all render `-54.2 USD`, and never in scientific notation (`100`, not `1E+2`). The exact value and the commodity keep distinct rows distinct: rounding would give `-0.001 ETH` and `-0.002 ETH` the same input, and dropping the commodity would do the same for `-1 ETH` and `-1 BTC`. A transaction with several source postings joins them with `+` in sorted order: `-1 BTC+-1 ETH`.
+- `amount` — the **ledger-sign** amount followed by a space and its commodity: `-54.20 USD`. Write the exact value with trailing zeros stripped and no thousands separators, so the spellings of one amount (`-54.2`, `-54.20`, `-54.200`) all render `-54.2 USD`, and never in scientific notation (`100`, not `1E+2`). The exact value and the commodity keep distinct rows distinct: rounding would give `-0.001 ETH` and `-0.002 ETH` the same input, and dropping the commodity would do the same for `-1 ETH` and `-1 BTC`. A transaction with several source postings joins them with `+` in sorted order: `-1 BTC+-1 ETH`. A source posting held at cost or priced adds its lot right after its units, as the ledger writes it: the per-unit cost and its commodity in braces, with its label when it has one (`10 AAPL {100 USD}`, `10 AAPL {100 USD, "lot-a"}`), then its price (`-10 AAPL {100 USD} @ 120 USD`), every number in the same exact form. So two same-day buys of `10 AAPL` at 100 and 120 USD are two rows. A cost the posting leaves open (`{}`, a currency or date alone) adds nothing. Ids hashed from units alone, written before lots counted, stay **lookup-only** keys: `bea import` matches them, but only against the same lot.
 - `description` — the **raw** row description (not the cleaned payee), uppercased, runs of whitespace collapsed to one space, leading/trailing whitespace stripped, then Unicode-normalized to **NFC**. Raw, because payee-cleanup rules may improve over time and must not change hashes; NFC, because the same description can arrive decomposed in one export and composed in the next, and the two must hash alike. Normalize *after* uppercasing — uppercasing decomposed text can itself emit a non-canonical form.
 - `source-account` — the full account name in NFC, e.g. `Assets:Bank:Checking`.
 
@@ -40,7 +40,7 @@ Otherwise `STARBUCKS / CARD PURCHASE` and `PEETS COFFEE / CARD PURCHASE` for the
 
 Take the SHA-256 hex digest, keep the **first 16 hex chars** (64 bits — collision-safe at personal-ledger scale, short enough to read).
 
-Example: `2026-05-07|-54.2 USD|TRADER JOES #123 SEATTLE WA|Assets:Bank:Checking` → `import-id: "csv:sha256:<first-16-of-sha256>"`. With a payee column reading `Store`: `2026-05-07|-54.2 USD|STORE|TRADER JOES #123 SEATTLE WA|Assets:Bank:Checking`.
+Example: `2026-05-07|-54.2 USD|TRADER JOES #123 SEATTLE WA|Assets:Bank:Checking` → `import-id: "csv:sha256:<first-16-of-sha256>"`. With a payee column reading `Store`: `2026-05-07|-54.2 USD|STORE|TRADER JOES #123 SEATTLE WA|Assets:Bank:Checking`. With a lot (an importer's `BUY AAPL` row posting `10 AAPL {100 USD}` to its source account): `2026-05-07|10 AAPL {100 USD}|BUY AAPL|Assets:Broker:AAPL` → `import-id: "csv:sha256:d11701f46efbd599"`.
 
 Compute it honestly (e.g. `printf '%s' '<input>' | shasum -a 256 | cut -c1-16`) — never fabricate a plausible-looking hash.
 
