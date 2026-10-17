@@ -29,10 +29,13 @@ class _SingleValueParser(_OptionParser):
             return value
         earlier_name, earlier = self._given.setdefault(option.dest, (option_name, value))
         if earlier != value:
-            command = self.ctx.command.name if self.ctx is not None else None
+            # `add price` alone takes the quote in --amount; `list price` has
+            # no --amount to point at (w5/597).
+            parent = self.ctx.parent if self.ctx is not None else None
+            command = (parent.command.name if parent is not None else None, self.ctx.command.name if self.ctx else None)
             hint = (
                 " Both name the commodity being priced; the quote currency belongs in --amount."
-                if command == "price" and option.dest == "currency"
+                if command == ("add", "price") and option.dest == "currency"
                 else ""
             )
             raise UsageError(
