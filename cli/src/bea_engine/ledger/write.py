@@ -1409,15 +1409,42 @@ def top_root(file: Path) -> Path | None:
     return root
 
 
+#: What a leaf reads from the ledger that includes it: an account opened, a
+#: plugin, or an option that changes how entries read (a title does not).
+_DEFINITION = re.compile(
+    rb'^(?:\d{4}[-/]\d{2}[-/]\d{2}[ \t]+open[ \t]|plugin[ \t]|option[ \t]+"(?!title"|render_commas")[a-z_]+")',
+    re.MULTILINE,
+)
+
+
+def defines_for(file: Path, root: Path) -> bool:
+    """Whether the ledger including `file` defines what `file` reads, which makes `file` its leaf.
+
+    A per-year file reads the accounts its root opens. A working ledger that a
+    Fava or forecast overlay includes reads nothing from the overlay, which
+    only adds to it: taken for its root, the overlay's forecast entries
+    counted in validation and dedupe, a wrong balance was written and a real
+    bank row skipped as a duplicate (w5/578). When the closures cannot be
+    read, the leaf answer stands.
+    """
+    try:
+        around = LedgerSnapshot.capture(root).contents
+        own = LedgerSnapshot.capture(file).contents
+    except Exception:  # noqa: BLE001 - unreadable here is reported by the load itself
+        return True
+    return any(_DEFINITION.search(content) for path, content in around.items() if path not in own)
+
+
 def root_read_hint(file: Path) -> str | None:
     """For a read that failed on an included leaf: the root to read instead, or None.
 
     `check` and the reads refused a per-year file with `Pass --allow-errors`,
     which answers for part of the ledger, never naming the root that loads
-    the accounts it uses (w5/348).
+    the accounts it uses (w5/348). A file that reads nothing from its
+    includer is no leaf (w5/578).
     """
     root = top_root(file)
-    if root is None:
+    if root is None or not defines_for(file, root):
         return None
     return (
         f"{file.name} is included by {root}; on its own it lacks the accounts and options that root provides. "
@@ -1443,7 +1470,7 @@ def write_through_root(file: Path, into: Path | None) -> tuple[Path, Path | None
     # what a balance or a close contradicts, what import dedupes against —
     # stayed out of the check (w5/346). Climb to the file nothing includes.
     root = top_root(file)
-    if root is None:
+    if root is None or not defines_for(file, root):
         return file, into
     note(f"{file.name} is included by {root}; the write goes to {file.name} and is checked against that whole ledger.")
     return root, Path(os.path.relpath(file.resolve(), root.parent))
