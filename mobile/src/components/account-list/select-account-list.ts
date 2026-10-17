@@ -51,6 +51,51 @@ export const CATEGORY_SIGN: Record<CategoryKey, 1 | -1> = {
   expenses: 1,
 };
 
+/**
+ * Which way a change in a category moves net worth. Assets and Liabilities
+ * make it up; Income, Expenses and Equity mirror it, because every posting
+ * balances: earning income or incurring an expense moves the other side. An
+ * account page colors a change by `change * NET_WORTH_SIGN[category]`, while
+ * every figure keeps the sign the ledger holds (w0/033).
+ */
+export const NET_WORTH_SIGN: Record<CategoryKey, 1 | -1> = {
+  assets: 1,
+  liabilities: 1,
+  equity: -1,
+  income: -1,
+  expenses: -1,
+};
+
+/** A ledger's root names (`option "name_assets"` and friends), by category. */
+export type CategoryRootNames = Partial<
+  Record<CategoryKey, string | null | undefined>
+>;
+
+const DEFAULT_ROOT_NAMES: Record<CategoryKey, string> = {
+  assets: "Assets",
+  liabilities: "Liabilities",
+  equity: "Equity",
+  income: "Income",
+  expenses: "Expenses",
+};
+
+/**
+ * The category an account belongs to by its root segment, honoring the
+ * ledger's renamed roots and falling back to Beancount's defaults while they
+ * load. Null for a root that is none of the five.
+ */
+export function accountCategory(
+  account: string,
+  roots: CategoryRootNames = {},
+): CategoryKey | null {
+  const root = account.split(":")[0];
+  return (
+    CATEGORY_KEYS.find(
+      (key) => (roots[key] || DEFAULT_ROOT_NAMES[key]) === root,
+    ) ?? null
+  );
+}
+
 type RawChild = {
   account: string;
   balance_children: Record<string, number | string>;

@@ -96,24 +96,43 @@ export function activeScrubIndex(scrubIndex: number, count: number): number {
 }
 
 /**
- * Whether the scrubbed point is up on the period's opening balance — `null`
- * while no finger is down, so the chart keeps its resting direction.
+ * Whether a value reads as good news against the period's opening balance.
+ * With `netWorthSign` 1 (Assets, Liabilities, net worth) that is at or above
+ * it; with -1 (Income, Expenses, Equity, which mirror net worth) at or below
+ * it, so earning income or a refunded expense reads favorable and spending
+ * does not (w0/033). An unchanged value is favorable either way, like a
+ * zero change.
+ */
+export function trendFavorable(
+  value: number,
+  opening: number,
+  netWorthSign: 1 | -1,
+): boolean {
+  "worklet";
+  return netWorthSign === 1 ? value >= opening : value <= opening;
+}
+
+/**
+ * `trendFavorable` for the scrubbed point — `null` while no finger is down, so
+ * the chart keeps its resting direction.
  *
  * `openingY` is the opening balance projected through the plot's y scale, the
  * same baseline the change row measures from. It is *not* the first plotted
  * point: that is a closing balance, and an ALL window opens at zero below it.
- * SVG y grows downward, so "at or above the opening" is the smaller-or-equal
- * y — matching the change row's `change >= 0` reading green. A stale index
- * clamps to the last point exactly as the cursor does.
+ * SVG y grows downward, so the plotted y is negated to compare as a value. A
+ * stale index clamps to the last point exactly as the cursor does.
  */
-export function scrubTrendUp(
+export function scrubTrendFavorable(
   scrubIndex: number,
   pointYs: number[],
   openingY: number,
+  netWorthSign: 1 | -1,
 ): boolean | null {
   "worklet";
   const index = activeScrubIndex(scrubIndex, pointYs.length);
-  return index === SCRUB_IDLE ? null : pointYs[index] <= openingY;
+  return index === SCRUB_IDLE
+    ? null
+    : trendFavorable(-pointYs[index], -openingY, netWorthSign);
 }
 
 /** The value under the cursor, or the latest one at rest. Zero if there is no series. */

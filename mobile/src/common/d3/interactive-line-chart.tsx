@@ -42,7 +42,8 @@ import {
   scrubbedValue,
   shouldTickHaptic,
   shownScrubIndex,
-  scrubTrendUp,
+  scrubTrendFavorable,
+  trendFavorable,
 } from "./scrub";
 import { LEADING_TEXT_ALIGN, LTR_PLOT } from "@/common/rtl";
 import { ChartErrorBoundary } from "./chart-chrome";
@@ -114,6 +115,14 @@ type InteractiveLineChartProps = {
    * whole chart — Home's pager — needs this to size its pages.
    */
   onHeaderLayout?: (height: number) => void;
+  /**
+   * Which way a change moves net worth, and so which way the trend color
+   * reads: 1 (the default) when a rising value raises it — net worth, Assets,
+   * Liabilities — and -1 for Income, Expenses and Equity, where earning or a
+   * refund lowers the balance. Only the color follows it; every figure stays
+   * as the ledger holds it.
+   */
+  netWorthSign?: 1 | -1;
 };
 
 const CHART_HEIGHT = 190;
@@ -485,6 +494,7 @@ function InteractiveLineChart({
   height = CHART_HEIGHT,
   placeholder,
   onHeaderLayout,
+  netWorthSign = 1,
 }: InteractiveLineChartProps): JSX.Element {
   const theme = useTheme().colorTheme;
   const styles = useThemeStyle(getStyles);
@@ -634,9 +644,14 @@ function InteractiveLineChart({
   // What keeps that honest is the gate: this fires when the scrub *crosses the
   // baseline*, not per frame and not per point. Every render it causes is a
   // color change that had to be painted anyway.
-  const [scrubUp, setScrubUp] = useState<boolean | null>(null);
-  const restingUp = (numbers[count - 1] ?? 0) >= baseline;
-  const lineColor = (scrubUp ?? restingUp) ? theme.success : theme.error;
+  const [scrubFavorable, setScrubFavorable] = useState<boolean | null>(null);
+  const restingFavorable = trendFavorable(
+    numbers[count - 1] ?? 0,
+    baseline,
+    netWorthSign,
+  );
+  const lineColor =
+    (scrubFavorable ?? restingFavorable) ? theme.success : theme.error;
 
   // Read off the plotted y positions rather than the values behind them: the
   // cursor worklets already hold `pointYs`, so asking it here costs no second
@@ -645,10 +660,10 @@ function InteractiveLineChart({
   // every unrelated re-render of the card. Measured against `openingY`, the
   // same baseline as the change row, not the first plotted close.
   useAnimatedReaction(
-    () => scrubTrendUp(scrub.value, pointYs, openingY),
-    (up, previous) => {
-      if (up !== previous) {
-        scheduleOnRN(setScrubUp, up);
+    () => scrubTrendFavorable(scrub.value, pointYs, openingY, netWorthSign),
+    (favorable, previous) => {
+      if (favorable !== previous) {
+        scheduleOnRN(setScrubFavorable, favorable);
       }
     },
   );

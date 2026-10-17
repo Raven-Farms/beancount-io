@@ -23,6 +23,10 @@ import { useAccountReport } from "@/screens/accounts-screen/hooks/use-account-re
 import { useTrialBalance } from "@/screens/accounts-screen/hooks/use-trial-balance";
 import { selectTrialBalanceAccount } from "@/components/account-list/select-trial-balance";
 import {
+  NET_WORTH_SIGN,
+  accountCategory,
+} from "@/components/account-list/select-account-list";
+import {
   ACCOUNT_JOURNAL_PAGE_SIZE,
   useAccountJournal,
 } from "@/screens/accounts-screen/hooks/use-account-journal";
@@ -125,9 +129,23 @@ const AccountDetailScreenImpl = ({
   // comparing that to "dark" gave every system-theme user the light indicator.
   const { colorTheme: theme, name: themeName } = useTheme();
 
-  const { currencies, refetch: ledgerMetaRefetch } =
-    useLedgerReadContext(ledgerId);
+  const {
+    currencies,
+    data: ledgerReadData,
+    refetch: ledgerMetaRefetch,
+  } = useLedgerReadContext(ledgerId);
   const currency = getPrimaryCurrency(currencies);
+  // Income, Expenses and Equity mirror net worth, so their changes color the
+  // other way round; the figures themselves keep the ledger's sign (w0/033).
+  const roots = ledgerReadData?.getLedger.options;
+  const category = accountCategory(account, {
+    assets: roots?.nameAssets,
+    liabilities: roots?.nameLiabilities,
+    equity: roots?.nameEquity,
+    income: roots?.nameIncome,
+    expenses: roots?.nameExpenses,
+  });
+  const netWorthSign = category ? NET_WORTH_SIGN[category] : 1;
 
   const {
     data: reportData,
@@ -355,10 +373,15 @@ const AccountDetailScreenImpl = ({
           ? () => openTransactionDetail(router, entry, ledgerId, account, guest)
           : undefined;
       return (
-        <AccountEntryRow row={item} currency={currency} onPress={onPress} />
+        <AccountEntryRow
+          row={item}
+          currency={currency}
+          onPress={onPress}
+          netWorthSign={netWorthSign}
+        />
       );
     },
-    [currency, itemsByKey, router, ledgerId, account, guest],
+    [currency, itemsByKey, router, ledgerId, account, guest, netWorthSign],
   );
 
   const renderSectionHeader = useCallback(
@@ -392,6 +415,7 @@ const AccountDetailScreenImpl = ({
             // it back to a tile.
             loading={reportPending || unitsReportPending || valuationPending}
             error={Boolean(unitsCurrency ? unitsReportError : reportError)}
+            netWorthSign={netWorthSign}
           />
         </View>
         <Text style={styles.sectionTitle}>{t("transactions")}</Text>
@@ -412,6 +436,7 @@ const AccountDetailScreenImpl = ({
       styles.sectionTitle,
       styles.accountPath,
       account,
+      netWorthSign,
     ],
   );
 

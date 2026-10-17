@@ -26,7 +26,6 @@ Mobile QA findings from 2026-10-15, triaged the same day. Order is suggested, hi
 **Minors: wrong or misleading output**
 
 - [036 — Profile accepts usernames sign-up forbids; nothing server-side checks them](./036.md) — mobile QA 2026-10-15 (mobile + backend-v2)
-- [033 — Income and Expenses account pages color by raw sign: salary red, spending green](./033.md) — mobile QA 2026-10-15
 - [034 — Cash flow chart draws a deficit period as money from nowhere; same-named groups both read "Crypto"](./034.md) — mobile QA 2026-10-15
 - [045 — In Persian (RTL), text inputs stay pinned to the physical left (Profile, Payee)](./045.md) — mobile QA 2026-10-15
 - [039 — Marking a merchant Recurring labels two identical monthly payments "Irregular"](./039.md) — mobile QA 2026-10-15
