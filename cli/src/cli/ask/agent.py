@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
 
-from pydantic_ai import Agent, ModelRetry, RunContext
+from pydantic_ai import Agent, AgentRunResult, ModelRetry, RunContext
 from pydantic_ai.exceptions import AgentRunError, ModelAPIError, ModelHTTPError, UsageLimitExceeded
 from pydantic_ai.messages import ModelMessage, ModelResponse
 from pydantic_ai.models import ModelRequestParameters
@@ -118,6 +118,19 @@ TOOL_CALLS_LIMIT = 10
 #: fits (w3/446). An answer here is prose about a ledger — a few paragraphs, or a
 #: short table — so this is generous for the job and small against a window.
 MAX_OUTPUT_TOKENS = 1500
+
+
+#: Said when an answer stopped at `MAX_OUTPUT_TOKENS`: its text ends wherever
+#: the cap fell, mid-figure included, and printed as if complete (w5/546).
+CUT_OFF_NOTICE = "The answer reached the per-answer limit and was cut off; ask a narrower question."
+
+
+def cut_off(result: AgentRunResult[str]) -> bool:
+    """Whether a run's final answer stopped at the output cap instead of finishing."""
+    for message in reversed(result.all_messages()):
+        if isinstance(message, ModelResponse):
+            return getattr(message, "finish_reason", None) == "length"
+    return False
 
 
 def usage_limits() -> UsageLimits:

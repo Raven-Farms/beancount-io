@@ -1808,7 +1808,8 @@ of hosted requests and ledger queries; a model that keeps querying without
 answering stops there, reports what was written (nothing, unless you approved a
 write), and costs no more.
 Each answer also carries an explicit output cap rather than reserving the
-model's default allowance.
+model's default allowance. An answer that reaches it is printed with a notice
+that it was cut off, and `--print` then exits **1**: ask a narrower question.
 
 A query's result reaches the assistant as rows with a row count, the relation
 they came from, and a zero written as `0` — a total that nets to zero is a zero,

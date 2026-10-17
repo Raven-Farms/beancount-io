@@ -13,7 +13,7 @@ from typing import Annotated
 import typer
 
 from cli import context, output
-from cli.errors import UsageError
+from cli.errors import BeaError, UsageError
 from cli.utils import IntoPath
 
 _MISSING_EXTRA = (
@@ -60,7 +60,7 @@ def ask(
     # The missing extra is checked before the credential: without it the
     # command cannot run at all, and "log in first" would be misleading advice.
     try:
-        from cli.ask.agent import BqlDeps, make_agent, translated_failures, usage_limits
+        from cli.ask.agent import CUT_OFF_NOTICE, BqlDeps, cut_off, make_agent, translated_failures, usage_limits
     except ImportError as exc:
         raise UsageError(_MISSING_EXTRA) from exc
 
@@ -106,6 +106,9 @@ def ask(
         # would otherwise emit one itself — an OSC 8 hyperlink whose visible
         # text the model chose — so a link is rendered with its target shown.
         console.print(Markdown(inert_text(result.output), hyperlinks=False))
+        if cut_off(result):
+            # Part of an answer is not the answer: a nonzero exit says so (w5/546).
+            raise BeaError(CUT_OFF_NOTICE)
     else:
         from cli.ask.repl import print_welcome, run_repl
 

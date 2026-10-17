@@ -245,7 +245,14 @@ def print_welcome() -> None:
 def run_repl(agent: Agent[BqlDeps, str], deps: BqlDeps, *, default_input: str | None = None) -> None:
     from pydantic_ai import capture_run_messages
 
-    from cli.ask.agent import WritePermission, translated_failures, usage_limits, written_so_far
+    from cli.ask.agent import (
+        CUT_OFF_NOTICE,
+        WritePermission,
+        cut_off,
+        translated_failures,
+        usage_limits,
+        written_so_far,
+    )
 
     hint = random.choice(_PLACEHOLDER_HINTS)
     first_turn = [True]
@@ -344,6 +351,8 @@ def run_repl(agent: Agent[BqlDeps, str], deps: BqlDeps, *, default_input: str | 
             # No OSC 8 hyperlink: its visible text is the model's, so it could read
             # one address and open another. The target is printed beside it instead.
             console.print(Markdown(inert_text(result.output), hyperlinks=False))
+            if cut_off(result):
+                console.print(Text(CUT_OFF_NOTICE, style="yellow"))
     finally:
         turn_loop.close()
 
