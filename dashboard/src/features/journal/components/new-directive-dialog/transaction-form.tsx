@@ -11,6 +11,7 @@ import {
   FormControl,
   FormField,
   FormItem,
+  FormLabel,
   FormMessage,
 } from "@/common/components/ui/form";
 import {
@@ -324,9 +325,9 @@ export function TransactionForm({ ledgerId, onSuccess }: TransactionFormProps) {
             name="date"
             render={({ field }) => (
               <FormItem>
+                <FormLabel className="sr-only">{t("journal.date")}</FormLabel>
                 <FormControl>
                   <DatePicker
-                    id="date"
                     value={field.value}
                     onChange={(newDate) => field.onChange(newDate)}
                     required
@@ -384,6 +385,7 @@ export function TransactionForm({ ledgerId, onSuccess }: TransactionFormProps) {
             name="payee"
             render={({ field }) => (
               <FormItem className="flex-1" data-transaction-payee>
+                <FormLabel className="sr-only">{t("journal.payee")}</FormLabel>
                 <FormControl>
                   <PayeesCombobox
                     ledgerId={ledgerId}
@@ -402,6 +404,9 @@ export function TransactionForm({ ledgerId, onSuccess }: TransactionFormProps) {
             name="narration"
             render={({ field }) => (
               <FormItem className="flex-1">
+                <FormLabel className="sr-only">
+                  {t("journal.narration")}
+                </FormLabel>
                 <FormControl>
                   <NarrationsCombobox
                     ledgerId={ledgerId}
@@ -439,6 +444,11 @@ export function TransactionForm({ ledgerId, onSuccess }: TransactionFormProps) {
                         name={`postings.${index}.account`}
                         render={({ field }) => (
                           <FormItem className="flex-2">
+                            <FormLabel className="sr-only">
+                              {t("journal.postingAccount", {
+                                number: index + 1,
+                              })}
+                            </FormLabel>
                             <FormControl>
                               <AccountCombobox
                                 ledgerId={ledgerId}
@@ -457,9 +467,13 @@ export function TransactionForm({ ledgerId, onSuccess }: TransactionFormProps) {
                         name={`postings.${index}.amount`}
                         render={({ field }) => (
                           <FormItem className="flex-1 relative">
+                            <FormLabel className="sr-only">
+                              {t("journal.postingAmount", {
+                                number: index + 1,
+                              })}
+                            </FormLabel>
                             <FormControl>
                               <Input
-                                id={`amount-${index}`}
                                 type="number"
                                 step="any"
                                 placeholder={
@@ -490,6 +504,11 @@ export function TransactionForm({ ledgerId, onSuccess }: TransactionFormProps) {
                         name={`postings.${index}.currency`}
                         render={({ field }) => (
                           <FormItem className="w-48">
+                            <FormLabel className="sr-only">
+                              {t("journal.postingCurrency", {
+                                number: index + 1,
+                              })}
+                            </FormLabel>
                             <FormControl>
                               <CurrencyCombobox
                                 ledgerId={ledgerId}

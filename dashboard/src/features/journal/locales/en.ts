@@ -446,6 +446,37 @@ const enJournal: Record<string, TranslationEntry> = {
     description:
       "Accessible name for removing a numbered transaction posting row",
   },
+  "journal.payee": {
+    message: "Payee",
+    description: "Label for the payee field",
+  },
+  "journal.accountLabel": {
+    message: "Account",
+    description: "Label for the account field of a directive form",
+  },
+  "journal.amountLabel": {
+    message: "Amount",
+    description: "Label for the amount field of a directive form",
+  },
+  "journal.currencyLabel": {
+    message: "Currency",
+    description: "Label for the currency field of a directive form",
+  },
+  "journal.postingAccount": {
+    message: "Posting {number} account",
+    description:
+      "Accessible label for a numbered transaction posting's account field",
+  },
+  "journal.postingAmount": {
+    message: "Posting {number} amount",
+    description:
+      "Accessible label for a numbered transaction posting's amount field",
+  },
+  "journal.postingCurrency": {
+    message: "Posting {number} currency",
+    description:
+      "Accessible label for a numbered transaction posting's currency field",
+  },
   "journal.autoAmount": {
     message: "auto",
     description: "Label for an automatically balanced amount",

@@ -429,6 +429,37 @@ const jaJournal: Record<string, TranslationEntry> = {
     description:
       "Accessible name for removing a numbered transaction posting row",
   },
+  "journal.payee": {
+    message: "支払先",
+    description: "Label for the payee field",
+  },
+  "journal.accountLabel": {
+    message: "勘定科目",
+    description: "Label for the account field of a directive form",
+  },
+  "journal.amountLabel": {
+    message: "金額",
+    description: "Label for the amount field of a directive form",
+  },
+  "journal.currencyLabel": {
+    message: "通貨",
+    description: "Label for the currency field of a directive form",
+  },
+  "journal.postingAccount": {
+    message: "仕訳行 {number} の勘定科目",
+    description:
+      "Accessible label for a numbered transaction posting's account field",
+  },
+  "journal.postingAmount": {
+    message: "仕訳行 {number} の金額",
+    description:
+      "Accessible label for a numbered transaction posting's amount field",
+  },
+  "journal.postingCurrency": {
+    message: "仕訳行 {number} の通貨",
+    description:
+      "Accessible label for a numbered transaction posting's currency field",
+  },
   "journal.autoAmount": {
     message: "自動",
     description: "Label for an automatically balanced amount",

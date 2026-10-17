@@ -431,6 +431,37 @@ const zhJournal: Record<string, TranslationEntry> = {
     description:
       "Accessible name for removing a numbered transaction posting row",
   },
+  "journal.payee": {
+    message: "收款人",
+    description: "Label for the payee field",
+  },
+  "journal.accountLabel": {
+    message: "账户",
+    description: "Label for the account field of a directive form",
+  },
+  "journal.amountLabel": {
+    message: "金额",
+    description: "Label for the amount field of a directive form",
+  },
+  "journal.currencyLabel": {
+    message: "货币",
+    description: "Label for the currency field of a directive form",
+  },
+  "journal.postingAccount": {
+    message: "分录 {number} 账户",
+    description:
+      "Accessible label for a numbered transaction posting's account field",
+  },
+  "journal.postingAmount": {
+    message: "分录 {number} 金额",
+    description:
+      "Accessible label for a numbered transaction posting's amount field",
+  },
+  "journal.postingCurrency": {
+    message: "分录 {number} 货币",
+    description:
+      "Accessible label for a numbered transaction posting's currency field",
+  },
   "journal.autoAmount": {
     message: "汽车",
     description: "Label for an automatically balanced amount",

@@ -428,6 +428,37 @@ const koJournal: Record<string, TranslationEntry> = {
     description:
       "Accessible name for removing a numbered transaction posting row",
   },
+  "journal.payee": {
+    message: "수취인",
+    description: "Label for the payee field",
+  },
+  "journal.accountLabel": {
+    message: "계정",
+    description: "Label for the account field of a directive form",
+  },
+  "journal.amountLabel": {
+    message: "금액",
+    description: "Label for the amount field of a directive form",
+  },
+  "journal.currencyLabel": {
+    message: "통화",
+    description: "Label for the currency field of a directive form",
+  },
+  "journal.postingAccount": {
+    message: "분개 {number} 계정",
+    description:
+      "Accessible label for a numbered transaction posting's account field",
+  },
+  "journal.postingAmount": {
+    message: "분개 {number} 금액",
+    description:
+      "Accessible label for a numbered transaction posting's amount field",
+  },
+  "journal.postingCurrency": {
+    message: "분개 {number} 통화",
+    description:
+      "Accessible label for a numbered transaction posting's currency field",
+  },
   "journal.autoAmount": {
     message: "자동",
     description: "Label for an automatically balanced amount",

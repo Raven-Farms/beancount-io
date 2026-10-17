@@ -447,6 +447,37 @@ const bgJournal: Record<string, TranslationEntry> = {
     description:
       "Accessible name for removing a numbered transaction posting row",
   },
+  "journal.payee": {
+    message: "Получател",
+    description: "Label for the payee field",
+  },
+  "journal.accountLabel": {
+    message: "Сметка",
+    description: "Label for the account field of a directive form",
+  },
+  "journal.amountLabel": {
+    message: "Сума",
+    description: "Label for the amount field of a directive form",
+  },
+  "journal.currencyLabel": {
+    message: "Валута",
+    description: "Label for the currency field of a directive form",
+  },
+  "journal.postingAccount": {
+    message: "Сметка на запис {number}",
+    description:
+      "Accessible label for a numbered transaction posting's account field",
+  },
+  "journal.postingAmount": {
+    message: "Сума на запис {number}",
+    description:
+      "Accessible label for a numbered transaction posting's amount field",
+  },
+  "journal.postingCurrency": {
+    message: "Валута на запис {number}",
+    description:
+      "Accessible label for a numbered transaction posting's currency field",
+  },
   "journal.autoAmount": {
     message: "авто",
     description: "Label for an automatically balanced amount",

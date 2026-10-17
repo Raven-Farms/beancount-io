@@ -16,6 +16,7 @@ import {
   FormControl,
   FormField,
   FormItem,
+  FormLabel,
   FormMessage,
 } from "@/common/components/ui/form";
 import { DatePicker } from "@/common/components/ui/date-picker";
@@ -129,9 +130,9 @@ export function OpenAccountForm({ ledgerId, onSuccess }: OpenAccountFormProps) {
             name="date"
             render={({ field }) => (
               <FormItem>
+                <FormLabel className="sr-only">{t("journal.date")}</FormLabel>
                 <FormControl>
                   <DatePicker
-                    id="date"
                     value={field.value}
                     onChange={(d) => field.onChange(d)}
                     required
@@ -147,6 +148,9 @@ export function OpenAccountForm({ ledgerId, onSuccess }: OpenAccountFormProps) {
             name="account"
             render={({ field }) => (
               <FormItem className="flex-1">
+                <FormLabel className="sr-only">
+                  {t("journal.accountLabel")}
+                </FormLabel>
                 <FormControl>
                   <Input
                     placeholder={

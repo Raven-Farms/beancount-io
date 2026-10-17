@@ -11,6 +11,7 @@ import {
   FormControl,
   FormField,
   FormItem,
+  FormLabel,
   FormMessage,
 } from "@/common/components/ui/form";
 import { DatePicker } from "@/common/components/ui/date-picker";
@@ -146,9 +147,9 @@ export function BalanceForm({ ledgerId, onSuccess }: BalanceFormProps) {
             name="date"
             render={({ field }) => (
               <FormItem>
+                <FormLabel className="sr-only">{t("journal.date")}</FormLabel>
                 <FormControl>
                   <DatePicker
-                    id="date"
                     value={field.value}
                     onChange={(newDate) => field.onChange(newDate)}
                     required
@@ -164,6 +165,9 @@ export function BalanceForm({ ledgerId, onSuccess }: BalanceFormProps) {
             name="account"
             render={({ field }) => (
               <FormItem className="flex-1">
+                <FormLabel className="sr-only">
+                  {t("journal.accountLabel")}
+                </FormLabel>
                 <FormControl>
                   <AccountCombobox
                     ledgerId={ledgerId}
@@ -182,9 +186,11 @@ export function BalanceForm({ ledgerId, onSuccess }: BalanceFormProps) {
             name="amount"
             render={({ field }) => (
               <FormItem className="w-32">
+                <FormLabel className="sr-only">
+                  {t("journal.amountLabel")}
+                </FormLabel>
                 <FormControl>
                   <Input
-                    id="amount"
                     type="number"
                     step="any"
                     placeholder={t("journal.amountPlaceholder")}
@@ -201,6 +207,9 @@ export function BalanceForm({ ledgerId, onSuccess }: BalanceFormProps) {
             name="currency"
             render={({ field }) => (
               <FormItem className="w-48">
+                <FormLabel className="sr-only">
+                  {t("journal.currencyLabel")}
+                </FormLabel>
                 <FormControl>
                   <CurrencyCombobox
                     ledgerId={ledgerId}

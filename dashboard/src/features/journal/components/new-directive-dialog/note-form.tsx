@@ -11,6 +11,7 @@ import {
   FormControl,
   FormField,
   FormItem,
+  FormLabel,
   FormMessage,
 } from "@/common/components/ui/form";
 import { format } from "date-fns";
@@ -120,9 +121,9 @@ export function NoteForm({ ledgerId, onSuccess }: NoteFormProps) {
             name="date"
             render={({ field }) => (
               <FormItem>
+                <FormLabel className="sr-only">{t("journal.date")}</FormLabel>
                 <FormControl>
                   <DatePicker
-                    id="date"
                     value={field.value}
                     onChange={(newDate) => field.onChange(newDate)}
                     required
@@ -138,6 +139,9 @@ export function NoteForm({ ledgerId, onSuccess }: NoteFormProps) {
             name="account"
             render={({ field }) => (
               <FormItem className="flex-1">
+                <FormLabel className="sr-only">
+                  {t("journal.accountLabel")}
+                </FormLabel>
                 <FormControl>
                   <AccountCombobox
                     ledgerId={ledgerId}
@@ -157,9 +161,11 @@ export function NoteForm({ ledgerId, onSuccess }: NoteFormProps) {
           name="content"
           render={({ field }) => (
             <FormItem>
+              <FormLabel className="sr-only">
+                {t("journal.noteContent")}
+              </FormLabel>
               <FormControl>
                 <Textarea
-                  id="content"
                   placeholder={t("journal.noteContent")}
                   rows={4}
                   {...field}

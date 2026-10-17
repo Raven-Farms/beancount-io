@@ -449,6 +449,37 @@ const faJournal: Record<string, TranslationEntry> = {
     description:
       "Accessible name for removing a numbered transaction posting row",
   },
+  "journal.payee": {
+    message: "دریافت‌کننده",
+    description: "Label for the payee field",
+  },
+  "journal.accountLabel": {
+    message: "حساب",
+    description: "Label for the account field of a directive form",
+  },
+  "journal.amountLabel": {
+    message: "مبلغ",
+    description: "Label for the amount field of a directive form",
+  },
+  "journal.currencyLabel": {
+    message: "ارز",
+    description: "Label for the currency field of a directive form",
+  },
+  "journal.postingAccount": {
+    message: "حساب ردیف سند {number}",
+    description:
+      "Accessible label for a numbered transaction posting's account field",
+  },
+  "journal.postingAmount": {
+    message: "مبلغ ردیف سند {number}",
+    description:
+      "Accessible label for a numbered transaction posting's amount field",
+  },
+  "journal.postingCurrency": {
+    message: "ارز ردیف سند {number}",
+    description:
+      "Accessible label for a numbered transaction posting's currency field",
+  },
   "journal.autoAmount": {
     message: "خودکار",
     description: "Label for an automatically balanced amount",

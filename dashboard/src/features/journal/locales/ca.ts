@@ -462,6 +462,37 @@ const caJournal: Record<string, TranslationEntry> = {
     description:
       "Accessible name for removing a numbered transaction posting row",
   },
+  "journal.payee": {
+    message: "Beneficiari",
+    description: "Label for the payee field",
+  },
+  "journal.accountLabel": {
+    message: "Compte",
+    description: "Label for the account field of a directive form",
+  },
+  "journal.amountLabel": {
+    message: "Import",
+    description: "Label for the amount field of a directive form",
+  },
+  "journal.currencyLabel": {
+    message: "Moneda",
+    description: "Label for the currency field of a directive form",
+  },
+  "journal.postingAccount": {
+    message: "Compte de l'apunt {number}",
+    description:
+      "Accessible label for a numbered transaction posting's account field",
+  },
+  "journal.postingAmount": {
+    message: "Import de l'apunt {number}",
+    description:
+      "Accessible label for a numbered transaction posting's amount field",
+  },
+  "journal.postingCurrency": {
+    message: "Moneda de l'apunt {number}",
+    description:
+      "Accessible label for a numbered transaction posting's currency field",
+  },
   "journal.autoAmount": {
     message: "automàtic",
     description: "Label for an automatically balanced amount",
