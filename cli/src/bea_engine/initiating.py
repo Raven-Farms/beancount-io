@@ -48,7 +48,7 @@ def answer(
 
     `opening_balances` are `'ACCOUNT NUMBER'` strings for template asset or
     liability accounts. The file must not already exist; creation is atomic
-    (`os.link` of a validated candidate) so a race never overwrites.
+    (`claim_new_file` of a validated candidate) so a race never overwrites.
     """
     file = file.expanduser()
     if not file.is_absolute():
@@ -119,9 +119,11 @@ def answer(
         stopping.check()
         try:
             # Atomic creation without replacing a file another process created.
-            os.link(candidate, file)
+            ledger_write.claim_new_file(candidate, file)
         except FileExistsError as exc:
             raise ConflictError(f"Already exists: {file}; nothing was overwritten.") from exc
+        except PermissionError as exc:
+            raise AuthError(f"The filesystem refused to create {file}; nothing was written.") from exc
 
     return {
         "created": str(file),

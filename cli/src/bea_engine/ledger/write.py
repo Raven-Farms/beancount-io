@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import datetime
 import difflib
+import errno
 import fnmatch
 import glob
 import hashlib
@@ -1164,6 +1165,59 @@ def _stage_failed(file: Path, exc: OSError) -> str:
         f"Cannot write a staged copy of {file.name} in {file.parent} "
         f"({exc.strerror or type(exc).__name__}); nothing was written."
     )
+
+
+#: What `link` answers on a filesystem without hard links: macOS's exFAT and
+#: FAT say ENOTSUP, Linux's vfat EPERM.
+_NO_HARD_LINKS = frozenset(
+    code
+    for name in ("ENOTSUP", "EOPNOTSUPP", "EPERM", "EXDEV", "ENOSYS", "EMLINK")
+    if (code := getattr(errno, name, None))
+)
+
+
+def claim_new_file(candidate: Path, target: Path) -> None:
+    """Give a validated candidate the name `target`, which must not exist yet.
+
+    A hard link claims the name atomically and refuses an existing file. FAT
+    and exFAT, the filesystems of USB sticks and SD cards, have no hard links,
+    so `bea init` and every write into a new file failed there with a raw
+    `OSError: [Errno 45]` naming the staging file (w5/605). There the name is
+    claimed by exclusive creation instead, and the candidate replaces that
+    empty placeholder. `FileExistsError` and `PermissionError` reach the
+    caller as they are; anything else is said in bea's words.
+    """
+    try:
+        os.link(candidate, target)
+        return
+    except FileExistsError:
+        raise
+    except OSError as exc:
+        if exc.errno not in _NO_HARD_LINKS:
+            raise LedgerError(_create_failed(target, exc)) from exc
+    try:
+        fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    except (FileExistsError, PermissionError):
+        raise
+    except OSError as exc:
+        raise LedgerError(_create_failed(target, exc)) from exc
+    placeholder = os.fstat(fd)
+    os.close(fd)
+    try:
+        os.replace(candidate, target)
+    except BaseException as exc:
+        # Only the empty placeholder this call made is removed, never a file
+        # that took its place.
+        with suppress(OSError):
+            if os.path.samestat(placeholder, os.stat(target)):
+                os.unlink(target)
+        if isinstance(exc, OSError) and not isinstance(exc, PermissionError):
+            raise LedgerError(_create_failed(target, exc)) from exc
+        raise
+
+
+def _create_failed(target: Path, exc: OSError) -> str:
+    return f"Cannot create {target} ({exc.strerror or type(exc).__name__}); nothing was written."
 
 
 def _discard_candidate(candidate: Path) -> None:
@@ -3063,7 +3117,7 @@ def append(
             if original_stat is None:
                 stopping.check()
                 try:
-                    os.link(candidate, target)
+                    claim_new_file(candidate, target)
                 except FileExistsError as exc:
                     raise ConflictError(f"Already exists: {target}; nothing was overwritten.") from exc
                 except PermissionError as exc:
