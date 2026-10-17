@@ -135,7 +135,8 @@ def test_a_symlinked_ledger_leaves_nothing_beside_its_target(tmp_path: Path) -> 
 
     assert done.returncode == 0, done.stderr
     assert _listing(books) == ["main.bean"]
-    assert _cached(tmp_path) == ["main.bean.picklecache"]
+    # Doctor loads the path as named, as `check` does, so the cache follows the link's name (w5/568).
+    assert _cached(tmp_path) == ["link.bean.picklecache"]
     assert sorted(path.name for path in tmp_path.iterdir() if "roundtrip" in path.name) == []
 
 

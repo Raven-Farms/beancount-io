@@ -298,6 +298,12 @@ def _needs_compat(op: str, args: list[str]) -> bool:
     root = Path(positionals[0]).expanduser()
     if not root.is_file():
         return False
+    # Upstream resolves the ledger path's symlinks: its entries carried the
+    # real path, so a location under a linked folder matched nothing, and a
+    # linked root file read the includes beside its target. The helper loads
+    # the path as named, as `check` and `list` do (w5/568).
+    if op not in _SINGLE_FILE_OPS and os.path.realpath(root) != os.path.abspath(root):
+        return True
     try:
         members = [root] if op in _SINGLE_FILE_OPS else output.ledger_closure(root)
     except OSError:

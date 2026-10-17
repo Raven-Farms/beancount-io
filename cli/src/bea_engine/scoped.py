@@ -29,7 +29,7 @@ def run(op: str, argv: list[str]) -> int:
     keep_load_cache_private()
     upstream: Any = doctor
     plain_loader = upstream.loader
-    upstream.loader = _ManagedLoader(plain_loader)
+    upstream.loader = _ManagedLoader(plain_loader, argv)
     try:
         original = getattr(upstream, "render_mini_balances", None)
         if original is None:  # pragma: no cover - upstream renamed it; run unchanged
@@ -58,8 +58,9 @@ class _ManagedLoader:
     way every other command loads it; any other keeps upstream's own load.
     """
 
-    def __init__(self, plain: Any) -> None:
+    def __init__(self, plain: Any, argv: list[str]) -> None:
         self._plain = plain
+        self._argv = argv
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._plain, name)
@@ -67,11 +68,35 @@ class _ManagedLoader:
     def load_file(self, filename: Any, *args: Any, **kwargs: Any) -> Any:
         from bea_engine import managed_load
 
+        filename = _as_named(filename, self._argv)
         entry = Path(filename)
         if not managed_load.names_managed_source(entry):
             return self._plain.load_file(filename, *args, **kwargs)
         loaded = managed_load.load_with_sources(entry)
         return loaded.entries, loaded.errors, loaded.options
+
+
+def _as_named(filename: Any, argv: list[str]) -> Any:
+    """The ledger path as the command line named it, where upstream resolved its symlinks.
+
+    Upstream's doctor declares its ledger argument with `resolve_path=True`, so
+    the load read `real/books/main.bean` for `link/books/main.bean`: entries
+    carried the real path and missed every location under the link, and a
+    linked root file read the includes beside its target (w5/568). The named
+    path loads the ledger `check` and `list` read.
+    """
+    import os
+
+    if not isinstance(filename, str):
+        return filename
+    real = os.path.realpath(filename)
+    for arg in argv:
+        if arg.startswith("-"):
+            continue
+        named = os.path.abspath(os.path.expanduser(arg))
+        if named != filename and os.path.isfile(named) and os.path.realpath(named) == real:
+            return named
+    return filename
 
 
 def _invoke(upstream: Any, op: str, argv: list[str]) -> int:
