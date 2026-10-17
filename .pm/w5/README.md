@@ -204,6 +204,14 @@
 - [688 — An explicit `--pad-date` before the open now gets a looping "date the balance after the open" hint (regression from w5/513)](./688.md)
 - [689 — `--offline` still allows forwarded `bea price`, `engine enable` and a `-h`-valued cloud create (incomplete fix of w5/515)](./689.md)
 - [690 — Logout treats 504/524 as a plain failure; 521–523 are wrongly reported as "the request arrived" (incomplete fix of w5/517)](./690.md)
+- [691 — init's "Record purchases" line runs against no ledger for a non-default file name](./691.md)
+- [692 — Import before init's date blocks one account at a time; remedy skips the opening balance](./692.md)
+- [693 — init --currency X_ passes init's check, then fails with Invalid token](./693.md)
+- [694 — bea --file DIR init exits 4 "never overwrites" for an empty directory](./694.md)
+- [695 — A ~name path with no such user exits 1 "Could not determine home directory"](./695.md)
+- [696 — A 0-ready import preview still says "repeat with --apply"](./696.md)
+- [697 — Zero-sum opening balances write Equity:OpeningBalances -0 USD (regression from w5/310)](./697.md)
+- [698 — Three slips in USAGE "Creating a ledger"](./698.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
