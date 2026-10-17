@@ -168,6 +168,8 @@
 - [600 — A transfer imported from both banks is double-booked when their descriptions differ; the import skill promises a fuzzy flag that cannot fire](./600.md)
 - [601 — Migrated `<source>:sha256:` ids are matched only for four prefixes, so the generic migrate path double-books overlaps](./601.md)
 - [602 — A one-description row is never a possible duplicate of a ledger entry with a payee](./602.md)
+- [603 — A `{}` sale split across lots still conflicts with its booked twin (incomplete fix of w5/467)](./603.md)
+- [604 — `--id-key fitId` is folded to `fitid`, disabling dedupe for camelCase keys (regression from w5/469)](./604.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
