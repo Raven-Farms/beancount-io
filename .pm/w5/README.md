@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [599 — A monthly autopay reusing one reference is silently skipped across separate exports (gap in w5/075)](./599.md)
 - [600 — A transfer imported from both banks is double-booked when their descriptions differ; the import skill promises a fuzzy flag that cannot fire](./600.md)
 - [601 — Migrated `<source>:sha256:` ids are matched only for four prefixes, so the generic migrate path double-books overlaps](./601.md)
 - [602 — A one-description row is never a possible duplicate of a ledger entry with a payee](./602.md)
