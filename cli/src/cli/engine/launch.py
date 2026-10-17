@@ -278,7 +278,12 @@ def engine_python() -> Path:
 
 
 def capture_native(
-    name: str, args: Sequence[str], *, ledger: Path | str | None = None, pass_fds: Sequence[int] = ()
+    name: str,
+    args: Sequence[str],
+    *,
+    ledger: Path | str | None = None,
+    pass_fds: Sequence[int] = (),
+    input_text: str | None = None,
 ) -> subprocess.CompletedProcess[str]:
     """Run an upstream executable and keep its output instead of inheriting the streams.
 
@@ -287,7 +292,9 @@ def capture_native(
     and `bea format --check` compares the formatter's output against the file.
     Everything else should use `run_native` and let upstream own the streams.
     """
-    return run_captured([str(native_command(name)), *args], env=_native_env(ledger), pass_fds=pass_fds)
+    return run_captured(
+        [str(native_command(name)), *args], env=_native_env(ledger), pass_fds=pass_fds, input_text=input_text
+    )
 
 
 def check_native(
@@ -826,6 +833,7 @@ def run_captured(
     env: dict[str, str] | None = None,
     pass_fds: Sequence[int] = (),
     stdin_closed: bool = False,
+    input_text: str | None = None,
 ) -> subprocess.CompletedProcess[str]:
     """`subprocess.run` keeping the output, except a request to stop us stops the child too.
 
@@ -841,7 +849,7 @@ def run_captured(
         subprocess.Popen(
             command,
             env=env,
-            stdin=subprocess.DEVNULL if stdin_closed else None,
+            stdin=subprocess.PIPE if input_text is not None else subprocess.DEVNULL if stdin_closed else None,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             encoding="utf-8",
@@ -851,7 +859,7 @@ def run_captured(
     ):
         attach(child)
         try:
-            out, err = child.communicate()
+            out, err = child.communicate(input_text)
         except BaseException:
             child.kill()
             raise

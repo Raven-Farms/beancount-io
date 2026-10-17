@@ -44,17 +44,29 @@ def _bea(tmp_path: Path, *args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
-def test_a_crashed_upstream_program_carries_the_hint(tmp_path: Path) -> None:
-    # Upstream treeify reads its input as UTF-8 and crashes on anything else.
-    # (`--filler ''` was the crash used here until bea refused it, w5/388.)
-    (tmp_path / "latin1.txt").write_bytes(b"Assets:Caf\xe9  5\n")
-    plain = _bea(tmp_path, "treeify", "latin1.txt")
-    assert plain.returncode == 1, plain.stderr
+def test_a_crashed_upstream_program_carries_the_hint(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # A native child that died with a traceback. bea now refuses non-UTF-8
+    # treeify input itself (w5/535), so the crash is simulated at the boundary.
+    (tmp_path / "bal.txt").write_text("Assets:Cash  5\n")
+    crash = (
+        "Traceback (most recent call last):\n"
+        '  File "treeify", line 1, in <module>\n'
+        "UnicodeDecodeError: 'utf-8' codec can't decode byte 0xe9 in position 10: invalid continuation byte\n"
+    )
+
+    def crashed(*args: object, **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(["treeify"], 1, "", crash)
+
+    monkeypatch.setattr(treeify_command.launch, "capture_native", crashed)
+    runner = CliRunner()
+
+    plain = runner.invoke(app, ["treeify", str(tmp_path / "bal.txt")])
+    assert plain.exit_code == 1, plain.output
     assert "UnicodeDecodeError" in plain.stderr
     assert plain.stderr.rstrip().endswith(f". {HINT}")
     assert "Traceback" not in plain.stderr
 
-    debug = _bea(tmp_path, "--debug", "treeify", "latin1.txt")
+    debug = runner.invoke(app, ["--debug", "treeify", str(tmp_path / "bal.txt")])
     assert "Traceback (most recent call last)" in debug.stderr
     assert HINT not in debug.stderr
 

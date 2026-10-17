@@ -15,7 +15,7 @@ from cli import context, output
 from cli.engine import launch
 from cli.errors import AuthError, UsageError, refuse_json, refuse_misplaced_global
 from cli.native_help import native_options
-from cli.utils import atomic_write, regex_reads_otherwise
+from cli.utils import atomic_write, decode_error_message, regex_reads_otherwise
 
 _NO_COLUMN = "Could not find any valid column in input"
 _FORCE = "--force"
@@ -132,6 +132,21 @@ def _check_input(name: str | None) -> None:
         raise UsageError(f"treeify input '{path}' is a directory. Pass a text file, or omit it to read stdin.")
     if path.is_file() and not os.access(path, os.R_OK):
         raise AuthError(f"Cannot read treeify input '{path}': permission denied.")
+    if path.is_file():
+        _require_utf8(path.read_bytes(), path)
+
+
+def _require_utf8(data: bytes, name: object) -> str:
+    """The input as text, or the shared refusal for bytes that are not UTF-8.
+
+    Upstream decodes strictly since w5/404 and crashed on Latin-1 text with
+    a bare `UnicodeDecodeError`, where `format -` names the input and the
+    byte (w5/535).
+    """
+    try:
+        return data.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise UsageError(decode_error_message(name, exc)) from None
 
 
 def _held_descriptor(name: str | None) -> tuple[int, ...]:
@@ -200,6 +215,10 @@ def treeify(ctx: typer.Context) -> None:
     descriptors = _held_descriptor(parsed.input if parsed is not None else None)
     if descriptors:
         completed = launch.capture_native("treeify", forwarded, pass_fds=descriptors)
+    elif parsed is not None and not parsed.help and parsed.input in (None, "-") and sys.stdin is not None:
+        # Read here so a non-UTF-8 pipe is refused in bea's words, as a file is.
+        text = _require_utf8(sys.stdin.buffer.read(), "stdin")
+        completed = launch.capture_native("treeify", forwarded, input_text=text)
     else:
         completed = launch.capture_native("treeify", forwarded)
     if completed.returncode == 0 and _NO_COLUMN in (completed.stderr or ""):
