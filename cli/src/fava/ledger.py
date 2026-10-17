@@ -178,14 +178,20 @@ class FilteredLedger:
 
         entries = ledger.all_entries
 
-        if account:
-            entries = AccountFilter(account).apply(entries)
         if filter and filter.strip():
             entries = AdvancedFilter(filter).apply(entries)
         if time:
             time_filter = TimeFilter(ledger.options, ledger.fava_options, time)
             entries = time_filter.apply(entries)
             self.date_range = time_filter.date_range
+        # Beancount.io change: upstream Fava filtered by account before the
+        # time filter, so the clamp that opens a period summarized only the
+        # filtered transactions. `-a Equity -t 2025` lost the prior income the
+        # clamp moves into `Equity:Earnings:Previous` (-1,000 where the whole
+        # report said -4,000), and `-a Equity:Earnings` matched nothing. The
+        # account filter now narrows the clamped entries (w5/501).
+        if account:
+            entries = AccountFilter(account).apply(entries)
 
         self.entries = entries
 
