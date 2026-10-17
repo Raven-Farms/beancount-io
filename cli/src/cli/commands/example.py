@@ -31,6 +31,10 @@ _FORCE = "--force"
 #: text from a string, so every diagnostic starts `<string>:LINE:`.
 _VALIDATION_ERROR = re.compile(r"^<string>:\d+:\s*(\S.*)$", re.MULTILINE)
 
+#: The errors a range starting mid-year produces: a yearly assertion that
+#: fails, or a posting before an account's first open (w5/136).
+_CALENDAR_ERROR = re.compile(r"Balance failed|inactive account")
+
 #: A line only a ledger holds: a dated directive or an option.
 _DIRECTIVE = re.compile(r"^(?:\d{4}-\d{2}-\d{2}\s|option\s)", re.MULTILINE)
 
@@ -96,10 +100,16 @@ def _refuse_invalid(diagnostic: str, destination: Path | None) -> None:
     if not errors:
         return
     kept = "nothing was printed" if destination is None else f"{destination} was not written"
+    # The calendar advice fits only the errors a mid-year start makes; a long
+    # span that starts on January 1 fails otherwise (`Amount is zero`), and was
+    # told to do what it had already done (w5/573).
+    if any(_CALENDAR_ERROR.search(error) for error in errors):
+        advice = "Its rules assume whole calendar years: start --date-begin on January 1, with --date-birth before it."
+    else:
+        advice = "A span this long is more than it generates cleanly; try a shorter one with an earlier --date-end."
     raise BeaError(
         f"bean-example generated a ledger that fails validation ({len(errors)} "
-        f"error{'' if len(errors) == 1 else 's'}), so {kept}. "
-        "Its rules assume whole calendar years: start --date-begin on January 1, with --date-birth before it.",
+        f"error{'' if len(errors) == 1 else 's'}), so {kept}. {advice}",
         details=errors[:5],
     )
 

@@ -100,3 +100,32 @@ def test_january_range_still_writes_a_ledger_check_accepts(tmp_path: Path) -> No
 )
 def test_output_is_dropped_in_every_spelling(args: list[str], kept: list[str]) -> None:
     assert example._without_output(args) == kept
+
+
+CALENDAR = "Its rules assume whole calendar years: start --date-begin on January 1, with --date-birth before it."
+SHORTER = "A span this long is more than it generates cleanly; try a shorter one with an earlier --date-end."
+
+
+@pytest.mark.parametrize(
+    ("diagnostic", "advice", "absent"),
+    [
+        (
+            "<string>:40: Balance failed for 'Assets:US:Vanguard:Cash': expected 0 IRAUSD != accumulated 5 IRAUSD\n",
+            CALENDAR,
+            SHORTER,
+        ),
+        (
+            '<string>:9002: Amount is zero: "0.000 RGAGX"\n<string>:9101: Amount is zero: "0.000 VBMPX"\n',
+            SHORTER,
+            CALENDAR,
+        ),
+    ],
+    ids=["mid-year-start", "long-span"],
+)
+def test_the_advice_fits_the_errors_found(diagnostic: str, advice: str, absent: str) -> None:
+    """A long span starting on January 1 was told to start on January 1 (w5/573)."""
+    with pytest.raises(example.BeaError) as refused:
+        example._refuse_invalid(diagnostic, None)
+
+    assert str(refused.value).endswith(advice), str(refused.value)
+    assert absent not in str(refused.value)
