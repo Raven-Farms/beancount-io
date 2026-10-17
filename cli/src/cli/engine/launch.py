@@ -646,6 +646,9 @@ def engine_load_failure(python: Path) -> str | None:
     if probe.returncode == 0 and probe.stdout.strip().endswith(sentinel):
         return None
     lines = [line.strip() for line in probe.stderr.splitlines() if line.strip()]
+    if lines and lines[-1].startswith("Try `python -h'"):
+        # A Python too old for `-P` ends on its usage hint; the complaint is first.
+        return f"{lines[0]}; the engine needs Python 3.12 or newer"
     return lines[-1] if lines else "it is not a Python that loads the engine"
 
 

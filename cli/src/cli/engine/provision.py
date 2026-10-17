@@ -301,12 +301,18 @@ def _feature_present(root: Path, name: str) -> bool:
 def _packages_importable(python: Path, packages: list[str]) -> bool:
     if not packages:
         return False
-    probe = ";".join(f"import {package}" for package in packages)
+    sentinel = "bea-packages-imported"
+    probe = ";".join([*(f"import {package}" for package in packages), f"print({sentinel!r})"])
     # `-P`: `-c` would otherwise put the working directory first on the module
     # path, so a `beanprice.py` in whatever folder bea ran from was executed
     # and a folder of that name made the feature look installed (w5/174).
-    completed = subprocess.run([str(python), "-P", "-c", probe], capture_output=True, text=True, check=False)
-    return completed.returncode == 0
+    try:
+        completed = subprocess.run([str(python), "-P", "-c", probe], capture_output=True, text=True, check=False)
+    except (OSError, ValueError):
+        return False
+    # The import must say so itself: `/usr/bin/true` exits 0 having run
+    # nothing, and its features read as present (w5/481).
+    return completed.returncode == 0 and completed.stdout.strip().endswith(sentinel)
 
 
 def _record_feature(root: Path, name: str) -> set[str]:
