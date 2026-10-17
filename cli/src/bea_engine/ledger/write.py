@@ -2895,7 +2895,15 @@ def append(
     snapshot: LedgerSnapshot | None = None,
     one_entry_each: bool = True,
     pad_from: bool = False,
+    validated: list[str] | None = None,
 ) -> list[str]:
+    """Append `texts` to the ledger, validated and written under the lock.
+
+    `validated` is the answer `validate_append` already gave for these texts
+    against this same `snapshot`. The snapshot is verified unchanged here, so
+    that answer still holds and the candidate is not loaded a second time: an
+    `import --apply` validated it twice, three full loads for one row (w5/577).
+    """
     if not texts:
         return []
     if one_entry_each:
@@ -2915,15 +2923,16 @@ def append(
             raise ConflictError("The ledger changed since the preview was prepared; nothing was written. Retry.")
         seeded = new_include_seed(snapshot, target) + original
         with candidate_file(target, _appended_or_report(target, seeded, texts)) as candidate:
-            warnings = validate_candidate(
-                candidate,
-                target,
-                allow_errors=allow_errors,
-                snapshot=snapshot,
-                stages_pad=_only_pads(texts),
-                stages_open=_only_opens(texts),
-                pad_from=pad_from,
-            )
+            if validated is None:
+                warnings = validate_candidate(
+                    candidate,
+                    target,
+                    allow_errors=allow_errors,
+                    snapshot=snapshot,
+                    stages_pad=_only_pads(texts),
+                    stages_open=_only_opens(texts),
+                    pad_from=pad_from,
+                )
             snapshot.verify()
             if original_stat is None:
                 stopping.check()
@@ -2936,6 +2945,8 @@ def append(
             else:
                 replace_checked(target, candidate, original, original_stat)
             _COMMITS[0] += 1
+    if validated is not None:
+        return validated
     return warnings + respelled_account_notes(texts, snapshot)
 
 

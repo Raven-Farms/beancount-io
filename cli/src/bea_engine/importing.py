@@ -697,7 +697,17 @@ def answer(
                 result=preview,
             )
         snapshot.verify()
-        ledger_write.append(file, texts, allow_errors=allow_errors, expected=original, into=into, snapshot=snapshot)
+        # The preview's validation was of these texts against this snapshot,
+        # which `append` verifies unchanged under the lock (w5/577).
+        ledger_write.append(
+            file,
+            texts,
+            allow_errors=allow_errors,
+            expected=original,
+            into=into,
+            snapshot=snapshot,
+            validated=validation_warnings,
+        )
         preview["written"] = len(texts)
     return preview
 
