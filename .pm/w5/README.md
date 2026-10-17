@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [575 — Text-mode `query` takes ~2× `--json` on large ledgers (shell kept alive until shutdown)](./575.md)
 - [576 — A ledger with a managed price include never uses the load cache](./576.md)
 - [577 — `import --apply` validates the same candidate twice (three loads vs one for `add`)](./577.md)
 - [578 — A nearby overlay that includes the root takes over write validation and dedupe (regression from w5/343/346)](./578.md)
