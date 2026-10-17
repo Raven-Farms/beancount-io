@@ -59,5 +59,5 @@ Two tasks need someone with authority this repository does not have: t001 is the
 
 - Hermes Agent's curated MCP catalog (`optional-mcps/` in its repository). Nous approves entries there, and the docs describe no community submission, so this milestone does not open a pull request against it ([DO_NOT_DO](../../../DO_NOT_DO.md): no unsolicited PRs to other repos).
 - skills.sh, LobeHub, and other directories. A `/.well-known` skills index on `beancount.io`: Hermes documents `/.well-known/skills/index.json`, while the draft discovery RFC uses `/.well-known/agent-skills/index.json`. Revisit once the convention settles.
-- An OpenClaw plugin package, and the hosted MCP endpoint on either host ([w6/m7](../../m7/README.md)).
+- An OpenClaw plugin package, and the hosted MCP endpoint on either host ([w6/m7](../../done/m7/README.md)).
 - Development skills under `.agents/skills/`. Only the customer `beancount-*` suite is published.

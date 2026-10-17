@@ -4,7 +4,7 @@
 
 ## Milestones
 
-- [ ] **m7** — [Connect OpenClaw and Hermes Agent to the hosted MCP endpoint](./m7/README.md) (9 tasks; A1; backend-v2 fixtures and docs) ← user request 2026-10-16 to list Beancount.io on OpenClaw and Hermes Agent; ADR 019 D8
+- [x] **m7** — [Connect OpenClaw and Hermes Agent to the hosted MCP endpoint](./done/m7/README.md) (9 tasks; A1; backend-v2 fixtures and docs) ← user request 2026-10-16 to list Beancount.io on OpenClaw and Hermes Agent; ADR 019 D8
 
 - [ ] **m6** — [Publish the eight ledger skills to ClawHub for OpenClaw and Hermes Agent](./blocked/m6/README.md) (13 tasks; A3; skills and CI) ← user request 2026-10-16 to list Beancount.io on OpenClaw and Hermes Agent — **blocked:** t001 needs the owner's decision on ClawHub's MIT-0 terms and publishing handle; t002–t004 shipped
 
