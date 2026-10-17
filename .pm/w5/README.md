@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [579 — `init` ignores the `$VAR` path refusal (gap in w5/315)](./579.md)
 - [580 — `init` through a dangling symlink blames the working directory](./580.md)
 - [581 — `--json` `target.file` resolves a symlinked root to a path that loads a different ledger](./581.md)
 - [582 — Process substitution for `--rules`/`--config` gives misleading errors (gap in w5/436)](./582.md)
