@@ -221,6 +221,12 @@
 - [750 — bea ask cuts digits and account names in answer tables with … at 80 columns, even in --print > FILE; COLUMNS=0 prints nothing](./750.md)
 - [751 — bea query text tables misalign rows holding CJK text (padded by character count)](./751.md)
 - [752 — import --help splits the --csv example mid-word; 13 sub-command help rows end in ...](./752.md)
+- [753 — Whole amounts with dot thousands (ISK, CLP, VND) are refused, or imported 1000x too small with exit 0](./753.md)
+- [754 — Editing the previewed CSV drops its sign=ledger on a flag-free --apply, flipping every amount](./754.md)
+- [755 — A DEBIT/CREDIT Type column cannot be mapped and is ignored, booking debits as money in](./755.md)
+- [756 — The csv:sha256 import-id hashes a tab as \X09, not collapsed whitespace](./756.md)
+- [757 — £ and ₩ are treated as GBP/KRW only; GIP, FKP, SHP, EGP and KPW exports are refused](./757.md)
+- [758 — Bank-export framing (preamble, sep=, repeated header, footer) cannot be imported; refusal advice cannot work](./758.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
