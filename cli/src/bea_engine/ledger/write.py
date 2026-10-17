@@ -180,6 +180,14 @@ class LedgerSnapshot:
         if matching:
             if resolved.exists() or resolved.is_symlink():
                 raise ConflictError(f"The ledger changed during the operation: {resolved}. Nothing was written; retry.")
+            # A new file is created, its directory never is; found only when
+            # staging, that read as an internal failure, exit 1 (w5/492).
+            if not resolved.parent.is_dir():
+                state = "is not a directory" if resolved.parent.exists() else "does not exist"
+                raise UsageError(
+                    f"Write destination {target}: directory {resolved.parent} {state}. Create it first; bea "
+                    "creates only the file. Nothing was written."
+                )
             self.contents[resolved] = b""
             self.stats[resolved] = None
             for pattern in matching:
