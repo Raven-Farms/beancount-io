@@ -218,6 +218,10 @@
 - [743 — Reconcile skill: the red-ledger batch "passes on its own" is false while a mismatch remains (incomplete fix of w5/554)](./743.md)
 - [744 — ask BQL tool: a NUL kills the question; a dash-leading query is parsed as an engine option (gap in w5/549)](./744.md)
 - [745 — ask: content_filter partial answers print as complete; false gzip sent 3x; raw Pydantic warning (incomplete fix of w5/546/547)](./745.md)
+- [746 — .run * stops at an empty-window stored query without naming it; bare-CLOSE advice drops rows (incomplete fix of w5/559)](./746.md)
+- [747 — Query regex pre-check refuses ?~ subjects and concatenated ~ patterns (adjacent to w5/558)](./747.md)
+- [748 — Dated missing-price wording from a sold or later USD-cost lot (incomplete fix of w5/557)](./748.md)
+- [749 — .describe Accounts (wrong case or unknown name) exits 0 with no output](./749.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
