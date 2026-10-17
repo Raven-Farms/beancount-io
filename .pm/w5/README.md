@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [479 — `price export` exits 0 with a refused URL include left in the snapshot](./479.md)
 - [480 — `MANAGED_PRICE_ORIGINS` entries are not normalized (trailing slash refuses the origin)](./480.md)
 - [481 — `engine status` reports an unusable `BEA_ENGINE_PYTHON` override as serving](./481.md)
 - [482 — `bea ask` prints a proxy's HTML error page as the message](./482.md)
