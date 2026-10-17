@@ -206,8 +206,6 @@ def _ask(
     argv: list[str]
     if kind == "balances":
         argv = ["balance", "--file", str(file)]
-        for term in accounts or []:
-            argv.append(term)
     else:
         argv = ["report", "--file", str(file), "--kind", kind]
         if account is not None:
@@ -220,6 +218,11 @@ def _ask(
         argv += ["--time", time]
     if allow_errors or not ctx.strict_reads():
         argv.append("--allow-errors")
+    if kind == "balances" and accounts:
+        # Terms last and after `--`: a term the user passed after `--`
+        # (`-Balances`, `-f other.bean`) reached the engine as its own option,
+        # failing the call or reporting another ledger (w5/503).
+        argv += ["--", *accounts]
 
     data = launch.helper_json(argv)
     output.render_ledger_errors([str(error) for error in data.get("ledger_errors", [])], allow=True)
