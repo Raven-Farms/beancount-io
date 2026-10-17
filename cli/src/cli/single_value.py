@@ -42,13 +42,22 @@ class _SingleValueParser(_OptionParser):
         return value
 
 
+def single_value_parser(command: Any, ctx: Any, advice: str = "Pass it once.") -> _OptionParser:
+    """`command`'s option parser, refusing a second, different value for any scalar option.
+
+    The root group uses it too: `bea -f main.bean -f other.bean add …` wrote to
+    `other.bean` with exit 0 (w5/485).
+    """
+    parser = _SingleValueParser(ctx, advice=advice)
+    for param in command.get_params(ctx):
+        param.add_to_parser(parser, ctx)
+    return parser
+
+
 class SingleValueCommand(TyperCommand):
     """A command whose scalar options may repeat only with the same value."""
 
     advice = "Pass it once."
 
     def make_parser(self, ctx: Any) -> _OptionParser:
-        parser = _SingleValueParser(ctx, advice=self.advice)
-        for param in self.get_params(ctx):
-            param.add_to_parser(parser, ctx)
-        return parser
+        return single_value_parser(self, ctx, self.advice)

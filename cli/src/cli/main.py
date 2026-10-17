@@ -36,7 +36,7 @@ from cli.config import config_dir
 from cli.errors import BeaError
 from cli.native_command import ForwardingCommand
 from cli.native_help import native_help
-from cli.single_value import SingleValueCommand
+from cli.single_value import SingleValueCommand, single_value_parser
 
 
 def _discard_diagnostics_without_stderr() -> None:
@@ -223,7 +223,9 @@ class _GuardedGroup(TyperGroup):
         try:
             ctx.resilient_parsing = True
             ctx.ignore_unknown_options = True
-            opts, _, _ = self.make_parser(ctx).parse_args(list(args))
+            # The plain parser: a conflicting `--file` is refused by the real
+            # parse below, once `--json` has been read.
+            opts, _, _ = super().make_parser(ctx).parse_args(list(args))
         finally:
             ctx.resilient_parsing, ctx.ignore_unknown_options = resilient, ignore_unknown
         context.configure(
@@ -258,6 +260,10 @@ class _GuardedGroup(TyperGroup):
             if not args:  # Keep the normal no-arguments help page.
                 raise
             output.error(exc)
+
+    def make_parser(self, ctx: Any) -> Any:
+        # Global options hold one value like every command's own (w5/485).
+        return single_value_parser(self, ctx)
 
     def invoke(self, ctx: Any) -> Any:
         _tolerate_unencodable_output()
