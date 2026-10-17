@@ -365,23 +365,26 @@ export function setOidcRoutes(
   // would be signed out when its first access token expires. A third-party
   // host always sees the consent page, which lists "stay signed in" once the
   // scope survives, so ask for that consent explicitly. `prompt=none` is a
-  // silent request and is left alone. Hosts authorize with GET.
+  // silent request and is left alone. Hosts authorize with GET (POST is not
+  // mounted); a pushed authorization request (PAR) is not rewritten, and no
+  // MCP SDK sends one.
   provider.use(async (ctx, next) => {
     if (ctx.method === "GET" && ctx.path === AUTHORIZATION_ROUTE) {
-      const { client_id: clientId, scope, prompt } = ctx.query;
-      const prompts = typeof prompt === "string" ? prompt.split(" ") : [];
+      const { client_id: clientId, scope, prompt = "" } = ctx.query;
+      // A repeated `prompt` arrives as an array; oidc-provider refuses it.
       if (
         isThirdPartyOAuthClient(clientId) &&
         typeof scope === "string" &&
         scope.split(" ").includes("offline_access") &&
-        (prompt === undefined || typeof prompt === "string") &&
-        !prompts.includes("consent") &&
-        !prompts.includes("none")
+        typeof prompt === "string"
       ) {
-        ctx.query = {
-          ...ctx.query,
-          prompt: [...prompts.filter(Boolean), "consent"].join(" "),
-        };
+        const prompts = prompt.split(" ").filter(Boolean);
+        if (!prompts.includes("consent") && !prompts.includes("none")) {
+          ctx.query = {
+            ...ctx.query,
+            prompt: [...prompts, "consent"].join(" "),
+          };
+        }
       }
     }
     await next();

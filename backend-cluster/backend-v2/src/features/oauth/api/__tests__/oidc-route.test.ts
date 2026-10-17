@@ -1136,8 +1136,11 @@ describe("oidc-route: unified MCP + identity provider", () => {
 
   // ── Third-party connections (ADR 019 D5) ──────────────────────────────────
 
-  /** A DCR host signed in with a refresh token; returns what the clock tests need. */
-  async function connectThirdParty() {
+  /**
+   * A DCR host signed in with a refresh token; returns what the clock tests
+   * need. `null` signs in without a prompt, as MCP Python SDK 1.x hosts do.
+   */
+  async function connectThirdParty(prompt: "consent" | null = "consent") {
     const { clientId, redirectUri } = await registerMcpClient();
     const { code, verifier } = await driveAuthorizationCode({
       clientId,
@@ -1145,7 +1148,7 @@ describe("oidc-route: unified MCP + identity provider", () => {
       scope: "openid offline_access ledger.read",
       redirectUri,
       loginBody: { ledgerId: "ada/personal" },
-      prompt: "consent",
+      prompt: prompt ?? undefined,
     });
     const tokens = await exchangeToken({
       code,
@@ -1493,16 +1496,18 @@ describe("oidc-route: unified MCP + identity provider", () => {
     readonly registration?: Record<string, unknown>;
   }
 
-  // OpenClaw 2026.10.4 registers through the MCP TypeScript SDK 1.31.0
-  // (src/agents/mcp-oauth-provider.ts), which adds the resource's scopes.
+  // OpenClaw 2026.10.4 (MCP TypeScript SDK 1.31.0, src/agents/mcp-oauth-provider.ts)
+  // and Hermes Agent (MCP Python SDK) both register with the scopes the
+  // protected resource advertises.
+  const ADVERTISED_SCOPE =
+    "openid offline_access ledger.read ledger.write ledger.admin";
   const OPENCLAW_REGISTRATION = {
     client_name: "OpenClaw MCP",
-    scope: "openid offline_access ledger.read ledger.write ledger.admin",
+    scope: ADVERTISED_SCOPE,
   };
-  // Hermes Agent registers through the MCP Python SDK the same way.
   const HERMES_REGISTRATION = {
     client_name: "Hermes Agent",
-    scope: "openid offline_access ledger.read ledger.write ledger.admin",
+    scope: ADVERTISED_SCOPE,
   };
 
   const HOSTS: readonly HostFixture[] = [
@@ -2032,35 +2037,9 @@ describe("oidc-route: unified MCP + identity provider", () => {
   // prompt=consent. oidc-provider would drop the scope and issue no refresh
   // token, signing the host out when its first access token expires.
   it("keeps offline_access for a third-party host that sends no prompt, so it can refresh", async () => {
-    const { clientId, redirectUri } = await registerMcpClient();
-    const resource = `${ISSUER}/api-gateway/mcp`;
-    const { code, verifier } = await driveAuthorizationCode({
-      clientId,
-      clientAuth: "",
-      scope: "openid offline_access ledger.read ledger.write ledger.admin",
-      redirectUri,
-      loginBody: { ledgerId: "ada/personal" },
-      resource,
-    });
-    const tokenBody = await exchangeToken({
-      code,
-      verifier,
-      clientId,
-      redirectUri,
-      resource,
-    });
-    expect(tokenBody.refresh_token).toBeTruthy();
-    const refresh = await fetch(`${ISSUER}/api-gateway/oauth/token`, {
-      method: "POST",
-      headers: { "content-type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        grant_type: "refresh_token",
-        refresh_token: tokenBody.refresh_token as string,
-        client_id: clientId,
-        resource,
-      }),
-    });
-    expect(refresh.status).toBe(200);
+    const { clientId, refreshToken } = await connectThirdParty(null);
+    expect(refreshToken).toBeTruthy();
+    expect((await refresh(clientId, refreshToken)).status).toBe(200);
   });
 
   it("leaves a silent prompt=none request silent rather than forcing consent", async () => {
