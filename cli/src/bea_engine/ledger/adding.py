@@ -295,6 +295,29 @@ def _appended(
 # --------------------------------------------------------------------------- #
 
 
+def _preexisting_refusal(errors: list[Any], ledger_errors: list[str]) -> protocol.LedgerError:
+    """The strict pre-check's refusal of a ledger that already has errors.
+
+    `--allow-errors` never writes past a syntax error, so advising it for one
+    sent the user round in a loop; the shared validation already left it out
+    (w5/396), these pre-checks did not (w5/508).
+    """
+    from beancount.parser.grammar import ParserSyntaxError
+    from beancount.parser.lexer import LexerError
+
+    if any(isinstance(error, ParserSyntaxError | LexerError) for error in errors):
+        return protocol.LedgerError(
+            f"The ledger already has {len(ledger_errors)} error(s), including a syntax error; nothing was written. "
+            "Fix the syntax error first: --allow-errors never writes past one.",
+            details=ledger_errors,
+        )
+    return protocol.LedgerError(
+        f"The ledger already has {len(ledger_errors)} error(s); nothing was written. "
+        "Pass --allow-errors to write anyway.",
+        details=ledger_errors,
+    )
+
+
 def _conflict_refusal(
     conflict: Any, account: str, date: Any, number: Any, currency: str, tolerance: Any
 ) -> protocol.UsageError:
@@ -333,11 +356,7 @@ def _balance(
             # A staged pad is the transient error this very write resolves:
             # the two-step pad flow stages with --allow-errors, then completes
             # with the balance. Anything else still gates strict callers.
-            raise protocol.LedgerError(
-                f"The ledger already has {len(ledger_errors)} error(s); nothing was written. "
-                "Pass --allow-errors to write anyway.",
-                details=ledger_errors,
-            )
+            raise _preexisting_refusal(errors, ledger_errors)
         match = _balance_match(entries, date, account, number, currency, tolerance)
         if match is not None:
             snapshot.verify()
@@ -648,11 +667,7 @@ def _price(
     entries, errors, options = managed_load.load_file(file, snapshot=snapshot)
     ledger_errors = [format_error(error, ledger_file=file) for error in errors]
     if ledger_errors and strict_read:
-        raise protocol.LedgerError(
-            f"The ledger already has {len(ledger_errors)} error(s); nothing was written. "
-            "Pass --allow-errors to write anyway.",
-            details=ledger_errors,
-        )
+        raise _preexisting_refusal(errors, ledger_errors)
     local_prices: list[Price] = []
     managed_sources: set[str] = set()
     pair = (currency, amount_currency)
