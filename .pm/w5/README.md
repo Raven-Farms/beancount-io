@@ -194,6 +194,11 @@
 - [643 — `--strict-prices doctor roundtrip` prints a 184-line traceback (sibling of w5/572)](./643.md)
 - [644 — Strict/unavailable price messages give the wrong cause (future stamp, no stamp, no cache)](./644.md)
 - [645 — Price cache/URL edge cases: future `next_refresh_at`, dot-segment aliases, ETag `"head"`](./645.md)
+- [646 — TAB after two different `-f` values prints an 11 MB traceback instead of completions (regression from w5/485)](./646.md)
+- [647 — `engine status` calls an override usable when it has no `bean-check` beside it (incomplete fix of w5/481)](./647.md)
+- [648 — `upgrade --check` still accepts null/empty versions and Homebrew HTML with exit 0 (incomplete fix of w5/484)](./648.md)
+- [649 — A BOM-prefixed HTML error page still reaches `bea ask` (incomplete fix of w5/482)](./649.md)
+- [650 — A non-UTF-8 byte in an `add` argument gives a raw `UnicodeEncodeError`](./650.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
