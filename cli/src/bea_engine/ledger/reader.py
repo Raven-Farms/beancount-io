@@ -555,14 +555,15 @@ def list_events(
     type_filter: str | None = None,
     limit: int = 50,
 ) -> list[EventDirective]:
-    wanted = _nfc(type_filter or "").casefold()
+    # Folded as `--search` and `--account` fold, Turkish İ/ı included (w5/533).
+    wanted = fold_account(type_filter or "")
     results = []
     for entry in entries:
         if not isinstance(entry, Event):
             continue
         if not _in_date_range(entry.date, from_date, to_date):
             continue
-        if wanted and wanted != _nfc(entry.type or "").casefold():
+        if wanted and wanted != fold_account(entry.type or ""):
             continue
         results.append(
             EventDirective(
@@ -649,14 +650,15 @@ def list_customs(
 ) -> list[CustomDirective]:
     from beancount.core.amount import Amount as BcAmount
 
-    wanted = _nfc(type_filter or "").casefold()
+    # Folded as `--search` and `--account` fold, Turkish İ/ı included (w5/533).
+    wanted = fold_account(type_filter or "")
     results = []
     for entry in entries:
         if not isinstance(entry, Custom):
             continue
         if not _in_date_range(entry.date, from_date, to_date):
             continue
-        if wanted and wanted != _nfc(entry.type or "").casefold():
+        if wanted and wanted != fold_account(entry.type or ""):
             continue
         values: list[CustomDirectiveValue] = []
         for v in entry.values or []:

@@ -988,9 +988,11 @@ def read_header(source: Path, *, delimiter: str | None = None, encoding: str = "
 
 
 def _lookalike_header(column: str, headers: list[str]) -> str | None:
-    """The one header that differs from a mapped column name only by case."""
-    folded = column.casefold()
-    matches = [header for header in headers if header != column and header.casefold() == folded]
+    """The one header that differs from a mapped column name only by case, Turkish İ/ı included (w5/533)."""
+    from bea_engine.ledger.text import fold_account
+
+    folded = fold_account(column)
+    matches = [header for header in headers if header != column and fold_account(header) == folded]
     return matches[0] if len(matches) == 1 else None
 
 
