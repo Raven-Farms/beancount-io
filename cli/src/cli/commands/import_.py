@@ -137,7 +137,16 @@ def _config_available(file: Path, notes: list[str]) -> tuple[Path, str] | None:
     return None
 
 
-def _config_path(file: Path, supplied: Path | None, notes: list[str]) -> tuple[Path, str]:
+def _config_path(
+    file: Path,
+    supplied: Path | None,
+    notes: list[str],
+    *,
+    source: Path,
+    account: str | None,
+    delimiter: str | None = None,
+    encoding: str = "utf-8",
+) -> tuple[Path, str]:
     if supplied is not None:
         return supplied.expanduser().resolve(), "--config"
     available = _config_available(file, notes)
@@ -146,9 +155,29 @@ def _config_path(file: Path, supplied: Path | None, notes: list[str]) -> tuple[P
     raise UsageError(
         "Choose a Python importer with --config FILE, or place importers.py beside the root ledger. "
         "The selected path is remembered for this ledger. "
-        "For a CSV export whose header row bea could not read, map the columns directly with "
-        "--csv date=Date,amount=Amount,narration=Description --account Assets:Checking.",
+        + _unread_header_hint(source, account, delimiter=delimiter, encoding=encoding),
         details=notes,
+    )
+
+
+def _unread_header_hint(source: Path, account: str | None, *, delimiter: str | None, encoding: str) -> str:
+    """The `--csv` command for an export bea found no columns in, from what was typed and read.
+
+    A fixed `--account Assets:Checking` and `Date,Amount,Description` sent a
+    pasted command's savings rows into checking, on columns no file had
+    (w5/470). The typed account is kept, and the header bea read is listed.
+    """
+    from cli.csv_mapper import read_header
+
+    try:
+        headers = read_header(source, delimiter=delimiter, encoding=encoding)
+    except UsageError:
+        headers = None
+    columns = f" Its columns are: {', '.join(headers)}." if headers else ""
+    return (
+        f"For a CSV export whose header row bea could not read, map the columns directly.{columns} "
+        "Name them with --csv date=COLUMN,amount=COLUMN,narration=COLUMN "
+        f"--account {shlex.quote(account) if account else 'ACCOUNT'}."
     )
 
 
@@ -956,7 +985,15 @@ def import_entries(
                 "sign_ledger_sha256": _source_sha256(source) if mapping.sign == "ledger" else None,
             }
     else:
-        config_path, config_source = _config_path(file, config, config_notes)
+        config_path, config_source = _config_path(
+            file,
+            config,
+            config_notes,
+            source=source,
+            account=csv_account,
+            delimiter=csv_delimiter,
+            encoding=csv_encoding,
+        )
         frontend_notes = [*config_notes]
         # A Python importer names its own account and categories and never
         # reads the column-mapping options, so one typed here would be dropped
