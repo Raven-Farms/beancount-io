@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [537 — `add transactions --partial` is quadratic when a row breaks an existing balance assertion (gap in w5/123)](./537.md)
 - [538 — A booking-arithmetic failure aborts a `--partial` batch naming no row; zero-unit total cost gives raw `DivisionByZero`](./538.md)
 - [539 — Bulk `amount` shorthand silently overwrites an explicit `cost`/`price`/`price_total`](./539.md)
 - [540 — Filtered `list --json` output cannot be re-fed to `add transactions` (`matching_postings`)](./540.md)
