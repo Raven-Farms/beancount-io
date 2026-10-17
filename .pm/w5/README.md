@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [497 — A load-cache path inside an include glob breaks every later command](./497.md)
 - [498 — `doctor region --conversion value` rounds the tree, disagreeing with `Net Income`](./498.md)
 - [499 — `bea format` refuses a ledger not named `.bean`/`.beancount`](./499.md)
 - [500 — `bea check books.bean` never suggests `bea --file books.bean check`](./500.md)
