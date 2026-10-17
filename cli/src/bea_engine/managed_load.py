@@ -94,7 +94,6 @@ _LEDGER_PRICE_RE = re.compile(
 # an org-mode heading does — may hold a `"` too, which opens no string: the
 # `12"` in `* Prices for the 12" binder` masked the price below it (w5/476).
 _STRING_OR_COMMENT_RE = re.compile(r'"(?:[^"\\]|\\.)*"|;[^\n]*|^[*:#!&?%][^\n]*', re.MULTILINE)
-_METADATA_LINE_RE = re.compile(r"^[ \t]+[a-z][A-Za-z0-9_-]*\s*:")
 _SHADOWED_LINE = "; shadowed by a ledger-authored price for the same date"
 _ALREADY_INCLUDED_LINE = "; managed price feed already included from another file"
 _NO_CACHED_REVISION = "no cached revision"
@@ -200,9 +199,14 @@ def apply_ledger_price_precedence(
         ) in ledger_pairs:
             shadowed += 1
             lines[price.line - 1] = _SHADOWED_LINE
+            # Every indented line below belongs to the point: its metadata and
+            # any indented comment between them. Stopping at the comment left
+            # the metadata after it indented under nothing, an `unexpected
+            # INDENT` in every command (w5/477). Blank lines are kept as they are.
             index = price.line
-            while index < len(lines) and _METADATA_LINE_RE.match(lines[index]):
-                lines[index] = f"; {lines[index].strip()}"
+            while index < len(lines) and (not lines[index].strip() or lines[index][0] in " \t"):
+                if lines[index].strip():
+                    lines[index] = f"; {lines[index].strip()}"
                 index += 1
         else:
             effective_dates.append(price.date)
