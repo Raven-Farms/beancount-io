@@ -41,6 +41,11 @@ def ask(
     Interactive edits are confirmed, validated, and written atomically.
     """
     ctx = context.current()
+    if ctx.offline:
+        # The model calls go through the hosted proxy (w5/515).
+        raise UsageError(
+            "bea ask requires network access: its model calls go through the hosted proxy; remove --offline."
+        )
     model = "gpt-4o"
     file = ctx.entry_file()
     if ctx.json_output:

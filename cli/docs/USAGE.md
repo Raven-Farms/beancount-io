@@ -93,7 +93,7 @@ Global options come before the command.
 | `--json` | Emit the JSON envelope on stdout and JSON errors on stderr. Implies `--no-input`. |
 | `--no-input` | Never prompt. Missing confirmation or input fails with exit 2 instead of waiting. |
 | `--strict` | Refuse partial answers even in a terminal; `--allow-errors` opts into them. |
-| `--offline` | Never fetch: resolve managed price includes from the local cache only, and skip the update check. |
+| `--offline` | Never fetch: resolve managed price includes from the local cache only, and skip the update check. Commands that exist to use the network (`price refresh`, every `bea cloud` command, `bea ask`) exit 2 instead of sending anything. |
 | `--strict-prices` | Fail the load when a managed price source is stale or unavailable. |
 | `--yes / -y` | Answer confirmations with yes. |
 | `--debug` | Include exception tracebacks; JSON errors gain a `traceback` string. |

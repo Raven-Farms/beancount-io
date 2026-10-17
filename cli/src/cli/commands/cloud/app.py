@@ -21,6 +21,23 @@ cloud_app = typer.Typer(
 cloud_app.add_typer(ledger_app, name="ledger")
 
 
+@cloud_app.callback()
+def _refuse_offline(typer_ctx: typer.Context) -> None:
+    """Every `bea cloud` command talks to the hosted service; `--offline` means no network.
+
+    The flag was never read here, so `bea --offline -y cloud ledger delete`
+    sent the DELETE with exit 0 (w5/515). Refused before credentials are read
+    or anything is sent, as `price refresh` refuses it; `--help` still answers.
+    """
+    import sys
+
+    from cli.errors import UsageError
+
+    if context.current().offline and not {"--help", "-h"} & set(sys.argv[1:]):
+        command = f"cloud {typer_ctx.invoked_subcommand}" if typer_ctx.invoked_subcommand else "cloud"
+        raise UsageError(f"bea {command} requires network access; remove --offline.")
+
+
 @cloud_app.command("login")
 def cloud_login() -> None:
     """Log in via the browser device flow (stores credentials.json under $BEA_CONFIG_DIR, default ~/.config/bea)."""
