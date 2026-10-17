@@ -228,6 +228,9 @@
 - [768 — doctor linked/region print inferred-only legs at max precision and 26 decimals under --conversion (w5/571 follow-ups)](./768.md)
 - [769 — treeify: renamed roots still lose to a narration colon; the new lookahead is quadratic (incomplete fix of w5/570)](./769.md)
 - [770 — doctor roundtrip still prints tracebacks for identical entries and an over-long scratch name](./770.md)
+- [771 — check_drained close hint blames the parent for a subaccount's money; following it leaves wrong books](./771.md)
+- [772 — A backdated close (or late open) blames the existing entry, cites a line past EOF, and suggests --allow-errors](./772.md)
+- [773 — Closed-account hints: add open never names the close, doctor says reopen, duplicate close is bare or misblamed](./773.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
