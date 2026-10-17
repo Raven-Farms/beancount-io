@@ -1124,6 +1124,9 @@ def import_entries(
         # `add` and `price export` report it (w5/324).
         output.emit(preview, target={**output.file_target(file), "into": str(preview.get("into") or file)})
     else:
+        # The diff is ledger text, and what `--apply` is approved on: UTF-8
+        # whatever the locale, as `list` and `report` print (w5/532).
+        output.utf8_stdout()
         summary = (
             f"{preview['importer']} → {preview['account']}: {preview['ready']} ready, "
             f"{preview['duplicates']} exact duplicates, {preview['possible_duplicates']} possible duplicates"
