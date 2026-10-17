@@ -324,6 +324,12 @@ class TransactionHeader(BaseModel):
         description="A plugin synthesized this row; it is not text in any ledger file. "
         "Excluded from dumps so only listings opt back in.",
     )
+    matching_postings: list[Any] | None = Field(
+        default=None,
+        exclude=True,
+        description="The postings an account-filtered listing narrowed to; ignored on input, so a "
+        "`list transaction --account` answer can be fed back to `add transactions` (w5/540).",
+    )
 
 
 class TransactionDirective(TransactionHeader):
