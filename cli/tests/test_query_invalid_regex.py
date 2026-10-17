@@ -75,3 +75,30 @@ def test_valid_queries_are_unchanged(book: Path, query: str) -> None:
     result = _query(book, query)
 
     assert result.exit_code == 0, result.output
+
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        "SELECT date, narration /* was: narration ~ '(partial' */ WHERE account ~ 'Food'",
+        "SELECT date, narration WHERE narration != \"a ~ '[\" AND account ~ 'Food'",
+        "SELECT date, narration WHERE account ~ 'Food' /* ~ '[[:alpha:]]' */",
+    ],
+    ids=["commented-condition", "spliced-across-literals", "posix-class-in-comment"],
+)
+def test_a_pattern_inside_a_comment_or_literal_is_no_operand(book: Path, query: str) -> None:
+    """Only `~`/`!~` in code take a pattern; the check scanned comments and literals too (w5/558)."""
+    text = _query(book, query)
+    as_json = _query(book, query, as_json=True)
+
+    assert text.exit_code == 0, text.output
+    assert "Refund (partial)" in text.output
+    assert as_json.exit_code == 0, as_json.output
+    assert json.loads(as_json.stdout)["data"]["rows"] == [["2024-01-05", "Refund (partial)"]]
+
+
+def test_a_real_operand_after_a_literal_holding_a_tilde_is_still_checked(book: Path) -> None:
+    result = _query(book, "SELECT date WHERE narration != \"a ~ 'b\" AND narration ~ '(partial'")
+
+    assert result.exit_code == 2, result.output
+    assert "'(partial' is not a valid regular expression" in result.output

@@ -52,11 +52,13 @@ LEDGER_DSN = "beancount:"
 _RESERVED_TABLE_FROM = re.compile(r'(?i)\b(FROM|JOIN)\s+(?<!")(accounts|balances)\b(?!")')
 
 
-def _code_mask(text: str, *, literals: bool = True) -> str:
+def _code_mask(text: str, *, literals: bool = True, keep_quotes: bool = False) -> str:
     """The query with every string literal and comment blanked to spaces.
 
     `literals=False` blanks only the comments, for a caller asking whether any
-    code is there at all rather than where the keywords are.
+    code is there at all rather than where the keywords are. `keep_quotes`
+    blanks only a literal's inside, for a caller that must find the literal
+    an operator takes in code and then read it from the text.
 
     Exactly as long as the input, so a match found in the mask has the offsets
     of the real thing. That is what lets the relation rewrite below see only
@@ -86,7 +88,13 @@ def _code_mask(text: str, *, literals: bool = True) -> str:
                     end += 1
                     break
                 end += 1
-            out.append(" " * (end - index) if literals else text[index:end])
+            if not literals:
+                out.append(text[index:end])
+            elif keep_quotes:
+                closed = end - index >= 2 and text[end - 1] == char
+                out.append(char + " " * (end - index - 1 - closed) + (char if closed else ""))
+            else:
+                out.append(" " * (end - index))
             index = end
         elif text.startswith("/*", index):
             end = text.find("*/", index + 2)
@@ -1678,7 +1686,7 @@ def _compiled(
     # before anything runs, so both shapes are the same usage error (w5/103).
     from bea_engine.ledger.text import regex_reads_otherwise
 
-    for pattern in (next(group for group in groups if group) for groups in _PATTERN_LITERAL.findall(statement)):
+    for pattern in _pattern_literals(statement):
         # First, so no compile warns: Python reads `[[:alpha:]]` as a set and
         # only warns, and the query then matches something else (w5/429).
         otherwise = regex_reads_otherwise(pattern[1:-1])
@@ -1862,6 +1870,20 @@ _PATTERN_LITERAL = re.compile(
     r"""|\bJOURNAL\s+('[^']*'|"[^"]*")""",
     re.IGNORECASE,
 )
+
+
+def _pattern_literals(statement: str) -> Iterator[str]:
+    """Each constant regex operand in the statement's code, quotes included.
+
+    Found where the code is, then read from the text: `~ '…'` inside a
+    comment or a string literal is no operand, and matching the raw text
+    refused valid queries over a commented-out condition or a pattern
+    spliced across two literals (w5/558).
+    """
+    shape = _code_mask(statement, keep_quotes=True)
+    for found in _PATTERN_LITERAL.finditer(shape):
+        group = next(index for index in range(1, found.re.groups + 1) if found.group(index))
+        yield statement[found.start(group) : found.end(group)]
 
 
 def _evaluation_error(exc: Exception, statement: str, ledger_errors: list[str]) -> protocol.UsageError | None:
