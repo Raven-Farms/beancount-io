@@ -7,7 +7,7 @@ import typer
 
 from cli import context, output
 from cli.commands.cloud.generated.ledger import register_ledger_commands
-from cli.errors import LedgerError, UnreadableSuccess, unknown_write_outcome
+from cli.errors import GatewayTimeout, LedgerError, UnreadableSuccess, unknown_write_outcome
 from cli.utils import single_line
 
 ledger_app = typer.Typer(help="Manage hosted ledgers on beancount.io", no_args_is_help=True, rich_markup_mode=None)
@@ -79,7 +79,7 @@ def ledger_create(
         # No request left the machine (refused, DNS failure), so nothing was
         # created: "could not reach the server", not an unknown outcome (w5/368).
         raise
-    except (httpx.TimeoutException, httpx.TransportError, UnreadableSuccess) as e:
+    except (httpx.TimeoutException, httpx.TransportError, UnreadableSuccess, GatewayTimeout) as e:
         raise unknown_write_outcome(f"Creating ledger '{name}'", e) from e
 
     if not ctx.json_output:

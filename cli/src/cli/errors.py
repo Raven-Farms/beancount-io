@@ -178,6 +178,8 @@ def error_from_status(status: int, message: str | None, *, request_id: str | Non
         return UsageError(detail, request_id=request_id)
     if status == 429:
         return BeaError(f"Rate limited ({detail}). Wait a moment and retry.", request_id=request_id)
+    if status in _GATEWAY_TIMEOUTS:
+        return GatewayTimeout(f"Server error ({detail}).", status=status, request_id=request_id)
     if status >= 500:
         return BeaError(f"Server error ({detail}).", request_id=request_id)
     return BeaError(detail, request_id=request_id)
@@ -352,12 +354,36 @@ class UnreadableSuccess(BeaError):
         self.status = status
 
 
+#: A proxy's "the origin took the request and did not finish answering": 504,
+#: and Cloudflare's 520–524.
+_GATEWAY_TIMEOUTS = frozenset({504, 520, 521, 522, 523, 524})
+
+
+class GatewayTimeout(BeaError):
+    """A gateway's report that the origin received the request and did not finish answering it.
+
+    A read reports it as the server error it is. A write may have taken effect,
+    so the write paths say the outcome is unknown, as for bea's own timeout:
+    called a plain "Server error", the retry hit 409 or 404 (w5/517).
+    """
+
+    def __init__(self, message: str, *, status: int, request_id: str | None = None) -> None:
+        super().__init__(message, request_id=request_id)
+        self.status = status
+
+
 def unknown_write_outcome(operation: str, exc: BaseException) -> ConflictError:
     """A write that timed out, lost its connection, or got an answer bea could not read.
 
     The caller is told the outcome is unknown, and how to find out, rather than
     being handed a success or a plain failure that invites a blind retry.
     """
+    if isinstance(exc, GatewayTimeout):
+        return ConflictError(
+            f"{operation} timed out at the server's gateway (HTTP {exc.status}): the request arrived but was not "
+            "answered. The outcome is unknown — check the current state before retrying.",
+            request_id=exc.request_id,
+        )
     if isinstance(exc, UnreadableSuccess):
         return ConflictError(
             f"{operation} was answered with HTTP {exc.status}, but the response could not be read. "

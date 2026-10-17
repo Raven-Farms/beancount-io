@@ -313,7 +313,7 @@ the partial effects when the command wrote some of what it promised (the
 `ledger_warnings` carries loader errors a `--json` command tolerated before
 failing anyway; `--debug` adds the `traceback` string.
 
-Cloud commands map the server's HTTP status onto the same table, keeping the server's own message: `401`/`403` exit **3**, `400` exits **2**, `409` exits **4**, and everything else — including `404`, rate limiting, and server errors — exits **1**. A write whose outcome the CLI cannot know (a timeout mid-delete) exits **4** and says so rather than guessing. A write that never connected (a refused connection, a failed DNS lookup, a connect timeout) sent nothing, so it exits **1** with `Could not reach the server (…)`, like a read.
+Cloud commands map the server's HTTP status onto the same table, keeping the server's own message: `401`/`403` exit **3**, `400` exits **2**, `409` exits **4**, and everything else — including `404`, rate limiting, and server errors — exits **1**. A write whose outcome the CLI cannot know (a timeout mid-delete, or a gateway's `504` or Cloudflare's `520`–`524`, which mean the request arrived but was not answered) exits **4** and says so rather than guessing. A write that never connected (a refused connection, a failed DNS lookup, a connect timeout) sent nothing, so it exits **1** with `Could not reach the server (…)`, like a read.
 
 An HTTP `401` asks you to replace the rejected credential: log in again for a
 stored session, or correct or unset `BEA_TOKEN` when it supplies the credential.
