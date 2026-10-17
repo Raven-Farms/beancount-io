@@ -1797,9 +1797,10 @@ def _compiled(
                 ledger_errors=ledger_errors(),
             ) from None
         named = ", ".join(columns)
+        kind = "a list" if columns == ["other_accounts"] else "a set"
         raise protocol.UsageError(
-            f"BQL cannot use DISTINCT or GROUP BY on {named}: a set is not a value it can compare.",
-            details=_SET_COLUMN_ADVICE,
+            f"BQL cannot use DISTINCT or GROUP BY on {named}: {kind} is not a value it can compare.",
+            details=_set_column_advice(columns),
             ledger_errors=ledger_errors(),
         ) from None
     except TypeError as exc:
@@ -1957,7 +1958,7 @@ def _pattern_error(pattern: str, exc: re.error, statement: str, ledger_errors: l
     )
 
 
-_SET_COLUMNS = ("tags", "links")
+_SET_COLUMNS = ("tags", "links", "other_accounts")
 
 _SET_COLUMNS_PLUS_ACCOUNTS = ("tags", "links", "accounts")
 
@@ -1967,6 +1968,21 @@ _SET_COLUMN_ADVICE = [
     "Counts per combination: SELECT joinstr(tags), count(*) GROUP BY joinstr(tags)",
     "One tag at a time: SELECT date, narration WHERE 'grocery' IN tags",
 ]
+
+
+#: `other_accounts` is a list per posting: unhashable like the sets, with its
+#: own recipe rather than advice about `tags` (w5/563).
+_OTHER_ACCOUNTS_ADVICE = [
+    "`other_accounts` holds a list per posting (the entry's other accounts), so BQL cannot hash it.",
+    "Distinct combinations: SELECT DISTINCT joinstr(other_accounts)",
+    "Counts per combination: SELECT joinstr(other_accounts), count(*) GROUP BY joinstr(other_accounts)",
+]
+
+
+def _set_column_advice(columns: list[str]) -> list[str]:
+    """The recipes for the unhashable columns a query names: the set advice unless only `other_accounts`."""
+    advice = [] if columns == ["other_accounts"] else list(_SET_COLUMN_ADVICE)
+    return advice + (_OTHER_ACCOUNTS_ADVICE if "other_accounts" in columns else [])
 
 
 def _set_columns(query_string: str) -> list[str]:
@@ -2114,8 +2130,8 @@ def _usage_error(exc: Exception, query_string: str, conn: Any, ledger_errors: li
     if isinstance(position, int) and 0 <= position <= len(query_string):
         details.extend(_caret_lines(query_string, position))
     details.extend(_column_suggestions(str(exc), conn))
-    if "non-hashable" in str(exc) and _set_columns(query_string):
-        details.extend(_SET_COLUMN_ADVICE)
+    if "non-hashable" in str(exc) and (columns := _set_columns(query_string)):
+        details.extend(_set_column_advice(columns))
     # Not the interactive shell: under `--json` or without a terminal `bea query`
     # with no argument is itself a usage error, and `.tables` runs one-shot (w5/198).
     details.append("Run bea query .tables to list what you can query.")
