@@ -346,8 +346,10 @@ def _balance_sheet(
         "current_earnings": _headline(earnings, conversion),
         "current_earnings_signs": "negative_for_gain",
         "net_profit": _headline(-earnings, conversion),
-        "valuation_adjustment": data.valuation_adjustment if reconciled else None,
-        "equity_total": data.equity_total if reconciled else None,
+        # Named in the conversion currency, as the headlines are: an empty
+        # inventory printed "—" beside `Net Worth: 0.00 USD` (w5/506).
+        "valuation_adjustment": _headline(data.valuation_adjustment, conversion) if reconciled else None,
+        "equity_total": _headline(data.equity_total, conversion) if reconciled else None,
         "equity_reconciled": reconciled,
         "net_worth": worth,
         "net_worth_series": _summary_series_json(data.net_worth_data, conversion),
