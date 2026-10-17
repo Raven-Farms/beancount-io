@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [513 — `add balance --pad-from` before the open cites a nonexistent line as an assertion that "already holds"](./513.md)
 - [514 — `list` on an included leaf counts the root hint as an error](./514.md)
 - [515 — Global `--offline` is ignored by `bea cloud` (and `ask`): `--offline -y cloud ledger delete` deletes](./515.md)
 - [516 — `cloud login` with `BEA_TOKEN` set reports success, but the session is never used](./516.md)
