@@ -535,6 +535,12 @@ skills deduplicate against each other: the ledger itself is the dedup database.
   `--duplicates skip` or `--duplicates include`; choose include to preserve
   legitimate repeated purchases. Review the rows before choosing;
   the choice applies to all possible matches in that invocation.
+- The other side of a transfer is a possible duplicate too, whatever each bank
+  calls it. A transfer written by importing another balance-sheet account (its
+  first posting) that posts this row's amount to `--account` within three days
+  is named as "A transfer from … already posts …; this row may be its other
+  side". So `TRANSFER TO SAVINGS` imported from checking and `TRANSFER FROM
+  CHECKING` from savings are booked once, after `--duplicates skip`.
 - Identical nontransaction directives are skipped. They are compared, and
   written, as the ledger reads them back: text in Unicode NFC, and a balance
   assertion without the difference a failing one reports. A `price` directive

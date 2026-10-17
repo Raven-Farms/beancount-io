@@ -333,10 +333,15 @@ def answer(
     # Every entry under one bank id, not only the last: a reused reference
     # (w5/599) names several, and a row is the one nearest its date.
     dated: dict[tuple[str, str, str], list[Any]] = {}
+    # Transfers another account's import wrote, by the amounts they post here:
+    # each bank words its side differently, so only date and amount pair them (w5/600).
+    counterparts: dict[tuple[str, ...], list[Any]] = {}
     for entry in written:
         entry = normalize_entry_strings(entry)
         if isinstance(entry, Transaction) and _source_legs(entry, account):
             elsewhere = _issued_elsewhere(entry, account, roots[:2])
+            if elsewhere:
+                counterparts.setdefault(_amounts_key(_fingerprint(entry, account)), []).append(entry)
             for identity in _identities(entry, account, keys):
                 if elsewhere and _is_native_identity(identity):
                     transfer_ids[identity] = entry
@@ -494,6 +499,14 @@ def answer(
                     if _match_text(entry.payee)
                     else "Date, narration and source amount match; different bank IDs do not rule out a duplicate.",
                     twin,
+                )
+            elif (counterpart := _transfer_counterpart(counterparts, entry, account, fingerprint)) is not None:
+                status, reason, match = (
+                    "possible_duplicate",
+                    f"A transfer from {counterpart.postings[0].account} dated "
+                    f"{_relative_days(counterpart.date, entry.date)} already posts {_source_amounts(entry, account)} "
+                    f"to {account}; this row may be its other side, worded by this bank.",
+                    counterpart,
                 )
             if status == "new" or (status == "possible_duplicate" and duplicates == "include"):
                 for identity in ids:
@@ -1156,6 +1169,35 @@ def _transfer_side(
         ):
             return key, found
     return None
+
+
+#: How far apart two banks may date one transfer's sides when only the amount pairs them.
+_COUNTERPART_DAYS = 3
+
+
+def _amounts_key(fingerprint: tuple[Any, ...]) -> tuple[str, ...]:
+    return tuple(sorted(text for text, _ in fingerprint[3]))
+
+
+def _transfer_counterpart(
+    counterparts: dict[tuple[str, ...], list[Any]], entry: Any, account: str, fingerprint: tuple[Any, ...]
+) -> Any:
+    """A transfer another account's import wrote that posts this row's amount here, days apart at most.
+
+    "TRANSFER TO SAVINGS" and "TRANSFER FROM CHECKING" share no word, so the
+    second side of every transfer imported from both banks was booked again
+    with exit 0 (w5/600). For review only: the same amount near the same day
+    can be a separate payment.
+    """
+    return next(
+        (
+            found
+            for found in reversed(counterparts.get(_amounts_key(fingerprint), []))
+            if abs((found.date - entry.date).days) <= _COUNTERPART_DAYS
+            and _legs_agree(fingerprint[3], _fingerprint(found, account)[3])
+        ),
+        None,
+    )
 
 
 def _relative_days(written: Any, row: Any) -> str:
