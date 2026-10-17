@@ -783,8 +783,10 @@ stdin and open the interactive shell only on a terminal where prompting is
 allowed; under `--no-input` (or `CI`), or with empty stdin, a missing query is
 refused with exit 2 instead of waiting at a prompt. Piped BQL must be UTF-8 (a
 BOM is fine); anything else is refused with exit 2, naming `stdin` and the
-offending byte offset, whatever the locale. In the shell, `Ctrl-C`
-cancels the current line and returns to `beanquery>`, as under `bean-query`;
+offending byte offset, whatever the locale. The shell prints results without
+a pager, as `bean-query` does (`.set pager on` turns Beanquery's pager on). In
+the shell, `Ctrl-C` cancels the current line and returns to `beanquery>`, as
+under `bean-query`;
 `.exit` (or `Ctrl-D`) ends the session with exit 0 and saves its history to
 Beanquery's `~/.config/beanquery/history`, the file `bean-query` shares. It
 follows `HOME` only: `BEA_CONFIG_DIR` and `XDG_CONFIG_HOME` do not move it, so an

@@ -390,6 +390,19 @@ def _redirect_output(shell: Any, arg: str, stream: TextIO, file: Path | None) ->
     shell.outfile = destination
 
 
+def _unpaged(shell: Any) -> None:
+    """Start the shell without upstream's pager, as `bean-query` runs it (w5/585).
+
+    Upstream pages a result only when handed `sys.stdout` itself, which
+    `bean-query` never does and bea did: Ctrl-C in `less` interrupted the wait
+    without ending it, and the pager and the shell then split every keystroke.
+    `.set pager on` still turns it on.
+    """
+    settings = getattr(shell, "settings", None)
+    if settings is not None and hasattr(settings, "pager"):
+        settings.pager = False
+
+
 def _native_shell(source: str, *, interactive: bool, format: str, numberify: bool, show_errors: bool) -> Any:
     """Upstream's `BQLShell` on a native source, with bea's input and exit-status guards.
 
@@ -536,6 +549,7 @@ def _attach_native(
 
     try:
         shell = shell_class(dsn, sys.stdout, interactive, False, format, numberify, show_errors)
+        _unpaged(shell)
     except (TypeError, LookupError, csv.Error) as exc:
         raise protocol.UsageError(
             f"Cannot open --source '{source}': {exc}.",
@@ -1007,6 +1021,7 @@ def _interactive_session(
     output: Path | None,
 ) -> None:
     shell = build_shell(file, sys.stdout, interactive=True, format=format, numberify=numberify, show_errors=show_errors)
+    _unpaged(shell)
     shell.spreadsheet_safe = spreadsheet_safe
     shell.debug = debug
     # After build_shell, which is what loads the ledger, and before cmdloop.
