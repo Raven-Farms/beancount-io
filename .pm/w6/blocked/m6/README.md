@@ -1,6 +1,6 @@
 # w6 · m6 — Publish the eight ledger skills to ClawHub for OpenClaw and Hermes Agent
 
-**Worker:** worker1 **Goal:** An OpenClaw or Hermes Agent user installs any `beancount-*` skill by name from ClawHub, and it works on its own without a Git checkout or this repository's link installer. **Status:** todo (t001 blocked; t002–t004 done)
+**Worker:** worker1 **Goal:** An OpenClaw or Hermes Agent user installs any `beancount-*` skill by name from ClawHub, and it works on its own without a Git checkout or this repository's link installer. **Status:** blocked (t001 needs the owner; t002–t004 done)
 
 **Research date:** 2026-10-16. Sources: ClawHub's quickstart, how-it-works, and skill-format pages at `docs.openclaw.ai/clawhub/`; Hermes Agent's skills page at `hermes-agent.nousresearch.com/docs/user-guide/features/skills`. Re-check the CLI flags against `clawhub --help` and `hermes skills --help` before relying on them.
 
@@ -26,6 +26,7 @@ Two tasks need someone with authority this repository does not have: t001 is the
 
 ## Blocked
 
+- **Milestone (2026-10-16)** — every open task now waits on t001. t005 (dry run) depends on t001 directly, and t006–t013 follow from t005 or t001, so nothing in this milestone can proceed until the owner decides. Shipped baseline: t002 `beancount-skills.py bundle` (`6a3e99a4`), t003 sibling hand-off lines (`313fe145`), t004 registry metadata and the hardened frontmatter check (`155e3135`). **Unblock:** t001's condition below. Then `/pm unblock w6/m6` and continue at t005. **Who can clear it:** the repository owner.
 - **t001 (2026-10-16)** — needs the repository owner's decision, which this repository cannot make. ClawHub publishes every skill under `MIT-0` with no per-skill override, and `LICENSE` here is MIT. MIT-0 drops the requirement to keep the copyright and permission notice. The owner must also choose which ClawHub handle (and so which install scope, `@<handle>/beancount-*`) publishes the suite. No decision on either is recorded on the board, in an ADR, or in a commit. t002–t004 proceed without it; t005 onward depend on it. **Unblock:** the owner states (1) whether the eight skills may be published under MIT-0 and (2) the publishing handle, and t001 records both under `## Decisions`. If the owner declines MIT-0, block the milestone with that reason. **Who can clear it:** the repository owner.
 
 ## What the hosts need (checked 2026-10-16)
@@ -50,13 +51,13 @@ Two tasks need someone with authority this repository does not have: t001 is the
 ## Source + Goal linkage
 
 - **Source:** user request 2026-10-16 to list Beancount.io on OpenClaw and Hermes Agent, after a search found no such work on the board. Research the same day into ClawHub's publishing, skill-format, and moderation docs, and into Hermes Agent's skills-hub docs.
-- **Goal linkage:** **A3 — Community & distribution.** ClawHub is the public registry both hosts search, as PyPI and the Homebrew tap are for `bea` and the official MCP Registry is for the hosted endpoint ([w2/m36](../../w2/done/m36/README.md)). Secondary **A1 — Agent-native accounting**: two agent hosts beyond Claude Code and Codex can run the ledger workflows.
+- **Goal linkage:** **A3 — Community & distribution.** ClawHub is the public registry both hosts search, as PyPI and the Homebrew tap are for `bea` and the official MCP Registry is for the hosted endpoint ([w2/m36](../../../w2/done/m36/README.md)). Secondary **A1 — Agent-native accounting**: two agent hosts beyond Claude Code and Codex can run the ledger workflows.
 - **Expected outcome:** an OpenClaw or Hermes user types one install command and gets a working skill without cloning this repository. Signals: ClawHub install counts per skill, and `bea` installs that follow.
-- **Why now:** the suite is rehearsed and stable on Claude Code and Codex ([w5/m3](../../w5/done/m3/README.md), [w5/m9](../../w5/done/m9/README.md), [w5/m10](../../w5/done/m10/README.md)), and the only install path today is a sparse Git checkout plus a Python link script. Both hosts read ClawHub, so one listing reaches both. The single-folder gap (t002, t003) has to close before any registry publish, or the first installs read missing files. Adoption surface is included because the milestone changes the customer install guide, the skills catalog, and the skill frontmatter that agents read.
+- **Why now:** the suite is rehearsed and stable on Claude Code and Codex ([w5/m3](../../../w5/done/m3/README.md), [w5/m9](../../../w5/done/m9/README.md), [w5/m10](../../../w5/done/m10/README.md)), and the only install path today is a sparse Git checkout plus a Python link script. Both hosts read ClawHub, so one listing reaches both. The single-folder gap (t002, t003) has to close before any registry publish, or the first installs read missing files. Adoption surface is included because the milestone changes the customer install guide, the skills catalog, and the skill frontmatter that agents read.
 
 ## Out of scope
 
-- Hermes Agent's curated MCP catalog (`optional-mcps/` in its repository). Nous approves entries there, and the docs describe no community submission, so this milestone does not open a pull request against it ([DO_NOT_DO](../../DO_NOT_DO.md): no unsolicited PRs to other repos).
+- Hermes Agent's curated MCP catalog (`optional-mcps/` in its repository). Nous approves entries there, and the docs describe no community submission, so this milestone does not open a pull request against it ([DO_NOT_DO](../../../DO_NOT_DO.md): no unsolicited PRs to other repos).
 - skills.sh, LobeHub, and other directories. A `/.well-known` skills index on `beancount.io`: Hermes documents `/.well-known/skills/index.json`, while the draft discovery RFC uses `/.well-known/agent-skills/index.json`. Revisit once the convention settles.
-- An OpenClaw plugin package, and the hosted MCP endpoint on either host ([w6/m7](../m7/README.md)).
+- An OpenClaw plugin package, and the hosted MCP endpoint on either host ([w6/m7](../../m7/README.md)).
 - Development skills under `.agents/skills/`. Only the customer `beancount-*` suite is published.
