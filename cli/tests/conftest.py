@@ -271,6 +271,9 @@ class StubModel:
     url: str = ""
     reply: Callable[[int], StubReply] = field(default=lambda n: model_answer("stub answer"))
     requests: list[dict[str, object]] = field(default_factory=list)
+    #: Answer as HTTP/1.1 and keep the connection open, as the hosted proxy
+    #: does, for a test about the client's reuse of it (w5/545).
+    keep_alive: bool = False
 
     @property
     def count(self) -> int:
@@ -288,6 +291,11 @@ class _ModelHandler(BaseHTTPRequestHandler):
     # turn, which would make "how many requests did one question cost" — the
     # thing the usage ceiling is about — unmeasurable.
     protocol_version = "HTTP/1.0"
+
+    def setup(self) -> None:
+        super().setup()
+        if self.server.stub.keep_alive:  # type: ignore[attr-defined]
+            self.protocol_version = "HTTP/1.1"
 
     def do_POST(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler's spelling
         stub: StubModel = self.server.stub  # type: ignore[attr-defined]
