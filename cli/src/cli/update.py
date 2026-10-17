@@ -228,14 +228,20 @@ def _fetch_latest(channel: str) -> str:
             if time.monotonic() > deadline:
                 raise TimeoutError(f"no complete answer within {TIMEOUT_SECONDS:g} s")
     body = b"".join(chunks)
-    if channel == "homebrew":
-        formula = body.decode("utf-8")
-        match = re.search(r'^\s*version "(\d+\.\d+\.\d+)"\s*$', formula, re.MULTILINE)
-        if not match:
-            match = re.search(r"beancount_io-(\d+\.\d+\.\d+)\.tar\.gz", formula)
-        return match.group(1) if match else ""
-    payload = json.loads(body)
-    return str(payload["info"]["version"])
+    # An HTML page or a JSON shape without `info.version` surfaced as Python's
+    # own parser text (`Expecting value: line 1 column 1 (char 0)`, `'version'`)
+    # in the check's failure (w5/484).
+    try:
+        if channel == "homebrew":
+            formula = body.decode("utf-8")
+            match = re.search(r'^\s*version "(\d+\.\d+\.\d+)"\s*$', formula, re.MULTILINE)
+            if not match:
+                match = re.search(r"beancount_io-(\d+\.\d+\.\d+)\.tar\.gz", formula)
+            return match.group(1) if match else ""
+        payload = json.loads(body)
+        return str(payload["info"]["version"])
+    except (ValueError, KeyError, TypeError) as exc:
+        raise ValueError("the index sent an unreadable answer") from exc
 
 
 def latest_version(

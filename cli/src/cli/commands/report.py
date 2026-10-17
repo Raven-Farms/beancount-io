@@ -154,7 +154,8 @@ def _heading(title: str, metadata: dict[str, Any], *, profit_line: bool = False)
     typer.echo(f"{convention}; profit is positive for a gain." if profit_line else f"{convention}.")
     for source in metadata.get("price_sources", []):
         if source["freshness"] != "recent" or source["error"]:
-            detail = f"; {source['error']}" if source["error"] else ""
+            # The error is a sentence of its own; one full stop, not `..` (w5/484).
+            detail = f"; {source['error'].rstrip('.')}" if source["error"] else ""
             output.note(
                 f"Price source {source['alias']}: {source['freshness']}; "
                 f"observed {source['observed_at'] or 'unknown'}; revision {source['revision'] or 'none'}{detail}."
