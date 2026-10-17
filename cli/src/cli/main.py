@@ -455,7 +455,8 @@ app.command("balance", cls=SingleValueCommand, rich_help_panel=_LOCAL_PANEL)(bal
 app.command("init", cls=SingleValueCommand, rich_help_panel=_LOCAL_PANEL)(init)
 app.command("import", cls=SingleValueCommand, rich_help_panel=_LOCAL_PANEL)(import_entries)
 app.add_typer(ingest_app, name="ingest", rich_help_panel=_LOCAL_PANEL)
-app.command("format", rich_help_panel=_LOCAL_PANEL)(format_beans)
+# `format -o a -o b` wrote `b` alone with exit 0 (w5/512); `ask --into` names a write destination too.
+app.command("format", cls=SingleValueCommand, rich_help_panel=_LOCAL_PANEL)(format_beans)
 app.command("query", cls=SingleValueCommand, rich_help_panel=_LOCAL_PANEL)(query)
 app.command(
     "price",
@@ -464,7 +465,7 @@ app.command(
     context_settings=_CHECK_CTX,
     epilog=native_help("price"),
 )(price)
-app.command("ask", rich_help_panel=_LOCAL_PANEL)(ask)
+app.command("ask", cls=SingleValueCommand, rich_help_panel=_LOCAL_PANEL)(ask)
 app.command(
     "example",
     cls=ForwardingCommand,
