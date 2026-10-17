@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [512 — `bea format -o a -o b` / `-c 40 -c 70` keep the last value](./512.md)
 - [513 — `add balance --pad-from` before the open cites a nonexistent line as an assertion that "already holds"](./513.md)
 - [514 — `list` on an included leaf counts the root hint as an error](./514.md)
 - [515 — Global `--offline` is ignored by `bea cloud` (and `ask`): `--offline -y cloud ledger delete` deletes](./515.md)
