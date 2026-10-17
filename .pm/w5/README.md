@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [580 — `init` through a dangling symlink blames the working directory](./580.md)
 - [581 — `--json` `target.file` resolves a symlinked root to a path that loads a different ledger](./581.md)
 - [582 — Process substitution for `--rules`/`--config` gives misleading errors (gap in w5/436)](./582.md)
 - [583 — With `2>&-`, child processes lack fd 2: errors land in stdout with exit 0, and the query shell loops forever (gap in w5/308)](./583.md)
