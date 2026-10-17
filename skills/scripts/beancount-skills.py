@@ -9,10 +9,12 @@ directory in a destination is a symlink into this checkout, so Claude Code
     beancount-skills.py install   DEST [DEST ...]
     beancount-skills.py verify    DEST [DEST ...]
     beancount-skills.py uninstall DEST [DEST ...]
+    beancount-skills.py bundle    OUT
 
 `install` changes nothing when any owned name is already taken by something
 else, `verify` never writes, and `uninstall` removes only links into this
-checkout.
+checkout. `bundle` writes one self-contained copy per skill into an empty OUT,
+for registries such as ClawHub that install a single folder.
 """
 
 from __future__ import annotations
@@ -24,6 +26,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 SCRIPT = Path(__file__).resolve()
@@ -127,6 +130,20 @@ def verify(dest: Path) -> int:
 
 
 def skill_problems(dest: Path, name: str, names: list[str], installed: list[str]) -> list[str]:
+    missing_files, missing_siblings = missing_references(dest, name, names, installed)
+    return [
+        *(f"{path} is missing ({where} needs it)" for path, where in missing_files.items()),
+        *(
+            f"{name} refers to {sibling} ({where}), which is not installed"
+            for sibling, where in missing_siblings.items()
+        ),
+    ]
+
+
+def missing_references(
+    dest: Path, name: str, names: list[str], installed: list[str]
+) -> tuple[dict[str, str], dict[str, str]]:
+    """The supporting files (`owner/references/file.md`) and siblings DEST/NAME needs but lacks."""
     root = dest / name
     missing_files: dict[str, str] = {}
     missing_siblings: dict[str, str] = {}
@@ -150,13 +167,7 @@ def skill_problems(dest: Path, name: str, names: list[str], installed: list[str]
                     name,
                 )
                 missing_files.setdefault(f"{owner}/references/{filename}", f"{where}:{lineno}")
-    return [
-        *(f"{path} is missing ({where} needs it)" for path, where in missing_files.items()),
-        *(
-            f"{name} refers to {sibling} ({where}), which is not installed"
-            for sibling, where in missing_siblings.items()
-        ),
-    ]
+    return missing_files, missing_siblings
 
 
 def describe_conflict(entry: Path) -> str:
@@ -244,7 +255,48 @@ def uninstall(dest: Path) -> int:
     return 0
 
 
-ACTIONS = {"install": install, "verify": verify, "uninstall": uninstall}
+def bundle(out: Path) -> int:
+    """Write each skill into OUT with every sibling reference it reads, for single-folder installs.
+
+    A registry installs one folder, so a sibling's reference the skill names
+    (beancount-init's `references/bea-cli.md`) is copied into the skill's own
+    `references/`, which verify accepts as the same file. Repeats until the
+    copied references need nothing more. Evals stay behind; the checkout keeps
+    the only canonical copy of each reference.
+    """
+    if os.path.lexists(out) and (not out.is_dir() or any(out.iterdir())):
+        print(f"FAIL {out} must be an empty or new directory. Nothing was written.", file=sys.stderr)
+        return 1
+    names = expected_skills()
+    problems: list[str] = []
+    for name in names:
+        # Resolve alone: a sibling's bundle beside this one must not satisfy its references.
+        with tempfile.TemporaryDirectory() as staging:
+            target = Path(staging) / name
+            shutil.copytree(
+                SOURCE_DIR / name, target, ignore=shutil.ignore_patterns("evals", "__pycache__", ".DS_Store")
+            )
+            vendored: list[str] = []
+            while missing := missing_references(target.parent, name, names, [name])[0]:
+                dangling = [path for path in missing if not (SOURCE_DIR / path).is_file()]
+                if dangling:
+                    problems += [f"{name}: {path} is missing ({missing[path]} needs it)" for path in dangling]
+                    break
+                (target / "references").mkdir(exist_ok=True)
+                for path in missing:
+                    shutil.copy2(SOURCE_DIR / path, target / "references")
+                vendored += missing
+            shutil.copytree(target, out / name)
+        print(f"bundled {out / name}" + (f" with {', '.join(sorted(vendored))}" if vendored else ""))
+    for problem in problems:
+        print(f"FAIL {problem}", file=sys.stderr)
+    if problems:
+        print(f"Bundles in {out} are incomplete; do not publish them.", file=sys.stderr)
+        return 1
+    return 0
+
+
+ACTIONS = {"install": install, "verify": verify, "uninstall": uninstall, "bundle": bundle}
 
 
 def main(argv: list[str] | None = None) -> int:

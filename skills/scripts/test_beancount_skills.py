@@ -27,6 +27,7 @@ from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
 from string import Template
+from unittest import mock
 
 SCRIPTS_DIR = Path(__file__).resolve().parent
 SKILLS_ROOT = SCRIPTS_DIR.parent
@@ -285,6 +286,57 @@ class TestVerify(Workspace):
                 self.assertEqual(code, 1)
                 self.assertTrue(err.endswith(reason), err)
                 self.assertNotIn("does not exist", err)
+
+
+class TestBundle(Workspace):
+    def test_each_bundle_installed_alone_has_every_reference_it_names(self):
+        out = self.root / "bundles"
+        before = snapshot(SUITE)
+        code, _, err = run("bundle", out)
+        self.assertEqual((code, err), (0, ""))
+        self.assertEqual(snapshot(SUITE), before, "bundling must not touch the checkout")
+        names = skills.expected_skills()
+        self.assertEqual(sorted(p.name for p in out.iterdir()), names)
+        for name in names:
+            with self.subTest(skill=name):
+                alone = self.root / "alone" / name
+                shutil.copytree(out / name, alone / name)
+                missing_files, _ = skills.missing_references(alone, name, names, [name])
+                self.assertEqual(missing_files, {})
+                self.assertFalse((alone / name / "evals").exists())
+
+    def test_a_sibling_bundle_beside_it_does_not_stand_in_for_a_vendored_reference(self):
+        out = self.root / "bundles"
+        run("bundle", out)
+        # beancount-options sorts after beancount-init, so resolving in a shared
+        # directory would find init's copy instead of vendoring one.
+        shared = (SUITE / "beancount-init" / "references" / "bea-cli.md").read_bytes()
+        self.assertEqual((out / "beancount-options" / "references" / "bea-cli.md").read_bytes(), shared)
+
+    def test_a_reference_no_skill_owns_fails_the_build(self):
+        source = self.root / "suite"
+        self.copy_suite(source)
+        with (source / "beancount-ask" / "SKILL.md").open("a") as handle:
+            handle.write("\nRead beancount-init's `references/nowhere.md` first.\n")
+        out = self.root / "bundles"
+        with mock.patch.object(skills, "SOURCE_DIR", source):
+            code, _, err = run("bundle", out)
+        self.assertEqual(code, 1)
+        # As in verify, a file no skill has is attributed to the skill that names it.
+        self.assertRegex(
+            err,
+            r"FAIL beancount-ask: beancount-ask/references/nowhere\.md is missing \(beancount-ask/SKILL\.md:\d+ needs it\)",
+        )
+        self.assertIn("do not publish them", err)
+
+    def test_a_non_empty_output_is_refused_without_writing(self):
+        out = self.root / "bundles"
+        out.mkdir()
+        (out / "keep").write_text("mine\n")
+        code, _, err = run("bundle", out)
+        self.assertEqual(code, 1)
+        self.assertIn("must be an empty or new directory", err)
+        self.assertEqual([p.name for p in out.iterdir()], ["keep"])
 
 
 class TestUninstall(Workspace):
