@@ -443,8 +443,13 @@ def _targets(
                     raise UsageError(_denied(match, "Permission denied"))
                 files.add(target)
         elif resolved.is_file():
-            if resolved.suffix not in SUFFIXES:
-                raise UsageError("Expected a .bean or .beancount file, or a directory.")
+            # A named file is a ledger whatever its suffix, as for every other
+            # command and bean-format; `SUFFIXES` only picks ledgers out of a
+            # directory walk (w5/499).
+            if output.is_encrypted(resolved):
+                raise UsageError(
+                    f"Cannot format {resolved}: it is encrypted, and Beancount decrypts it only to load it."
+                )
             files.add(resolved)
             # The closure is walked from the path as named: a symlinked root's
             # includes sit beside the link, as the loader and every other
