@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [467 — `bea import` re-writes a `{}` sale already in the ledger, or exits 4 on its own entry (regression from w5/349)](./467.md)
 - [468 — `bea import` writes a self-cancelling entry when a rule, category or `--default-account` names `--account`](./468.md)
 - [469 — `bea import --id-key FITID`/`''` silently disables native-ID dedupe](./469.md)
 - [470 — `bea import`'s no-importer hint suggests `--account Assets:Checking` and placeholder columns](./470.md)
