@@ -13,7 +13,7 @@ from __future__ import annotations
 import dataclasses
 import re
 import unicodedata
-from collections.abc import Callable, Iterable, Iterator, Mapping
+from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from datetime import date, timedelta
 from decimal import Decimal
 from pathlib import Path
@@ -198,6 +198,7 @@ def _overview(
             "expenses": data.expenses_hierarchy,
         },
         filtered.account,
+        filtered.ledger.root_accounts,
     )
     trees = tuple(sections[name] for name in ("assets", "liabilities", "income", "expenses"))
     balances = [(filtered.end_date, balance) for tree in trees if tree is not None for balance in _tree_balances(tree)]
@@ -238,6 +239,7 @@ def _income_statement(
     sections = _prune_sections(
         {"income": data.income_hierarchy, "expenses": data.expenses_hierarchy},
         filtered.account,
+        filtered.ledger.root_accounts,
     )
     trees = (sections["income"], sections["expenses"])
     balances = [(filtered.end_date, balance) for tree in trees if tree is not None for balance in _tree_balances(tree)]
@@ -292,6 +294,7 @@ def _scoped_earnings(filtered: Any, conversion: str, unfiltered: Any) -> Any:
     trees = _prune_sections(
         {key: chart.hierarchy(filtered, options[key], conversion) for key in ("name_income", "name_expenses")},
         filtered.account,
+        filtered.ledger.root_accounts,
     )
     earnings = type(unfiltered)()
     for tree in trees.values():
@@ -316,6 +319,7 @@ def _balance_sheet(
             "equity": data.equity_hierarchy,
         },
         filtered.account,
+        filtered.ledger.root_accounts,
     )
     trees = (sections["assets"], sections["liabilities"], sections["equity"])
     balances = [(filtered.end_date, balance) for tree in trees if tree is not None for balance in _tree_balances(tree)]
@@ -363,7 +367,7 @@ def _trial_balance(filtered: Any, conversion: str, allow_errors: bool, ledger_er
     sections = {
         name: getattr(data, f"{name}_hierarchy") for name in ("assets", "liabilities", "equity", "income", "expenses")
     }
-    sections = _prune_sections(sections, filtered.account)
+    sections = _prune_sections(sections, filtered.account, filtered.ledger.root_accounts)
     metadata = _metadata(filtered, conversion, ledger_errors) | _valuation(
         conversion,
         (
@@ -919,7 +923,7 @@ def _substring_match(accounts: Iterable[str]) -> Callable[[str], bool]:
     return lambda account: any(term in fold_account(account) for term in terms)
 
 
-def _report_filter_match(account: str) -> Callable[[str], bool]:
+def _report_filter_match(account: str, roots: Sequence[str]) -> Callable[[str], bool]:
     """`bea report --account`'s documented matcher: a parent account or a regular expression.
 
     This has to be the matcher Fava's `AccountFilter` already applied to the
@@ -936,14 +940,14 @@ def _report_filter_match(account: str) -> Callable[[str], bool]:
     """
     from fava.core.filters import account_predicate
 
-    return account_predicate(account)
+    return account_predicate(account, roots)
 
 
-def _prune_sections(sections: dict[str, Any], account: str | None) -> dict[str, Any]:
+def _prune_sections(sections: dict[str, Any], account: str | None, roots: Sequence[str]) -> dict[str, Any]:
     """When `--account` is set, keep the subtrees the entry filter already kept."""
     if not account:
         return sections
-    matches = _report_filter_match(account)
+    matches = _report_filter_match(account, roots)
     return {name: _prune_tree(tree, matches) for name, tree in sections.items()}
 
 

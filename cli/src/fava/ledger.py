@@ -191,7 +191,8 @@ class FilteredLedger:
         # report said -4,000), and `-a Equity:Earnings` matched nothing. The
         # account filter now narrows the clamped entries (w5/501).
         if account:
-            entries = AccountFilter(account).apply(entries)
+            # Beancount.io change: the ledger's own root names (w5/616).
+            entries = AccountFilter(account, ledger.root_accounts).apply(entries)
 
         self.entries = entries
 

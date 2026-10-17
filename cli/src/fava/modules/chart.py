@@ -184,7 +184,7 @@ class ChartModule:
         # The entry filter keeps whole transactions, so a filtered report would
         # otherwise total the counterparty legs here while its headline tree
         # correctly excludes them — one report, two answers for one account.
-        in_scope = account_predicate(filtered.account)
+        in_scope = account_predicate(filtered.account, filtered.ledger.root_accounts)
 
         intervals = _flow_ranges(filtered, interval)
 
@@ -248,7 +248,7 @@ class ChartModule:
         )
 
         is_child_account = account_tester(account_name, with_children=True)
-        in_scope = account_predicate(filtered.account)
+        in_scope = account_predicate(filtered.account, filtered.ledger.root_accounts)
 
         txn = next(transactions, None)
         inventory = CounterInventory()
@@ -356,7 +356,7 @@ class ChartModule:
             filtered.ledger.options["name_liabilities"],
         )
 
-        in_scope = account_predicate(filtered.account)
+        in_scope = account_predicate(filtered.account, filtered.ledger.root_accounts)
 
         txn = next(transactions, None)
         inventory = CounterInventory()

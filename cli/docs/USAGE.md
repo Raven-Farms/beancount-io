@@ -1551,10 +1551,12 @@ bea report balance-sheet --conversion EUR
 Each report states its period, as-of date, account filter, and valuation.
 Invalid intervals, dates, reversed ranges, and malformed account filters exit
 **2**. `--account` takes a parent account (`Expenses:Food`) or a regular
-expression (`'Expenses:(Food|Rent)'`). A value spelled as an account name
-matches that account and its children only, so `Expenses:Food` does not
-pick up `Expenses:FoodTruck`; anything else is a case-insensitive regular
-expression search. It selects transactions involving
+expression (`'Expenses:(Food|Rent)'`). A value spelled as an account name,
+or a bare root (`Income`, or the ledger's renamed root), matches that account
+and its children only, counted from the start of the name. So `Expenses:Food`
+does not pick up `Expenses:FoodTruck` or `Assets:Reimbursable:Expenses:Food`,
+and `Income` leaves out `Expenses:Taxes:Income`. Anything else is a
+case-insensitive regular expression search. It selects transactions involving
 matching accounts, then reports only the postings to those accounts — totals,
 trees, and the interval breakdown all describe the accounts you asked for, not
 the counterparties they happened to face. As in `list`, an empty or
