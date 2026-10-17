@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [503 — `bea balance -- <term>` forwards dash terms as engine options (`-- -f other.bean` reports another ledger)](./503.md)
 - [504 — `report -a` on an account closed before `-t` prints a blank report and `account_filter_empty: false`](./504.md)
 - [505 — `balance-sheet -x at_cost` claims a reconciliation with a cross-currency adjustment](./505.md)
 - [506 — Zero valuation adjustment and total equity print as "—" under a conversion](./506.md)
