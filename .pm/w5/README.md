@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [553 — Shared `add open` recipe fails under `nounused`; the documented two-step needs `--allow-errors` the skill forbids](./553.md)
 - [554 — Reconcile diagnostic reads refuse on an already-red ledger; no skill allows `--allow-errors` on reads](./554.md)
 - [555 — `dedup.md` import-id grammar omits the lot/price `bea` now hashes (sibling of w5/349)](./555.md)
 - [556 — Same-day reciprocal prices: reports and `query` value differently and line order decides; `add price` allows it](./556.md)
