@@ -70,6 +70,12 @@ class _CountedSource(bytes):
         type(self).splits += 1
         return super().splitlines(keepends)
 
+    def split(self, sep: Any = None, maxsplit: Any = -1) -> list[bytes]:  # type: ignore[override]
+        # `lexer_lines` splits on `\n` alone, as Beancount numbers lines (w5/475).
+        if sep == b"\n":
+            type(self).splits += 1
+        return super().split(sep, maxsplit)
+
 
 def _refusal(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, content: str) -> tuple[list[str], dict[str, int]]:
     """Refuse a note on `content`; return the details and the work validation did."""
@@ -121,7 +127,9 @@ def test_validation_work_does_not_grow_with_the_error_count(
     _, few = _refusal(tmp_path / "few", monkeypatch, fixture(3))
     _, many = _refusal(tmp_path / "many", monkeypatch, fixture(60))
     assert many[counter] == few[counter], (few, many)
-    assert 0 < few[counter] <= 4
+    # A handful of whole-file passes: since w5/475 the splits count the
+    # lexer's `\n` splits as well as `splitlines`.
+    assert 0 < few[counter] <= 6
 
 
 def test_a_valid_ledger_pays_for_no_hint_index(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

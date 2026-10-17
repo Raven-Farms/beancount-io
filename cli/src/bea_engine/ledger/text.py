@@ -183,11 +183,11 @@ def _option_location(options: Mapping[str, Any], name: str, value: str) -> str:
     line = re.compile(rf'^\s*option\s+"{re.escape(name)}"\s+"{re.escape(value)}"')
     for filename in options.get("include") or ():
         try:
-            lines = Path(filename).read_text(encoding="utf-8", errors="replace").splitlines()
+            lines = lexer_lines(Path(filename).read_bytes())
         except OSError:
             continue
         for number, text in enumerate(lines, start=1):
-            if line.match(text):
+            if line.match(text.decode("utf-8", errors="replace")):
                 return f" at {filename}:{number}"
     return ""
 
@@ -481,6 +481,23 @@ class IncludeSpan:
     target: str
 
 
+def lexer_lines(content: bytes) -> list[bytes]:
+    """The file's lines as Beancount's lexer numbers them: split on `\\n` alone.
+
+    `bytes.splitlines()` also breaks on a lone `\\r`, so a stray carriage
+    return (pasted text, `\\r\\r\\n` endings) made a file look longer than
+    the lexer counts it. The entry being appended then sat inside the
+    "original" range: its balance failure was blamed on a plugin, its errors
+    lost `Proposed append (not written)`, and a staged pad's `Unused Pad` was
+    no longer exempt (w5/380). The reader counts this way since w5/169, and
+    the managed-include rewrites since w5/475.
+    """
+    lines = content.split(b"\n")
+    if lines and lines[-1] == b"":
+        lines.pop()
+    return lines
+
+
 def iter_includes(content: bytes) -> Iterator[IncludeSpan]:
     """Every include target the lexer sees, with spans for rewriting.
 
@@ -497,8 +514,8 @@ def iter_includes(content: bytes) -> Iterator[IncludeSpan]:
         # spaces keep the byte offsets below valid while restoring the keyword.
         content = b"   " + content[len(UTF8_BOM) :]
     starts = [0]
-    for line in content.splitlines(keepends=True):
-        starts.append(starts[-1] + len(line))
+    for line in lexer_lines(content):
+        starts.append(starts[-1] + len(line) + 1)
     pending = False
     for kind, line, text, value in lex_iter_string(content):  # type: ignore[no-untyped-call]
         if pending and kind == "STRING":

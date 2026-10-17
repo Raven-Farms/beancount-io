@@ -24,7 +24,7 @@ from pathlib import Path
 from typing import Any
 
 from bea_engine import stopping
-from bea_engine.ledger.text import single_line
+from bea_engine.ledger.text import lexer_lines, single_line
 from bea_engine.protocol import AuthError, ConflictError, LedgerError, UsageError, note, notice
 from bea_engine.query import format_error, same_file
 
@@ -977,22 +977,6 @@ def _stage_failed(file: Path, exc: OSError) -> str:
         f"Cannot write a staged copy of {file.name} in {file.parent} "
         f"({exc.strerror or type(exc).__name__}); nothing was written."
     )
-
-
-def lexer_lines(content: bytes) -> list[bytes]:
-    """The file's lines as Beancount's lexer numbers them: split on `\\n` alone.
-
-    `bytes.splitlines()` also breaks on a lone `\\r`, so a stray carriage
-    return (pasted text, `\\r\\r\\n` endings) made a file look longer than
-    the lexer counts it. The entry being appended then sat inside the
-    "original" range: its balance failure was blamed on a plugin, its errors
-    lost `Proposed append (not written)`, and a staged pad's `Unused Pad` was
-    no longer exempt (w5/380). The reader counts this way since w5/169.
-    """
-    lines = content.split(b"\n")
-    if lines and lines[-1] == b"":
-        lines.pop()
-    return lines
 
 
 def _discard_candidate(candidate: Path) -> None:

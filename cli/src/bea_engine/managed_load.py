@@ -957,10 +957,17 @@ def _rewrite_includes(
 
 
 def _swap_line(content: bytes, line: int, replacement: bytes) -> bytes:
-    """Replace 1-based `line` keeping the line count, so later spans stay valid."""
-    rows = content.splitlines(keepends=True)
-    start = sum(len(row) for row in rows[: line - 1])
-    return content[:start] + replacement + content[start + len(rows[line - 1]) :]
+    """Replace 1-based `line` keeping the line count, so later spans stay valid.
+
+    Lines are the lexer's, split on `\n` alone: one stray CR in a comment above
+    a rewritten include moved the swap onto the line before it, commenting out
+    the user's own price in place of the include (w5/475).
+    """
+    from bea_engine.ledger.text import lexer_lines
+
+    rows = lexer_lines(content)
+    start = sum(len(row) + 1 for row in rows[: line - 1])
+    return content[:start] + replacement + content[start + len(rows[line - 1]) + 1 :]
 
 
 def _remap_entry(entry: Any, back: dict[str, str]) -> Any:
