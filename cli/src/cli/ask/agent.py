@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+import threading
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -405,6 +406,14 @@ def make_agent(
             raise ModelRetry(f"BQL error: {exc}. Fix the query and retry.") from exc
         return format_result(query, data)
 
+    # Models batch independent calls ("add a coffee and a lunch"), and
+    # pydantic-ai runs a reply's sync tools at once in worker threads: two
+    # consent selectors shared one terminal, an answer reached either panel,
+    # and both dry runs predated either write (w5/544). One write at a time,
+    # each dry run after the last write; a lock, not `sequential=True`, since
+    # the ask extra accepts pydantic-ai releases older than that option.
+    write_lock = threading.Lock()
+
     @agent.tool()
     def write_directive(ctx: RunContext[BqlDeps], directive: str) -> str:
         """Append Beancount directive text (one or more directives) to the ledger file.
@@ -414,45 +423,48 @@ def make_agent(
         declines it; in non-interactive mode writes are skipped. Returns one line: how many
         directives were added and to which file, or why nothing was written.
         """
-        perm = ctx.deps.write_permission
-        if perm.deny_all:
-            return "Write denied (you denied all writes this session)."
-        argv = ["append", "--file", str(ctx.deps.file), "--text", "-"]
-        if ctx.deps.into is not None:
-            argv += ["--into", str(ctx.deps.into)]
-        try:
-            preview = launch.helper_json([*argv, "--dry-run"], stdin=directive)
-        except BeaError as exc:
-            return _write_rejection(exc)
-        if not perm.approve_all:
-            if perm.confirm_fn is None:
-                return "Write skipped (non-interactive mode does not support writes)."
-            # The dry run resolved where the text actually goes — with `--into`
-            # that is an included file, not `deps.file`. The consent panel has to
-            # name that file, so the preview's own answer is what it is built from.
-            warnings = [str(warning) for warning in preview.get("warnings") or []]
-            # The engine's aligned rendering is what lands in the file: the
-            # proposal's tab indentation showed as `\x09` and was then written
-            # as aligned spaces (w5/374).
-            shown = preview.get("text")
-            answer = perm.confirm_fn(shown if isinstance(shown, str) else directive, str(preview["target"]), warnings)
-            if answer == "a":
-                perm.approve_all = True
-            elif answer == "d":
-                perm.deny_all = True
-                return "Write denied."
-            elif answer == "n":
-                return "Write cancelled by user."
-        try:
-            result = launch.helper_json(
-                [*argv, "--token", json.dumps(preview["token"])],
-                stdin=directive,
-                writes=True,
-            )
-        except BeaError as exc:
-            return _write_rejection(exc)
-        ctx.deps.writes.append((int(result["written"]), str(result["target"])))
-        return f"Added {result['written']} directive(s) to {result['target']}."
+        with write_lock:
+            perm = ctx.deps.write_permission
+            if perm.deny_all:
+                return "Write denied (you denied all writes this session)."
+            argv = ["append", "--file", str(ctx.deps.file), "--text", "-"]
+            if ctx.deps.into is not None:
+                argv += ["--into", str(ctx.deps.into)]
+            try:
+                preview = launch.helper_json([*argv, "--dry-run"], stdin=directive)
+            except BeaError as exc:
+                return _write_rejection(exc)
+            if not perm.approve_all:
+                if perm.confirm_fn is None:
+                    return "Write skipped (non-interactive mode does not support writes)."
+                # The dry run resolved where the text actually goes — with `--into`
+                # that is an included file, not `deps.file`. The consent panel has to
+                # name that file, so the preview's own answer is what it is built from.
+                warnings = [str(warning) for warning in preview.get("warnings") or []]
+                # The engine's aligned rendering is what lands in the file: the
+                # proposal's tab indentation showed as `\x09` and was then written
+                # as aligned spaces (w5/374).
+                shown = preview.get("text")
+                answer = perm.confirm_fn(
+                    shown if isinstance(shown, str) else directive, str(preview["target"]), warnings
+                )
+                if answer == "a":
+                    perm.approve_all = True
+                elif answer == "d":
+                    perm.deny_all = True
+                    return "Write denied."
+                elif answer == "n":
+                    return "Write cancelled by user."
+            try:
+                result = launch.helper_json(
+                    [*argv, "--token", json.dumps(preview["token"])],
+                    stdin=directive,
+                    writes=True,
+                )
+            except BeaError as exc:
+                return _write_rejection(exc)
+            ctx.deps.writes.append((int(result["written"]), str(result["target"])))
+            return f"Added {result['written']} directive(s) to {result['target']}."
 
     @agent.tool()
     def get_skill_body(ctx: RunContext[BqlDeps], name: str) -> str:

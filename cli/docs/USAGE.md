@@ -1783,7 +1783,9 @@ carrying a control character in a string is escaped to a visible `\xNN`, so
 what is on screen is what will be written. The panel starts on **No**, so Enter alone
 declines. Arrows, `j`/`k`, the option numbers `1`–`4` and the letters `y`, `n`,
 `a` (yes to all) and `d` (deny all) move the selection, Enter confirms it, and
-Ctrl-C declines. Raw directive text carrying a control
+Ctrl-C declines. When one model reply proposes several writes, their panels
+come one at a time, each previewed after the write before it, so each answer
+applies to the directive on its panel. Raw directive text carrying a control
 character is refused rather than rewritten, so no AI-proposed write can leave one
 in a ledger file. Use `ask --into FILE` for an included destination. The write
 tool accepts dated directives; configure plugins, options and includes
