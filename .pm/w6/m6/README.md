@@ -1,6 +1,6 @@
 # w6 · m6 — Publish the eight ledger skills to ClawHub for OpenClaw and Hermes Agent
 
-**Worker:** worker1 **Goal:** An OpenClaw or Hermes Agent user installs any `beancount-*` skill by name from ClawHub, and it works on its own without a Git checkout or this repository's link installer. **Status:** todo
+**Worker:** worker1 **Goal:** An OpenClaw or Hermes Agent user installs any `beancount-*` skill by name from ClawHub, and it works on its own without a Git checkout or this repository's link installer. **Status:** todo (t001 blocked)
 
 **Research date:** 2026-10-16. Sources: ClawHub's quickstart, how-it-works, and skill-format pages at `docs.openclaw.ai/clawhub/`; Hermes Agent's skills page at `hermes-agent.nousresearch.com/docs/user-guide/features/skills`. Re-check the CLI flags against `clawhub --help` and `hermes skills --help` before relying on them.
 
@@ -8,7 +8,7 @@
 
 | id | title | est | depends_on |
 | --- | --- | --- | --- |
-| t001 | Owner decision: ClawHub's MIT-0 terms and the publishing handle | 15m | — |
+| t001 | Owner decision: ClawHub's MIT-0 terms and the publishing handle — **BLOCKED** | 15m | — |
 | t002 | Bundle each skill with the shared references it reads | 45m | — |
 | t003 | Name the sibling skills each one hands off to, and how to get them | 30m | — |
 | t004 | Declare `bea` and registry metadata in the frontmatter | 45m | — |
@@ -23,6 +23,10 @@
 | t013 | Closeout after the listings are live | 15m | t008, t012 |
 
 Two tasks need someone with authority this repository does not have: t001 is the owner's decision, and t007 needs the operator's ClawHub account and token. If either waits, park it with `/pm block` and keep the code tasks moving. t013 waits for both.
+
+## Blocked
+
+- **t001 (2026-10-16)** — needs the repository owner's decision, which this repository cannot make. ClawHub publishes every skill under `MIT-0` with no per-skill override, and `LICENSE` here is MIT. MIT-0 drops the requirement to keep the copyright and permission notice. The owner must also choose which ClawHub handle (and so which install scope, `@<handle>/beancount-*`) publishes the suite. No decision on either is recorded on the board, in an ADR, or in a commit. t002–t004 proceed without it; t005 onward depend on it. **Unblock:** the owner states (1) whether the eight skills may be published under MIT-0 and (2) the publishing handle, and t001 records both under `## Decisions`. If the owner declines MIT-0, block the milestone with that reason. **Who can clear it:** the repository owner.
 
 ## What the hosts need (checked 2026-10-16)
 
