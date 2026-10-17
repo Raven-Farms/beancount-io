@@ -1005,7 +1005,8 @@ def render_ledger_errors(
         formatted.append(hint)
     if not allow and (always_strict or context.current().strict_reads()):
         raise LedgerError(
-            message or f"Ledger has {len(formatted)} error(s). Pass --allow-errors to report anyway.",
+            # Counted from the errors, not the hint line appended to them (w5/514).
+            message or f"Ledger has {len(errors)} error(s). Pass --allow-errors to report anyway.",
             details=formatted,
         )
     if _json_mode():
