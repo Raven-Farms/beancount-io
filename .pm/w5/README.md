@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [566 — An include cycle gets a "Run with --file <itself>" root hint](./566.md)
 - [567 — `doctor missing-open` writes diagnostics to stdout, so `>> main.bean` corrupts the ledger](./567.md)
 - [568 — `bea doctor` resolves symlinks in the ledger path: locations under a symlinked directory find nothing](./568.md)
 - [569 — `bea doctor` double-counts a file included under two spellings; `roundtrip` crashes (gap in w5/433)](./569.md)
