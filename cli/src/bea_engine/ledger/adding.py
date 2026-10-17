@@ -175,6 +175,14 @@ def _simple(directive_type: str, request: dict[str, Any], roots: tuple[str, ...]
             raise protocol.UsageError(
                 "Every --currency value is blank after trimming; supply a currency symbol or omit -c."
             )
+        # One blank among others is still a lost value, `-c "$UNSET"`, not an
+        # omitted one: it was dropped and the open written without it (w5/491).
+        blank = next((number for number, item in enumerate(raw_currencies, start=1) if not str(item).strip()), None)
+        if blank is not None:
+            raise protocol.UsageError(
+                f"--currency value {blank} of {len(raw_currencies)} is blank after trimming; supply a currency "
+                "symbol or drop that -c. Nothing was written."
+            )
         return OpenDirective.model_validate(
             {
                 "date": date,

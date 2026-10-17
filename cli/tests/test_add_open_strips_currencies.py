@@ -1,4 +1,4 @@
-"""add open --currency strips padding and rejects blank-only tokens (w3/341)."""
+"""add open --currency strips padding and refuses blank tokens (w3/341, w5/491)."""
 
 from __future__ import annotations
 
@@ -72,8 +72,10 @@ def test_add_open_strips_and_drops_blank_currencies(tmp_path: Path) -> None:
         "--currency",
         "USD",
     )
-    assert mixed.returncode == 0, mixed.stderr or mixed.stdout
-    assert "open Assets:Mixed USD\n" in ledger.read_text()
+    # A blank beside a real symbol is a lost value, not an omitted one: refused
+    # like a blank `--tag`, rather than dropped (w5/491).
+    assert mixed.returncode == 2, mixed.stderr or mixed.stdout
+    assert "Assets:Mixed" not in ledger.read_text()
 
     listed = _bea(tmp_path, "--json", "--file", str(ledger), "list", "open", "--account", "Spaced")
     assert listed.returncode == 0
