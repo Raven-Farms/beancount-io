@@ -1554,6 +1554,11 @@ def validate_candidate(
     # so it is looked up once, on the first unknown account, not per error.
     root_hints: list[str] | None = None
     per_file_hinted: set[Path] = set()
+    duplicate_opens = {
+        error.entry.account
+        for error in errors
+        if isinstance(error.entry, Open) and str(getattr(error, "message", "")).startswith("Duplicate open directive")
+    }
     for index, error in enumerate(errors):
         hints = []
         message = format_error(error, ledger_file=file)
@@ -1713,8 +1718,24 @@ def validate_candidate(
             if lifecycles is None:
                 lifecycles = _lifecycles(entries)
             opened = next((e for e in lifecycles.get(invalid["account"], []) if isinstance(e, Open)), None)
-            if opened is not None and opened.currencies:
-                hints.append(_currency_widen_hint(invalid["currency"], opened, filenames, original_lines))
+            if invalid["account"] in duplicate_opens:
+                # Beancount checks postings against the account's last open:
+                # the proposed one, so the existing postings fail (w5/488).
+                hints.append(f"This follows from the duplicate open of {invalid['account']} above.")
+            elif opened is not None and opened.currencies:
+                interpolated = _interpolated_leg_hint(error.entry, invalid["account"], invalid["currency"], opened)
+                hints.append(
+                    interpolated or _currency_widen_hint(invalid["currency"], opened, filenames, original_lines)
+                )
+        if isinstance(error.entry, Open) and error.message.startswith("Duplicate open directive for "):
+            if lifecycles is None:
+                lifecycles = _lifecycles(entries)
+            existing = next(
+                (e for e in lifecycles.get(error.entry.account, []) if isinstance(e, Open) and e is not error.entry),
+                None,
+            )
+            if existing is not None:
+                hints.append(_duplicate_open_hint(existing, error.entry, filenames))
         if isinstance(error.entry, Pad) and error.message.startswith("Invalid reference to "):
             invalid_pad_accounts = True
             # Worded by how the pad arrived: `add balance --pad-from` wrote no
@@ -2048,13 +2069,68 @@ def _currency_widen_hint(
 ) -> str:
     """Where the open that refuses `currency` is, and the two ways past it."""
     allowed = ", ".join(opened.currencies)
-    widened = ",".join([*opened.currencies, currency])
     origin = _plugin_origin(opened, "open", filenames, original_lines)
     where = f"by {origin}" if origin else f"at {_location(opened, filenames)}"
     return (
         f"{opened.account} is opened {where} for {allowed} only. To post {currency} there, edit that open to "
-        f"'{opened.date} open {opened.account} {widened}' (bea add open cannot change an existing open); "
+        f"'{_open_line(opened, [*opened.currencies, currency])}' (bea add open cannot change an existing open); "
         f"otherwise record this posting in {allowed}, converted at the rate paid."
+    )
+
+
+def _open_line(opened: Any, currencies: list[str]) -> str:
+    """`opened` as one line with `currencies`, keeping its booking method.
+
+    Without it the suggested edit turned `"FIFO"` lot matching back into the
+    default one (w5/488). Metadata stays where it is, below the line.
+    """
+    booking = getattr(opened.booking, "value", opened.booking)
+    return f"{opened.date} open {opened.account} {','.join(currencies)}" + (f' "{booking}"' if booking else "")
+
+
+def _duplicate_open_hint(existing: Any, duplicate: Any, filenames: dict[Path, Path]) -> str:
+    """One remedy for a second `open`: the account opens once, so edit the first (w5/488)."""
+    where = _location(existing, filenames)
+    if not existing.currencies:
+        return f"{existing.account} is already opened at {where} for any currency; an account opens once."
+    added = [currency for currency in duplicate.currencies or [] if currency not in existing.currencies]
+    if not added:
+        return f"{existing.account} is already opened at {where}; an account opens once."
+    return (
+        f"{existing.account} is already opened at {where} for {', '.join(existing.currencies)}; an account opens "
+        f"once. To allow {', '.join(added)} too, edit that open to "
+        f"'{_open_line(existing, [*existing.currencies, *added])}' (bea add open cannot change an existing open)."
+    )
+
+
+def _interpolated_leg_hint(entry: Any, account: str, currency: str, opened: Any) -> str | None:
+    """Advice for a leg Beancount filled in, in a currency its account does not take.
+
+    A card charged for a meal priced in EUR is the usual case: the card leg had
+    no amount, so the EUR came from the other legs, and widening the card's
+    open is the wrong fix. The right one is a price on the leg the user wrote
+    (w5/488).
+    """
+    legs = [p for p in entry.postings if p.account == account and p.units.currency == currency]
+    if not legs or not all((p.meta or {}).get("__automatic__") for p in legs):
+        return None
+    priced = next(
+        (
+            p
+            for p in entry.postings
+            if not (p.meta or {}).get("__automatic__") and p.units.currency == currency and p.price is None
+        ),
+        None,
+    )
+    target = opened.currencies[0] if len(opened.currencies) == 1 else "CURRENCY"
+    example = (
+        f"'{priced.account} {format(priced.units.number, 'f')} {currency} @ RATE {target}'"
+        if priced is not None
+        else f"'NUMBER {currency} @ RATE {target}'"
+    )
+    return (
+        f"{account} was given no amount, so Beancount filled in {currency} from the other legs. If it was charged "
+        f"in {target}, price the {currency} leg at the rate paid: {example}."
     )
 
 

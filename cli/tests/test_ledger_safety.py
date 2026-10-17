@@ -560,7 +560,9 @@ def test_distinct_problems_are_still_reported_separately(book: Path) -> None:
     with pytest.raises(Exception) as caught:
         ledger_write.validate_append(book, entries)
     details = getattr(caught.value, "details", [])
-    assert len(details) == 2
+    # The duplicate open also carries its remedy as a hint line (w5/488).
+    problems = [detail for detail in details if detail.startswith("Proposed append (not written): ")]
+    assert len(problems) == 2
     assert not any("Same problem on" in detail for detail in details)
 
 
