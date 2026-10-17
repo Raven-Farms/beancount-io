@@ -1339,7 +1339,12 @@ def _same_file(left: Path, right: Path) -> bool:
 
 
 def top_root(file: Path) -> Path | None:
-    """The ledger nothing includes, above `file` through its includers, or None for a root."""
+    """The ledger nothing includes, above `file` through its includers, or None for a root.
+
+    A climb that comes back to `file` (an include cycle through it) has no
+    other root to name: the hint told the user to run the command they had
+    just run (w5/566).
+    """
     root = including_root(file)
     seen = {file.resolve()}
     while root is not None and root.resolve() not in seen:
@@ -1348,6 +1353,8 @@ def top_root(file: Path) -> Path | None:
         if above is None:
             break
         root = above
+    if root is not None and root.resolve() == file.resolve():
+        return None
     return root
 
 

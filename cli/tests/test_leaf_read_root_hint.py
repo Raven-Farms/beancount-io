@@ -81,3 +81,27 @@ def test_a_root_with_errors_gets_no_hint(tmp_path: Path) -> None:
         result = _bea(tmp_path, "-f", str(tmp_path / "bad.bean"), *command)
         assert result.returncode == 1
         assert "included by" not in result.stderr
+
+
+@pytest.mark.parametrize("start", ["main.bean", "a.bean"])
+@pytest.mark.parametrize(
+    "command",
+    [
+        ["check"],
+        ["--json", "check"],
+        ["list", "open"],
+        ["add", "note", "--date", "2026-01-03", "-a", "Assets:Cash", "-m", "hi", "--allow-errors"],
+    ],
+    ids=["check", "json-check", "list", "write"],
+)
+def test_an_include_cycle_names_no_root(tmp_path: Path, start: str, command: list[str]) -> None:
+    """The climb came back to the file itself and told the user to run what they ran (w5/566)."""
+    (tmp_path / "main.bean").write_text(
+        'option "operating_currency" "USD"\n2020-01-01 open Assets:Cash USD\ninclude "a.bean"\n'
+    )
+    (tmp_path / "a.bean").write_text('include "main.bean"\n')
+
+    result = _bea(tmp_path, "--file", str(tmp_path / start), *command)
+
+    assert "is included by" not in result.stdout + result.stderr, result.stdout + result.stderr
+    assert "Duplicate filename parsed" in result.stdout + result.stderr
