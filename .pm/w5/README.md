@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [557 — Missing-price summary gives a misleading "no price before DATE" for cash never routed through a cost currency](./557.md)
 - [558 — `query` regex pre-check reads `~ '…'` inside comments and string literals, refusing valid queries](./558.md)
 - [559 — A stored query whose OPEN date falls on or after its directive date answers `(no rows)` or a bogus CLOSE error (gap in w3/398)](./559.md)
 - [560 — `FROM ACCOUNTS`/`FROM Balances` rewritten to a nonexistent quoted table](./560.md)
