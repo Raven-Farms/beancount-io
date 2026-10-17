@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [547 — `ask` reply cut mid-UTF-8 prints a raw codec error and drops the already-wrote note (gap in w5/373)](./547.md)
 - [548 — `ask` answers lose angle-bracket text and HTML blocks](./548.md)
 - [549 — `ask`'s BQL tool drops error details and calls an engine crash "Ledger is invalid"](./549.md)
 - [550 — `bea ask > out.txt` hides the REPL and approval panel in the file, yet a blind `y` writes](./550.md)
