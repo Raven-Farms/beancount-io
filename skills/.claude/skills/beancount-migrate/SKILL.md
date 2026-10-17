@@ -1,6 +1,7 @@
 ---
 name: beancount-migrate
 description: Migrate full transaction history from Mint, Monarch, QuickBooks Online or another category-tagged finance-app export into a fresh Beancount ledger. Confirm account/category mappings, pair transfers, preserve source IDs, write through bea and reconcile source counts and balances. Skip ongoing bank imports, populated-ledger merges and investment lot reconstruction.
+metadata: {"openclaw": {"homepage": "https://github.com/bex-co/beancount-io/tree/main/skills", "requires": {"anyBins": ["bea", "bean-check"]}, "install": [{"id": "brew", "kind": "brew", "formula": "bex-co/tap/bea", "bins": ["bea"], "label": "Install bea (Homebrew)"}, {"id": "uv", "kind": "uv", "package": "beancount-io", "bins": ["bea"], "label": "Install bea (uv)"}]}, "hermes": {"category": "finance", "tags": ["beancount", "accounting", "migration", "mint", "monarch", "quickbooks"]}}
 ---
 
 # beancount-migrate

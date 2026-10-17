@@ -63,7 +63,7 @@ The [importer graduation guide](docs/importer-graduation.md) composes importer-a
 
 Each customer-facing skill lives at `.claude/skills/beancount-<name>/` within this package, with:
 
-- `SKILL.md` — frontmatter (`name`, `description` for triggering) + body instructions. Keep under ~500 lines; spill into `references/` for deep nuance.
+- `SKILL.md` — frontmatter (`name`, `description` for triggering) + body instructions. Keep under ~500 lines; spill into `references/` for deep nuance. Customer skills also carry a `metadata` object for registry hosts: `openclaw` (OpenClaw and ClawHub: `bea` or `bean-check` as the required binary, with Homebrew and uv installs of `bea`) and `hermes` (Hermes Agent category and tags). Keep it one line of JSON, which every host parses; `ci-check.py` rejects a multi-line block.
 - `references/` — optional files loaded on demand when the body points to them.
 - `evals/` — optional `evals.json` + fixtures for `skill-creator` iteration.
 - `scripts/` / `agents/` — optional executable helpers or platform metadata when the skill needs them.

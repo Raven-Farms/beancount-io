@@ -1,6 +1,7 @@
 ---
 name: beancount-import
 description: Import a bank or card CSV, OFX/QFX, or QIF export into an existing Beancount ledger. Normalize signs, suggest categories from existing accounts, review duplicates and confirm before writing through bea. Use for recording an export; skip statement reconciliation, full finance-app migrations, reusable importer authoring, and individual options trades.
+metadata: {"openclaw": {"homepage": "https://github.com/bex-co/beancount-io/tree/main/skills", "requires": {"anyBins": ["bea", "bean-check"]}, "install": [{"id": "brew", "kind": "brew", "formula": "bex-co/tap/bea", "bins": ["bea"], "label": "Install bea (Homebrew)"}, {"id": "uv", "kind": "uv", "package": "beancount-io", "bins": ["bea"], "label": "Install bea (uv)"}]}, "hermes": {"category": "finance", "tags": ["beancount", "accounting", "bank-import", "csv", "ofx"]}}
 ---
 
 # beancount-import
