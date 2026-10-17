@@ -1266,8 +1266,9 @@ Repeating the same value is accepted; `--posting`, `--tag`, `--link`,
 the same rule: a second, different `--account`, `--csv`, `--rules` or
 `init -c` is refused before anything is written or remembered. So do the read
 commands — `list`, `report`, `balance` and `query`: `list transaction -a Food
--a Rent` exits **2** naming both rather than listing Rent alone (an account
-filter is a regular expression, so `-a 'Food|Rent'` matches either), while
+-a Rent` exits **2** naming both rather than listing Rent alone (`list`'s
+account filter is one case-insensitive substring, so run it once per account;
+`report -a 'Food|Rent'` takes a regular expression that matches either), while
 `--search`, `--tag` and `--link` still repeat.
 
 ### Custom directives
