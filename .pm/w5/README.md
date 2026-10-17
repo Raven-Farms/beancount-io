@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [533 — Turkish İ/ı not folded by `list --type` or the CSV column hint](./533.md)
 - [534 — Decimal comma in `-p`/balance gives a raw `ValueError`; tag refusal says "letters"](./534.md)
 - [535 — `treeify` on non-UTF-8 input gives a raw `UnicodeDecodeError`](./535.md)
 - [536 — Only accounts are written NFC despite USAGE; `--into` creates NFD file names](./536.md)
