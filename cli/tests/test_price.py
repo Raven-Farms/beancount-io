@@ -283,7 +283,7 @@ class TestManagedPricePolicy:
         ("target", "fragment"),
         [
             ("https://prices.example.com/prices/BTC-USD", "origin https://prices.example.com is not allowlisted"),
-            ("https://beancount.io:8443/prices/BTC-USD", "origin https://beancount.io is not allowlisted"),
+            ("https://beancount.io:8443/prices/BTC-USD", "origin https://beancount.io:8443 is not allowlisted"),
             ("https://user@beancount.io/prices/BTC-USD", "must not carry credentials"),
             ("https://beancount.io/prices/BTC-USD?at=now", "must not carry a query string or fragment"),
             ("https://beancount.io/prices/BTC-USD#frag", "must not carry a query string or fragment"),

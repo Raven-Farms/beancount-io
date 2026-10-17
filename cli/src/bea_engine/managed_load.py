@@ -61,6 +61,7 @@ from bea_engine.managed_prices import (
     AllowedUrl,
     ManagedPriceBudget,
     is_url_include_target,
+    normalize_origin,
     parse_managed_price_url,
 )
 
@@ -221,7 +222,8 @@ def _env_origins() -> tuple[str, ...] | None:
     raw = os.environ.get(ORIGINS_ENV)
     if raw is None:
         return None
-    return tuple(origin.strip() for origin in raw.split(",") if origin.strip())
+    normalized = (normalize_origin(entry) for entry in raw.split(",") if entry.strip())
+    return tuple(dict.fromkeys(origin for origin in normalized if origin is not None))
 
 
 def _allowed_origins(origins: tuple[str, ...] | None) -> tuple[str, ...]:
