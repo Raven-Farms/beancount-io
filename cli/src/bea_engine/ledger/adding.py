@@ -714,6 +714,27 @@ def _price(
 # --------------------------------------------------------------------------- #
 
 
+def _refuse_unicode_space(number: int, posting_text: str) -> None:
+    """Refuse a space Beancount does not read as one, outside a quoted label.
+
+    A no-break space pasted from a web page or a statement between account and
+    amount was read as part of the account, `Expenses:Food\xa05`, and the
+    refusal offered to open that account (w5/490). Only a space or tab
+    separates fields.
+    """
+    quoted = False
+    for position, character in enumerate(posting_text, start=1):
+        if character == '"':
+            quoted = not quoted
+        elif not quoted and character.isspace() and character not in " \t":
+            label = unicodedata.name(character, "a Unicode space").title()
+            raise protocol.UsageError(
+                f"--posting {number} holds U+{ord(character):04X} ({label}) at character {position}: "
+                f"{posting_text!r}. Beancount separates fields only with an ordinary space or tab, so it would "
+                "read that character as part of a name or amount. Retype it as a space. Nothing was written."
+            )
+
+
 def _transaction(
     file: Path, request: dict[str, Any], *, into: Path | None, allow_errors: bool, strict_read: bool
 ) -> dict[str, Any]:
@@ -733,6 +754,7 @@ def _transaction(
                 f"--posting {number} contains a ';': {posting_text!r}. {COMMENT_HELP} "
                 "Use --meta for a transaction note. Nothing was written."
             )
+        _refuse_unicode_space(number, posting_text)
         parts = posting_text.split()
         # Native posting flags are single characters; accounts never are.
         if parts and len(parts[0]) == 1:

@@ -424,7 +424,12 @@ def _refused_character(name: str) -> str:
     for character in name:
         if character in ":-" or (character.isascii() and character.isalnum()):
             continue
-        if character.isascii() or CONTROL_CHARACTERS.match(character) or "\ud800" <= character <= "\udfff":
+        if (
+            character.isascii()
+            or character.isspace()
+            or CONTROL_CHARACTERS.match(character)
+            or "\ud800" <= character <= "\udfff"
+        ):
             label = unicodedata.name(character, "")
             return f" The character U+{ord(character):04X}{f' ({label})' if label else ''} is not allowed."
     return ""
@@ -450,7 +455,10 @@ def parse_account(name: str, roots: Collection[str] | None = None) -> str:
     from beancount.core.account import is_valid
 
     name = unicodedata.normalize("NFC", name)
-    if not is_valid(name) and not _loads_as_account(name):
+    # The lexer reads a no-break space inside an account token, so the loader
+    # accepts `Expenses:Food\xa05`; an invisible character in a name is never
+    # meant (w5/490).
+    if any(character.isspace() for character in name) or (not is_valid(name) and not _loads_as_account(name)):
         raise protocol.UsageError(
             f"Invalid account {name!r}. Account names use colon-separated segments, such as Assets:Checking. "
             "The root starts with an uppercase letter; each subaccount starts with an uppercase letter or digit. "
