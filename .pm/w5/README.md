@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [583 — With `2>&-`, child processes lack fd 2: errors land in stdout with exit 0, and the query shell loops forever (gap in w5/308)](./583.md)
 - [584 — With stdin closed (`<&-`), stdin-reading commands exit 1 with raw `NoneType` attribute errors](./584.md)
 - [585 — Ctrl-C in the query shell's `less` pager leaves it running and splitting keystrokes](./585.md)
 - [586 — With `TERM` unset, the query shell pages every result, even one row](./586.md)
