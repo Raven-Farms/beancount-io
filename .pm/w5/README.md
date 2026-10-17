@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [493 — `bea --json check` answers valid for a ledger `bea check` rejects (extra validations skipped)](./493.md)
 - [494 — `doctor linked ROOT file:start:end` no longer resolves include-relative paths (regression from w5/062)](./494.md)
 - [495 — An encrypted `.gpg` include breaks `format` and `doctor`; format advises re-saving it as UTF-8](./495.md)
 - [496 — Native `check --json` prints `{"errors": []}` or nothing while exiting 1](./496.md)
