@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import errno
 import os
 import re
 import shlex
@@ -17,7 +18,15 @@ from cli import output
 from cli.config import DEFAULT_ENTRY_FILE_FALLBACKS
 from cli.context import refuse_expanding_ledger_path
 from cli.engine import launch
-from cli.errors import BeaError, ConflictError, LedgerError, UsageError, refuse_json, refuse_misplaced_global
+from cli.errors import (
+    AuthError,
+    BeaError,
+    ConflictError,
+    LedgerError,
+    UsageError,
+    refuse_json,
+    refuse_misplaced_global,
+)
 from cli.native_command import ForwardingCommand
 from cli.native_help import native_help, native_options
 from cli.utils import decode_error_message, has_bom
@@ -503,8 +512,17 @@ def _private_roundtrip_artifacts(ledger: str) -> list[Path]:
     for path in _roundtrip_artifacts(ledger):
         try:
             os.close(os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600))
-        except OSError:
-            continue  # Upstream reports an unwritable directory itself.
+        except OSError as exc:
+            if exc.errno in (errno.EACCES, errno.EPERM, errno.EROFS):
+                # Upstream raised, then crashed in its own cleanup: a 34-line
+                # double traceback, exit 1 (w5/572). A permission failure is 3.
+                for made in created:
+                    made.unlink(missing_ok=True)
+                raise AuthError(
+                    f"doctor roundtrip writes scratch copies beside the ledger, and {path.parent} is not "
+                    "writable. Nothing was written."
+                ) from None
+            continue
         created.append(path)
     return created
 
