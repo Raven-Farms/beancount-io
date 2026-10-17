@@ -214,6 +214,10 @@
 - [732 — Other booking failures (HOOL {0 USD}, EUR @ 0 USD) still fail with a bare Python error (incomplete fix of w5/538)](./732.md)
 - [733 — A sale's escaped lot label no longer selects a control-character lot; JSON echo shows the raw label (incomplete fix of w5/542)](./733.md)
 - [734 — In bea ask, Ctrl-C right after Enter can end the session with exit 130](./734.md)
+- [735 — A refused JSON float's hint quotes repr(float), not the number typed; following it can unbalance a transaction](./735.md)
+- [736 — add transactions --from ./- and format ./- read stdin instead of the file named -](./736.md)
+- [737 — --from /dev/stdin waits on the terminal under --json/--no-input (gap in w5/210)](./737.md)
+- [738 — Four input-refusal messages are wrong (BOM offset, NUL as UTF-16, --from empty advice, tagged meta TypeError)](./738.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
