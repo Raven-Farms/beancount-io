@@ -1303,7 +1303,9 @@ class CsvImporter:
         if category_header is not None:
             if category_header not in row:
                 raise UsageError(f"{where}: the CSV lacks category column {category_header!r}.")
-            category = row[category_header].strip()
+            # NFC, as the ledger reads names: an NFD cell naming an open account
+            # was "not an account name" and went to Uncategorized (w5/530).
+            category = unicodedata.normalize("NFC", row[category_header].strip())
             if category == self._account:
                 # Posted against itself the row cancels out, so it queues for
                 # review like a label that is no account (w5/468).

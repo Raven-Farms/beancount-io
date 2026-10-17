@@ -33,7 +33,7 @@ from bea_engine.ledger.text import (
     reports_unused_accounts,
     unknown_root_message,
 )
-from bea_engine.ledger.writer import format_entry, normalize_entry_strings
+from bea_engine.ledger.writer import format_entry, nfc_entry_accounts, normalize_entry_strings
 from bea_engine.protocol import ConflictError, EngineError, LedgerError, UsageError
 from bea_engine.query import format_error
 
@@ -279,7 +279,9 @@ def answer(
         try:
             with _capturing(logs):
                 importer = _importer(config, source, importer_name)
-                account = str(importer.account(str(source)))
+                # NFC like the row accounts `_writable` normalizes, so an NFD
+                # source account still finds its own legs (w5/530).
+                account = unicodedata.normalize("NFC", str(importer.account(str(source))))
                 entries = _extracted(importer, source, existing)
         except EngineError as exc:
             _with_output(exc, logs)
@@ -754,7 +756,10 @@ def _writable(entry: Any, row: int, importer: Any, logs: io.StringIO) -> Any:
             logs,
         )
     try:
-        entry = entry._replace(meta=numbers(entry.meta))
+        # Accounts as the ledger reads them, NFC: an NFD `Expenses:Café` from a
+        # PDF or a macOS file name was "not open", with a duplicate `add open`
+        # as the remedy (w5/530).
+        entry = nfc_entry_accounts(entry._replace(meta=numbers(entry.meta)))
         if hasattr(entry, "postings"):
             entry = entry._replace(
                 postings=[posting._replace(meta=numbers(posting.meta)) for posting in entry.postings]

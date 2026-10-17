@@ -257,7 +257,7 @@ def _escape_cost_label(posting: Posting) -> Posting:
     return posting._replace(cost=cost._replace(label=escape_string(label)))
 
 
-def _nfc_entry_accounts(entry: Any) -> Any:
+def nfc_entry_accounts(entry: Any) -> Any:
     """The entry with every account name in NFC, so new directives are canonical.
 
     Reads normalize to NFC before parsing, so a newly written NFD name would
@@ -290,7 +290,7 @@ def _nfc_entry_accounts(entry: Any) -> Any:
 
 def format_entry(entry: Any) -> str:
     """Normalize new directive input and print it without changing the entry."""
-    entry = _nfc_entry_accounts(entry)
+    entry = nfc_entry_accounts(entry)
     entry = normalize_entry_strings(entry)
     rendered = DirectivePrinter()(entry)  # type: ignore[no-untyped-call]
     first, separator, rest = rendered.partition("\n")
