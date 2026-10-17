@@ -164,6 +164,11 @@
 - [595 — `-o Txns/…` (case variant of a glob-included dir) joins the ledger and doubles balances on APFS (gap in w5/072)](./595.md)
 - [596 — `doctor missing-open` exits 0 with a partial list on a ledger with a syntax error](./596.md)
 - [597 — `list price -c A -c B` gives `add price`'s `--amount` hint](./597.md)
+- [598 — A bank ID from one account dedupes another account's rows through a transfer: a real deposit is skipped as an exact duplicate](./598.md)
+- [599 — A monthly autopay reusing one reference is silently skipped across separate exports (gap in w5/075)](./599.md)
+- [600 — A transfer imported from both banks is double-booked when their descriptions differ; the import skill promises a fuzzy flag that cannot fire](./600.md)
+- [601 — Migrated `<source>:sha256:` ids are matched only for four prefixes, so the generic migrate path double-books overlaps](./601.md)
+- [602 — A one-description row is never a possible duplicate of a ledger entry with a payee](./602.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
