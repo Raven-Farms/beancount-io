@@ -53,6 +53,7 @@ from bea_engine.managed_price_cache import (
     cache_write_problem,
     feed_dir,
     freshness,
+    open_cache_file,
     resolve_feed,
     write_text_atomic,
 )
@@ -246,7 +247,9 @@ def _iso(moment: float | None) -> str | None:
 def _holds(path: Path, text: str) -> bool:
     """Whether `path` already holds exactly `text` (unreadable reads as no)."""
     try:
-        return path.read_text(encoding="utf-8") == text
+        with open_cache_file(path) as stream:
+            held: str = stream.read()
+        return held == text
     except (OSError, ValueError):
         return False
 
@@ -573,7 +576,7 @@ def _cached_managed_load(cache: Path, fingerprint: str) -> tuple[list[Any], list
     import pickle
 
     try:
-        with cache.open("rb") as stream:
+        with open_cache_file(cache, "rb") as stream:
             stored = pickle.load(stream)
     except Exception:  # noqa: BLE001 - a missing, partial or foreign cache is a miss
         return None

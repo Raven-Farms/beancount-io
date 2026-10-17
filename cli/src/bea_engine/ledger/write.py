@@ -557,7 +557,39 @@ def _private_load_cache(filename: str) -> str:
         pass
     resolved = os.path.realpath(filename)
     digest = hashlib.sha256(os.fsencode(os.path.dirname(resolved))).hexdigest()[:32]
-    return str(directory / f"{digest}.{os.path.basename(filename)}.picklecache")
+    cache = str(directory / f"{digest}.{os.path.basename(filename)}.picklecache")
+    if clear_stray_cache_entry(cache):
+        return cache
+    # Under the null device nothing can be read or created, so the load runs uncached.
+    return os.path.join(os.devnull, os.path.basename(cache))
+
+
+def clear_stray_cache_entry(cache: str) -> bool:
+    """Clear whatever non-regular entry sits at bea's own cache path; whether the path is now usable.
+
+    Beancount opens its cache path unguarded. A directory there raised
+    `IsADirectoryError` out of every read, a FIFO hung it, `--offline`
+    included (w5/591), and a link was read and written through. The path is
+    bea's, in a directory only its owner can enter, so what sits there is
+    cleared: a link (never its target), a FIFO or device, an empty directory.
+    `cli.engine.launch.load_cache_pattern` does the same for `bean-check`.
+    """
+    try:
+        mode = os.lstat(cache).st_mode
+    except FileNotFoundError:
+        return True
+    except OSError:
+        return False
+    if stat.S_ISREG(mode):
+        return True
+    try:
+        if stat.S_ISDIR(mode):
+            os.rmdir(cache)
+        else:
+            os.unlink(cache)
+    except OSError:
+        return False
+    return True
 
 
 def keep_load_cache_private() -> None:

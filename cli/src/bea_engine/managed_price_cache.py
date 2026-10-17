@@ -29,15 +29,17 @@ load when a source is stale or unavailable instead of degrading quietly.
 
 from __future__ import annotations
 
+import errno
 import json
 import os
+import stat
 import tempfile
 import time
 from contextlib import suppress
 from dataclasses import asdict, dataclass
 from hashlib import sha256
 from pathlib import Path
-from typing import Literal
+from typing import IO, Any, Literal
 from urllib.request import OpenerDirector
 
 from bea_engine.managed_prices import (
@@ -109,9 +111,33 @@ def feed_dir(url: str, root: Path | None = None) -> Path:
     return (root or cache_root()) / sha256(url.encode("utf-8")).hexdigest()[:32]
 
 
+def open_cache_file(path: Path, mode: str = "r") -> IO[Any]:
+    """Open one of bea's cache files for reading, refusing anything but a regular file.
+
+    A FIFO in place of `head.json`, a revision or an effective file hung every
+    load, `--offline` included, and the engine stayed blocked after the
+    frontend was killed (w5/591). The open never waits, and what is not a
+    regular file raises `OSError`, which every reader takes for a missing file.
+    """
+    fd = os.open(path, os.O_RDONLY | getattr(os, "O_NONBLOCK", 0) | getattr(os, "O_CLOEXEC", 0))
+    try:
+        if not stat.S_ISREG(os.fstat(fd).st_mode):
+            raise OSError(errno.EINVAL, "Not a regular file", str(path))
+        return os.fdopen(fd, mode, encoding=None if "b" in mode else "utf-8")
+    except BaseException:
+        os.close(fd)
+        raise
+
+
+def _read_text(path: Path) -> str:
+    with open_cache_file(path) as stream:
+        text: str = stream.read()
+    return text
+
+
 def _read_head(directory: Path) -> PriceFeedHead:
     try:
-        raw = json.loads((directory / "head.json").read_text(encoding="utf-8"))
+        raw = json.loads(_read_text(directory / "head.json"))
         return PriceFeedHead(
             revision=raw.get("revision"),
             next_refresh_at=float(raw.get("next_refresh_at", 0)),
@@ -123,8 +149,8 @@ def _read_head(directory: Path) -> PriceFeedHead:
 
 def _read_blob(directory: Path, revision: str) -> PriceFeedBlob | None:
     try:
-        text = (directory / f"{revision}.beancount").read_text(encoding="utf-8")
-        raw = json.loads((directory / f"{revision}.json").read_text(encoding="utf-8"))
+        text = _read_text(directory / f"{revision}.beancount")
+        raw = json.loads(_read_text(directory / f"{revision}.json"))
         digest = raw.get("sha256")
         if digest is not None and digest != _digest(text):
             # The bytes are not what was validated: treat the blob as missing
@@ -396,7 +422,7 @@ def managed_source_for_path(path: Path, root: Path | None = None) -> str | None:
         if sidecar.name == "head.json":
             continue
         try:
-            url = json.loads(sidecar.read_text(encoding="utf-8")).get("url")
+            url = json.loads(_read_text(sidecar)).get("url")
         except (OSError, ValueError, AttributeError):
             continue
         if isinstance(url, str):

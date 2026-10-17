@@ -157,8 +157,37 @@ def load_cache_pattern(ledger: Path | str) -> str:
         # Upstream then finds no cache there and says so if it cannot write one.
         pass
     digest = hashlib.sha256(os.fsencode(os.path.dirname(os.path.realpath(ledger)))).hexdigest()[:32]
+    if not _clear_stray_cache_entry(directory / f"{digest}.{os.path.basename(ledger)}.picklecache"):
+        # Under the null device nothing can be read or created, so the load runs uncached.
+        return os.path.join(os.devnull, "{filename}")
     literal = str(directory).replace("{", "{{").replace("}", "}}")
     return os.path.join(literal, f"{digest}.{{filename}}.picklecache")
+
+
+def _clear_stray_cache_entry(cache: Path) -> bool:
+    """Clear a non-regular entry at bea's own load-cache path; whether the path is now usable.
+
+    `bean-check` opens the path unguarded: a directory there printed its
+    traceback, and a FIFO hung it (w5/591). The engine's
+    `clear_stray_cache_entry` does the same for its own loads: a link (never
+    its target), a FIFO or device, an empty directory.
+    """
+    try:
+        mode = cache.lstat().st_mode
+    except FileNotFoundError:
+        return True
+    except OSError:
+        return False
+    if stat.S_ISREG(mode):
+        return True
+    try:
+        if stat.S_ISDIR(mode):
+            cache.rmdir()
+        else:
+            cache.unlink()
+    except OSError:
+        return False
+    return True
 
 
 def _native_env(ledger: Path | str | None = None) -> dict[str, str]:

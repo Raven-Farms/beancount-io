@@ -211,6 +211,11 @@ ledger's own files keeps working. An existing file there that is not a load cach
 (a note, a CSV, anything that does not start with a pickle header), or that is
 not a regular file at all (`/dev/null`, a FIFO), is refused the same way, under
 either name, instead of being deleted, read or waited on.
+bea's own default cache files under `$XDG_CACHE_HOME/bea` are never refused: a
+directory, FIFO or link at the private load-cache path is removed before the
+load. One that cannot be removed, such as a directory with files in it, is
+left in place and the load runs uncached. A non-regular file in the
+managed-price cache reads as missing.
 `bea check --auto` (`-a`) always runs bean-check with `--no-cache`: the load
 cache does not record which plugins produced it, so a load made with the auto
 plugins is never stored for, or answered from, the cache other commands read.
