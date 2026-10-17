@@ -346,6 +346,10 @@ def _run(name: str, spec: _Spec, limit: int, allow_errors: bool, *, details: boo
             f"--currency: {currency!r} is not one commodity; a commodity is a capital letter followed by capitals, "
             f"digits and ' . _ -.{_several(currency, 'filter one commodity per command')}"
         )
+    if currency is not None:
+        # The value checked is the value matched: `" HOOL"` passed the check
+        # and then matched no price, an empty answer with exit 0 (w5/473).
+        filters["currency"] = currency.strip()
     ctx = context.current()
     if filters.get("from_date") and filters.get("to_date") and filters["from_date"] > filters["to_date"]:
         raise UsageError("--from-date must be on or before --to-date.")
