@@ -91,7 +91,8 @@ def test_later_commands_still_report_the_unopened_account(tmp_path: Path, bea_co
 def test_auto_is_not_answered_from_a_default_load(tmp_path: Path, bea_config_dir: Path) -> None:
     ledger = _ledger(tmp_path, UNOPENED)
 
-    assert _bea(ledger, "check").exit_code == 1
+    # A read caches the default load; `check` itself now runs bean-check uncached (w5/564).
+    assert _bea(ledger, "list", "open").exit_code == 1
     assert _cache(ledger).exists(), "the fixture must be slow enough to be cached"
 
     result = _bea(ledger, "check", "--auto")

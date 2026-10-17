@@ -492,7 +492,10 @@ at that line too, and leaves that transaction out.
 validations. With no bean-check options, a ledger that passes is answered from
 that load, so each plugin runs once. A ledger with errors, or a run with
 options, also goes through native bean-check, which loads it again so that its
-errors print in bean-check's own form; plugins run twice there.
+errors print in bean-check's own form; plugins run twice there. That load skips
+the shared load cache (`--no-cache`, unless you name a `--cache-filename`): a
+cached load lacks bean-check's own data-type checks, so a slow ledger passed
+that bean-check rejects.
 
 `bea treeify` reads account names with Beancount's own grammar unless `-r`, `-F`
 or `-A` chooses another pattern, so a component with an accented or CJK

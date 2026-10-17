@@ -85,7 +85,13 @@ def check(ctx: typer.Context) -> None:
     # bean-check keys its load cache on the files read, not on the plugin set,
     # and every later read trusts that cache. A load made with the auto plugins
     # must neither be stored there nor answered from a default load's entry (w5/111).
-    isolate = ["--no-cache"] if _enables_auto(args) else []
+    # Nor is the key the validations a load ran: the helper's load, cached
+    # without bean-check's data-type checks, made bean-check pass a ledger it
+    # rejects once a load took over a second (w5/564). bean-check runs here
+    # only for a ledger the helper found errors in or for bean-check's own
+    # options, so it loads afresh unless the user named a cache file.
+    fresh = _enables_auto(args) or not _names_cache_file(args)
+    isolate = ["--no-cache"] if fresh and not _disables_cache(args) else []
     # bean-check does not cover document paths that resolve outside the ledger tree;
     # the helper check does, so copies that still resolve against another tree fail.
     # Only that rule: this second load knows none of bean-check's options, so
