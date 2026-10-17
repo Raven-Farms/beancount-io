@@ -2,7 +2,7 @@
 
 **Worker:** worker1
 **Goal:** Remove the built-in `beancount-web-dev` billing tenant and make billing details, effective tier, renewal cache, and resource quotas agree for live subscribers, including accounts with historical test bindings.
-**Status:** in progress (t001–t009 done; production backfill and hosted closeout open)
+**Status:** blocked (t001–t009 shipped and deployed; t011 execution and t010 final closeout remain open)
 
 ## Source + Goal linkage
 
@@ -61,6 +61,17 @@
 
 ## Operational state
 
-Bex login was refreshed successfully, but its service inventory request returned HTTP 524. The existing production management UI identifies the backend and dashboard deployment entries; deployment will be checked after this code is pushed. Direct SSH to the backend domain stops at strict host verification because no trusted host key is recorded. No production repair has run.
+Code shipped as `9dfc6275`. Both backend and dashboard deployments completed successfully from that revision through the existing production management UI. Hosted English/Chinese settings (including the retired URL switch) show Organization with the configured 100-ledger / 50-collaborator quota; `bea --json cloud status` returns ORGANIZATION. No live purchase, coupon redemption or subscription mutation was performed. The ordinary fixed settings refresh may update its own verified live period cache; no cohort maintenance backfill has run.
 
-**t011 is blocked:** a verified production execution entry (existing SSH alias/known host or authorized deployment terminal) is required. **Unblock:** the operator supplies that entry so the documented preview can inventory the cohort; review its fingerprint, apply bounded batches and record aggregate completeness/idempotence/read-back. No private key or customer report belongs in this board.
+Bex login refresh succeeded, but its separate inventory endpoint returned HTTP 524. The existing production deployment UI was usable and deployment is not blocked by that endpoint. Direct SSH execution stops at strict host verification because no trusted host key is recorded, and the only configured Beancount SSH alias is the restricted git service. A trusted execution entry is still needed for t011.
+
+## Blocked
+
+**t011 and dependent t010 are blocked:** a verified production execution entry (existing SSH alias/known host or authorized deployment terminal) is required. **Unblock:** the operator supplies that entry so the documented preview can inventory the cohort; review its fingerprint, apply bounded batches and record aggregate completeness/idempotence/read-back. No private key or customer report belongs in this board.
+
+## Final local/hosted verification
+
+- Backend typecheck and 5,514 unit tests pass; five PostgreSQL/CLI integration tests pass. Dashboard typecheck, full unit suite, 175-test settings retest, 17 translation checks, full `yarn format:check`, full `yarn lint` (including Knip), and production build pass.
+- Staged gitleaks scan and GitHub Secret scan pass. GitHub backend/dashboard CI was still running at this record; no pending job is counted as passed.
+- Backend deployment logs explicitly resolved `9dfc62757faff9e8d1ae427d6b13ebed9b983fe2`; dashboard checkout/build used the same revision. Both report SUCCESS. The hosted verification confirms the reported paid-tier mismatch is fixed, but does not replace full cohort execution.
+- Completed tasks are under this milestone's `done/`. This milestone remains unchecked and is parked under `blocked/` until the actual backfill and final aggregate read-back hold.
