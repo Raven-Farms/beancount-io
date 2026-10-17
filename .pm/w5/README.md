@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [565 — `format -i DIR` aborts entirely on one file with `100/0`, naming no file](./565.md)
 - [566 — An include cycle gets a "Run with --file <itself>" root hint](./566.md)
 - [567 — `doctor missing-open` writes diagnostics to stdout, so `>> main.bean` corrupts the ledger](./567.md)
 - [568 — `bea doctor` resolves symlinks in the ledger path: locations under a symlinked directory find nothing](./568.md)
