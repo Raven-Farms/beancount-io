@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [538 — A booking-arithmetic failure aborts a `--partial` batch naming no row; zero-unit total cost gives raw `DivisionByZero`](./538.md)
 - [539 — Bulk `amount` shorthand silently overwrites an explicit `cost`/`price`/`price_total`](./539.md)
 - [540 — Filtered `list --json` output cannot be re-fed to `add transactions` (`matching_postings`)](./540.md)
 - [541 — A `--partial` write drops the NFC/NFD notes of written rows in text mode](./541.md)
