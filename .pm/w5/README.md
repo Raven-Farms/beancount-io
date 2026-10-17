@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [483 — `price export -o a -o b` silently exports to `b`](./483.md)
 - [484 — Price-source warnings end in `..`; `upgrade --check` shows raw parser text](./484.md)
 - [485 — A repeated global `-f` silently uses the last ledger, so a write lands in the wrong file](./485.md)
 - [486 — `add transaction` blames an unclosed `{` on the next posting or the header](./486.md)
