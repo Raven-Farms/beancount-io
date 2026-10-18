@@ -1563,7 +1563,7 @@ const GITEA_SOCIAL_VERBS: readonly VerbEntry[] = [
     gql: "Mutation.approvePullRequest",
     class: "write" as const,
     rest: "POST /api-gateway/v1/ledgers/{owner}/{name}/pull-requests/{prNumber}/approve",
-    mcp: "approvePullRequest",
+    mcp: "mergePullRequest",
     authorizationAction: AUTHORIZATION_ACTIONS.LEDGER_PULL_REQUEST_APPROVE,
   },
   {

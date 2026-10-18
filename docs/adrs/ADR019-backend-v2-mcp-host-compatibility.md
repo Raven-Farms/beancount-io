@@ -325,6 +325,8 @@ Each grouped tool splits into one tool per `VERB_TABLE` verb. Under the 2026-10-
 
 `updateLedgerFiles` takes, per file, either an exact-text edit (`old_string`/`new_string`) or a full replacement (`content`). Both are the `update` verb, so it carries no `operation` field. `reconcileBankAccounts` is destructive because reconciling can hard-delete accounts Plaid no longer shares, which cascades to their staged transactions.
 
+The first rescan after the deploy (2026-10-18) cleared the "not individually exposed" finding on every tool. It flagged `approvePullRequest`'s name as "inconsistent with its behavior": the tool merges, and "approve" reads as a review verdict. The MCP tool is now `mergePullRequest` (w1/172); GraphQL and REST keep `approvePullRequest`, since parity is per verb.
+
 ### 2026-10-16 — OpenClaw and Hermes Agent are named hosts, and a missing `prompt=consent` no longer costs the refresh token (w6/m7)
 
 Two open-source agents join the hosts D8 names. Both use the single endpoint of D1; neither needed host-specific code. No submission directory exists for either: OpenClaw adds servers by hand, and Hermes's MCP catalog is curated by Nous. Being listed on them means a fixture, a verified sign-in, and a row in `docs/mcp.md`.

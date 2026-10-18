@@ -294,6 +294,8 @@ const RETIRED_TOOLS = [
   "managePullRequests",
   "manageLedgers",
   "manageLedgerCollaborators",
+  // Renamed for what it does: a merge, not a review verdict (w1/172).
+  "approvePullRequest",
   // Withdrawn by directory policy (ADR 019, 2026-10-09; w1/m36).
   "manageApiKeys",
   "listPublicKeys",

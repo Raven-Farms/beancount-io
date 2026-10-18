@@ -725,11 +725,13 @@ export const MCP_TOOLS: readonly McpToolDescriptor[] = [
     execute: PULL_REQUEST_EXECUTORS.create,
   },
   {
-    name: "approvePullRequest",
-    title: "Approve Pull Request",
+    // Named for what it does: OpenAI flagged "approve" as inconsistent with
+    // a merge (w1/172). GraphQL and REST keep `approvePullRequest`.
+    name: "mergePullRequest",
+    title: "Merge Pull Request",
     annotations: DESTRUCTIVE,
     description:
-      "Approve a pull request by merging it into its base branch; the merge applies immediately. A repository server failure is SERVICE_UNAVAILABLE naming the failed step.",
+      "Merge a pull request into its base branch; the merge applies immediately. A repository server failure is SERVICE_UNAVAILABLE naming the failed step.",
     inputSchema: PULL_REQUEST_OPERATION_SCHEMAS.approve,
     outputSchema: pullRequestToolOutput,
     execute: PULL_REQUEST_EXECUTORS.approve,

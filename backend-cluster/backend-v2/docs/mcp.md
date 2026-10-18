@@ -326,7 +326,7 @@ operation's arguments without `operation`. For the file tools, drop
 | `removeLedgerCollaborator`      | `manageLedgerCollaborators` `delete`     |
 | `leaveLedger`                   | `manageLedgerCollaborators` `leave`      |
 | `createPullRequest`             | `managePullRequests` `create`            |
-| `approvePullRequest`            | `managePullRequests` `approve`           |
+| `mergePullRequest`              | `managePullRequests` `approve`           |
 | `rejectPullRequest`             | `managePullRequests` `reject`            |
 | `createLedgerFiles`             | `editLedgerFiles` `create`               |
 | `updateLedgerFiles`             | `editLedgerFiles` `update` and `replace` |
@@ -502,7 +502,8 @@ Three tools, each requiring repository write authority and a `ledger` target
   differs from base and refuses a diff-less branch unless `fastForward: true`
   skips verification. The result carries the PR's actual `baseBranch`/`headBranch`
   refs — use those to follow up, not the requested names.
-- `approvePullRequest` requires `prNumber` and merges the PR.
+- `mergePullRequest` requires `prNumber` and merges the PR (GraphQL and REST
+  call this operation approve).
 - `rejectPullRequest` requires `prNumber` and closes it without merging.
 
 Reviews apply immediately; preview is unsupported. Repository refusals return

@@ -27,7 +27,7 @@ import type { McpRequestContext } from "../mcp-context";
  */
 const MCP_TOOL_FOR: Readonly<Record<string, string>> = {
   create: "createPullRequest",
-  approve: "approvePullRequest",
+  approve: "mergePullRequest",
   reject: "rejectPullRequest",
 };
 function perOperation(args: Record<string, unknown>) {
