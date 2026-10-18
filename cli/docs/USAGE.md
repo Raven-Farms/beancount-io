@@ -58,7 +58,10 @@ a `BEA_ENGINE_PYTHON` override, the provisioned managed engine, or a source
 checkout's `cli/src` (development only). When none of those exists it reports
 `not provisioned; provisions on first use`. `--json` carries the same answer as
 `serving.tier` (`override`, `managed`, `checkout`, or `first-use`) and
-`serving.location`.
+`serving.location`. A managed or override interpreter is probed, with the result
+in `usable`. A failed probe adds the reason in `unusable` for an override or
+`damaged` for the managed engine. Status still exits **0**; inspect those fields
+before relying on the engine. Checkout and first-use status omit these probe fields.
 
 ### Optional engine features (Beangulp / Beanprice)
 
@@ -217,9 +220,10 @@ deletes a cache file it cannot read, so a cache path that is the ledger or one
 of its includes is refused before bean-check runs, with or without `--no-cache`.
 The same holds for `BEANCOUNT_LOAD_CACHE_FILENAME` on every local command that
 loads the ledger — `list`, `query`, `balance`, `report`, `price`, `doctor`,
-`add`, `import` and the rest: a value that resolves to the root or an include is
-refused with exit 2 before the loader starts, and a cache path outside the
-ledger's own files keeps working. An existing file there that is not a load cache
+`add`, `import` and the rest: a value that replaces the root or an include,
+matches an include pattern once written, or falls under the encrypted-member
+restriction above is refused with exit 2 before the loader starts. A cache path
+outside these boundaries keeps working. An existing file there that is not a load cache
 (a note, a CSV, anything that does not start with a pickle header), or that is
 not a regular file at all (`/dev/null`, a FIFO), is refused the same way, under
 either name, instead of being deleted, read or waited on.
@@ -337,7 +341,18 @@ the partial effects when the command wrote some of what it promised (the
 `ledger_warnings` carries loader errors a `--json` command tolerated before
 failing anyway; `--debug` adds the `traceback` string.
 
-Cloud commands map the server's HTTP status onto the same table, keeping the server's own message: `401`/`403` exit **3**, `400` exits **2**, `409` exits **4**, and everything else — including `404`, rate limiting, and server errors — exits **1**. A write whose outcome the CLI cannot know (a timeout mid-delete, or a gateway's `504` or Cloudflare's `520`–`524`, which mean the request arrived but was not answered) exits **4** and says so rather than guessing. A write that never connected (a refused connection, a failed DNS lookup, a connect timeout) sent nothing, so it exits **1** with `Could not reach the server (…)`, like a read.
+Cloud commands map the server's HTTP status onto the same table, preserving a
+readable message from a supported JSON error response and otherwise showing
+`HTTP <status>`: `401`/`403` exit **3**, `400` exits **2**, `409` exits **4**, and
+everything else — including `404`, rate limiting, and server errors — exits
+**1**. `ask` also accepts a single plain-text sentence of at most 200 characters;
+markup, multiline or longer raw bodies fall back to the HTTP status. A message
+inside JSON can span lines. A write whose outcome the CLI cannot know (a timeout
+mid-delete, or a gateway's `504` or Cloudflare's `520`–`524`, which mean the request
+arrived but was not answered) exits **4** and says so rather than guessing. A
+write that never connected (a refused connection, a failed DNS lookup, a connect
+timeout) sent nothing, so it exits **1** with `Could not reach the server (…)`,
+like a read.
 
 An HTTP `401` asks you to replace the rejected credential: log in again for a
 stored session, or correct or unset `BEA_TOKEN` when it supplies the credential.
@@ -1016,7 +1031,10 @@ Account syntax follows Beancount: colon-separated segments with an uppercase
 root; each subaccount starts with an uppercase letter or digit. Unicode
 letters and configured root names are supported, and so is any other non-ASCII
 character Beancount itself loads after a segment's first character, such as a
-combining mark that has no precomposed letter. `add open` refuses Unicode format
+combining mark that has no precomposed letter, except Unicode whitespace.
+Unicode spaces such as U+00A0 (NO-BREAK SPACE) are refused even in an existing
+account Beancount loads; rename that account in the ledger before `add` can
+reference it. `add open` refuses Unicode format
 characters in new names, including U+200B (zero width space), ZWJ and ZWNJ. Existing
 accounts containing them remain usable; an unopened name gets visible escapes
 and a code-point explanation instead of an unusable `add open` remedy.

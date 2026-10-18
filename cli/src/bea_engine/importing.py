@@ -97,9 +97,9 @@ def _effective_id_keys(id_keys: list[str] | None, *, csv_id_mapped: bool = False
     carry: a list without it would turn the mapped ids off (w5/254).
 
     The default keys fold case the same way, so `FITID`, as OFX spells it,
-    is `fitid`. Any other key a metadata key cannot be — empty, or not
-    starting lowercase — is refused: it would replace the defaults with a
-    key no entry carries and turn native-ID matching off (w5/469).
+    is `fitid`. Any other key a metadata key cannot be — shorter than two
+    characters, or not starting lowercase — is refused: it would replace the
+    defaults with a key no entry carries and turn native-ID matching off (w5/469).
     """
     if not id_keys:
         return list(_DEFAULT_ID_KEYS)
@@ -117,8 +117,9 @@ def _effective_id_keys(id_keys: list[str] | None, *, csv_id_mapped: bool = False
             mapped = folded
         if not _METADATA_KEY.fullmatch(mapped):
             raise UsageError(
-                f"--id-key {key!r} is not a metadata key; a key starts with a lowercase letter and holds letters, "
-                f"digits, '-' and '_', such as {', '.join(_DEFAULT_ID_KEYS)}."
+                f"--id-key {key!r} is not a metadata key; a key needs at least two characters, starts with a "
+                f"lowercase ASCII letter, and then holds ASCII letters, digits, '-' or '_', "
+                f"such as {', '.join(_DEFAULT_ID_KEYS)}."
             )
         if mapped not in seen:
             seen.add(mapped)

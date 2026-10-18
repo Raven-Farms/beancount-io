@@ -469,8 +469,10 @@ skills deduplicate against each other: the ledger itself is the dedup database.
   keeps `bank_id` in the list whatever keys you name, so `--id-key` never
   silently disables bank-ID dedupe. A default key spelled in a way no metadata
   key can be folds to it (`FITID` is `fitid`). A legal key is used as typed,
-  camelCase included (`fitId`, `bank_ID`). Any other key that cannot be a
-  metadata key (empty, or not starting with a lowercase letter) exits **2**
+  camelCase included (`fitId`, `bank_ID`). A metadata key needs at least two
+  ASCII characters: a lowercase letter followed by letters (either case),
+  digits, `-` or `_`. Any other key that cannot be a metadata key (including an
+  empty or single-character key, or one not starting lowercase) exits **2**
   before the ledger is read or the importer runs.
   IDs must be stable and unique within that account. A transfer written by
   importing one account (its first posting) keeps that account's ID even
