@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [677 — The same conflicting same-day price exits 2 from `add price` but 4 from `import --apply`](./677.md)
 - [678 — `format FILE` / `-o` on an unparseable file exit 0 echoing it unchanged](./678.md)
 - [679 — `bea ask` answered with a redirect says "Could not reach the server"](./679.md)
 - [680 — Small exit-contract slips: wrong blame, `exit -11`, group-without-subcommand JSON, `--limit 0`, `price status` JSON](./680.md)
