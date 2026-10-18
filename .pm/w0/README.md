@@ -4,7 +4,7 @@
 
 ## Milestones
 
-- [ ] **m1** — [Translate the English copies shipped in non-English catalogs, and guard against them](./m1/README.md) (8 tasks) ← from dashboard QA 2026-10-15
+- [x] **m1** — [Translate the English copies shipped in non-English catalogs, and guard against them](./done/m1/README.md) (8 tasks) ← from dashboard QA 2026-10-15
 
 ## Dropped
 
