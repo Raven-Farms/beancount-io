@@ -547,7 +547,7 @@ def _load_with_sources(
 
 
 #: Bumped when what a managed load returns changes shape, so no older cache answers.
-_MANAGED_CACHE_FORMAT = 2
+_MANAGED_CACHE_FORMAT = 3
 
 
 def _managed_cache_file(entry: Path) -> Path | None:
@@ -1321,11 +1321,21 @@ def _remap_error(error: Any, back: dict[str, str]) -> Any:
     message = getattr(error, "message", "")
     for staged_path, original in back.items():
         message = message.replace(staged_path, original)
-    if mapped == source["filename"] and message == getattr(error, "message", ""):
+    attached = getattr(error, "entry", None)
+    remapped_entries = None
+    entries_changed = False
+    if isinstance(attached, list):
+        remapped_entries = [_remap_entry(entry, back) for entry in attached]
+        entries_changed = any(new is not old for new, old in zip(remapped_entries, attached, strict=True))
+    if mapped == source["filename"] and message == getattr(error, "message", "") and not entries_changed:
         return error
     replaced = dict(source)
     replaced["filename"] = mapped
     try:
+        if entries_changed:
+            # UniquePricesError carries every conflicting quote in its entry
+            # list. Their own locations must survive staging too (w5/665).
+            return error._replace(source=replaced, message=message, entry=remapped_entries)
         return error._replace(source=replaced, message=message)
     except (AttributeError, TypeError, ValueError):
         return error
