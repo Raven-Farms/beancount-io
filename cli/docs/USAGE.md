@@ -906,15 +906,23 @@ fails instead of reading as "already formatted", and an include that matches
 nothing fails naming the directive. A relative include resolves beside the file
 that names it, never against the working directory. A managed price include (an `http(s)://`
 URL) is not a file: it is neither formatted nor reported missing, and the gate
-needs no network or login for it. `--in-place` formats every reachable file
-and skips the unparseable ones, exiting nonzero when anything was skipped.
+needs no network or login for it. Encrypted includes (`.gpg`, or armored PGP
+`.asc`) are also left untouched: formatting names them as skipped and never
+decrypts them. These intentional skips do not cause a nonzero exit; the gate
+judges the plaintext files only. `--in-place` formats every reachable plaintext
+file and skips the unparseable ones, exiting nonzero for parse failures or
+missing/unreadable includes, as well as write failures.
 Semantic validity stays with `bea check`: a failing balance assertion or an
 unbalanced transaction does not fail `--check`, so for CI or a pre-commit hook
 run `bea check` alongside `bea format --check`. Included files are formatted
 independently of their root ledger's account opens and options. In JSON mode, a
 failing `--check` returns the scan result in `error.result`: `scanned`, the
 `formatted` paths that would change, the `failed` files with their syntax
-errors, the `missing` includes, `check`, and `dry_run`.
+errors, the `missing` includes, the `skipped` encrypted files with their
+`file` and `reason`, `check`, and `dry_run`. Successful check/dry-run and
+in-place results also include `skipped` (empty when none were skipped), as do
+reported in-place failure results. `scanned` counts the plaintext files and
+does not include the encrypted files in `skipped`.
 
 ### GitHub Actions for a ledger repository
 

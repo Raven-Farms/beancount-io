@@ -91,7 +91,7 @@ def format_beans(
         *(["-i"] if in_place else []),
         *(["-o", str(output_file)] if output_file is not None else []),
     ]
-    files, missing = _targets(paths, ctx.file, asked, alignment, expand_includes=walking)
+    files, missing, skipped = _targets(paths, ctx.file, asked, alignment, expand_includes=walking)
     if files is None:
         if reporting or in_place:
             raise UsageError("Name the files to format: reading stdin has nothing to compare or rewrite.")
@@ -119,14 +119,14 @@ def format_beans(
     failed: dict[str, list[str]] = _syntax_failures(files) if walking and files else {}
     if reporting:
         remedy = _remedy(_named(paths, ctx.file), alignment)
-        _report(files, alignment, target, remedy, failed, missing, check=check, dry_run=dry_run)
+        _report(files, alignment, target, remedy, failed, missing, skipped, check=check, dry_run=dry_run)
         return
 
     if not files:
         if in_place:
             raise UsageError(
                 "No .bean or .beancount files found to rewrite.",
-                result=_result([], [], {}, []) | {"in_place": True},
+                result=_result([], [], {}, [], skipped) | {"in_place": True},
             )
         if ctx.json_output:
             _require_json_destination(in_place, output_file)
@@ -135,7 +135,7 @@ def format_beans(
             # earlier run left there; nothing was read, so nothing is written.
             raise UsageError(
                 f"No .bean or .beancount files found; nothing was written to {output_file}.",
-                result=_result([], [], {}, []),
+                result=_result([], [], {}, [], skipped),
             )
         output.success("No .bean or .beancount files found.")
         return
@@ -144,7 +144,7 @@ def format_beans(
         _require_json_destination(in_place, output_file)
 
     if in_place:
-        _format_in_place(files, alignment, target, failed, missing)
+        _format_in_place(files, alignment, target, failed, missing, skipped)
         return
 
     if len(files) > 1:
@@ -169,6 +169,7 @@ def _format_in_place(
     target: dict[str, str | list[str]],
     failed: dict[str, list[str]],
     missing: list[output.MissingInclude],
+    skipped: list[dict[str, str]],
 ) -> None:
     # Unparseable files are skipped, not "formatted": upstream would echo them
     # back with a newline appended and call that a rewrite.
@@ -181,7 +182,11 @@ def _format_in_place(
         # retry without saying which files are already done.
         if exc.result is None:
             # A lost response cannot establish even an empty formatted list.
-            exc.details = _problem_lines(failed, missing) + exc.details
+            exc.details = (
+                _problem_lines(failed, missing)
+                + [f"Skipped {item['file']}: {item['reason']}" for item in skipped]
+                + exc.details
+            )
             raise
         progress = exc.result
         partial = [str(name) for name in progress.get("formatted", [])]
@@ -191,7 +196,7 @@ def _format_in_place(
         }
         details = [f"formatted: {name}" for name in partial] + _problem_lines(failed, missing)
         details.extend(f"failed: {name}: {errors[0]}" for name, errors in write_failed.items() if errors)
-        result = _result(files, partial, failed | write_failed, missing) | {"in_place": True}
+        result = _result(files, partial, failed | write_failed, missing, skipped) | {"in_place": True}
         # A missing engine result can mean an unknown write outcome. Only
         # publish these classifications when the engine actually reported them.
         for key, label in (("unchanged", "unchanged"), ("not_attempted", "not attempted")):
@@ -206,7 +211,7 @@ def _format_in_place(
             # earlier rewrites, "nothing was written" would misreport the run.
             exc.args = (_partial_message(len(partial), write_failed, failed, missing, progress),)
         raise
-    result = _result(files, changed, failed, missing) | {"in_place": True}
+    result = _result(files, changed, failed, missing, skipped) | {"in_place": True}
     if failed or missing:
         completed = set(changed)
         unchanged = [str(file) for file in formattable if str(file) not in completed]
@@ -235,6 +240,7 @@ def _report(
     remedy: str,
     failed: dict[str, list[str]],
     missing: list[output.MissingInclude],
+    skipped: list[dict[str, str]],
     *,
     check: bool,
     dry_run: bool,
@@ -242,7 +248,7 @@ def _report(
     """Which files upstream would rewrite, without rewriting any of them."""
     ctx = context.current()
     changed = _changed([file for file in files if str(file) not in failed], alignment, in_place=False)
-    result = _result(files, changed, failed, missing) | {"check": check, "dry_run": dry_run}
+    result = _result(files, changed, failed, missing, skipped) | {"check": check, "dry_run": dry_run}
 
     if check and (changed or failed or missing):
         for name in changed:
@@ -387,8 +393,8 @@ def _named(paths: list[Path] | None, default: Path | None) -> list[Path]:
 
 def _targets(
     paths: list[Path] | None, default: Path | None, asked: list[str], alignment: list[str], *, expand_includes: bool
-) -> tuple[list[Path] | None, list[output.MissingInclude]]:
-    """The files to format, or None for upstream's stdin filter, plus missing includes.
+) -> tuple[list[Path] | None, list[output.MissingInclude], list[dict[str, str]]]:
+    """The files to format (None for stdin), missing includes, and intentional encrypted skips.
 
     An explicit path wins; otherwise the global `--file` names the ledger. A
     bare `bea format` formats stdin, which is what `bean-format` does — it no
@@ -417,9 +423,9 @@ def _targets(
     if any(str(path) == STDIN for path in named):
         if len(named) > 1:
             raise UsageError(f"Read either stdin ('{STDIN}') or named files, not both.")
-        return None, []
+        return None, [], []
     if not named:
-        return None, []
+        return None, [], []
 
     files: set[Path] = set()
     roots: list[Path] = []
@@ -467,7 +473,7 @@ def _targets(
         else:
             raise UsageError(f"Not a regular file or directory: {resolved}")
     if not expand_includes:
-        return sorted(files), []
+        return sorted(files), [], []
     # Every member, whatever its suffix: `SUFFIXES` says which files a
     # directory walk treats as ledgers, but an `include` already made
     # `entries.inc` part of this ledger (w1/041). One shared walk per set of
@@ -476,15 +482,18 @@ def _targets(
     # A member nobody may read is reported as an unreadable include below,
     # and the rest still formatted (w5/523).
     files.update(member.resolve() for member in members if member in roots or os.access(member, os.R_OK))
+    skipped = []
     for encrypted in sorted(file for file in files if output.is_encrypted(file)):
         files.discard(encrypted)
-        output.note(f"Skipped {encrypted}: it is encrypted, and Beancount decrypts it only to load it.")
+        reason = "it is encrypted, and Beancount decrypts it only to load it."
+        skipped.append({"file": str(encrypted), "reason": reason})
+        output.note(f"Skipped {encrypted}: {reason}")
     missing: dict[tuple[str, Path], output.MissingInclude] = {}
     # Named roots first, so each is read under the name it was given; the
     # walk skips a file it has already seen through another spelling.
     for item in output.walk_closure(*roots, *sorted(files))[1]:
         missing[(item.include, item.source)] = item
-    return sorted(files), list(missing.values())
+    return sorted(files), list(missing.values()), skipped
 
 
 def _syntax_failures(files: list[Path]) -> dict[str, list[str]]:
@@ -682,6 +691,7 @@ def _result(
     changed: list[str],
     failed: dict[str, list[str]],
     missing: list[output.MissingInclude],
+    skipped: list[dict[str, str]],
 ) -> dict[str, object]:
     """The scanned set: how many files were walked, and what happened to each."""
     return {
@@ -692,6 +702,7 @@ def _result(
             {"include": item.include, "from": str(item.source), **({"reason": item.reason} if item.reason else {})}
             for item in missing
         ],
+        "skipped": skipped,
     }
 
 
