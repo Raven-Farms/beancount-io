@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [668 — A whole-number ledger with one `@@` total prints every figure with 25 decimals](./668.md)
 - [669 — `--meta` writes a wide negative number rounded (sibling of w5/263)](./669.md)
 - [670 — `BEANCOUNT_LOAD_CACHE_FILENAME=main.bean bea query --source main.bean` deletes the root ledger, exit 0 (incomplete fix of w5/497)](./670.md)
 - [671 — Large encrypted includes still trip doctor and native `check` text scans; globs inside them escape the guards (incomplete fix of w5/495)](./671.md)
