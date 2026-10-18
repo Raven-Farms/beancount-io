@@ -17,6 +17,17 @@ const ukAccounts: Record<string, TranslationEntry> = {
     message: "Рахунок повинен починатися з одного з: {prefixes}",
     description: "Validation error when account prefix is invalid",
   },
+  "page.accounts.accountAlreadyOpen": {
+    message: "Рахунок {account} уже відкрито (з {date}).",
+    description:
+      "Validation error when the account to open is already open; {account} is the name, {date} its open date",
+  },
+  "page.accounts.accountAlreadyClosed": {
+    message:
+      "Рахунок {account} закрито {date}; Beancount не дозволяє відкрити його знову.",
+    description:
+      "Validation error when the account to open was opened and later closed; {account} is the name, {date} its close date",
+  },
   "page.accounts.accountName": {
     message: "Назва рахунку",
     description: "Form label for account name input",

@@ -17,6 +17,17 @@ const jaAccounts: Record<string, TranslationEntry> = {
     message: "口座名は次のいずれかで始まる必要があります: {prefixes}",
     description: "Validation error when account prefix is invalid",
   },
+  "page.accounts.accountAlreadyOpen": {
+    message: "{account} はすでに開設されています（{date} から）。",
+    description:
+      "Validation error when the account to open is already open; {account} is the name, {date} its open date",
+  },
+  "page.accounts.accountAlreadyClosed": {
+    message:
+      "{account} は {date} に閉鎖されています。Beancount では再度開設できません。",
+    description:
+      "Validation error when the account to open was opened and later closed; {account} is the name, {date} its close date",
+  },
   "page.accounts.accountName": {
     message: "口座名",
     description: "Form label for account name input",

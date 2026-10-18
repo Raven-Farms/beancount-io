@@ -17,6 +17,17 @@ const skAccounts: Record<string, TranslationEntry> = {
     message: "Účet musí začínať jedným z: {prefixes}",
     description: "Validation error when account prefix is invalid",
   },
+  "page.accounts.accountAlreadyOpen": {
+    message: "Účet {account} je už otvorený (od {date}).",
+    description:
+      "Validation error when the account to open is already open; {account} is the name, {date} its open date",
+  },
+  "page.accounts.accountAlreadyClosed": {
+    message:
+      "Účet {account} bol zatvorený {date}; Beancount ho nedovolí znova otvoriť.",
+    description:
+      "Validation error when the account to open was opened and later closed; {account} is the name, {date} its close date",
+  },
   "page.accounts.accountName": {
     message: "Názov účtu",
     description: "Form label for account name input",

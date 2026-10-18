@@ -17,6 +17,17 @@ const caAccounts: Record<string, TranslationEntry> = {
     message: "El compte ha de començar amb un d'aquests: {prefixes}",
     description: "Validation error when account prefix is invalid",
   },
+  "page.accounts.accountAlreadyOpen": {
+    message: "{account} ja està obert (des del {date}).",
+    description:
+      "Validation error when the account to open is already open; {account} is the name, {date} its open date",
+  },
+  "page.accounts.accountAlreadyClosed": {
+    message:
+      "{account} es va tancar el {date}; Beancount no permet tornar-lo a obrir.",
+    description:
+      "Validation error when the account to open was opened and later closed; {account} is the name, {date} its close date",
+  },
   "page.accounts.accountName": {
     message: "Nom del compte",
     description: "Form label for account name input",

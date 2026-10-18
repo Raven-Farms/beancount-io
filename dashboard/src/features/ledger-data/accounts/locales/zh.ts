@@ -17,6 +17,16 @@ const zhAccounts: Record<string, TranslationEntry> = {
     message: "账户必须以以下之一开头：{prefixes}",
     description: "Validation error when account prefix is invalid",
   },
+  "page.accounts.accountAlreadyOpen": {
+    message: "{account} 已开立（自 {date} 起）。",
+    description:
+      "Validation error when the account to open is already open; {account} is the name, {date} its open date",
+  },
+  "page.accounts.accountAlreadyClosed": {
+    message: "{account} 已于 {date} 关闭，Beancount 不允许重新开立。",
+    description:
+      "Validation error when the account to open was opened and later closed; {account} is the name, {date} its close date",
+  },
   "page.accounts.accountName": {
     message: "账户名称",
     description: "Form label for account name input",

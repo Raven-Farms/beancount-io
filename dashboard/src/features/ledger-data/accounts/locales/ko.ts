@@ -17,6 +17,17 @@ const koAccounts: Record<string, TranslationEntry> = {
     message: "계정명은 다음 중 하나로 시작해야 합니다: {prefixes}",
     description: "Validation error when account prefix is invalid",
   },
+  "page.accounts.accountAlreadyOpen": {
+    message: "{account} 계정은 이미 열려 있습니다({date}부터).",
+    description:
+      "Validation error when the account to open is already open; {account} is the name, {date} its open date",
+  },
+  "page.accounts.accountAlreadyClosed": {
+    message:
+      "{account} 계정은 {date}에 닫혔으며 Beancount에서는 다시 열 수 없습니다.",
+    description:
+      "Validation error when the account to open was opened and later closed; {account} is the name, {date} its close date",
+  },
   "page.accounts.accountName": {
     message: "계정명",
     description: "Form label for account name input",

@@ -17,6 +17,16 @@ const enAccounts: Record<string, TranslationEntry> = {
     message: "Account must start with one of: {prefixes}",
     description: "Validation error when account prefix is invalid",
   },
+  "page.accounts.accountAlreadyOpen": {
+    message: "{account} is already open (since {date}).",
+    description:
+      "Validation error when the account to open is already open; {account} is the name, {date} its open date",
+  },
+  "page.accounts.accountAlreadyClosed": {
+    message: "{account} was closed on {date}; Beancount can't open it again.",
+    description:
+      "Validation error when the account to open was opened and later closed; {account} is the name, {date} its close date",
+  },
   "page.accounts.accountName": {
     message: "Account Name",
     description: "Form label for account name input",

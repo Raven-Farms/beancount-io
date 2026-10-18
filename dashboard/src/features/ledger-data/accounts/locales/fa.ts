@@ -17,6 +17,17 @@ const faAccounts: Record<string, TranslationEntry> = {
     message: "حساب باید با یکی از این‌ها شروع شود: {prefixes}",
     description: "Validation error when account prefix is invalid",
   },
+  "page.accounts.accountAlreadyOpen": {
+    message: "{account} از قبل باز است (از {date}).",
+    description:
+      "Validation error when the account to open is already open; {account} is the name, {date} its open date",
+  },
+  "page.accounts.accountAlreadyClosed": {
+    message:
+      "{account} در {date} بسته شده است؛ Beancount اجازهٔ بازکردن دوبارهٔ آن را نمی‌دهد.",
+    description:
+      "Validation error when the account to open was opened and later closed; {account} is the name, {date} its close date",
+  },
   "page.accounts.accountName": {
     message: "نام حساب",
     description: "Form label for account name input",

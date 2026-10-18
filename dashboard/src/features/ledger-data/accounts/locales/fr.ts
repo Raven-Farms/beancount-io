@@ -18,6 +18,17 @@ const frAccounts: Record<string, TranslationEntry> = {
       "Le compte doit commencer par l'un des éléments suivants : {prefixes}",
     description: "Validation error when account prefix is invalid",
   },
+  "page.accounts.accountAlreadyOpen": {
+    message: "{account} est déjà ouvert (depuis le {date}).",
+    description:
+      "Validation error when the account to open is already open; {account} is the name, {date} its open date",
+  },
+  "page.accounts.accountAlreadyClosed": {
+    message:
+      "{account} a été clôturé le {date} ; Beancount ne permet pas de le rouvrir.",
+    description:
+      "Validation error when the account to open was opened and later closed; {account} is the name, {date} its close date",
+  },
   "page.accounts.accountName": {
     message: "Nom du compte",
     description: "Form label for account name input",
