@@ -108,7 +108,7 @@ def test_generated_assertion_is_not_already_recorded(tmp_path: Path, plugin: str
     assert file.read_bytes() == after
     # ...and a different value for it is still a conflict naming that line.
     conflict = _add(tmp_path, file, "0.00 USD")
-    assert conflict.returncode == 2, conflict.stderr
+    assert conflict.returncode == 4, conflict.stderr
     assert f":{written_line}); refusing 0.00 USD" in conflict.stderr
     assert file.read_bytes() == after
 

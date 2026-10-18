@@ -66,7 +66,7 @@ def test_a_conflicting_quote_is_refused_naming_the_real_line(tmp_path: Path, bea
 
     result = _price(root, into, "12 USD")
 
-    assert result.exit_code == 2, result.output
+    assert result.exit_code == 4, result.output
     message = _flat(result.output)
     assert "ACME already has a 2024-03-15 price of 10 USD" in message
     assert f"main.bean:{PRICE_LINE}" in message.replace(" ", "")

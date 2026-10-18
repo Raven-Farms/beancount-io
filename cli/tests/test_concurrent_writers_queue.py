@@ -186,8 +186,8 @@ def test_a_conflicting_quote_that_landed_first_is_still_refused(tmp_path: Path) 
 
     results = _race(tmp_path, ledger, quotes)
 
-    assert sorted(code for code, _, _ in results) == [0, 2], _report(results)
-    refused = next(err for code, _, err in results if code == 2)
+    assert sorted(code for code, _, _ in results) == [0, 4], _report(results)
+    refused = next(err for code, _, err in results if code == 4)
     assert "Pass --force to record another quote" in refused, _report(results)
     assert ledger.read_text(encoding="utf-8").count(" price QQA ") == 1
 
@@ -280,7 +280,7 @@ def test_a_command_that_writes_nothing_leaves_no_lock_file(tmp_path: Path, monke
     request = {"date": "2024-03-01", "currency": "QQA", "number": "1", "amount_currency": "USD"}
 
     assert adding.answer(ledger, "price", request)["duplicate"] is True
-    with pytest.raises(protocol.UsageError, match="Pass --force"):
+    with pytest.raises(protocol.ConflictError, match="Pass --force"):
         adding.answer(ledger, "price", {**request, "number": "2"})
     assert list(locks.iterdir()) == []
 

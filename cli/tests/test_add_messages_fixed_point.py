@@ -85,12 +85,12 @@ def test_price_conflict_names_both_quotes_in_fixed_point(tmp_path: Path) -> None
     text = _bea(tmp_path, "--file", str(ledger), *price)
     as_json = _bea(tmp_path, "--json", "--file", str(ledger), *price)
 
-    assert text.returncode == 2, text.stdout
+    assert text.returncode == 4, text.stdout
     flat = " ".join(text.stderr.split())
     assert "price of 0.00000001 BTC" in flat
     assert "refusing 0.00000002 BTC" in flat
     _no_exponent(text.stderr)
-    assert as_json.returncode == 2, as_json.stdout
+    assert as_json.returncode == 4, as_json.stdout
     message = json.loads(as_json.stderr)["error"]["message"]
     assert "price of 0.00000001 BTC" in message
     assert "refusing 0.00000002 BTC" in message
@@ -167,12 +167,12 @@ def test_balance_conflict_names_amounts_and_tolerance_in_fixed_point(tmp_path: P
         "0.00000000 BTC",
     )
 
-    assert toleranced.returncode == 2, toleranced.stdout
+    assert toleranced.returncode == 4, toleranced.stdout
     message = json.loads(toleranced.stderr)["error"]["message"]
     assert "balance of 0.00000001 BTC" in message
     assert "refusing 0.00000002 ~ 0.00000001 BTC" in message
     _no_exponent(message)
-    assert zero.returncode == 2, zero.stdout
+    assert zero.returncode == 4, zero.stdout
     flat = " ".join(zero.stderr.split())
     assert "balance of 0.00000001 BTC" in flat
     assert "refusing 0.00000000 BTC" in flat

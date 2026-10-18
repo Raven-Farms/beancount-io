@@ -324,9 +324,9 @@ def _preexisting_refusal(errors: list[Any], ledger_errors: list[str]) -> protoco
 
 def _conflict_refusal(
     conflict: Any, account: str, date: Any, number: Any, currency: str, tolerance: Any
-) -> protocol.UsageError:
+) -> protocol.ConflictError:
     where = conflict.meta.get("filename"), conflict.meta.get("lineno")
-    return protocol.UsageError(
+    return protocol.ConflictError(
         f"{account} already has a {date.isoformat()} balance of "
         f"{_balance_amount(conflict.amount.number, currency, conflict.tolerance)} "
         f"(at {where[0]}:{where[1]}); refusing {_balance_amount(number, currency, tolerance)}. "
@@ -755,7 +755,7 @@ def _price(
             if unique
             else "Pass --force to record another quote."
         )
-        raise protocol.UsageError(
+        raise protocol.ConflictError(
             f"{currency} already has a {directive.date.isoformat()} price of "
             f"{_plain(conflict.amount.number)} {amount_currency} (at {where}); "
             f"refusing {_plain(number)} {amount_currency}. {remedy}"
@@ -768,7 +768,7 @@ def _price(
     crossing = next((entry for entry in reciprocal_prices if (entry.amount.number or 0) * number != 1), None)
     if crossing is not None and not request.get("force"):
         where = f"{crossing.meta.get('filename')}:{crossing.meta.get('lineno')}"
-        raise protocol.UsageError(
+        raise protocol.ConflictError(
             f"{amount_currency} already has a {directive.date.isoformat()} price of "
             f"{_plain(crossing.amount.number)} {currency} (at {where}), the other direction of this pair, and "
             f"{_plain(number)} {amount_currency} disagrees with it. Pass --force to record both; Beancount then "

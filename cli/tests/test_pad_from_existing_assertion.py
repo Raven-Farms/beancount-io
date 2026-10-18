@@ -47,7 +47,7 @@ def test_a_pad_that_would_validate_still_requires_force_for_a_conflict(
 
     result = _add(root, amount, json_output, *(["--allow-errors"] if allow_errors else []))
 
-    assert result.exit_code == 2, result.output
+    assert result.exit_code == 4, result.output
     diagnostic = json.dumps(json.loads(result.stderr)["error"]) if json_output else result.output
     text = " ".join(diagnostic.split())
     assert "already has a 2026-01-25 balance of 7.00 USD" in text

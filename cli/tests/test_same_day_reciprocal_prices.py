@@ -82,7 +82,7 @@ def test_add_price_refuses_a_disagreeing_reciprocal_quote(tmp_path: Path) -> Non
 
     refused = _bea(tmp_path, *quote, "--amount", "1.20 USD")
 
-    assert refused.returncode == 2, refused.stdout
+    assert refused.returncode == 4, refused.stdout
     error = json.loads(refused.stderr)["error"]["message"]
     assert error.startswith("USD already has a 2026-01-05 price of 0.80 EUR (at "), error
     assert "the other direction of this pair, and 1.20 USD disagrees with it. Pass --force" in error

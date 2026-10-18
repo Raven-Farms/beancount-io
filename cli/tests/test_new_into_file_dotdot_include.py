@@ -82,7 +82,7 @@ def test_a_different_quote_for_the_day_is_refused_naming_the_shared_file(books: 
 
     result = _price(root, "111 USD", DESTINATIONS[into])
 
-    assert result.exit_code == 2, result.output
+    assert result.exit_code == 4, result.output
     flat = " ".join(result.output.split())
     assert f"HOOL already has a 2026-02-10 price of 110.00 USD (at {shared}:2); refusing 111 USD" in flat
     _untouched(root, shared)

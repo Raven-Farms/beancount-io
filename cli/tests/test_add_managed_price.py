@@ -129,7 +129,7 @@ def test_included_price_destination_keeps_local_duplicate_and_conflict_rules(tmp
     assert repeated["source"]["lineno"] > 0
     assert destination.read_bytes() == written
     conflict = _add_price(book, feed_server, "111000 USD", *into)
-    assert conflict.returncode == 2, conflict.stderr
+    assert conflict.returncode == 4, conflict.stderr
     assert "110000 USD" in conflict.stderr
     assert "111000 USD" in conflict.stderr
     assert "--force" in conflict.stderr

@@ -52,7 +52,7 @@ def test_the_same_refusal_with_or_without_a_pad(tmp_path: Path, pad: tuple[str, 
 
     result = _bea(tmp_path, *ADD, *pad)
 
-    assert result.returncode == 2, result.stdout + result.stderr
+    assert result.returncode == 4, result.stdout + result.stderr
     assert "Assets:Cash already has a 2026-01-25 balance of 0 USD" in result.stderr
     assert "refusing 7 USD. Pass --force to record another assertion." in result.stderr
     assert "Date the pad after" not in result.stderr

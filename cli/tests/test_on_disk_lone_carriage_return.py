@@ -98,7 +98,7 @@ def test_add_price_refuses_a_conflicting_quote(tmp_path: Path, body: bytes) -> N
         "1.2 EUR",
     )
 
-    assert result.returncode == 2, result.stdout or result.stderr
+    assert result.returncode == 4, result.stdout or result.stderr
     message = json.loads(result.stderr)["error"]["message"]
     assert "USD already has a 2024-01-05 price of 1.0 EUR" in message, message
     assert f"main.bean:{PRICE_LINE})" in message, message
