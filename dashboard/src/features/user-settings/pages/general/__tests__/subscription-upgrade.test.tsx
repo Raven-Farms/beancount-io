@@ -525,3 +525,43 @@ describe("Pay yearly offer", () => {
     expect(screen.queryByTestId("pay-yearly-offer")).not.toBeInTheDocument();
   });
 });
+
+describe("Checkout return", () => {
+  it("remembers where a purchase began and offers the way back once it is recorded", async () => {
+    const user = userEvent.setup();
+    setUserLimits("FREE");
+    showSubscription(mockNoSubscriptionData);
+    mockCreateSubscriptionSession.mockResolvedValue({
+      data: {
+        createSubscriptionSession: {
+          success: true,
+          sessionUrl: "https://checkout.stripe.com/session/test",
+        },
+      },
+    });
+
+    const { unmount } = render(
+      <SubscriptionSection returnTo="/ledger/alice/books" />,
+    );
+    await user.click(
+      card("PREMIUM").getByRole("button", { name: "aiAgent.upgradeCta" }),
+    );
+    await waitFor(() =>
+      expect(window.location.href).toBe(
+        "https://checkout.stripe.com/session/test",
+      ),
+    );
+    unmount();
+
+    // Stripe returns after payment; the webhook has recorded the subscription.
+    premiumSubscriber();
+    render(<SubscriptionSection checkoutReturned />);
+    const confirmation = within(screen.getByTestId("checkout-confirmation"));
+    expect(
+      confirmation.getByText("userSettings.checkoutDone"),
+    ).toBeInTheDocument();
+    expect(
+      confirmation.getByRole("link", { name: "userSettings.backToWork" }),
+    ).toHaveAttribute("href", "/ledger/alice/books");
+  });
+});

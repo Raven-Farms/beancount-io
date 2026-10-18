@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { CreditCard, Loader2, AlertCircle } from "lucide-react";
 import {
   Card,
@@ -26,12 +26,24 @@ import {
   type BillingCycle,
   type SubscriptionTier,
 } from "./stripe-config";
-import { getUpgradeTiers } from "@/common/lib/subscription/tier-config";
+import {
+  getTierInfo,
+  getUpgradeTiers,
+} from "@/common/lib/subscription/tier-config";
 import {
   useAllTierQuotas,
   type TierQuota,
 } from "@/common/hooks/use-all-tier-quotas";
 import { CurrentPlanBanner } from "./subscription-plan-banner";
+import { describeTierQuota } from "./tier-quota-summary";
+import { CheckoutConfirmation } from "./checkout-confirmation";
+import { useCheckoutConfirmation } from "./use-checkout-confirmation";
+import { useMoneyFormat } from "./use-money-format";
+import { useQuotaNumberFormat } from "./use-quota-number-format";
+import {
+  rememberReturnPath,
+  takeReturnPath,
+} from "@/features/user-settings/lib/billing-return";
 import { UsageOverview } from "./subscription-usage-overview";
 import { PlanPicker } from "./subscription-plan-picker";
 import { PayYearlyOffer } from "./subscription-pay-yearly";
@@ -91,7 +103,17 @@ function SubscriptionHeader({ t }: { t: (key: string) => string }) {
   );
 }
 
-export function SubscriptionSection() {
+export function SubscriptionSection({
+  checkoutReturned = false,
+  returnTo,
+  onCheckoutDismiss,
+}: {
+  /** Stripe Checkout just returned here with `checkout=success`. */
+  checkoutReturned?: boolean;
+  /** Where the purchase began, to offer the way back after Checkout. */
+  returnTo?: string;
+  onCheckoutDismiss?: () => void;
+} = {}) {
   const { t } = useTranslations();
   const formatError = useErrorMessage();
   const {
@@ -165,6 +187,7 @@ export function SubscriptionSection() {
       });
       const result = response.data?.createSubscriptionSession;
       if (result?.success && result.sessionUrl) {
+        rememberReturnPath(returnTo);
         window.location.href = result.sessionUrl;
       } else {
         toast.error(
@@ -233,6 +256,33 @@ export function SubscriptionSection() {
   const isLoading =
     limitsLoading || subscriptionLoading || aiCfoLoading || quotasLoading;
 
+  const formatMoney = useMoneyFormat();
+  const formatCount = useQuotaNumberFormat();
+  const [checkoutReturnPath] = useState(() =>
+    checkoutReturned ? takeReturnPath() : null,
+  );
+  const confirmation = useCheckoutConfirmation(
+    checkoutReturned,
+    hasActiveStripeSubscription,
+    () => {
+      void refetchSubscription();
+      void refetchUserLimits();
+    },
+  );
+  const tierInfo = getTierInfo(tier);
+  const planLabel = [
+    tierInfo ? t(tierInfo.labelKey) : t("userSettings.freePlan"),
+    currentInterval
+      ? t(
+          currentInterval === "year"
+            ? "userSettings.yearly"
+            : "userSettings.monthly",
+        )
+      : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
   const aiPercentage =
     aiCfoTokensMax > 0
       ? Math.min((aiCfoTokensUsed / aiCfoTokensMax) * 100, 100)
@@ -248,6 +298,35 @@ export function SubscriptionSection() {
     <Card>
       <SubscriptionHeader t={t} />
       <CardContent className="space-y-6">
+        {checkoutReturned && (
+          <CheckoutConfirmation
+            state={confirmation}
+            planLabel={planLabel}
+            renewal={
+              renewalDate && currentPrice
+                ? {
+                    date: renewalDate,
+                    amount: formatMoney(
+                      currentPrice.amount,
+                      currentPrice.currency,
+                    ),
+                  }
+                : null
+            }
+            unlocked={
+              quotaByUserTier[tier]
+                ? describeTierQuota(quotaByUserTier[tier], t, formatCount)
+                : null
+            }
+            returnTo={checkoutReturnPath}
+            t={t}
+            onRefresh={() => {
+              void refetchSubscription();
+              void refetchUserLimits();
+            }}
+            onDismiss={() => onCheckoutDismiss?.()}
+          />
+        )}
         {isLoading ? (
           <SubscriptionSkeleton />
         ) : subscriptionError ? (

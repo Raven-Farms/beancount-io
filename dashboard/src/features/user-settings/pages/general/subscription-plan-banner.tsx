@@ -4,6 +4,7 @@ import { type UserTier } from "@/common/hooks/use-user-limits";
 import { getTierInfo } from "@/common/lib/subscription/tier-config";
 import { type TierQuota } from "@/common/hooks/use-all-tier-quotas";
 import { useQuotaNumberFormat } from "./use-quota-number-format";
+import { describeTierQuota } from "./tier-quota-summary";
 import { useMoneyFormat } from "./use-money-format";
 import type { PlanInterval } from "@/common/lib/subscription/plan-change";
 
@@ -44,31 +45,8 @@ export function CurrentPlanBanner({
         ? t(tierInfo.labelKey)
         : t("userSettings.freePlan");
 
-  // Same translated quota strings the upgrade cards use, so the current plan is
-  // described in the app language instead of hardcoded English.
   const featureSummary = tierQuota
-    ? [
-        t("userSettings.aiTokensPerMonth", {
-          count: formatCount(tierQuota.aiCfoTokensMax),
-        }),
-        tierQuota.maxLedgers === -1
-          ? t("userSettings.unlimitedLedgers")
-          : t("userSettings.includedLedgers", {
-              count: tierQuota.maxLedgers,
-              formattedCount: formatCount(tierQuota.maxLedgers),
-            }),
-        tierQuota.maxDirectives === -1
-          ? t("userSettings.unlimitedDirectives")
-          : t("userSettings.includedDirectives", {
-              count: formatCount(tierQuota.maxDirectives),
-            }),
-        tierQuota.maxCollaboratorsPerLedger === -1
-          ? t("userSettings.unlimitedCollaborators")
-          : t("userSettings.collaboratorsPerLedger", {
-              count: tierQuota.maxCollaboratorsPerLedger,
-              formattedCount: formatCount(tierQuota.maxCollaboratorsPerLedger),
-            }),
-      ].join(" · ")
+    ? describeTierQuota(tierQuota, t, formatCount)
     : isEnterprise
       ? t("userSettings.unlimited")
       : null;

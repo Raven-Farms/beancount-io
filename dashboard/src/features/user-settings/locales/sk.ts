@@ -654,6 +654,44 @@ const skUserSettings: Record<string, TranslationEntry> = {
     message: "Pôvodná cena",
     description: "Label for an older price an existing subscriber keeps",
   },
+  "userSettings.checkoutConfirming": {
+    message: "Potvrdzujeme vašu platbu…",
+    description:
+      "Shown while waiting for Stripe to confirm a just-completed checkout",
+  },
+  "userSettings.checkoutDone": {
+    message: "Teraz máte {plan}",
+    description:
+      "Confirmation after checkout; {plan} is a plan name and billing cycle such as 'Premium \u00b7 Yearly'",
+  },
+  "userSettings.checkoutRenews": {
+    message: "Obnoví sa {date} za {amount}. Potvrdenie dostanete e-mailom.",
+    description:
+      "Renewal line after checkout; {date} is a formatted date and {amount} a formatted price",
+  },
+  "userSettings.checkoutUnlocked": {
+    message: "Teraz zahŕňa: {limits}",
+    description: "What the new plan includes; {limits} is a list of quotas",
+  },
+  "userSettings.checkoutPending": {
+    message:
+      "Platba bola prijatá. Váš plán sa zobrazí do minúty; obnovte stránku a skontrolujte to.",
+    description:
+      "Shown when the payment is done but the subscription is not recorded yet",
+  },
+  "userSettings.refresh": {
+    message: "Obnoviť",
+    description: "Button that reloads the subscription status",
+  },
+  "userSettings.backToWork": {
+    message: "Späť na predchádzajúcu stránku",
+    description: "Button that returns to the page where the purchase began",
+  },
+  "userSettings.viewBilling": {
+    message: "Zobraziť fakturáciu",
+    description:
+      "Button that closes the checkout confirmation and shows billing settings",
+  },
 };
 
 export default skUserSettings;

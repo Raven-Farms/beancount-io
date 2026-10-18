@@ -655,6 +655,45 @@ const ruUserSettings: Record<string, TranslationEntry> = {
     message: "Прежняя цена",
     description: "Label for an older price an existing subscriber keeps",
   },
+  "userSettings.checkoutConfirming": {
+    message: "Подтверждаем оплату…",
+    description:
+      "Shown while waiting for Stripe to confirm a just-completed checkout",
+  },
+  "userSettings.checkoutDone": {
+    message: "Теперь у вас {plan}",
+    description:
+      "Confirmation after checkout; {plan} is a plan name and billing cycle such as 'Premium \u00b7 Yearly'",
+  },
+  "userSettings.checkoutRenews": {
+    message:
+      "Продление {date} за {amount}. Квитанция придёт на электронную почту.",
+    description:
+      "Renewal line after checkout; {date} is a formatted date and {amount} a formatted price",
+  },
+  "userSettings.checkoutUnlocked": {
+    message: "Теперь доступно: {limits}",
+    description: "What the new plan includes; {limits} is a list of quotas",
+  },
+  "userSettings.checkoutPending": {
+    message:
+      "Оплата получена. Тариф появится в течение минуты; обновите страницу, чтобы проверить.",
+    description:
+      "Shown when the payment is done but the subscription is not recorded yet",
+  },
+  "userSettings.refresh": {
+    message: "Обновить",
+    description: "Button that reloads the subscription status",
+  },
+  "userSettings.backToWork": {
+    message: "Вернуться к предыдущей странице",
+    description: "Button that returns to the page where the purchase began",
+  },
+  "userSettings.viewBilling": {
+    message: "Открыть оплату",
+    description:
+      "Button that closes the checkout confirmation and shows billing settings",
+  },
 };
 
 export default ruUserSettings;

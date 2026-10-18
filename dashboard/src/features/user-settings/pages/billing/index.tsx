@@ -1,4 +1,4 @@
-import { Navigate } from "@tanstack/react-router";
+import { Navigate, useNavigate, useSearch } from "@tanstack/react-router";
 import { PageSEO } from "@/common/components/seo/page-seo";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { useReactNativeContext } from "@/common/providers/react-native-bridge-provider/react-native-bridge-context";
@@ -12,13 +12,25 @@ import { SubscriptionSection } from "../general/subscription-section";
 export default function BillingSettingsPage() {
   const { t } = useTranslations();
   const { isReactNative } = useReactNativeContext();
+  const search = useSearch({ from: "/settings/billing" });
+  const navigate = useNavigate();
   if (isReactNative) return <Navigate to="/settings/general" replace />;
   return (
     <>
       <PageSEO titleKey="userSettings.billing" noIndex />
       <div className="space-y-6">
         <h1 className="text-2xl font-semibold">{t("userSettings.billing")}</h1>
-        <SubscriptionSection />
+        <SubscriptionSection
+          checkoutReturned={search.checkout === "success"}
+          returnTo={search.return}
+          onCheckoutDismiss={() =>
+            void navigate({
+              to: "/settings/billing",
+              search: {},
+              replace: true,
+            })
+          }
+        />
       </div>
     </>
   );

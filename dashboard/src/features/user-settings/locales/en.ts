@@ -631,6 +631,44 @@ const enUserSettings: Record<string, TranslationEntry> = {
     message: "Legacy price",
     description: "Label for an older price an existing subscriber keeps",
   },
+  "userSettings.checkoutConfirming": {
+    message: "Confirming your payment…",
+    description:
+      "Shown while waiting for Stripe to confirm a just-completed checkout",
+  },
+  "userSettings.checkoutDone": {
+    message: "You're on {plan}",
+    description:
+      "Confirmation after checkout; {plan} is a plan name and billing cycle such as 'Premium \u00b7 Yearly'",
+  },
+  "userSettings.checkoutRenews": {
+    message: "Renews {date} for {amount}. Your receipt arrives by email.",
+    description:
+      "Renewal line after checkout; {date} is a formatted date and {amount} a formatted price",
+  },
+  "userSettings.checkoutUnlocked": {
+    message: "Now unlocked: {limits}",
+    description: "What the new plan includes; {limits} is a list of quotas",
+  },
+  "userSettings.checkoutPending": {
+    message:
+      "Payment received. Your plan will appear in a minute; refresh to check.",
+    description:
+      "Shown when the payment is done but the subscription is not recorded yet",
+  },
+  "userSettings.refresh": {
+    message: "Refresh",
+    description: "Button that reloads the subscription status",
+  },
+  "userSettings.backToWork": {
+    message: "Back to where you were",
+    description: "Button that returns to the page where the purchase began",
+  },
+  "userSettings.viewBilling": {
+    message: "View billing",
+    description:
+      "Button that closes the checkout confirmation and shows billing settings",
+  },
 };
 
 export default enUserSettings;

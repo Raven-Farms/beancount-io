@@ -647,6 +647,45 @@ const frUserSettings: Record<string, TranslationEntry> = {
     message: "Ancien tarif",
     description: "Label for an older price an existing subscriber keeps",
   },
+  "userSettings.checkoutConfirming": {
+    message: "Confirmation de votre paiement…",
+    description:
+      "Shown while waiting for Stripe to confirm a just-completed checkout",
+  },
+  "userSettings.checkoutDone": {
+    message: "Vous êtes désormais sur {plan}",
+    description:
+      "Confirmation after checkout; {plan} is a plan name and billing cycle such as 'Premium \u00b7 Yearly'",
+  },
+  "userSettings.checkoutRenews": {
+    message:
+      "Renouvellement le {date} pour {amount}. Vous recevrez le reçu par e-mail.",
+    description:
+      "Renewal line after checkout; {date} is a formatted date and {amount} a formatted price",
+  },
+  "userSettings.checkoutUnlocked": {
+    message: "Désormais inclus : {limits}",
+    description: "What the new plan includes; {limits} is a list of quotas",
+  },
+  "userSettings.checkoutPending": {
+    message:
+      "Paiement reçu. Votre forfait apparaîtra d'ici une minute ; actualisez pour vérifier.",
+    description:
+      "Shown when the payment is done but the subscription is not recorded yet",
+  },
+  "userSettings.refresh": {
+    message: "Actualiser",
+    description: "Button that reloads the subscription status",
+  },
+  "userSettings.backToWork": {
+    message: "Revenir où vous étiez",
+    description: "Button that returns to the page where the purchase began",
+  },
+  "userSettings.viewBilling": {
+    message: "Voir la facturation",
+    description:
+      "Button that closes the checkout confirmation and shows billing settings",
+  },
 };
 
 export default frUserSettings;

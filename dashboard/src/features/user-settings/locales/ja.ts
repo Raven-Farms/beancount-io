@@ -619,6 +619,44 @@ const jaUserSettings: Record<string, TranslationEntry> = {
     message: "旧料金",
     description: "Label for an older price an existing subscriber keeps",
   },
+  "userSettings.checkoutConfirming": {
+    message: "お支払いを確認しています…",
+    description:
+      "Shown while waiting for Stripe to confirm a just-completed checkout",
+  },
+  "userSettings.checkoutDone": {
+    message: "{plan} をご利用中です",
+    description:
+      "Confirmation after checkout; {plan} is a plan name and billing cycle such as 'Premium \u00b7 Yearly'",
+  },
+  "userSettings.checkoutRenews": {
+    message: "{date} に {amount} で更新されます。領収書はメールで届きます。",
+    description:
+      "Renewal line after checkout; {date} is a formatted date and {amount} a formatted price",
+  },
+  "userSettings.checkoutUnlocked": {
+    message: "利用できるようになった内容: {limits}",
+    description: "What the new plan includes; {limits} is a list of quotas",
+  },
+  "userSettings.checkoutPending": {
+    message:
+      "お支払いを受け付けました。1 分ほどでプランが反映されます。更新して確認してください。",
+    description:
+      "Shown when the payment is done but the subscription is not recorded yet",
+  },
+  "userSettings.refresh": {
+    message: "更新",
+    description: "Button that reloads the subscription status",
+  },
+  "userSettings.backToWork": {
+    message: "元のページに戻る",
+    description: "Button that returns to the page where the purchase began",
+  },
+  "userSettings.viewBilling": {
+    message: "お支払い情報を見る",
+    description:
+      "Button that closes the checkout confirmation and shows billing settings",
+  },
 };
 
 export default jaUserSettings;

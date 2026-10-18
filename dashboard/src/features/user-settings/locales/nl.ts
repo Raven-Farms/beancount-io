@@ -634,6 +634,45 @@ const nlUserSettings: Record<string, TranslationEntry> = {
     message: "Oude prijs",
     description: "Label for an older price an existing subscriber keeps",
   },
+  "userSettings.checkoutConfirming": {
+    message: "Je betaling wordt bevestigd…",
+    description:
+      "Shown while waiting for Stripe to confirm a just-completed checkout",
+  },
+  "userSettings.checkoutDone": {
+    message: "Je hebt nu {plan}",
+    description:
+      "Confirmation after checkout; {plan} is a plan name and billing cycle such as 'Premium \u00b7 Yearly'",
+  },
+  "userSettings.checkoutRenews": {
+    message:
+      "Wordt verlengd op {date} voor {amount}. Je ontvangt het betaalbewijs per e-mail.",
+    description:
+      "Renewal line after checkout; {date} is a formatted date and {amount} a formatted price",
+  },
+  "userSettings.checkoutUnlocked": {
+    message: "Nu inbegrepen: {limits}",
+    description: "What the new plan includes; {limits} is a list of quotas",
+  },
+  "userSettings.checkoutPending": {
+    message:
+      "Betaling ontvangen. Je abonnement verschijnt binnen een minuut; vernieuw de pagina om het te controleren.",
+    description:
+      "Shown when the payment is done but the subscription is not recorded yet",
+  },
+  "userSettings.refresh": {
+    message: "Vernieuwen",
+    description: "Button that reloads the subscription status",
+  },
+  "userSettings.backToWork": {
+    message: "Terug naar waar je was",
+    description: "Button that returns to the page where the purchase began",
+  },
+  "userSettings.viewBilling": {
+    message: "Facturering bekijken",
+    description:
+      "Button that closes the checkout confirmation and shows billing settings",
+  },
 };
 
 export default nlUserSettings;

@@ -655,6 +655,45 @@ const ukUserSettings: Record<string, TranslationEntry> = {
     message: "Попередня ціна",
     description: "Label for an older price an existing subscriber keeps",
   },
+  "userSettings.checkoutConfirming": {
+    message: "Підтверджуємо оплату…",
+    description:
+      "Shown while waiting for Stripe to confirm a just-completed checkout",
+  },
+  "userSettings.checkoutDone": {
+    message: "Тепер у вас {plan}",
+    description:
+      "Confirmation after checkout; {plan} is a plan name and billing cycle such as 'Premium \u00b7 Yearly'",
+  },
+  "userSettings.checkoutRenews": {
+    message:
+      "Поновлюється {date} за {amount}. Квитанція надійде на електронну пошту.",
+    description:
+      "Renewal line after checkout; {date} is a formatted date and {amount} a formatted price",
+  },
+  "userSettings.checkoutUnlocked": {
+    message: "Тепер доступно: {limits}",
+    description: "What the new plan includes; {limits} is a list of quotas",
+  },
+  "userSettings.checkoutPending": {
+    message:
+      "Оплату отримано. Тариф з'явиться протягом хвилини; оновіть сторінку, щоб перевірити.",
+    description:
+      "Shown when the payment is done but the subscription is not recorded yet",
+  },
+  "userSettings.refresh": {
+    message: "Оновити",
+    description: "Button that reloads the subscription status",
+  },
+  "userSettings.backToWork": {
+    message: "Повернутися на попередню сторінку",
+    description: "Button that returns to the page where the purchase began",
+  },
+  "userSettings.viewBilling": {
+    message: "Відкрити оплату",
+    description:
+      "Button that closes the checkout confirmation and shows billing settings",
+  },
 };
 
 export default ukUserSettings;

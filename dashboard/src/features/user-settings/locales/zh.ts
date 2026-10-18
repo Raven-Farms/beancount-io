@@ -617,6 +617,43 @@ const zhUserSettings: Record<string, TranslationEntry> = {
     message: "旧价格",
     description: "Label for an older price an existing subscriber keeps",
   },
+  "userSettings.checkoutConfirming": {
+    message: "正在确认你的付款…",
+    description:
+      "Shown while waiting for Stripe to confirm a just-completed checkout",
+  },
+  "userSettings.checkoutDone": {
+    message: "你现在使用的是 {plan}",
+    description:
+      "Confirmation after checkout; {plan} is a plan name and billing cycle such as 'Premium \u00b7 Yearly'",
+  },
+  "userSettings.checkoutRenews": {
+    message: "将于 {date} 以 {amount} 续订。收据会通过电子邮件发送给你。",
+    description:
+      "Renewal line after checkout; {date} is a formatted date and {amount} a formatted price",
+  },
+  "userSettings.checkoutUnlocked": {
+    message: "现已包含：{limits}",
+    description: "What the new plan includes; {limits} is a list of quotas",
+  },
+  "userSettings.checkoutPending": {
+    message: "已收到付款。你的计划将在一分钟内显示；请刷新查看。",
+    description:
+      "Shown when the payment is done but the subscription is not recorded yet",
+  },
+  "userSettings.refresh": {
+    message: "刷新",
+    description: "Button that reloads the subscription status",
+  },
+  "userSettings.backToWork": {
+    message: "返回之前的页面",
+    description: "Button that returns to the page where the purchase began",
+  },
+  "userSettings.viewBilling": {
+    message: "查看账单",
+    description:
+      "Button that closes the checkout confirmation and shows billing settings",
+  },
 };
 
 export default zhUserSettings;

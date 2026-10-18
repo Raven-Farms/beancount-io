@@ -637,6 +637,45 @@ const deUserSettings: Record<string, TranslationEntry> = {
     message: "Bisheriger Preis",
     description: "Label for an older price an existing subscriber keeps",
   },
+  "userSettings.checkoutConfirming": {
+    message: "Zahlung wird bestätigt …",
+    description:
+      "Shown while waiting for Stripe to confirm a just-completed checkout",
+  },
+  "userSettings.checkoutDone": {
+    message: "Sie nutzen jetzt {plan}",
+    description:
+      "Confirmation after checkout; {plan} is a plan name and billing cycle such as 'Premium \u00b7 Yearly'",
+  },
+  "userSettings.checkoutRenews": {
+    message:
+      "Verlängert sich am {date} für {amount}. Den Beleg erhalten Sie per E-Mail.",
+    description:
+      "Renewal line after checkout; {date} is a formatted date and {amount} a formatted price",
+  },
+  "userSettings.checkoutUnlocked": {
+    message: "Jetzt enthalten: {limits}",
+    description: "What the new plan includes; {limits} is a list of quotas",
+  },
+  "userSettings.checkoutPending": {
+    message:
+      "Zahlung eingegangen. Ihr Plan erscheint in einer Minute; aktualisieren Sie zur Kontrolle.",
+    description:
+      "Shown when the payment is done but the subscription is not recorded yet",
+  },
+  "userSettings.refresh": {
+    message: "Aktualisieren",
+    description: "Button that reloads the subscription status",
+  },
+  "userSettings.backToWork": {
+    message: "Zurück zur vorherigen Seite",
+    description: "Button that returns to the page where the purchase began",
+  },
+  "userSettings.viewBilling": {
+    message: "Abrechnung anzeigen",
+    description:
+      "Button that closes the checkout confirmation and shows billing settings",
+  },
 };
 
 export default deUserSettings;

@@ -618,6 +618,45 @@ const koUserSettings: Record<string, TranslationEntry> = {
     message: "이전 요금",
     description: "Label for an older price an existing subscriber keeps",
   },
+  "userSettings.checkoutConfirming": {
+    message: "결제를 확인하는 중…",
+    description:
+      "Shown while waiting for Stripe to confirm a just-completed checkout",
+  },
+  "userSettings.checkoutDone": {
+    message: "이제 {plan} 플랜을 사용합니다",
+    description:
+      "Confirmation after checkout; {plan} is a plan name and billing cycle such as 'Premium \u00b7 Yearly'",
+  },
+  "userSettings.checkoutRenews": {
+    message:
+      "{date}에 {amount}(으)로 갱신됩니다. 영수증은 이메일로 받으실 수 있습니다.",
+    description:
+      "Renewal line after checkout; {date} is a formatted date and {amount} a formatted price",
+  },
+  "userSettings.checkoutUnlocked": {
+    message: "이제 포함된 항목: {limits}",
+    description: "What the new plan includes; {limits} is a list of quotas",
+  },
+  "userSettings.checkoutPending": {
+    message:
+      "결제가 완료되었습니다. 1분 안에 플랜이 표시됩니다. 새로고침해 확인하세요.",
+    description:
+      "Shown when the payment is done but the subscription is not recorded yet",
+  },
+  "userSettings.refresh": {
+    message: "새로고침",
+    description: "Button that reloads the subscription status",
+  },
+  "userSettings.backToWork": {
+    message: "이전 페이지로 돌아가기",
+    description: "Button that returns to the page where the purchase began",
+  },
+  "userSettings.viewBilling": {
+    message: "결제 정보 보기",
+    description:
+      "Button that closes the checkout confirmation and shows billing settings",
+  },
 };
 
 export default koUserSettings;

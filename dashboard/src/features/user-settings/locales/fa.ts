@@ -634,6 +634,45 @@ const faUserSettings: Record<string, TranslationEntry> = {
     message: "قیمت قدیمی",
     description: "Label for an older price an existing subscriber keeps",
   },
+  "userSettings.checkoutConfirming": {
+    message: "در حال تأیید پرداخت شما…",
+    description:
+      "Shown while waiting for Stripe to confirm a just-completed checkout",
+  },
+  "userSettings.checkoutDone": {
+    message: "اکنون طرح شما {plan} است",
+    description:
+      "Confirmation after checkout; {plan} is a plan name and billing cycle such as 'Premium \u00b7 Yearly'",
+  },
+  "userSettings.checkoutRenews": {
+    message:
+      "در تاریخ {date} با مبلغ {amount} تمدید می‌شود. رسید از طریق ایمیل برایتان ارسال می‌شود.",
+    description:
+      "Renewal line after checkout; {date} is a formatted date and {amount} a formatted price",
+  },
+  "userSettings.checkoutUnlocked": {
+    message: "اکنون شامل: {limits}",
+    description: "What the new plan includes; {limits} is a list of quotas",
+  },
+  "userSettings.checkoutPending": {
+    message:
+      "پرداخت دریافت شد. طرح شما تا یک دقیقه دیگر نمایش داده می‌شود؛ برای بررسی صفحه را تازه کنید.",
+    description:
+      "Shown when the payment is done but the subscription is not recorded yet",
+  },
+  "userSettings.refresh": {
+    message: "تازه‌سازی",
+    description: "Button that reloads the subscription status",
+  },
+  "userSettings.backToWork": {
+    message: "بازگشت به صفحه قبلی",
+    description: "Button that returns to the page where the purchase began",
+  },
+  "userSettings.viewBilling": {
+    message: "مشاهده صورت‌حساب",
+    description:
+      "Button that closes the checkout confirmation and shows billing settings",
+  },
 };
 
 export default faUserSettings;
