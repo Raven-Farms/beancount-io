@@ -1,7 +1,7 @@
 """A gateway timeout on a cloud write is an unknown outcome, exit 4 (w5/517).
 
-504 and Cloudflare's 520–524 mean the origin received the request and did
-not finish answering, the same unknown outcome as bea's own timeout, but
+504 and Cloudflare's 520, 522 and 524 do not establish the write's outcome,
+the same uncertainty as bea's own timeout, but
 they exited 1 with "Server error" and invited a retry that hit 409 or 404.
 """
 
@@ -93,7 +93,7 @@ def test_a_gateway_timeout_on_a_write_is_unknown(
     assert result.returncode == 4, result.stdout + result.stderr
     error = json.loads(result.stdout or result.stderr)["error"]
     assert error["category"] == "conflict"
-    assert error["message"].startswith(f"{operation} timed out at the server's gateway (HTTP {status})")
+    assert error["message"].startswith(f"{operation} was not confirmed by the server's gateway (HTTP {status})")
     assert "check the current state before retrying" in error["message"]
 
 

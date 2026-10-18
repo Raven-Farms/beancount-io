@@ -348,8 +348,12 @@ everything else — including `404`, rate limiting, and server errors — exits
 **1**. `ask` also accepts a single plain-text sentence of at most 200 characters;
 markup, multiline or longer raw bodies fall back to the HTTP status. A message
 inside JSON can span lines. A write whose outcome the CLI cannot know (a timeout
-mid-delete, or a gateway's `504` or Cloudflare's `520`–`524`, which mean the request
-arrived but was not answered) exits **4** and says so rather than guessing. A
+mid-delete, or a gateway's `504` or Cloudflare's `520`, `522` or `524`) exits
+**4** and says so rather than guessing. Cloudflare's `521` (connection refused)
+and `523` (origin unreachable) instead exit **1** with `Could not reach the server`.
+[Cloudflare's `522`](https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-522/)
+can occur during connection setup or while waiting for a request acknowledgment
+on an established connection; its status alone cannot establish a write's outcome. A
 write that never connected (a refused connection, a failed DNS lookup, a connect
 timeout) sent nothing, so it exits **1** with `Could not reach the server (…)`,
 like a read.

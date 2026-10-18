@@ -117,13 +117,13 @@ def cloud_logout() -> None:
             None,
         )
     except (httpx.TransportError, UnreadableSuccess, GatewayTimeout) as exc:
-        # The request arrived and the answer was lost or unreadable: unknown,
-        # as for create and delete, never "Could not reach the server" (w5/521).
+        # These failures cannot establish whether revocation took effect,
+        # as for create and delete (w5/521, w5/690).
         failure = (
             ConflictError,
             f"the server's answer to the revocation was lost or unreadable ({_failure_name(exc)}); "
             f"the outcome is unknown. {_STILL_VALID}",
-            None,
+            getattr(exc, "request_id", None),
         )
     except Exception as exc:
         reason = to_bea_error(exc)

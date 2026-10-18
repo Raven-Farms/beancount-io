@@ -207,6 +207,11 @@ def error_from_status(status: int, message: str | None, *, request_id: str | Non
         return BeaError(f"Rate limited ({detail}). Wait a moment and retry.", request_id=request_id)
     if status in _GATEWAY_TIMEOUTS:
         return GatewayTimeout(f"Server error ({detail}).", status=status, request_id=request_id)
+    if status in {521, 523}:
+        # Cloudflare could not connect to the origin, unlike 522, which can
+        # also mean a request went unacknowledged on an established connection.
+        connection = f"HTTP {status}" if detail == f"HTTP {status}" else f"HTTP {status}: {detail}"
+        return BeaError(f"Could not reach the server ({connection}).", request_id=request_id)
     if status >= 500:
         return BeaError(f"Server error ({detail}).", request_id=request_id)
     return BeaError(detail, request_id=request_id)
@@ -434,13 +439,13 @@ class UnreadableSuccess(BeaError):
         self.status = status
 
 
-#: A proxy's "the origin took the request and did not finish answering": 504,
-#: and Cloudflare's 520–524.
-_GATEWAY_TIMEOUTS = frozenset({504, 520, 521, 522, 523, 524})
+#: Gateway failures that cannot establish whether a write took effect.
+#: Cloudflare 522 includes both connection and resource-request ACK timeouts.
+_GATEWAY_TIMEOUTS = frozenset({504, 520, 522, 524})
 
 
 class GatewayTimeout(BeaError):
-    """A gateway's report that the origin received the request and did not finish answering it.
+    """A gateway failure that leaves the origin's write outcome unknown.
 
     A read reports it as the server error it is. A write may have taken effect,
     so the write paths say the outcome is unknown, as for bea's own timeout:
@@ -460,8 +465,8 @@ def unknown_write_outcome(operation: str, exc: BaseException) -> ConflictError:
     """
     if isinstance(exc, GatewayTimeout):
         return ConflictError(
-            f"{operation} timed out at the server's gateway (HTTP {exc.status}): the request arrived but was not "
-            "answered. The outcome is unknown — check the current state before retrying.",
+            f"{operation} was not confirmed by the server's gateway (HTTP {exc.status}). "
+            "The outcome is unknown — check the current state before retrying.",
             request_id=exc.request_id,
         )
     if isinstance(exc, UnreadableSuccess):
