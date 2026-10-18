@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [656 — `-p "Assets:Cash 10/0-5 USD"` leaks `SystemError` instead of the zero-divisor refusal (regression from w5/489)](./656.md)
 - [657 — A zero-width space in `add -p` still yields an invisible duplicate account via the printed `add open` (incomplete fix of w5/490)](./657.md)
 - [658 — An earlier-dated duplicate `add open` hint names the unwritten proposal line (incomplete fix of w5/488)](./658.md)
 - [659 — A validating `add balance --pad-from` skips the same-day conflict and duplicate checks (incomplete fix of w5/487)](./659.md)
