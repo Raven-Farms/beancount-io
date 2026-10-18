@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [703 — A malformed BEA_TOKEN is told to run cloud login; logout exits 3 instead of the BEA_TOKEN no-op](./703.md)
 - [704 — ingest extract -e misses duplicates in a BOM or NFD ledger, with no warning](./704.md)
 - [705 — treeify treats - as a file name: -o - writes ./-, and treeify - reads it instead of stdin](./705.md)
 - [706 — ingest extract: -e DIR ends in a traceback; -o into a read-only directory exits 1 after running, not 3](./706.md)
