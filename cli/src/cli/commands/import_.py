@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import shlex
 import unicodedata
 from enum import StrEnum
@@ -186,18 +187,49 @@ def _unread_header_hint(source: Path, account: str | None, *, delimiter: str | N
     pasted command's savings rows into checking, on columns no file had
     (w5/470). The typed account is kept, and the header bea read is listed.
     """
-    from cli.csv_mapper import read_header
+    from cli.csv_mapper import detect_delimiter, read_header
 
     try:
         headers = read_header(source, delimiter=delimiter, encoding=encoding)
+        used = delimiter if delimiter is not None else detect_delimiter(source, encoding=encoding)
     except UsageError:
-        headers = None
-    columns = f" Its columns are: {', '.join(headers)}." if headers else ""
+        headers, used = None, ","
+    # One cell is not a column list: a QIF or OFX file's first line, or a
+    # header the delimiter did not split, read as "its columns" (w5/627).
+    single = headers[0].lstrip("\ufeff") if headers and len(headers) == 1 else None
+    if single is not None and _NOT_CSV.match(single):
+        kind = "a QIF" if single.startswith("!") else "an OFX"
+        return (
+            f"{source.name} looks like {kind} file, not a CSV export, so it has no columns to map: "
+            "use a Python importer that reads it."
+        )
+    unsplit = _unsplit_header(headers, used)
+    if unsplit is not None:
+        return (
+            f"{source.name}'s header was read as one column ({unsplit[0]!r}) with delimiter "
+            f"{_display_delimiter(used)}, but it looks {_SEPARATOR_NAMES[unsplit[1]]}-separated: pass --delimiter "
+            f"{_display_delimiter(unsplit[1])}, or omit --delimiter so bea detects it."
+        )
+    columns = f" Its columns are: {', '.join(headers)}." if headers and len(headers) > 1 else ""
     return (
         f"For a CSV export whose header row bea could not read, map the columns directly.{columns} "
         "Name them with --csv date=COLUMN,amount=COLUMN,narration=COLUMN "
         f"--account {shlex.quote(account) if account else 'ACCOUNT'}."
     )
+
+
+#: The first line of an export that is not CSV at all: QIF's `!Type:`, OFX 1's
+#: SGML header, OFX 2's XML declaration.
+_NOT_CSV = re.compile(r"!(?:Type|Account|Option)\b|OFXHEADER:|<\?xml|<OFX>", re.IGNORECASE)
+
+_SEPARATOR_NAMES = {",": "comma", ";": "semicolon", "\t": "tab", "|": "pipe"}
+
+
+def _unsplit_header(headers: list[str] | None, used: str) -> tuple[str, str] | None:
+    """A one-cell header and the separator it holds that the delimiter in force is not (w5/622)."""
+    single = headers[0] if headers and len(headers) == 1 else None
+    other = next((sep for sep in _SEPARATOR_NAMES if single and sep != used and sep in single), None)
+    return (single, other) if single is not None and other is not None else None
 
 
 def _display_delimiter(delim: str) -> str:
@@ -262,15 +294,14 @@ def _inferred_mapping(
             return None
         columns = ", ".join(headers) if headers else "(none)"
         used = delimiter if delimiter is not None else detect_delimiter(source, encoding=encoding)
-        single = headers[0] if headers and len(headers) == 1 else None
-        other = next((sep for sep in (",", ";", "\t", "|") if single and sep != used and sep in single), None)
-        if other is not None:
+        unsplit = _unsplit_header(headers, used)
+        if unsplit is not None:
             # Every separator, a comma under a forced `;` too: the mapping
             # suggested instead failed the same way when followed (w5/622).
-            names = {",": "comma", ";": "semicolon", "\t": "tab", "|": "pipe"}
+            single, other = unsplit
             raise UsageError(
                 f"Cannot read a column mapping from the header row of {source.name}. "
-                f"The file looks {names[other]}-separated but was read as one column ({single!r}) "
+                f"The file looks {_SEPARATOR_NAMES[other]}-separated but was read as one column ({single!r}) "
                 f"with delimiter {_display_delimiter(used)}. "
                 f"Pass --delimiter {_display_delimiter(other)} — or omit the override so bea can detect it.",
                 details=notes,
