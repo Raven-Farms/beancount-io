@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [624 — Help/doc slips: "Try bean-check --help", login help omits XDG, USAGE treeify example unordered](./624.md)
 - [625 — Hosted ledger: an authored price below an ignored line holding a `"` loses to the managed feed (follow-up of w5/476)](./625.md)
 - [626 — A padded `--account` filter validates then matches nothing (incomplete fix of w5/473)](./626.md)
 - [627 — The no-importer hint lists a QIF/OFX first line as "its columns" (regression from w5/470)](./627.md)
