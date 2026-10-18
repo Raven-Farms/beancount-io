@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [689 — `--offline` still allows forwarded `bea price`, `engine enable` and a `-h`-valued cloud create (incomplete fix of w5/515)](./689.md)
 - [690 — Logout treats 504/524 as a plain failure; 521–523 are wrongly reported as "the request arrived" (incomplete fix of w5/517)](./690.md)
 - [691 — init's "Record purchases" line runs against no ledger for a non-default file name](./691.md)
 - [692 — Import before init's date blocks one account at a time; remedy skips the opening balance](./692.md)
