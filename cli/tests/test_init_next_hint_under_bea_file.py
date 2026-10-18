@@ -61,10 +61,19 @@ def _sh(command: str, env: dict[str, str], cwd: Path) -> subprocess.CompletedPro
     )
 
 
-def _init(env: dict[str, str], cwd: Path, target: str) -> tuple[str, str]:
+def _init(env: dict[str, str], cwd: Path, target: str, *, global_file: bool = False) -> tuple[str, str]:
     """Run init and return its `Next:` command and its `Record purchases …` line."""
     result = subprocess.run(
-        ["bea", "init", target, "--currency", "USD", "--date", "2026-08-01"],
+        [
+            "bea",
+            *(["--file", target] if global_file else []),
+            "init",
+            *([] if global_file else [target]),
+            "--currency",
+            "USD",
+            "--date",
+            "2026-08-01",
+        ],
         env=env,
         cwd=cwd,
         stdin=subprocess.DEVNULL,
@@ -127,3 +136,40 @@ def test_hint_is_unchanged_without_bea_file(tmp_path: Path, bea_file: str | None
     here, _ = _init(env, work, ".")
     assert here == "bea check"
     assert _sh(here, env, work).returncode == 0
+
+
+@pytest.mark.parametrize(
+    "target",
+    ["ledger.beancount", "sub/ledger.bean", "sub/main.beancount", "main.beancount", "my books/it's; 空白.bean"],
+)
+@pytest.mark.parametrize("global_file", [False, True], ids=["positional", "global-file"])
+def test_all_custom_filename_hints_reach_the_new_ledger(tmp_path: Path, target: str, global_file: bool) -> None:
+    home = tmp_path / "home"
+    work = home / "work dir"
+    work.mkdir(parents=True)
+    env = _env(home, None)
+    created = work / target
+
+    hint, record = _init(env, work, target, global_file=global_file)
+
+    assert _sh(hint, env, work).returncode == 0
+    add = record.removeprefix("Record purchases with ").partition(", or ")[0]
+    importing = record.partition("preview a bank export with ")[2].removesuffix(".")
+    assert "--file" in add and "--file" in importing, record
+    assert hint == add.removesuffix("add transaction") + "check", (hint, record)
+    assert importing == add.removesuffix("add transaction") + "import", record
+    starter = created.read_bytes()
+    added = _sh(f"{add} Coffee --date 2026-08-02 -p 'Expenses:Dining 4.50 USD' -p 'Assets:Checking'", env, work)
+    assert added.returncode == 0, added.stdout + added.stderr
+    written = created.read_bytes()
+    assert written != starter and b"Coffee" in written
+    (work / "statement.csv").write_text("Date,Description,Amount\n2026-08-03,Bank row,-2.50\n")
+    preview = _sh(
+        f"{importing} statement.csv --csv date=Date,amount=Amount,narration=Description --account Assets:Checking",
+        env,
+        work,
+    )
+    assert preview.returncode == 0, preview.stdout + preview.stderr
+    assert "Bank row" in preview.stdout
+    assert created.read_bytes() == written
+    assert _sh(hint, env, work).returncode == 0

@@ -210,11 +210,11 @@ def init(
             shown = f"~/{file.relative_to(Path.home())}"
         except ValueError:
             shown = str(file)
-        # `$BEA_FILE` outranks cwd discovery, so a bare `bea` would open the
-        # ledger it names rather than the one just created; name the new one.
-        bea = f"bea --file {_shell_path(shown)}" if os.environ.get("BEA_FILE") else "bea"
-        if bea != "bea" or file.name != "main.bean":
-            next_command = f"bea --file {_shell_path(shown)} check"
+        # Use the same target in every hint. A custom filename needs --file,
+        # as does BEA_FILE overriding discovery after the suggested cd.
+        bea = f"bea --file {_shell_path(shown)}" if os.environ.get("BEA_FILE") or file.name != "main.bean" else "bea"
+        if bea != "bea":
+            next_command = f"{bea} check"
         elif _in_working_directory(file):
             next_command = "bea check"
         else:

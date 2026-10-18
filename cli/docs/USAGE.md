@@ -457,6 +457,9 @@ symbolic link for a second name instead; writes land in the real file.
 `BEA_FILE` does not redirect
 `init`; while it is set, the printed next steps name the new ledger with
 `--file`, because a bare `bea` would open the one `BEA_FILE` points at.
+The check, purchase and import hints also use `--file` for a custom filename
+such as `ledger.beancount`; a directory's `main.bean` uses the printed `cd`
+before the plain `bea` commands.
 Without a terminal, `--currency` is required and the date defaults to
 today. Interactively, choose the earliest date you intend to record. Use
 `--date` when importing older history; opening balances must be as of that date.
