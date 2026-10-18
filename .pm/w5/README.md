@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [679 — `bea ask` answered with a redirect says "Could not reach the server"](./679.md)
 - [680 — Small exit-contract slips: wrong blame, `exit -11`, group-without-subcommand JSON, `--limit 0`, `price status` JSON](./680.md)
 - [681 — `list --on-disk` drops a real document (cwd-dependent) or a `pushtag` note when a plugin copies it (incomplete fix of w5/507)](./681.md)
 - [682 — `add price`/`add balance` still advise `--allow-errors` for an unopened pad account (incomplete fix of w5/508)](./682.md)
