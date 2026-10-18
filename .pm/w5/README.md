@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [645 — Price cache/URL edge cases: future `next_refresh_at`, dot-segment aliases, ETag `"head"`](./645.md)
 - [646 — TAB after two different `-f` values prints an 11 MB traceback instead of completions (regression from w5/485)](./646.md)
 - [647 — `engine status` calls an override usable when it has no `bean-check` beside it (incomplete fix of w5/481)](./647.md)
 - [648 — `upgrade --check` still accepts null/empty versions and Homebrew HTML with exit 0 (incomplete fix of w5/484)](./648.md)
