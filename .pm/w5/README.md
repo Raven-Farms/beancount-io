@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [699 — Other SOCKS spellings and unknown proxy schemes still fail as unexpected; refusal names the wrong variable (incomplete fix of w5/518)](./699.md)
 - [700 — An IDNA-invalid BEA_API_URL passes the URL check; logout deletes the credential without sending anything](./700.md)
 - [701 — Logout drops the request ID on a lost or unreadable answer; USAGE still gives the old exit codes (gap in w5/521)](./701.md)
 - [702 — A proxy that drops the CONNECT makes cloud writes and logout exit 4 "outcome unknown" (gap in w5/519)](./702.md)
