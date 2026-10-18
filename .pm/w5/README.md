@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [709 — A mode-000 include named by two roots is reported for the first includer only](./709.md)
 - [710 — A BOM on line 1 hides a first-line pushtag/pushmeta and option name_* from the write checks](./710.md)
 - [711 — A file ending inside an unterminated string makes add blame the new entry, not the broken line](./711.md)
 - [712 — A lone CR as the last byte does not converge under format -i](./712.md)
