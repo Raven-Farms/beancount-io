@@ -448,9 +448,9 @@ history. `--file` must name a ledger file: an existing directory exits **2**
 with suggestions to pass it to `bea init DIR` or use `--file DIR/main.bean`.
 The asset and liability accounts are opened for the chosen currency
 only; the income, expense and equity categories take any currency, so a
-foreign charge such as `Expenses:Dining 45 EUR @ 1.10 USD` books without
-editing an open. To hold another currency in an account, add it to that
-account's open line (`2026-08-01 open Assets:Checking EUR,USD`): `bea add open`
+foreign charge such as `Expenses:Dining 45 USD @ 0.90 EUR` books in the EUR
+ledger above without editing an open. To hold another currency in an account,
+add it to that account's open line (`2026-08-01 open Assets:Checking EUR,USD`): `bea add open`
 refuses an account that is already open, and a refused posting names the open
 to edit. New ledger files are
 private by default (`0600` on POSIX: readable and writable only by their owner).
@@ -477,15 +477,17 @@ Invalid answers re-prompt the current question while keeping earlier answers.
 Invalid command-line options still fail with exit **2**.
 Opening balances, `add price --amount` and custom `number:`/`amount:` values
 accept finite decimal notation with ASCII digits and an optional sign and
-decimal point. Comma grouping in threes (`1,000.00`, `65,432.10`) is read as
-`add balance` and `--posting` read it and written without the commas; any
-other comma (`1,50`, `12,34,567`) is refused naming the thousands separators.
+decimal point. Comma grouping in threes (`1,000.00`, `65,432.10`) is accepted
+for these values, as it is for `add balance` and `--posting`; numbers are
+written without the commas. Other comma placements (`1,50`, `12,34,567`) are
+refused naming the thousands separators.
 Exponents, underscores, and non-ASCII digits are refused before anything is
 written.
 
 The personal template opens checking, savings, cash, credit card, salary,
-interest, groceries, dining, rent, transport, utilities, fees, and opening
-equity accounts. Opening balances use that currency and balance against
+interest, groceries, dining, rent, transport, utilities, fees, uncategorized
+expenses (`Expenses:Uncategorized`), and opening equity accounts. Opening
+balances use that currency and balance against
 `Equity:OpeningBalances`; credit card debt is negative. Add other accounts with
 `bea add open` before posting to them.
 
