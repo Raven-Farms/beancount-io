@@ -6,9 +6,17 @@ import {
   ErrorCategory,
   InternalServerError,
   NotFoundError,
+  ResourceLimitReachedError,
 } from "@/shared/errors";
 import type { IGiteaClientFactory } from "@/foundation/clients/gitea-client-factory";
+import type { IFavaClientFactory } from "@/foundation/clients/fava-client-factory";
+import type { DirectiveLimitLookupDeps } from "@/features/ledger/operations/directive-limit-lookup";
+import {
+  directiveLimitMergeRefusal,
+  evaluateMergeDirectiveLimit,
+} from "@/features/gitea/policy/directive-limit-gate";
 import type {
+  Api as GiteaApi,
   ContentsResponse,
   ChangedFile,
 } from "@/features/gitea/client/gitea-api";
@@ -206,10 +214,16 @@ export interface IPullRequestService {
   ): Promise<{ success: boolean; message: string }>;
 }
 
+/** What merge needs to hold a pull request to the ledger's directive limit. */
+export interface MergeDirectiveLimitDeps extends DirectiveLimitLookupDeps {
+  favaClientFactory: IFavaClientFactory;
+}
+
 export class PullRequestService implements IPullRequestService {
   constructor(
     private readonly giteaClientFactory: IGiteaClientFactory,
     private readonly authorization: IAuthorizationService,
+    private readonly directiveLimit: MergeDirectiveLimitDeps,
   ) {}
 
   async createPRFromPatch(
@@ -556,6 +570,13 @@ export class PullRequestService implements IPullRequestService {
     });
     const userId = identity.userId;
     const client = await this.giteaClientFactory.getUserApiClient(userId);
+    await this.assertMergeWithinDirectiveLimit(
+      client,
+      userId,
+      owner,
+      repo,
+      prNumber,
+    );
 
     try {
       await client.repos.repoMergePullRequest(owner, repo, prNumber, {
@@ -565,6 +586,67 @@ export class PullRequestService implements IPullRequestService {
       return { success: true, message: "PR merged successfully" };
     } catch (error) {
       return reviewFailure(error, prNumber);
+    }
+  }
+
+  /**
+   * Refuse a merge that would take a free ledger past its directive limit, the
+   * same rule every other app write path enforces (w0/m6). Anything that stops
+   * the check (an unreadable pull request, the limit or a count failing) lets
+   * the merge proceed, and the merge reports its own failure as before.
+   */
+  private async assertMergeWithinDirectiveLimit(
+    client: GiteaApi<unknown>,
+    userId: string,
+    owner: string,
+    repo: string,
+    prNumber: number,
+  ): Promise<void> {
+    let verdict;
+    try {
+      const { data: pr } = await client.repos.repoGetPullRequest(
+        owner,
+        repo,
+        prNumber,
+      );
+      if (!pr.head?.sha || !pr.merge_base) return;
+      verdict = await evaluateMergeDirectiveLimit(
+        {
+          ...this.directiveLimit,
+          ledgerClient:
+            await this.directiveLimit.favaClientFactory.getPublicApiClient(
+              createLedgerId(owner, repo),
+              userId,
+            ),
+        },
+        owner,
+        repo,
+        { head: pr.head.sha, mergeBase: pr.merge_base },
+      );
+    } catch (error) {
+      logger.warn("merge directive-limit check failed open", {
+        owner,
+        repo,
+        prNumber,
+        error,
+      });
+      return;
+    }
+    if (verdict.decision === "unknown") {
+      logger.warn("merge directive-limit check failed open", {
+        owner,
+        repo,
+        prNumber,
+        reason: verdict.reason,
+      });
+    }
+    if (verdict.decision === "over") {
+      throw new ResourceLimitReachedError(
+        "directives",
+        verdict.limit,
+        verdict.count,
+        directiveLimitMergeRefusal(verdict.count, verdict.limit),
+      );
     }
   }
 

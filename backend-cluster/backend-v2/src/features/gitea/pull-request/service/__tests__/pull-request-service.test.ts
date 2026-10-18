@@ -33,6 +33,16 @@ type MockGiteaClient = {
   };
 };
 
+// An owner the directive-limit lookup cannot find: the merge check fails
+// open, as it does in production when the limit is unknown.
+const NO_DIRECTIVE_LIMIT = {
+  models: { user: { getUserByUsername: async () => null } },
+  db: {},
+  stripe: {},
+  cacheHelper: {},
+  favaClientFactory: { getPublicApiClient: async () => ({}) },
+} as never;
+
 describe("PullRequestService", () => {
   let service: PullRequestService;
   let mockClient: MockGiteaClient;
@@ -75,6 +85,7 @@ describe("PullRequestService", () => {
     service = new PullRequestService(
       mockGiteaClientFactory as never,
       authorization as never,
+      NO_DIRECTIVE_LIMIT,
     );
   });
 

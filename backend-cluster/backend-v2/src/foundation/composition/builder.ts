@@ -212,6 +212,13 @@ export function buildServiceLayer(input: {
     pullRequest: new PullRequestService(
       input.clients.giteaClientFactory,
       authorization,
+      {
+        models: input.database.models,
+        db: input.database.db,
+        stripe,
+        cacheHelper: input.clients.cacheHelper,
+        favaClientFactory: input.clients.favaClientFactory,
+      },
     ),
     feed: new FeedService(
       input.clients.cacheHelper,

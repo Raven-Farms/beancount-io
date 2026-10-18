@@ -190,6 +190,7 @@ async function fixture(caller = identity, appConfig = config) {
   const service = new PullRequestService(
     { getUserApiClient } as never,
     authorization,
+    NO_DIRECTIVE_LIMIT,
   );
   const workflow = new PullRequestWorkflow(
     service,
@@ -325,6 +326,16 @@ const validCreate = {
   description: "Patch description",
   clearCommitMessage: "Patch commit",
 };
+// An owner the directive-limit lookup cannot find: the merge check fails
+// open, as it does in production when the limit is unknown.
+const NO_DIRECTIVE_LIMIT = {
+  models: { user: { getUserByUsername: async () => null } },
+  db: {},
+  stripe: {},
+  cacheHelper: {},
+  favaClientFactory: { getPublicApiClient: async () => ({}) },
+} as never;
+
 describe("PR creation, inspection, and review through real adapters/workflow/service", () => {
   it.each(surfaces)(
     "creates patches, reads details, and merges via %s",

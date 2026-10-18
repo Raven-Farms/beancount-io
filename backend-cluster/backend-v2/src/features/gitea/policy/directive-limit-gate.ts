@@ -60,6 +60,8 @@ async function fetchDirectiveCount(
   client: FavaApiClient,
   owner: string,
   repo: string,
+  /** A commit SHA to count instead of HEAD. */
+  ref?: string,
 ): Promise<number> {
   const response = await client.request<
     { success: true; data: { count: number; sha: string | null } },
@@ -71,6 +73,7 @@ async function fetchDirectiveCount(
     path: `/ledgers/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/directive-count`,
     method: "GET",
     format: "json",
+    ...(ref ? { query: { ref } } : {}),
   });
   const count = response.data?.data?.count;
   if (typeof count !== "number") {
@@ -132,6 +135,73 @@ export async function evaluateDirectiveLimit(
   }
 
   return { decision: count > limit ? "over" : "under", count, limit };
+}
+
+/** The commits a pull-request merge combines. */
+export interface MergeCommits {
+  /** The pull request's head. */
+  head: string;
+  /** Where its branch left the base, so `head − mergeBase` is what it adds. */
+  mergeBase: string;
+}
+
+/**
+ * Would merging this pull request take the ledger past its owner's limit?
+ *
+ * Unlike a push, a pull request is already commits the ledger service can
+ * count, so this can ask the precise question the app write path asks: does
+ * the merged ledger end up over the limit **and** bigger than it is now. The
+ * merge adds what the branch added since it left the base, so the projection
+ * is HEAD's count plus `head − mergeBase` (a base that moved on keeps its own
+ * changes). A shrinking merge is never refused, and every failure is `unknown`,
+ * which means allow, for the same reasons as {@link evaluateDirectiveLimit}.
+ * `count` in an `over` or `under` verdict is the projected count.
+ */
+export async function evaluateMergeDirectiveLimit(
+  deps: DirectiveLimitGateDeps,
+  owner: string,
+  repo: string,
+  commits: MergeCommits,
+): Promise<DirectiveLimitVerdict> {
+  let limit: number;
+  try {
+    ({ maxDirectives: limit } = await lookupDirectiveLimit(deps, owner));
+  } catch (err) {
+    return { decision: "unknown", reason: `limit: ${describe(err)}` };
+  }
+  if (limit < 0) return { decision: "unlimited" };
+
+  let current: number;
+  let head: number;
+  let mergeBase: number;
+  try {
+    [current, head, mergeBase] = await Promise.all([
+      fetchDirectiveCount(deps.ledgerClient, owner, repo),
+      fetchDirectiveCount(deps.ledgerClient, owner, repo, commits.head),
+      fetchDirectiveCount(deps.ledgerClient, owner, repo, commits.mergeBase),
+    ]);
+  } catch (err) {
+    return { decision: "unknown", reason: `count: ${describe(err)}` };
+  }
+
+  const projected = current + head - mergeBase;
+  return {
+    decision: projected > limit && projected > current ? "over" : "under",
+    count: projected,
+    limit,
+  };
+}
+
+/** What a merge refused by the directive limit says, on every surface. */
+export function directiveLimitMergeRefusal(
+  count: number,
+  limit: number,
+): string {
+  return (
+    `Merging this pull request would bring the ledger to about ${count} directives, ` +
+    `over the ${limit} the free plan allows. Remove entries from the pull request, ` +
+    "or delete entries from the ledger, to merge it; upgrading removes the limit entirely."
+  );
 }
 
 /**

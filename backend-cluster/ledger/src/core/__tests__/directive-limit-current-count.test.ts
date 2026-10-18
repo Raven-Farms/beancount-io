@@ -3,7 +3,10 @@ import {
   countDirectivesForRepo,
 } from "@/core/directive-limit";
 import { countLedgerDirectives } from "@/foundation/rustledger";
-import { resolveHeadShaCoalesced } from "@/foundation/clients/load-cached-ledger-file-map";
+import {
+  loadCachedFileMapForRepo,
+  resolveHeadShaCoalesced,
+} from "@/foundation/clients/load-cached-ledger-file-map";
 import { getMaxDirectives } from "@/core/backend-v2-limits";
 import { RateLimitedError } from "@/shared/errors";
 
@@ -54,6 +57,7 @@ jest.mock("@/core/backend-v2-limits", () => ({ getMaxDirectives: jest.fn() }));
 
 const countMock = countLedgerDirectives as jest.Mock;
 const headMock = resolveHeadShaCoalesced as jest.Mock;
+const loadMock = loadCachedFileMapForRepo as jest.Mock;
 const limitMock = getMaxDirectives as jest.Mock;
 
 const base64 = (text: string) => Buffer.from(text).toString("base64");
@@ -116,6 +120,33 @@ describe("which ledgers a checked write counts", () => {
     await expect(
       countDirectivesForRepo({} as never, "alice", "l"),
     ).resolves.toEqual({ count: 2, sha: "sha-a" });
+  });
+
+  it("counts a pinned commit for the merge check, still resolving HEAD as the access check", async () => {
+    headMock.mockClear();
+    loadMock.mockClear();
+
+    await expect(
+      countDirectivesForRepo({} as never, "alice", "l", "feedbeef"),
+    ).resolves.toEqual({ count: 2, sha: "feedbeef" });
+    expect(loadMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      "alice",
+      "l",
+      { committedOnly: true, ref: "feedbeef" },
+    );
+    expect(headMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("refuses the count when the caller cannot resolve HEAD, even if the commit is cached", async () => {
+    headMock.mockRejectedValueOnce(
+      Object.assign(new Error("not found"), { status: 404 }),
+    );
+
+    await expect(
+      countDirectivesForRepo({} as never, "alice", "l", "feedbeef"),
+    ).rejects.toThrow("not found");
   });
 
   it("lets the write through and logs it when the worker pool refuses the count", async () => {

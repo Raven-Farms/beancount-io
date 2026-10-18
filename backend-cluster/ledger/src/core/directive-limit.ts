@@ -44,25 +44,29 @@ interface CommittedLedger {
 }
 
 /**
- * The committed file map at HEAD. Committed files only: managed price feeds are
- * virtual, not the customer's directives (ADR 015 section 9), so a feed can
- * never push a ledger over its tier limit, and a count never triggers a feed
- * fetch.
+ * The committed file map at HEAD, or at `ref` when given. Committed files only:
+ * managed price feeds are virtual, not the customer's directives (ADR 015
+ * section 9), so a feed can never push a ledger over its tier limit, and a
+ * count never triggers a feed fetch.
  */
 async function loadCommitted(
   client: GiteaApi<unknown>,
   owner: string,
   repoName: string,
+  ref?: string,
 ): Promise<CommittedLedger> {
   const commitClient = client as unknown as GiteaCommitClient;
   // One Gitea round trip: both resolve HEAD through the same coalesced call.
-  const [sha, { files }] = await Promise.all([
+  // With a pinned ref the loader may answer from cache without asking Gitea, so
+  // HEAD is still resolved with the caller's client: it is their access check.
+  const [head, { files }] = await Promise.all([
     resolveHeadShaCoalesced(commitClient, owner, repoName),
     loadCachedFileMapForRepo(commitClient, getCacheHelper(), owner, repoName, {
       committedOnly: true,
+      ...(ref ? { ref } : {}),
     }),
   ]);
-  return { files, sha: sha ?? null };
+  return { files, sha: ref ?? head ?? null };
 }
 
 export interface DirectiveCount {
@@ -72,7 +76,7 @@ export interface DirectiveCount {
 }
 
 /**
- * How many directives a ledger currently holds.
+ * How many directives a ledger currently holds, or held at commit `ref`.
  *
  * Deliberately the same counter the app write path and the dashboard use —
  * `loadCachedFileMapForRepo` follows `include` into multi-file ledgers, which a
@@ -86,8 +90,9 @@ export async function countDirectivesForRepo(
   client: GiteaApi<unknown>,
   owner: string,
   repoName: string,
+  ref?: string,
 ): Promise<DirectiveCount> {
-  const { files, sha } = await loadCommitted(client, owner, repoName);
+  const { files, sha } = await loadCommitted(client, owner, repoName, ref);
   return { count: await countMap(files), sha };
 }
 

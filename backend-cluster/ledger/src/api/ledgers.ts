@@ -41,6 +41,8 @@ interface LedgerPublic {
   permissions: PermissionPublic | null;
 }
 
+const COMMIT_SHA_RE = /^[0-9a-f]{7,64}$/i;
+
 export function toLedgerPublic(repo: Repository): LedgerPublic {
   return {
     id: repo.id as number,
@@ -233,17 +235,23 @@ export function setLedgersHandler(router: Router): void {
   //
   // Exists for enforcement points that cannot count for themselves.
   // Same counter the app write path and the dashboard use, so counts cannot
-  // disagree about what a directive is.
+  // disagree about what a directive is. `?ref=<commit sha>` counts that commit
+  // instead of HEAD (a pull request's head, for merge).
   router.get(
     "/ledgers/:owner/:repo_name/directive-count",
     authMiddleware,
     async (ctx) => {
+      const ref = strQuery(ctx.query.ref);
+      if (ref !== undefined && !COMMIT_SHA_RE.test(ref)) {
+        throw new BadUserInputError("ref must be a commit SHA");
+      }
       const client = giteaClientForRequest(ctx);
       ctx.body = successResponse(
         await countDirectivesForRepo(
           client,
           ctx.params.owner,
           ctx.params.repo_name,
+          ref,
         ),
       );
     },
