@@ -206,7 +206,7 @@ function SidebarLedgerSkeleton({ count }: { count: number }) {
     <div aria-busy="true">
       <SidebarMenu aria-hidden="true">
         {Array.from({ length: count }).map((_, i) => (
-          <SidebarMenuSkeleton key={i} showIcon={false} />
+          <SidebarMenuSkeleton key={i} index={i} showIcon={false} />
         ))}
       </SidebarMenu>
     </div>

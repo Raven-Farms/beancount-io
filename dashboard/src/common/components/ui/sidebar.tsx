@@ -837,18 +837,21 @@ function SidebarMenuBadge({
   );
 }
 
+/** Varied but fixed skeleton widths: a random one differed between the
+ * server render and hydration, so React reported a mismatch on every load. */
+const SKELETON_WIDTHS = ["60%", "72%", "54%", "84%", "66%"];
+
 function SidebarMenuSkeleton({
   className,
   showIcon = false,
+  index = 0,
   ...props
 }: React.ComponentProps<"div"> & {
   showIcon?: boolean;
+  /** Position in a list of skeletons; picks the row's width. */
+  index?: number;
 }) {
-  // Random width between 50 to 90%.
-  // Use useState to ensure the random value is generated only once on mount
-  const [width] = React.useState(
-    () => `${Math.floor(Math.random() * 40) + 50}%`,
-  );
+  const width = SKELETON_WIDTHS[index % SKELETON_WIDTHS.length];
 
   return (
     <div
