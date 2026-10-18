@@ -978,6 +978,8 @@ decrypts them. These intentional skips do not cause a nonzero exit; the gate
 judges the plaintext files only. `--in-place` formats every reachable plaintext
 file and skips the unparseable ones, exiting nonzero for parse failures or
 missing/unreadable includes, as well as write failures.
+When several roots or include directives reach one unreadable member, the
+report names each includer.
 Semantic validity stays with `bea check`: a failing balance assertion or an
 unbalanced transaction does not fail `--check`, so for CI or a pre-commit hook
 run `bea check` alongside `bea format --check`. Included files are formatted

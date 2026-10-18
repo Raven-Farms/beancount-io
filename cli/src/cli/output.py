@@ -499,8 +499,10 @@ def _walk_closure(*roots: Path) -> tuple[list[Path], list[MissingInclude], list[
     seen: dict[Path, str] = {}
     inodes: set[tuple[int, int]] = set()
     stack = list(reversed(roots))
-    # The include, as written, and the file holding it, that first reached each member.
-    named_by: dict[Path, tuple[str, Path]] = {}
+    # Every include edge matters for diagnostics, even when its member was
+    # already read through another root or path (w5/709).
+    named_by: dict[Path, list[tuple[str, Path]]] = {}
+    read_failures: dict[Path, str] = {}
     while stack:
         current = stack.pop()
         try:
@@ -531,14 +533,11 @@ def _walk_closure(*roots: Path) -> tuple[list[Path], list[MissingInclude], list[
         try:
             text = current.read_text(encoding="utf-8", errors="replace").removeprefix("\ufeff")
         except OSError as exc:
+            read_failures[key] = exc.strerror or type(exc).__name__
             if current not in roots:
-                unreadable.append(current)
                 # A file the include matched but nobody may read (mode 000) is
                 # an unreadable include, as a directory there is (w5/523).
-                if current in named_by:
-                    include, source = named_by[current]
-                    why = f"{current} cannot be read: {exc.strerror or type(exc).__name__}"
-                    missing.append(MissingInclude(include=include, source=source, reason=why))
+                unreadable.append(current)
             continue
         for match in _INCLUDE_DIRECTIVE.finditer(text):
             raw = match.group(1)
@@ -561,12 +560,26 @@ def _walk_closure(*roots: Path) -> tuple[list[Path], list[MissingInclude], list[
                 continue
             if matches:
                 for found in matches:
-                    named_by.setdefault(found, (raw, current))
+                    named_by.setdefault(found, []).append((raw, current))
                 stack.extend(matches)
             else:
                 reason = not_a_file(others[0]) if others else None
                 missing.append(MissingInclude(include=raw, source=current, reason=reason))
             unreadable.extend(others)
+    # Later roots can name a member after its failed read. Wait until every
+    # edge is known, then attach that failure to each includer without reading
+    # the member again. Resolve aliases only on this failure path.
+    if read_failures:
+        for found, includers in named_by.items():
+            try:
+                reason = read_failures.get(found.resolve())
+            except OSError:
+                continue
+            if reason is not None:
+                missing.extend(
+                    MissingInclude(include=include, source=source, reason=f"{found} cannot be read: {reason}")
+                    for include, source in includers
+                )
     return members, missing, unreadable, again
 
 
