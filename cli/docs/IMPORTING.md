@@ -618,7 +618,12 @@ decimal numbers, dates, and amounts. A Python `int` metadata value is written
 as a number (`check_number=1042` becomes `check_number: 1042`); a value
 Beancount cannot print, such as a `float` or an arbitrary object, stops the
 import with `Importer NAME row N cannot be written as a ledger entry` and
-writes nothing. Custom directive boolean/date values also
+writes nothing. So does a row that prints but would not read back as one
+directive (an uppercase metadata key, a `NaN` amount, a tag with a space), a
+date that is not a `datetime.date`, and a source posting with no amount; the
+sentence goes on to name the field. A row the ledger refuses once appended,
+such as one that does not balance, is shown `invalid` with Beancount's reason,
+is not counted ready, and `--apply` refuses with exit **1** naming it. Custom directive boolean/date values also
 survive listing and serialization. See [the JSON reference](USAGE.md#investment-postings-and-metadata)
 for the typed metadata representation used by `bea list transaction` and
 `bea add transactions`.

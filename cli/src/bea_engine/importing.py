@@ -364,6 +364,15 @@ def answer(
             sys.path.pop(0)
 
     entries = [_writable(entry, index + 1, importer, logs) for index, entry in enumerate(entries)]
+    for index, entry in enumerate(entries):
+        if isinstance(entry, Transaction) and not all(_has_explicit_units(p) for p in _source_legs(entry, account)):
+            raise _with_output(
+                LedgerError(
+                    f"Importer {_name(importer)} row {index + 1} cannot be written as a ledger entry: its "
+                    f"{account} posting has no amount. The importer must supply explicit source amounts."
+                ),
+                logs,
+            )
     keys = _effective_id_keys(id_keys, csv_id_mapped=csv_id_mapped)
     identities: dict[tuple[str, str, str], Any] = {}
     fingerprints: dict[tuple[Any, ...], list[Any]] = {}
@@ -685,6 +694,16 @@ def answer(
         validation_errors = exc.details or [str(exc)]
         # What `--allow-errors` tolerated still travels with the failure (w5/461).
         validation_warnings = list(exc.ledger_errors)
+        # Errors the appended rows carry are those rows', as bulk add names
+        # them: an unbalanced row previewed as `new`, counted ready, and
+        # `--apply` refused the import naming no row (w5/638).
+        named = _named_rows(file, texts, exc, allow_errors=allow_errors, into=into)
+        if named:
+            included = [row for row in rows if row["include"]]
+            for position, lines in named.items():
+                included[position].update(status="invalid", include=False, reason=" ".join(_unlocated(lines)))
+            texts = [row["entry"] for row in rows if row["include"]]
+            validation_errors = [f"Row {row['row']}: {row['reason']}" for row in rows if row["status"] == "invalid"]
 
     preview: dict[str, Any] = {
         "source": str(source),
@@ -704,6 +723,7 @@ def answer(
         # empty file to anything skimming the summary.
         "conflicts": sum(row["status"] == "conflict" for row in rows),
         "blocked": sum(row["status"] == "blocked" for row in rows),
+        "invalid": sum(row["status"] == "invalid" for row in rows),
         "skipped_blank": skipped_blank,
         "skipped_pending": skipped_pending,
         # Accounts a row posts to that the ledger still does not open after
@@ -808,6 +828,17 @@ def answer(
     return preview
 
 
+def _unlocated(lines: list[str]) -> list[str]:
+    """Refusal lines without the location of a row that was never written."""
+    return [re.sub(r"^Proposed append \(not written\): ", "", line) for line in lines]
+
+
+def _named_rows(file: Path, texts: list[str], error: LedgerError, *, allow_errors: bool, into: Path | None) -> Any:
+    from bea_engine.ledger.adding import _named_rows as named_rows
+
+    return named_rows(file, texts, error, allow_errors=allow_errors, into=into)
+
+
 def _extracted(importer: Any, source: Path, existing: Any) -> list[Any]:
     """The importer's rows, refusing a return value that is not a list of directives.
 
@@ -851,7 +882,9 @@ def _writable(entry: Any, row: int, importer: Any, logs: io.StringIO) -> Any:
             for key, value in meta.items()
         }
 
-    from beancount.core.data import ALL_DIRECTIVES
+    import datetime
+
+    from beancount.core.data import ALL_DIRECTIVES, Transaction
 
     if not isinstance(entry, ALL_DIRECTIVES):
         raise _with_output(
@@ -859,6 +892,14 @@ def _writable(entry: Any, row: int, importer: Any, logs: io.StringIO) -> Any:
                 f"Importer {_name(importer)} row {row} is {_type_name(entry)}, not a Beancount directive; "
                 "extract() must return a list of directives."
             ),
+            logs,
+        )
+    unwritable = f"Importer {_name(importer)} row {row} cannot be written as a ledger entry"
+    # A string or a datetime failed later as a bare AttributeError or
+    # TypeError naming no row (w5/638).
+    if type(entry.date) is not datetime.date:
+        raise _with_output(
+            LedgerError(f"{unwritable}: its date is {_type_name(entry.date)} ({entry.date!r}), not a datetime.date."),
             logs,
         )
     try:
@@ -870,19 +911,27 @@ def _writable(entry: Any, row: int, importer: Any, logs: io.StringIO) -> Any:
             entry = entry._replace(
                 postings=[posting._replace(meta=numbers(posting.meta)) for posting in entry.postings]
             )
-        format_entry(entry)
+        text = format_entry(entry) if isinstance(entry, Transaction) else _directive_text(entry)
     except EngineError as exc:
         _with_output(exc, logs)
         raise
     except Exception as exc:
         raise _with_output(
-            LedgerError(
-                f"Importer {_name(importer)} row {row} cannot be written as a ledger entry "
-                f"({type(exc).__name__}): {exc}.",
-                traceback=_traceback(exc),
-            ),
-            logs,
+            LedgerError(f"{unwritable} ({type(exc).__name__}): {exc}.", traceback=_traceback(exc)), logs
         ) from exc
+    # Printable is not readable: an uppercase metadata key, a NaN amount or a
+    # tag with a space prints, then reads back as no directive. The batch
+    # check that caught it numbered only the ready rows and stopped the
+    # preview with a usage error (w5/638).
+    if _invalid_name(entry) is not None:
+        # Blocked with `add`'s own words for the name, and never written (w5/637).
+        return entry
+    if isinstance(entry, Transaction) and "_csv_rule" in entry.meta:
+        # The column mapper's note of the rule it applied, taken off before the row is written.
+        text = format_entry(entry._replace(meta={k: v for k, v in entry.meta.items() if k != "_csv_rule"}))
+    problem = ledger_write.one_entry_problem(text)
+    if problem is not None:
+        raise _with_output(LedgerError(f"{unwritable}: it {problem}"), logs)
     return entry
 
 

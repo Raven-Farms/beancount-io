@@ -1275,6 +1275,8 @@ def import_entries(
             summary += f", {preview['conflicts']} {noun}"
         if preview["blocked"]:
             summary += f", {preview['blocked']} blocked"
+        if preview.get("invalid"):
+            summary += f", {preview['invalid']} invalid"
         typer.echo(summary)
         headers = ["ROW", "STATUS", "DATE", "PAYEE / NARRATION", "SOURCE AMOUNT", "ID"]
         if csv_mode:
@@ -1321,5 +1323,8 @@ def import_entries(
             written = preview["written"]
             noun = "entry" if written == 1 else "entries"
             output.success(f"Wrote {written} {noun} to {preview['into']}.")
+        elif preview["validation_errors"]:
+            # `--apply` refuses while these stand, so it is not the next step (w5/638).
+            typer.echo("Preview only. The import would leave the ledger invalid; fix the errors above before --apply.")
         else:
             typer.echo("Preview only. Review the entries, then repeat with --apply to write.")
