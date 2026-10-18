@@ -471,6 +471,7 @@ export const zh: Translations = {
   budgetInterval: "时间间隔",
   budgetSelectInterval: "选择间隔",
   budgetAmount: "金额",
+  budgetAmountInvalid: "请输入数字，例如 500 或 49.99。",
   budgetSaveFailed: "保存预算失败",
   // delete
   budgetDelete: "删除",

@@ -514,6 +514,7 @@ export const nl: Translations = {
   budgetInterval: "Interval",
   budgetSelectInterval: "Interval selecteren",
   budgetAmount: "Bedrag",
+  budgetAmountInvalid: "Voer een getal in, zoals 500 of 49.99.",
   budgetSaveFailed: "Budget kon niet worden opgeslagen",
   // delete
   budgetDelete: "Verwijderen",

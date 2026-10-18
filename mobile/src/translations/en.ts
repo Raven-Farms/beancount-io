@@ -520,6 +520,7 @@ export const en = {
   budgetInterval: "Interval",
   budgetSelectInterval: "Select interval",
   budgetAmount: "Amount",
+  budgetAmountInvalid: "Enter a number, like 500 or 49.99.",
   budgetSaveFailed: "Failed to save budget",
   // delete
   budgetDelete: "Delete",

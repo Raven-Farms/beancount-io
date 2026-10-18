@@ -525,6 +525,7 @@ export const ca: Translations = {
   budgetInterval: "Interval",
   budgetSelectInterval: "Selecciona un interval",
   budgetAmount: "Import",
+  budgetAmountInvalid: "Introdueix un número, com ara 500 o 49.99.",
   budgetSaveFailed: "No s'ha pogut desar el pressupost",
   // delete
   budgetDelete: "Elimina",

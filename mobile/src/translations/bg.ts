@@ -514,6 +514,7 @@ export const bg: Translations = {
   budgetInterval: "Интервал",
   budgetSelectInterval: "Изберете интервал",
   budgetAmount: "Сума",
+  budgetAmountInvalid: "Въведете число, например 500 или 49.99.",
   budgetSaveFailed: "Неуспешно записване на бюджета",
   // delete
   budgetDelete: "Изтриване",

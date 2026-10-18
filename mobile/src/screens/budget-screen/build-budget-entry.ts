@@ -26,6 +26,17 @@ export type BudgetEntryInput = {
   incomeRoot?: string;
 };
 
+/**
+ * Whether typed text is an amount the ledger can parse: an optional sign,
+ * digits, and an optional decimal part with digits after the point. The text
+ * is otherwise written verbatim, so `12..3`, `abc` or `1 000` used to commit
+ * an unparsable `custom "budget"` line (w0/038). Grouping commas and exponents
+ * are refused rather than rewritten: the user types the plain number.
+ */
+export function isBudgetAmount(text: string): boolean {
+  return /^[+-]?\d+(\.\d+)?$/u.test(text.trim());
+}
+
 function isIncomeAccount(account: string, incomeRoot?: string): boolean {
   return (
     Boolean(incomeRoot) &&

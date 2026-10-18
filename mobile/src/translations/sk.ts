@@ -527,6 +527,7 @@ export const sk: Translations = {
   budgetInterval: "Interval",
   budgetSelectInterval: "Vyberte interval",
   budgetAmount: "Suma",
+  budgetAmountInvalid: "Zadajte číslo, napríklad 500 alebo 49.99.",
   budgetSaveFailed: "Uloženie rozpočtu zlyhalo",
   // delete
   budgetDelete: "Odstrániť",

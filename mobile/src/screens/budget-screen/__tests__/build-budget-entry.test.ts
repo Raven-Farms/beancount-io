@@ -1,4 +1,4 @@
-import { buildBudgetEntry } from "../build-budget-entry";
+import { buildBudgetEntry, isBudgetAmount } from "../build-budget-entry";
 import { budgetDirection } from "../selectors/budget-selectors";
 
 describe("buildBudgetEntry", () => {
@@ -108,5 +108,54 @@ describe("buildBudgetEntry", () => {
           .budget?.amount.number,
       ).toBe("5000");
     });
+  });
+});
+
+describe("isBudgetAmount", () => {
+  // Add Budget enabled Done for any non-empty text and wrote it verbatim, so
+  // `12..3`, `abc` or `1 000` committed an unparsable `custom "budget"` line
+  // (w0/038).
+  it("accepts plain decimal amounts, signed or not", () => {
+    for (const text of ["500", "-50", "+12", "0.5", "49.99", " 500 ", "0"]) {
+      expect(isBudgetAmount(text)).toBe(true);
+    }
+  });
+
+  it("refuses text the ledger cannot parse as a number", () => {
+    for (const text of [
+      "12..3",
+      "abc",
+      "1 000",
+      "1,000",
+      "$500",
+      "1e3",
+      ".5",
+      "12.",
+      "-",
+      "",
+      "   ",
+    ]) {
+      expect(isBudgetAmount(text)).toBe(false);
+    }
+  });
+
+  it("gates Add Budget's Done and names the problem under the field", () => {
+    const source = require("fs").readFileSync(
+      require("path").join(
+        __dirname,
+        "..",
+        "..",
+        "add-budget-screen",
+        "add-budget-screen.tsx",
+      ),
+      "utf8",
+    ) as string;
+    expect(source.includes("const amountOk = isBudgetAmount(amount);")).toBe(
+      true,
+    );
+    const guard = source.match(/const canSubmit =[\s\S]*?;/);
+    expect(guard?.[0].includes("amountOk")).toBe(true);
+    expect(guard?.[0].includes("amount.trim().length > 0")).toBe(false);
+    expect(source.includes('{t("budgetAmountInvalid")}')).toBe(true);
   });
 });

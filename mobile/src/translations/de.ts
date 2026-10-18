@@ -524,6 +524,7 @@ export const de: Translations = {
   budgetInterval: "Intervall",
   budgetSelectInterval: "Intervall auswählen",
   budgetAmount: "Betrag",
+  budgetAmountInvalid: "Gib eine Zahl ein, z. B. 500 oder 49.99.",
   budgetSaveFailed: "Budget konnte nicht gespeichert werden",
   // delete
   budgetDelete: "Löschen",

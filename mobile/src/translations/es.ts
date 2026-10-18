@@ -523,6 +523,7 @@ export const es: Translations = {
   budgetInterval: "Intervalo",
   budgetSelectInterval: "Seleccionar intervalo",
   budgetAmount: "Monto",
+  budgetAmountInvalid: "Introduce un número, como 500 o 49.99.",
   budgetSaveFailed: "Error al guardar el presupuesto",
   // delete
   budgetDelete: "Eliminar",

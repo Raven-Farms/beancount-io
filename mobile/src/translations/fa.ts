@@ -507,6 +507,7 @@ export const fa: Translations = {
   budgetInterval: "بازه زمانی",
   budgetSelectInterval: "انتخاب بازه زمانی",
   budgetAmount: "مبلغ",
+  budgetAmountInvalid: "یک عدد وارد کنید، مثلاً 500 یا 49.99.",
   budgetSaveFailed: "ذخیره بودجه ناموفق بود",
   // delete
   budgetDelete: "حذف",

@@ -524,6 +524,7 @@ export const ru: Translations = {
   budgetInterval: "Интервал",
   budgetSelectInterval: "Выберите интервал",
   budgetAmount: "Сумма",
+  budgetAmountInvalid: "Введите число, например 500 или 49.99.",
   budgetSaveFailed: "Не удалось сохранить бюджет",
   // delete
   budgetDelete: "Удалить",

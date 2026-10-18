@@ -521,6 +521,7 @@ export const uk: Translations = {
   budgetInterval: "Інтервал",
   budgetSelectInterval: "Оберіть інтервал",
   budgetAmount: "Сума",
+  budgetAmountInvalid: "Введіть число, наприклад 500 або 49.99.",
   budgetSaveFailed: "Не вдалося зберегти бюджет",
   // delete
   budgetDelete: "Видалити",
