@@ -68,6 +68,8 @@ m39–m40 were materialized on 2026-10-18 from [PRFAQ005](../../docs/prfaqs/PRFA
 
 ## Inbox
 
+- [172](./172.md) — `approvePullRequest` is flagged: the name says approve, the tool merges (from the w1/m38 rescan)
+- [173](./173.md) — `createLedger` and `updateLedger` need further review: they can publish a ledger (from the w1/m38 rescan)
 - [172](./172.md) — In-place bank approval for plan changes with Stripe.js; needs the user's approval of the dependency (follow-up to w1/m39/t007).
 
 
