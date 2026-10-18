@@ -30,6 +30,24 @@ const WITHDRAWN_FROM_MCP = new Set([
   "Query.aiCfoUsage",
 ]);
 
+/**
+ * Verbs whose MCP tool was renamed on purpose when grouped tools split into one
+ * tool per operation (ADR 019 and ADR 0008, 2026-10-18 amendments, w1/m38):
+ * OpenAI's app-directory scan rejects a tool that dispatches on an `operation`
+ * argument. The operation stays on MCP under the new name. This is the only
+ * list that may change a baseline row's MCP binding.
+ */
+const RENAMED_ON_MCP: Readonly<Record<string, string>> = {
+  "Mutation.syncPlaidTransactions": "syncBankTransactions",
+  "Mutation.submitPlaidTransactionsToLedger": "importStagedBankTransactions",
+  "Mutation.deletePlaidTransactions": "discardStagedBankTransactions",
+  "Mutation.unlinkPlaidItem": "unlinkBankConnection",
+  "Mutation.reconcilePlaidAccounts": "reconcileBankAccounts",
+  "Mutation.updatePlaidAccountMapping": "mapBankAccount",
+  "Mutation.updatePlaidAccountCurrency": "setBankAccountCurrency",
+  "Mutation.refreshPlaidItemStatus": "refreshBankConnection",
+};
+
 describe("the accepted parity baseline", () => {
   const live = new Map(VERB_TABLE.map((entry) => [entry.verb, entry]));
 
@@ -75,6 +93,10 @@ describe("the accepted parity baseline", () => {
         if (binding === undefined) continue;
         if (surface === "mcp" && WITHDRAWN_FROM_MCP.has(entry.verb)) {
           expect(current?.mcp).toBeUndefined();
+          continue;
+        }
+        if (surface === "mcp" && entry.verb in RENAMED_ON_MCP) {
+          expect(current?.mcp).toBe(RENAMED_ON_MCP[entry.verb]);
           continue;
         }
         expect(current?.[surface]).toBe(binding);

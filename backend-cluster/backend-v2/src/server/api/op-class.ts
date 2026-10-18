@@ -1706,7 +1706,7 @@ const PLAID_VERBS: readonly VerbEntry[] = [
     class: "admin",
     gql: "Mutation.unlinkPlaidItem",
     rest: "DELETE /api-gateway/v1/ledgers/{owner}/{name}/banks/{itemId}",
-    mcp: "manageBankConnection",
+    mcp: "unlinkBankConnection",
     authorizationAction: AUTHORIZATION_ACTIONS.BANK_CONNECTION_UNLINK,
   },
   {
@@ -1714,7 +1714,7 @@ const PLAID_VERBS: readonly VerbEntry[] = [
     class: "admin",
     gql: "Mutation.reconcilePlaidAccounts",
     rest: "POST /api-gateway/v1/ledgers/{owner}/{name}/banks/{itemId}/reconcile",
-    mcp: "manageBankConnection",
+    mcp: "reconcileBankAccounts",
     authorizationAction: AUTHORIZATION_ACTIONS.BANK_ACCOUNTS_RECONCILE,
   },
   {
@@ -1722,7 +1722,7 @@ const PLAID_VERBS: readonly VerbEntry[] = [
     class: "admin",
     gql: "Mutation.updatePlaidAccountMapping",
     rest: "PUT /api-gateway/v1/ledgers/{owner}/{name}/bank-accounts/{accountId}/mapping",
-    mcp: "manageBankConnection",
+    mcp: "mapBankAccount",
     authorizationAction: AUTHORIZATION_ACTIONS.BANK_ACCOUNT_MAPPING_UPDATE,
   },
   {
@@ -1730,7 +1730,7 @@ const PLAID_VERBS: readonly VerbEntry[] = [
     class: "admin",
     gql: "Mutation.updatePlaidAccountCurrency",
     rest: "PUT /api-gateway/v1/ledgers/{owner}/{name}/bank-accounts/{accountId}/currency",
-    mcp: "manageBankConnection",
+    mcp: "setBankAccountCurrency",
     authorizationAction: AUTHORIZATION_ACTIONS.BANK_ACCOUNT_CURRENCY_UPDATE,
   },
   {
@@ -1738,7 +1738,7 @@ const PLAID_VERBS: readonly VerbEntry[] = [
     class: "admin",
     gql: "Mutation.refreshPlaidItemStatus",
     rest: "POST /api-gateway/v1/ledgers/{owner}/{name}/banks/{itemId}/refresh",
-    mcp: "manageBankConnection",
+    mcp: "refreshBankConnection",
     authorizationAction: AUTHORIZATION_ACTIONS.BANK_CONNECTION_STATUS_REFRESH,
   },
   {
@@ -1776,7 +1776,7 @@ const PLAID_VERBS: readonly VerbEntry[] = [
     class: "write",
     gql: "Mutation.syncPlaidTransactions",
     rest: "POST /api-gateway/v1/ledgers/{owner}/{name}/banks/{itemId}/sync",
-    mcp: "manageBankImport",
+    mcp: "syncBankTransactions",
     authorizationAction: AUTHORIZATION_ACTIONS.BANK_TRANSACTIONS_SYNC,
   },
   {
@@ -1784,7 +1784,7 @@ const PLAID_VERBS: readonly VerbEntry[] = [
     class: "write",
     gql: "Mutation.submitPlaidTransactionsToLedger",
     rest: "POST /api-gateway/v1/ledgers/{owner}/{name}/bank-transactions/submit",
-    mcp: "manageBankImport",
+    mcp: "importStagedBankTransactions",
     authorizationAction: AUTHORIZATION_ACTIONS.BANK_TRANSACTIONS_SUBMIT,
   },
   {
@@ -1792,7 +1792,7 @@ const PLAID_VERBS: readonly VerbEntry[] = [
     class: "write",
     gql: "Mutation.deletePlaidTransactions",
     rest: "DELETE /api-gateway/v1/ledgers/{owner}/{name}/bank-transactions",
-    mcp: "manageBankImport",
+    mcp: "discardStagedBankTransactions",
     authorizationAction: AUTHORIZATION_ACTIONS.BANK_TRANSACTIONS_DELETE,
   },
 ];

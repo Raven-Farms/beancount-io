@@ -187,9 +187,13 @@ describe("MCP tool list", () => {
     // official client SDK strips unknown top-level fields): 4.1 KB across 30
     // tools. Measured on the raw response from here on, since the parsed one
     // no longer shows everything an agent pays for.
+    //
+    // 80 KB since w1/m38 split the grouped tools into one tool per operation
+    // (ADR 019, 2026-10-18): the two bank tools became eight, measured at
+    // 77.7 KB. Each remaining split moves this by measurement.
     const { tools } = await listToolsRaw();
     const bytes = Buffer.byteLength(JSON.stringify(tools), "utf8");
-    expect(bytes).toBeLessThan(72 * 1024);
+    expect(bytes).toBeLessThan(80 * 1024);
   });
 
   it("publishes all four annotations on every tool", async () => {
@@ -261,8 +265,11 @@ describe("MCP tool security schemes", () => {
     expect(mcpToolSecuritySchemes("runBqlQuery")).toEqual([
       { type: "oauth2", scopes: ["ledger.read"] },
     ]);
-    expect(mcpToolSecuritySchemes("manageBankImport")).toEqual([
+    expect(mcpToolSecuritySchemes("syncBankTransactions")).toEqual([
       { type: "oauth2", scopes: ["ledger.write"] },
+    ]);
+    expect(mcpToolSecuritySchemes("unlinkBankConnection")).toEqual([
+      { type: "oauth2", scopes: ["ledger.admin"] },
     ]);
     // A grouped tool whose branches span classes declares the strongest.
     const classes = new Set(

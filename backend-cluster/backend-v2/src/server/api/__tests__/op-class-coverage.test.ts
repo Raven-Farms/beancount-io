@@ -238,7 +238,9 @@ describe("op-class coverage", () => {
     // leaving 26. w6/008 adds the 27th, listLedgerEntries, under ADR 019 D7:
     // getEntryContext and editEntrySource take an existing entry's hash, and
     // without it no tool output carried one — BQL's `id` is a directive index.
-    expect(tools).toHaveLength(27);
+    // w1/m38 splits the grouped tools into one tool per operation (ADR 019,
+    // 2026-10-18): the two bank tools become eight, so 33 here.
+    expect(tools).toHaveLength(33);
 
     // Resources are counted apart on purpose. They do not compete for tool
     // selection (ADR 0008 D2), which is the entire reason 50 in-scope reads can

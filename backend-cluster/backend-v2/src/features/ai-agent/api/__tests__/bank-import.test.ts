@@ -85,31 +85,48 @@ const call = async (
 };
 
 describe("bank import on MCP", () => {
-  it("adds exactly two tools, split by authorization class", async () => {
+  const BANK_TOOLS = [
+    "syncBankTransactions",
+    "importStagedBankTransactions",
+    "discardStagedBankTransactions",
+    "reconcileBankAccounts",
+    "mapBankAccount",
+    "setBankAccountCurrency",
+    "refreshBankConnection",
+    "unlinkBankConnection",
+  ];
+
+  // OpenAI's app-directory scan rejects a tool that dispatches on an
+  // `operation` argument (ADR 019, 2026-10-18), so each bank operation is its
+  // own tool and the grouped names are gone.
+  it("exposes one tool per bank operation, none taking an operation argument", async () => {
     const { client, close } = await connect(ctx(fakeServices()));
     const { tools } = await client.listTools();
 
     expect(tools).toHaveLength(MCP_TOOLS.length);
     const names = tools.map((t) => t.name);
-    expect(names).toContain("manageBankImport");
-    expect(names).toContain("manageBankConnection");
+    expect(names).toEqual(expect.arrayContaining(BANK_TOOLS));
+    expect(names).not.toContain("manageBankImport");
+    expect(names).not.toContain("manageBankConnection");
+    for (const tool of tools.filter((t) => BANK_TOOLS.includes(t.name))) {
+      expect({
+        tool: tool.name,
+        operation: "operation" in (tool.inputSchema.properties ?? {}),
+      }).toEqual({ tool: tool.name, operation: false });
+    }
     await close();
   });
 
   /**
-   * The split exists because a credential that may import transactions must not
-   * thereby be able to sever the bank connection. If `unlink` ever appears on
-   * the write-class tool, that separation is gone.
+   * A credential that may import transactions must not thereby be able to
+   * sever the bank connection: unlink is its own admin-class tool, never a
+   * branch of an import tool.
    */
-  it("keeps unlink off the write-class import tool", async () => {
-    const { client, close } = await connect(ctx(fakeServices()));
-    const { tools } = await client.listTools();
-
-    const importTool = tools.find((t) => t.name === "manageBankImport");
-    const ops = JSON.stringify(importTool?.inputSchema);
-    expect(ops).toContain("sync");
-    expect(ops).not.toContain("unlink");
-    await close();
+  it("keeps unlink a separate tool from the import tools", async () => {
+    const services = fakeServices();
+    await call(services, "syncBankTransactions", { item_id: "pitm_1" });
+    expect(services.plaidSync.syncItemTransactions).toHaveBeenCalledTimes(1);
+    expect(services.plaidItem.unlinkItem).not.toHaveBeenCalled();
   });
 
   it("publishes the seven bank reads as resources", async () => {
@@ -205,22 +222,14 @@ describe("bank import on MCP", () => {
    */
   describe("dry_run reaches the service", () => {
     it.each([
-      ["sync", "manageBankImport", { operation: "sync", item_id: "pitm_1" }],
+      ["sync", "syncBankTransactions", { item_id: "pitm_1" }],
       [
         "discard",
-        "manageBankImport",
-        { operation: "discard", transaction_ids: ["ptxn_1"] },
+        "discardStagedBankTransactions",
+        { transaction_ids: ["ptxn_1"] },
       ],
-      [
-        "reconcile",
-        "manageBankConnection",
-        { operation: "reconcile", item_id: "pitm_1" },
-      ],
-      [
-        "unlink",
-        "manageBankConnection",
-        { operation: "unlink", item_id: "pitm_1" },
-      ],
+      ["reconcile", "reconcileBankAccounts", { item_id: "pitm_1" }],
+      ["unlink", "unlinkBankConnection", { item_id: "pitm_1" }],
     ])("%s passes dry_run through", async (_op, tool, args) => {
       const services = fakeServices();
       await call(services, tool, { ...args, dry_run: true });
@@ -239,27 +248,26 @@ describe("bank import on MCP", () => {
 
     it("defaults to false when the caller does not ask for a preview", async () => {
       const services = fakeServices();
-      await call(services, "manageBankConnection", {
-        operation: "unlink",
-        item_id: "pitm_1",
-      });
+      await call(services, "unlinkBankConnection", { item_id: "pitm_1" });
 
       expect(services.plaidItem.unlinkItem.mock.calls[0]!.at(-1)).toBe(false);
     });
   });
 
   describe.each([
-    { operation: "refresh", item_id: "pitm_1" },
+    { tool: "refreshBankConnection", args: { item_id: "pitm_1" } },
     {
-      operation: "map_account",
-      account_id: "pacc_1",
-      ledger_account: "Assets:Checking",
+      tool: "mapBankAccount",
+      args: { account_id: "pacc_1", ledger_account: "Assets:Checking" },
     },
-    { operation: "set_currency", account_id: "pacc_1", currency: "USD" },
-  ])("$operation without a preview contract", (args) => {
+    {
+      tool: "setBankAccountCurrency",
+      args: { account_id: "pacc_1", currency: "USD" },
+    },
+  ])("$tool without a preview contract", ({ tool, args }) => {
     it("refuses a requested preview before invoking any bank operation", async () => {
       const services = fakeServices();
-      const result = await call(services, "manageBankConnection", {
+      const result = await call(services, tool, {
         ...args,
         dry_run: true,
       });
@@ -277,32 +285,26 @@ describe("bank import on MCP", () => {
       }
     });
 
-    it.each([undefined, false])(
-      "applies the operation with dry_run=%s",
-      async (dryRun) => {
-        const services = fakeServices();
-        const result = await call(services, "manageBankConnection", {
-          ...args,
-          ...(dryRun === undefined ? {} : { dry_run: dryRun }),
-        });
-        expect(result.isError).not.toBe(true);
-        const writes = [
-          services.plaidItem.refreshItemStatus,
-          services.plaidItem.updateAccountMapping,
-          services.plaidItem.updateAccountCurrency,
-        ];
-        expect(
-          writes.reduce((count, write) => count + write.mock.calls.length, 0),
-        ).toBe(1);
-      },
-    );
+    // These tools publish no `dry_run`, so it is omitted; `dry_run: false`
+    // is an undeclared argument and is refused like any other.
+    it("applies the operation when dry_run is omitted", async () => {
+      const services = fakeServices();
+      const result = await call(services, tool, args);
+      expect(result.isError).not.toBe(true);
+      const writes = [
+        services.plaidItem.refreshItemStatus,
+        services.plaidItem.updateAccountMapping,
+        services.plaidItem.updateAccountCurrency,
+      ];
+      expect(
+        writes.reduce((count, write) => count + write.mock.calls.length, 0),
+      ).toBe(1);
+    });
   });
 
   it("names a missing argument instead of letting the service guess", async () => {
     const services = fakeServices();
-    const result = await call(services, "manageBankConnection", {
-      operation: "unlink",
-    });
+    const result = await call(services, "unlinkBankConnection", {});
 
     expect(result.isError).toBe(true);
     expect(JSON.stringify(result.content)).toContain("item_id");
@@ -312,21 +314,22 @@ describe("bank import on MCP", () => {
   // An agent that sync'd without `item_id` against the hosted server was told
   // INTERNAL_SERVER_ERROR and "retry once" — a retry that could never succeed.
   it.each([
-    ["manageBankConnection", { operation: "unlink" }],
-    ["manageBankImport", { operation: "sync", dry_run: true }],
+    ["unlinkBankConnection", {}],
+    ["syncBankTransactions", { dry_run: true }],
   ])(
     "reports a missing item_id on %s as bad input the caller can fix",
     async (name, args) => {
       const result = await call(fakeServices(), name, args);
       const failure = (
         result.structuredContent as {
-          error?: { code?: string; hint?: string };
+          error?: { code?: string; message?: string; hint?: string };
         }
       ).error;
 
       expect(result.isError).toBe(true);
       expect(failure?.code).toBe("BAD_USER_INPUT");
-      expect(failure?.hint).toContain("item_id");
+      expect(failure?.message).toContain("item_id");
+      expect(failure?.hint).not.toMatch(/retry/i);
     },
   );
 });

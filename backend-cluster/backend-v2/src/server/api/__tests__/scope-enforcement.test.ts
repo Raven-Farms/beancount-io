@@ -384,7 +384,7 @@ describe("scope enforcement across surfaces", () => {
     });
   });
 
-  describe("routes protected writes to the PDP while retaining grouped-dispatcher scope checks", () => {
+  describe("routes protected writes to the PDP while the gate still checks scope-only writes", () => {
     it("REST: defers a protected ledger write to its service", async () => {
       const { ctx, reached } = await driveRest(
         readOnlyToken,
@@ -416,7 +416,9 @@ describe("scope enforcement across surfaces", () => {
       // An agent is mid-conversation; a thrown transport error would end the
       // session instead of telling it what it lacked.
       const handlers = captureMcpHandlers(readOnlyToken, enforcing);
-      const result = await handlers.get("manageBankImport")!({});
+      // setLedgerStar has no single PDP action, so the scope gate refuses a
+      // read-only token itself.
+      const result = await handlers.get("setLedgerStar")!({});
       expect(result.isError).toBe(true);
       expect(JSON.stringify(result.content)).toContain("ledger.write");
     });

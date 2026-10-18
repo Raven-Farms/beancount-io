@@ -262,10 +262,16 @@ the principal inputs; inspect the schema before constructing a call.
 | `appendLedgerText`           | `text`, optional `path`, `dry_run`, `allowInvalid`; appends Beancount directive text, routed by type and date and inserted in date order.                                 | Write      |
 | `refreshManagedPrices`       | Optional `ledger`; re-fetches every managed price include (`include "https://beancount.io/prices/BTC-USD"`) now and returns each source's status. Never edits the ledger. | Write      |
 | `editLedgerFiles`            | `description`, `files`, optional `dry_run`; batches create/update/replace/delete operations into one commit.                                                              | Write      |
-| `manageBankImport`           | `operation: sync / submit / discard`, operation-specific arguments, optional `dry_run`.                                                                                   | Write      |
-| `manageBankConnection`       | `operation: reconcile / map_account / set_currency / refresh / unlink`, operation-specific arguments.                                                                     | Admin      |
+| `syncBankTransactions`       | `item_id`, optional `dry_run`; pulls new transactions from a linked bank into staging.                                                                                    | Write      |
+| `importStagedBankTransactions` | `transactions: [{ transaction_id, target_account, source_account? }]`, optional `filename`, `dry_run`; writes staged transactions into the ledger.                     | Write      |
+| `discardStagedBankTransactions` | `transaction_ids`, optional `dry_run`; removes staged transactions.                                                                                                  | Write      |
+| `reconcileBankAccounts`      | `item_id`, optional `dry_run`; re-reads which accounts a bank shares and can delete ones it no longer shares.                                                             | Admin      |
+| `mapBankAccount`             | `account_id`, `ledger_account`; points a bank account at a ledger account.                                                                                                | Admin      |
+| `setBankAccountCurrency`     | `account_id`, `currency`; sets a bank account's currency.                                                                                                                 | Admin      |
+| `refreshBankConnection`      | `item_id`; re-reads a connection's health.                                                                                                                                | Admin      |
+| `unlinkBankConnection`       | `item_id`, optional `dry_run`; severs a linked bank.                                                                                                                      | Admin      |
 | `listBankConnections`        | `{}`; linked bank connections (`item_id`) and their accounts (`account_id`, mapping) — the `banks` and `bank-accounts` resources as a tool.                               | Admin      |
-| `listStagedBankTransactions` | Optional `accountId`; transactions staged for import, with the ids `manageBankImport` submit/discard take — the `bank-transactions/unsynced` resource as a tool.          | Read       |
+| `listStagedBankTransactions` | Optional `accountId`; transactions staged for import, with the ids `importStagedBankTransactions` and `discardStagedBankTransactions` take — the `bank-transactions/unsynced` resource as a tool.          | Read       |
 
 The implementation is listed in
 [`mcp-tools.ts`](../src/features/ai-agent/api/mcp-tools.ts).
@@ -387,25 +393,26 @@ After linking:
 
 1. Read the `banks` and `bank-accounts` resources, or call
    `listBankConnections`, to find connection IDs and ledger-account mappings.
-2. Call `manageBankImport` with `operation: "sync"` and `item_id` to pull bank
-   transactions into staging.
+2. Call `syncBankTransactions` with `item_id` to pull bank transactions into
+   staging.
 3. Read `bank-transactions/unsynced` or call `listStagedBankTransactions`
    (optionally with `accountId` to select one bank account). Select the
    transactions and accounts to
    book; the suggestion resources can help categorize them.
-4. Call `manageBankImport` with `operation: "submit"` and
+4. Call `importStagedBankTransactions` with
    `transactions: [{ transaction_id, target_account, source_account? }]`.
    Optional `filename` selects an existing ledger file.
-5. Use `operation: "discard"` with `transaction_ids` to remove unwanted staged
-   transactions.
+5. Call `discardStagedBankTransactions` with `transaction_ids` to remove
+   unwanted staged transactions.
 
-`sync`, `submit`, and `discard` accept `dry_run: true` to invoke their service
-preview paths. Bank-connection `reconcile` and `unlink` also accept previews.
-`map_account`, `set_currency`, and `refresh` have no preview contract and reject
-`dry_run: true` before invoking a bank service. Omit the flag or set it to false
-to apply these operations immediately.
-Inspect the [bank tool dispatcher](../src/features/ai-agent/tools/bank-import-tool.ts)
-for the arguments each operation requires.
+`syncBankTransactions`, `importStagedBankTransactions`,
+`discardStagedBankTransactions`, `reconcileBankAccounts`, and
+`unlinkBankConnection` accept `dry_run: true` to invoke their service preview
+paths. `mapBankAccount`, `setBankAccountCurrency`, and `refreshBankConnection`
+have no preview contract and publish no `dry_run` argument, so passing one is
+refused as an undeclared argument before any bank service runs. Each tool's
+input schema is in [`bank-import-tool.ts`](../src/features/ai-agent/tools/bank-import-tool.ts)
+(`BANK_OPERATION_SCHEMAS`).
 
 ### Asset and archive URL discovery
 

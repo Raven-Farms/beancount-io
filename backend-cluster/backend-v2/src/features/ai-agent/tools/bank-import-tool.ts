@@ -44,41 +44,6 @@ const dryRunField = z
 
 // --- import workflow (write class) ------------------------------------------
 
-export const importDescription =
-  "Move bank transactions into the ledger. `sync` pulls new transactions from a linked bank into staging; `submit` writes staged ones into the ledger as directives; `discard` removes staged ones. " +
-  "All three accept dry_run, which runs every check and reports exactly what would happen without doing it.";
-
-export const bankImportInputSchema = z.object({
-  operation: z
-    .enum(["sync", "submit", "discard"])
-    .describe("What to do with staged bank transactions."),
-  item_id: z
-    .string()
-    .optional()
-    .describe("The linked bank's id. Required by `sync`."),
-  transactions: z
-    .array(
-      z.object({
-        transaction_id: z.string(),
-        target_account: z
-          .string()
-          .describe("The ledger account to book this against."),
-        source_account: z.string().optional(),
-      }),
-    )
-    .optional()
-    .describe("Required by `submit`: which staged transactions to write."),
-  transaction_ids: z
-    .array(z.string())
-    .optional()
-    .describe("Required by `discard`."),
-  filename: z
-    .string()
-    .optional()
-    .describe("For `submit`: which ledger file to append to. Must exist."),
-  dry_run: dryRunField,
-});
-
 /**
  * The bank-import payload is service-defined per operation, so the schema
  * stays open — but `submit` (the one operation that writes ledger entries)
@@ -98,32 +63,94 @@ export const bankImportOutputSchema = toolOutputSchema(
 
 // --- connection control plane (admin class) ---------------------------------
 
-export const connectionDescription =
-  "Manage a linked bank connection. `reconcile` re-reads which accounts it shares; `map_account` points one at a ledger account; `set_currency` sets its currency; `refresh` re-reads connection health; `unlink` severs it. " +
-  "Linking a NEW bank is not here — that happens in a browser through the bank's own widget. " +
-  "`reconcile` and `unlink` accept dry_run. `map_account`, `set_currency`, and `refresh` apply changes immediately and reject dry_run=true.";
-
-export const bankConnectionInputSchema = z.object({
-  operation: z
-    .enum(["reconcile", "map_account", "set_currency", "refresh", "unlink"])
-    .describe("What to do to the connection."),
-  item_id: z
-    .string()
-    .optional()
-    .describe("Required by `reconcile`, `refresh`, `unlink`."),
-  account_id: z
-    .string()
-    .optional()
-    .describe("Required by `map_account` and `set_currency`."),
-  ledger_account: z.string().optional().describe("Required by `map_account`."),
-  currency: z.string().optional().describe("Required by `set_currency`."),
-  dry_run: dryRunField,
-});
-
 export const bankConnectionOutputSchema = toolOutputSchema(z.unknown());
 
-type ImportInput = z.infer<typeof bankImportInputSchema>;
-type ConnectionInput = z.infer<typeof bankConnectionInputSchema>;
+// --- one MCP tool per operation (ADR 019, 2026-10-18; w1/m38) ---------------
+//
+// MCP exposes each operation above as its own tool, with only that operation's
+// fields and those fields required where the operation needs them. The two
+// executors stay the shared implementation; each tool fixes its `operation`.
+
+const itemIdField = z.string().describe("The linked bank's id (item_id).");
+const accountIdField = z
+  .string()
+  .describe("The linked bank account's id (account_id).");
+
+export const BANK_OPERATION_SCHEMAS = {
+  sync: z.object({ item_id: itemIdField, dry_run: dryRunField }),
+  submit: z.object({
+    transactions: z
+      .array(
+        z.object({
+          transaction_id: z.string(),
+          target_account: z
+            .string()
+            .describe("The ledger account to book this against."),
+          source_account: z.string().optional(),
+        }),
+      )
+      .min(1)
+      .describe("The staged transactions to write."),
+    filename: z
+      .string()
+      .optional()
+      .describe("Which ledger file to append to. Must exist."),
+    dry_run: dryRunField,
+  }),
+  discard: z.object({
+    transaction_ids: z
+      .array(z.string())
+      .min(1)
+      .describe("The staged transactions to remove."),
+    dry_run: dryRunField,
+  }),
+  reconcile: z.object({ item_id: itemIdField, dry_run: dryRunField }),
+  map_account: z.object({
+    account_id: accountIdField,
+    ledger_account: z.string().describe("The ledger account to map it to."),
+  }),
+  set_currency: z.object({
+    account_id: accountIdField,
+    currency: z.string().describe("The account's currency, e.g. USD."),
+  }),
+  refresh: z.object({ item_id: itemIdField }),
+  unlink: z.object({ item_id: itemIdField, dry_run: dryRunField }),
+} as const;
+
+export const BANK_OPERATION_DESCRIPTIONS = {
+  sync: "Pull new transactions from a linked bank into staging; nothing is written to the ledger. dry_run reports what would be pulled.",
+  submit:
+    "Write staged bank transactions into the ledger as directives, each booked against the given target account. dry_run returns the result and projected validation without committing.",
+  discard:
+    "Remove staged bank transactions so they are never imported. dry_run reports what would be removed.",
+  reconcile:
+    "Re-read which accounts a linked bank shares; accounts the bank no longer shares can be deleted along with their staged transactions. dry_run reports the changes without applying them.",
+  map_account:
+    "Point a linked bank account at a ledger account; replaces any existing mapping.",
+  set_currency:
+    "Set a linked bank account's currency; replaces the current value.",
+  refresh: "Re-read a linked bank connection's health status from the bank.",
+  unlink:
+    "Sever a linked bank connection. Linking a new bank happens in a browser through the bank's own widget, not here. dry_run reports what would be removed.",
+} as const;
+
+type Schemas = typeof BANK_OPERATION_SCHEMAS;
+type Fields<K extends keyof Schemas> = Partial<z.infer<Schemas[K]>>;
+type ImportInput = Fields<"sync"> &
+  Fields<"submit"> &
+  Fields<"discard"> & { operation: "sync" | "submit" | "discard" };
+type ConnectionInput = Fields<"reconcile"> &
+  Fields<"map_account"> &
+  Fields<"set_currency"> &
+  Fields<"refresh"> &
+  Fields<"unlink"> & {
+    operation:
+      | "reconcile"
+      | "map_account"
+      | "set_currency"
+      | "refresh"
+      | "unlink";
+  };
 type BankCtx = Pick<ToolContext, "services" | "identity" | "ledgerId">;
 
 /**

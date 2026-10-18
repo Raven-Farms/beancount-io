@@ -33,7 +33,8 @@ const session: Identity = {
 
 const READ_OP = "GQL Query.queryShellText";
 const WRITE_OP = "GQL Mutation.unclassifiedWriteFallback";
-const ADMIN_OP = "MCP manageBankConnection";
+// An admin read the scope gate itself enforces: it has no single PDP action.
+const ADMIN_OP = "MCP listBankConnections";
 const SESSION_ONLY_OP = "GQL Mutation.signIn";
 const PUBLIC_OP = "GQL Query.health";
 const UNKNOWN_OP = "GQL Query.somethingNobodyClassified";
@@ -95,7 +96,7 @@ describe("classifyOp", () => {
         "REST DELETE /api-gateway/v1/api-keys/{id}",
         // The grouped MCP dispatcher (w2/m27) carries all three verbs, so it
         // has no transport-level canonical action — each operation authorizes
-        // in the shared application service, as with manageBankImport.
+        // in the shared application service.
         "MCP manageApiKeys",
         "GQL Query.subscriptionStatus",
         "GQL Mutation.createSubscriptionSession",
@@ -310,11 +311,15 @@ describe("classifyOp", () => {
     }
   });
 
-  it("leaves grouped bank MCP dispatchers to authorize the selected service verb", () => {
-    expect(
-      authorizationActionForOp("MCP manageBankConnection"),
-    ).toBeUndefined();
-    expect(authorizationActionForOp("MCP manageBankImport")).toBeUndefined();
+  it("gives each per-operation bank MCP tool its verb's canonical action", () => {
+    // Split from the grouped dispatchers (ADR 019, 2026-10-18): each tool now
+    // carries exactly its verb's PDP action, the same as GraphQL's.
+    expect(authorizationActionForOp("MCP unlinkBankConnection")).toBe(
+      AUTHORIZATION_ACTIONS.BANK_CONNECTION_UNLINK,
+    );
+    expect(authorizationActionForOp("MCP syncBankTransactions")).toBe(
+      AUTHORIZATION_ACTIONS.BANK_TRANSACTIONS_SYNC,
+    );
 
     expect(authorizationActionForOp("GQL Mutation.unlinkPlaidItem")).toBe(
       AUTHORIZATION_ACTIONS.BANK_CONNECTION_UNLINK,

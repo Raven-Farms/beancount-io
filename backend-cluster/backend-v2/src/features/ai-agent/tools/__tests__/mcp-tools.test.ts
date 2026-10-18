@@ -882,8 +882,11 @@ describe("MCP tool annotations", () => {
       "manageLedgers",
       "manageLedgerCollaborators",
       "managePullRequests",
-      "manageBankConnection",
-      "manageBankImport",
+      "discardStagedBankTransactions",
+      "reconcileBankAccounts",
+      "mapBankAccount",
+      "setBankAccountCurrency",
+      "unlinkBankConnection",
       "editLedgerFiles",
       "editEntrySource",
     ]) {

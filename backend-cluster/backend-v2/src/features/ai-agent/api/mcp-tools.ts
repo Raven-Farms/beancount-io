@@ -115,14 +115,12 @@ import {
   withPostWriteValidation,
 } from "../tools/write-validation";
 import {
-  bankConnectionInputSchema,
+  BANK_OPERATION_DESCRIPTIONS,
+  BANK_OPERATION_SCHEMAS,
   bankConnectionOutputSchema,
-  bankImportInputSchema,
   bankImportOutputSchema,
-  connectionDescription,
   executeBankConnection,
   executeBankImport,
-  importDescription,
 } from "../tools/bank-import-tool";
 import {
   checkLedgerDescription,
@@ -188,6 +186,35 @@ function withLedger(
     const { ledger, ...argumentsWithoutTarget } = input as { ledger?: string };
     const ledgerId = resolveMcpLedger(context, ledger);
     return execute({ ...context, ledgerId }, argumentsWithoutTarget as never);
+  };
+}
+
+const IMPORT_OPERATIONS = new Set(["sync", "submit", "discard"]);
+
+/** One bank operation as its own tool, over the shared bank executors. */
+function bankTool(
+  name: string,
+  title: string,
+  operation: keyof typeof BANK_OPERATION_SCHEMAS,
+  annotations: ToolAnnotations,
+): McpToolDescriptor {
+  const isImport = IMPORT_OPERATIONS.has(operation);
+  return {
+    name,
+    title,
+    annotations,
+    description: BANK_OPERATION_DESCRIPTIONS[operation],
+    inputSchema: BANK_OPERATION_SCHEMAS[operation].extend({
+      ledger: ledgerSelection,
+    }),
+    outputSchema: mcpOutputSchema(
+      isImport ? bankImportOutputSchema : bankConnectionOutputSchema,
+    ),
+    execute: withLedger((context: ToolContext, input: object) =>
+      isImport
+        ? executeBankImport(context, { ...input, operation } as never)
+        : executeBankConnection(context, { ...input, operation } as never),
+    ),
   };
 }
 
@@ -587,30 +614,63 @@ export const MCP_TOOLS: readonly McpToolDescriptor[] = [
     outputSchema: refreshManagedPricesOutput,
     execute: executeRefreshManagedPrices,
   },
-  // Eight bank-import verbs behind one `operation` discriminator (ADR 0008 D3).
-  // A family, not a bag: same subject, same authorization class, and an agent
-  // picking one is choosing among them rather than between them and something
-  // unrelated.
-  {
-    name: "manageBankImport",
-    title: "Move Bank Transactions Into The Ledger",
-    // `discard` deletes staged transactions.
-    annotations: EXTERNAL_ADMIN,
-    description: importDescription,
-    inputSchema: bankImportInputSchema.extend({ ledger: ledgerSelection }),
-    outputSchema: mcpOutputSchema(bankImportOutputSchema),
-    execute: withLedger(executeBankImport),
-  },
-  {
-    name: "manageBankConnection",
-    title: "Manage A Linked Bank Connection",
-    annotations: EXTERNAL_ADMIN,
-    description: connectionDescription,
-    inputSchema: bankConnectionInputSchema.extend({ ledger: ledgerSelection }),
-    outputSchema: mcpOutputSchema(bankConnectionOutputSchema),
-    execute: withLedger(executeBankConnection),
-  },
-  // The ids the two tools above need, for hosts that only call tools (ADR 019
+  // One tool per bank operation (ADR 019, 2026-10-18; w1/m38). Each fixes
+  // the operation of the shared executor and publishes only its own fields.
+  bankTool("syncBankTransactions", "Sync Bank Transactions", "sync", {
+    ...EXTERNAL_WRITE,
+  }),
+  bankTool(
+    "importStagedBankTransactions",
+    "Import Staged Bank Transactions",
+    "submit",
+    APPEND,
+  ),
+  bankTool(
+    "discardStagedBankTransactions",
+    "Discard Staged Bank Transactions",
+    "discard",
+    DESTRUCTIVE,
+  ),
+  bankTool(
+    "reconcileBankAccounts",
+    "Reconcile Linked Bank Accounts",
+    "reconcile",
+    EXTERNAL_ADMIN,
+  ),
+  bankTool(
+    "mapBankAccount",
+    "Map Bank Account To Ledger Account",
+    "map_account",
+    {
+      ...DESTRUCTIVE,
+      idempotentHint: true,
+    },
+  ),
+  bankTool(
+    "setBankAccountCurrency",
+    "Set Bank Account Currency",
+    "set_currency",
+    {
+      ...DESTRUCTIVE,
+      idempotentHint: true,
+    },
+  ),
+  bankTool(
+    "refreshBankConnection",
+    "Refresh Bank Connection Status",
+    "refresh",
+    {
+      ...IDEMPOTENT_WRITE,
+      openWorldHint: true,
+    },
+  ),
+  bankTool(
+    "unlinkBankConnection",
+    "Unlink Bank Connection",
+    "unlink",
+    EXTERNAL_ADMIN,
+  ),
+  // The ids the bank tools above need, for hosts that only call tools (ADR 019
   // D7). The `banks` and `bank-accounts` resources carry the same data.
   {
     name: "listBankConnections",

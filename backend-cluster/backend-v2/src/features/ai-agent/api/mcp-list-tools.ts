@@ -11,8 +11,8 @@ import { runToolSafely } from "../utils/run-tool";
  * (ADR 019 D7). Each wraps exactly the service call of a resource twin and is
  * authorized the same way; the rule they answer is that an identifier a tool
  * needs must be obtainable from some tool's output. Without them, ChatGPT and
- * Copilot's cloud agent cannot reach the ids `manageBankConnection`,
- * `manageBankImport`, `getEntryContext`, and `editEntrySource` require.
+ * Copilot's cloud agent cannot reach the ids the bank tools,
+ * `getEntryContext`, and `editEntrySource` require.
  */
 
 const toolLogger = logger.child({ module: "tool:list" });
@@ -20,7 +20,7 @@ const toolLogger = logger.child({ module: "tool:list" });
 // --- listBankConnections ----------------------------------------------------
 
 export const listBankConnectionsDescription =
-  "List linked bank connections (item_id) and their accounts (account_id) for manageBankConnection and manageBankImport.";
+  "List linked bank connections (item_id) and their accounts (account_id), the ids the bank sync, import, and connection tools take.";
 
 export const listBankConnectionsInput = z.object({}).strict();
 
@@ -55,7 +55,7 @@ export async function executeListBankConnections(
 // --- listStagedBankTransactions ---------------------------------------------
 
 export const listStagedBankTransactionsDescription =
-  "List bank transactions staged for import (ids for manageBankImport submit/discard); optional accountId filter.";
+  "List bank transactions staged for import (the ids importStagedBankTransactions and discardStagedBankTransactions take); optional accountId filter.";
 
 export const listStagedBankTransactionsInput = bankAccountQuery.strict();
 

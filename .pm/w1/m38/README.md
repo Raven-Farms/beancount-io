@@ -1,13 +1,13 @@
 # w1 · m38 — One MCP tool per operation, so the ChatGPT app directory accepts every tool
 
-**Worker:** worker1 **Goal:** Every model-callable MCP operation is its own tool with its own description, input schema, and annotations. No tool dispatches on an `operation` argument. OpenAI's app-directory scan then reports no blocking findings, and parity, the frozen baseline, prompts, and docs describe the new shape. **Status:** in progress (t001 done)
+**Worker:** worker1 **Goal:** Every model-callable MCP operation is its own tool with its own description, input schema, and annotations. No tool dispatches on an `operation` argument. OpenAI's app-directory scan then reports no blocking findings, and parity, the frozen baseline, prompts, and docs describe the new shape. **Status:** in progress (t001–t002 done)
 
 ## Tasks (in order)
 
 | id | title | est | depends_on |
 | --- | --- | --- | --- |
 | [t001](./done/t001.md) | Decide the split: tool names, annotations, and the ADR amendments — **DONE** | 45m | — |
-| t002 | Split the bank tools: `manageBankImport` and `manageBankConnection` | 60m | t001 |
+| [t002](./done/t002.md) | Split the bank tools: `manageBankImport` and `manageBankConnection` — **DONE** | 60m | t001 |
 | t003 | Split ledger lifecycle, collaborators, and pull requests | 60m | t001 |
 | t004 | Split the editing tools: `editLedgerFiles` and `editEntrySource` | 60m | t001 |
 | t005 | Retire the grouped-dispatcher machinery and remeasure the tool-list gates | 40m | t002, t003, t004 |

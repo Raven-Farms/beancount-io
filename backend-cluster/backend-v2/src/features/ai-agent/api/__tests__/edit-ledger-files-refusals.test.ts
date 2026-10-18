@@ -180,8 +180,8 @@ describe("an argument the tool does not declare", () => {
   it.each([
     ["readLedgerFiles", { files: [{ path: "main.bean" }] }],
     ["listLedgerFiles", {}],
-    ["manageBankConnection", { operation: "refresh", item_id: "pitm_1" }],
-    ["manageBankImport", { operation: "sync", item_id: "pitm_1" }],
+    ["refreshBankConnection", { item_id: "pitm_1" }],
+    ["syncBankTransactions", { item_id: "pitm_1" }],
   ])(
     "refuses an unknown argument on %s before the tool runs",
     async (name, args) => {
