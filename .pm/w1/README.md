@@ -8,9 +8,19 @@ Milestones m1–m23 are complete; no pending ADR014 follow-up milestones remain 
 
 **Suggested order:** m30 → m31 → m34, with m32, m33, and note 170 in parallel. ADR 019 requires D3 and D4 (m30) before D6 (m31): enabling CIMD first breaks Claude Code's sign-in. m34 drives real hosts and needs m30, m31, and m33 on production. Every milestone's production checks wait on an operator deploy of backend-v2 (and dashboard for m30).
 
+m39–m40 were materialized on 2026-10-18 from [PRFAQ005](../../docs/prfaqs/PRFAQ005-plan-changes-and-yearly-billing.md) stages 1–2, at the user's request. They are the in-product half of the plan-change experience; the marketing pricing page's half is served and tracked outside this repository.
+
+- **The pricing page must not break.** `beancount.io/pricing` already checks out against this backend, so both milestones keep everything it relies on working until it changes: `createSubscriptionSession` and every price it sells (including the $99.99 Premium yearly price), `subscriptionStatus.hasActiveSubscription`, `/settings/general` as its "Manage subscription" destination, and the sign-up `next` round trip.
+- **Suggested order:** m39 → m40, after m38's top-priority directory work. m40/t003 and t004 can start alongside m39.
+- **Waiting on the user:** one task in each milestone needs the user's Stripe account (m39/t004, m40/t006). That includes the 100%-off production coupons for the QA payment tests (m39/t015, m40/t014), unless the worker has live Stripe access.
+- **Production payment tests:** by user decision on 2026-10-18, each milestone ends with a real payment test in production. It uses the QA account from `beancount-io/.env` and two 100%-off coupons, before closeout.
+- **Not on the board:** PRFAQ005's stage 3, its growth experiments, waits for four weeks of stage 1–2 metrics.
+
 ### Open
 
 - [ ] **m38** — [One MCP tool per operation, so the ChatGPT app directory accepts every tool](./blocked/m38/README.md) (11 tasks) ← OpenAI Plugins dashboard scan 2026-10-18: seven grouped tools flagged for operations "not individually exposed"; reverses ADR 0008 D3 — **top priority** (directory listing) — **blocked:** shipped through `8d751b15b`; the directory rescan (t007) and closeout wait on the production deploy.
+- [ ] **m39** — [Reach yearly billing from inside the product](./m39/README.md) (15 tasks) ← PRFAQ005 stage 1, user request 2026-10-17: server-side change preview, charging at the previewed amount, in-place bank authentication, a Billing tab with "Pay yearly", the Checkout confirmation and the $143.88 Premium yearly price, without breaking the pricing page's checkout
+- [ ] **m40** — [Downgrade, switch to monthly and survive a failed renewal without losing paid time](./m40/README.md) (14 tasks) ← PRFAQ005 stage 2, user request 2026-10-17: scheduled downgrades with undo, the cancel sheet, paid limits while past due, the ledger-count and collaborator-limit fixes; after m39
 - [ ] **m37** — [Retire the Stripe test tenant and resolve each paid plan from its own subscription](./blocked/m37/README.md) (11 tasks) ← user request 2026-10-17; remove the built-in test billing tenant, correct tier/customer binding and renewal-cache writes, backfill existing users, and verify dashboard/CLI quotas — **blocked:** code shipped/deployed; t011 needs a verified production execution entry for the actual cohort repair
 - [x] **m36** — [Trim the MCP surface to what the Claude and ChatGPT directories accept](./done/m36/README.md) (10 tasks) ← user decision 2026-10-09: a public listing in Claude's and ChatGPT's directories outranks every other goal; ADR 019 follow-up — **top priority**
 - [x] **m30** — [Every named MCP host can register and reach a consent page that says who is asking](./done/m30/README.md) (11 tasks) ← `/pm-brainstorm for w1` 2026-10-06 item 1; ADR 019 D3 + D4 + D8
