@@ -703,38 +703,12 @@ def _mixed_lines(source: Path) -> tuple[int, int] | None:
     return None
 
 
-# Read as cp1252, these are what other code pages' letters turn into: `³`
-# for Polish ł, `¹` for ą, `¯` for Ż, `¸` for Cyrillic ё. Western text has
-# them only standing alone, never right after a letter. `¤` is Latin-9's €.
-_LETTER_ADJACENT_MOJIBAKE = frozenset("¹²³¸¨´¯¥Ÿ¦¾¼½£")
-
-
-def _foreign_code_page_sample(source: Path) -> str | None:
-    """A word of the file that reads as mojibake under cp1252, or None when it reads as Western text.
-
-    A run of three non-ASCII letters is how Cyrillic or Japanese bytes read
-    as cp1252; Western languages rarely put three accented letters together.
-    """
-    try:
-        text = source.read_bytes().decode("cp1252")
-    except (OSError, UnicodeDecodeError):
-        return None
-    # Words of the cells, not whole CSV lines: the sample should be a payee.
-    for word in text.replace(",", " ").replace(";", " ").replace("|", " ").split():
-        if "¤" in word or re.search(r"[^\W\d_]{3}", "".join(c if not c.isascii() else " " for c in word)):
-            return word[:24]
-        if any(c in _LETTER_ADJACENT_MOJIBAKE and i and word[i - 1].isalpha() for i, c in enumerate(word)):
-            return word[:24]
-    return None
-
-
 def _decode_usage_error(source: Path, exc: UnicodeDecodeError, encoding: str) -> UsageError:
     """Name a decode failure instead of pretending the CSV had no columns.
 
-    Under the default UTF-8 the whole fallback chain is probed so the
-    refusal can name the decoding that works; a latin-1-only file is still
-    refused with the tried list, and an explicitly chosen codec reports
-    itself.
+    Under default UTF-8 the fallback chain identifies which codecs can read
+    the bytes, not the export's actual encoding. Legacy-codec advice stays
+    conditional; an explicitly chosen codec reports its own failure.
     """
     if encoding != "utf-8":
         return UsageError(f"{source.name} is not valid {encoding} ({exc.reason} at byte {exc.start}).")
@@ -753,19 +727,12 @@ def _decode_usage_error(source: Path, exc: UnicodeDecodeError, encoding: str) ->
             "re-save the export in one encoding (UTF-8) and import it again."
         )
     if winner == "cp1252":
-        sample = _foreign_code_page_sample(source)
-        if sample is not None:
-            # Almost any 8-bit file decodes as cp1252, so a Polish or Russian
-            # export got that advice and imported as `Wp³ata £ódŸ` (w5/529).
-            return UsageError(
-                f"{source.name} is not valid UTF-8 ({exc.reason} at byte {exc.start}). Read as cp1252 it shows "
-                f"{sample!r}, which looks like another code page (Central or Eastern European, Cyrillic or "
-                "Asian). Re-save the export as UTF-8 and import it again; pass --csv encoding=cp1252 only if it "
-                "really is Western European."
-            )
+        # Many unrelated code pages decode as cp1252. Their text cannot be
+        # reliably distinguished from Western text by its letter patterns.
         return UsageError(
-            f"{source.name} is not valid UTF-8 ({exc.reason} at byte {exc.start}); "
-            "it decodes as cp1252 — pass --csv encoding=cp1252."
+            f"{source.name} is not valid UTF-8 ({exc.reason} at byte {exc.start}). "
+            "Re-save the export as UTF-8 and import it again, or pass --csv encoding=cp1252 only if the export "
+            "really uses Western European Windows-1252 (cp1252)."
         )
     # latin-1 reads every byte, so it cannot have failed: saying it was tried
     # sent a Shift_JIS export to the one decoding that garbles it (w5/332).

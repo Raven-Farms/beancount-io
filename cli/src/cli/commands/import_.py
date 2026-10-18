@@ -534,6 +534,21 @@ def _is_multibyte_utf8(source: Path) -> bool:
     return not data.isascii()
 
 
+def _legacy_encoding_notice(source: Path, encoding: str) -> str | None:
+    """Recheck a remembered legacy decoding without guessing its code page."""
+    try:
+        source.read_bytes().decode("utf-8")
+    except UnicodeDecodeError:
+        return (
+            f"Remembered --csv encoding={encoding} may misread {source.name}: non-UTF-8 bytes do not identify "
+            "their code page. Re-save the export as UTF-8, or confirm its encoding and pass "
+            f"--csv encoding={encoding} explicitly. The remembered mapping is unchanged."
+        )
+    except OSError:
+        pass  # The normal source read reports its access failure.
+    return None
+
+
 def _remember_csv(file: Path, spec: dict[str, Any], notes: list[str]) -> bool:
     """Persist captured settings without re-reading a source already imported.
 
@@ -825,6 +840,10 @@ def import_entries(
                     # Detection below decodes the file, so the remembered
                     # decoding has to be in force before it runs.
                     csv_encoding = recalled_spec.encoding
+                    if csv_encoding in {"cp1252", "latin-1"} and (
+                        notice := _legacy_encoding_notice(source, csv_encoding)
+                    ):
+                        recall_notes.append(notice)
             csv_request = _strip_spec_keys(csv_request, {"delimiter"})
             if csv_delimiter is None and isinstance(stored_delimiter, str):
                 # Re-validated per file: the header matched under detection, so

@@ -129,14 +129,13 @@ split into the same number of fields, so quoted `;` or dates like
 `Jan 05, 2026` cannot outvote the real separator; pass `--delimiter ','`, `--delimiter ';'`, or
 `--delimiter tab` to force one — or `delimiter=';'` inside `--csv` itself.
 Files read as UTF-8 (with or without a BOM) unless `--csv encoding=` names
-cp1252 or latin-1 — Windows exports with accented payees need
+cp1252 or latin-1 — a Western European Windows export may need
 `encoding=cp1252`. A bare `--csv encoding=cp1252` decodes with that codec
 and then infers the mapping like `auto`. Without the key, a non-UTF-8 file
-fails before anything is read: the error names the byte offset and, when the
-file decodes as cp1252, says so with the override to pass — unless the cp1252
-reading looks like another code page (`Wp³ata` for Polish, `Ïÿò¸ðî` for
-Cyrillic, `¤` for Latin-9's euro), when it quotes that word and asks for the
-export re-saved as UTF-8 instead. A file that
+fails before importing: the error names the byte offset and asks for the
+export re-saved as UTF-8. If the bytes decode as cp1252, the override is
+offered only on the condition that the export really uses that encoding;
+successful decoding alone cannot identify its code page. A file that
 neither UTF-8 nor cp1252 decodes is named as such: only latin-1, which reads
 any byte, would accept it, so pass `encoding=latin-1` only if that is the
 export's encoding. An `encoding=` or `delimiter=` value outside the supported
@@ -338,7 +337,11 @@ exports can share a header row without sharing a date convention. A
 remembered `encoding=cp1252` or `encoding=latin-1` is re-validated the same
 way: a later file that is valid UTF-8 with accented or other non-ASCII text is
 read as UTF-8 for that run, with a note, and the remembered encoding stays
-saved for files that are not UTF-8. A
+saved for files that are not UTF-8. Reusing either legacy codec for non-UTF-8
+text emits an uncertainty note before importing, also included in JSON
+`notes`: confirm the export's encoding explicitly or re-save it as UTF-8.
+The stored mapping stays unchanged. An explicit encoding for the current
+run remains authoritative, and ASCII needs no uncertainty note. A
 remembered `--rules` path that is missing or unreadable degrades to a warning
 and an unruled import rather than failing; that repair is saved only after a
 successful preview or apply. A changed header row matches
