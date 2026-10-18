@@ -355,10 +355,19 @@ def _balance(
     snapshot.require_target(target, into=into)
     before, errors, before_options = managed_load.load_file(file, snapshot=snapshot, check_types=True)
     ledger_errors = [format_error(error, ledger_file=file) for error in errors]
-    if pad_from is None and ledger_errors and strict_read and not all("Unused Pad" in error for error in ledger_errors):
-        # A staged pad is the transient error this very write resolves:
-        # the two-step pad flow stages with --allow-errors, then completes
-        # with the balance. Anything else still gates strict callers.
+    if (
+        pad_from is None
+        and ledger_errors
+        and strict_read
+        and not all(
+            "Unused Pad" in getattr(error, "message", "")
+            or (write.is_unused_open(error) and error.entry.account == account)
+            for error in errors
+        )
+    ):
+        # The balance can complete a staged pad or be this account's first
+        # use under nounused. Other errors still gate strict callers; final
+        # validation must clear the transient error (w5/664).
         raise _preexisting_refusal(errors, ledger_errors)
     # A pad can make validation succeed even when the assertion is a
     # duplicate or conflicts. Decide before either write path (w5/659).
