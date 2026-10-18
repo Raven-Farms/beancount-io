@@ -15,6 +15,7 @@ from cli import context, output
 from cli.engine import launch
 from cli.errors import AuthError, UsageError, refuse_json, refuse_misplaced_global
 from cli.native_help import native_options
+from cli.paths import expand_path
 from cli.utils import atomic_write, decode_error_message, regex_reads_otherwise
 
 _NO_COLUMN = "Could not find any valid column in input"
@@ -129,7 +130,7 @@ def _check_input(name: str | None) -> None:
     """
     if name is None or name == "-" or _held_descriptor(name):
         return
-    path = Path(name).expanduser()
+    path = expand_path(Path(name), "treeify input")
     if not os.path.lexists(path):
         raise UsageError(f"treeify input '{path}' does not exist. Pass a text file, or omit it to read stdin.")
     if path.is_dir():
@@ -200,12 +201,12 @@ def treeify(ctx: typer.Context) -> None:
         # Upstream opens `-o` for writing before it reads the input, so a run
         # that then fails — or reads the same file — has already truncated
         # it. bea keeps the destination itself and writes it only on success.
-        destination = Path(parsed.output).expanduser()
+        destination = expand_path(Path(parsed.output), "--output")
         output.guard_output_destination(
             destination, _ledgers(), refuse_existing_ledger_file=True, force=_FORCE in args[:stop]
         )
         if parsed.input is not None:
-            output.refuse_input_alias(destination, Path(parsed.input).expanduser())
+            output.refuse_input_alias(destination, expand_path(Path(parsed.input), "treeify input"))
         output.check_output_destination(destination)
         output.require_writable_destination(destination)
         forwarded = _without_output(parsed)

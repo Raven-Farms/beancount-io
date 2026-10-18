@@ -30,6 +30,7 @@ from pathlib import Path
 from typing import Any
 
 from bea_engine.ledger import write
+from bea_engine.paths import expand_path
 from bea_engine.protocol import EngineError, LedgerError, UsageError
 
 #: The UTF-8 BOM as one character: `compat.UTF8_BOM` is the same mark in bytes.
@@ -108,7 +109,7 @@ def format_files(
     one lock at a time cannot deadlock either (w5/207).
     """
     widths = (prefix_width, num_width, currency_column)
-    targets = sorted({file.expanduser().resolve() for file in files})
+    targets = sorted({expand_path(file, "format").resolve() for file in files})
     if not in_place:
         return {"changed": [str(file) for file in targets if _would_change(file, widths)]}
 

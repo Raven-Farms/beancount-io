@@ -23,6 +23,7 @@ from cli.output import (
     require_writable_destination,
     utf8_stdout,
 )
+from cli.paths import expand_path
 from cli.utils import atomic_write
 
 _FORCE = "--force"
@@ -50,7 +51,7 @@ def _split_output(args: list[str]) -> tuple[list[str], Path | None, bool]:
     force = _FORCE in args[:stop]
     forwarded = [arg for index, arg in enumerate(args) if arg != _FORCE or index > stop]
     value = forwarded_option(forwarded, "-o", "--output")
-    return forwarded, None if value is None else Path(value), force
+    return forwarded, None if value is None else expand_path(Path(value), "--output"), force
 
 
 def _is_written_through(output: Path) -> bool:
@@ -152,7 +153,7 @@ def example(ctx: typer.Context) -> None:
         except UsageError:
             ledger = None
         if ledger is not None:
-            refuse_include_claim(output.expanduser(), ledger)
+            refuse_include_claim(expand_path(output, "--output"), ledger)
     _check_date_order(forwarded)
     destination: Path | None = None
     if output is not None and str(output) != "-":

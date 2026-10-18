@@ -23,6 +23,7 @@ import typer
 from cli import context, output
 from cli.config import config_dir
 from cli.errors import BeaError, UsageError
+from cli.paths import expand_path
 from cli.utils import IntoPath, NonEmptyPath, atomic_write, exclusive_lock, inert_text
 
 
@@ -168,7 +169,7 @@ def _config_path(
     encoding: str = "utf-8",
 ) -> tuple[Path, str]:
     if supplied is not None:
-        return supplied.expanduser().resolve(), "--config"
+        return expand_path(supplied, "--config").resolve(), "--config"
     available = _config_available(file, notes)
     if available is not None:
         return available
@@ -668,7 +669,7 @@ def import_entries(
             file, into, redirect = Path(resolved["root"]), Path(resolved["into"]), resolved.get("note")
             if redirect:
                 output.note(redirect)
-    source = source.expanduser().resolve()
+    source = expand_path(source, "import source").resolve()
     if date_format is not None and not date_format.strip():
         # An empty value is not an omitted one (w5/239): read as unset, it was
         # remembered as `""` and refused every later plain import (w5/385).
@@ -690,7 +691,7 @@ def import_entries(
     # `<(…)` passes as `/dev/fd/N`: "Bad file descriptor", or a config "not
     # found" right after "Using importers from" it (w5/582).
     for flag, named in (("--rules", rules_file), ("--config", config)):
-        path = named.expanduser() if named is not None else None
+        path = expand_path(named, flag) if named is not None else None
         if path is not None and os.path.lexists(path) and not path.is_file():
             raise UsageError(f"{flag} {output.not_a_file(path)}. Save it to a file and pass that file.")
 
@@ -700,7 +701,7 @@ def import_entries(
     discarded_note: str | None = None
     csv_origin = "--csv"
     csv_run_account: str | None = csv_account
-    csv_rules_arg: Path | None = rules_file.expanduser().resolve() if rules_file is not None else None
+    csv_rules_arg: Path | None = expand_path(rules_file, "--rules").resolve() if rules_file is not None else None
     remembered_run = False
     recalled_sign_ledger = False
     inferred_notes: list[str] = []

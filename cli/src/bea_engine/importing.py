@@ -33,6 +33,7 @@ from bea_engine.ledger.text import (
     unknown_root_message,
 )
 from bea_engine.ledger.writer import format_entry, nfc_entry_accounts, normalize_entry_strings
+from bea_engine.paths import expand_path
 from bea_engine.protocol import ConflictError, EngineError, LedgerError, UsageError, capturing
 from bea_engine.query import format_error
 
@@ -168,7 +169,7 @@ def answer(
     _effective_id_keys(id_keys)
 
     file = Path(os.path.abspath(file))
-    source = source.expanduser().resolve()
+    source = expand_path(source, "import source").resolve()
     if not source.is_file():
         raise UsageError(f"Export file not found: {source}")
 
@@ -288,7 +289,7 @@ def answer(
     else:
         if config is None:
             raise UsageError("Choose a Python importer with --config FILE, or use --csv for a column mapping.")
-        config = config.expanduser().resolve()
+        config = expand_path(config, "--config").resolve()
         preview_config = str(config)
         sys.path.insert(0, str(config.parent))
         try:

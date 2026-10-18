@@ -25,6 +25,7 @@ from typing import Annotated, Any
 import typer
 
 from bea_engine import protocol, version
+from bea_engine.paths import expand_path
 
 app = typer.Typer(
     help="Beancount.io engine helper. Ledger operations that load Beancount, one JSON object per call.",
@@ -485,7 +486,7 @@ def init_ledger(
         from bea_engine import initiating
 
         answer.data = initiating.answer(
-            file.expanduser().absolute(),
+            expand_path(file, "--file").absolute(),
             currency=currency,
             date=date,
             opening_balances=list(opening_balance) if opening_balance else None,

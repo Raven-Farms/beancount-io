@@ -43,6 +43,7 @@ from pathlib import Path
 from typing import Any, TextIO, get_origin
 
 from bea_engine import protocol, stopping
+from bea_engine.paths import expand_path
 
 LEDGER_DSN = "beancount:"
 """A pathless beanquery DSN: the source attaches the entries handed to it instead of loading a file."""
@@ -343,7 +344,7 @@ def _claiming_include(destination: Path, root: Path) -> str | None:
     from bea_engine.ledger.write import LedgerSnapshot, _included_new_file
 
     try:
-        target = destination.expanduser().resolve()
+        target = expand_path(destination, "--output").resolve()
         patterns = LedgerSnapshot.capture(root).patterns
     except (OSError, protocol.UsageError):
         return None

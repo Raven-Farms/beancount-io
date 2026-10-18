@@ -22,6 +22,7 @@ from cli.engine import launch
 from cli.errors import UsageError, placement_hint, refuse_json
 from cli.native_command import ForwardingCommand
 from cli.native_help import native_help
+from cli.paths import expand_path
 
 _EXTRA = {"allow_extra_args": True, "ignore_unknown_options": True}
 _CONFIG = Annotated[
@@ -44,7 +45,7 @@ def _ingest_script(supplied: Path | None) -> Path:
     must stay the link, not become the shared script it points to.
     """
     if supplied is not None:
-        return supplied.expanduser().absolute()
+        return expand_path(supplied, "--config").absolute()
     try:
         ledger = context.current().entry_file()
     except UsageError:
@@ -84,7 +85,7 @@ def _forward(operation: str, ctx: typer.Context, config: Path | None) -> None:
         if operation == "extract"
         else None
     )
-    placed = {"ledger": os.path.abspath(os.path.expanduser(existing))} if existing else {}
+    placed = {"ledger": os.path.abspath(expand_path(Path(existing), "--existing"))} if existing else {}
     if placed and output.has_unreadable_include(Path(placed["ledger"])):
         # Beangulp loads `-e` with Beancount, which answers an include it
         # cannot open with a traceback; the helper names it (w5/120, w5/438).
@@ -106,7 +107,7 @@ def _extract_ledgers(ctx: typer.Context) -> list[Path]:
         pass
     existing = output.forwarded_option(list(ctx.args), "-e", "--existing", flags=_EXTRACT_FLAGS)
     if existing is not None:
-        ledgers.append(Path(existing).expanduser())
+        ledgers.append(expand_path(Path(existing), "--existing"))
     return ledgers
 
 
@@ -122,7 +123,7 @@ def _refuse_output_over_inputs(args: list[str], script: Path) -> None:
     value = output.forwarded_option(args, "-o", "--output", flags=_EXTRACT_FLAGS)
     if value is None:
         return
-    destination = Path(value).expanduser()
+    destination = expand_path(Path(value), "--output")
     if not destination.exists():
         return  # Nothing there to lose; `-o -` and a fresh file pass through.
     output.refuse_input_alias(destination, script)
@@ -149,13 +150,13 @@ def _positional_sources(args: list[str]) -> list[Path]:
     while index < len(args):
         arg = args[index]
         if arg == "--":
-            sources.extend(Path(rest).expanduser() for rest in args[index + 1 :])
+            sources.extend(expand_path(Path(rest), "ingest source") for rest in args[index + 1 :])
             break
         if arg == "--output" or re.fullmatch(rf"-[{_EXTRACT_FLAGS}]*o", arg):
             index += 2
             continue
         if not arg.startswith("-"):
-            sources.append(Path(arg).expanduser())
+            sources.append(expand_path(Path(arg), "ingest source"))
         index += 1
     return sources
 

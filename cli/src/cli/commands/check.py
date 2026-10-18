@@ -16,6 +16,7 @@ from cli import context, output
 from cli.engine import launch
 from cli.errors import BeaError, LedgerError, UsageError, refuse_misplaced_global
 from cli.native_help import native_options
+from cli.paths import expand_path
 
 _URL_INCLUDE_RE = re.compile(r'^\s*include\s*"(?i:https?)://', re.MULTILINE)
 """An include line native bean-check cannot resolve (w1/m29).
@@ -228,7 +229,7 @@ def _refuse_positional_ledger(args: list[str]) -> None:
         if arg == _CACHE_FLAG:
             index += 2
             continue
-        if arg != "--" and not arg.startswith("-") and Path(arg).expanduser().is_file():
+        if arg != "--" and not arg.startswith("-") and expand_path(Path(arg), "check argument").is_file():
             raise UsageError(
                 f"bea check takes the ledger from --file, not as an argument: run bea --file {shlex.quote(arg)} check."
             )

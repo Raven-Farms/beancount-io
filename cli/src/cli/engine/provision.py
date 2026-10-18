@@ -40,6 +40,7 @@ from typing import Any
 from cli import context, output
 from cli.engine import paths
 from cli.errors import BeaError, UsageError
+from cli.paths import expand_path
 from cli.utils import exclusive_lock
 
 UV_ENV = "BEA_UV"
@@ -487,9 +488,10 @@ def _find_uv() -> str:
         # names the path but never the variable that supplied it — which is the
         # only part a user with an inherited profile or CI image cannot guess.
         # `paths.python_override()` validates its own variable the same way.
-        if not Path(override).expanduser().exists():
+        expanded = expand_path(Path(override), f"${UV_ENV}")
+        if not expanded.exists():
             raise BeaError(f"{UV_ENV} points at '{override}', which does not exist.")
-        return override
+        return str(expanded)
     found = shutil.which("uv")
     if found:
         return found

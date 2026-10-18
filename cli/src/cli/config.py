@@ -4,6 +4,8 @@ import os
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from cli.paths import expand_path
+
 if TYPE_CHECKING:
     from cli.settings import Settings
 
@@ -17,7 +19,7 @@ def _xdg_home(variable: str, default: Path) -> Path:
     A relative path would resolve against whatever directory a command ran
     from, so state would scatter across working directories.
     """
-    value = Path(os.environ.get(variable) or "").expanduser()
+    value = expand_path(Path(os.environ.get(variable) or ""), f"${variable}")
     return value if value.is_absolute() else default
 
 
@@ -33,7 +35,7 @@ def config_dir() -> Path:
     """
     override = os.environ.get("BEA_CONFIG_DIR")
     if override:
-        directory = Path(override).expanduser()
+        directory = expand_path(Path(override), "$BEA_CONFIG_DIR")
         if not directory.is_absolute():
             from cli.errors import UsageError
 

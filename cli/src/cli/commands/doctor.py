@@ -29,6 +29,7 @@ from cli.errors import (
 )
 from cli.native_command import ForwardingCommand
 from cli.native_help import native_help, native_options
+from cli.paths import expand_path
 from cli.utils import decode_error_message, has_bom
 
 doctor_app = typer.Typer(
@@ -157,7 +158,7 @@ def _located_against_ledger(op: str, args: list[str]) -> list[str]:
     operands = _operand_indices(args)
     if len(operands) < 2:
         return args
-    ledger = Path(args[operands[0]]).expanduser()
+    ledger = expand_path(Path(args[operands[0]]), "doctor ledger")
     if not ledger.is_file():
         return args
     position = operands[1]
@@ -311,7 +312,7 @@ def _needs_compat(op: str, args: list[str]) -> bool:
     positionals = _positionals(args)
     if not positionals:
         return False
-    root = Path(positionals[0]).expanduser()
+    root = expand_path(Path(positionals[0]), "doctor ledger")
     if not root.is_file():
         return False
     # Upstream resolves the ledger path's symlinks: its entries carried the

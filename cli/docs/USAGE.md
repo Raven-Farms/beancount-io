@@ -121,6 +121,11 @@ Local commands resolve their target in this order:
 
 If the resolved file does not exist, the command exits **2** and names those sources. Hosted targeting (`--ledger`) is not implemented yet.
 Passing a directory also exits **2** with a hint to select its root ledger file.
+Paths that use home-directory expansion accept `~/…` and existing `~user/…`
+names. If that home directory cannot be determined, the command exits **2**
+naming the supplied path and its option, argument, or environment variable.
+Use a known home name or an explicit path; init and writes create nothing
+for an unresolved home.
 An empty path (`--file ''`, or any path option or argument such as `format -i ''`,
 `--into ''`, `--from ''`, `init ''` or `price export -o ''`) exits **2** naming it
 instead of meaning the working directory, so an unset variable in a script

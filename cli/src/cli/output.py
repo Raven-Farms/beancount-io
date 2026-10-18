@@ -28,6 +28,7 @@ import typer
 from cli import context
 from cli.config import package_version
 from cli.errors import AuthError, BeaError, LedgerError, UsageError, to_bea_error
+from cli.paths import expand_path
 from cli.utils import atomic_write, inert_text, single_line
 
 
@@ -762,7 +763,7 @@ def _refuse_include_claim(destination: Path, members: Sequence[Path]) -> None:
 
 def _refuse_encrypted_destination(destination: Path, members: Sequence[Path], purpose: str) -> None:
     """Keep outputs outside directories whose encrypted includes hide the ledger's globs."""
-    lexical = Path(os.path.abspath(destination.expanduser()))
+    lexical = Path(os.path.abspath(expand_path(destination, purpose)))
     ancestors = {*lexical.parents, *lexical.resolve().parents}
     for member in members:
         if is_encrypted(member) and any(same_file(member.parent, ancestor) for ancestor in ancestors):
@@ -776,7 +777,7 @@ def _refuse_encrypted_destination(destination: Path, members: Sequence[Path], pu
 def _include_claim(destination: Path, members: Sequence[Path]) -> tuple[str, Path] | None:
     """The include, as written, and the file holding it, whose pattern would match `destination`."""
     try:
-        target = destination.expanduser().resolve()
+        target = expand_path(destination, "--output").resolve()
     except OSError:
         return None
     for member in members:
@@ -922,7 +923,10 @@ def guard_forwarded_output(
     if value is None:
         return
     guard_output_destination(
-        Path(value).expanduser(), ledgers, refuse_existing_ledger_file=refuse_existing_ledger_file, force=force
+        expand_path(Path(value), "--output"),
+        ledgers,
+        refuse_existing_ledger_file=refuse_existing_ledger_file,
+        force=force,
     )
 
 

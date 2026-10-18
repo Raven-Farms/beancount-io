@@ -19,6 +19,7 @@ import typer
 from cli import context, output
 from cli.amounts import parse_decimal_number
 from cli.errors import ConflictError, UsageError
+from cli.paths import expand_path
 from cli.utils import parse_date
 
 # Must match `bea_engine.initiating.ACCOUNTS` — the engine builds the template;
@@ -116,9 +117,9 @@ def init(
     if ctx.file is not None:
         if directory != Path("."):
             raise UsageError("Choose either --file or an init directory, not both.")
-        file = ctx.file.expanduser().absolute()
+        file = expand_path(ctx.file, "--file").absolute()
     else:
-        directory = directory.expanduser().absolute()
+        directory = expand_path(directory, "init directory").absolute()
         file = (
             directory
             if directory.suffix in {".bean", ".beancount"} and not directory.is_dir()

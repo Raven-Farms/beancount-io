@@ -36,6 +36,7 @@ from bea_engine.ledger.text import (
     single_line,
     without_root_name_errors,
 )
+from bea_engine.paths import expand_path
 
 TYPES = (
     "transaction",
@@ -114,7 +115,7 @@ def _require_document_in_tree(file: Path, into: Path | None, filename: str) -> N
     root = Path(os.path.abspath(file)).parent
     # Beancount resolves paths beside the include as named, even when the
     # include itself is a symlink to a file in another directory.
-    holder = root if into is None else Path(os.path.normpath(root / into.expanduser())).parent
+    holder = root if into is None else Path(os.path.normpath(root / expand_path(into, "--into"))).parent
     if outside_ledger_tree(holder / filename, root):
         raise protocol.UsageError(
             f"Document path {filename!r} resolves outside the ledger directory {root.resolve()}, which "

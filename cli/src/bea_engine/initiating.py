@@ -15,6 +15,7 @@ from typing import Any
 from bea_engine import stopping
 from bea_engine.amounts import parse_decimal_number
 from bea_engine.ledger import write as ledger_write
+from bea_engine.paths import expand_path
 from bea_engine.protocol import AuthError, ConflictError, LedgerError, UsageError
 
 ACCOUNTS = (
@@ -50,7 +51,7 @@ def answer(
     liability accounts. The file must not already exist; creation is atomic
     (`claim_new_file` of a validated candidate) so a race never overwrites.
     """
-    file = file.expanduser()
+    file = expand_path(file, "--file")
     if not file.is_absolute():
         file = file.resolve()
     if file.exists() or file.is_symlink():

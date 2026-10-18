@@ -34,6 +34,7 @@ from bea_engine.ledger.text import (
     new_account_format_problem,
     single_line,
 )
+from bea_engine.paths import expand_path
 from bea_engine.protocol import AuthError, ConflictError, LedgerError, StagingFailed, UsageError, notice
 from bea_engine.query import format_error, same_file
 
@@ -47,7 +48,7 @@ def cache_dir() -> Path:
     requires: it would resolve against whatever directory a command ran from,
     and the managed price cache writes this path into staged includes.
     """
-    xdg = Path(os.environ.get("XDG_CACHE_HOME") or "").expanduser()
+    xdg = expand_path(Path(os.environ.get("XDG_CACHE_HOME") or ""), "$XDG_CACHE_HOME")
     base = xdg if xdg.is_absolute() else Path.home() / ".cache"
     return base / "bea"
 
@@ -62,7 +63,7 @@ def destination(root: Path, into: Path | None = None) -> Path:
     """
     if into is None:
         return root.resolve()
-    target = root.parent / into.expanduser()
+    target = root.parent / expand_path(into, "--into")
     if not (target.exists() or target.is_symlink()):
         target = target.with_name(unicodedata.normalize("NFC", target.name))
     return target.resolve()
@@ -243,10 +244,10 @@ class LedgerSnapshot:
 
     def _cwd_into_hint(self, into: Path | None) -> str | None:
         """A root-relative correction when interpreting the path from cwd names a ledger member."""
-        if into is None or into.expanduser().is_absolute():
+        if into is None or expand_path(into, "--into").is_absolute():
             return None
         try:
-            alternative = Path.cwd() / into.expanduser()
+            alternative = Path.cwd() / expand_path(into, "--into")
         except (OSError, ValueError):
             return None
         for member in self.contents:
@@ -793,7 +794,7 @@ def refuse_encrypted_destination(destination: Path, members: Iterable[Path], pur
     """Refuse output below an encrypted member whose hidden includes cannot be checked."""
     from beancount.utils.encryption import is_encrypted_file
 
-    lexical = Path(os.path.abspath(destination.expanduser()))
+    lexical = Path(os.path.abspath(expand_path(destination, purpose)))
     ancestors = {*lexical.parents, *lexical.resolve().parents}
     for member in dict.fromkeys(members):
         try:

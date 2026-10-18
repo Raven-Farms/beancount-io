@@ -68,6 +68,7 @@ from bea_engine.managed_prices import (
     normalize_origin,
     parse_managed_price_url,
 )
+from bea_engine.paths import expand_path
 
 if TYPE_CHECKING:
     from bea_engine.ledger.write import LedgerSnapshot
@@ -1533,7 +1534,7 @@ def export_portable(
             f"Cannot export: managed price source {names} is unavailable. "
             "Retry, or pass --allow-errors to export with its marker only."
         )
-    target = (output or entry.parent / f"{entry.stem}-export").expanduser()
+    target = expand_path(output or entry.parent / f"{entry.stem}-export", "--output")
     snapshot = LedgerSnapshot.capture(entry)
     # A refused URL include is no source, so the check above never saw it, and
     # the "self-contained" snapshot kept the URL for stock tools to fail on

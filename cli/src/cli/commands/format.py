@@ -33,6 +33,7 @@ from cli import context, output
 from cli.amounts import zero_divisor_line
 from cli.engine import launch
 from cli.errors import BeaError, LedgerError, UsageError
+from cli.paths import expand_path
 from cli.utils import atomic_write, decode_error_message, single_line
 
 SUFFIXES = {".bean", ".beancount"}
@@ -78,6 +79,7 @@ def format_beans(
     if in_place and output_file is not None:
         raise UsageError("Pass either --in-place or --output, not both — they name two different destinations.")
     if output_file is not None:
+        output_file = expand_path(output_file, "--output")
         _require_output_file(output_file)
     reporting = check or dry_run
     if reporting and (in_place or output_file is not None):
@@ -156,7 +158,7 @@ def format_beans(
         # Upstream reads the target and writes this path; naming the target
         # itself would truncate the file before it is read.
         for ledger_file in _named(paths, ctx.file):
-            output.refuse_ledger_alias(output_file, Path(os.path.abspath(ledger_file.expanduser())))
+            output.refuse_ledger_alias(output_file, Path(os.path.abspath(expand_path(ledger_file, "format"))))
 
     _render(files[0], alignment, output_file)
     if ctx.json_output and output_file is not None:
@@ -352,7 +354,9 @@ def _remedy(named: list[Path], alignment: list[str]) -> str:
     It repeats the gate's own paths and alignment options: rewriting a narrower
     set of files, or at upstream's default widths, leaves the identical gate red.
     """
-    return shlex.join(["bea", "format", "-i", *(str(path.expanduser().resolve()) for path in named), *alignment])
+    return shlex.join(
+        ["bea", "format", "-i", *(str(expand_path(path, "format").resolve()) for path in named), *alignment]
+    )
 
 
 def _changed(files: list[Path], alignment: list[str], *, in_place: bool) -> list[str]:
@@ -412,9 +416,11 @@ def _targets(
     it positionally, in the mode `asked` for: a `--check` must not be answered
     with advice that rewrites the tree (w5/196).
     """
+    if not paths and default is not None:
+        default = expand_path(default, "--file")
     named = _named(paths, default)
-    if not paths and default is not None and default.expanduser().is_dir():
-        directory = default.expanduser().resolve()
+    if not paths and default is not None and default.is_dir():
+        directory = default.resolve()
         positional = shlex.join(["bea", "format", *asked, str(directory), *alignment])
         raise UsageError(
             f"Ledger path '{directory}' (from --file) is a directory; expected a ledger file. "
@@ -430,7 +436,7 @@ def _targets(
     files: set[Path] = set()
     roots: list[Path] = []
     for path in named:
-        resolved = path.expanduser().resolve()
+        resolved = expand_path(path, "format").resolve()
         if not resolved.exists():
             raise UsageError(f"Formatting target does not exist: {resolved}")
         if resolved.is_dir():
@@ -469,7 +475,7 @@ def _targets(
             # includes sit beside the link, as the loader and every other
             # command read them, not beside its target (w5/087). The resolved
             # path stays the write target and the deduplication key.
-            roots.append(Path(os.path.abspath(path.expanduser())))
+            roots.append(Path(os.path.abspath(expand_path(path, "format"))))
         else:
             raise UsageError(f"Not a regular file or directory: {resolved}")
     if not expand_includes:
@@ -683,7 +689,7 @@ def _require_json_destination(in_place: bool, output_file: Path | None) -> None:
 
 def _wrote(scanned: int, destination: Path) -> dict[str, object]:
     """What a successful `--output FILE` did: how much it read, and what it wrote."""
-    return {"scanned": scanned, "output": str(destination.expanduser().resolve())}
+    return {"scanned": scanned, "output": str(expand_path(destination, "--output").resolve())}
 
 
 def _result(
@@ -708,8 +714,8 @@ def _result(
 
 def _target(paths: list[Path] | None, files: list[Path]) -> dict[str, str | list[str]]:
     named = [path for path in (paths or []) if str(path)]
-    if len(named) == 1 and named[0].expanduser().resolve().is_dir():
-        return {"directory": str(named[0].expanduser().resolve())}
+    if len(named) == 1 and expand_path(named[0], "format").resolve().is_dir():
+        return {"directory": str(expand_path(named[0], "format").resolve())}
     if len(files) == 1:
         return {"file": str(files[0])}
     return {"files": [str(file) for file in files]}

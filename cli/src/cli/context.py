@@ -18,6 +18,7 @@ from typing import Any
 
 from cli.config import DEFAULT_ENTRY_FILE
 from cli.errors import UsageError
+from cli.paths import expand_path
 
 _TRUE = {"1", "true", "yes", "on"}
 
@@ -132,12 +133,12 @@ class RunContext:
         """
         from cli.config import DEFAULT_ENTRY_FILE_FALLBACKS
 
-        candidate = self.file
+        candidate = expand_path(self.file, "--file") if self.file is not None else None
         source = "--file"
         if candidate is None:
             env_file = os.environ.get("BEA_FILE")
             if env_file:
-                candidate, source = Path(env_file).expanduser(), "$BEA_FILE"
+                candidate, source = expand_path(Path(env_file), "$BEA_FILE"), "$BEA_FILE"
         if candidate is None:
             # Present, not just a file: a dangling `main.bean` link or a
             # `main.bean` directory fell through to an older `main.beancount`,

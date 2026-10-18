@@ -25,6 +25,7 @@ from cli import context, output
 from cli.completion import fixed_values
 from cli.engine import launch
 from cli.errors import UsageError, placement_hint
+from cli.paths import expand_path
 from cli.utils import decode_error_message, inert_text
 
 FORMATS = ("text", "csv", "beancount")
@@ -363,7 +364,7 @@ def query(
     if output_file is not None:
         # Resolve once before checking aliases, then carry that target through
         # the engine and JSON writer even if the original link changes.
-        output_file = str(Path(output_file).resolve())
+        output_file = str(expand_path(Path(output_file), "--output").resolve())
         output.check_output_destination(Path(output_file))
         # One rule for text and `--json`, which are written by different
         # processes: an unwritable destination is refused before the query runs.
