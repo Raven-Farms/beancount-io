@@ -178,7 +178,7 @@ export const uk: Translations = {
   quickAdd: "Швидке додавання",
   enterNewTransaction: "Записати нову транзакцію",
   multiPostingsTitle: "Нова транзакція",
-  addPosting: "+ Додати проведення",
+  addPosting: "Додати проведення",
   remainderLabel: "Залишок",
   autoLabel: "авто",
   postingAccount: "Оберіть рахунок",

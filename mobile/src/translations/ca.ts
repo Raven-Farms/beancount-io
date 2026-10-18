@@ -180,7 +180,7 @@ export const ca: Translations = {
   quickAdd: "Afegir ràpid",
   enterNewTransaction: "Registra una transacció",
   multiPostingsTitle: "Nova transacció",
-  addPosting: "+ Afegeix un apunt",
+  addPosting: "Afegeix un apunt",
   remainderLabel: "Resta",
   autoLabel: "auto",
   postingAccount: "Tria un compte",

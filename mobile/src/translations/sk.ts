@@ -179,7 +179,7 @@ export const sk: Translations = {
   quickAdd: "Rýchle pridanie",
   enterNewTransaction: "Zadať novú transakciu",
   multiPostingsTitle: "Nová transakcia",
-  addPosting: "+ Pridať zápis",
+  addPosting: "Pridať zápis",
   remainderLabel: "Zostatok",
   autoLabel: "auto",
   postingAccount: "Vybrať účet",

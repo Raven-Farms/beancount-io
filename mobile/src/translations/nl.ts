@@ -175,7 +175,7 @@ export const nl: Translations = {
   quickAdd: "Snel toevoegen",
   enterNewTransaction: "Nieuwe transactie invoeren",
   multiPostingsTitle: "Nieuwe transactie",
-  addPosting: "+ Boeking toevoegen",
+  addPosting: "Boeking toevoegen",
   remainderLabel: "Restant",
   autoLabel: "auto",
   postingAccount: "Account kiezen",

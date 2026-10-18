@@ -180,7 +180,7 @@ export const de: Translations = {
   quickAdd: "Schnell hinzufügen",
   enterNewTransaction: "Neue Transaktion erfassen",
   multiPostingsTitle: "Neue Transaktion",
-  addPosting: "+ Buchung hinzufügen",
+  addPosting: "Buchung hinzufügen",
   remainderLabel: "Restbetrag",
   autoLabel: "auto",
   postingAccount: "Konto wählen",

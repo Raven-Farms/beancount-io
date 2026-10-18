@@ -179,7 +179,7 @@ export const ru: Translations = {
   quickAdd: "Быстрое добавление",
   enterNewTransaction: "Записать новую транзакцию",
   multiPostingsTitle: "Новая транзакция",
-  addPosting: "+ Добавить проводку",
+  addPosting: "Добавить проводку",
   remainderLabel: "Остаток",
   autoLabel: "авто",
   postingAccount: "Выберите счёт",

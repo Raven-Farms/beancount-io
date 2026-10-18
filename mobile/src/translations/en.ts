@@ -168,7 +168,7 @@ export const en = {
   quickAdd: "Quick Add",
   enterNewTransaction: "Enter new transaction",
   multiPostingsTitle: "New Transaction",
-  addPosting: "+ Add posting",
+  addPosting: "Add posting",
   remainderLabel: "Remainder",
   autoLabel: "auto",
   postingAccount: "Select account",

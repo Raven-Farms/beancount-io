@@ -173,7 +173,7 @@ export const fa: Translations = {
   quickAdd: "افزودن سریع",
   enterNewTransaction: "ثبت تراکنش جدید",
   multiPostingsTitle: "تراکنش جدید",
-  addPosting: "+ افزودن ثبت",
+  addPosting: "افزودن ثبت",
   remainderLabel: "باقی‌مانده",
   autoLabel: "خودکار",
   postingAccount: "انتخاب حساب",

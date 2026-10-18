@@ -176,7 +176,7 @@ export const bg: Translations = {
   quickAdd: "Бързо добавяне",
   enterNewTransaction: "Въведете нова транзакция",
   multiPostingsTitle: "Нова транзакция",
-  addPosting: "+ Добави ред",
+  addPosting: "Добави ред",
   remainderLabel: "Остатък",
   autoLabel: "авто",
   postingAccount: "Изберете сметка",

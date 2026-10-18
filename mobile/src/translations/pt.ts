@@ -179,7 +179,7 @@ export const pt: Translations = {
   quickAdd: "Adicionar rápido",
   enterNewTransaction: "Registrar nova transação",
   multiPostingsTitle: "Nova transação",
-  addPosting: "+ Adicionar lançamento",
+  addPosting: "Adicionar lançamento",
   remainderLabel: "Restante",
   autoLabel: "auto",
   postingAccount: "Escolher conta",

@@ -157,7 +157,7 @@ export const zh: Translations = {
   quickAdd: "快速添加",
   enterNewTransaction: "记一笔新交易",
   multiPostingsTitle: "新建交易",
-  addPosting: "+ 添加分录",
+  addPosting: "添加分录",
   remainderLabel: "差额",
   autoLabel: "自动",
   postingAccount: "选择账户",
