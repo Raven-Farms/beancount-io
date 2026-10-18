@@ -2205,6 +2205,10 @@ select targets, endpoints, and state directories:
 | `MANAGED_PRICE_OFFLINE` | — | Truthy resolves managed includes from the cache only, like `--offline` |
 | `MANAGED_PRICE_STRICT` | — | Truthy fails loads on stale or unavailable sources, like `--strict-prices` |
 
+`BEA_API_URL` and `BEA_DASHBOARD_URL` also validate Unicode and punycode
+hostnames. An invalid endpoint exits **2** before any request; `cloud logout`
+keeps the stored credential when endpoint validation fails.
+
 Hosted commands and `ask` also use HTTP(S) proxies from `HTTP_PROXY`,
 `HTTPS_PROXY`, and `ALL_PROXY` (including lowercase and mixed-case spellings).
 Unsupported schemes, malformed proxy URLs, and SOCKS proxies without the

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from urllib.parse import urlsplit
 
+from httpx import URL, InvalidURL
 from pydantic import ValidationInfo, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -34,8 +35,12 @@ class Settings(BaseSettings):
         try:
             parts = urlsplit(value)
             _ = parts.port  # raises ValueError for a malformed or out-of-range port
-            valid = parts.scheme in {"http", "https"} and bool(parts.hostname)
-        except ValueError:
+            # Parsing alone can leave a bad punycode host unread until the
+            # request is built. Validate the decoded host before logout can
+            # remove a credential after a request-preparation failure (w5/700).
+            parsed = URL(value)
+            valid = parts.scheme in {"http", "https"} and bool(parts.hostname) and bool(parsed.host)
+        except (ValueError, InvalidURL):
             valid = False
         if not valid:
             from cli.errors import UsageError

@@ -125,6 +125,11 @@ def cloud_logout() -> None:
             f"the outcome is unknown. {_STILL_VALID}",
             getattr(exc, "request_id", None),
         )
+    except ValueError:
+        # `call` translates response-parsing ValueErrors after a response.
+        # A remaining ValueError is request preparation, not an attempted
+        # revocation: leave the stored credential available to retry.
+        raise
     except Exception as exc:
         reason = to_bea_error(exc)
         failure = (
