@@ -116,6 +116,19 @@ export function isRtlLayout(): boolean {
 }
 
 /**
+ * Letter spacing for text: `spacing` in a left-to-right layout, none in a
+ * right-to-left one. Any tracking pulls Arabic-script letters apart and
+ * breaks their joins — the Payee caption پیشنهادها rendered as "پیشنهاد ها"
+ * (w0/049) — and Persian, the app's right-to-left language, is written in
+ * that script. Read when styles are built; a direction change restarts the
+ * app. `src/common/__tests__/letter-spacing.test.ts` keeps every
+ * `letterSpacing` going through here.
+ */
+export function letterSpacing(spacing: number): number {
+  return isRtlLayout() ? 0 : spacing;
+}
+
+/**
  * `textAlign` for text that must follow the **layout's** leading edge rather
  * than its own content's direction.
  *
@@ -153,6 +166,17 @@ export const LEADING_TEXT_ALIGN = "left" as const;
  */
 export function leadingInputTextAlign(): "left" | "right" {
   return isRtlLayout() ? "right" : "left";
+}
+
+/**
+ * `textAlign` for a `TextInput` whose text sits at the layout's trailing edge,
+ * like the values beside it — an amount in a form row. The same reason as
+ * `leadingInputTextAlign`: an input's `"right"` stays on the physical right,
+ * so in Persian Add Budget's amount sat mid-row against its label while every
+ * other value sat at the trailing (left) edge (w0/049).
+ */
+export function trailingInputTextAlign(): "left" | "right" {
+  return isRtlLayout() ? "left" : "right";
 }
 
 /**

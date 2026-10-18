@@ -46,6 +46,7 @@ import {
 } from "./selectors/merchant-sections";
 import { usePayeeRecurrence } from "./use-payee-recurrence";
 import { merchantsSortButtonLabelKey } from "./sort-button-label";
+import { letterSpacing } from "@/common/rtl";
 
 const getStyles = (theme: ColorTheme) =>
   StyleSheet.create({
@@ -92,7 +93,7 @@ const getStyles = (theme: ColorTheme) =>
       fontWeight: fontWeights.medium,
       color: theme.black80,
       textTransform: "uppercase",
-      letterSpacing: 0.4,
+      letterSpacing: letterSpacing(0.4),
     },
     emptyContainer: {
       flex: 1,

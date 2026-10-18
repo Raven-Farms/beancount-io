@@ -12,7 +12,7 @@ import { LedgerGuard, useLedgerGuard } from "@/components/ledger-guard";
 import { RouteLedgerUnavailable } from "@/components/route-ledger-unavailable";
 import { bindRouteLedger, firstRouteParam } from "@/common/route-ledger";
 import { parseDiff, DiffLine } from "./diff-utils";
-import { LEADING_TEXT_ALIGN, LTR_SOURCE } from "@/common/rtl";
+import { LEADING_TEXT_ALIGN, letterSpacing, LTR_SOURCE } from "@/common/rtl";
 import {
   formatCommitAuthorLine,
   splitCommitMessage,
@@ -37,7 +37,7 @@ const getStyles = (theme: ColorTheme) =>
       fontWeight: "600",
       color: theme.black80,
       textTransform: "uppercase",
-      letterSpacing: 0.5,
+      letterSpacing: letterSpacing(0.5),
       paddingHorizontal: 16,
       paddingBottom: 8,
     },

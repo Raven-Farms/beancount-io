@@ -17,7 +17,11 @@ import {
 import { AmountText } from "@/components/amount-text";
 import { useThemeStyle } from "@/common/hooks/use-theme-style";
 import { PostingDisplayRow } from "../selectors/select-transaction-detail";
-import { LEADING_TEXT_ALIGN, directionalIcon } from "@/common/rtl";
+import {
+  directionalIcon,
+  LEADING_TEXT_ALIGN,
+  letterSpacing,
+} from "@/common/rtl";
 
 const getStyles = (theme: ColorTheme) =>
   StyleSheet.create({
@@ -55,7 +59,7 @@ const getStyles = (theme: ColorTheme) =>
       color: theme.black80,
       marginBottom: 3,
       textTransform: "uppercase",
-      letterSpacing: 0.4,
+      letterSpacing: letterSpacing(0.4),
     },
     account: {
       fontSize: fontSizes.sm,

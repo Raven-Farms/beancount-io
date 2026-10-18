@@ -29,7 +29,11 @@ import {
   LedgerError,
   splitCommitMessage,
 } from "./formatting";
-import { LEADING_TEXT_ALIGN, directionalIcon } from "@/common/rtl";
+import {
+  directionalIcon,
+  LEADING_TEXT_ALIGN,
+  letterSpacing,
+} from "@/common/rtl";
 import { CardLoadFailure } from "@/components/card-load-failure";
 import { selectCardLoadState } from "@/common/apollo/card-load-state";
 
@@ -49,7 +53,7 @@ const getStyles = (theme: ColorTheme) =>
       fontWeight: "600",
       color: theme.black80,
       textTransform: "uppercase",
-      letterSpacing: 0.5,
+      letterSpacing: letterSpacing(0.5),
       paddingHorizontal: 16,
       paddingTop: 20,
       paddingBottom: 8,

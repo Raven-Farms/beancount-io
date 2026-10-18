@@ -48,6 +48,7 @@ import {
   isRtlLayout,
   layoutDirectionFactor,
   LEADING_TEXT_ALIGN,
+  letterSpacing,
 } from "@/common/rtl";
 import { ThemedRefreshControl } from "@/components/dashboard-scroll-view";
 import { clampProgress, settleTarget } from "./drawer-motion";
@@ -217,7 +218,7 @@ const getStyles = (theme: ColorTheme) =>
       fontWeight: fontWeights.medium,
       color: theme.black80,
       textTransform: "uppercase",
-      letterSpacing: 0.4,
+      letterSpacing: letterSpacing(0.4),
       textAlign: LEADING_TEXT_ALIGN,
     },
     ownerHeaderRule: {

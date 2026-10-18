@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { durations, fontSizes, fontWeights } from "@/common/theme";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { CHROME } from "./chrome";
+import { letterSpacing } from "@/common/rtl";
 
 const styles = StyleSheet.create({
   scrim: {
@@ -34,7 +35,7 @@ const styles = StyleSheet.create({
     color: CHROME.icon,
     fontSize: fontSizes.hero,
     fontWeight: fontWeights.medium,
-    letterSpacing: -1,
+    letterSpacing: letterSpacing(-1),
   },
   date: {
     color: CHROME.icon,

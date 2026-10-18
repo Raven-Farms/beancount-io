@@ -122,8 +122,14 @@ const getStyles = (theme: ColorTheme) =>
       color: theme.black80,
       fontSize: fontSizes.sm,
       marginBottom: space.sm,
+      // Leading edge in Persian too; it sat on the left (w0/049).
+      textAlign: LEADING_TEXT_ALIGN,
     },
+    // An account name is Latin ledger data read left to right: the root comes
+    // first and the sub-path follows it, in every app direction. Mirrored,
+    // Persian showed "Bank:Checking | Assets:" — the name backwards (w0/049).
     accountInput: {
+      direction: "ltr",
       minHeight: 46,
       flexDirection: "row",
       alignItems: "center",
@@ -165,6 +171,8 @@ const getStyles = (theme: ColorTheme) =>
       flex: 1,
       minWidth: 0,
       minHeight: 44,
+      // Typed text starts beside the root, inside the left-to-right row.
+      textAlign: "left",
       paddingHorizontal: space.sm,
       paddingVertical: space.sm,
       color: theme.text01,

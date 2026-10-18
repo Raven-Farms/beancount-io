@@ -245,5 +245,23 @@ describe("rtl", () => {
       expect(load(true).rtl.leadingInputTextAlign()).toBe("right");
       expect(load(false).rtl.leadingInputTextAlign()).toBe("left");
     });
+
+    it("puts a trailing input, like an amount, on the trailing edge", () => {
+      // Add Budget's amount stayed on the physical right in Persian, mid-row
+      // against its label (w0/049).
+      expect(load(true).rtl.trailingInputTextAlign()).toBe("left");
+      expect(load(false).rtl.trailingInputTextAlign()).toBe("right");
+    });
+  });
+
+  describe("letterSpacing", () => {
+    it("drops tracking in a right-to-left layout and keeps it otherwise", () => {
+      // Tracking splits Arabic-script letters: پیشنهادها read "پیشنهاد ها"
+      // (w0/049).
+      expect(load(true).rtl.letterSpacing(0.8)).toBe(0);
+      expect(load(true).rtl.letterSpacing(-1)).toBe(0);
+      expect(load(false).rtl.letterSpacing(0.8)).toBe(0.8);
+      expect(load(false).rtl.letterSpacing(-1)).toBe(-1);
+    });
   });
 });

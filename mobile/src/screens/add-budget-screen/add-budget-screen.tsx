@@ -37,7 +37,11 @@ import {
   intervalLabelKey,
 } from "@/screens/budget-screen/selectors/budget-labels";
 import { getFormatDate } from "@/common/format-util";
-import { LEADING_TEXT_ALIGN, directionalIcon } from "@/common/rtl";
+import {
+  LEADING_TEXT_ALIGN,
+  directionalIcon,
+  trailingInputTextAlign,
+} from "@/common/rtl";
 
 const getStyles = (theme: ColorTheme) =>
   StyleSheet.create({
@@ -98,7 +102,7 @@ const getStyles = (theme: ColorTheme) =>
       paddingHorizontal: space.sm,
       color: theme.text01,
       fontSize: fontSizes.lg,
-      textAlign: "right",
+      textAlign: trailingInputTextAlign(),
     },
     help: {
       paddingHorizontal: space.xs,

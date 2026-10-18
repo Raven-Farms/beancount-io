@@ -33,6 +33,7 @@ import {
   runAddTransactionCallback,
 } from "@/common/globalFnFactory";
 import { pushAccountPicker } from "@/screens/account-picker-screen/push-account-picker";
+import { letterSpacing } from "@/common/rtl";
 
 /** Keep only non-empty string arguments (drops undefined option names). */
 function pickDefined(...values: (string | undefined)[]): string[] {
@@ -57,7 +58,7 @@ const getStyles = (theme: ColorTheme) =>
     txtMoney: {
       fontSize: fontSizes.hero,
       fontWeight: fontWeights.medium,
-      letterSpacing: -1,
+      letterSpacing: letterSpacing(-1),
       color: theme.black,
     },
     txtSmallMoney: {
@@ -65,7 +66,7 @@ const getStyles = (theme: ColorTheme) =>
       color: theme.black,
       fontWeight: fontWeights.medium,
       marginTop: 9,
-      letterSpacing: 0.5,
+      letterSpacing: letterSpacing(0.5),
       marginStart: 1,
     },
     moneyContainer: {

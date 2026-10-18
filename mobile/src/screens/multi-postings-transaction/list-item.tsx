@@ -4,7 +4,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { ColorTheme } from "@/types/theme-props";
 import { useThemeStyle } from "@/common/hooks/use-theme-style";
 import { LoadingTile } from "@/components/loading-tile";
-import { LEADING_TEXT_ALIGN, directionalIcon } from "@/common/rtl";
+import {
+  directionalIcon,
+  LEADING_TEXT_ALIGN,
+  letterSpacing,
+} from "@/common/rtl";
 
 type ListItemProps = {
   onPress?: () => void;
@@ -35,7 +39,7 @@ const getStyles = (theme: ColorTheme) =>
       fontSize: fontSizes.xs,
       lineHeight: 16,
       fontWeight: fontWeights.medium,
-      letterSpacing: 0.8,
+      letterSpacing: letterSpacing(0.8),
       color: theme.black80,
       marginBottom: 2,
       textAlign: LEADING_TEXT_ALIGN,
