@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
+import { CombinedGraphQLErrors } from "@apollo/client/errors";
+import { toast } from "sonner";
 import userEvent from "@testing-library/user-event";
 import { UserProfileSection } from "../user-profile-section";
 import type { GetCurrentUserQuery } from "@/graphql/definitions";
@@ -7,14 +9,17 @@ import type { GetCurrentUserQuery } from "@/graphql/definitions";
 // Mock mutations
 const mockUpdateUsername = vi.fn();
 const mockUpdateProfile = vi.fn();
+let mockUsernameOptions: { onError?: (error: unknown) => void } | undefined;
 
 // Mock Apollo Client
 vi.mock("@apollo/client/react", () => ({
-  useMutation: vi.fn((document) => {
-    // Return different mocks based on the document type
-    if (document.toString().includes("updateProfile")) {
+  useMutation: vi.fn((document, options) => {
+    // Return different mocks based on the operation. A parsed document
+    // stringifies to "[object Object]", so match its operation name.
+    if (document.definitions[0]?.name?.value === "UpdateProfile") {
       return [mockUpdateProfile, { loading: false }];
     }
+    mockUsernameOptions = options;
     return [mockUpdateUsername, { loading: false }];
   }),
 }));
@@ -48,6 +53,9 @@ vi.mock("@/common/hooks/use-translations", () => ({
         "auth.enterFirstName": "Enter your first name",
         "auth.enterLastName": "Enter your last name",
         "auth.usernameRequired": "Username is required",
+        "auth.usernameLowercaseAlphanumeric":
+          "Username can only contain lowercase letters, numbers, and underscores",
+        "auth.usernameMaxLength": "Username must be at most 20 characters",
         "common.edit": "Edit",
         "common.cancel": "Cancel",
         "common.save": "Save",
@@ -366,6 +374,87 @@ describe("UserProfileSection", () => {
       await user.type(usernameInput, "newusername");
 
       expect((usernameInput as HTMLInputElement).value).toBe("newusername");
+    });
+  });
+
+  // Settings holds a rename to sign-up's rule before submitting, and shows a
+  // server rule refusal on the field rather than as a generic toast (w0/047).
+  describe("Username rule", () => {
+    const openUsernameDialog = async () => {
+      const user = userEvent.setup();
+      render(<UserProfileSection userData={mockUserData} />);
+      await user.click(screen.getAllByRole("button", { name: "Edit" })[1]);
+      const input = await screen.findByPlaceholderText("Enter new username");
+      return { user, input };
+    };
+
+    it("states the rule before anything is typed", async () => {
+      await openUsernameDialog();
+      expect(
+        screen.getByText(
+          "Username can only contain lowercase letters, numbers, and underscores",
+        ),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText("Username must be at most 20 characters"),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    });
+
+    it.each([
+      [
+        "John.Doe",
+        "Username can only contain lowercase letters, numbers, and underscores",
+      ],
+      ["a".repeat(21), "Username must be at most 20 characters"],
+      ["   ", "Username is required"],
+    ])("refuses %j on the field without submitting", async (name, message) => {
+      const { user, input } = await openUsernameDialog();
+      await user.clear(input);
+      await user.type(input, name);
+      await user.click(screen.getByRole("button", { name: "Save" }));
+
+      expect(screen.getByRole("alert")).toHaveTextContent(message);
+      expect(input).toHaveAttribute("aria-invalid", "true");
+      expect(mockUpdateUsername).not.toHaveBeenCalled();
+    });
+
+    it("submits a name in the rule", async () => {
+      const { user, input } = await openUsernameDialog();
+      await user.clear(input);
+      await user.type(input, "new_name_2");
+      await user.click(screen.getByRole("button", { name: "Save" }));
+
+      expect(mockUpdateUsername).toHaveBeenCalledWith({
+        variables: { username: "new_name_2" },
+      });
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    });
+
+    it("shows the server's rule refusal on the field", async () => {
+      const { user, input } = await openUsernameDialog();
+      await user.clear(input);
+      await user.type(input, "new_name");
+      await user.click(screen.getByRole("button", { name: "Save" }));
+      act(() => {
+        mockUsernameOptions?.onError?.(
+          new CombinedGraphQLErrors({
+            errors: [
+              {
+                message:
+                  "Usernames use 1–20 lowercase letters, numbers, or underscores.",
+                extensions: { code: "BAD_USER_INPUT", field: "username" },
+              },
+            ],
+          }),
+        );
+      });
+
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Username can only contain lowercase letters, numbers, and underscores",
+      );
+      expect(toast.error).not.toHaveBeenCalled();
+      expect(input).toBeInTheDocument();
     });
   });
 

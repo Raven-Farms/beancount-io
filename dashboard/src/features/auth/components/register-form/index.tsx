@@ -12,6 +12,10 @@ import { useTranslations } from "@/common/hooks/use-translations";
 import { ScriptRequiredNotice } from "@/features/auth/components/script-required-notice";
 import { useHydrated } from "@/features/auth/lib/use-hydrated";
 import type { RegisterFormData } from "@/features/auth/hooks/use-register-form";
+import {
+  USERNAME_CHARACTERS,
+  USERNAME_MAX_LENGTH,
+} from "@/common/lib/auth/username-rule";
 
 export type RegisterFormProps = {
   onSubmit: (data: RegisterFormData) => Promise<void>;
@@ -57,8 +61,11 @@ export function RegisterForm({
           username: z
             .string()
             .min(1, t("auth.usernameRequired"))
-            .max(20, t("auth.usernameMaxLength"))
-            .regex(/^[a-z0-9_]+$/, t("auth.usernameLowercaseAlphanumeric")),
+            .max(USERNAME_MAX_LENGTH, t("auth.usernameMaxLength"))
+            .regex(
+              USERNAME_CHARACTERS,
+              t("auth.usernameLowercaseAlphanumeric"),
+            ),
           password: z
             .string()
             .min(1, t("auth.passwordRequired"))
