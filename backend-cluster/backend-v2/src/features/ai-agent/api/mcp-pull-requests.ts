@@ -24,6 +24,13 @@ export const pullRequestToolInput = z
     changes: pullRequestCreateInput.shape.changes.optional(),
   })
   .strict();
+/** One MCP tool per pull-request operation (ADR 019, 2026-10-18; w1/m38). */
+const prNumber = z.number().int().describe("The pull request's number.");
+export const PULL_REQUEST_OPERATION_SCHEMAS = {
+  create: pullRequestCreateInput.extend({ ledger: ledgerSelection }),
+  approve: z.object({ ledger: ledgerSelection, prNumber }).strict(),
+  reject: z.object({ ledger: ledgerSelection, prNumber }).strict(),
+} as const;
 export const pullRequestToolOutput = mcpOutputSchema(
   toolOutputSchema(pullRequestResultSchema),
 );

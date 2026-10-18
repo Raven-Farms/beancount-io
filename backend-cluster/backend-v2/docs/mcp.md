@@ -449,10 +449,10 @@ GraphQL's deliberate raw-byte exclusion remains unchanged.
 Read `beancount://{owner}/{name}/pull-request{?prNumber}` to inspect metadata,
 file statistics, and the full diff. This requires repository read authority.
 
-`managePullRequests` requires repository write authority and a `ledger` target
+Three tools, each requiring repository write authority and a `ledger` target
 (`owner/name`), which may be omitted for a pinned credential:
 
-- `create` requires `title`, `description`, `clearCommitMessage`, and
+- `createPullRequest` requires `title`, `description`, `clearCommitMessage`, and
   `changes: [{ "path": "...", "content": "..." }]`. Each content value is the
   complete replacement file text; empty title/description and a missing commit
   message are refused. `baseBranch` defaults to `main` — say so when the
@@ -460,8 +460,8 @@ file statistics, and the full diff. This requires repository read authority.
   differs from base and refuses a diff-less branch unless `fastForward: true`
   skips verification. The result carries the PR's actual `baseBranch`/`headBranch`
   refs — use those to follow up, not the requested names.
-- `approve` requires `prNumber` and merges the PR.
-- `reject` requires `prNumber` and closes it without merging.
+- `approvePullRequest` requires `prNumber` and merges the PR.
+- `rejectPullRequest` requires `prNumber` and closes it without merging.
 
 Reviews apply immediately; preview is unsupported. Repository refusals return
 `success: false`; MCP additionally reports `isError` with code
@@ -480,16 +480,16 @@ for review. The three mutations use POST; review bodies are `{}`.
 
 ### Ledger lifecycle
 
-`manageLedgers` requires administrative authority and applies changes
-immediately. It offers no preview.
+`createLedger`, `updateLedger`, and `deleteLedger` require administrative
+authority and apply changes immediately. They offer no preview.
 
-- `create` requires `name` and accepts `description`, `private`, and `template`
+- `createLedger` requires `name` and accepts `description`, `private`, and `template`
   (`STARTER` or `SAMPLE`; omission selects starter files). Names use lowercase
   letters, numbers, hyphens, and underscores, up to 100 characters. Creation
   uses the authenticated account and accepts no `ledger` selector; the existing
   account policy also permits creation with a ledger-pinned admin credential.
-- `update` accepts `ledger` and optional `name`, `description`, and `private`.
-- `delete` accepts only `ledger` and returns `{ "ledgerId": "owner/name" }`.
+- `updateLedger` accepts `ledger` and optional `name`, `description`, and `private`.
+- `deleteLedger` accepts only `ledger` and returns `{ "ledgerId": "owner/name" }`.
 
 For update/delete, unpinned credentials must supply `ledger`; pinned credentials
 may omit it and cannot select another ledger. Creation and update return ledger
@@ -511,18 +511,18 @@ access credential, which the connector directories forbid an app to handle
 
 ### Collaborator changes
 
-`manageLedgerCollaborators` requires `ledger.admin` and the current relationship
-for its selected operation. Supply `ledger: "owner/name"` for an unpinned
-credential; a pinned credential can omit it.
+Each tool requires `ledger.admin` and the current relationship for its
+operation. Supply `ledger: "owner/name"` for an unpinned credential; a pinned
+credential can omit it.
 
-| Operation | Arguments                                                                    | Effect                                                                                                                        |
-| --------- | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `update`  | Required `collaborator`; optional `permission` (`read`, `write`, or `admin`) | Add or update membership, subject to the existing collaborator limit. Omitted or null permission uses the repository default. |
-| `delete`  | Required `collaborator`                                                      | Remove that member.                                                                                                           |
-| `leave`   | No collaborator or permission argument                                       | Remove the authenticated caller. Owners cannot leave their own ledger.                                                        |
+| Tool                       | Arguments                                                                    | Effect                                                                                                                        |
+| -------------------------- | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `setLedgerCollaborator`    | Required `collaborator`; optional `permission` (`read`, `write`, or `admin`) | Add or update membership, subject to the existing collaborator limit. Omitted or null permission uses the repository default. |
+| `removeLedgerCollaborator` | Required `collaborator`                                                      | Remove that member.                                                                                                           |
+| `leaveLedger`              | No collaborator or permission argument                                       | Remove the authenticated caller. Owners cannot leave their own ledger.                                                        |
 
-These operations apply immediately; preview is not supported. Extra branch
-arguments and `dry_run` are rejected. A membership removal affects the next
+These tools apply immediately; preview is not supported. Undeclared arguments,
+including `dry_run`, are rejected. A membership removal affects the next
 protected call.
 
 ## Resources

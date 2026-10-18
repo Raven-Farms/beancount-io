@@ -285,7 +285,7 @@ describe("classifyOp", () => {
       actions,
     );
     // A grouped MCP dispatcher (one tool spanning verbs with different
-    // canonical actions, e.g. managePullRequests) deliberately has no
+    // canonical actions) deliberately has no
     // transport-level action: the selected service verb authorizes itself.
     const actionsByTool = new Map<string, Set<string | undefined>>();
     for (const entry of VERB_TABLE) {

@@ -3,7 +3,7 @@ import { pullRequestCreateInput } from "../pull-request-routes";
 /**
  * The create contract REST and MCP share: `pullRequestToolInput` re-parses
  * its payload through this schema, so the default below is the reason
- * `managePullRequests` create works without `baseBranch` on both surfaces
+ * `createPullRequest` works without `baseBranch` on both surfaces
  * (GraphQL applies its own `defaultValue: "main"`).
  */
 describe("pullRequestCreateInput", () => {

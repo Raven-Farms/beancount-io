@@ -653,7 +653,7 @@ const LEDGER_ADMIN_VERBS: readonly VerbEntry[] = [
     class: "admin",
     authorizationAction: AUTHORIZATION_ACTIONS.LEDGER_CREATE,
     rest: "POST /api-gateway/v1/ledgers",
-    mcp: "manageLedgers",
+    mcp: "createLedger",
   },
   {
     verb: "Mutation.updateLedger",
@@ -661,7 +661,7 @@ const LEDGER_ADMIN_VERBS: readonly VerbEntry[] = [
     class: "admin",
     authorizationAction: AUTHORIZATION_ACTIONS.LEDGER_ADMINISTRATION_UPDATE,
     rest: "PUT /api-gateway/v1/ledgers/{owner}/{name}",
-    mcp: "manageLedgers",
+    mcp: "updateLedger",
   },
   {
     verb: "Mutation.deleteLedger",
@@ -669,7 +669,7 @@ const LEDGER_ADMIN_VERBS: readonly VerbEntry[] = [
     class: "admin",
     authorizationAction: AUTHORIZATION_ACTIONS.LEDGER_ADMINISTRATION_DELETE,
     rest: "DELETE /api-gateway/v1/ledgers/{owner}/{name}",
-    mcp: "manageLedgers",
+    mcp: "deleteLedger",
   },
   {
     verb: "Query.listPublicKeys",
@@ -730,7 +730,7 @@ const LEDGER_ADMIN_VERBS: readonly VerbEntry[] = [
     class: "admin",
     authorizationAction: AUTHORIZATION_ACTIONS.LEDGER_COLLABORATORS_UPDATE,
     rest: "PUT /api-gateway/v1/ledgers/{owner}/{name}/collaborators/{collaborator}",
-    mcp: "manageLedgerCollaborators",
+    mcp: "setLedgerCollaborator",
   },
   {
     verb: "Mutation.deleteLedgerCollaborator",
@@ -738,7 +738,7 @@ const LEDGER_ADMIN_VERBS: readonly VerbEntry[] = [
     class: "admin",
     authorizationAction: AUTHORIZATION_ACTIONS.LEDGER_COLLABORATORS_DELETE,
     rest: "DELETE /api-gateway/v1/ledgers/{owner}/{name}/collaborators/{collaborator}",
-    mcp: "manageLedgerCollaborators",
+    mcp: "removeLedgerCollaborator",
   },
   {
     verb: "Mutation.leaveLedger",
@@ -746,7 +746,7 @@ const LEDGER_ADMIN_VERBS: readonly VerbEntry[] = [
     class: "admin",
     authorizationAction: AUTHORIZATION_ACTIONS.LEDGER_COLLABORATORS_LEAVE,
     rest: "POST /api-gateway/v1/ledgers/{owner}/{name}/leave",
-    mcp: "manageLedgerCollaborators",
+    mcp: "leaveLedger",
   },
 ];
 
@@ -1548,7 +1548,7 @@ const GITEA_SOCIAL_VERBS: readonly VerbEntry[] = [
     gql: "Mutation.createPullRequestFromPatch",
     class: "write" as const,
     rest: "POST /api-gateway/v1/ledgers/{owner}/{name}/pull-requests",
-    mcp: "managePullRequests",
+    mcp: "createPullRequest",
     authorizationAction: AUTHORIZATION_ACTIONS.LEDGER_PULL_REQUEST_CREATE,
   },
   {
@@ -1556,7 +1556,7 @@ const GITEA_SOCIAL_VERBS: readonly VerbEntry[] = [
     gql: "Mutation.approvePullRequest",
     class: "write" as const,
     rest: "POST /api-gateway/v1/ledgers/{owner}/{name}/pull-requests/{prNumber}/approve",
-    mcp: "managePullRequests",
+    mcp: "approvePullRequest",
     authorizationAction: AUTHORIZATION_ACTIONS.LEDGER_PULL_REQUEST_APPROVE,
   },
   {
@@ -1564,7 +1564,7 @@ const GITEA_SOCIAL_VERBS: readonly VerbEntry[] = [
     gql: "Mutation.rejectPullRequest",
     class: "write" as const,
     rest: "POST /api-gateway/v1/ledgers/{owner}/{name}/pull-requests/{prNumber}/reject",
-    mcp: "managePullRequests",
+    mcp: "rejectPullRequest",
     authorizationAction: AUTHORIZATION_ACTIONS.LEDGER_PULL_REQUEST_REJECT,
   },
 ];

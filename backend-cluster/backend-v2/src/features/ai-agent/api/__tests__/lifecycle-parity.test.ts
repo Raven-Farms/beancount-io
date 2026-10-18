@@ -32,6 +32,26 @@ import type { Identity } from "@/server/api/identity";
 import type { AppConfig } from "@/config/config";
 import type { AppLayers } from "@/foundation/composition";
 import type { McpRequestContext } from "../mcp-context";
+
+/**
+ * The MCP tool for one manageLedgers operation (ADR 019, 2026-10-18; w1/m38):
+ * each operation is its own tool, so the call names it and drops `operation`.
+ * An unknown operation names a tool that does not exist.
+ */
+const MCP_TOOL_FOR: Readonly<Record<string, string>> = {
+  create: "createLedger",
+  update: "updateLedger",
+  delete: "deleteLedger",
+};
+function perOperation(args: Record<string, unknown>) {
+  const { operation, ...rest } = args;
+  return {
+    name:
+      MCP_TOOL_FOR[String(operation)] ?? `no-such-tool-${String(operation)}`,
+    arguments: rest,
+  };
+}
+
 const config = {
   api: { scopeEnforcement: "enforce" },
   gitea: { hostname: "example.com", externalHttpPort: 443, sshPort: 22 },
@@ -418,14 +438,13 @@ async function fixture(caller = identity, appId?: string) {
             return { failed: true, data: undefined, error: failure.data };
           }
         }
-        const r = await client.callTool({
-          name: "manageLedgers",
-          arguments: {
+        const r = await client.callTool(
+          perOperation({
             operation,
             ...(operation !== "create" && { ledger: ledgerId }),
             ...input,
-          },
-        });
+          }),
+        );
         return {
           failed: r.isError === true,
           data: (r.structuredContent as { result?: unknown } | undefined)
@@ -936,10 +955,9 @@ describe("ledger lifecycle through actual adapters and workflow", () => {
         { operation: "delete", ledger: "alice/main", name: "other" },
         { operation: "delete", ledger: "alice/main", dry_run: true },
       ])
-        expect(
-          (await f.client.callTool({ name: "manageLedgers", arguments: args }))
-            .isError,
-        ).toBe(true);
+        expect((await f.client.callTool(perOperation(args))).isError).toBe(
+          true,
+        );
       expect(f.create).not.toHaveBeenCalled();
       expect(f.update).not.toHaveBeenCalled();
       expect(f.remove).not.toHaveBeenCalled();
@@ -989,10 +1007,9 @@ describe("ledger lifecycle through actual adapters and workflow", () => {
   it("uses a pinned target when the MCP mutation omits ledger", async () => {
     const f = await fixture({ ...identity, ledgerScope: "alice/main" });
     try {
-      const result = await f.client.callTool({
-        name: "manageLedgers",
-        arguments: { operation: "update", description: "pinned" },
-      });
+      const result = await f.client.callTool(
+        perOperation({ operation: "update", description: "pinned" }),
+      );
       expect(result.isError).not.toBe(true);
       expect(f.records.get("alice/main")?.description).toBe("pinned");
     } finally {

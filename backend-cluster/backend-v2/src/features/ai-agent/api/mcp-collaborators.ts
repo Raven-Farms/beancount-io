@@ -28,6 +28,18 @@ export const collaboratorToolInput = z
   })
   .strict();
 
+/** One MCP tool per collaborator operation (ADR 019, 2026-10-18; w1/m38). */
+export const COLLABORATOR_OPERATION_SCHEMAS = {
+  update: collaboratorUpdateInput.extend({
+    ledger: ledgerSelection,
+    permission: collaboratorUpdateInput.shape.permission.describe(
+      "read, write, or admin; omitted or null uses the repository default.",
+    ),
+  }),
+  delete: collaboratorDeleteInput.extend({ ledger: ledgerSelection }),
+  leave: collaboratorLeaveInput.extend({ ledger: ledgerSelection }),
+} as const;
+
 export const collaboratorToolOutput = mcpOutputSchema(
   toolOutputSchema(collaboratorResultSchema),
 );

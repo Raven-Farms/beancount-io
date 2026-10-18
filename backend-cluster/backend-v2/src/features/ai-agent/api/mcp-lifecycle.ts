@@ -23,6 +23,21 @@ export const lifecycleToolInput = z
     template: ledgerCreateInput.shape.template,
   })
   .strict();
+/**
+ * One MCP tool per lifecycle operation (ADR 019, 2026-10-18; w1/m38), each
+ * taking exactly REST's input for that operation plus the ledger target.
+ */
+const existingLedger = z
+  .string()
+  .optional()
+  .describe(
+    "Existing ledger as owner/name. Unpinned credentials must specify it; a pinned credential may omit it.",
+  );
+export const LIFECYCLE_OPERATION_SCHEMAS = {
+  create: ledgerCreateInput,
+  update: ledgerUpdateInput.extend({ ledger: existingLedger }),
+  delete: ledgerDeleteInput.extend({ ledger: existingLedger }),
+} as const;
 export const lifecycleToolOutput = mcpOutputSchema(
   toolOutputSchema(
     z.union([ledgerResultSchema, z.object({ ledgerId: z.string() })]),

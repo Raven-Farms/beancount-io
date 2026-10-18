@@ -17,7 +17,7 @@ import {
   PLAN_WORDING,
   STEERING_WORDING,
 } from "@/features/ai-agent/api/__tests__/directory-wording";
-import { mcpToolSecuritySchemes, VERB_TABLE } from "../op-class";
+import { mcpToolSecuritySchemes } from "../op-class";
 
 /**
  * The lean, use-ordered tool list (w2/m27:t005).
@@ -188,12 +188,13 @@ describe("MCP tool list", () => {
     // tools. Measured on the raw response from here on, since the parsed one
     // no longer shows everything an agent pays for.
     //
-    // 80 KB since w1/m38 split the grouped tools into one tool per operation
-    // (ADR 019, 2026-10-18): the two bank tools became eight, measured at
-    // 77.7 KB. Each remaining split moves this by measurement.
+    // 90 KB since w1/m38 split the grouped tools into one tool per operation
+    // (ADR 019, 2026-10-18): the two bank tools became eight (77.7 KB), then
+    // ledger lifecycle, collaborators, and pull requests became three each
+    // (87.4 KB). The editing split and t005 set the final number.
     const { tools } = await listToolsRaw();
     const bytes = Buffer.byteLength(JSON.stringify(tools), "utf8");
-    expect(bytes).toBeLessThan(80 * 1024);
+    expect(bytes).toBeLessThan(90 * 1024);
   });
 
   it("publishes all four annotations on every tool", async () => {
@@ -271,14 +272,10 @@ describe("MCP tool security schemes", () => {
     expect(mcpToolSecuritySchemes("unlinkBankConnection")).toEqual([
       { type: "oauth2", scopes: ["ledger.admin"] },
     ]);
-    // A grouped tool whose branches span classes declares the strongest.
-    const classes = new Set(
-      VERB_TABLE.filter((e) => e.mcp === "manageLedgers").map((e) => e.class),
-    );
-    expect(classes.has("admin")).toBe(true);
-    expect(mcpToolSecuritySchemes("manageLedgers")).toEqual([
+    expect(mcpToolSecuritySchemes("deleteLedger")).toEqual([
       { type: "oauth2", scopes: ["ledger.admin"] },
     ]);
+    // A tool binding several verbs of different classes declares the strongest.
     expect(
       mcpToolSecuritySchemes("mixed", [
         { mcp: "mixed", class: "read" },

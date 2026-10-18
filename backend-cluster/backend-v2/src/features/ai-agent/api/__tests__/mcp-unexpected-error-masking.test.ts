@@ -42,8 +42,8 @@ async function connect(env: string, failure: Error) {
   return {
     call: () =>
       client.callTool({
-        name: "manageLedgers",
-        arguments: { operation: "delete", ledger: "alice/main" },
+        name: "deleteLedger",
+        arguments: { ledger: "alice/main" },
       }),
     read: () =>
       client.readResource({ uri: "beancount://alice/main/collaborators" }),

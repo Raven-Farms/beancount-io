@@ -19,6 +19,26 @@ import type { Identity } from "@/server/api/identity";
 import type { AppConfig } from "@/config/config";
 import type { AppLayers } from "@/foundation/composition";
 import type { McpRequestContext } from "../mcp-context";
+
+/**
+ * The MCP tool for one managePullRequests operation (ADR 019, 2026-10-18; w1/m38):
+ * each operation is its own tool, so the call names it and drops `operation`.
+ * An unknown operation names a tool that does not exist.
+ */
+const MCP_TOOL_FOR: Readonly<Record<string, string>> = {
+  create: "createPullRequest",
+  approve: "approvePullRequest",
+  reject: "rejectPullRequest",
+};
+function perOperation(args: Record<string, unknown>) {
+  const { operation, ...rest } = args;
+  return {
+    name:
+      MCP_TOOL_FOR[String(operation)] ?? `no-such-tool-${String(operation)}`,
+    arguments: rest,
+  };
+}
+
 const config = { api: { scopeEnforcement: "enforce" } } as AppConfig;
 // MCP masks an uncoded failure's message in production; REST and GraphQL
 // keep a DomainError's.
@@ -239,15 +259,14 @@ async function fixture(caller = identity, appConfig = config) {
         return { failed: !r.ok, data: await r.json() };
       }
       if (surface === "mcp") {
-        const r = await client.callTool({
-          name: "managePullRequests",
-          arguments: {
+        const r = await client.callTool(
+          perOperation({
             operation,
             ledger: "alice/main",
             ...(operation !== "create" && { prNumber: 1 }),
             ...input,
-          },
-        });
+          }),
+        );
         return {
           failed: r.isError === true,
           data: (r.structuredContent as { result?: unknown } | undefined)
@@ -564,10 +583,9 @@ describe("PR creation, inspection, and review through real adapters/workflow/ser
       const rest = await f.call("rest", "create", input);
       expect(rest.failed).toBe(true);
       expect(rest.data).toMatchObject({ error: { code: "NOT_FOUND" } });
-      const mcp = await f.client.callTool({
-        name: "managePullRequests",
-        arguments: { operation: "create", ledger: "alice/main", ...input },
-      });
+      const mcp = await f.client.callTool(
+        perOperation({ operation: "create", ledger: "alice/main", ...input }),
+      );
       expect(mcp.isError).toBe(true);
       expect(mcp.structuredContent).toMatchObject({
         error: {
@@ -610,10 +628,9 @@ describe("PR creation, inspection, and review through real adapters/workflow/ser
         const rest = await f.call("rest", operation);
         expect(rest.failed).toBe(true);
         expect(rest.data).toMatchObject({ error: { code: "NOT_FOUND" } });
-        const mcp = await f.client.callTool({
-          name: "managePullRequests",
-          arguments: { operation, ledger: "alice/main", prNumber: 1 },
-        });
+        const mcp = await f.client.callTool(
+          perOperation({ operation, ledger: "alice/main", prNumber: 1 }),
+        );
         expect(mcp.isError).toBe(true);
         expect(mcp.structuredContent).toMatchObject({
           error: { code: "NOT_FOUND" },
@@ -631,10 +648,9 @@ describe("PR creation, inspection, and review through real adapters/workflow/ser
     const input = { title: "Patch", ...validCreate, changes };
     const createMutation = `mutation($input:CreatePRFromPatchInput!){createPullRequestFromPatch(input:$input){${resultFields}}}`;
     const mcpCreate = (f: Awaited<ReturnType<typeof fixture>>) =>
-      f.client.callTool({
-        name: "managePullRequests",
-        arguments: { operation: "create", ledger: "alice/main", ...input },
-      });
+      f.client.callTool(
+        perOperation({ operation: "create", ledger: "alice/main", ...input }),
+      );
 
     it.each([
       ["repoCreateBranch", "creating branch pr-patch-"],
@@ -728,14 +744,9 @@ describe("PR creation, inspection, and review through real adapters/workflow/ser
           dry_run: true,
         },
       ])
-        expect(
-          (
-            await f.client.callTool({
-              name: "managePullRequests",
-              arguments: args,
-            })
-          ).isError,
-        ).toBe(true);
+        expect((await f.client.callTool(perOperation(args))).isError).toBe(
+          true,
+        );
     } finally {
       await f.close();
     }

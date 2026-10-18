@@ -37,17 +37,17 @@ import {
   refreshManagedPricesOutput,
 } from "./mcp-managed-prices";
 import {
-  pullRequestToolInput,
+  PULL_REQUEST_OPERATION_SCHEMAS,
   pullRequestToolOutput,
   executePullRequestTool,
 } from "./mcp-pull-requests";
 import {
-  lifecycleToolInput,
+  LIFECYCLE_OPERATION_SCHEMAS,
   lifecycleToolOutput,
   executeLifecycleTool,
 } from "./mcp-lifecycle";
 import {
-  collaboratorToolInput,
+  COLLABORATOR_OPERATION_SCHEMAS,
   collaboratorToolOutput,
   executeCollaboratorTool,
 } from "./mcp-collaborators";
@@ -186,6 +186,30 @@ function withLedger(
     const { ledger, ...argumentsWithoutTarget } = input as { ledger?: string };
     const ledgerId = resolveMcpLedger(context, ledger);
     return execute({ ...context, ledgerId }, argumentsWithoutTarget as never);
+  };
+}
+
+/**
+ * One operation of a shared executor as its own tool (ADR 019, 2026-10-18;
+ * w1/m38): the tool publishes only that operation's fields and fixes the
+ * `operation` the executor dispatches on.
+ */
+function operationTool(
+  operation: string,
+  descriptor: Omit<McpToolDescriptor, "execute"> & {
+    readonly execute: (
+      toolCtx: McpRequestContext,
+      input: never,
+    ) => Promise<unknown>;
+  },
+): McpToolDescriptor {
+  return {
+    ...descriptor,
+    execute: (context, input) =>
+      descriptor.execute(context, {
+        ...(input as object),
+        operation,
+      } as never),
   };
 }
 
@@ -692,34 +716,92 @@ export const MCP_TOOLS: readonly McpToolDescriptor[] = [
     outputSchema: mcpOutputSchema(listStagedBankTransactionsOutput),
     execute: withLedger(executeListStagedBankTransactions),
   },
-  {
-    name: "managePullRequests",
-    title: "Create and Review Pull Requests",
-    annotations: DESTRUCTIVE,
+  operationTool("create", {
+    name: "createPullRequest",
+    title: "Create Pull Request",
+    annotations: APPEND,
     description:
-      "Create a proposed set of file changes, approve it by merging, or reject it by closing. create requires title, description, clearCommitMessage, and changes [{path,content}]; an omitted baseBranch targets main. approve/reject require prNumber only. Reviews apply immediately. A repository server failure is SERVICE_UNAVAILABLE naming the failed step.",
-    inputSchema: pullRequestToolInput,
+      "Propose a set of file changes as a pull request. Requires title, description, clearCommitMessage, and changes [{path,content}]; an omitted baseBranch targets main. A repository server failure is SERVICE_UNAVAILABLE naming the failed step.",
+    inputSchema: PULL_REQUEST_OPERATION_SCHEMAS.create,
     outputSchema: pullRequestToolOutput,
     execute: executePullRequestTool,
-  },
-  {
-    name: "manageLedgers",
-    title: "Manage Ledger Lifecycle",
+  }),
+  operationTool("approve", {
+    name: "approvePullRequest",
+    title: "Approve Pull Request",
     annotations: DESTRUCTIVE,
     description:
-      "Create, update, or delete a ledger with administrative authority. create requires name and accepts description, private, template: STARTER (default, including null) has options and accounts without transactions or opening balances; SAMPLE has demonstration transactions. Templates affect only new ledgers. update takes ledger and optional name, description, private; delete takes only ledger. Pinned credentials may omit ledger on update/delete.",
-    inputSchema: lifecycleToolInput,
+      "Approve a pull request by merging it into its base branch; the merge applies immediately. A repository server failure is SERVICE_UNAVAILABLE naming the failed step.",
+    inputSchema: PULL_REQUEST_OPERATION_SCHEMAS.approve,
+    outputSchema: pullRequestToolOutput,
+    execute: executePullRequestTool,
+  }),
+  operationTool("reject", {
+    name: "rejectPullRequest",
+    title: "Reject Pull Request",
+    annotations: DESTRUCTIVE,
+    description:
+      "Reject a pull request by closing it without merging; applies immediately.",
+    inputSchema: PULL_REQUEST_OPERATION_SCHEMAS.reject,
+    outputSchema: pullRequestToolOutput,
+    execute: executePullRequestTool,
+  }),
+  operationTool("create", {
+    name: "createLedger",
+    title: "Create Ledger",
+    annotations: APPEND,
+    description:
+      "Create a ledger owned by the authenticated user. Requires name; accepts description, private, and template: STARTER (default, including null) has options and accounts without transactions or opening balances; SAMPLE has demonstration transactions.",
+    inputSchema: LIFECYCLE_OPERATION_SCHEMAS.create,
     outputSchema: lifecycleToolOutput,
     execute: executeLifecycleTool,
-  },
-  {
-    name: "manageLedgerCollaborators",
-    title: "Manage Ledger Collaborators",
-    annotations: DESTRUCTIVE,
+  }),
+  operationTool("update", {
+    name: "updateLedger",
+    title: "Update Ledger Settings",
+    annotations: { ...DESTRUCTIVE, idempotentHint: true },
     description:
-      "Update or delete a ledger collaborator, or leave the ledger as the authenticated caller. update requires collaborator and accepts permission; delete requires only collaborator; leave accepts neither.",
-    inputSchema: collaboratorToolInput,
+      "Change a ledger's name, description, or privacy; omitted fields stay as they are.",
+    inputSchema: LIFECYCLE_OPERATION_SCHEMAS.update,
+    outputSchema: lifecycleToolOutput,
+    execute: executeLifecycleTool,
+  }),
+  operationTool("delete", {
+    name: "deleteLedger",
+    title: "Delete Ledger",
+    annotations: DESTRUCTIVE,
+    description: "Permanently delete a ledger, including its history.",
+    inputSchema: LIFECYCLE_OPERATION_SCHEMAS.delete,
+    outputSchema: lifecycleToolOutput,
+    execute: executeLifecycleTool,
+  }),
+  operationTool("update", {
+    name: "setLedgerCollaborator",
+    title: "Add or Update Ledger Collaborator",
+    annotations: { ...DESTRUCTIVE, idempotentHint: true },
+    description:
+      "Add a collaborator to a ledger, or change an existing collaborator's permission (read, write, or admin).",
+    inputSchema: COLLABORATOR_OPERATION_SCHEMAS.update,
     outputSchema: collaboratorToolOutput,
     execute: executeCollaboratorTool,
-  },
+  }),
+  operationTool("delete", {
+    name: "removeLedgerCollaborator",
+    title: "Remove Ledger Collaborator",
+    annotations: DESTRUCTIVE,
+    description: "Remove a collaborator's access to a ledger.",
+    inputSchema: COLLABORATOR_OPERATION_SCHEMAS.delete,
+    outputSchema: collaboratorToolOutput,
+    execute: executeCollaboratorTool,
+  }),
+  operationTool("leave", {
+    name: "leaveLedger",
+    title: "Leave Ledger",
+    annotations: DESTRUCTIVE,
+    description:
+      "Remove the authenticated user's own access to a ledger they collaborate on.",
+    inputSchema: COLLABORATOR_OPERATION_SCHEMAS.leave,
+    outputSchema: collaboratorToolOutput,
+    execute: executeCollaboratorTool,
+  }),
 ];

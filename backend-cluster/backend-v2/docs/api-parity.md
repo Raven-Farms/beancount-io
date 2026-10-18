@@ -301,8 +301,9 @@ Unicode branch names, diff statistics, and empty repositories.
 
 Collaborator listing, permission inspection, add/update, deletion, and leaving
 now have REST/MCP adapters over `LedgerCollaboratorsWorkflow`. The two reads
-remain administrative resources; `manageLedgerCollaborators` dispatches the
-three mutations to their distinct canonical actions. `collaborator-parity.test.ts`
+remain administrative resources; the three mutations are the MCP tools
+`setLedgerCollaborator`, `removeLedgerCollaborator`, and `leaveLedger`, each
+bound to its own canonical action. `collaborator-parity.test.ts`
 uses the real workflow, PDP, and source-backed relationship evaluator with
 controlled upstream membership data. It verifies persisted membership effects,
 subsequent revocation, owner-leave refusal, tier limits, default permissions,
@@ -322,8 +323,8 @@ failures, default/read-only flags, and insufficient-scope refusals before
 upstream work. Repository key-format validation remains upstream; these tests
 do not establish live Gitea integration.
 
-Ledger creation, update, and deletion now have REST bindings and a grouped
-`manageLedgers` MCP tool over `LedgerWorkflow`. Creation uses account authority;
+Ledger creation, update, and deletion now have REST bindings and the MCP tools
+`createLedger`, `updateLedger`, and `deleteLedger` over `LedgerWorkflow`. Creation uses account authority;
 update/delete resolve an existing ledger under its pin and administrative
 relationship. Nullable command types now accurately describe GraphQL's existing
 nullable inputs. The lifecycle adapter tests exercise actual workflows, the PDP,
