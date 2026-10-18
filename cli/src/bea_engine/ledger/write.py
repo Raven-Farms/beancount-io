@@ -2128,12 +2128,27 @@ def validate_candidate(
         if isinstance(error.entry, Open) and error.message.startswith("Duplicate open directive for "):
             if lifecycles is None:
                 lifecycles = _lifecycles(entries)
-            existing = next(
-                (e for e in lifecycles.get(error.entry.account, []) if isinstance(e, Open) and e is not error.entry),
-                None,
-            )
-            if existing is not None:
-                hints.append(_duplicate_open_hint(existing, error.entry, filenames))
+            opens = [e for e in lifecycles.get(error.entry.account, []) if isinstance(e, Open)]
+            existing = None
+            duplicate = None
+            for opened in opens:
+                path = Path(opened.meta.get("filename", ""))
+                original = filenames.get(path, path).resolve()
+                line = opened.meta.get("lineno")
+                # Beancount blames the later-dated open, which can be the
+                # existing one. Only an entry within the original bytes is
+                # an open the user can edit (w5/658).
+                if isinstance(line, int) and 1 <= line <= original_line_counts.get(original, 0):
+                    if existing is None:
+                        existing = opened
+                elif duplicate is None or opened is error.entry:
+                    duplicate = opened
+            # With pre-existing duplicates, merge the newly proposed open's
+            # currencies, rather than those of another persisted open.
+            if duplicate is None:
+                duplicate = next((e for e in opens if e is not existing), None)
+            if existing is not None and duplicate is not None:
+                hints.append(_duplicate_open_hint(existing, duplicate, filenames))
         if isinstance(error.entry, Pad) and error.message.startswith("Invalid reference to "):
             invalid_pad_accounts = True
             # Worded by how the pad arrived: `add balance --pad-from` wrote no
