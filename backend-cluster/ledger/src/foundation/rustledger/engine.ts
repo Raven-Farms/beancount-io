@@ -779,19 +779,37 @@ export async function queryLedgerFiles(
 }
 
 /**
+ * Counts by content, so the map one write projects is a hit when it comes back
+ * as the next write's committed ledger, and a commit is counted once however
+ * many writes and push checks ask. Values are numbers: a few hundred entries
+ * cost nothing but their keys.
+ */
+const directiveCountCache = new CoalescingLruCache<number>(256);
+
+/**
  * How many directives a ledger holds, following `include` from `entryPoint`.
  * The parse is CPU-proportional to the ledger's size, so request-path callers
  * use this and it runs in the worker pool, under its queue bound and timeout.
+ * A failed count is not cached.
  */
-export async function countLedgerDirectives(
+export function countLedgerDirectives(
   files: FileMap,
   entryPoint: string,
 ): Promise<number> {
-  // Jest cannot bootstrap the worker entry; see parseLedgerFiles.
-  if (process.env.JEST_WORKER_ID !== undefined) {
-    return countLedgerDirectivesInProcess(files, entryPoint);
-  }
-  return getRustledgerWorkerPool().countDirectives(files, entryPoint);
+  const key = buildSnapshotCacheKey({
+    files,
+    entryPoint,
+    // WASM-native plugins may read the clock; same rationale as the snapshot cache.
+    effectiveToday: localTodayStr(),
+    repoPaths: undefined,
+    applyTsPlugins: false,
+  });
+  return directiveCountCache.getOrLoad(key, () =>
+    // Jest cannot bootstrap the worker entry; see parseLedgerFiles.
+    process.env.JEST_WORKER_ID !== undefined
+      ? countLedgerDirectivesInProcess(files, entryPoint)
+      : getRustledgerWorkerPool().countDirectives(files, entryPoint),
+  );
 }
 
 /** Worker-local implementation; request-path callers use countLedgerDirectives. */
@@ -812,9 +830,7 @@ export function countDirectives(
   content: string,
   entryPoint = "main.beancount",
 ): Promise<number> {
-  return withLedger({ [entryPoint]: content }, entryPoint, (ledger) =>
-    ledger.directiveCount(),
-  );
+  return countLedgerDirectivesInProcess({ [entryPoint]: content }, entryPoint);
 }
 
 /** Format a beancount source string with rustledger's canonical alignment. */

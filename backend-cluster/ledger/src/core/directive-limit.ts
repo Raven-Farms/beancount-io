@@ -5,10 +5,7 @@ import {
   type GiteaCommitClient,
 } from "@/foundation/clients/load-cached-ledger-file-map";
 import { getCacheHelper } from "@/foundation/clients/build-cache";
-import {
-  CoalescingLruCache,
-  countLedgerDirectives,
-} from "@/foundation/rustledger";
+import { countLedgerDirectives } from "@/foundation/rustledger";
 import { getMaxDirectives } from "@/core/backend-v2-limits";
 import { DomainError, ErrorCategory } from "@/shared/errors";
 import { logger } from "@/shared/logger";
@@ -41,28 +38,22 @@ async function countMap(files: Record<string, string>): Promise<number> {
   return countLedgerDirectives(files, "main.bean");
 }
 
-/**
- * A commit's count, which every checked write and every push-gate count would
- * otherwise reparse. Keyed by the immutable commit, so a push moves to a new
- * key; the values are numbers, so a few hundred entries cost nothing.
- */
-const committedCounts = new CoalescingLruCache<number>(256);
+interface CommittedLedger {
+  files: Record<string, string>;
+  sha: string | null;
+}
 
 /**
- * The committed file map at HEAD and its directive count. Committed files
- * only: managed price feeds are virtual, not the customer's directives (ADR 015
- * section 9), so a feed can never push a ledger over its tier limit, and a
- * count never triggers a feed fetch.
+ * The committed file map at HEAD. Committed files only: managed price feeds are
+ * virtual, not the customer's directives (ADR 015 section 9), so a feed can
+ * never push a ledger over its tier limit, and a count never triggers a feed
+ * fetch.
  */
-async function loadCommittedCount(
+async function loadCommitted(
   client: GiteaApi<unknown>,
   owner: string,
   repoName: string,
-): Promise<{
-  files: Record<string, string>;
-  count: number;
-  sha: string | null;
-}> {
+): Promise<CommittedLedger> {
   const commitClient = client as unknown as GiteaCommitClient;
   // One Gitea round trip: both resolve HEAD through the same coalesced call.
   const [sha, { files }] = await Promise.all([
@@ -71,12 +62,7 @@ async function loadCommittedCount(
       committedOnly: true,
     }),
   ]);
-  const count = sha
-    ? await committedCounts.getOrLoad(`${owner}/${repoName}@${sha}`, () =>
-        countMap(files),
-      )
-    : await countMap(files);
-  return { files, count, sha: sha ?? null };
+  return { files, sha: sha ?? null };
 }
 
 export interface DirectiveCount {
@@ -101,8 +87,8 @@ export async function countDirectivesForRepo(
   owner: string,
   repoName: string,
 ): Promise<DirectiveCount> {
-  const { count, sha } = await loadCommittedCount(client, owner, repoName);
-  return { count, sha };
+  const { files, sha } = await loadCommitted(client, owner, repoName);
+  return { count: await countMap(files), sha };
 }
 
 /**
@@ -151,10 +137,7 @@ export async function checkDirectiveLimitForFileChanges(
     limit = await getMaxDirectives(owner);
     if (limit === null || limit < 0) return;
 
-    const committed = await loadCommittedCount(client, owner, repoName);
-    const { files } = committed;
-    currentTotal = committed.count;
-
+    const { files } = await loadCommitted(client, owner, repoName);
     const projected: Record<string, string> = { ...files };
     for (const [path, newBase64] of beanChanges) {
       if (newBase64 === null) {
@@ -164,12 +147,16 @@ export async function checkDirectiveLimitForFileChanges(
       }
     }
     projectedTotal = await countMap(projected);
+    // A write that stays within the limit is allowed whatever the ledger holds
+    // now, so only a write past it pays for the current count.
+    if (projectedTotal <= limit) return;
+    currentTotal = await countMap(files);
   } catch (err) {
     log.warn("directive-limit pre-check failed open", { owner, repoName, err });
     return;
   }
 
-  if (projectedTotal > limit && projectedTotal > currentTotal) {
+  if (projectedTotal > currentTotal) {
     throw new DirectiveLimitExceededError(limit, projectedTotal);
   }
 }

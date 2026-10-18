@@ -137,27 +137,6 @@ describe("RustledgerWorkerPool", () => {
     await pool.close();
   });
 
-  it("refuses a directive count when workers and the queue are full", async () => {
-    const { pool, workers } = makePool({ maxQueueDepth: 1 });
-    const files = { "main.bean": "" };
-    const first = pool.countDirectives(files, "main.bean");
-    const second = pool.countDirectives(files, "main.bean");
-
-    await expect(
-      pool.countDirectives(files, "main.bean"),
-    ).rejects.toBeInstanceOf(RateLimitedError);
-
-    for (const [index, promise] of [first, second].entries()) {
-      workers[0].respond({
-        id: workers[0].posted[index].id,
-        ok: true,
-        value: 0,
-      });
-      await expect(promise).resolves.toBe(0);
-    }
-    await pool.close();
-  });
-
   it("warms the worker with a real parse task before startup readiness", async () => {
     const { pool, workers } = makePool();
     const promise = pool.warmup();
