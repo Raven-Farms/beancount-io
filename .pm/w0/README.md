@@ -7,6 +7,10 @@
 - [x] **m1** — [Translate the English copies shipped in non-English catalogs, and guard against them](./done/m1/README.md) (8 tasks) ← from dashboard QA 2026-10-15
 - [x] **m2** — [Structured ledger writes refuse changes that would break the ledger](./done/m2/README.md) (7 tasks) ← from /pm-brainstorm for w0 2026-10-17
 - [x] **m3** — [Make i18n:prepare safe to run and honest about English copies](./done/m3/README.md) (8 tasks) ← from /pm-brainstorm for w0 2026-10-17
+- [ ] **m4** — [A password reset ends every session the old password issued](./m4/README.md) (6 tasks) ← from security review 2026-10-18
+- [ ] **m5** — [Directive counting runs on the worker pool, not the request thread](./m5/README.md) (6 tasks) ← from security review 2026-10-18
+- [ ] **m6** — [Every app-mediated ledger write enforces the directive limit at one boundary](./m6/README.md) (7 tasks) ← from security review 2026-10-18; after m5
+- [ ] **m7** — [Login limits key on a trusted client address and on the account](./m7/README.md) (6 tasks) ← from security review 2026-10-18
 
 ## Dropped
 
@@ -18,5 +22,9 @@
 
 ## Inbox
 
-No open notes. Resolved notes are in [`done/`](./done/).
+- [051 — Account deletion accepts an application-API OAuth token of any scope (latent; decision first, see w2/m12)](./051.md)
+- [052 — A Plaid webhook that fails signature verification is still queued as pending work](./052.md)
+- [053 — Google Analytics records the full URL of the password-reset and one-time-login pages, tokens included](./053.md)
+
+Resolved notes are in [`done/`](./done/).
 
