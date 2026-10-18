@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [681 — `list --on-disk` drops a real document (cwd-dependent) or a `pushtag` note when a plugin copies it (incomplete fix of w5/507)](./681.md)
 - [682 — `add price`/`add balance` still advise `--allow-errors` for an unopened pad account (incomplete fix of w5/508)](./682.md)
 - [683 — BQL patterns built with `&&`/`||`/`~~` at run time exit 0 with a raw FutureWarning (incomplete fix of w5/509)](./683.md)
 - [684 — `bea import` on a ledger with a syntax error still offers `--allow-errors` (gap in w5/508)](./684.md)
