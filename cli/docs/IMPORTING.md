@@ -411,6 +411,10 @@ process it runs prints — is captured in the preview's `importer_output` field
 so it does not corrupt JSON. If the importer then raises, what it printed first
 is kept: human output shows it on stderr ahead of the error, and JSON carries
 it as `error.result.importer_output`.
+A configuration that calls `sys.exit` — a Beangulp ingest script whose
+`beangulp.Ingest(CONFIG)()` is not under `if __name__ == "__main__":` — is
+reported the same way, as `Importer failed (SystemExit: N)` with that hint and
+exit 1, before anything is written.
 For importer exceptions, put `--debug` before the command to see the traceback:
 
 ```bash norun

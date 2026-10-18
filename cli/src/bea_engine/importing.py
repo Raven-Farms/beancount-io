@@ -78,6 +78,27 @@ def _capturing(logs: io.StringIO) -> Iterator[None]:
             logs.write(sink.read().decode("utf-8", "replace"))
 
 
+def _exited(exc: SystemExit, logs: io.StringIO) -> EngineError:
+    """An importer configuration that called `sys.exit`, as the importer failure it is.
+
+    A Beangulp ingest script reused as `--config` runs `Ingest(CONFIG)()`
+    when it is loaded, and Click exits. `SystemExit` is no `Exception`, so it
+    passed the importer guard, the engine answered nothing, and the frontend
+    said the engine "did not answer" and, for `--apply`, that the outcome was
+    unknown, though nothing had been written (w5/634).
+    """
+    status = "" if exc.code is None else f": {exc.code}"
+    return _with_output(
+        LedgerError(
+            f"Importer failed (SystemExit{status}): the configuration called sys.exit, as an unguarded "
+            'beangulp.Ingest(CONFIG)() does. Put that call under if __name__ == "__main__": to use the '
+            "script with --config.",
+            traceback=_traceback(exc),
+        ),
+        logs,
+    )
+
+
 def _with_output(error: EngineError, logs: io.StringIO) -> EngineError:
     """Attach what the importer printed before it failed to the failure.
 
@@ -333,6 +354,8 @@ def answer(
                 ),
                 logs,
             ) from exc
+        except SystemExit as exc:
+            raise _exited(exc, logs) from exc
         except Exception as exc:
             raise _with_output(
                 LedgerError(f"Importer failed ({type(exc).__name__}): {exc}.", traceback=_traceback(exc)), logs
