@@ -41,16 +41,15 @@ _ACCOUNTS = (
 )
 
 
-#: A Beancount commodity symbol, as the loader spells one. This is upstream's
-#: `CURRENCY_RE` minus its leading-`/` commodity-pair alternative, which is not
-#: an operating currency: one uppercase letter, then anything from the symbol
-#: alphabet, ending on a word character. Upstream ends its pattern with `\b`,
-#: which is why `X_` is a symbol and `A.` is not — and why the last character is
-#: *optional*, so `F` and `C` are symbols too. Requiring two characters refused
-#: single-letter tickers that the loader accepts and `bea check` validates.
+#: One Beancount commodity token, as the lexer accepts it on an `open` line:
+#: one uppercase letter, optionally followed by the symbol alphabet and an
+#: alphanumeric final character. The general-purpose `CURRENCY_RE` also
+#: matches a trailing underscore, but the lexer refuses it (w5/693). Keep
+#: single-letter tickers such as `F` and internal punctuation such as `NT.TO`.
+#: The leading-`/` commodity-pair form is not an operating currency here.
 #: Restated rather than imported: the frontend loads no Beancount, and
-#: `tests/test_init_currency_symbols.py` pins it against upstream's own regex.
-_CURRENCY_SYMBOL = re.compile(r"[A-Z](?:[A-Z0-9'._-]*[A-Z0-9_])?")
+#: `tests/test_init_currency_symbols.py` verifies the ledger token boundary.
+_CURRENCY_SYMBOL = re.compile(r"[A-Z](?:[A-Z0-9'._-]*[A-Z0-9])?")
 
 
 def _currency(value: str) -> str:

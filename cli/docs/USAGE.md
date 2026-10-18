@@ -485,7 +485,10 @@ Currency symbols follow Beancount syntax, including custom and crypto symbols;
 the CLI does not check an ISO currency registry. `init --currency US` is valid
 syntax, but emits a typo warning because the symbol is not three uppercase
 letters. The warning appears on stderr, or in `data.warnings` in JSON mode.
-Lowercase input such as `usd` is normalized to `USD`.
+Lowercase input such as `usd` is normalized to `USD`. Single-letter symbols
+such as `F` and internal punctuation such as `NT.TO` or `X_USD` work. A symbol
+ending in punctuation, including `_`, is refused with exit **2** before init
+creates a directory or ledger.
 
 ## Checking, formatting, querying
 
