@@ -24,6 +24,7 @@ import {
   type LedgerAmountInput,
 } from "@/graphql/definitions";
 import { useTranslations } from "@/common/hooks/use-translations";
+import { parseDecimalNumber } from "@/common/lib/beancount/decimal-number";
 import { useErrorMessage } from "@/common/lib/errors/error-message";
 
 import {
@@ -47,7 +48,7 @@ const createBalanceSchema = (t: (key: string) => string) =>
       .string()
       .min(1, t("journal.amountRequired"))
       .refine(
-        (val) => !isNaN(parseFloat(val)) && isFinite(parseFloat(val)),
+        (val) => parseDecimalNumber(val) !== null,
         t("journal.amountMustBeNumber"),
       ),
     currency: z.string().min(1, t("journal.currencyRequired")).trim(),
@@ -83,12 +84,10 @@ export function BalanceForm({ ledgerId, onSuccess }: BalanceFormProps) {
     setError(null);
 
     try {
-      // Parse amount
-      const amountNumber = parseFloat(data.amount);
-
-      // Create amount input
+      // The digits as typed: Beancount infers the assertion's tolerance from
+      // them, so `49.70` must not become `49.7` through a double.
       const amountInput: LedgerAmountInput = {
-        number: amountNumber.toString(),
+        number: parseDecimalNumber(data.amount) ?? data.amount,
         currency: data.currency,
       };
 

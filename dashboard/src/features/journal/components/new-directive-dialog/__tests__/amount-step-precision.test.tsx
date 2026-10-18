@@ -196,6 +196,44 @@ describe("directive amount precision", () => {
     },
   );
 
+  it.each([
+    // A balance assertion's tolerance comes from the digits written, so the
+    // trailing zero is the difference between catching 0.05 and passing it.
+    ["49.70", "49.70"],
+    ["0.00000001", "0.00000001"],
+    ["12345678901234567.89", "12345678901234567.89"],
+    // Same spelling rule as the Transaction form: exponents expand exactly.
+    ["1e3", "1000"],
+  ])("submits Balance %s as %s (w3/558)", async (typed, sent) => {
+    const user = userEvent.setup();
+    const addBalance = vi.fn().mockResolvedValue({
+      data: { bulkEntries: { success: true } },
+    });
+    mockUseMutation.mockReturnValue([
+      addBalance,
+      { loading: false },
+    ] as unknown as ReturnType<typeof useMutation>);
+
+    render(<BalanceForm ledgerId="open_ledger/minimax" />);
+
+    fireEvent.change(screen.getByRole("textbox", { name: "Account" }), {
+      target: { value: "Assets:Cash" },
+    });
+    // Deliver the raw string a browser keeps; user-event would re-serialize
+    // number-input typing through a double.
+    fireEvent.change(screen.getByRole("spinbutton"), {
+      target: { value: typed },
+    });
+    const submit = screen.getByRole("button", { name: "Create Balance Entry" });
+    await waitFor(() => expect(submit).toBeEnabled());
+    await user.click(submit);
+
+    await waitFor(() => expect(addBalance).toHaveBeenCalled());
+    expect(
+      addBalance.mock.calls[0]?.[0]?.variables?.entries?.[0]?.balance?.amount,
+    ).toEqual({ number: sent, currency: "MUSD" });
+  });
+
   it("names the status control and posting row actions", async () => {
     const user = userEvent.setup();
     mockUseMutation.mockReturnValue([
