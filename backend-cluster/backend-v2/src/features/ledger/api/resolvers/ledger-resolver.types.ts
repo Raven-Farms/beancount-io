@@ -109,7 +109,11 @@ export class CreateLedgerInput {
   @Field(() => String, { nullable: true })
   description?: string;
 
-  @Field(() => Boolean, { nullable: true })
+  @Field(() => Boolean, {
+    nullable: true,
+    description:
+      "true or omitted keeps the ledger visible only to its owner and collaborators; false makes it public, readable by anyone.",
+  })
   private?: boolean;
 
   @Field(() => LedgerTemplate, { nullable: true })
@@ -134,7 +138,11 @@ export class UpdateLedgerInput {
   @Field(() => String, { nullable: true })
   description?: string;
 
-  @Field(() => Boolean, { nullable: true })
+  @Field(() => Boolean, {
+    nullable: true,
+    description:
+      "true makes the ledger visible only to its owner and collaborators; false makes it public, readable by anyone; omitted leaves it as it is.",
+  })
   private?: boolean;
 }
 

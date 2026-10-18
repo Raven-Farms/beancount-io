@@ -794,9 +794,11 @@ describe("ledger lifecycle through actual adapters and workflow", () => {
             })
           ).failed,
         ).toBe(false);
+        // A null `private` means "not specified", which creates a private
+        // ledger (w1/173).
         expect(f.create.mock.calls[0][0]).toMatchObject({
           description: null,
-          private: null,
+          private: true,
         });
         expect(
           (
@@ -812,6 +814,36 @@ describe("ledger lifecycle through actual adapters and workflow", () => {
           description: null,
           private: null,
         });
+      } finally {
+        await f.close();
+      }
+    },
+  );
+  it.each(surfaces)(
+    "creates a private ledger unless publishing is asked for, via %s",
+    async (surface) => {
+      // Ledgers are financial records. The repository host creates a
+      // repository public when `private` is unset, so the workflow decides
+      // instead: unset is private, and only an explicit false publishes
+      // (w1/173).
+      const f = await fixture();
+      try {
+        for (const [name, privacy, expected] of [
+          ["omitted", undefined, true],
+          ["null", null, true],
+          ["public", false, false],
+          ["private", true, true],
+        ] as const) {
+          const response = await f.call(surface, "create", {
+            name,
+            ...(privacy === undefined ? {} : { private: privacy }),
+          });
+          expect(response.failed).toBe(false);
+          expect(response.data).toMatchObject({ private: expected });
+          expect(f.create.mock.calls.at(-1)?.[0]).toMatchObject({
+            private: expected,
+          });
+        }
       } finally {
         await f.close();
       }
@@ -1036,7 +1068,8 @@ it.each(surfaces)(
         expect(result.failed).toBe(!mobile);
         expect(f.records.has("alice/second")).toBe(mobile);
         if (mobile) {
-          expect(result.data).toEqual(expected("second", "", false));
+          // No `private` given: created private (w1/173).
+          expect(result.data).toEqual(expected("second", "", true));
           expect(f.files.get("alice/second")).toEqual(defaultLedgerTemplate);
         }
         expect(f.create).toHaveBeenCalledTimes(mobile ? 1 : 0);

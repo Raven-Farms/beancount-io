@@ -494,7 +494,10 @@ export class LedgerWorkflow implements ILedgerWorkflow {
     const ledgerCreate: LedgerCreate = {
       name: input.name,
       description: input.description,
-      private: input.private,
+      // A ledger is financial records: an omitted or null `private` keeps it
+      // private. Left unset, the repository host would create it public
+      // (w1/173). Publishing takes an explicit `private: false`.
+      private: input.private ?? true,
       files:
         input.template === LedgerTemplate.SAMPLE
           ? ledgerWithMultipleFilesTemplate

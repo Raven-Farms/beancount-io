@@ -335,6 +335,12 @@ bank revocation precedes repository deletion; repository failure rolls back
 local metadata but cannot undo that revocation. Failed repository-ID lookup
 continues to skip bank cleanup without blocking deletion, as in GraphQL.
 
+On every surface, creating a ledger without `private` (or with `null`) makes it
+private (w1/173, 2026-10-18). `LedgerWorkflow` used to forward an unset value,
+and the repository host then created the ledger public. Only `private: false`
+publishes a ledger. The dashboard and mobile app always send the value, so the
+change reaches only API and MCP callers that omit it.
+
 Pull-request inspection, file-change creation, merge approval, and close rejection
 now have REST/MCP bindings. `PullRequestWorkflow` shares the former GraphQL
 credential checks and result shaping across adapters; missing credentials and

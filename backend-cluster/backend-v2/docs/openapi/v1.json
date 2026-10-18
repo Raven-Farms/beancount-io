@@ -1299,15 +1299,18 @@
                   "name": {
                     "type": "string",
                     "maxLength": 100,
-                    "pattern": "^[a-z0-9_-]+$"
+                    "pattern": "^[a-z0-9_-]+$",
+                    "description": "The ledger's name: lowercase letters, numbers, hyphens, and underscores, up to 100 characters."
                   },
                   "description": {
                     "type": "string",
-                    "nullable": true
+                    "nullable": true,
+                    "description": "A short description shown with the ledger."
                   },
                   "private": {
                     "type": "boolean",
-                    "nullable": true
+                    "nullable": true,
+                    "description": "true or omitted keeps the ledger visible only to its owner and collaborators; false makes it public, readable by anyone."
                   },
                   "template": {
                     "type": "string",
@@ -1316,7 +1319,8 @@
                       "STARTER",
                       "SAMPLE",
                       null
-                    ]
+                    ],
+                    "description": "STARTER (the default) has options and accounts without transactions; SAMPLE has demonstration transactions."
                   }
                 },
                 "required": [
@@ -2345,15 +2349,18 @@
                     "type": "string",
                     "nullable": true,
                     "maxLength": 100,
-                    "pattern": "^[a-z0-9_-]+$"
+                    "pattern": "^[a-z0-9_-]+$",
+                    "description": "The ledger's name: lowercase letters, numbers, hyphens, and underscores, up to 100 characters."
                   },
                   "description": {
                     "type": "string",
-                    "nullable": true
+                    "nullable": true,
+                    "description": "A short description shown with the ledger."
                   },
                   "private": {
                     "type": "boolean",
-                    "nullable": true
+                    "nullable": true,
+                    "description": "true makes the ledger visible only to its owner and collaborators; false makes it public, readable by anyone; omitted leaves it as it is."
                   }
                 },
                 "additionalProperties": false

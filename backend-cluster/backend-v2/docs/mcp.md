@@ -531,7 +531,10 @@ authority and apply changes immediately. They offer no preview.
   letters, numbers, hyphens, and underscores, up to 100 characters. Creation
   uses the authenticated account and accepts no `ledger` selector; the existing
   account policy also permits creation with a ledger-pinned admin credential.
-- `updateLedger` accepts `ledger` and optional `name`, `description`, and `private`.
+- `private` controls who can read the ledger. On create, an omitted or null
+  value keeps it private; `false` publishes it, readable by anyone.
+- `updateLedger` accepts `ledger` and optional `name`, `description`, and `private`;
+  an omitted field stays as it is.
 - `deleteLedger` accepts only `ledger` and returns `{ "ledgerId": "owner/name" }`.
 
 For update/delete, unpinned credentials must supply `ledger`; pinned credentials

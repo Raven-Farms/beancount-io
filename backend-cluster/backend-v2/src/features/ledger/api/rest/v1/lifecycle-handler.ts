@@ -7,18 +7,43 @@ import { ledgerPathSchema, ledgerIdOf } from "./schemas";
 const name = z
   .string()
   .max(100)
-  .regex(/^[a-z0-9_-]+$/);
+  .regex(/^[a-z0-9_-]+$/)
+  .describe(
+    "The ledger's name: lowercase letters, numbers, hyphens, and underscores, up to 100 characters.",
+  );
+const description = z
+  .string()
+  .nullish()
+  .describe("A short description shown with the ledger.");
 export const ledgerCreateInput = z
   .object({
     name,
-    description: z.string().nullish(),
-    private: z.boolean().nullish(),
-    template: z.nativeEnum(LedgerTemplate).nullish(),
+    description,
+    private: z
+      .boolean()
+      .nullish()
+      .describe(
+        "true or omitted keeps the ledger visible only to its owner and collaborators; false makes it public, readable by anyone.",
+      ),
+    template: z
+      .nativeEnum(LedgerTemplate)
+      .nullish()
+      .describe(
+        "STARTER (the default) has options and accounts without transactions; SAMPLE has demonstration transactions.",
+      ),
   })
   .strict();
-export const ledgerUpdateInput = ledgerCreateInput
-  .omit({ template: true })
-  .extend({ name: name.nullish() })
+export const ledgerUpdateInput = z
+  .object({
+    name: name.nullish(),
+    description,
+    private: z
+      .boolean()
+      .nullish()
+      .describe(
+        "true makes the ledger visible only to its owner and collaborators; false makes it public, readable by anyone; omitted leaves it as it is.",
+      ),
+  })
   .strict();
 export const ledgerDeleteInput = z.object({}).strict();
 export const ledgerResultSchema = z.object({
