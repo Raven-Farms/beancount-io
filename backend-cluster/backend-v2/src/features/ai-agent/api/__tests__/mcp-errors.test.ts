@@ -127,6 +127,31 @@ describe("envelopeFromThrown", () => {
     expect(envelope.hint).not.toContain("getEntryContext");
   });
 
+  it("refuses entries that would break the ledger with a fix-or-allowInvalid hint", () => {
+    // The structured-write twin of the text-append refusal (w0/m2): the
+    // ledger service names each new error, and the agent learns its options.
+    const domain = favaApiErrorToDomainError(
+      new FavaApiError("refused", 400, {
+        success: false,
+        error:
+          "adding these entries would introduce 1 new bean-check error: Duplicate open directive for Assets:Cash (main.bean:3)",
+        code: "NEW_LEDGER_ERRORS",
+        details: {
+          count: 1,
+          detail: "Duplicate open directive for Assets:Cash (main.bean:3)",
+        },
+      }),
+      "add entries",
+    );
+    expect(domain.message).toBe(
+      "Validation failed for entries: adding these entries would introduce 1 new bean-check error: Duplicate open directive for Assets:Cash (main.bean:3)",
+    );
+    const envelope = envelopeFromThrown(domain);
+    expect(envelope.code).toBe("VALIDATION_FAILED");
+    expect(envelope.hint).toMatch(/allowInvalid/);
+    expect(envelope.hint).toMatch(/names each new error/);
+  });
+
   it("carries retryAfter for a rate-limit refusal", () => {
     const envelope = envelopeFromThrown(new RateLimitedError(42));
     expect(envelope.code).toBe("RATE_LIMITED");

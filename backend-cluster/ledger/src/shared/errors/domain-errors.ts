@@ -112,14 +112,45 @@ export class BadUserInputError extends DomainError {
  * prose. Pass `allowInvalid` to record the imbalance deliberately.
  */
 export class UnbalancedTransactionError extends DomainError {
-  constructor(
-    message: string,
-    details: { residual: string; entry: number },
-  ) {
+  constructor(message: string, details: { residual: string; entry: number }) {
     super(ErrorCategory.BAD_USER_INPUT, message, {
       code: "UNBALANCED",
       details,
     });
+  }
+}
+
+/**
+ * A structured write whose entries would leave the ledger with bean-check
+ * errors it did not have — a second `open` for an account already open, a
+ * balance against an account never opened (w0/m2). Carries the
+ * `NEW_LEDGER_ERRORS` code, the count and each new error as `message (file:line)`
+ * so clients can refuse without parsing prose. `allowInvalid` records the
+ * entries deliberately, as the text-append route already allows.
+ */
+export class NewLedgerErrorsError extends DomainError {
+  constructor(
+    newErrors: readonly {
+      message: string;
+      source?: { filename: string; lineno: number } | null;
+    }[],
+  ) {
+    const detail = newErrors
+      .map((error) =>
+        error.source
+          ? `${error.message} (${error.source.filename}:${error.source.lineno})`
+          : error.message,
+      )
+      .join("; ");
+    const noun = newErrors.length === 1 ? "error" : "errors";
+    super(
+      ErrorCategory.BAD_USER_INPUT,
+      `adding these entries would introduce ${newErrors.length} new bean-check ${noun}: ${detail}`,
+      {
+        code: "NEW_LEDGER_ERRORS",
+        details: { count: newErrors.length, detail },
+      },
+    );
   }
 }
 

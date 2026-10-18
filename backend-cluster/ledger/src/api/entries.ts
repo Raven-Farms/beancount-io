@@ -8,7 +8,13 @@ import { successResponse } from "@/server/envelope";
 import { checkDirectiveLimitForFileChanges } from "@/core/directive-limit";
 import { entryInputToText } from "@/foundation/rustledger";
 import type { LedgerEntryInput } from "@/foundation/ledger-api-types/ledger-entry-input";
-import { BadUserInputError, UnbalancedTransactionError } from "@/shared/errors";
+import {
+  BadUserInputError,
+  NewLedgerErrorsError,
+  UnbalancedTransactionError,
+} from "@/shared/errors";
+import { ledgerIdOf, servicesForRequest } from "./service-context";
+import { newLedgerErrors } from "@/features/ledger/utils/new-ledger-errors";
 import {
   checkTransactionBalance,
   scanInferredToleranceDefault,
@@ -161,6 +167,31 @@ export function setEntriesHandler(router: Router): void {
           content: Buffer.from(newContents, "utf8").toString("base64"),
           sha: cached.sha,
         });
+      }
+
+      // Check the projection, then commit — the text-append route's order
+      // (w0/m2). A second `open` for an open account, or a balance against an
+      // unopened one, used to be committed and only surfaced later as a ledger
+      // error. `allowInvalid` records such entries deliberately.
+      if (updates.length > 0 && !allowInvalid) {
+        const { data } = servicesForRequest(ctx);
+        const ledgerId = ledgerIdOf(ctx);
+        const [before, after] = await Promise.all([
+          data.checkProjectedErrors({
+            ledgerId,
+            userId: undefined,
+            overlays: [],
+            enforceInputLimits: false,
+          }),
+          data.checkProjectedErrors({
+            ledgerId,
+            userId: undefined,
+            overlays: updates.map(({ path, content }) => ({ path, content })),
+            enforceInputLimits: false,
+          }),
+        ]);
+        const introduced = newLedgerErrors(before, after);
+        if (introduced.length > 0) throw new NewLedgerErrorsError(introduced);
       }
 
       if (updates.length > 0) {
