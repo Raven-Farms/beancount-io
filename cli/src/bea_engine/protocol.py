@@ -18,12 +18,14 @@ from __future__ import annotations
 
 import dataclasses
 import enum
+import io
 import json
 import os
 import sys
+import tempfile
 import traceback
 from collections.abc import Callable, Iterator
-from contextlib import contextmanager
+from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from dataclasses import dataclass, field
 from typing import Any, NoReturn
 
@@ -108,6 +110,31 @@ class Answer:
     # The refusal to publish when the answer outruns Python's recursion limit.
     # Only the command knows what was nested — for a report, which account.
     too_deep: Callable[[], EngineError] | None = None
+
+
+@contextmanager
+def capturing(logs: io.StringIO) -> Iterator[None]:
+    """Collect Python and descriptor output from user plugins and importers."""
+    with tempfile.TemporaryFile() as sink:
+        saved: list[tuple[int, int]] = []
+        for stream in (sys.stdout, sys.stderr):
+            try:
+                stream.flush()
+                fd = stream.fileno()
+            except (AttributeError, OSError, ValueError):
+                continue
+            if fd in (1, 2) and all(fd != kept for kept, _ in saved):
+                saved.append((fd, os.dup(fd)))
+                os.dup2(sink.fileno(), fd)
+        try:
+            with redirect_stdout(logs), redirect_stderr(logs):
+                yield
+        finally:
+            for fd, copy_fd in saved:
+                os.dup2(copy_fd, fd)
+                os.close(copy_fd)
+            sink.seek(0)
+            logs.write(sink.read().decode("utf-8", "replace"))
 
 
 @contextmanager

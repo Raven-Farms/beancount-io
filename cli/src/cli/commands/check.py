@@ -113,6 +113,12 @@ def check(ctx: typer.Context) -> None:
         try:
             loaded = launch.helper_json(["check", "--file", str(file), "--documents-only"])
         except BeaError as error:
+            if str(error).endswith("plugin(s) terminated while loading."):
+                # The plugin terminated the load. Falling through to native
+                # bean-check would execute it again and leak its exit status.
+                if as_json:
+                    _emit_json_errors(file, error.details, error.exit_code)
+                raise
             if str(error).startswith(_UNDECODABLE):
                 # bean-check reports a file that is not UTF-8 as a codec message
                 # at a line; the helper names the file, the byte and the remedy,

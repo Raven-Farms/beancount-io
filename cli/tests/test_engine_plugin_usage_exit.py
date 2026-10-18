@@ -1,4 +1,4 @@
-"""A nested Click refusal cannot prove that an engine write never started (w5/673)."""
+"""Nested plugin Click exits are named failures and preserve plugin side effects (w5/674)."""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ PERSISTED = "; plugin persisted an update\n"
 
 @pytest.mark.parametrize("notice", [False, True], ids=["clean-click-diagnostic", "plugin-notice"])
 @pytest.mark.parametrize("structured", [False, True], ids=["text", "json"])
-def test_nested_click_exit_after_a_plugin_write_keeps_the_unknown_outcome(
+def test_nested_click_exit_after_a_plugin_write_is_a_named_plugin_failure(
     tmp_path: Path, notice: bool, structured: bool
 ) -> None:
     ledger = tmp_path / "main.bean"
@@ -73,16 +73,17 @@ def test_nested_click_exit_after_a_plugin_write_keeps_the_unknown_outcome(
         timeout=120,
     )
 
-    assert result.returncode == 4, result.stdout + result.stderr
+    assert result.returncode == 1, result.stdout + result.stderr
     assert result.stdout == ""
     if structured:
         error = json.loads(result.stderr)["error"]
-        assert (error["category"], error["exit_code"]) == ("conflict", 4)
-        assert "outcome is unknown" in error["message"]
-        diagnostics = "\n".join(error["details"])
+        assert (error["category"], error["exit_code"]) == ("validation", 1)
+        diagnostics = error["message"] + "\n" + "\n".join(error["details"])
     else:
-        assert "outcome is unknown" in result.stderr
         diagnostics = result.stderr
+    assert 'Plugin "mutating_cli" failed while running: SystemExit: 2' in diagnostics
+    assert "outcome is unknown" not in result.stderr
+    assert "engine did not answer" not in result.stderr
     assert "No such option: --bad-plugin-option" in diagnostics
     assert "Usage:" in diagnostics
     assert ("plugin persisted an update" in diagnostics) is notice

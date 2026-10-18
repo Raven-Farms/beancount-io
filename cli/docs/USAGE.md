@@ -500,13 +500,19 @@ string) — the lines `--json check` and every other read give — instead of
 bean-check's traceback at `<load>:0`, and exits **1**. With no bean-check options the
 ledger's other load errors are listed beside it; with options such as `-v` or
 `--auto`, which can change those, only the plugin failures are.
+A plugin that calls `sys.exit()` also fails with exit **1**, including exits
+0 and 7 or an argument parser rejecting its configuration. The failure names
+the plugin, its `SystemExit` value, and what it printed. This stops the load
+on reads and writes, including doctor, native-source queries, `--debug`, and
+`--allow-errors`; the plugin did not finish transforming the ledger.
 A transaction Beancount's booking cannot do the arithmetic for — zero units
 at a total cost (`0 HOOL {{310 USD}}`), or an amount it must infer wider than
 the 28 significant digits it keeps — is reported the same way, as `FILE:LINE:
 Beancount cannot book this transaction: …`, where bean-check raises an
 uncaught `DivisionByZero` or `InvalidOperation`; every other read reports it
 at that line too, and leaves that transaction out.
-`bea --debug check` runs bean-check as is and keeps its traceback.
+`bea --debug check` keeps bean-check's traceback for ordinary exceptions;
+a terminating plugin is refused before bean-check can run it again.
 Metadata named `filename` or `lineno`, on a directive or in a `pushmeta`, is
 an error at its line under every option, `--debug` included: `Metadata key
 'filename' is reserved for Beancount's source location; choose another key.`

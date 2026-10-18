@@ -27,6 +27,7 @@ so the portable export t005 builds reads the same bytes the load parsed.
 from __future__ import annotations
 
 import contextlib
+import io
 import json
 import os
 import re
@@ -34,6 +35,7 @@ import secrets
 import stat
 import sys
 import time
+import traceback
 import unicodedata
 from collections.abc import Collection, Iterator, Mapping
 from contextlib import ExitStack, contextmanager
@@ -300,7 +302,7 @@ def load_with_sources(
     # Beancount's parser swallows the exception a signal handler raises, so a
     # termination signal during the load exits at once instead (w1/074).
     with stopping.loading():
-        return _load_with_sources(
+        loaded = _load_with_sources(
             entry,
             offline=offline,
             strict=strict,
@@ -310,6 +312,16 @@ def load_with_sources(
             opener=opener,
             snapshot=snapshot,
         )
+    # A terminating plugin did not finish the transformation pipeline. Refuse
+    # even an allow-errors read/write, after staged locations map back, rather
+    # than loading and running that user code again during write validation.
+    from bea_engine.protocol import LedgerError
+    from bea_engine.query import format_error
+
+    exited = [format_error(error, ledger_file=entry) for error in loaded.errors if is_plugin_exit(error)]
+    if exited:
+        raise LedgerError(f"{entry}: {len(exited)} plugin(s) terminated while loading.", details=exited)
+    return loaded
 
 
 def _resolve_feeds(
@@ -695,10 +707,11 @@ def _refuse_undecodable(errors: list[Any], snapshot: LedgerSnapshot) -> None:
 #: by name alone, so two directives naming one plugin with different configs
 #: could not be told apart (w1/101).
 PLUGIN_CONFIG_KEY = "__bea_plugin_config__"
+PLUGIN_EXIT_KEY = "__bea_plugin_exit__"
 
 
 def _record_plugin_configs(loader: Any) -> None:
-    """Have the loader's plugin errors carry the failing directive's config.
+    """Record failing plugin configs and turn plugin exits into load errors.
 
     The loader builds those errors inside `run_transformations`, where the
     config is the `plugin_config` local. For the duration of that call only,
@@ -723,14 +736,60 @@ def _record_plugin_configs(loader: Any) -> None:
             return (base, tuple(self))
 
     def run_transformations(*args: Any, **kwargs: Any) -> Any:
+        from bea_engine import stopping
+        from bea_engine.protocol import capturing
+
         loader.LoadError = _PluginAwareLoadError
+        logs = io.StringIO()
+        failed = False
         try:
-            return original(*args, **kwargs)
+            with capturing(logs):
+                try:
+                    return original(*args, **kwargs)
+                except SystemExit as exc:
+                    # Signals still stop the process. Only an exit raised by
+                    # user plugin code is a failed load rather than our status.
+                    stopping.check()
+                    current = exc.__traceback__
+                    while current is not None and current.tb_frame.f_code is not original.__code__:
+                        current = current.tb_next
+                    if current is None or "plugin_name" not in current.tb_frame.f_locals:
+                        raise
+                    state = current.tb_frame.f_locals
+                    called = current.tb_next
+                    importing = (
+                        called is not None
+                        and called.tb_frame.f_globals.get("__name__") == "importlib"
+                        and called.tb_frame.f_code.co_name == "import_module"
+                    )
+                    formatted = traceback.format_exc().replace("\n", "\n  ")
+                    failed = True
+            # Captured descriptors have been drained on leaving the context.
+            printed = logs.getvalue().strip()
+            if printed:
+                formatted += "\n  Plugin output:\n  " + printed.replace("\n", "\n  ")
+            source = {
+                "filename": "<load>",
+                "lineno": 0,
+                PLUGIN_CONFIG_KEY: state.get("plugin_config"),
+                PLUGIN_EXIT_KEY: True,
+            }
+            kind = "importing" if importing else "applying plugin"
+            error = base(source, f'Error {kind} "{state["plugin_name"]}": {formatted}')
+            return state["entries"], [*state["errors"], error]
         finally:
             loader.LoadError = base
+            if not failed and logs.getvalue():
+                # Successful and ordinary-exception loads keep their output.
+                print(logs.getvalue(), file=sys.stderr, end="")
 
     run_transformations._bea_records_plugin_config = True  # type: ignore[attr-defined]
     loader.run_transformations = run_transformations
+
+
+def is_plugin_exit(error: Any) -> bool:
+    """A plugin load that terminated before the transformation pipeline finished."""
+    return bool((getattr(error, "source", None) or {}).get(PLUGIN_EXIT_KEY))
 
 
 #: How every booking failure `_book_past_arithmetic_failures` reports begins;

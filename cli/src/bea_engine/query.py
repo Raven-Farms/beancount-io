@@ -453,6 +453,12 @@ def _native_shell(source: str, *, interactive: bool, format: str, numberify: boo
             raise protocol.UsageError(
                 f"{kind[0].upper()}{kind[1:]} path '{file}' (from --source) is a directory; expected a {kind} file."
             )
+    if parts.scheme == "beancount":
+        from beancount import loader
+
+        from bea_engine.managed_load import _record_plugin_configs
+
+        _record_plugin_configs(loader)
 
     class GuardedShell(BQLShell):  # type: ignore[misc]
         source_file = file
@@ -485,9 +491,29 @@ def _native_shell(source: str, *, interactive: bool, format: str, numberify: boo
 
                 snapshot = LedgerSnapshot.capture(file)
                 refuse_cache_over_ledger(file, snapshot.contents, snapshot.patterns)
-            # Upstream loads the source itself; a Ctrl-C mid-parse waits for it.
-            with stopping.deferring_interrupt():
-                super().do_reload(arg)
+            attach = self.context.attach
+
+            def checked_attach(*args: Any, **kwargs: Any) -> Any:
+                result = attach(*args, **kwargs)
+                # Reject before upstream prints raw LoadError tracebacks or
+                # answers from entries whose plugin terminated mid-load.
+                from bea_engine.managed_load import is_plugin_exit
+
+                failed = [
+                    format_error(error, ledger_file=file) for error in self.context.errors if is_plugin_exit(error)
+                ]
+                if failed:
+                    raise protocol.LedgerError(f"Cannot load --source '{source}': {failed[0]}", details=failed[1:])
+                return result
+
+            if parts.scheme == "beancount":
+                self.context.attach = checked_attach
+            try:
+                # Upstream loads the source itself; a Ctrl-C mid-parse waits for it.
+                with stopping.deferring_interrupt():
+                    super().do_reload(arg)
+            finally:
+                self.context.attach = attach
 
         def do_run(self, arg: str) -> None:
             """Run a named stored query, or list them; missing names are usage errors."""

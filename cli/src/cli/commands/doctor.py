@@ -245,6 +245,9 @@ def _refuse_plugin_failures(op: str, ledger: str) -> None:
     declared = False
     for member in output.ledger_closure(root):
         if output.is_encrypted(member):
+            # Its decrypted text may declare a plugin. The helper can inspect
+            # that content; scanning ciphertext cannot establish its absence.
+            declared = True
             continue
         with contextlib.suppress(OSError):
             declared = declared or bool(_PLUGIN_DIRECTIVE.search(member.read_bytes()))
