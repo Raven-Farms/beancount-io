@@ -1999,7 +1999,35 @@ bea cloud status
 bea cloud logout
 ```
 
-`bea cloud status` reports the credential source (`file` or `environment`), its expiry, and the account it belongs to. For CI, set `BEA_TOKEN` instead of logging in — it is never written to disk, and `cloud status` reports `source: environment`. `cloud logout` revokes the stored session and deletes the credential file. The file is deleted even when revocation fails, but then the command exits nonzero and says the session may still be valid (revoke it from the dashboard): exit 1 when the server is unreachable or answers with an error, exit 4 when the request timed out and the outcome is unknown. A 401 answer means the session was already revoked, so it exits 0. A credential file that exists but cannot be used — unreadable, not JSON, or missing its `token` or `expireAt` — is never read as "not logged in": cloud commands exit 3 naming the file and the reason, and `cloud logout` deletes it and exits 1, since a token it cannot read cannot be revoked. When `BEA_TOKEN` is set, `cloud login` exits 2 before starting the browser flow, since the new session would never be used, and `cloud logout` changes nothing: it neither revokes the token (another job may share it) nor unsets it in the shell — unset the variable yourself, or revoke the token from the dashboard. A credential the server rejects is reported against the source actually in use: `BEA_TOKEN` takes precedence over the stored file unconditionally, so that failure tells you to correct or unset the variable rather than to log in, which would not change which credential is sent.
+`bea cloud status` reports the credential source (`file` or `environment`),
+its expiry, and the account it belongs to. For CI, set `BEA_TOKEN` instead of
+logging in — it is never written to disk, and `cloud status` reports
+`source: environment`.
+
+`cloud logout` revokes the stored session and deletes the credential file
+after an attempted revocation, including when that attempt fails. An invalid
+endpoint is refused before any revocation attempt, keeping the credential. Failed attempts
+say the session may still be valid and can be revoked from the dashboard.
+Connection failures (including connection timeouts and refused proxy tunnels)
+and ordinary server errors exit **1**. Other timeouts, connections lost after sending,
+unreadable successful replies, and gateway HTTP **504, 520, 522, or 524** exit
+**4** because the revocation outcome is unknown. Server request IDs are kept
+in both JSON and human errors. A **401** answer means the session was already
+revoked, so it exits **0**.
+
+A credential file that exists but cannot be used — unreadable, not JSON, or
+missing its `token` or `expireAt` — is never read as "not logged in": cloud
+commands exit **3** naming the file and the reason, and `cloud logout` deletes
+it and exits **1**, since a token it cannot read cannot be revoked.
+
+When `BEA_TOKEN` is set, `cloud login` exits **2** before starting the browser
+flow, since the new session would never be used, and `cloud logout` changes
+nothing: it neither revokes the token (another job may share it) nor unsets it
+in the shell — unset the variable yourself, or revoke the token from the
+dashboard. A credential the server rejects is reported against the source
+actually in use: `BEA_TOKEN` takes precedence over the stored file
+unconditionally, so that failure tells you to correct or unset the variable
+rather than to log in, which would not change which credential is sent.
 
 ## Cloud: hosted ledgers
 
