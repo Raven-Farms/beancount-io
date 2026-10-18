@@ -17,6 +17,12 @@ const faAccounts: Record<string, TranslationEntry> = {
     message: "حساب باید با یکی از این‌ها شروع شود: {prefixes}",
     description: "Validation error when account prefix is invalid",
   },
+  "page.accounts.timeFilterNotApplied": {
+    message:
+      "مانده‌های اینجا فعلی هستند. فیلتر زمان روی این صفحه اعمال نمی‌شود.",
+    description:
+      "Note on the Accounts directory when a Time filter is in the URL; its balances are always current",
+  },
   "page.accounts.accountAlreadyOpen": {
     message: "{account} از قبل باز است (از {date}).",
     description:

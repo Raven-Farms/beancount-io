@@ -17,6 +17,12 @@ const ptAccounts: Record<string, TranslationEntry> = {
     message: "A conta deve começar com um dos: {prefixes}",
     description: "Validation error when account prefix is invalid",
   },
+  "page.accounts.timeFilterNotApplied": {
+    message:
+      "Os saldos aqui são atuais. O filtro de tempo não se aplica a esta página.",
+    description:
+      "Note on the Accounts directory when a Time filter is in the URL; its balances are always current",
+  },
   "page.accounts.accountAlreadyOpen": {
     message: "{account} já está aberta (desde {date}).",
     description:

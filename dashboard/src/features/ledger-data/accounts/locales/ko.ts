@@ -17,6 +17,12 @@ const koAccounts: Record<string, TranslationEntry> = {
     message: "계정명은 다음 중 하나로 시작해야 합니다: {prefixes}",
     description: "Validation error when account prefix is invalid",
   },
+  "page.accounts.timeFilterNotApplied": {
+    message:
+      "여기의 잔액은 현재 잔액입니다. 기간 필터는 이 페이지에 적용되지 않습니다.",
+    description:
+      "Note on the Accounts directory when a Time filter is in the URL; its balances are always current",
+  },
   "page.accounts.accountAlreadyOpen": {
     message: "{account} 계정은 이미 열려 있습니다({date}부터).",
     description:

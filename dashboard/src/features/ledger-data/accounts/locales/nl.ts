@@ -17,6 +17,12 @@ const nlAccounts: Record<string, TranslationEntry> = {
     message: "Rekening moet beginnen met een van: {prefixes}",
     description: "Validation error when account prefix is invalid",
   },
+  "page.accounts.timeFilterNotApplied": {
+    message:
+      "De saldi hier zijn actueel. Het tijdfilter geldt niet voor deze pagina.",
+    description:
+      "Note on the Accounts directory when a Time filter is in the URL; its balances are always current",
+  },
   "page.accounts.accountAlreadyOpen": {
     message: "{account} is al geopend (sinds {date}).",
     description:

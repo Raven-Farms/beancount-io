@@ -17,6 +17,12 @@ const caAccounts: Record<string, TranslationEntry> = {
     message: "El compte ha de començar amb un d'aquests: {prefixes}",
     description: "Validation error when account prefix is invalid",
   },
+  "page.accounts.timeFilterNotApplied": {
+    message:
+      "Aquí els saldos són actuals. El filtre de temps no s'aplica a aquesta pàgina.",
+    description:
+      "Note on the Accounts directory when a Time filter is in the URL; its balances are always current",
+  },
   "page.accounts.accountAlreadyOpen": {
     message: "{account} ja està obert (des del {date}).",
     description:

@@ -7,6 +7,12 @@ export interface DashboardTranslationEntry {
 
 const descriptions = {
   accountsDescription: "Description for the dashboard account-balance card",
+  accountsDescriptionAt:
+    "Account-balance card description under a Time filter; {date} is the period's last day",
+  accountsDescriptionPeriodEnd:
+    "Account-balance card description under a relative Time filter whose last day is not shown",
+  viewPeriodBalanceSheet:
+    "Accessible link label from the account-balance card to the Balance Sheet for the filtered period",
   allWidgetsHidden: "Empty state when every dashboard module is hidden",
   chartView: "Accessible label for switching a financial card to chart view",
   costBasis:
@@ -108,6 +114,10 @@ type DashboardMessages = {
 
 const messages: Record<DashboardLanguage, DashboardMessages> = {
   en: {
+    accountsDescriptionAt: "Asset and liability balances at {date}",
+    accountsDescriptionPeriodEnd:
+      "Asset and liability balances at the end of the selected period",
+    viewPeriodBalanceSheet: "Open the balance sheet for this period",
     accountsDescription: "Current asset and liability account balances",
     allWidgetsHidden:
       "All dashboard modules are hidden. Customize the dashboard to restore one.",
@@ -167,6 +177,10 @@ const messages: Record<DashboardLanguage, DashboardMessages> = {
     viewAllAccounts: "View all accounts",
   },
   bg: {
+    accountsDescriptionAt: "Салда на активи и пасиви към {date}",
+    accountsDescriptionPeriodEnd:
+      "Салда на активи и пасиви в края на избрания период",
+    viewPeriodBalanceSheet: "Отвори баланса за този период",
     accountsDescription: "Текущи салда по сметки за активи и пасиви",
     allWidgetsHidden:
       "Всички модули на таблото са скрити. Персонализирайте таблото, за да възстановите модул.",
@@ -227,6 +241,10 @@ const messages: Record<DashboardLanguage, DashboardMessages> = {
     viewAllAccounts: "Виж всички сметки",
   },
   ca: {
+    accountsDescriptionAt: "Saldos d'actiu i passiu a {date}",
+    accountsDescriptionPeriodEnd:
+      "Saldos d'actiu i passiu al final del període seleccionat",
+    viewPeriodBalanceSheet: "Obre el balanç d'aquest període",
     accountsDescription: "Saldos actuals dels comptes d'actiu i passiu",
     allWidgetsHidden:
       "Tots els mòduls del tauler estan ocults. Personalitzeu el tauler per restaurar-ne un.",
@@ -292,6 +310,10 @@ const messages: Record<DashboardLanguage, DashboardMessages> = {
     viewAllAccounts: "Mostra tots els comptes",
   },
   de: {
+    accountsDescriptionAt: "Salden der Aktiv- und Passivkonten zum {date}",
+    accountsDescriptionPeriodEnd:
+      "Salden der Aktiv- und Passivkonten am Ende des gewählten Zeitraums",
+    viewPeriodBalanceSheet: "Bilanz für diesen Zeitraum öffnen",
     accountsDescription: "Aktuelle Salden der Aktiv- und Passivkonten",
     allWidgetsHidden:
       "Alle Dashboard-Module sind ausgeblendet. Passen Sie das Dashboard an, um eines wiederherzustellen.",
@@ -353,6 +375,10 @@ const messages: Record<DashboardLanguage, DashboardMessages> = {
     viewAllAccounts: "Alle Konten anzeigen",
   },
   es: {
+    accountsDescriptionAt: "Saldos de activos y pasivos al {date}",
+    accountsDescriptionPeriodEnd:
+      "Saldos de activos y pasivos al final del periodo seleccionado",
+    viewPeriodBalanceSheet: "Abrir el balance de este periodo",
     accountsDescription: "Saldos actuales de las cuentas de activo y pasivo",
     allWidgetsHidden:
       "Todos los módulos del panel están ocultos. Personaliza el panel para restaurar uno.",
@@ -418,6 +444,10 @@ const messages: Record<DashboardLanguage, DashboardMessages> = {
     viewAllAccounts: "Ver todas las cuentas",
   },
   fa: {
+    accountsDescriptionAt: "مانده‌های دارایی و بدهی در {date}",
+    accountsDescriptionPeriodEnd:
+      "مانده‌های دارایی و بدهی در پایان دورهٔ انتخاب‌شده",
+    viewPeriodBalanceSheet: "باز کردن ترازنامهٔ این دوره",
     accountsDescription: "مانده فعلی حساب‌های دارایی و بدهی",
     allWidgetsHidden:
       "همه بخش‌های داشبورد پنهان هستند. برای بازگرداندن یک بخش، داشبورد را سفارشی کنید.",
@@ -476,6 +506,10 @@ const messages: Record<DashboardLanguage, DashboardMessages> = {
     viewAllAccounts: "نمایش همه حساب‌ها",
   },
   fr: {
+    accountsDescriptionAt: "Soldes des actifs et passifs au {date}",
+    accountsDescriptionPeriodEnd:
+      "Soldes des actifs et passifs à la fin de la période sélectionnée",
+    viewPeriodBalanceSheet: "Ouvrir le bilan de cette période",
     accountsDescription: "Soldes actuels des comptes d'actif et de passif",
     allWidgetsHidden:
       "Tous les modules du tableau de bord sont masqués. Personnalisez-le pour en restaurer un.",
@@ -541,6 +575,9 @@ const messages: Record<DashboardLanguage, DashboardMessages> = {
     viewAllAccounts: "Afficher tous les comptes",
   },
   ja: {
+    accountsDescriptionAt: "{date} 時点の資産・負債残高",
+    accountsDescriptionPeriodEnd: "選択した期間の末日時点の資産・負債残高",
+    viewPeriodBalanceSheet: "この期間の貸借対照表を開く",
     accountsDescription: "資産・負債勘定の現在残高",
     allWidgetsHidden:
       "すべてのダッシュボードモジュールが非表示です。カスタマイズして復元してください。",
@@ -595,6 +632,9 @@ const messages: Record<DashboardLanguage, DashboardMessages> = {
     viewAllAccounts: "すべての勘定を表示",
   },
   ko: {
+    accountsDescriptionAt: "{date} 기준 자산 및 부채 잔액",
+    accountsDescriptionPeriodEnd: "선택한 기간 말 기준 자산 및 부채 잔액",
+    viewPeriodBalanceSheet: "이 기간의 대차대조표 열기",
     accountsDescription: "현재 자산 및 부채 계정 잔액",
     allWidgetsHidden:
       "모든 대시보드 모듈이 숨겨져 있습니다. 대시보드를 사용자 지정해 복원하세요.",
@@ -649,6 +689,10 @@ const messages: Record<DashboardLanguage, DashboardMessages> = {
     viewAllAccounts: "모든 계정 보기",
   },
   nl: {
+    accountsDescriptionAt: "Saldi van activa en passiva op {date}",
+    accountsDescriptionPeriodEnd:
+      "Saldi van activa en passiva aan het einde van de gekozen periode",
+    viewPeriodBalanceSheet: "De balans voor deze periode openen",
     accountsDescription: "Huidige saldi van activa- en passivarekeningen",
     allWidgetsHidden:
       "Alle dashboardmodules zijn verborgen. Pas het dashboard aan om er een te herstellen.",
@@ -709,6 +753,10 @@ const messages: Record<DashboardLanguage, DashboardMessages> = {
     viewAllAccounts: "Alle rekeningen bekijken",
   },
   pt: {
+    accountsDescriptionAt: "Saldos de ativos e passivos em {date}",
+    accountsDescriptionPeriodEnd:
+      "Saldos de ativos e passivos no fim do período selecionado",
+    viewPeriodBalanceSheet: "Abrir o balanço deste período",
     accountsDescription: "Saldos atuais das contas de ativos e passivos",
     allWidgetsHidden:
       "Todos os módulos do painel estão ocultos. Personalize o painel para restaurar um.",
@@ -775,6 +823,10 @@ const messages: Record<DashboardLanguage, DashboardMessages> = {
     viewAllAccounts: "Ver todas as contas",
   },
   ru: {
+    accountsDescriptionAt: "Остатки по активам и пассивам на {date}",
+    accountsDescriptionPeriodEnd:
+      "Остатки по активам и пассивам на конец выбранного периода",
+    viewPeriodBalanceSheet: "Открыть баланс за этот период",
     accountsDescription: "Текущие остатки по счетам активов и обязательств",
     allWidgetsHidden:
       "Все модули панели скрыты. Настройте панель, чтобы вернуть нужный модуль.",
@@ -841,6 +893,10 @@ const messages: Record<DashboardLanguage, DashboardMessages> = {
     viewAllAccounts: "Показать все счета",
   },
   sk: {
+    accountsDescriptionAt: "Zostatky aktív a pasív k {date}",
+    accountsDescriptionPeriodEnd:
+      "Zostatky aktív a pasív ku koncu zvoleného obdobia",
+    viewPeriodBalanceSheet: "Otvoriť súvahu za toto obdobie",
     accountsDescription: "Aktuálne zostatky účtov aktív a pasív",
     allWidgetsHidden:
       "Všetky moduly nástenky sú skryté. Prispôsobte nástenku a niektorý obnovte.",
@@ -907,6 +963,10 @@ const messages: Record<DashboardLanguage, DashboardMessages> = {
     viewAllAccounts: "Zobraziť všetky účty",
   },
   uk: {
+    accountsDescriptionAt: "Залишки активів і пасивів на {date}",
+    accountsDescriptionPeriodEnd:
+      "Залишки активів і пасивів на кінець вибраного періоду",
+    viewPeriodBalanceSheet: "Відкрити баланс за цей період",
     accountsDescription: "Поточні залишки на рахунках активів і зобов'язань",
     allWidgetsHidden:
       "Усі модулі панелі приховано. Налаштуйте панель, щоб відновити модуль.",
@@ -973,6 +1033,9 @@ const messages: Record<DashboardLanguage, DashboardMessages> = {
     viewAllAccounts: "Показати всі рахунки",
   },
   zh: {
+    accountsDescriptionAt: "截至 {date} 的资产和负债余额",
+    accountsDescriptionPeriodEnd: "所选期间末的资产和负债余额",
+    viewPeriodBalanceSheet: "打开此期间的资产负债表",
     accountsDescription: "当前资产和负债账户余额",
     allWidgetsHidden: "所有仪表板模块均已隐藏。请自定义仪表板以恢复模块。",
     chartView: "显示图表",

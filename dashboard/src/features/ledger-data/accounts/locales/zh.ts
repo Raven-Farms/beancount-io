@@ -17,6 +17,11 @@ const zhAccounts: Record<string, TranslationEntry> = {
     message: "账户必须以以下之一开头：{prefixes}",
     description: "Validation error when account prefix is invalid",
   },
+  "page.accounts.timeFilterNotApplied": {
+    message: "此处显示的是当前余额。时间筛选不适用于此页面。",
+    description:
+      "Note on the Accounts directory when a Time filter is in the URL; its balances are always current",
+  },
   "page.accounts.accountAlreadyOpen": {
     message: "{account} 已开立（自 {date} 起）。",
     description:

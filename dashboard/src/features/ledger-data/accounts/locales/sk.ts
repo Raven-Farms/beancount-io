@@ -17,6 +17,12 @@ const skAccounts: Record<string, TranslationEntry> = {
     message: "Účet musí začínať jedným z: {prefixes}",
     description: "Validation error when account prefix is invalid",
   },
+  "page.accounts.timeFilterNotApplied": {
+    message:
+      "Zostatky tu sú aktuálne. Časový filter sa na túto stránku nevzťahuje.",
+    description:
+      "Note on the Accounts directory when a Time filter is in the URL; its balances are always current",
+  },
   "page.accounts.accountAlreadyOpen": {
     message: "Účet {account} je už otvorený (od {date}).",
     description:

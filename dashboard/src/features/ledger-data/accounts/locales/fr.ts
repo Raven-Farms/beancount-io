@@ -18,6 +18,12 @@ const frAccounts: Record<string, TranslationEntry> = {
       "Le compte doit commencer par l'un des éléments suivants : {prefixes}",
     description: "Validation error when account prefix is invalid",
   },
+  "page.accounts.timeFilterNotApplied": {
+    message:
+      "Les soldes affichés ici sont actuels. Le filtre de période ne s'applique pas à cette page.",
+    description:
+      "Note on the Accounts directory when a Time filter is in the URL; its balances are always current",
+  },
   "page.accounts.accountAlreadyOpen": {
     message: "{account} est déjà ouvert (depuis le {date}).",
     description:

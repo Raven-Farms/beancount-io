@@ -17,6 +17,12 @@ const ukAccounts: Record<string, TranslationEntry> = {
     message: "Рахунок повинен починатися з одного з: {prefixes}",
     description: "Validation error when account prefix is invalid",
   },
+  "page.accounts.timeFilterNotApplied": {
+    message:
+      "Тут показано поточні залишки. Фільтр за часом до цієї сторінки не застосовується.",
+    description:
+      "Note on the Accounts directory when a Time filter is in the URL; its balances are always current",
+  },
   "page.accounts.accountAlreadyOpen": {
     message: "Рахунок {account} уже відкрито (з {date}).",
     description:

@@ -17,6 +17,12 @@ const jaAccounts: Record<string, TranslationEntry> = {
     message: "口座名は次のいずれかで始まる必要があります: {prefixes}",
     description: "Validation error when account prefix is invalid",
   },
+  "page.accounts.timeFilterNotApplied": {
+    message:
+      "ここの残高は現在のものです。期間フィルターはこのページには適用されません。",
+    description:
+      "Note on the Accounts directory when a Time filter is in the URL; its balances are always current",
+  },
   "page.accounts.accountAlreadyOpen": {
     message: "{account} はすでに開設されています（{date} から）。",
     description:

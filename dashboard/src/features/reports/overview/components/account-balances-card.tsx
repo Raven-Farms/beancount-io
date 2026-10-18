@@ -12,6 +12,11 @@ import { Button } from "@/common/components/ui/button";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { useLedgerNavigateToAccount } from "@/common/hooks/use-ledger";
 import { buildAccountBalanceRows } from "../lib/overview-utils";
+import {
+  parseConcreteTimeFilter,
+  type FiscalYearEnd,
+} from "../../export/reporting-period";
+import { formatStatementDate } from "../../export/date";
 import { FormattedAmounts } from "./formatted-amounts";
 
 export function AccountBalancesCard({
@@ -21,7 +26,12 @@ export function AccountBalancesCard({
   invertLiabilities,
   ledgerOwner,
   ledgerName,
+  time,
+  fiscalYearEnd,
 }: {
+  /** The active Time filter: balances are then as of its last day. */
+  time?: string;
+  fiscalYearEnd?: FiscalYearEnd;
   assets?: unknown;
   liabilities?: unknown;
   primaryCurrency: string;
@@ -29,8 +39,21 @@ export function AccountBalancesCard({
   ledgerOwner: string;
   ledgerName: string;
 }) {
-  const { t } = useTranslations();
+  const { t, i18n } = useTranslations();
   const navigateToAccount = useLedgerNavigateToAccount();
+  // Under a Time filter these are period-end balances, which the all-time
+  // Accounts directory cannot show; the Balance Sheet can.
+  const filtered = Boolean(time?.trim());
+  const periodEnd = filtered
+    ? (parseConcreteTimeFilter(time!, fiscalYearEnd)?.endDate ?? null)
+    : null;
+  const description = !filtered
+    ? t("page.overview.accountsDescription")
+    : periodEnd
+      ? t("page.overview.accountsDescriptionAt", {
+          date: formatStatementDate(periodEnd, i18n.language),
+        })
+      : t("page.overview.accountsDescriptionPeriodEnd");
   const accounts = buildAccountBalanceRows({
     assets,
     liabilities,
@@ -42,15 +65,21 @@ export function AccountBalancesCard({
     <Card className="h-full gap-0 overflow-hidden py-0">
       <CardHeader className="border-b py-5">
         <CardTitle>{t("page.accounts.accounts")}</CardTitle>
-        <CardDescription>
-          {t("page.overview.accountsDescription")}
-        </CardDescription>
+        <CardDescription>{description}</CardDescription>
         <CardAction>
           <Button variant="ghost" size="icon" asChild>
             <Link
-              to="/ledger/$ledgerOwner/$ledgerName/accounts"
+              to={
+                filtered
+                  ? "/ledger/$ledgerOwner/$ledgerName/balance-sheet"
+                  : "/ledger/$ledgerOwner/$ledgerName/accounts"
+              }
               params={{ ledgerOwner, ledgerName }}
-              aria-label={t("page.overview.viewAllAccounts")}
+              aria-label={
+                filtered
+                  ? t("page.overview.viewPeriodBalanceSheet")
+                  : t("page.overview.viewAllAccounts")
+              }
             >
               <ListTree className="size-4" />
             </Link>
