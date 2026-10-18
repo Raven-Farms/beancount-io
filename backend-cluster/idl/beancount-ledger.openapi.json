@@ -9574,7 +9574,7 @@
           },
           "allowInvalid": {
             "type": "boolean",
-            "description": "Record unbalanced transactions deliberately instead of refusing them with UNBALANCED."
+            "description": "Record entries deliberately even when they are unbalanced (UNBALANCED) or would add bean-check errors (NEW_LEDGER_ERRORS), instead of refusing them."
           }
         },
         "type": "object",

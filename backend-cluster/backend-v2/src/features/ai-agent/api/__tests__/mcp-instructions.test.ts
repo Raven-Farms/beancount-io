@@ -30,6 +30,18 @@ describe("buildInstructions", () => {
     }
   });
 
+  it("states that structured and text writes refuse new bean-check errors unless allowInvalid", () => {
+    // Both write tools refuse a write that would break the ledger (w0/m2); a
+    // session that only read "results include newErrors" would expect a
+    // committed write to repair afterwards.
+    for (const identity of [base, { ...base, ledgerScope: "alice/personal" }]) {
+      const text = buildInstructions(identity);
+      expect(text).toMatch(
+        /`addLedgerEntries` and `appendLedgerText` refuse writes that add bean-check errors unless `allowInvalid: true`/,
+      );
+    }
+  });
+
   it("stays under 1,500 characters; it is paid on every session", () => {
     expect(buildInstructions(base).length).toBeLessThan(1500);
     expect(

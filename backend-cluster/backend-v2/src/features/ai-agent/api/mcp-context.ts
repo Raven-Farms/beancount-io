@@ -72,7 +72,7 @@ export function buildInstructions(identity: Identity): string {
     "Files: beancount://{owner}/{name}/files/{path}; catalog: beancount://catalog/ledgers.",
     "Most reads are also resources, which cost less than a tool call.",
     "Multi-step jobs have playbooks: prompts/list offers close-month, reconcile-account, categorize-imports, spending-report.",
-    "Write results include `validation.newErrors`; `checkLedger` reports every bean-check error.",
+    "`addLedgerEntries` and `appendLedgerText` refuse writes that add bean-check errors unless `allowInvalid: true`. Write results include `validation.newErrors`; `checkLedger` reports every bean-check error.",
     "BQL returns result rows: one per posting for an unaggregated query (not per transaction), one per group with GROUP BY; LIMIT bounds result rows. `runBqlQueryStructured` returns typed numbers.",
     "Every tool returns {ok, result} or {ok:false, error:{code,message,hint}} with isError.",
     // Interpolated, not restated: the instruction string is the contract every

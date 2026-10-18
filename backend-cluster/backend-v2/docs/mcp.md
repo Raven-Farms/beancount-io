@@ -897,22 +897,22 @@ encoding — also answers `BAD_USER_INPUT` (`-32602`), with a hint naming what t
 template accepts. A URI under another scheme is not this server's to answer
 and still returns the SDK's own refusal.
 
-| `error.code`             | JSON-RPC | What it means and what to do                                                                               |
-| ------------------------ | -------- | ---------------------------------------------------------------------------------------------------------- |
-| `BAD_USER_INPUT`         | `-32602` | An argument is wrong. `tools/list` publishes each tool's input schema.                                     |
-| `VALIDATION_FAILED`      | `-32602` | A field failed a business rule. The message names the field path.                                          |
-| `UNBALANCED`             | `-32602` | Postings do not sum to zero. Add a posting, elide an amount, or pass `allowInvalid: true`.                 |
-| `NOT_FOUND`              | `-32002` | No such ledger, file, entry, or revision. `listLedgers` and `listLedgerFiles` say what exists.             |
-| `FORBIDDEN`              | `-32003` | The credential lacks authority, or a pinned credential named another ledger. Read the ledger's `metadata`. |
-| `UNAUTHENTICATED`        | `-32003` | The credential expired or was revoked. Re-run the OAuth flow, or use a live API key.                       |
-| `PREMIUM_REQUIRED`       | `-32003` | The operation needs a paid plan on the credential's account.                                               |
-| `RESOURCE_LIMIT_REACHED` | `-32003` | A plan limit is reached. Remove something or upgrade.                                                      |
-| `OPERATION_NOT_ALLOWED`  | `-32003` | The ledger's current state forbids it.                                                                     |
-| `CONFLICT`               | `-32000` | Something changed since you read it. Re-read with `getEntryContext` and resend the fresh `sha256sum`.      |
-| `RATE_LIMITED`           | `-32000` | Over budget. Wait `retryAfter` seconds; batch writes rather than looping.                                  |
-| `SERVICE_UNAVAILABLE`    | `-32000` | A dependency is down. Retry with backoff; the request is not the problem.                                  |
-| `CONFIGURATION_ERROR`    | `-32000` | The deployment is missing configuration. Nothing about the request will fix it.                            |
-| `INTERNAL_SERVER_ERROR`  | `-32000` | Server-side failure. Retry once; changing the request will not help.                                       |
+| `error.code`             | JSON-RPC | What it means and what to do                                                                                                                                                                             |
+| ------------------------ | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BAD_USER_INPUT`         | `-32602` | An argument is wrong. `tools/list` publishes each tool's input schema.                                                                                                                                   |
+| `VALIDATION_FAILED`      | `-32602` | A field failed a business rule. The message names the field path. On `entries`, it names each bean-check error the write would add; fix the entries, or pass `allowInvalid: true` to record them anyway. |
+| `UNBALANCED`             | `-32602` | Postings do not sum to zero. Add a posting, elide an amount, or pass `allowInvalid: true`.                                                                                                               |
+| `NOT_FOUND`              | `-32002` | No such ledger, file, entry, or revision. `listLedgers` and `listLedgerFiles` say what exists.                                                                                                           |
+| `FORBIDDEN`              | `-32003` | The credential lacks authority, or a pinned credential named another ledger. Read the ledger's `metadata`.                                                                                               |
+| `UNAUTHENTICATED`        | `-32003` | The credential expired or was revoked. Re-run the OAuth flow, or use a live API key.                                                                                                                     |
+| `PREMIUM_REQUIRED`       | `-32003` | The operation needs a paid plan on the credential's account.                                                                                                                                             |
+| `RESOURCE_LIMIT_REACHED` | `-32003` | A plan limit is reached. Remove something or upgrade.                                                                                                                                                    |
+| `OPERATION_NOT_ALLOWED`  | `-32003` | The ledger's current state forbids it.                                                                                                                                                                   |
+| `CONFLICT`               | `-32000` | Something changed since you read it. Re-read with `getEntryContext` and resend the fresh `sha256sum`.                                                                                                    |
+| `RATE_LIMITED`           | `-32000` | Over budget. Wait `retryAfter` seconds; batch writes rather than looping.                                                                                                                                |
+| `SERVICE_UNAVAILABLE`    | `-32000` | A dependency is down. Retry with backoff; the request is not the problem.                                                                                                                                |
+| `CONFIGURATION_ERROR`    | `-32000` | The deployment is missing configuration. Nothing about the request will fix it.                                                                                                                          |
+| `INTERNAL_SERVER_ERROR`  | `-32000` | Server-side failure. Retry once; changing the request will not help.                                                                                                                                     |
 
 | Symptom                                           | Meaning and next step                                                                                                              |
 | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |

@@ -1121,7 +1121,7 @@ export interface EntryAddBulkEntriesRequest {
    * Default target file for items that omit their own (defaults to main.bean)
    */
   filename?: string | null;
-  /** Record unbalanced transactions deliberately instead of refusing them with UNBALANCED. */
+  /** Record entries deliberately even when they are unbalanced (UNBALANCED) or would add bean-check errors (NEW_LEDGER_ERRORS), instead of refusing them. */
   allowInvalid?: boolean;
 }
 
