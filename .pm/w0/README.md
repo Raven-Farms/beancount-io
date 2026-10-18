@@ -18,6 +18,5 @@
 
 ## Inbox
 
-From `/pm-brainstorm` for w0 (2026-10-17). Each note is sub-hour.
+No open notes. Resolved notes are in [`done/`](./done/).
 
-- [050 — German and Chinese use two words for "ledger" in the dashboard](./050.md) — dashboard

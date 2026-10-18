@@ -410,7 +410,7 @@ const deJournal: Record<string, TranslationEntry> = {
   },
   "journal.entryDeleteDescription": {
     message:
-      "Den Eintrag in {location} löschen? Dies entfernt ihn aus dem Ledger und kann in der App nicht rückgängig gemacht werden.",
+      "Den Eintrag in {location} löschen? Dies entfernt ihn aus dem Hauptbuch und kann in der App nicht rückgängig gemacht werden.",
     description:
       "Confirmation message for deleting a journal entry. {location} is replaced with the entry's source location.",
   },

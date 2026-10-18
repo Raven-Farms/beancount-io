@@ -75,7 +75,7 @@ const zhDashboardPage: Record<string, TranslationEntry> = {
     description: "Toast notification when ledger deleted",
   },
   "page.dashboard.ledgerLimitReached": {
-    message: "你已达到分类账限制。升级以创建更多分类账。",
+    message: "你已达到账本数量上限。升级以创建更多账本。",
     description: "Tooltip shown when save button is disabled due to limit",
   },
   "page.dashboard.ledgerName": {

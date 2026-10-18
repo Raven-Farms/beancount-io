@@ -254,15 +254,15 @@ const translations: Record<SupportedLanguage, ApiKeyMessages> = {
     "userSettings.apiKeyScopes": "Berechtigungen",
     "userSettings.apiKeyScopesDescription":
       "Beginne mit Lesezugriff und gewähre mehr nur bei Bedarf.",
-    "userSettings.apiKeyReadScopeDescription": "Ledger-Daten lesen.",
+    "userSettings.apiKeyReadScopeDescription": "Hauptbuchdaten lesen.",
     "userSettings.apiKeyWriteScopeDescription":
-      "Ledger-Daten erstellen und ändern.",
+      "Hauptbuchdaten erstellen und ändern.",
     "userSettings.apiKeyAdminScopeDescription":
-      "Administrative Ledger-Aktionen ausführen.",
-    "userSettings.apiKeyLedgerScope": "Ledger-Beschränkung (optional)",
+      "Administrative Hauptbuchaktionen ausführen.",
+    "userSettings.apiKeyLedgerScope": "Hauptbuch-Beschränkung (optional)",
     "userSettings.apiKeyLedgerScopePlaceholder": "owner/ledger",
     "userSettings.apiKeyLedgerScopeDescription":
-      "Beschränke das Token mit owner/ledger auf ein Ledger.",
+      "Beschränken Sie das Token mit owner/ledger auf ein Hauptbuch.",
     "userSettings.apiKeyExpiration": "Ablaufdatum (optional)",
     "userSettings.apiKeyExpirationDescription":
       "Das Token gilt bis zum Ende dieses UTC-Datums.",
@@ -290,8 +290,8 @@ const translations: Record<SupportedLanguage, ApiKeyMessages> = {
     "userSettings.apiKeyActive": "Aktiv",
     "userSettings.apiKeyExpired": "Abgelaufen",
     "userSettings.apiKeyRevoked": "Widerrufen",
-    "userSettings.apiKeyLedger": "Ledger",
-    "userSettings.apiKeyAllLedgers": "Alle Ledger",
+    "userSettings.apiKeyLedger": "Hauptbuch",
+    "userSettings.apiKeyAllLedgers": "Alle Hauptbücher",
     "userSettings.apiKeyCreatedAt": "Erstellt",
     "userSettings.apiKeyLastUsed": "Zuletzt verwendet",
     "userSettings.apiKeyExpiresAt": "Läuft ab",

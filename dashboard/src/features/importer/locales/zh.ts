@@ -435,7 +435,7 @@ const zhImporter: Record<string, TranslationEntry> = {
     description: "Title shown during import process",
   },
   "importer.importing.description": {
-    message: "请稍候，我们正在将你的交易添加到分类账",
+    message: "请稍候，我们正在将你的交易添加到账本",
     description: "Description shown during import process",
   },
 

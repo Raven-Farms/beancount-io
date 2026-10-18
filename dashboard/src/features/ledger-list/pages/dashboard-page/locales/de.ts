@@ -78,7 +78,7 @@ const deDashboardPage: Record<string, TranslationEntry> = {
   },
   "page.dashboard.ledgerLimitReached": {
     message:
-      "Sie haben Ihr Ledger-Limit erreicht. Upgraden Sie, um weitere Ledger zu erstellen.",
+      "Sie haben Ihr Hauptbuch-Limit erreicht. Upgraden Sie, um weitere Hauptbücher zu erstellen.",
     description: "Tooltip shown when save button is disabled due to limit",
   },
   "page.dashboard.ledgerName": {
