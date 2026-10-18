@@ -330,7 +330,8 @@ type UserLimits {
 }
 
 type SearchUser {
-  email: String!
+  """The match's email, returned only when the keyword was that email"""
+  email: String
   username: String!
 }
 

@@ -126,6 +126,18 @@ const koJournal: Record<string, TranslationEntry> = {
     message: "사용자 정의",
     description: "Custom entry type filter",
   },
+  "journal.commodity": {
+    message: "상품",
+    description: "Name of the Commodity directive type",
+  },
+  "journal.event": {
+    message: "이벤트",
+    description: "Name of the Event directive type",
+  },
+  "journal.query": {
+    message: "쿼리",
+    description: "Name of the Query directive type",
+  },
   "journal.date": {
     message: "날짜",
     description: "Label for date field",
@@ -427,6 +439,96 @@ const koJournal: Record<string, TranslationEntry> = {
     message: "분개 {number} 삭제",
     description:
       "Accessible name for removing a numbered transaction posting row",
+  },
+  "journal.payee": {
+    message: "수취인",
+    description: "Label for the payee field",
+  },
+  "journal.accountLabel": {
+    message: "계정",
+    description: "Label for the account field of a directive form",
+  },
+  "journal.amountLabel": {
+    message: "금액",
+    description: "Label for the amount field of a directive form",
+  },
+  "journal.currencyLabel": {
+    message: "통화",
+    description: "Label for the currency field of a directive form",
+  },
+  "journal.postingAccount": {
+    message: "분개 {number} 계정",
+    description:
+      "Accessible label for a numbered transaction posting's account field",
+  },
+  "journal.postingAmount": {
+    message: "분개 {number} 금액",
+    description:
+      "Accessible label for a numbered transaction posting's amount field",
+  },
+  "journal.postingCurrency": {
+    message: "분개 {number} 통화",
+    description:
+      "Accessible label for a numbered transaction posting's currency field",
+  },
+  "journal.postingsUnbalanced": {
+    message:
+      "분개가 균형이 맞지 않습니다: {residual}이(가) 남습니다. 금액을 조정하거나 하나를 비워 자동으로 맞추세요.",
+    description:
+      "Shown when a new transaction's postings leave a residual; {residual} is the amount and currency, e.g. 1 USD",
+  },
+  "journal.accountNotOpen": {
+    message: "{account} 계정은 이 원장에서 열려 있지 않습니다.",
+    description:
+      "Shown under a New Entry account field naming an account the ledger never opened; {account} is the name",
+  },
+  "journal.alsoOpenAccount": {
+    message: "{date}에 {account} 계정도 열기",
+    description:
+      "Checkbox label that adds an open directive for {account} dated {date} to the same New Entry write",
+  },
+  "journal.accountClosedBefore": {
+    message: "{account} 계정은 이 항목보다 앞선 {date}에 닫혔습니다.",
+    description:
+      "Shown under a New Entry account field naming an account closed before the entry; {date} is its close date",
+  },
+  "journal.accountOpensAfter": {
+    message: "{account} 계정은 이 항목 이후인 {date}에 열립니다.",
+    description:
+      "Shown under a New Entry account field naming an account opened after the entry; {date} is its open date",
+  },
+  "journal.discardEntryEditTitle": {
+    message: "편집 내용을 버릴까요?",
+    description:
+      "Title of the confirmation shown when leaving Entry Context with unsaved source edits",
+  },
+  "journal.discardEntryEditDescription": {
+    message: "이 항목의 원본에 대한 변경 사항이 저장되지 않았습니다.",
+    description: "Body of the Entry Context discard confirmation",
+  },
+  "journal.keepEditing": {
+    message: "계속 편집",
+    description:
+      "Button that returns to the Entry Context editor with the edit intact",
+  },
+  "journal.discardEntryEdit": {
+    message: "버리기",
+    description: "Button that discards the Entry Context edit and leaves",
+  },
+  "journal.entryChangedElsewhere": {
+    message:
+      "이 항목은 연 이후에 변경되거나 삭제되어 편집 내용이 저장되지 않았습니다. 편집 내용을 복사한 다음 새로 고쳐 최신 버전을 확인하세요.",
+    description:
+      "Entry Context save refused because the entry changed elsewhere since it was opened",
+  },
+  "journal.copyMyEdit": {
+    message: "내 편집 복사",
+    description: "Copies the unsaved Entry Context edit to the clipboard",
+  },
+  "journal.reloadEntries": {
+    message: "새로 고침",
+    description:
+      "Closes Entry Context and refreshes the journal to show the latest entries",
   },
   "journal.autoAmount": {
     message: "자동",

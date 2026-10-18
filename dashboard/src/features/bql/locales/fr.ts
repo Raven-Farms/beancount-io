@@ -58,6 +58,12 @@ const frBql: Record<string, TranslationEntry> = {
     message: "Résultat de la requête",
     description: "Label for a query result section header",
   },
+  "page.bql.largeResultHint": {
+    message:
+      "Seules les lignes visibles sont disponibles ici. Le fichier CSV contient toutes les lignes (total : {count}).",
+    description:
+      "Screen-reader note on a result too long to render every row; {count} is the total row count",
+  },
   "page.bql.unknownResultType": {
     message: "Type de résultat inconnu",
     description: "Message when query result type is not recognized",

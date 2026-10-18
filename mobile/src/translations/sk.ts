@@ -91,6 +91,7 @@ export const sk: Translations = {
   merchantsCadenceQuarterly: "Štvrťročne",
   merchantsCadenceYearly: "Ročne",
   merchantsCadenceIrregular: "Nepravidelne",
+  merchantsCadenceUnknown: "Málo histórie",
   merchantsNextExpected: "Ďalšie {{date}}",
   merchantsOverdue: "Po splatnosti",
   merchantsRecurringToggle: "Opakujúce sa",
@@ -179,7 +180,7 @@ export const sk: Translations = {
   quickAdd: "Rýchle pridanie",
   enterNewTransaction: "Zadať novú transakciu",
   multiPostingsTitle: "Nová transakcia",
-  addPosting: "+ Pridať zápis",
+  addPosting: "Pridať zápis",
   remainderLabel: "Zostatok",
   autoLabel: "auto",
   postingAccount: "Vybrať účet",
@@ -315,10 +316,12 @@ export const sk: Translations = {
   openAccountNoCurrency: "Bez meny",
   openAccountSaving: "Otvára sa...",
   openAccountFailed: "Účet sa nepodarilo otvoriť. Skúste to znova.",
+  ledgerWouldBreak: "Toto by pridalo chybu do vašej knihy: {{detail}}",
   openAccountInvalidRoot: "Vyberte platný typ účtu.",
   openAccountNameRequired: "Zadajte aspoň jednu časť názvu účtu.",
   openAccountEmptyComponent: "Časti názvu účtu nemôžu byť prázdne.",
   openAccountNamePreview: "Vytvorí sa ako {{account}}",
+  openAccountAlreadyOpen: "Účet {{account}} je v tejto knihe už otvorený.",
   openAccountUppercaseComponent:
     "Každá časť názvu účtu musí začínať veľkým písmenom alebo číslicou.",
   openAccountInvalidCharacters:
@@ -526,6 +529,7 @@ export const sk: Translations = {
   budgetInterval: "Interval",
   budgetSelectInterval: "Vyberte interval",
   budgetAmount: "Suma",
+  budgetAmountInvalid: "Zadajte číslo, napríklad 500 alebo 49.99.",
   budgetSaveFailed: "Uloženie rozpočtu zlyhalo",
   // delete
   budgetDelete: "Odstrániť",
@@ -601,6 +605,10 @@ export const sk: Translations = {
     "Peňažný tok z príjmov do výdavkov. Príjmy {{income}}, výdavky {{expenses}}.",
   cashFlowChartSummaryWithSavings:
     "Peňažný tok z príjmov do výdavkov. Príjmy {{income}}, výdavky {{expenses}}, úspory {{savings}}.",
+  cashFlowChartSummaryWithShortfall:
+    "Peňažný tok z príjmov do výdavkov. Príjmy {{income}}, výdavky {{expenses}}, z úspor {{shortfall}}.",
+  sankeyIncomeNodeLabel: "{{name}} (príjmy)",
+  sankeyExpensesNodeLabel: "{{name}} (výdavky)",
   ledgerNavigateUp: "O úroveň vyššie",
   openLedgerDrawer: "Otvoriť menu",
   back: "Späť",
@@ -625,7 +633,8 @@ export const sk: Translations = {
   profileUsernameHint:
     "Webové adresy vašich kníh začínajú vaším používateľským menom, takže jeho zmena zmení aj ich.",
   profileUsernameRequired: "Zadajte používateľské meno",
-  profileUsernameNoSpaces: "Používateľské meno nemôže obsahovať medzery",
+  profileUsernameRule:
+    "Použite 1 až 20 znakov: malé písmená a–z, číslice 0–9 alebo podčiarkovníky.",
   profileUsernameTaken: "Toto používateľské meno je už obsadené",
   profileEmail: "E-mail",
   profileEmailReadOnly: "E-mail tu nemožno zmeniť",

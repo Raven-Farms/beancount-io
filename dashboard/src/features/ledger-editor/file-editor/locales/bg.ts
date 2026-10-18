@@ -1,4 +1,9 @@
 const bgFileEditor: Record<string, { message: string; description: string }> = {
+  "ledgerEditor.rootFileCannotBeDeleted": {
+    message: "{filename} е основният файл на книгата и не може да бъде изтрит",
+    description:
+      "Why Delete is unavailable for the ledger's root file, which the server refuses to delete; {filename} is main.bean",
+  },
   "ledgerEditor.alignAmounts": {
     message: "Подравняване на суми",
     description: "Menu item to align amounts in editor",

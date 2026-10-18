@@ -96,6 +96,10 @@ client's authorization flow:
    subsequent MCP requests. Clients requesting `offline_access` can use refresh
    tokens to obtain new access tokens.
 
+A client that requests `offline_access` gets a refresh token whether or not it
+also sends `prompt=consent`, because a third-party app always sees the consent
+page. Some clients, such as MCP Python SDK 1.x hosts, leave that prompt out.
+
 A connection lasts while it is used. Access tokens expire after an hour; a
 refresh token lasts 45 days and is replaced on every refresh, so a client that
 refreshes at least every 45 days — a monthly close is enough — stays connected
@@ -126,16 +130,20 @@ with the redirect the host really uses. A host without a fixture is not called
 supported here
 ([ADR 019](../../../docs/adrs/ADR019-backend-v2-mcp-host-compatibility.md) D8).
 Claude Code signed in for real against `https://beancount.io` through its
-CIMD document on 2026-10-08. The other hosts have not been verified with a
-real sign-in yet.
+CIMD document on 2026-10-08. On 2026-10-16, OpenClaw 2026.10.4 (through
+dynamic registration) and Hermes Agent v0.22.2 (through its CIMD document)
+each signed in, read the ledger, and previewed a write with `dry_run`. The
+other hosts have not been verified with a real sign-in yet.
 
-| Host                                | Identifies itself by                      | Redirect the fixture authorizes with                                                                  | Notes                                                                                                         |
-| ----------------------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| Claude (claude.ai, Desktop, mobile) | CIMD; the fixture covers its DCR fallback | `https://claude.ai/api/mcp/auth_callback`                                                             | Add the endpoint as a custom connector.                                                                       |
-| Claude Code                         | Its CIMD document, or DCR                 | Loopback on an ephemeral port                                                                         | `claude mcp add --transport http beancount <endpoint>`, then sign in from `/mcp`.                             |
-| ChatGPT                             | CIMD; DCR otherwise                       | `https://chatgpt.com/connector_platform_oauth_redirect`                                               | Calls tools only. Every id a tool argument needs is returned by another tool. ChatGPT cannot send an API key. |
-| Cursor                              | DCR, with no `application_type`           | `cursor://anysphere.cursor-mcp/oauth/callback` (also registers `localhost:8787` and `www.cursor.com`) | Add the endpoint as a remote server in `mcp.json`.                                                            |
-| GitHub Copilot in VS Code           | CIMD, or DCR with no `application_type`   | `http://127.0.0.1:33418/`, or any loopback port when 33418 is busy                                    | Add the endpoint as an `http` server in `mcp.json`.                                                           |
+| Host                                | Identifies itself by                                            | Redirect the fixture authorizes with                                                                                  | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| ----------------------------------- | --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Claude (claude.ai, Desktop, mobile) | CIMD; the fixture covers its DCR fallback                       | `https://claude.ai/api/mcp/auth_callback`                                                                             | Add the endpoint as a custom connector.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Claude Code                         | Its CIMD document, or DCR                                       | Loopback on an ephemeral port                                                                                         | `claude mcp add --transport http beancount <endpoint>`, then sign in from `/mcp`.                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| ChatGPT                             | CIMD; DCR otherwise                                             | `https://chatgpt.com/connector_platform_oauth_redirect`                                                               | Calls tools only. Every id a tool argument needs is returned by another tool. ChatGPT cannot send an API key.                                                                                                                                                                                                                                                                                                                                                                                                            |
+| Cursor                              | DCR, with no `application_type`                                 | `cursor://anysphere.cursor-mcp/oauth/callback` (also registers `localhost:8787` and `www.cursor.com`)                 | Add the endpoint as a remote server in `mcp.json`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| GitHub Copilot in VS Code           | CIMD, or DCR with no `application_type`                         | `http://127.0.0.1:33418/`, or any loopback port when 33418 is busy                                                    | Add the endpoint as an `http` server in `mcp.json`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| OpenClaw                            | DCR, with no `application_type`                                 | `http://127.0.0.1:8989/oauth/callback`; a per-requester gateway uses `https://<its public origin>/oauth/mcp/callback` | `openclaw mcp add beancount --url https://beancount.io/api-gateway/mcp --transport streamable-http --auth oauth`, then `openclaw mcp login beancount`. Keep `--transport`: without it OpenClaw uses SSE. Resources and prompts arrive as `beancount__resources_*` and `beancount__prompts_*` tools.                                                                                                                                                                                                                      |
+| Hermes Agent                        | Its CIMD document (`nousresearch.github.io`); DCR as a fallback | `http://127.0.0.1:27890/callback`, or the next of ports 27890–27894                                                   | Under `mcp_servers` in `~/.hermes/config.yaml`, add `beancount` with `url: https://beancount.io/api-gateway/mcp` and `auth: oauth`, then run `hermes mcp login beancount` in a terminal. Resources and prompts arrive through `list_resources`, `read_resource`, `list_prompts`, and `get_prompt`. `--flow device` is not supported; on a headless machine, paste the redirect URL back at the login prompt. Install Hermes with its own installer: the older PyPI package has no MCP support without the `[mcp]` extra. |
 
 A host that registers through DCR without stating `application_type` is
 treated as a native app. That is what lets custom-scheme and loopback
@@ -223,7 +231,7 @@ operation gate.
 
 For example, `runBqlQuery` calls `LedgerShellService.queryShellText`, which
 authorizes the caller and delegates through the ledger API client.
-`readLedgerFiles` and `editLedgerFiles` use `LedgerRepoService`. GraphQL and REST
+`readLedgerFiles` and the `…LedgerFiles` write tools use `LedgerRepoService`. GraphQL and REST
 use these same services. MCP is an adapter to those capabilities; the client's
 agent decides which calls to make.
 
@@ -253,11 +261,19 @@ the principal inputs; inspect the schema before constructing a call.
 | `readLedgerFiles`            | `files: [{ path, start_line?, end_line? }]`; returns text and line-range metadata.                                                                                        | Read       |
 | `appendLedgerText`           | `text`, optional `path`, `dry_run`, `allowInvalid`; appends Beancount directive text, routed by type and date and inserted in date order.                                 | Write      |
 | `refreshManagedPrices`       | Optional `ledger`; re-fetches every managed price include (`include "https://beancount.io/prices/BTC-USD"`) now and returns each source's status. Never edits the ledger. | Write      |
-| `editLedgerFiles`            | `description`, `files`, optional `dry_run`; batches create/update/replace/delete operations into one commit.                                                              | Write      |
-| `manageBankImport`           | `operation: sync / submit / discard`, operation-specific arguments, optional `dry_run`.                                                                                   | Write      |
-| `manageBankConnection`       | `operation: reconcile / map_account / set_currency / refresh / unlink`, operation-specific arguments.                                                                     | Admin      |
+| `createLedgerFiles`          | `description`, `files: [{ path, content }]`, optional `dry_run`; creates new files in one commit.                                                                         | Write      |
+| `updateLedgerFiles`          | `description`, `files: [{ path, old_string, new_string } | { path, content }]`, optional `dry_run`; replaces exact text or whole files in one commit.                     | Write      |
+| `deleteLedgerFiles`          | `description`, `files: [{ path }]`, optional `dry_run`; deletes files in one commit.                                                                                      | Write      |
+| `syncBankTransactions`       | `item_id`, optional `dry_run`; pulls new transactions from a linked bank into staging.                                                                                    | Write      |
+| `importStagedBankTransactions` | `transactions: [{ transaction_id, target_account, source_account? }]`, optional `filename`, `dry_run`; writes staged transactions into the ledger.                     | Write      |
+| `discardStagedBankTransactions` | `transaction_ids`, optional `dry_run`; removes staged transactions.                                                                                                  | Write      |
+| `reconcileBankAccounts`      | `item_id`, optional `dry_run`; re-reads which accounts a bank shares and can delete ones it no longer shares.                                                             | Admin      |
+| `mapBankAccount`             | `account_id`, `ledger_account`; points a bank account at a ledger account.                                                                                                | Admin      |
+| `setBankAccountCurrency`     | `account_id`, `currency`; sets a bank account's currency.                                                                                                                 | Admin      |
+| `refreshBankConnection`      | `item_id`; re-reads a connection's health.                                                                                                                                | Admin      |
+| `unlinkBankConnection`       | `item_id`, optional `dry_run`; severs a linked bank.                                                                                                                      | Admin      |
 | `listBankConnections`        | `{}`; linked bank connections (`item_id`) and their accounts (`account_id`, mapping) — the `banks` and `bank-accounts` resources as a tool.                               | Admin      |
-| `listStagedBankTransactions` | Optional `accountId`; transactions staged for import, with the ids `manageBankImport` submit/discard take — the `bank-transactions/unsynced` resource as a tool.          | Read       |
+| `listStagedBankTransactions` | Optional `accountId`; transactions staged for import, with the ids `importStagedBankTransactions` and `discardStagedBankTransactions` take — the `bank-transactions/unsynced` resource as a tool.          | Read       |
 
 The implementation is listed in
 [`mcp-tools.ts`](../src/features/ai-agent/api/mcp-tools.ts).
@@ -281,6 +297,48 @@ scopes or widen its ledger restriction. MCP key results use
 `created_at` for REST/GraphQL's camelCase fields; `revoked` remains available
 for compatibility. Only creation returns the plaintext key.
 
+### Tools renamed on 2026-10-18
+
+Seven tools used to take an `operation` argument and run one of several
+operations. OpenAI's app-directory review asks for each operation as its own
+tool, so each operation now has its own tool with its own input schema and
+annotations ([ADR 019](../../../docs/adrs/ADR019-backend-v2-mcp-host-compatibility.md),
+2026-10-18 amendment). The old names are gone; a client that cached them gets
+`NOT_FOUND` and should list tools again. Each new tool takes its old
+operation's arguments without `operation`. For the file tools, drop
+`operation` from each `files` item too: a `replace` item becomes an
+`updateLedgerFiles` item with `content`.
+
+| New tool                        | Was: tool and `operation`                |
+| ------------------------------- | ---------------------------------------- |
+| `syncBankTransactions`          | `manageBankImport` `sync`                |
+| `importStagedBankTransactions`  | `manageBankImport` `submit`              |
+| `discardStagedBankTransactions` | `manageBankImport` `discard`             |
+| `reconcileBankAccounts`         | `manageBankConnection` `reconcile`       |
+| `mapBankAccount`                | `manageBankConnection` `map_account`     |
+| `setBankAccountCurrency`        | `manageBankConnection` `set_currency`    |
+| `refreshBankConnection`         | `manageBankConnection` `refresh`         |
+| `unlinkBankConnection`          | `manageBankConnection` `unlink`          |
+| `createLedger`                  | `manageLedgers` `create`                 |
+| `updateLedger`                  | `manageLedgers` `update`                 |
+| `deleteLedger`                  | `manageLedgers` `delete`                 |
+| `setLedgerCollaborator`         | `manageLedgerCollaborators` `update`     |
+| `removeLedgerCollaborator`      | `manageLedgerCollaborators` `delete`     |
+| `leaveLedger`                   | `manageLedgerCollaborators` `leave`      |
+| `createPullRequest`             | `managePullRequests` `create`            |
+| `approvePullRequest`            | `managePullRequests` `approve`           |
+| `rejectPullRequest`             | `managePullRequests` `reject`            |
+| `createLedgerFiles`             | `editLedgerFiles` `create`               |
+| `updateLedgerFiles`             | `editLedgerFiles` `update` and `replace` |
+| `deleteLedgerFiles`             | `editLedgerFiles` `delete`               |
+| `updateEntrySource`             | `editEntrySource` `update`               |
+| `deleteEntrySource`             | `editEntrySource` `delete`               |
+| `deleteEntrySources`            | `editEntrySource` `delete_many`          |
+
+File edits lose one thing: an `editLedgerFiles` call could mix creates,
+updates, and deletes in one commit. Each file tool still commits all of its
+own files together, so a mixed change is now one commit per kind.
+
 ### Writing directives as Beancount text
 
 `appendLedgerText` takes the text you would write into a file:
@@ -303,11 +361,11 @@ refusal — `UNBALANCED` when a transaction does not balance — unless
 `allowInvalid` records them deliberately. `dry_run` returns the unified diff
 and the projected errors without committing. At most 50 directives per call.
 
-Prefer it over `editLedgerFiles` for adding directives: `editLedgerFiles`
+Prefer it over `updateLedgerFiles` for adding directives: `updateLedgerFiles`
 replaces file contents, so appending with it means reading, concatenating, and
 writing the whole file back — which is how entries end up at the bottom of
-`main.bean` out of order. Use `editLedgerFiles` to restructure files and
-`editEntrySource` to change a directive that already exists.
+`main.bean` out of order. Use the `…LedgerFiles` tools to restructure files and
+`updateEntrySource` to change a directive that already exists.
 
 ### Reading and editing files
 
@@ -316,17 +374,16 @@ them. Line ranges in `readLedgerFiles` are 1-based and inclusive; the response
 contains `startLine`, `endLine`, `totalLines`, and raw `content`. It does not
 prefix every line of the content with a line number.
 
-File-edit operations have these shapes:
+One tool per kind of change, each batching its files into one commit:
 
-| Operation | Required fields besides `operation` and `path`                               |
-| --------- | ---------------------------------------------------------------------------- |
-| `create`  | `content`: new file text.                                                    |
-| `update`  | `old_string`, `new_string`: exact replacement; the old text must occur once. |
-| `replace` | `content`: complete replacement text.                                        |
-| `delete`  | None.                                                                        |
+| Tool                | Each `files` item                                                                                                  |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `createLedgerFiles` | `path`, `content`: a new file's text.                                                                              |
+| `updateLedgerFiles` | `path` with either `old_string`, `new_string` (an exact replacement; the old text must occur once) or `content` (the complete replacement text). |
+| `deleteLedgerFiles` | `path`.                                                                                                            |
 
 Send plain UTF-8 text, not base64. For example, these are arguments to
-`editLedgerFiles` for a preview; use an existing path and exact text from your
+`updateLedgerFiles` for a preview; use an existing path and exact text from your
 own ledger:
 
 ```json
@@ -335,7 +392,6 @@ own ledger:
   "dry_run": true,
   "files": [
     {
-      "operation": "update",
       "path": "main.bean",
       "old_string": "\"Grocery shooping\"",
       "new_string": "\"Grocery shopping\""
@@ -344,7 +400,7 @@ own ledger:
 }
 ```
 
-Each created or replaced file, including the complete result of an `update`
+Each created or replaced file, including the complete result of an exact-text
 replacement, must be at most **1 MiB (1,048,576 UTF-8 bytes)**. The same size
 check applies to a preview. Reads of existing larger files remain available;
 generated directive appends are a separate operation and may grow a ledger file
@@ -379,25 +435,26 @@ After linking:
 
 1. Read the `banks` and `bank-accounts` resources, or call
    `listBankConnections`, to find connection IDs and ledger-account mappings.
-2. Call `manageBankImport` with `operation: "sync"` and `item_id` to pull bank
-   transactions into staging.
+2. Call `syncBankTransactions` with `item_id` to pull bank transactions into
+   staging.
 3. Read `bank-transactions/unsynced` or call `listStagedBankTransactions`
    (optionally with `accountId` to select one bank account). Select the
    transactions and accounts to
    book; the suggestion resources can help categorize them.
-4. Call `manageBankImport` with `operation: "submit"` and
+4. Call `importStagedBankTransactions` with
    `transactions: [{ transaction_id, target_account, source_account? }]`.
    Optional `filename` selects an existing ledger file.
-5. Use `operation: "discard"` with `transaction_ids` to remove unwanted staged
-   transactions.
+5. Call `discardStagedBankTransactions` with `transaction_ids` to remove
+   unwanted staged transactions.
 
-`sync`, `submit`, and `discard` accept `dry_run: true` to invoke their service
-preview paths. Bank-connection `reconcile` and `unlink` also accept previews.
-`map_account`, `set_currency`, and `refresh` have no preview contract and reject
-`dry_run: true` before invoking a bank service. Omit the flag or set it to false
-to apply these operations immediately.
-Inspect the [bank tool dispatcher](../src/features/ai-agent/tools/bank-import-tool.ts)
-for the arguments each operation requires.
+`syncBankTransactions`, `importStagedBankTransactions`,
+`discardStagedBankTransactions`, `reconcileBankAccounts`, and
+`unlinkBankConnection` accept `dry_run: true` to invoke their service preview
+paths. `mapBankAccount`, `setBankAccountCurrency`, and `refreshBankConnection`
+have no preview contract and publish no `dry_run` argument, so passing one is
+refused as an undeclared argument before any bank service runs. Each tool's
+input schema is in [`bank-import-tool.ts`](../src/features/ai-agent/tools/bank-import-tool.ts)
+(`BANK_OPERATIONS`).
 
 ### Asset and archive URL discovery
 
@@ -434,10 +491,10 @@ GraphQL's deliberate raw-byte exclusion remains unchanged.
 Read `beancount://{owner}/{name}/pull-request{?prNumber}` to inspect metadata,
 file statistics, and the full diff. This requires repository read authority.
 
-`managePullRequests` requires repository write authority and a `ledger` target
+Three tools, each requiring repository write authority and a `ledger` target
 (`owner/name`), which may be omitted for a pinned credential:
 
-- `create` requires `title`, `description`, `clearCommitMessage`, and
+- `createPullRequest` requires `title`, `description`, `clearCommitMessage`, and
   `changes: [{ "path": "...", "content": "..." }]`. Each content value is the
   complete replacement file text; empty title/description and a missing commit
   message are refused. `baseBranch` defaults to `main` — say so when the
@@ -445,13 +502,18 @@ file statistics, and the full diff. This requires repository read authority.
   differs from base and refuses a diff-less branch unless `fastForward: true`
   skips verification. The result carries the PR's actual `baseBranch`/`headBranch`
   refs — use those to follow up, not the requested names.
-- `approve` requires `prNumber` and merges the PR.
-- `reject` requires `prNumber` and closes it without merging.
+- `approvePullRequest` requires `prNumber` and merges the PR.
+- `rejectPullRequest` requires `prNumber` and closes it without merging.
 
-Reviews apply immediately; preview is unsupported. Domain failures return
-`success: false`; MCP additionally reports `isError` and retains the domain
-payload under `structuredContent.result`. Creation can leave a branch with
-partial file changes if an upstream operation fails after branch creation.
+Reviews apply immediately; preview is unsupported. Repository refusals return
+`success: false`; MCP additionally reports `isError` with code
+`OPERATION_NOT_ALLOWED` and retains the domain payload under
+`structuredContent.result`. A create failure names the step that failed
+(`creating branch …`, `writing main.bean`, `opening the pull request`) and
+Gitea's reason when it gave one. When the repository server itself fails
+(5xx or unreachable), every surface answers `SERVICE_UNAVAILABLE` with that
+message, and its hint says whether a retry can help. A failed create deletes
+the branch it made (best effort), so no partial changes are left behind.
 Unsafe repository-relative paths are rejected before a branch is created.
 
 REST uses `/api-gateway/v1/ledgers/{owner}/{name}/pull-requests` for creation,
@@ -460,16 +522,16 @@ for review. The three mutations use POST; review bodies are `{}`.
 
 ### Ledger lifecycle
 
-`manageLedgers` requires administrative authority and applies changes
-immediately. It offers no preview.
+`createLedger`, `updateLedger`, and `deleteLedger` require administrative
+authority and apply changes immediately. They offer no preview.
 
-- `create` requires `name` and accepts `description`, `private`, and `template`
+- `createLedger` requires `name` and accepts `description`, `private`, and `template`
   (`STARTER` or `SAMPLE`; omission selects starter files). Names use lowercase
   letters, numbers, hyphens, and underscores, up to 100 characters. Creation
   uses the authenticated account and accepts no `ledger` selector; the existing
   account policy also permits creation with a ledger-pinned admin credential.
-- `update` accepts `ledger` and optional `name`, `description`, and `private`.
-- `delete` accepts only `ledger` and returns `{ "ledgerId": "owner/name" }`.
+- `updateLedger` accepts `ledger` and optional `name`, `description`, and `private`.
+- `deleteLedger` accepts only `ledger` and returns `{ "ledgerId": "owner/name" }`.
 
 For update/delete, unpinned credentials must supply `ledger`; pinned credentials
 may omit it and cannot select another ledger. Creation and update return ledger
@@ -491,18 +553,18 @@ access credential, which the connector directories forbid an app to handle
 
 ### Collaborator changes
 
-`manageLedgerCollaborators` requires `ledger.admin` and the current relationship
-for its selected operation. Supply `ledger: "owner/name"` for an unpinned
-credential; a pinned credential can omit it.
+Each tool requires `ledger.admin` and the current relationship for its
+operation. Supply `ledger: "owner/name"` for an unpinned credential; a pinned
+credential can omit it.
 
-| Operation | Arguments                                                                    | Effect                                                                                                                        |
-| --------- | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `update`  | Required `collaborator`; optional `permission` (`read`, `write`, or `admin`) | Add or update membership, subject to the existing collaborator limit. Omitted or null permission uses the repository default. |
-| `delete`  | Required `collaborator`                                                      | Remove that member.                                                                                                           |
-| `leave`   | No collaborator or permission argument                                       | Remove the authenticated caller. Owners cannot leave their own ledger.                                                        |
+| Tool                       | Arguments                                                                    | Effect                                                                                                                        |
+| -------------------------- | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `setLedgerCollaborator`    | Required `collaborator`; optional `permission` (`read`, `write`, or `admin`) | Add or update membership, subject to the existing collaborator limit. Omitted or null permission uses the repository default. |
+| `removeLedgerCollaborator` | Required `collaborator`                                                      | Remove that member.                                                                                                           |
+| `leaveLedger`              | No collaborator or permission argument                                       | Remove the authenticated caller. Owners cannot leave their own ledger.                                                        |
 
-These operations apply immediately; preview is not supported. Extra branch
-arguments and `dry_run` are rejected. A membership removal affects the next
+These tools apply immediately; preview is not supported. Undeclared arguments,
+including `dry_run`, are rejected. A membership removal affects the next
 protected call.
 
 ## Resources
@@ -869,7 +931,7 @@ mean the tool succeeded.
 Each tool advertises an object `outputSchema`: `ok` is required, with optional
 `result` and `error`. Its fields are intentionally undocumented there — the
 envelope is identical on every tool, so describing it once here costs one copy
-instead of twenty-seven in each `tools/list`. The runtime success/failure
+instead of forty-three in each `tools/list`. The runtime success/failure
 convention is stronger than that published schema because the SDK requires an
 object schema here. See
 [`types.ts`](../src/features/ai-agent/tools/types.ts) and MCP's
@@ -889,22 +951,22 @@ encoding — also answers `BAD_USER_INPUT` (`-32602`), with a hint naming what t
 template accepts. A URI under another scheme is not this server's to answer
 and still returns the SDK's own refusal.
 
-| `error.code`             | JSON-RPC | What it means and what to do                                                                               |
-| ------------------------ | -------- | ---------------------------------------------------------------------------------------------------------- |
-| `BAD_USER_INPUT`         | `-32602` | An argument is wrong. `tools/list` publishes each tool's input schema.                                     |
-| `VALIDATION_FAILED`      | `-32602` | A field failed a business rule. The message names the field path.                                          |
-| `UNBALANCED`             | `-32602` | Postings do not sum to zero. Add a posting, elide an amount, or pass `allowInvalid: true`.                 |
-| `NOT_FOUND`              | `-32002` | No such ledger, file, entry, or revision. `listLedgers` and `listLedgerFiles` say what exists.             |
-| `FORBIDDEN`              | `-32003` | The credential lacks authority, or a pinned credential named another ledger. Read the ledger's `metadata`. |
-| `UNAUTHENTICATED`        | `-32003` | The credential expired or was revoked. Re-run the OAuth flow, or use a live API key.                       |
-| `PREMIUM_REQUIRED`       | `-32003` | The operation needs a paid plan on the credential's account.                                               |
-| `RESOURCE_LIMIT_REACHED` | `-32003` | A plan limit is reached. Remove something or upgrade.                                                      |
-| `OPERATION_NOT_ALLOWED`  | `-32003` | The ledger's current state forbids it.                                                                     |
-| `CONFLICT`               | `-32000` | Something changed since you read it. Re-read with `getEntryContext` and resend the fresh `sha256sum`.      |
-| `RATE_LIMITED`           | `-32000` | Over budget. Wait `retryAfter` seconds; batch writes rather than looping.                                  |
-| `SERVICE_UNAVAILABLE`    | `-32000` | A dependency is down. Retry with backoff; the request is not the problem.                                  |
-| `CONFIGURATION_ERROR`    | `-32000` | The deployment is missing configuration. Nothing about the request will fix it.                            |
-| `INTERNAL_SERVER_ERROR`  | `-32000` | Server-side failure. Retry once; changing the request will not help.                                       |
+| `error.code`             | JSON-RPC | What it means and what to do                                                                                                                                                                             |
+| ------------------------ | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BAD_USER_INPUT`         | `-32602` | An argument is wrong. `tools/list` publishes each tool's input schema.                                                                                                                                   |
+| `VALIDATION_FAILED`      | `-32602` | A field failed a business rule. The message names the field path. On `entries`, it names each bean-check error the write would add; fix the entries, or pass `allowInvalid: true` to record them anyway. |
+| `UNBALANCED`             | `-32602` | Postings do not sum to zero. Add a posting, elide an amount, or pass `allowInvalid: true`.                                                                                                               |
+| `NOT_FOUND`              | `-32002` | No such ledger, file, entry, or revision. `listLedgers` and `listLedgerFiles` say what exists.                                                                                                           |
+| `FORBIDDEN`              | `-32003` | The credential lacks authority, or a pinned credential named another ledger. Read the ledger's `metadata`.                                                                                               |
+| `UNAUTHENTICATED`        | `-32003` | The credential expired or was revoked. Re-run the OAuth flow, or use a live API key.                                                                                                                     |
+| `PREMIUM_REQUIRED`       | `-32003` | The operation needs a paid plan on the credential's account.                                                                                                                                             |
+| `RESOURCE_LIMIT_REACHED` | `-32003` | A plan limit is reached. Remove something or upgrade.                                                                                                                                                    |
+| `OPERATION_NOT_ALLOWED`  | `-32003` | The ledger's current state forbids it.                                                                                                                                                                   |
+| `CONFLICT`               | `-32000` | Something changed since you read it. Re-read with `getEntryContext` and resend the fresh `sha256sum`.                                                                                                    |
+| `RATE_LIMITED`           | `-32000` | Over budget. Wait `retryAfter` seconds; batch writes rather than looping.                                                                                                                                |
+| `SERVICE_UNAVAILABLE`    | `-32000` | A dependency is down. Retry with backoff; the request is not the problem.                                                                                                                                |
+| `CONFIGURATION_ERROR`    | `-32000` | The deployment is missing configuration. Nothing about the request will fix it.                                                                                                                          |
+| `INTERNAL_SERVER_ERROR`  | `-32000` | Server-side failure. Retry once; changing the request will not help.                                                                                                                                     |
 
 | Symptom                                           | Meaning and next step                                                                                                              |
 | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
@@ -1234,18 +1296,19 @@ SHA or preview flag. Repository conflicts remain errors.
 
 ### Update or delete entry source
 
-`editEntrySource` exposes three operations through the existing journal service:
+Three tools reach the existing journal service:
 
-- `update`: `entryHash`, `sha256sum`, and `newContent`; returns `message`,
-  `newSha256sum`, and `newEntryHash` — the request's `entryHash` is stale
-  after the commit, so use `newEntryHash` for the next edit.
-- `delete`: `entryHash` and `sha256sum`; returns `message` and `entryHash`.
-- `delete_many`: `entries: [{entryHash, sha256sum}]`; returns `message` and
-  `deletedCount`.
+- `updateEntrySource`: `entryHash`, `sha256sum`, and `newContent`; returns
+  `message`, `newSha256sum`, and `newEntryHash` — the request's `entryHash` is
+  stale after the commit, so use `newEntryHash` for the next edit.
+- `deleteEntrySource`: `entryHash` and `sha256sum`; returns `message` and
+  `entryHash`.
+- `deleteEntrySources`: `entries: [{entryHash, sha256sum}]`; returns `message`
+  and `deletedCount`.
 
-Use the current source checksum returned by entry context. Each branch accepts
+Use the current source checksum returned by entry context. Each tool accepts
 only its own arguments and optional `ledger`; a pinned credential may omit the
-ledger. Current content-write access is required. The operation delegates source
+ledger. Current content-write access is required. Each delegates source
 validation and mutation to the ledger service and does not support preview.
 
 ### Insert structured directives
@@ -1263,7 +1326,11 @@ of what was written and how many new bean-check errors it introduced, then
 `errorsAfter`, `newErrors`) — learn about a broken ledger from the write
 result itself instead of re-reading the errors resource. A transaction with at
 most one amount omitted is written elided; any other imbalance is refused with
-`UNBALANCED` unless `allowInvalid: true` records it deliberately. It is
+`UNBALANCED`. Like `appendLedgerText`, it bean-checks the projected ledger
+before committing: entries that would add new errors — a second `open` for an
+account already open, a balance against an account never opened — are refused
+with `VALIDATION_FAILED`, the message naming each new error (w0/m2).
+`allowInvalid: true` records either deliberately. It is
 distinct from raw file editing. REST and MCP impose no separate batch-size
 limit beyond the shared ledger contract. Optional null fields are treated as
 absent. Transaction metadata accepts string-valued objects on all three

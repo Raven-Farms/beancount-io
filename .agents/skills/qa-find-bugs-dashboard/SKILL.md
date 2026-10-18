@@ -61,6 +61,11 @@ matches local HEAD before declaring a source fix missing from production.
   Inspect `features/auth/hooks/use-login-form.ts`,
   `graphql/query/auth.graphql`, and the backend auth resolver/cookie helper for the
   current contract. Verify the resulting account and role, not merely a 200.
+- Write journeys (journal edits, New Entry, Open Account, budgets, file
+  create/edit/upload/delete, CSV import) run on the QA account's designated
+  disposable ledger under the contract's standing write authorization:
+  snapshot first, prefix and record each write, restore byte-for-byte at the
+  end. Everything outside that authorization still needs the user's go-ahead.
 - Use an ordinary desktop viewport (for example 1440×1000), then repeat the
   relevant controls at a narrow viewport. Record locale, theme, and active
   filters. Prefer accessible roles and names from snapshots to brittle selectors.

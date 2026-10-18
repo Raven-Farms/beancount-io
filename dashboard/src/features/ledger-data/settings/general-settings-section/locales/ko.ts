@@ -16,6 +16,11 @@ const koGeneralSettingsSection: Record<string, TranslationEntry> = {
     message: "이 이름은 애플리케이션 전체에 표시됩니다",
     description: "Help text for ledger name field",
   },
+  "page.settings.ledgerNameTaken": {
+    message: "{name} 이름의 원장이 이미 있습니다.",
+    description:
+      "Rename refusal when another ledger of the same owner already has the name; {name} is the slug",
+  },
   "page.settings.generalSettings": {
     message: "일반 설정",
     description: "Section title for general settings",

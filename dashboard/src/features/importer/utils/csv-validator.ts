@@ -3,6 +3,7 @@
  */
 
 import type { ParsedRow } from "../types";
+import { parseDecimalNumber } from "@/common/lib/beancount/decimal-number";
 
 /**
  * Validate date format (YYYY-MM-DD)
@@ -64,6 +65,12 @@ export type AmountParseFailureReason =
 export type AmountParseResult = {
   valid: boolean;
   amount?: number;
+  /**
+   * The exact plain decimal the token denotes, digits as written: `-1,234.56`
+   * is `-1234.56`, `(12.50)` is `-12.50`, comma-decimal `-1.000` is `-1000`.
+   * This, never the raw token, is what an import writes.
+   */
+  decimal?: string;
   error?: string;
   reason?: AmountParseFailureReason;
 };
@@ -300,16 +307,31 @@ export function parseAmount(
     };
   }
 
-  return { valid: true, amount };
+  // Null only past the decimal helper's exponent bound, which no bank writes.
+  const decimal = parseDecimalNumber(trimmed);
+  if (decimal === null) {
+    return {
+      valid: false,
+      error: "Amount has unsupported precision",
+      reason: "unsupported-precision",
+    };
+  }
+
+  return { valid: true, amount, decimal };
 }
 
 export function createParsedRowId(): string {
   return crypto.randomUUID();
 }
 
+const MIXED_DECIMAL_ERROR =
+  "Amount column mixes point decimals (1,234.56) and comma decimals (1.234,56). Use one convention per column.";
+
 /**
  * Build a ParsedRow from editable field strings, applying the same validators
- * used by the CSV parser so upload and inline edit share one contract.
+ * used by the CSV parser so upload and inline edit share one contract. A
+ * `decimalMixed` column refuses every amount: no row may resolve
+ * `1,234.56` against `1.234,56` alone, as in the CLI importer.
  */
 export function buildParsedRow(
   fields: {
@@ -319,7 +341,10 @@ export function buildParsedRow(
     amountInput: string;
     id?: string;
   },
-  { decimalComma = false }: { decimalComma?: boolean } = {},
+  {
+    decimalComma = false,
+    decimalMixed = false,
+  }: { decimalComma?: boolean; decimalMixed?: boolean } = {},
 ): ParsedRow {
   const errors: string[] = [];
 
@@ -342,6 +367,8 @@ export function buildParsedRow(
   if (!amountResult.valid) {
     errors.push(amountResult.error!);
   }
+  if (decimalMixed) errors.push(MIXED_DECIMAL_ERROR);
+  const amountValid = amountResult.valid && !decimalMixed;
 
   return {
     id: fields.id ?? createParsedRowId(),
@@ -349,9 +376,14 @@ export function buildParsedRow(
     payee: fields.payee,
     description: fields.description,
     amountInput: fields.amountInput,
-    amount: amountResult.valid ? amountResult.amount! : 0,
-    amountFailureReason: amountResult.valid ? undefined : amountResult.reason,
+    amount: amountValid ? amountResult.amount! : 0,
+    amountFailureReason: amountValid
+      ? undefined
+      : decimalMixed
+        ? "invalid"
+        : amountResult.reason,
     ...(decimalComma ? { decimalComma } : {}),
+    ...(decimalMixed ? { decimalMixed } : {}),
     errors: errors.length > 0 ? errors : undefined,
   };
 }

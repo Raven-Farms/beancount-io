@@ -188,3 +188,14 @@ key unless you also plan a known-hosts migration for every client.
 - [Docker: health-gated startup order](https://docs.docker.com/compose/how-tos/startup-order/)
 - [Gitea: installation with Docker](https://docs.gitea.com/next/installation/install-with-docker/)
 - [Caddy: automatic HTTPS](https://caddyserver.com/docs/automatic-https)
+
+
+## Application billing
+
+Only the live application client `beancount-web-prod` is supported. Configure
+`STRIPE_PRIVATE_KEY`, `STRIPE_PUBLIC_KEY` and `STRIPE_WEBHOOK_SECRET` through the
+local secret environment when billing is needed. Retired `STRIPE_DEV_*` variables
+and `?env=dev` do not enable test billing. Synthetic fixtures/isolated test runs
+cover Stripe behavior without charging or redeeming live promotions. Deploy the
+backend and dashboard together. A deployment without Stripe
+credentials can run non-billing features but cannot verify paid subscriptions.

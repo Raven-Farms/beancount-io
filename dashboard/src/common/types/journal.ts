@@ -61,6 +61,10 @@ export interface JournalTransaction extends JournalDirective {
 
 export interface JournalBalance extends JournalDirective {
   account: string;
+  /** The asserted amount; absent from ledger services older than w3/556. */
+  amount?: JournalAmount;
+  /** Explicit tolerance from a `~` annotation. */
+  tolerance?: string | null;
   diff_amount?: JournalAmount | null;
 }
 

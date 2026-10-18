@@ -47,19 +47,19 @@ const deReports = {
   ...deOverview,
   ...deExport,
   "page.overview.starButton.starSuccess": {
-    message: "Ledger spielte erfolgreich die Hauptrolle",
+    message: "Hauptbuch mit Stern versehen",
     description: "Toast shown after starring a ledger",
   },
   "page.overview.starButton.starFailed": {
-    message: "Fehler beim Star-Ledger",
+    message: "Hauptbuch konnte nicht mit Stern versehen werden",
     description: "Toast shown when starring a ledger fails",
   },
   "page.overview.starButton.unstarSuccess": {
-    message: "Ledger hat die Markierung erfolgreich aufgehoben",
+    message: "Stern vom Hauptbuch entfernt",
     description: "Toast shown after unstarring a ledger",
   },
   "page.overview.starButton.unstarFailed": {
-    message: "Fehler beim Entsperren des Hauptbuchs",
+    message: "Stern konnte nicht vom Hauptbuch entfernt werden",
     description: "Toast shown when unstarring a ledger fails",
   },
 };

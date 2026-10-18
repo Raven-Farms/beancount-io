@@ -504,6 +504,67 @@ describe("useCSVParser", () => {
     });
   });
 
+  describe("parseCSV – field delimiters (w3/643)", () => {
+    it("reads a semicolon EU bank export with comma decimals", () => {
+      const { result } = renderHook(() => useCSVParser());
+      const parsed = result.current.parseCSV(
+        [
+          "Date;Payee;Description;Amount",
+          "2026-09-03;Cafe;Comma decimal;-4,50",
+          "2026-09-04;Shop;Thousand;-1.000",
+        ].join("\n"),
+      );
+      expect(parsed.errorCount).toBe(0);
+      expect(parsed.rows.map((row) => row.payee)).toEqual(["Cafe", "Shop"]);
+      expect(parsed.rows.map((row) => row.amount)).toEqual([-4.5, -1000]);
+    });
+
+    it("reads a headerless semicolon file by its four columns", () => {
+      const { result } = renderHook(() => useCSVParser());
+      const parsed = result.current.parseCSV(
+        "2026-09-03;Cafe;Kaffee;-4,50\n2026-09-04;Laden;Einkauf;-12,00",
+      );
+      expect(parsed.validCount).toBe(2);
+      expect(parsed.rows.map((row) => row.amount)).toEqual([-4.5, -12]);
+    });
+
+    it("keeps quoted semicolons and quotes inside a semicolon file", () => {
+      const { result } = renderHook(() => useCSVParser());
+      const parsed = result.current.parseCSV(
+        [
+          "Date;Payee;Description;Amount",
+          '2026-09-03;"Cafe; Bar";"Said ""hi""";"-4,50"',
+        ].join("\n"),
+      );
+      expect(parsed.validCount).toBe(1);
+      expect(parsed.rows[0].payee).toBe("Cafe; Bar");
+      expect(parsed.rows[0].description).toBe('Said "hi"');
+      expect(parsed.rows[0].amount).toBe(-4.5);
+    });
+
+    it("reads a tab-delimited export", () => {
+      const { result } = renderHook(() => useCSVParser());
+      const parsed = result.current.parseCSV(
+        [
+          "Date\tPayee\tDescription\tAmount",
+          '2026-09-03\t"Cafe, Bar"\tCoffee\t-4.50',
+        ].join("\n"),
+      );
+      expect(parsed.validCount).toBe(1);
+      expect(parsed.rows[0].payee).toBe("Cafe, Bar");
+      expect(parsed.rows[0].amount).toBe(-4.5);
+    });
+
+    it("keeps a comma file comma-delimited when a field holds semicolons", () => {
+      const { result } = renderHook(() => useCSVParser());
+      const parsed = result.current.parseCSV(
+        "2026-09-03,Cafe,a;b;c,5.50\n2026-09-04,Shop,d;e,-1.25",
+      );
+      expect(parsed.validCount).toBe(2);
+      expect(parsed.rows[0].description).toBe("a;b;c");
+    });
+  });
+
   describe("parseCSV – quoted multiline fields (RFC 4180)", () => {
     const fixtureHeader = "Date,Payee,Description,Amount";
     const fixtureBody = [

@@ -33,7 +33,8 @@ const session: Identity = {
 
 const READ_OP = "GQL Query.queryShellText";
 const WRITE_OP = "GQL Mutation.unclassifiedWriteFallback";
-const ADMIN_OP = "MCP manageBankConnection";
+// An admin read the scope gate itself enforces: it has no single PDP action.
+const ADMIN_OP = "MCP listBankConnections";
 const SESSION_ONLY_OP = "GQL Mutation.signIn";
 const PUBLIC_OP = "GQL Query.health";
 const UNKNOWN_OP = "GQL Query.somethingNobodyClassified";
@@ -72,8 +73,8 @@ describe("classifyOp", () => {
         (entry.mcpResource ? 1 : 0),
       0,
     );
-    // Fewer ids than entries for two reasons: `editLedgerFiles` is named by
-    // three rows, and `ledger.readFiles` carries both a tool and a resource —
+    // Fewer ids than entries for two reasons: the file `PUT` route is named by
+    // two rows, and `ledger.readFiles` carries both a tool and a resource —
     // one verb, two primitives, two ids.
     expect(classifiedOpIds().length).toBeLessThanOrEqual(expected);
     expect(new Set(classifiedOpIds()).size).toBe(classifiedOpIds().length);
@@ -95,7 +96,7 @@ describe("classifyOp", () => {
         "REST DELETE /api-gateway/v1/api-keys/{id}",
         // The grouped MCP dispatcher (w2/m27) carries all three verbs, so it
         // has no transport-level canonical action — each operation authorizes
-        // in the shared application service, as with manageBankImport.
+        // in the shared application service.
         "MCP manageApiKeys",
         "GQL Query.subscriptionStatus",
         "GQL Mutation.createSubscriptionSession",
@@ -284,7 +285,7 @@ describe("classifyOp", () => {
       actions,
     );
     // A grouped MCP dispatcher (one tool spanning verbs with different
-    // canonical actions, e.g. managePullRequests) deliberately has no
+    // canonical actions) deliberately has no
     // transport-level action: the selected service verb authorizes itself.
     const actionsByTool = new Map<string, Set<string | undefined>>();
     for (const entry of VERB_TABLE) {
@@ -310,11 +311,15 @@ describe("classifyOp", () => {
     }
   });
 
-  it("leaves grouped bank MCP dispatchers to authorize the selected service verb", () => {
-    expect(
-      authorizationActionForOp("MCP manageBankConnection"),
-    ).toBeUndefined();
-    expect(authorizationActionForOp("MCP manageBankImport")).toBeUndefined();
+  it("gives each per-operation bank MCP tool its verb's canonical action", () => {
+    // Split from the grouped dispatchers (ADR 019, 2026-10-18): each tool now
+    // carries exactly its verb's PDP action, the same as GraphQL's.
+    expect(authorizationActionForOp("MCP unlinkBankConnection")).toBe(
+      AUTHORIZATION_ACTIONS.BANK_CONNECTION_UNLINK,
+    );
+    expect(authorizationActionForOp("MCP syncBankTransactions")).toBe(
+      AUTHORIZATION_ACTIONS.BANK_TRANSACTIONS_SYNC,
+    );
 
     expect(authorizationActionForOp("GQL Mutation.unlinkPlaidItem")).toBe(
       AUTHORIZATION_ACTIONS.BANK_CONNECTION_UNLINK,

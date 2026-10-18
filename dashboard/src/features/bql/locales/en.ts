@@ -57,6 +57,12 @@ const enBql: Record<string, TranslationEntry> = {
     message: "Query Result",
     description: "Label for a query result section header",
   },
+  "page.bql.largeResultHint": {
+    message:
+      "Only the rows in view are available here. Download CSV contains every row (total: {count}).",
+    description:
+      "Screen-reader note on a result too long to render every row; {count} is the total row count",
+  },
   "page.bql.unknownResultType": {
     message: "Unknown result type",
     description: "Message when query result type is not recognized",

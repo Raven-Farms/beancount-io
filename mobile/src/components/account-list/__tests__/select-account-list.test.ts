@@ -1,5 +1,7 @@
 import {
   CATEGORY_SIGN,
+  NET_WORTH_SIGN,
+  accountCategory,
   selectAccountTreeFromRoot,
 } from "../select-account-list";
 
@@ -307,5 +309,43 @@ describe("selectAccountTreeFromRoot", () => {
     const result = selectAccountTreeFromRoot("CNY", root);
     expect(result.map((n) => n.name)).toEqual(["Salary"]);
     expect(result[0].value).toBe(5000.5);
+  });
+});
+
+describe("accountCategory and NET_WORTH_SIGN", () => {
+  it("finds the category of an account by its root", () => {
+    expect(accountCategory("Expenses:Food:Groceries")).toBe("expenses");
+    expect(accountCategory("Income")).toBe("income");
+    expect(accountCategory("Liabilities:US:Chase:Slate")).toBe("liabilities");
+    expect(accountCategory("Equity:Opening-Balances")).toBe("equity");
+    expect(accountCategory("Assets:Cash")).toBe("assets");
+  });
+
+  it("honors a ledger's renamed roots", () => {
+    const roots = { income: "Revenue", expenses: "Costs", assets: null };
+    expect(accountCategory("Revenue:Salary", roots)).toBe("income");
+    expect(accountCategory("Costs:Rent", roots)).toBe("expenses");
+    // A null option falls back to the default root name.
+    expect(accountCategory("Assets:Cash", roots)).toBe("assets");
+    expect(accountCategory("Income:Salary", roots)).toBe(null);
+  });
+
+  it("returns null for a root that is none of the five", () => {
+    expect(accountCategory("Budget:Food")).toBe(null);
+    expect(accountCategory("")).toBe(null);
+  });
+
+  it("mirrors net worth for Income, Expenses and Equity only", () => {
+    expect(NET_WORTH_SIGN).toEqual({
+      assets: 1,
+      liabilities: 1,
+      equity: -1,
+      income: -1,
+      expenses: -1,
+    });
+    // Unlike CATEGORY_SIGN, which follows debit/credit normal balances.
+    expect(NET_WORTH_SIGN.liabilities === CATEGORY_SIGN.liabilities).toBe(
+      false,
+    );
   });
 });

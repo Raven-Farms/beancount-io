@@ -9,6 +9,7 @@ root, as the `--into` recipe would.
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -105,5 +106,6 @@ def test_a_never_opened_account_still_gets_the_add_open_remedy(books: Path) -> N
         "Assets:Cash",
     )
     assert result.returncode == 1
-    assert "To create it, use bea add open --account Expenses:Nope" in " ".join(result.stderr.split())
+    # Named with the root it is checked against (w5/619).
+    assert re.search(r"To create it, use bea --file .*main\.bean'? add open --account Expenses:Nope", result.stderr)
     assert leaf.read_text() == LEAF

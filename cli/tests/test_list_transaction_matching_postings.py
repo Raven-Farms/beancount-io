@@ -87,3 +87,23 @@ def test_no_account_filter_keeps_the_envelope_unchanged(tmp_path: Path) -> None:
     for row in rows:
         assert "matching_postings" not in row
         assert len(row["postings"]) == 2
+
+
+def test_a_filtered_listing_feeds_back_into_add_transactions(tmp_path: Path) -> None:
+    """`add transactions` ignores `matching_postings` like `source`, so the pipe round-trips (w5/540)."""
+    ledger = _ledger(tmp_path)
+    listed = _bea(tmp_path, "--json", "--file", str(ledger), "list", "transaction", "--account", "Food")
+    assert listed.returncode == 0, listed.stderr
+    rows = json.loads(listed.stdout)["data"]
+    assert len(rows) == 1 and rows[0]["matching_postings"], rows
+    target = tmp_path / "target.bean"
+    target.write_text(LEDGER.split("\n\n")[0] + "\n")
+    (tmp_path / "rows.json").write_text(json.dumps(rows))
+
+    added = _bea(tmp_path, "--file", str(target), "add", "transactions", "--from", "rows.json")
+
+    assert added.returncode == 0, added.stderr
+    written = target.read_text()
+    assert written.count('"Lunch"') == 1 and "Transfer" not in written
+    assert "  Expenses:Food   12.00 USD\n  Assets:Cash    -12.00 USD\n" in written
+    assert "matching_postings" not in written

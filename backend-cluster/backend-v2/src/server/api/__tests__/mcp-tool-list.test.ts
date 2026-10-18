@@ -17,7 +17,7 @@ import {
   PLAN_WORDING,
   STEERING_WORDING,
 } from "@/features/ai-agent/api/__tests__/directory-wording";
-import { mcpToolSecuritySchemes, VERB_TABLE } from "../op-class";
+import { mcpToolSecuritySchemes } from "../op-class";
 
 /**
  * The lean, use-ordered tool list (w2/m27:t005).
@@ -69,6 +69,23 @@ const listToolsRaw = () =>
   );
 
 const listTools = () => withClient((client) => client.listTools());
+
+const SELECTOR = /^(operation|op|action|verb|command|method)$/i;
+
+/** Every property in a JSON Schema whose name says it picks an operation. */
+function selectorPaths(schema: unknown, at = "$"): string[] {
+  if (Array.isArray(schema))
+    return schema.flatMap((item, i) => selectorPaths(item, `${at}[${i}]`));
+  if (!schema || typeof schema !== "object") return [];
+  return Object.entries(schema).flatMap(([key, value]) => {
+    if (key !== "properties" || !value || typeof value !== "object")
+      return selectorPaths(value, `${at}.${key}`);
+    return Object.entries(value).flatMap(([name, property]) => [
+      ...(SELECTOR.test(name) ? [`${at}.${name}`] : []),
+      ...selectorPaths(property, `${at}.${name}`),
+    ]);
+  });
+}
 
 describe("MCP tool list", () => {
   it("describes every tool and prompt without steering the model or naming a plan", async () => {
@@ -187,9 +204,28 @@ describe("MCP tool list", () => {
     // official client SDK strips unknown top-level fields): 4.1 KB across 30
     // tools. Measured on the raw response from here on, since the parsed one
     // no longer shows everything an agent pays for.
+    //
+    // 96 KB since w1/m38 split the grouped tools into one tool per operation
+    // (ADR 019, 2026-10-18), measured at 96,458 bytes across 43 tools: the
+    // two bank tools became eight, and ledger lifecycle, collaborators, pull
+    // requests, file edits, and entry-source edits became three each. Each
+    // entry-source tool publishes only its own result shape; the shared
+    // union would have put the list about 8 KB over this line.
     const { tools } = await listToolsRaw();
     const bytes = Buffer.byteLength(JSON.stringify(tools), "utf8");
-    expect(bytes).toBeLessThan(72 * 1024);
+    expect(bytes).toBeLessThan(96 * 1024);
+  });
+
+  it("exposes each operation as its own tool, never behind a selector argument", async () => {
+    // OpenAI's app-directory scan refuses a tool that "appears to execute
+    // operations that are not individually exposed" (ADR 019, 2026-10-18).
+    // A dispatcher shows itself as an argument naming which operation to run,
+    // at the top level or inside each item of a batch.
+    const { tools } = await listTools();
+    const selectors = tools.flatMap((tool) =>
+      selectorPaths(tool.inputSchema).map((path) => `${tool.name}: ${path}`),
+    );
+    expect(selectors).toEqual([]);
   });
 
   it("publishes all four annotations on every tool", async () => {
@@ -244,6 +280,60 @@ describe("MCP tool list", () => {
  * Per-tool `securitySchemes` (ADR 019 D2): derived from `VERB_TABLE`, never
  * hand-written, published top-level and mirrored in `_meta`.
  */
+/**
+ * Tools this server used to serve. Each is gone for a recorded reason, so its
+ * name must neither answer a call nor be suggested by anything the server
+ * says: a description naming one sends the model to a dead end.
+ */
+const RETIRED_TOOLS = [
+  // Split into one tool per operation (ADR 019, 2026-10-18; w1/m38).
+  "editLedgerFiles",
+  "editEntrySource",
+  "manageBankImport",
+  "manageBankConnection",
+  "managePullRequests",
+  "manageLedgers",
+  "manageLedgerCollaborators",
+  // Withdrawn by directory policy (ADR 019, 2026-10-09; w1/m36).
+  "manageApiKeys",
+  "listPublicKeys",
+  "managePublicKeys",
+  "deleteAccount",
+];
+
+describe("retired MCP tools", () => {
+  it.each(RETIRED_TOOLS)(
+    "answers %s as an unknown tool and points at tools/list",
+    async (name) => {
+      const result = await withClient((client) =>
+        client.callTool({ name, arguments: {} }),
+      );
+      expect(result.isError).toBe(true);
+      expect(result.structuredContent).toMatchObject({
+        ok: false,
+        error: {
+          code: "NOT_FOUND",
+          hint: expect.stringContaining("tools/list"),
+        },
+      });
+    },
+  );
+
+  it("are named by no tool, resource, or instruction the server publishes", async () => {
+    const served = await withClient(async (client) => [
+      JSON.stringify(await client.listTools()),
+      JSON.stringify(await client.listResourceTemplates()),
+      JSON.stringify(await client.listResources()),
+      JSON.stringify(await client.listPrompts()),
+      client.getInstructions() ?? "",
+    ]);
+    const text = served.join("\n");
+    expect(
+      RETIRED_TOOLS.filter((name) => new RegExp(`\\b${name}\\b`).test(text)),
+    ).toEqual([]);
+  });
+});
+
 describe("MCP tool security schemes", () => {
   it("publishes each tool's derived scheme top-level and in _meta", async () => {
     const { tools } = await listToolsRaw();
@@ -261,17 +351,16 @@ describe("MCP tool security schemes", () => {
     expect(mcpToolSecuritySchemes("runBqlQuery")).toEqual([
       { type: "oauth2", scopes: ["ledger.read"] },
     ]);
-    expect(mcpToolSecuritySchemes("manageBankImport")).toEqual([
+    expect(mcpToolSecuritySchemes("syncBankTransactions")).toEqual([
       { type: "oauth2", scopes: ["ledger.write"] },
     ]);
-    // A grouped tool whose branches span classes declares the strongest.
-    const classes = new Set(
-      VERB_TABLE.filter((e) => e.mcp === "manageLedgers").map((e) => e.class),
-    );
-    expect(classes.has("admin")).toBe(true);
-    expect(mcpToolSecuritySchemes("manageLedgers")).toEqual([
+    expect(mcpToolSecuritySchemes("unlinkBankConnection")).toEqual([
       { type: "oauth2", scopes: ["ledger.admin"] },
     ]);
+    expect(mcpToolSecuritySchemes("deleteLedger")).toEqual([
+      { type: "oauth2", scopes: ["ledger.admin"] },
+    ]);
+    // A tool binding several verbs of different classes declares the strongest.
     expect(
       mcpToolSecuritySchemes("mixed", [
         { mcp: "mixed", class: "read" },

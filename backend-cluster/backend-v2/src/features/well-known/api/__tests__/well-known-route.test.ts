@@ -6,14 +6,14 @@ import Router from "@koa/router";
 import type { AppConfig } from "@/config/config";
 import { MCP_TOOLS } from "@/features/ai-agent/api/mcp-tools";
 import { API_SCOPES } from "@/server/api/identity";
-import { setWellKnownRoutes } from "../well-known-route";
+import {
+  OPENAI_APPS_CHALLENGE_TOKEN,
+  setWellKnownRoutes,
+} from "../well-known-route";
 
 // A syntactically valid record with a throwaway key — not Beancount.io's.
 const MCP_REGISTRY_AUTH_PROOF =
   "v=MCPv1; k=ed25519; p=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
-
-// A made-up token in the dashboard's shape — not Beancount.io's.
-const OPENAI_APPS_CHALLENGE = "oai-apps-challenge-0123456789abcdef";
 
 const config = {
   dashboard: { url: "https://beancount.io" },
@@ -25,7 +25,6 @@ const config = {
     ],
   },
   mcpRegistry: { authProof: MCP_REGISTRY_AUTH_PROOF },
-  openAiApps: { challengeToken: OPENAI_APPS_CHALLENGE },
 } as unknown as AppConfig;
 
 /**
@@ -38,14 +37,15 @@ const REGISTRY_LISTING_PATH = path.resolve(
   "../../../../../server.json",
 );
 
+// A self-hosted deployment: none of Beancount.io's own proofs apply to it.
 const unsetAppLinksConfig = {
   ...config,
+  dashboard: { url: "https://books.example.com" },
   appLinks: {
     appleTeamId: null,
     androidSha256Fingerprints: [],
   },
   mcpRegistry: { authProof: null },
-  openAiApps: { challengeToken: null },
 } as unknown as AppConfig;
 describe("well-known routes", () => {
   let server: http.Server;
@@ -218,7 +218,7 @@ describe("well-known routes", () => {
     expect(response.headers.get("content-type")).toMatch(/^text\/plain/);
     expect(response.headers.get("cache-control")).toBe("no-store");
     // The bare token: no newline, no wrapper.
-    expect(await response.text()).toBe(OPENAI_APPS_CHALLENGE);
+    expect(await response.text()).toBe(OPENAI_APPS_CHALLENGE_TOKEN);
   });
 
   it("serves Android assetlinks as JSON", async () => {
@@ -290,7 +290,7 @@ describe("well-known app-link routes without config", () => {
     expect(response.status).toBe(404);
   });
 
-  it("returns 404 for the OpenAI apps challenge when none is configured", async () => {
+  it("returns 404 for the OpenAI apps challenge on a self-hosted deployment", async () => {
     const response = await fetch(`${origin}/.well-known/openai-apps-challenge`);
     expect(response.status).toBe(404);
   });

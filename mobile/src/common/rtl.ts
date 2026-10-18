@@ -116,6 +116,19 @@ export function isRtlLayout(): boolean {
 }
 
 /**
+ * Letter spacing for text: `spacing` in a left-to-right layout, none in a
+ * right-to-left one. Any tracking pulls Arabic-script letters apart and
+ * breaks their joins — the Payee caption پیشنهادها rendered as "پیشنهاد ها"
+ * (w0/049) — and Persian, the app's right-to-left language, is written in
+ * that script. Read when styles are built; a direction change restarts the
+ * app. `src/common/__tests__/letter-spacing.test.ts` keeps every
+ * `letterSpacing` going through here.
+ */
+export function letterSpacing(spacing: number): number {
+  return isRtlLayout() ? 0 : spacing;
+}
+
+/**
  * `textAlign` for text that must follow the **layout's** leading edge rather
  * than its own content's direction.
  *
@@ -135,9 +148,36 @@ export function isRtlLayout(): boolean {
  * all: every depth starts at the same edge.
  *
  * So: UI copy needs nothing; a `Text` that holds ledger data and is wider than
- * its content needs this.
+ * its content needs this. A `TextInput` needs `leadingInputTextAlign()`
+ * instead — see there.
  */
 export const LEADING_TEXT_ALIGN = "left" as const;
+
+/**
+ * `textAlign` for a `TextInput` whose text, placeholder and caret start at the
+ * layout's leading edge.
+ *
+ * The opposite rule from `LEADING_TEXT_ALIGN`, on purpose: an iOS `TextInput`
+ * does not get the left/right swap `Text` does. Styled `"left"` — or left at
+ * the natural default — Persian inputs stayed on the physical left while their
+ * labels and the screen around them mirrored (w0/045). So an input takes the
+ * explicit branch a `Text` must never take. Read when styles are built; a
+ * direction change restarts the app, so it cannot go stale.
+ */
+export function leadingInputTextAlign(): "left" | "right" {
+  return isRtlLayout() ? "right" : "left";
+}
+
+/**
+ * `textAlign` for a `TextInput` whose text sits at the layout's trailing edge,
+ * like the values beside it — an amount in a form row. The same reason as
+ * `leadingInputTextAlign`: an input's `"right"` stays on the physical right,
+ * so in Persian Add Budget's amount sat mid-row against its label while every
+ * other value sat at the trailing (left) edge (w0/049).
+ */
+export function trailingInputTextAlign(): "left" | "right" {
+  return isRtlLayout() ? "left" : "right";
+}
 
 /**
  * Pins a subtree to left-to-right, whatever the app's direction.

@@ -1,5 +1,6 @@
 import "reflect-metadata";
 import { AccountService } from "../account-service";
+import { BadUserInputError, ErrorCategory } from "@/shared/errors";
 import {
   NotFoundError,
   ConflictError,
@@ -102,6 +103,7 @@ describe("AccountService", () => {
         updateUser: jest.fn(),
         deleteByUserId: jest.fn(),
         getUserByUsername: jest.fn(),
+        findUserByEmailOrUsername: jest.fn(),
       },
       jwt: {
         deleteByUserId: jest.fn(),
@@ -168,6 +170,57 @@ describe("AccountService", () => {
         expect(mockModels.user.getById).not.toHaveBeenCalled();
       },
     );
+  });
+
+  describe("findUsersByEmailOrUsername", () => {
+    const alice = {
+      id: "user-456",
+      email: "Alice@Example.com",
+      ledger_username: "alice",
+    };
+
+    it("withholds the email when the keyword matched the username", async () => {
+      mockModels.user.findUserByEmailOrUsername.mockResolvedValue([alice]);
+
+      await expect(
+        accountService.findUsersByEmailOrUsername(
+          identity("user-123"),
+          "ALICE",
+          false,
+        ),
+      ).resolves.toEqual([{ username: "alice", email: null }]);
+    });
+
+    it("returns the email when the keyword was that email", async () => {
+      mockModels.user.findUserByEmailOrUsername.mockResolvedValue([alice]);
+
+      await expect(
+        accountService.findUsersByEmailOrUsername(
+          identity("user-123"),
+          "alice@example.com",
+          false,
+        ),
+      ).resolves.toEqual([{ username: "alice", email: "Alice@Example.com" }]);
+    });
+
+    it("excludes the caller unless asked to include them", async () => {
+      mockModels.user.findUserByEmailOrUsername.mockResolvedValue([alice]);
+
+      await expect(
+        accountService.findUsersByEmailOrUsername(
+          identity("user-456"),
+          "alice",
+          false,
+        ),
+      ).resolves.toEqual([]);
+      await expect(
+        accountService.findUsersByEmailOrUsername(
+          identity("user-456"),
+          "alice",
+          true,
+        ),
+      ).resolves.toEqual([{ username: "alice", email: null }]);
+    });
   });
 
   describe("getUserProfile", () => {
@@ -816,6 +869,64 @@ describe("AccountService", () => {
         expect.any(Object),
         userId,
         "sameusername",
+      );
+    });
+
+    // Sign-up's rule, which a rename used to skip: any name the git host
+    // accepted was stored, and one it refused failed as a generic error
+    // (w0/036).
+    it.each([
+      ["uppercase", "Alice"],
+      ["an accented letter", "josé"],
+      ["a dot", "john.doe"],
+      ["a hyphen", "john-doe"],
+      ["a space", "john doe"],
+      ["21 characters", "a".repeat(21)],
+      ["an empty name", ""],
+    ])("refuses %s before touching the account", async (_case, username) => {
+      mockModels.user.getById = jest.fn();
+      mockModels.user.updateUsername = jest.fn();
+      (lock.acquire as jest.Mock) = jest.fn(
+        async (_key, callback) => await callback(),
+      );
+
+      const result = accountService.updateUsername(
+        identity("user-123"),
+        username,
+      );
+
+      await expect(result).rejects.toBeInstanceOf(BadUserInputError);
+      await expect(result).rejects.toMatchObject({
+        category: ErrorCategory.BAD_USER_INPUT,
+        metadata: { field: "username" },
+      });
+      expect(lock.acquire).not.toHaveBeenCalled();
+      expect(mockModels.user.getById).not.toHaveBeenCalled();
+      expect(mockModels.user.updateUsername).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ["lowercase letters", "alice"],
+      ["digits and underscores", "user_2026"],
+      ["exactly 20 characters", "a".repeat(20)],
+      ["one character", "a"],
+    ])("accepts %s", async (_case, username) => {
+      mockModels.user.getById = jest.fn().mockResolvedValue({
+        id: "user-123",
+        ledger_username: "oldusername",
+      });
+      mockModels.user.getUserByUsername = jest.fn().mockResolvedValue(null);
+      mockModels.user.updateUsername = jest.fn().mockResolvedValue(undefined);
+      (lock.acquire as jest.Mock) = jest.fn(
+        async (_key, callback) => await callback(),
+      );
+
+      await accountService.updateUsername(identity("user-123"), username);
+
+      expect(mockModels.user.updateUsername).toHaveBeenCalledWith(
+        expect.any(Object),
+        "user-123",
+        username,
       );
     });
   });

@@ -43,4 +43,5 @@ export {
   ResourceLimitReachedError,
   OperationNotAllowedError,
   PremiumRequiredError,
+  NewLedgerErrorsError,
 } from "./domain-errors";

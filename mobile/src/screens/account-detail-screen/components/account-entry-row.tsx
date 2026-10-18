@@ -103,12 +103,19 @@ type AccountEntryRowProps = {
   row: AccountJournalRow;
   currency: string;
   onPress?: () => void;
+  /**
+   * Which way a change moves net worth: 1 for Assets and Liabilities, -1 for
+   * Income, Expenses and Equity. The change keeps its ledger sign; only its
+   * color follows this, so salary reads favorable and spending does not.
+   */
+  netWorthSign?: 1 | -1;
 };
 
 export function AccountEntryRow({
   row,
   currency,
   onPress,
+  netWorthSign = 1,
 }: AccountEntryRowProps): JSX.Element {
   const styles = useThemeStyle(getStyles);
   const { fontScale } = useWindowDimensions();
@@ -128,12 +135,9 @@ export function AccountEntryRow({
   // Open / Balance / Pad / … rows read as plain transactions otherwise: the
   // title falls back to the directive's own account name.
   const typeLabelKey = directiveTypeLabelKey(row.directiveType);
+  const effect = row.change * netWorthSign;
   const changeColor =
-    row.change > 0
-      ? theme.success
-      : row.change < 0
-        ? theme.error
-        : theme.black60;
+    effect > 0 ? theme.success : effect < 0 ? theme.error : theme.black60;
 
   const title = row.title || t("transactions");
   const costText =

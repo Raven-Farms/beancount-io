@@ -103,6 +103,33 @@ const caImporter: Record<string, TranslationEntry> = {
     message: "Pujar un altre fitxer",
     description: "Button to upload a different file after error",
   },
+  "importer.aiOffer.title": {
+    message: "No hem pogut llegir les columnes d'aquest CSV",
+    description:
+      "Title when a CSV's columns could not be read by the free client parser",
+  },
+  "importer.aiOffer.description": {
+    message:
+      "La importació intel·ligent llegeix gratuïtament fitxers CSV amb columnes Data, Beneficiari, Descripció i Import. Aquest fitxer es pot llegir amb IA, cosa que fa servir els vostres tokens d'IA.",
+    description:
+      "Explains the free CSV format and that AI parsing spends AI tokens",
+  },
+  "importer.aiOffer.parseWithAi": {
+    message: "Analitza amb IA (fa servir tokens d'IA)",
+    description:
+      "Button that parses the unreadable CSV with AI, spending AI tokens",
+  },
+  "importer.error.aiQuotaReached": {
+    message: "Heu esgotat els tokens d'IA d'aquest mes",
+    description:
+      "Title when AI parsing of a CSV is refused because the month's AI tokens are used up",
+  },
+  "importer.error.aiQuotaReachedCsv": {
+    message:
+      "L'anàlisi amb IA tornarà a estar disponible el mes vinent o amb Premium. Un CSV amb columnes Data, Beneficiari, Descripció i Import encara s'importa gratuïtament.",
+    description:
+      "Explains when AI parsing returns and that a well-formed CSV still imports for free",
+  },
   "importer.error.premiumRequired": {
     message: "Es requereix funció premium",
     description: "Title for premium required error",
@@ -238,7 +265,7 @@ const caImporter: Record<string, TranslationEntry> = {
     description: "Table header for actions column",
   },
   "importer.preview.deleteRow": {
-    message: "Elimina la fila",
+    message: "Elimina la fila {row}",
     description: "Aria label for delete row button",
   },
   "importer.preview.emptyFileTitle": {
@@ -538,12 +565,12 @@ const caImporter: Record<string, TranslationEntry> = {
     description: "Count of additional import errors",
   },
   "importer.preview.editCellLabel": {
-    message: "Edita {field}. Valor actual: {value}",
+    message: "Edita {field}, fila {row}. Valor actual: {value}",
     description: "Accessible label for an editable import cell",
   },
-  "importer.preview.field": {
-    message: "camp",
-    description: "Fallback name for an editable import field",
+  "importer.preview.editFieldLabel": {
+    message: "{field}, fila {row}",
+    description: "Accessible label for the open editor of an import cell",
   },
   "importer.validation.dateRequired": {
     message: "La data és necessària",
@@ -568,6 +595,12 @@ const caImporter: Record<string, TranslationEntry> = {
   "importer.validation.amountInvalid": {
     message: "L'import ha de ser un número vàlid",
     description: "Validation error for an invalid import amount",
+  },
+  "importer.validation.amountMixedDecimals": {
+    message:
+      "Aquesta columna barreja decimals amb punt (1,234.56) i amb coma (1.234,56). Feu servir una sola convenció per columna.",
+    description:
+      "Validation error when an import amount column mixes point and comma decimal marks",
   },
   "importer.validation.amountUnsupportedPrecision": {
     message:

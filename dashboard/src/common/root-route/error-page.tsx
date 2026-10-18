@@ -8,6 +8,7 @@ import { PageSEO } from "@/common/components/seo/page-seo";
 import { isUnauthenticatedError } from "@/common/apollo/links/auth-error-link";
 import { useLoginNextPath } from "@/common/hooks/use-login-next-path";
 import { ErrorDetails } from "@/common/components/error-details";
+import { getErrorMessageKey } from "@/common/lib/errors/error-message";
 
 /**
  * Global error page component
@@ -58,6 +59,14 @@ export default function ErrorPage({ error, reset }: ErrorComponentProps) {
     errorMessage.includes("parse") ||
     error?.constructor?.name === "ZodError";
 
+  // A recognized failure category (a gateway 502, a network failure, …)
+  // names itself truthfully instead of the generic page copy (w3/646).
+  const mappedErrorKey = getErrorMessageKey(error);
+  const mappedDescription =
+    mappedErrorKey === "common.errors.generic"
+      ? t("common.errorDescription")
+      : t(mappedErrorKey);
+
   return (
     <>
       <PageSEO
@@ -88,7 +97,7 @@ export default function ErrorPage({ error, reset }: ErrorComponentProps) {
                 ? t("common.errors.unauthenticated")
                 : isValidationError
                   ? t("common.invalidParametersDescription")
-                  : t("common.errorDescription")}
+                  : mappedDescription}
             </p>
           </div>
 

@@ -11,7 +11,7 @@ import type { Identity } from "@/server/api/identity";
 import type { McpRequestContext } from "../mcp-context";
 
 /**
- * w5/035. `editLedgerFiles` promises that a dry run gives "the same refusal as
+ * w5/035. The file-edit tools promise that a dry run gives "the same refusal as
  * the commit", and describes `create` as a new file. The preview nevertheless
  * approved a `create` over a file that already exists. Driven through the real
  * registry and repo service, with only the ledger client faked.
@@ -25,7 +25,7 @@ const identity: Identity = {
 };
 
 async function fixture() {
-  const existing = new Set(["main.bean"]);
+  const existing = new Set(["main.bean", "accounts.bean"]);
   const getLedgerFilesContent = jest.fn(
     async (_owner: string, _name: string, { files }: { files: string[] }) => ({
       data: {
@@ -69,30 +69,23 @@ async function fixture() {
     getLedgerFilesContent,
     preview: (path: string) =>
       client.callTool({
-        name: "editLedgerFiles",
+        name: "createLedgerFiles",
         arguments: {
           ledger: "alice/main",
           description: "add a file",
           dry_run: true,
-          files: [{ operation: "create", path, content: "; new\n" }],
+          files: [{ path, content: "; new\n" }],
         },
       }),
     client,
     update: (old_string: string) =>
       client.callTool({
-        name: "editLedgerFiles",
+        name: "updateLedgerFiles",
         arguments: {
           ledger: "alice/main",
           description: "rename a payee",
           dry_run: true,
-          files: [
-            {
-              operation: "update",
-              path: "main.bean",
-              old_string,
-              new_string: "Bakery",
-            },
-          ],
+          files: [{ path: "main.bean", old_string, new_string: "Bakery" }],
         },
       }),
     close: async () => {
@@ -123,6 +116,97 @@ describe("previewing a create over an existing file", () => {
   });
 });
 
+/**
+ * w1/m38. Splitting `editLedgerFiles` into one tool per kind of change kept
+ * the batch: every file a call names lands in the same commit, so a partial
+ * write cannot leave the ledger half-restructured.
+ */
+describe("one call to a file tool", () => {
+  const decode = (content?: string) =>
+    content === undefined
+      ? undefined
+      : Buffer.from(content, "base64").toString();
+
+  it.each([
+    [
+      "createLedgerFiles",
+      [
+        { path: "a.bean", content: "; a\n" },
+        { path: "b.bean", content: "; b\n" },
+      ],
+      [
+        { operation: "create", path: "a.bean", text: "; a\n" },
+        { operation: "create", path: "b.bean", text: "; b\n" },
+      ],
+    ],
+    [
+      "updateLedgerFiles",
+      [
+        {
+          path: "main.bean",
+          old_string: '01-05 * "Cafe"',
+          new_string: '01-05 * "Bakery"',
+        },
+        { path: "accounts.bean", content: "; replaced\n" },
+      ],
+      [
+        {
+          operation: "update",
+          path: "main.bean",
+          text: '2026-01-05 * "Bakery"\n2026-02-05 * "Cafe"\n',
+        },
+        { operation: "update", path: "accounts.bean", text: "; replaced\n" },
+      ],
+    ],
+    [
+      "deleteLedgerFiles",
+      [{ path: "main.bean" }, { path: "accounts.bean" }],
+      [
+        { operation: "delete", path: "main.bean", text: undefined },
+        { operation: "delete", path: "accounts.bean", text: undefined },
+      ],
+    ],
+  ])(
+    "%s commits every file it names in one commit",
+    async (name, files, expected) => {
+      const f = await fixture();
+      f.changeLedgerFiles.mockResolvedValue({
+        data: { success: true, data: {} },
+      });
+      try {
+        const result = await f.client.callTool({
+          name,
+          arguments: {
+            ledger: "alice/main",
+            description: "restructure",
+            files,
+          },
+        });
+        expect(result.isError).toBeFalsy();
+        expect(f.changeLedgerFiles).toHaveBeenCalledTimes(1);
+        const [, , body] = f.changeLedgerFiles.mock.calls[0] as [
+          string,
+          string,
+          {
+            message: string;
+            files: { operation: string; path: string; content?: string }[];
+          },
+        ];
+        expect(body.message).toBe("restructure");
+        expect(
+          body.files.map(({ operation, path, content }) => ({
+            operation,
+            path,
+            text: decode(content),
+          })),
+        ).toEqual(expected);
+      } finally {
+        await f.close();
+      }
+    },
+  );
+});
+
 /** w5/036: an ambiguous `old_string` is the caller's to fix, in production too. */
 describe("an old_string that matches more than once", () => {
   it("is refused as bad input with the count and a way forward", async () => {
@@ -151,17 +235,17 @@ describe("an old_string that matches more than once", () => {
  */
 describe("an argument the tool does not declare", () => {
   it.each(["dryrun", "dryRun", "bogus"])(
-    "refuses %s on editLedgerFiles instead of committing",
+    "refuses %s on createLedgerFiles instead of committing",
     async (typo) => {
       const f = await fixture();
       try {
         const result = await f.client.callTool({
-          name: "editLedgerFiles",
+          name: "createLedgerFiles",
           arguments: {
             ledger: "alice/main",
             description: "add a file",
             [typo]: true,
-            files: [{ operation: "create", path: "new.bean", content: "x\n" }],
+            files: [{ path: "new.bean", content: "x\n" }],
           },
         });
         expect(result.isError).toBe(true);
@@ -180,8 +264,8 @@ describe("an argument the tool does not declare", () => {
   it.each([
     ["readLedgerFiles", { files: [{ path: "main.bean" }] }],
     ["listLedgerFiles", {}],
-    ["manageBankConnection", { operation: "refresh", item_id: "pitm_1" }],
-    ["manageBankImport", { operation: "sync", item_id: "pitm_1" }],
+    ["refreshBankConnection", { item_id: "pitm_1" }],
+    ["syncBankTransactions", { item_id: "pitm_1" }],
   ])(
     "refuses an unknown argument on %s before the tool runs",
     async (name, args) => {

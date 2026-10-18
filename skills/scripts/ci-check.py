@@ -34,6 +34,7 @@ CLI_PROJECT = REPO_ROOT / "cli"
 # Ledger fixtures that must fail bean-check (failure-mode evals).
 EXPECTED_BEAN_CHECK_FAILURES = {
     "skills/.claude/skills/beancount-close/evals/files/eval5_ledger.beancount",
+    "skills/.claude/skills/beancount-reconcile/evals/files/eval16_ledger.beancount",
 }
 
 # Skills that must state a bea preference once and keep raw appends in fallbacks.
@@ -117,7 +118,9 @@ def parse_frontmatter(path: Path) -> dict[str, str]:
         fail(f"{path.relative_to(REPO_ROOT)}: unclosed YAML frontmatter")
     meta: dict[str, str] = {}
     for line in text[4:end].splitlines():
-        if not line.strip() or line.lstrip().startswith("#"):
+        # Top-level keys only: an indented `name:` inside a nested block must
+        # neither overwrite nor satisfy the skill's own `name`.
+        if not line.strip() or line.lstrip().startswith("#") or line[0] in " \t":
             continue
         if ":" not in line:
             continue
@@ -140,7 +143,21 @@ def check_skill_md() -> None:
         for key in ("name", "description"):
             if not meta.get(key):
                 fail(f"{rel}: frontmatter missing '{key}'")
+        if "metadata" in meta:
+            check_metadata(rel, meta["metadata"])
         print(f"OK frontmatter {rel}")
+
+
+def check_metadata(rel: Path, value: str) -> None:
+    # OpenClaw re-reads `metadata` as JSON5; Claude Code, Codex, and Hermes read
+    # YAML. One line of JSON is valid to every one of them and to the top-level
+    # parsers here and in beancount-skills.py, which skip indented lines.
+    try:
+        data = json.loads(value)
+    except json.JSONDecodeError as error:
+        fail(f"{rel}: frontmatter 'metadata' must be a single-line JSON object ({error})")
+    if not isinstance(data, dict):
+        fail(f"{rel}: frontmatter 'metadata' must be a single-line JSON object")
 
 
 def check_evals() -> None:

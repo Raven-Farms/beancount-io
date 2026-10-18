@@ -1,9 +1,11 @@
 /**
  * Multi-stage parser hook
- * Tries client-side CSV parsing first, falls back to LLM for complex formats
+ * Tries client-side CSV parsing first. Other formats go to the server's AI
+ * parser; a CSV the client cannot read is offered to it only on request,
+ * because AI parsing spends the account's AI tokens.
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useCSVParser } from "./use-csv-parser";
 import { useLLMParser } from "./use-llm-parser";
 import { detectFileFormat } from "../utils/file-format-detector";
@@ -17,8 +19,31 @@ export function useMultiStageParser() {
   const csvParser = useCSVParser();
   const llmParser = useLLMParser();
 
+  // The CSV awaiting the user's choice to parse it with AI.
+  const offeredFile = useRef<File | null>(null);
+
+  const parseWithLlm = useCallback(
+    async (file: File, format: FileFormat): Promise<CSVParseResult> => {
+      setStage("server-parsing");
+      try {
+        const result = await llmParser.parseFile(file, format);
+        setStage("complete");
+        return result;
+      } catch (err) {
+        setError(err);
+        setStage("error");
+        throw err;
+      }
+    },
+    [llmParser],
+  );
+
+  /**
+   * Parse a file; `null` means a CSV the client could not read is waiting on
+   * `parseWithAi` (or a different file).
+   */
   const parseFile = useCallback(
-    async (file: File): Promise<CSVParseResult> => {
+    async (file: File): Promise<CSVParseResult | null> => {
       setError(null);
       setStage("detecting");
 
@@ -26,47 +51,40 @@ export function useMultiStageParser() {
       const format = detectFileFormat(file);
       setFileFormat(format);
 
-      // Stage 1: Try client-side parsing for CSV
-      if (format === "csv") {
-        setStage("client-parsing");
-        try {
-          const result = await csvParser.parseFile(file);
+      if (format !== "csv") return parseWithLlm(file, format);
 
-          // Keep recognized CSV rows for repair when any amount failed the
-          // representability guard — even if validCount is 0. Falling through
-          // would let LLM JSON re-stringify already-rounded Numbers.
-          if (result.validCount > 0 || result.blockLlmFallback) {
-            setStage("complete");
-            return result;
-          }
-
-          // If no valid rows and no structured block, fall through to LLM
-          console.warn(
-            "Client-side CSV parsing found no valid rows, trying LLM...",
-          );
-        } catch (err) {
-          console.warn("Client-side CSV parsing failed, trying LLM...", err);
-        }
-      }
-
-      // Stage 2: Server-side LLM parsing
-      // (for non-CSV files, CSV parse failures, or no valid rows)
-      setStage("server-parsing");
+      setStage("client-parsing");
       try {
-        const result = await llmParser.parseFile(file, format);
-        setStage("complete");
-        return result;
+        const result = await csvParser.parseFile(file);
+
+        // Keep recognized CSV rows for repair when any amount failed the
+        // representability guard — even if validCount is 0. AI parsing
+        // would re-stringify already-rounded Numbers.
+        if (result.validCount > 0 || result.blockLlmFallback) {
+          setStage("complete");
+          return result;
+        }
       } catch (err) {
-        // Stage 3: LLM parsing failed - show error
-        setError(err);
-        setStage("error");
-        throw err;
+        console.warn("Client-side CSV parsing failed", err);
       }
+      // Never spend AI tokens on a CSV without asking (w3/643).
+      offeredFile.current = file;
+      setStage("ai-offer");
+      return null;
     },
-    [csvParser, llmParser],
+    [csvParser, parseWithLlm],
   );
 
+  /** The user chose to parse the offered CSV with AI. */
+  const parseWithAi = useCallback(async (): Promise<CSVParseResult | null> => {
+    const file = offeredFile.current;
+    if (!file) return null;
+    offeredFile.current = null;
+    return parseWithLlm(file, "csv");
+  }, [parseWithLlm]);
+
   const reset = useCallback(() => {
+    offeredFile.current = null;
     setStage("idle");
     setError(null);
     setFileFormat(null);
@@ -74,6 +92,7 @@ export function useMultiStageParser() {
 
   return {
     parseFile,
+    parseWithAi,
     reset,
     stage,
     error,

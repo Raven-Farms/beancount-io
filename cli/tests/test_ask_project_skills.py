@@ -72,7 +72,7 @@ def test_ask_prints_the_notice(
 ) -> None:
     monkeypatch.chdir(repo)
     agent = MagicMock()
-    agent.run_sync.return_value = SimpleNamespace(output="ok")
+    agent.run_sync.return_value = SimpleNamespace(output="ok", all_messages=list)
     with patch("cli.ask.agent.make_agent", return_value=agent):
         result = CliRunner().invoke(app, ["--file", str(tmp_bean_file), "ask", "hi", "--print"])
     assert result.exit_code == 0, result.output

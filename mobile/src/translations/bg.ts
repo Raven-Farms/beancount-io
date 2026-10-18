@@ -87,6 +87,7 @@ export const bg: Translations = {
   merchantsCadenceQuarterly: "На тримесечие",
   merchantsCadenceYearly: "Годишно",
   merchantsCadenceIrregular: "Неравномерно",
+  merchantsCadenceUnknown: "Недостатъчна история",
   merchantsNextExpected: "Следващо {{date}}",
   merchantsOverdue: "Просрочено",
   merchantsRecurringToggle: "Повтарящ се",
@@ -176,7 +177,7 @@ export const bg: Translations = {
   quickAdd: "Бързо добавяне",
   enterNewTransaction: "Въведете нова транзакция",
   multiPostingsTitle: "Нова транзакция",
-  addPosting: "+ Добави ред",
+  addPosting: "Добави ред",
   remainderLabel: "Остатък",
   autoLabel: "авто",
   postingAccount: "Изберете сметка",
@@ -306,11 +307,13 @@ export const bg: Translations = {
   openAccountNoCurrency: "Няма валута",
   openAccountSaving: "Открива се...",
   openAccountFailed: "Сметката не беше открита. Опитайте отново.",
+  ledgerWouldBreak: "Това ще добави грешка в книгата ви: {{detail}}",
   openAccountInvalidRoot: "Изберете валиден вид сметка.",
   openAccountNameRequired: "Въведете поне една част от името на сметката.",
   openAccountEmptyComponent:
     "Частите от името на сметката не може да са празни.",
   openAccountNamePreview: "Ще бъде създадена като {{account}}",
+  openAccountAlreadyOpen: "{{account}} вече е отворена в тази книга.",
   openAccountUppercaseComponent:
     "Всяка част от името на сметката трябва да започва с главна буква или цифра.",
   openAccountInvalidCharacters:
@@ -513,6 +516,7 @@ export const bg: Translations = {
   budgetInterval: "Интервал",
   budgetSelectInterval: "Изберете интервал",
   budgetAmount: "Сума",
+  budgetAmountInvalid: "Въведете число, например 500 или 49.99.",
   budgetSaveFailed: "Неуспешно записване на бюджета",
   // delete
   budgetDelete: "Изтриване",
@@ -586,6 +590,10 @@ export const bg: Translations = {
     "Паричен поток от приходи към разходи. Приходи {{income}}, разходи {{expenses}}.",
   cashFlowChartSummaryWithSavings:
     "Паричен поток от приходи към разходи. Приходи {{income}}, разходи {{expenses}}, спестявания {{savings}}.",
+  cashFlowChartSummaryWithShortfall:
+    "Паричен поток от приходи към разходи. Приходи {{income}}, разходи {{expenses}}, от спестявания {{shortfall}}.",
+  sankeyIncomeNodeLabel: "{{name}} (приходи)",
+  sankeyExpensesNodeLabel: "{{name}} (разходи)",
   ledgerNavigateUp: "Нагоре една папка",
   openLedgerDrawer: "Отвори менюто",
   back: "Назад",
@@ -610,7 +618,8 @@ export const bg: Translations = {
   profileUsernameHint:
     "Уеб адресите на книгите ви започват с потребителското ви име, затова промяната му променя и тях.",
   profileUsernameRequired: "Въведете потребителско име",
-  profileUsernameNoSpaces: "Потребителското име не може да съдържа интервали",
+  profileUsernameRule:
+    "Използвайте 1–20 знака: малки букви a–z, цифри 0–9 или долни черти.",
   profileUsernameTaken: "Това потребителско име вече е заето",
   profileEmail: "Имейл",
   profileEmailReadOnly: "Имейлът не може да се променя тук",

@@ -13,25 +13,63 @@ import {
 const UNSUPPORTED_LAYOUT_ERROR =
   "Unsupported CSV columns. Expected exactly Date, Payee, Description (or Narration), and Amount — in any order.";
 
-const MIXED_DECIMAL_ERROR =
-  "Amount column mixes point decimals (1,234.56) and comma decimals (1.234,56). Use one convention per column.";
-
 type ParseRecordsResult =
   | { ok: true; records: string[][] }
   | { ok: false; error: string };
 
+const DELIMITERS = [",", ";", "\t"] as const;
+
+/** The first record's text, up to the first newline outside quotes. */
+function firstRecordText(text: string): string {
+  let inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === '"') inQuotes = !inQuotes;
+    else if (!inQuotes && (text[i] === "\n" || text[i] === "\r")) {
+      return text.slice(0, i);
+    }
+  }
+  return text;
+}
+
+/**
+ * The field separator a bank export uses. Most European banks write `;`
+ * (their decimal mark is the comma), some exports use tabs. A recognized
+ * header decides it; otherwise the delimiter that splits the first record
+ * into the four import columns; otherwise a comma.
+ */
+function detectDelimiter(text: string): string {
+  const first = firstRecordText(text);
+  const split = (delimiter: string) => {
+    const parsed = parseRecords(first, delimiter);
+    return parsed.ok ? (parsed.records[0] ?? []) : [];
+  };
+  for (const delimiter of DELIMITERS) {
+    const header = detectHeaderRow(split(delimiter));
+    if (header.isHeader && header.supported) return delimiter;
+  }
+  const fourColumns = DELIMITERS.filter(
+    (delimiter) => split(delimiter).length === 4,
+  );
+  return fourColumns.length === 1 ? fourColumns[0] : ",";
+}
+
 /**
  * Parse logical CSV records from the full input, carrying quote state across
  * physical line endings (RFC 4180). Newlines separate records only outside
- * quotes; CRLF inside a quoted field is preserved as a single `\n`.
+ * quotes; CRLF inside a quoted field is preserved as a single `\n`. The field
+ * delimiter (`,`, `;` or tab) is detected from the first record.
  */
 export function parseCSVRecords(content: string): ParseRecordsResult {
+  const text = content.replace(/^\uFEFF/, "");
+  return parseRecords(text, detectDelimiter(text));
+}
+
+function parseRecords(text: string, delimiter: string): ParseRecordsResult {
   const records: string[][] = [];
   let columns: string[] = [];
   let currentField = "";
   let inQuotes = false;
   let i = 0;
-  const text = content.replace(/^\uFEFF/, "");
 
   const pushRecord = () => {
     columns.push(currentField.trim());
@@ -73,7 +111,7 @@ export function parseCSVRecords(content: string): ParseRecordsResult {
       i += 1;
       continue;
     }
-    if (char === ",") {
+    if (char === delimiter) {
       columns.push(currentField.trim());
       currentField = "";
       i += 1;
@@ -218,18 +256,10 @@ export function useCSVParser() {
         };
       }
 
-      const row = buildParsedRow(readRecordFields(columns, columnFields), {
+      return buildParsedRow(readRecordFields(columns, columnFields), {
         decimalComma: convention.decimalComma,
+        decimalMixed: convention.mixed,
       });
-      if (!convention.mixed) return row;
-      // Refuse a column that mixes `1,234.56` and `1.234,56`: no row may
-      // resolve the ambiguity alone, as in the CLI importer.
-      return {
-        ...row,
-        amount: 0,
-        amountFailureReason: "invalid" as const,
-        errors: [...(row.errors ?? []), MIXED_DECIMAL_ERROR],
-      };
     });
 
     const errorCount = rows.filter(

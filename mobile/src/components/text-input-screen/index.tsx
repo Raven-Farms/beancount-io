@@ -23,7 +23,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LoadingTile } from "@/components/loading-tile";
 import { FadeInView } from "@/components/crossfade";
-import { LEADING_TEXT_ALIGN } from "@/common/rtl";
+import {
+  LEADING_TEXT_ALIGN,
+  leadingInputTextAlign,
+  letterSpacing,
+} from "@/common/rtl";
 import { useStackKeyboardOffset } from "@/common/hooks/use-stack-keyboard-offset";
 
 const MAX_SUGGESTIONS = 30;
@@ -45,6 +49,7 @@ const getStyles = (theme: ColorTheme) =>
       color: theme.text01,
       fontSize: fontSizes.xl,
       paddingVertical: 8,
+      textAlign: leadingInputTextAlign(),
     },
     inputMultiline: {
       flex: 1,
@@ -56,13 +61,20 @@ const getStyles = (theme: ColorTheme) =>
     doneButton: headerActionStyle(theme),
     suggestionsScroll: {
       flex: 1,
-      paddingHorizontal: 16,
       marginTop: 20,
+    },
+    // Padding on the content, not the ScrollView: padded itself, an iOS
+    // ScrollView in right-to-left layout shifted its content toward the
+    // trailing edge and cut the caption and card off there (w0/049).
+    suggestionsContent: {
+      paddingHorizontal: 16,
     },
     sectionTitle: {
       fontSize: fontSizes.xs,
       fontWeight: fontWeights.medium,
-      letterSpacing: 0.8,
+      letterSpacing: letterSpacing(0.8),
+      // The rows below mirror; the caption follows them (w0/049).
+      textAlign: LEADING_TEXT_ALIGN,
       color: theme.black80,
       marginBottom: 8,
     },
@@ -242,6 +254,7 @@ export const TextInputScreen: React.FC<TextInputScreenProps> = ({
           {(matches.length > 0 || showSkeleton) && (
             <ScrollView
               style={styles.suggestionsScroll}
+              contentContainerStyle={styles.suggestionsContent}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
             >

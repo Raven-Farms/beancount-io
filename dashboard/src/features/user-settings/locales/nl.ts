@@ -420,10 +420,6 @@ const nlUserSettings: Record<string, TranslationEntry> = {
     message: "Systeem",
     description: "System theme option",
   },
-  "userSettings.testMode": {
-    message: "Testmodus",
-    description: "Label indicating Stripe is in test/development mode",
-  },
   "userSettings.theme": {
     message: "Thema",
     description: "Label for theme selection",

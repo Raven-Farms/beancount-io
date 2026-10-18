@@ -19,7 +19,7 @@ from cli import context, output
 from cli.engine import launch
 from cli.errors import UsageError
 from cli.single_value import SingleValueCommand
-from cli.utils import refuse_blank_filter, single_line
+from cli.utils import account_filter, refuse_blank_filter, single_line
 
 report_app = typer.Typer(help="Financial reports from a local ledger", no_args_is_help=True, rich_markup_mode=None)
 
@@ -154,7 +154,8 @@ def _heading(title: str, metadata: dict[str, Any], *, profit_line: bool = False)
     typer.echo(f"{convention}; profit is positive for a gain." if profit_line else f"{convention}.")
     for source in metadata.get("price_sources", []):
         if source["freshness"] != "recent" or source["error"]:
-            detail = f"; {source['error']}" if source["error"] else ""
+            # The error is a sentence of its own; one full stop, not `..` (w5/484).
+            detail = f"; {source['error'].rstrip('.')}" if source["error"] else ""
             output.note(
                 f"Price source {source['alias']}: {source['freshness']}; "
                 f"observed {source['observed_at'] or 'unknown'}; revision {source['revision'] or 'none'}{detail}."
@@ -192,7 +193,7 @@ def _ask(
     allow_errors: bool,
 ) -> tuple[Any, dict[str, Any]]:
     """Ask the engine for one report payload and surface tolerated load errors."""
-    refuse_blank_filter("--account", account)
+    account = account_filter("--account", account)
     refuse_blank_filter("--conversion", conversion)
     refuse_blank_filter("--time", time)
     for position, term in enumerate(accounts or [], start=1):
@@ -200,13 +201,13 @@ def _ask(
         # parameter, which no user can type (w5/305).
         if not term.strip():
             raise UsageError(f"ACCOUNT argument {position} is empty; remove it, or pass an account name or substring.")
+    # The terms checked are the terms matched: `" Assets:Cash"` matched no account (w5/626).
+    accounts = [term.strip() for term in accounts] if accounts else accounts
     ctx = context.current()
     file = ctx.entry_file()
     argv: list[str]
     if kind == "balances":
         argv = ["balance", "--file", str(file)]
-        for term in accounts or []:
-            argv.append(term)
     else:
         argv = ["report", "--file", str(file), "--kind", kind]
         if account is not None:
@@ -219,6 +220,11 @@ def _ask(
         argv += ["--time", time]
     if allow_errors or not ctx.strict_reads():
         argv.append("--allow-errors")
+    if kind == "balances" and accounts:
+        # Terms last and after `--`: a term the user passed after `--`
+        # (`-Balances`, `-f other.bean`) reached the engine as its own option,
+        # failing the call or reporting another ledger (w5/503).
+        argv += ["--", *accounts]
 
     data = launch.helper_json(argv)
     output.render_ledger_errors([str(error) for error in data.get("ledger_errors", [])], allow=True)

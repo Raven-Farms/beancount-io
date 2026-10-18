@@ -25,6 +25,7 @@ from cli import context, output
 from cli.completion import fixed_values
 from cli.engine import launch
 from cli.errors import UsageError, placement_hint
+from cli.paths import expand_path
 from cli.utils import decode_error_message, inert_text
 
 FORMATS = ("text", "csv", "beancount")
@@ -32,6 +33,21 @@ FORMATS = ("text", "csv", "beancount")
 # Bare names that PreciseShell rewrites to dot commands (beanquery deprecates
 # the undotted forms). Any leading-`.` token also goes through the shell.
 _SHELL_ALIASES = frozenset({"clear", "errors", "exit", "help", "history", "parse", "quit", "run", "set"})
+
+
+def _refuse_shell_without_terminal_stdout() -> None:
+    """Refuse the interactive shell when its prompt would not reach the terminal (w5/587).
+
+    Upstream's `input()` writes the prompt to stdout, so with stdout
+    redirected the session showed nothing, looked hung, and wrote its
+    `beanquery>` prompts into the results file.
+    """
+    if not context.current().stdout_is_a_terminal:
+        raise UsageError(
+            "The query shell draws its prompt on stdout, and stdout is redirected, so the session would be "
+            "invisible and its prompts would land in the output. Pass the query as an argument or on stdin, "
+            "or export with -o FILE."
+        )
 
 
 def _stdin_query() -> str:
@@ -108,9 +124,11 @@ def _require_source_ledger(source: str) -> None:
         raise UsageError(f"No {kind} file at '{path}' (from --source{named}).")
     if path.is_dir():
         raise UsageError(f"{label} path '{path}' (from --source{named}) is a directory; expected a {kind} file.")
+    if parts.scheme == "beancount":
+        output.refuse_cache_over_ledger(path)
 
 
-def _refuse_source_alias(source: str, destination: Path) -> None:
+def _refuse_source_alias(source: str, destination: Path, *, spelling: Path | None = None) -> None:
     """Refuse `--output` onto the local file a native `--source` reads.
 
     Native Beanquery opens the output itself, so the guard `--file` runs never
@@ -124,9 +142,9 @@ def _refuse_source_alias(source: str, destination: Path) -> None:
     parts = urlparse(source)
     scheme = parts.scheme.casefold() if len(parts.scheme) > 1 else ""
     if scheme == "":
-        output.refuse_ledger_alias(destination, Path(source))
+        output.refuse_ledger_alias(destination, Path(source), spelling=spelling)
     elif scheme == "beancount" and parts.path:
-        output.refuse_ledger_alias(destination, Path(parts.path))
+        output.refuse_ledger_alias(destination, Path(parts.path), spelling=spelling)
     elif scheme == "csv" and parts.path:
         output.refuse_input_alias(destination, Path(parts.path))
 
@@ -342,10 +360,11 @@ def query(
             "--spreadsheet-safe applies to CSV from a local --file: pass --format csv (or -o FILE.csv), "
             "without --json or --source."
         )
+    output_spelling = Path(output_file) if output_file is not None else None
     if output_file is not None:
         # Resolve once before checking aliases, then carry that target through
         # the engine and JSON writer even if the original link changes.
-        output_file = str(Path(output_file).resolve())
+        output_file = str(expand_path(Path(output_file), "--output").resolve())
         output.check_output_destination(Path(output_file))
         # One rule for text and `--json`, which are written by different
         # processes: an unwritable destination is refused before the query runs.
@@ -364,7 +383,7 @@ def query(
         _check_source_scheme(source)
         _require_source_ledger(source)
         if output_file is not None:
-            _refuse_source_alias(source, Path(output_file))
+            _refuse_source_alias(source, Path(output_file), spelling=output_spelling)
         if query_string is None:
             # The same missing-query policy as `--file`: a terminal opens the
             # shell only when prompting is allowed, and a pipe must carry BQL.
@@ -375,6 +394,7 @@ def query(
             elif ctx.no_input:
                 raise UsageError("A query is required with --no-input. Pass it as an argument or on stdin.")
             else:
+                _refuse_shell_without_terminal_stdout()
                 # `--debug` reaches the prompt, where a mistake is otherwise only explained.
                 shell_argv = ["source-shell", *rendering, *(["--debug"] if ctx.debug else []), "--", source]
                 raise typer.Exit(launch.run_engine_argv(shell_argv, interactive=True))
@@ -386,13 +406,14 @@ def query(
         # The engine runs upstream's shell on the native source the way
         # `bean-query` does, but a missing stored query exits 2 instead of
         # printing an error and reporting success.
-        raise typer.Exit(launch.run_engine_argv(["source-query", *rendering, "--", source, query_string]))
+        debug = ["--debug"] if ctx.debug else []
+        raise typer.Exit(launch.run_engine_argv(["source-query", *rendering, *debug, "--", source, query_string]))
 
     file = ctx.entry_file()
     if output_file is not None:
         # Before anything is forwarded: the engine opens this path for write,
         # and opening the ledger under read would truncate the books.
-        output.refuse_ledger_alias(Path(output_file), file)
+        output.refuse_ledger_alias(Path(output_file), file, spelling=output_spelling)
     if query_string is None:
         if not sys.stdin.isatty():
             query_string = _stdin_query()
@@ -401,6 +422,7 @@ def query(
         elif ctx.no_input:
             raise UsageError("A query is required with --no-input. Pass it as an argument or on stdin.")
         else:
+            _refuse_shell_without_terminal_stdout()
             # The read policy is frontend-resolved and must reach the shell:
             # a strict session answering from a ledger that does not load is
             # exactly what `--strict` exists to refuse, and suppressing the

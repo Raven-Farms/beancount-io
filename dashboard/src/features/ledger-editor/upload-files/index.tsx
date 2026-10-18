@@ -1,14 +1,15 @@
 import { PageHeader } from "@/common/components/page-header";
 import { RelatedLinks } from "@/common/components/related-links";
 import { getLedgerFilesRootPath } from "@/common/hooks/use-file-navigate";
-import { useState, useRef, useId } from "react";
+import { useState, useRef, useId, useMemo } from "react";
 import type { DragEvent } from "react";
 import { useParams, useNavigate } from "@tanstack/react-router";
-import { useMutation } from "@apollo/client/react";
+import { useMutation, useQuery } from "@apollo/client/react";
 import { Card, CardContent } from "@/common/components/ui/card";
 import { Button } from "@/common/components/ui/button";
 import { Input } from "@/common/components/ui/input";
 import { Label } from "@/common/components/ui/label";
+import { Alert, AlertDescription } from "@/common/components/ui/alert";
 import {
   CreateLedgerFileDocument,
   GetLedgerDirContentDocument,
@@ -22,6 +23,7 @@ import type {
 import { cn } from "@/common/lib/utils/utils";
 import { createLedgerId } from "@/common/lib/utils/encode";
 import { useTranslations } from "@/common/hooks/use-translations";
+import { useErrorMessage } from "@/common/lib/errors/error-message";
 import { toast } from "sonner";
 import { useLedger } from "@/common/hooks/use-ledger";
 import { useLedgerPermission } from "@/common/hooks/use-ledger-permission";
@@ -30,6 +32,17 @@ import { formatFileSize } from "../shared/lib/utils";
 
 // Maximum file size allowed (1MB)
 const MAX_FILE_SIZE = 1024 * 1024; // 1MB in bytes
+
+/** Stage `chosen`, a re-picked name replacing its earlier entry in place. */
+function stageFiles(staged: File[], chosen: File[]): File[] {
+  const incoming = new Map(chosen.map((file) => [file.name, file]));
+  const replaced = staged.map((file) => incoming.get(file.name) ?? file);
+  const stagedNames = new Set(staged.map((file) => file.name));
+  return [
+    ...replaced,
+    ...[...incoming.values()].filter((file) => !stagedNames.has(file.name)),
+  ];
+}
 
 /**
  * Upload Files Page Component - GitHub-style file upload interface
@@ -46,6 +59,7 @@ const UploadFilesPage = () => {
   const ledgerId = createLedgerId(ledgerOwner, ledgerName);
   const navigate = useNavigate();
   const { t } = useTranslations();
+  const formatError = useErrorMessage();
   const { ledgerName: ledgerDisplayName } = useLedger();
   // False for anonymous readers and while permissions are unresolved.
   const { canWrite } = useLedgerPermission();
@@ -56,6 +70,23 @@ const UploadFilesPage = () => {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadSizeLimitId = useId();
+  const uploadClashId = useId();
+  /** Where the last upload stopped, and what it had already written. */
+  const [uploadFailure, setUploadFailure] = useState<{
+    fileName: string;
+    reason: string;
+    uploaded: string[];
+  } | null>(null);
+
+  // The folder's names: Gitea refuses to create a path that already exists.
+  const { data: dirData } = useQuery(GetLedgerDirContentDocument, {
+    variables: { ledgerId, dirPath: dirPath || null },
+    skip: !ledgerId,
+  });
+  const existingNames = useMemo(
+    () => new Set((dirData?.getLedgerDirContent ?? []).map((e) => e.name)),
+    [dirData],
+  );
 
   const [createFileMutation] = useMutation<
     CreateLedgerFileMutation,
@@ -65,10 +96,17 @@ const UploadFilesPage = () => {
   const hasOversizedFiles = selectedFiles.some(
     (file) => file.size > MAX_FILE_SIZE,
   );
+  const hasExistingFiles = selectedFiles.some((file) =>
+    existingNames.has(file.name),
+  );
 
   // This also guards the handler before any file is read or sent.
   const isUploadDisabled =
-    !canWrite || selectedFiles.length === 0 || isUploading || hasOversizedFiles;
+    !canWrite ||
+    selectedFiles.length === 0 ||
+    isUploading ||
+    hasOversizedFiles ||
+    hasExistingFiles;
 
   /**
    * Handle cancel button click - navigate back to files view
@@ -111,15 +149,17 @@ const UploadFilesPage = () => {
     if (!canWrite || isUploadDisabled) return;
 
     setIsUploading(true);
-    const message =
-      commitMessage.trim() || `Upload ${selectedFiles.length} file(s)`;
+    setUploadFailure(null);
+    const batch = selectedFiles;
+    const message = commitMessage.trim() || `Upload ${batch.length} file(s)`;
+    const uploaded: string[] = [];
 
-    try {
-      // Upload files sequentially
-      for (const file of selectedFiles) {
-        const fullPath = dirPath ? `${dirPath}/${file.name}` : file.name;
+    // One commit per file, in order. Each created file leaves the staged list
+    // at once, so a failure leaves exactly what a retry still has to send.
+    for (const file of batch) {
+      const fullPath = dirPath ? `${dirPath}/${file.name}` : file.name;
+      try {
         const content = await fileToBase64(file);
-
         await createFileMutation({
           variables: {
             ledgerId: ledgerId,
@@ -138,25 +178,36 @@ const UploadFilesPage = () => {
           ],
           awaitRefetchQueries: true,
         });
+      } catch (error) {
+        const failure = {
+          fileName: file.name,
+          reason: formatError(error),
+          uploaded,
+        };
+        setUploadFailure(failure);
+        toast.error(
+          t("ledgerEditor.uploadStoppedAt", {
+            fileName: failure.fileName,
+            reason: failure.reason,
+          }),
+        );
+        setIsUploading(false);
+        return;
       }
-
-      // Refetch directory content after all uploads
-      // Navigate back to files view after successful upload
-      void navigate({
-        to: "/ledger/$ledgerOwner/$ledgerName/files/tree/$branch/$",
-        params: {
-          ledgerOwner,
-          ledgerName,
-          branch: "main",
-          _splat: dirPath || "",
-        },
-      });
-    } catch {
-      const errorMessage = t("ledgerEditor.failedToUploadFiles");
-      toast.error(errorMessage);
-    } finally {
-      setIsUploading(false);
+      uploaded.push(file.name);
+      setSelectedFiles((prev) => prev.filter((staged) => staged !== file));
     }
+
+    setIsUploading(false);
+    void navigate({
+      to: "/ledger/$ledgerOwner/$ledgerName/files/tree/$branch/$",
+      params: {
+        ledgerOwner,
+        ledgerName,
+        branch: "main",
+        _splat: dirPath || "",
+      },
+    });
   };
 
   /**
@@ -171,7 +222,7 @@ const UploadFilesPage = () => {
     // Allow selecting the same path again after remove/cancel.
     event.target.value = "";
     if (chosen.length > 0) {
-      setSelectedFiles((prev) => [...prev, ...chosen]);
+      setSelectedFiles((prev) => stageFiles(prev, chosen));
     }
   };
 
@@ -200,7 +251,7 @@ const UploadFilesPage = () => {
 
     const files = e.dataTransfer.files;
     if (files && files.length > 0) {
-      setSelectedFiles((prev) => [...prev, ...Array.from(files)]);
+      setSelectedFiles((prev) => stageFiles(prev, Array.from(files)));
     }
   };
 
@@ -322,12 +373,13 @@ const UploadFilesPage = () => {
               <div className="border rounded-lg divide-y">
                 {selectedFiles.map((file, index) => {
                   const isOversized = file.size > MAX_FILE_SIZE;
+                  const exists = existingNames.has(file.name);
                   return (
                     <div
-                      key={index}
+                      key={file.name}
                       className={cn(
                         "flex items-center justify-between p-3 hover:bg-muted/50",
-                        isOversized && "bg-destructive/5",
+                        (isOversized || exists) && "bg-destructive/5",
                       )}
                     >
                       <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -341,6 +393,14 @@ const UploadFilesPage = () => {
                             <AlertCircle className="h-4 w-4" />
                             <span className="text-xs font-medium">
                               {t("ledgerEditor.exceedsFileSizeLimit")}
+                            </span>
+                          </div>
+                        )}
+                        {exists && (
+                          <div className="flex items-center gap-1 text-destructive shrink-0">
+                            <AlertCircle className="h-4 w-4" />
+                            <span className="text-xs font-medium">
+                              {t("ledgerEditor.fileAlreadyExists")}
                             </span>
                           </div>
                         )}
@@ -381,9 +441,33 @@ const UploadFilesPage = () => {
 
           {/* Action buttons */}
           <div className="space-y-2 pt-4 border-t">
+            {uploadFailure && (
+              <Alert variant="destructive">
+                <AlertDescription>
+                  <p>
+                    {t("ledgerEditor.uploadStoppedAt", {
+                      fileName: uploadFailure.fileName,
+                      reason: uploadFailure.reason,
+                    })}
+                  </p>
+                  {uploadFailure.uploaded.length > 0 && (
+                    <p>
+                      {t("ledgerEditor.uploadedBeforeFailure", {
+                        files: uploadFailure.uploaded.join(", "),
+                      })}
+                    </p>
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
             {hasOversizedFiles && (
               <p id={uploadSizeLimitId} className="text-sm text-destructive">
                 {t("ledgerEditor.removeOversizedFiles")}
+              </p>
+            )}
+            {hasExistingFiles && (
+              <p id={uploadClashId} className="text-sm text-destructive">
+                {t("ledgerEditor.removeExistingFiles")}
               </p>
             )}
             <div className="flex items-center gap-3">
@@ -392,7 +476,12 @@ const UploadFilesPage = () => {
                 onClick={handleUpload}
                 disabled={isUploadDisabled}
                 aria-describedby={
-                  hasOversizedFiles ? uploadSizeLimitId : undefined
+                  [
+                    hasOversizedFiles && uploadSizeLimitId,
+                    hasExistingFiles && uploadClashId,
+                  ]
+                    .filter(Boolean)
+                    .join(" ") || undefined
                 }
                 className="flex items-center gap-2"
               >

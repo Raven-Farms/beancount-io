@@ -1,6 +1,7 @@
 ---
 name: beancount-close
 description: Close an accounting period in a Beancount ledger by reconciling each active account through beancount-reconcile, checking assertions and recurring gaps, reviewing flags, then proposing a commit with the period reports. Use for month-end close or wrapping up the books. Surface incomplete work and require a passing check before a confirmed commit; never push.
+metadata: {"openclaw": {"homepage": "https://github.com/bex-co/beancount-io/tree/main/skills", "requires": {"anyBins": ["bea", "bean-check"]}, "install": [{"id": "brew", "kind": "brew", "formula": "bex-co/tap/bea", "bins": ["bea"], "label": "Install bea (Homebrew)"}, {"id": "uv", "kind": "uv", "package": "beancount-io", "bins": ["bea"], "label": "Install bea (uv)"}]}, "hermes": {"category": "finance", "tags": ["beancount", "accounting", "month-end-close", "reconciliation"]}}
 ---
 
 # beancount-close
@@ -15,7 +16,8 @@ Read beancount-init's `references/bea-cli.md` before running ledger commands: it
 
 Check the root ledger and generate the committed summary with root-scoped
 `report income-statement` and `report balance-sheet`, both using the resolved
-month. Reconciliation writes still belong to beancount-reconcile.
+month and both at book value (`-x at_cost`), the valuation the checklist's
+period-end balances use. Reconciliation writes still belong to beancount-reconcile.
 
 ## Scope
 
@@ -37,6 +39,8 @@ Resolve the period (user's words or last complete month — state it). Find the 
 
 For each active account, ask the user for the period statement (CSV/pasted text). Per account **with** a statement, run the `beancount-reconcile` flow (its own confirm gate applies) — outcome **tied**, or **partial** when reconcile correctly withholds the assertion over unresolved suspects/mismatches (a reported finding with its residual, *not* a failure to retry). Per account **without** one: status **unverified** — listed in the report, never silently passed. Nothing in this phase writes except through reconcile's confirmed appends.
 
+If beancount-reconcile is not installed beside this skill (a registry can install one skill alone), say so and point the user to https://github.com/bex-co/beancount-io/blob/main/skills/docs/installation.md to add it. Do not reconcile without it; continuing marks every account **unverified**.
+
 ### 3. Assert
 
 After reconciliation, every reconciled account has a period-end `balance` assertion (reconcile appends them). Verify each active account has an assertion dated on/after period end; accounts without one are **unpinned** in the report.
@@ -51,10 +55,17 @@ List every `!`-flagged entry dated in or before the period. Each is either resol
 
 ### 6. Report
 
-Generate the period's numbers with the shared report recipes, using
-`--file "$ledger" --json --no-input` and `--time "$month"` on both
-`report income-statement` and `report balance-sheet`. Use beancount-ask's BQL
-recipes for any additional figures. Assemble the close report:
+Generate the period's numbers with the `close-income-statement` and
+`close-balance-sheet` recipes in `references/close-checklist.md`: both reports
+at book value (`-x at_cost`), so a cost-basis lot counts at its cost and a
+commodity without a price (an `@`-priced foreign charge, an option lot) appears
+in its own units instead of stopping the close. State that valuation in the
+report. Expense totals in the operating currency come from beancount-ask's
+`weight` recipes (`top-expenses` counts `300 EUR @ 1.10 USD` as the 330 USD
+paid); without beancount-ask installed, report only the two reports. A report
+that exits 1 with `result.missing_prices` is a valuation gap, not an engine
+failure: list the missing prices in the close report and use the `weight`
+recipes — never repair or reinstall the engine for it. Assemble the close report:
 
 ```
 Close: 2026-06 (2026-06-01 … 2026-06-30)

@@ -21,6 +21,25 @@ import type { AppConfig } from "@/config/config";
 import type { AppLayers } from "@/foundation/composition";
 import type { McpRequestContext } from "../mcp-context";
 
+/**
+ * The MCP tool for one manageLedgerCollaborators operation (ADR 019, 2026-10-18; w1/m38):
+ * each operation is its own tool, so the call names it and drops `operation`.
+ * An unknown operation names a tool that does not exist.
+ */
+const MCP_TOOL_FOR: Readonly<Record<string, string>> = {
+  update: "setLedgerCollaborator",
+  delete: "removeLedgerCollaborator",
+  leave: "leaveLedger",
+};
+function perOperation(args: Record<string, unknown>) {
+  const { operation, ...rest } = args;
+  return {
+    name:
+      MCP_TOOL_FOR[String(operation)] ?? `no-such-tool-${String(operation)}`,
+    arguments: rest,
+  };
+}
+
 const config = { api: { scopeEnforcement: "enforce" } } as AppConfig;
 const token = (
   username = "alice",
@@ -174,9 +193,19 @@ async function fixture(initialIdentity = token()) {
   const authorize = jest.spyOn(authorization, "authorizeOrThrow");
   const workflow = new LedgerCollaboratorsWorkflow(
     fava as never,
-    { listSubscriptions: async () => [{ status: "active" }] } as never,
-    models as never,
-    {} as never,
+    {
+      listSubscriptions: async () => [
+        {
+          status: "active",
+          livemode: true,
+          clientId: "beancount-web-prod",
+          customer: "cus_synthetic",
+          items: {
+            data: [{ price: { id: "price_1RrSOGEqsEqs2tLVFnyB34qG" } }],
+          },
+        },
+      ],
+    } as never,
     authorization,
   );
   resolvers = new Map<unknown, object>([
@@ -265,10 +294,9 @@ async function fixture(initialIdentity = token()) {
         ...(permissionValue !== undefined && { permission: permissionValue }),
       };
       if (surface === "mcp") {
-        const result = await client.callTool({
-          name: "manageLedgerCollaborators",
-          arguments: { operation, ledger: "alice/main", ...payload },
-        });
+        const result = await client.callTool(
+          perOperation({ operation, ledger: "alice/main", ...payload }),
+        );
         return {
           failed: result.isError === true,
           data: (result.structuredContent as { result?: unknown } | undefined)
@@ -566,15 +594,14 @@ describe("collaborators through actual adapters, workflow, PDP, and relationship
     async (operation) => {
       const f = await fixture();
       try {
-        const mcp = await f.client.callTool({
-          name: "manageLedgerCollaborators",
-          arguments: {
+        const mcp = await f.client.callTool(
+          perOperation({
             operation,
             ledger: "alice/main",
             collaborator: "",
             ...(operation === "update" && { permission: "read" }),
-          },
-        });
+          }),
+        );
         expect(mcp.isError).toBe(true);
         expect(mcp.structuredContent).toMatchObject({
           error: { code: "BAD_USER_INPUT" },
@@ -616,14 +643,13 @@ describe("collaborators through actual adapters, workflow, PDP, and relationship
       const rest = await f.request("collaborators/zz-ghost", "DELETE");
       expect(rest.status).toBe(400);
       expect(await rest.text()).not.toContain("uid");
-      const mcp = await f.client.callTool({
-        name: "manageLedgerCollaborators",
-        arguments: {
+      const mcp = await f.client.callTool(
+        perOperation({
           operation: "delete",
           ledger: "alice/main",
           collaborator: "zz-ghost",
-        },
-      });
+        }),
+      );
       expect(mcp.isError).toBe(true);
       expect(mcp.structuredContent).toMatchObject({
         error: { code: "BAD_USER_INPUT", message: "No such user: zz-ghost" },
@@ -701,10 +727,7 @@ describe("collaborators through actual adapters, workflow, PDP, and relationship
         { operation: "leave", ledger: "other/main" },
         { operation: "update", collaborator: "bob", dry_run: true },
       ]) {
-        const result = await f.client.callTool({
-          name: "manageLedgerCollaborators",
-          arguments: args,
-        });
+        const result = await f.client.callTool(perOperation(args));
         expect(result.isError).toBe(true);
       }
       expect(

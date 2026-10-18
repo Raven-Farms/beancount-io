@@ -882,6 +882,25 @@ const esCommon: Record<string, TranslationEntry> = {
     description:
       "Error shown when a feature needs a premium plan (PREMIUM_REQUIRED)",
   },
+  "common.errors.unbalanced": {
+    message: "Los asientos no cuadran. Ajusta un monto e inténtalo de nuevo.",
+    description:
+      "Error shown when the ledger refuses a transaction whose postings do not balance (UNBALANCED)",
+  },
+  "common.writeLeftErrors": {
+    message: "Se guardó, pero ahora el libro informa de un error: {error}",
+    description:
+      "Warning after a write that succeeded but left the ledger with a new validation error; {error} is the first new error",
+  },
+  "common.viewErrors": {
+    message: "Ver errores",
+    description: "Action that opens the ledger's Errors page",
+  },
+  "common.errors.wouldBreakLedger": {
+    message: "Esto añadiría un error a tu libro: {detail}",
+    description:
+      "Error shown when the ledger refuses entries that would add bean-check errors; {detail} is the ledger’s own error text, e.g. Duplicate open directive for Assets:Cash (main.bean:74)",
+  },
   "common.errors.network": {
     message:
       "Problema de conexión. Comprueba tu conexión a internet e inténtalo de nuevo.",

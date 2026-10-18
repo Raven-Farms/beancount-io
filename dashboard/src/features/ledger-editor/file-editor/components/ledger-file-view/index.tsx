@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from "react";
 import { useQuery, useMutation } from "@apollo/client/react";
+import { CombinedGraphQLErrors } from "@apollo/client/errors";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import {
   GetLedgerFileDocument,
@@ -20,6 +21,7 @@ import { toast } from "sonner";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { useErrorMessage } from "@/common/lib/errors/error-message";
 import { useFileNavigate } from "@/common/hooks/use-file-navigate";
+import { useWriteOutcome } from "@/common/hooks/use-write-outcome";
 import { getParentPath, getFilename } from "../../../shared/lib/utils";
 import {
   FileLoadingView,
@@ -34,6 +36,23 @@ interface LedgerFileViewProps {
   isEditMode?: boolean;
   lineNumber?: number;
 }
+
+/** The ledger's root file, which the server refuses to delete. Only the root
+ * path: a nested `accounts/main.bean` is an ordinary file. */
+function isRootLedgerFile(path: string): boolean {
+  return path.replace(/^\/+/, "") === "main.bean";
+}
+
+/** The server's refusal of an unsafe path (`assertSafeRepoPath`). */
+function isRefusedPath(error: unknown): boolean {
+  return (
+    CombinedGraphQLErrors.is(error) &&
+    error.errors.some((item) => item.extensions?.code === "BAD_USER_INPUT")
+  );
+}
+
+/** backend-v2's refusal for deleting it (`ledger-workflow.ts`). */
+const ROOT_FILE_REFUSAL = /main\.bean file cannot be deleted/;
 
 /**
  * Ledger file view container component
@@ -50,6 +69,7 @@ export default function LedgerFileView({
   const cleanCache = useApolloCacheClear();
   const fileNavigate = useFileNavigate();
   const navigate = useNavigate();
+  const writeOutcome = useWriteOutcome(ledgerId);
   const params = useParams({
     from: "/ledger/$ledgerOwner/$ledgerName/files/blob/$branch/$",
   });
@@ -113,6 +133,7 @@ export default function LedgerFileView({
     if (!fileContent) return;
 
     setIsSaving(true);
+    const before = writeOutcome.snapshot();
     try {
       await updateFileMutation({
         variables: {
@@ -125,9 +146,11 @@ export default function LedgerFileView({
         onError: (error) => {
           toast.error(formatError(error));
         },
-        onCompleted: () => {
+        onCompleted: async () => {
           track("file_edited", {});
-          toast.success(t("ledgerEditor.fileSavedSuccess"));
+          if (!(await writeOutcome.report(before))) {
+            toast.success(t("ledgerEditor.fileSavedSuccess"));
+          }
           cleanCache();
         },
       });
@@ -147,7 +170,14 @@ export default function LedgerFileView({
         message: t("ledgerEditor.deleteFileCommit", { path: filePath }),
       },
       onError: (error) => {
-        toast.error(formatError(error));
+        const refusedRoot = ROOT_FILE_REFUSAL.test(error.message);
+        toast.error(
+          refusedRoot
+            ? t("ledgerEditor.rootFileCannotBeDeleted", {
+                filename: "main.bean",
+              })
+            : formatError(error),
+        );
       },
       onCompleted: () => {
         toast.success(t("ledgerEditor.fileDeletedSuccess"));
@@ -159,17 +189,19 @@ export default function LedgerFileView({
     });
   };
 
-  if (error) {
+  // A path the server refuses is not a file that failed to load: Try Again
+  // could never succeed, so show it as not found.
+  if (error && !isRefusedPath(error)) {
     return <FileErrorView filename={getFilename(filePath)} />;
   }
 
   // cache-and-network can keep loading true after the first result; only treat
   // absence as confirmed when the query has a settled payload.
-  if (data === undefined) {
+  if (data === undefined && !error) {
     return <FileLoadingView filename={getFilename(filePath)} />;
   }
 
-  if (!fileContent) {
+  if (error || !fileContent) {
     return (
       <FileNotFoundView
         filePath={filePath}
@@ -185,7 +217,7 @@ export default function LedgerFileView({
       filePath={filePath}
       fileContent={fileContent}
       onSave={handleSaveFile}
-      onDelete={handleDeleteFile}
+      onDelete={isRootLedgerFile(filePath) ? undefined : handleDeleteFile}
       isSaving={isSaving}
       isEditMode={isEditMode}
       lineNumber={lineNumber}

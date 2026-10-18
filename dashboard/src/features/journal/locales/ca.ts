@@ -159,6 +159,18 @@ const caJournal: Record<string, TranslationEntry> = {
     message: "Personalitzat",
     description: "Custom entry type filter",
   },
+  "journal.commodity": {
+    message: "Mercaderia",
+    description: "Name of the Commodity directive type",
+  },
+  "journal.event": {
+    message: "Esdeveniment",
+    description: "Name of the Event directive type",
+  },
+  "journal.query": {
+    message: "Consulta",
+    description: "Name of the Query directive type",
+  },
   "journal.date": {
     message: "Data",
     description: "Label for date field",
@@ -461,6 +473,96 @@ const caJournal: Record<string, TranslationEntry> = {
     message: "Elimina l'apunt {number}",
     description:
       "Accessible name for removing a numbered transaction posting row",
+  },
+  "journal.payee": {
+    message: "Beneficiari",
+    description: "Label for the payee field",
+  },
+  "journal.accountLabel": {
+    message: "Compte",
+    description: "Label for the account field of a directive form",
+  },
+  "journal.amountLabel": {
+    message: "Import",
+    description: "Label for the amount field of a directive form",
+  },
+  "journal.currencyLabel": {
+    message: "Moneda",
+    description: "Label for the currency field of a directive form",
+  },
+  "journal.postingAccount": {
+    message: "Compte de l'apunt {number}",
+    description:
+      "Accessible label for a numbered transaction posting's account field",
+  },
+  "journal.postingAmount": {
+    message: "Import de l'apunt {number}",
+    description:
+      "Accessible label for a numbered transaction posting's amount field",
+  },
+  "journal.postingCurrency": {
+    message: "Moneda de l'apunt {number}",
+    description:
+      "Accessible label for a numbered transaction posting's currency field",
+  },
+  "journal.postingsUnbalanced": {
+    message:
+      "Els apunts no quadren: en sobren {residual}. Ajusteu un import o buideu-ne un perquè es quadri automàticament.",
+    description:
+      "Shown when a new transaction's postings leave a residual; {residual} is the amount and currency, e.g. 1 USD",
+  },
+  "journal.accountNotOpen": {
+    message: "{account} no està obert en aquest llibre.",
+    description:
+      "Shown under a New Entry account field naming an account the ledger never opened; {account} is the name",
+  },
+  "journal.alsoOpenAccount": {
+    message: "Obre també {account} el {date}",
+    description:
+      "Checkbox label that adds an open directive for {account} dated {date} to the same New Entry write",
+  },
+  "journal.accountClosedBefore": {
+    message: "{account} es va tancar el {date}, abans d'aquest apunt.",
+    description:
+      "Shown under a New Entry account field naming an account closed before the entry; {date} is its close date",
+  },
+  "journal.accountOpensAfter": {
+    message: "{account} s'obre el {date}, després d'aquest apunt.",
+    description:
+      "Shown under a New Entry account field naming an account opened after the entry; {date} is its open date",
+  },
+  "journal.discardEntryEditTitle": {
+    message: "Voleu descartar l'edició?",
+    description:
+      "Title of the confirmation shown when leaving Entry Context with unsaved source edits",
+  },
+  "journal.discardEntryEditDescription": {
+    message: "Els canvis al codi font d'aquest apunt no s'han desat.",
+    description: "Body of the Entry Context discard confirmation",
+  },
+  "journal.keepEditing": {
+    message: "Continua editant",
+    description:
+      "Button that returns to the Entry Context editor with the edit intact",
+  },
+  "journal.discardEntryEdit": {
+    message: "Descarta",
+    description: "Button that discards the Entry Context edit and leaves",
+  },
+  "journal.entryChangedElsewhere": {
+    message:
+      "Aquest apunt s'ha canviat o eliminat des que el vau obrir, així que la vostra edició no s'ha desat. Copieu l'edició i torneu a carregar per veure'n la versió més recent.",
+    description:
+      "Entry Context save refused because the entry changed elsewhere since it was opened",
+  },
+  "journal.copyMyEdit": {
+    message: "Copia la meva edició",
+    description: "Copies the unsaved Entry Context edit to the clipboard",
+  },
+  "journal.reloadEntries": {
+    message: "Torna a carregar",
+    description:
+      "Closes Entry Context and refreshes the journal to show the latest entries",
   },
   "journal.autoAmount": {
     message: "automàtic",

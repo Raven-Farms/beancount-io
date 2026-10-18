@@ -50,8 +50,10 @@ interface TransactionFormData {
     payee: string;
     description: string;
     amount: number;
-    /** Original CSV amount token; the submitted amount is built from it. */
+    /** Original CSV amount token, kept for display and re-validation. */
     amountInput: string;
+    /** The exact normalized decimal that is submitted. */
+    amountDecimal: string;
     targetAccount: string;
     selected: boolean;
   }[];

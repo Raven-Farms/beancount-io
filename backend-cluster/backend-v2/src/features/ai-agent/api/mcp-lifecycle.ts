@@ -5,62 +5,57 @@ import {
   ledgerDeleteInput,
   ledgerResultSchema,
 } from "@/features/ledger/api/rest/v1/lifecycle-handler";
-import { type McpRequestContext, resolveMcpLedger } from "./mcp-context";
+import {
+  type McpRequestContext,
+  ledgerSelection,
+  resolveMcpLedger,
+} from "./mcp-context";
 import { mcpOutputSchema, toolOutputSchema } from "../tools/types";
-import { BadUserInputError } from "@/shared/errors";
-export const lifecycleToolInput = z
-  .object({
-    operation: z.enum(["create", "update", "delete"]),
-    ledger: z
-      .string()
-      .optional()
-      .describe(
-        "Existing ledger as owner/name. For update/delete only; unpinned credentials must specify it.",
-      ),
-    name: ledgerUpdateInput.shape.name,
-    description: ledgerUpdateInput.shape.description,
-    private: ledgerUpdateInput.shape.private,
-    template: ledgerCreateInput.shape.template,
-  })
-  .strict();
+/**
+ * One MCP tool per lifecycle operation (ADR 019, 2026-10-18; w1/m38), each
+ * taking exactly REST's input for that operation plus the ledger target.
+ */
+export const LIFECYCLE_OPERATION_SCHEMAS = {
+  create: ledgerCreateInput,
+  update: ledgerUpdateInput.extend({ ledger: ledgerSelection }),
+  delete: ledgerDeleteInput.extend({ ledger: ledgerSelection }),
+} as const;
 export const lifecycleToolOutput = mcpOutputSchema(
   toolOutputSchema(
     z.union([ledgerResultSchema, z.object({ ledgerId: z.string() })]),
   ),
 );
-export async function executeLifecycleTool(
-  context: McpRequestContext,
-  input: z.infer<typeof lifecycleToolInput>,
-) {
-  const { operation, ledger, ...payload } = lifecycleToolInput.parse(input);
-  const identity = context.identity;
-  if (operation === "create") {
-    if (ledger !== undefined)
-      throw new BadUserInputError(
-        "Creation uses the authenticated user's account; omit ledger and provide name.",
-      );
-    return {
-      ok: true,
-      result: await context.ledgerWorkflow.createLedger({
-        identity,
-        input: ledgerCreateInput.parse(payload),
-        platform: context.platform,
-      }),
-    };
-  }
-  const ledgerId = resolveMcpLedger(context, ledger);
-  if (operation === "update")
+
+/** Each tool's handler, parsing the schema that tool publishes. */
+export const LIFECYCLE_EXECUTORS = {
+  create: async (context: McpRequestContext, input: unknown) => ({
+    ok: true,
+    result: await context.ledgerWorkflow.createLedger({
+      identity: context.identity,
+      input: LIFECYCLE_OPERATION_SCHEMAS.create.parse(input),
+      platform: context.platform,
+    }),
+  }),
+  update: async (context: McpRequestContext, input: unknown) => {
+    const { ledger, ...payload } =
+      LIFECYCLE_OPERATION_SCHEMAS.update.parse(input);
     return {
       ok: true,
       result: await context.ledgerWorkflow.updateLedger({
-        identity,
-        ledgerId,
-        input: ledgerUpdateInput.parse(payload),
+        identity: context.identity,
+        ledgerId: resolveMcpLedger(context, ledger),
+        input: payload,
       }),
     };
-  ledgerDeleteInput.parse(payload);
-  return {
-    ok: true,
-    result: await context.ledgerWorkflow.deleteLedger({ identity, ledgerId }),
-  };
-}
+  },
+  delete: async (context: McpRequestContext, input: unknown) => {
+    const { ledger } = LIFECYCLE_OPERATION_SCHEMAS.delete.parse(input);
+    return {
+      ok: true,
+      result: await context.ledgerWorkflow.deleteLedger({
+        identity: context.identity,
+        ledgerId: resolveMcpLedger(context, ledger),
+      }),
+    };
+  },
+};

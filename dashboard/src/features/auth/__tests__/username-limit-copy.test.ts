@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
+import { USERNAME_MAX_LENGTH } from "@/common/lib/auth/username-rule";
 
 /**
  * The signup form enforces a 20-character username, but twelve catalogs still
@@ -21,12 +22,17 @@ const REGISTER_FORM = join(
   "index.tsx",
 );
 
-/** The maximum the form actually enforces, read from the schema itself. */
+/**
+ * The maximum the form actually enforces: the shared rule's, which the
+ * schema must be the one to apply (Settings' rename uses it too, w0/047).
+ */
 function enforcedMaximum(): number {
   const source = readFileSync(REGISTER_FORM, "utf8");
-  const match = /\.max\((\d+),\s*t\("auth\.usernameMaxLength"\)\)/.exec(source);
-  expect(match, "username max() not found in the register form").not.toBeNull();
-  return Number(match![1]);
+  expect(
+    source,
+    "the register form must apply the shared username maximum",
+  ).toMatch(/\.max\(USERNAME_MAX_LENGTH,\s*t\("auth\.usernameMaxLength"\)\)/);
+  return USERNAME_MAX_LENGTH;
 }
 
 function localeFiles(): string[] {

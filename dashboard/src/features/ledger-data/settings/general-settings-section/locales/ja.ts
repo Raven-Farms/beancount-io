@@ -16,6 +16,11 @@ const jaGeneralSettingsSection: Record<string, TranslationEntry> = {
     message: "この名前はアプリケーション全体に表示されます",
     description: "Help text for ledger name field",
   },
+  "page.settings.ledgerNameTaken": {
+    message: "{name} という名前の元帳は既に存在します。",
+    description:
+      "Rename refusal when another ledger of the same owner already has the name; {name} is the slug",
+  },
   "page.settings.generalSettings": {
     message: "一般設定",
     description: "Section title for general settings",

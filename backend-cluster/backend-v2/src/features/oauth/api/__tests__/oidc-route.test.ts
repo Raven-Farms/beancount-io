@@ -490,7 +490,8 @@ describe("oidc-route: unified MCP + identity provider", () => {
     authUrl.searchParams.set("code_challenge", codeChallenge);
     authUrl.searchParams.set("code_challenge_method", "S256");
     authUrl.searchParams.set("state", state);
-    // Per RFC — offline_access is silently dropped unless prompt=consent is present.
+    // Per OIDC, offline_access is dropped unless prompt=consent is present; a
+    // third-party host gets that prompt added for it (ADR 019 D5).
     if (opts.prompt) authUrl.searchParams.set("prompt", opts.prompt);
     if (opts.resource) authUrl.searchParams.set("resource", opts.resource);
 
@@ -502,7 +503,7 @@ describe("oidc-route: unified MCP + identity provider", () => {
     expect(uid).toBeTruthy();
     if (opts.clientId !== DISCOURSE_CLIENT_ID) {
       expect(consentUrl.searchParams.get("scope")).toBe(
-        opts.prompt === "consent"
+        opts.prompt === "consent" || opts.clientId !== MOBILE_CLIENT_ID
           ? opts.scope
           : opts.scope
               .split(" ")
@@ -1135,8 +1136,11 @@ describe("oidc-route: unified MCP + identity provider", () => {
 
   // ── Third-party connections (ADR 019 D5) ──────────────────────────────────
 
-  /** A DCR host signed in with a refresh token; returns what the clock tests need. */
-  async function connectThirdParty() {
+  /**
+   * A DCR host signed in with a refresh token; returns what the clock tests
+   * need. `null` signs in without a prompt, as MCP Python SDK 1.x hosts do.
+   */
+  async function connectThirdParty(prompt: "consent" | null = "consent") {
     const { clientId, redirectUri } = await registerMcpClient();
     const { code, verifier } = await driveAuthorizationCode({
       clientId,
@@ -1144,7 +1148,7 @@ describe("oidc-route: unified MCP + identity provider", () => {
       scope: "openid offline_access ledger.read",
       redirectUri,
       loginBody: { ledgerId: "ada/personal" },
-      prompt: "consent",
+      prompt: prompt ?? undefined,
     });
     const tokens = await exchangeToken({
       code,
@@ -1488,7 +1492,23 @@ describe("oidc-route: unified MCP + identity provider", () => {
     readonly redirectUris: readonly string[];
     /** The redirect the host sends at authorization, when it is not the first registered one. */
     readonly authorizeWith?: string;
+    /** Registration fields the host sends beyond the shared public-client ones. */
+    readonly registration?: Record<string, unknown>;
   }
+
+  // OpenClaw 2026.10.4 (MCP TypeScript SDK 1.31.0, src/agents/mcp-oauth-provider.ts)
+  // and Hermes Agent (MCP Python SDK) both register with the scopes the
+  // protected resource advertises.
+  const ADVERTISED_SCOPE =
+    "openid offline_access ledger.read ledger.write ledger.admin";
+  const OPENCLAW_REGISTRATION = {
+    client_name: "OpenClaw MCP",
+    scope: ADVERTISED_SCOPE,
+  };
+  const HERMES_REGISTRATION = {
+    client_name: "Hermes Agent",
+    scope: ADVERTISED_SCOPE,
+  };
 
   const HOSTS: readonly HostFixture[] = [
     {
@@ -1519,6 +1539,41 @@ describe("oidc-route: unified MCP + identity provider", () => {
       host: "VS Code (a loopback port other than 33418)",
       redirectUris: VSCODE_REDIRECTS,
       authorizeWith: "http://127.0.0.1:50123/",
+    },
+    // Captured against production on 2026-10-16 (w6/m7): fixed port 8989.
+    {
+      host: "OpenClaw (CLI login)",
+      redirectUris: ["http://127.0.0.1:8989/oauth/callback"],
+      registration: OPENCLAW_REGISTRATION,
+    },
+    // Its retry when a server refuses the 127.0.0.1 registration.
+    {
+      host: "OpenClaw (CLI login, localhost retry)",
+      redirectUris: ["http://localhost:8989/oauth/callback"],
+      registration: OPENCLAW_REGISTRATION,
+    },
+    // Per-requester OAuth returns to the gateway's own public HTTPS origin,
+    // which is wherever its operator runs it.
+    {
+      host: "OpenClaw (per-requester gateway)",
+      redirectUris: [
+        "https://openclaw-gateway.example.test/oauth/mcp/callback",
+      ],
+      registration: OPENCLAW_REGISTRATION,
+    },
+    // hermes-agent 0.19.0, the PyPI release, registers with an ephemeral
+    // loopback port (captured against production on 2026-10-16).
+    {
+      host: "Hermes Agent 0.19.0 (PyPI)",
+      redirectUris: ["http://127.0.0.1:64849/callback"],
+      registration: HERMES_REGISTRATION,
+    },
+    // Current releases fall back to DCR, on a pinned port, wherever CIMD is
+    // off (tools/mcp_oauth.py in v0.22.2).
+    {
+      host: "Hermes Agent (DCR fallback)",
+      redirectUris: ["http://127.0.0.1:27890/callback"],
+      registration: { ...HERMES_REGISTRATION, application_type: "native" },
     },
   ];
 
@@ -1583,7 +1638,7 @@ describe("oidc-route: unified MCP + identity provider", () => {
   }
 
   it.each(HOSTS)("$host registers and reaches consent", async (h) => {
-    const reg = await registerHost(h.redirectUris);
+    const reg = await registerHost(h.redirectUris, h.registration);
     expect(reg).toMatchObject({ status: 201, error: undefined });
     const auth = await authorizeHost(
       reg.clientId!,
@@ -1978,6 +2033,29 @@ describe("oidc-route: unified MCP + identity provider", () => {
     expect(metadata.resource).toBe(resource);
   });
 
+  // ADR 019 D5. Hermes Agent (MCP Python SDK) asks for offline_access without
+  // prompt=consent. oidc-provider would drop the scope and issue no refresh
+  // token, signing the host out when its first access token expires.
+  it("keeps offline_access for a third-party host that sends no prompt, so it can refresh", async () => {
+    const { clientId, refreshToken } = await connectThirdParty(null);
+    expect(refreshToken).toBeTruthy();
+    expect((await refresh(clientId, refreshToken)).status).toBe(200);
+  });
+
+  it("leaves a silent prompt=none request silent rather than forcing consent", async () => {
+    const { clientId, redirectUri } = await registerMcpClient();
+    const authUrl = authUrlFor(
+      clientId,
+      redirectUri,
+      "openid offline_access ledger.read",
+    );
+    authUrl.searchParams.set("prompt", "none");
+    const res = await fetch(authUrl, { redirect: "manual" });
+    const location = new URL(res.headers.get("location")!);
+    expect(location.origin + location.pathname).toBe(redirectUri);
+    expect(location.searchParams.get("error")).toBe("login_required");
+  });
+
   // ── CIMD (ADR 019 D6) ─────────────────────────────────────────────────────
 
   it("advertises client ID metadata documents alongside dynamic registration", async () => {
@@ -2013,6 +2091,24 @@ describe("oidc-route: unified MCP + identity provider", () => {
       response_types: ["code"],
       token_endpoint_auth_method: "none",
     },
+    // Hermes Agent v0.22.2 presents this by default (fetched 2026-10-16).
+    "https://nousresearch.github.io/hermes-agent/docs/oauth/client-metadata.json":
+      {
+        client_id:
+          "https://nousresearch.github.io/hermes-agent/docs/oauth/client-metadata.json",
+        client_name: "Hermes Agent",
+        client_uri: "https://hermes-agent.nousresearch.com",
+        logo_uri:
+          "https://nousresearch.github.io/hermes-agent/docs/img/logo.png",
+        application_type: "native",
+        grant_types: ["authorization_code", "refresh_token"],
+        response_types: ["code"],
+        token_endpoint_auth_method: "none",
+        redirect_uris: [27890, 27891, 27892, 27893, 27894].flatMap((port) => [
+          `http://127.0.0.1:${port}/callback`,
+          `http://localhost:${port}/callback`,
+        ]),
+      },
     // ChatGPT's document URL is not published; the shape follows its auth docs.
     "https://chatgpt.example.test/oauth/client-metadata.json": {
       client_id: "https://chatgpt.example.test/oauth/client-metadata.json",
@@ -2138,6 +2234,13 @@ describe("oidc-route: unified MCP + identity provider", () => {
         "https://chatgpt.com/connector_platform_oauth_redirect",
         "chatgpt.example.test",
         false,
+      ],
+      [
+        "Hermes Agent (a pinned port past the first)",
+        "https://nousresearch.github.io/hermes-agent/docs/oauth/client-metadata.json",
+        "http://localhost:27892/callback",
+        "nousresearch.github.io",
+        true,
       ],
     ])(
       "%s reaches consent naming its vouching domain",

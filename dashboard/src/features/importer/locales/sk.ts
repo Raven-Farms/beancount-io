@@ -101,6 +101,33 @@ const skImporter: Record<string, TranslationEntry> = {
     message: "Nahrať iný súbor",
     description: "Button to upload a different file after error",
   },
+  "importer.aiOffer.title": {
+    message: "Stĺpce tohto CSV sa nepodarilo prečítať",
+    description:
+      "Title when a CSV's columns could not be read by the free client parser",
+  },
+  "importer.aiOffer.description": {
+    message:
+      "Inteligentný import bezplatne číta súbory CSV so stĺpcami Dátum, Príjemca, Popis a Suma. Tento súbor sa dá prečítať pomocou AI, ktorá spotrebúva vaše AI tokeny.",
+    description:
+      "Explains the free CSV format and that AI parsing spends AI tokens",
+  },
+  "importer.aiOffer.parseWithAi": {
+    message: "Analyzovať pomocou AI (spotrebúva AI tokeny)",
+    description:
+      "Button that parses the unreadable CSV with AI, spending AI tokens",
+  },
+  "importer.error.aiQuotaReached": {
+    message: "Minuli ste AI tokeny na tento mesiac",
+    description:
+      "Title when AI parsing of a CSV is refused because the month's AI tokens are used up",
+  },
+  "importer.error.aiQuotaReachedCsv": {
+    message:
+      "Analýza pomocou AI bude opäť dostupná budúci mesiac alebo s Premium. CSV so stĺpcami Dátum, Príjemca, Popis a Suma sa stále importuje bezplatne.",
+    description:
+      "Explains when AI parsing returns and that a well-formed CSV still imports for free",
+  },
   "importer.error.premiumRequired": {
     message: "Vyžaduje sa prémiová funkcia",
     description: "Title for premium required error",
@@ -234,7 +261,7 @@ const skImporter: Record<string, TranslationEntry> = {
     description: "Table header for actions column",
   },
   "importer.preview.deleteRow": {
-    message: "Odstrániť riadok",
+    message: "Odstrániť riadok {row}",
     description: "Aria label for delete row button",
   },
   "importer.preview.emptyFileTitle": {
@@ -555,12 +582,12 @@ const skImporter: Record<string, TranslationEntry> = {
     description: "Count of additional import errors",
   },
   "importer.preview.editCellLabel": {
-    message: "Upraviť {field}. Aktuálna hodnota: {value}",
+    message: "Upraviť {field}, riadok {row}. Aktuálna hodnota: {value}",
     description: "Accessible label for an editable import cell",
   },
-  "importer.preview.field": {
-    message: "pole",
-    description: "Fallback name for an editable import field",
+  "importer.preview.editFieldLabel": {
+    message: "{field}, riadok {row}",
+    description: "Accessible label for the open editor of an import cell",
   },
   "importer.validation.dateRequired": {
     message: "Vyžaduje sa dátum",
@@ -585,6 +612,12 @@ const skImporter: Record<string, TranslationEntry> = {
   "importer.validation.amountInvalid": {
     message: "Čiastka musí byť platné číslo",
     description: "Validation error for an invalid import amount",
+  },
+  "importer.validation.amountMixedDecimals": {
+    message:
+      "Tento stĺpec mieša desatinné bodky (1,234.56) a desatinné čiarky (1.234,56). V jednom stĺpci použite jeden zápis.",
+    description:
+      "Validation error when an import amount column mixes point and comma decimal marks",
   },
   "importer.validation.amountUnsupportedPrecision": {
     message:

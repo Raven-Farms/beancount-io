@@ -92,6 +92,7 @@ export const ru: Translations = {
   merchantsCadenceQuarterly: "Ежеквартально",
   merchantsCadenceYearly: "Ежегодно",
   merchantsCadenceIrregular: "Нерегулярно",
+  merchantsCadenceUnknown: "Мало истории",
   merchantsNextExpected: "Следующий {{date}}",
   merchantsOverdue: "Просрочено",
   merchantsRecurringToggle: "Регулярный",
@@ -179,7 +180,7 @@ export const ru: Translations = {
   quickAdd: "Быстрое добавление",
   enterNewTransaction: "Записать новую транзакцию",
   multiPostingsTitle: "Новая транзакция",
-  addPosting: "+ Добавить проводку",
+  addPosting: "Добавить проводку",
   remainderLabel: "Остаток",
   autoLabel: "авто",
   postingAccount: "Выберите счёт",
@@ -315,10 +316,12 @@ export const ru: Translations = {
   openAccountNoCurrency: "Валюта не выбрана",
   openAccountSaving: "Открываем...",
   openAccountFailed: "Не удалось открыть счёт. Попробуйте ещё раз.",
+  ledgerWouldBreak: "Это добавит ошибку в вашу книгу: {{detail}}",
   openAccountInvalidRoot: "Выберите допустимый тип счёта.",
   openAccountNameRequired: "Введите хотя бы одну часть названия счёта.",
   openAccountEmptyComponent: "Части названия счёта не могут быть пустыми.",
   openAccountNamePreview: "Будет создан как {{account}}",
+  openAccountAlreadyOpen: "Счёт {{account}} уже открыт в этой книге.",
   openAccountUppercaseComponent:
     "Каждая часть названия счёта должна начинаться с заглавной буквы или цифры.",
   openAccountInvalidCharacters:
@@ -523,6 +526,7 @@ export const ru: Translations = {
   budgetInterval: "Интервал",
   budgetSelectInterval: "Выберите интервал",
   budgetAmount: "Сумма",
+  budgetAmountInvalid: "Введите число, например 500 или 49.99.",
   budgetSaveFailed: "Не удалось сохранить бюджет",
   // delete
   budgetDelete: "Удалить",
@@ -596,6 +600,10 @@ export const ru: Translations = {
     "Денежный поток от доходов к расходам. Доходы {{income}}, расходы {{expenses}}.",
   cashFlowChartSummaryWithSavings:
     "Денежный поток от доходов к расходам. Доходы {{income}}, расходы {{expenses}}, сбережения {{savings}}.",
+  cashFlowChartSummaryWithShortfall:
+    "Денежный поток от доходов к расходам. Доходы {{income}}, расходы {{expenses}}, из сбережений {{shortfall}}.",
+  sankeyIncomeNodeLabel: "{{name}} (доходы)",
+  sankeyExpensesNodeLabel: "{{name}} (расходы)",
   ledgerNavigateUp: "На уровень выше",
   openLedgerDrawer: "Открыть меню",
   back: "Назад",
@@ -620,7 +628,8 @@ export const ru: Translations = {
   profileUsernameHint:
     "Веб-адреса ваших книг начинаются с имени пользователя, поэтому при его смене они тоже изменятся.",
   profileUsernameRequired: "Введите имя пользователя",
-  profileUsernameNoSpaces: "Имя пользователя не может содержать пробелы",
+  profileUsernameRule:
+    "Используйте от 1 до 20 символов: строчные буквы a–z, цифры 0–9 или подчёркивания.",
   profileUsernameTaken: "Это имя пользователя уже занято",
   profileEmail: "Эл. почта",
   profileEmailReadOnly: "Адрес эл. почты нельзя изменить здесь",

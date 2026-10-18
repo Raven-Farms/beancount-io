@@ -102,6 +102,33 @@ const ruImporter: Record<string, TranslationEntry> = {
     message: "Загрузить другой файл",
     description: "Button to upload a different file after error",
   },
+  "importer.aiOffer.title": {
+    message: "Не удалось прочитать столбцы этого CSV",
+    description:
+      "Title when a CSV's columns could not be read by the free client parser",
+  },
+  "importer.aiOffer.description": {
+    message:
+      "Умный импорт бесплатно читает CSV-файлы со столбцами «Дата», «Получатель», «Описание» и «Сумма». Этот файл можно прочитать с помощью ИИ — это расходует ваши ИИ-токены.",
+    description:
+      "Explains the free CSV format and that AI parsing spends AI tokens",
+  },
+  "importer.aiOffer.parseWithAi": {
+    message: "Разобрать с ИИ (расходует ИИ-токены)",
+    description:
+      "Button that parses the unreadable CSV with AI, spending AI tokens",
+  },
+  "importer.error.aiQuotaReached": {
+    message: "Вы израсходовали ИИ-токены этого месяца",
+    description:
+      "Title when AI parsing of a CSV is refused because the month's AI tokens are used up",
+  },
+  "importer.error.aiQuotaReachedCsv": {
+    message:
+      "Разбор с ИИ снова станет доступен в следующем месяце или с Premium. CSV со столбцами «Дата», «Получатель», «Описание» и «Сумма» по-прежнему импортируется бесплатно.",
+    description:
+      "Explains when AI parsing returns and that a well-formed CSV still imports for free",
+  },
   "importer.error.premiumRequired": {
     message: "Требуется премиум-функция",
     description: "Title for premium required error",
@@ -235,7 +262,7 @@ const ruImporter: Record<string, TranslationEntry> = {
     description: "Table header for actions column",
   },
   "importer.preview.deleteRow": {
-    message: "Удалить строку",
+    message: "Удалить строку {row}",
     description: "Aria label for delete row button",
   },
   "importer.preview.emptyFileTitle": {
@@ -557,12 +584,12 @@ const ruImporter: Record<string, TranslationEntry> = {
     description: "Count of additional import errors",
   },
   "importer.preview.editCellLabel": {
-    message: "Изменить {field}. Текущее значение: {value}",
+    message: "Изменить {field}, строка {row}. Текущее значение: {value}",
     description: "Accessible label for an editable import cell",
   },
-  "importer.preview.field": {
-    message: "поле",
-    description: "Fallback name for an editable import field",
+  "importer.preview.editFieldLabel": {
+    message: "{field}, строка {row}",
+    description: "Accessible label for the open editor of an import cell",
   },
   "importer.validation.dateRequired": {
     message: "Укажите дату",
@@ -587,6 +614,12 @@ const ruImporter: Record<string, TranslationEntry> = {
   "importer.validation.amountInvalid": {
     message: "Сумма должна быть действительным числом.",
     description: "Validation error for an invalid import amount",
+  },
+  "importer.validation.amountMixedDecimals": {
+    message:
+      "В этом столбце смешаны десятичные точки (1,234.56) и десятичные запятые (1.234,56). Используйте один формат в столбце.",
+    description:
+      "Validation error when an import amount column mixes point and comma decimal marks",
   },
   "importer.validation.amountUnsupportedPrecision": {
     message:

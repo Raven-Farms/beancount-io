@@ -34,7 +34,8 @@ TRANSACTION = (
     "-p",
     "Assets:Cash -5 EUR",
 )
-REMEDY = "bea add commodity --date YYYY-MM-DD --currency EUR"
+# Named with its ledger since w5/619: `bea --file … add commodity …`.
+REMEDY = "add commodity --date YYYY-MM-DD --currency EUR"
 
 
 def _bea(tmp_path: Path, *args: str) -> subprocess.CompletedProcess[str]:
@@ -105,5 +106,5 @@ def test_a_currency_the_books_already_lacked_is_not_called_the_append(tmp_path: 
     assert "Proposed append (not written): Missing Commodity directive for 'EUR'" in flat
     assert "Proposed append (not written): Missing Commodity directive for 'GBP'" not in flat
     assert "Missing Commodity directive for 'GBP'" in flat
-    assert "bea add commodity --date YYYY-MM-DD --currency GBP" in flat
+    assert "add commodity --date YYYY-MM-DD --currency GBP" in flat
     assert "<check_commodity>:0" not in flat

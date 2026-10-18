@@ -98,7 +98,7 @@ def test_conflicting_price_names_both_values_and_the_flag(ledger: Path) -> None:
     assert _bea(ledger.parent, *_price(ledger, "3 USD")).returncode == 0
     result = _bea(ledger.parent, *_price(ledger, "4 USD"))
 
-    assert result.returncode == 2, result.stderr
+    assert result.returncode == 4, result.stderr
     assert "3 USD" in result.stderr
     assert "4 USD" in result.stderr
     assert "--force" in result.stderr
@@ -126,7 +126,7 @@ def test_conflicting_balance_names_both_values_and_the_flag(ledger: Path) -> Non
     assert _bea(ledger.parent, *_balance(ledger, "-10 USD")).returncode == 0
     result = _bea(ledger.parent, *_balance(ledger, "-9 USD"))
 
-    assert result.returncode == 2, result.stderr
+    assert result.returncode == 4, result.stderr
     assert "-10 USD" in result.stderr
     assert "-9 USD" in result.stderr
     assert "--force" in result.stderr
@@ -145,7 +145,7 @@ def test_tolerance_change_conflicts_but_force_appends(ledger: Path) -> None:
     assert _bea(ledger.parent, *_balance(ledger, "-10 USD")).returncode == 0
     conflict = _bea(ledger.parent, *_balance(ledger, "-10 ~ 0.5 USD"))
 
-    assert conflict.returncode == 2, conflict.stderr
+    assert conflict.returncode == 4, conflict.stderr
     assert "~ 0.5 USD" in conflict.stderr
     forced = _bea(ledger.parent, *_balance(ledger, "-10 ~ 0.5 USD", "--force"))
 
@@ -171,7 +171,7 @@ def test_precision_change_is_a_different_assertion(tmp_path: Path) -> None:
 
     stricter = _bea(tmp_path, "--json", *args, "10.30 USD")
 
-    assert stricter.returncode == 2, stricter.stdout + stricter.stderr
+    assert stricter.returncode == 4, stricter.stdout + stricter.stderr
     assert "duplicate" not in stricter.stdout
     assert "10.3 USD" in stricter.stderr and "10.30 USD" in stricter.stderr
     assert file.read_bytes() == before

@@ -87,10 +87,7 @@ it("finishes the bank flow through tools alone", async () => {
   };
 
   // 2. Pull new transactions from the bank the list named.
-  await call("manageBankImport", {
-    operation: "sync",
-    item_id: connections[0].id,
-  });
+  await call("syncBankTransactions", { item_id: connections[0].id });
   expect(services.plaidSync.syncItemTransactions).toHaveBeenCalledWith(
     identity,
     "pitm_9f2",
@@ -103,8 +100,7 @@ it("finishes the bank flow through tools alone", async () => {
   const staged = (await call("listStagedBankTransactions", {})) as {
     id: string;
   }[];
-  await call("manageBankImport", {
-    operation: "discard",
+  await call("discardStagedBankTransactions", {
     transaction_ids: staged.map((t) => t.id),
   });
   expect(services.plaidSync.deleteTransactions).toHaveBeenCalledWith(
@@ -115,8 +111,7 @@ it("finishes the bank flow through tools alone", async () => {
   );
 
   // 4. Map an account the list named to a ledger account.
-  await call("manageBankConnection", {
-    operation: "map_account",
+  await call("mapBankAccount", {
     account_id: accounts[0].id,
     ledger_account: "Assets:Bank:Checking",
   });

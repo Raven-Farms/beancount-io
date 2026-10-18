@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { SCRUB_IDLE, scrubTrendUp } from "../scrub";
+import { SCRUB_IDLE, scrubTrendFavorable, trendFavorable } from "../scrub";
 
 /**
  * The scrubbed chart colour must agree with the change row: both measure from
@@ -24,9 +24,14 @@ function project(values: number[], opening: number) {
   return { pointYs: values.map(y), openingY: y(opening) };
 }
 
-function trendAt(values: number[], opening: number, index: number) {
+function trendAt(
+  values: number[],
+  opening: number,
+  index: number,
+  netWorthSign: 1 | -1 = 1,
+) {
   const { pointYs, openingY } = project(values, opening);
-  return scrubTrendUp(index, pointYs, openingY);
+  return scrubTrendFavorable(index, pointYs, openingY, netWorthSign);
 }
 
 const LIABILITIES_ALL = [-630123, -652230, -714121, -783300, -848215];
@@ -60,7 +65,8 @@ test("a point equal to the opening balance reads up, like a zero change", () => 
 
 test("no finger down defers to the resting direction", () => {
   expect(trendAt(LIABILITIES_ALL, 0, SCRUB_IDLE)).toBe(null);
-  expect(scrubTrendUp(0, [], 0)).toBe(null);
+  expect(scrubTrendFavorable(0, [], 0, 1)).toBe(null);
+  expect(scrubTrendFavorable(0, [], 0, -1)).toBe(null);
 });
 
 test("a stale index past a shorter series clamps to its last point", () => {
@@ -74,7 +80,40 @@ test("the chart feeds the scrub the projected opening balance", () => {
     "utf8",
   );
   expect(chart.includes("openingY: paths.yFor(baseline)")).toBe(true);
-  expect(chart.includes("scrubTrendUp(scrub.value, pointYs, openingY)")).toBe(
-    true,
-  );
+  expect(
+    chart.includes(
+      "scrubTrendFavorable(scrub.value, pointYs, openingY, netWorthSign)",
+    ),
+  ).toBe(true);
+});
+
+// Income, Expenses and Equity mirror net worth: an Expenses balance rising
+// is spending, an Income balance falling is earning (w0/033).
+const EXPENSES_6M = [212663, 225000, 240000, 254609];
+const INCOME_6M = [-296528, -320000, -340000, -357944];
+
+test("a rising Expenses balance reads unfavorable", () => {
+  expect(trendAt(EXPENSES_6M, 212663, 3, -1)).toBe(false);
+  expect(trendFavorable(254609, 212663, -1)).toBe(false);
+});
+
+test("a falling Income balance reads favorable", () => {
+  expect(trendAt(INCOME_6M, -296528, 3, -1)).toBe(true);
+  expect(trendFavorable(-357944, -296528, -1)).toBe(true);
+});
+
+test("a refunded expense below the opening balance reads favorable", () => {
+  expect(trendAt([100, 60], 100, 1, -1)).toBe(true);
+});
+
+test("an unchanged balance reads favorable whichever way the category runs", () => {
+  for (const sign of [1, -1] as const) {
+    expect(trendFavorable(50, 50, sign)).toBe(true);
+    expect(trendAt([50, 80, 50], 50, 2, sign)).toBe(true);
+  }
+});
+
+test("Assets and Liabilities keep reading by direction", () => {
+  expect(trendFavorable(120, 100, 1)).toBe(true);
+  expect(trendFavorable(-848215, -630123, 1)).toBe(false);
 });

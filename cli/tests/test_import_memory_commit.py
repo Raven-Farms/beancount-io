@@ -63,6 +63,9 @@ def test_applied_import_remembers_validated_headers_when_source_changes(
         args: Sequence[str], *, stdin: str | None = None, writes: bool = False
     ) -> dict[str, Any]:
         result = real_helper(args, stdin=stdin, writes=writes)
+        if args[0] == "root":
+            # The root lookup before memory is read (w5/613); only the apply changes the source.
+            return result
         assert writes and "--apply" in args
         assert result["written"] == 1
         if source_change == "remove":

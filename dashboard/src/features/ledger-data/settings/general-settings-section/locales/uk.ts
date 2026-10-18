@@ -16,6 +16,11 @@ const ukGeneralSettingsSection: Record<string, TranslationEntry> = {
     message: "Ця назва буде відображатися в усьому додатку",
     description: "Help text for ledger name field",
   },
+  "page.settings.ledgerNameTaken": {
+    message: "Книга з назвою {name} вже існує.",
+    description:
+      "Rename refusal when another ledger of the same owner already has the name; {name} is the slug",
+  },
   "page.settings.generalSettings": {
     message: "Загальні налаштування",
     description: "Section title for general settings",

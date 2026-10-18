@@ -11,6 +11,7 @@ import { ColorTheme } from "@/types/theme-props";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useToast } from "@/common/hooks";
+import { letterSpacing } from "@/common/rtl";
 
 const KeypadPadding = 12;
 const KeyCellWidth = (ScreenWidth - KeypadPadding * 2) / 3;
@@ -50,7 +51,7 @@ const getStyles = (theme: ColorTheme) =>
     txtMoney: {
       fontSize: fontSizes.hero,
       fontWeight: fontWeights.medium,
-      letterSpacing: -1,
+      letterSpacing: letterSpacing(-1),
     },
     keypad: {
       flexDirection: "row",

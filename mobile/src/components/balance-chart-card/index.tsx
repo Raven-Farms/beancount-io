@@ -42,6 +42,8 @@ type BalanceChartCardProps = {
   series: SeriesPoint[];
   loading: boolean;
   error?: boolean;
+  /** Which way a change moves net worth; see `InteractiveLineChartD3`. */
+  netWorthSign?: 1 | -1;
 };
 
 /**
@@ -57,6 +59,7 @@ export function BalanceChartCard({
   series,
   loading,
   error,
+  netWorthSign,
 }: BalanceChartCardProps): JSX.Element {
   const { t } = useTranslations();
   const [range, setRange] = useState<TimeRange>("6M");
@@ -90,6 +93,7 @@ export function BalanceChartCard({
           currency={currency}
           formatValue={formatValue}
           height={CHART_HEIGHT}
+          netWorthSign={netWorthSign}
         />
       </FadeInView>
       <TimeRangePills

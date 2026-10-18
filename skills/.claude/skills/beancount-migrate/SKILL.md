@@ -1,6 +1,7 @@
 ---
 name: beancount-migrate
 description: Migrate full transaction history from Mint, Monarch, QuickBooks Online or another category-tagged finance-app export into a fresh Beancount ledger. Confirm account/category mappings, pair transfers, preserve source IDs, write through bea and reconcile source counts and balances. Skip ongoing bank imports, populated-ledger merges and investment lot reconstruction.
+metadata: {"openclaw": {"homepage": "https://github.com/bex-co/beancount-io/tree/main/skills", "requires": {"anyBins": ["bea", "bean-check"]}, "install": [{"id": "brew", "kind": "brew", "formula": "bex-co/tap/bea", "bins": ["bea"], "label": "Install bea (Homebrew)"}, {"id": "uv", "kind": "uv", "package": "beancount-io", "bins": ["bea"], "label": "Install bea (uv)"}]}, "hermes": {"category": "finance", "tags": ["beancount", "accounting", "migration", "mint", "monarch", "quickbooks"]}}
 ---
 
 # beancount-migrate
@@ -39,7 +40,7 @@ Also ask up front for each source account's **current balance** (from the old ap
 
 ### 2. Scaffold
 
-If there is no ledger, compose **beancount-init** with an explicit historical open date: the day before the earliest source row, so account opens also cover the opening-balance transactions. Run `bea --no-input init . --currency CURRENCY --date OPEN_DATE` through that flow. Do not initialize with today's date and patch the opens afterward. If a populated ledger already exists, offer beancount-import instead; this skill targets fresh starts.
+If there is no ledger, compose **beancount-init** with an explicit historical open date: the day before the earliest source row, so account opens also cover the opening-balance transactions. Run `bea --no-input init . --currency CURRENCY --date OPEN_DATE` through that flow. Do not initialize with today's date and patch the opens afterward. If beancount-init is not installed beside this skill (a registry can install one skill alone), say so and point the user to https://github.com/bex-co/beancount-io/blob/main/skills/docs/installation.md to add it; do not scaffold by hand. If a populated ledger already exists, offer beancount-import instead; this skill targets fresh starts.
 
 ### 3. Map
 

@@ -2,6 +2,8 @@ import { useCallback } from "react";
 import { useRouter } from "expo-router";
 import { haptics } from "@/common/haptics";
 import { useToast } from "@/common/hooks/use-toast";
+import { describeLedgerRefusal } from "@/common/ledger-refusal";
+import { i18n } from "@/translations";
 import {
   runLedgerWrite,
   type LedgerWriteOutcome,
@@ -26,6 +28,7 @@ export const useLedgerWrite = () => {
           showToast: (message, type) => toast.showToast({ message, type }),
           haptics,
           goBack: () => router.back(),
+          describeRefusal: (error) => describeLedgerRefusal(error, i18n),
         },
         spec,
       ),

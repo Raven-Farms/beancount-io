@@ -420,10 +420,6 @@ const skUserSettings: Record<string, TranslationEntry> = {
     message: "Systémová",
     description: "System theme option",
   },
-  "userSettings.testMode": {
-    message: "Testovací režim",
-    description: "Label indicating Stripe is in test/development mode",
-  },
   "userSettings.theme": {
     message: "Téma",
     description: "Label for theme selection",

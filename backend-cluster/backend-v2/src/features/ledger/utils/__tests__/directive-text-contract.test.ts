@@ -66,10 +66,16 @@ describe("unbalancedOrValidationError", () => {
   it("reports any other new error as a validation failure", () => {
     const error = unbalancedOrValidationError([
       { message: "Account Expenses:NotOpened was never opened", code: "E1001" },
+      { message: "Duplicate open", source: "main.bean:3", code: "E1002" },
     ]);
     expect(error).toMatchObject({
       category: ErrorCategory.VALIDATION_FAILED,
-      metadata: { field: "text" },
+      // Named for apps, as on the structured path (w0/m2).
+      metadata: {
+        field: "text",
+        newLedgerErrors:
+          "Account Expenses:NotOpened was never opened; Duplicate open (main.bean:3)",
+      },
     });
     expect(error.message).toContain("Expenses:NotOpened");
   });

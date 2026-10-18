@@ -102,6 +102,33 @@ const bgImporter: Record<string, TranslationEntry> = {
     message: "Качи друг файл",
     description: "Button to upload a different file after error",
   },
+  "importer.aiOffer.title": {
+    message: "Не успяхме да прочетем колоните на този CSV",
+    description:
+      "Title when a CSV's columns could not be read by the free client parser",
+  },
+  "importer.aiOffer.description": {
+    message:
+      "Интелигентният импорт чете безплатно CSV файлове с колони Дата, Получател, Описание и Сума. Този файл може да бъде прочетен с ИИ, което използва вашите ИИ токени.",
+    description:
+      "Explains the free CSV format and that AI parsing spends AI tokens",
+  },
+  "importer.aiOffer.parseWithAi": {
+    message: "Анализирай с ИИ (използва ИИ токени)",
+    description:
+      "Button that parses the unreadable CSV with AI, spending AI tokens",
+  },
+  "importer.error.aiQuotaReached": {
+    message: "Използвахте ИИ токените си за този месец",
+    description:
+      "Title when AI parsing of a CSV is refused because the month's AI tokens are used up",
+  },
+  "importer.error.aiQuotaReachedCsv": {
+    message:
+      "Анализът с ИИ е отново достъпен следващия месец или с Premium. CSV с колони Дата, Получател, Описание и Сума все още се импортира безплатно.",
+    description:
+      "Explains when AI parsing returns and that a well-formed CSV still imports for free",
+  },
   "importer.error.premiumRequired": {
     message: "Изисква се премиум функция",
     description: "Title for premium required error",
@@ -237,7 +264,7 @@ const bgImporter: Record<string, TranslationEntry> = {
     description: "Table header for actions column",
   },
   "importer.preview.deleteRow": {
-    message: "Изтрий ред",
+    message: "Изтрий ред {row}",
     description: "Aria label for delete row button",
   },
   "importer.preview.emptyFileTitle": {
@@ -515,12 +542,12 @@ const bgImporter: Record<string, TranslationEntry> = {
     description: "Count of additional import errors",
   },
   "importer.preview.editCellLabel": {
-    message: "Редактиране на {field}. Текуща стойност: {value}",
+    message: "Редактиране на {field}, ред {row}. Текуща стойност: {value}",
     description: "Accessible label for an editable import cell",
   },
-  "importer.preview.field": {
-    message: "поле",
-    description: "Fallback name for an editable import field",
+  "importer.preview.editFieldLabel": {
+    message: "{field}, ред {row}",
+    description: "Accessible label for the open editor of an import cell",
   },
   "importer.validation.dateRequired": {
     message: "Датата е задължителна",
@@ -545,6 +572,12 @@ const bgImporter: Record<string, TranslationEntry> = {
   "importer.validation.amountInvalid": {
     message: "Сумата трябва да е валидно число",
     description: "Validation error for an invalid import amount",
+  },
+  "importer.validation.amountMixedDecimals": {
+    message:
+      "Тази колона смесва десетична точка (1,234.56) и десетична запетая (1.234,56). Използвайте един формат за колона.",
+    description:
+      "Validation error when an import amount column mixes point and comma decimal marks",
   },
   "importer.validation.amountUnsupportedPrecision": {
     message:

@@ -9,7 +9,11 @@ vi.mock("@tanstack/react-router", () => ({
   }),
 }));
 
-import { getSafeRedirectPath, requireAuth } from "../auth";
+import {
+  AuthUnavailableError,
+  getSafeRedirectPath,
+  requireAuth,
+} from "../auth";
 
 describe("getSafeRedirectPath", () => {
   it("accepts same-origin relative paths including query and hash", () => {
@@ -167,5 +171,43 @@ describe("requireAuth", () => {
         location: { href: "/settings/api-keys" },
       }),
     ).not.toThrow();
+  });
+
+  it("does not send an outage to login: it throws AuthUnavailableError instead (w3/646)", () => {
+    const guard = requireAuth("/settings");
+    vi.mocked(redirect).mockClear();
+    let thrown: unknown;
+    try {
+      guard({
+        context: {
+          userProfile: null,
+          authStatus: "unavailable",
+          authErrorKey: "common.errors.serviceUnavailable",
+        },
+        location: { href: "/settings/general" },
+      });
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toBeInstanceOf(AuthUnavailableError);
+    expect((thrown as AuthUnavailableError).messageKey).toBe(
+      "common.errors.serviceUnavailable",
+    );
+    expect(redirect).not.toHaveBeenCalled();
+  });
+
+  it("still redirects a genuinely signed-out visitor by status", () => {
+    const guard = requireAuth("/ledger");
+    vi.mocked(redirect).mockClear();
+    expect(() =>
+      guard({
+        context: { userProfile: null, authStatus: "signed-out" },
+        location: { href: "/ledger" },
+      }),
+    ).toThrow("REDIRECT");
+    expect(redirect).toHaveBeenCalledWith({
+      to: "/auth/login",
+      search: { next: "/ledger" },
+    });
   });
 });

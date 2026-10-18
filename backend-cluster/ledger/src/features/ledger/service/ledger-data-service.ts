@@ -121,7 +121,15 @@ interface ILedgerDataService {
    * Powers dry-run previews (w2/m26).
    */
   checkProjectedErrors(
-    params: BaseParams & { overlays: ProjectedFileOverlay[] },
+    params: BaseParams & {
+      overlays: ProjectedFileOverlay[];
+      /**
+       * The file-count and byte caps guard the public `/check` input. A write
+       * checking its own projection passes false: a large ledger's ordinary
+       * append must not be refused by a preview limit.
+       */
+      enforceInputLimits?: boolean;
+    },
   ): Promise<BeancountErrorPublic[]>;
 
   getCurrencies(params: BaseParams): Promise<string[]>;
@@ -431,10 +439,16 @@ export class LedgerDataService implements ILedgerDataService {
   }
 
   async checkProjectedErrors(
-    params: BaseParams & { overlays: ProjectedFileOverlay[] },
+    params: BaseParams & {
+      overlays: ProjectedFileOverlay[];
+      enforceInputLimits?: boolean;
+    },
   ): Promise<BeancountErrorPublic[]> {
-    const { ledgerId, userId, overlays } = params;
-    if (!Array.isArray(overlays) || overlays.length > MAX_PROJECTED_FILES) {
+    const { ledgerId, userId, overlays, enforceInputLimits = true } = params;
+    if (
+      !Array.isArray(overlays) ||
+      (enforceInputLimits && overlays.length > MAX_PROJECTED_FILES)
+    ) {
       throw new BadUserInputError(
         `at most ${MAX_PROJECTED_FILES} files may be projected at once`,
       );
@@ -474,7 +488,7 @@ export class LedgerDataService implements ILedgerDataService {
       }
       const text = Buffer.from(overlay.content, "base64").toString("utf8");
       totalBytes += text.length;
-      if (totalBytes > MAX_PROJECTED_BYTES) {
+      if (enforceInputLimits && totalBytes > MAX_PROJECTED_BYTES) {
         throw new BadUserInputError(
           `projected contents exceed ${MAX_PROJECTED_BYTES} bytes`,
         );

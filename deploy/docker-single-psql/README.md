@@ -140,3 +140,14 @@ SSH_PROXY_HOST_KEY=placeholder docker compose --env-file .env.example \
 - [Gitea: installation with Docker](https://docs.gitea.com/next/installation/install-with-docker/)
 - [`../docker/README.md`](../docker/README.md) for the shared topology, TLS,
   SSH overlay, and upgrade procedure.
+
+
+## Application billing
+
+Only the live application client `beancount-web-prod` is supported. Configure
+`STRIPE_PRIVATE_KEY`, `STRIPE_PUBLIC_KEY` and `STRIPE_WEBHOOK_SECRET` through the
+local secret environment when billing is needed. Retired `STRIPE_DEV_*` variables
+and `?env=dev` do not enable test billing. Synthetic fixtures/isolated test runs
+cover Stripe behavior without charging or redeeming live promotions. Deploy the
+backend and dashboard together. A deployment without Stripe
+credentials can run non-billing features but cannot verify paid subscriptions.

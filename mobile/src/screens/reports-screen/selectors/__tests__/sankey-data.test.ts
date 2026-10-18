@@ -4,6 +4,7 @@ import {
   OTHER_EXPENSES_ACCOUNT,
   OTHER_INCOME_ACCOUNT,
   SAVINGS_ID,
+  SHORTFALL_ID,
   cashFlowChartSummary,
   categorizeAccount,
   extractAccountAtDepth,
@@ -12,6 +13,7 @@ import {
   sankeyColorForRole,
   sankeyRoleForId,
   sankeySavings,
+  sankeyShortfall,
   transformToSankeyData,
   truncateSankeyLabel,
 } from "../sankey-data";
@@ -109,6 +111,9 @@ describe("sankeyRoleForId / sankeyColorForRole", () => {
       "token-error",
     );
     expect(sankeyColorForRole(sankeyRoleForId(SAVINGS_ID), theme)).toBe(
+      "token-information",
+    );
+    expect(sankeyColorForRole(sankeyRoleForId(SHORTFALL_ID), theme)).toBe(
       "token-information",
     );
     expect(
@@ -252,13 +257,77 @@ describe("transformToSankeyData", () => {
     expect(ids.includes("Income:Salary:Gross")).toBe(false);
   });
 
-  it("does not add a Savings node when expenses exceed income", () => {
+  // A loss-making range drew a hub taller than everything feeding it: the
+  // shortfall was paid from existing balances and the chart showed nothing
+  // for it (w0/034, open_ledger/crypto-example May–Oct 2026).
+  it("funds a deficit from savings so the hub's inflow equals its outflow", () => {
     const result = transformToSankeyData({
       income: [node("Income:Salary", 100)],
       expenses: [node("Expenses:Rent", 400)],
       ...labels,
     });
-    expect(result.nodes.map((n) => n.id).includes(SAVINGS_ID)).toBe(false);
+    const ids = result.nodes.map((n) => n.id);
+    expect(ids.includes(SAVINGS_ID)).toBe(false);
+    const shortfall = result.nodes.find((n) => n.id === SHORTFALL_ID);
+    expect(shortfall).toEqual({
+      id: SHORTFALL_ID,
+      label: "Savings",
+      role: "savings",
+    });
+    const into = result.links.filter((l) => l.target === CASH_FLOW_ID);
+    const out = result.links.filter((l) => l.source === CASH_FLOW_ID);
+    const sum = (links: { value: number }[]) =>
+      links.reduce((total, l) => total + l.value, 0);
+    expect(sum(into)).toBe(400);
+    expect(sum(out)).toBe(400);
+    expect(result.links.find((l) => l.source === SHORTFALL_ID)?.value).toBe(
+      300,
+    );
+  });
+
+  it("draws neither Savings nor a shortfall when income meets expenses", () => {
+    const result = transformToSankeyData({
+      income: [node("Income:Salary", 400)],
+      expenses: [node("Expenses:Rent", 400)],
+      ...labels,
+    });
+    const ids = result.nodes.map((n) => n.id);
+    expect(ids.includes(SAVINGS_ID)).toBe(false);
+    expect(ids.includes(SHORTFALL_ID)).toBe(false);
+  });
+
+  it("names the side of an income and an expense group that share a name", () => {
+    // Income:Crypto and Expenses:Crypto both read "Crypto" (w0/034).
+    const result = transformToSankeyData({
+      income: [node("Income:Crypto", 6517), node("Income:Salary", 900)],
+      expenses: [node("Expenses:Crypto", 11427), node("Expenses:Rent", 50)],
+      ...labels,
+      incomeNodeLabel: (name) => `${name} (income)`,
+      expensesNodeLabel: (name) => `${name} (expenses)`,
+    });
+    const label = (id: string) => result.nodes.find((n) => n.id === id)?.label;
+    expect(label("Income:Crypto")).toBe("Crypto (income)");
+    expect(label("Expenses:Crypto")).toBe("Crypto (expenses)");
+    expect(label("Income:Salary")).toBe("Salary");
+    expect(label("Expenses:Rent")).toBe("Rent");
+  });
+
+  it("keeps the folded Other rows generic on both sides", () => {
+    const many = (root: string) =>
+      ["A", "B", "C", "D", "E", "F", "G"].map((name, i) =>
+        node(`${root}:${name}${root}`, 100 - i),
+      );
+    const result = transformToSankeyData({
+      income: many("Income"),
+      expenses: many("Expenses"),
+      ...labels,
+      incomeNodeLabel: (name) => `${name} (income)`,
+      expensesNodeLabel: (name) => `${name} (expenses)`,
+    });
+    const label = (id: string) => result.nodes.find((n) => n.id === id)?.label;
+    expect(label(OTHER_INCOME_ACCOUNT)).toBe("Other");
+    expect(label(OTHER_EXPENSES_ACCOUNT)).toBe("Other");
+    expect(label("Income:AIncome")).toBe("AIncome");
   });
 
   it("skips excluded equity accounts", () => {
@@ -298,10 +367,19 @@ describe("cashFlowChartSummary", () => {
     );
   });
 
-  it("leaves savings out when the chart draws no Savings band", () => {
+  it("names what a deficit draws from savings", () => {
     expect(sankeySavings(flow(3000, 5000))).toBe(null);
+    expect(sankeyShortfall(flow(3000, 5000))).toBe(2000);
     expect(cashFlowChartSummary(flow(3000, 5000), "USD", t)).toBe(
-      "Cash flow from income to expenses. Income $3K, expenses $5K.",
+      "Cash flow from income to expenses. Income $3K, expenses $5K, from savings $2K.",
+    );
+  });
+
+  it("leaves savings out when income exactly meets expenses", () => {
+    expect(sankeySavings(flow(5000, 5000))).toBe(null);
+    expect(sankeyShortfall(flow(5000, 5000))).toBe(null);
+    expect(cashFlowChartSummary(flow(5000, 5000), "USD", t)).toBe(
+      "Cash flow from income to expenses. Income $5K, expenses $5K.",
     );
   });
 

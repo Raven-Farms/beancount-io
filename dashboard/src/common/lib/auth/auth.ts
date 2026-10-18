@@ -1,4 +1,5 @@
 import { redirect } from "@tanstack/react-router";
+import type { AuthStatus } from "@/common/server-fn/user";
 
 /** Origin used only to resolve a candidate path; never navigated to. */
 const RESOLUTION_BASE = "https://placeholder.invalid";
@@ -130,14 +131,43 @@ export const getSafeReturnPath = (
  * so deep links like `/settings/api-keys` survive login. `fallbackPath` is used only
  * when the location cannot form a safe relative path.
  */
+/**
+ * Thrown by `requireAuth` when the identity probe could not reach the API.
+ * Carries the localized message key for the underlying failure (route
+ * context stays serializable, so the live probe error never travels in it).
+ * `getErrorMessageKey` recognizes it by name, which survives the SSR error
+ * serialization that a class identity would not.
+ */
+export class AuthUnavailableError extends Error {
+  readonly messageKey: string;
+
+  constructor(messageKey: string) {
+    super("Authentication unavailable");
+    this.name = "AuthUnavailableError";
+    this.messageKey = messageKey;
+  }
+}
+
 export const requireAuth = (fallbackPath?: string) => {
   return ({
     context,
     location,
   }: {
-    context: { userProfile: unknown };
+    context: {
+      userProfile: unknown;
+      authStatus?: AuthStatus;
+      authErrorKey?: string;
+    };
     location: RequireAuthLocation;
   }): void => {
+    // An outage is not a sign-out: throw so the route's error boundary
+    // offers a retry on this URL instead of a login form (w3/646). Only a
+    // genuine signed-out state may redirect.
+    if (!context.userProfile && context.authStatus === "unavailable") {
+      throw new AuthUnavailableError(
+        context.authErrorKey ?? "common.errors.serviceUnavailable",
+      );
+    }
     if (!context.userProfile) {
       const requested = getSafeReturnPath(location);
       throw redirect({

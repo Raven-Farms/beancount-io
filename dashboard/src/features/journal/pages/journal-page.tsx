@@ -398,8 +398,9 @@ const JournalContent = () => {
           });
         }}
         ledgerId={ledgerId}
-        onSuccess={() => {
-          toast.success(t("journal.entryCreatedSuccess"));
+        onSuccess={({ leftErrors }) => {
+          // A write that broke the ledger already warned with its error.
+          if (!leftErrors) toast.success(t("journal.entryCreatedSuccess"));
           setOffset(0);
           // Evict journal query cache and refetch to ensure fresh data
           void refetch();

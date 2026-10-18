@@ -11,6 +11,7 @@ import * as dynamicType from "../../../common/theme/dynamic-type";
 type Node = { type: unknown; props: Record<string, any>; children: unknown[] };
 
 let fontScale = 1;
+let guest: { requestSignIn: () => void } | null = null;
 
 const react = {
   createElement: (type: unknown, props: any, ...children: unknown[]): Node => ({
@@ -67,7 +68,7 @@ function load(): (props: Record<string, unknown>) => Node | null {
     "@/common/app-links/build-ledger-url": { buildLedgerUrl: () => "" },
     "@/common/vars/server-url": { getServerUrl: () => "" },
     "@/components/button": { Button: "Button" },
-    "@/common/guest/guest-context": { useGuest: () => null },
+    "@/common/guest/guest-context": { useGuest: () => guest },
   };
   vm.runInNewContext(source, {
     exports,
@@ -103,6 +104,7 @@ describe("ValuationSheet accessibility", () => {
       notInTotal: [],
     },
     ledgerId: "open_ledger/stock-example",
+    canWrite: true,
     onClose: () => (closes += 1),
   })!;
   const [overlay] = modal.children as Node[];
@@ -166,6 +168,7 @@ describe("ValuationSheet rows at enlarged text", () => {
           notInTotal: [holding("VACHR", false)],
         },
         ledgerId: "open_ledger/stock-example",
+        canWrite: true,
         onClose() {},
       }),
       (node) => node.props.accessible === true,
@@ -197,5 +200,69 @@ describe("ValuationSheet rows at enlarged text", () => {
       expect(flat(detail.props.style).alignItems).toBe("flex-start");
     }
     expect(stacked[0].props.accessibilityLabel.includes("NWRB")).toBe(true);
+  });
+});
+
+describe("ValuationSheet footer action", () => {
+  // A read-only reader was offered "Update prices on the web", which opened a
+  // page that cannot update this ledger's prices (w0/031).
+  const footer = (canWrite: boolean) => {
+    let closes = 0;
+    const tree = ValuationSheet({
+      valuation: {
+        priced: [holding("NWRB", true)],
+        atCostNoPrice: [],
+        notInTotal: [],
+      },
+      ledgerId: "open_ledger/example",
+      canWrite,
+      onClose: () => (closes += 1),
+    })!;
+    const buttons = findAll(tree, (node) => node.type === "Button");
+    return { buttons, closes: () => closes };
+  };
+
+  afterEach(() => {
+    guest = null;
+  });
+
+  it("offers the price update to a reader who can write the ledger", () => {
+    const { buttons } = footer(true);
+    expect(buttons.length).toBe(1);
+    expect(buttons[0].children).toEqual(["updatePricesOnWeb"]);
+  });
+
+  it("offers no action to a signed-in reader who cannot write the ledger", () => {
+    const { buttons } = footer(false);
+    expect(buttons.length).toBe(0);
+  });
+
+  it("keeps the holdings visible to a read-only reader", () => {
+    const tree = ValuationSheet({
+      valuation: {
+        priced: [holding("NWRB", true), holding("VBMPX", false)],
+        atCostNoPrice: [],
+        notInTotal: [holding("VACHR", false)],
+      },
+      ledgerId: "open_ledger/example",
+      canWrite: false,
+      onClose() {},
+    })!;
+    expect(findAll(tree, (node) => node.props.accessible === true).length).toBe(
+      3,
+    );
+  });
+
+  it("still invites a guest to sign in, whatever the write access", () => {
+    let requests = 0;
+    guest = { requestSignIn: () => (requests += 1) };
+    for (const canWrite of [false, true]) {
+      const { buttons, closes } = footer(canWrite);
+      expect(buttons.length).toBe(1);
+      expect(buttons[0].children).toEqual(["signIn"]);
+      buttons[0].props.onPress();
+      expect(closes()).toBe(1);
+    }
+    expect(requests).toBe(2);
   });
 });

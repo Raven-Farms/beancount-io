@@ -161,3 +161,41 @@ def test_an_all_whole_scope_still_prints_whole_numbers(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stderr
     tree = " ".join(result.stdout.split())
     assert "Checking 3000 USD" in tree and "Salary -3000 USD" in tree
+
+
+INFERRED_LEG = """2024-01-01 open Assets:Broker
+2024-01-01 open Assets:Cash USD
+2024-01-01 open Expenses:Food USD
+
+2024-01-03 * "Buy" ^x
+  Assets:Broker  3 HOOL {{100.00 USD}}
+  Assets:Cash
+
+2024-01-04 * "Lunch" ^x
+  Expenses:Food  12.50 USD
+  Assets:Cash
+"""
+
+
+def _tree_line(stdout: str, account: str) -> str:
+    return next(line for line in stdout.splitlines() if re.search(rf"`-- {account}\b", line))
+
+
+def test_an_inferred_leg_does_not_widen_the_tree(tmp_path: Path) -> None:
+    """Its whole division result set 26 decimals for the column (w5/571)."""
+    result = _bea(tmp_path, "doctor", "linked", str(_ledger(tmp_path, INFERRED_LEG)), "^x")
+
+    assert result.returncode == 0, result.stderr
+    assert _tree_line(result.stdout, "Cash").split()[-2:] == ["-112.50", "USD"], result.stdout
+    assert _tree_line(result.stdout, "Food").split()[-2:] == ["12.50", "USD"], result.stdout
+    assert "Net Income: (-12.50 USD)" in result.stdout
+
+
+def test_a_fixed_display_precision_is_kept(tmp_path: Path) -> None:
+    ledger = _ledger(tmp_path, 'option "display_precision" "USD:0.001"\n' + INFERRED_LEG)
+
+    result = _bea(tmp_path, "doctor", "linked", str(ledger), "^x")
+
+    assert result.returncode == 0, result.stderr
+    assert _tree_line(result.stdout, "Cash").split()[-2:] == ["-112.500", "USD"], result.stdout
+    assert _tree_line(result.stdout, "Food").split()[-2:] == ["12.500", "USD"], result.stdout

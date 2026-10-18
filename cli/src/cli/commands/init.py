@@ -19,6 +19,7 @@ import typer
 from cli import context, output
 from cli.amounts import parse_decimal_number
 from cli.errors import ConflictError, UsageError
+from cli.paths import expand_path
 from cli.utils import parse_date
 
 # Must match `bea_engine.initiating.ACCOUNTS` — the engine builds the template;
@@ -41,16 +42,15 @@ _ACCOUNTS = (
 )
 
 
-#: A Beancount commodity symbol, as the loader spells one. This is upstream's
-#: `CURRENCY_RE` minus its leading-`/` commodity-pair alternative, which is not
-#: an operating currency: one uppercase letter, then anything from the symbol
-#: alphabet, ending on a word character. Upstream ends its pattern with `\b`,
-#: which is why `X_` is a symbol and `A.` is not — and why the last character is
-#: *optional*, so `F` and `C` are symbols too. Requiring two characters refused
-#: single-letter tickers that the loader accepts and `bea check` validates.
+#: One Beancount commodity token, as the lexer accepts it on an `open` line:
+#: one uppercase letter, optionally followed by the symbol alphabet and an
+#: alphanumeric final character. The general-purpose `CURRENCY_RE` also
+#: matches a trailing underscore, but the lexer refuses it (w5/693). Keep
+#: single-letter tickers such as `F` and internal punctuation such as `NT.TO`.
+#: The leading-`/` commodity-pair form is not an operating currency here.
 #: Restated rather than imported: the frontend loads no Beancount, and
-#: `tests/test_init_currency_symbols.py` pins it against upstream's own regex.
-_CURRENCY_SYMBOL = re.compile(r"[A-Z](?:[A-Z0-9'._-]*[A-Z0-9_])?")
+#: `tests/test_init_currency_symbols.py` verifies the ledger token boundary.
+_CURRENCY_SYMBOL = re.compile(r"[A-Z](?:[A-Z0-9'._-]*[A-Z0-9])?")
 
 
 def _currency(value: str) -> str:
@@ -117,10 +117,23 @@ def init(
     if ctx.file is not None:
         if directory != Path("."):
             raise UsageError("Choose either --file or an init directory, not both.")
-        file = ctx.file.expanduser().absolute()
+        file = expand_path(ctx.file, "--file").absolute()
     else:
-        directory = directory.expanduser().absolute()
-        file = directory if directory.suffix in {".bean", ".beancount"} else directory / "main.bean"
+        directory = expand_path(directory, "init directory").absolute()
+        file = (
+            directory
+            if directory.suffix in {".bean", ".beancount"} and not directory.is_dir()
+            else directory / "main.bean"
+        )
+    # Before anything is created: every later command refuses such a path
+    # (w5/315), and `$HOME/books` left an empty `./$HOME/books/` behind (w5/579).
+    context.refuse_expanding_ledger_path(str(file))
+    if ctx.file is not None and file.is_dir():
+        raise UsageError(
+            f"Ledger path '{file}' (from --file) is a directory; expected a ledger file. "
+            f"Use bea init {shlex.quote(str(file))} for a directory target, "
+            f"or --file {shlex.quote(str(file / 'main.bean'))} for a file target."
+        )
     if file.exists() or file.is_symlink():
         raise ConflictError(f"Already exists: {file}. Choose a new path; init never overwrites a ledger.")
     # Refuse shadowing a sibling default root ledger (cwd discovery prefers main.bean).
@@ -135,6 +148,30 @@ def init(
                     f"would prefer main.bean over main.beancount — choose a new path; init never "
                     f"shadows an existing root ledger."
                 )
+    # Every option is checked before the first question, naming itself: a bad
+    # `--date` or `--opening-balance` was refused only after the prompts were
+    # answered, as `Invalid value: …` with no option named (w5/588).
+    given_day = None
+    if date is not None:
+        try:
+            given_day = parse_date(date)
+        except typer.BadParameter as exc:
+            raise UsageError(f"--date {date!r}: {exc.message}") from None
+    balances: dict[str, Decimal] = {}
+    for balance in opening_balance or []:
+        parts = balance.split()
+        if len(parts) != 2 or parts[0] not in _ACCOUNTS or not parts[0].startswith(("Assets:", "Liabilities:")):
+            raise UsageError(
+                f"--opening-balance {balance!r}: Opening balance must be 'ACCOUNT NUMBER' for one of the "
+                "template's asset/liability accounts."
+            )
+        account, number = parts
+        if account in balances:
+            raise UsageError(f"--opening-balance {balance!r}: Opening balance specified twice for {account}.")
+        try:
+            balances[account] = _opening_amount(number)
+        except typer.BadParameter as exc:
+            raise UsageError(f"--opening-balance {balance!r}: {exc.message}") from None
     prompted = currency is None
     if currency is None:
         if not ctx.can_prompt:
@@ -158,18 +195,7 @@ def init(
             value_proc=parse_date,
         )
     else:
-        day = datetime.date.today() if date is None else parse_date(date)
-    balances: dict[str, Decimal] = {}
-    for balance in opening_balance or []:
-        parts = balance.split()
-        if len(parts) != 2 or parts[0] not in _ACCOUNTS or not parts[0].startswith(("Assets:", "Liabilities:")):
-            raise UsageError(
-                "Opening balance must be 'ACCOUNT NUMBER' for one of the template's asset/liability accounts."
-            )
-        account, number = parts
-        if account in balances:
-            raise UsageError(f"Opening balance specified twice for {account}.")
-        balances[account] = _opening_amount(number)
+        day = given_day or datetime.date.today()
     if ctx.can_prompt and opening_balance is None:
         balances["Assets:Checking"] = ctx.prompt(
             f"Checking opening balance on {day} (negative for an overdraft)", default="0", value_proc=_opening_amount
@@ -179,7 +205,7 @@ def init(
     for account, amount in balances.items():
         if amount:
             argv += ["--opening-balance", f"{account} {amount:f}"]
-    data = launch.helper_json(argv)
+    data = launch.helper_json(argv, writes=True)
     if warnings:
         data["warnings"] = warnings
     if ctx.json_output:
@@ -194,11 +220,11 @@ def init(
             shown = f"~/{file.relative_to(Path.home())}"
         except ValueError:
             shown = str(file)
-        # `$BEA_FILE` outranks cwd discovery, so a bare `bea` would open the
-        # ledger it names rather than the one just created; name the new one.
-        bea = f"bea --file {_shell_path(shown)}" if os.environ.get("BEA_FILE") else "bea"
-        if bea != "bea" or file.name != "main.bean":
-            next_command = f"bea --file {_shell_path(shown)} check"
+        # Use the same target in every hint. A custom filename needs --file,
+        # as does BEA_FILE overriding discovery after the suggested cd.
+        bea = f"bea --file {_shell_path(shown)}" if os.environ.get("BEA_FILE") or file.name != "main.bean" else "bea"
+        if bea != "bea":
+            next_command = f"{bea} check"
         elif _in_working_directory(file):
             next_command = "bea check"
         else:

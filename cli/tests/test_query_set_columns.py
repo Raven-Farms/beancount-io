@@ -116,3 +116,21 @@ def test_group_by_accounts_without_target_still_names_it(tmp_path: Path) -> None
     assert result.returncode == 2, result.stderr
     assert "accounts" in result.stderr
     assert "issubclass" not in result.stderr
+
+
+def test_distinct_on_other_accounts_names_it_and_its_own_recipe(tmp_path: Path) -> None:
+    """A list per posting, with advice about itself rather than about tags (w5/563)."""
+    result = _bea(tmp_path, "--json", "--file", str(_ledger(tmp_path)), "query", "SELECT DISTINCT other_accounts")
+
+    assert result.returncode == 2, result.stdout + result.stderr
+    error = json.loads(result.stderr)["error"]
+    assert error["message"] == (
+        "BQL cannot use DISTINCT or GROUP BY on other_accounts: a list is not a value it can compare."
+    )
+    assert "starred expression" not in result.stderr and "tags" not in result.stderr
+    assert "Distinct combinations: SELECT DISTINCT joinstr(other_accounts)" in error["details"]
+    recipe = _bea(
+        tmp_path, "--json", "--file", str(_ledger(tmp_path)), "query", "SELECT DISTINCT joinstr(other_accounts)"
+    )
+    assert recipe.returncode == 0, recipe.stderr
+    assert sorted(row[0] for row in json.loads(recipe.stdout)["data"]["rows"]) == ["Assets:Cash", "Expenses:Food"]

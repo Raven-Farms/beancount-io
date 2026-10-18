@@ -34,14 +34,16 @@ import re
 import stat
 import sys
 import unicodedata
+import warnings
 from collections.abc import Callable, Hashable, Iterator, Mapping
 from contextlib import contextmanager
-from decimal import Decimal, localcontext
+from decimal import Decimal, DecimalException, InvalidOperation, localcontext
 from functools import cache, partial
 from pathlib import Path
 from typing import Any, TextIO, get_origin
 
 from bea_engine import protocol, stopping
+from bea_engine.paths import expand_path
 
 LEDGER_DSN = "beancount:"
 """A pathless beanquery DSN: the source attaches the entries handed to it instead of loading a file."""
@@ -51,11 +53,13 @@ LEDGER_DSN = "beancount:"
 _RESERVED_TABLE_FROM = re.compile(r'(?i)\b(FROM|JOIN)\s+(?<!")(accounts|balances)\b(?!")')
 
 
-def _code_mask(text: str, *, literals: bool = True) -> str:
+def _code_mask(text: str, *, literals: bool = True, keep_quotes: bool = False) -> str:
     """The query with every string literal and comment blanked to spaces.
 
     `literals=False` blanks only the comments, for a caller asking whether any
-    code is there at all rather than where the keywords are.
+    code is there at all rather than where the keywords are. `keep_quotes`
+    blanks only a literal's inside, for a caller that must find the literal
+    an operator takes in code and then read it from the text.
 
     Exactly as long as the input, so a match found in the mask has the offsets
     of the real thing. That is what lets the relation rewrite below see only
@@ -85,7 +89,13 @@ def _code_mask(text: str, *, literals: bool = True) -> str:
                     end += 1
                     break
                 end += 1
-            out.append(" " * (end - index) if literals else text[index:end])
+            if not literals:
+                out.append(text[index:end])
+            elif keep_quotes:
+                closed = end - index >= 2 and text[end - 1] == char
+                out.append(char + " " * (end - index - 1 - closed) + (char if closed else ""))
+            else:
+                out.append(" " * (end - index))
             index = end
         elif text.startswith("/*", index):
             end = text.find("*/", index + 2)
@@ -129,7 +139,9 @@ def _quote_reserved_tables(query_string: str) -> str:
     """Rewrite `FROM accounts|balances` to the quoted form discovery documents.
 
     Matched against the code mask and spliced back by offset, so the user's own
-    text — literals, comments — is returned byte-for-byte.
+    text — literals, comments — is returned byte-for-byte. The name is matched
+    in any case but quoted in lower case: a quoted name is looked up as
+    written, and `FROM ACCOUNTS` became a table that does not exist (w5/560).
     """
     masked = _code_mask(query_string)
     pieces: list[str] = []
@@ -137,7 +149,7 @@ def _quote_reserved_tables(query_string: str) -> str:
     for match in _RESERVED_TABLE_FROM.finditer(masked):
         start, end = match.span(2)
         pieces.append(query_string[cursor:start])
-        pieces.append(f'"{query_string[start:end]}"')
+        pieces.append(f'"{query_string[start:end].lower()}"')
         cursor = end
     pieces.append(query_string[cursor:])
     return "".join(pieces)
@@ -155,7 +167,36 @@ def connect(file: Path) -> Any:
     """A beanquery connection on the exact ledger file, includes and load errors intact."""
     import beanquery
 
+    _null_safe_ordering()
     return beanquery.connect(LEDGER_DSN, **load(file))
+
+
+def _null_safe_ordering() -> None:
+    """Sort a NULL first without comparing it to a value (w5/562).
+
+    Beanquery's ORDER BY swaps a None for a NULL meant to compare smaller than
+    anything, but the value's own `__lt__` runs first, and Beancount's
+    `Amount` reads `.currency` off its argument: `ORDER BY price` raised a bare
+    AttributeError whenever an unpriced posting sorted against a priced one,
+    and posting order decided whether it did. Each key is a (present, value)
+    pair instead, so a NULL is only ever compared with another NULL.
+    """
+    from beanquery import query_execute
+
+    if getattr(query_execute.nullitemgetter, "_bea_null_safe", False):
+        return
+
+    def present(value: Any) -> tuple[bool, Any]:
+        return (False, 0) if value is None else (True, value)
+
+    def nullitemgetter(item: int, *items: int) -> Callable[[Any], Any]:
+        if items:
+            indexes = (item, *items)
+            return lambda row: tuple(present(row[index]) for index in indexes)
+        return lambda row: present(row[item])
+
+    nullitemgetter._bea_null_safe = True  # type: ignore[attr-defined]
+    query_execute.nullitemgetter = nullitemgetter
 
 
 def rows_answer(
@@ -203,6 +244,7 @@ def text_answer(
     """
     import io
 
+    output_spelling = output
     if output is not None:
         # Keep the approved target stable if the user's symlink is retargeted
         # while the query runs. The alias check below sees this same path.
@@ -215,24 +257,43 @@ def text_answer(
     # `USAGE.md`'s "a failed query or write preserves an existing export" — and
     # left a partial file behind if a query failed mid-render.
     buffer = io.StringIO()
-    # `show_errors=False`: the load errors travel in the envelope, and
-    # upstream printing them to stderr too would report each one twice.
-    shell = build_shell(file, buffer, format=format, numberify=numberify, show_errors=False)
-    shell.spreadsheet_safe = spreadsheet_safe
-    errors = _gate([format_error(error, ledger_file=file) for error in shell.context.errors], allow_errors, file)
-    if output is not None:
-        # Still before the query: refusing to write over the ledger being read
-        # is a refusal, and a refusal has to happen before any work is done.
-        _refuse_alias(output, file, shell.context)
-    _replay_init(shell, buffer if output is not None else None)
-    _executed(shell.context, query_string, shell.onecmd, errors, file=file)
-    if output is not None:
-        # Rendered whole, then swapped in atomically. w3/380 moved this past
-        # the *query*; the write itself still had to become atomic.
-        _export(shell, output, buffer.getvalue())
-        # The export is the result; the frontend has nothing left to print.
-        return {"text": "", "errors": errors}
-    return {"text": buffer.getvalue(), "errors": errors}
+    with _shell_warning_hook():
+        # `show_errors=False`: the load errors travel in the envelope, and
+        # upstream printing them to stderr too would report each one twice.
+        shell = build_shell(file, buffer, format=format, numberify=numberify, show_errors=False)
+        shell.spreadsheet_safe = spreadsheet_safe
+        errors = _gate([format_error(error, ledger_file=file) for error in shell.context.errors], allow_errors, file)
+        if output is not None:
+            # Still before the query: refusing to write over the ledger being read
+            # is a refusal, and a refusal has to happen before any work is done.
+            _refuse_alias(output, file, shell.context, spelling=output_spelling)
+        _replay_init(shell, buffer if output is not None else None)
+        _executed(shell.context, query_string, shell.onecmd, errors, file=file)
+        if output is not None:
+            # Rendered whole, then swapped in atomically. w3/380 moved this past
+            # the *query*; the write itself still had to become atomic.
+            _export(shell, output, buffer.getvalue())
+            # The export is the result; the frontend has nothing left to print.
+            return {"text": "", "errors": errors}
+        return {"text": buffer.getvalue(), "errors": errors}
+
+
+@contextmanager
+def _shell_warning_hook() -> Iterator[None]:
+    """Give `warnings.showwarning` back once a shell is done with it (w5/575).
+
+    Upstream's `BQLShell.__init__` installs its own method as the hook, which
+    kept the shell, its context and every entry reachable until interpreter
+    shutdown: a text query on a large ledger spent as long tearing down as
+    answering, about twice what `--json` took.
+    """
+    import warnings
+
+    saved = warnings.showwarning
+    try:
+        yield
+    finally:
+        warnings.showwarning = saved
 
 
 def _loaded_files(root: Path, context: Any) -> list[Path]:
@@ -283,20 +344,28 @@ def _claiming_include(destination: Path, root: Path) -> str | None:
     from bea_engine.ledger.write import LedgerSnapshot, _included_new_file
 
     try:
-        target = destination.expanduser().resolve()
+        target = expand_path(destination, "--output").resolve()
         patterns = LedgerSnapshot.capture(root).patterns
     except (OSError, protocol.UsageError):
         return None
-    return next((pattern for pattern in patterns if _included_new_file(target, pattern)), None)
+    return next((pattern for pattern in patterns if _included_new_file(target, pattern, any_spelling=True)), None)
 
 
-def _refuse_alias(destination: Path, root: Path, context: Any) -> None:
+def _refuse_alias(destination: Path, root: Path, context: Any, *, spelling: Path | None = None) -> None:
     """Fail a destination that is one of the files this query reads."""
     member = _find_alias(destination, root, context)
     if member is not None:
         raise protocol.UsageError(
             f"--output {destination} would overwrite the ledger it reads ({member}); choose a different destination."
         )
+    from bea_engine.ledger.write import refuse_encrypted_destination
+
+    if (getattr(context, "options", None) or {}).get("include"):
+        # CSV sources do not decrypt inputs, whatever their filename suffix.
+        members = _loaded_files(root, context)
+        refuse_encrypted_destination(destination, members, "--output")
+        if spelling is not None:
+            refuse_encrypted_destination(spelling, members, "--output")
     pattern = _claiming_include(destination, root)
     if pattern is not None:
         raise protocol.UsageError(
@@ -313,6 +382,14 @@ def _redirect_output(shell: Any, arg: str, stream: TextIO, file: Path | None) ->
             protocol.note(
                 f"Refusing to write query output to {arg}: it is one of the ledger files under query ({member})."
             )
+            return
+        from bea_engine.ledger.write import refuse_encrypted_destination
+
+        try:
+            if (getattr(shell.context, "options", None) or {}).get("include"):
+                refuse_encrypted_destination(Path(arg), _loaded_files(file, shell.context), "Query output")
+        except protocol.UsageError as exc:
+            protocol.note(str(exc))
             return
         pattern = _claiming_include(Path(arg), file)
         if pattern is not None:
@@ -331,6 +408,19 @@ def _redirect_output(shell: Any, arg: str, stream: TextIO, file: Path | None) ->
     shell.outfile = destination
 
 
+def _unpaged(shell: Any) -> None:
+    """Start the shell without upstream's pager, as `bean-query` runs it (w5/585).
+
+    Upstream pages a result only when handed `sys.stdout` itself, which
+    `bean-query` never does and bea did: Ctrl-C in `less` interrupted the wait
+    without ending it, and the pager and the shell then split every keystroke.
+    `.set pager on` still turns it on.
+    """
+    settings = getattr(shell, "settings", None)
+    if settings is not None and hasattr(settings, "pager"):
+        settings.pager = False
+
+
 def _native_shell(source: str, *, interactive: bool, format: str, numberify: bool, show_errors: bool) -> Any:
     """Upstream's `BQLShell` on a native source, with bea's input and exit-status guards.
 
@@ -344,6 +434,7 @@ def _native_shell(source: str, *, interactive: bool, format: str, numberify: boo
 
     from beanquery.shell import BQLShell
 
+    _null_safe_ordering()
     dsn = source if re.match("[a-z]{2,}:", source) else "beancount:" + source
     parts = urlparse(dsn)
     file = Path(parts.path) if parts.scheme in {"beancount", "csv"} and parts.path else None
@@ -363,6 +454,12 @@ def _native_shell(source: str, *, interactive: bool, format: str, numberify: boo
             raise protocol.UsageError(
                 f"{kind[0].upper()}{kind[1:]} path '{file}' (from --source) is a directory; expected a {kind} file."
             )
+    if parts.scheme == "beancount":
+        from beancount import loader
+
+        from bea_engine.managed_load import _record_plugin_configs
+
+        _record_plugin_configs(loader)
 
     class GuardedShell(BQLShell):  # type: ignore[misc]
         source_file = file
@@ -387,9 +484,37 @@ def _native_shell(source: str, *, interactive: bool, format: str, numberify: boo
 
         def do_reload(self, arg: Any = None) -> None:
             """Reload the Beancount input file."""
-            # Upstream loads the source itself; a Ctrl-C mid-parse waits for it.
-            with stopping.deferring_interrupt():
-                super().do_reload(arg)
+            if parts.scheme == "beancount" and file is not None and os.getenv("BEANCOUNT_LOAD_CACHE_FILENAME"):
+                # Native sources bypass managed_load. Guard every reload,
+                # including the constructor's, before upstream can discard a
+                # supposed cache that is actually a ledger file (w5/670).
+                from bea_engine.ledger.write import LedgerSnapshot, refuse_cache_over_ledger
+
+                snapshot = LedgerSnapshot.capture(file)
+                refuse_cache_over_ledger(file, snapshot.contents, snapshot.patterns)
+            attach = self.context.attach
+
+            def checked_attach(*args: Any, **kwargs: Any) -> Any:
+                result = attach(*args, **kwargs)
+                # Reject before upstream prints raw LoadError tracebacks or
+                # answers from entries whose plugin terminated mid-load.
+                from bea_engine.managed_load import is_plugin_exit
+
+                failed = [
+                    format_error(error, ledger_file=file) for error in self.context.errors if is_plugin_exit(error)
+                ]
+                if failed:
+                    raise protocol.LedgerError(f"Cannot load --source '{source}': {failed[0]}", details=failed[1:])
+                return result
+
+            if parts.scheme == "beancount":
+                self.context.attach = checked_attach
+            try:
+                # Upstream loads the source itself; a Ctrl-C mid-parse waits for it.
+                with stopping.deferring_interrupt():
+                    super().do_reload(arg)
+            finally:
+                self.context.attach = attach
 
         def do_run(self, arg: str) -> None:
             """Run a named stored query, or list them; missing names are usage errors."""
@@ -437,7 +562,7 @@ def _native_shell(source: str, *, interactive: bool, format: str, numberify: boo
             if statement:
                 _refuse_statement_tail(statement)
             context = None if self.interactive else self.context
-            return _compiled(partial(super().execute, query, **kwargs), statement, list, context)
+            return _compiled(partial(super().execute, query, **kwargs), statement, list, context, native=True)
 
         def onecmd(self, line: str) -> Any:
             return _recovering(self, self._dispatch, line)
@@ -476,6 +601,7 @@ def _attach_native(
 
     try:
         shell = shell_class(dsn, sys.stdout, interactive, False, format, numberify, show_errors)
+        _unpaged(shell)
     except (TypeError, LookupError, csv.Error) as exc:
         raise protocol.UsageError(
             f"Cannot open --source '{source}': {exc}.",
@@ -625,10 +751,11 @@ def native_one_shot(
 
     shell = _native_shell(source, interactive=False, format=format, numberify=numberify, show_errors=show_errors)
     buffer = io.StringIO()
+    output_spelling = output
     if output is not None:
         output = output.resolve()
         if shell.source_file is not None:
-            _refuse_alias(output, shell.source_file, shell.context)
+            _refuse_alias(output, shell.source_file, shell.context, spelling=output_spelling)
     _replay_init(shell, buffer if output is not None else None)
     from beanquery import Error as BeanqueryError
 
@@ -799,6 +926,72 @@ def _recovering(shell: Any, dispatch: Callable[[str], Any], line: str) -> Any:
         protocol.note(f"Cannot run this BQL query: {exc}.")
         _debug_traceback(shell, exc)
         return False
+    except OSError:
+        raise
+    except Exception as exc:
+        # Upstream's loop would print this with its traceback and carry on.
+        if not shell.interactive:
+            raise
+        protocol.note(f"error: {unexpected_failure(exc)}")
+        _debug_traceback(shell, exc)
+        return False
+
+
+def unexpected_failure(exc: Exception) -> str:
+    """One line for an exception upstream's shell raised and bea has no wording for.
+
+    `query --source` hands the query to upstream, whose display context gives
+    an amount twelve integer digits at most: a 10^12 VND balance raised
+    `InvalidOperation` there and printed a 200-line traceback, where `--file`
+    answers (w5/472).
+    """
+    if isinstance(exc, DecimalException):
+        return decimal_failure(exc, native=True)
+    return f"{type(exc).__name__}: {exc}".rstrip(".") + "."
+
+
+def decimal_failure(exc: ArithmeticError, *, native: bool) -> str:
+    """One sentence for a decimal signal a query raised, said by what raised it (w5/628).
+
+    Two things raise one. Upstream's renderer quantizes each amount to its
+    display precision, which holds twelve integer digits — the `--source`
+    path's limit, which `--file` does not share. Anything else is a NaN or an
+    infinity met by an operation that needs a number: ordering, comparing,
+    subtracting. w5/472 gave every signal the first explanation, so a NaN
+    sorted under `--file` was told to query with `--file`.
+    """
+    name = type(exc).__name__
+    if _display_overflow(exc):
+        if native:
+            return (
+                f"Decimal arithmetic failed while printing this query ({name}). Upstream's rendering holds an "
+                "amount to twelve integer digits; query the ledger with --file to print larger ones."
+            )
+        return f"Decimal arithmetic failed while printing this query ({name}): an amount outgrew its display precision."
+    if isinstance(exc, InvalidOperation):
+        return (
+            f"Decimal arithmetic failed while running this query ({name}): a NaN or infinite value cannot be "
+            "ordered, compared or used in arithmetic. Filter it out with WHERE, for example "
+            "WHERE str(<value>) NOT IN ('NaN', 'Infinity', '-Infinity')."
+        )
+    return f"Decimal arithmetic failed while running or printing this query ({name})."
+
+
+def _display_overflow(exc: BaseException) -> bool:
+    """Whether a decimal signal is a finite amount too wide for the precision it was quantized to.
+
+    The C decimal module raises from inside `quantize`, so the innermost
+    Python frame is the caller's `quantize` — Beancount's display context —
+    and its `number` is the amount. An infinity fails there too, but it is
+    not an amount too wide to print.
+    """
+    tb = exc.__traceback__
+    if tb is None:
+        return False
+    while tb.tb_next is not None:
+        tb = tb.tb_next
+    number = tb.tb_frame.f_locals.get("number")
+    return tb.tb_frame.f_code.co_name == "quantize" and isinstance(number, Decimal) and number.is_finite()
 
 
 def _debug_traceback(shell: Any, exc: BaseException) -> None:
@@ -905,7 +1098,22 @@ def interactive(
     import warnings
 
     warnings.filterwarnings("always")
+    with _shell_warning_hook():
+        _interactive_session(file, format, numberify, show_errors, spreadsheet_safe, debug, allow_errors, output)
+
+
+def _interactive_session(
+    file: Path,
+    format: str,
+    numberify: bool,
+    show_errors: bool,
+    spreadsheet_safe: bool,
+    debug: bool,
+    allow_errors: bool,
+    output: Path | None,
+) -> None:
     shell = build_shell(file, sys.stdout, interactive=True, format=format, numberify=numberify, show_errors=show_errors)
+    _unpaged(shell)
     shell.spreadsheet_safe = spreadsheet_safe
     shell.debug = debug
     # After build_shell, which is what loads the ledger, and before cmdloop.
@@ -939,6 +1147,8 @@ def build_shell(
     from beanquery.numberify import numberify_results
     from beanquery.shell import FORMATS, BQLShell
     from beanquery.sources.beancount import Metadata
+
+    _null_safe_ordering()
 
     class PreciseShell(BQLShell):  # type: ignore[misc]  # beanquery does not ship type annotations
         outfile: TextIO
@@ -1072,7 +1282,7 @@ def build_shell(
             if isinstance(query, str):
                 _refuse_statement_tail(query)
                 query = statement = _quote_reserved_tables(unicodedata.normalize("NFC", query))
-                _refuse_empty_window(query, [], file=file)
+                _refuse_empty_window(query, [], file=file, stored_on=kwargs.get("default_close_date"))
             return _compiled(
                 partial(super().execute, query, **kwargs),
                 statement,
@@ -1124,7 +1334,7 @@ def build_shell(
                     # unpadded machine cells so spreadsheets and Decimal() parse.
                     return _render_csv(description, rows, out, spreadsheet_safe=self.spreadsheet_safe)
                 if self.settings.format == "beancount":
-                    return _render_beancount(rows, out, file)
+                    return _render_beancount(rows, out, file, self.context.tables["entries"].options)
                 if self.settings.format == "text":
                     rows = [tuple(_inert_cell(_text_cell(value)) for value in row) for row in rows]
                     # Upstream renders `set` sorted and separated but has no
@@ -1260,7 +1470,103 @@ def _source_location(entry: Any) -> tuple[Any, Any]:
     return (meta.get("filename"), meta.get("lineno"))
 
 
-def _render_beancount(rows: Any, out: TextIO, file: Path) -> None:
+# The options a ledger's validity rests on: the root names its accounts are
+# checked against, and how its amounts book and balance (w5/474).
+_ROOT_OPTIONS = (
+    "name_assets",
+    "name_liabilities",
+    "name_equity",
+    "name_income",
+    "name_expenses",
+)
+_EXPORTED_OPTIONS = (
+    *_ROOT_OPTIONS,
+    "account_rounding",
+    "booking_method",
+    "tolerance_multiplier",
+    "infer_tolerance_from_cost",
+)
+
+
+def _quoted_option(text: str) -> str:
+    return '"' + text.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
+def _option_lines(options: Mapping[str, Any]) -> list[str]:
+    """`option` lines for each validity option the ledger changes from Beancount's default.
+
+    An export of `Activos:Banco` without `option "name_assets" "Activos"`
+    re-checked as an invalid account name, and a transaction balanced only by
+    `inferred_tolerance_default` as unbalanced.
+    """
+    from enum import Enum
+
+    from beancount.parser.options import OPTIONS_DEFAULTS
+
+    lines = []
+    for name in _EXPORTED_OPTIONS:
+        value = options.get(name, OPTIONS_DEFAULTS[name])
+        if value is None or value == OPTIONS_DEFAULTS[name]:
+            continue
+        if isinstance(value, Enum):
+            text = str(value.value)
+        elif isinstance(value, bool):
+            text = "TRUE" if value else "FALSE"
+        elif isinstance(value, Decimal):
+            text = format(value, "f")
+        else:
+            text = str(value)
+        lines.append(f"option {_quoted_option(name)} {_quoted_option(text)}\n")
+    for currency, tolerance in (options.get("inferred_tolerance_default") or {}).items():
+        lines.append(f'option "inferred_tolerance_default" {_quoted_option(f"{currency}:{tolerance:f}")}\n')
+    return lines
+
+
+def _export_root_changes(rows: Any, options: Mapping[str, Any]) -> tuple[list[str], str]:
+    """Plan per-directive parser roots without changing the final account types.
+
+    Includes start on Beancount's defaults, even when the root file renames
+    them. A flat export must switch those names back while reading their
+    directives, then restore the root's options for booking and reporting.
+    Refuse incompatible roots before emitting any part of the result.
+    """
+    from beancount.core import account, getters
+    from beancount.core.data import Custom
+    from beancount.parser.options import OPTIONS_DEFAULTS
+
+    original = {name: options.get(name, OPTIONS_DEFAULTS[name]) for name in _ROOT_OPTIONS}
+    default_names = {OPTIONS_DEFAULTS[name]: name for name in _ROOT_OPTIONS}
+
+    def changed(before: Mapping[str, Any], after: Mapping[str, Any]) -> str:
+        return "".join(
+            f"option {_quoted_option(name)} {_quoted_option(after[name])}\n"
+            for name in _ROOT_OPTIONS
+            if before[name] != after[name]
+        )
+
+    current = original
+    switches = []
+    for (entry,) in rows:
+        accounts = getters.get_entry_accounts(entry)
+        if isinstance(entry, Custom):
+            accounts.update(value.value for value in entry.values if value.dtype == account.TYPE)
+        roots = {name.partition(":")[0] for name in accounts}
+        needed = original.copy()
+        for root in roots - set(original.values()):
+            if root in default_names:
+                needed[default_names[root]] = root
+        if roots - set(needed.values()):
+            raise protocol.LedgerError(
+                "Cannot export these accounts as one Beancount file using this ledger's root names: "
+                + ", ".join(sorted(accounts))
+                + ". Keep the original split ledger, or use JSON/text output."
+            )
+        switches.append(changed(current, needed))
+        current = needed
+    return switches, changed(current, original)
+
+
+def _render_beancount(rows: Any, out: TextIO, file: Path, options: Mapping[str, Any]) -> None:
     """Use the writer's syntax fixes with upstream's grouping and exact precision."""
     from beancount.core.data import Commodity, Document, Pad, Transaction
     from beancount.core.display_context import DisplayContext
@@ -1281,15 +1587,27 @@ def _render_beancount(rows: Any, out: TextIO, file: Path) -> None:
         for (entry,) in rows
         if not (isinstance(entry, Transaction) and entry.flag == "P" and _source_location(entry) in pads)
     ]
+    switches, restore = _export_root_changes(rows, options)
+    preamble = "".join(_option_lines(options))
+    # `write` only: the interactive pager has no `writelines`.
+    out.write(preamble)
     previous_type = type(rows[0][0]) if rows else None
-    for (entry,) in rows:
+    if preamble and previous_type not in (None, Transaction, Commodity):
+        # Those two open with a blank line of their own.
+        out.write("\n")
+    for (entry,), switch in zip(rows, switches, strict=True):
         entry_type = type(entry)
+        if switch:
+            out.write("\n" + switch)
+            previous_type = None
         if entry_type in (Transaction, Commodity) or entry_type is not previous_type:
             out.write("\n")
             previous_type = entry_type
         if isinstance(entry, Document):
             entry = entry._replace(filename=_portable_document_path(str(entry.filename), file))
         out.write(printer(entry))
+    if restore:
+        out.write("\n" + restore)
 
 
 def _portable_document_path(filename: str, file: Path) -> str:
@@ -1424,6 +1742,16 @@ def _fixed_point_text() -> Iterator[None]:
         query_render.RENDERERS.update(saved)
 
 
+def _whole(value: Decimal) -> Decimal:
+    """A positive-exponent decimal as the same number with its zeros written out.
+
+    `Decimal("1.5E+3")` becomes `Decimal("1500")`: parsed from its fixed-point
+    text, never rounded to the context's precision.
+    """
+    exponent = value.as_tuple().exponent
+    return Decimal(format(value, "f")) if isinstance(exponent, int) and exponent > 0 else value
+
+
 @cache
 def _text_renderers() -> dict[type, type]:
     from beanquery import query_render
@@ -1431,9 +1759,27 @@ def _text_renderers() -> dict[type, type]:
     registered = dict(query_render.RENDERERS)
 
     class FixedPointDecimalRenderer(query_render.DecimalRenderer):  # type: ignore[misc]
+        """Upstream's decimal-point alignment, never in scientific notation.
+
+        Upstream measures and prints a positive exponent (`round(x, -2)`) as
+        `1.5E+3`, and compares a NaN's or an infinity's exponent, a letter,
+        with `>`, a TypeError that ended the query (w5/471). Such a value is
+        measured and printed as its fixed-point digits, and a non-finite one
+        as its name, as CSV and JSON print them.
+        """
+
+        nintegral: int
+
+        def update(self, value: Decimal) -> None:
+            if not value.is_finite():
+                self.nintegral = max(self.nintegral, len(str(value)))
+                return
+            super().update(_whole(value))
+
         def format(self, value: Decimal) -> str:
-            if value.as_tuple().exponent > 0:  # type: ignore[operator]
-                return str(super().format(value))
+            if not value.is_finite():
+                return str(value).rjust(self.nintegral).ljust(self.maxwidth)
+            value = _whole(value)
             # Upstream's padding with a fixed-point spelling: the widths it
             # measured from `as_tuple()` already count the zeros.
             n = value.as_tuple()
@@ -1498,6 +1844,9 @@ def _csv_from_jsonable(value: Any) -> str:
                 return f"{units} {{{_csv_cost(cost)}}}"
             return units
         if "number" in value and "currency" in value:
+            # A bare lot (`position.cost`) carries its date and label too (w5/561).
+            if "date" in value or "label" in value:
+                return _csv_cost(value)
             return f"{value['number']} {value['currency']}"
         return str(value)
     if isinstance(value, list):
@@ -1513,7 +1862,7 @@ def _csv_cost(cost: dict[str, Any]) -> str:
     other machine-readable surface kept their dates and labels apart
     (w5/465).
     """
-    parts = [_csv_from_jsonable(cost)]
+    parts = [f"{cost['number']} {cost['currency']}"]
     if cost.get("date"):
         parts.append(str(cost["date"]))
     if cost.get("label"):
@@ -1544,7 +1893,12 @@ def _executed(conn: Any, query_string: str, run: Any, ledger_errors: list[str], 
 
 
 def _compiled(
-    run: Callable[[], Any], statement: str, ledger_errors: Callable[[], list[str]], context: Any = None
+    run: Callable[[], Any],
+    statement: str,
+    ledger_errors: Callable[[], list[str]],
+    context: Any = None,
+    *,
+    native: bool = False,
 ) -> Any:
     """Run one BQL statement, naming the compile failures Beanquery lets escape raw.
 
@@ -1567,7 +1921,7 @@ def _compiled(
     # before anything runs, so both shapes are the same usage error (w5/103).
     from bea_engine.ledger.text import regex_reads_otherwise
 
-    for pattern in _PATTERN_LITERAL.findall(statement):
+    for pattern in _pattern_literals(statement):
         # First, so no compile warns: Python reads `[[:alpha:]]` as a set and
         # only warns, and the query then matches something else (w5/429).
         otherwise = regex_reads_otherwise(pattern[1:-1])
@@ -1582,7 +1936,27 @@ def _compiled(
         except re.error as exc:
             raise _pattern_error(pattern[1:-1], exc, statement, ledger_errors()) from None
     try:
-        return run()
+        # Patterns built by expressions reach the parser only at runtime.
+        # Every ambiguous set construct needs the same refusal as a literal.
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "error",
+                message=r"Possible (?:nested set|set (?:intersection|union|difference|symmetric difference))",
+                category=FutureWarning,
+            )
+            # A prior literal check can cache the compiled pattern even though
+            # it refused it. A cache hit never warns, so ensure the runtime
+            # guard sees compilation too, as regex_reads_otherwise does.
+            re.purge()
+            return run()
+    except FutureWarning as exc:
+        raise protocol.UsageError(
+            f"Cannot run this BQL query: Python's regex reads a pattern differently from what it says ({exc}). "
+            "Escape a literal [ inside a set as \\[, and a doubled -, &, ~ or | there with backslashes. "
+            "Write [^\\W\\d_] for letters instead of [[:alpha:]].",
+            details=[f"  {statement}"],
+            ledger_errors=ledger_errors(),
+        ) from None
     except re.error as exc:
         # A pattern that is not a constant — built by an expression — can only
         # fail here.
@@ -1591,6 +1965,11 @@ def _compiled(
         if context is None:
             raise
         raise _usage_error(exc, statement, context, ledger_errors()) from None
+    except DecimalException as exc:
+        if native:
+            # `query --source` keeps upstream's raw failure for its `--debug` stack (w5/472).
+            raise
+        raise protocol.EngineError(decimal_failure(exc, native=False), ledger_errors=ledger_errors()) from None
     except OverflowError as exc:
         evaluation = _evaluation_error(exc, statement, ledger_errors())
         if evaluation is None:
@@ -1629,9 +2008,10 @@ def _compiled(
                 ledger_errors=ledger_errors(),
             ) from None
         named = ", ".join(columns)
+        kind = "a list" if columns == ["other_accounts"] else "a set"
         raise protocol.UsageError(
-            f"BQL cannot use DISTINCT or GROUP BY on {named}: a set is not a value it can compare.",
-            details=_SET_COLUMN_ADVICE,
+            f"BQL cannot use DISTINCT or GROUP BY on {named}: {kind} is not a value it can compare.",
+            details=_set_column_advice(columns),
             ledger_errors=ledger_errors(),
         ) from None
     except TypeError as exc:
@@ -1729,7 +2109,30 @@ def _implicit_group_error(columns: list[tuple[str, str]], ledger_errors: list[st
 
 
 #: The string literal on the right of BQL's regex operators, quotes included.
-_PATTERN_LITERAL = re.compile(r"""!?~\s*('[^']*'|"[^"]*")""")
+_PATTERN_LITERAL = re.compile(
+    r"""!?~\s*('[^']*'|"[^"]*")"""
+    # The constant pattern of beanquery's regex functions, and a `JOURNAL`
+    # account pattern, compile the same way and were unchecked (w5/509).
+    # A literal is the whole argument only when `,` or `)` follows it: a
+    # concatenated pattern is first known when it runs.
+    r"""|\b(?:grep|grepn|subst|findfirst)\s*\(\s*('[^']*'|"[^"]*")(?=\s*[,)])"""
+    r"""|\bJOURNAL\s+('[^']*'|"[^"]*")""",
+    re.IGNORECASE,
+)
+
+
+def _pattern_literals(statement: str) -> Iterator[str]:
+    """Each constant regex operand in the statement's code, quotes included.
+
+    Found where the code is, then read from the text: `~ '…'` inside a
+    comment or a string literal is no operand, and matching the raw text
+    refused valid queries over a commented-out condition or a pattern
+    spliced across two literals (w5/558).
+    """
+    shape = _code_mask(statement, keep_quotes=True)
+    for found in _PATTERN_LITERAL.finditer(shape):
+        group = next(index for index in range(1, found.re.groups + 1) if found.group(index))
+        yield statement[found.start(group) : found.end(group)]
 
 
 def _evaluation_error(exc: Exception, statement: str, ledger_errors: list[str]) -> protocol.UsageError | None:
@@ -1766,7 +2169,7 @@ def _pattern_error(pattern: str, exc: re.error, statement: str, ledger_errors: l
     )
 
 
-_SET_COLUMNS = ("tags", "links")
+_SET_COLUMNS = ("tags", "links", "other_accounts")
 
 _SET_COLUMNS_PLUS_ACCOUNTS = ("tags", "links", "accounts")
 
@@ -1776,6 +2179,21 @@ _SET_COLUMN_ADVICE = [
     "Counts per combination: SELECT joinstr(tags), count(*) GROUP BY joinstr(tags)",
     "One tag at a time: SELECT date, narration WHERE 'grocery' IN tags",
 ]
+
+
+#: `other_accounts` is a list per posting: unhashable like the sets, with its
+#: own recipe rather than advice about `tags` (w5/563).
+_OTHER_ACCOUNTS_ADVICE = [
+    "`other_accounts` holds a list per posting (the entry's other accounts), so BQL cannot hash it.",
+    "Distinct combinations: SELECT DISTINCT joinstr(other_accounts)",
+    "Counts per combination: SELECT joinstr(other_accounts), count(*) GROUP BY joinstr(other_accounts)",
+]
+
+
+def _set_column_advice(columns: list[str]) -> list[str]:
+    """The recipes for the unhashable columns a query names: the set advice unless only `other_accounts`."""
+    advice = [] if columns == ["other_accounts"] else list(_SET_COLUMN_ADVICE)
+    return advice + (_OTHER_ACCOUNTS_ADVICE if "other_accounts" in columns else [])
 
 
 def _set_columns(query_string: str) -> list[str]:
@@ -1821,13 +2239,18 @@ def _grouped_columns(query_string: str) -> list[str]:
     return [name for name in names if isinstance(name, str)]
 
 
-def _refuse_empty_window(query_string: str, ledger_errors: list[str], *, file: Path) -> None:
+def _refuse_empty_window(query_string: str, ledger_errors: list[str], *, file: Path, stored_on: Any = None) -> None:
     """Refuse a `FROM OPEN ON … CLOSE ON …` window that can hold no entries.
 
     `CLOSE ON D` is exclusive, so `OPEN ON D CLOSE ON D` spans zero days while
     the `--from-date D --to-date D` filters everywhere else in `bea` span one.
     Answering `(no rows)` reads as "that day is empty" rather than "you asked
     for no days", so say which it is and how to ask for the day.
+
+    `stored_on` is a stored query's directive date, which Beanquery applies as
+    the outer window's `CLOSE ON` when the query names none: a stored query
+    opening on that date answered `(no rows)`, and one opening later failed
+    over a CLOSE nobody wrote (w5/559).
     """
     try:
         from beanquery.parser import ast, parse
@@ -1835,15 +2258,23 @@ def _refuse_empty_window(query_string: str, ledger_errors: list[str], *, file: P
         parsed = parse(query_string)
     except Exception:  # noqa: BLE001 - a dot command or a broken query; beanquery reports it
         return
+    outer: Any = parsed.from_clause if isinstance(parsed, ast.Select) else None
     # Every dated window, not just the outer one: a subquery's `FROM OPEN ON D
     # CLOSE ON D` answered `(no rows)` just the same (w1/158).
     for clause in ast.walk(parsed):
         if isinstance(clause, ast.From):
-            _refuse_window(clause.open, clause.close, ledger_errors, file=file)
+            if stored_on is not None and clause is outer and not clause.close:
+                _refuse_window(clause.open, stored_on, ledger_errors, file=file, stored=True)
+            else:
+                _refuse_window(clause.open, clause.close, ledger_errors, file=file)
 
 
-def _refuse_window(begin: Any, end: Any, ledger_errors: list[str], *, file: Path) -> None:
-    """Refuse one `OPEN ON begin CLOSE ON end` window that spans no days, or has no end date."""
+def _refuse_window(begin: Any, end: Any, ledger_errors: list[str], *, file: Path, stored: bool = False) -> None:
+    """Refuse one `OPEN ON begin CLOSE ON end` window that spans no days, or has no end date.
+
+    `stored` says `end` is a stored query's directive date rather than a
+    `CLOSE ON` in its text, so the remedy is that date or an explicit close.
+    """
     from datetime import date, timedelta
 
     from bea_engine.ledger.text import bea_command
@@ -1862,6 +2293,17 @@ def _refuse_window(begin: Any, end: Any, ledger_errors: list[str], *, file: Path
         )
     if not isinstance(begin, date) or not isinstance(end, date) or begin < end:
         return
+    if stored:
+        where = "on that same day" if begin == end else f"after it, on {begin}"
+        raise protocol.UsageError(
+            f"This stored query's window covers no days: its query directive's date, {end}, closes the window "
+            f"(exclusive), and OPEN ON starts {where}.",
+            details=[
+                f"Add CLOSE ON {begin + timedelta(days=1)} or later to the query, or re-date its query directive "
+                "after the last day it should cover."
+            ],
+            ledger_errors=ledger_errors,
+        )
     if begin == end:
         message = (
             f"This BQL window covers no days: CLOSE ON {end} is exclusive, so it ends where OPEN ON {begin} starts."
@@ -1899,8 +2341,8 @@ def _usage_error(exc: Exception, query_string: str, conn: Any, ledger_errors: li
     if isinstance(position, int) and 0 <= position <= len(query_string):
         details.extend(_caret_lines(query_string, position))
     details.extend(_column_suggestions(str(exc), conn))
-    if "non-hashable" in str(exc) and _set_columns(query_string):
-        details.extend(_SET_COLUMN_ADVICE)
+    if "non-hashable" in str(exc) and (columns := _set_columns(query_string)):
+        details.extend(_set_column_advice(columns))
     # Not the interactive shell: under `--json` or without a terminal `bea query`
     # with no argument is itself a usage error, and `.tables` runs one-shot (w5/198).
     details.append("Run bea query .tables to list what you can query.")
@@ -1993,6 +2435,7 @@ _NO_LOT = re.compile(
     r"against balance (?P<held>.*)\Z",
     re.DOTALL,
 )
+_POSTING_LINE = re.compile(r"meta=\{[^}]*'lineno': (?P<lineno>\d+)")
 _BALANCE_CURRENCY = re.compile(r"Invalid currency '(?P<currency>[^']*)' for Balance directive: ?\Z")
 _NEGATIVE_COST = re.compile(
     r"Cost is negative: \"Cost\(number=Decimal\('(?P<number>[^']*)'\), currency='(?P<currency>[^']*)'"
@@ -2019,6 +2462,13 @@ def readable_parser_message(message: str) -> str:
     strict-read refusals and the `add` posting refusal (w5/334). A message
     that does not parse as expected is returned unchanged.
     """
+    # Beancount's lexer relays a decimal comma as a bare ValueError; `add price`
+    # already explains it, postings and balances now do too (w5/534).
+    comma = re.fullmatch(r"(?:ValueError: )?Invalid number format: '([^']*,[^']*)'", message)
+    if comma is not None:
+        from bea_engine.amounts import DECIMAL_COMMA_HELP
+
+        return f"Invalid amount {comma[1]!r}. {DECIMAL_COMMA_HELP}"
     for pattern, kind in _PARSER_REPRS:
         match = pattern.match(message)
         if match is None:
@@ -2100,7 +2550,14 @@ def _booking_message(error: Any, message: str) -> str:
 
     account, units = no_lot["account"], no_lot["units"].strip()
     postings = getattr(getattr(error, "entry", None), "postings", None) or []
-    posting = next((p for p in postings if p.account == account and str(p.units) == units), None)
+    candidates = [p for p in postings if p.account == account and str(p.units) == units]
+    # Two lots of one size sold together share account and units; upstream's
+    # posting carries its own line, which names the one it rejected (w5/510).
+    line = _POSTING_LINE.search(message)
+    posting = next(
+        (p for p in candidates if line is not None and (p.meta or {}).get("lineno") == int(line["lineno"])),
+        candidates[0] if candidates else None,
+    )
     cost = getattr(posting, "cost", None)
     requested = f"{units} {{{_cost_spec_text(cost, DisplayContext().build())}}}" if cost is not None else units
     return f"No position matches {requested} in {account}; it holds {no_lot['held'].strip()}"

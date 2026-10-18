@@ -80,3 +80,18 @@ def test_from_accounts_is_not_postings(tmp_path: Path) -> None:
     assert described.returncode == 0, described.stderr
     cols = [c["name"] for c in json.loads(described.stdout)["data"]["columns"]]
     assert cols == ["account", "open", "close"]
+
+
+def test_a_reserved_table_name_in_any_case_hits_the_real_table(tmp_path: Path) -> None:
+    """Matched in any case, the name was quoted as typed and looked up as a missing table (w5/560)."""
+    ledger = tmp_path / "main.bean"
+    ledger.write_text(LEDGER)
+
+    accounts = _bea(tmp_path, "--json", "--file", str(ledger), "query", "SELECT account FROM ACCOUNTS")
+    balances = _bea(tmp_path, "--file", str(ledger), "query", "SELECT account, amount FROM Balances")
+
+    assert accounts.returncode == 0, accounts.stderr
+    rows = json.loads(accounts.stdout)["data"]["rows"]
+    assert sorted(row[0] for row in rows) == ["Assets:Cash", "Equity:Opening-Balances", "Expenses:Food"]
+    assert balances.returncode == 0, balances.stderr
+    assert "Assets:Cash" in balances.stdout and "9 USD" in balances.stdout

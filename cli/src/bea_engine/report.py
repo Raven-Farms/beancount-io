@@ -13,7 +13,7 @@ from __future__ import annotations
 import dataclasses
 import re
 import unicodedata
-from collections.abc import Callable, Iterable, Iterator, Mapping
+from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from datetime import date, timedelta
 from decimal import Decimal
 from pathlib import Path
@@ -174,7 +174,7 @@ def _balances(
                 for balance in _tree_balances(tree)
             ),
             allow_errors,
-            filtered.ledger.prices,
+            filtered.ledger,
             ledger_errors,
         )
     )
@@ -198,12 +198,13 @@ def _overview(
             "expenses": data.expenses_hierarchy,
         },
         filtered.account,
+        filtered.ledger.root_accounts,
     )
     trees = tuple(sections[name] for name in ("assets", "liabilities", "income", "expenses"))
     balances = [(filtered.end_date, balance) for tree in trees if tree is not None for balance in _tree_balances(tree)]
     for series in (data.assets_data, data.liabilities_data, data.income_interval_data, data.expenses_interval_data):
         balances.extend((point.date, point.balance) for point in series)
-    valuation = _valuation(conversion, balances, allow_errors, filtered.ledger.prices, ledger_errors)
+    valuation = _valuation(conversion, balances, allow_errors, filtered.ledger, ledger_errors)
     metadata = _metadata(filtered, conversion, ledger_errors, interval) | valuation
     empty = type(data.assets_hierarchy.balance_children)()
     assets = trees[0].balance_children if trees[0] is not None else empty
@@ -238,12 +239,13 @@ def _income_statement(
     sections = _prune_sections(
         {"income": data.income_hierarchy, "expenses": data.expenses_hierarchy},
         filtered.account,
+        filtered.ledger.root_accounts,
     )
     trees = (sections["income"], sections["expenses"])
     balances = [(filtered.end_date, balance) for tree in trees if tree is not None for balance in _tree_balances(tree)]
     for series in (data.income_data, data.expenses_data):
         balances.extend((point.date, point.balance) for point in series)
-    valuation = _valuation(conversion, balances, allow_errors, filtered.ledger.prices, ledger_errors)
+    valuation = _valuation(conversion, balances, allow_errors, filtered.ledger, ledger_errors)
     metadata = _metadata(filtered, conversion, ledger_errors, interval) | valuation
     empty = type(data.income_hierarchy.balance_children)()
     kept = [tree.balance_children if tree is not None else empty for tree in trees]
@@ -292,6 +294,7 @@ def _scoped_earnings(filtered: Any, conversion: str, unfiltered: Any) -> Any:
     trees = _prune_sections(
         {key: chart.hierarchy(filtered, options[key], conversion) for key in ("name_income", "name_expenses")},
         filtered.account,
+        filtered.ledger.root_accounts,
     )
     earnings = type(unfiltered)()
     for tree in trees.values():
@@ -316,6 +319,7 @@ def _balance_sheet(
             "equity": data.equity_hierarchy,
         },
         filtered.account,
+        filtered.ledger.root_accounts,
     )
     trees = (sections["assets"], sections["liabilities"], sections["equity"])
     balances = [(filtered.end_date, balance) for tree in trees if tree is not None for balance in _tree_balances(tree)]
@@ -324,13 +328,19 @@ def _balance_sheet(
     # still unvalued at the report date withholds them, not an earlier row's gap.
     incomplete = any(_unvalued(balance, conversion) for _, balance in balances)
     balances.extend((point.date, point.balance) for point in data.net_worth_data)
-    valuation = _valuation(conversion, balances, allow_errors, filtered.ledger.prices, ledger_errors)
+    valuation = _valuation(conversion, balances, allow_errors, filtered.ledger, ledger_errors)
     metadata = _metadata(filtered, conversion, ledger_errors, interval) | valuation
     empty = type(data.assets_hierarchy.balance_children)()
     assets = trees[0].balance_children if trees[0] is not None else empty
     liabilities = trees[1].balance_children if trees[1] is not None else empty
     worth = _headline(_sum(assets, liabilities), conversion)
-    reconciled = not incomplete and not filtered.ledger.load_errors and conversion != "units" and not filtered.account
+    # `at_cost` leaves cost-less holdings (foreign cash) in their own units, so
+    # an "adjustment" across unlike commodities was just the FX trade, claimed
+    # as reconciled (w5/505): only a single-commodity view reconciles.
+    single = len(_sum(assets, liabilities)) <= 1 and len(data.valuation_adjustment) <= 1
+    reconciled = (
+        not incomplete and not filtered.ledger.load_errors and conversion != "units" and single and not filtered.account
+    )
     return metadata | {
         "display_precision": _display_precision(filtered),
         "assets": _tree_json(trees[0]) if trees[0] is not None else None,
@@ -340,8 +350,10 @@ def _balance_sheet(
         "current_earnings": _headline(earnings, conversion),
         "current_earnings_signs": "negative_for_gain",
         "net_profit": _headline(-earnings, conversion),
-        "valuation_adjustment": data.valuation_adjustment if reconciled else None,
-        "equity_total": data.equity_total if reconciled else None,
+        # Named in the conversion currency, as the headlines are: an empty
+        # inventory printed "—" beside `Net Worth: 0.00 USD` (w5/506).
+        "valuation_adjustment": _headline(data.valuation_adjustment, conversion) if reconciled else None,
+        "equity_total": _headline(data.equity_total, conversion) if reconciled else None,
         "equity_reconciled": reconciled,
         "net_worth": worth,
         "net_worth_series": _summary_series_json(data.net_worth_data, conversion),
@@ -355,7 +367,7 @@ def _trial_balance(filtered: Any, conversion: str, allow_errors: bool, ledger_er
     sections = {
         name: getattr(data, f"{name}_hierarchy") for name in ("assets", "liabilities", "equity", "income", "expenses")
     }
-    sections = _prune_sections(sections, filtered.account)
+    sections = _prune_sections(sections, filtered.account, filtered.ledger.root_accounts)
     metadata = _metadata(filtered, conversion, ledger_errors) | _valuation(
         conversion,
         (
@@ -365,7 +377,7 @@ def _trial_balance(filtered: Any, conversion: str, allow_errors: bool, ledger_er
             for balance in _tree_balances(tree)
         ),
         allow_errors,
-        filtered.ledger.prices,
+        filtered.ledger,
         ledger_errors,
     )
     return metadata | {
@@ -403,6 +415,12 @@ def _load(
     if otherwise is not None:
         # Before the filter compiles it, which would only warn (w5/429).
         raise protocol.UsageError(f"Invalid account filter {account!r}: {otherwise}.", ledger_errors=ledger_errors)
+    if account is not None and (problem := _invalid_pattern(account)) is not None:
+        raise protocol.UsageError(
+            f"Invalid account filter {account!r}: {problem}. Pass a parent account such as Expenses:Food, or a "
+            "regular expression such as 'Expenses:(Food|Rent)' or '.*Food.*'.",
+            ledger_errors=ledger_errors,
+        )
     try:
         filtered = ledger.get_filtered(account=account, time=time)
     except re.error as exc:
@@ -526,6 +544,25 @@ def _require_fiscal_year_end(ledger: Any, file: Path, time: str, ledger_errors: 
         )
 
 
+def _invalid_pattern(value: str) -> str | None:
+    """Why `value` is neither an account name nor a regular expression, or None.
+
+    The filter fell back to plain equality for a pattern that does not
+    compile, so `*Food*` (a shell-glob habit) reported with exit 0 and missed
+    accounts, and a wrapper's compile error quoted positions the user never
+    typed (w5/502). Python's message is for the user's own pattern.
+    """
+    from beancount.core import account
+
+    if account.is_valid(value):
+        return None
+    try:
+        re.compile(value, re.IGNORECASE)
+    except re.error as exc:
+        return str(exc)
+    return None
+
+
 def _unreportable_boundary(entries: Any) -> date | None:
     """The dated fact whose period a report cannot bound, if the ledger has one.
 
@@ -557,6 +594,8 @@ def _interval(value: str) -> Any:
 
 
 def _metadata(filtered: Any, conversion: str, ledger_errors: list[str], interval: str | None = None) -> dict[str, Any]:
+    from beancount.core.data import Custom
+
     # Every dated fact the report covers sets the period, not transactions
     # alone: a period-end balance assertion is the last thing a close writes,
     # and a report that stopped before it would omit its own evidence. Opens,
@@ -575,7 +614,12 @@ def _metadata(filtered: Any, conversion: str, ledger_errors: list[str], interval
         "as_of": end - timedelta(days=1) if end else None,
         "account_filter": filtered.account,
         "account_filters": [filtered.account] if filtered.account else None,
-        "account_filter_empty": (empty := bool(filtered.account) and not filtered.entries),
+        # A `custom` directive naming the account (a budget line) passes the
+        # account filter but makes no tree: the report printed only its
+        # heading and said the filter matched (w5/504).
+        "account_filter_empty": (
+            empty := bool(filtered.account) and all(isinstance(entry, Custom) for entry in filtered.entries)
+        ),
         "account_filter_periods": _period_terms([filtered.account]) if empty else [],
         "balance_signs": "beancount",
         "ledger_valid": not filtered.ledger.load_errors,
@@ -613,20 +657,26 @@ def _unrooted_accounts(filtered: Any) -> list[str]:
     return sorted(account for account in posted if account.split(":", 1)[0] not in roots)
 
 
-def _routed_since(currency: str, conversion: str, prices: Any, unvalued: list[date | None]) -> date | None:
+def _routed_since(
+    currency: str, conversion: str, prices: Any, unvalued: list[date | None], costs: set[str]
+) -> date | None:
     """The first date a holding with no direct quote is valued through its cost currency.
 
     A lot held at cost converts in two hops (ACME → USD → EUR) once both legs
     are quoted, so "no price at any date" would sit above a report that values
-    it. The price map does not say which lots carry a cost, so the route counts
-    only when every row the report left in units precedes it; a row still
-    unvalued on or after that date means the route is not the one in use.
+    it. Only a lot held at a cost in the route's middle currency (`costs`) takes
+    it: cost-less cash, or a lot already at a cost in the target, never does,
+    and was told a quote from the route's first date would do (w5/557). The
+    route counts only when every row the report left in units precedes it; a
+    row still unvalued on or after that date means it is not the one in use.
     """
     firsts = []
     for pair in prices.commodity_pairs(()):
         if currency not in pair:
             continue
         via = pair[1] if pair[0] == currency else pair[0]
+        if via == conversion or via not in costs:
+            continue
         legs = [prices.get_all_prices((currency, via)), prices.get_all_prices((via, conversion))]
         if all(legs):
             firsts.append(max(min(point[0] for point in leg) for leg in legs))
@@ -636,19 +686,37 @@ def _routed_since(currency: str, conversion: str, prices: Any, unvalued: list[da
     return first if all(when is not None and when < first for when in unvalued) else None
 
 
+def _cost_currencies(entries: Iterable[Any]) -> dict[str, set[str]]:
+    """Each commodity's cost currencies: those of the lots postings hold it at."""
+    from beancount.core.data import Transaction
+
+    found: dict[str, set[str]] = {}
+    for entry in entries:
+        if isinstance(entry, Transaction):
+            for posting in entry.postings:
+                currency = getattr(posting.cost, "currency", None)
+                if isinstance(currency, str) and posting.units is not None:
+                    found.setdefault(posting.units.currency, set()).add(currency)
+    return found
+
+
 def _price_summary_lines(
-    missing: list[str], dated: list[dict[str, Any]], conversion: str, prices: Any | None
+    missing: list[str], dated: list[dict[str, Any]], conversion: str, ledger: Any | None
 ) -> list[str]:
     """One line per unconverted commodity: never one line per interval date."""
     lines = []
+    costs: dict[str, set[str]] | None = None
     for currency in missing:
-        if prices is not None:
+        if ledger is not None:
+            prices = ledger.prices
             all_prices = prices.get_all_prices((currency, conversion))
             if all_prices:
                 earliest = min(point[0] for point in all_prices)
             else:
+                if costs is None:
+                    costs = _cost_currencies(ledger.all_entries)
                 unvalued = [item["date"] for item in dated if item["from"] == currency]
-                earliest = _routed_since(currency, conversion, prices, unvalued)
+                earliest = _routed_since(currency, conversion, prices, unvalued, costs.get(currency, set()))
             if earliest is None:
                 lines.append(f"{currency} has no {conversion} price at any date; shown in units")
                 continue
@@ -668,7 +736,7 @@ def _valuation(
     conversion: str,
     balances: Iterable[tuple[date | None, Mapping[str, Decimal]]],
     allow_errors: bool,
-    prices: Any | None,
+    ledger: Any | None,
     ledger_errors: list[str],
 ) -> dict[str, Any]:
     missing_dates = {
@@ -683,7 +751,7 @@ def _valuation(
         {"from": currency, "to": conversion, "date": when}
         for currency, when in sorted(missing_dates, key=lambda item: (item[1] or date.min, item[0]))
     ]
-    summary = _price_summary_lines(missing, dated, conversion, prices)
+    summary = _price_summary_lines(missing, dated, conversion, ledger)
     if pairs and not allow_errors:
         raise protocol.LedgerError(
             f"Missing prices for {', '.join(missing)} → {conversion}. "
@@ -814,6 +882,9 @@ def _display_precision(filtered: Any) -> dict[str, int]:
     """
     from beancount.core.data import Balance, Transaction
 
+    from bea_engine.ledger.reader import forget_source_lines
+
+    forget_source_lines()
     precision: dict[str, int] = {}
     # A leg Beancount interpolated holds units times cost or price, with that
     # rate's digits: an amount nobody wrote. Once the ledger writes fractional
@@ -824,22 +895,55 @@ def _display_precision(filtered: Any) -> dict[str, int]:
     # is the one evidence of its subunits: rounding a 31.5 cash leg to 32
     # would misstate the balance, so it still counts.
     inferred: dict[str, int] = {}
+    pending: list[tuple[Any, Any]] = []
 
-    def learn(number: Any, currency: Any, into: dict[str, int]) -> None:
+    def learn(number: Any, currency: Any, into: dict[str, int], limit: int | None = None) -> None:
         if not isinstance(number, Decimal) or not number.is_finite() or not isinstance(currency, str):
             return
         exponent = number.as_tuple().exponent
         digits = max(0, -exponent) if isinstance(exponent, int) else 0
+        if limit is not None:
+            digits = min(digits, limit)
         into[currency] = max(digits, into.get(currency, 0))
 
     for entry in filtered.ledger.all_entries:
         if isinstance(entry, Transaction):
             for posting in entry.postings:
                 if posting.units is not None:
-                    interpolated = bool((posting.meta or {}).get("__automatic__"))
-                    learn(posting.units.number, posting.units.currency, inferred if interpolated else precision)
+                    if (posting.meta or {}).get("__automatic__"):
+                        pending.append((entry, posting))
+                    else:
+                        learn(posting.units.number, posting.units.currency, precision)
         elif isinstance(entry, Balance):
             learn(entry.amount.number, entry.amount.currency, precision)
+    # Only a fractional inferred amount in a currency without written
+    # subunits needs source evidence. The parser records the written @@ total
+    # in its display context before dividing it into a repeating unit price.
+    sources: dict[str, tuple[tuple[str, ...], list[int]]] = {}
+    limits: dict[tuple[str, int], dict[str, int] | None] = {}
+    for entry, posting in pending:
+        if precision.get(posting.units.currency):
+            continue
+        number = posting.units.number
+        limit = None
+        exponent = number.as_tuple().exponent if isinstance(number, Decimal) else 0
+        meta = entry.meta or {}
+        filename, lineno = meta.get("filename"), meta.get("lineno")
+        if (
+            isinstance(number, Decimal)
+            and number.is_finite()
+            and isinstance(exponent, int)
+            and exponent < 0
+            and isinstance(filename, str)
+            and isinstance(lineno, int)
+            and lineno > 0
+        ):
+            key = (filename, lineno)
+            if key not in limits:
+                limits[key] = _written_transaction_precision(*key, sources)
+            written = limits[key]
+            limit = written.get(posting.units.currency) if written is not None else None
+        learn(number, posting.units.currency, inferred, limit)
     for currency, digits in inferred.items():
         if not precision.get(currency):
             precision[currency] = digits
@@ -849,13 +953,81 @@ def _display_precision(filtered: Any) -> dict[str, int]:
     return precision
 
 
+def _written_transaction_precision(
+    filename: str, lineno: int, sources: dict[str, tuple[tuple[str, ...], list[int]]]
+) -> dict[str, int] | None:
+    """Precision supported by written totals or by units times per-unit rates."""
+    from bisect import bisect_left, bisect_right
+
+    from beancount.core.data import Transaction
+    from beancount.core.display_context import Precision
+    from beancount.core.position import CostSpec
+    from beancount.parser import lexer, parser
+
+    from bea_engine.ledger.reader import _source_lines, _spelled_entries
+
+    if filename not in sources:
+        lines = _source_lines(filename)
+        if lines is None:
+            return None
+        sources[filename] = (lines, sorted(_spelled_entries(filename)))
+    lines, starts = sources[filename]
+    if not 1 <= lineno <= len(lines) or not isinstance(_spelled_entries(filename).get(lineno), Transaction):
+        return None
+    index = bisect_right(starts, lineno)
+    end = starts[index] - 1 if index < len(starts) else len(lines)
+    text = "\n".join(lines[lineno - 1 : end]) + "\n"
+    entries, _, options = parser.parse_string(text)
+    written = {
+        currency: digits
+        for currency, context in options["dcontext"].ccontexts.items()
+        if (digits := context.get_fractional(Precision.MAXIMUM)) is not None
+    }
+    # @@ has already become a per-unit price in the parser's Posting. The
+    # lexer preserves which original posting carried a total price, without
+    # mistaking a quoted/commented @@ for notation.
+    lex: Callable[[str], Iterator[tuple[str, int, bytes, object]]] = lexer.lex_iter_string
+    totals = sorted(line for kind, line, _, _ in lex(text) if kind == "ATAT")
+
+    def places(number: Any) -> int:
+        exponent = number.as_tuple().exponent if isinstance(number, Decimal) else 0
+        return max(0, -exponent) if isinstance(exponent, int) else 0
+
+    for transaction in entries:
+        if not isinstance(transaction, Transaction):
+            continue
+        for index, posting in enumerate(transaction.postings):
+            if posting.units is None:
+                continue
+            if isinstance(posting.cost, CostSpec):
+                cost = posting.cost
+                if isinstance(cost.number_per, Decimal) and (cost.number_per or cost.number_total is None):
+                    written[cost.currency] = max(
+                        written.get(cost.currency, 0), places(posting.units.number) + places(cost.number_per)
+                    )
+            elif posting.price is not None:
+                start = (posting.meta or {}).get("lineno", 0)
+                stop = (
+                    (transaction.postings[index + 1].meta or {}).get("lineno", 0)
+                    if index + 1 < len(transaction.postings)
+                    else end + 1
+                )
+                total = bisect_left(totals, start)
+                if total == len(totals) or totals[total] >= stop:
+                    currency = posting.price.currency
+                    written[currency] = max(
+                        written.get(currency, 0), places(posting.units.number) + places(posting.price.number)
+                    )
+    return written
+
+
 def _substring_match(accounts: Iterable[str]) -> Callable[[str], bool]:
     """`bea balance`'s documented matcher: a case-folded substring of the account name."""
     terms = [fold_account(term or "") for term in accounts]
     return lambda account: any(term in fold_account(account) for term in terms)
 
 
-def _report_filter_match(account: str) -> Callable[[str], bool]:
+def _report_filter_match(account: str, roots: Sequence[str]) -> Callable[[str], bool]:
     """`bea report --account`'s documented matcher: a parent account or a regular expression.
 
     This has to be the matcher Fava's `AccountFilter` already applied to the
@@ -872,14 +1044,14 @@ def _report_filter_match(account: str) -> Callable[[str], bool]:
     """
     from fava.core.filters import account_predicate
 
-    return account_predicate(account)
+    return account_predicate(account, roots)
 
 
-def _prune_sections(sections: dict[str, Any], account: str | None) -> dict[str, Any]:
+def _prune_sections(sections: dict[str, Any], account: str | None, roots: Sequence[str]) -> dict[str, Any]:
     """When `--account` is set, keep the subtrees the entry filter already kept."""
     if not account:
         return sections
-    matches = _report_filter_match(account)
+    matches = _report_filter_match(account, roots)
     return {name: _prune_tree(tree, matches) for name, tree in sections.items()}
 
 

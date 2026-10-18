@@ -42,10 +42,17 @@ Duplicate candidates show the existing entry and its source location beside
 the explanation. Fix categories or account openings
 in the mapping, rules, or ledger, then rerun the preview. `--apply`
 recomputes the preview from the current files and refuses an invalid result.
+The human preview offers `--apply` when entries are ready and no unresolved
+review blocks the import. With only exact duplicates or skipped rows it says
+`Nothing new to import.`; blocked or conflicting rows ask for resolution and
+another preview. Possible duplicates under the default review policy ask for
+a `--duplicates skip/include` decision before previewing again.
 A ledger that already fails validation blocks the import; `--allow-errors`
 previews and applies over semantic errors such as a failing balance assertion,
 never over syntax errors, and lists what it tolerated under
-`validation_warnings` in JSON.
+`validation_warnings` in JSON. Syntax errors stop both preview and apply,
+even with the flag: fix the named file and line before any rows can be
+reported ready.
 A concurrent ledger change during preparation causes exit **4**; no entries
 are appended. An `--apply` refused because duplicates need review also exits
 **4**, including under `--no-input`. A successful preview or an explicit
@@ -126,7 +133,10 @@ cp1252 or latin-1 — Windows exports with accented payees need
 `encoding=cp1252`. A bare `--csv encoding=cp1252` decodes with that codec
 and then infers the mapping like `auto`. Without the key, a non-UTF-8 file
 fails before anything is read: the error names the byte offset and, when the
-file decodes as cp1252, says so with the override to pass. A file that
+file decodes as cp1252, says so with the override to pass — unless the cp1252
+reading looks like another code page (`Wp³ata` for Polish, `Ïÿò¸ðî` for
+Cyrillic, `¤` for Latin-9's euro), when it quotes that word and asks for the
+export re-saved as UTF-8 instead. A file that
 neither UTF-8 nor cp1252 decodes is named as such: only latin-1, which reads
 any byte, would accept it, so pass `encoding=latin-1` only if that is the
 export's encoding. An `encoding=` or `delimiter=` value outside the supported
@@ -154,7 +164,13 @@ is not active on the row's date (closed before it, or opened after it), or in a
 currency the open directive disallows are shown `blocked`, not ready. An
 inactive account's row names the `close` or `open` and its line, and says to
 re-date it or to point the rule, category or `--default-account` at an open
-account. A never-opened account's row names the missing account and the
+account. Each row names all its missing and inactive accounts together, so
+fixing one does not reveal another on the next preview. When the source account opens
+after the row and carries init's `Opening balances` transaction on that open
+date, the reason also names that transaction and its location: review and move
+or restate it to describe the balance before the imported history, so that
+history is not counted twice. Import does not edit existing opens or opening
+balances. A never-opened account's row names the missing account and the
 `bea add open` line that fixes it. Every blocked row stays in the diff so the
 proposal stays visible, and `--apply` refuses with exit **4** while any row is
 blocked. Every row blocked on the same account prints the same
@@ -178,7 +194,10 @@ currency the account allows. An account under a root the ledger
 does not use (`Foo:Bar`; the roots are its `name_*` options) can never be
 opened: `--account`, `--default-account`, and rule accounts naming one exit
 **2**, a category cell naming one queues the row for review, and an importer
-posting to one is blocked without an `add open` suggestion.
+posting to one is blocked without an `add open` suggestion. The same holds
+for the `--account` itself: a row posted against its own source cancels
+out, so a rule or `--default-account` naming it exits **2** and a category
+cell naming it queues the row for review.
 
 ### Reading the header row
 
@@ -259,6 +278,16 @@ EOF
 bea --file books/main.bean import category.csv --csv date=Date,amount=Amount,narration=Description,category=Category --account Assets:Checking --rules category-rules.toml
 ```
 
+Card and bank exports often carry a `Status` column (`Pending`/`Posted`), and
+a pending charge often posts days later at another amount (a tip, a hold, a
+currency conversion). Map that column with `status=Column`, as header
+inference does for a `Status` header, and a row whose status reads `Pending`,
+`Authorized` or a hold is left out. The preview names it ("Left out 1 pending
+row(s) (…); import them from the export they post in") and counts it in
+`skipped_pending`. The posted row then arrives once, in the next export. A
+mapping without `status=` imports pending rows as they are, and a column that
+marks some rows pending is named in a note suggesting `status=` for it.
+
 The mapping is remembered per root ledger, CSV header row, and source account,
 along with the `--rules` path, `--default-account`, an explicit
 `--date-format`, and a delimiter you passed (`--delimiter` or `delimiter=`; a
@@ -267,7 +296,10 @@ reads the header gives way to detection with a note) — but never `sign=`, whic
 always needs passed explicitly. The one exception keeps a preview honest: after
 `sign=ledger`, a flag-free `--apply` of the byte-identical file re-applies it
 and says so; another file sharing the header is read bank-signed, with a note
-naming the file that used `sign=ledger`. A `--csv` that carries only keys —
+naming the file that used `sign=ledger`. Each file keeps its own sign, so
+previewing next month's export with the same header leaves this month's
+`sign=ledger` in place. Previewing a file again without it drops only that
+file's. A `--csv` that carries only keys —
 `--csv sign=ledger`, `--csv encoding=cp1252`, `--csv delimiter=';'` — applies them
 on top of the mapping remembered for that header and account, keeping its
 columns, rules, default account and date format; it infers from the header only
@@ -323,6 +355,14 @@ still succeeds and says what to pass next time — `Could not remember the
 column mapping: <reason>. Pass --csv on the next import.`, or `Could not
 remember the importer path: <reason>. Pass --config on the next import.` — on
 stderr and in the JSON `notes` alike.
+A remembered importer record that is not valid JSON, or not of the form
+`{"config": "<path>"}`, selects nothing, just like an importer that was moved
+away. The note (`The remembered importer record <file> is not valid; ignoring
+it.`) names the file, and the `importers.py` and header-row fallbacks apply.
+A record bea cannot read (wrong mode) still stops a flag-free import, since it
+may name the importer the ledger relies on. The refusal names the file. Make
+it readable or delete it, or choose for that run with `--config FILE` or
+`--csv auto`.
 
 ## A Python importer (`--config`)
 
@@ -384,6 +424,10 @@ process it runs prints — is captured in the preview's `importer_output` field
 so it does not corrupt JSON. If the importer then raises, what it printed first
 is kept: human output shows it on stderr ahead of the error, and JSON carries
 it as `error.result.importer_output`.
+A configuration that calls `sys.exit` — a Beangulp ingest script whose
+`beangulp.Ingest(CONFIG)()` is not under `if __name__ == "__main__":` — is
+reported the same way, as `Importer failed (SystemExit: N)` with that hint and
+exit 1, before anything is written.
 For importer exceptions, put `--debug` before the command to see the traceback:
 
 ```bash norun
@@ -434,8 +478,20 @@ skills deduplicate against each other: the ledger itself is the dedup database.
   `--id-key id` is accepted in any case (`ID`, `Id`) as an alias for `bank_id`,
   the canonical key the `--csv` path writes, and a `--csv` mapping with `id=`
   keeps `bank_id` in the list whatever keys you name, so `--id-key` never
-  silently disables bank-ID dedupe.
-  IDs must be stable and unique within that account. An exact match is skipped;
+  silently disables bank-ID dedupe. A default key spelled in a way no metadata
+  key can be folds to it (`FITID` is `fitid`). A legal key is used as typed,
+  camelCase included (`fitId`, `bank_ID`). A metadata key needs at least two
+  ASCII characters: a lowercase letter followed by letters (either case),
+  digits, `-` or `_`. Any other key that cannot be a metadata key (including an
+  empty or single-character key, or one not starting lowercase) exits **2**
+  before the ledger is read or the importer runs.
+  IDs must be stable and unique within that account. A transfer written by
+  importing one account (its first posting) keeps that account's ID even
+  though it also posts to the other account. Importing the other account never
+  takes that ID for one of its own rows. When the row has the same amount
+  within a week, it is a possible duplicate ("on the other side of a transfer
+  from …"), for banks that give both legs one reference; otherwise it is new.
+  An exact match is skipped;
   reused native IDs with different source amounts or commodities are conflicts
   requiring review. An ID repeated within one export with different data is a
   conflict too; it names the earlier row of the import, and the fix is in the
@@ -445,8 +501,13 @@ skills deduplicate against each other: the ledger itself is the dedup database.
   skip: choose
   `--duplicates include` to keep both, or map that column to something other
   than `id`. A same-day repeat that differs only in its description is still one
-  transaction and is written once. Payee, narration, date, flag, and counter-account edits to an entry already in the ledger do
-  not change that identity (generated ids: see below). The preview's `ID` column names each row's
+  transaction and is written once. The same holds across exports, where a
+  monthly autopay arrives one month per file. A ledger entry under the row's
+  native ID dated a week or more from it is a possible duplicate naming that
+  date, never a silent skip. A re-import is matched to the entry under that ID
+  dated nearest the row. Payee, narration, date, flag, and counter-account edits to an entry already in the ledger do
+  not change that identity (generated ids: see below). For a native ID, a date
+  moved by less than a week still matches. The preview's `ID` column names each row's
   identifier source: `bank` for a bank column, `hash` for a content hash, or
   `importer` for an `import-id` the importer supplied.
 - A row with a native ID is written with `import-id: "<kind>:<id>"` (`bank_id`
@@ -457,7 +518,11 @@ skills deduplicate against each other: the ledger itself is the dedup database.
   (`-54.2 USD`) — with the per-unit cost (and lot label) or price of a source
   posting held at cost or priced (`10 AAPL {100 USD}`), so two same-day buys of
   one share count at different prices are two rows; ids written before that
-  (units only) still match, but only the same lot — the narration (or payee when
+  (units only) still match, but only the same lot. A cost the importer leaves
+  open (`-4 HOOL {}`) compares only what it states, so it matches the lot
+  booking chose for the entry already in the ledger, or the lots it chose
+  when the sale spans several (`-20 HOOL {}` against `-10 HOOL {150 USD}` and
+  `-10 HOOL {155 USD}`, the units adding up) — the narration (or payee when
   narration is empty) uppercased with whitespace collapsed, and the source
   account. A row with both a payee and a narration hashes both, as
   `date|amount|payee|narration|account`, so rows that differ only in payee
@@ -468,10 +533,11 @@ skills deduplicate against each other: the ledger itself is the dedup database.
   the row falls. Keep this metadata when editing
   entries. New writes no longer carry the pre-release `bea_import_id` key, but
   existing entries with it still match on re-import.
-- A generated id matches by its digest under any documented prefix, so a bank
-  export overlapping history that `beancount-migrate` wrote as
-  `monarch:sha256:…` (or `mint:`/`qbo:`) is skipped rather than written
-  again. For each side of a merged transfer, the digest is found through
+- A generated id matches by its digest under any source prefix
+  (`<source>:sha256:<16 hex>`, a lowercase source name). So a bank export
+  overlapping history that `beancount-migrate` wrote as `monarch:sha256:…`
+  (or `mint:`, `qbo:`, or the generic path's `ynab:`, `actual:` and the like)
+  is skipped rather than written again. For each side of a merged transfer, the digest is found through
   `import-id` or `import-id-2`. The digest already binds the date, amount,
   description, and account of the original source row, so a canonical
   generated-id hit is a duplicate even if the ledger's date, amounts, payee, or
@@ -498,11 +564,21 @@ skills deduplicate against each other: the ledger itself is the dedup database.
 - Date, normalized payee, and signed source amount/currency identify a *possible*
   duplicate even when bank IDs or narration differ. A row with no payee (the
   one-description mapping) is compared by its normalized narration instead, so
-  two different same-day purchases of one amount are both new. This does not prove
+  two different same-day purchases of one amount are both new. When either the
+  row or an entry already in the ledger has no payee, the two meet on their
+  narrations. So a bank export of rows a migration wrote as payee plus
+  statement text is not booked again. Two different named payees never meet on
+  a shared narration, and neither do two rows of one export. This does not prove
   duplication: two real purchases can have identical details. `--apply` requires
   `--duplicates skip` or `--duplicates include`; choose include to preserve
   legitimate repeated purchases. Review the rows before choosing;
   the choice applies to all possible matches in that invocation.
+- The other side of a transfer is a possible duplicate too, whatever each bank
+  calls it. A transfer written by importing another balance-sheet account (its
+  first posting) that posts this row's amount to `--account` within three days
+  is named as "A transfer from … already posts …; this row may be its other
+  side". So `TRANSFER TO SAVINGS` imported from checking and `TRANSFER FROM
+  CHECKING` from savings are booked once, after `--duplicates skip`.
 - Identical nontransaction directives are skipped. They are compared, and
   written, as the ledger reads them back: text in Unicode NFC, and a balance
   assertion without the difference a failing one reports. A `price` directive
@@ -522,7 +598,10 @@ Both existing entries and accepted rows in the same batch participate in
 matching. Existing entries are the ones written in the ledger's files: a
 transaction a plugin generates — a `fava.plugins.forecast` projection, an
 amortization copy — is neither a duplicate nor a possible duplicate, so a real
-payment it predicted imports as new. `bea add transactions --from FILE.json` remains a plain validated
+payment it predicted imports as new. This includes the projection on the
+template's own date and generated fees sharing a written transaction's line:
+import matching requires the transaction's payee and narration to be declared
+at that source location. `bea add transactions --from FILE.json` remains a plain validated
 append operation and intentionally does not deduplicate.
 
 ## Python dependencies and metadata
@@ -557,7 +636,12 @@ decimal numbers, dates, and amounts. A Python `int` metadata value is written
 as a number (`check_number=1042` becomes `check_number: 1042`); a value
 Beancount cannot print, such as a `float` or an arbitrary object, stops the
 import with `Importer NAME row N cannot be written as a ledger entry` and
-writes nothing. Custom directive boolean/date values also
+writes nothing. So does a row that prints but would not read back as one
+directive (an uppercase metadata key, a `NaN` amount, a tag with a space), a
+date that is not a `datetime.date`, and a source posting with no amount; the
+sentence goes on to name the field. A row the ledger refuses once appended,
+such as one that does not balance, is shown `invalid` with Beancount's reason,
+is not counted ready, and `--apply` refuses with exit **1** naming it. Custom directive boolean/date values also
 survive listing and serialization. See [the JSON reference](USAGE.md#investment-postings-and-metadata)
 for the typed metadata representation used by `bea list transaction` and
 `bea add transactions`.

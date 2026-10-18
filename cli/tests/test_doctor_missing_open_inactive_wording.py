@@ -73,7 +73,9 @@ def _missing_open(tmp_path: Path, text: str) -> subprocess.CompletedProcess[str]
 def test_inactive_references_count_distinct_accounts(tmp_path: Path, text: str, references: int) -> None:
     result = _missing_open(tmp_path, text)
     assert result.returncode == 1, result.stderr
-    assert result.stdout.count("inactive account 'Assets:Cash'") == references
+    # On stderr: stdout holds only directives, so it can be appended (w5/567).
+    assert result.stderr.count("inactive account 'Assets:Cash'") == references
+    assert "inactive" not in result.stdout
     message = " ".join(result.stderr.split())
     assert f"{references} reference(s) to 1 inactive account(s)" in message
     assert "before the open date or after the close" in message
@@ -84,3 +86,13 @@ def test_an_active_ledger_reports_nothing(tmp_path: Path) -> None:
     result = _missing_open(tmp_path, ACTIVE)
     assert result.returncode == 0, result.stderr
     assert "inactive" not in result.stdout + result.stderr
+
+
+def test_the_documented_append_leaves_only_directives(tmp_path: Path) -> None:
+    """`missing-open main.bean >> main.bean` appended the diagnostics too, and the ledger stopped parsing (w5/567)."""
+    text = '2024-02-01 open Assets:Cash USD\n\n2024-01-15 * "early"\n  Assets:Cash  5 USD\n  Income:Gift\n'
+    result = _missing_open(tmp_path, text)
+
+    assert result.returncode == 1, result.stderr
+    assert [line for line in result.stdout.splitlines() if line.strip()] == ["2024-01-15 open Income:Gift"]
+    assert "inactive account 'Assets:Cash'" in result.stderr

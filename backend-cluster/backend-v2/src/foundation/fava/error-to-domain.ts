@@ -4,6 +4,7 @@ import {
   DomainError,
   ForbiddenError,
   InternalServerError,
+  NewLedgerErrorsError,
   NotFoundError,
   PremiumRequiredError,
   RateLimitedError,
@@ -17,6 +18,11 @@ import { FavaApiError } from "./api-client";
 const LEDGER_NAME_ALREADY_EXISTS = "LEDGER_NAME_ALREADY_EXISTS";
 const DIRECTIVE_LIMIT_EXCEEDED = "DIRECTIVE_LIMIT_EXCEEDED";
 const UNBALANCED = "UNBALANCED";
+/**
+ * The ledger service refused structured entries that would add bean-check
+ * errors (w0/m2), the structured twin of the text-append refusal.
+ */
+const NEW_LEDGER_ERRORS = "NEW_LEDGER_ERRORS";
 const RESOURCE_LIMIT_MESSAGE =
   /^(.*?) limit reached\. Maximum: (\d+), Current: (\d+)\./i;
 
@@ -84,6 +90,14 @@ export function favaApiErrorToDomainError(
 
   const resourceLimit = resourceLimitFromError(error);
   if (resourceLimit) return resourceLimit;
+
+  if (code === NEW_LEDGER_ERRORS) {
+    const details = error.body?.details;
+    const named =
+      (typeof details?.detail === "string" && details.detail) || message;
+    const count = typeof details?.count === "number" ? details.count : 1;
+    return new NewLedgerErrorsError("entries", count, named);
+  }
 
   if (code === UNBALANCED) {
     const details = error.body?.details;

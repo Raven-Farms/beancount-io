@@ -17,6 +17,23 @@ const bgAccounts: Record<string, TranslationEntry> = {
     message: "Сметката трябва да започва с един от: {prefixes}",
     description: "Validation error when account prefix is invalid",
   },
+  "page.accounts.timeFilterNotApplied": {
+    message:
+      "Салдата тук са текущи. Филтърът по време не се прилага за тази страница.",
+    description:
+      "Note on the Accounts directory when a Time filter is in the URL; its balances are always current",
+  },
+  "page.accounts.accountAlreadyOpen": {
+    message: "{account} вече е открита (от {date}).",
+    description:
+      "Validation error when the account to open is already open; {account} is the name, {date} its open date",
+  },
+  "page.accounts.accountAlreadyClosed": {
+    message:
+      "{account} е закрита на {date}; Beancount не позволява повторното ѝ откриване.",
+    description:
+      "Validation error when the account to open was opened and later closed; {account} is the name, {date} its close date",
+  },
   "page.accounts.accountName": {
     message: "Наименование на сметката",
     description: "Form label for account name input",

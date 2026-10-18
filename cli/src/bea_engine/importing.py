@@ -16,10 +16,8 @@ import re
 import runpy
 import shlex
 import sys
-import tempfile
 import unicodedata
-from collections.abc import Iterator, Sequence
-from contextlib import contextmanager, redirect_stderr, redirect_stdout
+from collections.abc import Sequence
 from dataclasses import dataclass
 from decimal import Context, Decimal
 from pathlib import Path
@@ -30,11 +28,13 @@ from bea_engine.ledger.text import (
     bea_command,
     checked_operating_currencies,
     ledger_roots,
+    new_account_format_problem,
     reports_unused_accounts,
     unknown_root_message,
 )
-from bea_engine.ledger.writer import format_entry, normalize_entry_strings
-from bea_engine.protocol import ConflictError, EngineError, LedgerError, UsageError
+from bea_engine.ledger.writer import format_entry, nfc_entry_accounts, normalize_entry_strings
+from bea_engine.paths import expand_path
+from bea_engine.protocol import ConflictError, EngineError, LedgerError, UsageError, capturing
 from bea_engine.query import format_error
 
 _IDENTITY_KINDS = {
@@ -47,35 +47,25 @@ _IDENTITY_KINDS = {
 _DEFAULT_ID_KEYS = ["bank_id", "fitid", "transaction_id", "imported_id"]
 
 
-@contextmanager
-def _capturing(logs: io.StringIO) -> Iterator[None]:
-    """Collect everything the importer prints into `importer_output`.
+def _exited(exc: SystemExit, logs: io.StringIO) -> EngineError:
+    """An importer configuration that called `sys.exit`, as the importer failure it is.
 
-    `redirect_stdout` swaps only the Python objects; a `subprocess.run` or an
-    `os.write(1, …)` inside the importer writes to the inherited descriptors,
-    which bypassed the capture (w1/061). Descriptors 1 and 2 point at a
-    scratch file for the duration and its bytes are appended afterwards.
+    A Beangulp ingest script reused as `--config` runs `Ingest(CONFIG)()`
+    when it is loaded, and Click exits. `SystemExit` is no `Exception`, so it
+    passed the importer guard, the engine answered nothing, and the frontend
+    said the engine "did not answer" and, for `--apply`, that the outcome was
+    unknown, though nothing had been written (w5/634).
     """
-    with tempfile.TemporaryFile() as sink:
-        saved: list[tuple[int, int]] = []
-        for stream in (sys.stdout, sys.stderr):
-            try:
-                stream.flush()
-                fd = stream.fileno()
-            except (AttributeError, OSError, ValueError):
-                continue
-            if fd in (1, 2) and all(fd != kept for kept, _ in saved):
-                saved.append((fd, os.dup(fd)))
-                os.dup2(sink.fileno(), fd)
-        try:
-            with redirect_stdout(logs), redirect_stderr(logs):
-                yield
-        finally:
-            for fd, copy_fd in saved:
-                os.dup2(copy_fd, fd)
-                os.close(copy_fd)
-            sink.seek(0)
-            logs.write(sink.read().decode("utf-8", "replace"))
+    status = "" if exc.code is None else f": {exc.code}"
+    return _with_output(
+        LedgerError(
+            f"Importer failed (SystemExit{status}): the configuration called sys.exit, as an unguarded "
+            'beangulp.Ingest(CONFIG)() does. Put that call under if __name__ == "__main__": to use the '
+            "script with --config.",
+            traceback=_traceback(exc),
+        ),
+        logs,
+    )
 
 
 def _with_output(error: EngineError, logs: io.StringIO) -> EngineError:
@@ -92,6 +82,9 @@ def _with_output(error: EngineError, logs: io.StringIO) -> EngineError:
     return error
 
 
+_METADATA_KEY = re.compile(r"[a-z][A-Za-z0-9_-]+")
+
+
 def _effective_id_keys(id_keys: list[str] | None, *, csv_id_mapped: bool = False) -> list[str]:
     """Resolve `--id-key` values to metadata keys the CSV mapper actually writes.
 
@@ -103,13 +96,32 @@ def _effective_id_keys(id_keys: list[str] | None, *, csv_id_mapped: bool = False
     header spelling) can name nothing else. And a mapping with `id=` keeps
     `bank_id` whatever keys were typed, since that is the only key its rows
     carry: a list without it would turn the mapped ids off (w5/254).
+
+    The default keys fold case the same way, so `FITID`, as OFX spells it,
+    is `fitid`. Any other key a metadata key cannot be — shorter than two
+    characters, or not starting lowercase — is refused: it would replace the
+    defaults with a key no entry carries and turn native-ID matching off (w5/469).
     """
     if not id_keys:
         return list(_DEFAULT_ID_KEYS)
     resolved: list[str] = []
     seen: set[str] = set()
     for key in [*id_keys, *(["bank_id"] if csv_id_mapped else [])]:
-        mapped = "bank_id" if key.lower() == "id" else key
+        folded = key.lower()
+        # Only a spelling that cannot be a key folds: `fitId` and `bank_ID` are
+        # keys a ledger may use, and folding them turned their matching off (w5/604).
+        if folded == "id":
+            mapped = "bank_id"
+        elif _METADATA_KEY.fullmatch(key) or folded not in _DEFAULT_ID_KEYS:
+            mapped = key
+        else:
+            mapped = folded
+        if not _METADATA_KEY.fullmatch(mapped):
+            raise UsageError(
+                f"--id-key {key!r} is not a metadata key; a key needs at least two characters, starts with a "
+                f"lowercase ASCII letter, and then holds ASCII letters, digits, '-' or '_', "
+                f"such as {', '.join(_DEFAULT_ID_KEYS)}."
+            )
         if mapped not in seen:
             seen.add(mapped)
             resolved.append(mapped)
@@ -146,42 +158,44 @@ def answer(
 
     from bea_engine import managed_load
     from bea_engine.csv_mapper import CsvImporter, load_rules, parse_delimiter, parse_encoding, parse_mapping
-    from bea_engine.ledger.reader import entry_generated, forget_source_lines
+    from bea_engine.ledger.reader import entry_generated, forget_source_lines, shared_locations
 
     if duplicates not in {"review", "skip", "include"}:
         raise UsageError(f"--duplicates must be review, skip, or include; got {duplicates!r}.")
     if csv_mapping is not None and config is not None:
         raise UsageError("Pass --csv or --config, not both.")
+    # Refused before the ledger loads or the importer's extract() runs, which
+    # may have side effects of its own (w5/604).
+    _effective_id_keys(id_keys)
 
     file = Path(os.path.abspath(file))
-    source = source.expanduser().resolve()
+    source = expand_path(source, "import source").resolve()
     if not source.is_file():
         raise UsageError(f"Export file not found: {source}")
 
     source_bytes = source.read_bytes()
     snapshot = ledger_write.LedgerSnapshot.capture(file)
     target = ledger_write.destination(file, into)
-    original = snapshot.require_target(target)
+    original = snapshot.require_target(target, into=into)
     existing, errors, options = managed_load.load_file(file, snapshot=snapshot)
-    # An account staged for this import under `nounused` is the one error the
-    # import itself clears; validation still refuses a result that leaves it.
-    if not allow_errors and not all(ledger_write.is_unused_open(error) for error in errors):
-        raise LedgerError(
-            f"Ledger has {len(errors)} error(s). Pass --allow-errors to preview and apply anyway.",
-            details=[format_error(error, ledger_file=file) for error in errors],
-        )
+    # Appended rows cannot repair unreadable existing text. Refuse it before
+    # extracting rows or calling any ready, even under --allow-errors.
+    # An account staged under nounused can still be cleared by this import.
+    if any(ledger_write.is_syntax_error(error) for error in errors) or (
+        not allow_errors and not all(ledger_write.is_unused_open(error) for error in errors)
+    ):
+        raise ledger_write.preexisting_refusal(errors, [format_error(error, ledger_file=file) for error in errors])
 
     logs = io.StringIO()
     notes: list[str] = []
     roots = ledger_roots(options)
     csv_mode = csv_mapping is not None
     skipped_blank = 0
+    skipped_pending = 0
     csv_id_mapped = False
     if csv_mode:
         if csv_account is None or csv_mapping is None:
-            raise UsageError(
-                "--csv needs --account ACCOUNT for the source account, for example --account Assets:Checking."
-            )
+            raise UsageError("--csv needs --account ACCOUNT, naming the account the export belongs to.")
         mapping = parse_mapping(csv_mapping)
         csv_id_mapped = mapping.column("id") is not None
         # Before the preview, not after: an invalid name would otherwise block
@@ -191,8 +205,26 @@ def answer(
         # `Expenses:` name is refused on a ledger that sets `name_expenses`.
         if default_account is None:
             default_account = f"{roots[-1]}:Uncategorized"
+            fallback = f"the built-in default account {default_account}"
         else:
             default_account = _valid_account(default_account, "--default-account", roots)
+            fallback = f"--default-account {default_account}"
+        # A counter posting to the source account cancels the bank movement:
+        # `-100 USD` and `+100 USD` on Assets:Checking, written with exit 0
+        # and gone from its balance (w5/468).
+        if default_account == csv_account:
+            raise UsageError(
+                f"{fallback} is the --account being imported; an uncategorized row would post against its "
+                "own source and cancel out. Name the account its money goes to or comes from."
+            )
+        rules = load_rules(Path(rules_file), roots) if rules_file is not None else None
+        for number, listed in enumerate(rules or [], start=1):
+            if listed.account == csv_account:
+                raise UsageError(
+                    f"Rules file {rules_file}: rule {number} (match {listed.pattern!r}) posts to {listed.account}, the "
+                    "--account being imported; a matching row would post against its own source and cancel out. "
+                    "Name the account its money goes to or comes from."
+                )
         resolved_date_format = "%Y-%m-%d" if date_format is None else date_format
         resolved_delimiter = parse_delimiter(delimiter) if delimiter is not None else None
         resolved_encoding = parse_encoding(encoding) if encoding is not None else "utf-8"
@@ -201,7 +233,7 @@ def answer(
             account=csv_account,
             mapping=mapping,
             date_format=resolved_date_format,
-            rules=load_rules(Path(rules_file), roots) if rules_file is not None else None,
+            rules=rules,
             default_account=default_account,
             currency=_row_currency(existing, csv_account, options, checked="currency" not in mapping.columns),
             known_currencies=_known_currencies(existing, operating),
@@ -212,7 +244,7 @@ def answer(
         preview_config = csv_mapping
         try:
             account = str(importer.account(str(source)))
-            with _capturing(logs):
+            with capturing(logs):
                 entries = _extracted(importer, source, existing)
         except EngineError as exc:
             _with_output(exc, logs)
@@ -222,6 +254,19 @@ def answer(
                 LedgerError(f"Importer failed ({type(exc).__name__}): {exc}.", traceback=_traceback(exc)), logs
             ) from exc
         skipped_blank = importer.skipped_blank_rows
+        skipped_pending = len(importer.skipped_pending)
+        if importer.skipped_pending:
+            pending = "; ".join(importer.skipped_pending[:3]) + ("; …" if len(importer.skipped_pending) > 3 else "")
+            notes.append(
+                f"Left out {skipped_pending} pending row(s) ({pending}); import them from the export they post in."
+            )
+        if importer.pending_column is not None:
+            column, count = importer.pending_column
+            notes.append(
+                f"Column {column!r} marks {count} row(s) pending, and they are imported as they are: a pending "
+                f"charge that posts at another amount is then booked twice. Add status={column} to the --csv "
+                "mapping to leave pending rows out until they post."
+            )
         if importer.constant_currency is not None:
             notes.append(
                 f"currency={importer.constant_currency} names no column of {source.name}, so every row "
@@ -235,16 +280,24 @@ def answer(
                 f"{default_account} with flag '!'. Categorize them with --rules, or map a column of full "
                 "account names with --csv category=Column."
             )
+        if importer.source_categories:
+            notes.append(
+                f"{importer.source_categories} row(s) carry the category {csv_account}, the account being imported, "
+                f"so they post to {default_account} with flag '!' instead of cancelling out. Categorize them with "
+                "--rules."
+            )
     else:
         if config is None:
             raise UsageError("Choose a Python importer with --config FILE, or use --csv for a column mapping.")
-        config = config.expanduser().resolve()
+        config = expand_path(config, "--config").resolve()
         preview_config = str(config)
         sys.path.insert(0, str(config.parent))
         try:
-            with _capturing(logs):
+            with capturing(logs):
                 importer = _importer(config, source, importer_name)
-                account = str(importer.account(str(source)))
+                # NFC like the row accounts `_writable` normalizes, so an NFD
+                # source account still finds its own legs (w5/530).
+                account = unicodedata.normalize("NFC", str(importer.account(str(source))))
                 entries = _extracted(importer, source, existing)
         except EngineError as exc:
             _with_output(exc, logs)
@@ -271,6 +324,8 @@ def answer(
                 ),
                 logs,
             ) from exc
+        except SystemExit as exc:
+            raise _exited(exc, logs) from exc
         except Exception as exc:
             raise _with_output(
                 LedgerError(f"Importer failed ({type(exc).__name__}): {exc}.", traceback=_traceback(exc)), logs
@@ -279,9 +334,18 @@ def answer(
             sys.path.pop(0)
 
     entries = [_writable(entry, index + 1, importer, logs) for index, entry in enumerate(entries)]
+    for index, entry in enumerate(entries):
+        if isinstance(entry, Transaction) and not all(_has_explicit_units(p) for p in _source_legs(entry, account)):
+            raise _with_output(
+                LedgerError(
+                    f"Importer {_name(importer)} row {index + 1} cannot be written as a ledger entry: its "
+                    f"{account} posting has no amount. The importer must supply explicit source amounts."
+                ),
+                logs,
+            )
     keys = _effective_id_keys(id_keys, csv_id_mapped=csv_id_mapped)
     identities: dict[tuple[str, str, str], Any] = {}
-    fingerprints: dict[tuple[Any, ...], Any] = {}
+    fingerprints: dict[tuple[Any, ...], list[Any]] = {}
     open_currencies = _open_currencies(existing, Open)
     windows = _active_windows(existing)
     # Only what the ledger writes can be a duplicate: a forecast plugin's
@@ -289,13 +353,41 @@ def answer(
     # duplicate" cited at the template's line, and `--duplicates skip` then
     # dropped them all (w5/325).
     forget_source_lines()
-    written = [entry for entry in existing if not entry_generated(entry, type(entry).__name__.lower())]
+    lifecycles = ledger_write._lifecycles(existing, snapshot.contents)
+    shared = shared_locations(existing)
+    written = [
+        entry
+        for entry in existing
+        if not entry_generated(
+            entry,
+            type(entry).__name__.lower(),
+            shared,
+            require_declaration=isinstance(entry, Transaction),
+        )
+    ]
+    opening_balances = _opening_balances(written, account, roots[2])
+    # Bank ids another account issued, reached here only through a transfer's
+    # counter leg: never an exact match for this account's rows (w5/598).
+    transfer_ids: dict[tuple[str, str, str], Any] = {}
+    # Every entry under one bank id, not only the last: a reused reference
+    # (w5/599) names several, and a row is the one nearest its date.
+    dated: dict[tuple[str, str, str], list[Any]] = {}
+    # Transfers another account's import wrote, by the amounts they post here:
+    # each bank words its side differently, so only date and amount pair them (w5/600).
+    counterparts: dict[tuple[str, ...], list[Any]] = {}
     for entry in written:
         entry = normalize_entry_strings(entry)
         if isinstance(entry, Transaction) and _source_legs(entry, account):
+            elsewhere = _issued_elsewhere(entry, account, roots[:2])
+            if elsewhere:
+                counterparts.setdefault(_amounts_key(_fingerprint(entry, account)), []).append(entry)
             for identity in _identities(entry, account, keys):
-                identities[identity] = entry
-            fingerprints[_candidate_key(entry, account)] = entry
+                if elsewhere and _is_native_identity(identity):
+                    transfer_ids[identity] = entry
+                else:
+                    identities[identity] = entry
+                    dated.setdefault(identity, []).append(entry)
+            _index_twin(fingerprints, entry, account, ledger=True)
     if source.read_bytes() != source_bytes:
         raise ConflictError("The export changed during extraction; nothing was written. Retry.")
     source_hash = hashlib.sha256(source_bytes).hexdigest()
@@ -417,18 +509,47 @@ def answer(
                         )
                     else:
                         reason = f"Repeats row {earlier} of this import."
-            elif _candidate_key(entry, account) in fingerprints:
+                elif status == "duplicate" and all(_is_native_identity(key) for key, _, _ in hits):
+                    # Across exports too: a monthly autopay arrives one month
+                    # per file, and February's rent was dropped as January's
+                    # with exit 0 (w5/599). A date corrected in the ledger
+                    # moves it days, not weeks, and stays the same row.
+                    match = _nearest(dated.get(hits[0][0], [match]), entry, account, fingerprint)
+                    days = abs((entry.date - match.date).days)
+                    if days >= _REUSED_REFERENCE_DAYS:
+                        status = "possible_duplicate"
+                        reason = (
+                            f"Stable ID {matched_value} is already in the ledger on {match.date}, {days} days from "
+                            "this row; a reference reused on other dates, such as a monthly autopay's, is not a "
+                            "unique ID."
+                        )
+            elif (other_side := _transfer_side(ids, transfer_ids, entry, account, fingerprint)) is not None:
+                (_, _, matched_value), match = other_side
+                status, reason = (
+                    "possible_duplicate",
+                    f"Stable ID {matched_value} is on the other side of a transfer from {match.postings[0].account} "
+                    f"dated {_relative_days(match.date, entry.date)}, for the same amount; a bank that shares one "
+                    "reference across both legs makes this that transfer.",
+                )
+            elif (twin := _possible_twin(fingerprints, entry, account, fingerprint, owners, index)) is not None:
                 status, reason, match = (
                     "possible_duplicate",
-                    "Date, payee and source amount match; different bank IDs or narration do not rule out a duplicate."
-                    if _match_text(entry.payee)
-                    else "Date, narration and source amount match; different bank IDs do not rule out a duplicate.",
-                    fingerprints[_candidate_key(entry, account)],
+                    _twin_reason(entry, twin, batch_rows.get(id(twin)), ours=id_source != "hash", keys=keys),
+                    twin,
+                )
+            elif (counterpart := _transfer_counterpart(counterparts, entry, account, fingerprint)) is not None:
+                status, reason, match = (
+                    "possible_duplicate",
+                    f"A transfer from {counterpart.postings[0].account} dated "
+                    f"{_relative_days(counterpart.date, entry.date)} already posts {_source_amounts(entry, account)} "
+                    f"to {account}; this row may be its other side, worded by this bank.",
+                    counterpart,
                 )
             if status == "new" or (status == "possible_duplicate" and duplicates == "include"):
                 for identity in ids:
                     identities[identity] = entry
-                fingerprints[_candidate_key(entry, account)] = entry
+                    dated.setdefault(identity, []).append(entry)
+                _index_twin(fingerprints, entry, account, ledger=False)
                 batch_rows[id(entry)] = index + 1
         rule = entry.meta.pop("_csv_rule", None) if isinstance(entry, Transaction) else None
         text = format_entry(entry) if isinstance(entry, Transaction) else _directive_text(entry)
@@ -469,6 +590,8 @@ def answer(
                 ledger=file,
                 source=account if csv_mode else None,
                 windows=windows,
+                lifecycles=lifecycles,
+                opening_balances=opening_balances,
             )
             if blocked_reason is not None:
                 status, reason, include = "blocked", blocked_reason, False
@@ -510,10 +633,13 @@ def answer(
     # accounts are read again from the ledger as the import would leave it.
     opened_after = open_currencies
     if any(name not in open_currencies for _, entry, _, _ in held for name, _ in _entry_accounts(entry)):
-        proposal = [row["entry"] for row in rows if row["include"] or row["status"] == "blocked"]
-        entries_after = _entries_after(snapshot, target, original, proposal)
+        proposed_rows = [row for row in rows if row["include"] or row["status"] == "blocked"]
+        entries_after = _entries_after(
+            snapshot, target, original, [row["entry"] for row in proposed_rows], [row["row"] for row in proposed_rows]
+        )
         after = _open_currencies(entries_after, Open)
         windows_after = _active_windows(entries_after)
+        lifecycles_after = ledger_write._lifecycles(entries_after, snapshot.contents)
         opened_after = after
         for row_dict, entry, was, why in held:
             still = _blocked_reason(
@@ -525,6 +651,8 @@ def answer(
                 ledger=file,
                 source=account if csv_mode else None,
                 windows=windows_after,
+                lifecycles=lifecycles_after,
+                opening_balances=opening_balances,
             )
             if still is None:
                 row_dict.update(status=was, reason=why, include=True)
@@ -553,6 +681,16 @@ def answer(
         validation_errors = exc.details or [str(exc)]
         # What `--allow-errors` tolerated still travels with the failure (w5/461).
         validation_warnings = list(exc.ledger_errors)
+        # Errors the appended rows carry are those rows', as bulk add names
+        # them: an unbalanced row previewed as `new`, counted ready, and
+        # `--apply` refused the import naming no row (w5/638).
+        named = _named_rows(file, texts, exc, allow_errors=allow_errors, into=into)
+        if named:
+            included = [row for row in rows if row["include"]]
+            for position, lines in named.items():
+                included[position].update(status="invalid", include=False, reason=" ".join(_unlocated(lines)))
+            texts = [row["entry"] for row in rows if row["include"]]
+            validation_errors = [f"Row {row['row']}: {row['reason']}" for row in rows if row["status"] == "invalid"]
 
     preview: dict[str, Any] = {
         "source": str(source),
@@ -572,7 +710,9 @@ def answer(
         # empty file to anything skimming the summary.
         "conflicts": sum(row["status"] == "conflict" for row in rows),
         "blocked": sum(row["status"] == "blocked" for row in rows),
+        "invalid": sum(row["status"] == "invalid" for row in rows),
         "skipped_blank": skipped_blank,
+        "skipped_pending": skipped_pending,
         # Accounts a row posts to that the ledger still does not open after
         # this import — duplicates included, whose new text would carry them
         # too — so the frontend never remembers a mistyped `--account` or
@@ -660,9 +800,30 @@ def answer(
                 result=preview,
             )
         snapshot.verify()
-        ledger_write.append(file, texts, allow_errors=allow_errors, expected=original, into=into, snapshot=snapshot)
+        # The preview's validation was of these texts against this snapshot,
+        # which `append` verifies unchanged under the lock (w5/577).
+        ledger_write.append(
+            file,
+            texts,
+            allow_errors=allow_errors,
+            expected=original,
+            into=into,
+            snapshot=snapshot,
+            validated=validation_warnings,
+        )
         preview["written"] = len(texts)
     return preview
+
+
+def _unlocated(lines: list[str]) -> list[str]:
+    """Refusal lines without the location of a row that was never written."""
+    return [re.sub(r"^Proposed append \(not written\): ", "", line) for line in lines]
+
+
+def _named_rows(file: Path, texts: list[str], error: LedgerError, *, allow_errors: bool, into: Path | None) -> Any:
+    from bea_engine.ledger.adding import _named_rows as named_rows
+
+    return named_rows(file, texts, error, allow_errors=allow_errors, into=into)
 
 
 def _extracted(importer: Any, source: Path, existing: Any) -> list[Any]:
@@ -673,11 +834,16 @@ def _extracted(importer: Any, source: Path, existing: Any) -> list[Any]:
     failed as "not iterable" — neither saying what the importer got wrong
     (w5/319).
     """
+    from beancount.core.data import ALL_DIRECTIVES
+
     result = importer.extract(str(source), existing)
-    if result is None or isinstance(result, str | bytes | dict):
+    # One directive is a namedtuple, so `list()` took its fields for rows:
+    # "row 1 is a dict" (w5/639).
+    if result is None or isinstance(result, str | bytes | dict) or isinstance(result, ALL_DIRECTIVES):
+        single = "; return [entry] for one" if isinstance(result, ALL_DIRECTIVES) else ""
         raise LedgerError(
             f"Importer {_name(importer)} extract() returned {_type_name(result)} instead of a list of "
-            "Beancount directives."
+            f"Beancount directives{single}."
         )
     return copy.deepcopy(list(result))
 
@@ -708,7 +874,9 @@ def _writable(entry: Any, row: int, importer: Any, logs: io.StringIO) -> Any:
             for key, value in meta.items()
         }
 
-    from beancount.core.data import ALL_DIRECTIVES
+    import datetime
+
+    from beancount.core.data import ALL_DIRECTIVES, Transaction
 
     if not isinstance(entry, ALL_DIRECTIVES):
         raise _with_output(
@@ -718,25 +886,44 @@ def _writable(entry: Any, row: int, importer: Any, logs: io.StringIO) -> Any:
             ),
             logs,
         )
+    unwritable = f"Importer {_name(importer)} row {row} cannot be written as a ledger entry"
+    # A string or a datetime failed later as a bare AttributeError or
+    # TypeError naming no row (w5/638).
+    if type(entry.date) is not datetime.date:
+        raise _with_output(
+            LedgerError(f"{unwritable}: its date is {_type_name(entry.date)} ({entry.date!r}), not a datetime.date."),
+            logs,
+        )
     try:
-        entry = entry._replace(meta=numbers(entry.meta))
+        # Accounts as the ledger reads them, NFC: an NFD `Expenses:Café` from a
+        # PDF or a macOS file name was "not open", with a duplicate `add open`
+        # as the remedy (w5/530).
+        entry = nfc_entry_accounts(entry._replace(meta=numbers(entry.meta)))
         if hasattr(entry, "postings"):
             entry = entry._replace(
                 postings=[posting._replace(meta=numbers(posting.meta)) for posting in entry.postings]
             )
-        format_entry(entry)
+        text = format_entry(entry) if isinstance(entry, Transaction) else _directive_text(entry)
     except EngineError as exc:
         _with_output(exc, logs)
         raise
     except Exception as exc:
         raise _with_output(
-            LedgerError(
-                f"Importer {_name(importer)} row {row} cannot be written as a ledger entry "
-                f"({type(exc).__name__}): {exc}.",
-                traceback=_traceback(exc),
-            ),
-            logs,
+            LedgerError(f"{unwritable} ({type(exc).__name__}): {exc}.", traceback=_traceback(exc)), logs
         ) from exc
+    # Printable is not readable: an uppercase metadata key, a NaN amount or a
+    # tag with a space prints, then reads back as no directive. The batch
+    # check that caught it numbered only the ready rows and stopped the
+    # preview with a usage error (w5/638).
+    if _invalid_name(entry) is not None:
+        # Blocked with `add`'s own words for the name, and never written (w5/637).
+        return entry
+    if isinstance(entry, Transaction) and "_csv_rule" in entry.meta:
+        # The column mapper's note of the rule it applied, taken off before the row is written.
+        text = format_entry(entry._replace(meta={k: v for k, v in entry.meta.items() if k != "_csv_rule"}))
+    problem = ledger_write.one_entry_problem(text)
+    if problem is not None:
+        raise _with_output(LedgerError(f"{unwritable}: it {problem}"), logs)
     return entry
 
 
@@ -801,9 +988,26 @@ def _described(selector: str, importer: Any, source: Path) -> str:
 
 
 def _name(importer: Any) -> str:
-    name = getattr(importer, "name", type(importer).__name__)
+    """The importer's name, or a refusal naming the CONFIG entry and its fix.
+
+    "Use the current Beangulp Importer interface" named neither which entry
+    nor what to do, so one legacy importer beside a working one blocked the
+    whole configuration without a clue (w5/639).
+    """
+    if isinstance(importer, type):
+        raise UsageError(
+            f"CONFIG lists the class {importer.__name__}, not an importer; list an instance, {importer.__name__}(...)."
+        )
+    kind = type(importer).__name__
+    name = getattr(importer, "name", kind)
+    if callable(name):
+        raise UsageError(
+            f"CONFIG entry {kind} is a Beancount v2 importer (its name is a method); wrap it as "
+            f"beangulp.Adapter({kind}(...)), or port it to the current Beangulp Importer interface "
+            "(a name property and file paths)."
+        )
     if not isinstance(name, str):
-        raise UsageError("Use the current Beangulp Importer interface (name property and file paths).")
+        raise UsageError(f"CONFIG entry {kind} has a name that is {_type_name(name)}; its name must be a str.")
     return name
 
 
@@ -830,29 +1034,120 @@ def _source_postings(entry: Any, account: str) -> list[Any]:
     return [p for p in _source_legs(entry, account) if _has_explicit_units(p)]
 
 
+_Lot = tuple[Decimal | None, str | None, str | None]
+
+
+def _lot(posting: Any) -> _Lot | None:
+    """The per-unit number, currency and label a source posting's cost states.
+
+    None for a posting held at no cost. A field the cost leaves open is None:
+    an importer's `{}` or `{USD}` states less than the ledger's copy of the
+    same entry, whose booking filled the rest in. The lot date is left out,
+    since booking always fills it in.
+    """
+    cost = posting.cost
+    if cost is None:
+        return None
+    per = getattr(cost, "number_per", None) if hasattr(cost, "number_per") else getattr(cost, "number", None)
+    total = getattr(cost, "number_total", None)
+    if not isinstance(per, Decimal) and isinstance(total, Decimal) and isinstance(posting.units.number, Decimal):
+        per = total / abs(posting.units.number) if posting.units.number else None
+    return (
+        per if isinstance(per, Decimal) else None,
+        cost.currency if isinstance(cost.currency, str) else None,
+        getattr(cost, "label", None) or None,
+    )
+
+
+def _price_text(posting: Any) -> str:
+    price = posting.price
+    if price is not None and isinstance(price.number, Decimal) and isinstance(price.currency, str):
+        return f" @ {_exact_amount(price.number, price.currency)}"
+    return ""
+
+
 def _lot_text(posting: Any) -> str:
     """A source posting's cost or price, as it bears on which source row this is.
 
     Two same-day buys of `10 AAPL` at 100 and 120 USD are two rows; hashing
     units alone gave them one id, and the second was skipped as an exact
-    duplicate with exit 0 (w5/349). The per-unit number, currency and label
-    are kept; the lot date is not, since booking fills it in on the entry
-    already in the ledger while the importer's cost spec leaves it empty.
+    duplicate with exit 0 (w5/349). A cost is written only when it states
+    both its number and currency, so an open `{}` adds nothing.
     """
-    parts = []
-    cost = posting.cost
-    if cost is not None:
-        per = getattr(cost, "number_per", None) if hasattr(cost, "number_per") else getattr(cost, "number", None)
-        total = getattr(cost, "number_total", None)
-        if not isinstance(per, Decimal) and isinstance(total, Decimal) and isinstance(posting.units.number, Decimal):
-            per = total / abs(posting.units.number) if posting.units.number else None
-        label = f', "{cost.label}"' if getattr(cost, "label", None) else ""
-        if isinstance(per, Decimal) and isinstance(cost.currency, str):
-            parts.append(f" {{{_exact_amount(per, cost.currency)}{label}}}")
-    price = posting.price
-    if price is not None and isinstance(price.number, Decimal) and isinstance(price.currency, str):
-        parts.append(f" @ {_exact_amount(price.number, price.currency)}")
-    return "".join(parts)
+    lot = _lot(posting)
+    cost = ""
+    if lot is not None and lot[0] is not None and lot[1] is not None:
+        label = f', "{lot[2]}"' if lot[2] else ""
+        cost = f" {{{_exact_amount(lot[0], lot[1])}{label}}}"
+    return cost + _price_text(posting)
+
+
+_Leg = tuple[str, _Lot | None]
+
+
+def _legs(entry: Any, account: str) -> tuple[_Leg, ...]:
+    """Each source posting's units and price as text, beside its stated lot."""
+    return tuple(
+        (_exact_amount(p.units.number, p.units.currency) + _price_text(p), _lot(p))
+        for p in _source_postings(entry, account)
+    )
+
+
+def _lots_agree(ours: _Lot | None, theirs: _Lot | None) -> bool:
+    if ours is None or theirs is None:
+        return ours is theirs
+    return all(a is None or b is None or a == b for a, b in zip(ours, theirs, strict=True))
+
+
+def _legs_agree(ours: Sequence[_Leg], theirs: Sequence[_Leg]) -> bool:
+    """Whether two rows move the same source amounts out of the same lots.
+
+    A cost field either side leaves open agrees with any value. An importer
+    that sells `-4 HOOL {}` describes the entry the ledger holds as
+    `-4 HOOL {150 USD}` once booked, and comparing the two as text made a
+    hand-entered twin new and bea's own write a conflict (w5/467). Lots both
+    sides state at 100 and 120 USD still differ (w5/349).
+    """
+    left = list(theirs)
+    # A stated lot picks first, so an open one cannot take the leg it needs.
+    for text, lot in sorted(ours, key=lambda leg: 0 if leg[1] is None else leg[1].count(None)):
+        match = next((i for i, (other, found) in enumerate(left) if other == text and _lots_agree(lot, found)), None)
+        picked = [match] if match is not None else _split_booking(text, lot, left)
+        if not picked:
+            return False
+        for index in sorted(picked, reverse=True):
+            del left[index]
+    return not left
+
+
+def _units_of(text: str) -> tuple[Decimal, str, str]:
+    """A leg's units number, currency and price, from the text `_legs` writes."""
+    units, _, price = text.partition(" @ ")
+    number, currency = units.split(" ", 1)
+    return Decimal(number), currency, price
+
+
+def _split_booking(text: str, lot: _Lot | None, left: list[_Leg]) -> list[int]:
+    """The legs an open-cost leg was booked into, or none.
+
+    Booking reduces as many lots as a `{}` sale spans, so the ledger holds one
+    posting per lot where the importer has one: `-20 HOOL {}` was booked as
+    `-10 HOOL {150 USD}` and `-10 HOOL {155 USD}`, re-importing bea's own
+    write was a conflict, and a hand-entered FIFO twin was written again
+    (w5/603). They are the legs of its currency and price whose lots agree
+    with what it states, and their units must add up to its own.
+    """
+    if lot is None or lot[0] is not None:
+        return []
+    number, currency, price = _units_of(text)
+    picked = [
+        index
+        for index, (other, found) in enumerate(left)
+        if found is not None and _units_of(other)[1:] == (currency, price) and _lots_agree(lot, found)
+    ]
+    if len(picked) < 2 or sum(_units_of(left[index][0])[0] for index in picked) != number:
+        return []
+    return picked
 
 
 def _fingerprint(entry: Any, account: str) -> tuple[Any, ...]:
@@ -862,10 +1157,8 @@ def _fingerprint(entry: Any, account: str) -> tuple[Any, ...]:
     # has one answer in this module. `str(number.normalize())` would say
     # `1E+2` where the id says `100`; both sides of a comparison are built the
     # same way, so that was consistent rather than wrong — but two spellings of
-    # one rule is how they drift apart.
-    amounts = tuple(
-        sorted(_exact_amount(p.units.number, p.units.currency) + _lot_text(p) for p in _source_postings(entry, account))
-    )
+    # one rule is how they drift apart. The legs compare with `_legs_agree`,
+    # never `==`, so an open cost matches the lot booking chose.
     # Ledger text loads NFC-normalized but an export's rows arrive in whatever
     # form the bank wrote, so an accented description would otherwise compare
     # unequal to the identical entry already in the ledger.
@@ -873,7 +1166,7 @@ def _fingerprint(entry: Any, account: str) -> tuple[Any, ...]:
         entry.date,
         _match_text(entry.payee),
         _match_text(entry.narration),
-        amounts,
+        _legs(entry, account),
     )
 
 
@@ -950,13 +1243,140 @@ def _identities(entry: Any, account: str, keys: list[str]) -> list[tuple[str, st
     return identities
 
 
-# The generated-id prefixes skills/.../beancount-import/references/dedup.md
-# defines: `bea import` writes `csv:`, beancount-migrate writes the others.
-_GENERATED_ID = re.compile(r"(?:csv|mint|monarch|qbo):sha256:([0-9a-f]{16})")
+# The generated ids skills/.../beancount-import/references/dedup.md defines:
+# `bea import` writes `csv:`, beancount-migrate `mint:`/`monarch:`/`qbo:`, and
+# `<source>:` for any other source (`ynab:`, `actual:`). Listing four missed
+# the generic path, and every overlap row after such a migration was written
+# again (w5/601).
+_GENERATED_ID = re.compile(r"[a-z][a-z0-9-]*:sha256:([0-9a-f]{16})")
 
 
 def _is_generated_identity(key: tuple[str, str, str]) -> bool:
     return key[1] == "digest" or (key[1] == "import-id" and _GENERATED_ID.fullmatch(key[2]) is not None)
+
+
+def _twin_reason(entry: Any, twin: Any, earlier: int | None, *, ours: bool, keys: list[str]) -> str:
+    """Why a row may repeat `twin`, naming only the bank IDs that exist.
+
+    Two same-day charges with no ID column read "different bank IDs do not
+    rule out a duplicate", about IDs neither row had (w5/615).
+    """
+    theirs = _native_import_id(twin.meta or {}, keys) is not None or (
+        bool(twin.meta.get("import-id")) and _GENERATED_ID.fullmatch(str(twin.meta["import-id"])) is None
+    )
+    if ours and theirs:
+        ids = "their bank IDs differ, which does not rule out a duplicate"
+    elif ours or theirs:
+        ids = "only one of them carries a bank ID"
+    else:
+        ids = "neither row has a bank ID" if earlier is not None else "neither has a bank ID"
+    named = "payee" if _match_text(entry.payee) else "narration"
+    where = f" row {earlier} of this import" if earlier is not None else ""
+    return f"Date, {named} and source amount match{where}; {ids}."
+
+
+def _is_native_identity(key: tuple[str, str, str]) -> bool:
+    """A bank's or importer's own id, unique only within the account that issued it."""
+    return key[1] in {"bank", "import-id"} and not _is_generated_identity(key)
+
+
+#: How far apart the two sides of one transfer may post and still read as one.
+_TRANSFER_DAYS = 7
+
+#: How far a ledger entry's date may sit from its row's under one bank id and
+#: still be that row with its date corrected, rather than the id reused (w5/599).
+_REUSED_REFERENCE_DAYS = 7
+
+
+def _nearest(entries: list[Any], entry: Any, account: str, fingerprint: tuple[Any, ...]) -> Any:
+    """Of the entries under one bank id, the one with this row's source amounts dated nearest it."""
+    agreeing = [found for found in entries if _legs_agree(fingerprint[3], _fingerprint(found, account)[3])]
+    return min(agreeing or entries, key=lambda found: abs((entry.date - found.date).days))
+
+
+def _issued_elsewhere(entry: Any, account: str, balance_roots: tuple[str, ...]) -> bool:
+    """Whether another account issued the native ids of an entry that posts to `account`.
+
+    bea writes the source posting first, so an entry whose first posting is
+    another balance-sheet account is that account's import, a transfer, and
+    its bank id is scoped there: checking's `1001` deduped savings' own
+    `1001`, a different deposit, as an exact duplicate (w5/598). An income or
+    expense leg first is no such evidence: some importers list it first.
+    """
+    first = entry.postings[0] if entry.postings else None
+    if first is None or any(first is leg for leg in _source_legs(entry, account)):
+        return False
+    return first.account.split(":", 1)[0] in balance_roots
+
+
+def _transfer_side(
+    ids: list[tuple[str, str, str]],
+    transfer_ids: dict[tuple[str, str, str], Any],
+    entry: Any,
+    account: str,
+    fingerprint: tuple[Any, ...],
+) -> tuple[tuple[str, str, str], Any] | None:
+    """A transfer whose other side may be this row: its issuer's id, the same amount here, days apart at most.
+
+    Some banks give both legs of a transfer one reference, so the id is kept
+    as evidence, but only for review: the same id on another date or amount
+    is another transaction.
+    """
+    for key in ids:
+        found = transfer_ids.get(key)
+        if (
+            found is not None
+            and abs((found.date - entry.date).days) <= _TRANSFER_DAYS
+            and _legs_agree(fingerprint[3], _fingerprint(found, account)[3])
+        ):
+            return key, found
+    return None
+
+
+#: How far apart two banks may date one transfer's sides when only the amount pairs them.
+_COUNTERPART_DAYS = 3
+
+
+def _amounts_key(fingerprint: tuple[Any, ...]) -> tuple[str, ...]:
+    """The source amounts, summed by currency and price: one sale booked across lots is one amount (w5/603)."""
+    totals: dict[tuple[str, str], Decimal] = {}
+    for text, _ in fingerprint[3]:
+        number, currency, price = _units_of(text)
+        totals[currency, price] = totals.get((currency, price), Decimal(0)) + number
+    return tuple(
+        sorted(
+            f"{_exact_amount(number, currency)}{f' @ {price}' if price else ''}"
+            for (currency, price), number in totals.items()
+        )
+    )
+
+
+def _transfer_counterpart(
+    counterparts: dict[tuple[str, ...], list[Any]], entry: Any, account: str, fingerprint: tuple[Any, ...]
+) -> Any:
+    """A transfer another account's import wrote that posts this row's amount here, days apart at most.
+
+    "TRANSFER TO SAVINGS" and "TRANSFER FROM CHECKING" share no word, so the
+    second side of every transfer imported from both banks was booked again
+    with exit 0 (w5/600). For review only: the same amount near the same day
+    can be a separate payment.
+    """
+    return next(
+        (
+            found
+            for found in reversed(counterparts.get(_amounts_key(fingerprint), []))
+            if abs((found.date - entry.date).days) <= _COUNTERPART_DAYS
+            and _legs_agree(fingerprint[3], _fingerprint(found, account)[3])
+        ),
+        None,
+    )
+
+
+def _relative_days(written: Any, row: Any) -> str:
+    days = (row - written).days
+    if days == 0:
+        return "the same day"
+    return f"{abs(days)} day{'s' if abs(days) != 1 else ''} {'earlier' if days > 0 else 'later'}"
 
 
 def _same_row(
@@ -974,11 +1394,13 @@ def _same_row(
     if generated and not lookup_only:
         return True
     found_print = _fingerprint(found, account)
+    if not _legs_agree(fingerprint[3], found_print[3]):
+        return False
     if generated:
-        return (found_print[0], found_print[3]) == (fingerprint[0], fingerprint[3])
+        return bool(found_print[0] == fingerprint[0])
     if key[1] in {"bank", "import-id"}:
-        return bool(found_print[3] == fingerprint[3])
-    return found_print == fingerprint
+        return True
+    return found_print[:3] == fingerprint[:3]
 
 
 def _valid_account(name: str, option: str, roots: tuple[str, ...]) -> str:
@@ -1096,19 +1518,41 @@ def _active_windows(entries: list[Any]) -> dict[str, tuple[Any, Any]]:
     return windows
 
 
-def _entries_after(snapshot: ledger_write.LedgerSnapshot, target: Path, original: bytes, texts: list[str]) -> list[Any]:
-    """The ledger's entries with `texts` appended, plugins applied; nothing is written.
+_IMPORT_ROW = "__bea_import_row__"
+"""Meta key on a reloaded directive the import's own rows wrote: that row's number."""
+
+
+def _entries_after(
+    snapshot: ledger_write.LedgerSnapshot, target: Path, original: bytes, texts: list[str], rows: list[int]
+) -> list[Any]:
+    """The ledger's entries with `texts` (rows `rows`) appended, plugins applied; nothing is written.
 
     Errors are not this load's business: an account nothing opens is simply
     absent from the result, and the append is validated on its own afterwards.
+
+    Each entry names its real file, and one the appended rows wrote names its
+    row: a blocked row's reason cited the open as `.bea-<hex>.tmp:9`, a
+    staging file gone when the command returned (w5/636).
     """
     from bea_engine import managed_load
 
-    ledger_write.refuse_cache_over_ledger(target, snapshot.contents)
+    ledger_write.refuse_cache_over_ledger(target, snapshot.contents, snapshot.patterns)
     with ledger_write.candidate_file(target, ledger_write.decoded_append(target, original, texts)) as candidate:
-        with snapshot.staged(candidate, target) as (root, _):
+        with snapshot.staged(candidate, target) as (root, staged):
             entries, _, _ = managed_load.load_file(root)
-    return entries
+    back = {str(copy): str(source) for copy, source in staged.items()}
+    spans = list(zip(ledger_write.appended_spans(original, texts), rows, strict=True))
+    written = os.path.normpath(target)
+    result = []
+    for entry in entries:
+        entry = managed_load._remap_entry(entry, back)
+        meta = getattr(entry, "meta", None) or {}
+        if os.path.normpath(str(meta.get("filename"))) == written and isinstance(meta.get("lineno"), int):
+            row = next((row for (first, last), row in spans if first <= meta["lineno"] <= last), None)
+            if row is not None:
+                entry = entry._replace(meta={**meta, _IMPORT_ROW: row})
+        result.append(entry)
+    return result
 
 
 def _entry_accounts(entry: Any, *, active_only: bool = False) -> list[tuple[str, str | None]]:
@@ -1168,6 +1612,8 @@ def _blocked_reason(
     ledger: Path,
     source: str | None = None,
     windows: dict[str, tuple[Any, Any]] | None = None,
+    lifecycles: dict[str, list[Any]] | None = None,
+    opening_balances: dict[tuple[str, Any], list[Any]] | None = None,
 ) -> str | None:
     """Why a transaction cannot be written, or None when its accounts allow it.
 
@@ -1179,12 +1625,24 @@ def _blocked_reason(
     under a root the ledger does not use (from a Python importer) gets no
     `add open` remedy: that command would refuse it too.
     """
+    invalid = _invalid_name(entry)
+    if invalid is not None:
+        chose = (
+            "Correct the rule, category column or --default-account that chose it."
+            if source is not None
+            else "The importer has to return a valid one."
+        )
+        return f"{invalid.rstrip('.')}. {chose}"
     referenced = _entry_accounts(entry)
     missing = sorted({name for name, _ in referenced if name not in open_currencies})
     foreign = [name for name in missing if name.split(":", 1)[0] not in roots]
     if foreign:
         return unknown_root_message(foreign[0], roots)
+    reasons = []
     if missing:
+        for name in missing:
+            if (problem := new_account_format_problem(name)) is not None:
+                return problem
         remedies = []
         flag = " --allow-errors" if stage_opens else ""
         bea = bea_command(ledger)
@@ -1201,10 +1659,12 @@ def _blocked_reason(
         quoted = ", ".join(f"'{name}'" for name in missing)
         noun = "Account" if len(missing) == 1 else "Accounts"
         verb = "is" if len(missing) == 1 else "are"
-        return f"{noun} {quoted} {verb} not open. Run: {'; '.join(remedies)}."
-    inactive = _inactive_reason(entry, windows or {}, first_uses, source)
+        reasons.append(f"{noun} {quoted} {verb} not open. Run: {'; '.join(remedies)}.")
+    inactive = _inactive_reason(entry, windows or {}, first_uses, source, lifecycles, opening_balances)
     if inactive is not None:
-        return inactive
+        reasons.append(inactive)
+    if reasons:
+        return " ".join(reasons)
     for name, currency in referenced:
         allowed = open_currencies.get(name)
         # A currency that cannot be told before booking is validation's to judge.
@@ -1235,11 +1695,65 @@ def _blocked_reason(
     return None
 
 
+def _invalid_name(entry: Any) -> str | None:
+    """`add`'s refusal for the first account or commodity no ledger can hold, or None.
+
+    Only membership in the ledger's opens was asked, so an importer's
+    `Expenses:food stuff` or `usd` was "not open", with an `add open` or
+    widen-the-open remedy that `add` refuses (w5/637, the importer side of
+    w3/386). These are the validators `add` uses.
+    """
+    from beancount.core.data import Balance, Transaction
+
+    from bea_engine.ledger.text import parse_account, require_commodity
+
+    for name, _ in _entry_accounts(entry):
+        try:
+            parse_account(name)
+        except UsageError as exc:
+            return str(exc)
+    currencies: list[Any] = []
+    if isinstance(entry, Transaction):
+        for posting in entry.postings:
+            currencies += [getattr(value, "currency", None) for value in (posting.units, posting.cost, posting.price)]
+    elif isinstance(entry, Balance):
+        currencies.append(entry.amount.currency)
+    for currency in currencies:
+        if isinstance(currency, str):
+            try:
+                require_commodity(currency)
+            except ValueError as exc:
+                return str(exc)
+    return None
+
+
+def _opening_balances(entries: list[Any], source: str, equity_root: str) -> dict[tuple[str, Any], list[Any]]:
+    """Index init's written opening transactions once, for each source account and date.
+
+    A later balance can double-count imported history. Only the template's
+    narration and equity counter-account identify that transaction; a generic
+    transaction on the open date is not an opening-balance remedy (w5/692).
+    """
+    from beancount.core.data import Transaction
+
+    balances: dict[tuple[str, Any], list[Any]] = {}
+    for entry in entries:
+        if not isinstance(entry, Transaction) or entry.narration != "Opening balances":
+            continue
+        entry = normalize_entry_strings(entry)
+        if any(post.account == f"{equity_root}:OpeningBalances" for post in entry.postings):
+            for name in dict.fromkeys(post.account for post in _source_legs(entry, source)):
+                balances.setdefault((name, entry.date), []).append(entry)
+    return balances
+
+
 def _inactive_reason(
     entry: Any,
     windows: dict[str, tuple[Any, Any]],
     first_uses: dict[str, tuple[Any, list[str] | None]],
     source: str | None,
+    lifecycles: dict[str, list[Any]] | None = None,
+    opening_balances: dict[tuple[str, Any], list[Any]] | None = None,
 ) -> str | None:
     """Why a posting's account cannot take this row's date, though it is opened.
 
@@ -1247,32 +1761,51 @@ def _inactive_reason(
     row, or opened after it, previewed the row as ready and then failed the
     whole `--apply` with exit 1, valid rows and all (w5/339).
     """
-    for name, _ in _entry_accounts(entry, active_only=True):
+    reasons = []
+    for name in dict.fromkeys(name for name, _ in _entry_accounts(entry, active_only=True)):
         window = windows.get(name)
         if window is None:
             continue
         opened, closed = window
         if entry.date < opened.date:
             earliest = first_uses.get(name, (entry.date, None))[0]
-            return (
-                f"Account '{name}' opens {opened.date} (at {_where(opened)}), after this row's "
+            reasons.append(
+                f"Account '{name}' opens {opened.date} ({_where(opened)}), after this row's "
                 f"{entry.date}. Re-date that open to {min(earliest, entry.date)} or earlier."
             )
+            for balance in (opening_balances or {}).get((name, opened.date), []):
+                reasons.append(
+                    f"Review the 'Opening balances' transaction dated {balance.date} ({_where(balance)}): "
+                    "move or restate it to describe the balance before the imported history and avoid "
+                    "counting that history twice."
+                )
         if closed is not None and entry.date > closed.date:
+            # close_tree's child close has no editable ledger line. Share
+            # add's attribution and point to the written parent's close.
+            if hint := ledger_write._plugin_close_hint(closed, lifecycles or {}, {}, {}):
+                description, edit = hint
+                reasons.append(
+                    f"Account '{name}' was {description}, before this row's {entry.date}. "
+                    f"Correct the row date, {edit}, or import into an account that is still open."
+                )
+                continue
             remedy = (
                 "Re-date the close, or import into an account that is still open."
                 if name == source
                 else "Point the rule, category or --default-account at an open account, or re-date the close."
             )
-            return (
-                f"Account '{name}' was closed {closed.date} (at {_where(closed)}), before this row's "
+            reasons.append(
+                f"Account '{name}' was closed {closed.date} ({_where(closed)}), before this row's "
                 f"{entry.date}. {remedy}"
             )
-    return None
+    return " ".join(reasons) or None
 
 
 def _where(directive: Any) -> str:
-    return f"{directive.meta.get('filename')}:{directive.meta.get('lineno')}"
+    row = directive.meta.get(_IMPORT_ROW)
+    if row is not None:
+        return f"row {row} of this import"
+    return f"at {directive.meta.get('filename')}:{directive.meta.get('lineno')}"
 
 
 def _native_import_id(meta: dict[str, Any], keys: list[str]) -> str | None:
@@ -1356,7 +1889,7 @@ class _HashedRow:
     narration_only: tuple[str, ...]
     payee: str
     date: Any
-    amounts: tuple[str, ...]
+    legs: tuple[_Leg, ...]
 
 
 def _hash_rows(entries: list[Any], account: str, keys: list[str], transaction: type[Any]) -> dict[int, _HashedRow]:
@@ -1420,7 +1953,7 @@ def _claim_payeeless_ids(
                     if found is None or any(found is entry for entry, _, _ in stored):
                         continue
                     found_print = _fingerprint(found, account)
-                    if (found_print[0], found_print[3]) == (row.date, row.amounts):
+                    if found_print[0] == row.date and _legs_agree(row.legs, found_print[3]):
                         stored.append((found, value, index))
         unclaimed = list(indices)
         leftover: list[tuple[Any, str, int]] = []
@@ -1534,22 +2067,67 @@ def _hash_import_ids(entry: Any, account: str, seen: dict[str, int]) -> _HashedR
         narration_only=tuple(dict.fromkeys([*([canonical] if base == single_base else []), single, *older])),
         payee=_match_text(entry.payee),
         date=entry.date,
-        # The fingerprint's amounts, lot included, so a claim's content check
+        # The fingerprint's legs, lot included, so a claim's content check
         # compares like with like (w5/349).
-        amounts=tuple(sorted(_exact_amount(number, currency) + lot for number, currency, lot in legs)),
+        legs=_legs(entry, account),
     )
 
 
 def _candidate_key(entry: Any, account: str) -> tuple[Any, ...]:
-    """Date, who was paid, and source amounts: what flags a possible duplicate.
+    """Date, who was paid, and source amounts: what may flag a possible duplicate.
 
-    The payee names who was paid. A row with no payee — the documented
+    The amounts leave lots out; `_possible_twin` compares those. The payee
+    names who was paid. A row with no payee — the documented
     one-description CSV mapping puts the bank text in `narration` — is named
     by its narration instead; otherwise every same-day same-amount row would
     collapse onto date + amount and `--duplicates skip` would drop real ones.
     """
-    date, payee, narration, amounts = _fingerprint(entry, account)
-    return date, payee or narration, amounts
+    fingerprint = _fingerprint(entry, account)
+    return fingerprint[0], fingerprint[1] or fingerprint[2], _amounts_key(fingerprint)
+
+
+def _narration_key(entry: Any, account: str) -> tuple[Any, ...]:
+    fingerprint = _fingerprint(entry, account)
+    return "narration", fingerprint[0], fingerprint[2], _amounts_key(fingerprint)
+
+
+def _index_twin(fingerprints: dict[tuple[Any, ...], list[Any]], entry: Any, account: str, *, ledger: bool) -> None:
+    """File an entry under who was paid, and a ledger entry also under its narration.
+
+    Rows of one export that differ in whether they name a payee are rows the
+    bank listed apart (w5/140), so only the ledger's entries meet across it.
+    """
+    fingerprints.setdefault(_candidate_key(entry, account), []).append(entry)
+    if ledger:
+        fingerprints.setdefault(_narration_key(entry, account), []).append(entry)
+
+
+def _possible_twin(
+    fingerprints: dict[tuple[Any, ...], list[Any]],
+    entry: Any,
+    account: str,
+    fingerprint: tuple[Any, ...],
+    owners: dict[int, int],
+    index: int,
+) -> Any:
+    """The latest entry sharing the row's candidate key whose lots agree with it, if any.
+
+    Payee meets payee. When either side names none, narration meets
+    narration: an entry keyed by its payee never met a one-description row
+    of the same text, so a bank export of rows beancount-migrate had written
+    as payee + statement text was booked again (w5/602). An entry another
+    row of this import owns by its id is that row's, not this one's twin.
+    """
+    by_narration = [
+        found
+        for found in fingerprints.get(_narration_key(entry, account), [])
+        if owners.get(id(found), index) == index and (not fingerprint[1] or not _match_text(found.payee))
+    ]
+    candidates = [*reversed(fingerprints.get(_candidate_key(entry, account), [])), *reversed(by_narration)]
+    return next(
+        (found for found in candidates if _legs_agree(fingerprint[3], _fingerprint(found, account)[3])),
+        None,
+    )
 
 
 def _source_amounts(entry: Any, account: str) -> str:

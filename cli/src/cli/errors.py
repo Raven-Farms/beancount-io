@@ -18,6 +18,7 @@ category name, so a caller can branch on either and get the same answer.
 from __future__ import annotations
 
 import json
+import os
 from collections.abc import Mapping
 from typing import Any
 
@@ -120,6 +121,30 @@ def request_id_from(headers: Any) -> str | None:
     return None
 
 
+def redirect_error(status: int, headers: Mapping[str, str] | None) -> BeaError:
+    """A redirect instead of the API, with its target but no query or fragment.
+
+    Shared by cloud commands and the assistant's SDK response translation so
+    a proxy or captive portal never reads as a rejected credential or a lost
+    connection.
+    """
+    from urllib.parse import urlsplit, urlunsplit
+
+    from cli.utils import single_line
+
+    location = headers.get("location") if headers is not None else None
+    target = ""
+    if location:
+        parts = urlsplit(location)
+        target = f" to {single_line(urlunsplit((parts.scheme, parts.netloc, parts.path, '', '')))}"
+    return BeaError(
+        f"Unexpected redirect (HTTP {status}){target}; bea does not follow redirects. "
+        "Check that BEA_API_URL, if set, names the API with https:// and the right host, "
+        "and that no proxy or captive portal is answering for it.",
+        request_id=request_id_from(headers),
+    )
+
+
 def server_message(body: object) -> str | None:
     """Read a sentence from nested API/SDK envelopes without printing raw JSON.
 
@@ -127,23 +152,37 @@ def server_message(body: object) -> str | None:
     Bound the unwrapping; unsupported, malformed, or deeper bodies leave the
     caller's HTTP-status fallback intact.
     """
+    raw = isinstance(body, str)
     for _ in range(8):
         if isinstance(body, Mapping):
+            raw = False
             message = body.get("message")
             body = message if isinstance(message, str) and message.strip() else body.get("error")
         elif isinstance(body, str):
-            sentence = body.strip()
+            # A leading byte-order mark is no whitespace to `strip()`, so a
+            # marked HTML page passed as the message (w5/649).
+            sentence = body.lstrip("\ufeff").strip()
             if not sentence:
                 return None
             try:
                 body = json.loads(sentence)
             except ValueError:
-                return None if sentence.startswith("{") else sentence
+                if sentence.startswith(("{", "<")):
+                    return None
+                # A proxy's HTML or text error page is no sentence: printed
+                # whole, the user read 18 lines of markup instead of the
+                # status (w5/482). A short plain-text line still passes.
+                if raw and ("\n" in sentence or len(sentence) > _RAW_SENTENCE_LIMIT):
+                    return None
+                return sentence
             except RecursionError:
                 return None
         else:
             return None
     return None
+
+
+_RAW_SENTENCE_LIMIT = 200
 
 
 def error_from_status(status: int, message: str | None, *, request_id: str | None = None) -> BeaError:
@@ -166,6 +205,13 @@ def error_from_status(status: int, message: str | None, *, request_id: str | Non
         return UsageError(detail, request_id=request_id)
     if status == 429:
         return BeaError(f"Rate limited ({detail}). Wait a moment and retry.", request_id=request_id)
+    if status in _GATEWAY_TIMEOUTS:
+        return GatewayTimeout(f"Server error ({detail}).", status=status, request_id=request_id)
+    if status in {521, 523}:
+        # Cloudflare could not connect to the origin, unlike 522, which can
+        # also mean a request went unacknowledged on an established connection.
+        connection = f"HTTP {status}" if detail == f"HTTP {status}" else f"HTTP {status}: {detail}"
+        return BeaError(f"Could not reach the server ({connection}).", request_id=request_id)
     if status >= 500:
         return BeaError(f"Server error ({detail}).", request_id=request_id)
     return BeaError(detail, request_id=request_id)
@@ -218,19 +264,50 @@ def placement_hint(option: str) -> str | None:
     return f"Place {option} before the command, for example: {example}." if example else None
 
 
-def refuse_misplaced_global(command: str, args: list[str], defined: frozenset[str]) -> None:
+def refuse_misplaced_global(
+    command: str, args: list[str], defined: frozenset[str], *, reads: str | None = None, json_output: bool = True
+) -> None:
     """Refuse a bea global option after a forwarded command that does not define it itself.
 
     Upstream answered with its own "No such option" and no hint, where every
     bea-owned command says where the option goes (w5/416).
+
+    A command that ignores `--file` names what it reads instead in `reads`
+    (`""` when it reads no ledger), and one without JSON output passes
+    `json_output=False`. The generic "Place -f before the command" sent
+    `doctor`, `treeify` and `example` to a form that failed (w5/620).
     """
-    for arg in args:
+    for index, arg in enumerate(args):
         if arg == "--":
             return
         name = arg.split("=", 1)[0]
-        hint = placement_hint(name) if name not in defined else None
+        if name in defined:
+            continue
+        if name in ("-f", "--file") and reads is not None:
+            raise UsageError(_file_as_argument(command, args, index, reads))
+        if name == "--json" and not json_output:
+            raise UsageError(f"bea {command} has no JSON output; drop --json.")
+        hint = placement_hint(name)
         if hint is not None:
             raise UsageError(f"{name} is a bea option, not one of bea {command}'s. {hint}")
+
+
+def _file_as_argument(command: str, args: list[str], index: int, reads: str) -> str:
+    """The refusal of `--file` on a command that takes its file as an argument, with that form."""
+    import shlex
+
+    name, given, value = args[index].partition("=")
+    if not reads:
+        return f"bea {command} reads no ledger, so {name} does nothing here; drop it."
+    taken = 1 if given else 2
+    if not given:
+        value = args[index + 1] if index + 1 < len(args) else "FILE"
+    rest = [*args[:index], *args[index + taken :]]
+    return (
+        f"bea {command} takes {reads} as an argument, not {name}: "
+        + shlex.join(["bea", *command.split(), value, *rest])
+        + "."
+    )
 
 
 def to_bea_error(exc: BaseException | str) -> BeaError:
@@ -250,6 +327,9 @@ def to_bea_error(exc: BaseException | str) -> BeaError:
     # Typer's vendored Click, without a dependency on either private module.
     click_usage_error: type[Any] = typer.BadParameter.__bases__[0]
     if isinstance(exc, click_usage_error):
+        missing_subcommand = _missing_subcommand_message(exc)
+        if missing_subcommand is not None:
+            return UsageError(missing_subcommand)
         option = getattr(exc, "option_name", None)
         placement = placement_hint(option) if isinstance(option, str) else None
         hint = f" {placement}" if placement else ""
@@ -272,6 +352,25 @@ def to_bea_error(exc: BaseException | str) -> BeaError:
     error = BeaError(_redact_secrets(str(exc) or f"{type(exc).__name__} (no detail)."))
     error.unexpected = True
     return error
+
+
+def _missing_subcommand_message(exc: Any) -> str | None:
+    """A bare group in JSON mode names its choices instead of embedding help."""
+    # This exception exists in standalone and vendored Click. Recognize it
+    # after the UsageError check without importing either private namespace.
+    if type(exc).__name__ != "NoArgsIsHelpError":
+        return None
+    from cli import context
+
+    ctx = getattr(exc, "ctx", None)
+    if not context.current().json_output or ctx is None:
+        return None
+    names = [
+        name
+        for name in ctx.command.list_commands(ctx)
+        if (command := ctx.command.get_command(ctx, name)) is not None and not command.hidden
+    ]
+    return f"Missing subcommand: choose one of {', '.join(names)}." if names else "Missing subcommand."
 
 
 # Names other tools and docs use for a bea subcommand, suggested only where
@@ -340,12 +439,36 @@ class UnreadableSuccess(BeaError):
         self.status = status
 
 
+#: Gateway failures that cannot establish whether a write took effect.
+#: Cloudflare 522 includes both connection and resource-request ACK timeouts.
+_GATEWAY_TIMEOUTS = frozenset({504, 520, 522, 524})
+
+
+class GatewayTimeout(BeaError):
+    """A gateway failure that leaves the origin's write outcome unknown.
+
+    A read reports it as the server error it is. A write may have taken effect,
+    so the write paths say the outcome is unknown, as for bea's own timeout:
+    called a plain "Server error", the retry hit 409 or 404 (w5/517).
+    """
+
+    def __init__(self, message: str, *, status: int, request_id: str | None = None) -> None:
+        super().__init__(message, request_id=request_id)
+        self.status = status
+
+
 def unknown_write_outcome(operation: str, exc: BaseException) -> ConflictError:
     """A write that timed out, lost its connection, or got an answer bea could not read.
 
     The caller is told the outcome is unknown, and how to find out, rather than
     being handed a success or a plain failure that invites a blind retry.
     """
+    if isinstance(exc, GatewayTimeout):
+        return ConflictError(
+            f"{operation} was not confirmed by the server's gateway (HTTP {exc.status}). "
+            "The outcome is unknown — check the current state before retrying.",
+            request_id=exc.request_id,
+        )
     if isinstance(exc, UnreadableSuccess):
         return ConflictError(
             f"{operation} was answered with HTTP {exc.status}, but the response could not be read. "
@@ -355,4 +478,27 @@ def unknown_write_outcome(operation: str, exc: BaseException) -> ConflictError:
     return ConflictError(
         f"{operation} did not complete cleanly ({type(exc).__name__}). "
         f"The outcome is unknown — check the current state before retrying."
+    )
+
+
+_PROXY_VARIABLES = ("ALL_PROXY", "all_proxy", "HTTPS_PROXY", "https_proxy", "HTTP_PROXY", "http_proxy")
+
+
+def socks_proxy_refusal(exc: ImportError) -> UsageError | None:
+    """The usage error for httpx's missing-`socksio` failure, or None for any other import error.
+
+    httpx builds a transport for every proxy in the environment when a client
+    is created and raises `ImportError` for a SOCKS one without `socksio`,
+    even for a host `no_proxy` excludes; its "pip install httpx[socks]" advice
+    cannot fix a Homebrew or `uv tool` install (w5/518). The cloud client and
+    `bea ask`'s model client both fail this way. Only the variable is named: a
+    proxy URL can carry credentials.
+    """
+    if "socks" not in str(exc).lower():
+        return None
+    named = [name for name in _PROXY_VARIABLES if os.environ.get(name, "").lower().startswith("socks")]
+    setting = " and ".join(named) or "a proxy variable"
+    return UsageError(
+        f"{setting} names a SOCKS proxy, which bea's HTTP client does not support. Unset it for bea "
+        f"(for example {named[0] if named else 'ALL_PROXY'}= bea …), or use an HTTP(S) proxy instead."
     )

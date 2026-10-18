@@ -258,13 +258,10 @@ describe("scope enforcement across surfaces", () => {
       });
 
       await asyncContext.run({ requestId: "req-mcp" }, async () => {
-        await handlers.get("manageLedgers")!({
-          operation: "delete",
-          ledger: "alice/main",
-        });
+        await handlers.get("deleteLedger")!({ ledger: "alice/main" });
         expect(getOperationId()).toBeUndefined();
       });
-      expect(seen).toEqual(["MCP manageLedgers"]);
+      expect(seen).toEqual(["MCP deleteLedger"]);
     });
   });
 
@@ -330,26 +327,24 @@ describe("scope enforcement across surfaces", () => {
       expect(reached).toBe(true);
     });
 
-    it("MCP: a grouped admin tool refuses a non-admin scope at the gate", async () => {
-      // The grouped dispatcher carries no transport-level canonical action
-      // (w2/m27), so the gate enforces the admin risk class up front — the
-      // centralized PDP still decides per-branch authority for callers that
-      // hold the scope, as the API-key parity suite proves branch by branch.
-      const deleteLedger = jest
-        .fn()
-        .mockResolvedValue({ ledgerId: "alice/main" });
+    it("MCP: an admin tool without a single PDP action refuses a non-admin scope at the gate", async () => {
+      // listBankConnections reads two admin-class verbs, so it carries no
+      // transport-level canonical action and the gate enforces the admin risk
+      // class up front, before either service runs.
+      const getItems = jest.fn().mockResolvedValue([]);
+      const getAccountsForLedger = jest.fn().mockResolvedValue([]);
       const handlers = captureMcpHandlers(writeToken, realConfig, {
-        ledgerWorkflow: { deleteLedger },
+        plaidItem: { getItems, getAccountsForLedger },
         ledgerRepo: {},
         ledgerShell: {},
       });
-      const result = await handlers.get("manageLedgers")!({
-        operation: "delete",
+      const result = await handlers.get("listBankConnections")!({
         ledger: "alice/main",
       });
 
       expect(result.isError).toBe(true);
-      expect(deleteLedger).not.toHaveBeenCalled();
+      expect(getItems).not.toHaveBeenCalled();
+      expect(getAccountsForLedger).not.toHaveBeenCalled();
     });
 
     it("MCP: ledger.admin still reaches an admin operation", async () => {
@@ -361,8 +356,7 @@ describe("scope enforcement across surfaces", () => {
         ledgerRepo: {},
         ledgerShell: {},
       });
-      const result = await handlers.get("manageLedgers")!({
-        operation: "delete",
+      const result = await handlers.get("deleteLedger")!({
         ledger: "alice/main",
       });
 
@@ -384,7 +378,7 @@ describe("scope enforcement across surfaces", () => {
     });
   });
 
-  describe("routes protected writes to the PDP while retaining grouped-dispatcher scope checks", () => {
+  describe("routes protected writes to the PDP while the gate still checks scope-only writes", () => {
     it("REST: defers a protected ledger write to its service", async () => {
       const { ctx, reached } = await driveRest(
         readOnlyToken,
@@ -416,7 +410,9 @@ describe("scope enforcement across surfaces", () => {
       // An agent is mid-conversation; a thrown transport error would end the
       // session instead of telling it what it lacked.
       const handlers = captureMcpHandlers(readOnlyToken, enforcing);
-      const result = await handlers.get("manageBankImport")!({});
+      // setLedgerStar has no single PDP action, so the scope gate refuses a
+      // read-only token itself.
+      const result = await handlers.get("setLedgerStar")!({});
       expect(result.isError).toBe(true);
       expect(JSON.stringify(result.content)).toContain("ledger.write");
     });

@@ -136,13 +136,11 @@ def forget_source_lines() -> None:
     generated, since the cached lines ended before them.
     """
     _source_lines.cache_clear()
-
-
-_QUOTED = re.compile(r'"((?:[^"\\]|\\.)*)"')
+    _spelled_entries.cache_clear()
 
 
 def shared_locations(entries: list[Any]) -> frozenset[tuple[str, int]]:
-    """The source locations two or more transactions claim on one date, of which at most one is written.
+    """The locations two or more directives of one type claim on one date.
 
     A plugin may stamp a new entry with its source's `filename` and `lineno`
     on the source's own date; that entry passed every on-disk test, so
@@ -151,32 +149,74 @@ def shared_locations(entries: list[Any]) -> frozenset[tuple[str, int]]:
     such a plugin keeps may carry a rewritten narration, so only a same-date
     claim is settled by the line's text.
     """
-    seen: set[tuple[str, int, Any]] = set()
+    seen: set[tuple[str, int, Any, str]] = set()
     shared: set[tuple[str, int]] = set()
     for entry in entries:
-        if not isinstance(entry, Transaction):
-            continue
         meta = entry.meta or {}
         lineno = meta.get("lineno")
         if not isinstance(lineno, int):
             continue
-        key = (str(meta.get("filename")), lineno, entry.date)
+        # Every directive type: a plugin's inverse `price` stamped with the
+        # price line's location passed as on disk too (w5/507).
+        key = (str(meta.get("filename")), lineno, entry.date, type(entry).__name__)
         if key in seen:
             shared.add(key[:2])
         seen.add(key)
     return frozenset(shared)
 
 
-def _declares(entry: Any, line: str) -> bool:
-    """Whether a transaction header line carries this entry's payee and narration."""
-    strings = [
-        unicodedata.normalize("NFC", text.replace('\\"', '"').replace("\\\\", "\\")) for text in _QUOTED.findall(line)
-    ][:2]
-    payee, narration = (strings[0], strings[1]) if len(strings) == 2 else (None, strings[0] if strings else "")
-    return (entry.payee or None, entry.narration or "") == (payee or None, narration)
+@cache
+def _spelled_entries(filename: str) -> dict[int, Any]:
+    """The directives a file spells, indexed by line and parsed without plugins.
+
+    Read with the parser, not a pattern over one line: a quoted word in a
+    trailing `;` comment was taken for the narration, and a narration
+    spanning lines never matched, so the real transaction at a shared
+    location counted as generated (w5/507). Import checks every transaction's
+    header, so parse each file once rather than a window for every row.
+    """
+    from beancount.parser import parser
+
+    lines = _source_lines(filename)
+    if lines is None:
+        return {}
+    # Match the loader's NFC reading and source filename: a relative document
+    # path resolves beside its declaring file, whatever the process's cwd.
+    entries, _, _ = parser.parse_string(unicodedata.normalize("NFC", "\n".join(lines) + "\n"), report_filename=filename)
+    return {entry.meta["lineno"]: entry for entry in entries}
 
 
-def entry_generated(entry: Any, directive_type: str, shared: frozenset[tuple[str, int]] = frozenset()) -> bool:
+def _declares(entry: Any) -> bool | None:
+    """Whether this entry is spelled at its location; None if no declaration can be read."""
+    meta = entry.meta or {}
+    lineno = meta.get("lineno")
+    if not isinstance(lineno, int):
+        return None
+    spelled = _spelled_entries(str(meta.get("filename"))).get(lineno)
+    if spelled is None:
+        return None
+    if type(spelled) is not type(entry):
+        return False
+    if isinstance(entry, Transaction):
+
+        def header(item: Any) -> tuple[str | None, str]:
+            return (
+                unicodedata.normalize("NFC", item.payee) if item.payee else None,
+                unicodedata.normalize("NFC", item.narration or ""),
+            )
+
+        return header(entry) == header(spelled)
+    ignored = {"meta", "postings", "diff_amount", "tolerance", "booking"}
+    return all(getattr(entry, name) == getattr(spelled, name) for name in entry._fields if name not in ignored)
+
+
+def entry_generated(
+    entry: Any,
+    directive_type: str,
+    shared: frozenset[tuple[str, int]] = frozenset(),
+    *,
+    require_declaration: bool = False,
+) -> bool:
     """Whether a plugin synthesized this entry rather than the ledger declaring it.
 
     A synthesized entry either points nowhere real (`<auto_accounts>`) or
@@ -190,6 +230,10 @@ def entry_generated(entry: Any, directive_type: str, shared: frozenset[tuple[str
     A managed price feed's entry is not on disk either: its line is real, but
     it sits in the price cache, not in any file of the ledger. An exported
     snapshot is an ordinary local file and its rows are written.
+
+    Import requires the transaction's declaration even at a unique location:
+    a forecast may replace its template with a same-date, rewritten copy.
+    Listings retain their date/location policy unless a location is shared.
     """
     meta = getattr(entry, "meta", None) or {}
     filename = meta.get("filename")
@@ -215,9 +259,12 @@ def entry_generated(entry: Any, directive_type: str, shared: frozenset[tuple[str
     if directive_type == "transaction":
         if _TXN_TOKEN.match(token) is None:
             return True
-        # Two transactions at one location: only the one the line spells is written.
-        return (str(filename), lineno) in shared and not _declares(entry, lines[lineno - 1])
-    return not token.startswith(directive_type)
+    elif not token.startswith(directive_type):
+        return True
+    # Two entries at one location: only the one the line spells is written.
+    if require_declaration:
+        return _declares(entry) is not True
+    return (str(filename), lineno) in shared and _declares(entry) is False
 
 
 def _in_date_range(
@@ -315,7 +362,7 @@ def list_transactions(
     shared: frozenset[tuple[str, int]] = frozenset(),
 ) -> list[TransactionHeader]:
     # The same fold account filters use, so Turkish `İ`/`ı` match `i` (w1/132).
-    terms = [fold_account(term or "") for term in search or []]
+    terms = [_search_key(term or "") for term in search or []]
     wanted_tags = {_nfc(tag.lstrip("#")) for tag in tags or []}
     wanted_links = {_nfc(link.lstrip("^")) for link in links or []}
     results = []
@@ -329,7 +376,7 @@ def list_transactions(
         if account and not any(fold_account(account) in fold_account(p.account) for p in entry.postings):
             continue
         if terms and not all(
-            term in fold_account(entry.payee or "") or term in fold_account(entry.narration or "") for term in terms
+            term in _search_key(entry.payee or "") or term in _search_key(entry.narration or "") for term in terms
         ):
             continue
         if wanted_tags and not wanted_tags.issubset({_nfc(tag) for tag in entry.tags or ()}):
@@ -342,12 +389,26 @@ def list_transactions(
     return results
 
 
+def _search_key(text: str) -> str:
+    """Text as `--search` compares it: folded, with each line break one space.
+
+    The table shows a narration's line breaks as spaces, and import's
+    duplicate matching reads them so, but the search compared the raw text:
+    `Rent for January`, as the table prints it, matched nothing (w5/631).
+    """
+    return fold_account(_LINE_BREAKS.sub(" ", text))
+
+
+_LINE_BREAKS = re.compile(r"[ \t]*[\r\n]+[ \t]*")
+
+
 def list_notes(
     entries: list[Any],
     from_date: datetime.date | None = None,
     to_date: datetime.date | None = None,
     account: str | None = None,
     limit: int = 50,
+    shared: frozenset[tuple[str, int]] = frozenset(),
 ) -> list[NoteDirective]:
     results = []
     for entry in entries:
@@ -365,7 +426,7 @@ def list_notes(
                 tags=sorted(entry.tags) if entry.tags else [],
                 links=sorted(entry.links) if entry.links else [],
                 meta=metadata_to_json(entry.meta),
-                generated=entry_generated(entry, "note"),
+                generated=entry_generated(entry, "note", shared),
             )
         )
         if len(results) >= limit:
@@ -379,6 +440,7 @@ def list_prices(
     to_date: datetime.date | None = None,
     currency: str | None = None,
     limit: int = 50,
+    shared: frozenset[tuple[str, int]] = frozenset(),
 ) -> list[PriceDirective]:
     results = []
     for entry in entries:
@@ -394,7 +456,7 @@ def list_prices(
                 currency=entry.currency,
                 amount=_to_amount(entry.amount),
                 meta=metadata_to_json(entry.meta),
-                generated=entry_generated(entry, "price"),
+                generated=entry_generated(entry, "price", shared),
             )
         )
         if len(results) >= limit:
@@ -408,6 +470,7 @@ def list_balances(
     to_date: datetime.date | None = None,
     account: str | None = None,
     limit: int = 50,
+    shared: frozenset[tuple[str, int]] = frozenset(),
 ) -> list[BalanceDirective]:
     results = []
     for entry in entries:
@@ -424,7 +487,7 @@ def list_balances(
                 amount=_to_amount(entry.amount),
                 tolerance=entry.tolerance,
                 meta=metadata_to_json(entry.meta),
-                generated=entry_generated(entry, "balance"),
+                generated=entry_generated(entry, "balance", shared),
             )
         )
         if len(results) >= limit:
@@ -438,6 +501,7 @@ def list_opens(
     to_date: datetime.date | None = None,
     account: str | None = None,
     limit: int = 50,
+    shared: frozenset[tuple[str, int]] = frozenset(),
 ) -> list[OpenDirective]:
     results = []
     for entry in entries:
@@ -456,7 +520,7 @@ def list_opens(
                 currencies=currencies,
                 booking=booking,
                 meta=metadata_to_json(entry.meta),
-                generated=entry_generated(entry, "open"),
+                generated=entry_generated(entry, "open", shared),
             )
         )
         if len(results) >= limit:
@@ -470,6 +534,7 @@ def list_closes(
     to_date: datetime.date | None = None,
     account: str | None = None,
     limit: int = 50,
+    shared: frozenset[tuple[str, int]] = frozenset(),
 ) -> list[CloseDirective]:
     results = []
     for entry in entries:
@@ -484,7 +549,7 @@ def list_closes(
                 date=entry.date,
                 account=entry.account,
                 meta=metadata_to_json(entry.meta),
-                generated=entry_generated(entry, "close"),
+                generated=entry_generated(entry, "close", shared),
             )
         )
         if len(results) >= limit:
@@ -498,6 +563,7 @@ def list_commodities(
     to_date: datetime.date | None = None,
     currency: str | None = None,
     limit: int = 50,
+    shared: frozenset[tuple[str, int]] = frozenset(),
 ) -> list[CommodityDirective]:
     results = []
     for entry in entries:
@@ -512,7 +578,7 @@ def list_commodities(
                 date=entry.date,
                 currency=entry.currency,
                 meta=metadata_to_json(entry.meta),
-                generated=entry_generated(entry, "commodity"),
+                generated=entry_generated(entry, "commodity", shared),
             )
         )
         if len(results) >= limit:
@@ -526,15 +592,17 @@ def list_events(
     to_date: datetime.date | None = None,
     type_filter: str | None = None,
     limit: int = 50,
+    shared: frozenset[tuple[str, int]] = frozenset(),
 ) -> list[EventDirective]:
-    wanted = _nfc(type_filter or "").casefold()
+    # Folded as `--search` and `--account` fold, Turkish İ/ı included (w5/533).
+    wanted = fold_account(type_filter or "")
     results = []
     for entry in entries:
         if not isinstance(entry, Event):
             continue
         if not _in_date_range(entry.date, from_date, to_date):
             continue
-        if wanted and wanted != _nfc(entry.type or "").casefold():
+        if wanted and wanted != fold_account(entry.type or ""):
             continue
         results.append(
             EventDirective(
@@ -542,7 +610,7 @@ def list_events(
                 type=entry.type,
                 description=entry.description,
                 meta=metadata_to_json(entry.meta),
-                generated=entry_generated(entry, "event"),
+                generated=entry_generated(entry, "event", shared),
             )
         )
         if len(results) >= limit:
@@ -557,6 +625,7 @@ def list_documents(
     account: str | None = None,
     limit: int = 50,
     root: Path | None = None,
+    shared: frozenset[tuple[str, int]] = frozenset(),
 ) -> list[DocumentDirective]:
     results = []
     for entry in entries:
@@ -576,7 +645,7 @@ def list_documents(
                 tags=tags,
                 links=links,
                 meta=metadata_to_json(entry.meta),
-                generated=entry_generated(entry, "document"),
+                generated=entry_generated(entry, "document", shared),
             )
         )
         if len(results) >= limit:
@@ -618,17 +687,19 @@ def list_customs(
     to_date: datetime.date | None = None,
     type_filter: str | None = None,
     limit: int = 50,
+    shared: frozenset[tuple[str, int]] = frozenset(),
 ) -> list[CustomDirective]:
     from beancount.core.amount import Amount as BcAmount
 
-    wanted = _nfc(type_filter or "").casefold()
+    # Folded as `--search` and `--account` fold, Turkish İ/ı included (w5/533).
+    wanted = fold_account(type_filter or "")
     results = []
     for entry in entries:
         if not isinstance(entry, Custom):
             continue
         if not _in_date_range(entry.date, from_date, to_date):
             continue
-        if wanted and wanted != _nfc(entry.type or "").casefold():
+        if wanted and wanted != fold_account(entry.type or ""):
             continue
         values: list[CustomDirectiveValue] = []
         for v in entry.values or []:
@@ -656,7 +727,7 @@ def list_customs(
                 type=entry.type,
                 values=values,
                 meta=metadata_to_json(entry.meta),
-                generated=entry_generated(entry, "custom"),
+                generated=entry_generated(entry, "custom", shared),
             )
         )
         if len(results) >= limit:
@@ -670,6 +741,7 @@ def list_pads(
     to_date: datetime.date | None = None,
     account: str | None = None,
     limit: int = 50,
+    shared: frozenset[tuple[str, int]] = frozenset(),
 ) -> list[PadDirective]:
     results = []
     for entry in entries:
@@ -687,7 +759,7 @@ def list_pads(
                 account=entry.account,
                 source_account=entry.source_account,
                 meta=metadata_to_json(entry.meta),
-                generated=entry_generated(entry, "pad"),
+                generated=entry_generated(entry, "pad", shared),
             )
         )
         if len(results) >= limit:

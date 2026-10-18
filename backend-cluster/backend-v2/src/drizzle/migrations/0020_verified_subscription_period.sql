@@ -1,0 +1,1 @@
+ALTER TABLE "paid_customers" ADD COLUMN "period_verification_version" integer;

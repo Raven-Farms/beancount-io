@@ -22,7 +22,7 @@ import { useTranslations } from "@/common/hooks/use-translations";
 import { useToast } from "@/common/hooks/use-toast";
 import { ColorTheme } from "@/types/theme-props";
 import { ledgerVar, sessionVar } from "@/common/vars";
-import { LEADING_TEXT_ALIGN } from "@/common/rtl";
+import { LEADING_TEXT_ALIGN, leadingInputTextAlign } from "@/common/rtl";
 import { ThemedRefreshControl } from "@/components/dashboard-scroll-view";
 import { LoadingTile } from "@/components/loading-tile";
 import { useDiscovery } from "./use-discovery";
@@ -69,7 +69,7 @@ const getStyles = (theme: ColorTheme) =>
       color: theme.text01,
       minHeight: 48,
       fontSize: 16,
-      textAlign: LEADING_TEXT_ALIGN,
+      textAlign: leadingInputTextAlign(),
     },
     row: {
       flexDirection: "row",

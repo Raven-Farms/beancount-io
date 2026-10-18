@@ -174,6 +174,18 @@ const ruJournal: Record<string, TranslationEntry> = {
     message: "Произвольный",
     description: "Custom entry type filter",
   },
+  "journal.commodity": {
+    message: "Товар",
+    description: "Name of the Commodity directive type",
+  },
+  "journal.event": {
+    message: "Событие",
+    description: "Name of the Event directive type",
+  },
+  "journal.query": {
+    message: "Запрос",
+    description: "Name of the Query directive type",
+  },
   "journal.date": {
     message: "Дата",
     description: "Label for date field",
@@ -476,6 +488,96 @@ const ruJournal: Record<string, TranslationEntry> = {
     message: "Удалить проводку {number}",
     description:
       "Accessible name for removing a numbered transaction posting row",
+  },
+  "journal.payee": {
+    message: "Получатель",
+    description: "Label for the payee field",
+  },
+  "journal.accountLabel": {
+    message: "Счёт",
+    description: "Label for the account field of a directive form",
+  },
+  "journal.amountLabel": {
+    message: "Сумма",
+    description: "Label for the amount field of a directive form",
+  },
+  "journal.currencyLabel": {
+    message: "Валюта",
+    description: "Label for the currency field of a directive form",
+  },
+  "journal.postingAccount": {
+    message: "Счёт проводки {number}",
+    description:
+      "Accessible label for a numbered transaction posting's account field",
+  },
+  "journal.postingAmount": {
+    message: "Сумма проводки {number}",
+    description:
+      "Accessible label for a numbered transaction posting's amount field",
+  },
+  "journal.postingCurrency": {
+    message: "Валюта проводки {number}",
+    description:
+      "Accessible label for a numbered transaction posting's currency field",
+  },
+  "journal.postingsUnbalanced": {
+    message:
+      "Проводки не сбалансированы: остаток {residual}. Измените сумму или очистите одну, чтобы она рассчиталась автоматически.",
+    description:
+      "Shown when a new transaction's postings leave a residual; {residual} is the amount and currency, e.g. 1 USD",
+  },
+  "journal.accountNotOpen": {
+    message: "Счёт {account} не открыт в этой книге.",
+    description:
+      "Shown under a New Entry account field naming an account the ledger never opened; {account} is the name",
+  },
+  "journal.alsoOpenAccount": {
+    message: "Также открыть {account} {date}",
+    description:
+      "Checkbox label that adds an open directive for {account} dated {date} to the same New Entry write",
+  },
+  "journal.accountClosedBefore": {
+    message: "Счёт {account} закрыт {date}, до этой записи.",
+    description:
+      "Shown under a New Entry account field naming an account closed before the entry; {date} is its close date",
+  },
+  "journal.accountOpensAfter": {
+    message: "Счёт {account} открывается {date}, после этой записи.",
+    description:
+      "Shown under a New Entry account field naming an account opened after the entry; {date} is its open date",
+  },
+  "journal.discardEntryEditTitle": {
+    message: "Отменить правку?",
+    description:
+      "Title of the confirmation shown when leaving Entry Context with unsaved source edits",
+  },
+  "journal.discardEntryEditDescription": {
+    message: "Изменения исходного текста этой записи не сохранены.",
+    description: "Body of the Entry Context discard confirmation",
+  },
+  "journal.keepEditing": {
+    message: "Продолжить правку",
+    description:
+      "Button that returns to the Entry Context editor with the edit intact",
+  },
+  "journal.discardEntryEdit": {
+    message: "Отменить",
+    description: "Button that discards the Entry Context edit and leaves",
+  },
+  "journal.entryChangedElsewhere": {
+    message:
+      "Эта запись изменена или удалена с момента открытия, поэтому правка не сохранена. Скопируйте правку и перезагрузите, чтобы увидеть последнюю версию.",
+    description:
+      "Entry Context save refused because the entry changed elsewhere since it was opened",
+  },
+  "journal.copyMyEdit": {
+    message: "Скопировать мою правку",
+    description: "Copies the unsaved Entry Context edit to the clipboard",
+  },
+  "journal.reloadEntries": {
+    message: "Перезагрузить",
+    description:
+      "Closes Entry Context and refreshes the journal to show the latest entries",
   },
   "journal.autoAmount": {
     message: "авто",

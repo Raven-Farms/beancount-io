@@ -97,6 +97,33 @@ const koImporter: Record<string, TranslationEntry> = {
     message: "다른 파일 업로드",
     description: "Button to upload a different file after error",
   },
+  "importer.aiOffer.title": {
+    message: "이 CSV의 열을 읽을 수 없습니다",
+    description:
+      "Title when a CSV's columns could not be read by the free client parser",
+  },
+  "importer.aiOffer.description": {
+    message:
+      "스마트 가져오기는 날짜, 수취인, 설명, 금액 열이 있는 CSV 파일을 무료로 읽습니다. 이 파일은 AI로 읽을 수도 있으며, 이 경우 AI 토큰이 사용됩니다.",
+    description:
+      "Explains the free CSV format and that AI parsing spends AI tokens",
+  },
+  "importer.aiOffer.parseWithAi": {
+    message: "AI로 분석(AI 토큰 사용)",
+    description:
+      "Button that parses the unreadable CSV with AI, spending AI tokens",
+  },
+  "importer.error.aiQuotaReached": {
+    message: "이번 달 AI 토큰을 모두 사용했습니다",
+    description:
+      "Title when AI parsing of a CSV is refused because the month's AI tokens are used up",
+  },
+  "importer.error.aiQuotaReachedCsv": {
+    message:
+      "AI 분석은 다음 달 또는 Premium으로 다시 사용할 수 있습니다. 날짜, 수취인, 설명, 금액 열이 있는 CSV는 계속 무료로 가져올 수 있습니다.",
+    description:
+      "Explains when AI parsing returns and that a well-formed CSV still imports for free",
+  },
   "importer.error.premiumRequired": {
     message: "프리미엄 기능 필요",
     description: "Title for premium required error",
@@ -231,7 +258,7 @@ const koImporter: Record<string, TranslationEntry> = {
     description: "Table header for actions column",
   },
   "importer.preview.deleteRow": {
-    message: "행 삭제",
+    message: "{row}행 삭제",
     description: "Aria label for delete row button",
   },
   "importer.preview.emptyFileTitle": {
@@ -487,12 +514,12 @@ const koImporter: Record<string, TranslationEntry> = {
     description: "Count of additional import errors",
   },
   "importer.preview.editCellLabel": {
-    message: "{field}을(를) 편집합니다. 현재 값: {value}",
+    message: "{row}행의 {field}을(를) 편집합니다. 현재 값: {value}",
     description: "Accessible label for an editable import cell",
   },
-  "importer.preview.field": {
-    message: "필드",
-    description: "Fallback name for an editable import field",
+  "importer.preview.editFieldLabel": {
+    message: "{field}, {row}행",
+    description: "Accessible label for the open editor of an import cell",
   },
   "importer.validation.dateRequired": {
     message: "날짜가 필요합니다",
@@ -517,6 +544,12 @@ const koImporter: Record<string, TranslationEntry> = {
   "importer.validation.amountInvalid": {
     message: "금액은 유효한 숫자여야 합니다.",
     description: "Validation error for an invalid import amount",
+  },
+  "importer.validation.amountMixedDecimals": {
+    message:
+      "이 열에 마침표 소수점(1,234.56)과 쉼표 소수점(1.234,56)이 섞여 있습니다. 열마다 한 가지 표기만 사용하세요.",
+    description:
+      "Validation error when an import amount column mixes point and comma decimal marks",
   },
   "importer.validation.amountUnsupportedPrecision": {
     message:

@@ -880,6 +880,25 @@ const ptCommon: Record<string, TranslationEntry> = {
     description:
       "Error shown when a feature needs a premium plan (PREMIUM_REQUIRED)",
   },
+  "common.errors.unbalanced": {
+    message: "Os lançamentos não fecham. Ajuste um valor e tente novamente.",
+    description:
+      "Error shown when the ledger refuses a transaction whose postings do not balance (UNBALANCED)",
+  },
+  "common.writeLeftErrors": {
+    message: "Salvo, mas o livro agora informa um erro: {error}",
+    description:
+      "Warning after a write that succeeded but left the ledger with a new validation error; {error} is the first new error",
+  },
+  "common.viewErrors": {
+    message: "Ver erros",
+    description: "Action that opens the ledger's Errors page",
+  },
+  "common.errors.wouldBreakLedger": {
+    message: "Isso adicionaria um erro ao seu livro: {detail}",
+    description:
+      "Error shown when the ledger refuses entries that would add bean-check errors; {detail} is the ledger’s own error text, e.g. Duplicate open directive for Assets:Cash (main.bean:74)",
+  },
   "common.errors.network": {
     message:
       "Problema de conexão. Verifique sua conexão com a internet e tente novamente.",

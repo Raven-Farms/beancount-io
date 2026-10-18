@@ -90,6 +90,7 @@ export const pt: Translations = {
   merchantsCadenceQuarterly: "Trimestral",
   merchantsCadenceYearly: "Anual",
   merchantsCadenceIrregular: "Irregular",
+  merchantsCadenceUnknown: "Histórico insuficiente",
   merchantsNextExpected: "Próximo {{date}}",
   merchantsOverdue: "Atrasado",
   merchantsRecurringToggle: "Recorrente",
@@ -179,7 +180,7 @@ export const pt: Translations = {
   quickAdd: "Adicionar rápido",
   enterNewTransaction: "Registrar nova transação",
   multiPostingsTitle: "Nova transação",
-  addPosting: "+ Adicionar lançamento",
+  addPosting: "Adicionar lançamento",
   remainderLabel: "Restante",
   autoLabel: "auto",
   postingAccount: "Escolher conta",
@@ -313,11 +314,13 @@ export const pt: Translations = {
   openAccountNoCurrency: "Sem moeda",
   openAccountSaving: "Abrindo...",
   openAccountFailed: "Não foi possível abrir a conta. Tente novamente.",
+  ledgerWouldBreak: "Isso adicionaria um erro ao seu livro: {{detail}}",
   openAccountInvalidRoot: "Escolha um tipo de conta válido.",
   openAccountNameRequired: "Digite pelo menos uma parte do nome da conta.",
   openAccountEmptyComponent:
     "As partes do nome da conta não podem ficar vazias.",
   openAccountNamePreview: "Será criada como {{account}}",
+  openAccountAlreadyOpen: "{{account}} já está aberta neste livro.",
   openAccountUppercaseComponent:
     "Cada parte do nome da conta precisa começar com letra maiúscula ou número.",
   openAccountInvalidCharacters:
@@ -524,6 +527,7 @@ export const pt: Translations = {
   budgetInterval: "Intervalo",
   budgetSelectInterval: "Selecionar intervalo",
   budgetAmount: "Valor",
+  budgetAmountInvalid: "Insira um número, como 500 ou 49.99.",
   budgetSaveFailed: "Falha ao salvar o orçamento",
   // delete
   budgetDelete: "Excluir",
@@ -598,6 +602,10 @@ export const pt: Translations = {
     "Fluxo de caixa de receitas para despesas. Receitas {{income}}, despesas {{expenses}}.",
   cashFlowChartSummaryWithSavings:
     "Fluxo de caixa de receitas para despesas. Receitas {{income}}, despesas {{expenses}}, poupança {{savings}}.",
+  cashFlowChartSummaryWithShortfall:
+    "Fluxo de caixa de receitas para despesas. Receitas {{income}}, despesas {{expenses}}, da poupança {{shortfall}}.",
+  sankeyIncomeNodeLabel: "{{name}} (receitas)",
+  sankeyExpensesNodeLabel: "{{name}} (despesas)",
   ledgerNavigateUp: "Subir uma pasta",
   openLedgerDrawer: "Abrir menu",
   back: "Voltar",
@@ -622,7 +630,8 @@ export const pt: Translations = {
   profileUsernameHint:
     "Os endereços web dos seus livros-razão começam pelo seu nome de utilizador, por isso alterá-lo também os altera.",
   profileUsernameRequired: "Introduza um nome de utilizador",
-  profileUsernameNoSpaces: "O nome de utilizador não pode conter espaços",
+  profileUsernameRule:
+    "Use de 1 a 20 caracteres: minúsculas a–z, dígitos 0–9 ou sublinhados.",
   profileUsernameTaken: "Esse nome de utilizador já está a ser usado",
   profileEmail: "E-mail",
   profileEmailReadOnly: "O e-mail não pode ser alterado aqui",

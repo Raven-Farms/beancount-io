@@ -1,6 +1,7 @@
 ---
 name: beancount-reconcile
 description: Reconcile one Beancount account against a CSV statement or pasted PDF text. Report missing entries, duplicates, amount mismatches and date drift; confirm missing-entry writes and a passing period-end balance assertion through bea. Use for checking whether an account matches its statement. Skip bulk imports, analytics, multi-account close orchestration, and edits to existing entries.
+metadata: {"openclaw": {"homepage": "https://github.com/bex-co/beancount-io/tree/main/skills", "requires": {"anyBins": ["bea", "bean-check"]}, "install": [{"id": "brew", "kind": "brew", "formula": "bex-co/tap/bea", "bins": ["bea"], "label": "Install bea (Homebrew)"}, {"id": "uv", "kind": "uv", "package": "beancount-io", "bins": ["bea"], "label": "Install bea (uv)"}]}, "hermes": {"category": "finance", "tags": ["beancount", "accounting", "reconciliation", "bank-statement"]}}
 ---
 
 # beancount-reconcile
@@ -120,6 +121,13 @@ bea --file "$ledger" --json --no-input query "SELECT sum(number) AS ledger, sum(
 - Show the command and its `rows` in the proposal. Any arithmetic you restate in prose — e.g. `2945.00 − 3.00 = 2942.00` — must copy the operands and result from that output. If the query returns no row or null, the account has no postings before that date; state that rather than assuming zero silently.
 - If a figure you wrote disagrees with the output, correct it before asking for approval. After any revision, rerun the query; never carry numbers over from an earlier draft.
 - The residual's sign is part of the result: negative means the ledger would hold more than the statement says; positive means less.
+
+When the ledger is already red — most often the user's own balance assertion failing, the very thing this reconcile is diagnosing — every read refuses under `--json` with `Ledger has N error(s). Pass --allow-errors to report anyway.`, not with an engine failure. Re-run the **read-only** diagnosis (the postings query in `references/matching.md` and the tie-out) with `--allow-errors`, as in the recipe below; tell the user the errors its answer reports (`ledger_valid: false`, `ledger_errors`) instead of hiding them. Writes stay strict: the confirmed batch never takes `--allow-errors` — writing the missing rows is what clears the failing assertion, so the batch passes on its own.
+
+<!-- recipe: tie-out-on-a-red-ledger -->
+```sh
+bea --file "$ledger" --json --no-input query --allow-errors "SELECT sum(number) AS ledger, sum(number) + $proposed_net AS projected, $statement_ending - (sum(number) + $proposed_net) AS residual WHERE account = '$account' AND currency = '$currency' AND date < $assertion_date"
+```
 
 Categorizing the other leg of a missing entry:
 

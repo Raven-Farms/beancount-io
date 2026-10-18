@@ -58,6 +58,12 @@ const faBql: Record<string, TranslationEntry> = {
     message: "نتیجه پرس‌وجو",
     description: "Label for a query result section header",
   },
+  "page.bql.largeResultHint": {
+    message:
+      "اینجا فقط ردیف‌های قابل‌مشاهده در دسترس‌اند. فایل CSV همهٔ ردیف‌ها را دارد (مجموع: {count}).",
+    description:
+      "Screen-reader note on a result too long to render every row; {count} is the total row count",
+  },
   "page.bql.unknownResultType": {
     message: "نوع نتیجه نامشخص",
     description: "Message when query result type is not recognized",

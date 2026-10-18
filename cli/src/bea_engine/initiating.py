@@ -15,7 +15,8 @@ from typing import Any
 from bea_engine import stopping
 from bea_engine.amounts import parse_decimal_number
 from bea_engine.ledger import write as ledger_write
-from bea_engine.protocol import AuthError, ConflictError, UsageError
+from bea_engine.paths import expand_path
+from bea_engine.protocol import AuthError, ConflictError, LedgerError, UsageError
 
 ACCOUNTS = (
     "Assets:Checking",
@@ -48,9 +49,9 @@ def answer(
 
     `opening_balances` are `'ACCOUNT NUMBER'` strings for template asset or
     liability accounts. The file must not already exist; creation is atomic
-    (`os.link` of a validated candidate) so a race never overwrites.
+    (`claim_new_file` of a validated candidate) so a race never overwrites.
     """
-    file = file.expanduser()
+    file = expand_path(file, "--file")
     if not file.is_absolute():
         file = file.resolve()
     if file.exists() or file.is_symlink():
@@ -113,15 +114,22 @@ def answer(
     from beancount.scripts.format import align_beancount
 
     content = align_beancount(content)  # type: ignore[no-untyped-call]
-    _make_parent(file)
-    with ledger_write.candidate_file(file, content) as candidate:
-        ledger_write.validate_candidate(candidate, file)
-        stopping.check()
-        try:
-            # Atomic creation without replacing a file another process created.
-            os.link(candidate, file)
-        except FileExistsError as exc:
-            raise ConflictError(f"Already exists: {file}; nothing was overwritten.") from exc
+    created = _make_parent(file)
+    try:
+        with ledger_write.candidate_file(file, content) as candidate:
+            ledger_write.validate_candidate(candidate, file)
+            stopping.check()
+            try:
+                # Atomic creation without replacing a file another process created.
+                ledger_write.claim_new_file(candidate, file)
+            except FileExistsError as exc:
+                raise ConflictError(f"Already exists: {file}; nothing was overwritten.") from exc
+            except PermissionError as exc:
+                raise AuthError(f"The filesystem refused to create {file}; nothing was written.") from exc
+    except BaseException:
+        # "Nothing was written" left the directories it had made (w5/610).
+        _remove_created(created)
+        raise
 
     return {
         "created": str(file),
@@ -131,7 +139,7 @@ def answer(
     }
 
 
-def _make_parent(file: Path) -> None:
+def _make_parent(file: Path) -> list[Path]:
     """Create the new ledger's directory, or say plainly what stands in the way.
 
     `mkdir` raised straight through: a regular file where a directory was
@@ -139,18 +147,48 @@ def _make_parent(file: Path) -> None:
     `PermissionError: [Errno 13]`, each with exit 1 as if a ledger had failed
     validation. The first is a bad argument and the second the filesystem
     refusing — on the first command a newcomer runs.
+
+    Returns the directories it made, outermost first, for removal when
+    nothing is written after all.
     """
     parent = file.parent
+    created = [path for path in (parent, *parent.parents) if not os.path.lexists(path)][::-1]
     try:
         parent.mkdir(parents=True, exist_ok=True)
     except (FileExistsError, NotADirectoryError) as exc:
-        blocker = next((path for path in (parent, *parent.parents) if path.exists()), parent)
+        _remove_created(created)
+        # `exists()` follows a link, so a dangling one (an unmounted drive) was
+        # skipped and its parent, a real directory, blamed instead (w5/580).
+        blocker = next((path for path in (parent, *parent.parents) if os.path.lexists(path)), parent)
+        if blocker.is_symlink() and not blocker.exists():
+            raise UsageError(
+                f"Cannot create a ledger in {parent}: {blocker} is a broken symbolic link to "
+                f"{os.readlink(blocker)}. Reconnect what it points to, or choose another directory. "
+                "Nothing was written."
+            ) from exc
         raise UsageError(
             f"Cannot create a ledger in {parent}: {blocker} is a file, not a directory. "
             "Choose another directory. Nothing was written."
         ) from exc
     except PermissionError as exc:
+        _remove_created(created)
         existing = next((path for path in parent.parents if path.exists()), parent)
         raise AuthError(
             f"Cannot create {parent}: the directory {existing} is not writable. Nothing was written."
         ) from exc
+    except OSError as exc:
+        _remove_created(created)
+        # A full disk read as a raw `OSError: [Errno 28]` (w5/610).
+        raise LedgerError(
+            f"Cannot create {parent} ({exc.strerror or type(exc).__name__}); nothing was written."
+        ) from exc
+    return created
+
+
+def _remove_created(created: list[Path]) -> None:
+    """Remove the directories `_make_parent` made, innermost first, while each is empty."""
+    for path in reversed(created):
+        try:
+            path.rmdir()
+        except OSError:
+            return

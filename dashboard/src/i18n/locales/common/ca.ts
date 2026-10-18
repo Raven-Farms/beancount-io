@@ -885,6 +885,25 @@ const caCommon: Record<string, TranslationEntry> = {
     description:
       "Error shown when a feature needs a premium plan (PREMIUM_REQUIRED)",
   },
+  "common.errors.unbalanced": {
+    message: "Els apunts no quadren. Ajusteu un import i torneu-ho a provar.",
+    description:
+      "Error shown when the ledger refuses a transaction whose postings do not balance (UNBALANCED)",
+  },
+  "common.writeLeftErrors": {
+    message: "S'ha desat, però ara el llibre informa d'un error: {error}",
+    description:
+      "Warning after a write that succeeded but left the ledger with a new validation error; {error} is the first new error",
+  },
+  "common.viewErrors": {
+    message: "Mostra els errors",
+    description: "Action that opens the ledger's Errors page",
+  },
+  "common.errors.wouldBreakLedger": {
+    message: "Això afegiria un error al teu llibre: {detail}",
+    description:
+      "Error shown when the ledger refuses entries that would add bean-check errors; {detail} is the ledger’s own error text, e.g. Duplicate open directive for Assets:Cash (main.bean:74)",
+  },
   "common.errors.network": {
     message:
       "Problema de connexió. Comproveu la connexió a internet i torneu-ho a provar.",

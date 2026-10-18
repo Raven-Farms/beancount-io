@@ -126,7 +126,12 @@ export class BadUserInputError extends DomainError {
  * throw new ValidationError("email", "Must be a valid email address");
  */
 export class ValidationError extends DomainError {
-  constructor(field: string, reason: string, hint?: string) {
+  constructor(
+    field: string,
+    reason: string,
+    hint?: string,
+    details?: Record<string, unknown>,
+  ) {
     super(
       ErrorCategory.VALIDATION_FAILED,
       `Validation failed for ${field}: ${reason}`,
@@ -134,7 +139,34 @@ export class ValidationError extends DomainError {
         field,
         reason,
         ...(hint !== undefined && { hint }),
+        ...details,
       },
+    );
+  }
+}
+
+/**
+ * A write that would add bean-check errors the ledger did not have, on either
+ * write path: Beancount text (`text`) or structured entries (`entries`, w0/m2).
+ * Each new error is named in the reason and, for clients, in
+ * `newLedgerErrors` (`message (file:line); …`), as UNBALANCED carries its
+ * `residual` — so an app shows what the write would break without parsing the
+ * message.
+ *
+ * Category: VALIDATION_FAILED (HTTP 400)
+ */
+export class NewLedgerErrorsError extends ValidationError {
+  constructor(
+    field: "text" | "entries",
+    count: number,
+    newLedgerErrors: string,
+  ) {
+    const text = field === "text";
+    super(
+      field,
+      `${text ? "appending it" : "adding these entries"} would introduce ${count} new bean-check error${count === 1 ? "" : "s"}: ${newLedgerErrors}`,
+      `The ${text ? "text is valid Beancount" : "entries are valid"} but would break the ledger — the message names each new error. Fix the ${text ? "directives" : "entries"}, or pass \`allowInvalid: true\` to record them anyway.`,
+      { newLedgerErrors },
     );
   }
 }

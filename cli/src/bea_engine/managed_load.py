@@ -26,6 +26,8 @@ so the portable export t005 builds reads the same bytes the load parsed.
 
 from __future__ import annotations
 
+import contextlib
+import io
 import json
 import os
 import re
@@ -33,8 +35,9 @@ import secrets
 import stat
 import sys
 import time
+import traceback
 import unicodedata
-from collections.abc import Iterator
+from collections.abc import Collection, Iterator, Mapping
 from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
@@ -52,6 +55,7 @@ from bea_engine.managed_price_cache import (
     cache_write_problem,
     feed_dir,
     freshness,
+    open_cache_file,
     resolve_feed,
     write_text_atomic,
 )
@@ -61,8 +65,10 @@ from bea_engine.managed_prices import (
     AllowedUrl,
     ManagedPriceBudget,
     is_url_include_target,
+    normalize_origin,
     parse_managed_price_url,
 )
+from bea_engine.paths import expand_path
 
 if TYPE_CHECKING:
     from bea_engine.ledger.write import LedgerSnapshot
@@ -89,9 +95,11 @@ _LEDGER_PRICE_RE = re.compile(
 )
 # What Beancount's lexer reads as one token before a line could start: a
 # string, which may span lines, and a comment, which may hold a `"`. A
-# price-shaped line inside a multi-line note is not a price (w5/378).
-_STRING_OR_COMMENT_RE = re.compile(r'"(?:[^"\\]|\\.)*"|;[^\n]*')
-_METADATA_LINE_RE = re.compile(r"^[ \t]+[a-z][A-Za-z0-9_-]*\s*:")
+# price-shaped line inside a multi-line note is not a price (w5/378). A line
+# the lexer ignores outright — starting `*`, `:`, `#` or a flag character, as
+# an org-mode heading does — may hold a `"` too, which opens no string: the
+# `12"` in `* Prices for the 12" binder` masked the price below it (w5/476).
+_STRING_OR_COMMENT_RE = re.compile(r'"(?:[^"\\]|\\.)*"|;[^\n]*|^[*:#!&?%][^\n]*', re.MULTILINE)
 _SHADOWED_LINE = "; shadowed by a ledger-authored price for the same date"
 _ALREADY_INCLUDED_LINE = "; managed price feed already included from another file"
 _NO_CACHED_REVISION = "no cached revision"
@@ -152,6 +160,9 @@ def collect_ledger_price_pairs(*texts: str) -> set[tuple[str, str, str]]:
     """
     pairs: set[tuple[str, str, str]] = set()
     for text in texts:
+        # The loader drops a byte-order mark, so a price on line 1 after one
+        # is still a price (w5/476).
+        text = text.removeprefix("\ufeff")
         # Each string collapses to one character, newlines and all, so none
         # of its lines can be read as the start of a directive.
         directives = _STRING_OR_COMMENT_RE.sub(lambda m: "x" if m.group(0).startswith('"') else m.group(0), text)
@@ -194,9 +205,14 @@ def apply_ledger_price_precedence(
         ) in ledger_pairs:
             shadowed += 1
             lines[price.line - 1] = _SHADOWED_LINE
+            # Every indented line below belongs to the point: its metadata and
+            # any indented comment between them. Stopping at the comment left
+            # the metadata after it indented under nothing, an `unexpected
+            # INDENT` in every command (w5/477). Blank lines are kept as they are.
             index = price.line
-            while index < len(lines) and _METADATA_LINE_RE.match(lines[index]):
-                lines[index] = f"; {lines[index].strip()}"
+            while index < len(lines) and (not lines[index].strip() or lines[index][0] in " \t"):
+                if lines[index].strip():
+                    lines[index] = f"; {lines[index].strip()}"
                 index += 1
         else:
             effective_dates.append(price.date)
@@ -211,7 +227,32 @@ def _env_origins() -> tuple[str, ...] | None:
     raw = os.environ.get(ORIGINS_ENV)
     if raw is None:
         return None
-    return tuple(origin.strip() for origin in raw.split(",") if origin.strip())
+    normalized = (normalize_origin(entry) for entry in raw.split(",") if entry.strip())
+    return tuple(dict.fromkeys(origin for origin in normalized if origin is not None))
+
+
+def _ignored_origins() -> str:
+    """Why the environment's allowlist is empty, when every entry it names was ignored, or "".
+
+    An entry that is not an http(s) URL is dropped, and with none left the
+    load said "managed price includes are disabled", the words for an empty
+    variable: `MANAGED_PRICE_ORIGINS=beancount.io` never said its entry was
+    the problem (w5/633).
+    """
+    raw = os.environ.get(ORIGINS_ENV) or ""
+    entries = [entry.strip() for entry in raw.split(",") if entry.strip()]
+    if not entries or any(normalize_origin(entry) is not None for entry in entries):
+        return ""
+    if len(entries) == 1:
+        return f"{ORIGINS_ENV} entry {entries[0]!r} is not an http(s) origin and was ignored; no origins remain"
+    names = ", ".join(repr(entry) for entry in entries)
+    return f"{ORIGINS_ENV} entries {names} are not http(s) origins and were ignored; no origins remain"
+
+
+def _allowed_origins(origins: tuple[str, ...] | None) -> tuple[str, ...]:
+    """The managed-price origins a load allows: the argument, else the environment, else the defaults."""
+    allowed = _env_origins() if origins is None else origins
+    return DEFAULT_ORIGINS if allowed is None else allowed
 
 
 def _env_flag(name: str) -> bool:
@@ -227,7 +268,9 @@ def _iso(moment: float | None) -> str | None:
 def _holds(path: Path, text: str) -> bool:
     """Whether `path` already holds exactly `text` (unreadable reads as no)."""
     try:
-        return path.read_text(encoding="utf-8") == text
+        with open_cache_file(path) as stream:
+            held: str = stream.read()
+        return held == text
     except (OSError, ValueError):
         return False
 
@@ -260,7 +303,7 @@ def load_with_sources(
     # Beancount's parser swallows the exception a signal handler raises, so a
     # termination signal during the load exits at once instead (w1/074).
     with stopping.loading():
-        return _load_with_sources(
+        loaded = _load_with_sources(
             entry,
             offline=offline,
             strict=strict,
@@ -270,6 +313,46 @@ def load_with_sources(
             opener=opener,
             snapshot=snapshot,
         )
+    # A terminating plugin did not finish the transformation pipeline. Refuse
+    # even an allow-errors read/write, after staged locations map back, rather
+    # than loading and running that user code again during write validation.
+    from bea_engine.protocol import LedgerError
+    from bea_engine.query import format_error
+
+    exited = [format_error(error, ledger_file=entry) for error in loaded.errors if is_plugin_exit(error)]
+    if exited:
+        raise LedgerError(f"{entry}: {len(exited)} plugin(s) terminated while loading.", details=exited)
+    return loaded
+
+
+def _resolve_feeds(
+    sources: list[_PendingSource],
+    *,
+    root: Path,
+    offline: bool,
+    strict: bool,
+    now: float,
+    opener: OpenerDirector | None,
+) -> dict[str, ResolvedFeed]:
+    """Each source resolved, the fetches running side by side.
+
+    One after another, each source's fetch timeout added up: during a price
+    service outage a ledger with six feeds stalled every command for half a
+    minute, where the hosted ledger resolves them together (w5/642). Each
+    feed has its own cache directory, so nothing they write is shared. In
+    strict mode the first source in include order that fails is the one
+    reported, as before.
+    """
+    from concurrent.futures import ThreadPoolExecutor
+
+    def resolve(source: _PendingSource) -> ResolvedFeed:
+        return resolve_feed(source.url, source.alias, root=root, offline=offline, strict=strict, now=now, opener=opener)
+
+    if offline or len(sources) < 2:
+        return {source.url: resolve(source) for source in sources}
+    with ThreadPoolExecutor(max_workers=len(sources), thread_name_prefix="managed-price-source") as pool:
+        futures = [(source.url, pool.submit(resolve, source)) for source in sources]
+        return {url: future.result() for url, future in futures}
 
 
 def _load_with_sources(
@@ -292,21 +375,20 @@ def _load_with_sources(
         keep_load_cache_private,
         refuse_cache_over_ledger,
     )
-    from bea_engine.protocol import LedgerError
+    from bea_engine.protocol import LedgerError, StagingFailed
 
     keep_load_cache_private()
     _record_plugin_configs(loader)
+    _book_past_arithmetic_failures()
 
     at = time.time() if now is None else now
     want_offline = _env_flag(OFFLINE_ENV) if offline is None else offline
     want_strict = _env_flag(STRICT_ENV) if strict is None else strict
-    allowed_origins = _env_origins() if origins is None else origins
-    if allowed_origins is None:
-        allowed_origins = DEFAULT_ORIGINS
+    allowed_origins = _allowed_origins(origins)
     cache = root or cache_root()
 
     snapshot = snapshot or LedgerSnapshot.capture(entry)
-    refuse_cache_over_ledger(entry, snapshot.contents)
+    refuse_cache_over_ledger(entry, snapshot.contents, snapshot.patterns)
     refused: dict[str, str] = {}
     managed = _collect_managed(snapshot, allowed_origins, refused)
     duplicates = _duplicate_members(snapshot)
@@ -323,23 +405,16 @@ def _load_with_sources(
     # status` and the export all name it.
     budget = ManagedPriceBudget(limit=MAX_URLS_PER_LOAD)
     pending = managed
-    resolved: dict[str, ResolvedFeed] = {}
-    for source in pending:
-        if not budget.claim(source.url):
-            if want_strict:
-                raise LedgerError(f"managed price source {source.url} is unavailable in strict mode: {_OVER_LIMIT}.")
-            over_limit = PriceFeedHead(revision=None, next_refresh_at=0.0, last_error=_OVER_LIMIT)
-            resolved[source.url] = ResolvedFeed(blob=None, head=over_limit)
-            continue
-        resolved[source.url] = resolve_feed(
-            source.url,
-            source.alias,
-            root=cache,
-            offline=want_offline,
-            strict=want_strict,
-            now=at,
-            opener=opener,
-        )
+    claimed = [source for source in pending if budget.claim(source.url)]
+    fetched = _resolve_feeds(claimed, root=cache, offline=want_offline, strict=want_strict, now=at, opener=opener)
+    if want_strict and len(claimed) < len(pending):
+        # The sources past the cap follow every claimed one, as they did when resolved in turn.
+        over = next(source for source in pending if source.url not in fetched)
+        raise LedgerError(f"managed price source {over.url} is unavailable in strict mode: {_OVER_LIMIT}.")
+    over_limit = PriceFeedHead(revision=None, next_refresh_at=0.0, last_error=_OVER_LIMIT)
+    resolved: dict[str, ResolvedFeed] = {
+        source.url: fetched.get(source.url) or ResolvedFeed(blob=None, head=over_limit) for source in pending
+    }
     blobs = {url: result.blob for url, result in resolved.items() if result.blob is not None}
     texts = [content.decode("utf-8", errors="replace") for content in snapshot.contents.values()]
     pairs = collect_ledger_price_pairs(*texts) if blobs else set()
@@ -384,44 +459,63 @@ def _load_with_sources(
                     continue
             effective[url] = (blob, precedence, path)
 
-        staged = {path: stack.enter_context(_shadow(path, "", entry, managed)) for path in snapshot.contents}
-        unavailable: list[Any] = []
-        for path, original in snapshot.contents.items():
-            content = _rewrite_includes(
-                original,
-                path,
-                snapshot.patterns,
-                staged,
-                pending,
-                resolved,
-                effective,
-                primary,
-                # A file reached again under another name is never loaded,
-                # so what its own lines would report is not reported.
-                [] if path in duplicates else unavailable,
-                LoadError,
-                stack,
-                refused,
-                duplicates,
-            )
-            try:
-                staged[path].write_bytes(content)
-            except OSError as exc:
-                if is_candidate_file(entry):
-                    raise LedgerError(
-                        f"Cannot write a staged copy of {path.name} in {path.parent} "
-                        f"({exc.strerror or type(exc).__name__}); nothing was written."
+        # The load itself is the slow part, and its staged root is a fresh
+        # random name every time, so Beancount's own cache never answered a
+        # ledger with a managed include: every read re-parsed it (w5/576).
+        load_cache = None if is_candidate_file(entry) else _managed_cache_file(entry)
+        fingerprint = (
+            _managed_fingerprint(snapshot, resolved, effective, staged_feeds, refused, primary) if load_cache else ""
+        )
+        cached = _cached_managed_load(load_cache, fingerprint) if load_cache is not None else None
+        if cached is not None:
+            entries, errors, remapped_options = cached
+        else:
+            started = time.time()
+            staged = {path: stack.enter_context(_shadow(path, "", entry, managed)) for path in snapshot.contents}
+            unavailable: list[Any] = []
+            for path, original in snapshot.contents.items():
+                content = _rewrite_includes(
+                    original,
+                    path,
+                    snapshot.patterns,
+                    staged,
+                    pending,
+                    resolved,
+                    effective,
+                    primary,
+                    # A file reached again under another name is never loaded,
+                    # so what its own lines would report is not reported.
+                    [] if path in duplicates else unavailable,
+                    LoadError,
+                    stack,
+                    refused,
+                    duplicates,
+                )
+                try:
+                    staged[path].write_bytes(content)
+                except OSError as exc:
+                    if is_candidate_file(entry):
+                        raise StagingFailed(
+                            f"Cannot write a staged copy of {path.name} in {path.parent} "
+                            f"({exc.strerror or type(exc).__name__}); nothing was written."
+                        ) from exc
+                    raise StagingFailed(
+                        _staging_refused(entry, path.parent, managed, _cause(exc), "Free space there")
                     ) from exc
-                raise LedgerError(
-                    _staging_refused(entry, path.parent, managed, _cause(exc), "Free space there")
-                ) from exc
-        entries, errors, options = loader.load_file(str(staged[snapshot.root]))
-        back = {str(staged_path): str(original) for original, staged_path in staged.items()}
-        back.update(staged_feeds)
-        entries = [_remap_entry(entry, back) for entry in entries]
-        errors = [_remap_error(error, back) for error in errors]
-    _refuse_undecodable(errors, snapshot)
-    errors.extend(unavailable)
+            entries, errors, options = loader.load_file(str(staged[snapshot.root]))
+            back = {str(staged_path): str(original) for original, staged_path in staged.items()}
+            back.update(staged_feeds)
+            entries = [_remap_entry(entry, back) for entry in entries]
+            errors = [_remap_error(error, back) for error in errors]
+            _refuse_undecodable(errors, snapshot)
+            errors.extend(unavailable)
+            remapped_options = dict(options)
+            if isinstance(remapped_options.get("filename"), str):
+                remapped_options["filename"] = _remap(remapped_options["filename"], back)
+            if isinstance(remapped_options.get("include"), list):
+                remapped_options["include"] = [_remap(str(item), back) for item in remapped_options["include"]]
+            if load_cache is not None and time.time() - started >= loader.PICKLE_CACHE_THRESHOLD:
+                _store_managed_load(load_cache, fingerprint, snapshot, entries, errors, remapped_options)
 
     for url, result in resolved.items():
         if result.head.last_error and result.head.last_error.startswith(CACHE_WRITE_PROBLEM):
@@ -462,12 +556,126 @@ def _load_with_sources(
                 effective_text=applied.text if applied else None,
             )
         )
-    remapped_options = dict(options)
-    if isinstance(remapped_options.get("filename"), str):
-        remapped_options["filename"] = _remap(remapped_options["filename"], back)
-    if isinstance(remapped_options.get("include"), list):
-        remapped_options["include"] = [_remap(str(item), back) for item in remapped_options["include"]]
     return LoadedLedger(entries, errors, remapped_options, tuple(sources))
+
+
+#: Bumped when what a managed load returns changes shape, so no older cache answers.
+_MANAGED_CACHE_FORMAT = 3
+
+
+def _managed_cache_file(entry: Path) -> Path | None:
+    """Where a managed-include load of `entry` keeps its cache, beside Beancount's own; None when caching is off."""
+    from beancount import loader
+
+    from bea_engine.ledger.write import pickle_cache_of
+
+    if not loader.PICKLE_CACHE_FILENAME:
+        return None
+    return Path(f"{pickle_cache_of(entry)}.managed")
+
+
+def _managed_fingerprint(
+    snapshot: LedgerSnapshot,
+    resolved: dict[str, ResolvedFeed],
+    effective: dict[str, tuple[PriceFeedBlob, EffectiveFeed, Path]],
+    staged_feeds: dict[str, str],
+    refused: dict[str, str],
+    primary: set[tuple[str, int]],
+) -> str:
+    """Everything a managed load's answer depends on that can change between reads.
+
+    The ledger's files by their captured stats, each feed by the revision it
+    served and the cause of any failure, and the effective text each one
+    contributed. A refreshed feed or an edited file changes it.
+    """
+    from importlib.metadata import PackageNotFoundError
+    from importlib.metadata import version as installed
+
+    try:
+        beancount = installed("beancount")
+    except PackageNotFoundError:
+        beancount = None
+    stats = sorted(
+        [str(path), None if status is None else [status.st_dev, status.st_ino, status.st_mtime_ns, status.st_size]]
+        for path, status in snapshot.stats.items()
+    )
+    feeds = sorted(
+        [url, result.blob.revision if result.blob else None, result.head.last_error] for url, result in resolved.items()
+    )
+    # An offline load stages a feed's text under a fresh name, which its
+    # entries are remapped from; the name they carry is what counts.
+    texts = sorted(
+        [url, _remap(str(path), staged_feeds), sha256(applied.text.encode("utf-8")).hexdigest()]
+        for url, (_, applied, path) in effective.items()
+    )
+    record = {
+        "format": _MANAGED_CACHE_FORMAT,
+        "beancount": beancount,
+        "stats": stats,
+        "feeds": feeds,
+        "effective": texts,
+        "refused": sorted(refused.items()),
+        "primary": sorted(primary),
+    }
+    return sha256(json.dumps(record, sort_keys=True).encode("utf-8")).hexdigest()
+
+
+def _cached_managed_load(cache: Path, fingerprint: str) -> tuple[list[Any], list[Any], dict[str, Any]] | None:
+    """The cached answer of an identical managed load, or None when it no longer holds.
+
+    It holds only for the same fingerprint, plugins that still resolve to the
+    same files (w5/326), and documents that are where the load found them
+    (w5/116): the same guards `_load_fresh` applies to Beancount's own cache.
+    """
+    import pickle
+
+    try:
+        with open_cache_file(cache, "rb") as stream:
+            stored = pickle.load(stream)
+    except Exception:  # noqa: BLE001 - a missing, partial or foreign cache is a miss
+        return None
+    if not isinstance(stored, dict) or stored.get("fingerprint") != fingerprint:
+        return None
+    plugins = stored.get("plugins") or {}
+    if plugins.get("modules") != _plugin_fingerprint(plugins.get("names", []), plugins.get("pythonpath", [])):
+        return None
+    entries, errors, options = stored["result"]
+    if _documents_moved(entries, errors, options):
+        return None
+    return list(entries), list(errors), dict(options)
+
+
+def _store_managed_load(
+    cache: Path,
+    fingerprint: str,
+    snapshot: LedgerSnapshot,
+    entries: list[Any],
+    errors: list[Any],
+    options: dict[str, Any],
+) -> None:
+    """Keep a slow managed load for the next identical read, private and replaced atomically.
+
+    Not kept when a file changed while it loaded (w5/218), or when an error is
+    a type a plugin defined, which a later process may not unpickle.
+    """
+    import pickle
+    import tempfile
+
+    if _changed_since(snapshot) or _plugin_defined(errors):
+        return
+    names = sorted({str(name) for name, _config in options.get("plugin") or ()})
+    paths = [str(directory) for directory in options.get("pythonpath") or ()]
+    plugins = {"names": names, "pythonpath": paths, "modules": _plugin_fingerprint(names, paths)}
+    try:
+        payload = pickle.dumps({"fingerprint": fingerprint, "plugins": plugins, "result": (entries, errors, options)})
+        cache.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        handle, temporary = tempfile.mkstemp(prefix=f".{cache.name}.", dir=cache.parent)
+        with os.fdopen(handle, "wb") as stream:
+            stream.write(payload)
+        os.replace(temporary, cache)
+    except Exception:  # noqa: BLE001 - a cache that cannot be written is only a slower next read
+        with contextlib.suppress(OSError, UnboundLocalError):
+            os.unlink(temporary)
 
 
 def _refuse_undecodable(errors: list[Any], snapshot: LedgerSnapshot) -> None:
@@ -500,10 +708,11 @@ def _refuse_undecodable(errors: list[Any], snapshot: LedgerSnapshot) -> None:
 #: by name alone, so two directives naming one plugin with different configs
 #: could not be told apart (w1/101).
 PLUGIN_CONFIG_KEY = "__bea_plugin_config__"
+PLUGIN_EXIT_KEY = "__bea_plugin_exit__"
 
 
 def _record_plugin_configs(loader: Any) -> None:
-    """Have the loader's plugin errors carry the failing directive's config.
+    """Record failing plugin configs and turn plugin exits into load errors.
 
     The loader builds those errors inside `run_transformations`, where the
     config is the `plugin_config` local. For the duration of that call only,
@@ -528,14 +737,172 @@ def _record_plugin_configs(loader: Any) -> None:
             return (base, tuple(self))
 
     def run_transformations(*args: Any, **kwargs: Any) -> Any:
+        from bea_engine import stopping
+        from bea_engine.protocol import capturing
+
         loader.LoadError = _PluginAwareLoadError
+        logs = io.StringIO()
+        failed = False
         try:
-            return original(*args, **kwargs)
+            with capturing(logs):
+                try:
+                    return original(*args, **kwargs)
+                except SystemExit as exc:
+                    # Signals still stop the process. Only an exit raised by
+                    # user plugin code is a failed load rather than our status.
+                    stopping.check()
+                    current = exc.__traceback__
+                    while current is not None and current.tb_frame.f_code is not original.__code__:
+                        current = current.tb_next
+                    if current is None or "plugin_name" not in current.tb_frame.f_locals:
+                        raise
+                    state = current.tb_frame.f_locals
+                    called = current.tb_next
+                    importing = (
+                        called is not None
+                        and called.tb_frame.f_globals.get("__name__") == "importlib"
+                        and called.tb_frame.f_code.co_name == "import_module"
+                    )
+                    formatted = traceback.format_exc().replace("\n", "\n  ")
+                    failed = True
+            # Captured descriptors have been drained on leaving the context.
+            printed = logs.getvalue().strip()
+            if printed:
+                formatted += "\n  Plugin output:\n  " + printed.replace("\n", "\n  ")
+            source = {
+                "filename": "<load>",
+                "lineno": 0,
+                PLUGIN_CONFIG_KEY: state.get("plugin_config"),
+                PLUGIN_EXIT_KEY: True,
+            }
+            kind = "importing" if importing else "applying plugin"
+            error = base(source, f'Error {kind} "{state["plugin_name"]}": {formatted}')
+            return state["entries"], [*state["errors"], error]
         finally:
             loader.LoadError = base
+            if not failed and logs.getvalue():
+                # Successful and ordinary-exception loads keep their output.
+                print(logs.getvalue(), file=sys.stderr, end="")
 
     run_transformations._bea_records_plugin_config = True  # type: ignore[attr-defined]
     loader.run_transformations = run_transformations
+
+
+def is_plugin_exit(error: Any) -> bool:
+    """A plugin load that terminated before the transformation pipeline finished."""
+    return bool((getattr(error, "source", None) or {}).get(PLUGIN_EXIT_KEY))
+
+
+#: How every booking failure `_book_past_arithmetic_failures` reports begins;
+#: bean-check raises on the same transaction, so `check` reports these itself.
+CANNOT_BOOK = "Beancount cannot book this transaction: "
+
+#: A zero-unit posting at a total cost, refused at input and reported on read.
+ZERO_UNITS_TOTAL_COST = (
+    "holds zero units at a total cost ({{…}}), and booking divides the total by the units. "
+    "Give the posting its units, or write its cost per unit in single braces."
+)
+
+#: The 28-digit failure, worded as the write refusal words it (w5/263).
+TOO_WIDE_TO_INFER = (
+    "it has to calculate an amount wider than the 28 significant digits its arithmetic keeps, which happens "
+    "when a posting's amount is left for it to infer beside a number that wide. Give every posting an "
+    "explicit amount, or use a number of at most 28 significant digits."
+)
+
+
+def is_booking_failure(error: Any) -> bool:
+    """Whether a loader error is a transaction `_book_past_arithmetic_failures` reported."""
+    message = getattr(error, "message", None)
+    return isinstance(message, str) and message.startswith(CANNOT_BOOK)
+
+
+def zero_units_at_total_cost(posting: Any) -> bool:
+    """Whether a parsed posting holds zero units at a total cost, which booking divides by."""
+    from beancount.core.number import MISSING
+    from beancount.core.position import CostSpec
+
+    units, cost = posting.units, posting.cost
+    return (
+        isinstance(cost, CostSpec)
+        and cost.number_total not in (None, MISSING)
+        and units is not MISSING
+        and units.number is not MISSING
+        and units.number == 0
+    )
+
+
+def _book_past_arithmetic_failures() -> None:
+    """Have booking report a transaction its decimal arithmetic fails on, at that transaction (w5/538).
+
+    Beancount's booking raises instead of reporting when an amount it infers
+    does not fit its 28-digit context, or a zero-unit posting divides a total
+    cost by nothing, so every read and write of the ledger failed with a bare
+    `DivisionByZero` or `InvalidOperation` naming no file or line. The raising
+    frame's locals say how far booking got — the entries booked so far, their
+    errors, the running balances and the entry that raised — so that entry
+    becomes an error at its line and is dropped, as a transaction failing
+    categorization is, and booking resumes after it from those balances. A
+    failure anywhere else still raises as before. The error is upstream's own
+    `InterpolationError`, so Beancount's load cache stays readable by
+    upstream tools.
+    """
+    from decimal import DecimalException
+
+    from beancount.parser import booking_full
+
+    if getattr(booking_full._book, "_bea_books_past_arithmetic", False):
+        return
+    original: Any = booking_full._book
+
+    def _book(entries: Any, options_map: Any, methods: Any, initial_balances: Any = None) -> Any:
+        booked: list[Any] = []
+        errors: list[Any] = []
+        balances = initial_balances
+        while True:
+            try:
+                done, found, balances = original(entries, options_map, methods, balances)
+            except DecimalException as exc:
+                state = _interrupted_booking(exc, original.__code__)
+                index = None if state is None else next((n for n, e in enumerate(entries) if e is state[3]), None)
+                if state is None or index is None:
+                    raise
+                so_far, so_far_errors, balances, culprit = state
+                booked.extend(so_far)
+                errors.extend(so_far_errors)
+                errors.append(booking_full.InterpolationError(culprit.meta, _booking_failure(culprit, exc), culprit))
+                entries = entries[index + 1 :]
+            else:
+                return [*booked, *done], [*errors, *found], balances
+
+    _book._bea_books_past_arithmetic = True  # type: ignore[attr-defined]
+    booking_full._book = _book
+
+
+def _interrupted_booking(exc: BaseException, code: Any) -> tuple[list[Any], list[Any], Any, Any] | None:
+    """Upstream `_book`'s progress when `exc` left it: booked entries, errors, balances, the raising entry."""
+    trace = exc.__traceback__
+    while trace is not None:
+        if trace.tb_frame.f_code is code:
+            local = trace.tb_frame.f_locals
+            try:
+                return local["new_entries"], local["errors"], local["balances"], local["entry"]
+            except KeyError:
+                return None
+        trace = trace.tb_next
+    return None
+
+
+def _booking_failure(entry: Any, exc: BaseException) -> str:
+    """The error for a transaction booking's decimal arithmetic raised on."""
+    from decimal import InvalidOperation
+
+    for posting in entry.postings:
+        if zero_units_at_total_cost(posting):
+            return f"{CANNOT_BOOK}{posting.account} {ZERO_UNITS_TOTAL_COST}"
+    if isinstance(exc, InvalidOperation):
+        return f"{CANNOT_BOOK}{TOO_WIDE_TO_INFER}"
+    return f"{CANNOT_BOOK}its decimal arithmetic failed ({type(exc).__name__}). Check its amounts, costs and prices."
 
 
 def _load_fresh(entry: Path, snapshot: LedgerSnapshot) -> tuple[Any, Any, Any]:
@@ -615,8 +982,10 @@ def _changed_since(snapshot: LedgerSnapshot) -> bool:
 
 #: What ends a load cache `_load_fresh` wrote. Unpickling stops at the pickle's
 #: own end, so upstream tools read a marked cache exactly as they did, and one
-#: they write themselves replaces the file, mark included.
-_ENGINE_CACHE_MARK = b"\nbea-engine-load\n"
+#: they write themselves replaces the file, mark included. Its revision moves
+#: when the engine parses differently, so no older cache answers: one kept the
+#: location a `filename:` key overwrote (w5/630).
+_ENGINE_CACHE_MARK = b"\nbea-engine-load 2\n"
 
 
 def _engine_wrote(cache: Path) -> bool:
@@ -770,7 +1139,7 @@ def _collect_managed(
             decision = parse_managed_price_url(span.target, origins)
             if not isinstance(decision, AllowedUrl):
                 if refused is not None:
-                    refused[span.target] = decision.detail
+                    refused[span.target] = (not origins and _ignored_origins()) or decision.detail
                 continue
             include = IncludeRef(file=str(path), line=span.line, target=span.target)
             existing = by_url.get(decision.url)
@@ -798,6 +1167,14 @@ def cached_revisions(entry: Path) -> dict[str, str | None]:
         blob = resolve_feed(source.url, source.alias, offline=True).blob if budget.claim(source.url) else None
         revisions[source.url] = blob.revision if blob is not None else None
     return revisions
+
+
+def duplicate_include_message(again: Path, first: Path) -> str:
+    """The load error for a file an include reaches again under another name."""
+    return (
+        f"Duplicate include: {again} is {first} under another name "
+        "(letter case, Unicode form or a link); its entries are loaded once."
+    )
 
 
 def _duplicate_members(snapshot: Any) -> dict[Path, Path]:
@@ -834,7 +1211,7 @@ def _shadow(path: Path, content: str, entry: Path, managed: list[_PendingSource]
     that message; a read says what it needed the directory for and why.
     """
     from bea_engine.ledger.write import candidate_file, is_candidate_file
-    from bea_engine.protocol import AuthError, LedgerError
+    from bea_engine.protocol import AuthError, StagingFailed
 
     with ExitStack() as stack:
         try:
@@ -845,12 +1222,12 @@ def _shadow(path: Path, content: str, entry: Path, managed: list[_PendingSource]
             raise AuthError(
                 _staging_refused(entry, path.parent, managed, "is not writable", "Make that directory writable")
             ) from exc
-        except LedgerError as exc:
+        except StagingFailed as exc:
             # A full disk or quota (w5/408): the staged write's own words say
             # "nothing was written", which a read never meant to do.
             if is_candidate_file(entry):
                 raise
-            raise LedgerError(_staging_refused(entry, path.parent, managed, _cause(exc), "Free space there")) from exc
+            raise StagingFailed(_staging_refused(entry, path.parent, managed, _cause(exc), "Free space there")) from exc
         yield staged
 
 
@@ -862,8 +1239,13 @@ def _cause(exc: BaseException) -> str:
 
 
 def _staging_refused(entry: Path, directory: Path, managed: list[_PendingSource], why: str, remedy: str) -> str:
-    """Why a read of a ledger with managed price includes could not stage its temporary copy."""
-    includes = ", ".join(sorted({source.url for source in managed})) or "a managed price include"
+    """Why the loader could not stage the temporary copies its include graph needs."""
+    if not managed:
+        return (
+            f"Cannot read {entry}: resolving its include files needs a temporary copy beside each ledger file, "
+            f"and the directory {directory} {why}. {remedy} and retry. Nothing was changed."
+        )
+    includes = ", ".join(sorted({source.url for source in managed}))
     return (
         f"Cannot read {entry}: its managed price include ({includes}) is resolved on a temporary copy "
         f"beside each ledger file, and the directory {directory} {why}. {remedy}, or read a snapshot made "
@@ -920,8 +1302,7 @@ def _rewrite_includes(
                     unavailable.append(
                         load_error(
                             {"filename": str(path), "lineno": span.line},
-                            f"Duplicate include: {again} is {duplicates[again]} under another name "
-                            "(letter case, Unicode form or a link); its entries are loaded once.",
+                            duplicate_include_message(again, duplicates[again]),
                         )
                     )
                 # One line stays one line, so every later line of this file
@@ -957,10 +1338,17 @@ def _rewrite_includes(
 
 
 def _swap_line(content: bytes, line: int, replacement: bytes) -> bytes:
-    """Replace 1-based `line` keeping the line count, so later spans stay valid."""
-    rows = content.splitlines(keepends=True)
-    start = sum(len(row) for row in rows[: line - 1])
-    return content[:start] + replacement + content[start + len(rows[line - 1]) :]
+    """Replace 1-based `line` keeping the line count, so later spans stay valid.
+
+    Lines are the lexer's, split on `\n` alone: one stray CR in a comment above
+    a rewritten include moved the swap onto the line before it, commenting out
+    the user's own price in place of the include (w5/475).
+    """
+    from bea_engine.ledger.text import lexer_lines
+
+    rows = lexer_lines(content)
+    start = sum(len(row) + 1 for row in rows[: line - 1])
+    return content[:start] + replacement + content[start + len(rows[line - 1]) + 1 :]
 
 
 def _remap_entry(entry: Any, back: dict[str, str]) -> Any:
@@ -998,11 +1386,21 @@ def _remap_error(error: Any, back: dict[str, str]) -> Any:
     message = getattr(error, "message", "")
     for staged_path, original in back.items():
         message = message.replace(staged_path, original)
-    if mapped == source["filename"] and message == getattr(error, "message", ""):
+    attached = getattr(error, "entry", None)
+    remapped_entries = None
+    entries_changed = False
+    if isinstance(attached, list):
+        remapped_entries = [_remap_entry(entry, back) for entry in attached]
+        entries_changed = any(new is not old for new, old in zip(remapped_entries, attached, strict=True))
+    if mapped == source["filename"] and message == getattr(error, "message", "") and not entries_changed:
         return error
     replaced = dict(source)
     replaced["filename"] = mapped
     try:
+        if entries_changed:
+            # UniquePricesError carries every conflicting quote in its entry
+            # list. Their own locations must survive staging too (w5/665).
+            return error._replace(source=replaced, message=message, entry=remapped_entries)
         return error._replace(source=replaced, message=message)
     except (AttributeError, TypeError, ValueError):
         return error
@@ -1049,6 +1447,13 @@ def names_managed_source(entry: Path) -> bool:
     return bool(_collect_managed(snapshot, DEFAULT_ORIGINS if origins is None else origins))
 
 
+def data_type_errors(entries: list[Any], options: Mapping[str, Any]) -> list[Any]:
+    """The extra checks bean-check applies to plugin-produced directive values."""
+    from beancount.ops.validation import HARDCORE_VALIDATIONS
+
+    return [error for validate in HARDCORE_VALIDATIONS for error in validate(entries, options)]  # type: ignore[no-untyped-call]
+
+
 def load_file(
     entry: Path | str,
     *,
@@ -1059,11 +1464,13 @@ def load_file(
     now: float | None = None,
     opener: OpenerDirector | None = None,
     snapshot: LedgerSnapshot | None = None,
+    check_types: bool = False,
 ) -> tuple[list[Any], list[Any], dict[str, Any]]:
     """Drop-in `loader.load_file` with managed includes resolved.
 
     For call sites that need the per-source records, `load_with_sources`
-    returns them alongside.
+    returns them alongside. Write gates use `check_types` to compare the same
+    data-type errors that bean-check reports, including on cached loads.
     """
     loaded = load_with_sources(
         Path(entry),
@@ -1077,7 +1484,8 @@ def load_file(
     )
     if loaded.sources:
         loaded.options["bea_managed_price_sources"] = [source_json(source) for source in loaded.sources]
-    return loaded.entries, loaded.errors, loaded.options
+    errors = [*loaded.errors, *data_type_errors(loaded.entries, loaded.options)] if check_types else loaded.errors
+    return loaded.entries, errors, loaded.options
 
 
 @dataclass(frozen=True)
@@ -1126,8 +1534,18 @@ def export_portable(
             f"Cannot export: managed price source {names} is unavailable. "
             "Retry, or pass --allow-errors to export with its marker only."
         )
-    target = (output or entry.parent / f"{entry.stem}-export").expanduser()
+    target = expand_path(output or entry.parent / f"{entry.stem}-export", "--output")
     snapshot = LedgerSnapshot.capture(entry)
+    # A refused URL include is no source, so the check above never saw it, and
+    # the "self-contained" snapshot kept the URL for stock tools to fail on
+    # (w5/479). Refused alike; `--allow-errors` comments it out as the load does.
+    refused: dict[str, str] = {}
+    _collect_managed(snapshot, _allowed_origins(origins), refused)
+    if refused and not allow_errors:
+        refusals = "; ".join(f'include "{url}" was refused: {why}' for url, why in refused.items())
+        raise UsageError(
+            f"Cannot export: {refusals}. Remove it, or pass --allow-errors to export with it commented out."
+        )
     # `resolve()` for a destination that does not exist yet, too: `absolute()`
     # leaves `..` in place, so `books/not-created/..` compared unequal to
     # `books` and slipped past the guard below — then `mkdir(parents=True)`
@@ -1146,7 +1564,7 @@ def export_portable(
                 "Choose an empty or dedicated directory."
             )
     destinations: dict[Path, Path] = {}
-    external = 0
+    external_paths: list[Path] = []
     # Classified by the file each path truly names. Snapshot paths keep a
     # lexical `..` (`books/../shared/accounts.bean`), which `relative_to`
     # accepted as `../shared/accounts.bean`: the copy was written beside the
@@ -1167,8 +1585,20 @@ def export_portable(
         try:
             destinations[path] = target / path.resolve().relative_to(home)
         except ValueError:
+            external_paths.append(path)
+    # Reserve every in-tree name before allocating relocated copies, whatever
+    # order the includes use. The resulting snapshot must survive moving to a
+    # case- or normalization-insensitive volume, like managed-feed names do.
+    owned = {_name_key(dest) for dest in destinations.values()}
+    external = 0
+    for path in external_paths:
+        while True:
             external += 1
-            destinations[path] = target / "_shared" / f"{external:02d}-{path.name}"
+            candidate = target / "_shared" / f"{external:02d}-{path.name}"
+            if _name_key(candidate) not in owned:
+                break
+        destinations[path] = candidate
+        owned.add(_name_key(candidate))
     # Allocated against the copied files, not independently of them. A ledger
     # may legitimately keep its own `prices/BTC-USD.beancount` beside a managed
     # `BTC-USD` feed; the two maps used to be built in isolation, so the feed
@@ -1200,6 +1630,26 @@ def export_portable(
     attachments = _export_attachments(loaded, snapshot, destinations, target, home)
     attachments.update(_export_plugin_modules(loaded, snapshot, target))
     planned = [*destinations.values(), *feed_files.values(), *attachments]
+    # Distinct spellings may still be one destination: a pre-existing symlink
+    # inside the snapshot, hard links, or case/Unicode variants. --force must
+    # never let one planned copy replace another one during the same export.
+    destination_names: dict[str, Path] = {}
+    identities: dict[tuple[int, int], Path] = {}
+    for dest in planned:
+        keys = (_name_key(dest), _name_key(dest.resolve()))
+        other = next((destination_names[key] for key in keys if key in destination_names), None)
+        for key in keys:
+            destination_names[key] = dest
+        if dest.exists():
+            info = dest.stat()
+            identity = (info.st_dev, info.st_ino)
+            other = other or identities.get(identity)
+            identities[identity] = dest
+        if other is not None:
+            raise UsageError(
+                f"Cannot export: {other} and {dest} name the same destination. "
+                "Choose an empty or dedicated directory. Nothing was written."
+            )
     for dest in planned:
         if not dest.exists():
             continue
@@ -1275,6 +1725,13 @@ def export_portable(
                 f"Cannot export into {target}: {dest} is read-only and cannot be replaced. Nothing was written."
             )
         holder = next((parent for parent in dest.parents if parent.is_dir()), None)
+        # A write-only directory cannot be inspected as a portable snapshot.
+        # Report its permission failure here, inside the answer boundary.
+        if holder is not None and not os.access(holder, os.R_OK | os.X_OK):
+            raise AuthError(
+                f"Cannot export into {target}: the directory {holder.resolve()} is not readable/searchable. "
+                "Nothing was written."
+            )
         if not dest.exists() and holder is not None and not os.access(holder, os.W_OK | os.X_OK):
             raise AuthError(
                 f"Cannot export into {target}: the directory {holder.resolve()} is not writable. Nothing was written."
@@ -1290,7 +1747,7 @@ def export_portable(
             _write_export(
                 dest,
                 _rewrite_export_includes(
-                    original, path, snapshot.patterns, destinations, by_target, repeats, duplicates
+                    original, path, snapshot.patterns, destinations, by_target, repeats, duplicates, refused
                 ),
                 _permission_bits(path),
             )
@@ -1571,7 +2028,8 @@ def _write_export(dest: Path, content: bytes, mode: int) -> None:
                 stream.write(content)
                 stream.flush()
                 os.fsync(stream.fileno())
-            os.replace(staged, final)
+            with stopping.committing():
+                os.replace(staged, final)
         finally:
             staged.unlink(missing_ok=True)
 
@@ -1584,6 +2042,7 @@ def _rewrite_export_includes(
     by_target: dict[str, Path],
     repeats: set[tuple[str, str, int]],
     duplicates: dict[Path, Path],
+    refused: Collection[str] = (),
 ) -> bytes:
     """Rewrite one copied file's includes as portable relative targets.
 
@@ -1598,6 +2057,9 @@ def _rewrite_export_includes(
     content = original
     dest = destinations[path]
     for span in sorted(iter_includes(content), key=lambda item: item.start, reverse=True):
+        if span.target in refused:
+            content = _swap_line(content, span.line, f"; refused URL include: {span.target}\n".encode())
+            continue
         feed = by_target.get(span.target)
         if feed is not None:
             if (span.target, str(path), span.line) in repeats:
@@ -1655,6 +2117,7 @@ __all__ = [
     "STRICT_ENV",
     "apply_ledger_price_precedence",
     "collect_ledger_price_pairs",
+    "data_type_errors",
     "export_portable",
     "load_file",
     "load_with_sources",

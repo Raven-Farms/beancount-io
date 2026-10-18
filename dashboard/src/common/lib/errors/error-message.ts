@@ -25,6 +25,7 @@ const ERROR_CODE_TO_KEY: Record<string, string> = {
   RESOURCE_LIMIT_REACHED: "common.errors.resourceLimitReached",
   OPERATION_NOT_ALLOWED: "common.errors.operationNotAllowed",
   PREMIUM_REQUIRED: "common.errors.premiumRequired",
+  UNBALANCED: "common.errors.unbalanced",
 };
 
 const GENERIC_ERROR_KEY = "common.errors.generic";
@@ -47,6 +48,15 @@ const ADVANCED_FILTER_ERROR =
   /^(?:Illegal character|Trailing tokens|Unexpected end of filter|Unexpected token|Expected .+, got|Expected : or comparison|Filter pattern exceeds)/;
 
 export function getErrorMessageKey(error: unknown): string {
+  // requireAuth's outage throw (w3/646), recognized by name so it survives
+  // SSR error serialization; it carries the probe failure's own key.
+  if (error instanceof Error && error.name === "AuthUnavailableError") {
+    const key = (error as { messageKey?: unknown }).messageKey;
+    return typeof key === "string" && key.startsWith("common.errors.")
+      ? key
+      : "common.errors.serviceUnavailable";
+  }
+
   if (CombinedGraphQLErrors.is(error)) {
     for (const gqlError of error.errors) {
       if (gqlError.extensions?.code !== "BAD_USER_INPUT") continue;
@@ -83,6 +93,46 @@ export function getErrorMessageKey(error: unknown): string {
   return GENERIC_ERROR_KEY;
 }
 
+/**
+ * The residual an UNBALANCED refusal names (`"1 USD"`, `"0.003 EUR, 1 JPY"`),
+ * so an entry form can say how far off the postings are; `null` for any
+ * other error.
+ */
+export function getUnbalancedResidual(error: unknown): string | null {
+  if (!CombinedGraphQLErrors.is(error)) return null;
+  for (const gqlError of error.errors) {
+    const { code, residual } = gqlError.extensions ?? {};
+    if (
+      code === "UNBALANCED" &&
+      typeof residual === "string" &&
+      residual !== "" &&
+      residual !== "unknown"
+    ) {
+      return residual;
+    }
+  }
+  return null;
+}
+
+/**
+ * What a would-break refusal names: a write that would add bean-check errors
+ * is refused as VALIDATION_FAILED, each new error named in
+ * `extensions.newLedgerErrors` (w0/m2). That text is the ledger's own
+ * diagnostic — account names and file:line — so, like the UNBALANCED
+ * residual, it is shown; `null` for any other error.
+ */
+export function getNewLedgerErrorDetail(error: unknown): string | null {
+  if (!CombinedGraphQLErrors.is(error)) return null;
+  for (const gqlError of error.errors) {
+    const { code, newLedgerErrors } = gqlError.extensions ?? {};
+    if (code === "VALIDATION_FAILED" && typeof newLedgerErrors === "string") {
+      const detail = newLedgerErrors.trim();
+      if (detail) return detail;
+    }
+  }
+  return null;
+}
+
 const FETCH_FAILURE_MESSAGES = [
   "failed to fetch", // Chromium
   "networkerror when attempting to fetch resource", // Firefox
@@ -114,8 +164,10 @@ export function useErrorMessage(): (error: unknown) => string {
   useEffect(() => {
     tRef.current = t;
   });
-  return useCallback(
-    (error: unknown) => tRef.current(getErrorMessageKey(error)),
-    [],
-  );
+  return useCallback((error: unknown) => {
+    const detail = getNewLedgerErrorDetail(error);
+    return detail
+      ? tRef.current("common.errors.wouldBreakLedger", { detail })
+      : tRef.current(getErrorMessageKey(error));
+  }, []);
 }

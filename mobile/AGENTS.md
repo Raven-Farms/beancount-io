@@ -69,7 +69,9 @@ for any agent.
 at `https://beancount.io/` and the dev build is signed in, so **any save, edit, delete
 or file write commits to a real ledger**. Read-only verification needs no permission;
 **ask the user before writing**, and when they agree, delete what you created through
-the app afterwards so the ledger is left as found.
+the app afterwards so the ledger is left as found. The one standing exception is QA
+on the `QA_*` account's designated disposable ledger, governed by
+`.agents/skills/qa-shared/contract.md`.
 
 ```zsh
 UDID=$(xcrun simctl list devices booted -j | python3 -c 'import json,sys;print(next(d["udid"] for v in json.load(sys.stdin)["devices"].values() for d in v))')

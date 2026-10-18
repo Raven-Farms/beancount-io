@@ -34,9 +34,9 @@ def test_wildcard_matching_grows_linearly(tmp_path: Path, monkeypatch: pytest.Mo
     calls: list[tuple[Path, str]] = []
     original = write._included_new_file
 
-    def counted(target: Path, pattern: str) -> bool:
+    def counted(target: Path, pattern: str, **options: bool) -> bool:
         calls.append((target, pattern))
-        return original(target, pattern)
+        return original(target, pattern, **options)
 
     monkeypatch.setattr(write, "_included_new_file", counted)
     exported = managed_load.export_portable(ledger, tmp_path / "outside", offline=True, root=tmp_path / "cache")

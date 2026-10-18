@@ -40,6 +40,21 @@ import { directiveToText } from "@/foundation/rustledger/journal-serialize";
 // --- input → DirectiveJson mapping ---------------------------------------
 
 /**
+ * The numbers a structured write accepts: an optional sign, digits with an
+ * optional fraction, and an optional exponent `toBeancountNumber` expands.
+ * Bank spellings (`(12.50)`, `-1,234.56`, `$4.50`) are the client's to
+ * normalize; written as typed they would break the ledger file.
+ */
+const DECIMAL_NUMBER = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/;
+
+export function isDecimalNumber(value: unknown): boolean {
+  return (
+    (typeof value === "number" && Number.isFinite(value)) ||
+    (typeof value === "string" && DECIMAL_NUMBER.test(value))
+  );
+}
+
+/**
  * Beancount source rejects scientific notation. Keep ordinary decimals
  * (including trailing zeros) byte-identical; expand only finite exponent forms.
  */

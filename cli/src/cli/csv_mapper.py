@@ -32,6 +32,7 @@ _MAPPING_FIELDS = frozenset(
         "debit",
         "credit",
         "category",
+        "status",
         "sign",
         "delimiter",
         "encoding",
@@ -164,7 +165,9 @@ def parse_mapping(spec: str) -> CsvMapping:
     encoding: str | None = None
     for part in split_spec(spec):
         name, separator, column = part.partition("=")
-        name, column = name.strip(), spec_value(column)
+        name = name.strip()
+        # A tab is a delimiter's value, never padding to strip (w5/621).
+        column = column.strip(" ") if name == "delimiter" else spec_value(column)
         if not separator or not name or not column:
             if name == "delimiter" and separator:
                 raise UsageError(
@@ -227,12 +230,12 @@ def validate_reading_keys(spec: str) -> None:
     """
     for part in split_spec(spec):
         name, separator, column = part.partition("=")
-        if not separator or not column.strip():
+        if not separator or not column.strip(" "):
             continue
         if name.strip() == "encoding":
             _parse_encoding_value(column.strip())
         elif name.strip() == "delimiter":
-            _parse_delimiter_value(column.strip())
+            _parse_delimiter_value(column.strip(" "))
 
 
 def _parse_encoding_value(column: str) -> str:
@@ -255,7 +258,7 @@ def _parse_delimiter_value(column: str) -> str:
     `delimiter=,` arrives here as an empty value and is pointed at the
     `comma` word.
     """
-    value = column.strip()
+    value = column.strip(" ")
     if len(value) >= 2 and value[0] == value[-1] and value[0] in "'\"":
         value = value[1:-1]
     if value:
@@ -338,6 +341,7 @@ _HEADER_SYNONYMS: dict[str, tuple[str, ...]] = {
     "currency": ("currency", "currency code", "ccy"),
     "id": ("id", "transaction id", "transaction_id", "reference number", "fitid", "txn id", "txnid", "bank id"),
     "category": ("category",),
+    "status": ("status", "transaction status"),
 }
 
 # Ordered so the unambiguous ISO form wins before the day/month forms it could
@@ -506,6 +510,31 @@ def _mixed_lines(source: Path) -> tuple[int, int] | None:
     return None
 
 
+# Read as cp1252, these are what other code pages' letters turn into: `³`
+# for Polish ł, `¹` for ą, `¯` for Ż, `¸` for Cyrillic ё. Western text has
+# them only standing alone, never right after a letter. `¤` is Latin-9's €.
+_LETTER_ADJACENT_MOJIBAKE = frozenset("¹²³¸¨´¯¥Ÿ¦¾¼½£")
+
+
+def _foreign_code_page_sample(source: Path) -> str | None:
+    """A word of the file that reads as mojibake under cp1252, or None when it reads as Western text.
+
+    A run of three non-ASCII letters is how Cyrillic or Japanese bytes read
+    as cp1252; Western languages rarely put three accented letters together.
+    """
+    try:
+        text = source.read_bytes().decode("cp1252")
+    except (OSError, UnicodeDecodeError):
+        return None
+    # Words of the cells, not whole CSV lines: the sample should be a payee.
+    for word in text.replace(",", " ").replace(";", " ").replace("|", " ").split():
+        if "¤" in word or re.search(r"[^\W\d_]{3}", "".join(c if not c.isascii() else " " for c in word)):
+            return word[:24]
+        if any(c in _LETTER_ADJACENT_MOJIBAKE and i and word[i - 1].isalpha() for i, c in enumerate(word)):
+            return word[:24]
+    return None
+
+
 def _decode_usage_error(source: Path, exc: UnicodeDecodeError, encoding: str) -> UsageError:
     """Name a decode failure instead of pretending the CSV had no columns.
 
@@ -531,6 +560,16 @@ def _decode_usage_error(source: Path, exc: UnicodeDecodeError, encoding: str) ->
             "re-save the export in one encoding (UTF-8) and import it again."
         )
     if winner == "cp1252":
+        sample = _foreign_code_page_sample(source)
+        if sample is not None:
+            # Almost any 8-bit file decodes as cp1252, so a Polish or Russian
+            # export got that advice and imported as `Wp³ata £ódŸ` (w5/529).
+            return UsageError(
+                f"{source.name} is not valid UTF-8 ({exc.reason} at byte {exc.start}). Read as cp1252 it shows "
+                f"{sample!r}, which looks like another code page (Central or Eastern European, Cyrillic or "
+                "Asian). Re-save the export as UTF-8 and import it again; pass --csv encoding=cp1252 only if it "
+                "really is Western European."
+            )
         return UsageError(
             f"{source.name} is not valid UTF-8 ({exc.reason} at byte {exc.start}); "
             "it decodes as cp1252 — pass --csv encoding=cp1252."
@@ -612,8 +651,12 @@ def detect_delimiter(source: Path, encoding: str = "utf-8") -> str:
 
 
 def parse_delimiter(value: str) -> str:
-    """Normalize ``--delimiter`` to a single character (``,``, ``;``, tab, ``|``)."""
-    raw = value.strip()
+    """Normalize ``--delimiter`` to a single character (``,``, ``;``, tab, ``|``).
+
+    Only spaces are padding: `strip()` took a literal tab for whitespace and
+    refused `--delimiter $'\\t'`, the usual shell spelling for TSV (w5/621).
+    """
+    raw = value.strip(" ")
     folded = raw.casefold()
     if folded in {",", "comma"}:
         return ","
@@ -624,6 +667,9 @@ def parse_delimiter(value: str) -> str:
     if folded in {"|", "pipe"}:
         return "|"
     raise UsageError(f"Bad --delimiter {value!r}: use ',', ';', '|', or 'tab'.")
+
+
+_ZERO_WIDTH_HEADER = re.compile("[\u200b\u2060\ufeff]")
 
 
 @contextmanager
@@ -660,7 +706,10 @@ def open_records(
             raise _decode_usage_error(source, exc, encoding) from None
         # NFC, like the mapping that names them: a header typed composed must
         # find a bank's decomposed spelling of the same name, and vice versa.
-        headers = [unicodedata.normalize("NFC", cell.strip()) for cell in first or []]
+        # Zero-width characters and BOMs dropped too, as amount cells drop them:
+        # a doubled BOM or a U+200B left `Date` unmatchable while the column
+        # list showed it plain (w5/531).
+        headers = [unicodedata.normalize("NFC", _ZERO_WIDTH_HEADER.sub("", cell).strip()) for cell in first or []]
 
         def rows() -> Iterator[tuple[int, dict[str, str]]]:
             # As in the engine's reader: a record starts one line past wherever

@@ -217,8 +217,9 @@ def normalize_entry_strings(entry: Any) -> Any:
     """Flatten untrusted directive text and metadata without mutating the input.
 
     Source filenames describe real paths, so they are left intact. Other string
-    fields that agents type (payee, narration, note comment, event description,
-    custom text) flatten CR/LF to spaces so every write stays one ledger line.
+    fields that agents type (payee, narration, cost label, note comment, event
+    description, custom text) flatten CR/LF to spaces so every write stays one
+    ledger line.
     """
 
     def metadata(meta: dict[str, Any] | None) -> dict[str, Any]:
@@ -227,12 +228,20 @@ def normalize_entry_strings(entry: Any) -> Any:
             for key, value in (meta or {}).items()
         }
 
+    def posting_strings(posting: Posting) -> Posting:
+        # A lot label sits right before `@ price`, where a bidi override would
+        # reorder how the rest of the row reads; it was written raw (w5/542).
+        cost: Any = posting.cost
+        if isinstance(getattr(cost, "label", None), str):
+            posting = posting._replace(cost=cost._replace(label=single_line(cost.label)))
+        return posting._replace(meta=metadata(posting.meta))
+
     entry = entry._replace(meta=metadata(entry.meta))
     if isinstance(entry, Transaction):
         entry = entry._replace(
             payee=single_line(entry.payee) if entry.payee is not None else None,
             narration=single_line(entry.narration) if entry.narration is not None else None,
-            postings=[posting._replace(meta=metadata(posting.meta)) for posting in entry.postings],
+            postings=[posting_strings(posting) for posting in entry.postings],
         )
     elif isinstance(entry, Note):
         entry = entry._replace(comment=single_line(entry.comment))
@@ -257,7 +266,7 @@ def _escape_cost_label(posting: Posting) -> Posting:
     return posting._replace(cost=cost._replace(label=escape_string(label)))
 
 
-def _nfc_entry_accounts(entry: Any) -> Any:
+def nfc_entry_accounts(entry: Any) -> Any:
     """The entry with every account name in NFC, so new directives are canonical.
 
     Reads normalize to NFC before parsing, so a newly written NFD name would
@@ -290,7 +299,7 @@ def _nfc_entry_accounts(entry: Any) -> Any:
 
 def format_entry(entry: Any) -> str:
     """Normalize new directive input and print it without changing the entry."""
-    entry = _nfc_entry_accounts(entry)
+    entry = nfc_entry_accounts(entry)
     entry = normalize_entry_strings(entry)
     rendered = DirectivePrinter()(entry)  # type: ignore[no-untyped-call]
     first, separator, rest = rendered.partition("\n")

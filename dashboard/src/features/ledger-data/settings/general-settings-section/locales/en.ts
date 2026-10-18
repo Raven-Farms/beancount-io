@@ -16,6 +16,11 @@ const enGeneralSettingsSection: Record<string, TranslationEntry> = {
     message: "This name will be displayed across the application",
     description: "Help text for ledger name field",
   },
+  "page.settings.ledgerNameTaken": {
+    message: "A ledger named {name} already exists.",
+    description:
+      "Rename refusal when another ledger of the same owner already has the name; {name} is the slug",
+  },
   "page.settings.generalSettings": {
     message: "General Settings",
     description: "Section title for general settings",

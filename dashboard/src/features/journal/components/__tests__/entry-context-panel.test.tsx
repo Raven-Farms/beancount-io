@@ -102,6 +102,11 @@ vi.mock("sonner", () => ({
 
 import { EntryContextPanel } from "../entry-context-panel";
 
+// The post-write error check (w3/640) has its own suite.
+vi.mock("@/common/hooks/use-write-outcome", () => ({
+  useWriteOutcome: () => ({ snapshot: () => null, report: async () => false }),
+}));
+
 describe("EntryContextPanel", () => {
   beforeEach(() => {
     mocks.canWrite = true;

@@ -2,6 +2,8 @@ import { useCallback } from "react";
 import { useApolloClient } from "@apollo/client";
 import { useBulkEntriesMutation } from "@/generated-graphql/graphql";
 import { invalidateLedgerData } from "@/common/apollo/invalidate-ledger";
+import { ledgerWriteFailureMessage } from "@/common/ledger-refusal";
+import { i18n } from "@/translations";
 import {
   buildBudgetEntry,
   type BudgetEntryInput,
@@ -34,7 +36,7 @@ export function useSaveBudget(ledgerId: string) {
       } catch (caught) {
         return {
           ok: false,
-          message: caught instanceof Error ? caught.message : null,
+          message: ledgerWriteFailureMessage(caught, i18n),
         };
       }
     },

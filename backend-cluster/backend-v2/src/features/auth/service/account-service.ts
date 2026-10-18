@@ -10,7 +10,7 @@ import {
 import type Stripe from "stripe";
 import { lock, LOCK_KEYS } from "@/shared/lock";
 import { ReportStatus } from "@/features/auth/utils/report-status";
-import type { User } from "@/features/auth/data/user-model";
+import { assertValidUsername } from "@/features/auth/utils/username-rule";
 import type { IStripeService } from "@/features/stripe/service/stripe-service";
 import type { IFavaClientFactory } from "@/foundation/clients/fava-client-factory";
 import type { IPlaidClient } from "@/features/plaid/service/plaid-client";
@@ -48,6 +48,16 @@ export type UserProfile = {
   hasEverSubscribed: boolean;
 };
 
+/**
+ * One collaborator-search match. `email` is set only when the searcher typed
+ * that email: usernames are public, so echoing the email for a username match
+ * would turn any handle into its owner's private address.
+ */
+export type UserSearchMatch = {
+  username: string;
+  email: string | null;
+};
+
 export interface IAccountService {
   getUserProfile(
     identity: Identity,
@@ -68,7 +78,7 @@ export interface IAccountService {
     identity: Identity,
     keyword: string,
     includeCurrentUser: boolean,
-  ): Promise<User[]>;
+  ): Promise<UserSearchMatch[]>;
 }
 
 export class AccountService implements IAccountService {
@@ -107,8 +117,6 @@ export class AccountService implements IAccountService {
     const [tier, paidCustomers] = await Promise.all([
       getUserTier({
         stripe: this.stripe,
-        models: this.models,
-        postgresDb: this.db,
         userId,
       }),
       // A paidCustomer row is created on checkout completion and persists after
@@ -162,6 +170,9 @@ export class AccountService implements IAccountService {
       action: AUTHORIZATION_ACTIONS.USER_PROFILE_UPDATE,
       resource: userResource(userId),
     });
+    // Before the conflict check and the git-host rename: a name sign-up would
+    // refuse was otherwise stored, or failed upstream as a generic error.
+    assertValidUsername(username);
     const lockKey = LOCK_KEYS.USER.updateUsername(userId);
     await lock.acquire(lockKey, async () => {
       const user = await this.models.user.getById(this.db, userId);
@@ -388,7 +399,7 @@ export class AccountService implements IAccountService {
     identity: Identity,
     keyword: string,
     includeCurrentUser: boolean,
-  ): Promise<User[]> => {
+  ): Promise<UserSearchMatch[]> => {
     const { userId } = identity;
     await this.authorization.authorizeOrThrow({
       principal: identity,
@@ -399,7 +410,13 @@ export class AccountService implements IAccountService {
       this.db,
       keyword,
     );
-    if (includeCurrentUser) return users;
-    return users.filter((u) => u.id !== userId);
+    const normalizedKeyword = keyword.toLowerCase();
+    return users
+      .filter((u) => includeCurrentUser || u.id !== userId)
+      .map((u) => ({
+        username: u.ledger_username,
+        // Mirrors the model's case-insensitive email match.
+        email: u.email.toLowerCase() === normalizedKeyword ? u.email : null,
+      }));
   };
 }

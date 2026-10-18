@@ -11,6 +11,7 @@ import {
   FormControl,
   FormField,
   FormItem,
+  FormLabel,
   FormMessage,
 } from "@/common/components/ui/form";
 import {
@@ -41,15 +42,21 @@ import {
   NarrationsCombobox,
 } from "@/common/components/ledger-comboboxes";
 import { useTranslations } from "@/common/hooks/use-translations";
-import { useErrorMessage } from "@/common/lib/errors/error-message";
+import {
+  getUnbalancedResidual,
+  useErrorMessage,
+} from "@/common/lib/errors/error-message";
 import { useLedger } from "@/common/hooks/use-ledger";
 import {
   applyAutoBalanceToPostings,
   computeAutoBalance,
+  findUnbalancedResiduals,
   findUnresolvedEligibleAmount,
   isEligiblePosting,
 } from "./transaction-auto-balance";
 import { parseDecimalNumber } from "@/common/lib/beancount/decimal-number";
+import { AccountAvailabilityNotice } from "./account-availability-notice";
+import { entryDay, useAccountAvailability } from "./use-account-availability";
 
 interface TransactionFormProps {
   ledgerId: string;
@@ -178,6 +185,12 @@ export function TransactionForm({ ledgerId, onSuccess }: TransactionFormProps) {
     }
   }, [watchedPostings, append, primaryCurrency]);
 
+  const accounts = useAccountAvailability(ledgerId);
+  const day = entryDay(form.watch("date"));
+  const postingAccounts = (watchedPostings ?? []).map(
+    (posting) => posting.account,
+  );
+
   // Calculate auto-balance amount among postings that will be written
   const autoBalanceInfo = useMemo(() => {
     if (!watchedPostings) {
@@ -190,6 +203,10 @@ export function TransactionForm({ ledgerId, onSuccess }: TransactionFormProps) {
     setError(null);
 
     try {
+      const entryDate = entryDay(data.date);
+      const named = data.postings.map((posting) => posting.account);
+      if (accounts.blocks(named, entryDate)) return;
+
       const { balances, incomplete } = computeAutoBalance(
         data.postings,
         primaryCurrency,
@@ -207,6 +224,22 @@ export function TransactionForm({ ledgerId, onSuccess }: TransactionFormProps) {
 
       if (findUnresolvedEligibleAmount(balancedPostings) !== null) {
         setError(t("journal.amountRequired"));
+        return;
+      }
+
+      // The ledger refuses these as UNBALANCED; say so before sending.
+      const residuals = findUnbalancedResiduals(
+        balancedPostings,
+        primaryCurrency,
+      );
+      if (residuals.length > 0) {
+        setError(
+          t("journal.postingsUnbalanced", {
+            residual: residuals
+              .map(({ amount, currency }) => `${amount} ${currency}`)
+              .join(", "),
+          }),
+        );
         return;
       }
 
@@ -239,6 +272,7 @@ export function TransactionForm({ ledgerId, onSuccess }: TransactionFormProps) {
       const variables: BulkEntriesMutationVariables = {
         ledgerId,
         entries: [
+          ...accounts.openEntries(named, entryDate),
           { type: LedgerEntryType.Transaction, transaction: transactionInput },
         ],
       };
@@ -265,6 +299,7 @@ export function TransactionForm({ ledgerId, onSuccess }: TransactionFormProps) {
             },
           ],
         });
+        accounts.reset();
         track("directive_added", { directive_type: "transaction" });
         onSuccess?.();
       } else {
@@ -275,7 +310,12 @@ export function TransactionForm({ ledgerId, onSuccess }: TransactionFormProps) {
         );
       }
     } catch (err) {
-      setError(formatError(err));
+      const residual = getUnbalancedResidual(err);
+      setError(
+        residual
+          ? t("journal.postingsUnbalanced", { residual })
+          : formatError(err),
+      );
     }
   };
 
@@ -324,9 +364,9 @@ export function TransactionForm({ ledgerId, onSuccess }: TransactionFormProps) {
             name="date"
             render={({ field }) => (
               <FormItem>
+                <FormLabel className="sr-only">{t("journal.date")}</FormLabel>
                 <FormControl>
                   <DatePicker
-                    id="date"
                     value={field.value}
                     onChange={(newDate) => field.onChange(newDate)}
                     required
@@ -384,6 +424,7 @@ export function TransactionForm({ ledgerId, onSuccess }: TransactionFormProps) {
             name="payee"
             render={({ field }) => (
               <FormItem className="flex-1" data-transaction-payee>
+                <FormLabel className="sr-only">{t("journal.payee")}</FormLabel>
                 <FormControl>
                   <PayeesCombobox
                     ledgerId={ledgerId}
@@ -402,6 +443,9 @@ export function TransactionForm({ ledgerId, onSuccess }: TransactionFormProps) {
             name="narration"
             render={({ field }) => (
               <FormItem className="flex-1">
+                <FormLabel className="sr-only">
+                  {t("journal.narration")}
+                </FormLabel>
                 <FormControl>
                   <NarrationsCombobox
                     ledgerId={ledgerId}
@@ -439,6 +483,11 @@ export function TransactionForm({ ledgerId, onSuccess }: TransactionFormProps) {
                         name={`postings.${index}.account`}
                         render={({ field }) => (
                           <FormItem className="flex-2">
+                            <FormLabel className="sr-only">
+                              {t("journal.postingAccount", {
+                                number: index + 1,
+                              })}
+                            </FormLabel>
                             <FormControl>
                               <AccountCombobox
                                 ledgerId={ledgerId}
@@ -457,9 +506,13 @@ export function TransactionForm({ ledgerId, onSuccess }: TransactionFormProps) {
                         name={`postings.${index}.amount`}
                         render={({ field }) => (
                           <FormItem className="flex-1 relative">
+                            <FormLabel className="sr-only">
+                              {t("journal.postingAmount", {
+                                number: index + 1,
+                              })}
+                            </FormLabel>
                             <FormControl>
                               <Input
-                                id={`amount-${index}`}
                                 type="number"
                                 step="any"
                                 placeholder={
@@ -490,6 +543,11 @@ export function TransactionForm({ ledgerId, onSuccess }: TransactionFormProps) {
                         name={`postings.${index}.currency`}
                         render={({ field }) => (
                           <FormItem className="w-48">
+                            <FormLabel className="sr-only">
+                              {t("journal.postingCurrency", {
+                                number: index + 1,
+                              })}
+                            </FormLabel>
                             <FormControl>
                               <CurrencyCombobox
                                 ledgerId={ledgerId}
@@ -531,6 +589,12 @@ export function TransactionForm({ ledgerId, onSuccess }: TransactionFormProps) {
                         <div className="h-9 w-9 shrink-0" />
                       )}
                     </div>
+                    <AccountAvailabilityNotice
+                      check={accounts}
+                      account={watchedPostings?.[index]?.account ?? ""}
+                      day={day}
+                      className="md:pl-8"
+                    />
                   </div>
                 );
               })}
@@ -539,7 +603,11 @@ export function TransactionForm({ ledgerId, onSuccess }: TransactionFormProps) {
         </div>
 
         <div className="flex justify-end">
-          <Button type="submit" loading={form.formState.isSubmitting}>
+          <Button
+            type="submit"
+            disabled={accounts.blocks(postingAccounts, day)}
+            loading={form.formState.isSubmitting}
+          >
             {t("journal.createTransactionEntry")}
           </Button>
         </div>

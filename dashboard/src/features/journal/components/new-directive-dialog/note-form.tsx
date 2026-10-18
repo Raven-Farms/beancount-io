@@ -11,6 +11,7 @@ import {
   FormControl,
   FormField,
   FormItem,
+  FormLabel,
   FormMessage,
 } from "@/common/components/ui/form";
 import { format } from "date-fns";
@@ -27,6 +28,8 @@ import { useErrorMessage } from "@/common/lib/errors/error-message";
 import { DatePicker } from "@/common/components/ui/date-picker";
 import { AccountCombobox } from "@/common/components/ledger-comboboxes";
 import { track } from "@/common/analytics";
+import { AccountAvailabilityNotice } from "./account-availability-notice";
+import { entryDay, useAccountAvailability } from "./use-account-availability";
 
 interface NoteFormProps {
   ledgerId: string;
@@ -64,10 +67,17 @@ export function NoteForm({ ledgerId, onSuccess }: NoteFormProps) {
     mode: "onChange",
   });
 
+  const accounts = useAccountAvailability(ledgerId);
+  const day = entryDay(form.watch("date"));
+  const account = form.watch("account");
+
   const onSubmit = async (data: NoteFormData) => {
     setError(null);
 
     try {
+      const entryDate = entryDay(data.date);
+      if (accounts.blocks([data.account], entryDate)) return;
+
       // Create note input
       const noteInput: LedgerNoteInput = {
         date: format(data.date, "yyyy-MM-dd"),
@@ -77,7 +87,10 @@ export function NoteForm({ ledgerId, onSuccess }: NoteFormProps) {
 
       const variables: BulkEntriesMutationVariables = {
         ledgerId,
-        entries: [{ type: LedgerEntryType.Note, note: noteInput }],
+        entries: [
+          ...accounts.openEntries([data.account], entryDate),
+          { type: LedgerEntryType.Note, note: noteInput },
+        ],
       };
 
       const result = await addNote({ variables });
@@ -89,6 +102,7 @@ export function NoteForm({ ledgerId, onSuccess }: NoteFormProps) {
           account: "",
           content: "",
         });
+        accounts.reset();
         track("directive_added", { directive_type: "note" });
         onSuccess?.();
       } else {
@@ -120,9 +134,9 @@ export function NoteForm({ ledgerId, onSuccess }: NoteFormProps) {
             name="date"
             render={({ field }) => (
               <FormItem>
+                <FormLabel className="sr-only">{t("journal.date")}</FormLabel>
                 <FormControl>
                   <DatePicker
-                    id="date"
                     value={field.value}
                     onChange={(newDate) => field.onChange(newDate)}
                     required
@@ -138,6 +152,9 @@ export function NoteForm({ ledgerId, onSuccess }: NoteFormProps) {
             name="account"
             render={({ field }) => (
               <FormItem className="flex-1">
+                <FormLabel className="sr-only">
+                  {t("journal.accountLabel")}
+                </FormLabel>
                 <FormControl>
                   <AccountCombobox
                     ledgerId={ledgerId}
@@ -147,6 +164,11 @@ export function NoteForm({ ledgerId, onSuccess }: NoteFormProps) {
                   />
                 </FormControl>
                 <FormMessage />
+                <AccountAvailabilityNotice
+                  check={accounts}
+                  account={account}
+                  day={day}
+                />
               </FormItem>
             )}
           />
@@ -157,9 +179,11 @@ export function NoteForm({ ledgerId, onSuccess }: NoteFormProps) {
           name="content"
           render={({ field }) => (
             <FormItem>
+              <FormLabel className="sr-only">
+                {t("journal.noteContent")}
+              </FormLabel>
               <FormControl>
                 <Textarea
-                  id="content"
                   placeholder={t("journal.noteContent")}
                   rows={4}
                   {...field}
@@ -173,7 +197,9 @@ export function NoteForm({ ledgerId, onSuccess }: NoteFormProps) {
         <div className="flex justify-end">
           <Button
             type="submit"
-            disabled={!form.formState.isValid}
+            disabled={
+              !form.formState.isValid || accounts.blocks([account], day)
+            }
             loading={form.formState.isSubmitting}
           >
             {t("journal.createNoteEntry")}

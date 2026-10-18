@@ -144,6 +144,18 @@ const nlJournal: Record<string, TranslationEntry> = {
     message: "Aangepast",
     description: "Custom entry type filter",
   },
+  "journal.commodity": {
+    message: "Goed",
+    description: "Name of the Commodity directive type",
+  },
+  "journal.event": {
+    message: "Gebeurtenis",
+    description: "Name of the Event directive type",
+  },
+  "journal.query": {
+    message: "Zoekopdracht",
+    description: "Name of the Query directive type",
+  },
   "journal.date": {
     message: "Datum",
     description: "Label for date field",
@@ -446,6 +458,96 @@ const nlJournal: Record<string, TranslationEntry> = {
     message: "Boekingsregel {number} verwijderen",
     description:
       "Accessible name for removing a numbered transaction posting row",
+  },
+  "journal.payee": {
+    message: "Begunstigde",
+    description: "Label for the payee field",
+  },
+  "journal.accountLabel": {
+    message: "Rekening",
+    description: "Label for the account field of a directive form",
+  },
+  "journal.amountLabel": {
+    message: "Bedrag",
+    description: "Label for the amount field of a directive form",
+  },
+  "journal.currencyLabel": {
+    message: "Valuta",
+    description: "Label for the currency field of a directive form",
+  },
+  "journal.postingAccount": {
+    message: "Rekening van boekingsregel {number}",
+    description:
+      "Accessible label for a numbered transaction posting's account field",
+  },
+  "journal.postingAmount": {
+    message: "Bedrag van boekingsregel {number}",
+    description:
+      "Accessible label for a numbered transaction posting's amount field",
+  },
+  "journal.postingCurrency": {
+    message: "Valuta van boekingsregel {number}",
+    description:
+      "Accessible label for a numbered transaction posting's currency field",
+  },
+  "journal.postingsUnbalanced": {
+    message:
+      "De boekingsregels zijn niet in balans: er blijft {residual} over. Pas een bedrag aan of maak er een leeg om het automatisch te laten berekenen.",
+    description:
+      "Shown when a new transaction's postings leave a residual; {residual} is the amount and currency, e.g. 1 USD",
+  },
+  "journal.accountNotOpen": {
+    message: "{account} is niet geopend in dit grootboek.",
+    description:
+      "Shown under a New Entry account field naming an account the ledger never opened; {account} is the name",
+  },
+  "journal.alsoOpenAccount": {
+    message: "{account} ook openen op {date}",
+    description:
+      "Checkbox label that adds an open directive for {account} dated {date} to the same New Entry write",
+  },
+  "journal.accountClosedBefore": {
+    message: "{account} is op {date} gesloten, vóór deze boeking.",
+    description:
+      "Shown under a New Entry account field naming an account closed before the entry; {date} is its close date",
+  },
+  "journal.accountOpensAfter": {
+    message: "{account} wordt pas op {date} geopend, na deze boeking.",
+    description:
+      "Shown under a New Entry account field naming an account opened after the entry; {date} is its open date",
+  },
+  "journal.discardEntryEditTitle": {
+    message: "Bewerking verwerpen?",
+    description:
+      "Title of the confirmation shown when leaving Entry Context with unsaved source edits",
+  },
+  "journal.discardEntryEditDescription": {
+    message: "Je wijzigingen in de bron van deze boeking zijn niet opgeslagen.",
+    description: "Body of the Entry Context discard confirmation",
+  },
+  "journal.keepEditing": {
+    message: "Verder bewerken",
+    description:
+      "Button that returns to the Entry Context editor with the edit intact",
+  },
+  "journal.discardEntryEdit": {
+    message: "Verwerpen",
+    description: "Button that discards the Entry Context edit and leaves",
+  },
+  "journal.entryChangedElsewhere": {
+    message:
+      "Deze boeking is gewijzigd of verwijderd sinds je hem opende, dus je bewerking is niet opgeslagen. Kopieer je bewerking en laad opnieuw om de nieuwste versie te zien.",
+    description:
+      "Entry Context save refused because the entry changed elsewhere since it was opened",
+  },
+  "journal.copyMyEdit": {
+    message: "Mijn bewerking kopiëren",
+    description: "Copies the unsaved Entry Context edit to the clipboard",
+  },
+  "journal.reloadEntries": {
+    message: "Opnieuw laden",
+    description:
+      "Closes Entry Context and refreshes the journal to show the latest entries",
   },
   "journal.autoAmount": {
     message: "automatisch",

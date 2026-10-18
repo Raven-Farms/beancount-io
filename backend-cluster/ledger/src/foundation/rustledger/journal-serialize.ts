@@ -52,6 +52,9 @@ import { perUnitFromTotalCostString } from "./total-cost";
  * - `Balance.diff_amount` is `null` in the common (passing-assertion) case, which
  *   matches; the failed-assertion diff is a beancount balance-check artifact
  *   rustledger's `DirectiveJson` does not expose.
+ * - `Balance` also carries the asserted `amount` and its explicit `tolerance`,
+ *   which the Python `serialize_directive` dropped, so a journal row can show
+ *   what was asserted (w3/556). The fields are additive.
  * - `directiveToText` renders numbers from rustledger's own source-preserving
  *   strings rather than reproducing beancount's ledger-global `DisplayContext`
  *   (`MOST_COMMON` precision), which can re-pad numbers to a ledger-wide common
@@ -232,6 +235,8 @@ export function serializeDirective(directive: DirectiveJson): JournalItem {
         date,
         meta,
         account: directive.account,
+        amount: serializeAmount(directive.amount),
+        tolerance: directive.tolerance ?? null,
         diff_amount: null,
       };
     case "commodity":

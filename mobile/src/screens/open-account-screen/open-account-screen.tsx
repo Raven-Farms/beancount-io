@@ -43,6 +43,7 @@ import {
   type AccountNameValidationReason,
   type AccountRootPrefix,
   validateAccountName,
+  openAccountSubmitState,
 } from "./account-name";
 import { useOpenAccount } from "./use-open-account";
 import { getFormatDate } from "@/common/format-util";
@@ -121,8 +122,14 @@ const getStyles = (theme: ColorTheme) =>
       color: theme.black80,
       fontSize: fontSizes.sm,
       marginBottom: space.sm,
+      // Leading edge in Persian too; it sat on the left (w0/049).
+      textAlign: LEADING_TEXT_ALIGN,
     },
+    // An account name is Latin ledger data read left to right: the root comes
+    // first and the sub-path follows it, in every app direction. Mirrored,
+    // Persian showed "Bank:Checking | Assets:" — the name backwards (w0/049).
     accountInput: {
+      direction: "ltr",
       minHeight: 46,
       flexDirection: "row",
       alignItems: "center",
@@ -164,6 +171,8 @@ const getStyles = (theme: ColorTheme) =>
       flex: 1,
       minWidth: 0,
       minHeight: 44,
+      // Typed text starts beside the root, inside the left-to-right row.
+      textAlign: "left",
       paddingHorizontal: space.sm,
       paddingVertical: space.sm,
       color: theme.text01,
@@ -193,7 +202,11 @@ export function OpenAccountScreenComponent(): JSX.Element {
   const styles = useThemeStyle(getStyles);
   const ledgerId = useLedgerGuard();
   const { userId } = useSession();
-  const { currencies, loading: metaLoading } = useLedgerMeta(userId, ledgerId);
+  const {
+    data: meta,
+    currencies,
+    loading: metaLoading,
+  } = useLedgerMeta(userId, ledgerId);
   const { openAccount, loading } = useOpenAccount(ledgerId);
 
   // The account picker's "Create <typed>" row lands here with the typed query
@@ -243,7 +256,16 @@ export function OpenAccountScreenComponent(): JSX.Element {
   // The typed text, before composition tidies it: "Investments:" is a name
   // still being typed, not a request for `Assets:Investments`.
   const typedIssue = typedSubPathIssue(subPath);
-  const canSubmit = validation.ok && typedIssue === null && !loading && !saved;
+  const nameOk = validation.ok && typedIssue === null;
+  // An account the ledger already opens would be opened twice (w0/037).
+  const submitState = openAccountSubmitState({
+    account,
+    nameOk,
+    openAccounts: meta?.accounts,
+    busy: loading,
+  });
+  const { alreadyOpen } = submitState;
+  const canSubmit = submitState.canSubmit && !saved;
   const rootKey = rootPrefix.toLowerCase() as AccountRoot;
   const rootIcon = getRootIcon(rootKey);
   const rootTone = rootIcon.tone(theme);
@@ -308,9 +330,7 @@ export function OpenAccountScreenComponent(): JSX.Element {
         ? t(VALIDATION_KEYS.emptyComponent)
         : null;
   const namePreview =
-    validation.ok && typedIssue === null
-      ? t("openAccountNamePreview", { account })
-      : null;
+    nameOk && !alreadyOpen ? t("openAccountNamePreview", { account }) : null;
   return (
     <SafeAreaView edges={["bottom"]} style={styles.container}>
       <Stack.Screen
@@ -392,6 +412,15 @@ export function OpenAccountScreenComponent(): JSX.Element {
             {validationMessage ? (
               <Text style={styles.error} accessibilityLiveRegion="polite">
                 {validationMessage}
+              </Text>
+            ) : null}
+            {alreadyOpen ? (
+              <Text
+                style={styles.error}
+                accessibilityRole="alert"
+                accessibilityLiveRegion="polite"
+              >
+                {t("openAccountAlreadyOpen", { account })}
               </Text>
             ) : null}
             {namePreview ? (

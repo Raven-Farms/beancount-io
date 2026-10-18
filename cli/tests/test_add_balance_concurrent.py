@@ -118,11 +118,10 @@ def test_concurrent_add_balance_records_one_assertion(tmp_path: Path, runs: list
             payload = json.loads(out)["data"]
             assert payload["written"] == 1 or payload.get("duplicate") is True, report
             wrote += payload["written"]
-        elif code == 4:
-            assert "changed" in err, report
         else:
-            # A different precision that ran after the winner needs --force.
-            assert code == 2 and "Pass --force to record another assertion" in err, report
+            # A competing snapshot or a different precision is a conflict.
+            assert code == 4, report
+            assert "changed" in err or "Pass --force to record another assertion" in err, report
     assert wrote == 1, report
 
 
@@ -135,7 +134,7 @@ def test_sequential_add_balance_still_reports_the_duplicate_and_the_refusal(tmp_
 
     assert first[0] == 0 and json.loads(first[1])["data"]["written"] == 1, first
     assert same[0] == 0 and json.loads(same[1])["data"]["duplicate"] is True, same
-    assert other[0] == 2 and "Pass --force to record another assertion" in other[2], other
+    assert other[0] == 4 and "Pass --force to record another assertion" in other[2], other
     assert len(_assertions(tmp_path)) == 1
 
 

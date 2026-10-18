@@ -80,6 +80,7 @@ export const en = {
   merchantsCadenceQuarterly: "Quarterly",
   merchantsCadenceYearly: "Yearly",
   merchantsCadenceIrregular: "Irregular",
+  merchantsCadenceUnknown: "Not enough history",
   merchantsNextExpected: "Next {{date}}",
   merchantsOverdue: "Overdue",
   // Setting name for the Switch (not an action label) so VoiceOver hears
@@ -168,7 +169,7 @@ export const en = {
   quickAdd: "Quick Add",
   enterNewTransaction: "Enter new transaction",
   multiPostingsTitle: "New Transaction",
-  addPosting: "+ Add posting",
+  addPosting: "Add posting",
   remainderLabel: "Remainder",
   autoLabel: "auto",
   postingAccount: "Select account",
@@ -298,10 +299,12 @@ export const en = {
   openAccountNoCurrency: "No currency",
   openAccountSaving: "Opening...",
   openAccountFailed: "Couldn't open the account. Please try again.",
+  ledgerWouldBreak: "This would add an error to your ledger: {{detail}}",
   openAccountInvalidRoot: "Choose a valid account type.",
   openAccountNameRequired: "Enter at least one account name component.",
   openAccountEmptyComponent: "Account components cannot be empty.",
   openAccountNamePreview: "Will be created as {{account}}",
+  openAccountAlreadyOpen: "{{account}} is already open in this ledger.",
   openAccountUppercaseComponent:
     "Each account component must start with an uppercase letter or a number.",
   openAccountInvalidCharacters:
@@ -356,6 +359,10 @@ export const en = {
     "Cash flow from income to expenses. Income {{income}}, expenses {{expenses}}.",
   cashFlowChartSummaryWithSavings:
     "Cash flow from income to expenses. Income {{income}}, expenses {{expenses}}, savings {{savings}}.",
+  cashFlowChartSummaryWithShortfall:
+    "Cash flow from income to expenses. Income {{income}}, expenses {{expenses}}, from savings {{shortfall}}.",
+  sankeyIncomeNodeLabel: "{{name}} (income)",
+  sankeyExpensesNodeLabel: "{{name}} (expenses)",
   savings: "Savings",
   // feed
   latestUpdates: "Latest Updates",
@@ -515,6 +522,7 @@ export const en = {
   budgetInterval: "Interval",
   budgetSelectInterval: "Select interval",
   budgetAmount: "Amount",
+  budgetAmountInvalid: "Enter a number, like 500 or 49.99.",
   budgetSaveFailed: "Failed to save budget",
   // delete
   budgetDelete: "Delete",
@@ -601,7 +609,8 @@ export const en = {
   profileUsernameHint:
     "Your ledgers’ web addresses start with your username, so changing it changes them too.",
   profileUsernameRequired: "Enter a username",
-  profileUsernameNoSpaces: "Usernames can't contain spaces",
+  profileUsernameRule:
+    "Use 1–20 characters: lowercase a–z, digits 0–9, or underscores.",
   profileUsernameTaken: "That username is already taken",
   profileEmail: "Email",
   profileEmailReadOnly: "Email can't be changed here",

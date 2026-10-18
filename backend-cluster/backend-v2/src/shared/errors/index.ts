@@ -43,5 +43,6 @@ export {
   OperationNotAllowedError,
   PremiumRequiredError,
   UnbalancedTransactionError,
+  NewLedgerErrorsError,
   ConfigurationError,
 } from "./domain-errors";

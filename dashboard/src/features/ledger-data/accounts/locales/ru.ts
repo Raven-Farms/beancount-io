@@ -17,6 +17,23 @@ const ruAccounts: Record<string, TranslationEntry> = {
     message: "Счёт должен начинаться с одного из: {prefixes}",
     description: "Validation error when account prefix is invalid",
   },
+  "page.accounts.timeFilterNotApplied": {
+    message:
+      "Здесь показаны текущие остатки. Фильтр по времени к этой странице не применяется.",
+    description:
+      "Note on the Accounts directory when a Time filter is in the URL; its balances are always current",
+  },
+  "page.accounts.accountAlreadyOpen": {
+    message: "Счёт {account} уже открыт (с {date}).",
+    description:
+      "Validation error when the account to open is already open; {account} is the name, {date} its open date",
+  },
+  "page.accounts.accountAlreadyClosed": {
+    message:
+      "Счёт {account} закрыт {date}; Beancount не позволяет открыть его снова.",
+    description:
+      "Validation error when the account to open was opened and later closed; {account} is the name, {date} its close date",
+  },
   "page.accounts.accountName": {
     message: "Название счёта",
     description: "Form label for account name input",

@@ -6,6 +6,8 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { CombinedGraphQLErrors } from "@apollo/client/errors";
+import { useRef, useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import en from "@/i18n/locales/en";
 import de from "@/i18n/locales/de";
@@ -1040,5 +1042,208 @@ describe("EntryContextDialog", () => {
       await user.tab();
       expect(mocks.deleteMutation).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe("EntryContextDialog unsaved edits (w3/565)", () => {
+  function Harness() {
+    const [open, setOpen] = useState(true);
+    const opener = useRef<HTMLButtonElement>(null);
+    return (
+      <>
+        <button ref={opener} type="button" onClick={() => setOpen(true)}>
+          reopen
+        </button>
+        <EntryContextDialog
+          open={open}
+          onOpenChange={setOpen}
+          entry={entry}
+          ledgerId="open_ledger/example"
+          returnFocusRef={opener}
+        />
+      </>
+    );
+  }
+
+  const source = () => screen.getByLabelText("entry-source");
+  const edit = () =>
+    fireEvent.change(source(), {
+      target: { value: `${source().getAttribute("value") ?? ""} ; qa draft` },
+    });
+  const confirmation = () =>
+    screen.queryByRole("dialog", { name: "journal.discardEntryEditTitle" });
+
+  const exits = {
+    "the Close button": () =>
+      userEvent.click(screen.getByRole("button", { name: "Close" })),
+    Escape: () => userEvent.keyboard("{Escape}"),
+    "an outside click": async () => {
+      // Radix arms its outside-pointer listener a tick after opening, then
+      // dismisses on a pointerdown on the overlay.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      fireEvent.pointerDown(
+        document.querySelector('[data-slot="dialog-overlay"]')!,
+      );
+    },
+    "Open source": () =>
+      userEvent.click(
+        screen.getByRole("button", { name: "journal.openEntrySource" }),
+      ),
+  };
+
+  beforeEach(() => {
+    mocks.canWrite = true;
+    mocks.language = null;
+    mocks.fileNavigate.mockReset();
+    mocks.contextData = {
+      entry: { meta: { filename: "main.bean", lineno: 42 } },
+      slice: '2024-01-01 * "Payee" "Narration"\n  Assets:Cash  -10 USD\n',
+      sha256sum: "abc123",
+      balances_before: null,
+      balances_after: null,
+    };
+  });
+
+  it.each(Object.entries(exits))(
+    "asks before %s drops an edit, and Keep editing keeps it",
+    async (_exit, leave) => {
+      render(<Harness />);
+      edit();
+      const edited = (source() as HTMLTextAreaElement).value;
+
+      await leave();
+
+      expect(
+        await screen.findByText("journal.discardEntryEditDescription"),
+      ).toBeInTheDocument();
+      expect(confirmation()).toBeInTheDocument();
+      expect(mocks.fileNavigate).not.toHaveBeenCalled();
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "journal.keepEditing" }),
+      );
+      await waitFor(() => expect(confirmation()).not.toBeInTheDocument());
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+      expect(source()).toHaveValue(edited);
+    },
+  );
+
+  it.each(Object.entries(exits))(
+    "leaves by %s after Discard",
+    async (exit, leave) => {
+      render(<Harness />);
+      edit();
+
+      await leave();
+      await userEvent.click(
+        await screen.findByRole("button", { name: "journal.discardEntryEdit" }),
+      );
+
+      if (exit === "Open source") {
+        expect(mocks.fileNavigate).toHaveBeenCalledTimes(1);
+      } else {
+        await waitFor(() =>
+          expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+        );
+      }
+    },
+  );
+
+  it.each(Object.entries(exits))(
+    "leaves by %s at once without an edit",
+    async (exit, leave) => {
+      render(<Harness />);
+
+      await leave();
+
+      expect(confirmation()).not.toBeInTheDocument();
+      if (exit === "Open source") {
+        expect(mocks.fileNavigate).toHaveBeenCalledTimes(1);
+      } else {
+        await waitFor(() =>
+          expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+        );
+      }
+    },
+  );
+
+  it("returns focus to the opener after Discard", async () => {
+    render(<Harness />);
+    edit();
+
+    await userEvent.keyboard("{Escape}");
+    await userEvent.click(
+      await screen.findByRole("button", { name: "journal.discardEntryEdit" }),
+    );
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "reopen" })).toHaveFocus(),
+    );
+  });
+});
+
+describe("EntryContextDialog save after the entry changed elsewhere (w3/642)", () => {
+  beforeEach(() => {
+    mocks.canWrite = true;
+    mocks.language = null;
+    mocks.mutationCallCount = 0;
+    mocks.contextData = {
+      entry: { meta: { filename: "main.bean", lineno: 42 } },
+      slice: '2024-01-01 * "Payee" "Narration"\n  Assets:Cash  -10 USD\n',
+      sha256sum: "abc123",
+      balances_before: null,
+      balances_after: null,
+    };
+    mocks.updateMutation.mockReset().mockRejectedValue(
+      new CombinedGraphQLErrors({
+        errors: [
+          {
+            message: "Ledger resource not found",
+            extensions: { code: "NOT_FOUND" },
+          },
+        ],
+      }),
+    );
+    vi.mocked(toast.error).mockClear();
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: vi.fn().mockResolvedValue(undefined) },
+    });
+  });
+
+  it("says the entry changed, keeps the draft, and offers Copy and Reload", async () => {
+    const onOpenChange = vi.fn();
+    const onSuccess = vi.fn();
+    render(
+      <EntryContextDialog
+        open
+        onOpenChange={onOpenChange}
+        entry={entry}
+        ledgerId="open_ledger/example"
+        onSuccess={onSuccess}
+      />,
+    );
+    const source = screen.getByLabelText("entry-source");
+    const draft = `${(source as HTMLTextAreaElement).value}; my edit`;
+    fireEvent.change(source, { target: { value: draft } });
+
+    await userEvent.click(screen.getByRole("button", { name: "common.save" }));
+
+    expect(
+      await screen.findByText("journal.entryChangedElsewhere"),
+    ).toBeInTheDocument();
+    expect(toast.error).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("entry-source")).toHaveValue(draft);
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "journal.copyMyEdit" }),
+    );
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(draft);
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "journal.reloadEntries" }),
+    );
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(onSuccess).toHaveBeenCalled();
   });
 });

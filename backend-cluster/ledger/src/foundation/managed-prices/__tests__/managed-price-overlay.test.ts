@@ -280,6 +280,16 @@ describe("precedence helpers", () => {
       ["2026-01-10\0BTC\0USD"],
     ],
     [
+      "a quote on an org heading the lexer ignores (w5/625)",
+      '* Prices for the 12" binder\n2026-09-10 price BTC 70000 USD\n2026-09-12 * "Later"\n',
+      ["2026-09-10\0BTC\0USD"],
+    ],
+    [
+      "a byte-order mark before the first line (w5/625)",
+      "\uFEFF2026-09-10 price BTC 70000 USD\n",
+      ["2026-09-10\0BTC\0USD"],
+    ],
+    [
       "an escaped quote inside a string",
       '2026-01-09 note Assets:Crypto "a \\" b\n2026-01-10 price BTC 1 USD\n"\n2026-01-11 price BTC 2 USD\n',
       ["2026-01-11\0BTC\0USD"],
@@ -302,6 +312,35 @@ describe("precedence helpers", () => {
       "2026-01-03\0X\0USD",
       "2026-01-04\0X\0USD",
     ]);
+  });
+
+  // An indented comment between a shadowed price and its metadata ended the
+  // walk, leaving the metadata indented under nothing: the effective feed
+  // failed to parse (w5/632).
+  it("comments out every indented line of a shadowed point, past an indented comment", () => {
+    const text =
+      "; alias: K2\n; commodity: XC\n; quote: USD\n2026-10-15 price XC 10 USD\n" +
+      '    ; provider note\n  observed-at: "2026-10-16T12:00:00Z"\n\n' +
+      '2026-10-16 price XC 11 USD\n  observed-at: "2026-10-17T12:00:00Z"\n';
+    const validation = validateManagedPriceText(text);
+    if (!validation.ok) throw new Error(validation.reason);
+
+    const result = applyLedgerPricePrecedence(
+      text,
+      validation.feed,
+      collectLedgerPricePairs({ "a.bean": "2026-10-15 price XC 12 USD\n" }, ["a.bean"]),
+    );
+
+    const lines = result.text.split("\n");
+    expect(lines).toHaveLength(text.split("\n").length);
+    expect(lines.slice(3, 7)).toEqual([
+      expect.stringMatching(/^;/u),
+      "; ; provider note",
+      '; observed-at: "2026-10-16T12:00:00Z"',
+      "",
+    ]);
+    expect(lines.slice(7, 9)).toEqual(text.split("\n").slice(7, 9));
+    expect(result).toMatchObject({ shadowedCount: 1, effectiveDates: ["2026-10-16"] });
   });
 
   it("returns the text untouched when nothing is shadowed", () => {

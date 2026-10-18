@@ -23,11 +23,22 @@ cloud_app.add_typer(ledger_app, name="ledger")
 
 @cloud_app.command("login")
 def cloud_login() -> None:
-    """Log in via the browser device flow (stores credentials.json under $BEA_CONFIG_DIR, default ~/.config/bea)."""
+    """Log in by device flow; credentials.json goes in $BEA_CONFIG_DIR, $XDG_CONFIG_HOME/bea or ~/.config/bea."""
+    context.current().require_network("cloud login")
+    import os
+
+    from cli.errors import UsageError
+
+    if os.environ.get("BEA_TOKEN"):
+        # BEA_TOKEN wins over the stored file unconditionally, so a login here
+        # printed success and every later command still sent the old token
+        # (w5/516). Said before the flow starts, as logout says it.
+        raise UsageError(
+            "BEA_TOKEN is set in this shell and takes precedence over a login, so the new session would never be "
+            "used. Unset BEA_TOKEN first, then run 'bea cloud login'."
+        )
     ctx = context.current()
     if ctx.no_input:
-        from cli.errors import UsageError
-
         raise UsageError("Login needs a browser and a terminal. Set BEA_TOKEN for unattended use.")
 
     from cli.api.client import make_client
@@ -41,9 +52,11 @@ def cloud_login() -> None:
 @cloud_app.command("logout")
 def cloud_logout() -> None:
     """Revoke the token and clear stored credentials."""
+    context.current().require_network("cloud logout")
     from cli.api.client import bearer_client, call, unwrap_or_none
     from cli.api.rest_client.api.ledger_v_1 import logout
     from cli.auth.credentials import ENVIRONMENT, UnusableCredentials, clear_credentials, load_credentials
+    from cli.config import credentials_path
     from cli.errors import BeaError
 
     try:
@@ -54,7 +67,11 @@ def cloud_logout() -> None:
         try:
             clear_credentials()
         except OSError as error:
-            raise BeaError(f"{exc} It could not be removed either: {error.strerror}.") from error
+            # Not the unusable credential's own remedy, which names this command (w5/589).
+            raise BeaError(
+                f"The stored credential {exc.path} is unusable ({exc.reason}) and could not be removed: "
+                f"{error.strerror}. Remove it yourself."
+            ) from error
         raise BeaError(
             f"Removed the unusable credential file {exc.path}; it could not be revoked. "
             "If it held a live session, revoke it from the dashboard."
@@ -74,39 +91,84 @@ def cloud_logout() -> None:
         return
     import httpx
 
-    from cli.errors import ConflictError, to_bea_error
+    from cli.errors import ConflictError, GatewayTimeout, UnreadableSuccess, to_bea_error
 
-    failure: BeaError | None = None
+    # Built before the request: a malformed BEA_API_URL is a usage error with
+    # the credential kept, not a "failed revocation" after deleting it (w5/521).
+    client = bearer_client(creds.token)
+    # What went wrong with the revocation: the error class, the outcome as a
+    # clause, and the server's request id. Worded only once the local removal
+    # is known, so neither half claims what the other did (w5/589).
+    failure: tuple[type[BeaError], str, str | None] | None = None
     try:
-        response = call(logout.sync_detailed, client=bearer_client(creds.token))
+        response = call(logout.sync_detailed, client=client)
         # A 401 means the server no longer accepts this token: it is already
         # revoked (or expired), which is the outcome logout is after.
         if response.status_code != 401:
             unwrap_or_none(response)
+    except (httpx.ConnectError, httpx.ConnectTimeout, httpx.ProxyError) as exc:
+        # Nothing reached the server: a plain failure, as for the other writes (w5/368, w5/519).
+        reason = to_bea_error(exc)
+        failure = (BeaError, f"server revocation failed: {str(reason).rstrip('.')}. {_STILL_VALID}", None)
     except httpx.TimeoutException as exc:
-        failure = ConflictError(
-            f"Removed the local credential, but server revocation timed out ({type(exc).__name__}); "
-            "the outcome is unknown. The session may still be valid: revoke it from the dashboard."
+        failure = (
+            ConflictError,
+            f"server revocation timed out ({type(exc).__name__}); the outcome is unknown. {_STILL_VALID}",
+            None,
+        )
+    except (httpx.TransportError, UnreadableSuccess, GatewayTimeout) as exc:
+        # These failures cannot establish whether revocation took effect,
+        # as for create and delete (w5/521, w5/690).
+        failure = (
+            ConflictError,
+            f"the server's answer to the revocation was lost or unreadable ({_failure_name(exc)}); "
+            f"the outcome is unknown. {_STILL_VALID}",
+            getattr(exc, "request_id", None),
         )
     except Exception as exc:
         reason = to_bea_error(exc)
-        failure = BeaError(
-            f"Removed the local credential, but server revocation failed: {str(reason).rstrip('.')}. "
-            "The session may still be valid: revoke it from the dashboard.",
-            request_id=reason.request_id,
+        failure = (
+            BeaError,
+            f"server revocation failed: {str(reason).rstrip('.')}. {_STILL_VALID}",
+            reason.request_id,
         )
     # The local credential goes either way: a server that cannot be reached
     # must not leave a token sitting on this disk.
-    clear_credentials()
+    try:
+        clear_credentials()
+    except OSError as error:
+        # A read-only directory raised a bare `[Errno 13]` that said nothing of
+        # the revocation, which had already reached the server (w5/589).
+        kept = f"{credentials_path()} ({error.strerror})"
+        if failure is None:
+            raise BeaError(
+                f"Revoked the session on the server, but could not remove the local credential {kept}. "
+                "The token there no longer works; delete the file yourself."
+            ) from error
+        kind, outcome, request_id = failure
+        raise kind(
+            f"Could not remove the local credential {kept}; delete it yourself. Also, {outcome}",
+            request_id=request_id,
+        ) from error
     if failure is not None:
-        raise failure
+        kind, outcome, request_id = failure
+        raise kind(f"Removed the local credential, but {outcome}", request_id=request_id)
     output.success("Logged out.")
+
+
+_STILL_VALID = "The session may still be valid: revoke it from the dashboard."
+
+
+def _failure_name(exc: BaseException) -> str:
+    status = getattr(exc, "status", None)
+    return f"HTTP {status}" if isinstance(status, int) else type(exc).__name__
 
 
 @cloud_app.command("status")
 def cloud_status() -> None:
     """Show who is logged in, where the credential came from, and when it expires."""
     ctx = context.current()
+    ctx.require_network("cloud status")
     from cli.api.client import bearer_client, call, unwrap_or_none
     from cli.api.rest_client.api.ledger_v_1 import get_user_profile
     from cli.api.rest_client.models import GetUserProfileResponse200Type0

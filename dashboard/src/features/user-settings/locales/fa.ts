@@ -418,10 +418,6 @@ const faUserSettings: Record<string, TranslationEntry> = {
     message: "سیستم",
     description: "System theme option",
   },
-  "userSettings.testMode": {
-    message: "حالت آزمایشی",
-    description: "Label indicating Stripe is in test/development mode",
-  },
   "userSettings.theme": {
     message: "تم",
     description: "Label for theme selection",

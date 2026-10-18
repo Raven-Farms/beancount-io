@@ -422,19 +422,19 @@ async function resetLedger(
       `the eval ledger has directories (${directories.join(", ")}); remove them by hand`,
     );
   }
-  await callTool(client, "editLedgerFiles", {
-    description: "Reset the mcp-agent-eval fixture",
-    files: [
-      ...listed
-        .filter((p) => p !== suite.ledgerFile)
-        .map((p) => ({ operation: "delete", path: p })),
-      {
-        operation: listed.includes(suite.ledgerFile) ? "replace" : "create",
-        path: suite.ledgerFile,
-        content: fixture,
-      },
-    ],
-  });
+  const description = "Reset the mcp-agent-eval fixture";
+  await callTool(
+    client,
+    listed.includes(suite.ledgerFile) ? "updateLedgerFiles" : "createLedgerFiles",
+    { description, files: [{ path: suite.ledgerFile, content: fixture }] },
+  );
+  const extra = listed.filter((p) => p !== suite.ledgerFile);
+  if (extra.length) {
+    await callTool(client, "deleteLedgerFiles", {
+      description,
+      files: extra.map((path) => ({ path })),
+    });
+  }
   const after = await readState(client, suite.ledgerFile);
   if (!after.ok) throw new Error(`could not verify the reset: ${after.reason}`);
   if (!matchesFixture(after, fixture, suite.ledgerFile))

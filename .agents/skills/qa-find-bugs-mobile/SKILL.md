@@ -11,6 +11,10 @@ description: >-
 
 Read [the shared QA contract](../qa-shared/contract.md) first, then
 `mobile/AGENTS.md`, especially its production-write and simulator instructions.
+Writes from the signed-in dev build to the QA account's designated disposable
+ledger fall under the contract's standing write authorization (snapshot, prefix,
+record, restore byte-for-byte). Any other production write still needs the
+user's go-ahead, as `mobile/AGENTS.md` says.
 Use **Expo MCP on iPhone 17e** unless the user names another device. A mobile
 viewport in Playwright is not a substitute for exercising the native app.
 

@@ -13,8 +13,11 @@ export type Scalars = {
   Boolean: { input: boolean; output: boolean; }
   Int: { input: number; output: number; }
   Float: { input: number; output: number; }
+  /** A date-time string at UTC, such as 2007-12-03T10:15:30Z, compliant with the `date-time` format outlined in section 5.6 of the RFC 3339 profile of the ISO 8601 standard for representation of dates and times using the Gregorian calendar.This scalar is serialized to a string in ISO 8601 format and parsed from a string in ISO 8601 format. */
   DateTimeISO: { input: string; output: string; }
+  /** The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf). */
   JSON: { input: unknown; output: unknown; }
+  /** The `JSONObject` scalar type represents JSON objects as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf). */
   JSONObject: { input: Record<string, unknown>; output: Record<string, unknown>; }
 };
 
@@ -999,7 +1002,7 @@ export type Mutation = {
   createApiKey: MintedApiKeyType;
   /** Initiate a CLI authentication session. Returns the device code the CLI polls with and the user code to display for the person to enter in the browser. */
   createCliAuthSession: CreateCliAuthSessionResponse;
-  /** Create a new ledger for the current user */
+  /** Create a new ledger for the current user. STARTER (the default, including null) contains options and accounts without transactions or opening balances; SAMPLE contains demonstration transactions. Existing ledgers are unchanged. */
   createLedger: Ledger;
   /** Create a new file in a specific ledger */
   createLedgerFile: LedgerFileContent;
@@ -1781,7 +1784,7 @@ export type Query = {
   getLedgerAssetDownloadUrl: LedgerAssetDownloadUrlResult;
   /** Get the filter options of a specific ledger */
   getLedgerAttributes: LedgerAttributes;
-  /** Get the balance sheet of a specific ledger */
+  /** Get the balance sheet of a specific ledger, including report-only current earnings in equity and its interval series under the configured account names */
   getLedgerBalanceSheet: BalanceSheetData;
   getLedgerCollaboratorPermission: LedgerCollaborator;
   /** Get the commodities of a specific ledger */
@@ -1812,15 +1815,17 @@ export type Query = {
   getLedgerLinks: Array<Scalars['String']['output']>;
   /** Status of every managed price include the ledger names: feed pair and source, serving revision, observed/fetched/next-refresh times, freshness and the last refresh error. Empty when the ledger has none. */
   getLedgerManagedPrices: Array<ManagedPriceSource>;
-  /** Get the transactions for a narration */
-  getLedgerNarrationTransactions: Transaction;
+  /** Get the most recent transaction for a narration, or null when none matches */
+  getLedgerNarrationTransactions: Maybe<Transaction>;
   getLedgerNarrations: Array<Scalars['String']['output']>;
+  /** Get the effective beancount options of a ledger: title, account-root names, conversion and earnings accounts, comma rendering, and operating currencies */
+  getLedgerOptions: LedgerOptions;
   /** Get the overview of a specific ledger */
   getLedgerOverview: LedgerOverview;
   /** Get the accounts for a payee */
   getLedgerPayeeAccounts: Array<Scalars['String']['output']>;
-  /** Get the transactions for a payee */
-  getLedgerPayeeTransactions: Transaction;
+  /** Get the most recent transaction for a payee, or null when none matches */
+  getLedgerPayeeTransactions: Maybe<Transaction>;
   /** Get the payees of a specific ledger */
   getLedgerPayees: Array<Scalars['String']['output']>;
   /** Get plaintext journal in beancount format */
@@ -2115,6 +2120,11 @@ export type QueryGetLedgerNarrationTransactionsArgs = {
 
 
 export type QueryGetLedgerNarrationsArgs = {
+  ledgerId: Scalars['String']['input'];
+};
+
+
+export type QueryGetLedgerOptionsArgs = {
   ledgerId: Scalars['String']['input'];
 };
 
@@ -2470,7 +2480,8 @@ export type ResetPasswordResponse = {
 
 export type SearchUser = {
   __typename: 'SearchUser';
-  email: Scalars['String']['output'];
+  /** The match's email, returned only when the keyword was that email */
+  email: Maybe<Scalars['String']['output']>;
   username: Scalars['String']['output'];
 };
 
@@ -2693,6 +2704,7 @@ export type UserProfile = {
 
 export type UserProfileResponse = {
   __typename: 'UserProfileResponse';
+  avatarUrl: Maybe<Scalars['String']['output']>;
   email: Scalars['String']['output'];
   emailReportStatus: Maybe<ReportStatus>;
   firstName: Maybe<Scalars['String']['output']>;
@@ -3347,7 +3359,7 @@ export type GetUserByExactMatchQueryVariables = Exact<{
 }>;
 
 
-export type GetUserByExactMatchQuery = { getUserByExactMatch: Array<{ __typename: 'SearchUser', username: string, email: string }> };
+export type GetUserByExactMatchQuery = { getUserByExactMatch: Array<{ __typename: 'SearchUser', username: string, email: string | null }> };
 
 export type LeaveLedgerMutationVariables = Exact<{
   ledgerId: Scalars['String']['input'];
@@ -3624,7 +3636,7 @@ export type GetPlaidAccountsForLedgerQueryVariables = Exact<{
 }>;
 
 
-export type GetPlaidAccountsForLedgerQuery = { getPlaidAccountsForLedger: Array<{ __typename: 'PlaidAccountWithInstitutionType', id: string, plaidItemId: string, accountName: string, mask: string | null, institutionName: string }> };
+export type GetPlaidAccountsForLedgerQuery = { getPlaidAccountsForLedger: Array<{ __typename: 'PlaidAccountWithInstitutionType', id: string, plaidItemId: string, accountName: string, mask: string | null, institutionName: string, currency: string }> };
 
 export type GetUnsyncedPlaidTransactionsQueryVariables = Exact<{
   ledgerId: Scalars['String']['input'];
@@ -3870,7 +3882,7 @@ export const StarLedgerDocument = {"kind":"Document","definitions":[{"kind":"Ope
 export const UnstarLedgerDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"UnstarLedger"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"ledgerId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"unstarLedger"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"ledgerId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"ledgerId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"isStarred"}},{"kind":"Field","name":{"kind":"Name","value":"message"}}]}}]}}]} as unknown as DocumentNode<UnstarLedgerMutation, UnstarLedgerMutationVariables>;
 export const GetPlaidItemsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetPlaidItems"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"ledgerId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"getPlaidItems"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"ledgerId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"ledgerId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"institutionName"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"errorMessage"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"lastSync"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"timestamp"}},{"kind":"Field","name":{"kind":"Name","value":"transactionsAdded"}},{"kind":"Field","name":{"kind":"Name","value":"errorMessage"}}]}}]}}]}}]} as unknown as DocumentNode<GetPlaidItemsQuery, GetPlaidItemsQueryVariables>;
 export const GetPlaidAccountsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetPlaidAccounts"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"itemId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"ledgerId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"getPlaidAccounts"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"itemId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"itemId"}}},{"kind":"Argument","name":{"kind":"Name","value":"ledgerId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"ledgerId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"accountName"}},{"kind":"Field","name":{"kind":"Name","value":"accountType"}},{"kind":"Field","name":{"kind":"Name","value":"mask"}},{"kind":"Field","name":{"kind":"Name","value":"ledgerAccount"}},{"kind":"Field","name":{"kind":"Name","value":"currency"}},{"kind":"Field","name":{"kind":"Name","value":"enabled"}}]}}]}}]} as unknown as DocumentNode<GetPlaidAccountsQuery, GetPlaidAccountsQueryVariables>;
-export const GetPlaidAccountsForLedgerDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetPlaidAccountsForLedger"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"ledgerId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"getPlaidAccountsForLedger"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"ledgerId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"ledgerId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"plaidItemId"}},{"kind":"Field","name":{"kind":"Name","value":"accountName"}},{"kind":"Field","name":{"kind":"Name","value":"mask"}},{"kind":"Field","name":{"kind":"Name","value":"institutionName"}}]}}]}}]} as unknown as DocumentNode<GetPlaidAccountsForLedgerQuery, GetPlaidAccountsForLedgerQueryVariables>;
+export const GetPlaidAccountsForLedgerDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetPlaidAccountsForLedger"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"ledgerId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"getPlaidAccountsForLedger"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"ledgerId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"ledgerId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"plaidItemId"}},{"kind":"Field","name":{"kind":"Name","value":"accountName"}},{"kind":"Field","name":{"kind":"Name","value":"mask"}},{"kind":"Field","name":{"kind":"Name","value":"institutionName"}},{"kind":"Field","name":{"kind":"Name","value":"currency"}}]}}]}}]} as unknown as DocumentNode<GetPlaidAccountsForLedgerQuery, GetPlaidAccountsForLedgerQueryVariables>;
 export const GetUnsyncedPlaidTransactionsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetUnsyncedPlaidTransactions"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"ledgerId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"accountId"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"getUnsyncedPlaidTransactions"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"ledgerId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"ledgerId"}}},{"kind":"Argument","name":{"kind":"Name","value":"accountId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"accountId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"plaidAccountId"}},{"kind":"Field","name":{"kind":"Name","value":"transactionId"}},{"kind":"Field","name":{"kind":"Name","value":"date"}},{"kind":"Field","name":{"kind":"Name","value":"amount"}},{"kind":"Field","name":{"kind":"Name","value":"merchantName"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"isPending"}},{"kind":"Field","name":{"kind":"Name","value":"accountName"}},{"kind":"Field","name":{"kind":"Name","value":"institutionName"}},{"kind":"Field","name":{"kind":"Name","value":"ledgerAccount"}}]}}]}}]} as unknown as DocumentNode<GetUnsyncedPlaidTransactionsQuery, GetUnsyncedPlaidTransactionsQueryVariables>;
 export const SuggestPlaidTransactionCategoriesDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"SuggestPlaidTransactionCategories"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"ledgerId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"accountId"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"suggestPlaidTransactionCategories"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"ledgerId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"ledgerId"}}},{"kind":"Argument","name":{"kind":"Name","value":"accountId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"accountId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"rowIndex"}},{"kind":"Field","name":{"kind":"Name","value":"targetAccount"}},{"kind":"Field","name":{"kind":"Name","value":"confidence"}},{"kind":"Field","name":{"kind":"Name","value":"reasoning"}}]}}]}}]} as unknown as DocumentNode<SuggestPlaidTransactionCategoriesQuery, SuggestPlaidTransactionCategoriesQueryVariables>;
 export const SuggestPlaidAccountMappingDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"SuggestPlaidAccountMapping"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"ledgerId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"itemId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"suggestPlaidAccountMapping"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"ledgerId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"ledgerId"}}},{"kind":"Argument","name":{"kind":"Name","value":"itemId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"itemId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"accountId"}},{"kind":"Field","name":{"kind":"Name","value":"suggestedAccount"}},{"kind":"Field","name":{"kind":"Name","value":"confidence"}},{"kind":"Field","name":{"kind":"Name","value":"reasoning"}}]}}]}}]} as unknown as DocumentNode<SuggestPlaidAccountMappingQuery, SuggestPlaidAccountMappingQueryVariables>;

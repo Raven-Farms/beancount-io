@@ -235,7 +235,7 @@ const M = {
   coveredByBql:
     "Already reachable through `runBqlQuery` — BQL expresses this query directly, so a dedicated tool would be a second, narrower way to ask the same question. Read-only by construction: BQL cannot write, so this may never excuse a `write` or `admin` verb (ADR 0008 D7.1).",
   coveredByEditFiles:
-    "Already reachable through `editLedgerFiles` — the directive is written into the ledger file and committed by the same tool, so a dedicated tool would be a second way to spell one commit.",
+    "Already reachable through `createLedgerFiles` and `updateLedgerFiles` — the directive is written into the ledger file and committed by those tools, so a dedicated tool would be a second way to spell one commit.",
   transportOnly:
     "This *is* the MCP surface's own transport or one of its siblings — a tool for reaching it would be circular.",
   singleLedgerPin:
@@ -653,7 +653,7 @@ const LEDGER_ADMIN_VERBS: readonly VerbEntry[] = [
     class: "admin",
     authorizationAction: AUTHORIZATION_ACTIONS.LEDGER_CREATE,
     rest: "POST /api-gateway/v1/ledgers",
-    mcp: "manageLedgers",
+    mcp: "createLedger",
   },
   {
     verb: "Mutation.updateLedger",
@@ -661,7 +661,7 @@ const LEDGER_ADMIN_VERBS: readonly VerbEntry[] = [
     class: "admin",
     authorizationAction: AUTHORIZATION_ACTIONS.LEDGER_ADMINISTRATION_UPDATE,
     rest: "PUT /api-gateway/v1/ledgers/{owner}/{name}",
-    mcp: "manageLedgers",
+    mcp: "updateLedger",
   },
   {
     verb: "Mutation.deleteLedger",
@@ -669,7 +669,7 @@ const LEDGER_ADMIN_VERBS: readonly VerbEntry[] = [
     class: "admin",
     authorizationAction: AUTHORIZATION_ACTIONS.LEDGER_ADMINISTRATION_DELETE,
     rest: "DELETE /api-gateway/v1/ledgers/{owner}/{name}",
-    mcp: "manageLedgers",
+    mcp: "deleteLedger",
   },
   {
     verb: "Query.listPublicKeys",
@@ -730,7 +730,7 @@ const LEDGER_ADMIN_VERBS: readonly VerbEntry[] = [
     class: "admin",
     authorizationAction: AUTHORIZATION_ACTIONS.LEDGER_COLLABORATORS_UPDATE,
     rest: "PUT /api-gateway/v1/ledgers/{owner}/{name}/collaborators/{collaborator}",
-    mcp: "manageLedgerCollaborators",
+    mcp: "setLedgerCollaborator",
   },
   {
     verb: "Mutation.deleteLedgerCollaborator",
@@ -738,7 +738,7 @@ const LEDGER_ADMIN_VERBS: readonly VerbEntry[] = [
     class: "admin",
     authorizationAction: AUTHORIZATION_ACTIONS.LEDGER_COLLABORATORS_DELETE,
     rest: "DELETE /api-gateway/v1/ledgers/{owner}/{name}/collaborators/{collaborator}",
-    mcp: "manageLedgerCollaborators",
+    mcp: "removeLedgerCollaborator",
   },
   {
     verb: "Mutation.leaveLedger",
@@ -746,7 +746,7 @@ const LEDGER_ADMIN_VERBS: readonly VerbEntry[] = [
     class: "admin",
     authorizationAction: AUTHORIZATION_ACTIONS.LEDGER_COLLABORATORS_LEAVE,
     rest: "POST /api-gateway/v1/ledgers/{owner}/{name}/leave",
-    mcp: "manageLedgerCollaborators",
+    mcp: "leaveLedger",
   },
 ];
 
@@ -1086,7 +1086,7 @@ const LEDGER_READ_VERBS: readonly VerbEntry[] = (
       gql: "Query.getLedgerJournal",
       rest: "GET /api-gateway/v1/ledgers/{owner}/{name}/journal",
       // A tool as well as the resource under ADR 019 D7: getEntryContext and
-      // editEntrySource take an entry hash, and a host that never reads
+      // the entry-source tools take an entry hash, and a host that never reads
       // resources gets one only from this tool's output (w6/008).
       mcp: "listLedgerEntries",
       mcpResource: "ledgerJournal",
@@ -1271,21 +1271,21 @@ const LEDGER_WRITE_VERBS: readonly VerbEntry[] = [
     class: "write" as const,
     gql: "Mutation.deleteLedgerEntrySourceSlice",
     rest: "POST /api-gateway/v1/ledgers/{owner}/{name}/entry-source/delete",
-    mcp: "editEntrySource",
+    mcp: "deleteEntrySource",
   },
   {
     verb: "Mutation.deleteMultipleLedgerEntrySourceSlices",
     class: "write" as const,
     gql: "Mutation.deleteMultipleLedgerEntrySourceSlices",
     rest: "POST /api-gateway/v1/ledgers/{owner}/{name}/entry-source/delete-many",
-    mcp: "editEntrySource",
+    mcp: "deleteEntrySources",
   },
   {
     verb: "Mutation.updateLedgerEntrySourceSlice",
     class: "write" as const,
     gql: "Mutation.updateLedgerEntrySourceSlice",
     rest: "PUT /api-gateway/v1/ledgers/{owner}/{name}/entry-source",
-    mcp: "editEntrySource",
+    mcp: "updateEntrySource",
   },
   {
     verb: "Mutation.addEntries",
@@ -1420,16 +1420,15 @@ const CROSS_SURFACE_VERBS: readonly VerbEntry[] = [
     mcpResource: "ledgerFile",
     rest: "GET /api-gateway/v1/ledgers/{owner}/{name}/files/{*path}",
   },
-  // One MCP tool, three GraphQL mutations: `editLedgerFiles` takes create /
-  // update / delete as an operation argument, while GraphQL spells each out as
-  // its own field. The verb row is anchored on the create field and the other
-  // two carry their own rows pointing back at the same tool.
+  // One row per kind of file write, each with its own GraphQL mutation and MCP
+  // tool (w1/m38). REST's `PUT` both creates and replaces, so the create and
+  // update rows share it.
   {
     verb: "ledger.editFiles.create",
     class: "write",
     authorizationAction: AUTHORIZATION_ACTIONS.LEDGER_FILES_WRITE,
     gql: "Mutation.createLedgerFile",
-    mcp: "editLedgerFiles",
+    mcp: "createLedgerFiles",
     rest: "PUT /api-gateway/v1/ledgers/{owner}/{name}/files/{*path}",
   },
   {
@@ -1437,7 +1436,7 @@ const CROSS_SURFACE_VERBS: readonly VerbEntry[] = [
     class: "write",
     authorizationAction: AUTHORIZATION_ACTIONS.LEDGER_FILES_WRITE,
     gql: "Mutation.updateLedgerFile",
-    mcp: "editLedgerFiles",
+    mcp: "updateLedgerFiles",
     rest: "PUT /api-gateway/v1/ledgers/{owner}/{name}/files/{*path}",
   },
   {
@@ -1445,7 +1444,7 @@ const CROSS_SURFACE_VERBS: readonly VerbEntry[] = [
     class: "write",
     authorizationAction: AUTHORIZATION_ACTIONS.LEDGER_FILES_WRITE,
     gql: "Mutation.deleteLedgerFile",
-    mcp: "editLedgerFiles",
+    mcp: "deleteLedgerFiles",
     rest: "DELETE /api-gateway/v1/ledgers/{owner}/{name}/files/{*path}",
   },
   {
@@ -1548,7 +1547,7 @@ const GITEA_SOCIAL_VERBS: readonly VerbEntry[] = [
     gql: "Mutation.createPullRequestFromPatch",
     class: "write" as const,
     rest: "POST /api-gateway/v1/ledgers/{owner}/{name}/pull-requests",
-    mcp: "managePullRequests",
+    mcp: "createPullRequest",
     authorizationAction: AUTHORIZATION_ACTIONS.LEDGER_PULL_REQUEST_CREATE,
   },
   {
@@ -1556,7 +1555,7 @@ const GITEA_SOCIAL_VERBS: readonly VerbEntry[] = [
     gql: "Mutation.approvePullRequest",
     class: "write" as const,
     rest: "POST /api-gateway/v1/ledgers/{owner}/{name}/pull-requests/{prNumber}/approve",
-    mcp: "managePullRequests",
+    mcp: "approvePullRequest",
     authorizationAction: AUTHORIZATION_ACTIONS.LEDGER_PULL_REQUEST_APPROVE,
   },
   {
@@ -1564,7 +1563,7 @@ const GITEA_SOCIAL_VERBS: readonly VerbEntry[] = [
     gql: "Mutation.rejectPullRequest",
     class: "write" as const,
     rest: "POST /api-gateway/v1/ledgers/{owner}/{name}/pull-requests/{prNumber}/reject",
-    mcp: "managePullRequests",
+    mcp: "rejectPullRequest",
     authorizationAction: AUTHORIZATION_ACTIONS.LEDGER_PULL_REQUEST_REJECT,
   },
 ];
@@ -1706,7 +1705,7 @@ const PLAID_VERBS: readonly VerbEntry[] = [
     class: "admin",
     gql: "Mutation.unlinkPlaidItem",
     rest: "DELETE /api-gateway/v1/ledgers/{owner}/{name}/banks/{itemId}",
-    mcp: "manageBankConnection",
+    mcp: "unlinkBankConnection",
     authorizationAction: AUTHORIZATION_ACTIONS.BANK_CONNECTION_UNLINK,
   },
   {
@@ -1714,7 +1713,7 @@ const PLAID_VERBS: readonly VerbEntry[] = [
     class: "admin",
     gql: "Mutation.reconcilePlaidAccounts",
     rest: "POST /api-gateway/v1/ledgers/{owner}/{name}/banks/{itemId}/reconcile",
-    mcp: "manageBankConnection",
+    mcp: "reconcileBankAccounts",
     authorizationAction: AUTHORIZATION_ACTIONS.BANK_ACCOUNTS_RECONCILE,
   },
   {
@@ -1722,7 +1721,7 @@ const PLAID_VERBS: readonly VerbEntry[] = [
     class: "admin",
     gql: "Mutation.updatePlaidAccountMapping",
     rest: "PUT /api-gateway/v1/ledgers/{owner}/{name}/bank-accounts/{accountId}/mapping",
-    mcp: "manageBankConnection",
+    mcp: "mapBankAccount",
     authorizationAction: AUTHORIZATION_ACTIONS.BANK_ACCOUNT_MAPPING_UPDATE,
   },
   {
@@ -1730,7 +1729,7 @@ const PLAID_VERBS: readonly VerbEntry[] = [
     class: "admin",
     gql: "Mutation.updatePlaidAccountCurrency",
     rest: "PUT /api-gateway/v1/ledgers/{owner}/{name}/bank-accounts/{accountId}/currency",
-    mcp: "manageBankConnection",
+    mcp: "setBankAccountCurrency",
     authorizationAction: AUTHORIZATION_ACTIONS.BANK_ACCOUNT_CURRENCY_UPDATE,
   },
   {
@@ -1738,7 +1737,7 @@ const PLAID_VERBS: readonly VerbEntry[] = [
     class: "admin",
     gql: "Mutation.refreshPlaidItemStatus",
     rest: "POST /api-gateway/v1/ledgers/{owner}/{name}/banks/{itemId}/refresh",
-    mcp: "manageBankConnection",
+    mcp: "refreshBankConnection",
     authorizationAction: AUTHORIZATION_ACTIONS.BANK_CONNECTION_STATUS_REFRESH,
   },
   {
@@ -1776,7 +1775,7 @@ const PLAID_VERBS: readonly VerbEntry[] = [
     class: "write",
     gql: "Mutation.syncPlaidTransactions",
     rest: "POST /api-gateway/v1/ledgers/{owner}/{name}/banks/{itemId}/sync",
-    mcp: "manageBankImport",
+    mcp: "syncBankTransactions",
     authorizationAction: AUTHORIZATION_ACTIONS.BANK_TRANSACTIONS_SYNC,
   },
   {
@@ -1784,7 +1783,7 @@ const PLAID_VERBS: readonly VerbEntry[] = [
     class: "write",
     gql: "Mutation.submitPlaidTransactionsToLedger",
     rest: "POST /api-gateway/v1/ledgers/{owner}/{name}/bank-transactions/submit",
-    mcp: "manageBankImport",
+    mcp: "importStagedBankTransactions",
     authorizationAction: AUTHORIZATION_ACTIONS.BANK_TRANSACTIONS_SUBMIT,
   },
   {
@@ -1792,7 +1791,7 @@ const PLAID_VERBS: readonly VerbEntry[] = [
     class: "write",
     gql: "Mutation.deletePlaidTransactions",
     rest: "DELETE /api-gateway/v1/ledgers/{owner}/{name}/bank-transactions",
-    mcp: "manageBankImport",
+    mcp: "discardStagedBankTransactions",
     authorizationAction: AUTHORIZATION_ACTIONS.BANK_TRANSACTIONS_DELETE,
   },
 ];
@@ -1869,13 +1868,15 @@ export const DIRECT_ONLY_ACTIONS: Readonly<
 
 function buildOpIndex(): ReadonlyMap<string, VerbEntry> {
   const index = new Map<string, VerbEntry>();
-  const claim = (opId: string, entry: VerbEntry, groupedDispatcher = false) => {
+  const claim = (opId: string, entry: VerbEntry, spansVerbs = false) => {
     const existing = index.get(opId);
-    // One transport id must always have one operational class. A grouped MCP
-    // dispatcher can, however, select several domain verbs of that same class
-    // from its validated `operation` input. In that case there is deliberately
-    // no transport-level canonical action: the selected application-service
-    // method performs the exact PDP call before domain work.
+    // One transport id must always have one operational class. An MCP tool
+    // may still span several verbs of that class: `getLedgerContext` and
+    // `checkLedger` read several in one call, and `setLedgerStar` stars or
+    // unstars by its `starred` flag. Such a tool deliberately has no
+    // transport-level canonical action; each service method it calls makes
+    // its own PDP decision before domain work. No tool selects among verbs by
+    // an `operation` argument (ADR 019, 2026-10-18; mcp-tool-list.test.ts).
     if (existing && existing.class !== entry.class) {
       throw new Error(
         `op-class: ${opId} has conflicting entries (${existing.verb}, ${entry.verb})`,
@@ -1885,7 +1886,7 @@ function buildOpIndex(): ReadonlyMap<string, VerbEntry> {
       existing &&
       existing.authorizationAction !== entry.authorizationAction
     ) {
-      if (!groupedDispatcher) {
+      if (!spansVerbs) {
         throw new Error(
           `op-class: ${opId} has conflicting entries (${existing.verb}, ${entry.verb})`,
         );
@@ -2135,11 +2136,12 @@ const STRONGEST_FIRST: readonly OpClass[] = ["admin", "write", "read"];
  * What a tool declares it needs, derived from `VERB_TABLE` and never written
  * by hand (ADR 019 D2, the rule ADR 0007 D8 applied to output schemas).
  *
- * A grouped tool declares its most privileged branch's scope. A tool whose
- * only verbs are `session-only` (callable by an OAuth grant, never by a
- * scoped key) needs OAuth with no particular scope; a `public` verb also
- * allows anonymous calls. ChatGPT uses the declaration to decide when to link
- * an account and when to ask for a broader scope; other hosts ignore it.
+ * A tool spanning several verbs declares its most privileged one's scope.
+ * A tool whose only verbs are `session-only` (callable by an OAuth grant,
+ * never by a scoped key) needs OAuth with no particular scope; a `public`
+ * verb also allows anonymous calls. ChatGPT uses the declaration to decide
+ * when to link an account and when to ask for a broader scope; other hosts
+ * ignore it.
  */
 export function mcpToolSecuritySchemes(
   tool: string,

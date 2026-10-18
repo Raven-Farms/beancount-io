@@ -255,8 +255,9 @@ def model_answer(text: str) -> dict[str, object]:
     return {"index": 0, "finish_reason": "stop", "message": {"role": "assistant", "content": text}}
 
 
-#: A choice to answer with, a status to fail with, or a status with its body.
-StubReply = dict[str, object] | int | tuple[int, dict[str, object]]
+#: A choice to answer with, a status to fail with, a status with its body, or
+#: raw bytes to answer 200 with.
+StubReply = dict[str, object] | int | tuple[int, dict[str, object]] | bytes
 
 
 @dataclass
@@ -271,6 +272,9 @@ class StubModel:
     url: str = ""
     reply: Callable[[int], StubReply] = field(default=lambda n: model_answer("stub answer"))
     requests: list[dict[str, object]] = field(default_factory=list)
+    #: Answer as HTTP/1.1 and keep the connection open, as the hosted proxy
+    #: does, for a test about the client's reuse of it (w5/545).
+    keep_alive: bool = False
 
     @property
     def count(self) -> int:
@@ -289,6 +293,11 @@ class _ModelHandler(BaseHTTPRequestHandler):
     # thing the usage ceiling is about — unmeasurable.
     protocol_version = "HTTP/1.0"
 
+    def setup(self) -> None:
+        super().setup()
+        if self.server.stub.keep_alive:  # type: ignore[attr-defined]
+            self.protocol_version = "HTTP/1.1"
+
     def do_POST(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler's spelling
         stub: StubModel = self.server.stub  # type: ignore[attr-defined]
         body = self.rfile.read(int(self.headers.get("Content-Length") or 0))
@@ -297,6 +306,14 @@ class _ModelHandler(BaseHTTPRequestHandler):
         except ValueError:
             stub.requests.append({})
         outcome = stub.reply(len(stub.requests))
+        if isinstance(outcome, bytes):
+            # A body sent as it is, for a test about one the client cannot read.
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(outcome)))
+            self.end_headers()
+            self.wfile.write(outcome)
+            return
         if isinstance(outcome, int):
             self._send(outcome, {"message": "Upstream model provider failed."})
             return

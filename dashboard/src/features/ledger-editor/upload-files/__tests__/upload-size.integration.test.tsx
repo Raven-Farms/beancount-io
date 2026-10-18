@@ -263,6 +263,8 @@ describe("upload size enforcement with native files and readers", () => {
         })),
       );
       expect(requests.map(({ name }) => name)).toEqual([
+        // The page reads the folder first to flag names that already exist.
+        "GetLedgerDirContent",
         "CreateLedgerFile",
         "GetLedgerDirContent",
         "CreateLedgerFile",
@@ -275,7 +277,7 @@ describe("upload size enforcement with native files and readers", () => {
           .filter(({ name }) => name === "GetLedgerDirContent")
           .map(({ variables }) => variables),
       ).toEqual(
-        Array.from({ length: 3 }, () => ({
+        Array.from({ length: 4 }, () => ({
           ledgerId: "alice/books",
           dirPath: dir,
         })),

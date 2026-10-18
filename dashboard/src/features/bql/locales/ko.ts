@@ -53,6 +53,12 @@ const koBql: Record<string, TranslationEntry> = {
     message: "쿼리 결과",
     description: "Label for a query result section header",
   },
+  "page.bql.largeResultHint": {
+    message:
+      "여기에서는 보이는 행만 사용할 수 있습니다. CSV 파일에는 모든 행이 포함됩니다(총 {count}).",
+    description:
+      "Screen-reader note on a result too long to render every row; {count} is the total row count",
+  },
   "page.bql.unknownResultType": {
     message: "알 수 없는 결과 유형",
     description: "Message when query result type is not recognized",

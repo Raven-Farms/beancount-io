@@ -90,6 +90,7 @@ export const fr: Translations = {
   merchantsCadenceQuarterly: "Trimestriel",
   merchantsCadenceYearly: "Annuel",
   merchantsCadenceIrregular: "Irrégulier",
+  merchantsCadenceUnknown: "Historique insuffisant",
   merchantsNextExpected: "Prochain {{date}}",
   merchantsOverdue: "En retard",
   merchantsRecurringToggle: "Récurrent",
@@ -178,7 +179,7 @@ export const fr: Translations = {
   quickAdd: "Ajout rapide",
   enterNewTransaction: "Saisir une transaction",
   multiPostingsTitle: "Nouvelle transaction",
-  addPosting: "+ Ajouter une écriture",
+  addPosting: "Ajouter une écriture",
   remainderLabel: "Solde restant",
   autoLabel: "auto",
   postingAccount: "Choisir un compte",
@@ -312,10 +313,13 @@ export const fr: Translations = {
   openAccountNoCurrency: "Aucune devise",
   openAccountSaving: "Ouverture...",
   openAccountFailed: "Impossible d'ouvrir le compte. Veuillez réessayer.",
+  ledgerWouldBreak:
+    "Cela ajouterait une erreur à votre grand livre : {{detail}}",
   openAccountInvalidRoot: "Choisissez un type de compte valide.",
   openAccountNameRequired: "Saisissez au moins un élément du nom.",
   openAccountEmptyComponent: "Les éléments du nom ne peuvent pas être vides.",
   openAccountNamePreview: "Sera créé sous le nom {{account}}",
+  openAccountAlreadyOpen: "{{account}} est déjà ouvert dans ce grand livre.",
   openAccountUppercaseComponent:
     "Chaque élément du nom doit commencer par une majuscule ou un chiffre.",
   openAccountInvalidCharacters:
@@ -523,6 +527,7 @@ export const fr: Translations = {
   budgetInterval: "Intervalle",
   budgetSelectInterval: "Choisir un intervalle",
   budgetAmount: "Montant",
+  budgetAmountInvalid: "Saisissez un nombre, par exemple 500 ou 49.99.",
   budgetSaveFailed: "Échec de l’enregistrement du budget",
   // delete
   budgetDelete: "Supprimer",
@@ -598,6 +603,10 @@ export const fr: Translations = {
     "Flux de trésorerie des revenus vers les dépenses. Revenus {{income}}, dépenses {{expenses}}.",
   cashFlowChartSummaryWithSavings:
     "Flux de trésorerie des revenus vers les dépenses. Revenus {{income}}, dépenses {{expenses}}, épargne {{savings}}.",
+  cashFlowChartSummaryWithShortfall:
+    "Flux de trésorerie des revenus vers les dépenses. Revenus {{income}}, dépenses {{expenses}}, prélevé sur l'épargne {{shortfall}}.",
+  sankeyIncomeNodeLabel: "{{name}} (revenus)",
+  sankeyExpensesNodeLabel: "{{name}} (dépenses)",
   ledgerNavigateUp: "Remonter d'un dossier",
   openLedgerDrawer: "Ouvrir le menu",
   back: "Retour",
@@ -622,8 +631,8 @@ export const fr: Translations = {
   profileUsernameHint:
     "Les adresses web de vos grands livres commencent par votre nom d’utilisateur : le changer les modifie aussi.",
   profileUsernameRequired: "Saisissez un nom d’utilisateur",
-  profileUsernameNoSpaces:
-    "Le nom d’utilisateur ne peut pas contenir d’espaces",
+  profileUsernameRule:
+    "Utilisez 1 à 20 caractères : minuscules a–z, chiffres 0–9 ou tirets bas.",
   profileUsernameTaken: "Ce nom d’utilisateur est déjà pris",
   profileEmail: "E-mail",
   profileEmailReadOnly: "L’e-mail ne peut pas être modifié ici",

@@ -24,6 +24,7 @@ from typing import Any
 
 from cli.config import data_dir
 from cli.errors import BeaError, UsageError
+from cli.paths import expand_path
 
 PYTHON_ENV = "BEA_ENGINE_PYTHON"
 DIR_ENV = "BEA_ENGINE_DIR"
@@ -60,7 +61,7 @@ def engine_root() -> Path:
     """
     override = os.environ.get(DIR_ENV)
     if override:
-        root = Path(override).expanduser()
+        root = expand_path(Path(override), f"${DIR_ENV}")
         # Checked like BEA_CONFIG_DIR: a relative value would provision a
         # whole engine into every working directory, and a file can never
         # hold one, though status said the next command would rebuild it (w5/412).
@@ -88,7 +89,7 @@ def python_override() -> Path | None:
     value = os.environ.get(PYTHON_ENV)
     if not value:
         return None
-    python = Path(value).expanduser()
+    python = expand_path(Path(value), f"${PYTHON_ENV}")
     if not python.exists():
         raise BeaError(f"{PYTHON_ENV} points at '{python}', which does not exist.")
     # A directory or a file without the execute bit surfaced as a bare

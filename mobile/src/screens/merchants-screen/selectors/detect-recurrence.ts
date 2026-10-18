@@ -150,6 +150,23 @@ function amountSpreadIsApproximate(amounts: readonly number[]): boolean {
 }
 
 /**
+ * Whether `series` has enough distinct, valid event dates for a cadence to be
+ * inferred at all. A null `detectRecurrence` means "too short" when this is
+ * false and "analysed, no steady pattern" when it is true; a manual Recurring
+ * mark reads the difference (w0/039).
+ */
+export function hasEnoughHistory(series: readonly SeriesPoint[]): boolean {
+  const days = new Set<number>();
+  for (const point of series) {
+    const day = parseLedgerDay(point.date);
+    if (day !== null && Number.isFinite(point.amount)) {
+      days.add(day);
+    }
+  }
+  return days.size >= MIN_EVENT_DATES;
+}
+
+/**
  * Detect a steady cadence in `series`.
  *
  * Same-day duplicates collapse for gap math (a 0-day gap must not poison the

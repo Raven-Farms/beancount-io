@@ -21,6 +21,8 @@ from ..util import listify
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Iterable, Mapping, Sequence
 
+    from ..beans.abc import Directive
+
     from ..core.conversion import Conversion
     from ..core.inventory import SimpleCounterInventory
     from ..core.tree import SerialisedTreeNode
@@ -30,6 +32,10 @@ if TYPE_CHECKING:  # pragma: no cover
 
 ONE_DAY = timedelta(days=1)
 ZERO = Decimal()
+
+
+#: The sources of the entries clamping to a time filter synthesizes (beancount.ops.summarize).
+_CLAMP_SOURCES = frozenset({"<summarize>", "<transfer_balances>", "<conversions>"})
 
 
 def _flow_ranges(
@@ -55,15 +61,32 @@ def _flow_ranges(
     # at a boundary the user chose, so it is the current period and stays.
     if len(ranges) < 2 or not filtered.date_range:
         return ranges
-    # Beancount.io change: only entries the ledger declares count. Clamping to
-    # the time filter synthesizes summarize, transfer and conversion entries —
-    # a `C "Conversion for (…)"` on the period's last day whenever the period
+    # Beancount.io change: a fragment is busy only when a transaction in it
+    # posts to the statement's flow accounts in scope. Clamping to the time
+    # filter synthesizes summarize, transfer and conversion entries — a
+    # `C "Conversion for (…)"` on the period's last day whenever the period
     # holds a currency exchange — which made every such fragment look busy.
-    declared = [entry for entry in filtered.entries if not str(entry.meta.get("filename", "")).startswith("<")]
+    # Excluding every `<…>` source also dropped a plugin's own transaction
+    # (its rows no longer summed to the headline), while a lone balance
+    # assertion kept an empty one-day row (w5/617). The flow roots are the
+    # statement's, not one series', so the income, expense and net-profit
+    # series keep the same rows.
+    options = filtered.ledger.options
+    flows = (options["name_income"], options["name_expenses"])
+    in_scope = account_predicate(filtered.account, filtered.ledger.root_accounts)
+
+    def busy(entry: Directive) -> bool:
+        return (
+            isinstance(entry, Transaction)
+            and entry.meta.get("filename") not in _CLAMP_SOURCES
+            and any(posting.account.startswith(flows) and in_scope(posting.account) for posting in entry.postings)
+        )
 
     def quiet_fragment(period: DateRange) -> bool:
         whole = interval.get_prev(period.begin) == period.begin and interval.get_next(period.begin) == period.end
-        return not whole and not slice_entry_dates(declared, period.begin, period.end)
+        return not whole and not any(
+            busy(entry) for entry in slice_entry_dates(filtered.entries, period.begin, period.end)
+        )
 
     kept = list(ranges)
     if quiet_fragment(kept[-1]):
@@ -184,7 +207,7 @@ class ChartModule:
         # The entry filter keeps whole transactions, so a filtered report would
         # otherwise total the counterparty legs here while its headline tree
         # correctly excludes them — one report, two answers for one account.
-        in_scope = account_predicate(filtered.account)
+        in_scope = account_predicate(filtered.account, filtered.ledger.root_accounts)
 
         intervals = _flow_ranges(filtered, interval)
 
@@ -248,7 +271,7 @@ class ChartModule:
         )
 
         is_child_account = account_tester(account_name, with_children=True)
-        in_scope = account_predicate(filtered.account)
+        in_scope = account_predicate(filtered.account, filtered.ledger.root_accounts)
 
         txn = next(transactions, None)
         inventory = CounterInventory()
@@ -356,7 +379,7 @@ class ChartModule:
             filtered.ledger.options["name_liabilities"],
         )
 
-        in_scope = account_predicate(filtered.account)
+        in_scope = account_predicate(filtered.account, filtered.ledger.root_accounts)
 
         txn = next(transactions, None)
         inventory = CounterInventory()

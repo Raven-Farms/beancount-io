@@ -101,6 +101,33 @@ const faImporter: Record<string, TranslationEntry> = {
     message: "بارگذاری فایل دیگر",
     description: "Button to upload a different file after error",
   },
+  "importer.aiOffer.title": {
+    message: "نتوانستیم ستون‌های این CSV را بخوانیم",
+    description:
+      "Title when a CSV's columns could not be read by the free client parser",
+  },
+  "importer.aiOffer.description": {
+    message:
+      "ورود هوشمند فایل‌های CSV با ستون‌های تاریخ، دریافت‌کننده، شرح و مبلغ را رایگان می‌خواند. این فایل را می‌توان با هوش مصنوعی خواند که توکن‌های هوش مصنوعی شما را مصرف می‌کند.",
+    description:
+      "Explains the free CSV format and that AI parsing spends AI tokens",
+  },
+  "importer.aiOffer.parseWithAi": {
+    message: "تجزیه با هوش مصنوعی (توکن مصرف می‌کند)",
+    description:
+      "Button that parses the unreadable CSV with AI, spending AI tokens",
+  },
+  "importer.error.aiQuotaReached": {
+    message: "توکن‌های هوش مصنوعی این ماه را مصرف کرده‌اید",
+    description:
+      "Title when AI parsing of a CSV is refused because the month's AI tokens are used up",
+  },
+  "importer.error.aiQuotaReachedCsv": {
+    message:
+      "تجزیه با هوش مصنوعی ماه آینده یا با Premium دوباره در دسترس است. یک CSV با ستون‌های تاریخ، دریافت‌کننده، شرح و مبلغ همچنان رایگان وارد می‌شود.",
+    description:
+      "Explains when AI parsing returns and that a well-formed CSV still imports for free",
+  },
   "importer.error.premiumRequired": {
     message: "ویژگی ممتاز مورد نیاز است",
     description: "Title for premium required error",
@@ -236,7 +263,7 @@ const faImporter: Record<string, TranslationEntry> = {
     description: "Table header for actions column",
   },
   "importer.preview.deleteRow": {
-    message: "حذف ردیف",
+    message: "حذف ردیف {row}",
     description: "Aria label for delete row button",
   },
   "importer.preview.emptyFileTitle": {
@@ -513,12 +540,12 @@ const faImporter: Record<string, TranslationEntry> = {
     description: "Count of additional import errors",
   },
   "importer.preview.editCellLabel": {
-    message: "ویرایش {field}. مقدار فعلی: {value}\nزمینه",
+    message: "ویرایش {field}، ردیف {row}. مقدار فعلی: {value}",
     description: "Accessible label for an editable import cell",
   },
-  "importer.preview.field": {
-    message: "فیلد",
-    description: "Fallback name for an editable import field",
+  "importer.preview.editFieldLabel": {
+    message: "{field}، ردیف {row}",
+    description: "Accessible label for the open editor of an import cell",
   },
   "importer.validation.dateRequired": {
     message: "تاریخ لازم است",
@@ -543,6 +570,12 @@ const faImporter: Record<string, TranslationEntry> = {
   "importer.validation.amountInvalid": {
     message: "مبلغ باید یک عدد معتبر باشد",
     description: "Validation error for an invalid import amount",
+  },
+  "importer.validation.amountMixedDecimals": {
+    message:
+      "این ستون اعشار با نقطه (1,234.56) و اعشار با ویرگول (1.234,56) را با هم دارد. در هر ستون فقط از یک قالب استفاده کنید.",
+    description:
+      "Validation error when an import amount column mixes point and comma decimal marks",
   },
   "importer.validation.amountUnsupportedPrecision": {
     message:

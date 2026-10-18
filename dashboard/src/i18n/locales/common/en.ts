@@ -884,6 +884,25 @@ const enCommon: Record<string, TranslationEntry> = {
     description:
       "Error shown when a feature needs a premium plan (PREMIUM_REQUIRED)",
   },
+  "common.errors.unbalanced": {
+    message: "The postings don't balance. Adjust an amount and try again.",
+    description:
+      "Error shown when the ledger refuses a transaction whose postings do not balance (UNBALANCED)",
+  },
+  "common.writeLeftErrors": {
+    message: "Saved, but your ledger now reports an error: {error}",
+    description:
+      "Warning after a write that succeeded but left the ledger with a new validation error; {error} is the first new error",
+  },
+  "common.viewErrors": {
+    message: "View errors",
+    description: "Action that opens the ledger's Errors page",
+  },
+  "common.errors.wouldBreakLedger": {
+    message: "This would add an error to your ledger: {detail}",
+    description:
+      "Error shown when the ledger refuses entries that would add bean-check errors; {detail} is the ledger’s own error text, e.g. Duplicate open directive for Assets:Cash (main.bean:74)",
+  },
   "common.errors.network": {
     message:
       "Connection problem. Please check your internet connection and try again.",

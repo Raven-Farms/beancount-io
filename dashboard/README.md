@@ -33,6 +33,17 @@ account linking, and an AI assistant.
 
 Part of the [`beancount-io`](https://github.com/bex-co/beancount-io) monorepo.
 
+## Billing settings
+
+`/settings/general` uses the single live billing catalog. Old `?env=dev` links
+show the same supported plans and cannot switch to test prices. The current plan
+and limits come from the account profile; billing details show the subscription.
+Both are resolved from the same recognized live price by the backend. Choose
+English or Chinese through the normal language selector; there are no separate
+locale-prefixed settings routes. Checkout continues to accept promotion codes.
+
+Deploy with the backend billing update.
+
 ## Shared entry links
 
 Native **Share link** / **Copy link** on a transaction produce a canonical URL:

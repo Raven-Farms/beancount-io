@@ -9574,7 +9574,7 @@
           },
           "allowInvalid": {
             "type": "boolean",
-            "description": "Record unbalanced transactions deliberately instead of refusing them with UNBALANCED."
+            "description": "Record entries deliberately even when they are unbalanced (UNBALANCED) or would add bean-check errors (NEW_LEDGER_ERRORS), instead of refusing them."
           }
         },
         "type": "object",
@@ -10031,6 +10031,22 @@
               }
             ],
             "description": "Difference amount"
+          },
+          "amount": {
+            "$ref": "#/components/schemas/JournalAmountPublic",
+            "description": "Asserted amount"
+          },
+          "tolerance": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tolerance",
+            "description": "Explicit tolerance from a `~` annotation"
           }
         },
         "type": "object",
@@ -10038,7 +10054,8 @@
           "date",
           "entry_hash",
           "directive_type",
-          "account"
+          "account",
+          "amount"
         ],
         "title": "JournalBalancePublic",
         "description": "A Beancount Balance directive."

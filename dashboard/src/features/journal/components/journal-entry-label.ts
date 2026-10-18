@@ -1,5 +1,6 @@
 import {
   type JournalDirectiveType,
+  isJournalBalance,
   isJournalCustom,
   isJournalDocument,
   isJournalTransaction,
@@ -14,7 +15,16 @@ export function journalEntryLabel(directive: JournalDirectiveType): string {
     parts.push(directive.payee ?? "", directive.narration ?? "");
   } else {
     parts.push(directive.directive_type);
-    if (isJournalDocument(directive)) {
+    if (isJournalBalance(directive)) {
+      // A Balance carries `amount` too, so it must not reach the Price branch.
+      parts.push(directive.account);
+      if (directive.amount) {
+        parts.push(formatAmountWithCurrency(directive.amount));
+      }
+      if (directive.diff_amount) {
+        parts.push(formatAmountWithCurrency(directive.diff_amount));
+      }
+    } else if (isJournalDocument(directive)) {
       parts.push(directive.account, directive.filename.split("/").pop() ?? "");
     } else if (isJournalCustom(directive)) {
       parts.push(directive.type);
@@ -50,9 +60,6 @@ export function journalEntryLabel(directive: JournalDirectiveType): string {
     } else if ("account" in directive) {
       parts.push(directive.account);
       if ("source_account" in directive) parts.push(directive.source_account);
-      if ("diff_amount" in directive && directive.diff_amount) {
-        parts.push(formatAmountWithCurrency(directive.diff_amount));
-      }
     }
   }
 

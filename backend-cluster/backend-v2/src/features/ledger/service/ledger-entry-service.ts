@@ -83,6 +83,36 @@ type BudgetInput = {
  * uniform `{ type, entry }` shape; `type` selects how `entry` is built into a
  * Fava directive and which file it is routed to.
  */
+/**
+ * The numbers a structured write accepts: an optional sign, digits with an
+ * optional fraction, and an optional exponent the ledger expands. A bank
+ * spelling such as `(12.50)` or `-1,234.56` is the client's to normalize.
+ */
+const DECIMAL_NUMBER = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/;
+
+/** Every amount an entry carries, with the field path a refusal names. */
+function entryAmounts(
+  input: LedgerEntryInput,
+): ReadonlyArray<readonly [string, unknown]> {
+  switch (input.type) {
+    case "transaction":
+      return input.entry.postings.flatMap((posting, index) => [
+        ...(posting.units
+          ? [[`postings[${index}].units.number`, posting.units.number] as const]
+          : []),
+        ...(posting.price
+          ? [[`postings[${index}].price.number`, posting.price.number] as const]
+          : []),
+      ]);
+    case "price":
+    case "balance":
+    case "budget":
+      return [["amount.number", input.entry.amount?.number]];
+    default:
+      return [];
+  }
+}
+
 export type LedgerEntryInput =
   | { type: "transaction"; entry: TransactionInput }
   | { type: "commodity"; entry: CommodityInput }
@@ -269,6 +299,18 @@ class FavaLedgerEntryWriter implements ILedgerEntryWriter {
         throw new BadUserInputError(
           `entry ${index}: at most one posting may omit its amount, found ${elided}`,
         );
+      }
+    });
+    // A malformed amount was a 500 in the ledger, reported as "service
+    // unavailable, retry", or was committed as unparseable text. Refuse it
+    // here, naming the field, on GraphQL, REST and MCP at once.
+    inputs.forEach((input, index) => {
+      for (const [field, value] of entryAmounts(input)) {
+        if (typeof value !== "string" || !DECIMAL_NUMBER.test(value)) {
+          throw new BadUserInputError(
+            `entry ${index}: ${field} ${JSON.stringify(value)} is not a decimal number`,
+          );
+        }
       }
     });
     // Refused before any file is read, and whether or not the ledger routes

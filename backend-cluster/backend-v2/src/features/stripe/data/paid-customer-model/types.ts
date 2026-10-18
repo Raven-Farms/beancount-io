@@ -8,8 +8,12 @@ export interface PaidCustomer {
   name?: string;
   phone?: string;
   currentPeriodEnd?: Date;
+  /** Null/absent for historical or otherwise unverified subscription periods. */
+  periodVerificationVersion?: number;
   createdAt: Date;
   updatedAt: Date;
+  /** Opaque persistence version, retaining database timestamp precision. */
+  version?: string;
 }
 
 export interface CreatePaidCustomerInput {
@@ -26,7 +30,7 @@ export interface UpdatePaidCustomerInput {
   email?: string;
   name?: string;
   phone?: string;
-  currentPeriodEnd?: Date;
+  currentPeriodEnd?: Date | null;
   clientId?: string;
   updatedAt?: Date;
 }
@@ -60,6 +64,13 @@ export interface IPaidCustomerModel {
     id: string,
     input: UpdatePaidCustomerInput,
   ): Promise<PaidCustomer | null>;
+  /** Atomically record a provider-verified period and its verification version. */
+  updatePeriodIfUnchanged(
+    db: DbExecutor,
+    customer: PaidCustomer,
+    currentPeriodEnd: Date | null,
+    verificationVersion: number,
+  ): Promise<boolean>;
   updateByUserIdAndClientId(
     db: DbExecutor,
     userId: string,

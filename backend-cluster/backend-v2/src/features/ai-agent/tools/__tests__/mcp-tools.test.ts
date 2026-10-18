@@ -879,15 +879,80 @@ describe("MCP tool annotations", () => {
       MCP_TOOLS.map((tool) => [tool.name, tool.annotations.destructiveHint]),
     );
     for (const name of [
-      "manageLedgers",
-      "manageLedgerCollaborators",
-      "managePullRequests",
-      "manageBankConnection",
-      "manageBankImport",
-      "editLedgerFiles",
-      "editEntrySource",
+      "deleteLedger",
+      "updateLedger",
+      "setLedgerCollaborator",
+      "removeLedgerCollaborator",
+      "leaveLedger",
+      "approvePullRequest",
+      "rejectPullRequest",
+      "discardStagedBankTransactions",
+      "reconcileBankAccounts",
+      "mapBankAccount",
+      "setBankAccountCurrency",
+      "unlinkBankConnection",
+      "updateLedgerFiles",
+      "deleteLedgerFiles",
+      "updateEntrySource",
+      "deleteEntrySource",
+      "deleteEntrySources",
     ]) {
       expect(destructive.get(name)).toBe(true);
     }
+  });
+
+  it("gives each per-operation tool the hints ADR 019 decided on 2026-10-18", () => {
+    // The amendment's table: overwriting, deleting, merging, closing, and
+    // revoking access are destructive; a tool that reaches the bank is open
+    // world. Directory reviewers check these against the behavior, so a hint
+    // changes only with the decision.
+    const decided: [string, { destructive: boolean; openWorld: boolean }][] = [
+      ["createLedgerFiles", { destructive: false, openWorld: false }],
+      ["updateLedgerFiles", { destructive: true, openWorld: false }],
+      ["deleteLedgerFiles", { destructive: true, openWorld: false }],
+      ["updateEntrySource", { destructive: true, openWorld: false }],
+      ["deleteEntrySource", { destructive: true, openWorld: false }],
+      ["deleteEntrySources", { destructive: true, openWorld: false }],
+      ["syncBankTransactions", { destructive: false, openWorld: true }],
+      [
+        "importStagedBankTransactions",
+        { destructive: false, openWorld: false },
+      ],
+      [
+        "discardStagedBankTransactions",
+        { destructive: true, openWorld: false },
+      ],
+      ["reconcileBankAccounts", { destructive: true, openWorld: true }],
+      ["mapBankAccount", { destructive: true, openWorld: false }],
+      ["setBankAccountCurrency", { destructive: true, openWorld: false }],
+      ["refreshBankConnection", { destructive: false, openWorld: true }],
+      ["unlinkBankConnection", { destructive: true, openWorld: true }],
+      ["createPullRequest", { destructive: false, openWorld: false }],
+      ["approvePullRequest", { destructive: true, openWorld: false }],
+      ["rejectPullRequest", { destructive: true, openWorld: false }],
+      ["createLedger", { destructive: false, openWorld: false }],
+      ["updateLedger", { destructive: true, openWorld: false }],
+      ["deleteLedger", { destructive: true, openWorld: false }],
+      ["setLedgerCollaborator", { destructive: true, openWorld: false }],
+      ["removeLedgerCollaborator", { destructive: true, openWorld: false }],
+      ["leaveLedger", { destructive: true, openWorld: false }],
+    ];
+    const served = new Map(MCP_TOOLS.map((tool) => [tool.name, tool]));
+    expect(
+      decided.map(([name]) => {
+        const hints = served.get(name)?.annotations;
+        return [
+          name,
+          {
+            destructive: hints?.destructiveHint,
+            openWorld: hints?.openWorldHint,
+          },
+        ];
+      }),
+    ).toEqual(decided);
+    // Refreshing re-reads the bank's status: repeating it changes nothing.
+    expect(
+      served.get("refreshBankConnection")?.annotations.idempotentHint,
+    ).toBe(true);
   });
 });

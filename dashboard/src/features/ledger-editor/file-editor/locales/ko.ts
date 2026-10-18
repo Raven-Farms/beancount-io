@@ -1,4 +1,9 @@
 const koFileEditor: Record<string, { message: string; description: string }> = {
+  "ledgerEditor.rootFileCannotBeDeleted": {
+    message: "{filename}은 원장의 루트 파일이므로 삭제할 수 없습니다",
+    description:
+      "Why Delete is unavailable for the ledger's root file, which the server refuses to delete; {filename} is main.bean",
+  },
   "ledgerEditor.alignAmounts": {
     message: "금액 정렬",
     description: "Menu item to align amounts in editor",

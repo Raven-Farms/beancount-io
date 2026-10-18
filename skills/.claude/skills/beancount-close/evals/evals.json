@@ -1,6 +1,6 @@
 {
   "skill_name": "beancount-close",
-  "notes": "Each eval runs in a scratch dir that is a git repo (git init, one prior commit of the fixture) with the fixture as ./ledger.beancount and, where listed, ./statement.csv. Validate with `bea check` when bea is installed; oracle/CI uses `uv run --project cli bean-check` separately. Do not `pip install beancount` as the customer path. eval1 fixture plants four findings for the June 2026 close: checking statement has a missing 12.00 parking row (ending balance 7874.60 ties only after it lands), Amex has no statement (unverified), NETFLIX appears Apr+May but not June (recurring gap), and one ! flag on 2026-06-21. June P&L after reconcile: Income 3000.00, Expenses 203.60. eval5 fixture has a deliberately failing balance assertion (asserts 9000.00, actual 8000.00). eval2-4 reuse the eval1 fixture with focused expectations; eval6 tests the decline path.",
+  "notes": "Each eval runs in a scratch dir that is a git repo (git init, one prior commit of the fixture) with the fixture as ./ledger.beancount and, where listed, ./statement.csv. Validate with `bea check` when bea is installed; oracle/CI uses `uv run --project cli bean-check` separately. Do not `pip install beancount` as the customer path. eval1 fixture plants four findings for the June 2026 close: checking statement has a missing 12.00 parking row (ending balance 7874.60 ties only after it lands), Amex has no statement (unverified), NETFLIX appears Apr+May but not June (recurring gap), and one ! flag on 2026-06-21. June P&L after reconcile: Income 3000.00, Expenses 203.60. eval5 fixture has a deliberately failing balance assertion (asserts 9000.00, actual 8000.00). eval2-4 reuse the eval1 fixture with focused expectations; eval6 tests the decline path. eval7 fixture has a hotel bill in EUR paid by a USD card (300.00 EUR @ 1.10 USD) and no EUR price: the reports run at book value (-x at_cost), and June expenses in USD come from the weight recipes as Travel 330.00 and Food 20.00.",
   "evals": [
     {
       "id": 1,
@@ -96,6 +96,22 @@
         "The confirmed reconciliation appends remain in the working tree (the decline applies to the commit, not to already-confirmed ledger changes)",
         "The full close report is still delivered",
         "The skill does not re-ask or pressure to commit after the user's instruction"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "foreign-charge-report-at-book-value",
+      "prompt": "Close June 2026 for ./ledger.beancount. I don't have any statements this month.",
+      "expected_output": "The close runs every phase with both accounts unverified. Phase 6 runs report income-statement and report balance-sheet with --time 2026-06 and -x at_cost, both exit 0, and the report states book value; the EUR hotel charge appears as 300.00 EUR there. June expenses in USD come from the weight recipes: Travel 330.00 and Food 20.00 USD (Income 3000.00). No missing-price exit is treated as an engine failure, no engine repair or reinstall is attempted, and no price directive is invented.",
+      "files": [
+        "evals/files/eval7_ledger.beancount"
+      ],
+      "expectations": [
+        "Both report commands carry -x at_cost and --time 2026-06, and the close report names book value as their valuation",
+        "June expenses in USD are stated as Travel 330.00 and Food 20.00 (from a shown weight query), not 300.00 for Travel",
+        "No step tries to repair, reinstall or reprovision bea's engine, and --allow-errors is not used to force a report",
+        "No price directive is written or proposed to make the report pass",
+        "Assets:Bank:Checking and Liabilities:Card are reported unverified (no statements)"
       ]
     }
   ]

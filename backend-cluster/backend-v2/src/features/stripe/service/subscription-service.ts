@@ -1,3 +1,8 @@
+import { refreshSubscriptionPeriods } from "../operations/refresh-subscription-periods";
+import {
+  subscriptionTier,
+  SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
+} from "./subscription-plan";
 import type Stripe from "stripe";
 import type { DbExecutor } from "@/drizzle/drizzle";
 import type { IModels } from "@/foundation/models";
@@ -8,9 +13,13 @@ import {
   type IAuthorizationService,
   userResource,
 } from "@/server/api/authorization";
-import { config } from "@/config/config";
 import { logger } from "@/shared/logger";
-import { SUBSCRIPTION_CONFIG, TIER_LIMITS, SubscriptionTier } from "./stripe";
+import {
+  BILLING_CLIENT_ID,
+  SUBSCRIPTION_CONFIG,
+  TIER_LIMITS,
+  SubscriptionTier,
+} from "./stripe";
 import type { IStripeService } from "./stripe-service";
 
 interface SubscriptionPriceView {
@@ -154,116 +163,62 @@ export class SubscriptionService implements ISubscriptionService {
     const { userId } = identity;
 
     if (onlyActiveStatus) {
-      const paidCustomer =
+      const cached =
         await this.models.paidCustomer.findByUserIdWithActivePeriod(
           this.db,
           userId,
         );
-
-      if (paidCustomer?.currentPeriodEnd) {
-        logger.debug("Using cached subscription status", {
-          userId,
-          validUntil: paidCustomer.currentPeriodEnd,
-        });
+      if (
+        cached?.userId === userId &&
+        cached.clientId === BILLING_CLIENT_ID &&
+        cached.stripeCustomerId &&
+        cached.periodVerificationVersion ===
+          SUBSCRIPTION_PERIOD_VERIFICATION_VERSION &&
+        cached.currentPeriodEnd &&
+        cached.currentPeriodEnd.getTime() > Date.now()
+      ) {
         return { hasActiveSubscription: true, subscriptions: [] };
       }
-
-      logger.debug(
-        "No valid cached subscription status found, only hasActiveSubscription requested",
-        { userId },
-      );
     }
 
-    logger.debug("Querying Stripe for subscription status", { userId });
-    const stripeSubscriptions = await this.stripe.listSubscriptions(userId);
-
-    const filteredSubscriptions = stripeSubscriptions.filter((subscription) => {
-      const clientConfig =
-        SUBSCRIPTION_CONFIG[
-          subscription.clientId as keyof typeof SUBSCRIPTION_CONFIG
-        ];
-
-      if (!clientConfig) {
-        logger.warn(
-          "No configuration found for client, skipping subscription",
-          {
-            clientId: subscription.clientId,
-            subscriptionId: subscription.id,
-          },
-        );
-        return false;
-      }
-
-      if (
-        clientConfig.productIds.length === 0 &&
-        clientConfig.planIds.length === 0
-      ) {
-        return true;
-      }
-
-      return subscription.items.data.some((item) => {
-        const { price } = item;
-        const product = price.product;
-        if (
-          clientConfig.productIds.length > 0 &&
-          product &&
-          typeof product === "object"
-        ) {
-          return clientConfig.productIds.includes(product.id);
-        }
-        if (clientConfig.planIds.length > 0) {
-          return clientConfig.planIds.includes(price.id);
-        }
-        return false;
-      });
-    });
-
-    const hasActiveSubscription = filteredSubscriptions.some(
-      (subscription) => subscription.status === "active",
+    const stripeSubscriptions = await refreshSubscriptionPeriods(
+      this.stripe,
+      this.models,
+      this.db,
+      userId,
+      onlyActiveStatus ? "active" : "all",
     );
+    const filteredSubscriptions = stripeSubscriptions.filter(
+      (subscription) =>
+        !!SUBSCRIPTION_CONFIG[subscription.clientId] &&
+        subscription.livemode &&
+        subscription.items.data.some((item) =>
+          SUBSCRIPTION_CONFIG[subscription.clientId].planIds.includes(
+            item.price.id,
+          ),
+        ),
+    );
+    const hasActiveSubscription = filteredSubscriptions.some(
+      (subscription) =>
+        subscriptionTier(subscription) !== SubscriptionTier.FREE,
+    );
+    if (onlyActiveStatus) return { hasActiveSubscription, subscriptions: [] };
 
-    if (hasActiveSubscription) {
-      try {
-        const activeSubscriptions = filteredSubscriptions
-          .filter((subscription) => subscription.status === "active")
-          .sort((left, right) => {
-            const leftEnd = left.items.data[0]?.current_period_end ?? 0;
-            const rightEnd = right.items.data[0]?.current_period_end ?? 0;
-            return rightEnd - leftEnd;
-          });
-        const latestPeriodEnd =
-          activeSubscriptions[0]?.items.data[0]?.current_period_end;
-        if (latestPeriodEnd) {
-          const currentPeriodEnd = new Date(latestPeriodEnd * 1000);
-          const customers = await this.models.paidCustomer.findByUserId(
-            this.db,
-            userId,
-          );
-          const paidCustomer = customers[0];
-          if (
-            paidCustomer &&
-            paidCustomer.currentPeriodEnd?.getTime() !==
-              currentPeriodEnd.getTime()
-          ) {
-            await this.models.paidCustomer.updateCustomerById(
-              this.db,
-              paidCustomer.id,
-              { currentPeriodEnd },
-            );
-            logger.debug("Updated currentPeriodEnd for user", {
-              userId,
-              currentPeriodEnd,
-            });
-          }
-        }
-      } catch (error) {
-        logger.error("Error updating currentPeriodEnd for user", {
-          userId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+    const products = new Map<
+      string,
+      Promise<Stripe.Product | Stripe.DeletedProduct>
+    >();
+    const loadProduct = (clientId: string, productId: string) => {
+      const key = `${clientId}:${productId}`;
+      let pending = products.get(key);
+      if (!pending) {
+        pending = this.stripe
+          .getStripeInstance(clientId)
+          .products.retrieve(productId);
+        products.set(key, pending);
       }
-    }
-
+      return pending;
+    };
     const subscriptionsResults = await Promise.allSettled(
       filteredSubscriptions.map(async (subscription) => {
         const itemsResults = await Promise.allSettled(
@@ -272,9 +227,7 @@ export class SubscriptionService implements ISubscriptionService {
             const productDetails: Stripe.Product | Stripe.DeletedProduct =
               typeof price.product !== "string"
                 ? price.product
-                : await this.stripe
-                    .getStripeInstance(subscription.clientId)
-                    .products.retrieve(price.product);
+                : await loadProduct(subscription.clientId, price.product);
             const product = productDetails.deleted ? undefined : productDetails;
             return {
               id: item.id,
@@ -357,10 +310,7 @@ export class SubscriptionService implements ISubscriptionService {
     try {
       const clientConfig =
         SUBSCRIPTION_CONFIG[clientId as keyof typeof SUBSCRIPTION_CONFIG];
-      if (
-        !clientConfig ||
-        (clientConfig.isDevOnly && config.env === "production")
-      ) {
+      if (!clientConfig) {
         return { success: false, message: `Invalid client ID: ${clientId}` };
       }
       if (!clientConfig.planIds.includes(priceId)) {
@@ -389,10 +339,14 @@ export class SubscriptionService implements ISubscriptionService {
         );
       const sharedSession = {
         line_items: [{ price: priceId, quantity: 1 }],
+        allow_promotion_codes: true,
         mode: planConfig.type,
         success_url: clientConfig.successUrl,
         cancel_url: clientConfig.cancelUrl,
         metadata: { userId, clientId },
+        ...(planConfig.type === "subscription"
+          ? { subscription_data: { metadata: { userId, clientId } } }
+          : {}),
       };
       let session: Stripe.Checkout.Session;
       if (existingCustomer?.stripeCustomerId) {

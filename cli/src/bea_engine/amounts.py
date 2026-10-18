@@ -13,6 +13,29 @@ _PLAIN_DECIMAL = re.compile(r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)")
 _QUOTED_OR_COMMENT = re.compile(r'"(?:[^"\\]|\\.)*"|;[^\r\n]*')
 """Quoted strings and comments, inside which an `@@` is text, not a price."""
 
+_ZERO_DIVISOR = re.compile(r"/\s*[-+]?(?:0+(?:\.0*)?|\.0+)(?![\d.]|[A-Z0-9'._-]*[A-Z])")
+_NOT_ARITHMETIC = re.compile(r'"(?:[^"\\]|\\.)*"|;[^\n]*|^[*:#!&?%][^\n]*', re.MULTILINE)
+
+
+def zero_divisor_line(text: str) -> int | None:
+    """The first literal zero divisor in ledger text, before the parser can crash.
+
+    The frontend twin in `cli.amounts` protects batch syntax scans. This copy
+    protects text already read by the engine, including piped formatter input.
+    Strings, comments and skipped org-mode lines contain no amount arithmetic.
+    """
+    code = _NOT_ARITHMETIC.sub(lambda found: re.sub(r"[^\n]", " ", found.group()), text)
+    for number, line in enumerate(code.split("\n"), start=1):
+        if _ZERO_DIVISOR.search(line):
+            return number
+    return None
+
+
+DECIMAL_COMMA_HELP = (
+    "A comma is read only as a thousands separator between groups of three digits, such as '1,538.25'; "
+    "write the fraction after a decimal point, or remove the separators."
+)
+
 
 def parse_decimal_number(value: str, *, grouping: bool = True) -> Decimal:
     """The frontend's finite ASCII decimal rule, repeated across the engine boundary.
@@ -27,10 +50,7 @@ def parse_decimal_number(value: str, *, grouping: bool = True) -> Decimal:
         return Decimal(text.replace(",", ""))
     if not re.fullmatch(r"[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)", text):
         if grouping and "," in text:
-            raise ValueError(
-                f"Invalid amount {value!r}. A comma is read only as a thousands separator between groups of "
-                "three digits, such as '1,538.25'; write the fraction after a decimal point, or remove the separators."
-            )
+            raise ValueError(f"Invalid amount {value!r}. {DECIMAL_COMMA_HELP}")
         raise ValueError(f"Invalid amount {value!r}. Use finite decimal notation with ASCII digits, such as '1538.25'.")
     return Decimal(text)
 
@@ -134,9 +154,10 @@ def refuse_zero_divisor(text: str) -> None:
     The frontend's `check_decimal_notation` makes the same check for flag
     input; a bulk row's amount fragment reaches the engine without passing
     it. Quoted labels and comments are text, and anything computed
-    (`100/(2-2)`) is still upstream's to answer.
+    (`100/(2-2)`) is still upstream's to answer. Slash currencies such as
+    /0-J need a letter in their token; /0-5 instead divides by zero.
     """
-    if re.search(r"/\s*[-+]?(?:0+(?:\.0*)?|\.0+)(?![\d.])", _QUOTED_OR_COMMENT.sub("", text)):
+    if _ZERO_DIVISOR.search(_QUOTED_OR_COMMENT.sub("", text)):
         raise ValueError(
             f"Division by zero in {text.strip()!r}. Beancount evaluates amount arithmetic while parsing, "
             "and a zero divisor crashes it outright, so bea refuses the expression instead of sending it."

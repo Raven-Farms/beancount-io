@@ -3,6 +3,7 @@ import { logger } from "@/shared/logger";
 import {
   BadUserInputError,
   DomainError,
+  ErrorCategory,
   InternalServerError,
   NotFoundError,
 } from "@/shared/errors";
@@ -70,6 +71,85 @@ function clientFailureStatus(error: unknown): number | undefined {
   if (typeof error !== "object" || error === null) return undefined;
   const status = (error as { status?: unknown }).status;
   return typeof status === "number" ? status : undefined;
+}
+
+/**
+ * Gitea's own words for a failed call. The generated client parses the body
+ * as JSON from a clone, so a text body (a proxy's error page, a panic) is
+ * still readable from the thrown response when that parse failed.
+ */
+async function clientFailureDetail(
+  error: unknown,
+): Promise<string | undefined> {
+  if (error instanceof Error) return error.message;
+  if (typeof error !== "object" || error === null) return undefined;
+  const body = (error as { error?: unknown }).error;
+  if (typeof body === "string") return body.trim() || undefined;
+  if (body instanceof Error) {
+    const text = (error as { text?: unknown }).text;
+    if (typeof text !== "function") return undefined;
+    try {
+      const raw = String(await (text as () => Promise<string>).call(error));
+      return raw.trim().slice(0, 500) || undefined;
+    } catch {
+      return undefined;
+    }
+  }
+  const message = (body as { message?: unknown } | null)?.message;
+  return typeof message === "string" ? message.trim() || undefined : undefined;
+}
+
+/** A Gitea call that failed at a named step of creating a pull request. */
+class PullRequestStepFailure extends Error {
+  constructor(
+    readonly step: string,
+    readonly status: number | undefined,
+    detail: string | undefined,
+  ) {
+    super(
+      `${status === undefined ? "Gitea request failed" : `Gitea ${status}`} while ${step}${
+        detail
+          ? `: ${detail}`
+          : // Gitea in production mode tells a non-admin caller nothing about
+            // an internal error; the cause is only in its own log.
+            status !== undefined && status >= 500
+            ? " (Gitea gave no reason; its server log has the cause)"
+            : ""
+      }`,
+    );
+    this.name = "PullRequestStepFailure";
+  }
+
+  /** The repository server failed or could not be reached, not the request. */
+  get serverSide(): boolean {
+    return this.status === undefined || this.status >= 500;
+  }
+}
+
+/**
+ * A pull request create the repository server failed. SERVICE_UNAVAILABLE
+ * rather than an internal error: the request was sound, every surface keeps
+ * the step-named message, and the hint says whether a retry can help.
+ */
+class RepositoryStepUnavailableError extends DomainError {
+  constructor(failure: PullRequestStepFailure) {
+    const transient =
+      failure.status === undefined ||
+      failure.status === 502 ||
+      failure.status === 503 ||
+      failure.status === 504;
+    super(
+      ErrorCategory.SERVICE_UNAVAILABLE,
+      `Could not create the pull request: ${failure.message}. No pull request was opened.`,
+      {
+        step: failure.step,
+        ...(failure.status !== undefined && { upstreamStatus: failure.status }),
+        hint: transient
+          ? "The repository server is unreachable or overloaded. Retry with backoff; the request itself is fine."
+          : "The repository server failed at this step. A retry later may succeed; changing the request will not help.",
+      },
+    );
+  }
 }
 
 /**
@@ -182,19 +262,44 @@ export class PullRequestService implements IPullRequestService {
     const headBranch = `pr-patch-${timestamp}-${random}`;
     let branchCreated = false;
 
+    // Every Gitea call below is one named step, so a failure says which one
+    // failed and Gitea's own words for it, and is logged with both.
+    const step = async <T>(
+      name: string,
+      call: () => Promise<T>,
+    ): Promise<T> => {
+      try {
+        return await call();
+      } catch (error) {
+        if (error instanceof DomainError) throw error;
+        const status = clientFailureStatus(error);
+        const detail = await clientFailureDetail(error);
+        logger.error("Gitea call failed while creating a pull request", {
+          owner,
+          repo,
+          step: name,
+          status,
+          detail,
+        });
+        throw new PullRequestStepFailure(name, status, detail);
+      }
+    };
+
     try {
       // 2. Get base branch reference (`format` is load-bearing: without it
       // the generated client resolves `data` to null and every check below
       // misfires against a live Gitea.)
-      const baseBranchRef = await client.repos
-        .repoGetBranch(owner, repo, baseBranch, { format: "json" })
-        .catch((error: unknown) => {
-          // The client throws on a 404 rather than resolving empty data, so
-          // the guard below never saw an unknown branch: it fell through to
-          // the catch-all and read as a server fault to retry.
-          if (clientFailureStatus(error) === 404) return { data: null };
-          throw error;
-        });
+      const baseBranchRef = await step(`reading branch ${baseBranch}`, () =>
+        client.repos
+          .repoGetBranch(owner, repo, baseBranch, { format: "json" })
+          .catch((error: unknown) => {
+            // The client throws on a 404 rather than resolving empty data, so
+            // the guard below never saw an unknown branch: it fell through to
+            // the catch-all and read as a server fault to retry.
+            if (clientFailureStatus(error) === 404) return { data: null };
+            throw error;
+          }),
+      );
       if (!baseBranchRef.data) {
         throw new NotFoundError(
           "Branch",
@@ -205,14 +310,18 @@ export class PullRequestService implements IPullRequestService {
       const baseSha = baseBranchRef.data.commit?.id ?? "";
 
       // 3. Create new branch from base
-      const createBranchResult = await client.repos.repoCreateBranch(
-        owner,
-        repo,
-        {
-          new_branch_name: headBranch,
-          old_ref_name: baseBranch,
-        },
-        { format: "json" },
+      const createBranchResult = await step(
+        `creating branch ${headBranch}`,
+        () =>
+          client.repos.repoCreateBranch(
+            owner,
+            repo,
+            {
+              new_branch_name: headBranch,
+              old_ref_name: baseBranch,
+            },
+            { format: "json" },
+          ),
       );
 
       if (!createBranchResult.data) {
@@ -222,73 +331,78 @@ export class PullRequestService implements IPullRequestService {
 
       // 4. Apply file changes to new branch
       for (const change of input.changes) {
-        // Check if file exists
-        let fileSha: string | undefined;
-        try {
-          const fileContents = await client.repos.repoGetContents(
-            owner,
-            repo,
-            change.path,
-            {
-              ref: headBranch,
-            },
-            { format: "json" },
-          );
-          // Type assertion: repoGetContents returns ContentsResponse
-          const contents = fileContents.data as ContentsResponse;
-          fileSha = contents.sha;
-        } catch {
-          // File doesn't exist, will create it
-          fileSha = undefined;
-        }
+        // Only Gitea's 404 means the file is new; any other failure reading
+        // it is this step's, not a reason to try creating a file that exists.
+        const fileContents = await step(`reading ${change.path}`, () =>
+          client.repos
+            .repoGetContents(
+              owner,
+              repo,
+              change.path,
+              {
+                ref: headBranch,
+              },
+              { format: "json" },
+            )
+            .catch((error: unknown) => {
+              if (clientFailureStatus(error) === 404) return null;
+              throw error;
+            }),
+        );
+        // Type assertion: repoGetContents returns ContentsResponse
+        const fileSha = (fileContents?.data as ContentsResponse | undefined)
+          ?.sha;
 
         // Update or create file
         const content = Buffer.from(change.content).toString("base64");
 
-        if (fileSha) {
-          await client.repos.repoUpdateFile(
-            owner,
-            repo,
-            change.path,
-            {
-              content,
-              sha: fileSha,
-              branch: headBranch,
-              message: clearCommitMessage,
-            },
-            { format: "json" },
-          );
-        } else {
-          await client.repos.repoCreateFile(
-            owner,
-            repo,
-            change.path,
-            {
-              content,
-              branch: headBranch,
-              message: clearCommitMessage,
-            },
-            { format: "json" },
-          );
-        }
+        await step(`writing ${change.path}`, () =>
+          fileSha
+            ? client.repos.repoUpdateFile(
+                owner,
+                repo,
+                change.path,
+                {
+                  content,
+                  sha: fileSha,
+                  branch: headBranch,
+                  message: clearCommitMessage,
+                },
+                { format: "json" },
+              )
+            : client.repos.repoCreateFile(
+                owner,
+                repo,
+                change.path,
+                {
+                  content,
+                  branch: headBranch,
+                  message: clearCommitMessage,
+                },
+                { format: "json" },
+              ),
+        );
       }
 
       // 5. Verify the branch actually differs from base, unless the caller
       // takes responsibility with fastForward. The revisions travel in the
       // refusal so the agent can re-verify them instead of guessing.
       if (!input.fastForward) {
-        const headRef = await client.repos.repoGetBranch(
-          owner,
-          repo,
-          headBranch,
-          { format: "json" },
+        const headRef = await step(`reading branch ${headBranch}`, () =>
+          client.repos.repoGetBranch(owner, repo, headBranch, {
+            format: "json",
+          }),
         );
         const headSha = headRef.data?.commit?.id ?? "";
-        const comparison = await client.repos.repoCompareDiff(
-          owner,
-          repo,
-          `${baseBranch}...${headBranch}`,
-          { format: "json" },
+        const comparison = await step(
+          `comparing ${headBranch} with ${baseBranch}`,
+          () =>
+            client.repos.repoCompareDiff(
+              owner,
+              repo,
+              `${baseBranch}...${headBranch}`,
+              { format: "json" },
+            ),
         );
         if ((comparison.data?.total_commits ?? 0) === 0) {
           throw new BadUserInputError(
@@ -298,16 +412,18 @@ export class PullRequestService implements IPullRequestService {
       }
 
       // 6. Create pull request
-      const prResult = await client.repos.repoCreatePullRequest(
-        owner,
-        repo,
-        {
-          title,
-          body: description,
-          head: headBranch,
-          base: baseBranch,
-        },
-        { format: "json" },
+      const prResult = await step("opening the pull request", () =>
+        client.repos.repoCreatePullRequest(
+          owner,
+          repo,
+          {
+            title,
+            body: description,
+            head: headBranch,
+            base: baseBranch,
+          },
+          { format: "json" },
+        ),
       );
 
       if (!prResult.data) {
@@ -339,8 +455,14 @@ export class PullRequestService implements IPullRequestService {
           });
       }
       if (error instanceof DomainError) throw error;
+      if (error instanceof PullRequestStepFailure && error.serverSide) {
+        throw new RepositoryStepUnavailableError(error);
+      }
+      // A refusal by the repository keeps the success:false result.
       throw new Error(
-        `Failed to create PR from patch: ${describeClientFailure(error)}`,
+        error instanceof PullRequestStepFailure
+          ? error.message
+          : `Failed to create PR from patch: ${describeClientFailure(error)}`,
       );
     }
   }

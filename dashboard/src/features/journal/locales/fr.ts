@@ -159,6 +159,18 @@ const frJournal: Record<string, TranslationEntry> = {
     message: "Personnalisé",
     description: "Custom entry type filter",
   },
+  "journal.commodity": {
+    message: "Marchandise",
+    description: "Name of the Commodity directive type",
+  },
+  "journal.event": {
+    message: "Événement",
+    description: "Name of the Event directive type",
+  },
+  "journal.query": {
+    message: "Requête",
+    description: "Name of the Query directive type",
+  },
   "journal.date": {
     message: "Date",
     description: "Label for date field",
@@ -461,6 +473,97 @@ const frJournal: Record<string, TranslationEntry> = {
     message: "Supprimer l'écriture {number}",
     description:
       "Accessible name for removing a numbered transaction posting row",
+  },
+  "journal.payee": {
+    message: "Bénéficiaire",
+    description: "Label for the payee field",
+  },
+  "journal.accountLabel": {
+    message: "Compte",
+    description: "Label for the account field of a directive form",
+  },
+  "journal.amountLabel": {
+    message: "Montant",
+    description: "Label for the amount field of a directive form",
+  },
+  "journal.currencyLabel": {
+    message: "Devise",
+    description: "Label for the currency field of a directive form",
+  },
+  "journal.postingAccount": {
+    message: "Compte de l'écriture {number}",
+    description:
+      "Accessible label for a numbered transaction posting's account field",
+  },
+  "journal.postingAmount": {
+    message: "Montant de l'écriture {number}",
+    description:
+      "Accessible label for a numbered transaction posting's amount field",
+  },
+  "journal.postingCurrency": {
+    message: "Devise de l'écriture {number}",
+    description:
+      "Accessible label for a numbered transaction posting's currency field",
+  },
+  "journal.postingsUnbalanced": {
+    message:
+      "Les écritures ne sont pas équilibrées : il reste {residual}. Ajustez un montant ou videz-en un pour l'équilibrer automatiquement.",
+    description:
+      "Shown when a new transaction's postings leave a residual; {residual} is the amount and currency, e.g. 1 USD",
+  },
+  "journal.accountNotOpen": {
+    message: "{account} n'est pas ouvert dans ce grand livre.",
+    description:
+      "Shown under a New Entry account field naming an account the ledger never opened; {account} is the name",
+  },
+  "journal.alsoOpenAccount": {
+    message: "Ouvrir aussi {account} le {date}",
+    description:
+      "Checkbox label that adds an open directive for {account} dated {date} to the same New Entry write",
+  },
+  "journal.accountClosedBefore": {
+    message: "{account} a été clôturé le {date}, avant cette écriture.",
+    description:
+      "Shown under a New Entry account field naming an account closed before the entry; {date} is its close date",
+  },
+  "journal.accountOpensAfter": {
+    message: "{account} ouvre le {date}, après cette écriture.",
+    description:
+      "Shown under a New Entry account field naming an account opened after the entry; {date} is its open date",
+  },
+  "journal.discardEntryEditTitle": {
+    message: "Abandonner la modification ?",
+    description:
+      "Title of the confirmation shown when leaving Entry Context with unsaved source edits",
+  },
+  "journal.discardEntryEditDescription": {
+    message:
+      "Vos modifications de la source de cette écriture n'ont pas été enregistrées.",
+    description: "Body of the Entry Context discard confirmation",
+  },
+  "journal.keepEditing": {
+    message: "Continuer la modification",
+    description:
+      "Button that returns to the Entry Context editor with the edit intact",
+  },
+  "journal.discardEntryEdit": {
+    message: "Abandonner",
+    description: "Button that discards the Entry Context edit and leaves",
+  },
+  "journal.entryChangedElsewhere": {
+    message:
+      "Cette écriture a été modifiée ou supprimée depuis son ouverture, votre modification n'a donc pas été enregistrée. Copiez votre modification, puis rechargez pour voir la dernière version.",
+    description:
+      "Entry Context save refused because the entry changed elsewhere since it was opened",
+  },
+  "journal.copyMyEdit": {
+    message: "Copier ma modification",
+    description: "Copies the unsaved Entry Context edit to the clipboard",
+  },
+  "journal.reloadEntries": {
+    message: "Recharger",
+    description:
+      "Closes Entry Context and refreshes the journal to show the latest entries",
   },
   "journal.autoAmount": {
     message: "automatique",

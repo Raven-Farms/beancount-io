@@ -387,3 +387,143 @@ export function untranslatedWholeMessage(
     .match(/(?<![0-9A-Za-z])[A-Za-z]{2,}(?![0-9A-Za-z])/g);
   return words && words.length >= 2 ? words : [];
 }
+
+/**
+ * One locale's messages that `check` finds untranslated against the same key
+ * in English. The walk the English-comparison guards and the
+ * `i18n:prepare` report share — the half-translated tail and the whole copy —
+ * so they cannot drift in what they skip: keys English no longer has, and keys
+ * `allowed` excuses.
+ */
+export function untranslatedAgainstEnglish(
+  messages: Readonly<Record<string, string>> | undefined,
+  english: Readonly<Record<string, string>>,
+  check: (message: string, english: string) => string[],
+  allowed: (key: string) => boolean = () => false,
+): { key: string; message: string; words: string[] }[] {
+  const offenders: { key: string; message: string; words: string[] }[] = [];
+  for (const [key, message] of Object.entries(messages ?? {})) {
+    const source = english[key];
+    if (source === undefined || allowed(key)) continue;
+    const words = check(message, source);
+    if (words.length) offenders.push({ key, message, words });
+  }
+  return offenders;
+}
+
+/** The prefix `i18n:prepare` gives a key until someone translates it. */
+export const TODO_MARKER = "[TODO]";
+
+/**
+ * A message still awaiting translation. The catalog tests, `i18n:check` and
+ * the `i18n:prepare` report share it, so none calls a catalog done that
+ * another rejects.
+ */
+export function isTodoMessage(message: string): boolean {
+  return message.trimStart().startsWith(TODO_MARKER);
+}
+
+/**
+ * One locale's messages copied whole from English, minus the ones
+ * `IDENTICAL_BY_DESIGN` excuses and any `skip` names. The whole-copy guard
+ * and the `i18n:prepare` report both use it, so they judge alike.
+ */
+export function wholeEnglishCopies(
+  messages: Readonly<Record<string, string>> | undefined,
+  english: Readonly<Record<string, string>>,
+  locale: string,
+  skip: (key: string) => boolean = () => false,
+): { key: string; message: string; words: string[] }[] {
+  return untranslatedAgainstEnglish(
+    messages,
+    english,
+    untranslatedWholeMessage,
+    (key) => skip(key) || `${locale}/${key}` in IDENTICAL_BY_DESIGN,
+  );
+}
+
+/**
+ * Entries of a `locale/key` identical-by-design allowlist that no longer
+ * describe a copy: the locale now translates the key, or the key is gone. A
+ * stale entry would otherwise excuse a future regression on that key
+ * silently. A key removed from both the locale and English used to compare
+ * equal (`undefined === undefined`) and linger.
+ */
+export function staleIdenticalEntries(
+  allowlist: Readonly<Record<string, string>>,
+  catalogs: Readonly<Record<string, Readonly<Record<string, string>>>>,
+  english: Readonly<Record<string, string>>,
+): string[] {
+  return Object.keys(allowlist).filter((entry) => {
+    const [locale, ...rest] = entry.split("/");
+    const key = rest.join("/");
+    const message = catalogs[locale]?.[key];
+    return message === undefined || message !== english[key];
+  });
+}
+
+/**
+ * Messages a locale deliberately keeps identical to English, keyed
+ * `locale/key`, each with the reason it is correct there. The list exists so
+ * the whole-copy guard (`locale-stray-english.test.ts`) and the
+ * `i18n:prepare` report can stay strict; an entry that stops being identical fails
+ * the stale-entry test rather than lingering as a silent excuse.
+ */
+export const IDENTICAL_BY_DESIGN: Record<string, string> = {
+  "bg/userProfile.openLedgerName":
+    "Open Ledger is the proper name of the public collection account",
+  "ca/userProfile.openLedgerName":
+    "Open Ledger is the proper name of the public collection account",
+  "de/userProfile.openLedgerName":
+    "Open Ledger is the proper name of the public collection account",
+  "es/userProfile.openLedgerName":
+    "Open Ledger is the proper name of the public collection account",
+  "fa/userProfile.openLedgerName":
+    "Open Ledger is the proper name of the public collection account",
+  "fr/userProfile.openLedgerName":
+    "Open Ledger is the proper name of the public collection account",
+  "ja/userProfile.openLedgerName":
+    "Open Ledger is the proper name of the public collection account",
+  "ko/userProfile.openLedgerName":
+    "Open Ledger is the proper name of the public collection account",
+  "nl/userProfile.openLedgerName":
+    "Open Ledger is the proper name of the public collection account",
+  "pt/userProfile.openLedgerName":
+    "Open Ledger is the proper name of the public collection account",
+  "ru/userProfile.openLedgerName":
+    "Open Ledger is the proper name of the public collection account",
+  "sk/userProfile.openLedgerName":
+    "Open Ledger is the proper name of the public collection account",
+  "uk/userProfile.openLedgerName":
+    "Open Ledger is the proper name of the public collection account",
+  "zh/userProfile.openLedgerName":
+    "Open Ledger is the proper name of the public collection account",
+  "bg/page.accounts.accountSubAccountPlaceholder":
+    "Placeholder written in Beancount account-path syntax",
+  "ca/page.accounts.accountSubAccountPlaceholder":
+    "Placeholder written in Beancount account-path syntax",
+  "de/page.accounts.accountSubAccountPlaceholder":
+    "Placeholder written in Beancount account-path syntax",
+  "es/page.accounts.accountSubAccountPlaceholder":
+    "Placeholder written in Beancount account-path syntax",
+  "fa/page.accounts.accountSubAccountPlaceholder":
+    "Placeholder written in Beancount account-path syntax",
+  "fr/page.accounts.accountSubAccountPlaceholder":
+    "Placeholder written in Beancount account-path syntax",
+  "nl/page.accounts.accountSubAccountPlaceholder":
+    "Placeholder written in Beancount account-path syntax",
+  "pt/page.accounts.accountSubAccountPlaceholder":
+    "Placeholder written in Beancount account-path syntax",
+  "ru/page.accounts.accountSubAccountPlaceholder":
+    "Placeholder written in Beancount account-path syntax",
+  "sk/page.accounts.accountSubAccountPlaceholder":
+    "Placeholder written in Beancount account-path syntax",
+  "uk/page.accounts.accountSubAccountPlaceholder":
+    "Placeholder written in Beancount account-path syntax",
+  "zh/page.accounts.accountSubAccountPlaceholder":
+    "Placeholder written in Beancount account-path syntax",
+  "de/seo.ledgerPullRequest.title":
+    "These catalogs keep the Git term Pull Request throughout",
+  "nl/seo.ledgerPullRequest.title":
+    "These catalogs keep the Git term Pull Request throughout",
+};

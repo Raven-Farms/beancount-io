@@ -28,6 +28,7 @@ import typer
 from cli import context
 from cli.config import package_version
 from cli.errors import AuthError, BeaError, LedgerError, UsageError, to_bea_error
+from cli.paths import expand_path
 from cli.utils import atomic_write, inert_text, single_line
 
 
@@ -140,29 +141,53 @@ def error(exc: BaseException | str) -> NoReturn:
 
             trace = "".join(traceback.format_exception(exc))
 
-    if _json_mode():
-        payload: dict[str, Any] = {
-            "category": err.category,
-            "message": _message(err),
-            "exit_code": exit_code,
-        }
-        if err.request_id:
-            payload["request_id"] = err.request_id
-        if err.details:
-            payload["details"] = err.details
-        if err.result is not None:
-            payload["result"] = jsonable(err.result)
-        if _pending_warnings:
-            payload["ledger_warnings"] = list(_pending_warnings)
-            _pending_warnings.clear()
-        _pending_engine_output.clear()
-        if trace:
-            payload["traceback"] = trace
-        print(json.dumps({"error": payload}), file=sys.stderr)
-    else:
-        _print_failure(err, trace)
+    try:
+        if _json_mode():
+            payload: dict[str, Any] = {
+                "category": err.category,
+                "message": _message(err),
+                "exit_code": exit_code,
+            }
+            if err.request_id:
+                payload["request_id"] = err.request_id
+            if err.details:
+                payload["details"] = err.details
+            if err.result is not None:
+                payload["result"] = jsonable(err.result)
+            if _pending_warnings:
+                payload["ledger_warnings"] = list(_pending_warnings)
+                _pending_warnings.clear()
+            _pending_engine_output.clear()
+            if trace:
+                payload["traceback"] = trace
+            print(json.dumps({"error": payload}), file=sys.stderr)
+        else:
+            _print_failure(err, trace)
+    except BrokenPipeError:
+        # `2>&1 | head` closed the reader: the message cannot be written, but
+        # the status is still the error's, never a generic 1 (w5/522).
+        silence_broken_streams()
 
     raise typer.Exit(exit_code)
+
+
+def silence_broken_streams() -> None:
+    """Point stdout and stderr at /dev/null after a reader went away.
+
+    Both still hold unwritten bytes, and the interpreter's shutdown flush of
+    either would fail on the closed pipe and force exit 120 (w5/522). A
+    stream that is not a real fd (captured in a test) is left alone.
+    """
+    try:
+        devnull = os.open(os.devnull, os.O_WRONLY)
+    except OSError:
+        return
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            if stream is not None:
+                os.dup2(devnull, stream.fileno())
+        except (OSError, ValueError, AttributeError):
+            continue
 
 
 def failure(exc: BaseException | str) -> None:
@@ -182,7 +207,7 @@ def failure(exc: BaseException | str) -> None:
     _print_failure(err, trace)
 
 
-_DEBUG_HINT = "Pass --debug before the command for a traceback."
+DEBUG_HINT = "Pass --debug before the command for a traceback."
 
 
 def _message(err: BeaError) -> str:
@@ -193,8 +218,8 @@ def _message(err: BeaError) -> str:
     shows a traceback for both (w5/424).
     """
     message = str(err)
-    if (err.traceback or err.unexpected) and not context.current().debug and _DEBUG_HINT not in message:
-        return f"{message}{' ' if message.endswith(('.', '!', '?')) else '. '}{_DEBUG_HINT}"
+    if (err.traceback or err.unexpected) and not context.current().debug and DEBUG_HINT not in message:
+        return f"{message}{' ' if message.endswith(('.', '!', '?')) else '. '}{DEBUG_HINT}"
     return message
 
 
@@ -326,7 +351,20 @@ def fields(values: Mapping[str, object], *, indent: int = 0) -> None:
 
 
 def file_target(path: Path) -> dict[str, Any]:
-    return {"file": str(path.resolve())}
+    """The ledger an answer is about, as the command named and read it.
+
+    Lexical, as `RunContext.entry_file` is (w1/056): a symlinked root's
+    target loads the includes beside the target, not beside the link, so
+    `target.file` resolved through the link named a different, broken ledger
+    to re-run on (w5/581).
+    """
+    return {"file": os.path.abspath(path)}
+
+
+def write_target(path: Path, into: str) -> dict[str, Any]:
+    """`file_target` plus where a write landed, the root itself spelled as it was named."""
+    same = os.path.realpath(into) == os.path.realpath(path)
+    return {**file_target(path), "into": os.path.abspath(path) if same else into}
 
 
 # Spelled the way Beancount's lexer reads it: the keyword may touch its string
@@ -394,6 +432,25 @@ def _include_matches(source: Path, raw: str) -> tuple[list[Path], list[Path]]:
     return [path for path in found if path.is_file()], [path for path in found if not path.is_file()]
 
 
+def is_encrypted(path: Path) -> bool:
+    """Whether Beancount decrypts `path` when loading it, rather than reading it as text.
+
+    Upstream's rule (`is_encrypted_file`): a `.gpg` name, or an `.asc` name
+    whose first KiB holds an armored PGP message. Read as text, such a member
+    was "not UTF-8" to `format`, which advised re-saving the secrets as
+    plaintext, and a syntax error to doctor (w5/495).
+    """
+    if path.suffix == ".gpg":
+        return True
+    if path.suffix == ".asc":
+        try:
+            with path.open(encoding="ascii") as handle:
+                return "--BEGIN PGP MESSAGE--" in handle.read(1024)
+        except (OSError, UnicodeDecodeError):
+            return False
+    return False
+
+
 def walk_closure(*roots: Path) -> tuple[list[Path], list[MissingInclude]]:
     """The roots plus every reachable file, with the includes that resolve nowhere."""
     members, missing, _, _ = _walk_closure(*roots)
@@ -440,6 +497,8 @@ def _walk_closure(*roots: Path) -> tuple[list[Path], list[MissingInclude], list[
     seen: dict[Path, str] = {}
     inodes: set[tuple[int, int]] = set()
     stack = list(reversed(roots))
+    # The include, as written, and the file holding it, that first reached each member.
+    named_by: dict[Path, tuple[str, Path]] = {}
     while stack:
         current = stack.pop()
         try:
@@ -463,11 +522,21 @@ def _walk_closure(*roots: Path) -> tuple[list[Path], list[MissingInclude], list[
             if (status.st_dev, status.st_ino) in inodes:
                 again.append(current)
             inodes.add((status.st_dev, status.st_ino))
+        if is_encrypted(current):
+            # Still a member, so no output may overwrite it; its includes are
+            # ciphertext until the loader decrypts it.
+            continue
         try:
             text = current.read_text(encoding="utf-8", errors="replace").removeprefix("\ufeff")
-        except OSError:
+        except OSError as exc:
             if current not in roots:
                 unreadable.append(current)
+                # A file the include matched but nobody may read (mode 000) is
+                # an unreadable include, as a directory there is (w5/523).
+                if current in named_by:
+                    include, source = named_by[current]
+                    why = f"{current} cannot be read: {exc.strerror or type(exc).__name__}"
+                    missing.append(MissingInclude(include=include, source=source, reason=why))
             continue
         for match in _INCLUDE_DIRECTIVE.finditer(text):
             raw = match.group(1)
@@ -477,6 +546,8 @@ def _walk_closure(*roots: Path) -> tuple[list[Path], list[MissingInclude], list[
                 continue
             matches, others = _include_matches(current, _unescape(raw))
             if matches:
+                for found in matches:
+                    named_by.setdefault(found, (raw, current))
                 stack.extend(matches)
             else:
                 reason = not_a_file(others[0]) if others else None
@@ -489,6 +560,71 @@ def ledger_closure(root: Path) -> list[Path]:
     """The root ledger plus every file its `include` chain can reach."""
     members, _ = walk_closure(root)
     return members
+
+
+def _output_ledger_members(ledger: Path) -> list[Path]:
+    """Protect nearby including ledgers as well as the input's descendants.
+
+    Search beside both the named input and its resolved target, climbing
+    again from each includer. Every includer matters, even reporting-only
+    overlays and multiple roots sharing a leaf. The search shares a budget
+    of 64 candidate include graphs across the entire climb.
+    """
+    members = ledger_closure(ledger)
+    target = ledger.resolve()
+    pending = [ledger.absolute(), target]
+    searched: set[Path] = set()
+    known = {path.resolve() for path in members}
+    opened = 0
+    while pending:
+        source = pending.pop()
+        for directory in _nearby_ledger_directories(source):
+            if directory in searched:
+                continue
+            searched.add(directory)
+            for candidate in sorted(directory.glob("*.bean")) + sorted(directory.glob("*.beancount")):
+                if opened >= 64:
+                    return members
+                try:
+                    info = candidate.stat()
+                    if (
+                        not stat.S_ISREG(info.st_mode)
+                        or info.st_size > 16 * 1024 * 1024
+                        or candidate.resolve() in known
+                    ):
+                        continue
+                    text = candidate.read_text(encoding="utf-8", errors="replace").removeprefix("\ufeff")
+                    if not _INCLUDE_DIRECTIVE.search(text):
+                        continue
+                    opened += 1
+                    included = ledger_closure(candidate)
+                    if not any(same_file(path, target) for path in included):
+                        continue
+                    pending.extend((candidate.absolute(), candidate.resolve()))
+                    for path in included:
+                        key = path.resolve()
+                        if key not in known:
+                            members.append(path)
+                            known.add(key)
+                except OSError:
+                    continue
+    return members
+
+
+def _nearby_ledger_directories(source: Path) -> list[Path]:
+    """The write-side search area: four ancestor levels and immediate children."""
+    directories: list[Path] = []
+    for directory in [source.parent, *source.parent.parents][:4]:
+        directories.append(directory)
+        try:
+            directories.extend(
+                child for child in sorted(directory.iterdir()) if not child.name.startswith(".") and child.is_dir()
+            )
+        except OSError:
+            pass
+        if (directory / ".git").exists():
+            break
+    return directories
 
 
 def missing_includes(root: Path) -> list[MissingInclude]:
@@ -563,6 +699,17 @@ def refuse_cache_over_ledger(file: Path, pattern: str | None = None, source: str
                 "cache file it cannot read, so this would delete the ledger. Choose a cache path outside the "
                 "ledger's own files. Nothing was changed."
             )
+    _refuse_encrypted_destination(cache, members, CACHE_ENV)
+    # A path an include glob claims becomes a member once written: the pickle
+    # loaded as ledger text, and every later command failed on it (w5/497).
+    claim = None if cache.exists() else _include_claim(cache, members)
+    if claim is not None:
+        include, member = claim
+        raise UsageError(
+            f'{source} {pattern} names {cache}, which include "{include}" in {member} would load as part of '
+            "the ledger once the cache is written. Choose a cache path outside the ledger's includes. "
+            "Nothing was changed."
+        )
     problem = not_a_load_cache(cache)
     if problem is not None:
         remove = "unset it" if source == CACHE_ENV else "leave it out"
@@ -572,7 +719,7 @@ def refuse_cache_over_ledger(file: Path, pattern: str | None = None, source: str
         )
 
 
-def refuse_ledger_alias(destination: Path, ledger: Path) -> None:
+def refuse_ledger_alias(destination: Path, ledger: Path, *, spelling: Path | None = None) -> None:
     """Refuse an output destination that is the ledger under read, or one of its includes.
 
     A result redirected onto the file it was read from truncates the books
@@ -580,7 +727,9 @@ def refuse_ledger_alias(destination: Path, ledger: Path) -> None:
     still says success. Call this before any temp file is created or any
     stream is opened, so a refusal leaves the destination byte-identical.
     """
-    members = ledger_closure(ledger)
+    members = _output_ledger_members(ledger)
+    if spelling is not None:
+        _refuse_encrypted_destination(spelling, members, "--output")
     for member in members:
         if same_file(destination, member):
             raise UsageError(
@@ -598,15 +747,42 @@ def refuse_include_claim(destination: Path, ledger: Path) -> None:
     a `PRINT` backup saved under `include "txns/*.bean"` doubled every exported
     transaction on the next load, with `check` still passing (w5/072).
     """
-    _refuse_include_claim(destination, ledger_closure(ledger))
+    _refuse_include_claim(destination, _output_ledger_members(ledger))
 
 
 def _refuse_include_claim(destination: Path, members: Sequence[Path]) -> None:
-    try:
-        target = destination.expanduser().resolve()
-    except OSError:
-        return
+    _refuse_encrypted_destination(destination, members, "--output")
+    claim = _include_claim(destination, members)
+    if claim is not None:
+        include, member = claim
+        raise UsageError(
+            f'--output {destination} would become part of the ledger it reads: include "{include}" '
+            f"in {member} matches that path. Choose a destination outside the ledger's includes."
+        )
+
+
+def _refuse_encrypted_destination(destination: Path, members: Sequence[Path], purpose: str) -> None:
+    """Keep outputs outside directories whose encrypted includes hide the ledger's globs."""
+    lexical = Path(os.path.abspath(expand_path(destination, purpose)))
+    ancestors = {*lexical.parents, *lexical.resolve().parents}
     for member in members:
+        if is_encrypted(member) and any(same_file(member.parent, ancestor) for ancestor in ancestors):
+            raise UsageError(
+                f"{purpose} {destination} is beneath the directory of encrypted ledger member {member}. "
+                "Its include patterns cannot be inspected before decryption, so this destination could join "
+                f"the ledger. Choose a path outside {member.parent.resolve()}. Nothing was changed."
+            )
+
+
+def _include_claim(destination: Path, members: Sequence[Path]) -> tuple[str, Path] | None:
+    """The include, as written, and the file holding it, whose pattern would match `destination`."""
+    try:
+        target = expand_path(destination, "--output").resolve()
+    except OSError:
+        return None
+    for member in members:
+        if is_encrypted(member):
+            continue
         try:
             text = member.read_text(encoding="utf-8", errors="replace").removeprefix("\ufeff")
         except OSError:
@@ -617,10 +793,8 @@ def _refuse_include_claim(destination: Path, members: Sequence[Path]) -> None:
                 continue
             pattern = raw if Path(raw).is_absolute() else str(member.parent / raw)
             if _glob_would_match(target, pattern):
-                raise UsageError(
-                    f'--output {destination} would become part of the ledger it reads: include "{match.group(1)}" '
-                    f"in {member} matches that path. Choose a destination outside the ledger's includes."
-                )
+                return match.group(1), member
+    return None
 
 
 def _glob_would_match(target: Path, pattern: str) -> bool:
@@ -638,11 +812,33 @@ def _glob_would_match(target: Path, pattern: str) -> bool:
         parent = os.path.join(parent, "**")
     for directory in glob.glob(parent or ".", recursive=True):
         try:
-            if Path(os.path.normpath(directory)).resolve() == target.parent:
+            if _same_directory(Path(os.path.normpath(directory)).resolve(), target.parent):
                 return True
         except OSError:
             continue
     return False
+
+
+def _same_directory(found: Path, wanted: Path) -> bool:
+    """Whether a directory glob listed is `wanted`, however each is spelled.
+
+    `resolve()` keeps the spelling typed, so on a case- and normalization-
+    insensitive volume (macOS's default) `-o Txns/backup.bean` passed for
+    `include "txns/*.bean"` and the export joined the books (w5/595). Spellings
+    that fold together are compared by identity.
+    """
+    if found == wanted:
+        return True
+    if _folded(str(found)) != _folded(str(wanted)):
+        return False
+    try:
+        return os.path.samefile(found, wanted)
+    except OSError:
+        return False
+
+
+def _folded(spelling: str) -> str:
+    return unicodedata.normalize("NFC", spelling).casefold()
 
 
 def refuse_input_alias(destination: Path, source: Path) -> None:
@@ -727,7 +923,10 @@ def guard_forwarded_output(
     if value is None:
         return
     guard_output_destination(
-        Path(value).expanduser(), ledgers, refuse_existing_ledger_file=refuse_existing_ledger_file, force=force
+        expand_path(Path(value), "--output"),
+        ledgers,
+        refuse_existing_ledger_file=refuse_existing_ledger_file,
+        force=force,
     )
 
 
@@ -963,7 +1162,8 @@ def render_ledger_errors(
         formatted.append(hint)
     if not allow and (always_strict or context.current().strict_reads()):
         raise LedgerError(
-            message or f"Ledger has {len(formatted)} error(s). Pass --allow-errors to report anyway.",
+            # Counted from the errors, not the hint line appended to them (w5/514).
+            message or f"Ledger has {len(errors)} error(s). Pass --allow-errors to report anyway.",
             details=formatted,
         )
     if _json_mode():

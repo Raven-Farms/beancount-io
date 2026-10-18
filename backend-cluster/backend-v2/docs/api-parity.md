@@ -157,7 +157,7 @@ authentication-required response. No relationship grant changes.
 ## Explicit file-write byte limits
 
 GraphQL `createLedgerFile` and `updateLedgerFile`, REST `PUT …/files/{path}`,
-and MCP `editLedgerFiles` share a **1 MiB (1,048,576 bytes) per-file limit**.
+and MCP `createLedgerFiles`/`updateLedgerFiles` share a **1 MiB (1,048,576 bytes) per-file limit**.
 GraphQL content is base64, so the workflow counts decoded bytes (including
 binary files); REST and MCP accept text, so the repository service counts UTF-8
 bytes. MCP `update` checks the entire resulting file after replacement, not
@@ -193,13 +193,14 @@ Shared service mocks alone do not prove the adapter contract. In particular:
 | BQL                                | Typed columns/rows and text rendering, including nulls and non-table results.                                                         |
 | File and entry writes              | Safe paths, structured validation, source hashes, atomic batches, commit effects, source ranges, and equivalent supported previews.   |
 | API keys                           | Expiry, names, scopes, inherited restriction, public metadata, one-time plaintext and revocation.                                     |
-| Bank operations                    | Every discriminator branch, account filters, explicit ledger target, preview support, staging/submit effects and composite authority. |
+| Bank operations                    | Every per-operation tool, account filters, explicit ledger target, preview support, staging/submit effects and composite authority.   |
 | Downloads                          | Selection, expiry, authorization of the full download path, content type and actual bytes; a link alone is not proof.                 |
 | Administrative/assisted operations | Exact target, current authority, quotas, ownership, side effects and dependency failure handling.                                     |
 | All families                       | Wrong audience/scope/target, revocation, source outage, rate budget, audit operation/target and concurrent request isolation.         |
 
-Grouped MCP tools must enumerate executable branches and select the operation's
-exact protected service. Approximate BQL or raw-file alternatives cannot close a
+Each MCP write or admin tool performs one operation through that operation's
+exact protected service; no tool selects among operations by an argument
+(ADR 019, 2026-10-18 amendment). Approximate BQL or raw-file alternatives cannot close a
 structured operation without proving its input, result and effect contract.
 Protocol envelopes and documented field-name aliases may differ. An input
 supported by one eligible adapter cannot simply be discarded by another.
@@ -301,8 +302,9 @@ Unicode branch names, diff statistics, and empty repositories.
 
 Collaborator listing, permission inspection, add/update, deletion, and leaving
 now have REST/MCP adapters over `LedgerCollaboratorsWorkflow`. The two reads
-remain administrative resources; `manageLedgerCollaborators` dispatches the
-three mutations to their distinct canonical actions. `collaborator-parity.test.ts`
+remain administrative resources; the three mutations are the MCP tools
+`setLedgerCollaborator`, `removeLedgerCollaborator`, and `leaveLedger`, each
+bound to its own canonical action. `collaborator-parity.test.ts`
 uses the real workflow, PDP, and source-backed relationship evaluator with
 controlled upstream membership data. It verifies persisted membership effects,
 subsequent revocation, owner-leave refusal, tier limits, default permissions,
@@ -322,8 +324,8 @@ failures, default/read-only flags, and insufficient-scope refusals before
 upstream work. Repository key-format validation remains upstream; these tests
 do not establish live Gitea integration.
 
-Ledger creation, update, and deletion now have REST bindings and a grouped
-`manageLedgers` MCP tool over `LedgerWorkflow`. Creation uses account authority;
+Ledger creation, update, and deletion now have REST bindings and the MCP tools
+`createLedger`, `updateLedger`, and `deleteLedger` over `LedgerWorkflow`. Creation uses account authority;
 update/delete resolve an existing ledger under its pin and administrative
 relationship. Nullable command types now accurately describe GraphQL's existing
 nullable inputs. The lifecycle adapter tests exercise actual workflows, the PDP,
@@ -403,8 +405,8 @@ and anonymous views, optional follow status, dates, source failures, and partial
 activity enrichment. The original public-profile credential exception remains
 unchanged; this does not introduce a new scope or ledger-pin policy.
 
-Ledger star/unstar now use the existing LedgerWorkflow through REST and a grouped
-MCP tool. Adapter tests check both branches, idempotent starring, failed-write
+Ledger star/unstar now use the existing LedgerWorkflow through REST and the
+`setLedgerStar` MCP tool. Adapter tests check both states, idempotent starring, failed-write
 results, pin and scope refusals, relationship outages, and revocation between
 calls. They preserve read-relationship plus write-capability authority.
 
@@ -459,7 +461,7 @@ file-preview contract still require milestone verification.
 
 Source-slice updates and single/batch deletions now have REST bindings below
 `/api-gateway/v1/ledgers/{owner}/{name}/entry-source` and the MCP
-`editEntrySource` tool. The three branches preserve GraphQL inputs, checksum
+`updateEntrySource`, `deleteEntrySource`, and `deleteEntrySources` tools. The three preserve GraphQL inputs, checksum
 fields, updated checksum results, and deleted-hash arrays through the protected
 `LedgerJournalService`. Cross-adapter tests use a source-backed PDP and isolated
 ledger fixture to exercise successful changes, stale hashes including a stale
@@ -487,7 +489,7 @@ enabled before filtering), and ledger submission validates the target file
 before its preview return, so a dry run refuses exactly what the write would.
 Reconcile, unlink, and delete previews were audited write-free as built.
 
-The `editLedgerFiles` preview now runs through the same protected service call
+The file-tool preview (`dry_run`) now runs through the same protected service call
 as the commit: `LedgerRepoService.changeFiles` accepts `dryRun`, performing the
 identical write authorization, safe-path and per-file UTF-8 byte-limit validation
 and stopping before the repository commit. Internal generated directive merges

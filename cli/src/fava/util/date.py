@@ -349,16 +349,20 @@ def substitute(
     today = local_today()
     fye = fye or END_OF_YEAR
 
-    for match in VARIABLE_RE.finditer(string):
-        complete_match, interval, plusminus_, mod_ = match.group(0, 1, 2, 3)
+    # Beancount.io change: each match is replaced where it stands. Upstream
+    # replaced every occurrence of the matched text, so the bare `year` in
+    # `year - year+1` also rewrote the start of `year+1` into `2026+1`, and
+    # the range no longer parsed (w5/618).
+    def replace(match: re.Match[str]) -> str:
+        interval, plusminus_, mod_ = match.group(1, 2, 3)
         mod = int(mod_) if mod_ else 0
         offset = mod if plusminus_ == "+" else -mod
         if interval == "fiscal_year":
             after_fye = (today.month, today.day) > (fye.month_of_year, fye.day)
             year = today.year + (1 if after_fye else 0) - fye.year_offset
-            string = string.replace(complete_match, f"FY{year + offset}")
+            return f"FY{year + offset}"
         if interval == "year":
-            string = string.replace(complete_match, str(today.year + offset))
+            return str(today.year + offset)
         if interval == "fiscal_quarter":
             if not fye.has_quarters():
                 raise FyeHasNoQuartersError
@@ -366,27 +370,21 @@ def substitute(
             after_fye = (target.month) > (fye.month_of_year)
             year = target.year + (1 if after_fye else 0) - fye.year_offset
             quarter = ((target.month - fye.month_of_year - 1) // 3) % 4 + 1
-            string = string.replace(complete_match, f"FY{year}-Q{quarter}")
+            return f"FY{year}-Q{quarter}"
         if interval == "quarter":
             quarter_today = (today.month - 1) // 3 + 1
             year = today.year + (quarter_today + offset - 1) // 4
             quarter = (quarter_today + offset - 1) % 4 + 1
-            string = string.replace(complete_match, f"{year}-Q{quarter}")
+            return f"{year}-Q{quarter}"
         if interval == "month":
             year = today.year + (today.month + offset - 1) // 12
             month = (today.month + offset - 1) % 12 + 1
-            string = string.replace(complete_match, f"{year}-{month:02}")
+            return f"{year}-{month:02}"
         if interval == "week":
-            string = string.replace(
-                complete_match,
-                (today + timedelta(offset * 7)).strftime("%G-W%V"),
-            )
-        if interval == "day":
-            string = string.replace(
-                complete_match,
-                (today + timedelta(offset)).isoformat(),
-            )
-    return string
+            return (today + timedelta(offset * 7)).strftime("%G-W%V")
+        return (today + timedelta(offset)).isoformat()
+
+    return VARIABLE_RE.sub(replace, string)
 
 
 def parse_date(

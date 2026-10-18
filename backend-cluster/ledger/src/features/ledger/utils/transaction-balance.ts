@@ -63,9 +63,7 @@ function formatResidual(value: BigNumber, decimals: number): string {
  * bulk endpoint already fetched are scanned — an override living in an
  * unrelated file falls back to the default, noted at the call site.
  */
-export function scanInferredToleranceDefault(
-  contents: string[],
-): string {
+export function scanInferredToleranceDefault(contents: string[]): string {
   for (const content of contents) {
     for (const line of content.split("\n")) {
       const match =
@@ -92,7 +90,9 @@ export type CheckedTransaction = {
 export function checkTransactionBalance(
   postings: BalancePosting[],
   inferredToleranceDefault: string = DEFAULT_INFERRED_TOLERANCE,
-): { ok: true; value: CheckedTransaction } | { ok: false; value: BalanceFailure } {
+):
+  | { ok: true; value: CheckedTransaction }
+  | { ok: false; value: BalanceFailure } {
   const elided = postings.filter(
     (posting) => posting.units === undefined || posting.units === null,
   );
@@ -112,7 +112,14 @@ export function checkTransactionBalance(
   for (const posting of postings) {
     if (posting.units === undefined || posting.units === null) continue;
     const { number, currency } = posting.units;
-    const amount = new BigNumber(number);
+    // bignumber.js 11 throws on a malformed string where earlier versions
+    // returned NaN; either way it is the caller's input, never an outage.
+    let amount: BigNumber;
+    try {
+      amount = new BigNumber(number);
+    } catch {
+      amount = new BigNumber(NaN);
+    }
     if (!amount.isFinite()) {
       return {
         ok: false,
@@ -128,7 +135,8 @@ export function checkTransactionBalance(
     decimals.set(currency, Math.max(decimals.get(currency) ?? 0, places));
     const candidate = halfUnit(places);
     const best = inferred.get(currency);
-    if (!best || candidate.isGreaterThan(best)) inferred.set(currency, candidate);
+    if (!best || candidate.isGreaterThan(best))
+      inferred.set(currency, candidate);
   }
 
   const floorParsed = new BigNumber(inferredToleranceDefault);

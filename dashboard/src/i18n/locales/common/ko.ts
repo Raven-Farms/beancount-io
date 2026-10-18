@@ -869,6 +869,25 @@ const koCommon: Record<string, TranslationEntry> = {
     description:
       "Error shown when a feature needs a premium plan (PREMIUM_REQUIRED)",
   },
+  "common.errors.unbalanced": {
+    message: "분개가 균형이 맞지 않습니다. 금액을 조정한 후 다시 시도하세요.",
+    description:
+      "Error shown when the ledger refuses a transaction whose postings do not balance (UNBALANCED)",
+  },
+  "common.writeLeftErrors": {
+    message: "저장했지만 원장에서 이제 오류가 보고됩니다: {error}",
+    description:
+      "Warning after a write that succeeded but left the ledger with a new validation error; {error} is the first new error",
+  },
+  "common.viewErrors": {
+    message: "오류 보기",
+    description: "Action that opens the ledger's Errors page",
+  },
+  "common.errors.wouldBreakLedger": {
+    message: "장부에 오류가 추가됩니다: {detail}",
+    description:
+      "Error shown when the ledger refuses entries that would add bean-check errors; {detail} is the ledger’s own error text, e.g. Duplicate open directive for Assets:Cash (main.bean:74)",
+  },
   "common.errors.network": {
     message: "연결에 문제가 있습니다. 인터넷 연결을 확인하고 다시 시도하세요.",
     description:

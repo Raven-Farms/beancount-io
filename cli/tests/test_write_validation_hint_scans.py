@@ -21,6 +21,7 @@ from typer.testing import CliRunner
 
 from bea_engine import managed_load
 from bea_engine.ledger import write as ledger_write
+from bea_engine.ledger.text import bea_command
 from cli.main import app
 
 runner = CliRunner()
@@ -69,6 +70,12 @@ class _CountedSource(bytes):
     def splitlines(self, keepends: bool = False) -> list[bytes]:
         type(self).splits += 1
         return super().splitlines(keepends)
+
+    def split(self, sep: Any = None, maxsplit: Any = -1) -> list[bytes]:  # type: ignore[override]
+        # `lexer_lines` splits on `\n` alone, as Beancount numbers lines (w5/475).
+        if sep == b"\n":
+            type(self).splits += 1
+        return super().split(sep, maxsplit)
 
 
 def _refusal(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, content: str) -> tuple[list[str], dict[str, int]]:
@@ -121,12 +128,14 @@ def test_validation_work_does_not_grow_with_the_error_count(
     _, few = _refusal(tmp_path / "few", monkeypatch, fixture(3))
     _, many = _refusal(tmp_path / "many", monkeypatch, fixture(60))
     assert many[counter] == few[counter], (few, many)
-    assert 0 < few[counter] <= 4
+    # A handful of whole-file passes: since w5/475 the splits count the
+    # lexer's `\n` splits as well as `splitlines`.
+    assert 0 < few[counter] <= 6
 
 
 def test_a_valid_ledger_pays_for_no_hint_index(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     # Control: the same books with the open dated correctly accept the note,
-    # and the only pass over the entries is the one that lists open accounts.
+    # and the only passes list open accounts and validate plugin data types.
     ledger = tmp_path / "main.bean"
     ledger.write_text(_inactive(60).replace("2030-01-01 open", "2000-01-01 open"))
     load_file = managed_load.load_file
@@ -139,7 +148,7 @@ def test_a_valid_ledger_pays_for_no_hint_index(tmp_path: Path, monkeypatch: pyte
     monkeypatch.setattr(managed_load, "load_file", counted_load)
     assert ledger_write.append(ledger, [NOTE]) == []
     assert ledger.read_text().endswith(NOTE + "\n")
-    assert _CountedEntries.walks == 1
+    assert _CountedEntries.walks == 2
 
 
 def test_inactive_account_refusal_still_names_the_open_and_the_close(
@@ -163,7 +172,7 @@ def test_unknown_account_refusal_still_suggests_the_close_match(
     assert len(details) == 1
     assert (
         "unknown account 'Expenses:Fod' Did you mean Expenses:Food? "
-        "To create it, use bea add open --account Expenses:Fod --date YYYY-MM-DD. "
+        f"To create it, use {bea_command(tmp_path / 'main.bean')} add open --account Expenses:Fod --date YYYY-MM-DD. "
         "Same problem on 2 more lines: 7, 10."
     ) in details[0]
 

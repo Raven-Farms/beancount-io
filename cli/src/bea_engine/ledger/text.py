@@ -180,14 +180,18 @@ def checked_operating_currencies(options: Mapping[str, Any]) -> list[str]:
 
 def _option_location(options: Mapping[str, Any], name: str, value: str) -> str:
     """` at FILE:LINE` for the option line setting `value`, or nothing when no file shows it."""
+    from bea_engine.compat import UTF8_BOM
+
     line = re.compile(rf'^\s*option\s+"{re.escape(name)}"\s+"{re.escape(value)}"')
     for filename in options.get("include") or ():
         try:
-            lines = Path(filename).read_text(encoding="utf-8", errors="replace").splitlines()
+            # The parser skips a leading mark, and `\s` does not match it: an
+            # option on line 1 lost its location (w5/633).
+            lines = lexer_lines(Path(filename).read_bytes().removeprefix(UTF8_BOM))
         except OSError:
             continue
         for number, text in enumerate(lines, start=1):
-            if line.match(text):
+            if line.match(text.decode("utf-8", errors="replace")):
                 return f" at {filename}:{number}"
     return ""
 
@@ -196,7 +200,7 @@ def require_tag_or_link(value: str) -> str:
     """One tag or link body, or a ValueError naming the allowed characters."""
     if not _TAG_OR_LINK.fullmatch(value):
         raise ValueError(
-            f"{value!r} is not one tag or link; use only letters, digits and - _ / . "
+            f"{value!r} is not one tag or link; use only ASCII letters, digits and - _ / . "
             "after an optional leading # or ^ (no spaces, sigils or line breaks inside)."
         )
     return value
@@ -424,13 +428,37 @@ def _refused_character(name: str) -> str:
     for character in name:
         if character in ":-" or (character.isascii() and character.isalnum()):
             continue
-        if character.isascii() or CONTROL_CHARACTERS.match(character) or "\ud800" <= character <= "\udfff":
+        if (
+            character.isascii()
+            or character.isspace()
+            or CONTROL_CHARACTERS.match(character)
+            or "\ud800" <= character <= "\udfff"
+        ):
             label = unicodedata.name(character, "")
             return f" The character U+{ord(character):04X}{f' ({label})' if label else ''} is not allowed."
     return ""
 
 
-def parse_account(name: str, roots: Collection[str] | None = None) -> str:
+def escape_format_characters(text: str) -> str:
+    """Make invisible Unicode format characters visible in a diagnostic."""
+    return "".join(
+        ascii(character)[1:-1] if unicodedata.category(character) == "Cf" else character for character in text
+    )
+
+
+def new_account_format_problem(name: str) -> str | None:
+    """Why creating this name would introduce an invisible account distinction."""
+    for character in name:
+        if unicodedata.category(character) == "Cf":
+            label = unicodedata.name(character, "FORMAT CHARACTER")
+            return (
+                f"Invalid account {name!r}. The character U+{ord(character):04X} ({label}) is not allowed. "
+                "New account names cannot contain format characters; retype the name without them."
+            )
+    return None
+
+
+def parse_account(name: str, roots: Collection[str] | None = None, *, creating: bool = False) -> str:
     """Validate an account name the way the loader will, or explain the rules.
 
     Engine-side because only Beancount knows what a valid account is: the root
@@ -450,7 +478,14 @@ def parse_account(name: str, roots: Collection[str] | None = None) -> str:
     from beancount.core.account import is_valid
 
     name = unicodedata.normalize("NFC", name)
-    if not is_valid(name) and not _loads_as_account(name):
+    # Existing loader-valid names remain usable, including ZWJ/ZWNJ in scripts
+    # that need them. New opens must not introduce invisible distinctions.
+    if creating and (problem := new_account_format_problem(name)) is not None:
+        raise protocol.UsageError(problem)
+    # The lexer reads a no-break space inside an account token, so the loader
+    # accepts `Expenses:Food\xa05`; an invisible character in a name is never
+    # meant (w5/490).
+    if any(character.isspace() for character in name) or (not is_valid(name) and not _loads_as_account(name)):
         raise protocol.UsageError(
             f"Invalid account {name!r}. Account names use colon-separated segments, such as Assets:Checking. "
             "The root starts with an uppercase letter; each subaccount starts with an uppercase letter or digit. "
@@ -481,6 +516,23 @@ class IncludeSpan:
     target: str
 
 
+def lexer_lines(content: bytes) -> list[bytes]:
+    """The file's lines as Beancount's lexer numbers them: split on `\\n` alone.
+
+    `bytes.splitlines()` also breaks on a lone `\\r`, so a stray carriage
+    return (pasted text, `\\r\\r\\n` endings) made a file look longer than
+    the lexer counts it. The entry being appended then sat inside the
+    "original" range: its balance failure was blamed on a plugin, its errors
+    lost `Proposed append (not written)`, and a staged pad's `Unused Pad` was
+    no longer exempt (w5/380). The reader counts this way since w5/169, and
+    the managed-include rewrites since w5/475.
+    """
+    lines = content.split(b"\n")
+    if lines and lines[-1] == b"":
+        lines.pop()
+    return lines
+
+
 def iter_includes(content: bytes) -> Iterator[IncludeSpan]:
     """Every include target the lexer sees, with spans for rewriting.
 
@@ -497,8 +549,8 @@ def iter_includes(content: bytes) -> Iterator[IncludeSpan]:
         # spaces keep the byte offsets below valid while restoring the keyword.
         content = b"   " + content[len(UTF8_BOM) :]
     starts = [0]
-    for line in content.splitlines(keepends=True):
-        starts.append(starts[-1] + len(line))
+    for line in lexer_lines(content):
+        starts.append(starts[-1] + len(line) + 1)
     pending = False
     for kind, line, text, value in lex_iter_string(content):  # type: ignore[no-untyped-call]
         if pending and kind == "STRING":

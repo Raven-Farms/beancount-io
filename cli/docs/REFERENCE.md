@@ -15,7 +15,7 @@ with its usage line, arguments, and options.
 | `--yes, -y` | flag |  | Answer confirmations with yes |
 | `--debug` | flag |  | Include exception tracebacks in errors |
 | `--strict` | flag |  | Refuse partial answers even in a terminal; --allow-errors opts in |
-| `--offline` | flag |  | Never fetch: resolve managed price includes from the local cache only, and skip the update check |
+| `--offline` | flag |  | Never fetch (except upgrade --check): reuse cached managed prices and skip background update checks |
 | `--strict-prices` | flag |  | Fail the load when a managed price source is stale or unavailable |
 | `--shell` | str |  | Completion shell: bash, zsh, fish, powershell or pwsh |
 | `--show-completion` | flag |  | Print completion script; detects the shell unless --shell is supplied |
@@ -171,7 +171,8 @@ Usage: bea price [OPTIONS]
 bea options (bea price export; read by bea, not forwarded):
 
   -o, --output DIR  Export into DIR (default: <ledger>-export/ beside the ledger).
-  --allow-errors    Export even when a managed source is unavailable.
+  --allow-errors    Export even when a managed source is unavailable (its marker only)
+                    or a URL include was refused (written as a comment).
   --force           Overwrite files already at the paths the export writes.
 
 Native interface (arguments/options are forwarded by bea):
@@ -510,7 +511,7 @@ Usage: bea add balance [OPTIONS]
 | --- | --- | --- | --- |
 | `--date` | str | required | Date in YYYY-MM-DD format |
 | `--account, -a` | str | required | Account name |
-| `--amount` | str (repeatable) | required | 'NUMBER [~ TOLERANCE] CURRENCY' (pass once) |
+| `--amount` | str | required | 'NUMBER [~ TOLERANCE] CURRENCY' (pass once) |
 | `--allow-errors` | flag |  | Allow semantic ledger errors; syntax and pad account references must be valid |
 | `--into` | path |  | Write to an included file, relative to the root ledger |
 | `--force` | flag |  | Record another assertion when the date/account already has one |
@@ -577,7 +578,7 @@ Usage: bea add price [OPTIONS]
 | --- | --- | --- | --- |
 | `--date` | str | required | Date in YYYY-MM-DD format |
 | `--currency, --commodity, -c` | str | required | Commodity being priced |
-| `--amount` | str (repeatable) | required | 'NUMBER CURRENCY' (pass once) |
+| `--amount` | str | required | 'NUMBER CURRENCY' (pass once) |
 | `--allow-errors` | flag |  | Allow semantic ledger errors; syntax and pad account references must be valid |
 | `--into` | path |  | Write to an included file, relative to the root ledger |
 | `--force` | flag |  | Record another quote when the ledger already has one for the date/commodity |
@@ -1216,7 +1217,7 @@ Usage: bea engine enable [OPTIONS] {feature}
 
 ### `bea cloud login`
 
-Log in via the browser device flow (stores credentials.json under $BEA_CONFIG_DIR, default ~/.config/bea).
+Log in by device flow; credentials.json goes in $BEA_CONFIG_DIR, $XDG_CONFIG_HOME/bea or ~/.config/bea.
 
 ```text
 Usage: bea cloud login [OPTIONS]
@@ -1248,8 +1249,8 @@ Usage: bea cloud ledger list [OPTIONS]
 
 | Option | Type | Default | Help |
 | --- | --- | --- | --- |
-| `--page` | int | 1 | 1-based page number |
-| `--limit` | int | 50 | Page size, at most 100 |
+| `--page` | int range | 1 | 1-based page number |
+| `--limit` | int range | 50 | Page size, at most 100 |
 
 ### `bea cloud ledger show`
 
@@ -1290,7 +1291,7 @@ Usage: bea cloud ledger create [OPTIONS] {name}
 | Option | Type | Default | Help |
 | --- | --- | --- | --- |
 | `--description, -d` | str |  | Ledger description |
-| `--private, --public` | flag | True | Ledger visibility |
+| `--private, --public` | flag | private | Ledger visibility |
 | `--clone` | flag |  | Clone the new ledger to disk after creating it |
 | `--dir` | path |  | Local directory for the git clone |
 

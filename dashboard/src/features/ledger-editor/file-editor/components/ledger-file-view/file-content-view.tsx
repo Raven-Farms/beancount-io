@@ -16,7 +16,8 @@ export interface FileContentViewProps {
   filePath: string;
   fileContent: NonNullable<GetLedgerFileQuery["getLedgerFile"]>;
   onSave: (content: string) => Promise<void>;
-  onDelete: () => void;
+  /** Absent when the file cannot be deleted (the ledger's root main.bean). */
+  onDelete?: () => void;
   isSaving: boolean;
   isEditMode?: boolean;
   lineNumber?: number;

@@ -1,9 +1,9 @@
 import { entriesBodySchema } from "@/features/ledger/api/rest/v1/entries-handler";
 import { parseLedgerId } from "@/shared/str";
 import {
-  sourceSliceInput,
-  sourceSliceOutput,
-  executeSourceSlice,
+  SOURCE_SLICE_OPERATION_OUTPUTS,
+  SOURCE_SLICE_OPERATION_SCHEMAS,
+  SOURCE_SLICE_EXECUTORS,
 } from "./mcp-source-slices";
 import {
   renameFileInput,
@@ -37,19 +37,19 @@ import {
   refreshManagedPricesOutput,
 } from "./mcp-managed-prices";
 import {
-  pullRequestToolInput,
+  PULL_REQUEST_OPERATION_SCHEMAS,
   pullRequestToolOutput,
-  executePullRequestTool,
+  PULL_REQUEST_EXECUTORS,
 } from "./mcp-pull-requests";
 import {
-  lifecycleToolInput,
+  LIFECYCLE_OPERATION_SCHEMAS,
   lifecycleToolOutput,
-  executeLifecycleTool,
+  LIFECYCLE_EXECUTORS,
 } from "./mcp-lifecycle";
 import {
-  collaboratorToolInput,
+  COLLABORATOR_OPERATION_SCHEMAS,
   collaboratorToolOutput,
-  executeCollaboratorTool,
+  COLLABORATOR_EXECUTORS,
 } from "./mcp-collaborators";
 import {
   listBankConnectionsDescription,
@@ -65,7 +65,7 @@ import {
   listLedgerEntriesOutput,
   executeListLedgerEntries,
 } from "./mcp-list-tools";
-import { z, type ZodTypeAny } from "zod";
+import { z, type ZodObject, type ZodTypeAny } from "zod";
 import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import {
   type McpRequestContext,
@@ -92,12 +92,7 @@ import {
   executeReadLedgerFiles,
   description as readDescription,
 } from "../tools/read-ledger-files-tool";
-import {
-  editLedgerFilesInputSchema,
-  editLedgerFilesOutputSchema,
-  executeEditLedgerFiles,
-  description as editDescription,
-} from "../tools/edit-ledger-files-tool";
+import { LEDGER_FILE_OPERATIONS } from "../tools/edit-ledger-files-tool";
 import {
   appendLedgerTextDescription,
   appendLedgerTextInputSchema,
@@ -114,16 +109,7 @@ import {
   summarizeWrite,
   withPostWriteValidation,
 } from "../tools/write-validation";
-import {
-  bankConnectionInputSchema,
-  bankConnectionOutputSchema,
-  bankImportInputSchema,
-  bankImportOutputSchema,
-  connectionDescription,
-  executeBankConnection,
-  executeBankImport,
-  importDescription,
-} from "../tools/bank-import-tool";
+import { BANK_OPERATIONS } from "../tools/bank-import-tool";
 import {
   checkLedgerDescription,
   checkLedgerInputSchema,
@@ -169,9 +155,9 @@ export interface McpToolDescriptor {
   /**
    * Selection hints published in `tools/list` (w2/m27), so clients can decide
    * what to auto-approve. Worst-case rule: the hints describe the most
-   * destructive, least idempotent operation the tool can perform — a grouped
-   * dispatcher carrying one deleting operation is destructive, even when its
-   * other operations only read. The guard test refuses a tool without hints
+   * destructive, least idempotent operation the tool can perform. Each tool
+   * performs one operation (ADR 019, 2026-10-18), so the hints describe
+   * exactly what it does. The guard test refuses a tool without hints
    * and a `readOnlyHint: true` tool whose op-class is not `read`.
    */
   readonly annotations: ToolAnnotations;
@@ -188,6 +174,36 @@ function withLedger(
     const { ledger, ...argumentsWithoutTarget } = input as { ledger?: string };
     const ledgerId = resolveMcpLedger(context, ledger);
     return execute({ ...context, ledgerId }, argumentsWithoutTarget as never);
+  };
+}
+
+/**
+ * One entry of a feature's per-operation table as its own tool (ADR 019,
+ * 2026-10-18; w1/m38): the entry supplies the schema, description, output, and
+ * handler; the tool adds its name, title, hints, and the ledger target.
+ */
+function operationTool(
+  name: string,
+  title: string,
+  operation: {
+    readonly schema: ZodObject;
+    readonly description: string;
+    readonly outputSchema: ReturnType<typeof toolOutputSchema>;
+    readonly execute: (
+      context: ToolContext,
+      input: unknown,
+    ) => Promise<unknown>;
+  },
+  annotations: ToolAnnotations,
+): McpToolDescriptor {
+  return {
+    name,
+    title,
+    annotations,
+    description: operation.description,
+    inputSchema: operation.schema.extend({ ledger: ledgerSelection }),
+    outputSchema: mcpOutputSchema(operation.outputSchema),
+    execute: withLedger(operation.execute),
   };
 }
 
@@ -219,7 +235,7 @@ const IDEMPOTENT_WRITE: ToolAnnotations = {
   idempotentHint: true,
   openWorldHint: false,
 };
-/** Worst case deletes or merges: the grouped-dispatcher default. */
+/** Deletes, overwrites, or revokes access. */
 const DESTRUCTIVE: ToolAnnotations = {
   readOnlyHint: false,
   destructiveHint: true,
@@ -231,6 +247,16 @@ const EXTERNAL_WRITE: ToolAnnotations = {
   readOnlyHint: false,
   destructiveHint: false,
   idempotentHint: false,
+  openWorldHint: true,
+};
+/** Replaces state with what the call names: repeating it changes nothing. */
+const IDEMPOTENT_DESTRUCTIVE: ToolAnnotations = {
+  ...DESTRUCTIVE,
+  idempotentHint: true,
+};
+/** A converging write that reaches an external service (a feed, a bank). */
+const EXTERNAL_IDEMPOTENT_WRITE: ToolAnnotations = {
+  ...IDEMPOTENT_WRITE,
   openWorldHint: true,
 };
 /** A destructive admin write that reaches an external service. */
@@ -347,7 +373,7 @@ export const MCP_TOOLS: readonly McpToolDescriptor[] = [
     title: "Add Structured Ledger Entries",
     annotations: APPEND,
     description:
-      "Append entries [{type,entry}] to the ledger. Supports transaction, commodity, price, note, balance, open, close, budget, document, event. Budget interval uses lowercase daily/weekly/monthly/quarterly/yearly. One posting per transaction may omit its amount and is written elided. An unbalanced transaction is refused with UNBALANCED unless allowInvalid records it deliberately. ledger is required unless pinned.",
+      "Append entries [{type,entry}] to the ledger. Supports transaction, commodity, price, note, balance, open, close, budget, document, event. Budget interval uses lowercase daily/weekly/monthly/quarterly/yearly. One posting per transaction may omit its amount and is written elided. An unbalanced transaction is refused with UNBALANCED, and entries that would add bean-check errors (a second open for an open account, a balance against an unopened account) with VALIDATION_FAILED naming each error, unless allowInvalid records them deliberately. ledger is required unless pinned.",
     inputSchema: addLedgerEntriesInput,
     outputSchema: mcpOutputSchema(
       toolOutputSchema(
@@ -499,24 +525,53 @@ export const MCP_TOOLS: readonly McpToolDescriptor[] = [
       };
     },
   },
+  operationTool(
+    "createLedgerFiles",
+    "Create Ledger Files",
+    LEDGER_FILE_OPERATIONS.create,
+    APPEND,
+  ),
+  operationTool(
+    "updateLedgerFiles",
+    "Update Ledger Files",
+    LEDGER_FILE_OPERATIONS.update,
+    IDEMPOTENT_DESTRUCTIVE,
+  ),
+  operationTool(
+    "deleteLedgerFiles",
+    "Delete Ledger Files",
+    LEDGER_FILE_OPERATIONS.delete,
+    IDEMPOTENT_DESTRUCTIVE,
+  ),
   {
-    name: "editLedgerFiles",
-    title: "Edit Ledger Files (Create / Update / Delete)",
-    annotations: DESTRUCTIVE,
-    description: editDescription,
-    inputSchema: editLedgerFilesInputSchema.extend({ ledger: ledgerSelection }),
-    outputSchema: mcpOutputSchema(editLedgerFilesOutputSchema),
-    execute: withLedger(executeEditLedgerFiles),
-  },
-  {
-    name: "editEntrySource",
-    title: "Update or Delete Entry Source",
+    name: "updateEntrySource",
+    title: "Update Entry Source",
     annotations: DESTRUCTIVE,
     description:
-      "Use operation update or delete with entryHash (listLedgerEntries' entry_hash) and sha256sum from getEntryContext; update also requires newContent. delete_many accepts only entries [{entryHash,sha256sum}]. An update returns the entry's new hash — the request's entryHash is stale after the commit, so use newEntryHash for the next edit; delete_many returns the deleted count.",
-    inputSchema: sourceSliceInput,
-    outputSchema: sourceSliceOutput,
-    execute: executeSourceSlice,
+      "Replace one entry's source text with newContent, addressed by entryHash (listLedgerEntries' entry_hash) and sha256sum from getEntryContext. Returns the entry's new hash as newEntryHash; the request's entryHash is stale after the commit.",
+    inputSchema: SOURCE_SLICE_OPERATION_SCHEMAS.update,
+    outputSchema: SOURCE_SLICE_OPERATION_OUTPUTS.update,
+    execute: SOURCE_SLICE_EXECUTORS.update,
+  },
+  {
+    name: "deleteEntrySource",
+    title: "Delete Entry Source",
+    annotations: DESTRUCTIVE,
+    description:
+      "Delete one entry's source text, addressed by entryHash (listLedgerEntries' entry_hash) and sha256sum from getEntryContext.",
+    inputSchema: SOURCE_SLICE_OPERATION_SCHEMAS.delete,
+    outputSchema: SOURCE_SLICE_OPERATION_OUTPUTS.delete,
+    execute: SOURCE_SLICE_EXECUTORS.delete,
+  },
+  {
+    name: "deleteEntrySources",
+    title: "Delete Several Entry Sources",
+    annotations: DESTRUCTIVE,
+    description:
+      "Delete several entries' source text in one commit; entries is a list of {entryHash, sha256sum}. Returns the deleted count.",
+    inputSchema: SOURCE_SLICE_OPERATION_SCHEMAS.delete_many,
+    outputSchema: SOURCE_SLICE_OPERATION_OUTPUTS.delete_many,
+    execute: SOURCE_SLICE_EXECUTORS.delete_many,
   },
   {
     name: "renameLedgerFile",
@@ -580,37 +635,64 @@ export const MCP_TOOLS: readonly McpToolDescriptor[] = [
     title: "Refresh Managed Price Feeds",
     // Re-fetches public market data: idempotent in effect, and open-world
     // because it reaches the feed's origin.
-    annotations: { ...IDEMPOTENT_WRITE, openWorldHint: true },
+    annotations: EXTERNAL_IDEMPOTENT_WRITE,
     description:
       "Re-fetch the ledger's managed price feeds now and return each source's status (the ledgerManagedPrices records). Never edits the ledger. ledger is required unless pinned.",
     inputSchema: refreshManagedPricesInput,
     outputSchema: refreshManagedPricesOutput,
     execute: executeRefreshManagedPrices,
   },
-  // Eight bank-import verbs behind one `operation` discriminator (ADR 0008 D3).
-  // A family, not a bag: same subject, same authorization class, and an agent
-  // picking one is choosing among them rather than between them and something
-  // unrelated.
-  {
-    name: "manageBankImport",
-    title: "Move Bank Transactions Into The Ledger",
-    // `discard` deletes staged transactions.
-    annotations: EXTERNAL_ADMIN,
-    description: importDescription,
-    inputSchema: bankImportInputSchema.extend({ ledger: ledgerSelection }),
-    outputSchema: mcpOutputSchema(bankImportOutputSchema),
-    execute: withLedger(executeBankImport),
-  },
-  {
-    name: "manageBankConnection",
-    title: "Manage A Linked Bank Connection",
-    annotations: EXTERNAL_ADMIN,
-    description: connectionDescription,
-    inputSchema: bankConnectionInputSchema.extend({ ledger: ledgerSelection }),
-    outputSchema: mcpOutputSchema(bankConnectionOutputSchema),
-    execute: withLedger(executeBankConnection),
-  },
-  // The ids the two tools above need, for hosts that only call tools (ADR 019
+  // One tool per bank operation (ADR 019, 2026-10-18; w1/m38), each
+  // publishing only its own fields.
+  operationTool(
+    "syncBankTransactions",
+    "Sync Bank Transactions",
+    BANK_OPERATIONS.sync,
+    EXTERNAL_WRITE,
+  ),
+  operationTool(
+    "importStagedBankTransactions",
+    "Import Staged Bank Transactions",
+    BANK_OPERATIONS.submit,
+    APPEND,
+  ),
+  operationTool(
+    "discardStagedBankTransactions",
+    "Discard Staged Bank Transactions",
+    BANK_OPERATIONS.discard,
+    DESTRUCTIVE,
+  ),
+  operationTool(
+    "reconcileBankAccounts",
+    "Reconcile Linked Bank Accounts",
+    BANK_OPERATIONS.reconcile,
+    EXTERNAL_ADMIN,
+  ),
+  operationTool(
+    "mapBankAccount",
+    "Map Bank Account To Ledger Account",
+    BANK_OPERATIONS.map_account,
+    IDEMPOTENT_DESTRUCTIVE,
+  ),
+  operationTool(
+    "setBankAccountCurrency",
+    "Set Bank Account Currency",
+    BANK_OPERATIONS.set_currency,
+    IDEMPOTENT_DESTRUCTIVE,
+  ),
+  operationTool(
+    "refreshBankConnection",
+    "Refresh Bank Connection Status",
+    BANK_OPERATIONS.refresh,
+    EXTERNAL_IDEMPOTENT_WRITE,
+  ),
+  operationTool(
+    "unlinkBankConnection",
+    "Unlink Bank Connection",
+    BANK_OPERATIONS.unlink,
+    EXTERNAL_ADMIN,
+  ),
+  // The ids the bank tools above need, for hosts that only call tools (ADR 019
   // D7). The `banks` and `bank-accounts` resources carry the same data.
   {
     name: "listBankConnections",
@@ -633,33 +715,91 @@ export const MCP_TOOLS: readonly McpToolDescriptor[] = [
     execute: withLedger(executeListStagedBankTransactions),
   },
   {
-    name: "managePullRequests",
-    title: "Create and Review Pull Requests",
-    annotations: DESTRUCTIVE,
+    name: "createPullRequest",
+    title: "Create Pull Request",
+    annotations: APPEND,
     description:
-      "Create a proposed set of file changes, approve it by merging, or reject it by closing. create requires title, description, clearCommitMessage, and changes [{path,content}]; an omitted baseBranch targets main. approve/reject require prNumber only. Reviews apply immediately.",
-    inputSchema: pullRequestToolInput,
+      "Propose a set of file changes as a pull request. Requires title, description, clearCommitMessage, and changes [{path,content}]; an omitted baseBranch targets main. A repository server failure is SERVICE_UNAVAILABLE naming the failed step.",
+    inputSchema: PULL_REQUEST_OPERATION_SCHEMAS.create,
     outputSchema: pullRequestToolOutput,
-    execute: executePullRequestTool,
+    execute: PULL_REQUEST_EXECUTORS.create,
   },
   {
-    name: "manageLedgers",
-    title: "Manage Ledger Lifecycle",
+    name: "approvePullRequest",
+    title: "Approve Pull Request",
     annotations: DESTRUCTIVE,
     description:
-      "Create, update, or delete a ledger with administrative authority. create requires name and accepts description, private, template: STARTER (default, including null) has options and accounts without transactions or opening balances; SAMPLE has demonstration transactions. Templates affect only new ledgers. update takes ledger and optional name, description, private; delete takes only ledger. Pinned credentials may omit ledger on update/delete.",
-    inputSchema: lifecycleToolInput,
+      "Approve a pull request by merging it into its base branch; the merge applies immediately. A repository server failure is SERVICE_UNAVAILABLE naming the failed step.",
+    inputSchema: PULL_REQUEST_OPERATION_SCHEMAS.approve,
+    outputSchema: pullRequestToolOutput,
+    execute: PULL_REQUEST_EXECUTORS.approve,
+  },
+  {
+    name: "rejectPullRequest",
+    title: "Reject Pull Request",
+    annotations: DESTRUCTIVE,
+    description:
+      "Reject a pull request by closing it without merging; applies immediately.",
+    inputSchema: PULL_REQUEST_OPERATION_SCHEMAS.reject,
+    outputSchema: pullRequestToolOutput,
+    execute: PULL_REQUEST_EXECUTORS.reject,
+  },
+  {
+    name: "createLedger",
+    title: "Create Ledger",
+    annotations: APPEND,
+    description:
+      "Create a ledger owned by the authenticated user. Requires name; accepts description, private, and template: STARTER (default, including null) has options and accounts without transactions or opening balances; SAMPLE has demonstration transactions.",
+    inputSchema: LIFECYCLE_OPERATION_SCHEMAS.create,
     outputSchema: lifecycleToolOutput,
-    execute: executeLifecycleTool,
+    execute: LIFECYCLE_EXECUTORS.create,
   },
   {
-    name: "manageLedgerCollaborators",
-    title: "Manage Ledger Collaborators",
+    name: "updateLedger",
+    title: "Update Ledger Settings",
+    annotations: IDEMPOTENT_DESTRUCTIVE,
+    description:
+      "Change a ledger's name, description, or privacy; omitted fields stay as they are.",
+    inputSchema: LIFECYCLE_OPERATION_SCHEMAS.update,
+    outputSchema: lifecycleToolOutput,
+    execute: LIFECYCLE_EXECUTORS.update,
+  },
+  {
+    name: "deleteLedger",
+    title: "Delete Ledger",
+    annotations: DESTRUCTIVE,
+    description: "Permanently delete a ledger, including its history.",
+    inputSchema: LIFECYCLE_OPERATION_SCHEMAS.delete,
+    outputSchema: lifecycleToolOutput,
+    execute: LIFECYCLE_EXECUTORS.delete,
+  },
+  {
+    name: "setLedgerCollaborator",
+    title: "Add or Update Ledger Collaborator",
+    annotations: IDEMPOTENT_DESTRUCTIVE,
+    description:
+      "Add a collaborator to a ledger, or change an existing collaborator's permission (read, write, or admin).",
+    inputSchema: COLLABORATOR_OPERATION_SCHEMAS.update,
+    outputSchema: collaboratorToolOutput,
+    execute: COLLABORATOR_EXECUTORS.update,
+  },
+  {
+    name: "removeLedgerCollaborator",
+    title: "Remove Ledger Collaborator",
+    annotations: DESTRUCTIVE,
+    description: "Remove a collaborator's access to a ledger.",
+    inputSchema: COLLABORATOR_OPERATION_SCHEMAS.delete,
+    outputSchema: collaboratorToolOutput,
+    execute: COLLABORATOR_EXECUTORS.delete,
+  },
+  {
+    name: "leaveLedger",
+    title: "Leave Ledger",
     annotations: DESTRUCTIVE,
     description:
-      "Update or delete a ledger collaborator, or leave the ledger as the authenticated caller. update requires collaborator and accepts permission; delete requires only collaborator; leave accepts neither.",
-    inputSchema: collaboratorToolInput,
+      "Remove the authenticated user's own access to a ledger they collaborate on.",
+    inputSchema: COLLABORATOR_OPERATION_SCHEMAS.leave,
     outputSchema: collaboratorToolOutput,
-    execute: executeCollaboratorTool,
+    execute: COLLABORATOR_EXECUTORS.leave,
   },
 ];

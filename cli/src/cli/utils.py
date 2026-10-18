@@ -108,6 +108,26 @@ def refuse_blank_filter(flag: str, value: str | None) -> None:
         raise UsageError(f"{flag} needs a non-empty value; drop {flag} to leave it unset.")
 
 
+def account_filter(flag: str, value: str | None) -> str | None:
+    """An `--account` value as it is matched: stripped, and refused when it can never match.
+
+    The blank check tested the stripped value while the raw one was matched,
+    so `-a " Assets:Cash"` matched nothing with exit 0. And Click reads
+    `-a=Food` as the value `=Food`, which no account name holds (w5/626).
+    """
+    refuse_blank_filter(flag, value)
+    if value is None:
+        return None
+    stripped = value.strip()
+    if stripped.startswith("="):
+        name = stripped.lstrip("=")
+        raise UsageError(
+            f"{flag} {value!r} starts with '=', which no account name holds: a short option takes its value "
+            f"after a space. Write -a {name} or --account={name}."
+        )
+    return stripped
+
+
 def fold_account(name: str) -> str:
     """The key two account names must share to match in a filter.
 
@@ -326,12 +346,71 @@ def atomic_write(path: Path, content: str, *, export: bool = False) -> None:
             raise AuthError(f"Output file {path} is read-only and cannot be replaced. Nothing was written.")
         raise PermissionError(f"Output file is read-only: {path}")
     creation_mode = 0o666 if export and mode is None else 0o600
+    with _unwinding_on_stop() as staged:
+        _stage_and_replace(path, content, export=export, mode=mode, creation_mode=creation_mode, staged=staged)
+
+
+class _Stopped(BaseException):
+    """SIGTERM or SIGHUP while a staged copy exists, raised so its `finally` runs."""
+
+    def __init__(self, number: int) -> None:
+        super().__init__(number)
+        self.number = number
+
+
+@contextmanager
+def _unwinding_on_stop() -> Iterator[list[Path]]:
+    """Turn SIGTERM and SIGHUP into an exception while a copy is staged, then die by the signal.
+
+    Their default disposition ended the process on the spot, so the `finally`
+    that removes the `.bea-*.tmp` copy never ran, and a stopped `format -o`
+    left a full-size copy beside its destination (w5/608). A handler someone
+    else installed is left alone, and only the main thread can install one.
+    """
+    import signal
+    import threading
+
+    staged: list[Path] = []
+    if threading.current_thread() is not threading.main_thread():
+        yield staged
+        return
+
+    def stop(number: int, _frame: Any) -> None:
+        raise _Stopped(number)
+
+    installed: list[tuple[int, Any]] = []
+    for name in ("SIGTERM", "SIGHUP"):
+        number = getattr(signal, name, None)
+        if number is not None and signal.getsignal(number) is signal.SIG_DFL:
+            installed.append((number, signal.signal(number, stop)))
+    try:
+        yield staged
+    except _Stopped as stopped:
+        # A stop between creating the copy and guarding it removes it here.
+        for candidate in staged:
+            candidate.unlink(missing_ok=True)
+        # The copy is gone; end the way the signal would have, status and all.
+        for number, previous in installed:
+            signal.signal(number, previous)
+        os.kill(os.getpid(), stopped.number)
+        raise SystemExit(128 + stopped.number) from None
+    finally:
+        for number, previous in installed:
+            signal.signal(number, previous)
+
+
+def _stage_and_replace(
+    path: Path, content: str, *, export: bool, mode: int | None, creation_mode: int, staged: list[Path]
+) -> None:
     while True:
         candidate = path.parent / f".bea-{secrets.token_hex(8)}.tmp"
+        staged.append(candidate)
         try:
             fd = os.open(candidate, os.O_RDWR | os.O_CREAT | os.O_EXCL, creation_mode)
             break
         except FileExistsError:
+            # Someone else's file: never ours to remove on a stop.
+            staged.remove(candidate)
             continue
         except PermissionError as exc:
             if not export:
@@ -340,6 +419,14 @@ def atomic_write(path: Path, content: str, *, export: bool = False) -> None:
             # user chose rather than the hidden staging file beside it (w5/119).
             raise AuthError(
                 f"Cannot write {path}: the directory {path.parent} is not writable. Nothing was written."
+            ) from exc
+        except OSError as exc:
+            if not export:
+                raise
+            # A full disk refused the copy itself: the stdout sentence, "Could
+            # not write output", named no file and not that nothing was written (w5/610).
+            raise LedgerError(
+                f"Cannot write {path} ({exc.strerror or type(exc).__name__}); nothing was written."
             ) from exc
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as stream:

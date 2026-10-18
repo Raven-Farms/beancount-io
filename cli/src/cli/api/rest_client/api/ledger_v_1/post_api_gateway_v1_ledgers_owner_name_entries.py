@@ -120,8 +120,10 @@ def sync_detailed(
 
      Appends one or more Beancount directives, routed to the right file by type and date and committed as
     a single commit. All-or-nothing: if any directive fails, none are written. A transaction whose
-    residual is outside the ledger's tolerance is refused with UNBALANCED unless allowInvalid records it
-    deliberately; one posting per transaction may omit its amount and is written elided.
+    residual is outside the ledger's tolerance is refused with UNBALANCED, and directives that would add
+    bean-check errors (a second open for an open account, a balance against an unopened account) are
+    refused with VALIDATION_FAILED naming each new error; allowInvalid records either deliberately. One
+    posting per transaction may omit its amount and is written elided.
 
     Args:
         owner (str): Ledger owner's username Example: alice.
@@ -160,8 +162,10 @@ def sync(
 
      Appends one or more Beancount directives, routed to the right file by type and date and committed as
     a single commit. All-or-nothing: if any directive fails, none are written. A transaction whose
-    residual is outside the ledger's tolerance is refused with UNBALANCED unless allowInvalid records it
-    deliberately; one posting per transaction may omit its amount and is written elided.
+    residual is outside the ledger's tolerance is refused with UNBALANCED, and directives that would add
+    bean-check errors (a second open for an open account, a balance against an unopened account) are
+    refused with VALIDATION_FAILED naming each new error; allowInvalid records either deliberately. One
+    posting per transaction may omit its amount and is written elided.
 
     Args:
         owner (str): Ledger owner's username Example: alice.
@@ -195,8 +199,10 @@ async def asyncio_detailed(
 
      Appends one or more Beancount directives, routed to the right file by type and date and committed as
     a single commit. All-or-nothing: if any directive fails, none are written. A transaction whose
-    residual is outside the ledger's tolerance is refused with UNBALANCED unless allowInvalid records it
-    deliberately; one posting per transaction may omit its amount and is written elided.
+    residual is outside the ledger's tolerance is refused with UNBALANCED, and directives that would add
+    bean-check errors (a second open for an open account, a balance against an unopened account) are
+    refused with VALIDATION_FAILED naming each new error; allowInvalid records either deliberately. One
+    posting per transaction may omit its amount and is written elided.
 
     Args:
         owner (str): Ledger owner's username Example: alice.
@@ -233,8 +239,10 @@ async def asyncio(
 
      Appends one or more Beancount directives, routed to the right file by type and date and committed as
     a single commit. All-or-nothing: if any directive fails, none are written. A transaction whose
-    residual is outside the ledger's tolerance is refused with UNBALANCED unless allowInvalid records it
-    deliberately; one posting per transaction may omit its amount and is written elided.
+    residual is outside the ledger's tolerance is refused with UNBALANCED, and directives that would add
+    bean-check errors (a second open for an open account, a balance against an unopened account) are
+    refused with VALIDATION_FAILED naming each new error; allowInvalid records either deliberately. One
+    posting per transaction may omit its amount and is written elided.
 
     Args:
         owner (str): Ledger owner's username Example: alice.

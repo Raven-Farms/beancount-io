@@ -1360,6 +1360,13 @@ export interface JournalBalancePublic {
   account: string;
   /** Difference amount */
   diff_amount?: JournalAmountPublic | null;
+  /** Asserted amount */
+  amount: JournalAmountPublic;
+  /**
+   * Tolerance
+   * Explicit tolerance from a `~` annotation
+   */
+  tolerance?: string | null;
 }
 
 /**

@@ -42,6 +42,10 @@ reads and parses once without having to know the outcome first:
 
 `data` is per-command; `engine`, `command` and `ok` are always present, and
 exactly one of `data` or `error` accompanies them.
+Argument-parser refusals, including unknown commands, answer with
+`command: "usage"`, a `usage` error, and exit 2 before any command body runs.
+A writer that produces no envelope still has an unknown outcome, even at
+exit 2: a plugin may have changed files before exiting with that status.
 
 **stderr** is unstructured diagnostics — progress notes, loader warnings, and
 whatever the engine's own dependencies print. It is never parsed and never
@@ -152,6 +156,9 @@ reporting the errors in `ledger_errors`. A `balance` with `pad_from` writes both
 directives atomically and answers `{"written": 2, "directive": {...}, "pad": {...}}`:
 the assertion and the inserted pad in the `list balance`/`list pad` model
 shape. Every other `balance` answer carries `"pad": null`.
+`pad_date_explicit` records whether the caller supplied the pad date, so a
+refusal can distinguish changing `--pad-date` from moving a derived date with
+the balance. It defaults to false when omitted.
 
 ```zsh
 bea-engine add --file main.bean --type transaction --request '{

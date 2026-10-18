@@ -16,6 +16,11 @@ const bgGeneralSettingsSection: Record<string, TranslationEntry> = {
     message: "Това име ще се показва в цялото приложение",
     description: "Help text for ledger name field",
   },
+  "page.settings.ledgerNameTaken": {
+    message: "Вече съществува книга с име {name}.",
+    description:
+      "Rename refusal when another ledger of the same owner already has the name; {name} is the slug",
+  },
   "page.settings.generalSettings": {
     message: "Общи настройки",
     description: "Section title for general settings",

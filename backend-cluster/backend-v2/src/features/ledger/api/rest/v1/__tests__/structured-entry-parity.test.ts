@@ -111,7 +111,12 @@ async function fixture(
   }[][] = [[], []],
 ) {
   const committed: unknown[] = [];
-  const state = { writable: true, failCommit: false, unbalanced: false };
+  const state = {
+    writable: true,
+    failCommit: false,
+    unbalanced: false,
+    wouldBreak: false,
+  };
   const errorCalls = { count: 0 };
   const envelope = (data: unknown) => ({ data: { success: true, data } });
   const write = jest.fn(async (_owner, _name, body) => {
@@ -126,6 +131,20 @@ async function fixture(
           details: { residual: "5 USD", entry: 0 },
         },
       );
+    // The ledger service's pre-commit check (w0/m2): entries that would add
+    // bean-check errors are refused unless the caller records them anyway.
+    if (state.wouldBreak && body.allowInvalid !== true) {
+      const detail = "Duplicate open directive for Assets:Cash (main.bean:74)";
+      throw new FavaApiError(
+        `adding these entries would introduce 1 new bean-check error: ${detail}`,
+        400,
+        {
+          error: `adding these entries would introduce 1 new bean-check error: ${detail}`,
+          code: "NEW_LEDGER_ERRORS",
+          details: { count: 1, detail },
+        },
+      );
+    }
     committed.push(...body.entries);
     return envelope(null);
   });
@@ -476,6 +495,105 @@ describe.each(["rest", "gql", "mcp"])(
   },
 );
 
+// A second `open` for an account the ledger already opens: the ledger service
+// refuses it before committing, and every surface must say so the same way
+// (w0/m2). The refusal's source is the ledger client, so this proves the
+// adapters, not the engine's diagnosis (ledger `entries-new-errors.test.ts`).
+const duplicateOpenBatch = [
+  {
+    type: "open",
+    entry: { date, account: "Assets:Cash", currencies: ["USD"] },
+  },
+] as unknown as LedgerEntryInput[];
+
+describe.each(["rest", "gql", "mcp"])(
+  "entries that would break the ledger via %s",
+  (surface) => {
+    it("refuses them with VALIDATION_FAILED and writes nothing", async () => {
+      const f = await fixture();
+      f.state.wouldBreak = true;
+      try {
+        const result = await f.call(surface, duplicateOpenBatch);
+        expect(result.success).toBe(false);
+        expect(f.committed).toEqual([]);
+        const named = "Duplicate open directive for Assets:Cash (main.bean:74)";
+        if (surface === "rest") {
+          // Apps read the named errors from `newLedgerErrors`, not the prose.
+          expect(result.result).toMatchObject({
+            ok: false,
+            error: {
+              code: "VALIDATION_FAILED",
+              message: expect.stringContaining(named),
+              metadata: { field: "entries", newLedgerErrors: named },
+            },
+          });
+        } else if (surface === "gql") {
+          // Raw `graphql()` bypasses Apollo's formatError, which merges this
+          // metadata into `extensions`; the category mapping is proven by the
+          // REST and MCP envelopes above and below.
+          const refusal = (result.errors ?? []).find((error) =>
+            String(error.message).includes(named),
+          );
+          expect(
+            (refusal?.originalError as { metadata?: unknown } | undefined)
+              ?.metadata,
+          ).toMatchObject({ field: "entries", newLedgerErrors: named });
+        } else {
+          expect(result.full).toMatchObject({
+            ok: false,
+            error: {
+              code: "VALIDATION_FAILED",
+              message: expect.stringContaining(named),
+              hint: expect.stringContaining("allowInvalid: true"),
+            },
+          });
+        }
+      } finally {
+        await f.close();
+      }
+    });
+
+    it("records them with allowInvalid and reports the new error", async () => {
+      const f = await fixture(identity, [
+        [],
+        [
+          {
+            message: "Duplicate open directive for Assets:Cash",
+            source: { filename: "main.bean", lineno: 74 },
+          },
+        ],
+      ]);
+      f.state.wouldBreak = true;
+      try {
+        const result = await f.call(surface, duplicateOpenBatch, {
+          allowInvalid: true,
+        });
+        expect(result.success).toBe(true);
+        expect(f.committed).toHaveLength(1);
+        expect(f.write.mock.calls[0]?.[2]).toMatchObject({
+          allowInvalid: true,
+        });
+        if (surface === "mcp") {
+          expect(result.result).toMatchObject({
+            validation: {
+              errorsBefore: 0,
+              errorsAfter: 1,
+              newErrors: [
+                {
+                  message: "Duplicate open directive for Assets:Cash",
+                  source: "main.bean:74",
+                },
+              ],
+            },
+          });
+        }
+      } finally {
+        await f.close();
+      }
+    });
+  },
+);
+
 describe.each(["rest", "gql", "mcp"])("elided postings via %s", (surface) => {
   const elidedBatch = [
     {
@@ -639,3 +757,121 @@ it("refuses non-string transaction metadata before writing", async () => {
     }
   }
 });
+
+describe.each(["rest", "gql", "mcp"])(
+  "malformed amounts via %s (w3/641)",
+  (surface) => {
+    const posting = (number: string) => ({
+      account: "Expenses:Food",
+      units: { number, currency: "USD" },
+    });
+    const cases: Array<[string, LedgerEntryInput, string]> = [
+      [
+        "a parenthesized posting",
+        {
+          type: "transaction",
+          entry: {
+            date,
+            flag: "*",
+            narration: "Food",
+            postings: [posting("(12.50)"), { account: "Assets:Cash" }],
+          },
+        } as LedgerEntryInput,
+        'entry 0: postings[0].units.number "(12.50)" is not a decimal number',
+      ],
+      [
+        "a grouped posting",
+        {
+          type: "transaction",
+          entry: {
+            date,
+            flag: "*",
+            narration: "Food",
+            postings: [posting("-1,234.56"), posting("1,234.56")],
+          },
+        } as LedgerEntryInput,
+        'entry 0: postings[0].units.number "-1,234.56" is not a decimal number',
+      ],
+      [
+        "a balance",
+        {
+          type: "balance",
+          entry: {
+            date,
+            account: "Assets:Cash",
+            amount: { number: "abc", currency: "USD" },
+          },
+        } as LedgerEntryInput,
+        'entry 0: amount.number "abc" is not a decimal number',
+      ],
+      [
+        "a price",
+        {
+          type: "price",
+          entry: {
+            date,
+            currency: "XYZ",
+            amount: { number: "$4.50", currency: "USD" },
+          },
+        } as LedgerEntryInput,
+        'entry 0: amount.number "$4.50" is not a decimal number',
+      ],
+      [
+        "a budget",
+        {
+          type: "budget",
+          entry: {
+            date,
+            account: "Expenses:Food",
+            interval: "monthly",
+            amount: { number: "1.000,00", currency: "EUR" },
+          },
+        } as unknown as LedgerEntryInput,
+        'entry 0: amount.number "1.000,00" is not a decimal number',
+      ],
+    ];
+
+    it.each(cases)(
+      "refuses %s as bad input naming the field, writing nothing",
+      async (_name, entry, message) => {
+        const f = await fixture();
+        try {
+          const result = await f.call(surface, [entry]);
+          expect(result.success).toBe(false);
+          expect(f.write).not.toHaveBeenCalled();
+          expect(f.committed).toEqual([]);
+          const text = JSON.stringify(
+            "errors" in result ? result.errors : result,
+          );
+          expect(text).toContain(JSON.stringify(message).slice(1, -1));
+          expect(text).not.toMatch(
+            /SERVICE_UNAVAILABLE|temporarily unavailable/,
+          );
+        } finally {
+          await f.close();
+        }
+      },
+    );
+
+    it.each(["-3.21", "1e-7"])("still writes %s", async (number) => {
+      const f = await fixture();
+      try {
+        const result = await f.call(surface, [
+          {
+            type: "transaction",
+            entry: {
+              date,
+              flag: "*",
+              narration: "Food",
+              postings: [posting(number), { account: "Assets:Cash" }],
+            },
+          } as LedgerEntryInput,
+        ]);
+        expect(result.success).toBe(true);
+        expect(f.committed).toHaveLength(1);
+      } finally {
+        await f.close();
+      }
+    });
+  },
+);

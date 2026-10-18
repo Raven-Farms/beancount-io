@@ -70,7 +70,7 @@ def test_print_mode_spends_the_budget_it_declares(ledger: Path, logged_in: None)
     class _Recording:
         def run_sync(self, *args: object, **kwargs: object) -> object:
             seen.update(kwargs)
-            return type("R", (), {"output": "ok"})()
+            return type("R", (), {"output": "ok", "all_messages": lambda self: []})()
 
     with patch("cli.ask.agent.make_agent", return_value=_Recording()):
         result = CliRunner().invoke(app, ["--file", str(ledger), "ask", "hi", "--print"])

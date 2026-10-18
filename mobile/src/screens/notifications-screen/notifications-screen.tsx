@@ -27,8 +27,13 @@ import {
   formatCommitAuthorLine,
   formatShortSha,
   LedgerError,
+  splitCommitMessage,
 } from "./formatting";
-import { LEADING_TEXT_ALIGN, directionalIcon } from "@/common/rtl";
+import {
+  directionalIcon,
+  LEADING_TEXT_ALIGN,
+  letterSpacing,
+} from "@/common/rtl";
 import { CardLoadFailure } from "@/components/card-load-failure";
 import { selectCardLoadState } from "@/common/apollo/card-load-state";
 
@@ -48,7 +53,7 @@ const getStyles = (theme: ColorTheme) =>
       fontWeight: "600",
       color: theme.black80,
       textTransform: "uppercase",
-      letterSpacing: 0.5,
+      letterSpacing: letterSpacing(0.5),
       paddingHorizontal: 16,
       paddingTop: 20,
       paddingBottom: 8,
@@ -217,7 +222,12 @@ function NotificationsScreenImpl(): JSX.Element {
     fetchPolicy: "cache-and-network",
   });
 
-  const commits = commitsData?.listCommits ?? [];
+  // Rows show the subject line only: git messages end in a newline, which
+  // filled the two-line slot with a blank line (w0/032).
+  const commits = (commitsData?.listCommits ?? []).map((commit) => ({
+    ...commit,
+    subject: splitCommitMessage(commit.message).subject,
+  }));
   const { errorsPending, commitsPending } = selectSectionsPending({
     errorsLoaded,
     commitsLoading,
@@ -309,7 +319,7 @@ function NotificationsScreenImpl(): JSX.Element {
                       style={styles.changeRow}
                       activeOpacity={0.7}
                       accessibilityRole="button"
-                      accessibilityLabel={commit.message}
+                      accessibilityLabel={commit.subject}
                       onPress={() =>
                         router.push({
                           pathname: "/(app)/commit-detail",
@@ -321,7 +331,7 @@ function NotificationsScreenImpl(): JSX.Element {
                     >
                       <View style={styles.changeContent}>
                         <Text style={styles.changeMessage} numberOfLines={2}>
-                          {commit.message}
+                          {commit.subject}
                         </Text>
                         <Text style={styles.changeMeta}>
                           {formatCommitAuthorLine(

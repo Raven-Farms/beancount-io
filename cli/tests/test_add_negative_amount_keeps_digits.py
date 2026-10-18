@@ -96,10 +96,12 @@ def test_a_repeating_quotient_keeps_beancounts_reading_beside_a_wide_number(tmp_
     assert f" -0.{'3' * 28} SHIB" in written
 
 
-def test_an_inferred_leg_beside_a_wide_number_is_a_usage_error(tmp_path: Path) -> None:
+def test_an_inferred_leg_beside_a_wide_number_is_refused_at_its_line(tmp_path: Path) -> None:
+    """Booking now reports the transaction instead of raising, so the refusal is a validation (w5/538)."""
     result = _transaction(tmp_path, f"Assets:Wallet {WIDE} SHIB", "Equity:Opening")
 
-    assert result.returncode == 2, result.stdout + result.stderr
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert "Proposed append (not written): Beancount cannot book this transaction" in result.stderr
     assert "28 significant digits" in result.stderr
     assert "InvalidOperation" not in result.stdout + result.stderr
     assert _written(tmp_path) == ""

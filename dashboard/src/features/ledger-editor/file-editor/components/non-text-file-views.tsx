@@ -18,6 +18,7 @@ import {
   Download,
   Trash2,
   EllipsisVertical,
+  Lock,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -42,7 +43,8 @@ import { restoreFocusOnDialogClose } from "@/common/lib/focus/restore-focus-on-d
 export interface NonTextFileViewProps {
   filePath: string;
   fileContent: NonNullable<GetLedgerFileQuery["getLedgerFile"]>;
-  onDelete: () => void;
+  /** Absent when the file cannot be deleted (the ledger's root main.bean). */
+  onDelete?: () => void;
 }
 
 interface FileMetadataBarProps {
@@ -53,7 +55,8 @@ interface FileActionButtonsProps {
   filename: string;
   fileContent: NonNullable<GetLedgerFileQuery["getLedgerFile"]>;
   onDownload: () => void;
-  onDelete: () => void;
+  /** Absent when the file cannot be deleted (the ledger's root main.bean). */
+  onDelete?: () => void;
   canEdit?: boolean;
   onEdit?: () => void;
 }
@@ -112,7 +115,7 @@ export const FileActionButtons = ({
 
   const handleConfirmDelete = () => {
     deleteConfirmedRef.current = true;
-    onDelete();
+    onDelete?.();
     setIsDeleteDialogOpen(false);
   };
 
@@ -162,13 +165,28 @@ export const FileActionButtons = ({
               </DropdownMenuItem>
               <LedgerWritePermission>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  variant="destructive"
-                  onClick={handleDeleteClick}
-                >
-                  <Trash2 className="h-4 w-4" />
-                  {t("common.delete")}
-                </DropdownMenuItem>
+                {onDelete ? (
+                  <DropdownMenuItem
+                    variant="destructive"
+                    onClick={handleDeleteClick}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    {t("common.delete")}
+                  </DropdownMenuItem>
+                ) : (
+                  // The server always refuses; say why instead of offering it.
+                  <DropdownMenuItem disabled className="items-start">
+                    <Lock className="mt-0.5 h-4 w-4" />
+                    <span className="flex flex-col">
+                      <span>{t("common.delete")}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {t("ledgerEditor.rootFileCannotBeDeleted", {
+                          filename,
+                        })}
+                      </span>
+                    </span>
+                  </DropdownMenuItem>
+                )}
               </LedgerWritePermission>
             </DropdownMenuContent>
           </DropdownMenu>

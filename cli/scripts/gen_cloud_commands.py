@@ -165,7 +165,15 @@ def emit_command(cmd: Command, spec: dict[str, Any]) -> str:
         if default is None:
             fail(f"operation '{cmd.operation_id}' query param '{param['name']}' needs a CLI default in the registry")
         help_ = esc(param["description"])
-        signature.append(f'    {py_name}: Annotated[int, typer.Option("--{py_name}", help="{help_}")] = {default},')
+        schema = param.get("schema", {})
+        bounds = "".join(
+            f", {option}={schema[key]!r}"
+            for key, option in (("minimum", "min"), ("maximum", "max"))
+            if schema.get(key) is not None
+        )
+        signature.append(
+            f'    {py_name}: Annotated[int, typer.Option("--{py_name}", help="{help_}"{bounds})] = {default},'
+        )
         call_args.append(f"{py_name}={py_name}")
 
     fn = f"{cmd.group}_{cmd.name}"
@@ -202,14 +210,15 @@ def emit_command(cmd: Command, spec: dict[str, Any]) -> str:
     else:
         lines.append("    import httpx")
         lines.append("")
-        lines.append("    from cli.errors import UnreadableSuccess, unknown_write_outcome")
+        lines.append("    from cli.errors import GatewayTimeout, UnreadableSuccess, unknown_write_outcome")
         lines.append("")
         lines.append("    try:")
         lines.append(f"        result = unwrap({call})")
-        lines.append("    except (httpx.ConnectError, httpx.ConnectTimeout):")
-        lines.append("        # No request left the machine, so nothing happened: not unknown.")
+        lines.append("    except (httpx.ConnectError, httpx.ConnectTimeout, httpx.ProxyError):")
+        lines.append("        # No request left the machine (or the proxy), so nothing happened: not unknown.")
         lines.append("        raise")
-        lines.append("    except (httpx.TimeoutException, httpx.TransportError, UnreadableSuccess) as e:")
+        unknown = "httpx.TimeoutException, httpx.TransportError, UnreadableSuccess, GatewayTimeout"
+        lines.append(f"    except ({unknown}) as e:")
         lines.append(f'        raise unknown_write_outcome(f"{esc(cmd.write_action or "")}", e) from e')
 
     lines.append("    data = result if isinstance(result, list) else [result]")

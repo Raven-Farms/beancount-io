@@ -216,11 +216,17 @@ describe("csv-validator", () => {
       expect(parseAmount("-1,234.56")).toEqual({
         valid: true,
         amount: -1234.56,
+        decimal: "-1234.56",
       });
-      expect(parseAmount("1,000")).toEqual({ valid: true, amount: 1000 });
+      expect(parseAmount("1,000")).toEqual({
+        valid: true,
+        amount: 1000,
+        decimal: "1000",
+      });
       expect(parseAmount("12,34,567.50")).toEqual({
         valid: true,
         amount: 1234567.5,
+        decimal: "1234567.50",
       });
       // A comma that is not a group in a point-decimal column is refused
       // rather than deleted, which would multiply the amount.
@@ -229,27 +235,26 @@ describe("csv-validator", () => {
     });
 
     it("accepts the bank spellings the CLI importer accepts (w0/007)", () => {
-      expect(parseAmount("$1,000.00")).toEqual({ valid: true, amount: 1000 });
-      expect(parseAmount("$4.50")).toEqual({ valid: true, amount: 4.5 });
-      expect(parseAmount("(12.00)")).toEqual({ valid: true, amount: -12 });
-      expect(parseAmount("4.50-")).toEqual({ valid: true, amount: -4.5 });
-      expect(parseAmount("$(1,234.56)")).toEqual({
-        valid: true,
-        amount: -1234.56,
-      });
-      expect(parseAmount("\u221212.00")).toEqual({ valid: true, amount: -12 });
-      expect(parseAmount("€ 4,50", { decimalComma: true })).toEqual({
-        valid: true,
-        amount: 4.5,
-      });
-      expect(parseAmount("1.000,00", { decimalComma: true })).toEqual({
-        valid: true,
-        amount: 1000,
-      });
-      expect(parseAmount("-4,50", { decimalComma: true })).toEqual({
-        valid: true,
-        amount: -4.5,
-      });
+      // `decimal` is what an import writes: the cell's digits, normalized.
+      for (const [token, amount, decimal, decimalComma] of [
+        ["$1,000.00", 1000, "1000.00", false],
+        ["$4.50", 4.5, "4.50", false],
+        ["(12.00)", -12, "-12.00", false],
+        ["4.50-", -4.5, "-4.50", false],
+        ["$(1,234.56)", -1234.56, "-1234.56", false],
+        ["\u221212.00", -12, "-12.00", false],
+        ["€ 4,50", 4.5, "4.50", true],
+        ["1.000,00", 1000, "1000.00", true],
+        ["-4,50", -4.5, "-4.50", true],
+        // Three digits after a point in a comma column are a group.
+        ["-1.000", -1000, "-1000", true],
+      ] as const) {
+        expect(parseAmount(token, { decimalComma }), token).toEqual({
+          valid: true,
+          amount,
+          decimal,
+        });
+      }
     });
 
     it("refuses an amount marked negative twice", () => {
@@ -264,8 +269,16 @@ describe("csv-validator", () => {
     });
 
     it("accepts fractional and signed scientific forms", () => {
-      expect(parseAmount(".5")).toEqual({ valid: true, amount: 0.5 });
-      expect(parseAmount("+2.5e1")).toEqual({ valid: true, amount: 25 });
+      expect(parseAmount(".5")).toEqual({
+        valid: true,
+        amount: 0.5,
+        decimal: "0.5",
+      });
+      expect(parseAmount("+2.5e1")).toEqual({
+        valid: true,
+        amount: 25,
+        decimal: "25",
+      });
     });
 
     it("rejects tokens whose Number conversion changes the exact decimal value", () => {
@@ -345,6 +358,22 @@ describe("csv-validator", () => {
       expect(row.amountInput).toBe("0.123456789012345678");
       expect(row.amountFailureReason).toBe("unsupported-precision");
       expect(row.errors).toEqual(["Amount has unsupported precision"]);
+    });
+
+    it("refuses any amount in a mixed-decimal column and keeps the mark", () => {
+      const row = buildParsedRow(
+        {
+          date: "2026-09-01",
+          payee: "QA Mixed",
+          description: "Mixed column",
+          amountInput: "1,234.56",
+        },
+        { decimalMixed: true },
+      );
+      expect(row.amount).toBe(0);
+      expect(row.amountFailureReason).toBe("invalid");
+      expect(row.decimalMixed).toBe(true);
+      expect(row.errors?.join(" ")).toMatch(/mixes point decimals/);
     });
   });
 

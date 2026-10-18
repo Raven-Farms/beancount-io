@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import datetime
 import difflib
+import errno
 import fnmatch
 import glob
 import hashlib
 import logging
+import operator
 import os
 import re
 import secrets
@@ -24,8 +27,15 @@ from pathlib import Path
 from typing import Any
 
 from bea_engine import stopping
-from bea_engine.ledger.text import single_line
-from bea_engine.protocol import AuthError, ConflictError, LedgerError, UsageError, note, notice
+from bea_engine.ledger.text import (
+    bea_command,
+    escape_format_characters,
+    lexer_lines,
+    new_account_format_problem,
+    single_line,
+)
+from bea_engine.paths import expand_path
+from bea_engine.protocol import AuthError, ConflictError, LedgerError, StagingFailed, UsageError, notice
 from bea_engine.query import format_error, same_file
 
 
@@ -38,14 +48,25 @@ def cache_dir() -> Path:
     requires: it would resolve against whatever directory a command ran from,
     and the managed price cache writes this path into staged includes.
     """
-    xdg = Path(os.environ.get("XDG_CACHE_HOME") or "").expanduser()
+    xdg = expand_path(Path(os.environ.get("XDG_CACHE_HOME") or ""), "$XDG_CACHE_HOME")
     base = xdg if xdg.is_absolute() else Path.home() / ".cache"
     return base / "bea"
 
 
 def destination(root: Path, into: Path | None = None) -> Path:
-    """Destinations are relative to the root ledger, independently of cwd."""
-    return (root.parent / into.expanduser()).resolve() if into is not None else root.resolve()
+    """Destinations are relative to the root ledger, independently of cwd.
+
+    A file `--into` creates takes the NFC spelling of its name, as new
+    directives do: one typed NFD (pasted from Finder) was created NFD, and the
+    next keyboard-typed `--into` was refused as a respelling (w5/536).
+    Directories keep the spelling they have on disk.
+    """
+    if into is None:
+        return root.resolve()
+    target = root.parent / expand_path(into, "--into")
+    if not (target.exists() or target.is_symlink()):
+        target = target.with_name(unicodedata.normalize("NFC", target.name))
+    return target.resolve()
 
 
 def _includes(content: bytes) -> Iterator[tuple[int, int, str]]:
@@ -91,6 +112,8 @@ class LedgerSnapshot:
     def capture(cls, root: Path) -> LedgerSnapshot:
         # Lexical, like Beancount's loader: a symlinked root's includes sit
         # beside the link, not beside its target (w1/056).
+        from beancount.utils.encryption import is_encrypted_file
+
         from bea_engine.managed_prices import is_url_include_target
 
         snapshot = cls(Path(os.path.abspath(root)))
@@ -131,6 +154,10 @@ class LedgerSnapshot:
                     f"Included file '{path}' (included from '{includers[path]}') is not readable: {reason}. "
                     "Correct the file or its permissions, or remove the include."
                 ) from None
+            if is_encrypted_file(str(path)):
+                # Retain ciphertext for conflict checks and staged loads, but
+                # never interpret it as source text (w5/671).
+                continue
             for _, _, name in _includes(content):
                 if is_url_include_target(name):
                     # A URL is a managed price request or a refusal the load
@@ -150,7 +177,7 @@ class LedgerSnapshot:
                 pending.extend(matches)
         return snapshot
 
-    def require_target(self, target: Path) -> bytes:
+    def require_target(self, target: Path, *, into: Path | None = None) -> bytes:
         """Register an included destination without creating it; return its frozen bytes."""
         from bea_engine.managed_price_cache import managed_source_for_path
 
@@ -180,6 +207,14 @@ class LedgerSnapshot:
         if matching:
             if resolved.exists() or resolved.is_symlink():
                 raise ConflictError(f"The ledger changed during the operation: {resolved}. Nothing was written; retry.")
+            # A new file is created, its directory never is; found only when
+            # staging, that read as an internal failure, exit 1 (w5/492).
+            if not resolved.parent.is_dir():
+                state = "is not a directory" if resolved.parent.exists() else "does not exist"
+                raise UsageError(
+                    f"Write destination {target}: directory {resolved.parent} {state}. Create it first; bea "
+                    "creates only the file. Nothing was written."
+                )
             self.contents[resolved] = b""
             self.stats[resolved] = None
             for pattern in matching:
@@ -192,14 +227,34 @@ class LedgerSnapshot:
                 f"or Unicode form, and the include pattern matches only that spelling. "
                 f"{self._respelling(claimed, resolved)} Nothing was written."
             )
+        base = f"A relative --into path is based on {self.root.parent}, the root ledger's directory."
+        correction = self._cwd_into_hint(into)
+        if correction is not None:
+            raise UsageError(
+                f"Write destination {target} is not included by {self.root}. {base} {correction} Nothing was written."
+            )
         if not resolved.parent.is_dir():
             raise UsageError(
-                f"Write destination directory {resolved.parent} does not exist. Create the directory first."
+                f"Write destination directory {resolved.parent} does not exist. {base} Create the directory first."
             )
         raise UsageError(
             f"Write destination {target} is not included by {self.root}. "
-            "Create it and add an include directive to the root first."
+            f"{base} Create it and add an include directive to the root first."
         )
+
+    def _cwd_into_hint(self, into: Path | None) -> str | None:
+        """A root-relative correction when interpreting the path from cwd names a ledger member."""
+        if into is None or expand_path(into, "--into").is_absolute():
+            return None
+        try:
+            alternative = Path.cwd() / expand_path(into, "--into")
+        except (OSError, ValueError):
+            return None
+        for member in self.contents:
+            if same_file(alternative, member):
+                relative = os.path.relpath(member, self.root.parent)
+                return f"Did you mean --into {shlex.quote(relative)}?"
+        return None
 
     def _respelling(self, accepted: Path, given: Path) -> str:
         """Which spelling `--into` takes: the include's, relative to the root, which is what bea matches.
@@ -209,7 +264,13 @@ class LedgerSnapshot:
         identical in a terminal, so it is named too (w5/434).
         """
         spelled = os.path.relpath(accepted, self.root.parent)
-        advice = f"Pass --into {shlex.quote(spelled)} as the include line spells it."
+        # A file an include glob matched is named by the disk, not by any
+        # include line, which says only `Ausgaben/*.bean` (w5/536).
+        globbed = any(
+            accepted in matches and any(mark in pattern for mark in "*?[") for pattern, matches in self.patterns.items()
+        )
+        source = "the file is named on disk" if globbed else "the include line spells it"
+        advice = f"Pass --into {shlex.quote(spelled)} as {source}."
         if unicodedata.normalize("NFC", str(accepted)) == unicodedata.normalize("NFC", str(given)):
             if unicodedata.normalize("NFC", spelled) == spelled:
                 form = "NFC"
@@ -217,7 +278,8 @@ class LedgerSnapshot:
                 form = "NFD"
             else:
                 form = "mixed"
-            advice += f" The two differ only in Unicode form; the include line is {form}."
+            where = "the file's name" if globbed else "the include line"
+            advice += f" The two differ only in Unicode form; {where} is {form}."
         return advice
 
     def _glob_claim_in_another_spelling(self, resolved: Path) -> Path | None:
@@ -276,7 +338,9 @@ class LedgerSnapshot:
             for _, _, name in _includes(content):
                 for match in self.patterns.get(str(path.parent / name), ()):
                     included_by.setdefault(match, set()).add(path)
-        found = {path for path in self.contents if path.resolve() == target}
+        # Every name the file goes by, a case variant or a link as much as its
+        # own: the one the load keeps first may not be the one written to.
+        found = {path for path in self.contents if self._stands_for(path, target)}
         pending = list(found)
         while pending:
             for parent in included_by.get(pending.pop(), ()):
@@ -284,6 +348,11 @@ class LedgerSnapshot:
                     found.add(parent)
                     pending.append(parent)
         return found
+
+    def _identity(self, path: Path) -> tuple[int, int] | None:
+        """The (device, inode) a closure file had when captured, or None."""
+        status = self.stats.get(path)
+        return None if status is None else (status.st_dev, status.st_ino)
 
     @contextmanager
     def staged(self, candidate: Path, target: Path) -> Iterator[tuple[Path, dict[Path, Path]]]:
@@ -295,18 +364,62 @@ class LedgerSnapshot:
         the write cannot affect is read where it is, and a read-only shared
         directory elsewhere in the include graph does not block the write
         (w1/073).
+
+        A file the ledger reaches again under another name is left out of a
+        staged include line, as a read leaves it out: the staged copy's new
+        inode hid it from that check, and the candidate was validated beside
+        a second copy of its own entries (w5/574). `duplicate_include_errors`
+        restores the error the read reports for it.
         """
+        from bea_engine.managed_load import _duplicate_members
+
+        duplicates = _duplicate_members(self)
         with ExitStack() as stack:
             paths = {path: stack.enter_context(candidate_file(path, "")) for path in self._includers(target)}
             for path, staged in paths.items():
-                content = candidate.read_bytes() if path.resolve() == target else self.contents[path]
+                content = candidate.read_bytes() if self._stands_for(path, target) else self.contents[path]
                 for start, end, name in reversed(list(_includes(content))):
                     matches = self.patterns.get(str(path.parent / name), ())
                     if matches:
-                        replacement = staged_include(stack, path, [paths.get(p, p) for p in matches])
+                        kept = [paths.get(p, p) for p in matches if p not in duplicates]
+                        replacement = staged_include(stack, path, kept)
                         content = content[:start] + replacement.encode() + content[end:]
                 staged.write_bytes(content)
             yield paths[self.root], {staged: original for original, staged in paths.items()}
+
+    def _stands_for(self, path: Path, target: Path) -> bool:
+        """Whether a closure file is the write's target under one of its names."""
+        identity = self._identity(target)
+        return path.resolve() == target or (identity is not None and self._identity(path) == identity)
+
+    def duplicate_include_errors(self, target: Path) -> list[Any]:
+        """The `Duplicate include` errors a read reports on the include lines `staged` rewrites.
+
+        Reported where the read reports them, so a ledger that already had one
+        keeps it through a write: its gate applies, and `--allow-errors` sees
+        it as the error it was, not a new one (w5/574).
+        """
+        from beancount.loader import LoadError
+
+        from bea_engine.ledger.text import iter_includes
+        from bea_engine.managed_load import _duplicate_members, duplicate_include_message
+
+        duplicates = _duplicate_members(self)
+        if not duplicates:
+            return []
+        found = []
+        for path in sorted(self._includers(target)):
+            for span in iter_includes(self.contents[path]):
+                for again in self.patterns.get(str(path.parent / span.target), ()):
+                    if again in duplicates:
+                        found.append(
+                            LoadError(
+                                {"filename": str(path), "lineno": span.line},
+                                duplicate_include_message(again, duplicates[again]),
+                                None,
+                            )
+                        )
+        return found
 
 
 def _glob_members(pattern: str) -> tuple[Path, ...]:
@@ -370,14 +483,19 @@ def include_claims(patterns: Iterable[str]) -> Callable[[Path], str | None]:
 
     def claim(target: Path) -> str | None:
         return literal.get(target) or next(
-            (pattern for pattern in wildcards if _included_new_file(target, pattern)), None
+            (pattern for pattern in wildcards if _included_new_file(target, pattern, any_spelling=True)), None
         )
 
     return claim
 
 
-def _included_new_file(target: Path, pattern: str) -> bool:
-    """Match an absent leaf using the same directory and hidden-file rules as glob."""
+def _included_new_file(target: Path, pattern: str, *, any_spelling: bool = False) -> bool:
+    """Match an absent leaf using the same directory and hidden-file rules as glob.
+
+    `any_spelling` matches a directory however it is spelled, which a claim
+    check needs (w5/595); `--into` matches the spelling the glob lists, and
+    names the other one itself (w5/434).
+    """
     parent, name = os.path.split(pattern)
     if target.name.startswith(".") and not name.startswith("."):
         return False
@@ -385,25 +503,46 @@ def _included_new_file(target: Path, pattern: str) -> bool:
         return False
     if name == "**":
         parent = os.path.join(parent, "**")
+    same = _same_directory if any_spelling else operator.eq
     if any(
-        Path(os.path.normpath(directory)).resolve() == target.parent for directory in glob.glob(parent, recursive=True)
+        same(Path(os.path.normpath(directory)).resolve(), target.parent)
+        for directory in glob.glob(parent, recursive=True)
     ):
         return True
     # A directory the write would create is not on disk for `glob` to list:
     # `price export` into a new `snap/` under `include "*/*.bean"` wrote a
     # copy the next load read back as part of the books (w5/296).
-    return _directory_matches(target.parent, parent)
+    return _directory_matches(target.parent, parent, same)
 
 
-def _directory_matches(directory: Path, pattern: str) -> bool:
+def _directory_matches(directory: Path, pattern: str, same: Callable[[Path, Path], bool]) -> bool:
     """Whether `glob` would list `directory` for `pattern` once it exists."""
     parts = Path(pattern).parts
     fixed = next((i for i, part in enumerate(parts) if glob.has_magic(part)), len(parts))
-    try:
-        names = directory.relative_to(Path(os.path.normpath(Path(*parts[:fixed]))).resolve()).parts
-    except ValueError:
+    base = Path(os.path.normpath(Path(*parts[:fixed]))).resolve()
+    below = next(
+        (directory.relative_to(ancestor).parts for ancestor in (directory, *directory.parents) if same(ancestor, base)),
+        None,
+    )
+    return below is not None and _components_match(below, parts[fixed:])
+
+
+def _same_directory(found: Path, wanted: Path) -> bool:
+    """Whether two resolved directories are one, however each is spelled.
+
+    `resolve()` keeps the spelling typed, so on a case- and normalization-
+    insensitive volume (macOS's default) `Txns/` and `txns/` compared unequal
+    while naming one directory, and an output or load cache there joined the
+    books (w5/595). Spellings that fold together are compared by identity.
+    """
+    if found == wanted:
+        return True
+    if unicodedata.normalize("NFC", str(found)).casefold() != unicodedata.normalize("NFC", str(wanted)).casefold():
         return False
-    return _components_match(names, parts[fixed:])
+    try:
+        return os.path.samefile(found, wanted)
+    except OSError:
+        return False
 
 
 def _components_match(names: tuple[str, ...], patterns: tuple[str, ...]) -> bool:
@@ -479,7 +618,39 @@ def _private_load_cache(filename: str) -> str:
         pass
     resolved = os.path.realpath(filename)
     digest = hashlib.sha256(os.fsencode(os.path.dirname(resolved))).hexdigest()[:32]
-    return str(directory / f"{digest}.{os.path.basename(filename)}.picklecache")
+    cache = str(directory / f"{digest}.{os.path.basename(filename)}.picklecache")
+    if clear_stray_cache_entry(cache):
+        return cache
+    # Under the null device nothing can be read or created, so the load runs uncached.
+    return os.path.join(os.devnull, os.path.basename(cache))
+
+
+def clear_stray_cache_entry(cache: str) -> bool:
+    """Clear whatever non-regular entry sits at bea's own cache path; whether the path is now usable.
+
+    Beancount opens its cache path unguarded. A directory there raised
+    `IsADirectoryError` out of every read, a FIFO hung it, `--offline`
+    included (w5/591), and a link was read and written through. The path is
+    bea's, in a directory only its owner can enter, so what sits there is
+    cleared: a link (never its target), a FIFO or device, an empty directory.
+    `cli.engine.launch.load_cache_pattern` does the same for `bean-check`.
+    """
+    try:
+        mode = os.lstat(cache).st_mode
+    except FileNotFoundError:
+        return True
+    except OSError:
+        return False
+    if stat.S_ISREG(mode):
+        return True
+    try:
+        if stat.S_ISDIR(mode):
+            os.rmdir(cache)
+        else:
+            os.unlink(cache)
+    except OSError:
+        return False
+    return True
 
 
 def keep_load_cache_private() -> None:
@@ -570,7 +741,7 @@ def not_a_load_cache(cache: Path) -> str | None:
     return None
 
 
-def refuse_cache_over_ledger(loaded: Path, members: Iterable[Path]) -> None:
+def refuse_cache_over_ledger(loaded: Path, members: Iterable[Path], patterns: Iterable[str] = ()) -> None:
     """Refuse a relocated pickle cache that is one of the ledger's own files.
 
     Beancount treats its cache path as disposable: a file there that does not
@@ -588,6 +759,7 @@ def refuse_cache_over_ledger(loaded: Path, members: Iterable[Path]) -> None:
     except (LookupError, ValueError):
         # A pattern upstream cannot format fails there before anything is removed.
         return
+    members = tuple(members)
     for member in members:
         if same_file(cache, member):
             raise UsageError(
@@ -595,12 +767,46 @@ def refuse_cache_over_ledger(loaded: Path, members: Iterable[Path]) -> None:
                 "cache file it cannot read, so this would delete the ledger. Choose a cache path outside the "
                 "ledger's own files. Nothing was changed."
             )
+    refuse_encrypted_destination(cache, members, CACHE_ENV)
+    # A path an include glob claims becomes a member once written: the pickle
+    # then loads as ledger text and every later command fails (w5/497).
+    resolved = cache.resolve()
+    claim = (
+        None
+        if cache.exists()
+        else next((p for p in patterns if _included_new_file(resolved, p, any_spelling=True)), None)
+    )
+    if claim is not None:
+        raise UsageError(
+            f"{CACHE_ENV} {pattern} names {cache}, which the include pattern {claim} would load as part of the "
+            "ledger once the cache is written. Choose a cache path outside the ledger's includes. "
+            "Nothing was changed."
+        )
     problem = not_a_load_cache(cache)
     if problem is not None:
         raise UsageError(
             f"{CACHE_ENV} {pattern} names {cache}, {problem}. Point {CACHE_ENV} at a new file or an "
             "existing cache, or unset it. Nothing was changed."
         )
+
+
+def refuse_encrypted_destination(destination: Path, members: Iterable[Path], purpose: str) -> None:
+    """Refuse output below an encrypted member whose hidden includes cannot be checked."""
+    from beancount.utils.encryption import is_encrypted_file
+
+    lexical = Path(os.path.abspath(expand_path(destination, purpose)))
+    ancestors = {*lexical.parents, *lexical.resolve().parents}
+    for member in dict.fromkeys(members):
+        try:
+            encrypted = is_encrypted_file(str(member))
+        except OSError:
+            continue
+        if encrypted and any(same_file(member.parent, ancestor) for ancestor in ancestors):
+            raise UsageError(
+                f"{purpose} {destination} is beneath the directory of encrypted ledger member {member}. "
+                "Its include patterns cannot be inspected before decryption, so this destination could join "
+                f"the ledger. Choose a path outside {member.parent.resolve()}. Nothing was changed."
+            )
 
 
 def sweep_abandoned_candidates(directory: Path) -> None:
@@ -770,6 +976,30 @@ def _open_lock(path: Path) -> tuple[int, bool]:
         return os.open(path, os.O_RDWR | os.O_CREAT, 0o600), False
 
 
+def _not_a_lock_file(mode: int) -> str | None:
+    """What sits at a lock path instead of a regular file, or None when it is one."""
+    if stat.S_ISREG(mode):
+        return None
+    if stat.S_ISDIR(mode):
+        return "a directory"
+    if stat.S_ISFIFO(mode):
+        return "a named pipe"
+    if stat.S_ISSOCK(mode):
+        return "a socket"
+    if stat.S_ISCHR(mode) or stat.S_ISBLK(mode):
+        return "a device"
+    return "something other than a file"
+
+
+def _lock_obstructed(path: Path, what: str) -> str:
+    """The refusal for a lock path something else occupies (w5/593).
+
+    Not replaced: an entry removed on a stale look could be the lock file
+    another writer has just created and holds.
+    """
+    return f"Cannot take the write lock: {path} is {what}, not a lock file. Remove it, then retry. Nothing was written."
+
+
 #: How long a writer queues behind another `bea` write before it gives up, and
 #: the variable that overrides it. Long enough for a large import to finish.
 LOCK_TIMEOUT_SECONDS = Decimal(60)
@@ -855,6 +1085,12 @@ def lock_file(file: Path, *, deciding: bool = False) -> Iterator[None]:
                 directory.mkdir(mode=0o700, parents=True, exist_ok=True)
                 fd, made = _open_lock(path)
             except OSError as exc:
+                try:
+                    in_the_way = _not_a_lock_file(os.stat(path).st_mode)
+                except OSError:
+                    in_the_way = None
+                if in_the_way is not None:
+                    raise AuthError(_lock_obstructed(path, in_the_way)) from exc
                 # The filesystem refusing, not a broken ledger: exit 3 like the staging
                 # refusal below, whether the cache is read-only or a file is in the way.
                 raise AuthError(
@@ -863,6 +1099,12 @@ def lock_file(file: Path, *, deciding: bool = False) -> Iterator[None]:
                     "before retrying. Nothing was written."
                 ) from exc
             created = created or made
+            # A FIFO opens, then failed as `UnsupportedOperation: File or stream
+            # is not seekable` (exit 1), naming nothing and leaking the descriptor (w5/593).
+            in_the_way = _not_a_lock_file(os.fstat(fd).st_mode)
+            if in_the_way is not None:
+                os.close(fd)
+                raise AuthError(_lock_obstructed(path, in_the_way))
             stream = os.fdopen(fd, "r+b")
             if sys.platform == "win32":
                 import msvcrt
@@ -941,7 +1183,7 @@ def candidate_file(file: Path, content: str, *, mode: int = 0o600) -> Iterator[P
                     "writable before retrying. Nothing was written."
                 ) from exc
             except OSError as exc:
-                raise LedgerError(_stage_failed(file, exc)) from exc
+                raise StagingFailed(_stage_failed(file, exc)) from exc
             sidecar: Path | None = None
             try:
                 # The sidecar's name may import Beancount, so it is registered second.
@@ -955,7 +1197,7 @@ def candidate_file(file: Path, content: str, *, mode: int = 0o600) -> Iterator[P
                             stream.flush()
                             os.fsync(stream.fileno())
                     except OSError as exc:
-                        raise LedgerError(_stage_failed(file, exc)) from exc
+                        raise StagingFailed(_stage_failed(file, exc)) from exc
                     yield candidate
             finally:
                 _discard_candidate(candidate)
@@ -979,20 +1221,59 @@ def _stage_failed(file: Path, exc: OSError) -> str:
     )
 
 
-def lexer_lines(content: bytes) -> list[bytes]:
-    """The file's lines as Beancount's lexer numbers them: split on `\\n` alone.
+#: What `link` answers on a filesystem without hard links: macOS's exFAT and
+#: FAT say ENOTSUP, Linux's vfat EPERM.
+_NO_HARD_LINKS = frozenset(
+    code
+    for name in ("ENOTSUP", "EOPNOTSUPP", "EPERM", "EXDEV", "ENOSYS", "EMLINK")
+    if (code := getattr(errno, name, None))
+)
 
-    `bytes.splitlines()` also breaks on a lone `\\r`, so a stray carriage
-    return (pasted text, `\\r\\r\\n` endings) made a file look longer than
-    the lexer counts it. The entry being appended then sat inside the
-    "original" range: its balance failure was blamed on a plugin, its errors
-    lost `Proposed append (not written)`, and a staged pad's `Unused Pad` was
-    no longer exempt (w5/380). The reader counts this way since w5/169.
+
+def claim_new_file(candidate: Path, target: Path) -> None:
+    """Give a validated candidate the name `target`, which must not exist yet.
+
+    A hard link claims the name atomically and refuses an existing file. FAT
+    and exFAT, the filesystems of USB sticks and SD cards, have no hard links,
+    so `bea init` and every write into a new file failed there with a raw
+    `OSError: [Errno 45]` naming the staging file (w5/605). There the name is
+    claimed by exclusive creation instead, and the candidate replaces that
+    empty placeholder. `FileExistsError` and `PermissionError` reach the
+    caller as they are; anything else is said in bea's words.
     """
-    lines = content.split(b"\n")
-    if lines and lines[-1] == b"":
-        lines.pop()
-    return lines
+    try:
+        with stopping.committing():
+            os.link(candidate, target)
+        return
+    except FileExistsError:
+        raise
+    except OSError as exc:
+        if exc.errno not in _NO_HARD_LINKS:
+            raise LedgerError(_create_failed(target, exc)) from exc
+    # Inside the commit section, so no stop can leave the empty placeholder behind.
+    placeholder: os.stat_result | None = None
+    try:
+        with stopping.committing():
+            fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            try:
+                placeholder = os.fstat(fd)
+            finally:
+                os.close(fd)
+            os.replace(candidate, target)
+    except BaseException as exc:
+        # Only the empty placeholder this call made is removed, never a file
+        # that took its place.
+        if placeholder is not None:
+            with suppress(OSError):
+                if os.path.samestat(placeholder, os.stat(target)):
+                    os.unlink(target)
+        if isinstance(exc, OSError) and not isinstance(exc, (FileExistsError, PermissionError)):
+            raise LedgerError(_create_failed(target, exc)) from exc
+        raise
+
+
+def _create_failed(target: Path, exc: OSError) -> str:
+    return f"Cannot create {target} ({exc.strerror or type(exc).__name__}); nothing was written."
 
 
 def _discard_candidate(candidate: Path) -> None:
@@ -1038,7 +1319,74 @@ _BALANCE_DATE_HINT = (
 )
 
 
+def book_units(entries: list[Any], account: str, currency: str, date: datetime.date) -> Decimal:
+    """Units of `currency` in `account` and its children when a `date` assertion runs.
+
+    Assertions run at the start of the day, so only earlier postings count —
+    including the padding Beancount already inserted for earlier pads.
+    """
+    from beancount.core.data import Transaction
+
+    prefix = f"{account}:"
+    return sum(
+        (
+            posting.units.number
+            for entry in entries
+            if isinstance(entry, Transaction) and entry.date < date
+            for posting in entry.postings
+            if (posting.account == account or posting.account.startswith(prefix))
+            and posting.units is not None
+            and posting.units.currency == currency
+            and posting.units.number is not None
+        ),
+        Decimal(0),
+    )
+
+
+def credit_root(account: str, options: dict[str, Any]) -> str | None:
+    """The root of a credit-normal account (liabilities, equity, income), whose balances are negative, or None."""
+    from bea_engine.ledger.text import ledger_roots
+
+    root = account.split(":", 1)[0]
+    return root if root in ledger_roots(options)[1:4] else None
+
+
+def negated_credit_hint(
+    account: str, number: Decimal, held: Decimal, currency: str, options: dict[str, Any]
+) -> str | None:
+    """The sign hint for a credit-normal account asserted at exactly its balance negated, or None.
+
+    A card statement prints the balance owed as positive, and Beancount holds
+    it negative: `77.04 USD` against a book of `-77.04 USD` failed with advice
+    about missing transactions, and with `--pad-from` was padded by 154.08 USD
+    with exit 0 (w5/611).
+    """
+    root = credit_root(account, options)
+    if root is None or held == 0 or number != -held:
+        return None
+    return (
+        f"{account} holds {held:f} {currency}: {root} balances are negative in Beancount, so a statement's "
+        f"{abs(held):f} owed is {held:f} {currency}. Did you mean {held:f} {currency}?"
+    )
+
+
 def _balance_recovery_hints(
+    balance: Any,
+    source: Path,
+    root: Path,
+    entries: list[Any],
+    options: dict[str, Any],
+    snapshot: LedgerSnapshot | None,
+    line_counts: dict[Path, int],
+    filenames: dict[Path, Path] | None = None,
+) -> list[str]:
+    held = book_units(entries, balance.account, balance.amount.currency, balance.date)
+    sign = negated_credit_hint(balance.account, balance.amount.number, held, balance.amount.currency, options)
+    steps = _balance_recovery_steps(balance, source, root, entries, options, snapshot, line_counts, filenames)
+    return [sign, *steps] if sign else steps
+
+
+def _balance_recovery_steps(
     balance: Any,
     source: Path,
     root: Path,
@@ -1141,8 +1489,20 @@ def _balance_recovery_hints(
     hints = [
         date_hint,
         "Review missing transactions first. The following command creates an intentional opening adjustment.",
-        "Opening adjustment command: " + shlex.join(command),
     ]
+    owed = credit_root(balance.account, options)
+    if owed is not None and balance.amount.number > 0:
+        # Run verbatim, the positive command added a loan to net worth (w5/611).
+        negated = [*command]
+        negated[negated.index("--amount") + 1] = f"{-balance.amount.number:f}{tolerance} {balance.amount.currency}"
+        hints.append(
+            f"{owed} balances are negative in Beancount, so an amount owed of {amount} is asserted as "
+            f"{-balance.amount.number:f}{tolerance} {balance.amount.currency}. Opening adjustment command for that: "
+            + shlex.join(negated)
+        )
+        hints.append("Opening adjustment command as asserted: " + shlex.join(command))
+    else:
+        hints.append("Opening adjustment command: " + shlex.join(command))
     if source_account == "SOURCE_ACCOUNT":
         hints.append(
             f"Replace SOURCE_ACCOUNT with the intended adjustment source, active on {pad_date} "
@@ -1235,7 +1595,7 @@ def _collapse_repeats(records: list[_ErrorRecord]) -> list[str]:
             message += f" Same problem on {len(others)} more line{plural}: {', '.join(others)}."
         messages.append(message)
         messages.extend(occurrences[0].hints)
-    return messages
+    return [escape_format_characters(message) for message in messages]
 
 
 #: How far `including_root` looks: the leaf's directory and this many above it.
@@ -1318,7 +1678,12 @@ def _same_file(left: Path, right: Path) -> bool:
 
 
 def top_root(file: Path) -> Path | None:
-    """The ledger nothing includes, above `file` through its includers, or None for a root."""
+    """The ledger nothing includes, above `file` through its includers, or None for a root.
+
+    A climb that comes back to `file` (an include cycle through it) has no
+    other root to name: the hint told the user to run the command they had
+    just run (w5/566).
+    """
     root = including_root(file)
     seen = {file.resolve()}
     while root is not None and root.resolve() not in seen:
@@ -1327,7 +1692,35 @@ def top_root(file: Path) -> Path | None:
         if above is None:
             break
         root = above
+    if root is not None and root.resolve() == file.resolve():
+        return None
     return root
+
+
+#: What a leaf reads from the ledger that includes it: an account opened, a
+#: plugin, or an option that changes how entries read (a title does not).
+_DEFINITION = re.compile(
+    rb'^(?:\d{4}[-/]\d{2}[-/]\d{2}[ \t]+open[ \t]|plugin[ \t]|option[ \t]+"(?!title"|render_commas")[a-z_]+")',
+    re.MULTILINE,
+)
+
+
+def defines_for(file: Path, root: Path) -> bool:
+    """Whether the ledger including `file` defines what `file` reads, which makes `file` its leaf.
+
+    A per-year file reads the accounts its root opens. A working ledger that a
+    Fava or forecast overlay includes reads nothing from the overlay, which
+    only adds to it: taken for its root, the overlay's forecast entries
+    counted in validation and dedupe, a wrong balance was written and a real
+    bank row skipped as a duplicate (w5/578). When the closures cannot be
+    read, the leaf answer stands.
+    """
+    try:
+        around = LedgerSnapshot.capture(root).contents
+        own = LedgerSnapshot.capture(file).contents
+    except Exception:  # noqa: BLE001 - unreadable here is reported by the load itself
+        return True
+    return any(_DEFINITION.search(content) for path, content in around.items() if path not in own)
 
 
 def root_read_hint(file: Path) -> str | None:
@@ -1335,10 +1728,11 @@ def root_read_hint(file: Path) -> str | None:
 
     `check` and the reads refused a per-year file with `Pass --allow-errors`,
     which answers for part of the ledger, never naming the root that loads
-    the accounts it uses (w5/348).
+    the accounts it uses (w5/348). A file that reads nothing from its
+    includer is no leaf (w5/578).
     """
     root = top_root(file)
-    if root is None:
+    if root is None or not defines_for(file, root):
         return None
     return (
         f"{file.name} is included by {root}; on its own it lacks the accounts and options that root provides. "
@@ -1346,8 +1740,8 @@ def root_read_hint(file: Path) -> str | None:
     )
 
 
-def write_through_root(file: Path, into: Path | None) -> tuple[Path, Path | None]:
-    """The root and `--into` a write aimed at an included leaf is validated through.
+def write_through_root(file: Path, into: Path | None) -> tuple[Path, Path | None, str | None]:
+    """The root and `--into` a write aimed at an included leaf is validated through, and the note saying so.
 
     A write with `--file` on a leaf validated that file alone: every account
     the root opens looked unknown, a remedy said to `add open` one again, and
@@ -1356,18 +1750,23 @@ def write_through_root(file: Path, into: Path | None) -> tuple[Path, Path | None
     dedupe missed rows booked there (w5/343, w5/346). The write still lands
     in the leaf, checked against the ledger that loads it — the `--into`
     recipe, applied rather than printed.
+
+    The note is the caller's to report in its answer: printed here, it
+    reached a person but never `--json` (w5/613).
     """
     if into is not None:
-        return file, into
+        return file, into, None
     # The nearest includer may itself be included: a leaf under `sub/extra.bean`
     # was checked against `extra.bean` alone, and the root's own entries —
     # what a balance or a close contradicts, what import dedupes against —
     # stayed out of the check (w5/346). Climb to the file nothing includes.
     root = top_root(file)
-    if root is None:
-        return file, into
-    note(f"{file.name} is included by {root}; the write goes to {file.name} and is checked against that whole ledger.")
-    return root, Path(os.path.relpath(file.resolve(), root.parent))
+    if root is None or not defines_for(file, root):
+        return file, into, None
+    redirect = (
+        f"{file.name} is included by {root}; the write goes to {file.name} and is checked against that whole ledger."
+    )
+    return root, Path(os.path.relpath(file.resolve(), root.parent)), redirect
 
 
 def root_ledger_hints(file: Path) -> list[str]:
@@ -1474,6 +1873,7 @@ def validate_candidate(
     stages_pad: bool = False,
     stages_open: bool = False,
     pad_from: bool = False,
+    pad_date_explicit: bool = False,
 ) -> list[str]:
     """Refuse a candidate that fails validation, naming what it would break.
 
@@ -1503,8 +1903,7 @@ def validate_candidate(
     from beancount.core import interpolate
     from beancount.core.data import Balance, Close, Document, Open, Pad, Transaction
     from beancount.core.flags import FLAG_PADDING
-    from beancount.parser.grammar import ParserSyntaxError
-    from beancount.parser.lexer import LexerError
+    from beancount.plugins.unique_prices import UniquePricesError
 
     from bea_engine import managed_load
     from bea_engine.ledger.text import (
@@ -1516,7 +1915,7 @@ def validate_candidate(
 
     # The staged copy has a private name, so the guard inside the load would
     # name that; a `{filename}` cache pattern is about the ledger file itself.
-    refuse_cache_over_ledger(file, snapshot.contents if snapshot else [file])
+    refuse_cache_over_ledger(file, snapshot.contents if snapshot else [file], snapshot.patterns if snapshot else ())
     try:
         if snapshot is None:
             entries, errors, options = managed_load.load_file(candidate)
@@ -1527,6 +1926,7 @@ def validate_candidate(
         else:
             with snapshot.staged(candidate, file) as (root, filenames):
                 entries, errors, options = managed_load.load_file(root)
+            errors = [*errors, *snapshot.duplicate_include_errors(file)]
             original_lines = {path.resolve(): lexer_lines(content) for path, content in snapshot.contents.items()}
     except InvalidOperation as exc:
         # Booking quantizes an interpolated amount under the 28-digit decimal
@@ -1537,6 +1937,8 @@ def validate_candidate(
             "to infer beside a number that wide. Give every posting an explicit amount, or use a number of at "
             "most 28 significant digits. Nothing was written."
         ) from exc
+    type_errors = managed_load.data_type_errors(entries, options)
+    errors = [*errors, *type_errors]
     original_line_counts = {path: len(lines) for path, lines in original_lines.items()}
     # The error set before the write, matched so the same failure after the
     # append reads as the same error. Appends land at end of file over
@@ -1544,9 +1946,13 @@ def validate_candidate(
     # line; anything unmatched in the after set is newly introduced.
     tolerated: set[int] = set()
     before_errors: list[Any] | None = None
+    existing_plugin_errors: set[int] | None = None
     if allow_errors:
-        _, before_errors, _ = managed_load.load_file(snapshot.root if snapshot else file, snapshot=snapshot)
+        _, before_errors, _ = managed_load.load_file(
+            snapshot.root if snapshot else file, snapshot=snapshot, check_types=True
+        )
         tolerated = _preexisting_errors(errors, before_errors, filenames, original_lines)
+        existing_plugin_errors = tolerated
     accounts = [entry.account for entry in entries if isinstance(entry, Open)]
     # What the per-error hints below look up, each built on first use and then
     # shared (w5/124). One mis-dated `open` makes thousands of errors, and a
@@ -1554,7 +1960,9 @@ def validate_candidate(
     # minutes.
     account_suggestions: dict[str, str] = {}
     lifecycles: dict[str, list[Any]] | None = None
+    closes_by_location: dict[tuple[Any, Any, Any], Any] | None = None
     cost_holders: dict[str, set[int]] | None = None
+    first_inactive_dates: dict[str, Any] | None = None
     source_line_counts: dict[Path, int] = {}
     roots = ledger_roots(options)
     records: list[_ErrorRecord] = []
@@ -1570,14 +1978,27 @@ def validate_candidate(
     # so it is looked up once, on the first unknown account, not per error.
     root_hints: list[str] | None = None
     per_file_hinted: set[Path] = set()
+    pad_invalid = any(is_invalid_pad_account(error) for error in errors)
+    duplicate_opens = {
+        error.entry.account
+        for error in errors
+        if isinstance(error.entry, Open) and str(getattr(error, "message", "")).startswith("Duplicate open directive")
+    }
+    conflicting_balances = {
+        (error.entry.date, error.entry.account, error.entry.amount.currency)
+        for error in errors
+        if isinstance(error.entry, Balance)
+        and str(getattr(error, "message", "")).startswith("Duplicate balance assertion")
+    }
     for index, error in enumerate(errors):
         hints = []
         message = format_error(error, ledger_file=file)
         for staged, original in filenames.items():
             message = message.replace(str(staged), str(original))
-        source = Path(error.source.get("filename", str(candidate)))
+        metadata = error.source or {}
+        source = Path(metadata.get("filename", str(candidate)))
         source = filenames.get(source, source)
-        lineno = error.source.get("lineno")
+        lineno = metadata.get("lineno")
         # A staged pad's `Unused Pad` is the documented carve-out — the
         # two-step pad-then-balance flow cannot start without it. A staged
         # open's `Unused account` is the other, for the same reason.
@@ -1601,15 +2022,31 @@ def validate_candidate(
                 message = "Proposed append (not written): " + message[len(prefix) :]
             else:
                 message = f"Proposed append (not written): {message}"
+        plugin = type(error).__module__
+        if plugin.startswith("beancount.plugins.") and not appended and not _unanchored(error):
+            # A backdated entry can make a plugin fail at an existing line.
+            # Keep that real location, but identify this write as the trigger
+            # only when the error was absent before it (w5/666).
+            if existing_plugin_errors is None:
+                if before_errors is None:
+                    root = snapshot.root if snapshot else file
+                    before_errors = (
+                        managed_load.load_file(root, snapshot=snapshot, check_types=True)[1] if root.exists() else []
+                    )
+                existing_plugin_errors = _preexisting_errors(errors, before_errors, filenames, original_lines)
+            if index not in existing_plugin_errors:
+                hints.append(f"The proposed append (not written) triggers this error from plugin {plugin}.")
         if _unanchored(error) and (missing := _MISSING_COMMODITY.search(message)):
             # check_commodity reports against no line, so the location test
             # above cannot tell the write's own currency from one the books
             # already lacked; the ledger before the write can (w5/398).
-            message = message.removeprefix(f"{error.source.get('filename')}:{lineno}: ")
+            message = message.removeprefix(f"{metadata.get('filename')}:{lineno}: ")
             if missing_before is None:
                 if before_errors is None:
                     root = snapshot.root if snapshot else file
-                    before_errors = managed_load.load_file(root, snapshot=snapshot)[1] if root.exists() else []
+                    before_errors = (
+                        managed_load.load_file(root, snapshot=snapshot, check_types=True)[1] if root.exists() else []
+                    )
                 missing_before = {
                     found.group(1)
                     for before in before_errors
@@ -1619,7 +2056,8 @@ def validate_candidate(
                 message = f"Proposed append (not written): {message}"
             hints.append(
                 "Plugin check_commodity requires a commodity directive for every currency the ledger uses. "
-                f"Declare it first: bea add commodity --date YYYY-MM-DD --currency {missing.group(1)}, then retry."
+                f"Declare it first: {bea_command(snapshot.root if snapshot else file)} add commodity "
+                f"--date YYYY-MM-DD --currency {missing.group(1)}, then retry."
             )
         if "unknown account '" in message:
             account = message.split("unknown account '", 1)[1].split("'", 1)[0]
@@ -1631,9 +2069,14 @@ def validate_candidate(
                     suggestion = f" Did you mean {', '.join(matches)}?" if matches else ""
                     # An `open` under a root the ledger does not use can never
                     # load, so the remedy is the root, not the directive (w5/154).
-                    if account.split(":", 1)[0] in roots:
+                    if (problem := new_account_format_problem(account)) is not None:
+                        suggestion += f" {problem}"
+                    elif account.split(":", 1)[0] in roots:
+                        # Pasted, a bare `bea add open` opened the account in
+                        # whatever ledger cwd discovery found (w5/619).
                         suggestion += (
-                            f" To create it, use bea add open --account {shlex.quote(account)} --date YYYY-MM-DD"
+                            f" To create it, use {bea_command(snapshot.root if snapshot else file)} add open "
+                            f"--account {shlex.quote(account)} --date YYYY-MM-DD"
                         )
                         # Under `nounused` the plain command is refused: the
                         # open is an error until this very write uses it.
@@ -1673,34 +2116,38 @@ def validate_candidate(
         if "inactive account '" in message:
             account = message.split("inactive account '", 1)[1].split("'", 1)[0]
             if lifecycles is None:
-                lifecycles = _lifecycles(entries)
+                lifecycles = _lifecycles(entries, original_lines)
             # A plugin's open or close is not a line anyone can edit (w5/222).
             remedy = "edit that directive"
             for entry in lifecycles.get(account, []):
                 word, state = ("open", "opened") if isinstance(entry, Open) else ("close", "closed")
+                if isinstance(entry, Open) and _proposed_entry(entry, filenames, original_lines):
+                    if first_inactive_dates is None:
+                        first_inactive_dates = {}
+                        for inactive in errors:
+                            if "inactive account '" in inactive.message and inactive.entry is not None:
+                                name = inactive.message.split("inactive account '", 1)[1].split("'", 1)[0]
+                                first_inactive_dates[name] = min(
+                                    first_inactive_dates.get(name, inactive.entry.date), inactive.entry.date
+                                )
+                    message += (
+                        f" The proposed open would open {account} on {entry.date}; date it on or before "
+                        f"{first_inactive_dates[account]}."
+                    )
+                    remedy = "correct the proposed open date"
+                    continue
+                if isinstance(entry, Close) and (
+                    closing_hint := _plugin_close_hint(entry, lifecycles, filenames, original_lines)
+                ):
+                    description, remedy = closing_hint
+                    message += f" Account {description}."
+                    continue
                 origin = _plugin_origin(entry, word, filenames, original_lines)
                 if origin is None:
                     message += f" Account {state} {entry.date} at {_location(entry, filenames)}."
                     continue
                 message += f" Account {state} {entry.date} by {origin}, not by a line in the ledger"
                 remedy = "change the ledger lines that plugin reads"
-                # `close_tree` closes a subtree with its parent: name the
-                # parent's written close, which is the line to edit.
-                parent = next(
-                    (
-                        other
-                        for name, group in lifecycles.items()
-                        if word == "close" and account.startswith(f"{name}:")
-                        for other in group
-                        if isinstance(other, Close)
-                        and other.date == entry.date
-                        and _plugin_origin(other, "close", filenames, original_lines) is None
-                    ),
-                    None,
-                )
-                if parent is not None:
-                    message += f"; {parent.account} is closed that day at {_location(parent, filenames)}"
-                    remedy = f"edit the close of {parent.account}"
                 message += "."
             # Named for the directive that failed: a note or a pad is no transaction (w5/393).
             # A pad's own padding transaction is the pad the user wrote, and
@@ -1714,9 +2161,16 @@ def validate_candidate(
             # opens after the close; say which, as every other directive's
             # refusal does (w5/394).
             if lifecycles is None:
-                lifecycles = _lifecycles(entries)
+                lifecycles = _lifecycles(entries, original_lines)
             opened = next((e for e in lifecycles.get(error.entry.account, []) if isinstance(e, Open)), None)
-            if opened is not None:
+            if closing_hint := _plugin_close_hint(error.entry, lifecycles, filenames, original_lines):
+                description, _ = closing_hint
+                message = message.removeprefix(f"{metadata.get('filename')}:{lineno}: ")
+                message += (
+                    f". Account {description}. Open {error.entry.account} on or before {error.entry.date}, "
+                    "or open it under another parent."
+                )
+            elif opened is not None:
                 message += (
                     f". Account opened {opened.date} at {_location(opened, filenames)}; "
                     f"date the close on or after {opened.date}."
@@ -1727,11 +2181,44 @@ def validate_candidate(
                 message += f". The ledger never opens {error.entry.account}; check the account name."
         if isinstance(error.entry, Transaction) and (invalid := _POSTING_CURRENCY.fullmatch(error.message)):
             if lifecycles is None:
-                lifecycles = _lifecycles(entries)
+                lifecycles = _lifecycles(entries, original_lines)
             opened = next((e for e in lifecycles.get(invalid["account"], []) if isinstance(e, Open)), None)
-            if opened is not None and opened.currencies:
-                hints.append(_currency_widen_hint(invalid["currency"], opened, filenames, original_lines))
-        if isinstance(error.entry, Pad) and error.message.startswith("Invalid reference to "):
+            if invalid["account"] in duplicate_opens:
+                # Beancount checks postings against the account's last open:
+                # the proposed one, so the existing postings fail (w5/488).
+                hints.append(f"This follows from the duplicate open of {invalid['account']} above.")
+            elif opened is not None and opened.currencies:
+                interpolated = _interpolated_leg_hint(error.entry, invalid["account"], invalid["currency"], opened)
+                hints.append(
+                    interpolated or _currency_widen_hint(invalid["currency"], opened, filenames, original_lines)
+                )
+        if isinstance(error.entry, Open) and error.message.startswith("Duplicate open directive for "):
+            if lifecycles is None:
+                lifecycles = _lifecycles(entries, original_lines)
+            opens = [e for e in lifecycles.get(error.entry.account, []) if isinstance(e, Open)]
+            existing = None
+            duplicate = None
+            for opened in opens:
+                path = Path(opened.meta.get("filename", ""))
+                original = filenames.get(path, path).resolve()
+                line = opened.meta.get("lineno")
+                # Beancount blames the later-dated open, which can be the
+                # existing one. Only an entry within the original bytes is
+                # an open the user can edit (w5/658).
+                if isinstance(line, int) and 1 <= line <= original_line_counts.get(original, 0):
+                    if existing is None:
+                        existing = opened
+                elif duplicate is None or opened is error.entry:
+                    duplicate = opened
+            # With pre-existing duplicates, merge the newly proposed open's
+            # currencies, rather than those of another persisted open.
+            if duplicate is None:
+                duplicate = next((e for e in opens if e is not existing), None)
+            if existing is not None and duplicate is not None:
+                hints.append(_duplicate_open_hint(existing, duplicate, filenames))
+        if isinstance(error, UniquePricesError):
+            hints.append(_unique_prices_hint(error.entry, filenames, original_lines))
+        if is_invalid_pad_account(error):
             invalid_pad_accounts = True
             # Worded by how the pad arrived: `add balance --pad-from` wrote no
             # pad directive, and the flag is news only to who passed it (w5/395).
@@ -1739,6 +2226,23 @@ def validate_candidate(
                 pad_hint = f"The --pad-from account must be open on the pad date, {error.entry.date}" + (
                     ", even with --allow-errors." if allow_errors else "."
                 )
+            elif pad_from and (opened_on := _opened_after(error.entry.account, error.entry.date, entries)):
+                if pad_date_explicit:
+                    # Moving the balance cannot move a pad date the caller
+                    # supplied. Change that date too, keeping it before the
+                    # assertion (w5/688).
+                    pad_hint = (
+                        f"The pad date {error.entry.date} is before {error.entry.account} opens ({opened_on}); "
+                        f"pass --pad-date {opened_on} or later, with a balance --date later than the pad date."
+                    )
+                else:
+                    # The pad date was derived, the day before the balance;
+                    # moving the balance moves both dates (w5/513).
+                    pad_hint = (
+                        f"{error.entry.account} opens {opened_on}, after the pad date {error.entry.date}: --pad-from "
+                        "pads the day before the balance. Date the balance after the open, for example --date "
+                        f"{opened_on + datetime.timedelta(days=1)}."
+                    )
             elif allow_errors:
                 pad_hint = "Pad accounts must be active, even with --allow-errors."
             else:
@@ -1795,17 +2299,33 @@ def validate_candidate(
                 )
             elif not is_new:
                 hints.append("Staged: add the account's first transaction to clear this.")
-        if "Unused Pad" in message:
+        if "Unused Pad" in message and not (pad_from and appended and pad_invalid):
+            # A `--pad-from` pad on a date its account is not open is unused
+            # because of that: the hint's "the assertion at line N already
+            # holds" cited the proposed append, past the end of the file (w5/513).
             pad_entry = error.entry if isinstance(error.entry, Pad) else None
             # Beancount's "Unused Pad entry" has no full stop; every hint starts with a space.
             message = (
                 message.rstrip(".") + "." + _unused_pad_hint(pad_entry, entries, errors, filenames, appended=appended)
             )
         elif isinstance(error.entry, Balance) and "Balance failed" in error.message:
+            if not allow_errors and closes_by_location is None:
+                closes_by_location = {
+                    (entry.account, entry.meta.get("filename"), entry.meta.get("lineno")): entry
+                    for entry in entries
+                    if isinstance(entry, Close)
+                }
+            closing = (closes_by_location or {}).get(
+                (error.entry.account, error.entry.meta.get("filename"), error.entry.meta.get("lineno"))
+            )
             if allow_errors:
                 hints.append(
                     "Review this assertion and missing transactions before further writes; it still fails validation."
                 )
+            elif closing is not None:
+                # check_drained can inherit a close_tree close's pseudo-file;
+                # the assertion still comes from check_drained (w5/666).
+                hints.append(_drained_close_hint(error.entry, closing, error.message, options))
             elif origin := _plugin_origin(error.entry, "balance", filenames, original_lines):
                 # Nothing at that location is an assertion to edit (w5/222).
                 hints.append(
@@ -1813,9 +2333,12 @@ def validate_candidate(
                     f"Review the transactions on {error.entry.account} before {error.entry.date}, "
                     "or the ledger line the plugin reads."
                 )
-            elif closing := _drained_close(error.entry, entries):
-                # The close this write appends is what the plugin read (w5/399).
-                hints.append(_drained_close_hint(error.entry, closing, error.message, options))
+            elif (error.entry.date, error.entry.account, error.entry.amount.currency) in conflicting_balances:
+                hints.append(
+                    f"The {error.entry.date} assertions for {error.entry.account} in "
+                    f"{error.entry.amount.currency} disagree. Remove or correct the conflicting assertion; "
+                    "an opening adjustment cannot resolve conflicting same-day assertions."
+                )
             else:
                 hints.extend(
                     _balance_recovery_hints(
@@ -1829,20 +2352,34 @@ def validate_candidate(
                         filenames,
                     )
                 )
-        records.append(
-            _ErrorRecord(getattr(error, "message", str(error)), message, error.source.get("lineno"), hints, source)
-        )
+        records.append(_ErrorRecord(getattr(error, "message", str(error)), message, lineno, hints, source))
         locations.append((source, lineno if isinstance(lineno, int) else None))
     messages = _collapse_repeats(records)
-    syntax_errors = [err for err in errors if isinstance(err, ParserSyntaxError | LexerError)]
+    syntax_errors = [err for err in errors if is_syntax_error(err)]
     new_records = [record for record, is_new in zip(records, introduced, strict=True) if is_new]
     if errors and (not allow_errors or syntax_errors or invalid_pad_accounts or new_records):
+        if not allow_errors and type_errors and not (syntax_errors or invalid_pad_accounts):
+            if before_errors is None:
+                root = snapshot.root if snapshot else file
+                before_errors = (
+                    managed_load.load_file(root, snapshot=snapshot, check_types=True)[1] if root.exists() else []
+                )
+            if _preexisting_errors(type_errors, before_errors, filenames, original_lines):
+                raise CandidateRejected(
+                    f"The ledger already has {len(before_errors)} error(s); nothing was written. "
+                    "Pass --allow-errors to tolerate existing errors; new errors are still refused.",
+                    details=messages,
+                    locations=locations,
+                    records=records,
+                )
         # An error on an appended line is the write's own; only books whose
         # every error sits elsewhere are worth a load of the version before.
         if not allow_errors and not (any_appended or syntax_errors or invalid_pad_accounts):
             if before_errors is None:
                 root = snapshot.root if snapshot else file
-                before_errors = managed_load.load_file(root, snapshot=snapshot)[1] if root.exists() else []
+                before_errors = (
+                    managed_load.load_file(root, snapshot=snapshot, check_types=True)[1] if root.exists() else []
+                )
             if len(_preexisting_errors(errors, before_errors, filenames, original_lines)) == len(errors):
                 # The write adds nothing wrong; the books were already broken,
                 # which is the case --allow-errors exists for. The repair hints
@@ -1872,9 +2409,7 @@ def validate_candidate(
         blocking = [
             index
             for index, (error, is_new) in enumerate(zip(errors, introduced, strict=True))
-            if is_new
-            or isinstance(error, ParserSyntaxError | LexerError)
-            or (isinstance(error.entry, Pad) and str(getattr(error, "message", "")).startswith("Invalid reference to "))
+            if is_new or is_syntax_error(error) or is_invalid_pad_account(error)
         ]
         if new_records:
             message = f"The change would introduce {len(new_records)} new ledger error(s); nothing was written."
@@ -1893,11 +2428,76 @@ def validate_candidate(
     return messages
 
 
+def is_syntax_error(error: Any) -> bool:
+    """Whether Beancount could not read ledger text, rather than reporting a semantic parser error."""
+    from beancount.parser.grammar import ParserSyntaxError
+    from beancount.parser.lexer import LexerError
+
+    return isinstance(error, ParserSyntaxError | LexerError)
+
+
+def preexisting_refusal(errors: list[Any], ledger_errors: list[str]) -> LedgerError:
+    """The strict pre-check's refusal of a ledger that already has errors.
+
+    Syntax errors and pads with inactive accounts cannot be tolerated by the
+    shared validation, so advising `--allow-errors` for either sends the user
+    round in a loop (w5/508, w5/682).
+    """
+    if any(is_syntax_error(error) for error in errors):
+        return LedgerError(
+            f"The ledger already has {len(ledger_errors)} error(s), including a syntax error; nothing was written. "
+            "Fix the syntax error first: --allow-errors never writes past one.",
+            details=ledger_errors,
+        )
+    pads = sorted(
+        {
+            (error.entry.date, error.entry.account, error.entry.source_account)
+            for error in errors
+            if is_invalid_pad_account(error)
+        }
+    )
+    if pads:
+        return LedgerError(
+            f"The ledger already has {len(ledger_errors)} error(s), including an invalid pad account; "
+            "nothing was written. Open missing accounts or correct the pad account/date first: "
+            "--allow-errors cannot bypass an inactive pad account.",
+            details=[
+                *ledger_errors,
+                *(
+                    f"Pad dated {date}: {account} and {source} must both be active on that date."
+                    for date, account, source in pads
+                ),
+            ],
+        )
+    return LedgerError(
+        f"The ledger already has {len(ledger_errors)} error(s); nothing was written. "
+        "Pass --allow-errors to write anyway.",
+        details=ledger_errors,
+    )
+
+
+def is_invalid_pad_account(error: Any) -> bool:
+    """Whether a pad names an unopened or inactive account, which no write may tolerate."""
+    from beancount.core.data import Pad
+
+    return isinstance(getattr(error, "entry", None), Pad) and str(getattr(error, "message", "")).startswith(
+        "Invalid reference to "
+    )
+
+
 def is_unused_open(error: Any) -> bool:
     """Whether a loader error is `nounused` reporting an `open` nothing uses yet."""
     from beancount.core.data import Open
 
     return isinstance(error.entry, Open) and str(getattr(error, "message", "")).startswith("Unused account '")
+
+
+def _opened_after(account: str, date: Any, entries: list[Any]) -> Any:
+    """The date `account` opens, when that is after `date`; otherwise None."""
+    from beancount.core.data import Open
+
+    opened = next((entry.date for entry in entries if isinstance(entry, Open) and entry.account == account), None)
+    return opened if opened is not None and opened > date else None
 
 
 def _unused_pad_hint(
@@ -1950,6 +2550,14 @@ def _unused_pad_hint(
     for balance in reached:
         first = first_by_currency.setdefault(balance.amount.currency, balance)
         if first is not balance and (balance.meta.get("filename"), balance.meta.get("lineno")) in failed:
+            if first.date == balance.date:
+                # "Date the pad after" that same day cannot be done: the day
+                # already holds an assertion, which is the conflict (w5/487).
+                return (
+                    f" The {first.date} assertion at {_location(first, filenames)} already asserts this "
+                    "account on that day and consumes the pad; two different assertions for one account and "
+                    "currency on one day cannot both hold, so remove one of the two."
+                )
             return (
                 f" A pad fills only the first later assertion in each currency; the {first.date} assertion at "
                 f"{_location(first, filenames)} already holds and consumes it, so the {balance.date} assertion "
@@ -1978,30 +2586,6 @@ _MISSING_COMMODITY = re.compile(r"Missing Commodity directive for '([^']+)'")
 _ACCUMULATED = re.compile(r"accumulated (?P<amount>-?[\d.,]+ \S+)")
 
 
-def _drained_close(balance: Any, entries: list[Any]) -> Any | None:
-    """The `close` a plugin's zero assertion checks, when it shares that close's location.
-
-    `check_drained` stamps its assertion with the close's own line. A close
-    already in the ledger is `_plugin_origin`'s case; one this write appends
-    read as a balance the user typed and got statement-date and fee advice
-    (w5/399).
-    """
-    from beancount.core.data import Close
-
-    meta = balance.meta or {}
-    return next(
-        (
-            entry
-            for entry in entries
-            if isinstance(entry, Close)
-            and entry.account == balance.account
-            and (entry.meta or {}).get("filename") == meta.get("filename")
-            and (entry.meta or {}).get("lineno") == meta.get("lineno")
-        ),
-        None,
-    )
-
-
 def _drained_close_hint(balance: Any, closing: Any, message: str, options: dict[str, Any]) -> str:
     """What the account still holds at its close, and how to get it to zero."""
     plugins = [str(name) for name, _ in options.get("plugin") or ()]
@@ -2013,6 +2597,49 @@ def _drained_close_hint(balance: Any, closing: Any, message: str, options: dict[
         f"account {holding} then. Move that balance out of {balance.account} with a transaction dated on or "
         f"before {closing.date}, then close it."
     )
+
+
+def _proposed_entry(entry: Any, filenames: dict[Path, Path], original_lines: dict[Path, list[bytes]]) -> bool:
+    """Whether the entry points into this write's unpersisted append."""
+    path = Path(entry.meta.get("filename", ""))
+    original = filenames.get(path, path).resolve()
+    line = entry.meta.get("lineno")
+    return original in original_lines and isinstance(line, int) and line > len(original_lines[original])
+
+
+def _plugin_close_hint(
+    closed: Any,
+    lifecycles: dict[str, list[Any]],
+    filenames: dict[Path, Path],
+    original_lines: dict[Path, list[bytes]],
+) -> tuple[str, str] | None:
+    """Describe a generated close and the written ancestor close to correct."""
+    from beancount.core.data import Close
+
+    origin = _plugin_origin(closed, "close", filenames, original_lines)
+    if origin is None:
+        return None
+    description = f"closed {closed.date} by {origin}, not by a line in the ledger"
+    remedy = "change the ledger lines that plugin reads"
+    ancestor = closed.account
+    while ":" in ancestor:
+        ancestor = ancestor.rsplit(":", 1)[0]
+        parent = next(
+            (
+                entry
+                for entry in lifecycles.get(ancestor, [])
+                if isinstance(entry, Close)
+                and entry.date == closed.date
+                and not _proposed_entry(entry, filenames, original_lines)
+                and _plugin_origin(entry, "close", filenames, original_lines) is None
+            ),
+            None,
+        )
+        if parent is not None:
+            description += f"; {parent.account} is closed that day at {_location(parent, filenames)}"
+            remedy = f"edit the close of {parent.account}"
+            break
+    return description, remedy
 
 
 def _plugin_origin(
@@ -2056,24 +2683,153 @@ def _currency_widen_hint(
 ) -> str:
     """Where the open that refuses `currency` is, and the two ways past it."""
     allowed = ", ".join(opened.currencies)
-    widened = ",".join([*opened.currencies, currency])
     origin = _plugin_origin(opened, "open", filenames, original_lines)
     where = f"by {origin}" if origin else f"at {_location(opened, filenames)}"
     return (
         f"{opened.account} is opened {where} for {allowed} only. To post {currency} there, edit that open to "
-        f"'{opened.date} open {opened.account} {widened}' (bea add open cannot change an existing open); "
+        f"'{_open_line(opened, [*opened.currencies, currency])}' (bea add open cannot change an existing open); "
         f"otherwise record this posting in {allowed}, converted at the rate paid."
     )
 
 
-def _lifecycles(entries: list[Any]) -> dict[str, list[Any]]:
-    """Each account's opens and closes, in ledger order."""
+def _open_line(opened: Any, currencies: list[str]) -> str:
+    """`opened` as one line with `currencies`, keeping its booking method.
+
+    Without it the suggested edit turned `"FIFO"` lot matching back into the
+    default one (w5/488). Metadata stays where it is, below the line.
+    """
+    booking = getattr(opened.booking, "value", opened.booking)
+    return f"{opened.date} open {opened.account} {','.join(currencies)}" + (f' "{booking}"' if booking else "")
+
+
+def _unique_prices_hint(prices: list[Any], filenames: dict[Path, Path], original_lines: dict[Path, list[bytes]]) -> str:
+    """Explain conflicting explicit and transaction-implied quotes (w5/665)."""
+    from bea_engine.managed_price_cache import managed_source_for_path
+
+    quotes = []
+    for price in prices:
+        path = Path(price.meta.get("filename", ""))
+        source = filenames.get(path, path)
+        line = price.meta.get("lineno")
+        lines = original_lines.get(source.resolve())
+        proposed = isinstance(line, int) and lines is not None and line > len(lines)
+        if price.meta.get("__implicit_prices__"):
+            origin = (
+                "implied by the proposed transaction (not written)"
+                if proposed
+                else (f"implied by the transaction at {_location(price, filenames)}")
+            )
+        elif proposed:
+            origin = "proposed price (not written)"
+        elif feed := managed_source_for_path(source):
+            origin = f"managed price from {feed}"
+        elif plugin := _plugin_origin(price, "price", filenames, original_lines):
+            origin = f"generated by {plugin}"
+        elif lines is None:
+            origin = f"existing quote at {_location(price, filenames)}"
+        else:
+            origin = f"written price at {_location(price, filenames)}"
+        quotes.append(f"{price.amount.number:f} {price.amount.currency} per {price.currency} on {price.date}, {origin}")
+    return (
+        "The unique_prices plugin permits one rate per date and currency pair. Conflicting quotes: "
+        + "; ".join(quotes)
+        + ". Review these rates and the plugin's one-price-per-day policy; --force cannot bypass this validation."
+    )
+
+
+def _duplicate_open_hint(existing: Any, duplicate: Any, filenames: dict[Path, Path]) -> str:
+    """One remedy for a second `open`: the account opens once, so edit the first (w5/488)."""
+    where = _location(existing, filenames)
+    if not existing.currencies:
+        return f"{existing.account} is already opened at {where} for any currency; an account opens once."
+    added = [currency for currency in duplicate.currencies or [] if currency not in existing.currencies]
+    if not added:
+        return f"{existing.account} is already opened at {where}; an account opens once."
+    return (
+        f"{existing.account} is already opened at {where} for {', '.join(existing.currencies)}; an account opens "
+        f"once. To allow {', '.join(added)} too, edit that open to "
+        f"'{_open_line(existing, [*existing.currencies, *added])}' (bea add open cannot change an existing open)."
+    )
+
+
+def _interpolated_leg_hint(entry: Any, account: str, currency: str, opened: Any) -> str | None:
+    """Advice for a leg Beancount filled in, in a currency its account does not take.
+
+    A card charged for a meal priced in EUR is the usual case: the card leg had
+    no amount, so the EUR came from the other legs, and widening the card's
+    open is the wrong fix. The right one is a price on the leg the user wrote
+    (w5/488).
+    """
+    from beancount.core.convert import get_weight
+    from beancount.utils.misc_utils import escape_string
+
+    legs = [p for p in entry.postings if p.account == account and p.units is not None and p.units.currency == currency]
+    if not legs or not all((p.meta or {}).get("__automatic__") for p in legs):
+        return None
+    target = opened.currencies[0] if len(opened.currencies) == 1 else "CURRENCY"
+    prefix = (
+        f"{account} was given no amount, so Beancount filled in {currency} from the other legs. If it was charged "
+        f"in {target}, "
+    )
+    remedies = []
+    for posting in entry.postings:
+        if (
+            (posting.meta or {}).get("__automatic__")
+            or posting.units is None
+            or not isinstance(posting.units.number, Decimal)
+        ):
+            continue
+        weight = get_weight(posting)  # type: ignore[no-untyped-call]
+        if weight.currency != currency:
+            continue
+        leg = f"{posting.account} {format(posting.units.number, 'f')} {posting.units.currency}"
+        if posting.cost is not None:
+            keep_lot = (
+                f"keep the recorded {posting.cost.currency} cost of an existing {posting.account} lot "
+                f"and use explicit settlement and FX postings for the {target} cash movement"
+            )
+            if posting.units.number < 0:
+                remedies.append(keep_lot)
+                continue
+            details = [f"COST {target}"]
+            if posting.cost.date:
+                details.append(posting.cost.date.isoformat())
+            if posting.cost.label:
+                label = escape_string(posting.cost.label)  # type: ignore[no-untyped-call]
+                details.append(f'"{label}"')
+            example = shlex.quote(f"{leg} {{{', '.join(details)}}}")
+            remedies.append(
+                f"for a new lot, record the cost in {target} at the actual per-unit cost: {example}; {keep_lot}"
+            )
+        else:
+            example = shlex.quote(f"{leg} @ RATE {target}")
+            remedies.append(f"price the {posting.units.currency} leg at the rate paid: {example}")
+    return prefix + ("; ".join(remedies) + "." if remedies else f"review the other legs' prices and costs in {target}.")
+
+
+def _lifecycles(entries: list[Any], sources: Iterable[Path] = ()) -> dict[str, list[Any]]:
+    """Account lifecycles, retaining written parent closes close_tree removes."""
     from beancount.core.data import Close, Open
 
+    from bea_engine.ledger.reader import _spelled_entries
+
     lifecycles: dict[str, list[Any]] = {}
+    generated_close = False
     for entry in entries:
         if isinstance(entry, Open | Close):
             lifecycles.setdefault(entry.account, []).append(entry)
+            generated_close |= isinstance(entry, Close) and str(entry.meta.get("filename", "")).startswith("<")
+    if generated_close:
+        # close_tree drops a parent's close when the parent itself was never
+        # opened. Recover that real remedy from the plugin-free source parse,
+        # once for the whole load rather than once per error/import row.
+        for source in sources:
+            for entry in _spelled_entries(str(source)).values():
+                if isinstance(entry, Close):
+                    entry = entry._replace(account=unicodedata.normalize("NFC", entry.account))
+                    group = lifecycles.setdefault(entry.account, [])
+                    if not any(isinstance(other, Close) and other.date == entry.date for other in group):
+                        group.append(entry._replace(meta={**entry.meta, "filename": str(source)}))
     return lifecycles
 
 
@@ -2099,13 +2855,14 @@ def _error_key(error: Any, filenames: dict[Path, Path]) -> tuple[str, int | None
     """
     from beancount.core.data import Balance
 
-    source = Path(error.source.get("filename", ""))
+    metadata = error.source or {}
+    source = Path(metadata.get("filename", ""))
     try:
         name = str(filenames.get(source, source).resolve())
     except OSError:
         name = str(filenames.get(source, source))
     entry = getattr(error, "entry", None)
-    if isinstance(entry, Balance):
+    if isinstance(entry, Balance) and str(getattr(error, "message", "")).startswith("Balance failed"):
         message = f"Balance failed for {entry.account} on {entry.date}"
     else:
         message = getattr(error, "message", str(error))
@@ -2114,7 +2871,7 @@ def _error_key(error: Any, filenames: dict[Path, Path]) -> tuple[str, int | None
         # back too or every such pre-existing error reads as new.
         for staged, original in filenames.items():
             message = message.replace(str(staged), str(original))
-    return (name, error.source.get("lineno"), message)
+    return (name, metadata.get("lineno"), message)
 
 
 def _preexisting_errors(
@@ -2195,12 +2952,18 @@ def _error_kind(error: Any) -> str:
     reduction error ("Not enough lots").
     """
     kind = type(error)
+    # A plugin may fix an old tags violation but introduce a links violation
+    # on that same entry. Sharing ValidationError and a line is not enough
+    # to tolerate a different data-type failure (w5/661).
+    message = str(getattr(error, "message", ""))
+    if message.startswith("Invalid data types:"):
+        return f"{kind.__name__}: {message}"
     return "booking" if kind.__module__.startswith("beancount.parser.booking") else kind.__name__
 
 
 def _unanchored(error: Any) -> bool:
     """Whether a plugin reported this error against no ledger line at all (`<check_commodity>:0`)."""
-    lineno = error.source.get("lineno")
+    lineno = (error.source or {}).get("lineno")
     return not isinstance(lineno, int) or lineno <= 0
 
 
@@ -2212,13 +2975,22 @@ def _moved_error_key(error: Any) -> tuple[str, str]:
     books already had; it matches on class and message wherever it now sits,
     its words sorted because the plugin joins a set of currencies in arbitrary
     order. `check_commodity` reports against no line and names whichever
-    account sorts first, so the message moves too: there the class and the
-    pseudo-file are all that is stable, and the before-count still caps how
+    account sorts first, so the message moves too: its missing currency stays
+    the same even when the account changes. The before-count still caps how
     many such errors a write may leave.
     """
     kind = type(error).__name__
+    if str(getattr(error, "message", "")).startswith("Invalid data types:"):
+        kind = _error_kind(error)
     if _unanchored(error):
-        return (kind, str(error.source.get("filename", "")))
+        source = str((error.source or {}).get("filename", ""))
+        if missing := _MISSING_COMMODITY.search(str(getattr(error, "message", ""))):
+            return (kind, f"{source}: {missing.group(1)}")
+        if not source:
+            # With no source at all, the message is the only distinction
+            # between this old failure and an unrelated new one (w5/667).
+            return (kind, str(getattr(error, "message", error)))
+        return (kind, source)
     return (kind, " ".join(sorted(re.split(r"[\s,]+", getattr(error, "message", str(error))))))
 
 
@@ -2295,6 +3067,20 @@ def _indent_block(texts: list[str], indent: str) -> list[str]:
                 lines.append(f"{nested}{line.strip()}")
         rendered.append("\n".join(lines))
     return rendered
+
+
+def appended_spans(original: bytes, texts: list[str]) -> list[tuple[int, int]]:
+    """The first and last line, 1-based, each of `texts` occupies in `appended_content(original, texts)`.
+
+    Each entry follows a blank line, and the aligner keeps the line count.
+    """
+    line = len(_lines(original.decode("utf-8", errors="replace")))
+    spans = []
+    for text in texts:
+        count = len(_lines(text.rstrip())) or 1
+        spans.append((line + 2, line + 1 + count))
+        line += 1 + count
+    return spans
 
 
 def appended_content(original: bytes, texts: list[str]) -> str:
@@ -2520,7 +3306,7 @@ def validate_append(
         require_one_entry_each(texts)
     snapshot = snapshot or LedgerSnapshot.capture(file)
     target = destination(file, into)
-    original = snapshot.require_target(target)
+    original = snapshot.require_target(target, into=into)
     seeded = new_include_seed(snapshot, target) + original
     with candidate_file(target, _appended_or_report(target, seeded, texts)) as candidate:
         warnings = validate_candidate(
@@ -2683,9 +3469,9 @@ def replace_checked(file: Path, candidate: Path, original: bytes, original_stat:
             "Replace the extra name with a symbolic link (writes land in the real file) or remove it, then retry."
         )
     keep_file_metadata(file, candidate, original_stat)
-    stopping.check()
     try:
-        os.replace(candidate, file)
+        with stopping.committing():
+            os.replace(candidate, file)
     except PermissionError as exc:
         raise AuthError(
             f"The filesystem refused to replace {file} (an ACL, file flag or directory permission "
@@ -2708,7 +3494,16 @@ def append(
     snapshot: LedgerSnapshot | None = None,
     one_entry_each: bool = True,
     pad_from: bool = False,
+    pad_date_explicit: bool = False,
+    validated: list[str] | None = None,
 ) -> list[str]:
+    """Append `texts` to the ledger, validated and written under the lock.
+
+    `validated` is the answer `validate_append` already gave for these texts
+    against this same `snapshot`. The snapshot is verified unchanged here, so
+    that answer still holds and the candidate is not loaded a second time: an
+    `import --apply` validated it twice, three full loads for one row (w5/577).
+    """
     if not texts:
         return []
     if one_entry_each:
@@ -2719,7 +3514,7 @@ def append(
         stack.enter_context(lock_files([file, target]))
         sweep_abandoned_candidates(target.parent)
         snapshot = snapshot or LedgerSnapshot.capture(file)
-        original = snapshot.require_target(target)
+        original = snapshot.require_target(target, into=into)
         snapshot.verify()
         original_stat = target.stat() if target.exists() else None
         if original_stat is not None:
@@ -2728,20 +3523,22 @@ def append(
             raise ConflictError("The ledger changed since the preview was prepared; nothing was written. Retry.")
         seeded = new_include_seed(snapshot, target) + original
         with candidate_file(target, _appended_or_report(target, seeded, texts)) as candidate:
-            warnings = validate_candidate(
-                candidate,
-                target,
-                allow_errors=allow_errors,
-                snapshot=snapshot,
-                stages_pad=_only_pads(texts),
-                stages_open=_only_opens(texts),
-                pad_from=pad_from,
-            )
+            if validated is None:
+                warnings = validate_candidate(
+                    candidate,
+                    target,
+                    allow_errors=allow_errors,
+                    snapshot=snapshot,
+                    stages_pad=_only_pads(texts),
+                    stages_open=_only_opens(texts),
+                    pad_from=pad_from,
+                    pad_date_explicit=pad_date_explicit,
+                )
             snapshot.verify()
             if original_stat is None:
                 stopping.check()
                 try:
-                    os.link(candidate, target)
+                    claim_new_file(candidate, target)
                 except FileExistsError as exc:
                     raise ConflictError(f"Already exists: {target}; nothing was overwritten.") from exc
                 except PermissionError as exc:
@@ -2749,6 +3546,8 @@ def append(
             else:
                 replace_checked(target, candidate, original, original_stat)
             _COMMITS[0] += 1
+    if validated is not None:
+        return validated
     return warnings + respelled_account_notes(texts, snapshot)
 
 

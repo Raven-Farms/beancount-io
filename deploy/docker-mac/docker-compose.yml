@@ -108,8 +108,6 @@ services:
       APP_LINKS_ANDROID_SHA256: ${APP_LINKS_ANDROID_SHA256:-}
       # Official MCP Registry domain proof. Unset → /.well-known/mcp-registry-auth 404.
       MCP_REGISTRY_AUTH_PROOF: ${MCP_REGISTRY_AUTH_PROOF:-}
-      # OpenAI apps domain proof. Unset → /.well-known/openai-apps-challenge 404.
-      OPENAI_APPS_CHALLENGE: ${OPENAI_APPS_CHALLENGE:-}
       # Data stores (service-name addressing inside the compose network).
       POSTGRES_BACKEND_URI: ${POSTGRES_BACKEND_URI:-postgresql://postgres:password@postgres-backend:5432/backend}
       REDIS_URI: ${REDIS_URI:-redis://redis:6379}
@@ -165,9 +163,6 @@ services:
       STRIPE_PUBLIC_KEY: ${STRIPE_PUBLIC_KEY:-}
       STRIPE_PRIVATE_KEY: ${STRIPE_PRIVATE_KEY:-}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
-      STRIPE_DEV_PUBLIC_KEY: ${STRIPE_DEV_PUBLIC_KEY:-}
-      STRIPE_DEV_PRIVATE_KEY: ${STRIPE_DEV_PRIVATE_KEY:-}
-      STRIPE_DEV_WEBHOOK_SECRET: ${STRIPE_DEV_WEBHOOK_SECRET:-}
       PLAID_CLIENT_ID: ${PLAID_CLIENT_ID:-}
       PLAID_SECRET: ${PLAID_SECRET:-}
       PLAID_ENVIRONMENT: ${PLAID_ENVIRONMENT:-sandbox}

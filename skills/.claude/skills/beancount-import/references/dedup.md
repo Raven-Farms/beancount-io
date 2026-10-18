@@ -15,7 +15,7 @@ import-id: "<source>:<stable-id>"
 
 Other tools may use their own source prefixes (e.g. a bank-feed integration writing `plaid:<txn-id>`); the exact-match layer treats every `import-id` value as an opaque string, so foreign prefixes dedup correctly without this skill knowing them. `bea import` follows this convention: native bank IDs become `bank:<id>` (`fitid` becomes `ofx:<id>`), rows without one become `csv:sha256:<16-hex>` with the normalization above, and pre-release `bea_import_id` entries still match.
 
-Migration prefixes (used by `beancount-migrate`, normative here): `mint:sha256:<16-hex>`, `monarch:sha256:<16-hex>`, `qbo:sha256:<16-hex>` — hash computed with exactly the normalization below, using the source's raw-description field (each migrate per-source reference names it). This is what lets a post-migration `beancount-import` run dedup against migrated history.
+Migration prefixes (used by `beancount-migrate`, normative here): `mint:sha256:<16-hex>`, `monarch:sha256:<16-hex>`, `qbo:sha256:<16-hex>`, and `<source>:sha256:<16-hex>` (a lowercase source name such as `ynab:` or `actual:`) for a source without its own reference. `bea import` matches the digest under any of them. The hash is computed with exactly the normalization below, using the source's raw-description field (each migrate per-source reference names it). This is what lets a post-migration `beancount-import` run dedup against migrated history.
 
 ## Hash normalization (the `csv:sha256` form)
 
@@ -26,7 +26,7 @@ Hash input is the UTF-8 string:
 ```
 
 - `date` — ISO `YYYY-MM-DD`.
-- `amount` — the **ledger-sign** amount followed by a space and its commodity: `-54.20 USD`. Write the exact value with trailing zeros stripped and no thousands separators, so the spellings of one amount (`-54.2`, `-54.20`, `-54.200`) all render `-54.2 USD`, and never in scientific notation (`100`, not `1E+2`). The exact value and the commodity keep distinct rows distinct: rounding would give `-0.001 ETH` and `-0.002 ETH` the same input, and dropping the commodity would do the same for `-1 ETH` and `-1 BTC`. A transaction with several source postings joins them with `+` in sorted order: `-1 BTC+-1 ETH`.
+- `amount` — the **ledger-sign** amount followed by a space and its commodity: `-54.20 USD`. Write the exact value with trailing zeros stripped and no thousands separators, so the spellings of one amount (`-54.2`, `-54.20`, `-54.200`) all render `-54.2 USD`, and never in scientific notation (`100`, not `1E+2`). The exact value and the commodity keep distinct rows distinct: rounding would give `-0.001 ETH` and `-0.002 ETH` the same input, and dropping the commodity would do the same for `-1 ETH` and `-1 BTC`. A transaction with several source postings joins them with `+` in sorted order: `-1 BTC+-1 ETH`. A source posting held at cost or priced adds its lot right after its units, as the ledger writes it: the per-unit cost and its commodity in braces, with its label when it has one (`10 AAPL {100 USD}`, `10 AAPL {100 USD, "lot-a"}`), then its price (`-10 AAPL {100 USD} @ 120 USD`), every number in the same exact form. So two same-day buys of `10 AAPL` at 100 and 120 USD are two rows. A cost the posting leaves open (`{}`, a currency or date alone) adds nothing. Ids hashed from units alone, written before lots counted, stay **lookup-only** keys: `bea import` matches them, but only against the same lot.
 - `description` — the **raw** row description (not the cleaned payee), uppercased, runs of whitespace collapsed to one space, leading/trailing whitespace stripped, then Unicode-normalized to **NFC**. Raw, because payee-cleanup rules may improve over time and must not change hashes; NFC, because the same description can arrive decomposed in one export and composed in the next, and the two must hash alike. Normalize *after* uppercasing — uppercasing decomposed text can itself emit a non-canonical form.
 - `source-account` — the full account name in NFC, e.g. `Assets:Bank:Checking`.
 
@@ -40,7 +40,7 @@ Otherwise `STARBUCKS / CARD PURCHASE` and `PEETS COFFEE / CARD PURCHASE` for the
 
 Take the SHA-256 hex digest, keep the **first 16 hex chars** (64 bits — collision-safe at personal-ledger scale, short enough to read).
 
-Example: `2026-05-07|-54.2 USD|TRADER JOES #123 SEATTLE WA|Assets:Bank:Checking` → `import-id: "csv:sha256:<first-16-of-sha256>"`. With a payee column reading `Store`: `2026-05-07|-54.2 USD|STORE|TRADER JOES #123 SEATTLE WA|Assets:Bank:Checking`.
+Example: `2026-05-07|-54.2 USD|TRADER JOES #123 SEATTLE WA|Assets:Bank:Checking` → `import-id: "csv:sha256:<first-16-of-sha256>"`. With a payee column reading `Store`: `2026-05-07|-54.2 USD|STORE|TRADER JOES #123 SEATTLE WA|Assets:Bank:Checking`. With a lot (an importer's `BUY AAPL` row posting `10 AAPL {100 USD}` to its source account): `2026-05-07|10 AAPL {100 USD}|BUY AAPL|Assets:Broker:AAPL` → `import-id: "csv:sha256:d11701f46efbd599"`.
 
 Compute it honestly (e.g. `printf '%s' '<input>' | shasum -a 256 | cut -c1-16`) — never fabricate a plausible-looking hash.
 
@@ -60,6 +60,8 @@ A canonical generated hash identifies the original source row. Keep it when revi
 
 **Layer 2 — fuzzy (legacy entries without metadata).** Manual entries predate the convention. For each surviving candidate, look for existing entries **lacking** import-id metadata that post the **same amount** to the **source account** within **±3 days**, with similar descriptions (case-insensitive token overlap; a matching leading word like a shared merchant name counts). Each hit is a **suspected duplicate**: present the candidate and the existing entry side by side and ask *skip* (already recorded manually) or *import* (genuinely distinct). Never decide silently in either direction — a wrong skip loses a real transaction, a wrong import double-books one.
 
+**Layer 2b — the other side of a transfer.** A transfer imported from one account already sits in the ledger with that account's `import-id`, and posts to the source account only as its counter posting (the first posting is the other account). Each bank words its side differently (`TRANSFER TO SAVINGS` / `TRANSFER FROM CHECKING`), so neither the description pass nor Layer 1 sees the pair. For each surviving candidate, look for such entries, with or without import-id metadata, that post the **same amount** to the source account within **±3 days**, whatever the description. Each hit is a suspected duplicate, presented and decided like the ones above; *skip* is the usual answer, since the transfer is already booked.
+
 If the user chooses *skip*, offer to add the candidate's `import-id` onto the **existing** manual entry (one metadata line — the only edit-of-existing-entries this skill ever proposes, and only with explicit consent). This makes the next re-import exact-match it in layer 1 instead of re-asking.
 
 ## Ordering
@@ -70,7 +72,9 @@ Dedup runs **before** categorization (Suggest). Skipped rows must not consume ca
 
 `bea import` auto-skips exact `import-id` matches and reports possible
 duplicates with the same date, normalized payee (the narration when the row has
-no payee) and source amount/currency.
+no payee) and source amount/currency. It also reports Layer 2b's transfer sides
+itself ("A transfer from … already posts …; this row may be its other side"),
+for a transfer whose first posting is another asset or liability account.
 It **does not implement** the ±3-day, similar-description pass above. Run that
 additional review even when the CLI reports zero possible duplicates; see
 `references/bea-import.md` for the query and write procedure.

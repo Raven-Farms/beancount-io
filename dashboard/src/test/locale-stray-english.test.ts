@@ -2,12 +2,16 @@ import { describe, expect, it } from "vitest";
 import * as locales from "@/i18n/locales";
 import {
   EN_COMPARED_LOCALES,
+  IDENTICAL_BY_DESIGN,
   SCANNED_LOCALES,
   UNCLASSIFIED_LOCALES,
   type ScannedLocale,
+  staleIdenticalEntries,
   strayEnglishWords,
+  untranslatedAgainstEnglish,
   untranslatedEnglishTail,
   untranslatedWholeMessage,
+  wholeEnglishCopies,
 } from "./locale-scan";
 import en from "@/i18n/locales/en";
 
@@ -20,6 +24,16 @@ import en from "@/i18n/locales/en";
  */
 
 const ALL = locales as unknown as Record<string, Record<string, string>>;
+
+/** A failure names the locale, key, message and the English words it kept. */
+const offenderLines = (
+  locale: string,
+  offenders: { key: string; message: string; words: string[] }[],
+) =>
+  offenders.map(
+    ({ key, message, words }) =>
+      `${locale}/${key}: ${message} -> ${words.join(" ")}`,
+  );
 
 /**
  * Damage that exists on `main` today, listed key by key so that repairing one
@@ -85,16 +99,14 @@ describe("no locale ships a half-translated message", () => {
       // Reaches the Latin-script locales, where script proves nothing: `Cuenta
       // Balance` and `Excluir Ledger` are only visible beside their English
       // source.
-      const offenders: string[] = [];
-      for (const [key, message] of Object.entries(ALL[locale] ?? {})) {
-        const english = en[key];
-        if (english === undefined) continue;
-        const tail = untranslatedEnglishTail(message, english, locale);
-        if (tail.length) {
-          offenders.push(`${locale}/${key}: ${message} -> ${tail.join(" ")}`);
-        }
-      }
-      expect(offenders).toEqual([]);
+      expect(
+        offenderLines(
+          locale,
+          untranslatedAgainstEnglish(ALL[locale], en, (message, english) =>
+            untranslatedEnglishTail(message, english, locale),
+          ),
+        ),
+      ).toEqual([]);
     },
   );
 
@@ -184,95 +196,18 @@ describe("German table column headers", () => {
   });
 });
 
-/**
- * Messages a locale deliberately keeps identical to English, keyed
- * `locale/key`, each with the reason it is correct there. The list exists so
- * the check below can stay strict; an entry that stops being identical fails
- * the stale-entry test rather than lingering as a silent excuse.
- */
-const IDENTICAL_BY_DESIGN: Record<string, string> = {
-  "bg/userProfile.openLedgerName":
-    "Open Ledger is the proper name of the public collection account",
-  "ca/userProfile.openLedgerName":
-    "Open Ledger is the proper name of the public collection account",
-  "de/userProfile.openLedgerName":
-    "Open Ledger is the proper name of the public collection account",
-  "es/userProfile.openLedgerName":
-    "Open Ledger is the proper name of the public collection account",
-  "fa/userProfile.openLedgerName":
-    "Open Ledger is the proper name of the public collection account",
-  "fr/userProfile.openLedgerName":
-    "Open Ledger is the proper name of the public collection account",
-  "ja/userProfile.openLedgerName":
-    "Open Ledger is the proper name of the public collection account",
-  "ko/userProfile.openLedgerName":
-    "Open Ledger is the proper name of the public collection account",
-  "nl/userProfile.openLedgerName":
-    "Open Ledger is the proper name of the public collection account",
-  "pt/userProfile.openLedgerName":
-    "Open Ledger is the proper name of the public collection account",
-  "ru/userProfile.openLedgerName":
-    "Open Ledger is the proper name of the public collection account",
-  "sk/userProfile.openLedgerName":
-    "Open Ledger is the proper name of the public collection account",
-  "uk/userProfile.openLedgerName":
-    "Open Ledger is the proper name of the public collection account",
-  "zh/userProfile.openLedgerName":
-    "Open Ledger is the proper name of the public collection account",
-  "bg/page.accounts.accountSubAccountPlaceholder":
-    "Placeholder written in Beancount account-path syntax",
-  "ca/page.accounts.accountSubAccountPlaceholder":
-    "Placeholder written in Beancount account-path syntax",
-  "de/page.accounts.accountSubAccountPlaceholder":
-    "Placeholder written in Beancount account-path syntax",
-  "es/page.accounts.accountSubAccountPlaceholder":
-    "Placeholder written in Beancount account-path syntax",
-  "fa/page.accounts.accountSubAccountPlaceholder":
-    "Placeholder written in Beancount account-path syntax",
-  "fr/page.accounts.accountSubAccountPlaceholder":
-    "Placeholder written in Beancount account-path syntax",
-  "nl/page.accounts.accountSubAccountPlaceholder":
-    "Placeholder written in Beancount account-path syntax",
-  "pt/page.accounts.accountSubAccountPlaceholder":
-    "Placeholder written in Beancount account-path syntax",
-  "ru/page.accounts.accountSubAccountPlaceholder":
-    "Placeholder written in Beancount account-path syntax",
-  "sk/page.accounts.accountSubAccountPlaceholder":
-    "Placeholder written in Beancount account-path syntax",
-  "uk/page.accounts.accountSubAccountPlaceholder":
-    "Placeholder written in Beancount account-path syntax",
-  "zh/page.accounts.accountSubAccountPlaceholder":
-    "Placeholder written in Beancount account-path syntax",
-  "de/seo.ledgerPullRequest.title":
-    "These catalogs keep the Git term Pull Request throughout",
-  "nl/seo.ledgerPullRequest.title":
-    "These catalogs keep the Git term Pull Request throughout",
-};
-
 describe("no locale ships an English message copied whole", () => {
   it.each(EN_COMPARED_LOCALES)(
     "%s translates every copied message",
     (locale) => {
-      const offenders: string[] = [];
-      for (const [key, message] of Object.entries(ALL[locale] ?? {})) {
-        const english = en[key];
-        if (english === undefined) continue;
-        if (IDENTICAL_BY_DESIGN[`${locale}/${key}`]) continue;
-        if (untranslatedWholeMessage(message, english).length) {
-          offenders.push(`${locale}/${key}: ${message}`);
-        }
-      }
-      expect(offenders).toEqual([]);
+      expect(
+        offenderLines(locale, wholeEnglishCopies(ALL[locale], en, locale)),
+      ).toEqual([]);
     },
   );
 
   it("keeps every identical-by-design entry identical", () => {
-    const stale = Object.keys(IDENTICAL_BY_DESIGN).filter((entry) => {
-      const [locale, ...rest] = entry.split("/");
-      const key = rest.join("/");
-      return ALL[locale]?.[key] !== en[key];
-    });
-    expect(stale).toEqual([]);
+    expect(staleIdenticalEntries(IDENTICAL_BY_DESIGN, ALL, en)).toEqual([]);
   });
 
   it("flags a whole English copy but not brand or notation alone", () => {

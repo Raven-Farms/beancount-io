@@ -87,6 +87,7 @@ export const fa: Translations = {
   merchantsCadenceQuarterly: "فصلی",
   merchantsCadenceYearly: "سالانه",
   merchantsCadenceIrregular: "نامنظم",
+  merchantsCadenceUnknown: "سابقه کافی نیست",
   merchantsNextExpected: "بعدی {{date}}",
   merchantsOverdue: "سررسید گذشته",
   merchantsRecurringToggle: "دوره‌ای",
@@ -173,7 +174,7 @@ export const fa: Translations = {
   quickAdd: "افزودن سریع",
   enterNewTransaction: "ثبت تراکنش جدید",
   multiPostingsTitle: "تراکنش جدید",
-  addPosting: "+ افزودن ثبت",
+  addPosting: "افزودن ثبت",
   remainderLabel: "باقی‌مانده",
   autoLabel: "خودکار",
   postingAccount: "انتخاب حساب",
@@ -302,10 +303,12 @@ export const fa: Translations = {
   openAccountNoCurrency: "بدون واحد پول",
   openAccountSaving: "در حال افتتاح...",
   openAccountFailed: "افتتاح حساب ناموفق بود. دوباره تلاش کنید.",
+  ledgerWouldBreak: "این کار یک خطا به دفتر شما اضافه می‌کند: {{detail}}",
   openAccountInvalidRoot: "یک نوع حساب معتبر انتخاب کنید.",
   openAccountNameRequired: "دست‌کم یک بخش از نام حساب را وارد کنید.",
   openAccountEmptyComponent: "بخش‌های نام حساب نمی‌توانند خالی باشند.",
   openAccountNamePreview: "با نام {{account}} ایجاد می‌شود",
+  openAccountAlreadyOpen: "{{account}} از قبل در این دفتر باز شده است.",
   openAccountUppercaseComponent:
     "هر بخش نام حساب باید با حرف بزرگ یا رقم آغاز شود.",
   openAccountInvalidCharacters:
@@ -506,6 +509,7 @@ export const fa: Translations = {
   budgetInterval: "بازه زمانی",
   budgetSelectInterval: "انتخاب بازه زمانی",
   budgetAmount: "مبلغ",
+  budgetAmountInvalid: "یک عدد وارد کنید، مثلاً 500 یا 49.99.",
   budgetSaveFailed: "ذخیره بودجه ناموفق بود",
   // delete
   budgetDelete: "حذف",
@@ -577,6 +581,10 @@ export const fa: Translations = {
     "جریان نقدی از درآمد به هزینه. درآمد {{income}}، هزینه {{expenses}}.",
   cashFlowChartSummaryWithSavings:
     "جریان نقدی از درآمد به هزینه. درآمد {{income}}، هزینه {{expenses}}، پس‌انداز {{savings}}.",
+  cashFlowChartSummaryWithShortfall:
+    "جریان نقدی از درآمد به هزینه. درآمد {{income}}، هزینه {{expenses}}، از پس‌انداز {{shortfall}}.",
+  sankeyIncomeNodeLabel: "{{name}} (درآمد)",
+  sankeyExpensesNodeLabel: "{{name}} (هزینه)",
   ledgerNavigateUp: "رفتن به پوشه بالاتر",
   openLedgerDrawer: "باز کردن منو",
   back: "بازگشت",
@@ -601,7 +609,8 @@ export const fa: Translations = {
   profileUsernameHint:
     "نشانی وب دفترهای کل شما با نام کاربری‌تان شروع می‌شود، پس تغییر آن نشانی‌ها را هم تغییر می‌دهد.",
   profileUsernameRequired: "یک نام کاربری وارد کنید",
-  profileUsernameNoSpaces: "نام کاربری نمی‌تواند فاصله داشته باشد",
+  profileUsernameRule:
+    "از ۱ تا ۲۰ نویسه استفاده کنید: حروف کوچک a–z، ارقام 0–9 یا زیرخط.",
   profileUsernameTaken: "این نام کاربری قبلاً گرفته شده است",
   profileEmail: "ایمیل",
   profileEmailReadOnly: "ایمیل را اینجا نمی‌توان تغییر داد",

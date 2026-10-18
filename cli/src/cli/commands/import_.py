@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import shlex
 import unicodedata
 from enum import StrEnum
@@ -22,6 +23,7 @@ import typer
 from cli import context, output
 from cli.config import config_dir
 from cli.errors import BeaError, UsageError
+from cli.paths import expand_path
 from cli.utils import IntoPath, NonEmptyPath, atomic_write, exclusive_lock, inert_text
 
 
@@ -120,16 +122,35 @@ def _config_available(file: Path, notes: list[str]) -> tuple[Path, str] | None:
     record = _config_record(file, reading=True)
     if _is_record(record):
         try:
-            remembered = Path(json.loads(record.read_text())["config"])
-        except (OSError, ValueError, KeyError, TypeError) as exc:
-            raise UsageError("Cannot read the saved importer path; select one with --config FILE.") from exc
-        if remembered.is_file():
+            text = record.read_text()
+        except OSError as exc:
+            # Unreadable is not corrupt: it may still name the importer this
+            # ledger relies on, so it is not guessed past (w5/215). But it is
+            # named, with remedies that work for a CSV too (w5/592).
+            raise UsageError(
+                f"Cannot read the remembered importer record {record} ({exc.strerror or type(exc).__name__}). "
+                "Make it readable, or delete it to forget the importer; or choose for this run with "
+                "--config FILE (a Python importer) or --csv auto (the header row)."
+            ) from exc
+        try:
+            remembered: Path | None = Path(json.loads(text)["config"])
+        except (ValueError, KeyError, TypeError, RecursionError):
+            # Corrupt memory selects nothing, as a moved importer does: stale
+            # local state must not block an import (w1/105, w5/592).
+            remembered = None
+            corrupt = (
+                f"The remembered importer record {record} is not valid; ignoring it. "
+                "Pass --config FILE to select a Python importer again."
+            )
+            if corrupt not in notes:
+                notes.append(corrupt)
+        if remembered is not None and remembered.is_file():
             return remembered, "remembered"
         missing = (
             f"The remembered importer {remembered} is missing; ignoring it. "
             "Pass --config FILE to select a Python importer again."
         )
-        if missing not in notes:
+        if remembered is not None and missing not in notes:
             notes.append(missing)
     conventional = file.parent / "importers.py"
     if conventional.is_file():
@@ -137,19 +158,79 @@ def _config_available(file: Path, notes: list[str]) -> tuple[Path, str] | None:
     return None
 
 
-def _config_path(file: Path, supplied: Path | None, notes: list[str]) -> tuple[Path, str]:
+def _config_path(
+    file: Path,
+    supplied: Path | None,
+    notes: list[str],
+    *,
+    source: Path,
+    account: str | None,
+    delimiter: str | None = None,
+    encoding: str = "utf-8",
+) -> tuple[Path, str]:
     if supplied is not None:
-        return supplied.expanduser().resolve(), "--config"
+        return expand_path(supplied, "--config").resolve(), "--config"
     available = _config_available(file, notes)
     if available is not None:
         return available
     raise UsageError(
         "Choose a Python importer with --config FILE, or place importers.py beside the root ledger. "
         "The selected path is remembered for this ledger. "
-        "For a CSV export whose header row bea could not read, map the columns directly with "
-        "--csv date=Date,amount=Amount,narration=Description --account Assets:Checking.",
+        + _unread_header_hint(source, account, delimiter=delimiter, encoding=encoding),
         details=notes,
     )
+
+
+def _unread_header_hint(source: Path, account: str | None, *, delimiter: str | None, encoding: str) -> str:
+    """The `--csv` command for an export bea found no columns in, from what was typed and read.
+
+    A fixed `--account Assets:Checking` and `Date,Amount,Description` sent a
+    pasted command's savings rows into checking, on columns no file had
+    (w5/470). The typed account is kept, and the header bea read is listed.
+    """
+    from cli.csv_mapper import detect_delimiter, read_header
+
+    try:
+        headers = read_header(source, delimiter=delimiter, encoding=encoding)
+        used = delimiter if delimiter is not None else detect_delimiter(source, encoding=encoding)
+    except UsageError:
+        headers, used = None, ","
+    # One cell is not a column list: a QIF or OFX file's first line, or a
+    # header the delimiter did not split, read as "its columns" (w5/627).
+    single = headers[0].lstrip("\ufeff") if headers and len(headers) == 1 else None
+    if single is not None and _NOT_CSV.match(single):
+        kind = "a QIF" if single.startswith("!") else "an OFX"
+        return (
+            f"{source.name} looks like {kind} file, not a CSV export, so it has no columns to map: "
+            "use a Python importer that reads it."
+        )
+    unsplit = _unsplit_header(headers, used)
+    if unsplit is not None:
+        return (
+            f"{source.name}'s header was read as one column ({unsplit[0]!r}) with delimiter "
+            f"{_display_delimiter(used)}, but it looks {_SEPARATOR_NAMES[unsplit[1]]}-separated: pass --delimiter "
+            f"{_display_delimiter(unsplit[1])}, or omit --delimiter so bea detects it."
+        )
+    columns = f" Its columns are: {', '.join(headers)}." if headers and len(headers) > 1 else ""
+    return (
+        f"For a CSV export whose header row bea could not read, map the columns directly.{columns} "
+        "Name them with --csv date=COLUMN,amount=COLUMN,narration=COLUMN "
+        f"--account {shlex.quote(account) if account else 'ACCOUNT'}."
+    )
+
+
+#: The first line of an export that is not CSV at all: QIF's `!Type:`, OFX 1's
+#: SGML header, OFX 2's XML declaration.
+_NOT_CSV = re.compile(r"!(?:Type|Account|Option)\b|OFXHEADER:|<\?xml|<OFX>", re.IGNORECASE)
+
+_SEPARATOR_NAMES = {",": "comma", ";": "semicolon", "\t": "tab", "|": "pipe"}
+
+
+def _unsplit_header(headers: list[str] | None, used: str) -> tuple[str, str] | None:
+    """A one-cell header and the separator it holds that the delimiter in force is not (w5/622)."""
+    single = headers[0] if headers and len(headers) == 1 else None
+    other = next((sep for sep in _SEPARATOR_NAMES if single and sep != used and sep in single), None)
+    return (single, other) if single is not None and other is not None else None
 
 
 def _display_delimiter(delim: str) -> str:
@@ -186,7 +267,13 @@ def _shell_spec(spec: str) -> str:
 
 
 def _inferred_mapping(
-    source: Path, *, explicit: bool, notes: list[str], delimiter: str | None = None, encoding: str = "utf-8"
+    source: Path,
+    *,
+    explicit: bool,
+    notes: list[str],
+    delimiter: str | None = None,
+    encoding: str = "utf-8",
+    account: str | None = None,
 ) -> str | None:
     """A `--csv` spec read off the export's header row.
 
@@ -208,20 +295,27 @@ def _inferred_mapping(
             return None
         columns = ", ".join(headers) if headers else "(none)"
         used = delimiter if delimiter is not None else detect_delimiter(source, encoding=encoding)
-        if headers and len(headers) == 1 and any(sep in headers[0] for sep in (";", "\t", "|")):
+        unsplit = _unsplit_header(headers, used)
+        if unsplit is not None:
+            # Every separator, a comma under a forced `;` too: the mapping
+            # suggested instead failed the same way when followed (w5/622).
+            single, other = unsplit
             raise UsageError(
                 f"Cannot read a column mapping from the header row of {source.name}. "
-                f"The file looks semicolon-, tab-, or pipe-separated but was read as one column ({headers[0]!r}) "
+                f"The file looks {_SEPARATOR_NAMES[other]}-separated but was read as one column ({single!r}) "
                 f"with delimiter {_display_delimiter(used)}. "
-                "Pass --delimiter ';' (or tab, or '|'), --csv delimiter=';' — "
-                "or omit the override so bea can detect it.",
+                f"Pass --delimiter {_display_delimiter(other)} — or omit the override so bea can detect it.",
                 details=notes,
             )
         clause = f" (delimiter {_display_delimiter(used)})" if used != "," else ""
+        # The columns this file has, never ones it lacks, and the account
+        # that was typed: the fixed `Date,Amount,Description` failed when
+        # pasted (w5/612), as w5/470 found for the no-importer refusal.
         raise UsageError(
             f"Cannot read a column mapping from the header row of {source.name}. "
             f"Its columns are: {columns}{clause}. "
-            "Name them with --csv date=Date,amount=Amount,narration=Description.",
+            "Name them with --csv date=COLUMN,amount=COLUMN,narration=COLUMN "
+            f"--account {shlex.quote(account) if account else 'ACCOUNT'}.",
             details=notes,
         )
     return inferred.spec
@@ -271,6 +365,42 @@ def _source_sha256(source: Path) -> str | None:
         return hashlib.sha256(source.read_bytes()).hexdigest()
     except OSError:
         return None
+
+
+#: How many ledger-signed files one header remembers; the oldest fall off.
+_SIGN_LEDGER_FILES = 64
+
+
+def _sign_ledger_files(record: dict[str, Any] | None) -> dict[str, str]:
+    """The files of a header chosen as `sign=ledger`: content hash → file name, oldest first.
+
+    One hash per header was kept, so previewing next month's export with the
+    same header evicted the first file's sign, and that file's flag-free
+    `--apply` wrote every amount flipped, with no note (w5/594). A record
+    from before then holds its one hash under `sign_ledger_sha256`.
+    """
+    if record is None:
+        return {}
+    stored = record.get("sign_ledger_files")
+    files = (
+        {digest: name for digest, name in stored.items() if isinstance(digest, str) and isinstance(name, str)}
+        if isinstance(stored, dict)
+        else {}
+    )
+    legacy = record.get("sign_ledger_sha256")
+    if isinstance(legacy, str) and legacy not in files:
+        source = record.get("source")
+        files = {legacy: source if isinstance(source, str) else "the remembered file", **files}
+    return files
+
+
+def _signed(files: dict[str, str], source: Path, *, ledger: bool) -> dict[str, Any]:
+    """The sign fields of a record after a run that chose `source`'s sign: only this file's entry changes."""
+    digest = _source_sha256(source)
+    kept = {key: name for key, name in files.items() if key != digest}
+    if ledger and digest is not None:
+        kept[digest] = source.name
+    return {"sign_ledger_files": dict(list(kept.items())[-_SIGN_LEDGER_FILES:]), "sign_ledger_sha256": None}
 
 
 def _same_account(stored: Any, account: str) -> bool:
@@ -529,7 +659,17 @@ def import_entries(
     from cli.engine import launch
 
     file = context.current().entry_file()
-    source = source.expanduser().resolve()
+    # A write through an included leaf is the root's: its memory is kept per
+    # root, and `target.file` names the root, as the same import with
+    # `--into` does. Resolved here, before memory is read (w5/613).
+    redirect: str | None = None
+    if into is None:
+        resolved = launch.helper_json(["root", "--file", str(file)])
+        if resolved.get("root"):
+            file, into, redirect = Path(resolved["root"]), Path(resolved["into"]), resolved.get("note")
+            if redirect:
+                output.note(redirect)
+    source = expand_path(source, "import source").resolve()
     if date_format is not None and not date_format.strip():
         # An empty value is not an omitted one (w5/239): read as unset, it was
         # remembered as `""` and refused every later plain import (w5/385).
@@ -547,6 +687,13 @@ def import_entries(
             raise UsageError(f"Export file not found: {source}")
         remedy = "Name the export file inside it." if source.is_dir() else "Save it to a file and import that file."
         raise UsageError(f"Export {output.not_a_file(source)}. {remedy}")
+    # The engine child reads these, and does not inherit the descriptor a
+    # `<(…)` passes as `/dev/fd/N`: "Bad file descriptor", or a config "not
+    # found" right after "Using importers from" it (w5/582).
+    for flag, named in (("--rules", rules_file), ("--config", config)):
+        path = expand_path(named, flag) if named is not None else None
+        if path is not None and os.path.lexists(path) and not path.is_file():
+            raise UsageError(f"{flag} {output.not_a_file(path)}. Save it to a file and pass that file.")
 
     csv_request: str | None = csv_mapping
     config_to_remember: Path | None = None
@@ -554,7 +701,7 @@ def import_entries(
     discarded_note: str | None = None
     csv_origin = "--csv"
     csv_run_account: str | None = csv_account
-    csv_rules_arg: Path | None = rules_file.expanduser().resolve() if rules_file is not None else None
+    csv_rules_arg: Path | None = expand_path(rules_file, "--rules").resolve() if rules_file is not None else None
     remembered_run = False
     recalled_sign_ledger = False
     inferred_notes: list[str] = []
@@ -584,7 +731,12 @@ def import_entries(
     typed_key_names: set[str] = set()
     if csv_request is not None and csv_request.strip().casefold() == "auto":
         csv_request = _inferred_mapping(
-            source, explicit=True, notes=inferred_notes, delimiter=csv_delimiter, encoding=csv_encoding
+            source,
+            explicit=True,
+            notes=inferred_notes,
+            delimiter=csv_delimiter,
+            encoding=csv_encoding,
+            account=csv_account,
         )
         csv_origin = "inferred --csv"
     if csv_request is not None and csv_request.strip().casefold() != "auto":
@@ -617,7 +769,12 @@ def import_entries(
                     csv_request = None
                 else:
                     csv_request = _inferred_mapping(
-                        source, explicit=True, notes=inferred_notes, delimiter=csv_delimiter, encoding=csv_encoding
+                        source,
+                        explicit=True,
+                        notes=inferred_notes,
+                        delimiter=csv_delimiter,
+                        encoding=csv_encoding,
+                        account=csv_account,
                     )
                     if peek.sign != "bank" and csv_request is not None:
                         csv_request = f"{csv_request},sign={peek.sign}"
@@ -707,33 +864,30 @@ def import_entries(
                     f"Updated remembered settings for {source.name}: {', '.join(changes)}. "
                     "A flag-free run of this header now uses them."
                 )
-            sign_file = remembered.get("sign_ledger_sha256")
+            sign_files = _sign_ledger_files(remembered)
             if typed_keys is not None:
                 # The keys typed on this run are part of what the next
                 # flag-free run of this file must replay. Sign stays out of
-                # the mapping; only the file it was chosen for is recorded.
+                # the mapping; only the files it was chosen for are recorded.
                 if "sign" in typed_key_names:
                     csv_request = _strip_spec_keys(csv_request, {"sign"})
                     recalled_sign_ledger = typed_keys.sign == "ledger"
                     if recalled_sign_ledger:
                         csv_request = f"{csv_request},sign=ledger"
-                    sign_file = _source_sha256(source) if recalled_sign_ledger else None
-                    csv_to_remember = {
-                        **(csv_to_remember or remembered),
-                        "source": source.name,
-                        "sign_ledger_sha256": sign_file,
-                    }
+                    signed = _signed(sign_files, source, ledger=recalled_sign_ledger)
+                    sign_files = signed["sign_ledger_files"]
+                    csv_to_remember = {**(csv_to_remember or remembered), "source": source.name, **signed}
                 if "encoding" in typed_key_names:
                     csv_to_remember = {
                         **(csv_to_remember or remembered),
                         "mapping": _strip_spec_keys(csv_request, {"sign", "delimiter"}),
                     }
-            if isinstance(sign_file, str) and "sign" not in typed_key_names:
-                # `sign=ledger` belongs to the file it was chosen for. Replaying
-                # that same file keeps it, so `--apply` writes what the preview
+            if sign_files and "sign" not in typed_key_names:
+                # `sign=ledger` belongs to the files it was chosen for. Replaying
+                # one of them keeps it, so `--apply` writes what the preview
                 # showed; any other file sharing the header must say its sign.
-                seeded_from = recalled_source or "the remembered file"
-                if _source_sha256(source) == sign_file:
+                seeded_from = list(sign_files.values())[-1]
+                if _source_sha256(source) in sign_files:
                     recalled_sign_ledger = True
                     csv_request = f"{csv_request},sign=ledger"
                     recall_notes.append(
@@ -747,7 +901,12 @@ def import_entries(
                     )
         elif config is None and _config_available(file, config_notes) is None:
             csv_request = _inferred_mapping(
-                source, explicit=False, notes=inferred_notes, delimiter=csv_delimiter, encoding=csv_encoding
+                source,
+                explicit=False,
+                notes=inferred_notes,
+                delimiter=csv_delimiter,
+                encoding=csv_encoding,
+                account=csv_account,
             )
             if csv_request is not None:
                 csv_origin = "inferred --csv"
@@ -790,12 +949,17 @@ def import_entries(
                 raise UsageError(
                     f"Read a column mapping from the header row of {source.name} "
                     f"(--csv {_shell_spec(csv_request or '')}), but not which account the export belongs to. "
-                    "Add --account Assets:Checking, or choose a Python importer with --config FILE.",
-                    details=inferred_notes,
+                    "Add --account ACCOUNT, naming the account it belongs to, or choose a Python importer with "
+                    "--config FILE.",
+                    # The settings notes too: an unreadable settings directory
+                    # is why nothing was remembered here (w5/525).
+                    details=[*config_notes, *recall_notes, *inferred_notes],
                 )
             raise UsageError(
-                "--csv needs --account ACCOUNT for the source account, for example --account Assets:Checking.",
-                details=inferred_notes,
+                # No example account: one that was never typed sent pasted
+                # savings rows into checking (w5/470, w5/612).
+                "--csv needs --account ACCOUNT, naming the account the export belongs to.",
+                details=[*config_notes, *recall_notes, *inferred_notes],
             )
         mapping = parse_mapping(csv_request)
         spec_delimiter = mapping.delimiter
@@ -804,6 +968,49 @@ def import_entries(
             csv_delimiter = spec_delimiter
         if mapping.encoding is not None:
             csv_encoding = mapping.encoding
+        delimiter_note = ""
+        if csv_delimiter is not None and csv_delimiter != ",":
+            delimiter_note = f", delimiter {_display_delimiter(csv_delimiter)}"
+        encoding_note = f", encoding {csv_encoding}" if csv_encoding != "utf-8" else ""
+
+        def settings_notes(date_format: str | None) -> list[str]:
+            """The notes a run prints first, and a refusal lists first (w5/282, w5/525)."""
+            frontend_notes: list[str] = [*config_notes]
+            if remembered_run:
+                columns_only = _strip_spec_keys(csv_request or "", {"delimiter", "encoding", "sign"})
+                if recalled_sign_ledger:
+                    columns_only = f"{columns_only},sign=ledger"
+                if csv_encoding != "utf-8":
+                    # One `--csv`: a second one would replace the columns when the
+                    # line is pasted back, since the last `--csv` wins (w5/283).
+                    columns_only = f"{columns_only},encoding={csv_encoding}"
+                settings = [f"--csv {_shell_spec(columns_only)}", shlex.join(["--account", csv_run_account])]
+                if date_format is not None:
+                    settings.append(shlex.join(["--date-format", date_format]))
+                if csv_rules_arg is not None:
+                    settings.append(shlex.join(["--rules", str(csv_rules_arg)]))
+                if default_account is not None:
+                    settings.append(f"--default-account {default_account}")
+                if carried_delimiter is not None:
+                    settings.append(f"--delimiter {_display_delimiter(carried_delimiter)}")
+                if recalled_source is not None and recalled_source != source.name:
+                    frontend_notes.append(
+                        f"Using settings remembered from {recalled_source} for {source.name}: {' '.join(settings)}."
+                    )
+                else:
+                    frontend_notes.append(f"Using remembered settings for {source.name}: {' '.join(settings)}.")
+            elif csv_origin == "inferred --csv":
+                frontend_notes.append(
+                    f"Read the column mapping from the header row: --csv {_shell_spec(csv_request or '')}"
+                    + (f" --date-format {shlex.quote(date_format)}" if date_format is not None else "")
+                    + ". Pass --csv to override."
+                )
+            else:
+                frontend_notes.append(f"Using column mapping (--csv{delimiter_note}{encoding_note}).")
+            frontend_notes.extend(recall_notes)
+            frontend_notes.extend(inferred_notes)
+            return frontend_notes
+
         if date_format is None:
             date_format, ambiguous, rejection = inspect_date_column(
                 source,
@@ -820,7 +1027,8 @@ def import_entries(
                     f"Row {rejection.row} (line {rejection.line}): cannot parse date {rejection.value!r} in column "
                     f"{mapping.columns['date']!r} with {fits}. Correct the cell, or pass --date-format with the "
                     "file's strptime format (for example --date-format %d.%m.%y).",
-                    details=[*recall_notes, *inferred_notes],
+                    # The remembered-settings note first, as other refusals list it (w5/525).
+                    details=settings_notes(None),
                 )
             if date_format is None:
                 date_format = "%Y-%m-%d"
@@ -844,44 +1052,8 @@ def import_entries(
                     "(or --csv) for this file.",
                     details=recall_notes,
                 )
-        delimiter_note = ""
-        if csv_delimiter is not None and csv_delimiter != ",":
-            delimiter_note = f", delimiter {_display_delimiter(csv_delimiter)}"
-        encoding_note = f", encoding {csv_encoding}" if csv_encoding != "utf-8" else ""
-        frontend_notes: list[str] = [*config_notes]
-        if remembered_run:
-            columns_only = _strip_spec_keys(csv_request or "", {"delimiter", "encoding", "sign"})
-            if recalled_sign_ledger:
-                columns_only = f"{columns_only},sign=ledger"
-            if csv_encoding != "utf-8":
-                # One `--csv`: a second one would replace the columns when the
-                # line is pasted back, since the last `--csv` wins (w5/283).
-                columns_only = f"{columns_only},encoding={csv_encoding}"
-            settings = [f"--csv {_shell_spec(columns_only)}", shlex.join(["--account", csv_run_account])]
-            if date_format is not None:
-                settings.append(shlex.join(["--date-format", date_format]))
-            if csv_rules_arg is not None:
-                settings.append(shlex.join(["--rules", str(csv_rules_arg)]))
-            if default_account is not None:
-                settings.append(f"--default-account {default_account}")
-            if carried_delimiter is not None:
-                settings.append(f"--delimiter {_display_delimiter(carried_delimiter)}")
-            if recalled_source is not None and recalled_source != source.name:
-                frontend_notes.append(
-                    f"Using settings remembered from {recalled_source} for {source.name}: {' '.join(settings)}."
-                )
-            else:
-                frontend_notes.append(f"Using remembered settings for {source.name}: {' '.join(settings)}.")
-        elif csv_origin == "inferred --csv":
-            frontend_notes.append(
-                f"Read the column mapping from the header row: --csv {_shell_spec(csv_request or '')} "
-                f"--date-format {shlex.quote(date_format)}. "
-                "Pass --csv to override."
-            )
-        else:
-            frontend_notes.append(f"Using column mapping (--csv{delimiter_note}{encoding_note}).")
-        frontend_notes.extend(recall_notes)
-        frontend_notes.extend(inferred_notes)
+
+        frontend_notes = settings_notes(date_format)
         for line in frontend_notes:
             output.note(line)
         # The engine's parser rejects `delimiter=` and `encoding=` by design:
@@ -951,12 +1123,21 @@ def import_entries(
                 "default_account": default_account,
                 "date_format": kept_date_format,
                 "delimiter": chosen_delimiter,
-                # Sign itself is never remembered; only which file it was
-                # chosen for, so replaying that file cannot flip its sign.
-                "sign_ledger_sha256": _source_sha256(source) if mapping.sign == "ledger" else None,
+                # Sign itself is never remembered; only which files it was
+                # chosen for, so replaying one of them cannot flip its sign.
+                # Another file's run leaves their entries alone (w5/594).
+                **_signed(_sign_ledger_files(prior), source, ledger=mapping.sign == "ledger"),
             }
     else:
-        config_path, config_source = _config_path(file, config, config_notes)
+        config_path, config_source = _config_path(
+            file,
+            config,
+            config_notes,
+            source=source,
+            account=csv_account,
+            delimiter=csv_delimiter,
+            encoding=csv_encoding,
+        )
         frontend_notes = [*config_notes]
         # A Python importer names its own account and categories and never
         # reads the column-mapping options, so one typed here would be dropped
@@ -1067,7 +1248,7 @@ def import_entries(
         _remember_config(file, config_to_remember, engine_notes)
 
     if context.current().json_output:
-        notes = [*frontend_notes, *engine_notes]
+        notes = [*([redirect] if redirect else []), *frontend_notes, *engine_notes]
         if notes:
             preview["notes"] = notes
         if csv_mode and date_format is not None:
@@ -1075,8 +1256,11 @@ def import_entries(
         preview["remembered"] = json_remembered
         # The write destination sits in `target.into` for every writer, as
         # `add` and `price export` report it (w5/324).
-        output.emit(preview, target={**output.file_target(file), "into": str(preview.get("into") or file)})
+        output.emit(preview, target=output.write_target(file, str(preview.get("into") or file)))
     else:
+        # The diff is ledger text, and what `--apply` is approved on: UTF-8
+        # whatever the locale, as `list` and `report` print (w5/532).
+        output.utf8_stdout()
         summary = (
             f"{preview['importer']} → {preview['account']}: {preview['ready']} ready, "
             f"{preview['duplicates']} exact duplicates, {preview['possible_duplicates']} possible duplicates"
@@ -1084,11 +1268,16 @@ def import_entries(
         if preview["skipped_blank"]:
             noun = "row" if preview["skipped_blank"] == 1 else "rows"
             summary += f", {preview['skipped_blank']} blank {noun} skipped"
+        if preview.get("skipped_pending"):
+            noun = "row" if preview["skipped_pending"] == 1 else "rows"
+            summary += f", {preview['skipped_pending']} pending {noun} left out"
         if preview["conflicts"]:
             noun = "conflict" if preview["conflicts"] == 1 else "conflicts"
             summary += f", {preview['conflicts']} {noun}"
         if preview["blocked"]:
             summary += f", {preview['blocked']} blocked"
+        if preview.get("invalid"):
+            summary += f", {preview['invalid']} invalid"
         typer.echo(summary)
         headers = ["ROW", "STATUS", "DATE", "PAYEE / NARRATION", "SOURCE AMOUNT", "ID"]
         if csv_mode:
@@ -1135,5 +1324,17 @@ def import_entries(
             written = preview["written"]
             noun = "entry" if written == 1 else "entries"
             output.success(f"Wrote {written} {noun} to {preview['into']}.")
+        elif preview["validation_errors"]:
+            # `--apply` refuses while these stand, so it is not the next step (w5/638).
+            typer.echo("Preview only. The import would leave the ledger invalid; fix the errors above before --apply.")
+        elif preview["blocked"] or preview["conflicts"]:
+            kinds = [name for key, name in (("blocked", "blocked"), ("conflicts", "conflicting")) if preview[key]]
+            typer.echo(f"Preview only. Resolve the {' and '.join(kinds)} rows, then preview again.")
+        elif preview["possible_duplicates"] and duplicates == "review":
+            typer.echo(
+                "Preview only. Review possible duplicates and choose --duplicates skip/include, then preview again."
+            )
+        elif not preview["ready"]:
+            typer.echo("Nothing new to import.")
         else:
             typer.echo("Preview only. Review the entries, then repeat with --apply to write.")

@@ -1,8 +1,9 @@
 import Stripe from "stripe";
+import { customerId, subscriptionPeriodEnd } from "./subscription-plan";
 import { SUBSCRIPTION_CONFIG } from "@/features/stripe/service/stripe";
+import type { PaidCustomer } from "../data/paid-customer-model/types";
 import { IModels } from "@/foundation/models";
 import { logger } from "@/shared/logger";
-import { config } from "@/config/config";
 import { NodePgDatabase } from "drizzle-orm/node-postgres";
 
 function isNoSuchSubscriptionError(error: unknown): boolean {
@@ -12,6 +13,11 @@ function isNoSuchSubscriptionError(error: unknown): boolean {
       "No such subscription",
     ) === true
   );
+}
+
+export interface SubscriptionListOptions {
+  status?: "active" | "all";
+  bindings?: PaidCustomer[];
 }
 
 export interface IStripeService {
@@ -49,6 +55,7 @@ export interface IStripeService {
   ): Promise<{ success: boolean; message?: string }>;
   listSubscriptions(
     userId: string,
+    options?: SubscriptionListOptions,
   ): Promise<(Stripe.Subscription & { clientId: string })[]>;
   createCustomerPortalSession(
     userId: string,
@@ -102,33 +109,17 @@ export class StripeService implements IStripeService {
     const clientConfig =
       SUBSCRIPTION_CONFIG[clientId as keyof typeof SUBSCRIPTION_CONFIG];
 
-    // If no config exists for this client, fall back to environment variables
-    if (!clientConfig || !clientConfig.stripePriKey) {
-      logger.warn(
-        "No Stripe configuration found for client, using default config",
-        { clientId },
-      );
-      // Fall back to default config
-      const fallbackKey = config.stripe.privateKey;
-      if (!fallbackKey) {
-        throw new Error(
-          `No Stripe API key found for client ${clientId} and no fallback configuration available`,
-        );
-      }
-
-      this.stripeInstances[clientId] = new Stripe(fallbackKey, {
-        apiVersion: "2025-12-15.clover",
-      });
-      return this.stripeInstances[clientId];
+    if (!clientConfig) {
+      throw new Error(`Invalid Stripe client ID: ${clientId}`);
+    }
+    if (!clientConfig.stripePriKey) {
+      throw new Error(`No Stripe API key found for client ${clientId}`);
     }
 
     // Create a new Stripe instance with the client's API key
-    this.stripeInstances[clientId] = new Stripe(
-      clientConfig.stripePriKey || "",
-      {
-        apiVersion: "2025-12-15.clover",
-      },
-    );
+    this.stripeInstances[clientId] = new Stripe(clientConfig.stripePriKey, {
+      apiVersion: "2025-12-15.clover",
+    });
 
     return this.stripeInstances[clientId];
   }
@@ -233,13 +224,6 @@ export class StripeService implements IStripeService {
         };
       }
 
-      if (clientConfig.isDevOnly && config.env === "production") {
-        return {
-          success: false,
-          message: `Invalid client ID: ${clientId}`,
-        };
-      }
-
       // Validate newPriceId exists in client's plans
       if (!clientConfig.planIds.includes(newPriceId)) {
         return {
@@ -286,7 +270,23 @@ export class StripeService implements IStripeService {
       }
 
       const subscription = subscriptions.data[0];
-      const currentItem = subscription.items.data[0];
+      if (
+        !subscription.livemode ||
+        customerId(subscription.customer) !== customer.stripeCustomerId
+      ) {
+        return {
+          success: false,
+          message: "Subscription does not match your live billing customer",
+        };
+      }
+      const currentItem = subscription.items.data.find((item) =>
+        clientConfig.planIds.includes(item.price.id),
+      );
+      if (!currentItem)
+        return {
+          success: false,
+          message: "Subscription plan is not recognized",
+        };
 
       // Same-plan guard
       if (currentItem.price.id === newPriceId) {
@@ -307,14 +307,24 @@ export class StripeService implements IStripeService {
       );
 
       // Handle response based on status
+      if (
+        !updatedSubscription.livemode ||
+        customerId(updatedSubscription.customer) !== customer.stripeCustomerId
+      ) {
+        throw new Error(
+          "Updated subscription does not match its live customer binding",
+        );
+      }
       if (updatedSubscription.status === "active") {
         // Success — update currentPeriodEnd in DB
-        const periodEnd = updatedSubscription.items.data[0]?.current_period_end;
+        const periodEnd = subscriptionPeriodEnd([
+          { ...updatedSubscription, clientId },
+        ]);
         if (periodEnd) {
           await this.models.paidCustomer.updateCustomerById(
             this.postgresDb,
             customer.id,
-            { currentPeriodEnd: new Date(periodEnd * 1000) },
+            { currentPeriodEnd: periodEnd },
           );
         }
 
@@ -397,7 +407,7 @@ export class StripeService implements IStripeService {
     clientId: string,
   ): Promise<{ authorized: true } | { authorized: false; message: string }> {
     // Retrieve the subscription to verify it exists
-    await stripe.subscriptions.retrieve(subscriptionId);
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
 
     // Verify that this subscription belongs to a customer in our database
     // with the correct user ID and client ID (tenant isolation)
@@ -407,7 +417,11 @@ export class StripeService implements IStripeService {
       clientId,
     );
 
-    if (!customer?.stripeCustomerId) {
+    if (
+      !customer?.stripeCustomerId ||
+      customerId(subscription.customer) !== customer.stripeCustomerId ||
+      !subscription.livemode
+    ) {
       logger.warn("Attempt to cancel subscription by unauthorized user", {
         subscriptionId,
         userId,
@@ -601,74 +615,50 @@ export class StripeService implements IStripeService {
 
   async listSubscriptions(
     userId: string,
+    options: SubscriptionListOptions = {},
   ): Promise<(Stripe.Subscription & { clientId: string })[]> {
-    try {
-      // Get all client IDs from the SUBSCRIPTION_CONFIG
-      const clientIds = Object.keys(SUBSCRIPTION_CONFIG);
-      let allSubscriptions: (Stripe.Subscription & {
-        clientId: string;
-      })[] = [];
-
-      // Fetch subscriptions from all clients
-      for (const clientId of clientIds) {
-        try {
-          // Check if we have a customer record for this user and client
-          const customer =
-            await this.models.paidCustomer.findByUserIdAndClientId(
-              this.postgresDb,
-              userId,
-              clientId,
+    const allSubscriptions: (Stripe.Subscription & { clientId: string })[] = [];
+    for (const clientId of Object.keys(SUBSCRIPTION_CONFIG)) {
+      const binding = options.bindings
+        ? options.bindings.find(
+            (row) => row.userId === userId && row.clientId === clientId,
+          )
+        : await this.models.paidCustomer.findByUserIdAndClientId(
+            this.postgresDb,
+            userId,
+            clientId,
+          );
+      if (!binding?.stripeCustomerId) continue;
+      const stripe = this.getStripeInstance(clientId);
+      let startingAfter: string | undefined;
+      do {
+        // Include canceled history and paginate: an active plan may be beyond page one.
+        // Provider failures propagate; an outage is not evidence of no subscription.
+        const page = await stripe.subscriptions.list({
+          customer: binding.stripeCustomerId,
+          status: options.status ?? "all",
+          limit: 100,
+          starting_after: startingAfter,
+        });
+        for (const subscription of page.data) {
+          if (
+            !subscription.livemode ||
+            customerId(subscription.customer) !== binding.stripeCustomerId
+          ) {
+            throw new Error(
+              "Stripe subscription does not match its live customer binding",
             );
-
-          if (!customer?.stripeCustomerId) {
-            logger.debug("No Stripe customer found for user and client", {
-              userId,
-              clientId,
-            });
-            continue; // Skip to next client
           }
-
-          // Get the Stripe instance for this client
-          const stripe = this.getStripeInstance(clientId);
-
-          // Get all subscriptions for this customer
-          const subscriptions = await stripe.subscriptions.list({
-            customer: customer.stripeCustomerId,
-            expand: ["data.default_payment_method"],
-          });
-
-          logger.debug("Retrieved subscriptions for user and client", {
-            userId,
-            clientId,
-            count: subscriptions.data.length,
-          });
-
-          // Add these subscriptions to our collection
-          allSubscriptions = [
-            ...allSubscriptions,
-            ...subscriptions.data.map((it: Stripe.Subscription) => ({
-              ...it,
-              clientId,
-            })),
-          ];
-        } catch (error) {
-          logger.error("Error listing subscriptions for user and client", {
-            userId,
-            clientId,
-            error: error instanceof Error ? error.message : String(error),
-          });
-          // Continue with other clients even if one fails
+          allSubscriptions.push({ ...subscription, clientId });
         }
-      }
-
-      return allSubscriptions;
-    } catch (error) {
-      logger.error("Error listing all subscriptions for user", {
-        userId,
-        error: error instanceof Error ? error.message : String(error),
-      });
-      return []; // Return empty array on error
+        if (page.has_more && !page.data.length)
+          throw new Error("Empty Stripe subscription page");
+        startingAfter = page.has_more
+          ? page.data[page.data.length - 1].id
+          : undefined;
+      } while (startingAfter);
     }
+    return allSubscriptions;
   }
 
   async createCustomerPortalSession(
@@ -788,45 +778,42 @@ export class StripeService implements IStripeService {
   async handleCustomerEvent(
     customer: Stripe.Customer,
     eventType: string,
-    previousAttributes: Record<string, unknown> = {},
+    _previousAttributes: Record<string, unknown> = {},
     clientId: string,
     userId: string,
   ): Promise<void> {
-    // Extract metadata from the customer
-    const metadata = customer.metadata;
-    // Use clientId from metadata if available, otherwise use the provided clientId
-    const effectiveClientId = (metadata?.clientId as string) || clientId;
-
-    if (!effectiveClientId) {
-      throw new Error("No client ID available for customer");
+    // Signed event routing is authoritative; customer metadata cannot switch tenants/users.
+    if (
+      !SUBSCRIPTION_CONFIG[clientId] ||
+      !customer.livemode ||
+      !userId ||
+      userId === "unknown" ||
+      (customer.metadata?.clientId &&
+        customer.metadata.clientId !== clientId) ||
+      (customer.metadata?.userId && customer.metadata.userId !== userId)
+    ) {
+      throw new Error("Invalid live customer ownership");
     }
 
     // Log the customer event
     logger.debug(`Processing customer ${eventType} event`, {
       userId,
       customerId: customer.id,
-      clientId: effectiveClientId,
+      clientId: clientId,
     });
 
     try {
-      // Log the previous attributes for debugging purposes (for updates)
-      if (
-        eventType === "updated" &&
-        Object.keys(previousAttributes).length > 0
-      ) {
-        logger.debug("Customer update - previous attributes", {
-          customerId: customer.id,
-          previousAttributes,
-        });
-      }
-
       // Find the customer in our database
       const existingCustomer =
         await this.models.paidCustomer.findByStripeCustomerIdAndClientId(
           this.postgresDb,
           customer.id as string,
-          effectiveClientId,
+          clientId,
         );
+
+      if (existingCustomer && existingCustomer.userId !== userId) {
+        throw new Error("Stripe customer belongs to another user");
+      }
 
       if (!existingCustomer) {
         logger.debug("Customer not found in database, creating new record", {
@@ -838,7 +825,7 @@ export class StripeService implements IStripeService {
           //id: `pc_${Date.now()}${Math.random().toString(36).substring(2, 7)}`, // Generate a unique ID
           userId,
           stripeCustomerId: customer.id as string,
-          clientId: effectiveClientId, // Ensure client ID is stored
+          clientId: clientId, // Ensure client ID is stored
           email: (customer.email as string) || undefined,
           // createdAt and updatedAt are automatically handled by Typegoose
         });
@@ -865,12 +852,6 @@ export class StripeService implements IStripeService {
         needsUpdate = true;
       }
 
-      // Ensure client ID is set
-      if (existingCustomer.clientId !== effectiveClientId) {
-        updates.clientId = effectiveClientId;
-        needsUpdate = true;
-      }
-
       // Apply updates if there are any
       if (needsUpdate) {
         await this.models.paidCustomer.updateCustomerById(
@@ -880,7 +861,6 @@ export class StripeService implements IStripeService {
         );
         logger.debug("Updated customer record", {
           customerId: customer.id,
-          updates,
         });
       } else {
         logger.debug("No updates needed for customer", {

@@ -98,6 +98,33 @@ const jaImporter: Record<string, TranslationEntry> = {
     message: "別のファイルをアップロード",
     description: "Button to upload a different file after error",
   },
+  "importer.aiOffer.title": {
+    message: "この CSV の列を読み取れませんでした",
+    description:
+      "Title when a CSV's columns could not be read by the free client parser",
+  },
+  "importer.aiOffer.description": {
+    message:
+      "スマートインポートは、日付・支払先・説明・金額の列がある CSV ファイルを無料で読み取ります。このファイルは AI で読み取ることもでき、その場合は AI トークンを使用します。",
+    description:
+      "Explains the free CSV format and that AI parsing spends AI tokens",
+  },
+  "importer.aiOffer.parseWithAi": {
+    message: "AI で解析（AI トークンを使用）",
+    description:
+      "Button that parses the unreadable CSV with AI, spending AI tokens",
+  },
+  "importer.error.aiQuotaReached": {
+    message: "今月の AI トークンを使い切りました",
+    description:
+      "Title when AI parsing of a CSV is refused because the month's AI tokens are used up",
+  },
+  "importer.error.aiQuotaReachedCsv": {
+    message:
+      "AI 解析は来月、または Premium で再び利用できます。日付・支払先・説明・金額の列がある CSV は引き続き無料でインポートできます。",
+    description:
+      "Explains when AI parsing returns and that a well-formed CSV still imports for free",
+  },
   "importer.error.premiumRequired": {
     message: "プレミアム機能が必要です",
     description: "Title for premium required error",
@@ -233,7 +260,7 @@ const jaImporter: Record<string, TranslationEntry> = {
     description: "Table header for actions column",
   },
   "importer.preview.deleteRow": {
-    message: "行を削除",
+    message: "{row} 行目を削除",
     description: "Aria label for delete row button",
   },
   "importer.preview.emptyFileTitle": {
@@ -489,12 +516,12 @@ const jaImporter: Record<string, TranslationEntry> = {
     description: "Count of additional import errors",
   },
   "importer.preview.editCellLabel": {
-    message: "{field} を編集します。現在の値: {value}",
+    message: "{field}（{row} 行目）を編集します。現在の値: {value}",
     description: "Accessible label for an editable import cell",
   },
-  "importer.preview.field": {
-    message: "フィールド",
-    description: "Fallback name for an editable import field",
+  "importer.preview.editFieldLabel": {
+    message: "{field}、{row} 行目",
+    description: "Accessible label for the open editor of an import cell",
   },
   "importer.validation.dateRequired": {
     message: "日付は必須です",
@@ -519,6 +546,12 @@ const jaImporter: Record<string, TranslationEntry> = {
   "importer.validation.amountInvalid": {
     message: "金額は有効な数値でなければなりません",
     description: "Validation error for an invalid import amount",
+  },
+  "importer.validation.amountMixedDecimals": {
+    message:
+      "この列には小数点がピリオドの値（1,234.56）とカンマの値（1.234,56）が混在しています。列ごとに 1 つの表記に揃えてください。",
+    description:
+      "Validation error when an import amount column mixes point and comma decimal marks",
   },
   "importer.validation.amountUnsupportedPrecision": {
     message:

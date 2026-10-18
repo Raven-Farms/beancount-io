@@ -120,6 +120,41 @@ class TestSkillTrees(unittest.TestCase):
         self.assertIn(".agents/skills/ship/SKILL.md", error.getvalue())
         self.assertIn("missing 'description'", error.getvalue())
 
+    def check_frontmatter(self, frontmatter: str) -> str:
+        """Run the SKILL.md check on beancount-ask with FRONTMATTER; return stderr ('' when it passes)."""
+        (self.customer / "beancount-ask/SKILL.md").write_text(f"---\n{frontmatter}---\n")
+        error = io.StringIO()
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(error):
+            try:
+                ci_check.check_skill_md()
+            except SystemExit:
+                pass
+        return error.getvalue()
+
+    def test_a_nested_name_cannot_stand_in_for_the_top_level_name(self):
+        err = self.check_frontmatter('description: d\nextra:\n  name: beancount-ask\n')
+        self.assertIn("frontmatter missing 'name'", err)
+
+    def test_a_nested_name_does_not_overwrite_the_top_level_name(self):
+        path = self.customer / "beancount-ask/SKILL.md"
+        path.write_text("---\nname: beancount-ask\ndescription: d\nextra:\n  name: other\n  description: ''\n---\n")
+        meta = ci_check.parse_frontmatter(path)
+        self.assertEqual((meta["name"], meta["description"]), ("beancount-ask", "d"))
+
+    def test_metadata_must_be_one_line_of_json_object(self):
+        for metadata, accepted in (
+            ('{"openclaw": {"requires": {"anyBins": ["bea"]}}, "hermes": {"tags": ["beancount"]}}', True),
+            ("\n  openclaw:\n    requires: {}", False),
+            ('{"openclaw": {"requires": }}', False),
+            ('["bea"]', False),
+        ):
+            with self.subTest(metadata=metadata):
+                err = self.check_frontmatter(f"name: beancount-ask\ndescription: d\nmetadata: {metadata}\n")
+                if accepted:
+                    self.assertEqual(err, "")
+                else:
+                    self.assertIn("frontmatter 'metadata' must be a single-line JSON object", err)
+
     def test_development_eval_fixtures_are_checked(self):
         evals = self.development / "ship/evals/evals.json"
         evals.parent.mkdir()

@@ -43,8 +43,9 @@ def _bea(books: Path, *args: str) -> subprocess.CompletedProcess[str]:
     ("args", "option", "command", "example"),
     [
         (["-f", "main.bean", "check", "--offline"], "--offline", "check", "bea --offline balance"),
-        (["doctor", "lex", "main.bean", "--json"], "--json", "doctor lex", "bea --json list transaction"),
-        (["treeify", "bal.txt", "--json"], "--json", "treeify", "bea --json list transaction"),
+        # `--json` there is a dead end: those commands have no JSON output (w5/620).
+        (["doctor", "lex", "main.bean", "--debug"], "--debug", "doctor lex", "bea --debug import statement.csv"),
+        (["treeify", "bal.txt", "--debug"], "--debug", "treeify", "bea --debug import statement.csv"),
         (
             ["example", "--seed", "1", "-o", "ex.bean", "--debug"],
             "--debug",

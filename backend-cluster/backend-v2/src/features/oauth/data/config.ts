@@ -138,7 +138,7 @@ export const isIdentityOAuthClient = (clientId: unknown): boolean =>
   clientId === DISCOURSE_CLIENT_ID;
 
 /** A DCR or CIMD host — any client that is not one of the static clients. */
-const isThirdPartyOAuthClient = (clientId: unknown): boolean =>
+export const isThirdPartyOAuthClient = (clientId: unknown): boolean =>
   typeof clientId === "string" &&
   clientId !== "" &&
   !isMobileOAuthClient(clientId) &&

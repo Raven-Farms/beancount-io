@@ -37,10 +37,23 @@ def engine_status() -> None:
         "serving": {"tier": source.tier, "location": str(source.location)},
     }
     # Present is not usable: package directories whose contents were damaged
-    # still read as provisioned while every command failed to import (w5/320).
-    damaged = launch.engine_load_failure(source.python) if source.tier == "managed" and source.python else None
-    if damaged is not None:
-        status["damaged"] = damaged
+    # still read as provisioned while every command failed to import (w5/320),
+    # and an override that cannot run the engine read as serving while every
+    # local command sent the user back here (w5/481).
+    probed = source.tier in ("managed", "override") and source.python is not None
+    failure = launch.engine_load_failure(source.python) if probed and source.python else None
+    reason = f"it cannot load the engine ({failure})" if failure is not None else None
+    if failure is None and source.tier == "override" and source.python is not None:
+        # Native tools are run from beside the override, so loading the engine
+        # is not enough: `check` and `example` failed where status said usable (w5/647).
+        missing = launch.missing_native_tools(source.python)
+        if missing:
+            failure = reason = f"no {', '.join(missing)} beside {source.python} ({paths.bin_dir_for(source.python)})"
+    if probed:
+        status["usable"] = failure is None
+    if failure is not None:
+        status["damaged" if source.tier == "managed" else "unusable"] = failure
+    damaged = failure if source.tier == "managed" else None
     if context.current().json_output:
         output.emit(status)
         return
@@ -48,6 +61,8 @@ def engine_status() -> None:
     override = status.get("python_override")
     if override:
         typer.echo(f"Engine interpreter override: {override}")
+        if reason is not None:
+            typer.echo(f"Usable: no — {reason}. Correct or unset {paths.PYTHON_ENV}; local commands fail until then.")
     else:
         typer.echo(f"Engine {status['engine_version']} at {status['engine_root']}")
         if damaged is not None:

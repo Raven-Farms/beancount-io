@@ -98,7 +98,11 @@ def _write(
         argv.append("--allow-errors")
     if strict_read:
         argv.append("--strict-read")
-    return file, launch.helper_json(argv, stdin=json.dumps(request), writes=True)
+    data = launch.helper_json(argv, stdin=json.dumps(request), writes=True)
+    # A write through an included leaf is the root's write: `target.file`
+    # named the leaf, and the same write with `--into` named the root (w5/613).
+    root = data.pop("root", None)
+    return (Path(root) if root else file), data
 
 
 def _already_recorded(name: str, source: dict[str, Any]) -> None:
@@ -111,7 +115,7 @@ def _appended(name: str, file: Path, data: dict[str, Any]) -> None:
     target = data.pop("target")
     warnings = data.pop("warnings", [])
     if context.current().json_output:
-        output.emit({**data, "warnings": warnings}, target={**output.file_target(file), "into": target})
+        output.emit({**data, "warnings": warnings}, target=output.write_target(file, target))
     else:
         for warning in warnings:
             output.note(warning)
@@ -317,7 +321,7 @@ def add_balance(
         data.setdefault("source", None)
         source = data.get("source")
         if ctx.json_output:
-            output.emit(data, target={**output.file_target(file), "into": target})
+            output.emit(data, target=output.write_target(file, target))
         elif source:
             for warning in data["warnings"]:
                 output.note(warning)
@@ -331,7 +335,7 @@ def add_balance(
     padded = day - datetime.timedelta(days=1) if pad_date is None else parse_date(pad_date)
     if padded >= day:
         raise UsageError("--pad-date must be earlier than the balance date (assertions run at the start of the day).")
-    request |= {"pad_from": pad_from, "pad_date": padded.isoformat()}
+    request |= {"pad_from": pad_from, "pad_date": padded.isoformat(), "pad_date_explicit": pad_date is not None}
     file, data = _write("balance", request, allow_errors=allow_errors, into=into)
     target = data.pop("target")
     warnings = data.pop("warnings", [])
@@ -341,7 +345,7 @@ def add_balance(
     written = int(data.get("written") or 0)
     source = data.get("source")
     if ctx.json_output:
-        output.emit({**data, "warnings": warnings}, target={**output.file_target(file), "into": target})
+        output.emit({**data, "warnings": warnings}, target=output.write_target(file, target))
     else:
         for warning in warnings:
             output.note(warning)
@@ -350,7 +354,16 @@ def add_balance(
         elif written == 1:
             output.success(f"Added 1 balance to {target}.")
         else:
-            output.success(f"Added 1 pad and 1 balance to {target}.")
+            pad = data.get("pad") or {}
+            inserted = pad.get("amount") or {}
+            if inserted:
+                # The amount was never said, so a sign error padded twice the balance unseen (w5/611).
+                output.success(
+                    f"Added 1 pad and 1 balance to {target}; the pad inserts {inserted['number']} "
+                    f"{inserted['currency']} into {pad.get('account')} from {pad.get('source_account')}."
+                )
+            else:
+                output.success(f"Added 1 pad and 1 balance to {target}.")
 
 
 @add_app.command("pad", cls=_SingleValueCommand)
@@ -433,7 +446,7 @@ def add_price(
     target = data.pop("target")
     source = data["source"]
     if ctx.json_output:
-        output.emit(data, target={**output.file_target(file), "into": target})
+        output.emit(data, target=output.write_target(file, target))
     else:
         for warning in data["warnings"]:
             output.note(warning)
@@ -678,7 +691,7 @@ def add_transactions(
     if context.current().json_output:
         if warnings:
             data["warnings"] = warnings
-        output.emit(data, target={**output.file_target(file), "into": target})
+        output.emit(data, target=output.write_target(file, target))
     else:
         for warning in warnings:
             output.note(warning)

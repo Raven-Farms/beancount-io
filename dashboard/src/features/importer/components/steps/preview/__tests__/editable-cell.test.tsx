@@ -5,9 +5,12 @@ import { EditableCell } from "../editable-cell";
 
 vi.mock("@/common/hooks/use-translations", () => ({
   useTranslations: () => ({
-    t: (key: string, params?: Record<string, string>) => {
+    t: (key: string, params?: Record<string, string | number>) => {
       if (key === "importer.preview.editCellLabel") {
-        return `Edit ${params?.field}. Current value: ${params?.value}`;
+        return `Edit ${params?.field}, row ${params?.row}. Current value: ${params?.value}`;
+      }
+      if (key === "importer.preview.editFieldLabel") {
+        return `${params?.field}, row ${params?.row}`;
       }
       return key;
     },
@@ -20,6 +23,8 @@ describe("EditableCell keyboard behavior", () => {
     const onChange = vi.fn();
     render(
       <EditableCell
+        label="Payee"
+        rowNumber={1}
         value="QA Coffee"
         onChange={onChange}
         placeholder="Payee name"
@@ -27,7 +32,7 @@ describe("EditableCell keyboard behavior", () => {
     );
 
     const button = screen.getByRole("button", {
-      name: "Edit Payee name. Current value: QA Coffee",
+      name: "Edit Payee, row 1. Current value: QA Coffee",
     });
     button.focus();
     await user.keyboard(" ");
@@ -39,7 +44,7 @@ describe("EditableCell keyboard behavior", () => {
     expect(onChange).not.toHaveBeenCalled();
     expect(
       screen.getByRole("button", {
-        name: "Edit Payee name. Current value: QA Coffee",
+        name: "Edit Payee, row 1. Current value: QA Coffee",
       }),
     ).toHaveFocus();
   });
@@ -49,6 +54,8 @@ describe("EditableCell keyboard behavior", () => {
     const onChange = vi.fn();
     render(
       <EditableCell
+        label="Payee"
+        rowNumber={1}
         value="QA Coffee"
         onChange={onChange}
         placeholder="Payee name"
@@ -57,7 +64,7 @@ describe("EditableCell keyboard behavior", () => {
 
     await user.click(
       screen.getByRole("button", {
-        name: "Edit Payee name. Current value: QA Coffee",
+        name: "Edit Payee, row 1. Current value: QA Coffee",
       }),
     );
     const input = screen.getByDisplayValue("QA Coffee");
@@ -67,7 +74,7 @@ describe("EditableCell keyboard behavior", () => {
     expect(onChange).toHaveBeenCalledWith("QA Tea");
     expect(
       screen.getByRole("button", {
-        name: "Edit Payee name. Current value: QA Coffee",
+        name: "Edit Payee, row 1. Current value: QA Coffee",
       }),
     ).toHaveFocus();
   });
@@ -78,6 +85,8 @@ describe("EditableCell keyboard behavior", () => {
     render(
       <div>
         <EditableCell
+          label="Payee"
+          rowNumber={1}
           value="QA Coffee"
           onChange={onChange}
           placeholder="Payee name"
@@ -88,7 +97,7 @@ describe("EditableCell keyboard behavior", () => {
 
     await user.click(
       screen.getByRole("button", {
-        name: "Edit Payee name. Current value: QA Coffee",
+        name: "Edit Payee, row 1. Current value: QA Coffee",
       }),
     );
     await user.tab();
@@ -100,6 +109,8 @@ describe("EditableCell keyboard behavior", () => {
   it("keeps disabled cells out of the tab sequence", () => {
     render(
       <EditableCell
+        label="Payee"
+        rowNumber={1}
         value="locked"
         onChange={vi.fn()}
         placeholder="Payee name"
@@ -109,7 +120,7 @@ describe("EditableCell keyboard behavior", () => {
 
     expect(
       screen.getByRole("button", {
-        name: "Edit Payee name. Current value: locked",
+        name: "Edit Payee, row 1. Current value: locked",
       }),
     ).toBeDisabled();
   });
@@ -119,6 +130,8 @@ describe("EditableCell keyboard behavior", () => {
     const onChange = vi.fn();
     render(
       <EditableCell
+        label="Description"
+        rowNumber={1}
         value={"First line\nSecond line"}
         onChange={onChange}
         placeholder="Description"
@@ -128,7 +141,7 @@ describe("EditableCell keyboard behavior", () => {
 
     await user.click(
       screen.getByRole("button", {
-        name: "Edit Description. Current value: First line\nSecond line",
+        name: "Edit Description, row 1. Current value: First line\nSecond line",
       }),
     );
 
@@ -147,6 +160,8 @@ describe("EditableCell keyboard behavior", () => {
     const onChange = vi.fn();
     render(
       <EditableCell
+        label="Description"
+        rowNumber={1}
         value="First line"
         onChange={onChange}
         placeholder="Description"
@@ -156,7 +171,7 @@ describe("EditableCell keyboard behavior", () => {
 
     await user.click(
       screen.getByRole("button", {
-        name: "Edit Description. Current value: First line",
+        name: "Edit Description, row 1. Current value: First line",
       }),
     );
     const editor = screen.getByDisplayValue("First line");
@@ -175,6 +190,8 @@ describe("EditableCell keyboard behavior", () => {
     const onChange = vi.fn();
     render(
       <EditableCell
+        label="Description"
+        rowNumber={1}
         value="First line"
         onChange={onChange}
         placeholder="Description"
@@ -184,7 +201,7 @@ describe("EditableCell keyboard behavior", () => {
 
     await user.click(
       screen.getByRole("button", {
-        name: "Edit Description. Current value: First line",
+        name: "Edit Description, row 1. Current value: First line",
       }),
     );
     const editor = screen.getByDisplayValue("First line");
@@ -200,6 +217,8 @@ describe("EditableCell keyboard behavior", () => {
     const onChange = vi.fn();
     render(
       <EditableCell
+        label="Description"
+        rowNumber={1}
         value={"First line\nSecond line"}
         onChange={onChange}
         placeholder="Description"
@@ -208,7 +227,7 @@ describe("EditableCell keyboard behavior", () => {
     );
 
     const button = screen.getByRole("button", {
-      name: "Edit Description. Current value: First line\nSecond line",
+      name: "Edit Description, row 1. Current value: First line\nSecond line",
     });
     await user.click(button);
     await user.keyboard("edited{Escape}");
@@ -216,7 +235,7 @@ describe("EditableCell keyboard behavior", () => {
     expect(onChange).not.toHaveBeenCalled();
     expect(
       screen.getByRole("button", {
-        name: "Edit Description. Current value: First line\nSecond line",
+        name: "Edit Description, row 1. Current value: First line\nSecond line",
       }),
     ).toHaveFocus();
   });
@@ -225,6 +244,8 @@ describe("EditableCell keyboard behavior", () => {
     const user = userEvent.setup();
     render(
       <EditableCell
+        label="Payee"
+        rowNumber={1}
         value="QA Coffee"
         onChange={vi.fn()}
         placeholder="Payee name"
@@ -233,7 +254,7 @@ describe("EditableCell keyboard behavior", () => {
 
     await user.click(
       screen.getByRole("button", {
-        name: "Edit Payee name. Current value: QA Coffee",
+        name: "Edit Payee, row 1. Current value: QA Coffee",
       }),
     );
 
@@ -244,15 +265,17 @@ describe("EditableCell keyboard behavior", () => {
     const onChange = vi.fn();
     render(
       <EditableCell
+        label="Date"
+        rowNumber={1}
         value="2025-12-01"
         onChange={onChange}
-        placeholder="Date"
+        placeholder="YYYY-MM-DD"
         type="date"
       />,
     );
 
     const button = screen.getByRole("button", {
-      name: "Edit Date. Current value: 2025-12-01",
+      name: "Edit Date, row 1. Current value: 2025-12-01",
     });
     fireEvent.keyDown(button, { key: "Enter" });
     // Native button click from Enter is handled by the browser; click path:

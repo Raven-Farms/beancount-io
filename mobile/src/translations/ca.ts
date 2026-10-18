@@ -90,6 +90,7 @@ export const ca: Translations = {
   merchantsCadenceQuarterly: "Trimestral",
   merchantsCadenceYearly: "Anual",
   merchantsCadenceIrregular: "Irregular",
+  merchantsCadenceUnknown: "Historial insuficient",
   merchantsNextExpected: "Proper {{date}}",
   merchantsOverdue: "Vençut",
   merchantsRecurringToggle: "Recurrent",
@@ -180,7 +181,7 @@ export const ca: Translations = {
   quickAdd: "Afegir ràpid",
   enterNewTransaction: "Registra una transacció",
   multiPostingsTitle: "Nova transacció",
-  addPosting: "+ Afegeix un apunt",
+  addPosting: "Afegeix un apunt",
   remainderLabel: "Resta",
   autoLabel: "auto",
   postingAccount: "Tria un compte",
@@ -313,10 +314,12 @@ export const ca: Translations = {
   openAccountNoCurrency: "Sense moneda",
   openAccountSaving: "S'està obrint...",
   openAccountFailed: "No s'ha pogut obrir el compte. Torna-ho a provar.",
+  ledgerWouldBreak: "Això afegiria un error al teu llibre: {{detail}}",
   openAccountInvalidRoot: "Tria un tipus de compte vàlid.",
   openAccountNameRequired: "Escriu almenys un component del nom.",
   openAccountEmptyComponent: "Els components del nom no poden ser buits.",
   openAccountNamePreview: "Es crearà com a {{account}}",
+  openAccountAlreadyOpen: "{{account}} ja està obert en aquest llibre.",
   openAccountUppercaseComponent:
     "Cada component del nom ha de començar amb majúscula o xifra.",
   openAccountInvalidCharacters:
@@ -524,6 +527,7 @@ export const ca: Translations = {
   budgetInterval: "Interval",
   budgetSelectInterval: "Selecciona un interval",
   budgetAmount: "Import",
+  budgetAmountInvalid: "Introdueix un número, com ara 500 o 49.99.",
   budgetSaveFailed: "No s'ha pogut desar el pressupost",
   // delete
   budgetDelete: "Elimina",
@@ -599,6 +603,10 @@ export const ca: Translations = {
     "Flux de caixa d'ingressos a despeses. Ingressos {{income}}, despeses {{expenses}}.",
   cashFlowChartSummaryWithSavings:
     "Flux de caixa d'ingressos a despeses. Ingressos {{income}}, despeses {{expenses}}, estalvis {{savings}}.",
+  cashFlowChartSummaryWithShortfall:
+    "Flux de caixa d'ingressos a despeses. Ingressos {{income}}, despeses {{expenses}}, dels estalvis {{shortfall}}.",
+  sankeyIncomeNodeLabel: "{{name}} (ingressos)",
+  sankeyExpensesNodeLabel: "{{name}} (despeses)",
   ledgerNavigateUp: "Puja una carpeta",
   openLedgerDrawer: "Obre el menú",
   back: "Enrere",
@@ -623,7 +631,8 @@ export const ca: Translations = {
   profileUsernameHint:
     "Les adreces web dels teus llibres comencen amb el teu nom d'usuari, així que canviar-lo també les canvia.",
   profileUsernameRequired: "Introdueix un nom d'usuari",
-  profileUsernameNoSpaces: "El nom d'usuari no pot contenir espais",
+  profileUsernameRule:
+    "Fes servir d'1 a 20 caràcters: minúscules a–z, xifres 0–9 o guions baixos.",
   profileUsernameTaken: "Aquest nom d'usuari ja està agafat",
   profileEmail: "Correu electrònic",
   profileEmailReadOnly: "El correu electrònic no es pot canviar aquí",

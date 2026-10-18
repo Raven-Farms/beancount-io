@@ -16,6 +16,11 @@ const nlGeneralSettingsSection: Record<string, TranslationEntry> = {
     message: "Deze naam wordt overal in de applicatie weergegeven",
     description: "Help text for ledger name field",
   },
+  "page.settings.ledgerNameTaken": {
+    message: "Er bestaat al een grootboek met de naam {name}.",
+    description:
+      "Rename refusal when another ledger of the same owner already has the name; {name} is the slug",
+  },
   "page.settings.generalSettings": {
     message: "Algemene instellingen",
     description: "Section title for general settings",

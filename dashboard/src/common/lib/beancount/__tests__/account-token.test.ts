@@ -104,3 +104,47 @@ describe("account name reasons (w0/017)", () => {
     }
   });
 });
+
+describe("accounts the ledger already opens (w3/557)", () => {
+  const existing = new Map([
+    ["Assets:Cash", { openedAt: "2026-01-01", closedAt: null }],
+    ["Assets:Old", { openedAt: "2025-01-01", closedAt: "2025-12-31" }],
+  ]);
+  const schema = buildOpenAccountSchema(
+    ["Assets", "Equity"],
+    {
+      required: "required",
+      mustStartWith: "prefix",
+      invalid: (problem) => problem.kind,
+      exists: (account, { openedAt, closedAt }) =>
+        closedAt
+          ? `closed:${account}:${closedAt}`
+          : `open:${account}:${openedAt}`,
+    },
+    existing,
+  );
+  const message = (account: string) =>
+    schema.safeParse({ date: new Date(), account }).error?.issues[0]?.message;
+
+  it("refuses an open account and names its open date", () => {
+    expect(message("Assets:Cash")).toBe("open:Assets:Cash:2026-01-01");
+  });
+
+  it("refuses a closed account, which cannot be reopened", () => {
+    expect(message("Assets:Old")).toBe("closed:Assets:Old:2025-12-31");
+  });
+
+  it("accepts a new child of an existing account", () => {
+    expect(
+      schema.safeParse({ date: new Date(), account: "Assets:Cash:Wallet" })
+        .success,
+    ).toBe(true);
+  });
+
+  it("compares names exactly, leaving a case-different root to the prefix rule", () => {
+    expect(message("assets:cash")).toBe("prefix");
+    expect(
+      schema.safeParse({ date: new Date(), account: "Assets:CASH" }).success,
+    ).toBe(true);
+  });
+});

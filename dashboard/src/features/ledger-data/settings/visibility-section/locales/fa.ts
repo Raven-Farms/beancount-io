@@ -4,6 +4,20 @@ export interface TranslationEntry {
 }
 
 const faVisibilitySection: Record<string, TranslationEntry> = {
+  "page.settings.makePublicTitle": {
+    message: "این دفتر عمومی شود؟",
+    description:
+      "Title of the confirmation before a private ledger becomes public",
+  },
+  "page.settings.makePublicDescription": {
+    message:
+      "هر کسی که پیوند را داشته باشد، و موتورهای جستجو، می‌توانند تراکنش‌ها، مانده‌ها، فایل‌ها و تاریخچهٔ این دفتر را ببینند.",
+    description: "What becomes visible when a private ledger is made public",
+  },
+  "page.settings.makePublic": {
+    message: "عمومی کن",
+    description: "Button that confirms making a private ledger public",
+  },
   "page.settings.publicLedger": {
     message: "دفتر عمومی",
     description: "Label when ledger is public",

@@ -40,7 +40,7 @@ def test_recovery_advice_names_only_a_missing_root_context(
         assert "specify NUMBER CURRENCY" in message
     else:
         assert "unknown account 'Assets:Nope'" in message
-        assert "bea add open --account Assets:Nope" in message
+        assert "add open --account Assets:Nope" in message
     # A leaf as `--file` already runs through the root that includes it, with
     # `--into` set to the leaf (w5/343): the recipe is applied, never printed.
     assert "Run against the root" not in message

@@ -88,6 +88,7 @@ export const de: Translations = {
   merchantsCadenceQuarterly: "Vierteljährlich",
   merchantsCadenceYearly: "Jährlich",
   merchantsCadenceIrregular: "Unregelmäßig",
+  merchantsCadenceUnknown: "Zu wenig Verlauf",
   merchantsNextExpected: "Nächste {{date}}",
   merchantsOverdue: "Überfällig",
   merchantsRecurringToggle: "Wiederkehrend",
@@ -180,7 +181,7 @@ export const de: Translations = {
   quickAdd: "Schnell hinzufügen",
   enterNewTransaction: "Neue Transaktion erfassen",
   multiPostingsTitle: "Neue Transaktion",
-  addPosting: "+ Buchung hinzufügen",
+  addPosting: "Buchung hinzufügen",
   remainderLabel: "Restbetrag",
   autoLabel: "auto",
   postingAccount: "Konto wählen",
@@ -312,10 +313,14 @@ export const de: Translations = {
   openAccountSaving: "Wird eröffnet...",
   openAccountFailed:
     "Konto konnte nicht eröffnet werden. Bitte erneut versuchen.",
+  ledgerWouldBreak:
+    "Das würde Ihrem Hauptbuch einen Fehler hinzufügen: {{detail}}",
   openAccountInvalidRoot: "Wählen Sie einen gültigen Kontotyp.",
   openAccountNameRequired: "Geben Sie mindestens einen Namensbestandteil ein.",
   openAccountEmptyComponent: "Namensbestandteile dürfen nicht leer sein.",
   openAccountNamePreview: "Wird als {{account}} erstellt",
+  openAccountAlreadyOpen:
+    "{{account}} ist in diesem Hauptbuch bereits eröffnet.",
   openAccountUppercaseComponent:
     "Jeder Namensbestandteil muss mit einem Großbuchstaben oder einer Ziffer beginnen.",
   openAccountInvalidCharacters:
@@ -522,6 +527,7 @@ export const de: Translations = {
   budgetInterval: "Intervall",
   budgetSelectInterval: "Intervall auswählen",
   budgetAmount: "Betrag",
+  budgetAmountInvalid: "Gib eine Zahl ein, z. B. 500 oder 49.99.",
   budgetSaveFailed: "Budget konnte nicht gespeichert werden",
   // delete
   budgetDelete: "Löschen",
@@ -597,6 +603,10 @@ export const de: Translations = {
     "Cashflow von Einnahmen zu Ausgaben. Einnahmen {{income}}, Ausgaben {{expenses}}.",
   cashFlowChartSummaryWithSavings:
     "Cashflow von Einnahmen zu Ausgaben. Einnahmen {{income}}, Ausgaben {{expenses}}, Ersparnisse {{savings}}.",
+  cashFlowChartSummaryWithShortfall:
+    "Cashflow von Einnahmen zu Ausgaben. Einnahmen {{income}}, Ausgaben {{expenses}}, aus Ersparnissen {{shortfall}}.",
+  sankeyIncomeNodeLabel: "{{name}} (Einnahmen)",
+  sankeyExpensesNodeLabel: "{{name}} (Ausgaben)",
   ledgerNavigateUp: "Eine Ebene nach oben",
   openLedgerDrawer: "Menü öffnen",
   back: "Zurück",
@@ -621,7 +631,8 @@ export const de: Translations = {
   profileUsernameHint:
     "Die Webadressen deiner Hauptbücher beginnen mit deinem Benutzernamen – wenn du ihn änderst, ändern sie sich mit.",
   profileUsernameRequired: "Gib einen Benutzernamen ein",
-  profileUsernameNoSpaces: "Benutzernamen dürfen keine Leerzeichen enthalten",
+  profileUsernameRule:
+    "Verwende 1–20 Zeichen: Kleinbuchstaben a–z, Ziffern 0–9 oder Unterstriche.",
   profileUsernameTaken: "Dieser Benutzername ist bereits vergeben",
   profileEmail: "E-Mail",
   profileEmailReadOnly: "Die E-Mail-Adresse kann hier nicht geändert werden",

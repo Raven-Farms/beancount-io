@@ -132,6 +132,8 @@ export function IncomeExpensesChart({
             {option.xAxis.data.map((date, index) => {
               const income = option.series[0].data[index];
               const expenses = option.series[1].data[index];
+              // Net is a float difference; the formatter's unit precision
+              // keeps its binary error (1625.7399999999998) out of the text.
               const net =
                 income === undefined || expenses === undefined
                   ? undefined
@@ -153,7 +155,7 @@ export function IncomeExpensesChart({
                         "—"
                       ) : (
                         <Amount>
-                          {String(value)} {unit}
+                          {formatNum(value, unit)} {unit}
                         </Amount>
                       )}
                     </TableCell>

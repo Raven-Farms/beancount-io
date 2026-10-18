@@ -18,6 +18,7 @@ from typing import Any
 
 from cli.config import DEFAULT_ENTRY_FILE
 from cli.errors import UsageError
+from cli.paths import expand_path
 
 _TRUE = {"1", "true", "yes", "on"}
 
@@ -85,6 +86,11 @@ class RunContext:
     strict_prices: bool = False
     _no_input: bool = field(default=False, repr=False)
 
+    def require_network(self, command: str) -> None:
+        """Refuse a command whose purpose requires network access before it starts."""
+        if self.offline:
+            raise UsageError(f"bea {command} requires network access; remove --offline.")
+
     @property
     def no_input(self) -> bool:
         """True when nothing may block on a human.
@@ -105,6 +111,11 @@ class RunContext:
         """
         return not self.no_input and _stderr_is_a_terminal()
 
+    @property
+    def stdout_is_a_terminal(self) -> bool:
+        """True when what is drawn on stdout reaches the person at the keyboard."""
+        return _stdout_is_a_terminal()
+
     def strict_reads(self) -> bool:
         """True when a read must refuse partial answers.
 
@@ -122,12 +133,12 @@ class RunContext:
         """
         from cli.config import DEFAULT_ENTRY_FILE_FALLBACKS
 
-        candidate = self.file
+        candidate = expand_path(self.file, "--file") if self.file is not None else None
         source = "--file"
         if candidate is None:
             env_file = os.environ.get("BEA_FILE")
             if env_file:
-                candidate, source = Path(env_file).expanduser(), "$BEA_FILE"
+                candidate, source = expand_path(Path(env_file), "$BEA_FILE"), "$BEA_FILE"
         if candidate is None:
             # Present, not just a file: a dangling `main.bean` link or a
             # `main.bean` directory fell through to an older `main.beancount`,

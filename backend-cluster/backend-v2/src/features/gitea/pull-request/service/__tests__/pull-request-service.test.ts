@@ -1,4 +1,5 @@
 import { PullRequestService } from "../pull-request-service";
+import { logger } from "@/shared/logger";
 
 // Mock dependencies
 jest.mock("@/shared/logger", () => ({
@@ -100,9 +101,8 @@ describe("PullRequestService", () => {
       mockClient.repos.repoCreateBranch.mockResolvedValue({
         data: { name: "pr-patch-123-xyz" },
       });
-      mockClient.repos.repoGetContents.mockRejectedValue(
-        new Error("File not found"),
-      );
+      // What the generated client throws for a path the branch lacks.
+      mockClient.repos.repoGetContents.mockRejectedValue({ status: 404 });
       mockClient.repos.repoCreateFile.mockResolvedValue({
         data: { commit: { sha: "def456" } },
       });
@@ -292,6 +292,106 @@ describe("PullRequestService", () => {
         service.createPRFromPatch(identity, owner, repo, input),
       ).rejects.toThrow();
       expect(mockClient.repos.repoDeleteBranch).not.toHaveBeenCalled();
+    });
+
+    describe("a Gitea failure names its step (w3/645)", () => {
+      // The generated client throws the response; with a text body its JSON
+      // parse fails, and the body is still readable from the response.
+      const textFailure = (status: number, body: string) => ({
+        status,
+        error: new SyntaxError("Unexpected token < in JSON"),
+        text: async () => body,
+      });
+      // Gitea in production mode hides an internal error's cause.
+      const hiddenFailure = { status: 500, error: { message: "", url: "x" } };
+
+      it.each([
+        ["repoCreateBranch", /while creating branch pr-patch-/],
+        ["repoCreateFile", /while writing test\.txt/],
+        ["repoCompareDiff", /while comparing pr-patch-\S+ with main/],
+        ["repoCreatePullRequest", /while opening the pull request/],
+      ] as const)(
+        "reports a 500 from %s as SERVICE_UNAVAILABLE naming the step",
+        async (method, step) => {
+          mockSuccessfulCreate();
+          mockClient.repos[method].mockRejectedValue(hiddenFailure);
+
+          const failure = await service
+            .createPRFromPatch(identity, owner, repo, input)
+            .catch((error: unknown) => error);
+          expect(failure).toMatchObject({
+            category: "SERVICE_UNAVAILABLE",
+            metadata: { upstreamStatus: 500 },
+          });
+          expect((failure as Error).message).toMatch(step);
+          expect((failure as Error).message).toMatch(
+            /Gitea 500 .*Gitea gave no reason; its server log has the cause/,
+          );
+          expect(logger.error).toHaveBeenCalledWith(
+            "Gitea call failed while creating a pull request",
+            expect.objectContaining({ status: 500, owner, repo }),
+          );
+          // No pull request, so no branch is left behind either.
+          expect(mockClient.repos.repoDeleteBranch.mock.calls.length).toBe(
+            method === "repoCreateBranch" ? 0 : 1,
+          );
+        },
+      );
+
+      it("keeps a text body Gitea sent instead of JSON", async () => {
+        mockSuccessfulCreate();
+        mockClient.repos.repoCreateBranch.mockRejectedValue(
+          textFailure(500, "runtime error: invalid memory address"),
+        );
+
+        await expect(
+          service.createPRFromPatch(identity, owner, repo, input),
+        ).rejects.toThrow(
+          /Gitea 500 while creating branch \S+: runtime error: invalid memory address/,
+        );
+      });
+
+      it("tells a transient gateway failure to retry with backoff", async () => {
+        mockSuccessfulCreate();
+        mockClient.repos.repoCreatePullRequest.mockRejectedValue(
+          textFailure(502, "<html>Bad Gateway</html>"),
+        );
+
+        const failure = await service
+          .createPRFromPatch(identity, owner, repo, input)
+          .catch((error: unknown) => error);
+        expect(failure).toMatchObject({
+          category: "SERVICE_UNAVAILABLE",
+          metadata: { hint: expect.stringMatching(/Retry with backoff/) },
+        });
+      });
+
+      it("fails reading an existing file instead of creating it over", async () => {
+        mockSuccessfulCreate();
+        mockClient.repos.repoGetContents.mockRejectedValue(hiddenFailure);
+
+        await expect(
+          service.createPRFromPatch(identity, owner, repo, input),
+        ).rejects.toThrow(/while reading test\.txt/);
+        expect(mockClient.repos.repoCreateFile).not.toHaveBeenCalled();
+        expect(mockClient.repos.repoUpdateFile).not.toHaveBeenCalled();
+      });
+
+      it("keeps a repository refusal a plain failure naming the step", async () => {
+        mockSuccessfulCreate();
+        mockClient.repos.repoCreateFile.mockRejectedValue({
+          status: 422,
+          error: { message: "repository file already exists" },
+        });
+
+        const failure = await service
+          .createPRFromPatch(identity, owner, repo, input)
+          .catch((error: unknown) => error);
+        expect(failure).not.toHaveProperty("category");
+        expect((failure as Error).message).toBe(
+          "Gitea 422 while writing test.txt: repository file already exists",
+        );
+      });
     });
 
     it("requests parsed bodies from the generated client on every call", async () => {

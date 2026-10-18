@@ -25,7 +25,7 @@ from bea_engine.ledger.text import is_commodity, regex_reads_otherwise, require_
 from bea_engine.protocol import UsageError
 
 _MAPPING_FIELDS = frozenset(
-    {"date", "amount", "payee", "narration", "id", "currency", "debit", "credit", "category", "sign"}
+    {"date", "amount", "payee", "narration", "id", "currency", "debit", "credit", "category", "status", "sign"}
 )
 
 _THOUSAND_SEPARATOR_FILLER = re.compile(r"[\s'\u2019]")
@@ -513,7 +513,36 @@ _HEADER_SYNONYMS: dict[str, tuple[str, ...]] = {
     "currency": ("currency", "currency code", "ccy"),
     "id": ("id", "transaction id", "transaction_id", "reference number", "fitid", "txn id", "txnid", "bank id"),
     "category": ("category",),
+    "status": ("status", "transaction status"),
 }
+
+
+def is_pending(value: str | None) -> bool:
+    """Whether a status cell marks a row not yet posted: `Pending`, `Authorized`, a hold."""
+    text = (value or "").strip().casefold()
+    return text.startswith("pending") or text in {"authorized", "authorised", "hold", "on hold"}
+
+
+def _row_summary(row: dict[str, str], columns: dict[str, str]) -> str:
+    cells = (
+        row.get(columns[field], "").strip()
+        for field in ("date", "payee", "narration", "amount", "debit", "credit")
+        if field in columns
+    )
+    return " ".join(cell for cell in cells if cell)
+
+
+def _pending_column(headers: list[str], rows: list[dict[str, str]], columns: dict[str, str]) -> tuple[str, int] | None:
+    """An unmapped column that marks rows pending, and how many, for a note."""
+    mapped = set(columns.values())
+    for header in headers:
+        if header in mapped:
+            continue
+        count = sum(is_pending(row.get(header)) for row in rows)
+        if count:
+            return header, count
+    return None
+
 
 # Ordered so the unambiguous ISO form wins before the day/month forms it could
 # never be confused with.
@@ -674,6 +703,31 @@ def _mixed_lines(source: Path) -> tuple[int, int] | None:
     return None
 
 
+# Read as cp1252, these are what other code pages' letters turn into: `³`
+# for Polish ł, `¹` for ą, `¯` for Ż, `¸` for Cyrillic ё. Western text has
+# them only standing alone, never right after a letter. `¤` is Latin-9's €.
+_LETTER_ADJACENT_MOJIBAKE = frozenset("¹²³¸¨´¯¥Ÿ¦¾¼½£")
+
+
+def _foreign_code_page_sample(source: Path) -> str | None:
+    """A word of the file that reads as mojibake under cp1252, or None when it reads as Western text.
+
+    A run of three non-ASCII letters is how Cyrillic or Japanese bytes read
+    as cp1252; Western languages rarely put three accented letters together.
+    """
+    try:
+        text = source.read_bytes().decode("cp1252")
+    except (OSError, UnicodeDecodeError):
+        return None
+    # Words of the cells, not whole CSV lines: the sample should be a payee.
+    for word in text.replace(",", " ").replace(";", " ").replace("|", " ").split():
+        if "¤" in word or re.search(r"[^\W\d_]{3}", "".join(c if not c.isascii() else " " for c in word)):
+            return word[:24]
+        if any(c in _LETTER_ADJACENT_MOJIBAKE and i and word[i - 1].isalpha() for i, c in enumerate(word)):
+            return word[:24]
+    return None
+
+
 def _decode_usage_error(source: Path, exc: UnicodeDecodeError, encoding: str) -> UsageError:
     """Name a decode failure instead of pretending the CSV had no columns.
 
@@ -699,6 +753,16 @@ def _decode_usage_error(source: Path, exc: UnicodeDecodeError, encoding: str) ->
             "re-save the export in one encoding (UTF-8) and import it again."
         )
     if winner == "cp1252":
+        sample = _foreign_code_page_sample(source)
+        if sample is not None:
+            # Almost any 8-bit file decodes as cp1252, so a Polish or Russian
+            # export got that advice and imported as `Wp³ata £ódŸ` (w5/529).
+            return UsageError(
+                f"{source.name} is not valid UTF-8 ({exc.reason} at byte {exc.start}). Read as cp1252 it shows "
+                f"{sample!r}, which looks like another code page (Central or Eastern European, Cyrillic or "
+                "Asian). Re-save the export as UTF-8 and import it again; pass --csv encoding=cp1252 only if it "
+                "really is Western European."
+            )
         return UsageError(
             f"{source.name} is not valid UTF-8 ({exc.reason} at byte {exc.start}); "
             "it decodes as cp1252 — pass --csv encoding=cp1252."
@@ -779,9 +843,27 @@ def detect_delimiter(source: Path, encoding: str = "utf-8") -> str:
     return best
 
 
+_SEPARATOR_NAMES = {",": "comma", ";": "semicolon", "\t": "tab", "|": "pipe"}
+
+
+def unsplit_header(headers: list[str], used: str | None) -> str | None:
+    """The separator a one-column header holds when the delimiter in force did not split it, or None."""
+    if len(headers) != 1:
+        return None
+    return next((sep for sep in _SEPARATOR_NAMES if sep != used and sep in headers[0]), None)
+
+
+def _shown_delimiter(delimiter: str | None) -> str:
+    return "tab" if delimiter == "\t" else f"'{delimiter or ','}'"
+
+
 def parse_delimiter(value: str) -> str:
-    """Normalize ``--delimiter`` to a single character (``,``, ``;``, tab, ``|``)."""
-    raw = value.strip()
+    """Normalize ``--delimiter`` to a single character (``,``, ``;``, tab, ``|``).
+
+    Only spaces are padding: `strip()` took a literal tab for whitespace and
+    refused `--delimiter $'\\t'`, the usual shell spelling for TSV (w5/621).
+    """
+    raw = value.strip(" ")
     folded = raw.casefold()
     if folded in {",", "comma"}:
         return ","
@@ -823,6 +905,9 @@ def _refuse_surplus_fields(source: Path, line: int, headers: list[str], record: 
     )
 
 
+_ZERO_WIDTH_HEADER = re.compile("[\u200b\u2060\ufeff]")
+
+
 @contextmanager
 def open_records(
     source: Path, *, delimiter: str | None = None, encoding: str = "utf-8"
@@ -857,7 +942,10 @@ def open_records(
             raise _decode_usage_error(source, exc, encoding) from None
         # NFC, like the mapping that names them: a header typed composed must
         # find a bank's decomposed spelling of the same name, and vice versa.
-        headers = [unicodedata.normalize("NFC", cell.strip()) for cell in first or []]
+        # Zero-width characters and BOMs dropped too, as amount cells drop them:
+        # a doubled BOM or a U+200B left `Date` unmatchable while the column
+        # list showed it plain (w5/531).
+        headers = [unicodedata.normalize("NFC", _ZERO_WIDTH_HEADER.sub("", cell).strip()) for cell in first or []]
 
         def rows() -> Iterator[tuple[int, dict[str, str]]]:
             # `line_num` counts lines *consumed*, so after the header it names
@@ -947,9 +1035,11 @@ def read_header(source: Path, *, delimiter: str | None = None, encoding: str = "
 
 
 def _lookalike_header(column: str, headers: list[str]) -> str | None:
-    """The one header that differs from a mapped column name only by case."""
-    folded = column.casefold()
-    matches = [header for header in headers if header != column and header.casefold() == folded]
+    """The one header that differs from a mapped column name only by case, Turkish İ/ı included (w5/533)."""
+    from bea_engine.ledger.text import fold_account
+
+    folded = fold_account(column)
+    matches = [header for header in headers if header != column and fold_account(header) == folded]
     return matches[0] if len(matches) == 1 else None
 
 
@@ -989,8 +1079,14 @@ class CsvImporter:
         self._constant_currency: str | None = None
         self._decimal_comma = False
         self.skipped_blank_rows = 0
+        # Rows a mapped status column marks pending, each summarized for the
+        # note; and, with none mapped, a column that marks some pending (w5/614).
+        self.skipped_pending: list[str] = []
+        self.pending_column: tuple[str, int] | None = None
         # Category values that were not account names, for the caller to report once.
         self.rejected_categories: Counter[str] = Counter()
+        # Rows whose category names the source account itself (w5/468).
+        self.source_categories = 0
 
     @property
     def constant_currency(self) -> str | None:
@@ -1039,6 +1135,15 @@ class CsvImporter:
             wanted.setdefault("category", category_header)
         for role, column in wanted.items():
             if counts[column] == 0:
+                other = unsplit_header(headers, self._delimiter)
+                if other is not None:
+                    # A forced delimiter that does not split the header read as
+                    # a missing `Date` column, plainly present (w5/622).
+                    raise UsageError(
+                        f"{source.name}'s header was read as one column ({headers[0]!r}) with delimiter "
+                        f"{_shown_delimiter(self._delimiter)}, but it looks {_SEPARATOR_NAMES[other]}-separated. "
+                        f"Pass --delimiter {_shown_delimiter(other)}, or omit --delimiter so bea detects it."
+                    )
                 lookalike = _lookalike_header(column, headers)
                 hint = f" Did you mean {lookalike!r}? Column names are case-sensitive." if lookalike else ""
                 raise UsageError(f"The mapping names column {column!r} for {role}, which {source.name} lacks.{hint}")
@@ -1166,11 +1271,20 @@ class CsvImporter:
             # because a quoted cell may contain newlines and then a record is
             # no longer a line.
             numbered: list[tuple[int, int, dict[str, str]]] = []
+            status_header = columns.get("status")
             for line, row in materialized:
                 if self._is_blank_row(row, blank_headers):
                     self.skipped_blank_rows += 1
                     continue
+                if status_header is not None and is_pending(row.get(status_header)):
+                    # A pending charge often posts later at another amount (a
+                    # tip, a hold), and both were booked (w5/614). It waits
+                    # for the export it posts in.
+                    self.skipped_pending.append(_row_summary(row, columns))
+                    continue
                 numbered.append((len(numbered) + 1, line, row))
+            if status_header is None:
+                self.pending_column = _pending_column(headers, [row for _, row in materialized], columns)
             # Blank cells never voted on the decimal convention anyway, so
             # skipping blank rows here changes only which number it names.
             self._decimal_comma = _resolve_decimal_comma(
@@ -1266,7 +1380,14 @@ class CsvImporter:
         if category_header is not None:
             if category_header not in row:
                 raise UsageError(f"{where}: the CSV lacks category column {category_header!r}.")
-            category = row[category_header].strip()
+            # NFC, as the ledger reads names: an NFD cell naming an open account
+            # was "not an account name" and went to Uncategorized (w5/530).
+            category = unicodedata.normalize("NFC", row[category_header].strip())
+            if category == self._account:
+                # Posted against itself the row cancels out, so it queues for
+                # review like a label that is no account (w5/468).
+                self.source_categories += 1
+                return self._default_account, "!", "unmatched"
             if (
                 category
                 and is_valid(category)

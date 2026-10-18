@@ -241,6 +241,8 @@ function CashFlowSankeyPlot({
         otherLabel: t("other"),
         cashFlowLabel: t("cashFlow"),
         savingsLabel: t("savings"),
+        incomeNodeLabel: (name) => t("sankeyIncomeNodeLabel", { name }),
+        expensesNodeLabel: (name) => t("sankeyExpensesNodeLabel", { name }),
       }),
     [income, expenses, t],
   );

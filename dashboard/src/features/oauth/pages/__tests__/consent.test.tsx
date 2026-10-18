@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import OAuthConsentPage from "../consent";
 
@@ -131,6 +132,27 @@ describe("MCP consent", () => {
     expect(Object.fromEntries(new FormData(approvalForm()))).toEqual({
       ledgerId: "ada/personal",
     });
+  });
+});
+
+describe("MCP consent keyboard focus (w3/561)", () => {
+  it("draws focus on the ledger card whose hidden radio has it, before any choice", async () => {
+    const user = userEvent.setup();
+    render(<OAuthConsentPage />);
+    await whoIsAsking();
+    const radio = screen.getByRole("radio", { name: /Personal/ });
+
+    for (let i = 0; i < 10 && document.activeElement !== radio; i++) {
+      await user.tab();
+    }
+
+    expect(radio).toHaveFocus();
+    expect(radio).not.toBeChecked();
+    expect(radio).toHaveClass("sr-only");
+    // The card draws the ring for the hidden radio, apart from selection.
+    const card = radio.closest("label")!;
+    expect(card).toHaveClass("has-[:focus-visible]:ring-2");
+    expect(card).not.toHaveClass("border-primary");
   });
 });
 

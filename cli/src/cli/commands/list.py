@@ -24,7 +24,7 @@ import typer
 from cli import context, output
 from cli.errors import UsageError
 from cli.single_value import SingleValueCommand
-from cli.utils import fold_account, inert_text, parse_opt_date, refuse_blank_filter, single_line
+from cli.utils import account_filter, fold_account, inert_text, parse_opt_date, refuse_blank_filter, single_line
 
 list_app = typer.Typer(help="List directives from a local .bean file", no_args_is_help=True, rich_markup_mode=None)
 
@@ -312,7 +312,7 @@ def _refuse_non_token(flag: str, value: str, sigil: str) -> None:
         return
     noun = "tags" if flag == "--tag" else "links"
     raise UsageError(
-        f"{flag}: {value!r} is not one tag or link; use only letters, digits and - _ / . after an optional "
+        f"{flag}: {value!r} is not one tag or link; use only ASCII letters, digits and - _ / . after an optional "
         f"leading {sigil}.{_several(value, f'repeat {flag} for several {noun}')}"
     )
 
@@ -321,8 +321,8 @@ def _run(name: str, spec: _Spec, limit: int, allow_errors: bool, *, details: boo
     """Ask the engine for one directive type, and render it for the active mode."""
     from cli.engine import launch
 
+    filters["account"] = account_filter("--account", filters.get("account"))
     for flag, value in (
-        ("--account", filters.get("account")),
         ("--currency", filters.get("currency")),
         ("--type", filters.get("kind")),
         ("--flag", filters.get("flag")),
@@ -346,6 +346,10 @@ def _run(name: str, spec: _Spec, limit: int, allow_errors: bool, *, details: boo
             f"--currency: {currency!r} is not one commodity; a commodity is a capital letter followed by capitals, "
             f"digits and ' . _ -.{_several(currency, 'filter one commodity per command')}"
         )
+    if currency is not None:
+        # The value checked is the value matched: `" HOOL"` passed the check
+        # and then matched no price, an empty answer with exit 0 (w5/473).
+        filters["currency"] = currency.strip()
     ctx = context.current()
     if filters.get("from_date") and filters.get("to_date") and filters["from_date"] > filters["to_date"]:
         raise UsageError("--from-date must be on or before --to-date.")
@@ -597,9 +601,13 @@ def transactions(
     ] = ListSort.newest,
 ) -> None:
     """List recent transactions and their amounts; --details adds metadata and source."""
+    if flag == "txn":
+        # `add --flag txn` writes it and Beancount reads it as `*`: the shared
+        # flag grammar includes it, so the filter does too (w5/526).
+        flag = "*"
     if flag is not None and flag.strip() and flag not in _FLAGS:
         raise UsageError(
-            f"--flag {flag!r} is not a transaction flag; use one of * ! & # ? % or a capital letter, such as '!'."
+            f"--flag {flag!r} is not a transaction flag; use one of * ! & # ? %, a capital letter or txn, such as '!'."
         )
     _run(
         "transaction",

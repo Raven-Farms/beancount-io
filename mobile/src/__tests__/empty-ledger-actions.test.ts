@@ -452,3 +452,28 @@ describe("Transactions narrowed empty results", () => {
     expect(text(tree).includes("transactionsNoSearchResults")).toBe(false);
   });
 });
+
+describe("Home holdings sheet", () => {
+  // The sheet's "Update prices on the web" must follow the same access as
+  // Home's other write actions (w0/031).
+  const sheetAccess = () =>
+    find(render(HomeScreen), "ValuationSheet")[0].props.canWrite;
+
+  it("lets writers and admins reach the price update", () => {
+    permissions = { push: true, admin: false };
+    expect(sheetAccess()).toBe(true);
+    permissions = { push: false, admin: true };
+    expect(sheetAccess()).toBe(true);
+  });
+
+  it("withholds it from readers, guests and unknown permissions", () => {
+    permissions = { push: false, admin: false };
+    expect(sheetAccess()).toBe(false);
+    permissions = { push: true, admin: false };
+    guest = { transactionFilters: transactionFiltersVar };
+    expect(sheetAccess()).toBe(false);
+    guest = null;
+    permissionError = new Error("Offline");
+    expect(sheetAccess()).toBe(false);
+  });
+});

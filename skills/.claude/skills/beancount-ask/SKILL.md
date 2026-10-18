@@ -1,6 +1,7 @@
 ---
 name: beancount-ask
 description: Answer questions about a local Beancount ledger using shown, reproducible bea queries and reports for spending, trends, net worth, subscriptions and anomalies. Strictly read-only; figures come from executed queries. Skip recording transactions, reconciliation, migration, ledger edits, and general Beancount or BQL documentation questions.
+metadata: {"openclaw": {"homepage": "https://github.com/bex-co/beancount-io/tree/main/skills", "requires": {"anyBins": ["bea", "bean-check"]}, "install": [{"id": "brew", "kind": "brew", "formula": "bex-co/tap/bea", "bins": ["bea"], "label": "Install bea (Homebrew)"}, {"id": "uv", "kind": "uv", "package": "beancount-io", "bins": ["bea"], "label": "Install bea (uv)"}]}, "hermes": {"category": "finance", "tags": ["beancount", "accounting", "bql", "reports"]}}
 ---
 
 # beancount-ask
@@ -28,6 +29,11 @@ bea --file "$ledger" --json --no-input query "$query"
 bea --file "$ledger" --json --no-input balance
 bea --file "$ledger" --json --no-input report income-statement --time "$month"
 ```
+
+`balance` and `report` value rows at market in the operating currency: under
+`--json` they exit 1 with `result.missing_prices` when a commodity has no
+price. Answer spending with the `weight` recipes, pass `-x at_cost` for book
+value, and disclose missing prices — that exit is not an engine failure.
 
 For entry searches, use root-scoped `list transaction --search/--tag/--link`;
 check truncation before treating a listing as complete. Use `report` for

@@ -30,8 +30,10 @@ from typing import Annotated
 import typer
 
 from cli import context, output
+from cli.amounts import zero_divisor_line
 from cli.engine import launch
 from cli.errors import BeaError, LedgerError, UsageError
+from cli.paths import expand_path
 from cli.utils import atomic_write, decode_error_message, single_line
 
 SUFFIXES = {".bean", ".beancount"}
@@ -77,6 +79,7 @@ def format_beans(
     if in_place and output_file is not None:
         raise UsageError("Pass either --in-place or --output, not both — they name two different destinations.")
     if output_file is not None:
+        output_file = expand_path(output_file, "--output")
         _require_output_file(output_file)
     reporting = check or dry_run
     if reporting and (in_place or output_file is not None):
@@ -90,7 +93,7 @@ def format_beans(
         *(["-i"] if in_place else []),
         *(["-o", str(output_file)] if output_file is not None else []),
     ]
-    files, missing = _targets(paths, ctx.file, asked, alignment, expand_includes=walking)
+    files, missing, skipped = _targets(paths, ctx.file, asked, alignment, expand_includes=walking)
     if files is None:
         if reporting or in_place:
             raise UsageError("Name the files to format: reading stdin has nothing to compare or rewrite.")
@@ -99,26 +102,33 @@ def format_beans(
         context.refuse_terminal_stdin(
             "A ledger is required with --no-input. Name the files to format or pipe the ledger on stdin."
         )
+        if output_file is not None:
+            try:
+                ledger = ctx.entry_file()
+            except UsageError:
+                ledger = None
+            if ledger is not None:
+                output.refuse_ledger_alias(output_file, ledger)
         _render(None, alignment, output_file)
         if ctx.json_output and output_file is not None:
             output.emit(_wrote(0, output_file), target={"stdin": STDIN})
         return
 
     target = _target(paths, files)
-    # The walk modes see whole ledgers: a root stands for its include closure,
-    # and a file bean-format cannot parse is a failure rather than "already
-    # formatted". Single-file stdout output stays a plain filter.
+    # The walk modes scan the include closure together so invalid files can be
+    # skipped while valid ones are formatted. Single-file rendering checks its
+    # own text in the engine before returning anything to stdout or --output.
     failed: dict[str, list[str]] = _syntax_failures(files) if walking and files else {}
     if reporting:
         remedy = _remedy(_named(paths, ctx.file), alignment)
-        _report(files, alignment, target, remedy, failed, missing, check=check, dry_run=dry_run)
+        _report(files, alignment, target, remedy, failed, missing, skipped, check=check, dry_run=dry_run)
         return
 
     if not files:
         if in_place:
             raise UsageError(
                 "No .bean or .beancount files found to rewrite.",
-                result=_result([], [], {}, []) | {"in_place": True},
+                result=_result([], [], {}, [], skipped) | {"in_place": True},
             )
         if ctx.json_output:
             _require_json_destination(in_place, output_file)
@@ -127,7 +137,7 @@ def format_beans(
             # earlier run left there; nothing was read, so nothing is written.
             raise UsageError(
                 f"No .bean or .beancount files found; nothing was written to {output_file}.",
-                result=_result([], [], {}, []),
+                result=_result([], [], {}, [], skipped),
             )
         output.success("No .bean or .beancount files found.")
         return
@@ -136,7 +146,7 @@ def format_beans(
         _require_json_destination(in_place, output_file)
 
     if in_place:
-        _format_in_place(files, alignment, target, failed, missing)
+        _format_in_place(files, alignment, target, failed, missing, skipped)
         return
 
     if len(files) > 1:
@@ -148,7 +158,7 @@ def format_beans(
         # Upstream reads the target and writes this path; naming the target
         # itself would truncate the file before it is read.
         for ledger_file in _named(paths, ctx.file):
-            output.refuse_ledger_alias(output_file, Path(os.path.abspath(ledger_file.expanduser())))
+            output.refuse_ledger_alias(output_file, Path(os.path.abspath(expand_path(ledger_file, "format"))))
 
     _render(files[0], alignment, output_file)
     if ctx.json_output and output_file is not None:
@@ -161,6 +171,7 @@ def _format_in_place(
     target: dict[str, str | list[str]],
     failed: dict[str, list[str]],
     missing: list[output.MissingInclude],
+    skipped: list[dict[str, str]],
 ) -> None:
     # Unparseable files are skipped, not "formatted": upstream would echo them
     # back with a newline appended and call that a rewrite.
@@ -173,7 +184,11 @@ def _format_in_place(
         # retry without saying which files are already done.
         if exc.result is None:
             # A lost response cannot establish even an empty formatted list.
-            exc.details = _problem_lines(failed, missing) + exc.details
+            exc.details = (
+                _problem_lines(failed, missing)
+                + [f"Skipped {item['file']}: {item['reason']}" for item in skipped]
+                + exc.details
+            )
             raise
         progress = exc.result
         partial = [str(name) for name in progress.get("formatted", [])]
@@ -183,7 +198,7 @@ def _format_in_place(
         }
         details = [f"formatted: {name}" for name in partial] + _problem_lines(failed, missing)
         details.extend(f"failed: {name}: {errors[0]}" for name, errors in write_failed.items() if errors)
-        result = _result(files, partial, failed | write_failed, missing) | {"in_place": True}
+        result = _result(files, partial, failed | write_failed, missing, skipped) | {"in_place": True}
         # A missing engine result can mean an unknown write outcome. Only
         # publish these classifications when the engine actually reported them.
         for key, label in (("unchanged", "unchanged"), ("not_attempted", "not attempted")):
@@ -198,7 +213,7 @@ def _format_in_place(
             # earlier rewrites, "nothing was written" would misreport the run.
             exc.args = (_partial_message(len(partial), write_failed, failed, missing, progress),)
         raise
-    result = _result(files, changed, failed, missing) | {"in_place": True}
+    result = _result(files, changed, failed, missing, skipped) | {"in_place": True}
     if failed or missing:
         completed = set(changed)
         unchanged = [str(file) for file in formattable if str(file) not in completed]
@@ -227,6 +242,7 @@ def _report(
     remedy: str,
     failed: dict[str, list[str]],
     missing: list[output.MissingInclude],
+    skipped: list[dict[str, str]],
     *,
     check: bool,
     dry_run: bool,
@@ -234,7 +250,7 @@ def _report(
     """Which files upstream would rewrite, without rewriting any of them."""
     ctx = context.current()
     changed = _changed([file for file in files if str(file) not in failed], alignment, in_place=False)
-    result = _result(files, changed, failed, missing) | {"check": check, "dry_run": dry_run}
+    result = _result(files, changed, failed, missing, skipped) | {"check": check, "dry_run": dry_run}
 
     if check and (changed or failed or missing):
         for name in changed:
@@ -338,7 +354,9 @@ def _remedy(named: list[Path], alignment: list[str]) -> str:
     It repeats the gate's own paths and alignment options: rewriting a narrower
     set of files, or at upstream's default widths, leaves the identical gate red.
     """
-    return shlex.join(["bea", "format", "-i", *(str(path.expanduser().resolve()) for path in named), *alignment])
+    return shlex.join(
+        ["bea", "format", "-i", *(str(expand_path(path, "format").resolve()) for path in named), *alignment]
+    )
 
 
 def _changed(files: list[Path], alignment: list[str], *, in_place: bool) -> list[str]:
@@ -379,8 +397,8 @@ def _named(paths: list[Path] | None, default: Path | None) -> list[Path]:
 
 def _targets(
     paths: list[Path] | None, default: Path | None, asked: list[str], alignment: list[str], *, expand_includes: bool
-) -> tuple[list[Path] | None, list[output.MissingInclude]]:
-    """The files to format, or None for upstream's stdin filter, plus missing includes.
+) -> tuple[list[Path] | None, list[output.MissingInclude], list[dict[str, str]]]:
+    """The files to format (None for stdin), missing includes, and intentional encrypted skips.
 
     An explicit path wins; otherwise the global `--file` names the ledger. A
     bare `bea format` formats stdin, which is what `bean-format` does — it no
@@ -398,9 +416,11 @@ def _targets(
     it positionally, in the mode `asked` for: a `--check` must not be answered
     with advice that rewrites the tree (w5/196).
     """
+    if not paths and default is not None:
+        default = expand_path(default, "--file")
     named = _named(paths, default)
-    if not paths and default is not None and default.expanduser().is_dir():
-        directory = default.expanduser().resolve()
+    if not paths and default is not None and default.is_dir():
+        directory = default.resolve()
         positional = shlex.join(["bea", "format", *asked, str(directory), *alignment])
         raise UsageError(
             f"Ledger path '{directory}' (from --file) is a directory; expected a ledger file. "
@@ -409,14 +429,14 @@ def _targets(
     if any(str(path) == STDIN for path in named):
         if len(named) > 1:
             raise UsageError(f"Read either stdin ('{STDIN}') or named files, not both.")
-        return None, []
+        return None, [], []
     if not named:
-        return None, []
+        return None, [], []
 
     files: set[Path] = set()
     roots: list[Path] = []
     for path in named:
-        resolved = path.expanduser().resolve()
+        resolved = expand_path(path, "format").resolve()
         if not resolved.exists():
             raise UsageError(f"Formatting target does not exist: {resolved}")
         if resolved.is_dir():
@@ -443,30 +463,43 @@ def _targets(
                     raise UsageError(_denied(match, "Permission denied"))
                 files.add(target)
         elif resolved.is_file():
-            if resolved.suffix not in SUFFIXES:
-                raise UsageError("Expected a .bean or .beancount file, or a directory.")
+            # A named file is a ledger whatever its suffix, as for every other
+            # command and bean-format; `SUFFIXES` only picks ledgers out of a
+            # directory walk (w5/499).
+            if output.is_encrypted(resolved):
+                raise UsageError(
+                    f"Cannot format {resolved}: it is encrypted, and Beancount decrypts it only to load it."
+                )
             files.add(resolved)
             # The closure is walked from the path as named: a symlinked root's
             # includes sit beside the link, as the loader and every other
             # command read them, not beside its target (w5/087). The resolved
             # path stays the write target and the deduplication key.
-            roots.append(Path(os.path.abspath(path.expanduser())))
+            roots.append(Path(os.path.abspath(expand_path(path, "format"))))
         else:
             raise UsageError(f"Not a regular file or directory: {resolved}")
     if not expand_includes:
-        return sorted(files), []
+        return sorted(files), [], []
     # Every member, whatever its suffix: `SUFFIXES` says which files a
     # directory walk treats as ledgers, but an `include` already made
     # `entries.inc` part of this ledger (w1/041). One shared walk per set of
     # roots — never one per file, which is quadratic on a long chain (w1/087).
     members, _ = output.walk_closure(*roots)
-    files.update(member.resolve() for member in members)
+    # A member nobody may read is reported as an unreadable include below,
+    # and the rest still formatted (w5/523).
+    files.update(member.resolve() for member in members if member in roots or os.access(member, os.R_OK))
+    skipped = []
+    for encrypted in sorted(file for file in files if output.is_encrypted(file)):
+        files.discard(encrypted)
+        reason = "it is encrypted, and Beancount decrypts it only to load it."
+        skipped.append({"file": str(encrypted), "reason": reason})
+        output.note(f"Skipped {encrypted}: {reason}")
     missing: dict[tuple[str, Path], output.MissingInclude] = {}
     # Named roots first, so each is read under the name it was given; the
     # walk skips a file it has already seen through another spelling.
     for item in output.walk_closure(*roots, *sorted(files))[1]:
         missing[(item.include, item.source)] = item
-    return sorted(files), list(missing.values())
+    return sorted(files), list(missing.values()), skipped
 
 
 def _syntax_failures(files: list[Path]) -> dict[str, list[str]]:
@@ -477,13 +510,22 @@ def _syntax_failures(files: list[Path]) -> dict[str, list[str]]:
     are read as UTF-8 first, so an undecodable path raises the same error it
     always has instead of arriving as a parse failure.
     """
+    # A literal zero divisor segfaults upstream's parser, which took the whole
+    # batch down unnamed and formatted nothing (w5/565): that file is reported
+    # here and the rest go to the engine.
+    divided: dict[str, list[str]] = {}
     for file in files:
-        _text(file)
-    data = launch.helper_json(["syntax", *(str(file) for file in files)])
-    reported = data.get("files", {})
+        line = zero_divisor_line(_text(file))
+        if line is not None:
+            divided[str(file)] = [
+                f"{file}:{line}: Division by zero in an amount expression; Beancount's parser crashes on a "
+                "zero divisor, so this file was not parsed."
+            ]
+    parsed = [str(file) for file in files if str(file) not in divided]
+    reported = launch.helper_json(["syntax", *parsed]).get("files", {}) if parsed else {}
     failures: dict[str, list[str]] = {}
     for file in files:
-        errors = [str(error) for error in reported.get(str(file), [])]
+        errors = divided.get(str(file)) or [str(error) for error in reported.get(str(file), [])]
         if not errors:
             continue
         if len(errors) == 1 and errors[0].startswith(f"{file}: cannot read file"):
@@ -523,8 +565,33 @@ def _walk(root: Path) -> list[Path]:
     suffixes = tuple(SUFFIXES)
     found: list[Path] = []
     for directory, _, names in os.walk(root, onerror=stop):
-        found.extend(Path(directory, name) for name in names if name.endswith(suffixes))
+        found.extend(
+            Path(directory, name)
+            for name in names
+            if name.endswith(suffixes) and not _apple_double(Path(directory, name))
+        )
     return sorted(found)
+
+
+#: The first bytes of the `._name` files macOS writes beside each file on
+#: exFAT, FAT and SMB volumes, and leaves in its tar and zip archives.
+_APPLE_DOUBLE_MAGIC = b"\x00\x05\x16\x07"
+
+
+def _apple_double(path: Path) -> bool:
+    """A macOS AppleDouble `._name` file: resource-fork metadata, never ledger text.
+
+    The walk took `._main.bean` for a ledger file and stopped on it with
+    "Re-save the file as UTF-8", formatting nothing (w5/609). A real ledger
+    whose name starts `._` does not start with the magic, and is kept.
+    """
+    if not path.name.startswith("._"):
+        return False
+    try:
+        with path.open("rb") as stream:
+            return stream.read(len(_APPLE_DOUBLE_MAGIC)) == _APPLE_DOUBLE_MAGIC
+    except OSError:
+        return False
 
 
 def _denied(path: Path, reason: str) -> str:
@@ -622,7 +689,7 @@ def _require_json_destination(in_place: bool, output_file: Path | None) -> None:
 
 def _wrote(scanned: int, destination: Path) -> dict[str, object]:
     """What a successful `--output FILE` did: how much it read, and what it wrote."""
-    return {"scanned": scanned, "output": str(destination.expanduser().resolve())}
+    return {"scanned": scanned, "output": str(expand_path(destination, "--output").resolve())}
 
 
 def _result(
@@ -630,6 +697,7 @@ def _result(
     changed: list[str],
     failed: dict[str, list[str]],
     missing: list[output.MissingInclude],
+    skipped: list[dict[str, str]],
 ) -> dict[str, object]:
     """The scanned set: how many files were walked, and what happened to each."""
     return {
@@ -640,13 +708,14 @@ def _result(
             {"include": item.include, "from": str(item.source), **({"reason": item.reason} if item.reason else {})}
             for item in missing
         ],
+        "skipped": skipped,
     }
 
 
 def _target(paths: list[Path] | None, files: list[Path]) -> dict[str, str | list[str]]:
     named = [path for path in (paths or []) if str(path)]
-    if len(named) == 1 and named[0].expanduser().resolve().is_dir():
-        return {"directory": str(named[0].expanduser().resolve())}
+    if len(named) == 1 and expand_path(named[0], "format").resolve().is_dir():
+        return {"directory": str(expand_path(named[0], "format").resolve())}
     if len(files) == 1:
         return {"file": str(files[0])}
     return {"files": [str(file) for file in files]}

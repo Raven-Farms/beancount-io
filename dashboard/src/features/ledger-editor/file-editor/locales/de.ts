@@ -1,4 +1,10 @@
 const deFileEditor: Record<string, { message: string; description: string }> = {
+  "ledgerEditor.rootFileCannotBeDeleted": {
+    message:
+      "{filename} ist die Stammdatei des Hauptbuchs und kann nicht gelöscht werden",
+    description:
+      "Why Delete is unavailable for the ledger's root file, which the server refuses to delete; {filename} is main.bean",
+  },
   "ledgerEditor.alignAmounts": {
     message: "Beträge ausrichten",
     description: "Menu item to align amounts in editor",

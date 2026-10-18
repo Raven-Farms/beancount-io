@@ -129,6 +129,6 @@ def test_a_price_quoted_in_another_include_still_conflicts(books: tuple[Path, Pa
     )
 
     flat = " ".join(result.output.split())
-    assert result.exit_code == 2, result.output
+    assert result.exit_code == 4, result.output
     assert "already has" in flat and "10 USD" in flat and ".bea-" not in flat, flat
     assert not new.exists()

@@ -46,7 +46,9 @@ function load(): (props: Record<string, unknown>) => Node {
     "@/common/theme": {
       fontSizes: {},
       fontWeights: {},
-      useTheme: () => ({ colorTheme: {} }),
+      useTheme: () => ({
+        colorTheme: { success: "success", error: "error", black60: "neutral" },
+      }),
     },
     "@/components/amount-text": { AmountText: "AmountText" },
     "@/components/account-type-icon": { AccountTypeIcon: "AccountTypeIcon" },
@@ -213,5 +215,43 @@ describe("AccountEntryRow accessibility", () => {
     const row = AccountEntryRow({ row: balanceDirective, currency: "USD" });
     expect(row.type).toBe("View");
     expect(row.props.accessibilityRole).toBe(undefined);
+  });
+});
+
+describe("AccountEntryRow change color", () => {
+  // Colored by raw sign, salary read in the error color and spending in the
+  // success color on Income and Expenses pages (w0/033). The amount keeps its
+  // ledger sign; only the color follows the effect on net worth.
+  const colorOf = (change: number, netWorthSign?: 1 | -1) => {
+    const tree = AccountEntryRow({
+      row: { ...transfer, flag: "*", change },
+      currency: "USD",
+      netWorthSign,
+    });
+    const [amount] = findAll(
+      tree,
+      (node) => node.type === "AmountText" && textOf(node) === `$${change}`,
+    );
+    return flat(amount.props.style).color;
+  };
+
+  it("reads an asset's inflow favorable and outflow unfavorable", () => {
+    expect(colorOf(250)).toBe("success");
+    expect(colorOf(-250)).toBe("error");
+    expect(colorOf(250, 1)).toBe("success");
+  });
+
+  it("reads spending unfavorable and a refund favorable on an Expenses page", () => {
+    expect(colorOf(33.71, -1)).toBe("error");
+    expect(colorOf(-12, -1)).toBe("success");
+  });
+
+  it("reads salary favorable on an Income page, keeping its negative sign", () => {
+    expect(colorOf(-4639.7, -1)).toBe("success");
+  });
+
+  it("leaves a zero change neutral either way", () => {
+    expect(colorOf(0)).toBe("neutral");
+    expect(colorOf(0, -1)).toBe("neutral");
   });
 });

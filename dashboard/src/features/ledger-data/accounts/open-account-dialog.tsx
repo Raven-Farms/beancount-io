@@ -1,16 +1,12 @@
-import { useState, useMemo, type RefObject } from "react";
+import { useState, type RefObject } from "react";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { useErrorMessage } from "@/common/lib/errors/error-message";
 import { restoreFocusOnDialogClose } from "@/common/lib/focus/restore-focus-on-dialog-close";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQuery } from "@apollo/client/react";
+import { useMutation } from "@apollo/client/react";
 import { format } from "date-fns";
-import {
-  BulkEntriesDocument,
-  LedgerEntryType,
-  GetLedgerDocument,
-} from "@/graphql/definitions";
+import { BulkEntriesDocument, LedgerEntryType } from "@/graphql/definitions";
 import {
   Dialog,
   DialogContent,
@@ -29,10 +25,8 @@ import {
   FormMessage,
 } from "@/common/components/ui/form";
 import { DatePicker } from "@/common/components/ui/date-picker";
-import {
-  accountProblemMessage,
-  buildOpenAccountSchema,
-} from "@/common/lib/beancount/open-account-schema";
+import { useOpenAccountSchema } from "@/common/hooks/use-open-account-schema";
+import { useWriteOutcome } from "@/common/hooks/use-write-outcome";
 
 type OpenAccountFormData = {
   date: Date;
@@ -59,34 +53,8 @@ export function OpenAccountDialog({
   const [addEntryOpen] = useMutation(BulkEntriesDocument);
   const [error, setError] = useState<string | null>(null);
 
-  const { data: ledgerData } = useQuery(GetLedgerDocument, {
-    variables: { ledgerId },
-    skip: !ledgerId,
-  });
-
-  const accountPrefixes = useMemo(() => {
-    const opts = ledgerData?.getLedger?.options;
-    if (!opts) return [];
-    return [
-      opts.nameAssets,
-      opts.nameLiabilities,
-      opts.nameEquity,
-      opts.nameIncome,
-      opts.nameExpenses,
-    ].filter(Boolean);
-  }, [ledgerData]);
-
-  const schema = useMemo(
-    () =>
-      buildOpenAccountSchema(accountPrefixes, {
-        required: t("page.accounts.accountNameRequired"),
-        mustStartWith: t("page.accounts.accountMustStartWith", {
-          prefixes: accountPrefixes.join(", "),
-        }),
-        invalid: accountProblemMessage(t),
-      }),
-    [accountPrefixes, t],
-  );
+  const { accountPrefixes, schema } = useOpenAccountSchema(ledgerId);
+  const writeOutcome = useWriteOutcome(ledgerId);
 
   const form = useForm<OpenAccountFormData>({
     resolver: zodResolver(schema),
@@ -104,6 +72,7 @@ export function OpenAccountDialog({
 
   const onSubmit = async (data: OpenAccountFormData) => {
     setError(null);
+    const before = writeOutcome.snapshot();
     try {
       const result = await addEntryOpen({
         variables: {
@@ -125,6 +94,7 @@ export function OpenAccountDialog({
         resetForm();
         onSuccess?.();
         onOpenChange(false);
+        void writeOutcome.report(before);
       } else {
         setError(result.data?.bulkEntries.message ?? formatError(undefined));
       }

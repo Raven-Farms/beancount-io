@@ -259,7 +259,9 @@ function LedgerStep({ uid, scope }: { uid: string; scope?: string }) {
           {ledgers.map((ledger) => (
             <label
               key={ledger.id}
-              className={`flex items-center gap-3 p-3 rounded-md border cursor-pointer transition-colors ${
+              // The radio is visually hidden, so its keyboard focus is drawn
+              // on the card, apart from the selected style.
+              className={`flex items-center gap-3 p-3 rounded-md border cursor-pointer transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-2 has-[:focus-visible]:ring-offset-background ${
                 selected === ledger.fullName
                   ? "border-primary bg-primary/5"
                   : "border-border hover:bg-muted/50"

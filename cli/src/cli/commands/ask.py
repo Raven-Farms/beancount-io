@@ -13,7 +13,7 @@ from typing import Annotated
 import typer
 
 from cli import context, output
-from cli.errors import UsageError
+from cli.errors import BeaError, UsageError
 from cli.utils import IntoPath
 
 _MISSING_EXTRA = (
@@ -41,6 +41,11 @@ def ask(
     Interactive edits are confirmed, validated, and written atomically.
     """
     ctx = context.current()
+    if ctx.offline:
+        # The model calls go through the hosted proxy (w5/515).
+        raise UsageError(
+            "bea ask requires network access: its model calls go through the hosted proxy; remove --offline."
+        )
     model = "gpt-4o"
     file = ctx.entry_file()
     if ctx.json_output:
@@ -51,11 +56,20 @@ def ask(
         if print_mode or ctx.no_input:
             raise UsageError("A question is required without a terminal (or with --print).")
         question = ""
+    if not (print_mode or ctx.no_input) and not ctx.stdout_is_a_terminal:
+        # The session draws its prompt and its write-approval panel on stdout:
+        # redirected, the person saw nothing while a keystroke still approved
+        # the AI's write (w5/550).
+        raise UsageError(
+            "bea ask's interactive session draws on the terminal, and stdout is redirected, so its "
+            "write-approval panel would not be seen. Ask one question with --print "
+            "(bea ask QUESTION --print > FILE), or run the session without redirecting stdout."
+        )
 
     # The missing extra is checked before the credential: without it the
     # command cannot run at all, and "log in first" would be misleading advice.
     try:
-        from cli.ask.agent import BqlDeps, make_agent, translated_failures, usage_limits
+        from cli.ask.agent import CUT_OFF_NOTICE, BqlDeps, cut_off, make_agent, translated_failures, usage_limits
     except ImportError as exc:
         raise UsageError(_MISSING_EXTRA) from exc
 
@@ -69,29 +83,35 @@ def ask(
     skills = load_skills()
     for line in project_skills_notice(skills):
         output.note(line)
-    agent = make_agent(
-        model_name=model,
-        base_url=f"{settings().api_url}/api-gateway/ai/openai/",
-        api_key=creds.token,
-        skills=skills,
-    )
+    try:
+        agent = make_agent(
+            model_name=model,
+            base_url=f"{settings().api_url}/api-gateway/ai/openai/",
+            api_key=creds.token,
+            skills=skills,
+        )
+    except ImportError as exc:
+        # A SOCKS proxy in the environment, as for the cloud commands (w5/518).
+        from cli.errors import socks_proxy_refusal
+
+        refusal = socks_proxy_refusal(exc)
+        if refusal is None:
+            raise
+        raise refusal from None
     deps = BqlDeps(file=file, skills={s.name: s for s in skills}, into=into)
 
     if print_mode or ctx.no_input:
         from rich.console import Console
-        from rich.markdown import Markdown
 
-        from cli.utils import inert_text
+        from cli.ask.render import answer_markdown
 
         console = Console()
         with console.status("[dim]Thinking…[/dim]", spinner="dots"), translated_failures(deps):
             result = agent.run_sync(question, deps=deps, usage_limits=usage_limits())
-        # The answer is model-controlled text on its way to a terminal, so it
-        # obeys the same invariant as every other untrusted string the CLI
-        # prints (w3/392): no control character reaches the screen raw. Rich
-        # would otherwise emit one itself — an OSC 8 hyperlink whose visible
-        # text the model chose — so a link is rendered with its target shown.
-        console.print(Markdown(inert_text(result.output), hyperlinks=False))
+        console.print(answer_markdown(result.output))
+        if cut_off(result):
+            # Part of an answer is not the answer: a nonzero exit says so (w5/546).
+            raise BeaError(CUT_OFF_NOTICE)
     else:
         from cli.ask.repl import print_welcome, run_repl
 

@@ -4,6 +4,20 @@ export interface TranslationEntry {
 }
 
 const caVisibilitySection: Record<string, TranslationEntry> = {
+  "page.settings.makePublicTitle": {
+    message: "Voleu fer públic aquest llibre?",
+    description:
+      "Title of the confirmation before a private ledger becomes public",
+  },
+  "page.settings.makePublicDescription": {
+    message:
+      "Qualsevol persona amb l'enllaç, i els cercadors, podran veure les transaccions, els saldos, els fitxers i l'historial d'aquest llibre.",
+    description: "What becomes visible when a private ledger is made public",
+  },
+  "page.settings.makePublic": {
+    message: "Fes-lo públic",
+    description: "Button that confirms making a private ledger public",
+  },
   "page.settings.publicLedger": {
     message: "Llibre públic",
     description: "Label when ledger is public",

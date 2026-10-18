@@ -1,6 +1,12 @@
 import { z } from "zod";
 import { accountTokenProblem, type AccountTokenProblem } from "./account-token";
 
+/** An account the ledger already opens, as the Accounts directory lists it. */
+export interface ExistingAccount {
+  openedAt: string;
+  closedAt?: string | null;
+}
+
 export function buildOpenAccountSchema(
   prefixes: string[],
   messages: {
@@ -8,7 +14,10 @@ export function buildOpenAccountSchema(
     mustStartWith: string;
     /** Message for each reason the name is not a complete account token. */
     invalid: (problem: AccountTokenProblem) => string;
+    /** Message for a name the ledger already opens, open or closed. */
+    exists: (account: string, existing: ExistingAccount) => string;
   },
+  existing: ReadonlyMap<string, ExistingAccount> = new Map(),
 ) {
   return z.object({
     date: z.date(),
@@ -26,8 +35,29 @@ export function buildOpenAccountSchema(
         if (problem) {
           ctx.addIssue({ code: "custom", message: messages.invalid(problem) });
         }
+      })
+      // A second `open` breaks the ledger, and a closed account cannot be
+      // reopened. Names compare exactly, as Beancount's do.
+      .superRefine((val, ctx) => {
+        const account = existing.get(val);
+        if (account) {
+          ctx.addIssue({
+            code: "custom",
+            message: messages.exists(val, account),
+          });
+        }
       }),
   });
+}
+
+/** The localized message for an account the ledger already opens. */
+export function accountExistsMessage(
+  t: (key: string, params?: Record<string, string>) => string,
+): (account: string, existing: ExistingAccount) => string {
+  return (account, { openedAt, closedAt }) =>
+    closedAt
+      ? t("page.accounts.accountAlreadyClosed", { account, date: closedAt })
+      : t("page.accounts.accountAlreadyOpen", { account, date: openedAt });
 }
 
 /**

@@ -174,6 +174,18 @@ const ukJournal: Record<string, TranslationEntry> = {
     message: "Власний",
     description: "Custom entry type filter",
   },
+  "journal.commodity": {
+    message: "Товар",
+    description: "Name of the Commodity directive type",
+  },
+  "journal.event": {
+    message: "Подія",
+    description: "Name of the Event directive type",
+  },
+  "journal.query": {
+    message: "Запит",
+    description: "Name of the Query directive type",
+  },
   "journal.date": {
     message: "Дата",
     description: "Label for date field",
@@ -476,6 +488,96 @@ const ukJournal: Record<string, TranslationEntry> = {
     message: "Видалити проводку {number}",
     description:
       "Accessible name for removing a numbered transaction posting row",
+  },
+  "journal.payee": {
+    message: "Отримувач",
+    description: "Label for the payee field",
+  },
+  "journal.accountLabel": {
+    message: "Рахунок",
+    description: "Label for the account field of a directive form",
+  },
+  "journal.amountLabel": {
+    message: "Сума",
+    description: "Label for the amount field of a directive form",
+  },
+  "journal.currencyLabel": {
+    message: "Валюта",
+    description: "Label for the currency field of a directive form",
+  },
+  "journal.postingAccount": {
+    message: "Рахунок проводки {number}",
+    description:
+      "Accessible label for a numbered transaction posting's account field",
+  },
+  "journal.postingAmount": {
+    message: "Сума проводки {number}",
+    description:
+      "Accessible label for a numbered transaction posting's amount field",
+  },
+  "journal.postingCurrency": {
+    message: "Валюта проводки {number}",
+    description:
+      "Accessible label for a numbered transaction posting's currency field",
+  },
+  "journal.postingsUnbalanced": {
+    message:
+      "Проводки не збалансовані: залишок {residual}. Змініть суму або очистьте одну, щоб її було розраховано автоматично.",
+    description:
+      "Shown when a new transaction's postings leave a residual; {residual} is the amount and currency, e.g. 1 USD",
+  },
+  "journal.accountNotOpen": {
+    message: "Рахунок {account} не відкрито в цій книзі.",
+    description:
+      "Shown under a New Entry account field naming an account the ledger never opened; {account} is the name",
+  },
+  "journal.alsoOpenAccount": {
+    message: "Також відкрити {account} {date}",
+    description:
+      "Checkbox label that adds an open directive for {account} dated {date} to the same New Entry write",
+  },
+  "journal.accountClosedBefore": {
+    message: "Рахунок {account} закрито {date}, до цього запису.",
+    description:
+      "Shown under a New Entry account field naming an account closed before the entry; {date} is its close date",
+  },
+  "journal.accountOpensAfter": {
+    message: "Рахунок {account} відкривається {date}, після цього запису.",
+    description:
+      "Shown under a New Entry account field naming an account opened after the entry; {date} is its open date",
+  },
+  "journal.discardEntryEditTitle": {
+    message: "Скасувати редагування?",
+    description:
+      "Title of the confirmation shown when leaving Entry Context with unsaved source edits",
+  },
+  "journal.discardEntryEditDescription": {
+    message: "Зміни вихідного тексту цього запису не збережено.",
+    description: "Body of the Entry Context discard confirmation",
+  },
+  "journal.keepEditing": {
+    message: "Продовжити редагування",
+    description:
+      "Button that returns to the Entry Context editor with the edit intact",
+  },
+  "journal.discardEntryEdit": {
+    message: "Скасувати",
+    description: "Button that discards the Entry Context edit and leaves",
+  },
+  "journal.entryChangedElsewhere": {
+    message:
+      "Цей запис змінено або видалено відтоді, як ви його відкрили, тому редагування не збережено. Скопіюйте редагування та перезавантажте, щоб побачити останню версію.",
+    description:
+      "Entry Context save refused because the entry changed elsewhere since it was opened",
+  },
+  "journal.copyMyEdit": {
+    message: "Скопіювати моє редагування",
+    description: "Copies the unsaved Entry Context edit to the clipboard",
+  },
+  "journal.reloadEntries": {
+    message: "Перезавантажити",
+    description:
+      "Closes Entry Context and refreshes the journal to show the latest entries",
   },
   "journal.autoAmount": {
     message: "авто",

@@ -3,8 +3,6 @@ import type { IFeatureUsageService } from "../feature-usage-service";
 import { SubscriptionTier } from "@/features/stripe/service/stripe";
 import type { IStripeService } from "@/features/stripe/service/stripe-service";
 import { getUserTier } from "@/features/stripe/operations/get-user-tier";
-import type { IModels } from "@/foundation/models";
-import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { Identity } from "@/server/api/identity";
 import { AUTHORIZATION_ACTIONS } from "@/server/api/authorization";
 
@@ -22,9 +20,6 @@ describe("AiCfoUsageService", () => {
   // Typed against the INTERFACE: no `as unknown as` cast, and every
   // `mockResolvedValue` below is checked against the real method signatures.
   let mockFeatureUsageService: jest.Mocked<IFeatureUsageService>;
-  // Only paidCustomer is forwarded to getUserTier (mocked), never read here.
-  const mockModels = {} as Pick<IModels, "paidCustomer">;
-  const mockPostgresDb = {} as NodePgDatabase;
   // stripe is forwarded to getUserTier (mocked) and never called here.
   const mockStripe = {} as jest.Mocked<IStripeService>;
   const identity: Identity = {
@@ -44,13 +39,10 @@ describe("AiCfoUsageService", () => {
       getCurrentBillingMonth: jest.fn(),
     };
 
-    service = new AiCfoUsageService(
-      mockFeatureUsageService,
-      mockStripe,
-      mockModels,
-      mockPostgresDb,
-      { authorize: jest.fn(), authorizeOrThrow },
-    );
+    service = new AiCfoUsageService(mockFeatureUsageService, mockStripe, {
+      authorize: jest.fn(),
+      authorizeOrThrow,
+    });
   });
 
   describe("FEATURE_KEY_AI_CFO", () => {
@@ -73,8 +65,6 @@ describe("AiCfoUsageService", () => {
 
       expect(mockGetUserTier).toHaveBeenCalledWith({
         stripe: mockStripe,
-        models: mockModels,
-        postgresDb: mockPostgresDb,
         userId: "user1",
       });
       expect(mockFeatureUsageService.checkUsage).toHaveBeenCalledWith(

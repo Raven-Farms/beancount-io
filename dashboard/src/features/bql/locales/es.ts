@@ -58,6 +58,12 @@ const esBql: Record<string, TranslationEntry> = {
     message: "Resultado de Consulta",
     description: "Label for a query result section header",
   },
+  "page.bql.largeResultHint": {
+    message:
+      "Aquí solo están disponibles las filas visibles. El archivo CSV contiene todas las filas (total: {count}).",
+    description:
+      "Screen-reader note on a result too long to render every row; {count} is the total row count",
+  },
   "page.bql.unknownResultType": {
     message: "Tipo de resultado desconocido",
     description: "Message when query result type is not recognized",

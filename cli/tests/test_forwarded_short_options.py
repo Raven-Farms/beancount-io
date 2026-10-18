@@ -67,7 +67,8 @@ def test_ingest_preserves_glued_native_options_around_frontend_config(
     ("command", "native", "seam", "program", "prefix"),
     [
         (["price"], ["-eUSD:help/source"], "run_optional_native", "bean-price", []),
-        (["check"], ["-f./help/check.log"], "run_native", "bean-check", ["{root}"]),
+        # bean-check loads afresh: the shared cache lacks its validations (w5/564).
+        (["check"], ["-f./help/check.log"], "run_native", "bean-check", ["--no-cache", "{root}"]),
         (["doctor", "list-options"], ["-x./help/options"], "run_native", "bean-doctor", ["list-options"]),
         (
             ["doctor", "dump-lexer"],

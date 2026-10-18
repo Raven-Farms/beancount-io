@@ -103,6 +103,33 @@ const deImporter: Record<string, TranslationEntry> = {
     message: "Andere Datei hochladen",
     description: "Button to upload a different file after error",
   },
+  "importer.aiOffer.title": {
+    message: "Die Spalten dieser CSV-Datei konnten nicht gelesen werden",
+    description:
+      "Title when a CSV's columns could not be read by the free client parser",
+  },
+  "importer.aiOffer.description": {
+    message:
+      "Der Smart Import liest CSV-Dateien mit den Spalten Datum, Empfänger, Beschreibung und Betrag kostenlos. Diese Datei kann stattdessen mit KI gelesen werden, was Ihre KI-Tokens verbraucht.",
+    description:
+      "Explains the free CSV format and that AI parsing spends AI tokens",
+  },
+  "importer.aiOffer.parseWithAi": {
+    message: "Mit KI auslesen (verbraucht KI-Tokens)",
+    description:
+      "Button that parses the unreadable CSV with AI, spending AI tokens",
+  },
+  "importer.error.aiQuotaReached": {
+    message: "Sie haben die KI-Tokens dieses Monats aufgebraucht",
+    description:
+      "Title when AI parsing of a CSV is refused because the month's AI tokens are used up",
+  },
+  "importer.error.aiQuotaReachedCsv": {
+    message:
+      "KI-Auslesen ist ab nächstem Monat oder mit Premium wieder verfügbar. Eine CSV-Datei mit den Spalten Datum, Empfänger, Beschreibung und Betrag wird weiterhin kostenlos importiert.",
+    description:
+      "Explains when AI parsing returns and that a well-formed CSV still imports for free",
+  },
   "importer.error.premiumRequired": {
     message: "Premium-Funktion erforderlich",
     description: "Title for premium required error",
@@ -238,7 +265,7 @@ const deImporter: Record<string, TranslationEntry> = {
     description: "Table header for actions column",
   },
   "importer.preview.deleteRow": {
-    message: "Zeile löschen",
+    message: "Zeile {row} löschen",
     description: "Aria label for delete row button",
   },
   "importer.preview.emptyFileTitle": {
@@ -516,12 +543,12 @@ const deImporter: Record<string, TranslationEntry> = {
     description: "Count of additional import errors",
   },
   "importer.preview.editCellLabel": {
-    message: "Bearbeiten Sie {field}. Aktueller Wert: {value}",
+    message: "Bearbeiten Sie {field}, Zeile {row}. Aktueller Wert: {value}",
     description: "Accessible label for an editable import cell",
   },
-  "importer.preview.field": {
-    message: "Feld",
-    description: "Fallback name for an editable import field",
+  "importer.preview.editFieldLabel": {
+    message: "{field}, Zeile {row}",
+    description: "Accessible label for the open editor of an import cell",
   },
   "importer.validation.dateRequired": {
     message: "Datum ist erforderlich",
@@ -546,6 +573,12 @@ const deImporter: Record<string, TranslationEntry> = {
   "importer.validation.amountInvalid": {
     message: "Betrag muss eine gültige Zahl sein",
     description: "Validation error for an invalid import amount",
+  },
+  "importer.validation.amountMixedDecimals": {
+    message:
+      "Diese Spalte mischt Dezimalpunkte (1,234.56) und Dezimalkommas (1.234,56). Verwenden Sie eine Schreibweise pro Spalte.",
+    description:
+      "Validation error when an import amount column mixes point and comma decimal marks",
   },
   "importer.validation.amountUnsupportedPrecision": {
     message:

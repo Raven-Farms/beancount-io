@@ -96,6 +96,33 @@ const zhImporter: Record<string, TranslationEntry> = {
     message: "上传其他文件",
     description: "Button to upload a different file after error",
   },
+  "importer.aiOffer.title": {
+    message: "无法读取此 CSV 的列",
+    description:
+      "Title when a CSV's columns could not be read by the free client parser",
+  },
+  "importer.aiOffer.description": {
+    message:
+      "智能导入可免费读取包含日期、收款人、描述和金额列的 CSV 文件。此文件也可以用 AI 读取，但会消耗你的 AI 令牌。",
+    description:
+      "Explains the free CSV format and that AI parsing spends AI tokens",
+  },
+  "importer.aiOffer.parseWithAi": {
+    message: "用 AI 解析（消耗 AI 令牌）",
+    description:
+      "Button that parses the unreadable CSV with AI, spending AI tokens",
+  },
+  "importer.error.aiQuotaReached": {
+    message: "你已用完本月的 AI 令牌",
+    description:
+      "Title when AI parsing of a CSV is refused because the month's AI tokens are used up",
+  },
+  "importer.error.aiQuotaReachedCsv": {
+    message:
+      "AI 解析将在下个月或开通 Premium 后恢复。包含日期、收款人、描述和金额列的 CSV 仍可免费导入。",
+    description:
+      "Explains when AI parsing returns and that a well-formed CSV still imports for free",
+  },
   "importer.error.premiumRequired": {
     message: "需要高级功能",
     description: "Title for premium required error",
@@ -227,7 +254,7 @@ const zhImporter: Record<string, TranslationEntry> = {
     description: "Table header for actions column",
   },
   "importer.preview.deleteRow": {
-    message: "删除行",
+    message: "删除第 {row} 行",
     description: "Aria label for delete row button",
   },
   "importer.preview.emptyFileTitle": {
@@ -408,7 +435,7 @@ const zhImporter: Record<string, TranslationEntry> = {
     description: "Title shown during import process",
   },
   "importer.importing.description": {
-    message: "请稍候，我们正在将你的交易添加到分类账",
+    message: "请稍候，我们正在将你的交易添加到账本",
     description: "Description shown during import process",
   },
 
@@ -481,12 +508,12 @@ const zhImporter: Record<string, TranslationEntry> = {
     description: "Count of additional import errors",
   },
   "importer.preview.editCellLabel": {
-    message: "编辑 {field}。当前值：{value}",
+    message: "编辑 {field}，第 {row} 行。当前值：{value}",
     description: "Accessible label for an editable import cell",
   },
-  "importer.preview.field": {
-    message: "领域",
-    description: "Fallback name for an editable import field",
+  "importer.preview.editFieldLabel": {
+    message: "{field}，第 {row} 行",
+    description: "Accessible label for the open editor of an import cell",
   },
   "importer.validation.dateRequired": {
     message: "日期为必填项",
@@ -511,6 +538,12 @@ const zhImporter: Record<string, TranslationEntry> = {
   "importer.validation.amountInvalid": {
     message: "金额必须是有效数字",
     description: "Validation error for an invalid import amount",
+  },
+  "importer.validation.amountMixedDecimals": {
+    message:
+      "此列混用了小数点（1,234.56）和小数逗号（1.234,56）。请在每列中只使用一种写法。",
+    description:
+      "Validation error when an import amount column mixes point and comma decimal marks",
   },
   "importer.validation.amountUnsupportedPrecision": {
     message: "此金额无法精确导入 — 请缩短位数以保留每一位数字",

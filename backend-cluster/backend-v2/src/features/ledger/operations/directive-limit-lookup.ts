@@ -38,11 +38,8 @@ export async function lookupDirectiveLimit(
     throw new NotFoundError("User", ledgerUsername);
   }
 
-
   const tierLimits = await getUserTierLimits({
     stripe: deps.stripe,
-    models: { paidCustomer: deps.models.paidCustomer },
-    postgresDb: deps.db,
     userId: user.id,
   });
 

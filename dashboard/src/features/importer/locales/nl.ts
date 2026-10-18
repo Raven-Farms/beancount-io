@@ -101,6 +101,33 @@ const nlImporter: Record<string, TranslationEntry> = {
     message: "Upload een ander bestand",
     description: "Button to upload a different file after error",
   },
+  "importer.aiOffer.title": {
+    message: "We konden de kolommen van deze CSV niet lezen",
+    description:
+      "Title when a CSV's columns could not be read by the free client parser",
+  },
+  "importer.aiOffer.description": {
+    message:
+      "Slim importeren leest CSV-bestanden met de kolommen Datum, Begunstigde, Omschrijving en Bedrag gratis. Dit bestand kan in plaats daarvan met AI worden gelezen, wat je AI-tokens verbruikt.",
+    description:
+      "Explains the free CSV format and that AI parsing spends AI tokens",
+  },
+  "importer.aiOffer.parseWithAi": {
+    message: "Met AI uitlezen (verbruikt AI-tokens)",
+    description:
+      "Button that parses the unreadable CSV with AI, spending AI tokens",
+  },
+  "importer.error.aiQuotaReached": {
+    message: "Je hebt de AI-tokens van deze maand verbruikt",
+    description:
+      "Title when AI parsing of a CSV is refused because the month's AI tokens are used up",
+  },
+  "importer.error.aiQuotaReachedCsv": {
+    message:
+      "Uitlezen met AI is volgende maand of met Premium weer beschikbaar. Een CSV met de kolommen Datum, Begunstigde, Omschrijving en Bedrag wordt nog steeds gratis geïmporteerd.",
+    description:
+      "Explains when AI parsing returns and that a well-formed CSV still imports for free",
+  },
   "importer.error.premiumRequired": {
     message: "Premiumfunctie vereist",
     description: "Title for premium required error",
@@ -236,7 +263,7 @@ const nlImporter: Record<string, TranslationEntry> = {
     description: "Table header for actions column",
   },
   "importer.preview.deleteRow": {
-    message: "Rij verwijderen",
+    message: "Rij {row} verwijderen",
     description: "Aria label for delete row button",
   },
   "importer.preview.emptyFileTitle": {
@@ -514,12 +541,12 @@ const nlImporter: Record<string, TranslationEntry> = {
     description: "Count of additional import errors",
   },
   "importer.preview.editCellLabel": {
-    message: "Bewerk {field}. Huidige waarde: {value}",
+    message: "Bewerk {field}, rij {row}. Huidige waarde: {value}",
     description: "Accessible label for an editable import cell",
   },
-  "importer.preview.field": {
-    message: "veld",
-    description: "Fallback name for an editable import field",
+  "importer.preview.editFieldLabel": {
+    message: "{field}, rij {row}",
+    description: "Accessible label for the open editor of an import cell",
   },
   "importer.validation.dateRequired": {
     message: "Datum is vereist",
@@ -544,6 +571,12 @@ const nlImporter: Record<string, TranslationEntry> = {
   "importer.validation.amountInvalid": {
     message: "Bedrag moet een geldig getal zijn",
     description: "Validation error for an invalid import amount",
+  },
+  "importer.validation.amountMixedDecimals": {
+    message:
+      "Deze kolom mengt decimale punten (1,234.56) en decimale komma's (1.234,56). Gebruik één notatie per kolom.",
+    description:
+      "Validation error when an import amount column mixes point and comma decimal marks",
   },
   "importer.validation.amountUnsupportedPrecision": {
     message:

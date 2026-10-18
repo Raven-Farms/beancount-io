@@ -101,7 +101,7 @@ def answer(
         filters["root"] = Path(os.path.abspath(str(file))).parent
 
     entries, errors = reader.load_file(file)
-    shared = reader.shared_locations(entries) if directive_type == "transaction" else frozenset()
+    shared = reader.shared_locations(entries)
     if shared:
         filters["shared"] = shared
     if on_disk_only:

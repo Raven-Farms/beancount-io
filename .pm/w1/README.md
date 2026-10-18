@@ -10,6 +10,8 @@ Milestones m1–m23 are complete; no pending ADR014 follow-up milestones remain 
 
 ### Open
 
+- [ ] **m38** — [One MCP tool per operation, so the ChatGPT app directory accepts every tool](./blocked/m38/README.md) (11 tasks) ← OpenAI Plugins dashboard scan 2026-10-18: seven grouped tools flagged for operations "not individually exposed"; reverses ADR 0008 D3 — **top priority** (directory listing) — **blocked:** shipped through `8d751b15b`; the directory rescan (t007) and closeout wait on the production deploy.
+- [ ] **m37** — [Retire the Stripe test tenant and resolve each paid plan from its own subscription](./blocked/m37/README.md) (11 tasks) ← user request 2026-10-17; remove the built-in test billing tenant, correct tier/customer binding and renewal-cache writes, backfill existing users, and verify dashboard/CLI quotas — **blocked:** code shipped/deployed; t011 needs a verified production execution entry for the actual cohort repair
 - [x] **m36** — [Trim the MCP surface to what the Claude and ChatGPT directories accept](./done/m36/README.md) (10 tasks) ← user decision 2026-10-09: a public listing in Claude's and ChatGPT's directories outranks every other goal; ADR 019 follow-up — **top priority**
 - [x] **m30** — [Every named MCP host can register and reach a consent page that says who is asking](./done/m30/README.md) (11 tasks) ← `/pm-brainstorm for w1` 2026-10-06 item 1; ADR 019 D3 + D4 + D8
 - [x] **m31** — [Advertise CIMD so Claude and ChatGPT identify themselves without registering](./done/m31/README.md) (8 tasks) ← `/pm-brainstorm for w1` 2026-10-06 item 2; ADR 019 D6, after m30
@@ -65,6 +67,7 @@ The four mobile QA findings filed on 2026-09-16 were drained the same day: [031]
 
 Blocked notes live under [`blocked/`](./blocked/) with their reason and **Unblock:** condition; they keep their IDs and return to the open tree when work can resume.
 
+- [171](./blocked/171.md) — The website's MCP pages name tools that no longer exist — **blocked:** the pages live in the website's repository and must wait for the w1/m38 backend deploy. **Unblock:** the user routes the change there once the deploy is live.
 - [033](./blocked/033.md) — Slice-delete success precedes removal by minutes; a refetch resurrects the row — **blocked:** no async-apply code exists in this monorepo and the acceptance cannot be proven here. **Unblock:** hosted diagnosis naming the lagging layer, or a local full-stack repro. Cleared by the user (hosted access plus QA credentials).
 
 ## Absorbed CLI QA notes (m23–m27)

@@ -1,11 +1,14 @@
-import { useId, useRef, type RefObject } from "react";
+import { useId, useRef, useState, type RefObject } from "react";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
+  DialogHeader,
   DialogTitle,
 } from "@/common/components/ui/dialog";
+import { Button } from "@/common/components/ui/button";
 import { Alert, AlertDescription } from "@/common/components/ui/alert";
 import {
   Table,
@@ -162,9 +165,25 @@ export function EntryContextDialog({
   const entryHash = entry?.entry_hash ?? "";
   const skipFocusRestoreRef = useRef(false);
   const entryLabel = describeEntry(entry);
+  // Unsaved source edits, and the exit waiting on "Discard" while they exist.
+  // The panel remounts per entry and reports its own state, so only an open
+  // dialog's report counts.
+  const [dirty, setDirty] = useState(false);
+  const [pendingLeave, setPendingLeave] = useState<(() => void) | null>(null);
+
+  const requestLeave = (leave: () => void) => {
+    if (open && dirty) setPendingLeave(() => leave);
+    else leave();
+  };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      // Close, Escape and an outside click all arrive here.
+      onOpenChange={(next) =>
+        next ? onOpenChange(true) : requestLeave(() => onOpenChange(false))
+      }
+    >
       <DialogContent
         className="w-[95vw] sm:w-[90vw] md:min-w-[600px] md:max-w-2xl lg:min-w-[800px] lg:max-w-4xl max-h-[80vh] overflow-hidden flex flex-col"
         onCloseAutoFocus={(event) => {
@@ -204,6 +223,8 @@ export function EntryContextDialog({
               onSourceNavigate={() => {
                 skipFocusRestoreRef.current = true;
               }}
+              onDirtyChange={setDirty}
+              confirmLeave={requestLeave}
               onSuccess={() => {
                 onOpenChange(false);
                 onSuccess?.();
@@ -211,6 +232,35 @@ export function EntryContextDialog({
             />
           )}
         </div>
+        <Dialog
+          open={pendingLeave !== null}
+          onOpenChange={(next) => !next && setPendingLeave(null)}
+        >
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>{t("journal.discardEntryEditTitle")}</DialogTitle>
+              <DialogDescription>
+                {t("journal.discardEntryEditDescription")}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="flex-col gap-2 sm:flex-row">
+              <Button variant="outline" onClick={() => setPendingLeave(null)}>
+                {t("journal.keepEditing")}
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  const leave = pendingLeave;
+                  setPendingLeave(null);
+                  setDirty(false);
+                  leave?.();
+                }}
+              >
+                {t("journal.discardEntryEdit")}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </DialogContent>
     </Dialog>
   );

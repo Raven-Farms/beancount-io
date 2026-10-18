@@ -1,691 +1,188 @@
 import "reflect-metadata";
 import Router from "@koa/router";
 import { setStripeWebhookHandler } from "../stripe-webhook-handler";
+import { BILLING_CLIENT_ID } from "../../service/stripe";
+import { SUBSCRIPTION_PERIOD_VERIFICATION_VERSION } from "../../service/subscription-plan";
 import type { AppLayers } from "@/foundation/composition";
-import { StripeService } from "@/features/stripe/service/stripe-service";
 
-// Mock logger
-jest.mock("@/shared/logger", () => ({
-  logger: {
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    debug: jest.fn(),
+jest.mock("@/features/stripe/service/stripe", () => ({
+  ...jest.requireActual("@/features/stripe/service/stripe"),
+  SUBSCRIPTION_CONFIG: {
+    "beancount-web-prod": { webhookSecret: "whsec_synthetic" },
   },
 }));
-
-// Mock openapi registry
 jest.mock("@/server/rest/openapi-registry", () => ({
   registerRoute: jest.fn(),
 }));
 
-// Mock the SUBSCRIPTION_CONFIG
-jest.mock("@/features/stripe/service/stripe", () => ({
-  SUBSCRIPTION_CONFIG: {
-    testClient: {
-      webhookSecret: "whsec_test_secret",
-      secretKey: "sk_test_secret",
+function setup(event: any) {
+  const constructEvent = jest.fn(() => event);
+  const stripe = {
+    getStripeInstance: jest.fn(() => ({ webhooks: { constructEvent } })),
+    handleCustomerEvent: jest.fn(),
+    handleCheckoutSessionCompleted: jest.fn(),
+    listSubscriptions: jest.fn(async () => []),
+  };
+  const paidCustomer = {
+    findByStripeCustomerIdAndClientId: jest.fn(async () => ({
+      userId: "usr_synthetic",
+    })),
+    findByUserId: jest.fn(async () => []),
+    updatePeriodIfUnchanged: jest.fn(),
+  };
+  const router = new Router();
+  setStripeWebhookHandler(router, {
+    services: { stripe },
+    database: { db: {}, models: { paidCustomer } },
+  } as unknown as AppLayers);
+  const handler = router.stack.find((layer) => layer.methods.includes("POST"))!
+    .stack[0];
+  const ctx: any = {
+    request: {
+      headers: { "stripe-signature": "sig_synthetic" },
+      rawBody: "raw signed payload",
     },
-  },
-}));
+  };
+  return {
+    stripe,
+    paidCustomer,
+    constructEvent,
+    ctx,
+    run: () => handler(ctx, async () => {}),
+  };
+}
+const subscriptionEvent = (overrides = {}) => ({
+  id: "evt_synthetic",
+  livemode: true,
+  type: "customer.subscription.updated",
+  data: { object: { customer: "cus_synthetic", metadata: {} } },
+  ...overrides,
+});
 
-// Mock StripeService
-jest.mock("@/features/stripe/service/stripe-service");
-
-describe("stripe-webhook-handler", () => {
-  let mockRouter: Router;
-  let mockLayers: AppLayers;
-  let postHandler: Router.Middleware;
-  let getHandler: Router.Middleware;
-
-  const createMockContext = (overrides: Partial<Router.RouterContext> = {}) =>
-    ({
-      request: {
-        headers: {},
-        rawBody: undefined,
-        ...overrides.request,
-      },
-      status: 0,
-      body: undefined,
-      ...overrides,
-    }) as unknown as Router.RouterContext;
-
-  beforeEach(() => {
-    jest.clearAllMocks();
-
-    // Setup StripeService mock
-    (StripeService as jest.Mock).mockImplementation(() => ({
-      handleCustomerEvent: jest.fn().mockResolvedValue(undefined),
-      handleCheckoutSessionCompleted: jest.fn().mockResolvedValue(undefined),
-      getStripeInstance: jest.fn().mockReturnValue({
-        webhooks: {
-          constructEvent: jest.fn(),
+describe("live Stripe webhook boundary", () => {
+  it("revalidates and clears a historical period on a verified live webhook", async () => {
+    const t = setup(subscriptionEvent());
+    const binding = {
+      id: "binding_synthetic",
+      userId: "usr_synthetic",
+      clientId: BILLING_CLIENT_ID,
+      stripeCustomerId: "cus_synthetic",
+      currentPeriodEnd: new Date(2100000000000),
+    };
+    t.paidCustomer.findByUserId.mockResolvedValue([binding] as never);
+    await t.run();
+    expect(t.paidCustomer.updatePeriodIfUnchanged).toHaveBeenCalledWith(
+      {},
+      binding,
+      null,
+      SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
+    );
+    expect(t.ctx.body.processed).toBe(true);
+  });
+  it("verifies with the configured live secret before consulting metadata", async () => {
+    const t = setup(subscriptionEvent());
+    await t.run();
+    expect(t.constructEvent).toHaveBeenCalledWith(
+      "raw signed payload",
+      "sig_synthetic",
+      "whsec_synthetic",
+    );
+    expect(
+      t.paidCustomer.findByStripeCustomerIdAndClientId,
+    ).toHaveBeenCalledWith({}, "cus_synthetic", BILLING_CLIENT_ID);
+    expect(t.stripe.listSubscriptions).toHaveBeenCalledWith("usr_synthetic", {
+      bindings: [],
+      status: "active",
+    });
+    expect(t.ctx.body.processed).toBe(true);
+  });
+  it.each([
+    subscriptionEvent({ livemode: false }),
+    subscriptionEvent({
+      data: { object: { metadata: { clientId: "beancount-web-dev" } } },
+    }),
+  ])(
+    "acknowledges retired/test events without any billing work",
+    async (event) => {
+      const t = setup(event);
+      await t.run();
+      expect(t.ctx.status).toBe(200);
+      expect(t.ctx.body.processed).toBe(false);
+      expect(
+        t.paidCustomer.findByStripeCustomerIdAndClientId,
+      ).not.toHaveBeenCalled();
+      expect(t.stripe.listSubscriptions).not.toHaveBeenCalled();
+    },
+  );
+  it.each([
+    "customer.subscription.created",
+    "customer.subscription.updated",
+    "customer.subscription.deleted",
+  ])(
+    "re-reads current state for %s rather than copying the event period",
+    async (type) => {
+      const t = setup(subscriptionEvent({ type }));
+      await t.run();
+      expect(t.stripe.listSubscriptions).toHaveBeenCalledTimes(1);
+      expect(t.paidCustomer.updatePeriodIfUnchanged).not.toHaveBeenCalled();
+    },
+  );
+  it("ignores a mismatched user without updating another binding", async () => {
+    const t = setup(
+      subscriptionEvent({
+        data: {
+          object: {
+            customer: "cus_synthetic",
+            metadata: { userId: "usr_other" },
+          },
         },
       }),
-    }));
-
-    // Create mock router
-    mockRouter = {
-      post: jest.fn((path: string, handler: Router.Middleware) => {
-        if (path === "/api-gateway/stripe/webhook") {
-          postHandler = handler;
-        }
+    );
+    await t.run();
+    expect(t.stripe.listSubscriptions).not.toHaveBeenCalled();
+    expect(t.ctx.body.processed).toBe(false);
+  });
+  it("does no work on invalid signatures or missing input", async () => {
+    const t = setup(subscriptionEvent());
+    t.constructEvent.mockImplementation(() => {
+      throw new Error("invalid signature");
+    });
+    await t.run();
+    expect(t.ctx.status).toBe(400);
+    expect(t.stripe.listSubscriptions).not.toHaveBeenCalled();
+    delete t.ctx.request.headers["stripe-signature"];
+    await t.run();
+    expect(t.ctx.status).toBe(400);
+    t.ctx.request.headers["stripe-signature"] = "sig";
+    t.ctx.request.rawBody = "";
+    await t.run();
+    expect(t.ctx.status).toBe(400);
+  });
+  it("lets Stripe retry transient provider failures without clearing caches", async () => {
+    const t = setup(subscriptionEvent());
+    t.stripe.listSubscriptions.mockRejectedValue(
+      new Error("unavailable") as never,
+    );
+    await t.run();
+    expect(t.ctx.status).toBe(400);
+    expect(t.paidCustomer.updatePeriodIfUnchanged).not.toHaveBeenCalled();
+  });
+  it("passes verified checkout metadata to customer binding creation", async () => {
+    const object = {
+      customer: "cus_synthetic",
+      metadata: { userId: "usr_synthetic", clientId: BILLING_CLIENT_ID },
+    };
+    const t = setup(
+      subscriptionEvent({
+        type: "checkout.session.completed",
+        data: { object },
       }),
-      get: jest.fn((path: string, handler: Router.Middleware) => {
-        if (path === "/api-gateway/stripe/webhook") {
-          getHandler = handler;
-        }
-      }),
-    } as unknown as Router;
-
-    // Create mock layers. `services.stripe` is a getter that constructs via the mocked
-    // StripeService, so each test's `(StripeService as jest.Mock)
-    // .mockImplementation(...)` still drives `layers.services.stripe`.
-    mockLayers = {
-      database: {
-        db: {} as any,
-        models: {
-          paidCustomer: {
-            findOne: jest.fn(),
-          },
-        },
-      },
-      clients: {},
-      services: {
-        get stripe() {
-          return new (StripeService as unknown as new () => unknown)();
-        },
-      },
-      workflows: {},
-    } as unknown as AppLayers;
-
-    // Call the function to register routes
-    setStripeWebhookHandler(mockRouter, mockLayers);
-  });
-
-  describe("setStripeWebhookHandler", () => {
-    it("should register POST and GET routes", () => {
-      expect(mockRouter.post).toHaveBeenCalledWith(
-        "/api-gateway/stripe/webhook",
-        expect.any(Function),
-      );
-      expect(mockRouter.get).toHaveBeenCalledWith(
-        "/api-gateway/stripe/webhook",
-        expect.any(Function),
-      );
-    });
-  });
-
-  describe("GET /api-gateway/stripe/webhook", () => {
-    it("should return health check response", async () => {
-      const ctx = createMockContext();
-      await getHandler(ctx, jest.fn());
-
-      expect(ctx.status).toBe(200);
-      expect(ctx.body).toEqual({ ok: true });
-    });
-  });
-
-  describe("POST /api-gateway/stripe/webhook", () => {
-    describe("signature validation", () => {
-      it("should return 400 when stripe-signature header is missing", async () => {
-        const ctx = createMockContext({
-          request: {
-            headers: {},
-            rawBody: "{}",
-          } as unknown as Router.RouterContext["request"],
-        });
-
-        await postHandler(ctx, jest.fn());
-
-        expect(ctx.status).toBe(400);
-        expect(ctx.body).toEqual({ error: "No Stripe signature found" });
-      });
-    });
-
-    describe("request body validation", () => {
-      it("should return 400 when request body is missing", async () => {
-        const ctx = createMockContext({
-          request: {
-            headers: { "stripe-signature": "sig_test" },
-            rawBody: undefined,
-          } as unknown as Router.RouterContext["request"],
-        });
-
-        await postHandler(ctx, jest.fn());
-
-        expect(ctx.status).toBe(400);
-        expect(ctx.body).toEqual({ error: "Missing request body" });
-      });
-
-      it("should return 400 when request body is invalid JSON", async () => {
-        const ctx = createMockContext({
-          request: {
-            headers: { "stripe-signature": "sig_test" },
-            rawBody: "invalid json",
-          } as unknown as Router.RouterContext["request"],
-        });
-
-        await postHandler(ctx, jest.fn());
-
-        expect(ctx.status).toBe(400);
-        expect(ctx.body).toEqual({ error: "Invalid JSON payload" });
-      });
-    });
-
-    describe("client ID extraction", () => {
-      it("should return 200 with not processed when clientId is missing from metadata", async () => {
-        const eventPayload = JSON.stringify({
-          id: "evt_test",
-          type: "customer.created",
-          data: {
-            object: {
-              id: "cus_test",
-              metadata: {},
-            },
-          },
-        });
-
-        const ctx = createMockContext({
-          request: {
-            headers: { "stripe-signature": "sig_test" },
-            rawBody: eventPayload,
-          } as unknown as Router.RouterContext["request"],
-        });
-
-        await postHandler(ctx, jest.fn());
-
-        expect(ctx.status).toBe(200);
-        expect(ctx.body).toEqual({
-          received: true,
-          processed: false,
-          reason: "No client ID in metadata",
-        });
-      });
-
-      it("should extract clientId from event metadata", async () => {
-        const eventPayload = JSON.stringify({
-          id: "evt_test",
-          type: "customer.created",
-          data: {
-            object: {
-              id: "cus_test",
-              metadata: {
-                clientId: "testClient",
-                userId: "user-123",
-              },
-            },
-          },
-        });
-
-        // Mock constructEvent to return the parsed event
-        const mockStripe = {
-          webhooks: {
-            constructEvent: jest.fn().mockReturnValue({
-              id: "evt_test",
-              type: "customer.created",
-              data: {
-                object: {
-                  id: "cus_test",
-                  metadata: {
-                    clientId: "testClient",
-                    userId: "user-123",
-                  },
-                },
-                previous_attributes: {},
-              },
-            }),
-          },
-        };
-
-        (StripeService as jest.Mock).mockImplementation(() => ({
-          handleCustomerEvent: jest.fn().mockResolvedValue(undefined),
-          handleCheckoutSessionCompleted: jest
-            .fn()
-            .mockResolvedValue(undefined),
-          getStripeInstance: jest.fn().mockReturnValue(mockStripe),
-        }));
-
-        const ctx = createMockContext({
-          request: {
-            headers: { "stripe-signature": "sig_test" },
-            rawBody: eventPayload,
-          } as unknown as Router.RouterContext["request"],
-        });
-
-        await postHandler(ctx, jest.fn());
-
-        expect(ctx.status).toBe(200);
-        expect(ctx.body).toEqual({ received: true, processed: true });
-      });
-    });
-
-    describe("webhook configuration", () => {
-      it("should return 400 when client has no webhook secret configured", async () => {
-        const eventPayload = JSON.stringify({
-          id: "evt_test",
-          type: "customer.created",
-          data: {
-            object: {
-              id: "cus_test",
-              metadata: {
-                clientId: "unknownClient",
-              },
-            },
-          },
-        });
-
-        const ctx = createMockContext({
-          request: {
-            headers: { "stripe-signature": "sig_test" },
-            rawBody: eventPayload,
-          } as unknown as Router.RouterContext["request"],
-        });
-
-        await postHandler(ctx, jest.fn());
-
-        expect(ctx.status).toBe(400);
-        expect(ctx.body).toEqual({
-          error: "Invalid client configuration for unknownClient",
-        });
-      });
-    });
-
-    describe("event handling", () => {
-      const setupValidEvent = (
-        eventType: string,
-        eventData: Record<string, unknown>,
-      ) => {
-        const eventPayload = JSON.stringify({
-          id: "evt_test",
-          type: eventType,
-          data: {
-            object: {
-              id: "obj_test",
-              metadata: {
-                clientId: "testClient",
-                userId: "user-123",
-              },
-              ...eventData,
-            },
-          },
-        });
-
-        // Setup mock to return event
-        const mockStripe = {
-          webhooks: {
-            constructEvent: jest.fn().mockReturnValue({
-              id: "evt_test",
-              type: eventType,
-              data: {
-                object: {
-                  id: "obj_test",
-                  metadata: {
-                    clientId: "testClient",
-                    userId: "user-123",
-                  },
-                  ...eventData,
-                },
-                previous_attributes: {},
-              },
-            }),
-          },
-        };
-
-        const mockHandleCustomerEvent = jest.fn().mockResolvedValue(undefined);
-        const mockHandleCheckout = jest.fn().mockResolvedValue(undefined);
-
-        (StripeService as jest.Mock).mockImplementation(() => ({
-          handleCustomerEvent: mockHandleCustomerEvent,
-          handleCheckoutSessionCompleted: mockHandleCheckout,
-          getStripeInstance: jest.fn().mockReturnValue(mockStripe),
-        }));
-
-        const ctx = createMockContext({
-          request: {
-            headers: { "stripe-signature": "sig_test" },
-            rawBody: eventPayload,
-          } as unknown as Router.RouterContext["request"],
-        });
-
-        return {
-          ctx,
-          mocks: {
-            handleCustomerEvent: mockHandleCustomerEvent,
-            handleCheckoutSessionCompleted: mockHandleCheckout,
-          },
-        };
-      };
-
-      it("should handle customer.created event", async () => {
-        const { ctx, mocks } = setupValidEvent("customer.created", {
-          email: "test@example.com",
-        });
-
-        await postHandler(ctx, jest.fn());
-
-        expect(mocks.handleCustomerEvent).toHaveBeenCalledWith(
-          expect.objectContaining({ id: "obj_test" }),
-          "created",
-          {},
-          "testClient",
-          "user-123",
-        );
-        expect(ctx.status).toBe(200);
-      });
-
-      it("should handle customer.updated event", async () => {
-        const { ctx, mocks } = setupValidEvent("customer.updated", {
-          email: "updated@example.com",
-        });
-
-        await postHandler(ctx, jest.fn());
-
-        expect(mocks.handleCustomerEvent).toHaveBeenCalledWith(
-          expect.objectContaining({ id: "obj_test" }),
-          "updated",
-          {},
-          "testClient",
-          "user-123",
-        );
-        expect(ctx.status).toBe(200);
-      });
-
-      it("should handle checkout.session.completed event", async () => {
-        const { ctx, mocks } = setupValidEvent("checkout.session.completed", {
-          payment_status: "paid",
-        });
-
-        await postHandler(ctx, jest.fn());
-
-        expect(mocks.handleCheckoutSessionCompleted).toHaveBeenCalledWith(
-          expect.objectContaining({ id: "obj_test" }),
-          "testClient",
-          "user-123",
-        );
-        expect(ctx.status).toBe(200);
-      });
-
-      it("should handle unknown event types gracefully", async () => {
-        const { ctx } = setupValidEvent("some.unknown.event", {});
-        const { logger } = jest.requireMock("@/shared/logger");
-
-        await postHandler(ctx, jest.fn());
-
-        expect(logger.debug).toHaveBeenCalledWith(
-          "Unhandled event type received",
-          expect.objectContaining({ eventType: "some.unknown.event" }),
-        );
-        expect(ctx.status).toBe(200);
-      });
-    });
-
-    describe("error handling", () => {
-      it("should return 400 when webhook signature verification fails", async () => {
-        const eventPayload = JSON.stringify({
-          id: "evt_test",
-          type: "customer.created",
-          data: {
-            object: {
-              id: "cus_test",
-              metadata: {
-                clientId: "testClient",
-              },
-            },
-          },
-        });
-
-        // Setup mock to throw on constructEvent
-        const mockStripe = {
-          webhooks: {
-            constructEvent: jest.fn().mockImplementation(() => {
-              throw new Error("Signature verification failed");
-            }),
-          },
-        };
-
-        (StripeService as jest.Mock).mockImplementation(() => ({
-          handleCustomerEvent: jest.fn().mockResolvedValue(undefined),
-          handleCheckoutSessionCompleted: jest
-            .fn()
-            .mockResolvedValue(undefined),
-          getStripeInstance: jest.fn().mockReturnValue(mockStripe),
-        }));
-
-        const ctx = createMockContext({
-          request: {
-            headers: { "stripe-signature": "sig_test" },
-            rawBody: eventPayload,
-          } as unknown as Router.RouterContext["request"],
-        });
-
-        await postHandler(ctx, jest.fn());
-
-        expect(ctx.status).toBe(400);
-        expect(ctx.body).toEqual({
-          error: "Webhook Error: Signature verification failed",
-        });
-      });
-
-      it("should handle event processing errors", async () => {
-        const eventPayload = JSON.stringify({
-          id: "evt_test",
-          type: "customer.created",
-          data: {
-            object: {
-              id: "cus_test",
-              metadata: {
-                clientId: "testClient",
-                userId: "user-123",
-              },
-            },
-          },
-        });
-
-        // Setup mock to return event and throw on handleCustomerEvent
-        const mockStripe = {
-          webhooks: {
-            constructEvent: jest.fn().mockReturnValue({
-              id: "evt_test",
-              type: "customer.created",
-              data: {
-                object: {
-                  id: "cus_test",
-                  metadata: {
-                    clientId: "testClient",
-                    userId: "user-123",
-                  },
-                },
-                previous_attributes: {},
-              },
-            }),
-          },
-        };
-
-        (StripeService as jest.Mock).mockImplementation(() => ({
-          handleCustomerEvent: jest
-            .fn()
-            .mockRejectedValue(new Error("Database error")),
-          handleCheckoutSessionCompleted: jest
-            .fn()
-            .mockResolvedValue(undefined),
-          getStripeInstance: jest.fn().mockReturnValue(mockStripe),
-        }));
-
-        const ctx = createMockContext({
-          request: {
-            headers: { "stripe-signature": "sig_test" },
-            rawBody: eventPayload,
-          } as unknown as Router.RouterContext["request"],
-        });
-
-        await postHandler(ctx, jest.fn());
-
-        expect(ctx.status).toBe(400);
-        expect(ctx.body).toEqual({
-          error: "Webhook Error: Database error",
-        });
-      });
-
-      it("should handle non-Error exceptions", async () => {
-        const eventPayload = JSON.stringify({
-          id: "evt_test",
-          type: "customer.created",
-          data: {
-            object: {
-              id: "cus_test",
-              metadata: {
-                clientId: "testClient",
-              },
-            },
-          },
-        });
-
-        // Setup mock to throw non-Error
-        const mockStripe = {
-          webhooks: {
-            constructEvent: jest.fn().mockImplementation(() => {
-              throw "String error";
-            }),
-          },
-        };
-
-        (StripeService as jest.Mock).mockImplementation(() => ({
-          handleCustomerEvent: jest.fn().mockResolvedValue(undefined),
-          handleCheckoutSessionCompleted: jest
-            .fn()
-            .mockResolvedValue(undefined),
-          getStripeInstance: jest.fn().mockReturnValue(mockStripe),
-        }));
-
-        const ctx = createMockContext({
-          request: {
-            headers: { "stripe-signature": "sig_test" },
-            rawBody: eventPayload,
-          } as unknown as Router.RouterContext["request"],
-        });
-
-        await postHandler(ctx, jest.fn());
-
-        expect(ctx.status).toBe(400);
-        expect(ctx.body).toEqual({
-          error: "Webhook Error: Unknown error",
-        });
-      });
-    });
-
-    describe("userId extraction", () => {
-      it("should extract userId from event metadata", async () => {
-        const eventPayload = JSON.stringify({
-          id: "evt_test",
-          type: "checkout.session.completed",
-          data: {
-            object: {
-              id: "cs_test",
-              metadata: {
-                clientId: "testClient",
-                userId: "specific-user-id",
-              },
-            },
-          },
-        });
-
-        // Setup mock to return event
-        const mockStripe = {
-          webhooks: {
-            constructEvent: jest.fn().mockReturnValue({
-              id: "evt_test",
-              type: "checkout.session.completed",
-              data: {
-                object: {
-                  id: "cs_test",
-                  metadata: {
-                    clientId: "testClient",
-                    userId: "specific-user-id",
-                  },
-                },
-              },
-            }),
-          },
-        };
-
-        const mockHandleCheckout = jest.fn().mockResolvedValue(undefined);
-        (StripeService as jest.Mock).mockImplementation(() => ({
-          handleCustomerEvent: jest.fn().mockResolvedValue(undefined),
-          handleCheckoutSessionCompleted: mockHandleCheckout,
-          getStripeInstance: jest.fn().mockReturnValue(mockStripe),
-        }));
-
-        const ctx = createMockContext({
-          request: {
-            headers: { "stripe-signature": "sig_test" },
-            rawBody: eventPayload,
-          } as unknown as Router.RouterContext["request"],
-        });
-
-        await postHandler(ctx, jest.fn());
-
-        expect(mockHandleCheckout).toHaveBeenCalledWith(
-          expect.anything(),
-          "testClient",
-          "specific-user-id",
-        );
-      });
-
-      it("should use 'unknown' when userId is not in metadata", async () => {
-        const eventPayload = JSON.stringify({
-          id: "evt_test",
-          type: "checkout.session.completed",
-          data: {
-            object: {
-              id: "cs_test",
-              metadata: {
-                clientId: "testClient",
-              },
-            },
-          },
-        });
-
-        // Setup mock to return event without userId
-        const mockStripe = {
-          webhooks: {
-            constructEvent: jest.fn().mockReturnValue({
-              id: "evt_test",
-              type: "checkout.session.completed",
-              data: {
-                object: {
-                  id: "cs_test",
-                  metadata: {
-                    clientId: "testClient",
-                  },
-                },
-              },
-            }),
-          },
-        };
-
-        const mockHandleCheckout = jest.fn().mockResolvedValue(undefined);
-        (StripeService as jest.Mock).mockImplementation(() => ({
-          handleCustomerEvent: jest.fn().mockResolvedValue(undefined),
-          handleCheckoutSessionCompleted: mockHandleCheckout,
-          getStripeInstance: jest.fn().mockReturnValue(mockStripe),
-        }));
-
-        const ctx = createMockContext({
-          request: {
-            headers: { "stripe-signature": "sig_test" },
-            rawBody: eventPayload,
-          } as unknown as Router.RouterContext["request"],
-        });
-
-        await postHandler(ctx, jest.fn());
-
-        expect(mockHandleCheckout).toHaveBeenCalledWith(
-          expect.anything(),
-          "testClient",
-          "unknown",
-        );
-      });
-    });
+    );
+    await t.run();
+    expect(t.stripe.handleCheckoutSessionCompleted).toHaveBeenCalledWith(
+      object,
+      BILLING_CLIENT_ID,
+      "usr_synthetic",
+    );
   });
 });

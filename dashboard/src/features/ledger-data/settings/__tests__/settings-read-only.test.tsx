@@ -38,6 +38,7 @@ vi.mock("sonner", () => ({
 
 vi.mock("@apollo/client/react", () => ({
   useMutation: () => [vi.fn(), { loading: false }],
+  useQuery: () => ({ data: undefined }),
 }));
 
 const ledger = {

@@ -355,3 +355,54 @@ describe("BQL result End navigation (w4/183)", () => {
     expect(rowgroup.scrollTop).toBe(1000);
   });
 });
+
+describe("BQL results for assistive technology (w3/631)", () => {
+  const numbers = (count: number) =>
+    tableResult(
+      [{ name: "n", dtype: "int" }],
+      Array.from({ length: count }, (_, index) => [index + 1]),
+    );
+
+  it("puts every row of a modest result in the DOM, not only those in view", async () => {
+    renderCard(numbers(58));
+
+    await screen.findByRole("rowgroup");
+    await waitFor(() =>
+      expect(
+        document.querySelectorAll('[role="rowgroup"] [role="row"]'),
+      ).toHaveLength(58),
+    );
+    expect(screen.queryByText("page.bql.largeResultHint")).toBeNull();
+  });
+
+  it("keeps a long result virtualized and says where every row is", async () => {
+    renderCard(numbers(450));
+
+    await screen.findByRole("rowgroup");
+    expect(
+      document.querySelectorAll('[role="rowgroup"] [role="row"]').length,
+    ).toBeLessThan(450);
+    expect(screen.getByText("page.bql.largeResultHint")).toHaveClass("sr-only");
+  });
+
+  it("makes the scrolling body an explicit, named focus stop", async () => {
+    renderCard(numbers(58));
+
+    const body = await screen.findByRole("rowgroup", {
+      name: "page.bql.queryResult",
+    });
+    expect(body).toHaveAttribute("tabindex", "0");
+  });
+
+  it("names the history disclosure by its query and keeps actions out of it", () => {
+    renderCard(numbers(3));
+
+    const summary = document.querySelector("summary")!;
+    expect(summary.querySelector("button")).toBeNull();
+    expect(summary).toHaveTextContent(/^select$/);
+    expect(
+      screen.getByRole("button", { name: "bql.deleteQuery" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "export" })).toBeInTheDocument();
+  });
+});

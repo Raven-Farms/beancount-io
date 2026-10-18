@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { searchEnum } from "@/common/lib/search-params/tolerant";
 import {
   normalizeListSearchCount,
   normalizeListSearchText,
@@ -55,12 +56,12 @@ export interface UserProfileSearch {
 /**
  * The public profile keeps the ledger collection's search, ordering, and
  * revealed count in the URL so opening a ledger and pressing Back rebuilds the
- * same list. Unknown sorts and unusable counts coerce to the defaults instead of
- * throwing; `tab` keeps its original strict validation.
+ * same list. Unknown sorts, unusable counts and a mistyped tab coerce to the
+ * defaults instead of throwing a SearchParamError (an HTTP 500 during SSR).
  */
 export const userProfileSearchSchema = z
   .object({
-    tab: z.enum(USER_PROFILE_TABS).optional(),
+    tab: searchEnum(USER_PROFILE_TABS),
     q: z.unknown().optional(),
     sort: z.unknown().optional(),
     show: z.unknown().optional(),

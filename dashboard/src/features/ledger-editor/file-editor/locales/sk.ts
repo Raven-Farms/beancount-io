@@ -1,4 +1,9 @@
 const skFileEditor: Record<string, { message: string; description: string }> = {
+  "ledgerEditor.rootFileCannotBeDeleted": {
+    message: "{filename} je koreňový súbor knihy a nedá sa odstrániť",
+    description:
+      "Why Delete is unavailable for the ledger's root file, which the server refuses to delete; {filename} is main.bean",
+  },
   "ledgerEditor.alignAmounts": {
     message: "Zarovnať sumy",
     description: "Menu item to align amounts in editor",

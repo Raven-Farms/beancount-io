@@ -48,6 +48,7 @@ Optional features (`beangulp`, `beanprice`) must be enabled first; see
 
 from __future__ import annotations
 
+import atexit
 import hashlib
 import json
 import os
@@ -66,7 +67,7 @@ from typing import Any, Literal, TextIO
 from cli import config, context, output
 from cli.auth.credentials import load_credentials
 from cli.engine import paths, provision
-from cli.errors import BY_CATEGORY, AuthError, BeaError, ConflictError, UsageError
+from cli.errors import BY_CATEGORY, BeaError, ConflictError, UsageError
 
 
 def run_engine_argv(argv: Sequence[str], *, interactive: bool = False) -> int:
@@ -76,6 +77,9 @@ def run_engine_argv(argv: Sequence[str], *, interactive: bool = False) -> int:
     such as the query shell: Ctrl-C there belongs to the child, which cancels
     the line and keeps going, so this process must not die of it too.
     """
+    # Streamed commands have no answer envelope to prove that the program
+    # served. A non-Python override can otherwise silently exit successfully.
+    _refuse_unusable_engine()
     command, env = helper_command()
     if not interactive:
         return _spawn([*command, *argv], env)
@@ -129,7 +133,35 @@ def run_native(
     process still hears it, and stops the child on its way out.
     """
     command = [str(native_command(name)), *args]
-    return _spawn(command, env if env is not None else _native_env(ledger), deaf_to_interrupt=True)
+    return _spawn(
+        command, env if env is not None else _native_env(ledger), deaf_to_interrupt=True, renamed=_BEA_NAMES.get(name)
+    )
+
+
+#: The `bea` command each upstream program answers for. Its usage errors said
+#: `Try 'bean-check --help'`, naming a program nobody installed (w5/624).
+#: `bean-query` is left out: its shell must keep its terminal on stderr.
+_BEA_NAMES = {
+    "bean-check": "bea check",
+    "bean-doctor": "bea doctor",
+    "bean-example": "bea example",
+    "bean-format": "bea format",
+    "treeify": "bea treeify",
+}
+
+
+def _renamed(text: str, renamed: tuple[str, str] | None) -> str:
+    """Upstream's `Usage:` and `Try '… --help'` lines with the `bea` command in its program's place."""
+    if renamed is None:
+        return text
+    program, command = renamed
+    lines = text.splitlines(keepends=True)
+    return "".join(
+        line.replace(f"Usage: {program} ", f"Usage: {command} ").replace(f"Try '{program} ", f"Try '{command} ")
+        if line.startswith("Usage: ") or "Try '" in line
+        else line
+        for line in lines
+    )
 
 
 LOAD_CACHE_ENV = "BEANCOUNT_LOAD_CACHE_FILENAME"
@@ -157,8 +189,37 @@ def load_cache_pattern(ledger: Path | str) -> str:
         # Upstream then finds no cache there and says so if it cannot write one.
         pass
     digest = hashlib.sha256(os.fsencode(os.path.dirname(os.path.realpath(ledger)))).hexdigest()[:32]
+    if not _clear_stray_cache_entry(directory / f"{digest}.{os.path.basename(ledger)}.picklecache"):
+        # Under the null device nothing can be read or created, so the load runs uncached.
+        return os.path.join(os.devnull, "{filename}")
     literal = str(directory).replace("{", "{{").replace("}", "}}")
     return os.path.join(literal, f"{digest}.{{filename}}.picklecache")
+
+
+def _clear_stray_cache_entry(cache: Path) -> bool:
+    """Clear a non-regular entry at bea's own load-cache path; whether the path is now usable.
+
+    `bean-check` opens the path unguarded: a directory there printed its
+    traceback, and a FIFO hung it (w5/591). The engine's
+    `clear_stray_cache_entry` does the same for its own loads: a link (never
+    its target), a FIFO or device, an empty directory.
+    """
+    try:
+        mode = cache.lstat().st_mode
+    except FileNotFoundError:
+        return True
+    except OSError:
+        return False
+    if stat.S_ISREG(mode):
+        return True
+    try:
+        if stat.S_ISDIR(mode):
+            cache.rmdir()
+        else:
+            cache.unlink()
+    except OSError:
+        return False
+    return True
 
 
 def _native_env(ledger: Path | str | None = None) -> dict[str, str]:
@@ -181,6 +242,9 @@ def _native_env(ledger: Path | str | None = None) -> dict[str, str]:
     # under a Latin-1 or cp1252 locale `treeify` and `doctor context` crashed on
     # `İstanbul` with a UnicodeEncodeError (w5/404).
     env["PYTHONIOENCODING"] = "utf-8"
+    # Importing a local plugin during a read must not add __pycache__ beside
+    # the ledger, including through an upstream executable (w5/655).
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
     return env
 
 
@@ -278,7 +342,12 @@ def engine_python() -> Path:
 
 
 def capture_native(
-    name: str, args: Sequence[str], *, ledger: Path | str | None = None, pass_fds: Sequence[int] = ()
+    name: str,
+    args: Sequence[str],
+    *,
+    ledger: Path | str | None = None,
+    pass_fds: Sequence[int] = (),
+    input_text: str | None = None,
 ) -> subprocess.CompletedProcess[str]:
     """Run an upstream executable and keep its output instead of inheriting the streams.
 
@@ -287,7 +356,9 @@ def capture_native(
     and `bea format --check` compares the formatter's output against the file.
     Everything else should use `run_native` and let upstream own the streams.
     """
-    return run_captured([str(native_command(name)), *args], env=_native_env(ledger), pass_fds=pass_fds)
+    return run_captured(
+        [str(native_command(name)), *args], env=_native_env(ledger), pass_fds=pass_fds, input_text=input_text
+    )
 
 
 def check_native(
@@ -302,7 +373,19 @@ def check_native(
     """
     if completed.returncode == 0:
         return
-    diagnostic = (completed.stderr or "").strip()
+    if completed.returncode < 0:
+        import typer
+
+        try:
+            status = captured_status(completed)
+        except BeaError as exc:
+            exc.result = result
+            raise
+        # Quiet signals keep their shell status instead of becoming an error
+        # about a negative exit code; other signals were named above.
+        raise typer.Exit(status)
+    command = _BEA_NAMES.get(name)
+    diagnostic = _renamed(completed.stderr or "", (name, command) if command else None).strip()
     tail = [line for line in diagnostic.splitlines() if line.strip()][-20:]
     reason = tail[-1] if tail else "No diagnostic was returned."
     if "Traceback (most recent call last)" in diagnostic:
@@ -329,6 +412,7 @@ def capture_engine(argv: Sequence[str]) -> subprocess.CompletedProcess[str]:
     envelope, where `bea` has to read the answer before it can decide what the
     exit status should be.
     """
+    _refuse_unusable_engine()
     command, env = helper_command()
     return _run_helper([*command, *argv], env, None)
 
@@ -380,6 +464,17 @@ def native_command(name: str) -> Path:
     return executable
 
 
+#: The upstream executables local commands run beside the engine interpreter.
+NATIVE_TOOLS = ("bean-check", "bean-doctor", "bean-example", "treeify")
+
+
+def missing_native_tools(python: Path) -> list[str]:
+    """The native tools absent beside `python`, where `native_command` looks for them under an override."""
+    directory = paths.bin_dir_for(python)
+    suffix = ".exe" if sys.platform == "win32" else ""
+    return [name for name in NATIVE_TOOLS if not (directory / f"{name}{suffix}").exists()]
+
+
 def _candidate_bin_dirs() -> list[Path]:
     """Where an upstream executable may already be, without provisioning anything."""
     override = paths.python_override()
@@ -415,7 +510,7 @@ def helper_json(args: Sequence[str], *, stdin: str | None = None, writes: bool =
     request and then answers.
     """
     command, env = helper_command()
-    completed = _run_helper([*command, *args], env, stdin)
+    completed = _run_helper([*command, *args], env, stdin, writes=writes)
 
     envelope = _parse(completed, args, writes=writes)
     if not envelope.get("ok"):
@@ -423,9 +518,13 @@ def helper_json(args: Sequence[str], *, stdin: str | None = None, writes: bool =
         category = str(failure.get("category", "validation"))
         # Load errors tolerated before a different failure — surface as warnings.
         # A refused write names only what forced the refusal on a terminal; its
-        # `--json` envelope still carries what the flag tolerated (w5/461).
+        # `--json` envelope still carries what the flag tolerated (w5/461). A
+        # partial write that wrote rows was not refused: what their write noted
+        # prints as a clean write's notes do (w5/541).
         tolerated = [str(error) for error in failure.get("ledger_errors", [])]
-        if tolerated and (not writes or context.current().json_output):
+        result = failure.get("result")
+        wrote = isinstance(result, dict) and bool(result.get("written"))
+        if tolerated and (not writes or wrote or context.current().json_output):
             output.render_ledger_errors(tolerated, allow=True)
         message = str(failure.get("message", "The engine reported a failure."))
         trace = failure.get("traceback")
@@ -434,12 +533,12 @@ def helper_json(args: Sequence[str], *, stdin: str | None = None, writes: bool =
             # The engine always sends the traceback and only `bea --debug` shows
             # it, so the advice to ask for one belongs on this side of the
             # boundary, where that flag is known.
-            message = f"{message} Pass --debug before the command for a traceback."
+            stop = " " if message.endswith((".", "!", "?")) else ". "
+            message = f"{message}{stop}{output.DEBUG_HINT}"
         error = BY_CATEGORY.get(category, BeaError)(
             message,
             details=[str(detail) for detail in failure.get("details", [])],
         )
-        result = failure.get("result")
         if isinstance(result, dict):
             error.result = result
         error.traceback = trace
@@ -455,9 +554,21 @@ def helper_json(args: Sequence[str], *, stdin: str | None = None, writes: bool =
 _CLEANUP_GRACE_SECONDS = 5.0
 
 
-def _run_helper(command: list[str], env: dict[str, str] | None, stdin: str | None) -> subprocess.CompletedProcess[str]:
-    """`subprocess.run`, except the child is told when the frontend is being stopped."""
-    with _forwarding_teardown() as attach:
+def _run_helper(
+    command: list[str], env: dict[str, str] | None, stdin: str | None, *, writes: bool = False
+) -> subprocess.CompletedProcess[str]:
+    """`subprocess.run`, except the child is told when the frontend is being stopped.
+
+    A stopped write that still answered success had committed before the
+    stop. That answer is kept and reported, and so is a stop that arrives
+    while it is being rendered. Dying by the signal instead made a
+    supervisor's retry record the entry twice (w5/606). Any other stopped
+    child still takes this process down with it: a read before a write must
+    not let the write run.
+    """
+    stopped: list[int] = []
+    committed = False
+    with _forwarding_teardown(stopped, committed=lambda: committed) as attach:
         with subprocess.Popen(
             command,
             env=env,
@@ -482,7 +593,81 @@ def _run_helper(command: list[str], env: dict[str, str] | None, stdin: str | Non
             finally:
                 relay.join()
                 stream.close()
-    return subprocess.CompletedProcess(command, child.returncode, out, "".join(kept))
+        # Decide while forwarding handlers still own every stop. Restoring
+        # defaults before installing the post-commit handlers left a window
+        # where the frontend could die silently over a completed write.
+        completed = subprocess.CompletedProcess(command, child.returncode, out, "".join(kept))
+        committed = writes and _answered_success(completed)
+    if stopped and not committed:
+        _die_by(stopped[0])
+    return completed
+
+
+def _hold_stops_after_commit(stopped: list[int], previous: list[tuple[int, Any]]) -> None:
+    """From a committed write on, a stop is noted and reported at exit, not obeyed.
+
+    The default disposition came back with the helper's return, so a stop
+    landing while the result was rendered killed bea silently over a write
+    that had landed (w5/606).
+    """
+
+    from typer._click.globals import get_current_context
+
+    registered = False
+
+    def report_stop() -> None:
+        nonlocal registered
+        if stopped and not registered:
+            registered = True
+            atexit.register(_report_late_stop, stopped[0])
+
+    def hold(number: int, _frame: Any) -> None:
+        if not stopped:
+            stopped.append(number)
+        report_stop()
+
+    # Held for the command that wrote, and handed back when it closes: an
+    # embedding process (CliRunner) keeps its own handlers afterwards.
+    command = get_current_context(silent=True)
+    if command is None:
+        report_stop()
+        _restore_handlers(previous)
+        return
+    for number, _handler in previous:
+        try:
+            signal.signal(number, hold)
+        except (OSError, ValueError):
+            continue
+    report_stop()
+    command.find_root().call_on_close(lambda: _restore_handlers(previous))
+
+
+def _restore_handlers(previous: list[tuple[int, Any]]) -> None:
+    for number, handler in previous:
+        try:
+            signal.signal(number, handler)
+        except (OSError, ValueError):
+            continue
+
+
+def _report_late_stop(number: int) -> None:
+    output.note(f"Stopped ({signal.Signals(number).name}) after the write had completed; its result stands.")
+
+
+def _answered_success(completed: subprocess.CompletedProcess[str]) -> bool:
+    if completed.returncode != 0:
+        return False
+    try:
+        envelope = json.loads(completed.stdout)
+    except ValueError:
+        return False
+    return isinstance(envelope, dict) and envelope.get("ok") is True
+
+
+def _die_by(number: int) -> None:
+    """End this process by `number` with its default disposition, keeping the status the shell reports."""
+    signal.signal(number, signal.SIG_DFL)
+    os.kill(os.getpid(), number)
 
 
 #: Opens a stderr line the engine wants shown while it is still running
@@ -511,7 +696,9 @@ def _relay_notices(stream: TextIO, kept: list[str]) -> None:
 
 
 @contextmanager
-def _forwarding_teardown() -> Iterator[Callable[[subprocess.Popen[str]], None]]:
+def _forwarding_teardown(
+    stopped: list[int] | None = None, *, committed: Callable[[], bool] | None = None
+) -> Iterator[Callable[[subprocess.Popen[str]], None]]:
     """Pass a termination signal on to `child`, and let it unwind before we go.
 
     The engine stages every write into a `.bea-*.tmp` candidate beside the
@@ -526,7 +713,9 @@ def _forwarding_teardown() -> Iterator[Callable[[subprocess.Popen[str]], None]]:
     Install before spawning and defer signals until the child handle is ready,
     so an interrupt during Popen cannot orphan an isolated helper. Handlers are
     restored after the child exits. Once the child is done we re-raise the signal
-    with its default disposition, keeping the status the shell reports.
+    with its default disposition, keeping the status the shell reports. A
+    caller passing `stopped` gets the signal recorded there instead, and
+    decides once it has read the child's answer.
     """
     child: subprocess.Popen[str] | None = None
     pending: int | None = None
@@ -541,8 +730,10 @@ def _forwarding_teardown() -> Iterator[Callable[[subprocess.Popen[str]], None]]:
             child.wait(timeout=_CLEANUP_GRACE_SECONDS)
         except subprocess.TimeoutExpired:
             child.kill()
-        signal.signal(number, signal.SIG_DFL)
-        os.kill(os.getpid(), number)
+        if stopped is not None:
+            stopped.append(number)
+            return
+        _die_by(number)
 
     def attach(started: subprocess.Popen[str]) -> None:
         nonlocal child, pending
@@ -563,11 +754,12 @@ def _forwarding_teardown() -> Iterator[Callable[[subprocess.Popen[str]], None]]:
                 continue
         yield attach
     finally:
-        for number, previous in installed:
-            try:
-                signal.signal(number, previous)
-            except (OSError, ValueError):
-                pass
+        if committed is not None and committed():
+            # Hand off directly, without restoring the default disposition
+            # between a known committed result and its frontend rendering.
+            _hold_stops_after_commit(stopped if stopped is not None else [], installed)
+        else:
+            _restore_handlers(installed)
         if pending is not None:
             # A failed spawn must not swallow a termination signal either.
             signal.signal(pending, signal.SIG_DFL)
@@ -645,11 +837,14 @@ def engine_load_failure(python: Path) -> str | None:
     if probe.returncode == 0 and probe.stdout.strip().endswith(sentinel):
         return None
     lines = [line.strip() for line in probe.stderr.splitlines() if line.strip()]
+    if lines and lines[-1].startswith("Try `python -h'"):
+        # A Python too old for `-P` ends on its usage hint; the complaint is first.
+        return f"{lines[0]}; the engine needs Python 3.12 or newer"
     return lines[-1] if lines else "it is not a Python that loads the engine"
 
 
-def _refuse_unusable_engine(completed: subprocess.CompletedProcess[str]) -> None:
-    """Blame the engine itself when the interpreter that served cannot load the helper at all.
+def _refuse_unusable_engine(completed: subprocess.CompletedProcess[str] | None = None) -> None:
+    """Refuse an override or managed interpreter that cannot load the helper.
 
     An override without Beancount died on the helper's first import, which
     `_parse` could only report as an engine that "did not answer", traceback
@@ -659,6 +854,8 @@ def _refuse_unusable_engine(completed: subprocess.CompletedProcess[str]) -> None
     while `engine status` said "Provisioned: yes" (w5/320). Asking that
     interpreter for the import alone settles it: when even that fails no
     command body ran, so nothing was written, and the engine is what to fix.
+    Streamed/captured calls probe before spawning, since even exit 0 carries
+    no envelope to distinguish an engine result from a non-Python program.
     An engine that does load the helper falls through to the caller's report.
     """
     source = resolve_engine()
@@ -678,7 +875,7 @@ def _refuse_unusable_engine(completed: subprocess.CompletedProcess[str]) -> None
             f"The managed Beancount engine at {source.location} is damaged and cannot load ({reason}). "
             f"Remove {source.location} and rerun; bea provisions a fresh engine."
         )
-    raise BeaError(message, traceback=completed.stderr or None) from None
+    raise BeaError(message, traceback=(completed.stderr or None) if completed is not None else None) from None
 
 
 def helper_command() -> tuple[list[str], dict[str, str] | None]:
@@ -712,21 +909,23 @@ def _helper_env(source_root: Path | None = None) -> dict[str, str] | None:
     The global managed-price modes travel here too, so every load-bearing
     helper call honors `--offline` / `--strict-prices` without threading
     them through each command's argv. Flags win over the process environment;
-    without them the child's environment is exactly what was inherited.
+    without them the managed-price settings are inherited. Bytecode writing
+    stays disabled so importing local plugins never adds files beside books.
     """
     root = source_root if source_root is not None else paths.helper_source_root()
     if root is None:
         return None
     inherited = os.environ.get("PYTHONPATH", "")
     search_path = os.pathsep.join([str(root), inherited]) if inherited else str(root)
-    env = {**os.environ, "PYTHONPATH": search_path}
+    env = {**os.environ, "PYTHONPATH": search_path, "PYTHONDONTWRITEBYTECODE": "1"}
     current = context.current()
     if current.offline:
         env["MANAGED_PRICE_OFFLINE"] = "1"
     if current.strict_prices:
         env["MANAGED_PRICE_STRICT"] = "1"
     # Credentials cross only in the child environment, never argv or requests
-    # describing the ledger. Missing/invalid login must not break local books.
+    # describing the ledger. Missing/invalid login must not break local books:
+    # no failure reading the credential, of any kind, stops a local command (w5/589).
     env.pop("BEA_MANAGED_PRICE_TOKEN", None)
     env.pop("BEA_MANAGED_PRICE_AUTH_ERROR", None)
     if env.get("MANAGED_PRICE_OFFLINE", "").strip().lower() not in {"1", "true", "yes", "on"}:
@@ -736,12 +935,18 @@ def _helper_env(source_root: Path | None = None) -> dict[str, str] | None:
                 env["BEA_MANAGED_PRICE_AUTH_ERROR"] = "expired"
             elif credential is not None:
                 env["BEA_MANAGED_PRICE_TOKEN"] = credential.token
-        except AuthError:
+        except Exception:
             env["BEA_MANAGED_PRICE_AUTH_ERROR"] = "invalid"
     return env
 
 
-def _spawn(command: list[str], env: dict[str, str] | None, *, deaf_to_interrupt: bool = False) -> int:
+def _spawn(
+    command: list[str],
+    env: dict[str, str] | None,
+    *,
+    deaf_to_interrupt: bool = False,
+    renamed: str | None = None,
+) -> int:
     """Run a child with the caller's streams and working directory, and report its status.
 
     Streams are inherited when they are real OS file descriptors so an
@@ -752,16 +957,20 @@ def _spawn(command: list[str], env: dict[str, str] | None, *, deaf_to_interrupt:
     through `sys.stdout` / `sys.stderr` instead, which is what the caller is
     actually reading. The one exception to inheritance is stderr beside a
     stdout pipe; see `_stderr_minus_flush_epilogue`.
+
+    `renamed` is the `bea` command an upstream program answers for: its stderr
+    is then relayed with the program's name replaced in usage lines.
     """
+    rename = (Path(command[0]).name, renamed) if renamed else None
     if _stream_is_captured(sys.stdout) or _stream_is_captured(sys.stderr):
         captured = subprocess.run(
             command, env=env, capture_output=True, encoding="utf-8", errors="replace", check=False
         )
         output.replay(captured.stdout, sys.stdout)
-        output.replay(captured.stderr, sys.stderr)
+        output.replay(_renamed(captured.stderr, rename), sys.stderr)
         returncode = captured.returncode
     else:
-        with _stderr_minus_flush_epilogue() as stderr:
+        with _stderr_minus_flush_epilogue(rename) as stderr:
             returncode = _run_inherited(command, env, stderr, deaf_to_interrupt=deaf_to_interrupt)
         if returncode > 0 and _downstream_pipe_closed():
             # The child wrote to the same closed pipe we would have. Upstream is
@@ -822,6 +1031,7 @@ def run_captured(
     env: dict[str, str] | None = None,
     pass_fds: Sequence[int] = (),
     stdin_closed: bool = False,
+    input_text: str | None = None,
 ) -> subprocess.CompletedProcess[str]:
     """`subprocess.run` keeping the output, except a request to stop us stops the child too.
 
@@ -837,7 +1047,7 @@ def run_captured(
         subprocess.Popen(
             command,
             env=env,
-            stdin=subprocess.DEVNULL if stdin_closed else None,
+            stdin=subprocess.PIPE if input_text is not None else subprocess.DEVNULL if stdin_closed else None,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             encoding="utf-8",
@@ -847,7 +1057,7 @@ def run_captured(
     ):
         attach(child)
         try:
-            out, err = child.communicate()
+            out, err = child.communicate(input_text)
         except BaseException:
             child.kill()
             raise
@@ -949,7 +1159,7 @@ def _interrupt_withheld(wanted: bool) -> Iterator[Callable[[], None]]:
 
 
 @contextmanager
-def _stderr_minus_flush_epilogue() -> Iterator[int | None]:
+def _stderr_minus_flush_epilogue(rename: tuple[str, str] | None = None) -> Iterator[int | None]:
     """The child's stderr: ours, or a relay onto ours that drops one interpreter epilogue.
 
     A Python child that only buffered its output meets the closed pipe when the
@@ -963,13 +1173,14 @@ def _stderr_minus_flush_epilogue() -> Iterator[int | None]:
     Only a stdout that can hang up, with stderr going somewhere else, gets the
     relay. A terminal session keeps its terminal, and under `2>&1` the epilogue
     already lands in the closed pipe, where relaying would only reorder the two
-    streams.
+    streams. A `rename` (upstream program, `bea` command) always relays, so
+    usage lines name the command the user ran (w5/624).
     """
-    if not _stdout_can_hang_up_apart_from_stderr():
+    if rename is None and not _stdout_can_hang_up_apart_from_stderr():
         yield None
         return
     reader, writer = os.pipe()
-    relay = threading.Thread(target=_relay_stderr, args=(reader,), daemon=True)
+    relay = threading.Thread(target=_relay_stderr, args=(reader, rename), daemon=True)
     relay.start()
     try:
         yield writer
@@ -995,7 +1206,7 @@ _EPILOGUE_HEADER = b"Exception ignored"
 _EPILOGUE_REASON = b"BrokenPipeError"
 
 
-def _relay_stderr(reader: int) -> None:
+def _relay_stderr(reader: int, rename: tuple[str, str] | None = None) -> None:
     """Copy the child's stderr to ours as it arrives, minus a closing flush epilogue.
 
     Everything is forwarded the moment it cannot be that epilogue, a prompt
@@ -1022,7 +1233,11 @@ def _relay_stderr(reader: int) -> None:
                     if line.startswith(_EPILOGUE_HEADER) and b"stdout" in line:
                         held.append(line)
                     else:
-                        _write_stderr(line)
+                        _write_stderr(
+                            _renamed(line.decode("utf-8", "surrogateescape"), rename).encode("utf-8", "surrogateescape")
+                            if rename
+                            else line
+                        )
             expected = _EPILOGUE_REASON if len(held) == 1 else _EPILOGUE_HEADER
             if partial and (passing or not (partial.startswith(expected) or expected.startswith(partial))):
                 _write_stderr(b"".join(held) + partial)

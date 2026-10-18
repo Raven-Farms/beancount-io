@@ -37,9 +37,10 @@ from importlib import resources
 from pathlib import Path
 from typing import Any
 
-from cli import output
+from cli import context, output
 from cli.engine import paths
 from cli.errors import BeaError, UsageError
+from cli.paths import expand_path
 from cli.utils import exclusive_lock
 
 UV_ENV = "BEA_UV"
@@ -54,11 +55,20 @@ def ensure_engine() -> Path:
 
     root = paths.engine_root()
     if not paths.is_provisioned(root):
+        _refuse_offline_install(root)
         with provisioning_lock(root):
             # Another command may have finished provisioning while we waited.
             if not paths.is_provisioned(root):
                 provision(root)
     return paths.venv_python(root)
+
+
+def _refuse_offline_install(root: Path) -> None:
+    if context.current().offline:
+        raise UsageError(
+            f"The Beancount engine is not installed at {root}; installing it requires network access. "
+            "Rerun without --offline once with network access, then reuse the installed engine offline."
+        )
 
 
 @contextmanager
@@ -85,6 +95,7 @@ def provision(root: Path) -> None:
     engine commands were using. Optional features recorded in it are
     reinstalled into the replacement before it is published.
     """
+    _refuse_offline_install(root)
     _refuse_foreign_root(root)
     uv = _find_uv()
     remembered = enabled_features(root)
@@ -178,6 +189,7 @@ def enable_feature(name: str) -> tuple[bool, set[str]]:
     Returns `(changed, enabled_features)`. `changed` is False when the feature
     was already present so callers can avoid claiming a fresh enable.
     """
+    context.current().require_network("engine enable")
     if paths.python_override() is not None:
         raise UsageError(
             f"Cannot enable engine feature '{name}' while {paths.PYTHON_ENV} is set. "
@@ -301,12 +313,18 @@ def _feature_present(root: Path, name: str) -> bool:
 def _packages_importable(python: Path, packages: list[str]) -> bool:
     if not packages:
         return False
-    probe = ";".join(f"import {package}" for package in packages)
+    sentinel = "bea-packages-imported"
+    probe = ";".join([*(f"import {package}" for package in packages), f"print({sentinel!r})"])
     # `-P`: `-c` would otherwise put the working directory first on the module
     # path, so a `beanprice.py` in whatever folder bea ran from was executed
     # and a folder of that name made the feature look installed (w5/174).
-    completed = subprocess.run([str(python), "-P", "-c", probe], capture_output=True, text=True, check=False)
-    return completed.returncode == 0
+    try:
+        completed = subprocess.run([str(python), "-P", "-c", probe], capture_output=True, text=True, check=False)
+    except (OSError, ValueError):
+        return False
+    # The import must say so itself: `/usr/bin/true` exits 0 having run
+    # nothing, and its features read as present (w5/481).
+    return completed.returncode == 0 and completed.stdout.strip().endswith(sentinel)
 
 
 def _record_feature(root: Path, name: str) -> set[str]:
@@ -470,9 +488,10 @@ def _find_uv() -> str:
         # names the path but never the variable that supplied it — which is the
         # only part a user with an inherited profile or CI image cannot guess.
         # `paths.python_override()` validates its own variable the same way.
-        if not Path(override).expanduser().exists():
+        expanded = expand_path(Path(override), f"${UV_ENV}")
+        if not expanded.exists():
             raise BeaError(f"{UV_ENV} points at '{override}', which does not exist.")
-        return override
+        return str(expanded)
     found = shutil.which("uv")
     if found:
         return found

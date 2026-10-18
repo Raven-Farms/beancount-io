@@ -335,7 +335,7 @@ CASES: list[dict[str, Any]] = [
         "args": ["doctor", "missing-open", "closed-only.bean"],
         "exit": 1,
         "unchanged": ["closed-only.bean"],
-        "stdout_has": ["Assets:Bank:Checking"],
+        "stderr_has": ["Assets:Bank:Checking"],
     },
     {
         "id": "w3/369",

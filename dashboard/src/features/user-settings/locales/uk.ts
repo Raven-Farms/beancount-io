@@ -420,10 +420,6 @@ const ukUserSettings: Record<string, TranslationEntry> = {
     message: "Системна",
     description: "System theme option",
   },
-  "userSettings.testMode": {
-    message: "Тестовий режим",
-    description: "Label indicating Stripe is in test/development mode",
-  },
   "userSettings.theme": {
     message: "Тема",
     description: "Label for theme selection",

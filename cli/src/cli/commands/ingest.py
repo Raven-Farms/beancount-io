@@ -11,6 +11,7 @@ from __future__ import annotations
 import ast
 import os
 import re
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Annotated
 
@@ -21,6 +22,7 @@ from cli.engine import launch
 from cli.errors import UsageError, placement_hint, refuse_json
 from cli.native_command import ForwardingCommand
 from cli.native_help import native_help
+from cli.paths import expand_path
 
 _EXTRA = {"allow_extra_args": True, "ignore_unknown_options": True}
 _CONFIG = Annotated[
@@ -43,7 +45,7 @@ def _ingest_script(supplied: Path | None) -> Path:
     must stay the link, not become the shared script it points to.
     """
     if supplied is not None:
-        return supplied.expanduser().absolute()
+        return expand_path(supplied, "--config").absolute()
     try:
         ledger = context.current().entry_file()
     except UsageError:
@@ -83,7 +85,7 @@ def _forward(operation: str, ctx: typer.Context, config: Path | None) -> None:
         if operation == "extract"
         else None
     )
-    placed = {"ledger": os.path.abspath(os.path.expanduser(existing))} if existing else {}
+    placed = {"ledger": os.path.abspath(expand_path(Path(existing), "--existing"))} if existing else {}
     if placed and output.has_unreadable_include(Path(placed["ledger"])):
         # Beangulp loads `-e` with Beancount, which answers an include it
         # cannot open with a traceback; the helper names it (w5/120, w5/438).
@@ -105,7 +107,7 @@ def _extract_ledgers(ctx: typer.Context) -> list[Path]:
         pass
     existing = output.forwarded_option(list(ctx.args), "-e", "--existing", flags=_EXTRACT_FLAGS)
     if existing is not None:
-        ledgers.append(Path(existing).expanduser())
+        ledgers.append(expand_path(Path(existing), "--existing"))
     return ledgers
 
 
@@ -121,7 +123,7 @@ def _refuse_output_over_inputs(args: list[str], script: Path) -> None:
     value = output.forwarded_option(args, "-o", "--output", flags=_EXTRACT_FLAGS)
     if value is None:
         return
-    destination = Path(value).expanduser()
+    destination = expand_path(Path(value), "--output")
     if not destination.exists():
         return  # Nothing there to lose; `-o -` and a fresh file pass through.
     output.refuse_input_alias(destination, script)
@@ -148,13 +150,13 @@ def _positional_sources(args: list[str]) -> list[Path]:
     while index < len(args):
         arg = args[index]
         if arg == "--":
-            sources.extend(Path(rest).expanduser() for rest in args[index + 1 :])
+            sources.extend(expand_path(Path(rest), "ingest source") for rest in args[index + 1 :])
             break
         if arg == "--output" or re.fullmatch(rf"-[{_EXTRACT_FLAGS}]*o", arg):
             index += 2
             continue
         if not arg.startswith("-"):
-            sources.append(Path(arg).expanduser())
+            sources.append(expand_path(Path(arg), "ingest source"))
         index += 1
     return sources
 
@@ -171,19 +173,19 @@ def _refuse_config_only_script(script: Path) -> None:
     The shape is read from the syntax tree, not the spelling: an annotated
     `CONFIG: list = [...]` is the same module, and a script with a `__main__`
     block runs something even when the `Ingest` call sits in a module it
-    imports. A file Python cannot parse is left for Python to report.
+    imports. `CONFIG` bound by an import or inside `try`/`if`/`with` is the
+    same module too, and an `Ingest(` in a comment or a docstring calls
+    nothing (w5/635). A file Python cannot parse is left for Python to report.
     """
     try:
         text = script.read_text(encoding="utf-8", errors="replace")
-    except OSError:
+        tree = ast.parse(text)
+    except (OSError, SyntaxError, ValueError):
         return
-    if re.search(r"Ingest\s*\(", text):
+    if any(_calls_ingest(node) for node in ast.walk(tree)):
         return
-    try:
-        body = ast.parse(text).body
-    except (SyntaxError, ValueError):
-        return
-    if any(_binds_config(node) for node in body) and not any(_is_main_guard(node) for node in body):
+    statements = list(_module_statements(tree.body))
+    if any(_binds_config(node) for node in statements) and not any(_is_main_guard(node) for node in statements):
         raise UsageError(
             f"{script} looks like a `bea import --config` module (CONFIG = [...]). "
             "`bea ingest` needs a script that calls beangulp.Ingest(...)(); "
@@ -191,8 +193,34 @@ def _refuse_config_only_script(script: Path) -> None:
         )
 
 
+def _calls_ingest(node: ast.AST) -> bool:
+    """Whether a node calls `Ingest(...)` or `something.Ingest(...)`."""
+    if not isinstance(node, ast.Call):
+        return False
+    func = node.func
+    return (isinstance(func, ast.Name) and func.id == "Ingest") or (
+        isinstance(func, ast.Attribute) and func.attr == "Ingest"
+    )
+
+
+def _module_statements(body: list[ast.stmt]) -> Iterator[ast.stmt]:
+    """The statements that run when the module loads, inside compound statements too, not in a def or class."""
+    for node in body:
+        yield node
+        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef):
+            continue
+        for field in ("body", "orelse", "finalbody"):
+            yield from _module_statements(getattr(node, field, None) or [])
+        for handler in getattr(node, "handlers", None) or []:
+            yield from _module_statements(handler.body)
+        for case in getattr(node, "cases", None) or []:
+            yield from _module_statements(case.body)
+
+
 def _binds_config(node: ast.stmt) -> bool:
-    """Whether a module-level statement assigns `CONFIG`, annotated or not."""
+    """Whether a statement binds `CONFIG`: assigned, annotated, or imported under that name."""
+    if isinstance(node, ast.Import | ast.ImportFrom):
+        return any((alias.asname or alias.name) == "CONFIG" for alias in node.names)
     if isinstance(node, ast.Assign):
         targets = node.targets
     elif isinstance(node, ast.AnnAssign) and node.value is not None:
@@ -207,7 +235,7 @@ def _binds_config(node: ast.stmt) -> bool:
 
 
 def _is_main_guard(node: ast.stmt) -> bool:
-    """Whether a module-level statement is `if __name__ == "__main__":`, either way round."""
+    """Whether a statement is `if __name__ == "__main__":`, either way round."""
     if not isinstance(node, ast.If) or not isinstance(node.test, ast.Compare):
         return False
     operands = [node.test.left, *node.test.comparators]

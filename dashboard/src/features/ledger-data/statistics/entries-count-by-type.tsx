@@ -17,6 +17,7 @@ import { useLedgerSearchParams } from "@/common/hooks/use-ledger-search-params";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { useErrorMessage } from "@/common/lib/errors/error-message";
 import { useFormatNumber } from "@/common/hooks/use-format-number";
+import { directiveTypeLabel } from "@/common/lib/beancount/directive-type-label";
 import { StatisticsSection } from "./statistics-section";
 
 /**
@@ -99,7 +100,11 @@ function EntriesCountTable({
 }) {
   const { t, i18n } = useTranslations();
   const formatNum = useFormatNumber();
-  const entries = data.getLedgerEntriesCountPerType;
+  // Ordered by the name the reader sees, not the English type name.
+  const collator = new Intl.Collator(i18n.language);
+  const entries = data.getLedgerEntriesCountPerType
+    .map((entry) => ({ ...entry, label: directiveTypeLabel(entry.type, t) }))
+    .sort((a, b) => collator.compare(a.label, b.label));
   const totalCount = entries.reduce((sum, entry) => sum + entry.number, 0);
   const formatPercentage = new Intl.NumberFormat(i18n.language, {
     style: "percent",
@@ -140,7 +145,7 @@ function EntriesCountTable({
           return (
             <TableRow key={entry.type}>
               <TableCell className="font-medium text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">
-                {entry.type}
+                {entry.label}
               </TableCell>
               <TableCell className="text-right font-mono text-xs sm:text-sm whitespace-nowrap px-2 sm:px-3 py-1.5 sm:py-2">
                 {formatNum(entry.number)}

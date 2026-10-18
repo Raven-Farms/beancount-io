@@ -10,6 +10,7 @@ remedy prints the command that works.
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import shlex
@@ -197,3 +198,69 @@ def test_without_the_plugin_nothing_changes(tmp_path: Path) -> None:
     assert opened.stderr == ""
     assert "2024-03-01 open Expenses:Fuel" in ledger.read_text()
     _passes_check(tmp_path)
+
+
+@pytest.mark.parametrize("plugin", PLUGINS)
+@pytest.mark.parametrize("json_output", [False, True])
+def test_a_plain_balance_is_a_staged_accounts_first_use_with_closed_stdin(
+    tmp_path: Path, plugin: str, json_output: bool
+) -> None:
+    ledger = _ledger(tmp_path, plugin)
+    assert _bea(tmp_path, *OPEN, "--allow-errors").returncode == 0
+    command = [
+        *(["--json"] if json_output else []), "add", "balance", "--date", "2024-03-05",
+        "--account", "Expenses:Fuel", "--amount", "0 USD",
+    ]  # fmt: skip
+
+    result = _bea(tmp_path, *command)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert ledger.read_text().count(" balance Expenses:Fuel ") == 1
+    if json_output:
+        assert json.loads(result.stdout)["data"]["written"] == 1
+    _passes_check(tmp_path)
+    after = ledger.read_bytes()
+    repeated = _bea(tmp_path, *command)
+    assert repeated.returncode == 0, repeated.stdout + repeated.stderr
+    assert ledger.read_bytes() == after
+    if json_output:
+        assert json.loads(repeated.stdout)["data"]["duplicate"] is True
+
+
+@pytest.mark.parametrize("plugin", PLUGINS)
+@pytest.mark.parametrize("json_output", [False, True])
+def test_another_staged_account_still_blocks_the_strict_balance(tmp_path: Path, plugin: str, json_output: bool) -> None:
+    ledger = _ledger(tmp_path, plugin)
+    assert _bea(tmp_path, *OPEN, "--allow-errors").returncode == 0
+    assert (
+        _bea(
+            tmp_path, "add", "open", "-a", "Expenses:Other", "--date", "2024-03-01", "-c", "USD", "--allow-errors"
+        ).returncode
+        == 0
+    )
+    before = ledger.read_bytes()
+
+    result = _bea(
+        tmp_path, *(["--json"] if json_output else []), "add", "balance", "--date", "2024-03-05",
+        "--account", "Expenses:Fuel", "--amount", "0 USD",
+    )  # fmt: skip
+
+    assert result.returncode == 1, result.stdout
+    assert "Unused account 'Expenses:Other'" in result.stderr
+    assert ledger.read_bytes() == before
+
+
+@pytest.mark.parametrize("plugin", PLUGINS)
+def test_the_exemption_never_allows_a_failing_first_balance(tmp_path: Path, plugin: str) -> None:
+    ledger = _ledger(tmp_path, plugin)
+    assert _bea(tmp_path, *OPEN, "--allow-errors").returncode == 0
+    before = ledger.read_bytes()
+
+    result = _bea(
+        tmp_path, "--json", "add", "balance", "--date", "2024-03-05",
+        "--account", "Expenses:Fuel", "--amount", "5 USD",
+    )  # fmt: skip
+
+    assert result.returncode == 1, result.stdout
+    assert "Balance failed" in result.stderr
+    assert ledger.read_bytes() == before

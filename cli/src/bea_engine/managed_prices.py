@@ -100,6 +100,36 @@ def is_url_include_target(target: str) -> bool:
     return _URL_TARGET_RE.match(target) is not None
 
 
+def _origin(scheme: str, hostname: str, port: int | None) -> str:
+    """`scheme://host[:port]` as a browser's `URL.origin` spells it: lower case, default port dropped."""
+    scheme = scheme.lower()
+    host = hostname.lower()
+    if ":" in host:
+        host = f"[{host}]"
+    if port is not None and port != {"http": 80, "https": 443}.get(scheme):
+        host += f":{port}"
+    return f"{scheme}://{host}"
+
+
+def normalize_origin(entry: str) -> str | None:
+    """A `MANAGED_PRICE_ORIGINS` entry as the origin includes are compared with, or None.
+
+    Compared raw, `https://beancount.io/` — the trailing slash a browser copy
+    carries — `https://Beancount.io` and `https://beancount.io:443` each
+    refused the very origin they name (w5/480). The hosted service reads the
+    setting through `URL.origin`, so both engines now agree. An entry that is
+    not an absolute http(s) URL is dropped, as it is there.
+    """
+    try:
+        parts = urlsplit(entry.strip())
+        hostname, port = parts.hostname, parts.port
+    except ValueError:
+        return None
+    if parts.scheme.lower() not in {"http", "https"} or not hostname:
+        return None
+    return _origin(parts.scheme, hostname, port)
+
+
 def parse_managed_price_url(target: str, origins: tuple[str, ...] = DEFAULT_ORIGINS) -> AllowedUrl | RefusedUrl:
     """Decide whether an include target is an allowed managed price URL.
 
@@ -121,20 +151,19 @@ def parse_managed_price_url(target: str, origins: tuple[str, ...] = DEFAULT_ORIG
         return RefusedUrl(detail=f"{target!r} is not an allowed managed price source: not a valid URL")
     if parts.username is not None or parts.password is not None:
         return RefusedUrl(detail=f"{target!r} is not an allowed managed price source: it must not carry credentials")
-    scheme = parts.scheme.lower()
-    origin = scheme + "://" + hostname.lower()
-    if port is not None and port != {"http": 80, "https": 443}.get(scheme):
-        origin += f":{port}"
+    origin = _origin(parts.scheme, hostname, port)
     if origin not in origins:
         return RefusedUrl(
-            detail=f"{target!r} is not an allowed managed price source: origin {scheme}://{hostname} is not allowlisted"
+            detail=f"{target!r} is not an allowed managed price source: origin {origin} is not allowlisted"
         )
     if parts.query or parts.fragment:
         return RefusedUrl(
             detail=f"{target!r} is not an allowed managed price source: it must not carry a query string or fragment"
         )
     match = _PRICES_PATH_RE.match(parts.path)
-    if not match:
+    # `.` and `..` are dot segments, which servers resolve away: `/prices/..`
+    # fetched `/`, and an export wrote it as a hidden `...beancount` (w5/645).
+    if not match or match.group(1) in {".", ".."}:
         return RefusedUrl(
             detail=f"{target!r} is not an allowed managed price source: "
             "the path must be /prices/<ALIAS> (letters, digits, . _ -)"
@@ -351,7 +380,7 @@ def _exchange(
         if error.code >= 500:
             return FetchFailed(
                 reason="provider",
-                message=f"HTTP {error.code}: price service unavailable. Retry later; cached prices remain usable.",
+                message=f"HTTP {error.code}: price service unavailable. Retry later.",
             )
         if 300 <= error.code < 400:
             return FetchFailed(reason="redirect", message=f"redirects are not followed (HTTP {error.code})")
@@ -491,9 +520,18 @@ def validate_managed_price_text(text: str) -> ValidFeed | InvalidFeed:
     for index, raw in enumerate(text.split("\n")):
         line_number = index + 1
         line = raw.removesuffix("\r")
+        # Beancount ends a directive at a blank line or a comment at column 0,
+        # so metadata after one is an indented line under nothing: `unexpected
+        # INDENT` for every command once the body replaced the last good
+        # revision (w5/478). An indented comment belongs to the point above.
         if _BLANK_RE.match(line):
+            current = None
             continue
         if _COMMENT_RE.match(line):
+            if not line[0].isspace():
+                current = None
+            elif current is None:
+                return InvalidFeed(reason="indented comment without a preceding price directive", line=line_number)
             header = _HEADER_RE.match(line)
             if header and header.group(1) in _HEADER_KEYS and header.group(1) not in headers:
                 headers[header.group(1)] = header.group(2)
@@ -611,6 +649,8 @@ def feed_revision_id(etag: str | None, text: str) -> str:
     """The revision id for a fetched body: the ETag made key-safe, else the body SHA-256."""
     if etag:
         safe = re.sub(r"[^A-Za-z0-9._-]", "", etag.removeprefix("W/").replace('"', ""))
-        if 0 < len(safe) <= 128:
+        # Not a name the cache keeps for itself: `ETag: "head"` wrote its record
+        # over head.json, and a leading dot hid the files (w5/645).
+        if 0 < len(safe) <= 128 and safe != "head" and safe[0].isalnum():
             return safe
     return sha256(text.encode("utf-8")).hexdigest()

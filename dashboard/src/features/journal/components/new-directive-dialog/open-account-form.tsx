@@ -1,13 +1,9 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQuery } from "@apollo/client/react";
+import { useMutation } from "@apollo/client/react";
 import { format } from "date-fns";
-import {
-  BulkEntriesDocument,
-  LedgerEntryType,
-  GetLedgerDocument,
-} from "@/graphql/definitions";
+import { BulkEntriesDocument, LedgerEntryType } from "@/graphql/definitions";
 import { Button } from "@/common/components/ui/button";
 import { Input } from "@/common/components/ui/input";
 import { Alert, AlertDescription } from "@/common/components/ui/alert";
@@ -16,16 +12,14 @@ import {
   FormControl,
   FormField,
   FormItem,
+  FormLabel,
   FormMessage,
 } from "@/common/components/ui/form";
 import { DatePicker } from "@/common/components/ui/date-picker";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { track } from "@/common/analytics";
 import { useErrorMessage } from "@/common/lib/errors/error-message";
-import {
-  accountProblemMessage,
-  buildOpenAccountSchema,
-} from "@/common/lib/beancount/open-account-schema";
+import { useOpenAccountSchema } from "@/common/hooks/use-open-account-schema";
 
 interface OpenAccountFormProps {
   ledgerId: string;
@@ -38,34 +32,7 @@ export function OpenAccountForm({ ledgerId, onSuccess }: OpenAccountFormProps) {
   const [addEntryOpen] = useMutation(BulkEntriesDocument);
   const [error, setError] = useState<string | null>(null);
 
-  const { data: ledgerData } = useQuery(GetLedgerDocument, {
-    variables: { ledgerId },
-    skip: !ledgerId,
-  });
-
-  const accountPrefixes = useMemo(() => {
-    const opts = ledgerData?.getLedger?.options;
-    if (!opts) return [];
-    return [
-      opts.nameAssets,
-      opts.nameLiabilities,
-      opts.nameEquity,
-      opts.nameIncome,
-      opts.nameExpenses,
-    ].filter(Boolean);
-  }, [ledgerData]);
-
-  const schema = useMemo(
-    () =>
-      buildOpenAccountSchema(accountPrefixes, {
-        required: t("page.accounts.accountNameRequired"),
-        mustStartWith: t("page.accounts.accountMustStartWith", {
-          prefixes: accountPrefixes.join(", "),
-        }),
-        invalid: accountProblemMessage(t),
-      }),
-    [accountPrefixes, t],
-  );
+  const { accountPrefixes, schema } = useOpenAccountSchema(ledgerId);
 
   type FormData = {
     date: Date;
@@ -129,9 +96,9 @@ export function OpenAccountForm({ ledgerId, onSuccess }: OpenAccountFormProps) {
             name="date"
             render={({ field }) => (
               <FormItem>
+                <FormLabel className="sr-only">{t("journal.date")}</FormLabel>
                 <FormControl>
                   <DatePicker
-                    id="date"
                     value={field.value}
                     onChange={(d) => field.onChange(d)}
                     required
@@ -147,6 +114,9 @@ export function OpenAccountForm({ ledgerId, onSuccess }: OpenAccountFormProps) {
             name="account"
             render={({ field }) => (
               <FormItem className="flex-1">
+                <FormLabel className="sr-only">
+                  {t("journal.accountLabel")}
+                </FormLabel>
                 <FormControl>
                   <Input
                     placeholder={

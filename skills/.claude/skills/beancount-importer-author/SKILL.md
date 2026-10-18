@@ -1,6 +1,7 @@
 ---
 name: beancount-importer-author
 description: Write or repair a reusable Beangulp importer from a sample bank export, with reviewed golden files and a passing test harness. Use when a source needs a tested Python importer or its format changed. Wire the confirmed runner through bea ingest; keep generate/test in the authoring project. Skip one-off imports, reconciliation, finance-app migration and ledger writes.
+metadata: {"openclaw": {"homepage": "https://github.com/bex-co/beancount-io/tree/main/skills", "requires": {"anyBins": ["bea", "bean-check"]}, "install": [{"id": "brew", "kind": "brew", "formula": "bex-co/tap/bea", "bins": ["bea"], "label": "Install bea (Homebrew)"}, {"id": "uv", "kind": "uv", "package": "beancount-io", "bins": ["bea"], "label": "Install bea (uv)"}]}, "hermes": {"category": "finance", "tags": ["beancount", "accounting", "beangulp", "importer"]}}
 ---
 
 # beancount-importer-author

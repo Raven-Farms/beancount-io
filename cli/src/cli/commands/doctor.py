@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import errno
 import os
 import re
 import shlex
@@ -17,9 +18,18 @@ from cli import output
 from cli.config import DEFAULT_ENTRY_FILE_FALLBACKS
 from cli.context import refuse_expanding_ledger_path
 from cli.engine import launch
-from cli.errors import BeaError, ConflictError, LedgerError, UsageError, refuse_json, refuse_misplaced_global
+from cli.errors import (
+    AuthError,
+    BeaError,
+    ConflictError,
+    LedgerError,
+    UsageError,
+    refuse_json,
+    refuse_misplaced_global,
+)
 from cli.native_command import ForwardingCommand
 from cli.native_help import native_help, native_options
+from cli.paths import expand_path
 from cli.utils import decode_error_message, has_bom
 
 doctor_app = typer.Typer(
@@ -148,24 +158,27 @@ def _located_against_ledger(op: str, args: list[str]) -> list[str]:
     operands = _operand_indices(args)
     if len(operands) < 2:
         return args
-    ledger = Path(args[operands[0]]).expanduser()
+    ledger = expand_path(Path(args[operands[0]]), "doctor ledger")
     if not ledger.is_file():
         return args
     position = operands[1]
     # Upstream's own split: the filename is everything before the trailing
     # line fields, so a colon inside it (`tx:jan.bean:1`) belongs to the name.
-    lines = r"\d+:\d+" if op == "region" else r"\d+"
-    match = re.fullmatch(rf"(.+):({lines})", args[position])
-    if match is None:
-        return args
-    head, rest = match.groups()
-    if Path(head).is_absolute() or Path(head).exists():
-        return args
-    candidate = ledger.parent / head
-    if not candidate.exists():
-        return args
-    args = list(args)
-    args[position] = f"{candidate}:{rest}"
+    # `linked` takes a line or, like `region`, a `start:end` range; the
+    # range form was read as file `jan.bean:1` and left unresolved (w5/494).
+    forms = [r"\d+:\d+"] if op == "region" else [r"\d+:\d+", r"\d+"] if op == "linked" else [r"\d+"]
+    for lines in forms:
+        match = re.fullmatch(rf"(.+):({lines})", args[position])
+        if match is None:
+            continue
+        head, rest = match.groups()
+        if Path(head).is_absolute() or Path(head).exists():
+            return args
+        candidate = ledger.parent / head
+        if candidate.exists():
+            args = list(args)
+            args[position] = f"{candidate}:{rest}"
+            return args
     return args
 
 
@@ -203,6 +216,8 @@ def _refuse_undecodable(ledger: str) -> None:
     if not root.is_file():
         return
     for member in output.ledger_closure(root):
+        if output.is_encrypted(member):
+            continue
         try:
             member.read_bytes().decode("utf-8")
         except OSError:
@@ -230,6 +245,11 @@ def _refuse_plugin_failures(op: str, ledger: str) -> None:
         return
     declared = False
     for member in output.ledger_closure(root):
+        if output.is_encrypted(member):
+            # Its decrypted text may declare a plugin. The helper can inspect
+            # that content; scanning ciphertext cannot establish its absence.
+            declared = True
+            continue
         with contextlib.suppress(OSError):
             declared = declared or bool(_PLUGIN_DIRECTIVE.search(member.read_bytes()))
     if not declared:
@@ -254,7 +274,8 @@ def _closure_syntax_errors_of(filename: str) -> list[str]:
     root = Path(filename)
     if not root.is_file():
         return []
-    members = [str(member) for member in output.ledger_closure(root)]
+    # An encrypted include is decrypted by the loader, never parsed as text (w5/495).
+    members = [str(member) for member in output.ledger_closure(root) if not output.is_encrypted(member)]
     try:
         data = launch.helper_json(["syntax", *members])
     except BeaError:
@@ -291,14 +312,22 @@ def _needs_compat(op: str, args: list[str]) -> bool:
     positionals = _positionals(args)
     if not positionals:
         return False
-    root = Path(positionals[0]).expanduser()
+    root = expand_path(Path(positionals[0]), "doctor ledger")
     if not root.is_file():
         return False
+    # Upstream resolves the ledger path's symlinks: its entries carried the
+    # real path, so a location under a linked folder matched nothing, and a
+    # linked root file read the includes beside its target. The helper loads
+    # the path as named, as `check` and `list` do (w5/568).
+    if op not in _SINGLE_FILE_OPS and os.path.realpath(root) != os.path.abspath(root):
+        return True
     try:
         members = [root] if op in _SINGLE_FILE_OPS else output.ledger_closure(root)
     except OSError:
         return False
     for member in members:
+        if output.is_encrypted(member):
+            continue
         if has_bom(member):
             return True
         try:
@@ -356,7 +385,16 @@ def _replayed(completed: subprocess.CompletedProcess[str]) -> subprocess.Complet
 def _forward(op: str, ctx: typer.Context) -> None:
     """Pass remaining argv through to bean-doctor, resolving a relative location."""
     _refuse_json()
-    code = _run(op, _located_against_ledger(op, list(ctx.args)))
+    args = _located_against_ledger(op, list(ctx.args))
+    operands = _positionals(args)
+    if op == "context" and len(operands) >= 2:
+        filename = Path(operands[1].rsplit(":", 1)[0])
+        if output.is_encrypted(filename):
+            raise UsageError(
+                f"doctor context cannot inspect a location inside encrypted file '{filename}': "
+                "Beancount decrypts it only while loading. Choose a location in a plaintext ledger file."
+            )
+    code = _run(op, args)
     raise typer.Exit(code)
 
 
@@ -493,8 +531,17 @@ def _private_roundtrip_artifacts(ledger: str) -> list[Path]:
     for path in _roundtrip_artifacts(ledger):
         try:
             os.close(os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600))
-        except OSError:
-            continue  # Upstream reports an unwritable directory itself.
+        except OSError as exc:
+            if exc.errno in (errno.EACCES, errno.EPERM, errno.EROFS):
+                # Upstream raised, then crashed in its own cleanup: a 34-line
+                # double traceback, exit 1 (w5/572). A permission failure is 3.
+                for made in created:
+                    made.unlink(missing_ok=True)
+                raise AuthError(
+                    f"doctor roundtrip writes scratch copies beside the ledger, and {path.parent} is not "
+                    "writable. Nothing was written."
+                ) from None
+            continue
         created.append(path)
     return created
 
@@ -568,10 +615,26 @@ def _forward_directories(ctx: typer.Context) -> None:
     raise typer.Exit(0)
 
 
+def _refuse_partial_load(op: str, ledger: str) -> None:
+    """Refuse an answer that would silently leave out what a syntax error hid.
+
+    The loader skips an unparseable directive and carries on, so
+    `missing-open` listed the opens of the entries it could parse with exit
+    0, and `linked` showed half a link group (w5/596). Refused before any
+    output: `missing-open main.bean >> main.bean` appends what it prints.
+    """
+    errors = _closure_syntax_errors_of(ledger)
+    if errors:
+        raise LedgerError(f"doctor {op} cannot load {ledger}: {errors[0]}", details=errors[1:])
+
+
 def _forward_scoped(op: str, ctx: typer.Context) -> None:
     """Fail an empty link/region scope instead of printing a blank success."""
     _refuse_json()
     args = _located_against_ledger(op, list(ctx.args))
+    located = _positionals(args)
+    if located:
+        _refuse_partial_load(op, located[0])
     # Through the helper rather than the `bean-doctor` script: same upstream
     # command, run where bea can number its balance tree from the entries in
     # scope instead of from the whole ledger's display context (w3/352).
@@ -594,8 +657,10 @@ def _forward_missing_open(ctx: typer.Context) -> None:
     """Print upstream's missing opens, then name the inactive ones it omits."""
     _refuse_json()
     args = list(ctx.args)
-    _replayed(_capture("missing-open", args))
     positionals = _positionals(args)
+    if positionals:
+        _refuse_partial_load("missing-open", positionals[0])
+    _replayed(_capture("missing-open", args))
     if not positionals:
         raise typer.Exit(0)
     try:
@@ -606,15 +671,16 @@ def _forward_missing_open(ctx: typer.Context) -> None:
         details = []
     inactive = [line for line in details if "inactive account" in line]
     if inactive:
-        for line in inactive:
-            typer.echo(line)
         # Beancount says "inactive" for a posting dated before the open as
-        # well as after the close, and reports one line per posting.
+        # well as after the close, and reports one line per posting. They are
+        # the error's details, on stderr: stdout holds only the `open` lines,
+        # which `missing-open main.bean >> main.bean` appends (w5/567).
         accounts = {line.split("inactive account '", 1)[1].split("'", 1)[0] for line in inactive if "'" in line}
         raise LedgerError(
             f"doctor missing-open found {len(inactive)} reference(s) to {len(accounts) or len(inactive)} "
             "inactive account(s) (posted before the open date or after the close); "
-            "move the open earlier, reopen the account, or fix the postings."
+            "move the open earlier, reopen the account, or fix the postings.",
+            details=inactive,
         )
     raise typer.Exit(0)
 
@@ -645,7 +711,9 @@ def _register(op: str) -> None:
     )
     def _cmd(ctx: typer.Context) -> None:
         assert forwarder is not None
-        refuse_misplaced_global(f"doctor {op}", list(ctx.args), native_options(f"doctor {op}"))
+        refuse_misplaced_global(
+            f"doctor {op}", list(ctx.args), native_options(f"doctor {op}"), reads="the ledger", json_output=False
+        )
         _refuse_directory_ledger(op, list(ctx.args))
         # Every operation that loads its ledger starts upstream's loader, which
         # deletes an unreadable file at the cache path the environment names.
@@ -656,10 +724,13 @@ def _register(op: str) -> None:
         if positionals and op != "list-options":
             refuse_expanding_ledger_path(os.path.abspath(positionals[0]))
         if positionals and op not in _NON_LOADING_OPS:
-            if output.has_unreadable_include(Path(positionals[0])):
+            ledger = Path(positionals[0])
+            if output.has_unreadable_include(ledger) or output.has_duplicate_member(ledger):
                 # Upstream answers an include it cannot open with a traceback;
                 # the helper names the include and its includer, as every
-                # read does (w5/120, w5/438).
+                # read does (w5/120, w5/438). Upstream also loads one file
+                # reached under two names twice, counting it twice, where the
+                # helper refuses with `Duplicate include` (w5/433, w5/569).
                 launch.helper_json(["check", "--file", positionals[0]])
             _refuse_undecodable(positionals[0])
             _refuse_plugin_failures(op, positionals[0])
@@ -678,6 +749,8 @@ for _op in _OPS:
 )
 def dump_lexer(ctx: typer.Context) -> None:
     """Alias for bean-doctor lex."""
-    refuse_misplaced_global("doctor dump-lexer", list(ctx.args), native_options("doctor dump-lexer"))
+    refuse_misplaced_global(
+        "doctor dump-lexer", list(ctx.args), native_options("doctor dump-lexer"), reads="the ledger", json_output=False
+    )
     _refuse_directory_ledger("dump-lexer", list(ctx.args))
     _forward_parse("lex", ctx)

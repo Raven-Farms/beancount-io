@@ -33,6 +33,7 @@ query GetPlaidAccountsForLedger($ledgerId: String!) {
     accountName
     mask
     institutionName
+    currency
   }
 }
 

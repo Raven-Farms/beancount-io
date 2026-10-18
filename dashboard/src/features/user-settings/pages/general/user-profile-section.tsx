@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useMutation } from "@apollo/client/react";
+import { CombinedGraphQLErrors } from "@apollo/client/errors";
 import { User } from "lucide-react";
 import {
   Card,
@@ -34,6 +35,19 @@ import {
 import { toast } from "sonner";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { useErrorMessage } from "@/common/lib/errors/error-message";
+import { usernameRuleError } from "@/common/lib/auth/username-rule";
+
+/** The server refused the name as outside the username rule (w0/036). */
+function isUsernameRuleRefusal(error: unknown): boolean {
+  return (
+    CombinedGraphQLErrors.is(error) &&
+    error.errors.some(
+      ({ extensions }) =>
+        extensions?.code === "BAD_USER_INPUT" &&
+        extensions.field === "username",
+    )
+  );
+}
 
 interface UserProfileSectionProps {
   userData: GetCurrentUserQuery | undefined;
@@ -49,6 +63,9 @@ export function UserProfileSection({ userData }: UserProfileSectionProps) {
   const [isUsernameDialogOpen, setIsUsernameDialogOpen] = useState(false);
   const [isNameDialogOpen, setIsNameDialogOpen] = useState(false);
   const [newUsername, setNewUsername] = useState("");
+  // The rule error shows once the name is edited or submitted, not on open.
+  const [usernameEdited, setUsernameEdited] = useState(false);
+  const [usernameRefused, setUsernameRefused] = useState(false);
   const [newFirstName, setNewFirstName] = useState("");
   const [newLastName, setNewLastName] = useState("");
 
@@ -62,7 +79,10 @@ export function UserProfileSection({ userData }: UserProfileSectionProps) {
       setNewUsername("");
     },
     onError: (err) => {
-      toast.error(formatError(err));
+      // A rule refusal belongs on the field, in the reader's language; the
+      // server's own text is never shown.
+      if (isUsernameRuleRefusal(err)) setUsernameRefused(true);
+      else toast.error(formatError(err));
     },
     refetchQueries: [
       { query: GetCurrentUserDocument },
@@ -89,12 +109,20 @@ export function UserProfileSection({ userData }: UserProfileSectionProps) {
     ],
   });
 
+  const trimmedUsername = newUsername.trim();
+  const usernameErrorKey = usernameRuleError(trimmedUsername);
+  const usernameError = usernameRefused
+    ? t(usernameErrorKey ?? "auth.usernameLowercaseAlphanumeric")
+    : usernameEdited && usernameErrorKey
+      ? t(usernameErrorKey)
+      : null;
+
   const handleUpdateUsername = () => {
-    if (!newUsername.trim()) {
-      toast.error(t("auth.usernameRequired"));
+    if (usernameErrorKey) {
+      setUsernameEdited(true);
       return;
     }
-    void updateUsername({ variables: { username: newUsername.trim() } });
+    void updateUsername({ variables: { username: trimmedUsername } });
   };
 
   const handleUpdateName = () => {
@@ -219,9 +247,11 @@ export function UserProfileSection({ userData }: UserProfileSectionProps) {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() =>
-                  setNewUsername(userData?.userProfile?.username || "")
-                }
+                onClick={() => {
+                  setNewUsername(userData?.userProfile?.username || "");
+                  setUsernameEdited(false);
+                  setUsernameRefused(false);
+                }}
               >
                 {t("common.edit")}
               </Button>
@@ -233,17 +263,45 @@ export function UserProfileSection({ userData }: UserProfileSectionProps) {
                   {t("userSettings.enterNewUsername")}
                 </DialogDescription>
               </DialogHeader>
-              <div className="py-4">
+              <div className="space-y-2 py-4">
                 <Input
                   value={newUsername}
-                  onChange={(e) => setNewUsername(e.target.value)}
+                  onChange={(e) => {
+                    setNewUsername(e.target.value);
+                    setUsernameEdited(true);
+                    setUsernameRefused(false);
+                  }}
                   placeholder={t("userSettings.enterNewUsernamePlaceholder")}
+                  aria-label={t("auth.username")}
+                  aria-invalid={usernameError ? true : undefined}
+                  aria-describedby={
+                    usernameError
+                      ? "username-rule username-error"
+                      : "username-rule"
+                  }
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       handleUpdateUsername();
                     }
                   }}
                 />
+                {/* Sign-up's rule, stated before submit (w0/047). */}
+                <div
+                  id="username-rule"
+                  className="space-y-0.5 text-sm text-muted-foreground"
+                >
+                  <p>{t("auth.usernameLowercaseAlphanumeric")}</p>
+                  <p>{t("auth.usernameMaxLength")}</p>
+                </div>
+                {usernameError ? (
+                  <p
+                    id="username-error"
+                    role="alert"
+                    className="text-sm text-destructive"
+                  >
+                    {usernameError}
+                  </p>
+                ) : null}
               </div>
               <DialogFooter>
                 <Button

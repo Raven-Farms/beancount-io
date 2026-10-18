@@ -17,13 +17,15 @@ from __future__ import annotations
 
 import json
 import os
-from contextlib import nullcontext
+from collections.abc import Iterator
+from contextlib import contextmanager, nullcontext
 from pathlib import Path
 from typing import Annotated, Any
 
 import typer
 
 from bea_engine import protocol, version
+from bea_engine.paths import expand_path
 
 app = typer.Typer(
     help="Beancount.io engine helper. Ledger operations that load Beancount, one JSON object per call.",
@@ -52,7 +54,8 @@ def check(
     native `bean-check` the user ran with its own options: it must not re-judge
     a ledger bean-check already accepted under them. A plugin that failed to
     load fails under any of those options, so that pass answers
-    `{"valid": false, "errors": [...], "plugin_failures": [...]}` for one.
+    `{"valid": false, "errors": [...], "plugin_failures": [...]}` for one, as
+    it does with `booking_failures` for a transaction bean-check raises on.
     `clean` says whether bean-check itself would find nothing: no loader
     error and none from the validations it adds.
     """
@@ -254,7 +257,8 @@ def add(
         str, typer.Option("--request", help="The directive as JSON, or '-' to read that JSON from stdin.")
     ],
     into: Annotated[
-        Path | None, typer.Option("--into", help="Write to this included file, relative to the root ledger.")
+        Path | None,
+        typer.Option("--into", help="Write to this included file, relative to the root ledger.", readable=False),
     ] = None,
     allow_errors: Annotated[
         bool, typer.Option("--allow-errors", help="Accept semantic ledger errors; syntax must still be valid.")
@@ -279,15 +283,57 @@ def add(
     with protocol.answering("add") as answer:
         from bea_engine.ledger import adding, write
 
-        ledger, into = write.write_through_root(_ledger(file), into)
-        answer.data = adding.answer(
-            ledger,
-            type,
-            _request(request),
-            into=into,
-            allow_errors=allow_errors,
-            strict_read=strict_read,
-        )
+        ledger, into, redirect = write.write_through_root(_ledger(file), into)
+        with _redirect_on_failure(redirect):
+            answer.data = adding.answer(
+                ledger,
+                type,
+                _request(request),
+                into=into,
+                allow_errors=allow_errors,
+                strict_read=strict_read,
+            )
+        _report_redirect(answer.data, ledger, redirect, "warnings")
+
+
+@contextmanager
+def _redirect_on_failure(redirect: str | None) -> Iterator[None]:
+    """Say a refused write was checked against the root, as the answer would have."""
+    try:
+        yield
+    except protocol.EngineError:
+        if redirect is not None:
+            protocol.note(redirect)
+        raise
+
+
+def _report_redirect(data: Any, ledger: Path, redirect: str | None, key: str) -> None:
+    """Put a write's redirect through its root into the answer, where `--json` sees it (w5/613)."""
+    if redirect is None or not isinstance(data, dict):
+        return
+    data[key] = [redirect, *(data.get(key) or [])]
+    data["root"] = str(ledger)
+
+
+@app.command()
+def root(
+    file: Annotated[Path, typer.Option("--file", "-f", help="The ledger file a write names.")],
+) -> None:
+    """The root ledger a write aimed at FILE is checked against, or null when FILE is the root.
+
+    Answers `{"root", "into", "note"}`. Reads include lines only, never the
+    ledger: the frontend asks before it reads import memory, which is kept
+    per root (w5/613).
+    """
+    with protocol.answering("root") as answer:
+        from bea_engine.ledger import write
+
+        ledger, into, redirect = write.write_through_root(_ledger(file), None)
+        answer.data = {
+            "root": str(ledger) if into is not None else None,
+            "into": str(into) if into is not None else None,
+            "note": redirect,
+        }
 
 
 @app.command()
@@ -297,7 +343,8 @@ def append(
         str, typer.Option("--text", help="Raw Beancount directive text, or '-' to read that text from stdin.")
     ],
     into: Annotated[
-        Path | None, typer.Option("--into", help="Write to this included file, relative to the root ledger.")
+        Path | None,
+        typer.Option("--into", help="Write to this included file, relative to the root ledger.", readable=False),
     ] = None,
     allow_errors: Annotated[
         bool, typer.Option("--allow-errors", help="Accept semantic ledger errors; syntax must still be valid.")
@@ -323,15 +370,17 @@ def append(
     with protocol.answering("append") as answer:
         from bea_engine.ledger import appending, write
 
-        ledger, into = write.write_through_root(_ledger(file), into)
-        answer.data = appending.answer(
-            ledger,
-            _text(text),
-            into=into,
-            allow_errors=allow_errors,
-            dry_run=dry_run,
-            token=appending.parse_token(token) if token is not None else None,
-        )
+        ledger, into, redirect = write.write_through_root(_ledger(file), into)
+        with _redirect_on_failure(redirect):
+            answer.data = appending.answer(
+                ledger,
+                _text(text),
+                into=into,
+                allow_errors=allow_errors,
+                dry_run=dry_run,
+                token=appending.parse_token(token) if token is not None else None,
+            )
+        _report_redirect(answer.data, ledger, redirect, "warnings")
 
 
 @app.command()
@@ -437,7 +486,7 @@ def init_ledger(
         from bea_engine import initiating
 
         answer.data = initiating.answer(
-            file.expanduser().absolute(),
+            expand_path(file, "--file").absolute(),
             currency=currency,
             date=date,
             opening_balances=list(opening_balance) if opening_balance else None,
@@ -460,7 +509,7 @@ def import_entries(
         str | None, typer.Option("--encoding", help="CSV text encoding for --csv: utf-8, cp1252, or latin-1.")
     ] = None,
     rules_file: Annotated[
-        Path | None, typer.Option("--rules", help="TOML categorization rules for --csv rows.")
+        Path | None, typer.Option("--rules", help="TOML categorization rules for --csv rows.", readable=False)
     ] = None,
     default_account: Annotated[
         str | None, typer.Option("--default-account", help="Counter account for unmatched --csv rows.")
@@ -475,7 +524,8 @@ def import_entries(
         list[str] | None, typer.Option("--id-key", help="Stable bank ID metadata key; repeatable.")
     ] = None,
     into: Annotated[
-        Path | None, typer.Option("--into", help="Write to an included file, relative to the root ledger.")
+        Path | None,
+        typer.Option("--into", help="Write to an included file, relative to the root ledger.", readable=False),
     ] = None,
     allow_errors: Annotated[
         bool, typer.Option("--allow-errors", help="Accept semantic ledger errors; syntax must still be valid.")
@@ -495,7 +545,11 @@ def import_entries(
         from bea_engine import importing
         from bea_engine.ledger import write
 
-        ledger, into = write.write_through_root(_ledger(file), into)
+        ledger, into, redirect = write.write_through_root(_ledger(file), into)
+        if redirect is not None:
+            # The frontend resolves the root itself before reading its import
+            # memory, so this is a direct caller's write through a leaf.
+            protocol.note(redirect)
         # An apply decides its rows against the ledger it read, so it queues
         # behind other `bea` writers before that read rather than refusing
         # what one of them committed meanwhile (w5/183). A preview writes
@@ -624,8 +678,11 @@ def source_query(
     output: Annotated[Path | None, typer.Option("--output", "-o", help="Query output file.", readable=False)] = None,
     numberify: Annotated[bool, typer.Option("--numberify", "-m")] = False,
     no_errors: Annotated[bool, typer.Option("--no-errors", "-q")] = False,
+    debug: Annotated[bool, typer.Option("--debug")] = False,
 ) -> None:
     """Run one native query, streaming upstream's rendering, with a failing status for usage errors."""
+    import traceback
+
     from bea_engine import query as bql
 
     try:
@@ -642,6 +699,14 @@ def source_query(
         raise
     except OSError as exc:
         raise SystemExit(_source_io_failure(exc)) from None
+    except Exception as exc:
+        # Anything else upstream raised: one line, the stack only under `--debug` (w5/472).
+        if debug:
+            protocol.note("".join(traceback.format_exception(exc)).rstrip())
+            protocol.note(f"error: {bql.unexpected_failure(exc)}")
+        else:
+            protocol.note(f"error: {bql.unexpected_failure(exc)} Pass --debug before the command for a traceback.")
+        raise SystemExit(protocol.EXIT_VALIDATION) from None
 
 
 @app.command(
@@ -748,7 +813,9 @@ def price_refresh(
 @app.command("price-export")
 def price_export(
     file: Annotated[Path, typer.Option("--file", "-f", help="Root ledger file to export.")],
-    output: Annotated[Path | None, typer.Option("--output", "-o", help="Directory for the portable copy.")] = None,
+    output: Annotated[
+        Path | None, typer.Option("--output", "-o", help="Directory for the portable copy.", readable=False)
+    ] = None,
     allow_errors: Annotated[
         bool,
         typer.Option("--allow-errors", help="Export unavailable sources with their marker alone."),
@@ -866,6 +933,8 @@ def _validate(file: Path, *, documents_only: bool = False) -> dict[str, Any]:
 
     from beancount.core.data import Document
 
+    from bea_engine.compat import is_reserved_location
+    from bea_engine.managed_load import data_type_errors, is_booking_failure
     from bea_engine.query import format_error, is_plugin_failure
     from fava.core.loader import load_file
 
@@ -874,26 +943,35 @@ def _validate(file: Path, *, documents_only: bool = False) -> dict[str, Any]:
     # loader errors plus the validations it adds for `check`. With no
     # bean-check option to honor, a clean answer spares the frontend a second
     # load that would run every plugin again (w5/430).
-    from beancount.ops.validation import HARDCORE_VALIDATIONS
-
-    clean = not errors and not any(validate(entries, options) for validate in HARDCORE_VALIDATIONS)  # type: ignore[no-untyped-call]
+    validation_errors = data_type_errors(entries, options)
+    clean = not errors and not validation_errors
 
     from bea_engine.ledger.write import root_read_hint
 
     hint = root_read_hint(file) if errors else None
-    if errors and not documents_only:
+    # bean-check's own validations count here too: a plugin's malformed
+    # entries failed text `check` and passed `--json check`, the verdict
+    # scripts gate on (w5/493). `--documents-only` leaves them to bean-check.
+    if (errors or validation_errors) and not documents_only:
+        found = [*errors, *validation_errors]
         raise protocol.LedgerError(
-            f"{file}: {len(errors)} error(s).",
-            details=[*(format_error(error, ledger_file=file) for error in errors), *([hint] if hint else [])],
+            f"{file}: {len(found)} error(s).",
+            details=[*(format_error(error, ledger_file=file) for error in found), *([hint] if hint else [])],
         )
     failed = [format_error(error, ledger_file=file) for error in errors if is_plugin_failure(error)]
-    if failed:
-        # bean-check prints these as a traceback at `<load>:0`; the caller, which
-        # knows the options bean-check was given, picks the lines to show (w5/256).
+    unbookable = [format_error(error, ledger_file=file) for error in errors if is_booking_failure(error)]
+    reserved = [format_error(error, ledger_file=file) for error in errors if is_reserved_location(error)]
+    if failed or unbookable or reserved:
+        # bean-check prints these as a traceback at `<load>:0`, raises on the
+        # transaction booking cannot do the arithmetic for (w5/538), or accepts
+        # metadata that overwrites an entry's location (w5/630); the caller,
+        # which knows the options bean-check was given, picks the lines to show (w5/256).
         return {
             "valid": False,
             "errors": [format_error(error, ledger_file=file) for error in errors],
             "plugin_failures": failed,
+            "booking_failures": unbookable,
+            "reserved_keys": reserved,
             "root_hint": hint,
             "clean": False,
         }

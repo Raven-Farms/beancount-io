@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 import typer
 
 from cli import context, output
 from cli.commands.cloud.generated.ledger import register_ledger_commands
-from cli.errors import LedgerError, UnreadableSuccess, unknown_write_outcome
+from cli.errors import GatewayTimeout, LedgerError, UnreadableSuccess, UsageError, unknown_write_outcome
+from cli.single_value import SingleValueCommand
 from cli.utils import single_line
 
 ledger_app = typer.Typer(help="Manage hosted ledgers on beancount.io", no_args_is_help=True, rich_markup_mode=None)
@@ -42,7 +43,23 @@ def _clone_failure_message(ledger_name: str | None, error: object, target: Path 
     return f"Clone failed for {remote}. Ensure you have SSH access."
 
 
-@ledger_app.command("create")
+class _CreateCommand(SingleValueCommand):
+    """`create` refuses two values for one option, the visibility pair included.
+
+    `--private --public` created a public ledger (the last flag won) and
+    `-d a -d b` kept `b`, with the request already sent (w5/623). A flag pair
+    never reaches the single-value parser, so it is checked here, before
+    credentials or any request.
+    """
+
+    def parse_args(self, ctx: Any, args: list[str]) -> list[str]:
+        typed = set(args[: args.index("--")] if "--" in args else args)
+        if {"--private", "--public"} <= typed:
+            raise UsageError("Pass --private or --public, not both: a ledger has one visibility. Nothing was created.")
+        return super().parse_args(ctx, args)
+
+
+@ledger_app.command("create", cls=_CreateCommand)
 def ledger_create(
     name: Annotated[str, typer.Argument(help="Ledger name (lowercase, hyphens ok)")],
     description: Annotated[str | None, typer.Option("--description", "-d", help="Ledger description")] = None,
@@ -66,6 +83,9 @@ def ledger_create(
     # Before credentials, as in `clone` and `show`: a name the service would
     # refuse is the caller's mistake, and saying "not logged in" hides it.
     name = ledger_name(name)
+    if directory is not None and not clone:
+        # It was read only `if clone:`, so the ledger was created and nothing cloned, unsaid (w5/623).
+        raise UsageError("--dir is where --clone puts the new ledger; add --clone, or drop --dir. Nothing was created.")
     if clone:
         manager.ensure_git_available()
         # A target git is certain to refuse is refused here, before the ledger
@@ -75,11 +95,12 @@ def ledger_create(
     client = authenticated_client()
     try:
         ledger = manager.create_ledger(client, name, description=description, private=private)
-    except (httpx.ConnectError, httpx.ConnectTimeout):
+    except (httpx.ConnectError, httpx.ConnectTimeout, httpx.ProxyError):
         # No request left the machine (refused, DNS failure), so nothing was
         # created: "could not reach the server", not an unknown outcome (w5/368).
+        # A proxy that refused the tunnel never forwarded it either (w5/519).
         raise
-    except (httpx.TimeoutException, httpx.TransportError, UnreadableSuccess) as e:
+    except (httpx.TimeoutException, httpx.TransportError, UnreadableSuccess, GatewayTimeout) as e:
         raise unknown_write_outcome(f"Creating ledger '{name}'", e) from e
 
     if not ctx.json_output:
@@ -135,9 +156,15 @@ def ledger_clone(
     # As `create --clone` does: a missing git is a usage error found before
     # the server is asked anything, not an OSError after it (w5/372).
     manager.ensure_git_available("bea cloud ledger clone")
+    # A target git is certain to refuse, as `create --clone` refuses it: a
+    # `--dir` before credentials and the request, the default `./<name>`
+    # once the lookup names it, never git's message after it (w5/520).
+    if directory is not None:
+        manager.refuse_occupied_clone_target(directory, nothing="cloned")
     ledger = manager.get_ledger(authenticated_client(), full_name)
     manager.check_clone_url(ledger.ssh_url)
     target = directory or manager.default_clone_dir(ledger.name)
+    manager.refuse_occupied_clone_target(target, nothing="cloned")
     shown_name, shown_target = single_line(ledger.full_name), single_line(str(target))
     output.note(f"Cloning '{shown_name}' to '{shown_target}'...")
     try:

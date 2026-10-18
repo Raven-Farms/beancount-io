@@ -129,6 +129,18 @@ const zhJournal: Record<string, TranslationEntry> = {
     message: "自定义",
     description: "Custom entry type filter",
   },
+  "journal.commodity": {
+    message: "商品",
+    description: "Name of the Commodity directive type",
+  },
+  "journal.event": {
+    message: "事件",
+    description: "Name of the Event directive type",
+  },
+  "journal.query": {
+    message: "查询",
+    description: "Name of the Query directive type",
+  },
   "journal.date": {
     message: "日期",
     description: "Label for date field",
@@ -430,6 +442,96 @@ const zhJournal: Record<string, TranslationEntry> = {
     message: "删除分录 {number}",
     description:
       "Accessible name for removing a numbered transaction posting row",
+  },
+  "journal.payee": {
+    message: "收款人",
+    description: "Label for the payee field",
+  },
+  "journal.accountLabel": {
+    message: "账户",
+    description: "Label for the account field of a directive form",
+  },
+  "journal.amountLabel": {
+    message: "金额",
+    description: "Label for the amount field of a directive form",
+  },
+  "journal.currencyLabel": {
+    message: "货币",
+    description: "Label for the currency field of a directive form",
+  },
+  "journal.postingAccount": {
+    message: "分录 {number} 账户",
+    description:
+      "Accessible label for a numbered transaction posting's account field",
+  },
+  "journal.postingAmount": {
+    message: "分录 {number} 金额",
+    description:
+      "Accessible label for a numbered transaction posting's amount field",
+  },
+  "journal.postingCurrency": {
+    message: "分录 {number} 货币",
+    description:
+      "Accessible label for a numbered transaction posting's currency field",
+  },
+  "journal.postingsUnbalanced": {
+    message:
+      "分录不平衡：相差 {residual}。请调整金额，或清空其中一项以自动平衡。",
+    description:
+      "Shown when a new transaction's postings leave a residual; {residual} is the amount and currency, e.g. 1 USD",
+  },
+  "journal.accountNotOpen": {
+    message: "{account} 在此账本中未开立。",
+    description:
+      "Shown under a New Entry account field naming an account the ledger never opened; {account} is the name",
+  },
+  "journal.alsoOpenAccount": {
+    message: "同时在 {date} 开立 {account}",
+    description:
+      "Checkbox label that adds an open directive for {account} dated {date} to the same New Entry write",
+  },
+  "journal.accountClosedBefore": {
+    message: "{account} 已于 {date} 关闭，早于此分录。",
+    description:
+      "Shown under a New Entry account field naming an account closed before the entry; {date} is its close date",
+  },
+  "journal.accountOpensAfter": {
+    message: "{account} 于 {date} 开立，晚于此分录。",
+    description:
+      "Shown under a New Entry account field naming an account opened after the entry; {date} is its open date",
+  },
+  "journal.discardEntryEditTitle": {
+    message: "放弃编辑？",
+    description:
+      "Title of the confirmation shown when leaving Entry Context with unsaved source edits",
+  },
+  "journal.discardEntryEditDescription": {
+    message: "对此分录源文本的更改尚未保存。",
+    description: "Body of the Entry Context discard confirmation",
+  },
+  "journal.keepEditing": {
+    message: "继续编辑",
+    description:
+      "Button that returns to the Entry Context editor with the edit intact",
+  },
+  "journal.discardEntryEdit": {
+    message: "放弃",
+    description: "Button that discards the Entry Context edit and leaves",
+  },
+  "journal.entryChangedElsewhere": {
+    message:
+      "此分录在你打开后已被更改或删除，因此你的编辑未保存。请复制你的编辑，然后重新加载以查看最新版本。",
+    description:
+      "Entry Context save refused because the entry changed elsewhere since it was opened",
+  },
+  "journal.copyMyEdit": {
+    message: "复制我的编辑",
+    description: "Copies the unsaved Entry Context edit to the clipboard",
+  },
+  "journal.reloadEntries": {
+    message: "重新加载",
+    description:
+      "Closes Entry Context and refreshes the journal to show the latest entries",
   },
   "journal.autoAmount": {
     message: "汽车",

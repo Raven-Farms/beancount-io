@@ -1,13 +1,19 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { z } from "zod";
+import {
+  searchBoolean,
+  searchEnum,
+  searchPositiveInteger,
+  searchString,
+} from "@/common/lib/search-params/tolerant";
 import { createLedgerHead } from "@/common/lib/seo/ledger-head";
 import FilesContentPage from "@/features/ledger-editor/files-content";
 
 const filesSchema = z.object({
-  type: z.enum(["file", "dir"]).default("dir"),
-  path: z.string().default(""),
-  editMode: z.boolean().optional(),
-  lineNumber: z.number().optional(),
+  type: searchEnum(["file", "dir"]).transform((type) => type ?? "dir"),
+  path: searchString().transform((path) => path ?? ""),
+  editMode: searchBoolean(),
+  lineNumber: searchPositiveInteger(),
 });
 
 /**

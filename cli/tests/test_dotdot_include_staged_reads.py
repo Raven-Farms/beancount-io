@@ -104,7 +104,7 @@ def test_a_second_quote_is_refused_beside_a_managed_include(
         offline=offline,
     )
 
-    assert result.returncode == 2, result.stdout + result.stderr
+    assert result.returncode == 4, result.stdout + result.stderr
     flat = " ".join(result.stderr.split())
     assert f"EUR already has a 2026-01-03 price of 1.10 USD (at {shared}:1); refusing 1.25 USD" in flat
     assert root.read_text() == before
@@ -165,7 +165,7 @@ def test_a_different_quote_into_a_new_period_file_is_refused(period_books: tuple
 
     result = _add(root, "add", "price", "--date", "2026-02-10", "-c", "HOOL", "--amount", "111 USD")
 
-    assert result.exit_code == 2, result.output
+    assert result.exit_code == 4, result.output
     flat = " ".join(result.output.split())
     assert f"HOOL already has a 2026-02-10 price of 110.00 USD (at {shared}:2); refusing 111 USD" in flat
     assert not (root.parent / "2026" / "02.bean").exists()

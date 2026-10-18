@@ -17,6 +17,12 @@ const SANKEY_LABEL_MAX_CHARS = 10;
 
 export const CASH_FLOW_ID = "cash-flow";
 export const SAVINGS_ID = "savings";
+/**
+ * The source that funds a deficit: what expenses drew beyond income, taken
+ * from existing balances. It shares the Savings role (and color, and label),
+ * so on the source side it reads as money from savings.
+ */
+export const SHORTFALL_ID = "shortfall";
 export const OTHER_INCOME_ACCOUNT = "__other_income__";
 export const OTHER_EXPENSES_ACCOUNT = "__other_expenses__";
 
@@ -145,7 +151,7 @@ export function sankeyRoleForId(id: string): SankeyRole {
   if (id === CASH_FLOW_ID) {
     return "hub";
   }
-  if (id === SAVINGS_ID) {
+  if (id === SAVINGS_ID || id === SHORTFALL_ID) {
     return "savings";
   }
   if (id === OTHER_INCOME_ACCOUNT) {
@@ -193,6 +199,13 @@ type TransformOptions = {
   otherLabel: string;
   cashFlowLabel: string;
   savingsLabel: string;
+  /**
+   * Labels an income or expense group whose name the other side also uses
+   * (`Income:Crypto` and `Expenses:Crypto` both read "Crypto"), so the two
+   * tell apart without relying on color. Identity by default.
+   */
+  incomeNodeLabel?: (name: string) => string;
+  expensesNodeLabel?: (name: string) => string;
   depth?: number;
   topN?: number;
 };
@@ -276,6 +289,8 @@ export function transformToSankeyData(options: TransformOptions): SankeyData {
     otherLabel,
     cashFlowLabel,
     savingsLabel,
+    incomeNodeLabel = (name: string) => name,
+    expensesNodeLabel = (name: string) => name,
     depth = SANKEY_DEPTH,
     topN = SANKEY_TOP_N,
   } = options;
@@ -301,6 +316,19 @@ export function transformToSankeyData(options: TransformOptions): SankeyData {
     OTHER_EXPENSES_ACCOUNT,
   );
 
+  // A group named on both sides gets its side named too (w0/034). The folded
+  // "Other" rows are left alone: they are generic, and their side is their
+  // position.
+  const accountNames = (rows: AccountNode[], other: string) =>
+    new Set(rows.filter((row) => row.account !== other).map((row) => row.name));
+  const incomeNames = accountNames(incomeRows, OTHER_INCOME_ACCOUNT);
+  const expenseNames = accountNames(expenseRows, OTHER_EXPENSES_ACCOUNT);
+  const sideLabel = (
+    row: AccountNode,
+    otherSide: Set<string>,
+    label: (name: string) => string,
+  ) => (otherSide.has(row.name) ? label(row.name) : row.name);
+
   const nodes: SankeyNodeDatum[] = [];
   const links: SankeyLinkDatum[] = [];
   const seen = new Set<string>();
@@ -317,7 +345,15 @@ export function transformToSankeyData(options: TransformOptions): SankeyData {
     if (row.value <= 0) {
       continue;
     }
-    pushNode(nodes, seen, row.account, row.name, sankeyRoleForId(row.account));
+    pushNode(
+      nodes,
+      seen,
+      row.account,
+      row.account === OTHER_INCOME_ACCOUNT
+        ? row.name
+        : sideLabel(row, expenseNames, incomeNodeLabel),
+      sankeyRoleForId(row.account),
+    );
     links.push({
       source: row.account,
       target: CASH_FLOW_ID,
@@ -329,7 +365,15 @@ export function transformToSankeyData(options: TransformOptions): SankeyData {
     if (row.value <= 0) {
       continue;
     }
-    pushNode(nodes, seen, row.account, row.name, sankeyRoleForId(row.account));
+    pushNode(
+      nodes,
+      seen,
+      row.account,
+      row.account === OTHER_EXPENSES_ACCOUNT
+        ? row.name
+        : sideLabel(row, incomeNames, expensesNodeLabel),
+      sankeyRoleForId(row.account),
+    );
     links.push({
       source: CASH_FLOW_ID,
       target: row.account,
@@ -341,7 +385,9 @@ export function transformToSankeyData(options: TransformOptions): SankeyData {
   // totals: refunds and other non-positive rows still count toward
   // `totalIncome` / `totalExpenses` (so those match the cards) but never
   // become ribbons — using them for Savings would make the hub taller than
-  // the income flow and break conservation on screen.
+  // the income flow and break conservation on screen. Conservation runs both
+  // ways: a surplus leaves the hub as Savings, and a deficit enters it from
+  // savings, or the hub stood taller than everything feeding it (w0/034).
   const linkedIncome = links
     .filter((l) => l.target === CASH_FLOW_ID)
     .reduce((sum, l) => sum + l.value, 0);
@@ -356,6 +402,13 @@ export function transformToSankeyData(options: TransformOptions): SankeyData {
       target: SAVINGS_ID,
       value: savings,
     });
+  } else if (savings < 0) {
+    pushNode(nodes, seen, SHORTFALL_ID, savingsLabel, "savings");
+    links.push({
+      source: SHORTFALL_ID,
+      target: CASH_FLOW_ID,
+      value: -savings,
+    });
   }
 
   return { nodes, links, totalIncome, totalExpenses };
@@ -367,11 +420,20 @@ export function sankeySavings(data: SankeyData): number | null {
   return link ? link.value : null;
 }
 
+/** What the chart draws from savings to cover a deficit, or null when it draws none. */
+export function sankeyShortfall(data: SankeyData): number | null {
+  const link = data.links.find(
+    (candidate) => candidate.source === SHORTFALL_ID,
+  );
+  return link ? link.value : null;
+}
+
 /**
  * The chart's screen-reader summary. The Sankey draws no values, so this is the
  * only way assistive technology learns any magnitude from it: money is
  * formatted like the income/expense chart beside it (with the ledger's
- * currency), and savings is named whenever the chart draws a Savings band.
+ * currency), and savings is named whenever the chart draws a Savings band —
+ * into savings for a surplus, out of it for a deficit.
  */
 export function cashFlowChartSummary(
   data: SankeyData,
@@ -385,10 +447,17 @@ export function cashFlowChartSummary(
     expenses: money(data.totalExpenses),
   };
   const savings = sankeySavings(data);
-  return savings === null
+  if (savings !== null) {
+    return t("cashFlowChartSummaryWithSavings", {
+      ...totals,
+      savings: money(savings),
+    });
+  }
+  const shortfall = sankeyShortfall(data);
+  return shortfall === null
     ? t("cashFlowChartSummary", totals)
-    : t("cashFlowChartSummaryWithSavings", {
+    : t("cashFlowChartSummaryWithShortfall", {
         ...totals,
-        savings: money(savings),
+        shortfall: money(shortfall),
       });
 }

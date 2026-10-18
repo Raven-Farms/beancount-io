@@ -78,8 +78,12 @@ class UserProfileResponse {
 
 @ObjectType()
 class SearchUser {
-  @Field(() => String)
-  public email: string;
+  @Field(() => String, {
+    nullable: true,
+    description:
+      "The match's email, returned only when the keyword was that email",
+  })
+  public email: string | null;
 
   @Field(() => String)
   public username: string;
@@ -153,12 +157,11 @@ export class AccountResolver {
     @Ctx() ctx: IContext,
     @Args() args: SearchUserInput,
   ): Promise<SearchUser[]> {
-    const users = await this.accountService.findUsersByEmailOrUsername(
+    return this.accountService.findUsersByEmailOrUsername(
       ctx.getCurrentIdentity(),
       args.keyword,
       Boolean(args.includeCurrentUser),
     );
-    return users.map((u) => ({ email: u.email, username: u.ledger_username }));
   }
 
   @Authenticated()

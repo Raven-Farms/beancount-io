@@ -552,7 +552,7 @@ def test_one_missing_account_reads_as_one_problem_not_one_per_row(book: Path) ->
     assert len(details) == 1
     assert "unknown account 'Expenses:Nope'" in details[0]
     assert "Same problem on 2 more lines:" in details[0]
-    assert "bea add open --account Expenses:Nope" in details[0]
+    assert "add open --account Expenses:Nope" in details[0]
 
 
 def test_distinct_problems_are_still_reported_separately(book: Path) -> None:
@@ -560,7 +560,9 @@ def test_distinct_problems_are_still_reported_separately(book: Path) -> None:
     with pytest.raises(Exception) as caught:
         ledger_write.validate_append(book, entries)
     details = getattr(caught.value, "details", [])
-    assert len(details) == 2
+    # The duplicate open also carries its remedy as a hint line (w5/488).
+    problems = [detail for detail in details if detail.startswith("Proposed append (not written): ")]
+    assert len(problems) == 2
     assert not any("Same problem on" in detail for detail in details)
 
 

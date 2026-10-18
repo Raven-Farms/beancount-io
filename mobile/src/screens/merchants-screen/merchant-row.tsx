@@ -17,7 +17,7 @@ import {
 import { useThemeStyle } from "@/common/hooks";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { formatLedgerDateShort } from "@/common/date-format";
-import { LEADING_TEXT_ALIGN } from "@/common/rtl";
+import { LEADING_TEXT_ALIGN, letterSpacing } from "@/common/rtl";
 import { AccountTypeIcon } from "@/components/account-type-icon";
 import { ColorTheme } from "@/types/theme-props";
 import { formatAmount } from "@/screens/transactions-screen/utils/transaction-display-utils";
@@ -103,7 +103,7 @@ const getStyles = (theme: ColorTheme) =>
       fontWeight: fontWeights.medium,
       color: theme.black80,
       textTransform: "uppercase",
-      letterSpacing: 0.3,
+      letterSpacing: letterSpacing(0.3),
     },
     subtitle: {
       marginTop: 2,

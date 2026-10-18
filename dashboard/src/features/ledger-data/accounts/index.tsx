@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useContext } from "react";
 import { useTranslations } from "@/common/hooks/use-translations";
 import {
   Link,
@@ -10,6 +10,7 @@ import { useQuery } from "@apollo/client/react";
 import { GetLedgerAccountDirectivesDocument } from "@/graphql/definitions";
 import { createLedgerId } from "@/common/lib/utils/encode";
 import { PageHeader } from "@/common/components/page-header";
+import { LedgerSearchParamsContext } from "@/common/providers/ledger-search-params-provider";
 import { useLedger } from "@/common/hooks/use-ledger";
 import { OpenAccountDialog } from "@/features/ledger-data/accounts/open-account-dialog";
 import { useApolloCacheClear } from "@/common/hooks/use-apollo-cache";
@@ -397,6 +398,10 @@ export default function LedgerAccountsPage() {
     setDeleteTarget(account);
   };
 
+  // The directory is all-time; a Time filter carried over from another page
+  // (filters persist across navigation) does not apply here, so say so.
+  const timeFilter = useContext(LedgerSearchParamsContext)?.searchParams.time;
+
   const { data, loading, error } = useQuery(
     GetLedgerAccountDirectivesDocument,
     {
@@ -455,6 +460,12 @@ export default function LedgerAccountsPage() {
           </Button>
         </LedgerWritePermission>
       </div>
+
+      {timeFilter && (
+        <p role="note" className="text-sm text-muted-foreground">
+          {t("page.accounts.timeFilterNotApplied")}
+        </p>
+      )}
 
       <div className="@container overflow-hidden rounded-xl border bg-card shadow-sm">
         <div className="flex flex-col gap-3 border-b bg-muted/20 p-3 @3xl:flex-row @3xl:items-center">

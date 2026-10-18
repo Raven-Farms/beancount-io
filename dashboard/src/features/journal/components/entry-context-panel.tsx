@@ -1,5 +1,6 @@
 import { useState, useEffect, useId, useRef } from "react";
 import { useQuery, useMutation } from "@apollo/client/react";
+import { CombinedGraphQLErrors } from "@apollo/client/errors";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -46,6 +47,7 @@ import {
 } from "@/common/lib/errors/error-message";
 import { useIsMobile } from "@/common/hooks/use-mobile";
 import { useFileNavigate } from "@/common/hooks/use-file-navigate";
+import { useWriteOutcome } from "@/common/hooks/use-write-outcome";
 import { useLedgerPermission } from "@/common/hooks/use-ledger-permission";
 import { restoreFocusOnDialogClose } from "@/common/lib/focus/restore-focus-on-dialog-close";
 import { readEntrySourceLocation } from "@/features/journal/lib/entry-source-location";
@@ -65,6 +67,23 @@ export interface EntryContextPanelProps {
    * owning dialog can skip opener focus restoration.
    */
   onSourceNavigate?: () => void;
+  /** Told whenever the source editor gains or loses unsaved changes. */
+  onDirtyChange?: (dirty: boolean) => void;
+  /**
+   * Asked before leaving for the source file; calls `proceed` when it may
+   * go, so an owner can confirm discarding unsaved changes first.
+   */
+  confirmLeave?: (proceed: () => void) => void;
+}
+
+/** A save that missed because the entry changed or vanished since loading. */
+function isStaleEntry(error: unknown): boolean {
+  return (
+    CombinedGraphQLErrors.is(error) &&
+    error.errors.some((item) =>
+      ["NOT_FOUND", "CONFLICT"].includes(String(item.extensions?.code)),
+    )
+  );
 }
 
 function EntryContextLoading() {
@@ -94,7 +113,9 @@ function EntryContextMain({
   entry,
   onGoToFile,
   canWrite,
+  onDirtyChange,
 }: {
+  onDirtyChange?: (dirty: boolean) => void;
   data: GetLedgerEntryContextQuery["getLedgerEntryContext"];
   entryHash: string;
   entry: JournalDirectiveType | null | undefined;
@@ -142,6 +163,10 @@ function EntryContextMain({
   useEffect(() => {
     setHasChanges(sourceText !== originalSource);
   }, [sourceText, originalSource]);
+
+  useEffect(() => {
+    onDirtyChange?.(editable && hasChanges);
+  }, [editable, hasChanges, onDirtyChange]);
 
   const handleSave = async () => {
     if (!editable || !entryHash || !hasChanges || isSaving) return;
@@ -449,12 +474,17 @@ export function EntryContextPanel({
   onSuccess,
   onDeleted,
   onSourceNavigate,
+  onDirtyChange,
+  confirmLeave,
 }: EntryContextPanelProps) {
   const { t } = useTranslations();
   const formatError = useErrorMessage();
   const fileNavigate = useFileNavigate();
   const clearCache = useApolloCacheClear();
   const { canWrite } = useLedgerPermission();
+  const writeOutcome = useWriteOutcome(ledgerId);
+  /** The edit a save could not land because the entry changed elsewhere. */
+  const [staleDraft, setStaleDraft] = useState<string | null>(null);
   const { data, loading, error } = useQuery(GetLedgerEntryContextDocument, {
     variables: {
       entryHash,
@@ -479,6 +509,7 @@ export function EntryContextPanel({
     sha256sum: string,
   ) => {
     if (!canWrite) return;
+    const before = writeOutcome.snapshot();
     try {
       await updateEntrySourceSlice({
         variables: {
@@ -490,12 +521,19 @@ export function EntryContextPanel({
           },
         },
       });
-      toast.success(t("journal.entrySavedSuccess"));
+      // An edit can break the ledger where creating would be refused
+      // (an unbalanced transaction); say so instead of "saved".
+      if (!(await writeOutcome.report(before))) {
+        toast.success(t("journal.entrySavedSuccess"));
+      }
       clearCache();
       onSuccess?.();
     } catch (saveError) {
       console.error("Failed to update entry:", saveError);
-      toast.error(formatError(saveError));
+      // The slice is addressed by the hash this panel loaded; an edit made
+      // elsewhere gives the entry a new one, so this save can only miss.
+      if (isStaleEntry(saveError)) setStaleDraft(newSource);
+      else toast.error(formatError(saveError));
       throw saveError;
     }
   };
@@ -524,11 +562,15 @@ export function EntryContextPanel({
   };
 
   const handleGoToFile = (filename: string, lineNumber: number) => {
-    onSourceNavigate?.();
-    fileNavigate(ledgerId, "file", filename, {
-      lineNumber,
-      editMode: canWrite,
-    });
+    const go = () => {
+      onSourceNavigate?.();
+      fileNavigate(ledgerId, "file", filename, {
+        lineNumber,
+        editMode: canWrite,
+      });
+    };
+    if (confirmLeave) confirmLeave(go);
+    else go();
   };
 
   if (loading) {
@@ -539,15 +581,49 @@ export function EntryContextPanel({
   }
   if (data?.getLedgerEntryContext) {
     return (
-      <EntryContextMain
-        data={data.getLedgerEntryContext}
-        onSave={handleSave}
-        onDelete={handleDelete}
-        entryHash={entryHash}
-        entry={entry}
-        onGoToFile={handleGoToFile}
-        canWrite={canWrite}
-      />
+      <>
+        {staleDraft !== null && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription className="space-y-3">
+              <p>{t("journal.entryChangedElsewhere")}</p>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    void navigator.clipboard
+                      .writeText(staleDraft)
+                      .then(() => toast.success(t("common.copied")))
+                  }
+                >
+                  {t("journal.copyMyEdit")}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => {
+                    clearCache();
+                    onSuccess?.();
+                  }}
+                >
+                  {t("journal.reloadEntries")}
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+        <EntryContextMain
+          data={data.getLedgerEntryContext}
+          onSave={handleSave}
+          onDelete={handleDelete}
+          entryHash={entryHash}
+          entry={entry}
+          onGoToFile={handleGoToFile}
+          canWrite={canWrite}
+          onDirtyChange={onDirtyChange}
+        />
+      </>
     );
   }
   return (

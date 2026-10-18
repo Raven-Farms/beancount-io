@@ -146,6 +146,18 @@ const faJournal: Record<string, TranslationEntry> = {
     message: "سفارشی",
     description: "Custom entry type filter",
   },
+  "journal.commodity": {
+    message: "کالا",
+    description: "Name of the Commodity directive type",
+  },
+  "journal.event": {
+    message: "رویداد",
+    description: "Name of the Event directive type",
+  },
+  "journal.query": {
+    message: "پرس‌وجو",
+    description: "Name of the Query directive type",
+  },
   "journal.date": {
     message: "تاریخ",
     description: "Label for date field",
@@ -448,6 +460,96 @@ const faJournal: Record<string, TranslationEntry> = {
     message: "حذف ردیف سند {number}",
     description:
       "Accessible name for removing a numbered transaction posting row",
+  },
+  "journal.payee": {
+    message: "دریافت‌کننده",
+    description: "Label for the payee field",
+  },
+  "journal.accountLabel": {
+    message: "حساب",
+    description: "Label for the account field of a directive form",
+  },
+  "journal.amountLabel": {
+    message: "مبلغ",
+    description: "Label for the amount field of a directive form",
+  },
+  "journal.currencyLabel": {
+    message: "ارز",
+    description: "Label for the currency field of a directive form",
+  },
+  "journal.postingAccount": {
+    message: "حساب ردیف سند {number}",
+    description:
+      "Accessible label for a numbered transaction posting's account field",
+  },
+  "journal.postingAmount": {
+    message: "مبلغ ردیف سند {number}",
+    description:
+      "Accessible label for a numbered transaction posting's amount field",
+  },
+  "journal.postingCurrency": {
+    message: "ارز ردیف سند {number}",
+    description:
+      "Accessible label for a numbered transaction posting's currency field",
+  },
+  "journal.postingsUnbalanced": {
+    message:
+      "ردیف‌های سند تراز نیستند: {residual} باقی مانده است. یک مبلغ را اصلاح کنید یا یکی را خالی بگذارید تا خودکار تراز شود.",
+    description:
+      "Shown when a new transaction's postings leave a residual; {residual} is the amount and currency, e.g. 1 USD",
+  },
+  "journal.accountNotOpen": {
+    message: "{account} در این دفتر باز نیست.",
+    description:
+      "Shown under a New Entry account field naming an account the ledger never opened; {account} is the name",
+  },
+  "journal.alsoOpenAccount": {
+    message: "{account} را هم در {date} باز کن",
+    description:
+      "Checkbox label that adds an open directive for {account} dated {date} to the same New Entry write",
+  },
+  "journal.accountClosedBefore": {
+    message: "{account} در {date}، پیش از این ثبت، بسته شده است.",
+    description:
+      "Shown under a New Entry account field naming an account closed before the entry; {date} is its close date",
+  },
+  "journal.accountOpensAfter": {
+    message: "{account} در {date}، پس از این ثبت، باز می‌شود.",
+    description:
+      "Shown under a New Entry account field naming an account opened after the entry; {date} is its open date",
+  },
+  "journal.discardEntryEditTitle": {
+    message: "ویرایش کنار گذاشته شود؟",
+    description:
+      "Title of the confirmation shown when leaving Entry Context with unsaved source edits",
+  },
+  "journal.discardEntryEditDescription": {
+    message: "تغییرات متن منبع این ثبت ذخیره نشده است.",
+    description: "Body of the Entry Context discard confirmation",
+  },
+  "journal.keepEditing": {
+    message: "ادامهٔ ویرایش",
+    description:
+      "Button that returns to the Entry Context editor with the edit intact",
+  },
+  "journal.discardEntryEdit": {
+    message: "کنار گذاشتن",
+    description: "Button that discards the Entry Context edit and leaves",
+  },
+  "journal.entryChangedElsewhere": {
+    message:
+      "این ثبت پس از باز کردن شما تغییر کرده یا حذف شده است، بنابراین ویرایش شما ذخیره نشد. ویرایش خود را کپی کنید و سپس برای دیدن آخرین نسخه دوباره بارگذاری کنید.",
+    description:
+      "Entry Context save refused because the entry changed elsewhere since it was opened",
+  },
+  "journal.copyMyEdit": {
+    message: "کپی ویرایش من",
+    description: "Copies the unsaved Entry Context edit to the clipboard",
+  },
+  "journal.reloadEntries": {
+    message: "بارگذاری دوباره",
+    description:
+      "Closes Entry Context and refreshes the journal to show the latest entries",
   },
   "journal.autoAmount": {
     message: "خودکار",

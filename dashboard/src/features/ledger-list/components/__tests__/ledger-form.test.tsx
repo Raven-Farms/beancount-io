@@ -176,6 +176,24 @@ describe("LedgerForm", () => {
     });
   });
 
+  it("draws keyboard focus on the template card whose hidden radio has it (w3/561)", async () => {
+    const user = userEvent.setup();
+    render(<LedgerForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
+    const sample = screen.getByRole("radio", { name: /Sample ledger/i });
+
+    for (let i = 0; i < 15 && document.activeElement !== sample; i++) {
+      await user.tab();
+      // Tab lands on the checked radio of the group; arrows move within it.
+      if ((document.activeElement as HTMLInputElement)?.type === "radio") {
+        await user.keyboard("{ArrowDown}");
+      }
+    }
+
+    expect(sample).toHaveFocus();
+    expect(sample).toHaveClass("sr-only");
+    expect(sample.closest("label")).toHaveClass("has-[:focus-visible]:ring-2");
+  });
+
   it("should call onSubmit with undefined description when empty", async () => {
     const user = userEvent.setup();
     render(<LedgerForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);

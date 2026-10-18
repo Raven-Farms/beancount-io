@@ -200,10 +200,14 @@ async function fixture(caller = identity) {
           result: response.data?.[spec.field],
         };
       }
+      // One MCP tool per operation (ADR 019, 2026-10-18).
       const response = await client.callTool({
-        name: "editEntrySource",
+        name: {
+          update: "updateEntrySource",
+          delete: "deleteEntrySource",
+          delete_many: "deleteEntrySources",
+        }[operation],
         arguments: {
-          operation,
           ...input,
           ...(caller.ledgerScope ? {} : { ledger: "alice/main" }),
         },
@@ -280,8 +284,7 @@ describe.each(["rest", "gql", "mcp"])("source edits via %s", (surface) => {
               surface === "mcp"
                 ? {
                     ...deleted,
-                    summary:
-                      "Deleted 2 entries. No new bean-check errors.",
+                    summary: "Deleted 2 entries. No new bean-check errors.",
                     wrote: [],
                     entryHashes: ["entry1", "entry2"],
                     validation: emptyValidation,
@@ -295,8 +298,7 @@ describe.each(["rest", "gql", "mcp"])("source edits via %s", (surface) => {
               surface === "mcp"
                 ? {
                     ...deleted,
-                    summary:
-                      "Deleted entry entry1. No new bean-check errors.",
+                    summary: "Deleted entry entry1. No new bean-check errors.",
                     wrote: [],
                     entryHashes: ["entry1"],
                     validation: emptyValidation,

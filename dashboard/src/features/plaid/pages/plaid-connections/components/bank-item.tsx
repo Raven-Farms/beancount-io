@@ -32,7 +32,10 @@ import {
 } from "@/common/components/ui/alert-dialog";
 import { useToast } from "@/common/hooks/use-toast";
 import { useTranslations } from "@/common/hooks/use-translations";
-import { useFormatRelativeTime } from "@/common/hooks/use-date-locale";
+import {
+  useDateLocale,
+  useFormatRelativeTime,
+} from "@/common/hooks/use-date-locale";
 import {
   useUnlinkItem,
   usePlaidItems,
@@ -54,6 +57,7 @@ interface BankItemProps {
 
 export function BankItem({ item, ledgerId }: BankItemProps) {
   const { t } = useTranslations();
+  const dateLocale = useDateLocale();
   const formatRelativeTime = useFormatRelativeTime();
   const { toast } = useToast();
   const { unlinkItem, loading: unlinking } = useUnlinkItem();
@@ -145,7 +149,11 @@ export function BankItem({ item, ledgerId }: BankItemProps) {
                 <Calendar className="h-3 w-3" />
                 <span>
                   {t("plaid.bankAccount.linkedOn", {
-                    date: format(new Date(item.createdAt), "MMM d, yyyy"),
+                    // Localized: a fixed "MMM d, yyyy" read "Feb 13, 2026"
+                    // in every language (w0/048).
+                    date: format(new Date(item.createdAt), "PP", {
+                      locale: dateLocale,
+                    }),
                   })}
                 </span>
               </div>

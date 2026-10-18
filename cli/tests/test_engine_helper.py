@@ -347,11 +347,16 @@ class TestProtocol:
             assert answered["command"] == command
             assert answered["engine"] == engine_version()
 
-    def test_an_unknown_command_fails_without_pretending_to_answer(self) -> None:
+    def test_an_unknown_command_answers_a_usage_failure(self) -> None:
         completed = run_engine("nonesuch")
 
-        assert completed.returncode != 0
-        assert completed.stdout.strip() == ""
+        assert completed.returncode == 2
+        failure = envelope(completed)
+        assert failure["command"] == "usage"
+        assert failure["ok"] is False
+        assert failure["error"]["category"] == "usage"
+        assert failure["error"]["message"] == "No such command 'nonesuch'."
+        assert completed.stderr == ""
 
 
 class TestVersion:

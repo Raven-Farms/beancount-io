@@ -17,6 +17,23 @@ const esAccounts: Record<string, TranslationEntry> = {
     message: "La cuenta debe comenzar con uno de: {prefixes}",
     description: "Validation error when account prefix is invalid",
   },
+  "page.accounts.timeFilterNotApplied": {
+    message:
+      "Aquí los saldos son actuales. El filtro de tiempo no se aplica a esta página.",
+    description:
+      "Note on the Accounts directory when a Time filter is in the URL; its balances are always current",
+  },
+  "page.accounts.accountAlreadyOpen": {
+    message: "{account} ya está abierta (desde el {date}).",
+    description:
+      "Validation error when the account to open is already open; {account} is the name, {date} its open date",
+  },
+  "page.accounts.accountAlreadyClosed": {
+    message:
+      "{account} se cerró el {date}; Beancount no permite volver a abrirla.",
+    description:
+      "Validation error when the account to open was opened and later closed; {account} is the name, {date} its close date",
+  },
   "page.accounts.accountName": {
     message: "Nombre de cuenta",
     description: "Form label for account name input",

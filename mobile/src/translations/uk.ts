@@ -91,6 +91,7 @@ export const uk: Translations = {
   merchantsCadenceQuarterly: "Щокварталу",
   merchantsCadenceYearly: "Щороку",
   merchantsCadenceIrregular: "Нерегулярно",
+  merchantsCadenceUnknown: "Замало історії",
   merchantsNextExpected: "Наступний {{date}}",
   merchantsOverdue: "Прострочено",
   merchantsRecurringToggle: "Регулярний",
@@ -178,7 +179,7 @@ export const uk: Translations = {
   quickAdd: "Швидке додавання",
   enterNewTransaction: "Записати нову транзакцію",
   multiPostingsTitle: "Нова транзакція",
-  addPosting: "+ Додати проведення",
+  addPosting: "Додати проведення",
   remainderLabel: "Залишок",
   autoLabel: "авто",
   postingAccount: "Оберіть рахунок",
@@ -313,10 +314,12 @@ export const uk: Translations = {
   openAccountNoCurrency: "Валюту не обрано",
   openAccountSaving: "Відкриваємо...",
   openAccountFailed: "Не вдалося відкрити рахунок. Спробуйте ще раз.",
+  ledgerWouldBreak: "Це додасть помилку до вашої книги: {{detail}}",
   openAccountInvalidRoot: "Оберіть дійсний тип рахунку.",
   openAccountNameRequired: "Введіть хоча б одну частину назви рахунку.",
   openAccountEmptyComponent: "Частини назви рахунку не можуть бути порожніми.",
   openAccountNamePreview: "Буде створено як {{account}}",
+  openAccountAlreadyOpen: "Рахунок {{account}} уже відкрито в цій книзі.",
   openAccountUppercaseComponent:
     "Кожна частина назви рахунку має починатися з великої літери або цифри.",
   openAccountInvalidCharacters:
@@ -520,6 +523,7 @@ export const uk: Translations = {
   budgetInterval: "Інтервал",
   budgetSelectInterval: "Оберіть інтервал",
   budgetAmount: "Сума",
+  budgetAmountInvalid: "Введіть число, наприклад 500 або 49.99.",
   budgetSaveFailed: "Не вдалося зберегти бюджет",
   // delete
   budgetDelete: "Видалити",
@@ -594,6 +598,10 @@ export const uk: Translations = {
     "Грошовий потік від доходів до витрат. Доходи {{income}}, витрати {{expenses}}.",
   cashFlowChartSummaryWithSavings:
     "Грошовий потік від доходів до витрат. Доходи {{income}}, витрати {{expenses}}, заощадження {{savings}}.",
+  cashFlowChartSummaryWithShortfall:
+    "Грошовий потік від доходів до витрат. Доходи {{income}}, витрати {{expenses}}, із заощаджень {{shortfall}}.",
+  sankeyIncomeNodeLabel: "{{name}} (доходи)",
+  sankeyExpensesNodeLabel: "{{name}} (витрати)",
   ledgerNavigateUp: "На рівень вище",
   openLedgerDrawer: "Відкрити меню",
   back: "Назад",
@@ -618,7 +626,8 @@ export const uk: Translations = {
   profileUsernameHint:
     "Вебадреси ваших книг починаються з імені користувача, тож його зміна змінить і їх.",
   profileUsernameRequired: "Введіть ім’я користувача",
-  profileUsernameNoSpaces: "Ім’я користувача не може містити пробіли",
+  profileUsernameRule:
+    "Використовуйте від 1 до 20 символів: малі літери a–z, цифри 0–9 або підкреслення.",
   profileUsernameTaken: "Це ім’я користувача вже зайняте",
   profileEmail: "Ел. пошта",
   profileEmailReadOnly: "Адресу ел. пошти тут змінити не можна",

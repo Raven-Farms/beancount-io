@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import { Button } from "@/common/components/ui/button";
 import { Card } from "@/common/components/ui/card";
 import { useTranslations } from "@/common/hooks/use-translations";
+import { useDateLocale } from "@/common/hooks/use-date-locale";
 import type { ReviewFormData } from "../hooks/use-receipt-workflow";
 
 interface ReceiptSuccessCardProps {
@@ -20,6 +21,7 @@ export function ReceiptSuccessCard({
   onReset,
 }: ReceiptSuccessCardProps) {
   const { t } = useTranslations();
+  const dateLocale = useDateLocale();
 
   return (
     <Card className="p-8">
@@ -49,7 +51,7 @@ export function ReceiptSuccessCard({
               {t("receipt.success.date")}
             </dt>
             <dd className="font-medium">
-              {format(formData.date, "MMM d, yyyy")}
+              {format(formData.date, "PP", { locale: dateLocale })}
             </dd>
           </div>
           <div className="flex justify-between gap-4">

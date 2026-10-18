@@ -87,6 +87,7 @@ export const nl: Translations = {
   merchantsCadenceQuarterly: "Per kwartaal",
   merchantsCadenceYearly: "Jaarlijks",
   merchantsCadenceIrregular: "Onregelmatig",
+  merchantsCadenceUnknown: "Te weinig geschiedenis",
   merchantsNextExpected: "Volgende {{date}}",
   merchantsOverdue: "Achterstallig",
   merchantsRecurringToggle: "Terugkerend",
@@ -175,7 +176,7 @@ export const nl: Translations = {
   quickAdd: "Snel toevoegen",
   enterNewTransaction: "Nieuwe transactie invoeren",
   multiPostingsTitle: "Nieuwe transactie",
-  addPosting: "+ Boeking toevoegen",
+  addPosting: "Boeking toevoegen",
   remainderLabel: "Restant",
   autoLabel: "auto",
   postingAccount: "Account kiezen",
@@ -304,10 +305,12 @@ export const nl: Translations = {
   openAccountNoCurrency: "Geen valuta",
   openAccountSaving: "Openen...",
   openAccountFailed: "Account openen is mislukt. Probeer het opnieuw.",
+  ledgerWouldBreak: "Dit zou een fout aan je grootboek toevoegen: {{detail}}",
   openAccountInvalidRoot: "Kies een geldig accounttype.",
   openAccountNameRequired: "Voer minstens één naamdeel in.",
   openAccountEmptyComponent: "Naamdelen mogen niet leeg zijn.",
   openAccountNamePreview: "Wordt aangemaakt als {{account}}",
+  openAccountAlreadyOpen: "{{account}} is al geopend in dit grootboek.",
   openAccountUppercaseComponent:
     "Elk naamdeel moet met een hoofdletter of cijfer beginnen.",
   openAccountInvalidCharacters:
@@ -513,6 +516,7 @@ export const nl: Translations = {
   budgetInterval: "Interval",
   budgetSelectInterval: "Interval selecteren",
   budgetAmount: "Bedrag",
+  budgetAmountInvalid: "Voer een getal in, zoals 500 of 49.99.",
   budgetSaveFailed: "Budget kon niet worden opgeslagen",
   // delete
   budgetDelete: "Verwijderen",
@@ -588,6 +592,10 @@ export const nl: Translations = {
     "Kasstroom van inkomsten naar uitgaven. Inkomsten {{income}}, uitgaven {{expenses}}.",
   cashFlowChartSummaryWithSavings:
     "Kasstroom van inkomsten naar uitgaven. Inkomsten {{income}}, uitgaven {{expenses}}, spaargeld {{savings}}.",
+  cashFlowChartSummaryWithShortfall:
+    "Kasstroom van inkomsten naar uitgaven. Inkomsten {{income}}, uitgaven {{expenses}}, uit spaargeld {{shortfall}}.",
+  sankeyIncomeNodeLabel: "{{name}} (inkomsten)",
+  sankeyExpensesNodeLabel: "{{name}} (uitgaven)",
   ledgerNavigateUp: "Eén map omhoog",
   openLedgerDrawer: "Menu openen",
   back: "Terug",
@@ -612,7 +620,8 @@ export const nl: Translations = {
   profileUsernameHint:
     "De webadressen van je grootboeken beginnen met je gebruikersnaam, dus als je die wijzigt, veranderen ze mee.",
   profileUsernameRequired: "Voer een gebruikersnaam in",
-  profileUsernameNoSpaces: "Een gebruikersnaam mag geen spaties bevatten",
+  profileUsernameRule:
+    "Gebruik 1–20 tekens: kleine letters a–z, cijfers 0–9 of underscores.",
   profileUsernameTaken: "Die gebruikersnaam is al in gebruik",
   profileEmail: "E-mail",
   profileEmailReadOnly: "Je e-mailadres kan hier niet worden gewijzigd",

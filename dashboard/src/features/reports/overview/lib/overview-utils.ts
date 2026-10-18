@@ -1,3 +1,4 @@
+import { ledgerDateFormat } from "@/common/lib/format/ledger-date";
 import { parseConcreteTimeFilter } from "@/features/reports/export/reporting-period";
 import {
   balanceToAmounts,
@@ -376,7 +377,7 @@ export function getMovementSnapshot({
 export function formatPeriodMonth(date: string, language: string): string {
   const parsed = new Date(`${date}T00:00:00`);
   if (Number.isNaN(parsed.getTime())) return date;
-  return new Intl.DateTimeFormat(language, {
+  return ledgerDateFormat(language, {
     month: "long",
     year: "numeric",
   }).format(parsed);

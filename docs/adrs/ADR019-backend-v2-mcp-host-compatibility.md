@@ -291,6 +291,49 @@ Ledger scope is settled in ADR 0007: [every credential reaches all the ledgers i
 
 ## Amendments
 
+### 2026-10-18 — One MCP tool per operation (w1/m38)
+
+The OpenAI Plugins dashboard scanned the Beancount.io draft on 2026-10-18. Seven tools (`editLedgerFiles`, `editEntrySource`, `manageBankImport`, `manageBankConnection`, `managePullRequests`, `manageLedgers`, `manageLedgerCollaborators`) each received: "This tool appears to execute operations that are not individually exposed. Please expose each model-callable operation upfront as a separate tool with a clear description, input schema, and annotations." `manageLedgers` also received "This new tool definition needs further review before it can be published."
+
+Each grouped tool splits into one tool per `VERB_TABLE` verb. Under the 2026-10-09 amendment's rules, annotations follow OpenAI's definitions: deletion, overwriting, cancellation, and access revocation are destructive. This reverses ADR 0008 D3; see its 2026-10-18 amendment.
+
+| Old tool → branch | New tool | Verb row | Annotations |
+| --- | --- | --- | --- |
+| `editLedgerFiles` → create | `createLedgerFiles` | `ledger.editFiles.create` | write, not destructive |
+| `editLedgerFiles` → update, replace | `updateLedgerFiles` | `ledger.editFiles.update` | destructive (overwrites) |
+| `editLedgerFiles` → delete | `deleteLedgerFiles` | `ledger.editFiles.delete` | destructive |
+| `editEntrySource` → update | `updateEntrySource` | `Mutation.updateLedgerEntrySourceSlice` | destructive (overwrites) |
+| `editEntrySource` → delete | `deleteEntrySource` | `Mutation.deleteLedgerEntrySourceSlice` | destructive |
+| `editEntrySource` → delete_many | `deleteEntrySources` | `Mutation.deleteMultipleLedgerEntrySourceSlices` | destructive |
+| `manageBankImport` → sync | `syncBankTransactions` | `Mutation.syncPlaidTransactions` | write, open world |
+| `manageBankImport` → submit | `importStagedBankTransactions` | `Mutation.submitPlaidTransactionsToLedger` | write, not destructive |
+| `manageBankImport` → discard | `discardStagedBankTransactions` | `Mutation.deletePlaidTransactions` | destructive |
+| `manageBankConnection` → reconcile | `reconcileBankAccounts` | `Mutation.reconcilePlaidAccounts` | destructive (may delete stale accounts), open world |
+| `manageBankConnection` → map_account | `mapBankAccount` | `Mutation.updatePlaidAccountMapping` | destructive (overwrites the mapping) |
+| `manageBankConnection` → set_currency | `setBankAccountCurrency` | `Mutation.updatePlaidAccountCurrency` | destructive (overwrites) |
+| `manageBankConnection` → refresh | `refreshBankConnection` | `Mutation.refreshPlaidItemStatus` | idempotent, open world |
+| `manageBankConnection` → unlink | `unlinkBankConnection` | `Mutation.unlinkPlaidItem` | destructive, open world |
+| `managePullRequests` → create | `createPullRequest` | `Mutation.createPullRequestFromPatch` | write, not destructive |
+| `managePullRequests` → approve | `approvePullRequest` | `Mutation.approvePullRequest` | destructive (merges into main) |
+| `managePullRequests` → reject | `rejectPullRequest` | `Mutation.rejectPullRequest` | destructive (closes) |
+| `manageLedgers` → create | `createLedger` | `Mutation.createLedger` | write, not destructive |
+| `manageLedgers` → update | `updateLedger` | `Mutation.updateLedger` | destructive (overwrites) |
+| `manageLedgers` → delete | `deleteLedger` | `Mutation.deleteLedger` | destructive |
+| `manageLedgerCollaborators` → update | `setLedgerCollaborator` | `Mutation.addOrUpdateLedgerCollaborator` | destructive (can lower access) |
+| `manageLedgerCollaborators` → delete | `removeLedgerCollaborator` | `Mutation.deleteLedgerCollaborator` | destructive (revokes access) |
+| `manageLedgerCollaborators` → leave | `leaveLedger` | `Mutation.leaveLedger` | destructive (revokes access) |
+
+`updateLedgerFiles` takes, per file, either an exact-text edit (`old_string`/`new_string`) or a full replacement (`content`). Both are the `update` verb, so it carries no `operation` field. `reconcileBankAccounts` is destructive because reconciling can hard-delete accounts Plaid no longer shares, which cascades to their staged transactions.
+
+### 2026-10-16 — OpenClaw and Hermes Agent are named hosts, and a missing `prompt=consent` no longer costs the refresh token (w6/m7)
+
+Two open-source agents join the hosts D8 names. Both use the single endpoint of D1; neither needed host-specific code. No submission directory exists for either: OpenClaw adds servers by hand, and Hermes's MCP catalog is curated by Nous. Being listed on them means a fixture, a verified sign-in, and a row in `docs/mcp.md`.
+
+- **OpenClaw 2026.10.4** registers through DCR as "OpenClaw MCP", with no `application_type` (so D3 applies), and requests every advertised scope with `prompt=consent`. The CLI login redirects to `http://127.0.0.1:8989/oauth/callback` and retries with `localhost` if that is refused. A per-requester gateway redirects to `<its public origin>/oauth/mcp/callback`. CIMD is used only when an operator configures a document URL.
+- **Hermes Agent v0.22.2** presents its CIMD document (`https://nousresearch.github.io/hermes-agent/docs/oauth/client-metadata.json`, `application_type: native`, redirects on loopback ports 27890–27894) and falls back to DCR. The older PyPI release, 0.19.0, registers through DCR on an ephemeral port and sends no `prompt` at all.
+- **D5 gap found and closed.** oidc-provider follows OIDC Core and drops `offline_access` from an authorization request whose `prompt` lacks `consent`, then issues no refresh token. A host built on the MCP Python SDK 1.x, such as Hermes 0.19.0, was therefore signed out when its first access token expired. Every DCR and CIMD host sees the consent page anyway (D4 and `native_client_prompt`), so the authorization route now adds `consent` to the prompt for such a host when it asks for `offline_access`. The page then lists "Stay signed in". `prompt=none` and the two static clients are unchanged. A device-authorization grant (Hermes's `--flow device`) stays out of scope.
+- **Evidence.** Fixtures for each registration and redirect are in `oidc-route.test.ts`, including Hermes's published document. On 2026-10-16 both hosts completed a real sign-in on production with the QA account, a read, and an `appendLedgerText` preview with `dry_run` (`.pm/w6/done/m7`).
+
 ### 2026-10-15 — Existing entry hashes come from a tool too (w6/008)
 
 D7's inventory missed a fourth case. `getEntryContext` and `editEntrySource` address an existing entry by its canonical hash. The `journal` resource lists hashes, but no tool did: BQL's `id` is a directive index, which the context tool refuses, and file reads have no entries. A tools-only host could inspect or edit only entries it had just written itself. `listLedgerEntries` is the journal verb's tool binding. It is a read-only tool beside the `ledgerJournal` resource, over the same `LedgerJournalService.getJournal` call as REST `journal` and GraphQL `getLedgerJournal`. It takes the account, filter, time, and directive-type narrowing and bounded pagination; the resource keeps the subtype filters. `tools-only-journey.test.ts` finds an older filtered occurrence among duplicates and reads its context from the listed hash without `resources/read`. `tools/list` serves 27 tools.

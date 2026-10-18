@@ -36,7 +36,7 @@ from cli.config import config_dir
 from cli.errors import BeaError
 from cli.native_command import ForwardingCommand
 from cli.native_help import native_help
-from cli.single_value import SingleValueCommand
+from cli.single_value import SingleValueCommand, single_value_parser
 
 
 def _discard_diagnostics_without_stderr() -> None:
@@ -55,7 +55,36 @@ def _discard_diagnostics_without_stderr() -> None:
         if devnull != 2:
             os.dup2(devnull, 2)
             os.close(devnull)
+        else:
+            # `os.open` hands back the free fd 2 itself, non-inheritable
+            # (PEP 446), so every child bea spawns started without fd 2: its
+            # errors fell back to stdout with exit 0, and the query shell's
+            # `input()` looped on `lost sys.stderr` (w5/583).
+            os.set_inheritable(2, True)
         sys.stderr = open(2, "w", errors="backslashreplace", closefd=False)  # noqa: SIM115 - lives as sys.stderr
+    except OSError:
+        pass
+
+
+def _empty_stdin_when_closed() -> None:
+    """With fd 0 closed, read stdin as empty rather than failing on `None`.
+
+    `<&-` (a CI runner, a daemon) leaves `sys.stdin` None: `query`, `format -`
+    and `add transactions --from -` exited 1 with `'NoneType' object has no
+    attribute 'isatty'` or `'read'`, and treeify's child started with no fd 0
+    (w5/584). Devnull at fd 0, inheritable, gives every command and child the
+    empty input `</dev/null` already gets.
+    """
+    if sys.stdin is not None:
+        return
+    try:
+        devnull = os.open(os.devnull, os.O_RDONLY)
+        if devnull != 0:
+            os.dup2(devnull, 0)
+            os.close(devnull)
+        else:
+            os.set_inheritable(0, True)
+        sys.stdin = open(0, errors="surrogateescape", closefd=False)  # noqa: SIM115 - lives as sys.stdin
     except OSError:
         pass
 
@@ -107,11 +136,8 @@ def _exit_on_broken_pipe() -> NoReturn:
     shutdown flush would fail in turn and force 120. Pointing the file
     descriptor at devnull gives that flush somewhere harmless to go.
     """
-    try:
-        devnull = os.open(os.devnull, os.O_WRONLY)
-        os.dup2(devnull, sys.stdout.fileno())
-    except (OSError, ValueError):  # No real fd to rescue (a captured stream).
-        pass
+    # Both streams: the broken one may be stderr's, under `2>&1 | head` (w5/522).
+    output.silence_broken_streams()
     sys.exit(141)
 
 
@@ -217,13 +243,16 @@ class _GuardedGroup(TyperGroup):
     # a private module just to restate the supertype's annotation.
     def parse_args(self, ctx: Any, args: list[str]) -> list[str]:
         _discard_diagnostics_without_stderr()
+        _empty_stdin_when_closed()
         # Parse global switches before command resolution can fail. Use Click's
         # parser so --file=--json and arguments following -- remain values.
         resilient, ignore_unknown = ctx.resilient_parsing, ctx.ignore_unknown_options
         try:
             ctx.resilient_parsing = True
             ctx.ignore_unknown_options = True
-            opts, _, _ = self.make_parser(ctx).parse_args(list(args))
+            # The plain parser: a conflicting `--file` is refused by the real
+            # parse below, once `--json` has been read.
+            opts, _, _ = super().make_parser(ctx).parse_args(list(args))
         finally:
             ctx.resilient_parsing, ctx.ignore_unknown_options = resilient, ignore_unknown
         context.configure(
@@ -258,6 +287,10 @@ class _GuardedGroup(TyperGroup):
             if not args:  # Keep the normal no-arguments help page.
                 raise
             output.error(exc)
+
+    def make_parser(self, ctx: Any) -> Any:
+        # Global options hold one value like every command's own (w5/485).
+        return single_value_parser(self, ctx)
 
     def invoke(self, ctx: Any) -> Any:
         _tolerate_unencodable_output()
@@ -369,7 +402,7 @@ def main(
         bool,
         typer.Option(
             "--offline",
-            help="Never fetch: resolve managed price includes from the local cache only, and skip the update check",
+            help="Never fetch (except upgrade --check): reuse cached managed prices and skip background update checks",
         ),
     ] = False,
     strict_prices: Annotated[
@@ -449,7 +482,8 @@ app.command("balance", cls=SingleValueCommand, rich_help_panel=_LOCAL_PANEL)(bal
 app.command("init", cls=SingleValueCommand, rich_help_panel=_LOCAL_PANEL)(init)
 app.command("import", cls=SingleValueCommand, rich_help_panel=_LOCAL_PANEL)(import_entries)
 app.add_typer(ingest_app, name="ingest", rich_help_panel=_LOCAL_PANEL)
-app.command("format", rich_help_panel=_LOCAL_PANEL)(format_beans)
+# `format -o a -o b` wrote `b` alone with exit 0 (w5/512); `ask --into` names a write destination too.
+app.command("format", cls=SingleValueCommand, rich_help_panel=_LOCAL_PANEL)(format_beans)
 app.command("query", cls=SingleValueCommand, rich_help_panel=_LOCAL_PANEL)(query)
 app.command(
     "price",
@@ -458,7 +492,7 @@ app.command(
     context_settings=_CHECK_CTX,
     epilog=native_help("price"),
 )(price)
-app.command("ask", rich_help_panel=_LOCAL_PANEL)(ask)
+app.command("ask", cls=SingleValueCommand, rich_help_panel=_LOCAL_PANEL)(ask)
 app.command(
     "example",
     cls=ForwardingCommand,

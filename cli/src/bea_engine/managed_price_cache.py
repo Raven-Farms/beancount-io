@@ -29,15 +29,18 @@ load when a source is stale or unavailable instead of degrading quietly.
 
 from __future__ import annotations
 
+import errno
 import json
 import os
+import re
+import stat
 import tempfile
 import time
 from contextlib import suppress
 from dataclasses import asdict, dataclass
 from hashlib import sha256
 from pathlib import Path
-from typing import Literal
+from typing import IO, Any, Literal
 from urllib.request import OpenerDirector
 
 from bea_engine.managed_prices import (
@@ -63,6 +66,9 @@ RETRY_SECONDS = 60
 
 STALE_SECONDS = 600
 """Observation age beyond which a source reads `stale` (ADR 015 section 8)."""
+
+SUPERSEDED_GRACE_SECONDS = REFRESH_SECONDS
+"""How long a superseded revision's files stay for a load that already chose it (w5/640)."""
 
 FUTURE_SKEW_SECONDS = 300
 """How far ahead of the clock an observation may claim to be and still read recent."""
@@ -109,9 +115,33 @@ def feed_dir(url: str, root: Path | None = None) -> Path:
     return (root or cache_root()) / sha256(url.encode("utf-8")).hexdigest()[:32]
 
 
+def open_cache_file(path: Path, mode: str = "r") -> IO[Any]:
+    """Open one of bea's cache files for reading, refusing anything but a regular file.
+
+    A FIFO in place of `head.json`, a revision or an effective file hung every
+    load, `--offline` included, and the engine stayed blocked after the
+    frontend was killed (w5/591). The open never waits, and what is not a
+    regular file raises `OSError`, which every reader takes for a missing file.
+    """
+    fd = os.open(path, os.O_RDONLY | getattr(os, "O_NONBLOCK", 0) | getattr(os, "O_CLOEXEC", 0))
+    try:
+        if not stat.S_ISREG(os.fstat(fd).st_mode):
+            raise OSError(errno.EINVAL, "Not a regular file", str(path))
+        return os.fdopen(fd, mode, encoding=None if "b" in mode else "utf-8")
+    except BaseException:
+        os.close(fd)
+        raise
+
+
+def _read_text(path: Path) -> str:
+    with open_cache_file(path) as stream:
+        text: str = stream.read()
+    return text
+
+
 def _read_head(directory: Path) -> PriceFeedHead:
     try:
-        raw = json.loads((directory / "head.json").read_text(encoding="utf-8"))
+        raw = json.loads(_read_text(directory / "head.json"))
         return PriceFeedHead(
             revision=raw.get("revision"),
             next_refresh_at=float(raw.get("next_refresh_at", 0)),
@@ -123,8 +153,8 @@ def _read_head(directory: Path) -> PriceFeedHead:
 
 def _read_blob(directory: Path, revision: str) -> PriceFeedBlob | None:
     try:
-        text = (directory / f"{revision}.beancount").read_text(encoding="utf-8")
-        raw = json.loads((directory / f"{revision}.json").read_text(encoding="utf-8"))
+        text = _read_text(directory / f"{revision}.beancount")
+        raw = json.loads(_read_text(directory / f"{revision}.json"))
         digest = raw.get("sha256")
         if digest is not None and digest != _digest(text):
             # The bytes are not what was validated: treat the blob as missing
@@ -217,6 +247,68 @@ def _try_write(path: Path, text: str) -> str | None:
     return None
 
 
+_EFFECTIVE_NAME = re.compile(r"(?P<revision>.+)\.effective\.[0-9a-f]{16}\.beancount")
+
+
+def _revision_of(name: str) -> str | None:
+    """The revision a cache file belongs to — its blob, record or an effective text — or None.
+
+    A revision id is an ETag made key-safe, and may hold dots of its own.
+    """
+    if name.startswith(".") or name == "head.json":
+        return None
+    effective = _EFFECTIVE_NAME.fullmatch(name)
+    if effective is not None:
+        return effective["revision"]
+    for suffix in (".beancount", ".json"):
+        if name.endswith(suffix) and len(name) > len(suffix):
+            return name.removesuffix(suffix)
+    return None
+
+
+def _revision_files(directory: Path, revision: str) -> list[Path]:
+    """The blob, its record and every per-ledger effective text of one revision."""
+    try:
+        return [path for path in directory.iterdir() if _revision_of(path.name) == revision]
+    except OSError:
+        return []
+
+
+def _retire(directory: Path, revision: str) -> None:
+    """Stamp a superseded revision's files with the moment it was superseded.
+
+    Deleting them at once failed every load in another process that had
+    already chosen the revision: Beancount then found no file at the
+    effective text's include (w5/640). The sweep removes them once a load
+    that chose them has long finished.
+    """
+    now = time.time()
+    for path in _revision_files(directory, revision):
+        with suppress(OSError):
+            os.utime(path, (now, now))
+
+
+def _sweep(directory: Path, current: str) -> None:
+    """Remove every revision but `current` untouched for the grace period.
+
+    A fetch racing this one writes a revision no head ever points at, and
+    nothing deleted it; the sweep collects those too, so the cache keeps only
+    the revisions of the last grace period.
+    """
+    cutoff = time.time() - SUPERSEDED_GRACE_SECONDS
+    try:
+        entries = list(directory.iterdir())
+    except OSError:
+        return
+    for path in entries:
+        revision = _revision_of(path.name)
+        if revision is None or revision == current:
+            continue
+        with suppress(OSError):
+            if path.lstat().st_mtime < cutoff:
+                path.unlink()
+
+
 def _persist_head(directory: Path, head: PriceFeedHead) -> PriceFeedHead:
     """Write `head`; the head this load reports carries any write failure."""
     problem = _try_write(directory / "head.json", json.dumps(asdict(head)))
@@ -277,7 +369,10 @@ def resolve_feed(
         resolved = ResolvedFeed(blob=previous, head=head)
         _enforce_strict(url, resolved, at, stale_seconds, strict)
         return resolved
-    if at < head.next_refresh_at and (previous is not None or head.revision is None):
+    # A refresh time further out than any window sets was written under a
+    # clock running fast; honored, it suppressed refreshes for days (w5/645).
+    believable = head.next_refresh_at <= at + max(refresh_seconds, retry_seconds)
+    if at < head.next_refresh_at and believable and (previous is not None or head.revision is None):
         resolved = ResolvedFeed(blob=previous, head=head)
         _enforce_strict(url, resolved, at, stale_seconds, strict)
         return resolved
@@ -335,13 +430,10 @@ def resolve_feed(
                 refreshed = _persist_head(directory, refreshed)
             else:
                 refreshed = PriceFeedHead(revision=revision, next_refresh_at=at + refresh_seconds, last_error=problem)
-            if refreshed.last_error is None and previous is not None and previous.revision != revision:
-                with suppress(OSError):
-                    (directory / f"{previous.revision}.beancount").unlink(missing_ok=True)
-                    (directory / f"{previous.revision}.json").unlink(missing_ok=True)
-                    # Per-ledger effective texts key off the revision; they die with it.
-                    for effective in directory.glob(f"{previous.revision}.effective.*.beancount"):
-                        effective.unlink(missing_ok=True)
+            if refreshed.last_error is None:
+                if previous is not None and previous.revision != revision:
+                    _retire(directory, previous.revision)
+                _sweep(directory, revision)
             resolved = ResolvedFeed(blob=blob, head=refreshed)
             _enforce_strict(url, resolved, at, stale_seconds, strict)
             return resolved
@@ -354,8 +446,18 @@ def resolve_feed(
         message = "server answered 304 without a cached revision to reuse"
     else:
         message = f"fetch failed ({result.reason}): {result.message}"
+        # Only the cache knows whether anything is left to serve (w5/644).
+        if result.reason == "provider" and previous is not None:
+            message = message.rstrip(".") + "; cached prices remain usable."
 
-    degraded = PriceFeedHead(revision=head.revision, next_refresh_at=at + retry_seconds, last_error=message)
+    # The revision that still serves, not one whose blob is gone: a head naming
+    # a missing blob never honored the retry window, so every command fetched
+    # again, waiting out the timeout on a slow service (w5/641).
+    degraded = PriceFeedHead(
+        revision=previous.revision if previous is not None else None,
+        next_refresh_at=at + retry_seconds,
+        last_error=message,
+    )
     # The fetch failure is the error worth reporting; an unwritable cache
     # only means the next load retries sooner.
     _try_write(directory / "head.json", json.dumps(asdict(degraded)))
@@ -375,11 +477,22 @@ def _enforce_strict(url: str, resolved: ResolvedFeed, at: float, stale_seconds: 
         cause = (resolved.head.last_error or "no cached revision").rstrip()
         raise LedgerError(f"managed price source {url} is unavailable in strict mode: {cause}".rstrip(".") + ".")
     if freshness(resolved.blob, at, stale_seconds) == "stale":
-        stamp = resolved.blob.feed.latest_observed_at or "unknown observation time"
-        raise LedgerError(
-            f"managed price source {url} is stale in strict mode: latest observation {stamp} "
-            f"is older than {stale_seconds} seconds."
-        )
+        # Worded by why it reads stale: "older than 600 seconds" was said of a
+        # stamp an hour ahead of the clock, and of a feed with none (w5/644).
+        stamp = resolved.blob.feed.latest_observed_at
+        instant = observed_instant(stamp)
+        if not stamp:
+            why = "the feed has no observation time (observed-at)."
+        elif instant is None:
+            why = f"its observation time {stamp} cannot be read."
+        elif instant - at > FUTURE_SKEW_SECONDS:
+            why = (
+                f"latest observation {stamp} is more than {FUTURE_SKEW_SECONDS} seconds ahead of this computer's "
+                "clock; check the clock."
+            )
+        else:
+            why = f"latest observation {stamp} is older than {stale_seconds} seconds."
+        raise LedgerError(f"managed price source {url} is stale in strict mode: {why}")
 
 
 def managed_source_for_path(path: Path, root: Path | None = None) -> str | None:
@@ -396,7 +509,7 @@ def managed_source_for_path(path: Path, root: Path | None = None) -> str | None:
         if sidecar.name == "head.json":
             continue
         try:
-            url = json.loads(sidecar.read_text(encoding="utf-8")).get("url")
+            url = json.loads(_read_text(sidecar)).get("url")
         except (OSError, ValueError, AttributeError):
             continue
         if isinstance(url, str):

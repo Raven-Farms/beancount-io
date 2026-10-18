@@ -54,7 +54,7 @@ def test_conflict_under_unique_prices_names_the_plugin_and_the_existing_line(
     before = ledger.read_bytes()
     result = _bea(tmp_path, "-f", str(ledger), *PRICE, *force)
 
-    assert result.returncode == 2, result.stderr
+    assert result.returncode == 4, result.stderr
     assert ledger.read_bytes() == before
     flat = " ".join(result.stderr.split())
     assert f"EUR already has a 2026-01-05 price of 1.1 USD (at {ledger}:5); refusing 1.2 USD." in flat
@@ -68,7 +68,7 @@ def test_without_the_plugin_force_still_records_another_quote(tmp_path: Path) ->
     ledger = tmp_path / "main.bean"
     ledger.write_text(LEDGER)
     refused = _bea(tmp_path, "-f", str(ledger), *PRICE)
-    assert refused.returncode == 2, refused.stderr
+    assert refused.returncode == 4, refused.stderr
     assert "Pass --force to record another quote." in " ".join(refused.stderr.split())
 
     forced = _bea(tmp_path, "-f", str(ledger), *PRICE, "--force")

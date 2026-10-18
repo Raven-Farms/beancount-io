@@ -283,7 +283,7 @@ class TestManagedPricePolicy:
         ("target", "fragment"),
         [
             ("https://prices.example.com/prices/BTC-USD", "origin https://prices.example.com is not allowlisted"),
-            ("https://beancount.io:8443/prices/BTC-USD", "origin https://beancount.io is not allowlisted"),
+            ("https://beancount.io:8443/prices/BTC-USD", "origin https://beancount.io:8443 is not allowlisted"),
             ("https://user@beancount.io/prices/BTC-USD", "must not carry credentials"),
             ("https://beancount.io/prices/BTC-USD?at=now", "must not carry a query string or fragment"),
             ("https://beancount.io/prices/BTC-USD#frag", "must not carry a query string or fragment"),
@@ -340,6 +340,14 @@ class _FeedHandler(BaseHTTPRequestHandler):
             return
         if "sleep" in route:
             time.sleep(route["sleep"])
+        if "barrier" in route:
+            # Answers only once every request sharing the barrier is in flight at once.
+            try:
+                route["barrier"].wait(timeout=4)
+            except threading.BrokenBarrierError:
+                self.send_response(503)
+                self.end_headers()
+                return
         if route.get("etag_match") and self.headers.get("If-None-Match") == route["etag"]:
             self.send_response(304)
             self.end_headers()
@@ -729,9 +737,11 @@ class TestFeedCache:
         assert _FeedHandler.hits == ["/prices/BTC-USD", "/prices/BTC-USD"]
         assert _FeedHandler.seen_headers["/prices/BTC-USD"]["if-none-match"] == '"r1"'
 
-    def test_new_revision_replaces_and_removes_the_superseded_blob(self, feed_server: str, tmp_path: Path) -> None:
+    def test_new_revision_replaces_and_keeps_the_superseded_blob(self, feed_server: str, tmp_path: Path) -> None:
         now = time.time()
         _resolve(feed_server, tmp_path, now=now)
+        effective = feed_dir(f"{feed_server}/prices/BTC-USD", tmp_path) / "r1.effective.0123456789abcdef.beancount"
+        effective.write_text("; what a load in another process includes\n")
         body = _feed_text(_stamp(now + 301), revision="r2").encode("utf-8")
         _FeedHandler.routes["/prices/BTC-USD"] = {
             "body": body,
@@ -748,8 +758,62 @@ class TestFeedCache:
         assert resolved.head.revision == "r2"
         directory = feed_dir(f"{feed_server}/prices/BTC-USD", tmp_path)
         assert (directory / "r2.beancount").is_file()
-        assert not (directory / "r1.beancount").exists()
-        assert not (directory / "r1.json").exists()
+        # Kept for a load another process may have begun on it (w5/640).
+        assert (directory / "r1.beancount").is_file()
+        assert effective.is_file()
+
+    def test_superseded_and_orphan_revisions_are_swept_after_the_grace(self, feed_server: str, tmp_path: Path) -> None:
+        """A load that chose a revision outlives its refresh; the sweep keeps the cache bounded (w5/640)."""
+        from bea_engine.managed_price_cache import SUPERSEDED_GRACE_SECONDS
+
+        now = time.time()
+        _resolve(feed_server, tmp_path, now=now)
+        directory = feed_dir(f"{feed_server}/prices/BTC-USD", tmp_path)
+        (directory / "r1.effective.0123456789abcdef.beancount").write_text("; effective\n")
+        # A racing fetcher's revision no head points at, and an id with a dot.
+        for orphan in ("orphan.beancount", "orphan.json", "v1.2.beancount", "v1.2.json"):
+            (directory / orphan).write_text("x")
+        for revision, at in (("r2", now + 301), ("r3", now + 602)):
+            _FeedHandler.routes["/prices/BTC-USD"] = {
+                "body": _feed_text(_stamp(at), revision=revision).encode("utf-8"),
+                "headers": {"Content-Type": "text/plain; charset=utf-8", "ETag": f'"{revision}"'},
+                "etag": f'"{revision}"',
+                "etag_match": True,
+            }
+            if revision == "r3":
+                old = time.time() - SUPERSEDED_GRACE_SECONDS - 1
+                for path in directory.iterdir():
+                    if not path.name.startswith(("r2.", "head")):
+                        os.utime(path, (old, old))
+            _resolve(feed_server, tmp_path, now=at)
+
+        assert sorted(path.name for path in directory.iterdir()) == [
+            "head.json",
+            "r2.beancount",
+            "r2.json",
+            "r3.beancount",
+            "r3.json",
+        ]
+
+    @pytest.mark.parametrize("damage", ["missing", "corrupt"])
+    def test_a_failure_backs_off_whatever_the_blob(self, feed_server: str, tmp_path: Path, damage: str) -> None:
+        """The retry window held only while the blob read; the degraded head kept naming a gone one (w5/641)."""
+        now = time.time()
+        _resolve(feed_server, tmp_path, now=now)
+        blob = feed_dir(f"{feed_server}/prices/BTC-USD", tmp_path) / "r1.beancount"
+        if damage == "missing":
+            blob.unlink()
+        else:
+            blob.write_text(blob.read_text() + "; edited\n")
+        _FeedHandler.routes["/prices/BTC-USD"] = {"status": 503, "body": b"down"}
+        before = len(_FeedHandler.hits)
+
+        results = [_resolve(feed_server, tmp_path, now=now + 1 + step) for step in range(4)]
+
+        assert len(_FeedHandler.hits) - before == 1
+        assert all(result.blob is None for result in results)
+        assert results[-1].head.revision is None
+        assert results[-1].head.last_error is not None and "503" in results[-1].head.last_error
 
     def test_failed_refresh_serves_last_good_and_records_the_error(self, feed_server: str, tmp_path: Path) -> None:
         now = time.time()
@@ -1180,6 +1244,25 @@ include "prices.bean"
         assert load_with_sources(ledger, root=root).sources != ()
         assert _FeedHandler.hits == []
 
+    def test_sources_are_fetched_side_by_side(self, feed_server: str, tmp_path: Path) -> None:
+        """One after another, each slow source added its whole timeout to the command (w5/642)."""
+        barrier = threading.Barrier(6)
+        for index in range(6):
+            _FeedHandler.routes[f"/prices/P-{index}"] = {
+                "body": (
+                    f"; alias: P-{index}\n; commodity: P{index}\n; quote: USD\n2024-01-15 price P{index} 10 USD\n"
+                ).encode(),
+                "barrier": barrier,
+            }
+        lines = ['option "operating_currency" "USD"']
+        lines += [f'include "{feed_server}/prices/P-{index}"' for index in range(6)]
+        lines += ["2024-01-01 open Assets:Broker"]
+
+        loaded = _load(feed_server, tmp_path, "\n".join(lines) + "\n")
+
+        assert [source.alias for source in loaded.sources] == [f"P-{index}" for index in range(6)]
+        assert all(source.revision is not None for source in loaded.sources), [s.error for s in loaded.sources]
+
     def test_seventeenth_url_is_an_unavailable_source(self, feed_server: str, tmp_path: Path) -> None:
         for index in range(17):
             alias = f"F-{index:02d}"
@@ -1544,6 +1627,107 @@ class TestPriceStatus:
         assert "bea price status" in loaded.errors[0].message
 
 
+class TestCacheAndUrlEdges:
+    """A fast clock's refresh time, dot-segment aliases and a reserved ETag (w5/645)."""
+
+    def test_a_refresh_time_written_by_a_fast_clock_is_not_honored(self, feed_server: str, tmp_path: Path) -> None:
+        now = time.time()
+        _resolve(feed_server, tmp_path, now=now)
+        head = feed_dir(f"{feed_server}/prices/BTC-USD", tmp_path) / "head.json"
+        record = json.loads(head.read_text())
+        head.write_text(json.dumps({**record, "next_refresh_at": now + 7 * 86400}))
+        _FeedHandler.routes["/prices/BTC-USD"] = {
+            "body": _feed_text(_stamp(now), revision="r2").encode("utf-8"),
+            "headers": {"ETag": '"r2"'},
+        }
+        before = len(_FeedHandler.hits)
+
+        resolved = _resolve(feed_server, tmp_path, now=now + 10)
+
+        assert len(_FeedHandler.hits) - before == 1
+        assert resolved.blob is not None and resolved.blob.revision == "r2"
+
+    @pytest.mark.parametrize("alias", [".", ".."])
+    def test_a_dot_segment_is_not_an_alias(self, alias: str) -> None:
+        decision = parse_managed_price_url(f"https://beancount.io/prices/{alias}")
+
+        assert isinstance(decision, RefusedUrl)
+        assert "the path must be /prices/<ALIAS>" in decision.detail
+
+    @pytest.mark.parametrize("etag", ['"head"', '".hidden"', 'W/"head"'])
+    def test_a_reserved_etag_falls_back_to_the_body_hash(self, etag: str) -> None:
+        assert feed_revision_id(etag, "body") == hashlib.sha256(b"body").hexdigest()
+        assert feed_revision_id('"r1.2"', "body") == "r1.2"
+
+    def test_a_head_etag_keeps_the_cache_head(self, feed_server: str, tmp_path: Path) -> None:
+        now = time.time()
+        _FeedHandler.routes["/prices/BTC-USD"] = {
+            "body": _feed_text(_stamp(now)).encode("utf-8"),
+            "headers": {"ETag": '"head"'},
+        }
+        _resolve(feed_server, tmp_path, now=now)
+
+        offline = _resolve(feed_server, tmp_path, now=now + 1, offline=True)
+
+        assert offline.blob is not None
+        assert (
+            json.loads((feed_dir(f"{feed_server}/prices/BTC-USD", tmp_path) / "head.json").read_text())["revision"]
+            == offline.blob.revision
+        )
+
+
+class TestStrictAndUnavailableWording:
+    """Each managed-price message names the condition it reports (w5/644)."""
+
+    def _strict(self, feed_server: str, tmp_path: Path, body: str, now: float) -> str:
+        _FeedHandler.routes["/prices/BTC-USD"] = {"body": body.encode("utf-8")}
+        with pytest.raises(LedgerError) as raised:
+            _resolve(feed_server, tmp_path, now=now, strict=True)
+        return str(raised.value)
+
+    def test_a_future_stamp_names_the_clock(self, feed_server: str, tmp_path: Path) -> None:
+        now = time.time()
+        stamp = _stamp(now + 3600)
+
+        message = self._strict(feed_server, tmp_path, _feed_text(stamp), now)
+
+        assert message.endswith(
+            f"is stale in strict mode: latest observation {stamp} is more than 300 seconds ahead of this "
+            "computer's clock; check the clock."
+        )
+        assert "older than" not in message
+
+    def test_a_feed_with_no_stamp_says_so(self, feed_server: str, tmp_path: Path) -> None:
+        body = "; alias: BTC-USD\n; commodity: BTC\n; quote: USD\n2026-09-10 price BTC 112000 USD\n"
+
+        message = self._strict(feed_server, tmp_path, body, time.time())
+
+        assert message.endswith("is stale in strict mode: the feed has no observation time (observed-at).")
+        assert "unknown observation time" not in message
+
+    def test_an_old_stamp_keeps_its_age(self, feed_server: str, tmp_path: Path) -> None:
+        now = time.time()
+        stamp = _stamp(now - 3600)
+
+        assert self._strict(feed_server, tmp_path, _feed_text(stamp), now).endswith(
+            f"latest observation {stamp} is older than 600 seconds."
+        )
+
+    def test_a_provider_outage_mentions_cached_prices_only_when_cached(self, feed_server: str, tmp_path: Path) -> None:
+        now = time.time()
+        _FeedHandler.routes["/prices/BTC-USD"] = {"status": 503, "body": b"down"}
+        uncached = _resolve(feed_server, tmp_path / "empty", now=now)
+        _FeedHandler.routes["/prices/BTC-USD"] = {"body": _feed_text(_stamp(now)).encode("utf-8")}
+        _resolve(feed_server, tmp_path / "warm", now=now)
+        _FeedHandler.routes["/prices/BTC-USD"] = {"status": 503, "body": b"down"}
+        cached = _resolve(feed_server, tmp_path / "warm", now=now + 301)
+
+        assert uncached.head.last_error == "fetch failed (provider): HTTP 503: price service unavailable. Retry later."
+        assert cached.head.last_error == (
+            "fetch failed (provider): HTTP 503: price service unavailable. Retry later; cached prices remain usable."
+        )
+
+
 class TestManagedPriceFailureText:
     def _record_provider_failure(self, url: str, cache: Path) -> str:
         from email.message import Message
@@ -1555,7 +1739,7 @@ class TestManagedPriceFailureText:
         resolved = resolve_feed(url, "BTC-USD", root=cache, opener=opener)
         assert resolved.blob is None
         assert resolved.head.last_error == (
-            "fetch failed (provider): HTTP 503: price service unavailable. Retry later; cached prices remain usable."
+            "fetch failed (provider): HTTP 503: price service unavailable. Retry later."
         )
         return resolved.head.last_error
 

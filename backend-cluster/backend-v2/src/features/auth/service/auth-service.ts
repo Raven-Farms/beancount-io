@@ -16,6 +16,10 @@ import {
 import { getBasicAuthHeader } from "@/features/auth/utils/auth";
 import { delayRun } from "@/shared/execute";
 import { generateLedgerPassword } from "@/features/auth/utils/ledger-password";
+import {
+  assertValidUsername,
+  usernameFromEmail,
+} from "@/features/auth/utils/username-rule";
 import { createLedger } from "@/features/ledger/operations/create-ledger";
 import { defaultLedgerTemplate } from "@/features/ledger/utils/ledger-template";
 import { logger } from "@/shared/logger";
@@ -159,7 +163,14 @@ export class AuthService implements IAuthService {
   ): Promise<AuthResponse> => {
     const { email, password, firstName, lastName, username } = params;
     const locale = "en";
-    const ledger_username = username ?? email.split("@")[0];
+    if (username) assertValidUsername(username);
+    const ledger_username =
+      username ||
+      (await usernameFromEmail(
+        email,
+        async (name) =>
+          (await this.models.user.getUserByUsername(this.db, name)) !== null,
+      ));
     const ledger_password = generateLedgerPassword();
     const ip = params.ip;
 
@@ -495,6 +506,9 @@ export class AuthService implements IAuthService {
     }
     const usernameToUse = username?.trim() || null;
     if (usernameToUse) {
+      // Sign-up's own rule, which only the dashboard form used to check
+      // (w0/046); renames are held to it too (w0/036).
+      assertValidUsername(usernameToUse);
       const existingUser = await this.models.user.getUserByUsername(
         this.db,
         usernameToUse,

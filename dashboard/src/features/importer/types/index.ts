@@ -11,6 +11,8 @@ export type ParseStage =
   | "detecting"
   | "client-parsing"
   | "server-parsing"
+  /** A CSV the client could not read; AI parsing waits for the user's yes. */
+  | "ai-offer"
   | "complete"
   | "error";
 
@@ -31,6 +33,11 @@ export type ParsedRow = {
   amountFailureReason?: "empty" | "invalid" | "unsupported-precision";
   /** The source column writes comma decimals (`1.000,00`); edits re-parse with it. */
   decimalComma?: boolean;
+  /**
+   * The source column mixes point and comma decimals, so the parser refused
+   * the row; an edit re-reads the amount on its own.
+   */
+  decimalMixed?: boolean;
   errors?: string[];
 };
 

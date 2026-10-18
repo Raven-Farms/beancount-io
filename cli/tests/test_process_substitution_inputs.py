@@ -91,3 +91,21 @@ def test_an_import_directory_and_a_missing_export_keep_their_own_words(tmp_path:
     )
     missing = _bea_with_pipe(tmp_path, "", *base, "nope.csv", *tail)
     assert "Export file not found:" in missing.stderr
+
+
+@pytest.mark.parametrize(
+    ("flag", "extra"),
+    [("--rules", ["--csv", "date=Date,amount=Amount", "--account", "Assets:Cash"]), ("--config", [])],
+    ids=["rules", "config"],
+)
+def test_a_piped_import_option_file_is_named(tmp_path: Path, flag: str, extra: list[str]) -> None:
+    """The engine child reading `--rules`/`--config` does not inherit the descriptor (w5/582)."""
+    (tmp_path / "main.bean").write_text(LEDGER)
+    (tmp_path / "s.csv").write_text("Date,Amount\n2026-01-05,-5.00\n")
+
+    result = _bea_with_pipe(tmp_path, "CONFIG = []\n", "-f", "main.bean", "import", "s.csv", *extra, flag, "{pipe}")
+
+    assert result.returncode == 2, result.stderr
+    pipe = next(arg for arg in result.args if arg.startswith("/dev/fd/"))
+    assert f"{flag} {pipe} is a pipe, not a file. Save it to a file and pass that file." in result.stderr
+    assert "Bad file descriptor" not in result.stderr and "not found" not in result.stderr

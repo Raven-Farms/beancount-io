@@ -126,6 +126,18 @@ const jaJournal: Record<string, TranslationEntry> = {
     message: "カスタム",
     description: "Custom entry type filter",
   },
+  "journal.commodity": {
+    message: "商品",
+    description: "Name of the Commodity directive type",
+  },
+  "journal.event": {
+    message: "イベント",
+    description: "Name of the Event directive type",
+  },
+  "journal.query": {
+    message: "クエリ",
+    description: "Name of the Query directive type",
+  },
   "journal.date": {
     message: "日付",
     description: "Label for date field",
@@ -428,6 +440,96 @@ const jaJournal: Record<string, TranslationEntry> = {
     message: "仕訳行 {number} を削除",
     description:
       "Accessible name for removing a numbered transaction posting row",
+  },
+  "journal.payee": {
+    message: "支払先",
+    description: "Label for the payee field",
+  },
+  "journal.accountLabel": {
+    message: "勘定科目",
+    description: "Label for the account field of a directive form",
+  },
+  "journal.amountLabel": {
+    message: "金額",
+    description: "Label for the amount field of a directive form",
+  },
+  "journal.currencyLabel": {
+    message: "通貨",
+    description: "Label for the currency field of a directive form",
+  },
+  "journal.postingAccount": {
+    message: "仕訳行 {number} の勘定科目",
+    description:
+      "Accessible label for a numbered transaction posting's account field",
+  },
+  "journal.postingAmount": {
+    message: "仕訳行 {number} の金額",
+    description:
+      "Accessible label for a numbered transaction posting's amount field",
+  },
+  "journal.postingCurrency": {
+    message: "仕訳行 {number} の通貨",
+    description:
+      "Accessible label for a numbered transaction posting's currency field",
+  },
+  "journal.postingsUnbalanced": {
+    message:
+      "仕訳行の貸借が一致しません：{residual} の差額があります。金額を修正するか、1 つを空欄にして自動で調整してください。",
+    description:
+      "Shown when a new transaction's postings leave a residual; {residual} is the amount and currency, e.g. 1 USD",
+  },
+  "journal.accountNotOpen": {
+    message: "{account} はこの元帳で開設されていません。",
+    description:
+      "Shown under a New Entry account field naming an account the ledger never opened; {account} is the name",
+  },
+  "journal.alsoOpenAccount": {
+    message: "{account} を {date} に開設する",
+    description:
+      "Checkbox label that adds an open directive for {account} dated {date} to the same New Entry write",
+  },
+  "journal.accountClosedBefore": {
+    message: "{account} はこの仕訳より前の {date} に閉鎖されています。",
+    description:
+      "Shown under a New Entry account field naming an account closed before the entry; {date} is its close date",
+  },
+  "journal.accountOpensAfter": {
+    message: "{account} はこの仕訳より後の {date} に開設されます。",
+    description:
+      "Shown under a New Entry account field naming an account opened after the entry; {date} is its open date",
+  },
+  "journal.discardEntryEditTitle": {
+    message: "編集を破棄しますか？",
+    description:
+      "Title of the confirmation shown when leaving Entry Context with unsaved source edits",
+  },
+  "journal.discardEntryEditDescription": {
+    message: "この仕訳のソースへの変更は保存されていません。",
+    description: "Body of the Entry Context discard confirmation",
+  },
+  "journal.keepEditing": {
+    message: "編集を続ける",
+    description:
+      "Button that returns to the Entry Context editor with the edit intact",
+  },
+  "journal.discardEntryEdit": {
+    message: "破棄",
+    description: "Button that discards the Entry Context edit and leaves",
+  },
+  "journal.entryChangedElsewhere": {
+    message:
+      "この仕訳は開いた後に変更または削除されたため、編集は保存されませんでした。編集内容をコピーしてから再読み込みし、最新の版を確認してください。",
+    description:
+      "Entry Context save refused because the entry changed elsewhere since it was opened",
+  },
+  "journal.copyMyEdit": {
+    message: "編集内容をコピー",
+    description: "Copies the unsaved Entry Context edit to the clipboard",
+  },
+  "journal.reloadEntries": {
+    message: "再読み込み",
+    description:
+      "Closes Entry Context and refreshes the journal to show the latest entries",
   },
   "journal.autoAmount": {
     message: "自動",

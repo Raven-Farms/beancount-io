@@ -27,6 +27,7 @@ from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
 from string import Template
+from unittest import mock
 
 SCRIPTS_DIR = Path(__file__).resolve().parent
 SKILLS_ROOT = SCRIPTS_DIR.parent
@@ -287,6 +288,57 @@ class TestVerify(Workspace):
                 self.assertNotIn("does not exist", err)
 
 
+class TestBundle(Workspace):
+    def test_each_bundle_installed_alone_has_every_reference_it_names(self):
+        out = self.root / "bundles"
+        before = snapshot(SUITE)
+        code, _, err = run("bundle", out)
+        self.assertEqual((code, err), (0, ""))
+        self.assertEqual(snapshot(SUITE), before, "bundling must not touch the checkout")
+        names = skills.expected_skills()
+        self.assertEqual(sorted(p.name for p in out.iterdir()), names)
+        for name in names:
+            with self.subTest(skill=name):
+                alone = self.root / "alone" / name
+                shutil.copytree(out / name, alone / name)
+                missing_files, _ = skills.missing_references(alone, name, names, [name])
+                self.assertEqual(missing_files, {})
+                self.assertFalse((alone / name / "evals").exists())
+
+    def test_a_sibling_bundle_beside_it_does_not_stand_in_for_a_vendored_reference(self):
+        out = self.root / "bundles"
+        run("bundle", out)
+        # beancount-options sorts after beancount-init, so resolving in a shared
+        # directory would find init's copy instead of vendoring one.
+        shared = (SUITE / "beancount-init" / "references" / "bea-cli.md").read_bytes()
+        self.assertEqual((out / "beancount-options" / "references" / "bea-cli.md").read_bytes(), shared)
+
+    def test_a_reference_no_skill_owns_fails_the_build(self):
+        source = self.root / "suite"
+        self.copy_suite(source)
+        with (source / "beancount-ask" / "SKILL.md").open("a") as handle:
+            handle.write("\nRead beancount-init's `references/nowhere.md` first.\n")
+        out = self.root / "bundles"
+        with mock.patch.object(skills, "SOURCE_DIR", source):
+            code, _, err = run("bundle", out)
+        self.assertEqual(code, 1)
+        # As in verify, a file no skill has is attributed to the skill that names it.
+        self.assertRegex(
+            err,
+            r"FAIL beancount-ask: beancount-ask/references/nowhere\.md is missing \(beancount-ask/SKILL\.md:\d+ needs it\)",
+        )
+        self.assertIn("do not publish them", err)
+
+    def test_a_non_empty_output_is_refused_without_writing(self):
+        out = self.root / "bundles"
+        out.mkdir()
+        (out / "keep").write_text("mine\n")
+        code, _, err = run("bundle", out)
+        self.assertEqual(code, 1)
+        self.assertIn("must be an empty or new directory", err)
+        self.assertEqual([p.name for p in out.iterdir()], ["keep"])
+
+
 class TestUninstall(Workspace):
     def test_removes_only_links_into_this_checkout(self):
         run("install", self.dest)
@@ -458,6 +510,19 @@ class TestFirstQueryWalkthrough(unittest.TestCase):
         self.assertEqual(rows[0][0], "Expenses:Food:Groceries")
 
 
+class TestDedupConvention(unittest.TestCase):
+    def test_the_lot_example_hashes_to_the_id_bea_writes(self):
+        # bea hashes a source posting's lot with its units (w5/349); the
+        # documented grammar importers follow must give the same id (w5/555).
+        text = (SUITE / "beancount-import" / "references" / "dedup.md").read_text(encoding="utf-8")
+        example = re.search(r'With a lot \([^)]*\): `([^`]+)` → `import-id: "csv:sha256:([0-9a-f]{16})"`', text)
+        self.assertIsNotNone(example, "dedup.md must show a lot-bearing example")
+        hashed, written = example.groups()
+        self.assertEqual(hashed, "2026-05-07|10 AAPL {100 USD}|BUY AAPL|Assets:Broker:AAPL")
+        self.assertEqual(hashlib.sha256(hashed.encode()).hexdigest()[:16], written)
+        self.assertEqual(written, "d11701f46efbd599")
+
+
 class TestBeaRecipes(unittest.TestCase):
     """Execute the shipped Markdown recipes against isolated synthetic books."""
 
@@ -528,7 +593,7 @@ class TestBeaRecipes(unittest.TestCase):
         self.assertIsNotNone(match, f"Missing executable recipe {name}")
         return match.group(1)
 
-    def recipe(self, name: str, *, succeeds: bool = True):
+    def recipe(self, name: str, *, succeeds: bool = True, envelope: bool = False):
         tokens = shlex.split(self.block(name))
         self.assertEqual(tokens[0], "bea")
         args = [Template(token).substitute(self.values) for token in tokens[1:]]
@@ -539,7 +604,8 @@ class TestBeaRecipes(unittest.TestCase):
         self.assertEqual(self.decoy.read_bytes(), self.decoy_before)
         if succeeds:
             self.assertEqual(result.returncode, 0, result.stderr)
-            return json.loads(result.stdout)["data"]
+            answer = json.loads(result.stdout)
+            return answer if envelope else answer["data"]
         self.assertNotEqual(result.returncode, 0, result.stdout)
         return result
 
@@ -652,6 +718,38 @@ class TestBeaRecipes(unittest.TestCase):
         self.assertEqual(self.target.read_text().count('import-id: "ofx:2026050701"'), 1)
         self.recipe("check")
 
+    def test_a_nounused_ledger_stages_the_open_then_writes_its_first_posting(self):
+        self.ledger.write_text(
+            self.ledger.read_text().replace(
+                'option "operating_currency" "USD"\n',
+                'option "operating_currency" "USD"\nplugin "beancount.plugins.nounused"\n',
+            )
+        )
+        self.target.write_text(
+            '2026-01-02 * "Opening"\n  Assets:Checking 100.00 USD\n  Equity:OpeningBalances\n'
+            '2026-01-03 * "Lunch"\n  Assets:Checking -10.00 USD\n  Expenses:Dining\n'
+        )
+        self.recipe("check")
+        self.values.update(account="Expenses:Uncategorized", open_date="2026-01-01")
+        before = self.ledger.read_bytes()
+
+        # The plain open is refused only as unused; the documented two-step
+        # stages it, and the batch that posts to it clears the check (w5/553).
+        refused = self.recipe("open", succeeds=False)
+        self.assertIn("Unused account 'Expenses:Uncategorized'", refused.stdout + refused.stderr)
+        self.assertEqual(self.ledger.read_bytes(), before)
+        self.recipe("open-staged")
+        self.recipe("check", succeeds=False)
+        self.batch([{
+            "date": "2026-01-04", "flag": "*", "narration": "Parking",
+            "postings": [
+                {"account": "Assets:Checking", "units": {"number": "-5.00", "currency": "USD"}},
+                {"account": "Expenses:Uncategorized", "units": {"number": "5.00", "currency": "USD"}},
+            ],
+        }])
+        self.recipe("batch")
+        self.recipe("check")
+
     def test_option_batch_and_native_expiry_preserve_lot_booking_and_links(self):
         before = self.target.read_bytes()
         for account in ("Assets:Brokerage:Options", "Expenses:Trading:Fees", "Income:Trading:OptionPremium"):
@@ -695,6 +793,37 @@ class TestBeaRecipes(unittest.TestCase):
         self.recipe("batch")
         self.values.update(assertion_date="2023-01-02", amount="87.50 USD")
         self.recipe("balance")
+        self.recipe("check")
+
+    def test_tie_out_diagnoses_a_ledger_its_failing_assertion_made_red(self):
+        fixture = SUITE / "beancount-reconcile" / "evals" / "files" / "eval16_ledger.beancount"
+        ledger = self.books / "main.bean"
+        ledger.write_text(fixture.read_text())
+        before = ledger.read_bytes()
+        self.values.update(
+            ledger=str(ledger), account="Assets:Bank:Checking", currency="USD",
+            assertion_date="2026-06-01", statement_ending="2902.70", proposed_net="(-31.10 + -12.00)",
+        )
+
+        # The strict read refuses the red ledger; the documented read-only
+        # variant answers and says the ledger is invalid (w5/554).
+        refused = self.recipe("tie-out", succeeds=False)
+        self.assertIn("Pass --allow-errors", refused.stdout + refused.stderr)
+        answer = self.recipe("tie-out-on-a-red-ledger", envelope=True)
+        self.assertEqual(answer["data"]["rows"], [["2945.80", "2902.70", "0.00"]])
+        self.assertFalse(answer["ledger_valid"])
+        self.assertTrue(any("Balance failed for 'Assets:Bank:Checking'" in str(e) for e in answer["ledger_errors"]))
+        self.assertEqual(ledger.read_bytes(), before)
+        # The confirmed write needs no flag: the missing rows clear the assertion.
+        self.values["target"] = ledger.name
+        self.batch([
+            {"date": day, "flag": "*", "narration": what, "postings": [
+                {"account": "Assets:Bank:Checking", "units": {"number": amount, "currency": "USD"}},
+                {"account": "Expenses:Food:Groceries"},
+            ]}
+            for day, what, amount in (("2026-05-12", "TRADER JOES #123", "-31.10"), ("2026-05-22", "CITY PARKING", "-12.00"))
+        ])
+        self.recipe("batch")
         self.recipe("check")
 
     def test_tie_out_computes_preview_balance_and_signed_residual_read_only(self):
@@ -916,6 +1045,63 @@ class TestBeaRecipes(unittest.TestCase):
         payees = [payee for row in rows for payee in row if payee in {"WHOLE FOODS", "Split", "Cleared"}]
         self.assertEqual(payees, ["WHOLE FOODS", "WHOLE FOODS", "Split"])
 
+    def test_close_reports_run_at_book_value_beside_an_unpriced_foreign_charge(self):
+        self.ledger.write_text(
+            'option "operating_currency" "USD"\n'
+            "2026-01-01 open Liabilities:Card USD\n"
+            "2026-01-01 open Assets:Brokerage\n"
+            "2026-01-01 open Assets:Checking USD\n"
+            "2026-01-01 open Expenses:Travel\n"
+            "2026-01-01 open Expenses:Food USD\n"
+            '2026-06-10 * "Hotel Paris"\n  Liabilities:Card -330.00 USD\n  Expenses:Travel 300.00 EUR @ 1.10 USD\n'
+            '2026-06-12 * "Lunch"\n  Liabilities:Card -20.00 USD\n  Expenses:Food 20.00 USD\n'
+            '2026-06-15 * "BROKER" "buy"\n  Assets:Brokerage 10 AAPL {150 USD}\n  Assets:Checking -1500 USD\n'
+        )
+        self.values["month"] = "2026-06"
+
+        # Market valuation stops on the missing EUR and AAPL prices; the
+        # close's own recipes, at book value, complete (w5/551).
+        income = self.recipe("close-income-statement")
+        self.assertEqual(income["valuation"], "complete")
+        self.assertEqual(income["expenses"]["balance_children"], {"USD": "20.00", "EUR": "300.00"})
+        sheet = self.recipe("close-balance-sheet")
+        self.assertEqual(sheet["valuation"], "complete")
+        self.assertEqual(sheet["missing_prices"], [])
+        # Spending in the currency paid is the `weight` recipe's answer.
+        top = {account: Decimal(total[0]["units"]["number"]) for account, total in self.query_recipe("top-expenses")}
+        self.assertEqual(top, {"Expenses:Travel": Decimal("330"), "Expenses:Food": Decimal("20")})
+
+    def test_merchant_recipes_count_transactions_not_postings(self):
+        self.ledger.write_text(
+            'option "operating_currency" "USD"\n'
+            "2026-01-01 open Liabilities:Card USD\n"
+            "2026-01-01 open Expenses:Entertainment:Streaming USD\n"
+            "2026-01-01 open Expenses:Taxes:Sales USD\n"
+            "2026-01-01 open Expenses:Food USD\n"
+            + "".join(
+                f'2026-{month}-15 * "NETFLIX" "plan"\n  Liabilities:Card -16.89 USD\n'
+                "  Expenses:Entertainment:Streaming 15.49 USD\n  Expenses:Taxes:Sales 1.40 USD\n"
+                for month in ("04", "05", "06")
+            )
+            + '2026-05-28 * "BEST BUY" "Monitor + cable"\n  Liabilities:Card -260.00 USD\n'
+            "  Expenses:Entertainment:Streaming 150.00 USD\n  Expenses:Food 110.00 USD\n"
+        )
+
+        def usd(inventory):
+            self.assertEqual({lot["units"]["currency"] for lot in inventory}, {"USD"}, inventory)
+            return sum(Decimal(lot["units"]["number"]) for lot in inventory)
+
+        # A charge with a tax line is one charge, and a split purchase one
+        # transaction over the threshold (w5/552).
+        counts = {merchant: n for merchant, n, _ in self.query_recipe("recurring-candidates")}
+        self.assertEqual(counts, {"NETFLIX": 3, "BEST BUY": 1})
+        history = self.query_recipe("merchant-history")
+        self.assertEqual([(day, usd(amount)) for day, amount in history],
+                         [(f"2026-{m}-15", Decimal("16.89")) for m in ("04", "05", "06")])
+        anomalies = self.query_recipe("anomalies")
+        self.assertEqual([(row[0], row[1], usd(row[3])) for row in anomalies],
+                         [("2026-05-28", "BEST BUY", Decimal("260.00"))])
+
     def test_spending_recipes_count_priced_foreign_charges_at_the_usd_paid(self):
         self.ledger.write_text(
             'option "operating_currency" "USD"\n'
@@ -948,11 +1134,10 @@ class TestBeaRecipes(unittest.TestCase):
         grid = {(row[0], row[2]): usd(row[3]) for row in self.query_recipe("recurring-grid")}
         self.assertEqual(grid[("HOTEL PARIS", 6)], Decimal("330"))
         history = self.query_recipe("merchant-history", **{"'NETFLIX'": "'TOKYO RAMEN'"})
-        self.assertEqual([amount["currency"] for _, amount in history], ["USD", "USD"])
+        self.assertEqual([usd(amount) for _, amount in history], [Decimal("10.50"), Decimal("10.50")])
         # Only the 330 USD hotel crosses the 200 threshold; 1500 JPY is $10.50.
         anomalies = self.query_recipe("anomalies")
-        self.assertEqual([(row[1], row[3]["number"], row[3]["currency"]) for row in anomalies],
-                         [("HOTEL PARIS", "330.00", "USD")])
+        self.assertEqual([(row[1], usd(row[3])) for row in anomalies], [("HOTEL PARIS", Decimal("330"))])
         # Book value still reads the at-cost lot at cost.
         net_worth = self.query_recipe("net-worth")
         self.assertEqual(usd(net_worth[0][0]), Decimal("-391.00"))

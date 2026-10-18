@@ -144,6 +144,18 @@ const deJournal: Record<string, TranslationEntry> = {
     message: "Benutzerdefiniert",
     description: "Custom entry type filter",
   },
+  "journal.commodity": {
+    message: "Ware",
+    description: "Name of the Commodity directive type",
+  },
+  "journal.event": {
+    message: "Ereignis",
+    description: "Name of the Event directive type",
+  },
+  "journal.query": {
+    message: "Abfrage",
+    description: "Name of the Query directive type",
+  },
   "journal.date": {
     message: "Datum",
     description: "Label for date field",
@@ -398,7 +410,7 @@ const deJournal: Record<string, TranslationEntry> = {
   },
   "journal.entryDeleteDescription": {
     message:
-      "Den Eintrag in {location} löschen? Dies entfernt ihn aus dem Ledger und kann in der App nicht rückgängig gemacht werden.",
+      "Den Eintrag in {location} löschen? Dies entfernt ihn aus dem Hauptbuch und kann in der App nicht rückgängig gemacht werden.",
     description:
       "Confirmation message for deleting a journal entry. {location} is replaced with the entry's source location.",
   },
@@ -446,6 +458,97 @@ const deJournal: Record<string, TranslationEntry> = {
     message: "Buchungszeile {number} entfernen",
     description:
       "Accessible name for removing a numbered transaction posting row",
+  },
+  "journal.payee": {
+    message: "Zahlungsempfänger",
+    description: "Label for the payee field",
+  },
+  "journal.accountLabel": {
+    message: "Konto",
+    description: "Label for the account field of a directive form",
+  },
+  "journal.amountLabel": {
+    message: "Betrag",
+    description: "Label for the amount field of a directive form",
+  },
+  "journal.currencyLabel": {
+    message: "Währung",
+    description: "Label for the currency field of a directive form",
+  },
+  "journal.postingAccount": {
+    message: "Konto der Buchungszeile {number}",
+    description:
+      "Accessible label for a numbered transaction posting's account field",
+  },
+  "journal.postingAmount": {
+    message: "Betrag der Buchungszeile {number}",
+    description:
+      "Accessible label for a numbered transaction posting's amount field",
+  },
+  "journal.postingCurrency": {
+    message: "Währung der Buchungszeile {number}",
+    description:
+      "Accessible label for a numbered transaction posting's currency field",
+  },
+  "journal.postingsUnbalanced": {
+    message:
+      "Die Buchungszeilen sind nicht ausgeglichen: {residual} bleiben übrig. Passen Sie einen Betrag an oder leeren Sie einen, damit er automatisch ausgeglichen wird.",
+    description:
+      "Shown when a new transaction's postings leave a residual; {residual} is the amount and currency, e.g. 1 USD",
+  },
+  "journal.accountNotOpen": {
+    message: "{account} ist in diesem Hauptbuch nicht eröffnet.",
+    description:
+      "Shown under a New Entry account field naming an account the ledger never opened; {account} is the name",
+  },
+  "journal.alsoOpenAccount": {
+    message: "{account} am {date} ebenfalls eröffnen",
+    description:
+      "Checkbox label that adds an open directive for {account} dated {date} to the same New Entry write",
+  },
+  "journal.accountClosedBefore": {
+    message: "{account} wurde am {date} geschlossen, vor dieser Buchung.",
+    description:
+      "Shown under a New Entry account field naming an account closed before the entry; {date} is its close date",
+  },
+  "journal.accountOpensAfter": {
+    message: "{account} wird erst am {date} eröffnet, nach dieser Buchung.",
+    description:
+      "Shown under a New Entry account field naming an account opened after the entry; {date} is its open date",
+  },
+  "journal.discardEntryEditTitle": {
+    message: "Bearbeitung verwerfen?",
+    description:
+      "Title of the confirmation shown when leaving Entry Context with unsaved source edits",
+  },
+  "journal.discardEntryEditDescription": {
+    message:
+      "Ihre Änderungen am Quelltext dieses Eintrags wurden nicht gespeichert.",
+    description: "Body of the Entry Context discard confirmation",
+  },
+  "journal.keepEditing": {
+    message: "Weiter bearbeiten",
+    description:
+      "Button that returns to the Entry Context editor with the edit intact",
+  },
+  "journal.discardEntryEdit": {
+    message: "Verwerfen",
+    description: "Button that discards the Entry Context edit and leaves",
+  },
+  "journal.entryChangedElsewhere": {
+    message:
+      "Dieser Eintrag wurde seit dem Öffnen geändert oder entfernt, daher wurde Ihre Bearbeitung nicht gespeichert. Kopieren Sie Ihre Bearbeitung und laden Sie neu, um die aktuelle Fassung zu sehen.",
+    description:
+      "Entry Context save refused because the entry changed elsewhere since it was opened",
+  },
+  "journal.copyMyEdit": {
+    message: "Meine Bearbeitung kopieren",
+    description: "Copies the unsaved Entry Context edit to the clipboard",
+  },
+  "journal.reloadEntries": {
+    message: "Neu laden",
+    description:
+      "Closes Entry Context and refreshes the journal to show the latest entries",
   },
   "journal.autoAmount": {
     message: "auto",

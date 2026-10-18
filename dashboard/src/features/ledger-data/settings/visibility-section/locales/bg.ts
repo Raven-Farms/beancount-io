@@ -4,6 +4,20 @@ export interface TranslationEntry {
 }
 
 const bgVisibilitySection: Record<string, TranslationEntry> = {
+  "page.settings.makePublicTitle": {
+    message: "Да стане ли тази книга публична?",
+    description:
+      "Title of the confirmation before a private ledger becomes public",
+  },
+  "page.settings.makePublicDescription": {
+    message:
+      "Всеки с връзката, както и търсачките, ще може да вижда транзакциите, салдата, файловете и историята на тази книга.",
+    description: "What becomes visible when a private ledger is made public",
+  },
+  "page.settings.makePublic": {
+    message: "Направи публична",
+    description: "Button that confirms making a private ledger public",
+  },
   "page.settings.publicLedger": {
     message: "Публична книга",
     description: "Label when ledger is public",

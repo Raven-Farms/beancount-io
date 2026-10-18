@@ -12,6 +12,8 @@ import { LocalizationProvider } from "@/i18n/provider";
 import { EntriesCountByType } from "../entries-count-by-type";
 import en from "../locales/en";
 import de from "../locales/de";
+import journalEn from "@/features/journal/locales/en";
+import journalDe from "@/features/journal/locales/de";
 
 vi.unmock("react-i18next");
 vi.unmock("@/common/hooks/use-translations");
@@ -88,20 +90,33 @@ async function setup(language: SupportedLanguage, data = entries) {
       </MockedProvider>
     </LocalizationProvider>,
   );
-  await screen.findByText("Transaction");
+  await screen.findByText(language === "de" ? "Transaktion" : "Transaction");
   return { localization, result };
+}
+
+/** The rows as the reader sees them: localized names in that language's order. */
+function expectedRows(language: "en" | "de") {
+  const labels = language === "en" ? journalEn : journalDe;
+  const collator = new Intl.Collator(language);
+  return entries
+    .map((entry) => ({
+      ...entry,
+      label: labels[`journal.${entry.type.toLowerCase()}`].message,
+    }))
+    .sort((a, b) => collator.compare(a.label, b.label));
 }
 
 function checkRows(table: HTMLElement, language: "en" | "de") {
   const nonzero = ["Balance", "Open", "Price", "Transaction"];
   const rows = within(table).getAllByRole("row").slice(1);
+  const expected = expectedRows(language);
   expect(rows).toHaveLength(entries.length);
   for (const [index, row] of rows.entries()) {
     const cells = within(row).getAllByRole("cell");
     expect(cells).toHaveLength(3);
-    expect(cells[0]).toHaveTextContent(entries[index].type);
-    expect(cells[1].textContent).toBe(String(entries[index].number));
-    const valueIndex = nonzero.indexOf(entries[index].type);
+    expect(cells[0].textContent).toBe(expected[index].label);
+    expect(cells[1].textContent).toBe(String(expected[index].number));
+    const valueIndex = nonzero.indexOf(expected[index].type);
     // Inspect textContent directly: German Intl includes a nonbreaking space
     // before %, which text-normalizing matchers would otherwise conceal.
     expect
@@ -163,7 +178,10 @@ describe("EntriesCountByType locale percentages", () => {
           name: labels["page.statistics.entriesCountByType"].message,
         }),
       ).toBe(table);
-      expect(within(table).getAllByRole("cell")).toEqual(cells);
+      // The same cells, reordered by the new language's names, not remounted.
+      expect(new Set(within(table).getAllByRole("cell"))).toEqual(
+        new Set(cells),
+      );
       checkRows(table, language);
       expect(result).toHaveBeenCalledTimes(1);
     }
@@ -207,5 +225,33 @@ describe("EntriesCountByType locale percentages", () => {
       ).toBeInTheDocument();
       expect(result).toHaveBeenCalledTimes(1);
     }
+  });
+});
+
+describe("EntriesCountByType type names (w3/562)", () => {
+  it("names each type in German, as the Journal does, in German order", async () => {
+    await setup("de");
+    const table = screen.getByRole("table", {
+      name: de["page.statistics.entriesCountByType"].message,
+    });
+    const names = within(table)
+      .getAllByRole("row")
+      .slice(1)
+      .map((row) => within(row).getAllByRole("cell")[0].textContent);
+
+    expect(names).toEqual(expectedRows("de").map((row) => row.label));
+    for (const name of ["Saldo", "Eröffnen", "Transaktion", "Abfrage"]) {
+      expect(names).toContain(name);
+    }
+    expect(names).not.toContain("Balance");
+  });
+
+  it("shows an unknown future type by its own name", async () => {
+    await setup("de", [
+      ...entries,
+      { __typename: "EntriesByType", type: "Budget", number: 0 },
+    ]);
+
+    expect(screen.getByRole("cell", { name: "Budget" })).toBeInTheDocument();
   });
 });

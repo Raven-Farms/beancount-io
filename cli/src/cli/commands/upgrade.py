@@ -125,6 +125,7 @@ def upgrade(
             _report(channel, current, latest)
         return
 
+    ctx.require_network("upgrade")
     if channel.unknown:
         raise UsageError(
             "Cannot tell which package manager installed bea, so nothing was run.",

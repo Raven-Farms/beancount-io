@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import json
 import re
 import shlex
+import subprocess
+import sys
 import unicodedata
 from pathlib import Path
 
@@ -13,6 +16,7 @@ from cli import context, output
 from cli.engine import launch
 from cli.errors import BeaError, LedgerError, UsageError, refuse_misplaced_global
 from cli.native_help import native_options
+from cli.paths import expand_path
 
 _URL_INCLUDE_RE = re.compile(r'^\s*include\s*"(?i:https?)://', re.MULTILINE)
 """An include line native bean-check cannot resolve (w1/m29).
@@ -36,6 +40,7 @@ NFC and NFD spellings could split one account in two (w1/054).
 def check(ctx: typer.Context) -> None:
     """Parse, check and realize a beancount ledger."""
     refuse_misplaced_global("check", list(ctx.args), native_options("check"))
+    _refuse_positional_ledger(list(ctx.args))
     current = context.current()
     file = current.entry_file()
     compat = _closure_needs_compat(file)
@@ -67,6 +72,8 @@ def check(ctx: typer.Context) -> None:
     # Judged as given, with or without --no-cache, as USAGE promises.
     _refuse_cache_over_ledger(file, ctx.args)
     args = list(ctx.args)
+    # Native --json must cover refusals before bean-check starts as well.
+    as_json = "--json" in args[: args.index("--")] if "--" in args else "--json" in args
     if _disables_cache(args) and _names_cache_file(args):
         # bean-check ignores the path under --no-cache and says so through
         # Python's root logger, a raw `WARNING:root:` line (w5/417).
@@ -77,11 +84,22 @@ def check(ctx: typer.Context) -> None:
         # loads a file reached under two names twice without a word; the
         # helper names the include and the file that includes it (w5/120),
         # or both names of the one file (w5/433).
-        launch.helper_json(["check", "--file", str(file)])
+        try:
+            launch.helper_json(["check", "--file", str(file)])
+        except BeaError as error:
+            if as_json:
+                _emit_json_errors(file, error.details or [str(error)], error.exit_code)
+            raise
     # bean-check keys its load cache on the files read, not on the plugin set,
     # and every later read trusts that cache. A load made with the auto plugins
     # must neither be stored there nor answered from a default load's entry (w5/111).
-    isolate = ["--no-cache"] if _enables_auto(args) else []
+    # Nor is the key the validations a load ran: the helper's load, cached
+    # without bean-check's data-type checks, made bean-check pass a ledger it
+    # rejects once a load took over a second (w5/564). bean-check runs here
+    # only for a ledger the helper found errors in or for bean-check's own
+    # options, so it loads afresh unless the user named a cache file.
+    fresh = _enables_auto(args) or not _names_cache_file(args)
+    isolate = ["--no-cache"] if fresh and not _disables_cache(args) else []
     # bean-check does not cover document paths that resolve outside the ledger tree;
     # the helper check does, so copies that still resolve against another tree fail.
     # Only that rule: this second load knows none of bean-check's options, so
@@ -96,23 +114,44 @@ def check(ctx: typer.Context) -> None:
         try:
             loaded = launch.helper_json(["check", "--file", str(file), "--documents-only"])
         except BeaError as error:
+            if str(error).endswith("plugin(s) terminated while loading."):
+                # The plugin terminated the load. Falling through to native
+                # bean-check would execute it again and leak its exit status.
+                if as_json:
+                    _emit_json_errors(file, error.details, error.exit_code)
+                raise
             if str(error).startswith(_UNDECODABLE):
                 # bean-check reports a file that is not UTF-8 as a codec message
                 # at a line; the helper names the file, the byte and the remedy,
                 # and no bean-check option makes those bytes decode (w5/278).
+                if as_json:
+                    _emit_json_errors(file, [str(error), *error.details], error.exit_code)
                 raise
             portable = error
         else:
             root_hint = loaded.get("root_hint")
             failed = [str(line) for line in loaded.get("plugin_failures") or []]
-            if failed and not current.debug:
+            unbookable = [str(line) for line in loaded.get("booking_failures") or []]
+            # Metadata overwriting an entry's location: bean-check accepts it
+            # under any option, `--debug` included (w5/630).
+            reserved = [str(line) for line in loaded.get("reserved_keys") or []]
+            if current.debug:
+                failed, unbookable = [], []
+            if failed or unbookable or reserved:
                 # bean-check reports a plugin that cannot load as a traceback at
-                # `<load>:0`; the helper names the directive's file and line, as
-                # `--json check` and every other read do. The other load errors
-                # are listed only when no option could have changed them (w5/256).
+                # `<load>:0`, and a transaction booking cannot do the arithmetic
+                # for as an uncaught `DivisionByZero` or `InvalidOperation` (w5/538);
+                # the helper names the directive's file and line, as `--json check`
+                # and every other read do. The other load errors are listed only
+                # when no option could have changed them (w5/256).
+                crashed = [*failed, *unbookable, *reserved]
+                if as_json:
+                    _emit_json_errors(file, crashed, 1)
                 if args:
-                    raise LedgerError(f"{file}: {len(failed)} plugin(s) failed to load.", details=failed)
-                errors = [str(line) for line in loaded.get("errors") or failed]
+                    only_plugins = len(failed) == len(crashed)
+                    summary = f"{len(failed)} plugin(s) failed to load" if only_plugins else f"{len(crashed)} error(s)"
+                    raise LedgerError(f"{file}: {summary}.", details=crashed)
+                errors = [str(line) for line in loaded.get("errors") or crashed]
                 raise LedgerError(f"{file}: {len(errors)} error(s).", details=errors)
             if not args and loaded.get("clean"):
                 # That load ran bean-check's own loader and validations and found
@@ -120,6 +159,9 @@ def check(ctx: typer.Context) -> None:
                 # native run would only load it again, every plugin twice (w5/430).
                 # Errors still come from bean-check, in its own words.
                 raise typer.Exit(0)
+    if as_json and portable is not None:
+        answer = launch.capture_native("bean-check", [*isolate, str(file), *args], ledger=file)
+        _merge_json_errors(file, answer, portable)
     code = launch.run_native("bean-check", [*isolate, str(file), *args], ledger=file)
     if code != 0:
         # An included leaf fails on accounts its root opens; say which root
@@ -130,6 +172,68 @@ def check(ctx: typer.Context) -> None:
     if portable is not None:
         raise portable
     raise typer.Exit(0)
+
+
+_LOCATED = re.compile(r"(?P<filename>.+?):(?P<lineno>\d+): (?P<message>.*)", re.DOTALL)
+
+
+def _json_error(file: Path, detail: str) -> dict[str, object]:
+    """One of bea's findings in bean-check's `--json` shape: message, filename, line."""
+    # These failures have a filename but no parser line. Keep that include's
+    # source instead of attributing every unlocated refusal to the root.
+    for pattern in (
+        r"Cannot decode '(?P<filename>.+)' as UTF-8:",
+        r"Included file '(?P<filename>.+)' \(included from '.+'\) is not readable:",
+    ):
+        if found := re.match(pattern, detail):
+            return {"message": detail, "filename": found["filename"], "lineno": 0}
+    located = _LOCATED.fullmatch(detail)
+    if located is None:
+        return {"message": detail, "filename": str(file), "lineno": 0}
+    return {"message": located["message"], "filename": located["filename"], "lineno": int(located["lineno"])}
+
+
+def _emit_json_errors(file: Path, details: list[str], code: int) -> None:
+    """Print bea's findings as bean-check's JSON error list, and exit failing."""
+    typer.echo(json.dumps({"errors": [_json_error(file, detail) for detail in details]}))
+    raise typer.Exit(code or 1)
+
+
+def _merge_json_errors(file: Path, completed: subprocess.CompletedProcess[str], finding: BeaError) -> None:
+    """bean-check's JSON answer with bea's portable-document finding added to its list."""
+    stdout = completed.stdout or ""
+    sys.stderr.write(completed.stderr or "")
+    code = launch.captured_status(completed)
+    try:
+        answer = json.loads(stdout)
+        errors = list(answer["errors"])
+    except (ValueError, KeyError, TypeError):
+        # Not the shape documented: leave bean-check's words as they were.
+        sys.stdout.write(stdout)
+        raise typer.Exit(code or 1) from None
+    errors.extend(_json_error(file, detail) for detail in finding.details)
+    typer.echo(json.dumps({**answer, "errors": errors}))
+    raise typer.Exit(code or 1)
+
+
+def _refuse_positional_ledger(args: list[str]) -> None:
+    """Send `bea check books.bean`, the `bean-check FILE` habit, to `--file`.
+
+    The path was ignored: the check fell back to `main.bean` or failed on
+    upstream's "unexpected extra argument", and `--json` blamed it as a
+    bean-check option, none of them naming `--file` (w5/500).
+    """
+    index = 0
+    while index < len(args):
+        arg = args[index]
+        if arg == _CACHE_FLAG:
+            index += 2
+            continue
+        if arg != "--" and not arg.startswith("-") and expand_path(Path(arg), "check argument").is_file():
+            raise UsageError(
+                f"bea check takes the ledger from --file, not as an argument: run bea --file {shlex.quote(arg)} check."
+            )
+        index += 1
 
 
 #: bean-check options that print and exit without reading the ledger.
@@ -222,7 +326,7 @@ def _closure_needs_compat(file: Path) -> tuple[str, str] | None:
         members = output.ledger_closure(file)
     except OSError:
         return None
-    marked = [str(member) for member in members if has_bom(member)]
+    marked = [str(member) for member in members if not output.is_encrypted(member) and has_bom(member)]
     if marked:
         # Bare `bea format -i` reads stdin and is refused, so the remedy names
         # every marked file: one run of the printed command clears the closure (w5/197).
@@ -231,6 +335,8 @@ def _closure_needs_compat(file: Path) -> tuple[str, str] | None:
             f"Run {shlex.join(['bea', 'format', '-i', *marked])} to strip the mark, then retry.",
         )
     for member in members:
+        if output.is_encrypted(member):
+            continue
         try:
             raw = member.read_bytes()
         except OSError:

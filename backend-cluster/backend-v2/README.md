@@ -10,6 +10,18 @@ The backend is built with Node.js and TypeScript using Koa and GraphQL. It power
 - Redis for caching
 - Background jobs for data processing
 
+## Billing
+
+The supported application client is `beancount-web-prod`, configured by
+`STRIPE_PRIVATE_KEY`, `STRIPE_PUBLIC_KEY`, and `STRIPE_WEBHOOK_SECRET`. Billing
+uses live subscriptions and recognized current/legacy prices; an old cached period
+or unknown price cannot identify a purchased plan. Only verified live webhooks
+may refresh a customer's cache. Stripe failures do not clear stored periods.
+
+The retired `beancount-web-dev` tenant and `STRIPE_DEV_*` variables are ignored;
+no fake-paid script replaces them. Keep isolated Stripe testing outside live
+application billing.
+
 ## Project Structure
 
 ```
@@ -226,11 +238,11 @@ uses `APP_LINKS_APPLE_TEAM_ID=PTLM7BZQMM`.
 
 ### OpenAI apps domain proof
 
-Optional. `OPENAI_APPS_CHALLENGE` holds the token the OpenAI Plugins dashboard
-issues while it verifies the domain of an app submission. When set, this server
-answers `GET /.well-known/openai-apps-challenge` with exactly that token as
-`text/plain`. A value with whitespace inside it fails startup. Unset → 404;
-leave it unset on a self-host.
+`GET /.well-known/openai-apps-challenge` answers with the token the OpenAI
+Plugins dashboard issued for Beancount.io's app submission, as `text/plain`.
+The token is not a secret, so it is a constant in `well-known-route.ts`, not an
+environment variable. Only a deployment whose `DASHBOARD_URL` is
+`https://beancount.io` serves it; every other deployment answers 404.
 
 ### MCP Registry domain proof
 
@@ -495,7 +507,7 @@ See `src/scheduler/` for implementation details and `src/scheduler/README.md` fo
 The backend exposes GraphQL APIs through Apollo Server. You can explore the API schema by running the server and visiting the GraphQL playground.
 
 Ledger creation through GraphQL `createLedger`, REST `POST /api-gateway/v1/ledgers`,
-or MCP `manageLedgers` uses the **STARTER** template by default (also for an omitted
+or MCP `createLedger` uses the **STARTER** template by default (also for an omitted
 or null template). Starter includes options and account scaffolding, with no
 transactions or opening balances. Choose **SAMPLE** for a populated demonstration
 ledger. Template changes apply only to newly created ledgers; existing books are
@@ -579,7 +591,7 @@ shows the same read URI for Codex and Claude Code, including report-only equity
 closing and account-filter scope.
 
 The [Beancount.io MCP guide](./docs/mcp.md) explains setup, OAuth and API-key
-permissions, how requests reach the ledger, all 27 tools and 64 resource
+permissions, how requests reach the ledger, all 43 tools and 64 resource
 templates, the four accounting prompts and how Claude Code and Codex use them,
 the result envelope and its failure codes, writing directives as
 Beancount text, file-edit previews, bank imports, protocol examples, and

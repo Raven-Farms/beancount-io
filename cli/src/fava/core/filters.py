@@ -435,7 +435,11 @@ class AdvancedFilter(EntryFilter):
         return [entry for entry in entries if include(entry)]
 
 
-def account_predicate(value: str | None) -> Callable[[str], bool]:
+#: Beancount's root account names, for callers that do not pass a ledger's own.
+DEFAULT_ROOTS = ("Assets", "Liabilities", "Equity", "Income", "Expenses")
+
+
+def account_predicate(value: str | None, roots: Sequence[str] = DEFAULT_ROOTS) -> Callable[[str], bool]:
     """Whether one account name satisfies an `--account` filter.
 
     The single definition of what that filter means: a parent account
@@ -459,10 +463,20 @@ def account_predicate(value: str | None) -> Callable[[str], bool]:
     # its prefix sibling `Expenses:FoodTruck`, as an unanchored regex search
     # would (w5/292). Anything else — a single word, lower case, or a real
     # pattern — keeps the documented regular-expression search.
-    if account.is_valid(value):
-        return lambda name: account.has_component(name, value)
-    matches_pattern = Match(value)
-    return lambda name: account.has_component(name, value) or matches_pattern(name)
+    if account.is_valid(value) or value in roots:
+        # Beancount.io change: `has_component` searches for the components
+        # anywhere in a name, so `Expenses:Travel` also matched
+        # `Assets:Reimbursable:Expenses:Travel`, and a bare root, read as a
+        # pattern, let `Income` pull `Expenses:Taxes:Income` into net profit
+        # (w5/616). An account name or a root is anchored at the start.
+        prefix = f"{value}:"
+        return lambda name: name == value or name.startswith(prefix)
+    # Beancount.io change: the raw value was also formatted into
+    # `has_component`'s `(^|:)…(:|$)` wrapper. The case-insensitive search
+    # already matches everything that wrapper does for a valid pattern, and
+    # for an invalid one the wrapper read `*Food*` as "component Foo, then
+    # d*", silently dropping Expenses:FoodTruck (w5/502).
+    return Match(value)
 
 
 class AccountFilter(EntryFilter):
@@ -473,9 +487,9 @@ class AccountFilter(EntryFilter):
 
     __slots__ = ("_match", "_value")
 
-    def __init__(self, value: str) -> None:
+    def __init__(self, value: str, roots: Sequence[str] = DEFAULT_ROOTS) -> None:
         self._value = value
-        self._match = account_predicate(value)
+        self._match = account_predicate(value, roots)
 
     def apply(self, entries: Sequence[Directive]) -> Sequence[Directive]:
         if not self._value:

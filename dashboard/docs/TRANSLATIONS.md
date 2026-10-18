@@ -222,36 +222,45 @@ yarn i18n:prepare
 
 This script:
 
-1. Reads all keys from `en.ts`
-2. Checks each language file for missing translations
-3. Adds new keys with `[TODO]` markers for untranslated entries
-4. Preserves existing translations
-5. Shows completion percentage for each language
+1. Adds keys that code passes to `t()` but the English catalog lacks (a shared `common.*` key is reported for you to add by hand instead)
+2. Brings each language's catalog in line with English: missing keys are added as `[TODO] <English>`, keys English no longer has are removed, and existing translations are kept
+3. Expands counts per language: a plural message keeps the forms that language uses (`_one`/`_few`/`_many`/`_other` in Russian, Ukrainian and Slovak; `_other` alone in Chinese, Japanese and Korean), per `Intl.PluralRules`
+4. Edits catalogs in place — only the entries it adds or removes change, formatted by Prettier — so on a tree that is already in sync it changes no file
+5. Reports each language's progress, and names every key that is still `[TODO]`, half-translated (ends in verbatim English), or copied whole from English
+
+A message copied whole from English is not counted as translated. If it is genuinely correct in English for that language (a proper name, account-path syntax), add it to `IDENTICAL_BY_DESIGN` in `src/test/locale-scan.ts` with the reason.
 
 Example output:
 
 ```
-📊 Translation Progress:
+📊 Overall Translation Progress by Locale:
 
   Locale | Completed | Total | Progress
   -------|-----------|-------|----------
-  ✅ zh   |       215 |   219 | ████████████████████ 98%
-  📝 es   |       110 |   219 | ██████████░░░░░░░░░░ 50%
-  📝 fr   |       110 |   219 | ██████████░░░░░░░░░░ 50%
+  ✅ zh   |      2298 |  2298 | ████████████████████ 100%
+  📝 es   |      2290 |  2298 | ███████████████████░ 99% (8 TODOs)
 ```
+
+### Checking Catalogs Without Changing Them
+
+```bash
+yarn i18n:check
+```
+
+Lists everything `yarn i18n:prepare` would change — keys missing from English or from a language (its own plural forms included) and keys a language no longer needs — plus every `[TODO]` message, and exits non-zero if there is any. `yarn lint`, and so dashboard CI, runs it.
 
 ### Finding Untranslated Keys
 
 Search for `[TODO]` markers to find keys that need translation:
 
 ```bash
-grep -r '\[TODO\]' src/locales/
+grep -n '\[TODO\]' $(find src -path '*/locales/*.ts')
 ```
 
 Or in a specific language:
 
 ```bash
-grep '\[TODO\]' src/locales/zh.ts
+grep -n '\[TODO\]' $(find src -path '*/locales/*' -name zh.ts)
 ```
 
 ## Best Practices

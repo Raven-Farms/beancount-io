@@ -30,6 +30,7 @@ import { Route as EntryRoute } from "@/routes/ledger.$ledgerOwner.$ledgerName.en
 import { Route as CommitRoute } from "@/routes/ledger.$ledgerOwner.$ledgerName.commit.$commitSha";
 import { Route as PullRoute } from "@/routes/ledger.$ledgerOwner.$ledgerName.pull.$prNumber";
 import { Route as ProfileRoute } from "@/routes/ledger.$username";
+import { Route as FileRoute } from "@/routes/ledger.$ledgerOwner.$ledgerName.files.blob.$branch.$";
 
 vi.unmock("@/common/hooks/use-translations");
 vi.unmock("react-i18next");
@@ -39,7 +40,13 @@ vi.mock("@/common/root-route/shell-component", () => ({
 vi.mock("@/common/root-route/root-component", () => ({
   RootComponent: () => null,
 }));
-vi.mock("@/common/server-fn", () => ({ fetchUserProfile: vi.fn() }));
+vi.mock("@/common/server-fn", () => ({
+  fetchUserProfile: vi.fn(async () => ({ status: "signed-out" as const })),
+  toAuthContext: () => ({
+    userProfile: null,
+    authStatus: "signed-out" as const,
+  }),
+}));
 vi.mock("@/i18n/detect-language", () => ({ detectLanguage: () => "en" }));
 
 // Keep actual file-route loaders, validation, heads and not-found components.
@@ -56,6 +63,9 @@ vi.mock("@/features/git/commits/pages/commit-detail-page", () => ({
 }));
 vi.mock("@/features/git/pull-requests/pages/pr-review-page", () => ({
   default: () => <p>Existing pull body</p>,
+}));
+vi.mock("@/features/ledger-editor/file-editor", () => ({
+  default: () => <p>Existing file body</p>,
 }));
 vi.mock(
   "@/features/user-profile/pages/user-profile-page",
@@ -89,6 +99,12 @@ const entities = [
     operation: "GetPullRequestDetails",
   },
   { name: "profile", path: "/ledger/alice", operation: "GetUserProfile" },
+  {
+    // w3/629: a stale file link was an indexable 200.
+    name: "file",
+    path: `${ledger}/files/blob/main/README.md`,
+    operation: "GetLedgerFile",
+  },
 ] as const;
 
 function responseData(operation: string, missing: boolean) {
@@ -147,6 +163,23 @@ function responseData(operation: string, missing: boolean) {
               baseBranch: "main",
               files: [],
               diff: "",
+            },
+      };
+    case "GetLedgerFile":
+      return {
+        getLedgerFile: missing
+          ? null
+          : {
+              name: "README.md",
+              path: "README.md",
+              sha: "synthetic-sha",
+              size: 9,
+              type: "file",
+              encoding: "base64",
+              content: "U3ludGhldGlj",
+              lastCommitSha: null,
+              lastAuthorDate: null,
+              lastCommitterDate: null,
             },
       };
     case "GetUserProfile":
@@ -248,6 +281,7 @@ async function serve(
     clone(EntryRoute, ledgerRoute, "entry/$entryHash"),
     clone(CommitRoute, ledgerRoute, "commit/$commitSha"),
     clone(PullRoute, ledgerRoute, "pull/$prNumber"),
+    clone(FileRoute, ledgerRoute, "files/blob/$branch/$"),
   ]);
   const router = createRouter({
     routeTree: root.addChildren([
@@ -305,6 +339,7 @@ describe("matched entity routes through the actual SSR boundary", () => {
           commit: "Commit known-c - books",
           pull: "Pull Request #7 - books",
           profile: "alice - User Profile",
+          file: "README.md · Files - books",
         }[name],
       ]);
     },

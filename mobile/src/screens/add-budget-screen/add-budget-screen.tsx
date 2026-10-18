@@ -20,6 +20,7 @@ import {
   fontSizes,
   fontWeights,
   gutter,
+  headerActionMaxFontSizeMultiplier,
   headerActionStyle,
   space,
   useTheme,
@@ -30,12 +31,17 @@ import { LedgerGuard, useLedgerGuard } from "@/components/ledger-guard";
 import { Picker } from "@/components/picker";
 import type { ColorTheme } from "@/types/theme-props";
 import { useSaveBudget } from "@/screens/budget-screen/hooks/use-save-budget";
+import { isBudgetAmount } from "@/screens/budget-screen/build-budget-entry";
 import {
   BUDGET_INTERVALS,
   intervalLabelKey,
 } from "@/screens/budget-screen/selectors/budget-labels";
 import { getFormatDate } from "@/common/format-util";
-import { LEADING_TEXT_ALIGN, directionalIcon } from "@/common/rtl";
+import {
+  LEADING_TEXT_ALIGN,
+  directionalIcon,
+  trailingInputTextAlign,
+} from "@/common/rtl";
 
 const getStyles = (theme: ColorTheme) =>
   StyleSheet.create({
@@ -96,7 +102,7 @@ const getStyles = (theme: ColorTheme) =>
       paddingHorizontal: space.sm,
       color: theme.text01,
       fontSize: fontSizes.lg,
-      textAlign: "right",
+      textAlign: trailingInputTextAlign(),
     },
     help: {
       paddingHorizontal: space.xs,
@@ -206,9 +212,12 @@ function AddBudgetScreenImpl(): JSX.Element {
   const currency =
     pickedCurrency || (metaLoading ? "" : (currencies[0] ?? "USD"));
 
+  // Written verbatim into the directive, so only a number may pass (w0/038).
+  const amountOk = isBudgetAmount(amount);
+  const amountInvalid = amount.trim().length > 0 && !amountOk;
   const canSubmit =
     account.trim().length > 0 &&
-    amount.trim().length > 0 &&
+    amountOk &&
     currency.trim().length > 0 &&
     !loading &&
     !saved;
@@ -285,6 +294,7 @@ function AddBudgetScreenImpl(): JSX.Element {
                   styles.doneButton,
                   !canSubmit && styles.doneButtonDisabled,
                 ]}
+                maxFontSizeMultiplier={headerActionMaxFontSizeMultiplier}
               >
                 {t("done")}
               </Text>
@@ -332,6 +342,9 @@ function AddBudgetScreenImpl(): JSX.Element {
               placeholderTextColor={theme.controlPlaceholder}
               keyboardType="numbers-and-punctuation"
               returnKeyType="done"
+              accessibilityHint={
+                amountInvalid ? t("budgetAmountInvalid") : undefined
+              }
             />
           </View>
 
@@ -342,6 +355,15 @@ function AddBudgetScreenImpl(): JSX.Element {
           />
         </View>
 
+        {amountInvalid ? (
+          <Text
+            style={styles.error}
+            accessibilityRole="alert"
+            accessibilityLiveRegion="polite"
+          >
+            {t("budgetAmountInvalid")}
+          </Text>
+        ) : null}
         <Text style={styles.help}>{t("budgetAccountHelp")}</Text>
         {submitError && <Text style={styles.error}>{submitError}</Text>}
       </ScrollView>

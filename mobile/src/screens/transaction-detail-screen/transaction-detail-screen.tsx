@@ -66,6 +66,7 @@ import {
 } from "@/common/app-links/ledger-url-actions";
 import { getServerUrl } from "@/common/vars/server-url";
 import { HERO_AMOUNT_FIT } from "@/components/amount-text/hero-amount-fit";
+import { letterSpacing } from "@/common/rtl";
 
 const getStyles = (theme: ColorTheme) =>
   StyleSheet.create({
@@ -192,7 +193,7 @@ const getStyles = (theme: ColorTheme) =>
       color: theme.black80,
       marginBottom: 5,
       textTransform: "uppercase",
-      letterSpacing: 0.4,
+      letterSpacing: letterSpacing(0.4),
     },
     chipRow: {
       flexDirection: "row",

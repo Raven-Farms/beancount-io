@@ -11,45 +11,70 @@ import {
 } from "./csv-validator";
 
 /**
- * Schema for a single editable row
+ * The parser's decision for the row's amount column: its decimal mark, or
+ * that the column mixes both, which the parser refuses.
  */
-export const editableRowSchema = z.object({
-  date: z
-    .string()
-    .min(1, "importer.validation.dateRequired")
-    .refine((val: string) => parseDate(val).valid, {
-      message: "importer.validation.invalidDateFormat",
-    }),
+type AmountColumnConvention = {
+  decimalComma?: boolean;
+  decimalMixed?: boolean;
+};
 
-  payee: z
-    .string()
-    .min(1, "importer.validation.payeeRequired")
-    .refine((val: string) => validatePayee(val).valid, {
-      message: "importer.validation.payeeRequired",
-    }),
+/**
+ * Schema for a single editable row. The amount is read with its column's
+ * convention, the same rule `buildParsedRow` and Configure apply, so a
+ * comma-decimal `-4,50` the parser accepted is not flagged here (w3/644).
+ */
+export const createEditableRowSchema = ({
+  decimalComma = false,
+  decimalMixed = false,
+}: AmountColumnConvention = {}) =>
+  z.object({
+    date: z
+      .string()
+      .min(1, "importer.validation.dateRequired")
+      .refine((val: string) => parseDate(val).valid, {
+        message: "importer.validation.invalidDateFormat",
+      }),
 
-  description: z
-    .string()
-    .min(1, "importer.validation.descriptionRequired")
-    .refine((val: string) => validateDescription(val).valid, {
-      message: "importer.validation.descriptionRequired",
-    }),
+    payee: z
+      .string()
+      .min(1, "importer.validation.payeeRequired")
+      .refine((val: string) => validatePayee(val).valid, {
+        message: "importer.validation.payeeRequired",
+      }),
 
-  amount: z
-    .string()
-    .min(1, "importer.validation.amountRequired")
-    .superRefine((val: string, ctx) => {
-      const result = parseAmount(val);
-      if (result.valid) return;
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message:
-          result.reason === "unsupported-precision"
-            ? "importer.validation.amountUnsupportedPrecision"
-            : "importer.validation.amountInvalid",
-      });
-    }),
-});
+    description: z
+      .string()
+      .min(1, "importer.validation.descriptionRequired")
+      .refine((val: string) => validateDescription(val).valid, {
+        message: "importer.validation.descriptionRequired",
+      }),
+
+    amount: z
+      .string()
+      .min(1, "importer.validation.amountRequired")
+      .superRefine((val: string, ctx) => {
+        if (decimalMixed) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "importer.validation.amountMixedDecimals",
+          });
+          return;
+        }
+        const result = parseAmount(val, { decimalComma });
+        if (result.valid) return;
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            result.reason === "unsupported-precision"
+              ? "importer.validation.amountUnsupportedPrecision"
+              : "importer.validation.amountInvalid",
+        });
+      }),
+  });
+
+/** A dot-decimal row's schema. */
+export const editableRowSchema = createEditableRowSchema();
 
 /**
  * Schema for the full form with array of rows
@@ -70,4 +95,5 @@ export type ImporterValidationKey =
   | "importer.validation.descriptionRequired"
   | "importer.validation.amountRequired"
   | "importer.validation.amountInvalid"
+  | "importer.validation.amountMixedDecimals"
   | "importer.validation.amountUnsupportedPrecision";

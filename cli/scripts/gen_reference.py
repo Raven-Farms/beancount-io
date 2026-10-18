@@ -70,7 +70,9 @@ def type_label(param: Any) -> str:
     if kind == "option" and getattr(param, "is_bool_flag", False):
         return "flag"
     label = name
-    if getattr(param, "multiple", False):
+    # A list option whose help says "(pass once)" is a list only so the command
+    # can count a repeat and refuse it (w5/527).
+    if getattr(param, "multiple", False) and "(pass once)" not in (getattr(param, "help", "") or ""):
         label += " (repeatable)"
     return label
 
@@ -79,6 +81,10 @@ def default_label(param: Any) -> str:
     if getattr(param, "required", False):
         return "required"
     default = getattr(param, "default", None)
+    secondary = getattr(param, "secondary_opts", None) or []
+    if secondary and isinstance(default, bool):
+        # `--private/--public` defaults to a name, as `--help` shows it (w5/527).
+        return (param.opts[0] if default else secondary[0]).lstrip("-")
     if default is None or default is False:
         return ""
     if default is True:

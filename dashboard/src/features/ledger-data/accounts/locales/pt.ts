@@ -17,6 +17,23 @@ const ptAccounts: Record<string, TranslationEntry> = {
     message: "A conta deve começar com um dos: {prefixes}",
     description: "Validation error when account prefix is invalid",
   },
+  "page.accounts.timeFilterNotApplied": {
+    message:
+      "Os saldos aqui são atuais. O filtro de tempo não se aplica a esta página.",
+    description:
+      "Note on the Accounts directory when a Time filter is in the URL; its balances are always current",
+  },
+  "page.accounts.accountAlreadyOpen": {
+    message: "{account} já está aberta (desde {date}).",
+    description:
+      "Validation error when the account to open is already open; {account} is the name, {date} its open date",
+  },
+  "page.accounts.accountAlreadyClosed": {
+    message:
+      "{account} foi encerrada em {date}; o Beancount não permite reabri-la.",
+    description:
+      "Validation error when the account to open was opened and later closed; {account} is the name, {date} its close date",
+  },
   "page.accounts.accountName": {
     message: "Nome da conta",
     description: "Form label for account name input",

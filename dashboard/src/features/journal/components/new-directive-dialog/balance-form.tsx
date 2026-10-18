@@ -11,6 +11,7 @@ import {
   FormControl,
   FormField,
   FormItem,
+  FormLabel,
   FormMessage,
 } from "@/common/components/ui/form";
 import { DatePicker } from "@/common/components/ui/date-picker";
@@ -23,6 +24,7 @@ import {
   type LedgerAmountInput,
 } from "@/graphql/definitions";
 import { useTranslations } from "@/common/hooks/use-translations";
+import { parseDecimalNumber } from "@/common/lib/beancount/decimal-number";
 import { useErrorMessage } from "@/common/lib/errors/error-message";
 
 import {
@@ -31,6 +33,8 @@ import {
 } from "@/common/components/ledger-comboboxes";
 import { useLedger } from "@/common/hooks/use-ledger";
 import { track } from "@/common/analytics";
+import { AccountAvailabilityNotice } from "./account-availability-notice";
+import { entryDay, useAccountAvailability } from "./use-account-availability";
 
 interface BalanceFormProps {
   ledgerId: string;
@@ -46,7 +50,7 @@ const createBalanceSchema = (t: (key: string) => string) =>
       .string()
       .min(1, t("journal.amountRequired"))
       .refine(
-        (val) => !isNaN(parseFloat(val)) && isFinite(parseFloat(val)),
+        (val) => parseDecimalNumber(val) !== null,
         t("journal.amountMustBeNumber"),
       ),
     currency: z.string().min(1, t("journal.currencyRequired")).trim(),
@@ -78,16 +82,21 @@ export function BalanceForm({ ledgerId, onSuccess }: BalanceFormProps) {
     mode: "onChange",
   });
 
+  const accounts = useAccountAvailability(ledgerId);
+  const day = entryDay(form.watch("date"));
+  const account = form.watch("account");
+
   const onSubmit = async (data: BalanceFormData) => {
     setError(null);
 
     try {
-      // Parse amount
-      const amountNumber = parseFloat(data.amount);
+      const entryDate = entryDay(data.date);
+      if (accounts.blocks([data.account], entryDate)) return;
 
-      // Create amount input
+      // The digits as typed: Beancount infers the assertion's tolerance from
+      // them, so `49.70` must not become `49.7` through a double.
       const amountInput: LedgerAmountInput = {
-        number: amountNumber.toString(),
+        number: parseDecimalNumber(data.amount) ?? data.amount,
         currency: data.currency,
       };
 
@@ -100,7 +109,10 @@ export function BalanceForm({ ledgerId, onSuccess }: BalanceFormProps) {
 
       const variables: BulkEntriesMutationVariables = {
         ledgerId,
-        entries: [{ type: LedgerEntryType.Balance, balance: balanceInput }],
+        entries: [
+          ...accounts.openEntries([data.account], entryDate),
+          { type: LedgerEntryType.Balance, balance: balanceInput },
+        ],
       };
 
       const result = await addBalance({ variables });
@@ -113,6 +125,7 @@ export function BalanceForm({ ledgerId, onSuccess }: BalanceFormProps) {
           amount: "",
           currency: primaryCurrency,
         });
+        accounts.reset();
         track("directive_added", { directive_type: "balance" });
         onSuccess?.();
       } else {
@@ -146,9 +159,9 @@ export function BalanceForm({ ledgerId, onSuccess }: BalanceFormProps) {
             name="date"
             render={({ field }) => (
               <FormItem>
+                <FormLabel className="sr-only">{t("journal.date")}</FormLabel>
                 <FormControl>
                   <DatePicker
-                    id="date"
                     value={field.value}
                     onChange={(newDate) => field.onChange(newDate)}
                     required
@@ -164,6 +177,9 @@ export function BalanceForm({ ledgerId, onSuccess }: BalanceFormProps) {
             name="account"
             render={({ field }) => (
               <FormItem className="flex-1">
+                <FormLabel className="sr-only">
+                  {t("journal.accountLabel")}
+                </FormLabel>
                 <FormControl>
                   <AccountCombobox
                     ledgerId={ledgerId}
@@ -173,6 +189,11 @@ export function BalanceForm({ ledgerId, onSuccess }: BalanceFormProps) {
                   />
                 </FormControl>
                 <FormMessage />
+                <AccountAvailabilityNotice
+                  check={accounts}
+                  account={account}
+                  day={day}
+                />
               </FormItem>
             )}
           />
@@ -182,9 +203,11 @@ export function BalanceForm({ ledgerId, onSuccess }: BalanceFormProps) {
             name="amount"
             render={({ field }) => (
               <FormItem className="w-32">
+                <FormLabel className="sr-only">
+                  {t("journal.amountLabel")}
+                </FormLabel>
                 <FormControl>
                   <Input
-                    id="amount"
                     type="number"
                     step="any"
                     placeholder={t("journal.amountPlaceholder")}
@@ -201,6 +224,9 @@ export function BalanceForm({ ledgerId, onSuccess }: BalanceFormProps) {
             name="currency"
             render={({ field }) => (
               <FormItem className="w-48">
+                <FormLabel className="sr-only">
+                  {t("journal.currencyLabel")}
+                </FormLabel>
                 <FormControl>
                   <CurrencyCombobox
                     ledgerId={ledgerId}
@@ -218,7 +244,9 @@ export function BalanceForm({ ledgerId, onSuccess }: BalanceFormProps) {
         <div className="flex justify-end">
           <Button
             type="submit"
-            disabled={!form.formState.isValid}
+            disabled={
+              !form.formState.isValid || accounts.blocks([account], day)
+            }
             loading={form.formState.isSubmitting}
           >
             {t("journal.createBalanceEntry")}

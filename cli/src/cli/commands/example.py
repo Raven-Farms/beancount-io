@@ -23,6 +23,7 @@ from cli.output import (
     require_writable_destination,
     utf8_stdout,
 )
+from cli.paths import expand_path
 from cli.utils import atomic_write
 
 _FORCE = "--force"
@@ -30,6 +31,10 @@ _FORCE = "--force"
 #: How upstream reports an error in the history it just generated: it loads the
 #: text from a string, so every diagnostic starts `<string>:LINE:`.
 _VALIDATION_ERROR = re.compile(r"^<string>:\d+:\s*(\S.*)$", re.MULTILINE)
+
+#: The errors a range starting mid-year produces: a yearly assertion that
+#: fails, or a posting before an account's first open (w5/136).
+_CALENDAR_ERROR = re.compile(r"Balance failed|inactive account")
 
 #: A line only a ledger holds: a dated directive or an option.
 _DIRECTIVE = re.compile(r"^(?:\d{4}-\d{2}-\d{2}\s|option\s)", re.MULTILINE)
@@ -46,7 +51,7 @@ def _split_output(args: list[str]) -> tuple[list[str], Path | None, bool]:
     force = _FORCE in args[:stop]
     forwarded = [arg for index, arg in enumerate(args) if arg != _FORCE or index > stop]
     value = forwarded_option(forwarded, "-o", "--output")
-    return forwarded, None if value is None else Path(value), force
+    return forwarded, None if value is None else expand_path(Path(value), "--output"), force
 
 
 def _is_written_through(output: Path) -> bool:
@@ -96,10 +101,16 @@ def _refuse_invalid(diagnostic: str, destination: Path | None) -> None:
     if not errors:
         return
     kept = "nothing was printed" if destination is None else f"{destination} was not written"
+    # The calendar advice fits only the errors a mid-year start makes; a long
+    # span that starts on January 1 fails otherwise (`Amount is zero`), and was
+    # told to do what it had already done (w5/573).
+    if any(_CALENDAR_ERROR.search(error) for error in errors):
+        advice = "Its rules assume whole calendar years: start --date-begin on January 1, with --date-birth before it."
+    else:
+        advice = "A span this long is more than it generates cleanly; try a shorter one with an earlier --date-end."
     raise BeaError(
         f"bean-example generated a ledger that fails validation ({len(errors)} "
-        f"error{'' if len(errors) == 1 else 's'}), so {kept}. "
-        "Its rules assume whole calendar years: start --date-begin on January 1, with --date-birth before it.",
+        f"error{'' if len(errors) == 1 else 's'}), so {kept}. {advice}",
         details=errors[:5],
     )
 
@@ -107,7 +118,7 @@ def _refuse_invalid(diagnostic: str, destination: Path | None) -> None:
 def example(ctx: typer.Context) -> None:
     """Generate an example ledger (delegates to bean-example)."""
     refuse_json("example", hint="Run without --json to print the sample ledger.")
-    refuse_misplaced_global("example", list(ctx.args), native_options("example"))
+    refuse_misplaced_global("example", list(ctx.args), native_options("example"), reads="", json_output=False)
     forwarded, output, force = _split_output(list(ctx.args))
     if "--version" in forwarded[: forwarded.index("--") if "--" in forwarded else None]:
         # Informational: bean-example prints its version and exits 0, which
@@ -142,7 +153,7 @@ def example(ctx: typer.Context) -> None:
         except UsageError:
             ledger = None
         if ledger is not None:
-            refuse_include_claim(output.expanduser(), ledger)
+            refuse_include_claim(expand_path(output, "--output"), ledger)
     _check_date_order(forwarded)
     destination: Path | None = None
     if output is not None and str(output) != "-":

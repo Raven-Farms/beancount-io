@@ -28,6 +28,8 @@ export type ImportConfigTransactionValues = {
   description: string;
   amount: number;
   amountInput: string;
+  /** The exact decimal to write, normalized from the bank's spelling. */
+  amountDecimal: string;
   targetAccount: string;
   selected: boolean;
 };
@@ -76,6 +78,7 @@ export function buildImportConfigFormValues(
         description: row.description,
         amount: amountResult.amount!,
         amountInput: row.amountInput,
+        amountDecimal: amountResult.decimal!,
         targetAccount: rowDraft?.targetAccount ?? "",
         selected: rowDraft?.selected ?? true,
       };

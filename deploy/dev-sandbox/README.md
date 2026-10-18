@@ -133,3 +133,14 @@ docker compose logs backend-v2 | grep -i otp   # sign-up OTP in dev
   containers named by wrangler — `./down.sh` stops the ones it can identify.
 - The Git-over-SSH proxy is intentionally not wired in this target; use
   `../docker-mac/` for that.
+
+
+## Application billing
+
+Only the live application client `beancount-web-prod` is supported. Configure
+`STRIPE_PRIVATE_KEY`, `STRIPE_PUBLIC_KEY` and `STRIPE_WEBHOOK_SECRET` through the
+local secret environment when billing is needed. Retired `STRIPE_DEV_*` variables
+and `?env=dev` do not enable test billing. Synthetic fixtures/isolated test runs
+cover Stripe behavior without charging or redeeming live promotions. Deploy the
+backend and dashboard together. A deployment without Stripe
+credentials can run non-billing features but cannot verify paid subscriptions.

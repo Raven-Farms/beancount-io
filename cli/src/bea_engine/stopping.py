@@ -29,6 +29,9 @@ from typing import Any
 
 _received: int | None = None
 _loading = 0
+#: Inside the replace that commits a write, and after it: a stop is noted, not obeyed.
+_committing = False
+_committed = False
 _staged: set[Path] = set()
 #: The frontend that launched us, while we are watching for it to go.
 _parent: int | None = None
@@ -120,6 +123,9 @@ def deferring_interrupt() -> Iterator[None]:
 def _terminate(number: int, _frame: FrameType | None) -> None:
     global _received
     _received = number
+    if _committing or _committed:
+        # The write is landing or has landed: its answer must still go out.
+        return
     _discard_staged()
     if _loading:
         # The parser would swallow an exception raised here and keep parsing.
@@ -135,11 +141,35 @@ def check() -> None:
     A frontend that is gone counts too: the watcher's signal may not have
     been handled yet, and nobody is left to report a commit to.
     """
+    if _committed:
+        return
     if _received is None and _orphaned():
         _discard_staged()
         raise SystemExit(128 + signal.SIGTERM)
     if _received is not None:
         raise SystemExit(128 + _received)
+
+
+@contextmanager
+def committing() -> Iterator[None]:
+    """Commit a write as one step that no termination signal can split from its answer.
+
+    A stop that landed just after the replace raised `SystemExit` before the
+    success envelope was written, so the frontend died silently over a write
+    that had committed, and a retry recorded the entry twice (w5/606). A stop
+    that arrived before this point still refuses the commit. One that arrives
+    during it or after is only noted, and the command finishes and reports.
+    Signal masks would not do: they are per thread, and the parent watcher's
+    thread can take the signal.
+    """
+    global _committing, _committed
+    check()
+    _committing = True
+    try:
+        yield
+        _committed = True
+    finally:
+        _committing = False
 
 
 @contextmanager

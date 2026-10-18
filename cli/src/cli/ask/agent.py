@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import json
 import re
+import threading
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
 
-from pydantic_ai import Agent, ModelRetry, RunContext
+from pydantic_ai import Agent, AgentRunResult, ModelRetry, RunContext
 from pydantic_ai.exceptions import AgentRunError, ModelAPIError, ModelHTTPError, UsageLimitExceeded
 from pydantic_ai.messages import ModelMessage, ModelResponse
 from pydantic_ai.models import ModelRequestParameters
@@ -17,10 +18,11 @@ from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_ai.settings import ModelSettings
 from pydantic_ai.usage import UsageLimits
 
+from cli import output
 from cli.ask.results import format_result
 from cli.ask.skills import AgentSkill, build_skills_index_prompt
 from cli.engine import launch
-from cli.errors import BeaError, LedgerError, error_from_status
+from cli.errors import BeaError, LedgerError, error_from_status, redirect_error, request_id_from
 from cli.errors import server_message as _server_message
 
 _SYSTEM_PROMPT = """You are a helpful Beancount accounting assistant.
@@ -119,6 +121,19 @@ TOOL_CALLS_LIMIT = 10
 MAX_OUTPUT_TOKENS = 1500
 
 
+#: Said when an answer stopped at `MAX_OUTPUT_TOKENS`: its text ends wherever
+#: the cap fell, mid-figure included, and printed as if complete (w5/546).
+CUT_OFF_NOTICE = "The answer reached the per-answer limit and was cut off; ask a narrower question."
+
+
+def cut_off(result: AgentRunResult[str]) -> bool:
+    """Whether a run's final answer stopped at the output cap instead of finishing."""
+    for message in reversed(result.all_messages()):
+        if isinstance(message, ModelResponse):
+            return getattr(message, "finish_reason", None) == "length"
+    return False
+
+
 def usage_limits() -> UsageLimits:
     """The per-question budget, built the same way for the REPL and for `--print`."""
     return UsageLimits(request_limit=REQUEST_LIMIT, tool_calls_limit=TOOL_CALLS_LIMIT)
@@ -196,18 +211,17 @@ def translated_failures(deps: BqlDeps | None = None) -> Iterator[None]:
     try:
         yield
     except ModelHTTPError as exc:
+        if 300 <= exc.status_code < 400:
+            raise _naming_writes(redirect_error(exc.status_code, getattr(exc, "headers", None)), deps) from exc
         quota = _quota_refusal(exc.body, written_so_far(deps))
         if quota is not None:
             raise BeaError(quota) from exc
         raise _naming_writes(error_from_status(exc.status_code, _server_message(exc.body)), deps) from exc
     except ModelAPIError as exc:
-        # A connection-level failure: the AI SDK wraps the HTTP client's error
-        # rather than answering with a status, so it never reached the status
-        # table above and `ask` said the SDK's bare `Connection error.` where
-        # `bea cloud status` says `Could not reach the server (ConnectError).`
-        # `USAGE.md` promises those read the same, so the same translation the
-        # rest of the CLI uses is applied to whatever the SDK was hiding.
-        raise _naming_writes(_unreachable(exc), deps) from exc
+        # The SDK wraps redirects as ModelAPIError rather than ModelHTTPError,
+        # just like connection failures. Inspect the actual cause before
+        # claiming that the server could not be reached.
+        raise _naming_writes(_model_api_error(exc), deps) from exc
     except UnreadableModelReply as exc:
         # The sentence every other unreadable success gets (USAGE.md), with
         # what this question wrote, never the parser's own words.
@@ -243,13 +257,13 @@ def _naming_writes(error: BeaError, deps: BqlDeps | None) -> BeaError:
     return error
 
 
-def _unreachable(exc: BaseException) -> BeaError:
-    """The CLI's own network sentence, built from whatever the SDK wrapped.
+def _model_api_error(exc: BaseException) -> BeaError:
+    """The CLI's HTTP or network sentence, built from whatever the SDK wrapped.
 
-    The HTTP client's exception class is the only part of a connection failure
-    worth showing (its message is often empty, and can carry a credential), so
-    the cause chain is walked for it and `to_bea_error` words the result — the
-    same call `cli.api.client` makes, hence the same sentence.
+    A real HTTP response takes precedence over the connection fallback. Its
+    SDK exception string can carry request details, so use only the response's
+    status, headers and safely decoded server sentence. Transport failures keep
+    the same translation as cloud commands.
     """
     import httpx
 
@@ -259,6 +273,19 @@ def _unreachable(exc: BaseException) -> BeaError:
     seen: set[int] = set()
     while cause is not None and id(cause) not in seen:
         seen.add(id(cause))
+        response = getattr(cause, "response", None)
+        if isinstance(response, httpx.Response):
+            if 300 <= response.status_code < 400:
+                return redirect_error(response.status_code, response.headers)
+            body = getattr(cause, "body", None)
+            if body is None:
+                try:
+                    body = response.json()
+                except (ValueError, RecursionError):
+                    pass
+            return error_from_status(
+                response.status_code, _server_message(body), request_id=request_id_from(response.headers)
+            )
         if isinstance(cause, httpx.TransportError):
             return to_bea_error(cause)
         cause = cause.__cause__ or cause.__context__
@@ -337,6 +364,9 @@ class _ProxyChatModel(OpenAIChatModel):
     filtered prompt) is an `IndexError` in the SDK's response handling, and an
     empty, HTML or truncated JSON body a `JSONDecodeError` in its parser. Both
     reached the catch-all in `main.py` and printed `list index out of range`.
+    A body cut inside a UTF-8 character or sent in another charset is a
+    `UnicodeDecodeError`, one nested past the parser's depth a `RecursionError`,
+    and a `"type": "custom"` tool call the SDK's own `RuntimeError` (w5/547).
     Only the model call is wrapped, so a fault in bea's own tools is never
     reported as the server's.
     """
@@ -353,9 +383,16 @@ class _ProxyChatModel(OpenAIChatModel):
             return await super().request(messages, model_settings, model_request_parameters)
         except APIResponseValidationError as exc:
             raise UnreadableModelReply(exc.response.status_code) from exc
-        except (json.JSONDecodeError, IndexError, KeyError, TypeError) as exc:
+        except (ValueError, IndexError, KeyError, TypeError, RecursionError) as exc:
             # The SDK parses only a successful body; any other status raises its
-            # status error, which arrives as `ModelHTTPError`.
+            # status error, which arrives as `ModelHTTPError`. `ValueError`
+            # covers `JSONDecodeError` and `UnicodeDecodeError`.
+            raise UnreadableModelReply(200) from exc
+        except RuntimeError as exc:
+            # Only the SDK's refusal of a custom tool call: its own run failures
+            # (`AgentRunError`) are `RuntimeError`s too, and are reported apart.
+            if type(exc) is not RuntimeError or not str(exc).startswith("Custom tool calls"):
+                raise
             raise UnreadableModelReply(200) from exc
 
 
@@ -394,16 +431,23 @@ def make_agent(
         Returns the matching rows with a row count. An invalid query or an invalid
         ledger comes back as an error to fix and retry.
         """
+        if not query.strip():
+            raise ModelRetry("The query is empty. Send a BQL SELECT statement.")
         try:
             # Rows and columns, not the rendered table: the row count, a visible
             # zero and a bounded result all need the typed shape (`ask.results`).
             data = launch.helper_json(["query", "--file", str(ctx.deps.file), query, "--format", "json"])
-        except LedgerError as exc:
-            detail = "; ".join(exc.details) if exc.details else str(exc)
-            raise ModelRetry("Ledger is invalid: " + detail) from exc
         except BeaError as exc:
-            raise ModelRetry(f"BQL error: {exc}. Fix the query and retry.") from exc
+            raise ModelRetry(_query_failure(exc)) from exc
         return format_result(query, data)
+
+    # Models batch independent calls ("add a coffee and a lunch"), and
+    # pydantic-ai runs a reply's sync tools at once in worker threads: two
+    # consent selectors shared one terminal, an answer reached either panel,
+    # and both dry runs predated either write (w5/544). One write at a time,
+    # each dry run after the last write; a lock, not `sequential=True`, since
+    # the ask extra accepts pydantic-ai releases older than that option.
+    write_lock = threading.Lock()
 
     @agent.tool()
     def write_directive(ctx: RunContext[BqlDeps], directive: str) -> str:
@@ -414,45 +458,48 @@ def make_agent(
         declines it; in non-interactive mode writes are skipped. Returns one line: how many
         directives were added and to which file, or why nothing was written.
         """
-        perm = ctx.deps.write_permission
-        if perm.deny_all:
-            return "Write denied (you denied all writes this session)."
-        argv = ["append", "--file", str(ctx.deps.file), "--text", "-"]
-        if ctx.deps.into is not None:
-            argv += ["--into", str(ctx.deps.into)]
-        try:
-            preview = launch.helper_json([*argv, "--dry-run"], stdin=directive)
-        except BeaError as exc:
-            return _write_rejection(exc)
-        if not perm.approve_all:
-            if perm.confirm_fn is None:
-                return "Write skipped (non-interactive mode does not support writes)."
-            # The dry run resolved where the text actually goes — with `--into`
-            # that is an included file, not `deps.file`. The consent panel has to
-            # name that file, so the preview's own answer is what it is built from.
-            warnings = [str(warning) for warning in preview.get("warnings") or []]
-            # The engine's aligned rendering is what lands in the file: the
-            # proposal's tab indentation showed as `\x09` and was then written
-            # as aligned spaces (w5/374).
-            shown = preview.get("text")
-            answer = perm.confirm_fn(shown if isinstance(shown, str) else directive, str(preview["target"]), warnings)
-            if answer == "a":
-                perm.approve_all = True
-            elif answer == "d":
-                perm.deny_all = True
-                return "Write denied."
-            elif answer == "n":
-                return "Write cancelled by user."
-        try:
-            result = launch.helper_json(
-                [*argv, "--token", json.dumps(preview["token"])],
-                stdin=directive,
-                writes=True,
-            )
-        except BeaError as exc:
-            return _write_rejection(exc)
-        ctx.deps.writes.append((int(result["written"]), str(result["target"])))
-        return f"Added {result['written']} directive(s) to {result['target']}."
+        with write_lock:
+            perm = ctx.deps.write_permission
+            if perm.deny_all:
+                return "Write denied (you denied all writes this session)."
+            argv = ["append", "--file", str(ctx.deps.file), "--text", "-"]
+            if ctx.deps.into is not None:
+                argv += ["--into", str(ctx.deps.into)]
+            try:
+                preview = launch.helper_json([*argv, "--dry-run"], stdin=directive)
+            except BeaError as exc:
+                return _write_rejection(exc)
+            if not perm.approve_all:
+                if perm.confirm_fn is None:
+                    return "Write skipped (non-interactive mode does not support writes)."
+                # The dry run resolved where the text actually goes — with `--into`
+                # that is an included file, not `deps.file`. The consent panel has to
+                # name that file, so the preview's own answer is what it is built from.
+                warnings = [str(warning) for warning in preview.get("warnings") or []]
+                # The engine's aligned rendering is what lands in the file: the
+                # proposal's tab indentation showed as `\x09` and was then written
+                # as aligned spaces (w5/374).
+                shown = preview.get("text")
+                answer = perm.confirm_fn(
+                    shown if isinstance(shown, str) else directive, str(preview["target"]), warnings
+                )
+                if answer == "a":
+                    perm.approve_all = True
+                elif answer == "d":
+                    perm.deny_all = True
+                    return "Write denied."
+                elif answer == "n":
+                    return "Write cancelled by user."
+            try:
+                result = launch.helper_json(
+                    [*argv, "--token", json.dumps(preview["token"])],
+                    stdin=directive,
+                    writes=True,
+                )
+            except BeaError as exc:
+                return _write_rejection(exc)
+            ctx.deps.writes.append((int(result["written"]), str(result["target"])))
+            return f"Added {result['written']} directive(s) to {result['target']}."
 
     @agent.tool()
     def get_skill_body(ctx: RunContext[BqlDeps], name: str) -> str:
@@ -464,6 +511,28 @@ def make_agent(
         return skill.body or "(no body content)"
 
     return agent
+
+
+def _query_failure(exc: BeaError) -> str:
+    """What the BQL tool tells the model about a query that did not run (w5/549).
+
+    The engine's details are what make a query fixable — the caret under the
+    failing token, the columns the table has — so they travel with it, minus
+    the lines that address a person at a shell (`bea query .tables`, `--debug`).
+    A crash in the engine carries a traceback and is the engine's failure, not
+    an invalid ledger: saying "Ledger is invalid" pushed the model to "fix" a
+    ledger that loads.
+    """
+    message = str(exc).removesuffix(output.DEBUG_HINT).rstrip().rstrip(".")
+    details = [line for line in exc.details if not line.lstrip().startswith("Run bea ")]
+    if exc.traceback is not None:
+        return (
+            f"The query engine failed on this query ({message}); the ledger is not at fault. "
+            "Rephrase the query and retry."
+        )
+    if isinstance(exc, LedgerError):
+        return "Ledger is invalid: " + ("; ".join(details) or message)
+    return "\n".join([f"BQL error: {message}.", *details, "Fix the query and retry."])
 
 
 def _write_rejection(exc: BeaError) -> str:

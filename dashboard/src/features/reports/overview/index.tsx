@@ -285,6 +285,8 @@ export default function LedgerOverviewPage() {
               invertLiabilities={invertIncomeLiabilitiesEquity}
               ledgerOwner={ledgerOwner}
               ledgerName={ledgerName}
+              time={ledgerFilters.searchParams.time}
+              fiscalYearEnd={ledgerData.favaOptions?.fiscalYearEnd}
             />
           </div>
         )}

@@ -36,6 +36,7 @@ from bea_engine.ledger.text import (
     single_line,
     without_root_name_errors,
 )
+from bea_engine.paths import expand_path
 
 TYPES = (
     "transaction",
@@ -72,6 +73,8 @@ def answer(
     from pydantic import ValidationError
 
     build = builders.get(directive_type)
+    if directive_type != "transactions":
+        _refuse_undecodable_arguments(request)
     try:
         if build is not None:
             # These read the ledger to decide what to write. Reading before the
@@ -110,7 +113,9 @@ def _require_document_in_tree(file: Path, into: Path | None, filename: str) -> N
     a ledger the very next `check` failed.
     """
     root = Path(os.path.abspath(file)).parent
-    holder = root if into is None else write.destination(file, into).parent
+    # Beancount resolves paths beside the include as named, even when the
+    # include itself is a symlink to a file in another directory.
+    holder = root if into is None else Path(os.path.normpath(root / expand_path(into, "--into"))).parent
     if outside_ledger_tree(holder / filename, root):
         raise protocol.UsageError(
             f"Document path {filename!r} resolves outside the ledger directory {root.resolve()}, which "
@@ -175,10 +180,18 @@ def _simple(directive_type: str, request: dict[str, Any], roots: tuple[str, ...]
             raise protocol.UsageError(
                 "Every --currency value is blank after trimming; supply a currency symbol or omit -c."
             )
+        # One blank among others is still a lost value, `-c "$UNSET"`, not an
+        # omitted one: it was dropped and the open written without it (w5/491).
+        blank = next((number for number, item in enumerate(raw_currencies, start=1) if not str(item).strip()), None)
+        if blank is not None:
+            raise protocol.UsageError(
+                f"--currency value {blank} of {len(raw_currencies)} is blank after trimming; supply a currency "
+                "symbol or drop that -c. Nothing was written."
+            )
         return OpenDirective.model_validate(
             {
                 "date": date,
-                "account": parse_account(_text(request, "account"), roots),
+                "account": parse_account(_text(request, "account"), roots, creating=True),
                 "currencies": currencies,
                 "booking": booking,
             },
@@ -287,6 +300,18 @@ def _appended(
 # --------------------------------------------------------------------------- #
 
 
+def _conflict_refusal(
+    conflict: Any, account: str, date: Any, number: Any, currency: str, tolerance: Any
+) -> protocol.ConflictError:
+    where = conflict.meta.get("filename"), conflict.meta.get("lineno")
+    return protocol.ConflictError(
+        f"{account} already has a {date.isoformat()} balance of "
+        f"{_balance_amount(conflict.amount.number, currency, conflict.tolerance)} "
+        f"(at {where[0]}:{where[1]}); refusing {_balance_amount(number, currency, tolerance)}. "
+        "Pass --force to record another assertion."
+    )
+
+
 def _balance(
     file: Path, request: dict[str, Any], *, into: Path | None, allow_errors: bool, strict_read: bool
 ) -> dict[str, Any]:
@@ -303,44 +328,54 @@ def _balance(
         date=date, account=account, amount=Amount(number=number, currency=currency), tolerance=tolerance
     )
     pad_from = request.get("pad_from")
+    snapshot = write.LedgerSnapshot.capture(file)
+    target = write.destination(file, into)
+    snapshot.require_target(target, into=into)
+    before, errors, before_options = managed_load.load_file(file, snapshot=snapshot, check_types=True)
+    ledger_errors = [format_error(error, ledger_file=file) for error in errors]
+    if (
+        pad_from is None
+        and ledger_errors
+        and strict_read
+        and not all(
+            "Unused Pad" in getattr(error, "message", "")
+            or (write.is_unused_open(error) and error.entry.account == account)
+            for error in errors
+        )
+    ):
+        # The balance can complete a staged pad or be this account's first
+        # use under nounused. Other errors still gate strict callers; final
+        # validation must clear the transient error (w5/664).
+        raise write.preexisting_refusal(errors, ledger_errors)
+    # A pad can make validation succeed even when the assertion is a
+    # duplicate or conflicts. Decide before either write path (w5/659).
+    match = _balance_match(before, date, account, number, currency, tolerance)
+    if match is not None:
+        snapshot.verify()
+        source = {"filename": match.meta.get("filename"), "lineno": match.meta.get("lineno")}
+        warnings = list(ledger_errors)
+        if pad_from is not None:
+            held = write.book_units(before, account, currency, date)
+            if abs(number - held) <= _balance_tolerance(match, before_options):
+                warnings.append(
+                    f"{_already_matches(held, number, currency, tolerance)}; "
+                    f"omitted the pad from --pad-from (assertion already recorded at "
+                    f"{source['filename']}:{source['lineno']})."
+                )
+        return {
+            "written": 0,
+            "directive": directive.model_dump(mode="json"),
+            "pad": None,
+            "warnings": warnings,
+            "duplicate": True,
+            "source": source,
+            "target": str(target),
+            **({"ledger_errors": ledger_errors} if pad_from is None else {}),
+        }
+    conflict = _balance_conflict(before, date, account, number, currency, tolerance)
+    if conflict is not None and not request.get("force"):
+        raise _conflict_refusal(conflict, account, date, number, currency, tolerance)
     if pad_from is None:
-        snapshot = write.LedgerSnapshot.capture(file)
-        target = write.destination(file, into)
-        snapshot.require_target(target)
-        entries, errors, _ = managed_load.load_file(file, snapshot=snapshot)
-        ledger_errors = [format_error(error, ledger_file=file) for error in errors]
-        if ledger_errors and strict_read and not all("Unused Pad" in error for error in ledger_errors):
-            # A staged pad is the transient error this very write resolves:
-            # the two-step pad flow stages with --allow-errors, then completes
-            # with the balance. Anything else still gates strict callers.
-            raise protocol.LedgerError(
-                f"The ledger already has {len(ledger_errors)} error(s); nothing was written. "
-                "Pass --allow-errors to write anyway.",
-                details=ledger_errors,
-            )
-        match = _balance_match(entries, date, account, number, currency, tolerance)
-        if match is not None:
-            snapshot.verify()
-            source = {"filename": match.meta.get("filename"), "lineno": match.meta.get("lineno")}
-            return {
-                "written": 0,
-                "directive": directive.model_dump(mode="json"),
-                "pad": None,
-                "warnings": ledger_errors,
-                "duplicate": True,
-                "source": source,
-                "ledger_errors": ledger_errors,
-                "target": str(target),
-            }
-        conflict = _balance_conflict(entries, date, account, number, currency, tolerance)
-        if conflict is not None and not request.get("force"):
-            where = conflict.meta.get("filename"), conflict.meta.get("lineno")
-            raise protocol.UsageError(
-                f"{account} already has a {date.isoformat()} balance of "
-                f"{_balance_amount(conflict.amount.number, currency, conflict.tolerance)} "
-                f"(at {where[0]}:{where[1]}); refusing {_balance_amount(number, currency, tolerance)}. "
-                "Pass --force to record another assertion."
-            )
         # The snapshot the checks above read: a writer that landed since then
         # is a conflict, not a second assertion appended beside it (w5/115).
         return _appended(file, directive, allow_errors=allow_errors, into=into, snapshot=snapshot) | {"pad": None}
@@ -349,15 +384,41 @@ def _balance(
     from beancount.core.data import Pad
 
     padded = _date(request, "pad_date")
+    # Read first, as the plain path does: the answer names what the pad
+    # inserts, and a sign a statement prints is caught before it is padded (w5/611).
+    held = write.book_units(before, account, currency, date)
+    sign = write.negated_credit_hint(account, number, held, currency, before_options)
+    if sign is not None and not request.get("force"):
+        raise protocol.UsageError(
+            f"{sign} Padding to {_balance_amount(number, currency, tolerance)} would insert "
+            f"{_plain(number - held)} {currency}. Pass --force to pad to it anyway. Nothing was written."
+        )
     entries = [
         Pad({}, padded, account, parse_account(str(pad_from))),
         Balance({}, date, account, BcAmount(number, currency), tolerance, None),
     ]
     try:
         warnings = write.append(
-            file, [writer.format_entry(e) for e in entries], allow_errors=allow_errors, into=into, pad_from=True
+            file,
+            [writer.format_entry(e) for e in entries],
+            allow_errors=allow_errors,
+            into=into,
+            pad_from=True,
+            pad_date_explicit=bool(request.get("pad_date_explicit")),
+            snapshot=snapshot,
         )
     except protocol.LedgerError as exc:
+        # Decide against one snapshot and write against the same one, as the
+        # plain path does, so concurrent retries cannot each append (w5/115).
+        snapshot = write.LedgerSnapshot.capture(file)
+        snapshot.require_target(write.destination(file, into), into=into)
+        loaded, before_errors, options = managed_load.load_file(file, snapshot=snapshot, check_types=True)
+        # The plain path refuses a second, different assertion for the day
+        # before writing. Here the write failed on it instead, with advice to
+        # date the pad after that very day and to rerun this command (w5/487).
+        conflict = _balance_conflict(loaded, date, account, number, currency, tolerance)
+        if conflict is not None and not request.get("force"):
+            raise _conflict_refusal(conflict, account, date, number, currency, tolerance) from None
         # The only failure worth a retry is a pad Beancount reports unused;
         # anything else stands. Why it went unused decides what happens next.
         # `--allow-errors` takes the same path: the flag tolerates errors
@@ -365,11 +426,6 @@ def _balance(
         if not _unused_pad_only(exc):
             raise
         source_account = parse_account(str(pad_from))
-        # Decide against one snapshot and write against the same one, as the
-        # plain path does, so concurrent retries cannot each append (w5/115).
-        snapshot = write.LedgerSnapshot.capture(file)
-        snapshot.require_target(write.destination(file, into))
-        loaded, before_errors, options = managed_load.load_file(file, snapshot=snapshot)
         staged = [
             f"{format_error(error, ledger_file=file)} "
             f"({error.entry.date} pad {error.entry.account} {error.entry.source_account})"
@@ -387,24 +443,27 @@ def _balance(
         match = _balance_match(loaded, date, account, number, currency, tolerance)
         if match is not None:
             source = {"filename": match.meta.get("filename"), "lineno": match.meta.get("lineno")}
+            stands = _already_matches(write.book_units(loaded, account, currency, date), number, currency, tolerance)
             return {
                 "written": 0,
                 "directive": directive.model_dump(mode="json"),
                 "pad": None,
                 "warnings": [
-                    f"Book balance already matches {_plain(number)} {currency}; omitted the pad from "
-                    f"--pad-from (assertion already recorded at {source['filename']}:{source['lineno']})."
+                    f"{stands}; "
+                    f"omitted the pad from --pad-from (assertion already recorded at "
+                    f"{source['filename']}:{source['lineno']})."
                 ],
                 "duplicate": True,
                 "source": source,
                 "target": str(write.destination(file, into)),
             }
-        difference = number - _book_units(loaded, account, currency, date)
+        book = write.book_units(loaded, account, currency, date)
+        difference = number - book
         if abs(difference) <= _balance_tolerance(entries[1], options):
             result = _appended(file, directive, allow_errors=allow_errors, into=into, snapshot=snapshot) | {"pad": None}
             warnings = list(result.get("warnings") or [])
             warnings.append(
-                f"Book balance already matches {_plain(number)} {currency}; omitted the pad from "
+                f"{_already_matches(book, number, currency, tolerance)}; omitted the pad from "
                 "--pad-from and wrote the assertion alone."
             )
             result["warnings"] = warnings
@@ -438,10 +497,13 @@ def _balance(
     # internal `diff_amount`, so `data.directive` vanished exactly when the
     # pad was written (w5/323).
     pad = PadDirective(date=padded, account=account, source_account=parse_account(str(pad_from)))
+    # What the pad inserts was never said: a sign error padded twice the
+    # balance with exit 0, found only by listing the padding entry (w5/611).
+    inserted = {"number": _plain(number - held), "currency": currency}
     return {
         "written": 2,
         "directive": directive.model_dump(mode="json"),
-        "pad": pad.model_dump(mode="json"),
+        "pad": pad.model_dump(mode="json") | {"amount": inserted},
         "warnings": warnings,
         "duplicate": False,
         "source": None,
@@ -523,28 +585,16 @@ def _plain(number: Any) -> str:
     return format(number, "f")
 
 
-def _book_units(entries: list[Any], account: str, currency: str, date: datetime.date) -> Decimal:
-    """Units of `currency` in `account` and its children when a `date` assertion runs.
+def _already_matches(held: Decimal, number: Decimal, currency: str, tolerance: Decimal | None) -> str:
+    """How the book stands against an assertion it satisfies: exactly, or only within tolerance.
 
-    Assertions run at the start of the day, so only earlier postings count —
-    including the padding Beancount already inserted for earlier pads.
+    "Book balance already matches 100.01 USD" overstated a book holding
+    100.004 USD, and dropped the `~ 0.004` that was typed (w5/611).
     """
-    from beancount.core.data import Transaction
-
-    prefix = f"{account}:"
-    return sum(
-        (
-            posting.units.number
-            for entry in entries
-            if isinstance(entry, Transaction) and entry.date < date
-            for posting in entry.postings
-            if (posting.account == account or posting.account.startswith(prefix))
-            and posting.units is not None
-            and posting.units.currency == currency
-            and posting.units.number is not None
-        ),
-        Decimal(0),
-    )
+    asserted = _balance_amount(number, currency, tolerance)
+    if held == number:
+        return f"Book balance already matches {asserted}"
+    return f"The book holds {_plain(held)} {currency}, within the tolerance of the {asserted} assertion"
 
 
 def _balance_tolerance(balance: Any, options: dict[str, Any]) -> Decimal:
@@ -577,13 +627,23 @@ def _parse_balance_amount(text: str) -> tuple[Decimal, str, Decimal | None]:
     """`NUMBER [~ TOLERANCE] CURRENCY`, read by the parser that will read it back."""
     from beancount.core.data import Balance
 
+    from bea_engine.ledger.models import COMMENT_HELP, comment_start
+    from bea_engine.query import readable_parser_message
+
     if "\n" in text or "\r" in text:
         raise protocol.UsageError("Balance amount must be one line: 'NUMBER [~ TOLERANCE] CURRENCY'.")
+    if comment_start(text) is not None:
+        # Parsed as written, the note after `;` was dropped and the assertion
+        # written without it, exit 0 (w5/511), as `add price` already refuses.
+        raise protocol.UsageError(f"--amount contains a ';': {text!r}. {COMMENT_HELP} Nothing was written.")
+    # Amount fields have no account or quoted label to confuse with a
+    # separator. Accept pasted Unicode spaces as price/bulk amounts do.
+    text = "".join(" " if unicodedata.category(character) == "Zs" else character for character in text)
     entries, errors, _ = parse_exact(f"2000-01-01 balance Assets:Balance {text}\n")
     if errors or len(entries) != 1 or not isinstance(entries[0], Balance):
         raise protocol.UsageError(
             "Balance amount must be 'NUMBER [~ TOLERANCE] CURRENCY', for example '1538 ~ 1 EUR'.",
-            details=[f"--amount: {error.message}" for error in errors],
+            details=[f"--amount: {readable_parser_message(error.message)}" for error in errors],
         )
     entry = entries[0]
     if entry.amount.number is None:
@@ -624,16 +684,13 @@ def _price(
     )
     snapshot = write.LedgerSnapshot.capture(file)
     target = write.destination(file, into)
-    snapshot.require_target(target)
-    entries, errors, options = managed_load.load_file(file, snapshot=snapshot)
+    snapshot.require_target(target, into=into)
+    entries, errors, options = managed_load.load_file(file, snapshot=snapshot, check_types=True)
     ledger_errors = [format_error(error, ledger_file=file) for error in errors]
     if ledger_errors and strict_read:
-        raise protocol.LedgerError(
-            f"The ledger already has {len(ledger_errors)} error(s); nothing was written. "
-            "Pass --allow-errors to write anyway.",
-            details=ledger_errors,
-        )
+        raise write.preexisting_refusal(errors, ledger_errors)
     local_prices: list[Price] = []
+    reciprocal_prices: list[Price] = []
     managed_sources: set[str] = set()
     pair = (currency, amount_currency)
     shadowed_pairs = {pair, (amount_currency, currency)}
@@ -647,10 +704,10 @@ def _price(
         managed_source = managed_source_for_path(Path(filename)) if isinstance(filename, str) and filename else None
         if managed_source is not None:
             managed_sources.add(managed_source)
-        elif entry_pair == pair and not entry_generated(entry, "price"):
+        elif not entry_generated(entry, "price"):
             # A plugin-made price (implicit_prices) borrows its transaction's
             # location; it is no ledger-authored quote to match or conflict with.
-            local_prices.append(entry)
+            (local_prices if entry_pair == pair else reciprocal_prices).append(entry)
 
     match = next((entry for entry in local_prices if entry.amount.number == number), None)
     if match is not None:
@@ -677,10 +734,24 @@ def _price(
             if unique
             else "Pass --force to record another quote."
         )
-        raise protocol.UsageError(
+        raise protocol.ConflictError(
             f"{currency} already has a {directive.date.isoformat()} price of "
             f"{_plain(conflict.amount.number)} {amount_currency} (at {where}); "
             f"refusing {_plain(number)} {amount_currency}. {remedy}"
+        )
+
+    # A same-day quote in the other direction is the same rate for the day, and
+    # one that disagrees made `balance` and `query` value the pair differently
+    # by line order; with both, Beancount values by the inverse of the
+    # direction quoted less often (w5/556).
+    crossing = next((entry for entry in reciprocal_prices if (entry.amount.number or 0) * number != 1), None)
+    if crossing is not None and not request.get("force"):
+        where = f"{crossing.meta.get('filename')}:{crossing.meta.get('lineno')}"
+        raise protocol.ConflictError(
+            f"{amount_currency} already has a {directive.date.isoformat()} price of "
+            f"{_plain(crossing.amount.number)} {currency} (at {where}), the other direction of this pair, and "
+            f"{_plain(number)} {amount_currency} disagrees with it. Pass --force to record both; Beancount then "
+            "values the pair by the inverse of the direction quoted less often."
         )
 
     entry = Price({}, directive.date, currency, BcAmount(number, amount_currency))
@@ -702,6 +773,27 @@ def _price(
 # --------------------------------------------------------------------------- #
 
 
+def _refuse_unicode_space(number: int, posting_text: str) -> None:
+    """Refuse a space Beancount does not read as one, outside a quoted label.
+
+    A no-break space pasted from a web page or a statement between account and
+    amount was read as part of the account, `Expenses:Food\xa05`, and the
+    refusal offered to open that account (w5/490). Only a space or tab
+    separates fields.
+    """
+    quoted = False
+    for position, character in enumerate(posting_text, start=1):
+        if character == '"':
+            quoted = not quoted
+        elif not quoted and character.isspace() and character not in " \t":
+            label = unicodedata.name(character, "a Unicode space").title()
+            raise protocol.UsageError(
+                f"--posting {number} holds U+{ord(character):04X} ({label}) at character {position}: "
+                f"{posting_text!r}. Beancount separates fields only with an ordinary space or tab, so it would "
+                "read that character as part of a name or amount. Retype it as a space. Nothing was written."
+            )
+
+
 def _transaction(
     file: Path, request: dict[str, Any], *, into: Path | None, allow_errors: bool, strict_read: bool
 ) -> dict[str, Any]:
@@ -721,6 +813,7 @@ def _transaction(
                 f"--posting {number} contains a ';': {posting_text!r}. {COMMENT_HELP} "
                 "Use --meta for a transaction note. Nothing was written."
             )
+        _refuse_unicode_space(number, posting_text)
         parts = posting_text.split()
         # Native posting flags are single characters; accounts never are.
         if parts and len(parts[0]) == 1:
@@ -749,8 +842,17 @@ def _transaction(
     errors = without_root_name_errors(errors)
     if errors or len(entries) != 1 or not isinstance(entries[0], Transaction):
         details = []
+        # Lines as the lexer counts them, on `\n` alone: a U+2028 in the
+        # narration made `splitlines` count one more header line (w5/486).
+        header_lines = header_text.count("\n")
         for error in errors:
-            posting_number = error.source.get("lineno", 0) - len(header_text.splitlines())
+            line = error.source.get("lineno", 0)
+            # A missing closing token is noticed at the end of its line, and
+            # Beancount reports that EOL on the next one: the blame moved one
+            # posting down, or off the last one onto the header (w5/486).
+            if "unexpected EOL" in error.message:
+                line -= 1
+            posting_number = line - header_lines
             location = f"--posting {posting_number}" if 0 < posting_number <= len(postings) else "Transaction options"
             details.append(f"{location}: {readable_parser_message(error.message)}")
         if details and all(detail.startswith("Transaction options:") for detail in details):
@@ -761,6 +863,10 @@ def _transaction(
             )
         raise protocol.UsageError(message, details=details)
     entry = entries[0]
+    for number, posting in enumerate(entry.postings, start=1):
+        if managed_load.zero_units_at_total_cost(posting):
+            # Booking divides the total by the units, and raised (w5/538).
+            raise protocol.UsageError(f"--posting {number} {managed_load.ZERO_UNITS_TOTAL_COST} Nothing was written.")
     # The ledger loads NFC-normalized; the parsed postings must match it before
     # currency inference compares them against the opened accounts below.
     entry = entry._replace(postings=[posting._replace(account=_nfc(posting.account)) for posting in entry.postings])
@@ -1057,7 +1163,7 @@ def _parse_metadata(items: list[str]) -> dict[str, Any]:
         if not _may_be_typed(raw):
             # Text either way; the stand-in still lets Beancount judge the key.
             parsed_raw = '"x"'
-        entries, errors, _ = parser.parse_string(f'2000-01-01 * ""\n  {key}: {parsed_raw}\n')
+        entries, errors, _ = parse_exact(f'2000-01-01 * ""\n  {key}: {parsed_raw}\n')
         errors = without_root_name_errors(errors)
         if not errors and len(entries) == 1 and isinstance(entries[0], Transaction) and key in entries[0].meta:
             value = entries[0].meta[key]
@@ -1344,7 +1450,8 @@ def _transactions(
 
     # Validate the entire batch first: an earlier sale may depend on a buy that
     # appears later in the input. Partial recovery drops the rows that load's
-    # errors name; only errors it cannot place need sequential trials.
+    # errors name; only errors it cannot place need a bisection of the batch.
+    valid = _same_day_purchases_first(valid)
     batch_texts = [writer.format_transaction(d) for _, d in valid]
     try:
         write.validate_append(file, batch_texts, allow_errors=allow_errors, into=into)
@@ -1355,7 +1462,7 @@ def _transactions(
             result: dict[str, Any] = {
                 "written": 0,
                 "written_rows": [],
-                "unwritten_rows": [index for index, _ in valid],
+                "unwritten_rows": sorted(index for index, _ in valid),
             }
             # The rows the hint counts as valid are known, so the rest are
             # named here as `--partial` names them: the refusal said "the 49
@@ -1389,17 +1496,14 @@ def _transactions(
                 else:
                     accepted.append((index, directive))
         else:
-            texts: list[str] = []
-            for index, directive in valid:
-                try:
-                    text = writer.format_transaction(directive)
-                    write.validate_append(file, [*texts, text], allow_errors=allow_errors, into=into)
-                except protocol.LedgerError as err:
+            refused = _refused_in_order(file, batch_texts, batch_error, allow_errors=allow_errors, into=into)
+            for number, (index, directive) in enumerate(valid):
+                err = refused.get(number)
+                if err is None:
+                    accepted.append((index, directive))
+                else:
                     rejected.append(f"Row {index + 1}: {'; '.join(err.details) or str(err)}")
                     rejected_rows.append(index)
-                else:
-                    accepted.append((index, directive))
-                    texts.append(text)
         valid = accepted
 
     warnings = writer.write_transactions(file, [d for _, d in valid], allow_errors=allow_errors, into=into)
@@ -1414,11 +1518,55 @@ def _transactions(
             ledger_errors=warnings,
             result={
                 "written": len(valid),
-                "written_rows": [index for index, _ in valid],
+                "written_rows": sorted(index for index, _ in valid),
                 "rejected_rows": rejected_rows,
             },
         )
     return {"written": len(valid), "rejected": [], "warnings": warnings, "target": target}
+
+
+def _same_day_purchases_first(valid: list[tuple[int, Any]]) -> list[tuple[int, Any]]:
+    """`valid` with each day's sales at cost after that day's purchases of the same lots (w5/543).
+
+    Beancount books one date's entries in file order, and rows are appended
+    in input order, so a broker export or a newest-first listing that put a
+    same-day sale before the buy it closes found no lot: refused with `{}`,
+    booked as a short position with an explicit cost. A row selling a
+    commodity at cost that another row of the same date buys at cost into
+    the same account moves after that date's other rows, keeping the slots
+    each date held; nothing else changes order.
+    """
+    from collections import Counter, defaultdict
+
+    def lots(directive: Any, negative: bool) -> set[tuple[str, str]]:
+        return {
+            (posting.account, posting.units.currency)
+            for posting in directive.postings
+            if posting.cost is not None
+            and posting.units is not None
+            and (posting.units.number < 0) == negative
+            and posting.units.number != 0
+        }
+
+    slots: dict[Any, list[int]] = defaultdict(list)
+    for position, (_, directive) in enumerate(valid):
+        slots[directive.date].append(position)
+    ordered = list(valid)
+    for positions in slots.values():
+        rows = [valid[position] for position in positions]
+        bought = [lots(directive, negative=False) for _, directive in rows]
+        buyers = Counter(lot for own in bought for lot in own)
+        selling = [
+            any(buyers[lot] > (lot in own) for lot in lots(directive, negative=True))
+            for (_, directive), own in zip(rows, bought, strict=True)
+        ]
+        if not any(selling):
+            continue
+        rearranged = [row for row, sells in zip(rows, selling, strict=True) if not sells]
+        rearranged += [row for row, sells in zip(rows, selling, strict=True) if sells]
+        for position, row in zip(positions, rearranged, strict=True):
+            ordered[position] = row
+    return ordered
 
 
 def _named_rows(
@@ -1443,6 +1591,61 @@ def _named_rows(
         except protocol.LedgerError:
             return None
     return {number: batch_error.details_at(rows[number]) for number in sorted(rows)}
+
+
+def _refused_in_order(
+    file: Path, texts: list[str], batch_error: protocol.LedgerError, *, allow_errors: bool, into: Path | None
+) -> dict[int, protocol.LedgerError]:
+    """Positions in `texts` the rows kept before them refuse, each with the refusal it met.
+
+    A row is kept when it loads after the rows kept before it, as a trial per
+    row decided; but those trials cost a full load per row over a growing
+    batch, so an error no row can be named for (an existing balance assertion
+    the batch breaks) made `--partial` quadratic. Bisecting for the first
+    refused row instead costs a load per halving: k bad rows take O(k log n)
+    loads (w5/537). A ledger that refuses any write by itself (an error it
+    already has, without --allow-errors) would bisect down to every row, so it
+    keeps one trial per row.
+    """
+
+    def refusal(candidate: list[str]) -> protocol.LedgerError | None:
+        try:
+            write.validate_append(file, candidate, allow_errors=allow_errors, into=into)
+        except protocol.LedgerError as err:
+            return err
+        return None
+
+    refused: dict[int, protocol.LedgerError] = {}
+    kept: list[str] = []
+    rest = list(range(len(texts)))
+    error: protocol.LedgerError | None = batch_error
+    ledger_loads: bool | None = None
+    while rest and error is not None:
+        # `kept` with rest[:low] loads; `kept` with rest[:high] meets `error`.
+        low, high = 0, len(rest)
+        while high - low > 1:
+            middle = (low + high) // 2
+            found = refusal([*kept, *(texts[number] for number in rest[:middle])])
+            if found is None:
+                low = middle
+            else:
+                high, error = middle, found
+        if not kept and low == 0:
+            if ledger_loads is None:
+                ledger_loads = refusal([]) is None
+            if not ledger_loads:
+                for number in rest:
+                    found = refusal([*kept, texts[number]])
+                    if found is None:
+                        kept.append(texts[number])
+                    else:
+                        refused[number] = found
+                return refused
+        refused[rest[low]] = error
+        kept.extend(texts[number] for number in rest[:low])
+        rest = rest[low + 1 :]
+        error = refusal([*kept, *(texts[number] for number in rest)]) if rest else None
+    return refused
 
 
 def _rows_with_errors(
@@ -1500,6 +1703,46 @@ _OPTION_FOR_FIELD = {
     "source_account": "-s/--source",
     "type": "-t/--type",
 }
+
+
+#: What the user typed for each request field `add` builds from its command line.
+_ARGUMENT_FOR_FIELD = {
+    **_OPTION_FOR_FIELD,
+    "narration": "The narration",
+    "payee": "--payee",
+    "postings": "-p/--posting",
+    "tags": "--tag",
+    "links": "--link",
+    "meta": "--meta",
+    "flag": "--flag",
+    "path": "--path",
+}
+
+
+def _refuse_undecodable_arguments(request: dict[str, Any]) -> None:
+    """Refuse a command-line value holding a byte that is not UTF-8, naming where it was typed.
+
+    Python hands an argv byte it cannot decode — a Latin-1 `é` from an old
+    script or terminal — over as a lone surrogate (U+DC80-U+DCFF). It reached
+    Beancount's parser, which failed with a raw `UnicodeEncodeError` filed as a
+    validation failure (w5/650); bulk rows already refused it (w5/185).
+    """
+    for field, value in request.items():
+        for text in value if isinstance(value, list) else [value]:
+            found = _SURROGATE.search(text) if isinstance(text, str) else None
+            if found is None:
+                continue
+            label = _ARGUMENT_FOR_FIELD.get(field, f"The {field!r} value")
+            code = ord(found[0])
+            if 0xDC80 <= code <= 0xDCFF:
+                raise protocol.UsageError(
+                    f"{label} is not valid UTF-8 (byte 0x{code - 0xDC00:02x} at position {found.start()}); "
+                    "re-type it in a UTF-8 terminal."
+                )
+            raise protocol.UsageError(
+                f"{label} holds an unpaired surrogate (\\u{code:04x}), which cannot be written as UTF-8; "
+                "send the whole character or remove it."
+            )
 
 
 def _text(request: dict[str, Any], field: str) -> str:

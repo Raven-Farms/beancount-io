@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import os
 import random
 import shutil
@@ -13,7 +14,6 @@ from prompt_toolkit.history import FileHistory, History, InMemoryHistory
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.styles import Style
 from rich.console import Console
-from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.text import Text
 
@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from cli.ask.agent import BqlDeps
 
 from cli import output
+from cli.ask.render import answer_markdown
 from cli.config import history_path
 from cli.context import env_flag
 from cli.errors import AuthError
@@ -244,7 +245,14 @@ def print_welcome() -> None:
 def run_repl(agent: Agent[BqlDeps, str], deps: BqlDeps, *, default_input: str | None = None) -> None:
     from pydantic_ai import capture_run_messages
 
-    from cli.ask.agent import WritePermission, translated_failures, usage_limits, written_so_far
+    from cli.ask.agent import (
+        CUT_OFF_NOTICE,
+        WritePermission,
+        cut_off,
+        translated_failures,
+        usage_limits,
+        written_so_far,
+    )
 
     hint = random.choice(_PLACEHOLDER_HINTS)
     first_turn = [True]
@@ -262,74 +270,89 @@ def run_repl(agent: Agent[BqlDeps, str], deps: BqlDeps, *, default_input: str | 
 
     session = _make_session(hint, key_bindings=kb)
     messages: list[Any] = []
-    while True:
-        try:
-            ph = FormattedText([("class:placeholder", f" {hint}")]) if first_turn[0] else FormattedText([])
-            user_input = session.prompt(default=default_input or "" if first_turn[0] else "", placeholder=ph).strip()
-        except KeyboardInterrupt:
-            # What the session's own help and toolbar promise: Ctrl-C clears the
-            # line (prompt-toolkit has already discarded the buffer) and Ctrl-D
-            # exits. Sharing one handler made the key people press to abandon a
-            # half-typed question throw the whole conversation away.
-            continue
-        except EOFError:
-            console.print("\n[dim]Goodbye.[/dim]")
-            break
-        if not user_input:
-            continue
-        first_turn[0] = False
-        if user_input.lower() in {"exit", "quit", "/exit", "/quit"}:
-            console.print("[dim]Goodbye.[/dim]")
-            break
-        if user_input.lower() in {"?", "/help", "help"}:
-            _print_help()
-            continue
-        status = console.status("", spinner="dots")
-        active_status[0] = status
-        status.start()
-        try:
-            # The spinner is stopped before any arm below prints: a live display
-            # left running would overwrite the line it is reporting on.
-            turn: list[Any] = []
+    # Every turn runs on this one loop. The prompt between turns runs its own
+    # and clears the current one, so `run_sync` made a new loop per turn while
+    # the cached HTTP client kept the last turn's keep-alive connection, bound
+    # to the old loop: reading the reply failed, the SDK retried on a new
+    # connection, and the question was sent, and billed, twice (w5/545).
+    turn_loop = asyncio.new_event_loop()
+    try:
+        while True:
             try:
-                with capture_run_messages() as turn, translated_failures(deps):
-                    result = agent.run_sync(
-                        user_input,
-                        deps=deps,
-                        message_history=messages,
-                        usage_limits=usage_limits(),
-                    )
-            finally:
-                status.stop()
-                active_status[0] = None
-        except KeyboardInterrupt:
-            # A turn costs one Ctrl-C, not the session. `messages` is left as it
-            # was before the turn, so the next question still carries the history
-            # — and keeps this turn too if it wrote to the ledger.
-            messages = _history_after_a_failed_turn(messages, turn, deps)
-            done = f": {inert_text(written_so_far(deps))}" if deps.writes else ""
-            # Text, not markup: the file name is not ours to have interpreted.
-            console.print(Text(f"\n(cancelled{done})", style="dim"))
-            continue
-        except AuthError as exc:
-            # The one failure worth ending on: the credential is rejected, so
-            # every later turn would fail the same way and the remedy is outside
-            # the session. Raising keeps the documented exit code 3.
+                ph = FormattedText([("class:placeholder", f" {hint}")]) if first_turn[0] else FormattedText([])
+                user_input = session.prompt(
+                    default=default_input or "" if first_turn[0] else "", placeholder=ph
+                ).strip()
+            except KeyboardInterrupt:
+                # What the session's own help and toolbar promise: Ctrl-C clears the
+                # line (prompt-toolkit has already discarded the buffer) and Ctrl-D
+                # exits. Sharing one handler made the key people press to abandon a
+                # half-typed question throw the whole conversation away.
+                continue
+            except EOFError:
+                console.print("\n[dim]Goodbye.[/dim]")
+                break
+            if not user_input:
+                continue
+            first_turn[0] = False
+            if user_input.lower() in {"exit", "quit", "/exit", "/quit"}:
+                console.print("[dim]Goodbye.[/dim]")
+                break
+            if user_input.lower() in {"?", "/help", "help"}:
+                _print_help()
+                continue
+            status = console.status("", spinner="dots")
+            active_status[0] = status
+            status.start()
+            try:
+                # The spinner is stopped before any arm below prints: a live display
+                # left running would overwrite the line it is reporting on.
+                turn: list[Any] = []
+                try:
+                    with capture_run_messages() as turn, translated_failures(deps):
+                        asyncio.set_event_loop(turn_loop)
+                        try:
+                            result = agent.run_sync(
+                                user_input,
+                                deps=deps,
+                                message_history=messages,
+                                usage_limits=usage_limits(),
+                            )
+                        finally:
+                            asyncio.set_event_loop(None)
+                finally:
+                    status.stop()
+                    active_status[0] = None
+            except KeyboardInterrupt:
+                # A turn costs one Ctrl-C, not the session. `messages` is left as it
+                # was before the turn, so the next question still carries the history
+                # — and keeps this turn too if it wrote to the ledger.
+                messages = _history_after_a_failed_turn(messages, turn, deps)
+                done = f": {inert_text(written_so_far(deps))}" if deps.writes else ""
+                # Text, not markup: the file name is not ours to have interpreted.
+                console.print(Text(f"\n(cancelled{done})", style="dim"))
+                continue
+            except AuthError as exc:
+                # The one failure worth ending on: the credential is rejected, so
+                # every later turn would fail the same way and the remedy is outside
+                # the session. Raising keeps the documented exit code 3.
+                console.print()
+                raise exc
+            except Exception as exc:
+                # Anything else costs this turn only — a 5xx from the proxy, a tool
+                # the model cannot get right, the per-question budget. Before this,
+                # one such failure ended the process and discarded the conversation.
+                messages = _history_after_a_failed_turn(messages, turn, deps)
+                console.print()
+                output.failure(exc)
+                continue
+            messages = list(result.all_messages())
             console.print()
-            raise exc
-        except Exception as exc:
-            # Anything else costs this turn only — a 5xx from the proxy, a tool
-            # the model cannot get right, the per-question budget. Before this,
-            # one such failure ended the process and discarded the conversation.
-            messages = _history_after_a_failed_turn(messages, turn, deps)
-            console.print()
-            output.failure(exc)
-            continue
-        messages = list(result.all_messages())
-        console.print()
-        # No OSC 8 hyperlink: its visible text is the model's, so it could read
-        # one address and open another. The target is printed beside it instead.
-        console.print(Markdown(inert_text(result.output), hyperlinks=False))
+            console.print(answer_markdown(result.output))
+            if cut_off(result):
+                console.print(Text(CUT_OFF_NOTICE, style="yellow"))
+    finally:
+        turn_loop.close()
 
 
 def _history_after_a_failed_turn(before: list[Any], turn: list[Any], deps: BqlDeps) -> list[Any]:

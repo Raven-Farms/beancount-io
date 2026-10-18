@@ -11,6 +11,10 @@ import { useTranslations } from "@/common/hooks/use-translations";
 import { cn } from "@/common/lib/utils/utils";
 
 interface EditableCellProps {
+  /** Localized column name (same key as the table header), for accessible names. */
+  label: string;
+  /** 1-based row number as shown in the row-number column. */
+  rowNumber: number;
   value: string;
   /** Optional read-only label; canonical `value` is still edited/submitted. */
   displayValue?: string;
@@ -31,6 +35,8 @@ interface EditableCellProps {
 }
 
 export function EditableCell({
+  label,
+  rowNumber,
   value,
   displayValue,
   onChange,
@@ -142,6 +148,12 @@ export function EditableCell({
 
   // Check if content should be right-aligned
   const isRightAligned = className?.includes("text-right");
+  // The placeholder is a format hint only; without an explicit name the
+  // browser would announce the open editor as e.g. textbox "0.00".
+  const editorLabel = t("importer.preview.editFieldLabel", {
+    field: label,
+    row: rowNumber,
+  });
 
   if (isEditing) {
     return (
@@ -154,6 +166,7 @@ export function EditableCell({
             onBlur={handleBlur}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
+            aria-label={editorLabel}
             rows={2}
             aria-invalid={error ? true : undefined}
             aria-describedby={
@@ -177,6 +190,7 @@ export function EditableCell({
             onBlur={handleBlur}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
+            aria-label={editorLabel}
             aria-invalid={error ? true : undefined}
             aria-describedby={error ? errorId : undefined}
             className={cn(
@@ -222,7 +236,8 @@ export function EditableCell({
         disabled && "cursor-not-allowed opacity-50",
       )}
       aria-label={t("importer.preview.editCellLabel", {
-        field: placeholder || t("importer.preview.field"),
+        field: label,
+        row: rowNumber,
         value,
       })}
       // The collapsed cell repeats the field's error underneath it; name it

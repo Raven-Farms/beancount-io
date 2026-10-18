@@ -15,7 +15,8 @@ from cli import context, output
 from cli.engine import launch
 from cli.errors import AuthError, UsageError, refuse_json, refuse_misplaced_global
 from cli.native_help import native_options
-from cli.utils import atomic_write, regex_reads_otherwise
+from cli.paths import expand_path
+from cli.utils import atomic_write, decode_error_message, regex_reads_otherwise
 
 _NO_COLUMN = "Could not find any valid column in input"
 _FORCE = "--force"
@@ -25,13 +26,17 @@ _FORCE = "--force"
 # tree. Written with escapes so the argument itself is plain ASCII.
 _LETTERS = r"(?:[A-Za-z0-9-_']|[^\x00-\x7F\s])*"
 _COMPONENT = r"(?:[A-Z0-9]|[^\x00-\x7F\s])" + _LETTERS
+_ENGLISH_ROOT = r"(?:Assets|Liabilities|Equity|Income|Expenses)"
 # Any root the grammar allows, not only the five English names: a ledger with
 # `option "name_assets" "Aktiva"` found "no hierarchical column" (w5/414). A
 # root needs a component after it, so a capitalized word or a currency is not
-# taken for an account; the English roots still match on their own.
+# taken for an account. Upstream takes the leftmost column that matches, so
+# that wider match is a fallback: it is not tried where an English-root
+# account follows on the line, and a narration such as `NYSE:IBM dividend`
+# beside `Assets:Broker:Cash` no longer wins the column (w5/570).
 _ACCOUNT_PATTERN = (
-    rf"(?:(?:[A-Z]|[^\x00-\x7F\s]){_LETTERS}(?::{_COMPONENT})+"
-    r"|Assets|Liabilities|Equity|Income|Expenses)"
+    rf"(?:(?!.*(?<!\S){_ENGLISH_ROOT}:)(?:[A-Z]|[^\x00-\x7F\s]){_LETTERS}(?::{_COMPONENT})+"
+    rf"|{_ENGLISH_ROOT}(?::{_COMPONENT})*)"
 )
 
 
@@ -125,13 +130,28 @@ def _check_input(name: str | None) -> None:
     """
     if name is None or name == "-" or _held_descriptor(name):
         return
-    path = Path(name).expanduser()
+    path = expand_path(Path(name), "treeify input")
     if not os.path.lexists(path):
         raise UsageError(f"treeify input '{path}' does not exist. Pass a text file, or omit it to read stdin.")
     if path.is_dir():
         raise UsageError(f"treeify input '{path}' is a directory. Pass a text file, or omit it to read stdin.")
     if path.is_file() and not os.access(path, os.R_OK):
         raise AuthError(f"Cannot read treeify input '{path}': permission denied.")
+    if path.is_file():
+        _require_utf8(path.read_bytes(), path)
+
+
+def _require_utf8(data: bytes, name: object) -> str:
+    """The input as text, or the shared refusal for bytes that are not UTF-8.
+
+    Upstream decodes strictly since w5/404 and crashed on Latin-1 text with
+    a bare `UnicodeDecodeError`, where `format -` names the input and the
+    byte (w5/535).
+    """
+    try:
+        return data.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise UsageError(decode_error_message(name, exc)) from None
 
 
 def _held_descriptor(name: str | None) -> tuple[int, ...]:
@@ -154,7 +174,7 @@ def _held_descriptor(name: str | None) -> tuple[int, ...]:
 def treeify(ctx: typer.Context) -> None:
     """Render a column as an ASCII tree (delegates to treeify)."""
     refuse_json("treeify", hint="Run without --json to print the ASCII tree.")
-    refuse_misplaced_global("treeify", list(ctx.args), native_options("treeify"))
+    refuse_misplaced_global("treeify", list(ctx.args), native_options("treeify"), reads="the file", json_output=False)
     # Upstream treeify knows no `--force`, so bea's own opt-in is stripped
     # before forwarding; without it an existing ledger file is never replaced.
     args = list(ctx.args)
@@ -181,12 +201,12 @@ def treeify(ctx: typer.Context) -> None:
         # Upstream opens `-o` for writing before it reads the input, so a run
         # that then fails — or reads the same file — has already truncated
         # it. bea keeps the destination itself and writes it only on success.
-        destination = Path(parsed.output).expanduser()
+        destination = expand_path(Path(parsed.output), "--output")
         output.guard_output_destination(
             destination, _ledgers(), refuse_existing_ledger_file=True, force=_FORCE in args[:stop]
         )
         if parsed.input is not None:
-            output.refuse_input_alias(destination, Path(parsed.input).expanduser())
+            output.refuse_input_alias(destination, expand_path(Path(parsed.input), "treeify input"))
         output.check_output_destination(destination)
         output.require_writable_destination(destination)
         forwarded = _without_output(parsed)
@@ -200,6 +220,10 @@ def treeify(ctx: typer.Context) -> None:
     descriptors = _held_descriptor(parsed.input if parsed is not None else None)
     if descriptors:
         completed = launch.capture_native("treeify", forwarded, pass_fds=descriptors)
+    elif parsed is not None and not parsed.help and parsed.input in (None, "-") and sys.stdin is not None:
+        # Read here so a non-UTF-8 pipe is refused in bea's words, as a file is.
+        text = _require_utf8(sys.stdin.buffer.read(), "stdin")
+        completed = launch.capture_native("treeify", forwarded, input_text=text)
     else:
         completed = launch.capture_native("treeify", forwarded)
     if completed.returncode == 0 and _NO_COLUMN in (completed.stderr or ""):

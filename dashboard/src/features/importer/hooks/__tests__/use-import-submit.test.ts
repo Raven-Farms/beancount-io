@@ -3,6 +3,11 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { useImportSubmit } from "../use-import-submit";
 import type { ImportTransaction } from "../../types";
 
+// The post-write error check (w3/640) has its own suite.
+vi.mock("@/common/hooks/use-write-outcome", () => ({
+  useWriteOutcome: () => ({ snapshot: () => null, report: async () => false }),
+}));
+
 // ---------------------------------------------------------------------------
 // Hoist mocks so they are available before module imports
 // ---------------------------------------------------------------------------

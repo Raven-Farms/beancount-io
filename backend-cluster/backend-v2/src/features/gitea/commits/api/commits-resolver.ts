@@ -1,5 +1,5 @@
 import { Resolver, Query, Arg, Ctx, Int } from "type-graphql";
-import { Authenticated } from "@/server/graphql/authenticated";
+import { AllowAnonymous } from "@/server/graphql/authenticated";
 import { IContext } from "@/server/graphql/context";
 import type { ICommitsService } from "../service/commits-service";
 import { CommitListItem, CommitDetails } from "./commits-resolver.types";
@@ -8,7 +8,9 @@ import { CommitListItem, CommitDetails } from "./commits-resolver.types";
 export class CommitsResolver {
   constructor(private readonly commitsService: ICommitsService) {}
 
-  @Authenticated()
+  // Commit history is ledger content: LEDGER_REPOSITORY_READ in the service
+  // admits anonymous readers of a public ledger and conceals a private one.
+  @AllowAnonymous()
   @Query(() => [CommitListItem])
   async listCommits(
     @Arg("ledgerId") ledgerId: string,
@@ -26,7 +28,7 @@ export class CommitsResolver {
     });
   }
 
-  @Authenticated()
+  @AllowAnonymous()
   @Query(() => CommitDetails)
   async getCommitDetails(
     @Arg("ledgerId") ledgerId: string,

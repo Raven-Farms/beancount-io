@@ -4,6 +4,20 @@ export interface TranslationEntry {
 }
 
 const esVisibilitySection: Record<string, TranslationEntry> = {
+  "page.settings.makePublicTitle": {
+    message: "¿Hacer público este libro?",
+    description:
+      "Title of the confirmation before a private ledger becomes public",
+  },
+  "page.settings.makePublicDescription": {
+    message:
+      "Cualquiera con el enlace, y los buscadores, podrá ver las transacciones, los saldos, los archivos y el historial de este libro.",
+    description: "What becomes visible when a private ledger is made public",
+  },
+  "page.settings.makePublic": {
+    message: "Hacer público",
+    description: "Button that confirms making a private ledger public",
+  },
   "page.settings.publicLedger": {
     message: "Libro Mayor Público",
     description: "Label when ledger is public",

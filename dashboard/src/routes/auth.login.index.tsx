@@ -1,12 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import LoginPage from "@/features/auth/pages/login-page";
 import { z } from "zod";
+import { searchEnum, searchString } from "@/common/lib/search-params/tolerant";
 import { getSEOMetadata, createHeadMeta } from "@/common/lib/seo/seo-helpers";
 import { loginBeforeLoad } from "@/features/auth/pages/login-page/loader";
 
 const loginSearchSchema = z.object({
-  next: z.string().optional(),
-  reason: z.enum(["expired"]).optional(),
+  next: searchString(),
+  reason: searchEnum(["expired"]),
 });
 
 export const Route = createFileRoute("/auth/login/")({

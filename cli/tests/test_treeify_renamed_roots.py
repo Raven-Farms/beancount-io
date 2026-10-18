@@ -77,3 +77,22 @@ def test_no_column_names_the_loose_option(tmp_path: Path) -> None:
     result = _bea(tmp_path, "treeify", "plain.txt")
     assert result.returncode == 2
     assert "pass -A (loose accounts) or your own -r pattern" in result.stderr
+
+
+@pytest.mark.parametrize("narration", ["NYSE:IBM dividend", "Ref:A12 transfer"])
+def test_a_colon_in_a_narration_does_not_take_the_account_column(tmp_path: Path, narration: str) -> None:
+    """The any-root match is a fallback where an English-root account follows on the line (w5/570)."""
+    (tmp_path / "main.bean").write_text(
+        "2024-01-01 open Assets:Broker:Cash USD\n2024-01-01 open Income:Dividends USD\n"
+        f'2024-01-05 * "{narration}"\n  Assets:Broker:Cash  10.00 USD\n  Income:Dividends\n'
+    )
+    listing = _bea(tmp_path, "--file", "main.bean", "query", "SELECT narration, account, position")
+    assert listing.returncode == 0, listing.stderr
+    (tmp_path / "q.txt").write_text(listing.stdout)
+
+    tree = _bea(tmp_path, "treeify", "q.txt")
+
+    assert tree.returncode == 0, tree.stderr
+    for drawn in ("|-- Assets", "`-- Broker", "`-- Cash", "`-- Income", "`-- Dividends"):
+        assert drawn in tree.stdout, tree.stdout
+    assert tree.stdout.count(narration) == 2, tree.stdout

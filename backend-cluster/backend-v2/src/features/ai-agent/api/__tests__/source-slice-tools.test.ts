@@ -1,4 +1,4 @@
-import { executeSourceSlice } from "../mcp-source-slices";
+import { SOURCE_SLICE_EXECUTORS } from "../mcp-source-slices";
 import type { Identity } from "@/server/api/identity";
 
 const IDENTITY: Identity = {
@@ -19,7 +19,7 @@ function context(ledgerJournal: unknown) {
   } as any;
 }
 
-describe("executeSourceSlice", () => {
+describe("SOURCE_SLICE_EXECUTORS", () => {
   it("update returns the new hash for follow-up edits, not the stale one", async () => {
     const updateSourceSlice = jest.fn().mockResolvedValue({
       message: "Updated",
@@ -27,14 +27,13 @@ describe("executeSourceSlice", () => {
       newSha256sum: "newsum",
       newEntryHash: "hash-new",
     });
-    const result = await executeSourceSlice(
+    const result = await SOURCE_SLICE_EXECUTORS.update(
       context({ updateSourceSlice }),
       {
-        operation: "update",
         ledger: LEDGER_ID,
         entryHash: "hash-old",
         sha256sum: "oldsum",
-        newContent: "2024-01-02 * \"new\"\n",
+        newContent: '2024-01-02 * "new"\n',
       },
     );
 
@@ -59,9 +58,9 @@ describe("executeSourceSlice", () => {
       { entryHash: "h1", sha256sum: "s1" },
       { entryHash: "h2", sha256sum: "s2" },
     ];
-    const result = await executeSourceSlice(
+    const result = await SOURCE_SLICE_EXECUTORS.delete_many(
       context({ deleteMultiSourceSlices }),
-      { operation: "delete_many", ledger: LEDGER_ID, entries },
+      { ledger: LEDGER_ID, entries },
     );
 
     expect(result.ok).toBe(true);
