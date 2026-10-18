@@ -1,3 +1,4 @@
+import { ledgerDateFormat } from "@/common/lib/format/ledger-date";
 import { lazy, Suspense, useMemo, useRef, useState } from "react";
 import { useQuery } from "@apollo/client/react";
 import { ChevronRight, Plus, ReceiptText } from "lucide-react";
@@ -46,7 +47,8 @@ function formatActivityDate(date: string, language: string): string {
   if (parsed.getFullYear() !== new Date().getFullYear()) {
     options.year = "numeric";
   }
-  return new Intl.DateTimeFormat(language, options).format(parsed);
+  // Gregorian, so the year compared above is the year the label shows.
+  return ledgerDateFormat(language, options).format(parsed);
 }
 
 function getTitle(transaction: JournalTransaction, fallback: string): string {

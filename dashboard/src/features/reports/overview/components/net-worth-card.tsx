@@ -1,3 +1,4 @@
+import { ledgerDateFormat } from "@/common/lib/format/ledger-date";
 import { useId, useMemo } from "react";
 import type { EChartsOption } from "echarts";
 import {
@@ -52,19 +53,33 @@ import {
 function formatMonth(date: string, language: string): string {
   const parsed = new Date(`${date}T00:00:00`);
   if (Number.isNaN(parsed.getTime())) return date;
-  return new Intl.DateTimeFormat(language, {
+  return ledgerDateFormat(language, {
     month: "short",
     year: "numeric",
   }).format(parsed);
+}
+
+/**
+ * Y-axis ticks in the language's own digits, like the amounts beside them.
+ * Latin-digit languages keep the compact `18.0k` every other chart uses.
+ */
+function yAxisTickFormatter(language: string): (value: number) => string {
+  const native = new Intl.NumberFormat(language);
+  if (native.resolvedOptions().numberingSystem === "latn") {
+    return formatYAxisNumber;
+  }
+  const compact = new Intl.NumberFormat(language, {
+    notation: "compact",
+    maximumFractionDigits: 1,
+  });
+  return (value) => compact.format(value);
 }
 
 /** `YYYY-MM-DD` as a medium date in the app language, e.g. "Sep 8, 2017". */
 function formatPriceDate(date: string, language: string): string {
   const parsed = new Date(`${date}T00:00:00`);
   if (Number.isNaN(parsed.getTime())) return date;
-  return new Intl.DateTimeFormat(language, { dateStyle: "medium" }).format(
-    parsed,
-  );
+  return ledgerDateFormat(language, { dateStyle: "medium" }).format(parsed);
 }
 
 /**
@@ -284,6 +299,7 @@ export function NetWorthCard({
       : null;
 
   const chartOption = useMemo<EChartsOption>(() => {
+    const formatTick = yAxisTickFormatter(language);
     const currencies = Array.from(
       new Set(
         visibleData.flatMap((point) =>
@@ -323,7 +339,7 @@ export function NetWorthCard({
             if (Number.isNaN(parsed.getTime())) {
               return formatDateAxis(value, "monthly");
             }
-            return new Intl.DateTimeFormat(language, {
+            return ledgerDateFormat(language, {
               month: "short",
             }).format(parsed);
           },
@@ -332,7 +348,7 @@ export function NetWorthCard({
       yAxis: {
         type: "value",
         splitLine: defaultSplitLine,
-        axisLabel: { formatter: formatYAxisNumber },
+        axisLabel: { formatter: formatTick },
         scale: true,
       },
       series: displayedCurrencies.map((currency) => {
