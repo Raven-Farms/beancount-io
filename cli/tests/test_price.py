@@ -1627,6 +1627,58 @@ class TestPriceStatus:
         assert "bea price status" in loaded.errors[0].message
 
 
+class TestStrictAndUnavailableWording:
+    """Each managed-price message names the condition it reports (w5/644)."""
+
+    def _strict(self, feed_server: str, tmp_path: Path, body: str, now: float) -> str:
+        _FeedHandler.routes["/prices/BTC-USD"] = {"body": body.encode("utf-8")}
+        with pytest.raises(LedgerError) as raised:
+            _resolve(feed_server, tmp_path, now=now, strict=True)
+        return str(raised.value)
+
+    def test_a_future_stamp_names_the_clock(self, feed_server: str, tmp_path: Path) -> None:
+        now = time.time()
+        stamp = _stamp(now + 3600)
+
+        message = self._strict(feed_server, tmp_path, _feed_text(stamp), now)
+
+        assert message.endswith(
+            f"is stale in strict mode: latest observation {stamp} is more than 300 seconds ahead of this "
+            "computer's clock; check the clock."
+        )
+        assert "older than" not in message
+
+    def test_a_feed_with_no_stamp_says_so(self, feed_server: str, tmp_path: Path) -> None:
+        body = "; alias: BTC-USD\n; commodity: BTC\n; quote: USD\n2026-09-10 price BTC 112000 USD\n"
+
+        message = self._strict(feed_server, tmp_path, body, time.time())
+
+        assert message.endswith("is stale in strict mode: the feed has no observation time (observed-at).")
+        assert "unknown observation time" not in message
+
+    def test_an_old_stamp_keeps_its_age(self, feed_server: str, tmp_path: Path) -> None:
+        now = time.time()
+        stamp = _stamp(now - 3600)
+
+        assert self._strict(feed_server, tmp_path, _feed_text(stamp), now).endswith(
+            f"latest observation {stamp} is older than 600 seconds."
+        )
+
+    def test_a_provider_outage_mentions_cached_prices_only_when_cached(self, feed_server: str, tmp_path: Path) -> None:
+        now = time.time()
+        _FeedHandler.routes["/prices/BTC-USD"] = {"status": 503, "body": b"down"}
+        uncached = _resolve(feed_server, tmp_path / "empty", now=now)
+        _FeedHandler.routes["/prices/BTC-USD"] = {"body": _feed_text(_stamp(now)).encode("utf-8")}
+        _resolve(feed_server, tmp_path / "warm", now=now)
+        _FeedHandler.routes["/prices/BTC-USD"] = {"status": 503, "body": b"down"}
+        cached = _resolve(feed_server, tmp_path / "warm", now=now + 301)
+
+        assert uncached.head.last_error == "fetch failed (provider): HTTP 503: price service unavailable. Retry later."
+        assert cached.head.last_error == (
+            "fetch failed (provider): HTTP 503: price service unavailable. Retry later; cached prices remain usable."
+        )
+
+
 class TestManagedPriceFailureText:
     def _record_provider_failure(self, url: str, cache: Path) -> str:
         from email.message import Message
@@ -1638,7 +1690,7 @@ class TestManagedPriceFailureText:
         resolved = resolve_feed(url, "BTC-USD", root=cache, opener=opener)
         assert resolved.blob is None
         assert resolved.head.last_error == (
-            "fetch failed (provider): HTTP 503: price service unavailable. Retry later; cached prices remain usable."
+            "fetch failed (provider): HTTP 503: price service unavailable. Retry later."
         )
         return resolved.head.last_error
 

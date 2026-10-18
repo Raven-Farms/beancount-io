@@ -378,7 +378,7 @@ def _exchange(
         if error.code >= 500:
             return FetchFailed(
                 reason="provider",
-                message=f"HTTP {error.code}: price service unavailable. Retry later; cached prices remain usable.",
+                message=f"HTTP {error.code}: price service unavailable. Retry later.",
             )
         if 300 <= error.code < 400:
             return FetchFailed(reason="redirect", message=f"redirects are not followed (HTTP {error.code})")

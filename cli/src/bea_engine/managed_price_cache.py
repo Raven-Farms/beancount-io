@@ -443,6 +443,9 @@ def resolve_feed(
         message = "server answered 304 without a cached revision to reuse"
     else:
         message = f"fetch failed ({result.reason}): {result.message}"
+        # Only the cache knows whether anything is left to serve (w5/644).
+        if result.reason == "provider" and previous is not None:
+            message = message.rstrip(".") + "; cached prices remain usable."
 
     # The revision that still serves, not one whose blob is gone: a head naming
     # a missing blob never honored the retry window, so every command fetched
@@ -471,11 +474,22 @@ def _enforce_strict(url: str, resolved: ResolvedFeed, at: float, stale_seconds: 
         cause = (resolved.head.last_error or "no cached revision").rstrip()
         raise LedgerError(f"managed price source {url} is unavailable in strict mode: {cause}".rstrip(".") + ".")
     if freshness(resolved.blob, at, stale_seconds) == "stale":
-        stamp = resolved.blob.feed.latest_observed_at or "unknown observation time"
-        raise LedgerError(
-            f"managed price source {url} is stale in strict mode: latest observation {stamp} "
-            f"is older than {stale_seconds} seconds."
-        )
+        # Worded by why it reads stale: "older than 600 seconds" was said of a
+        # stamp an hour ahead of the clock, and of a feed with none (w5/644).
+        stamp = resolved.blob.feed.latest_observed_at
+        instant = observed_instant(stamp)
+        if not stamp:
+            why = "the feed has no observation time (observed-at)."
+        elif instant is None:
+            why = f"its observation time {stamp} cannot be read."
+        elif instant - at > FUTURE_SKEW_SECONDS:
+            why = (
+                f"latest observation {stamp} is more than {FUTURE_SKEW_SECONDS} seconds ahead of this computer's "
+                "clock; check the clock."
+            )
+        else:
+            why = f"latest observation {stamp} is older than {stale_seconds} seconds."
+        raise LedgerError(f"managed price source {url} is stale in strict mode: {why}")
 
 
 def managed_source_for_path(path: Path, root: Path | None = None) -> str | None:
