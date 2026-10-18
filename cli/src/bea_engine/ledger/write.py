@@ -2754,6 +2754,20 @@ def _indent_block(texts: list[str], indent: str) -> list[str]:
     return rendered
 
 
+def appended_spans(original: bytes, texts: list[str]) -> list[tuple[int, int]]:
+    """The first and last line, 1-based, each of `texts` occupies in `appended_content(original, texts)`.
+
+    Each entry follows a blank line, and the aligner keeps the line count.
+    """
+    line = len(_lines(original.decode("utf-8", errors="replace")))
+    spans = []
+    for text in texts:
+        count = len(_lines(text.rstrip())) or 1
+        spans.append((line + 2, line + 1 + count))
+        line += 1 + count
+    return spans
+
+
 def appended_content(original: bytes, texts: list[str]) -> str:
     """The destination with `texts` appended, the new lines aligned as `bea format` would leave them.
 

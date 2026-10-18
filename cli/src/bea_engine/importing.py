@@ -640,8 +640,10 @@ def answer(
     # accounts are read again from the ledger as the import would leave it.
     opened_after = open_currencies
     if any(name not in open_currencies for _, entry, _, _ in held for name, _ in _entry_accounts(entry)):
-        proposal = [row["entry"] for row in rows if row["include"] or row["status"] == "blocked"]
-        entries_after = _entries_after(snapshot, target, original, proposal)
+        proposed_rows = [row for row in rows if row["include"] or row["status"] == "blocked"]
+        entries_after = _entries_after(
+            snapshot, target, original, [row["entry"] for row in proposed_rows], [row["row"] for row in proposed_rows]
+        )
         after = _open_currencies(entries_after, Open)
         windows_after = _active_windows(entries_after)
         opened_after = after
@@ -1458,19 +1460,41 @@ def _active_windows(entries: list[Any]) -> dict[str, tuple[Any, Any]]:
     return windows
 
 
-def _entries_after(snapshot: ledger_write.LedgerSnapshot, target: Path, original: bytes, texts: list[str]) -> list[Any]:
-    """The ledger's entries with `texts` appended, plugins applied; nothing is written.
+_IMPORT_ROW = "__bea_import_row__"
+"""Meta key on a reloaded directive the import's own rows wrote: that row's number."""
+
+
+def _entries_after(
+    snapshot: ledger_write.LedgerSnapshot, target: Path, original: bytes, texts: list[str], rows: list[int]
+) -> list[Any]:
+    """The ledger's entries with `texts` (rows `rows`) appended, plugins applied; nothing is written.
 
     Errors are not this load's business: an account nothing opens is simply
     absent from the result, and the append is validated on its own afterwards.
+
+    Each entry names its real file, and one the appended rows wrote names its
+    row: a blocked row's reason cited the open as `.bea-<hex>.tmp:9`, a
+    staging file gone when the command returned (w5/636).
     """
     from bea_engine import managed_load
 
     ledger_write.refuse_cache_over_ledger(target, snapshot.contents, snapshot.patterns)
     with ledger_write.candidate_file(target, ledger_write.decoded_append(target, original, texts)) as candidate:
-        with snapshot.staged(candidate, target) as (root, _):
+        with snapshot.staged(candidate, target) as (root, staged):
             entries, _, _ = managed_load.load_file(root)
-    return entries
+    back = {str(copy): str(source) for copy, source in staged.items()}
+    spans = list(zip(ledger_write.appended_spans(original, texts), rows, strict=True))
+    written = os.path.normpath(target)
+    result = []
+    for entry in entries:
+        entry = managed_load._remap_entry(entry, back)
+        meta = getattr(entry, "meta", None) or {}
+        if os.path.normpath(str(meta.get("filename"))) == written and isinstance(meta.get("lineno"), int):
+            row = next((row for (first, last), row in spans if first <= meta["lineno"] <= last), None)
+            if row is not None:
+                entry = entry._replace(meta={**meta, _IMPORT_ROW: row})
+        result.append(entry)
+    return result
 
 
 def _entry_accounts(entry: Any, *, active_only: bool = False) -> list[tuple[str, str | None]]:
@@ -1617,7 +1641,7 @@ def _inactive_reason(
         if entry.date < opened.date:
             earliest = first_uses.get(name, (entry.date, None))[0]
             return (
-                f"Account '{name}' opens {opened.date} (at {_where(opened)}), after this row's "
+                f"Account '{name}' opens {opened.date} ({_where(opened)}), after this row's "
                 f"{entry.date}. Re-date that open to {min(earliest, entry.date)} or earlier."
             )
         if closed is not None and entry.date > closed.date:
@@ -1627,14 +1651,17 @@ def _inactive_reason(
                 else "Point the rule, category or --default-account at an open account, or re-date the close."
             )
             return (
-                f"Account '{name}' was closed {closed.date} (at {_where(closed)}), before this row's "
+                f"Account '{name}' was closed {closed.date} ({_where(closed)}), before this row's "
                 f"{entry.date}. {remedy}"
             )
     return None
 
 
 def _where(directive: Any) -> str:
-    return f"{directive.meta.get('filename')}:{directive.meta.get('lineno')}"
+    row = directive.meta.get(_IMPORT_ROW)
+    if row is not None:
+        return f"row {row} of this import"
+    return f"at {directive.meta.get('filename')}:{directive.meta.get('lineno')}"
 
 
 def _native_import_id(meta: dict[str, Any], keys: list[str]) -> str | None:
