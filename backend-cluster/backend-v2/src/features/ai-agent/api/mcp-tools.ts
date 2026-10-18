@@ -168,9 +168,9 @@ export interface McpToolDescriptor {
   /**
    * Selection hints published in `tools/list` (w2/m27), so clients can decide
    * what to auto-approve. Worst-case rule: the hints describe the most
-   * destructive, least idempotent operation the tool can perform — a grouped
-   * dispatcher carrying one deleting operation is destructive, even when its
-   * other operations only read. The guard test refuses a tool without hints
+   * destructive, least idempotent operation the tool can perform. Each tool
+   * performs one operation (ADR 019, 2026-10-18), so the hints describe
+   * exactly what it does. The guard test refuses a tool without hints
    * and a `readOnlyHint: true` tool whose op-class is not `read`.
    */
   readonly annotations: ToolAnnotations;
@@ -305,7 +305,7 @@ const IDEMPOTENT_WRITE: ToolAnnotations = {
   idempotentHint: true,
   openWorldHint: false,
 };
-/** Worst case deletes or merges: the grouped-dispatcher default. */
+/** Deletes, overwrites, or revokes access. */
 const DESTRUCTIVE: ToolAnnotations = {
   readOnlyHint: false,
   destructiveHint: true,

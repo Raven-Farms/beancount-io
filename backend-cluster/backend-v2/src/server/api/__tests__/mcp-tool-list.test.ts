@@ -70,6 +70,23 @@ const listToolsRaw = () =>
 
 const listTools = () => withClient((client) => client.listTools());
 
+const SELECTOR = /^(operation|op|action|verb|command|method)$/i;
+
+/** Every property in a JSON Schema whose name says it picks an operation. */
+function selectorPaths(schema: unknown, at = "$"): string[] {
+  if (Array.isArray(schema))
+    return schema.flatMap((item, i) => selectorPaths(item, `${at}[${i}]`));
+  if (!schema || typeof schema !== "object") return [];
+  return Object.entries(schema).flatMap(([key, value]) => {
+    if (key !== "properties" || !value || typeof value !== "object")
+      return selectorPaths(value, `${at}.${key}`);
+    return Object.entries(value).flatMap(([name, property]) => [
+      ...(SELECTOR.test(name) ? [`${at}.${name}`] : []),
+      ...selectorPaths(property, `${at}.${name}`),
+    ]);
+  });
+}
+
 describe("MCP tool list", () => {
   it("describes every tool and prompt without steering the model or naming a plan", async () => {
     // Both connector directories review this text (ADR 019, 2026-10-09
@@ -188,15 +205,27 @@ describe("MCP tool list", () => {
     // tools. Measured on the raw response from here on, since the parsed one
     // no longer shows everything an agent pays for.
     //
-    // 90 KB since w1/m38 split the grouped tools into one tool per operation
-    // (ADR 019, 2026-10-18): the two bank tools became eight (77.7 KB), then
-    // ledger lifecycle, collaborators, and pull requests became three each
-    // (87.4 KB), then the two editing tools became three each (96.4 KB, after
-    // each entry-source tool published only its own result shape). t005
-    // remeasures the final number.
+    // 96 KB since w1/m38 split the grouped tools into one tool per operation
+    // (ADR 019, 2026-10-18), measured at 96,458 bytes across 43 tools: the
+    // two bank tools became eight, and ledger lifecycle, collaborators, pull
+    // requests, file edits, and entry-source edits became three each. Each
+    // entry-source tool publishes only its own result shape; the shared
+    // union would have put the list about 8 KB over this line.
     const { tools } = await listToolsRaw();
     const bytes = Buffer.byteLength(JSON.stringify(tools), "utf8");
-    expect(bytes).toBeLessThan(100 * 1024);
+    expect(bytes).toBeLessThan(96 * 1024);
+  });
+
+  it("exposes each operation as its own tool, never behind a selector argument", async () => {
+    // OpenAI's app-directory scan refuses a tool that "appears to execute
+    // operations that are not individually exposed" (ADR 019, 2026-10-18).
+    // A dispatcher shows itself as an argument naming which operation to run,
+    // at the top level or inside each item of a batch.
+    const { tools } = await listTools();
+    const selectors = tools.flatMap((tool) =>
+      selectorPaths(tool.inputSchema).map((path) => `${tool.name}: ${path}`),
+    );
+    expect(selectors).toEqual([]);
   });
 
   it("publishes all four annotations on every tool", async () => {

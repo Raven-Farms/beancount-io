@@ -1868,13 +1868,15 @@ export const DIRECT_ONLY_ACTIONS: Readonly<
 
 function buildOpIndex(): ReadonlyMap<string, VerbEntry> {
   const index = new Map<string, VerbEntry>();
-  const claim = (opId: string, entry: VerbEntry, groupedDispatcher = false) => {
+  const claim = (opId: string, entry: VerbEntry, spansVerbs = false) => {
     const existing = index.get(opId);
-    // One transport id must always have one operational class. A grouped MCP
-    // dispatcher can, however, select several domain verbs of that same class
-    // from its validated `operation` input. In that case there is deliberately
-    // no transport-level canonical action: the selected application-service
-    // method performs the exact PDP call before domain work.
+    // One transport id must always have one operational class. An MCP tool
+    // may still span several verbs of that class: `getLedgerContext` and
+    // `checkLedger` read several in one call, and `setLedgerStar` stars or
+    // unstars by its `starred` flag. Such a tool deliberately has no
+    // transport-level canonical action; each service method it calls makes
+    // its own PDP decision before domain work. No tool selects among verbs by
+    // an `operation` argument (ADR 019, 2026-10-18; mcp-tool-list.test.ts).
     if (existing && existing.class !== entry.class) {
       throw new Error(
         `op-class: ${opId} has conflicting entries (${existing.verb}, ${entry.verb})`,
@@ -1884,7 +1886,7 @@ function buildOpIndex(): ReadonlyMap<string, VerbEntry> {
       existing &&
       existing.authorizationAction !== entry.authorizationAction
     ) {
-      if (!groupedDispatcher) {
+      if (!spansVerbs) {
         throw new Error(
           `op-class: ${opId} has conflicting entries (${existing.verb}, ${entry.verb})`,
         );
@@ -2134,11 +2136,12 @@ const STRONGEST_FIRST: readonly OpClass[] = ["admin", "write", "read"];
  * What a tool declares it needs, derived from `VERB_TABLE` and never written
  * by hand (ADR 019 D2, the rule ADR 0007 D8 applied to output schemas).
  *
- * A grouped tool declares its most privileged branch's scope. A tool whose
- * only verbs are `session-only` (callable by an OAuth grant, never by a
- * scoped key) needs OAuth with no particular scope; a `public` verb also
- * allows anonymous calls. ChatGPT uses the declaration to decide when to link
- * an account and when to ask for a broader scope; other hosts ignore it.
+ * A tool spanning several verbs declares its most privileged one's scope.
+ * A tool whose only verbs are `session-only` (callable by an OAuth grant,
+ * never by a scoped key) needs OAuth with no particular scope; a `public`
+ * verb also allows anonymous calls. ChatGPT uses the declaration to decide
+ * when to link an account and when to ask for a broader scope; other hosts
+ * ignore it.
  */
 export function mcpToolSecuritySchemes(
   tool: string,
