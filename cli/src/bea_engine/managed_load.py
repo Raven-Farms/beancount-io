@@ -1479,7 +1479,7 @@ def export_portable(
                 "Choose an empty or dedicated directory."
             )
     destinations: dict[Path, Path] = {}
-    external = 0
+    external_paths: list[Path] = []
     # Classified by the file each path truly names. Snapshot paths keep a
     # lexical `..` (`books/../shared/accounts.bean`), which `relative_to`
     # accepted as `../shared/accounts.bean`: the copy was written beside the
@@ -1500,8 +1500,20 @@ def export_portable(
         try:
             destinations[path] = target / path.resolve().relative_to(home)
         except ValueError:
+            external_paths.append(path)
+    # Reserve every in-tree name before allocating relocated copies, whatever
+    # order the includes use. The resulting snapshot must survive moving to a
+    # case- or normalization-insensitive volume, like managed-feed names do.
+    owned = {_name_key(dest) for dest in destinations.values()}
+    external = 0
+    for path in external_paths:
+        while True:
             external += 1
-            destinations[path] = target / "_shared" / f"{external:02d}-{path.name}"
+            candidate = target / "_shared" / f"{external:02d}-{path.name}"
+            if _name_key(candidate) not in owned:
+                break
+        destinations[path] = candidate
+        owned.add(_name_key(candidate))
     # Allocated against the copied files, not independently of them. A ledger
     # may legitimately keep its own `prices/BTC-USD.beancount` beside a managed
     # `BTC-USD` feed; the two maps used to be built in isolation, so the feed
@@ -1533,6 +1545,26 @@ def export_portable(
     attachments = _export_attachments(loaded, snapshot, destinations, target, home)
     attachments.update(_export_plugin_modules(loaded, snapshot, target))
     planned = [*destinations.values(), *feed_files.values(), *attachments]
+    # Distinct spellings may still be one destination: a pre-existing symlink
+    # inside the snapshot, hard links, or case/Unicode variants. --force must
+    # never let one planned copy replace another one during the same export.
+    destination_names: dict[str, Path] = {}
+    identities: dict[tuple[int, int], Path] = {}
+    for dest in planned:
+        keys = (_name_key(dest), _name_key(dest.resolve()))
+        other = next((destination_names[key] for key in keys if key in destination_names), None)
+        for key in keys:
+            destination_names[key] = dest
+        if dest.exists():
+            info = dest.stat()
+            identity = (info.st_dev, info.st_ino)
+            other = other or identities.get(identity)
+            identities[identity] = dest
+        if other is not None:
+            raise UsageError(
+                f"Cannot export: {other} and {dest} name the same destination. "
+                "Choose an empty or dedicated directory. Nothing was written."
+            )
     for dest in planned:
         if not dest.exists():
             continue
