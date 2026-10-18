@@ -76,6 +76,12 @@ function normalizeItem(item: Record<string, unknown>): Record<string, unknown> {
   if (item.directive_type === DirectiveType.Document) {
     delete normalized.filename;
   }
+  // The Python serializer dropped a Balance's asserted amount; ours adds it
+  // (w3/556) and the dedicated test below pins it.
+  if (item.directive_type === DirectiveType.Balance) {
+    delete normalized.amount;
+    delete normalized.tolerance;
+  }
   return normalized;
 }
 
@@ -110,6 +116,28 @@ describe("serializeDirective (golden parity)", () => {
       expect(item.entry_hash).toMatch(/^[0-9a-f]{32}$/);
       // deterministic
       expect(serializeDirective(directive).entry_hash).toBe(item.entry_hash);
+    });
+  });
+
+  it("serializes a Balance's asserted amount and explicit tolerance", () => {
+    const balance = rustledger.find((d) => d.type === "balance");
+    expect(serializeDirective(balance as DirectiveJson)).toMatchObject({
+      directive_type: DirectiveType.Balance,
+      account: "Assets:Checking",
+      amount: { number: "0.00", currency: "USD" },
+      tolerance: null,
+    });
+    expect(
+      serializeDirective({
+        type: "balance",
+        date: "2026-08-29",
+        account: "Assets:Cash",
+        amount: { number: "49.75", currency: "USD" },
+        tolerance: "0.01",
+      }),
+    ).toMatchObject({
+      amount: { number: "49.75", currency: "USD" },
+      tolerance: "0.01",
     });
   });
 
@@ -404,7 +432,11 @@ describe("matchesJournalDisplayFilters", () => {
 
   it("keeps open-only selections without transactions", () => {
     const rows = [
-      { entry: txnWithFlag("*"), change: { USD: "10" }, balance: { USD: "10" } },
+      {
+        entry: txnWithFlag("*"),
+        change: { USD: "10" },
+        balance: { USD: "10" },
+      },
       { entry: openItem, change: {}, balance: { USD: "0" } },
     ].filter((row) =>
       matchesJournalDisplayFilters(row.entry, {
