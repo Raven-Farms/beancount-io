@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [640 — A price refresh deletes the effective file a concurrent load is reading; racing fetches leave orphan revisions](./640.md)
 - [641 — With the cached price blob missing or corrupt, a failing fetch never backs off](./641.md)
 - [642 — Managed sources are fetched one after another: 5 s per slow source per command](./642.md)
 - [643 — `--strict-prices doctor roundtrip` prints a 184-line traceback (sibling of w5/572)](./643.md)
