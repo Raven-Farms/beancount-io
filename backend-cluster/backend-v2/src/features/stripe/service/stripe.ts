@@ -79,10 +79,12 @@ export function getTierLimits(tier: SubscriptionTier): TierLimits {
   return TIER_LIMITS[tier];
 }
 
+export type BillingInterval = "month" | "year";
+
 /**
  * Interface for plan configuration
  */
-interface PlanConfig {
+export interface PlanConfig {
   /** Price ID for this plan */
   priceId: string;
   /** Payment type (subscription or one-time) */
@@ -91,6 +93,8 @@ interface PlanConfig {
   description: string;
   /** Subscription tier associated with this plan */
   tier: SubscriptionTier;
+  /** Billing cycle, so plan changes classify without a Stripe call. */
+  interval: BillingInterval;
 }
 
 /**
@@ -152,18 +156,21 @@ export const SUBSCRIPTION_CONFIG: SubscriptionConfigMap = {
         priceId: "price_1L9ccEEqsEqs2tLVKPRV17wb",
         type: PaymentType.RECURRING,
         description: "Beancount.io Basic - Monthly - $9.99/month (Legacy)",
+        interval: "month",
         tier: SubscriptionTier.PREMIUM,
       },
       {
         priceId: "price_1L9ccEEqsEqs2tLVbeBgHm9p",
         type: PaymentType.RECURRING,
         description: "Beancount.io Basic - Yearly - $99.99/year (Legacy)",
+        interval: "year",
         tier: SubscriptionTier.PREMIUM,
       },
       {
         priceId: "price_1RrSOGEqsEqs2tLVFnyB34qG",
         type: PaymentType.RECURRING,
         description: "Beancount.io Premium - Monthly - $14.99/month",
+        interval: "month",
         tier: SubscriptionTier.PREMIUM,
       },
       {
@@ -171,6 +178,7 @@ export const SUBSCRIPTION_CONFIG: SubscriptionConfigMap = {
         type: PaymentType.RECURRING,
         description:
           "Beancount.io Growth - Monthly - $99.99/month (Smart Automation)",
+        interval: "month",
         tier: SubscriptionTier.GROWTH,
       },
       {
@@ -178,6 +186,7 @@ export const SUBSCRIPTION_CONFIG: SubscriptionConfigMap = {
         type: PaymentType.RECURRING,
         description:
           "Beancount.io Growth - Yearly - $79.99/month billed yearly (Smart Automation)",
+        interval: "year",
         tier: SubscriptionTier.GROWTH,
       },
       {
@@ -185,6 +194,7 @@ export const SUBSCRIPTION_CONFIG: SubscriptionConfigMap = {
         type: PaymentType.RECURRING,
         description:
           "Beancount.io Organization - Monthly - $499.99/month (Multi-Entity)",
+        interval: "month",
         tier: SubscriptionTier.ORGANIZATION,
       },
       {
@@ -192,6 +202,7 @@ export const SUBSCRIPTION_CONFIG: SubscriptionConfigMap = {
         type: PaymentType.RECURRING,
         description:
           "Beancount.io Organization - Yearly - $399.99/month billed yearly (Multi-Entity)",
+        interval: "year",
         tier: SubscriptionTier.ORGANIZATION,
       },
     ],

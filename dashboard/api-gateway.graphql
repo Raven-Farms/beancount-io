@@ -114,6 +114,10 @@ type Query {
 
   """Returns your subscription status. Requires a full signed-in session."""
   subscriptionStatus: CustomerSubscriptionStatus!
+  """
+  Previews switching your plan to a price: the kind of change, when it takes effect, and what is charged today. Requires a full signed-in session.
+  """
+  previewPlanChange(priceId: String!, clientId: String!): PlanChangePreview!
 
   """List all public keys for the current user"""
   listPublicKeys(page: Float, limit: Float): [PublicKey!]!
@@ -645,6 +649,71 @@ type Subscription {
   canceledAt: DateTimeISO
   cancelAtPeriodEnd: Boolean!
   items: [SubscriptionItem!]!
+  """The card renewals and plan changes charge, when known."""
+  paymentMethod: PaymentMethodSummary
+}
+
+type PaymentMethodSummary {
+  brand: String!
+  last4: String!
+}
+
+"""
+What choosing a price would do, before anything changes. Amounts are in the currency's minor unit (cents).
+"""
+type PlanChangePreview {
+  kind: PlanChangeKind
+  refusal: PlanChangeRefusal
+  effect: PlanChangeEffect
+  currentPriceId: String
+  targetPriceId: String!
+  currency: String!
+  amountDueToday: Int!
+  creditApplied: Int!
+  nextAmount: Int!
+  nextChargeAt: DateTimeISO
+  effectiveAt: DateTimeISO
+
+  """
+  Unix seconds. Pass it to changePlan so the charge matches this preview.
+  """
+  prorationDate: Int
+
+  """For SPLIT: the higher tier on the current billing cycle, applied now."""
+  alternativePriceId: String
+  limitChanges: [PlanLimitChange!]!
+  paymentMethod: PaymentMethodSummary
+}
+
+enum PlanChangeKind {
+  NEW
+  UPGRADE
+  TO_YEARLY
+  DOWNGRADE
+  TO_MONTHLY
+  SPLIT
+}
+
+enum PlanChangeRefusal {
+  CURRENT_PLAN
+  SAME_TIER_AND_CYCLE
+  MULTIPLE_SUBSCRIPTIONS
+}
+
+enum PlanChangeEffect {
+  CHECKOUT
+  IMMEDIATE
+  SCHEDULED
+}
+
+type PlanLimitChange {
+  limit: String!
+
+  """-1 means unlimited."""
+  from: Int!
+
+  """-1 means unlimited."""
+  to: Int!
 }
 
 """

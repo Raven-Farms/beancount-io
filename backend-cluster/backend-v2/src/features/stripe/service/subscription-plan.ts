@@ -32,10 +32,14 @@ const tierOrder = [
   SubscriptionTier.ENTERPRISE,
 ];
 
+/** Position in the upgrade order: a higher rank is a higher tier. */
+export function tierRank(tier: SubscriptionTier): number {
+  return tierOrder.indexOf(tier);
+}
+
 export function highestTier(tiers: SubscriptionTier[]): SubscriptionTier {
   return tiers.reduce(
-    (best, tier) =>
-      tierOrder.indexOf(tier) > tierOrder.indexOf(best) ? tier : best,
+    (best, tier) => (tierRank(tier) > tierRank(best) ? tier : best),
     SubscriptionTier.FREE,
   );
 }

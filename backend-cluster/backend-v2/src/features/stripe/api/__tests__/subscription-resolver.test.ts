@@ -16,6 +16,15 @@ import { SUBSCRIPTION_PERIOD_VERIFICATION_VERSION } from "@/features/stripe/serv
 // Test constants
 const THIRTY_DAYS_IN_MS = 30 * 24 * 60 * 60 * 1000; // 30 days in milliseconds
 
+let currentResolver: SubscriptionResolver;
+// One schema for the whole file: building the resolver's schema a second time
+// in one process re-binds TypeGraphQL's parameter metadata, after which @Arg and
+// @Ctx arrive in the wrong positions for every schema built so far.
+const graphqlSchema = buildSchema({
+  resolvers: [SubscriptionResolver],
+  container: { get: () => currentResolver },
+});
+
 describe("SubscriptionResolver", () => {
   let resolver: SubscriptionResolver;
   let mockContext: IContext;
@@ -26,6 +35,8 @@ describe("SubscriptionResolver", () => {
     resumeSubscription: jest.Mock;
     createCustomerPortalSession: jest.Mock;
     upgradeSubscription: jest.Mock;
+    previewPlanChange: jest.Mock;
+    defaultCard: jest.Mock;
   };
   let mockModels: {
     user: {
@@ -50,6 +61,8 @@ describe("SubscriptionResolver", () => {
       resumeSubscription: jest.fn(),
       createCustomerPortalSession: jest.fn(),
       upgradeSubscription: jest.fn(),
+      previewPlanChange: jest.fn(),
+      defaultCard: jest.fn().mockResolvedValue(null),
     };
 
     mockModels = {
@@ -85,6 +98,7 @@ describe("SubscriptionResolver", () => {
       }),
     );
     resolver = new SubscriptionResolver(subscriptions);
+    currentResolver = resolver;
   });
 
   describe("subscriptionStatus", () => {
@@ -104,12 +118,8 @@ describe("SubscriptionResolver", () => {
       mockStripeService.listSubscriptions.mockRejectedValue(
         new Error("Stripe unavailable"),
       );
-      const schema = await buildSchema({
-        resolvers: [SubscriptionResolver],
-        container: { get: () => resolver },
-      });
       const result = await graphql({
-        schema,
+        schema: await graphqlSchema,
         source: "query { subscriptionStatus { hasActiveSubscription } }",
         contextValue: {
           ...mockContext,
@@ -1776,12 +1786,8 @@ describe("SubscriptionResolver", () => {
 
   describe("allTierQuotas", () => {
     it("is reachable anonymously through the real GraphQL schema", async () => {
-      const schema = await buildSchema({
-        resolvers: [SubscriptionResolver],
-        container: { get: () => resolver },
-      });
       const result = await graphql({
-        schema,
+        schema: await graphqlSchema,
         source: "query { allTierQuotas { tier } }",
         contextValue: { identity: undefined },
       });
@@ -1837,6 +1843,95 @@ describe("SubscriptionResolver", () => {
         maxCollaboratorsPerLedger: 1,
         maxDirectives: 1000,
       });
+    });
+  });
+  describe("previewPlanChange", () => {
+    const PREVIEW_QUERY = `query Preview($clientId: String!, $priceId: String!) {
+      previewPlanChange(clientId: $clientId, priceId: $priceId) {
+        kind
+        effect
+        refusal
+        currentPriceId
+        targetPriceId
+        currency
+        amountDueToday
+        creditApplied
+        nextAmount
+        nextChargeAt
+        effectiveAt
+        prorationDate
+        alternativePriceId
+        limitChanges { limit from to }
+        paymentMethod { brand last4 }
+      }
+    }`;
+
+    async function execute(identity: unknown) {
+      return graphql({
+        schema: await graphqlSchema,
+        source: PREVIEW_QUERY,
+        variableValues: {
+          clientId: "beancount-web-prod",
+          priceId: "price_1L9ccEEqsEqs2tLVbeBgHm9p",
+        },
+        contextValue: {
+          ...mockContext,
+          identity,
+          getCurrentIdentity: () => identity,
+        },
+      });
+    }
+
+    it("returns the server's classification and Stripe's amounts through GraphQL", async () => {
+      mockStripeService.previewPlanChange.mockResolvedValue({
+        kind: "TO_YEARLY",
+        effect: "IMMEDIATE",
+        refusal: null,
+        currentPriceId: "price_1RrSOGEqsEqs2tLVFnyB34qG",
+        targetPriceId: "price_1L9ccEEqsEqs2tLVbeBgHm9p",
+        currency: "usd",
+        amountDueToday: 9000,
+        creditApplied: 999,
+        nextAmount: 9999,
+        nextChargeAt: new Date("2027-10-17T12:00:00Z"),
+        effectiveAt: new Date("2026-10-17T12:00:00Z"),
+        prorationDate: 1792238400,
+        alternativePriceId: null,
+        limitChanges: [{ limit: "maxLedgers", from: 5, to: 5 }],
+        paymentMethod: { brand: "visa", last4: "4242" },
+      });
+
+      const result = await execute(mockContext.getCurrentIdentity());
+      expect(result.errors).toBeUndefined();
+      expect(result.data?.previewPlanChange).toMatchObject({
+        kind: "TO_YEARLY",
+        effect: "IMMEDIATE",
+        refusal: null,
+        amountDueToday: 9000,
+        creditApplied: 999,
+        nextChargeAt: "2027-10-17T12:00:00.000Z",
+        prorationDate: 1792238400,
+        paymentMethod: { brand: "visa", last4: "4242" },
+      });
+      expect(mockStripeService.previewPlanChange).toHaveBeenCalledWith(
+        "user-123",
+        "beancount-web-prod",
+        "price_1L9ccEEqsEqs2tLVbeBgHm9p",
+      );
+    });
+
+    it("refuses an OAuth credential before any Stripe work", async () => {
+      const result = await execute({
+        userId: "user-123",
+        method: "oauth",
+        scopes: new Set(["ledger.read", "ledger.write", "ledger.admin"]),
+      });
+
+      expect(result.errors?.[0]?.originalError).toMatchObject({
+        category: ErrorCategory.FORBIDDEN,
+      });
+      expect(result.data).toBeNull();
+      expect(mockStripeService.previewPlanChange).not.toHaveBeenCalled();
     });
   });
 });

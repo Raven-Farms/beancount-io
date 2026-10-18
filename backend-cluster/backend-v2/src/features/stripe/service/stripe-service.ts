@@ -1,6 +1,13 @@
 import Stripe from "stripe";
 import { customerId, subscriptionPeriodEnd } from "./subscription-plan";
 import { SUBSCRIPTION_CONFIG } from "@/features/stripe/service/stripe";
+import {
+  defaultCard,
+  previewPlanChange,
+  type PaymentMethodSummaryView,
+  type PlanChangePreviewView,
+} from "../operations/plan-change-preview";
+import { ValidationError } from "@/shared/errors";
 import type { PaidCustomer } from "../data/paid-customer-model/types";
 import { IModels } from "@/foundation/models";
 import { logger } from "@/shared/logger";
@@ -22,6 +29,15 @@ export interface SubscriptionListOptions {
 
 export interface IStripeService {
   getStripeInstance(clientId: string): Stripe;
+  previewPlanChange(
+    userId: string,
+    clientId: string,
+    priceId: string,
+  ): Promise<PlanChangePreviewView>;
+  defaultCard(
+    clientId: string,
+    subscription: Stripe.Subscription,
+  ): Promise<PaymentMethodSummaryView | null>;
   handleCheckoutSessionCompleted(
     session: Stripe.Checkout.Session,
     clientId: string,
@@ -200,6 +216,33 @@ export class StripeService implements IStripeService {
         error: error instanceof Error ? error.message : String(error),
       });
     }
+  }
+
+  async previewPlanChange(
+    userId: string,
+    clientId: string,
+    priceId: string,
+  ): Promise<PlanChangePreviewView> {
+    if (!SUBSCRIPTION_CONFIG[clientId]) {
+      throw new ValidationError("clientId", "Unknown client");
+    }
+    return previewPlanChange(
+      {
+        stripe: this.getStripeInstance(clientId),
+        models: this.models,
+        db: this.postgresDb,
+      },
+      userId,
+      clientId,
+      priceId,
+    );
+  }
+
+  defaultCard(
+    clientId: string,
+    subscription: Stripe.Subscription,
+  ): Promise<PaymentMethodSummaryView | null> {
+    return defaultCard(this.getStripeInstance(clientId), subscription);
   }
 
   async upgradeSubscription(

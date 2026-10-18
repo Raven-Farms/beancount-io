@@ -617,6 +617,10 @@ const BILLING_VERBS: readonly VerbEntry[] = [
     authorizationAction:
       AUTHORIZATION_ACTIONS.USER_BILLING_SUBSCRIPTION_UPGRADE,
   },
+  {
+    ...gqlOnly("Query.previewPlanChange", "read", R.billing, M.billing),
+    authorizationAction: AUTHORIZATION_ACTIONS.USER_BILLING_PLAN_CHANGE_PREVIEW,
+  },
 ];
 
 const PROBE_VERBS: readonly VerbEntry[] = [

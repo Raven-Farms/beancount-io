@@ -21,6 +21,10 @@ import {
   SubscriptionTier,
 } from "./stripe";
 import type { IStripeService } from "./stripe-service";
+import type {
+  PaymentMethodSummaryView,
+  PlanChangePreviewView,
+} from "../operations/plan-change-preview";
 
 interface SubscriptionPriceView {
   id: string;
@@ -55,6 +59,7 @@ interface SubscriptionView {
   canceledAt?: Date;
   cancelAtPeriodEnd: boolean;
   items: SubscriptionItemView[];
+  paymentMethod: PaymentMethodSummaryView | null;
 }
 
 export interface CustomerSubscriptionStatusView {
@@ -116,6 +121,11 @@ export interface ISubscriptionService {
     clientId: string,
     priceId: string,
   ): Promise<UpgradeSubscriptionResultView>;
+  previewPlanChange(
+    identity: Identity,
+    clientId: string,
+    priceId: string,
+  ): Promise<PlanChangePreviewView>;
 }
 
 /**
@@ -281,6 +291,10 @@ export class SubscriptionService implements ISubscriptionService {
             : undefined,
           cancelAtPeriodEnd: subscription.cancel_at_period_end,
           items,
+          paymentMethod: await this.stripe.defaultCard(
+            subscription.clientId,
+            subscription,
+          ),
         } satisfies SubscriptionView;
       }),
     );
@@ -431,5 +445,17 @@ export class SubscriptionService implements ISubscriptionService {
       AUTHORIZATION_ACTIONS.USER_BILLING_SUBSCRIPTION_UPGRADE,
     );
     return this.stripe.upgradeSubscription(identity.userId, clientId, priceId);
+  }
+
+  public async previewPlanChange(
+    identity: Identity,
+    clientId: string,
+    priceId: string,
+  ): Promise<PlanChangePreviewView> {
+    await this.authorize(
+      identity,
+      AUTHORIZATION_ACTIONS.USER_BILLING_PLAN_CHANGE_PREVIEW,
+    );
+    return this.stripe.previewPlanChange(identity.userId, clientId, priceId);
   }
 }

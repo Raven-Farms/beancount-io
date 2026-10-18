@@ -1516,6 +1516,12 @@ export type ParsedRow = {
   payee: Scalars['String']['output'];
 };
 
+export type PaymentMethodSummary = {
+  __typename: 'PaymentMethodSummary';
+  brand: Scalars['String']['output'];
+  last4: Scalars['String']['output'];
+};
+
 export type Permission = {
   __typename: 'Permission';
   admin: Scalars['Boolean']['output'];
@@ -1664,6 +1670,58 @@ export type PlaintextJournalQueryInput = {
 export type PlaintextJournalResponse = {
   __typename: 'PlaintextJournalResponse';
   content: Scalars['String']['output'];
+};
+
+export enum PlanChangeEffect {
+  Checkout = 'CHECKOUT',
+  Immediate = 'IMMEDIATE',
+  Scheduled = 'SCHEDULED'
+}
+
+export enum PlanChangeKind {
+  Downgrade = 'DOWNGRADE',
+  New = 'NEW',
+  Split = 'SPLIT',
+  ToMonthly = 'TO_MONTHLY',
+  ToYearly = 'TO_YEARLY',
+  Upgrade = 'UPGRADE'
+}
+
+/** What choosing a price would do, before anything changes. Amounts are in the currency's minor unit (cents). */
+export type PlanChangePreview = {
+  __typename: 'PlanChangePreview';
+  /** For SPLIT: the higher tier on the current billing cycle, applied now. */
+  alternativePriceId: Maybe<Scalars['String']['output']>;
+  amountDueToday: Scalars['Int']['output'];
+  creditApplied: Scalars['Int']['output'];
+  currency: Scalars['String']['output'];
+  currentPriceId: Maybe<Scalars['String']['output']>;
+  effect: Maybe<PlanChangeEffect>;
+  effectiveAt: Maybe<Scalars['DateTimeISO']['output']>;
+  kind: Maybe<PlanChangeKind>;
+  limitChanges: Array<PlanLimitChange>;
+  nextAmount: Scalars['Int']['output'];
+  nextChargeAt: Maybe<Scalars['DateTimeISO']['output']>;
+  paymentMethod: Maybe<PaymentMethodSummary>;
+  /** Unix seconds. Pass it to changePlan so the charge matches this preview. */
+  prorationDate: Maybe<Scalars['Int']['output']>;
+  refusal: Maybe<PlanChangeRefusal>;
+  targetPriceId: Scalars['String']['output'];
+};
+
+export enum PlanChangeRefusal {
+  CurrentPlan = 'CURRENT_PLAN',
+  MultipleSubscriptions = 'MULTIPLE_SUBSCRIPTIONS',
+  SameTierAndCycle = 'SAME_TIER_AND_CYCLE'
+}
+
+export type PlanLimitChange = {
+  __typename: 'PlanLimitChange';
+  /** -1 means unlimited. */
+  from: Scalars['Int']['output'];
+  limit: Scalars['String']['output'];
+  /** -1 means unlimited. */
+  to: Scalars['Int']['output'];
 };
 
 export type Posting = {
@@ -1879,6 +1937,8 @@ export type Query = {
   listPublicKeys: Array<PublicKey>;
   /** List all user owned ledgers for the current user */
   listUserOwnedLedgers: Array<Ledger>;
+  /** Previews switching your plan to a price: the kind of change, when it takes effect, and what is charged today. Requires a full signed-in session. */
+  previewPlanChange: PlanChangePreview;
   /** Execute a shell query on a ledger */
   queryShell: Maybe<QueryResult>;
   /** Execute a shell query on a ledger and return plain text output */
@@ -2334,6 +2394,12 @@ export type QueryListUserOwnedLedgersArgs = {
 };
 
 
+export type QueryPreviewPlanChangeArgs = {
+  clientId: Scalars['String']['input'];
+  priceId: Scalars['String']['input'];
+};
+
+
 export type QueryQueryShellArgs = {
   ledgerId: Scalars['String']['input'];
   query: Scalars['String']['input'];
@@ -2524,6 +2590,8 @@ export type Subscription = {
   currentPeriodStart: Scalars['DateTimeISO']['output'];
   id: Scalars['ID']['output'];
   items: Array<SubscriptionItem>;
+  /** The card renewals and plan changes charge, when known. */
+  paymentMethod: Maybe<PaymentMethodSummary>;
   status: Scalars['String']['output'];
 };
 

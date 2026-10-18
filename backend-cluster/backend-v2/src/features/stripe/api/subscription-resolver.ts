@@ -4,13 +4,20 @@ import {
   Field,
   ID,
   Info,
+  Int,
   Mutation,
   ObjectType,
   Query,
   Resolver,
+  registerEnumType,
 } from "type-graphql";
 import { type GraphQLResolveInfo, Kind } from "graphql";
 import type { ISubscriptionService } from "@/features/stripe/service/subscription-service";
+import type {
+  PlanChangeEffect,
+  PlanChangeKind,
+  PlanChangeRefusal,
+} from "@/features/stripe/service/plan-change";
 import type { IContext } from "@/server/graphql/context";
 import { AllowAnonymous, Authenticated } from "@/server/graphql/authenticated";
 
@@ -65,6 +72,15 @@ class SubscriptionItem {
   quantity!: number;
 }
 
+@ObjectType("PaymentMethodSummary")
+class PaymentMethodSummary {
+  @Field()
+  brand!: string;
+
+  @Field()
+  last4!: string;
+}
+
 @ObjectType("Subscription")
 class Subscription {
   @Field(() => ID)
@@ -93,6 +109,12 @@ class Subscription {
 
   @Field(() => [SubscriptionItem])
   items!: SubscriptionItem[];
+
+  @Field(() => PaymentMethodSummary, {
+    nullable: true,
+    description: "The card renewals and plan changes charge, when known.",
+  })
+  paymentMethod?: PaymentMethodSummary | null;
 }
 
 @ObjectType("CustomerSubscriptionStatus")
@@ -144,6 +166,101 @@ class SubscriptionSessionResult {
 
   @Field({ nullable: true })
   sessionUrl?: string;
+}
+
+const PlanChangeKindValues: { [K in PlanChangeKind]: K } = {
+  NEW: "NEW",
+  UPGRADE: "UPGRADE",
+  TO_YEARLY: "TO_YEARLY",
+  DOWNGRADE: "DOWNGRADE",
+  TO_MONTHLY: "TO_MONTHLY",
+  SPLIT: "SPLIT",
+};
+registerEnumType(PlanChangeKindValues, { name: "PlanChangeKind" });
+
+const PlanChangeRefusalValues: { [K in PlanChangeRefusal]: K } = {
+  CURRENT_PLAN: "CURRENT_PLAN",
+  SAME_TIER_AND_CYCLE: "SAME_TIER_AND_CYCLE",
+  MULTIPLE_SUBSCRIPTIONS: "MULTIPLE_SUBSCRIPTIONS",
+};
+registerEnumType(PlanChangeRefusalValues, { name: "PlanChangeRefusal" });
+
+const PlanChangeEffectValues: { [K in PlanChangeEffect]: K } = {
+  CHECKOUT: "CHECKOUT",
+  IMMEDIATE: "IMMEDIATE",
+  SCHEDULED: "SCHEDULED",
+};
+registerEnumType(PlanChangeEffectValues, { name: "PlanChangeEffect" });
+
+@ObjectType("PlanLimitChange")
+class PlanLimitChange {
+  @Field()
+  limit!: string;
+
+  @Field(() => Int, { description: "-1 means unlimited." })
+  from!: number;
+
+  @Field(() => Int, { description: "-1 means unlimited." })
+  to!: number;
+}
+
+@ObjectType("PlanChangePreview", {
+  description:
+    "What choosing a price would do, before anything changes. Amounts are in the currency's minor unit (cents).",
+})
+class PlanChangePreview {
+  @Field(() => PlanChangeKindValues, { nullable: true })
+  kind!: PlanChangeKind | null;
+
+  @Field(() => PlanChangeRefusalValues, { nullable: true })
+  refusal!: PlanChangeRefusal | null;
+
+  @Field(() => PlanChangeEffectValues, { nullable: true })
+  effect!: PlanChangeEffect | null;
+
+  @Field(() => String, { nullable: true })
+  currentPriceId!: string | null;
+
+  @Field()
+  targetPriceId!: string;
+
+  @Field()
+  currency!: string;
+
+  @Field(() => Int)
+  amountDueToday!: number;
+
+  @Field(() => Int)
+  creditApplied!: number;
+
+  @Field(() => Int)
+  nextAmount!: number;
+
+  @Field(() => Date, { nullable: true })
+  nextChargeAt!: Date | null;
+
+  @Field(() => Date, { nullable: true })
+  effectiveAt!: Date | null;
+
+  @Field(() => Int, {
+    nullable: true,
+    description:
+      "Unix seconds. Pass it to changePlan so the charge matches this preview.",
+  })
+  prorationDate!: number | null;
+
+  @Field(() => String, {
+    nullable: true,
+    description:
+      "For SPLIT: the higher tier on the current billing cycle, applied now.",
+  })
+  alternativePriceId!: string | null;
+
+  @Field(() => [PlanLimitChange])
+  limitChanges!: PlanLimitChange[];
+
+  @Field(() => PaymentMethodSummary, { nullable: true })
+  paymentMethod!: PaymentMethodSummary | null;
 }
 
 @ObjectType("TierQuotaItem")
@@ -201,6 +318,23 @@ export class SubscriptionResolver {
     return this.subscriptions.subscriptionStatus(
       context.getCurrentIdentity(),
       isOnlyHasActiveSubscriptionRequested(info),
+    );
+  }
+
+  @Authenticated()
+  @Query(() => PlanChangePreview, {
+    description:
+      "Previews switching your plan to a price: the kind of change, when it takes effect, and what is charged today. Requires a full signed-in session.",
+  })
+  async previewPlanChange(
+    @Arg("clientId") clientId: string,
+    @Arg("priceId") priceId: string,
+    @Ctx() context: IContext,
+  ): Promise<PlanChangePreview> {
+    return this.subscriptions.previewPlanChange(
+      context.getCurrentIdentity(),
+      clientId,
+      priceId,
     );
   }
 

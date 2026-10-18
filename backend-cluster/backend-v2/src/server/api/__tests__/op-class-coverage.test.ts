@@ -91,9 +91,10 @@ describe("op-class coverage", () => {
     // introspection endpoint (ADR 0017); 79 since w2/m32 added
     // `getLedgerManagedPrices` (ADR 015 managed price status); 80 since w6/m3
     // added `getLedgerOptions`, the root twin of the nested `Ledger.options`
-    // that REST `/options` and the `ledgerOptions` resource bind to.
+    // that REST `/options` and the `ledgerOptions` resource bind to; 81 since
+    // w1/m39 added `previewPlanChange` (PRFAQ005), browser-session billing.
     expect(graphqlOps.filter((op) => op.startsWith("GQL Query.")).length).toBe(
-      80,
+      81,
     );
     // 63 since w2/m28:t005 added `appendLedgerText`, the Beancount-text
     // dialect of `bulkEntries`, on all three surfaces; 64 since w2/m32 added

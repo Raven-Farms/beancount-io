@@ -2,7 +2,7 @@
 
 **Worker:** worker1
 **Goal:** A subscriber can preview and confirm any upgrade or monthly-to-yearly switch from Billing settings, pay exactly the amount shown, approve bank authentication without leaving the page, and land on a confirmation after Checkout.
-**Status:** todo (t004 blocked on the operator)
+**Status:** todo (t001 done; t004 blocked on the operator)
 
 ## Source + Goal linkage
 
@@ -43,7 +43,7 @@ This milestone ships before that page changes, so every task keeps that contract
 
 | id | title | est | depends_on |
 | --- | --- | --- | --- |
-| t001 | Classify plan changes and preview them on the server | 45m | — |
+| t001 | Classify plan changes and preview them on the server — **DONE** | 45m | — |
 | t002 | Apply immediate plan changes at the previewed amount and report bank authentication | 45m | t001 |
 | t003 | Return Checkout to the dashboard and pin the billing portal configuration | 30m | t001, t008 |
 | t004 | Operator: create the $143.88 Premium yearly price and the billing portal configuration | 20m | — |
