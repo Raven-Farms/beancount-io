@@ -603,6 +603,9 @@ writing nothing: `-o` is written by `bea`, only after the run validates, so a
 failed run leaves no new file and an existing `--force` target untouched.
 `bea treeify` exits 2 when its input has no hierarchical column to render,
 naming what it looked for — piping plain text is not a tree. Its `-o`
+option accepts `-` for stdout, and an input of `-` reads stdin, just like
+omitting the input. Neither form reads or creates a file named `-`; use `./-`
+when that literal file is intended. Its file output
 destination follows [Output destinations](#output-destinations): the ledger
 under read is refused, an existing `.bean`/`.beancount` file needs
 `--force`, and a destination that is the input file is refused. The

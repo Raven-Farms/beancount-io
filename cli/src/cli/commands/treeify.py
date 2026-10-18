@@ -191,6 +191,15 @@ def treeify(ctx: typer.Context) -> None:
             forwarded, _ledgers(), refuse_existing_ledger_file=True, force=_FORCE in args[:stop], flags="FA"
         )
     if parsed is not None and not parsed.help:
+        if parsed.input == "-" or parsed.output == "-":
+            # Upstream treats '-' as a literal file, unlike bea's stream
+            # convention. Translate both sentinels before forwarding or
+            # checking aliases; './-' still names a literal file (w5/705).
+            if parsed.input == "-":
+                parsed.input = None
+            if parsed.output == "-":
+                parsed.output = None
+            forwarded = _without_output(parsed)
         if parsed.filler is not None and not parsed.filler:
             # Upstream pads with `filler * (width // len(filler) + 1)`, so an
             # empty one was a ZeroDivisionError (w5/388).
@@ -202,6 +211,8 @@ def treeify(ctx: typer.Context) -> None:
         # that then fails — or reads the same file — has already truncated
         # it. bea keeps the destination itself and writes it only on success.
         destination = expand_path(Path(parsed.output), "--output")
+        if destination == Path("-"):
+            destination = destination.absolute()  # A literal './-', not the stdout sentinel.
         output.guard_output_destination(
             destination, _ledgers(), refuse_existing_ledger_file=True, force=_FORCE in args[:stop]
         )
