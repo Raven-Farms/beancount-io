@@ -1,0 +1,436 @@
+{
+  "description": "Suite-level routing set for the customer beancount-* skills. Each entry names the one skill that should handle the prompt, or `none` when no suite skill should. `confusable` lists skills the prompt could be mistaken for: an entry is a near-miss negative for every confusable skill other than its expected one. Validated by scripts/ci-check.py; run against real clients with scripts/run-routing.py (never in CI).",
+  "entries": [
+    {
+      "id": "ask-groceries-last-month",
+      "prompt": "How much did I spend on groceries last month?",
+      "expected": "beancount-ask",
+      "confusable": [
+        "beancount-close"
+      ],
+      "why": "A spending question answered from the local ledger."
+    },
+    {
+      "id": "ask-net-worth",
+      "prompt": "What's my net worth right now according to my ledger?",
+      "expected": "beancount-ask",
+      "confusable": [],
+      "why": "Balance-sheet question; read-only."
+    },
+    {
+      "id": "ask-subscriptions-crept-up",
+      "prompt": "Which of my subscriptions went up in price this year?",
+      "expected": "beancount-ask",
+      "confusable": [
+        "beancount-close"
+      ],
+      "why": "Recurring-merchant trend question."
+    },
+    {
+      "id": "ask-top-categories-2026",
+      "prompt": "What were my top five expense categories in 2026?",
+      "expected": "beancount-ask",
+      "confusable": [
+        "beancount-close"
+      ],
+      "why": "A ranking query, not a period close or report commit."
+    },
+    {
+      "id": "ask-chase-count",
+      "prompt": "How many transactions did I import from Chase last month?",
+      "expected": "beancount-ask",
+      "confusable": [
+        "beancount-import"
+      ],
+      "why": "Counts entries already in the ledger; nothing is imported."
+    },
+    {
+      "id": "close-month-september",
+      "prompt": "Let's do the month-end close for September.",
+      "expected": "beancount-close",
+      "confusable": [
+        "beancount-reconcile"
+      ],
+      "why": "The month-end ritual by name."
+    },
+    {
+      "id": "close-wrap-up-books",
+      "prompt": "Wrap up the books for last month and commit the result.",
+      "expected": "beancount-close",
+      "confusable": [
+        "beancount-reconcile"
+      ],
+      "why": "Closing a period and committing it."
+    },
+    {
+      "id": "close-reconcile-all-june",
+      "prompt": "Reconcile all of my accounts for June, check the flags, and close the period.",
+      "expected": "beancount-close",
+      "confusable": [
+        "beancount-reconcile"
+      ],
+      "why": "Multi-account reconciliation plus close is the close skill's orchestration, not one-account reconcile."
+    },
+    {
+      "id": "import-chase-csv",
+      "prompt": "Import this Chase CSV into my ledger: ./downloads/chase-activity.csv",
+      "expected": "beancount-import",
+      "confusable": [
+        "beancount-reconcile",
+        "beancount-importer-author"
+      ],
+      "why": "A bank CSV export into an existing ledger."
+    },
+    {
+      "id": "import-credit-union-qfx",
+      "prompt": "I downloaded a QFX file from my credit union. Can you record it in my books? It's ./export.qfx",
+      "expected": "beancount-import",
+      "confusable": [
+        "beancount-reconcile"
+      ],
+      "why": "OFX/QFX export import."
+    },
+    {
+      "id": "import-amex-export",
+      "prompt": "Record the transactions from my Amex export ./amex.csv",
+      "expected": "beancount-import",
+      "confusable": [
+        "beancount-reconcile"
+      ],
+      "why": "Card export import."
+    },
+    {
+      "id": "import-with-existing-config",
+      "prompt": "Import ./chase-oct.csv the same way as last time; the source is already set up in my ledger's import config.",
+      "expected": "beancount-import",
+      "confusable": [
+        "beancount-importer-author"
+      ],
+      "why": "A repeat import uses the stored config; no importer needs writing."
+    },
+    {
+      "id": "author-schwab-importer",
+      "prompt": "Write a beangulp importer for my Schwab checking CSV exports so I can rerun it every month. Sample: ./schwab-sample.csv",
+      "expected": "beancount-importer-author",
+      "confusable": [
+        "beancount-import"
+      ],
+      "why": "A reusable, tested importer from a sample file."
+    },
+    {
+      "id": "author-ally-headers-broke",
+      "prompt": "My importer for Ally broke because they renamed the CSV headers. Can you fix it?",
+      "expected": "beancount-importer-author",
+      "confusable": [
+        "beancount-import"
+      ],
+      "why": "Repairing an existing importer after format drift."
+    },
+    {
+      "id": "author-graduate-repeat-import",
+      "prompt": "I've imported this bank's CSV by hand four times now. Turn it into a real tested importer I can run myself.",
+      "expected": "beancount-importer-author",
+      "confusable": [
+        "beancount-import"
+      ],
+      "why": "Graduating a repeated import into code."
+    },
+    {
+      "id": "init-new-ledger-here",
+      "prompt": "Set up a new beancount ledger in this folder.",
+      "expected": "beancount-init",
+      "confusable": [
+        "beancount-migrate"
+      ],
+      "why": "Scaffolding a fresh ledger."
+    },
+    {
+      "id": "init-fresh-usd",
+      "prompt": "I want to start plain-text accounting. Create a fresh ledger here in USD with no history.",
+      "expected": "beancount-init",
+      "confusable": [
+        "beancount-migrate"
+      ],
+      "why": "A new ledger with nothing to migrate."
+    },
+    {
+      "id": "init-with-fava",
+      "prompt": "Bootstrap a beancount repo with Fava so I can browse it in my browser.",
+      "expected": "beancount-init",
+      "confusable": [],
+      "why": "init's optional Fava setup."
+    },
+    {
+      "id": "migrate-mint",
+      "prompt": "Mint shut down and I have a CSV export of all my transactions. Move my history into beancount.",
+      "expected": "beancount-migrate",
+      "confusable": [
+        "beancount-import",
+        "beancount-init"
+      ],
+      "why": "Finance-app history into a fresh ledger."
+    },
+    {
+      "id": "migrate-monarch",
+      "prompt": "Convert my Monarch Money export into a beancount ledger.",
+      "expected": "beancount-migrate",
+      "confusable": [
+        "beancount-import"
+      ],
+      "why": "Finance-app export conversion."
+    },
+    {
+      "id": "migrate-qbo",
+      "prompt": "Migrate my QuickBooks Online transactions into a new ledger.",
+      "expected": "beancount-migrate",
+      "confusable": [
+        "beancount-import"
+      ],
+      "why": "QBO history migration."
+    },
+    {
+      "id": "migrate-import-full-history",
+      "prompt": "Import my full Mint history into a new ledger.",
+      "expected": "beancount-migrate",
+      "confusable": [
+        "beancount-import"
+      ],
+      "why": "Says import, but full finance-app history into a new ledger is a migration."
+    },
+    {
+      "id": "migrate-new-ledger-from-monarch",
+      "prompt": "Create a new ledger and bring in my Monarch export.",
+      "expected": "beancount-migrate",
+      "confusable": [
+        "beancount-init"
+      ],
+      "why": "Migration composes init; the history is the point."
+    },
+    {
+      "id": "options-sell-csp",
+      "prompt": "I sold a cash-secured put on AAPL, 150 strike expiring June 20, for 1.50. Record it.",
+      "expected": "beancount-options",
+      "confusable": [],
+      "why": "An options trade to record."
+    },
+    {
+      "id": "options-cc-assigned",
+      "prompt": "My covered call on MSFT got assigned yesterday. Book it in my ledger.",
+      "expected": "beancount-options",
+      "confusable": [],
+      "why": "An options lifecycle event."
+    },
+    {
+      "id": "options-pasted-fill",
+      "prompt": "Record this fill: Sold to Open 1 SPY Dec 19 '26 600/590 put spread @ 2.10",
+      "expected": "beancount-options",
+      "confusable": [
+        "beancount-import"
+      ],
+      "why": "A pasted broker confirmation for a multi-leg trade."
+    },
+    {
+      "id": "reconcile-checking-may",
+      "prompt": "Does my checking account match the bank statement for May? ./may-statement.csv",
+      "expected": "beancount-reconcile",
+      "confusable": [
+        "beancount-import",
+        "beancount-close"
+      ],
+      "why": "One account against one statement."
+    },
+    {
+      "id": "reconcile-amex-pdf",
+      "prompt": "Reconcile my Amex against this statement PDF: ./amex-june.pdf",
+      "expected": "beancount-reconcile",
+      "confusable": [
+        "beancount-import"
+      ],
+      "why": "Statement reconciliation from a PDF."
+    },
+    {
+      "id": "reconcile-savings-off",
+      "prompt": "My savings balance in the ledger doesn't match what the bank shows. Compare it with ./statement.csv.",
+      "expected": "beancount-reconcile",
+      "confusable": [
+        "beancount-ask"
+      ],
+      "why": "A balance discrepancy against a statement."
+    },
+    {
+      "id": "reconcile-add-missing-assert",
+      "prompt": "Here is my June checking statement. Add whatever transactions are missing and assert the ending balance. ./june.csv",
+      "expected": "beancount-reconcile",
+      "confusable": [
+        "beancount-import"
+      ],
+      "why": "Missing entries plus a balance assertion is reconcile, not a bulk import."
+    },
+    {
+      "id": "reconcile-one-account-june",
+      "prompt": "Reconcile my checking account for June.",
+      "expected": "beancount-reconcile",
+      "confusable": [
+        "beancount-close"
+      ],
+      "why": "One account, not the whole close."
+    },
+    {
+      "id": "none-close-amex-account",
+      "prompt": "Close my old Amex card account in the ledger. I cancelled the card.",
+      "expected": "none",
+      "confusable": [
+        "beancount-close"
+      ],
+      "why": "Closing one account is a `close` directive, not a period close."
+    },
+    {
+      "id": "none-mark-account-closed",
+      "prompt": "Mark Assets:Bank:OldSavings as closed as of today.",
+      "expected": "none",
+      "confusable": [
+        "beancount-close"
+      ],
+      "why": "A `close` directive."
+    },
+    {
+      "id": "none-operating-currency-option",
+      "prompt": "Set the operating_currency option in my ledger to EUR.",
+      "expected": "none",
+      "confusable": [
+        "beancount-options"
+      ],
+      "why": "A Beancount `option` setting, not an options trade."
+    },
+    {
+      "id": "none-which-options-to-set",
+      "prompt": "Which beancount options should I set at the top of my main file?",
+      "expected": "none",
+      "confusable": [
+        "beancount-options"
+      ],
+      "why": "Ledger `option` directives (documentation), not options trading."
+    },
+    {
+      "id": "none-rename-account-roots",
+      "prompt": "How do I use a beancount option to rename the Assets and Liabilities roots?",
+      "expected": "none",
+      "confusable": [
+        "beancount-options"
+      ],
+      "why": "The `name_*` options; documentation."
+    },
+    {
+      "id": "none-options-education",
+      "prompt": "Explain how a covered call works and whether I should sell one.",
+      "expected": "none",
+      "confusable": [
+        "beancount-options"
+      ],
+      "why": "Options education and advice; the options skill records trades only."
+    },
+    {
+      "id": "none-options-greeks",
+      "prompt": "What are the greeks on my AAPL 150 put?",
+      "expected": "none",
+      "confusable": [
+        "beancount-options",
+        "beancount-ask"
+      ],
+      "why": "Pricing and greeks are out of every skill's scope."
+    },
+    {
+      "id": "none-what-is-bea-ask",
+      "prompt": "What does `bea ask` do, and how is it different from `bea query`?",
+      "expected": "none",
+      "confusable": [
+        "beancount-ask"
+      ],
+      "why": "A question about the CLI, not about the ledger."
+    },
+    {
+      "id": "none-bql-group-by-month",
+      "prompt": "How do I write a BQL query that groups by month?",
+      "expected": "none",
+      "confusable": [
+        "beancount-ask"
+      ],
+      "why": "General BQL documentation."
+    },
+    {
+      "id": "none-balance-vs-pad",
+      "prompt": "What is the difference between a balance and a pad directive in beancount?",
+      "expected": "none",
+      "confusable": [
+        "beancount-ask",
+        "beancount-reconcile"
+      ],
+      "why": "General Beancount documentation."
+    },
+    {
+      "id": "none-dinner-on-amex",
+      "prompt": "I paid $42 for dinner on the Amex tonight. Add it to my ledger.",
+      "expected": "none",
+      "confusable": [
+        "beancount-import",
+        "beancount-options"
+      ],
+      "why": "One manual entry; no export, statement, or options trade."
+    },
+    {
+      "id": "none-rent-transaction",
+      "prompt": "Add a transaction: $1,200 rent paid from checking on the 1st.",
+      "expected": "none",
+      "confusable": [
+        "beancount-import"
+      ],
+      "why": "One manual entry."
+    },
+    {
+      "id": "none-open-savings-account",
+      "prompt": "Open a new account Assets:Bank:HighYieldSavings in my ledger.",
+      "expected": "none",
+      "confusable": [
+        "beancount-init"
+      ],
+      "why": "An `open` directive in an existing ledger, not a new ledger."
+    },
+    {
+      "id": "none-fix-payee-typo",
+      "prompt": "Fix the typo in the payee of yesterday's Starbucks transaction.",
+      "expected": "none",
+      "confusable": [
+        "beancount-import",
+        "beancount-reconcile"
+      ],
+      "why": "Editing an existing entry; every skill appends only."
+    },
+    {
+      "id": "none-hosted-dining-spend",
+      "prompt": "My ledger is hosted on Beancount.io and I'm connected through its MCP server. What did I spend on dining last month?",
+      "expected": "none",
+      "confusable": [
+        "beancount-ask"
+      ],
+      "why": "A hosted ledger; the local skills do not apply."
+    },
+    {
+      "id": "none-hosted-close-month",
+      "prompt": "Using the Beancount.io MCP connection, close the month for my hosted ledger.",
+      "expected": "none",
+      "confusable": [
+        "beancount-close"
+      ],
+      "why": "A hosted ledger; the MCP server has its own close-month prompt."
+    },
+    {
+      "id": "none-hosted-reconcile",
+      "prompt": "My books live on Beancount.io (MCP connected). Reconcile my checking account against ./june.csv.",
+      "expected": "none",
+      "confusable": [
+        "beancount-reconcile"
+      ],
+      "why": "A hosted ledger."
+    }
+  ]
+}

@@ -1,12 +1,12 @@
 # w2 · m38 — Route every ledger request to the right beancount skill
 
-**Worker:** worker2 **Goal:** a labeled routing set shows which `beancount-*` skill (or none) Claude Code and Codex choose for common ledger requests, and the eight descriptions are tuned against that evidence instead of by eye. **Status:** todo
+**Worker:** worker2 **Goal:** a labeled routing set shows which `beancount-*` skill (or none) Claude Code and Codex choose for common ledger requests, and the eight descriptions are tuned against that evidence instead of by eye. **Status:** todo (t001 done)
 
 ## Tasks (in order)
 
 | id   | title | est | depends_on |
 | ---- | ----- | --- | ---------- |
-| t001 | Write the suite routing set | 45m | — |
+| [t001](./done/t001.md) | Write the suite routing set — **DONE** | 45m | — |
 | t002 | Validate the routing set in `ci-check.py` | 30m | t001 |
 | t003 | Build the local routing runner | 45m | t001 |
 | t004 | Record the baseline on Claude Code and Codex | 30m | t002, t003 |
