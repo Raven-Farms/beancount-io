@@ -126,6 +126,18 @@ const jaJournal: Record<string, TranslationEntry> = {
     message: "カスタム",
     description: "Custom entry type filter",
   },
+  "journal.commodity": {
+    message: "商品",
+    description: "Name of the Commodity directive type",
+  },
+  "journal.event": {
+    message: "イベント",
+    description: "Name of the Event directive type",
+  },
+  "journal.query": {
+    message: "クエリ",
+    description: "Name of the Query directive type",
+  },
   "journal.date": {
     message: "日付",
     description: "Label for date field",

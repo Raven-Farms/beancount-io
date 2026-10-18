@@ -174,6 +174,18 @@ const ruJournal: Record<string, TranslationEntry> = {
     message: "Произвольный",
     description: "Custom entry type filter",
   },
+  "journal.commodity": {
+    message: "Товар",
+    description: "Name of the Commodity directive type",
+  },
+  "journal.event": {
+    message: "Событие",
+    description: "Name of the Event directive type",
+  },
+  "journal.query": {
+    message: "Запрос",
+    description: "Name of the Query directive type",
+  },
   "journal.date": {
     message: "Дата",
     description: "Label for date field",

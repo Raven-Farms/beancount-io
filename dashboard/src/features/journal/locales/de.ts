@@ -144,6 +144,18 @@ const deJournal: Record<string, TranslationEntry> = {
     message: "Benutzerdefiniert",
     description: "Custom entry type filter",
   },
+  "journal.commodity": {
+    message: "Ware",
+    description: "Name of the Commodity directive type",
+  },
+  "journal.event": {
+    message: "Ereignis",
+    description: "Name of the Event directive type",
+  },
+  "journal.query": {
+    message: "Abfrage",
+    description: "Name of the Query directive type",
+  },
   "journal.date": {
     message: "Datum",
     description: "Label for date field",

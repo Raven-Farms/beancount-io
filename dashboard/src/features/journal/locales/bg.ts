@@ -144,6 +144,18 @@ const bgJournal: Record<string, TranslationEntry> = {
     message: "Потребителски",
     description: "Custom entry type filter",
   },
+  "journal.commodity": {
+    message: "Стока",
+    description: "Name of the Commodity directive type",
+  },
+  "journal.event": {
+    message: "Събитие",
+    description: "Name of the Event directive type",
+  },
+  "journal.query": {
+    message: "Търсене",
+    description: "Name of the Query directive type",
+  },
   "journal.date": {
     message: "Дата",
     description: "Label for date field",

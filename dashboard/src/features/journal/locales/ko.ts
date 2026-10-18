@@ -126,6 +126,18 @@ const koJournal: Record<string, TranslationEntry> = {
     message: "사용자 정의",
     description: "Custom entry type filter",
   },
+  "journal.commodity": {
+    message: "상품",
+    description: "Name of the Commodity directive type",
+  },
+  "journal.event": {
+    message: "이벤트",
+    description: "Name of the Event directive type",
+  },
+  "journal.query": {
+    message: "쿼리",
+    description: "Name of the Query directive type",
+  },
   "journal.date": {
     message: "날짜",
     description: "Label for date field",

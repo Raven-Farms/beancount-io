@@ -144,6 +144,18 @@ const enJournal: Record<string, TranslationEntry> = {
     message: "Custom",
     description: "Custom entry type filter",
   },
+  "journal.commodity": {
+    message: "Commodity",
+    description: "Name of the Commodity directive type",
+  },
+  "journal.event": {
+    message: "Event",
+    description: "Name of the Event directive type",
+  },
+  "journal.query": {
+    message: "Query",
+    description: "Name of the Query directive type",
+  },
   "journal.date": {
     message: "Date",
     description: "Label for date field",

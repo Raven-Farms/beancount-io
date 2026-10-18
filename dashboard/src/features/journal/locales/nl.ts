@@ -144,6 +144,18 @@ const nlJournal: Record<string, TranslationEntry> = {
     message: "Aangepast",
     description: "Custom entry type filter",
   },
+  "journal.commodity": {
+    message: "Goed",
+    description: "Name of the Commodity directive type",
+  },
+  "journal.event": {
+    message: "Gebeurtenis",
+    description: "Name of the Event directive type",
+  },
+  "journal.query": {
+    message: "Zoekopdracht",
+    description: "Name of the Query directive type",
+  },
   "journal.date": {
     message: "Datum",
     description: "Label for date field",

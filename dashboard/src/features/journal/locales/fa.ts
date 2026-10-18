@@ -146,6 +146,18 @@ const faJournal: Record<string, TranslationEntry> = {
     message: "سفارشی",
     description: "Custom entry type filter",
   },
+  "journal.commodity": {
+    message: "کالا",
+    description: "Name of the Commodity directive type",
+  },
+  "journal.event": {
+    message: "رویداد",
+    description: "Name of the Event directive type",
+  },
+  "journal.query": {
+    message: "پرس‌وجو",
+    description: "Name of the Query directive type",
+  },
   "journal.date": {
     message: "تاریخ",
     description: "Label for date field",

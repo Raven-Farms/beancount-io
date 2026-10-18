@@ -159,6 +159,18 @@ const caJournal: Record<string, TranslationEntry> = {
     message: "Personalitzat",
     description: "Custom entry type filter",
   },
+  "journal.commodity": {
+    message: "Mercaderia",
+    description: "Name of the Commodity directive type",
+  },
+  "journal.event": {
+    message: "Esdeveniment",
+    description: "Name of the Event directive type",
+  },
+  "journal.query": {
+    message: "Consulta",
+    description: "Name of the Query directive type",
+  },
   "journal.date": {
     message: "Data",
     description: "Label for date field",

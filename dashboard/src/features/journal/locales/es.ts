@@ -159,6 +159,18 @@ const esJournal: Record<string, TranslationEntry> = {
     message: "Personalizado",
     description: "Custom entry type filter",
   },
+  "journal.commodity": {
+    message: "Materia prima",
+    description: "Name of the Commodity directive type",
+  },
+  "journal.event": {
+    message: "Evento",
+    description: "Name of the Event directive type",
+  },
+  "journal.query": {
+    message: "Consulta",
+    description: "Name of the Query directive type",
+  },
   "journal.date": {
     message: "Fecha",
     description: "Label for date field",

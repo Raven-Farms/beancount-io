@@ -159,6 +159,18 @@ const ptJournal: Record<string, TranslationEntry> = {
     message: "Personalizado",
     description: "Custom entry type filter",
   },
+  "journal.commodity": {
+    message: "Commodity",
+    description: "Name of the Commodity directive type",
+  },
+  "journal.event": {
+    message: "Evento",
+    description: "Name of the Event directive type",
+  },
+  "journal.query": {
+    message: "Consulta",
+    description: "Name of the Query directive type",
+  },
   "journal.date": {
     message: "Data",
     description: "Label for date field",

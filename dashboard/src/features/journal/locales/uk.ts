@@ -174,6 +174,18 @@ const ukJournal: Record<string, TranslationEntry> = {
     message: "Власний",
     description: "Custom entry type filter",
   },
+  "journal.commodity": {
+    message: "Товар",
+    description: "Name of the Commodity directive type",
+  },
+  "journal.event": {
+    message: "Подія",
+    description: "Name of the Event directive type",
+  },
+  "journal.query": {
+    message: "Запит",
+    description: "Name of the Query directive type",
+  },
   "journal.date": {
     message: "Дата",
     description: "Label for date field",

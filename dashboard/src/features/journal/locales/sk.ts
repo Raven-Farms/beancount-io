@@ -174,6 +174,18 @@ const skJournal: Record<string, TranslationEntry> = {
     message: "Vlastné",
     description: "Custom entry type filter",
   },
+  "journal.commodity": {
+    message: "Komodita",
+    description: "Name of the Commodity directive type",
+  },
+  "journal.event": {
+    message: "Udalosť",
+    description: "Name of the Event directive type",
+  },
+  "journal.query": {
+    message: "Dotaz",
+    description: "Name of the Query directive type",
+  },
   "journal.date": {
     message: "Dátum",
     description: "Label for date field",
