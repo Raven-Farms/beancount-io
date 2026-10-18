@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [671 — Large encrypted includes still trip doctor and native `check` text scans; globs inside them escape the guards (incomplete fix of w5/495)](./671.md)
 - [672 — Native `check --json` prints nothing for duplicate or unreadable includes (incomplete fix of w5/496)](./672.md)
 - [673 — An unreadable `--into`/`--rules`/`-o` dir is reported as "engine did not answer" and exit 4 "outcome unknown" (gap in w5/120)](./673.md)
 - [674 — A plugin calling `sys.exit` leaks its status: exit 2/7, exit 4 on writes, silent exit 0](./674.md)
