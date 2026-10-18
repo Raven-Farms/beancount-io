@@ -314,6 +314,35 @@ describe("precedence helpers", () => {
     ]);
   });
 
+  // An indented comment between a shadowed price and its metadata ended the
+  // walk, leaving the metadata indented under nothing: the effective feed
+  // failed to parse (w5/632).
+  it("comments out every indented line of a shadowed point, past an indented comment", () => {
+    const text =
+      "; alias: K2\n; commodity: XC\n; quote: USD\n2026-10-15 price XC 10 USD\n" +
+      '    ; provider note\n  observed-at: "2026-10-16T12:00:00Z"\n\n' +
+      '2026-10-16 price XC 11 USD\n  observed-at: "2026-10-17T12:00:00Z"\n';
+    const validation = validateManagedPriceText(text);
+    if (!validation.ok) throw new Error(validation.reason);
+
+    const result = applyLedgerPricePrecedence(
+      text,
+      validation.feed,
+      collectLedgerPricePairs({ "a.bean": "2026-10-15 price XC 12 USD\n" }, ["a.bean"]),
+    );
+
+    const lines = result.text.split("\n");
+    expect(lines).toHaveLength(text.split("\n").length);
+    expect(lines.slice(3, 7)).toEqual([
+      expect.stringMatching(/^;/u),
+      "; ; provider note",
+      '; observed-at: "2026-10-16T12:00:00Z"',
+      "",
+    ]);
+    expect(lines.slice(7, 9)).toEqual(text.split("\n").slice(7, 9));
+    expect(result).toMatchObject({ shadowedCount: 1, effectiveDates: ["2026-10-16"] });
+  });
+
   it("returns the text untouched when nothing is shadowed", () => {
     const text = feedText([["2026-09-15", "1"]]);
     const validation = validateManagedPriceText(text);

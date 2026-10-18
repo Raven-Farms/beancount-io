@@ -82,7 +82,6 @@ const LEDGER_PRICE_RE =
 // pairing it with the next quote in the file hid every price in between
 // (w5/625, as the CLI's w5/476).
 const STRING_OR_COMMENT_RE = /^[*:#!&?%][^\n]*|"(?:[^"\\]|\\.)*"|;[^\n]*/gmu;
-const METADATA_LINE_RE = /^[ \t]+[a-z][A-Za-z0-9_-]*\s*:/u;
 
 const pairKey = (date: string, base: string, quote: string): string =>
   `${date}\0${base}\0${quote}`;
@@ -137,12 +136,16 @@ export function applyLedgerPricePrecedence(
     }
     shadowedCount += 1;
     lines[price.line - 1] = SHADOWED_LINE;
+    // Every indented line below belongs to the point: its metadata and any
+    // indented comment between them. Stopping at the comment left the
+    // metadata after it indented under nothing, a parse error for the whole
+    // feed (w5/632, as the CLI's w5/477). Blank lines are kept as they are.
     for (
       let next = price.line;
-      next < lines.length && METADATA_LINE_RE.test(lines[next]);
+      next < lines.length && (lines[next].trim() === "" || /^[ \t]/u.test(lines[next]));
       next += 1
     ) {
-      lines[next] = `; ${lines[next].trim()}`;
+      if (lines[next].trim() !== "") lines[next] = `; ${lines[next].trim()}`;
     }
   }
   return {
