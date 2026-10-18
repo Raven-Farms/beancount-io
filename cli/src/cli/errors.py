@@ -135,7 +135,9 @@ def server_message(body: object) -> str | None:
             message = body.get("message")
             body = message if isinstance(message, str) and message.strip() else body.get("error")
         elif isinstance(body, str):
-            sentence = body.strip()
+            # A leading byte-order mark is no whitespace to `strip()`, so a
+            # marked HTML page passed as the message (w5/649).
+            sentence = body.lstrip("\ufeff").strip()
             if not sentence:
                 return None
             try:
