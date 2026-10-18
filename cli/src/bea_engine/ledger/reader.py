@@ -140,7 +140,7 @@ def forget_source_lines() -> None:
 
 
 def shared_locations(entries: list[Any]) -> frozenset[tuple[str, int]]:
-    """The source locations two or more transactions claim on one date, of which at most one is written.
+    """The locations two or more directives of one type claim on one date.
 
     A plugin may stamp a new entry with its source's `filename` and `lineno`
     on the source's own date; that entry passed every on-disk test, so
@@ -180,7 +180,9 @@ def _spelled_entries(filename: str) -> dict[int, Any]:
     lines = _source_lines(filename)
     if lines is None:
         return {}
-    entries, _, _ = parser.parse_string("\n".join(lines) + "\n")
+    # Match the loader's NFC reading and source filename: a relative document
+    # path resolves beside its declaring file, whatever the process's cwd.
+    entries, _, _ = parser.parse_string(unicodedata.normalize("NFC", "\n".join(lines) + "\n"), report_filename=filename)
     return {entry.meta["lineno"]: entry for entry in entries}
 
 
@@ -406,6 +408,7 @@ def list_notes(
     to_date: datetime.date | None = None,
     account: str | None = None,
     limit: int = 50,
+    shared: frozenset[tuple[str, int]] = frozenset(),
 ) -> list[NoteDirective]:
     results = []
     for entry in entries:
@@ -423,7 +426,7 @@ def list_notes(
                 tags=sorted(entry.tags) if entry.tags else [],
                 links=sorted(entry.links) if entry.links else [],
                 meta=metadata_to_json(entry.meta),
-                generated=entry_generated(entry, "note"),
+                generated=entry_generated(entry, "note", shared),
             )
         )
         if len(results) >= limit:
@@ -437,6 +440,7 @@ def list_prices(
     to_date: datetime.date | None = None,
     currency: str | None = None,
     limit: int = 50,
+    shared: frozenset[tuple[str, int]] = frozenset(),
 ) -> list[PriceDirective]:
     results = []
     for entry in entries:
@@ -452,7 +456,7 @@ def list_prices(
                 currency=entry.currency,
                 amount=_to_amount(entry.amount),
                 meta=metadata_to_json(entry.meta),
-                generated=entry_generated(entry, "price"),
+                generated=entry_generated(entry, "price", shared),
             )
         )
         if len(results) >= limit:
@@ -466,6 +470,7 @@ def list_balances(
     to_date: datetime.date | None = None,
     account: str | None = None,
     limit: int = 50,
+    shared: frozenset[tuple[str, int]] = frozenset(),
 ) -> list[BalanceDirective]:
     results = []
     for entry in entries:
@@ -482,7 +487,7 @@ def list_balances(
                 amount=_to_amount(entry.amount),
                 tolerance=entry.tolerance,
                 meta=metadata_to_json(entry.meta),
-                generated=entry_generated(entry, "balance"),
+                generated=entry_generated(entry, "balance", shared),
             )
         )
         if len(results) >= limit:
@@ -496,6 +501,7 @@ def list_opens(
     to_date: datetime.date | None = None,
     account: str | None = None,
     limit: int = 50,
+    shared: frozenset[tuple[str, int]] = frozenset(),
 ) -> list[OpenDirective]:
     results = []
     for entry in entries:
@@ -514,7 +520,7 @@ def list_opens(
                 currencies=currencies,
                 booking=booking,
                 meta=metadata_to_json(entry.meta),
-                generated=entry_generated(entry, "open"),
+                generated=entry_generated(entry, "open", shared),
             )
         )
         if len(results) >= limit:
@@ -528,6 +534,7 @@ def list_closes(
     to_date: datetime.date | None = None,
     account: str | None = None,
     limit: int = 50,
+    shared: frozenset[tuple[str, int]] = frozenset(),
 ) -> list[CloseDirective]:
     results = []
     for entry in entries:
@@ -542,7 +549,7 @@ def list_closes(
                 date=entry.date,
                 account=entry.account,
                 meta=metadata_to_json(entry.meta),
-                generated=entry_generated(entry, "close"),
+                generated=entry_generated(entry, "close", shared),
             )
         )
         if len(results) >= limit:
@@ -556,6 +563,7 @@ def list_commodities(
     to_date: datetime.date | None = None,
     currency: str | None = None,
     limit: int = 50,
+    shared: frozenset[tuple[str, int]] = frozenset(),
 ) -> list[CommodityDirective]:
     results = []
     for entry in entries:
@@ -570,7 +578,7 @@ def list_commodities(
                 date=entry.date,
                 currency=entry.currency,
                 meta=metadata_to_json(entry.meta),
-                generated=entry_generated(entry, "commodity"),
+                generated=entry_generated(entry, "commodity", shared),
             )
         )
         if len(results) >= limit:
@@ -584,6 +592,7 @@ def list_events(
     to_date: datetime.date | None = None,
     type_filter: str | None = None,
     limit: int = 50,
+    shared: frozenset[tuple[str, int]] = frozenset(),
 ) -> list[EventDirective]:
     # Folded as `--search` and `--account` fold, Turkish İ/ı included (w5/533).
     wanted = fold_account(type_filter or "")
@@ -601,7 +610,7 @@ def list_events(
                 type=entry.type,
                 description=entry.description,
                 meta=metadata_to_json(entry.meta),
-                generated=entry_generated(entry, "event"),
+                generated=entry_generated(entry, "event", shared),
             )
         )
         if len(results) >= limit:
@@ -616,6 +625,7 @@ def list_documents(
     account: str | None = None,
     limit: int = 50,
     root: Path | None = None,
+    shared: frozenset[tuple[str, int]] = frozenset(),
 ) -> list[DocumentDirective]:
     results = []
     for entry in entries:
@@ -635,7 +645,7 @@ def list_documents(
                 tags=tags,
                 links=links,
                 meta=metadata_to_json(entry.meta),
-                generated=entry_generated(entry, "document"),
+                generated=entry_generated(entry, "document", shared),
             )
         )
         if len(results) >= limit:
@@ -677,6 +687,7 @@ def list_customs(
     to_date: datetime.date | None = None,
     type_filter: str | None = None,
     limit: int = 50,
+    shared: frozenset[tuple[str, int]] = frozenset(),
 ) -> list[CustomDirective]:
     from beancount.core.amount import Amount as BcAmount
 
@@ -716,7 +727,7 @@ def list_customs(
                 type=entry.type,
                 values=values,
                 meta=metadata_to_json(entry.meta),
-                generated=entry_generated(entry, "custom"),
+                generated=entry_generated(entry, "custom", shared),
             )
         )
         if len(results) >= limit:
@@ -730,6 +741,7 @@ def list_pads(
     to_date: datetime.date | None = None,
     account: str | None = None,
     limit: int = 50,
+    shared: frozenset[tuple[str, int]] = frozenset(),
 ) -> list[PadDirective]:
     results = []
     for entry in entries:
@@ -747,7 +759,7 @@ def list_pads(
                 account=entry.account,
                 source_account=entry.source_account,
                 meta=metadata_to_json(entry.meta),
-                generated=entry_generated(entry, "pad"),
+                generated=entry_generated(entry, "pad", shared),
             )
         )
         if len(results) >= limit:

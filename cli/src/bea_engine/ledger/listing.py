@@ -102,7 +102,7 @@ def answer(
 
     entries, errors = reader.load_file(file)
     shared = reader.shared_locations(entries)
-    if shared and directive_type == "transaction":
+    if shared:
         filters["shared"] = shared
     if on_disk_only:
         # Before the limit: truncation must count answerable rows, not rows
