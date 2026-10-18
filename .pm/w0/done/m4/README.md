@@ -1,6 +1,6 @@
 # w0 · m4 — A password reset ends every session the old password issued
 
-**Worker:** worker1 **Goal:** completing a password reset signs out every existing browser and CLI session and revokes every OAuth grant (mobile refresh tokens included), so a reset actually evicts someone who held the old credentials **Status:** todo (t001–t005 done)
+**Worker:** worker1 **Goal:** completing a password reset signs out every existing browser and CLI session and revokes every OAuth grant (mobile refresh tokens included), so a reset actually evicts someone who held the old credentials **Status:** done
 
 ## Tasks (in order)
 
@@ -11,7 +11,7 @@
 | t003 | Adoption surface | 20m | t002 | — **DONE**
 | t004 | Simplify | 15m | t003 | — **DONE**
 | t005 | Test coverage | 30m | t003, t004 | — **DONE**
-| t006 | Closeout | 10m | t005 |
+| t006 | Closeout | 10m | t005 | — **DONE**
 
 ## Definition of done
 
