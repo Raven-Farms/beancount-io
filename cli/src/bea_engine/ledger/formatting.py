@@ -267,7 +267,9 @@ def _aligned(file: Path, text: str, widths: tuple[int | None, int | None, int | 
         ) from None
     formatted = _split_lines(aligned)
     for index, original in protected.items():
-        formatted[index] = original if original.endswith("\n") else original + "\n"
+        # Normalize the whole trailing CR run before restoring one LF. Leaving
+        # a CR beside that LF would lose another CR on each later format pass.
+        formatted[index] = original.removesuffix("\n").rstrip("\r") + "\n"
     return "".join(formatted)
 
 

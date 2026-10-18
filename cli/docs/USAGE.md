@@ -684,7 +684,9 @@ convergence path instead — it rewrites CRLF line endings to LF, strips a UTF-8
 BOM, and reports the file as formatted even when alignment alone did not change
 — so `--check` fails on a BOM-marked or CRLF file until `-i` has run. A lone
 carriage return inside a line is text to Beancount (in a comment or a string),
-so the formatter keeps it and leaves that line unaligned.
+so the formatter keeps it and leaves that line unaligned. Carriage returns
+at line endings or EOF become a single LF on the first format pass. Appends preserve
+the original bytes and add the missing newline and blank separator there.
 
 `-i` is a write like any other here, with the same guarantee: each target ends
 up either exactly as it was or completely formatted, never partially written.
