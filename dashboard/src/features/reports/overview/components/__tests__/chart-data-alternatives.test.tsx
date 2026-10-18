@@ -9,6 +9,7 @@ import {
 import { createLocalization } from "@/i18n/init";
 import { LocalizationProvider } from "@/i18n/provider";
 import type { SerializableTreeNode } from "@/graphql/definitions";
+import { formatNumber } from "@/common/lib/format/format-number";
 import { IncomeExpensesChart } from "../income-expenses-chart";
 import { DistributionChart } from "../distribution-chart";
 import CashFlowSankey from "../cash-flow-sankey";
@@ -111,14 +112,21 @@ type PeriodOption = {
   xAxis: { data: string[] };
   series: Array<{ data: number[] }>;
 };
+/** An amount as the chart's own formatter writes it (renderCommas off). */
+const shown = (value: number, unit: string, language = "en") =>
+  `${formatNumber(value, false, language, unit)} ${unit}`;
+
 function assertPeriods(element: HTMLElement, unit: string) {
   const plotted = option<PeriodOption>();
   expect(rows(element).map(texts)).toEqual(
     plotted.xAxis.data.map((date, index) => [
       date,
-      `${plotted.series[0].data[index]} ${unit}`,
-      `${plotted.series[1].data[index]} ${unit}`,
-      `${plotted.series[0].data[index] - plotted.series[1].data[index]} ${unit}`,
+      shown(plotted.series[0].data[index], unit),
+      shown(plotted.series[1].data[index], unit),
+      shown(
+        plotted.series[0].data[index] - plotted.series[1].data[index],
+        unit,
+      ),
     ]),
   );
 }
@@ -130,12 +138,16 @@ type DistributionOption = {
     },
   ];
 };
-function assertDistribution(element: HTMLElement, unit: string) {
+function assertDistribution(
+  element: HTMLElement,
+  unit: string,
+  language = "en",
+) {
   const series = option<DistributionOption>().series[0];
   expect(rows(element).map((row) => texts(row).slice(0, 2))).toEqual(
     series.data.map((item) => [
       item.account ?? item.name,
-      `${item.value} ${unit}`,
+      shown(item.value, unit, language),
     ]),
   );
   return series;
@@ -148,7 +160,7 @@ function assertFlows(element: HTMLElement, unit: string) {
     option<FlowsOption>().series[0].links.map((link) => [
       link.source,
       link.target,
-      `${link.value} ${unit}`,
+      shown(link.value, unit),
     ]),
   );
 }
@@ -169,7 +181,7 @@ describe("Overview chart data alternatives", () => {
         .map((cell) => cell.textContent),
     ).toEqual(["Period", "Income", "Expenses", "Net Profit"]);
     assertPeriods(element, "USD");
-    expect(rows(element)[1]).toHaveTextContent("-10 USD");
+    expect(rows(element)[1]).toHaveTextContent("-10.00 USD");
     expect(
       screen.getByText(/Balances in VACHR are not included/),
     ).toBeInTheDocument();
@@ -367,7 +379,7 @@ describe("Overview chart data alternatives", () => {
         name: "Anteil am Gesamtwert",
       }),
     ).toBeInTheDocument();
-    assertDistribution(element, "EUR");
+    assertDistribution(element, "EUR", "de");
   });
 
   it.each(["income", "distribution", "flows"])(
@@ -385,4 +397,64 @@ describe("Overview chart data alternatives", () => {
       expect(document.querySelector("details")).toBeNull();
     },
   );
+
+  describe("amounts without binary noise (w3/627)", () => {
+    it("writes a computed Net at the unit's precision", async () => {
+      await mount(
+        <IncomeExpensesChart
+          income={[{ date: "2026-01-31", balance: { USD: "-4100" } }]}
+          expenses={[{ date: "2026-01-31", balance: { USD: "2474.26" } }]}
+          primaryCurrency="USD"
+        />,
+      );
+      const element = await table("Income vs Expenses", "Period data");
+
+      // 4100 - 2474.26 is 1625.7399999999998 as a double.
+      expect(texts(rows(element)[0])).toEqual([
+        "2026-01-31",
+        "4100.00 USD",
+        "2474.26 USD",
+        "1625.74 USD",
+      ]);
+    });
+
+    it("writes a grouped distribution row at the unit's precision", async () => {
+      await mount(
+        <DistributionChart
+          title="Assets Distribution"
+          data={node("Assets", {}, [
+            node("Assets:Bank", { USD: 0.1 }),
+            node("Assets:Cash", { USD: 0.2 }),
+          ])}
+          primaryCurrency="USD"
+        />,
+      );
+      const element = await table("Assets Distribution", "Breakdown");
+
+      for (const row of rows(element)) {
+        expect(texts(row)[1]).toMatch(/^\d+\.\d{2} USD$/);
+      }
+    });
+
+    it("formats amounts in the reader's language", async () => {
+      await mount(
+        <IncomeExpensesChart
+          income={[{ date: "2026-01-31", balance: { EUR: "-4100" } }]}
+          expenses={[{ date: "2026-01-31", balance: { EUR: "2474.26" } }]}
+          primaryCurrency="EUR"
+        />,
+        "de",
+      );
+      const element = await table(
+        "Erträge vs. Aufwendungen",
+        "Daten je Zeitraum",
+      );
+
+      expect(texts(rows(element)[0]).slice(1)).toEqual([
+        "4100,00 EUR",
+        "2474,26 EUR",
+        "1625,74 EUR",
+      ]);
+    });
+  });
 });

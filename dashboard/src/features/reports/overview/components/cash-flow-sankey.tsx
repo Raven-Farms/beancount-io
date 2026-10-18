@@ -193,7 +193,7 @@ export default function CashFlowSankey({
                 <TableCell>{link.target}</TableCell>
                 <TableCell className="text-end font-mono text-sm tabular-nums">
                   <Amount>
-                    {String(link.value)}
+                    {formatNum(link.value, sankeyData.unit ?? undefined)}
                     {sankeyData.unit ? ` ${sankeyData.unit}` : ""}
                   </Amount>
                 </TableCell>

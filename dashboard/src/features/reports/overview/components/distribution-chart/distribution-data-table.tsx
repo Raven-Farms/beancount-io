@@ -54,7 +54,7 @@ export function DistributionDataTable({
             </TableHead>
             <TableCell className="text-end font-mono text-sm tabular-nums">
               <Amount>
-                {String(item.value)}
+                {formatNum(item.value, unit ?? undefined)}
                 {unit ? ` ${unit}` : ""}
               </Amount>
             </TableCell>
