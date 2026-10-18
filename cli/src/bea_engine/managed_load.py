@@ -1660,6 +1660,13 @@ def export_portable(
                 f"Cannot export into {target}: {dest} is read-only and cannot be replaced. Nothing was written."
             )
         holder = next((parent for parent in dest.parents if parent.is_dir()), None)
+        # A write-only directory cannot be inspected as a portable snapshot.
+        # Report its permission failure here, inside the answer boundary.
+        if holder is not None and not os.access(holder, os.R_OK | os.X_OK):
+            raise AuthError(
+                f"Cannot export into {target}: the directory {holder.resolve()} is not readable/searchable. "
+                "Nothing was written."
+            )
         if not dest.exists() and holder is not None and not os.access(holder, os.W_OK | os.X_OK):
             raise AuthError(
                 f"Cannot export into {target}: the directory {holder.resolve()} is not writable. Nothing was written."

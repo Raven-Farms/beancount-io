@@ -1775,6 +1775,8 @@ marker directive plus the exact effective text the load parsed, and every
 include is rewritten relative. Each copy keeps its source's permission bits
 whatever the umask — a `0600` ledger, include or receipt stays `0600`, a feed
 file takes the root ledger's — and directories the export creates are `0700`.
+An existing output directory must be readable and searchable as well as
+writable; a refused permission exits 3 naming the directory.
 When the ledger includes a file of its own
 named `prices`, the feeds go in `prices-managed/` instead. A feed never
 replaces a file the ledger already keeps under that name: it lands at

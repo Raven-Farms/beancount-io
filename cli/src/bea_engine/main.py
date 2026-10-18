@@ -256,7 +256,8 @@ def add(
         str, typer.Option("--request", help="The directive as JSON, or '-' to read that JSON from stdin.")
     ],
     into: Annotated[
-        Path | None, typer.Option("--into", help="Write to this included file, relative to the root ledger.")
+        Path | None,
+        typer.Option("--into", help="Write to this included file, relative to the root ledger.", readable=False),
     ] = None,
     allow_errors: Annotated[
         bool, typer.Option("--allow-errors", help="Accept semantic ledger errors; syntax must still be valid.")
@@ -341,7 +342,8 @@ def append(
         str, typer.Option("--text", help="Raw Beancount directive text, or '-' to read that text from stdin.")
     ],
     into: Annotated[
-        Path | None, typer.Option("--into", help="Write to this included file, relative to the root ledger.")
+        Path | None,
+        typer.Option("--into", help="Write to this included file, relative to the root ledger.", readable=False),
     ] = None,
     allow_errors: Annotated[
         bool, typer.Option("--allow-errors", help="Accept semantic ledger errors; syntax must still be valid.")
@@ -506,7 +508,7 @@ def import_entries(
         str | None, typer.Option("--encoding", help="CSV text encoding for --csv: utf-8, cp1252, or latin-1.")
     ] = None,
     rules_file: Annotated[
-        Path | None, typer.Option("--rules", help="TOML categorization rules for --csv rows.")
+        Path | None, typer.Option("--rules", help="TOML categorization rules for --csv rows.", readable=False)
     ] = None,
     default_account: Annotated[
         str | None, typer.Option("--default-account", help="Counter account for unmatched --csv rows.")
@@ -521,7 +523,8 @@ def import_entries(
         list[str] | None, typer.Option("--id-key", help="Stable bank ID metadata key; repeatable.")
     ] = None,
     into: Annotated[
-        Path | None, typer.Option("--into", help="Write to an included file, relative to the root ledger.")
+        Path | None,
+        typer.Option("--into", help="Write to an included file, relative to the root ledger.", readable=False),
     ] = None,
     allow_errors: Annotated[
         bool, typer.Option("--allow-errors", help="Accept semantic ledger errors; syntax must still be valid.")
@@ -809,7 +812,9 @@ def price_refresh(
 @app.command("price-export")
 def price_export(
     file: Annotated[Path, typer.Option("--file", "-f", help="Root ledger file to export.")],
-    output: Annotated[Path | None, typer.Option("--output", "-o", help="Directory for the portable copy.")] = None,
+    output: Annotated[
+        Path | None, typer.Option("--output", "-o", help="Directory for the portable copy.", readable=False)
+    ] = None,
     allow_errors: Annotated[
         bool,
         typer.Option("--allow-errors", help="Export unavailable sources with their marker alone."),

@@ -8,14 +8,32 @@ checkout works without installing the engine distribution at all.
 from __future__ import annotations
 
 import signal
+import sys
 
-from bea_engine import stopping
+try:
+    # Typer 0.27 vendors Click; older supported engine environments use the
+    # standalone package. Catch the exception class its parser actually uses.
+    from typer._click.exceptions import Abort, ClickException
+except ImportError:
+    from click import Abort, ClickException  # type: ignore[assignment]  # Equivalent parser API before vendoring.
+
+from bea_engine import protocol, stopping
 from bea_engine.main import app
 
 # Unwind staged files and locks before reporting the shell's signal status.
 _previous_handlers = stopping.install()
 try:
-    app()
+    # Let the outer parser raise its own argument errors so they get the
+    # same trustworthy envelope as command failures. A missing envelope is
+    # still an unknown write outcome: user code can itself invoke Click and
+    # exit 2 after changing a file, with identical-looking stderr.
+    raise SystemExit(app(standalone_mode=False))
+except ClickException as exc:
+    with protocol.answering("usage"):
+        raise protocol.UsageError(exc.format_message()) from None
+except Abort:
+    print("Aborted!", file=sys.stderr)
+    raise SystemExit(1) from None
 finally:
     for number, handler in _previous_handlers.items():
         signal.signal(number, handler)
