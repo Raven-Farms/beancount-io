@@ -515,6 +515,21 @@ const koJournal: Record<string, TranslationEntry> = {
     message: "버리기",
     description: "Button that discards the Entry Context edit and leaves",
   },
+  "journal.entryChangedElsewhere": {
+    message:
+      "이 항목은 연 이후에 변경되거나 삭제되어 편집 내용이 저장되지 않았습니다. 편집 내용을 복사한 다음 새로 고쳐 최신 버전을 확인하세요.",
+    description:
+      "Entry Context save refused because the entry changed elsewhere since it was opened",
+  },
+  "journal.copyMyEdit": {
+    message: "내 편집 복사",
+    description: "Copies the unsaved Entry Context edit to the clipboard",
+  },
+  "journal.reloadEntries": {
+    message: "새로 고침",
+    description:
+      "Closes Entry Context and refreshes the journal to show the latest entries",
+  },
   "journal.autoAmount": {
     message: "자동",
     description: "Label for an automatically balanced amount",

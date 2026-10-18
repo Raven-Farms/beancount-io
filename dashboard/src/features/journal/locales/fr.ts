@@ -550,6 +550,21 @@ const frJournal: Record<string, TranslationEntry> = {
     message: "Abandonner",
     description: "Button that discards the Entry Context edit and leaves",
   },
+  "journal.entryChangedElsewhere": {
+    message:
+      "Cette écriture a été modifiée ou supprimée depuis son ouverture, votre modification n'a donc pas été enregistrée. Copiez votre modification, puis rechargez pour voir la dernière version.",
+    description:
+      "Entry Context save refused because the entry changed elsewhere since it was opened",
+  },
+  "journal.copyMyEdit": {
+    message: "Copier ma modification",
+    description: "Copies the unsaved Entry Context edit to the clipboard",
+  },
+  "journal.reloadEntries": {
+    message: "Recharger",
+    description:
+      "Closes Entry Context and refreshes the journal to show the latest entries",
+  },
   "journal.autoAmount": {
     message: "automatique",
     description: "Label for an automatically balanced amount",

@@ -536,6 +536,21 @@ const faJournal: Record<string, TranslationEntry> = {
     message: "کنار گذاشتن",
     description: "Button that discards the Entry Context edit and leaves",
   },
+  "journal.entryChangedElsewhere": {
+    message:
+      "این ثبت پس از باز کردن شما تغییر کرده یا حذف شده است، بنابراین ویرایش شما ذخیره نشد. ویرایش خود را کپی کنید و سپس برای دیدن آخرین نسخه دوباره بارگذاری کنید.",
+    description:
+      "Entry Context save refused because the entry changed elsewhere since it was opened",
+  },
+  "journal.copyMyEdit": {
+    message: "کپی ویرایش من",
+    description: "Copies the unsaved Entry Context edit to the clipboard",
+  },
+  "journal.reloadEntries": {
+    message: "بارگذاری دوباره",
+    description:
+      "Closes Entry Context and refreshes the journal to show the latest entries",
+  },
   "journal.autoAmount": {
     message: "خودکار",
     description: "Label for an automatically balanced amount",

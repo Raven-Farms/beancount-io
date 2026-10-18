@@ -564,6 +564,21 @@ const ruJournal: Record<string, TranslationEntry> = {
     message: "Отменить",
     description: "Button that discards the Entry Context edit and leaves",
   },
+  "journal.entryChangedElsewhere": {
+    message:
+      "Эта запись изменена или удалена с момента открытия, поэтому правка не сохранена. Скопируйте правку и перезагрузите, чтобы увидеть последнюю версию.",
+    description:
+      "Entry Context save refused because the entry changed elsewhere since it was opened",
+  },
+  "journal.copyMyEdit": {
+    message: "Скопировать мою правку",
+    description: "Copies the unsaved Entry Context edit to the clipboard",
+  },
+  "journal.reloadEntries": {
+    message: "Перезагрузить",
+    description:
+      "Closes Entry Context and refreshes the journal to show the latest entries",
+  },
   "journal.autoAmount": {
     message: "авто",
     description: "Label for an automatically balanced amount",

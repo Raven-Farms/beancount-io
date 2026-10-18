@@ -564,6 +564,21 @@ const skJournal: Record<string, TranslationEntry> = {
     message: "Zahodiť",
     description: "Button that discards the Entry Context edit and leaves",
   },
+  "journal.entryChangedElsewhere": {
+    message:
+      "Tento záznam sa od otvorenia zmenil alebo bol odstránený, preto sa vaša úprava neuložila. Skopírujte si úpravu a znova načítajte najnovšiu verziu.",
+    description:
+      "Entry Context save refused because the entry changed elsewhere since it was opened",
+  },
+  "journal.copyMyEdit": {
+    message: "Kopírovať moju úpravu",
+    description: "Copies the unsaved Entry Context edit to the clipboard",
+  },
+  "journal.reloadEntries": {
+    message: "Znova načítať",
+    description:
+      "Closes Entry Context and refreshes the journal to show the latest entries",
+  },
   "journal.autoAmount": {
     message: "auto",
     description: "Label for an automatically balanced amount",

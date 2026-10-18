@@ -534,6 +534,21 @@ const bgJournal: Record<string, TranslationEntry> = {
     message: "Отхвърли",
     description: "Button that discards the Entry Context edit and leaves",
   },
+  "journal.entryChangedElsewhere": {
+    message:
+      "Този запис е променен или премахнат, откакто го отворихте, затова редакцията ви не е запазена. Копирайте редакцията си и презаредете, за да видите последната версия.",
+    description:
+      "Entry Context save refused because the entry changed elsewhere since it was opened",
+  },
+  "journal.copyMyEdit": {
+    message: "Копирай моята редакция",
+    description: "Copies the unsaved Entry Context edit to the clipboard",
+  },
+  "journal.reloadEntries": {
+    message: "Презареди",
+    description:
+      "Closes Entry Context and refreshes the journal to show the latest entries",
+  },
   "journal.autoAmount": {
     message: "авто",
     description: "Label for an automatically balanced amount",

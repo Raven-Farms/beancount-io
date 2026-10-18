@@ -535,6 +535,21 @@ const deJournal: Record<string, TranslationEntry> = {
     message: "Verwerfen",
     description: "Button that discards the Entry Context edit and leaves",
   },
+  "journal.entryChangedElsewhere": {
+    message:
+      "Dieser Eintrag wurde seit dem Öffnen geändert oder entfernt, daher wurde Ihre Bearbeitung nicht gespeichert. Kopieren Sie Ihre Bearbeitung und laden Sie neu, um die aktuelle Fassung zu sehen.",
+    description:
+      "Entry Context save refused because the entry changed elsewhere since it was opened",
+  },
+  "journal.copyMyEdit": {
+    message: "Meine Bearbeitung kopieren",
+    description: "Copies the unsaved Entry Context edit to the clipboard",
+  },
+  "journal.reloadEntries": {
+    message: "Neu laden",
+    description:
+      "Closes Entry Context and refreshes the journal to show the latest entries",
+  },
   "journal.autoAmount": {
     message: "auto",
     description: "Label for an automatically balanced amount",

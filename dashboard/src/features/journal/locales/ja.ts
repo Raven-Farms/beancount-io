@@ -516,6 +516,21 @@ const jaJournal: Record<string, TranslationEntry> = {
     message: "破棄",
     description: "Button that discards the Entry Context edit and leaves",
   },
+  "journal.entryChangedElsewhere": {
+    message:
+      "この仕訳は開いた後に変更または削除されたため、編集は保存されませんでした。編集内容をコピーしてから再読み込みし、最新の版を確認してください。",
+    description:
+      "Entry Context save refused because the entry changed elsewhere since it was opened",
+  },
+  "journal.copyMyEdit": {
+    message: "編集内容をコピー",
+    description: "Copies the unsaved Entry Context edit to the clipboard",
+  },
+  "journal.reloadEntries": {
+    message: "再読み込み",
+    description:
+      "Closes Entry Context and refreshes the journal to show the latest entries",
+  },
   "journal.autoAmount": {
     message: "自動",
     description: "Label for an automatically balanced amount",

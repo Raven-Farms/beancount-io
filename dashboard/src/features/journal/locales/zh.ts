@@ -518,6 +518,21 @@ const zhJournal: Record<string, TranslationEntry> = {
     message: "放弃",
     description: "Button that discards the Entry Context edit and leaves",
   },
+  "journal.entryChangedElsewhere": {
+    message:
+      "此分录在你打开后已被更改或删除，因此你的编辑未保存。请复制你的编辑，然后重新加载以查看最新版本。",
+    description:
+      "Entry Context save refused because the entry changed elsewhere since it was opened",
+  },
+  "journal.copyMyEdit": {
+    message: "复制我的编辑",
+    description: "Copies the unsaved Entry Context edit to the clipboard",
+  },
+  "journal.reloadEntries": {
+    message: "重新加载",
+    description:
+      "Closes Entry Context and refreshes the journal to show the latest entries",
+  },
   "journal.autoAmount": {
     message: "汽车",
     description: "Label for an automatically balanced amount",

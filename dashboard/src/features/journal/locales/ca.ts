@@ -549,6 +549,21 @@ const caJournal: Record<string, TranslationEntry> = {
     message: "Descarta",
     description: "Button that discards the Entry Context edit and leaves",
   },
+  "journal.entryChangedElsewhere": {
+    message:
+      "Aquest apunt s'ha canviat o eliminat des que el vau obrir, així que la vostra edició no s'ha desat. Copieu l'edició i torneu a carregar per veure'n la versió més recent.",
+    description:
+      "Entry Context save refused because the entry changed elsewhere since it was opened",
+  },
+  "journal.copyMyEdit": {
+    message: "Copia la meva edició",
+    description: "Copies the unsaved Entry Context edit to the clipboard",
+  },
+  "journal.reloadEntries": {
+    message: "Torna a carregar",
+    description:
+      "Closes Entry Context and refreshes the journal to show the latest entries",
+  },
   "journal.autoAmount": {
     message: "automàtic",
     description: "Label for an automatically balanced amount",

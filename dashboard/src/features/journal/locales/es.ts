@@ -550,6 +550,21 @@ const esJournal: Record<string, TranslationEntry> = {
     message: "Descartar",
     description: "Button that discards the Entry Context edit and leaves",
   },
+  "journal.entryChangedElsewhere": {
+    message:
+      "Este asiento se cambió o eliminó desde que lo abriste, así que tu edición no se guardó. Copia tu edición y vuelve a cargar para ver la versión más reciente.",
+    description:
+      "Entry Context save refused because the entry changed elsewhere since it was opened",
+  },
+  "journal.copyMyEdit": {
+    message: "Copiar mi edición",
+    description: "Copies the unsaved Entry Context edit to the clipboard",
+  },
+  "journal.reloadEntries": {
+    message: "Volver a cargar",
+    description:
+      "Closes Entry Context and refreshes the journal to show the latest entries",
+  },
   "journal.autoAmount": {
     message: "automático",
     description: "Label for an automatically balanced amount",

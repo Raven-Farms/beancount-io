@@ -1,5 +1,6 @@
 import { useState, useEffect, useId, useRef } from "react";
 import { useQuery, useMutation } from "@apollo/client/react";
+import { CombinedGraphQLErrors } from "@apollo/client/errors";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -73,6 +74,16 @@ export interface EntryContextPanelProps {
    * go, so an owner can confirm discarding unsaved changes first.
    */
   confirmLeave?: (proceed: () => void) => void;
+}
+
+/** A save that missed because the entry changed or vanished since loading. */
+function isStaleEntry(error: unknown): boolean {
+  return (
+    CombinedGraphQLErrors.is(error) &&
+    error.errors.some((item) =>
+      ["NOT_FOUND", "CONFLICT"].includes(String(item.extensions?.code)),
+    )
+  );
 }
 
 function EntryContextLoading() {
@@ -472,6 +483,8 @@ export function EntryContextPanel({
   const clearCache = useApolloCacheClear();
   const { canWrite } = useLedgerPermission();
   const writeOutcome = useWriteOutcome(ledgerId);
+  /** The edit a save could not land because the entry changed elsewhere. */
+  const [staleDraft, setStaleDraft] = useState<string | null>(null);
   const { data, loading, error } = useQuery(GetLedgerEntryContextDocument, {
     variables: {
       entryHash,
@@ -517,7 +530,10 @@ export function EntryContextPanel({
       onSuccess?.();
     } catch (saveError) {
       console.error("Failed to update entry:", saveError);
-      toast.error(formatError(saveError));
+      // The slice is addressed by the hash this panel loaded; an edit made
+      // elsewhere gives the entry a new one, so this save can only miss.
+      if (isStaleEntry(saveError)) setStaleDraft(newSource);
+      else toast.error(formatError(saveError));
       throw saveError;
     }
   };
@@ -565,16 +581,49 @@ export function EntryContextPanel({
   }
   if (data?.getLedgerEntryContext) {
     return (
-      <EntryContextMain
-        data={data.getLedgerEntryContext}
-        onSave={handleSave}
-        onDelete={handleDelete}
-        entryHash={entryHash}
-        entry={entry}
-        onGoToFile={handleGoToFile}
-        canWrite={canWrite}
-        onDirtyChange={onDirtyChange}
-      />
+      <>
+        {staleDraft !== null && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription className="space-y-3">
+              <p>{t("journal.entryChangedElsewhere")}</p>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    void navigator.clipboard
+                      .writeText(staleDraft)
+                      .then(() => toast.success(t("common.copied")))
+                  }
+                >
+                  {t("journal.copyMyEdit")}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => {
+                    clearCache();
+                    onSuccess?.();
+                  }}
+                >
+                  {t("journal.reloadEntries")}
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+        <EntryContextMain
+          data={data.getLedgerEntryContext}
+          onSave={handleSave}
+          onDelete={handleDelete}
+          entryHash={entryHash}
+          entry={entry}
+          onGoToFile={handleGoToFile}
+          canWrite={canWrite}
+          onDirtyChange={onDirtyChange}
+        />
+      </>
     );
   }
   return (

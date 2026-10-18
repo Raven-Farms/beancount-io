@@ -564,6 +564,21 @@ const ukJournal: Record<string, TranslationEntry> = {
     message: "Скасувати",
     description: "Button that discards the Entry Context edit and leaves",
   },
+  "journal.entryChangedElsewhere": {
+    message:
+      "Цей запис змінено або видалено відтоді, як ви його відкрили, тому редагування не збережено. Скопіюйте редагування та перезавантажте, щоб побачити останню версію.",
+    description:
+      "Entry Context save refused because the entry changed elsewhere since it was opened",
+  },
+  "journal.copyMyEdit": {
+    message: "Скопіювати моє редагування",
+    description: "Copies the unsaved Entry Context edit to the clipboard",
+  },
+  "journal.reloadEntries": {
+    message: "Перезавантажити",
+    description:
+      "Closes Entry Context and refreshes the journal to show the latest entries",
+  },
   "journal.autoAmount": {
     message: "авто",
     description: "Label for an automatically balanced amount",

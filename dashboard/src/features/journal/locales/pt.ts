@@ -549,6 +549,21 @@ const ptJournal: Record<string, TranslationEntry> = {
     message: "Descartar",
     description: "Button that discards the Entry Context edit and leaves",
   },
+  "journal.entryChangedElsewhere": {
+    message:
+      "Este lançamento foi alterado ou removido desde que você o abriu, então sua edição não foi salva. Copie sua edição e recarregue para ver a versão mais recente.",
+    description:
+      "Entry Context save refused because the entry changed elsewhere since it was opened",
+  },
+  "journal.copyMyEdit": {
+    message: "Copiar minha edição",
+    description: "Copies the unsaved Entry Context edit to the clipboard",
+  },
+  "journal.reloadEntries": {
+    message: "Recarregar",
+    description:
+      "Closes Entry Context and refreshes the journal to show the latest entries",
+  },
   "journal.autoAmount": {
     message: "automático",
     description: "Label for an automatically balanced amount",

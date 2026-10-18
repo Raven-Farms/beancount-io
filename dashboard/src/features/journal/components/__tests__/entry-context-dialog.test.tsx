@@ -6,6 +6,7 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { CombinedGraphQLErrors } from "@apollo/client/errors";
 import { useRef, useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import en from "@/i18n/locales/en";
@@ -1178,5 +1179,71 @@ describe("EntryContextDialog unsaved edits (w3/565)", () => {
     await waitFor(() =>
       expect(screen.getByRole("button", { name: "reopen" })).toHaveFocus(),
     );
+  });
+});
+
+describe("EntryContextDialog save after the entry changed elsewhere (w3/642)", () => {
+  beforeEach(() => {
+    mocks.canWrite = true;
+    mocks.language = null;
+    mocks.mutationCallCount = 0;
+    mocks.contextData = {
+      entry: { meta: { filename: "main.bean", lineno: 42 } },
+      slice: '2024-01-01 * "Payee" "Narration"\n  Assets:Cash  -10 USD\n',
+      sha256sum: "abc123",
+      balances_before: null,
+      balances_after: null,
+    };
+    mocks.updateMutation.mockReset().mockRejectedValue(
+      new CombinedGraphQLErrors({
+        errors: [
+          {
+            message: "Ledger resource not found",
+            extensions: { code: "NOT_FOUND" },
+          },
+        ],
+      }),
+    );
+    vi.mocked(toast.error).mockClear();
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: vi.fn().mockResolvedValue(undefined) },
+    });
+  });
+
+  it("says the entry changed, keeps the draft, and offers Copy and Reload", async () => {
+    const onOpenChange = vi.fn();
+    const onSuccess = vi.fn();
+    render(
+      <EntryContextDialog
+        open
+        onOpenChange={onOpenChange}
+        entry={entry}
+        ledgerId="open_ledger/example"
+        onSuccess={onSuccess}
+      />,
+    );
+    const source = screen.getByLabelText("entry-source");
+    const draft = `${(source as HTMLTextAreaElement).value}; my edit`;
+    fireEvent.change(source, { target: { value: draft } });
+
+    await userEvent.click(screen.getByRole("button", { name: "common.save" }));
+
+    expect(
+      await screen.findByText("journal.entryChangedElsewhere"),
+    ).toBeInTheDocument();
+    expect(toast.error).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("entry-source")).toHaveValue(draft);
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "journal.copyMyEdit" }),
+    );
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(draft);
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "journal.reloadEntries" }),
+    );
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(onSuccess).toHaveBeenCalled();
   });
 });

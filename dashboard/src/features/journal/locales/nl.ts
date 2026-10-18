@@ -534,6 +534,21 @@ const nlJournal: Record<string, TranslationEntry> = {
     message: "Verwerpen",
     description: "Button that discards the Entry Context edit and leaves",
   },
+  "journal.entryChangedElsewhere": {
+    message:
+      "Deze boeking is gewijzigd of verwijderd sinds je hem opende, dus je bewerking is niet opgeslagen. Kopieer je bewerking en laad opnieuw om de nieuwste versie te zien.",
+    description:
+      "Entry Context save refused because the entry changed elsewhere since it was opened",
+  },
+  "journal.copyMyEdit": {
+    message: "Mijn bewerking kopiëren",
+    description: "Copies the unsaved Entry Context edit to the clipboard",
+  },
+  "journal.reloadEntries": {
+    message: "Opnieuw laden",
+    description:
+      "Closes Entry Context and refreshes the journal to show the latest entries",
+  },
   "journal.autoAmount": {
     message: "automatisch",
     description: "Label for an automatically balanced amount",
