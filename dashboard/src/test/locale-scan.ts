@@ -387,3 +387,43 @@ export function untranslatedWholeMessage(
     .match(/(?<![0-9A-Za-z])[A-Za-z]{2,}(?![0-9A-Za-z])/g);
   return words && words.length >= 2 ? words : [];
 }
+
+/**
+ * One locale's messages that `check` finds untranslated against the same key
+ * in English. The walk the English-comparison guards and the
+ * `i18n:prepare` report share — the half-translated tail and the whole copy —
+ * so they cannot drift in what they skip: keys English no longer has, and keys
+ * `allowed` excuses.
+ */
+export function untranslatedAgainstEnglish(
+  messages: Readonly<Record<string, string>> | undefined,
+  english: Readonly<Record<string, string>>,
+  check: (message: string, english: string) => string[],
+  allowed: (key: string) => boolean = () => false,
+): { key: string; message: string; words: string[] }[] {
+  const offenders: { key: string; message: string; words: string[] }[] = [];
+  for (const [key, message] of Object.entries(messages ?? {})) {
+    const source = english[key];
+    if (source === undefined || allowed(key)) continue;
+    const words = check(message, source);
+    if (words.length) offenders.push({ key, message, words });
+  }
+  return offenders;
+}
+
+/**
+ * Entries of a `locale/key` identical-by-design allowlist whose message no
+ * longer matches English. A stale entry would otherwise excuse a future
+ * regression on that key silently.
+ */
+export function staleIdenticalEntries(
+  allowlist: Readonly<Record<string, string>>,
+  catalogs: Readonly<Record<string, Readonly<Record<string, string>>>>,
+  english: Readonly<Record<string, string>>,
+): string[] {
+  return Object.keys(allowlist).filter((entry) => {
+    const [locale, ...rest] = entry.split("/");
+    const key = rest.join("/");
+    return catalogs[locale]?.[key] !== english[key];
+  });
+}

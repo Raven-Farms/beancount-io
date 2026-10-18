@@ -5,7 +5,9 @@ import {
   SCANNED_LOCALES,
   UNCLASSIFIED_LOCALES,
   type ScannedLocale,
+  staleIdenticalEntries,
   strayEnglishWords,
+  untranslatedAgainstEnglish,
   untranslatedEnglishTail,
   untranslatedWholeMessage,
 } from "./locale-scan";
@@ -20,6 +22,16 @@ import en from "@/i18n/locales/en";
  */
 
 const ALL = locales as unknown as Record<string, Record<string, string>>;
+
+/** A failure names the locale, key, message and the English words it kept. */
+const offenderLines = (
+  locale: string,
+  offenders: { key: string; message: string; words: string[] }[],
+) =>
+  offenders.map(
+    ({ key, message, words }) =>
+      `${locale}/${key}: ${message} -> ${words.join(" ")}`,
+  );
 
 /**
  * Damage that exists on `main` today, listed key by key so that repairing one
@@ -85,16 +97,14 @@ describe("no locale ships a half-translated message", () => {
       // Reaches the Latin-script locales, where script proves nothing: `Cuenta
       // Balance` and `Excluir Ledger` are only visible beside their English
       // source.
-      const offenders: string[] = [];
-      for (const [key, message] of Object.entries(ALL[locale] ?? {})) {
-        const english = en[key];
-        if (english === undefined) continue;
-        const tail = untranslatedEnglishTail(message, english, locale);
-        if (tail.length) {
-          offenders.push(`${locale}/${key}: ${message} -> ${tail.join(" ")}`);
-        }
-      }
-      expect(offenders).toEqual([]);
+      expect(
+        offenderLines(
+          locale,
+          untranslatedAgainstEnglish(ALL[locale], en, (message, english) =>
+            untranslatedEnglishTail(message, english, locale),
+          ),
+        ),
+      ).toEqual([]);
     },
   );
 
@@ -253,26 +263,22 @@ describe("no locale ships an English message copied whole", () => {
   it.each(EN_COMPARED_LOCALES)(
     "%s translates every copied message",
     (locale) => {
-      const offenders: string[] = [];
-      for (const [key, message] of Object.entries(ALL[locale] ?? {})) {
-        const english = en[key];
-        if (english === undefined) continue;
-        if (IDENTICAL_BY_DESIGN[`${locale}/${key}`]) continue;
-        if (untranslatedWholeMessage(message, english).length) {
-          offenders.push(`${locale}/${key}: ${message}`);
-        }
-      }
-      expect(offenders).toEqual([]);
+      expect(
+        offenderLines(
+          locale,
+          untranslatedAgainstEnglish(
+            ALL[locale],
+            en,
+            untranslatedWholeMessage,
+            (key) => `${locale}/${key}` in IDENTICAL_BY_DESIGN,
+          ),
+        ),
+      ).toEqual([]);
     },
   );
 
   it("keeps every identical-by-design entry identical", () => {
-    const stale = Object.keys(IDENTICAL_BY_DESIGN).filter((entry) => {
-      const [locale, ...rest] = entry.split("/");
-      const key = rest.join("/");
-      return ALL[locale]?.[key] !== en[key];
-    });
-    expect(stale).toEqual([]);
+    expect(staleIdenticalEntries(IDENTICAL_BY_DESIGN, ALL, en)).toEqual([]);
   });
 
   it("flags a whole English copy but not brand or notation alone", () => {

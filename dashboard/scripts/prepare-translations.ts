@@ -11,7 +11,10 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import { untranslatedEnglishTail } from "../src/test/locale-scan";
+import {
+  untranslatedAgainstEnglish,
+  untranslatedEnglishTail,
+} from "../src/test/locale-scan";
 
 const SRC_DIR = path.join(process.cwd(), "src");
 const FEATURES_DIR = path.join(SRC_DIR, "features");
@@ -67,6 +70,17 @@ interface GlobalStats {
   total: number;
   percentage: number;
   todoCount: number;
+}
+
+/** A catalog's structured entries as `key → message`. */
+function messagesOf(
+  translations: Record<string, unknown>,
+): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(translations).flatMap(([key, value]) =>
+      isStructuredFormat(value) ? [[key, value.message]] : [],
+    ),
+  );
 }
 
 /**
@@ -333,19 +347,15 @@ async function findHalfTranslated(
 ): Promise<string[]> {
   const englishPath = getLocaleFilePath(feature, "en");
   if (!fs.existsSync(englishPath)) return [];
-  const english = await readTranslations(englishPath);
+  const english = messagesOf(await readTranslations(englishPath));
+  const messages = messagesOf(translations);
 
-  const offenders: string[] = [];
-  for (const [key, value] of Object.entries(translations)) {
-    if (!isStructuredFormat(value)) continue;
-    if (value.message.startsWith("[TODO]")) continue;
-    const source = english[key];
-    if (!isStructuredFormat(source)) continue;
-    if (untranslatedEnglishTail(value.message, source.message, locale).length) {
-      offenders.push(key);
-    }
-  }
-  return offenders;
+  return untranslatedAgainstEnglish(
+    messages,
+    english,
+    (message, source) => untranslatedEnglishTail(message, source, locale),
+    (key) => messages[key].startsWith("[TODO]"),
+  ).map(({ key }) => key);
 }
 
 /**
