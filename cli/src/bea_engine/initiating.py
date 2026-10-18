@@ -102,7 +102,10 @@ def answer(
         with localcontext() as exact:
             exact.prec = MAX_PREC
             total = sum(nonzero.values(), Decimal(0))
-        content += f"  Equity:OpeningBalances  {total.copy_negate():f} {currency}\n"
+        # copy_negate also changes zero's sign; a cancelling opening needs
+        # ordinary zero without sacrificing the exact nonzero negation.
+        equity = total.copy_negate() if total else Decimal(0)
+        content += f"  Equity:OpeningBalances  {equity:f} {currency}\n"
     else:
         content += (
             "\n; Record opening balances with a transaction against Equity:OpeningBalances.\n"
