@@ -314,6 +314,7 @@ export const pt: Translations = {
   openAccountNoCurrency: "Sem moeda",
   openAccountSaving: "Abrindo...",
   openAccountFailed: "Não foi possível abrir a conta. Tente novamente.",
+  ledgerWouldBreak: "Isso adicionaria um erro ao seu livro: {{detail}}",
   openAccountInvalidRoot: "Escolha um tipo de conta válido.",
   openAccountNameRequired: "Digite pelo menos uma parte do nome da conta.",
   openAccountEmptyComponent:

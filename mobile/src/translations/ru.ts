@@ -316,6 +316,7 @@ export const ru: Translations = {
   openAccountNoCurrency: "Валюта не выбрана",
   openAccountSaving: "Открываем...",
   openAccountFailed: "Не удалось открыть счёт. Попробуйте ещё раз.",
+  ledgerWouldBreak: "Это добавит ошибку в вашу книгу: {{detail}}",
   openAccountInvalidRoot: "Выберите допустимый тип счёта.",
   openAccountNameRequired: "Введите хотя бы одну часть названия счёта.",
   openAccountEmptyComponent: "Части названия счёта не могут быть пустыми.",

@@ -874,6 +874,11 @@ const koCommon: Record<string, TranslationEntry> = {
     description:
       "Error shown when the ledger refuses a transaction whose postings do not balance (UNBALANCED)",
   },
+  "common.errors.wouldBreakLedger": {
+    message: "장부에 오류가 추가됩니다: {detail}",
+    description:
+      "Error shown when the ledger refuses entries that would add bean-check errors; {detail} is the ledger’s own error text, e.g. Duplicate open directive for Assets:Cash (main.bean:74)",
+  },
   "common.errors.network": {
     message: "연결에 문제가 있습니다. 인터넷 연결을 확인하고 다시 시도하세요.",
     description:

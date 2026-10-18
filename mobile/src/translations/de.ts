@@ -313,6 +313,8 @@ export const de: Translations = {
   openAccountSaving: "Wird eröffnet...",
   openAccountFailed:
     "Konto konnte nicht eröffnet werden. Bitte erneut versuchen.",
+  ledgerWouldBreak:
+    "Das würde Ihrem Hauptbuch einen Fehler hinzufügen: {{detail}}",
   openAccountInvalidRoot: "Wählen Sie einen gültigen Kontotyp.",
   openAccountNameRequired: "Geben Sie mindestens einen Namensbestandteil ein.",
   openAccountEmptyComponent: "Namensbestandteile dürfen nicht leer sein.",

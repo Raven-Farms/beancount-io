@@ -889,6 +889,11 @@ const skCommon: Record<string, TranslationEntry> = {
     description:
       "Error shown when the ledger refuses a transaction whose postings do not balance (UNBALANCED)",
   },
+  "common.errors.wouldBreakLedger": {
+    message: "Toto by pridalo chybu do vašej knihy: {detail}",
+    description:
+      "Error shown when the ledger refuses entries that would add bean-check errors; {detail} is the ledger’s own error text, e.g. Duplicate open directive for Assets:Cash (main.bean:74)",
+  },
   "common.errors.network": {
     message:
       "Problém s pripojením. Skontrolujte internetové pripojenie a skúste to znova.",

@@ -312,7 +312,11 @@ export function OpenAccountScreenComponent(): JSX.Element {
       return;
     }
 
-    setSubmitError(result.message || t("openAccountFailed"));
+    setSubmitError(
+      result.wouldBreak
+        ? t("ledgerWouldBreak", { detail: result.wouldBreak })
+        : result.message || t("openAccountFailed"),
+    );
   };
 
   const validationMessage =

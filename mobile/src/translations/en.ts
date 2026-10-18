@@ -299,6 +299,7 @@ export const en = {
   openAccountNoCurrency: "No currency",
   openAccountSaving: "Opening...",
   openAccountFailed: "Couldn't open the account. Please try again.",
+  ledgerWouldBreak: "This would add an error to your ledger: {{detail}}",
   openAccountInvalidRoot: "Choose a valid account type.",
   openAccountNameRequired: "Enter at least one account name component.",
   openAccountEmptyComponent: "Account components cannot be empty.",

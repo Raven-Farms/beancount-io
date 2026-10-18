@@ -891,6 +891,11 @@ const frCommon: Record<string, TranslationEntry> = {
     description:
       "Error shown when the ledger refuses a transaction whose postings do not balance (UNBALANCED)",
   },
+  "common.errors.wouldBreakLedger": {
+    message: "Cela ajouterait une erreur à votre grand livre : {detail}",
+    description:
+      "Error shown when the ledger refuses entries that would add bean-check errors; {detail} is the ledger’s own error text, e.g. Duplicate open directive for Assets:Cash (main.bean:74)",
+  },
   "common.errors.network": {
     message:
       "Problème de connexion. Vérifiez votre connexion internet et réessayez.",

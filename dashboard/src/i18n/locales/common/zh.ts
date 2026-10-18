@@ -861,6 +861,11 @@ const zhCommon: Record<string, TranslationEntry> = {
     description:
       "Error shown when the ledger refuses a transaction whose postings do not balance (UNBALANCED)",
   },
+  "common.errors.wouldBreakLedger": {
+    message: "这会给你的账本带来一个错误：{detail}",
+    description:
+      "Error shown when the ledger refuses entries that would add bean-check errors; {detail} is the ledger’s own error text, e.g. Duplicate open directive for Assets:Cash (main.bean:74)",
+  },
   "common.errors.network": {
     message: "连接出现问题，请检查网络连接后重试。",
     description:

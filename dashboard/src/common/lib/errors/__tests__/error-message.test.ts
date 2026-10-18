@@ -1,6 +1,12 @@
 import { describe, it, expect } from "vitest";
+import { renderHook } from "@testing-library/react";
 import { CombinedGraphQLErrors, ServerError } from "@apollo/client/errors";
-import { getErrorMessageKey, getUnbalancedResidual } from "../error-message";
+import {
+  getErrorMessageKey,
+  getNewLedgerErrorDetail,
+  getUnbalancedResidual,
+  useErrorMessage,
+} from "../error-message";
 
 function graphQLError(code?: string): CombinedGraphQLErrors {
   return new CombinedGraphQLErrors({
@@ -148,5 +154,90 @@ describe("getUnbalancedResidual", () => {
 
   it("returns null for errors that are not GraphQL refusals", () => {
     expect(getUnbalancedResidual(new Error("UNBALANCED"))).toBeNull();
+  });
+});
+
+// Entries that would add bean-check errors are refused as VALIDATION_FAILED on
+// `entries`, the reason naming each new error (w0/m2). The forms say what the
+// write would break instead of "Validation failed".
+describe("would-break refusals", () => {
+  const refusal = (extensions: Record<string, unknown>) =>
+    new CombinedGraphQLErrors({
+      errors: [
+        {
+          message: `Validation failed for entries: ${String(extensions.reason)}`,
+          extensions,
+        },
+      ],
+    });
+  const wouldBreak = (detail: string, count = 1) =>
+    refusal({
+      code: "VALIDATION_FAILED",
+      field: "entries",
+      reason: `adding these entries would introduce ${count} new bean-check error${count === 1 ? "" : "s"}: ${detail}`,
+    });
+
+  it("names the error a refused write would add", () => {
+    expect(
+      getNewLedgerErrorDetail(
+        wouldBreak("Duplicate open directive for Assets:Cash (main.bean:74)"),
+      ),
+    ).toBe("Duplicate open directive for Assets:Cash (main.bean:74)");
+    expect(
+      getNewLedgerErrorDetail(
+        wouldBreak("A (main.bean:1); B (main.bean:2)", 2),
+      ),
+    ).toBe("A (main.bean:1); B (main.bean:2)");
+  });
+
+  it.each([
+    [
+      "another field",
+      {
+        code: "VALIDATION_FAILED",
+        field: "username",
+        reason: "1 new bean-check error: X",
+      },
+    ],
+    [
+      "another code",
+      {
+        code: "BAD_USER_INPUT",
+        field: "entries",
+        reason: "1 new bean-check error: X",
+      },
+    ],
+    [
+      "another entries refusal",
+      { code: "VALIDATION_FAILED", field: "entries", reason: "Must be set" },
+    ],
+  ])("returns null for %s", (_case, extensions) => {
+    expect(getNewLedgerErrorDetail(refusal(extensions))).toBeNull();
+  });
+
+  it("returns null for errors that are not GraphQL refusals", () => {
+    expect(
+      getNewLedgerErrorDetail(new Error("1 new bean-check error: X")),
+    ).toBeNull();
+  });
+
+  it("formats the refusal with what it would break", () => {
+    const { result } = renderHook(() => useErrorMessage());
+    expect(
+      result.current(
+        wouldBreak("Duplicate open directive for Assets:Cash (main.bean:74)"),
+      ),
+    ).toBe(
+      "This would add an error to your ledger: Duplicate open directive for Assets:Cash (main.bean:74)",
+    );
+    expect(
+      result.current(
+        refusal({
+          code: "VALIDATION_FAILED",
+          field: "entries",
+          reason: "Must be set",
+        }),
+      ),
+    ).toBe("Validation failed. Please review your input and try again.");
   });
 });

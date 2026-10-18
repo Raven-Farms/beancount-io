@@ -31,6 +31,12 @@ export type LedgerWriteDeps = {
   haptics: { success: () => void; error: () => void };
   /** Return to the screen that opened this one. */
   goBack: () => void;
+  /**
+   * Turns a refusal the server explained into the toast copy, or null to keep
+   * the spec's own failure message — so a write that would break the ledger
+   * says what it would break instead of "could not save" (w0/m2).
+   */
+  describeRefusal?: (error: unknown) => string | null;
 };
 
 export type LedgerWriteSpec<T> = {
@@ -87,7 +93,9 @@ export async function runLedgerWrite<T>(
     dismissLoading?.();
     return fail(
       deps,
-      spec.failureMessageFor?.(caught) ?? spec.failureMessage,
+      spec.failureMessageFor?.(caught) ??
+        deps.describeRefusal?.(caught) ??
+        spec.failureMessage,
       caught,
     );
   }

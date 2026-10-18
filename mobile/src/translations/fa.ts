@@ -303,6 +303,7 @@ export const fa: Translations = {
   openAccountNoCurrency: "بدون واحد پول",
   openAccountSaving: "در حال افتتاح...",
   openAccountFailed: "افتتاح حساب ناموفق بود. دوباره تلاش کنید.",
+  ledgerWouldBreak: "این کار یک خطا به دفتر شما اضافه می‌کند: {{detail}}",
   openAccountInvalidRoot: "یک نوع حساب معتبر انتخاب کنید.",
   openAccountNameRequired: "دست‌کم یک بخش از نام حساب را وارد کنید.",
   openAccountEmptyComponent: "بخش‌های نام حساب نمی‌توانند خالی باشند.",

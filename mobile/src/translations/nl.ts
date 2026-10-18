@@ -305,6 +305,7 @@ export const nl: Translations = {
   openAccountNoCurrency: "Geen valuta",
   openAccountSaving: "Openen...",
   openAccountFailed: "Account openen is mislukt. Probeer het opnieuw.",
+  ledgerWouldBreak: "Dit zou een fout aan je grootboek toevoegen: {{detail}}",
   openAccountInvalidRoot: "Kies een geldig accounttype.",
   openAccountNameRequired: "Voer minstens één naamdeel in.",
   openAccountEmptyComponent: "Naamdelen mogen niet leeg zijn.",

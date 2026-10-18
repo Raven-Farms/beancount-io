@@ -307,6 +307,7 @@ export const bg: Translations = {
   openAccountNoCurrency: "Няма валута",
   openAccountSaving: "Открива се...",
   openAccountFailed: "Сметката не беше открита. Опитайте отново.",
+  ledgerWouldBreak: "Това ще добави грешка в книгата ви: {{detail}}",
   openAccountInvalidRoot: "Изберете валиден вид сметка.",
   openAccountNameRequired: "Въведете поне една част от името на сметката.",
   openAccountEmptyComponent:

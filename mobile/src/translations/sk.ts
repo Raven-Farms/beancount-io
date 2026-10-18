@@ -316,6 +316,7 @@ export const sk: Translations = {
   openAccountNoCurrency: "Bez meny",
   openAccountSaving: "Otvára sa...",
   openAccountFailed: "Účet sa nepodarilo otvoriť. Skúste to znova.",
+  ledgerWouldBreak: "Toto by pridalo chybu do vašej knihy: {{detail}}",
   openAccountInvalidRoot: "Vyberte platný typ účtu.",
   openAccountNameRequired: "Zadajte aspoň jednu časť názvu účtu.",
   openAccountEmptyComponent: "Časti názvu účtu nemôžu byť prázdne.",

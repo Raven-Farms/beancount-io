@@ -314,6 +314,7 @@ export const uk: Translations = {
   openAccountNoCurrency: "Валюту не обрано",
   openAccountSaving: "Відкриваємо...",
   openAccountFailed: "Не вдалося відкрити рахунок. Спробуйте ще раз.",
+  ledgerWouldBreak: "Це додасть помилку до вашої книги: {{detail}}",
   openAccountInvalidRoot: "Оберіть дійсний тип рахунку.",
   openAccountNameRequired: "Введіть хоча б одну частину назви рахунку.",
   openAccountEmptyComponent: "Частини назви рахунку не можуть бути порожніми.",
