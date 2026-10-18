@@ -1230,7 +1230,9 @@ an account until something uses it, so there `add open` needs `--allow-errors`,
 reports `Unused account` as staged, and the account's first `add transaction`,
 `add transactions` or `import` clears it without the flag; the refusals for a
 missing account print the `add open` line with the flag. Syntax errors and pad references to unknown or inactive accounts
-are always rejected. A syntax error is text Beancount could not read; what it
+are always rejected. An unterminated string in the append destination is
+reported at its original file and line, even with `--allow-errors`.
+A syntax error is text Beancount could not read; what it
 reports about text it did read — an unknown option, a duplicate metadata key, an
 unbalanced `pushtag` — is tolerated like any other existing error. An append
 destination that ends inside `pushtag` or `pushmeta` is always refused, even

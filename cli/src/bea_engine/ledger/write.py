@@ -24,7 +24,7 @@ from contextlib import ExitStack, contextmanager, nullcontext, suppress
 from dataclasses import dataclass, field, replace
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from bea_engine import stopping
 from bea_engine.include_glob import check_glob
@@ -39,6 +39,9 @@ from bea_engine.ledger.text import (
 from bea_engine.paths import expand_path
 from bea_engine.protocol import AuthError, ConflictError, LedgerError, StagingFailed, UsageError, notice
 from bea_engine.query import format_error, same_file
+
+if TYPE_CHECKING:
+    from beancount.parser.lexer import LexBuilder
 
 
 def cache_dir() -> Path:
@@ -3185,9 +3188,9 @@ def decoded_append(target: Path, original: bytes, texts: list[str]) -> str:
 
 
 def _appended_or_report(target: Path, original: bytes, texts: list[str]) -> str:
-    """The append candidate, refusing a file that is not UTF-8 or leaves a push open."""
+    """The append candidate, refusing invalid UTF-8, original lexer errors or an open push."""
     content = decoded_append(target, original, texts)
-    _refuse_open_push(target, original)
+    _refuse_unsafe_append_context(target, original)
     return content
 
 
@@ -3205,14 +3208,14 @@ def new_include_seed(snapshot: LedgerSnapshot, target: Path) -> bytes:
     return "".join(f"{line}\n" for line in lines).encode()
 
 
-def open_pushes(text: str) -> list[tuple[int, str]]:
+def open_pushes(text: str, *, builder: LexBuilder | None = None) -> list[tuple[int, str]]:
     """The `pushtag`/`pushmeta` directives still open at the end of `text`, as (line, directive)."""
     from beancount.parser import lexer
 
     open_: dict[tuple[str, str], list[int]] = {}
     pending: str | None = None
     text = unicodedata.normalize("NFC", text.removeprefix("\ufeff"))
-    for kind, line, _, value in lexer.lex_iter_string(text):  # type: ignore[no-untyped-call]
+    for kind, line, _, value in lexer.lex_iter_string(text, builder=builder):  # type: ignore[no-untyped-call]
         if pending is not None and kind in {"TAG", "KEY"}:
             key = ("tag" if kind == "TAG" else "meta", str(value))
             if pending.startswith("PUSH"):
@@ -3227,18 +3230,21 @@ def open_pushes(text: str) -> list[tuple[int, str]]:
     )
 
 
-def _refuse_open_push(target: Path, original: bytes) -> None:
-    """Refuse to append after a `pushtag`/`pushmeta` the file never closes.
+def _refuse_unsafe_append_context(target: Path, original: bytes) -> None:
+    """Refuse original lexer errors or a `pushtag`/`pushmeta` the file never closes.
 
-    Beancount applies an open push to every entry after it, so an entry
-    appended there silently carried a tag and metadata nobody asked for,
-    while the echo showed it without them. `--allow-errors` tolerated the
-    file's `Unbalanced pushed tag` as pre-existing and wrote anyway (w5/464).
-    Nothing here can be tolerated: the entry would not mean what was written.
+    An appended quote can close an original unterminated string, shifting its
+    lexer error into the proposed entry (w5/711). An open push silently gives
+    the entry tags or metadata nobody asked for (w5/464). Neither is safe even
+    under `--allow-errors`; scan the original without parsing or loading it.
     """
-    if b"push" not in original:
-        return
-    pushes = open_pushes(original.decode("utf-8"))
+    from beancount.parser import lexer
+
+    builder = lexer.LexBuilder()
+    pushes = open_pushes(original.decode("utf-8"), builder=builder)
+    if builder.errors:
+        details = [f"{target}:{error.source.get('lineno', 0)}: {error.message}" for error in builder.errors]
+        raise preexisting_refusal(builder.errors, details)
     if not pushes:
         return
     named = ", ".join(f"`{directive}` at line {line}" for line, directive in pushes)

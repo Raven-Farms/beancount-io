@@ -203,7 +203,9 @@ def test_an_existing_syntax_error_is_still_refused(tmp_path: Path, body: str, er
     refused = _bea(tmp_path, "--file", str(ledger), *NOTE)
 
     assert refused.returncode == 1
-    assert "The change would leave the ledger invalid; nothing was written." in refused.stderr
+    assert "including a syntax error; nothing was written." in refused.stderr
+    assert "Fix the syntax error first: --allow-errors never writes past one." in refused.stderr
+    assert "Proposed append" not in refused.stderr
     assert error in refused.stderr
     assert ledger.read_text() == body
 
