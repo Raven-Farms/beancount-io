@@ -280,6 +280,16 @@ describe("precedence helpers", () => {
       ["2026-01-10\0BTC\0USD"],
     ],
     [
+      "a quote on an org heading the lexer ignores (w5/625)",
+      '* Prices for the 12" binder\n2026-09-10 price BTC 70000 USD\n2026-09-12 * "Later"\n',
+      ["2026-09-10\0BTC\0USD"],
+    ],
+    [
+      "a byte-order mark before the first line (w5/625)",
+      "\uFEFF2026-09-10 price BTC 70000 USD\n",
+      ["2026-09-10\0BTC\0USD"],
+    ],
+    [
       "an escaped quote inside a string",
       '2026-01-09 note Assets:Crypto "a \\" b\n2026-01-10 price BTC 1 USD\n"\n2026-01-11 price BTC 2 USD\n',
       ["2026-01-11\0BTC\0USD"],

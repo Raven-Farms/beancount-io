@@ -76,8 +76,12 @@ const LEDGER_PRICE_RE =
   /^([0-9]{4})[-/]([0-9]{1,2})[-/]([0-9]{1,2})[ \t]+price[ \t]+([A-Z](?:[A-Z0-9'._-]*[A-Z0-9])?)[ \t]+[-+*/(),.0-9 \t]+?([A-Z](?:[A-Z0-9'._-]*[A-Z0-9])?)(?![A-Za-z0-9'._-])/gmu;
 // What Beancount's lexer reads as one token before a line could start: a
 // string, which may span lines, and a comment, which may hold a `"`. A
-// price-shaped line inside a multi-line note is not a price (w5/378).
-const STRING_OR_COMMENT_RE = /"(?:[^"\\]|\\.)*"|;[^\n]*/gu;
+// price-shaped line inside a multi-line note is not a price (w5/378). A line
+// the lexer ignores outright (an org heading `*`, `:`, `#` or a flag
+// character first) is matched whole first: a `"` there opens no string, and
+// pairing it with the next quote in the file hid every price in between
+// (w5/625, as the CLI's w5/476).
+const STRING_OR_COMMENT_RE = /^[*:#!&?%][^\n]*|"(?:[^"\\]|\\.)*"|;[^\n]*/gmu;
 const METADATA_LINE_RE = /^[ \t]+[a-z][A-Za-z0-9_-]*\s*:/u;
 
 const pairKey = (date: string, base: string, quote: string): string =>
@@ -96,9 +100,10 @@ export function collectLedgerPricePairs(
   for (const path of paths) {
     // Each string collapses to one character, newlines and all, so none of
     // its lines can be read as the start of a directive.
-    const directives = (files[path] ?? "").replace(STRING_OR_COMMENT_RE, (token) =>
-      token.startsWith('"') ? "x" : token,
-    );
+    // A leading byte-order mark would keep line 1 from starting with its date.
+    const directives = (files[path] ?? "")
+      .replace(/^\uFEFF/u, "")
+      .replace(STRING_OR_COMMENT_RE, (token) => (token.startsWith('"') ? "x" : token));
     for (const match of directives.matchAll(LEDGER_PRICE_RE)) {
       const [, year, month, day, base, quote] = match;
       const date = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
