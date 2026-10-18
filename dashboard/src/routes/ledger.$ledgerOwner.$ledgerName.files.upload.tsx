@@ -1,5 +1,6 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { z } from "zod";
+import { searchString } from "@/common/lib/search-params/tolerant";
 
 /**
  * Backward compatibility route for old query-based upload files URLs
@@ -11,7 +12,7 @@ import { z } from "zod";
 
 // Define search schema for backward compatibility
 const searchSchema = z.object({
-  dirPath: z.string().optional().default(""),
+  dirPath: searchString().transform((dirPath) => dirPath ?? ""),
 });
 
 export const Route = createFileRoute(

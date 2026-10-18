@@ -1,16 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
 import RegisterFlow from "@/features/auth/pages/register";
 import { z } from "zod";
+import {
+  searchBoolean,
+  searchString,
+} from "@/common/lib/search-params/tolerant";
 import { getSEOMetadata, createHeadMeta } from "@/common/lib/seo/seo-helpers";
 import { registerBeforeLoad } from "@/features/auth/pages/register/loader";
 
 const signUpSearchSchema = z.object({
-  withDefaultLedger: z.boolean().optional(),
-  src: z.string().optional(),
-  by: z.string().optional(),
+  withDefaultLedger: searchBoolean(),
+  src: searchString(),
+  by: searchString(),
   // Post-signup destination (e.g. the marketing /pricing page's paid-plan
   // CTAs pass ?next=%2Fpricing). Validated by getSafeRedirectPath before use.
-  next: z.string().optional(),
+  next: searchString(),
 });
 
 export const Route = createFileRoute("/auth/sign-up")({

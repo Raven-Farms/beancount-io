@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
+import { searchString } from "@/common/lib/search-params/tolerant";
 import LedgerQueryPage from "@/features/bql/pages";
 import { createLedgerHead } from "@/common/lib/seo/ledger-head";
 
 const searchSchema = z.object({
-  query: z.string().optional(),
+  query: searchString(),
 });
 
 export const Route = createFileRoute("/ledger/$ledgerOwner/$ledgerName/query")({

@@ -1,11 +1,12 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { z } from "zod";
+import { searchEnum, searchString } from "@/common/lib/search-params/tolerant";
 import SandboxAgentPage from "@/features/ai-agent/pages/sandbox-agent";
 import { createLedgerHead } from "@/common/lib/seo/ledger-head";
 
 const searchSchema = z.object({
-  q: z.string().optional(),
-  mode: z.enum(["sandbox", "agent"]).optional(),
+  q: searchString(),
+  mode: searchEnum(["sandbox", "agent"]),
 });
 
 export const Route = createFileRoute("/ledger/$ledgerOwner/$ledgerName/ask")({
