@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [647 — `engine status` calls an override usable when it has no `bean-check` beside it (incomplete fix of w5/481)](./647.md)
 - [648 — `upgrade --check` still accepts null/empty versions and Homebrew HTML with exit 0 (incomplete fix of w5/484)](./648.md)
 - [649 — A BOM-prefixed HTML error page still reaches `bea ask` (incomplete fix of w5/482)](./649.md)
 - [650 — A non-UTF-8 byte in an `add` argument gives a raw `UnicodeEncodeError`](./650.md)
