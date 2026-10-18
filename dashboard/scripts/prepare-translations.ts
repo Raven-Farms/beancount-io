@@ -15,6 +15,8 @@ import {
   untranslatedAgainstEnglish,
   untranslatedEnglishTail,
 } from "../src/test/locale-scan";
+import { SUPPORTED_LANGUAGES } from "../src/i18n/config";
+import { syncLocaleEntries, type TranslationEntry } from "./lib/sync-locale";
 
 const SRC_DIR = path.join(process.cwd(), "src");
 const FEATURES_DIR = path.join(SRC_DIR, "features");
@@ -27,25 +29,9 @@ const SHARED_LOCALE_DIRS: Record<string, string> = {
   seo: path.join(SRC_DIR, "i18n", "locales", "seo"),
 };
 
-const TARGET_LOCALES = [
-  "zh",
-  "es",
-  "fr",
-  "de",
-  "pt",
-  "ru",
-  "nl",
-  "bg",
-  "ca",
-  "fa",
-  "sk",
-  "uk",
-];
-
-interface TranslationEntry {
-  message: string;
-  description: string;
-}
+// Every supported language but English, from the canonical list: a hand-kept
+// copy here had fallen behind it and left Japanese and Korean unsynced.
+const TARGET_LOCALES = SUPPORTED_LANGUAGES.filter((locale) => locale !== "en");
 
 interface FeatureStats {
   feature: string;
@@ -184,7 +170,7 @@ function writeTranslations(
 /**
  * Sync translations from source (en) to target locale
  * - Add missing keys with [TODO] prefix
- * - Remove keys that don't exist in source
+ * - Remove keys the locale does not need, keeping its own plural forms
  */
 async function syncTranslations(
   feature: string,
@@ -202,42 +188,20 @@ async function syncTranslations(
     return { added: 0, removed: 0 };
   }
 
-  const sourceKeys = Object.keys(sourceTranslations);
-  const targetKeys = Object.keys(targetTranslations);
-
-  // Find missing keys (in source but not in target)
-  const missingKeys = sourceKeys.filter((key) => !targetKeys.includes(key));
-
-  // Find extra keys (in target but not in source)
-  const extraKeys = targetKeys.filter((key) => !sourceKeys.includes(key));
+  const { entries, added, removed } = syncLocaleEntries(
+    sourceTranslations,
+    targetTranslations,
+    locale,
+  );
 
   // If no changes needed, skip
-  if (missingKeys.length === 0 && extraKeys.length === 0) {
+  if (added.length === 0 && removed.length === 0) {
     return { added: 0, removed: 0 };
   }
 
-  // Build new target translations
-  const newTargetTranslations: Record<string, TranslationEntry> = {};
+  writeTranslations(targetPath, entries, locale);
 
-  // Copy existing translations (excluding extra keys)
-  for (const key of sourceKeys) {
-    if (targetTranslations[key]) {
-      // Keep existing translation
-      newTargetTranslations[key] = targetTranslations[key];
-    } else {
-      // Add missing key with [TODO] prefix
-      const sourceEntry = sourceTranslations[key];
-      newTargetTranslations[key] = {
-        message: `[TODO] ${sourceEntry.message}`,
-        description: sourceEntry.description,
-      };
-    }
-  }
-
-  // Write updated translations
-  writeTranslations(targetPath, newTargetTranslations, locale);
-
-  return { added: missingKeys.length, removed: extraKeys.length };
+  return { added: added.length, removed: removed.length };
 }
 
 /**
