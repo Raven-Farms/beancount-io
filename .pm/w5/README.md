@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [683 — BQL patterns built with `&&`/`||`/`~~` at run time exit 0 with a raw FutureWarning (incomplete fix of w5/509)](./683.md)
 - [684 — `bea import` on a ledger with a syntax error still offers `--allow-errors` (gap in w5/508)](./684.md)
 - [685 — `PRINT -f beancount` export fails `check` when an include uses default roots (incomplete fix of w5/474)](./685.md)
 - [686 — `--json format` skips an encrypted include without naming it (incomplete fix of w5/495)](./686.md)
