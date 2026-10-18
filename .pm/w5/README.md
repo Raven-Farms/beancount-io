@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [648 — `upgrade --check` still accepts null/empty versions and Homebrew HTML with exit 0 (incomplete fix of w5/484)](./648.md)
 - [649 — A BOM-prefixed HTML error page still reaches `bea ask` (incomplete fix of w5/482)](./649.md)
 - [650 — A non-UTF-8 byte in an `add` argument gives a raw `UnicodeEncodeError`](./650.md)
 - [651 — With an included leaf (or stdin) as input, `-o` can replace the root ledger or join its include glob, exit 0 (gap in w5/072)](./651.md)
