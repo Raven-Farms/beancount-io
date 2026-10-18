@@ -38,7 +38,7 @@ Blocked 2026-10-18 on the production deploy. Cleared the same day: the user depl
 - **Decisions and docs.** ADR 0008 and ADR 019 carry the 2026-10-18 amendments (t001; the `mergePullRequest` rename is noted in `7ce5ec802`). `docs/mcp.md` (with the rename table), `docs/api-parity.md`, the prompts, the QA skill, both READMEs, and `backend-v2/AGENTS.md` name only the new tools (t006, t008).
 - **Gates.** `tools/list` measures 96,458 bytes against a 96 KiB gate, and the tool count is 43 (t005).
 - **Directories.** On 2026-10-18, with the deploy through `8d751b15b`, the OpenAI rescan has no "operations that are not individually exposed" finding, and Claude's Tools step lists all 43 tools with no flags (t007).
-- **Follow-ups outside this milestone:** [w1/173](../../173.md) (`createLedger`/`updateLedger` need review, waiting on the user's decision) and [w1/171](../../blocked/171.md) (the website's MCP pages). The `mergePullRequest` rename (w1/172) reaches OpenAI with the next deploy.
+- **Follow-ups outside this milestone:** [w1/173](../../blocked/173.md) (`createLedger`/`updateLedger` need review, waiting on the user's decision) and [w1/171](../../blocked/171.md) (the website's MCP pages). The `mergePullRequest` rename (w1/172) reaches OpenAI with the next deploy.
 
 ## Source + Goal linkage
 

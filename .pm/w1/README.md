@@ -68,7 +68,6 @@ m39–m40 were materialized on 2026-10-18 from [PRFAQ005](../../docs/prfaqs/PRFA
 
 ## Inbox
 
-- [173](./173.md) — `createLedger` and `updateLedger` need further review: they can publish a ledger (from the w1/m38 rescan)
 - [172](./172.md) — In-place bank approval for plan changes with Stripe.js; needs the user's approval of the dependency (follow-up to w1/m39/t007).
 
 
@@ -80,6 +79,7 @@ The four mobile QA findings filed on 2026-09-16 were drained the same day: [031]
 
 Blocked notes live under [`blocked/`](./blocked/) with their reason and **Unblock:** condition; they keep their IDs and return to the open tree when work can resume.
 
+- [173](./blocked/173.md) — `createLedger` and `updateLedger` need further review: they can publish a ledger — **blocked:** default `private` to true everywhere, drop it from MCP, or keep it described. **Unblock:** the user picks one.
 - [171](./blocked/171.md) — The website's MCP pages name tools that no longer exist — **blocked:** the pages live in the website's repository and must wait for the w1/m38 backend deploy. **Unblock:** the user routes the change there once the deploy is live.
 - [033](./blocked/033.md) — Slice-delete success precedes removal by minutes; a refetch resurrects the row — **blocked:** no async-apply code exists in this monorepo and the acceptance cannot be proven here. **Unblock:** hosted diagnosis naming the lagging layer, or a local full-stack repro. Cleared by the user (hosted access plus QA credentials).
 
