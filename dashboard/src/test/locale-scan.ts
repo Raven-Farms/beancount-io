@@ -412,9 +412,11 @@ export function untranslatedAgainstEnglish(
 }
 
 /**
- * Entries of a `locale/key` identical-by-design allowlist whose message no
- * longer matches English. A stale entry would otherwise excuse a future
- * regression on that key silently.
+ * Entries of a `locale/key` identical-by-design allowlist that no longer
+ * describe a copy: the locale now translates the key, or the key is gone. A
+ * stale entry would otherwise excuse a future regression on that key
+ * silently. A key removed from both the locale and English used to compare
+ * equal (`undefined === undefined`) and linger.
  */
 export function staleIdenticalEntries(
   allowlist: Readonly<Record<string, string>>,
@@ -424,6 +426,7 @@ export function staleIdenticalEntries(
   return Object.keys(allowlist).filter((entry) => {
     const [locale, ...rest] = entry.split("/");
     const key = rest.join("/");
-    return catalogs[locale]?.[key] !== english[key];
+    const message = catalogs[locale]?.[key];
+    return message === undefined || message !== english[key];
   });
 }
