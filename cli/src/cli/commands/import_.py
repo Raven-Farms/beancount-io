@@ -13,6 +13,8 @@ import os
 import re
 import shlex
 import unicodedata
+from collections.abc import Iterator
+from contextlib import contextmanager
 from enum import StrEnum
 from itertools import groupby
 from pathlib import Path
@@ -744,15 +746,78 @@ def import_entries(
     carried_delimiter = chosen_delimiter
     typed_keys: Any = None
     typed_key_names: set[str] = set()
+
+    def settings_notes(date_format: str | None, *, refusal: bool = False) -> list[str]:
+        """Resolved settings for output; only recalled or inferred settings enrich refusals."""
+        if refusal and csv_origin == "--csv":
+            return []
+        frontend_notes: list[str] = [*config_notes]
+        if remembered_run:
+            columns_only = _strip_spec_keys(csv_request or "", {"delimiter", "encoding", "sign"})
+            if recalled_sign_ledger:
+                columns_only = f"{columns_only},sign=ledger"
+            if csv_encoding != "utf-8":
+                # One --csv keeps the echoed columns when the line is pasted.
+                columns_only = f"{columns_only},encoding={csv_encoding}"
+            settings = [f"--csv {_shell_spec(columns_only)}"]
+            if csv_run_account is not None:
+                settings.append(shlex.join(["--account", csv_run_account]))
+            if date_format is not None:
+                settings.append(shlex.join(["--date-format", date_format]))
+            if csv_rules_arg is not None:
+                settings.append(shlex.join(["--rules", str(csv_rules_arg)]))
+            if default_account is not None:
+                settings.append(f"--default-account {default_account}")
+            if carried_delimiter is not None:
+                settings.append(f"--delimiter {_display_delimiter(carried_delimiter)}")
+            if recalled_source is not None and recalled_source != source.name:
+                frontend_notes.append(
+                    f"Using settings remembered from {recalled_source} for {source.name}: {' '.join(settings)}."
+                )
+            else:
+                frontend_notes.append(f"Using remembered settings for {source.name}: {' '.join(settings)}.")
+        elif csv_origin == "inferred --csv":
+            frontend_notes.append(
+                f"Read the column mapping from the header row: --csv {_shell_spec(csv_request or '')}"
+                + (f" --date-format {shlex.quote(date_format)}" if date_format is not None else "")
+                + ". Pass --csv to override."
+            )
+        else:
+            delimiter_note = (
+                f", delimiter {_display_delimiter(csv_delimiter)}"
+                if csv_delimiter is not None and csv_delimiter != ","
+                else ""
+            )
+            encoding_note = f", encoding {csv_encoding}" if csv_encoding != "utf-8" else ""
+            frontend_notes.append(f"Using column mapping (--csv{delimiter_note}{encoding_note}).")
+        frontend_notes.extend(recall_notes)
+        frontend_notes.extend(inferred_notes)
+        return frontend_notes
+
+    @contextmanager
+    def preserve_settings_notes(*, failed_inference: bool = False) -> Iterator[None]:
+        """Keep known settings on early refusals without claiming inference succeeded."""
+        try:
+            yield
+        except UsageError as exc:
+            notes = (
+                [*config_notes, *recall_notes, *inferred_notes]
+                if failed_inference
+                else settings_notes(date_format, refusal=True)
+            )
+            exc.details = list(dict.fromkeys([*notes, *exc.details]))
+            raise
+
     if csv_request is not None and csv_request.strip().casefold() == "auto":
-        csv_request = _inferred_mapping(
-            source,
-            explicit=True,
-            notes=inferred_notes,
-            delimiter=csv_delimiter,
-            encoding=csv_encoding,
-            account=csv_account,
-        )
+        with preserve_settings_notes(failed_inference=True):
+            csv_request = _inferred_mapping(
+                source,
+                explicit=True,
+                notes=inferred_notes,
+                delimiter=csv_delimiter,
+                encoding=csv_encoding,
+                account=csv_account,
+            )
         csv_origin = "inferred --csv"
     if csv_request is not None and csv_request.strip().casefold() != "auto":
         try:
@@ -783,14 +848,15 @@ def import_entries(
                     typed_key_names = {part.partition("=")[0].strip() for part in split_spec(csv_request)}
                     csv_request = None
                 else:
-                    csv_request = _inferred_mapping(
-                        source,
-                        explicit=True,
-                        notes=inferred_notes,
-                        delimiter=csv_delimiter,
-                        encoding=csv_encoding,
-                        account=csv_account,
-                    )
+                    with preserve_settings_notes(failed_inference=True):
+                        csv_request = _inferred_mapping(
+                            source,
+                            explicit=True,
+                            notes=inferred_notes,
+                            delimiter=csv_delimiter,
+                            encoding=csv_encoding,
+                            account=csv_account,
+                        )
                     if peek.sign != "bank" and csv_request is not None:
                         csv_request = f"{csv_request},sign={peek.sign}"
                     csv_origin = "inferred --csv"
@@ -919,20 +985,22 @@ def import_entries(
                         f"file: {source.name} is read bank-signed. Pass --csv sign=ledger if it is ledger-signed."
                     )
         elif config is None and _config_available(file, config_notes) is None:
-            csv_request = _inferred_mapping(
-                source,
-                explicit=False,
-                notes=inferred_notes,
-                delimiter=csv_delimiter,
-                encoding=csv_encoding,
-                account=csv_account,
-            )
+            with preserve_settings_notes(failed_inference=True):
+                csv_request = _inferred_mapping(
+                    source,
+                    explicit=False,
+                    notes=inferred_notes,
+                    delimiter=csv_delimiter,
+                    encoding=csv_encoding,
+                    account=csv_account,
+                )
             if csv_request is not None:
                 csv_origin = "inferred --csv"
 
     csv_mode = csv_request is not None
     if csv_mode and csv_delimiter is None:
-        csv_delimiter = detect_delimiter(source, encoding=csv_encoding)
+        with preserve_settings_notes():
+            csv_delimiter = detect_delimiter(source, encoding=csv_encoding)
     if csv_origin == "inferred --csv" and csv_request is not None:
         # The echoed spec carries what was assumed, so it pastes back verbatim.
         if csv_delimiter is not None and csv_delimiter != ",":
@@ -961,7 +1029,7 @@ def import_entries(
                 f"--importer selects a Python importer by name, but this import reads {source.name} with "
                 f"{mapping_source}, which has no named importers. Remove --importer, or choose a Python "
                 "importer with --config FILE.",
-                details=config_notes,
+                details=settings_notes(date_format, refusal=True),
             )
         if csv_run_account is None or csv_request is None:
             if csv_origin == "inferred --csv":
@@ -972,72 +1040,31 @@ def import_entries(
                     "--config FILE.",
                     # The settings notes too: an unreadable settings directory
                     # is why nothing was remembered here (w5/525).
-                    details=[*config_notes, *recall_notes, *inferred_notes],
+                    details=settings_notes(date_format, refusal=True),
                 )
             raise UsageError(
                 # No example account: one that was never typed sent pasted
                 # savings rows into checking (w5/470, w5/612).
                 "--csv needs --account ACCOUNT, naming the account the export belongs to.",
-                details=[*config_notes, *recall_notes, *inferred_notes],
+                details=settings_notes(date_format, refusal=True),
             )
         mapping = parse_mapping(csv_request)
         spec_delimiter = mapping.delimiter
-        _check_delimiter_conflict(flag_delimiter, spec_delimiter)
+        with preserve_settings_notes():
+            _check_delimiter_conflict(flag_delimiter, spec_delimiter)
         if spec_delimiter is not None:
             csv_delimiter = spec_delimiter
         if mapping.encoding is not None:
             csv_encoding = mapping.encoding
-        delimiter_note = ""
-        if csv_delimiter is not None and csv_delimiter != ",":
-            delimiter_note = f", delimiter {_display_delimiter(csv_delimiter)}"
-        encoding_note = f", encoding {csv_encoding}" if csv_encoding != "utf-8" else ""
-
-        def settings_notes(date_format: str | None) -> list[str]:
-            """The notes a run prints first, and a refusal lists first (w5/282, w5/525)."""
-            frontend_notes: list[str] = [*config_notes]
-            if remembered_run:
-                columns_only = _strip_spec_keys(csv_request or "", {"delimiter", "encoding", "sign"})
-                if recalled_sign_ledger:
-                    columns_only = f"{columns_only},sign=ledger"
-                if csv_encoding != "utf-8":
-                    # One `--csv`: a second one would replace the columns when the
-                    # line is pasted back, since the last `--csv` wins (w5/283).
-                    columns_only = f"{columns_only},encoding={csv_encoding}"
-                settings = [f"--csv {_shell_spec(columns_only)}", shlex.join(["--account", csv_run_account])]
-                if date_format is not None:
-                    settings.append(shlex.join(["--date-format", date_format]))
-                if csv_rules_arg is not None:
-                    settings.append(shlex.join(["--rules", str(csv_rules_arg)]))
-                if default_account is not None:
-                    settings.append(f"--default-account {default_account}")
-                if carried_delimiter is not None:
-                    settings.append(f"--delimiter {_display_delimiter(carried_delimiter)}")
-                if recalled_source is not None and recalled_source != source.name:
-                    frontend_notes.append(
-                        f"Using settings remembered from {recalled_source} for {source.name}: {' '.join(settings)}."
-                    )
-                else:
-                    frontend_notes.append(f"Using remembered settings for {source.name}: {' '.join(settings)}.")
-            elif csv_origin == "inferred --csv":
-                frontend_notes.append(
-                    f"Read the column mapping from the header row: --csv {_shell_spec(csv_request or '')}"
-                    + (f" --date-format {shlex.quote(date_format)}" if date_format is not None else "")
-                    + ". Pass --csv to override."
-                )
-            else:
-                frontend_notes.append(f"Using column mapping (--csv{delimiter_note}{encoding_note}).")
-            frontend_notes.extend(recall_notes)
-            frontend_notes.extend(inferred_notes)
-            return frontend_notes
-
         if date_format is None:
-            date_format, ambiguous, rejection = inspect_date_column(
-                source,
-                mapping.columns["date"],
-                delimiter=csv_delimiter,
-                encoding=csv_encoding,
-                mapped_columns=mapping.columns,
-            )
+            with preserve_settings_notes():
+                date_format, ambiguous, rejection = inspect_date_column(
+                    source,
+                    mapping.columns["date"],
+                    delimiter=csv_delimiter,
+                    encoding=csv_encoding,
+                    mapped_columns=mapping.columns,
+                )
             if rejection is not None:
                 # No known format reads the whole column: name the cell that
                 # ruled out the last one, never a format the user did not pick.
@@ -1047,7 +1074,7 @@ def import_entries(
                     f"{mapping.columns['date']!r} with {fits}. Correct the cell, or pass --date-format with the "
                     "file's strptime format (for example --date-format %d.%m.%y).",
                     # The remembered-settings note first, as other refusals list it (w5/525).
-                    details=settings_notes(None),
+                    details=settings_notes(None, refusal=True),
                 )
             if date_format is None:
                 date_format = "%Y-%m-%d"
@@ -1061,15 +1088,16 @@ def import_entries(
             # exports can share headers without sharing a date convention.
             # Ambiguous files cannot prove a mismatch, so only an unambiguous
             # disagreement refuses; an unreadable column keeps the memory.
-            inferred_format, ambiguous = infer_date_format(
-                source, mapping.columns["date"], delimiter=csv_delimiter, encoding=csv_encoding
-            )
+            with preserve_settings_notes():
+                inferred_format, ambiguous = infer_date_format(
+                    source, mapping.columns["date"], delimiter=csv_delimiter, encoding=csv_encoding
+                )
             if inferred_format is not None and not ambiguous and inferred_format != recalled_date_format:
                 raise UsageError(
                     f"Remembered --date-format {shlex.quote(recalled_date_format)} does not match {source.name}, "
                     f"whose dates look like {inferred_format}. Pass --date-format {shlex.quote(inferred_format)} "
                     "(or --csv) for this file.",
-                    details=recall_notes,
+                    details=settings_notes(date_format, refusal=True),
                 )
 
         frontend_notes = settings_notes(date_format)

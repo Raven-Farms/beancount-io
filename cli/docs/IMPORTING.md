@@ -663,5 +663,10 @@ envelope. An application blocked by conflicts or validation exits **4** or
 the same `notes`, `date_format` and `remembered` fields a preview carries. A
 failure with no preview, on a run whose column mapping was remembered or read
 from the header row, lists those settings notes first in the error details.
+This includes refusals while checking remembered date formats or decoding
+the next export. If reading the header fails before a mapping can be found,
+the details still include any warning about unreadable remembered settings.
+The same details appear in human output. Fully typed column mappings keep
+the error’s own details.
 Review refusals also list the affected preview row numbers and reasons in
 the error details, including in human `--apply` output.
