@@ -5,7 +5,10 @@ import {
   type GiteaCommitClient,
 } from "@/foundation/clients/load-cached-ledger-file-map";
 import { getCacheHelper } from "@/foundation/clients/build-cache";
-import { countLedgerDirectives } from "@/foundation/rustledger";
+import {
+  CoalescingLruCache,
+  countLedgerDirectives,
+} from "@/foundation/rustledger";
 import { getMaxDirectives } from "@/core/backend-v2-limits";
 import { DomainError, ErrorCategory } from "@/shared/errors";
 import { logger } from "@/shared/logger";
@@ -38,6 +41,44 @@ async function countMap(files: Record<string, string>): Promise<number> {
   return countLedgerDirectives(files, "main.bean");
 }
 
+/**
+ * A commit's count, which every checked write and every push-gate count would
+ * otherwise reparse. Keyed by the immutable commit, so a push moves to a new
+ * key; the values are numbers, so a few hundred entries cost nothing.
+ */
+const committedCounts = new CoalescingLruCache<number>(256);
+
+/**
+ * The committed file map at HEAD and its directive count. Committed files
+ * only: managed price feeds are virtual, not the customer's directives (ADR 015
+ * section 9), so a feed can never push a ledger over its tier limit, and a
+ * count never triggers a feed fetch.
+ */
+async function loadCommittedCount(
+  client: GiteaApi<unknown>,
+  owner: string,
+  repoName: string,
+): Promise<{
+  files: Record<string, string>;
+  count: number;
+  sha: string | null;
+}> {
+  const commitClient = client as unknown as GiteaCommitClient;
+  // One Gitea round trip: both resolve HEAD through the same coalesced call.
+  const [sha, { files }] = await Promise.all([
+    resolveHeadShaCoalesced(commitClient, owner, repoName),
+    loadCachedFileMapForRepo(commitClient, getCacheHelper(), owner, repoName, {
+      committedOnly: true,
+    }),
+  ]);
+  const count = sha
+    ? await committedCounts.getOrLoad(`${owner}/${repoName}@${sha}`, () =>
+        countMap(files),
+      )
+    : await countMap(files);
+  return { files, count, sha: sha ?? null };
+}
+
 export interface DirectiveCount {
   count: number;
   /** The commit the count was computed from; null if the repo has no commits. */
@@ -60,17 +101,8 @@ export async function countDirectivesForRepo(
   owner: string,
   repoName: string,
 ): Promise<DirectiveCount> {
-  const commitClient = client as unknown as GiteaCommitClient;
-  // Committed files only: managed price feeds are virtual, not the customer's
-  // directives (ADR 015 section 9), so a feed can never push a ledger over its
-  // tier limit, and a count never triggers a feed fetch.
-  const [sha, { files }] = await Promise.all([
-    resolveHeadShaCoalesced(commitClient, owner, repoName),
-    loadCachedFileMapForRepo(commitClient, getCacheHelper(), owner, repoName, {
-      committedOnly: true,
-    }),
-  ]);
-  return { count: await countMap(files), sha: sha ?? null };
+  const { count, sha } = await loadCommittedCount(client, owner, repoName);
+  return { count, sha };
 }
 
 /**
@@ -119,14 +151,9 @@ export async function checkDirectiveLimitForFileChanges(
     limit = await getMaxDirectives(owner);
     if (limit === null || limit < 0) return;
 
-    const { files } = await loadCachedFileMapForRepo(
-      client as unknown as GiteaCommitClient,
-      getCacheHelper(),
-      owner,
-      repoName,
-      { committedOnly: true },
-    );
-    currentTotal = await countMap(files);
+    const committed = await loadCommittedCount(client, owner, repoName);
+    const { files } = committed;
+    currentTotal = committed.count;
 
     const projected: Record<string, string> = { ...files };
     for (const [path, newBase64] of beanChanges) {
