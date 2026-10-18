@@ -16,6 +16,7 @@ import { createLocalization } from "@/i18n/init";
 import type { RouterContext } from "@/common/types/router-context";
 import NotFoundPage from "@/common/root-route/not-found-page";
 import { Route as RootRoute } from "@/routes/__root";
+import { Route as CatchAllRoute } from "@/routes/$";
 import { Route as FilesTreeRoute } from "@/routes/ledger.$ledgerOwner.$ledgerName.files.tree.$branch.$";
 import { createLedgerHead } from "../ledger-head";
 
@@ -92,9 +93,17 @@ function testRouter(
     head: FilesTreeRoute.options.head,
     component: () => <main>Directory fixture</main>,
   });
+  const catchAll = createRoute({
+    getParentRoute: () => root,
+    path: "$",
+    loader: CatchAllRoute.options.loader,
+    head: CatchAllRoute.options.head,
+    component: NotFoundPage,
+  });
   const router = createRouter({
     routeTree: root.addChildren([
       ledger.addChildren([overview, holdings, files]),
+      catchAll,
     ]),
     context,
     isServer,
@@ -212,50 +221,65 @@ describe("ledger document head ownership", () => {
     }
   });
 
-  it("keeps one not-found title through SSR and hydration when the ledger loader denies access", async () => {
-    const assertNotFound = (doc: Document) => {
-      expect(
-        [...doc.querySelectorAll("title")].map((node) => node.textContent),
-      ).toEqual(["Page Not Found"]);
-      expect(doc.querySelectorAll('meta[name="description"]')).toHaveLength(1);
-      expect(
-        [...doc.querySelectorAll('meta[name="robots"]')].map((node) =>
-          node.getAttribute("content"),
-        ),
-      ).toEqual(["noindex, follow"]);
-      expect(
-        doc.querySelectorAll('link[rel="canonical"], link[rel="alternate"]'),
-      ).toHaveLength(0);
-      expect(
-        [...doc.querySelectorAll("h1")].map((node) => node.textContent),
-      ).toEqual(["404"]);
-    };
-    const server = testRouter(true, true);
-    await server.load();
-    expect(server.state.matches[0].globalNotFound).toBe(true);
-    const html = renderToString(<RouterProvider router={server} />);
-    const parsed = new DOMParser().parseFromString(html, "text/html");
-    assertNotFound(parsed);
-    const original = document.documentElement.innerHTML;
-    const originalLang = document.documentElement.lang;
-    document.documentElement.lang = "en";
-    document.documentElement.innerHTML = parsed.documentElement.innerHTML;
-    const client = testRouter(true);
-    await client.load();
-    const recoverable = vi.fn();
-    let root: ReturnType<typeof hydrateRoot> | undefined;
-    try {
-      await act(async () => {
-        root = hydrateRoot(document, <RouterProvider router={client} />, {
-          onRecoverableError: recoverable,
+  it.each([
+    [true, "/ledger/open_ledger/stock-example?time=2026"],
+    [false, "/missing/%E5%B8%B3%20book/%3F%23?lang=en#section"],
+  ] as const)(
+    "keeps the exact 404 path in one title through SSR, hydration and navigation (%s, %s)",
+    async (missingLedger, initialEntry) => {
+      const assertNotFound = (doc: Document, pathname: string) => {
+        expect(
+          [...doc.querySelectorAll("title")].map((node) => node.textContent),
+        ).toEqual([`Page Not Found — ${pathname}`]);
+        expect(doc.querySelectorAll('meta[name="description"]')).toHaveLength(
+          1,
+        );
+        expect(
+          [...doc.querySelectorAll('meta[name="robots"]')].map((node) =>
+            node.getAttribute("content"),
+          ),
+        ).toEqual(["noindex, follow"]);
+        expect(
+          doc.querySelectorAll('link[rel="canonical"], link[rel="alternate"]'),
+        ).toHaveLength(0);
+        expect(
+          [...doc.querySelectorAll("h1")].map((node) => node.textContent),
+        ).toEqual(["404"]);
+      };
+      const pathname = initialEntry.split(/[?#]/, 1)[0];
+      const server = testRouter(missingLedger, true, initialEntry);
+      await server.load();
+      expect(server.state.matches[0].globalNotFound).toBe(true);
+      const html = renderToString(<RouterProvider router={server} />);
+      const parsed = new DOMParser().parseFromString(html, "text/html");
+      assertNotFound(parsed, pathname);
+      const original = document.documentElement.innerHTML;
+      const originalLang = document.documentElement.lang;
+      document.documentElement.lang = "en";
+      document.documentElement.innerHTML = parsed.documentElement.innerHTML;
+      const client = testRouter(missingLedger, false, initialEntry);
+      await client.load();
+      const recoverable = vi.fn();
+      let root: ReturnType<typeof hydrateRoot> | undefined;
+      try {
+        await act(async () => {
+          root = hydrateRoot(document, <RouterProvider router={client} />, {
+            onRecoverableError: recoverable,
+          });
         });
-      });
-      assertNotFound(document);
-      expect(recoverable).not.toHaveBeenCalled();
-    } finally {
-      await act(async () => root?.unmount());
-      document.documentElement.innerHTML = original;
-      document.documentElement.lang = originalLang;
-    }
-  });
+        assertNotFound(document, pathname);
+        await act(async () => {
+          await client.navigate({
+            to: "/missing/another%20page?lang=en#section",
+          });
+        });
+        assertNotFound(document, "/missing/another%20page");
+        expect(recoverable).not.toHaveBeenCalled();
+      } finally {
+        await act(async () => root?.unmount());
+        document.documentElement.innerHTML = original;
+        document.documentElement.lang = originalLang;
+      }
+    },
+  );
 });
