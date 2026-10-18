@@ -327,9 +327,40 @@ _ROOT_OPTIONS = ("name_assets", "name_liabilities", "name_equity", "name_income"
 _DEFAULT_ROOTS = ("Assets", "Liabilities", "Equity", "Income", "Expenses")
 
 
-_ROOT_NAME_LINE = re.compile(
-    r'^option[ \t]+"(name_(?:assets|liabilities|equity|income|expenses))"[ \t]+"([^"\\\n]*)"', re.MULTILINE
-)
+def root_name_options(text: str) -> dict[str, str]:
+    """The root-name options accepted from source text, without parsing a ledger.
+
+    Match the loader's BOM and Unicode handling, then use its lexer and option
+    converter. Comments, quoted directive text and malformed option lines must
+    not rename an account root; an invalid value keeps the last valid value.
+    The insertion order follows each option's first valid appearance.
+    """
+    from beancount.parser.lexer import lex_iter_string
+    from beancount.parser.options import options_validate_root_account
+
+    named: dict[str, str] = {}
+
+    def accept(tokens: list[tuple[str, Any]]) -> None:
+        if [kind for kind, _ in tokens] != ["OPTION", "STRING", "STRING"]:
+            return
+        key, value = tokens[1][1], tokens[2][1]
+        if key not in _ROOT_OPTIONS:
+            return
+        try:
+            named[key] = options_validate_root_account(value)  # type: ignore[no-untyped-call]
+        except ValueError:
+            pass
+
+    tokens: list[tuple[str, Any]] = []
+    text = unicodedata.normalize("NFC", text.removeprefix("\ufeff"))
+    for kind, _, _, value in lex_iter_string(text):  # type: ignore[no-untyped-call]
+        if kind == "EOL":
+            accept(tokens)
+            tokens.clear()
+        elif len(tokens) < 4:
+            tokens.append((kind, value))
+    accept(tokens)
+    return named
 
 
 def root_names_of(file: Path) -> tuple[str, ...]:
@@ -338,13 +369,13 @@ def root_names_of(file: Path) -> tuple[str, ...]:
     For refusing an account under a root the ledger does not use before
     anything loads: `add open Expenses:X` on a ledger whose expenses root is
     `Aufwand` ended at Beancount's bare "Invalid account name" (w5/402).
-    Beancount takes these options from the root file, the last one winning.
+    Beancount takes these options from the root file, the last valid one winning.
     """
     try:
         text = file.read_text(encoding="utf-8", errors="replace")
     except OSError:
         return _DEFAULT_ROOTS
-    named = dict(_ROOT_NAME_LINE.findall(text))
+    named = root_name_options(text)
     return tuple(named.get(key) or default for key, default in zip(_ROOT_OPTIONS, _DEFAULT_ROOTS, strict=True))
 
 

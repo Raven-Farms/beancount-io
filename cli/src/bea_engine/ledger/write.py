@@ -33,6 +33,7 @@ from bea_engine.ledger.text import (
     escape_format_characters,
     lexer_lines,
     new_account_format_problem,
+    root_name_options,
     single_line,
 )
 from bea_engine.paths import expand_path
@@ -3190,11 +3191,6 @@ def _appended_or_report(target: Path, original: bytes, texts: list[str]) -> str:
     return content
 
 
-_ROOT_NAME_OPTION = re.compile(
-    rb'^option[ \t]+"(name_(?:assets|liabilities|equity|income|expenses))"[ \t]+"([^"\\\n]*)"', re.MULTILINE
-)
-
-
 def new_include_seed(snapshot: LedgerSnapshot, target: Path) -> bytes:
     """The root's `name_*` option lines, for an include this write is about to create; else nothing.
 
@@ -3204,10 +3200,8 @@ def new_include_seed(snapshot: LedgerSnapshot, target: Path) -> bytes:
     """
     if snapshot.stats.get(target.resolve(), os.stat_result((0,) * 10)) is not None:
         return b""
-    lines = dict.fromkeys(
-        f'option "{key.decode()}" "{name.decode()}"'
-        for key, name in _ROOT_NAME_OPTION.findall(snapshot.contents.get(snapshot.root, b""))
-    )
+    text = snapshot.contents.get(snapshot.root, b"").decode("utf-8", errors="replace")
+    lines = (f'option "{key}" "{name}"' for key, name in root_name_options(text).items())
     return "".join(f"{line}\n" for line in lines).encode()
 
 
@@ -3217,6 +3211,7 @@ def open_pushes(text: str) -> list[tuple[int, str]]:
 
     open_: dict[tuple[str, str], list[int]] = {}
     pending: str | None = None
+    text = unicodedata.normalize("NFC", text.removeprefix("\ufeff"))
     for kind, line, _, value in lexer.lex_iter_string(text):  # type: ignore[no-untyped-call]
         if pending is not None and kind in {"TAG", "KEY"}:
             key = ("tag" if kind == "TAG" else "meta", str(value))

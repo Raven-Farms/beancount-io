@@ -1166,6 +1166,8 @@ default roots unless it repeats them. A new destination on a ledger with renamed
 roots starts with the root's `name_*` option lines. A write into an existing
 include that lacks them is refused, and the error lists the lines to add at
 the top of that file.
+Write checks and new-file seeds use NFC root names and the last valid option
+values; a leading UTF-8 BOM does not hide the first option.
 
 ```bash
 bea --file main.bean add transaction --into 2026.bean \
@@ -1230,7 +1232,10 @@ reports `Unused account` as staged, and the account's first `add transaction`,
 missing account print the `add open` line with the flag. Syntax errors and pad references to unknown or inactive accounts
 are always rejected. A syntax error is text Beancount could not read; what it
 reports about text it did read — an unknown option, a duplicate metadata key, an
-unbalanced `pushtag` — is tolerated like any other existing error. For an
+unbalanced `pushtag` — is tolerated like any other existing error. An append
+destination that ends inside `pushtag` or `pushmeta` is always refused, even
+with `--allow-errors` or a leading UTF-8 BOM, because the new entry would
+inherit that context. Close the push or choose another destination. For an
 opening adjustment, prefer an explicit atomic pad and balance:
 
 ```bash
