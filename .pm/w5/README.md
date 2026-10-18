@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [692 — Import before init's date blocks one account at a time; remedy skips the opening balance](./692.md)
 - [693 — init --currency X_ passes init's check, then fails with Invalid token](./693.md)
 - [694 — bea --file DIR init exits 4 "never overwrites" for an empty directory](./694.md)
 - [695 — A ~name path with no such user exits 1 "Could not determine home directory"](./695.md)
