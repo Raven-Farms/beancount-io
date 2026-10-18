@@ -843,6 +843,20 @@ def detect_delimiter(source: Path, encoding: str = "utf-8") -> str:
     return best
 
 
+_SEPARATOR_NAMES = {",": "comma", ";": "semicolon", "\t": "tab", "|": "pipe"}
+
+
+def unsplit_header(headers: list[str], used: str | None) -> str | None:
+    """The separator a one-column header holds when the delimiter in force did not split it, or None."""
+    if len(headers) != 1:
+        return None
+    return next((sep for sep in _SEPARATOR_NAMES if sep != used and sep in headers[0]), None)
+
+
+def _shown_delimiter(delimiter: str | None) -> str:
+    return "tab" if delimiter == "\t" else f"'{delimiter or ','}'"
+
+
 def parse_delimiter(value: str) -> str:
     """Normalize ``--delimiter`` to a single character (``,``, ``;``, tab, ``|``).
 
@@ -1121,6 +1135,15 @@ class CsvImporter:
             wanted.setdefault("category", category_header)
         for role, column in wanted.items():
             if counts[column] == 0:
+                other = unsplit_header(headers, self._delimiter)
+                if other is not None:
+                    # A forced delimiter that does not split the header read as
+                    # a missing `Date` column, plainly present (w5/622).
+                    raise UsageError(
+                        f"{source.name}'s header was read as one column ({headers[0]!r}) with delimiter "
+                        f"{_shown_delimiter(self._delimiter)}, but it looks {_SEPARATOR_NAMES[other]}-separated. "
+                        f"Pass --delimiter {_shown_delimiter(other)}, or omit --delimiter so bea detects it."
+                    )
                 lookalike = _lookalike_header(column, headers)
                 hint = f" Did you mean {lookalike!r}? Column names are case-sensitive." if lookalike else ""
                 raise UsageError(f"The mapping names column {column!r} for {role}, which {source.name} lacks.{hint}")

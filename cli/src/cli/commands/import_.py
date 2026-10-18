@@ -262,13 +262,17 @@ def _inferred_mapping(
             return None
         columns = ", ".join(headers) if headers else "(none)"
         used = delimiter if delimiter is not None else detect_delimiter(source, encoding=encoding)
-        if headers and len(headers) == 1 and any(sep in headers[0] for sep in (";", "\t", "|")):
+        single = headers[0] if headers and len(headers) == 1 else None
+        other = next((sep for sep in (",", ";", "\t", "|") if single and sep != used and sep in single), None)
+        if other is not None:
+            # Every separator, a comma under a forced `;` too: the mapping
+            # suggested instead failed the same way when followed (w5/622).
+            names = {",": "comma", ";": "semicolon", "\t": "tab", "|": "pipe"}
             raise UsageError(
                 f"Cannot read a column mapping from the header row of {source.name}. "
-                f"The file looks semicolon-, tab-, or pipe-separated but was read as one column ({headers[0]!r}) "
+                f"The file looks {names[other]}-separated but was read as one column ({single!r}) "
                 f"with delimiter {_display_delimiter(used)}. "
-                "Pass --delimiter ';' (or tab, or '|'), --csv delimiter=';' — "
-                "or omit the override so bea can detect it.",
+                f"Pass --delimiter {_display_delimiter(other)} — or omit the override so bea can detect it.",
                 details=notes,
             )
         clause = f" (delimiter {_display_delimiter(used)})" if used != "," else ""
