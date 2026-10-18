@@ -27,7 +27,13 @@ from pathlib import Path
 from typing import Any
 
 from bea_engine import stopping
-from bea_engine.ledger.text import bea_command, lexer_lines, single_line
+from bea_engine.ledger.text import (
+    bea_command,
+    escape_format_characters,
+    lexer_lines,
+    new_account_format_problem,
+    single_line,
+)
 from bea_engine.protocol import AuthError, ConflictError, LedgerError, StagingFailed, UsageError, notice
 from bea_engine.query import format_error, same_file
 
@@ -1561,7 +1567,7 @@ def _collapse_repeats(records: list[_ErrorRecord]) -> list[str]:
             message += f" Same problem on {len(others)} more line{plural}: {', '.join(others)}."
         messages.append(message)
         messages.extend(occurrences[0].hints)
-    return messages
+    return [escape_format_characters(message) for message in messages]
 
 
 #: How far `including_root` looks: the leaf's directory and this many above it.
@@ -2007,7 +2013,9 @@ def validate_candidate(
                     suggestion = f" Did you mean {', '.join(matches)}?" if matches else ""
                     # An `open` under a root the ledger does not use can never
                     # load, so the remedy is the root, not the directive (w5/154).
-                    if account.split(":", 1)[0] in roots:
+                    if (problem := new_account_format_problem(account)) is not None:
+                        suggestion += f" {problem}"
+                    elif account.split(":", 1)[0] in roots:
                         # Pasted, a bare `bea add open` opened the account in
                         # whatever ledger cwd discovery found (w5/619).
                         suggestion += (

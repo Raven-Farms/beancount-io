@@ -30,6 +30,7 @@ from bea_engine.ledger.text import (
     bea_command,
     checked_operating_currencies,
     ledger_roots,
+    new_account_format_problem,
     reports_unused_accounts,
     unknown_root_message,
 )
@@ -1650,6 +1651,9 @@ def _blocked_reason(
     if foreign:
         return unknown_root_message(foreign[0], roots)
     if missing:
+        for name in missing:
+            if (problem := new_account_format_problem(name)) is not None:
+                return problem
         remedies = []
         flag = " --allow-errors" if stage_opens else ""
         bea = bea_command(ledger)

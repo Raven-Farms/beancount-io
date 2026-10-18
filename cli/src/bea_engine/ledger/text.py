@@ -439,7 +439,26 @@ def _refused_character(name: str) -> str:
     return ""
 
 
-def parse_account(name: str, roots: Collection[str] | None = None) -> str:
+def escape_format_characters(text: str) -> str:
+    """Make invisible Unicode format characters visible in a diagnostic."""
+    return "".join(
+        ascii(character)[1:-1] if unicodedata.category(character) == "Cf" else character for character in text
+    )
+
+
+def new_account_format_problem(name: str) -> str | None:
+    """Why creating this name would introduce an invisible account distinction."""
+    for character in name:
+        if unicodedata.category(character) == "Cf":
+            label = unicodedata.name(character, "FORMAT CHARACTER")
+            return (
+                f"Invalid account {name!r}. The character U+{ord(character):04X} ({label}) is not allowed. "
+                "New account names cannot contain format characters; retype the name without them."
+            )
+    return None
+
+
+def parse_account(name: str, roots: Collection[str] | None = None, *, creating: bool = False) -> str:
     """Validate an account name the way the loader will, or explain the rules.
 
     Engine-side because only Beancount knows what a valid account is: the root
@@ -459,6 +478,10 @@ def parse_account(name: str, roots: Collection[str] | None = None) -> str:
     from beancount.core.account import is_valid
 
     name = unicodedata.normalize("NFC", name)
+    # Existing loader-valid names remain usable, including ZWJ/ZWNJ in scripts
+    # that need them. New opens must not introduce invisible distinctions.
+    if creating and (problem := new_account_format_problem(name)) is not None:
+        raise protocol.UsageError(problem)
     # The lexer reads a no-break space inside an account token, so the loader
     # accepts `Expenses:Food\xa05`; an invisible character in a name is never
     # meant (w5/490).

@@ -981,7 +981,11 @@ Account syntax follows Beancount: colon-separated segments with an uppercase
 root; each subaccount starts with an uppercase letter or digit. Unicode
 letters and configured root names are supported, and so is any other non-ASCII
 character Beancount itself loads after a segment's first character, such as a
-combining mark that has no precomposed letter. An account name written in a
+combining mark that has no precomposed letter. `add open` refuses Unicode format
+characters in new names, including U+200B (zero width space), ZWJ and ZWNJ. Existing
+accounts containing them remain usable; an unopened name gets visible escapes
+and a code-point explanation instead of an unusable `add open` remedy.
+An account name written in a
 different Unicode normalization than the ledger uses — NFC where the ledger has
 NFD, which is what a name taken from a macOS file path looks like — resolves to
 the same account instead of a false unknown-account error, and the new

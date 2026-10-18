@@ -190,7 +190,7 @@ def _simple(directive_type: str, request: dict[str, Any], roots: tuple[str, ...]
         return OpenDirective.model_validate(
             {
                 "date": date,
-                "account": parse_account(_text(request, "account"), roots),
+                "account": parse_account(_text(request, "account"), roots, creating=True),
                 "currencies": currencies,
                 "booking": booking,
             },
