@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [663 — Under check_commodity with `--allow-errors`, the refusal blames the pre-existing currency, not the new one](./663.md)
 - [664 — Under nounused/pedantic, plain `add balance` cannot be a staged account's first use outside a terminal (gap in w5/221)](./664.md)
 - [665 — implicit_prices + unique_prices: a second same-day FX trade gets a bare `Disagreeing price entries` (incomplete fix of w5/397)](./665.md)
 - [666 — Plugin-triggered write refusals unattributed or misattributed (leafonly, coherent_cost, close_tree, auto_accounts)](./666.md)
