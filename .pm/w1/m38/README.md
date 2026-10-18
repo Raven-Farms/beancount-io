@@ -12,11 +12,13 @@
 | [t004](./done/t004.md) | Split the editing tools: `editLedgerFiles` and `editEntrySource` — **DONE** | 60m | t001 |
 | [t005](./done/t005.md) | Retire the grouped-dispatcher machinery and remeasure the tool-list gates — **DONE** | 40m | t002, t003, t004 |
 | [t006](./done/t006.md) | Update prompts, docs, and skills that name the old tools — **DONE** | 45m | t002, t003, t004 |
-| t007 | Verify on production: OpenAI rescan and Claude portal tools step | 20m | t005, t006 |
-| t008 | Adoption surface | 30m | t007 |
+| t008 | Adoption surface | 30m | t005, t006 |
 | t009 | Simplify | 30m | t008 |
 | t010 | Test coverage | 45m | t008, t009 |
-| t011 | Closeout | 15m | t010 |
+| t007 | Verify on production: OpenAI rescan and Claude portal tools step | 20m | t010 |
+| t011 | Closeout | 15m | t007, t010 |
+
+Re-sequenced 2026-10-18: production verification (t007) moved after Test coverage (t010). Adoption surface, Simplify, and Test coverage need no deploy. Verifying last means the directories check the revision that closes the milestone.
 
 ## Definition of done
 
