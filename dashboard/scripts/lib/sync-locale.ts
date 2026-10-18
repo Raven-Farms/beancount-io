@@ -1,5 +1,8 @@
 import { PLURAL_SUFFIX, pluralCategories } from "../../src/i18n/plural";
 
+/** The prefix a key added by the sync carries until someone translates it. */
+export const TODO_MARKER = "[TODO]";
+
 export interface TranslationEntry {
   message: string;
   description: string;
@@ -72,11 +75,30 @@ export function syncLocaleEntries(
       continue;
     }
     const { message, description } = source[sourceKey];
-    entries[key] = { message: `[TODO] ${message}`, description };
+    entries[key] = { message: `${TODO_MARKER} ${message}`, description };
     added.push(key);
   }
   const removed = Object.keys(target).filter((key) => !expected.has(key));
   return { entries, added, removed };
+}
+
+/**
+ * What syncing `target` would change, without changing it: keys `locale` is
+ * missing (its own plural forms included), keys it no longer needs, and
+ * messages still marked `[TODO]`. All empty when the catalog is in sync.
+ */
+export function catalogDrift(
+  source: Record<string, TranslationEntry>,
+  target: Record<string, TranslationEntry>,
+  locale: string,
+): { missing: string[]; obsolete: string[]; todo: string[] } {
+  const { added, removed } = syncLocaleEntries(source, target, locale);
+  const todo = Object.keys(target).filter(
+    (key) =>
+      !removed.includes(key) &&
+      target[key].message.trimStart().startsWith(TODO_MARKER),
+  );
+  return { missing: added, obsolete: removed, todo };
 }
 
 const escapeRegExp = (text: string) =>

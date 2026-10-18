@@ -18,9 +18,11 @@ import {
 } from "../src/test/locale-scan";
 import { SUPPORTED_LANGUAGES } from "../src/i18n/config";
 import {
+  catalogDrift,
   editCatalogSource,
   ownCatalogKeys,
   syncLocaleEntries,
+  TODO_MARKER,
   type TranslationEntry,
 } from "./lib/sync-locale";
 
@@ -213,29 +215,28 @@ function ownEntries(
  * - Add missing keys with [TODO] prefix
  * - Remove keys the locale does not need, keeping its own plural forms
  */
+/**
+ * A feature's English catalog and one locale's, as the entries each file
+ * writes out itself: an aggregate catalog's spread-in keys are synced and
+ * checked through the sub-feature's own file. `null` without an English file.
+ */
+async function readCatalogPair(feature: string, locale: string) {
+  const sourcePath = getLocaleFilePath(feature, "en");
+  const targetPath = getLocaleFilePath(feature, locale);
+  const source = ownEntries(await readTranslations(sourcePath), sourcePath);
+  if (Object.keys(source).length === 0) return null;
+  const target = ownEntries(await readTranslations(targetPath), targetPath);
+  return { source, target, targetPath };
+}
+
 async function syncTranslations(
   feature: string,
   locale: string,
 ): Promise<{ added: number; removed: number }> {
-  const sourcePath = getLocaleFilePath(feature, "en");
-  const targetPath = getLocaleFilePath(feature, locale);
-
-  // Read source (en) and target translations
-  const sourceTranslations = await readTranslations(sourcePath);
-  const targetTranslations = await readTranslations(targetPath);
-
-  if (Object.keys(sourceTranslations).length === 0) {
-    // No source file exists, skip
-    return { added: 0, removed: 0 };
-  }
-
-  // Only the keys each file writes out: an aggregate catalog's spread-in keys
-  // are synced through the sub-feature's own file.
-  const { entries, added, removed } = syncLocaleEntries(
-    ownEntries(sourceTranslations, sourcePath),
-    ownEntries(targetTranslations, targetPath),
-    locale,
-  );
+  const pair = await readCatalogPair(feature, locale);
+  if (!pair) return { added: 0, removed: 0 };
+  const { source, target, targetPath } = pair;
+  const { entries, added, removed } = syncLocaleEntries(source, target, locale);
 
   // If no changes needed, skip
   if (added.length === 0 && removed.length === 0) {
@@ -261,7 +262,7 @@ function countCompleted(obj: Record<string, TranslationEntry>): number {
   let count = 0;
 
   for (const value of Object.values(obj)) {
-    if (isStructuredFormat(value) && !value.message.startsWith("[TODO]")) {
+    if (isStructuredFormat(value) && !value.message.startsWith(TODO_MARKER)) {
       count++;
     }
   }
@@ -276,7 +277,7 @@ function countTodos(obj: Record<string, TranslationEntry>): number {
   let count = 0;
 
   for (const value of Object.values(obj)) {
-    if (isStructuredFormat(value) && value.message.startsWith("[TODO]")) {
+    if (isStructuredFormat(value) && value.message.startsWith(TODO_MARKER)) {
       count++;
     }
   }
@@ -361,7 +362,7 @@ async function findHalfTranslated(
     messages,
     english,
     (message, source) => untranslatedEnglishTail(message, source, locale),
-    (key) => messages[key].startsWith("[TODO]"),
+    (key) => messages[key].startsWith(TODO_MARKER),
   ).map(({ key }) => key);
 }
 
@@ -554,26 +555,71 @@ async function extractKeysFromCode(): Promise<{
  * Add missing keys to English locale files
  * Returns count of keys added per feature
  */
+/** Keys code uses for `feature` that its English catalog does not define. */
+function missingEnglishKeys(
+  feature: string,
+  keys: Set<string>,
+  english: Record<string, TranslationEntry>,
+): string[] {
+  // `determineFeatureFromKey` returns `common` for any key it cannot
+  // attribute, so this would otherwise write every unattributed key in the
+  // codebase into the shared catalog. They are read-only here.
+  if (feature in SHARED_LOCALE_DIRS) return [];
+  return Array.from(keys).filter((key) => !(key in english));
+}
+
+/**
+ * `--check`: what a run would change, without writing anything — keys code
+ * uses that English lacks, keys a locale is missing (its own plural forms
+ * included) or no longer needs — plus messages still marked `[TODO]`. Lists
+ * each, and returns the exit code: non-zero on any, so CI keeps
+ * `yarn i18n:prepare` a no-op on main (w0/m3).
+ */
+async function checkCatalogs(): Promise<number> {
+  const offenders: string[] = [];
+  const { keysByFeature } = await extractKeysFromCode();
+  for (const [feature, keys] of keysByFeature) {
+    const english = await readTranslations(getLocaleFilePath(feature, "en"));
+    for (const key of missingEnglishKeys(feature, keys, english)) {
+      offenders.push(`en · ${feature}: ${key} is used in code but missing`);
+    }
+  }
+  const features = getFeatureDirectories();
+  for (const locale of TARGET_LOCALES) {
+    for (const feature of features) {
+      const pair = await readCatalogPair(feature, locale);
+      if (!pair) continue;
+      const drift = catalogDrift(pair.source, pair.target, locale);
+      const where = path.relative(process.cwd(), pair.targetPath);
+      for (const key of drift.missing)
+        offenders.push(`${where}: missing ${key}`);
+      for (const key of drift.obsolete) {
+        offenders.push(`${where}: obsolete ${key}`);
+      }
+      for (const key of drift.todo) offenders.push(`${where}: [TODO] ${key}`);
+    }
+  }
+  if (offenders.length === 0) {
+    console.log("✅ Translation catalogs are in sync.");
+    return 0;
+  }
+  console.error(`❌ ${offenders.length} translation catalog problem(s):\n`);
+  for (const offender of offenders) console.error(`   ${offender}`);
+  console.error(
+    "\nRun `yarn i18n:prepare` to add and remove keys, then translate every [TODO].",
+  );
+  return 1;
+}
+
 async function addMissingKeysToEnglish(
   extractedKeys: Map<string, Set<string>>,
 ): Promise<Map<string, number>> {
   const addedCounts = new Map<string, number>();
 
   for (const [feature, keys] of extractedKeys.entries()) {
-    // `determineFeatureFromKey` returns `common` for any key it cannot
-    // attribute, so this loop would otherwise write every unattributed key in
-    // the codebase into the shared catalog. They are read-only here.
-    if (feature in SHARED_LOCALE_DIRS) continue;
     const enPath = getLocaleFilePath(feature, "en");
-
-    // Read existing English translations
     const existingTranslations = await readTranslations(enPath);
-    const existingKeys = new Set(Object.keys(existingTranslations));
-
-    // Find missing keys
-    const missingKeys = Array.from(keys).filter(
-      (key) => !existingKeys.has(key),
-    );
+    const missingKeys = missingEnglishKeys(feature, keys, existingTranslations);
 
     if (missingKeys.length === 0) {
       continue;
@@ -604,6 +650,11 @@ async function addMissingKeysToEnglish(
  * Main function
  */
 async function main() {
+  if (process.argv.includes("--check")) {
+    process.exitCode = await checkCatalogs();
+    return;
+  }
+
   console.log(
     "🌍 Translation Preparation & Sync (Feature-Based Architecture)\n",
   );

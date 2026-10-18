@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  catalogDrift,
   editCatalogSource,
   ownCatalogKeys,
   syncLocaleEntries,
@@ -203,5 +204,55 @@ const deEditor: Record<string, TranslationEntry> = {
 };
 `;
     expect([...ownCatalogKeys(aggregate)]).toEqual(["editor.title"]);
+  });
+});
+
+// `i18n:prepare --check` fails CI on each of these (w0/m3).
+describe("catalogDrift", () => {
+  const russian = {
+    "files.count_one": entry("{{count}} файл"),
+    "files.count_few": entry("{{count}} файла"),
+    "files.count_many": entry("{{count}} файлов"),
+    "files.count_other": entry("{{count}} файла"),
+    "files.title": entry("Файлы"),
+  };
+  const without = (key: string) =>
+    Object.fromEntries(Object.entries(russian).filter(([k]) => k !== key));
+
+  it("finds nothing in a catalog that is in sync", () => {
+    expect(catalogDrift(english, russian, "ru")).toEqual({
+      missing: [],
+      obsolete: [],
+      todo: [],
+    });
+  });
+
+  it("names a missing key", () => {
+    expect(catalogDrift(english, without("files.title"), "ru").missing).toEqual(
+      ["files.title"],
+    );
+  });
+
+  it("names a deleted Russian plural form", () => {
+    expect(
+      catalogDrift(english, without("files.count_few"), "ru").missing,
+    ).toEqual(["files.count_few"]);
+  });
+
+  it("names an obsolete key", () => {
+    expect(
+      catalogDrift(english, { ...russian, "files.gone": entry("x") }, "ru")
+        .obsolete,
+    ).toEqual(["files.gone"]);
+  });
+
+  it("names a message still marked [TODO]", () => {
+    const drift = catalogDrift(
+      english,
+      { ...russian, "files.title": entry("  [TODO] Files") },
+      "ru",
+    );
+    expect(drift.todo).toEqual(["files.title"]);
+    expect(drift.missing).toEqual([]);
   });
 });
