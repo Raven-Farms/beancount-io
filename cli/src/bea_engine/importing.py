@@ -847,11 +847,16 @@ def _extracted(importer: Any, source: Path, existing: Any) -> list[Any]:
     failed as "not iterable" — neither saying what the importer got wrong
     (w5/319).
     """
+    from beancount.core.data import ALL_DIRECTIVES
+
     result = importer.extract(str(source), existing)
-    if result is None or isinstance(result, str | bytes | dict):
+    # One directive is a namedtuple, so `list()` took its fields for rows:
+    # "row 1 is a dict" (w5/639).
+    if result is None or isinstance(result, str | bytes | dict) or isinstance(result, ALL_DIRECTIVES):
+        single = "; return [entry] for one" if isinstance(result, ALL_DIRECTIVES) else ""
         raise LedgerError(
             f"Importer {_name(importer)} extract() returned {_type_name(result)} instead of a list of "
-            "Beancount directives."
+            f"Beancount directives{single}."
         )
     return copy.deepcopy(list(result))
 
@@ -996,9 +1001,26 @@ def _described(selector: str, importer: Any, source: Path) -> str:
 
 
 def _name(importer: Any) -> str:
-    name = getattr(importer, "name", type(importer).__name__)
+    """The importer's name, or a refusal naming the CONFIG entry and its fix.
+
+    "Use the current Beangulp Importer interface" named neither which entry
+    nor what to do, so one legacy importer beside a working one blocked the
+    whole configuration without a clue (w5/639).
+    """
+    if isinstance(importer, type):
+        raise UsageError(
+            f"CONFIG lists the class {importer.__name__}, not an importer; list an instance, {importer.__name__}(...)."
+        )
+    kind = type(importer).__name__
+    name = getattr(importer, "name", kind)
+    if callable(name):
+        raise UsageError(
+            f"CONFIG entry {kind} is a Beancount v2 importer (its name is a method); wrap it as "
+            f"beangulp.Adapter({kind}(...)), or port it to the current Beangulp Importer interface "
+            "(a name property and file paths)."
+        )
     if not isinstance(name, str):
-        raise UsageError("Use the current Beangulp Importer interface (name property and file paths).")
+        raise UsageError(f"CONFIG entry {kind} has a name that is {_type_name(name)}; its name must be a str.")
     return name
 
 
