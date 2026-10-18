@@ -17,7 +17,10 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from bea_engine import protocol
 
 
 def run(op: str, argv: list[str]) -> int:
@@ -111,7 +114,30 @@ def _invoke(upstream: Any, op: str, argv: list[str]) -> int:
         # Only the managed load raises one: strict prices, or a directory it cannot stage in.
         protocol.note(f"error: {exc}")
         return exc.exit_code
+    except Exception as exc:
+        # Upstream's roundtrip cleans up in a `finally` that calls
+        # `os.path.exists(None)` when its load failed, so the strict-prices
+        # error arrived as a 200-line TypeError traceback (w5/643).
+        behind = _engine_error_behind(exc)
+        if behind is None:
+            raise
+        protocol.note(f"error: {behind}")
+        return behind.exit_code
     return 0
+
+
+def _engine_error_behind(exc: BaseException) -> protocol.EngineError | None:
+    """The managed load's error an upstream exception was raised while handling, or None."""
+    from bea_engine import protocol
+
+    seen: set[int] = set()
+    current: BaseException | None = exc
+    while current is not None and id(current) not in seen:
+        if isinstance(current, protocol.EngineError):
+            return current
+        seen.add(id(current))
+        current = current.__cause__ or current.__context__
+    return None
 
 
 def _status(code: object) -> int:
