@@ -20,7 +20,6 @@
 
 From `/pm-brainstorm` for w0 (2026-10-17). Each note is sub-hour.
 
-- [046 — Sign-up accepts any username server-side and derives one from the email local part outside the rule](./046.md) — backend-v2
 - [047 — Dashboard's rename dialog skips sign-up's username rule and shows refusals as a generic error](./047.md) — dashboard
 - [048 — Dashboard date-fns month names ignore the reader's language](./048.md) — dashboard
 - [049 — Persian: letter-spaced captions break joins; Payee caption stays left; two inputs unverified in RTL](./049.md) — mobile

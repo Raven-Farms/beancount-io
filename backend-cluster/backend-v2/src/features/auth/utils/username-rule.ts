@@ -1,4 +1,4 @@
-import { BadUserInputError } from "@/shared/errors";
+import { BadUserInputError, ConflictError } from "@/shared/errors";
 
 /**
  * The username rule sign-up publishes (the dashboard registration form): 1–20
@@ -17,4 +17,30 @@ export function assertValidUsername(username: string): void {
   if (typeof username !== "string" || !USERNAME_PATTERN.test(username)) {
     throw new BadUserInputError(USERNAME_RULE, "username");
   }
+}
+
+/**
+ * A username in the rule for a sign-up that did not choose one, derived from
+ * the email's local part: lowercased, every other character mapped to `_`,
+ * cut to 20, then numbered while `isTaken` says the name is in use
+ * (`John.Doe+x@…` → `john_doe_x`, else `john_doe_x2`, …). Taking the local
+ * part as it was let uppercase, dots, `+tags`, over-long and already-taken
+ * names reach the git host (w0/046).
+ */
+export async function usernameFromEmail(
+  email: string,
+  isTaken: (username: string) => Promise<boolean>,
+): Promise<string> {
+  const base =
+    (email.split("@")[0] ?? "")
+      .toLowerCase()
+      .replace(/[^a-z0-9_]/g, "_")
+      .slice(0, 20) || "user";
+  if (!(await isTaken(base))) return base;
+  for (let n = 2; n < 10_000; n++) {
+    const suffix = String(n);
+    const candidate = base.slice(0, 20 - suffix.length) + suffix;
+    if (!(await isTaken(candidate))) return candidate;
+  }
+  throw new ConflictError("Username", base);
 }
