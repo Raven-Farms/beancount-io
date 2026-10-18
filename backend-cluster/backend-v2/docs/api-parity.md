@@ -193,13 +193,14 @@ Shared service mocks alone do not prove the adapter contract. In particular:
 | BQL                                | Typed columns/rows and text rendering, including nulls and non-table results.                                                         |
 | File and entry writes              | Safe paths, structured validation, source hashes, atomic batches, commit effects, source ranges, and equivalent supported previews.   |
 | API keys                           | Expiry, names, scopes, inherited restriction, public metadata, one-time plaintext and revocation.                                     |
-| Bank operations                    | Every discriminator branch, account filters, explicit ledger target, preview support, staging/submit effects and composite authority. |
+| Bank operations                    | Every per-operation tool, account filters, explicit ledger target, preview support, staging/submit effects and composite authority.   |
 | Downloads                          | Selection, expiry, authorization of the full download path, content type and actual bytes; a link alone is not proof.                 |
 | Administrative/assisted operations | Exact target, current authority, quotas, ownership, side effects and dependency failure handling.                                     |
 | All families                       | Wrong audience/scope/target, revocation, source outage, rate budget, audit operation/target and concurrent request isolation.         |
 
-Grouped MCP tools must enumerate executable branches and select the operation's
-exact protected service. Approximate BQL or raw-file alternatives cannot close a
+Each MCP write or admin tool performs one operation through that operation's
+exact protected service; no tool selects among operations by an argument
+(ADR 019, 2026-10-18 amendment). Approximate BQL or raw-file alternatives cannot close a
 structured operation without proving its input, result and effect contract.
 Protocol envelopes and documented field-name aliases may differ. An input
 supported by one eligible adapter cannot simply be discarded by another.
@@ -404,8 +405,8 @@ and anonymous views, optional follow status, dates, source failures, and partial
 activity enrichment. The original public-profile credential exception remains
 unchanged; this does not introduce a new scope or ledger-pin policy.
 
-Ledger star/unstar now use the existing LedgerWorkflow through REST and a grouped
-MCP tool. Adapter tests check both branches, idempotent starring, failed-write
+Ledger star/unstar now use the existing LedgerWorkflow through REST and the
+`setLedgerStar` MCP tool. Adapter tests check both states, idempotent starring, failed-write
 results, pin and scope refusals, relationship outages, and revocation between
 calls. They preserve read-relationship plus write-capability authority.
 
