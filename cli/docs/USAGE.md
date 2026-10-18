@@ -876,7 +876,8 @@ exit 0 when stdout is a terminal; under `--json`, when stdout is piped, when
 opts into the partial answer (the errors still print on stderr). A `--json`
 `list` or `query` envelope carries `ledger_valid` and `ledger_errors` beside
 `data`, as reports carry them inside it, so a partial answer says so in the
-JSON itself. If a JSON command tolerates loader errors and then fails anyway,
+JSON itself. `price status` also tolerates ledger errors and includes these
+two fields beside `data`. If a JSON command tolerates loader errors and then fails anyway,
 stderr still holds one object: the loader lines ride along as
 `error.ledger_warnings`. `bea check`
 always exits 1 on errors — reporting them is its whole job, so it has no

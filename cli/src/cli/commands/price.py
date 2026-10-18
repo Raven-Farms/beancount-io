@@ -95,9 +95,14 @@ def _status(extra: list[str]) -> None:
         raise UsageError(f"bea price status takes no arguments; got: {' '.join(extra)}.")
     current = context.current()
     file = current.entry_file()
-    sources: list[dict[str, Any]] = _answer(["price-status", "--file", str(file)], table_covers_sources=True)["sources"]
+    data = _answer(["price-status", "--file", str(file)], table_covers_sources=True)
+    sources: list[dict[str, Any]] = data["sources"]
     if current.json_output:
-        output.emit({"sources": sources}, target=output.file_target(file))
+        output.emit(
+            {"sources": sources},
+            target=output.file_target(file),
+            ledger_errors=[output.format_ledger_error(error) for error in data.get("errors") or []],
+        )
         return
     if not sources:
         typer.echo("No managed price includes in this ledger.")

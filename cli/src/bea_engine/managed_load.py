@@ -1238,8 +1238,13 @@ def _cause(exc: BaseException) -> str:
 
 
 def _staging_refused(entry: Path, directory: Path, managed: list[_PendingSource], why: str, remedy: str) -> str:
-    """Why a read of a ledger with managed price includes could not stage its temporary copy."""
-    includes = ", ".join(sorted({source.url for source in managed})) or "a managed price include"
+    """Why the loader could not stage the temporary copies its include graph needs."""
+    if not managed:
+        return (
+            f"Cannot read {entry}: resolving its include files needs a temporary copy beside each ledger file, "
+            f"and the directory {directory} {why}. {remedy} and retry. Nothing was changed."
+        )
+    includes = ", ".join(sorted({source.url for source in managed}))
     return (
         f"Cannot read {entry}: its managed price include ({includes}) is resolved on a temporary copy "
         f"beside each ledger file, and the directory {directory} {why}. {remedy}, or read a snapshot made "

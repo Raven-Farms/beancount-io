@@ -373,6 +373,17 @@ def check_native(
     """
     if completed.returncode == 0:
         return
+    if completed.returncode < 0:
+        import typer
+
+        try:
+            status = captured_status(completed)
+        except BeaError as exc:
+            exc.result = result
+            raise
+        # Quiet signals keep their shell status instead of becoming an error
+        # about a negative exit code; other signals were named above.
+        raise typer.Exit(status)
     command = _BEA_NAMES.get(name)
     diagnostic = _renamed(completed.stderr or "", (name, command) if command else None).strip()
     tail = [line for line in diagnostic.splitlines() if line.strip()][-20:]

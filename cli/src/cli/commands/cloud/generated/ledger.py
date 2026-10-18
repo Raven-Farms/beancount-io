@@ -22,8 +22,8 @@ def register_ledger_commands(ledger_app: typer.Typer) -> None:
         "list", help="List the caller's accessible ledgers, restricted to the credential's ledger pin when present"
     )
     def ledger_list(
-        page: Annotated[int, typer.Option("--page", help="1-based page number")] = 1,
-        limit: Annotated[int, typer.Option("--limit", help="Page size, at most 100")] = 50,
+        page: Annotated[int, typer.Option("--page", help="1-based page number", min=1)] = 1,
+        limit: Annotated[int, typer.Option("--limit", help="Page size, at most 100", min=1, max=100)] = 50,
     ) -> None:
         from cli.api.client import authenticated_client, call, unwrap
         from cli.api.rest_client.api.ledger_v_1 import accessible_ledgers

@@ -322,6 +322,9 @@ def to_bea_error(exc: BaseException | str) -> BeaError:
     # Typer's vendored Click, without a dependency on either private module.
     click_usage_error: type[Any] = typer.BadParameter.__bases__[0]
     if isinstance(exc, click_usage_error):
+        missing_subcommand = _missing_subcommand_message(exc)
+        if missing_subcommand is not None:
+            return UsageError(missing_subcommand)
         option = getattr(exc, "option_name", None)
         placement = placement_hint(option) if isinstance(option, str) else None
         hint = f" {placement}" if placement else ""
@@ -344,6 +347,25 @@ def to_bea_error(exc: BaseException | str) -> BeaError:
     error = BeaError(_redact_secrets(str(exc) or f"{type(exc).__name__} (no detail)."))
     error.unexpected = True
     return error
+
+
+def _missing_subcommand_message(exc: Any) -> str | None:
+    """A bare group in JSON mode names its choices instead of embedding help."""
+    # This exception exists in standalone and vendored Click. Recognize it
+    # after the UsageError check without importing either private namespace.
+    if type(exc).__name__ != "NoArgsIsHelpError":
+        return None
+    from cli import context
+
+    ctx = getattr(exc, "ctx", None)
+    if not context.current().json_output or ctx is None:
+        return None
+    names = [
+        name
+        for name in ctx.command.list_commands(ctx)
+        if (command := ctx.command.get_command(ctx, name)) is not None and not command.hidden
+    ]
+    return f"Missing subcommand: choose one of {', '.join(names)}." if names else "Missing subcommand."
 
 
 # Names other tools and docs use for a bea subcommand, suggested only where

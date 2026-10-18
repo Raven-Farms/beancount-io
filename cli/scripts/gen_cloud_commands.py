@@ -165,7 +165,15 @@ def emit_command(cmd: Command, spec: dict[str, Any]) -> str:
         if default is None:
             fail(f"operation '{cmd.operation_id}' query param '{param['name']}' needs a CLI default in the registry")
         help_ = esc(param["description"])
-        signature.append(f'    {py_name}: Annotated[int, typer.Option("--{py_name}", help="{help_}")] = {default},')
+        schema = param.get("schema", {})
+        bounds = "".join(
+            f", {option}={schema[key]!r}"
+            for key, option in (("minimum", "min"), ("maximum", "max"))
+            if schema.get(key) is not None
+        )
+        signature.append(
+            f'    {py_name}: Annotated[int, typer.Option("--{py_name}", help="{help_}"{bounds})] = {default},'
+        )
         call_args.append(f"{py_name}={py_name}")
 
     fn = f"{cmd.group}_{cmd.name}"

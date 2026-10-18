@@ -1249,8 +1249,8 @@ Usage: bea cloud ledger list [OPTIONS]
 
 | Option | Type | Default | Help |
 | --- | --- | --- | --- |
-| `--page` | int | 1 | 1-based page number |
-| `--limit` | int | 50 | Page size, at most 100 |
+| `--page` | int range | 1 | 1-based page number |
+| `--limit` | int range | 50 | Page size, at most 100 |
 
 ### `bea cloud ledger show`
 
