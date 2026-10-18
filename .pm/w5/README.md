@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [672 — Native `check --json` prints nothing for duplicate or unreadable includes (incomplete fix of w5/496)](./672.md)
 - [673 — An unreadable `--into`/`--rules`/`-o` dir is reported as "engine did not answer" and exit 4 "outcome unknown" (gap in w5/120)](./673.md)
 - [674 — A plugin calling `sys.exit` leaks its status: exit 2/7, exit 4 on writes, silent exit 0](./674.md)
 - [675 — `query --source`, the shell and doctor compat skip the `BEA_ENGINE_PYTHON` check (gap in w5/309)](./675.md)
