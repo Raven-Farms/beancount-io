@@ -861,6 +861,15 @@ const zhCommon: Record<string, TranslationEntry> = {
     description:
       "Error shown when the ledger refuses a transaction whose postings do not balance (UNBALANCED)",
   },
+  "common.writeLeftErrors": {
+    message: "已保存，但账本现在报告了一个错误：{error}",
+    description:
+      "Warning after a write that succeeded but left the ledger with a new validation error; {error} is the first new error",
+  },
+  "common.viewErrors": {
+    message: "查看错误",
+    description: "Action that opens the ledger's Errors page",
+  },
   "common.errors.wouldBreakLedger": {
     message: "这会给你的账本带来一个错误：{detail}",
     description:

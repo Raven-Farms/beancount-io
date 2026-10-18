@@ -890,6 +890,15 @@ const caCommon: Record<string, TranslationEntry> = {
     description:
       "Error shown when the ledger refuses a transaction whose postings do not balance (UNBALANCED)",
   },
+  "common.writeLeftErrors": {
+    message: "S'ha desat, però ara el llibre informa d'un error: {error}",
+    description:
+      "Warning after a write that succeeded but left the ledger with a new validation error; {error} is the first new error",
+  },
+  "common.viewErrors": {
+    message: "Mostra els errors",
+    description: "Action that opens the ledger's Errors page",
+  },
   "common.errors.wouldBreakLedger": {
     message: "Això afegiria un error al teu llibre: {detail}",
     description:

@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { useErrorMessage } from "@/common/lib/errors/error-message";
 import { useFileNavigate } from "@/common/hooks/use-file-navigate";
+import { useWriteOutcome } from "@/common/hooks/use-write-outcome";
 import { getParentPath, getFilename } from "../../../shared/lib/utils";
 import {
   FileLoadingView,
@@ -68,6 +69,7 @@ export default function LedgerFileView({
   const cleanCache = useApolloCacheClear();
   const fileNavigate = useFileNavigate();
   const navigate = useNavigate();
+  const writeOutcome = useWriteOutcome(ledgerId);
   const params = useParams({
     from: "/ledger/$ledgerOwner/$ledgerName/files/blob/$branch/$",
   });
@@ -131,6 +133,7 @@ export default function LedgerFileView({
     if (!fileContent) return;
 
     setIsSaving(true);
+    const before = writeOutcome.snapshot();
     try {
       await updateFileMutation({
         variables: {
@@ -143,9 +146,11 @@ export default function LedgerFileView({
         onError: (error) => {
           toast.error(formatError(error));
         },
-        onCompleted: () => {
+        onCompleted: async () => {
           track("file_edited", {});
-          toast.success(t("ledgerEditor.fileSavedSuccess"));
+          if (!(await writeOutcome.report(before))) {
+            toast.success(t("ledgerEditor.fileSavedSuccess"));
+          }
           cleanCache();
         },
       });

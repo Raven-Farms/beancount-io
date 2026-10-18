@@ -4,6 +4,11 @@ import { useRef, useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { NewDirectiveDialog } from "../index";
 
+// The post-write error check (w3/640) has its own suite.
+vi.mock("@/common/hooks/use-write-outcome", () => ({
+  useWriteOutcome: () => ({ snapshot: () => null, report: async () => false }),
+}));
+
 // The forms are irrelevant to focus handling; the dialog itself is real.
 vi.mock("../transaction-form", () => ({ TransactionForm: () => <div /> }));
 vi.mock("../balance-form", () => ({ BalanceForm: () => <div /> }));

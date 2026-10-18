@@ -2,6 +2,11 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import LedgerFileView from "../index";
 
+// The post-write error check (w3/640) has its own suite.
+vi.mock("@/common/hooks/use-write-outcome", () => ({
+  useWriteOutcome: () => ({ snapshot: () => null, report: async () => false }),
+}));
+
 const mocks = vi.hoisted(() => ({
   queryResult: {
     data: undefined as

@@ -5,6 +5,11 @@ import type { GetLedgerFileQuery } from "@/graphql/definitions";
 import { FileActionButtons } from "../../non-text-file-views";
 import LedgerFileView from "../index";
 
+// The post-write error check (w3/640) has its own suite.
+vi.mock("@/common/hooks/use-write-outcome", () => ({
+  useWriteOutcome: () => ({ snapshot: () => null, report: async () => false }),
+}));
+
 const { contentViewProps } = vi.hoisted(() => ({
   contentViewProps: vi.fn(),
 }));

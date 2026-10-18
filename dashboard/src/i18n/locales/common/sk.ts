@@ -889,6 +889,15 @@ const skCommon: Record<string, TranslationEntry> = {
     description:
       "Error shown when the ledger refuses a transaction whose postings do not balance (UNBALANCED)",
   },
+  "common.writeLeftErrors": {
+    message: "Uložené, ale kniha teraz hlási chybu: {error}",
+    description:
+      "Warning after a write that succeeded but left the ledger with a new validation error; {error} is the first new error",
+  },
+  "common.viewErrors": {
+    message: "Zobraziť chyby",
+    description: "Action that opens the ledger's Errors page",
+  },
   "common.errors.wouldBreakLedger": {
     message: "Toto by pridalo chybu do vašej knihy: {detail}",
     description:

@@ -16,6 +16,7 @@ import { BalanceForm } from "@/features/journal/components/new-directive-dialog/
 import { NoteForm } from "@/features/journal/components/new-directive-dialog/note-form";
 import { OpenAccountForm } from "@/features/journal/components/new-directive-dialog/open-account-form";
 import { useApolloCacheClear } from "@/common/hooks/use-apollo-cache";
+import { useWriteOutcome } from "@/common/hooks/use-write-outcome";
 import { useTranslations } from "@/common/hooks/use-translations";
 import type { JournalDirectiveAction } from "@/common/lib/ledger-action-search";
 import type { RefObject } from "react";
@@ -27,7 +28,8 @@ interface NewDirectiveDialogProps {
   ledgerId: string;
   activeTab: JournalDirectiveAction;
   onActiveTabChange: (tab: JournalDirectiveAction) => void;
-  onSuccess?: () => void;
+  /** `leftErrors`: the write succeeded but the ledger now fails validation. */
+  onSuccess?: (outcome: { leftErrors: boolean }) => void;
   /**
    * Where focus lands when the dialog closes. The dialog is opened by a route
    * link (and by the sidebar or Overview, which may be unmounted by then), so
@@ -51,11 +53,14 @@ export function NewDirectiveDialog({
 }: NewDirectiveDialogProps) {
   const { t } = useTranslations();
   const clearCache = useApolloCacheClear();
+  const writeOutcome = useWriteOutcome(ledgerId);
 
-  const handleSuccess = () => {
-    onSuccess?.();
+  const handleSuccess = async () => {
+    // Read before the cache clear below drops it: the pre-write errors.
+    const before = writeOutcome.snapshot();
     onOpenChange(false);
     clearCache();
+    onSuccess?.({ leftErrors: await writeOutcome.report(before) });
   };
 
   return (

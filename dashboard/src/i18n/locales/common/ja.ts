@@ -880,6 +880,15 @@ const jaCommon: Record<string, TranslationEntry> = {
     description:
       "Error shown when the ledger refuses a transaction whose postings do not balance (UNBALANCED)",
   },
+  "common.writeLeftErrors": {
+    message: "保存しましたが、元帳でエラーが報告されています：{error}",
+    description:
+      "Warning after a write that succeeded but left the ledger with a new validation error; {error} is the first new error",
+  },
+  "common.viewErrors": {
+    message: "エラーを表示",
+    description: "Action that opens the ledger's Errors page",
+  },
   "common.errors.wouldBreakLedger": {
     message: "台帳にエラーが追加されます: {detail}",
     description:

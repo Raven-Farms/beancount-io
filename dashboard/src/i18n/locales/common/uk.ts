@@ -889,6 +889,15 @@ const ukCommon: Record<string, TranslationEntry> = {
     description:
       "Error shown when the ledger refuses a transaction whose postings do not balance (UNBALANCED)",
   },
+  "common.writeLeftErrors": {
+    message: "Збережено, але книга тепер повідомляє про помилку: {error}",
+    description:
+      "Warning after a write that succeeded but left the ledger with a new validation error; {error} is the first new error",
+  },
+  "common.viewErrors": {
+    message: "Переглянути помилки",
+    description: "Action that opens the ledger's Errors page",
+  },
   "common.errors.wouldBreakLedger": {
     message: "Це додасть помилку до вашої книги: {detail}",
     description:

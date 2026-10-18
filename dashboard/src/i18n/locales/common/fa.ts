@@ -882,6 +882,15 @@ const faCommon: Record<string, TranslationEntry> = {
     description:
       "Error shown when the ledger refuses a transaction whose postings do not balance (UNBALANCED)",
   },
+  "common.writeLeftErrors": {
+    message: "ذخیره شد، اما دفتر شما اکنون یک خطا گزارش می‌کند: {error}",
+    description:
+      "Warning after a write that succeeded but left the ledger with a new validation error; {error} is the first new error",
+  },
+  "common.viewErrors": {
+    message: "مشاهدهٔ خطاها",
+    description: "Action that opens the ledger's Errors page",
+  },
   "common.errors.wouldBreakLedger": {
     message: "این کار یک خطا به دفتر شما اضافه می‌کند: {detail}",
     description:

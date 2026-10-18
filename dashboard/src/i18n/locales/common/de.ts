@@ -888,6 +888,16 @@ const deCommon: Record<string, TranslationEntry> = {
     description:
       "Error shown when the ledger refuses a transaction whose postings do not balance (UNBALANCED)",
   },
+  "common.writeLeftErrors": {
+    message:
+      "Gespeichert, aber Ihr Hauptbuch meldet jetzt einen Fehler: {error}",
+    description:
+      "Warning after a write that succeeded but left the ledger with a new validation error; {error} is the first new error",
+  },
+  "common.viewErrors": {
+    message: "Fehler anzeigen",
+    description: "Action that opens the ledger's Errors page",
+  },
   "common.errors.wouldBreakLedger": {
     message: "Das würde Ihrem Hauptbuch einen Fehler hinzufügen: {detail}",
     description:

@@ -46,6 +46,7 @@ import {
 } from "@/common/lib/errors/error-message";
 import { useIsMobile } from "@/common/hooks/use-mobile";
 import { useFileNavigate } from "@/common/hooks/use-file-navigate";
+import { useWriteOutcome } from "@/common/hooks/use-write-outcome";
 import { useLedgerPermission } from "@/common/hooks/use-ledger-permission";
 import { restoreFocusOnDialogClose } from "@/common/lib/focus/restore-focus-on-dialog-close";
 import { readEntrySourceLocation } from "@/features/journal/lib/entry-source-location";
@@ -470,6 +471,7 @@ export function EntryContextPanel({
   const fileNavigate = useFileNavigate();
   const clearCache = useApolloCacheClear();
   const { canWrite } = useLedgerPermission();
+  const writeOutcome = useWriteOutcome(ledgerId);
   const { data, loading, error } = useQuery(GetLedgerEntryContextDocument, {
     variables: {
       entryHash,
@@ -494,6 +496,7 @@ export function EntryContextPanel({
     sha256sum: string,
   ) => {
     if (!canWrite) return;
+    const before = writeOutcome.snapshot();
     try {
       await updateEntrySourceSlice({
         variables: {
@@ -505,7 +508,11 @@ export function EntryContextPanel({
           },
         },
       });
-      toast.success(t("journal.entrySavedSuccess"));
+      // An edit can break the ledger where creating would be refused
+      // (an unbalanced transaction); say so instead of "saved".
+      if (!(await writeOutcome.report(before))) {
+        toast.success(t("journal.entrySavedSuccess"));
+      }
       clearCache();
       onSuccess?.();
     } catch (saveError) {

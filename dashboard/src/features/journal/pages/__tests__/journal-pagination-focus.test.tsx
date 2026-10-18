@@ -34,6 +34,11 @@ import { createLocalization } from "@/i18n/init";
 import { LocalizationProvider } from "@/i18n/provider";
 import LedgerJournalPage from "../journal-page";
 
+// The post-write error check (w3/640) has its own suite.
+vi.mock("@/common/hooks/use-write-outcome", () => ({
+  useWriteOutcome: () => ({ snapshot: () => null, report: async () => false }),
+}));
+
 vi.unmock("@/common/hooks/use-translations");
 vi.unmock("react-i18next");
 vi.mock("@/common/hooks/use-is-authenticated", () => ({

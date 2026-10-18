@@ -5,6 +5,7 @@ import { useErrorMessage } from "@/common/lib/errors/error-message";
 import { negateDecimalNumber } from "@/common/lib/beancount/decimal-number";
 import { useLedgerPermission } from "@/common/hooks/use-ledger-permission";
 import { useTranslations } from "@/common/hooks/use-translations";
+import { useWriteOutcome } from "@/common/hooks/use-write-outcome";
 import type {
   LedgerTransactionInput,
   LedgerPostingInput,
@@ -27,6 +28,7 @@ export function useImportSubmit(ledgerId: string): UseImportSubmitReturn {
   const formatError = useErrorMessage();
   const { t } = useTranslations();
   const { canWrite } = useLedgerPermission();
+  const writeOutcome = useWriteOutcome(ledgerId);
   const canWriteRef = useRef(canWrite);
 
   useEffect(() => {
@@ -54,6 +56,7 @@ export function useImportSubmit(ledgerId: string): UseImportSubmitReturn {
 
       setIsSubmitting(true);
       const startTime = Date.now();
+      const before = writeOutcome.snapshot();
 
       try {
         // Transform to GraphQL input format
@@ -118,6 +121,7 @@ export function useImportSubmit(ledgerId: string): UseImportSubmitReturn {
         };
 
         setImportResult(importResultData);
+        if (ok) void writeOutcome.report(before);
       } catch (error) {
         console.error("Import error:", error);
         // Handle network/API errors

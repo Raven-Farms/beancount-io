@@ -3,6 +3,11 @@ import { CombinedGraphQLErrors } from "@apollo/client/errors";
 import { describe, expect, it, vi } from "vitest";
 import LedgerFileView from "../index";
 
+// The post-write error check (w3/640) has its own suite.
+vi.mock("@/common/hooks/use-write-outcome", () => ({
+  useWriteOutcome: () => ({ snapshot: () => null, report: async () => false }),
+}));
+
 const state = vi.hoisted(() => ({ error: undefined as unknown }));
 
 vi.mock("@apollo/client/react", () => ({

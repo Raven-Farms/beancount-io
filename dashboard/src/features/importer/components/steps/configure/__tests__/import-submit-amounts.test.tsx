@@ -5,6 +5,11 @@ import { TransactionConfigForm } from "../transaction-config-form";
 import { useCSVParser } from "../../../../hooks/use-csv-parser";
 import { useImportSubmit } from "../../../../hooks/use-import-submit";
 
+// The post-write error check (w3/640) has its own suite.
+vi.mock("@/common/hooks/use-write-outcome", () => ({
+  useWriteOutcome: () => ({ snapshot: () => null, report: async () => false }),
+}));
+
 const { mutate } = vi.hoisted(() => ({
   mutate: vi.fn(async () => ({ data: { bulkEntries: { success: true } } })),
 }));

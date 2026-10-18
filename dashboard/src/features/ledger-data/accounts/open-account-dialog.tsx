@@ -26,6 +26,7 @@ import {
 } from "@/common/components/ui/form";
 import { DatePicker } from "@/common/components/ui/date-picker";
 import { useOpenAccountSchema } from "@/common/hooks/use-open-account-schema";
+import { useWriteOutcome } from "@/common/hooks/use-write-outcome";
 
 type OpenAccountFormData = {
   date: Date;
@@ -53,6 +54,7 @@ export function OpenAccountDialog({
   const [error, setError] = useState<string | null>(null);
 
   const { accountPrefixes, schema } = useOpenAccountSchema(ledgerId);
+  const writeOutcome = useWriteOutcome(ledgerId);
 
   const form = useForm<OpenAccountFormData>({
     resolver: zodResolver(schema),
@@ -70,6 +72,7 @@ export function OpenAccountDialog({
 
   const onSubmit = async (data: OpenAccountFormData) => {
     setError(null);
+    const before = writeOutcome.snapshot();
     try {
       const result = await addEntryOpen({
         variables: {
@@ -91,6 +94,7 @@ export function OpenAccountDialog({
         resetForm();
         onSuccess?.();
         onOpenChange(false);
+        void writeOutcome.report(before);
       } else {
         setError(result.data?.bulkEntries.message ?? formatError(undefined));
       }
