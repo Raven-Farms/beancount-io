@@ -359,6 +359,22 @@ describe("csv-validator", () => {
       expect(row.amountFailureReason).toBe("unsupported-precision");
       expect(row.errors).toEqual(["Amount has unsupported precision"]);
     });
+
+    it("refuses any amount in a mixed-decimal column and keeps the mark", () => {
+      const row = buildParsedRow(
+        {
+          date: "2026-09-01",
+          payee: "QA Mixed",
+          description: "Mixed column",
+          amountInput: "1,234.56",
+        },
+        { decimalMixed: true },
+      );
+      expect(row.amount).toBe(0);
+      expect(row.amountFailureReason).toBe("invalid");
+      expect(row.decimalMixed).toBe(true);
+      expect(row.errors?.join(" ")).toMatch(/mixes point decimals/);
+    });
   });
 
   describe("isValidRowFormat", () => {

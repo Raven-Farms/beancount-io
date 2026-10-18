@@ -545,6 +545,12 @@ const koImporter: Record<string, TranslationEntry> = {
     message: "금액은 유효한 숫자여야 합니다.",
     description: "Validation error for an invalid import amount",
   },
+  "importer.validation.amountMixedDecimals": {
+    message:
+      "이 열에 마침표 소수점(1,234.56)과 쉼표 소수점(1.234,56)이 섞여 있습니다. 열마다 한 가지 표기만 사용하세요.",
+    description:
+      "Validation error when an import amount column mixes point and comma decimal marks",
+  },
   "importer.validation.amountUnsupportedPrecision": {
     message:
       "이 금액은 정확히 가져올 수 없습니다. 모든 자릿수가 유지되도록 짧게 줄이세요",

@@ -615,6 +615,12 @@ const ruImporter: Record<string, TranslationEntry> = {
     message: "Сумма должна быть действительным числом.",
     description: "Validation error for an invalid import amount",
   },
+  "importer.validation.amountMixedDecimals": {
+    message:
+      "В этом столбце смешаны десятичные точки (1,234.56) и десятичные запятые (1.234,56). Используйте один формат в столбце.",
+    description:
+      "Validation error when an import amount column mixes point and comma decimal marks",
+  },
   "importer.validation.amountUnsupportedPrecision": {
     message:
       "Эту сумму нельзя импортировать точно — сократите её, чтобы сохранить все цифры",

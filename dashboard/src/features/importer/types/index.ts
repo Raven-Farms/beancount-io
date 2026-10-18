@@ -33,6 +33,11 @@ export type ParsedRow = {
   amountFailureReason?: "empty" | "invalid" | "unsupported-precision";
   /** The source column writes comma decimals (`1.000,00`); edits re-parse with it. */
   decimalComma?: boolean;
+  /**
+   * The source column mixes point and comma decimals, so the parser refused
+   * the row; an edit re-reads the amount on its own.
+   */
+  decimalMixed?: boolean;
   errors?: string[];
 };
 

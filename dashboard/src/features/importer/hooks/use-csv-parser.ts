@@ -13,9 +13,6 @@ import {
 const UNSUPPORTED_LAYOUT_ERROR =
   "Unsupported CSV columns. Expected exactly Date, Payee, Description (or Narration), and Amount — in any order.";
 
-const MIXED_DECIMAL_ERROR =
-  "Amount column mixes point decimals (1,234.56) and comma decimals (1.234,56). Use one convention per column.";
-
 type ParseRecordsResult =
   | { ok: true; records: string[][] }
   | { ok: false; error: string };
@@ -259,18 +256,10 @@ export function useCSVParser() {
         };
       }
 
-      const row = buildParsedRow(readRecordFields(columns, columnFields), {
+      return buildParsedRow(readRecordFields(columns, columnFields), {
         decimalComma: convention.decimalComma,
+        decimalMixed: convention.mixed,
       });
-      if (!convention.mixed) return row;
-      // Refuse a column that mixes `1,234.56` and `1.234,56`: no row may
-      // resolve the ambiguity alone, as in the CLI importer.
-      return {
-        ...row,
-        amount: 0,
-        amountFailureReason: "invalid" as const,
-        errors: [...(row.errors ?? []), MIXED_DECIMAL_ERROR],
-      };
     });
 
     const errorCount = rows.filter(

@@ -574,6 +574,12 @@ const deImporter: Record<string, TranslationEntry> = {
     message: "Betrag muss eine gültige Zahl sein",
     description: "Validation error for an invalid import amount",
   },
+  "importer.validation.amountMixedDecimals": {
+    message:
+      "Diese Spalte mischt Dezimalpunkte (1,234.56) und Dezimalkommas (1.234,56). Verwenden Sie eine Schreibweise pro Spalte.",
+    description:
+      "Validation error when an import amount column mixes point and comma decimal marks",
+  },
   "importer.validation.amountUnsupportedPrecision": {
     message:
       "Dieser Betrag kann nicht exakt importiert werden — kürzen Sie ihn, damit jede Ziffer erhalten bleibt",

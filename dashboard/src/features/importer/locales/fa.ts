@@ -571,6 +571,12 @@ const faImporter: Record<string, TranslationEntry> = {
     message: "مبلغ باید یک عدد معتبر باشد",
     description: "Validation error for an invalid import amount",
   },
+  "importer.validation.amountMixedDecimals": {
+    message:
+      "این ستون اعشار با نقطه (1,234.56) و اعشار با ویرگول (1.234,56) را با هم دارد. در هر ستون فقط از یک قالب استفاده کنید.",
+    description:
+      "Validation error when an import amount column mixes point and comma decimal marks",
+  },
   "importer.validation.amountUnsupportedPrecision": {
     message:
       "این مبلغ را نمی\u200cتوان دقیقاً وارد کرد — آن را کوتاه کنید تا همه ارقام حفظ شوند",

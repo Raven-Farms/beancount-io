@@ -613,6 +613,12 @@ const skImporter: Record<string, TranslationEntry> = {
     message: "Čiastka musí byť platné číslo",
     description: "Validation error for an invalid import amount",
   },
+  "importer.validation.amountMixedDecimals": {
+    message:
+      "Tento stĺpec mieša desatinné bodky (1,234.56) a desatinné čiarky (1.234,56). V jednom stĺpci použite jeden zápis.",
+    description:
+      "Validation error when an import amount column mixes point and comma decimal marks",
+  },
   "importer.validation.amountUnsupportedPrecision": {
     message:
       "Túto sumu nemožno importovať presne — skráťte ju, aby sa zachovali všetky číslice",

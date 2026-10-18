@@ -572,6 +572,12 @@ const nlImporter: Record<string, TranslationEntry> = {
     message: "Bedrag moet een geldig getal zijn",
     description: "Validation error for an invalid import amount",
   },
+  "importer.validation.amountMixedDecimals": {
+    message:
+      "Deze kolom mengt decimale punten (1,234.56) en decimale komma's (1.234,56). Gebruik één notatie per kolom.",
+    description:
+      "Validation error when an import amount column mixes point and comma decimal marks",
+  },
   "importer.validation.amountUnsupportedPrecision": {
     message:
       "Dit bedrag kan niet exact worden geïmporteerd — verkort het zodat elk cijfer behouden blijft",

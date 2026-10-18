@@ -594,6 +594,12 @@ const esImporter: Record<string, TranslationEntry> = {
     message: "El monto debe ser un número válido",
     description: "Validation error for an invalid import amount",
   },
+  "importer.validation.amountMixedDecimals": {
+    message:
+      "Esta columna mezcla decimales con punto (1,234.56) y con coma (1.234,56). Usa una sola convención por columna.",
+    description:
+      "Validation error when an import amount column mixes point and comma decimal marks",
+  },
   "importer.validation.amountUnsupportedPrecision": {
     message:
       "Esta cantidad no se puede importar exactamente: acórtela para conservar todos los dígitos",

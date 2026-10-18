@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { editableRowSchema, previewTableFormSchema } from "../row-edit-schema";
+import {
+  createEditableRowSchema,
+  editableRowSchema,
+  previewTableFormSchema,
+} from "../row-edit-schema";
 
 describe("row-edit-schema", () => {
   describe("editableRowSchema", () => {
@@ -215,6 +219,43 @@ describe("row-edit-schema", () => {
       };
       const result = previewTableFormSchema.safeParse(form);
       expect(result.success).toBe(false);
+    });
+  });
+
+  describe("createEditableRowSchema amount convention (w3/644)", () => {
+    const row = (amount: string) => ({
+      date: "2026-09-05",
+      payee: "QA",
+      description: "Comma column",
+      amount,
+    });
+    const amountMessages = (
+      result: ReturnType<typeof editableRowSchema.safeParse>,
+    ) =>
+      result.success
+        ? []
+        : result.error.issues
+            .filter((issue) => issue.path.includes("amount"))
+            .map((issue) => issue.message);
+
+    it("accepts a comma-decimal column's spellings", () => {
+      const schema = createEditableRowSchema({ decimalComma: true });
+      for (const amount of ["-4,50", "-1.000", "2.500,00"]) {
+        expect(schema.safeParse(row(amount)).success).toBe(true);
+      }
+    });
+
+    it("rejects a comma decimal in a dot-decimal column", () => {
+      expect(amountMessages(editableRowSchema.safeParse(row("-4,50")))).toEqual(
+        ["importer.validation.amountInvalid"],
+      );
+    });
+
+    it("names a mixed column instead of reading the cell", () => {
+      const schema = createEditableRowSchema({ decimalMixed: true });
+      expect(amountMessages(schema.safeParse(row("1,234.56")))).toEqual([
+        "importer.validation.amountMixedDecimals",
+      ]);
     });
   });
 });

@@ -539,6 +539,12 @@ const zhImporter: Record<string, TranslationEntry> = {
     message: "金额必须是有效数字",
     description: "Validation error for an invalid import amount",
   },
+  "importer.validation.amountMixedDecimals": {
+    message:
+      "此列混用了小数点（1,234.56）和小数逗号（1.234,56）。请在每列中只使用一种写法。",
+    description:
+      "Validation error when an import amount column mixes point and comma decimal marks",
+  },
   "importer.validation.amountUnsupportedPrecision": {
     message: "此金额无法精确导入 — 请缩短位数以保留每一位数字",
     description:

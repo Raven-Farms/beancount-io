@@ -614,6 +614,12 @@ const ukImporter: Record<string, TranslationEntry> = {
     message: "Сума має бути дійсним числом",
     description: "Validation error for an invalid import amount",
   },
+  "importer.validation.amountMixedDecimals": {
+    message:
+      "У цьому стовпці змішано десяткові крапки (1,234.56) і десяткові коми (1.234,56). Використовуйте один формат у стовпці.",
+    description:
+      "Validation error when an import amount column mixes point and comma decimal marks",
+  },
   "importer.validation.amountUnsupportedPrecision": {
     message:
       "Цю суму неможливо імпортувати точно — скоротіть її, щоб зберегти всі цифри",

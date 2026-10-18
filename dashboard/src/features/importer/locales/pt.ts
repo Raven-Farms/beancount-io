@@ -593,6 +593,12 @@ const ptImporter: Record<string, TranslationEntry> = {
     message: "O valor deve ser um número válido",
     description: "Validation error for an invalid import amount",
   },
+  "importer.validation.amountMixedDecimals": {
+    message:
+      "Esta coluna mistura decimais com ponto (1,234.56) e com vírgula (1.234,56). Use uma única convenção por coluna.",
+    description:
+      "Validation error when an import amount column mixes point and comma decimal marks",
+  },
   "importer.validation.amountUnsupportedPrecision": {
     message:
       "Este valor não pode ser importado exatamente — encurte-o para manter todos os dígitos",

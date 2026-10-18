@@ -573,6 +573,12 @@ const bgImporter: Record<string, TranslationEntry> = {
     message: "Сумата трябва да е валидно число",
     description: "Validation error for an invalid import amount",
   },
+  "importer.validation.amountMixedDecimals": {
+    message:
+      "Тази колона смесва десетична точка (1,234.56) и десетична запетая (1.234,56). Използвайте един формат за колона.",
+    description:
+      "Validation error when an import amount column mixes point and comma decimal marks",
+  },
   "importer.validation.amountUnsupportedPrecision": {
     message:
       "Тази сума не може да бъде импортирана точно — съкратете я, за да се запазят всички цифри",

@@ -29,9 +29,13 @@ Preview. It clears on a new upload or reset/finish — never via localStorage.
 
 ## Parser Hooks
 
-- **`use-csv-parser.ts`** — Basic CSV parsing
+- **`use-csv-parser.ts`** — Client CSV parsing; the field delimiter (`,`, `;`,
+  tab) is detected from the first record, so EU bank exports parse for free
 - **`use-llm-parser.ts`** — LLM-assisted parsing for non-standard formats
-- **`use-multi-stage-parser.ts`** — Orchestrates CSV → LLM fallback
+- **`use-multi-stage-parser.ts`** — Client CSV first; other formats go to the
+  LLM. A CSV the client cannot read stops at the `ai-offer` stage until the
+  user chooses "Parse with AI" — AI parsing spends the account's AI tokens, so
+  it is never a silent fallback
 
 ## Key Utils
 
@@ -40,7 +44,8 @@ Preview. It clears on a new upload or reset/finish — never via localStorage.
   the recognized column order so reordered exports map by name, and a
   recognized-but-unmappable header fails the whole file instead of guessing
 - **`format-import-date.ts`** — Locale display for canonical `YYYY-MM-DD` dates
-- **`row-edit-schema.ts`** — Zod validation for editable rows
+- **`row-edit-schema.ts`** — Zod validation for editable rows, built per row
+  from its amount column's convention
 - **`is-premium-required.ts`** — Tier gating for import limits
 
 - Dates stay the canonical `YYYY-MM-DD` string from upload through preview,
@@ -63,9 +68,11 @@ Preview. It clears on a new upload or reset/finish — never via localStorage.
   parentheses and a trailing minus. `resolveDecimalConvention` decides each
   file's amount column once — comma decimals (`1.000,00`) only when the column
   proves them — and refuses a column mixing both conventions. The resolved
-  `decimalComma` rides on each `ParsedRow`, so inline edits and configuration
-  re-parse with the same convention; a grouping comma is never deleted when it
-  could be a decimal mark.
+  `decimalComma` (or `decimalMixed`) rides on each `ParsedRow`, and every
+  reader of the amount uses it: `buildParsedRow`, the preview's inline schema
+  (`createEditableRowSchema`), and configuration. A grouping comma is never
+  deleted when it could be a decimal mark. A mixed column's rows stay refused
+  until their own amount is edited; editing another field keeps the refusal.
 - Submit writes `parseAmount(...).decimal` — the exact normalized decimal, with
   the cell's digits (`(12.50)` → `-12.50`, comma-decimal `-1.000` → `-1000`) —
   never the raw token, which the ledger refuses or reads as another number.

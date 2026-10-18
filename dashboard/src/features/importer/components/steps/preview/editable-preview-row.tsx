@@ -12,11 +12,11 @@ import { Button } from "@/common/components/ui/button";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { EditableCell } from "./editable-cell";
 import {
-  editableRowSchema,
+  createEditableRowSchema,
   type EditableRowData,
   type ImporterValidationKey,
 } from "../../../utils/row-edit-schema";
-import { buildParsedRow } from "../../../utils/csv-validator";
+import { buildParsedRow, parseAmount } from "../../../utils/csv-validator";
 import { formatImportDateForDisplay } from "../../../utils/format-import-date";
 import type { ParsedRow } from "../../../types";
 
@@ -35,7 +35,14 @@ export function EditablePreviewRow({
 }: EditablePreviewRowProps) {
   const { t, i18n } = useTranslations();
   const form = useForm<EditableRowData>({
-    resolver: zodResolver(editableRowSchema),
+    // react-hook-form reads the resolver on every render, so an amount edit
+    // that drops `decimalMixed` validates with the rebuilt row's rule.
+    resolver: zodResolver(
+      createEditableRowSchema({
+        decimalComma: row.decimalComma,
+        decimalMixed: row.decimalMixed,
+      }),
+    ),
     defaultValues: {
       date: row.date,
       payee: row.payee,
@@ -57,9 +64,19 @@ export function EditablePreviewRow({
   // formState.errors — it does not move focus — so mounting stays quiet.
   useEffect(() => {
     void trigger();
-  }, [row.id, trigger]);
+  }, [row.id, row.decimalComma, row.decimalMixed, trigger]);
 
   const hasErrors = Object.keys(errors).length > 0;
+  // The value an amount imports as, shown when the bank's spelling differs
+  // (`-4,50` is -4.50, comma-column `-1.000` is -1000); the cell still edits
+  // the raw token.
+  const amountReading = (value: string) => {
+    if (row.decimalMixed) return undefined;
+    const parsed = parseAmount(value, { decimalComma: row.decimalComma });
+    return parsed.valid && parsed.decimal !== value.trim()
+      ? parsed.decimal
+      : undefined;
+  };
   const validationMessage = (message?: string) =>
     message ? t(message as ImporterValidationKey) : undefined;
 
@@ -82,7 +99,12 @@ export function EditablePreviewRow({
           description: values.description,
           amountInput: values.amount,
         },
-        { decimalComma: row.decimalComma },
+        {
+          decimalComma: row.decimalComma,
+          // A new amount is re-read on its own; editing another field keeps
+          // a mixed column's refusal.
+          decimalMixed: field === "amount" ? false : row.decimalMixed,
+        },
       ),
     );
   };
@@ -180,6 +202,7 @@ export function EditablePreviewRow({
                 label={t("importer.preview.amount")}
                 rowNumber={index + 1}
                 value={field.value}
+                displayValue={amountReading(field.value)}
                 onChange={(value) => {
                   field.onChange(value);
                   void handleFieldChange("amount", value);

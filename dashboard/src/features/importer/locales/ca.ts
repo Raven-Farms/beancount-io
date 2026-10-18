@@ -596,6 +596,12 @@ const caImporter: Record<string, TranslationEntry> = {
     message: "L'import ha de ser un número vàlid",
     description: "Validation error for an invalid import amount",
   },
+  "importer.validation.amountMixedDecimals": {
+    message:
+      "Aquesta columna barreja decimals amb punt (1,234.56) i amb coma (1.234,56). Feu servir una sola convenció per columna.",
+    description:
+      "Validation error when an import amount column mixes point and comma decimal marks",
+  },
   "importer.validation.amountUnsupportedPrecision": {
     message:
       "Aquesta quantitat no es pot importar exactament: escurceu-la perquè es conservin tots els dígits",

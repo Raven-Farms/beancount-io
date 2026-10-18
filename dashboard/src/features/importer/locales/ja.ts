@@ -547,6 +547,12 @@ const jaImporter: Record<string, TranslationEntry> = {
     message: "金額は有効な数値でなければなりません",
     description: "Validation error for an invalid import amount",
   },
+  "importer.validation.amountMixedDecimals": {
+    message:
+      "この列には小数点がピリオドの値（1,234.56）とカンマの値（1.234,56）が混在しています。列ごとに 1 つの表記に揃えてください。",
+    description:
+      "Validation error when an import amount column mixes point and comma decimal marks",
+  },
   "importer.validation.amountUnsupportedPrecision": {
     message:
       "この金額は正確にインポートできません。すべての桁が保たれるよう短くしてください",
