@@ -629,7 +629,8 @@ export const sk: Translations = {
   profileUsernameHint:
     "Webové adresy vašich kníh začínajú vaším používateľským menom, takže jeho zmena zmení aj ich.",
   profileUsernameRequired: "Zadajte používateľské meno",
-  profileUsernameNoSpaces: "Používateľské meno nemôže obsahovať medzery",
+  profileUsernameRule:
+    "Použite 1 až 20 znakov: malé písmená a–z, číslice 0–9 alebo podčiarkovníky.",
   profileUsernameTaken: "Toto používateľské meno je už obsadené",
   profileEmail: "E-mail",
   profileEmailReadOnly: "E-mail tu nemožno zmeniť",

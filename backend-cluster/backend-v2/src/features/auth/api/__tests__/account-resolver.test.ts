@@ -1,11 +1,31 @@
 import "reflect-metadata";
 import { validate } from "class-validator";
-import { graphql } from "graphql";
+import { graphql, type GraphQLSchema } from "graphql";
 import { buildSchema, registerEnumType } from "type-graphql";
 import { AccountResolver, SearchUserInput } from "../account-resolver";
 import type { IContext } from "@/server/graphql/context";
-import type { IAccountService } from "@/features/auth/service/account-service";
+import {
+  AccountService,
+  type IAccountService,
+} from "@/features/auth/service/account-service";
+import { formatError } from "@/server/graphql/format-error";
+import { USERNAME_RULE } from "@/features/auth/utils/username-rule";
 import { ReportStatus } from "@/features/auth/utils/report-status";
+
+// type-graphql reads argument metadata from one build per process: a second
+// buildSchema in this file resolved every @Args() as undefined, so tests that
+// execute GraphQL share one schema and swap the resolver it serves.
+let servedResolver: AccountResolver;
+let schemaOnce: Promise<GraphQLSchema> | undefined;
+function realSchema(resolverToServe: AccountResolver): Promise<GraphQLSchema> {
+  servedResolver = resolverToServe;
+  registerEnumType(ReportStatus, { name: "ReportStatus" });
+  schemaOnce ??= buildSchema({
+    resolvers: [AccountResolver],
+    container: { get: () => servedResolver },
+  });
+  return schemaOnce;
+}
 
 describe("AccountResolver", () => {
   const sessionIdentity = {
@@ -56,11 +76,7 @@ describe("AccountResolver", () => {
 
   describe("userProfile", () => {
     it("returns null for an anonymous caller through the real GraphQL schema", async () => {
-      registerEnumType(ReportStatus, { name: "ReportStatus" });
-      const schema = await buildSchema({
-        resolvers: [AccountResolver],
-        container: { get: () => resolver },
-      });
+      const schema = await realSchema(resolver);
 
       const result = await graphql({
         schema,
@@ -144,11 +160,7 @@ describe("AccountResolver", () => {
     });
 
     it("serializes a username match without an email through the real GraphQL schema", async () => {
-      registerEnumType(ReportStatus, { name: "ReportStatus" });
-      const schema = await buildSchema({
-        resolvers: [AccountResolver],
-        container: { get: () => resolver },
-      });
+      const schema = await realSchema(resolver);
       accountService.findUsersByEmailOrUsername.mockResolvedValue([
         { email: null, username: "john" },
       ]);
@@ -164,6 +176,11 @@ describe("AccountResolver", () => {
       expect(result.data).toEqual({
         getUserByExactMatch: [{ username: "john", email: null }],
       });
+      expect(accountService.findUsersByEmailOrUsername).toHaveBeenCalledWith(
+        sessionIdentity,
+        "john",
+        false,
+      );
     });
   });
 
@@ -179,6 +196,73 @@ describe("AccountResolver", () => {
       sessionIdentity,
       "newusername",
     );
+  });
+
+  // A rename outside sign-up's rule reached the git host and failed there as
+  // a generic error, or was stored (w0/036). Through the real schema, the
+  // real service and the server's error formatter, it is a field-level
+  // BAD_USER_INPUT naming the rule, before any account or git work.
+  it("refuses a username outside sign-up's rule as a field-level BAD_USER_INPUT", async () => {
+    const models = { user: { getById: jest.fn(), updateUsername: jest.fn() } };
+    const fava = { getAdminClient: jest.fn() };
+    const service = new AccountService(
+      models as never,
+      {} as never,
+      {} as never,
+      fava as never,
+      {} as never,
+      { authorizeOrThrow: jest.fn().mockResolvedValue(undefined) } as never,
+    );
+    const schema = await realSchema(new AccountResolver(service));
+
+    const result = await graphql({
+      schema,
+      source: 'mutation { updateUsername(username: "José.Doe") { username } }',
+      contextValue: context,
+    });
+
+    expect(result.data).toBeNull();
+    const [error] = result.errors ?? [];
+    const formatted = formatError(error.toJSON(), error);
+    expect(formatted.extensions).toMatchObject({
+      code: "BAD_USER_INPUT",
+      field: "username",
+    });
+    expect(formatted.message).toBe(USERNAME_RULE);
+    expect(models.user.getById).not.toHaveBeenCalled();
+    expect(models.user.updateUsername).not.toHaveBeenCalled();
+    expect(fava.getAdminClient).not.toHaveBeenCalled();
+  });
+
+  it("passes a name inside the rule through to the account", async () => {
+    const models = {
+      user: {
+        getById: jest.fn().mockResolvedValue(null),
+        updateUsername: jest.fn(),
+      },
+    };
+    const service = new AccountService(
+      models as never,
+      {} as never,
+      {} as never,
+      { getAdminClient: jest.fn() } as never,
+      {} as never,
+      { authorizeOrThrow: jest.fn().mockResolvedValue(undefined) } as never,
+    );
+    const schema = await realSchema(new AccountResolver(service));
+
+    const result = await graphql({
+      schema,
+      source: 'mutation { updateUsername(username: "jose_doe") { username } }',
+      contextValue: context,
+    });
+
+    // The rule let it through: the service went on to load the account.
+    const [error] = result.errors ?? [];
+    expect(formatError(error.toJSON(), error).extensions?.code).toBe(
+      "NOT_FOUND",
+    );
+    expect(models.user.getById).toHaveBeenCalled();
   });
 
   it("normalizes nullable profile fields before delegation", async () => {

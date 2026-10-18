@@ -627,7 +627,8 @@ export const ca: Translations = {
   profileUsernameHint:
     "Les adreces web dels teus llibres comencen amb el teu nom d'usuari, així que canviar-lo també les canvia.",
   profileUsernameRequired: "Introdueix un nom d'usuari",
-  profileUsernameNoSpaces: "El nom d'usuari no pot contenir espais",
+  profileUsernameRule:
+    "Fes servir d'1 a 20 caràcters: minúscules a–z, xifres 0–9 o guions baixos.",
   profileUsernameTaken: "Aquest nom d'usuari ja està agafat",
   profileEmail: "Correu electrònic",
   profileEmailReadOnly: "El correu electrònic no es pot canviar aquí",

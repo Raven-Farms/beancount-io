@@ -624,7 +624,8 @@ export const ru: Translations = {
   profileUsernameHint:
     "Веб-адреса ваших книг начинаются с имени пользователя, поэтому при его смене они тоже изменятся.",
   profileUsernameRequired: "Введите имя пользователя",
-  profileUsernameNoSpaces: "Имя пользователя не может содержать пробелы",
+  profileUsernameRule:
+    "Используйте от 1 до 20 символов: строчные буквы a–z, цифры 0–9 или подчёркивания.",
   profileUsernameTaken: "Это имя пользователя уже занято",
   profileEmail: "Эл. почта",
   profileEmailReadOnly: "Адрес эл. почты нельзя изменить здесь",

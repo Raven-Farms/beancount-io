@@ -41,8 +41,30 @@ export function profileChanges(
   return changes;
 }
 
-/** Whether a failed username update means the name belongs to someone else:
- * the API reports a taken username as a `CONFLICT` error. */
-export function isUsernameTaken(error: unknown): boolean {
-  return graphQLErrorCodes(error).includes("CONFLICT");
+/**
+ * Sign-up's username rule, which the API also enforces on a rename: 1–20
+ * lowercase letters a–z, digits and underscores (w0/036).
+ */
+const USERNAME_PATTERN = /^[a-z0-9_]{1,20}$/;
+
+/**
+ * Whether the edited username may be saved. An unchanged name always may, so
+ * an account whose name predates the rule can still save its other fields;
+ * a new name must follow the rule.
+ */
+export function usernameAllowed(saved: string, edited: string): boolean {
+  const name = edited.trim();
+  return name === saved.trim() || USERNAME_PATTERN.test(name);
+}
+
+/** The field message for a refused rename, or null for a non-field failure:
+ * `CONFLICT` is a taken name, `BAD_USER_INPUT` one outside the rule. Only the
+ * typed code decides, never message text. */
+export function usernameErrorKey(
+  error: unknown,
+): "profileUsernameTaken" | "profileUsernameRule" | null {
+  const codes = graphQLErrorCodes(error);
+  if (codes.includes("CONFLICT")) return "profileUsernameTaken";
+  if (codes.includes("BAD_USER_INPUT")) return "profileUsernameRule";
+  return null;
 }

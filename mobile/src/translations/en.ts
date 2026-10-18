@@ -605,7 +605,8 @@ export const en = {
   profileUsernameHint:
     "Your ledgers’ web addresses start with your username, so changing it changes them too.",
   profileUsernameRequired: "Enter a username",
-  profileUsernameNoSpaces: "Usernames can't contain spaces",
+  profileUsernameRule:
+    "Use 1–20 characters: lowercase a–z, digits 0–9, or underscores.",
   profileUsernameTaken: "That username is already taken",
   profileEmail: "Email",
   profileEmailReadOnly: "Email can't be changed here",

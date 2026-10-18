@@ -614,7 +614,8 @@ export const bg: Translations = {
   profileUsernameHint:
     "Уеб адресите на книгите ви започват с потребителското ви име, затова промяната му променя и тях.",
   profileUsernameRequired: "Въведете потребителско име",
-  profileUsernameNoSpaces: "Потребителското име не може да съдържа интервали",
+  profileUsernameRule:
+    "Използвайте 1–20 знака: малки букви a–z, цифри 0–9 или долни черти.",
   profileUsernameTaken: "Това потребителско име вече е заето",
   profileEmail: "Имейл",
   profileEmailReadOnly: "Имейлът не може да се променя тук",

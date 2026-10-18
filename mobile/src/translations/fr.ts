@@ -626,8 +626,8 @@ export const fr: Translations = {
   profileUsernameHint:
     "Les adresses web de vos grands livres commencent par votre nom d’utilisateur : le changer les modifie aussi.",
   profileUsernameRequired: "Saisissez un nom d’utilisateur",
-  profileUsernameNoSpaces:
-    "Le nom d’utilisateur ne peut pas contenir d’espaces",
+  profileUsernameRule:
+    "Utilisez 1 à 20 caractères : minuscules a–z, chiffres 0–9 ou tirets bas.",
   profileUsernameTaken: "Ce nom d’utilisateur est déjà pris",
   profileEmail: "E-mail",
   profileEmailReadOnly: "L’e-mail ne peut pas être modifié ici",

@@ -616,7 +616,8 @@ export const nl: Translations = {
   profileUsernameHint:
     "De webadressen van je grootboeken beginnen met je gebruikersnaam, dus als je die wijzigt, veranderen ze mee.",
   profileUsernameRequired: "Voer een gebruikersnaam in",
-  profileUsernameNoSpaces: "Een gebruikersnaam mag geen spaties bevatten",
+  profileUsernameRule:
+    "Gebruik 1–20 tekens: kleine letters a–z, cijfers 0–9 of underscores.",
   profileUsernameTaken: "Die gebruikersnaam is al in gebruik",
   profileEmail: "E-mail",
   profileEmailReadOnly: "Je e-mailadres kan hier niet worden gewijzigd",

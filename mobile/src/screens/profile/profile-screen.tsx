@@ -41,7 +41,8 @@ import { CardLoadFailure } from "@/components/card-load-failure";
 import { LoadingTile } from "@/components/loading-tile";
 import { UserAvatar } from "@/components/user-avatar";
 import {
-  isUsernameTaken,
+  usernameAllowed,
+  usernameErrorKey,
   profileChanges,
   type ProfileValues,
 } from "./profile-changes";
@@ -228,9 +229,12 @@ export function ProfileScreen(): JSX.Element {
           .string()
           .trim()
           .min(1, t("profileUsernameRequired"))
-          .regex(/^\S+$/, t("profileUsernameNoSpaces")),
+          .refine(
+            (name) => usernameAllowed(savedValues.username, name),
+            t("profileUsernameRule"),
+          ),
       }),
-    [t],
+    [t, savedValues.username],
   );
 
   const {
@@ -256,9 +260,9 @@ export function ProfileScreen(): JSX.Element {
         // would otherwise keep listing them under the old owner.
         void refreshLedgers().catch(() => {});
       } catch (error) {
-        const taken = isUsernameTaken(error);
-        setError(taken ? "username" : "root", {
-          message: t(taken ? "profileUsernameTaken" : "saveFailed"),
+        const fieldKey = usernameErrorKey(error);
+        setError(fieldKey ? "username" : "root", {
+          message: t(fieldKey ?? "saveFailed"),
         });
         return;
       }
@@ -361,7 +365,9 @@ export function ProfileScreen(): JSX.Element {
             {errors.username.message}
           </Text>
         ) : (
-          <Text style={styles.hint}>{t("profileUsernameHint")}</Text>
+          <Text style={styles.hint}>
+            {`${t("profileUsernameRule")} ${t("profileUsernameHint")}`}
+          </Text>
         )}
 
         <View

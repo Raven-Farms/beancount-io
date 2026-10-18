@@ -566,7 +566,7 @@ export const zh: Translations = {
   profileUsernameHint:
     "你的账本网址以用户名开头，修改用户名会同时改变这些网址。",
   profileUsernameRequired: "请输入用户名",
-  profileUsernameNoSpaces: "用户名不能包含空格",
+  profileUsernameRule: "请使用 1–20 个字符：小写字母 a–z、数字 0–9 或下划线。",
   profileUsernameTaken: "该用户名已被占用",
   profileEmail: "邮箱",
   profileEmailReadOnly: "此处无法修改邮箱",

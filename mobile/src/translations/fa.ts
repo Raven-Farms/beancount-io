@@ -605,7 +605,8 @@ export const fa: Translations = {
   profileUsernameHint:
     "نشانی وب دفترهای کل شما با نام کاربری‌تان شروع می‌شود، پس تغییر آن نشانی‌ها را هم تغییر می‌دهد.",
   profileUsernameRequired: "یک نام کاربری وارد کنید",
-  profileUsernameNoSpaces: "نام کاربری نمی‌تواند فاصله داشته باشد",
+  profileUsernameRule:
+    "از ۱ تا ۲۰ نویسه استفاده کنید: حروف کوچک a–z، ارقام 0–9 یا زیرخط.",
   profileUsernameTaken: "این نام کاربری قبلاً گرفته شده است",
   profileEmail: "ایمیل",
   profileEmailReadOnly: "ایمیل را اینجا نمی‌توان تغییر داد",

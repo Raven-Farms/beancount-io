@@ -10,6 +10,7 @@ import {
 import type Stripe from "stripe";
 import { lock, LOCK_KEYS } from "@/shared/lock";
 import { ReportStatus } from "@/features/auth/utils/report-status";
+import { assertValidUsername } from "@/features/auth/utils/username-rule";
 import type { IStripeService } from "@/features/stripe/service/stripe-service";
 import type { IFavaClientFactory } from "@/foundation/clients/fava-client-factory";
 import type { IPlaidClient } from "@/features/plaid/service/plaid-client";
@@ -169,6 +170,9 @@ export class AccountService implements IAccountService {
       action: AUTHORIZATION_ACTIONS.USER_PROFILE_UPDATE,
       resource: userResource(userId),
     });
+    // Before the conflict check and the git-host rename: a name sign-up would
+    // refuse was otherwise stored, or failed upstream as a generic error.
+    assertValidUsername(username);
     const lockKey = LOCK_KEYS.USER.updateUsername(userId);
     await lock.acquire(lockKey, async () => {
       const user = await this.models.user.getById(this.db, userId);

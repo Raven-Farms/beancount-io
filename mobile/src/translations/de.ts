@@ -625,7 +625,8 @@ export const de: Translations = {
   profileUsernameHint:
     "Die Webadressen deiner Hauptbücher beginnen mit deinem Benutzernamen – wenn du ihn änderst, ändern sie sich mit.",
   profileUsernameRequired: "Gib einen Benutzernamen ein",
-  profileUsernameNoSpaces: "Benutzernamen dürfen keine Leerzeichen enthalten",
+  profileUsernameRule:
+    "Verwende 1–20 Zeichen: Kleinbuchstaben a–z, Ziffern 0–9 oder Unterstriche.",
   profileUsernameTaken: "Dieser Benutzername ist bereits vergeben",
   profileEmail: "E-Mail",
   profileEmailReadOnly: "Die E-Mail-Adresse kann hier nicht geändert werden",
