@@ -1919,11 +1919,13 @@ def validate_candidate(
     # line; anything unmatched in the after set is newly introduced.
     tolerated: set[int] = set()
     before_errors: list[Any] | None = None
+    existing_plugin_errors: set[int] | None = None
     if allow_errors:
         _, before_errors, _ = managed_load.load_file(
             snapshot.root if snapshot else file, snapshot=snapshot, check_types=True
         )
         tolerated = _preexisting_errors(errors, before_errors, filenames, original_lines)
+        existing_plugin_errors = tolerated
     accounts = [entry.account for entry in entries if isinstance(entry, Open)]
     # What the per-error hints below look up, each built on first use and then
     # shared (w5/124). One mis-dated `open` makes thousands of errors, and a
@@ -1931,7 +1933,9 @@ def validate_candidate(
     # minutes.
     account_suggestions: dict[str, str] = {}
     lifecycles: dict[str, list[Any]] | None = None
+    closes_by_location: dict[tuple[Any, Any, Any], Any] | None = None
     cost_holders: dict[str, set[int]] | None = None
+    first_inactive_dates: dict[str, Any] | None = None
     source_line_counts: dict[Path, int] = {}
     roots = ledger_roots(options)
     records: list[_ErrorRecord] = []
@@ -1993,6 +1997,20 @@ def validate_candidate(
                 message = "Proposed append (not written): " + message[len(prefix) :]
             else:
                 message = f"Proposed append (not written): {message}"
+        plugin = type(error).__module__
+        if plugin.startswith("beancount.plugins.") and not appended and not _unanchored(error):
+            # A backdated entry can make a plugin fail at an existing line.
+            # Keep that real location, but identify this write as the trigger
+            # only when the error was absent before it (w5/666).
+            if existing_plugin_errors is None:
+                if before_errors is None:
+                    root = snapshot.root if snapshot else file
+                    before_errors = (
+                        managed_load.load_file(root, snapshot=snapshot, check_types=True)[1] if root.exists() else []
+                    )
+                existing_plugin_errors = _preexisting_errors(errors, before_errors, filenames, original_lines)
+            if index not in existing_plugin_errors:
+                hints.append(f"The proposed append (not written) triggers this error from plugin {plugin}.")
         if _unanchored(error) and (missing := _MISSING_COMMODITY.search(message)):
             # check_commodity reports against no line, so the location test
             # above cannot tell the write's own currency from one the books
@@ -2073,34 +2091,38 @@ def validate_candidate(
         if "inactive account '" in message:
             account = message.split("inactive account '", 1)[1].split("'", 1)[0]
             if lifecycles is None:
-                lifecycles = _lifecycles(entries)
+                lifecycles = _lifecycles(entries, original_lines)
             # A plugin's open or close is not a line anyone can edit (w5/222).
             remedy = "edit that directive"
             for entry in lifecycles.get(account, []):
                 word, state = ("open", "opened") if isinstance(entry, Open) else ("close", "closed")
+                if isinstance(entry, Open) and _proposed_entry(entry, filenames, original_lines):
+                    if first_inactive_dates is None:
+                        first_inactive_dates = {}
+                        for inactive in errors:
+                            if "inactive account '" in inactive.message and inactive.entry is not None:
+                                name = inactive.message.split("inactive account '", 1)[1].split("'", 1)[0]
+                                first_inactive_dates[name] = min(
+                                    first_inactive_dates.get(name, inactive.entry.date), inactive.entry.date
+                                )
+                    message += (
+                        f" The proposed open would open {account} on {entry.date}; date it on or before "
+                        f"{first_inactive_dates[account]}."
+                    )
+                    remedy = "correct the proposed open date"
+                    continue
+                if isinstance(entry, Close) and (
+                    closing_hint := _plugin_close_hint(entry, lifecycles, filenames, original_lines)
+                ):
+                    description, remedy = closing_hint
+                    message += f" Account {description}."
+                    continue
                 origin = _plugin_origin(entry, word, filenames, original_lines)
                 if origin is None:
                     message += f" Account {state} {entry.date} at {_location(entry, filenames)}."
                     continue
                 message += f" Account {state} {entry.date} by {origin}, not by a line in the ledger"
                 remedy = "change the ledger lines that plugin reads"
-                # `close_tree` closes a subtree with its parent: name the
-                # parent's written close, which is the line to edit.
-                parent = next(
-                    (
-                        other
-                        for name, group in lifecycles.items()
-                        if word == "close" and account.startswith(f"{name}:")
-                        for other in group
-                        if isinstance(other, Close)
-                        and other.date == entry.date
-                        and _plugin_origin(other, "close", filenames, original_lines) is None
-                    ),
-                    None,
-                )
-                if parent is not None:
-                    message += f"; {parent.account} is closed that day at {_location(parent, filenames)}"
-                    remedy = f"edit the close of {parent.account}"
                 message += "."
             # Named for the directive that failed: a note or a pad is no transaction (w5/393).
             # A pad's own padding transaction is the pad the user wrote, and
@@ -2114,9 +2136,16 @@ def validate_candidate(
             # opens after the close; say which, as every other directive's
             # refusal does (w5/394).
             if lifecycles is None:
-                lifecycles = _lifecycles(entries)
+                lifecycles = _lifecycles(entries, original_lines)
             opened = next((e for e in lifecycles.get(error.entry.account, []) if isinstance(e, Open)), None)
-            if opened is not None:
+            if closing_hint := _plugin_close_hint(error.entry, lifecycles, filenames, original_lines):
+                description, _ = closing_hint
+                message = message.removeprefix(f"{error.source.get('filename')}:{lineno}: ")
+                message += (
+                    f". Account {description}. Open {error.entry.account} on or before {error.entry.date}, "
+                    "or open it under another parent."
+                )
+            elif opened is not None:
                 message += (
                     f". Account opened {opened.date} at {_location(opened, filenames)}; "
                     f"date the close on or after {opened.date}."
@@ -2127,7 +2156,7 @@ def validate_candidate(
                 message += f". The ledger never opens {error.entry.account}; check the account name."
         if isinstance(error.entry, Transaction) and (invalid := _POSTING_CURRENCY.fullmatch(error.message)):
             if lifecycles is None:
-                lifecycles = _lifecycles(entries)
+                lifecycles = _lifecycles(entries, original_lines)
             opened = next((e for e in lifecycles.get(invalid["account"], []) if isinstance(e, Open)), None)
             if invalid["account"] in duplicate_opens:
                 # Beancount checks postings against the account's last open:
@@ -2140,7 +2169,7 @@ def validate_candidate(
                 )
         if isinstance(error.entry, Open) and error.message.startswith("Duplicate open directive for "):
             if lifecycles is None:
-                lifecycles = _lifecycles(entries)
+                lifecycles = _lifecycles(entries, original_lines)
             opens = [e for e in lifecycles.get(error.entry.account, []) if isinstance(e, Open)]
             existing = None
             duplicate = None
@@ -2246,10 +2275,23 @@ def validate_candidate(
                 message.rstrip(".") + "." + _unused_pad_hint(pad_entry, entries, errors, filenames, appended=appended)
             )
         elif isinstance(error.entry, Balance) and "Balance failed" in error.message:
+            if not allow_errors and closes_by_location is None:
+                closes_by_location = {
+                    (entry.account, entry.meta.get("filename"), entry.meta.get("lineno")): entry
+                    for entry in entries
+                    if isinstance(entry, Close)
+                }
+            closing = (closes_by_location or {}).get(
+                (error.entry.account, error.entry.meta.get("filename"), error.entry.meta.get("lineno"))
+            )
             if allow_errors:
                 hints.append(
                     "Review this assertion and missing transactions before further writes; it still fails validation."
                 )
+            elif closing is not None:
+                # check_drained can inherit a close_tree close's pseudo-file;
+                # the assertion still comes from check_drained (w5/666).
+                hints.append(_drained_close_hint(error.entry, closing, error.message, options))
             elif origin := _plugin_origin(error.entry, "balance", filenames, original_lines):
                 # Nothing at that location is an assertion to edit (w5/222).
                 hints.append(
@@ -2257,9 +2299,6 @@ def validate_candidate(
                     f"Review the transactions on {error.entry.account} before {error.entry.date}, "
                     "or the ledger line the plugin reads."
                 )
-            elif closing := _drained_close(error.entry, entries):
-                # The close this write appends is what the plugin read (w5/399).
-                hints.append(_drained_close_hint(error.entry, closing, error.message, options))
             elif (error.entry.date, error.entry.account, error.entry.amount.currency) in conflicting_balances:
                 hints.append(
                     f"The {error.entry.date} assertions for {error.entry.account} in "
@@ -2460,30 +2499,6 @@ _MISSING_COMMODITY = re.compile(r"Missing Commodity directive for '([^']+)'")
 _ACCUMULATED = re.compile(r"accumulated (?P<amount>-?[\d.,]+ \S+)")
 
 
-def _drained_close(balance: Any, entries: list[Any]) -> Any | None:
-    """The `close` a plugin's zero assertion checks, when it shares that close's location.
-
-    `check_drained` stamps its assertion with the close's own line. A close
-    already in the ledger is `_plugin_origin`'s case; one this write appends
-    read as a balance the user typed and got statement-date and fee advice
-    (w5/399).
-    """
-    from beancount.core.data import Close
-
-    meta = balance.meta or {}
-    return next(
-        (
-            entry
-            for entry in entries
-            if isinstance(entry, Close)
-            and entry.account == balance.account
-            and (entry.meta or {}).get("filename") == meta.get("filename")
-            and (entry.meta or {}).get("lineno") == meta.get("lineno")
-        ),
-        None,
-    )
-
-
 def _drained_close_hint(balance: Any, closing: Any, message: str, options: dict[str, Any]) -> str:
     """What the account still holds at its close, and how to get it to zero."""
     plugins = [str(name) for name, _ in options.get("plugin") or ()]
@@ -2495,6 +2510,49 @@ def _drained_close_hint(balance: Any, closing: Any, message: str, options: dict[
         f"account {holding} then. Move that balance out of {balance.account} with a transaction dated on or "
         f"before {closing.date}, then close it."
     )
+
+
+def _proposed_entry(entry: Any, filenames: dict[Path, Path], original_lines: dict[Path, list[bytes]]) -> bool:
+    """Whether the entry points into this write's unpersisted append."""
+    path = Path(entry.meta.get("filename", ""))
+    original = filenames.get(path, path).resolve()
+    line = entry.meta.get("lineno")
+    return original in original_lines and isinstance(line, int) and line > len(original_lines[original])
+
+
+def _plugin_close_hint(
+    closed: Any,
+    lifecycles: dict[str, list[Any]],
+    filenames: dict[Path, Path],
+    original_lines: dict[Path, list[bytes]],
+) -> tuple[str, str] | None:
+    """Describe a generated close and the written ancestor close to correct."""
+    from beancount.core.data import Close
+
+    origin = _plugin_origin(closed, "close", filenames, original_lines)
+    if origin is None:
+        return None
+    description = f"closed {closed.date} by {origin}, not by a line in the ledger"
+    remedy = "change the ledger lines that plugin reads"
+    ancestor = closed.account
+    while ":" in ancestor:
+        ancestor = ancestor.rsplit(":", 1)[0]
+        parent = next(
+            (
+                entry
+                for entry in lifecycles.get(ancestor, [])
+                if isinstance(entry, Close)
+                and entry.date == closed.date
+                and not _proposed_entry(entry, filenames, original_lines)
+                and _plugin_origin(entry, "close", filenames, original_lines) is None
+            ),
+            None,
+        )
+        if parent is not None:
+            description += f"; {parent.account} is closed that day at {_location(parent, filenames)}"
+            remedy = f"edit the close of {parent.account}"
+            break
+    return description, remedy
 
 
 def _plugin_origin(
@@ -2662,14 +2720,29 @@ def _interpolated_leg_hint(entry: Any, account: str, currency: str, opened: Any)
     return prefix + ("; ".join(remedies) + "." if remedies else f"review the other legs' prices and costs in {target}.")
 
 
-def _lifecycles(entries: list[Any]) -> dict[str, list[Any]]:
-    """Each account's opens and closes, in ledger order."""
+def _lifecycles(entries: list[Any], sources: Iterable[Path] = ()) -> dict[str, list[Any]]:
+    """Account lifecycles, retaining written parent closes close_tree removes."""
     from beancount.core.data import Close, Open
 
+    from bea_engine.ledger.reader import _spelled_entries
+
     lifecycles: dict[str, list[Any]] = {}
+    generated_close = False
     for entry in entries:
         if isinstance(entry, Open | Close):
             lifecycles.setdefault(entry.account, []).append(entry)
+            generated_close |= isinstance(entry, Close) and str(entry.meta.get("filename", "")).startswith("<")
+    if generated_close:
+        # close_tree drops a parent's close when the parent itself was never
+        # opened. Recover that real remedy from the plugin-free source parse,
+        # once for the whole load rather than once per error/import row.
+        for source in sources:
+            for entry in _spelled_entries(str(source)).values():
+                if isinstance(entry, Close):
+                    entry = entry._replace(account=unicodedata.normalize("NFC", entry.account))
+                    group = lifecycles.setdefault(entry.account, [])
+                    if not any(isinstance(other, Close) and other.date == entry.date for other in group):
+                        group.append(entry._replace(meta={**entry.meta, "filename": str(source)}))
     return lifecycles
 
 

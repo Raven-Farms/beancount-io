@@ -384,6 +384,7 @@ def answer(
     # duplicate" cited at the template's line, and `--duplicates skip` then
     # dropped them all (w5/325).
     forget_source_lines()
+    lifecycles = ledger_write._lifecycles(existing, snapshot.contents)
     shared = shared_locations(existing)
     written = [
         entry
@@ -619,6 +620,7 @@ def answer(
                 ledger=file,
                 source=account if csv_mode else None,
                 windows=windows,
+                lifecycles=lifecycles,
             )
             if blocked_reason is not None:
                 status, reason, include = "blocked", blocked_reason, False
@@ -666,6 +668,7 @@ def answer(
         )
         after = _open_currencies(entries_after, Open)
         windows_after = _active_windows(entries_after)
+        lifecycles_after = ledger_write._lifecycles(entries_after, snapshot.contents)
         opened_after = after
         for row_dict, entry, was, why in held:
             still = _blocked_reason(
@@ -677,6 +680,7 @@ def answer(
                 ledger=file,
                 source=account if csv_mode else None,
                 windows=windows_after,
+                lifecycles=lifecycles_after,
             )
             if still is None:
                 row_dict.update(status=was, reason=why, include=True)
@@ -1636,6 +1640,7 @@ def _blocked_reason(
     ledger: Path,
     source: str | None = None,
     windows: dict[str, tuple[Any, Any]] | None = None,
+    lifecycles: dict[str, list[Any]] | None = None,
 ) -> str | None:
     """Why a transaction cannot be written, or None when its accounts allow it.
 
@@ -1681,7 +1686,7 @@ def _blocked_reason(
         noun = "Account" if len(missing) == 1 else "Accounts"
         verb = "is" if len(missing) == 1 else "are"
         return f"{noun} {quoted} {verb} not open. Run: {'; '.join(remedies)}."
-    inactive = _inactive_reason(entry, windows or {}, first_uses, source)
+    inactive = _inactive_reason(entry, windows or {}, first_uses, source, lifecycles)
     if inactive is not None:
         return inactive
     for name, currency in referenced:
@@ -1751,6 +1756,7 @@ def _inactive_reason(
     windows: dict[str, tuple[Any, Any]],
     first_uses: dict[str, tuple[Any, list[str] | None]],
     source: str | None,
+    lifecycles: dict[str, list[Any]] | None = None,
 ) -> str | None:
     """Why a posting's account cannot take this row's date, though it is opened.
 
@@ -1770,6 +1776,14 @@ def _inactive_reason(
                 f"{entry.date}. Re-date that open to {min(earliest, entry.date)} or earlier."
             )
         if closed is not None and entry.date > closed.date:
+            # close_tree's child close has no editable ledger line. Share
+            # add's attribution and point to the written parent's close.
+            if hint := ledger_write._plugin_close_hint(closed, lifecycles or {}, {}, {}):
+                description, edit = hint
+                return (
+                    f"Account '{name}' was {description}, before this row's {entry.date}. "
+                    f"Correct the row date, {edit}, or import into an account that is still open."
+                )
             remedy = (
                 "Re-date the close, or import into an account that is still open."
                 if name == source
