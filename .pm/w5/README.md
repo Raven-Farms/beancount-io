@@ -248,6 +248,9 @@
 - [847 — bea ask approval panel shows a zero-width char in an AI-written account invisibly; approving creates a lookalike account](./847.md)
 - [848 — bea ask write tool tells the model whether local paths exist, without approval, even in --print](./848.md)
 - [849 — bea ask UX: no directive count on the panel, unbounded skill body, --into seed line not shown](./849.md)
+- [850 — check with -C, -v or --json shows only a reserved-key error and hides the ledger's other errors (gap in w5/630)](./850.md)
+- [851 — A BOM-saved or star-import CONFIG module escapes the bea ingest refusal (incomplete fix of w5/635)](./851.md)
+- [852 — Four gaps: --search vs table spacing, sys.exit hint in importer methods, price export -oDIR, posting filename: message](./852.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
