@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [620 — The misplaced-global hint sends `doctor`/`treeify`/`example` users to a dead end (gap in w5/416)](./620.md)
 - [621 — A literal tab is refused as an import delimiter, though the refusal recommends it](./621.md)
 - [622 — A forced `--delimiter` that does not split the header is reported as a missing column (gap in w3/226)](./622.md)
 - [623 — `cloud ledger create --private --public` creates a public ledger; `--dir` without `--clone` ignored](./623.md)
