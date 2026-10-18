@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [660 — Trivial gaps in w5/487/488/490: `--force` hint loop, wrong filled-in leg, NBSP in `--amount`](./660.md)
 - [661 — `add` exits 0 on a ledger `check` rejects for data-type errors (gap next to w5/493)](./661.md)
 - [662 — On a forecast ledger, `import --duplicates skip` drops the real payment on the template date (sibling of w5/325)](./662.md)
 - [663 — Under check_commodity with `--allow-errors`, the refusal blames the pre-existing currency, not the new one](./663.md)
