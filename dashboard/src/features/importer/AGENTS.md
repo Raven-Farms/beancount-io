@@ -66,6 +66,9 @@ Preview. It clears on a new upload or reset/finish — never via localStorage.
   `decimalComma` rides on each `ParsedRow`, so inline edits and configuration
   re-parse with the same convention; a grouping comma is never deleted when it
   could be a decimal mark.
+- Submit writes `parseAmount(...).decimal` — the exact normalized decimal, with
+  the cell's digits (`(12.50)` → `-12.50`, comma-decimal `-1.000` → `-1000`) —
+  never the raw token, which the ledger refuses or reads as another number.
 
 ## Premium Gating
 

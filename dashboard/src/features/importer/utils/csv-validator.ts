@@ -3,6 +3,7 @@
  */
 
 import type { ParsedRow } from "../types";
+import { parseDecimalNumber } from "@/common/lib/beancount/decimal-number";
 
 /**
  * Validate date format (YYYY-MM-DD)
@@ -64,6 +65,12 @@ export type AmountParseFailureReason =
 export type AmountParseResult = {
   valid: boolean;
   amount?: number;
+  /**
+   * The exact plain decimal the token denotes, digits as written: `-1,234.56`
+   * is `-1234.56`, `(12.50)` is `-12.50`, comma-decimal `-1.000` is `-1000`.
+   * This, never the raw token, is what an import writes.
+   */
+  decimal?: string;
   error?: string;
   reason?: AmountParseFailureReason;
 };
@@ -300,7 +307,17 @@ export function parseAmount(
     };
   }
 
-  return { valid: true, amount };
+  // Null only past the decimal helper's exponent bound, which no bank writes.
+  const decimal = parseDecimalNumber(trimmed);
+  if (decimal === null) {
+    return {
+      valid: false,
+      error: "Amount has unsupported precision",
+      reason: "unsupported-precision",
+    };
+  }
+
+  return { valid: true, amount, decimal };
 }
 
 export function createParsedRowId(): string {

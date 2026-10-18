@@ -26,7 +26,6 @@ import {
 } from "@/common/components/ledger-comboboxes";
 import { AccountMappingTable } from "./account-mapping-table";
 import { useAICategorization } from "../../../hooks/use-ai-categorization";
-import { parseDecimalNumber } from "@/common/lib/beancount/decimal-number";
 import type { ParsedRow, ImportTransaction } from "../../../types";
 import {
   buildImportConfigFormValues,
@@ -79,6 +78,7 @@ export function TransactionConfigForm({
                 description: z.string(),
                 amount: z.number(),
                 amountInput: z.string(),
+                amountDecimal: z.string(),
                 targetAccount: z.string(),
                 selected: z.boolean(),
               }),
@@ -138,6 +138,7 @@ export function TransactionConfigForm({
                     description: txn.description ?? "",
                     amount: txn.amount ?? 0,
                     amountInput: txn.amountInput ?? "",
+                    amountDecimal: txn.amountDecimal ?? "",
                     targetAccount: txn.targetAccount ?? "",
                     selected: txn.selected ?? true,
                   },
@@ -179,7 +180,9 @@ export function TransactionConfigForm({
         date: txn.date,
         payee: txn.payee,
         description: txn.description,
-        amount: parseDecimalNumber(txn.amountInput) ?? txn.amountInput.trim(),
+        // Never the raw cell: `(12.50)` or comma-decimal `-1.000` would be
+        // refused or written as a different number.
+        amount: txn.amountDecimal,
         sourceAccount: data.sourceAccount,
         targetAccount: txn.targetAccount,
         currency: data.defaultCurrency,
