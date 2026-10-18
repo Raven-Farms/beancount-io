@@ -312,6 +312,36 @@ def load_with_sources(
         )
 
 
+def _resolve_feeds(
+    sources: list[_PendingSource],
+    *,
+    root: Path,
+    offline: bool,
+    strict: bool,
+    now: float,
+    opener: OpenerDirector | None,
+) -> dict[str, ResolvedFeed]:
+    """Each source resolved, the fetches running side by side.
+
+    One after another, each source's fetch timeout added up: during a price
+    service outage a ledger with six feeds stalled every command for half a
+    minute, where the hosted ledger resolves them together (w5/642). Each
+    feed has its own cache directory, so nothing they write is shared. In
+    strict mode the first source in include order that fails is the one
+    reported, as before.
+    """
+    from concurrent.futures import ThreadPoolExecutor
+
+    def resolve(source: _PendingSource) -> ResolvedFeed:
+        return resolve_feed(source.url, source.alias, root=root, offline=offline, strict=strict, now=now, opener=opener)
+
+    if offline or len(sources) < 2:
+        return {source.url: resolve(source) for source in sources}
+    with ThreadPoolExecutor(max_workers=len(sources), thread_name_prefix="managed-price-source") as pool:
+        futures = [(source.url, pool.submit(resolve, source)) for source in sources]
+        return {url: future.result() for url, future in futures}
+
+
 def _load_with_sources(
     entry: Path,
     *,
@@ -362,23 +392,16 @@ def _load_with_sources(
     # status` and the export all name it.
     budget = ManagedPriceBudget(limit=MAX_URLS_PER_LOAD)
     pending = managed
-    resolved: dict[str, ResolvedFeed] = {}
-    for source in pending:
-        if not budget.claim(source.url):
-            if want_strict:
-                raise LedgerError(f"managed price source {source.url} is unavailable in strict mode: {_OVER_LIMIT}.")
-            over_limit = PriceFeedHead(revision=None, next_refresh_at=0.0, last_error=_OVER_LIMIT)
-            resolved[source.url] = ResolvedFeed(blob=None, head=over_limit)
-            continue
-        resolved[source.url] = resolve_feed(
-            source.url,
-            source.alias,
-            root=cache,
-            offline=want_offline,
-            strict=want_strict,
-            now=at,
-            opener=opener,
-        )
+    claimed = [source for source in pending if budget.claim(source.url)]
+    fetched = _resolve_feeds(claimed, root=cache, offline=want_offline, strict=want_strict, now=at, opener=opener)
+    if want_strict and len(claimed) < len(pending):
+        # The sources past the cap follow every claimed one, as they did when resolved in turn.
+        over = next(source for source in pending if source.url not in fetched)
+        raise LedgerError(f"managed price source {over.url} is unavailable in strict mode: {_OVER_LIMIT}.")
+    over_limit = PriceFeedHead(revision=None, next_refresh_at=0.0, last_error=_OVER_LIMIT)
+    resolved: dict[str, ResolvedFeed] = {
+        source.url: fetched.get(source.url) or ResolvedFeed(blob=None, head=over_limit) for source in pending
+    }
     blobs = {url: result.blob for url, result in resolved.items() if result.blob is not None}
     texts = [content.decode("utf-8", errors="replace") for content in snapshot.contents.values()]
     pairs = collect_ledger_price_pairs(*texts) if blobs else set()

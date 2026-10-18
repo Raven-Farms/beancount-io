@@ -340,6 +340,14 @@ class _FeedHandler(BaseHTTPRequestHandler):
             return
         if "sleep" in route:
             time.sleep(route["sleep"])
+        if "barrier" in route:
+            # Answers only once every request sharing the barrier is in flight at once.
+            try:
+                route["barrier"].wait(timeout=4)
+            except threading.BrokenBarrierError:
+                self.send_response(503)
+                self.end_headers()
+                return
         if route.get("etag_match") and self.headers.get("If-None-Match") == route["etag"]:
             self.send_response(304)
             self.end_headers()
@@ -1235,6 +1243,25 @@ include "prices.bean"
         _FeedHandler.hits.clear()
         assert load_with_sources(ledger, root=root).sources != ()
         assert _FeedHandler.hits == []
+
+    def test_sources_are_fetched_side_by_side(self, feed_server: str, tmp_path: Path) -> None:
+        """One after another, each slow source added its whole timeout to the command (w5/642)."""
+        barrier = threading.Barrier(6)
+        for index in range(6):
+            _FeedHandler.routes[f"/prices/P-{index}"] = {
+                "body": (
+                    f"; alias: P-{index}\n; commodity: P{index}\n; quote: USD\n2024-01-15 price P{index} 10 USD\n"
+                ).encode(),
+                "barrier": barrier,
+            }
+        lines = ['option "operating_currency" "USD"']
+        lines += [f'include "{feed_server}/prices/P-{index}"' for index in range(6)]
+        lines += ["2024-01-01 open Assets:Broker"]
+
+        loaded = _load(feed_server, tmp_path, "\n".join(lines) + "\n")
+
+        assert [source.alias for source in loaded.sources] == [f"P-{index}" for index in range(6)]
+        assert all(source.revision is not None for source in loaded.sources), [s.error for s in loaded.sources]
 
     def test_seventeenth_url_is_an_unavailable_source(self, feed_server: str, tmp_path: Path) -> None:
         for index in range(17):
