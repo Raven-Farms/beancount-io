@@ -57,6 +57,7 @@ import {
 import { useState } from "react";
 import { useToast } from "@/common/hooks/use-toast";
 import { useTranslations } from "@/common/hooks/use-translations";
+import { Amount } from "@/common/components/amount";
 
 const SKELETON_ROWS = 5;
 
@@ -70,7 +71,7 @@ export function TransactionReviewTable({
   accountId,
   ledgerId,
 }: TransactionReviewTableProps) {
-  const { t } = useTranslations();
+  const { t, i18n } = useTranslations();
   const { transactions, loading, refetch } = useUnsyncedTransactions(
     ledgerId,
     accountId,
@@ -284,21 +285,26 @@ export function TransactionReviewTable({
     }
   };
 
-  const formatAmount = (amount: string) => {
-    const num = parseFloat(amount);
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(Math.abs(num));
-  };
+  /** Each account's mapped currency, the one booking writes the row in. */
+  const currencyByAccountId = new Map(
+    ledgerAccounts.map((account) => [account.id, account.currency]),
+  );
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
+  // The units booking will write: two decimals in the mapped currency, with
+  // the same USD fallback (`plaid-mapper.ts`, `plaid-sync-service.ts`).
+  const formatAmount = (amount: string, plaidAccountId: string) =>
+    `${Math.abs(parseFloat(amount)).toFixed(2)} ${
+      currencyByAccountId.get(plaidAccountId) ?? "USD"
+    }`;
+
+  // Booking keeps the UTC calendar day, so read it back in UTC.
+  const formatDate = (dateString: string) =>
+    new Date(dateString).toLocaleDateString(i18n.language, {
       month: "short",
       day: "numeric",
       year: "numeric",
+      timeZone: "UTC",
     });
-  };
 
   /** Which bank each account belongs to, so rows can be matched on item id
    * rather than on the institution name they happen to carry. */
@@ -786,8 +792,13 @@ export function TransactionReviewTable({
                       {transaction.name}
                     </TableCell>
                     <TableCell className="text-right font-mono">
-                      {isExpense ? "-" : "+"}
-                      {formatAmount(transaction.amount)}
+                      <Amount>
+                        {isExpense ? "-" : "+"}
+                        {formatAmount(
+                          transaction.amount,
+                          transaction.plaidAccountId,
+                        )}
+                      </Amount>
                     </TableCell>
                     <TableCell>
                       <AccountCombobox
