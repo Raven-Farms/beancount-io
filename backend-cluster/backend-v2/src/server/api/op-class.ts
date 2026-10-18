@@ -235,7 +235,7 @@ const M = {
   coveredByBql:
     "Already reachable through `runBqlQuery` — BQL expresses this query directly, so a dedicated tool would be a second, narrower way to ask the same question. Read-only by construction: BQL cannot write, so this may never excuse a `write` or `admin` verb (ADR 0008 D7.1).",
   coveredByEditFiles:
-    "Already reachable through `editLedgerFiles` — the directive is written into the ledger file and committed by the same tool, so a dedicated tool would be a second way to spell one commit.",
+    "Already reachable through `createLedgerFiles` and `updateLedgerFiles` — the directive is written into the ledger file and committed by those tools, so a dedicated tool would be a second way to spell one commit.",
   transportOnly:
     "This *is* the MCP surface's own transport or one of its siblings — a tool for reaching it would be circular.",
   singleLedgerPin:
@@ -1086,7 +1086,7 @@ const LEDGER_READ_VERBS: readonly VerbEntry[] = (
       gql: "Query.getLedgerJournal",
       rest: "GET /api-gateway/v1/ledgers/{owner}/{name}/journal",
       // A tool as well as the resource under ADR 019 D7: getEntryContext and
-      // editEntrySource take an entry hash, and a host that never reads
+      // the entry-source tools take an entry hash, and a host that never reads
       // resources gets one only from this tool's output (w6/008).
       mcp: "listLedgerEntries",
       mcpResource: "ledgerJournal",
@@ -1271,21 +1271,21 @@ const LEDGER_WRITE_VERBS: readonly VerbEntry[] = [
     class: "write" as const,
     gql: "Mutation.deleteLedgerEntrySourceSlice",
     rest: "POST /api-gateway/v1/ledgers/{owner}/{name}/entry-source/delete",
-    mcp: "editEntrySource",
+    mcp: "deleteEntrySource",
   },
   {
     verb: "Mutation.deleteMultipleLedgerEntrySourceSlices",
     class: "write" as const,
     gql: "Mutation.deleteMultipleLedgerEntrySourceSlices",
     rest: "POST /api-gateway/v1/ledgers/{owner}/{name}/entry-source/delete-many",
-    mcp: "editEntrySource",
+    mcp: "deleteEntrySources",
   },
   {
     verb: "Mutation.updateLedgerEntrySourceSlice",
     class: "write" as const,
     gql: "Mutation.updateLedgerEntrySourceSlice",
     rest: "PUT /api-gateway/v1/ledgers/{owner}/{name}/entry-source",
-    mcp: "editEntrySource",
+    mcp: "updateEntrySource",
   },
   {
     verb: "Mutation.addEntries",
@@ -1420,16 +1420,15 @@ const CROSS_SURFACE_VERBS: readonly VerbEntry[] = [
     mcpResource: "ledgerFile",
     rest: "GET /api-gateway/v1/ledgers/{owner}/{name}/files/{*path}",
   },
-  // One MCP tool, three GraphQL mutations: `editLedgerFiles` takes create /
-  // update / delete as an operation argument, while GraphQL spells each out as
-  // its own field. The verb row is anchored on the create field and the other
-  // two carry their own rows pointing back at the same tool.
+  // One row per kind of file write, each with its own GraphQL mutation and MCP
+  // tool (w1/m38). REST's `PUT` both creates and replaces, so the create and
+  // update rows share it.
   {
     verb: "ledger.editFiles.create",
     class: "write",
     authorizationAction: AUTHORIZATION_ACTIONS.LEDGER_FILES_WRITE,
     gql: "Mutation.createLedgerFile",
-    mcp: "editLedgerFiles",
+    mcp: "createLedgerFiles",
     rest: "PUT /api-gateway/v1/ledgers/{owner}/{name}/files/{*path}",
   },
   {
@@ -1437,7 +1436,7 @@ const CROSS_SURFACE_VERBS: readonly VerbEntry[] = [
     class: "write",
     authorizationAction: AUTHORIZATION_ACTIONS.LEDGER_FILES_WRITE,
     gql: "Mutation.updateLedgerFile",
-    mcp: "editLedgerFiles",
+    mcp: "updateLedgerFiles",
     rest: "PUT /api-gateway/v1/ledgers/{owner}/{name}/files/{*path}",
   },
   {
@@ -1445,7 +1444,7 @@ const CROSS_SURFACE_VERBS: readonly VerbEntry[] = [
     class: "write",
     authorizationAction: AUTHORIZATION_ACTIONS.LEDGER_FILES_WRITE,
     gql: "Mutation.deleteLedgerFile",
-    mcp: "editLedgerFiles",
+    mcp: "deleteLedgerFiles",
     rest: "DELETE /api-gateway/v1/ledgers/{owner}/{name}/files/{*path}",
   },
   {

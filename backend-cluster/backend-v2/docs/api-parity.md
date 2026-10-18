@@ -157,7 +157,7 @@ authentication-required response. No relationship grant changes.
 ## Explicit file-write byte limits
 
 GraphQL `createLedgerFile` and `updateLedgerFile`, REST `PUT …/files/{path}`,
-and MCP `editLedgerFiles` share a **1 MiB (1,048,576 bytes) per-file limit**.
+and MCP `createLedgerFiles`/`updateLedgerFiles` share a **1 MiB (1,048,576 bytes) per-file limit**.
 GraphQL content is base64, so the workflow counts decoded bytes (including
 binary files); REST and MCP accept text, so the repository service counts UTF-8
 bytes. MCP `update` checks the entire resulting file after replacement, not
@@ -460,7 +460,7 @@ file-preview contract still require milestone verification.
 
 Source-slice updates and single/batch deletions now have REST bindings below
 `/api-gateway/v1/ledgers/{owner}/{name}/entry-source` and the MCP
-`editEntrySource` tool. The three branches preserve GraphQL inputs, checksum
+`updateEntrySource`, `deleteEntrySource`, and `deleteEntrySources` tools. The three preserve GraphQL inputs, checksum
 fields, updated checksum results, and deleted-hash arrays through the protected
 `LedgerJournalService`. Cross-adapter tests use a source-backed PDP and isolated
 ledger fixture to exercise successful changes, stale hashes including a stale
@@ -488,7 +488,7 @@ enabled before filtering), and ledger submission validates the target file
 before its preview return, so a dry run refuses exactly what the write would.
 Reconcile, unlink, and delete previews were audited write-free as built.
 
-The `editLedgerFiles` preview now runs through the same protected service call
+The file-tool preview (`dry_run`) now runs through the same protected service call
 as the commit: `LedgerRepoService.changeFiles` accepts `dryRun`, performing the
 identical write authorization, safe-path and per-file UTF-8 byte-limit validation
 and stopping before the repository commit. Internal generated directive merges

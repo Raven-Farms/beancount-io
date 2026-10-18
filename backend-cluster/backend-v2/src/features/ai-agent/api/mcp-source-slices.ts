@@ -48,15 +48,25 @@ export const sourceSliceInput = z
           message: issue.message,
         });
   });
-export const sourceSliceOutput = mcpOutputSchema(
-  toolOutputSchema(
-    z.union([
-      withWriteOutcome(updateSliceResult.shape),
-      withWriteOutcome(deleteSliceResult.shape),
-      withWriteOutcome(deleteSlicesResult.shape),
-    ]),
+/** One MCP tool per entry-source operation (ADR 019, 2026-10-18; w1/m38). */
+export const SOURCE_SLICE_OPERATION_SCHEMAS = {
+  update: updateSliceInput.extend({ ledger: ledgerSelection }),
+  delete: deleteSliceInput.extend({ ledger: ledgerSelection }),
+  delete_many: deleteSlicesInput.extend({ ledger: ledgerSelection }),
+} as const;
+
+/** Each tool publishes only its own result shape, not the union of all three. */
+export const SOURCE_SLICE_OPERATION_OUTPUTS = {
+  update: mcpOutputSchema(
+    toolOutputSchema(withWriteOutcome(updateSliceResult.shape)),
   ),
-);
+  delete: mcpOutputSchema(
+    toolOutputSchema(withWriteOutcome(deleteSliceResult.shape)),
+  ),
+  delete_many: mcpOutputSchema(
+    toolOutputSchema(withWriteOutcome(deleteSlicesResult.shape)),
+  ),
+} as const;
 export async function executeSourceSlice(
   context: McpRequestContext,
   input: z.infer<typeof sourceSliceInput>,

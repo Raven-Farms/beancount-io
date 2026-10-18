@@ -891,8 +891,11 @@ describe("MCP tool annotations", () => {
       "mapBankAccount",
       "setBankAccountCurrency",
       "unlinkBankConnection",
-      "editLedgerFiles",
-      "editEntrySource",
+      "updateLedgerFiles",
+      "deleteLedgerFiles",
+      "updateEntrySource",
+      "deleteEntrySource",
+      "deleteEntrySources",
     ]) {
       expect(destructive.get(name)).toBe(true);
     }

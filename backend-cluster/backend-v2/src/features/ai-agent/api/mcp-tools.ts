@@ -1,8 +1,8 @@
 import { entriesBodySchema } from "@/features/ledger/api/rest/v1/entries-handler";
 import { parseLedgerId } from "@/shared/str";
 import {
-  sourceSliceInput,
-  sourceSliceOutput,
+  SOURCE_SLICE_OPERATION_OUTPUTS,
+  SOURCE_SLICE_OPERATION_SCHEMAS,
   executeSourceSlice,
 } from "./mcp-source-slices";
 import {
@@ -93,10 +93,11 @@ import {
   description as readDescription,
 } from "../tools/read-ledger-files-tool";
 import {
-  editLedgerFilesInputSchema,
+  LEDGER_FILE_OPERATION_DESCRIPTIONS,
+  LEDGER_FILE_OPERATION_SCHEMAS,
   editLedgerFilesOutputSchema,
   executeEditLedgerFiles,
-  description as editDescription,
+  toFileOperations,
 } from "../tools/edit-ledger-files-tool";
 import {
   appendLedgerTextDescription,
@@ -210,6 +211,40 @@ function operationTool(
         ...(input as object),
         operation,
       } as never),
+  };
+}
+
+/** One kind of file change as its own tool, over the shared edit executor. */
+function fileTool(
+  name: string,
+  title: string,
+  kind: keyof typeof LEDGER_FILE_OPERATION_SCHEMAS,
+  annotations: ToolAnnotations,
+): McpToolDescriptor {
+  return {
+    name,
+    title,
+    annotations,
+    description: LEDGER_FILE_OPERATION_DESCRIPTIONS[kind],
+    inputSchema: LEDGER_FILE_OPERATION_SCHEMAS[kind].extend({
+      ledger: ledgerSelection,
+    }),
+    outputSchema: mcpOutputSchema(editLedgerFilesOutputSchema),
+    execute: withLedger(
+      (
+        context: ToolContext,
+        input: {
+          description: string;
+          files: Record<string, string>[];
+          dry_run?: boolean;
+        },
+      ) =>
+        executeEditLedgerFiles(context, {
+          description: input.description,
+          files: toFileOperations(kind, input.files),
+          dry_run: input.dry_run ?? false,
+        }),
+    ),
   };
 }
 
@@ -550,25 +585,45 @@ export const MCP_TOOLS: readonly McpToolDescriptor[] = [
       };
     },
   },
-  {
-    name: "editLedgerFiles",
-    title: "Edit Ledger Files (Create / Update / Delete)",
-    annotations: DESTRUCTIVE,
-    description: editDescription,
-    inputSchema: editLedgerFilesInputSchema.extend({ ledger: ledgerSelection }),
-    outputSchema: mcpOutputSchema(editLedgerFilesOutputSchema),
-    execute: withLedger(executeEditLedgerFiles),
-  },
-  {
-    name: "editEntrySource",
-    title: "Update or Delete Entry Source",
+  fileTool("createLedgerFiles", "Create Ledger Files", "create", APPEND),
+  fileTool("updateLedgerFiles", "Update Ledger Files", "update", {
+    ...DESTRUCTIVE,
+    idempotentHint: true,
+  }),
+  fileTool("deleteLedgerFiles", "Delete Ledger Files", "delete", {
+    ...DESTRUCTIVE,
+    idempotentHint: true,
+  }),
+  operationTool("update", {
+    name: "updateEntrySource",
+    title: "Update Entry Source",
     annotations: DESTRUCTIVE,
     description:
-      "Use operation update or delete with entryHash (listLedgerEntries' entry_hash) and sha256sum from getEntryContext; update also requires newContent. delete_many accepts only entries [{entryHash,sha256sum}]. An update returns the entry's new hash — the request's entryHash is stale after the commit, so use newEntryHash for the next edit; delete_many returns the deleted count.",
-    inputSchema: sourceSliceInput,
-    outputSchema: sourceSliceOutput,
+      "Replace one entry's source text with newContent, addressed by entryHash (listLedgerEntries' entry_hash) and sha256sum from getEntryContext. Returns the entry's new hash as newEntryHash; the request's entryHash is stale after the commit.",
+    inputSchema: SOURCE_SLICE_OPERATION_SCHEMAS.update,
+    outputSchema: SOURCE_SLICE_OPERATION_OUTPUTS.update,
     execute: executeSourceSlice,
-  },
+  }),
+  operationTool("delete", {
+    name: "deleteEntrySource",
+    title: "Delete Entry Source",
+    annotations: DESTRUCTIVE,
+    description:
+      "Delete one entry's source text, addressed by entryHash (listLedgerEntries' entry_hash) and sha256sum from getEntryContext.",
+    inputSchema: SOURCE_SLICE_OPERATION_SCHEMAS.delete,
+    outputSchema: SOURCE_SLICE_OPERATION_OUTPUTS.delete,
+    execute: executeSourceSlice,
+  }),
+  operationTool("delete_many", {
+    name: "deleteEntrySources",
+    title: "Delete Several Entry Sources",
+    annotations: DESTRUCTIVE,
+    description:
+      "Delete several entries' source text in one commit; entries is a list of {entryHash, sha256sum}. Returns the deleted count.",
+    inputSchema: SOURCE_SLICE_OPERATION_SCHEMAS.delete_many,
+    outputSchema: SOURCE_SLICE_OPERATION_OUTPUTS.delete_many,
+    execute: executeSourceSlice,
+  }),
   {
     name: "renameLedgerFile",
     title: "Rename Ledger File",

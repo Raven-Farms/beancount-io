@@ -234,7 +234,7 @@ describe("MCP prompts", () => {
   /**
    * w6/015. The reconcile and close playbooks told an agent to pass a
    * `description` to `addLedgerEntries`, whose strict input has none — the
-   * call they prescribed would be refused. Only `editLedgerFiles` takes one.
+   * call they prescribed would be refused. Only the file tools take one.
    */
   it("prescribes a description only to the write tool that accepts one", () => {
     const accepts = (tool: string) =>
@@ -244,7 +244,8 @@ describe("MCP prompts", () => {
           .inputSchema as unknown as { shape: Record<string, unknown> }
       ).shape;
     expect(accepts("addLedgerEntries")).toBe(false);
-    expect(accepts("editLedgerFiles")).toBe(true);
+    expect(accepts("createLedgerFiles")).toBe(true);
+    expect(accepts("updateLedgerFiles")).toBe(true);
 
     const playbook = (name: string) =>
       prose(

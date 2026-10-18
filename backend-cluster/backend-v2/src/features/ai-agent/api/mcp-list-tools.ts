@@ -12,7 +12,7 @@ import { runToolSafely } from "../utils/run-tool";
  * authorized the same way; the rule they answer is that an identifier a tool
  * needs must be obtainable from some tool's output. Without them, ChatGPT and
  * Copilot's cloud agent cannot reach the ids the bank tools,
- * `getEntryContext`, and `editEntrySource` require.
+ * `getEntryContext`, `updateEntrySource`, and `deleteEntrySource` require.
  */
 
 const toolLogger = logger.child({ module: "tool:list" });
@@ -83,11 +83,11 @@ export async function executeListStagedBankTransactions(
 
 /**
  * The journal resource's twin (w6/008): `getEntryContext` and
- * `editEntrySource` take an existing entry's hash, which no tool returned —
+ * `updateEntrySource` and `deleteEntrySource` take an existing entry's hash, which no tool returned —
  * BQL's `id` is a directive index, and file reads have no entries.
  */
 export const listLedgerEntriesDescription =
-  "List journal entries, each with the entry_hash getEntryContext and editEntrySource take. Narrows by account, filter, time, and directiveTypes; pages with limit and offset; total counts every match. Same data as the journal resource.";
+  "List journal entries, each with the entry_hash getEntryContext, updateEntrySource, and deleteEntrySource take. Narrows by account, filter, time, and directiveTypes; pages with limit and offset; total counts every match. Same data as the journal resource.";
 
 export const listLedgerEntriesInput = z.object({
   account: z.string().optional().describe("Account filter, e.g. Assets:Bank."),

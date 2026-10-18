@@ -322,14 +322,14 @@ async function checkScopeRefusal(o: Options): Promise<CheckResult> {
     body: rpc(
       "tools/call",
       {
-        name: "editLedgerFiles",
+        name: "createLedgerFiles",
         arguments: {
           description: "conformance probe — expected to be refused",
           // Creating main.bean reaches the service's write PEP without a
           // preparatory file read. If authorization regresses and lets the
           // call through, the existing root file makes the operation fail
           // without changing the ledger.
-          files: [{ operation: "create", path: "main.bean", content: "" }],
+          files: [{ path: "main.bean", content: "" }],
         },
       },
       3,

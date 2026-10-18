@@ -18,7 +18,7 @@ import { unifiedDiff } from "@/shared/unified-diff";
 
 const toolLogger = logger.child({ module: "tool:edit-ledger-files" });
 
-export const description =
+const description =
   "Create, update, replace, or delete files in a single atomic commit.\n" +
   "  create: new text file — provide plain UTF-8 text content (NOT base64).\n" +
   "  update: str_replace on a text file — old_string must appear exactly once.\n" +
@@ -78,6 +78,91 @@ export const editLedgerFilesInputSchema = z.object({
       "If true, validates all operations and returns a preview without committing.",
     ),
 });
+
+// --- one MCP tool per kind of file change (ADR 019, 2026-10-18; w1/m38) ----
+//
+// MCP exposes create, update, and delete as separate tools, each taking a batch
+// of its own kind in one atomic commit. They map onto the shared executor's
+// per-file operations; the in-product agent keeps the combined tool above.
+
+const commitDescription = editLedgerFilesInputSchema.shape.description;
+const filePath = z.string().describe("File path relative to ledger root");
+const fullContent = z
+  .string()
+  .describe("Plain UTF-8 text content of the whole file (NOT base64).");
+const previewFlag = editLedgerFilesInputSchema.shape.dry_run;
+
+export const LEDGER_FILE_OPERATION_SCHEMAS = {
+  create: z.object({
+    description: commitDescription,
+    files: z
+      .array(z.object({ path: filePath, content: fullContent }).strict())
+      .min(1),
+    dry_run: previewFlag,
+  }),
+  update: z.object({
+    description: commitDescription,
+    files: z
+      .array(
+        z.union([
+          z
+            .object({
+              path: filePath,
+              old_string: z
+                .string()
+                .describe(
+                  "Exact text to replace — must appear exactly once in the file.",
+                ),
+              new_string: z.string().describe("Replacement text."),
+            })
+            .strict(),
+          z.object({ path: filePath, content: fullContent }).strict(),
+        ]),
+      )
+      .min(1),
+    dry_run: previewFlag,
+  }),
+  delete: z.object({
+    description: commitDescription,
+    files: z.array(z.object({ path: filePath }).strict()).min(1),
+    dry_run: previewFlag,
+  }),
+} as const;
+
+const PREVIEW_NOTE =
+  " Each new/resulting file is limited to 1 MiB of UTF-8 bytes, including dry runs. dry_run previews without committing: the same refusal as the commit, plus a unified diff per touched file and bean-check's verdict over the projected contents.";
+
+export const LEDGER_FILE_OPERATION_DESCRIPTIONS = {
+  create:
+    "Create new text files in one atomic commit; each file gets plain UTF-8 content." +
+    PREVIEW_NOTE,
+  update:
+    "Change existing text files in one atomic commit: per file, either replace an exact text (old_string must appear exactly once) with new_string, or overwrite the whole file with content." +
+    PREVIEW_NOTE,
+  delete: "Delete files in one atomic commit." + PREVIEW_NOTE,
+} as const;
+
+type FileOperation = z.infer<typeof fileOpSchema>;
+
+/** A per-kind batch as the shared executor's per-file operations. */
+export function toFileOperations(
+  kind: keyof typeof LEDGER_FILE_OPERATION_SCHEMAS,
+  files: readonly Record<string, string>[],
+): FileOperation[] {
+  return files.map((file) => {
+    if (kind === "create")
+      return { operation: "create", path: file.path, content: file.content };
+    if (kind === "delete") return { operation: "delete", path: file.path };
+    return "content" in file
+      ? { operation: "replace", path: file.path, content: file.content }
+      : {
+          operation: "update",
+          path: file.path,
+          old_string: file.old_string,
+          new_string: file.new_string,
+        };
+  });
+}
 
 export const editLedgerFilesOutputSchema = toolOutputSchema(
   withWriteOutcome({

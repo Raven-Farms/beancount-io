@@ -171,7 +171,7 @@ const closeMonth = (
     "   `checkLedger` result. Show every query you ran.",
     "7. Commit. Only when the check passes. This server commits on every write, so there is",
     "   no separate commit step: confirm the close report with the user. When the period's",
-    "   last write is an `editLedgerFiles` call, pass the report as its `description` so",
+    "   last write is a `createLedgerFiles` or `updateLedgerFiles` call, pass the report as its `description` so",
     "   `git log` reads as a close history. `addLedgerEntries` takes no description, so after",
     "   an entry write give the report to the user instead, and never make an edit only to",
     "   carry it. Say the close is complete only when every active account is tied, every",

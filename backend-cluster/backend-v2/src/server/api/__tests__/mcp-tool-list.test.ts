@@ -191,10 +191,12 @@ describe("MCP tool list", () => {
     // 90 KB since w1/m38 split the grouped tools into one tool per operation
     // (ADR 019, 2026-10-18): the two bank tools became eight (77.7 KB), then
     // ledger lifecycle, collaborators, and pull requests became three each
-    // (87.4 KB). The editing split and t005 set the final number.
+    // (87.4 KB), then the two editing tools became three each (96.4 KB, after
+    // each entry-source tool published only its own result shape). t005
+    // remeasures the final number.
     const { tools } = await listToolsRaw();
     const bytes = Buffer.byteLength(JSON.stringify(tools), "utf8");
-    expect(bytes).toBeLessThan(90 * 1024);
+    expect(bytes).toBeLessThan(100 * 1024);
   });
 
   it("publishes all four annotations on every tool", async () => {

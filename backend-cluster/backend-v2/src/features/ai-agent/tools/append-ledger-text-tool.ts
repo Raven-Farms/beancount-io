@@ -19,13 +19,13 @@ export const appendLedgerTextDescription =
   `inserts it in date order. Max ${MAX_APPENDED_DIRECTIVES} directives. Non-directive text, and ` +
   "text introducing new bean-check errors (UNBALANCED when a transaction does not balance), are " +
   "refused unless allowInvalid. dry_run returns the diff and projected errors without " +
-  "committing. Adds directives without rewriting files, unlike editLedgerFiles. Syntax: " +
+  "committing. Adds directives without rewriting files, unlike updateLedgerFiles. Syntax: " +
   "https://beancount.github.io/docs/beancount_language_syntax/";
 
 /**
  * The tool's input, built from the REST body so the two dialects of one
  * capability cannot drift (w2/m28:t005). `dry_run` keeps MCP's existing
- * snake-case spelling — it is what `editLedgerFiles` already publishes, and an
+ * snake-case spelling — it is what the file-edit tools already publish, and an
  * agent using both should not have to remember which one is which.
  */
 export const appendLedgerTextInputSchema = z

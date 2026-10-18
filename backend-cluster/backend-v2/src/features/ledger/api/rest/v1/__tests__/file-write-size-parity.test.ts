@@ -310,12 +310,20 @@ async function fixture(initial: Record<string, string> = {}) {
     operations: Record<string, unknown>[],
     dryRun = false,
   ): Promise<Outcome> => {
+    // One MCP tool per kind of change (ADR 019, 2026-10-18): every batch
+    // here is a single kind, so the first operation names the tool.
+    const kind = String(operations[0]?.operation);
     const result = await client.callTool({
-      name: "editLedgerFiles",
+      name:
+        kind === "create"
+          ? "createLedgerFiles"
+          : kind === "delete"
+            ? "deleteLedgerFiles"
+            : "updateLedgerFiles",
       arguments: {
         ledger: "alice/main",
         description: "Size contract edit",
-        files: operations,
+        files: operations.map(({ operation: _operation, ...file }) => file),
         dry_run: dryRun,
       },
     });

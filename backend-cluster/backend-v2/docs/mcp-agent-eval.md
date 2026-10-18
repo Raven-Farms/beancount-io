@@ -76,7 +76,7 @@ The exit status is `0` when every attempt passed and the fixture was restored, `
 
 ## What happens during a run
 
-- **Before each attempt,** the harness restores the fixture with `editLedgerFiles`, then confirms the read-back content, the file list, and `checkLedger`. It skips the commit when the ledger already matches.
+- **Before each attempt,** the harness restores the fixture with `updateLedgerFiles` (or `createLedgerFiles`) and removes any other file with `deleteLedgerFiles`, then confirms the read-back content, the file list, and `checkLedger`. It skips the commit when the ledger already matches.
 - **Each client runs in a fresh temporary directory and its own process group.**
   - A timeout, the call limit, or Ctrl-C terminates the whole group, helpers included, and marks the attempt incomplete.
   - The ledger is still read back, because an interrupted write is still a write.

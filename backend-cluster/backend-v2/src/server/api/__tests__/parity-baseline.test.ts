@@ -46,6 +46,9 @@ const RENAMED_ON_MCP: Readonly<Record<string, string>> = {
   "Mutation.updatePlaidAccountMapping": "mapBankAccount",
   "Mutation.updatePlaidAccountCurrency": "setBankAccountCurrency",
   "Mutation.refreshPlaidItemStatus": "refreshBankConnection",
+  "ledger.editFiles.create": "createLedgerFiles",
+  "ledger.editFiles.update": "updateLedgerFiles",
+  "ledger.editFiles.delete": "deleteLedgerFiles",
 };
 
 describe("the accepted parity baseline", () => {

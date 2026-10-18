@@ -231,7 +231,7 @@ operation gate.
 
 For example, `runBqlQuery` calls `LedgerShellService.queryShellText`, which
 authorizes the caller and delegates through the ledger API client.
-`readLedgerFiles` and `editLedgerFiles` use `LedgerRepoService`. GraphQL and REST
+`readLedgerFiles` and the `…LedgerFiles` write tools use `LedgerRepoService`. GraphQL and REST
 use these same services. MCP is an adapter to those capabilities; the client's
 agent decides which calls to make.
 
@@ -261,7 +261,9 @@ the principal inputs; inspect the schema before constructing a call.
 | `readLedgerFiles`            | `files: [{ path, start_line?, end_line? }]`; returns text and line-range metadata.                                                                                        | Read       |
 | `appendLedgerText`           | `text`, optional `path`, `dry_run`, `allowInvalid`; appends Beancount directive text, routed by type and date and inserted in date order.                                 | Write      |
 | `refreshManagedPrices`       | Optional `ledger`; re-fetches every managed price include (`include "https://beancount.io/prices/BTC-USD"`) now and returns each source's status. Never edits the ledger. | Write      |
-| `editLedgerFiles`            | `description`, `files`, optional `dry_run`; batches create/update/replace/delete operations into one commit.                                                              | Write      |
+| `createLedgerFiles`          | `description`, `files: [{ path, content }]`, optional `dry_run`; creates new files in one commit.                                                                         | Write      |
+| `updateLedgerFiles`          | `description`, `files: [{ path, old_string, new_string } | { path, content }]`, optional `dry_run`; replaces exact text or whole files in one commit.                     | Write      |
+| `deleteLedgerFiles`          | `description`, `files: [{ path }]`, optional `dry_run`; deletes files in one commit.                                                                                      | Write      |
 | `syncBankTransactions`       | `item_id`, optional `dry_run`; pulls new transactions from a linked bank into staging.                                                                                    | Write      |
 | `importStagedBankTransactions` | `transactions: [{ transaction_id, target_account, source_account? }]`, optional `filename`, `dry_run`; writes staged transactions into the ledger.                     | Write      |
 | `discardStagedBankTransactions` | `transaction_ids`, optional `dry_run`; removes staged transactions.                                                                                                  | Write      |
@@ -317,11 +319,11 @@ refusal — `UNBALANCED` when a transaction does not balance — unless
 `allowInvalid` records them deliberately. `dry_run` returns the unified diff
 and the projected errors without committing. At most 50 directives per call.
 
-Prefer it over `editLedgerFiles` for adding directives: `editLedgerFiles`
+Prefer it over `updateLedgerFiles` for adding directives: `updateLedgerFiles`
 replaces file contents, so appending with it means reading, concatenating, and
 writing the whole file back — which is how entries end up at the bottom of
-`main.bean` out of order. Use `editLedgerFiles` to restructure files and
-`editEntrySource` to change a directive that already exists.
+`main.bean` out of order. Use the `…LedgerFiles` tools to restructure files and
+`updateEntrySource` to change a directive that already exists.
 
 ### Reading and editing files
 
@@ -330,17 +332,16 @@ them. Line ranges in `readLedgerFiles` are 1-based and inclusive; the response
 contains `startLine`, `endLine`, `totalLines`, and raw `content`. It does not
 prefix every line of the content with a line number.
 
-File-edit operations have these shapes:
+One tool per kind of change, each batching its files into one commit:
 
-| Operation | Required fields besides `operation` and `path`                               |
-| --------- | ---------------------------------------------------------------------------- |
-| `create`  | `content`: new file text.                                                    |
-| `update`  | `old_string`, `new_string`: exact replacement; the old text must occur once. |
-| `replace` | `content`: complete replacement text.                                        |
-| `delete`  | None.                                                                        |
+| Tool                | Each `files` item                                                                                                  |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `createLedgerFiles` | `path`, `content`: a new file's text.                                                                              |
+| `updateLedgerFiles` | `path` with either `old_string`, `new_string` (an exact replacement; the old text must occur once) or `content` (the complete replacement text). |
+| `deleteLedgerFiles` | `path`.                                                                                                            |
 
 Send plain UTF-8 text, not base64. For example, these are arguments to
-`editLedgerFiles` for a preview; use an existing path and exact text from your
+`updateLedgerFiles` for a preview; use an existing path and exact text from your
 own ledger:
 
 ```json
@@ -349,7 +350,6 @@ own ledger:
   "dry_run": true,
   "files": [
     {
-      "operation": "update",
       "path": "main.bean",
       "old_string": "\"Grocery shooping\"",
       "new_string": "\"Grocery shopping\""
@@ -358,7 +358,7 @@ own ledger:
 }
 ```
 
-Each created or replaced file, including the complete result of an `update`
+Each created or replaced file, including the complete result of an exact-text
 replacement, must be at most **1 MiB (1,048,576 UTF-8 bytes)**. The same size
 check applies to a preview. Reads of existing larger files remain available;
 generated directive appends are a separate operation and may grow a ledger file
@@ -1254,18 +1254,19 @@ SHA or preview flag. Repository conflicts remain errors.
 
 ### Update or delete entry source
 
-`editEntrySource` exposes three operations through the existing journal service:
+Three tools reach the existing journal service:
 
-- `update`: `entryHash`, `sha256sum`, and `newContent`; returns `message`,
-  `newSha256sum`, and `newEntryHash` — the request's `entryHash` is stale
-  after the commit, so use `newEntryHash` for the next edit.
-- `delete`: `entryHash` and `sha256sum`; returns `message` and `entryHash`.
-- `delete_many`: `entries: [{entryHash, sha256sum}]`; returns `message` and
-  `deletedCount`.
+- `updateEntrySource`: `entryHash`, `sha256sum`, and `newContent`; returns
+  `message`, `newSha256sum`, and `newEntryHash` — the request's `entryHash` is
+  stale after the commit, so use `newEntryHash` for the next edit.
+- `deleteEntrySource`: `entryHash` and `sha256sum`; returns `message` and
+  `entryHash`.
+- `deleteEntrySources`: `entries: [{entryHash, sha256sum}]`; returns `message`
+  and `deletedCount`.
 
-Use the current source checksum returned by entry context. Each branch accepts
+Use the current source checksum returned by entry context. Each tool accepts
 only its own arguments and optional `ledger`; a pinned credential may omit the
-ledger. Current content-write access is required. The operation delegates source
+ledger. Current content-write access is required. Each delegates source
 validation and mutation to the ledger service and does not support preview.
 
 ### Insert structured directives

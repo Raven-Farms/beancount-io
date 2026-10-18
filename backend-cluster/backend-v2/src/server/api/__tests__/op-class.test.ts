@@ -73,8 +73,8 @@ describe("classifyOp", () => {
         (entry.mcpResource ? 1 : 0),
       0,
     );
-    // Fewer ids than entries for two reasons: `editLedgerFiles` is named by
-    // three rows, and `ledger.readFiles` carries both a tool and a resource —
+    // Fewer ids than entries for two reasons: the file `PUT` route is named by
+    // two rows, and `ledger.readFiles` carries both a tool and a resource —
     // one verb, two primitives, two ids.
     expect(classifiedOpIds().length).toBeLessThanOrEqual(expected);
     expect(new Set(classifiedOpIds()).size).toBe(classifiedOpIds().length);
