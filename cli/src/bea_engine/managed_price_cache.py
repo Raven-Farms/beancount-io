@@ -444,7 +444,14 @@ def resolve_feed(
     else:
         message = f"fetch failed ({result.reason}): {result.message}"
 
-    degraded = PriceFeedHead(revision=head.revision, next_refresh_at=at + retry_seconds, last_error=message)
+    # The revision that still serves, not one whose blob is gone: a head naming
+    # a missing blob never honored the retry window, so every command fetched
+    # again, waiting out the timeout on a slow service (w5/641).
+    degraded = PriceFeedHead(
+        revision=previous.revision if previous is not None else None,
+        next_refresh_at=at + retry_seconds,
+        last_error=message,
+    )
     # The fetch failure is the error worth reporting; an unwritable cache
     # only means the next load retries sooner.
     _try_write(directory / "head.json", json.dumps(asdict(degraded)))

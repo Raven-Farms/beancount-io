@@ -787,6 +787,26 @@ class TestFeedCache:
             "r3.json",
         ]
 
+    @pytest.mark.parametrize("damage", ["missing", "corrupt"])
+    def test_a_failure_backs_off_whatever_the_blob(self, feed_server: str, tmp_path: Path, damage: str) -> None:
+        """The retry window held only while the blob read; the degraded head kept naming a gone one (w5/641)."""
+        now = time.time()
+        _resolve(feed_server, tmp_path, now=now)
+        blob = feed_dir(f"{feed_server}/prices/BTC-USD", tmp_path) / "r1.beancount"
+        if damage == "missing":
+            blob.unlink()
+        else:
+            blob.write_text(blob.read_text() + "; edited\n")
+        _FeedHandler.routes["/prices/BTC-USD"] = {"status": 503, "body": b"down"}
+        before = len(_FeedHandler.hits)
+
+        results = [_resolve(feed_server, tmp_path, now=now + 1 + step) for step in range(4)]
+
+        assert len(_FeedHandler.hits) - before == 1
+        assert all(result.blob is None for result in results)
+        assert results[-1].head.revision is None
+        assert results[-1].head.last_error is not None and "503" in results[-1].head.last_error
+
     def test_failed_refresh_serves_last_good_and_records_the_error(self, feed_server: str, tmp_path: Path) -> None:
         now = time.time()
         first = _resolve(feed_server, tmp_path, now=now)
