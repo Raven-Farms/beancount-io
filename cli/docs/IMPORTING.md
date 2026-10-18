@@ -159,7 +159,13 @@ is not active on the row's date (closed before it, or opened after it), or in a
 currency the open directive disallows are shown `blocked`, not ready. An
 inactive account's row names the `close` or `open` and its line, and says to
 re-date it or to point the rule, category or `--default-account` at an open
-account. A never-opened account's row names the missing account and the
+account. Each row names all its missing and inactive accounts together, so
+fixing one does not reveal another on the next preview. When the source account opens
+after the row and carries init's `Opening balances` transaction on that open
+date, the reason also names that transaction and its location: review and move
+or restate it to describe the balance before the imported history, so that
+history is not counted twice. Import does not edit existing opens or opening
+balances. A never-opened account's row names the missing account and the
 `bea add open` line that fixes it. Every blocked row stays in the diff so the
 proposal stays visible, and `--apply` refuses with exit **4** while any row is
 blocked. Every row blocked on the same account prints the same

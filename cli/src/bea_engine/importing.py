@@ -364,6 +364,7 @@ def answer(
             require_declaration=isinstance(entry, Transaction),
         )
     ]
+    opening_balances = _opening_balances(written, account, roots[2])
     # Bank ids another account issued, reached here only through a transfer's
     # counter leg: never an exact match for this account's rows (w5/598).
     transfer_ids: dict[tuple[str, str, str], Any] = {}
@@ -589,6 +590,7 @@ def answer(
                 source=account if csv_mode else None,
                 windows=windows,
                 lifecycles=lifecycles,
+                opening_balances=opening_balances,
             )
             if blocked_reason is not None:
                 status, reason, include = "blocked", blocked_reason, False
@@ -649,6 +651,7 @@ def answer(
                 source=account if csv_mode else None,
                 windows=windows_after,
                 lifecycles=lifecycles_after,
+                opening_balances=opening_balances,
             )
             if still is None:
                 row_dict.update(status=was, reason=why, include=True)
@@ -1609,6 +1612,7 @@ def _blocked_reason(
     source: str | None = None,
     windows: dict[str, tuple[Any, Any]] | None = None,
     lifecycles: dict[str, list[Any]] | None = None,
+    opening_balances: dict[tuple[str, Any], list[Any]] | None = None,
 ) -> str | None:
     """Why a transaction cannot be written, or None when its accounts allow it.
 
@@ -1633,6 +1637,7 @@ def _blocked_reason(
     foreign = [name for name in missing if name.split(":", 1)[0] not in roots]
     if foreign:
         return unknown_root_message(foreign[0], roots)
+    reasons = []
     if missing:
         for name in missing:
             if (problem := new_account_format_problem(name)) is not None:
@@ -1653,10 +1658,12 @@ def _blocked_reason(
         quoted = ", ".join(f"'{name}'" for name in missing)
         noun = "Account" if len(missing) == 1 else "Accounts"
         verb = "is" if len(missing) == 1 else "are"
-        return f"{noun} {quoted} {verb} not open. Run: {'; '.join(remedies)}."
-    inactive = _inactive_reason(entry, windows or {}, first_uses, source, lifecycles)
+        reasons.append(f"{noun} {quoted} {verb} not open. Run: {'; '.join(remedies)}.")
+    inactive = _inactive_reason(entry, windows or {}, first_uses, source, lifecycles, opening_balances)
     if inactive is not None:
-        return inactive
+        reasons.append(inactive)
+    if reasons:
+        return " ".join(reasons)
     for name, currency in referenced:
         allowed = open_currencies.get(name)
         # A currency that cannot be told before booking is validation's to judge.
@@ -1719,12 +1726,33 @@ def _invalid_name(entry: Any) -> str | None:
     return None
 
 
+def _opening_balances(entries: list[Any], source: str, equity_root: str) -> dict[tuple[str, Any], list[Any]]:
+    """Index init's written opening transactions once, for each source account and date.
+
+    A later balance can double-count imported history. Only the template's
+    narration and equity counter-account identify that transaction; a generic
+    transaction on the open date is not an opening-balance remedy (w5/692).
+    """
+    from beancount.core.data import Transaction
+
+    balances: dict[tuple[str, Any], list[Any]] = {}
+    for entry in entries:
+        if not isinstance(entry, Transaction) or entry.narration != "Opening balances":
+            continue
+        entry = normalize_entry_strings(entry)
+        if any(post.account == f"{equity_root}:OpeningBalances" for post in entry.postings):
+            for name in dict.fromkeys(post.account for post in _source_legs(entry, source)):
+                balances.setdefault((name, entry.date), []).append(entry)
+    return balances
+
+
 def _inactive_reason(
     entry: Any,
     windows: dict[str, tuple[Any, Any]],
     first_uses: dict[str, tuple[Any, list[str] | None]],
     source: str | None,
     lifecycles: dict[str, list[Any]] | None = None,
+    opening_balances: dict[tuple[str, Any], list[Any]] | None = None,
 ) -> str | None:
     """Why a posting's account cannot take this row's date, though it is opened.
 
@@ -1732,36 +1760,44 @@ def _inactive_reason(
     row, or opened after it, previewed the row as ready and then failed the
     whole `--apply` with exit 1, valid rows and all (w5/339).
     """
-    for name, _ in _entry_accounts(entry, active_only=True):
+    reasons = []
+    for name in dict.fromkeys(name for name, _ in _entry_accounts(entry, active_only=True)):
         window = windows.get(name)
         if window is None:
             continue
         opened, closed = window
         if entry.date < opened.date:
             earliest = first_uses.get(name, (entry.date, None))[0]
-            return (
+            reasons.append(
                 f"Account '{name}' opens {opened.date} ({_where(opened)}), after this row's "
                 f"{entry.date}. Re-date that open to {min(earliest, entry.date)} or earlier."
             )
+            for balance in (opening_balances or {}).get((name, opened.date), []):
+                reasons.append(
+                    f"Review the 'Opening balances' transaction dated {balance.date} ({_where(balance)}): "
+                    "move or restate it to describe the balance before the imported history and avoid "
+                    "counting that history twice."
+                )
         if closed is not None and entry.date > closed.date:
             # close_tree's child close has no editable ledger line. Share
             # add's attribution and point to the written parent's close.
             if hint := ledger_write._plugin_close_hint(closed, lifecycles or {}, {}, {}):
                 description, edit = hint
-                return (
+                reasons.append(
                     f"Account '{name}' was {description}, before this row's {entry.date}. "
                     f"Correct the row date, {edit}, or import into an account that is still open."
                 )
+                continue
             remedy = (
                 "Re-date the close, or import into an account that is still open."
                 if name == source
                 else "Point the rule, category or --default-account at an open account, or re-date the close."
             )
-            return (
+            reasons.append(
                 f"Account '{name}' was closed {closed.date} ({_where(closed)}), before this row's "
                 f"{entry.date}. {remedy}"
             )
-    return None
+    return " ".join(reasons) or None
 
 
 def _where(directive: Any) -> str:
