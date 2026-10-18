@@ -71,6 +71,8 @@ def check(ctx: typer.Context) -> None:
     # Judged as given, with or without --no-cache, as USAGE promises.
     _refuse_cache_over_ledger(file, ctx.args)
     args = list(ctx.args)
+    # Native --json must cover refusals before bean-check starts as well.
+    as_json = "--json" in args[: args.index("--")] if "--" in args else "--json" in args
     if _disables_cache(args) and _names_cache_file(args):
         # bean-check ignores the path under --no-cache and says so through
         # Python's root logger, a raw `WARNING:root:` line (w5/417).
@@ -81,7 +83,12 @@ def check(ctx: typer.Context) -> None:
         # loads a file reached under two names twice without a word; the
         # helper names the include and the file that includes it (w5/120),
         # or both names of the one file (w5/433).
-        launch.helper_json(["check", "--file", str(file)])
+        try:
+            launch.helper_json(["check", "--file", str(file)])
+        except BeaError as error:
+            if as_json:
+                _emit_json_errors(file, error.details or [str(error)], error.exit_code)
+            raise
     # bean-check keys its load cache on the files read, not on the plugin set,
     # and every later read trusts that cache. A load made with the auto plugins
     # must neither be stored there nor answered from a default load's entry (w5/111).
@@ -102,9 +109,6 @@ def check(ctx: typer.Context) -> None:
     # its own finding still waits for bean-check to accept the ledger.
     portable: BeaError | None = None
     root_hint: str | None = None
-    # bean-check's own `--json`: bea's findings join its `errors` list on
-    # stdout, or a script read "no errors" beside a failing status (w5/496).
-    as_json = "--json" in args[: args.index("--")] if "--" in args else "--json" in args
     if not _INFORMATIONAL & set(args):
         try:
             loaded = launch.helper_json(["check", "--file", str(file), "--documents-only"])
@@ -168,6 +172,14 @@ _LOCATED = re.compile(r"(?P<filename>.+?):(?P<lineno>\d+): (?P<message>.*)", re.
 
 def _json_error(file: Path, detail: str) -> dict[str, object]:
     """One of bea's findings in bean-check's `--json` shape: message, filename, line."""
+    # These failures have a filename but no parser line. Keep that include's
+    # source instead of attributing every unlocated refusal to the root.
+    for pattern in (
+        r"Cannot decode '(?P<filename>.+)' as UTF-8:",
+        r"Included file '(?P<filename>.+)' \(included from '.+'\) is not readable:",
+    ):
+        if found := re.match(pattern, detail):
+            return {"message": detail, "filename": found["filename"], "lineno": 0}
     located = _LOCATED.fullmatch(detail)
     if located is None:
         return {"message": detail, "filename": str(file), "lineno": 0}
