@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [637 — Importer rows with unopenable account names or bad currencies get remedies `bea add` refuses (gap in w3/386)](./637.md)
 - [638 — Importer row failures are not attributed to rows (unbalanced row "ready", "Directive 2 of 3", bare type errors)](./638.md)
 - [639 — Importer-shape refusals name neither the importer nor the fix (legacy entry, class entry, single directive)](./639.md)
 - [640 — A price refresh deletes the effective file a concurrent load is reading; racing fetches leave orphan revisions](./640.md)
