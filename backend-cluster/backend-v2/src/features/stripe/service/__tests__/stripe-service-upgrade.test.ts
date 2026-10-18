@@ -33,6 +33,7 @@ describe("StripeService.upgradeSubscription", () => {
     list: jest.Mock;
     update: jest.Mock;
   };
+  let mockPaymentIntents: { retrieve: jest.Mock };
   let mockStripeInstance: unknown;
 
   const userId = "user_123";
@@ -47,6 +48,7 @@ describe("StripeService.upgradeSubscription", () => {
       findByStripeCustomerIdAndClientId: jest.fn(),
       create: jest.fn(),
       updateCustomerById: jest.fn(),
+      updatePeriodIfUnchanged: jest.fn().mockResolvedValue(true),
       findOne: jest.fn(),
       findByIdAndUpdate: jest.fn(),
     } as unknown as jest.Mocked<IPaidCustomerModel>;
@@ -75,8 +77,11 @@ describe("StripeService.upgradeSubscription", () => {
       update: jest.fn(),
     };
 
+    mockPaymentIntents = { retrieve: jest.fn() };
+
     mockStripeInstance = {
       subscriptions: mockStripeSubscriptions,
+      paymentIntents: mockPaymentIntents,
     };
 
     stripeUseCase = new StripeService(mockModels, mockPostgresDb);
@@ -139,16 +144,26 @@ describe("StripeService.upgradeSubscription", () => {
     expect(result.message).toContain("upgraded successfully");
     expect(result.subscriptionId).toBe("sub_123");
     expect(result.newTier).toBe("GROWTH");
-    expect(mockStripeSubscriptions.update).toHaveBeenCalledWith("sub_123", {
-      items: [{ id: "si_123", price: growthPriceId }],
-      payment_behavior: "pending_if_incomplete",
-      proration_behavior: "always_invoice",
-    });
-    expect(mockIPaidCustomerModel.updateCustomerById).toHaveBeenCalledWith(
-      expect.any(Object),
-      "customer_doc_id",
-      { currentPeriodEnd: new Date(1700000000 * 1000) },
+    expect(mockStripeSubscriptions.update).toHaveBeenCalledWith(
+      "sub_123",
+      {
+        items: [{ id: "si_123", price: growthPriceId }],
+        payment_behavior: "pending_if_incomplete",
+        proration_behavior: "always_invoice",
+        proration_date: expect.any(Number),
+        expand: ["latest_invoice.payments"],
+      },
+      { idempotencyKey: expect.stringMatching(/^plan-change:sub_123:/) },
     );
+    // The new period is recorded through the verified write, so the
+    // paid-status cache keeps answering without Stripe.
+    expect(mockIPaidCustomerModel.updatePeriodIfUnchanged).toHaveBeenCalledWith(
+      expect.any(Object),
+      mockCustomer,
+      new Date(1700000000 * 1000),
+      expect.any(Number),
+    );
+    expect(mockIPaidCustomerModel.updateCustomerById).not.toHaveBeenCalled();
   });
 
   it("should reject same-plan upgrade attempt", async () => {
@@ -200,7 +215,7 @@ describe("StripeService.upgradeSubscription", () => {
     );
 
     expect(result.success).toBe(false);
-    expect(result.message).toContain("No active Stripe customer");
+    expect(result.message).toContain("no subscription to change");
   });
 
   it("should return error when no active subscription found", async () => {
@@ -226,7 +241,7 @@ describe("StripeService.upgradeSubscription", () => {
     );
 
     expect(result.success).toBe(false);
-    expect(result.message).toContain("No active subscription found");
+    expect(result.message).toContain("no subscription to change");
   });
 
   it("should return error for invalid clientId", async () => {
@@ -300,20 +315,29 @@ describe("StripeService.upgradeSubscription", () => {
       ],
     });
 
+    // With pending_if_incomplete Stripe keeps the old price active and holds
+    // the change; the payment is read from the invoice's payment records.
     mockStripeSubscriptions.update.mockResolvedValue({
       id: "sub_123",
-      status: "incomplete",
+      status: "active",
       livemode: true,
       customer: "cus_123",
+      pending_update: { subscription_items: [] },
       latest_invoice: {
-        payment_intent: {
-          status: "requires_action",
-          client_secret: "pi_secret_123",
+        hosted_invoice_url: "https://invoice.stripe.com/i/in_123",
+        payments: {
+          data: [
+            { payment: { type: "payment_intent", payment_intent: "pi_123" } },
+          ],
         },
       },
       items: {
-        data: [{ id: "si_123", price: { id: growthPriceId } }],
+        data: [{ id: "si_123", price: { id: premiumPriceId } }],
       },
+    });
+    mockPaymentIntents.retrieve.mockResolvedValue({
+      status: "requires_action",
+      client_secret: "pi_secret_123",
     });
 
     const result = await stripeUseCase.upgradeSubscription(
@@ -324,7 +348,8 @@ describe("StripeService.upgradeSubscription", () => {
 
     expect(result.success).toBe(false);
     expect(result.clientSecret).toBe("pi_secret_123");
-    expect(result.message).toContain("additional authentication");
+    expect(result.message).toContain("bank needs to approve");
+    expect(mockPaymentIntents.retrieve).toHaveBeenCalledWith("pi_123");
   });
 
   it("should return error when payment fails", async () => {
@@ -357,17 +382,23 @@ describe("StripeService.upgradeSubscription", () => {
 
     mockStripeSubscriptions.update.mockResolvedValue({
       id: "sub_123",
-      status: "past_due",
+      status: "active",
       livemode: true,
       customer: "cus_123",
+      pending_update: { subscription_items: [] },
       latest_invoice: {
-        payment_intent: {
-          status: "requires_payment_method",
+        payments: {
+          data: [
+            { payment: { type: "payment_intent", payment_intent: "pi_123" } },
+          ],
         },
       },
       items: {
-        data: [{ id: "si_123", price: { id: growthPriceId } }],
+        data: [{ id: "si_123", price: { id: premiumPriceId } }],
       },
+    });
+    mockPaymentIntents.retrieve.mockResolvedValue({
+      status: "requires_payment_method",
     });
 
     const result = await stripeUseCase.upgradeSubscription(
@@ -377,7 +408,8 @@ describe("StripeService.upgradeSubscription", () => {
     );
 
     expect(result.success).toBe(false);
-    expect(result.message).toContain("Payment failed");
+    expect(result.message).toContain("plan was not changed");
+    expect(mockIPaidCustomerModel.updatePeriodIfUnchanged).not.toHaveBeenCalled();
   });
 
   it("should handle Stripe API error", async () => {
@@ -422,7 +454,7 @@ describe("StripeService.upgradeSubscription", () => {
     expect(result.message).toContain("error occurred");
   });
 
-  it("should handle downgrade the same way as upgrade", async () => {
+  it("refuses a downgrade instead of applying it immediately", async () => {
     const mockCustomer = {
       id: "customer_doc_id",
       userId,
@@ -473,8 +505,11 @@ describe("StripeService.upgradeSubscription", () => {
       premiumPriceId,
     );
 
-    expect(result.success).toBe(true);
-    expect(result.newTier).toBe("PREMIUM");
+    // A downgrade takes effect at the end of the paid period (PRFAQ005), so
+    // the immediate-change path must not move the subscription.
+    expect(result.success).toBe(false);
+    expect(result.message).toContain("end of your billing period");
+    expect(mockStripeSubscriptions.update).not.toHaveBeenCalled();
   });
 
   it("should handle subscription not found Stripe error", async () => {

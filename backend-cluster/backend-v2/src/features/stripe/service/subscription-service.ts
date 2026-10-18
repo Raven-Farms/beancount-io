@@ -25,6 +25,7 @@ import type {
   PaymentMethodSummaryView,
   PlanChangePreviewView,
 } from "../operations/plan-change-preview";
+import type { PlanChangeResultView } from "../operations/plan-change-apply";
 
 interface SubscriptionPriceView {
   id: string;
@@ -126,6 +127,12 @@ export interface ISubscriptionService {
     clientId: string,
     priceId: string,
   ): Promise<PlanChangePreviewView>;
+  changePlan(
+    identity: Identity,
+    clientId: string,
+    priceId: string,
+    prorationDate?: number | null,
+  ): Promise<PlanChangeResultView>;
 }
 
 /**
@@ -351,6 +358,28 @@ export class SubscriptionService implements ISubscriptionService {
           userId,
           clientId,
         );
+      if (existingCustomer?.stripeCustomerId) {
+        // A second Checkout would bill the customer twice; plan changes go
+        // through changePlan. The pricing page only offers Checkout to
+        // visitors without a subscription, so this catches races and stale
+        // pages rather than an ordinary path.
+        const current = await this.stripe.listSubscriptions(userId, {
+          status: "active",
+          bindings: [existingCustomer],
+        });
+        if (
+          current.some(
+            (subscription) =>
+              subscriptionTier(subscription) !== SubscriptionTier.FREE,
+          )
+        ) {
+          return {
+            success: false,
+            message:
+              "You already have an active subscription. Change your plan in Billing settings.",
+          };
+        }
+      }
       const sharedSession = {
         line_items: [{ price: priceId, quantity: 1 }],
         allow_promotion_codes: true,
@@ -457,5 +486,23 @@ export class SubscriptionService implements ISubscriptionService {
       AUTHORIZATION_ACTIONS.USER_BILLING_PLAN_CHANGE_PREVIEW,
     );
     return this.stripe.previewPlanChange(identity.userId, clientId, priceId);
+  }
+
+  public async changePlan(
+    identity: Identity,
+    clientId: string,
+    priceId: string,
+    prorationDate?: number | null,
+  ): Promise<PlanChangeResultView> {
+    await this.authorize(
+      identity,
+      AUTHORIZATION_ACTIONS.USER_BILLING_PLAN_CHANGE_APPLY,
+    );
+    return this.stripe.changePlan(
+      identity.userId,
+      clientId,
+      priceId,
+      prorationDate,
+    );
   }
 }

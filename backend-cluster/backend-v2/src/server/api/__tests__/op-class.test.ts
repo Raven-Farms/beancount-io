@@ -105,6 +105,7 @@ describe("classifyOp", () => {
         "GQL Mutation.resumeSubscription",
         "GQL Mutation.upgradeSubscription",
         "GQL Query.previewPlanChange",
+        "GQL Mutation.changePlan",
         "GQL Query.getFeed",
         "GQL Mutation.followUser",
         "GQL Mutation.unfollowUser",
@@ -131,6 +132,7 @@ describe("classifyOp", () => {
       AUTHORIZATION_ACTIONS.USER_BILLING_SUBSCRIPTION_RESUME,
       AUTHORIZATION_ACTIONS.USER_BILLING_SUBSCRIPTION_UPGRADE,
       AUTHORIZATION_ACTIONS.USER_BILLING_PLAN_CHANGE_PREVIEW,
+      AUTHORIZATION_ACTIONS.USER_BILLING_PLAN_CHANGE_APPLY,
       AUTHORIZATION_ACTIONS.USER_SOCIAL_FEED_READ,
       AUTHORIZATION_ACTIONS.USER_SOCIAL_FOLLOW_CREATE,
       AUTHORIZATION_ACTIONS.USER_SOCIAL_FOLLOW_DELETE,
@@ -504,6 +506,7 @@ describe("evaluateScope", () => {
         "GQL Mutation.resumeSubscription",
         "GQL Mutation.upgradeSubscription",
         "GQL Query.previewPlanChange",
+        "GQL Mutation.changePlan",
       ].map((opId) => classifyOp(opId).class),
     ).toEqual([
       "public",
@@ -514,6 +517,7 @@ describe("evaluateScope", () => {
       "write",
       "write",
       "read",
+      "write",
     ]);
     expect(evaluateScope(token(), "GQL Query.allTierQuotas")).toMatchObject({
       allowed: true,

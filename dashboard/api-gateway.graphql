@@ -698,6 +698,8 @@ enum PlanChangeRefusal {
   CURRENT_PLAN
   SAME_TIER_AND_CYCLE
   MULTIPLE_SUBSCRIPTIONS
+  NO_SUBSCRIPTION
+  SCHEDULED_CHANGE
 }
 
 enum PlanChangeEffect {
@@ -714,6 +716,29 @@ type PlanLimitChange {
 
   """-1 means unlimited."""
   to: Int!
+}
+
+enum PlanChangeStatus {
+  ACTIVE
+  REQUIRES_ACTION
+  FAILED
+  REFUSED
+}
+
+type PlanChangeResult {
+  status: PlanChangeStatus!
+  kind: PlanChangeKind
+  refusal: PlanChangeRefusal
+  message: String
+
+  """With REQUIRES_ACTION: confirm the payment with Stripe.js."""
+  clientSecret: String
+
+  """Stripe's hosted page to pay or authenticate this change's invoice."""
+  hostedInvoiceUrl: String
+  subscriptionId: String
+  newTier: String
+  currentPeriodEnd: DateTimeISO
 }
 
 """
@@ -1404,6 +1429,16 @@ type Mutation {
 
   """Unstar a specific ledger"""
   unstarLedger(ledgerId: String!): StarLedgerResponse!
+
+  """
+  Applies an upgrade or a switch to yearly at the previewed proration time. Requires a full signed-in session.
+  """
+  changePlan(
+    """The prorationDate from previewPlanChange."""
+    prorationDate: Int
+    priceId: String!
+    clientId: String!
+  ): PlanChangeResult!
 
   """
   Creates a Stripe-hosted checkout session. Requires a full signed-in session.

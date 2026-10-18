@@ -1,6 +1,10 @@
 import Stripe from "stripe";
-import { customerId, subscriptionPeriodEnd } from "./subscription-plan";
+import { customerId } from "./subscription-plan";
 import { SUBSCRIPTION_CONFIG } from "@/features/stripe/service/stripe";
+import {
+  applyPlanChange,
+  type PlanChangeResultView,
+} from "../operations/plan-change-apply";
 import {
   defaultCard,
   previewPlanChange,
@@ -38,6 +42,12 @@ export interface IStripeService {
     clientId: string,
     subscription: Stripe.Subscription,
   ): Promise<PaymentMethodSummaryView | null>;
+  changePlan(
+    userId: string,
+    clientId: string,
+    priceId: string,
+    prorationDate?: number | null,
+  ): Promise<PlanChangeResultView>;
   handleCheckoutSessionCompleted(
     session: Stripe.Checkout.Session,
     clientId: string,
@@ -245,6 +255,33 @@ export class StripeService implements IStripeService {
     return defaultCard(this.getStripeInstance(clientId), subscription);
   }
 
+  changePlan(
+    userId: string,
+    clientId: string,
+    priceId: string,
+    prorationDate?: number | null,
+  ): Promise<PlanChangeResultView> {
+    if (!SUBSCRIPTION_CONFIG[clientId]) {
+      throw new ValidationError("clientId", "Unknown client");
+    }
+    return applyPlanChange(
+      {
+        stripe: this.getStripeInstance(clientId),
+        models: this.models,
+        db: this.postgresDb,
+      },
+      userId,
+      clientId,
+      priceId,
+      prorationDate,
+    );
+  }
+
+  /**
+   * The original immediate-change mutation, kept for existing callers. It now
+   * runs through `changePlan`, so a downgrade or a switch to monthly is refused
+   * here instead of being applied at once.
+   */
   async upgradeSubscription(
     userId: string,
     clientId: string,
@@ -256,164 +293,38 @@ export class StripeService implements IStripeService {
     subscriptionId?: string;
     newTier?: string;
   }> {
+    const clientConfig = SUBSCRIPTION_CONFIG[clientId];
+    if (!clientConfig) {
+      return { success: false, message: `Invalid client ID: ${clientId}` };
+    }
+    if (!clientConfig.planIds.includes(newPriceId)) {
+      return {
+        success: false,
+        message: `Invalid price ID for client ${clientId}: ${newPriceId}`,
+      };
+    }
     try {
-      // Validate clientId
-      const clientConfig =
-        SUBSCRIPTION_CONFIG[clientId as keyof typeof SUBSCRIPTION_CONFIG];
-      if (!clientConfig) {
-        return {
-          success: false,
-          message: `Invalid client ID: ${clientId}`,
-        };
-      }
-
-      // Validate newPriceId exists in client's plans
-      if (!clientConfig.planIds.includes(newPriceId)) {
-        return {
-          success: false,
-          message: `Invalid price ID for client ${clientId}: ${newPriceId}`,
-        };
-      }
-
-      // Look up target tier from plan config
-      const targetPlan = clientConfig.plans.find(
-        (plan) => plan.priceId === newPriceId,
-      );
-      const newTier = targetPlan?.tier;
-
-      // Look up PaidCustomer
-      const customer = await this.models.paidCustomer.findByUserIdAndClientId(
-        this.postgresDb,
-        userId,
-        clientId,
-      );
-
-      if (!customer?.stripeCustomerId) {
-        return {
-          success: false,
-          message:
-            "No active Stripe customer found. Please create a new subscription instead.",
-        };
-      }
-
-      const stripe = this.getStripeInstance(clientId);
-
-      // List active subscriptions
-      const subscriptions = await stripe.subscriptions.list({
-        customer: customer.stripeCustomerId,
-        status: "active",
-      });
-
-      if (subscriptions.data.length === 0) {
-        return {
-          success: false,
-          message:
-            "No active subscription found. Please create a new subscription instead.",
-        };
-      }
-
-      const subscription = subscriptions.data[0];
-      if (
-        !subscription.livemode ||
-        customerId(subscription.customer) !== customer.stripeCustomerId
-      ) {
-        return {
-          success: false,
-          message: "Subscription does not match your live billing customer",
-        };
-      }
-      const currentItem = subscription.items.data.find((item) =>
-        clientConfig.planIds.includes(item.price.id),
-      );
-      if (!currentItem)
-        return {
-          success: false,
-          message: "Subscription plan is not recognized",
-        };
-
-      // Same-plan guard
-      if (currentItem.price.id === newPriceId) {
-        return {
-          success: false,
-          message: "You are already on this plan.",
-        };
-      }
-
-      // Update subscription in place
-      const updatedSubscription = await stripe.subscriptions.update(
-        subscription.id,
-        {
-          items: [{ id: currentItem.id, price: newPriceId }],
-          payment_behavior: "pending_if_incomplete",
-          proration_behavior: "always_invoice",
-        },
-      );
-
-      // Handle response based on status
-      if (
-        !updatedSubscription.livemode ||
-        customerId(updatedSubscription.customer) !== customer.stripeCustomerId
-      ) {
-        throw new Error(
-          "Updated subscription does not match its live customer binding",
-        );
-      }
-      if (updatedSubscription.status === "active") {
-        // Success — update currentPeriodEnd in DB
-        const periodEnd = subscriptionPeriodEnd([
-          { ...updatedSubscription, clientId },
-        ]);
-        if (periodEnd) {
-          await this.models.paidCustomer.updateCustomerById(
-            this.postgresDb,
-            customer.id,
-            { currentPeriodEnd: periodEnd },
-          );
-        }
-
+      const outcome = await this.changePlan(userId, clientId, newPriceId);
+      if (outcome.status === "ACTIVE") {
         logger.debug("Subscription upgraded successfully", {
           userId,
           clientId,
-          subscriptionId: updatedSubscription.id,
-          newTier,
+          subscriptionId: outcome.subscriptionId,
+          newTier: outcome.newTier,
         });
-
         return {
           success: true,
           message: "Subscription upgraded successfully.",
-          subscriptionId: updatedSubscription.id,
-          newTier,
+          subscriptionId: outcome.subscriptionId ?? undefined,
+          newTier: outcome.newTier ?? undefined,
         };
       }
-
-      // Check for 3DS / requires_action
-      const latestInvoice = updatedSubscription.latest_invoice;
-      if (latestInvoice && typeof latestInvoice === "object") {
-        const paymentIntent = (latestInvoice as { payment_intent?: unknown })
-          .payment_intent;
-        if (paymentIntent && typeof paymentIntent === "object") {
-          const pi = paymentIntent as {
-            status?: string;
-            client_secret?: string;
-          };
-          if (pi.status === "requires_action" && pi.client_secret) {
-            return {
-              success: false,
-              message:
-                "Your payment requires additional authentication. Please check your email or card issuer.",
-              clientSecret: pi.client_secret,
-              subscriptionId: updatedSubscription.id,
-              newTier,
-            };
-          }
-        }
-      }
-
-      // Payment failed or subscription incomplete
       return {
         success: false,
-        message:
-          "Payment failed. Your subscription was not changed. Please update your payment method and try again.",
+        message: outcome.message ?? undefined,
+        clientSecret: outcome.clientSecret ?? undefined,
+        subscriptionId: outcome.subscriptionId ?? undefined,
+        newTier: outcome.newTier ?? undefined,
       };
     } catch (error) {
       if (isNoSuchSubscriptionError(error)) {

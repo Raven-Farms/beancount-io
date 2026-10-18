@@ -36,6 +36,7 @@ describe("SubscriptionResolver", () => {
     createCustomerPortalSession: jest.Mock;
     upgradeSubscription: jest.Mock;
     previewPlanChange: jest.Mock;
+    changePlan: jest.Mock;
     defaultCard: jest.Mock;
   };
   let mockModels: {
@@ -62,6 +63,7 @@ describe("SubscriptionResolver", () => {
       createCustomerPortalSession: jest.fn(),
       upgradeSubscription: jest.fn(),
       previewPlanChange: jest.fn(),
+      changePlan: jest.fn(),
       defaultCard: jest.fn().mockResolvedValue(null),
     };
 
@@ -1508,6 +1510,47 @@ describe("SubscriptionResolver", () => {
       expect(mockModels.user.getById).not.toHaveBeenCalled();
     });
 
+    it("refuses a second Checkout to a customer who already pays, so nobody is billed twice", async () => {
+      const mockStripeCheckoutSessions = { create: jest.fn() };
+      mockStripeService.getStripeInstance.mockReturnValue({
+        checkout: { sessions: mockStripeCheckoutSessions },
+      });
+      const binding = {
+        id: "customer-123",
+        userId: "user-123",
+        stripeCustomerId: "cus_existing_123",
+        clientId: "beancount-web-prod",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      mockModels.paidCustomer.findByUserIdAndClientId.mockResolvedValue(
+        binding,
+      );
+      mockStripeService.listSubscriptions.mockResolvedValue([
+        {
+          id: "sub_live",
+          status: "active",
+          livemode: true,
+          clientId: "beancount-web-prod",
+          items: { data: [{ price: { id: "price_1RrSOGEqsEqs2tLVFnyB34qG" } }] },
+        },
+      ]);
+
+      const result = await resolver.createSubscriptionSession(
+        "beancount-web-prod",
+        "price_1L9ccEEqsEqs2tLVbeBgHm9p",
+        mockContext,
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.message).toContain("already have an active subscription");
+      expect(mockStripeCheckoutSessions.create).not.toHaveBeenCalled();
+      expect(mockStripeService.listSubscriptions).toHaveBeenCalledWith(
+        "user-123",
+        { status: "active", bindings: [binding] },
+      );
+    });
+
     it("should handle Stripe API errors gracefully", async () => {
       const mockStripeCheckoutSessions = {
         create: jest.fn().mockRejectedValue(new Error("Stripe API error")),
@@ -1932,6 +1975,76 @@ describe("SubscriptionResolver", () => {
       });
       expect(result.data).toBeNull();
       expect(mockStripeService.previewPlanChange).not.toHaveBeenCalled();
+    });
+  });
+  describe("changePlan", () => {
+    const CHANGE_MUTATION = `mutation Change($clientId: String!, $priceId: String!, $prorationDate: Int) {
+      changePlan(clientId: $clientId, priceId: $priceId, prorationDate: $prorationDate) {
+        status kind refusal message clientSecret hostedInvoiceUrl subscriptionId newTier currentPeriodEnd
+      }
+    }`;
+
+    async function execute(identity: unknown, prorationDate: number | null) {
+      return graphql({
+        schema: await graphqlSchema,
+        source: CHANGE_MUTATION,
+        variableValues: {
+          clientId: "beancount-web-prod",
+          priceId: "price_1L9ccEEqsEqs2tLVbeBgHm9p",
+          prorationDate,
+        },
+        contextValue: {
+          ...mockContext,
+          identity,
+          getCurrentIdentity: () => identity,
+        },
+      });
+    }
+
+    it("passes the previewed proration time through and returns the authentication handoff", async () => {
+      mockStripeService.changePlan.mockResolvedValue({
+        status: "REQUIRES_ACTION",
+        kind: "TO_YEARLY",
+        refusal: null,
+        message: "Your bank needs to approve this payment.",
+        clientSecret: "pi_1_secret",
+        hostedInvoiceUrl: "https://invoice.stripe.com/i/in_1",
+        subscriptionId: "sub_1",
+        newTier: "PREMIUM",
+        currentPeriodEnd: null,
+      });
+
+      const result = await execute(mockContext.getCurrentIdentity(), 1792238400);
+
+      expect(result.errors).toBeUndefined();
+      expect(result.data?.changePlan).toMatchObject({
+        status: "REQUIRES_ACTION",
+        kind: "TO_YEARLY",
+        clientSecret: "pi_1_secret",
+        hostedInvoiceUrl: "https://invoice.stripe.com/i/in_1",
+      });
+      expect(mockStripeService.changePlan).toHaveBeenCalledWith(
+        "user-123",
+        "beancount-web-prod",
+        "price_1L9ccEEqsEqs2tLVbeBgHm9p",
+        1792238400,
+      );
+    });
+
+    it("refuses an OAuth credential before any Stripe work", async () => {
+      const result = await execute(
+        {
+          userId: "user-123",
+          method: "oauth",
+          scopes: new Set(["ledger.read", "ledger.write", "ledger.admin"]),
+        },
+        null,
+      );
+
+      expect(result.errors?.[0]?.originalError).toMatchObject({
+        category: ErrorCategory.FORBIDDEN,
+      });
+      expect(mockStripeService.changePlan).not.toHaveBeenCalled();
     });
   });
 });

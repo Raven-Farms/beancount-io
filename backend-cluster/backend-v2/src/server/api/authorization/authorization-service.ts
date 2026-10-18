@@ -310,6 +310,11 @@ const ACTION_REQUIREMENTS: Readonly<
     credential: BILLING_CREDENTIAL,
     auditClass: "read",
   },
+  [AUTHORIZATION_ACTIONS.USER_BILLING_PLAN_CHANGE_APPLY]: {
+    relationships: userRelationship(USER_RELATIONSHIPS.WRITE_BILLING),
+    credential: BILLING_CREDENTIAL,
+    auditClass: "write",
+  },
   [AUTHORIZATION_ACTIONS.USER_AI_USAGE_READ]: {
     relationships: userRelationship(USER_RELATIONSHIPS.OWNER),
     credential: { methods: EVERY_CREDENTIAL, capability: "read" },

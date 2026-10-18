@@ -621,6 +621,10 @@ const BILLING_VERBS: readonly VerbEntry[] = [
     ...gqlOnly("Query.previewPlanChange", "read", R.billing, M.billing),
     authorizationAction: AUTHORIZATION_ACTIONS.USER_BILLING_PLAN_CHANGE_PREVIEW,
   },
+  {
+    ...gqlOnly("Mutation.changePlan", "write", R.billing, M.billing),
+    authorizationAction: AUTHORIZATION_ACTIONS.USER_BILLING_PLAN_CHANGE_APPLY,
+  },
 ];
 
 const PROBE_VERBS: readonly VerbEntry[] = [

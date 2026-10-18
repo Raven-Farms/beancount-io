@@ -18,6 +18,7 @@ import type {
   PlanChangeKind,
   PlanChangeRefusal,
 } from "@/features/stripe/service/plan-change";
+import type { PlanChangeStatus } from "@/features/stripe/operations/plan-change-apply";
 import type { IContext } from "@/server/graphql/context";
 import { AllowAnonymous, Authenticated } from "@/server/graphql/authenticated";
 
@@ -182,6 +183,8 @@ const PlanChangeRefusalValues: { [K in PlanChangeRefusal]: K } = {
   CURRENT_PLAN: "CURRENT_PLAN",
   SAME_TIER_AND_CYCLE: "SAME_TIER_AND_CYCLE",
   MULTIPLE_SUBSCRIPTIONS: "MULTIPLE_SUBSCRIPTIONS",
+  NO_SUBSCRIPTION: "NO_SUBSCRIPTION",
+  SCHEDULED_CHANGE: "SCHEDULED_CHANGE",
 };
 registerEnumType(PlanChangeRefusalValues, { name: "PlanChangeRefusal" });
 
@@ -263,6 +266,51 @@ class PlanChangePreview {
   paymentMethod!: PaymentMethodSummary | null;
 }
 
+const PlanChangeStatusValues: { [K in PlanChangeStatus]: K } = {
+  ACTIVE: "ACTIVE",
+  REQUIRES_ACTION: "REQUIRES_ACTION",
+  FAILED: "FAILED",
+  REFUSED: "REFUSED",
+};
+registerEnumType(PlanChangeStatusValues, { name: "PlanChangeStatus" });
+
+@ObjectType("PlanChangeResult")
+class PlanChangeResult {
+  @Field(() => PlanChangeStatusValues)
+  status!: PlanChangeStatus;
+
+  @Field(() => PlanChangeKindValues, { nullable: true })
+  kind!: PlanChangeKind | null;
+
+  @Field(() => PlanChangeRefusalValues, { nullable: true })
+  refusal!: PlanChangeRefusal | null;
+
+  @Field(() => String, { nullable: true })
+  message!: string | null;
+
+  @Field(() => String, {
+    nullable: true,
+    description: "With REQUIRES_ACTION: confirm the payment with Stripe.js.",
+  })
+  clientSecret!: string | null;
+
+  @Field(() => String, {
+    nullable: true,
+    description:
+      "Stripe's hosted page to pay or authenticate this change's invoice.",
+  })
+  hostedInvoiceUrl!: string | null;
+
+  @Field(() => String, { nullable: true })
+  subscriptionId!: string | null;
+
+  @Field(() => String, { nullable: true })
+  newTier!: string | null;
+
+  @Field(() => Date, { nullable: true })
+  currentPeriodEnd!: Date | null;
+}
+
 @ObjectType("TierQuotaItem")
 class TierQuotaItem {
   @Field(() => String)
@@ -335,6 +383,29 @@ export class SubscriptionResolver {
       context.getCurrentIdentity(),
       clientId,
       priceId,
+    );
+  }
+
+  @Authenticated()
+  @Mutation(() => PlanChangeResult, {
+    description:
+      "Applies an upgrade or a switch to yearly at the previewed proration time. Requires a full signed-in session.",
+  })
+  async changePlan(
+    @Arg("clientId") clientId: string,
+    @Arg("priceId") priceId: string,
+    @Arg("prorationDate", () => Int, {
+      nullable: true,
+      description: "The prorationDate from previewPlanChange.",
+    })
+    prorationDate: number | null | undefined,
+    @Ctx() context: IContext,
+  ): Promise<PlanChangeResult> {
+    return this.subscriptions.changePlan(
+      context.getCurrentIdentity(),
+      clientId,
+      priceId,
+      prorationDate,
     );
   }
 

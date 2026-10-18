@@ -994,6 +994,8 @@ export type Mutation = {
   bulkEntries: AddLedgerEntryResponse;
   /** Schedules your subscription to cancel. Requires a full signed-in session. */
   cancelSubscription: SubscriptionActionResult;
+  /** Applies an upgrade or a switch to yearly at the previewed proration time. Requires a full signed-in session. */
+  changePlan: PlanChangeResult;
   /** Authorize the pending CLI session a user code names. Issues a JWT for the CLI and stores it for the matching device code to collect. */
   confirmCliAuthSession: ConfirmCliAuthSessionResponse;
   /** Retrieve and consume the token from an authorized CLI auth session. Single-use, and only redeemable by the device code the session was created with. */
@@ -1143,6 +1145,13 @@ export type MutationBulkEntriesArgs = {
 export type MutationCancelSubscriptionArgs = {
   clientId: Scalars['String']['input'];
   subscriptionId: Scalars['String']['input'];
+};
+
+
+export type MutationChangePlanArgs = {
+  clientId: Scalars['String']['input'];
+  priceId: Scalars['String']['input'];
+  prorationDate?: InputMaybe<Scalars['Int']['input']>;
 };
 
 
@@ -1712,7 +1721,31 @@ export type PlanChangePreview = {
 export enum PlanChangeRefusal {
   CurrentPlan = 'CURRENT_PLAN',
   MultipleSubscriptions = 'MULTIPLE_SUBSCRIPTIONS',
-  SameTierAndCycle = 'SAME_TIER_AND_CYCLE'
+  NoSubscription = 'NO_SUBSCRIPTION',
+  SameTierAndCycle = 'SAME_TIER_AND_CYCLE',
+  ScheduledChange = 'SCHEDULED_CHANGE'
+}
+
+export type PlanChangeResult = {
+  __typename: 'PlanChangeResult';
+  /** With REQUIRES_ACTION: confirm the payment with Stripe.js. */
+  clientSecret: Maybe<Scalars['String']['output']>;
+  currentPeriodEnd: Maybe<Scalars['DateTimeISO']['output']>;
+  /** Stripe's hosted page to pay or authenticate this change's invoice. */
+  hostedInvoiceUrl: Maybe<Scalars['String']['output']>;
+  kind: Maybe<PlanChangeKind>;
+  message: Maybe<Scalars['String']['output']>;
+  newTier: Maybe<Scalars['String']['output']>;
+  refusal: Maybe<PlanChangeRefusal>;
+  status: PlanChangeStatus;
+  subscriptionId: Maybe<Scalars['String']['output']>;
+};
+
+export enum PlanChangeStatus {
+  Active = 'ACTIVE',
+  Failed = 'FAILED',
+  Refused = 'REFUSED',
+  RequiresAction = 'REQUIRES_ACTION'
 }
 
 export type PlanLimitChange = {

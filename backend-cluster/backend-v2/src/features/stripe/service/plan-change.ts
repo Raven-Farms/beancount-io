@@ -22,11 +22,17 @@ export type PlanChangeKind =
   | "TO_MONTHLY"
   | "SPLIT";
 
-/** Why a choice is refused before any Stripe work. */
+/**
+ * Why a choice is refused before any Stripe work. The last two only come from
+ * applying a change: a customer without a subscription checks out instead, and
+ * a change that waits for the period end cannot be applied immediately.
+ */
 export type PlanChangeRefusal =
   | "CURRENT_PLAN"
   | "SAME_TIER_AND_CYCLE"
-  | "MULTIPLE_SUBSCRIPTIONS";
+  | "MULTIPLE_SUBSCRIPTIONS"
+  | "NO_SUBSCRIPTION"
+  | "SCHEDULED_CHANGE";
 
 /** When a change takes effect, and through which Stripe mechanism. */
 export type PlanChangeEffect = "CHECKOUT" | "IMMEDIATE" | "SCHEDULED";

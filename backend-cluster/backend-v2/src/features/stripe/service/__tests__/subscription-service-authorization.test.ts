@@ -33,6 +33,7 @@ function makeDeps() {
     resumeSubscription: jest.fn(async () => ({ success: true })),
     upgradeSubscription: jest.fn(async () => ({ success: true })),
     previewPlanChange: jest.fn(async () => ({})),
+    changePlan: jest.fn(async () => ({})),
     defaultCard: jest.fn(async () => null),
   };
   const models = {
@@ -100,6 +101,11 @@ const BILLING_CASES = [
     call: (service: SubscriptionService, identity: Identity) =>
       service.previewPlanChange(identity, "beancount-web-prod", "price_1"),
   },
+  {
+    action: AUTHORIZATION_ACTIONS.USER_BILLING_PLAN_CHANGE_APPLY,
+    call: (service: SubscriptionService, identity: Identity) =>
+      service.changePlan(identity, "beancount-web-prod", "price_1", 1),
+  },
 ] as const;
 
 function expectNoBillingWork(deps: ReturnType<typeof makeDeps>): void {
@@ -110,6 +116,7 @@ function expectNoBillingWork(deps: ReturnType<typeof makeDeps>): void {
   expect(deps.stripe.resumeSubscription).not.toHaveBeenCalled();
   expect(deps.stripe.upgradeSubscription).not.toHaveBeenCalled();
   expect(deps.stripe.previewPlanChange).not.toHaveBeenCalled();
+  expect(deps.stripe.changePlan).not.toHaveBeenCalled();
   expect(deps.stripe.defaultCard).not.toHaveBeenCalled();
   expect(deps.models.user.getById).not.toHaveBeenCalled();
   expect(

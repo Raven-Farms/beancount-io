@@ -19,6 +19,7 @@ import {
   type TierLimits,
 } from "../service/stripe";
 import { customerId } from "../service/subscription-plan";
+import { loadActivePlans } from "./current-plan";
 
 const previewLogger = logger.child({ module: "plan-change-preview" });
 
@@ -187,34 +188,14 @@ export async function previewPlanChange(
 
   const { stripe } = deps;
   const now = deps.now?.() ?? new Date();
-  const binding = await deps.models.paidCustomer.findByUserIdAndClientId(
+  const { active } = await loadActivePlans(
+    stripe,
+    deps.models,
     deps.db,
     userId,
     clientId,
+    clientConfig.plans,
   );
-
-  const active: { subscription: Stripe.Subscription; item: Stripe.SubscriptionItem; plan: PlanConfig }[] = [];
-  if (binding?.stripeCustomerId) {
-    const page = await stripe.subscriptions.list({
-      customer: binding.stripeCustomerId,
-      status: "active",
-      limit: 100,
-    });
-    for (const subscription of page.data) {
-      if (
-        !subscription.livemode ||
-        customerId(subscription.customer) !== binding.stripeCustomerId
-      ) {
-        continue;
-      }
-      for (const item of subscription.items.data) {
-        const plan = clientConfig.plans.find(
-          (candidate) => candidate.priceId === item.price.id,
-        );
-        if (plan) active.push({ subscription, item, plan });
-      }
-    }
-  }
 
   const { amount: targetAmount, currency } = await listPrice(
     stripe,

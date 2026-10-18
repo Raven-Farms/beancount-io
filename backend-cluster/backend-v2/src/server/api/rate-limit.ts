@@ -169,6 +169,7 @@ export const OP_BUDGETS: Record<string, Budget> = {
   "GQL Mutation.resumeSubscription": CLASS_BUDGETS["session-only"],
   "GQL Mutation.upgradeSubscription": CLASS_BUDGETS["session-only"],
   "GQL Query.previewPlanChange": CLASS_BUDGETS["session-only"],
+  "GQL Mutation.changePlan": CLASS_BUDGETS["session-only"],
   // Social discovery and session feed/follow operations used the legacy
   // session-only budget before centralized authorization split reachability
   // from operational risk. Preserve that 300/minute budget exactly.
