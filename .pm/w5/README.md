@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [702 — A proxy that drops the CONNECT makes cloud writes and logout exit 4 "outcome unknown" (gap in w5/519)](./702.md)
 - [703 — A malformed BEA_TOKEN is told to run cloud login; logout exits 3 instead of the BEA_TOKEN no-op](./703.md)
 - [704 — ingest extract -e misses duplicates in a BOM or NFD ledger, with no warning](./704.md)
 - [705 — treeify treats - as a file name: -o - writes ./-, and treeify - reads it instead of stdin](./705.md)
