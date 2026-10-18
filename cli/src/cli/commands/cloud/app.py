@@ -40,7 +40,7 @@ def _refuse_offline(typer_ctx: typer.Context) -> None:
 
 @cloud_app.command("login")
 def cloud_login() -> None:
-    """Log in via the browser device flow (stores credentials.json under $BEA_CONFIG_DIR, default ~/.config/bea)."""
+    """Log in by device flow; credentials.json goes in $BEA_CONFIG_DIR, $XDG_CONFIG_HOME/bea or ~/.config/bea."""
     import os
 
     from cli.errors import UsageError

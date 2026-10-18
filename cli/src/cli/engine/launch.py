@@ -130,7 +130,35 @@ def run_native(
     process still hears it, and stops the child on its way out.
     """
     command = [str(native_command(name)), *args]
-    return _spawn(command, env if env is not None else _native_env(ledger), deaf_to_interrupt=True)
+    return _spawn(
+        command, env if env is not None else _native_env(ledger), deaf_to_interrupt=True, renamed=_BEA_NAMES.get(name)
+    )
+
+
+#: The `bea` command each upstream program answers for. Its usage errors said
+#: `Try 'bean-check --help'`, naming a program nobody installed (w5/624).
+#: `bean-query` is left out: its shell must keep its terminal on stderr.
+_BEA_NAMES = {
+    "bean-check": "bea check",
+    "bean-doctor": "bea doctor",
+    "bean-example": "bea example",
+    "bean-format": "bea format",
+    "treeify": "bea treeify",
+}
+
+
+def _renamed(text: str, renamed: tuple[str, str] | None) -> str:
+    """Upstream's `Usage:` and `Try '… --help'` lines with the `bea` command in its program's place."""
+    if renamed is None:
+        return text
+    program, command = renamed
+    lines = text.splitlines(keepends=True)
+    return "".join(
+        line.replace(f"Usage: {program} ", f"Usage: {command} ").replace(f"Try '{program} ", f"Try '{command} ")
+        if line.startswith("Usage: ") or "Try '" in line
+        else line
+        for line in lines
+    )
 
 
 LOAD_CACHE_ENV = "BEANCOUNT_LOAD_CACHE_FILENAME"
@@ -339,7 +367,8 @@ def check_native(
     """
     if completed.returncode == 0:
         return
-    diagnostic = (completed.stderr or "").strip()
+    command = _BEA_NAMES.get(name)
+    diagnostic = _renamed(completed.stderr or "", (name, command) if command else None).strip()
     tail = [line for line in diagnostic.splitlines() if line.strip()][-20:]
     reason = tail[-1] if tail else "No diagnostic was returned."
     if "Traceback (most recent call last)" in diagnostic:
@@ -866,7 +895,13 @@ def _helper_env(source_root: Path | None = None) -> dict[str, str] | None:
     return env
 
 
-def _spawn(command: list[str], env: dict[str, str] | None, *, deaf_to_interrupt: bool = False) -> int:
+def _spawn(
+    command: list[str],
+    env: dict[str, str] | None,
+    *,
+    deaf_to_interrupt: bool = False,
+    renamed: str | None = None,
+) -> int:
     """Run a child with the caller's streams and working directory, and report its status.
 
     Streams are inherited when they are real OS file descriptors so an
@@ -877,16 +912,20 @@ def _spawn(command: list[str], env: dict[str, str] | None, *, deaf_to_interrupt:
     through `sys.stdout` / `sys.stderr` instead, which is what the caller is
     actually reading. The one exception to inheritance is stderr beside a
     stdout pipe; see `_stderr_minus_flush_epilogue`.
+
+    `renamed` is the `bea` command an upstream program answers for: its stderr
+    is then relayed with the program's name replaced in usage lines.
     """
+    rename = (Path(command[0]).name, renamed) if renamed else None
     if _stream_is_captured(sys.stdout) or _stream_is_captured(sys.stderr):
         captured = subprocess.run(
             command, env=env, capture_output=True, encoding="utf-8", errors="replace", check=False
         )
         output.replay(captured.stdout, sys.stdout)
-        output.replay(captured.stderr, sys.stderr)
+        output.replay(_renamed(captured.stderr, rename), sys.stderr)
         returncode = captured.returncode
     else:
-        with _stderr_minus_flush_epilogue() as stderr:
+        with _stderr_minus_flush_epilogue(rename) as stderr:
             returncode = _run_inherited(command, env, stderr, deaf_to_interrupt=deaf_to_interrupt)
         if returncode > 0 and _downstream_pipe_closed():
             # The child wrote to the same closed pipe we would have. Upstream is
@@ -1075,7 +1114,7 @@ def _interrupt_withheld(wanted: bool) -> Iterator[Callable[[], None]]:
 
 
 @contextmanager
-def _stderr_minus_flush_epilogue() -> Iterator[int | None]:
+def _stderr_minus_flush_epilogue(rename: tuple[str, str] | None = None) -> Iterator[int | None]:
     """The child's stderr: ours, or a relay onto ours that drops one interpreter epilogue.
 
     A Python child that only buffered its output meets the closed pipe when the
@@ -1089,13 +1128,14 @@ def _stderr_minus_flush_epilogue() -> Iterator[int | None]:
     Only a stdout that can hang up, with stderr going somewhere else, gets the
     relay. A terminal session keeps its terminal, and under `2>&1` the epilogue
     already lands in the closed pipe, where relaying would only reorder the two
-    streams.
+    streams. A `rename` (upstream program, `bea` command) always relays, so
+    usage lines name the command the user ran (w5/624).
     """
-    if not _stdout_can_hang_up_apart_from_stderr():
+    if rename is None and not _stdout_can_hang_up_apart_from_stderr():
         yield None
         return
     reader, writer = os.pipe()
-    relay = threading.Thread(target=_relay_stderr, args=(reader,), daemon=True)
+    relay = threading.Thread(target=_relay_stderr, args=(reader, rename), daemon=True)
     relay.start()
     try:
         yield writer
@@ -1121,7 +1161,7 @@ _EPILOGUE_HEADER = b"Exception ignored"
 _EPILOGUE_REASON = b"BrokenPipeError"
 
 
-def _relay_stderr(reader: int) -> None:
+def _relay_stderr(reader: int, rename: tuple[str, str] | None = None) -> None:
     """Copy the child's stderr to ours as it arrives, minus a closing flush epilogue.
 
     Everything is forwarded the moment it cannot be that epilogue, a prompt
@@ -1148,7 +1188,11 @@ def _relay_stderr(reader: int) -> None:
                     if line.startswith(_EPILOGUE_HEADER) and b"stdout" in line:
                         held.append(line)
                     else:
-                        _write_stderr(line)
+                        _write_stderr(
+                            _renamed(line.decode("utf-8", "surrogateescape"), rename).encode("utf-8", "surrogateescape")
+                            if rename
+                            else line
+                        )
             expected = _EPILOGUE_REASON if len(held) == 1 else _EPILOGUE_HEADER
             if partial and (passing or not (partial.startswith(expected) or expected.startswith(partial))):
                 _write_stderr(b"".join(held) + partial)

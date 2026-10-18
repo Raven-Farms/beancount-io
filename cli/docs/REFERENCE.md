@@ -1216,7 +1216,7 @@ Usage: bea engine enable [OPTIONS] {feature}
 
 ### `bea cloud login`
 
-Log in via the browser device flow (stores credentials.json under $BEA_CONFIG_DIR, default ~/.config/bea).
+Log in by device flow; credentials.json goes in $BEA_CONFIG_DIR, $XDG_CONFIG_HOME/bea or ~/.config/bea.
 
 ```text
 Usage: bea cloud login [OPTIONS]

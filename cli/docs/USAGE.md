@@ -471,7 +471,7 @@ bea format . --check               # CI/pre-commit gate: alignment, parseable fi
 bea doctor context main.bean main.bean:22   # the entry at that line, as an include spells it
 bea doctor context main.bean 22             # a bare line number means the root file
 bea example --seed 1 -o example.beancount
-bea query "SELECT account, sum(position) GROUP BY account" > balances.txt
+bea query "SELECT account, sum(position) GROUP BY account ORDER BY account" > balances.txt
 bea treeify < balances.txt                  # the account column drawn as a tree
 
 # Run a BQL query and print a table; omit the query for the interactive shell
@@ -1887,7 +1887,7 @@ configuration directory, owner-only (`0600` in a `0700` directory, like
 
 ## Cloud: authentication
 
-Hosted commands need a session. `bea cloud login` prints a one-time code and opens the dashboard's device page; enter the code there, check that the device shown is this machine, and approve. The link itself carries no secret, so a device page opened from anywhere else cannot authorize this CLI. The credential is stored as `credentials.json` in the configuration directory — `$BEA_CONFIG_DIR` when set, else `~/.config/bea` (mode 0600, in a 0700 directory).
+Hosted commands need a session. `bea cloud login` prints a one-time code and opens the dashboard's device page; enter the code there, check that the device shown is this machine, and approve. The link itself carries no secret, so a device page opened from anywhere else cannot authorize this CLI. The credential is stored as `credentials.json` in the configuration directory — `$BEA_CONFIG_DIR` when set, else `$XDG_CONFIG_HOME/bea`, else `~/.config/bea` (mode 0600, in a 0700 directory).
 
 ```bash norun
 # Needs a browser and hosted credentials.
