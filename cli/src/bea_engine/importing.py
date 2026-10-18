@@ -189,7 +189,7 @@ def answer(
 
     from bea_engine import managed_load
     from bea_engine.csv_mapper import CsvImporter, load_rules, parse_delimiter, parse_encoding, parse_mapping
-    from bea_engine.ledger.reader import entry_generated, forget_source_lines
+    from bea_engine.ledger.reader import entry_generated, forget_source_lines, shared_locations
 
     if duplicates not in {"review", "skip", "include"}:
         raise UsageError(f"--duplicates must be review, skip, or include; got {duplicates!r}.")
@@ -384,7 +384,17 @@ def answer(
     # duplicate" cited at the template's line, and `--duplicates skip` then
     # dropped them all (w5/325).
     forget_source_lines()
-    written = [entry for entry in existing if not entry_generated(entry, type(entry).__name__.lower())]
+    shared = shared_locations(existing)
+    written = [
+        entry
+        for entry in existing
+        if not entry_generated(
+            entry,
+            type(entry).__name__.lower(),
+            shared,
+            require_declaration=isinstance(entry, Transaction),
+        )
+    ]
     # Bank ids another account issued, reached here only through a transfer's
     # counter leg: never an exact match for this account's rows (w5/598).
     transfer_ids: dict[tuple[str, str, str], Any] = {}

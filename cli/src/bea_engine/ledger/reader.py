@@ -136,6 +136,7 @@ def forget_source_lines() -> None:
     generated, since the cached lines ended before them.
     """
     _source_lines.cache_clear()
+    _spelled_entries.cache_clear()
 
 
 def shared_locations(entries: list[Any]) -> frozenset[tuple[str, int]]:
@@ -165,29 +166,33 @@ def shared_locations(entries: list[Any]) -> frozenset[tuple[str, int]]:
 
 
 @cache
-def _spelled_at(filename: str, lineno: int) -> Any:
-    """The directive the file itself spells at this line, parsed without plugins, or None.
+def _spelled_entries(filename: str) -> dict[int, Any]:
+    """The directives a file spells, indexed by line and parsed without plugins.
 
     Read with the parser, not a pattern over one line: a quoted word in a
     trailing `;` comment was taken for the narration, and a narration
     spanning lines never matched, so the real transaction at a shared
-    location counted as generated (w5/507).
+    location counted as generated (w5/507). Import checks every transaction's
+    header, so parse each file once rather than a window for every row.
     """
     from beancount.parser import parser
 
     lines = _source_lines(filename)
-    if lines is None or lineno > len(lines):
-        return None
-    entries, _, _ = parser.parse_string("\n".join(lines[lineno - 1 : lineno - 1 + 200]) + "\n")
-    return entries[0] if entries else None
+    if lines is None:
+        return {}
+    entries, _, _ = parser.parse_string("\n".join(lines) + "\n")
+    return {entry.meta["lineno"]: entry for entry in entries}
 
 
-def _declares(entry: Any) -> bool:
-    """Whether the file spells this entry at its location, rather than another entry stamped there."""
+def _declares(entry: Any) -> bool | None:
+    """Whether this entry is spelled at its location; None if no declaration can be read."""
     meta = entry.meta or {}
-    spelled = _spelled_at(str(meta.get("filename")), meta.get("lineno"))
+    lineno = meta.get("lineno")
+    if not isinstance(lineno, int):
+        return None
+    spelled = _spelled_entries(str(meta.get("filename"))).get(lineno)
     if spelled is None:
-        return True
+        return None
     if type(spelled) is not type(entry):
         return False
     if isinstance(entry, Transaction):
@@ -203,7 +208,13 @@ def _declares(entry: Any) -> bool:
     return all(getattr(entry, name) == getattr(spelled, name) for name in entry._fields if name not in ignored)
 
 
-def entry_generated(entry: Any, directive_type: str, shared: frozenset[tuple[str, int]] = frozenset()) -> bool:
+def entry_generated(
+    entry: Any,
+    directive_type: str,
+    shared: frozenset[tuple[str, int]] = frozenset(),
+    *,
+    require_declaration: bool = False,
+) -> bool:
     """Whether a plugin synthesized this entry rather than the ledger declaring it.
 
     A synthesized entry either points nowhere real (`<auto_accounts>`) or
@@ -217,6 +228,10 @@ def entry_generated(entry: Any, directive_type: str, shared: frozenset[tuple[str
     A managed price feed's entry is not on disk either: its line is real, but
     it sits in the price cache, not in any file of the ledger. An exported
     snapshot is an ordinary local file and its rows are written.
+
+    Import requires the transaction's declaration even at a unique location:
+    a forecast may replace its template with a same-date, rewritten copy.
+    Listings retain their date/location policy unless a location is shared.
     """
     meta = getattr(entry, "meta", None) or {}
     filename = meta.get("filename")
@@ -245,7 +260,9 @@ def entry_generated(entry: Any, directive_type: str, shared: frozenset[tuple[str
     elif not token.startswith(directive_type):
         return True
     # Two entries at one location: only the one the line spells is written.
-    return (str(filename), lineno) in shared and not _declares(entry)
+    if require_declaration:
+        return _declares(entry) is not True
+    return (str(filename), lineno) in shared and _declares(entry) is False
 
 
 def _in_date_range(

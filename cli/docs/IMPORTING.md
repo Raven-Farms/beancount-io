@@ -583,7 +583,10 @@ Both existing entries and accepted rows in the same batch participate in
 matching. Existing entries are the ones written in the ledger's files: a
 transaction a plugin generates — a `fava.plugins.forecast` projection, an
 amortization copy — is neither a duplicate nor a possible duplicate, so a real
-payment it predicted imports as new. `bea add transactions --from FILE.json` remains a plain validated
+payment it predicted imports as new. This includes the projection on the
+template's own date and generated fees sharing a written transaction's line:
+import matching requires the transaction's payee and narration to be declared
+at that source location. `bea add transactions --from FILE.json` remains a plain validated
 append operation and intentionally does not deduplicate.
 
 ## Python dependencies and metadata
