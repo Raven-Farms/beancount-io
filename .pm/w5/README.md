@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [636 — A blocked import row's "opens after this row" names a vanished staging file](./636.md)
 - [637 — Importer rows with unopenable account names or bad currencies get remedies `bea add` refuses (gap in w3/386)](./637.md)
 - [638 — Importer row failures are not attributed to rows (unbalanced row "ready", "Directive 2 of 3", bare type errors)](./638.md)
 - [639 — Importer-shape refusals name neither the importer nor the fix (legacy entry, class entry, single directive)](./639.md)
