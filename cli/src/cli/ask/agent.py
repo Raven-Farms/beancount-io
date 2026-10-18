@@ -22,7 +22,7 @@ from cli import output
 from cli.ask.results import format_result
 from cli.ask.skills import AgentSkill, build_skills_index_prompt
 from cli.engine import launch
-from cli.errors import BeaError, LedgerError, error_from_status
+from cli.errors import BeaError, LedgerError, error_from_status, redirect_error, request_id_from
 from cli.errors import server_message as _server_message
 
 _SYSTEM_PROMPT = """You are a helpful Beancount accounting assistant.
@@ -211,18 +211,17 @@ def translated_failures(deps: BqlDeps | None = None) -> Iterator[None]:
     try:
         yield
     except ModelHTTPError as exc:
+        if 300 <= exc.status_code < 400:
+            raise _naming_writes(redirect_error(exc.status_code, getattr(exc, "headers", None)), deps) from exc
         quota = _quota_refusal(exc.body, written_so_far(deps))
         if quota is not None:
             raise BeaError(quota) from exc
         raise _naming_writes(error_from_status(exc.status_code, _server_message(exc.body)), deps) from exc
     except ModelAPIError as exc:
-        # A connection-level failure: the AI SDK wraps the HTTP client's error
-        # rather than answering with a status, so it never reached the status
-        # table above and `ask` said the SDK's bare `Connection error.` where
-        # `bea cloud status` says `Could not reach the server (ConnectError).`
-        # `USAGE.md` promises those read the same, so the same translation the
-        # rest of the CLI uses is applied to whatever the SDK was hiding.
-        raise _naming_writes(_unreachable(exc), deps) from exc
+        # The SDK wraps redirects as ModelAPIError rather than ModelHTTPError,
+        # just like connection failures. Inspect the actual cause before
+        # claiming that the server could not be reached.
+        raise _naming_writes(_model_api_error(exc), deps) from exc
     except UnreadableModelReply as exc:
         # The sentence every other unreadable success gets (USAGE.md), with
         # what this question wrote, never the parser's own words.
@@ -258,13 +257,13 @@ def _naming_writes(error: BeaError, deps: BqlDeps | None) -> BeaError:
     return error
 
 
-def _unreachable(exc: BaseException) -> BeaError:
-    """The CLI's own network sentence, built from whatever the SDK wrapped.
+def _model_api_error(exc: BaseException) -> BeaError:
+    """The CLI's HTTP or network sentence, built from whatever the SDK wrapped.
 
-    The HTTP client's exception class is the only part of a connection failure
-    worth showing (its message is often empty, and can carry a credential), so
-    the cause chain is walked for it and `to_bea_error` words the result — the
-    same call `cli.api.client` makes, hence the same sentence.
+    A real HTTP response takes precedence over the connection fallback. Its
+    SDK exception string can carry request details, so use only the response's
+    status, headers and safely decoded server sentence. Transport failures keep
+    the same translation as cloud commands.
     """
     import httpx
 
@@ -274,6 +273,19 @@ def _unreachable(exc: BaseException) -> BeaError:
     seen: set[int] = set()
     while cause is not None and id(cause) not in seen:
         seen.add(id(cause))
+        response = getattr(cause, "response", None)
+        if isinstance(response, httpx.Response):
+            if 300 <= response.status_code < 400:
+                return redirect_error(response.status_code, response.headers)
+            body = getattr(cause, "body", None)
+            if body is None:
+                try:
+                    body = response.json()
+                except (ValueError, RecursionError):
+                    pass
+            return error_from_status(
+                response.status_code, _server_message(body), request_id=request_id_from(response.headers)
+            )
         if isinstance(cause, httpx.TransportError):
             return to_bea_error(cause)
         cause = cause.__cause__ or cause.__context__

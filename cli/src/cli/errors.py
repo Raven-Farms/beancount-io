@@ -121,6 +121,30 @@ def request_id_from(headers: Any) -> str | None:
     return None
 
 
+def redirect_error(status: int, headers: Mapping[str, str] | None) -> BeaError:
+    """A redirect instead of the API, with its target but no query or fragment.
+
+    Shared by cloud commands and the assistant's SDK response translation so
+    a proxy or captive portal never reads as a rejected credential or a lost
+    connection.
+    """
+    from urllib.parse import urlsplit, urlunsplit
+
+    from cli.utils import single_line
+
+    location = headers.get("location") if headers is not None else None
+    target = ""
+    if location:
+        parts = urlsplit(location)
+        target = f" to {single_line(urlunsplit((parts.scheme, parts.netloc, parts.path, '', '')))}"
+    return BeaError(
+        f"Unexpected redirect (HTTP {status}){target}; bea does not follow redirects. "
+        "Check that BEA_API_URL, if set, names the API with https:// and the right host, "
+        "and that no proxy or captive portal is answering for it.",
+        request_id=request_id_from(headers),
+    )
+
+
 def server_message(body: object) -> str | None:
     """Read a sentence from nested API/SDK envelopes without printing raw JSON.
 
