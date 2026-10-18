@@ -73,21 +73,30 @@ _EXTRACT_FLAGS = "rxq"
 
 def _forward(operation: str, ctx: typer.Context, config: Path | None) -> None:
     refuse_json("ingest", hint="Run without --json for native output; use bea import for a JSON preview.")
-    if operation == "extract":
-        # `archive -o DIR` moves source documents into a directory tree — not a
-        # ledger write — so it stays outside the guard on purpose, and
-        # `identify` writes nothing at all.
-        output.guard_forwarded_output(list(ctx.args), _extract_ledgers(ctx), flags=_EXTRACT_FLAGS)
-    script = _ingest_script(config)
-    if operation == "extract":
-        _refuse_output_over_inputs(list(ctx.args), script)
-    _refuse_config_only_script(script)
     existing = (
         output.forwarded_option(list(ctx.args), "-e", "--existing", flags=_EXTRACT_FLAGS)
         if operation == "extract"
         else None
     )
     placed = {"ledger": os.path.abspath(expand_path(Path(existing), "--existing"))} if existing else {}
+    if placed:
+        # Before any output guard walks the closure: a FIFO must not be read,
+        # and a directory cannot supply existing transactions (w5/706).
+        _require_existing_ledger(Path(placed["ledger"]))
+    if operation == "extract":
+        # `archive -o DIR` moves source documents into a directory tree — not a
+        # ledger write — so it stays outside the guard on purpose, and
+        # `identify` writes nothing at all.
+        destination = output.forwarded_option(list(ctx.args), "-o", "--output", flags=_EXTRACT_FLAGS)
+        if destination is not None and destination != "-":
+            output.guard_forwarded_output(list(ctx.args), _extract_ledgers(ctx), flags=_EXTRACT_FLAGS)
+            path = expand_path(Path(destination), "--output").absolute()
+            output.check_output_destination(path)
+            output.require_writable_destination(path)
+    script = _ingest_script(config)
+    if operation == "extract":
+        _refuse_output_over_inputs(list(ctx.args), script)
+    _refuse_config_only_script(script)
     if placed and output.has_unreadable_include(Path(placed["ledger"])):
         # Beangulp loads `-e` with Beancount, which answers an include it
         # cannot open with a traceback; the helper names it (w5/120, w5/438).
@@ -96,6 +105,23 @@ def _forward(operation: str, ctx: typer.Context, config: Path | None) -> None:
         _refuse_noncanonical_existing(Path(placed["ledger"]))
     code = launch.run_optional_script("beangulp", script, [operation, *ctx.args], **placed)
     raise typer.Exit(code)
+
+
+def _require_existing_ledger(path: Path) -> None:
+    """Require a root ledger before any include walk or user script runs."""
+    if path.is_dir():
+        from cli.config import DEFAULT_ENTRY_FILE_FALLBACKS
+
+        hint = next(
+            (path / name for name in DEFAULT_ENTRY_FILE_FALLBACKS if (path / name).is_file()),
+            path / DEFAULT_ENTRY_FILE_FALLBACKS[0],
+        )
+        raise UsageError(
+            f"--existing {path} is a directory; expected a root ledger file. "
+            f"Pass --existing {shlex.quote(str(hint))}. Nothing was extracted."
+        )
+    if not path.is_file():
+        raise UsageError(f"--existing {path} is not a regular ledger file. Name its root file. Nothing was extracted.")
 
 
 def _refuse_noncanonical_existing(root: Path) -> None:
@@ -153,7 +179,7 @@ def _refuse_output_over_inputs(args: list[str], script: Path) -> None:
     directory covers every file Beangulp would walk inside it.
     """
     value = output.forwarded_option(args, "-o", "--output", flags=_EXTRACT_FLAGS)
-    if value is None:
+    if value is None or value == "-":
         return
     destination = expand_path(Path(value), "--output")
     if not destination.exists():

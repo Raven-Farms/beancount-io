@@ -627,6 +627,12 @@ For Unicode normalization, re-save the named file in NFC; `format -i` does not
 renormalize existing text. Retry extraction after correcting the file. This
 guard applies to all text in those plaintext files, including comments and strings;
 encrypted files pass through to Beangulp without this preflight inspection.
+The existing ledger must be a regular file; a directory is refused with a
+`--existing` hint naming its root ledger. Extract also checks that a file output
+has an existing parent and can be written before running the ingest script.
+An invalid destination exits **2**, and a permission refusal exits **3**, with
+existing output left untouched. `-o -` keeps Beangulp's stdout behavior;
+`archive -o` continues to name an archive directory.
 
 ### `bea format` writes to stdout unless you ask for a file
 
