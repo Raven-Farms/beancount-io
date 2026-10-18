@@ -1,6 +1,6 @@
 # w0 · m1 — Translate the English copies shipped in non-English catalogs, and guard against them
 
-**Worker:** worker1 **Goal:** a German, Russian, or Chinese user sees Receipt upload, Bank Connections, and Settings billing in their language, and CI fails the next time a whole message ships as an English copy **Status:** blocked (t001–t004 done)
+**Worker:** worker1 **Goal:** a German, Russian, or Chinese user sees Receipt upload, Bank Connections, and Settings billing in their language, and CI fails the next time a whole message ships as an English copy **Status:** todo (t001–t004 done)
 
 ## Tasks (in order)
 
@@ -17,11 +17,9 @@
 
 Implementation totals about 195 minutes, and all eight tasks about 270. That's well past a sub-hour note.
 
-## Blocked
+## Unblocked
 
-**Blocked 2026-10-15** — t005 (Adoption surface) needs the definition of done's first check, which is live: `/receipt`, `/plaid-connections` and `/settings/general` rendered in de, ru and zh with no English chrome. The translations (`68bb3f58`, `de55789f`, `a821d9c1`) and the CI guard (`036a499b`) are on `main`, and `dashboard/AGENTS.md` now tells translators about the guard (shipped with this block). Production still serves an older bundle, and a local dev server can't render these authenticated routes against the hosted API, so the live check can't run yet. t006–t008 depend on t005 and wait with it.
-
-**Unblock:** a production dashboard deploy that includes `036a499b`. Whoever runs beancount.io deploys can clear it. Then repeat the three-route check in de/ru/zh and continue with t005.
+**Unblocked 2026-10-17** — production serves the m1 translations. The signed-out German pages render `/receipt` as "Beleg hochladen" (t001, `68bb3f58`) and the Plaid page as "Bankverbindungen verwalten" with "Kontozuordnungen" in its description (t002 `de55789f`, t003 `a821d9c1`), with no English "Bank Connections". `036a499b`, the CI guard pushed 23 seconds later, has no runtime footprint. It was blocked on 2026-10-15 waiting for that deploy; t005 resumes with the live three-route check.
 
 ## Definition of done
 
