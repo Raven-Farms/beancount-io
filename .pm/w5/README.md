@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [676 — `init`/`price export` report an engine killed after writing as "produced no result" (exit 1, not 4)](./676.md)
 - [677 — The same conflicting same-day price exits 2 from `add price` but 4 from `import --apply`](./677.md)
 - [678 — `format FILE` / `-o` on an unparseable file exit 0 echoing it unchanged](./678.md)
 - [679 — `bea ask` answered with a redirect says "Could not reach the server"](./679.md)
