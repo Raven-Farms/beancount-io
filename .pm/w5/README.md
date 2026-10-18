@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [643 — `--strict-prices doctor roundtrip` prints a 184-line traceback (sibling of w5/572)](./643.md)
 - [644 — Strict/unavailable price messages give the wrong cause (future stamp, no stamp, no cache)](./644.md)
 - [645 — Price cache/URL edge cases: future `next_refresh_at`, dot-segment aliases, ETag `"head"`](./645.md)
 - [646 — TAB after two different `-f` values prints an 11 MB traceback instead of completions (regression from w5/485)](./646.md)
