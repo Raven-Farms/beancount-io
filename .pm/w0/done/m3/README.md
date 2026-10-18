@@ -1,6 +1,6 @@
 # w0 · m3 — Make i18n:prepare safe to run and honest about English copies
 
-**Worker:** worker1 **Goal:** running the dashboard's translation tool on a synced tree changes nothing, keeps every locale's CLDR plural forms, reports whole English copies as untranslated, and CI fails when catalogs drift **Status:** todo (t001–t007 done)
+**Worker:** worker1 **Goal:** running the dashboard's translation tool on a synced tree changes nothing, keeps every locale's CLDR plural forms, reports whole English copies as untranslated, and CI fails when catalogs drift **Status:** done
 
 ## Tasks (in order)
 
@@ -13,7 +13,7 @@
 | t005 | Adoption surface | 20m | t003, t004 | — **DONE**
 | t006 | Simplify | 15m | t005 | — **DONE**
 | t007 | Test coverage | 30m | t005, t006 | — **DONE**
-| t008 | Closeout | 10m | t007 |
+| t008 | Closeout | 10m | t007 | — **DONE**
 
 ## Definition of done
 

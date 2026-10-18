@@ -6,7 +6,7 @@
 
 - [x] **m1** — [Translate the English copies shipped in non-English catalogs, and guard against them](./done/m1/README.md) (8 tasks) ← from dashboard QA 2026-10-15
 - [x] **m2** — [Structured ledger writes refuse changes that would break the ledger](./done/m2/README.md) (7 tasks) ← from /pm-brainstorm for w0 2026-10-17
-- [ ] **m3** — [Make i18n:prepare safe to run and honest about English copies](./m3/README.md) (8 tasks) ← from /pm-brainstorm for w0 2026-10-17
+- [x] **m3** — [Make i18n:prepare safe to run and honest about English copies](./done/m3/README.md) (8 tasks) ← from /pm-brainstorm for w0 2026-10-17
 
 ## Dropped
 
