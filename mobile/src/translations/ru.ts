@@ -319,6 +319,7 @@ export const ru: Translations = {
   openAccountNameRequired: "Введите хотя бы одну часть названия счёта.",
   openAccountEmptyComponent: "Части названия счёта не могут быть пустыми.",
   openAccountNamePreview: "Будет создан как {{account}}",
+  openAccountAlreadyOpen: "Счёт {{account}} уже открыт в этой книге.",
   openAccountUppercaseComponent:
     "Каждая часть названия счёта должна начинаться с заглавной буквы или цифры.",
   openAccountInvalidCharacters:

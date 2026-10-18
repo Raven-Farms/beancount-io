@@ -308,6 +308,7 @@ export const nl: Translations = {
   openAccountNameRequired: "Voer minstens één naamdeel in.",
   openAccountEmptyComponent: "Naamdelen mogen niet leeg zijn.",
   openAccountNamePreview: "Wordt aangemaakt als {{account}}",
+  openAccountAlreadyOpen: "{{account}} is al geopend in dit grootboek.",
   openAccountUppercaseComponent:
     "Elk naamdeel moet met een hoofdletter of cijfer beginnen.",
   openAccountInvalidCharacters:

@@ -302,6 +302,7 @@ export const en = {
   openAccountNameRequired: "Enter at least one account name component.",
   openAccountEmptyComponent: "Account components cannot be empty.",
   openAccountNamePreview: "Will be created as {{account}}",
+  openAccountAlreadyOpen: "{{account}} is already open in this ledger.",
   openAccountUppercaseComponent:
     "Each account component must start with an uppercase letter or a number.",
   openAccountInvalidCharacters:

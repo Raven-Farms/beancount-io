@@ -306,6 +306,7 @@ export const fa: Translations = {
   openAccountNameRequired: "دست‌کم یک بخش از نام حساب را وارد کنید.",
   openAccountEmptyComponent: "بخش‌های نام حساب نمی‌توانند خالی باشند.",
   openAccountNamePreview: "با نام {{account}} ایجاد می‌شود",
+  openAccountAlreadyOpen: "{{account}} از قبل در این دفتر باز شده است.",
   openAccountUppercaseComponent:
     "هر بخش نام حساب باید با حرف بزرگ یا رقم آغاز شود.",
   openAccountInvalidCharacters:

@@ -1,6 +1,7 @@
 import {
   ACCOUNT_ROOT_PREFIXES,
   composeAccountName,
+  openAccountSubmitState,
   splitPrefillAccountName,
   typedSubPathIssue,
   type AccountNameValidationReason,
@@ -278,11 +279,79 @@ describe("typedSubPathIssue", () => {
       "utf8",
     );
     expect(
-      source.includes("validation.ok && typedIssue === null && !loading"),
+      source.includes("const nameOk = validation.ok && typedIssue === null;"),
     ).toBe(true);
+    expect(source.includes("openAccountSubmitState({")).toBe(true);
+    expect(source.includes("openAccounts: meta?.accounts,")).toBe(true);
+    expect(source.includes("busy: loading,")).toBe(true);
     expect(source.includes("onSubmitEditing={handleSubmit}")).toBe(true);
     expect(source.includes('t("openAccountNamePreview", { account })')).toBe(
       true,
     );
+  });
+});
+
+describe("openAccountSubmitState", () => {
+  // Open Account showed "Will be created as Assets:Bank:Checking" for an
+  // account the ledger already opened, so Done wrote a duplicate `open`
+  // directive and broke the ledger (w0/037).
+  const open = ["Assets:Bank:Checking", "Expenses:Food", "Equity:Opening"];
+  const state = (
+    account: string,
+    overrides: Partial<Parameters<typeof openAccountSubmitState>[0]> = {},
+  ) =>
+    openAccountSubmitState({
+      account,
+      nameOk: true,
+      openAccounts: open,
+      busy: false,
+      ...overrides,
+    });
+
+  it("refuses an account the ledger already opens", () => {
+    expect(state("Assets:Bank:Checking")).toEqual({
+      canSubmit: false,
+      alreadyOpen: true,
+    });
+  });
+
+  it("allows a new account", () => {
+    expect(state("Assets:Bank:Savings")).toEqual({
+      canSubmit: true,
+      alreadyOpen: false,
+    });
+  });
+
+  it("treats a name differing only in case as a different account", () => {
+    // Beancount account names are case-sensitive.
+    expect(state("Assets:Bank:CHECKING")).toEqual({
+      canSubmit: true,
+      alreadyOpen: false,
+    });
+  });
+
+  it("waits for the ledger's accounts before allowing any name", () => {
+    expect(state("Assets:Bank:Savings", { openAccounts: undefined })).toEqual({
+      canSubmit: false,
+      alreadyOpen: false,
+    });
+  });
+
+  it("allows a first account in an empty ledger", () => {
+    expect(state("Assets:Cash", { openAccounts: [] })).toEqual({
+      canSubmit: true,
+      alreadyOpen: false,
+    });
+  });
+
+  it("leaves an invalid or busy form to its own message", () => {
+    expect(state("Assets:Bank:Checking", { nameOk: false })).toEqual({
+      canSubmit: false,
+      alreadyOpen: false,
+    });
+    expect(state("Assets:Bank:Savings", { busy: true })).toEqual({
+      canSubmit: false,
+      alreadyOpen: false,
+    });
   });
 });

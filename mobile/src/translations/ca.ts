@@ -317,6 +317,7 @@ export const ca: Translations = {
   openAccountNameRequired: "Escriu almenys un component del nom.",
   openAccountEmptyComponent: "Els components del nom no poden ser buits.",
   openAccountNamePreview: "Es crearà com a {{account}}",
+  openAccountAlreadyOpen: "{{account}} ja està obert en aquest llibre.",
   openAccountUppercaseComponent:
     "Cada component del nom ha de començar amb majúscula o xifra.",
   openAccountInvalidCharacters:

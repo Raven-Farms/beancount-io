@@ -43,6 +43,7 @@ import {
   type AccountNameValidationReason,
   type AccountRootPrefix,
   validateAccountName,
+  openAccountSubmitState,
 } from "./account-name";
 import { useOpenAccount } from "./use-open-account";
 import { getFormatDate } from "@/common/format-util";
@@ -193,7 +194,11 @@ export function OpenAccountScreenComponent(): JSX.Element {
   const styles = useThemeStyle(getStyles);
   const ledgerId = useLedgerGuard();
   const { userId } = useSession();
-  const { currencies, loading: metaLoading } = useLedgerMeta(userId, ledgerId);
+  const {
+    data: meta,
+    currencies,
+    loading: metaLoading,
+  } = useLedgerMeta(userId, ledgerId);
   const { openAccount, loading } = useOpenAccount(ledgerId);
 
   // The account picker's "Create <typed>" row lands here with the typed query
@@ -243,7 +248,16 @@ export function OpenAccountScreenComponent(): JSX.Element {
   // The typed text, before composition tidies it: "Investments:" is a name
   // still being typed, not a request for `Assets:Investments`.
   const typedIssue = typedSubPathIssue(subPath);
-  const canSubmit = validation.ok && typedIssue === null && !loading && !saved;
+  const nameOk = validation.ok && typedIssue === null;
+  // An account the ledger already opens would be opened twice (w0/037).
+  const submitState = openAccountSubmitState({
+    account,
+    nameOk,
+    openAccounts: meta?.accounts,
+    busy: loading,
+  });
+  const { alreadyOpen } = submitState;
+  const canSubmit = submitState.canSubmit && !saved;
   const rootKey = rootPrefix.toLowerCase() as AccountRoot;
   const rootIcon = getRootIcon(rootKey);
   const rootTone = rootIcon.tone(theme);
@@ -308,9 +322,7 @@ export function OpenAccountScreenComponent(): JSX.Element {
         ? t(VALIDATION_KEYS.emptyComponent)
         : null;
   const namePreview =
-    validation.ok && typedIssue === null
-      ? t("openAccountNamePreview", { account })
-      : null;
+    nameOk && !alreadyOpen ? t("openAccountNamePreview", { account }) : null;
   return (
     <SafeAreaView edges={["bottom"]} style={styles.container}>
       <Stack.Screen
@@ -392,6 +404,15 @@ export function OpenAccountScreenComponent(): JSX.Element {
             {validationMessage ? (
               <Text style={styles.error} accessibilityLiveRegion="polite">
                 {validationMessage}
+              </Text>
+            ) : null}
+            {alreadyOpen ? (
+              <Text
+                style={styles.error}
+                accessibilityRole="alert"
+                accessibilityLiveRegion="polite"
+              >
+                {t("openAccountAlreadyOpen", { account })}
               </Text>
             ) : null}
             {namePreview ? (

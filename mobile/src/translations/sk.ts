@@ -319,6 +319,7 @@ export const sk: Translations = {
   openAccountNameRequired: "Zadajte aspoň jednu časť názvu účtu.",
   openAccountEmptyComponent: "Časti názvu účtu nemôžu byť prázdne.",
   openAccountNamePreview: "Vytvorí sa ako {{account}}",
+  openAccountAlreadyOpen: "Účet {{account}} je v tejto knihe už otvorený.",
   openAccountUppercaseComponent:
     "Každá časť názvu účtu musí začínať veľkým písmenom alebo číslicou.",
   openAccountInvalidCharacters:

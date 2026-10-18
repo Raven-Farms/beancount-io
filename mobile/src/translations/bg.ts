@@ -311,6 +311,7 @@ export const bg: Translations = {
   openAccountEmptyComponent:
     "Частите от името на сметката не може да са празни.",
   openAccountNamePreview: "Ще бъде създадена като {{account}}",
+  openAccountAlreadyOpen: "{{account}} вече е отворена в тази книга.",
   openAccountUppercaseComponent:
     "Всяка част от името на сметката трябва да започва с главна буква или цифра.",
   openAccountInvalidCharacters:

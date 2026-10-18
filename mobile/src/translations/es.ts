@@ -316,6 +316,7 @@ export const es: Translations = {
   openAccountEmptyComponent:
     "Los componentes del nombre no pueden estar vacíos.",
   openAccountNamePreview: "Se creará como {{account}}",
+  openAccountAlreadyOpen: "{{account}} ya está abierta en este libro.",
   openAccountUppercaseComponent:
     "Cada componente del nombre debe empezar por mayúscula o número.",
   openAccountInvalidCharacters:

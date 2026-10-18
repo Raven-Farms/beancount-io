@@ -282,6 +282,7 @@ export const zh: Translations = {
   openAccountNameRequired: "请至少输入一级账户名称。",
   openAccountEmptyComponent: "各级账户名称不能为空。",
   openAccountNamePreview: "将创建为 {{account}}",
+  openAccountAlreadyOpen: "{{account}} 已在此账本中开设。",
   openAccountUppercaseComponent: "每级账户名称都必须以大写字母或数字开头。",
   openAccountInvalidCharacters: "账户名称只能使用字母、数字和连字符。",
   transaction: "交易",

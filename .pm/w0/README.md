@@ -20,7 +20,6 @@ Mobile QA findings from 2026-10-15, triaged the same day. Order is suggested, hi
 
 **Majors: each can commit an invalid ledger in one tap**
 
-- [037 — Open Account green-lights an account that is already open; Done writes a duplicate `open`](./037.md) — mobile QA 2026-10-15
 - [038 — Add Budget accepts any amount text and writes it verbatim into an unparsable `custom "budget"` line](./038.md) — mobile QA 2026-10-15 (same file as 040; ship together)
 
 **Minors: wrong or misleading output**

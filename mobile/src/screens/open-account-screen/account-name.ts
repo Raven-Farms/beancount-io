@@ -134,3 +134,33 @@ export function typedSubPathIssue(
   if (components.some((component) => component === "")) return "emptyComponent";
   return null;
 }
+
+/**
+ * Whether the form may submit, and whether a valid name is refused only
+ * because the ledger already opens it. A second `open` for an account breaks
+ * the ledger ("Duplicate open directive"), so the ledger's accounts must be
+ * known first: until they load, a new name cannot be told from an existing
+ * one. Beancount account names are case-sensitive, so only an exact match is
+ * a duplicate (w0/037).
+ */
+export function openAccountSubmitState(input: {
+  /** The composed name, as "Will be created as" shows it. */
+  account: string;
+  /** The name is complete and valid. */
+  nameOk: boolean;
+  /** Every account the ledger opens, or undefined until they load. */
+  openAccounts: readonly string[] | undefined;
+  /** A save is running or already committed. */
+  busy: boolean;
+}): { canSubmit: boolean; alreadyOpen: boolean } {
+  const alreadyOpen =
+    input.nameOk && (input.openAccounts ?? []).includes(input.account);
+  return {
+    alreadyOpen,
+    canSubmit:
+      input.nameOk &&
+      input.openAccounts !== undefined &&
+      !alreadyOpen &&
+      !input.busy,
+  };
+}

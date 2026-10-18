@@ -318,6 +318,7 @@ export const pt: Translations = {
   openAccountEmptyComponent:
     "As partes do nome da conta não podem ficar vazias.",
   openAccountNamePreview: "Será criada como {{account}}",
+  openAccountAlreadyOpen: "{{account}} já está aberta neste livro.",
   openAccountUppercaseComponent:
     "Cada parte do nome da conta precisa começar com letra maiúscula ou número.",
   openAccountInvalidCharacters:
