@@ -42,8 +42,7 @@ Both are resolved from the same recognized live price by the backend. Choose
 English or Chinese through the normal language selector; there are no separate
 locale-prefixed settings routes. Checkout continues to accept promotion codes.
 
-Deploy with the backend billing update. Operator-only historical-cache repairs
-are described in the [maintenance guide](../backend-cluster/backend-v2/scripts/HOW-TO-USE-SCRIPT.md#retire-historical-test-billing-caches).
+Deploy with the backend billing update.
 
 ## Shared entry links
 

@@ -20,10 +20,7 @@ may refresh a customer's cache. Stripe failures do not clear stored periods.
 
 The retired `beancount-web-dev` tenant and `STRIPE_DEV_*` variables are ignored;
 no fake-paid script replaces them. Keep isolated Stripe testing outside live
-application billing. Existing-user preview, bounded apply, checkpoints and
-rollback are documented in [the maintenance guide](scripts/HOW-TO-USE-SCRIPT.md#retire-historical-test-billing-caches).
-Deploy this backend and the dashboard before running the cutover; retain private
-reports outside the checkout and record unresolved users separately.
+application billing.
 
 ## Project Structure
 

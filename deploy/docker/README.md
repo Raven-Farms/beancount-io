@@ -197,6 +197,5 @@ Only the live application client `beancount-web-prod` is supported. Configure
 local secret environment when billing is needed. Retired `STRIPE_DEV_*` variables
 and `?env=dev` do not enable test billing. Synthetic fixtures/isolated test runs
 cover Stripe behavior without charging or redeeming live promotions. Deploy the
-backend and dashboard together; see the [billing cutover guide](../../backend-cluster/backend-v2/scripts/HOW-TO-USE-SCRIPT.md#retire-historical-test-billing-caches)
-for preview-first existing-user repair and rollback. A deployment without Stripe
+backend and dashboard together. A deployment without Stripe
 credentials can run non-billing features but cannot verify paid subscriptions.
