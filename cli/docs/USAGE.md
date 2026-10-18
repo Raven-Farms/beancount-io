@@ -1186,7 +1186,10 @@ bea add balance --date 2026-01-02 --account Assets:Checking \
 ```
 
 The pad defaults to the preceding day; `--pad-date` can select another date
-before the assertion. Both accounts must be open by the pad date. When the
+before the assertion. Both accounts must be open by the pad date. If an
+explicit pad date is before the account opens, move `--pad-date` to the open
+date or later and keep the balance `--date` later than that pad date; moving
+only the balance leaves an explicit pad date unchanged. When the
 book already holds the asserted amount, `--pad-from` writes the assertion alone
 and says so. A book that holds a different amount within the assertion's
 tolerance is named with that amount. When an existing pad on the account already

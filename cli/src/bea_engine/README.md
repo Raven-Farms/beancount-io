@@ -156,6 +156,9 @@ reporting the errors in `ledger_errors`. A `balance` with `pad_from` writes both
 directives atomically and answers `{"written": 2, "directive": {...}, "pad": {...}}`:
 the assertion and the inserted pad in the `list balance`/`list pad` model
 shape. Every other `balance` answer carries `"pad": null`.
+`pad_date_explicit` records whether the caller supplied the pad date, so a
+refusal can distinguish changing `--pad-date` from moving a derived date with
+the balance. It defaults to false when omitted.
 
 ```zsh
 bea-engine add --file main.bean --type transaction --request '{

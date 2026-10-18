@@ -403,6 +403,7 @@ def _balance(
             allow_errors=allow_errors,
             into=into,
             pad_from=True,
+            pad_date_explicit=bool(request.get("pad_date_explicit")),
             snapshot=snapshot,
         )
     except protocol.LedgerError as exc:

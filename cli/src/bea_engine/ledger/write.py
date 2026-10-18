@@ -1872,6 +1872,7 @@ def validate_candidate(
     stages_pad: bool = False,
     stages_open: bool = False,
     pad_from: bool = False,
+    pad_date_explicit: bool = False,
 ) -> list[str]:
     """Refuse a candidate that fails validation, naming what it would break.
 
@@ -2225,13 +2226,22 @@ def validate_candidate(
                     ", even with --allow-errors." if allow_errors else "."
                 )
             elif pad_from and (opened_on := _opened_after(error.entry.account, error.entry.date, entries)):
-                # The pad date was derived, the day before the balance; the
-                # remedy is a balance dated after the open (w5/513).
-                pad_hint = (
-                    f"{error.entry.account} opens {opened_on}, after the pad date {error.entry.date}: --pad-from "
-                    "pads the day before the balance. Date the balance after the open, for example --date "
-                    f"{opened_on + datetime.timedelta(days=1)}."
-                )
+                if pad_date_explicit:
+                    # Moving the balance cannot move a pad date the caller
+                    # supplied. Change that date too, keeping it before the
+                    # assertion (w5/688).
+                    pad_hint = (
+                        f"The pad date {error.entry.date} is before {error.entry.account} opens ({opened_on}); "
+                        f"pass --pad-date {opened_on} or later, with a balance --date later than the pad date."
+                    )
+                else:
+                    # The pad date was derived, the day before the balance;
+                    # moving the balance moves both dates (w5/513).
+                    pad_hint = (
+                        f"{error.entry.account} opens {opened_on}, after the pad date {error.entry.date}: --pad-from "
+                        "pads the day before the balance. Date the balance after the open, for example --date "
+                        f"{opened_on + datetime.timedelta(days=1)}."
+                    )
             elif allow_errors:
                 pad_hint = "Pad accounts must be active, even with --allow-errors."
             else:
@@ -3483,6 +3493,7 @@ def append(
     snapshot: LedgerSnapshot | None = None,
     one_entry_each: bool = True,
     pad_from: bool = False,
+    pad_date_explicit: bool = False,
     validated: list[str] | None = None,
 ) -> list[str]:
     """Append `texts` to the ledger, validated and written under the lock.
@@ -3520,6 +3531,7 @@ def append(
                     stages_pad=_only_pads(texts),
                     stages_open=_only_opens(texts),
                     pad_from=pad_from,
+                    pad_date_explicit=pad_date_explicit,
                 )
             snapshot.verify()
             if original_stat is None:

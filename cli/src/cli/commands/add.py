@@ -335,7 +335,7 @@ def add_balance(
     padded = day - datetime.timedelta(days=1) if pad_date is None else parse_date(pad_date)
     if padded >= day:
         raise UsageError("--pad-date must be earlier than the balance date (assertions run at the start of the day).")
-    request |= {"pad_from": pad_from, "pad_date": padded.isoformat()}
+    request |= {"pad_from": pad_from, "pad_date": padded.isoformat(), "pad_date_explicit": pad_date is not None}
     file, data = _write("balance", request, allow_errors=allow_errors, into=into)
     target = data.pop("target")
     warnings = data.pop("warnings", [])
