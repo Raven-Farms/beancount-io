@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import * as locales from "@/i18n/locales";
 import {
   EN_COMPARED_LOCALES,
+  IDENTICAL_BY_DESIGN,
   SCANNED_LOCALES,
   UNCLASSIFIED_LOCALES,
   type ScannedLocale,
@@ -193,71 +194,6 @@ describe("German table column headers", () => {
     expect(untranslated).toEqual([]);
   });
 });
-
-/**
- * Messages a locale deliberately keeps identical to English, keyed
- * `locale/key`, each with the reason it is correct there. The list exists so
- * the check below can stay strict; an entry that stops being identical fails
- * the stale-entry test rather than lingering as a silent excuse.
- */
-const IDENTICAL_BY_DESIGN: Record<string, string> = {
-  "bg/userProfile.openLedgerName":
-    "Open Ledger is the proper name of the public collection account",
-  "ca/userProfile.openLedgerName":
-    "Open Ledger is the proper name of the public collection account",
-  "de/userProfile.openLedgerName":
-    "Open Ledger is the proper name of the public collection account",
-  "es/userProfile.openLedgerName":
-    "Open Ledger is the proper name of the public collection account",
-  "fa/userProfile.openLedgerName":
-    "Open Ledger is the proper name of the public collection account",
-  "fr/userProfile.openLedgerName":
-    "Open Ledger is the proper name of the public collection account",
-  "ja/userProfile.openLedgerName":
-    "Open Ledger is the proper name of the public collection account",
-  "ko/userProfile.openLedgerName":
-    "Open Ledger is the proper name of the public collection account",
-  "nl/userProfile.openLedgerName":
-    "Open Ledger is the proper name of the public collection account",
-  "pt/userProfile.openLedgerName":
-    "Open Ledger is the proper name of the public collection account",
-  "ru/userProfile.openLedgerName":
-    "Open Ledger is the proper name of the public collection account",
-  "sk/userProfile.openLedgerName":
-    "Open Ledger is the proper name of the public collection account",
-  "uk/userProfile.openLedgerName":
-    "Open Ledger is the proper name of the public collection account",
-  "zh/userProfile.openLedgerName":
-    "Open Ledger is the proper name of the public collection account",
-  "bg/page.accounts.accountSubAccountPlaceholder":
-    "Placeholder written in Beancount account-path syntax",
-  "ca/page.accounts.accountSubAccountPlaceholder":
-    "Placeholder written in Beancount account-path syntax",
-  "de/page.accounts.accountSubAccountPlaceholder":
-    "Placeholder written in Beancount account-path syntax",
-  "es/page.accounts.accountSubAccountPlaceholder":
-    "Placeholder written in Beancount account-path syntax",
-  "fa/page.accounts.accountSubAccountPlaceholder":
-    "Placeholder written in Beancount account-path syntax",
-  "fr/page.accounts.accountSubAccountPlaceholder":
-    "Placeholder written in Beancount account-path syntax",
-  "nl/page.accounts.accountSubAccountPlaceholder":
-    "Placeholder written in Beancount account-path syntax",
-  "pt/page.accounts.accountSubAccountPlaceholder":
-    "Placeholder written in Beancount account-path syntax",
-  "ru/page.accounts.accountSubAccountPlaceholder":
-    "Placeholder written in Beancount account-path syntax",
-  "sk/page.accounts.accountSubAccountPlaceholder":
-    "Placeholder written in Beancount account-path syntax",
-  "uk/page.accounts.accountSubAccountPlaceholder":
-    "Placeholder written in Beancount account-path syntax",
-  "zh/page.accounts.accountSubAccountPlaceholder":
-    "Placeholder written in Beancount account-path syntax",
-  "de/seo.ledgerPullRequest.title":
-    "These catalogs keep the Git term Pull Request throughout",
-  "nl/seo.ledgerPullRequest.title":
-    "These catalogs keep the Git term Pull Request throughout",
-};
 
 describe("no locale ships an English message copied whole", () => {
   it.each(EN_COMPARED_LOCALES)(

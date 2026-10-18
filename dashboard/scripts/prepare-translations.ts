@@ -12,11 +12,8 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as prettier from "prettier";
-import {
-  untranslatedAgainstEnglish,
-  untranslatedEnglishTail,
-} from "../src/test/locale-scan";
 import { SUPPORTED_LANGUAGES } from "../src/i18n/config";
+import { catalogStatus, type CatalogStatus } from "./lib/catalog-status";
 import {
   catalogDrift,
   editCatalogSource,
@@ -41,21 +38,9 @@ const SHARED_LOCALE_DIRS: Record<string, string> = {
 // copy here had fallen behind it and left Japanese and Korean unsynced.
 const TARGET_LOCALES = SUPPORTED_LANGUAGES.filter((locale) => locale !== "en");
 
-interface FeatureStats {
+interface FeatureStats extends CatalogStatus {
   feature: string;
   locale: string;
-  completed: number;
-  total: number;
-  percentage: number;
-  todoCount: number;
-  /**
-   * Keys whose message still ends in verbatim English, which is what a
-   * half-finished edit of a `[TODO]` line leaves behind — `Cuenta Balance`
-   * from `[TODO] Account Balance`. A key counts as completed for the TODO
-   * column while reading like this, so without its own column the report
-   * calls the file finished.
-   */
-  halfTranslated: string[];
 }
 
 interface GlobalStats {
@@ -249,43 +234,6 @@ async function syncTranslations(
 }
 
 /**
- * Count translation keys
- */
-function countKeys(obj: Record<string, TranslationEntry>): number {
-  return Object.keys(obj).length;
-}
-
-/**
- * Count completed translations (no [TODO] marker)
- */
-function countCompleted(obj: Record<string, TranslationEntry>): number {
-  let count = 0;
-
-  for (const value of Object.values(obj)) {
-    if (isStructuredFormat(value) && !value.message.startsWith(TODO_MARKER)) {
-      count++;
-    }
-  }
-
-  return count;
-}
-
-/**
- * Count TODO items
- */
-function countTodos(obj: Record<string, TranslationEntry>): number {
-  let count = 0;
-
-  for (const value of Object.values(obj)) {
-    if (isStructuredFormat(value) && value.message.startsWith(TODO_MARKER)) {
-      count++;
-    }
-  }
-
-  return count;
-}
-
-/**
  * Get all feature directories
  */
 function getFeatureDirectories(): string[] {
@@ -348,24 +296,6 @@ function getReportedFeatures(): string[] {
  * same key in `en`. Uses the predicate the guard uses, so the script and
  * `src/test/locale-stray-english.test.ts` cannot disagree about what counts.
  */
-async function findHalfTranslated(
-  translations: Record<string, TranslationEntry>,
-  feature: string,
-  locale: string,
-): Promise<string[]> {
-  const englishPath = getLocaleFilePath(feature, "en");
-  if (!fs.existsSync(englishPath)) return [];
-  const english = messagesOf(await readTranslations(englishPath));
-  const messages = messagesOf(translations);
-
-  return untranslatedAgainstEnglish(
-    messages,
-    english,
-    (message, source) => untranslatedEnglishTail(message, source, locale),
-    (key) => messages[key].startsWith(TODO_MARKER),
-  ).map(({ key }) => key);
-}
-
 /**
  * Analyze a single feature locale
  */
@@ -379,26 +309,11 @@ async function analyzeFeatureLocale(
     return null;
   }
 
-  const translations = await readTranslations(filePath);
-  const total = countKeys(translations);
-  const completed = countCompleted(translations);
-  const todoCount = countTodos(translations);
-  const percentage = total > 0 ? Math.round((completed / total) * 100) : 100;
-  const halfTranslated = await findHalfTranslated(
-    translations,
-    feature,
-    locale,
+  const messages = messagesOf(await readTranslations(filePath));
+  const english = messagesOf(
+    await readTranslations(getLocaleFilePath(feature, "en")),
   );
-
-  return {
-    feature,
-    locale,
-    completed,
-    total,
-    percentage,
-    todoCount,
-    halfTranslated,
-  };
+  return { feature, locale, ...catalogStatus(messages, english, locale) };
 }
 
 /**
@@ -753,7 +668,7 @@ async function main() {
         allStats.push(stats);
 
         const status =
-          stats.halfTranslated.length > 0
+          stats.halfTranslated.length > 0 || stats.copiedWhole.length > 0
             ? "⚠️ "
             : stats.percentage === 100
               ? "✅"
@@ -763,7 +678,7 @@ async function main() {
           "░".repeat(20 - Math.floor(stats.percentage / 5));
 
         console.log(
-          `   ${status} ${feature.padEnd(20)} | ${String(stats.completed).padStart(3)}/${String(stats.total).padStart(3)} | ${progressBar} ${stats.percentage}%${stats.todoCount > 0 ? ` (${stats.todoCount} TODOs)` : ""}${stats.halfTranslated.length > 0 ? ` ⚠️  ${stats.halfTranslated.length} half-translated` : ""}`,
+          `   ${status} ${feature.padEnd(20)} | ${String(stats.completed).padStart(3)}/${String(stats.total).padStart(3)} | ${progressBar} ${stats.percentage}%${stats.todoCount > 0 ? ` (${stats.todoCount} TODOs)` : ""}${stats.halfTranslated.length > 0 ? ` ⚠️  ${stats.halfTranslated.length} half-translated` : ""}${stats.copiedWhole.length > 0 ? ` ⚠️  ${stats.copiedWhole.length} copied from English` : ""}`,
         );
       }
     }
@@ -784,6 +699,25 @@ async function main() {
     for (const stats of halfTranslated) {
       console.log(`   ${stats.locale} · ${stats.feature}`);
       for (const key of stats.halfTranslated) {
+        console.log(`      ${key}`);
+      }
+    }
+  }
+
+  // Messages pasted whole from English, named so they can be translated.
+  // They are not counted as completed above; CI rejects them too
+  // (`locale-stray-english.test.ts`), with the same allowlist.
+  const copiedWhole = allStats.filter((s) => s.copiedWhole.length > 0);
+  if (copiedWhole.length > 0) {
+    console.log("\n" + "=".repeat(80));
+    console.log("\n⚠️  Messages copied whole from English\n");
+    console.log("   Translate each, or add it to IDENTICAL_BY_DESIGN in");
+    console.log(
+      "   src/test/locale-scan.ts with the reason it is correct in English.\n",
+    );
+    for (const stats of copiedWhole) {
+      console.log(`   ${stats.locale} · ${stats.feature}`);
+      for (const key of stats.copiedWhole) {
         console.log(`      ${key}`);
       }
     }
