@@ -22,6 +22,7 @@ import {
   resolveConversion,
   TimeFilterParseError,
   AdvancedFilterParseError,
+  windowEndInclusive,
   type IntervalKey,
   type IntervalWindow,
   type PriceMap,
@@ -75,6 +76,7 @@ export class LedgerFinanceService implements ILedgerFinanceService {
     const {
       directives: rawDirectives,
       priceMap,
+      valuationDate,
       window,
       operatingCurrency,
       roots,
@@ -101,6 +103,7 @@ export class LedgerFinanceService implements ILedgerFinanceService {
         roots.assets,
         target,
         priceMap,
+        valuationDate,
       ),
       liabilities_data: cumulative([roots.liabilities]),
       liabilities_hierarchy_data: accountHierarchy(
@@ -108,6 +111,7 @@ export class LedgerFinanceService implements ILedgerFinanceService {
         roots.liabilities,
         target,
         priceMap,
+        valuationDate,
       ),
       expenses_interval_data: periodic([roots.expenses]),
       expenses_hierarchy_data: accountHierarchy(
@@ -115,6 +119,7 @@ export class LedgerFinanceService implements ILedgerFinanceService {
         roots.expenses,
         target,
         priceMap,
+        valuationDate,
       ),
       expenses_data: cumulative([roots.expenses]),
       income_interval_data: periodic([roots.income]),
@@ -123,6 +128,7 @@ export class LedgerFinanceService implements ILedgerFinanceService {
         roots.income,
         target,
         priceMap,
+        valuationDate,
       ),
       income_data: cumulative([roots.income]),
     };
@@ -137,6 +143,7 @@ export class LedgerFinanceService implements ILedgerFinanceService {
     const {
       directives: rawDirectives,
       priceMap,
+      valuationDate,
       window,
       operatingCurrency,
       roots,
@@ -182,12 +189,14 @@ export class LedgerFinanceService implements ILedgerFinanceService {
         roots.income,
         target,
         priceMap,
+        valuationDate,
       ),
       expenses_hierarchy_data: accountHierarchy(
         directives,
         roots.expenses,
         target,
         priceMap,
+        valuationDate,
       ),
     };
   }
@@ -201,6 +210,7 @@ export class LedgerFinanceService implements ILedgerFinanceService {
     const {
       directives: rawDirectives,
       priceMap,
+      valuationDate,
       window,
       operatingCurrency,
       roots,
@@ -236,18 +246,21 @@ export class LedgerFinanceService implements ILedgerFinanceService {
         roots.assets,
         target,
         priceMap,
+        valuationDate,
       ),
       liabilities_hierarchy_data: accountHierarchy(
         directives,
         roots.liabilities,
         target,
         priceMap,
+        valuationDate,
       ),
       equity_hierarchy_data: accountHierarchy(
         equityDirectives,
         roots.equity,
         target,
         priceMap,
+        valuationDate,
       ),
     };
   }
@@ -263,6 +276,7 @@ export class LedgerFinanceService implements ILedgerFinanceService {
     const {
       directives: rawDirectives,
       priceMap,
+      valuationDate,
       operatingCurrency,
       roots,
     } = await this.loadReportDirectives(ledgerId, userId, {
@@ -284,30 +298,35 @@ export class LedgerFinanceService implements ILedgerFinanceService {
         roots.income,
         target,
         priceMap,
+        valuationDate,
       ),
       liabilities_hierarchy_data: accountHierarchy(
         directives,
         roots.liabilities,
         target,
         priceMap,
+        valuationDate,
       ),
       equity_hierarchy_data: accountHierarchy(
         directives,
         roots.equity,
         target,
         priceMap,
+        valuationDate,
       ),
       expenses_hierarchy_data: accountHierarchy(
         directives,
         roots.expenses,
         target,
         priceMap,
+        valuationDate,
       ),
       assets_hierarchy_data: accountHierarchy(
         directives,
         roots.assets,
         target,
         priceMap,
+        valuationDate,
       ),
     };
   }
@@ -369,6 +388,8 @@ export class LedgerFinanceService implements ILedgerFinanceService {
     roots: ReportAccounts["roots"];
     clamp: ReportAccounts["clamp"];
     window?: IntervalWindow;
+    /** Price date for tree balances; latest prices when absent. */
+    valuationDate?: string;
   }> {
     const { directives, options, reportAccounts, fiscalYearEnd } =
       await this.loadSnapshot(ledgerId, userId);
@@ -408,6 +429,7 @@ export class LedgerFinanceService implements ILedgerFinanceService {
       // retained-earnings/conversion entries land under the ledger's actual
       // equity root and the income-statement predicate uses the real
       // income/expenses roots.
+      const window = { begin: range.begin, end: range.end };
       const clamped = clampDirectives(
         filtered,
         range.begin,
@@ -420,7 +442,8 @@ export class LedgerFinanceService implements ILedgerFinanceService {
         operatingCurrency,
         roots,
         clamp,
-        window: { begin: range.begin, end: range.end },
+        window,
+        valuationDate: windowEndInclusive(window),
       };
     } catch (error) {
       if (

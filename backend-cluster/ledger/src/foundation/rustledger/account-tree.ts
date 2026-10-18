@@ -178,8 +178,9 @@ function serialiseSubtree(
 /**
  * Build + serialise the account hierarchy rooted at `rootAccount`, valuing each
  * node's cost-lot inventory under `target` (a currency code, or `units` /
- * `at_cost` / `at_value`) against `priceMap`. Tree balances are valued at the
- * latest price (`date` omitted), matching fava's `ledger.prices`.
+ * `at_cost` / `at_value`) against `priceMap`. Prices are those on or before
+ * `date`, the time filter's last day (fava's `serialise_with_context` passes
+ * `g.filtered.end_date`), and the latest ones when there is no time filter.
  */
 export function accountHierarchy(
   directives: DirectiveJson[],

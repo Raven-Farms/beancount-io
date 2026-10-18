@@ -275,6 +275,11 @@ export interface IntervalWindow {
   end: string; // exclusive
 }
 
+/** The last day a window covers: fava's `FilteredLedger.end_date`. */
+export function windowEndInclusive(window: IntervalWindow): string {
+  return addDays(window.end, -1);
+}
+
 /**
  * Per-interval flow totals for the given account prefixes (fava
  * `ChartModule.interval_totals`): sum postings within each interval, with a
