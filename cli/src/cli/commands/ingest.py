@@ -11,6 +11,7 @@ from __future__ import annotations
 import ast
 import os
 import re
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Annotated
 
@@ -171,19 +172,19 @@ def _refuse_config_only_script(script: Path) -> None:
     The shape is read from the syntax tree, not the spelling: an annotated
     `CONFIG: list = [...]` is the same module, and a script with a `__main__`
     block runs something even when the `Ingest` call sits in a module it
-    imports. A file Python cannot parse is left for Python to report.
+    imports. `CONFIG` bound by an import or inside `try`/`if`/`with` is the
+    same module too, and an `Ingest(` in a comment or a docstring calls
+    nothing (w5/635). A file Python cannot parse is left for Python to report.
     """
     try:
         text = script.read_text(encoding="utf-8", errors="replace")
-    except OSError:
+        tree = ast.parse(text)
+    except (OSError, SyntaxError, ValueError):
         return
-    if re.search(r"Ingest\s*\(", text):
+    if any(_calls_ingest(node) for node in ast.walk(tree)):
         return
-    try:
-        body = ast.parse(text).body
-    except (SyntaxError, ValueError):
-        return
-    if any(_binds_config(node) for node in body) and not any(_is_main_guard(node) for node in body):
+    statements = list(_module_statements(tree.body))
+    if any(_binds_config(node) for node in statements) and not any(_is_main_guard(node) for node in statements):
         raise UsageError(
             f"{script} looks like a `bea import --config` module (CONFIG = [...]). "
             "`bea ingest` needs a script that calls beangulp.Ingest(...)(); "
@@ -191,8 +192,34 @@ def _refuse_config_only_script(script: Path) -> None:
         )
 
 
+def _calls_ingest(node: ast.AST) -> bool:
+    """Whether a node calls `Ingest(...)` or `something.Ingest(...)`."""
+    if not isinstance(node, ast.Call):
+        return False
+    func = node.func
+    return (isinstance(func, ast.Name) and func.id == "Ingest") or (
+        isinstance(func, ast.Attribute) and func.attr == "Ingest"
+    )
+
+
+def _module_statements(body: list[ast.stmt]) -> Iterator[ast.stmt]:
+    """The statements that run when the module loads, inside compound statements too, not in a def or class."""
+    for node in body:
+        yield node
+        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef):
+            continue
+        for field in ("body", "orelse", "finalbody"):
+            yield from _module_statements(getattr(node, field, None) or [])
+        for handler in getattr(node, "handlers", None) or []:
+            yield from _module_statements(handler.body)
+        for case in getattr(node, "cases", None) or []:
+            yield from _module_statements(case.body)
+
+
 def _binds_config(node: ast.stmt) -> bool:
-    """Whether a module-level statement assigns `CONFIG`, annotated or not."""
+    """Whether a statement binds `CONFIG`: assigned, annotated, or imported under that name."""
+    if isinstance(node, ast.Import | ast.ImportFrom):
+        return any((alias.asname or alias.name) == "CONFIG" for alias in node.names)
     if isinstance(node, ast.Assign):
         targets = node.targets
     elif isinstance(node, ast.AnnAssign) and node.value is not None:
@@ -207,7 +234,7 @@ def _binds_config(node: ast.stmt) -> bool:
 
 
 def _is_main_guard(node: ast.stmt) -> bool:
-    """Whether a module-level statement is `if __name__ == "__main__":`, either way round."""
+    """Whether a statement is `if __name__ == "__main__":`, either way round."""
     if not isinstance(node, ast.If) or not isinstance(node.test, ast.Compare):
         return False
     operands = [node.test.left, *node.test.comparators]

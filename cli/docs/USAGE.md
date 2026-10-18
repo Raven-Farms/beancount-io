@@ -552,8 +552,9 @@ untouched. `bea ingest`
 needs a script that calls `beangulp.Ingest(...)()`; a `CONFIG = [...]`
 import module is refused with exit 2 and pointed at `bea import --config`,
 which is the command that shape belongs to. An annotated
-`CONFIG: list = [...]` is the same module and is refused the same way; a
-script with an `if __name__ == "__main__":` block runs, whatever it names its
+`CONFIG: list = [...]`, a `from myimps import CONFIG`, or a `CONFIG` bound
+inside `try`/`if`/`with` is the same module and is refused the same way, and an
+`Ingest(` in a comment or docstring calls nothing; a script with an `if __name__ == "__main__":` block runs, whatever it names its
 importer list and wherever its `Ingest` call lives.
 
 ### `bea format` writes to stdout unless you ask for a file
