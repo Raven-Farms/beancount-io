@@ -280,6 +280,60 @@ describe("MCP tool list", () => {
  * Per-tool `securitySchemes` (ADR 019 D2): derived from `VERB_TABLE`, never
  * hand-written, published top-level and mirrored in `_meta`.
  */
+/**
+ * Tools this server used to serve. Each is gone for a recorded reason, so its
+ * name must neither answer a call nor be suggested by anything the server
+ * says: a description naming one sends the model to a dead end.
+ */
+const RETIRED_TOOLS = [
+  // Split into one tool per operation (ADR 019, 2026-10-18; w1/m38).
+  "editLedgerFiles",
+  "editEntrySource",
+  "manageBankImport",
+  "manageBankConnection",
+  "managePullRequests",
+  "manageLedgers",
+  "manageLedgerCollaborators",
+  // Withdrawn by directory policy (ADR 019, 2026-10-09; w1/m36).
+  "manageApiKeys",
+  "listPublicKeys",
+  "managePublicKeys",
+  "deleteAccount",
+];
+
+describe("retired MCP tools", () => {
+  it.each(RETIRED_TOOLS)(
+    "answers %s as an unknown tool and points at tools/list",
+    async (name) => {
+      const result = await withClient((client) =>
+        client.callTool({ name, arguments: {} }),
+      );
+      expect(result.isError).toBe(true);
+      expect(result.structuredContent).toMatchObject({
+        ok: false,
+        error: {
+          code: "NOT_FOUND",
+          hint: expect.stringContaining("tools/list"),
+        },
+      });
+    },
+  );
+
+  it("are named by no tool, resource, or instruction the server publishes", async () => {
+    const served = await withClient(async (client) => [
+      JSON.stringify(await client.listTools()),
+      JSON.stringify(await client.listResourceTemplates()),
+      JSON.stringify(await client.listResources()),
+      JSON.stringify(await client.listPrompts()),
+      client.getInstructions() ?? "",
+    ]);
+    const text = served.join("\n");
+    expect(
+      RETIRED_TOOLS.filter((name) => new RegExp(`\\b${name}\\b`).test(text)),
+    ).toEqual([]);
+  });
+});
+
 describe("MCP tool security schemes", () => {
   it("publishes each tool's derived scheme top-level and in _meta", async () => {
     const { tools } = await listToolsRaw();
