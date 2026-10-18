@@ -360,8 +360,10 @@ and `523` (origin unreachable) instead exit **1** with `Could not reach the serv
 can occur during connection setup or while waiting for a request acknowledgment
 on an established connection; its status alone cannot establish a write's outcome. A
 write that never connected (a refused connection, a failed DNS lookup, a connect
-timeout) sent nothing, so it exits **1** with `Could not reach the server (…)`,
-like a read.
+timeout, or a proxy tunnel that was refused, dropped, or never answered) sent
+nothing, so it exits **1** with `Could not reach the server (…)`, like a read.
+Once the API request starts through an established tunnel, a lost answer still
+leaves the write's outcome unknown and exits **4**.
 
 An HTTP `401` asks you to replace the rejected credential: log in again for a
 stored session, or correct or unset `BEA_TOKEN` when it supplies the credential.
@@ -2008,7 +2010,7 @@ logging in — it is never written to disk, and `cloud status` reports
 after an attempted revocation, including when that attempt fails. An invalid
 endpoint is refused before any revocation attempt, keeping the credential. Failed attempts
 say the session may still be valid and can be revoked from the dashboard.
-Connection failures (including connection timeouts and refused proxy tunnels)
+Connection failures (including connection timeouts and failed proxy tunnel setup)
 and ordinary server errors exit **1**. Other timeouts, connections lost after sending,
 unreadable successful replies, and gateway HTTP **504, 520, 522, or 524** exit
 **4** because the revocation outcome is unknown. Server request IDs are kept

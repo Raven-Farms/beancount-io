@@ -24,8 +24,8 @@ from cli.api.rest_client.types import Response
 DEFAULT_TIMEOUT = httpx.Timeout(30.0)
 
 
-def _install_tolerant_json(client: httpx.Client) -> httpx.Client:
-    """Make generated `response.json()` calls survive non-JSON error bodies.
+def _install_transport_guards(client: httpx.Client) -> httpx.Client:
+    """Keep proxy setup failures and non-JSON error bodies identifiable.
 
     openapi-python-client parses documented error statuses with `response.json()`
     before our `unwrap` runs; without this, an HTML 403 becomes a JSON decoder
@@ -35,7 +35,37 @@ def _install_tolerant_json(client: httpx.Client) -> httpx.Client:
     original_json = httpx.Response.json
 
     def request(method: str, url: httpx.URL | str, **kwargs: Any) -> httpx.Response:
-        response = original_request(method, url, **kwargs)
+        extensions = dict(kwargs.get("extensions") or {})
+        previous_trace = extensions.get("trace")
+        connecting_proxy = False
+        origin_started = False
+
+        def trace(name: str, info: dict[str, Any]) -> Any:
+            nonlocal connecting_proxy, origin_started
+            if name in {"http11.send_request_headers.started", "http2.send_request_headers.started"}:
+                if getattr(info.get("request"), "method", None) == b"CONNECT":
+                    connecting_proxy = True
+                else:
+                    # This is sticky: a later redirect/auth attempt can open
+                    # another tunnel after the original API request went out.
+                    origin_started = True
+            if previous_trace is not None:
+                return previous_trace(name, info)
+            return None
+
+        extensions["trace"] = trace
+        kwargs["extensions"] = extensions
+        try:
+            response = original_request(method, url, **kwargs)
+        except httpx.TransportError as exc:
+            # httpcore uses ReadTimeout/RemoteProtocolError when CONNECT is
+            # unanswered or dropped. No API request has started at that point,
+            # unlike the same errors after sending a POST/DELETE (w5/702).
+            # Observe the public trace extension rather than proxy env vars:
+            # bypassed proxies and reused tunnels must keep normal semantics.
+            if connecting_proxy and not origin_started:
+                raise httpx.ProxyError("Proxy tunnel setup failed", request=exc.request) from exc
+            raise
 
         def json_method(**kw: Any) -> Any:
             try:
@@ -73,7 +103,7 @@ def make_client() -> AuthenticatedClient:
         AuthenticatedClient,
         Client(base_url=settings().api_url, timeout=DEFAULT_TIMEOUT),
     )
-    _install_tolerant_json(_httpx_client(client))
+    _install_transport_guards(_httpx_client(client))
     return client
 
 
@@ -99,7 +129,7 @@ def bearer_client(token: str) -> AuthenticatedClient:
         token=token,
         timeout=DEFAULT_TIMEOUT,
     )
-    _install_tolerant_json(_httpx_client(client))
+    _install_transport_guards(_httpx_client(client))
     return client
 
 
