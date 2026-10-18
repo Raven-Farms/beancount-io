@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [685 — `PRINT -f beancount` export fails `check` when an include uses default roots (incomplete fix of w5/474)](./685.md)
 - [686 — `--json format` skips an encrypted include without naming it (incomplete fix of w5/495)](./686.md)
 - [687 — Five doc sentences describe behavior today's fixes changed](./687.md)
 - [688 — An explicit `--pad-date` before the open now gets a looping "date the balance after the open" hint (regression from w5/513)](./688.md)
