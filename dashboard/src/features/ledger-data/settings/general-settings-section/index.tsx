@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { useMutation } from "@apollo/client/react";
+import { useMutation, useQuery } from "@apollo/client/react";
+import { CombinedGraphQLErrors } from "@apollo/client/errors";
 import {
   Card,
   CardContent,
@@ -14,6 +15,7 @@ import { Label } from "@/common/components/ui/label";
 import { Textarea } from "@/common/components/ui/textarea";
 import { Save, Loader2 } from "lucide-react";
 import {
+  ListLedgersDocument,
   UpdateLedgerDocument,
   type GetLedgerQuery,
   type UpdateLedgerMutation,
@@ -25,6 +27,17 @@ import { useTranslations } from "@/common/hooks/use-translations";
 import { useErrorMessage } from "@/common/lib/errors/error-message";
 import { LedgerAdminPermission } from "@/common/components/ledger-permission/admin";
 import { useLedgerPermission } from "@/common/hooks/use-ledger-permission";
+import {
+  MAX_LEDGER_NAME_LENGTH,
+  slugifyLedgerName,
+} from "@/common/lib/beancount/ledger-name";
+
+/**
+ * The ledger service's two rename refusals worth naming, recognized by its
+ * fixed wording (`backend-cluster/ledger/src/shared/ledger-name.ts`, `api/ledgers.ts`).
+ */
+const NAME_TAKEN_ERROR = /already exists/i;
+const NAME_TOO_LONG_ERROR = /too long/i;
 
 export function GeneralSettingsSection({
   ledger,
@@ -66,8 +79,35 @@ export function GeneralSettingsSection({
     }
   }, [ledger.description]);
 
+  // The name the server will actually give the ledger, and why it may not.
+  const slug = slugifyLedgerName(ledgerName.trim());
+  const { ledgerOwner } = decodeLedgerId(ledgerId);
+  const { data: ledgersData } = useQuery(ListLedgersDocument);
+  const takenNames = useMemo(
+    () =>
+      new Set(
+        (ledgersData?.listLedgers ?? [])
+          .filter(
+            (other) =>
+              other.fullName === `${ledgerOwner}/${other.name}` &&
+              other.name !== ledger.name,
+          )
+          .map((other) => other.name),
+      ),
+    [ledgersData, ledgerOwner, ledger.name],
+  );
+  const nameError = !ledgerName.trim()
+    ? null
+    : !slug
+      ? t("page.dashboard.nameInvalid")
+      : slug.length > MAX_LEDGER_NAME_LENGTH
+        ? t("page.dashboard.nameMaxLength")
+        : takenNames.has(slug)
+          ? t("page.settings.ledgerNameTaken", { name: slug })
+          : null;
+
   const handleUpdateGeneral = async () => {
-    if (!ledgerId) return;
+    if (!ledgerId || nameError) return;
 
     const variables: {
       ledgerId: string;
@@ -75,12 +115,12 @@ export function GeneralSettingsSection({
       description?: string | null;
     } = { ledgerId };
 
-    const hasNameChanges = ledgerName.trim() !== ledger.name;
+    const hasNameChanges = slug !== "" && slug !== ledger.name;
     const hasDescriptionChanges =
       ledgerDescription !== (ledger.description || "");
 
-    if (hasNameChanges && ledgerName.trim()) {
-      variables.name = ledgerName.trim();
+    if (hasNameChanges) {
+      variables.name = slug;
     }
 
     if (hasDescriptionChanges) {
@@ -113,11 +153,27 @@ export function GeneralSettingsSection({
           result.data.updateLedger.description || "";
       }
     } catch (error) {
-      toast.error(formatError(error));
+      toast.error(renameErrorMessage(error));
     }
   };
 
-  const hasNameChanges = ledgerName.trim() !== ledger.name;
+  /** Name the refusals a user can act on; anything else stays generic. */
+  const renameErrorMessage = (error: unknown) => {
+    const refusal = CombinedGraphQLErrors.is(error)
+      ? error.errors.find(
+          (gqlError) => gqlError.extensions?.code === "BAD_USER_INPUT",
+        )?.message
+      : undefined;
+    if (refusal && NAME_TAKEN_ERROR.test(refusal)) {
+      return t("page.settings.ledgerNameTaken", { name: slug });
+    }
+    if (refusal && NAME_TOO_LONG_ERROR.test(refusal)) {
+      return t("page.dashboard.nameMaxLength");
+    }
+    return formatError(error);
+  };
+
+  const hasNameChanges = slug !== "" && slug !== ledger.name;
   const hasDescriptionChanges =
     ledgerDescription !== (ledger.description || "");
   const hasChanges = hasNameChanges || hasDescriptionChanges;
@@ -143,7 +199,22 @@ export function GeneralSettingsSection({
             placeholder={
               isAdmin ? t("page.dashboard.enterLedgerName") : undefined
             }
+            aria-invalid={nameError ? true : undefined}
+            aria-describedby={nameError ? "ledger-name-error" : undefined}
           />
+          {isAdmin && slug && slug !== ledgerName.trim() && (
+            <p className="text-sm text-muted-foreground">
+              {t("page.dashboard.repositoryName")}:{" "}
+              <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                {slug}
+              </code>
+            </p>
+          )}
+          {nameError && (
+            <p id="ledger-name-error" className="text-sm text-destructive">
+              {nameError}
+            </p>
+          )}
           <p className="text-sm text-muted-foreground">
             {t("page.settings.ledgerNameDescription")}
           </p>
@@ -177,7 +248,12 @@ export function GeneralSettingsSection({
           <div className="flex justify-end">
             <Button
               onClick={handleUpdateGeneral}
-              disabled={!hasChanges || updatingLedger || !ledgerName.trim()}
+              disabled={
+                !hasChanges ||
+                updatingLedger ||
+                !ledgerName.trim() ||
+                nameError !== null
+              }
             >
               {updatingLedger ? (
                 <>

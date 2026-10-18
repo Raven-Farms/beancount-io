@@ -16,6 +16,11 @@ const skGeneralSettingsSection: Record<string, TranslationEntry> = {
     message: "Tento názov sa zobrazí v celej aplikácii",
     description: "Help text for ledger name field",
   },
+  "page.settings.ledgerNameTaken": {
+    message: "Kniha s názvom {name} už existuje.",
+    description:
+      "Rename refusal when another ledger of the same owner already has the name; {name} is the slug",
+  },
   "page.settings.generalSettings": {
     message: "Všeobecné nastavenia",
     description: "Section title for general settings",

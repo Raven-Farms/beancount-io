@@ -24,23 +24,7 @@ import { LimitIndicator } from "@/common/components/limit-indicator";
 import { useUserLimits } from "@/common/hooks/use-user-limits";
 import { useQuery } from "@apollo/client/react";
 import { ListLedgersDocument } from "@/graphql/definitions";
-
-/**
- * Slugify a ledger name to match GitHub-style repository naming.
- * This mirrors the backend slugify logic in beancount-ledger/app/api/ledger.py
- */
-function slugifyLedgerName(text: string): string {
-  // Convert to lowercase
-  let result = text.toLowerCase();
-  // Replace spaces with hyphens
-  result = result.replace(/ /g, "-");
-  // Remove all characters except alphanumeric, underscore, and hyphen
-  result = result.replace(/[^a-z0-9_-]/g, "");
-  // Collapse consecutive hyphens to single hyphen
-  result = result.replace(/-+/g, "-");
-  // Remove leading/trailing hyphens
-  return result.replace(/^-+|-+$/g, "");
-}
+import { slugifyLedgerName } from "@/common/lib/beancount/ledger-name";
 
 /**
  * Generate a default ledger name that doesn't conflict with existing ledgers.

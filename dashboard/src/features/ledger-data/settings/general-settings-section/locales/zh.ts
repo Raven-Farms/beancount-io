@@ -16,6 +16,11 @@ const zhGeneralSettingsSection: Record<string, TranslationEntry> = {
     message: "此名称将在应用程序中显示",
     description: "Help text for ledger name field",
   },
+  "page.settings.ledgerNameTaken": {
+    message: "名为 {name} 的账本已存在。",
+    description:
+      "Rename refusal when another ledger of the same owner already has the name; {name} is the slug",
+  },
   "page.settings.generalSettings": {
     message: "常规设置",
     description: "Section title for general settings",

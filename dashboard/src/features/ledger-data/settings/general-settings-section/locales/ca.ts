@@ -16,6 +16,11 @@ const caGeneralSettingsSection: Record<string, TranslationEntry> = {
     message: "Aquest nom es mostrarà a tota l'aplicació",
     description: "Help text for ledger name field",
   },
+  "page.settings.ledgerNameTaken": {
+    message: "Ja existeix un llibre anomenat {name}.",
+    description:
+      "Rename refusal when another ledger of the same owner already has the name; {name} is the slug",
+  },
   "page.settings.generalSettings": {
     message: "Configuració general",
     description: "Section title for general settings",

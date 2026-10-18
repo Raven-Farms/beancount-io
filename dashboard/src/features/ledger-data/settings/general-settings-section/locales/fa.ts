@@ -16,6 +16,11 @@ const faGeneralSettingsSection: Record<string, TranslationEntry> = {
     message: "این نام در سراسر برنامه نمایش داده خواهد شد",
     description: "Help text for ledger name field",
   },
+  "page.settings.ledgerNameTaken": {
+    message: "دفتری با نام {name} از قبل وجود دارد.",
+    description:
+      "Rename refusal when another ledger of the same owner already has the name; {name} is the slug",
+  },
   "page.settings.generalSettings": {
     message: "تنظیمات عمومی",
     description: "Section title for general settings",
