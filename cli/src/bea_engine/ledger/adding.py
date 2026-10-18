@@ -302,9 +302,9 @@ def _appended(
 def _preexisting_refusal(errors: list[Any], ledger_errors: list[str]) -> protocol.LedgerError:
     """The strict pre-check's refusal of a ledger that already has errors.
 
-    `--allow-errors` never writes past a syntax error, so advising it for one
-    sent the user round in a loop; the shared validation already left it out
-    (w5/396), these pre-checks did not (w5/508).
+    Syntax errors and pads with inactive accounts cannot be tolerated by the
+    shared validation, so advising `--allow-errors` for either sends the user
+    round in a loop (w5/508, w5/682).
     """
     from beancount.parser.grammar import ParserSyntaxError
     from beancount.parser.lexer import LexerError
@@ -314,6 +314,26 @@ def _preexisting_refusal(errors: list[Any], ledger_errors: list[str]) -> protoco
             f"The ledger already has {len(ledger_errors)} error(s), including a syntax error; nothing was written. "
             "Fix the syntax error first: --allow-errors never writes past one.",
             details=ledger_errors,
+        )
+    pads = sorted(
+        {
+            (error.entry.date, error.entry.account, error.entry.source_account)
+            for error in errors
+            if write.is_invalid_pad_account(error)
+        }
+    )
+    if pads:
+        return protocol.LedgerError(
+            f"The ledger already has {len(ledger_errors)} error(s), including an invalid pad account; "
+            "nothing was written. Open missing accounts or correct the pad account/date first: "
+            "--allow-errors cannot bypass an inactive pad account.",
+            details=[
+                *ledger_errors,
+                *(
+                    f"Pad dated {date}: {account} and {source} must both be active on that date."
+                    for date, account, source in pads
+                ),
+            ],
         )
     return protocol.LedgerError(
         f"The ledger already has {len(ledger_errors)} error(s); nothing was written. "

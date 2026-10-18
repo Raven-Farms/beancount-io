@@ -1978,10 +1978,7 @@ def validate_candidate(
     # so it is looked up once, on the first unknown account, not per error.
     root_hints: list[str] | None = None
     per_file_hinted: set[Path] = set()
-    pad_invalid = any(
-        isinstance(error.entry, Pad) and str(getattr(error, "message", "")).startswith("Invalid reference to ")
-        for error in errors
-    )
+    pad_invalid = any(is_invalid_pad_account(error) for error in errors)
     duplicate_opens = {
         error.entry.account
         for error in errors
@@ -2221,7 +2218,7 @@ def validate_candidate(
                 hints.append(_duplicate_open_hint(existing, duplicate, filenames))
         if isinstance(error, UniquePricesError):
             hints.append(_unique_prices_hint(error.entry, filenames, original_lines))
-        if isinstance(error.entry, Pad) and error.message.startswith("Invalid reference to "):
+        if is_invalid_pad_account(error):
             invalid_pad_accounts = True
             # Worded by how the pad arrived: `add balance --pad-from` wrote no
             # pad directive, and the flag is news only to who passed it (w5/395).
@@ -2403,9 +2400,7 @@ def validate_candidate(
         blocking = [
             index
             for index, (error, is_new) in enumerate(zip(errors, introduced, strict=True))
-            if is_new
-            or isinstance(error, ParserSyntaxError | LexerError)
-            or (isinstance(error.entry, Pad) and str(getattr(error, "message", "")).startswith("Invalid reference to "))
+            if is_new or isinstance(error, ParserSyntaxError | LexerError) or is_invalid_pad_account(error)
         ]
         if new_records:
             message = f"The change would introduce {len(new_records)} new ledger error(s); nothing was written."
@@ -2422,6 +2417,15 @@ def validate_candidate(
             ledger_errors=_collapse_repeats(tolerated_records),
         )
     return messages
+
+
+def is_invalid_pad_account(error: Any) -> bool:
+    """Whether a pad names an unopened or inactive account, which no write may tolerate."""
+    from beancount.core.data import Pad
+
+    return isinstance(getattr(error, "entry", None), Pad) and str(getattr(error, "message", "")).startswith(
+        "Invalid reference to "
+    )
 
 
 def is_unused_open(error: Any) -> bool:
