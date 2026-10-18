@@ -18,9 +18,8 @@ describe("AuthResolver", () => {
     mockContext = {
       userId: "user-123",
       token: "mock-token",
-      reqHeaders: {
-        "x-forwarded-for": "127.0.0.1",
-      },
+      reqHeaders: {},
+      clientIp: "127.0.0.1",
       config: { env: "development" },
       koaCtx: {
         cookies: {
@@ -243,9 +242,12 @@ describe("AuthResolver", () => {
       );
     });
 
-    it("should extract IP from x-forwarded-for header", async () => {
+    // The rate-limit key is the address the trusted proxy saw (w0/m7). A
+    // forwarded entry the client wrote itself, or x-real-ip, must not change it.
+    it("ignores client-written forwarding headers", async () => {
       mockContext.reqHeaders = {
         "x-forwarded-for": "203.0.113.1, 198.51.100.178",
+        "x-real-ip": "192.0.2.1",
       };
       mockAuthService.sendForgotPasswordLink.mockResolvedValue(undefined);
 
@@ -255,26 +257,12 @@ describe("AuthResolver", () => {
 
       expect(mockAuthService.sendForgotPasswordLink).toHaveBeenCalledWith(
         "user@example.com",
-        "203.0.113.1",
+        "127.0.0.1",
       );
     });
 
-    it("should use x-real-ip as fallback", async () => {
-      mockContext.reqHeaders = { "x-real-ip": "192.0.2.1" };
-      mockAuthService.sendForgotPasswordLink.mockResolvedValue(undefined);
-
-      await resolver.sendForgotPasswordLink(mockContext, {
-        email: "user@example.com",
-      });
-
-      expect(mockAuthService.sendForgotPasswordLink).toHaveBeenCalledWith(
-        "user@example.com",
-        "192.0.2.1",
-      );
-    });
-
-    it("should use 'unknown' when no IP headers available", async () => {
-      mockContext.reqHeaders = {};
+    it("should use 'unknown' when no client address is known", async () => {
+      mockContext.clientIp = "unknown";
       mockAuthService.sendForgotPasswordLink.mockResolvedValue(undefined);
 
       await resolver.sendForgotPasswordLink(mockContext, {
@@ -432,7 +420,7 @@ describe("AuthResolver", () => {
       );
     });
 
-    it("should use x-real-ip as fallback for IP", async () => {
+    it("keys the sign-up on the trusted client address, not x-real-ip", async () => {
       mockContext.reqHeaders = { "x-real-ip": "192.168.1.1" };
       const args = {
         email: "newuser@example.com",
@@ -451,7 +439,7 @@ describe("AuthResolver", () => {
       await resolver.signUp(mockContext, args);
 
       expect(mockAuthService.createSignUpSession).toHaveBeenCalledWith(
-        expect.objectContaining({ ip: "192.168.1.1" }),
+        expect.objectContaining({ ip: "127.0.0.1" }),
       );
     });
   });

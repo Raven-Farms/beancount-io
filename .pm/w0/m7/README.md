@@ -1,12 +1,12 @@
 # w0 · m7 — Login limits key on a trusted client address and on the account
 
-**Worker:** worker1 **Goal:** every rate limiter reads the client address from one helper that trusts only the deployment's own proxy hop, and repeated wrong passwords for one account are limited across addresses and across dashboard and Git sign-in **Status:** todo
+**Worker:** worker1 **Goal:** every rate limiter reads the client address from one helper that trusts only the deployment's own proxy hop, and repeated wrong passwords for one account are limited across addresses and across dashboard and Git sign-in **Status:** todo (t001 done)
 
 ## Tasks (in order)
 
 | id   | title | est | depends_on |
 | ---- | ----- | --- | ---------- |
-| t001 | One trusted client-address helper for REST, GraphQL and Git | 40m | — |
+| t001 | One trusted client-address helper for REST, GraphQL and Git | 40m | — | — **DONE**
 | t002 | Per-account failed-password budget shared by `signIn` and Git basic auth | 60m | t001 |
 | t003 | Adoption surface | 20m | t002 |
 | t004 | Simplify | 15m | t003 |

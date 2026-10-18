@@ -29,12 +29,3 @@ export function toCliAuthWireStatus(
 ): CliAuthWireStatus {
   return status ? STATUS_TO_WIRE[status] : "EXPIRED";
 }
-
-/**
- * Best-effort address of the requesting device, for display on the consent
- * screen. Client-controlled (2026 security review, finding 7), so it is shown
- * as a hint and never used to decide anything.
- */
-export function firstForwardedIp(header: string | undefined): string | undefined {
-  return header?.split(",")[0]?.trim() || undefined;
-}

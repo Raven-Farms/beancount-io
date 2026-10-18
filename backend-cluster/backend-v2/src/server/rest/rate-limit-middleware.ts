@@ -65,12 +65,9 @@ export function restRateLimitMiddleware(): Router.Middleware {
 }
 
 /**
- * The caller's IP.
- *
- * `ctx.ip` honours Koa's `proxy` setting for `X-Forwarded-For`; behind
- * Cloudflare and Caddy the left-most entry is client-controlled, so this is a
- * best-effort bucket key for anonymous traffic and never an authorization
- * input.
+ * The caller's IP: the `X-Forwarded-For` entry the nearest trusted proxy
+ * appended (`TRUSTED_PROXY_HOPS`, set on the Koa app), or the socket address
+ * when nothing is trusted. A bucket key, never an authorization input.
  */
 function clientIp(ctx: RouterContext): string {
   return ctx.ip || "unknown";

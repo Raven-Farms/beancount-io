@@ -11,7 +11,6 @@ import { getTokenFromCtx } from "@/features/auth/utils/auth";
 import { clearAuthCookie } from "@/shared/cookie-utils";
 import {
   CLI_AUTH_WIRE_STATUSES,
-  firstForwardedIp,
   toCliAuthWireStatus,
 } from "@/features/auth/api/cli-auth-wire";
 
@@ -26,9 +25,15 @@ import {
 
 const clientInfoInput = z
   .object({
-    name: z.string().optional().openapi({ description: "Client name, e.g. `bea`." }),
+    name: z
+      .string()
+      .optional()
+      .openapi({ description: "Client name, e.g. `bea`." }),
     version: z.string().optional(),
-    deviceLabel: z.string().optional().openapi({ description: "Machine name the client runs on." }),
+    deviceLabel: z
+      .string()
+      .optional()
+      .openapi({ description: "Machine name the client runs on." }),
     platform: z.string().optional(),
   })
   .strict();
@@ -48,7 +53,8 @@ const createSessionResponse = z.object({
       "The CLI's private verifier. Keep it in the process; never put it in a URL, a log, or the browser.",
   }),
   userCode: z.string().openapi({
-    description: "Short code to display so the person can enter it in the browser.",
+    description:
+      "Short code to display so the person can enter it in the browser.",
   }),
   expiresAt: z.string(),
   pollIntervalSeconds: z.number().int().openapi({
@@ -71,11 +77,18 @@ export const CLI_AUTH_V1_ROUTES = [
     description:
       "Starts the device-authorization ceremony. Returns the device code the CLI polls with and the user code to display for the person to enter in the browser. Anonymous by design: the caller is the terminal that does not have a credential yet.",
     body: createSessionBody,
-    responses: { 200: json("The new session's codes and polling contract", createSessionResponse) },
+    responses: {
+      200: json(
+        "The new session's codes and polling contract",
+        createSessionResponse,
+      ),
+    },
     handler: async ({ layers }, { body, ctx }) =>
       layers.services.cliAuth.createSession(
         body.client ?? {},
-        firstForwardedIp(ctx.get("x-forwarded-for")),
+        // The address the trusted proxy saw, shown on the consent screen as a
+        // hint and never used to decide anything.
+        ctx.ip || undefined,
       ),
   }),
   anonymousV1Route({
@@ -87,10 +100,15 @@ export const CLI_AUTH_V1_ROUTES = [
       "Only the initiating CLI can call this: it takes the device code, which never leaves that process. A missing session and an unrecognized device code are the same answer: EXPIRED.",
     params: deviceCodeParams,
     responses: {
-      200: json("The session status", z.object({ status: z.enum(CLI_AUTH_WIRE_STATUSES) })),
+      200: json(
+        "The session status",
+        z.object({ status: z.enum(CLI_AUTH_WIRE_STATUSES) }),
+      ),
     },
     handler: async ({ layers }, { params }) => {
-      const status = await layers.services.cliAuth.getSessionStatus(params.deviceCode);
+      const status = await layers.services.cliAuth.getSessionStatus(
+        params.deviceCode,
+      );
       return { status: toCliAuthWireStatus(status) };
     },
   }),
@@ -118,7 +136,9 @@ export const CLI_AUTH_V1_ROUTES = [
     summary: "Revoke the calling credential and end the session",
     description:
       "Revokes the presented session token server-side and clears the browser cookie when one was used. Session-only: an API key or OAuth access token cannot log out, because a delegated credential does not own the session it rides on.",
-    responses: { 200: json("Logout confirmation", z.object({ success: z.boolean() })) },
+    responses: {
+      200: json("Logout confirmation", z.object({ success: z.boolean() })),
+    },
     handler: async ({ layers }, { ctx }) => {
       const token = getTokenFromCtx(ctx);
       if (token) await layers.services.auth.logout(token);

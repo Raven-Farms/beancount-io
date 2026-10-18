@@ -4,6 +4,7 @@ import {
   getDevelopmentPremiumUserIds,
   getMcpRegistryAuthProof,
   getOAuthPublicUrl,
+  parseTrustedProxyHops,
 } from "./config";
 
 describe("config", () => {
@@ -33,8 +34,18 @@ describe("config", () => {
   });
 
   it("should have correct server defaults", () => {
-    expect(config.server.proxy).toBe(true);
+    expect(config.server.trustedProxyHops).toBe(1);
     expect(config.server.port).toBe(4104);
+  });
+
+  it("reads TRUSTED_PROXY_HOPS as a non-negative integer, else one hop", () => {
+    expect(parseTrustedProxyHops(undefined)).toBe(1);
+    expect(parseTrustedProxyHops("")).toBe(1);
+    expect(parseTrustedProxyHops("0")).toBe(0);
+    expect(parseTrustedProxyHops("2")).toBe(2);
+    for (const bad of ["-1", "1.5", "two", "Infinity"]) {
+      expect(parseTrustedProxyHops(bad)).toBe(1);
+    }
   });
 
   it("limits local premium-user overrides to development", () => {

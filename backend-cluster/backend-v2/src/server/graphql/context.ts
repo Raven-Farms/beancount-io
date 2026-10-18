@@ -21,6 +21,13 @@ export interface IContext {
   userId?: string;
   token?: string;
   reqHeaders: Record<string, string>;
+  /**
+   * The caller's address as the trusted proxy saw it (Koa's `ctx.ip` under
+   * `TRUSTED_PROXY_HOPS`). A rate-limit bucket key, never an authorization
+   * input. Do not read `x-forwarded-for` from `reqHeaders` instead: its
+   * left-most entry is whatever the client sent.
+   */
+  clientIp: string;
   platform: "web" | "mobile";
   config: AppConfig;
   koaCtx: ContextLike;
@@ -37,6 +44,7 @@ export interface IContext {
  */
 interface ContextLike {
   headers: Record<string, string | string[] | undefined>;
+  ip?: string;
 }
 
 /**
@@ -105,6 +113,7 @@ export async function createContext(
     // cookie fallback even though authentication no longer goes through it.
     token: getTokenFromCtx(ctx as Parameters<typeof getTokenFromCtx>[0]),
     reqHeaders,
+    clientIp: ctx.ip || "unknown",
     platform,
     config,
     koaCtx: ctx,

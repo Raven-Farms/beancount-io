@@ -15,17 +15,6 @@ import { graphqlOperationId } from "./graphql-operation-id";
  * `extensions.code = RATE_LIMITED` and the `retryAfter` metadata, which is this
  * surface's dialect of REST's `Retry-After` header.
  */
-/**
- * Best-effort IP for anonymous GraphQL traffic (login, signup). Read from the
- * forwarded header because the GraphQL context carries headers, not the socket
- * — and, like every use of this value, it is a bucket key and never an
- * authorization input: the left-most entry is client-controlled.
- */
-function clientIp(context: IContext): string {
-  const forwarded = context.reqHeaders?.["x-forwarded-for"];
-  return forwarded?.split(",")[0]?.trim() || "unknown";
-}
-
 export function graphqlRateLimitMiddleware(): MiddlewareFn<IContext> {
   return async ({ context, info }, next) => {
     if (info.path.prev !== undefined) return next();
@@ -35,7 +24,7 @@ export function graphqlRateLimitMiddleware(): MiddlewareFn<IContext> {
     await enforceRateLimit({
       opId,
       identity: context.identity,
-      ip: clientIp(context),
+      ip: context.clientIp,
     });
     return next();
   };

@@ -29,18 +29,21 @@ describe("CliAuthResolver", () => {
     context = {
       getCurrentIdentity: jest.fn().mockReturnValue(identity),
       reqHeaders: { "x-forwarded-for": "203.0.113.7, 10.0.0.1" },
+      clientIp: "198.51.100.9",
     } as unknown as IContext;
     resolver = new CliAuthResolver(service);
   });
 
-  it("passes the reported client and the forwarded address to the service", async () => {
+  // The consent screen shows the address the trusted proxy saw, not a
+  // forwarded entry the CLI's host could have written itself (w0/m7).
+  it("passes the reported client and the trusted client address to the service", async () => {
     await resolver.createCliAuthSession(context, {
       client: { name: "bea", version: "0.4.1" },
     });
 
     expect(service.createSession).toHaveBeenCalledWith(
       { name: "bea", version: "0.4.1" },
-      "203.0.113.7",
+      "198.51.100.9",
     );
   });
 

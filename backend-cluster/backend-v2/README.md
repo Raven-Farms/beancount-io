@@ -93,6 +93,9 @@ SERVER_URL=http://localhost:4104
 DASHBOARD_URL=http://localhost:5173
 # Optional: login/register JWT lifetime in minutes (default 525600 = 365 days)
 # AUTH_JWT_EXP_MINUTES=5
+# Optional: reverse proxies in front of this server that append to
+# X-Forwarded-For (default 1; 0 when clients connect directly)
+# TRUSTED_PROXY_HOPS=1
 ```
 
 Production OAuth requires `OAUTH_JWKS`, a complete private P-256/ES256 signing

@@ -14,10 +14,7 @@ import { AllowAnonymous, Authenticated } from "@/server/graphql/authenticated";
 import { IContext } from "@/server/graphql/context";
 import type { ICliAuthService } from "@/features/auth/service/cli-auth-service";
 import type { CliAuthSessionStatus } from "@/features/auth/data/cli-auth-session-model/types";
-import {
-  firstForwardedIp,
-  toCliAuthWireStatus,
-} from "@/features/auth/api/cli-auth-wire";
+import { toCliAuthWireStatus } from "@/features/auth/api/cli-auth-wire";
 
 enum CliAuthStatus {
   PENDING = "PENDING",
@@ -185,7 +182,7 @@ export class CliAuthResolver {
   ): Promise<CreateCliAuthSessionResponse> {
     return this.cliAuthService.createSession(
       args.client ?? {},
-      forwardedIp(ctx),
+      requesterIp(ctx),
     );
   }
 
@@ -268,7 +265,10 @@ export class CliAuthResolver {
   }
 }
 
-/** Display-only requester address; the trust caveats live in `cli-auth-wire.ts`. */
-function forwardedIp(ctx: IContext): string | undefined {
-  return firstForwardedIp(ctx.reqHeaders?.["x-forwarded-for"]);
+/**
+ * The requesting device's address as the trusted proxy saw it, shown on the
+ * consent screen as a hint and never used to decide anything.
+ */
+function requesterIp(ctx: IContext): string | undefined {
+  return ctx.clientIp === "unknown" ? undefined : ctx.clientIp;
 }

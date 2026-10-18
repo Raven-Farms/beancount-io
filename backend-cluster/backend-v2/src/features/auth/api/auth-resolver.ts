@@ -245,11 +245,7 @@ export class AuthResolver {
     @Ctx() ctx: IContext,
     @Args() args: SendForgotPasswordLinkInput,
   ): Promise<SendForgotPasswordLinkResponse> {
-    const forwardedFor = ctx.reqHeaders["x-forwarded-for"];
-    const ip =
-      (forwardedFor && forwardedFor.split(",")[0].trim()) ||
-      ctx.reqHeaders["x-real-ip"] ||
-      "unknown";
+    const ip = ctx.clientIp;
     await this.authService.sendForgotPasswordLink(
       args.email.toLowerCase().trim(),
       ip,
@@ -291,11 +287,7 @@ export class AuthResolver {
     @Ctx() ctx: IContext,
     @Args() args: SignUpInput,
   ): Promise<SignUpResponse> {
-    const forwardedFor = ctx.reqHeaders["x-forwarded-for"];
-    const ip =
-      (forwardedFor && forwardedFor.split(",")[0].trim()) ||
-      ctx.reqHeaders["x-real-ip"] ||
-      "unknown";
+    const ip = ctx.clientIp;
     // inviteSrc and inviteBy are accepted for backward compatibility but no longer used
     const sessionId = await this.authService.createSignUpSession({
       email: args.email.toLowerCase().trim(),

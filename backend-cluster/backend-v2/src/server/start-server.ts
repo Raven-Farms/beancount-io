@@ -23,6 +23,7 @@ import { JobScheduler } from "@/scheduler";
 import { runStartupLlmProbe } from "@/features/llm/utils/llm-probe";
 import { SshProxyServer } from "@/features/gitea/ssh/ssh-proxy-server";
 import { SshAuthenticator } from "@/features/gitea/ssh/ssh-authenticator";
+import { trustProxyHops } from "@/server/client-address";
 
 const serverLogger = logger.child({ module: "start-server" });
 
@@ -56,7 +57,7 @@ export async function startServer(): Promise<void> {
     });
   });
 
-  app.proxy = config.server.proxy;
+  trustProxyHops(app, config.server.trustedProxyHops);
   app.use(bodyParserMiddleware());
 
   // Add async context middleware (must be early in the chain)
