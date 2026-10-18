@@ -165,6 +165,82 @@ class TestSkillTrees(unittest.TestCase):
         self.assertIn("referenced file missing: missing.csv", error.getvalue())
 
 
+class TestRoutingSet(unittest.TestCase):
+    def setUp(self):
+        scratch = SCRIPTS_DIR.parent / "tmp"
+        scratch.mkdir(exist_ok=True)
+        temporary = tempfile.TemporaryDirectory(dir=scratch)
+        self.addCleanup(temporary.cleanup)
+        self.repo = Path(temporary.name)
+        self.customer = self.repo / "skills/.claude/skills"
+        for name in ("beancount-ask", "beancount-close"):
+            (self.customer / name).mkdir(parents=True)
+            (self.customer / name / "SKILL.md").write_text(f"---\nname: {name}\ndescription: d\n---\n")
+        patches = mock.patch.multiple(
+            ci_check, REPO_ROOT=self.repo, SKILLS_ROOT=self.repo / "skills", SKILLS_DIR=self.customer
+        )
+        patches.start()
+        self.addCleanup(patches.stop)
+        self.entries = [
+            self.entry("ask-spend", "What did I spend last month?", "beancount-ask", ["beancount-close"]),
+            self.entry("close-june", "Close the books for June.", "beancount-close", []),
+            self.entry("none-close-card", "Close my old card account.", "none", ["beancount-close", "beancount-ask"]),
+        ]
+
+    @staticmethod
+    def entry(name, prompt, expected, confusable):
+        return {"id": name, "prompt": prompt, "expected": expected, "confusable": confusable, "why": "w"}
+
+    def check(self, entries) -> str:
+        path = self.repo / "skills/evals/routing.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps({"entries": entries}))
+        error = io.StringIO()
+        with contextlib.redirect_stderr(error), contextlib.redirect_stdout(io.StringIO()):
+            try:
+                ci_check.check_routing()
+            except SystemExit:
+                pass
+        return error.getvalue()
+
+    def test_a_consistent_set_passes(self):
+        self.assertEqual(self.check(self.entries), "")
+
+    def test_a_label_left_behind_by_a_rename_fails(self):
+        (self.customer / "beancount-close").rename(self.customer / "beancount-close-month")
+        err = self.check(self.entries)
+        self.assertIn("'beancount-close', which is not a customer skill", err)
+
+    def test_an_expected_skill_that_does_not_exist_fails(self):
+        self.entries[1]["expected"] = "beancount-close-month"
+        err = self.check(self.entries)
+        self.assertIn("'close-june' expects 'beancount-close-month', which is not a customer skill", err)
+
+    def test_an_unknown_confusable_skill_fails(self):
+        self.entries[0]["confusable"] = ["beancount-closing"]
+        self.assertIn("lists confusable 'beancount-closing'", self.check(self.entries))
+
+    def test_a_repeated_prompt_fails_after_whitespace_and_case(self):
+        self.entries.append(self.entry("dupe", "  what did I   spend last MONTH?", "beancount-ask", []))
+        self.assertIn("'dupe' repeats the prompt of 'ask-spend'", self.check(self.entries))
+
+    def test_a_skill_without_positives_fails(self):
+        self.entries[1]["expected"] = "none"
+        self.assertIn("no entry expects beancount-close", self.check(self.entries))
+
+    def test_a_skill_without_near_misses_fails(self):
+        self.entries[2]["confusable"] = ["beancount-close"]
+        self.assertIn("no near-miss entry lists beancount-ask as confusable", self.check(self.entries))
+
+    def test_an_entry_cannot_be_a_near_miss_for_itself(self):
+        self.entries[1]["confusable"] = ["beancount-close"]
+        self.assertIn("lists its own expected skill as confusable", self.check(self.entries))
+
+    def test_missing_fields_fail(self):
+        del self.entries[0]["why"]
+        self.assertIn("every entry needs id, prompt, expected, confusable, why", self.check(self.entries))
+
+
 class TestFindBea(unittest.TestCase):
     def test_resolves_to_a_working_bea(self):
         found = ci_check.find_bea()

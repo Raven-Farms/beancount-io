@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Structural CI checks for customer-facing and repository development skills.
 
-Validates SKILL.md frontmatter, evals.json, referenced fixtures, Python
-syntax, and ledger fixtures under two deliberate legs:
+Validates SKILL.md frontmatter, evals.json, referenced fixtures, the suite
+routing set, Python syntax, and ledger fixtures under two deliberate legs:
 
 1. **Customer bea** — `bea check` with global `bean-*` tools scrubbed from PATH
    (managed engine only; no shared-venv mask).
@@ -77,6 +77,7 @@ LIBMAGIC_REQUIRED = re.compile(
     re.IGNORECASE,
 )
 CUSTOMER_DOCS = SKILLS_ROOT / "docs"
+ROUTING_ENTRY_KEYS = ("id", "prompt", "expected", "confusable", "why")
 
 
 def fail(msg: str) -> None:
@@ -178,6 +179,55 @@ def check_evals() -> None:
                 if not candidate.is_file():
                     fail(f"{rel}: referenced file missing: {file_rel}")
         print(f"OK evals {rel}")
+
+
+def check_routing() -> None:
+    """The suite routing set must name only skills that exist, never repeat a
+    prompt, and give every customer skill positives and near-miss negatives."""
+    path = SKILLS_ROOT / "evals" / "routing.json"
+    rel = path.relative_to(REPO_ROOT)
+    if not path.is_file():
+        fail(f"{rel} is missing")
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        fail(f"{rel}: invalid JSON ({exc})")
+    entries = data.get("entries") if isinstance(data, dict) else None
+    if not isinstance(entries, list) or not entries:
+        fail(f"{rel}: missing 'entries' array")
+    skills = sorted(p.parent.name for p in SKILLS_DIR.glob("beancount-*/SKILL.md"))
+    labels = {*skills, "none"}
+    positives = dict.fromkeys(skills, 0)
+    near_misses = dict.fromkeys(skills, 0)
+    ids: set[str] = set()
+    prompts: dict[str, str] = {}
+    for entry in entries:
+        if not isinstance(entry, dict) or any(key not in entry for key in ROUTING_ENTRY_KEYS):
+            fail(f"{rel}: every entry needs {', '.join(ROUTING_ENTRY_KEYS)}: {entry!r}")
+        name, expected = entry["id"], entry["expected"]
+        if name in ids:
+            fail(f"{rel}: duplicate id {name!r}")
+        ids.add(name)
+        prompt = " ".join(str(entry["prompt"]).split()).casefold()
+        if prompt in prompts:
+            fail(f"{rel}: {name!r} repeats the prompt of {prompts[prompt]!r}")
+        prompts[prompt] = name
+        if expected not in labels:
+            fail(f"{rel}: {name!r} expects {expected!r}, which is not a customer skill or 'none'")
+        for other in entry["confusable"]:
+            if other not in skills:
+                fail(f"{rel}: {name!r} lists confusable {other!r}, which is not a customer skill")
+            if other == expected:
+                fail(f"{rel}: {name!r} lists its own expected skill as confusable")
+            near_misses[other] += 1
+        if expected != "none":
+            positives[expected] += 1
+    for skill in skills:
+        if not positives[skill]:
+            fail(f"{rel}: no entry expects {skill}")
+        if not near_misses[skill]:
+            fail(f"{rel}: no near-miss entry lists {skill} as confusable")
+    print(f"OK routing {rel} ({len(entries)} entries)")
 
 
 def check_python() -> None:
@@ -375,6 +425,7 @@ def main() -> None:
     check_symlinks()
     check_skill_md()
     check_evals()
+    check_routing()
     check_python()
     check_ledgers()
     check_bea_first()
