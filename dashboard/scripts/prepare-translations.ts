@@ -11,12 +11,18 @@
 
 import * as fs from "fs";
 import * as path from "path";
+import * as prettier from "prettier";
 import {
   untranslatedAgainstEnglish,
   untranslatedEnglishTail,
 } from "../src/test/locale-scan";
 import { SUPPORTED_LANGUAGES } from "../src/i18n/config";
-import { syncLocaleEntries, type TranslationEntry } from "./lib/sync-locale";
+import {
+  editCatalogSource,
+  ownCatalogKeys,
+  syncLocaleEntries,
+  type TranslationEntry,
+} from "./lib/sync-locale";
 
 const SRC_DIR = path.join(process.cwd(), "src");
 const FEATURES_DIR = path.join(SRC_DIR, "features");
@@ -116,14 +122,12 @@ async function readTranslations(
   }
 }
 
-/**
- * Write translations to a TypeScript file
- */
-function writeTranslations(
+/** A new catalog file's text, its entries in the order given. */
+function renderCatalog(
   filePath: string,
   translations: Record<string, TranslationEntry>,
   locale: string,
-): void {
+): string {
   // Extract variable name from existing file or create new one
   const feature = path.basename(path.dirname(path.dirname(filePath)));
 
@@ -149,11 +153,7 @@ function writeTranslations(
   content += `}\n\n`;
   content += `const ${varName}: Record<string, TranslationEntry> = {\n`;
 
-  // Sort keys alphabetically
-  const sortedKeys = Object.keys(translations).sort();
-
-  for (const key of sortedKeys) {
-    const entry = translations[key];
+  for (const [key, entry] of Object.entries(translations)) {
     content += `  "${key}": {\n`;
     content += `    message: ${JSON.stringify(entry.message)},\n`;
     content += `    description: ${JSON.stringify(entry.description)},\n`;
@@ -162,9 +162,50 @@ function writeTranslations(
 
   content += `};\n\n`;
   content += `export default ${varName};\n`;
+  return content;
+}
 
-  // Write to file
-  fs.writeFileSync(filePath, content, "utf8");
+/**
+ * Write a catalog's changes. An existing file is edited in place — removed
+ * entries cut, added ones inserted beside their neighbours, every other line
+ * untouched — and a missing one is generated; either way the result is
+ * formatted as the repository's Prettier config formats it. Regenerating
+ * existing files re-sorted and reformatted them, so one new key showed up as
+ * hundreds of changed lines (w0/m3).
+ */
+async function saveCatalog(
+  filePath: string,
+  locale: string,
+  entries: Record<string, TranslationEntry>,
+  changes: { added: readonly string[]; removed: readonly string[] },
+): Promise<void> {
+  const text = fs.existsSync(filePath)
+    ? editCatalogSource(fs.readFileSync(filePath, "utf8"), {
+        added: Object.fromEntries(
+          changes.added.map((key) => [key, entries[key]]),
+        ),
+        removed: changes.removed,
+        order: Object.keys(entries),
+      })
+    : renderCatalog(filePath, entries, locale);
+  const options = await prettier.resolveConfig(filePath);
+  fs.writeFileSync(
+    filePath,
+    await prettier.format(text, { ...options, filepath: filePath }),
+    "utf8",
+  );
+}
+
+/** The entries of `translations` a catalog file writes out itself. */
+function ownEntries(
+  translations: Record<string, TranslationEntry>,
+  filePath: string,
+): Record<string, TranslationEntry> {
+  if (!fs.existsSync(filePath)) return {};
+  const own = ownCatalogKeys(fs.readFileSync(filePath, "utf8"));
+  return Object.fromEntries(
+    Object.entries(translations).filter(([key]) => own.has(key)),
+  );
 }
 
 /**
@@ -188,9 +229,11 @@ async function syncTranslations(
     return { added: 0, removed: 0 };
   }
 
+  // Only the keys each file writes out: an aggregate catalog's spread-in keys
+  // are synced through the sub-feature's own file.
   const { entries, added, removed } = syncLocaleEntries(
-    sourceTranslations,
-    targetTranslations,
+    ownEntries(sourceTranslations, sourcePath),
+    ownEntries(targetTranslations, targetPath),
     locale,
   );
 
@@ -199,7 +242,7 @@ async function syncTranslations(
     return { added: 0, removed: 0 };
   }
 
-  writeTranslations(targetPath, entries, locale);
+  await saveCatalog(targetPath, locale, entries, { added, removed });
 
   return { added: added.length, removed: removed.length };
 }
@@ -546,8 +589,10 @@ async function addMissingKeysToEnglish(
       };
     }
 
-    // Write updated translations
-    writeTranslations(enPath, updatedTranslations, "en");
+    await saveCatalog(enPath, "en", updatedTranslations, {
+      added: missingKeys,
+      removed: [],
+    });
 
     addedCounts.set(feature, missingKeys.length);
   }

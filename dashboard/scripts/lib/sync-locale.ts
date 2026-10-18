@@ -78,3 +78,92 @@ export function syncLocaleEntries(
   const removed = Object.keys(target).filter((key) => !expected.has(key));
   return { entries, added, removed };
 }
+
+const escapeRegExp = (text: string) =>
+  text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * Keys a catalog file writes out itself. An aggregate catalog also spreads
+ * its sub-features' catalogs in; those keys belong to the sub-feature's own
+ * file, which the sync edits in its turn.
+ */
+export function ownCatalogKeys(source: string): Set<string> {
+  return new Set(
+    Array.from(
+      source.matchAll(/^ +("(?:[^"\\]|\\.)*"): \{$/gm),
+      (match) => JSON.parse(match[1]) as string,
+    ),
+  );
+}
+
+/** Where `key`'s `"key": { … },` block sits in a Prettier-formatted catalog. */
+function entrySpan(source: string, key: string) {
+  const match = new RegExp(
+    `^( +)${escapeRegExp(JSON.stringify(key))}: \\{\\n[\\s\\S]*?^\\1\\},\\n`,
+    "m",
+  ).exec(source);
+  return match
+    ? {
+        start: match.index,
+        end: match.index + match[0].length,
+        indent: match[1],
+      }
+    : null;
+}
+
+/** Just inside the catalog object's opening brace, and its entries' indent. */
+function objectStart(source: string) {
+  const match = /^const \w+:[^=]*=\s*\{\n/m.exec(source);
+  if (!match) {
+    throw new Error("catalog has no `const …: Record<…> = {` declaration");
+  }
+  const at = match.index + match[0].length;
+  return { at, indent: /^ +/.exec(source.slice(at))?.[0] ?? "  " };
+}
+
+const renderEntry = (
+  indent: string,
+  key: string,
+  { message, description }: TranslationEntry,
+) =>
+  `${indent}${JSON.stringify(key)}: {\n` +
+  `${indent}  message: ${JSON.stringify(message)},\n` +
+  `${indent}  description: ${JSON.stringify(description)},\n` +
+  `${indent}},\n`;
+
+/**
+ * A catalog file's text with `removed` entries cut out and `added` ones
+ * inserted, every other byte untouched. Each new entry goes after the nearest
+ * key before it in `order` (the English catalog's), else first in the object.
+ * Regenerating the file instead re-sorted and reformatted whole catalogs, so
+ * adding one key showed up as hundreds of changed lines (w0/m3). Run Prettier
+ * over the result for long messages.
+ */
+export function editCatalogSource(
+  source: string,
+  changes: {
+    added: Record<string, TranslationEntry>;
+    removed: readonly string[];
+    order: readonly string[];
+  },
+): string {
+  let text = source;
+  for (const key of changes.removed) {
+    const span = entrySpan(text, key);
+    if (span) text = text.slice(0, span.start) + text.slice(span.end);
+  }
+  for (const [index, key] of changes.order.entries()) {
+    const entry = changes.added[key];
+    if (!entry) continue;
+    const before = changes.order
+      .slice(0, index)
+      .reverse()
+      .map((previous) => entrySpan(text, previous))
+      .find((span) => span !== null);
+    const { at, indent } = before
+      ? { at: before.end, indent: before.indent }
+      : objectStart(text);
+    text = text.slice(0, at) + renderEntry(indent, key, entry) + text.slice(at);
+  }
+  return text;
+}
