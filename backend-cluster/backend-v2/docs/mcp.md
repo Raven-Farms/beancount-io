@@ -1271,7 +1271,11 @@ of what was written and how many new bean-check errors it introduced, then
 `errorsAfter`, `newErrors`) — learn about a broken ledger from the write
 result itself instead of re-reading the errors resource. A transaction with at
 most one amount omitted is written elided; any other imbalance is refused with
-`UNBALANCED` unless `allowInvalid: true` records it deliberately. It is
+`UNBALANCED`. Like `appendLedgerText`, it bean-checks the projected ledger
+before committing: entries that would add new errors — a second `open` for an
+account already open, a balance against an account never opened — are refused
+with `VALIDATION_FAILED`, the message naming each new error (w0/m2).
+`allowInvalid: true` records either deliberately. It is
 distinct from raw file editing. REST and MCP impose no separate batch-size
 limit beyond the shared ledger contract. Optional null fields are treated as
 absent. Transaction metadata accepts string-valued objects on all three

@@ -372,7 +372,7 @@ export class LedgerEntryMutationResolver {
     @Arg("allowInvalid", () => Boolean, {
       nullable: true,
       description:
-        "Record unbalanced transactions deliberately instead of refusing them with UNBALANCED",
+        "Record entries deliberately even when they are unbalanced (UNBALANCED) or would add bean-check errors such as a second open for an open account (VALIDATION_FAILED), instead of refusing them",
     })
     allowInvalid?: boolean,
   ): Promise<AddLedgerEntryResponse> {

@@ -111,7 +111,12 @@ async function fixture(
   }[][] = [[], []],
 ) {
   const committed: unknown[] = [];
-  const state = { writable: true, failCommit: false, unbalanced: false };
+  const state = {
+    writable: true,
+    failCommit: false,
+    unbalanced: false,
+    wouldBreak: false,
+  };
   const errorCalls = { count: 0 };
   const envelope = (data: unknown) => ({ data: { success: true, data } });
   const write = jest.fn(async (_owner, _name, body) => {
@@ -126,6 +131,20 @@ async function fixture(
           details: { residual: "5 USD", entry: 0 },
         },
       );
+    // The ledger service's pre-commit check (w0/m2): entries that would add
+    // bean-check errors are refused unless the caller records them anyway.
+    if (state.wouldBreak && body.allowInvalid !== true) {
+      const detail = "Duplicate open directive for Assets:Cash (main.bean:74)";
+      throw new FavaApiError(
+        `adding these entries would introduce 1 new bean-check error: ${detail}`,
+        400,
+        {
+          error: `adding these entries would introduce 1 new bean-check error: ${detail}`,
+          code: "NEW_LEDGER_ERRORS",
+          details: { count: 1, detail },
+        },
+      );
+    }
     committed.push(...body.entries);
     return envelope(null);
   });
@@ -464,6 +483,101 @@ describe.each(["rest", "gql", "mcp"])(
                 {
                   message: "Transaction does not balance: residual 5 USD",
                   source: "main.bean:73",
+                },
+              ],
+            },
+          });
+        }
+      } finally {
+        await f.close();
+      }
+    });
+  },
+);
+
+// A second `open` for an account the ledger already opens: the ledger service
+// refuses it before committing, and every surface must say so the same way
+// (w0/m2). The refusal's source is the ledger client, so this proves the
+// adapters, not the engine's diagnosis (ledger `entries-new-errors.test.ts`).
+const duplicateOpenBatch = [
+  {
+    type: "open",
+    entry: { date, account: "Assets:Cash", currencies: ["USD"] },
+  },
+] as unknown as LedgerEntryInput[];
+
+describe.each(["rest", "gql", "mcp"])(
+  "entries that would break the ledger via %s",
+  (surface) => {
+    it("refuses them with VALIDATION_FAILED and writes nothing", async () => {
+      const f = await fixture();
+      f.state.wouldBreak = true;
+      try {
+        const result = await f.call(surface, duplicateOpenBatch);
+        expect(result.success).toBe(false);
+        expect(f.committed).toEqual([]);
+        const named = "Duplicate open directive for Assets:Cash (main.bean:74)";
+        if (surface === "rest") {
+          expect(result.result).toMatchObject({
+            ok: false,
+            error: {
+              code: "VALIDATION_FAILED",
+              message: expect.stringContaining(named),
+            },
+          });
+        } else if (surface === "gql") {
+          // Raw `graphql()` bypasses Apollo's formatError; the message names
+          // the error, and the category mapping is proven by the REST and MCP
+          // envelopes above and below.
+          expect(
+            (result.errors ?? []).some((error) =>
+              String(error.message).includes(named),
+            ),
+          ).toBe(true);
+        } else {
+          expect(result.full).toMatchObject({
+            ok: false,
+            error: {
+              code: "VALIDATION_FAILED",
+              message: expect.stringContaining(named),
+              hint: expect.stringContaining("allowInvalid: true"),
+            },
+          });
+        }
+      } finally {
+        await f.close();
+      }
+    });
+
+    it("records them with allowInvalid and reports the new error", async () => {
+      const f = await fixture(identity, [
+        [],
+        [
+          {
+            message: "Duplicate open directive for Assets:Cash",
+            source: { filename: "main.bean", lineno: 74 },
+          },
+        ],
+      ]);
+      f.state.wouldBreak = true;
+      try {
+        const result = await f.call(surface, duplicateOpenBatch, {
+          allowInvalid: true,
+        });
+        expect(result.success).toBe(true);
+        expect(f.committed).toHaveLength(1);
+        expect(f.write.mock.calls[0]?.[2]).toMatchObject({
+          allowInvalid: true,
+        });
+        if (surface === "mcp") {
+          expect(result.result).toMatchObject({
+            validation: {
+              errorsBefore: 0,
+              errorsAfter: 1,
+              newErrors: [
+                {
+                  message: "Duplicate open directive for Assets:Cash",
+                  source: "main.bean:74",
                 },
               ],
             },

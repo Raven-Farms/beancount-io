@@ -1,13 +1,13 @@
 # w0 · m2 — Structured ledger writes refuse changes that would break the ledger
 
-**Worker:** worker1 **Goal:** no client can commit a structured entry that introduces a bean-check error without saying so: GraphQL, REST and MCP refuse it the way the text-append route already does, unless the caller passes `allowInvalid` **Status:** todo (t001 done)
+**Worker:** worker1 **Goal:** no client can commit a structured entry that introduces a bean-check error without saying so: GraphQL, REST and MCP refuse it the way the text-append route already does, unless the caller passes `allowInvalid` **Status:** todo (t001–t002 done)
 
 ## Tasks (in order)
 
 | id   | title | est | depends_on |
 | ---- | ----- | --- | ---------- |
 | t001 | Shared writer refuses structured writes that add bean-check errors | 60m | — | — **DONE**
-| t002 | Same refusal on GraphQL `bulkEntries`, REST `POST …/entries` and MCP `addLedgerEntries`, with contract tests and docs | 45m | t001 |
+| t002 | Same refusal on GraphQL `bulkEntries`, REST `POST …/entries` and MCP `addLedgerEntries`, with contract tests and docs | 45m | t001 | — **DONE**
 | t003 | Mobile and dashboard write forms show the refusal message | 30m | t001 |
 | t004 | Adoption surface | 20m | t002, t003 |
 | t005 | Simplify | 15m | t004 |

@@ -347,7 +347,7 @@ export const MCP_TOOLS: readonly McpToolDescriptor[] = [
     title: "Add Structured Ledger Entries",
     annotations: APPEND,
     description:
-      "Append entries [{type,entry}] to the ledger. Supports transaction, commodity, price, note, balance, open, close, budget, document, event. Budget interval uses lowercase daily/weekly/monthly/quarterly/yearly. One posting per transaction may omit its amount and is written elided. An unbalanced transaction is refused with UNBALANCED unless allowInvalid records it deliberately. ledger is required unless pinned.",
+      "Append entries [{type,entry}] to the ledger. Supports transaction, commodity, price, note, balance, open, close, budget, document, event. Budget interval uses lowercase daily/weekly/monthly/quarterly/yearly. One posting per transaction may omit its amount and is written elided. An unbalanced transaction is refused with UNBALANCED, and entries that would add bean-check errors (a second open for an open account, a balance against an unopened account) with VALIDATION_FAILED naming each error, unless allowInvalid records them deliberately. ledger is required unless pinned.",
     inputSchema: addLedgerEntriesInput,
     outputSchema: mcpOutputSchema(
       toolOutputSchema(
