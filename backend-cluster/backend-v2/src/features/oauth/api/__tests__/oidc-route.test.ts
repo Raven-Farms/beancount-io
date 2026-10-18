@@ -1071,6 +1071,95 @@ describe("oidc-route: unified MCP + identity provider", () => {
     });
   });
 
+  // A password reset deletes the provider rows whose top-level accountId's
+  // user segment is the user, plus every row under their grants
+  // (oauth-grant-model, w0/m4). That SQL can only be as right as its reading of
+  // what the provider writes, so check the rows a real sign-in leaves — for the
+  // mobile app (bare user id) and an MCP host pinned to a ledger
+  // ("userId:ledgerId") — and that removing them refuses the next refresh with
+  // the invalid_grant the mobile app treats as "signed out".
+  it("password reset: the rows it revokes are the user's, and their refresh tokens stop working", async () => {
+    const grants = new MemoryAdapter("Grant");
+    const refreshTokens = new MemoryAdapter("RefreshToken");
+    const ownedBy = (payload: { accountId?: unknown } | undefined) =>
+      String(payload?.accountId ?? "").split(":")[0];
+
+    const mobileResource = `${ISSUER}/v1`;
+    const mobileRedirect = MOBILE_REDIRECT_URIS[0];
+    const mobile = await driveAuthorizationCode({
+      clientId: MOBILE_CLIENT_ID,
+      clientAuth: "",
+      scope: "openid offline_access ledger.read",
+      redirectUri: mobileRedirect,
+      prompt: "consent",
+      resource: mobileResource,
+    });
+    const mobileTokens = await exchangeToken({
+      ...mobile,
+      clientId: MOBILE_CLIENT_ID,
+      redirectUri: mobileRedirect,
+      resource: mobileResource,
+    });
+
+    const host = await registerMcpClient();
+    const pinned = await driveAuthorizationCode({
+      clientId: host.clientId,
+      clientAuth: "",
+      scope: "openid offline_access ledger.read",
+      redirectUri: host.redirectUri,
+      loginBody: { ledgerId: "ada/personal" },
+      prompt: "consent",
+    });
+    const pinnedTokens = await exchangeToken({
+      ...pinned,
+      clientId: host.clientId,
+      redirectUri: host.redirectUri,
+    });
+
+    const connections = [
+      {
+        clientId: MOBILE_CLIENT_ID,
+        resource: mobileResource,
+        refreshToken: mobileTokens.refresh_token as string,
+        accountId: TEST_USER.id,
+      },
+      {
+        clientId: host.clientId,
+        resource: `${ISSUER}/api-gateway/mcp`,
+        refreshToken: pinnedTokens.refresh_token as string,
+        accountId: `${TEST_USER.id}:ada/personal`,
+      },
+    ];
+
+    for (const connection of connections) {
+      const refreshToken = await refreshTokens.find(connection.refreshToken);
+      const grantId = refreshToken?.grantId as string;
+      const grant = await grants.find(grantId);
+      expect(refreshToken?.accountId).toBe(connection.accountId);
+      expect(grant?.accountId).toBe(connection.accountId);
+      expect(ownedBy(refreshToken)).toBe(TEST_USER.id);
+      expect(ownedBy(grant)).toBe(TEST_USER.id);
+
+      await grants.destroy(grantId);
+      await refreshTokens.destroy(connection.refreshToken);
+
+      const refresh = await fetch(`${ISSUER}/api-gateway/oauth/token`, {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          grant_type: "refresh_token",
+          refresh_token: connection.refreshToken,
+          client_id: connection.clientId,
+          resource: connection.resource,
+        }),
+      });
+      expect(refresh.status).toBe(400);
+      expect((await refresh.json()) as object).toMatchObject({
+        error: "invalid_grant",
+      });
+    }
+  });
+
   it("mobile flow: refreshing slides the grant, so use — not age — keeps a session alive", async () => {
     const resource = `${ISSUER}/v1`;
     const redirectUri = MOBILE_REDIRECT_URIS[0];
