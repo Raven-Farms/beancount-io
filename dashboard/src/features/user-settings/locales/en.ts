@@ -387,12 +387,6 @@ const enUserSettings: Record<string, TranslationEntry> = {
     message: "Subscription upgraded successfully",
     description: "Success message after upgrading subscription",
   },
-  "userSettings.paymentRequiresAuth": {
-    message:
-      "Your payment requires additional authentication. Please check your email or card issuer.",
-    description:
-      "Message when 3DS authentication is needed for subscription upgrade",
-  },
   "userSettings.system": {
     message: "System",
     description: "System theme option",
@@ -668,6 +662,112 @@ const enUserSettings: Record<string, TranslationEntry> = {
     message: "View billing",
     description:
       "Button that closes the checkout confirmation and shows billing settings",
+  },
+  "userSettings.planChangeTitle": {
+    message: "Change to {plan}",
+    description:
+      "Title of the plan-change sheet; {plan} is a plan and cycle such as 'Premium \u00b7 Yearly'",
+  },
+  "userSettings.planChangePreviewing": {
+    message: "Working out what this change costs…",
+    description: "Shown while the server prices a plan change",
+  },
+  "userSettings.planChangePreviewFailed": {
+    message: "We couldn't price this change. Try again.",
+    description: "Shown when the plan-change price could not be loaded",
+  },
+  "userSettings.planChangeStartsToday": {
+    message: "Starts today.",
+    description: "The plan change takes effect immediately",
+  },
+  "userSettings.planChangeDueToday": {
+    message: "Due today",
+    description: "Label for the amount charged today",
+  },
+  "userSettings.planChangeCredit": {
+    message: "Includes a {credit} credit for unused time on your current plan.",
+    description: "Credit for unused time; {credit} is a formatted price",
+  },
+  "userSettings.planChangeNext": {
+    message: "Then {amount}, next on {date}.",
+    description:
+      "Next charge; {amount} is a price with its interval and {date} a formatted date",
+  },
+  "userSettings.planChangeChargedTo": {
+    message: "Charged to {card}",
+    description:
+      "Card the change is charged to; {card} is a card brand and its last four digits",
+  },
+  "userSettings.planChangeWhatYouGet": {
+    message: "What you get",
+    description: "Heading above what the new plan adds",
+  },
+  "userSettings.planChangePayAndSwitch": {
+    message: "Pay {amount} and switch",
+    description:
+      "Confirm button; {amount} is the formatted amount charged today",
+  },
+  "userSettings.planChangeContinueToCheckout": {
+    message: "Continue to checkout",
+    description: "Confirm button that opens Stripe Checkout",
+  },
+  "userSettings.planChangeNotNow": {
+    message: "Not now",
+    description:
+      "Button that closes the plan-change sheet without changing anything",
+  },
+  "userSettings.planChangeCreditNote": {
+    message: "Unused time is always credited — you never pay twice.",
+    description: "Reassurance under the confirm button",
+  },
+  "userSettings.planChangeRefusalCurrent": {
+    message: "You're already on this plan.",
+    description: "The chosen plan is the one the customer already has",
+  },
+  "userSettings.planChangeRefusalSameTier": {
+    message:
+      "You keep this plan at an older, lower price; switching would only raise it.",
+    description:
+      "The customer keeps an older, cheaper price for the same plan and cycle",
+  },
+  "userSettings.planChangeRefusalMultiple": {
+    message:
+      "Your account has more than one active subscription. Contact support to change plans.",
+    description: "The account has duplicate subscriptions and needs support",
+  },
+  "userSettings.planChangeRequiresAction": {
+    message:
+      "Your bank needs to approve this payment. Nothing changes until it does; after approving, refresh this page.",
+    description: "The bank must approve the payment before the change applies",
+  },
+  "userSettings.planChangeApprovePayment": {
+    message: "Approve payment",
+    description: "Button that opens Stripe's page to approve the payment",
+  },
+  "userSettings.planChangeFailed": {
+    message: "Your bank didn't approve the payment. Nothing changed.",
+    description: "The payment was declined and the plan did not change",
+  },
+  "userSettings.planChangeUseAnotherCard": {
+    message: "Use another card",
+    description: "Button that opens billing settings to change the card",
+  },
+  "userSettings.featureAutomaticBackups": {
+    message: "Automatic backups",
+    description: "Plan feature from the pricing table",
+  },
+  "userSettings.featureAutomationIntegrations": {
+    message: "Advanced automation & integrations",
+    description: "Plan feature from the pricing table",
+  },
+  "userSettings.featureOidcSso": {
+    message: "OIDC single sign-on (SSO)",
+    description:
+      "Plan feature from the pricing table; OIDC and SSO stay as written",
+  },
+  "userSettings.featureMultiEntity": {
+    message: "Multi-entity consolidation",
+    description: "Plan feature from the pricing table",
   },
 };
 

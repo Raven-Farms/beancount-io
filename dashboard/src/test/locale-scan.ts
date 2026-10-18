@@ -146,6 +146,9 @@ const ALLOWED_LATIN = [
   "JSON",
   "URL",
   "SSH",
+  // Protocol acronyms kept in Latin script, like SSH and HTTP.
+  "OIDC",
+  "SSO",
   "HTTP",
   "HTTPS",
   "API",

@@ -17,3 +17,16 @@ export function useMoneyFormat(): (cents: number, currency?: string) => string {
     [language],
   );
 }
+
+/** Formats a billing date in the app language, e.g. "Oct 17, 2027". */
+export function useBillingDateFormat(): (value: string | Date) => string {
+  const { i18n } = useTranslations();
+  const language = i18n.language;
+  return useCallback(
+    (value: string | Date) =>
+      new Intl.DateTimeFormat(language, { dateStyle: "medium" }).format(
+        new Date(value),
+      ),
+    [language],
+  );
+}

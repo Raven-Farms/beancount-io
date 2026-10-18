@@ -410,12 +410,6 @@ const skUserSettings: Record<string, TranslationEntry> = {
     message: "Predplatné bolo úspešne aktualizované",
     description: "Success message after upgrading subscription",
   },
-  "userSettings.paymentRequiresAuth": {
-    message:
-      "Vaša platba vyžaduje dodatočné overenie. Skontrolujte svoj e-mail alebo kontaktujte vydavateľa karty.",
-    description:
-      "Message when 3DS authentication is needed for subscription upgrade",
-  },
   "userSettings.system": {
     message: "Systémová",
     description: "System theme option",
@@ -691,6 +685,112 @@ const skUserSettings: Record<string, TranslationEntry> = {
     message: "Zobraziť fakturáciu",
     description:
       "Button that closes the checkout confirmation and shows billing settings",
+  },
+  "userSettings.planChangeTitle": {
+    message: "Zmeniť na {plan}",
+    description:
+      "Title of the plan-change sheet; {plan} is a plan and cycle such as 'Premium \u00b7 Yearly'",
+  },
+  "userSettings.planChangePreviewing": {
+    message: "Počítame, koľko stojí táto zmena…",
+    description: "Shown while the server prices a plan change",
+  },
+  "userSettings.planChangePreviewFailed": {
+    message: "Cenu tejto zmeny sa nepodarilo vypočítať. Skúste to znova.",
+    description: "Shown when the plan-change price could not be loaded",
+  },
+  "userSettings.planChangeStartsToday": {
+    message: "Platí od dnes.",
+    description: "The plan change takes effect immediately",
+  },
+  "userSettings.planChangeDueToday": {
+    message: "Na úhradu dnes",
+    description: "Label for the amount charged today",
+  },
+  "userSettings.planChangeCredit": {
+    message: "Zahŕňa kredit {credit} za nevyužitý čas súčasného plánu.",
+    description: "Credit for unused time; {credit} is a formatted price",
+  },
+  "userSettings.planChangeNext": {
+    message: "Potom {amount}, ďalšia platba {date}.",
+    description:
+      "Next charge; {amount} is a price with its interval and {date} a formatted date",
+  },
+  "userSettings.planChangeChargedTo": {
+    message: "Strhne sa z {card}",
+    description:
+      "Card the change is charged to; {card} is a card brand and its last four digits",
+  },
+  "userSettings.planChangeWhatYouGet": {
+    message: "Čo získate",
+    description: "Heading above what the new plan adds",
+  },
+  "userSettings.planChangePayAndSwitch": {
+    message: "Zaplatiť {amount} a zmeniť",
+    description:
+      "Confirm button; {amount} is the formatted amount charged today",
+  },
+  "userSettings.planChangeContinueToCheckout": {
+    message: "Pokračovať na platbu",
+    description: "Confirm button that opens Stripe Checkout",
+  },
+  "userSettings.planChangeNotNow": {
+    message: "Teraz nie",
+    description:
+      "Button that closes the plan-change sheet without changing anything",
+  },
+  "userSettings.planChangeCreditNote": {
+    message: "Nevyužitý čas sa vždy započíta — nikdy neplatíte dvakrát.",
+    description: "Reassurance under the confirm button",
+  },
+  "userSettings.planChangeRefusalCurrent": {
+    message: "Tento plán už máte.",
+    description: "The chosen plan is the one the customer already has",
+  },
+  "userSettings.planChangeRefusalSameTier": {
+    message:
+      "Tento plán si ponechávate za staršiu, nižšiu cenu; zmena by ju len zvýšila.",
+    description:
+      "The customer keeps an older, cheaper price for the same plan and cycle",
+  },
+  "userSettings.planChangeRefusalMultiple": {
+    message:
+      "Váš účet má viac ako jedno aktívne predplatné. Ak chcete zmeniť plán, kontaktujte podporu.",
+    description: "The account has duplicate subscriptions and needs support",
+  },
+  "userSettings.planChangeRequiresAction": {
+    message:
+      "Vaša banka musí túto platbu schváliť. Dovtedy sa nič nezmení; po schválení obnovte túto stránku.",
+    description: "The bank must approve the payment before the change applies",
+  },
+  "userSettings.planChangeApprovePayment": {
+    message: "Schváliť platbu",
+    description: "Button that opens Stripe's page to approve the payment",
+  },
+  "userSettings.planChangeFailed": {
+    message: "Vaša banka platbu neschválila. Nič sa nezmenilo.",
+    description: "The payment was declined and the plan did not change",
+  },
+  "userSettings.planChangeUseAnotherCard": {
+    message: "Použiť inú kartu",
+    description: "Button that opens billing settings to change the card",
+  },
+  "userSettings.featureAutomaticBackups": {
+    message: "Automatické zálohy",
+    description: "Plan feature from the pricing table",
+  },
+  "userSettings.featureAutomationIntegrations": {
+    message: "Pokročilá automatizácia a integrácie",
+    description: "Plan feature from the pricing table",
+  },
+  "userSettings.featureOidcSso": {
+    message: "Jednotné prihlásenie (SSO) cez OIDC",
+    description:
+      "Plan feature from the pricing table; OIDC and SSO stay as written",
+  },
+  "userSettings.featureMultiEntity": {
+    message: "Konsolidácia viacerých subjektov",
+    description: "Plan feature from the pricing table",
   },
 };
 

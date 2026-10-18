@@ -411,12 +411,6 @@ const frUserSettings: Record<string, TranslationEntry> = {
     message: "Abonnement mis à jour avec succès",
     description: "Success message after upgrading subscription",
   },
-  "userSettings.paymentRequiresAuth": {
-    message:
-      "Votre paiement nécessite une authentification supplémentaire. Veuillez vérifier votre e-mail ou contacter l'émetteur de votre carte.",
-    description:
-      "Message when 3DS authentication is needed for subscription upgrade",
-  },
   "userSettings.system": {
     message: "Système",
     description: "System theme option",
@@ -685,6 +679,114 @@ const frUserSettings: Record<string, TranslationEntry> = {
     message: "Voir la facturation",
     description:
       "Button that closes the checkout confirmation and shows billing settings",
+  },
+  "userSettings.planChangeTitle": {
+    message: "Passer à {plan}",
+    description:
+      "Title of the plan-change sheet; {plan} is a plan and cycle such as 'Premium \u00b7 Yearly'",
+  },
+  "userSettings.planChangePreviewing": {
+    message: "Calcul du coût de ce changement…",
+    description: "Shown while the server prices a plan change",
+  },
+  "userSettings.planChangePreviewFailed": {
+    message: "Impossible de calculer le prix de ce changement. Réessayez.",
+    description: "Shown when the plan-change price could not be loaded",
+  },
+  "userSettings.planChangeStartsToday": {
+    message: "Prend effet aujourd'hui.",
+    description: "The plan change takes effect immediately",
+  },
+  "userSettings.planChangeDueToday": {
+    message: "À payer aujourd'hui",
+    description: "Label for the amount charged today",
+  },
+  "userSettings.planChangeCredit": {
+    message:
+      "Inclut un crédit de {credit} pour le temps non utilisé de votre forfait actuel.",
+    description: "Credit for unused time; {credit} is a formatted price",
+  },
+  "userSettings.planChangeNext": {
+    message: "Puis {amount}, prochain prélèvement le {date}.",
+    description:
+      "Next charge; {amount} is a price with its interval and {date} a formatted date",
+  },
+  "userSettings.planChangeChargedTo": {
+    message: "Prélevé sur {card}",
+    description:
+      "Card the change is charged to; {card} is a card brand and its last four digits",
+  },
+  "userSettings.planChangeWhatYouGet": {
+    message: "Ce que vous obtenez",
+    description: "Heading above what the new plan adds",
+  },
+  "userSettings.planChangePayAndSwitch": {
+    message: "Payer {amount} et changer",
+    description:
+      "Confirm button; {amount} is the formatted amount charged today",
+  },
+  "userSettings.planChangeContinueToCheckout": {
+    message: "Continuer vers le paiement",
+    description: "Confirm button that opens Stripe Checkout",
+  },
+  "userSettings.planChangeNotNow": {
+    message: "Pas maintenant",
+    description:
+      "Button that closes the plan-change sheet without changing anything",
+  },
+  "userSettings.planChangeCreditNote": {
+    message:
+      "Le temps non utilisé est toujours crédité : vous ne payez jamais deux fois.",
+    description: "Reassurance under the confirm button",
+  },
+  "userSettings.planChangeRefusalCurrent": {
+    message: "Vous avez déjà ce forfait.",
+    description: "The chosen plan is the one the customer already has",
+  },
+  "userSettings.planChangeRefusalSameTier": {
+    message:
+      "Vous gardez ce forfait à un ancien tarif plus bas ; changer ne ferait que l'augmenter.",
+    description:
+      "The customer keeps an older, cheaper price for the same plan and cycle",
+  },
+  "userSettings.planChangeRefusalMultiple": {
+    message:
+      "Votre compte a plus d'un abonnement actif. Contactez l'assistance pour changer de forfait.",
+    description: "The account has duplicate subscriptions and needs support",
+  },
+  "userSettings.planChangeRequiresAction": {
+    message:
+      "Votre banque doit approuver ce paiement. Rien ne change d'ici là ; après l'approbation, actualisez cette page.",
+    description: "The bank must approve the payment before the change applies",
+  },
+  "userSettings.planChangeApprovePayment": {
+    message: "Approuver le paiement",
+    description: "Button that opens Stripe's page to approve the payment",
+  },
+  "userSettings.planChangeFailed": {
+    message: "Votre banque n'a pas approuvé le paiement. Rien n'a changé.",
+    description: "The payment was declined and the plan did not change",
+  },
+  "userSettings.planChangeUseAnotherCard": {
+    message: "Utiliser une autre carte",
+    description: "Button that opens billing settings to change the card",
+  },
+  "userSettings.featureAutomaticBackups": {
+    message: "Sauvegardes automatiques",
+    description: "Plan feature from the pricing table",
+  },
+  "userSettings.featureAutomationIntegrations": {
+    message: "Automatisation et intégrations avancées",
+    description: "Plan feature from the pricing table",
+  },
+  "userSettings.featureOidcSso": {
+    message: "Authentification unique (SSO) via OIDC",
+    description:
+      "Plan feature from the pricing table; OIDC and SSO stay as written",
+  },
+  "userSettings.featureMultiEntity": {
+    message: "Consolidation multi-entités",
+    description: "Plan feature from the pricing table",
   },
 };
 

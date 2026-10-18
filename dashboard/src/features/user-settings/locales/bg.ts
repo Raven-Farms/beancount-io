@@ -410,12 +410,6 @@ const bgUserSettings: Record<string, TranslationEntry> = {
     message: "Абонаментът е обновен успешно",
     description: "Success message after upgrading subscription",
   },
-  "userSettings.paymentRequiresAuth": {
-    message:
-      "Плащането ви изисква допълнително удостоверяване. Моля, проверете имейла си или издателя на картата.",
-    description:
-      "Message when 3DS authentication is needed for subscription upgrade",
-  },
   "userSettings.system": {
     message: "Системна",
     description: "System theme option",
@@ -674,6 +668,114 @@ const bgUserSettings: Record<string, TranslationEntry> = {
     message: "Към плащанията",
     description:
       "Button that closes the checkout confirmation and shows billing settings",
+  },
+  "userSettings.planChangeTitle": {
+    message: "Промяна към {plan}",
+    description:
+      "Title of the plan-change sheet; {plan} is a plan and cycle such as 'Premium \u00b7 Yearly'",
+  },
+  "userSettings.planChangePreviewing": {
+    message: "Изчисляваме цената на тази промяна…",
+    description: "Shown while the server prices a plan change",
+  },
+  "userSettings.planChangePreviewFailed": {
+    message: "Не успяхме да изчислим цената на промяната. Опитайте отново.",
+    description: "Shown when the plan-change price could not be loaded",
+  },
+  "userSettings.planChangeStartsToday": {
+    message: "Започва днес.",
+    description: "The plan change takes effect immediately",
+  },
+  "userSettings.planChangeDueToday": {
+    message: "Дължимо днес",
+    description: "Label for the amount charged today",
+  },
+  "userSettings.planChangeCredit": {
+    message:
+      "Включва кредит от {credit} за неизползваното време от текущия план.",
+    description: "Credit for unused time; {credit} is a formatted price",
+  },
+  "userSettings.planChangeNext": {
+    message: "След това {amount}, следващо плащане на {date}.",
+    description:
+      "Next charge; {amount} is a price with its interval and {date} a formatted date",
+  },
+  "userSettings.planChangeChargedTo": {
+    message: "Плаща се с {card}",
+    description:
+      "Card the change is charged to; {card} is a card brand and its last four digits",
+  },
+  "userSettings.planChangeWhatYouGet": {
+    message: "Какво получавате",
+    description: "Heading above what the new plan adds",
+  },
+  "userSettings.planChangePayAndSwitch": {
+    message: "Платете {amount} и сменете",
+    description:
+      "Confirm button; {amount} is the formatted amount charged today",
+  },
+  "userSettings.planChangeContinueToCheckout": {
+    message: "Към плащането",
+    description: "Confirm button that opens Stripe Checkout",
+  },
+  "userSettings.planChangeNotNow": {
+    message: "Не сега",
+    description:
+      "Button that closes the plan-change sheet without changing anything",
+  },
+  "userSettings.planChangeCreditNote": {
+    message:
+      "Неизползваното време винаги се приспада — никога не плащате два пъти.",
+    description: "Reassurance under the confirm button",
+  },
+  "userSettings.planChangeRefusalCurrent": {
+    message: "Вече използвате този план.",
+    description: "The chosen plan is the one the customer already has",
+  },
+  "userSettings.planChangeRefusalSameTier": {
+    message:
+      "Запазвате този план на по-стара и по-ниска цена; смяната само би я повишила.",
+    description:
+      "The customer keeps an older, cheaper price for the same plan and cycle",
+  },
+  "userSettings.planChangeRefusalMultiple": {
+    message:
+      "Акаунтът ви има повече от един активен абонамент. Свържете се с поддръжката, за да смените плана.",
+    description: "The account has duplicate subscriptions and needs support",
+  },
+  "userSettings.planChangeRequiresAction": {
+    message:
+      "Банката ви трябва да одобри това плащане. Нищо не се променя преди това; след одобрението обновете страницата.",
+    description: "The bank must approve the payment before the change applies",
+  },
+  "userSettings.planChangeApprovePayment": {
+    message: "Одобрете плащането",
+    description: "Button that opens Stripe's page to approve the payment",
+  },
+  "userSettings.planChangeFailed": {
+    message: "Банката ви не одобри плащането. Нищо не е променено.",
+    description: "The payment was declined and the plan did not change",
+  },
+  "userSettings.planChangeUseAnotherCard": {
+    message: "Използвайте друга карта",
+    description: "Button that opens billing settings to change the card",
+  },
+  "userSettings.featureAutomaticBackups": {
+    message: "Автоматични резервни копия",
+    description: "Plan feature from the pricing table",
+  },
+  "userSettings.featureAutomationIntegrations": {
+    message: "Разширена автоматизация и интеграции",
+    description: "Plan feature from the pricing table",
+  },
+  "userSettings.featureOidcSso": {
+    message: "Единен вход (SSO) чрез OIDC",
+    description:
+      "Plan feature from the pricing table; OIDC and SSO stay as written",
+  },
+  "userSettings.featureMultiEntity": {
+    message: "Консолидация на няколко юридически лица",
+    description: "Plan feature from the pricing table",
   },
 };
 

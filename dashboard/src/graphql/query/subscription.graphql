@@ -46,3 +46,30 @@ query GetAllTierQuotas {
     maxDirectives
   }
 }
+
+query PreviewPlanChange($clientId: String!, $priceId: String!) {
+  previewPlanChange(clientId: $clientId, priceId: $priceId) {
+    kind
+    refusal
+    effect
+    currentPriceId
+    targetPriceId
+    currency
+    amountDueToday
+    creditApplied
+    nextAmount
+    nextChargeAt
+    effectiveAt
+    prorationDate
+    alternativePriceId
+    limitChanges {
+      limit
+      from
+      to
+    }
+    paymentMethod {
+      brand
+      last4
+    }
+  }
+}

@@ -14,7 +14,6 @@ import { useErrorMessage } from "@/common/lib/errors/error-message";
 import { useUserLimits } from "@/common/hooks/use-user-limits";
 import { useAiCfoUsage } from "@/common/hooks/use-ai-cfo-usage";
 import { useCreateSubscriptionSession } from "@/features/user-settings/hooks/use-create-subscription-session";
-import { useUpgradeSubscription } from "@/features/user-settings/hooks/use-upgrade-subscription";
 import { useSubscriptionStatus } from "@/features/user-settings/hooks/use-subscription-status";
 import { useSubscriptionPortal } from "@/features/user-settings/hooks/use-subscription-portal";
 import { useSubscriptionCancel } from "@/features/user-settings/hooks/use-subscription-cancel";
@@ -47,11 +46,9 @@ import {
 import { UsageOverview } from "./subscription-usage-overview";
 import { PlanPicker } from "./subscription-plan-picker";
 import { PayYearlyOffer } from "./subscription-pay-yearly";
+import { PlanChangeSheet, type PlanChangeTarget } from "./plan-change-sheet";
 import { track } from "@/common/analytics";
-import type {
-  PlanChoice,
-  PlanInterval,
-} from "@/common/lib/subscription/plan-change";
+import type { PlanInterval } from "@/common/lib/subscription/plan-change";
 import type { UserTier } from "@/common/hooks/use-user-limits";
 import { BillingSection } from "./subscription-billing-section";
 import {
@@ -159,8 +156,7 @@ export function SubscriptionSection({
 
   const { createSubscriptionSession, loading: checkoutLoading } =
     useCreateSubscriptionSession();
-  const { upgradeSubscription, loading: upgradeLoading } =
-    useUpgradeSubscription();
+  const [sheetTarget, setSheetTarget] = useState<PlanChangeTarget | null>(null);
 
   const stripeConfig = stripePlanConfig;
 
@@ -199,33 +195,6 @@ export function SubscriptionSection({
     }
   };
 
-  const handleUpgradeExisting = async (
-    tierKey: SubscriptionTier,
-    cycle: BillingCycle,
-  ) => {
-    try {
-      const response = await upgradeSubscription({
-        variables: {
-          clientId: stripeConfig.clientId,
-          priceId: cyclePrice(tierKey, cycle).priceId,
-        },
-      });
-      const result = response.data?.upgradeSubscription;
-      if (result?.success) {
-        toast.success(result.message || t("userSettings.subscriptionUpgraded"));
-        await Promise.all([refetchSubscription(), refetchUserLimits()]);
-      } else if (result?.clientSecret) {
-        toast.info(t("userSettings.paymentRequiresAuth"));
-      } else {
-        toast.error(
-          result?.message || t("userSettings.failedToCreateCheckoutSession"),
-        );
-      }
-    } catch (error) {
-      toast.error(formatError(error));
-    }
-  };
-
   const currentSubscription = hasActiveStripeSubscription
     ? subscriptions?.[0]
     : undefined;
@@ -238,19 +207,16 @@ export function SubscriptionSection({
         : null;
   const currentTierKey = TIER_KEYS[tier] ?? null;
 
-  const handleChoose = (
-    tierKey: SubscriptionTier,
-    cycle: BillingCycle,
-    choice: PlanChoice,
-  ) => {
-    if (!hasActiveStripeSubscription || choice === "NEW") {
-      track("checkout_started", {
-        surface: "settings_billing",
-        target_tier: USER_TIERS[tierKey],
-      });
-      return handleUpgradeCheckout(tierKey, cycle);
-    }
-    return handleUpgradeExisting(tierKey, cycle);
+  // Every immediate choice confirms in the sheet, which previews the charge.
+  const handleChoose = (tierKey: SubscriptionTier, cycle: BillingCycle) =>
+    setSheetTarget({ tier: tierKey, cycle });
+
+  const startCheckout = (target: PlanChangeTarget) => {
+    track("checkout_started", {
+      surface: "settings_billing",
+      target_tier: USER_TIERS[target.tier],
+    });
+    return handleUpgradeCheckout(target.tier, target.cycle);
   };
 
   const isLoading =
@@ -357,8 +323,10 @@ export function SubscriptionSection({
               <PayYearlyOffer
                 tier={currentTierKey}
                 t={t}
-                busy={checkoutLoading || upgradeLoading}
-                onSwitch={() => handleUpgradeExisting(currentTierKey, "yearly")}
+                busy={checkoutLoading}
+                onSwitch={() =>
+                  setSheetTarget({ tier: currentTierKey, cycle: "yearly" })
+                }
               />
             )}
 
@@ -392,7 +360,7 @@ export function SubscriptionSection({
               currentInterval={currentInterval}
               quotaByUserTier={quotaByUserTier}
               t={t}
-              busy={checkoutLoading || upgradeLoading}
+              busy={checkoutLoading}
               onChoose={handleChoose}
             />
 
@@ -414,6 +382,22 @@ export function SubscriptionSection({
           </>
         )}
       </CardContent>
+
+      <PlanChangeSheet
+        key={sheetTarget ? `${sheetTarget.tier}-${sheetTarget.cycle}` : "none"}
+        target={sheetTarget}
+        currentTier={tier}
+        currentPlanLabel={planLabel}
+        quotaByUserTier={quotaByUserTier}
+        t={t}
+        onClose={() => setSheetTarget(null)}
+        onCheckout={(target) => void startCheckout(target)}
+        onManageBilling={() => void handleManageBilling(stripeConfig.clientId)}
+        onChanged={() => {
+          void refetchSubscription();
+          void refetchUserLimits();
+        }}
+      />
 
       <CancelSubscriptionDialog
         open={showCancelDialog}

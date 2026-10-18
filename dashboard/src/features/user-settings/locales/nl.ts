@@ -410,12 +410,6 @@ const nlUserSettings: Record<string, TranslationEntry> = {
     message: "Abonnement succesvol bijgewerkt",
     description: "Success message after upgrading subscription",
   },
-  "userSettings.paymentRequiresAuth": {
-    message:
-      "Uw betaling vereist extra verificatie. Controleer uw e-mail of neem contact op met uw kaartuitgever.",
-    description:
-      "Message when 3DS authentication is needed for subscription upgrade",
-  },
   "userSettings.system": {
     message: "Systeem",
     description: "System theme option",
@@ -672,6 +666,116 @@ const nlUserSettings: Record<string, TranslationEntry> = {
     message: "Facturering bekijken",
     description:
       "Button that closes the checkout confirmation and shows billing settings",
+  },
+  "userSettings.planChangeTitle": {
+    message: "Wijzigen naar {plan}",
+    description:
+      "Title of the plan-change sheet; {plan} is a plan and cycle such as 'Premium \u00b7 Yearly'",
+  },
+  "userSettings.planChangePreviewing": {
+    message: "We berekenen wat deze wijziging kost…",
+    description: "Shown while the server prices a plan change",
+  },
+  "userSettings.planChangePreviewFailed": {
+    message:
+      "We konden de prijs van deze wijziging niet berekenen. Probeer het opnieuw.",
+    description: "Shown when the plan-change price could not be loaded",
+  },
+  "userSettings.planChangeStartsToday": {
+    message: "Gaat vandaag in.",
+    description: "The plan change takes effect immediately",
+  },
+  "userSettings.planChangeDueToday": {
+    message: "Vandaag te betalen",
+    description: "Label for the amount charged today",
+  },
+  "userSettings.planChangeCredit": {
+    message:
+      "Inclusief een tegoed van {credit} voor de ongebruikte tijd van je huidige abonnement.",
+    description: "Credit for unused time; {credit} is a formatted price",
+  },
+  "userSettings.planChangeNext": {
+    message: "Daarna {amount}, volgende betaling op {date}.",
+    description:
+      "Next charge; {amount} is a price with its interval and {date} a formatted date",
+  },
+  "userSettings.planChangeChargedTo": {
+    message: "Afgeschreven van {card}",
+    description:
+      "Card the change is charged to; {card} is a card brand and its last four digits",
+  },
+  "userSettings.planChangeWhatYouGet": {
+    message: "Wat je krijgt",
+    description: "Heading above what the new plan adds",
+  },
+  "userSettings.planChangePayAndSwitch": {
+    message: "Betaal {amount} en wijzig",
+    description:
+      "Confirm button; {amount} is the formatted amount charged today",
+  },
+  "userSettings.planChangeContinueToCheckout": {
+    message: "Doorgaan naar betalen",
+    description: "Confirm button that opens Stripe Checkout",
+  },
+  "userSettings.planChangeNotNow": {
+    message: "Niet nu",
+    description:
+      "Button that closes the plan-change sheet without changing anything",
+  },
+  "userSettings.planChangeCreditNote": {
+    message:
+      "Ongebruikte tijd wordt altijd verrekend — je betaalt nooit dubbel.",
+    description: "Reassurance under the confirm button",
+  },
+  "userSettings.planChangeRefusalCurrent": {
+    message: "Je hebt dit abonnement al.",
+    description: "The chosen plan is the one the customer already has",
+  },
+  "userSettings.planChangeRefusalSameTier": {
+    message:
+      "Je houdt dit abonnement tegen een oudere, lagere prijs; wijzigen zou die alleen verhogen.",
+    description:
+      "The customer keeps an older, cheaper price for the same plan and cycle",
+  },
+  "userSettings.planChangeRefusalMultiple": {
+    message:
+      "Je account heeft meer dan één actief abonnement. Neem contact op met support om van abonnement te wisselen.",
+    description: "The account has duplicate subscriptions and needs support",
+  },
+  "userSettings.planChangeRequiresAction": {
+    message:
+      "Je bank moet deze betaling goedkeuren. Tot dan verandert er niets; vernieuw deze pagina na de goedkeuring.",
+    description: "The bank must approve the payment before the change applies",
+  },
+  "userSettings.planChangeApprovePayment": {
+    message: "Betaling goedkeuren",
+    description: "Button that opens Stripe's page to approve the payment",
+  },
+  "userSettings.planChangeFailed": {
+    message:
+      "Je bank heeft de betaling niet goedgekeurd. Er is niets veranderd.",
+    description: "The payment was declined and the plan did not change",
+  },
+  "userSettings.planChangeUseAnotherCard": {
+    message: "Andere kaart gebruiken",
+    description: "Button that opens billing settings to change the card",
+  },
+  "userSettings.featureAutomaticBackups": {
+    message: "Automatische back-ups",
+    description: "Plan feature from the pricing table",
+  },
+  "userSettings.featureAutomationIntegrations": {
+    message: "Geavanceerde automatisering en integraties",
+    description: "Plan feature from the pricing table",
+  },
+  "userSettings.featureOidcSso": {
+    message: "Single sign-on (SSO) via OIDC",
+    description:
+      "Plan feature from the pricing table; OIDC and SSO stay as written",
+  },
+  "userSettings.featureMultiEntity": {
+    message: "Consolidatie van meerdere entiteiten",
+    description: "Plan feature from the pricing table",
   },
 };
 

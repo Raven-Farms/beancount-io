@@ -13,7 +13,9 @@ const {
   mockResumeSubscription,
   mockCreateStripePortalSession,
   mockCreateSubscriptionSession,
-  mockUpgradeSubscription,
+  mockRunPreview,
+  mockChangePlan,
+  mockPreviewState,
   mockToastSuccess,
   mockToastError,
   mockToastInfo,
@@ -26,7 +28,15 @@ const {
   mockResumeSubscription: vi.fn(),
   mockCreateStripePortalSession: vi.fn(),
   mockCreateSubscriptionSession: vi.fn(),
-  mockUpgradeSubscription: vi.fn(),
+  mockRunPreview: vi.fn(),
+  mockChangePlan: vi.fn(),
+  mockPreviewState: {
+    value: { data: undefined, loading: false, error: undefined } as {
+      data: unknown;
+      loading: boolean;
+      error: unknown;
+    },
+  },
   mockToastSuccess: vi.fn(),
   mockToastError: vi.fn(),
   mockToastInfo: vi.fn(),
@@ -36,6 +46,10 @@ const {
 }));
 
 vi.mock("@apollo/client/react", () => ({
+  useLazyQuery: () => [
+    vi.fn(),
+    { data: undefined, loading: false, error: undefined },
+  ],
   useQuery: () => mockUseQuery(),
   useMutation: (document: {
     definitions?: Array<{ name?: { value?: string } }>;
@@ -69,11 +83,9 @@ vi.mock(
     }),
   }),
 );
-vi.mock("@/features/user-settings/hooks/use-upgrade-subscription", () => ({
-  useUpgradeSubscription: () => ({
-    upgradeSubscription: mockUpgradeSubscription,
-    loading: false,
-  }),
+vi.mock("@/features/user-settings/hooks/use-plan-change", () => ({
+  usePreviewPlanChange: () => [mockRunPreview, mockPreviewState.value],
+  useChangePlan: () => [mockChangePlan, { loading: false }],
 }));
 vi.mock("sonner", () => ({
   toast: {
@@ -341,11 +353,39 @@ describe("Manage Billing - Success Flow", () => {
   });
 });
 
-describe("Upgrade Refetch Flow", () => {
-  it("should refetch subscription and user limits after successful upgrade", async () => {
-    const user = userEvent.setup();
-    const mockRefetchSubscription = vi.fn();
-    const mockRefetchUserLimits = vi.fn().mockResolvedValue({});
+const GROWTH_MONTHLY = "price_1SyPdaEqsEqs2tLViLPUDoVi";
+const UPGRADE_PREVIEW = {
+  previewPlanChange: {
+    __typename: "PlanChangePreview",
+    kind: "UPGRADE",
+    refusal: null,
+    effect: "IMMEDIATE",
+    currentPriceId: "price_1RrSOGEqsEqs2tLVFnyB34qG",
+    targetPriceId: GROWTH_MONTHLY,
+    currency: "usd",
+    amountDueToday: 4250,
+    creditApplied: 750,
+    nextAmount: 9999,
+    nextChargeAt: "2026-11-03T12:00:00Z",
+    effectiveAt: "2026-10-17T12:00:00Z",
+    prorationDate: 1792238400,
+    alternativePriceId: null,
+    limitChanges: [],
+    paymentMethod: {
+      __typename: "PaymentMethodSummary",
+      brand: "visa",
+      last4: "4242",
+    },
+  },
+};
+
+describe("Plan change through the sheet", () => {
+  let refetchSubscription: ReturnType<typeof vi.fn>;
+  let refetchUserLimits: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    refetchSubscription = vi.fn();
+    refetchUserLimits = vi.fn().mockResolvedValue({});
     setUserLimits("PREMIUM", {
       aiCfoTokensUsed: 50,
       aiCfoTokensMax: 100,
@@ -353,259 +393,118 @@ describe("Upgrade Refetch Flow", () => {
       ledgersMax: 5,
       collaboratorsPerLedgerMax: 5,
     });
-    // Override to include mockRefetchUserLimits
     mockUseUserLimits.mockReturnValue({
-      tier: "PREMIUM",
-      limits: {
-        aiCfoTokensUsed: 50,
-        aiCfoTokensMax: 100,
-        ledgersUsed: 2,
-        ledgersMax: 5,
-        collaboratorsPerLedgerMax: 5,
-      },
-      isLoading: false,
-      error: null,
-      refetch: mockRefetchUserLimits,
-      isAtLedgerLimit: false,
-      isAtAiCfoLimit: false,
-      isPremium: true,
-      isFree: false,
-      isGrowth: false,
-      isOrganization: false,
-      isEnterprise: false,
-      isPaidTier: true,
+      ...mockUseUserLimits(),
+      refetch: refetchUserLimits,
     });
     mockUseQuery.mockReturnValue({
       data: mockActiveSubscriptionData,
       loading: false,
       error: null,
-      refetch: mockRefetchSubscription,
+      refetch: refetchSubscription,
     });
+    mockPreviewState.value = {
+      data: UPGRADE_PREVIEW,
+      loading: false,
+      error: undefined,
+    };
+  });
 
-    mockUpgradeSubscription.mockResolvedValue({
-      data: {
-        upgradeSubscription: {
-          success: true,
-          message: "Subscription upgraded successfully.",
-          newTier: "GROWTH",
-        },
-      },
-    });
-
+  async function confirmGrowthMonthly() {
+    const user = userEvent.setup();
     render(<SubscriptionSection />);
-
     // The plan row opens on yearly; a same-cycle upgrade is on monthly.
     await user.click(
       screen.getByRole("button", { name: "userSettings.monthly" }),
     );
-    const upgradeButtons = screen.getAllByText("aiAgent.upgradeCta");
-    await user.click(upgradeButtons[0]);
+    await user.click(screen.getAllByText("aiAgent.upgradeCta")[0]);
+    expect(mockRunPreview).toHaveBeenCalledWith({
+      variables: { clientId: "beancount-web-prod", priceId: GROWTH_MONTHLY },
+    });
+    await user.click(
+      screen.getByRole("button", {
+        name: "userSettings.planChangePayAndSwitch",
+      }),
+    );
+    expect(mockChangePlan).toHaveBeenCalledWith({
+      variables: {
+        clientId: "beancount-web-prod",
+        priceId: GROWTH_MONTHLY,
+        prorationDate: 1792238400,
+      },
+    });
+    return user;
+  }
 
-    await waitFor(() => {
-      expect(mockUpgradeSubscription).toHaveBeenCalled();
+  it("charges at the previewed proration time and refreshes plan and limits once it applies", async () => {
+    mockChangePlan.mockResolvedValue({
+      data: { changePlan: { status: "ACTIVE", newTier: "GROWTH" } },
     });
 
+    await confirmGrowthMonthly();
+
     await waitFor(() => {
+      expect(refetchSubscription).toHaveBeenCalled();
+      expect(refetchUserLimits).toHaveBeenCalled();
       expect(mockToastSuccess).toHaveBeenCalledWith(
-        "Subscription upgraded successfully.",
+        "userSettings.subscriptionUpgraded",
       );
     });
-
-    await waitFor(() => {
-      expect(mockRefetchSubscription).toHaveBeenCalled();
-      expect(mockRefetchUserLimits).toHaveBeenCalled();
-    });
   });
 
-  it("should not refetch when upgrade fails", async () => {
-    const user = userEvent.setup();
-    const mockRefetchSubscription = vi.fn();
-    const mockRefetchUserLimits = vi.fn();
-    setUserLimits("PREMIUM", {
-      aiCfoTokensUsed: 50,
-      aiCfoTokensMax: 100,
-      ledgersUsed: 2,
-      ledgersMax: 5,
-      collaboratorsPerLedgerMax: 5,
-    });
-    mockUseUserLimits.mockReturnValue({
-      tier: "PREMIUM",
-      limits: {
-        aiCfoTokensUsed: 50,
-        aiCfoTokensMax: 100,
-        ledgersUsed: 2,
-        ledgersMax: 5,
-        collaboratorsPerLedgerMax: 5,
-      },
-      isLoading: false,
-      error: null,
-      refetch: mockRefetchUserLimits,
-      isAtLedgerLimit: false,
-      isAtAiCfoLimit: false,
-      isPremium: true,
-      isFree: false,
-      isGrowth: false,
-      isOrganization: false,
-      isEnterprise: false,
-      isPaidTier: true,
-    });
-    mockUseQuery.mockReturnValue({
-      data: mockActiveSubscriptionData,
-      loading: false,
-      error: null,
-      refetch: mockRefetchSubscription,
-    });
-
-    mockUpgradeSubscription.mockResolvedValue({
+  it("sends a payment the bank must approve to Stripe's page instead of calling it done", async () => {
+    mockChangePlan.mockResolvedValue({
       data: {
-        upgradeSubscription: {
-          success: false,
-          message: "Payment declined",
-          newTier: null,
+        changePlan: {
+          status: "REQUIRES_ACTION",
+          hostedInvoiceUrl: "https://invoice.stripe.com/i/in_1",
         },
       },
     });
 
-    render(<SubscriptionSection />);
+    await confirmGrowthMonthly();
 
-    // The plan row opens on yearly; a same-cycle upgrade is on monthly.
-    await user.click(
-      screen.getByRole("button", { name: "userSettings.monthly" }),
-    );
-    const upgradeButtons = screen.getAllByText("aiAgent.upgradeCta");
-    await user.click(upgradeButtons[0]);
-
-    await waitFor(() => {
-      expect(mockToastError).toHaveBeenCalledWith("Payment declined");
-    });
-
-    expect(mockRefetchSubscription).not.toHaveBeenCalled();
-    expect(mockRefetchUserLimits).not.toHaveBeenCalled();
+    expect(
+      await screen.findByRole("link", {
+        name: "userSettings.planChangeApprovePayment",
+      }),
+    ).toHaveAttribute("href", "https://invoice.stripe.com/i/in_1");
+    expect(refetchUserLimits).not.toHaveBeenCalled();
+    expect(mockToastSuccess).not.toHaveBeenCalled();
   });
 
-  it("should show info toast and not refetch when 3DS auth is required", async () => {
-    const user = userEvent.setup();
-    const mockRefetchSubscription = vi.fn();
-    const mockRefetchUserLimits = vi.fn();
-
-    setUserLimits("PREMIUM", {
-      aiCfoTokensUsed: 50,
-      aiCfoTokensMax: 100,
-      ledgersUsed: 2,
-      ledgersMax: 5,
-      collaboratorsPerLedgerMax: 5,
+  it("says nothing changed when the bank declines, and offers another card", async () => {
+    mockChangePlan.mockResolvedValue({
+      data: { changePlan: { status: "FAILED" } },
     });
-    mockUseUserLimits.mockReturnValue({
-      tier: "PREMIUM",
-      limits: {
-        aiCfoTokensUsed: 50,
-        aiCfoTokensMax: 100,
-        ledgersUsed: 2,
-        ledgersMax: 5,
-        collaboratorsPerLedgerMax: 5,
-      },
-      isLoading: false,
-      error: null,
-      refetch: mockRefetchUserLimits,
-      isAtLedgerLimit: false,
-      isAtAiCfoLimit: false,
-      isPremium: true,
-      isFree: false,
-      isGrowth: false,
-      isOrganization: false,
-      isEnterprise: false,
-      isPaidTier: true,
-    });
-    mockUseQuery.mockReturnValue({
-      data: mockActiveSubscriptionData,
-      loading: false,
-      error: null,
-      refetch: mockRefetchSubscription,
+    mockCreateStripePortalSession.mockResolvedValue({
+      data: { createStripePortalSession: { success: true, sessionUrl: null } },
     });
 
-    mockUpgradeSubscription.mockResolvedValue({
-      data: {
-        upgradeSubscription: {
-          success: false,
-          message: null,
-          clientSecret: "pi_secret_abc",
-          newTier: null,
-        },
-      },
-    });
+    const user = await confirmGrowthMonthly();
 
-    render(<SubscriptionSection />);
-
-    // The plan row opens on yearly; a same-cycle upgrade is on monthly.
+    expect(
+      await screen.findByText("userSettings.planChangeFailed"),
+    ).toBeInTheDocument();
     await user.click(
-      screen.getByRole("button", { name: "userSettings.monthly" }),
+      screen.getByRole("button", {
+        name: "userSettings.planChangeUseAnotherCard",
+      }),
     );
-    const upgradeButtons = screen.getAllByText("aiAgent.upgradeCta");
-    await user.click(upgradeButtons[0]);
-
-    await waitFor(() => {
-      expect(mockUpgradeSubscription).toHaveBeenCalled();
-    });
-
-    expect(mockRefetchSubscription).not.toHaveBeenCalled();
-    expect(mockRefetchUserLimits).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(mockCreateStripePortalSession).toHaveBeenCalled(),
+    );
+    expect(refetchUserLimits).not.toHaveBeenCalled();
   });
 
-  it("should not refetch when upgrade throws an error", async () => {
-    const user = userEvent.setup();
-    const mockRefetchSubscription = vi.fn();
-    const mockRefetchUserLimits = vi.fn();
-    setUserLimits("PREMIUM", {
-      aiCfoTokensUsed: 50,
-      aiCfoTokensMax: 100,
-      ledgersUsed: 2,
-      ledgersMax: 5,
-      collaboratorsPerLedgerMax: 5,
-    });
-    mockUseUserLimits.mockReturnValue({
-      tier: "PREMIUM",
-      limits: {
-        aiCfoTokensUsed: 50,
-        aiCfoTokensMax: 100,
-        ledgersUsed: 2,
-        ledgersMax: 5,
-        collaboratorsPerLedgerMax: 5,
-      },
-      isLoading: false,
-      error: null,
-      refetch: mockRefetchUserLimits,
-      isAtLedgerLimit: false,
-      isAtAiCfoLimit: false,
-      isPremium: true,
-      isFree: false,
-      isGrowth: false,
-      isOrganization: false,
-      isEnterprise: false,
-      isPaidTier: true,
-    });
-    mockUseQuery.mockReturnValue({
-      data: mockActiveSubscriptionData,
-      loading: false,
-      error: null,
-      refetch: mockRefetchSubscription,
-    });
+  it("shows a network failure and changes nothing", async () => {
+    mockChangePlan.mockRejectedValue(new Error("Network failure"));
 
-    mockUpgradeSubscription.mockRejectedValue(new Error("Network failure"));
+    await confirmGrowthMonthly();
 
-    render(<SubscriptionSection />);
-
-    // The plan row opens on yearly; a same-cycle upgrade is on monthly.
-    await user.click(
-      screen.getByRole("button", { name: "userSettings.monthly" }),
+    await waitFor(() =>
+      expect(mockToastError).toHaveBeenCalledWith("common.errors.generic"),
     );
-    const upgradeButtons = screen.getAllByText("aiAgent.upgradeCta");
-    await user.click(upgradeButtons[0]);
-
-    await waitFor(() => {
-      expect(mockToastError).toHaveBeenCalledWith("common.errors.generic");
-    });
-
-    expect(mockRefetchSubscription).not.toHaveBeenCalled();
-    expect(mockRefetchUserLimits).not.toHaveBeenCalled();
+    expect(refetchUserLimits).not.toHaveBeenCalled();
   });
 });

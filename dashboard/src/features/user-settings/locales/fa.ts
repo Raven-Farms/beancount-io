@@ -408,12 +408,6 @@ const faUserSettings: Record<string, TranslationEntry> = {
     message: "اشتراک با موفقیت ارتقا یافت",
     description: "Success message after upgrading subscription",
   },
-  "userSettings.paymentRequiresAuth": {
-    message:
-      "پرداخت شما نیاز به احراز هویت اضافی دارد. لطفاً ایمیل یا صادرکننده کارت خود را بررسی کنید.",
-    description:
-      "Message when 3DS authentication is needed for subscription upgrade",
-  },
   "userSettings.system": {
     message: "سیستم",
     description: "System theme option",
@@ -672,6 +666,113 @@ const faUserSettings: Record<string, TranslationEntry> = {
     message: "مشاهده صورت‌حساب",
     description:
       "Button that closes the checkout confirmation and shows billing settings",
+  },
+  "userSettings.planChangeTitle": {
+    message: "تغییر به {plan}",
+    description:
+      "Title of the plan-change sheet; {plan} is a plan and cycle such as 'Premium \u00b7 Yearly'",
+  },
+  "userSettings.planChangePreviewing": {
+    message: "در حال محاسبه هزینه این تغییر…",
+    description: "Shown while the server prices a plan change",
+  },
+  "userSettings.planChangePreviewFailed": {
+    message: "نتوانستیم هزینه این تغییر را محاسبه کنیم. دوباره تلاش کنید.",
+    description: "Shown when the plan-change price could not be loaded",
+  },
+  "userSettings.planChangeStartsToday": {
+    message: "از امروز شروع می‌شود.",
+    description: "The plan change takes effect immediately",
+  },
+  "userSettings.planChangeDueToday": {
+    message: "مبلغ قابل پرداخت امروز",
+    description: "Label for the amount charged today",
+  },
+  "userSettings.planChangeCredit": {
+    message: "شامل اعتبار {credit} برای زمان استفاده‌نشده طرح فعلی شماست.",
+    description: "Credit for unused time; {credit} is a formatted price",
+  },
+  "userSettings.planChangeNext": {
+    message: "سپس {amount}، پرداخت بعدی در {date}.",
+    description:
+      "Next charge; {amount} is a price with its interval and {date} a formatted date",
+  },
+  "userSettings.planChangeChargedTo": {
+    message: "از {card} پرداخت می‌شود",
+    description:
+      "Card the change is charged to; {card} is a card brand and its last four digits",
+  },
+  "userSettings.planChangeWhatYouGet": {
+    message: "آنچه دریافت می‌کنید",
+    description: "Heading above what the new plan adds",
+  },
+  "userSettings.planChangePayAndSwitch": {
+    message: "پرداخت {amount} و تغییر",
+    description:
+      "Confirm button; {amount} is the formatted amount charged today",
+  },
+  "userSettings.planChangeContinueToCheckout": {
+    message: "ادامه به پرداخت",
+    description: "Confirm button that opens Stripe Checkout",
+  },
+  "userSettings.planChangeNotNow": {
+    message: "اکنون نه",
+    description:
+      "Button that closes the plan-change sheet without changing anything",
+  },
+  "userSettings.planChangeCreditNote": {
+    message:
+      "زمان استفاده‌نشده همیشه محاسبه و کسر می‌شود؛ هرگز دو بار پرداخت نمی‌کنید.",
+    description: "Reassurance under the confirm button",
+  },
+  "userSettings.planChangeRefusalCurrent": {
+    message: "شما همین حالا این طرح را دارید.",
+    description: "The chosen plan is the one the customer already has",
+  },
+  "userSettings.planChangeRefusalSameTier": {
+    message:
+      "این طرح را با قیمت قدیمی‌تر و کمتر نگه می‌دارید؛ تغییر فقط آن را افزایش می‌دهد.",
+    description:
+      "The customer keeps an older, cheaper price for the same plan and cycle",
+  },
+  "userSettings.planChangeRefusalMultiple": {
+    message:
+      "حساب شما بیش از یک اشتراک فعال دارد. برای تغییر طرح با پشتیبانی تماس بگیرید.",
+    description: "The account has duplicate subscriptions and needs support",
+  },
+  "userSettings.planChangeRequiresAction": {
+    message:
+      "بانک شما باید این پرداخت را تأیید کند. تا آن زمان چیزی تغییر نمی‌کند؛ پس از تأیید، این صفحه را تازه کنید.",
+    description: "The bank must approve the payment before the change applies",
+  },
+  "userSettings.planChangeApprovePayment": {
+    message: "تأیید پرداخت",
+    description: "Button that opens Stripe's page to approve the payment",
+  },
+  "userSettings.planChangeFailed": {
+    message: "بانک شما پرداخت را تأیید نکرد. چیزی تغییر نکرد.",
+    description: "The payment was declined and the plan did not change",
+  },
+  "userSettings.planChangeUseAnotherCard": {
+    message: "استفاده از کارت دیگر",
+    description: "Button that opens billing settings to change the card",
+  },
+  "userSettings.featureAutomaticBackups": {
+    message: "پشتیبان‌گیری خودکار",
+    description: "Plan feature from the pricing table",
+  },
+  "userSettings.featureAutomationIntegrations": {
+    message: "خودکارسازی و یکپارچه‌سازی پیشرفته",
+    description: "Plan feature from the pricing table",
+  },
+  "userSettings.featureOidcSso": {
+    message: "ورود یکپارچه (SSO) با OIDC",
+    description:
+      "Plan feature from the pricing table; OIDC and SSO stay as written",
+  },
+  "userSettings.featureMultiEntity": {
+    message: "تجمیع چند نهاد",
+    description: "Plan feature from the pricing table",
   },
 };
 

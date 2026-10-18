@@ -384,12 +384,6 @@ const koUserSettings: Record<string, TranslationEntry> = {
     message: "구독이 성공적으로 업그레이드되었습니다",
     description: "Success message after upgrading subscription",
   },
-  "userSettings.paymentRequiresAuth": {
-    message:
-      "결제에 추가 인증이 필요합니다. 이메일 또는 카드 발급사를 확인해 주세요.",
-    description:
-      "Message when 3DS authentication is needed for subscription upgrade",
-  },
   "userSettings.system": {
     message: "시스템",
     description: "System theme option",
@@ -656,6 +650,113 @@ const koUserSettings: Record<string, TranslationEntry> = {
     message: "결제 정보 보기",
     description:
       "Button that closes the checkout confirmation and shows billing settings",
+  },
+  "userSettings.planChangeTitle": {
+    message: "{plan}(으)로 변경",
+    description:
+      "Title of the plan-change sheet; {plan} is a plan and cycle such as 'Premium \u00b7 Yearly'",
+  },
+  "userSettings.planChangePreviewing": {
+    message: "이 변경의 요금을 계산하는 중…",
+    description: "Shown while the server prices a plan change",
+  },
+  "userSettings.planChangePreviewFailed": {
+    message: "이 변경의 요금을 계산하지 못했습니다. 다시 시도해 주세요.",
+    description: "Shown when the plan-change price could not be loaded",
+  },
+  "userSettings.planChangeStartsToday": {
+    message: "오늘부터 적용됩니다.",
+    description: "The plan change takes effect immediately",
+  },
+  "userSettings.planChangeDueToday": {
+    message: "오늘 결제 금액",
+    description: "Label for the amount charged today",
+  },
+  "userSettings.planChangeCredit": {
+    message: "현재 플랜의 미사용 기간에 대한 {credit} 크레딧이 포함됩니다.",
+    description: "Credit for unused time; {credit} is a formatted price",
+  },
+  "userSettings.planChangeNext": {
+    message: "이후 {amount}, 다음 결제일은 {date}입니다.",
+    description:
+      "Next charge; {amount} is a price with its interval and {date} a formatted date",
+  },
+  "userSettings.planChangeChargedTo": {
+    message: "{card}(으)로 결제",
+    description:
+      "Card the change is charged to; {card} is a card brand and its last four digits",
+  },
+  "userSettings.planChangeWhatYouGet": {
+    message: "추가되는 혜택",
+    description: "Heading above what the new plan adds",
+  },
+  "userSettings.planChangePayAndSwitch": {
+    message: "{amount} 결제 후 변경",
+    description:
+      "Confirm button; {amount} is the formatted amount charged today",
+  },
+  "userSettings.planChangeContinueToCheckout": {
+    message: "결제로 계속",
+    description: "Confirm button that opens Stripe Checkout",
+  },
+  "userSettings.planChangeNotNow": {
+    message: "나중에",
+    description:
+      "Button that closes the plan-change sheet without changing anything",
+  },
+  "userSettings.planChangeCreditNote": {
+    message:
+      "미사용 기간은 항상 크레딧으로 처리되므로 두 번 결제하지 않습니다.",
+    description: "Reassurance under the confirm button",
+  },
+  "userSettings.planChangeRefusalCurrent": {
+    message: "이미 이 플랜을 사용 중입니다.",
+    description: "The chosen plan is the one the customer already has",
+  },
+  "userSettings.planChangeRefusalSameTier": {
+    message:
+      "이 플랜을 이전의 더 낮은 요금으로 사용 중입니다. 변경하면 요금만 오릅니다.",
+    description:
+      "The customer keeps an older, cheaper price for the same plan and cycle",
+  },
+  "userSettings.planChangeRefusalMultiple": {
+    message:
+      "계정에 활성 구독이 두 개 이상 있습니다. 플랜을 변경하려면 지원팀에 문의하세요.",
+    description: "The account has duplicate subscriptions and needs support",
+  },
+  "userSettings.planChangeRequiresAction": {
+    message:
+      "은행에서 이 결제를 승인해야 합니다. 승인 전에는 아무것도 바뀌지 않습니다. 승인한 후 이 페이지를 새로고침하세요.",
+    description: "The bank must approve the payment before the change applies",
+  },
+  "userSettings.planChangeApprovePayment": {
+    message: "결제 승인",
+    description: "Button that opens Stripe's page to approve the payment",
+  },
+  "userSettings.planChangeFailed": {
+    message: "은행에서 결제를 승인하지 않았습니다. 변경된 사항이 없습니다.",
+    description: "The payment was declined and the plan did not change",
+  },
+  "userSettings.planChangeUseAnotherCard": {
+    message: "다른 카드 사용",
+    description: "Button that opens billing settings to change the card",
+  },
+  "userSettings.featureAutomaticBackups": {
+    message: "자동 백업",
+    description: "Plan feature from the pricing table",
+  },
+  "userSettings.featureAutomationIntegrations": {
+    message: "고급 자동화 및 연동",
+    description: "Plan feature from the pricing table",
+  },
+  "userSettings.featureOidcSso": {
+    message: "OIDC 기반 통합 인증(SSO)",
+    description:
+      "Plan feature from the pricing table; OIDC and SSO stay as written",
+  },
+  "userSettings.featureMultiEntity": {
+    message: "여러 법인 통합",
+    description: "Plan feature from the pricing table",
   },
 };
 

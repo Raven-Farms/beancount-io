@@ -14,7 +14,9 @@ const {
   mockResumeSubscription,
   mockCreateStripePortalSession,
   mockCreateSubscriptionSession,
-  mockUpgradeSubscription,
+  mockRunPreview,
+  mockChangePlan,
+  mockPreviewFor,
   mockToastSuccess,
   mockToastError,
   mockToastInfo,
@@ -27,7 +29,9 @@ const {
   mockResumeSubscription: vi.fn(),
   mockCreateStripePortalSession: vi.fn(),
   mockCreateSubscriptionSession: vi.fn(),
-  mockUpgradeSubscription: vi.fn(),
+  mockRunPreview: vi.fn(),
+  mockChangePlan: vi.fn(),
+  mockPreviewFor: { fn: (_priceId: string): unknown => undefined },
   mockToastSuccess: vi.fn(),
   mockToastError: vi.fn(),
   mockToastInfo: vi.fn(),
@@ -37,6 +41,10 @@ const {
 }));
 
 vi.mock("@apollo/client/react", () => ({
+  useLazyQuery: () => [
+    vi.fn(),
+    { data: undefined, loading: false, error: undefined },
+  ],
   useQuery: () => mockUseQuery(),
   useMutation: (document: {
     definitions?: Array<{ name?: { value?: string } }>;
@@ -70,12 +78,25 @@ vi.mock(
     }),
   }),
 );
-vi.mock("@/features/user-settings/hooks/use-upgrade-subscription", () => ({
-  useUpgradeSubscription: () => ({
-    upgradeSubscription: mockUpgradeSubscription,
-    loading: false,
-  }),
-}));
+// The sheet previews when it opens; this keeps the preview's result in state
+// so the sheet re-renders with it, as Apollo's lazy query does.
+vi.mock("@/features/user-settings/hooks/use-plan-change", async () => {
+  const React = await import("react");
+  return {
+    usePreviewPlanChange: () => {
+      const [data, setData] = React.useState<unknown>(undefined);
+      const run = React.useCallback(
+        (options: { variables: { priceId: string } }) => {
+          mockRunPreview(options);
+          setData(mockPreviewFor.fn(options.variables.priceId));
+        },
+        [],
+      );
+      return [run, { data, loading: false, error: undefined }];
+    },
+    useChangePlan: () => [mockChangePlan, { loading: false }],
+  };
+});
 vi.mock("sonner", () => ({
   toast: {
     success: mockToastSuccess,
@@ -236,6 +257,30 @@ const PRICES = {
   growthYearly: "price_1SyPdbEqsEqs2tLV7PJyWZed",
 };
 
+const PRORATION_DATE = 1792238400;
+function previewData(priceId: string, kind: string) {
+  return {
+    previewPlanChange: {
+      __typename: "PlanChangePreview",
+      kind,
+      refusal: null,
+      effect: kind === "NEW" ? "CHECKOUT" : "IMMEDIATE",
+      currentPriceId: null,
+      targetPriceId: priceId,
+      currency: "usd",
+      amountDueToday: 9000,
+      creditApplied: kind === "NEW" ? 0 : 999,
+      nextAmount: 9999,
+      nextChargeAt: "2027-10-17T12:00:00Z",
+      effectiveAt: "2026-10-17T12:00:00Z",
+      prorationDate: kind === "NEW" ? null : PRORATION_DATE,
+      alternativePriceId: null,
+      limitChanges: [],
+      paymentMethod: null,
+    },
+  };
+}
+
 const card = (tier: string) => within(screen.getByTestId(`plan-card-${tier}`));
 
 function showSubscription(data = mockActiveSubscriptionData) {
@@ -260,6 +305,7 @@ function premiumSubscriber() {
 }
 
 beforeEach(() => {
+  mockPreviewFor.fn = (priceId) => previewData(priceId, "NEW");
   Object.defineProperty(window, "location", {
     value: { href: "", search: "" },
     writable: true,
@@ -314,7 +360,7 @@ describe("Plan row", () => {
     ).toHaveAttribute("href", "https://beancount.io/tg");
   });
 
-  it("checks a free user out on the cycle they chose", async () => {
+  it("previews a free user's choice, then checks out on the cycle they chose", async () => {
     const user = userEvent.setup();
     setUserLimits("FREE");
     showSubscription(mockNoSubscriptionData);
@@ -331,6 +377,18 @@ describe("Plan row", () => {
     await user.click(
       card("PREMIUM").getByRole("button", { name: "aiAgent.upgradeCta" }),
     );
+    expect(mockRunPreview).toHaveBeenCalledWith({
+      variables: {
+        clientId: "beancount-web-prod",
+        priceId: PRICES.premiumYearly,
+      },
+    });
+    expect(mockCreateSubscriptionSession).not.toHaveBeenCalled();
+    await user.click(
+      screen.getByRole("button", {
+        name: "userSettings.planChangeContinueToCheckout",
+      }),
+    );
 
     await waitFor(() => {
       expect(mockCreateSubscriptionSession).toHaveBeenCalledWith({
@@ -343,15 +401,32 @@ describe("Plan row", () => {
     expect(window.location.href).toBe(
       "https://checkout.stripe.com/session/test",
     );
+  });
 
+  it("checks a free user out monthly when they pick the monthly cycle", async () => {
+    const user = userEvent.setup();
+    setUserLimits("FREE");
+    showSubscription(mockNoSubscriptionData);
+    mockCreateSubscriptionSession.mockResolvedValue({
+      data: {
+        createSubscriptionSession: { success: true, sessionUrl: "https://x" },
+      },
+    });
+
+    render(<SubscriptionSection />);
     await user.click(
       screen.getByRole("button", { name: "userSettings.monthly" }),
     );
     await user.click(
       card("GROWTH").getByRole("button", { name: "aiAgent.upgradeCta" }),
     );
+    await user.click(
+      screen.getByRole("button", {
+        name: "userSettings.planChangeContinueToCheckout",
+      }),
+    );
     await waitFor(() => {
-      expect(mockCreateSubscriptionSession).toHaveBeenLastCalledWith({
+      expect(mockCreateSubscriptionSession).toHaveBeenCalledWith({
         variables: {
           clientId: "beancount-web-prod",
           priceId: PRICES.growthMonthly,
@@ -393,16 +468,12 @@ describe("Plan row", () => {
     ).toBeEnabled();
   });
 
-  it("changes a subscriber's plan in place instead of opening a second checkout", async () => {
+  it("changes a subscriber's plan in place at the previewed proration time", async () => {
     const user = userEvent.setup();
     premiumSubscriber();
-    mockUpgradeSubscription.mockResolvedValue({
-      data: {
-        upgradeSubscription: {
-          success: true,
-          message: "Subscription upgraded successfully.",
-        },
-      },
+    mockPreviewFor.fn = (priceId) => previewData(priceId, "TO_YEARLY");
+    mockChangePlan.mockResolvedValue({
+      data: { changePlan: { status: "ACTIVE", newTier: "GROWTH" } },
     });
 
     render(<SubscriptionSection />);
@@ -411,14 +482,18 @@ describe("Plan row", () => {
         name: "userSettings.switchToYearly",
       }),
     );
+    await user.click(
+      screen.getByRole("button", {
+        name: "userSettings.planChangePayAndSwitch",
+      }),
+    );
 
-    await waitFor(() => {
-      expect(mockUpgradeSubscription).toHaveBeenCalledWith({
-        variables: {
-          clientId: "beancount-web-prod",
-          priceId: PRICES.growthYearly,
-        },
-      });
+    expect(mockChangePlan).toHaveBeenCalledWith({
+      variables: {
+        clientId: "beancount-web-prod",
+        priceId: PRICES.growthYearly,
+        prorationDate: PRORATION_DATE,
+      },
     });
     expect(mockCreateSubscriptionSession).not.toHaveBeenCalled();
   });
@@ -471,14 +546,17 @@ describe("Plan row", () => {
       .mockRejectedValueOnce(new Error("Network failure"));
 
     render(<SubscriptionSection />);
-    const premium = card("PREMIUM").getByRole("button", {
-      name: "aiAgent.upgradeCta",
+    await user.click(
+      card("PREMIUM").getByRole("button", { name: "aiAgent.upgradeCta" }),
+    );
+    const checkout = screen.getByRole("button", {
+      name: "userSettings.planChangeContinueToCheckout",
     });
-    await user.click(premium);
+    await user.click(checkout);
     await waitFor(() =>
       expect(mockToastError).toHaveBeenCalledWith("Card declined"),
     );
-    await user.click(premium);
+    await user.click(checkout);
     await waitFor(() =>
       expect(mockToastError).toHaveBeenLastCalledWith("common.errors.generic"),
     );
@@ -489,8 +567,9 @@ describe("Pay yearly offer", () => {
   it("offers a monthly subscriber their plan on yearly billing and switches it in place", async () => {
     const user = userEvent.setup();
     premiumSubscriber();
-    mockUpgradeSubscription.mockResolvedValue({
-      data: { upgradeSubscription: { success: true, message: "ok" } },
+    mockPreviewFor.fn = (priceId) => previewData(priceId, "TO_YEARLY");
+    mockChangePlan.mockResolvedValue({
+      data: { changePlan: { status: "ACTIVE", newTier: "PREMIUM" } },
     });
 
     render(<SubscriptionSection />);
@@ -499,14 +578,18 @@ describe("Pay yearly offer", () => {
     await user.click(
       offer.getByRole("button", { name: "userSettings.switchToYearly" }),
     );
+    await user.click(
+      screen.getByRole("button", {
+        name: "userSettings.planChangePayAndSwitch",
+      }),
+    );
 
-    await waitFor(() => {
-      expect(mockUpgradeSubscription).toHaveBeenCalledWith({
-        variables: {
-          clientId: "beancount-web-prod",
-          priceId: PRICES.premiumYearly,
-        },
-      });
+    expect(mockChangePlan).toHaveBeenCalledWith({
+      variables: {
+        clientId: "beancount-web-prod",
+        priceId: PRICES.premiumYearly,
+        prorationDate: PRORATION_DATE,
+      },
     });
   });
 
@@ -545,6 +628,11 @@ describe("Checkout return", () => {
     );
     await user.click(
       card("PREMIUM").getByRole("button", { name: "aiAgent.upgradeCta" }),
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: "userSettings.planChangeContinueToCheckout",
+      }),
     );
     await waitFor(() =>
       expect(window.location.href).toBe(

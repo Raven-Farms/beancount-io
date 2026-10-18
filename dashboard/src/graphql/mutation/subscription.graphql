@@ -30,12 +30,24 @@ mutation CreateStripePortalSession($clientId: String!) {
   }
 }
 
-mutation UpgradeSubscription($clientId: String!, $priceId: String!) {
-  upgradeSubscription(clientId: $clientId, priceId: $priceId) {
-    success
+mutation ChangePlan(
+  $clientId: String!
+  $priceId: String!
+  $prorationDate: Int
+) {
+  changePlan(
+    clientId: $clientId
+    priceId: $priceId
+    prorationDate: $prorationDate
+  ) {
+    status
+    kind
+    refusal
     message
     clientSecret
+    hostedInvoiceUrl
     subscriptionId
     newTier
+    currentPeriodEnd
   }
 }
