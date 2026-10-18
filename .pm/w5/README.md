@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [618 — `-t "year - year+1"` refused while `(year) - (year+1)` works (vendored Fava substitution)](./618.md)
 - [619 — `add`'s unknown-account fix-up drops `--file`, so pasting it writes another ledger (gap in w5/303)](./619.md)
 - [620 — The misplaced-global hint sends `doctor`/`treeify`/`example` users to a dead end (gap in w5/416)](./620.md)
 - [621 — A literal tab is refused as an import delimiter, though the refusal recommends it](./621.md)
