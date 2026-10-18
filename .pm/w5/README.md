@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [715 — Settings notes still missing from three flag-free refusals, now added to a typed one (incomplete fix of w5/525)](./715.md)
 - [716 — CSV headers keep direction marks, ZWJ, soft hyphen and NBSP; a zero-width mapping name is now refused (incomplete fix of w5/531)](./716.md)
 - [717 — A CSV decode error past 8 KiB names the wrong byte offset](./717.md)
 - [718 — A bea write to an include in another directory makes add/import exit 4 instead of queueing](./718.md)
