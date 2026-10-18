@@ -53,9 +53,20 @@ def cloud_login() -> None:
 def cloud_logout() -> None:
     """Revoke the token and clear stored credentials."""
     context.current().require_network("cloud logout")
+    import os
+
+    if os.environ.get("BEA_TOKEN"):
+        # Logout never sends this shared token, so even malformed values must
+        # leave it and the stored credential alone, without reading either.
+        output.success(
+            "BEA_TOKEN is set in this shell; 'bea cloud logout' leaves it "
+            "unchanged and does not revoke it. Unset BEA_TOKEN to stop using it."
+        )
+        return
+
     from cli.api.client import bearer_client, call, unwrap_or_none
     from cli.api.rest_client.api.ledger_v_1 import logout
-    from cli.auth.credentials import ENVIRONMENT, UnusableCredentials, clear_credentials, load_credentials
+    from cli.auth.credentials import UnusableCredentials, clear_credentials, load_credentials
     from cli.config import credentials_path
     from cli.errors import BeaError
 
@@ -78,16 +89,6 @@ def cloud_logout() -> None:
         ) from exc
     if creds is None:
         output.success("Already logged out.")
-        return
-    if creds.source == ENVIRONMENT:
-        # `BEA_TOKEN` is the shared, unattended credential: a CI job or a
-        # teammate may be using the same value right now. Revoking it from a
-        # routine logout would silently kill every other consumer, and this
-        # process cannot unset the caller's shell anyway.
-        output.success(
-            "BEA_TOKEN is set in this shell; 'bea cloud logout' leaves it "
-            "unchanged and does not revoke it. Unset BEA_TOKEN to stop using it."
-        )
         return
     import httpx
 

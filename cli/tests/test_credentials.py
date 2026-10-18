@@ -79,7 +79,7 @@ class TestNonAsciiToken:
     ) -> None:
         monkeypatch.delenv("BEA_TOKEN", raising=False)
         _write_stored(bea_config_dir, token, "2099-01-01T00:00:00Z")
-        with pytest.raises(AuthError, match="Invalid BEA_TOKEN"):
+        with pytest.raises(AuthError, match="Invalid stored credential"):
             require_credentials()
 
     @_NON_ASCII_TOKENS
@@ -115,8 +115,15 @@ class TestNonAsciiToken:
         result = CliRunner().invoke(app, command)
 
         assert result.exit_code == 3, result.output
-        assert "Invalid BEA_TOKEN or stored credential" in result.output
-        assert "bea cloud login" in result.output
+        if source == "environment":
+            assert "Invalid BEA_TOKEN" in result.output
+            assert "Fix or unset BEA_TOKEN" in result.output
+            assert "bea cloud login" not in result.output
+            assert "stored credential" not in result.output
+        else:
+            assert "Invalid stored credential" in result.output
+            assert "bea cloud login" in result.output
+            assert "BEA_TOKEN" not in result.output
         assert "codec" not in result.output
 
 
@@ -128,6 +135,22 @@ def _write_stored(config_dir: Path, token: str, expire_at: str) -> Path:
 
 
 class TestSaveLoadClear:
+    @pytest.mark.parametrize("token", ["qa token", "qa-token\n", "qa-tök"], ids=["space", "control", "non-ascii"])
+    def test_an_invalid_new_stored_token_is_refused_without_replacing_the_old_one(
+        self, bea_config_dir: Path, token: str
+    ) -> None:
+        path = _write_stored(bea_config_dir, "old-token", "2099-01-01T00:00:00Z")
+        original = path.read_bytes()
+
+        with pytest.raises(AuthError) as caught:
+            save_credentials(token, "2099-01-01T00:00:00Z")
+
+        assert "Invalid stored credential" in str(caught.value)
+        assert "bea cloud login" in str(caught.value)
+        assert "BEA_TOKEN" not in str(caught.value)
+        assert path.read_bytes() == original
+        assert not path.with_name(path.name + ".tmp").exists()
+
     def test_save_and_load(self, bea_config_dir: Path) -> None:
         save_credentials("my-token", "2099-01-01T00:00:00Z")
 

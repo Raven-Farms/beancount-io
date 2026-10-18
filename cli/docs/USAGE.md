@@ -2026,7 +2026,11 @@ When `BEA_TOKEN` is set, `cloud login` exits **2** before starting the browser
 flow, since the new session would never be used, and `cloud logout` changes
 nothing: it neither revokes the token (another job may share it) nor unsets it
 in the shell — unset the variable yourself, or revoke the token from the
-dashboard. A credential the server rejects is reported against the source
+dashboard. This no-op also applies to malformed nonempty values: logout does
+not validate or send the token, or read the stored credential. Commands that
+use a malformed `BEA_TOKEN` exit **3** and tell you to fix or unset that variable.
+An empty `BEA_TOKEN=` is treated as unset and falls back to the stored file.
+A credential the server rejects is reported against the source
 actually in use: `BEA_TOKEN` takes precedence over the stored file
 unconditionally, so that failure tells you to correct or unset the variable
 rather than to log in, which would not change which credential is sent.
