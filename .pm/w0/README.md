@@ -20,6 +20,5 @@
 
 From `/pm-brainstorm` for w0 (2026-10-17). Each note is sub-hour.
 
-- [048 — Dashboard date-fns month names ignore the reader's language](./048.md) — dashboard
 - [049 — Persian: letter-spaced captions break joins; Payee caption stays left; two inputs unverified in RTL](./049.md) — mobile
 - [050 — German and Chinese use two words for "ledger" in the dashboard](./050.md) — dashboard
