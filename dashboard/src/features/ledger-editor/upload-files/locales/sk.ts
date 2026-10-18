@@ -25,9 +25,26 @@ const skUploadFiles: Record<string, { message: string; description: string }> =
       description:
         "Explains why upload is disabled while oversized files are selected",
     },
-    "ledgerEditor.failedToUploadFiles": {
-      message: "Nahranie súborov zlyhalo",
-      description: "Error message when file upload fails",
+    "ledgerEditor.fileAlreadyExists": {
+      message: "V tomto priečinku už existuje",
+      description:
+        "Shown on a staged upload whose name already exists in the target folder",
+    },
+    "ledgerEditor.removeExistingFiles": {
+      message:
+        "Ak chcete nahrávať, odstráňte súbory, ktoré v tomto priečinku už existujú",
+      description:
+        "Explains why upload is disabled while staged files already exist in the folder",
+    },
+    "ledgerEditor.uploadStoppedAt": {
+      message: "{fileName} sa nenahral: {reason}",
+      description:
+        "Upload error naming the file that failed; {reason} is the localized cause",
+    },
+    "ledgerEditor.uploadedBeforeFailure": {
+      message: "Nahrané a odstránené zo zoznamu: {files}",
+      description:
+        "After a failed upload, lists the files that were uploaded and removed from the staged list",
     },
     "ledgerEditor.maximumFileSize": {
       message: "Maximálna veľkosť súboru: 1MB",

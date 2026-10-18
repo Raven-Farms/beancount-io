@@ -25,9 +25,25 @@ const ukUploadFiles: Record<string, { message: string; description: string }> =
       description:
         "Explains why upload is disabled while oversized files are selected",
     },
-    "ledgerEditor.failedToUploadFiles": {
-      message: "Не вдалося завантажити файли",
-      description: "Error message when file upload fails",
+    "ledgerEditor.fileAlreadyExists": {
+      message: "Уже є в цій теці",
+      description:
+        "Shown on a staged upload whose name already exists in the target folder",
+    },
+    "ledgerEditor.removeExistingFiles": {
+      message: "Щоб завантажити, приберіть файли, які вже є в цій теці",
+      description:
+        "Explains why upload is disabled while staged files already exist in the folder",
+    },
+    "ledgerEditor.uploadStoppedAt": {
+      message: "{fileName} не завантажено: {reason}",
+      description:
+        "Upload error naming the file that failed; {reason} is the localized cause",
+    },
+    "ledgerEditor.uploadedBeforeFailure": {
+      message: "Завантажено й прибрано зі списку: {files}",
+      description:
+        "After a failed upload, lists the files that were uploaded and removed from the staged list",
     },
     "ledgerEditor.maximumFileSize": {
       message: "Максимальний розмір файлу: 1MB",

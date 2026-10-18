@@ -25,9 +25,25 @@ const zhUploadFiles: Record<string, { message: string; description: string }> =
       description:
         "Explains why upload is disabled while oversized files are selected",
     },
-    "ledgerEditor.failedToUploadFiles": {
-      message: "上传文件失败",
-      description: "Error message when file upload fails",
+    "ledgerEditor.fileAlreadyExists": {
+      message: "此文件夹中已存在",
+      description:
+        "Shown on a staged upload whose name already exists in the target folder",
+    },
+    "ledgerEditor.removeExistingFiles": {
+      message: "请移除此文件夹中已存在的文件后再上传",
+      description:
+        "Explains why upload is disabled while staged files already exist in the folder",
+    },
+    "ledgerEditor.uploadStoppedAt": {
+      message: "{fileName} 未上传：{reason}",
+      description:
+        "Upload error naming the file that failed; {reason} is the localized cause",
+    },
+    "ledgerEditor.uploadedBeforeFailure": {
+      message: "已上传并从列表中移除：{files}",
+      description:
+        "After a failed upload, lists the files that were uploaded and removed from the staged list",
     },
     "ledgerEditor.maximumFileSize": {
       message: "最大文件大小：1MB",

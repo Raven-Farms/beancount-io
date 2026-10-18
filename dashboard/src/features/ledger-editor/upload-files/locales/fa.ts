@@ -25,9 +25,26 @@ const faUploadFiles: Record<string, { message: string; description: string }> =
       description:
         "Explains why upload is disabled while oversized files are selected",
     },
-    "ledgerEditor.failedToUploadFiles": {
-      message: "بارگذاری فایل‌ها ناموفق بود",
-      description: "Error message when file upload fails",
+    "ledgerEditor.fileAlreadyExists": {
+      message: "از قبل در این پوشه وجود دارد",
+      description:
+        "Shown on a staged upload whose name already exists in the target folder",
+    },
+    "ledgerEditor.removeExistingFiles": {
+      message:
+        "برای بارگذاری، فایل‌هایی را که از قبل در این پوشه هستند حذف کنید",
+      description:
+        "Explains why upload is disabled while staged files already exist in the folder",
+    },
+    "ledgerEditor.uploadStoppedAt": {
+      message: "{fileName} بارگذاری نشد: {reason}",
+      description:
+        "Upload error naming the file that failed; {reason} is the localized cause",
+    },
+    "ledgerEditor.uploadedBeforeFailure": {
+      message: "بارگذاری‌شده و حذف‌شده از فهرست: {files}",
+      description:
+        "After a failed upload, lists the files that were uploaded and removed from the staged list",
     },
     "ledgerEditor.maximumFileSize": {
       message: "حداکثر اندازه فایل: 1MB",

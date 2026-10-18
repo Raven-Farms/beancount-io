@@ -25,9 +25,26 @@ const esUploadFiles: Record<string, { message: string; description: string }> =
       description:
         "Explains why upload is disabled while oversized files are selected",
     },
-    "ledgerEditor.failedToUploadFiles": {
-      message: "Error al cargar archivos",
-      description: "Error message when file upload fails",
+    "ledgerEditor.fileAlreadyExists": {
+      message: "Ya existe en esta carpeta",
+      description:
+        "Shown on a staged upload whose name already exists in the target folder",
+    },
+    "ledgerEditor.removeExistingFiles": {
+      message:
+        "Quita los archivos que ya existen en esta carpeta para subirlos",
+      description:
+        "Explains why upload is disabled while staged files already exist in the folder",
+    },
+    "ledgerEditor.uploadStoppedAt": {
+      message: "{fileName} no se subió: {reason}",
+      description:
+        "Upload error naming the file that failed; {reason} is the localized cause",
+    },
+    "ledgerEditor.uploadedBeforeFailure": {
+      message: "Subidos y quitados de la lista: {files}",
+      description:
+        "After a failed upload, lists the files that were uploaded and removed from the staged list",
     },
     "ledgerEditor.maximumFileSize": {
       message: "Tamaño máximo de archivo: 1MB",
