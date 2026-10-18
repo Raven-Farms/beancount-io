@@ -23,7 +23,7 @@ period-end balances use. Reconciliation writes still belong to beancount-reconci
 
 **Does:** one period (default: last complete calendar month) across all active accounts; delegates per-account reconciliation to the **beancount-reconcile** skill; appends only what that skill's confirm-gated flow appends; produces a close report; makes one confirm-gated git commit.
 
-**Does not:** fabricate missing entries (a missing subscription charge is *reported*, not invented); edit existing entries; force a tie-out; push to remotes (`/ship` is separate); close a period when the check is red — red blocks the commit proposal, always.
+**Does not:** fabricate missing entries (a missing subscription charge is *reported*, not invented); edit existing entries; force a tie-out; push to remotes (pushing stays with the user); close a period when the check is red — red blocks the commit proposal, always.
 
 Read `references/close-checklist.md` before running — it defines each phase's procedure and reportable status.
 

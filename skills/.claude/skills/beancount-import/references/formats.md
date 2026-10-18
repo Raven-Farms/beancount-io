@@ -53,7 +53,7 @@ Line-tagged records terminated by `^`: `D` date, `T` amount, `P` payee, `M` memo
 
 ## Pending rows
 
-Sources mark pending as a status column (`Pending`/`Posted`), OFX by omission (pending usually absent), or a separate file section. Pending rows: flag `!`, import normally — but warn the user that when the transaction settles, the bank may re-export it with a different date/amount (and for OFX a different FITID), which will surface as a fuzzy suspected duplicate; resolving those is exactly what the suspected-duplicates review is for. `beancount-reconcile` is the tool that later flips `!` confidence into a proven balance.
+Sources mark pending as a status column (`Pending`/`Posted`), OFX by omission (pending usually absent), or a separate file section. Pending rows: flag `!`, import normally — but warn the user that when the transaction settles, the bank may re-export it with a different date/amount (and for OFX a different FITID), which will surface as a fuzzy suspected duplicate; resolving those is exactly what the suspected-duplicates review is for. `beancount-reconcile`'s balance assertion later proves the account's total; it does not clear `!` flags — the user does.
 
 ## Multi-currency
 

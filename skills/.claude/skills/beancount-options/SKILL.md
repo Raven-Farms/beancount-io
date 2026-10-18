@@ -91,7 +91,7 @@ Universal generation rules — apply unless a reference file overrides:
   - Why: `-1 X {1.50 USD}` has posting weight -$1.50, but the cash leg is +$150. The transaction won't balance. Per-contract basis (`{150.00 USD}`) does balance against a per-contract cash leg.
 - **Cost basis on shorts**: negative units, basis = gross premium × 100 per contract.
 - **Cost basis on longs**: positive units, basis = gross premium × 100 per contract.
-- **Fees: explicit `Expenses:Trading:Fees` posting**. Cash leg = net premium (gross − fees for STO/STC, gross + fees for BTO/BTC). Don't fold fees into cost basis or cash. This keeps cost basis as a clean dollar number, which makes assignment arithmetic produce clean per-share stock basis (strike − premium-per-share = whole cents).
+- **Fees: explicit `Expenses:Trading:Fees` posting**. Cash leg = net premium (gross − fees for STO/STC, gross + fees for BTO/BTC). Don't fold fees into cost basis. This keeps cost basis as a clean dollar number, which makes assignment arithmetic produce clean per-share stock basis (strike − premium-per-share = whole cents).
 - **Multi-leg open in one fill**: one transaction, all legs as separate postings, single shared `^link`.
 - **Multi-leg close**: same — one transaction per fill ticket, linked.
 - **Roll**: two transactions (close then open), each with its own `^link`. Don't combine. See `references/rolling.md`.
@@ -102,7 +102,7 @@ Universal generation rules — apply unless a reference file overrides:
 
 ### 4. Confirm + Write
 
-Show the user, then ask:
+Show the target path, any new `open` directives, and the transactions exactly as they will be written, then ask:
 
 ```
 Target file: ./transactions/2026.beancount
@@ -242,17 +242,6 @@ Tax carve-outs:
 - Multi-broker considerations | `references/multi-broker.md`
 
 If a description doesn't fit cleanly into one of these, default to single-leg or verticals and ask the user to confirm the strategy name.
-
-## Confirmation pattern (do not skip)
-
-Before writing to the user's ledger, every interaction MUST present:
-
-1. Target file path (one explicit path, not "the ledger")
-2. Any new `open` directives that will be added
-3. The proposed transaction(s), formatted exactly as they'll appear in the file
-4. A clear yes/no prompt
-
-On no: ask what to change. Never argue. Never write without explicit yes.
 
 ## Edge cases worth surfacing
 

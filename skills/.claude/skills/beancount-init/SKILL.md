@@ -110,59 +110,9 @@ start:
 
 ### `.gitignore`
 
-Overwrite whatever `uv init --bare` wrote:
-
-```
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-dist/
-*.egg-info/
-.eggs/
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-.coverage
-htmlcov/
-.tox/
-.venv/
-venv/
-env/
-
-# macOS
-.DS_Store
-.AppleDouble
-.LSOverride
-._*
-.Spotlight-V100
-.Trashes
-
-# Linux
-*~
-.fuse_hidden*
-.directory
-.Trash-*
-.nfs*
-
-# JetBrains
-.idea/
-*.iml
-*.iws
-*.ipr
-out/
-
-# VS Code
-.vscode/
-*.code-workspace
-.history/
-
-# Fava
-.fava/
-```
+Overwrite whatever `uv init --bare` wrote with a `.gitignore` covering `.venv/`,
+`.fava/`, Python build and cache artifacts, and common OS/editor files
+(`.DS_Store`, `.idea/`, `.vscode/`).
 
 ## Step 5 — `git init` (only if needed)
 

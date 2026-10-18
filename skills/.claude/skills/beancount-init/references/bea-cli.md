@@ -74,8 +74,7 @@ bea --file "$ledger" --json --no-input add open --date "$open_date" --account "$
 
 A ledger that loads `beancount.plugins.nounused` (or `pedantic`, which runs it)
 refuses a new open until something posts to the account: `Unused account
-'…'`, with `Stage the open with --allow-errors, then add the account's first
-transaction.` That refusal, and only that one, is a documented two-step:
+'…'`. That refusal, and only that one, is a documented two-step:
 
 1. Stage the open with the `open-staged` recipe below. Any other error in its
    refusal still means fix the proposal, not stage it.

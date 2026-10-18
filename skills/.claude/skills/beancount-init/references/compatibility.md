@@ -72,5 +72,3 @@ the supplied precision (`100` stays `100`). Without one, use this comment:
   importable by the project's Python. Follow beancount-importer-author's
   authoring workflow. Keep authoring dependencies aligned with the managed
   engine, then verify the wired importer through `bea ingest`.
-- **Repository CI:** upstream `bean-check` is an independent comparison
-  oracle. Retain it alongside the customer `bea` checks.

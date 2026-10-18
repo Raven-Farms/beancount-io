@@ -45,7 +45,7 @@ Read the month-grid per merchant: present in all prior months of the window, abs
 SELECT id, date, flag, payee, narration WHERE flag = '!' AND date < <period-end+1> GROUP BY id, date, flag, payee, narration ORDER BY date
 ```
 
-(Grouping by `id`, the transaction's identity, collapses the one-row-per-posting duplicates — without it a two-posting transaction counts twice — while two flagged charges at one merchant on one day, which `bea import` writes as separate `!` rows, stay two. Grouping by the visible columns alone merged them and undercounted carried flags.)
+(Grouping by `id`, the transaction's identity, collapses the one-row-per-posting duplicates — without it a two-posting transaction counts twice — while two flagged charges at one merchant on one day, which `bea import` writes as separate `!` rows, stay two. Grouping by the visible columns alone would merge them and undercount carried flags.)
 
 Each `!` is either resolved by the user during the close (their edit, not this skill's) or **carried** — counted in the report. A close can complete with carried flags; it cannot complete with uncounted ones.
 

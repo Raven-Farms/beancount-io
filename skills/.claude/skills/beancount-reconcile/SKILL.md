@@ -1,6 +1,6 @@
 ---
 name: beancount-reconcile
-description: Reconcile one Beancount account against a CSV statement or pasted PDF text. Report missing entries, duplicates, amount mismatches and date drift; confirm missing-entry writes and a passing period-end balance assertion through bea. Use for checking whether an account matches its statement. Skip bulk imports, analytics, multi-account close orchestration, and edits to existing entries.
+description: Reconcile one Beancount account against a CSV or PDF statement. Report missing entries, duplicates, amount mismatches and date drift; confirm missing-entry writes and a passing period-end balance assertion through bea. Use for checking whether an account matches its statement. Skip bulk imports, analytics, multi-account close orchestration, and edits to existing entries.
 metadata: {"openclaw": {"homepage": "https://github.com/bex-co/beancount-io/tree/main/skills", "requires": {"anyBins": ["bea", "bean-check"]}, "install": [{"id": "brew", "kind": "brew", "formula": "bex-co/tap/bea", "bins": ["bea"], "label": "Install bea (Homebrew)"}, {"id": "uv", "kind": "uv", "package": "beancount-io", "bins": ["bea"], "label": "Install bea (uv)"}]}, "hermes": {"category": "finance", "tags": ["beancount", "accounting", "reconciliation", "bank-statement"]}}
 ---
 
@@ -68,7 +68,7 @@ Persist the contract as a config block on the main file — but only as part of 
 
 Turn the statement into normalized lines. **Read `references/statement-formats.md` first.** In brief:
 
-- Accept a **CSV export** or **pasted PDF text**. Extract three things: the **statement period** (start and end dates), the **ending balance**, and the **transaction lines** (date, amount, description).
+- Accept a **CSV export** or a **PDF statement** (read directly when your agent can, or pasted as text). Extract three things: the **statement period** (start and end dates), the **ending balance**, and the **transaction lines** (date, amount, description).
 - Map every amount to the **ledger's sign convention for the target account**:
   - **Asset** account: money in `= +`, money out `= −`.
   - **Liability** account: a charge `= −` (you owe more), a payment `= +` (you owe less). The **balances flip too**: a card statement prints the amount owed as positive ("New Balance 342.20", or a running `Balance` column), which is `−342.20` in ledger sign. Use that signed figure as the ending balance in the tie-out and the assertion (see the liability section of `references/statement-formats.md`).
@@ -109,7 +109,7 @@ Present, in this exact order:
 
 #### Reproducible tie-out arithmetic
 
-Every balance, sum, and residual in the proposal must be reproducible by the user. Mental or prose arithmetic has produced wrong expressions next to correct ledger values, so compute with the ledger engine's decimal arithmetic in one read and quote its output:
+Every balance, sum, and residual in the proposal must be reproducible by the user. Prose arithmetic can produce a wrong expression next to correct ledger values, so compute with the ledger engine's decimal arithmetic in one read and quote its output:
 
 <!-- recipe: tie-out -->
 ```sh

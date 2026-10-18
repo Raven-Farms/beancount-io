@@ -1027,6 +1027,32 @@ class TestBeaRecipes(unittest.TestCase):
         }
         self.assertEqual(balances, {"Assets:Checking": [("2814.25", "USD")]})
 
+    def test_account_balances_read_each_balance_sheet_account_at_book_value(self):
+        self.ledger.write_text(
+            'option "operating_currency" "USD"\n'
+            "2026-01-01 open Assets:Checking USD\n"
+            "2026-01-01 open Assets:Brokerage\n"
+            "2026-01-01 open Liabilities:Card USD\n"
+            "2026-01-01 open Expenses:Food USD\n"
+            "2026-01-01 open Equity:OpeningBalances USD\n"
+            '2026-01-01 * "Opening"\n  Assets:Checking 3000.00 USD\n  Equity:OpeningBalances\n'
+            '2026-02-10 * "Grocer"\n  Expenses:Food 185.75 USD\n  Liabilities:Card\n'
+            '2026-03-05 * "Broker" "buy"\n  Assets:Brokerage 10 AAPL {150 USD}\n  Assets:Checking -1500 USD\n'
+        )
+
+        rows = self.query_recipe("account-balances")
+
+        # The AAPL lot reads at its cost; income, expense and equity accounts stay out.
+        balances = {
+            account: [(lot["units"]["number"], lot["units"]["currency"]) for lot in balance]
+            for account, balance in rows
+        }
+        self.assertEqual(balances, {
+            "Assets:Brokerage": [("1500", "USD")],
+            "Assets:Checking": [("1500.00", "USD")],
+            "Liabilities:Card": [("-185.75", "USD")],
+        })
+
     def test_flag_sweep_counts_each_flagged_transaction_once(self):
         self.ledger.write_text(
             'option "operating_currency" "USD"\n'

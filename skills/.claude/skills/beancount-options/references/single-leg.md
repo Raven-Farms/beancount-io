@@ -104,5 +104,5 @@ If you exercise a long option, the premium adjusts the cost basis (or proceeds) 
 
 - **Cash-secured put vs naked put**: identical beancount entries. The "secured" status is a broker buying-power concept; cash is still in the same `Cash` account. Don't split into `Cash:Available` / `Cash:Secured` unless the user explicitly asks.
 - **Per-contract, not per-share**: cost basis on a $1.50 contract is `{150.00 USD}`, not `{1.50 USD}`. Per-share basis won't balance against per-contract cash.
-- **Don't fold fees into basis or cash**: keep fees as a separate `Expenses:Trading:Fees` posting. Net cash leg = gross premium × 100 ± fees, basis = gross premium × 100.
+- **Don't fold fees into basis**: keep fees as a separate `Expenses:Trading:Fees` posting. Net cash leg = gross premium × 100 ± fees, basis = gross premium × 100.
 - **Auto-balance Income line**: write `Income:Trading:OptionPremium` with no amount on close transactions; beancount fills in the realized gain/loss.

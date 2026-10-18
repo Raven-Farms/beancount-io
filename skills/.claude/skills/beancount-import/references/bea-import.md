@@ -13,8 +13,7 @@ Set `mapping` to the confirmed `--csv` specification, **including**
 negates them. Choose by inspecting the source rows, not the account type or
 the option's name. Preserve this decision in the skill's per-source config.
 
-`bea` remembers column mappings but deliberately **does not remember sign**
-(it re-applies `sign=ledger` only to a byte-identical re-run of the same file).
+`bea` remembers column mappings but **does not remember sign** across files.
 Pass the full mapping, source `account`, `date_format`, `rules`, and `target`
 on every preview and apply, including repeat imports. Matching headers alone
 do not establish which account a file belongs to.
@@ -47,9 +46,9 @@ If required accounts are blocked, include their opens in the proposal. After
 approval, open them, then re-preview. Stop for a material change to the
 approved entries or destination and obtain a corrected review before applying.
 
-Read `references/dedup.md`: CLI duplicate review covers exact IDs and
-**same-date, normalized-payee, source-amount** matches. It does not implement
-the skill's **±3-day similar-description** check for legacy manual entries.
+Read `references/dedup.md` for what CLI duplicate review reports. It does not
+implement the skill's **±3-day similar-description** check for legacy manual
+entries, and it does not guarantee the Layer 2b transfer-side check.
 Always run that additional check before approving a CSV batch, even when
 `possible_duplicates` is zero. Read the root ledger's postings in the export
 date range extended by three days on both ends, including metadata:
@@ -60,7 +59,10 @@ bea --file "$ledger" --json --no-input query "SELECT date, payee, narration, pos
 ```
 
 Compare each surviving candidate with entries without imported IDs using
-the date, exact signed amount/currency, and description rules. Show potential
+the date, exact signed amount/currency, and description rules. Also apply
+Layer 2b: a transfer imported from another account posts here only as its
+counter posting, so match it on amount and date window, whatever its
+description or import ID. Show potential
 matches and ask keep/skip. Neither a match nor a zero CLI duplicate count is
 permission to decide silently.
 

@@ -24,15 +24,15 @@ A transaction-row CSV carries no period bounds. Infer the period as the **calend
 
 Detect the columns from the header row. If there is no header, infer from the data (a column that is always a parseable date; a column that is always numeric) and **state your inference to the user before relying on it**.
 
-### Pasted PDF text
+### PDF statement
 
-When the user pastes text copied out of a PDF statement, there is no delimiter structure — extract by pattern:
+Read the PDF directly when your agent can open it; otherwise ask the user to paste its text or export CSV. Either way there is no delimiter structure — extract by pattern, and let the sanity walk below (opening + movements = ending) catch a misread figure before Match:
 
 - **Period**: look for "Statement period", "Billing cycle", "From … to …", "Opening/Closing date" lines.
 - **Opening balance** and **ending/closing balance**: labelled lines ("Beginning balance", "Ending balance", "New balance", "Closing balance").
 - **Transaction lines**: rows that begin (or end) with a date and contain an amount. Multi-line descriptions happen — join continuation lines to the row whose date they follow.
 
-If period bounds or ending balance are missing from the pasted text, ask the user for them explicitly. Do not infer an ending balance by summing — a statement you can't anchor to a stated ending balance can't be reconciled with a trustworthy assertion.
+If period bounds or ending balance are missing from the statement, ask the user for them explicitly. Do not infer an ending balance by summing — a statement you can't anchor to a stated ending balance can't be reconciled with a trustworthy assertion.
 
 ## Sign normalization — depends on the account type
 
@@ -82,5 +82,4 @@ Hand the Match phase: the normalized line list, the period start/end, and the en
 
 ## Out of scope
 
-- **Fetching** statements from a bank (no scraping — this decays constantly). The user exports the CSV or copies the PDF text. For an automated read-only feed, point them at SimpleFIN (~$1.50/mo), which many beancount users already bridge from.
-- Parsing binary PDF directly — ask the user to paste the text (or export CSV). Text extraction quality from arbitrary PDFs is not worth silently getting a number wrong.
+- **Fetching** statements from a bank (no scraping — this decays constantly). The user exports the CSV or PDF. For an automated read-only feed, point them at SimpleFIN (~$1.50/mo), which many beancount users already bridge from.

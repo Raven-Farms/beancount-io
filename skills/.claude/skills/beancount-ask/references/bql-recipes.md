@@ -89,6 +89,7 @@ The threshold applies to each transaction's expense total, so a $260 purchase sp
 
 ## 7. Account balances / statement-style checks
 
+<!-- recipe: account-balances -->
 ```sql
 SELECT account, sum(cost(position)) as balance
 WHERE account ~ '^Assets:|^Liabilities:' GROUP BY account ORDER BY account

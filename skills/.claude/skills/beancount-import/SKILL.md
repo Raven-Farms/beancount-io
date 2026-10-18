@@ -66,6 +66,9 @@ Config block format — one `source` stanza per export source:
 ;; source: chase-checking
 ;;   account: Assets:Bank:Checking
 ;;   format: csv  columns: date=1,desc=2,amount=3  date_format: MDY  sign: negative=outflow
+;;   csv_mapping: date=Date,narration=Description,amount=Amount,sign=bank
+;;   date_format: %m/%d/%Y
+;;   rules: ./import-rules/chase-checking.toml
 ;;   append_target: ./transactions/2026.beancount
 ;;   imports: 3
 ;; source: amex-card

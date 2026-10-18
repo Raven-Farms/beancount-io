@@ -72,11 +72,10 @@ Dedup runs **before** categorization (Suggest). Skipped rows must not consume ca
 
 `bea import` auto-skips exact `import-id` matches and reports possible
 duplicates with the same date, normalized payee (the narration when the row has
-no payee) and source amount/currency. It also reports Layer 2b's transfer sides
-itself ("A transfer from … already posts …; this row may be its other side"),
-for a transfer whose first posting is another asset or liability account.
-It **does not implement** the ±3-day, similar-description pass above. Run that
-additional review even when the CLI reports zero possible duplicates; see
+no payee) and source amount/currency. It may also note a transfer's other side
+("… this row may be its other side"); do not depend on that note. Run Layer 2b
+and the ±3-day, similar-description pass above yourself on every import, even
+when the CLI reports zero possible duplicates; see
 `references/bea-import.md` for the query and write procedure.
 
 The CLI's `--duplicates skip/include` applies to every possible duplicate in
