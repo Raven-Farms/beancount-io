@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [629 — Hosted ledger: managed feed validator accepts metadata after a blank line or column-0 comment (follow-up of w5/478)](./629.md)
 - [630 — Entry metadata `filename:`/`lineno:` makes a written entry look plugin-made: hidden from `--on-disk`, re-imported as new, `list` crash](./630.md)
 - [631 — `list --search` cannot find a multi-line narration by the text the table shows](./631.md)
 - [632 — Hosted ledger: shadowing a feed point with an indented comment leaves orphaned lines (follow-up of w5/477)](./632.md)
