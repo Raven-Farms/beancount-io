@@ -24,7 +24,7 @@ import typer
 from cli import context, output
 from cli.errors import UsageError
 from cli.single_value import SingleValueCommand
-from cli.utils import fold_account, inert_text, parse_opt_date, refuse_blank_filter, single_line
+from cli.utils import account_filter, fold_account, inert_text, parse_opt_date, refuse_blank_filter, single_line
 
 list_app = typer.Typer(help="List directives from a local .bean file", no_args_is_help=True, rich_markup_mode=None)
 
@@ -321,8 +321,8 @@ def _run(name: str, spec: _Spec, limit: int, allow_errors: bool, *, details: boo
     """Ask the engine for one directive type, and render it for the active mode."""
     from cli.engine import launch
 
+    filters["account"] = account_filter("--account", filters.get("account"))
     for flag, value in (
-        ("--account", filters.get("account")),
         ("--currency", filters.get("currency")),
         ("--type", filters.get("kind")),
         ("--flag", filters.get("flag")),

@@ -108,6 +108,26 @@ def refuse_blank_filter(flag: str, value: str | None) -> None:
         raise UsageError(f"{flag} needs a non-empty value; drop {flag} to leave it unset.")
 
 
+def account_filter(flag: str, value: str | None) -> str | None:
+    """An `--account` value as it is matched: stripped, and refused when it can never match.
+
+    The blank check tested the stripped value while the raw one was matched,
+    so `-a " Assets:Cash"` matched nothing with exit 0. And Click reads
+    `-a=Food` as the value `=Food`, which no account name holds (w5/626).
+    """
+    refuse_blank_filter(flag, value)
+    if value is None:
+        return None
+    stripped = value.strip()
+    if stripped.startswith("="):
+        name = stripped.lstrip("=")
+        raise UsageError(
+            f"{flag} {value!r} starts with '=', which no account name holds: a short option takes its value "
+            f"after a space. Write -a {name} or --account={name}."
+        )
+    return stripped
+
+
 def fold_account(name: str) -> str:
     """The key two account names must share to match in a filter.
 
