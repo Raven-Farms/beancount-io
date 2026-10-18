@@ -33,6 +33,8 @@ import {
 } from "@/common/components/ledger-comboboxes";
 import { useLedger } from "@/common/hooks/use-ledger";
 import { track } from "@/common/analytics";
+import { AccountAvailabilityNotice } from "./account-availability-notice";
+import { entryDay, useAccountAvailability } from "./use-account-availability";
 
 interface BalanceFormProps {
   ledgerId: string;
@@ -80,10 +82,17 @@ export function BalanceForm({ ledgerId, onSuccess }: BalanceFormProps) {
     mode: "onChange",
   });
 
+  const accounts = useAccountAvailability(ledgerId);
+  const day = entryDay(form.watch("date"));
+  const account = form.watch("account");
+
   const onSubmit = async (data: BalanceFormData) => {
     setError(null);
 
     try {
+      const entryDate = entryDay(data.date);
+      if (accounts.blocks([data.account], entryDate)) return;
+
       // The digits as typed: Beancount infers the assertion's tolerance from
       // them, so `49.70` must not become `49.7` through a double.
       const amountInput: LedgerAmountInput = {
@@ -100,7 +109,10 @@ export function BalanceForm({ ledgerId, onSuccess }: BalanceFormProps) {
 
       const variables: BulkEntriesMutationVariables = {
         ledgerId,
-        entries: [{ type: LedgerEntryType.Balance, balance: balanceInput }],
+        entries: [
+          ...accounts.openEntries([data.account], entryDate),
+          { type: LedgerEntryType.Balance, balance: balanceInput },
+        ],
       };
 
       const result = await addBalance({ variables });
@@ -113,6 +125,7 @@ export function BalanceForm({ ledgerId, onSuccess }: BalanceFormProps) {
           amount: "",
           currency: primaryCurrency,
         });
+        accounts.reset();
         track("directive_added", { directive_type: "balance" });
         onSuccess?.();
       } else {
@@ -176,6 +189,11 @@ export function BalanceForm({ ledgerId, onSuccess }: BalanceFormProps) {
                   />
                 </FormControl>
                 <FormMessage />
+                <AccountAvailabilityNotice
+                  check={accounts}
+                  account={account}
+                  day={day}
+                />
               </FormItem>
             )}
           />
@@ -226,7 +244,9 @@ export function BalanceForm({ ledgerId, onSuccess }: BalanceFormProps) {
         <div className="flex justify-end">
           <Button
             type="submit"
-            disabled={!form.formState.isValid}
+            disabled={
+              !form.formState.isValid || accounts.blocks([account], day)
+            }
             loading={form.formState.isSubmitting}
           >
             {t("journal.createBalanceEntry")}

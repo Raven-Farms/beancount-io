@@ -465,6 +465,26 @@ const koJournal: Record<string, TranslationEntry> = {
     description:
       "Shown when a new transaction's postings leave a residual; {residual} is the amount and currency, e.g. 1 USD",
   },
+  "journal.accountNotOpen": {
+    message: "{account} 계정은 이 원장에서 열려 있지 않습니다.",
+    description:
+      "Shown under a New Entry account field naming an account the ledger never opened; {account} is the name",
+  },
+  "journal.alsoOpenAccount": {
+    message: "{date}에 {account} 계정도 열기",
+    description:
+      "Checkbox label that adds an open directive for {account} dated {date} to the same New Entry write",
+  },
+  "journal.accountClosedBefore": {
+    message: "{account} 계정은 이 항목보다 앞선 {date}에 닫혔습니다.",
+    description:
+      "Shown under a New Entry account field naming an account closed before the entry; {date} is its close date",
+  },
+  "journal.accountOpensAfter": {
+    message: "{account} 계정은 이 항목 이후인 {date}에 열립니다.",
+    description:
+      "Shown under a New Entry account field naming an account opened after the entry; {date} is its open date",
+  },
   "journal.autoAmount": {
     message: "자동",
     description: "Label for an automatically balanced amount",

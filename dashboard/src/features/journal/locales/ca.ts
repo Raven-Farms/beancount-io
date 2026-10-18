@@ -499,6 +499,26 @@ const caJournal: Record<string, TranslationEntry> = {
     description:
       "Shown when a new transaction's postings leave a residual; {residual} is the amount and currency, e.g. 1 USD",
   },
+  "journal.accountNotOpen": {
+    message: "{account} no està obert en aquest llibre.",
+    description:
+      "Shown under a New Entry account field naming an account the ledger never opened; {account} is the name",
+  },
+  "journal.alsoOpenAccount": {
+    message: "Obre també {account} el {date}",
+    description:
+      "Checkbox label that adds an open directive for {account} dated {date} to the same New Entry write",
+  },
+  "journal.accountClosedBefore": {
+    message: "{account} es va tancar el {date}, abans d'aquest apunt.",
+    description:
+      "Shown under a New Entry account field naming an account closed before the entry; {date} is its close date",
+  },
+  "journal.accountOpensAfter": {
+    message: "{account} s'obre el {date}, després d'aquest apunt.",
+    description:
+      "Shown under a New Entry account field naming an account opened after the entry; {date} is its open date",
+  },
   "journal.autoAmount": {
     message: "automàtic",
     description: "Label for an automatically balanced amount",

@@ -514,6 +514,26 @@ const ruJournal: Record<string, TranslationEntry> = {
     description:
       "Shown when a new transaction's postings leave a residual; {residual} is the amount and currency, e.g. 1 USD",
   },
+  "journal.accountNotOpen": {
+    message: "Счёт {account} не открыт в этой книге.",
+    description:
+      "Shown under a New Entry account field naming an account the ledger never opened; {account} is the name",
+  },
+  "journal.alsoOpenAccount": {
+    message: "Также открыть {account} {date}",
+    description:
+      "Checkbox label that adds an open directive for {account} dated {date} to the same New Entry write",
+  },
+  "journal.accountClosedBefore": {
+    message: "Счёт {account} закрыт {date}, до этой записи.",
+    description:
+      "Shown under a New Entry account field naming an account closed before the entry; {date} is its close date",
+  },
+  "journal.accountOpensAfter": {
+    message: "Счёт {account} открывается {date}, после этой записи.",
+    description:
+      "Shown under a New Entry account field naming an account opened after the entry; {date} is its open date",
+  },
   "journal.autoAmount": {
     message: "авто",
     description: "Label for an automatically balanced amount",

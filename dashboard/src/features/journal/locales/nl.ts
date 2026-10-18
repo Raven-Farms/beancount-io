@@ -484,6 +484,26 @@ const nlJournal: Record<string, TranslationEntry> = {
     description:
       "Shown when a new transaction's postings leave a residual; {residual} is the amount and currency, e.g. 1 USD",
   },
+  "journal.accountNotOpen": {
+    message: "{account} is niet geopend in dit grootboek.",
+    description:
+      "Shown under a New Entry account field naming an account the ledger never opened; {account} is the name",
+  },
+  "journal.alsoOpenAccount": {
+    message: "{account} ook openen op {date}",
+    description:
+      "Checkbox label that adds an open directive for {account} dated {date} to the same New Entry write",
+  },
+  "journal.accountClosedBefore": {
+    message: "{account} is op {date} gesloten, vóór deze boeking.",
+    description:
+      "Shown under a New Entry account field naming an account closed before the entry; {date} is its close date",
+  },
+  "journal.accountOpensAfter": {
+    message: "{account} wordt pas op {date} geopend, na deze boeking.",
+    description:
+      "Shown under a New Entry account field naming an account opened after the entry; {date} is its open date",
+  },
   "journal.autoAmount": {
     message: "automatisch",
     description: "Label for an automatically balanced amount",

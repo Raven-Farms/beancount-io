@@ -466,6 +466,26 @@ const jaJournal: Record<string, TranslationEntry> = {
     description:
       "Shown when a new transaction's postings leave a residual; {residual} is the amount and currency, e.g. 1 USD",
   },
+  "journal.accountNotOpen": {
+    message: "{account} はこの元帳で開設されていません。",
+    description:
+      "Shown under a New Entry account field naming an account the ledger never opened; {account} is the name",
+  },
+  "journal.alsoOpenAccount": {
+    message: "{account} を {date} に開設する",
+    description:
+      "Checkbox label that adds an open directive for {account} dated {date} to the same New Entry write",
+  },
+  "journal.accountClosedBefore": {
+    message: "{account} はこの仕訳より前の {date} に閉鎖されています。",
+    description:
+      "Shown under a New Entry account field naming an account closed before the entry; {date} is its close date",
+  },
+  "journal.accountOpensAfter": {
+    message: "{account} はこの仕訳より後の {date} に開設されます。",
+    description:
+      "Shown under a New Entry account field naming an account opened after the entry; {date} is its open date",
+  },
   "journal.autoAmount": {
     message: "自動",
     description: "Label for an automatically balanced amount",
