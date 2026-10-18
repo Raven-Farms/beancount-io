@@ -454,7 +454,7 @@ paths. `mapBankAccount`, `setBankAccountCurrency`, and `refreshBankConnection`
 have no preview contract and publish no `dry_run` argument, so passing one is
 refused as an undeclared argument before any bank service runs. Each tool's
 input schema is in [`bank-import-tool.ts`](../src/features/ai-agent/tools/bank-import-tool.ts)
-(`BANK_OPERATION_SCHEMAS`).
+(`BANK_OPERATIONS`).
 
 ### Asset and archive URL discovery
 

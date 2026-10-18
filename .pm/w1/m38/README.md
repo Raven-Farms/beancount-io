@@ -1,6 +1,6 @@
 # w1 · m38 — One MCP tool per operation, so the ChatGPT app directory accepts every tool
 
-**Worker:** worker1 **Goal:** Every model-callable MCP operation is its own tool with its own description, input schema, and annotations. No tool dispatches on an `operation` argument. OpenAI's app-directory scan then reports no blocking findings, and parity, the frozen baseline, prompts, and docs describe the new shape. **Status:** in progress (t001–t006, t008 done)
+**Worker:** worker1 **Goal:** Every model-callable MCP operation is its own tool with its own description, input schema, and annotations. No tool dispatches on an `operation` argument. OpenAI's app-directory scan then reports no blocking findings, and parity, the frozen baseline, prompts, and docs describe the new shape. **Status:** in progress (t001–t006, t008–t009 done)
 
 ## Tasks (in order)
 
@@ -13,7 +13,7 @@
 | [t005](./done/t005.md) | Retire the grouped-dispatcher machinery and remeasure the tool-list gates — **DONE** | 40m | t002, t003, t004 |
 | [t006](./done/t006.md) | Update prompts, docs, and skills that name the old tools — **DONE** | 45m | t002, t003, t004 |
 | [t008](./done/t008.md) | Adoption surface — **DONE** | 30m | t005, t006 |
-| t009 | Simplify | 30m | t008 |
+| [t009](./done/t009.md) | Simplify — **DONE** | 30m | t008 |
 | t010 | Test coverage | 45m | t008, t009 |
 | t007 | Verify on production: OpenAI rescan and Claude portal tools step | 20m | t010 |
 | t011 | Closeout | 15m | t007, t010 |

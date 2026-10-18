@@ -1,4 +1,3 @@
-import { z } from "zod";
 import {
   collaboratorUpdateInput,
   collaboratorDeleteInput,
@@ -11,22 +10,6 @@ import {
   type McpRequestContext,
 } from "./mcp-context";
 import { mcpOutputSchema, toolOutputSchema } from "../tools/types";
-
-export const collaboratorToolInput = z
-  .object({
-    operation: z.enum(["update", "delete", "leave"]),
-    ledger: ledgerSelection,
-    collaborator: z
-      .string()
-      .optional()
-      .describe(
-        "Username to add, update, or remove. Required for update/delete; forbidden for leave.",
-      ),
-    permission: collaboratorUpdateInput.shape.permission.describe(
-      "read, write, or admin. Only for update; omitted or null uses the repository default.",
-    ),
-  })
-  .strict();
 
 /** One MCP tool per collaborator operation (ADR 019, 2026-10-18; w1/m38). */
 export const COLLABORATOR_OPERATION_SCHEMAS = {
@@ -44,36 +27,45 @@ export const collaboratorToolOutput = mcpOutputSchema(
   toolOutputSchema(collaboratorResultSchema),
 );
 
-export async function executeCollaboratorTool(
-  context: McpRequestContext,
-  input: z.infer<typeof collaboratorToolInput>,
-) {
-  const { operation, ledger, ...payload } = collaboratorToolInput.parse(input);
-  const ledgerId = resolveMcpLedger(context, ledger);
-  const workflow = context.collaboratorsWorkflow;
-  const target = { identity: context.identity, ledgerId };
-  switch (operation) {
-    case "update": {
-      const data = collaboratorUpdateInput.parse(payload);
-      return {
-        ok: true,
-        result: await workflow.addOrUpdateCollaborator({
-          ...target,
-          collaborator: data.collaborator,
-          permission: data.permission ?? undefined,
-        }),
-      };
-    }
-    case "delete":
-      return {
-        ok: true,
-        result: await workflow.deleteCollaborator({
-          ...target,
-          ...collaboratorDeleteInput.parse(payload),
-        }),
-      };
-    case "leave":
-      collaboratorLeaveInput.parse(payload);
-      return { ok: true, result: await workflow.leaveLedger(target) };
-  }
+function target(context: McpRequestContext, ledger: string | undefined) {
+  return {
+    identity: context.identity,
+    ledgerId: resolveMcpLedger(context, ledger),
+  };
 }
+
+/** Each tool's handler, parsing the schema that tool publishes. */
+export const COLLABORATOR_EXECUTORS = {
+  update: async (context: McpRequestContext, input: unknown) => {
+    const { ledger, collaborator, permission } =
+      COLLABORATOR_OPERATION_SCHEMAS.update.parse(input);
+    return {
+      ok: true,
+      result: await context.collaboratorsWorkflow.addOrUpdateCollaborator({
+        ...target(context, ledger),
+        collaborator,
+        permission: permission ?? undefined,
+      }),
+    };
+  },
+  delete: async (context: McpRequestContext, input: unknown) => {
+    const { ledger, ...payload } =
+      COLLABORATOR_OPERATION_SCHEMAS.delete.parse(input);
+    return {
+      ok: true,
+      result: await context.collaboratorsWorkflow.deleteCollaborator({
+        ...target(context, ledger),
+        ...payload,
+      }),
+    };
+  },
+  leave: async (context: McpRequestContext, input: unknown) => {
+    const { ledger } = COLLABORATOR_OPERATION_SCHEMAS.leave.parse(input);
+    return {
+      ok: true,
+      result: await context.collaboratorsWorkflow.leaveLedger(
+        target(context, ledger),
+      ),
+    };
+  },
+};

@@ -1,9 +1,9 @@
 import { pullRequestCreateInput } from "../pull-request-routes";
 
 /**
- * The create contract REST and MCP share: `pullRequestToolInput` re-parses
- * its payload through this schema, so the default below is the reason
- * `createPullRequest` works without `baseBranch` on both surfaces
+ * The create contract REST and MCP share: MCP's `createPullRequest` input
+ * extends this schema with the ledger target, so the default below is the
+ * reason `createPullRequest` works without `baseBranch` on both surfaces
  * (GraphQL applies its own `defaultValue: "main"`).
  */
 describe("pullRequestCreateInput", () => {
