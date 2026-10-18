@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [690 — Logout treats 504/524 as a plain failure; 521–523 are wrongly reported as "the request arrived" (incomplete fix of w5/517)](./690.md)
 - [691 — init's "Record purchases" line runs against no ledger for a non-default file name](./691.md)
 - [692 — Import before init's date blocks one account at a time; remedy skips the opening balance](./692.md)
 - [693 — init --currency X_ passes init's check, then fails with Invalid token](./693.md)
