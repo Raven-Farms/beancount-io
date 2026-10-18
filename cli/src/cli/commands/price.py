@@ -74,7 +74,7 @@ def price(ctx: typer.Context) -> None:
     raise typer.Exit(code)
 
 
-def _answer(argv: list[str], *, table_covers_sources: bool = False) -> dict[str, Any]:
+def _answer(argv: list[str], *, table_covers_sources: bool = False, writes: bool = False) -> dict[str, Any]:
     """The helper answer, with the load's own errors bannered, never raised.
 
     `price status` and `price refresh` show each managed source's state in
@@ -82,7 +82,7 @@ def _answer(argv: list[str], *, table_covers_sources: bool = False) -> dict[str,
     to inspect the source." told the user to run the command they had just
     run, and repeated the row below it (w5/354). There it is left out.
     """
-    data = launch.helper_json(argv)
+    data = launch.helper_json(argv, writes=writes)
     errors = data.get("errors") or []
     if table_covers_sources:
         errors = [error for error in errors if "managed price source unavailable" not in str(error)]
@@ -210,7 +210,7 @@ def _export(args: list[str]) -> None:
         argv.append("--allow-errors")
     if force:
         argv.append("--force")
-    data = _answer(argv)
+    data = _answer(argv, writes=True)
     if current.json_output:
         output.emit(
             {

@@ -282,6 +282,10 @@ A device or FIFO destination is written through rather than replaced, so
 | 3 | `auth` | Authentication or permission failure |
 | 4 | `conflict` | Conflict, or a write whose outcome is unknown |
 
+This write-outcome protection includes `init` and `price export`: if their
+engine dies without an answer, exit 4 asks you to inspect the created files
+before retrying. A confirmed success keeps its result across a later stop.
+
 Exit 0 is a promise: the documented effect happened, and the run left the
 ledger no worse than it found it — a write that exits 0 introduces no new
 `bea check` error. A command that did nothing, or that wrote only part of

@@ -2022,7 +2022,8 @@ def _write_export(dest: Path, content: bytes, mode: int) -> None:
                 stream.write(content)
                 stream.flush()
                 os.fsync(stream.fileno())
-            os.replace(staged, final)
+            with stopping.committing():
+                os.replace(staged, final)
         finally:
             staged.unlink(missing_ok=True)
 

@@ -556,7 +556,8 @@ def _run_helper(
     not let the write run.
     """
     stopped: list[int] = []
-    with _forwarding_teardown(stopped) as attach:
+    committed = False
+    with _forwarding_teardown(stopped, committed=lambda: committed) as attach:
         with subprocess.Popen(
             command,
             env=env,
@@ -581,16 +582,17 @@ def _run_helper(
             finally:
                 relay.join()
                 stream.close()
-    completed = subprocess.CompletedProcess(command, child.returncode, out, "".join(kept))
-    committed = writes and _answered_success(completed)
+        # Decide while forwarding handlers still own every stop. Restoring
+        # defaults before installing the post-commit handlers left a window
+        # where the frontend could die silently over a completed write.
+        completed = subprocess.CompletedProcess(command, child.returncode, out, "".join(kept))
+        committed = writes and _answered_success(completed)
     if stopped and not committed:
         _die_by(stopped[0])
-    if committed:
-        _hold_stops_after_commit(stopped)
     return completed
 
 
-def _hold_stops_after_commit(stopped: list[int]) -> None:
+def _hold_stops_after_commit(stopped: list[int], previous: list[tuple[int, Any]]) -> None:
     """From a committed write on, a stop is noted and reported at exit, not obeyed.
 
     The default disposition came back with the helper's return, so a stop
@@ -600,24 +602,32 @@ def _hold_stops_after_commit(stopped: list[int]) -> None:
 
     from typer._click.globals import get_current_context
 
+    registered = False
+
+    def report_stop() -> None:
+        nonlocal registered
+        if stopped and not registered:
+            registered = True
+            atexit.register(_report_late_stop, stopped[0])
+
     def hold(number: int, _frame: Any) -> None:
         if not stopped:
             stopped.append(number)
-            atexit.register(_report_late_stop, number)
+        report_stop()
 
-    if stopped:
-        atexit.register(_report_late_stop, stopped[0])
     # Held for the command that wrote, and handed back when it closes: an
     # embedding process (CliRunner) keeps its own handlers afterwards.
     command = get_current_context(silent=True)
     if command is None:
+        report_stop()
+        _restore_handlers(previous)
         return
-    previous: list[tuple[int, Any]] = []
-    for number in _FORWARDED_SIGNALS:
+    for number, _handler in previous:
         try:
-            previous.append((number, signal.signal(number, hold)))
+            signal.signal(number, hold)
         except (OSError, ValueError):
             continue
+    report_stop()
     command.find_root().call_on_close(lambda: _restore_handlers(previous))
 
 
@@ -675,7 +685,9 @@ def _relay_notices(stream: TextIO, kept: list[str]) -> None:
 
 
 @contextmanager
-def _forwarding_teardown(stopped: list[int] | None = None) -> Iterator[Callable[[subprocess.Popen[str]], None]]:
+def _forwarding_teardown(
+    stopped: list[int] | None = None, *, committed: Callable[[], bool] | None = None
+) -> Iterator[Callable[[subprocess.Popen[str]], None]]:
     """Pass a termination signal on to `child`, and let it unwind before we go.
 
     The engine stages every write into a `.bea-*.tmp` candidate beside the
@@ -731,11 +743,12 @@ def _forwarding_teardown(stopped: list[int] | None = None) -> Iterator[Callable[
                 continue
         yield attach
     finally:
-        for number, previous in installed:
-            try:
-                signal.signal(number, previous)
-            except (OSError, ValueError):
-                pass
+        if committed is not None and committed():
+            # Hand off directly, without restoring the default disposition
+            # between a known committed result and its frontend rendering.
+            _hold_stops_after_commit(stopped if stopped is not None else [], installed)
+        else:
+            _restore_handlers(installed)
         if pending is not None:
             # A failed spawn must not swallow a termination signal either.
             signal.signal(pending, signal.SIG_DFL)

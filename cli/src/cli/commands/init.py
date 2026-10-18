@@ -195,7 +195,7 @@ def init(
     for account, amount in balances.items():
         if amount:
             argv += ["--opening-balance", f"{account} {amount:f}"]
-    data = launch.helper_json(argv)
+    data = launch.helper_json(argv, writes=True)
     if warnings:
         data["warnings"] = warnings
     if ctx.json_output:
