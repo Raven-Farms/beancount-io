@@ -16,6 +16,8 @@ import {
   collectAttributes,
   closeRustledgerWorkerPool,
   countDirectives,
+  countLedgerDirectives,
+  countLedgerDirectivesInProcess,
   createBookedBlockParser,
   entriesCountPerType,
   findEntrySlice,
@@ -956,6 +958,24 @@ async function main(): Promise<void> {
   assert(
     count === 2,
     `countDirectives on a leaf file returns 2 (got ${count})`,
+  );
+
+  // The free-tier precheck and the push gate count through the worker pool
+  // (w0/m5); it must agree with the in-process count, include graph and all.
+  const countFiles: FileMap = {
+    "main.bean":
+      'include "2024.bean"\n2024-01-01 open Assets:Cash USD\n2024-01-01 open Expenses:Food USD\n',
+    "2024.bean":
+      '2024-01-05 * "Lunch"\n  Expenses:Food 10 USD\n  Assets:Cash\n2024-01-06 balance Assets:Cash -10 USD\n',
+  };
+  const workerCount = await countLedgerDirectives(countFiles, "main.bean");
+  const inProcessCount = await countLedgerDirectivesInProcess(
+    countFiles,
+    "main.bean",
+  );
+  assert(
+    workerCount === 4 && inProcessCount === 4,
+    `the worker-pool directive count matches the in-process count across an include (worker ${workerCount}, in-process ${inProcessCount})`,
   );
 
   const formatted = await formatSource(
