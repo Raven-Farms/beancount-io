@@ -77,6 +77,9 @@ def run_engine_argv(argv: Sequence[str], *, interactive: bool = False) -> int:
     such as the query shell: Ctrl-C there belongs to the child, which cancels
     the line and keeps going, so this process must not die of it too.
     """
+    # Streamed commands have no answer envelope to prove that the program
+    # served. A non-Python override can otherwise silently exit successfully.
+    _refuse_unusable_engine()
     command, env = helper_command()
     if not interactive:
         return _spawn([*command, *argv], env)
@@ -398,6 +401,7 @@ def capture_engine(argv: Sequence[str]) -> subprocess.CompletedProcess[str]:
     envelope, where `bea` has to read the answer before it can decide what the
     exit status should be.
     """
+    _refuse_unusable_engine()
     command, env = helper_command()
     return _run_helper([*command, *argv], env, None)
 
@@ -815,8 +819,8 @@ def engine_load_failure(python: Path) -> str | None:
     return lines[-1] if lines else "it is not a Python that loads the engine"
 
 
-def _refuse_unusable_engine(completed: subprocess.CompletedProcess[str]) -> None:
-    """Blame the engine itself when the interpreter that served cannot load the helper at all.
+def _refuse_unusable_engine(completed: subprocess.CompletedProcess[str] | None = None) -> None:
+    """Refuse an override or managed interpreter that cannot load the helper.
 
     An override without Beancount died on the helper's first import, which
     `_parse` could only report as an engine that "did not answer", traceback
@@ -826,6 +830,8 @@ def _refuse_unusable_engine(completed: subprocess.CompletedProcess[str]) -> None
     while `engine status` said "Provisioned: yes" (w5/320). Asking that
     interpreter for the import alone settles it: when even that fails no
     command body ran, so nothing was written, and the engine is what to fix.
+    Streamed/captured calls probe before spawning, since even exit 0 carries
+    no envelope to distinguish an engine result from a non-Python program.
     An engine that does load the helper falls through to the caller's report.
     """
     source = resolve_engine()
@@ -845,7 +851,7 @@ def _refuse_unusable_engine(completed: subprocess.CompletedProcess[str]) -> None
             f"The managed Beancount engine at {source.location} is damaged and cannot load ({reason}). "
             f"Remove {source.location} and rerun; bea provisions a fresh engine."
         )
-    raise BeaError(message, traceback=completed.stderr or None) from None
+    raise BeaError(message, traceback=(completed.stderr or None) if completed is not None else None) from None
 
 
 def helper_command() -> tuple[list[str], dict[str, str] | None]:
