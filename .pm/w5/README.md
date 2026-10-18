@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [675 — `query --source`, the shell and doctor compat skip the `BEA_ENGINE_PYTHON` check (gap in w5/309)](./675.md)
 - [676 — `init`/`price export` report an engine killed after writing as "produced no result" (exit 1, not 4)](./676.md)
 - [677 — The same conflicting same-day price exits 2 from `add price` but 4 from `import --apply`](./677.md)
 - [678 — `format FILE` / `-o` on an unparseable file exit 0 echoing it unchanged](./678.md)
