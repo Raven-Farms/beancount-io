@@ -87,6 +87,7 @@ export const fa: Translations = {
   merchantsCadenceQuarterly: "فصلی",
   merchantsCadenceYearly: "سالانه",
   merchantsCadenceIrregular: "نامنظم",
+  merchantsCadenceUnknown: "سابقه کافی نیست",
   merchantsNextExpected: "بعدی {{date}}",
   merchantsOverdue: "سررسید گذشته",
   merchantsRecurringToggle: "دوره‌ای",

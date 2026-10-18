@@ -241,7 +241,7 @@ function MerchantDetailBody({ payee }: { payee: string }) {
   const theme = useTheme().colorTheme;
   const { t, locale } = useTranslations();
   const overrides = useReactiveVar(merchantRecurringOverridesVar);
-  const { detections } = usePayeeRecurrence(ledgerId);
+  const { detections, enoughHistory } = usePayeeRecurrence(ledgerId);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const pagesFetchedRef = useRef(1);
 
@@ -335,8 +335,9 @@ function MerchantDetailBody({ payee }: { payee: string }) {
       resolveRecurringVerdict(
         detection,
         overrideFor(overrides, ledgerId!, payee),
+        enoughHistory.has(payee),
       ),
-    [detection, overrides, ledgerId, payee],
+    [detection, overrides, ledgerId, payee, enoughHistory],
   );
 
   const loadMore = useCallback(async () => {

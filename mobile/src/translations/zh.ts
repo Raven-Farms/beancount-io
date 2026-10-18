@@ -76,6 +76,7 @@ export const zh: Translations = {
   merchantsCadenceQuarterly: "每季",
   merchantsCadenceYearly: "每年",
   merchantsCadenceIrregular: "不定期",
+  merchantsCadenceUnknown: "历史记录不足",
   merchantsNextExpected: "下次 {{date}}",
   merchantsOverdue: "已逾期",
   merchantsRecurringToggle: "定期",

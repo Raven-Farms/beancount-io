@@ -80,6 +80,7 @@ export const en = {
   merchantsCadenceQuarterly: "Quarterly",
   merchantsCadenceYearly: "Yearly",
   merchantsCadenceIrregular: "Irregular",
+  merchantsCadenceUnknown: "Not enough history",
   merchantsNextExpected: "Next {{date}}",
   merchantsOverdue: "Overdue",
   // Setting name for the Switch (not an action label) so VoiceOver hears

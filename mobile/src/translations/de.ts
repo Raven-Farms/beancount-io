@@ -88,6 +88,7 @@ export const de: Translations = {
   merchantsCadenceQuarterly: "Vierteljährlich",
   merchantsCadenceYearly: "Jährlich",
   merchantsCadenceIrregular: "Unregelmäßig",
+  merchantsCadenceUnknown: "Zu wenig Verlauf",
   merchantsNextExpected: "Nächste {{date}}",
   merchantsOverdue: "Überfällig",
   merchantsRecurringToggle: "Wiederkehrend",

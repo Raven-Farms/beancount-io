@@ -45,6 +45,8 @@ export type OverrideLookup = (payee: string) => RecurringOverride | null;
 export function buildMerchantSections(
   merchants: readonly MerchantAggregate[],
   detections: ReadonlyMap<string, RecurrenceVerdict | null>,
+  /** Payees whose series had enough dates to analyse (`hasEnoughHistory`). */
+  enoughHistory: ReadonlySet<string>,
   overrideForPayee: OverrideLookup,
   searchQuery: string,
   sort: MerchantSort,
@@ -56,6 +58,7 @@ export function buildMerchantSections(
     const resolved = resolveRecurringVerdict(
       detection,
       overrideForPayee(merchant.payee),
+      enoughHistory.has(merchant.payee),
     );
     return {
       merchant,
@@ -134,6 +137,8 @@ export function cadenceLabelKey(
       return "merchantsCadenceYearly";
     case "irregular":
       return "merchantsCadenceIrregular";
+    case "unknown":
+      return "merchantsCadenceUnknown";
     default:
       return null;
   }

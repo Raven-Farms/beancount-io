@@ -24,7 +24,6 @@ Mobile QA findings from 2026-10-15, triaged the same day. Order is suggested, hi
 **Minors: wrong or misleading output**
 
 - [045 — In Persian (RTL), text inputs stay pinned to the physical left (Profile, Payee)](./045.md) — mobile QA 2026-10-15
-- [039 — Marking a merchant Recurring labels two identical monthly payments "Irregular"](./039.md) — mobile QA 2026-10-15
 
 **Minors: polish**
 

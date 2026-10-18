@@ -91,6 +91,7 @@ export const sk: Translations = {
   merchantsCadenceQuarterly: "Štvrťročne",
   merchantsCadenceYearly: "Ročne",
   merchantsCadenceIrregular: "Nepravidelne",
+  merchantsCadenceUnknown: "Málo histórie",
   merchantsNextExpected: "Ďalšie {{date}}",
   merchantsOverdue: "Po splatnosti",
   merchantsRecurringToggle: "Opakujúce sa",

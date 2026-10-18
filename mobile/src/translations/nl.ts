@@ -87,6 +87,7 @@ export const nl: Translations = {
   merchantsCadenceQuarterly: "Per kwartaal",
   merchantsCadenceYearly: "Jaarlijks",
   merchantsCadenceIrregular: "Onregelmatig",
+  merchantsCadenceUnknown: "Te weinig geschiedenis",
   merchantsNextExpected: "Volgende {{date}}",
   merchantsOverdue: "Achterstallig",
   merchantsRecurringToggle: "Terugkerend",

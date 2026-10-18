@@ -1,6 +1,7 @@
 import {
   detectRecurrence,
   formatLedgerDay,
+  hasEnoughHistory,
   median,
   parseLedgerDay,
   type SeriesPoint,
@@ -282,5 +283,39 @@ describe("detectRecurrence", () => {
     // nextExpected ≈ 2024-05-02, grace ≈ 8 → boundary is May 10 inclusive.
     expect(onTime!.isOverdue).toBe(false);
     expect(overdue!.isOverdue).toBe(true);
+  });
+});
+
+describe("hasEnoughHistory", () => {
+  // A null detection meant both "too short" and "no pattern", so a manual
+  // Recurring mark on two monthly payments read "Irregular" (w0/039).
+  it("says two dated payments are too few to analyse", () => {
+    const two = monthlySeries("2026-07-03", 2, -1800);
+    expect(hasEnoughHistory(two)).toBe(false);
+    expect(detectRecurrence(two, "2026-08-10")).toBe(null);
+  });
+
+  it("says three dated payments are enough, pattern or not", () => {
+    expect(hasEnoughHistory(monthlySeries("2026-01-03", 3, -1800))).toBe(true);
+    const scattered: SeriesPoint[] = [
+      { date: "2026-01-01", currency: "USD", amount: -50 },
+      { date: "2026-01-04", currency: "USD", amount: -50 },
+      { date: "2026-03-29", currency: "USD", amount: -50 },
+      { date: "2026-04-02", currency: "USD", amount: -50 },
+    ];
+    expect(hasEnoughHistory(scattered)).toBe(true);
+    expect(detectRecurrence(scattered, "2026-05-01")).toBe(null);
+  });
+
+  it("counts distinct valid days, as detection does", () => {
+    const sameDay: SeriesPoint[] = [
+      { date: "2026-07-03", currency: "USD", amount: -10 },
+      { date: "2026-07-03", currency: "EUR", amount: -9 },
+      { date: "2026-08-03", currency: "USD", amount: -10 },
+      { date: "not-a-date", currency: "USD", amount: -10 },
+      { date: "2026-09-03", currency: "USD", amount: Number.NaN },
+    ];
+    expect(hasEnoughHistory(sameDay)).toBe(false);
+    expect(hasEnoughHistory([])).toBe(false);
   });
 });

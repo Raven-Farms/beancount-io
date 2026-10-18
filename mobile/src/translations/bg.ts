@@ -87,6 +87,7 @@ export const bg: Translations = {
   merchantsCadenceQuarterly: "На тримесечие",
   merchantsCadenceYearly: "Годишно",
   merchantsCadenceIrregular: "Неравномерно",
+  merchantsCadenceUnknown: "Недостатъчна история",
   merchantsNextExpected: "Следващо {{date}}",
   merchantsOverdue: "Просрочено",
   merchantsRecurringToggle: "Повтарящ се",

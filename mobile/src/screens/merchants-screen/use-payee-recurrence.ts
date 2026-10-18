@@ -1,7 +1,10 @@
 import { useMemo } from "react";
 import { useQueryShellQuery } from "@/generated-graphql/graphql";
 import { getFormatDate } from "@/common/format-util";
-import { detectRecurrence } from "./selectors/detect-recurrence";
+import {
+  detectRecurrence,
+  hasEnoughHistory,
+} from "./selectors/detect-recurrence";
 import {
   buildPayeeSeriesBql,
   mapPayeeSeries,
@@ -29,14 +32,18 @@ export function usePayeeRecurrence(ledgerId: string | null | undefined) {
     skip: !ledgerId || !seriesBql,
   });
 
-  const detections = useMemo(() => {
+  const { detections, enoughHistory } = useMemo(() => {
     const seriesByPayee = mapPayeeSeries(query.data?.queryShell?.table ?? null);
     const map = new Map<string, ReturnType<typeof detectRecurrence>>();
+    // Payees with enough dates to analyse: a manual mark on any other reads
+    // "Not enough history", not "Irregular" (w0/039).
+    const enough = new Set<string>();
     for (const [payee, series] of seriesByPayee) {
       map.set(payee, detectRecurrence(series, today));
+      if (hasEnoughHistory(series)) enough.add(payee);
     }
-    return map;
+    return { detections: map, enoughHistory: enough };
   }, [query.data?.queryShell?.table, today]);
 
-  return { ...query, today, detections, seriesBql };
+  return { ...query, today, detections, enoughHistory, seriesBql };
 }

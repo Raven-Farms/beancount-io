@@ -91,6 +91,7 @@ export const uk: Translations = {
   merchantsCadenceQuarterly: "Щокварталу",
   merchantsCadenceYearly: "Щороку",
   merchantsCadenceIrregular: "Нерегулярно",
+  merchantsCadenceUnknown: "Замало історії",
   merchantsNextExpected: "Наступний {{date}}",
   merchantsOverdue: "Прострочено",
   merchantsRecurringToggle: "Регулярний",

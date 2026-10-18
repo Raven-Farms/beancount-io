@@ -90,6 +90,7 @@ export const fr: Translations = {
   merchantsCadenceQuarterly: "Trimestriel",
   merchantsCadenceYearly: "Annuel",
   merchantsCadenceIrregular: "Irrégulier",
+  merchantsCadenceUnknown: "Historique insuffisant",
   merchantsNextExpected: "Prochain {{date}}",
   merchantsOverdue: "En retard",
   merchantsRecurringToggle: "Récurrent",

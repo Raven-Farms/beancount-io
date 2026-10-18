@@ -38,6 +38,9 @@ const OVERDUE: RecurrenceVerdict = {
   isOverdue: true,
 };
 
+// Payees whose series had enough dates for detection to analyse.
+const ANALYSED: ReadonlySet<string> = new Set(["Netflix", "Uber", "Landlord"]);
+
 describe("buildMerchantSections", () => {
   it("pins detected recurring merchants above the general list", () => {
     const detections = new Map<string, RecurrenceVerdict | null>([
@@ -48,6 +51,7 @@ describe("buildMerchantSections", () => {
     const sections = buildMerchantSections(
       [UBER, NETFLIX, RENT],
       detections,
+      ANALYSED,
       () => null,
       "",
       "count",
@@ -73,6 +77,7 @@ describe("buildMerchantSections", () => {
     const sections = buildMerchantSections(
       [NETFLIX, UBER],
       detections,
+      ANALYSED,
       (payee) => (payee === "Netflix" ? "notRecurring" : null),
       "",
       "alphabetical",
@@ -85,6 +90,7 @@ describe("buildMerchantSections", () => {
     const sections = buildMerchantSections(
       [UBER],
       new Map([["Uber", null]]),
+      ANALYSED,
       (payee) => (payee === "Uber" ? "recurring" : null),
       "",
       "count",
@@ -93,11 +99,26 @@ describe("buildMerchantSections", () => {
     expect(sections[0]!.data[0]!.resolved.cadence).toBe("irregular");
   });
 
+  it("says a marked payee with too little history has no cadence yet", () => {
+    // Two identical monthly rent payments read "Irregular" (w0/039).
+    const sections = buildMerchantSections(
+      [RENT],
+      new Map([["Landlord", null]]),
+      new Set<string>(),
+      (payee) => (payee === "Landlord" ? "recurring" : null),
+      "",
+      "count",
+    );
+    expect(sections[0]!.key).toBe("recurring");
+    expect(sections[0]!.data[0]!.resolved.cadence).toBe("unknown");
+  });
+
   it("filters both sections by search", () => {
     const detections = new Map([["Netflix", MONTHLY]]);
     const sections = buildMerchantSections(
       [NETFLIX, UBER],
       detections,
+      ANALYSED,
       () => null,
       "net",
       "count",
@@ -111,6 +132,7 @@ describe("cadenceLabelKey", () => {
   it("maps each cadence to a translation key", () => {
     expect(cadenceLabelKey("monthly")).toBe("merchantsCadenceMonthly");
     expect(cadenceLabelKey("irregular")).toBe("merchantsCadenceIrregular");
+    expect(cadenceLabelKey("unknown")).toBe("merchantsCadenceUnknown");
     expect(cadenceLabelKey(null)).toBe(null);
   });
 });

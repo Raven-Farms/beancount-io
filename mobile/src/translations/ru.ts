@@ -92,6 +92,7 @@ export const ru: Translations = {
   merchantsCadenceQuarterly: "Ежеквартально",
   merchantsCadenceYearly: "Ежегодно",
   merchantsCadenceIrregular: "Нерегулярно",
+  merchantsCadenceUnknown: "Мало истории",
   merchantsNextExpected: "Следующий {{date}}",
   merchantsOverdue: "Просрочено",
   merchantsRecurringToggle: "Регулярный",

@@ -169,6 +169,7 @@ function MerchantsDirectory() {
 
   const {
     detections,
+    enoughHistory,
     loading: seriesLoading,
     error: seriesError,
     refetch: refetchSeries,
@@ -184,11 +185,20 @@ function MerchantsDirectory() {
       buildMerchantSections(
         merchants,
         detections,
+        enoughHistory,
         (payee) => overrideFor(overrides, ledgerId!, payee),
         searchQuery,
         sort,
       ),
-    [merchants, detections, overrides, ledgerId, searchQuery, sort],
+    [
+      merchants,
+      detections,
+      enoughHistory,
+      overrides,
+      ledgerId,
+      searchQuery,
+      sort,
+    ],
   );
 
   const loading = rollupLoading || seriesLoading;
