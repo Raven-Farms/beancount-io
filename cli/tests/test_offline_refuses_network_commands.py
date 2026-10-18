@@ -80,9 +80,9 @@ def _bea(tmp_path: Path, stub: str, *args: str) -> subprocess.CompletedProcess[s
 @pytest.mark.parametrize(
     ("args", "named"),
     [
-        (("--json", "-y", "cloud", "ledger", "delete", "qa/books"), "bea cloud ledger requires network access"),
-        (("cloud", "ledger", "create", "newbook"), "bea cloud ledger requires network access"),
-        (("cloud", "ledger", "list"), "bea cloud ledger requires network access"),
+        (("--json", "-y", "cloud", "ledger", "delete", "qa/books"), "bea cloud requires network access"),
+        (("cloud", "ledger", "create", "newbook"), "bea cloud requires network access"),
+        (("cloud", "ledger", "list"), "bea cloud requires network access"),
         (("cloud", "logout"), "bea cloud logout requires network access"),
         (("-f", "main.bean", "ask", "--print", "q"), "bea ask requires network access"),
     ],

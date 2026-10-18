@@ -59,6 +59,7 @@ def price(ctx: typer.Context) -> None:
     if args[:1] == ["export"]:
         _export(args[1:])
         return
+    context.current().require_network("price")
     refuse_json(
         "price",
         when="when it forwards to bean-price",

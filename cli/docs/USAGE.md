@@ -96,7 +96,7 @@ Global options come before the command.
 | `--json` | Emit the JSON envelope on stdout and JSON errors on stderr. Implies `--no-input`. |
 | `--no-input` | Never prompt. Missing confirmation or input fails with exit 2 instead of waiting. |
 | `--strict` | Refuse partial answers even in a terminal; `--allow-errors` opts into them. |
-| `--offline` | Never fetch: resolve managed price includes from the local cache only, and skip the update check. Commands that exist to use the network (`price refresh`, every `bea cloud` command, `bea ask`) exit 2 instead of sending anything. |
+| `--offline` | Never fetch, except an explicit `upgrade --check`: reuse cached managed prices and skip background update checks. Forwarded `price` quote fetching, `price refresh`, `engine enable`, `upgrade`, every `bea cloud` command, and `bea ask` exit 2 instead of sending anything. Local engine commands reuse an available engine; if installation is needed, they exit 2 before starting it. Run once without `--offline` with network access to install the engine. |
 | `--strict-prices` | Fail the load when a managed price source is stale or unavailable. |
 | `--yes / -y` | Answer confirmations with yes. |
 | `--debug` | Include exception tracebacks; JSON errors gain a `traceback` string. |

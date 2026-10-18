@@ -37,7 +37,7 @@ from importlib import resources
 from pathlib import Path
 from typing import Any
 
-from cli import output
+from cli import context, output
 from cli.engine import paths
 from cli.errors import BeaError, UsageError
 from cli.utils import exclusive_lock
@@ -54,11 +54,20 @@ def ensure_engine() -> Path:
 
     root = paths.engine_root()
     if not paths.is_provisioned(root):
+        _refuse_offline_install(root)
         with provisioning_lock(root):
             # Another command may have finished provisioning while we waited.
             if not paths.is_provisioned(root):
                 provision(root)
     return paths.venv_python(root)
+
+
+def _refuse_offline_install(root: Path) -> None:
+    if context.current().offline:
+        raise UsageError(
+            f"The Beancount engine is not installed at {root}; installing it requires network access. "
+            "Rerun without --offline once with network access, then reuse the installed engine offline."
+        )
 
 
 @contextmanager
@@ -85,6 +94,7 @@ def provision(root: Path) -> None:
     engine commands were using. Optional features recorded in it are
     reinstalled into the replacement before it is published.
     """
+    _refuse_offline_install(root)
     _refuse_foreign_root(root)
     uv = _find_uv()
     remembered = enabled_features(root)
@@ -178,6 +188,7 @@ def enable_feature(name: str) -> tuple[bool, set[str]]:
     Returns `(changed, enabled_features)`. `changed` is False when the feature
     was already present so callers can avoid claiming a fresh enable.
     """
+    context.current().require_network("engine enable")
     if paths.python_override() is not None:
         raise UsageError(
             f"Cannot enable engine feature '{name}' while {paths.PYTHON_ENV} is set. "

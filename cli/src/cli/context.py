@@ -85,6 +85,11 @@ class RunContext:
     strict_prices: bool = False
     _no_input: bool = field(default=False, repr=False)
 
+    def require_network(self, command: str) -> None:
+        """Refuse a command whose purpose requires network access before it starts."""
+        if self.offline:
+            raise UsageError(f"bea {command} requires network access; remove --offline.")
+
     @property
     def no_input(self) -> bool:
         """True when nothing may block on a human.

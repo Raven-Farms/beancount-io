@@ -13,6 +13,7 @@ from typing import Any, cast
 
 import httpx
 
+from cli import context
 from cli.api.rest_client.client import AuthenticatedClient, Client
 from cli.api.rest_client.models.v1_error import V1Error
 from cli.api.rest_client.types import Response
@@ -65,6 +66,7 @@ def make_client() -> AuthenticatedClient:
     operations; the two generated classes share the transport surface, and
     this cast is the one place that fact lives.
     """
+    context.current().require_network("cloud")
     from cli.config import settings
 
     client = cast(
@@ -89,6 +91,7 @@ def _httpx_client(client: Any) -> Any:
 
 
 def bearer_client(token: str) -> AuthenticatedClient:
+    context.current().require_network("cloud")
     from cli.config import settings
 
     client = AuthenticatedClient(
@@ -102,6 +105,9 @@ def bearer_client(token: str) -> AuthenticatedClient:
 
 def authenticated_client() -> AuthenticatedClient:
     """The client every hosted command needs: the stored or environment credential, attached."""
+    # After Click has parsed eager help, before even reading credentials.
+    # A raw argv help-token check confused option values with actual help.
+    context.current().require_network("cloud")
     from cli.auth.credentials import require_credentials
 
     return bearer_client(require_credentials().token)

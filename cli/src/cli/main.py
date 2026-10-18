@@ -402,7 +402,7 @@ def main(
         bool,
         typer.Option(
             "--offline",
-            help="Never fetch: resolve managed price includes from the local cache only, and skip the update check",
+            help="Never fetch (except upgrade --check): reuse cached managed prices and skip background update checks",
         ),
     ] = False,
     strict_prices: Annotated[

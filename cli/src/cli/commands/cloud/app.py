@@ -21,26 +21,10 @@ cloud_app = typer.Typer(
 cloud_app.add_typer(ledger_app, name="ledger")
 
 
-@cloud_app.callback()
-def _refuse_offline(typer_ctx: typer.Context) -> None:
-    """Every `bea cloud` command talks to the hosted service; `--offline` means no network.
-
-    The flag was never read here, so `bea --offline -y cloud ledger delete`
-    sent the DELETE with exit 0 (w5/515). Refused before credentials are read
-    or anything is sent, as `price refresh` refuses it; `--help` still answers.
-    """
-    import sys
-
-    from cli.errors import UsageError
-
-    if context.current().offline and not {"--help", "-h"} & set(sys.argv[1:]):
-        command = f"cloud {typer_ctx.invoked_subcommand}" if typer_ctx.invoked_subcommand else "cloud"
-        raise UsageError(f"bea {command} requires network access; remove --offline.")
-
-
 @cloud_app.command("login")
 def cloud_login() -> None:
     """Log in by device flow; credentials.json goes in $BEA_CONFIG_DIR, $XDG_CONFIG_HOME/bea or ~/.config/bea."""
+    context.current().require_network("cloud login")
     import os
 
     from cli.errors import UsageError
@@ -68,6 +52,7 @@ def cloud_login() -> None:
 @cloud_app.command("logout")
 def cloud_logout() -> None:
     """Revoke the token and clear stored credentials."""
+    context.current().require_network("cloud logout")
     from cli.api.client import bearer_client, call, unwrap_or_none
     from cli.api.rest_client.api.ledger_v_1 import logout
     from cli.auth.credentials import ENVIRONMENT, UnusableCredentials, clear_credentials, load_credentials
@@ -183,6 +168,7 @@ def _failure_name(exc: BaseException) -> str:
 def cloud_status() -> None:
     """Show who is logged in, where the credential came from, and when it expires."""
     ctx = context.current()
+    ctx.require_network("cloud status")
     from cli.api.client import bearer_client, call, unwrap_or_none
     from cli.api.rest_client.api.ledger_v_1 import get_user_profile
     from cli.api.rest_client.models import GetUserProfileResponse200Type0
