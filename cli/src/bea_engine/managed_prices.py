@@ -161,7 +161,9 @@ def parse_managed_price_url(target: str, origins: tuple[str, ...] = DEFAULT_ORIG
             detail=f"{target!r} is not an allowed managed price source: it must not carry a query string or fragment"
         )
     match = _PRICES_PATH_RE.match(parts.path)
-    if not match:
+    # `.` and `..` are dot segments, which servers resolve away: `/prices/..`
+    # fetched `/`, and an export wrote it as a hidden `...beancount` (w5/645).
+    if not match or match.group(1) in {".", ".."}:
         return RefusedUrl(
             detail=f"{target!r} is not an allowed managed price source: "
             "the path must be /prices/<ALIAS> (letters, digits, . _ -)"
@@ -647,6 +649,8 @@ def feed_revision_id(etag: str | None, text: str) -> str:
     """The revision id for a fetched body: the ETag made key-safe, else the body SHA-256."""
     if etag:
         safe = re.sub(r"[^A-Za-z0-9._-]", "", etag.removeprefix("W/").replace('"', ""))
-        if 0 < len(safe) <= 128:
+        # Not a name the cache keeps for itself: `ETag: "head"` wrote its record
+        # over head.json, and a leading dot hid the files (w5/645).
+        if 0 < len(safe) <= 128 and safe != "head" and safe[0].isalnum():
             return safe
     return sha256(text.encode("utf-8")).hexdigest()

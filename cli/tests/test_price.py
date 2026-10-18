@@ -1627,6 +1627,55 @@ class TestPriceStatus:
         assert "bea price status" in loaded.errors[0].message
 
 
+class TestCacheAndUrlEdges:
+    """A fast clock's refresh time, dot-segment aliases and a reserved ETag (w5/645)."""
+
+    def test_a_refresh_time_written_by_a_fast_clock_is_not_honored(self, feed_server: str, tmp_path: Path) -> None:
+        now = time.time()
+        _resolve(feed_server, tmp_path, now=now)
+        head = feed_dir(f"{feed_server}/prices/BTC-USD", tmp_path) / "head.json"
+        record = json.loads(head.read_text())
+        head.write_text(json.dumps({**record, "next_refresh_at": now + 7 * 86400}))
+        _FeedHandler.routes["/prices/BTC-USD"] = {
+            "body": _feed_text(_stamp(now), revision="r2").encode("utf-8"),
+            "headers": {"ETag": '"r2"'},
+        }
+        before = len(_FeedHandler.hits)
+
+        resolved = _resolve(feed_server, tmp_path, now=now + 10)
+
+        assert len(_FeedHandler.hits) - before == 1
+        assert resolved.blob is not None and resolved.blob.revision == "r2"
+
+    @pytest.mark.parametrize("alias", [".", ".."])
+    def test_a_dot_segment_is_not_an_alias(self, alias: str) -> None:
+        decision = parse_managed_price_url(f"https://beancount.io/prices/{alias}")
+
+        assert isinstance(decision, RefusedUrl)
+        assert "the path must be /prices/<ALIAS>" in decision.detail
+
+    @pytest.mark.parametrize("etag", ['"head"', '".hidden"', 'W/"head"'])
+    def test_a_reserved_etag_falls_back_to_the_body_hash(self, etag: str) -> None:
+        assert feed_revision_id(etag, "body") == hashlib.sha256(b"body").hexdigest()
+        assert feed_revision_id('"r1.2"', "body") == "r1.2"
+
+    def test_a_head_etag_keeps_the_cache_head(self, feed_server: str, tmp_path: Path) -> None:
+        now = time.time()
+        _FeedHandler.routes["/prices/BTC-USD"] = {
+            "body": _feed_text(_stamp(now)).encode("utf-8"),
+            "headers": {"ETag": '"head"'},
+        }
+        _resolve(feed_server, tmp_path, now=now)
+
+        offline = _resolve(feed_server, tmp_path, now=now + 1, offline=True)
+
+        assert offline.blob is not None
+        assert (
+            json.loads((feed_dir(f"{feed_server}/prices/BTC-USD", tmp_path) / "head.json").read_text())["revision"]
+            == offline.blob.revision
+        )
+
+
 class TestStrictAndUnavailableWording:
     """Each managed-price message names the condition it reports (w5/644)."""
 

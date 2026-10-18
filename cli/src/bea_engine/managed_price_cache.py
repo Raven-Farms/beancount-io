@@ -369,7 +369,10 @@ def resolve_feed(
         resolved = ResolvedFeed(blob=previous, head=head)
         _enforce_strict(url, resolved, at, stale_seconds, strict)
         return resolved
-    if at < head.next_refresh_at and (previous is not None or head.revision is None):
+    # A refresh time further out than any window sets was written under a
+    # clock running fast; honored, it suppressed refreshes for days (w5/645).
+    believable = head.next_refresh_at <= at + max(refresh_seconds, retry_seconds)
+    if at < head.next_refresh_at and believable and (previous is not None or head.revision is None):
         resolved = ResolvedFeed(blob=previous, head=head)
         _enforce_strict(url, resolved, at, stale_seconds, strict)
         return resolved
