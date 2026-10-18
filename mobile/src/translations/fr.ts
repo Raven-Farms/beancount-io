@@ -598,6 +598,10 @@ export const fr: Translations = {
     "Flux de trésorerie des revenus vers les dépenses. Revenus {{income}}, dépenses {{expenses}}.",
   cashFlowChartSummaryWithSavings:
     "Flux de trésorerie des revenus vers les dépenses. Revenus {{income}}, dépenses {{expenses}}, épargne {{savings}}.",
+  cashFlowChartSummaryWithShortfall:
+    "Flux de trésorerie des revenus vers les dépenses. Revenus {{income}}, dépenses {{expenses}}, prélevé sur l'épargne {{shortfall}}.",
+  sankeyIncomeNodeLabel: "{{name}} (revenus)",
+  sankeyExpensesNodeLabel: "{{name}} (dépenses)",
   ledgerNavigateUp: "Remonter d'un dossier",
   openLedgerDrawer: "Ouvrir le menu",
   back: "Retour",

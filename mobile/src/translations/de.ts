@@ -597,6 +597,10 @@ export const de: Translations = {
     "Cashflow von Einnahmen zu Ausgaben. Einnahmen {{income}}, Ausgaben {{expenses}}.",
   cashFlowChartSummaryWithSavings:
     "Cashflow von Einnahmen zu Ausgaben. Einnahmen {{income}}, Ausgaben {{expenses}}, Ersparnisse {{savings}}.",
+  cashFlowChartSummaryWithShortfall:
+    "Cashflow von Einnahmen zu Ausgaben. Einnahmen {{income}}, Ausgaben {{expenses}}, aus Ersparnissen {{shortfall}}.",
+  sankeyIncomeNodeLabel: "{{name}} (Einnahmen)",
+  sankeyExpensesNodeLabel: "{{name}} (Ausgaben)",
   ledgerNavigateUp: "Eine Ebene nach oben",
   openLedgerDrawer: "Menü öffnen",
   back: "Zurück",

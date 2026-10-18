@@ -596,6 +596,10 @@ export const ru: Translations = {
     "Денежный поток от доходов к расходам. Доходы {{income}}, расходы {{expenses}}.",
   cashFlowChartSummaryWithSavings:
     "Денежный поток от доходов к расходам. Доходы {{income}}, расходы {{expenses}}, сбережения {{savings}}.",
+  cashFlowChartSummaryWithShortfall:
+    "Денежный поток от доходов к расходам. Доходы {{income}}, расходы {{expenses}}, из сбережений {{shortfall}}.",
+  sankeyIncomeNodeLabel: "{{name}} (доходы)",
+  sankeyExpensesNodeLabel: "{{name}} (расходы)",
   ledgerNavigateUp: "На уровень выше",
   openLedgerDrawer: "Открыть меню",
   back: "Назад",

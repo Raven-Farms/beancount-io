@@ -598,6 +598,10 @@ export const pt: Translations = {
     "Fluxo de caixa de receitas para despesas. Receitas {{income}}, despesas {{expenses}}.",
   cashFlowChartSummaryWithSavings:
     "Fluxo de caixa de receitas para despesas. Receitas {{income}}, despesas {{expenses}}, poupança {{savings}}.",
+  cashFlowChartSummaryWithShortfall:
+    "Fluxo de caixa de receitas para despesas. Receitas {{income}}, despesas {{expenses}}, da poupança {{shortfall}}.",
+  sankeyIncomeNodeLabel: "{{name}} (receitas)",
+  sankeyExpensesNodeLabel: "{{name}} (despesas)",
   ledgerNavigateUp: "Subir uma pasta",
   openLedgerDrawer: "Abrir menu",
   back: "Voltar",

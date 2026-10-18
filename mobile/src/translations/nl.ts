@@ -588,6 +588,10 @@ export const nl: Translations = {
     "Kasstroom van inkomsten naar uitgaven. Inkomsten {{income}}, uitgaven {{expenses}}.",
   cashFlowChartSummaryWithSavings:
     "Kasstroom van inkomsten naar uitgaven. Inkomsten {{income}}, uitgaven {{expenses}}, spaargeld {{savings}}.",
+  cashFlowChartSummaryWithShortfall:
+    "Kasstroom van inkomsten naar uitgaven. Inkomsten {{income}}, uitgaven {{expenses}}, uit spaargeld {{shortfall}}.",
+  sankeyIncomeNodeLabel: "{{name}} (inkomsten)",
+  sankeyExpensesNodeLabel: "{{name}} (uitgaven)",
   ledgerNavigateUp: "Eén map omhoog",
   openLedgerDrawer: "Menu openen",
   back: "Terug",

@@ -356,6 +356,10 @@ export const en = {
     "Cash flow from income to expenses. Income {{income}}, expenses {{expenses}}.",
   cashFlowChartSummaryWithSavings:
     "Cash flow from income to expenses. Income {{income}}, expenses {{expenses}}, savings {{savings}}.",
+  cashFlowChartSummaryWithShortfall:
+    "Cash flow from income to expenses. Income {{income}}, expenses {{expenses}}, from savings {{shortfall}}.",
+  sankeyIncomeNodeLabel: "{{name}} (income)",
+  sankeyExpensesNodeLabel: "{{name}} (expenses)",
   savings: "Savings",
   // feed
   latestUpdates: "Latest Updates",

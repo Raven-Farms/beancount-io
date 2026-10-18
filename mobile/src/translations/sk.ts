@@ -601,6 +601,10 @@ export const sk: Translations = {
     "Peňažný tok z príjmov do výdavkov. Príjmy {{income}}, výdavky {{expenses}}.",
   cashFlowChartSummaryWithSavings:
     "Peňažný tok z príjmov do výdavkov. Príjmy {{income}}, výdavky {{expenses}}, úspory {{savings}}.",
+  cashFlowChartSummaryWithShortfall:
+    "Peňažný tok z príjmov do výdavkov. Príjmy {{income}}, výdavky {{expenses}}, z úspor {{shortfall}}.",
+  sankeyIncomeNodeLabel: "{{name}} (príjmy)",
+  sankeyExpensesNodeLabel: "{{name}} (výdavky)",
   ledgerNavigateUp: "O úroveň vyššie",
   openLedgerDrawer: "Otvoriť menu",
   back: "Späť",

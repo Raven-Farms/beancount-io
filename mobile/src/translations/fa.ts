@@ -577,6 +577,10 @@ export const fa: Translations = {
     "جریان نقدی از درآمد به هزینه. درآمد {{income}}، هزینه {{expenses}}.",
   cashFlowChartSummaryWithSavings:
     "جریان نقدی از درآمد به هزینه. درآمد {{income}}، هزینه {{expenses}}، پس‌انداز {{savings}}.",
+  cashFlowChartSummaryWithShortfall:
+    "جریان نقدی از درآمد به هزینه. درآمد {{income}}، هزینه {{expenses}}، از پس‌انداز {{shortfall}}.",
+  sankeyIncomeNodeLabel: "{{name}} (درآمد)",
+  sankeyExpensesNodeLabel: "{{name}} (هزینه)",
   ledgerNavigateUp: "رفتن به پوشه بالاتر",
   openLedgerDrawer: "باز کردن منو",
   back: "بازگشت",

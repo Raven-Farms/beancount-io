@@ -594,6 +594,10 @@ export const uk: Translations = {
     "Грошовий потік від доходів до витрат. Доходи {{income}}, витрати {{expenses}}.",
   cashFlowChartSummaryWithSavings:
     "Грошовий потік від доходів до витрат. Доходи {{income}}, витрати {{expenses}}, заощадження {{savings}}.",
+  cashFlowChartSummaryWithShortfall:
+    "Грошовий потік від доходів до витрат. Доходи {{income}}, витрати {{expenses}}, із заощаджень {{shortfall}}.",
+  sankeyIncomeNodeLabel: "{{name}} (доходи)",
+  sankeyExpensesNodeLabel: "{{name}} (витрати)",
   ledgerNavigateUp: "На рівень вище",
   openLedgerDrawer: "Відкрити меню",
   back: "Назад",

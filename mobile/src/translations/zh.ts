@@ -539,6 +539,10 @@ export const zh: Translations = {
     "从收入到支出的现金流。收入 {{income}}，支出 {{expenses}}。",
   cashFlowChartSummaryWithSavings:
     "从收入到支出的现金流。收入 {{income}}，支出 {{expenses}}，储蓄 {{savings}}。",
+  cashFlowChartSummaryWithShortfall:
+    "从收入到支出的现金流。收入 {{income}}，支出 {{expenses}}，动用储蓄 {{shortfall}}。",
+  sankeyIncomeNodeLabel: "{{name}}（收入）",
+  sankeyExpensesNodeLabel: "{{name}}（支出）",
   ledgerNavigateUp: "返回上级文件夹",
   openLedgerDrawer: "打开菜单",
   back: "返回",

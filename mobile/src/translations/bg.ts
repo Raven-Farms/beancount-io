@@ -586,6 +586,10 @@ export const bg: Translations = {
     "Паричен поток от приходи към разходи. Приходи {{income}}, разходи {{expenses}}.",
   cashFlowChartSummaryWithSavings:
     "Паричен поток от приходи към разходи. Приходи {{income}}, разходи {{expenses}}, спестявания {{savings}}.",
+  cashFlowChartSummaryWithShortfall:
+    "Паричен поток от приходи към разходи. Приходи {{income}}, разходи {{expenses}}, от спестявания {{shortfall}}.",
+  sankeyIncomeNodeLabel: "{{name}} (приходи)",
+  sankeyExpensesNodeLabel: "{{name}} (разходи)",
   ledgerNavigateUp: "Нагоре една папка",
   openLedgerDrawer: "Отвори менюто",
   back: "Назад",
