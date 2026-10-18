@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [664 — Under nounused/pedantic, plain `add balance` cannot be a staged account's first use outside a terminal (gap in w5/221)](./664.md)
 - [665 — implicit_prices + unique_prices: a second same-day FX trade gets a bare `Disagreeing price entries` (incomplete fix of w5/397)](./665.md)
 - [666 — Plugin-triggered write refusals unattributed or misattributed (leafonly, coherent_cost, close_tree, auto_accounts)](./666.md)
 - [667 — A plugin error with `source=None` makes every write crash with an AttributeError](./667.md)
