@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [666 — Plugin-triggered write refusals unattributed or misattributed (leafonly, coherent_cost, close_tree, auto_accounts)](./666.md)
 - [667 — A plugin error with `source=None` makes every write crash with an AttributeError](./667.md)
 - [668 — A whole-number ledger with one `@@` total prints every figure with 25 decimals](./668.md)
 - [669 — `--meta` writes a wide negative number rounded (sibling of w5/263)](./669.md)
