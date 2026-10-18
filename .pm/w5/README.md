@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [621 — A literal tab is refused as an import delimiter, though the refusal recommends it](./621.md)
 - [622 — A forced `--delimiter` that does not split the header is reported as a missing column (gap in w3/226)](./622.md)
 - [623 — `cloud ledger create --private --public` creates a public ledger; `--dir` without `--clone` ignored](./623.md)
 - [624 — Help/doc slips: "Try bean-check --help", login help omits XDG, USAGE treeify example unordered](./624.md)
