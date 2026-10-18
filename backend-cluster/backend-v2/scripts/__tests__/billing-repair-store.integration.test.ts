@@ -15,6 +15,9 @@ import {
   rollbackRepair,
 } from "../reconcile-billing-core";
 import { PaidCustomerPostgresModel } from "../../src/features/stripe/data/paid-customer-model/postgres-impl";
+import { SubscriptionService } from "../../src/features/stripe/service/subscription-service";
+import { SUBSCRIPTION_PERIOD_VERIFICATION_VERSION } from "../../src/features/stripe/service/subscription-plan";
+import { AuthorizationService } from "../../src/server/api/authorization";
 let container: StartedPostgreSqlContainer;
 let pool: Pool;
 beforeAll(async () => {
@@ -25,6 +28,30 @@ beforeAll(async () => {
   );
   await pool.query(`CREATE TABLE paid_customers (id uuid PRIMARY KEY DEFAULT gen_random_uuid(),user_id text NOT NULL,client_id text NOT NULL,stripe_customer_id text NOT NULL,
     current_period_end timestamp,email text,name text,phone text,created_at timestamp NOT NULL DEFAULT now(),updated_at timestamp NOT NULL DEFAULT now(),UNIQUE(user_id,client_id))`);
+  await pool.query(
+    "INSERT INTO paid_customers(user_id,client_id,stripe_customer_id,current_period_end) VALUES ('historical','beancount-web-prod','cus_historical','2038-01-01')",
+  );
+  await pool.query(
+    readFileSync(
+      join(
+        process.cwd(),
+        "src/drizzle/migrations/0020_verified_subscription_period.sql",
+      ),
+      "utf8",
+    ),
+  );
+  expect(
+    (
+      await pool.query(
+        "SELECT current_period_end, period_verification_version FROM paid_customers WHERE user_id='historical'",
+      )
+    ).rows,
+  ).toEqual([
+    {
+      current_period_end: new Date("2038-01-01T00:00:00"),
+      period_verification_version: null,
+    },
+  ]);
 }, 120000);
 afterAll(async () => {
   await pool?.end();
@@ -86,6 +113,43 @@ it("rejects a concurrent webhook/cache change before any transaction writes", as
     (await store.read("u")).find((row) => row.clientId.endsWith("dev"))?.period,
   ).toBe("2038-01-01T00:00:00.000Z");
 });
+it("requires verification before a future live period can serve cached paid status", async () => {
+  const model = new PaidCustomerPostgresModel();
+  const db = drizzle(pool);
+  // The future test row must not satisfy the status cache fast path.
+  expect(await model.findByUserIdWithActivePeriod(db, "u")).toBeNull();
+  const live = (await model.findByUserIdAndClientId(
+    db,
+    "u",
+    "beancount-web-prod",
+  ))!;
+  const unverified = (await model.updateCustomerById(db, live.id, {
+    currentPeriodEnd: new Date("2038-01-01T00:00:00Z"),
+  }))!;
+  expect(unverified.periodVerificationVersion).toBeUndefined();
+  expect(
+    await model.updatePeriodIfUnchanged(
+      db,
+      unverified,
+      unverified.currentPeriodEnd!,
+      SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
+    ),
+  ).toBe(true);
+  expect(await model.findByUserIdWithActivePeriod(db, "u")).toMatchObject({
+    id: live.id,
+    userId: "u",
+    clientId: "beancount-web-prod",
+    stripeCustomerId: "cus_live",
+    periodVerificationVersion: SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
+  });
+  expect(
+    await model.findByUserIdWithActivePeriod(db, "someone-else"),
+  ).toBeNull();
+  await model.updateCustomerById(db, live.id, {
+    currentPeriodEnd: new Date(0),
+  });
+  expect(await model.findByUserIdWithActivePeriod(db, "u")).toBeNull();
+});
 it("normal request compare-and-set cannot overwrite a newer webhook or another customer", async () => {
   const model = new PaidCustomerPostgresModel();
   const db = drizzle(pool);
@@ -99,15 +163,34 @@ it("normal request compare-and-set cannot overwrite a newer webhook or another c
     currentPeriodEnd: new Date(2000000000000),
   });
   expect(
-    await model.updatePeriodIfUnchanged(db, live, new Date(1900000000000)),
+    await model.updatePeriodIfUnchanged(
+      db,
+      live,
+      new Date(1900000000000),
+      SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
+    ),
   ).toBe(false);
   const fresh = (await model.findByUserIdAndClientId(
     db,
     "u",
     "beancount-web-prod",
   ))!;
+  expect(fresh.periodVerificationVersion).toBeUndefined();
   expect(
-    await model.updatePeriodIfUnchanged(db, fresh, new Date(2100000000000)),
+    await model.updatePeriodIfUnchanged(
+      db,
+      { ...fresh, stripeCustomerId: "cus_foreign" },
+      new Date(2100000000000),
+      SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
+    ),
+  ).toBe(false);
+  expect(
+    await model.updatePeriodIfUnchanged(
+      db,
+      fresh,
+      new Date(2100000000000),
+      SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
+    ),
   ).toBe(true);
   expect(
     (
@@ -129,11 +212,156 @@ it("preserves microsecond versions written by reconciliation and rejects interve
   ))!;
   // The maintenance transaction wrote PostgreSQL microseconds, which JS Date cannot retain.
   expect(
-    await model.updatePeriodIfUnchanged(db, repaired, new Date(2000000000000)),
+    await model.updatePeriodIfUnchanged(
+      db,
+      repaired,
+      new Date(2000000000000),
+      SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
+    ),
   ).toBe(true);
   expect(
-    await model.updatePeriodIfUnchanged(db, repaired, new Date(2100000000000)),
+    await model.updatePeriodIfUnchanged(
+      db,
+      repaired,
+      new Date(2100000000000),
+      SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
+    ),
   ).toBe(false);
+});
+
+function statusService() {
+  const model = new PaidCustomerPostgresModel();
+  const db = drizzle(pool);
+  const stripe = { listSubscriptions: jest.fn(load) };
+  const service = new SubscriptionService(
+    stripe as any,
+    { paidCustomer: model } as any,
+    db,
+    new AuthorizationService({
+      check: async ({ user, object }) => user === object,
+    }),
+  );
+  const identity = {
+    userId: "u",
+    method: "session",
+    scopes: new Set<string>(),
+  } as const;
+  return {
+    model,
+    db,
+    stripe,
+    read: () => service.subscriptionStatus(identity, true),
+  };
+}
+
+it("revalidates a poisoned historical prod cache and never grants paid status from its future date", async () => {
+  const t = statusService();
+  await pool.query(
+    "UPDATE paid_customers SET current_period_end='2038-01-01' WHERE client_id='beancount-web-prod'",
+  );
+  t.stripe.listSubscriptions.mockResolvedValue([]);
+  expect(await t.read()).toEqual({
+    hasActiveSubscription: false,
+    subscriptions: [],
+  });
+  expect(t.stripe.listSubscriptions).toHaveBeenCalledTimes(1);
+  expect(
+    await t.model.findByUserIdAndClientId(t.db, "u", "beancount-web-prod"),
+  ).toMatchObject({
+    currentPeriodEnd: undefined,
+    periodVerificationVersion: SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
+  });
+});
+
+it("verifies an unchanged historical date once and then uses the paid cache", async () => {
+  const t = statusService();
+  const live = (await t.model.findByUserIdAndClientId(
+    t.db,
+    "u",
+    "beancount-web-prod",
+  ))!;
+  await t.model.updateCustomerById(t.db, live.id, {
+    currentPeriodEnd: new Date(2000000000000),
+  });
+  expect((await t.read()).hasActiveSubscription).toBe(true);
+  t.stripe.listSubscriptions.mockRejectedValue(
+    new Error("provider unavailable"),
+  );
+  expect((await t.read()).hasActiveSubscription).toBe(true);
+  expect(t.stripe.listSubscriptions).toHaveBeenCalledTimes(1);
+});
+
+it("does not trust or modify a historical cache when Stripe is unavailable", async () => {
+  const t = statusService();
+  await pool.query(
+    "UPDATE paid_customers SET current_period_end='2038-01-01' WHERE client_id='beancount-web-prod'",
+  );
+  const before = await t.model.findByUserIdAndClientId(
+    t.db,
+    "u",
+    "beancount-web-prod",
+  );
+  t.stripe.listSubscriptions.mockRejectedValue(
+    new Error("provider unavailable"),
+  );
+  await expect(t.read()).rejects.toThrow("provider unavailable");
+  expect(
+    await t.model.findByUserIdAndClientId(t.db, "u", "beancount-web-prod"),
+  ).toEqual(before);
+});
+
+it("preserves verification on metadata edits and invalidates it on period or binding writes", async () => {
+  const t = statusService();
+  await t.read();
+  let live = (await t.model.findByUserIdAndClientId(
+    t.db,
+    "u",
+    "beancount-web-prod",
+  ))!;
+  const updated = (await t.model.updateCustomerById(t.db, live.id, {
+    name: "Updated name",
+  }))!;
+  expect(updated.periodVerificationVersion).toBe(
+    SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
+  );
+  expect(
+    (
+      await t.model.updateCustomerById(t.db, live.id, {
+        currentPeriodEnd: live.currentPeriodEnd,
+      })
+    )?.periodVerificationVersion,
+  ).toBeUndefined();
+  await t.read();
+  live = (await t.model.findByUserIdAndClientId(
+    t.db,
+    "u",
+    "beancount-web-prod",
+  ))!;
+  await t.model.updateByUserIdAndClientId(t.db, "u", live.clientId, {
+    clientId: "beancount-web-other",
+  });
+  expect(
+    (await t.model.findByUserIdAndClientId(t.db, "u", "beancount-web-other"))
+      ?.periodVerificationVersion,
+  ).toBeUndefined();
+});
+
+it("invalidates verification when a repair or rollback writes a period", async () => {
+  const t = statusService();
+  await t.read();
+  const store = createRepairStore(pool);
+  const original = await store.read("u");
+  const plan = await planUserRepair("u", original, async () => []);
+  const after = await store.compareAndSet(plan);
+  expect(
+    (await t.model.findByUserIdAndClientId(t.db, "u", "beancount-web-prod"))
+      ?.periodVerificationVersion,
+  ).toBeUndefined();
+  await store.compareAndSet(rollbackRepair(plan, after));
+  expect(
+    (await t.model.findByUserIdAndClientId(t.db, "u", "beancount-web-prod"))
+      ?.periodVerificationVersion,
+  ).toBeUndefined();
 });
 
 it("runs the default CLI preview and bounded checkpoint/apply/rollback without provider or account writes", async () => {

@@ -11,6 +11,7 @@ import { buildSchema } from "type-graphql";
 import { config } from "@/config/config";
 import { ErrorCategory } from "@/shared/errors";
 import { AuthorizationService } from "@/server/api/authorization";
+import { SUBSCRIPTION_PERIOD_VERIFICATION_VERSION } from "@/features/stripe/service/subscription-plan";
 
 // Test constants
 const THIRTY_DAYS_IN_MS = 30 * 24 * 60 * 60 * 1000; // 30 days in milliseconds
@@ -87,42 +88,128 @@ describe("SubscriptionResolver", () => {
   });
 
   describe("subscriptionStatus", () => {
-    it("should revalidate Stripe even when an old cache claims active", async () => {
-      // Mock GraphQL info to indicate only hasActiveSubscription is requested
-      const mockInfo = {
+    it("serves a valid owned live cache through GraphQL without reaching Stripe", async () => {
+      const futureDate = new Date(Date.now() + 86400000); // Tomorrow
+      mockModels.paidCustomer.findByUserIdWithActivePeriod.mockResolvedValue({
+        id: "customer-123",
+        userId: "user-123",
+        stripeCustomerId: "cus_live",
+        clientId: "beancount-web-prod",
+        currentPeriodEnd: futureDate,
+        periodVerificationVersion: SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      mockStripeService.listSubscriptions.mockRejectedValue(
+        new Error("Stripe unavailable"),
+      );
+      const schema = await buildSchema({
+        resolvers: [SubscriptionResolver],
+        container: { get: () => resolver },
+      });
+      const result = await graphql({
+        schema,
+        source: "query { subscriptionStatus { hasActiveSubscription } }",
+        contextValue: {
+          ...mockContext,
+          identity: mockContext.getCurrentIdentity(),
+        },
+      });
+
+      expect(result.errors).toBeUndefined();
+      expect(result.data?.subscriptionStatus).toEqual({
+        hasActiveSubscription: true,
+      });
+      expect(
+        mockModels.paidCustomer.findByUserIdWithActivePeriod,
+      ).toHaveBeenCalledWith({}, "user-123");
+      expect(mockStripeService.listSubscriptions).not.toHaveBeenCalled();
+      expect(mockModels.paidCustomer.findByUserId).not.toHaveBeenCalled();
+      expect(
+        mockModels.paidCustomer.updatePeriodIfUnchanged,
+      ).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ["retired test binding", { clientId: "beancount-web-dev" }],
+      ["another user", { userId: "user-other" }],
+      ["missing Stripe customer", { stripeCustomerId: "" }],
+      ["expired period", { currentPeriodEnd: new Date(0) }],
+      ["missing period", { currentPeriodEnd: undefined }],
+      [
+        "unverified historical period",
+        { periodVerificationVersion: undefined },
+      ],
+      ["obsolete verification", { periodVerificationVersion: 0 }],
+    ])("does not use a cache with %s", async (_reason, override) => {
+      mockModels.paidCustomer.findByUserIdWithActivePeriod.mockResolvedValue({
+        id: "customer-123",
+        userId: "user-123",
+        clientId: "beancount-web-prod",
+        stripeCustomerId: "cus_live",
+        currentPeriodEnd: new Date(Date.now() + 86400000),
+        periodVerificationVersion: SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
+        ...override,
+      });
+      const info = {
         fieldNodes: [
           {
             selectionSet: {
               selections: [
-                {
-                  kind: Kind.FIELD,
-                  name: { value: "hasActiveSubscription" },
-                },
+                { kind: Kind.FIELD, name: { value: "hasActiveSubscription" } },
               ],
             },
           },
         ],
       } as unknown as GraphQLResolveInfo;
 
-      // Mock paidCustomer with valid currentPeriodEnd
-      const futureDate = new Date(Date.now() + 86400000); // Tomorrow
-      mockModels.paidCustomer.findByUserIdWithActivePeriod.mockResolvedValue({
-        id: "customer-123",
-        userId: "user-123",
-        stripeCustomerId: "cus_test",
-        clientId: "beancount-web-prod",
-        currentPeriodEnd: futureDate,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+      const result = await resolver.subscriptionStatus(mockContext, info);
+
+      expect(result).toEqual({
+        hasActiveSubscription: false,
+        subscriptions: [],
       });
-
-      const result = await resolver.subscriptionStatus(mockContext, mockInfo);
-
-      expect(result.hasActiveSubscription).toBe(false);
-      expect(result.subscriptions).toEqual([]);
+      expect(mockStripeService.listSubscriptions).toHaveBeenCalledTimes(1);
       expect(mockStripeService.listSubscriptions).toHaveBeenCalledWith(
         "user-123",
         expect.objectContaining({ status: "active" }),
+      );
+    });
+
+    it("queries Stripe for full billing details even with a valid live cache", async () => {
+      mockModels.paidCustomer.findByUserIdWithActivePeriod.mockResolvedValue({
+        userId: "user-123",
+        clientId: "beancount-web-prod",
+        stripeCustomerId: "cus_live",
+        currentPeriodEnd: new Date(Date.now() + 86400000),
+        periodVerificationVersion: SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
+      });
+      const info = {
+        fieldNodes: [
+          {
+            selectionSet: {
+              selections: [
+                { kind: Kind.FIELD, name: { value: "hasActiveSubscription" } },
+                { kind: Kind.FIELD, name: { value: "subscriptions" } },
+              ],
+            },
+          },
+        ],
+      } as unknown as GraphQLResolveInfo;
+
+      const result = await resolver.subscriptionStatus(mockContext, info);
+
+      expect(result).toEqual({
+        hasActiveSubscription: false,
+        subscriptions: [],
+      });
+      expect(
+        mockModels.paidCustomer.findByUserIdWithActivePeriod,
+      ).not.toHaveBeenCalled();
+      expect(mockStripeService.listSubscriptions).toHaveBeenCalledWith(
+        "user-123",
+        expect.objectContaining({ status: "all" }),
       );
     });
 
@@ -406,10 +493,11 @@ describe("SubscriptionResolver", () => {
           stripeCustomerId: "cus_test",
         }),
         new Date(newPeriodEnd * 1000),
+        SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
       );
     });
 
-    it("should not update currentPeriodEnd when dates match", async () => {
+    it("does not rewrite an already verified period when dates match", async () => {
       const mockInfo = {
         fieldNodes: [
           {
@@ -473,6 +561,7 @@ describe("SubscriptionResolver", () => {
           stripeCustomerId: "cus_test",
           clientId: "beancount-web-prod",
           currentPeriodEnd: exactDate,
+          periodVerificationVersion: SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
           createdAt: new Date(),
           updatedAt: new Date(),
         },

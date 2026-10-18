@@ -5,6 +5,7 @@ import { SUBSCRIPTION_CONFIG } from "../service/stripe";
 import {
   customerId,
   subscriptionPeriodEnd,
+  SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
 } from "../service/subscription-plan";
 
 /** Read bindings before Stripe, then compare-and-set so a concurrent webhook wins. */
@@ -30,9 +31,16 @@ export async function refreshSubscriptionPeriods(
     const period = subscriptionPeriodEnd(own);
     if (
       (binding.currentPeriodEnd?.getTime() ?? null) !==
-      (period?.getTime() ?? null)
+        (period?.getTime() ?? null) ||
+      binding.periodVerificationVersion !==
+        SUBSCRIPTION_PERIOD_VERIFICATION_VERSION
     ) {
-      await models.paidCustomer.updatePeriodIfUnchanged(db, binding, period);
+      await models.paidCustomer.updatePeriodIfUnchanged(
+        db,
+        binding,
+        period,
+        SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
+      );
     }
   }
   return subscriptions;

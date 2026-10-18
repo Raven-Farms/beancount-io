@@ -3,6 +3,7 @@ import {
   uuid,
   text,
   timestamp,
+  integer,
   uniqueIndex,
   index,
 } from "drizzle-orm/pg-core";
@@ -29,6 +30,7 @@ export const paidCustomers = pgTable(
 
     // Subscription period end
     currentPeriodEnd: timestamp("current_period_end"),
+    periodVerificationVersion: integer("period_verification_version"),
 
     // Timestamps
     createdAt: timestamp("created_at").notNull().defaultNow(),

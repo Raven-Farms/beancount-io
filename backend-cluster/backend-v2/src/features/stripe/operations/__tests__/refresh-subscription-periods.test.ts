@@ -1,4 +1,5 @@
 import { refreshSubscriptionPeriods } from "../refresh-subscription-periods";
+import { SUBSCRIPTION_PERIOD_VERIFICATION_VERSION } from "../../service/subscription-plan";
 const clientId = "beancount-web-prod";
 const period = new Date(2000000000000);
 function setup() {
@@ -63,12 +64,16 @@ describe("owned renewal cache", () => {
       {},
       t.live,
       period,
+      SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
     );
     expect(JSON.stringify(t.retired)).toBe(old);
   });
   it("does not write on repeated refresh or provider failure", async () => {
     const t = setup();
-    Object.assign(t.live, { currentPeriodEnd: period });
+    Object.assign(t.live, {
+      currentPeriodEnd: period,
+      periodVerificationVersion: SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
+    });
     await t.run();
     expect(t.model.updatePeriodIfUnchanged).not.toHaveBeenCalled();
     t.stripe.listSubscriptions.mockRejectedValue(
@@ -76,6 +81,27 @@ describe("owned renewal cache", () => {
     );
     await expect(t.run()).rejects.toThrow("provider unavailable");
     expect(t.model.updatePeriodIfUnchanged).not.toHaveBeenCalled();
+  });
+  it("verifies a historical period even when Stripe returns the same date", async () => {
+    const t = setup();
+    Object.assign(t.live, { currentPeriodEnd: period });
+    await t.run();
+    expect(t.model.updatePeriodIfUnchanged).toHaveBeenCalledWith(
+      {},
+      t.live,
+      period,
+      SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
+    );
+  });
+  it("leaves an unverified historical period untouched on provider failure", async () => {
+    const t = setup();
+    Object.assign(t.live, { currentPeriodEnd: period });
+    t.stripe.listSubscriptions.mockRejectedValue(
+      new Error("provider unavailable"),
+    );
+    await expect(t.run()).rejects.toThrow("provider unavailable");
+    expect(t.model.updatePeriodIfUnchanged).not.toHaveBeenCalled();
+    expect(t.live).not.toHaveProperty("periodVerificationVersion");
   });
   it("clears an expired live cache and never borrows a foreign customer's period", async () => {
     const t = setup();
@@ -88,6 +114,7 @@ describe("owned renewal cache", () => {
       {},
       t.live,
       null,
+      SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
     );
   });
 });

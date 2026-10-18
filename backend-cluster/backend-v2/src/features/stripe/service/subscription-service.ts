@@ -1,5 +1,8 @@
 import { refreshSubscriptionPeriods } from "../operations/refresh-subscription-periods";
-import { subscriptionTier } from "./subscription-plan";
+import {
+  subscriptionTier,
+  SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
+} from "./subscription-plan";
 import type Stripe from "stripe";
 import type { DbExecutor } from "@/drizzle/drizzle";
 import type { IModels } from "@/foundation/models";
@@ -11,7 +14,12 @@ import {
   userResource,
 } from "@/server/api/authorization";
 import { logger } from "@/shared/logger";
-import { SUBSCRIPTION_CONFIG, TIER_LIMITS, SubscriptionTier } from "./stripe";
+import {
+  BILLING_CLIENT_ID,
+  SUBSCRIPTION_CONFIG,
+  TIER_LIMITS,
+  SubscriptionTier,
+} from "./stripe";
 import type { IStripeService } from "./stripe-service";
 
 interface SubscriptionPriceView {
@@ -153,6 +161,25 @@ export class SubscriptionService implements ISubscriptionService {
       AUTHORIZATION_ACTIONS.USER_BILLING_STATUS_READ,
     );
     const { userId } = identity;
+
+    if (onlyActiveStatus) {
+      const cached =
+        await this.models.paidCustomer.findByUserIdWithActivePeriod(
+          this.db,
+          userId,
+        );
+      if (
+        cached?.userId === userId &&
+        cached.clientId === BILLING_CLIENT_ID &&
+        cached.stripeCustomerId &&
+        cached.periodVerificationVersion ===
+          SUBSCRIPTION_PERIOD_VERIFICATION_VERSION &&
+        cached.currentPeriodEnd &&
+        cached.currentPeriodEnd.getTime() > Date.now()
+      ) {
+        return { hasActiveSubscription: true, subscriptions: [] };
+      }
+    }
 
     const stripeSubscriptions = await refreshSubscriptionPeriods(
       this.stripe,

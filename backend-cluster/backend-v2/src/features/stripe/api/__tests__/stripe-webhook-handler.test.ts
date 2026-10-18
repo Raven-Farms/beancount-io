@@ -2,6 +2,7 @@ import "reflect-metadata";
 import Router from "@koa/router";
 import { setStripeWebhookHandler } from "../stripe-webhook-handler";
 import { BILLING_CLIENT_ID } from "../../service/stripe";
+import { SUBSCRIPTION_PERIOD_VERIFICATION_VERSION } from "../../service/subscription-plan";
 import type { AppLayers } from "@/foundation/composition";
 
 jest.mock("@/features/stripe/service/stripe", () => ({
@@ -59,6 +60,25 @@ const subscriptionEvent = (overrides = {}) => ({
 });
 
 describe("live Stripe webhook boundary", () => {
+  it("revalidates and clears a historical period on a verified live webhook", async () => {
+    const t = setup(subscriptionEvent());
+    const binding = {
+      id: "binding_synthetic",
+      userId: "usr_synthetic",
+      clientId: BILLING_CLIENT_ID,
+      stripeCustomerId: "cus_synthetic",
+      currentPeriodEnd: new Date(2100000000000),
+    };
+    t.paidCustomer.findByUserId.mockResolvedValue([binding] as never);
+    await t.run();
+    expect(t.paidCustomer.updatePeriodIfUnchanged).toHaveBeenCalledWith(
+      {},
+      binding,
+      null,
+      SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
+    );
+    expect(t.ctx.body.processed).toBe(true);
+  });
   it("verifies with the configured live secret before consulting metadata", async () => {
     const t = setup(subscriptionEvent());
     await t.run();

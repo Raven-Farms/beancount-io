@@ -26,6 +26,7 @@ export class PaidCustomerPostgresModel implements IPaidCustomerModel {
       name: row.name ?? undefined,
       phone: row.phone ?? undefined,
       currentPeriodEnd: row.currentPeriodEnd ?? undefined,
+      periodVerificationVersion: row.periodVerificationVersion ?? undefined,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
       version: row.version,
@@ -134,6 +135,9 @@ export class PaidCustomerPostgresModel implements IPaidCustomerModel {
       .update(paidCustomers)
       .set({
         ...input,
+        ...(input.currentPeriodEnd !== undefined || input.clientId !== undefined
+          ? { periodVerificationVersion: null }
+          : {}),
         updatedAt: new Date(),
       })
       .where(eq(paidCustomers.id, id))
@@ -149,11 +153,16 @@ export class PaidCustomerPostgresModel implements IPaidCustomerModel {
     db: DbExecutor,
     customer: PaidCustomer,
     currentPeriodEnd: Date | null,
+    verificationVersion: number,
   ): Promise<boolean> {
     if (!customer.version) return false;
     const rows = await db
       .update(paidCustomers)
-      .set({ currentPeriodEnd, updatedAt: new Date() })
+      .set({
+        currentPeriodEnd,
+        periodVerificationVersion: verificationVersion,
+        updatedAt: new Date(),
+      })
       .where(
         and(
           eq(paidCustomers.id, customer.id),
@@ -180,6 +189,9 @@ export class PaidCustomerPostgresModel implements IPaidCustomerModel {
       .update(paidCustomers)
       .set({
         ...input,
+        ...(input.currentPeriodEnd !== undefined || input.clientId !== undefined
+          ? { periodVerificationVersion: null }
+          : {}),
         updatedAt: new Date(),
       })
       .where(

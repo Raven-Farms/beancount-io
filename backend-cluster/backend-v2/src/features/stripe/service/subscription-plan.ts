@@ -3,6 +3,9 @@ import { SUBSCRIPTION_CONFIG, SubscriptionTier } from "./stripe";
 
 export type ClientSubscription = Stripe.Subscription & { clientId: string };
 
+// Bump when period verification rules change; older cached values must be re-read.
+export const SUBSCRIPTION_PERIOD_VERIFICATION_VERSION = 1;
+
 export function customerId(customer: Stripe.Subscription["customer"]): string {
   return typeof customer === "string" ? customer : customer.id;
 }
