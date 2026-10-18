@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [652 — `price export` maps an external include and an in-tree `_shared/01-x.bean` to one destination; snapshot fails `check`, exit 0](./652.md)
 - [653 — `add document --into` a symlinked include refuses a valid receipt (path judged at the link target)](./653.md)
 - [654 — Cwd-relative `--into` from a subdirectory gets advice to create a new include instead of the root-relative rule](./654.md)
 - [655 — Reads of a ledger with a local plugin leave `__pycache__` beside the ledger](./655.md)
