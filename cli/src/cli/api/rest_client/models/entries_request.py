@@ -32,8 +32,9 @@ class EntriesRequest:
             EntriesRequestEntriesItemType3 | EntriesRequestEntriesItemType4 | EntriesRequestEntriesItemType5 |
             EntriesRequestEntriesItemType6 | EntriesRequestEntriesItemType7 | EntriesRequestEntriesItemType8 |
             EntriesRequestEntriesItemType9]): Directives to append, committed all-or-nothing
-        allow_invalid (bool | None | Unset): Record unbalanced transactions deliberately instead of refusing them with
-            UNBALANCED
+        allow_invalid (bool | None | Unset): Record entries deliberately even when they are unbalanced (UNBALANCED) or
+            would add bean-check errors such as a second open for an open account (VALIDATION_FAILED), instead of refusing
+            them
     """
 
     entries: list[
