@@ -72,6 +72,8 @@ def answer(
     from pydantic import ValidationError
 
     build = builders.get(directive_type)
+    if directive_type != "transactions":
+        _refuse_undecodable_arguments(request)
     try:
         if build is not None:
             # These read the ledger to decide what to write. Reading before the
@@ -1700,6 +1702,46 @@ _OPTION_FOR_FIELD = {
     "source_account": "-s/--source",
     "type": "-t/--type",
 }
+
+
+#: What the user typed for each request field `add` builds from its command line.
+_ARGUMENT_FOR_FIELD = {
+    **_OPTION_FOR_FIELD,
+    "narration": "The narration",
+    "payee": "--payee",
+    "postings": "-p/--posting",
+    "tags": "--tag",
+    "links": "--link",
+    "meta": "--meta",
+    "flag": "--flag",
+    "path": "--path",
+}
+
+
+def _refuse_undecodable_arguments(request: dict[str, Any]) -> None:
+    """Refuse a command-line value holding a byte that is not UTF-8, naming where it was typed.
+
+    Python hands an argv byte it cannot decode — a Latin-1 `é` from an old
+    script or terminal — over as a lone surrogate (U+DC80-U+DCFF). It reached
+    Beancount's parser, which failed with a raw `UnicodeEncodeError` filed as a
+    validation failure (w5/650); bulk rows already refused it (w5/185).
+    """
+    for field, value in request.items():
+        for text in value if isinstance(value, list) else [value]:
+            found = _SURROGATE.search(text) if isinstance(text, str) else None
+            if found is None:
+                continue
+            label = _ARGUMENT_FOR_FIELD.get(field, f"The {field!r} value")
+            code = ord(found[0])
+            if 0xDC80 <= code <= 0xDCFF:
+                raise protocol.UsageError(
+                    f"{label} is not valid UTF-8 (byte 0x{code - 0xDC00:02x} at position {found.start()}); "
+                    "re-type it in a UTF-8 terminal."
+                )
+            raise protocol.UsageError(
+                f"{label} holds an unpaired surrogate (\\u{code:04x}), which cannot be written as UTF-8; "
+                "send the whole character or remove it."
+            )
 
 
 def _text(request: dict[str, Any], field: str) -> str:
