@@ -250,7 +250,9 @@ export function LedgerForm({
                       ].map(({ value, title, description, Icon }) => (
                         <label
                           key={value}
-                          className={`flex cursor-pointer gap-3 rounded-lg border p-3 transition-colors ${
+                          // The radio is visually hidden, so its keyboard
+                          // focus is drawn on the card.
+                          className={`flex cursor-pointer gap-3 rounded-lg border p-3 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-2 has-[:focus-visible]:ring-offset-background ${
                             field.value === value
                               ? "border-primary bg-primary/5 ring-1 ring-primary"
                               : "border-input hover:bg-muted/50"
