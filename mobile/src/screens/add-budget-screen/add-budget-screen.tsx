@@ -20,6 +20,7 @@ import {
   fontSizes,
   fontWeights,
   gutter,
+  headerActionMaxFontSizeMultiplier,
   headerActionStyle,
   space,
   useTheme,
@@ -289,6 +290,7 @@ function AddBudgetScreenImpl(): JSX.Element {
                   styles.doneButton,
                   !canSubmit && styles.doneButtonDisabled,
                 ]}
+                maxFontSizeMultiplier={headerActionMaxFontSizeMultiplier}
               >
                 {t("done")}
               </Text>

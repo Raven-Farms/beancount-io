@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
 import {
   fontSizes,
   fontWeights,
+  headerActionMaxFontSizeMultiplier,
   headerActionStyle,
   useTheme,
 } from "@/common/theme";
@@ -243,7 +244,12 @@ const AddTransactionNextScreenComponent = () => {
           headerTitle: t("addTransaction"),
           headerRight: () => (
             <Pressable onPress={addEntries} hitSlop={10}>
-              <Text style={styles.doneButton}>{t("done")}</Text>
+              <Text
+                style={styles.doneButton}
+                maxFontSizeMultiplier={headerActionMaxFontSizeMultiplier}
+              >
+                {t("done")}
+              </Text>
             </Pressable>
           ),
         }}
