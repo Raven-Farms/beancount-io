@@ -323,8 +323,13 @@ These five codes are the whole table. If the engine process dies on a signal —
 an upstream crash, an out-of-memory kill — `bea` reports it as exit 1 with a
 message naming the signal, rather than passing the shell's `128+N` convention
 through as an undocumented status. The exceptions are the two signals that mean
-the run was ended on purpose: `Ctrl-C` still exits 130 and a closed downstream
-pipe still exits 141, both without a message.
+the run was ended on purpose: `Ctrl-C` still exits 130 and a write to a closed
+downstream pipe exits 141, both without a message. This includes deferred
+warnings and update notices. A native command that fails without writing to
+the closed stream keeps its own failure status; diagnostics to a separate,
+live stderr remain available.
+Bare `bea` keeps its usage/help exit **2**, including when its help cannot be
+written to a closed diagnostic pipe.
 
 In `--json` mode a failure writes nothing to stdout and one object to stderr:
 

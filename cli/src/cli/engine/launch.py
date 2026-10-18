@@ -49,6 +49,7 @@ Optional features (`beangulp`, `beanprice`) must be enabled first; see
 from __future__ import annotations
 
 import atexit
+import errno
 import hashlib
 import json
 import os
@@ -955,8 +956,9 @@ def _spawn(
     tests, or anything else without a fileno), inheritance would write past
     those objects to the process's original fds — so we capture and write
     through `sys.stdout` / `sys.stderr` instead, which is what the caller is
-    actually reading. The one exception to inheritance is stderr beside a
-    stdout pipe; see `_stderr_minus_flush_epilogue`.
+    actually reading. Piped stdout is relayed so an actual EPIPE can be
+    distinguished from a child's independent failure; stderr beside it may
+    also be relayed to drop CPython's failed-flush epilogue.
 
     `renamed` is the `bea` command an upstream program answers for: its stderr
     is then relayed with the program's name replaced in usage lines.
@@ -970,14 +972,21 @@ def _spawn(
         output.replay(_renamed(captured.stderr, rename), sys.stderr)
         returncode = captured.returncode
     else:
-        with _stderr_minus_flush_epilogue(rename) as stderr:
-            returncode = _run_inherited(command, env, stderr, deaf_to_interrupt=deaf_to_interrupt)
-        if returncode > 0 and _downstream_pipe_closed():
-            # The child wrote to the same closed pipe we would have. Upstream is
-            # Python too, so it never sees SIGPIPE either and reports its own
-            # broken stdout as a plain failure — off the 128+N convention the
-            # exit table promises for `bea format … | head`.
-            return 128 + signal.SIGPIPE
+        with _relayed_stdout() as (stdout, failures), _stderr_minus_flush_epilogue(rename) as stderr:
+            if stdout is not None and stderr is None:
+                try:
+                    shared = os.path.samestat(os.fstat(sys.stdout.fileno()), os.fstat(sys.stderr.fileno()))
+                except (OSError, ValueError, AttributeError):
+                    shared = False
+                if shared:
+                    # Keep `2>&1` one byte stream: letting the child's stderr
+                    # bypass our stdout relay could reorder flushed writes.
+                    stderr = stdout
+            returncode = _run_inherited(command, env, stderr, stdout=stdout, deaf_to_interrupt=deaf_to_interrupt)
+        if failures:
+            if failures[0].errno == errno.EPIPE:
+                return 128 + signal.SIGPIPE
+            raise failures[0]
     if returncode < 0:
         return _died_on_signal(-returncode, command)
     if returncode == _FLUSH_FAILED:
@@ -995,7 +1004,12 @@ _FLUSH_FAILED = 120
 
 
 def _run_inherited(
-    command: list[str], env: dict[str, str] | None, stderr: int | None, *, deaf_to_interrupt: bool = False
+    command: list[str],
+    env: dict[str, str] | None,
+    stderr: int | None,
+    *,
+    stdout: int | None = None,
+    deaf_to_interrupt: bool = False,
 ) -> int:
     """`subprocess.run` on our own streams, except a request to stop us stops the child too.
 
@@ -1014,7 +1028,7 @@ def _run_inherited(
     with (
         _stop_passed_on() as attach,
         _interrupt_withheld(deaf_to_interrupt) as hear_interrupts,
-        subprocess.Popen(command, env=env, stderr=stderr) as child,
+        subprocess.Popen(command, env=env, stdout=stdout, stderr=stderr) as child,
     ):
         attach(child)
         try:
@@ -1023,6 +1037,55 @@ def _run_inherited(
         except BaseException:
             child.kill()
             raise
+
+
+@contextmanager
+def _relayed_stdout() -> Iterator[tuple[int | None, list[OSError]]]:
+    """Observe writes to a downstream pipe without guessing from its state.
+
+    Click catches a child's EPIPE and exits 1 silently. That status and a
+    closed reader cannot distinguish it from a genuine validation failure
+    that never wrote stdout (w5/707). Relay bytes only for a pipe/socket;
+    terminals and regular files retain direct inheritance.
+    """
+    failures: list[OSError] = []
+    try:
+        descriptor = sys.stdout.fileno()
+        mode = os.fstat(descriptor).st_mode
+    except (OSError, ValueError, AttributeError):
+        descriptor, mode = -1, 0
+    if getattr(select, "poll", None) is None or not (stat.S_ISFIFO(mode) or stat.S_ISSOCK(mode)):
+        yield None, failures
+        return
+
+    reader, writer = os.pipe()
+
+    def relay() -> None:
+        # Closing this read end on EPIPE also stops the child's next write;
+        # it gets to unwind instead of filling an unconsumed intermediate pipe.
+        with os.fdopen(reader, "rb", buffering=0) as stream:
+            try:
+                while data := stream.read(65536):
+                    while data:
+                        data = data[os.write(descriptor, data) :]
+            except OSError as exc:
+                failures.append(exc)
+
+    worker = threading.Thread(target=relay, daemon=True)
+    worker.start()
+    try:
+        yield writer, failures
+    except BaseException:
+        # The child's owning context has already killed/reaped it. A relay
+        # blocked behind an unread consumer must not delay an interrupt.
+        raise
+    else:
+        os.close(writer)
+        writer = -1
+        worker.join()
+    finally:
+        if writer >= 0:
+            os.close(writer)
 
 
 def run_captured(

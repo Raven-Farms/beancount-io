@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Annotated, Any, NoReturn
 
 import typer
+from typer._click.exceptions import NoArgsIsHelpError
 from typer.core import TyperGroup
 
 from cli import context, output, update
@@ -281,6 +282,22 @@ class _GuardedGroup(TyperGroup):
             raise
         except typer.Abort:
             raise
+        except NoArgsIsHelpError as exc:
+            # Typer normally renders this after parse_args has unwound, where
+            # a closed stderr reader can replace its usage status with 120.
+            try:
+                exc.show()
+                if sys.stderr is not None:
+                    sys.stderr.flush()
+            except BrokenPipeError:
+                output.silence_broken_streams()
+            except OSError as failure:
+                if not _output_failed(failure):
+                    raise
+                _exit_on_output_failure(failure)
+            except (typer.Abort, KeyboardInterrupt):
+                _exit_on_interrupt()
+            raise typer.Exit(exc.exit_code) from None
         except Exception as exc:
             if isinstance(exc, OSError) and _output_failed(exc):
                 _exit_on_output_failure(exc)
@@ -297,6 +314,10 @@ class _GuardedGroup(TyperGroup):
         try:
             result = super().invoke(ctx)
             _settle_stdout()
+            # Deferred warnings and courtesy notices write too: keep them
+            # inside the same pipe/output/interrupt guard as the command.
+            output.flush_warnings()
+            update.print_notice()
         except BrokenPipeError:
             _exit_on_broken_pipe()
         except typer.Exit as exc:
@@ -307,15 +328,17 @@ class _GuardedGroup(TyperGroup):
             # about upgrades after ADR014.
             try:
                 _settle_stdout()
+                output.flush_warnings()
+                if (exc.exit_code or 0) == 0:
+                    update.print_notice()
             except BrokenPipeError:
                 _exit_on_broken_pipe()
             except OSError as failure:
                 if not _output_failed(failure):
                     raise
                 _exit_on_output_failure(failure)
-            output.flush_warnings()
-            if (exc.exit_code or 0) == 0:
-                update.print_notice()
+            except (typer.Abort, KeyboardInterrupt):
+                _exit_on_interrupt()
             raise
         except (typer.Abort, KeyboardInterrupt):
             _exit_on_interrupt()
@@ -323,10 +346,6 @@ class _GuardedGroup(TyperGroup):
             if isinstance(e, OSError) and _output_failed(e):
                 _exit_on_output_failure(e)
             output.error(e)
-        # After the command's own output, and only on the way out cleanly: a
-        # courtesy line has no business interleaving with an error report.
-        output.flush_warnings()
-        update.print_notice()
         return result
 
     def format_commands(self, ctx: Any, formatter: Any) -> None:
