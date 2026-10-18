@@ -21,7 +21,8 @@ _BEA_OPTIONS = {
     "price": (
         "bea options (bea price export; read by bea, not forwarded):\n\n\b\n"
         "  -o, --output DIR  Export into DIR (default: <ledger>-export/ beside the ledger).\n"
-        "  --allow-errors    Export even when a managed source is unavailable.\n"
+        "  --allow-errors    Export even when a managed source is unavailable (its marker only)\n"
+        "                    or a URL include was refused (written as a comment).\n"
         "  --force           Overwrite files already at the paths the export writes."
     ),
     "example": ("bea options (read by bea, not forwarded):\n\n\b\n  --force  Overwrite an existing -o/--output file."),

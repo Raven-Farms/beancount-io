@@ -2104,7 +2104,7 @@ select targets, endpoints, and state directories:
 | `BEA_NO_UPDATE_NOTIFIER` | — | Truthy disables the update notice entirely |
 | `BEA_NO_ASK_HISTORY` | — | Truthy keeps `bea ask`'s prompt history in memory; no `ask_history` file is written |
 | `CI` | — | Truthy implies `--no-input`, and disables the update notice |
-| `MANAGED_PRICE_ORIGINS` | `https://beancount.io` | Comma-separated origin allowlist for managed price includes; empty disables them. Each entry compares as its origin (`https://Beancount.io:443/` is `https://beancount.io`); one that is not an http(s) URL is ignored |
+| `MANAGED_PRICE_ORIGINS` | `https://beancount.io` | Comma-separated origin allowlist for managed price includes; empty disables them. Each entry compares as its origin (`https://Beancount.io:443/` is `https://beancount.io`); one that is not an http(s) URL is ignored, and when every entry is, the refusal names them instead of saying includes are disabled |
 | `MANAGED_PRICE_OFFLINE` | — | Truthy resolves managed includes from the cache only, like `--offline` |
 | `MANAGED_PRICE_STRICT` | — | Truthy fails loads on stale or unavailable sources, like `--strict-prices` |
 

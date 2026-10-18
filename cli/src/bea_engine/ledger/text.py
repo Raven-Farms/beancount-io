@@ -180,10 +180,14 @@ def checked_operating_currencies(options: Mapping[str, Any]) -> list[str]:
 
 def _option_location(options: Mapping[str, Any], name: str, value: str) -> str:
     """` at FILE:LINE` for the option line setting `value`, or nothing when no file shows it."""
+    from bea_engine.compat import UTF8_BOM
+
     line = re.compile(rf'^\s*option\s+"{re.escape(name)}"\s+"{re.escape(value)}"')
     for filename in options.get("include") or ():
         try:
-            lines = lexer_lines(Path(filename).read_bytes())
+            # The parser skips a leading mark, and `\s` does not match it: an
+            # option on line 1 lost its location (w5/633).
+            lines = lexer_lines(Path(filename).read_bytes().removeprefix(UTF8_BOM))
         except OSError:
             continue
         for number, text in enumerate(lines, start=1):

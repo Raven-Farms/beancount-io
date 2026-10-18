@@ -171,7 +171,8 @@ Usage: bea price [OPTIONS]
 bea options (bea price export; read by bea, not forwarded):
 
   -o, --output DIR  Export into DIR (default: <ledger>-export/ beside the ledger).
-  --allow-errors    Export even when a managed source is unavailable.
+  --allow-errors    Export even when a managed source is unavailable (its marker only)
+                    or a URL include was refused (written as a comment).
   --force           Overwrite files already at the paths the export writes.
 
 Native interface (arguments/options are forwarded by bea):

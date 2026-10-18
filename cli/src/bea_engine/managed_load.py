@@ -228,6 +228,24 @@ def _env_origins() -> tuple[str, ...] | None:
     return tuple(dict.fromkeys(origin for origin in normalized if origin is not None))
 
 
+def _ignored_origins() -> str:
+    """Why the environment's allowlist is empty, when every entry it names was ignored, or "".
+
+    An entry that is not an http(s) URL is dropped, and with none left the
+    load said "managed price includes are disabled", the words for an empty
+    variable: `MANAGED_PRICE_ORIGINS=beancount.io` never said its entry was
+    the problem (w5/633).
+    """
+    raw = os.environ.get(ORIGINS_ENV) or ""
+    entries = [entry.strip() for entry in raw.split(",") if entry.strip()]
+    if not entries or any(normalize_origin(entry) is not None for entry in entries):
+        return ""
+    if len(entries) == 1:
+        return f"{ORIGINS_ENV} entry {entries[0]!r} is not an http(s) origin and was ignored; no origins remain"
+    names = ", ".join(repr(entry) for entry in entries)
+    return f"{ORIGINS_ENV} entries {names} are not http(s) origins and were ignored; no origins remain"
+
+
 def _allowed_origins(origins: tuple[str, ...] | None) -> tuple[str, ...]:
     """The managed-price origins a load allows: the argument, else the environment, else the defaults."""
     allowed = _env_origins() if origins is None else origins
@@ -1038,7 +1056,7 @@ def _collect_managed(
             decision = parse_managed_price_url(span.target, origins)
             if not isinstance(decision, AllowedUrl):
                 if refused is not None:
-                    refused[span.target] = decision.detail
+                    refused[span.target] = (not origins and _ignored_origins()) or decision.detail
                 continue
             include = IncludeRef(file=str(path), line=span.line, target=span.target)
             existing = by_url.get(decision.url)
