@@ -7,6 +7,11 @@ import {
 } from "@/features/gitea/utils/gitea-error";
 import { readGiteaFileText } from "@/features/gitea/utils/gitea-file-content";
 import { giteaWriteErrorFromCause } from "@/features/ledger/utils/operation-not-allowed-from-cause";
+import type { Api as GiteaApi } from "@/features/gitea/client/gitea-api";
+import {
+  checkDirectiveLimitForFileChanges,
+  type DirectiveLimitOptions,
+} from "@/core/directive-limit";
 
 const log = logger.child({ module: "commit-ledger-files" });
 
@@ -140,6 +145,10 @@ async function readFileOrNull(
  * `rawCreates` are pre-encoded binary files created in the SAME `repoChangeFiles`
  * commit as the text transforms — so an attachment (e.g. a receipt image) and
  * the ledger entries that reference it are atomic: both land or neither.
+ *
+ * Every commit made here is held to the free-tier directive limit, checked on
+ * each attempt against the content that attempt would commit, so no caller has
+ * to remember the check. `limit.exempt` is the request's own exemption.
  */
 export async function commitLedgerFiles(
   client: GiteaFileCommitClient,
@@ -148,6 +157,7 @@ export async function commitLedgerFiles(
   transforms: Map<string, LedgerFileTransform>,
   message: string,
   rawCreates: RawFileCreate[] = [],
+  limit: DirectiveLimitOptions = {},
 ): Promise<void> {
   const rawOperations: CommitOperation[] = rawCreates.map(
     ({ path, contentBase64 }) => ({
@@ -179,6 +189,16 @@ export async function commitLedgerFiles(
     );
     const operations = [...textOperations, ...rawOperations];
     if (operations.length === 0) return;
+
+    await checkDirectiveLimitForFileChanges(
+      client as unknown as GiteaApi<unknown>,
+      owner,
+      repo,
+      Object.fromEntries(
+        textOperations.map(({ path, content }) => [path, content]),
+      ),
+      limit,
+    );
 
     try {
       await client.repos.repoChangeFiles(owner, repo, {

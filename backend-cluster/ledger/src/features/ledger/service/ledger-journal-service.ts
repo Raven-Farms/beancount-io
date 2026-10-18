@@ -60,6 +60,7 @@ import {
   type GiteaFileCommitClient,
   type LedgerFileTransform,
 } from "@/features/ledger/operations/commit-ledger-files";
+import type { DirectiveLimitOptions } from "@/core/directive-limit";
 import type { CacheHelper } from "@/shared/cache";
 import { logger } from "@/shared/logger";
 
@@ -397,6 +398,8 @@ export class LedgerJournalService implements ILedgerJournalService {
   constructor(
     private readonly giteaClientFactory: IGiteaClientFactory,
     private readonly cacheHelper: CacheHelper,
+    /** The request's directive-limit exemption, applied to every commit. */
+    private readonly directiveLimit: DirectiveLimitOptions = {},
   ) {}
 
   private async loadSnapshot(ledgerId: string, userId: string | undefined) {
@@ -497,6 +500,8 @@ export class LedgerJournalService implements ILedgerJournalService {
       ledgerName,
       transforms,
       message,
+      [],
+      this.directiveLimit,
     );
   }
 

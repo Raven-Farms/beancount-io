@@ -1,10 +1,7 @@
 import { loadCachedFileMapForRepo } from "@/foundation/clients/load-cached-ledger-file-map";
 import { commitLedgerFiles } from "@/features/ledger/operations/commit-ledger-files";
 import { findEntrySliceAsync } from "@/foundation/rustledger/source-slice-worker";
-import {
-  buildEntryIdMap,
-  sliceSha256,
-} from "@/foundation/rustledger";
+import { buildEntryIdMap, sliceSha256 } from "@/foundation/rustledger";
 import { LedgerJournalService } from "@/features/ledger/service/ledger-journal-service";
 import type { DirectiveJson } from "@rustledger/wasm";
 
@@ -87,14 +84,21 @@ expect(OLD_ID).toBeDefined();
 expect(NEW_ID).toBeDefined();
 expect(NEW_ID).not.toBe(OLD_ID);
 
-const MAIN_PRE = ["2026-01-01 open Expenses:Food USD", "2026-01-01 open Assets:Cash USD", "", TXN_OLD, ""].join(
-  "\n",
-);
+const MAIN_PRE = [
+  "2026-01-01 open Expenses:Food USD",
+  "2026-01-01 open Assets:Cash USD",
+  "",
+  TXN_OLD,
+  "",
+].join("\n");
 
 let files: Record<string, string>;
 let committed: boolean;
 
-function snapshot(directives: DirectiveJson[], locations: Map<string, { filename: string; lineno: number }>) {
+function snapshot(
+  directives: DirectiveJson[],
+  locations: Map<string, { filename: string; lineno: number }>,
+) {
   // Deliberately NOT pre-seeding locations: the stub returns the directives
   // plus the transport-safe source index exactly as the worker boundary
   // delivers them, so the location lookup only matches through the service's
@@ -106,9 +110,13 @@ function snapshot(directives: DirectiveJson[], locations: Map<string, { filename
   };
 }
 
-function service() {
+function service(directiveLimit?: { exempt?: boolean }) {
   const giteaClientFactory = { getPublicApiClient: jest.fn() };
-  return new LedgerJournalService(giteaClientFactory as never, {} as never);
+  return new LedgerJournalService(
+    giteaClientFactory as never,
+    {} as never,
+    directiveLimit,
+  );
 }
 
 beforeEach(() => {
@@ -154,8 +162,14 @@ beforeEach(() => {
   const post = [OPEN_FOOD, OPEN_CASH, TXN_NEW_DIRECTIVE];
   parseMock.mockImplementation(async () =>
     committed
-      ? snapshot(post, new Map([[NEW_ID, { filename: "main.bean", lineno: 4 }]]))
-      : snapshot(pre, new Map([[OLD_ID, { filename: "main.bean", lineno: 4 }]])),
+      ? snapshot(
+          post,
+          new Map([[NEW_ID, { filename: "main.bean", lineno: 4 }]]),
+        )
+      : snapshot(
+          pre,
+          new Map([[OLD_ID, { filename: "main.bean", lineno: 4 }]]),
+        ),
   );
 });
 
@@ -191,5 +205,30 @@ describe("updateSourceSlice newEntryHash", () => {
     expect(lastCall?.[2]).toEqual(
       expect.objectContaining({ includeSourceDetails: true }),
     );
+  });
+});
+
+// The commit boundary checks the directive limit (w0/m6); the request's
+// exemption has to reach it, or an exempt caller's edit would be counted.
+describe("updateSourceSlice directive-limit exemption", () => {
+  const update = (svc: LedgerJournalService) =>
+    svc.updateSourceSlice({
+      ledgerId: "alice/main",
+      userId: "user-1",
+      entryHash: OLD_ID,
+      sha256sum: sliceSha256(TXN_OLD),
+      newContent: TXN_NEW,
+    });
+
+  it("passes the request's exemption to the commit", async () => {
+    await update(service({ exempt: true }));
+
+    expect(commitMock.mock.calls[0][6]).toEqual({ exempt: true });
+  });
+
+  it("commits unexempted by default", async () => {
+    await update(service());
+
+    expect(commitMock.mock.calls[0][6]).toEqual({});
   });
 });

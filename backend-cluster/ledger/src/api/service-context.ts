@@ -1,5 +1,5 @@
 import type { Context } from "koa";
-import { giteaClientForRequest } from "@/server/auth";
+import { directiveLimitExempt, giteaClientForRequest } from "@/server/auth";
 import { RequestScopedGiteaClientFactory } from "@/foundation/clients/gitea-client-factory";
 import { getCacheHelper } from "@/foundation/clients/build-cache";
 import {
@@ -30,7 +30,9 @@ export function servicesForRequest(ctx: Context) {
     client,
     finance: new LedgerFinanceService(factory, cache),
     data: new LedgerDataService(factory, cache),
-    journal: new LedgerJournalService(factory, cache),
+    journal: new LedgerJournalService(factory, cache, {
+      exempt: directiveLimitExempt(ctx),
+    }),
     shell: new LedgerShellService(factory, cache),
     account: new LedgerAccountService(factory, cache),
     entry: new LedgerEntryService(factory, cache),

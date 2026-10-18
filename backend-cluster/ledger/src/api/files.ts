@@ -149,6 +149,8 @@ export function setFilesHandler(router: Router): void {
       const body = (ctx.request.body ?? {}) as CreateFileBody;
       const safeUrlPath = toSafeRepoUrlPath(body.path);
       const client = giteaClientForRequest(ctx);
+      // Writes to Gitea directly, not through commitLedgerFiles, so it checks
+      // the directive limit itself.
       await checkDirectiveLimitForFileChanges(
         client,
         owner,
@@ -182,6 +184,8 @@ export function setFilesHandler(router: Router): void {
       const body = (ctx.request.body ?? {}) as UpdateFileBody;
       const safeUrlPath = toSafeRepoUrlPath(body.path);
       const client = giteaClientForRequest(ctx);
+      // Writes to Gitea directly, not through commitLedgerFiles, so it checks
+      // the directive limit itself.
       await checkDirectiveLimitForFileChanges(
         client,
         owner,
@@ -246,6 +250,8 @@ export function setFilesHandler(router: Router): void {
         }
       }
       const client = giteaClientForRequest(ctx);
+      // Writes to Gitea directly, not through commitLedgerFiles, so it checks
+      // the directive limit itself.
       await checkDirectiveLimitForFileChanges(
         client,
         owner,
