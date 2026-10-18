@@ -411,6 +411,37 @@ export function untranslatedAgainstEnglish(
   return offenders;
 }
 
+/** The prefix `i18n:prepare` gives a key until someone translates it. */
+export const TODO_MARKER = "[TODO]";
+
+/**
+ * A message still awaiting translation. The catalog tests, `i18n:check` and
+ * the `i18n:prepare` report share it, so none calls a catalog done that
+ * another rejects.
+ */
+export function isTodoMessage(message: string): boolean {
+  return message.trimStart().startsWith(TODO_MARKER);
+}
+
+/**
+ * One locale's messages copied whole from English, minus the ones
+ * `IDENTICAL_BY_DESIGN` excuses and any `skip` names. The whole-copy guard
+ * and the `i18n:prepare` report both use it, so they judge alike.
+ */
+export function wholeEnglishCopies(
+  messages: Readonly<Record<string, string>> | undefined,
+  english: Readonly<Record<string, string>>,
+  locale: string,
+  skip: (key: string) => boolean = () => false,
+): { key: string; message: string; words: string[] }[] {
+  return untranslatedAgainstEnglish(
+    messages,
+    english,
+    untranslatedWholeMessage,
+    (key) => skip(key) || `${locale}/${key}` in IDENTICAL_BY_DESIGN,
+  );
+}
+
 /**
  * Entries of a `locale/key` identical-by-design allowlist that no longer
  * describe a copy: the locale now translates the key, or the key is gone. A

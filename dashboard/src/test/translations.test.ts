@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import ts from "typescript";
-import { PLURAL_SUFFIX } from "@/i18n/plural";
+import { PLURAL_SUFFIX, pluralFamily } from "@/i18n/plural";
+import { TODO_MARKER, isTodoMessage } from "./locale-scan";
 
 /**
  * Translation entry interface matching the actual structure
@@ -8,12 +9,6 @@ import { PLURAL_SUFFIX } from "@/i18n/plural";
 interface TranslationEntry {
   message: string;
   description: string;
-}
-
-const TODO_MARKER = "[TODO]";
-
-function isIncompleteTranslation(message: string): boolean {
-  return message.trimStart().startsWith(TODO_MARKER);
 }
 
 /**
@@ -24,10 +19,7 @@ function isIncompleteTranslation(message: string): boolean {
 function familyKeys(keys: Iterable<string>): Set<string> {
   const all = new Set(keys);
   return new Set(
-    [...all].map((key) => {
-      const base = key.replace(PLURAL_SUFFIX, "");
-      return base !== key && all.has(`${base}_other`) ? base : key;
-    }),
+    [...all].map((key) => pluralFamily(key, (other) => all.has(other)) ?? key),
   );
 }
 
@@ -286,7 +278,7 @@ describe("Translation Files Validation", () => {
         if (lang === "en") continue;
 
         const incompleteKeys = Object.entries(translations)
-          .filter(([, entry]) => isIncompleteTranslation(entry.message))
+          .filter(([, entry]) => isTodoMessage(entry.message))
           .map(([key]) => key);
 
         if (incompleteKeys.length > 0) {

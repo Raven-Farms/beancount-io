@@ -1,10 +1,9 @@
 import {
-  IDENTICAL_BY_DESIGN,
+  isTodoMessage,
   untranslatedAgainstEnglish,
   untranslatedEnglishTail,
-  untranslatedWholeMessage,
+  wholeEnglishCopies,
 } from "../../src/test/locale-scan";
-import { TODO_MARKER } from "./sync-locale";
 
 export interface CatalogStatus {
   total: number;
@@ -37,7 +36,7 @@ export function catalogStatus(
   english: Readonly<Record<string, string>>,
   locale: string,
 ): CatalogStatus {
-  const isTodo = (key: string) => messages[key].startsWith(TODO_MARKER);
+  const isTodo = (key: string) => isTodoMessage(messages[key]);
   const keysOf = (offenders: { key: string }[]) =>
     offenders.map(({ key }) => key);
   const halfTranslated = keysOf(
@@ -49,12 +48,7 @@ export function catalogStatus(
     ),
   );
   const copiedWhole = keysOf(
-    untranslatedAgainstEnglish(
-      messages,
-      english,
-      untranslatedWholeMessage,
-      (key) => isTodo(key) || `${locale}/${key}` in IDENTICAL_BY_DESIGN,
-    ),
+    wholeEnglishCopies(messages, english, locale, isTodo),
   );
   const total = Object.keys(messages).length;
   const todoCount = Object.keys(messages).filter(isTodo).length;

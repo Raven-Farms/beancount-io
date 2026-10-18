@@ -1,24 +1,9 @@
-import { PLURAL_SUFFIX, pluralCategories } from "../../src/i18n/plural";
+import ts from "typescript";
+import { pluralCategories, pluralFamily } from "../../src/i18n/plural";
+import type { TranslationEntry } from "../../src/i18n/utils";
+import { TODO_MARKER, isTodoMessage } from "../../src/test/locale-scan";
 
-/** The prefix a key added by the sync carries until someone translates it. */
-export const TODO_MARKER = "[TODO]";
-
-export interface TranslationEntry {
-  message: string;
-  description: string;
-}
-
-/**
- * The plural family a key belongs to in `catalog`: its base when the key ends
- * in a CLDR suffix and the catalog also has `<base>_other`, else `null`.
- * `common.retry_one` with no `common.retry_other` is a plain key.
- */
-function pluralBase(key: string, catalog: Record<string, unknown>) {
-  const match = PLURAL_SUFFIX.exec(key);
-  if (!match) return null;
-  const base = key.slice(0, match.index);
-  return `${base}_other` in catalog ? base : null;
-}
+export type { TranslationEntry };
 
 /**
  * The keys `locale` needs for an English catalog with `sourceKeys`, each
@@ -34,14 +19,15 @@ function expectedLocaleKeys(
   source: Record<string, unknown>,
   locale: string,
 ): Map<string, string> {
+  const categories = pluralCategories(locale);
   const expected = new Map<string, string>();
   for (const key of Object.keys(source)) {
-    const base = pluralBase(key, source);
+    const base = pluralFamily(key, (other) => other in source);
     if (base === null) {
       expected.set(key, key);
       continue;
     }
-    for (const category of pluralCategories(locale)) {
+    for (const category of categories) {
       const localeKey = `${base}_${category}`;
       expected.set(
         localeKey,
@@ -55,7 +41,7 @@ function expectedLocaleKeys(
 /**
  * `target` brought in line with `source` for `locale`: existing translations
  * kept, missing keys added as `[TODO] <English>`, keys `locale` does not need
- * dropped.
+ * dropped. `entries` is in the locale's expected order.
  */
 export function syncLocaleEntries(
   source: Record<string, TranslationEntry>,
@@ -93,73 +79,131 @@ export function catalogDrift(
   locale: string,
 ): { missing: string[]; obsolete: string[]; todo: string[] } {
   const { added, removed } = syncLocaleEntries(source, target, locale);
+  const obsolete = new Set(removed);
   const todo = Object.keys(target).filter(
-    (key) =>
-      !removed.includes(key) &&
-      target[key].message.trimStart().startsWith(TODO_MARKER),
+    (key) => !obsolete.has(key) && isTodoMessage(target[key].message),
   );
   return { missing: added, obsolete: removed, todo };
 }
 
-const escapeRegExp = (text: string) =>
-  text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+/** `{ … }`, unwrapped from `as`, `satisfies` or parentheses. */
+function objectLiteral(node: ts.Expression | undefined) {
+  while (
+    node &&
+    (ts.isAsExpression(node) ||
+      ts.isSatisfiesExpression(node) ||
+      ts.isParenthesizedExpression(node))
+  ) {
+    node = node.expression;
+  }
+  return node && ts.isObjectLiteralExpression(node) ? node : undefined;
+}
 
 /**
- * Keys a catalog file writes out itself. An aggregate catalog also spreads
- * its sub-features' catalogs in; those keys belong to the sub-feature's own
- * file, which the sync edits in its turn.
+ * The object literals a catalog file writes its own entries into: the one
+ * it exports by default, then any local `const` object that one spreads in
+ * (`reports` keeps shared keys in `deReportsShared`). Spreads of imported
+ * catalogs are not followed; their keys belong to the sub-feature's file.
+ * Empty when the default export is not an object literal — `reports/export`
+ * builds its catalog with a function, so it has no entries to edit.
  */
-export function ownCatalogKeys(source: string): Set<string> {
-  return new Set(
-    Array.from(
-      source.matchAll(/^ +("(?:[^"\\]|\\.)*"): \{$/gm),
-      (match) => JSON.parse(match[1]) as string,
-    ),
-  );
-}
-
-/** Where `key`'s `"key": { … },` block sits in a Prettier-formatted catalog. */
-function entrySpan(source: string, key: string) {
-  const match = new RegExp(
-    `^( +)${escapeRegExp(JSON.stringify(key))}: \\{\\n[\\s\\S]*?^\\1\\},\\n`,
-    "m",
-  ).exec(source);
-  return match
-    ? {
-        start: match.index,
-        end: match.index + match[0].length,
-        indent: match[1],
+function ownObjects(file: ts.SourceFile): ts.ObjectLiteralExpression[] {
+  const locals = new Map<string, ts.ObjectLiteralExpression>();
+  let exported: ts.Expression | undefined;
+  for (const statement of file.statements) {
+    if (ts.isVariableStatement(statement)) {
+      for (const declaration of statement.declarationList.declarations) {
+        const object = objectLiteral(declaration.initializer);
+        if (object && ts.isIdentifier(declaration.name)) {
+          locals.set(declaration.name.text, object);
+        }
       }
-    : null;
-}
-
-/** Just inside the catalog object's opening brace, and its entries' indent. */
-function objectStart(source: string) {
-  const match = /^const \w+:[^=]*=\s*\{\n/m.exec(source);
-  if (!match) {
-    throw new Error("catalog has no `const …: Record<…> = {` declaration");
+    } else if (ts.isExportAssignment(statement)) {
+      exported = statement.expression;
+    }
   }
-  const at = match.index + match[0].length;
-  return { at, indent: /^ +/.exec(source.slice(at))?.[0] ?? "  " };
+  const root =
+    exported && ts.isIdentifier(exported)
+      ? locals.get(exported.text)
+      : objectLiteral(exported);
+  if (!root) return [];
+  const objects = [root];
+  for (const object of objects) {
+    for (const property of object.properties) {
+      if (
+        ts.isSpreadAssignment(property) &&
+        ts.isIdentifier(property.expression)
+      ) {
+        const local = locals.get(property.expression.text);
+        if (local && !objects.includes(local)) objects.push(local);
+      }
+    }
+  }
+  return objects;
 }
 
-const renderEntry = (
-  indent: string,
-  key: string,
-  { message, description }: TranslationEntry,
-) =>
-  `${indent}${JSON.stringify(key)}: {\n` +
-  `${indent}  message: ${JSON.stringify(message)},\n` +
-  `${indent}  description: ${JSON.stringify(description)},\n` +
-  `${indent}},\n`;
+interface CatalogSlot {
+  /** Where the entry begins, its leading comments included. */
+  start: number;
+  /** Just past the entry, and past the comma after it when there is one. */
+  end: number;
+  hasComma: boolean;
+}
+
+/**
+ * Every entry a catalog file writes out itself, by message key, and where a
+ * new first entry goes. Parsed with the TypeScript compiler rather than
+ * matched by layout, so a one-line entry, an untyped `const` or an aggregate
+ * that only spreads sub-catalogs reads like any other catalog.
+ */
+function parseCatalog(source: string) {
+  const file = ts.createSourceFile(
+    "catalog.ts",
+    source,
+    ts.ScriptTarget.Latest,
+  );
+  const objects = ownObjects(file);
+  const entries = new Map<string, CatalogSlot>();
+  for (const object of objects) {
+    for (const property of object.properties) {
+      if (
+        !ts.isPropertyAssignment(property) ||
+        !(
+          ts.isStringLiteral(property.name) || ts.isIdentifier(property.name)
+        ) ||
+        !ts.isObjectLiteralExpression(property.initializer)
+      ) {
+        continue;
+      }
+      const comma = /^\s*,/.exec(source.slice(property.end));
+      entries.set(property.name.text, {
+        start: property.getFullStart(),
+        end: property.end + (comma?.[0].length ?? 0),
+        hasComma: comma !== null,
+      });
+    }
+  }
+  // Just inside the default-exported object's opening brace.
+  const firstSlot = objects[0] ? objects[0].getStart(file) + 1 : undefined;
+  return { entries, firstSlot };
+}
+
+/** Keys a catalog file writes out itself, not the ones it spreads in. */
+export function ownCatalogKeys(source: string): Set<string> {
+  return new Set(parseCatalog(source).entries.keys());
+}
+
+// Laid out by Prettier afterwards; the line breaks keep it multi-line.
+const renderEntry = (key: string, { message, description }: TranslationEntry) =>
+  `\n${JSON.stringify(key)}: {\nmessage: ${JSON.stringify(message)},\ndescription: ${JSON.stringify(description)},\n},`;
 
 /**
  * A catalog file's text with `removed` entries cut out and `added` ones
  * inserted, every other byte untouched. Each new entry goes after the nearest
- * key before it in `order` (the English catalog's), else first in the object.
- * Regenerating the file instead re-sorted and reformatted whole catalogs, so
- * adding one key showed up as hundreds of changed lines (w0/m3). Run Prettier
- * over the result for long messages.
+ * key before it in `order` (the locale's expected order), else first in the
+ * default-exported object. Regenerating the file instead re-sorted and
+ * reformatted whole catalogs, so adding one key showed up as hundreds of
+ * changed lines (w0/m3). Format the result with Prettier.
  */
 export function editCatalogSource(
   source: string,
@@ -171,21 +215,23 @@ export function editCatalogSource(
 ): string {
   let text = source;
   for (const key of changes.removed) {
-    const span = entrySpan(text, key);
-    if (span) text = text.slice(0, span.start) + text.slice(span.end);
+    const slot = parseCatalog(text).entries.get(key);
+    if (slot) text = text.slice(0, slot.start) + text.slice(slot.end);
   }
   for (const [index, key] of changes.order.entries()) {
     const entry = changes.added[key];
     if (!entry) continue;
-    const before = changes.order
-      .slice(0, index)
-      .reverse()
-      .map((previous) => entrySpan(text, previous))
-      .find((span) => span !== null);
-    const { at, indent } = before
-      ? { at: before.end, indent: before.indent }
-      : objectStart(text);
-    text = text.slice(0, at) + renderEntry(indent, key, entry) + text.slice(at);
+    const { entries, firstSlot } = parseCatalog(text);
+    let before: CatalogSlot | undefined;
+    for (let i = index - 1; i >= 0 && !before; i--) {
+      before = entries.get(changes.order[i]);
+    }
+    const at = before?.end ?? firstSlot;
+    if (at === undefined) {
+      throw new Error(`no catalog object to add ${key} to`);
+    }
+    const comma = before && !before.hasComma ? "," : "";
+    text = text.slice(0, at) + comma + renderEntry(key, entry) + text.slice(at);
   }
   return text;
 }

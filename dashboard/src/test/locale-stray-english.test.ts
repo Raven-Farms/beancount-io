@@ -11,6 +11,7 @@ import {
   untranslatedAgainstEnglish,
   untranslatedEnglishTail,
   untranslatedWholeMessage,
+  wholeEnglishCopies,
 } from "./locale-scan";
 import en from "@/i18n/locales/en";
 
@@ -200,15 +201,7 @@ describe("no locale ships an English message copied whole", () => {
     "%s translates every copied message",
     (locale) => {
       expect(
-        offenderLines(
-          locale,
-          untranslatedAgainstEnglish(
-            ALL[locale],
-            en,
-            untranslatedWholeMessage,
-            (key) => `${locale}/${key}` in IDENTICAL_BY_DESIGN,
-          ),
-        ),
+        offenderLines(locale, wholeEnglishCopies(ALL[locale], en, locale)),
       ).toEqual([]);
     },
   );

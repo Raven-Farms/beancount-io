@@ -23,6 +23,22 @@ type PluralCategory = (typeof PLURAL_CATEGORIES)[number];
 /** The `_<category>` suffix i18next appends to a plural message's key. */
 export const PLURAL_SUFFIX = new RegExp(`_(${PLURAL_CATEGORIES.join("|")})$`);
 
+/**
+ * The plural family `key` belongs to: its base when it ends in a CLDR suffix
+ * and `hasKey(<base>_other)`, else `null` — `tour.step_one` with no
+ * `tour.step_other` is a plain key. The catalog tests and `i18n:prepare`
+ * share this rule, so they cannot disagree about what a plural is.
+ */
+export function pluralFamily(
+  key: string,
+  hasKey: (key: string) => boolean,
+): string | null {
+  const match = PLURAL_SUFFIX.exec(key);
+  if (!match) return null;
+  const base = key.slice(0, match.index);
+  return hasKey(`${base}_other`) ? base : null;
+}
+
 /** The cardinal categories `language` distinguishes, per `Intl.PluralRules`. */
 export function pluralCategories(language: string): PluralCategory[] {
   // Canonical order: ICU versions list the categories in different orders
@@ -52,12 +68,10 @@ export function findFlatPluralIssues(
 ): PluralIssue[] {
   const families = new Map<string, Set<PluralCategory>>();
   for (const key of Object.keys(resources)) {
-    const match = PLURAL_SUFFIX.exec(key);
-    if (!match) continue;
-    const base = key.slice(0, match.index);
-    if (!(`${base}_other` in resources)) continue;
+    const base = pluralFamily(key, (other) => other in resources);
+    if (base === null) continue;
     const present = families.get(base) ?? new Set();
-    present.add(match[1] as PluralCategory);
+    present.add(key.slice(base.length + 1) as PluralCategory);
     families.set(base, present);
   }
   const expected = pluralCategories(language);

@@ -1,5 +1,3 @@
-#!/usr/bin/env tsx
-
 // Prepare translation files for translators (Feature-Based Architecture)
 // This script:
 // 1. Extracts all translation keys from source code (t("key") calls)
@@ -12,14 +10,13 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as prettier from "prettier";
-import { SUPPORTED_LANGUAGES } from "../src/i18n/config";
+import { EN_COMPARED_LOCALES } from "../src/test/locale-scan";
 import { catalogStatus, type CatalogStatus } from "./lib/catalog-status";
 import {
   catalogDrift,
   editCatalogSource,
   ownCatalogKeys,
   syncLocaleEntries,
-  TODO_MARKER,
   type TranslationEntry,
 } from "./lib/sync-locale";
 
@@ -34,9 +31,9 @@ const SHARED_LOCALE_DIRS: Record<string, string> = {
   seo: path.join(SRC_DIR, "i18n", "locales", "seo"),
 };
 
-// Every supported language but English, from the canonical list: a hand-kept
-// copy here had fallen behind it and left Japanese and Korean unsynced.
-const TARGET_LOCALES = SUPPORTED_LANGUAGES.filter((locale) => locale !== "en");
+// Every supported language but English, as the locale guards compare them: a
+// hand-kept copy here had fallen behind and left Japanese and Korean unsynced.
+const TARGET_LOCALES = EN_COMPARED_LOCALES;
 
 interface FeatureStats extends CatalogStatus {
   feature: string;
@@ -51,14 +48,12 @@ interface GlobalStats {
   todoCount: number;
 }
 
-/** A catalog's structured entries as `key → message`. */
+/** A catalog's entries as `key → message`. */
 function messagesOf(
-  translations: Record<string, unknown>,
+  translations: Record<string, TranslationEntry>,
 ): Record<string, string> {
   return Object.fromEntries(
-    Object.entries(translations).flatMap(([key, value]) =>
-      isStructuredFormat(value) ? [[key, value.message]] : [],
-    ),
+    Object.entries(translations).map(([key, { message }]) => [key, message]),
   );
 }
 
@@ -77,20 +72,48 @@ function isStructuredFormat(value: unknown): value is TranslationEntry {
 }
 
 /**
- * Read translations from a TypeScript file
+ * Each catalog's entries, read once per run and again only after this run
+ * writes the file: English used to be imported afresh for every locale, 16
+ * times per file in `--check`.
  */
-async function readTranslations(
+const catalogReads = new Map<
+  string,
+  Promise<Record<string, TranslationEntry>>
+>();
+const catalogVersions = new Map<string, number>();
+
+function readTranslations(
   filePath: string,
 ): Promise<Record<string, TranslationEntry>> {
-  if (!fs.existsSync(filePath)) {
+  const absolutePath = path.resolve(filePath);
+  let read = catalogReads.get(absolutePath);
+  if (!read) {
+    read = importTranslations(absolutePath);
+    catalogReads.set(absolutePath, read);
+  }
+  return read;
+}
+
+/** Forget a catalog this run rewrote, so the next read sees the new file. */
+function catalogWritten(filePath: string): void {
+  const absolutePath = path.resolve(filePath);
+  catalogReads.delete(absolutePath);
+  catalogVersions.set(
+    absolutePath,
+    (catalogVersions.get(absolutePath) ?? 0) + 1,
+  );
+}
+
+async function importTranslations(
+  absolutePath: string,
+): Promise<Record<string, TranslationEntry>> {
+  if (!fs.existsSync(absolutePath)) {
     return {};
   }
 
   try {
-    // Use dynamic import to load the TypeScript module
-    // Add timestamp to bust Node.js module cache for repeated reads
-    const absolutePath = path.resolve(filePath);
-    const fileUrl = `file://${absolutePath}?t=${Date.now()}`;
+    // The version query makes Node re-import a file this run rewrote.
+    const fileUrl = `file://${absolutePath}?v=${catalogVersions.get(absolutePath) ?? 0}`;
     const module = await import(fileUrl);
     const translations = module.default || module;
 
@@ -104,17 +127,13 @@ async function readTranslations(
 
     return validated;
   } catch (error) {
-    console.error(`  ⚠️  Error reading ${filePath}:`, error);
+    console.error(`  ⚠️  Error reading ${absolutePath}:`, error);
     return {};
   }
 }
 
-/** A new catalog file's text, its entries in the order given. */
-function renderCatalog(
-  filePath: string,
-  translations: Record<string, TranslationEntry>,
-  locale: string,
-): string {
+/** A new, empty catalog file for `locale`, to add entries to. */
+function emptyCatalog(filePath: string, locale: string): string {
   // Extract variable name from existing file or create new one
   const feature = path.basename(path.dirname(path.dirname(filePath)));
 
@@ -138,27 +157,18 @@ function renderCatalog(
   content += `  message: string;\n`;
   content += `  description: string;\n`;
   content += `}\n\n`;
-  content += `const ${varName}: Record<string, TranslationEntry> = {\n`;
-
-  for (const [key, entry] of Object.entries(translations)) {
-    content += `  "${key}": {\n`;
-    content += `    message: ${JSON.stringify(entry.message)},\n`;
-    content += `    description: ${JSON.stringify(entry.description)},\n`;
-    content += `  },\n`;
-  }
-
-  content += `};\n\n`;
+  content += `const ${varName}: Record<string, TranslationEntry> = {};\n\n`;
   content += `export default ${varName};\n`;
   return content;
 }
 
 /**
- * Write a catalog's changes. An existing file is edited in place — removed
- * entries cut, added ones inserted beside their neighbours, every other line
- * untouched — and a missing one is generated; either way the result is
- * formatted as the repository's Prettier config formats it. Regenerating
- * existing files re-sorted and reformatted them, so one new key showed up as
- * hundreds of changed lines (w0/m3).
+ * Write a catalog's changes in place — removed entries cut, added ones
+ * inserted beside their neighbours, every other line untouched — starting
+ * from an empty catalog when the file is missing, and formatted as the
+ * repository's Prettier config formats it. Regenerating existing files
+ * re-sorted and reformatted them, so one new key showed up as hundreds of
+ * changed lines (w0/m3).
  */
 async function saveCatalog(
   filePath: string,
@@ -166,70 +176,69 @@ async function saveCatalog(
   entries: Record<string, TranslationEntry>,
   changes: { added: readonly string[]; removed: readonly string[] },
 ): Promise<void> {
-  const text = fs.existsSync(filePath)
-    ? editCatalogSource(fs.readFileSync(filePath, "utf8"), {
-        added: Object.fromEntries(
-          changes.added.map((key) => [key, entries[key]]),
-        ),
-        removed: changes.removed,
-        order: Object.keys(entries),
-      })
-    : renderCatalog(filePath, entries, locale);
+  const current = fs.existsSync(filePath)
+    ? fs.readFileSync(filePath, "utf8")
+    : emptyCatalog(filePath, locale);
+  const text = editCatalogSource(current, {
+    added: Object.fromEntries(changes.added.map((key) => [key, entries[key]])),
+    removed: changes.removed,
+    order: Object.keys(entries),
+  });
   const options = await prettier.resolveConfig(filePath);
   fs.writeFileSync(
     filePath,
     await prettier.format(text, { ...options, filepath: filePath }),
     "utf8",
   );
+  catalogWritten(filePath);
 }
 
-/** The entries of `translations` a catalog file writes out itself. */
-function ownEntries(
-  translations: Record<string, TranslationEntry>,
+/**
+ * The entries a catalog file writes out itself: an aggregate catalog's
+ * spread-in keys are synced and checked through the sub-feature's own file.
+ */
+async function readOwnEntries(
   filePath: string,
-): Record<string, TranslationEntry> {
+): Promise<Record<string, TranslationEntry>> {
   if (!fs.existsSync(filePath)) return {};
   const own = ownCatalogKeys(fs.readFileSync(filePath, "utf8"));
   return Object.fromEntries(
-    Object.entries(translations).filter(([key]) => own.has(key)),
+    Object.entries(await readTranslations(filePath)).filter(([key]) =>
+      own.has(key),
+    ),
   );
 }
 
 /**
- * Sync translations from source (en) to target locale
- * - Add missing keys with [TODO] prefix
- * - Remove keys the locale does not need, keeping its own plural forms
- */
-/**
- * A feature's English catalog and one locale's, as the entries each file
- * writes out itself: an aggregate catalog's spread-in keys are synced and
- * checked through the sub-feature's own file. `null` without an English file.
+ * A feature's English catalog and one locale's, own entries only. `null`
+ * without an English file.
  */
 async function readCatalogPair(feature: string, locale: string) {
-  const sourcePath = getLocaleFilePath(feature, "en");
-  const targetPath = getLocaleFilePath(feature, locale);
-  const source = ownEntries(await readTranslations(sourcePath), sourcePath);
+  const source = await readOwnEntries(getLocaleFilePath(feature, "en"));
   if (Object.keys(source).length === 0) return null;
-  const target = ownEntries(await readTranslations(targetPath), targetPath);
-  return { source, target, targetPath };
+  const targetPath = getLocaleFilePath(feature, locale);
+  return { source, target: await readOwnEntries(targetPath), targetPath };
 }
 
+/**
+ * Sync one locale's catalog with English: missing keys added with the
+ * `[TODO]` prefix, keys the locale does not need removed, its own plural
+ * forms kept. Writes nothing when it is already in sync.
+ */
 async function syncTranslations(
   feature: string,
   locale: string,
 ): Promise<{ added: number; removed: number }> {
   const pair = await readCatalogPair(feature, locale);
   if (!pair) return { added: 0, removed: 0 };
-  const { source, target, targetPath } = pair;
-  const { entries, added, removed } = syncLocaleEntries(source, target, locale);
-
-  // If no changes needed, skip
-  if (added.length === 0 && removed.length === 0) {
-    return { added: 0, removed: 0 };
+  const { entries, added, removed } = syncLocaleEntries(
+    pair.source,
+    pair.target,
+    locale,
+  );
+  if (added.length > 0 || removed.length > 0) {
+    await saveCatalog(pair.targetPath, locale, entries, { added, removed });
   }
-
-  await saveCatalog(targetPath, locale, entries, { added, removed });
-
   return { added: added.length, removed: removed.length };
 }
 
@@ -292,12 +301,8 @@ function getReportedFeatures(): string[] {
 }
 
 /**
- * Keys this locale has left ending in verbatim English, compared against the
- * same key in `en`. Uses the predicate the guard uses, so the script and
- * `src/test/locale-stray-english.test.ts` cannot disagree about what counts.
- */
-/**
- * Analyze a single feature locale
+ * One feature catalog's report line, judged by the CI guards' predicates
+ * (`catalogStatus`).
  */
 async function analyzeFeatureLocale(
   feature: string,
@@ -466,19 +471,13 @@ async function extractKeysFromCode(): Promise<{
   return { keysByFeature, unattributed };
 }
 
-/**
- * Add missing keys to English locale files
- * Returns count of keys added per feature
- */
 /** Keys code uses for `feature` that its English catalog does not define. */
 function missingEnglishKeys(
   feature: string,
   keys: Set<string>,
   english: Record<string, TranslationEntry>,
 ): string[] {
-  // `determineFeatureFromKey` returns `common` for any key it cannot
-  // attribute, so this would otherwise write every unattributed key in the
-  // codebase into the shared catalog. They are read-only here.
+  // The shared catalogs are edited by hand (see `getReportedFeatures`).
   if (feature in SHARED_LOCALE_DIRS) return [];
   return Array.from(keys).filter((key) => !(key in english));
 }
@@ -499,19 +498,21 @@ async function checkCatalogs(): Promise<number> {
       offenders.push(`en · ${feature}: ${key} is used in code but missing`);
     }
   }
-  const features = getFeatureDirectories();
+  const features = getReportedFeatures();
   for (const locale of TARGET_LOCALES) {
     for (const feature of features) {
       const pair = await readCatalogPair(feature, locale);
       if (!pair) continue;
       const drift = catalogDrift(pair.source, pair.target, locale);
+      // The run never syncs the shared catalogs, so only their [TODO]s count.
+      const synced = !(feature in SHARED_LOCALE_DIRS);
+      const problems = [
+        ...(synced ? drift.missing.map((key) => `missing ${key}`) : []),
+        ...(synced ? drift.obsolete.map((key) => `obsolete ${key}`) : []),
+        ...drift.todo.map((key) => `[TODO] ${key}`),
+      ];
       const where = path.relative(process.cwd(), pair.targetPath);
-      for (const key of drift.missing)
-        offenders.push(`${where}: missing ${key}`);
-      for (const key of drift.obsolete) {
-        offenders.push(`${where}: obsolete ${key}`);
-      }
-      for (const key of drift.todo) offenders.push(`${where}: [TODO] ${key}`);
+      offenders.push(...problems.map((problem) => `${where}: ${problem}`));
     }
   }
   if (offenders.length === 0) {
@@ -526,6 +527,7 @@ async function checkCatalogs(): Promise<number> {
   return 1;
 }
 
+/** Add the keys code uses to English catalogs; the count added per feature. */
 async function addMissingKeysToEnglish(
   extractedKeys: Map<string, Set<string>>,
 ): Promise<Map<string, number>> {
@@ -564,6 +566,25 @@ async function addMissingKeysToEnglish(
 /**
  * Main function
  */
+/** A report section naming each catalog's `keysOf` keys, if any. */
+function printKeyList(
+  allStats: FeatureStats[],
+  keysOf: (stats: FeatureStats) => string[],
+  title: string,
+  notes: string[],
+): void {
+  const listed = allStats.filter((stats) => keysOf(stats).length > 0);
+  if (listed.length === 0) return;
+  console.log("\n" + "=".repeat(80));
+  console.log(`\n⚠️  ${title}\n`);
+  for (const note of notes) console.log(`   ${note}`);
+  console.log("");
+  for (const stats of listed) {
+    console.log(`   ${stats.locale} · ${stats.feature}`);
+    for (const key of keysOf(stats)) console.log(`      ${key}`);
+  }
+}
+
 async function main() {
   if (process.argv.includes("--check")) {
     process.exitCode = await checkCatalogs();
@@ -667,61 +688,49 @@ async function main() {
       if (stats) {
         allStats.push(stats);
 
-        const status =
-          stats.halfTranslated.length > 0 || stats.copiedWhole.length > 0
-            ? "⚠️ "
-            : stats.percentage === 100
-              ? "✅"
-              : "📝";
+        const warnings = [
+          [stats.halfTranslated, "half-translated"],
+          [stats.copiedWhole, "copied from English"],
+        ] as const;
+        const warning = warnings
+          .filter(([keys]) => keys.length > 0)
+          .map(([keys, label]) => ` ⚠️  ${keys.length} ${label}`)
+          .join("");
+        const status = warning ? "⚠️ " : stats.percentage === 100 ? "✅" : "📝";
         const progressBar =
           "█".repeat(Math.floor(stats.percentage / 5)) +
           "░".repeat(20 - Math.floor(stats.percentage / 5));
 
         console.log(
-          `   ${status} ${feature.padEnd(20)} | ${String(stats.completed).padStart(3)}/${String(stats.total).padStart(3)} | ${progressBar} ${stats.percentage}%${stats.todoCount > 0 ? ` (${stats.todoCount} TODOs)` : ""}${stats.halfTranslated.length > 0 ? ` ⚠️  ${stats.halfTranslated.length} half-translated` : ""}${stats.copiedWhole.length > 0 ? ` ⚠️  ${stats.copiedWhole.length} copied from English` : ""}`,
+          `   ${status} ${feature.padEnd(20)} | ${String(stats.completed).padStart(3)}/${String(stats.total).padStart(3)} | ${progressBar} ${stats.percentage}%${stats.todoCount > 0 ? ` (${stats.todoCount} TODOs)` : ""}${warning}`,
         );
       }
     }
   }
 
-  // Half-translated keys, named so they can be opened and fixed. A key like
-  // this is the residue of editing a `[TODO]` line and replacing only its
-  // first word, so it counts as completed above while reading as neither
-  // language.
-  const halfTranslated = allStats.filter((s) => s.halfTranslated.length > 0);
-  if (halfTranslated.length > 0) {
-    console.log("\n" + "=".repeat(80));
-    console.log("\n⚠️  Half-translated messages\n");
-    console.log(
-      "   These end in verbatim English. They are not counted as TODOs,",
-    );
-    console.log("   so nothing else in this report flags them.\n");
-    for (const stats of halfTranslated) {
-      console.log(`   ${stats.locale} · ${stats.feature}`);
-      for (const key of stats.halfTranslated) {
-        console.log(`      ${key}`);
-      }
-    }
-  }
-
-  // Messages pasted whole from English, named so they can be translated.
-  // They are not counted as completed above; CI rejects them too
-  // (`locale-stray-english.test.ts`), with the same allowlist.
-  const copiedWhole = allStats.filter((s) => s.copiedWhole.length > 0);
-  if (copiedWhole.length > 0) {
-    console.log("\n" + "=".repeat(80));
-    console.log("\n⚠️  Messages copied whole from English\n");
-    console.log("   Translate each, or add it to IDENTICAL_BY_DESIGN in");
-    console.log(
-      "   src/test/locale-scan.ts with the reason it is correct in English.\n",
-    );
-    for (const stats of copiedWhole) {
-      console.log(`   ${stats.locale} · ${stats.feature}`);
-      for (const key of stats.copiedWhole) {
-        console.log(`      ${key}`);
-      }
-    }
-  }
+  // Half-translated keys are the residue of editing a `[TODO]` line and
+  // replacing only its first word: counted as completed above, yet reading
+  // as neither language. Whole copies are not counted as completed, and CI
+  // rejects them too (`locale-stray-english.test.ts`), with the same
+  // allowlist. Both are named so they can be opened and fixed.
+  printKeyList(
+    allStats,
+    (stats) => stats.halfTranslated,
+    "Half-translated messages",
+    [
+      "These end in verbatim English. They are not counted as TODOs,",
+      "so nothing else in this report flags them.",
+    ],
+  );
+  printKeyList(
+    allStats,
+    (stats) => stats.copiedWhole,
+    "Messages copied whole from English",
+    [
+      "Translate each, or add it to IDENTICAL_BY_DESIGN in",
+      "src/test/locale-scan.ts with the reason it is correct in English.",
+    ],
+  );
 
   // Calculate global stats per locale
   console.log("\n" + "=".repeat(80));

@@ -1,3 +1,4 @@
+import * as prettier from "prettier";
 import { describe, expect, it } from "vitest";
 import {
   catalogDrift,
@@ -103,7 +104,8 @@ describe("syncLocaleEntries", () => {
 });
 
 // A sync edits only the entries it adds or removes; regenerating the file
-// re-sorted and reformatted whole catalogs (w0/m3).
+// re-sorted and reformatted whole catalogs (w0/m3). Entries are found by
+// parsing, so every catalog shape in the tree edits the same way.
 const catalog = `export interface TranslationEntry {
   message: string;
   description: string;
@@ -127,37 +129,46 @@ const deFiles: Record<string, TranslationEntry> = {
 export default deFiles;
 `;
 
+/** The edit as `i18n:prepare` writes it: through Prettier. */
+const edit = async (
+  source: string,
+  changes: Parameters<typeof editCatalogSource>[1],
+) =>
+  prettier.format(editCatalogSource(source, changes), {
+    ...(await prettier.resolveConfig("src/features/x/locales/de.ts")),
+    parser: "typescript",
+  });
+
 describe("editCatalogSource", () => {
-  it("cuts a removed entry and leaves every other line as it was", () => {
+  it("cuts a removed entry and leaves every other byte as it was", () => {
     const edited = editCatalogSource(catalog, {
       added: {},
       removed: ["files.gone"],
       order: ["files.title", "files.count_other"],
     });
-    expect(edited).toBe(catalog.replace(/  "files\.gone"[\s\S]*?  \},\n/, ""));
+    expect(edited).toBe(catalog.replace(/\n  "files\.gone"[\s\S]*?  \},/, ""));
   });
 
-  it("inserts a new entry after its nearest English neighbour", () => {
-    const edited = editCatalogSource(catalog, {
+  it("inserts a new entry after its nearest neighbour", async () => {
+    const edited = await edit(catalog, {
       added: { "files.count_one": entry("[TODO] {{count}} file", "count") },
       removed: [],
       order: ["files.title", "files.count_one", "files.count_other"],
     });
-    expect(edited).toContain(
-      `  "files.title": {
-    message: "Dateien",
-    description: "Page title",
-  },
-  "files.count_one": {
+    expect(edited).toBe(
+      catalog.replace(
+        '  "files.gone": {',
+        `  "files.count_one": {
     message: "[TODO] {{count}} file",
     description: "count",
   },
   "files.gone": {`,
+      ),
     );
   });
 
-  it("puts a key with no earlier neighbour first in the object", () => {
-    const edited = editCatalogSource(catalog, {
+  it("puts a key with no earlier neighbour first in the object", async () => {
+    const edited = await edit(catalog, {
       added: { "files.aaa": entry("[TODO] A") },
       removed: [],
       order: ["files.aaa", "files.title"],
@@ -168,26 +179,89 @@ describe("editCatalogSource", () => {
     );
   });
 
-  it("matches the indent of a catalog Prettier wrapped", () => {
-    const wrapped = `const deReports: Record<string, { message: string; description: string }> =
-  {
-    "reports.title": {
-      message: "Berichte",
-      description: "Title",
-    },
-  };
+  it("edits an untyped catalog that spreads a local object", async () => {
+    // The shape of `reports/locales/*.ts`, which the layout regex refused.
+    const reports = `import deExport from "../export/locales/de";
+
+const deReportsShared = {
+  "reports.shared": {
+    message: "Geteilt",
+    description: "d",
+  },
+};
+
+const deReports = {
+  ...deReportsShared,
+  ...deExport,
+  "reports.title": {
+    message: "Berichte",
+    description: "d",
+  },
+};
+
+export default deReports;
 `;
-    const edited = editCatalogSource(wrapped, {
-      added: { "reports.empty": entry("[TODO] Nothing") },
+    expect([...ownCatalogKeys(reports)]).toEqual([
+      "reports.title",
+      "reports.shared",
+    ]);
+    const edited = await edit(reports, {
+      added: { "reports.shared2": entry("[TODO] Shared too") },
       removed: [],
-      order: ["reports.title", "reports.empty"],
+      order: ["reports.shared", "reports.shared2", "reports.title"],
     });
-    expect(edited).toContain(`    },
-    "reports.empty": {
-      message: "[TODO] Nothing",
-      description: "d",
-    },
-  };`);
+    expect(edited).toContain(`const deReportsShared = {
+  "reports.shared": {
+    message: "Geteilt",
+    description: "d",
+  },
+  "reports.shared2": {
+    message: "[TODO] Shared too",
+    description: "d",
+  },
+};`);
+  });
+
+  it("adds to an aggregate that only spreads sub-catalogs", async () => {
+    const aggregate = `import deDashboard from "../pages/dashboard/locales/de";
+
+const deList = {
+  ...deDashboard,
+};
+
+export default deList;
+`;
+    expect(ownCatalogKeys(aggregate).size).toBe(0);
+    expect(
+      await edit(aggregate, {
+        added: { "list.empty": entry("[TODO] Nothing yet") },
+        removed: [],
+        order: ["list.empty"],
+      }),
+    ).toContain(`const deList = {
+  "list.empty": {
+    message: "[TODO] Nothing yet",
+    description: "d",
+  },
+  ...deDashboard,
+};`);
+  });
+
+  it("reads and removes a one-line entry like any other", () => {
+    const oneLine = `const de = {
+  "a.one": { message: "Eins", description: "d" },
+  "a.two": {
+    message: "Zwei",
+    description: "d",
+  },
+};
+
+export default de;
+`;
+    expect([...ownCatalogKeys(oneLine)]).toEqual(["a.one", "a.two"]);
+    expect(
+      editCatalogSource(oneLine, { added: {}, removed: ["a.one"], order: [] }),
+    ).not.toContain("a.one");
   });
 });
 
@@ -195,13 +269,15 @@ describe("ownCatalogKeys", () => {
   it("lists the keys a file writes out, not the ones it spreads in", () => {
     const aggregate = `import deUpload from "../upload/locales/de";
 
-const deEditor: Record<string, TranslationEntry> = {
+const deEditor: Record<string, { message: string; description: string }> = {
   ...deUpload,
   "editor.title": {
     message: "Editor",
     description: "Title",
   },
 };
+
+export default deEditor;
 `;
     expect([...ownCatalogKeys(aggregate)]).toEqual(["editor.title"]);
   });
