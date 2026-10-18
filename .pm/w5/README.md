@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [696 — A 0-ready import preview still says "repeat with --apply"](./696.md)
 - [697 — Zero-sum opening balances write Equity:OpeningBalances -0 USD (regression from w5/310)](./697.md)
 - [698 — Three slips in USAGE "Creating a ledger"](./698.md)
 - [699 — Other SOCKS spellings and unknown proxy schemes still fail as unexpected; refusal names the wrong variable (incomplete fix of w5/518)](./699.md)
