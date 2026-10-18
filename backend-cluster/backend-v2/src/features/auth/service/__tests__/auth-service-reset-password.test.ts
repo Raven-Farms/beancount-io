@@ -63,7 +63,10 @@ function createStore() {
     }),
   };
   const user = {
-    getById: jest.fn(async (_db: unknown, id: string) => ({ id })),
+    getById: jest.fn(async (_db: unknown, id: string) => ({
+      id,
+      email: `${id}@example.com`,
+    })),
     updatePassword: jest.fn(
       async (db: unknown, userId: string, password: string) => {
         live(db).passwords.set(userId, password);

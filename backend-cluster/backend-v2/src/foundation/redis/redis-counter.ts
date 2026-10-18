@@ -53,3 +53,40 @@ export async function incrementInWindow(
     return undefined;
   }
 }
+
+/**
+ * Read `key`'s current count without incrementing it, for budgets checked
+ * before the attempt they count. `{ count: 0 }` when the counter does not exist;
+ * `undefined` when Redis is unreachable.
+ */
+export async function peekCount(
+  key: string,
+): Promise<CounterResult | undefined> {
+  const client = getRedisClient();
+  if (!client) return undefined;
+
+  try {
+    const value = await client.get(key);
+    if (value === null) return { count: 0, resetInMs: 0 };
+    const ttl = await client.pTTL(key);
+    return { count: Number(value) || 0, resetInMs: ttl > 0 ? ttl : 0 };
+  } catch (err) {
+    counterLogger.error("Redis counter unavailable", {
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return undefined;
+  }
+}
+
+/** Delete `key`'s counter, ending its window early. Best effort. */
+export async function resetCount(key: string): Promise<void> {
+  const client = getRedisClient();
+  if (!client) return;
+  try {
+    await client.del(key);
+  } catch (err) {
+    counterLogger.error("Redis counter unavailable", {
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+}

@@ -26,6 +26,11 @@ import { logger } from "@/shared/logger";
 import { lock, LOCK_KEYS } from "@/shared/lock";
 import { checkRateLimit } from "@/shared/rate-limiter";
 import { incrementInWindow } from "@/foundation/redis/redis-counter";
+import {
+  assertPasswordAttemptAllowed,
+  clearPasswordFailures,
+  recordPasswordFailure,
+} from "@/features/auth/operations/password-failure-budget";
 import { CACHE_KEYS } from "@/shared/cache";
 import { secureStringEqual } from "@/features/auth/utils/secure-string-equal";
 import bcrypt from "bcryptjs";
@@ -247,9 +252,13 @@ export class AuthService implements IAuthService {
     if (password.length > MAX_PASSWORD_LENGTH) {
       throw new BadUserInputError("Invalid email or password");
     }
+    // Per account, across addresses and shared with Git sign-in (w0/m7).
+    await assertPasswordAttemptAllowed(email);
     const user = await this.models.user.getByMail(this.db, email);
     if (!user) {
-      // Use same generic error as wrong password to prevent email enumeration
+      // Counted and answered like a wrong password, so neither the refusal nor
+      // the budget says whether the account exists.
+      await recordPasswordFailure(email);
       throw new BadUserInputError("Invalid email or password");
     }
     const isPasswordVerified = await this.models.user.verifyPassword(
@@ -258,8 +267,10 @@ export class AuthService implements IAuthService {
       password,
     );
     if (!isPasswordVerified) {
+      await recordPasswordFailure(email);
       throw new BadUserInputError("Invalid email or password");
     }
+    await clearPasswordFailures(email);
     if (user.isBlocked) {
       throw new ForbiddenError(
         "User is banned. If you need help, please contact https://beancount.io/tg.",
@@ -415,6 +426,8 @@ export class AuthService implements IAuthService {
       await this.models.jwt.deleteByUserId(tx, emailToken.userId);
       await this.models.oauthGrant.revokeAllForUser(tx, emailToken.userId);
     });
+    // Whoever reset the password holds the account's email; let them sign in.
+    await clearPasswordFailures(user.email);
   };
 
   public createSignUpSession = async (

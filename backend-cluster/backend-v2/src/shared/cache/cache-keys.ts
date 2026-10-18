@@ -57,6 +57,12 @@ export const CACHE_KEYS = {
     /** Atomic budget for user-code lookups, per approving user. */
     cliAuthUserCodeAttemptsByUser: (userId: string) =>
       `auth:cli_auth_user_code_attempts:user:${userId}`,
+    /**
+     * Atomic wrong-password budget per account, keyed by a digest of the
+     * normalized email so the key holds no address.
+     */
+    passwordFailuresByAccount: (emailDigest: string) =>
+      `auth:password_failures:account:${emailDigest}`,
     /** Atomic single-approval claim for one CLI auth session. */
     cliAuthApprovalClaim: (id: string) => `auth:cli_auth_approval_claim:${id}`,
     /** Atomic single-redemption claim for one CLI auth session. */

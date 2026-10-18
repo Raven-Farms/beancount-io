@@ -21,6 +21,8 @@ import {
 import type { SessionJwtVerification } from "@/features/auth/data/jwt-model/types";
 
 jest.mock("@/foundation/redis/redis-counter", () => ({
+  peekCount: jest.fn(async () => ({ count: 0, resetInMs: 0 })),
+  resetCount: jest.fn(async () => undefined),
   incrementInWindow: jest.fn(async () => ({ count: 1, resetInMs: 60_000 })),
 }));
 jest.mock("@/shared/execute", () => ({ delayRun: jest.fn() }));

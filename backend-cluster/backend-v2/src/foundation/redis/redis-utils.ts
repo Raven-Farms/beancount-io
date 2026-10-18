@@ -90,6 +90,8 @@ export function getRedisClient(): {
   incr(key: string): Promise<number>;
   pExpire(key: string, ms: number): Promise<unknown>;
   pTTL(key: string): Promise<number>;
+  get(key: string): Promise<string | null>;
+  del(key: string): Promise<number>;
 } | null {
   const client = (keyvRedisStore as unknown as { client?: unknown } | null)
     ?.client;

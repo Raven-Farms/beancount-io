@@ -20,6 +20,24 @@ jest.mock("@/shared/logger", () => ({
 const mockFetch = jest.fn();
 jest.mock("node-fetch", () => mockFetch);
 
+// The per-account wrong-password budget lives in Redis (w0/m7); an in-memory
+// stand-in with the same fixed-window semantics.
+const mockCounters = new Map<string, number>();
+jest.mock("@/foundation/redis/redis-counter", () => ({
+  incrementInWindow: jest.fn(async (key: string) => {
+    const count = (mockCounters.get(key) ?? 0) + 1;
+    mockCounters.set(key, count);
+    return { count, resetInMs: 60_000 };
+  }),
+  peekCount: jest.fn(async (key: string) => ({
+    count: mockCounters.get(key) ?? 0,
+    resetInMs: 60_000,
+  })),
+  resetCount: jest.fn(async (key: string) => {
+    mockCounters.delete(key);
+  }),
+}));
+
 // Import after mocking
 import {
   buildRejectionReport,
@@ -460,42 +478,46 @@ describe("setGitProxyHandler", () => {
       );
     });
 
-    it("should return 429 after 5 failed auth attempts (user not found)", async () => {
-      setGitProxyHandler(router, mockServices, mockConfig);
+    // Wrong passwords are budgeted per account, across addresses and shared
+    // with dashboard sign-in (w0/m7): 10, then a 429 before the password is
+    // even checked, for a known and an unknown account alike.
+    const attempt = async (email: string, ip = "192.168.1.100") => {
+      const basicAuth = Buffer.from(`${email}:wrongpass`).toString("base64");
+      const c = {
+        ...ctx,
+        ip,
+        status: 0,
+        body: null,
+        get: jest.fn().mockReturnValue(`Basic ${basicAuth}`),
+        set: jest.fn(),
+      } as unknown as Router.RouterContext;
+      await registeredRoute!.handler(c);
+      return c;
+    };
 
-      const basicAuth = Buffer.from("bad@example.com:wrongpass").toString(
-        "base64",
-      );
-      (ctx.get as jest.Mock).mockReturnValue(`Basic ${basicAuth}`);
+    beforeEach(() => mockCounters.clear());
+
+    it("refuses an unknown account's 11th wrong password, from any address", async () => {
+      setGitProxyHandler(router, mockServices, mockConfig);
       (
         mockServices.database.models.user.getByMail as jest.Mock
       ).mockResolvedValue(null);
 
-      // First 5 attempts should return 401
-      for (let i = 0; i < 5; i++) {
-        ctx.status = 0;
-        ctx.body = null;
-        await registeredRoute!.handler(ctx);
-        expect(ctx.status).toBe(401);
+      for (let i = 0; i < 10; i++) {
+        expect((await attempt("bad@example.com", `10.0.0.${i}`)).status).toBe(
+          401,
+        );
       }
 
-      // 6th attempt should be rate limited (429)
-      ctx.status = 0;
-      ctx.body = null;
-      await registeredRoute!.handler(ctx);
-      expect(ctx.status).toBe(429);
-      expect(ctx.body).toBe(
-        "Too many failed authentication attempts, please try again later.",
+      const refused = await attempt("bad@example.com", "203.0.113.9");
+      expect(refused.status).toBe(429);
+      expect(refused.body).toBe(
+        "Too many failed sign-in attempts for this account. Try again later, or reset your password.",
       );
     });
 
-    it("should return 429 after 5 failed auth attempts (wrong password)", async () => {
+    it("refuses a known account the same way, without checking the password", async () => {
       setGitProxyHandler(router, mockServices, mockConfig);
-
-      const basicAuth = Buffer.from("test@example.com:wrongpass").toString(
-        "base64",
-      );
-      (ctx.get as jest.Mock).mockReturnValue(`Basic ${basicAuth}`);
       (
         mockServices.database.models.user.getByMail as jest.Mock
       ).mockResolvedValue({
@@ -503,55 +525,50 @@ describe("setGitProxyHandler", () => {
         ledger_username: "gitea-user",
         ledger_password: "gitea-pass",
       });
-      (
-        mockServices.database.models.user.verifyPassword as jest.Mock
-      ).mockResolvedValue(false);
+      const verify = mockServices.database.models.user
+        .verifyPassword as jest.Mock;
+      verify.mockResolvedValue(false);
 
-      // First 5 attempts should return 401
-      for (let i = 0; i < 5; i++) {
-        ctx.status = 0;
-        ctx.body = null;
-        await registeredRoute!.handler(ctx);
-        expect(ctx.status).toBe(401);
+      for (let i = 0; i < 10; i++) {
+        expect((await attempt("test@example.com")).status).toBe(401);
       }
+      verify.mockClear();
 
-      // 6th attempt should be rate limited (429)
-      ctx.status = 0;
-      ctx.body = null;
-      await registeredRoute!.handler(ctx);
-      expect(ctx.status).toBe(429);
+      expect((await attempt("test@example.com")).status).toBe(429);
+      expect(verify).not.toHaveBeenCalled();
     });
 
-    it("should track auth failures per IP independently", async () => {
+    it("keeps each account's budget its own", async () => {
       setGitProxyHandler(router, mockServices, mockConfig);
-
-      const basicAuth = Buffer.from("bad@example.com:wrongpass").toString(
-        "base64",
-      );
-      (ctx.get as jest.Mock).mockReturnValue(`Basic ${basicAuth}`);
       (
         mockServices.database.models.user.getByMail as jest.Mock
       ).mockResolvedValue(null);
 
-      // 5 failures from IP A
-      for (let i = 0; i < 5; i++) {
-        ctx.status = 0;
-        await registeredRoute!.handler(ctx);
-        expect(ctx.status).toBe(401);
+      for (let i = 0; i < 10; i++) await attempt("bad@example.com");
+
+      expect((await attempt("other@example.com")).status).toBe(401);
+    });
+
+    it("starts an account afresh after a correct password", async () => {
+      setGitProxyHandler(router, mockServices, mockConfig);
+      (
+        mockServices.database.models.user.getByMail as jest.Mock
+      ).mockResolvedValue({
+        id: "user-123",
+        ledger_username: "gitea-user",
+        ledger_password: "gitea-pass",
+      });
+      const verify = mockServices.database.models.user
+        .verifyPassword as jest.Mock;
+      verify.mockResolvedValue(false);
+      for (let i = 0; i < 9; i++) await attempt("test@example.com");
+
+      verify.mockResolvedValueOnce(true);
+      await attempt("test@example.com");
+
+      for (let i = 0; i < 10; i++) {
+        expect((await attempt("test@example.com")).status).toBe(401);
       }
-
-      // Switch to a different IP — should still get 401 (not 429)
-      const ctx2 = {
-        ...ctx,
-        ip: "10.0.0.1",
-        status: 0,
-        body: null,
-        get: ctx.get,
-        set: jest.fn(),
-      } as unknown as Router.RouterContext;
-
-      await registeredRoute!.handler(ctx2);
-      expect(ctx2.status).toBe(401);
     });
   });
   // The route was a catch-all forwarding ANY path to Gitea with the caller's

@@ -9,6 +9,8 @@ import { graphqlScopeMiddleware } from "@/server/graphql/scope-middleware";
 import { COOKIE_NAME } from "@/shared/cookie-utils";
 
 jest.mock("@/foundation/redis/redis-counter", () => ({
+  peekCount: jest.fn(async () => ({ count: 0, resetInMs: 0 })),
+  resetCount: jest.fn(async () => undefined),
   incrementInWindow: jest.fn(async () => ({ count: 1, resetInMs: 60_000 })),
 }));
 jest.mock("@/shared/execute", () => ({ delayRun: jest.fn() }));

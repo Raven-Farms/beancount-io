@@ -15,7 +15,12 @@ import {
 } from "@/features/gitea/policy/directive-limit-gate";
 import fetch from "node-fetch";
 import { logger } from "@/shared/logger";
-import { createRateLimiter, checkRateLimit } from "@/shared/rate-limiter";
+import { createRateLimiter } from "@/shared/rate-limiter";
+import {
+  assertPasswordAttemptAllowed,
+  clearPasswordFailures,
+  recordPasswordFailure,
+} from "@/features/auth/operations/password-failure-budget";
 import { CATEGORY_HTTP_STATUS, RateLimitedError } from "@/shared/errors";
 
 const proxyLogger = logger.child({ module: "git-proxy" });
@@ -516,7 +521,10 @@ export function setGitProxyHandler(
       }
 
       if (username.includes("@")) {
-        // App email + password: look up user and translate to Gitea credentials
+        // App email + password: look up user and translate to Gitea credentials.
+        // The same per-account budget as dashboard sign-in (w0/m7); a spent one
+        // is a 429 from the catch below, before the password is checked.
+        await assertPasswordAttemptAllowed(username);
         const user = await layers.database.models.user.getByMail(
           layers.database.db,
           username,
@@ -525,12 +533,7 @@ export function setGitProxyHandler(
           proxyLogger.warn("Git proxy auth failed: user not found", {
             email: username,
           });
-          checkRateLimit(`git-auth-fail:${ctx.ip}`, {
-            max: 5,
-            windowMs: 60_000,
-            message:
-              "Too many failed authentication attempts, please try again later.",
-          });
+          await recordPasswordFailure(username);
           ctx.status = 401;
           ctx.set("WWW-Authenticate", 'Basic realm="Git"');
           ctx.body = "Invalid credentials";
@@ -547,17 +550,14 @@ export function setGitProxyHandler(
             email: username,
             userId: user.id,
           });
-          checkRateLimit(`git-auth-fail:${ctx.ip}`, {
-            max: 5,
-            windowMs: 60_000,
-            message:
-              "Too many failed authentication attempts, please try again later.",
-          });
+          await recordPasswordFailure(username);
           ctx.status = 401;
           ctx.set("WWW-Authenticate", 'Basic realm="Git"');
           ctx.body = "Invalid credentials";
           return;
         }
+
+        await clearPasswordFailures(username);
 
         const ledgerAuth = Buffer.from(
           `${user.ledger_username}:${user.ledger_password}`,
