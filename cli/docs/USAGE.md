@@ -435,10 +435,13 @@ bea --no-input init books --currency EUR --date 2026-08-01 \
 
 These are alternative ways to create a new ledger. `init` never overwrites an
 existing file. Pass a directory (creates `main.bean`) or a `.bean`/`.beancount`
-path; the global `--file` can also name the new file, but use either that
-argument or `--file`, not both. To backfill before the chosen date, edit the
+path. An existing directory is a directory target even when its name ends in
+`.bean` or `.beancount`. The global `--file` can also name the new file, but use
+either that argument or `--file`, not both. To backfill before the chosen date, edit the
 relevant account opens and ensure the opening balances still describe that
-history. The asset and liability accounts are opened for the chosen currency
+history. `--file` must name a ledger file: an existing directory exits **2**
+with suggestions to pass it to `bea init DIR` or use `--file DIR/main.bean`.
+The asset and liability accounts are opened for the chosen currency
 only; the income, expense and equity categories take any currency, so a
 foreign charge such as `Expenses:Dining 45 EUR @ 1.10 USD` books without
 editing an open. To hold another currency in an account, add it to that

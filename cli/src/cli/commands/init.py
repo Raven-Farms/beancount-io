@@ -119,10 +119,20 @@ def init(
         file = ctx.file.expanduser().absolute()
     else:
         directory = directory.expanduser().absolute()
-        file = directory if directory.suffix in {".bean", ".beancount"} else directory / "main.bean"
+        file = (
+            directory
+            if directory.suffix in {".bean", ".beancount"} and not directory.is_dir()
+            else directory / "main.bean"
+        )
     # Before anything is created: every later command refuses such a path
     # (w5/315), and `$HOME/books` left an empty `./$HOME/books/` behind (w5/579).
     context.refuse_expanding_ledger_path(str(file))
+    if ctx.file is not None and file.is_dir():
+        raise UsageError(
+            f"Ledger path '{file}' (from --file) is a directory; expected a ledger file. "
+            f"Use bea init {shlex.quote(str(file))} for a directory target, "
+            f"or --file {shlex.quote(str(file / 'main.bean'))} for a file target."
+        )
     if file.exists() or file.is_symlink():
         raise ConflictError(f"Already exists: {file}. Choose a new path; init never overwrites a ledger.")
     # Refuse shadowing a sibling default root ledger (cwd discovery prefers main.bean).
