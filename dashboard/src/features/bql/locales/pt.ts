@@ -58,6 +58,12 @@ const ptBql: Record<string, TranslationEntry> = {
     message: "Resultado da Consulta",
     description: "Label for a query result section header",
   },
+  "page.bql.largeResultHint": {
+    message:
+      "Aqui só estão disponíveis as linhas visíveis. O arquivo CSV contém todas as linhas (total: {count}).",
+    description:
+      "Screen-reader note on a result too long to render every row; {count} is the total row count",
+  },
   "page.bql.unknownResultType": {
     message: "Tipo de resultado desconhecido",
     description: "Message when query result type is not recognized",

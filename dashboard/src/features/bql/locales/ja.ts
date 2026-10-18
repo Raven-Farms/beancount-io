@@ -54,6 +54,12 @@ const jaBql: Record<string, TranslationEntry> = {
     message: "クエリ結果",
     description: "Label for a query result section header",
   },
+  "page.bql.largeResultHint": {
+    message:
+      "ここでは表示中の行のみ利用できます。CSV ファイルにはすべての行が含まれます（合計：{count}）。",
+    description:
+      "Screen-reader note on a result too long to render every row; {count} is the total row count",
+  },
   "page.bql.unknownResultType": {
     message: "不明な結果タイプ",
     description: "Message when query result type is not recognized",

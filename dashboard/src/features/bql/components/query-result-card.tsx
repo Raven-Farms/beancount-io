@@ -30,6 +30,12 @@ import { getQueryErrorFeedback } from "../lib/query-error";
 /** Height of an ordinary one-line row, and the starting guess for measurement. */
 const ROW_HEIGHT = 36;
 const CONTAINER_HEIGHT = 600;
+/**
+ * Results up to this size render every row, so a screen reader can reach all
+ * of them; past it, virtualization keeps the page responsive, only the rows in
+ * view exist in the DOM, and Download CSV holds the whole result.
+ */
+const FULLY_RENDERED_ROWS = 200;
 const COLUMN_MIN_WIDTH_PX = 120;
 
 /**
@@ -204,6 +210,11 @@ function QueryResultTable({ table }: { table: ResultTable }) {
       <div className="mb-2 text-sm text-muted-foreground">
         {t("bql.rowCount", { count: rows.length })}
       </div>
+      {rows.length > FULLY_RENDERED_ROWS && (
+        <p className="sr-only">
+          {t("page.bql.largeResultHint", { count: rows.length })}
+        </p>
+      )}
       {/* One horizontal scroll owner wraps header + body so columns stay aligned. */}
       <div className="overflow-x-auto border rounded-lg">
         <div
@@ -225,6 +236,14 @@ function QueryResultTable({ table }: { table: ResultTable }) {
           </div>
           <List<ResultRowProps>
             role="rowgroup"
+            // An explicit, named stop: Safari does not focus scrollers on its
+            // own, and keyboard scrolling (End above) needs the focus here.
+            tabIndex={0}
+            aria-label={t("page.bql.queryResult")}
+            className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            overscanCount={
+              rows.length <= FULLY_RENDERED_ROWS ? rows.length : undefined
+            }
             listRef={listRef}
             onKeyDown={trackEnd}
             onWheel={releaseEnd}
@@ -302,81 +321,82 @@ export function QueryResultCard({
   const chartConfig = result?.table ? parseQueryChart(result.table) : null;
 
   return (
-    <details
-      ref={detailsRef}
-      onToggle={handleToggle}
+    // The actions sit beside the disclosure, not inside its <summary>, so the
+    // disclosure is named by the query alone and holds nothing interactive.
+    <div
       className={cn(
-        "border rounded-lg overflow-hidden group",
+        "relative border rounded-lg overflow-hidden",
         error && "border-destructive",
       )}
     >
-      <summary className="flex items-start gap-2 p-3 hover:bg-muted/50 transition-colors cursor-pointer list-none">
-        <ChevronRight
-          className={cn(
-            "h-5 w-5 shrink-0 transition-transform mt-0.5",
-            "group-open:rotate-90",
-          )}
-        />
-        {/* `min-w-0` lets this flex item shrink below the SQL's intrinsic
-            width, so a long account name wraps instead of pushing the export
-            and delete actions outside the card's hidden overflow. */}
-        <div className="min-w-0 flex-1 text-left">
-          <pre className="text-sm font-mono whitespace-pre-wrap break-words">
-            {query}
-          </pre>
-        </div>
-        <div
-          className="flex items-center gap-1 shrink-0"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {result?.table && (
-            <QueryResultExport result={result.table} queryString={query} />
-          )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onDelete(query)}
-            className="gap-2"
-            title={t("bql.deleteQuery")}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      </summary>
-
-      <div className="border-t p-4 space-y-4">
-        {loading && (
-          <div className="text-center py-8 text-muted-foreground">
-            {t("bql.executing")}...
+      <details ref={detailsRef} onToggle={handleToggle} className="group">
+        <summary className="flex items-start gap-2 p-3 pr-28 hover:bg-muted/50 transition-colors cursor-pointer list-none">
+          <ChevronRight
+            className={cn(
+              "h-5 w-5 shrink-0 transition-transform mt-0.5",
+              "group-open:rotate-90",
+            )}
+          />
+          {/* `min-w-0` lets this flex item shrink below the SQL's intrinsic
+            width, so a long account name wraps instead of running under the
+            actions beside it. */}
+          <div className="min-w-0 flex-1 text-left">
+            <pre className="text-sm font-mono whitespace-pre-wrap break-words">
+              {query}
+            </pre>
           </div>
-        )}
+        </summary>
 
-        {errorFeedback && (
-          <Alert variant="destructive">
-            <AlertDescription>
-              {t(errorFeedback.key, errorFeedback.params)}
-            </AlertDescription>
-          </Alert>
-        )}
+        <div className="border-t p-4 space-y-4">
+          {loading && (
+            <div className="text-center py-8 text-muted-foreground">
+              {t("bql.executing")}...
+            </div>
+          )}
 
-        {result && !loading && (
-          <>
-            {chartConfig && (
-              <div className="mb-4">
-                <QueryResultChart chartConfig={chartConfig} />
-              </div>
-            )}
+          {errorFeedback && (
+            <Alert variant="destructive">
+              <AlertDescription>
+                {t(errorFeedback.key, errorFeedback.params)}
+              </AlertDescription>
+            </Alert>
+          )}
 
-            {result.resultType === "table" && renderTableData()}
-            {result.resultType === "text" && renderTextData()}
-            {result.resultType !== "table" && result.resultType !== "text" && (
-              <div className="text-center py-8 text-muted-foreground">
-                {t("page.bql.unknownResultType")}: {result.resultType}
-              </div>
-            )}
-          </>
+          {result && !loading && (
+            <>
+              {chartConfig && (
+                <div className="mb-4">
+                  <QueryResultChart chartConfig={chartConfig} />
+                </div>
+              )}
+
+              {result.resultType === "table" && renderTableData()}
+              {result.resultType === "text" && renderTextData()}
+              {result.resultType !== "table" &&
+                result.resultType !== "text" && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    {t("page.bql.unknownResultType")}: {result.resultType}
+                  </div>
+                )}
+            </>
+          )}
+        </div>
+      </details>
+      <div className="absolute right-3 top-2 flex items-center gap-1">
+        {result?.table && (
+          <QueryResultExport result={result.table} queryString={query} />
         )}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onDelete(query)}
+          className="gap-2"
+          title={t("bql.deleteQuery")}
+          aria-label={t("bql.deleteQuery")}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
       </div>
-    </details>
+    </div>
   );
 }

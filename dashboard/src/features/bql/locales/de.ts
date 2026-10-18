@@ -58,6 +58,12 @@ const deBql: Record<string, TranslationEntry> = {
     message: "Abfrageergebnis",
     description: "Label for a query result section header",
   },
+  "page.bql.largeResultHint": {
+    message:
+      "Hier sind nur die sichtbaren Zeilen verfügbar. Die CSV-Datei enthält alle Zeilen (insgesamt: {count}).",
+    description:
+      "Screen-reader note on a result too long to render every row; {count} is the total row count",
+  },
   "page.bql.unknownResultType": {
     message: "Unbekannter Ergebnistyp",
     description: "Message when query result type is not recognized",

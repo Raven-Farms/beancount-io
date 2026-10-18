@@ -57,6 +57,12 @@ const ukBql: Record<string, TranslationEntry> = {
     message: "Результат запиту",
     description: "Label for a query result section header",
   },
+  "page.bql.largeResultHint": {
+    message:
+      "Тут доступні лише видимі рядки. Файл CSV містить усі рядки (усього: {count}).",
+    description:
+      "Screen-reader note on a result too long to render every row; {count} is the total row count",
+  },
   "page.bql.unknownResultType": {
     message: "Невідомий тип результату",
     description: "Message when query result type is not recognized",

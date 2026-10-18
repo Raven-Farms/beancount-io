@@ -332,10 +332,11 @@ async function mountQueryPage() {
 }
 
 function queryCard(query: string) {
+  // The card is the disclosure plus its actions, which sit beside it.
   const card = screen
     .getByText(query, { selector: "summary pre" })
-    .closest("details");
-  expect(card).not.toBeNull();
+    .closest("details")?.parentElement;
+  expect(card).toBeTruthy();
   return within(card!);
 }
 

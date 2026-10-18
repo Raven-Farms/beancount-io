@@ -58,6 +58,12 @@ const bgBql: Record<string, TranslationEntry> = {
     message: "Резултат от заявка",
     description: "Label for a query result section header",
   },
+  "page.bql.largeResultHint": {
+    message:
+      "Тук са достъпни само видимите редове. Файлът CSV съдържа всички редове (общо: {count}).",
+    description:
+      "Screen-reader note on a result too long to render every row; {count} is the total row count",
+  },
   "page.bql.unknownResultType": {
     message: "Неизвестен тип резултат",
     description: "Message when query result type is not recognized",

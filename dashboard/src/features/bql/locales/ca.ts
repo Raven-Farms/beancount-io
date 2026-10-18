@@ -58,6 +58,12 @@ const caBql: Record<string, TranslationEntry> = {
     message: "Percentatge",
     description: "Label for a query result section header",
   },
+  "page.bql.largeResultHint": {
+    message:
+      "Aquí només hi ha disponibles les files visibles. El fitxer CSV conté totes les files (total: {count}).",
+    description:
+      "Screen-reader note on a result too long to render every row; {count} is the total row count",
+  },
   "page.bql.unknownResultType": {
     message: "Estadístiques",
     description: "Message when query result type is not recognized",

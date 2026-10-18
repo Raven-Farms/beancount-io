@@ -55,6 +55,11 @@ const zhBql: Record<string, TranslationEntry> = {
     message: "查询结果",
     description: "Label for a query result section header",
   },
+  "page.bql.largeResultHint": {
+    message: "此处仅提供可见的行。CSV 文件包含所有行（共 {count} 行）。",
+    description:
+      "Screen-reader note on a result too long to render every row; {count} is the total row count",
+  },
   "page.bql.unknownResultType": {
     message: "未知结果类型",
     description: "Message when query result type is not recognized",

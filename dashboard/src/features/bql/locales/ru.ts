@@ -57,6 +57,12 @@ const ruBql: Record<string, TranslationEntry> = {
     message: "Результат запроса",
     description: "Label for a query result section header",
   },
+  "page.bql.largeResultHint": {
+    message:
+      "Здесь доступны только видимые строки. Файл CSV содержит все строки (всего: {count}).",
+    description:
+      "Screen-reader note on a result too long to render every row; {count} is the total row count",
+  },
   "page.bql.unknownResultType": {
     message: "Неизвестный тип результата",
     description: "Message when query result type is not recognized",

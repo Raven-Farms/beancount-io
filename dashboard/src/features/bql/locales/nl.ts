@@ -58,6 +58,12 @@ const nlBql: Record<string, TranslationEntry> = {
     message: "Query resultaat",
     description: "Label for a query result section header",
   },
+  "page.bql.largeResultHint": {
+    message:
+      "Hier zijn alleen de zichtbare rijen beschikbaar. Het CSV-bestand bevat alle rijen (totaal: {count}).",
+    description:
+      "Screen-reader note on a result too long to render every row; {count} is the total row count",
+  },
   "page.bql.unknownResultType": {
     message: "Onbekend resultaattype",
     description: "Message when query result type is not recognized",
