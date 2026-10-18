@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 import typer
 
 from cli import context, output
 from cli.commands.cloud.generated.ledger import register_ledger_commands
-from cli.errors import GatewayTimeout, LedgerError, UnreadableSuccess, unknown_write_outcome
+from cli.errors import GatewayTimeout, LedgerError, UnreadableSuccess, UsageError, unknown_write_outcome
+from cli.single_value import SingleValueCommand
 from cli.utils import single_line
 
 ledger_app = typer.Typer(help="Manage hosted ledgers on beancount.io", no_args_is_help=True, rich_markup_mode=None)
@@ -42,7 +43,23 @@ def _clone_failure_message(ledger_name: str | None, error: object, target: Path 
     return f"Clone failed for {remote}. Ensure you have SSH access."
 
 
-@ledger_app.command("create")
+class _CreateCommand(SingleValueCommand):
+    """`create` refuses two values for one option, the visibility pair included.
+
+    `--private --public` created a public ledger (the last flag won) and
+    `-d a -d b` kept `b`, with the request already sent (w5/623). A flag pair
+    never reaches the single-value parser, so it is checked here, before
+    credentials or any request.
+    """
+
+    def parse_args(self, ctx: Any, args: list[str]) -> list[str]:
+        typed = set(args[: args.index("--")] if "--" in args else args)
+        if {"--private", "--public"} <= typed:
+            raise UsageError("Pass --private or --public, not both: a ledger has one visibility. Nothing was created.")
+        return super().parse_args(ctx, args)
+
+
+@ledger_app.command("create", cls=_CreateCommand)
 def ledger_create(
     name: Annotated[str, typer.Argument(help="Ledger name (lowercase, hyphens ok)")],
     description: Annotated[str | None, typer.Option("--description", "-d", help="Ledger description")] = None,
@@ -66,6 +83,9 @@ def ledger_create(
     # Before credentials, as in `clone` and `show`: a name the service would
     # refuse is the caller's mistake, and saying "not logged in" hides it.
     name = ledger_name(name)
+    if directory is not None and not clone:
+        # It was read only `if clone:`, so the ledger was created and nothing cloned, unsaid (w5/623).
+        raise UsageError("--dir is where --clone puts the new ledger; add --clone, or drop --dir. Nothing was created.")
     if clone:
         manager.ensure_git_available()
         # A target git is certain to refuse is refused here, before the ledger
