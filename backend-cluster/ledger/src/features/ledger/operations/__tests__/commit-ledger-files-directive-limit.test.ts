@@ -131,6 +131,10 @@ describe("commitLedgerFiles and the directive limit", () => {
     );
 
     expect(commits).toEqual([{ "main.bean": lines(1, 2) }]);
+    // Checked once: one tier lookup and one count, of the projected ledger
+    // (within the limit, the committed one is never needed).
+    expect(limitMock).toHaveBeenCalledTimes(1);
+    expect(countMock).toHaveBeenCalledTimes(1);
   });
 
   it("re-checks a retried commit against the content that retry would commit", async () => {
