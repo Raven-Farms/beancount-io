@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [694 — bea --file DIR init exits 4 "never overwrites" for an empty directory](./694.md)
 - [695 — A ~name path with no such user exits 1 "Could not determine home directory"](./695.md)
 - [696 — A 0-ready import preview still says "repeat with --apply"](./696.md)
 - [697 — Zero-sum opening balances write Equity:OpeningBalances -0 USD (regression from w5/310)](./697.md)
