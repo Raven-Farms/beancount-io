@@ -1,0 +1,123 @@
+# Raven Farms: weekly upstream sync for the `raven` branch.
+#
+# Fetches bex-co/beancount-io main. If it changed anything besides project notes
+# (.pm/), points the `upstream-sync` branch at upstream main, builds the three
+# self-hosted images to prove they compile, and opens (or updates) one PR into
+# `raven` that lists the changes and flags anything that needs care when
+# deploying. Nothing is merged or deployed automatically: merge the PR, then run
+# `sudo beancount-update` on the VPS.
+#
+# Requires the org/repo setting "Allow GitHub Actions to create and approve
+# pull requests" (it never approves anything).
+name: raven-upstream-sync
+
+on:
+  schedule:
+    - cron: "17 12 * * 1"   # Mondays 12:17 UTC (08:17 EDT)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: raven-upstream-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    if: github.repository == 'Raven-Farms/beancount-io'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      GH_TOKEN: ${{ github.token }}
+      UPSTREAM: https://github.com/bex-co/beancount-io.git
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: raven
+          fetch-depth: 0
+
+      - name: Compare raven with upstream
+        id: diff
+        run: |
+          git remote add upstream "$UPSTREAM"
+          git fetch --quiet upstream main
+          base=$(git merge-base raven upstream/main)
+          head=$(git rev-parse upstream/main)
+          echo "base=$base" >> "$GITHUB_OUTPUT"
+          echo "head=$head" >> "$GITHUB_OUTPUT"
+          git diff --name-only "$base" "$head" > all.txt
+          grep -vE '^\.pm/' all.txt > code.txt || true
+          echo "commits=$(git rev-list --count "$base..$head")" >> "$GITHUB_OUTPUT"
+          echo "code_files=$(wc -l < code.txt | tr -d ' ')" >> "$GITHUB_OUTPUT"
+          echo "Upstream $head is $(git rev-list --count "$base..$head") commits past raven's base; $(wc -l < code.txt | tr -d ' ') non-notes files changed."
+
+      - name: Flag deploy-sensitive changes
+        if: steps.diff.outputs.code_files != '0'
+        run: |
+          base=${{ steps.diff.outputs.base }}; head=${{ steps.diff.outputs.head }}
+          flag() { matches=$(grep -E "$2" code.txt || true); [ -n "$matches" ] && { echo "- **$1**"; echo "$matches" | sed 's/^/  - `/; s/$/`/'; }; }
+          {
+            flag "Database migrations (run automatically by backend-migrate; back up first)" '(^|/)migrations?/'
+            flag "Docker / compose / deploy files (check our docker-compose.override.yml still applies)" '(^|/)(Dockerfile|docker-compose[^/]*\.ya?ml|Caddyfile)$|^deploy/'
+            flag "Our fork change: email factory or SendGrid (check commit bf6230e2 still does its job)" 'backend-v2/src/foundation/(factory|sendgrid)\.ts$'
+            flag "Signup / auth code (the nginx signup gate depends on the signUp email argument and /api/admin/get-signup-otp)" 'features/auth/|features/admin/api/get-signup-otp|server/graphql/api-gateway\.ts$'
+            flag "OAuth / MCP surface" 'features/oauth/|features/mcp/|/mcp[^/]*\.ts$'
+          } > flags.md
+          # New settings in the deploy env template
+          git diff "$base" "$head" -- deploy/docker/.env.example | grep -E '^\+[A-Z_]+=' | sed 's/^+//; s/=.*//' > newenv.txt || true
+          if [ -s newenv.txt ]; then
+            { echo "- **New settings in deploy/docker/.env.example** (add to the VPS .env before deploying if required):"; sed 's/^/  - `/; s/$/`/' newenv.txt; } >> flags.md
+          fi
+          [ -s flags.md ] || echo "- None of the watched areas changed." > flags.md
+          cat flags.md
+
+      - name: Build images from upstream merged into raven
+        id: build
+        if: steps.diff.outputs.code_files != '0'
+        continue-on-error: true
+        run: |
+          git config user.name "raven-upstream-sync"; git config user.email "actions@users.noreply.github.com"
+          git switch -q -c trial raven
+          if ! git merge --no-edit --quiet upstream/main; then
+            echo "result=merge conflict (resolve in the PR)" >> "$GITHUB_OUTPUT"; exit 1; fi
+          ok=1
+          for svc in "backend-cluster/backend-v2" "dashboard" "backend-cluster/ledger"; do
+            echo "::group::build $svc"
+            args=()
+            [ "$svc" = dashboard ] && args=(--build-arg VITE_API_URL=https://books-api.ravenfarmsllc.com/api-gateway/
+                                            --build-arg VITE_SSR_API_URL=http://backend-v2:4104/api-gateway/)
+            docker build -q "${args[@]}" -t "raven-check/$(basename $svc)" "$svc" || ok=0
+            echo "::endgroup::"
+            docker image prune -af >/dev/null 2>&1 || true
+          done
+          [ $ok = 1 ] && echo "result=all three images built" >> "$GITHUB_OUTPUT" || { echo "result=an image FAILED to build (see workflow log)" >> "$GITHUB_OUTPUT"; exit 1; }
+
+      - name: Open or update the sync PR
+        if: steps.diff.outputs.code_files != '0'
+        run: |
+          base=${{ steps.diff.outputs.base }}; head=${{ steps.diff.outputs.head }}
+          git push --force origin "$head:refs/heads/upstream-sync"
+          {
+            echo "Upstream \`bex-co/beancount-io\` main is **${{ steps.diff.outputs.commits }} commits** ahead of what \`raven\` last merged (${base:0:10} → ${head:0:10}); **${{ steps.diff.outputs.code_files }} files** outside \`.pm/\` changed."
+            echo; echo "**Build check:** ${{ steps.build.outputs.result || 'not run' }}"
+            echo; echo "### Needs attention when deploying"; cat flags.md
+            echo; echo "### Commits (excluding project notes)"
+            git log --format='- %h %s' "$base..$head" -- . ':!.pm' | head -60
+            echo; echo "### Deploy"
+            echo "1. Review, then merge this PR into \`raven\` (merge commit, not squash)."
+            echo "2. On the VPS: \`sudo beancount-update\` (backs up, pulls raven, rebuilds, checks, rolls back on failure)."
+            echo; echo "_Opened by raven-upstream-sync. Nothing is merged or deployed automatically._"
+          } > body.md
+          pr=$(gh pr list --head upstream-sync --base raven --state open --json number --jq '.[0].number')
+          if [ -n "$pr" ]; then
+            gh pr edit "$pr" --body-file body.md --title "Upstream sync: bex-co/beancount-io ${head:0:10}"
+            echo "Updated PR #$pr"
+          else
+            gh pr create --base raven --head upstream-sync --title "Upstream sync: bex-co/beancount-io ${head:0:10}" --body-file body.md
+          fi
+
+      - name: Nothing to do
+        if: steps.diff.outputs.code_files == '0'
+        run: echo "Only project notes (.pm/) changed upstream since raven's base; no PR."
