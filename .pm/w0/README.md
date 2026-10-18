@@ -5,6 +5,8 @@
 ## Milestones
 
 - [x] **m1** — [Translate the English copies shipped in non-English catalogs, and guard against them](./done/m1/README.md) (8 tasks) ← from dashboard QA 2026-10-15
+- [ ] **m2** — [Structured ledger writes refuse changes that would break the ledger](./m2/README.md) (7 tasks) ← from /pm-brainstorm for w0 2026-10-17
+- [ ] **m3** — [Make i18n:prepare safe to run and honest about English copies](./m3/README.md) (8 tasks) ← from /pm-brainstorm for w0 2026-10-17
 
 ## Dropped
 
@@ -15,3 +17,11 @@
 - ~~**044**~~ — Money flow shrinks accounts to ten characters at the largest text size — dropped 2026-10-15: reproduces only at AX5; at AX2 postings stay identifiable ("Assets:US…:Checking", "Income:US…le:Salary"), which is [w4/014](../w4/done/014.md)'s acceptance. Out of scope per the AX2 ceiling.
 
 ## Inbox
+
+From `/pm-brainstorm` for w0 (2026-10-17). Each note is sub-hour.
+
+- [046 — Sign-up accepts any username server-side and derives one from the email local part outside the rule](./046.md) — backend-v2
+- [047 — Dashboard's rename dialog skips sign-up's username rule and shows refusals as a generic error](./047.md) — dashboard
+- [048 — Dashboard date-fns month names ignore the reader's language](./048.md) — dashboard
+- [049 — Persian: letter-spaced captions break joins; Payee caption stays left; two inputs unverified in RTL](./049.md) — mobile
+- [050 — German and Chinese use two words for "ledger" in the dashboard](./050.md) — dashboard
