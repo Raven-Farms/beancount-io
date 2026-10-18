@@ -33,6 +33,8 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       # In a fork, gh defaults to the parent repo; every gh call passes --repo.
       UPSTREAM: https://github.com/bex-co/beancount-io.git
+      # Requested as reviewer on every open/update, so GitHub emails them.
+      REVIEWER: burlesongrimes
     steps:
       - uses: actions/checkout@v4
         with:
@@ -113,10 +115,10 @@ jobs:
           } > body.md
           pr=$(gh pr list --repo "$GITHUB_REPOSITORY" --head upstream-sync --base raven --state open --json number --jq '.[0].number')
           if [ -n "$pr" ]; then
-            gh pr edit "$pr" --repo "$GITHUB_REPOSITORY" --body-file body.md --title "Upstream sync: bex-co/beancount-io ${head:0:10}"
+            gh pr edit "$pr" --repo "$GITHUB_REPOSITORY" --body-file body.md --title "Upstream sync: bex-co/beancount-io ${head:0:10}" --add-reviewer "$REVIEWER"
             echo "Updated PR #$pr"
           else
-            gh pr create --repo "$GITHUB_REPOSITORY" --base raven --head upstream-sync --title "Upstream sync: bex-co/beancount-io ${head:0:10}" --body-file body.md
+            gh pr create --repo "$GITHUB_REPOSITORY" --base raven --head upstream-sync --title "Upstream sync: bex-co/beancount-io ${head:0:10}" --body-file body.md --reviewer "$REVIEWER"
           fi
 
       - name: Nothing to do
