@@ -1,6 +1,6 @@
 # w1 · m38 — One MCP tool per operation, so the ChatGPT app directory accepts every tool
 
-**Worker:** worker1 **Goal:** Every model-callable MCP operation is its own tool with its own description, input schema, and annotations. No tool dispatches on an `operation` argument. OpenAI's app-directory scan then reports no blocking findings, and parity, the frozen baseline, prompts, and docs describe the new shape. **Status:** in progress (t001–t010 done)
+**Worker:** worker1 **Goal:** Every model-callable MCP operation is its own tool with its own description, input schema, and annotations. No tool dispatches on an `operation` argument. OpenAI's app-directory scan then reports no blocking findings, and parity, the frozen baseline, prompts, and docs describe the new shape. **Status:** done
 
 ## Tasks (in order)
 
@@ -16,7 +16,7 @@
 | [t009](./done/t009.md) | Simplify — **DONE** | 30m | t008 |
 | [t010](./done/t010.md) | Test coverage — **DONE** | 45m | t008, t009 |
 | [t007](./done/t007.md) | Verify on production: OpenAI rescan and Claude portal tools step — **DONE** | 20m | t010 |
-| t011 | Closeout | 15m | t007, t010 |
+| [t011](./done/t011.md) | Closeout — **DONE** | 15m | t007, t010 |
 
 Re-sequenced 2026-10-18: production verification (t007) moved after Test coverage (t010). Adoption surface, Simplify, and Test coverage need no deploy. Verifying last means the directories check the revision that closes the milestone.
 
@@ -29,6 +29,16 @@ Blocked 2026-10-18 on the production deploy. Cleared the same day: the user depl
 - ADR 0008 has an amendment reversing D3 ("grouped by shape"), and ADR 019 has an amendment quoting OpenAI's finding. `docs/mcp.md`, `docs/api-parity.md`, the MCP prompts, the skills, the README counts, and a release note name only the new tools.
 - The tool count and `tools/list` size gates are remeasured and justified in the change that moves them.
 - After the operator deploys, the OpenAI Plugins dashboard rescan of the Beancount.io draft shows no "operations that are not individually exposed" finding, and Claude's portal Tools step lists the new tools. Both are recorded with date and revision.
+
+## Closeout (2026-10-18)
+
+- **No operation selectors.** Production's `/.well-known/mcp.json` lists 43 tools, and no input schema has an `operation`, `op`, `action`, `verb`, `command`, or `method` property. On `main`, `mcp-tool-list.test.ts` enforces the same (t005).
+- **Titles, descriptions, schemas, hints.** Every tool carries its title in `annotations`, its own input schema, and all four hints. `mcp-tools.test.ts` pins the destructive and open-world hints ADR 019's table decided (t010).
+- **Parity.** Every split verb binds its own tool, and `surface-parity` stays at zero gaps. `RENAMED_ON_MCP` in `parity-baseline.test.ts` covers the frozen baseline's 11 renamed rows; the fixture is unedited (t002–t004).
+- **Decisions and docs.** ADR 0008 and ADR 019 carry the 2026-10-18 amendments (t001; the `mergePullRequest` rename is noted in `7ce5ec802`). `docs/mcp.md` (with the rename table), `docs/api-parity.md`, the prompts, the QA skill, both READMEs, and `backend-v2/AGENTS.md` name only the new tools (t006, t008).
+- **Gates.** `tools/list` measures 96,458 bytes against a 96 KiB gate, and the tool count is 43 (t005).
+- **Directories.** On 2026-10-18, with the deploy through `8d751b15b`, the OpenAI rescan has no "operations that are not individually exposed" finding, and Claude's Tools step lists all 43 tools with no flags (t007).
+- **Follow-ups outside this milestone:** [w1/173](../../173.md) (`createLedger`/`updateLedger` need review, waiting on the user's decision) and [w1/171](../../blocked/171.md) (the website's MCP pages). The `mergePullRequest` rename (w1/172) reaches OpenAI with the next deploy.
 
 ## Source + Goal linkage
 
