@@ -1,3 +1,4 @@
+import BigNumber from "bignumber.js";
 import {
   checkTransactionBalance,
   scanInferredToleranceDefault,
@@ -128,9 +129,9 @@ describe("scanInferredToleranceDefault", () => {
   });
 
   it("falls back to Beancount's default", () => {
-    expect(scanInferredToleranceDefault(["2020-01-01 open Assets:Cash USD\n"])).toBe(
-      DEFAULT_INFERRED_TOLERANCE,
-    );
+    expect(
+      scanInferredToleranceDefault(["2020-01-01 open Assets:Cash USD\n"]),
+    ).toBe(DEFAULT_INFERRED_TOLERANCE);
     expect(scanInferredToleranceDefault([])).toBe(DEFAULT_INFERRED_TOLERANCE);
   });
 });
@@ -144,7 +145,10 @@ describe("entryInputToText with an elided posting", () => {
         flag: "*",
         narration: "Food",
         postings: [
-          { account: "Expenses:Food", units: { number: "10.00", currency: "USD" } },
+          {
+            account: "Expenses:Food",
+            units: { number: "10.00", currency: "USD" },
+          },
           { account: "Assets:Cash" },
         ],
       },
@@ -153,4 +157,26 @@ describe("entryInputToText with an elided posting", () => {
     expect(text).toContain("Assets:Cash");
     expect(text).not.toMatch(/Assets:Cash\s+\S/);
   });
+});
+
+describe("malformed posting amounts (w3/641)", () => {
+  it.each(["(12.50)", "-1,234.56", "abc"])(
+    "reports %s as not a number instead of throwing",
+    (number) => {
+      // bignumber.js 11 throws on these where earlier versions returned NaN.
+      expect(() => new BigNumber(number)).toThrow();
+      const result = checkTransactionBalance([
+        { units: { number, currency: "USD" } },
+        { units: { number: "12.50", currency: "USD" } },
+      ] as never);
+
+      expect(result.ok).toBe(false);
+      expect(result).toMatchObject({
+        value: {
+          kind: "unbalanced",
+          message: `posting amount "${number} USD" is not a number`,
+        },
+      });
+    },
+  );
 });

@@ -757,3 +757,121 @@ it("refuses non-string transaction metadata before writing", async () => {
     }
   }
 });
+
+describe.each(["rest", "gql", "mcp"])(
+  "malformed amounts via %s (w3/641)",
+  (surface) => {
+    const posting = (number: string) => ({
+      account: "Expenses:Food",
+      units: { number, currency: "USD" },
+    });
+    const cases: Array<[string, LedgerEntryInput, string]> = [
+      [
+        "a parenthesized posting",
+        {
+          type: "transaction",
+          entry: {
+            date,
+            flag: "*",
+            narration: "Food",
+            postings: [posting("(12.50)"), { account: "Assets:Cash" }],
+          },
+        } as LedgerEntryInput,
+        'entry 0: postings[0].units.number "(12.50)" is not a decimal number',
+      ],
+      [
+        "a grouped posting",
+        {
+          type: "transaction",
+          entry: {
+            date,
+            flag: "*",
+            narration: "Food",
+            postings: [posting("-1,234.56"), posting("1,234.56")],
+          },
+        } as LedgerEntryInput,
+        'entry 0: postings[0].units.number "-1,234.56" is not a decimal number',
+      ],
+      [
+        "a balance",
+        {
+          type: "balance",
+          entry: {
+            date,
+            account: "Assets:Cash",
+            amount: { number: "abc", currency: "USD" },
+          },
+        } as LedgerEntryInput,
+        'entry 0: amount.number "abc" is not a decimal number',
+      ],
+      [
+        "a price",
+        {
+          type: "price",
+          entry: {
+            date,
+            currency: "XYZ",
+            amount: { number: "$4.50", currency: "USD" },
+          },
+        } as LedgerEntryInput,
+        'entry 0: amount.number "$4.50" is not a decimal number',
+      ],
+      [
+        "a budget",
+        {
+          type: "budget",
+          entry: {
+            date,
+            account: "Expenses:Food",
+            interval: "monthly",
+            amount: { number: "1.000,00", currency: "EUR" },
+          },
+        } as unknown as LedgerEntryInput,
+        'entry 0: amount.number "1.000,00" is not a decimal number',
+      ],
+    ];
+
+    it.each(cases)(
+      "refuses %s as bad input naming the field, writing nothing",
+      async (_name, entry, message) => {
+        const f = await fixture();
+        try {
+          const result = await f.call(surface, [entry]);
+          expect(result.success).toBe(false);
+          expect(f.write).not.toHaveBeenCalled();
+          expect(f.committed).toEqual([]);
+          const text = JSON.stringify(
+            "errors" in result ? result.errors : result,
+          );
+          expect(text).toContain(JSON.stringify(message).slice(1, -1));
+          expect(text).not.toMatch(
+            /SERVICE_UNAVAILABLE|temporarily unavailable/,
+          );
+        } finally {
+          await f.close();
+        }
+      },
+    );
+
+    it.each(["-3.21", "1e-7"])("still writes %s", async (number) => {
+      const f = await fixture();
+      try {
+        const result = await f.call(surface, [
+          {
+            type: "transaction",
+            entry: {
+              date,
+              flag: "*",
+              narration: "Food",
+              postings: [posting(number), { account: "Assets:Cash" }],
+            },
+          } as LedgerEntryInput,
+        ]);
+        expect(result.success).toBe(true);
+        expect(f.committed).toHaveLength(1);
+      } finally {
+        await f.close();
+      }
+    });
+  },
+);

@@ -6,7 +6,7 @@ import {
 } from "@/server/auth";
 import { successResponse } from "@/server/envelope";
 import { checkDirectiveLimitForFileChanges } from "@/core/directive-limit";
-import { entryInputToText } from "@/foundation/rustledger";
+import { entryInputToText, isDecimalNumber } from "@/foundation/rustledger";
 import type { LedgerEntryInput } from "@/foundation/ledger-api-types/ledger-entry-input";
 import {
   BadUserInputError,
@@ -53,6 +53,56 @@ function toEngineInput(row: BulkEntryWire): LedgerEntryInput {
   return { type: row.type, entry: row.item } as LedgerEntryInput;
 }
 
+/**
+ * Every amount a wire row carries, with the field path a refusal names.
+ * Transactions carry posting units and prices; balance, price and budget an
+ * `amount`; custom values may carry a number or an amount.
+ */
+function rowNumbers(row: BulkEntryWire): Array<[string, unknown]> {
+  const item = (row.item ?? {}) as Record<string, unknown>;
+  const numbers: Array<[string, unknown]> = [];
+  const add = (path: string, holder: unknown) => {
+    if (holder && typeof holder === "object" && "number" in holder) {
+      numbers.push([path, (holder as { number: unknown }).number]);
+    }
+  };
+  if (Array.isArray(item.postings)) {
+    item.postings.forEach((posting: Record<string, unknown>, index) => {
+      add(`postings[${index}].units.number`, posting?.units);
+      add(`postings[${index}].price.number`, posting?.price);
+    });
+  }
+  add("amount.number", item.amount);
+  if (Array.isArray(item.values)) {
+    item.values.forEach((value: Record<string, unknown>, index) => {
+      if (value?.kind === "number") {
+        numbers.push([`values[${index}].value`, value.value]);
+      } else if (value?.kind === "amount") {
+        numbers.push([`values[${index}].number`, value.number]);
+      }
+    });
+  }
+  return numbers;
+}
+
+/**
+ * Refuse any amount that is not a plain decimal before a file is read. Left
+ * alone, a posting like `(12.50)` failed deep in the balance check as a 500 —
+ * reported upstream as "service unavailable, retry" — and a balance, price or
+ * budget amount like `abc` was committed as unparseable text.
+ */
+function assertDecimalAmounts(rows: BulkEntryWire[]): void {
+  rows.forEach((row, idx) => {
+    for (const [field, value] of rowNumbers(row)) {
+      if (!isDecimalNumber(value)) {
+        throw new BadUserInputError(
+          `entry ${idx}: ${field} ${JSON.stringify(value)} is not a decimal number`,
+        );
+      }
+    }
+  });
+}
+
 export function setEntriesHandler(router: Router): void {
   // operationId: addBulkEntries — POST /entries/{o}/{r}/bulk → success(null)
   router.post(
@@ -68,6 +118,7 @@ export function setEntriesHandler(router: Router): void {
       const defaultFilename = body.filename || "main.bean";
       const allowInvalid = body.allowInvalid === true;
       const rows = body.entries ?? [];
+      assertDecimalAmounts(rows);
 
       const client = giteaClientForRequest(ctx);
 
