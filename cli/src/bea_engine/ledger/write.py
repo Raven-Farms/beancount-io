@@ -111,6 +111,8 @@ class LedgerSnapshot:
     def capture(cls, root: Path) -> LedgerSnapshot:
         # Lexical, like Beancount's loader: a symlinked root's includes sit
         # beside the link, not beside its target (w1/056).
+        from beancount.utils.encryption import is_encrypted_file
+
         from bea_engine.managed_prices import is_url_include_target
 
         snapshot = cls(Path(os.path.abspath(root)))
@@ -151,6 +153,10 @@ class LedgerSnapshot:
                     f"Included file '{path}' (included from '{includers[path]}') is not readable: {reason}. "
                     "Correct the file or its permissions, or remove the include."
                 ) from None
+            if is_encrypted_file(str(path)):
+                # Retain ciphertext for conflict checks and staged loads, but
+                # never interpret it as source text (w5/671).
+                continue
             for _, _, name in _includes(content):
                 if is_url_include_target(name):
                     # A URL is a managed price request or a refusal the load
@@ -752,6 +758,7 @@ def refuse_cache_over_ledger(loaded: Path, members: Iterable[Path], patterns: It
     except (LookupError, ValueError):
         # A pattern upstream cannot format fails there before anything is removed.
         return
+    members = tuple(members)
     for member in members:
         if same_file(cache, member):
             raise UsageError(
@@ -759,6 +766,7 @@ def refuse_cache_over_ledger(loaded: Path, members: Iterable[Path], patterns: It
                 "cache file it cannot read, so this would delete the ledger. Choose a cache path outside the "
                 "ledger's own files. Nothing was changed."
             )
+    refuse_encrypted_destination(cache, members, CACHE_ENV)
     # A path an include glob claims becomes a member once written: the pickle
     # then loads as ledger text and every later command fails (w5/497).
     resolved = cache.resolve()
@@ -779,6 +787,25 @@ def refuse_cache_over_ledger(loaded: Path, members: Iterable[Path], patterns: It
             f"{CACHE_ENV} {pattern} names {cache}, {problem}. Point {CACHE_ENV} at a new file or an "
             "existing cache, or unset it. Nothing was changed."
         )
+
+
+def refuse_encrypted_destination(destination: Path, members: Iterable[Path], purpose: str) -> None:
+    """Refuse output below an encrypted member whose hidden includes cannot be checked."""
+    from beancount.utils.encryption import is_encrypted_file
+
+    lexical = Path(os.path.abspath(destination.expanduser()))
+    ancestors = {*lexical.parents, *lexical.resolve().parents}
+    for member in dict.fromkeys(members):
+        try:
+            encrypted = is_encrypted_file(str(member))
+        except OSError:
+            continue
+        if encrypted and any(same_file(member.parent, ancestor) for ancestor in ancestors):
+            raise UsageError(
+                f"{purpose} {destination} is beneath the directory of encrypted ledger member {member}. "
+                "Its include patterns cannot be inspected before decryption, so this destination could join "
+                f"the ledger. Choose a path outside {member.parent.resolve()}. Nothing was changed."
+            )
 
 
 def sweep_abandoned_candidates(directory: Path) -> None:

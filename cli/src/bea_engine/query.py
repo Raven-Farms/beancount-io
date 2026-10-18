@@ -243,6 +243,7 @@ def text_answer(
     """
     import io
 
+    output_spelling = output
     if output is not None:
         # Keep the approved target stable if the user's symlink is retargeted
         # while the query runs. The alias check below sees this same path.
@@ -264,7 +265,7 @@ def text_answer(
         if output is not None:
             # Still before the query: refusing to write over the ledger being read
             # is a refusal, and a refusal has to happen before any work is done.
-            _refuse_alias(output, file, shell.context)
+            _refuse_alias(output, file, shell.context, spelling=output_spelling)
         _replay_init(shell, buffer if output is not None else None)
         _executed(shell.context, query_string, shell.onecmd, errors, file=file)
         if output is not None:
@@ -349,13 +350,21 @@ def _claiming_include(destination: Path, root: Path) -> str | None:
     return next((pattern for pattern in patterns if _included_new_file(target, pattern, any_spelling=True)), None)
 
 
-def _refuse_alias(destination: Path, root: Path, context: Any) -> None:
+def _refuse_alias(destination: Path, root: Path, context: Any, *, spelling: Path | None = None) -> None:
     """Fail a destination that is one of the files this query reads."""
     member = _find_alias(destination, root, context)
     if member is not None:
         raise protocol.UsageError(
             f"--output {destination} would overwrite the ledger it reads ({member}); choose a different destination."
         )
+    from bea_engine.ledger.write import refuse_encrypted_destination
+
+    if (getattr(context, "options", None) or {}).get("include"):
+        # CSV sources do not decrypt inputs, whatever their filename suffix.
+        members = _loaded_files(root, context)
+        refuse_encrypted_destination(destination, members, "--output")
+        if spelling is not None:
+            refuse_encrypted_destination(spelling, members, "--output")
     pattern = _claiming_include(destination, root)
     if pattern is not None:
         raise protocol.UsageError(
@@ -372,6 +381,14 @@ def _redirect_output(shell: Any, arg: str, stream: TextIO, file: Path | None) ->
             protocol.note(
                 f"Refusing to write query output to {arg}: it is one of the ledger files under query ({member})."
             )
+            return
+        from bea_engine.ledger.write import refuse_encrypted_destination
+
+        try:
+            if (getattr(shell.context, "options", None) or {}).get("include"):
+                refuse_encrypted_destination(Path(arg), _loaded_files(file, shell.context), "Query output")
+        except protocol.UsageError as exc:
+            protocol.note(str(exc))
             return
         pattern = _claiming_include(Path(arg), file)
         if pattern is not None:
@@ -707,10 +724,11 @@ def native_one_shot(
 
     shell = _native_shell(source, interactive=False, format=format, numberify=numberify, show_errors=show_errors)
     buffer = io.StringIO()
+    output_spelling = output
     if output is not None:
         output = output.resolve()
         if shell.source_file is not None:
-            _refuse_alias(output, shell.source_file, shell.context)
+            _refuse_alias(output, shell.source_file, shell.context, spelling=output_spelling)
     _replay_init(shell, buffer if output is not None else None)
     from beanquery import Error as BeanqueryError
 

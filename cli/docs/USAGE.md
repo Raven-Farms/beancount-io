@@ -197,6 +197,13 @@ that include it: `format txns/2026.bean -o txns/backup.bean` cannot add a
 copy to a root's `include "txns/*.bean"`. Formatting stdin checks the working
 ledger selected by `--file`, `BEA_FILE`, or the usual `main.bean` discovery.
 
+Encrypted ledger members hide their own include patterns from these preflight
+checks. Output and explicitly configured load-cache paths beneath an encrypted member's directory
+are therefore refused as well; choose a destination outside that directory.
+Encrypted files are left to Beancount's loader to decrypt and are skipped by
+text scans. `doctor context` cannot inspect a location inside an encrypted
+member; use a location in a plaintext ledger file instead.
+
 A refusal names the colliding path and leaves the destination byte-identical,
 its file list included. `--force` is the only way past the second case
 (`treeify -o`, `price export`, `example -o`); nothing gets past the first.

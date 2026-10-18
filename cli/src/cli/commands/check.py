@@ -307,7 +307,7 @@ def _closure_needs_compat(file: Path) -> tuple[str, str] | None:
         members = output.ledger_closure(file)
     except OSError:
         return None
-    marked = [str(member) for member in members if has_bom(member)]
+    marked = [str(member) for member in members if not output.is_encrypted(member) and has_bom(member)]
     if marked:
         # Bare `bea format -i` reads stdin and is refused, so the remedy names
         # every marked file: one run of the printed command clears the closure (w5/197).
@@ -316,6 +316,8 @@ def _closure_needs_compat(file: Path) -> tuple[str, str] | None:
             f"Run {shlex.join(['bea', 'format', '-i', *marked])} to strip the mark, then retry.",
         )
     for member in members:
+        if output.is_encrypted(member):
+            continue
         try:
             raw = member.read_bytes()
         except OSError:

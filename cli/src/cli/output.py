@@ -698,6 +698,7 @@ def refuse_cache_over_ledger(file: Path, pattern: str | None = None, source: str
                 "cache file it cannot read, so this would delete the ledger. Choose a cache path outside the "
                 "ledger's own files. Nothing was changed."
             )
+    _refuse_encrypted_destination(cache, members, CACHE_ENV)
     # A path an include glob claims becomes a member once written: the pickle
     # loaded as ledger text, and every later command failed on it (w5/497).
     claim = None if cache.exists() else _include_claim(cache, members)
@@ -717,7 +718,7 @@ def refuse_cache_over_ledger(file: Path, pattern: str | None = None, source: str
         )
 
 
-def refuse_ledger_alias(destination: Path, ledger: Path) -> None:
+def refuse_ledger_alias(destination: Path, ledger: Path, *, spelling: Path | None = None) -> None:
     """Refuse an output destination that is the ledger under read, or one of its includes.
 
     A result redirected onto the file it was read from truncates the books
@@ -726,6 +727,8 @@ def refuse_ledger_alias(destination: Path, ledger: Path) -> None:
     stream is opened, so a refusal leaves the destination byte-identical.
     """
     members = _output_ledger_members(ledger)
+    if spelling is not None:
+        _refuse_encrypted_destination(spelling, members, "--output")
     for member in members:
         if same_file(destination, member):
             raise UsageError(
@@ -747,6 +750,7 @@ def refuse_include_claim(destination: Path, ledger: Path) -> None:
 
 
 def _refuse_include_claim(destination: Path, members: Sequence[Path]) -> None:
+    _refuse_encrypted_destination(destination, members, "--output")
     claim = _include_claim(destination, members)
     if claim is not None:
         include, member = claim
@@ -756,6 +760,19 @@ def _refuse_include_claim(destination: Path, members: Sequence[Path]) -> None:
         )
 
 
+def _refuse_encrypted_destination(destination: Path, members: Sequence[Path], purpose: str) -> None:
+    """Keep outputs outside directories whose encrypted includes hide the ledger's globs."""
+    lexical = Path(os.path.abspath(destination.expanduser()))
+    ancestors = {*lexical.parents, *lexical.resolve().parents}
+    for member in members:
+        if is_encrypted(member) and any(same_file(member.parent, ancestor) for ancestor in ancestors):
+            raise UsageError(
+                f"{purpose} {destination} is beneath the directory of encrypted ledger member {member}. "
+                "Its include patterns cannot be inspected before decryption, so this destination could join "
+                f"the ledger. Choose a path outside {member.parent.resolve()}. Nothing was changed."
+            )
+
+
 def _include_claim(destination: Path, members: Sequence[Path]) -> tuple[str, Path] | None:
     """The include, as written, and the file holding it, whose pattern would match `destination`."""
     try:
@@ -763,6 +780,8 @@ def _include_claim(destination: Path, members: Sequence[Path]) -> tuple[str, Pat
     except OSError:
         return None
     for member in members:
+        if is_encrypted(member):
+            continue
         try:
             text = member.read_text(encoding="utf-8", errors="replace").removeprefix("\ufeff")
         except OSError:

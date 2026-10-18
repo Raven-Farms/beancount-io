@@ -127,7 +127,7 @@ def _require_source_ledger(source: str) -> None:
         output.refuse_cache_over_ledger(path)
 
 
-def _refuse_source_alias(source: str, destination: Path) -> None:
+def _refuse_source_alias(source: str, destination: Path, *, spelling: Path | None = None) -> None:
     """Refuse `--output` onto the local file a native `--source` reads.
 
     Native Beanquery opens the output itself, so the guard `--file` runs never
@@ -141,9 +141,9 @@ def _refuse_source_alias(source: str, destination: Path) -> None:
     parts = urlparse(source)
     scheme = parts.scheme.casefold() if len(parts.scheme) > 1 else ""
     if scheme == "":
-        output.refuse_ledger_alias(destination, Path(source))
+        output.refuse_ledger_alias(destination, Path(source), spelling=spelling)
     elif scheme == "beancount" and parts.path:
-        output.refuse_ledger_alias(destination, Path(parts.path))
+        output.refuse_ledger_alias(destination, Path(parts.path), spelling=spelling)
     elif scheme == "csv" and parts.path:
         output.refuse_input_alias(destination, Path(parts.path))
 
@@ -359,6 +359,7 @@ def query(
             "--spreadsheet-safe applies to CSV from a local --file: pass --format csv (or -o FILE.csv), "
             "without --json or --source."
         )
+    output_spelling = Path(output_file) if output_file is not None else None
     if output_file is not None:
         # Resolve once before checking aliases, then carry that target through
         # the engine and JSON writer even if the original link changes.
@@ -381,7 +382,7 @@ def query(
         _check_source_scheme(source)
         _require_source_ledger(source)
         if output_file is not None:
-            _refuse_source_alias(source, Path(output_file))
+            _refuse_source_alias(source, Path(output_file), spelling=output_spelling)
         if query_string is None:
             # The same missing-query policy as `--file`: a terminal opens the
             # shell only when prompting is allowed, and a pipe must carry BQL.
@@ -411,7 +412,7 @@ def query(
     if output_file is not None:
         # Before anything is forwarded: the engine opens this path for write,
         # and opening the ledger under read would truncate the books.
-        output.refuse_ledger_alias(Path(output_file), file)
+        output.refuse_ledger_alias(Path(output_file), file, spelling=output_spelling)
     if query_string is None:
         if not sys.stdin.isatty():
             query_string = _stdin_query()

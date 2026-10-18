@@ -215,6 +215,8 @@ def _refuse_undecodable(ledger: str) -> None:
     if not root.is_file():
         return
     for member in output.ledger_closure(root):
+        if output.is_encrypted(member):
+            continue
         try:
             member.read_bytes().decode("utf-8")
         except OSError:
@@ -242,6 +244,8 @@ def _refuse_plugin_failures(op: str, ledger: str) -> None:
         return
     declared = False
     for member in output.ledger_closure(root):
+        if output.is_encrypted(member):
+            continue
         with contextlib.suppress(OSError):
             declared = declared or bool(_PLUGIN_DIRECTIVE.search(member.read_bytes()))
     if not declared:
@@ -318,6 +322,8 @@ def _needs_compat(op: str, args: list[str]) -> bool:
     except OSError:
         return False
     for member in members:
+        if output.is_encrypted(member):
+            continue
         if has_bom(member):
             return True
         try:
@@ -375,7 +381,16 @@ def _replayed(completed: subprocess.CompletedProcess[str]) -> subprocess.Complet
 def _forward(op: str, ctx: typer.Context) -> None:
     """Pass remaining argv through to bean-doctor, resolving a relative location."""
     _refuse_json()
-    code = _run(op, _located_against_ledger(op, list(ctx.args)))
+    args = _located_against_ledger(op, list(ctx.args))
+    operands = _positionals(args)
+    if op == "context" and len(operands) >= 2:
+        filename = Path(operands[1].rsplit(":", 1)[0])
+        if output.is_encrypted(filename):
+            raise UsageError(
+                f"doctor context cannot inspect a location inside encrypted file '{filename}': "
+                "Beancount decrypts it only while loading. Choose a location in a plaintext ledger file."
+            )
+    code = _run(op, args)
     raise typer.Exit(code)
 
 
