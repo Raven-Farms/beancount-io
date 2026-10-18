@@ -29,7 +29,7 @@ const {
   mockResumeSubscription: vi.fn(),
   mockCreateStripePortalSession: vi.fn(),
   mockCreateSubscriptionSession: vi.fn(),
-  mockRunPreview: vi.fn(),
+  mockRunPreview: vi.fn(() => Promise.resolve({ data: undefined })),
   mockChangePlan: vi.fn(),
   mockPreviewState: {
     value: { data: undefined, loading: false, error: undefined } as {
@@ -461,7 +461,11 @@ describe("Plan change through the sheet", () => {
     const user = userEvent.setup();
     render(
       <SubscriptionSection
-        initialTarget={{ tier: "growth", cycle: "monthly" }}
+        initialTarget={{
+          tier: "growth",
+          cycle: "monthly",
+          surface: "ledgers_limit",
+        }}
         returnTo="/ledger/alice/books"
       />,
     );
@@ -515,7 +519,11 @@ describe("Plan change through the sheet", () => {
 
     render(
       <SubscriptionSection
-        initialTarget={{ tier: "premium", cycle: "yearly" }}
+        initialTarget={{
+          tier: "premium",
+          cycle: "yearly",
+          surface: "deep_link",
+        }}
       />,
     );
 

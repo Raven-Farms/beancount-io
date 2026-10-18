@@ -20,6 +20,11 @@
  *    prefer bucketed/derived attributes.
  */
 import type { UserTier } from "@/common/hooks/use-user-limits";
+import type { PlanChangeKind } from "@/graphql/definitions";
+import type {
+  BillingCycle,
+  SubscriptionTier,
+} from "@/features/user-settings/pages/general/stripe-config";
 import { trackEvent, setUserProperties as setRawUserProperties } from "./track";
 
 /**
@@ -50,12 +55,41 @@ export type ReportExportFailure =
 export type PlanTier = UserTier;
 
 /** The in-product prompts that open Billing on a recommended plan. */
-export type UpgradeSurface =
-  | "ai_cfo_panel"
-  | "importer_paywall"
-  | "ledgers_limit"
-  | "collaborators_limit"
-  | "directive_usage";
+export const UPGRADE_SURFACES = [
+  "ai_cfo_panel",
+  "importer_paywall",
+  "ledgers_limit",
+  "collaborators_limit",
+  "directive_usage",
+] as const;
+export type UpgradeSurface = (typeof UPGRADE_SURFACES)[number];
+
+/**
+ * Where a plan change started: a prompt's deep link, Billing's own plan rows
+ * or yearly offer, or a deep link from elsewhere (the pricing page).
+ */
+export type BillingSurface =
+  | UpgradeSurface
+  | "settings_billing"
+  | "pay_yearly_offer"
+  | "deep_link";
+
+/**
+ * A plan as an analytics value: tier and cycle (`growth_yearly`), or the tier
+ * alone when it has no billing cycle (`free`, `enterprise`, a paid tier held
+ * without a Stripe subscription).
+ */
+export type PlanValue =
+  | Lowercase<PlanTier>
+  | `${SubscriptionTier}_${BillingCycle}`;
+
+/** One plan change, as every plan-change event describes it. */
+interface PlanChangeParams {
+  kind: PlanChangeKind;
+  from: PlanValue;
+  to: PlanValue;
+  surface: BillingSurface;
+}
 
 /**
  * Standard parameters that may accompany any event. Attach whatever is in
@@ -179,19 +213,40 @@ export interface AnalyticsEvents {
    */
   upgrade_prompt_clicked: { surface: UpgradeSurface; target_tier?: PlanTier };
   /**
-   * A new (free-tier) subscriber started Stripe Checkout from the billing page's
-   * plan cards (`subscription-upgrade-cards.tsx`, settings › subscription). Fired
-   * on click of a plan's "Upgrade" button on the new-subscriber
-   * (`createSubscriptionSession` → hosted Checkout) path — the single,
-   * consolidated checkout entry point — so it marks the paid transaction actually
-   * beginning. `target_tier` is the plan being purchased. This is the deep funnel
-   * stage below `upgrade_prompt_clicked`: intent → checkout_started → `purchase`
-   * (the last fired server-side from the Stripe webhook). In-place tier changes by
-   * existing subscribers (`upgradeSubscription`, no checkout session) are NOT
-   * counted here. Note: `target_tier` (the plan being purchased) is distinct from
-   * the standard `plan_tier`, which is the actor's *current* tier.
+   * A reader without a subscription confirmed a plan in Billing's change sheet
+   * and is leaving for Stripe Checkout (`createSubscriptionSession`), the
+   * single checkout entry point. `target_tier` is the plan being purchased and
+   * `surface` is where the change started. It is the funnel stage below
+   * `upgrade_prompt_clicked`: intent → checkout_started → `purchase` (fired
+   * server-side from the Stripe webhook). An existing subscriber's in-place
+   * change (`changePlan`) is not a checkout; it is `plan_change_confirmed`.
+   * `target_tier` is distinct from the standard `plan_tier`, which is the
+   * actor's *current* tier.
    */
-  checkout_started: { target_tier: PlanTier };
+  checkout_started: { target_tier: PlanTier; surface: BillingSurface };
+  /**
+   * The monthly/yearly switch above Billing's plan rows changed. Yearly is the
+   * default, so this counts the readers who look at monthly first (PRFAQ005
+   * question 19).
+   */
+  billing_toggle_changed: { to: BillingCycle; surface: "settings_billing" };
+  /**
+   * The change sheet received the server's preview of a change it can
+   * describe (a `kind`); a refused preview is not counted. Fired once per
+   * preview response, so a retry after an error counts again.
+   */
+  plan_change_previewed: PlanChangeParams;
+  /**
+   * The reader confirmed a previewed change: the sheet's pay-and-switch
+   * button, or its checkout button for a `NEW` subscription (which then also
+   * sends `checkout_started`). Paired with `plan_change_previewed` it gives the
+   * preview → confirm rate per kind.
+   */
+  plan_change_confirmed: PlanChangeParams;
+  /** The bank must approve the change's payment; the sheet links to Stripe. */
+  payment_action_required: PlanChangeParams;
+  /** The change's payment was declined; nothing changed. */
+  payment_action_failed: PlanChangeParams;
 }
 
 export type AnalyticsEventName = keyof AnalyticsEvents;

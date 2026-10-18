@@ -33,7 +33,7 @@ vi.mock("../../general/subscription-section", () => ({
     checkoutReturned?: boolean;
     returnTo?: string;
     onCheckoutDismiss?: () => void;
-    initialTarget?: { tier: string; cycle: string } | null;
+    initialTarget?: { tier: string; cycle: string; surface: string } | null;
     onSheetClose?: () => void;
   }) => (
     <div
@@ -41,7 +41,9 @@ vi.mock("../../general/subscription-section", () => ({
       data-checkout={String(checkoutReturned)}
       data-return={returnTo ?? ""}
       data-target={
-        initialTarget ? `${initialTarget.tier}-${initialTarget.cycle}` : ""
+        initialTarget
+          ? `${initialTarget.tier}-${initialTarget.cycle}-${initialTarget.surface}`
+          : ""
       }
     >
       <button onClick={onCheckoutDismiss}>dismiss</button>
@@ -97,8 +99,12 @@ describe("BillingSettingsPage", () => {
   });
 
   it.each([
-    [{ plan: "growth", billing: "monthly" }, "growth-monthly"],
-    [{ plan: "premium" }, "premium-yearly"],
+    [
+      { plan: "growth", billing: "monthly", from: "ledgers_limit" },
+      "growth-monthly-ledgers_limit",
+    ],
+    // A link from outside the app (the pricing page) is a plain deep link.
+    [{ plan: "premium" }, "premium-yearly-deep_link"],
     // A plan the schema dropped, or a Checkout return, opens no sheet.
     [{ plan: undefined, billing: "yearly" }, ""],
     [{ plan: "growth", checkout: "success" }, ""],

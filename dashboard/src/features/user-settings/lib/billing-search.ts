@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { UPGRADE_SURFACES } from "@/common/analytics";
 import { getSafeRedirectPath } from "@/common/lib/auth/auth";
 import { searchEnum, searchString } from "@/common/lib/search-params/tolerant";
 import {
@@ -20,7 +21,8 @@ export const billingSearchSchema = z.object({
     .optional(),
   plan: searchEnum(SUBSCRIPTION_TIERS),
   billing: searchEnum(BILLING_CYCLES),
-  from: searchString(),
+  // A surface this app does not know (the pricing page's) is a plain deep link.
+  from: searchEnum(UPGRADE_SURFACES),
 });
 
 export type BillingSearch = z.infer<typeof billingSearchSchema>;

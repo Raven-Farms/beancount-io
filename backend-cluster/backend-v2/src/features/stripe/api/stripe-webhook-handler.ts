@@ -2,6 +2,8 @@ import Router from "@koa/router";
 import { BILLING_CLIENT_ID, SUBSCRIPTION_CONFIG } from "../service/stripe";
 import { customerId } from "../service/subscription-plan";
 import { refreshSubscriptionPeriods } from "../operations/refresh-subscription-periods";
+import { isPurchase, reportPurchase } from "../operations/report-purchase";
+import type { AppConfig } from "@/config/config";
 import { type AppLayers } from "@/foundation/composition";
 import { logger } from "@/shared/logger";
 import { registerRoute } from "@/server/rest/openapi-registry";
@@ -15,6 +17,7 @@ import {
 export function setStripeWebhookHandler(
   router: Router,
   layers: AppLayers,
+  analytics: AppConfig["analytics"],
 ): void {
   router.post("/api-gateway/stripe/webhook", (async (ctx) => {
     const signature = ctx.request.headers["stripe-signature"] as string;
@@ -90,6 +93,47 @@ export function setStripeWebhookHandler(
             processed = true;
           }
           break;
+        case "invoice.paid": {
+          const invoice = event.data.object;
+          if (!isPurchase(invoice)) break;
+          // A first Checkout's invoice can arrive before the session that
+          // binds the customer, so the subscription's signed metadata names
+          // the user; a binding, when present, must agree.
+          const subscriptionMetadata =
+            invoice.parent?.subscription_details?.metadata ?? {};
+          const binding = invoice.customer
+            ? await layers.database.models.paidCustomer.findByStripeCustomerIdAndClientId(
+                layers.database.db,
+                customerId(invoice.customer),
+                clientId,
+              )
+            : null;
+          const userId = binding?.userId ?? subscriptionMetadata.userId;
+          if (
+            !userId ||
+            (subscriptionMetadata.userId &&
+              subscriptionMetadata.userId !== userId) ||
+            (subscriptionMetadata.clientId &&
+              subscriptionMetadata.clientId !== clientId)
+          ) {
+            logger.warn("Paid invoice names no matching user; not reported");
+            break;
+          }
+          const report = await reportPurchase(
+            {
+              models: layers.database.models,
+              db: layers.database.db,
+              analytics,
+              plans: SUBSCRIPTION_CONFIG[clientId].plans,
+            },
+            invoice,
+            userId,
+          );
+          // Answer with an error so Stripe redelivers; the claim was given back.
+          if (report === "failed") throw new Error("Purchase report failed");
+          processed = report !== "unconfigured";
+          break;
+        }
         case "checkout.session.completed":
           if (metadata?.userId) {
             await stripe.handleCheckoutSessionCompleted(

@@ -50,7 +50,8 @@ const handlers: Array<{ name: string; fn: () => void }> = [
   { name: "admin", fn: () => setAdminApiRoute(router, mockLayers, mockConfig) },
   {
     name: "stripe-webhook",
-    fn: () => setStripeWebhookHandler(router, mockLayers),
+    fn: () =>
+      setStripeWebhookHandler(router, mockLayers, mockConfig.analytics),
   },
   {
     name: "v1-compat",

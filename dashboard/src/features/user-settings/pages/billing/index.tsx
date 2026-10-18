@@ -29,6 +29,7 @@ export default function BillingSettingsPage() {
               ? {
                   tier: search.plan,
                   cycle: search.billing ?? DEFAULT_BILLING_CYCLE,
+                  surface: search.from ?? "deep_link",
                 }
               : null
           }

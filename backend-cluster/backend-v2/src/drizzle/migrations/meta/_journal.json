@@ -148,6 +148,13 @@
       "when": 1792306761829,
       "tag": "0020_verified_subscription_period",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1792363292325,
+      "tag": "0021_reported_purchases",
+      "breakpoints": true
     }
   ]
 }

@@ -21,7 +21,9 @@ describe("config", () => {
   it("should have correct default values", () => {
     expect(config.project).toBe("beancount-io");
     expect(config.jwt.expMins).toBe(525600);
-    expect(config.analytics.gaMeasurementId).toBe("G-94TFG6X2Q5");
+    // Server-side analytics is off until the operator sets both values.
+    expect(config.analytics.gaMeasurementId).toBe("");
+    expect(config.analytics.measurementProtocolSecret).toBe("");
   });
 
   it("should read env from NODE_ENV", () => {

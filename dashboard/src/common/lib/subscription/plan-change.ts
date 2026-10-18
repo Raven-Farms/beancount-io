@@ -1,5 +1,7 @@
+import type { PlanValue } from "@/common/analytics";
 import type { UserTier } from "@/common/hooks/use-user-limits";
-import { TIER_RANK } from "./tier-config";
+import type { BillingCycle } from "@/features/user-settings/pages/general/stripe-config";
+import { getTierInfo, TIER_RANK } from "./tier-config";
 
 export type PlanInterval = "month" | "year";
 
@@ -45,4 +47,21 @@ export function planChoice(
   }
   if (current.interval === target.interval) return "UPGRADE";
   return target.interval === "year" ? "TO_YEARLY" : "SPLIT";
+}
+
+const TIER_VALUES: Record<UserTier, Lowercase<UserTier>> = {
+  FREE: "free",
+  PREMIUM: "premium",
+  GROWTH: "growth",
+  ORGANIZATION: "organization",
+  ENTERPRISE: "enterprise",
+};
+
+/** A plan as an analytics value: `growth_yearly`, or the tier alone without a cycle. */
+export function planValue(
+  tier: UserTier,
+  cycle: BillingCycle | null,
+): PlanValue {
+  const paid = getTierInfo(tier);
+  return paid && cycle ? `${paid.key}_${cycle}` : TIER_VALUES[tier];
 }

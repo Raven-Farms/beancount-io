@@ -1,7 +1,15 @@
-import { useEffect, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { ArrowUp, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/common/components/ui/button";
+import { track, type BillingSurface } from "@/common/analytics";
+import { planValue } from "@/common/lib/subscription/plan-change";
 import {
   Dialog,
   DialogContent,
@@ -21,6 +29,7 @@ import {
 import {
   PlanChangeEffect,
   PlanChangeRefusal,
+  type PlanChangeKind,
   type PreviewPlanChangeQuery,
 } from "@/graphql/definitions";
 import {
@@ -41,6 +50,8 @@ type Preview = PreviewPlanChangeQuery["previewPlanChange"];
 export interface PlanChangeTarget {
   tier: SubscriptionTier;
   cycle: BillingCycle;
+  /** Where the change started, for analytics. */
+  surface: BillingSurface;
 }
 
 const TIER_LABEL_KEYS: Record<SubscriptionTier, string> = {
@@ -80,6 +91,7 @@ type Outcome =
 export function PlanChangeSheet({
   target,
   currentTier,
+  currentCycle,
   currentPlanLabel,
   quotaByUserTier,
   t,
@@ -88,11 +100,14 @@ export function PlanChangeSheet({
   onManageBilling,
   onChanged,
   returnTo,
+  checkoutPending = false,
 }: {
   target: PlanChangeTarget | null;
   /** A safe path back to where the prompt was, offered once the change lands. */
   returnTo?: string;
   currentTier: UserTier;
+  /** The current subscription's cycle; null without one. */
+  currentCycle: BillingCycle | null;
   currentPlanLabel: string;
   quotaByUserTier: Record<string, TierQuota>;
   t: Translate;
@@ -100,6 +115,8 @@ export function PlanChangeSheet({
   onCheckout: (target: PlanChangeTarget) => void;
   onManageBilling: () => void;
   onChanged: () => void;
+  /** A Checkout session is being created; confirming again would open two. */
+  checkoutPending?: boolean;
 }) {
   const [runPreview, { data, loading, error }] = usePreviewPlanChange();
   const [changePlan, { loading: changing }] = useChangePlan();
@@ -112,25 +129,45 @@ export function PlanChangeSheet({
   const targetPriceId = target
     ? cyclePrice(target.tier, target.cycle).priceId
     : null;
-  // The parent remounts the sheet per target (`key`), so state starts fresh.
-  useEffect(() => {
+  const changeParams = (kind: PlanChangeKind | null) =>
+    target && kind
+      ? {
+          kind,
+          from: planValue(currentTier, currentCycle),
+          to: `${target.tier}_${target.cycle}` as const,
+          surface: target.surface,
+        }
+      : null;
+  // A preview resolves later, so it reports the plan as Billing then knows
+  // it; reading the latest through a ref keeps a refetched plan from
+  // re-running the preview.
+  const latestChangeParams = useRef(changeParams);
+  useLayoutEffect(() => {
+    latestChangeParams.current = changeParams;
+  });
+  const requestPreview = useCallback(() => {
     if (!targetPriceId) return;
-    void runPreview({
+    runPreview({
       variables: {
         clientId: stripePlanConfig.clientId,
         priceId: targetPriceId,
       },
-    });
+    }).then(
+      ({ data: response }) => {
+        const params = latestChangeParams.current(
+          response?.previewPlanChange.kind ?? null,
+        );
+        if (params) track("plan_change_previewed", params);
+      },
+      // The hook's error state renders the failure.
+      () => {},
+    );
   }, [targetPriceId, runPreview]);
+  // The parent remounts the sheet per target (`key`), so state starts fresh.
+  useEffect(requestPreview, [requestPreview]);
   const preview = () => {
-    if (!targetPriceId) return;
     setOutcome(null);
-    void runPreview({
-      variables: {
-        clientId: stripePlanConfig.clientId,
-        priceId: targetPriceId,
-      },
-    });
+    requestPreview();
   };
 
   const planChange: Preview | undefined =
@@ -147,6 +184,8 @@ export function PlanChangeSheet({
 
   const confirm = async () => {
     if (!target || !planChange) return;
+    const params = changeParams(planChange.kind);
+    if (params) track("plan_change_confirmed", params);
     if (planChange.kind === "NEW") {
       onCheckout(target);
       return;
@@ -176,6 +215,7 @@ export function PlanChangeSheet({
         onChanged();
         onClose();
       } else if (result?.status === "REQUIRES_ACTION") {
+        if (params) track("payment_action_required", params);
         setOutcome({
           type: "action",
           hostedInvoiceUrl: result.hostedInvoiceUrl ?? null,
@@ -183,6 +223,9 @@ export function PlanChangeSheet({
       } else if (result?.status === "REFUSED") {
         setOutcome({ type: "refused", refusal: result.refusal ?? null });
       } else {
+        if (params && result?.status === "FAILED") {
+          track("payment_action_failed", params);
+        }
         setOutcome({ type: "failed" });
       }
     } catch (changeError) {
@@ -338,7 +381,10 @@ export function PlanChangeSheet({
               </div>
             )}
             <DialogFooter className="flex-col gap-2 sm:flex-row">
-              <Button disabled={changing} onClick={() => void confirm()}>
+              <Button
+                disabled={changing || checkoutPending}
+                onClick={() => void confirm()}
+              >
                 {planChange.kind === "NEW"
                   ? t("userSettings.planChangeContinueToCheckout")
                   : t("userSettings.planChangePayAndSwitch", {

@@ -214,14 +214,20 @@ export function SubscriptionSection({
         ? "month"
         : null;
   const currentTierKey = TIER_KEYS[tier] ?? null;
+  const currentCycle: BillingCycle | null =
+    currentInterval === "year"
+      ? "yearly"
+      : currentInterval === "month"
+        ? "monthly"
+        : null;
 
   // Every immediate choice confirms in the sheet, which previews the charge.
   const handleChoose = (tierKey: SubscriptionTier, cycle: BillingCycle) =>
-    setSheetTarget({ tier: tierKey, cycle });
+    setSheetTarget({ tier: tierKey, cycle, surface: "settings_billing" });
 
   const startCheckout = (target: PlanChangeTarget) => {
     track("checkout_started", {
-      surface: "settings_billing",
+      surface: target.surface,
       target_tier: USER_TIERS[target.tier],
     });
     return handleUpgradeCheckout(target.tier, target.cycle);
@@ -333,7 +339,11 @@ export function SubscriptionSection({
                 t={t}
                 busy={checkoutLoading}
                 onSwitch={() =>
-                  setSheetTarget({ tier: currentTierKey, cycle: "yearly" })
+                  setSheetTarget({
+                    tier: currentTierKey,
+                    cycle: "yearly",
+                    surface: "pay_yearly_offer",
+                  })
                 }
               />
             )}
@@ -395,7 +405,9 @@ export function SubscriptionSection({
         key={sheetTarget ? `${sheetTarget.tier}-${sheetTarget.cycle}` : "none"}
         target={sheetTarget}
         currentTier={tier}
+        currentCycle={currentCycle}
         currentPlanLabel={planLabel}
+        checkoutPending={checkoutLoading}
         quotaByUserTier={quotaByUserTier}
         t={t}
         returnTo={returnTo}

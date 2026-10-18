@@ -22,6 +22,16 @@ uses live subscriptions and recognized current/legacy prices; an old cached peri
 or unknown price cannot identify a purchased plan. Only verified live webhooks
 may refresh a customer's cache. Stripe failures do not clear stored periods.
 
+A verified `invoice.paid` webhook for a Checkout's first invoice or an
+immediate plan change sends one GA4 `purchase` through the Measurement
+Protocol: value, currency, plan and cycle, the user's id, and no personal data.
+Renewals and fully discounted invoices are not purchases. The
+`reported_purchases` table claims each invoice before sending, so a retried
+delivery sends nothing twice; a failed send gives the claim back and answers
+with an error, so Stripe redelivers it. `GA_MEASUREMENT_ID` (the dashboard's stream) and
+`GA_MEASUREMENT_PROTOCOL_SECRET` enable it; either unset, nothing is sent. The
+Stripe webhook endpoint must subscribe to `invoice.paid`.
+
 The retired `beancount-web-dev` tenant and `STRIPE_DEV_*` variables are ignored;
 no fake-paid script replaces them. Keep isolated Stripe testing outside live
 application billing.

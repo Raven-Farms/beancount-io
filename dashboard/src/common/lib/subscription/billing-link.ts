@@ -1,3 +1,4 @@
+import type { UpgradeSurface } from "@/common/analytics";
 import {
   DEFAULT_BILLING_CYCLE,
   type BillingCycle,
@@ -16,7 +17,7 @@ export function billingLinkSearch({
   billing = DEFAULT_BILLING_CYCLE,
   returnTo,
 }: {
-  from: string;
+  from: UpgradeSurface;
   plan?: SubscriptionTier;
   billing?: BillingCycle;
   /** A safe same-origin path, offered back after the change. */

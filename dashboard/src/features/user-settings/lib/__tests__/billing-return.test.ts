@@ -57,8 +57,14 @@ describe("billing search", () => {
       billingSearchSchema.parse({
         plan: "platinum",
         billing: "weekly",
+        from: "pricing",
         return: "https://evil.example/x",
       }),
-    ).toMatchObject({ plan: undefined, billing: undefined, return: undefined });
+    ).toMatchObject({
+      plan: undefined,
+      billing: undefined,
+      from: undefined,
+      return: undefined,
+    });
   });
 });

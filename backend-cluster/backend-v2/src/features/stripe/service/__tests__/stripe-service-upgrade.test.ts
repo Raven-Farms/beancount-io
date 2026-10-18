@@ -55,6 +55,7 @@ describe("StripeService.upgradeSubscription", () => {
 
     mockModels = {
       paidCustomer: mockIPaidCustomerModel,
+      reportedPurchase: {} as any,
       jwt: {} as any,
       oauthGrant: {} as any,
       emailToken: {} as any,

@@ -228,7 +228,8 @@ const REST_FRAGMENTS: readonly RestFragment[] = [
   {
     feature: "stripe",
     gate: "outside",
-    register: (router, { layers }) => setStripeWebhookHandler(router, layers),
+    register: (router, { layers, config }) =>
+      setStripeWebhookHandler(router, layers, config.analytics),
   },
   {
     feature: "plaid",

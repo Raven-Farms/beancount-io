@@ -3,6 +3,7 @@ import { Sparkles } from "lucide-react";
 import { Button } from "@/common/components/ui/button";
 import { Badge } from "@/common/components/ui/badge";
 import { cn } from "@/common/lib/utils/utils";
+import { track } from "@/common/analytics";
 import type { UserTier } from "@/common/hooks/use-user-limits";
 import { type TierQuota } from "@/common/hooks/use-all-tier-quotas";
 import {
@@ -12,6 +13,7 @@ import {
   type PlanInterval,
 } from "@/common/lib/subscription/plan-change";
 import {
+  BILLING_CYCLES,
   cyclePrice,
   DEFAULT_BILLING_CYCLE,
   yearlySaving,
@@ -107,12 +109,19 @@ export function PlanPicker({
           aria-label={t("userSettings.billingCycle")}
           className="inline-flex rounded-md border p-0.5 text-xs"
         >
-          {(["monthly", "yearly"] as const).map((option) => (
+          {BILLING_CYCLES.map((option) => (
             <button
               key={option}
               type="button"
               aria-pressed={cycle === option}
-              onClick={() => setCycle(option)}
+              onClick={() => {
+                if (option === cycle) return;
+                setCycle(option);
+                track("billing_toggle_changed", {
+                  to: option,
+                  surface: "settings_billing",
+                });
+              }}
               className={cn(
                 "rounded px-3 py-1 font-medium transition-colors",
                 cycle === option

@@ -22,7 +22,10 @@ interface SendGridConfig {
 }
 
 interface AnalyticsConfig {
+  /** The dashboard's GA4 stream, so server events join its users. */
   gaMeasurementId: string;
+  /** GA4 Measurement Protocol API secret; unset, nothing is sent. */
+  measurementProtocolSecret: string;
 }
 
 interface JwtConfig {
@@ -444,7 +447,8 @@ export const config: AppConfig = {
     apiKey: process.env.SEND_GRID_API_KEY || "",
   },
   analytics: {
-    gaMeasurementId: "G-94TFG6X2Q5",
+    gaMeasurementId: process.env.GA_MEASUREMENT_ID || "",
+    measurementProtocolSecret: process.env.GA_MEASUREMENT_PROTOCOL_SECRET || "",
   },
   stripe: {
     webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || "",

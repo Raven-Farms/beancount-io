@@ -40,6 +40,9 @@ const {
   mockUseAllTierQuotas: vi.fn(),
 }));
 
+const { mockTrack } = vi.hoisted(() => ({ mockTrack: vi.fn() }));
+vi.mock("@/common/analytics", () => ({ track: mockTrack }));
+
 vi.mock("@apollo/client/react", () => ({
   useLazyQuery: () => [
     vi.fn(),
@@ -88,7 +91,9 @@ vi.mock("@/features/user-settings/hooks/use-plan-change", async () => {
       const run = React.useCallback(
         (options: { variables: { priceId: string } }) => {
           mockRunPreview(options);
-          setData(mockPreviewFor.fn(options.variables.priceId));
+          const next = mockPreviewFor.fn(options.variables.priceId);
+          setData(next);
+          return Promise.resolve({ data: next });
         },
         [],
       );
@@ -433,6 +438,32 @@ describe("Plan row", () => {
         },
       });
     });
+    expect(mockTrack).toHaveBeenCalledWith("billing_toggle_changed", {
+      to: "monthly",
+      surface: "settings_billing",
+    });
+    expect(mockTrack).toHaveBeenCalledWith("checkout_started", {
+      target_tier: "GROWTH",
+      surface: "settings_billing",
+    });
+  });
+
+  it("does not count a click on the cycle already shown", async () => {
+    const user = userEvent.setup();
+    setUserLimits("FREE");
+    showSubscription(mockNoSubscriptionData);
+    mockTrack.mockClear();
+
+    render(<SubscriptionSection />);
+    await user.click(
+      screen.getByRole("button", { name: "userSettings.yearly" }),
+    );
+
+    expect(
+      mockTrack.mock.calls.filter(
+        ([event]) => event === "billing_toggle_changed",
+      ),
+    ).toEqual([]);
   });
 
   it("labels each choice for a monthly subscriber the way the server classifies it", async () => {

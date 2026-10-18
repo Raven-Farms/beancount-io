@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   IMMEDIATE_CHOICES,
   planChoice,
+  planValue,
   type PlanChoice,
   type PlanInterval,
 } from "../plan-change";
@@ -87,5 +88,19 @@ describe("planChoice (mirrors the server's PRFAQ005 question 14 rule)", () => {
       "TO_YEARLY",
       "UPGRADE",
     ]);
+  });
+});
+
+describe("planValue", () => {
+  it.each([
+    ["PREMIUM", "monthly", "premium_monthly"],
+    ["GROWTH", "yearly", "growth_yearly"],
+    // No subscription, or a tier without a billing cycle, is the tier alone.
+    ["PREMIUM", null, "premium"],
+    ["FREE", null, "free"],
+    ["FREE", "yearly", "free"],
+    ["ENTERPRISE", "yearly", "enterprise"],
+  ] as const)("%s on %s is %s", (tier, cycle, expected) => {
+    expect(planValue(tier, cycle)).toBe(expected);
   });
 });
