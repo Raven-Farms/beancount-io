@@ -135,7 +135,7 @@ def test_validation_work_does_not_grow_with_the_error_count(
 
 def test_a_valid_ledger_pays_for_no_hint_index(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     # Control: the same books with the open dated correctly accept the note,
-    # and the only pass over the entries is the one that lists open accounts.
+    # and the only passes list open accounts and validate plugin data types.
     ledger = tmp_path / "main.bean"
     ledger.write_text(_inactive(60).replace("2030-01-01 open", "2000-01-01 open"))
     load_file = managed_load.load_file
@@ -148,7 +148,7 @@ def test_a_valid_ledger_pays_for_no_hint_index(tmp_path: Path, monkeypatch: pyte
     monkeypatch.setattr(managed_load, "load_file", counted_load)
     assert ledger_write.append(ledger, [NOTE]) == []
     assert ledger.read_text().endswith(NOTE + "\n")
-    assert _CountedEntries.walks == 1
+    assert _CountedEntries.walks == 2
 
 
 def test_inactive_account_refusal_still_names_the_open_and_the_close(

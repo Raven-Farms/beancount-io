@@ -928,7 +928,7 @@ def _validate(file: Path, *, documents_only: bool = False) -> dict[str, Any]:
     from beancount.core.data import Document
 
     from bea_engine.compat import is_reserved_location
-    from bea_engine.managed_load import is_booking_failure
+    from bea_engine.managed_load import data_type_errors, is_booking_failure
     from bea_engine.query import format_error, is_plugin_failure
     from fava.core.loader import load_file
 
@@ -937,9 +937,7 @@ def _validate(file: Path, *, documents_only: bool = False) -> dict[str, Any]:
     # loader errors plus the validations it adds for `check`. With no
     # bean-check option to honor, a clean answer spares the frontend a second
     # load that would run every plugin again (w5/430).
-    from beancount.ops.validation import HARDCORE_VALIDATIONS
-
-    validation_errors = [error for validate in HARDCORE_VALIDATIONS for error in validate(entries, options)]  # type: ignore[no-untyped-call]
+    validation_errors = data_type_errors(entries, options)
     clean = not errors and not validation_errors
 
     from bea_engine.ledger.write import root_read_hint

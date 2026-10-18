@@ -353,7 +353,7 @@ def _balance(
     snapshot = write.LedgerSnapshot.capture(file)
     target = write.destination(file, into)
     snapshot.require_target(target, into=into)
-    before, errors, before_options = managed_load.load_file(file, snapshot=snapshot)
+    before, errors, before_options = managed_load.load_file(file, snapshot=snapshot, check_types=True)
     ledger_errors = [format_error(error, ledger_file=file) for error in errors]
     if pad_from is None and ledger_errors and strict_read and not all("Unused Pad" in error for error in ledger_errors):
         # A staged pad is the transient error this very write resolves:
@@ -424,7 +424,7 @@ def _balance(
         # plain path does, so concurrent retries cannot each append (w5/115).
         snapshot = write.LedgerSnapshot.capture(file)
         snapshot.require_target(write.destination(file, into), into=into)
-        loaded, before_errors, options = managed_load.load_file(file, snapshot=snapshot)
+        loaded, before_errors, options = managed_load.load_file(file, snapshot=snapshot, check_types=True)
         # The plain path refuses a second, different assertion for the day
         # before writing. Here the write failed on it instead, with advice to
         # date the pad after that very day and to rerun this command (w5/487).
@@ -697,7 +697,7 @@ def _price(
     snapshot = write.LedgerSnapshot.capture(file)
     target = write.destination(file, into)
     snapshot.require_target(target, into=into)
-    entries, errors, options = managed_load.load_file(file, snapshot=snapshot)
+    entries, errors, options = managed_load.load_file(file, snapshot=snapshot, check_types=True)
     ledger_errors = [format_error(error, ledger_file=file) for error in errors]
     if ledger_errors and strict_read:
         raise _preexisting_refusal(errors, ledger_errors)

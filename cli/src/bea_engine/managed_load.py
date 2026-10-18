@@ -35,7 +35,7 @@ import stat
 import sys
 import time
 import unicodedata
-from collections.abc import Collection, Iterator
+from collections.abc import Collection, Iterator, Mapping
 from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
@@ -1372,6 +1372,13 @@ def names_managed_source(entry: Path) -> bool:
     return bool(_collect_managed(snapshot, DEFAULT_ORIGINS if origins is None else origins))
 
 
+def data_type_errors(entries: list[Any], options: Mapping[str, Any]) -> list[Any]:
+    """The extra checks bean-check applies to plugin-produced directive values."""
+    from beancount.ops.validation import HARDCORE_VALIDATIONS
+
+    return [error for validate in HARDCORE_VALIDATIONS for error in validate(entries, options)]  # type: ignore[no-untyped-call]
+
+
 def load_file(
     entry: Path | str,
     *,
@@ -1382,11 +1389,13 @@ def load_file(
     now: float | None = None,
     opener: OpenerDirector | None = None,
     snapshot: LedgerSnapshot | None = None,
+    check_types: bool = False,
 ) -> tuple[list[Any], list[Any], dict[str, Any]]:
     """Drop-in `loader.load_file` with managed includes resolved.
 
     For call sites that need the per-source records, `load_with_sources`
-    returns them alongside.
+    returns them alongside. Write gates use `check_types` to compare the same
+    data-type errors that bean-check reports, including on cached loads.
     """
     loaded = load_with_sources(
         Path(entry),
@@ -1400,7 +1409,8 @@ def load_file(
     )
     if loaded.sources:
         loaded.options["bea_managed_price_sources"] = [source_json(source) for source in loaded.sources]
-    return loaded.entries, loaded.errors, loaded.options
+    errors = [*loaded.errors, *data_type_errors(loaded.entries, loaded.options)] if check_types else loaded.errors
+    return loaded.entries, errors, loaded.options
 
 
 @dataclass(frozen=True)
@@ -2024,6 +2034,7 @@ __all__ = [
     "STRICT_ENV",
     "apply_ledger_price_precedence",
     "collect_ledger_price_pairs",
+    "data_type_errors",
     "export_portable",
     "load_file",
     "load_with_sources",

@@ -1909,6 +1909,8 @@ def validate_candidate(
             "to infer beside a number that wide. Give every posting an explicit amount, or use a number of at "
             "most 28 significant digits. Nothing was written."
         ) from exc
+    type_errors = managed_load.data_type_errors(entries, options)
+    errors = [*errors, *type_errors]
     original_line_counts = {path: len(lines) for path, lines in original_lines.items()}
     # The error set before the write, matched so the same failure after the
     # append reads as the same error. Appends land at end of file over
@@ -1917,7 +1919,9 @@ def validate_candidate(
     tolerated: set[int] = set()
     before_errors: list[Any] | None = None
     if allow_errors:
-        _, before_errors, _ = managed_load.load_file(snapshot.root if snapshot else file, snapshot=snapshot)
+        _, before_errors, _ = managed_load.load_file(
+            snapshot.root if snapshot else file, snapshot=snapshot, check_types=True
+        )
         tolerated = _preexisting_errors(errors, before_errors, filenames, original_lines)
     accounts = [entry.account for entry in entries if isinstance(entry, Open)]
     # What the per-error hints below look up, each built on first use and then
@@ -1996,7 +2000,9 @@ def validate_candidate(
             if missing_before is None:
                 if before_errors is None:
                     root = snapshot.root if snapshot else file
-                    before_errors = managed_load.load_file(root, snapshot=snapshot)[1] if root.exists() else []
+                    before_errors = (
+                        managed_load.load_file(root, snapshot=snapshot, check_types=True)[1] if root.exists() else []
+                    )
                 missing_before = {
                     found.group(1)
                     for before in before_errors
@@ -2278,12 +2284,28 @@ def validate_candidate(
     syntax_errors = [err for err in errors if isinstance(err, ParserSyntaxError | LexerError)]
     new_records = [record for record, is_new in zip(records, introduced, strict=True) if is_new]
     if errors and (not allow_errors or syntax_errors or invalid_pad_accounts or new_records):
+        if not allow_errors and type_errors and not (syntax_errors or invalid_pad_accounts):
+            if before_errors is None:
+                root = snapshot.root if snapshot else file
+                before_errors = (
+                    managed_load.load_file(root, snapshot=snapshot, check_types=True)[1] if root.exists() else []
+                )
+            if _preexisting_errors(type_errors, before_errors, filenames, original_lines):
+                raise CandidateRejected(
+                    f"The ledger already has {len(before_errors)} error(s); nothing was written. "
+                    "Pass --allow-errors to tolerate existing errors; new errors are still refused.",
+                    details=messages,
+                    locations=locations,
+                    records=records,
+                )
         # An error on an appended line is the write's own; only books whose
         # every error sits elsewhere are worth a load of the version before.
         if not allow_errors and not (any_appended or syntax_errors or invalid_pad_accounts):
             if before_errors is None:
                 root = snapshot.root if snapshot else file
-                before_errors = managed_load.load_file(root, snapshot=snapshot)[1] if root.exists() else []
+                before_errors = (
+                    managed_load.load_file(root, snapshot=snapshot, check_types=True)[1] if root.exists() else []
+                )
             if len(_preexisting_errors(errors, before_errors, filenames, original_lines)) == len(errors):
                 # The write adds nothing wrong; the books were already broken,
                 # which is the case --allow-errors exists for. The repair hints
@@ -2641,7 +2663,7 @@ def _error_key(error: Any, filenames: dict[Path, Path]) -> tuple[str, int | None
     except OSError:
         name = str(filenames.get(source, source))
     entry = getattr(error, "entry", None)
-    if isinstance(entry, Balance):
+    if isinstance(entry, Balance) and str(getattr(error, "message", "")).startswith("Balance failed"):
         message = f"Balance failed for {entry.account} on {entry.date}"
     else:
         message = getattr(error, "message", str(error))
@@ -2731,6 +2753,12 @@ def _error_kind(error: Any) -> str:
     reduction error ("Not enough lots").
     """
     kind = type(error)
+    # A plugin may fix an old tags violation but introduce a links violation
+    # on that same entry. Sharing ValidationError and a line is not enough
+    # to tolerate a different data-type failure (w5/661).
+    message = str(getattr(error, "message", ""))
+    if message.startswith("Invalid data types:"):
+        return f"{kind.__name__}: {message}"
     return "booking" if kind.__module__.startswith("beancount.parser.booking") else kind.__name__
 
 
@@ -2753,6 +2781,8 @@ def _moved_error_key(error: Any) -> tuple[str, str]:
     many such errors a write may leave.
     """
     kind = type(error).__name__
+    if str(getattr(error, "message", "")).startswith("Invalid data types:"):
+        kind = _error_kind(error)
     if _unanchored(error):
         return (kind, str(error.source.get("filename", "")))
     return (kind, " ".join(sorted(re.split(r"[\s,]+", getattr(error, "message", str(error))))))
