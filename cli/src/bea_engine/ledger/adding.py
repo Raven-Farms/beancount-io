@@ -353,7 +353,7 @@ def _balance(
     if pad_from is None:
         snapshot = write.LedgerSnapshot.capture(file)
         target = write.destination(file, into)
-        snapshot.require_target(target)
+        snapshot.require_target(target, into=into)
         entries, errors, _ = managed_load.load_file(file, snapshot=snapshot)
         ledger_errors = [format_error(error, ledger_file=file) for error in errors]
         if ledger_errors and strict_read and not all("Unused Pad" in error for error in ledger_errors):
@@ -389,7 +389,7 @@ def _balance(
     # Read first, as the plain path does: the answer names what the pad
     # inserts, and a sign a statement prints is caught before it is padded (w5/611).
     snapshot = write.LedgerSnapshot.capture(file)
-    snapshot.require_target(write.destination(file, into))
+    snapshot.require_target(write.destination(file, into), into=into)
     before, _, before_options = managed_load.load_file(file, snapshot=snapshot)
     held = write.book_units(before, account, currency, date)
     sign = write.negated_credit_hint(account, number, held, currency, before_options)
@@ -415,7 +415,7 @@ def _balance(
         # Decide against one snapshot and write against the same one, as the
         # plain path does, so concurrent retries cannot each append (w5/115).
         snapshot = write.LedgerSnapshot.capture(file)
-        snapshot.require_target(write.destination(file, into))
+        snapshot.require_target(write.destination(file, into), into=into)
         loaded, before_errors, options = managed_load.load_file(file, snapshot=snapshot)
         # The plain path refuses a second, different assertion for the day
         # before writing. Here the write failed on it instead, with advice to
@@ -685,7 +685,7 @@ def _price(
     )
     snapshot = write.LedgerSnapshot.capture(file)
     target = write.destination(file, into)
-    snapshot.require_target(target)
+    snapshot.require_target(target, into=into)
     entries, errors, options = managed_load.load_file(file, snapshot=snapshot)
     ledger_errors = [format_error(error, ledger_file=file) for error in errors]
     if ledger_errors and strict_read:

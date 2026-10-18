@@ -164,7 +164,7 @@ class LedgerSnapshot:
                 pending.extend(matches)
         return snapshot
 
-    def require_target(self, target: Path) -> bytes:
+    def require_target(self, target: Path, *, into: Path | None = None) -> bytes:
         """Register an included destination without creating it; return its frozen bytes."""
         from bea_engine.managed_price_cache import managed_source_for_path
 
@@ -214,14 +214,34 @@ class LedgerSnapshot:
                 f"or Unicode form, and the include pattern matches only that spelling. "
                 f"{self._respelling(claimed, resolved)} Nothing was written."
             )
+        base = f"A relative --into path is based on {self.root.parent}, the root ledger's directory."
+        correction = self._cwd_into_hint(into)
+        if correction is not None:
+            raise UsageError(
+                f"Write destination {target} is not included by {self.root}. {base} {correction} Nothing was written."
+            )
         if not resolved.parent.is_dir():
             raise UsageError(
-                f"Write destination directory {resolved.parent} does not exist. Create the directory first."
+                f"Write destination directory {resolved.parent} does not exist. {base} Create the directory first."
             )
         raise UsageError(
             f"Write destination {target} is not included by {self.root}. "
-            "Create it and add an include directive to the root first."
+            f"{base} Create it and add an include directive to the root first."
         )
+
+    def _cwd_into_hint(self, into: Path | None) -> str | None:
+        """A root-relative correction when interpreting the path from cwd names a ledger member."""
+        if into is None or into.expanduser().is_absolute():
+            return None
+        try:
+            alternative = Path.cwd() / into.expanduser()
+        except (OSError, ValueError):
+            return None
+        for member in self.contents:
+            if same_file(alternative, member):
+                relative = os.path.relpath(member, self.root.parent)
+                return f"Did you mean --into {shlex.quote(relative)}?"
+        return None
 
     def _respelling(self, accepted: Path, given: Path) -> str:
         """Which spelling `--into` takes: the include's, relative to the root, which is what bea matches.
@@ -2991,7 +3011,7 @@ def validate_append(
         require_one_entry_each(texts)
     snapshot = snapshot or LedgerSnapshot.capture(file)
     target = destination(file, into)
-    original = snapshot.require_target(target)
+    original = snapshot.require_target(target, into=into)
     seeded = new_include_seed(snapshot, target) + original
     with candidate_file(target, _appended_or_report(target, seeded, texts)) as candidate:
         warnings = validate_candidate(
@@ -3198,7 +3218,7 @@ def append(
         stack.enter_context(lock_files([file, target]))
         sweep_abandoned_candidates(target.parent)
         snapshot = snapshot or LedgerSnapshot.capture(file)
-        original = snapshot.require_target(target)
+        original = snapshot.require_target(target, into=into)
         snapshot.verify()
         original_stat = target.stat() if target.exists() else None
         if original_stat is not None:

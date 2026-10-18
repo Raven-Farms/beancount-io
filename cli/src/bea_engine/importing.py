@@ -206,7 +206,7 @@ def answer(
     source_bytes = source.read_bytes()
     snapshot = ledger_write.LedgerSnapshot.capture(file)
     target = ledger_write.destination(file, into)
-    original = snapshot.require_target(target)
+    original = snapshot.require_target(target, into=into)
     existing, errors, options = managed_load.load_file(file, snapshot=snapshot)
     # An account staged for this import under `nounused` is the one error the
     # import itself clears; validation still refuses a result that leaves it.

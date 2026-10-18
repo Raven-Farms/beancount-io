@@ -40,7 +40,7 @@ def answer(
         file, [text], allow_errors=allow_errors, into=into, snapshot=snapshot, one_entry_each=False
     )
     if dry_run:
-        seeded = ledger_write.new_include_seed(snapshot, target) + snapshot.require_target(target)
+        seeded = ledger_write.new_include_seed(snapshot, target) + snapshot.require_target(target, into=into)
         return {
             "count": len(entries),
             "target": str(target),
