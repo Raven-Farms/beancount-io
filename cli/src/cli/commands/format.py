@@ -113,9 +113,9 @@ def format_beans(
         return
 
     target = _target(paths, files)
-    # The walk modes see whole ledgers: a root stands for its include closure,
-    # and a file bean-format cannot parse is a failure rather than "already
-    # formatted". Single-file stdout output stays a plain filter.
+    # The walk modes scan the include closure together so invalid files can be
+    # skipped while valid ones are formatted. Single-file rendering checks its
+    # own text in the engine before returning anything to stdout or --output.
     failed: dict[str, list[str]] = _syntax_failures(files) if walking and files else {}
     if reporting:
         remedy = _remedy(_named(paths, ctx.file), alignment)

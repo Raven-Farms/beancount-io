@@ -84,10 +84,15 @@ def test_human_format_of_a_non_utf8_file_names_it_without_a_traceback(tmp_path: 
     assert not out.exists()
 
 
-def test_decodable_but_unparseable_text_still_formats_to_output(tmp_path: Path) -> None:
+def test_decodable_but_unparseable_text_refuses_output(tmp_path: Path) -> None:
     ledger = tmp_path / "odd.bean"
     ledger.write_text("this is not beancount\n2024-01-01 open Assets:Cash USD\n")
     out = tmp_path / "out.bean"
     result = _bea(tmp_path, "--json", "format", str(ledger), "--output", str(out))
-    assert result.returncode == 0, result.stderr
-    assert "Assets:Cash" in out.read_text()
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert result.stdout == ""
+    error = json.loads(result.stderr)["error"]
+    assert error["category"] == "validation"
+    assert f"{ledger}:1" in json.dumps(error)
+    assert not out.exists()
+    assert ledger.read_text() == "this is not beancount\n2024-01-01 open Assets:Cash USD\n"

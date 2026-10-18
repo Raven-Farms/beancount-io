@@ -23,6 +23,7 @@ and the rewrite can never disagree about what would change.
 from __future__ import annotations
 
 import sys
+import unicodedata
 from collections.abc import Callable, Iterator
 from contextlib import ExitStack
 from pathlib import Path
@@ -182,7 +183,27 @@ def _descriptors_allow(locks: int) -> bool:
 
 def render_file(file: Path, widths: tuple[int | None, int | None, int | None]) -> str:
     """The same formatted text for stdout/output as for an in-place rewrite."""
-    text = sys.stdin.read() if str(file) == "-" else _read(file)[1]
+    from beancount.parser import parser
+
+    from bea_engine.amounts import zero_divisor_line
+    from bea_engine.query import format_error
+
+    text = _universal(sys.stdin.read()) if str(file) == "-" else _read(file)[1]
+    name = "stdin" if str(file) == "-" else str(file)
+    line = zero_divisor_line(text)
+    if line is not None:
+        errors = [
+            f"{name}:{line}: Division by zero in an amount expression; Beancount's parser crashes on a "
+            "zero divisor, so this file was not parsed."
+        ]
+    else:
+        # Parse exactly the text we will align, without loading includes or
+        # executing plugins. Read NFC as every engine file parser does, while
+        # preserving the user's spelling in the formatted output.
+        _, parsed_errors, _ = parser.parse_string(unicodedata.normalize("NFC", text), report_filename=name)
+        errors = [format_error(error) for error in parsed_errors]
+    if errors:
+        raise LedgerError(f"Cannot format {name}: syntax errors; nothing was written.", details=errors)
     return _aligned(file, text, widths)
 
 

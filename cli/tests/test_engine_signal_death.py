@@ -187,16 +187,23 @@ def test_helper_commands_name_the_signal(tmp_path: Path, command: tuple[str, ...
     assert "exit -11" not in result.stderr
 
 
-@pytest.mark.parametrize("command", [("doctor", "lex"), ("format",)])
-def test_commands_that_never_parse_the_expression_still_work(tmp_path: Path, command: tuple[str, ...]) -> None:
-    """The lexer and the formatter do not evaluate arithmetic, so they must be unaffected."""
+@pytest.mark.parametrize(("command", "expected"), [(("doctor", "lex"), 0), (("format",), 1)])
+def test_non_loading_commands_handle_zero_divisors_without_crashing(
+    tmp_path: Path, command: tuple[str, ...], expected: int
+) -> None:
+    """Lexing stays usable; formatting's syntax gate refuses the expression before parsing."""
     ledger = tmp_path / "dz.bean"
     ledger.write_text(DIVIDE_BY_ZERO, encoding="utf-8")
 
     result = _bea(tmp_path, *command, str(ledger))
 
-    assert result.returncode == 0, result.stderr
-    assert result.stdout != ""
+    assert result.returncode == expected, result.stderr
+    if expected == 0:
+        assert result.stdout != ""
+    else:
+        assert result.stdout == ""
+        assert f"{ledger}:6: Division by zero" in result.stderr
+        assert "SIGSEGV" not in result.stderr
 
 
 # --- any signal death, not just this crash ------------------------------------

@@ -595,8 +595,11 @@ space (U+00A0) or ideographic space (U+3000) beside an account, say — is kept
 byte for byte under every width option, because Beancount reads that character
 as part of the name; the rest of the file is still aligned. Stdout, `-o`, and `-i` produce
 the same text; `--check` and `--dry-run` compare the exact bytes `-i` would write.
-Stdout and `-o` remain text filters that accept syntax errors; the walking modes
-check parseability as described below. Run `bea check` to validate the ledger.
+Every destination checks syntax first. Stdout and `-o` refuse malformed input
+with exit 1, naming its file (or stdin) and line, and leave the destination
+untouched. They parse only the supplied text, without loading includes or
+running plugins. The walking modes check parseability as described below.
+Run `bea check` to validate the ledger's accounts and balances.
 `-o` replaces its destination only once the whole formatted text is written: a
 write that fails part-way preserves an existing export and leaves no partial file.
 The same holds when it is stopped (SIGTERM, SIGHUP or Ctrl-C) while writing: the

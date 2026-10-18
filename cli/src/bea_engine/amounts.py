@@ -13,6 +13,23 @@ _PLAIN_DECIMAL = re.compile(r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)")
 _QUOTED_OR_COMMENT = re.compile(r'"(?:[^"\\]|\\.)*"|;[^\r\n]*')
 """Quoted strings and comments, inside which an `@@` is text, not a price."""
 
+_ZERO_DIVISOR = re.compile(r"/\s*[-+]?(?:0+(?:\.0*)?|\.0+)(?![\d.]|[A-Z0-9'._-]*[A-Z])")
+_NOT_ARITHMETIC = re.compile(r'"(?:[^"\\]|\\.)*"|;[^\n]*|^[*:#!&?%][^\n]*', re.MULTILINE)
+
+
+def zero_divisor_line(text: str) -> int | None:
+    """The first literal zero divisor in ledger text, before the parser can crash.
+
+    The frontend twin in `cli.amounts` protects batch syntax scans. This copy
+    protects text already read by the engine, including piped formatter input.
+    Strings, comments and skipped org-mode lines contain no amount arithmetic.
+    """
+    code = _NOT_ARITHMETIC.sub(lambda found: re.sub(r"[^\n]", " ", found.group()), text)
+    for number, line in enumerate(code.split("\n"), start=1):
+        if _ZERO_DIVISOR.search(line):
+            return number
+    return None
+
 
 DECIMAL_COMMA_HELP = (
     "A comma is read only as a thousands separator between groups of three digits, such as '1,538.25'; "
@@ -140,7 +157,7 @@ def refuse_zero_divisor(text: str) -> None:
     (`100/(2-2)`) is still upstream's to answer. Slash currencies such as
     /0-J need a letter in their token; /0-5 instead divides by zero.
     """
-    if re.search(r"/\s*[-+]?(?:0+(?:\.0*)?|\.0+)(?![\d.]|[A-Z0-9'._-]*[A-Z])", _QUOTED_OR_COMMENT.sub("", text)):
+    if _ZERO_DIVISOR.search(_QUOTED_OR_COMMENT.sub("", text)):
         raise ValueError(
             f"Division by zero in {text.strip()!r}. Beancount evaluates amount arithmetic while parsing, "
             "and a zero divisor crashes it outright, so bea refuses the expression instead of sending it."
