@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [651 — With an included leaf (or stdin) as input, `-o` can replace the root ledger or join its include glob, exit 0 (gap in w5/072)](./651.md)
 - [652 — `price export` maps an external include and an in-tree `_shared/01-x.bean` to one destination; snapshot fails `check`, exit 0](./652.md)
 - [653 — `add document --into` a symlinked include refuses a valid receipt (path judged at the link target)](./653.md)
 - [654 — Cwd-relative `--into` from a subdirectory gets advice to create a new include instead of the root-relative rule](./654.md)
