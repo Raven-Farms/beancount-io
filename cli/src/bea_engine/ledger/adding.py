@@ -350,34 +350,45 @@ def _balance(
         date=date, account=account, amount=Amount(number=number, currency=currency), tolerance=tolerance
     )
     pad_from = request.get("pad_from")
+    snapshot = write.LedgerSnapshot.capture(file)
+    target = write.destination(file, into)
+    snapshot.require_target(target, into=into)
+    before, errors, before_options = managed_load.load_file(file, snapshot=snapshot)
+    ledger_errors = [format_error(error, ledger_file=file) for error in errors]
+    if pad_from is None and ledger_errors and strict_read and not all("Unused Pad" in error for error in ledger_errors):
+        # A staged pad is the transient error this very write resolves:
+        # the two-step pad flow stages with --allow-errors, then completes
+        # with the balance. Anything else still gates strict callers.
+        raise _preexisting_refusal(errors, ledger_errors)
+    # A pad can make validation succeed even when the assertion is a
+    # duplicate or conflicts. Decide before either write path (w5/659).
+    match = _balance_match(before, date, account, number, currency, tolerance)
+    if match is not None:
+        snapshot.verify()
+        source = {"filename": match.meta.get("filename"), "lineno": match.meta.get("lineno")}
+        warnings = list(ledger_errors)
+        if pad_from is not None:
+            held = write.book_units(before, account, currency, date)
+            if abs(number - held) <= _balance_tolerance(match, before_options):
+                warnings.append(
+                    f"{_already_matches(held, number, currency, tolerance)}; "
+                    f"omitted the pad from --pad-from (assertion already recorded at "
+                    f"{source['filename']}:{source['lineno']})."
+                )
+        return {
+            "written": 0,
+            "directive": directive.model_dump(mode="json"),
+            "pad": None,
+            "warnings": warnings,
+            "duplicate": True,
+            "source": source,
+            "target": str(target),
+            **({"ledger_errors": ledger_errors} if pad_from is None else {}),
+        }
+    conflict = _balance_conflict(before, date, account, number, currency, tolerance)
+    if conflict is not None and not request.get("force"):
+        raise _conflict_refusal(conflict, account, date, number, currency, tolerance)
     if pad_from is None:
-        snapshot = write.LedgerSnapshot.capture(file)
-        target = write.destination(file, into)
-        snapshot.require_target(target, into=into)
-        entries, errors, _ = managed_load.load_file(file, snapshot=snapshot)
-        ledger_errors = [format_error(error, ledger_file=file) for error in errors]
-        if ledger_errors and strict_read and not all("Unused Pad" in error for error in ledger_errors):
-            # A staged pad is the transient error this very write resolves:
-            # the two-step pad flow stages with --allow-errors, then completes
-            # with the balance. Anything else still gates strict callers.
-            raise _preexisting_refusal(errors, ledger_errors)
-        match = _balance_match(entries, date, account, number, currency, tolerance)
-        if match is not None:
-            snapshot.verify()
-            source = {"filename": match.meta.get("filename"), "lineno": match.meta.get("lineno")}
-            return {
-                "written": 0,
-                "directive": directive.model_dump(mode="json"),
-                "pad": None,
-                "warnings": ledger_errors,
-                "duplicate": True,
-                "source": source,
-                "ledger_errors": ledger_errors,
-                "target": str(target),
-            }
-        conflict = _balance_conflict(entries, date, account, number, currency, tolerance)
-        if conflict is not None and not request.get("force"):
-            raise _conflict_refusal(conflict, account, date, number, currency, tolerance)
         # The snapshot the checks above read: a writer that landed since then
         # is a conflict, not a second assertion appended beside it (w5/115).
         return _appended(file, directive, allow_errors=allow_errors, into=into, snapshot=snapshot) | {"pad": None}
@@ -388,9 +399,6 @@ def _balance(
     padded = _date(request, "pad_date")
     # Read first, as the plain path does: the answer names what the pad
     # inserts, and a sign a statement prints is caught before it is padded (w5/611).
-    snapshot = write.LedgerSnapshot.capture(file)
-    snapshot.require_target(write.destination(file, into), into=into)
-    before, _, before_options = managed_load.load_file(file, snapshot=snapshot)
     held = write.book_units(before, account, currency, date)
     sign = write.negated_credit_hint(account, number, held, currency, before_options)
     if sign is not None and not request.get("force"):

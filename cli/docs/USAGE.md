@@ -1317,8 +1317,9 @@ other direction (`EUR 1.20 USD` beside `USD 0.80 EUR`, which says 1.25); with
 both on record, every read values the pair by the inverse of the direction
 quoted less often, as `bea query` does, whatever their line order. Only written price directives count: a price a plugin such as
 `implicit_prices` generates is neither a duplicate nor a conflict. `add balance` is idempotent the same way: re-running an
-identical assertion reports the existing location and writes nothing, and a
-different value for the same date, account, and currency needs `--force`
+identical assertion reports the existing location and writes nothing, including
+with `--pad-from` (no new pad is written). A different value for the same date,
+account, and currency needs `--force`
 (ledger validation still applies, so a conflicting value cannot land). Without
 an explicit `~` tolerance the number's precision sets the tolerance, so
 `10.30 USD` is a different, stricter assertion than `10.3 USD`.
