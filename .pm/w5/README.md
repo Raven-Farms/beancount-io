@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [706 — ingest extract: -e DIR ends in a traceback; -o into a read-only directory exits 1 after running, not 3](./706.md)
 - [707 — Three paths still miss w5/522's pipe statuses: --json --allow-errors exits 1, bare bea 120, native failures 141](./707.md)
 - [708 — An include glob through an unlistable directory silently drops its files; check exits 0](./708.md)
 - [709 — A mode-000 include named by two roots is reported for the first includer only](./709.md)
