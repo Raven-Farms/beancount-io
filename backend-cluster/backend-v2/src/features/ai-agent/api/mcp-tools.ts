@@ -637,7 +637,7 @@ export const MCP_TOOLS: readonly McpToolDescriptor[] = [
     title: "Create and Review Pull Requests",
     annotations: DESTRUCTIVE,
     description:
-      "Create a proposed set of file changes, approve it by merging, or reject it by closing. create requires title, description, clearCommitMessage, and changes [{path,content}]; an omitted baseBranch targets main. approve/reject require prNumber only. Reviews apply immediately.",
+      "Create a proposed set of file changes, approve it by merging, or reject it by closing. create requires title, description, clearCommitMessage, and changes [{path,content}]; an omitted baseBranch targets main. approve/reject require prNumber only. Reviews apply immediately. A repository server failure is SERVICE_UNAVAILABLE naming the failed step.",
     inputSchema: pullRequestToolInput,
     outputSchema: pullRequestToolOutput,
     execute: executePullRequestTool,

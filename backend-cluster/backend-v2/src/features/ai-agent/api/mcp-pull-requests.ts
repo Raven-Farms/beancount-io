@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { parseLedgerId } from "@/shared/str";
+import { ErrorCategory } from "@/shared/errors";
 import {
   pullRequestCreateInput,
   pullRequestResultSchema,
@@ -54,6 +55,10 @@ export async function executePullRequestTool(
     : {
         ok: false,
         error: result.message ?? "Pull request operation failed",
+        // The repository's refusal — already merged, a conflict, a write Gitea
+        // refused — is the result REST and GraphQL return as success:false.
+        // Coded, so the production mask for unexpected errors keeps it.
+        errorCode: ErrorCategory.OPERATION_NOT_ALLOWED,
         result,
       };
 }

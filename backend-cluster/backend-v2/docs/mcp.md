@@ -456,10 +456,15 @@ file statistics, and the full diff. This requires repository read authority.
 - `approve` requires `prNumber` and merges the PR.
 - `reject` requires `prNumber` and closes it without merging.
 
-Reviews apply immediately; preview is unsupported. Domain failures return
-`success: false`; MCP additionally reports `isError` and retains the domain
-payload under `structuredContent.result`. Creation can leave a branch with
-partial file changes if an upstream operation fails after branch creation.
+Reviews apply immediately; preview is unsupported. Repository refusals return
+`success: false`; MCP additionally reports `isError` with code
+`OPERATION_NOT_ALLOWED` and retains the domain payload under
+`structuredContent.result`. A create failure names the step that failed
+(`creating branch …`, `writing main.bean`, `opening the pull request`) and
+Gitea's reason when it gave one. When the repository server itself fails
+(5xx or unreachable), every surface answers `SERVICE_UNAVAILABLE` with that
+message, and its hint says whether a retry can help. A failed create deletes
+the branch it made (best effort), so no partial changes are left behind.
 Unsafe repository-relative paths are rejected before a branch is created.
 
 REST uses `/api-gateway/v1/ledgers/{owner}/{name}/pull-requests` for creation,
