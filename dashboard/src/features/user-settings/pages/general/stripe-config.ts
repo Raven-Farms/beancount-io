@@ -1,6 +1,14 @@
 /** Live billing catalog. URL query parameters never select a different tenant. */
-export type SubscriptionTier = "premium" | "growth" | "organization";
-export type BillingCycle = "monthly" | "yearly";
+export const SUBSCRIPTION_TIERS = [
+  "premium",
+  "growth",
+  "organization",
+] as const;
+export type SubscriptionTier = (typeof SUBSCRIPTION_TIERS)[number];
+export const BILLING_CYCLES = ["monthly", "yearly"] as const;
+export type BillingCycle = (typeof BILLING_CYCLES)[number];
+/** Yearly is what Billing offers first (PRFAQ005). */
+export const DEFAULT_BILLING_CYCLE: BillingCycle = "yearly";
 
 export interface TierPricing {
   monthly: string;

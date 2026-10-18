@@ -735,6 +735,11 @@ const enUserSettings: Record<string, TranslationEntry> = {
       "Your account has more than one active subscription. Contact support to change plans.",
     description: "The account has duplicate subscriptions and needs support",
   },
+  "userSettings.planChangeRefusalNoSubscription": {
+    message:
+      "There is no active subscription to change. Refresh the page to choose a plan.",
+    description: "The subscription ended before the change was confirmed",
+  },
   "userSettings.planChangeRequiresAction": {
     message:
       "Your bank needs to approve this payment. Nothing changes until it does; after approving, refresh this page.",

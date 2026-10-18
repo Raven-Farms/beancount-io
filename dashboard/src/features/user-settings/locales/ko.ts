@@ -724,6 +724,11 @@ const koUserSettings: Record<string, TranslationEntry> = {
       "계정에 활성 구독이 두 개 이상 있습니다. 플랜을 변경하려면 지원팀에 문의하세요.",
     description: "The account has duplicate subscriptions and needs support",
   },
+  "userSettings.planChangeRefusalNoSubscription": {
+    message:
+      "변경할 활성 구독이 없습니다. 페이지를 새로고침한 후 플랜을 선택하세요.",
+    description: "The subscription ended before the change was confirmed",
+  },
   "userSettings.planChangeRequiresAction": {
     message:
       "은행에서 이 결제를 승인해야 합니다. 승인 전에는 아무것도 바뀌지 않습니다. 승인한 후 이 페이지를 새로고침하세요.",

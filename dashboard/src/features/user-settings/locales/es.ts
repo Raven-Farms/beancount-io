@@ -753,6 +753,11 @@ const esUserSettings: Record<string, TranslationEntry> = {
       "Tu cuenta tiene más de una suscripción activa. Contacta con soporte para cambiar de plan.",
     description: "The account has duplicate subscriptions and needs support",
   },
+  "userSettings.planChangeRefusalNoSubscription": {
+    message:
+      "No hay ninguna suscripción activa que cambiar. Actualiza la página para elegir un plan.",
+    description: "The subscription ended before the change was confirmed",
+  },
   "userSettings.planChangeRequiresAction": {
     message:
       "Tu banco tiene que aprobar este pago. No cambia nada hasta entonces; después de aprobarlo, actualiza esta página.",

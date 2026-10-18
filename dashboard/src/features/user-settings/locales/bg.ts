@@ -743,6 +743,11 @@ const bgUserSettings: Record<string, TranslationEntry> = {
       "Акаунтът ви има повече от един активен абонамент. Свържете се с поддръжката, за да смените плана.",
     description: "The account has duplicate subscriptions and needs support",
   },
+  "userSettings.planChangeRefusalNoSubscription": {
+    message:
+      "Няма активен абонамент за промяна. Презаредете страницата, за да изберете план.",
+    description: "The subscription ended before the change was confirmed",
+  },
   "userSettings.planChangeRequiresAction": {
     message:
       "Банката ви трябва да одобри това плащане. Нищо не се променя преди това; след одобрението обновете страницата.",

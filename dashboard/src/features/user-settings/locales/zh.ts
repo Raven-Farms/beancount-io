@@ -719,6 +719,10 @@ const zhUserSettings: Record<string, TranslationEntry> = {
     message: "你的账户有多个有效订阅。请联系支持团队更改计划。",
     description: "The account has duplicate subscriptions and needs support",
   },
+  "userSettings.planChangeRefusalNoSubscription": {
+    message: "没有可更改的有效订阅。请刷新页面并选择一个计划。",
+    description: "The subscription ended before the change was confirmed",
+  },
   "userSettings.planChangeRequiresAction": {
     message:
       "你的银行需要批准此付款。批准前不会有任何变更；批准后请刷新此页面。",

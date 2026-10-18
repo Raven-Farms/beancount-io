@@ -24,8 +24,8 @@ vi.mock("@/common/hooks/use-is-authenticated", () => ({
   useIsAuthenticated: () => mockIsAuthenticated(),
 }));
 
-vi.mock("@/common/hooks/use-login-next-path", () => ({
-  useLoginNextPath: () => mockNextPath(),
+vi.mock("@/common/hooks/use-safe-return-path", () => ({
+  useSafeReturnPath: () => mockNextPath(),
 }));
 
 vi.mock("@/common/hooks/use-translations", () => ({

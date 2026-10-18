@@ -88,7 +88,7 @@ export function LedgerForm({
   hideLimitIndicator = false,
 }: LedgerFormProps) {
   const { t } = useTranslations();
-  const { limits, isAtLedgerLimit } = useUserLimits();
+  const { limits, tier, isAtLedgerLimit } = useUserLimits();
 
   const ledgerFormSchema = useMemo(() => createLedgerFormSchema(t), [t]);
   type LedgerFormData = z.infer<typeof ledgerFormSchema>;
@@ -166,6 +166,7 @@ export function LedgerForm({
               used={limits.ledgersUsed}
               max={limits.ledgersMax}
               limitType="ledgers"
+              tier={tier}
               variant="alert"
             />
           ) : null}

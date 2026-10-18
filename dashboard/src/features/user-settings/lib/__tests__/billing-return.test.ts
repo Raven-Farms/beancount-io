@@ -38,4 +38,27 @@ describe("billing search", () => {
       return: undefined,
     });
   });
+
+  it("reads a deep link's plan and cycle, and drops values it does not know", () => {
+    expect(
+      billingSearchSchema.parse({
+        plan: "Growth",
+        billing: "YEARLY",
+        from: "ai_cfo_panel",
+        return: "/ledger/alice/books",
+      }),
+    ).toMatchObject({
+      plan: "growth",
+      billing: "yearly",
+      from: "ai_cfo_panel",
+      return: "/ledger/alice/books",
+    });
+    expect(
+      billingSearchSchema.parse({
+        plan: "platinum",
+        billing: "weekly",
+        return: "https://evil.example/x",
+      }),
+    ).toMatchObject({ plan: undefined, billing: undefined, return: undefined });
+  });
 });

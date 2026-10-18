@@ -1,30 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { AiCfoUpgradePanel } from "../ai-cfo-upgrade-panel";
+import { TEST_LOCATION_HREF } from "@/test/mocks/router";
 
 const { mockTrack } = vi.hoisted(() => ({ mockTrack: vi.fn() }));
 
-vi.mock("@tanstack/react-router", () => ({
-  Link: ({
-    children,
-    to,
-    onClick,
-  }: {
-    children: React.ReactNode;
-    to: string;
-    onClick?: () => void;
-  }) => (
-    <a
-      href={to}
-      onClick={(event) => {
-        event.preventDefault();
-        onClick?.();
-      }}
-    >
-      {children}
-    </a>
-  ),
-}));
+vi.mock("@tanstack/react-router", async () => {
+  const { routerMock } = await import("@/test/mocks/router");
+  return routerMock;
+});
 
 vi.mock("@/common/analytics", () => ({ track: mockTrack }));
 
@@ -289,15 +273,21 @@ describe("AiCfoUpgradePanel", () => {
     expect(upgradeButtons).toHaveLength(3);
   });
 
-  it("should route upgrade links to subscription settings", () => {
+  it("opens each card's plan on Billing at the monthly price it quotes, with the way back", () => {
     setMocks("FREE", 9, 10);
 
     render(<AiCfoUpgradePanel />);
 
-    expect(screen.getAllByRole("link", { name: "Upgrade" })).toHaveLength(3);
-    for (const link of screen.getAllByRole("link", { name: "Upgrade" })) {
-      expect(link).toHaveAttribute("href", "/settings/general");
-    }
+    const hrefs = screen
+      .getAllByRole("link", { name: "Upgrade" })
+      .map((link) => link.getAttribute("href"));
+    const back = encodeURIComponent(TEST_LOCATION_HREF);
+    expect(hrefs).toEqual(
+      ["premium", "growth", "organization"].map(
+        (plan) =>
+          `/settings/billing?plan=${plan}&billing=monthly&from=ai_cfo_panel&return=${back}`,
+      ),
+    );
   });
 
   it("should track the selected target tier when an upgrade link is clicked", () => {

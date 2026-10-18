@@ -742,6 +742,11 @@ const nlUserSettings: Record<string, TranslationEntry> = {
       "Je account heeft meer dan één actief abonnement. Neem contact op met support om van abonnement te wisselen.",
     description: "The account has duplicate subscriptions and needs support",
   },
+  "userSettings.planChangeRefusalNoSubscription": {
+    message:
+      "Er is geen actief abonnement om te wijzigen. Vernieuw de pagina om een abonnement te kiezen.",
+    description: "The subscription ended before the change was confirmed",
+  },
   "userSettings.planChangeRequiresAction": {
     message:
       "Je bank moet deze betaling goedkeuren. Tot dan verandert er niets; vernieuw deze pagina na de goedkeuring.",

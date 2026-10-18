@@ -6,7 +6,7 @@ import { useUnstarLedger } from "./use-unstar-ledger";
 import { useState, useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useIsAuthenticated } from "@/common/hooks/use-is-authenticated";
-import { useLoginNextPath } from "@/common/hooks/use-login-next-path";
+import { useSafeReturnPath } from "@/common/hooks/use-safe-return-path";
 import { useTranslations } from "@/common/hooks/use-translations";
 
 interface StarButtonProps {
@@ -30,7 +30,7 @@ export function StarButton({
   const { unstarLedger, loading: unstarLoading } = useUnstarLedger(ledgerId);
   const [localIsStarred, setLocalIsStarred] = useState(initialIsStarred);
   const isUserAuthenticated = useIsAuthenticated();
-  const next = useLoginNextPath();
+  const next = useSafeReturnPath();
 
   // Sync local state with prop when it changes (e.g., after refetch)
   useEffect(() => {

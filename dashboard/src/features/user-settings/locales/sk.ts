@@ -758,6 +758,11 @@ const skUserSettings: Record<string, TranslationEntry> = {
       "Váš účet má viac ako jedno aktívne predplatné. Ak chcete zmeniť plán, kontaktujte podporu.",
     description: "The account has duplicate subscriptions and needs support",
   },
+  "userSettings.planChangeRefusalNoSubscription": {
+    message:
+      "Nemáte aktívne predplatné, ktoré by sa dalo zmeniť. Obnovte stránku a vyberte si plán.",
+    description: "The subscription ended before the change was confirmed",
+  },
   "userSettings.planChangeRequiresAction": {
     message:
       "Vaša banka musí túto platbu schváliť. Dovtedy sa nič nezmení; po schválení obnovte túto stránku.",

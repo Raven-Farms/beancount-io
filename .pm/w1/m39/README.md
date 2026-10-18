@@ -2,7 +2,7 @@
 
 **Worker:** worker1
 **Goal:** A subscriber can preview and confirm any upgrade or monthly-to-yearly switch from Billing settings, pay exactly the amount shown, approve bank authentication without leaving the page, and land on a confirmation after Checkout.
-**Status:** todo (t001, t002, t006, t007, t008 done; t003 part 1 shipped and blocked on an analytics question; t004 blocked on the operator)
+**Status:** todo (t001, t002, t006, t007, t008, t009 done; t003 part 1 shipped and blocked on an analytics question; t004 blocked on the operator)
 
 ## Source + Goal linkage
 
@@ -51,7 +51,7 @@ This milestone ships before that page changes, so every task keeps that contract
 | t006 | Billing settings tab: plan summary, "Pay yearly" line and every-tier plan row — **DONE** | 45m | t001 |
 | t007 | Change sheet for upgrades and switches to yearly, with in-place bank authentication — **DONE** | 50m | t002, t006 |
 | t008 | Confirmation after Checkout — **DONE** | 30m | t006 |
-| t009 | Deep links and in-product upgrade prompts open a prefilled change sheet | 35m | t007 |
+| t009 | Deep links and in-product upgrade prompts open a prefilled change sheet — **DONE** | 35m | t007 |
 | t010 | Plan-change analytics events and a server-side purchase event | 40m | t007, t008 |
 | t011 | Verify adoption surfaces for the billing changes | 20m | t005, t009, t010 |
 | t012 | Run `/simplify` over the milestone diff | 25m | t011 |

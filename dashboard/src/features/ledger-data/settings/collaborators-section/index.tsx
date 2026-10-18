@@ -42,7 +42,7 @@ export function CollaboratorsSection({ ledgerId }: { ledgerId: string }) {
   const { t } = useTranslations();
   const formatError = useErrorMessage();
   const navigate = useNavigate();
-  const { limits } = useUserLimits();
+  const { limits, tier } = useUserLimits();
 
   const {
     data: collaboratorsData,
@@ -137,6 +137,7 @@ export function CollaboratorsSection({ ledgerId }: { ledgerId: string }) {
               used={collaborators.length}
               max={limits.collaboratorsPerLedgerMax}
               limitType="collaborators"
+              tier={tier}
               variant="alert"
             />
           )}

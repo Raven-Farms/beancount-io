@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { SubscriptionSection } from "../subscription-section";
+import { stripePlanConfig } from "../stripe-config";
 import {
   MOCK_TIER_QUOTAS,
   mockActiveSubscriptionData,
@@ -448,8 +449,88 @@ describe("Plan change through the sheet", () => {
       expect(refetchUserLimits).toHaveBeenCalled();
       expect(mockToastSuccess).toHaveBeenCalledWith(
         "userSettings.subscriptionUpgraded",
+        undefined,
       );
     });
+  });
+
+  it("opens on a deep link's plan and offers the way back once the change lands", async () => {
+    mockChangePlan.mockResolvedValue({
+      data: { changePlan: { status: "ACTIVE", newTier: "GROWTH" } },
+    });
+    const user = userEvent.setup();
+    render(
+      <SubscriptionSection
+        initialTarget={{ tier: "growth", cycle: "monthly" }}
+        returnTo="/ledger/alice/books"
+      />,
+    );
+
+    expect(
+      screen.getByText("userSettings.planChangeTitle"),
+    ).toBeInTheDocument();
+    expect(mockRunPreview).toHaveBeenCalledWith({
+      variables: { clientId: "beancount-web-prod", priceId: GROWTH_MONTHLY },
+    });
+    await user.click(
+      screen.getByRole("button", {
+        name: "userSettings.planChangePayAndSwitch",
+      }),
+    );
+
+    await waitFor(() =>
+      expect(mockToastSuccess).toHaveBeenCalledWith(
+        "userSettings.subscriptionUpgraded",
+        {
+          action: {
+            label: "userSettings.backToWork",
+            onClick: expect.any(Function),
+          },
+        },
+      ),
+    );
+  });
+
+  it("says a change that waits for renewal is coming soon instead of confirming it", () => {
+    mockPreviewState.value = {
+      data: {
+        previewPlanChange: {
+          ...UPGRADE_PREVIEW.previewPlanChange,
+          kind: "DOWNGRADE",
+          effect: "SCHEDULED",
+          targetPriceId: stripePlanConfig.premium.yearly,
+          amountDueToday: 0,
+        },
+      },
+      loading: false,
+      error: undefined,
+    };
+    setUserLimits("GROWTH", {
+      aiCfoTokensUsed: 50,
+      aiCfoTokensMax: 100,
+      ledgersUsed: 2,
+      ledgersMax: 5,
+      collaboratorsPerLedgerMax: 5,
+    });
+
+    render(
+      <SubscriptionSection
+        initialTarget={{ tier: "premium", cycle: "yearly" }}
+      />,
+    );
+
+    const sheet = screen
+      .getByText("userSettings.planChangeTitle")
+      .closest<HTMLElement>('[data-testid="dialog-content"]');
+    if (!sheet) throw new Error("change sheet missing");
+    expect(
+      within(sheet).getByText("userSettings.renewalChangesComingSoon"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", {
+        name: "userSettings.planChangePayAndSwitch",
+      }),
+    ).not.toBeInTheDocument();
   });
 
   it("sends a payment the bank must approve to Stripe's page instead of calling it done", async () => {

@@ -761,6 +761,11 @@ const ukUserSettings: Record<string, TranslationEntry> = {
       "Ваш обліковий запис має кілька активних підписок. Зверніться до підтримки, щоб змінити тариф.",
     description: "The account has duplicate subscriptions and needs support",
   },
+  "userSettings.planChangeRefusalNoSubscription": {
+    message:
+      "Немає активної підписки для зміни. Оновіть сторінку, щоб вибрати тариф.",
+    description: "The subscription ended before the change was confirmed",
+  },
   "userSettings.planChangeRequiresAction": {
     message:
       "Ваш банк має підтвердити цей платіж. До того нічого не зміниться; після підтвердження оновіть сторінку.",

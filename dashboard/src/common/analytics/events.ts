@@ -49,6 +49,14 @@ export type ReportExportFailure =
 /** Subscription tier. Mirrors UserTier so it stays in sync with billing. */
 export type PlanTier = UserTier;
 
+/** The in-product prompts that open Billing on a recommended plan. */
+export type UpgradeSurface =
+  | "ai_cfo_panel"
+  | "importer_paywall"
+  | "ledgers_limit"
+  | "collaborators_limit"
+  | "directive_usage";
+
 /**
  * Standard parameters that may accompany any event. Attach whatever is in
  * scope at the call site.
@@ -160,17 +168,16 @@ export interface AnalyticsEvents {
   // --- Monetization ---
   /**
    * A user clicked an "Upgrade" CTA that surfaces subscription intent at a
-   * friction point and routes to the billing page (`/settings/general`) rather
-   * than starting checkout inline: the AI-CFO usage panel, the importer premium
-   * paywall, the collaborators/ledger limit walls, and the sidebar
-   * directive-usage nudge. Captures intent at the moment of interest —
-   * independent of whether a checkout is ever started — so it measures the top
-   * of the monetization funnel (which friction points drive upgrade interest).
-   * Always pair with `surface`; `target_tier` is attached when the CTA points at
-   * a specific plan (the AI-CFO cards, the importer's Premium upsell) and omitted
-   * for the generic limit nudges that just open the billing page.
+   * friction point and opens the billing page's change sheet on a recommended
+   * plan (`/settings/billing?plan=…&from=<surface>`) rather than starting
+   * checkout inline: the AI-CFO usage panel, the importer premium paywall, the
+   * collaborators/ledger limit walls, and the sidebar directive-usage nudge.
+   * Captures intent at the moment of interest — independent of whether a
+   * checkout is ever started — so it measures the top of the monetization
+   * funnel (which friction points drive upgrade interest). `target_tier` is the
+   * recommended plan, omitted only when no tier is above the user's.
    */
-  upgrade_prompt_clicked: { target_tier?: PlanTier };
+  upgrade_prompt_clicked: { surface: UpgradeSurface; target_tier?: PlanTier };
   /**
    * A new (free-tier) subscriber started Stripe Checkout from the billing page's
    * plan cards (`subscription-upgrade-cards.tsx`, settings › subscription). Fired

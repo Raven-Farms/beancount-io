@@ -1,14 +1,14 @@
 import { memo } from "react";
 import { useQuery } from "@apollo/client/react";
 import { Gauge } from "lucide-react";
-import { Link } from "@tanstack/react-router";
 import { GetLedgerEntriesCountPerTypeDocument } from "@/graphql/definitions.ts";
 import { Button } from "@/common/components/ui/button.tsx";
-import { track } from "@/common/analytics";
 import { useTranslations } from "@/common/hooks/use-translations.ts";
 import { useUserLimits } from "@/common/hooks/use-user-limits.ts";
 import { useReactNativeContext } from "@/common/providers/react-native-bridge-provider/react-native-bridge-context";
 import { cn } from "@/common/lib/utils/utils.ts";
+import { UpgradePromptLink } from "@/common/components/upgrade-prompt-link";
+import { getNextTier } from "@/common/lib/subscription/tier-config";
 
 /**
  * Directive-usage indicator for the ledger sidebar footer. Shows how many
@@ -30,7 +30,7 @@ export const DirectiveUsageIndicator = memo(
   ({ ledgerId }: { ledgerId: string }) => {
     const { t } = useTranslations();
     const { isReactNative } = useReactNativeContext();
-    const { limits } = useUserLimits();
+    const { limits, tier } = useUserLimits();
 
     const { data, loading } = useQuery(GetLedgerEntriesCountPerTypeDocument, {
       variables: { ledgerId },
@@ -84,16 +84,12 @@ export const DirectiveUsageIndicator = memo(
                 )}
               </span>
               <Button variant="default" size="sm" asChild className="w-full">
-                <Link
-                  to="/settings/general"
-                  onClick={() =>
-                    track("upgrade_prompt_clicked", {
-                      surface: "directive_usage",
-                    })
-                  }
+                <UpgradePromptLink
+                  surface="directive_usage"
+                  plan={getNextTier(tier)}
                 >
                   {t("common.upgradeToPro")}
-                </Link>
+                </UpgradePromptLink>
               </Button>
             </div>
           )}

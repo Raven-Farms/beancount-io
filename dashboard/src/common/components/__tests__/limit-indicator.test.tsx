@@ -1,13 +1,12 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { LimitIndicator } from "../limit-indicator";
+import { TEST_LOCATION_HREF } from "@/test/mocks/router";
 
-// Mock the Link component from @tanstack/react-router
-vi.mock("@tanstack/react-router", () => ({
-  Link: ({ to, children }: { to: string; children: React.ReactNode }) => (
-    <a href={to}>{children}</a>
-  ),
-}));
+vi.mock("@tanstack/react-router", async () => {
+  const { routerMock } = await import("@/test/mocks/router");
+  return routerMock;
+});
 
 // Mock ReactNativeBridgeProvider context
 const mockUseReactNativeContext = vi.fn();
@@ -45,6 +44,7 @@ describe("LimitIndicator", () => {
     it("should render as badge variant when specified", () => {
       render(
         <LimitIndicator
+          tier="FREE"
           used={3}
           max={10}
           limitType="ledgers"
@@ -58,6 +58,7 @@ describe("LimitIndicator", () => {
     it("should show secondary variant for low usage (under 70%)", () => {
       const { container } = render(
         <LimitIndicator
+          tier="FREE"
           used={5}
           max={10}
           limitType="ledgers"
@@ -73,6 +74,7 @@ describe("LimitIndicator", () => {
     it("should show destructive variant when at 90% usage", () => {
       const { container } = render(
         <LimitIndicator
+          tier="FREE"
           used={9}
           max={10}
           limitType="ledgers"
@@ -87,6 +89,7 @@ describe("LimitIndicator", () => {
     it("should show destructive variant when at 100% usage", () => {
       render(
         <LimitIndicator
+          tier="FREE"
           used={10}
           max={10}
           limitType="ledgers"
@@ -100,67 +103,113 @@ describe("LimitIndicator", () => {
 
   describe("Alert variant (default)", () => {
     it("should render as alert by default", () => {
-      render(<LimitIndicator used={5} max={10} limitType="ledgers" />);
+      render(
+        <LimitIndicator tier="FREE" used={5} max={10} limitType="ledgers" />,
+      );
 
       const alert = screen.getByRole("alert");
       expect(alert).toBeInTheDocument();
     });
 
     it("should show normal title when not at limit", () => {
-      render(<LimitIndicator used={5} max={10} limitType="ledgers" />);
+      render(
+        <LimitIndicator tier="FREE" used={5} max={10} limitType="ledgers" />,
+      );
 
       // Title key for normal ledger limit (singular: "Ledger Limit")
       expect(screen.getByText("Ledger Limit")).toBeInTheDocument();
     });
 
     it("should show reached title when at limit", () => {
-      render(<LimitIndicator used={10} max={10} limitType="ledgers" />);
+      render(
+        <LimitIndicator tier="FREE" used={10} max={10} limitType="ledgers" />,
+      );
 
       expect(screen.getByText("Ledger Limit Reached")).toBeInTheDocument();
     });
 
     it("should show usage count in alert", () => {
-      render(<LimitIndicator used={7} max={10} limitType="ledgers" />);
+      render(
+        <LimitIndicator tier="FREE" used={7} max={10} limitType="ledgers" />,
+      );
 
       expect(screen.getByText(/7 \/ 10 ledgers/)).toBeInTheDocument();
     });
 
     it("should show upgrade button when near limit (70% or more)", () => {
-      render(<LimitIndicator used={7} max={10} limitType="ledgers" />);
+      render(
+        <LimitIndicator tier="FREE" used={7} max={10} limitType="ledgers" />,
+      );
 
       expect(screen.getByText("Upgrade to unlock")).toBeInTheDocument();
     });
 
     it("should not show upgrade button when under 70%", () => {
-      render(<LimitIndicator used={5} max={10} limitType="ledgers" />);
+      render(
+        <LimitIndicator tier="FREE" used={5} max={10} limitType="ledgers" />,
+      );
 
       expect(screen.queryByText("Upgrade to unlock")).not.toBeInTheDocument();
     });
 
     it("should show upgrade button when at limit", () => {
-      render(<LimitIndicator used={10} max={10} limitType="ledgers" />);
+      render(
+        <LimitIndicator tier="FREE" used={10} max={10} limitType="ledgers" />,
+      );
 
       expect(screen.getByText("Upgrade to unlock")).toBeInTheDocument();
     });
 
     it("should show near limit message when near but not at limit", () => {
-      render(<LimitIndicator used={8} max={10} limitType="ledgers" />);
+      render(
+        <LimitIndicator tier="FREE" used={8} max={10} limitType="ledgers" />,
+      );
 
       expect(screen.getByText(/near limit/)).toBeInTheDocument();
     });
 
     it("should not show near limit message when at 100%", () => {
-      render(<LimitIndicator used={10} max={10} limitType="ledgers" />);
+      render(
+        <LimitIndicator tier="FREE" used={10} max={10} limitType="ledgers" />,
+      );
 
       // Should NOT show "near limit" message when at limit
       expect(screen.queryByText(/near limit/)).not.toBeInTheDocument();
     });
 
-    it("should link to settings page for upgrade", () => {
-      render(<LimitIndicator used={8} max={10} limitType="ledgers" />);
+    it.each([
+      ["FREE", "premium"],
+      ["PREMIUM", "growth"],
+      ["GROWTH", "organization"],
+    ] as const)(
+      "opens the next tier up from %s on Billing, with the way back",
+      (tier, plan) => {
+        render(
+          <LimitIndicator tier={tier} used={8} max={10} limitType="ledgers" />,
+        );
 
-      const upgradeLink = screen.getByRole("link", { name: /upgrade/i });
-      expect(upgradeLink).toHaveAttribute("href", "/settings/general");
+        const upgradeLink = screen.getByRole("link", { name: /upgrade/i });
+        expect(upgradeLink).toHaveAttribute(
+          "href",
+          `/settings/billing?plan=${plan}&billing=yearly&from=ledgers_limit&return=${encodeURIComponent(TEST_LOCATION_HREF)}`,
+        );
+      },
+    );
+
+    it("opens Billing without a plan when no tier is above", () => {
+      render(
+        <LimitIndicator
+          tier="ORGANIZATION"
+          used={8}
+          max={10}
+          limitType="collaborators"
+        />,
+      );
+
+      expect(screen.getByRole("link", { name: /upgrade/i })).toHaveAttribute(
+        "href",
+        `/settings/billing?from=collaborators_limit&return=${encodeURIComponent(TEST_LOCATION_HREF)}`,
+      );
     });
   });
 
@@ -168,6 +217,7 @@ describe("LimitIndicator", () => {
     it("should show collaborators limit text in badge", () => {
       render(
         <LimitIndicator
+          tier="FREE"
           used={3}
           max={5}
           limitType="collaborators"
@@ -179,14 +229,28 @@ describe("LimitIndicator", () => {
     });
 
     it("should show collaborators limit title in alert", () => {
-      render(<LimitIndicator used={3} max={5} limitType="collaborators" />);
+      render(
+        <LimitIndicator
+          tier="FREE"
+          used={3}
+          max={5}
+          limitType="collaborators"
+        />,
+      );
 
       // Singular: "Collaborator Limit"
       expect(screen.getByText("Collaborator Limit")).toBeInTheDocument();
     });
 
     it("should show collaborators limit reached title when at limit", () => {
-      render(<LimitIndicator used={5} max={5} limitType="collaborators" />);
+      render(
+        <LimitIndicator
+          tier="FREE"
+          used={5}
+          max={5}
+          limitType="collaborators"
+        />,
+      );
 
       expect(
         screen.getByText("Collaborator Limit Reached"),
@@ -198,14 +262,18 @@ describe("LimitIndicator", () => {
     it("should handle zero max gracefully (prevents division by zero)", () => {
       // This would cause percentage to be Infinity if max is 0
       // The component should handle this edge case
-      render(<LimitIndicator used={0} max={0} limitType="ledgers" />);
+      render(
+        <LimitIndicator tier="FREE" used={0} max={0} limitType="ledgers" />,
+      );
 
       // Should render without crashing
       expect(screen.getByRole("alert")).toBeInTheDocument();
     });
 
     it("should handle used greater than max", () => {
-      render(<LimitIndicator used={15} max={10} limitType="ledgers" />);
+      render(
+        <LimitIndicator tier="FREE" used={15} max={10} limitType="ledgers" />,
+      );
 
       // Should show at limit state
       expect(screen.getByText("Ledger Limit Reached")).toBeInTheDocument();
@@ -215,7 +283,9 @@ describe("LimitIndicator", () => {
   describe("React Native WebView", () => {
     it("should not show upgrade button when in React Native webview (at 70% usage)", () => {
       mockUseReactNativeContext.mockReturnValue({ isReactNative: true });
-      render(<LimitIndicator used={7} max={10} limitType="ledgers" />);
+      render(
+        <LimitIndicator tier="FREE" used={7} max={10} limitType="ledgers" />,
+      );
 
       // Should show limit warning
       expect(screen.getByText(/7 \/ 10 ledgers/)).toBeInTheDocument();
@@ -227,7 +297,9 @@ describe("LimitIndicator", () => {
 
     it("should not show upgrade button when in React Native webview (at 100% usage)", () => {
       mockUseReactNativeContext.mockReturnValue({ isReactNative: true });
-      render(<LimitIndicator used={10} max={10} limitType="ledgers" />);
+      render(
+        <LimitIndicator tier="FREE" used={10} max={10} limitType="ledgers" />,
+      );
 
       // Should show at limit state
       expect(screen.getByText("Ledger Limit Reached")).toBeInTheDocument();
@@ -239,7 +311,9 @@ describe("LimitIndicator", () => {
 
     it("should show upgrade button in web browser when near limit", () => {
       mockUseReactNativeContext.mockReturnValue({ isReactNative: false });
-      render(<LimitIndicator used={8} max={10} limitType="ledgers" />);
+      render(
+        <LimitIndicator tier="FREE" used={8} max={10} limitType="ledgers" />,
+      );
 
       // Should show upgrade button in web
       expect(screen.getByText("Upgrade to unlock")).toBeInTheDocument();
@@ -247,20 +321,31 @@ describe("LimitIndicator", () => {
 
     it("should not show upgrade button when under 70% regardless of context", () => {
       mockUseReactNativeContext.mockReturnValue({ isReactNative: true });
-      render(<LimitIndicator used={5} max={10} limitType="ledgers" />);
+      render(
+        <LimitIndicator tier="FREE" used={5} max={10} limitType="ledgers" />,
+      );
 
       // Under 70%, no upgrade button in any context
       expect(screen.queryByText("Upgrade to unlock")).not.toBeInTheDocument();
 
       // Same in web
       mockUseReactNativeContext.mockReturnValue({ isReactNative: false });
-      render(<LimitIndicator used={5} max={10} limitType="ledgers" />);
+      render(
+        <LimitIndicator tier="FREE" used={5} max={10} limitType="ledgers" />,
+      );
       expect(screen.queryByText("Upgrade to unlock")).not.toBeInTheDocument();
     });
 
     it("should hide upgrade button for collaborators limit in React Native", () => {
       mockUseReactNativeContext.mockReturnValue({ isReactNative: true });
-      render(<LimitIndicator used={4} max={5} limitType="collaborators" />);
+      render(
+        <LimitIndicator
+          tier="FREE"
+          used={4}
+          max={5}
+          limitType="collaborators"
+        />,
+      );
 
       // Should show limit info
       expect(screen.getByText(/4 \/ 5 collaborators/)).toBeInTheDocument();
@@ -271,7 +356,14 @@ describe("LimitIndicator", () => {
 
     it("should show upgrade button for collaborators limit in web browser", () => {
       mockUseReactNativeContext.mockReturnValue({ isReactNative: false });
-      render(<LimitIndicator used={4} max={5} limitType="collaborators" />);
+      render(
+        <LimitIndicator
+          tier="FREE"
+          used={4}
+          max={5}
+          limitType="collaborators"
+        />,
+      );
 
       // Should show upgrade button in web
       expect(screen.getByText("Upgrade to unlock")).toBeInTheDocument();
@@ -281,6 +373,7 @@ describe("LimitIndicator", () => {
       mockUseReactNativeContext.mockReturnValue({ isReactNative: true });
       render(
         <LimitIndicator
+          tier="FREE"
           used={8}
           max={10}
           limitType="ledgers"
@@ -295,7 +388,9 @@ describe("LimitIndicator", () => {
 
     it("should still show alert role in React Native", () => {
       mockUseReactNativeContext.mockReturnValue({ isReactNative: true });
-      render(<LimitIndicator used={9} max={10} limitType="ledgers" />);
+      render(
+        <LimitIndicator tier="FREE" used={9} max={10} limitType="ledgers" />,
+      );
 
       // Alert should still be rendered
       const alert = screen.getByRole("alert");
@@ -307,7 +402,9 @@ describe("LimitIndicator", () => {
 
     it("should show all limit info except upgrade button in React Native", () => {
       mockUseReactNativeContext.mockReturnValue({ isReactNative: true });
-      render(<LimitIndicator used={8} max={10} limitType="ledgers" />);
+      render(
+        <LimitIndicator tier="FREE" used={8} max={10} limitType="ledgers" />,
+      );
 
       // Should show title
       expect(screen.getByText("Ledger Limit")).toBeInTheDocument();

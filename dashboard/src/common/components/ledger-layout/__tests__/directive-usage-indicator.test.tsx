@@ -13,20 +13,13 @@ vi.mock("@apollo/client/react", () => ({
   useQuery: (...args: unknown[]) => mockUseQuery(...args),
 }));
 
-vi.mock("@tanstack/react-router", () => ({
-  Link: ({
-    to,
-    children,
-    ...props
-  }: React.ComponentProps<"a"> & { to: string }) => (
-    <a href={to} {...props}>
-      {children}
-    </a>
-  ),
-}));
+vi.mock("@tanstack/react-router", async () => {
+  const { routerMock } = await import("@/test/mocks/router");
+  return routerMock;
+});
 
 vi.mock("@/common/hooks/use-user-limits.ts", () => ({
-  useUserLimits: () => ({ limits: mockLimits.current }),
+  useUserLimits: () => ({ limits: mockLimits.current, tier: "FREE" }),
 }));
 
 vi.mock(
@@ -41,6 +34,7 @@ vi.mock("@/common/analytics", () => ({
 }));
 
 import { DirectiveUsageIndicator } from "../directive-usage-indicator";
+import { TEST_LOCATION_HREF } from "@/test/mocks/router";
 
 const counted = [
   { type: "Transaction", number: 2000 },
@@ -112,5 +106,23 @@ describe("DirectiveUsageIndicator", () => {
     );
 
     expect(container).toBeEmptyDOMElement();
+  });
+
+  it("opens Premium yearly on Billing near the cap, with the way back", () => {
+    mockUseQuery.mockReturnValue({
+      data: {
+        getLedgerEntriesCountPerType: [{ type: "Transaction", number: 4600 }],
+      },
+      loading: false,
+    });
+
+    render(<DirectiveUsageIndicator ledgerId="owner/ledger" />);
+
+    expect(
+      screen.getByRole("link", { name: "Upgrade to Pro" }),
+    ).toHaveAttribute(
+      "href",
+      `/settings/billing?plan=premium&billing=yearly&from=directive_usage&return=${encodeURIComponent(TEST_LOCATION_HREF)}`,
+    );
   });
 });

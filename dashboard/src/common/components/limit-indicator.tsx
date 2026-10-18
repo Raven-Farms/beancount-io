@@ -2,15 +2,18 @@ import { Badge } from "@/common/components/ui/badge";
 import { AlertCircle, Crown } from "lucide-react";
 import { Button } from "@/common/components/ui/button";
 import { useTranslations } from "@/common/hooks/use-translations";
-import { track } from "@/common/analytics";
-import { Link } from "@tanstack/react-router";
 import { cn } from "@/common/lib/utils/utils";
+import type { UserTier } from "@/common/hooks/use-user-limits";
+import { UpgradePromptLink } from "@/common/components/upgrade-prompt-link";
+import { getNextTier } from "@/common/lib/subscription/tier-config";
 import { useReactNativeContext } from "@/common/providers/react-native-bridge-provider/react-native-bridge-context";
 
 interface LimitIndicatorProps {
   used: number;
   max: number;
   limitType: "ledgers" | "collaborators";
+  /** The user's tier, which the parent already has; the prompt offers the next. */
+  tier: UserTier;
   variant?: "alert" | "badge";
 }
 
@@ -30,6 +33,7 @@ export function LimitIndicator({
   used,
   max,
   limitType,
+  tier,
   variant = "alert",
 }: LimitIndicatorProps) {
   const { t } = useTranslations();
@@ -89,16 +93,12 @@ export function LimitIndicator({
         </div>
         {isNearLimit && !isReactNative && (
           <Button variant="default" size="sm" asChild>
-            <Link
-              to="/settings/general"
-              onClick={() =>
-                track("upgrade_prompt_clicked", {
-                  surface: `${limitType}_limit`,
-                })
-              }
+            <UpgradePromptLink
+              surface={`${limitType}_limit`}
+              plan={getNextTier(tier)}
             >
               {t("common.upgradeToUnlock")}
-            </Link>
+            </UpgradePromptLink>
           </Button>
         )}
       </div>

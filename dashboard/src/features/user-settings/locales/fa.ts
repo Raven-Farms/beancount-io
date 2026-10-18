@@ -740,6 +740,11 @@ const faUserSettings: Record<string, TranslationEntry> = {
       "حساب شما بیش از یک اشتراک فعال دارد. برای تغییر طرح با پشتیبانی تماس بگیرید.",
     description: "The account has duplicate subscriptions and needs support",
   },
+  "userSettings.planChangeRefusalNoSubscription": {
+    message:
+      "اشتراک فعالی برای تغییر وجود ندارد. صفحه را تازه\u200cسازی کنید تا طرحی انتخاب کنید.",
+    description: "The subscription ended before the change was confirmed",
+  },
   "userSettings.planChangeRequiresAction": {
     message:
       "بانک شما باید این پرداخت را تأیید کند. تا آن زمان چیزی تغییر نمی‌کند؛ پس از تأیید، این صفحه را تازه کنید.",

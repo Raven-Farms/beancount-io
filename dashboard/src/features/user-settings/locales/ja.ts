@@ -725,6 +725,11 @@ const jaUserSettings: Record<string, TranslationEntry> = {
       "アカウントに有効なサブスクリプションが複数あります。プランを変更するにはサポートにお問い合わせください。",
     description: "The account has duplicate subscriptions and needs support",
   },
+  "userSettings.planChangeRefusalNoSubscription": {
+    message:
+      "変更できる有効なサブスクリプションがありません。ページを再読み込みしてプランを選択してください。",
+    description: "The subscription ended before the change was confirmed",
+  },
   "userSettings.planChangeRequiresAction": {
     message:
       "このお支払いには銀行の承認が必要です。承認されるまで何も変更されません。承認後、このページを更新してください。",

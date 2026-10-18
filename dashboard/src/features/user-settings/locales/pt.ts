@@ -753,6 +753,11 @@ const ptUserSettings: Record<string, TranslationEntry> = {
       "Sua conta tem mais de uma assinatura ativa. Fale com o suporte para mudar de plano.",
     description: "The account has duplicate subscriptions and needs support",
   },
+  "userSettings.planChangeRefusalNoSubscription": {
+    message:
+      "Não há uma assinatura ativa para alterar. Atualize a página para escolher um plano.",
+    description: "The subscription ended before the change was confirmed",
+  },
   "userSettings.planChangeRequiresAction": {
     message:
       "Seu banco precisa aprovar este pagamento. Nada muda até lá; depois de aprovar, atualize esta página.",

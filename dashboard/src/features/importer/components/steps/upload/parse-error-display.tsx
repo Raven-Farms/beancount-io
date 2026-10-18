@@ -1,9 +1,10 @@
 import { Card, CardContent } from "@/common/components/ui/card";
 import { Button } from "@/common/components/ui/button";
 import { AlertCircle, Download, Sparkles, FileText } from "lucide-react";
-import { Link } from "@tanstack/react-router";
 import { useTranslations } from "@/common/hooks/use-translations";
-import { track } from "@/common/analytics";
+import { useUserLimits } from "@/common/hooks/use-user-limits";
+import { UpgradePromptLink } from "@/common/components/upgrade-prompt-link";
+import { getNextTier } from "@/common/lib/subscription/tier-config";
 import { isPremiumRequired } from "../../../utils/is-premium-required";
 import type { FileFormat } from "../../../types";
 
@@ -65,6 +66,7 @@ function PremiumRequiredError({
   fileFormat: FileFormat;
 }) {
   const { t } = useTranslations();
+  const { tier } = useUserLimits();
   // A CSV only reaches AI parsing because the user chose it, so name the
   // spent quota rather than a file type that "requires" AI.
   const isCsv = fileFormat === "csv";
@@ -98,18 +100,14 @@ function PremiumRequiredError({
           <p className="text-xs text-muted-foreground">
             {t("importer.error.upgradeDescription")}
           </p>
+          {/* A Premium user who spent the AI allowance needs Growth. */}
           <Button asChild className="w-full" size="sm">
-            <Link
-              to="/settings/general"
-              onClick={() =>
-                track("upgrade_prompt_clicked", {
-                  surface: "importer_paywall",
-                  target_tier: "PREMIUM",
-                })
-              }
+            <UpgradePromptLink
+              surface="importer_paywall"
+              plan={getNextTier(tier)}
             >
               {t("importer.error.upgradeNow")}
-            </Link>
+            </UpgradePromptLink>
           </Button>
         </div>
 

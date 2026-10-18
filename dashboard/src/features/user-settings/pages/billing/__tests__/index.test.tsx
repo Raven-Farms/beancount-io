@@ -27,17 +27,25 @@ vi.mock("../../general/subscription-section", () => ({
     checkoutReturned,
     returnTo,
     onCheckoutDismiss,
+    initialTarget,
+    onSheetClose,
   }: {
     checkoutReturned?: boolean;
     returnTo?: string;
     onCheckoutDismiss?: () => void;
+    initialTarget?: { tier: string; cycle: string } | null;
+    onSheetClose?: () => void;
   }) => (
     <div
       data-testid="subscription-section"
       data-checkout={String(checkoutReturned)}
       data-return={returnTo ?? ""}
+      data-target={
+        initialTarget ? `${initialTarget.tier}-${initialTarget.cycle}` : ""
+      }
     >
       <button onClick={onCheckoutDismiss}>dismiss</button>
+      <button onClick={onSheetClose}>close sheet</button>
     </div>
   ),
 }));
@@ -86,5 +94,61 @@ describe("BillingSettingsPage", () => {
     } finally {
       mockSearch.value = {};
     }
+  });
+
+  it.each([
+    [{ plan: "growth", billing: "monthly" }, "growth-monthly"],
+    [{ plan: "premium" }, "premium-yearly"],
+    // A plan the schema dropped, or a Checkout return, opens no sheet.
+    [{ plan: undefined, billing: "yearly" }, ""],
+    [{ plan: "growth", checkout: "success" }, ""],
+  ])("opens the change sheet from a deep link %o", (search, target) => {
+    mockSearch.value = search;
+    try {
+      render(<BillingSettingsPage />);
+      expect(screen.getByTestId("subscription-section")).toHaveAttribute(
+        "data-target",
+        target,
+      );
+    } finally {
+      mockSearch.value = {};
+    }
+  });
+
+  it("takes a deep link's plan out of the URL when the sheet closes, keeping the way back", () => {
+    mockSearch.value = {
+      plan: "growth",
+      billing: "yearly",
+      from: "ledgers_limit",
+      return: "/ledger/alice/books",
+    };
+    mockNavigate.mockClear();
+    try {
+      render(<BillingSettingsPage />);
+      screen.getByRole("button", { name: "close sheet" }).click();
+
+      const [{ search, replace }] = mockNavigate.mock.calls[0] as [
+        {
+          search: (prev: Record<string, unknown>) => Record<string, unknown>;
+          replace: boolean;
+        },
+      ];
+      expect(replace).toBe(true);
+      expect(search(mockSearch.value)).toEqual({
+        plan: undefined,
+        billing: undefined,
+        from: undefined,
+        return: "/ledger/alice/books",
+      });
+    } finally {
+      mockSearch.value = {};
+    }
+  });
+
+  it("leaves the URL alone when a sheet opened from the page closes", () => {
+    mockNavigate.mockClear();
+    render(<BillingSettingsPage />);
+    screen.getByRole("button", { name: "close sheet" }).click();
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 });

@@ -5,7 +5,7 @@ import { useUnfollowUser } from "../hooks/use-unfollow-user";
 import { useNavigate } from "@tanstack/react-router";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { useIsAuthenticated } from "@/common/hooks/use-is-authenticated";
-import { useLoginNextPath } from "@/common/hooks/use-login-next-path";
+import { useSafeReturnPath } from "@/common/hooks/use-safe-return-path";
 
 interface FollowButtonProps {
   username: string;
@@ -25,7 +25,7 @@ export function FollowButton({
   const { followUser, loading: followLoading } = useFollowUser();
   const { unfollowUser, loading: unfollowLoading } = useUnfollowUser();
   const isUserAuthenticated = useIsAuthenticated();
-  const next = useLoginNextPath();
+  const next = useSafeReturnPath();
 
   const loading = followLoading || unfollowLoading;
 

@@ -18,7 +18,11 @@ import {
   useChangePlan,
   usePreviewPlanChange,
 } from "@/features/user-settings/hooks/use-plan-change";
-import type { PreviewPlanChangeQuery } from "@/graphql/definitions";
+import {
+  PlanChangeEffect,
+  PlanChangeRefusal,
+  type PreviewPlanChangeQuery,
+} from "@/graphql/definitions";
 import {
   cyclePrice,
   stripePlanConfig,
@@ -49,16 +53,21 @@ const USER_TIERS: Record<SubscriptionTier, UserTier> = {
   growth: "GROWTH",
   organization: "ORGANIZATION",
 };
-const REFUSAL_KEYS: Record<string, string> = {
-  CURRENT_PLAN: "userSettings.planChangeRefusalCurrent",
-  SAME_TIER_AND_CYCLE: "userSettings.planChangeRefusalSameTier",
-  MULTIPLE_SUBSCRIPTIONS: "userSettings.planChangeRefusalMultiple",
+const REFUSAL_KEYS: Record<PlanChangeRefusal, string> = {
+  [PlanChangeRefusal.CurrentPlan]: "userSettings.planChangeRefusalCurrent",
+  [PlanChangeRefusal.SameTierAndCycle]:
+    "userSettings.planChangeRefusalSameTier",
+  [PlanChangeRefusal.MultipleSubscriptions]:
+    "userSettings.planChangeRefusalMultiple",
+  [PlanChangeRefusal.NoSubscription]:
+    "userSettings.planChangeRefusalNoSubscription",
+  [PlanChangeRefusal.ScheduledChange]: "userSettings.renewalChangesComingSoon",
 };
 
 type Outcome =
   | { type: "action"; hostedInvoiceUrl: string | null }
   | { type: "failed" }
-  | { type: "refused"; refusal: string | null };
+  | { type: "refused"; refusal: PlanChangeRefusal | null };
 
 /**
  * The confirm step for every immediate plan change and every checkout from
@@ -78,8 +87,11 @@ export function PlanChangeSheet({
   onCheckout,
   onManageBilling,
   onChanged,
+  returnTo,
 }: {
   target: PlanChangeTarget | null;
+  /** A safe path back to where the prompt was, offered once the change lands. */
+  returnTo?: string;
   currentTier: UserTier;
   currentPlanLabel: string;
   quotaByUserTier: Record<string, TierQuota>;
@@ -149,7 +161,18 @@ export function PlanChangeSheet({
       });
       const result = response.data?.changePlan;
       if (result?.status === "ACTIVE") {
-        toast.success(t("userSettings.subscriptionUpgraded"));
+        toast.success(
+          t("userSettings.subscriptionUpgraded"),
+          returnTo
+            ? {
+                action: {
+                  label: t("userSettings.backToWork"),
+                  // A full load, so every query reads the new plan's limits.
+                  onClick: () => window.location.assign(returnTo),
+                },
+              }
+            : undefined,
+        );
         onChanged();
         onClose();
       } else if (result?.status === "REQUIRES_ACTION") {
@@ -166,6 +189,16 @@ export function PlanChangeSheet({
       toast.error(formatError(changeError));
     }
   };
+
+  // Nothing can wait for the renewal date until those changes are scheduled,
+  // so a scheduled preview is shown like a refusal.
+  const refusal =
+    outcome?.type === "refused"
+      ? (outcome.refusal ?? PlanChangeRefusal.CurrentPlan)
+      : (planChange?.refusal ??
+        (planChange?.effect === PlanChangeEffect.Scheduled
+          ? PlanChangeRefusal.ScheduledChange
+          : null));
 
   const gained = target
     ? gainedLines(
@@ -240,17 +273,9 @@ export function PlanChangeSheet({
               </Button>
             </DialogFooter>
           </div>
-        ) : outcome?.type === "refused" || planChange.refusal ? (
+        ) : refusal ? (
           <div className="space-y-3">
-            <p className="text-sm">
-              {t(
-                REFUSAL_KEYS[
-                  (outcome?.type === "refused"
-                    ? outcome.refusal
-                    : planChange.refusal) ?? ""
-                ] ?? "userSettings.planChangeRefusalCurrent",
-              )}
-            </p>
+            <p className="text-sm">{t(REFUSAL_KEYS[refusal])}</p>
             <DialogFooter>
               <Button variant="outline" onClick={onClose}>
                 {t("userSettings.planChangeNotNow")}

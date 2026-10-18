@@ -3,6 +3,7 @@ import { PageSEO } from "@/common/components/seo/page-seo";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { useReactNativeContext } from "@/common/providers/react-native-bridge-provider/react-native-bridge-context";
 import { SubscriptionSection } from "../general/subscription-section";
+import { DEFAULT_BILLING_CYCLE } from "../general/stripe-config";
 
 /**
  * Settings → Billing: the plan summary, the yearly offer, every plan, and the
@@ -23,6 +24,27 @@ export default function BillingSettingsPage() {
         <SubscriptionSection
           checkoutReturned={search.checkout === "success"}
           returnTo={search.return}
+          initialTarget={
+            search.plan && search.checkout !== "success"
+              ? {
+                  tier: search.plan,
+                  cycle: search.billing ?? DEFAULT_BILLING_CYCLE,
+                }
+              : null
+          }
+          onSheetClose={() => {
+            if (!search.plan) return;
+            void navigate({
+              to: "/settings/billing",
+              search: (prev) => ({
+                ...prev,
+                plan: undefined,
+                billing: undefined,
+                from: undefined,
+              }),
+              replace: true,
+            });
+          }}
           onCheckoutDismiss={() =>
             void navigate({
               to: "/settings/billing",

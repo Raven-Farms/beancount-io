@@ -51,3 +51,8 @@ export function getUpgradeTiers(tier: UserTier): TierInfo[] {
   const currentRank = TIER_RANK[tier] ?? 0;
   return TIERS.filter((t) => t.rank > currentRank);
 }
+
+/** The next tier up, for a prompt about a limit the current tier hits. */
+export function getNextTier(tier: UserTier): TierInfo | null {
+  return getUpgradeTiers(tier)[0] ?? null;
+}

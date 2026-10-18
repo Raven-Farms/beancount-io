@@ -1,12 +1,11 @@
 import { Bot, Crown, Sparkles, ArrowRight } from "lucide-react";
-import { Link } from "@tanstack/react-router";
 import { Button } from "@/common/components/ui/button";
 import { Badge } from "@/common/components/ui/badge";
-import { track } from "@/common/analytics";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { useUserLimits } from "@/common/hooks/use-user-limits";
 import { useAiCfoUsage } from "@/common/hooks/use-ai-cfo-usage";
 import { TIER_RANK, TIERS } from "@/common/lib/subscription/tier-config";
+import { UpgradePromptLink } from "@/common/components/upgrade-prompt-link";
 import { cn } from "@/common/lib/utils/utils";
 import { useAllTierQuotas } from "@/common/hooks/use-all-tier-quotas";
 
@@ -96,7 +95,8 @@ export function AiCfoUpgradePanel({ className }: { className?: string } = {}) {
         <div
           className={`grid grid-cols-1 ${availableTiers.length >= 3 ? "sm:grid-cols-3" : availableTiers.length === 2 ? "sm:grid-cols-2" : ""} gap-2.5 px-4 pb-4 pt-1`}
         >
-          {availableTiers.map(({ key, price, labelKey, userTier, popular }) => {
+          {availableTiers.map((plan) => {
+            const { key, price, labelKey, userTier, popular } = plan;
             const quota = tierQuotas?.find((q) => q.tier === userTier);
             const tokens = quota?.aiCfoTokensMax ?? 0;
             return (
@@ -140,14 +140,11 @@ export function AiCfoUpgradePanel({ className }: { className?: string } = {}) {
                   variant={popular ? "default" : "outline"}
                   className="w-full mt-auto"
                 >
-                  <Link
-                    to="/settings/general"
-                    onClick={() =>
-                      track("upgrade_prompt_clicked", {
-                        surface: "ai_cfo_panel",
-                        target_tier: userTier,
-                      })
-                    }
+                  <UpgradePromptLink
+                    surface="ai_cfo_panel"
+                    plan={plan}
+                    // The card quotes the monthly price, so the sheet opens on it.
+                    billing="monthly"
                   >
                     {popular ? (
                       <Crown className="h-3.5 w-3.5" />
@@ -155,7 +152,7 @@ export function AiCfoUpgradePanel({ className }: { className?: string } = {}) {
                       <ArrowRight className="h-3.5 w-3.5" />
                     )}
                     {t("aiAgent.upgradeCta")}
-                  </Link>
+                  </UpgradePromptLink>
                 </Button>
               </div>
             );

@@ -762,6 +762,11 @@ const ruUserSettings: Record<string, TranslationEntry> = {
       "У вашего аккаунта несколько активных подписок. Обратитесь в поддержку, чтобы сменить тариф.",
     description: "The account has duplicate subscriptions and needs support",
   },
+  "userSettings.planChangeRefusalNoSubscription": {
+    message:
+      "Нет активной подписки для изменения. Обновите страницу, чтобы выбрать тариф.",
+    description: "The subscription ended before the change was confirmed",
+  },
   "userSettings.planChangeRequiresAction": {
     message:
       "Ваш банк должен подтвердить этот платёж. До этого ничего не изменится; после подтверждения обновите страницу.",

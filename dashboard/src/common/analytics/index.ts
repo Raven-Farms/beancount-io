@@ -30,4 +30,5 @@ export type {
   StandardParams,
   AuthMethod,
   PlanTier,
+  UpgradeSurface,
 } from "./events";

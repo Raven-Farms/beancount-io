@@ -104,10 +104,16 @@ export function SubscriptionSection({
   checkoutReturned = false,
   returnTo,
   onCheckoutDismiss,
+  initialTarget = null,
+  onSheetClose,
 }: {
+  /** A deep link's plan and cycle: the change sheet opens on it. */
+  initialTarget?: PlanChangeTarget | null;
+  /** The sheet closed; a deep link's plan should leave the URL. */
+  onSheetClose?: () => void;
   /** Stripe Checkout just returned here with `checkout=success`. */
   checkoutReturned?: boolean;
-  /** Where the purchase began, to offer the way back after Checkout. */
+  /** Where the purchase began, a safe same-origin path, offered back after. */
   returnTo?: string;
   onCheckoutDismiss?: () => void;
 } = {}) {
@@ -156,7 +162,9 @@ export function SubscriptionSection({
 
   const { createSubscriptionSession, loading: checkoutLoading } =
     useCreateSubscriptionSession();
-  const [sheetTarget, setSheetTarget] = useState<PlanChangeTarget | null>(null);
+  const [sheetTarget, setSheetTarget] = useState<PlanChangeTarget | null>(
+    initialTarget,
+  );
 
   const stripeConfig = stripePlanConfig;
 
@@ -390,7 +398,11 @@ export function SubscriptionSection({
         currentPlanLabel={planLabel}
         quotaByUserTier={quotaByUserTier}
         t={t}
-        onClose={() => setSheetTarget(null)}
+        returnTo={returnTo}
+        onClose={() => {
+          setSheetTarget(null);
+          onSheetClose?.();
+        }}
         onCheckout={(target) => void startCheckout(target)}
         onManageBilling={() => void handleManageBilling(stripeConfig.clientId)}
         onChanged={() => {

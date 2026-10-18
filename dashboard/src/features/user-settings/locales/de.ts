@@ -745,6 +745,11 @@ const deUserSettings: Record<string, TranslationEntry> = {
       "Ihr Konto hat mehr als ein aktives Abonnement. Wenden Sie sich an den Support, um den Plan zu wechseln.",
     description: "The account has duplicate subscriptions and needs support",
   },
+  "userSettings.planChangeRefusalNoSubscription": {
+    message:
+      "Es gibt kein aktives Abonnement, das geändert werden kann. Laden Sie die Seite neu, um einen Plan zu wählen.",
+    description: "The subscription ended before the change was confirmed",
+  },
   "userSettings.planChangeRequiresAction": {
     message:
       "Ihre Bank muss diese Zahlung bestätigen. Bis dahin ändert sich nichts; aktualisieren Sie diese Seite nach der Bestätigung.",

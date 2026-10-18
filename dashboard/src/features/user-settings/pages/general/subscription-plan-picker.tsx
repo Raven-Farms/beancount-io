@@ -13,6 +13,7 @@ import {
 } from "@/common/lib/subscription/plan-change";
 import {
   cyclePrice,
+  DEFAULT_BILLING_CYCLE,
   yearlySaving,
   type BillingCycle,
   type SubscriptionTier,
@@ -91,7 +92,7 @@ export function PlanPicker({
   ) => void;
 }) {
   // Yearly first: it is the cheaper way to hold any paid plan (PRFAQ005).
-  const [cycle, setCycle] = useState<BillingCycle>("yearly");
+  const [cycle, setCycle] = useState<BillingCycle>(DEFAULT_BILLING_CYCLE);
   const formatMoney = useMoneyFormat();
   const formatCount = useQuotaNumberFormat();
 

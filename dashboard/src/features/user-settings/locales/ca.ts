@@ -754,6 +754,11 @@ const caUserSettings: Record<string, TranslationEntry> = {
       "El vostre compte té més d'una subscripció activa. Contacteu amb el servei d'assistència per canviar de pla.",
     description: "The account has duplicate subscriptions and needs support",
   },
+  "userSettings.planChangeRefusalNoSubscription": {
+    message:
+      "No hi ha cap subscripció activa per canviar. Actualitza la pàgina per triar un pla.",
+    description: "The subscription ended before the change was confirmed",
+  },
   "userSettings.planChangeRequiresAction": {
     message:
       "El vostre banc ha d'aprovar aquest pagament. No canvia res fins aleshores; després d'aprovar-lo, actualitzeu aquesta pàgina.",

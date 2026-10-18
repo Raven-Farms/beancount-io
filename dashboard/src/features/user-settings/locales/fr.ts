@@ -754,6 +754,11 @@ const frUserSettings: Record<string, TranslationEntry> = {
       "Votre compte a plus d'un abonnement actif. Contactez l'assistance pour changer de forfait.",
     description: "The account has duplicate subscriptions and needs support",
   },
+  "userSettings.planChangeRefusalNoSubscription": {
+    message:
+      "Aucun abonnement actif à modifier. Actualisez la page pour choisir un forfait.",
+    description: "The subscription ended before the change was confirmed",
+  },
   "userSettings.planChangeRequiresAction": {
     message:
       "Votre banque doit approuver ce paiement. Rien ne change d'ici là ; après l'approbation, actualisez cette page.",
