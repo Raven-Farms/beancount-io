@@ -844,8 +844,12 @@ def detect_delimiter(source: Path, encoding: str = "utf-8") -> str:
 
 
 def parse_delimiter(value: str) -> str:
-    """Normalize ``--delimiter`` to a single character (``,``, ``;``, tab, ``|``)."""
-    raw = value.strip()
+    """Normalize ``--delimiter`` to a single character (``,``, ``;``, tab, ``|``).
+
+    Only spaces are padding: `strip()` took a literal tab for whitespace and
+    refused `--delimiter $'\\t'`, the usual shell spelling for TSV (w5/621).
+    """
+    raw = value.strip(" ")
     folded = raw.casefold()
     if folded in {",", "comma"}:
         return ","

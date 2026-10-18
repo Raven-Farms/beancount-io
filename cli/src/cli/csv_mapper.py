@@ -165,7 +165,9 @@ def parse_mapping(spec: str) -> CsvMapping:
     encoding: str | None = None
     for part in split_spec(spec):
         name, separator, column = part.partition("=")
-        name, column = name.strip(), spec_value(column)
+        name = name.strip()
+        # A tab is a delimiter's value, never padding to strip (w5/621).
+        column = column.strip(" ") if name == "delimiter" else spec_value(column)
         if not separator or not name or not column:
             if name == "delimiter" and separator:
                 raise UsageError(
@@ -228,12 +230,12 @@ def validate_reading_keys(spec: str) -> None:
     """
     for part in split_spec(spec):
         name, separator, column = part.partition("=")
-        if not separator or not column.strip():
+        if not separator or not column.strip(" "):
             continue
         if name.strip() == "encoding":
             _parse_encoding_value(column.strip())
         elif name.strip() == "delimiter":
-            _parse_delimiter_value(column.strip())
+            _parse_delimiter_value(column.strip(" "))
 
 
 def _parse_encoding_value(column: str) -> str:
@@ -256,7 +258,7 @@ def _parse_delimiter_value(column: str) -> str:
     `delimiter=,` arrives here as an empty value and is pointed at the
     `comma` word.
     """
-    value = column.strip()
+    value = column.strip(" ")
     if len(value) >= 2 and value[0] == value[-1] and value[0] in "'\"":
         value = value[1:-1]
     if value:
@@ -649,8 +651,12 @@ def detect_delimiter(source: Path, encoding: str = "utf-8") -> str:
 
 
 def parse_delimiter(value: str) -> str:
-    """Normalize ``--delimiter`` to a single character (``,``, ``;``, tab, ``|``)."""
-    raw = value.strip()
+    """Normalize ``--delimiter`` to a single character (``,``, ``;``, tab, ``|``).
+
+    Only spaces are padding: `strip()` took a literal tab for whitespace and
+    refused `--delimiter $'\\t'`, the usual shell spelling for TSV (w5/621).
+    """
+    raw = value.strip(" ")
     folded = raw.casefold()
     if folded in {",", "comma"}:
         return ","
