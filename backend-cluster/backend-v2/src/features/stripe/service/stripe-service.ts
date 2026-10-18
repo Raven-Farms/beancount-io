@@ -11,6 +11,7 @@ import {
   type PaymentMethodSummaryView,
   type PlanChangePreviewView,
 } from "../operations/plan-change-preview";
+import { releaseSchedule } from "../operations/plan-change-schedule";
 import { ValidationError } from "@/shared/errors";
 import type { PaidCustomer } from "../data/paid-customer-model/types";
 import { IModels } from "@/foundation/models";
@@ -248,19 +249,24 @@ export class StripeService implements IStripeService {
     clientId: string,
     priceId: string,
   ): Promise<PlanChangePreviewView> {
-    if (!SUBSCRIPTION_CONFIG[clientId]) {
-      throw new ValidationError("clientId", "Unknown client");
-    }
     return previewPlanChange(
-      {
-        stripe: this.getStripeInstance(clientId),
-        models: this.models,
-        db: this.postgresDb,
-      },
+      this.planChangeDeps(clientId),
       userId,
       clientId,
       priceId,
     );
+  }
+
+  /** What preview and apply need to price and change a plan for a client. */
+  private planChangeDeps(clientId: string) {
+    if (!SUBSCRIPTION_CONFIG[clientId]) {
+      throw new ValidationError("clientId", "Unknown client");
+    }
+    return {
+      stripe: this.getStripeInstance(clientId),
+      models: this.models,
+      db: this.postgresDb,
+    };
   }
 
   defaultCard(
@@ -276,26 +282,20 @@ export class StripeService implements IStripeService {
     priceId: string,
     prorationDate?: number | null,
   ): Promise<PlanChangeResultView> {
-    if (!SUBSCRIPTION_CONFIG[clientId]) {
-      throw new ValidationError("clientId", "Unknown client");
-    }
     return applyPlanChange(
-      {
-        stripe: this.getStripeInstance(clientId),
-        models: this.models,
-        db: this.postgresDb,
-      },
+      this.planChangeDeps(clientId),
       userId,
       clientId,
       priceId,
-      prorationDate,
+      { prorationDate },
     );
   }
 
   /**
-   * The original immediate-change mutation, kept for existing callers. It now
-   * runs through `changePlan`, so a downgrade or a switch to monthly is refused
-   * here instead of being applied at once.
+   * The original immediate-change mutation, kept for existing callers. It
+   * applies changes through the same path as `changePlan`, but immediate-only:
+   * a downgrade or a switch to monthly is refused here, neither applied at
+   * once nor scheduled.
    */
   async upgradeSubscription(
     userId: string,
@@ -319,7 +319,13 @@ export class StripeService implements IStripeService {
       };
     }
     try {
-      const outcome = await this.changePlan(userId, clientId, newPriceId);
+      const outcome = await applyPlanChange(
+        this.planChangeDeps(clientId),
+        userId,
+        clientId,
+        newPriceId,
+        { immediateOnly: true },
+      );
       if (outcome.status === "ACTIVE") {
         logger.debug("Subscription upgraded successfully", {
           userId,
@@ -342,6 +348,10 @@ export class StripeService implements IStripeService {
         newTier: outcome.newTier ?? undefined,
       };
     } catch (error) {
+      if (error instanceof ValidationError) {
+        // A retired or unknown price: the caller's input, not a fault.
+        return { success: false, message: error.message };
+      }
       if (isNoSuchSubscriptionError(error)) {
         return {
           success: false,
@@ -374,9 +384,15 @@ export class StripeService implements IStripeService {
     subscriptionId: string,
     userId: string,
     clientId: string,
-  ): Promise<{ authorized: true } | { authorized: false; message: string }> {
+  ): Promise<
+    | { authorized: true; subscription: Stripe.Subscription }
+    | { authorized: false; message: string }
+  > {
     // Retrieve the subscription to verify it exists
-    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+    // The schedule comes inline, so releasing a pending change needs no read.
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId, {
+      expand: ["schedule"],
+    });
 
     // Verify that this subscription belongs to a customer in our database
     // with the correct user ID and client ID (tenant isolation)
@@ -402,7 +418,7 @@ export class StripeService implements IStripeService {
       };
     }
 
-    return { authorized: true };
+    return { authorized: true, subscription };
   }
 
   /**
@@ -428,6 +444,9 @@ export class StripeService implements IStripeService {
         return { success: false, message: ownership.message };
       }
 
+      // Stripe refuses a cancellation while a schedule holds a pending plan
+      // change; cancelling releases that change (PRFAQ005 question 14).
+      await releaseSchedule(stripe, ownership.subscription);
       await stripe.subscriptions.update(subscriptionId, {
         cancel_at_period_end: true,
       });
@@ -488,6 +507,7 @@ export class StripeService implements IStripeService {
         return { success: false, message: ownership.message };
       }
 
+      await releaseSchedule(stripe, ownership.subscription);
       await stripe.subscriptions.cancel(subscriptionId);
 
       logger.debug("Subscription deleted immediately", {

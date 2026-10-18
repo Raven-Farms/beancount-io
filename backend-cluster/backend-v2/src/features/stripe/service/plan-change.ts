@@ -1,4 +1,5 @@
-import type { PlanConfig } from "./stripe";
+import { ValidationError } from "@/shared/errors";
+import { SUBSCRIPTION_CONFIG, type PlanConfig } from "./stripe";
 import { tierRank } from "./subscription-plan";
 
 /**
@@ -23,9 +24,10 @@ export type PlanChangeKind =
   | "SPLIT";
 
 /**
- * Why a choice is refused before any Stripe work. The last two only come from
- * applying a change: a customer without a subscription checks out instead, and
- * a change that waits for the period end cannot be applied immediately.
+ * Why a choice is refused before any Stripe work. `NO_SUBSCRIPTION` only comes
+ * from applying a change: a customer without a subscription checks out
+ * instead. `SCHEDULED_CHANGE` comes only from the legacy immediate-only
+ * `upgradeSubscription`; `changePlan` schedules such changes.
  */
 export type PlanChangeRefusal =
   | "CURRENT_PLAN"
@@ -75,4 +77,19 @@ export function classifyPlanChange(
   }
   if (sameCycle) return { kind: "UPGRADE" };
   return { kind: target.interval === "year" ? "TO_YEARLY" : "SPLIT" };
+}
+
+/**
+ * The client's plans and the plan a change targets. A retired price is still
+ * billed to the subscribers on it but is never a target.
+ */
+export function resolveTargetPlan(clientId: string, priceId: string) {
+  const clientConfig = SUBSCRIPTION_CONFIG[clientId];
+  if (!clientConfig) throw new ValidationError("clientId", "Unknown client");
+  const target = clientConfig.plans.find((plan) => plan.priceId === priceId);
+  if (!target) throw new ValidationError("priceId", "Unknown price");
+  if (target.retired) {
+    throw new ValidationError("priceId", "This price is no longer offered");
+  }
+  return { plans: clientConfig.plans, target };
 }

@@ -38,6 +38,8 @@ export async function loadActivePlans(
     customer: binding.stripeCustomerId,
     status: "active",
     limit: 100,
+    // A pending plan change lives on the schedule; apply reads it inline.
+    expand: ["data.schedule"],
   });
   for (const subscription of page.data) {
     if (

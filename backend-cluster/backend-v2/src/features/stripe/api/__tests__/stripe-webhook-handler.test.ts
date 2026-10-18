@@ -5,12 +5,18 @@ import { BILLING_CLIENT_ID } from "../../service/stripe";
 import { SUBSCRIPTION_PERIOD_VERIFICATION_VERSION } from "../../service/subscription-plan";
 import type { AppLayers } from "@/foundation/composition";
 
-jest.mock("@/features/stripe/service/stripe", () => ({
-  ...jest.requireActual("@/features/stripe/service/stripe"),
-  SUBSCRIPTION_CONFIG: {
-    "beancount-web-prod": { webhookSecret: "whsec_synthetic" },
-  },
-}));
+jest.mock("@/features/stripe/service/stripe", () => {
+  const actual = jest.requireActual("@/features/stripe/service/stripe");
+  return {
+    ...actual,
+    SUBSCRIPTION_CONFIG: {
+      "beancount-web-prod": {
+        ...actual.SUBSCRIPTION_CONFIG["beancount-web-prod"],
+        webhookSecret: "whsec_synthetic",
+      },
+    },
+  };
+});
 jest.mock("@/server/rest/openapi-registry", () => ({
   registerRoute: jest.fn(),
 }));
@@ -197,6 +203,49 @@ describe("live Stripe webhook boundary", () => {
       object,
       BILLING_CLIENT_ID,
       "usr_synthetic",
+    );
+  });
+});
+
+describe("a scheduled plan change taking effect", () => {
+  it("refreshes the binding from the subscription's new price at the phase change", async () => {
+    // Stripe moves the subscription to the scheduled price and sends
+    // customer.subscription.updated; the schedule may still be attached.
+    const PERIOD_END = 2_100_000_000;
+    const t = setup(subscriptionEvent());
+    const binding = {
+      id: "binding_synthetic",
+      userId: "usr_synthetic",
+      clientId: BILLING_CLIENT_ID,
+      stripeCustomerId: "cus_synthetic",
+    };
+    t.paidCustomer.findByUserId.mockResolvedValue([binding] as never);
+    t.stripe.listSubscriptions.mockResolvedValue([
+      {
+        id: "sub_synthetic",
+        customer: "cus_synthetic",
+        clientId: BILLING_CLIENT_ID,
+        livemode: true,
+        status: "active",
+        schedule: "sub_sched_synthetic",
+        items: {
+          data: [
+            {
+              price: { id: "price_1RrSOGEqsEqs2tLVFnyB34qG" },
+              current_period_end: PERIOD_END,
+            },
+          ],
+        },
+      },
+    ] as never);
+
+    await t.run();
+
+    expect(t.paidCustomer.updatePeriodIfUnchanged).toHaveBeenCalledWith(
+      {},
+      binding,
+      new Date(PERIOD_END * 1000),
+      SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
     );
   });
 });

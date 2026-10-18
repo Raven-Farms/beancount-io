@@ -95,6 +95,11 @@ export interface PlanConfig {
   tier: SubscriptionTier;
   /** Billing cycle, so plan changes classify without a Stripe call. */
   interval: BillingInterval;
+  /**
+   * Still billed to the subscribers on it, but never offered again: a plan
+   * change cannot move anyone onto it.
+   */
+  retired?: true;
 }
 
 /**
@@ -160,6 +165,7 @@ export const SUBSCRIPTION_CONFIG: SubscriptionConfigMap = {
         description: "Beancount.io Basic - Monthly - $9.99/month (Legacy)",
         interval: "month",
         tier: SubscriptionTier.PREMIUM,
+        retired: true,
       },
       {
         priceId: "price_1L9ccEEqsEqs2tLVbeBgHm9p",

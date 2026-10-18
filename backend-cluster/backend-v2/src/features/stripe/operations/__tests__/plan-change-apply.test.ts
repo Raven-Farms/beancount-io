@@ -1,4 +1,4 @@
-import type Stripe from "stripe";
+import Stripe from "stripe";
 import type { DbExecutor } from "@/drizzle/drizzle";
 import type { IModels } from "@/foundation/models";
 import { ErrorCategory } from "@/shared/errors";
@@ -32,6 +32,8 @@ function subscription(
     livemode: true,
     status: "active",
     pending_update: null,
+    schedule: null,
+    discounts: [],
     clientId: BILLING_CLIENT_ID,
     items: {
       data: [
@@ -46,17 +48,33 @@ function subscription(
   } as unknown as Stripe.Subscription;
 }
 
+const PERIOD_START = NOW_SECONDS - 86_400 * 20;
+const PERIOD_END = NOW_SECONDS + 86_400;
+const SCHEDULE = {
+  id: "sub_sched_1",
+  status: "active",
+  current_phase: { start_date: PERIOD_START, end_date: PERIOD_END },
+};
+
 function setup(
   options: {
     subscriptions?: Stripe.Subscription[];
     updated?: Stripe.Subscription;
     intent?: Partial<Stripe.PaymentIntent>;
+    immediateOnly?: boolean;
   } = {},
 ) {
   const stripe = {
     subscriptions: {
       list: jest.fn(async () => ({ data: options.subscriptions ?? [] })),
       update: jest.fn(async () => options.updated),
+      retrieve: jest.fn(async () => options.subscriptions?.[0]),
+    },
+    subscriptionSchedules: {
+      create: jest.fn(async () => SCHEDULE),
+      retrieve: jest.fn(async () => SCHEDULE),
+      update: jest.fn(async () => SCHEDULE),
+      release: jest.fn(async () => ({ ...SCHEDULE, status: "released" })),
     },
     paymentIntents: {
       retrieve: jest.fn(async () => options.intent),
@@ -73,7 +91,10 @@ function setup(
     now: () => NOW,
   };
   const apply = (priceId: string, prorationDate?: number | null) =>
-    applyPlanChange(deps, "usr_1", BILLING_CLIENT_ID, priceId, prorationDate);
+    applyPlanChange(deps, "usr_1", BILLING_CLIENT_ID, priceId, {
+      prorationDate,
+      immediateOnly: options.immediateOnly,
+    });
   return { stripe, paidCustomer, apply };
 }
 
@@ -191,9 +212,202 @@ describe("applyPlanChange", () => {
     expect(stripe.subscriptions.update).not.toHaveBeenCalled();
   });
 
-  it("refuses a change that waits for the period end, with no Stripe write", async () => {
+  it.each([
+    ["a downgrade", GROWTH_MONTHLY, PREMIUM_MONTHLY, "DOWNGRADE"],
+    ["a switch to monthly", PREMIUM_YEARLY, PREMIUM_MONTHLY, "TO_MONTHLY"],
+    ["a higher tier on monthly", PREMIUM_YEARLY, GROWTH_MONTHLY, "SPLIT"],
+  ])(
+    "schedules %s for the period end with nothing charged",
+    async (_label, from, to, kind) => {
+      const { stripe, apply } = setup({
+        subscriptions: [subscription(from, { discounts: ["di_forever"] })],
+      });
+
+      await expect(apply(to, NOW_SECONDS)).resolves.toMatchObject({
+        status: "SCHEDULED",
+        kind,
+        effectiveAt: new Date(PERIOD_END * 1000),
+      });
+      expect(stripe.subscriptionSchedules.create).toHaveBeenCalledWith({
+        from_subscription: "sub_1",
+      });
+      expect(stripe.subscriptionSchedules.update).toHaveBeenCalledWith(
+        "sub_sched_1",
+        {
+          end_behavior: "release",
+          proration_behavior: "none",
+          phases: [
+            {
+              items: [{ price: from, quantity: 1 }],
+              start_date: PERIOD_START,
+              end_date: PERIOD_END,
+              discounts: [{ discount: "di_forever" }],
+            },
+            {
+              items: [{ price: to, quantity: 1 }],
+              duration: { interval: "month", interval_count: 1 },
+              discounts: [{ discount: "di_forever" }],
+              proration_behavior: "none",
+            },
+          ],
+        },
+      );
+      // Nothing is charged or changed on the subscription itself.
+      expect(stripe.subscriptions.update).not.toHaveBeenCalled();
+    },
+  );
+
+  it("replaces the next phase of a schedule already attached", async () => {
+    const { stripe, apply } = setup({
+      subscriptions: [
+        subscription(GROWTH_MONTHLY, { schedule: "sub_sched_1" }),
+      ],
+    });
+
+    await apply(PREMIUM_MONTHLY, NOW_SECONDS);
+
+    expect(stripe.subscriptionSchedules.create).not.toHaveBeenCalled();
+    expect(stripe.subscriptionSchedules.retrieve).toHaveBeenCalledWith(
+      "sub_sched_1",
+    );
+    expect(stripe.subscriptionSchedules.update).toHaveBeenCalledTimes(1);
+  });
+
+  it("uses the schedule a concurrent confirm attached first", async () => {
     const { stripe, apply } = setup({
       subscriptions: [subscription(GROWTH_MONTHLY)],
+    });
+    stripe.subscriptionSchedules.create.mockRejectedValueOnce(
+      new Stripe.errors.StripeInvalidRequestError({
+        type: "invalid_request_error",
+        message: "The subscription is already attached to a schedule.",
+      }),
+    );
+    stripe.subscriptions.retrieve.mockResolvedValueOnce(
+      subscription(GROWTH_MONTHLY, { schedule: "sub_sched_1" }),
+    );
+
+    await expect(apply(PREMIUM_MONTHLY, NOW_SECONDS)).resolves.toMatchObject({
+      status: "SCHEDULED",
+    });
+    expect(stripe.subscriptionSchedules.update).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not mistake a network failure for a race", async () => {
+    const { stripe, apply } = setup({
+      subscriptions: [subscription(GROWTH_MONTHLY)],
+    });
+    stripe.subscriptionSchedules.create.mockRejectedValueOnce(
+      new Stripe.errors.StripeConnectionError({
+        type: "api_error",
+        message: "socket hang up",
+      }),
+    );
+
+    await expect(apply(PREMIUM_MONTHLY, NOW_SECONDS)).rejects.toThrow(
+      "socket hang up",
+    );
+    expect(stripe.subscriptions.retrieve).not.toHaveBeenCalled();
+    expect(stripe.subscriptionSchedules.update).not.toHaveBeenCalled();
+  });
+
+  it("keeps every other item and its quantity in both phases", async () => {
+    const { stripe, apply } = setup({
+      subscriptions: [
+        subscription(GROWTH_MONTHLY, {
+          items: {
+            data: [
+              {
+                id: "si_1",
+                price: { id: GROWTH_MONTHLY },
+                quantity: 1,
+                current_period_end: PERIOD_END,
+              },
+              {
+                id: "si_addon",
+                price: { id: "price_addon" },
+                quantity: 3,
+                current_period_end: PERIOD_END,
+              },
+            ],
+          },
+        }),
+      ],
+    });
+
+    await apply(PREMIUM_MONTHLY, NOW_SECONDS);
+
+    const [, params] = stripe.subscriptionSchedules.update.mock
+      .calls[0] as unknown as [string, Stripe.SubscriptionScheduleUpdateParams];
+    expect(params.phases?.map((phase) => phase.items)).toEqual([
+      [
+        { price: GROWTH_MONTHLY, quantity: 1 },
+        { price: "price_addon", quantity: 3 },
+      ],
+      [
+        { price: PREMIUM_MONTHLY, quantity: 1 },
+        { price: "price_addon", quantity: 3 },
+      ],
+    ]);
+  });
+
+  it("uses an expanded schedule as is, and ends its current phase at the period end", async () => {
+    const { stripe, apply } = setup({
+      subscriptions: [
+        subscription(GROWTH_MONTHLY, {
+          schedule: {
+            ...SCHEDULE,
+            current_phase: { start_date: PERIOD_START, end_date: 1 },
+          },
+        }),
+      ],
+    });
+
+    await expect(apply(PREMIUM_MONTHLY, NOW_SECONDS)).resolves.toMatchObject({
+      effectiveAt: new Date(PERIOD_END * 1000),
+    });
+    expect(stripe.subscriptionSchedules.retrieve).not.toHaveBeenCalled();
+    const [, params] = stripe.subscriptionSchedules.update.mock
+      .calls[0] as unknown as [string, Stripe.SubscriptionScheduleUpdateParams];
+    expect(params.phases?.[0]).toMatchObject({
+      start_date: PERIOD_START,
+      end_date: PERIOD_END,
+    });
+  });
+
+  it("releases a pending scheduled change before an immediate one, so renewal cannot undo it", async () => {
+    const { stripe, apply } = setup({
+      subscriptions: [
+        subscription(PREMIUM_MONTHLY, { schedule: "sub_sched_1" }),
+      ],
+      updated: subscription(PREMIUM_YEARLY),
+    });
+
+    await apply(PREMIUM_YEARLY, NOW_SECONDS);
+
+    expect(stripe.subscriptionSchedules.release).toHaveBeenCalledWith(
+      "sub_sched_1",
+    );
+    expect(
+      stripe.subscriptionSchedules.release.mock.invocationCallOrder[0],
+    ).toBeLessThan(stripe.subscriptions.update.mock.invocationCallOrder[0]);
+  });
+
+  it("refuses a retired price as a target before any Stripe call", async () => {
+    const { stripe, apply } = setup({
+      subscriptions: [subscription(GROWTH_MONTHLY)],
+    });
+
+    await expect(
+      apply("price_1L9ccEEqsEqs2tLVKPRV17wb", NOW_SECONDS),
+    ).rejects.toMatchObject({ category: ErrorCategory.VALIDATION_FAILED });
+    expect(stripe.subscriptions.list).not.toHaveBeenCalled();
+  });
+
+  it("refuses an end-of-period change for the immediate-only legacy mutation, with no Stripe write", async () => {
+    const { stripe, apply } = setup({
+      subscriptions: [subscription(GROWTH_MONTHLY)],
+      immediateOnly: true,
     });
 
     await expect(apply(PREMIUM_MONTHLY, NOW_SECONDS)).resolves.toMatchObject({
@@ -202,6 +416,7 @@ describe("applyPlanChange", () => {
       kind: "DOWNGRADE",
     });
     expect(stripe.subscriptions.update).not.toHaveBeenCalled();
+    expect(stripe.subscriptionSchedules.create).not.toHaveBeenCalled();
   });
 
   it("sends a customer without a subscription to Checkout", async () => {
@@ -231,14 +446,17 @@ describe("applyPlanChange", () => {
   it.each([
     ["from the future", NOW_SECONDS + 3_600],
     ["older than an hour", NOW_SECONDS - 7_200],
-  ])("rejects a proration time %s before reading billing state", async (_name, when) => {
-    const { stripe, apply } = setup({
-      subscriptions: [subscription(PREMIUM_MONTHLY)],
-    });
+  ])(
+    "rejects a proration time %s before reading billing state",
+    async (_name, when) => {
+      const { stripe, apply } = setup({
+        subscriptions: [subscription(PREMIUM_MONTHLY)],
+      });
 
-    await expect(apply(PREMIUM_YEARLY, when)).rejects.toMatchObject({
-      category: ErrorCategory.VALIDATION_FAILED,
-    });
-    expect(stripe.subscriptions.list).not.toHaveBeenCalled();
-  });
+      await expect(apply(PREMIUM_YEARLY, when)).rejects.toMatchObject({
+        category: ErrorCategory.VALIDATION_FAILED,
+      });
+      expect(stripe.subscriptions.list).not.toHaveBeenCalled();
+    },
+  );
 });

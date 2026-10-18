@@ -246,6 +246,20 @@ describe("StripeService.upgradeSubscription", () => {
     expect(result.message).toContain("no subscription to change");
   });
 
+  it("explains that a retired price is no longer offered, with no Stripe call", async () => {
+    const result = await stripeUseCase.upgradeSubscription(
+      userId,
+      clientId,
+      "price_1L9ccEEqsEqs2tLVKPRV17wb",
+    );
+
+    expect(result).toEqual({
+      success: false,
+      message: "Validation failed for priceId: This price is no longer offered",
+    });
+    expect(mockStripeSubscriptions.list).not.toHaveBeenCalled();
+  });
+
   it("should return error for invalid clientId", async () => {
     const result = await stripeUseCase.upgradeSubscription(
       userId,

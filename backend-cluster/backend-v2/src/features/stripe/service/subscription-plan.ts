@@ -6,8 +6,13 @@ export type ClientSubscription = Stripe.Subscription & { clientId: string };
 // Bump when period verification rules change; older cached values must be re-read.
 export const SUBSCRIPTION_PERIOD_VERIFICATION_VERSION = 1;
 
+/** The id of a Stripe field that is either an id or the expanded object. */
+export function expandableId(value: string | { id: string }): string {
+  return typeof value === "string" ? value : value.id;
+}
+
 export function customerId(customer: Stripe.Subscription["customer"]): string {
-  return typeof customer === "string" ? customer : customer.id;
+  return expandableId(customer);
 }
 
 // The same recognized prices and active-status policy drive tier and cache.

@@ -8,14 +8,15 @@ import {
   PLAN_CHANGE_EFFECT,
   type PlanChangeKind,
   type PlanChangeRefusal,
+  resolveTargetPlan,
 } from "../service/plan-change";
-import { SUBSCRIPTION_CONFIG } from "../service/stripe";
 import {
   customerId,
   subscriptionPeriodEnd,
   SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
 } from "../service/subscription-plan";
 import { loadActivePlans } from "./current-plan";
+import { releaseSchedule, scheduleChange } from "./plan-change-schedule";
 
 const applyLogger = logger.child({ module: "plan-change-apply" });
 
@@ -26,6 +27,7 @@ const MAX_FUTURE_SKEW_SECONDS = 60;
 
 export type PlanChangeStatus =
   | "ACTIVE"
+  | "SCHEDULED"
   | "REQUIRES_ACTION"
   | "FAILED"
   | "REFUSED";
@@ -42,6 +44,8 @@ export interface PlanChangeResultView {
   subscriptionId: string | null;
   newTier: string | null;
   currentPeriodEnd: Date | null;
+  /** With SCHEDULED: when the new price takes over; nothing is charged now. */
+  effectiveAt: Date | null;
 }
 
 export interface PlanChangeApplyDeps {
@@ -49,6 +53,16 @@ export interface PlanChangeApplyDeps {
   models: Pick<IModels, "paidCustomer">;
   db: DbExecutor;
   now?: () => Date;
+}
+
+export interface PlanChangeApplyOptions {
+  /** The previewed proration time, so the charge equals the preview. */
+  prorationDate?: number | null;
+  /**
+   * Refuse end-of-period changes instead of scheduling them, for the legacy
+   * `upgradeSubscription` mutation, whose callers expect an immediate change.
+   */
+  immediateOnly?: boolean;
 }
 
 function result(
@@ -65,6 +79,7 @@ function result(
     subscriptionId: null,
     newTier: null,
     currentPeriodEnd: null,
+    effectiveAt: null,
     ...fields,
   };
 }
@@ -106,27 +121,23 @@ async function invoicePaymentIntent(
 }
 
 /**
- * Apply an immediate plan change (an upgrade or a switch to yearly) at the
- * proration time the customer previewed, so the charge equals the preview.
+ * Apply a plan change. Gains (an upgrade, a switch to yearly) are charged now
+ * at the proration time the customer previewed, so the charge equals the
+ * preview; losses are scheduled for the end of the paid period.
  *
- * Changes are made with `pending_if_incomplete`: when the payment needs the
- * customer's bank or fails, Stripe keeps the old plan and holds the change as
- * a pending update, so a successful-looking `active` status is not success —
- * the item must actually carry the new price with nothing pending.
+ * Immediate changes are made with `pending_if_incomplete`: when the payment
+ * needs the customer's bank or fails, Stripe keeps the old plan and holds the
+ * change as a pending update, so a successful-looking `active` status is not
+ * success — the item must actually carry the new price with nothing pending.
  */
 export async function applyPlanChange(
   deps: PlanChangeApplyDeps,
   userId: string,
   clientId: string,
   targetPriceId: string,
-  prorationDate?: number | null,
+  { prorationDate, immediateOnly = false }: PlanChangeApplyOptions = {},
 ): Promise<PlanChangeResultView> {
-  const clientConfig = SUBSCRIPTION_CONFIG[clientId];
-  if (!clientConfig) throw new ValidationError("clientId", "Unknown client");
-  const target = clientConfig.plans.find(
-    (plan) => plan.priceId === targetPriceId,
-  );
-  if (!target) throw new ValidationError("priceId", "Unknown price");
+  const { plans, target } = resolveTargetPlan(clientId, targetPriceId);
 
   const nowSeconds = Math.floor((deps.now?.() ?? new Date()).getTime() / 1000);
   if (prorationDate != null) {
@@ -149,7 +160,7 @@ export async function applyPlanChange(
     deps.db,
     userId,
     clientId,
-    clientConfig.plans,
+    plans,
   );
   if (active.length > 1) {
     applyLogger.warn("Plan change refused: several active subscriptions", {
@@ -177,10 +188,29 @@ export async function applyPlanChange(
     });
   }
   const { kind } = classification;
-  if (PLAN_CHANGE_EFFECT[kind] !== "IMMEDIATE") {
-    return refused("SCHEDULED_CHANGE", { kind });
+  if (PLAN_CHANGE_EFFECT[kind] === "SCHEDULED") {
+    if (immediateOnly) return refused("SCHEDULED_CHANGE", { kind });
+    // Losses wait for the end of the paid period, and nothing is charged.
+    const effectiveAt = await scheduleChange(
+      stripe,
+      current.subscription,
+      current.item,
+      target,
+    );
+    return result("SCHEDULED", {
+      kind,
+      subscriptionId: current.subscription.id,
+      newTier: target.tier,
+      currentPeriodEnd: effectiveAt,
+      effectiveAt,
+    });
   }
 
+  // A pending scheduled change would undo this one at renewal, so it goes
+  // first. It cannot wait for the outcome: a payment the bank must approve
+  // or that failed leaves Stripe holding the update, which still applies if
+  // the invoice is paid later, and an attached schedule would then revert it.
+  await releaseSchedule(stripe, current.subscription);
   const proration = prorationDate ?? nowSeconds;
   const updated = await stripe.subscriptions.update(
     current.subscription.id,

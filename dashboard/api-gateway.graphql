@@ -720,6 +720,7 @@ type PlanLimitChange {
 
 enum PlanChangeStatus {
   ACTIVE
+  SCHEDULED
   REQUIRES_ACTION
   FAILED
   REFUSED
@@ -739,6 +740,11 @@ type PlanChangeResult {
   subscriptionId: String
   newTier: String
   currentPeriodEnd: DateTimeISO
+
+  """
+  With SCHEDULED: when the new price takes over. Nothing is charged until then.
+  """
+  effectiveAt: DateTimeISO
 }
 
 """

@@ -268,6 +268,7 @@ class PlanChangePreview {
 
 const PlanChangeStatusValues: { [K in PlanChangeStatus]: K } = {
   ACTIVE: "ACTIVE",
+  SCHEDULED: "SCHEDULED",
   REQUIRES_ACTION: "REQUIRES_ACTION",
   FAILED: "FAILED",
   REFUSED: "REFUSED",
@@ -309,6 +310,13 @@ class PlanChangeResult {
 
   @Field(() => Date, { nullable: true })
   currentPeriodEnd!: Date | null;
+
+  @Field(() => Date, {
+    nullable: true,
+    description:
+      "With SCHEDULED: when the new price takes over. Nothing is charged until then.",
+  })
+  effectiveAt!: Date | null;
 }
 
 @ObjectType("TierQuotaItem")

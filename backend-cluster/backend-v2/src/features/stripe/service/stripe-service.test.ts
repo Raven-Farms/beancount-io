@@ -44,6 +44,7 @@ describe("StripeService", () => {
   let mockStripeCustomers: {
     retrieve: jest.Mock;
   };
+  let mockStripeSchedules: { retrieve: jest.Mock; release: jest.Mock };
   let mockStripeInstance: unknown;
 
   beforeEach(() => {
@@ -78,9 +79,15 @@ describe("StripeService", () => {
       retrieve: jest.fn(),
     };
 
+    mockStripeSchedules = {
+      retrieve: jest.fn(async () => ({ id: "sub_sched_1", status: "active" })),
+      release: jest.fn(async () => ({ id: "sub_sched_1", status: "released" })),
+    };
+
     mockStripeInstance = {
       subscriptions: mockStripeSubscriptions,
       customers: mockStripeCustomers,
+      subscriptionSchedules: mockStripeSchedules,
     };
 
     stripeUseCase = new StripeService(mockModels, mockPostgresDb);
@@ -172,6 +179,38 @@ describe("StripeService", () => {
         { cancel_at_period_end: true },
       );
       expect(mockStripeSubscriptions.cancel).not.toHaveBeenCalled();
+    });
+
+    it("releases a pending scheduled change before cancelling, which Stripe would otherwise refuse", async () => {
+      mockIPaidCustomerModel.findByUserIdAndClientId.mockResolvedValue({
+        id: "customer_doc_id",
+        userId,
+        clientId,
+        stripeCustomerId: "cus_123",
+      } as unknown as Awaited<
+        ReturnType<typeof mockIPaidCustomerModel.findByUserIdAndClientId>
+      >);
+      mockStripeSubscriptions.retrieve.mockResolvedValue({
+        id: subscriptionId,
+        customer: "cus_123",
+        livemode: true,
+        schedule: "sub_sched_1",
+      } as unknown as Stripe.Subscription);
+      mockStripeSubscriptions.update.mockResolvedValue({});
+
+      const result = await stripeUseCase.cancelSubscription(
+        subscriptionId,
+        userId,
+        clientId,
+      );
+
+      expect(result.success).toBe(true);
+      expect(mockStripeSchedules.release).toHaveBeenCalledWith("sub_sched_1");
+      expect(
+        mockStripeSchedules.release.mock.invocationCallOrder[0],
+      ).toBeLessThan(
+        mockStripeSubscriptions.update.mock.invocationCallOrder[0],
+      );
     });
 
     it("should return error when customer is not authorized", async () => {

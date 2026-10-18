@@ -1,7 +1,6 @@
 import type Stripe from "stripe";
 import type { DbExecutor } from "@/drizzle/drizzle";
 import type { IModels } from "@/foundation/models";
-import { ValidationError } from "@/shared/errors";
 import { logger } from "@/shared/logger";
 import {
   classifyPlanChange,
@@ -9,9 +8,9 @@ import {
   type PlanChangeEffect,
   type PlanChangeKind,
   type PlanChangeRefusal,
+  resolveTargetPlan,
 } from "../service/plan-change";
 import {
-  SUBSCRIPTION_CONFIG,
   SubscriptionTier,
   TIER_LIMITS,
   type BillingInterval,
@@ -133,8 +132,10 @@ function sameTierOnCycle(
   interval: BillingInterval,
 ): string | null {
   return (
-    plans.find((plan) => plan.tier === tier && plan.interval === interval)
-      ?.priceId ?? null
+    plans.find(
+      (plan) =>
+        plan.tier === tier && plan.interval === interval && !plan.retired,
+    )?.priceId ?? null
   );
 }
 
@@ -179,12 +180,7 @@ export async function previewPlanChange(
   clientId: string,
   targetPriceId: string,
 ): Promise<PlanChangePreviewView> {
-  const clientConfig = SUBSCRIPTION_CONFIG[clientId];
-  if (!clientConfig) throw new ValidationError("clientId", "Unknown client");
-  const target = clientConfig.plans.find(
-    (plan) => plan.priceId === targetPriceId,
-  );
-  if (!target) throw new ValidationError("priceId", "Unknown price");
+  const { plans, target } = resolveTargetPlan(clientId, targetPriceId);
 
   const { stripe } = deps;
   const now = deps.now?.() ?? new Date();
@@ -194,7 +190,7 @@ export async function previewPlanChange(
     deps.db,
     userId,
     clientId,
-    clientConfig.plans,
+    plans,
   );
 
   const { amount: targetAmount, currency } = await listPrice(
@@ -264,11 +260,7 @@ export async function previewPlanChange(
       paymentMethod,
       alternativePriceId:
         kind === "SPLIT"
-          ? sameTierOnCycle(
-              clientConfig.plans,
-              target.tier,
-              current.plan.interval,
-            )
+          ? sameTierOnCycle(plans, target.tier, current.plan.interval)
           : null,
     };
   }

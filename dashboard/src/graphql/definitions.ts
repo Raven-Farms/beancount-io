@@ -1731,6 +1731,8 @@ export type PlanChangeResult = {
   /** With REQUIRES_ACTION: confirm the payment with Stripe.js. */
   clientSecret: Maybe<Scalars['String']['output']>;
   currentPeriodEnd: Maybe<Scalars['DateTimeISO']['output']>;
+  /** With SCHEDULED: when the new price takes over. Nothing is charged until then. */
+  effectiveAt: Maybe<Scalars['DateTimeISO']['output']>;
   /** Stripe's hosted page to pay or authenticate this change's invoice. */
   hostedInvoiceUrl: Maybe<Scalars['String']['output']>;
   kind: Maybe<PlanChangeKind>;
@@ -1745,7 +1747,8 @@ export enum PlanChangeStatus {
   Active = 'ACTIVE',
   Failed = 'FAILED',
   Refused = 'REFUSED',
-  RequiresAction = 'REQUIRES_ACTION'
+  RequiresAction = 'REQUIRES_ACTION',
+  Scheduled = 'SCHEDULED'
 }
 
 export type PlanLimitChange = {
