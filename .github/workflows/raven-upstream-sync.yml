@@ -57,7 +57,7 @@ jobs:
         if: steps.diff.outputs.code_files != '0'
         run: |
           base=${{ steps.diff.outputs.base }}; head=${{ steps.diff.outputs.head }}
-          flag() { matches=$(grep -E "$2" code.txt || true); [ -n "$matches" ] && { echo "- **$1**"; echo "$matches" | sed 's/^/  - `/; s/$/`/'; }; }
+          flag() { matches=$(grep -E "$2" code.txt || true); if [ -n "$matches" ]; then echo "- **$1**"; echo "$matches" | sed 's/^/  - `/; s/$/`/'; fi; return 0; }
           {
             flag "Database migrations (run automatically by backend-migrate; back up first)" '(^|/)migrations?/'
             flag "Docker / compose / deploy files (check our docker-compose.override.yml still applies)" '(^|/)(Dockerfile|docker-compose[^/]*\.ya?ml|Caddyfile)$|^deploy/'
