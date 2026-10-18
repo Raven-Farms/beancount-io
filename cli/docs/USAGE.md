@@ -754,6 +754,12 @@ rests on, wherever the ledger changes them from Beancount's defaults: renamed
 roots (`name_assets` …), `account_rounding`, `booking_method`,
 `tolerance_multiplier`, `infer_tolerance_from_cost` and each
 `inferred_tolerance_default`. Other options and `plugin` lines are not carried.
+When included directives use default root names, the export switches `name_*`
+options around those directives without changing their result order, then
+restores the root ledger's names at the end. A directive needing both the
+default and renamed name for one account type, or another included file's
+names that differ from both, cannot be flattened this way: export refuses and
+names its accounts. Keep the split ledger or use JSON/text output for those results.
 A `document` path inside the root ledger's directory is printed relative to
 that directory, whichever file of the ledger wrote it, so the export never
 names the machine it ran on and reloads when saved beside the ledger; a path

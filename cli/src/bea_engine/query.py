@@ -1471,17 +1471,24 @@ def _source_location(entry: Any) -> tuple[Any, Any]:
 
 # The options a ledger's validity rests on: the root names its accounts are
 # checked against, and how its amounts book and balance (w5/474).
-_EXPORTED_OPTIONS = (
+_ROOT_OPTIONS = (
     "name_assets",
     "name_liabilities",
     "name_equity",
     "name_income",
     "name_expenses",
+)
+_EXPORTED_OPTIONS = (
+    *_ROOT_OPTIONS,
     "account_rounding",
     "booking_method",
     "tolerance_multiplier",
     "infer_tolerance_from_cost",
 )
+
+
+def _quoted_option(text: str) -> str:
+    return '"' + text.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 
 def _option_lines(options: Mapping[str, Any]) -> list[str]:
@@ -1494,9 +1501,6 @@ def _option_lines(options: Mapping[str, Any]) -> list[str]:
     from enum import Enum
 
     from beancount.parser.options import OPTIONS_DEFAULTS
-
-    def quoted(text: str) -> str:
-        return '"' + text.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
     lines = []
     for name in _EXPORTED_OPTIONS:
@@ -1511,10 +1515,54 @@ def _option_lines(options: Mapping[str, Any]) -> list[str]:
             text = format(value, "f")
         else:
             text = str(value)
-        lines.append(f"option {quoted(name)} {quoted(text)}\n")
+        lines.append(f"option {_quoted_option(name)} {_quoted_option(text)}\n")
     for currency, tolerance in (options.get("inferred_tolerance_default") or {}).items():
-        lines.append(f'option "inferred_tolerance_default" {quoted(f"{currency}:{tolerance:f}")}\n')
+        lines.append(f'option "inferred_tolerance_default" {_quoted_option(f"{currency}:{tolerance:f}")}\n')
     return lines
+
+
+def _export_root_changes(rows: Any, options: Mapping[str, Any]) -> tuple[list[str], str]:
+    """Plan per-directive parser roots without changing the final account types.
+
+    Includes start on Beancount's defaults, even when the root file renames
+    them. A flat export must switch those names back while reading their
+    directives, then restore the root's options for booking and reporting.
+    Refuse incompatible roots before emitting any part of the result.
+    """
+    from beancount.core import account, getters
+    from beancount.core.data import Custom
+    from beancount.parser.options import OPTIONS_DEFAULTS
+
+    original = {name: options.get(name, OPTIONS_DEFAULTS[name]) for name in _ROOT_OPTIONS}
+    default_names = {OPTIONS_DEFAULTS[name]: name for name in _ROOT_OPTIONS}
+
+    def changed(before: Mapping[str, Any], after: Mapping[str, Any]) -> str:
+        return "".join(
+            f"option {_quoted_option(name)} {_quoted_option(after[name])}\n"
+            for name in _ROOT_OPTIONS
+            if before[name] != after[name]
+        )
+
+    current = original
+    switches = []
+    for (entry,) in rows:
+        accounts = getters.get_entry_accounts(entry)
+        if isinstance(entry, Custom):
+            accounts.update(value.value for value in entry.values if value.dtype == account.TYPE)
+        roots = {name.partition(":")[0] for name in accounts}
+        needed = original.copy()
+        for root in roots - set(original.values()):
+            if root in default_names:
+                needed[default_names[root]] = root
+        if roots - set(needed.values()):
+            raise protocol.LedgerError(
+                "Cannot export these accounts as one Beancount file using this ledger's root names: "
+                + ", ".join(sorted(accounts))
+                + ". Keep the original split ledger, or use JSON/text output."
+            )
+        switches.append(changed(current, needed))
+        current = needed
+    return switches, changed(current, original)
 
 
 def _render_beancount(rows: Any, out: TextIO, file: Path, options: Mapping[str, Any]) -> None:
@@ -1523,10 +1571,6 @@ def _render_beancount(rows: Any, out: TextIO, file: Path, options: Mapping[str, 
     from beancount.core.display_context import DisplayContext
 
     from bea_engine.ledger.writer import DirectivePrinter
-
-    preamble = "".join(_option_lines(options))
-    # `write` only: the interactive pager has no `writelines`.
-    out.write(preamble)
 
     # Like upstream's Beancount renderer, a fresh display context retains each
     # number's natural precision instead of rounding to a result-column width.
@@ -1542,18 +1586,27 @@ def _render_beancount(rows: Any, out: TextIO, file: Path, options: Mapping[str, 
         for (entry,) in rows
         if not (isinstance(entry, Transaction) and entry.flag == "P" and _source_location(entry) in pads)
     ]
+    switches, restore = _export_root_changes(rows, options)
+    preamble = "".join(_option_lines(options))
+    # `write` only: the interactive pager has no `writelines`.
+    out.write(preamble)
     previous_type = type(rows[0][0]) if rows else None
     if preamble and previous_type not in (None, Transaction, Commodity):
         # Those two open with a blank line of their own.
         out.write("\n")
-    for (entry,) in rows:
+    for (entry,), switch in zip(rows, switches, strict=True):
         entry_type = type(entry)
+        if switch:
+            out.write("\n" + switch)
+            previous_type = None
         if entry_type in (Transaction, Commodity) or entry_type is not previous_type:
             out.write("\n")
             previous_type = entry_type
         if isinstance(entry, Document):
             entry = entry._replace(filename=_portable_document_path(str(entry.filename), file))
         out.write(printer(entry))
+    if restore:
+        out.write("\n" + restore)
 
 
 def _portable_document_path(filename: str, file: Path) -> str:
