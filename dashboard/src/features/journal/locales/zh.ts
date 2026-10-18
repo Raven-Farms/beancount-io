@@ -462,6 +462,12 @@ const zhJournal: Record<string, TranslationEntry> = {
     description:
       "Accessible label for a numbered transaction posting's currency field",
   },
+  "journal.postingsUnbalanced": {
+    message:
+      "分录不平衡：相差 {residual}。请调整金额，或清空其中一项以自动平衡。",
+    description:
+      "Shown when a new transaction's postings leave a residual; {residual} is the amount and currency, e.g. 1 USD",
+  },
   "journal.autoAmount": {
     message: "汽车",
     description: "Label for an automatically balanced amount",

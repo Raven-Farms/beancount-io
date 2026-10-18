@@ -885,6 +885,12 @@ const frCommon: Record<string, TranslationEntry> = {
     description:
       "Error shown when a feature needs a premium plan (PREMIUM_REQUIRED)",
   },
+  "common.errors.unbalanced": {
+    message:
+      "Les écritures ne sont pas équilibrées. Ajustez un montant et réessayez.",
+    description:
+      "Error shown when the ledger refuses a transaction whose postings do not balance (UNBALANCED)",
+  },
   "common.errors.network": {
     message:
       "Problème de connexion. Vérifiez votre connexion internet et réessayez.",

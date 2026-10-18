@@ -460,6 +460,12 @@ const jaJournal: Record<string, TranslationEntry> = {
     description:
       "Accessible label for a numbered transaction posting's currency field",
   },
+  "journal.postingsUnbalanced": {
+    message:
+      "仕訳行の貸借が一致しません：{residual} の差額があります。金額を修正するか、1 つを空欄にして自動で調整してください。",
+    description:
+      "Shown when a new transaction's postings leave a residual; {residual} is the amount and currency, e.g. 1 USD",
+  },
   "journal.autoAmount": {
     message: "自動",
     description: "Label for an automatically balanced amount",

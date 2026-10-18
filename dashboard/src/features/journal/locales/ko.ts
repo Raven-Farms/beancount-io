@@ -459,6 +459,12 @@ const koJournal: Record<string, TranslationEntry> = {
     description:
       "Accessible label for a numbered transaction posting's currency field",
   },
+  "journal.postingsUnbalanced": {
+    message:
+      "분개가 균형이 맞지 않습니다: {residual}이(가) 남습니다. 금액을 조정하거나 하나를 비워 자동으로 맞추세요.",
+    description:
+      "Shown when a new transaction's postings leave a residual; {residual} is the amount and currency, e.g. 1 USD",
+  },
   "journal.autoAmount": {
     message: "자동",
     description: "Label for an automatically balanced amount",

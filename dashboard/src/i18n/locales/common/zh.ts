@@ -856,6 +856,11 @@ const zhCommon: Record<string, TranslationEntry> = {
     description:
       "Error shown when a feature needs a premium plan (PREMIUM_REQUIRED)",
   },
+  "common.errors.unbalanced": {
+    message: "分录不平衡。请调整金额后重试。",
+    description:
+      "Error shown when the ledger refuses a transaction whose postings do not balance (UNBALANCED)",
+  },
   "common.errors.network": {
     message: "连接出现问题，请检查网络连接后重试。",
     description:

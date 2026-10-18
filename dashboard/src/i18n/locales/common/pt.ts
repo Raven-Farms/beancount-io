@@ -880,6 +880,11 @@ const ptCommon: Record<string, TranslationEntry> = {
     description:
       "Error shown when a feature needs a premium plan (PREMIUM_REQUIRED)",
   },
+  "common.errors.unbalanced": {
+    message: "Os lançamentos não fecham. Ajuste um valor e tente novamente.",
+    description:
+      "Error shown when the ledger refuses a transaction whose postings do not balance (UNBALANCED)",
+  },
   "common.errors.network": {
     message:
       "Problema de conexão. Verifique sua conexão com a internet e tente novamente.",

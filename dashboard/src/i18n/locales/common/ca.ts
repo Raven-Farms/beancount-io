@@ -885,6 +885,11 @@ const caCommon: Record<string, TranslationEntry> = {
     description:
       "Error shown when a feature needs a premium plan (PREMIUM_REQUIRED)",
   },
+  "common.errors.unbalanced": {
+    message: "Els apunts no quadren. Ajusteu un import i torneu-ho a provar.",
+    description:
+      "Error shown when the ledger refuses a transaction whose postings do not balance (UNBALANCED)",
+  },
   "common.errors.network": {
     message:
       "Problema de connexió. Comproveu la connexió a internet i torneu-ho a provar.",

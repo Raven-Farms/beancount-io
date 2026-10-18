@@ -884,6 +884,11 @@ const ukCommon: Record<string, TranslationEntry> = {
     description:
       "Error shown when a feature needs a premium plan (PREMIUM_REQUIRED)",
   },
+  "common.errors.unbalanced": {
+    message: "Проводки не збалансовані. Змініть суму й спробуйте ще раз.",
+    description:
+      "Error shown when the ledger refuses a transaction whose postings do not balance (UNBALANCED)",
+  },
   "common.errors.network": {
     message:
       "Проблема зі з'єднанням. Перевірте інтернет-з'єднання та спробуйте ще раз.",

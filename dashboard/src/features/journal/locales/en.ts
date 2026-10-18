@@ -477,6 +477,12 @@ const enJournal: Record<string, TranslationEntry> = {
     description:
       "Accessible label for a numbered transaction posting's currency field",
   },
+  "journal.postingsUnbalanced": {
+    message:
+      "Postings don't balance: {residual} left over. Adjust an amount, or clear one to balance it automatically.",
+    description:
+      "Shown when a new transaction's postings leave a residual; {residual} is the amount and currency, e.g. 1 USD",
+  },
   "journal.autoAmount": {
     message: "auto",
     description: "Label for an automatically balanced amount",

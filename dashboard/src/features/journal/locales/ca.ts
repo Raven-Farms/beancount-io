@@ -493,6 +493,12 @@ const caJournal: Record<string, TranslationEntry> = {
     description:
       "Accessible label for a numbered transaction posting's currency field",
   },
+  "journal.postingsUnbalanced": {
+    message:
+      "Els apunts no quadren: en sobren {residual}. Ajusteu un import o buideu-ne un perquè es quadri automàticament.",
+    description:
+      "Shown when a new transaction's postings leave a residual; {residual} is the amount and currency, e.g. 1 USD",
+  },
   "journal.autoAmount": {
     message: "automàtic",
     description: "Label for an automatically balanced amount",

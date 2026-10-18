@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { CombinedGraphQLErrors, ServerError } from "@apollo/client/errors";
-import { getErrorMessageKey } from "../error-message";
+import { getErrorMessageKey, getUnbalancedResidual } from "../error-message";
 
 function graphQLError(code?: string): CombinedGraphQLErrors {
   return new CombinedGraphQLErrors({
@@ -27,6 +27,7 @@ describe("getErrorMessageKey", () => {
     ["RESOURCE_LIMIT_REACHED", "common.errors.resourceLimitReached"],
     ["OPERATION_NOT_ALLOWED", "common.errors.operationNotAllowed"],
     ["PREMIUM_REQUIRED", "common.errors.premiumRequired"],
+    ["UNBALANCED", "common.errors.unbalanced"],
   ])("maps GraphQL extensions.code %s to %s", (code, expectedKey) => {
     expect(getErrorMessageKey(graphQLError(code))).toBe(expectedKey);
   });
@@ -120,5 +121,32 @@ describe("header filter diagnostics (w0/020)", () => {
         badInput("Failed to parse date: x", "INTERNAL_SERVER_ERROR"),
       ),
     ).toBe("common.errors.internal");
+  });
+});
+
+describe("getUnbalancedResidual", () => {
+  const refusal = (extensions: Record<string, unknown>) =>
+    new CombinedGraphQLErrors({
+      errors: [{ message: "entry 0: does not balance", extensions }],
+    });
+
+  it("returns the residual an UNBALANCED refusal names", () => {
+    expect(
+      getUnbalancedResidual(
+        refusal({ code: "UNBALANCED", residual: "0.003 EUR, 1 JPY" }),
+      ),
+    ).toBe("0.003 EUR, 1 JPY");
+  });
+
+  it.each([
+    ["another code", { code: "VALIDATION_FAILED", residual: "1 USD" }],
+    ["no residual", { code: "UNBALANCED" }],
+    ["an unparsed residual", { code: "UNBALANCED", residual: "unknown" }],
+  ])("returns null for %s", (_case, extensions) => {
+    expect(getUnbalancedResidual(refusal(extensions))).toBeNull();
+  });
+
+  it("returns null for errors that are not GraphQL refusals", () => {
+    expect(getUnbalancedResidual(new Error("UNBALANCED"))).toBeNull();
   });
 });

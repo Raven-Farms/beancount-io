@@ -878,6 +878,12 @@ const nlCommon: Record<string, TranslationEntry> = {
     description:
       "Error shown when a feature needs a premium plan (PREMIUM_REQUIRED)",
   },
+  "common.errors.unbalanced": {
+    message:
+      "De boekingsregels zijn niet in balans. Pas een bedrag aan en probeer het opnieuw.",
+    description:
+      "Error shown when the ledger refuses a transaction whose postings do not balance (UNBALANCED)",
+  },
   "common.errors.network": {
     message:
       "Verbindingsprobleem. Controleer je internetverbinding en probeer het opnieuw.",

@@ -42,11 +42,15 @@ import {
   NarrationsCombobox,
 } from "@/common/components/ledger-comboboxes";
 import { useTranslations } from "@/common/hooks/use-translations";
-import { useErrorMessage } from "@/common/lib/errors/error-message";
+import {
+  getUnbalancedResidual,
+  useErrorMessage,
+} from "@/common/lib/errors/error-message";
 import { useLedger } from "@/common/hooks/use-ledger";
 import {
   applyAutoBalanceToPostings,
   computeAutoBalance,
+  findUnbalancedResiduals,
   findUnresolvedEligibleAmount,
   isEligiblePosting,
 } from "./transaction-auto-balance";
@@ -211,6 +215,22 @@ export function TransactionForm({ ledgerId, onSuccess }: TransactionFormProps) {
         return;
       }
 
+      // The ledger refuses these as UNBALANCED; say so before sending.
+      const residuals = findUnbalancedResiduals(
+        balancedPostings,
+        primaryCurrency,
+      );
+      if (residuals.length > 0) {
+        setError(
+          t("journal.postingsUnbalanced", {
+            residual: residuals
+              .map(({ amount, currency }) => `${amount} ${currency}`)
+              .join(", "),
+          }),
+        );
+        return;
+      }
+
       // Create postings array - skip empty accounts
       const ledgerPostings: LedgerPostingInput[] = balancedPostings
         .filter((posting) => isEligiblePosting(posting))
@@ -276,7 +296,12 @@ export function TransactionForm({ ledgerId, onSuccess }: TransactionFormProps) {
         );
       }
     } catch (err) {
-      setError(formatError(err));
+      const residual = getUnbalancedResidual(err);
+      setError(
+        residual
+          ? t("journal.postingsUnbalanced", { residual })
+          : formatError(err),
+      );
     }
   };
 

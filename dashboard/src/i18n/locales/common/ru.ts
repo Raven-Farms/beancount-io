@@ -885,6 +885,11 @@ const ruCommon: Record<string, TranslationEntry> = {
     description:
       "Error shown when a feature needs a premium plan (PREMIUM_REQUIRED)",
   },
+  "common.errors.unbalanced": {
+    message: "Проводки не сбалансированы. Измените сумму и попробуйте снова.",
+    description:
+      "Error shown when the ledger refuses a transaction whose postings do not balance (UNBALANCED)",
+  },
   "common.errors.network": {
     message:
       "Проблема с подключением. Проверьте интернет-соединение и попробуйте снова.",

@@ -480,6 +480,12 @@ const faJournal: Record<string, TranslationEntry> = {
     description:
       "Accessible label for a numbered transaction posting's currency field",
   },
+  "journal.postingsUnbalanced": {
+    message:
+      "ردیف‌های سند تراز نیستند: {residual} باقی مانده است. یک مبلغ را اصلاح کنید یا یکی را خالی بگذارید تا خودکار تراز شود.",
+    description:
+      "Shown when a new transaction's postings leave a residual; {residual} is the amount and currency, e.g. 1 USD",
+  },
   "journal.autoAmount": {
     message: "خودکار",
     description: "Label for an automatically balanced amount",

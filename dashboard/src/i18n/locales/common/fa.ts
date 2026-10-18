@@ -876,6 +876,12 @@ const faCommon: Record<string, TranslationEntry> = {
     description:
       "Error shown when a feature needs a premium plan (PREMIUM_REQUIRED)",
   },
+  "common.errors.unbalanced": {
+    message:
+      "ردیف‌های سند تراز نیستند. یک مبلغ را اصلاح کنید و دوباره تلاش کنید.",
+    description:
+      "Error shown when the ledger refuses a transaction whose postings do not balance (UNBALANCED)",
+  },
   "common.errors.network": {
     message:
       "مشکل در اتصال. اتصال اینترنت خود را بررسی کنید و دوباره تلاش کنید.",

@@ -882,6 +882,11 @@ const esCommon: Record<string, TranslationEntry> = {
     description:
       "Error shown when a feature needs a premium plan (PREMIUM_REQUIRED)",
   },
+  "common.errors.unbalanced": {
+    message: "Los asientos no cuadran. Ajusta un monto e inténtalo de nuevo.",
+    description:
+      "Error shown when the ledger refuses a transaction whose postings do not balance (UNBALANCED)",
+  },
   "common.errors.network": {
     message:
       "Problema de conexión. Comprueba tu conexión a internet e inténtalo de nuevo.",

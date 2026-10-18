@@ -478,6 +478,12 @@ const nlJournal: Record<string, TranslationEntry> = {
     description:
       "Accessible label for a numbered transaction posting's currency field",
   },
+  "journal.postingsUnbalanced": {
+    message:
+      "De boekingsregels zijn niet in balans: er blijft {residual} over. Pas een bedrag aan of maak er een leeg om het automatisch te laten berekenen.",
+    description:
+      "Shown when a new transaction's postings leave a residual; {residual} is the amount and currency, e.g. 1 USD",
+  },
   "journal.autoAmount": {
     message: "automatisch",
     description: "Label for an automatically balanced amount",

@@ -25,6 +25,7 @@ const ERROR_CODE_TO_KEY: Record<string, string> = {
   RESOURCE_LIMIT_REACHED: "common.errors.resourceLimitReached",
   OPERATION_NOT_ALLOWED: "common.errors.operationNotAllowed",
   PREMIUM_REQUIRED: "common.errors.premiumRequired",
+  UNBALANCED: "common.errors.unbalanced",
 };
 
 const GENERIC_ERROR_KEY = "common.errors.generic";
@@ -81,6 +82,27 @@ export function getErrorMessageKey(error: unknown): string {
   }
 
   return GENERIC_ERROR_KEY;
+}
+
+/**
+ * The residual an UNBALANCED refusal names (`"1 USD"`, `"0.003 EUR, 1 JPY"`),
+ * so an entry form can say how far off the postings are; `null` for any
+ * other error.
+ */
+export function getUnbalancedResidual(error: unknown): string | null {
+  if (!CombinedGraphQLErrors.is(error)) return null;
+  for (const gqlError of error.errors) {
+    const { code, residual } = gqlError.extensions ?? {};
+    if (
+      code === "UNBALANCED" &&
+      typeof residual === "string" &&
+      residual !== "" &&
+      residual !== "unknown"
+    ) {
+      return residual;
+    }
+  }
+  return null;
 }
 
 const FETCH_FAILURE_MESSAGES = [

@@ -884,6 +884,11 @@ const skCommon: Record<string, TranslationEntry> = {
     description:
       "Error shown when a feature needs a premium plan (PREMIUM_REQUIRED)",
   },
+  "common.errors.unbalanced": {
+    message: "Položky nie sú vyrovnané. Upravte sumu a skúste to znova.",
+    description:
+      "Error shown when the ledger refuses a transaction whose postings do not balance (UNBALANCED)",
+  },
   "common.errors.network": {
     message:
       "Problém s pripojením. Skontrolujte internetové pripojenie a skúste to znova.",

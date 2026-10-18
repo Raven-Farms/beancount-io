@@ -478,6 +478,12 @@ const deJournal: Record<string, TranslationEntry> = {
     description:
       "Accessible label for a numbered transaction posting's currency field",
   },
+  "journal.postingsUnbalanced": {
+    message:
+      "Die Buchungszeilen sind nicht ausgeglichen: {residual} bleiben übrig. Passen Sie einen Betrag an oder leeren Sie einen, damit er automatisch ausgeglichen wird.",
+    description:
+      "Shown when a new transaction's postings leave a residual; {residual} is the amount and currency, e.g. 1 USD",
+  },
   "journal.autoAmount": {
     message: "auto",
     description: "Label for an automatically balanced amount",

@@ -877,6 +877,11 @@ const bgCommon: Record<string, TranslationEntry> = {
     description:
       "Error shown when a feature needs a premium plan (PREMIUM_REQUIRED)",
   },
+  "common.errors.unbalanced": {
+    message: "Записите не са балансирани. Коригирайте сума и опитайте отново.",
+    description:
+      "Error shown when the ledger refuses a transaction whose postings do not balance (UNBALANCED)",
+  },
   "common.errors.network": {
     message:
       "Проблем с връзката. Проверете интернет връзката си и опитайте отново.",
