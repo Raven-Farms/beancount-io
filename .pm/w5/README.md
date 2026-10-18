@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [633 — Trivial follow-ups to w5/475, 479, 480: "disabled" for ignored origins, stale `--allow-errors` help, BOM option location](./633.md)
 - [634 — An importer config calling `sys.exit` is reported as "engine did not answer" and, with `--apply`, exit 4 "outcome unknown"](./634.md)
 - [635 — `ingest extract -o` on a module binding `CONFIG` by import exits 0 and writes nothing (gap in w5/167)](./635.md)
 - [636 — A blocked import row's "opens after this row" names a vanished staging file](./636.md)
