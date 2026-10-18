@@ -21,6 +21,7 @@ from typer.testing import CliRunner
 
 from bea_engine import managed_load
 from bea_engine.ledger import write as ledger_write
+from bea_engine.ledger.text import bea_command
 from cli.main import app
 
 runner = CliRunner()
@@ -171,7 +172,7 @@ def test_unknown_account_refusal_still_suggests_the_close_match(
     assert len(details) == 1
     assert (
         "unknown account 'Expenses:Fod' Did you mean Expenses:Food? "
-        "To create it, use bea add open --account Expenses:Fod --date YYYY-MM-DD. "
+        f"To create it, use {bea_command(tmp_path / 'main.bean')} add open --account Expenses:Fod --date YYYY-MM-DD. "
         "Same problem on 2 more lines: 7, 10."
     ) in details[0]
 

@@ -17,12 +17,18 @@ import pytest
 
 from bea_engine import managed_load, protocol
 from bea_engine.ledger import adding
+from bea_engine.ledger.text import bea_command
 
 LEDGER = "2026-01-01 open Expenses:Food USD\n2026-01-01 open Assets:Cash USD\n"
-UNKNOWN = (
-    "Proposed append (not written): Invalid reference to unknown account 'Expenses:Nope' "
-    "Did you mean Expenses:Food? To create it, use bea add open --account Expenses:Nope --date YYYY-MM-DD."
-)
+
+
+def _unknown(ledger: Path) -> str:
+    # The remedy names the ledger it is about (w5/619).
+    return (
+        "Proposed append (not written): Invalid reference to unknown account 'Expenses:Nope' "
+        f"Did you mean Expenses:Food? To create it, use {bea_command(ledger)} add open --account Expenses:Nope "
+        "--date YYYY-MM-DD."
+    )
 
 
 def _row(n: int, account: str = "Expenses:Food") -> dict[str, Any]:
@@ -66,7 +72,7 @@ def test_one_bad_row_costs_the_same_loads_at_any_batch_size(tmp_path: Path, load
     # The refused batch, the confirmed remainder, and the write itself.
     assert len(loads) == 3, loads
     assert str(error) == f"Added {count - 1} of {count} transactions; 1 row was rejected."
-    assert error.details == [f"Row 1: {UNKNOWN}"]
+    assert error.details == [f"Row 1: {_unknown(ledger)}"]
     assert error.result == {"written": count - 1, "written_rows": list(range(1, count)), "rejected_rows": [0]}
     written = ledger.read_text()
     assert written.startswith(LEDGER)
@@ -95,7 +101,7 @@ def test_each_rejected_row_keeps_its_own_message(tmp_path: Path, loads: list[Pat
 
     assert len(loads) == 3, loads
     assert str(error) == "Added 6 of 9 transactions; 3 rows were rejected."
-    assert error.details[:2] == [f"Row 3: {UNKNOWN}", f"Row 6: {UNKNOWN}"]
+    assert error.details[:2] == [f"Row 3: {_unknown(ledger)}", f"Row 6: {_unknown(ledger)}"]
     assert error.details[2].startswith("Row 8: Proposed append (not written): Invalid reference to inactive account")
     assert len(error.details) == 3
     assert error.result is not None
@@ -120,7 +126,7 @@ def test_into_and_allow_errors_stay_bounded(tmp_path: Path, loads: list[Path]) -
         sizes.append(len(loads))
         assert error.result is not None
         assert error.result["written"] == count - 1 and error.result["rejected_rows"] == [3]
-        assert error.details == [f"Row 4: {UNKNOWN}"]
+        assert error.details == [f"Row 4: {_unknown(ledger)}"]
         assert part.read_text().count(" * ") == count - 1
 
     # Each `--allow-errors` validation also loads the ledger as it was.

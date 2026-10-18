@@ -552,7 +552,7 @@ def test_one_missing_account_reads_as_one_problem_not_one_per_row(book: Path) ->
     assert len(details) == 1
     assert "unknown account 'Expenses:Nope'" in details[0]
     assert "Same problem on 2 more lines:" in details[0]
-    assert "bea add open --account Expenses:Nope" in details[0]
+    assert "add open --account Expenses:Nope" in details[0]
 
 
 def test_distinct_problems_are_still_reported_separately(book: Path) -> None:

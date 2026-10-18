@@ -137,7 +137,7 @@ def test_add_still_offers_to_open_a_genuinely_absent_account(tmp_path: Path) -> 
     )
 
     assert result.returncode != 0
-    assert "bea add open --account Expenses:Totally-Absent" in result.stderr
+    assert "add open --account Expenses:Totally-Absent" in result.stderr
     assert "different Unicode normalization" not in result.stderr
 
 

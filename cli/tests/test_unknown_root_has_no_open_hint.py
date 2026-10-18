@@ -9,6 +9,7 @@ so the message names the ledger's roots instead, as `bea import` does.
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -101,7 +102,10 @@ def test_account_under_a_ledger_root_keeps_a_working_add_open_hint(tmp_path: Pat
         *("add", "transaction", "--date", "2024-03-02", "Brot", "-p", "Aufwand:Neu 3 EUR", "-p", "Aktiva:Bank"),
     )
 
-    assert "To create it, use bea add open --account Aufwand:Neu --date YYYY-MM-DD." in output
+    # Named with the ledger it is about (w5/619).
+    assert re.search(
+        r"To create it, use bea --file \S*main\.bean add open --account Aufwand:Neu --date YYYY-MM-DD\.", output
+    )
     assert "its roots are" not in output
 
     opened = _bea(tmp_path, "add", "open", "--account", "Aufwand:Neu", "--date", "2024-03-01")

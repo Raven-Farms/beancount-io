@@ -27,7 +27,7 @@ from pathlib import Path
 from typing import Any
 
 from bea_engine import stopping
-from bea_engine.ledger.text import lexer_lines, single_line
+from bea_engine.ledger.text import bea_command, lexer_lines, single_line
 from bea_engine.protocol import AuthError, ConflictError, LedgerError, StagingFailed, UsageError, notice
 from bea_engine.query import format_error, same_file
 
@@ -1974,7 +1974,8 @@ def validate_candidate(
                 message = f"Proposed append (not written): {message}"
             hints.append(
                 "Plugin check_commodity requires a commodity directive for every currency the ledger uses. "
-                f"Declare it first: bea add commodity --date YYYY-MM-DD --currency {missing.group(1)}, then retry."
+                f"Declare it first: {bea_command(snapshot.root if snapshot else file)} add commodity "
+                f"--date YYYY-MM-DD --currency {missing.group(1)}, then retry."
             )
         if "unknown account '" in message:
             account = message.split("unknown account '", 1)[1].split("'", 1)[0]
@@ -1987,8 +1988,11 @@ def validate_candidate(
                     # An `open` under a root the ledger does not use can never
                     # load, so the remedy is the root, not the directive (w5/154).
                     if account.split(":", 1)[0] in roots:
+                        # Pasted, a bare `bea add open` opened the account in
+                        # whatever ledger cwd discovery found (w5/619).
                         suggestion += (
-                            f" To create it, use bea add open --account {shlex.quote(account)} --date YYYY-MM-DD"
+                            f" To create it, use {bea_command(snapshot.root if snapshot else file)} add open "
+                            f"--account {shlex.quote(account)} --date YYYY-MM-DD"
                         )
                         # Under `nounused` the plain command is refused: the
                         # open is an error until this very write uses it.
