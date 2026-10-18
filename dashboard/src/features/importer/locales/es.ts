@@ -101,6 +101,33 @@ const esImporter: Record<string, TranslationEntry> = {
     message: "Subir otro archivo",
     description: "Button to upload a different file after error",
   },
+  "importer.aiOffer.title": {
+    message: "No pudimos leer las columnas de este CSV",
+    description:
+      "Title when a CSV's columns could not be read by the free client parser",
+  },
+  "importer.aiOffer.description": {
+    message:
+      "La importación inteligente lee gratis archivos CSV con columnas Fecha, Beneficiario, Descripción e Importe. Este archivo puede leerse con IA, lo que usa tus tokens de IA.",
+    description:
+      "Explains the free CSV format and that AI parsing spends AI tokens",
+  },
+  "importer.aiOffer.parseWithAi": {
+    message: "Analizar con IA (usa tokens de IA)",
+    description:
+      "Button that parses the unreadable CSV with AI, spending AI tokens",
+  },
+  "importer.error.aiQuotaReached": {
+    message: "Has usado los tokens de IA de este mes",
+    description:
+      "Title when AI parsing of a CSV is refused because the month's AI tokens are used up",
+  },
+  "importer.error.aiQuotaReachedCsv": {
+    message:
+      "El análisis con IA vuelve a estar disponible el mes que viene o con Premium. Un CSV con columnas Fecha, Beneficiario, Descripción e Importe se sigue importando gratis.",
+    description:
+      "Explains when AI parsing returns and that a well-formed CSV still imports for free",
+  },
   "importer.error.premiumRequired": {
     message: "Función premium requerida",
     description: "Title for premium required error",

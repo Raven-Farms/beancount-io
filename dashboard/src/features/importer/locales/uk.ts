@@ -101,6 +101,33 @@ const ukImporter: Record<string, TranslationEntry> = {
     message: "Завантажити інший файл",
     description: "Button to upload a different file after error",
   },
+  "importer.aiOffer.title": {
+    message: "Не вдалося прочитати стовпці цього CSV",
+    description:
+      "Title when a CSV's columns could not be read by the free client parser",
+  },
+  "importer.aiOffer.description": {
+    message:
+      "Розумний імпорт безкоштовно читає CSV-файли зі стовпцями «Дата», «Отримувач», «Опис» і «Сума». Цей файл можна прочитати за допомогою ШІ — це витрачає ваші ШІ-токени.",
+    description:
+      "Explains the free CSV format and that AI parsing spends AI tokens",
+  },
+  "importer.aiOffer.parseWithAi": {
+    message: "Розібрати за допомогою ШІ (витрачає ШІ-токени)",
+    description:
+      "Button that parses the unreadable CSV with AI, spending AI tokens",
+  },
+  "importer.error.aiQuotaReached": {
+    message: "Ви витратили ШІ-токени цього місяця",
+    description:
+      "Title when AI parsing of a CSV is refused because the month's AI tokens are used up",
+  },
+  "importer.error.aiQuotaReachedCsv": {
+    message:
+      "Розбір за допомогою ШІ знову буде доступний наступного місяця або з Premium. CSV зі стовпцями «Дата», «Отримувач», «Опис» і «Сума» і далі імпортується безкоштовно.",
+    description:
+      "Explains when AI parsing returns and that a well-formed CSV still imports for free",
+  },
   "importer.error.premiumRequired": {
     message: "Потрібна преміум-функція",
     description: "Title for premium required error",

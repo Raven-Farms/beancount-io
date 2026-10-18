@@ -2,6 +2,7 @@ import { useState } from "react";
 import { FileUpload } from "./file-upload";
 import { ParsingProgress } from "./parsing-progress";
 import { ParseErrorDisplay } from "./parse-error-display";
+import { AiParseOffer } from "./ai-parse-offer";
 import { useMultiStageParser } from "../../../hooks/use-multi-stage-parser";
 import type { CSVParseResult } from "../../../types";
 
@@ -21,7 +22,7 @@ export function UploadStep({ onParseComplete }: UploadStepProps) {
     setSelectedFileName(file.name);
     try {
       const result = await parser.parseFile(file);
-      onParseComplete(result);
+      if (result) onParseComplete(result);
     } catch (err) {
       console.error("File parsing failed:", err);
       // Error is already set in the hook
@@ -36,6 +37,26 @@ export function UploadStep({ onParseComplete }: UploadStepProps) {
   // Show parsing progress
   if (parser.isLoading) {
     return <ParsingProgress stage={parser.stage} fileName={selectedFileName} />;
+  }
+
+  const handleParseWithAi = async () => {
+    try {
+      const result = await parser.parseWithAi();
+      if (result) onParseComplete(result);
+    } catch (err) {
+      console.error("AI parsing failed:", err);
+    }
+  };
+
+  // A CSV the client could not read: AI parsing only if the user says so.
+  if (parser.stage === "ai-offer") {
+    return (
+      <AiParseOffer
+        fileName={selectedFileName}
+        onParseWithAi={handleParseWithAi}
+        onReset={handleReset}
+      />
+    );
   }
 
   // Show parse error

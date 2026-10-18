@@ -68,14 +68,14 @@ describe("useMultiStageParser", () => {
     expect(result.current.stage).toBe("complete");
   });
 
-  it("still falls through to LLM for unrecognized CSV with zero valid rows", async () => {
+  it("offers AI parsing for an unreadable CSV and sends nothing until chosen", async () => {
     parseCSVFile.mockResolvedValue({
       rows: [],
       validCount: 0,
       errorCount: 0,
       hasErrors: false,
     } satisfies CSVParseResult);
-    parseLLMFile.mockResolvedValue({
+    const llmResult: CSVParseResult = {
       rows: [
         {
           id: "llm",
@@ -89,15 +89,50 @@ describe("useMultiStageParser", () => {
       validCount: 1,
       errorCount: 0,
       hasErrors: false,
-    } satisfies CSVParseResult);
+    };
+    parseLLMFile.mockResolvedValue(llmResult);
 
     const { result } = renderHook(() => useMultiStageParser());
+    let parsed: CSVParseResult | null | undefined;
     await act(async () => {
-      await result.current.parseFile(csvFile("empty.csv"));
+      parsed = await result.current.parseFile(csvFile("empty.csv"));
+    });
+
+    expect(parsed).toBeNull();
+    expect(result.current.stage).toBe("ai-offer");
+    expect(result.current.isLoading).toBe(false);
+    expect(parseLLMFile).not.toHaveBeenCalled();
+
+    await act(async () => {
+      parsed = await result.current.parseWithAi();
     });
 
     expect(parseLLMFile).toHaveBeenCalledTimes(1);
+    expect(parseLLMFile.mock.calls[0][1]).toBe("csv");
+    expect(parsed).toEqual(llmResult);
     expect(result.current.stage).toBe("complete");
+  });
+
+  it("offers AI parsing when the client parser throws, and reset withdraws it", async () => {
+    parseCSVFile.mockRejectedValue(new Error("unterminated quote"));
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const { result } = renderHook(() => useMultiStageParser());
+    await act(async () => {
+      await result.current.parseFile(csvFile("broken.csv"));
+    });
+    expect(result.current.stage).toBe("ai-offer");
+
+    act(() => result.current.reset());
+    let parsed: CSVParseResult | null | undefined;
+    await act(async () => {
+      parsed = await result.current.parseWithAi();
+    });
+
+    expect(parsed).toBeNull();
+    expect(parseLLMFile).not.toHaveBeenCalled();
+    expect(result.current.stage).toBe("idle");
+    warn.mockRestore();
   });
 
   it("returns mixed CSV without LLM when some rows are valid", async () => {

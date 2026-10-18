@@ -96,6 +96,33 @@ const zhImporter: Record<string, TranslationEntry> = {
     message: "上传其他文件",
     description: "Button to upload a different file after error",
   },
+  "importer.aiOffer.title": {
+    message: "无法读取此 CSV 的列",
+    description:
+      "Title when a CSV's columns could not be read by the free client parser",
+  },
+  "importer.aiOffer.description": {
+    message:
+      "智能导入可免费读取包含日期、收款人、描述和金额列的 CSV 文件。此文件也可以用 AI 读取，但会消耗你的 AI 令牌。",
+    description:
+      "Explains the free CSV format and that AI parsing spends AI tokens",
+  },
+  "importer.aiOffer.parseWithAi": {
+    message: "用 AI 解析（消耗 AI 令牌）",
+    description:
+      "Button that parses the unreadable CSV with AI, spending AI tokens",
+  },
+  "importer.error.aiQuotaReached": {
+    message: "你已用完本月的 AI 令牌",
+    description:
+      "Title when AI parsing of a CSV is refused because the month's AI tokens are used up",
+  },
+  "importer.error.aiQuotaReachedCsv": {
+    message:
+      "AI 解析将在下个月或开通 Premium 后恢复。包含日期、收款人、描述和金额列的 CSV 仍可免费导入。",
+    description:
+      "Explains when AI parsing returns and that a well-formed CSV still imports for free",
+  },
   "importer.error.premiumRequired": {
     message: "需要高级功能",
     description: "Title for premium required error",

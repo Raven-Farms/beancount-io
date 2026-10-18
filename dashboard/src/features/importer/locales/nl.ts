@@ -101,6 +101,33 @@ const nlImporter: Record<string, TranslationEntry> = {
     message: "Upload een ander bestand",
     description: "Button to upload a different file after error",
   },
+  "importer.aiOffer.title": {
+    message: "We konden de kolommen van deze CSV niet lezen",
+    description:
+      "Title when a CSV's columns could not be read by the free client parser",
+  },
+  "importer.aiOffer.description": {
+    message:
+      "Slim importeren leest CSV-bestanden met de kolommen Datum, Begunstigde, Omschrijving en Bedrag gratis. Dit bestand kan in plaats daarvan met AI worden gelezen, wat je AI-tokens verbruikt.",
+    description:
+      "Explains the free CSV format and that AI parsing spends AI tokens",
+  },
+  "importer.aiOffer.parseWithAi": {
+    message: "Met AI uitlezen (verbruikt AI-tokens)",
+    description:
+      "Button that parses the unreadable CSV with AI, spending AI tokens",
+  },
+  "importer.error.aiQuotaReached": {
+    message: "Je hebt de AI-tokens van deze maand verbruikt",
+    description:
+      "Title when AI parsing of a CSV is refused because the month's AI tokens are used up",
+  },
+  "importer.error.aiQuotaReachedCsv": {
+    message:
+      "Uitlezen met AI is volgende maand of met Premium weer beschikbaar. Een CSV met de kolommen Datum, Begunstigde, Omschrijving en Bedrag wordt nog steeds gratis geïmporteerd.",
+    description:
+      "Explains when AI parsing returns and that a well-formed CSV still imports for free",
+  },
   "importer.error.premiumRequired": {
     message: "Premiumfunctie vereist",
     description: "Title for premium required error",

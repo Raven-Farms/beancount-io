@@ -102,6 +102,33 @@ const bgImporter: Record<string, TranslationEntry> = {
     message: "Качи друг файл",
     description: "Button to upload a different file after error",
   },
+  "importer.aiOffer.title": {
+    message: "Не успяхме да прочетем колоните на този CSV",
+    description:
+      "Title when a CSV's columns could not be read by the free client parser",
+  },
+  "importer.aiOffer.description": {
+    message:
+      "Интелигентният импорт чете безплатно CSV файлове с колони Дата, Получател, Описание и Сума. Този файл може да бъде прочетен с ИИ, което използва вашите ИИ токени.",
+    description:
+      "Explains the free CSV format and that AI parsing spends AI tokens",
+  },
+  "importer.aiOffer.parseWithAi": {
+    message: "Анализирай с ИИ (използва ИИ токени)",
+    description:
+      "Button that parses the unreadable CSV with AI, spending AI tokens",
+  },
+  "importer.error.aiQuotaReached": {
+    message: "Използвахте ИИ токените си за този месец",
+    description:
+      "Title when AI parsing of a CSV is refused because the month's AI tokens are used up",
+  },
+  "importer.error.aiQuotaReachedCsv": {
+    message:
+      "Анализът с ИИ е отново достъпен следващия месец или с Premium. CSV с колони Дата, Получател, Описание и Сума все още се импортира безплатно.",
+    description:
+      "Explains when AI parsing returns and that a well-formed CSV still imports for free",
+  },
   "importer.error.premiumRequired": {
     message: "Изисква се премиум функция",
     description: "Title for premium required error",

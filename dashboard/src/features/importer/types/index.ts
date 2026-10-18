@@ -11,6 +11,8 @@ export type ParseStage =
   | "detecting"
   | "client-parsing"
   | "server-parsing"
+  /** A CSV the client could not read; AI parsing waits for the user's yes. */
+  | "ai-offer"
   | "complete"
   | "error";
 

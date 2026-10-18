@@ -103,6 +103,33 @@ const caImporter: Record<string, TranslationEntry> = {
     message: "Pujar un altre fitxer",
     description: "Button to upload a different file after error",
   },
+  "importer.aiOffer.title": {
+    message: "No hem pogut llegir les columnes d'aquest CSV",
+    description:
+      "Title when a CSV's columns could not be read by the free client parser",
+  },
+  "importer.aiOffer.description": {
+    message:
+      "La importació intel·ligent llegeix gratuïtament fitxers CSV amb columnes Data, Beneficiari, Descripció i Import. Aquest fitxer es pot llegir amb IA, cosa que fa servir els vostres tokens d'IA.",
+    description:
+      "Explains the free CSV format and that AI parsing spends AI tokens",
+  },
+  "importer.aiOffer.parseWithAi": {
+    message: "Analitza amb IA (fa servir tokens d'IA)",
+    description:
+      "Button that parses the unreadable CSV with AI, spending AI tokens",
+  },
+  "importer.error.aiQuotaReached": {
+    message: "Heu esgotat els tokens d'IA d'aquest mes",
+    description:
+      "Title when AI parsing of a CSV is refused because the month's AI tokens are used up",
+  },
+  "importer.error.aiQuotaReachedCsv": {
+    message:
+      "L'anàlisi amb IA tornarà a estar disponible el mes vinent o amb Premium. Un CSV amb columnes Data, Beneficiari, Descripció i Import encara s'importa gratuïtament.",
+    description:
+      "Explains when AI parsing returns and that a well-formed CSV still imports for free",
+  },
   "importer.error.premiumRequired": {
     message: "Es requereix funció premium",
     description: "Title for premium required error",

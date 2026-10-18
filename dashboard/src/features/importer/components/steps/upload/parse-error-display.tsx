@@ -57,18 +57,31 @@ function ErrorLayout({ onReset, children }: ErrorLayoutProps) {
  * Premium required error component
  * Displays upgrade options and CSV alternative
  */
-function PremiumRequiredError({ onReset }: { onReset: () => void }) {
+function PremiumRequiredError({
+  onReset,
+  fileFormat,
+}: {
+  onReset: () => void;
+  fileFormat: FileFormat;
+}) {
   const { t } = useTranslations();
+  // A CSV only reaches AI parsing because the user chose it, so name the
+  // spent quota rather than a file type that "requires" AI.
+  const isCsv = fileFormat === "csv";
 
   return (
     <ErrorLayout onReset={onReset}>
       {/* Title */}
       <div className="space-y-2">
         <h3 className="text-lg font-semibold text-foreground">
-          {t("importer.error.premiumRequired")}
+          {isCsv
+            ? t("importer.error.aiQuotaReached")
+            : t("importer.error.premiumRequired")}
         </h3>
         <p className="text-sm text-muted-foreground">
-          {t("importer.error.premiumRequiredDescription")}
+          {isCsv
+            ? t("importer.error.aiQuotaReachedCsv")
+            : t("importer.error.premiumRequiredDescription")}
         </p>
       </div>
 
@@ -113,15 +126,21 @@ function PremiumRequiredError({ onReset }: { onReset: () => void }) {
         </div>
 
         <div className="border rounded-lg p-4 space-y-3">
-          <div className="flex items-center justify-center gap-2">
-            <FileText className="w-4 h-4 text-muted-foreground" />
-            <p className="text-sm font-medium">
-              {t("importer.error.useCsvFormat")}
-            </p>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            {t("importer.error.csvFreeAccess")}
-          </p>
+          {/* A CSV uploader already read the free path in the description;
+              they need the example, not "use CSV format". */}
+          {!isCsv && (
+            <>
+              <div className="flex items-center justify-center gap-2">
+                <FileText className="w-4 h-4 text-muted-foreground" />
+                <p className="text-sm font-medium">
+                  {t("importer.error.useCsvFormat")}
+                </p>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {t("importer.error.csvFreeAccess")}
+              </p>
+            </>
+          )}
           <a
             href="/lgasset/csv_transactions.csv"
             download="example_transactions.csv"
@@ -164,12 +183,16 @@ function ServerError({ onReset }: { onReset: () => void }) {
  * Parent component that routes to appropriate error display
  * based on error type
  */
-export function ParseErrorDisplay({ error, onReset }: ParseErrorDisplayProps) {
+export function ParseErrorDisplay({
+  error,
+  fileFormat,
+  onReset,
+}: ParseErrorDisplayProps) {
   // Detect if error is premium-related using GraphQL extensions.code
   const isPremiumRequiredError = isPremiumRequired(error);
 
   if (isPremiumRequiredError) {
-    return <PremiumRequiredError onReset={onReset} />;
+    return <PremiumRequiredError onReset={onReset} fileFormat={fileFormat} />;
   }
 
   return <ServerError onReset={onReset} />;

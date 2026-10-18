@@ -101,6 +101,33 @@ const faImporter: Record<string, TranslationEntry> = {
     message: "بارگذاری فایل دیگر",
     description: "Button to upload a different file after error",
   },
+  "importer.aiOffer.title": {
+    message: "نتوانستیم ستون‌های این CSV را بخوانیم",
+    description:
+      "Title when a CSV's columns could not be read by the free client parser",
+  },
+  "importer.aiOffer.description": {
+    message:
+      "ورود هوشمند فایل‌های CSV با ستون‌های تاریخ، دریافت‌کننده، شرح و مبلغ را رایگان می‌خواند. این فایل را می‌توان با هوش مصنوعی خواند که توکن‌های هوش مصنوعی شما را مصرف می‌کند.",
+    description:
+      "Explains the free CSV format and that AI parsing spends AI tokens",
+  },
+  "importer.aiOffer.parseWithAi": {
+    message: "تجزیه با هوش مصنوعی (توکن مصرف می‌کند)",
+    description:
+      "Button that parses the unreadable CSV with AI, spending AI tokens",
+  },
+  "importer.error.aiQuotaReached": {
+    message: "توکن‌های هوش مصنوعی این ماه را مصرف کرده‌اید",
+    description:
+      "Title when AI parsing of a CSV is refused because the month's AI tokens are used up",
+  },
+  "importer.error.aiQuotaReachedCsv": {
+    message:
+      "تجزیه با هوش مصنوعی ماه آینده یا با Premium دوباره در دسترس است. یک CSV با ستون‌های تاریخ، دریافت‌کننده، شرح و مبلغ همچنان رایگان وارد می‌شود.",
+    description:
+      "Explains when AI parsing returns and that a well-formed CSV still imports for free",
+  },
   "importer.error.premiumRequired": {
     message: "ویژگی ممتاز مورد نیاز است",
     description: "Title for premium required error",

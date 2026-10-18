@@ -103,6 +103,33 @@ const deImporter: Record<string, TranslationEntry> = {
     message: "Andere Datei hochladen",
     description: "Button to upload a different file after error",
   },
+  "importer.aiOffer.title": {
+    message: "Die Spalten dieser CSV-Datei konnten nicht gelesen werden",
+    description:
+      "Title when a CSV's columns could not be read by the free client parser",
+  },
+  "importer.aiOffer.description": {
+    message:
+      "Der Smart Import liest CSV-Dateien mit den Spalten Datum, Empfänger, Beschreibung und Betrag kostenlos. Diese Datei kann stattdessen mit KI gelesen werden, was Ihre KI-Tokens verbraucht.",
+    description:
+      "Explains the free CSV format and that AI parsing spends AI tokens",
+  },
+  "importer.aiOffer.parseWithAi": {
+    message: "Mit KI auslesen (verbraucht KI-Tokens)",
+    description:
+      "Button that parses the unreadable CSV with AI, spending AI tokens",
+  },
+  "importer.error.aiQuotaReached": {
+    message: "Sie haben die KI-Tokens dieses Monats aufgebraucht",
+    description:
+      "Title when AI parsing of a CSV is refused because the month's AI tokens are used up",
+  },
+  "importer.error.aiQuotaReachedCsv": {
+    message:
+      "KI-Auslesen ist ab nächstem Monat oder mit Premium wieder verfügbar. Eine CSV-Datei mit den Spalten Datum, Empfänger, Beschreibung und Betrag wird weiterhin kostenlos importiert.",
+    description:
+      "Explains when AI parsing returns and that a well-formed CSV still imports for free",
+  },
   "importer.error.premiumRequired": {
     message: "Premium-Funktion erforderlich",
     description: "Title for premium required error",

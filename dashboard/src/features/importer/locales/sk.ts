@@ -101,6 +101,33 @@ const skImporter: Record<string, TranslationEntry> = {
     message: "Nahrať iný súbor",
     description: "Button to upload a different file after error",
   },
+  "importer.aiOffer.title": {
+    message: "Stĺpce tohto CSV sa nepodarilo prečítať",
+    description:
+      "Title when a CSV's columns could not be read by the free client parser",
+  },
+  "importer.aiOffer.description": {
+    message:
+      "Inteligentný import bezplatne číta súbory CSV so stĺpcami Dátum, Príjemca, Popis a Suma. Tento súbor sa dá prečítať pomocou AI, ktorá spotrebúva vaše AI tokeny.",
+    description:
+      "Explains the free CSV format and that AI parsing spends AI tokens",
+  },
+  "importer.aiOffer.parseWithAi": {
+    message: "Analyzovať pomocou AI (spotrebúva AI tokeny)",
+    description:
+      "Button that parses the unreadable CSV with AI, spending AI tokens",
+  },
+  "importer.error.aiQuotaReached": {
+    message: "Minuli ste AI tokeny na tento mesiac",
+    description:
+      "Title when AI parsing of a CSV is refused because the month's AI tokens are used up",
+  },
+  "importer.error.aiQuotaReachedCsv": {
+    message:
+      "Analýza pomocou AI bude opäť dostupná budúci mesiac alebo s Premium. CSV so stĺpcami Dátum, Príjemca, Popis a Suma sa stále importuje bezplatne.",
+    description:
+      "Explains when AI parsing returns and that a well-formed CSV still imports for free",
+  },
   "importer.error.premiumRequired": {
     message: "Vyžaduje sa prémiová funkcia",
     description: "Title for premium required error",
