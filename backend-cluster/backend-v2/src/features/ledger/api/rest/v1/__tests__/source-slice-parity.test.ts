@@ -10,6 +10,7 @@ import { HealthResolver } from "@/features/healthz/api/health-resolver";
 import { LedgerJournalService } from "@/features/ledger/service/ledger-journal-service";
 import { createHash } from "node:crypto";
 import { BadUserInputError } from "@/shared/errors";
+import { FavaApiError } from "@/foundation/fava/api-client";
 import {
   AuthorizationService,
   SourceBackedRelationshipEvaluator,
@@ -76,7 +77,7 @@ async function fixture(caller = identity) {
     ["entry1", original],
     ["entry2", "; second\n"],
   ]);
-  const state = { writable: true };
+  const state = { writable: true, limited: false };
   const envelope = (data: unknown) => ({ data: { success: true, data } });
   type Ref = { entry_hash: string; sha256sum: string };
   function validate(ref: Ref) {
@@ -102,6 +103,17 @@ async function fixture(caller = identity) {
   const updateSourceSlice = jest.fn(
     async (_owner, _name, body: Ref & { new_content: string }) => {
       validate(body);
+      // The ledger service's commit-boundary check (w0/m6): the replacement
+      // would take a free ledger past its directive limit.
+      if (state.limited) {
+        const error =
+          "This ledger has reached its free-tier limit of 2 directives (this change would bring it to approximately 5). Deleting entries still works and is how to get back under the limit; upgrading removes it entirely.";
+        throw new FavaApiError(error, 403, {
+          error,
+          code: "directive_limit_exceeded",
+          details: { limit: 2, current: 5 },
+        });
+      }
       slices.set(body.entry_hash, body.new_content);
       return envelope({
         message: "Updated",
@@ -186,6 +198,8 @@ async function fixture(caller = identity) {
         return {
           success: response.status === 200,
           result: await response.json(),
+          errors: undefined,
+          full: undefined,
         };
       }
       if (surface === "gql") {
@@ -198,6 +212,8 @@ async function fixture(caller = identity) {
         return {
           success: !response.errors,
           result: response.data?.[spec.field],
+          errors: response.errors,
+          full: undefined,
         };
       }
       // One MCP tool per operation (ADR 019, 2026-10-18).
@@ -215,6 +231,8 @@ async function fixture(caller = identity) {
       return {
         success: !response.isError,
         result: (response.structuredContent as { result?: unknown })?.result,
+        errors: undefined,
+        full: response.structuredContent,
       };
     },
     close: async () => {
@@ -356,3 +374,49 @@ describe.each(["rest", "gql", "mcp"])("source edits via %s", (surface) => {
     });
   });
 });
+
+// The ledger service refuses a source-slice update past the directive limit at
+// its commit boundary (w0/m6); every surface must refuse it the same way, with
+// the limit and the projected count, and change nothing.
+describe.each(["rest", "gql", "mcp"])(
+  "a source edit past the directive limit via %s",
+  (surface) => {
+    it("is refused with the limit and the projected count", async () => {
+      const f = await fixture();
+      f.state.limited = true;
+      const before = [...f.slices];
+      try {
+        const result = await f.call(surface, "update", args("update"));
+        expect(result.success).toBe(false);
+        expect([...f.slices]).toEqual(before);
+        const limit = { resource: "directives", limit: 2, current: 5 };
+        const message = expect.stringContaining(
+          "free-tier limit of 2 directives",
+        );
+        if (surface === "rest") {
+          expect(result.result).toMatchObject({
+            ok: false,
+            error: { code: "RESOURCE_LIMIT_REACHED", message, metadata: limit },
+          });
+        } else if (surface === "gql") {
+          // Raw `graphql()` bypasses Apollo's formatError; the error itself
+          // carries what formatError copies into `extensions`.
+          const refusal = result.errors?.[0]?.originalError as
+            | { category?: string; metadata?: unknown }
+            | undefined;
+          expect(refusal).toMatchObject({
+            category: "RESOURCE_LIMIT_REACHED",
+            metadata: limit,
+          });
+        } else {
+          expect(result.full).toMatchObject({
+            ok: false,
+            error: { code: "RESOURCE_LIMIT_REACHED", message },
+          });
+        }
+      } finally {
+        await f.close();
+      }
+    });
+  },
+);

@@ -1,6 +1,6 @@
 # w0 · m6 — Every app-mediated ledger write enforces the directive limit at one boundary
 
-**Worker:** worker1 **Goal:** the free-tier directive limit is checked once, at the ledger service's common commit boundary and on pull-request merge, instead of in selected route handlers, so a source-slice edit or a merged pull request cannot grow a ledger past it **Status:** todo (t001–t002 done)
+**Worker:** worker1 **Goal:** the free-tier directive limit is checked once, at the ledger service's common commit boundary and on pull-request merge, instead of in selected route handlers, so a source-slice edit or a merged pull request cannot grow a ledger past it **Status:** todo (t001–t003 done)
 
 ## Tasks (in order)
 
@@ -8,7 +8,7 @@
 | ---- | ----- | --- | ---------- |
 | t001 | Check the projected directive count inside `commitLedgerFiles` | 60m | — | — **DONE**
 | t002 | Pull-request merge refuses a head that would exceed the limit | 45m | t001 | — **DONE**
-| t003 | Contract tests for the source-slice refusal on REST, GraphQL and MCP | 30m | t001 |
+| t003 | Contract tests for the source-slice refusal on REST, GraphQL and MCP | 30m | t001 | — **DONE**
 | t004 | Adoption surface | 20m | t002, t003 |
 | t005 | Simplify | 15m | t004 |
 | t006 | Test coverage | 30m | t004, t005 |
