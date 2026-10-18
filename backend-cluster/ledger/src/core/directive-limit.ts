@@ -5,7 +5,7 @@ import {
   type GiteaCommitClient,
 } from "@/foundation/clients/load-cached-ledger-file-map";
 import { getCacheHelper } from "@/foundation/clients/build-cache";
-import { withLedger } from "@/foundation/rustledger";
+import { countLedgerDirectives } from "@/foundation/rustledger";
 import { getMaxDirectives } from "@/core/backend-v2-limits";
 import { DomainError, ErrorCategory } from "@/shared/errors";
 import { logger } from "@/shared/logger";
@@ -35,7 +35,7 @@ class DirectiveLimitExceededError extends DomainError {
 
 async function countMap(files: Record<string, string>): Promise<number> {
   if (!files["main.bean"]) return 0;
-  return withLedger(files, "main.bean", (ledger) => ledger.directiveCount());
+  return countLedgerDirectives(files, "main.bean");
 }
 
 export interface DirectiveCount {

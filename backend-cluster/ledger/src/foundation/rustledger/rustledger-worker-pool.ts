@@ -167,6 +167,15 @@ export class RustledgerWorkerPool {
     });
   }
 
+  public countDirectives(files: FileMap, entryPoint: string): Promise<number> {
+    return this.enqueue<number>({
+      id: this.nextTaskId,
+      kind: "directive-count",
+      files,
+      entryPoint,
+    });
+  }
+
   public findEntrySlice(
     files: FileMap,
     entryPoint: string,

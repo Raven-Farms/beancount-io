@@ -779,6 +779,30 @@ export async function queryLedgerFiles(
 }
 
 /**
+ * How many directives a ledger holds, following `include` from `entryPoint`.
+ * The parse is CPU-proportional to the ledger's size, so request-path callers
+ * use this and it runs in the worker pool, under its queue bound and timeout.
+ */
+export async function countLedgerDirectives(
+  files: FileMap,
+  entryPoint: string,
+): Promise<number> {
+  // Jest cannot bootstrap the worker entry; see parseLedgerFiles.
+  if (process.env.JEST_WORKER_ID !== undefined) {
+    return countLedgerDirectivesInProcess(files, entryPoint);
+  }
+  return getRustledgerWorkerPool().countDirectives(files, entryPoint);
+}
+
+/** Worker-local implementation; request-path callers use countLedgerDirectives. */
+export function countLedgerDirectivesInProcess(
+  files: FileMap,
+  entryPoint: string,
+): Promise<number> {
+  return withLedger(files, entryPoint, (ledger) => ledger.directiveCount());
+}
+
+/**
  * Count the top-level directives in a single beancount source string. Mirrors
  * the Python service's `directive_limit.py` free-tier pre-check (which used
  * `beancount.loader.load_string` purely for a count) — the rustledger

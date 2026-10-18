@@ -26,6 +26,12 @@ export type RustledgerWorkerTask =
     }
   | {
       id: number;
+      kind: "directive-count";
+      files: FileMap;
+      entryPoint: string;
+    }
+  | {
+      id: number;
       kind: "find-entry-slice";
       files: FileMap;
       entryPoint: string;
@@ -33,11 +39,7 @@ export type RustledgerWorkerTask =
     };
 
 export type RustledgerWorkerValue =
-  | LedgerSnapshot
-  | QueryResult
-  | number[]
-  | EntrySlice
-  | null;
+  LedgerSnapshot | QueryResult | number | number[] | EntrySlice | null;
 
 export type RustledgerWorkerResponse =
   | { id: number; ok: true; value: RustledgerWorkerValue }

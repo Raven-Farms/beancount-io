@@ -1,5 +1,6 @@
 import { isMainThread, parentPort } from "node:worker_threads";
 import {
+  countLedgerDirectivesInProcess,
   parseLedgerFilesInProcess,
   queryLedgerFilesResultInProcess,
 } from "./engine";
@@ -39,6 +40,8 @@ port.on("message", async (task: RustledgerWorkerTask) => {
       value = task.directives.flatMap((directive, index) =>
         selected.has(directive) ? [index] : [],
       );
+    } else if (task.kind === "directive-count") {
+      value = await countLedgerDirectivesInProcess(task.files, task.entryPoint);
     } else {
       value = await findEntrySliceWithFullLedger(
         task.files,

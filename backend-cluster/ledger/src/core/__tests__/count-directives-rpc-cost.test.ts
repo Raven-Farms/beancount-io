@@ -5,11 +5,7 @@ import { countDirectivesForRepo } from "@/core/directive-limit";
 // so the parse is stubbed to a fixed number.
 jest.mock("@/foundation/rustledger", () => ({
   ...jest.requireActual("@/foundation/rustledger"),
-  withLedger: async (
-    _files: Record<string, string>,
-    _entry: string,
-    fn: (l: { directiveCount: () => number }) => number,
-  ) => fn({ directiveCount: () => 2 }),
+  countLedgerDirectives: async () => 2,
 }));
 
 jest.mock("@/foundation/clients/build-cache", () => ({
