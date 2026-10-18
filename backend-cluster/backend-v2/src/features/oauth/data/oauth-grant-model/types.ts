@@ -1,8 +1,4 @@
-/**
- * Database executor type - represents any database connection/transaction.
- * This allows the interface to remain database-agnostic while supporting transactions.
- */
-type DbExecutor = any;
+import { type DbExecutor } from "@/drizzle/drizzle";
 
 /**
  * Account-level control over what the OAuth provider has issued to a user.

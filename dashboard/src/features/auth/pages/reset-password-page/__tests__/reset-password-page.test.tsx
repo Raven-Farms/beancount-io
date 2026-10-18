@@ -4,36 +4,29 @@ import userEvent from "@testing-library/user-event";
 import ResetPasswordPage from "../index";
 
 // Mock dependencies - use vi.hoisted() to ensure mocks are available in hoisted vi.mock() calls
-const {
-  mockNavigate,
-  mockHardNavigate,
-  mockUseSearch,
-  mockMutation,
-  mockUseQuery,
-} = vi.hoisted(() => {
-  return {
-    mockNavigate: vi.fn(),
-    mockHardNavigate: vi.fn(),
-    mockUseSearch: vi.fn(() => ({ token: "valid-token" })),
-    mockMutation: vi.fn(),
-    mockUseQuery: vi.fn(() => ({
-      data: { validateEmailToken: { isValid: true } },
-      loading: false,
-      error: null,
-    })),
-  };
-});
+const { mockRedirectToLogin, mockUseSearch, mockMutation, mockUseQuery } =
+  vi.hoisted(() => {
+    return {
+      mockRedirectToLogin: vi.fn(),
+      mockUseSearch: vi.fn(() => ({ token: "valid-token" })),
+      mockMutation: vi.fn(),
+      mockUseQuery: vi.fn(() => ({
+        data: { validateEmailToken: { isValid: true } },
+        loading: false,
+        error: null,
+      })),
+    };
+  });
 
 vi.mock("@tanstack/react-router", () => ({
-  useNavigate: () => mockNavigate,
   useSearch: () => mockUseSearch(),
   Link: ({ to, children }: { to: string; children: React.ReactNode }) => (
     <a href={to}>{children}</a>
   ),
 }));
 
-vi.mock("@/common/lib/navigation/hard-navigate", () => ({
-  hardNavigate: (href: string) => mockHardNavigate(href),
+vi.mock("@/features/auth/lib/redirect-to-login", () => ({
+  redirectToLogin: () => mockRedirectToLogin(),
 }));
 
 vi.mock("@apollo/client/react", () => ({
@@ -224,8 +217,7 @@ describe("ResetPasswordPage", () => {
 
       // A document load drops the profile the router loaded under the session
       // the reset just ended; a router navigation would keep it.
-      expect(mockHardNavigate).toHaveBeenCalledWith("/auth/login");
-      expect(mockNavigate).not.toHaveBeenCalled();
+      expect(mockRedirectToLogin).toHaveBeenCalledTimes(1);
     });
 
     it("should show error when API returns failure", async () => {

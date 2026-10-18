@@ -42,10 +42,8 @@ function createStore() {
     grants: Grant[];
     passwords: Map<string, string>;
   };
-  const live = (db: unknown): Tx =>
-    (db as Partial<Tx>).sessions
-      ? (db as Tx)
-      : { sessions: committed, grants, passwords };
+  // The service hands the models only the transaction.
+  const live = (tx: unknown) => tx as Tx;
 
   const jwt = {
     create: jest.fn(async (_db: unknown, userId: string) => {

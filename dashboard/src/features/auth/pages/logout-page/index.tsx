@@ -5,7 +5,7 @@ import { PageSEO } from "@/common/components/seo/page-seo";
 import { useMutation } from "@apollo/client/react";
 import { LogoutDocument } from "@/graphql/definitions";
 import { clearUserId } from "@/common/analytics";
-import { redirectToLoginAfterLogout } from "./redirect-to-login";
+import { redirectToLogin } from "@/features/auth/lib/redirect-to-login";
 
 /**
  * Logout page component
@@ -44,7 +44,7 @@ export default function LogoutPage() {
 
       // Replacing the document clears Apollo and React state without resetting
       // live authenticated queries after the backend has revoked the session.
-      redirectToLoginAfterLogout();
+      redirectToLogin();
     };
 
     void performLogout();

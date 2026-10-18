@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useSearch, Link } from "@tanstack/react-router";
-import { hardNavigate } from "@/common/lib/navigation/hard-navigate";
+import { redirectToLogin } from "@/features/auth/lib/redirect-to-login";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -138,9 +138,7 @@ export default function ResetPasswordPage() {
         // Redirect to login after 2 seconds. A document load, not a router
         // navigation: the reset ended this browser's session too, and the
         // router still holds the signed-in profile it loaded before.
-        setTimeout(() => {
-          hardNavigate("/auth/login");
-        }, 2000);
+        setTimeout(redirectToLogin, 2000);
       } else {
         setError(t("auth.failedToResetPassword"));
       }

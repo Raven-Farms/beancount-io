@@ -9,14 +9,8 @@ import { OauthGrantPostgresModel } from "../postgres-impl";
 function capturingDb() {
   const queries: { text: string; values: unknown[] }[] = [];
   const client = {
-    query: async (
-      config: { text: string; values?: unknown[] },
-      values?: unknown[],
-    ) => {
-      queries.push({
-        text: config.text,
-        values: values ?? config.values ?? [],
-      });
+    query: async (config: { text: string }, values?: unknown[]) => {
+      queries.push({ text: config.text, values: values ?? [] });
       return { rows: [], rowCount: 0 };
     },
   };

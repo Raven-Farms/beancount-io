@@ -20,8 +20,8 @@ vi.mock("@/common/components/seo/page-seo", () => ({
   PageSEO: () => null,
 }));
 
-vi.mock("../redirect-to-login", () => ({
-  redirectToLoginAfterLogout: mockRedirectToLogin,
+vi.mock("@/features/auth/lib/redirect-to-login", () => ({
+  redirectToLogin: mockRedirectToLogin,
 }));
 
 describe("LogoutPage", () => {

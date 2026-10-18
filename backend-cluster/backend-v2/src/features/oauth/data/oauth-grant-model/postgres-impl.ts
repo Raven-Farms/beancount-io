@@ -12,26 +12,17 @@ const rowUserId = sql`split_part(${oauthAdapterStorage.payload}->>'accountId', '
 
 export class OauthGrantPostgresModel implements IOauthGrantModel {
   public async revokeAllForUser(db: DbExecutor, userId: string): Promise<void> {
+    const ownedByUser = sql`${rowUserId} = ${userId}`;
     const grants = db
       .select({ id: oauthAdapterStorage.id })
       .from(oauthAdapterStorage)
-      .where(
-        and(
-          eq(oauthAdapterStorage.model, "Grant"),
-          sql`${rowUserId} = ${userId}`,
-        ),
-      );
+      .where(and(eq(oauthAdapterStorage.model, "Grant"), ownedByUser));
 
     // Rows carrying the account (Grant, Session, RefreshToken, AuthorizationCode,
     // …) and rows that only carry a grant id. Clients and registration tokens
     // carry neither, so they stay.
     await db
       .delete(oauthAdapterStorage)
-      .where(
-        or(
-          sql`${rowUserId} = ${userId}`,
-          inArray(oauthAdapterStorage.grantId, grants),
-        ),
-      );
+      .where(or(ownedByUser, inArray(oauthAdapterStorage.grantId, grants)));
   }
 }
