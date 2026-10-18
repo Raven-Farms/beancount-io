@@ -35,6 +35,15 @@ interface LedgerFileViewProps {
   lineNumber?: number;
 }
 
+/** The ledger's root file, which the server refuses to delete. Only the root
+ * path: a nested `accounts/main.bean` is an ordinary file. */
+function isRootLedgerFile(path: string): boolean {
+  return path.replace(/^\/+/, "") === "main.bean";
+}
+
+/** backend-v2's refusal for deleting it (`ledger-workflow.ts`). */
+const ROOT_FILE_REFUSAL = /main\.bean file cannot be deleted/;
+
 /**
  * Ledger file view container component
  * Handles data fetching and business logic (update/delete file operations)
@@ -147,7 +156,14 @@ export default function LedgerFileView({
         message: t("ledgerEditor.deleteFileCommit", { path: filePath }),
       },
       onError: (error) => {
-        toast.error(formatError(error));
+        const refusedRoot = ROOT_FILE_REFUSAL.test(error.message);
+        toast.error(
+          refusedRoot
+            ? t("ledgerEditor.rootFileCannotBeDeleted", {
+                filename: "main.bean",
+              })
+            : formatError(error),
+        );
       },
       onCompleted: () => {
         toast.success(t("ledgerEditor.fileDeletedSuccess"));
@@ -185,7 +201,7 @@ export default function LedgerFileView({
       filePath={filePath}
       fileContent={fileContent}
       onSave={handleSaveFile}
-      onDelete={handleDeleteFile}
+      onDelete={isRootLedgerFile(filePath) ? undefined : handleDeleteFile}
       isSaving={isSaving}
       isEditMode={isEditMode}
       lineNumber={lineNumber}

@@ -1,4 +1,9 @@
 const faFileEditor: Record<string, { message: string; description: string }> = {
+  "ledgerEditor.rootFileCannotBeDeleted": {
+    message: "{filename} فایل ریشهٔ دفتر است و نمی‌توان آن را حذف کرد",
+    description:
+      "Why Delete is unavailable for the ledger's root file, which the server refuses to delete; {filename} is main.bean",
+  },
   "ledgerEditor.alignAmounts": {
     message: "تراز کردن مبالغ",
     description: "Menu item to align amounts in editor",

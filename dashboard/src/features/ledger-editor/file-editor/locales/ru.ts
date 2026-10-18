@@ -1,4 +1,9 @@
 const ruFileEditor: Record<string, { message: string; description: string }> = {
+  "ledgerEditor.rootFileCannotBeDeleted": {
+    message: "{filename} — корневой файл книги, его нельзя удалить",
+    description:
+      "Why Delete is unavailable for the ledger's root file, which the server refuses to delete; {filename} is main.bean",
+  },
   "ledgerEditor.alignAmounts": {
     message: "Выровнять суммы",
     description: "Menu item to align amounts in editor",

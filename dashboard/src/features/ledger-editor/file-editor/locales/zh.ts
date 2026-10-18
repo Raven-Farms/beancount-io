@@ -1,4 +1,9 @@
 const zhFileEditor: Record<string, { message: string; description: string }> = {
+  "ledgerEditor.rootFileCannotBeDeleted": {
+    message: "{filename} 是账本的根文件，无法删除",
+    description:
+      "Why Delete is unavailable for the ledger's root file, which the server refuses to delete; {filename} is main.bean",
+  },
   "ledgerEditor.alignAmounts": {
     message: "对齐金额",
     description: "Menu item to align amounts in editor",

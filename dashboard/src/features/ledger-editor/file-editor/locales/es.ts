@@ -1,4 +1,9 @@
 const esFileEditor: Record<string, { message: string; description: string }> = {
+  "ledgerEditor.rootFileCannotBeDeleted": {
+    message: "{filename} es el archivo raíz del libro y no se puede eliminar",
+    description:
+      "Why Delete is unavailable for the ledger's root file, which the server refuses to delete; {filename} is main.bean",
+  },
   "ledgerEditor.alignAmounts": {
     message: "Alinear Montos",
     description: "Menu item to align amounts in editor",
