@@ -112,7 +112,9 @@ def _require_document_in_tree(file: Path, into: Path | None, filename: str) -> N
     a ledger the very next `check` failed.
     """
     root = Path(os.path.abspath(file)).parent
-    holder = root if into is None else write.destination(file, into).parent
+    # Beancount resolves paths beside the include as named, even when the
+    # include itself is a symlink to a file in another directory.
+    holder = root if into is None else Path(os.path.normpath(root / into.expanduser())).parent
     if outside_ledger_tree(holder / filename, root):
         raise protocol.UsageError(
             f"Document path {filename!r} resolves outside the ledger directory {root.resolve()}, which "
