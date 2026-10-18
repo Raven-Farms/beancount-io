@@ -273,11 +273,22 @@ def _fetch_latest(channel: str) -> str:
             match = re.search(r'^\s*version "(\d+\.\d+\.\d+)"\s*$', formula, re.MULTILINE)
             if not match:
                 match = re.search(r"beancount_io-(\d+\.\d+\.\d+)\.tar\.gz", formula)
-            return match.group(1) if match else ""
+            if not match:
+                # An HTML error page from the tap read as "Latest release: unknown" (w5/648).
+                raise ValueError("no version in the formula")
+            return match.group(1)
         payload = json.loads(body)
-        return str(payload["info"]["version"])
+        version = payload["info"]["version"]
+        # `str()` read null as "None" and cached it; an empty string or a list
+        # passed too. Only a version string is an answer (w5/648).
+        if not isinstance(version, str) or not _VERSION.fullmatch(version):
+            raise ValueError(f"not a version: {version!r}")
+        return version
     except (ValueError, KeyError, TypeError) as exc:
         raise ValueError("the index sent an unreadable answer") from exc
+
+
+_VERSION = re.compile(r"\d+(?:\.\d+)+[A-Za-z0-9.+-]*")
 
 
 def latest_version(

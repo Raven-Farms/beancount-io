@@ -129,18 +129,20 @@ class TestCheck:
     def test_a_hostile_index_answer_is_shown_inert(
         self, fake_index: FakeIndex, monkeypatch: pytest.MonkeyPatch, answer: str
     ) -> None:
-        """`info.version` is server text: no escape or forged line reaches the terminal (w5/376)."""
+        """`info.version` is server text: no escape or forged line reaches the terminal (w5/376).
+
+        Text that is no version is now refused as an unreadable answer (w5/648).
+        """
         monkeypatch.setattr("cli.commands.upgrade.current_channel", lambda: upgrade_command.UV_TOOL)
         _refuse_to_run(monkeypatch)
         fake_index.version = answer
 
         result = runner.invoke(app, ["upgrade", "--check"])
 
-        assert result.exit_code == 0
-        assert "\x1b" not in result.stdout and "\x07" not in result.stdout
-        lines = result.stdout.splitlines()
-        assert [line for line in lines if line.startswith("Would run:")] == ["Would run: uv tool upgrade beancount-io"]
-        assert lines[1].startswith("Latest release: unknown (the index answered '")
+        assert result.exit_code == 1
+        assert "\x1b" not in result.output and "\x07" not in result.output
+        assert not [line for line in result.output.splitlines() if line.startswith("Would run:")]
+        assert "the index sent an unreadable answer" in result.stderr
 
     def test_it_asks_the_index_even_when_the_daily_cache_is_warm(
         self, fake_index: FakeIndex, monkeypatch: pytest.MonkeyPatch
