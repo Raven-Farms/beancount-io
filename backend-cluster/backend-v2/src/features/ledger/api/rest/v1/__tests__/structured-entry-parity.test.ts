@@ -518,22 +518,26 @@ describe.each(["rest", "gql", "mcp"])(
         expect(f.committed).toEqual([]);
         const named = "Duplicate open directive for Assets:Cash (main.bean:74)";
         if (surface === "rest") {
+          // Apps read the named errors from `newLedgerErrors`, not the prose.
           expect(result.result).toMatchObject({
             ok: false,
             error: {
               code: "VALIDATION_FAILED",
               message: expect.stringContaining(named),
+              metadata: { field: "entries", newLedgerErrors: named },
             },
           });
         } else if (surface === "gql") {
-          // Raw `graphql()` bypasses Apollo's formatError; the message names
-          // the error, and the category mapping is proven by the REST and MCP
-          // envelopes above and below.
+          // Raw `graphql()` bypasses Apollo's formatError, which merges this
+          // metadata into `extensions`; the category mapping is proven by the
+          // REST and MCP envelopes above and below.
+          const refusal = (result.errors ?? []).find((error) =>
+            String(error.message).includes(named),
+          );
           expect(
-            (result.errors ?? []).some((error) =>
-              String(error.message).includes(named),
-            ),
-          ).toBe(true);
+            (refusal?.originalError as { metadata?: unknown } | undefined)
+              ?.metadata,
+          ).toMatchObject({ field: "entries", newLedgerErrors: named });
         } else {
           expect(result.full).toMatchObject({
             ok: false,

@@ -3,20 +3,15 @@ import { useApolloClient } from "@apollo/client";
 import { useBulkEntriesMutation } from "@/generated-graphql/graphql";
 import { invalidateLedgerData } from "@/common/apollo/invalidate-ledger";
 import { haptics } from "@/common/haptics";
-import { newLedgerErrorDetail } from "@/common/ledger-refusal";
+import { describeLedgerRefusal } from "@/common/ledger-refusal";
+import { i18n } from "@/translations";
 import {
   buildOpenAccountEntry,
   type OpenAccountInput,
 } from "./open-account-entry";
 
 export type OpenAccountResult =
-  | { ok: true }
-  | {
-      ok: false;
-      message: string | null;
-      /** What the write would break, when the server refused it for that. */
-      wouldBreak?: string | null;
-    };
+  { ok: true } | { ok: false; message: string | null };
 
 export function useOpenAccount(ledgerId: string) {
   const client = useApolloClient();
@@ -52,8 +47,10 @@ export function useOpenAccount(ledgerId: string) {
         return { ok: false, message };
       } catch (caught) {
         haptics.error();
-        const message = caught instanceof Error ? caught.message : null;
-        return { ok: false, message, wouldBreak: newLedgerErrorDetail(caught) };
+        const message =
+          describeLedgerRefusal(caught, i18n) ??
+          (caught instanceof Error ? caught.message : null);
+        return { ok: false, message };
       }
     },
     [bulkEntries, client, ledgerId],

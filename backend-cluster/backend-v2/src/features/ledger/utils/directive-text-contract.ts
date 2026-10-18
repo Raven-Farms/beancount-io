@@ -1,4 +1,7 @@
-import { UnbalancedTransactionError, ValidationError } from "@/shared/errors";
+import {
+  NewLedgerErrorsError,
+  UnbalancedTransactionError,
+} from "@/shared/errors";
 import {
   UNBALANCED_ERROR_CODE,
   type BeanCheckError,
@@ -93,9 +96,5 @@ export function unbalancedOrValidationError(
       residual,
     );
   }
-  return new ValidationError(
-    "text",
-    `appending it would introduce ${newErrors.length} new bean-check error${newErrors.length === 1 ? "" : "s"}: ${detail}`,
-    "The text is valid Beancount but breaks the ledger — the message names each new error. Fix the directives, or pass `allowInvalid: true` to record them anyway.",
-  );
+  return new NewLedgerErrorsError("text", newErrors.length, detail);
 }

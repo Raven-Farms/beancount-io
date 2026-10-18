@@ -105,28 +105,21 @@ export function getUnbalancedResidual(error: unknown): string | null {
   return null;
 }
 
-const NEW_LEDGER_ERRORS = /new bean-check errors?: ([\s\S]+)$/;
-
 /**
- * What a would-break refusal names: entries that are valid on their own but
- * would add bean-check errors are refused as VALIDATION_FAILED on `entries`,
- * the reason ending with each new error (w0/m2). That text is the ledger's
- * own diagnostic — account names and file:line — so, like the UNBALANCED
+ * What a would-break refusal names: a write that would add bean-check errors
+ * is refused as VALIDATION_FAILED, each new error named in
+ * `extensions.newLedgerErrors` (w0/m2). That text is the ledger's own
+ * diagnostic — account names and file:line — so, like the UNBALANCED
  * residual, it is shown; `null` for any other error.
  */
 export function getNewLedgerErrorDetail(error: unknown): string | null {
   if (!CombinedGraphQLErrors.is(error)) return null;
   for (const gqlError of error.errors) {
-    const { code, field, reason } = gqlError.extensions ?? {};
-    if (
-      code !== "VALIDATION_FAILED" ||
-      field !== "entries" ||
-      typeof reason !== "string"
-    ) {
-      continue;
+    const { code, newLedgerErrors } = gqlError.extensions ?? {};
+    if (code === "VALIDATION_FAILED" && typeof newLedgerErrors === "string") {
+      const detail = newLedgerErrors.trim();
+      if (detail) return detail;
     }
-    const detail = NEW_LEDGER_ERRORS.exec(reason)?.[1]?.trim();
-    if (detail) return detail;
   }
   return null;
 }

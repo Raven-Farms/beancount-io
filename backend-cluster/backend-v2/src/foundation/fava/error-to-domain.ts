@@ -4,6 +4,7 @@ import {
   DomainError,
   ForbiddenError,
   InternalServerError,
+  NewLedgerErrorsError,
   NotFoundError,
   PremiumRequiredError,
   RateLimitedError,
@@ -11,7 +12,6 @@ import {
   ServiceUnavailableError,
   UnbalancedTransactionError,
   UnauthenticatedError,
-  ValidationError,
 } from "@/shared/errors";
 import { FavaApiError } from "./api-client";
 
@@ -23,8 +23,6 @@ const UNBALANCED = "UNBALANCED";
  * errors (w0/m2), the structured twin of the text-append refusal.
  */
 const NEW_LEDGER_ERRORS = "NEW_LEDGER_ERRORS";
-const NEW_LEDGER_ERRORS_HINT =
-  "The entries are valid but would break the ledger — the message names each new error. Fix the entries, or pass `allowInvalid: true` to record them anyway.";
 const RESOURCE_LIMIT_MESSAGE =
   /^(.*?) limit reached\. Maximum: (\d+), Current: (\d+)\./i;
 
@@ -94,7 +92,11 @@ export function favaApiErrorToDomainError(
   if (resourceLimit) return resourceLimit;
 
   if (code === NEW_LEDGER_ERRORS) {
-    return new ValidationError("entries", message, NEW_LEDGER_ERRORS_HINT);
+    const details = error.body?.details;
+    const named =
+      (typeof details?.detail === "string" && details.detail) || message;
+    const count = typeof details?.count === "number" ? details.count : 1;
+    return new NewLedgerErrorsError("entries", count, named);
   }
 
   if (code === UNBALANCED) {

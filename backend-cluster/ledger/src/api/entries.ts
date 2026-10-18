@@ -169,32 +169,33 @@ export function setEntriesHandler(router: Router): void {
         });
       }
 
-      // Check the projection, then commit — the text-append route's order
-      // (w0/m2). A second `open` for an open account, or a balance against an
-      // unopened one, used to be committed and only surfaced later as a ledger
-      // error. `allowInvalid` records such entries deliberately.
-      if (updates.length > 0 && !allowInvalid) {
-        const { data } = servicesForRequest(ctx);
-        const ledgerId = ledgerIdOf(ctx);
-        const [before, after] = await Promise.all([
-          data.checkProjectedErrors({
-            ledgerId,
-            userId: undefined,
-            overlays: [],
-            enforceInputLimits: false,
-          }),
-          data.checkProjectedErrors({
-            ledgerId,
-            userId: undefined,
-            overlays: updates.map(({ path, content }) => ({ path, content })),
-            enforceInputLimits: false,
-          }),
-        ]);
-        const introduced = newLedgerErrors(before, after);
-        if (introduced.length > 0) throw new NewLedgerErrorsError(introduced);
-      }
-
       if (updates.length > 0) {
+        // Check the projection, then commit — the text-append route's order
+        // (w0/m2). A second `open` for an open account, or a balance against
+        // an unopened one, used to be committed and only surfaced later as a
+        // ledger error. `allowInvalid` records such entries deliberately.
+        if (!allowInvalid) {
+          const { data } = servicesForRequest(ctx);
+          const ledgerId = ledgerIdOf(ctx);
+          const after = await data.checkProjectedErrors({
+            ledgerId,
+            userId: undefined,
+            overlays: updates,
+            enforceInputLimits: false,
+          });
+          // A clean projection adds nothing; only a ledger left with errors
+          // needs today's to tell old from new.
+          if (after.length > 0) {
+            const before = await data.getErrors({
+              ledgerId,
+              userId: undefined,
+            });
+            const introduced = newLedgerErrors(before, after);
+            if (introduced.length > 0) {
+              throw new NewLedgerErrorsError(introduced);
+            }
+          }
+        }
         await checkDirectiveLimitForFileChanges(
           client,
           owner,

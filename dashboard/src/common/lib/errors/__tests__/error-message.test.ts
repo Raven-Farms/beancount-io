@@ -157,87 +157,49 @@ describe("getUnbalancedResidual", () => {
   });
 });
 
-// Entries that would add bean-check errors are refused as VALIDATION_FAILED on
-// `entries`, the reason naming each new error (w0/m2). The forms say what the
-// write would break instead of "Validation failed".
+// A write that would add bean-check errors is refused as VALIDATION_FAILED,
+// each new error named in `extensions.newLedgerErrors` (w0/m2). The forms say
+// what the write would break instead of "Validation failed".
 describe("would-break refusals", () => {
   const refusal = (extensions: Record<string, unknown>) =>
     new CombinedGraphQLErrors({
-      errors: [
-        {
-          message: `Validation failed for entries: ${String(extensions.reason)}`,
-          extensions,
-        },
-      ],
+      errors: [{ message: "Validation failed for entries", extensions }],
     });
-  const wouldBreak = (detail: string, count = 1) =>
-    refusal({
-      code: "VALIDATION_FAILED",
-      field: "entries",
-      reason: `adding these entries would introduce ${count} new bean-check error${count === 1 ? "" : "s"}: ${detail}`,
-    });
+  const DUPLICATE_OPEN =
+    "Duplicate open directive for Assets:Cash (main.bean:74)";
+  const wouldBreak = (named: string, field = "entries") =>
+    refusal({ code: "VALIDATION_FAILED", field, newLedgerErrors: named });
 
-  it("names the error a refused write would add", () => {
+  it("names the errors a refused write would add, on either write path", () => {
+    expect(getNewLedgerErrorDetail(wouldBreak(DUPLICATE_OPEN))).toBe(
+      DUPLICATE_OPEN,
+    );
     expect(
       getNewLedgerErrorDetail(
-        wouldBreak("Duplicate open directive for Assets:Cash (main.bean:74)"),
-      ),
-    ).toBe("Duplicate open directive for Assets:Cash (main.bean:74)");
-    expect(
-      getNewLedgerErrorDetail(
-        wouldBreak("A (main.bean:1); B (main.bean:2)", 2),
+        wouldBreak("A (main.bean:1); B (main.bean:2)", "text"),
       ),
     ).toBe("A (main.bean:1); B (main.bean:2)");
   });
 
   it.each([
-    [
-      "another field",
-      {
-        code: "VALIDATION_FAILED",
-        field: "username",
-        reason: "1 new bean-check error: X",
-      },
-    ],
-    [
-      "another code",
-      {
-        code: "BAD_USER_INPUT",
-        field: "entries",
-        reason: "1 new bean-check error: X",
-      },
-    ],
-    [
-      "another entries refusal",
-      { code: "VALIDATION_FAILED", field: "entries", reason: "Must be set" },
-    ],
+    ["no named errors", { code: "VALIDATION_FAILED", field: "username" }],
+    ["another code", { code: "BAD_USER_INPUT", newLedgerErrors: "X" }],
+    ["blank named errors", { code: "VALIDATION_FAILED", newLedgerErrors: " " }],
   ])("returns null for %s", (_case, extensions) => {
     expect(getNewLedgerErrorDetail(refusal(extensions))).toBeNull();
   });
 
   it("returns null for errors that are not GraphQL refusals", () => {
-    expect(
-      getNewLedgerErrorDetail(new Error("1 new bean-check error: X")),
-    ).toBeNull();
+    expect(getNewLedgerErrorDetail(new Error(DUPLICATE_OPEN))).toBeNull();
   });
 
   it("formats the refusal with what it would break", () => {
     const { result } = renderHook(() => useErrorMessage());
-    expect(
-      result.current(
-        wouldBreak("Duplicate open directive for Assets:Cash (main.bean:74)"),
-      ),
-    ).toBe(
-      "This would add an error to your ledger: Duplicate open directive for Assets:Cash (main.bean:74)",
+    expect(result.current(wouldBreak(DUPLICATE_OPEN))).toBe(
+      `This would add an error to your ledger: ${DUPLICATE_OPEN}`,
     );
     expect(
-      result.current(
-        refusal({
-          code: "VALIDATION_FAILED",
-          field: "entries",
-          reason: "Must be set",
-        }),
-      ),
+      result.current(refusal({ code: "VALIDATION_FAILED", field: "entries" })),
     ).toBe("Validation failed. Please review your input and try again.");
   });
 });

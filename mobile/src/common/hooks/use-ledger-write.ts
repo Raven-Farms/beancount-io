@@ -2,8 +2,8 @@ import { useCallback } from "react";
 import { useRouter } from "expo-router";
 import { haptics } from "@/common/haptics";
 import { useToast } from "@/common/hooks/use-toast";
-import { useTranslations } from "@/common/hooks/use-translations";
-import { newLedgerErrorDetail } from "@/common/ledger-refusal";
+import { describeLedgerRefusal } from "@/common/ledger-refusal";
+import { i18n } from "@/translations";
 import {
   runLedgerWrite,
   type LedgerWriteOutcome,
@@ -20,7 +20,6 @@ import {
 export const useLedgerWrite = () => {
   const toast = useToast();
   const router = useRouter();
-  const { t } = useTranslations();
 
   return useCallback(
     <T>(spec: LedgerWriteSpec<T>): Promise<LedgerWriteOutcome> =>
@@ -29,13 +28,10 @@ export const useLedgerWrite = () => {
           showToast: (message, type) => toast.showToast({ message, type }),
           haptics,
           goBack: () => router.back(),
-          describeRefusal: (error) => {
-            const detail = newLedgerErrorDetail(error);
-            return detail ? t("ledgerWouldBreak", { detail }) : null;
-          },
+          describeRefusal: (error) => describeLedgerRefusal(error, i18n),
         },
         spec,
       ),
-    [toast, router, t],
+    [toast, router],
   );
 };

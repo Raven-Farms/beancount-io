@@ -62,10 +62,4 @@ export function useBudgetGroups(ledgerId?: string, refreshSignal = 0) {
  * report failure the same way and their callers can handle one shape.
  */
 export type BudgetMutationResult =
-  | { ok: true }
-  | {
-      ok: false;
-      message: string | null;
-      /** What the write would break, when the server refused it for that. */
-      wouldBreak?: string | null;
-    };
+  { ok: true } | { ok: false; message: string | null };

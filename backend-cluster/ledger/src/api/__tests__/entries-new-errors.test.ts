@@ -47,33 +47,42 @@ jest.mock("@/core/directive-limit", () => ({
   checkDirectiveLimitForFileChanges: async () => undefined,
 }));
 
+// A stand-in for bean-check: a second `open` of one account is the engine's
+// duplicate-open error on the line that repeats it.
+function errorsOf(text: string) {
+  const seen = new Set<string>();
+  const errors = [...baselineErrors];
+  text.split("\n").forEach((line, index) => {
+    const account = /\bopen (\S+)/.exec(line)?.[1];
+    if (!account) return;
+    if (seen.has(account)) {
+      errors.push({
+        message: `Duplicate open directive for ${account}`,
+        source: { filename: "main.bean", lineno: index + 1 },
+      });
+    }
+    seen.add(account);
+  });
+  return errors;
+}
+
+let baselineReads = 0;
+
 jest.mock("../service-context", () => ({
   ...jest.requireActual("../service-context"),
   servicesForRequest: () => ({
     data: {
-      // A stand-in for bean-check: a second `open` of one account is the
-      // engine's duplicate-open error on the line that repeats it.
+      getErrors: async () => {
+        baselineReads += 1;
+        return errorsOf(MAIN);
+      },
       checkProjectedErrors: async ({
         overlays,
       }: {
         overlays: { path: string; content: string }[];
       }) => {
         const main = overlays.find((overlay) => overlay.path === "main.bean");
-        const text = main ? fromB64(main.content) : MAIN;
-        const seen = new Set<string>();
-        const errors = [...baselineErrors];
-        text.split("\n").forEach((line, index) => {
-          const account = /\bopen (\S+)/.exec(line)?.[1];
-          if (!account) return;
-          if (seen.has(account)) {
-            errors.push({
-              message: `Duplicate open directive for ${account}`,
-              source: { filename: "main.bean", lineno: index + 1 },
-            });
-          }
-          seen.add(account);
-        });
-        return errors;
+        return errorsOf(main ? fromB64(main.content) : MAIN);
       },
     },
   }),
@@ -103,6 +112,7 @@ describe("bulk entries refuse a write that adds ledger errors", () => {
 
   beforeEach(() => {
     baselineErrors = [];
+    baselineReads = 0;
     committed.length = 0;
   });
 
@@ -145,6 +155,8 @@ describe("bulk entries refuse a write that adds ledger errors", () => {
     const response = await post({ entries: [open("Assets:Savings")] });
     expect(response.status).toBe(200);
     expect(committed).toHaveLength(1);
+    // A clean projection needs no second parse of today's ledger.
+    expect(baselineReads).toBe(0);
   });
 
   it("does not blame the write for errors the ledger already had", async () => {

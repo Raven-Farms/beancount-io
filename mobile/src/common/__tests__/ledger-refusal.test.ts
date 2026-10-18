@@ -1,56 +1,69 @@
-import { newLedgerErrorDetail } from "../ledger-refusal";
+import { describeLedgerRefusal } from "../ledger-refusal";
 import { runLedgerWrite, type LedgerWriteDeps } from "../ledger-write";
 
-// A structured write that would add bean-check errors is refused as
-// VALIDATION_FAILED on `entries`, its reason naming each new error (w0/m2).
-// The app shows what it would break instead of a generic failure.
-const refusal = (
-  reason: string,
-  field = "entries",
-  code = "VALIDATION_FAILED",
-) =>
-  Object.assign(new Error(`Validation failed for ${field}: ${reason}`), {
-    graphQLErrors: [{ message: reason, extensions: { code, field, reason } }],
+// A write that would add bean-check errors is refused as VALIDATION_FAILED,
+// each new error named in `extensions.newLedgerErrors` (w0/m2). The app shows
+// what it would break instead of a generic failure.
+const refusal = (extensions: Record<string, unknown>) =>
+  Object.assign(new Error("Validation failed for entries"), {
+    graphQLErrors: [{ message: "Validation failed", extensions }],
   });
+const wouldBreak = (named: string) =>
+  refusal({
+    code: "VALIDATION_FAILED",
+    field: "entries",
+    newLedgerErrors: named,
+  });
+const DUPLICATE_OPEN =
+  "Duplicate open directive for Assets:Cash (main.bean:74)";
+const i18n = {
+  t: (_key: "ledgerWouldBreak", { detail }: { detail: string }) =>
+    `Would break: ${detail}`,
+};
 
-describe("newLedgerErrorDetail", () => {
+describe("describeLedgerRefusal", () => {
   it("names the error a refused write would add", () => {
-    expect(
-      newLedgerErrorDetail(
-        refusal(
-          "adding these entries would introduce 1 new bean-check error: Duplicate open directive for Assets:Cash (main.bean:74)",
-        ),
-      ),
-    ).toBe("Duplicate open directive for Assets:Cash (main.bean:74)");
-  });
-
-  it("keeps several named errors together", () => {
-    expect(
-      newLedgerErrorDetail(
-        refusal(
-          "adding these entries would introduce 2 new bean-check errors: A (main.bean:1); B (main.bean:2)",
-        ),
-      ),
-    ).toBe("A (main.bean:1); B (main.bean:2)");
-  });
-
-  it("ignores other refusals, fields and failures", () => {
-    expect(newLedgerErrorDetail(refusal("Must be lowercase", "username"))).toBe(
-      null,
+    expect(describeLedgerRefusal(wouldBreak(DUPLICATE_OPEN), i18n)).toBe(
+      `Would break: ${DUPLICATE_OPEN}`,
     );
+  });
+
+  it("keeps several named errors together, on either write path", () => {
     expect(
-      newLedgerErrorDetail(
-        refusal(
-          "introduce 1 new bean-check error: X",
-          "entries",
-          "BAD_USER_INPUT",
-        ),
+      describeLedgerRefusal(
+        refusal({
+          code: "VALIDATION_FAILED",
+          field: "text",
+          newLedgerErrors: "A (main.bean:1); B (main.bean:2)",
+        }),
+        i18n,
+      ),
+    ).toBe("Would break: A (main.bean:1); B (main.bean:2)");
+  });
+
+  it("ignores other refusals and failures", () => {
+    expect(
+      describeLedgerRefusal(
+        refusal({ code: "VALIDATION_FAILED", field: "username" }),
+        i18n,
       ),
     ).toBe(null);
-    expect(newLedgerErrorDetail(new Error("Network request failed"))).toBe(
-      null,
-    );
-    expect(newLedgerErrorDetail(undefined)).toBe(null);
+    expect(
+      describeLedgerRefusal(
+        refusal({ code: "BAD_USER_INPUT", newLedgerErrors: DUPLICATE_OPEN }),
+        i18n,
+      ),
+    ).toBe(null);
+    expect(
+      describeLedgerRefusal(
+        refusal({ code: "VALIDATION_FAILED", newLedgerErrors: "  " }),
+        i18n,
+      ),
+    ).toBe(null);
+    expect(
+      describeLedgerRefusal(new Error("Network request failed"), i18n),
+    ).toBe(null);
+    expect(describeLedgerRefusal(undefined, i18n)).toBe(null);
   });
 });
 
@@ -62,35 +75,27 @@ describe("runLedgerWrite with a refusal it can describe", () => {
     },
     haptics: { success: () => undefined, error: () => undefined },
     goBack: () => undefined,
-    describeRefusal: (error) => {
-      const detail = newLedgerErrorDetail(error);
-      return detail ? `Would break: ${detail}` : null;
-    },
+    describeRefusal: (error) => describeLedgerRefusal(error, i18n),
   });
+  const failWith = (error: unknown) => async () => {
+    throw error;
+  };
 
   it("toasts what the write would break instead of the generic failure", async () => {
     const toasts: string[] = [];
     const outcome = await runLedgerWrite(deps(toasts), {
-      perform: async () => {
-        throw refusal(
-          "adding these entries would introduce 1 new bean-check error: Duplicate open directive for Assets:Cash (main.bean:74)",
-        );
-      },
+      perform: failWith(wouldBreak(DUPLICATE_OPEN)),
       successMessage: "Saved",
       failureMessage: "Could not save",
     });
     expect(outcome.ok).toBe(false);
-    expect(toasts).toEqual([
-      "Would break: Duplicate open directive for Assets:Cash (main.bean:74)",
-    ]);
+    expect(toasts).toEqual([`Would break: ${DUPLICATE_OPEN}`]);
   });
 
   it("keeps the generic failure for anything else", async () => {
     const toasts: string[] = [];
     await runLedgerWrite(deps(toasts), {
-      perform: async () => {
-        throw new Error("Network request failed");
-      },
+      perform: failWith(new Error("Network request failed")),
       successMessage: "Saved",
       failureMessage: "Could not save",
     });
@@ -100,11 +105,7 @@ describe("runLedgerWrite with a refusal it can describe", () => {
   it("lets a screen's own failure copy win", async () => {
     const toasts: string[] = [];
     await runLedgerWrite(deps(toasts), {
-      perform: async () => {
-        throw refusal(
-          "adding these entries would introduce 1 new bean-check error: X",
-        );
-      },
+      perform: failWith(wouldBreak(DUPLICATE_OPEN)),
       successMessage: "Saved",
       failureMessage: "Could not save",
       failureMessageFor: () => "Delete failed: entry changed",

@@ -258,11 +258,7 @@ function AddBudgetScreenImpl(): JSX.Element {
     }
 
     haptics.error();
-    setSubmitError(
-      result.wouldBreak
-        ? t("ledgerWouldBreak", { detail: result.wouldBreak })
-        : result.message || t("budgetSaveFailed"),
-    );
+    setSubmitError(result.message || t("budgetSaveFailed"));
   };
 
   const intervalItems = BUDGET_INTERVALS.map((value) => ({
