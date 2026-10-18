@@ -778,13 +778,20 @@ async function main() {
   console.log("\n✨ Translation status report complete!\n");
   console.log("📝 How to translate:");
   console.log("   1. Navigate to src/features/<feature>/locales/<locale>.ts");
-  console.log("   2. Or navigate to src/common/locales/<locale>.ts");
+  console.log(
+    "   2. Or src/i18n/locales/common/<locale>.ts for common.* and component.* keys",
+  );
   console.log('   3. Search for "[TODO]" to find untranslated keys');
   console.log('   4. Replace "[TODO] English text" with translated text');
-  console.log("   5. Keep the description field unchanged");
-  console.log("   6. Run this script again to get updated stats\n");
   console.log(
-    "💡 Tip: Use \"grep -r '\\[TODO\\]' src/features/*/locales/<locale>.ts\" to find pending translations\n",
+    "   5. Translate anything listed above as half-translated or copied",
+  );
+  console.log("   6. Keep the description field unchanged");
+  console.log(
+    "   7. Run `yarn i18n:check` — it fails while any [TODO] or drift remains\n",
+  );
+  console.log(
+    "💡 Tip: Use \"grep -n '\\[TODO\\]' $(find src -path '*/locales/*' -name <locale>.ts)\" to find pending translations\n",
   );
 }
 
