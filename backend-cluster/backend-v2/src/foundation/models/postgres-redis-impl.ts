@@ -15,6 +15,7 @@ import { PlaidTransactionPostgresModel } from "@/features/plaid/data/plaid-trans
 import { PlaidSyncLogPostgresModel } from "@/features/plaid/data/plaid-sync-log-model";
 import { FeatureUsagePostgresModel } from "@/features/feature-usage/data/feature-usage-model";
 import { CliAuthSessionRedisModel } from "@/features/auth/data/cli-auth-session-model";
+import { OauthGrantPostgresModel } from "@/features/oauth/data/oauth-grant-model";
 import { IModels } from "./types";
 
 export class PostgresRedisImpl implements IModels {
@@ -23,6 +24,8 @@ export class PostgresRedisImpl implements IModels {
   public auditEvent: AuditEventPostgresModel;
 
   public jwt: JwtPostgresModel;
+
+  public oauthGrant: OauthGrantPostgresModel;
 
   public emailToken: EmailTokenRedisModel;
 
@@ -59,6 +62,8 @@ export class PostgresRedisImpl implements IModels {
     this.paidCustomer = new PaidCustomerPostgresModel();
     this.apiKey = new ApiKeyPostgresModel();
     this.auditEvent = new AuditEventPostgresModel();
+
+    this.oauthGrant = new OauthGrantPostgresModel();
 
     this.jwt = new JwtPostgresModel({
       secret: this.config.jwt.secret,

@@ -56,6 +56,7 @@ describe("StripeService.upgradeSubscription", () => {
     mockModels = {
       paidCustomer: mockIPaidCustomerModel,
       jwt: {} as any,
+      oauthGrant: {} as any,
       emailToken: {} as any,
       magicLinkToken: {} as any,
       signupOtpSession: {} as any,

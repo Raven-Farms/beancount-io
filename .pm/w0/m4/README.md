@@ -1,13 +1,13 @@
 # w0 · m4 — A password reset ends every session the old password issued
 
-**Worker:** worker1 **Goal:** completing a password reset signs out every existing browser and CLI session and revokes every OAuth grant (mobile refresh tokens included), so a reset actually evicts someone who held the old credentials **Status:** todo (t001 done)
+**Worker:** worker1 **Goal:** completing a password reset signs out every existing browser and CLI session and revokes every OAuth grant (mobile refresh tokens included), so a reset actually evicts someone who held the old credentials **Status:** todo (t001–t002 done)
 
 ## Tasks (in order)
 
 | id   | title | est | depends_on |
 | ---- | ----- | --- | ---------- |
 | t001 | Reset revokes every session JWT in the same transaction as the password change | 30m | — | — **DONE**
-| t002 | Reset revokes every OAuth grant, refresh token and provider session the user holds | 60m | t001 |
+| t002 | Reset revokes every OAuth grant, refresh token and provider session the user holds | 60m | t001 | — **DONE**
 | t003 | Adoption surface | 20m | t002 |
 | t004 | Simplify | 15m | t003 |
 | t005 | Test coverage | 30m | t003, t004 |
@@ -16,7 +16,7 @@
 ## Definition of done
 
 - After `Mutation.resetPassword` succeeds, every session JWT issued before it fails verification (`jwts` rows for the user are gone), including a session the same browser held.
-- After the reset, every OAuth access token, refresh token and grant for the user is rejected, and the mobile app's next refresh sends it to sign-in instead of an error loop.
+- After the reset, every OAuth refresh token and grant for the user is rejected, and the mobile app's next refresh sends it to sign-in instead of an error loop. (Amended in t002: access tokens are stateless one-hour JWTs that no request looks up, so one already issued runs out on its own and cannot be refreshed.)
 - A failed password update leaves the sessions and grants intact and the reset token consumed, as today.
 - Backend-v2 typecheck, lint and tests pass. `Mutation.resetPassword` is `gqlOnly` (`op-class.ts`), so there is no REST or MCP adapter to keep in parity.
 

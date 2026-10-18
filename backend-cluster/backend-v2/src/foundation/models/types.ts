@@ -12,6 +12,7 @@ import { IPlaidTransactionModel } from "@/features/plaid/data/plaid-transaction-
 import { IPlaidSyncLogModel } from "@/features/plaid/data/plaid-sync-log-model";
 import { IFeatureUsageModel } from "@/features/feature-usage/data/feature-usage-model";
 import { ICliAuthSessionModel } from "@/features/auth/data/cli-auth-session-model";
+import type { IOauthGrantModel } from "@/features/oauth/data/oauth-grant-model";
 
 /**
  * Database-agnostic models container interface.
@@ -26,6 +27,7 @@ export interface IModels {
   auditEvent: IAuditEventModel;
   cliAuthSession: ICliAuthSessionModel;
   jwt: IJwtModel;
+  oauthGrant: IOauthGrantModel;
   emailToken: IEmailTokenModel;
   magicLinkToken: IMagicLinkTokenModel;
   signupOtpSession: ISignupOtpSessionModel;

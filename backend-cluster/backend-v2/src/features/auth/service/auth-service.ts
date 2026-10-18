@@ -146,6 +146,7 @@ export class AuthService implements IAuthService {
       IModels,
       | "user"
       | "jwt"
+      | "oauthGrant"
       | "magicLinkToken"
       | "emailToken"
       | "signupOtpSession"
@@ -406,11 +407,13 @@ export class AuthService implements IAuthService {
     // Consume the token FIRST to prevent reuse (security: if password update fails, token is already consumed)
     await this.models.emailToken.findOneAndDelete(token);
 
-    // A reset ends every session the old password issued, this browser's
-    // included: the user may be resetting because someone else holds one.
+    // A reset ends every session and OAuth grant the old password issued, this
+    // browser's included: the user may be resetting because someone else holds
+    // one. All or nothing, so a reset never reports success with a grant left.
     await this.db.transaction(async (tx) => {
       await this.models.user.updatePassword(tx, emailToken.userId, newPassword);
       await this.models.jwt.deleteByUserId(tx, emailToken.userId);
+      await this.models.oauthGrant.revokeAllForUser(tx, emailToken.userId);
     });
   };
 

@@ -25,6 +25,7 @@
 - [051 — Account deletion accepts an application-API OAuth token of any scope (latent; decision first, see w2/m12)](./051.md)
 - [052 — A Plaid webhook that fails signature verification is still queued as pending work](./052.md)
 - [053 — Google Analytics records the full URL of the password-reset and one-time-login pages, tokens included](./053.md)
+- [054 — Account deletion leaves the user's OAuth grants and refresh tokens working](./054.md)
 
 Resolved notes are in [`done/`](./done/).
 

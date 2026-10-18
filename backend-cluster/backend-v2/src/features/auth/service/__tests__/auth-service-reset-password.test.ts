@@ -2,11 +2,12 @@ import "reflect-metadata";
 import { AuthService } from "../auth-service";
 import { BadUserInputError } from "@/shared/errors";
 
-// A password reset ends every session the old password issued (w0/m4). Before,
-// it changed the password and left year-long sessions verifying, so a reset
-// could not evict someone who already held one.
+// A password reset ends every session and OAuth grant the old password issued
+// (w0/m4). Before, it changed the password and left year-long sessions and
+// refresh tokens working, so a reset could not evict someone who held one.
 
 type Session = { token: string; userId: string };
+type Grant = { id: string; userId: string };
 
 /**
  * A session store and a database whose transaction commits only when its
@@ -14,23 +15,37 @@ type Session = { token: string; userId: string };
  */
 function createStore() {
   let committed: Session[] = [];
+  let grants: Grant[] = [
+    { id: "mobile", userId: "user-1" },
+    { id: "connector", userId: "user-1" },
+    { id: "theirs", userId: "user-2" },
+  ];
   let passwords = new Map<string, string>([["user-1", "old-password"]]);
   let next = 0;
 
   const db = {
     async transaction<T>(run: (tx: unknown) => Promise<T>): Promise<T> {
-      const tx = { sessions: [...committed], passwords: new Map(passwords) };
+      const tx = {
+        sessions: [...committed],
+        grants: [...grants],
+        passwords: new Map(passwords),
+      };
       const result = await run(tx);
       committed = tx.sessions;
+      grants = tx.grants;
       passwords = tx.passwords;
       return result;
     },
   };
-  type Tx = { sessions: Session[]; passwords: Map<string, string> };
+  type Tx = {
+    sessions: Session[];
+    grants: Grant[];
+    passwords: Map<string, string>;
+  };
   const live = (db: unknown): Tx =>
     (db as Partial<Tx>).sessions
       ? (db as Tx)
-      : { sessions: committed, passwords };
+      : { sessions: committed, grants, passwords };
 
   const jwt = {
     create: jest.fn(async (_db: unknown, userId: string) => {
@@ -41,6 +56,12 @@ function createStore() {
     deleteByUserId: jest.fn(async (db: unknown, userId: string) => {
       const tx = live(db);
       tx.sessions = tx.sessions.filter((s) => s.userId !== userId);
+    }),
+  };
+  const oauthGrant = {
+    revokeAllForUser: jest.fn(async (db: unknown, userId: string) => {
+      const tx = live(db);
+      tx.grants = tx.grants.filter((g) => g.userId !== userId);
     }),
   };
   const user = {
@@ -59,7 +80,7 @@ function createStore() {
   };
 
   const service = new AuthService(
-    { user, jwt, emailToken } as any,
+    { user, jwt, oauthGrant, emailToken } as any,
     db as any,
     {} as any,
     {} as any,
@@ -69,7 +90,18 @@ function createStore() {
   const verifies = (token: string) =>
     committed.some((session) => session.token === token);
   const passwordOf = (userId: string) => passwords.get(userId);
-  return { service, jwt, user, emailToken, verifies, passwordOf };
+  const grantsOf = (userId: string) =>
+    grants.filter((g) => g.userId === userId).map((g) => g.id);
+  return {
+    service,
+    jwt,
+    oauthGrant,
+    user,
+    emailToken,
+    verifies,
+    passwordOf,
+    grantsOf,
+  };
 }
 
 describe("resetPassword", () => {
@@ -85,13 +117,22 @@ describe("resetPassword", () => {
     expect(passwordOf("user-1")).toBe("new-password");
   });
 
-  it("leaves other users' sessions alone", async () => {
-    const { service, jwt, verifies } = createStore();
+  it("revokes every OAuth grant the user holds", async () => {
+    const { service, grantsOf } = createStore();
+
+    await service.resetPassword("reset-token", "new-password");
+
+    expect(grantsOf("user-1")).toEqual([]);
+  });
+
+  it("leaves other users' sessions and grants alone", async () => {
+    const { service, jwt, verifies, grantsOf } = createStore();
     const { token: someoneElse } = await jwt.create(null, "user-2");
 
     await service.resetPassword("reset-token", "new-password");
 
     expect(verifies(someoneElse)).toBe(true);
+    expect(grantsOf("user-2")).toEqual(["theirs"]);
   });
 
   it("lets a session made after the reset verify", async () => {
@@ -104,7 +145,7 @@ describe("resetPassword", () => {
   });
 
   it("revokes nothing when the password update fails", async () => {
-    const { service, jwt, user, emailToken, verifies, passwordOf } =
+    const { service, jwt, user, emailToken, verifies, passwordOf, grantsOf } =
       createStore();
     const { token: browser } = await jwt.create(null, "user-1");
     user.updatePassword.mockRejectedValueOnce(new Error("database down"));
@@ -115,12 +156,29 @@ describe("resetPassword", () => {
 
     expect(verifies(browser)).toBe(true);
     expect(passwordOf("user-1")).toBe("old-password");
+    expect(grantsOf("user-1")).toEqual(["mobile", "connector"]);
     // The token is still consumed first, so it cannot be replayed.
     expect(emailToken.findOneAndDelete).toHaveBeenCalledWith("reset-token");
   });
 
+  it("keeps the old password and sessions when grant revocation fails", async () => {
+    const { service, jwt, oauthGrant, verifies, passwordOf, grantsOf } =
+      createStore();
+    const { token: browser } = await jwt.create(null, "user-1");
+    oauthGrant.revokeAllForUser.mockRejectedValueOnce(new Error("timeout"));
+
+    await expect(
+      service.resetPassword("reset-token", "new-password"),
+    ).rejects.toThrow("timeout");
+
+    // All or nothing: a reset never reports success with a grant left behind.
+    expect(verifies(browser)).toBe(true);
+    expect(passwordOf("user-1")).toBe("old-password");
+    expect(grantsOf("user-1")).toEqual(["mobile", "connector"]);
+  });
+
   it("revokes nothing for an unknown reset token", async () => {
-    const { service, jwt, verifies } = createStore();
+    const { service, jwt, verifies, grantsOf } = createStore();
     const { token: browser } = await jwt.create(null, "user-1");
 
     await expect(
@@ -128,5 +186,6 @@ describe("resetPassword", () => {
     ).rejects.toBeInstanceOf(BadUserInputError);
 
     expect(verifies(browser)).toBe(true);
+    expect(grantsOf("user-1")).toEqual(["mobile", "connector"]);
   });
 });
