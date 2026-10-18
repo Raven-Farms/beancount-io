@@ -2776,15 +2776,18 @@ def _moved_error_key(error: Any) -> tuple[str, str]:
     books already had; it matches on class and message wherever it now sits,
     its words sorted because the plugin joins a set of currencies in arbitrary
     order. `check_commodity` reports against no line and names whichever
-    account sorts first, so the message moves too: there the class and the
-    pseudo-file are all that is stable, and the before-count still caps how
+    account sorts first, so the message moves too: its missing currency stays
+    the same even when the account changes. The before-count still caps how
     many such errors a write may leave.
     """
     kind = type(error).__name__
     if str(getattr(error, "message", "")).startswith("Invalid data types:"):
         kind = _error_kind(error)
     if _unanchored(error):
-        return (kind, str(error.source.get("filename", "")))
+        source = str(error.source.get("filename", ""))
+        if missing := _MISSING_COMMODITY.search(str(getattr(error, "message", ""))):
+            return (kind, f"{source}: {missing.group(1)}")
+        return (kind, source)
     return (kind, " ".join(sorted(re.split(r"[\s,]+", getattr(error, "message", str(error))))))
 
 
