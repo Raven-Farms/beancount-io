@@ -729,9 +729,11 @@ class TestFeedCache:
         assert _FeedHandler.hits == ["/prices/BTC-USD", "/prices/BTC-USD"]
         assert _FeedHandler.seen_headers["/prices/BTC-USD"]["if-none-match"] == '"r1"'
 
-    def test_new_revision_replaces_and_removes_the_superseded_blob(self, feed_server: str, tmp_path: Path) -> None:
+    def test_new_revision_replaces_and_keeps_the_superseded_blob(self, feed_server: str, tmp_path: Path) -> None:
         now = time.time()
         _resolve(feed_server, tmp_path, now=now)
+        effective = feed_dir(f"{feed_server}/prices/BTC-USD", tmp_path) / "r1.effective.0123456789abcdef.beancount"
+        effective.write_text("; what a load in another process includes\n")
         body = _feed_text(_stamp(now + 301), revision="r2").encode("utf-8")
         _FeedHandler.routes["/prices/BTC-USD"] = {
             "body": body,
@@ -748,8 +750,42 @@ class TestFeedCache:
         assert resolved.head.revision == "r2"
         directory = feed_dir(f"{feed_server}/prices/BTC-USD", tmp_path)
         assert (directory / "r2.beancount").is_file()
-        assert not (directory / "r1.beancount").exists()
-        assert not (directory / "r1.json").exists()
+        # Kept for a load another process may have begun on it (w5/640).
+        assert (directory / "r1.beancount").is_file()
+        assert effective.is_file()
+
+    def test_superseded_and_orphan_revisions_are_swept_after_the_grace(self, feed_server: str, tmp_path: Path) -> None:
+        """A load that chose a revision outlives its refresh; the sweep keeps the cache bounded (w5/640)."""
+        from bea_engine.managed_price_cache import SUPERSEDED_GRACE_SECONDS
+
+        now = time.time()
+        _resolve(feed_server, tmp_path, now=now)
+        directory = feed_dir(f"{feed_server}/prices/BTC-USD", tmp_path)
+        (directory / "r1.effective.0123456789abcdef.beancount").write_text("; effective\n")
+        # A racing fetcher's revision no head points at, and an id with a dot.
+        for orphan in ("orphan.beancount", "orphan.json", "v1.2.beancount", "v1.2.json"):
+            (directory / orphan).write_text("x")
+        for revision, at in (("r2", now + 301), ("r3", now + 602)):
+            _FeedHandler.routes["/prices/BTC-USD"] = {
+                "body": _feed_text(_stamp(at), revision=revision).encode("utf-8"),
+                "headers": {"Content-Type": "text/plain; charset=utf-8", "ETag": f'"{revision}"'},
+                "etag": f'"{revision}"',
+                "etag_match": True,
+            }
+            if revision == "r3":
+                old = time.time() - SUPERSEDED_GRACE_SECONDS - 1
+                for path in directory.iterdir():
+                    if not path.name.startswith(("r2.", "head")):
+                        os.utime(path, (old, old))
+            _resolve(feed_server, tmp_path, now=at)
+
+        assert sorted(path.name for path in directory.iterdir()) == [
+            "head.json",
+            "r2.beancount",
+            "r2.json",
+            "r3.beancount",
+            "r3.json",
+        ]
 
     def test_failed_refresh_serves_last_good_and_records_the_error(self, feed_server: str, tmp_path: Path) -> None:
         now = time.time()

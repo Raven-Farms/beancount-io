@@ -32,6 +32,7 @@ from __future__ import annotations
 import errno
 import json
 import os
+import re
 import stat
 import tempfile
 import time
@@ -65,6 +66,9 @@ RETRY_SECONDS = 60
 
 STALE_SECONDS = 600
 """Observation age beyond which a source reads `stale` (ADR 015 section 8)."""
+
+SUPERSEDED_GRACE_SECONDS = REFRESH_SECONDS
+"""How long a superseded revision's files stay for a load that already chose it (w5/640)."""
 
 FUTURE_SKEW_SECONDS = 300
 """How far ahead of the clock an observation may claim to be and still read recent."""
@@ -243,6 +247,68 @@ def _try_write(path: Path, text: str) -> str | None:
     return None
 
 
+_EFFECTIVE_NAME = re.compile(r"(?P<revision>.+)\.effective\.[0-9a-f]{16}\.beancount")
+
+
+def _revision_of(name: str) -> str | None:
+    """The revision a cache file belongs to — its blob, record or an effective text — or None.
+
+    A revision id is an ETag made key-safe, and may hold dots of its own.
+    """
+    if name.startswith(".") or name == "head.json":
+        return None
+    effective = _EFFECTIVE_NAME.fullmatch(name)
+    if effective is not None:
+        return effective["revision"]
+    for suffix in (".beancount", ".json"):
+        if name.endswith(suffix) and len(name) > len(suffix):
+            return name.removesuffix(suffix)
+    return None
+
+
+def _revision_files(directory: Path, revision: str) -> list[Path]:
+    """The blob, its record and every per-ledger effective text of one revision."""
+    try:
+        return [path for path in directory.iterdir() if _revision_of(path.name) == revision]
+    except OSError:
+        return []
+
+
+def _retire(directory: Path, revision: str) -> None:
+    """Stamp a superseded revision's files with the moment it was superseded.
+
+    Deleting them at once failed every load in another process that had
+    already chosen the revision: Beancount then found no file at the
+    effective text's include (w5/640). The sweep removes them once a load
+    that chose them has long finished.
+    """
+    now = time.time()
+    for path in _revision_files(directory, revision):
+        with suppress(OSError):
+            os.utime(path, (now, now))
+
+
+def _sweep(directory: Path, current: str) -> None:
+    """Remove every revision but `current` untouched for the grace period.
+
+    A fetch racing this one writes a revision no head ever points at, and
+    nothing deleted it; the sweep collects those too, so the cache keeps only
+    the revisions of the last grace period.
+    """
+    cutoff = time.time() - SUPERSEDED_GRACE_SECONDS
+    try:
+        entries = list(directory.iterdir())
+    except OSError:
+        return
+    for path in entries:
+        revision = _revision_of(path.name)
+        if revision is None or revision == current:
+            continue
+        with suppress(OSError):
+            if path.lstat().st_mtime < cutoff:
+                path.unlink()
+
+
 def _persist_head(directory: Path, head: PriceFeedHead) -> PriceFeedHead:
     """Write `head`; the head this load reports carries any write failure."""
     problem = _try_write(directory / "head.json", json.dumps(asdict(head)))
@@ -361,13 +427,10 @@ def resolve_feed(
                 refreshed = _persist_head(directory, refreshed)
             else:
                 refreshed = PriceFeedHead(revision=revision, next_refresh_at=at + refresh_seconds, last_error=problem)
-            if refreshed.last_error is None and previous is not None and previous.revision != revision:
-                with suppress(OSError):
-                    (directory / f"{previous.revision}.beancount").unlink(missing_ok=True)
-                    (directory / f"{previous.revision}.json").unlink(missing_ok=True)
-                    # Per-ledger effective texts key off the revision; they die with it.
-                    for effective in directory.glob(f"{previous.revision}.effective.*.beancount"):
-                        effective.unlink(missing_ok=True)
+            if refreshed.last_error is None:
+                if previous is not None and previous.revision != revision:
+                    _retire(directory, previous.revision)
+                _sweep(directory, revision)
             resolved = ResolvedFeed(blob=blob, head=refreshed)
             _enforce_strict(url, resolved, at, stale_seconds, strict)
             return resolved
