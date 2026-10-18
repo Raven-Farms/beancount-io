@@ -1882,16 +1882,24 @@ def _compiled(
         except re.error as exc:
             raise _pattern_error(pattern[1:-1], exc, statement, ledger_errors()) from None
     try:
-        # A pattern built by an expression is first compiled here: Python's
-        # "Possible nested set" warning reached stderr with the engine's own
-        # path, and the query matched something else (w5/509).
+        # Patterns built by expressions reach the parser only at runtime.
+        # Every ambiguous set construct needs the same refusal as a literal.
         with warnings.catch_warnings():
-            warnings.filterwarnings("error", message="Possible nested set", category=FutureWarning)
+            warnings.filterwarnings(
+                "error",
+                message=r"Possible (?:nested set|set (?:intersection|union|difference|symmetric difference))",
+                category=FutureWarning,
+            )
+            # A prior literal check can cache the compiled pattern even though
+            # it refused it. A cache hit never warns, so ensure the runtime
+            # guard sees compilation too, as regex_reads_otherwise does.
+            re.purge()
             return run()
     except FutureWarning as exc:
         raise protocol.UsageError(
             f"Cannot run this BQL query: Python's regex reads a pattern differently from what it says ({exc}). "
-            "Escape a literal [ inside a set as \\[, and write [^\\W\\d_] for letters instead of [[:alpha:]].",
+            "Escape a literal [ inside a set as \\[, and a doubled -, &, ~ or | there with backslashes. "
+            "Write [^\\W\\d_] for letters instead of [[:alpha:]].",
             details=[f"  {statement}"],
             ledger_errors=ledger_errors(),
         ) from None
