@@ -173,7 +173,7 @@ def _held_descriptor(name: str | None) -> tuple[int, ...]:
 def treeify(ctx: typer.Context) -> None:
     """Render a column as an ASCII tree (delegates to treeify)."""
     refuse_json("treeify", hint="Run without --json to print the ASCII tree.")
-    refuse_misplaced_global("treeify", list(ctx.args), native_options("treeify"))
+    refuse_misplaced_global("treeify", list(ctx.args), native_options("treeify"), reads="the file", json_output=False)
     # Upstream treeify knows no `--force`, so bea's own opt-in is stripped
     # before forwarding; without it an existing ledger file is never replaced.
     args = list(ctx.args)

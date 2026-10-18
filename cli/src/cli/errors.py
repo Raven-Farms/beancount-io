@@ -233,19 +233,50 @@ def placement_hint(option: str) -> str | None:
     return f"Place {option} before the command, for example: {example}." if example else None
 
 
-def refuse_misplaced_global(command: str, args: list[str], defined: frozenset[str]) -> None:
+def refuse_misplaced_global(
+    command: str, args: list[str], defined: frozenset[str], *, reads: str | None = None, json_output: bool = True
+) -> None:
     """Refuse a bea global option after a forwarded command that does not define it itself.
 
     Upstream answered with its own "No such option" and no hint, where every
     bea-owned command says where the option goes (w5/416).
+
+    A command that ignores `--file` names what it reads instead in `reads`
+    (`""` when it reads no ledger), and one without JSON output passes
+    `json_output=False`. The generic "Place -f before the command" sent
+    `doctor`, `treeify` and `example` to a form that failed (w5/620).
     """
-    for arg in args:
+    for index, arg in enumerate(args):
         if arg == "--":
             return
         name = arg.split("=", 1)[0]
-        hint = placement_hint(name) if name not in defined else None
+        if name in defined:
+            continue
+        if name in ("-f", "--file") and reads is not None:
+            raise UsageError(_file_as_argument(command, args, index, reads))
+        if name == "--json" and not json_output:
+            raise UsageError(f"bea {command} has no JSON output; drop --json.")
+        hint = placement_hint(name)
         if hint is not None:
             raise UsageError(f"{name} is a bea option, not one of bea {command}'s. {hint}")
+
+
+def _file_as_argument(command: str, args: list[str], index: int, reads: str) -> str:
+    """The refusal of `--file` on a command that takes its file as an argument, with that form."""
+    import shlex
+
+    name, given, value = args[index].partition("=")
+    if not reads:
+        return f"bea {command} reads no ledger, so {name} does nothing here; drop it."
+    taken = 1 if given else 2
+    if not given:
+        value = args[index + 1] if index + 1 < len(args) else "FILE"
+    rest = [*args[:index], *args[index + taken :]]
+    return (
+        f"bea {command} takes {reads} as an argument, not {name}: "
+        + shlex.join(["bea", *command.split(), value, *rest])
+        + "."
+    )
 
 
 def to_bea_error(exc: BaseException | str) -> BeaError:

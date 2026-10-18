@@ -117,7 +117,7 @@ def _refuse_invalid(diagnostic: str, destination: Path | None) -> None:
 def example(ctx: typer.Context) -> None:
     """Generate an example ledger (delegates to bean-example)."""
     refuse_json("example", hint="Run without --json to print the sample ledger.")
-    refuse_misplaced_global("example", list(ctx.args), native_options("example"))
+    refuse_misplaced_global("example", list(ctx.args), native_options("example"), reads="", json_output=False)
     forwarded, output, force = _split_output(list(ctx.args))
     if "--version" in forwarded[: forwarded.index("--") if "--" in forwarded else None]:
         # Informational: bean-example prints its version and exits 0, which

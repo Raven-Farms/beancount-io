@@ -692,7 +692,9 @@ def _register(op: str) -> None:
     )
     def _cmd(ctx: typer.Context) -> None:
         assert forwarder is not None
-        refuse_misplaced_global(f"doctor {op}", list(ctx.args), native_options(f"doctor {op}"))
+        refuse_misplaced_global(
+            f"doctor {op}", list(ctx.args), native_options(f"doctor {op}"), reads="the ledger", json_output=False
+        )
         _refuse_directory_ledger(op, list(ctx.args))
         # Every operation that loads its ledger starts upstream's loader, which
         # deletes an unreadable file at the cache path the environment names.
@@ -728,6 +730,8 @@ for _op in _OPS:
 )
 def dump_lexer(ctx: typer.Context) -> None:
     """Alias for bean-doctor lex."""
-    refuse_misplaced_global("doctor dump-lexer", list(ctx.args), native_options("doctor dump-lexer"))
+    refuse_misplaced_global(
+        "doctor dump-lexer", list(ctx.args), native_options("doctor dump-lexer"), reads="the ledger", json_output=False
+    )
     _refuse_directory_ledger("dump-lexer", list(ctx.args))
     _forward_parse("lex", ctx)
