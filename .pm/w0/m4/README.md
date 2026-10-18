@@ -1,12 +1,12 @@
 # w0 · m4 — A password reset ends every session the old password issued
 
-**Worker:** worker1 **Goal:** completing a password reset signs out every existing browser and CLI session and revokes every OAuth grant (mobile refresh tokens included), so a reset actually evicts someone who held the old credentials **Status:** todo
+**Worker:** worker1 **Goal:** completing a password reset signs out every existing browser and CLI session and revokes every OAuth grant (mobile refresh tokens included), so a reset actually evicts someone who held the old credentials **Status:** todo (t001 done)
 
 ## Tasks (in order)
 
 | id   | title | est | depends_on |
 | ---- | ----- | --- | ---------- |
-| t001 | Reset revokes every session JWT in the same transaction as the password change | 30m | — |
+| t001 | Reset revokes every session JWT in the same transaction as the password change | 30m | — | — **DONE**
 | t002 | Reset revokes every OAuth grant, refresh token and provider session the user holds | 60m | t001 |
 | t003 | Adoption surface | 20m | t002 |
 | t004 | Simplify | 15m | t003 |

@@ -406,11 +406,12 @@ export class AuthService implements IAuthService {
     // Consume the token FIRST to prevent reuse (security: if password update fails, token is already consumed)
     await this.models.emailToken.findOneAndDelete(token);
 
-    await this.models.user.updatePassword(
-      this.db,
-      emailToken.userId,
-      newPassword,
-    );
+    // A reset ends every session the old password issued, this browser's
+    // included: the user may be resetting because someone else holds one.
+    await this.db.transaction(async (tx) => {
+      await this.models.user.updatePassword(tx, emailToken.userId, newPassword);
+      await this.models.jwt.deleteByUserId(tx, emailToken.userId);
+    });
   };
 
   public createSignUpSession = async (
