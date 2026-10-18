@@ -1565,6 +1565,14 @@ def _blocked_reason(
     under a root the ledger does not use (from a Python importer) gets no
     `add open` remedy: that command would refuse it too.
     """
+    invalid = _invalid_name(entry)
+    if invalid is not None:
+        chose = (
+            "Correct the rule, category column or --default-account that chose it."
+            if source is not None
+            else "The importer has to return a valid one."
+        )
+        return f"{invalid.rstrip('.')}. {chose}"
     referenced = _entry_accounts(entry)
     missing = sorted({name for name, _ in referenced if name not in open_currencies})
     foreign = [name for name in missing if name.split(":", 1)[0] not in roots]
@@ -1618,6 +1626,38 @@ def _blocked_reason(
                 f"{blocked} The importer posts {currency} there: have it post {instead}, or book the row "
                 f"to an account open for {currency} — {widen}."
             )
+    return None
+
+
+def _invalid_name(entry: Any) -> str | None:
+    """`add`'s refusal for the first account or commodity no ledger can hold, or None.
+
+    Only membership in the ledger's opens was asked, so an importer's
+    `Expenses:food stuff` or `usd` was "not open", with an `add open` or
+    widen-the-open remedy that `add` refuses (w5/637, the importer side of
+    w3/386). These are the validators `add` uses.
+    """
+    from beancount.core.data import Balance, Transaction
+
+    from bea_engine.ledger.text import parse_account, require_commodity
+
+    for name, _ in _entry_accounts(entry):
+        try:
+            parse_account(name)
+        except UsageError as exc:
+            return str(exc)
+    currencies: list[Any] = []
+    if isinstance(entry, Transaction):
+        for posting in entry.postings:
+            currencies += [getattr(value, "currency", None) for value in (posting.units, posting.cost, posting.price)]
+    elif isinstance(entry, Balance):
+        currencies.append(entry.amount.currency)
+    for currency in currencies:
+        if isinstance(currency, str):
+            try:
+                require_commodity(currency)
+            except ValueError as exc:
+                return str(exc)
     return None
 
 
