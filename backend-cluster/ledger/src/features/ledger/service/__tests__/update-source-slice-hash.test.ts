@@ -223,12 +223,14 @@ describe("updateSourceSlice directive-limit exemption", () => {
   it("passes the request's exemption to the commit", async () => {
     await update(service({ exempt: true }));
 
-    expect(commitMock.mock.calls[0][6]).toEqual({ exempt: true });
+    expect(commitMock.mock.calls[0][5]).toEqual({
+      directiveLimit: { exempt: true },
+    });
   });
 
   it("commits unexempted by default", async () => {
     await update(service());
 
-    expect(commitMock.mock.calls[0][6]).toEqual({});
+    expect(commitMock.mock.calls[0][5]).toEqual({ directiveLimit: {} });
   });
 });

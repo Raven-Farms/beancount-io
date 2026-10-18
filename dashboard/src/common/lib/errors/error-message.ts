@@ -47,7 +47,15 @@ const TIME_FILTER_ERROR = /^Failed to parse date:/;
 const ADVANCED_FILTER_ERROR =
   /^(?:Illegal character|Trailing tokens|Unexpected end of filter|Unexpected token|Expected .+, got|Expected : or comparison|Filter pattern exceeds)/;
 
-export function getErrorMessageKey(error: unknown): string {
+/**
+ * The catalog key for `error`. `fallbackKey` replaces the generic "something
+ * went wrong" for an error the app has no words for, so an action can keep its
+ * own failure text.
+ */
+export function getErrorMessageKey(
+  error: unknown,
+  fallbackKey: string = GENERIC_ERROR_KEY,
+): string {
   // requireAuth's outage throw (w3/646), recognized by name so it survives
   // SSR error serialization; it carries the probe failure's own key.
   if (error instanceof Error && error.name === "AuthUnavailableError") {
@@ -73,7 +81,7 @@ export function getErrorMessageKey(error: unknown): string {
         return ERROR_CODE_TO_KEY[code];
       }
     }
-    return GENERIC_ERROR_KEY;
+    return fallbackKey;
   }
 
   // Non-2xx / unparseable responses from the API gateway.
@@ -90,7 +98,7 @@ export function getErrorMessageKey(error: unknown): string {
     return "common.errors.network";
   }
 
-  return GENERIC_ERROR_KEY;
+  return fallbackKey;
 }
 
 /**

@@ -500,8 +500,7 @@ export class LedgerJournalService implements ILedgerJournalService {
       ledgerName,
       transforms,
       message,
-      [],
-      this.directiveLimit,
+      { directiveLimit: this.directiveLimit },
     );
   }
 

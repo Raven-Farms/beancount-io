@@ -7,11 +7,12 @@ import {
 } from "@/features/gitea/utils/gitea-error";
 import { readGiteaFileText } from "@/features/gitea/utils/gitea-file-content";
 import { giteaWriteErrorFromCause } from "@/features/ledger/utils/operation-not-allowed-from-cause";
-import type { Api as GiteaApi } from "@/features/gitea/client/gitea-api";
+import type { GiteaCommitClient } from "@/foundation/clients/load-cached-ledger-file-map";
 import {
   checkDirectiveLimitForFileChanges,
   type DirectiveLimitOptions,
 } from "@/core/directive-limit";
+import { getMaxDirectives } from "@/core/backend-v2-limits";
 
 const log = logger.child({ module: "commit-ledger-files" });
 
@@ -45,9 +46,12 @@ interface CommitOperation {
   sha?: string;
 }
 
-/** The narrow slice of the Gitea client this helper needs. */
+/**
+ * The slice of the Gitea client this helper needs: file reads and the commit,
+ * plus what the directive-limit check reads (the committed file map at HEAD).
+ */
 export interface GiteaFileCommitClient {
-  repos: {
+  repos: GiteaCommitClient["repos"] & {
     repoGetContents(
       owner: string,
       repo: string,
@@ -148,7 +152,8 @@ async function readFileOrNull(
  *
  * Every commit made here is held to the free-tier directive limit, checked on
  * each attempt against the content that attempt would commit, so no caller has
- * to remember the check. `limit.exempt` is the request's own exemption.
+ * to remember the check. `directiveLimit` is required so none forgets the
+ * request's exemption either.
  */
 export async function commitLedgerFiles(
   client: GiteaFileCommitClient,
@@ -156,9 +161,15 @@ export async function commitLedgerFiles(
   repo: string,
   transforms: Map<string, LedgerFileTransform>,
   message: string,
-  rawCreates: RawFileCreate[] = [],
-  limit: DirectiveLimitOptions = {},
+  {
+    directiveLimit,
+    rawCreates = [],
+  }: { directiveLimit: DirectiveLimitOptions; rawCreates?: RawFileCreate[] },
 ): Promise<void> {
+  // One tier lookup per commit, however many attempts it takes.
+  const limit: DirectiveLimitOptions = directiveLimit.exempt
+    ? directiveLimit
+    : { ...directiveLimit, maxDirectives: getMaxDirectives(owner) };
   const rawOperations: CommitOperation[] = rawCreates.map(
     ({ path, contentBase64 }) => ({
       operation: "create",
@@ -191,7 +202,7 @@ export async function commitLedgerFiles(
     if (operations.length === 0) return;
 
     await checkDirectiveLimitForFileChanges(
-      client as unknown as GiteaApi<unknown>,
+      client,
       owner,
       repo,
       Object.fromEntries(

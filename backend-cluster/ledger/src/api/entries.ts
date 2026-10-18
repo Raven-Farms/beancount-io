@@ -247,8 +247,6 @@ export function setEntriesHandler(router: Router): void {
             }
           }
         }
-        // Writes to Gitea directly, not through commitLedgerFiles, so it checks
-        // the directive limit itself.
         await checkDirectiveLimitForFileChanges(
           client,
           owner,

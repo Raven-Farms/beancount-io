@@ -50,7 +50,7 @@ interface CommittedLedger {
  * count never triggers a feed fetch.
  */
 async function loadCommitted(
-  client: GiteaApi<unknown>,
+  client: GiteaApi<unknown> | GiteaCommitClient,
   owner: string,
   repoName: string,
   ref?: string,
@@ -112,6 +112,9 @@ export async function countDirectivesForRepo(
  *
  * `fileChanges` maps repo-relative path → proposed new BASE64 content, or
  * null for a deletion. Non-.bean paths are skipped.
+ *
+ * `commitLedgerFiles` runs this for every commit it makes. A route that writes
+ * to Gitea directly (files, bulk entries) must call it itself.
  */
 export interface DirectiveLimitOptions {
   /**
@@ -119,10 +122,15 @@ export interface DirectiveLimitOptions {
    * exempt from the per-ledger limit by product policy.
    */
   exempt?: boolean;
+  /**
+   * The owner's limit, when the caller already started the lookup — so a
+   * commit that retries asks backend-v2 once, not once per attempt.
+   */
+  maxDirectives?: Promise<number | null>;
 }
 
 export async function checkDirectiveLimitForFileChanges(
-  client: GiteaApi<unknown>,
+  client: GiteaApi<unknown> | GiteaCommitClient,
   owner: string,
   repoName: string,
   fileChanges: Record<string, string | null>,
@@ -139,7 +147,7 @@ export async function checkDirectiveLimitForFileChanges(
   let currentTotal: number;
   let projectedTotal: number;
   try {
-    limit = await getMaxDirectives(owner);
+    limit = await (options.maxDirectives ?? getMaxDirectives(owner));
     if (limit === null || limit < 0) return;
 
     const { files } = await loadCommitted(client, owner, repoName);

@@ -100,11 +100,12 @@ describe("commitLedgerFiles and the directive limit", () => {
 
     await expect(
       commitLedgerFiles(
-        client,
+        client as never,
         "alice",
         "books",
         replaceWith(lines(1, 2, 3, 4)),
         "Update entry",
+        { directiveLimit: {} },
       ),
     ).rejects.toMatchObject({
       metadata: expect.objectContaining({
@@ -121,11 +122,12 @@ describe("commitLedgerFiles and the directive limit", () => {
     const { client, commits } = repository();
 
     await commitLedgerFiles(
-      client,
+      client as never,
       "alice",
       "books",
       replaceWith(lines(1, 2)),
       "Update entry",
+      { directiveLimit: {} },
     );
 
     expect(commits).toEqual([{ "main.bean": lines(1, 2) }]);
@@ -147,12 +149,22 @@ describe("commitLedgerFiles and the directive limit", () => {
 
     // First attempt: 1 → 2, within the limit. The retry would make it 3.
     await expect(
-      commitLedgerFiles(client, "alice", "books", append, "Add entry"),
+      commitLedgerFiles(
+        client as never,
+        "alice",
+        "books",
+        append,
+        "Add entry",
+        { directiveLimit: {} },
+      ),
     ).rejects.toMatchObject({
       metadata: expect.objectContaining({ code: "directive_limit_exceeded" }),
     });
     expect(commits).toEqual([]);
     expect(remote["main.bean"]).toBe(lines(1, 9));
+    // Both attempts were checked, against one tier lookup.
+    expect(limitMock).toHaveBeenCalledTimes(1);
+    expect(countMock).toHaveBeenCalledTimes(3);
   });
 
   it("lets a shrinking commit through on a ledger already over the limit", async () => {
@@ -161,11 +173,12 @@ describe("commitLedgerFiles and the directive limit", () => {
     const { client, commits } = repository();
 
     await commitLedgerFiles(
-      client,
+      client as never,
       "alice",
       "books",
       replaceWith(lines(1, 2)),
       "Delete entry",
+      { directiveLimit: {} },
     );
 
     expect(commits).toEqual([{ "main.bean": lines(1, 2) }]);
@@ -177,13 +190,12 @@ describe("commitLedgerFiles and the directive limit", () => {
     const { client, commits } = repository();
 
     await commitLedgerFiles(
-      client,
+      client as never,
       "alice",
       "books",
       replaceWith(lines(1, 2, 3)),
       "Update entry",
-      [],
-      { exempt: true },
+      { directiveLimit: { exempt: true } },
     );
 
     expect(commits).toHaveLength(1);
@@ -197,11 +209,12 @@ describe("commitLedgerFiles and the directive limit", () => {
     const { client, commits } = repository();
 
     await commitLedgerFiles(
-      client,
+      client as never,
       "alice",
       "books",
       replaceWith(lines(1, 2, 3)),
       "Update entry",
+      { directiveLimit: {} },
     );
 
     expect(commits).toHaveLength(1);

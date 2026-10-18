@@ -12,6 +12,7 @@ import {
   type GiteaFileCommitClient,
   type RawFileCreate,
 } from "@/features/ledger/operations/commit-ledger-files";
+import type { DirectiveLimitOptions } from "@/core/directive-limit";
 import type { IGiteaClientFactory } from "@/foundation/clients/gitea-client-factory";
 import type { CacheHelper } from "@/shared/cache";
 import {
@@ -139,6 +140,8 @@ export class LedgerEntryService implements ILedgerEntryService {
   constructor(
     private readonly giteaClientFactory: IGiteaClientFactory,
     private readonly cacheHelper: CacheHelper,
+    /** The request's directive-limit exemption, applied to every commit. */
+    private readonly directiveLimit: DirectiveLimitOptions = {},
   ) {}
 
   /** See {@link ILedgerEntryService.checkRepoSizeLimit}. */
@@ -262,7 +265,7 @@ export class LedgerEntryService implements ILedgerEntryService {
       ledgerName,
       transforms,
       `Add ${inputs.length} ${noun}`,
-      attachments,
+      { directiveLimit: this.directiveLimit, rawCreates: attachments },
     );
 
     return {

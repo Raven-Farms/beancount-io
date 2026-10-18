@@ -61,11 +61,9 @@ export default function ErrorPage({ error, reset }: ErrorComponentProps) {
 
   // A recognized failure category (a gateway 502, a network failure, …)
   // names itself truthfully instead of the generic page copy (w3/646).
-  const mappedErrorKey = getErrorMessageKey(error);
-  const mappedDescription =
-    mappedErrorKey === "common.errors.generic"
-      ? t("common.errorDescription")
-      : t(mappedErrorKey);
+  const mappedDescription = t(
+    getErrorMessageKey(error, "common.errorDescription"),
+  );
 
   return (
     <>

@@ -326,13 +326,13 @@ const validCreate = {
   description: "Patch description",
   clearCommitMessage: "Patch commit",
 };
-// An owner the directive-limit lookup cannot find: the merge check fails
-// open, as it does in production when the limit is unknown.
+// The merge's directive-limit check has its own tests
+// (pull-request-merge-directive-limit.test.ts); here the ledger is unlimited.
+jest.mock("@/features/gitea/policy/directive-limit-gate", () => ({
+  ...jest.requireActual("@/features/gitea/policy/directive-limit-gate"),
+  evaluateMergeDirectiveLimit: async () => ({ decision: "unlimited" }),
+}));
 const NO_DIRECTIVE_LIMIT = {
-  models: { user: { getUserByUsername: async () => null } },
-  db: {},
-  stripe: {},
-  cacheHelper: {},
   favaClientFactory: { getPublicApiClient: async () => ({}) },
 } as never;
 

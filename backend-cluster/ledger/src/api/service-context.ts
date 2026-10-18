@@ -26,16 +26,15 @@ export function servicesForRequest(ctx: Context) {
   const client = giteaClientForRequest(ctx);
   const factory = new RequestScopedGiteaClientFactory(client);
   const cache = getCacheHelper();
+  const directiveLimit = { exempt: directiveLimitExempt(ctx) };
   return {
     client,
     finance: new LedgerFinanceService(factory, cache),
     data: new LedgerDataService(factory, cache),
-    journal: new LedgerJournalService(factory, cache, {
-      exempt: directiveLimitExempt(ctx),
-    }),
+    journal: new LedgerJournalService(factory, cache, directiveLimit),
     shell: new LedgerShellService(factory, cache),
     account: new LedgerAccountService(factory, cache),
-    entry: new LedgerEntryService(factory, cache),
+    entry: new LedgerEntryService(factory, cache, directiveLimit),
   };
 }
 

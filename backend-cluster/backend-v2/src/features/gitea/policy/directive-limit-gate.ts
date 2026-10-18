@@ -96,6 +96,25 @@ function describe(err: unknown): string {
 }
 
 /**
+ * The owner's limit, or the verdict that ends the check before any count:
+ * `unknown` (fail open) when the lookup fails, `unlimited` for premium — the
+ * count costs a Gitea read and a ledger parse to answer a question whose
+ * answer cannot change the outcome.
+ */
+async function limitOrVerdict(
+  deps: DirectiveLimitLookupDeps,
+  owner: string,
+): Promise<number | DirectiveLimitVerdict> {
+  let limit: number;
+  try {
+    ({ maxDirectives: limit } = await lookupDirectiveLimit(deps, owner));
+  } catch (err) {
+    return { decision: "unknown", reason: `limit: ${describe(err)}` };
+  }
+  return limit < 0 ? { decision: "unlimited" } : limit;
+}
+
+/**
  * Is this ledger **currently** over its owner's directive limit?
  *
  * Deliberately not "will this push take it over": answering that needs the
@@ -116,16 +135,8 @@ export async function evaluateDirectiveLimit(
   owner: string,
   repo: string,
 ): Promise<DirectiveLimitVerdict> {
-  let limit: number;
-  try {
-    ({ maxDirectives: limit } = await lookupDirectiveLimit(deps, owner));
-  } catch (err) {
-    return { decision: "unknown", reason: `limit: ${describe(err)}` };
-  }
-
-  // Premium. Skip the count — it costs a Gitea read and a ledger parse to
-  // answer a question whose answer cannot change the outcome.
-  if (limit < 0) return { decision: "unlimited" };
+  const limit = await limitOrVerdict(deps, owner);
+  if (typeof limit !== "number") return limit;
 
   let count: number;
   try {
@@ -163,13 +174,8 @@ export async function evaluateMergeDirectiveLimit(
   repo: string,
   commits: MergeCommits,
 ): Promise<DirectiveLimitVerdict> {
-  let limit: number;
-  try {
-    ({ maxDirectives: limit } = await lookupDirectiveLimit(deps, owner));
-  } catch (err) {
-    return { decision: "unknown", reason: `limit: ${describe(err)}` };
-  }
-  if (limit < 0) return { decision: "unlimited" };
+  const limit = await limitOrVerdict(deps, owner);
+  if (typeof limit !== "number") return limit;
 
   let current: number;
   let head: number;

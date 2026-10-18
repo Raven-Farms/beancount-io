@@ -14,6 +14,7 @@ import type { DirectiveLimitLookupDeps } from "@/features/ledger/operations/dire
 import {
   directiveLimitMergeRefusal,
   evaluateMergeDirectiveLimit,
+  type DirectiveLimitVerdict,
 } from "@/features/gitea/policy/directive-limit-gate";
 import type {
   Api as GiteaApi,
@@ -602,35 +603,34 @@ export class PullRequestService implements IPullRequestService {
     repo: string,
     prNumber: number,
   ): Promise<void> {
-    let verdict;
+    let verdict: DirectiveLimitVerdict;
     try {
       const { data: pr } = await client.repos.repoGetPullRequest(
         owner,
         repo,
         prNumber,
       );
-      if (!pr.head?.sha || !pr.merge_base) return;
-      verdict = await evaluateMergeDirectiveLimit(
-        {
-          ...this.directiveLimit,
-          ledgerClient:
-            await this.directiveLimit.favaClientFactory.getPublicApiClient(
-              createLedgerId(owner, repo),
-              userId,
-            ),
-        },
-        owner,
-        repo,
-        { head: pr.head.sha, mergeBase: pr.merge_base },
-      );
+      verdict =
+        pr.head?.sha && pr.merge_base
+          ? await evaluateMergeDirectiveLimit(
+              {
+                ...this.directiveLimit,
+                ledgerClient:
+                  await this.directiveLimit.favaClientFactory.getPublicApiClient(
+                    createLedgerId(owner, repo),
+                    userId,
+                  ),
+              },
+              owner,
+              repo,
+              { head: pr.head.sha, mergeBase: pr.merge_base },
+            )
+          : {
+              decision: "unknown",
+              reason: "pull request has no head or merge base",
+            };
     } catch (error) {
-      logger.warn("merge directive-limit check failed open", {
-        owner,
-        repo,
-        prNumber,
-        error,
-      });
-      return;
+      verdict = { decision: "unknown", reason: describeClientFailure(error) };
     }
     if (verdict.decision === "unknown") {
       logger.warn("merge directive-limit check failed open", {
