@@ -249,7 +249,7 @@ const caAuth: Record<string, TranslationEntry> = {
   },
   "auth.passwordResetSuccessMessage": {
     message:
-      "La vostra contrasenya s'ha restablert. Redirigint a l'inici de sessió...",
+      "La vostra contrasenya s'ha restablert i s'ha tancat la sessió a tots els dispositius i aplicacions connectades. Redirigint a l'inici de sessió...",
     description: "Success message description",
   },
   "auth.passwordResetSuccessful": {

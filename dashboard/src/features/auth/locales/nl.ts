@@ -246,7 +246,8 @@ const nlAuth: Record<string, TranslationEntry> = {
     description: "Validation error when password is not provided",
   },
   "auth.passwordResetSuccessMessage": {
-    message: "Uw wachtwoord is gereset. Doorverwijzen naar inlogpagina...",
+    message:
+      "Uw wachtwoord is gereset en u bent op alle apparaten en in gekoppelde apps uitgelogd. Doorverwijzen naar inlogpagina...",
     description: "Success message description",
   },
   "auth.passwordResetSuccessful": {

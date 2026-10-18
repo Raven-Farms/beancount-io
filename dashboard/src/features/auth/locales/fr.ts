@@ -249,7 +249,7 @@ const frAuth: Record<string, TranslationEntry> = {
   },
   "auth.passwordResetSuccessMessage": {
     message:
-      "Votre mot de passe a été réinitialisé. Redirection vers la connexion...",
+      "Votre mot de passe a été réinitialisé, et vos sessions ont été fermées sur tous vos appareils et applications connectées. Redirection vers la connexion...",
     description: "Success message description",
   },
   "auth.passwordResetSuccessful": {

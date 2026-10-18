@@ -246,7 +246,8 @@ const ptAuth: Record<string, TranslationEntry> = {
     description: "Validation error when password is not provided",
   },
   "auth.passwordResetSuccessMessage": {
-    message: "Sua senha foi redefinida. Redirecionando para login...",
+    message:
+      "Sua senha foi redefinida, e a sessão foi encerrada em todos os dispositivos e aplicativos conectados. Redirecionando para login...",
     description: "Success message description",
   },
   "auth.passwordResetSuccessful": {

@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useNavigate, useSearch, Link } from "@tanstack/react-router";
+import { useSearch, Link } from "@tanstack/react-router";
+import { hardNavigate } from "@/common/lib/navigation/hard-navigate";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -40,7 +41,6 @@ type ResetPasswordFormData = {
 export default function ResetPasswordPage() {
   const { t } = useTranslations();
   const formatError = useErrorMessage();
-  const navigate = useNavigate();
   const search = useSearch({ from: "/auth/reset-password" });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -135,9 +135,11 @@ export default function ResetPasswordPage() {
 
       if (response.data?.resetPassword.success) {
         setSuccess(true);
-        // Redirect to login after 2 seconds
+        // Redirect to login after 2 seconds. A document load, not a router
+        // navigation: the reset ended this browser's session too, and the
+        // router still holds the signed-in profile it loaded before.
         setTimeout(() => {
-          void navigate({ to: "/auth/login" });
+          hardNavigate("/auth/login");
         }, 2000);
       } else {
         setError(t("auth.failedToResetPassword"));

@@ -247,7 +247,7 @@ const bgAuth: Record<string, TranslationEntry> = {
   },
   "auth.passwordResetSuccessMessage": {
     message:
-      "Вашата парола беше нулирана. Пренасочване към страницата за вход...",
+      "Вашата парола беше нулирана и излязохте от профила си на всички устройства и в свързаните приложения. Пренасочване към страницата за вход...",
     description: "Success message description",
   },
   "auth.passwordResetSuccessful": {

@@ -246,7 +246,8 @@ const faAuth: Record<string, TranslationEntry> = {
     description: "Validation error when password is not provided",
   },
   "auth.passwordResetSuccessMessage": {
-    message: "رمز عبور شما بازنشانی شد. در حال هدایت به صفحه ورود...",
+    message:
+      "رمز عبور شما بازنشانی شد و از همه دستگاه‌ها و برنامه‌های متصل خارج شدید. در حال هدایت به صفحه ورود...",
     description: "Success message description",
   },
   "auth.passwordResetSuccessful": {

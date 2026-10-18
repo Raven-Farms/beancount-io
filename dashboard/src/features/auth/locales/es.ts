@@ -249,7 +249,7 @@ const esAuth: Record<string, TranslationEntry> = {
   },
   "auth.passwordResetSuccessMessage": {
     message:
-      "Su contraseña ha sido restablecida. Redirigiendo al inicio de sesión...",
+      "Su contraseña ha sido restablecida y se ha cerrado la sesión en todos los dispositivos y aplicaciones conectadas. Redirigiendo al inicio de sesión...",
     description: "Success message description",
   },
   "auth.passwordResetSuccessful": {

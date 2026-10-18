@@ -246,7 +246,8 @@ const ukAuth: Record<string, TranslationEntry> = {
     description: "Validation error when password is not provided",
   },
   "auth.passwordResetSuccessMessage": {
-    message: "Ваш пароль скинуто. Перенаправлення на сторінку входу...",
+    message:
+      "Ваш пароль скинуто, і ви вийшли з облікового запису на всіх пристроях і в підключених застосунках. Перенаправлення на сторінку входу...",
     description: "Success message description",
   },
   "auth.passwordResetSuccessful": {

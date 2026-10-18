@@ -199,7 +199,7 @@ const jaAuth: Record<string, TranslationEntry> = {
   },
   "auth.passwordResetSuccessMessage": {
     message:
-      "パスワードがリセットされました。ログインページにリダイレクト中...",
+      "パスワードがリセットされ、すべてのデバイスと連携アプリからログアウトしました。ログインページにリダイレクト中...",
     description: "Success message description",
   },
   "auth.passwordResetSuccessful": {

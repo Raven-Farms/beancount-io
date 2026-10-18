@@ -196,7 +196,8 @@ const koAuth: Record<string, TranslationEntry> = {
     description: "Validation error when password is not provided",
   },
   "auth.passwordResetSuccessMessage": {
-    message: "비밀번호가 재설정되었습니다. 로그인 페이지로 이동 중...",
+    message:
+      "비밀번호가 재설정되었으며 모든 기기와 연결된 앱에서 로그아웃되었습니다. 로그인 페이지로 이동 중...",
     description: "Success message description",
   },
   "auth.passwordResetSuccessful": {

@@ -247,7 +247,8 @@ const deAuth: Record<string, TranslationEntry> = {
     description: "Validation error when password is not provided",
   },
   "auth.passwordResetSuccessMessage": {
-    message: "Ihr Passwort wurde zurückgesetzt. Weiterleitung zur Anmeldung...",
+    message:
+      "Ihr Passwort wurde zurückgesetzt, und Sie wurden auf allen Geräten und in verbundenen Apps abgemeldet. Weiterleitung zur Anmeldung...",
     description: "Success message description",
   },
   "auth.passwordResetSuccessful": {

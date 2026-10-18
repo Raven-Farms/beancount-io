@@ -200,7 +200,8 @@ const enAuth: Record<string, TranslationEntry> = {
     description: "Validation error when password is not provided",
   },
   "auth.passwordResetSuccessMessage": {
-    message: "Your password has been reset. Redirecting to login...",
+    message:
+      "Your password has been reset, and every device and connected app has been signed out. Redirecting to login...",
     description: "Success message description",
   },
   "auth.passwordResetSuccessful": {

@@ -426,6 +426,16 @@ Discourse keeps oidc-provider's defaults.
 Revocation is what ends a long session early: logout revokes the refresh
 credential, which revokes the grant with it.
 
+A password reset ends all of them at once. In the same transaction as the
+password change it deletes every dashboard and CLI session (`jwts` rows) and,
+for every client, every OAuth grant, refresh token and authorization-server
+session the user holds (`oauthGrant.revokeAllForUser`). A reset that cannot
+revoke them fails and leaves the old password in place. Access tokens already
+issued run out within their hour, and nothing can refresh them. Personal API
+keys (`bcio_`) and SSH keys are not revoked: they are long-lived credentials the
+user created on purpose, and each is listed and revocable in the dashboard
+under Settings → Personal access tokens and Settings → SSH Keys.
+
 Credentials issued before these lifetimes shipped keep working on their own
 terms: an existing refresh token is honored until its original expiry and the
 replacement it rotates into carries the new window, so an installed app migrates

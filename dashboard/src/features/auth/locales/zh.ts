@@ -243,7 +243,8 @@ const zhAuth: Record<string, TranslationEntry> = {
     description: "Validation error when password is not provided",
   },
   "auth.passwordResetSuccessMessage": {
-    message: "你的密码已重置。正在跳转到登录页面...",
+    message:
+      "你的密码已重置，所有设备和已连接的应用均已登出。正在跳转到登录页面...",
     description: "Success message description",
   },
   "auth.passwordResetSuccessful": {

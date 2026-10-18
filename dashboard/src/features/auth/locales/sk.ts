@@ -246,7 +246,8 @@ const skAuth: Record<string, TranslationEntry> = {
     description: "Validation error when password is not provided",
   },
   "auth.passwordResetSuccessMessage": {
-    message: "Vaše heslo bolo resetované. Presmerovávam na prihlásenie...",
+    message:
+      "Vaše heslo bolo resetované a na všetkých zariadeniach a v pripojených aplikáciách ste boli odhlásení. Presmerovávam na prihlásenie...",
     description: "Success message description",
   },
   "auth.passwordResetSuccessful": {

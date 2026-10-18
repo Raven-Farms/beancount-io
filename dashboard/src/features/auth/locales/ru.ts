@@ -246,7 +246,8 @@ const ruAuth: Record<string, TranslationEntry> = {
     description: "Validation error when password is not provided",
   },
   "auth.passwordResetSuccessMessage": {
-    message: "Ваш пароль сброшен. Перенаправление на страницу входа...",
+    message:
+      "Ваш пароль сброшен, и вы вышли из аккаунта на всех устройствах и в подключённых приложениях. Перенаправление на страницу входа...",
     description: "Success message description",
   },
   "auth.passwordResetSuccessful": {
