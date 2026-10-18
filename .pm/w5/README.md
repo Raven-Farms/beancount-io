@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [634 — An importer config calling `sys.exit` is reported as "engine did not answer" and, with `--apply`, exit 4 "outcome unknown"](./634.md)
 - [635 — `ingest extract -o` on a module binding `CONFIG` by import exits 0 and writes nothing (gap in w5/167)](./635.md)
 - [636 — A blocked import row's "opens after this row" names a vanished staging file](./636.md)
 - [637 — Importer rows with unopenable account names or bad currencies get remedies `bea add` refuses (gap in w3/386)](./637.md)
