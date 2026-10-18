@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [631 — `list --search` cannot find a multi-line narration by the text the table shows](./631.md)
 - [632 — Hosted ledger: shadowing a feed point with an indented comment leaves orphaned lines (follow-up of w5/477)](./632.md)
 - [633 — Trivial follow-ups to w5/475, 479, 480: "disabled" for ignored origins, stale `--allow-errors` help, BOM option location](./633.md)
 - [634 — An importer config calling `sys.exit` is reported as "engine did not answer" and, with `--apply`, exit 4 "outcome unknown"](./634.md)
