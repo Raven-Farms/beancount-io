@@ -1236,7 +1236,17 @@ def import_entries(
     # carry a preview in error.result, but must preserve the previous memory.
     if memory_note is not None:
         csv_to_remember = config_to_remember = None
-    unopened = set(preview.get("unopened_accounts") or [])
+    # The engine compares NFC account names. Match its spelling both when
+    # rejecting unopened settings and when persisting a valid mapping (w5/714).
+    if csv_to_remember is not None:
+        for key in ("account", "default_account"):
+            if isinstance(account := csv_to_remember.get(key), str):
+                csv_to_remember[key] = unicodedata.normalize("NFC", account)
+    unopened = {
+        unicodedata.normalize("NFC", account)
+        for account in preview.get("unopened_accounts") or []
+        if isinstance(account, str)
+    }
     mistaken = [
         account
         for account in ((csv_to_remember or {}).get("account"), (csv_to_remember or {}).get("default_account"))

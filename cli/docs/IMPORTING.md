@@ -309,7 +309,9 @@ kept separately and subsequent previews and applies require
 `--account` when importing from a new account, since headers alone cannot
 identify a bank account. A run whose `--account` or `--default-account` the
 ledger does not open is not remembered — it says so — so a typo never becomes a
-second account for the header. To forget settings already remembered, delete
+second account for the header. NFC and NFD account spellings use the same
+guard, and saved source and default account names use NFC.
+To forget settings already remembered, delete
 the ledger's record in `importers/` under the configuration directory; the
 "matches multiple source accounts" refusal names its path. For example:
 `bea import checking.csv --account Assets:Checking --apply`.
