@@ -8,6 +8,8 @@ import { isNotFound, isRedirect } from "@tanstack/react-router";
 import { GraphQLError, type DocumentNode } from "graphql";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  GetLedgerFileDocument,
+  type GetLedgerFileQuery,
   GetCommitDetailsDocument,
   GetLedgerEntryContextDocument,
   GetPullRequestDetailsDocument,
@@ -18,6 +20,7 @@ import {
 import { loadEntryRoute } from "@/features/journal/loaders/entry-loader";
 import { loadCommitRoute } from "@/features/git/commits/loaders/commit-loader";
 import { loadPullRequestRoute } from "@/features/git/pull-requests/loaders/pull-request-loader";
+import { fileLoader } from "@/features/ledger-editor/file-editor/loader";
 
 const owner = "synthetic";
 const name = "books";
@@ -70,6 +73,22 @@ const pullData = {
   },
 } satisfies GetPullRequestDetailsQuery;
 
+const fileData = {
+  getLedgerFile: {
+    __typename: "LedgerFileContent",
+    name: "README.md",
+    path: "README.md",
+    sha: "synthetic-file-sha",
+    size: 9,
+    type: "file",
+    encoding: "base64",
+    content: "U3ludGhldGlj",
+    lastCommitSha: null,
+    lastAuthorDate: null,
+    lastCommitterDate: null,
+  },
+} satisfies GetLedgerFileQuery;
+
 interface Lookup {
   kind: string;
   document: DocumentNode;
@@ -82,6 +101,27 @@ interface Lookup {
 }
 
 const lookups: Lookup[] = [
+  {
+    // w3/629: a missing or refused file path is a 404, not an indexable 200.
+    kind: "file",
+    document: GetLedgerFileDocument,
+    operation: "GetLedgerFile",
+    variables: { ledgerId: `${owner}/${name}`, path: "README.md" },
+    data: fileData,
+    field: "getLedgerFile",
+    href: `/ledger/${owner}/${name}/files/blob/main/README.md?time=2026`,
+    load: (client, href) =>
+      (fileLoader as unknown as (input: unknown) => Promise<void>)({
+        context: { client },
+        params: {
+          ledgerOwner: owner,
+          ledgerName: name,
+          branch: "main",
+          _splat: "README.md",
+        },
+        location: { href },
+      }),
+  },
   {
     kind: "entry",
     document: GetLedgerEntryContextDocument,

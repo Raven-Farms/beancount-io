@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from "react";
 import { useQuery, useMutation } from "@apollo/client/react";
+import { CombinedGraphQLErrors } from "@apollo/client/errors";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import {
   GetLedgerFileDocument,
@@ -39,6 +40,14 @@ interface LedgerFileViewProps {
  * path: a nested `accounts/main.bean` is an ordinary file. */
 function isRootLedgerFile(path: string): boolean {
   return path.replace(/^\/+/, "") === "main.bean";
+}
+
+/** The server's refusal of an unsafe path (`assertSafeRepoPath`). */
+function isRefusedPath(error: unknown): boolean {
+  return (
+    CombinedGraphQLErrors.is(error) &&
+    error.errors.some((item) => item.extensions?.code === "BAD_USER_INPUT")
+  );
 }
 
 /** backend-v2's refusal for deleting it (`ledger-workflow.ts`). */
@@ -175,17 +184,19 @@ export default function LedgerFileView({
     });
   };
 
-  if (error) {
+  // A path the server refuses is not a file that failed to load: Try Again
+  // could never succeed, so show it as not found.
+  if (error && !isRefusedPath(error)) {
     return <FileErrorView filename={getFilename(filePath)} />;
   }
 
   // cache-and-network can keep loading true after the first result; only treat
   // absence as confirmed when the query has a settled payload.
-  if (data === undefined) {
+  if (data === undefined && !error) {
     return <FileLoadingView filename={getFilename(filePath)} />;
   }
 
-  if (!fileContent) {
+  if (error || !fileContent) {
     return (
       <FileNotFoundView
         filePath={filePath}
