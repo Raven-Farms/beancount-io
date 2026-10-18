@@ -103,6 +103,40 @@ describe("validateManagedPriceText", () => {
     });
   });
 
+  // Beancount ends a directive at a blank line and at a comment in column 0,
+  // and reads an indented line after either as `unexpected INDENT` (w5/629).
+  it.each([
+    ["a blank line", '2026-09-15 price BTC 1 USD\n\n  observed-at: "x"\n', 3],
+    ["a whitespace-only line", '2026-09-15 price BTC 1 USD\n \t\n  observed-at: "x"\n', 3],
+    ["a column-0 comment", '2026-09-15 price BTC 1 USD\n; note\n  observed-at: "x"\n', 3],
+  ])("rejects metadata after %s", (_label, text, line) => {
+    expect(validateManagedPriceText(text)).toMatchObject({
+      ok: false,
+      reason: "metadata without a preceding price directive",
+      line,
+    });
+  });
+
+  it("rejects an indented comment before the first price", () => {
+    expect(
+      validateManagedPriceText("; alias: BTC-USD\n  ; note\n2026-09-15 price BTC 1 USD\n"),
+    ).toMatchObject({
+      ok: false,
+      reason: "indented comment without a preceding price directive",
+      line: 2,
+    });
+  });
+
+  it("accepts an indented comment between a price's metadata lines", () => {
+    const result = validateManagedPriceText(
+      '2026-09-15 price BTC 1 USD\n  ; note\n  observed-at: "2026-09-15T00:00:00Z"\n\n; next\n2026-09-16 price BTC 2 USD\n',
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.feed.latestObservedAt).toBe("2026-09-15T00:00:00Z");
+    expect(result.feed.prices.map((p) => p.line)).toEqual([1, 6]);
+  });
+
   it("rejects an empty or comment-only body", () => {
     expect(validateManagedPriceText("")).toMatchObject({
       ok: false,

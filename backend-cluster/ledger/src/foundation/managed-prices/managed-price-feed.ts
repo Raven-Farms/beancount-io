@@ -204,9 +204,25 @@ export function validateManagedPriceText(text: string): ManagedPriceValidation {
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];
     const lineNumber = index + 1;
-    if (BLANK_RE.test(line)) continue;
+    // Beancount ends a directive at a blank line or a comment at column 0,
+    // so metadata after one is an indented line under nothing: `unexpected
+    // INDENT` (w5/629, the CLI's w5/478). An indented comment belongs to the
+    // point above it.
+    if (BLANK_RE.test(line)) {
+      current = null;
+      continue;
+    }
 
     if (COMMENT_RE.test(line)) {
+      if (line.startsWith(";")) {
+        current = null;
+      } else if (current === null) {
+        return {
+          ok: false,
+          reason: "indented comment without a preceding price directive",
+          line: lineNumber,
+        };
+      }
       const header = HEADER_RE.exec(line);
       if (header && HEADER_KEYS.has(header[1]) && !headers.has(header[1])) {
         headers.set(header[1], header[2]);
