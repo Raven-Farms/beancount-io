@@ -1157,6 +1157,8 @@ until a matching balance consumes it; complete that pair before other writes.
 Balance amounts accept native tolerance syntax, for example
 `--amount '1538 ~ 1 EUR'`. The assertion succeeds only within the supplied
 nonnegative tolerance. This also works with `--pad-from`.
+Balance amounts accept pasted Unicode space separators, such as U+00A0
+(no-break space), and write ordinary spaces between tokens.
 Concurrent CLI writers use persistent locks under `$XDG_CACHE_HOME/bea/locks`
 (default `~/.cache/bea/locks`), keyed by the identity of each file's
 directory plus its case-folded name, so every spelling of one path — `Books`

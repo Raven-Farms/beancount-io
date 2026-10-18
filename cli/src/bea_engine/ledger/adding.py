@@ -648,6 +648,9 @@ def _parse_balance_amount(text: str) -> tuple[Decimal, str, Decimal | None]:
         # Parsed as written, the note after `;` was dropped and the assertion
         # written without it, exit 0 (w5/511), as `add price` already refuses.
         raise protocol.UsageError(f"--amount contains a ';': {text!r}. {COMMENT_HELP} Nothing was written.")
+    # Amount fields have no account or quoted label to confuse with a
+    # separator. Accept pasted Unicode spaces as price/bulk amounts do.
+    text = "".join(" " if unicodedata.category(character) == "Zs" else character for character in text)
     entries, errors, _ = parse_exact(f"2000-01-01 balance Assets:Balance {text}\n")
     if errors or len(entries) != 1 or not isinstance(entries[0], Balance):
         raise protocol.UsageError(

@@ -1951,6 +1951,12 @@ def validate_candidate(
         for error in errors
         if isinstance(error.entry, Open) and str(getattr(error, "message", "")).startswith("Duplicate open directive")
     }
+    conflicting_balances = {
+        (error.entry.date, error.entry.account, error.entry.amount.currency)
+        for error in errors
+        if isinstance(error.entry, Balance)
+        and str(getattr(error, "message", "")).startswith("Duplicate balance assertion")
+    }
     for index, error in enumerate(errors):
         hints = []
         message = format_error(error, ledger_file=file)
@@ -2245,6 +2251,12 @@ def validate_candidate(
             elif closing := _drained_close(error.entry, entries):
                 # The close this write appends is what the plugin read (w5/399).
                 hints.append(_drained_close_hint(error.entry, closing, error.message, options))
+            elif (error.entry.date, error.entry.account, error.entry.amount.currency) in conflicting_balances:
+                hints.append(
+                    f"The {error.entry.date} assertions for {error.entry.account} in "
+                    f"{error.entry.amount.currency} disagree. Remove or correct the conflicting assertion; "
+                    "an opening adjustment cannot resolve conflicting same-day assertions."
+                )
             else:
                 hints.extend(
                     _balance_recovery_hints(
@@ -2543,27 +2555,51 @@ def _interpolated_leg_hint(entry: Any, account: str, currency: str, opened: Any)
     open is the wrong fix. The right one is a price on the leg the user wrote
     (w5/488).
     """
-    legs = [p for p in entry.postings if p.account == account and p.units.currency == currency]
+    from beancount.core.convert import get_weight
+    from beancount.utils.misc_utils import escape_string
+
+    legs = [p for p in entry.postings if p.account == account and p.units is not None and p.units.currency == currency]
     if not legs or not all((p.meta or {}).get("__automatic__") for p in legs):
         return None
-    priced = next(
-        (
-            p
-            for p in entry.postings
-            if not (p.meta or {}).get("__automatic__") and p.units.currency == currency and p.price is None
-        ),
-        None,
-    )
     target = opened.currencies[0] if len(opened.currencies) == 1 else "CURRENCY"
-    example = (
-        f"'{priced.account} {format(priced.units.number, 'f')} {currency} @ RATE {target}'"
-        if priced is not None
-        else f"'NUMBER {currency} @ RATE {target}'"
-    )
-    return (
+    prefix = (
         f"{account} was given no amount, so Beancount filled in {currency} from the other legs. If it was charged "
-        f"in {target}, price the {currency} leg at the rate paid: {example}."
+        f"in {target}, "
     )
+    remedies = []
+    for posting in entry.postings:
+        if (
+            (posting.meta or {}).get("__automatic__")
+            or posting.units is None
+            or not isinstance(posting.units.number, Decimal)
+        ):
+            continue
+        weight = get_weight(posting)  # type: ignore[no-untyped-call]
+        if weight.currency != currency:
+            continue
+        leg = f"{posting.account} {format(posting.units.number, 'f')} {posting.units.currency}"
+        if posting.cost is not None:
+            keep_lot = (
+                f"keep the recorded {posting.cost.currency} cost of an existing {posting.account} lot "
+                f"and use explicit settlement and FX postings for the {target} cash movement"
+            )
+            if posting.units.number < 0:
+                remedies.append(keep_lot)
+                continue
+            details = [f"COST {target}"]
+            if posting.cost.date:
+                details.append(posting.cost.date.isoformat())
+            if posting.cost.label:
+                label = escape_string(posting.cost.label)  # type: ignore[no-untyped-call]
+                details.append(f'"{label}"')
+            example = shlex.quote(f"{leg} {{{', '.join(details)}}}")
+            remedies.append(
+                f"for a new lot, record the cost in {target} at the actual per-unit cost: {example}; {keep_lot}"
+            )
+        else:
+            example = shlex.quote(f"{leg} @ RATE {target}")
+            remedies.append(f"price the {posting.units.currency} leg at the rate paid: {example}")
+    return prefix + ("; ".join(remedies) + "." if remedies else f"review the other legs' prices and costs in {target}.")
 
 
 def _lifecycles(entries: list[Any]) -> dict[str, list[Any]]:
