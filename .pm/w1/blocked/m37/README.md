@@ -63,7 +63,7 @@
 
 Code shipped as `9dfc6275`. Both backend and dashboard deployments completed successfully from that revision through the existing production management UI. Hosted English/Chinese settings (including the retired URL switch) show Organization with the configured 100-ledger / 50-collaborator quota; `bea --json cloud status` returns ORGANIZATION. No live purchase, coupon redemption or subscription mutation was performed. The ordinary fixed settings refresh may update its own verified live period cache; no cohort maintenance backfill has run.
 
-Bex login refresh succeeded, but its separate inventory endpoint returned HTTP 524. The existing production deployment UI was usable and deployment is not blocked by that endpoint. Direct SSH execution stops at strict host verification because no trusted host key is recorded, and the only configured Beancount SSH alias is the restricted git service. A trusted execution entry is still needed for t011.
+Bex login refresh succeeded, but its separate inventory endpoint returned HTTP 524. The existing production deployment UI was usable and deployment is not blocked by that endpoint. A follow-up connection probe reached the production SSH service using an isolated temporary host-key record, but the server rejected the locally available authentication (`Permission denied`). No application command ran. The only configured Beancount SSH alias is the restricted git service; t011 still needs a working production execution account or terminal.
 
 ## Blocked
 
