@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [654 — Cwd-relative `--into` from a subdirectory gets advice to create a new include instead of the root-relative rule](./654.md)
 - [655 — Reads of a ledger with a local plugin leave `__pycache__` beside the ledger](./655.md)
 - [656 — `-p "Assets:Cash 10/0-5 USD"` leaks `SystemError` instead of the zero-divisor refusal (regression from w5/489)](./656.md)
 - [657 — A zero-width space in `add -p` still yields an invisible duplicate account via the printed `add open` (incomplete fix of w5/490)](./657.md)
