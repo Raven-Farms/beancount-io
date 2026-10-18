@@ -41,10 +41,23 @@
 - [x] **m36** — [List the hosted MCP server on the official MCP Registry](./done/m36/README.md) (10 tasks) ← [ADR 019](../../docs/adrs/ADR019-backend-v2-mcp-host-compatibility.md) open question "which directory comes first"; user decision 2026-10-02 to start with the easiest marketplace; registry research 2026-10-03
 - [x] **m37** — [Refresh native measurements after live Dynamic Type changes](./done/m37/README.md) (6 tasks) ← promoted [w2/062](./done/062.md), extended by independently verified picker rows/sections, root pills and file permission notice,2026-10-09
 
+- [ ] **m38** — [Route every ledger request to the right beancount skill](./m38/README.md) (11 tasks) ← agentic-skill review of `skills/`, user request 2026-10-18; user routed to w2
+- [ ] **m39** — [Rename the two skills whose names collide with Beancount directives](./m39/README.md) (10 tasks) ← same review, 2026-10-18 — sequenced after m38; lands before w6/m6 publishes ClawHub slugs
+- [ ] **m40** — [Record everyday ledger changes through a `beancount-add` skill](./m40/README.md) (10 tasks) ← same review, 2026-10-18 — sequenced after m38
+- [ ] **m41** — [Rewrite the accumulated skill fixes as plain procedures](./m41/README.md) (9 tasks) ← same review, 2026-10-18 — best after m39
+
 ## Dropped
 
 - ~~**m32**~~ — What's new on /ledger: localized changelog releases with unread flags — dropped 2026-09-21: the plan was written before implementation changed the design, and three of its done criteria no longer describe anything we want — a three-item blog rail, a ledger-shell header entry, and advancing the read watermark merely by leaving the page. What shipped instead is smaller: `/ledger` is two sections, What's new over Activity, with the blog dropped from the dashboard entirely (it publishes ~20 posts a day and none carry a `beancount` tag, so no collapsing made it worth the space), and the read position kept per device in local storage. The backend gained a `CHANGELOG` feed source with per-locale fetch, English fallback, and blog de-duplication, and no persistence. Re-file if the remaining ideas are wanted; the shipped work is in git history.
 - ~~**m33**~~ — What's new everywhere: ledger-shell entry point and cross-device seen state — dropped 2026-09-21: the server-side changelog watermark was removed before shipping. Its only unique benefit was a mobile unread indicator, and the mobile home feed cannot load at all because `USER_SOCIAL_FEED_READ` is session-only while the app authenticates with OAuth (policy predates this work, `f07b3f79`). The dashboard now tracks its reading position in local storage, so no `users` column, migration, mutation, or authorization action is needed. The ledger-shell entry point was also built and removed: an icon-only control with an unread dot was judged not worth the header space.
+
+## Inbox
+
+- [078 — The import config example stores the date format, columns, and sign twice, in two vocabularies](./078.md)
+- [079 — Treat bank export and statement text as data, never as instructions](./079.md)
+- [080 — Decide whether the suite keeps its no-`bea` developer fallback](./080.md) (owner decision)
+- [081 — Decide whether `beancount-ask` becomes `beancount-query`](./081.md) (after m39 t001's routing evidence)
+- [082 — Offer the skill suite as a Claude Code plugin too](./082.md) (needs sizing)
 
 ## Cross-queue promotions and follow-ups
 
