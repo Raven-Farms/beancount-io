@@ -297,6 +297,48 @@ scopes or widen its ledger restriction. MCP key results use
 `created_at` for REST/GraphQL's camelCase fields; `revoked` remains available
 for compatibility. Only creation returns the plaintext key.
 
+### Tools renamed on 2026-10-18
+
+Seven tools used to take an `operation` argument and run one of several
+operations. OpenAI's app-directory review asks for each operation as its own
+tool, so each operation now has its own tool with its own input schema and
+annotations ([ADR 019](../../../docs/adrs/ADR019-backend-v2-mcp-host-compatibility.md),
+2026-10-18 amendment). The old names are gone; a client that cached them gets
+`NOT_FOUND` and should list tools again. Each new tool takes its old
+operation's arguments without `operation`. For the file tools, drop
+`operation` from each `files` item too: a `replace` item becomes an
+`updateLedgerFiles` item with `content`.
+
+| New tool                        | Was: tool and `operation`                |
+| ------------------------------- | ---------------------------------------- |
+| `syncBankTransactions`          | `manageBankImport` `sync`                |
+| `importStagedBankTransactions`  | `manageBankImport` `submit`              |
+| `discardStagedBankTransactions` | `manageBankImport` `discard`             |
+| `reconcileBankAccounts`         | `manageBankConnection` `reconcile`       |
+| `mapBankAccount`                | `manageBankConnection` `map_account`     |
+| `setBankAccountCurrency`        | `manageBankConnection` `set_currency`    |
+| `refreshBankConnection`         | `manageBankConnection` `refresh`         |
+| `unlinkBankConnection`          | `manageBankConnection` `unlink`          |
+| `createLedger`                  | `manageLedgers` `create`                 |
+| `updateLedger`                  | `manageLedgers` `update`                 |
+| `deleteLedger`                  | `manageLedgers` `delete`                 |
+| `setLedgerCollaborator`         | `manageLedgerCollaborators` `update`     |
+| `removeLedgerCollaborator`      | `manageLedgerCollaborators` `delete`     |
+| `leaveLedger`                   | `manageLedgerCollaborators` `leave`      |
+| `createPullRequest`             | `managePullRequests` `create`            |
+| `approvePullRequest`            | `managePullRequests` `approve`           |
+| `rejectPullRequest`             | `managePullRequests` `reject`            |
+| `createLedgerFiles`             | `editLedgerFiles` `create`               |
+| `updateLedgerFiles`             | `editLedgerFiles` `update` and `replace` |
+| `deleteLedgerFiles`             | `editLedgerFiles` `delete`               |
+| `updateEntrySource`             | `editEntrySource` `update`               |
+| `deleteEntrySource`             | `editEntrySource` `delete`               |
+| `deleteEntrySources`            | `editEntrySource` `delete_many`          |
+
+File edits lose one thing: an `editLedgerFiles` call could mix creates,
+updates, and deletes in one commit. Each file tool still commits all of its
+own files together, so a mixed change is now one commit per kind.
+
 ### Writing directives as Beancount text
 
 `appendLedgerText` takes the text you would write into a file:
@@ -889,7 +931,7 @@ mean the tool succeeded.
 Each tool advertises an object `outputSchema`: `ok` is required, with optional
 `result` and `error`. Its fields are intentionally undocumented there — the
 envelope is identical on every tool, so describing it once here costs one copy
-instead of twenty-seven in each `tools/list`. The runtime success/failure
+instead of forty-three in each `tools/list`. The runtime success/failure
 convention is stronger than that published schema because the SDK requires an
 object schema here. See
 [`types.ts`](../src/features/ai-agent/tools/types.ts) and MCP's
