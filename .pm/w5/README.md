@@ -249,6 +249,7 @@
 - [862 — ETag "HEAD" or "Head" still overwrites the managed-price revision record on a case-insensitive filesystem, so a successful check cannot be repeated offline (incomplete fix of w5/645)](./862.md)
 - [863 — engine status still says an override is usable when its native-tool paths are nonexecutable files or directories, while check -v cannot run them (incomplete fix of w5/647)](./863.md)
 - [864 — upgrade --check's new version-shape guard still accepts and caches malformed strings such as 0.9banana, 0.9.0.. and 0.9.0+ (incomplete fix of w5/648)](./864.md)
+- [865 — Leaf-output protection skips roots with uppercase or mixed-case suffixes: format still overwrites main.BEAN or doubles its included transactions, exit 0 (incomplete fix of w5/651)](./865.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
