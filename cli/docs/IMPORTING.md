@@ -42,6 +42,11 @@ Duplicate candidates show the existing entry and its source location beside
 the explanation. Fix categories or account openings
 in the mapping, rules, or ledger, then rerun the preview. `--apply`
 recomputes the preview from the current files and refuses an invalid result.
+The human preview offers `--apply` when entries are ready and no unresolved
+review blocks the import. With only exact duplicates or skipped rows it says
+`Nothing new to import.`; blocked or conflicting rows ask for resolution and
+another preview. Possible duplicates under the default review policy ask for
+a `--duplicates skip/include` decision before previewing again.
 A ledger that already fails validation blocks the import; `--allow-errors`
 previews and applies over semantic errors such as a failing balance assertion,
 never over syntax errors, and lists what it tolerated under

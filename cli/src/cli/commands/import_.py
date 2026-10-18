@@ -1327,5 +1327,14 @@ def import_entries(
         elif preview["validation_errors"]:
             # `--apply` refuses while these stand, so it is not the next step (w5/638).
             typer.echo("Preview only. The import would leave the ledger invalid; fix the errors above before --apply.")
+        elif preview["blocked"] or preview["conflicts"]:
+            kinds = [name for key, name in (("blocked", "blocked"), ("conflicts", "conflicting")) if preview[key]]
+            typer.echo(f"Preview only. Resolve the {' and '.join(kinds)} rows, then preview again.")
+        elif preview["possible_duplicates"] and duplicates == "review":
+            typer.echo(
+                "Preview only. Review possible duplicates and choose --duplicates skip/include, then preview again."
+            )
+        elif not preview["ready"]:
+            typer.echo("Nothing new to import.")
         else:
             typer.echo("Preview only. Review the entries, then repeat with --apply to write.")
