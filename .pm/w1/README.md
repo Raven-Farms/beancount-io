@@ -10,7 +10,7 @@ Milestones m1–m23 are complete; no pending ADR014 follow-up milestones remain 
 
 ### Open
 
-- [ ] **m38** — [One MCP tool per operation, so the ChatGPT app directory accepts every tool](./m38/README.md) (11 tasks) ← OpenAI Plugins dashboard scan 2026-10-18: seven grouped tools flagged for operations "not individually exposed"; reverses ADR 0008 D3 — **top priority** (directory listing)
+- [ ] **m38** — [One MCP tool per operation, so the ChatGPT app directory accepts every tool](./blocked/m38/README.md) (11 tasks) ← OpenAI Plugins dashboard scan 2026-10-18: seven grouped tools flagged for operations "not individually exposed"; reverses ADR 0008 D3 — **top priority** (directory listing) — **blocked:** shipped through `8d751b15b`; the directory rescan (t007) and closeout wait on the production deploy.
 - [ ] **m37** — [Retire the Stripe test tenant and resolve each paid plan from its own subscription](./blocked/m37/README.md) (11 tasks) ← user request 2026-10-17; remove the built-in test billing tenant, correct tier/customer binding and renewal-cache writes, backfill existing users, and verify dashboard/CLI quotas — **blocked:** code shipped/deployed; t011 needs a verified production execution entry for the actual cohort repair
 - [x] **m36** — [Trim the MCP surface to what the Claude and ChatGPT directories accept](./done/m36/README.md) (10 tasks) ← user decision 2026-10-09: a public listing in Claude's and ChatGPT's directories outranks every other goal; ADR 019 follow-up — **top priority**
 - [x] **m30** — [Every named MCP host can register and reach a consent page that says who is asking](./done/m30/README.md) (11 tasks) ← `/pm-brainstorm for w1` 2026-10-06 item 1; ADR 019 D3 + D4 + D8
