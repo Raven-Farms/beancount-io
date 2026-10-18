@@ -1901,8 +1901,6 @@ def validate_candidate(
     from beancount.core import interpolate
     from beancount.core.data import Balance, Close, Document, Open, Pad, Transaction
     from beancount.core.flags import FLAG_PADDING
-    from beancount.parser.grammar import ParserSyntaxError
-    from beancount.parser.lexer import LexerError
     from beancount.plugins.unique_prices import UniquePricesError
 
     from bea_engine import managed_load
@@ -2346,7 +2344,7 @@ def validate_candidate(
         records.append(_ErrorRecord(getattr(error, "message", str(error)), message, lineno, hints, source))
         locations.append((source, lineno if isinstance(lineno, int) else None))
     messages = _collapse_repeats(records)
-    syntax_errors = [err for err in errors if isinstance(err, ParserSyntaxError | LexerError)]
+    syntax_errors = [err for err in errors if is_syntax_error(err)]
     new_records = [record for record, is_new in zip(records, introduced, strict=True) if is_new]
     if errors and (not allow_errors or syntax_errors or invalid_pad_accounts or new_records):
         if not allow_errors and type_errors and not (syntax_errors or invalid_pad_accounts):
@@ -2400,7 +2398,7 @@ def validate_candidate(
         blocking = [
             index
             for index, (error, is_new) in enumerate(zip(errors, introduced, strict=True))
-            if is_new or isinstance(error, ParserSyntaxError | LexerError) or is_invalid_pad_account(error)
+            if is_new or is_syntax_error(error) or is_invalid_pad_account(error)
         ]
         if new_records:
             message = f"The change would introduce {len(new_records)} new ledger error(s); nothing was written."
@@ -2417,6 +2415,54 @@ def validate_candidate(
             ledger_errors=_collapse_repeats(tolerated_records),
         )
     return messages
+
+
+def is_syntax_error(error: Any) -> bool:
+    """Whether Beancount could not read ledger text, rather than reporting a semantic parser error."""
+    from beancount.parser.grammar import ParserSyntaxError
+    from beancount.parser.lexer import LexerError
+
+    return isinstance(error, ParserSyntaxError | LexerError)
+
+
+def preexisting_refusal(errors: list[Any], ledger_errors: list[str]) -> LedgerError:
+    """The strict pre-check's refusal of a ledger that already has errors.
+
+    Syntax errors and pads with inactive accounts cannot be tolerated by the
+    shared validation, so advising `--allow-errors` for either sends the user
+    round in a loop (w5/508, w5/682).
+    """
+    if any(is_syntax_error(error) for error in errors):
+        return LedgerError(
+            f"The ledger already has {len(ledger_errors)} error(s), including a syntax error; nothing was written. "
+            "Fix the syntax error first: --allow-errors never writes past one.",
+            details=ledger_errors,
+        )
+    pads = sorted(
+        {
+            (error.entry.date, error.entry.account, error.entry.source_account)
+            for error in errors
+            if is_invalid_pad_account(error)
+        }
+    )
+    if pads:
+        return LedgerError(
+            f"The ledger already has {len(ledger_errors)} error(s), including an invalid pad account; "
+            "nothing was written. Open missing accounts or correct the pad account/date first: "
+            "--allow-errors cannot bypass an inactive pad account.",
+            details=[
+                *ledger_errors,
+                *(
+                    f"Pad dated {date}: {account} and {source} must both be active on that date."
+                    for date, account, source in pads
+                ),
+            ],
+        )
+    return LedgerError(
+        f"The ledger already has {len(ledger_errors)} error(s); nothing was written. "
+        "Pass --allow-errors to write anyway.",
+        details=ledger_errors,
+    )
 
 
 def is_invalid_pad_account(error: Any) -> bool:

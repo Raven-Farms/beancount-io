@@ -176,13 +176,13 @@ def answer(
     target = ledger_write.destination(file, into)
     original = snapshot.require_target(target, into=into)
     existing, errors, options = managed_load.load_file(file, snapshot=snapshot)
-    # An account staged for this import under `nounused` is the one error the
-    # import itself clears; validation still refuses a result that leaves it.
-    if not allow_errors and not all(ledger_write.is_unused_open(error) for error in errors):
-        raise LedgerError(
-            f"Ledger has {len(errors)} error(s). Pass --allow-errors to preview and apply anyway.",
-            details=[format_error(error, ledger_file=file) for error in errors],
-        )
+    # Appended rows cannot repair unreadable existing text. Refuse it before
+    # extracting rows or calling any ready, even under --allow-errors.
+    # An account staged under nounused can still be cleared by this import.
+    if any(ledger_write.is_syntax_error(error) for error in errors) or (
+        not allow_errors and not all(ledger_write.is_unused_open(error) for error in errors)
+    ):
+        raise ledger_write.preexisting_refusal(errors, [format_error(error, ledger_file=file) for error in errors])
 
     logs = io.StringIO()
     notes: list[str] = []

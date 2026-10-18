@@ -299,49 +299,6 @@ def _appended(
 # --------------------------------------------------------------------------- #
 
 
-def _preexisting_refusal(errors: list[Any], ledger_errors: list[str]) -> protocol.LedgerError:
-    """The strict pre-check's refusal of a ledger that already has errors.
-
-    Syntax errors and pads with inactive accounts cannot be tolerated by the
-    shared validation, so advising `--allow-errors` for either sends the user
-    round in a loop (w5/508, w5/682).
-    """
-    from beancount.parser.grammar import ParserSyntaxError
-    from beancount.parser.lexer import LexerError
-
-    if any(isinstance(error, ParserSyntaxError | LexerError) for error in errors):
-        return protocol.LedgerError(
-            f"The ledger already has {len(ledger_errors)} error(s), including a syntax error; nothing was written. "
-            "Fix the syntax error first: --allow-errors never writes past one.",
-            details=ledger_errors,
-        )
-    pads = sorted(
-        {
-            (error.entry.date, error.entry.account, error.entry.source_account)
-            for error in errors
-            if write.is_invalid_pad_account(error)
-        }
-    )
-    if pads:
-        return protocol.LedgerError(
-            f"The ledger already has {len(ledger_errors)} error(s), including an invalid pad account; "
-            "nothing was written. Open missing accounts or correct the pad account/date first: "
-            "--allow-errors cannot bypass an inactive pad account.",
-            details=[
-                *ledger_errors,
-                *(
-                    f"Pad dated {date}: {account} and {source} must both be active on that date."
-                    for date, account, source in pads
-                ),
-            ],
-        )
-    return protocol.LedgerError(
-        f"The ledger already has {len(ledger_errors)} error(s); nothing was written. "
-        "Pass --allow-errors to write anyway.",
-        details=ledger_errors,
-    )
-
-
 def _conflict_refusal(
     conflict: Any, account: str, date: Any, number: Any, currency: str, tolerance: Any
 ) -> protocol.ConflictError:
@@ -388,7 +345,7 @@ def _balance(
         # The balance can complete a staged pad or be this account's first
         # use under nounused. Other errors still gate strict callers; final
         # validation must clear the transient error (w5/664).
-        raise _preexisting_refusal(errors, ledger_errors)
+        raise write.preexisting_refusal(errors, ledger_errors)
     # A pad can make validation succeed even when the assertion is a
     # duplicate or conflicts. Decide before either write path (w5/659).
     match = _balance_match(before, date, account, number, currency, tolerance)
@@ -729,7 +686,7 @@ def _price(
     entries, errors, options = managed_load.load_file(file, snapshot=snapshot, check_types=True)
     ledger_errors = [format_error(error, ledger_file=file) for error in errors]
     if ledger_errors and strict_read:
-        raise _preexisting_refusal(errors, ledger_errors)
+        raise write.preexisting_refusal(errors, ledger_errors)
     local_prices: list[Price] = []
     reciprocal_prices: list[Price] = []
     managed_sources: set[str] = set()

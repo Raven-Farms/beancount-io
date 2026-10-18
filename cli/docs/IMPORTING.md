@@ -45,7 +45,9 @@ recomputes the preview from the current files and refuses an invalid result.
 A ledger that already fails validation blocks the import; `--allow-errors`
 previews and applies over semantic errors such as a failing balance assertion,
 never over syntax errors, and lists what it tolerated under
-`validation_warnings` in JSON.
+`validation_warnings` in JSON. Syntax errors stop both preview and apply,
+even with the flag: fix the named file and line before any rows can be
+reported ready.
 A concurrent ledger change during preparation causes exit **4**; no entries
 are appended. An `--apply` refused because duplicates need review also exits
 **4**, including under `--no-input`. A successful preview or an explicit
