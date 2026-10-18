@@ -22,9 +22,9 @@ vi.mock("../appearance-section", () => ({
   ),
 }));
 
-vi.mock("../subscription-section", () => ({
-  SubscriptionSection: () => (
-    <div data-testid="subscription-section">Subscription Section</div>
+vi.mock("../billing-summary-link", () => ({
+  BillingSummaryLink: () => (
+    <div data-testid="billing-summary-section">Billing summary</div>
   ),
 }));
 
@@ -261,7 +261,7 @@ describe("GeneralSettingsPage", () => {
       const { default: GeneralSettingsPage } = await import("../index");
       render(<GeneralSettingsPage />);
 
-      expect(screen.getByTestId("subscription-section")).toBeInTheDocument();
+      expect(screen.getByTestId("billing-summary-section")).toBeInTheDocument();
       expect(screen.getByTestId("user-profile-section")).toBeInTheDocument();
       expect(screen.getByTestId("appearance-section")).toBeInTheDocument();
       expect(screen.getByTestId("session-section")).toBeInTheDocument();
@@ -283,7 +283,7 @@ describe("GeneralSettingsPage", () => {
       );
 
       expect(sectionIds).toEqual([
-        "subscription-section",
+        "billing-summary-section",
         "user-profile-section",
         "appearance-section",
         "session-section",
@@ -348,7 +348,7 @@ describe("GeneralSettingsPage", () => {
   });
 
   describe("Component Integration", () => {
-    it("should render SubscriptionSection first", async () => {
+    it("should render the billing summary first", async () => {
       mockUseQuery.mockReturnValue({
         data: mockUserData,
         loading: false,
@@ -360,7 +360,7 @@ describe("GeneralSettingsPage", () => {
 
       const firstSection = container.querySelector(".space-y-4 > div");
       expect(firstSection?.getAttribute("data-testid")).toBe(
-        "subscription-section",
+        "billing-summary-section",
       );
     });
 
@@ -440,7 +440,7 @@ describe("GeneralSettingsPage", () => {
       rerender(<GeneralSettingsPage />);
 
       // Verify success state
-      expect(screen.getByTestId("subscription-section")).toBeInTheDocument();
+      expect(screen.getByTestId("billing-summary-section")).toBeInTheDocument();
     });
 
     it("should handle partial user data", async () => {
@@ -484,7 +484,7 @@ describe("GeneralSettingsPage", () => {
   });
 
   describe("React Native WebView", () => {
-    it("should not render SubscriptionSection when in React Native webview", async () => {
+    it("should not render the billing summary in the React Native webview", async () => {
       mockUseReactNativeContext.mockReturnValue({ isReactNative: true });
       mockUseQuery.mockReturnValue({
         data: mockUserData,
@@ -497,7 +497,7 @@ describe("GeneralSettingsPage", () => {
 
       // Subscription section should NOT be rendered
       expect(
-        screen.queryByTestId("subscription-section"),
+        screen.queryByTestId("billing-summary-section"),
       ).not.toBeInTheDocument();
 
       // Other sections should still render
@@ -506,7 +506,7 @@ describe("GeneralSettingsPage", () => {
       expect(screen.getByTestId("session-section")).toBeInTheDocument();
     });
 
-    it("should render SubscriptionSection in web browser", async () => {
+    it("should render the billing summary in a web browser", async () => {
       mockUseReactNativeContext.mockReturnValue({ isReactNative: false });
       mockUseQuery.mockReturnValue({
         data: mockUserData,
@@ -518,7 +518,7 @@ describe("GeneralSettingsPage", () => {
       render(<GeneralSettingsPage />);
 
       // All sections including subscription should render
-      expect(screen.getByTestId("subscription-section")).toBeInTheDocument();
+      expect(screen.getByTestId("billing-summary-section")).toBeInTheDocument();
       expect(screen.getByTestId("user-profile-section")).toBeInTheDocument();
       expect(screen.getByTestId("appearance-section")).toBeInTheDocument();
       expect(screen.getByTestId("session-section")).toBeInTheDocument();

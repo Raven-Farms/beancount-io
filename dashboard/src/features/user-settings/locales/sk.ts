@@ -508,10 +508,6 @@ const skUserSettings: Record<string, TranslationEntry> = {
     message: "{used} / {max} kníh",
     description: "Ledger usage count display",
   },
-  "userSettings.upgradeYourPlan": {
-    message: "Vylepšite svoj plán",
-    description: "Section header for upgrade tier cards",
-  },
   "userSettings.billing": {
     message: "Fakturácia",
     description: "Section header for billing management",
@@ -602,6 +598,61 @@ const skUserSettings: Record<string, TranslationEntry> = {
   "userSettings.fingerprint": {
     message: "odtlačok prsta",
     description: "Label for an SSH key fingerprint",
+  },
+  "userSettings.yearly": {
+    message: "Ročne",
+    description: "Yearly billing option in the billing-cycle toggle",
+  },
+  "userSettings.billingCycle": {
+    message: "Fakturačné obdobie",
+    description: "Accessible label for the monthly/yearly billing-cycle toggle",
+  },
+  "userSettings.plans": {
+    message: "Plány",
+    description: "Section header above every plan on the Billing page",
+  },
+  "userSettings.switchToYearly": {
+    message: "Prejsť na ročné platby",
+    description: "Button that moves a monthly subscription to yearly billing",
+  },
+  "userSettings.switchToMonthly": {
+    message: "Prejsť na mesačné platby",
+    description: "Button that moves a yearly subscription to monthly billing",
+  },
+  "userSettings.downgrade": {
+    message: "Znížiť plán",
+    description: "Button for moving to a lower plan",
+  },
+  "userSettings.contactUs": {
+    message: "Kontaktujte nás",
+    description: "Enterprise plan call to action and price label",
+  },
+  "userSettings.renewalChangesComingSoon": {
+    message: "Zmeny platné od obnovenia budú čoskoro dostupné.",
+    description:
+      "Hint under a plan change that takes effect at renewal, which is not available yet",
+  },
+  "userSettings.billedYearly": {
+    message: "{amount} pri ročnej platbe",
+    description: "Total charged once a year; {amount} is a formatted price",
+  },
+  "userSettings.saveYearlyPercent": {
+    message: "Ušetrite {percent} %",
+    description: "Badge with the yearly saving; {percent} is a whole number",
+  },
+  "userSettings.payYearlyOffer": {
+    message:
+      "Plaťte ročne: {yearly} za rok namiesto {monthlyTotal} – ušetríte {saving} ročne.",
+    description:
+      "Offer on a monthly plan; {yearly}, {monthlyTotal} and {saving} are formatted prices",
+  },
+  "userSettings.perYear": {
+    message: "/rok",
+    description: "Price interval suffix for yearly prices",
+  },
+  "userSettings.legacyPrice": {
+    message: "Pôvodná cena",
+    description: "Label for an older price an existing subscriber keeps",
   },
 };
 

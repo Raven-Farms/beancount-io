@@ -503,10 +503,6 @@ const jaUserSettings: Record<string, TranslationEntry> = {
     message: "{used} / {max} 元帳",
     description: "Ledger usage count display",
   },
-  "userSettings.upgradeYourPlan": {
-    message: "プランをアップグレード",
-    description: "Section header for upgrade tier cards",
-  },
   "userSettings.billing": {
     message: "請求",
     description: "Section header for billing management",
@@ -567,6 +563,61 @@ const jaUserSettings: Record<string, TranslationEntry> = {
   "userSettings.fingerprint": {
     message: "指紋",
     description: "Label for an SSH key fingerprint",
+  },
+  "userSettings.yearly": {
+    message: "毎年",
+    description: "Yearly billing option in the billing-cycle toggle",
+  },
+  "userSettings.billingCycle": {
+    message: "請求サイクル",
+    description: "Accessible label for the monthly/yearly billing-cycle toggle",
+  },
+  "userSettings.plans": {
+    message: "プラン",
+    description: "Section header above every plan on the Billing page",
+  },
+  "userSettings.switchToYearly": {
+    message: "年払いに切り替える",
+    description: "Button that moves a monthly subscription to yearly billing",
+  },
+  "userSettings.switchToMonthly": {
+    message: "月払いに切り替える",
+    description: "Button that moves a yearly subscription to monthly billing",
+  },
+  "userSettings.downgrade": {
+    message: "ダウングレード",
+    description: "Button for moving to a lower plan",
+  },
+  "userSettings.contactUs": {
+    message: "お問い合わせ",
+    description: "Enterprise plan call to action and price label",
+  },
+  "userSettings.renewalChangesComingSoon": {
+    message: "更新日から適用される変更には近日対応予定です。",
+    description:
+      "Hint under a plan change that takes effect at renewal, which is not available yet",
+  },
+  "userSettings.billedYearly": {
+    message: "年額 {amount}",
+    description: "Total charged once a year; {amount} is a formatted price",
+  },
+  "userSettings.saveYearlyPercent": {
+    message: "{percent}%お得",
+    description: "Badge with the yearly saving; {percent} is a whole number",
+  },
+  "userSettings.payYearlyOffer": {
+    message:
+      "年払いなら年額 {yearly}（月払いでは {monthlyTotal}）で、毎年 {saving} お得です。",
+    description:
+      "Offer on a monthly plan; {yearly}, {monthlyTotal} and {saving} are formatted prices",
+  },
+  "userSettings.perYear": {
+    message: "/年",
+    description: "Price interval suffix for yearly prices",
+  },
+  "userSettings.legacyPrice": {
+    message: "旧料金",
+    description: "Label for an older price an existing subscriber keeps",
   },
 };
 

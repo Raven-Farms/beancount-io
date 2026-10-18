@@ -173,16 +173,6 @@ vi.mock("@/common/hooks/use-translations", () => ({
     i18n: { language: "en" },
   }),
 }));
-vi.mock("../stripe-config", () => ({
-  stripePlanConfig: {
-    clientId: "test-client",
-    premium: { monthly: "price_premium" },
-    growth: { monthly: "price_growth" },
-    organization: { monthly: "price_org" },
-    monthly: "price_monthly",
-    yearly: "price_yearly",
-  },
-}));
 
 function setUserLimits(
   tier = "FREE" as string,
@@ -404,6 +394,10 @@ describe("Upgrade Refetch Flow", () => {
 
     render(<SubscriptionSection />);
 
+    // The plan row opens on yearly; a same-cycle upgrade is on monthly.
+    await user.click(
+      screen.getByRole("button", { name: "userSettings.monthly" }),
+    );
     const upgradeButtons = screen.getAllByText("aiAgent.upgradeCta");
     await user.click(upgradeButtons[0]);
 
@@ -474,6 +468,10 @@ describe("Upgrade Refetch Flow", () => {
 
     render(<SubscriptionSection />);
 
+    // The plan row opens on yearly; a same-cycle upgrade is on monthly.
+    await user.click(
+      screen.getByRole("button", { name: "userSettings.monthly" }),
+    );
     const upgradeButtons = screen.getAllByText("aiAgent.upgradeCta");
     await user.click(upgradeButtons[0]);
 
@@ -538,6 +536,10 @@ describe("Upgrade Refetch Flow", () => {
 
     render(<SubscriptionSection />);
 
+    // The plan row opens on yearly; a same-cycle upgrade is on monthly.
+    await user.click(
+      screen.getByRole("button", { name: "userSettings.monthly" }),
+    );
     const upgradeButtons = screen.getAllByText("aiAgent.upgradeCta");
     await user.click(upgradeButtons[0]);
 
@@ -592,6 +594,10 @@ describe("Upgrade Refetch Flow", () => {
 
     render(<SubscriptionSection />);
 
+    // The plan row opens on yearly; a same-cycle upgrade is on monthly.
+    await user.click(
+      screen.getByRole("button", { name: "userSettings.monthly" }),
+    );
     const upgradeButtons = screen.getAllByText("aiAgent.upgradeCta");
     await user.click(upgradeButtons[0]);
 

@@ -4,19 +4,34 @@ import { type UserTier } from "@/common/hooks/use-user-limits";
 import { getTierInfo } from "@/common/lib/subscription/tier-config";
 import { type TierQuota } from "@/common/hooks/use-all-tier-quotas";
 import { useQuotaNumberFormat } from "./use-quota-number-format";
+import { useMoneyFormat } from "./use-money-format";
+import type { PlanInterval } from "@/common/lib/subscription/plan-change";
+
+/** What the current Stripe subscription bills, when there is one. */
+export interface CurrentBilling {
+  interval: PlanInterval | null;
+  /** Cents, as Stripe reports the price. */
+  amount: number;
+  currency: string;
+  isLegacyPrice: boolean;
+  paymentMethod: { brand: string; last4: string } | null;
+}
 
 export function CurrentPlanBanner({
   tier,
   renewalDate,
   tierQuota,
   t,
+  billing = null,
 }: {
   tier: UserTier;
   renewalDate: string | null;
   tierQuota: TierQuota | null;
   t: (key: string, params?: Record<string, string | number>) => string;
+  billing?: CurrentBilling | null;
 }) {
   const formatCount = useQuotaNumberFormat();
+  const formatMoney = useMoneyFormat();
   const tierInfo = getTierInfo(tier);
   const isFree = tier === "FREE";
   const isEnterprise = tier === "ENTERPRISE";
@@ -60,6 +75,7 @@ export function CurrentPlanBanner({
 
   return (
     <div
+      data-testid="current-plan-banner"
       className={`rounded-lg border p-4 ${
         isFree ? "border-border bg-muted/30" : "border-primary/20 bg-primary/5"
       }`}
@@ -90,6 +106,33 @@ export function CurrentPlanBanner({
                 className="text-xs text-muted-foreground mt-2"
               >
                 {featureSummary}
+              </p>
+            )}
+            {billing && (
+              <p
+                data-testid="current-billing"
+                className="text-xs text-muted-foreground mt-2"
+              >
+                <strong className="text-foreground">
+                  {formatMoney(billing.amount, billing.currency)}
+                  {t(
+                    billing.interval === "year"
+                      ? "userSettings.perYear"
+                      : "userSettings.perMonth",
+                  )}
+                </strong>
+                {billing.isLegacyPrice && (
+                  <> · {t("userSettings.legacyPrice")}</>
+                )}
+                {billing.paymentMethod && (
+                  <>
+                    {" · "}
+                    <span className="capitalize">
+                      {billing.paymentMethod.brand}
+                    </span>{" "}
+                    •••• {billing.paymentMethod.last4}
+                  </>
+                )}
               </p>
             )}
             {renewalDate && (

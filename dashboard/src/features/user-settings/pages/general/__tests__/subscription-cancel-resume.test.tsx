@@ -174,16 +174,6 @@ vi.mock("@/common/hooks/use-translations", () => ({
     i18n: { language: "en" },
   }),
 }));
-vi.mock("../stripe-config", () => ({
-  stripePlanConfig: {
-    clientId: "test-client",
-    premium: { monthly: "price_premium" },
-    growth: { monthly: "price_growth" },
-    organization: { monthly: "price_org" },
-    monthly: "price_monthly",
-    yearly: "price_yearly",
-  },
-}));
 
 function setUserLimits(
   tier = "FREE" as string,

@@ -19,8 +19,13 @@ import { useSubscriptionStatus } from "@/features/user-settings/hooks/use-subscr
 import { useSubscriptionPortal } from "@/features/user-settings/hooks/use-subscription-portal";
 import { useSubscriptionCancel } from "@/features/user-settings/hooks/use-subscription-cancel";
 import { useSubscriptionResume } from "@/features/user-settings/hooks/use-subscription-resume";
-import { stripePlanConfig } from "./stripe-config";
-import type { SubscriptionTier } from "./stripe-config";
+import {
+  cyclePrice,
+  LEGACY_PRICE_IDS,
+  stripePlanConfig,
+  type BillingCycle,
+  type SubscriptionTier,
+} from "./stripe-config";
 import { getUpgradeTiers } from "@/common/lib/subscription/tier-config";
 import {
   useAllTierQuotas,
@@ -28,12 +33,30 @@ import {
 } from "@/common/hooks/use-all-tier-quotas";
 import { CurrentPlanBanner } from "./subscription-plan-banner";
 import { UsageOverview } from "./subscription-usage-overview";
-import { UpgradeTierCards } from "./subscription-upgrade-cards";
+import { PlanPicker } from "./subscription-plan-picker";
+import { PayYearlyOffer } from "./subscription-pay-yearly";
+import { track } from "@/common/analytics";
+import type {
+  PlanChoice,
+  PlanInterval,
+} from "@/common/lib/subscription/plan-change";
+import type { UserTier } from "@/common/hooks/use-user-limits";
 import { BillingSection } from "./subscription-billing-section";
 import {
   CancelSubscriptionDialog,
   ResumeSubscriptionDialog,
 } from "./subscription-dialogs";
+
+const TIER_KEYS: Partial<Record<UserTier, SubscriptionTier>> = {
+  PREMIUM: "premium",
+  GROWTH: "growth",
+  ORGANIZATION: "organization",
+};
+const USER_TIERS: Record<SubscriptionTier, UserTier> = {
+  premium: "PREMIUM",
+  growth: "GROWTH",
+  organization: "ORGANIZATION",
+};
 
 function SubscriptionSkeleton() {
   return (
@@ -129,12 +152,15 @@ export function SubscriptionSection() {
     return map;
   }, [tierQuotas]);
 
-  const handleUpgradeCheckout = async (tierKey: SubscriptionTier) => {
+  const handleUpgradeCheckout = async (
+    tierKey: SubscriptionTier,
+    cycle: BillingCycle,
+  ) => {
     try {
       const response = await createSubscriptionSession({
         variables: {
           clientId: stripeConfig.clientId,
-          priceId: stripeConfig[tierKey].monthly,
+          priceId: cyclePrice(tierKey, cycle).priceId,
         },
       });
       const result = response.data?.createSubscriptionSession;
@@ -150,12 +176,15 @@ export function SubscriptionSection() {
     }
   };
 
-  const handleUpgradeExisting = async (tierKey: SubscriptionTier) => {
+  const handleUpgradeExisting = async (
+    tierKey: SubscriptionTier,
+    cycle: BillingCycle,
+  ) => {
     try {
       const response = await upgradeSubscription({
         variables: {
           clientId: stripeConfig.clientId,
-          priceId: stripeConfig[tierKey].monthly,
+          priceId: cyclePrice(tierKey, cycle).priceId,
         },
       });
       const result = response.data?.upgradeSubscription;
@@ -172,6 +201,33 @@ export function SubscriptionSection() {
     } catch (error) {
       toast.error(formatError(error));
     }
+  };
+
+  const currentSubscription = hasActiveStripeSubscription
+    ? subscriptions?.[0]
+    : undefined;
+  const currentPrice = currentSubscription?.items[0]?.price;
+  const currentInterval: PlanInterval | null =
+    currentPrice?.interval === "year"
+      ? "year"
+      : currentPrice?.interval === "month"
+        ? "month"
+        : null;
+  const currentTierKey = TIER_KEYS[tier] ?? null;
+
+  const handleChoose = (
+    tierKey: SubscriptionTier,
+    cycle: BillingCycle,
+    choice: PlanChoice,
+  ) => {
+    if (!hasActiveStripeSubscription || choice === "NEW") {
+      track("checkout_started", {
+        surface: "settings_billing",
+        target_tier: USER_TIERS[tierKey],
+      });
+      return handleUpgradeCheckout(tierKey, cycle);
+    }
+    return handleUpgradeExisting(tierKey, cycle);
   };
 
   const isLoading =
@@ -205,7 +261,27 @@ export function SubscriptionSection() {
               renewalDate={renewalDate}
               tierQuota={quotaByUserTier[tier] ?? null}
               t={t}
+              billing={
+                currentPrice
+                  ? {
+                      interval: currentInterval,
+                      amount: currentPrice.amount,
+                      currency: currentPrice.currency,
+                      isLegacyPrice: LEGACY_PRICE_IDS.has(currentPrice.id),
+                      paymentMethod: currentSubscription?.paymentMethod ?? null,
+                    }
+                  : null
+              }
             />
+
+            {currentInterval === "month" && currentTierKey && (
+              <PayYearlyOffer
+                tier={currentTierKey}
+                t={t}
+                busy={checkoutLoading || upgradeLoading}
+                onSwitch={() => handleUpgradeExisting(currentTierKey, "yearly")}
+              />
+            )}
 
             {limits && (
               <>
@@ -219,33 +295,27 @@ export function SubscriptionSection() {
               </>
             )}
 
-            {upgradeTiers.length > 0 && (
-              <>
-                <Separator />
-                {showUpgradeNudge && (
-                  <div className="flex items-start gap-2 p-3 rounded-md bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-200 dark:border-yellow-800 text-xs text-yellow-800 dark:text-yellow-200">
-                    <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0 text-yellow-600 dark:text-yellow-400" />
-                    <span>
-                      {ledgerPercentage >= 100
-                        ? t("page.dashboard.ledgerLimitReached")
-                        : t("userSettings.aiUsageUpgradeNudge", {
-                            percentage: Math.round(aiPercentage),
-                          })}
-                    </span>
-                  </div>
-                )}
-                <UpgradeTierCards
-                  upgradeTiers={upgradeTiers}
-                  quotaByUserTier={quotaByUserTier}
-                  hasActiveStripeSubscription={hasActiveStripeSubscription}
-                  t={t}
-                  checkoutLoading={checkoutLoading}
-                  upgradeLoading={upgradeLoading}
-                  onUpgradeCheckout={handleUpgradeCheckout}
-                  onUpgradeExisting={handleUpgradeExisting}
-                />
-              </>
+            <Separator />
+            {showUpgradeNudge && (
+              <div className="flex items-start gap-2 p-3 rounded-md bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-200 dark:border-yellow-800 text-xs text-yellow-800 dark:text-yellow-200">
+                <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0 text-yellow-600 dark:text-yellow-400" />
+                <span>
+                  {ledgerPercentage >= 100
+                    ? t("page.dashboard.ledgerLimitReached")
+                    : t("userSettings.aiUsageUpgradeNudge", {
+                        percentage: Math.round(aiPercentage),
+                      })}
+                </span>
+              </div>
             )}
+            <PlanPicker
+              tier={tier}
+              currentInterval={currentInterval}
+              quotaByUserTier={quotaByUserTier}
+              t={t}
+              busy={checkoutLoading || upgradeLoading}
+              onChoose={handleChoose}
+            />
 
             {hasActiveStripeSubscription && subscriptions && (
               <>

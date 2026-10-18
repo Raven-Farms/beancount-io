@@ -505,10 +505,6 @@ const enUserSettings: Record<string, TranslationEntry> = {
     message: "{used} / {max} ledgers",
     description: "Ledger usage count display",
   },
-  "userSettings.upgradeYourPlan": {
-    message: "Upgrade Your Plan",
-    description: "Section header for upgrade tier cards",
-  },
   "userSettings.billing": {
     message: "Billing",
     description: "Section header for billing management",
@@ -579,6 +575,61 @@ const enUserSettings: Record<string, TranslationEntry> = {
   "userSettings.fingerprint": {
     message: "fingerprint",
     description: "Label for an SSH key fingerprint",
+  },
+  "userSettings.yearly": {
+    message: "Yearly",
+    description: "Yearly billing option in the billing-cycle toggle",
+  },
+  "userSettings.billingCycle": {
+    message: "Billing cycle",
+    description: "Accessible label for the monthly/yearly billing-cycle toggle",
+  },
+  "userSettings.plans": {
+    message: "Plans",
+    description: "Section header above every plan on the Billing page",
+  },
+  "userSettings.switchToYearly": {
+    message: "Switch to yearly",
+    description: "Button that moves a monthly subscription to yearly billing",
+  },
+  "userSettings.switchToMonthly": {
+    message: "Switch to monthly",
+    description: "Button that moves a yearly subscription to monthly billing",
+  },
+  "userSettings.downgrade": {
+    message: "Downgrade",
+    description: "Button for moving to a lower plan",
+  },
+  "userSettings.contactUs": {
+    message: "Contact us",
+    description: "Enterprise plan call to action and price label",
+  },
+  "userSettings.renewalChangesComingSoon": {
+    message: "Changes that start at your renewal are coming soon.",
+    description:
+      "Hint under a plan change that takes effect at renewal, which is not available yet",
+  },
+  "userSettings.billedYearly": {
+    message: "{amount} billed yearly",
+    description: "Total charged once a year; {amount} is a formatted price",
+  },
+  "userSettings.saveYearlyPercent": {
+    message: "Save {percent}%",
+    description: "Badge with the yearly saving; {percent} is a whole number",
+  },
+  "userSettings.payYearlyOffer": {
+    message:
+      "Pay yearly: {yearly}/yr instead of {monthlyTotal} — save {saving} a year.",
+    description:
+      "Offer on a monthly plan; {yearly}, {monthlyTotal} and {saving} are formatted prices",
+  },
+  "userSettings.perYear": {
+    message: "/year",
+    description: "Price interval suffix for yearly prices",
+  },
+  "userSettings.legacyPrice": {
+    message: "Legacy price",
+    description: "Label for an older price an existing subscriber keeps",
   },
 };
 

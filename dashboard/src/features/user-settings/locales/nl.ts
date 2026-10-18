@@ -508,10 +508,6 @@ const nlUserSettings: Record<string, TranslationEntry> = {
     message: "{used} / {max} grootboeken",
     description: "Ledger usage count display",
   },
-  "userSettings.upgradeYourPlan": {
-    message: "Upgrade uw abonnement",
-    description: "Section header for upgrade tier cards",
-  },
   "userSettings.billing": {
     message: "Facturering",
     description: "Section header for billing management",
@@ -582,6 +578,61 @@ const nlUserSettings: Record<string, TranslationEntry> = {
   "userSettings.fingerprint": {
     message: "vingerafdruk",
     description: "Label for an SSH key fingerprint",
+  },
+  "userSettings.yearly": {
+    message: "Jaarlijks",
+    description: "Yearly billing option in the billing-cycle toggle",
+  },
+  "userSettings.billingCycle": {
+    message: "Factuurperiode",
+    description: "Accessible label for the monthly/yearly billing-cycle toggle",
+  },
+  "userSettings.plans": {
+    message: "Abonnementen",
+    description: "Section header above every plan on the Billing page",
+  },
+  "userSettings.switchToYearly": {
+    message: "Overstappen op jaarlijks",
+    description: "Button that moves a monthly subscription to yearly billing",
+  },
+  "userSettings.switchToMonthly": {
+    message: "Overstappen op maandelijks",
+    description: "Button that moves a yearly subscription to monthly billing",
+  },
+  "userSettings.downgrade": {
+    message: "Downgraden",
+    description: "Button for moving to a lower plan",
+  },
+  "userSettings.contactUs": {
+    message: "Neem contact op",
+    description: "Enterprise plan call to action and price label",
+  },
+  "userSettings.renewalChangesComingSoon": {
+    message: "Wijzigingen die ingaan op je verlengingsdatum komen binnenkort.",
+    description:
+      "Hint under a plan change that takes effect at renewal, which is not available yet",
+  },
+  "userSettings.billedYearly": {
+    message: "{amount} per jaar gefactureerd",
+    description: "Total charged once a year; {amount} is a formatted price",
+  },
+  "userSettings.saveYearlyPercent": {
+    message: "Bespaar {percent}%",
+    description: "Badge with the yearly saving; {percent} is a whole number",
+  },
+  "userSettings.payYearlyOffer": {
+    message:
+      "Betaal per jaar: {yearly} per jaar in plaats van {monthlyTotal} — je bespaart {saving} per jaar.",
+    description:
+      "Offer on a monthly plan; {yearly}, {monthlyTotal} and {saving} are formatted prices",
+  },
+  "userSettings.perYear": {
+    message: "/jaar",
+    description: "Price interval suffix for yearly prices",
+  },
+  "userSettings.legacyPrice": {
+    message: "Oude prijs",
+    description: "Label for an older price an existing subscriber keeps",
   },
 };
 

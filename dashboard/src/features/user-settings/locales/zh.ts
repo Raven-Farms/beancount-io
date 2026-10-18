@@ -502,10 +502,6 @@ const zhUserSettings: Record<string, TranslationEntry> = {
     message: "{used} / {max} 个账本",
     description: "Ledger usage count display",
   },
-  "userSettings.upgradeYourPlan": {
-    message: "升级你的计划",
-    description: "Section header for upgrade tier cards",
-  },
   "userSettings.billing": {
     message: "账单",
     description: "Section header for billing management",
@@ -565,6 +561,61 @@ const zhUserSettings: Record<string, TranslationEntry> = {
   "userSettings.fingerprint": {
     message: "指纹",
     description: "Label for an SSH key fingerprint",
+  },
+  "userSettings.yearly": {
+    message: "每年",
+    description: "Yearly billing option in the billing-cycle toggle",
+  },
+  "userSettings.billingCycle": {
+    message: "计费周期",
+    description: "Accessible label for the monthly/yearly billing-cycle toggle",
+  },
+  "userSettings.plans": {
+    message: "计划",
+    description: "Section header above every plan on the Billing page",
+  },
+  "userSettings.switchToYearly": {
+    message: "改为按年付费",
+    description: "Button that moves a monthly subscription to yearly billing",
+  },
+  "userSettings.switchToMonthly": {
+    message: "改为按月付费",
+    description: "Button that moves a yearly subscription to monthly billing",
+  },
+  "userSettings.downgrade": {
+    message: "降级",
+    description: "Button for moving to a lower plan",
+  },
+  "userSettings.contactUs": {
+    message: "联系我们",
+    description: "Enterprise plan call to action and price label",
+  },
+  "userSettings.renewalChangesComingSoon": {
+    message: "在续订日生效的变更即将推出。",
+    description:
+      "Hint under a plan change that takes effect at renewal, which is not available yet",
+  },
+  "userSettings.billedYearly": {
+    message: "按年计费 {amount}",
+    description: "Total charged once a year; {amount} is a formatted price",
+  },
+  "userSettings.saveYearlyPercent": {
+    message: "节省 {percent}%",
+    description: "Badge with the yearly saving; {percent} is a whole number",
+  },
+  "userSettings.payYearlyOffer": {
+    message:
+      "按年付费：每年 {yearly}，而不是 {monthlyTotal}，每年节省 {saving}。",
+    description:
+      "Offer on a monthly plan; {yearly}, {monthlyTotal} and {saving} are formatted prices",
+  },
+  "userSettings.perYear": {
+    message: "/年",
+    description: "Price interval suffix for yearly prices",
+  },
+  "userSettings.legacyPrice": {
+    message: "旧价格",
+    description: "Label for an older price an existing subscriber keeps",
   },
 };
 

@@ -14,7 +14,7 @@ import {
 } from "@/graphql/definitions";
 import { UserProfileSection } from "./user-profile-section";
 import { AppearanceSection } from "./appearance-section";
-import { SubscriptionSection } from "./subscription-section";
+import { BillingSummaryLink } from "./billing-summary-link";
 import { SessionSection } from "./session-section";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { getErrorMessageKey } from "@/common/lib/errors/error-message";
@@ -184,7 +184,7 @@ export default function GeneralSettingsPage() {
           <GeneralSettingsError error={error} />
         ) : (
           <div className="space-y-4">
-            {!isReactNative && <SubscriptionSection />}
+            {!isReactNative && <BillingSummaryLink />}
             <UserProfileSection userData={data} />
             <AppearanceSection />
             <SessionSection />

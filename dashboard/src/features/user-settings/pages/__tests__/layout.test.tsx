@@ -4,6 +4,12 @@ import userEvent from "@testing-library/user-event";
 import { SettingsLayout } from "../layout";
 
 const mockBack = vi.fn();
+const mockReactNative = vi.hoisted(() => ({ isReactNative: false }));
+
+vi.mock(
+  "@/common/providers/react-native-bridge-provider/react-native-bridge-context",
+  () => ({ useReactNativeContext: () => mockReactNative }),
+);
 
 vi.mock("@tanstack/react-router", () => ({
   Outlet: () => <div data-testid="outlet">Outlet Content</div>,
@@ -38,6 +44,7 @@ vi.mock("@/common/hooks/use-translations", () => ({
       const translations: Record<string, string> = {
         "common.back": "Back",
         "userSettings.general": "General",
+        "userSettings.billing": "Billing",
         "userSettings.sshKeys": "SSH Keys",
         "userSettings.apiKeys": "Personal access tokens",
         "userSettings.dangerZone": "Danger Zone",
@@ -124,6 +131,28 @@ describe("SettingsLayout", () => {
       expect(
         screen.getByRole("link", { name: "Personal access tokens" }),
       ).toBeInTheDocument();
+    });
+
+    it("links Billing on the web and hides it in the native app's web view", () => {
+      const { unmount } = render(<SettingsLayout />);
+      expect(screen.getByRole("link", { name: "Billing" })).toHaveAttribute(
+        "href",
+        "/settings/billing",
+      );
+      unmount();
+
+      mockReactNative.isReactNative = true;
+      try {
+        render(<SettingsLayout />);
+        expect(
+          screen.queryByRole("link", { name: "Billing" }),
+        ).not.toBeInTheDocument();
+        expect(
+          screen.getByRole("link", { name: "General" }),
+        ).toBeInTheDocument();
+      } finally {
+        mockReactNative.isReactNative = false;
+      }
     });
 
     it("should link to correct settings paths", () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { SubscriptionSection } from "../subscription-section";
 import { CurrentPlanBanner } from "../subscription-plan-banner";
 import { en } from "@/i18n/locales";
@@ -178,16 +178,6 @@ vi.mock("@/common/hooks/use-translations", () => ({
     i18n: { language: mockLanguage.current },
   }),
 }));
-vi.mock("../stripe-config", () => ({
-  stripePlanConfig: {
-    clientId: "test-client",
-    premium: { monthly: "price_premium" },
-    growth: { monthly: "price_growth" },
-    organization: { monthly: "price_org" },
-    monthly: "price_monthly",
-    yearly: "price_yearly",
-  },
-}));
 
 function setUserLimits(
   tier = "FREE" as string,
@@ -276,6 +266,9 @@ const translate = (
   return text;
 };
 
+/** The plan banner, apart from the plan row that names every tier too. */
+const banner = () => within(screen.getByTestId("current-plan-banner"));
+
 describe("Current Plan Banner", () => {
   it("should show current tier name for free user", () => {
     setUserLimits("FREE");
@@ -288,8 +281,8 @@ describe("Current Plan Banner", () => {
 
     render(<SubscriptionSection />);
 
-    expect(screen.getByText("userSettings.freePlan")).toBeInTheDocument();
-    expect(screen.getByText("userSettings.currentPlan")).toBeInTheDocument();
+    expect(banner().getByText("userSettings.freePlan")).toBeInTheDocument();
+    expect(banner().getByText("userSettings.currentPlan")).toBeInTheDocument();
   });
 
   it("should show current tier name for premium user", () => {
@@ -309,8 +302,8 @@ describe("Current Plan Banner", () => {
 
     render(<SubscriptionSection />);
 
-    expect(screen.getByText("aiAgent.premiumTier")).toBeInTheDocument();
-    expect(screen.getByText("userSettings.currentPlan")).toBeInTheDocument();
+    expect(banner().getByText("aiAgent.premiumTier")).toBeInTheDocument();
+    expect(banner().getByText("userSettings.currentPlan")).toBeInTheDocument();
   });
 
   it("should show current tier name for enterprise user", () => {
@@ -330,7 +323,9 @@ describe("Current Plan Banner", () => {
 
     render(<SubscriptionSection />);
 
-    expect(screen.getByText("userSettings.enterprisePlan")).toBeInTheDocument();
+    expect(
+      banner().getByText("userSettings.enterprisePlan"),
+    ).toBeInTheDocument();
   });
 });
 
@@ -346,8 +341,8 @@ describe("Current Plan Banner - Detailed", () => {
 
     render(<SubscriptionSection />);
 
-    expect(screen.getByText("userSettings.freePlan")).toBeInTheDocument();
-    expect(screen.getByText("userSettings.currentPlan")).toBeInTheDocument();
+    expect(banner().getByText("userSettings.freePlan")).toBeInTheDocument();
+    expect(banner().getByText("userSettings.currentPlan")).toBeInTheDocument();
   });
 
   it("should show enterprise tier name and current plan badge", () => {
@@ -367,8 +362,10 @@ describe("Current Plan Banner - Detailed", () => {
 
     render(<SubscriptionSection />);
 
-    expect(screen.getByText("userSettings.enterprisePlan")).toBeInTheDocument();
-    expect(screen.getByText("userSettings.currentPlan")).toBeInTheDocument();
+    expect(
+      banner().getByText("userSettings.enterprisePlan"),
+    ).toBeInTheDocument();
+    expect(banner().getByText("userSettings.currentPlan")).toBeInTheDocument();
   });
 
   it("should show growth tier name for growth user", () => {
@@ -388,8 +385,8 @@ describe("Current Plan Banner - Detailed", () => {
 
     render(<SubscriptionSection />);
 
-    expect(screen.getByText("aiAgent.growthTier")).toBeInTheDocument();
-    expect(screen.getByText("userSettings.currentPlan")).toBeInTheDocument();
+    expect(banner().getByText("aiAgent.growthTier")).toBeInTheDocument();
+    expect(banner().getByText("userSettings.currentPlan")).toBeInTheDocument();
   });
 
   it("should show organization tier name for organization user", () => {
@@ -409,7 +406,7 @@ describe("Current Plan Banner - Detailed", () => {
 
     render(<SubscriptionSection />);
 
-    expect(screen.getByText("aiAgent.organizationTier")).toBeInTheDocument();
+    expect(banner().getByText("aiAgent.organizationTier")).toBeInTheDocument();
   });
 
   it("should show feature summary for premium tier", () => {
@@ -473,7 +470,7 @@ describe("Current Plan Banner - Detailed", () => {
 
     // Renewal date should not appear in the banner area
     // (no Stripe subscription means no renewal)
-    expect(screen.getByText("aiAgent.premiumTier")).toBeInTheDocument();
+    expect(banner().getByText("aiAgent.premiumTier")).toBeInTheDocument();
     // The banner should not have renewsOn text (only billing section would)
     const bannerElements = screen.queryAllByText(/userSettings.renewsOn/);
     expect(bannerElements).toHaveLength(0);
@@ -498,7 +495,7 @@ describe("Current Plan Banner - Detailed", () => {
 
     // Canceled subscription: renewalDate should be null (cancelAt is set)
     // The billing section will have accessUntil, but banner should not have renewsOn
-    expect(screen.getByText("aiAgent.premiumTier")).toBeInTheDocument();
+    expect(banner().getByText("aiAgent.premiumTier")).toBeInTheDocument();
   });
 });
 

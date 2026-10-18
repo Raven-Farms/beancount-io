@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { SubscriptionSection } from "../subscription-section";
 import { UsageOverview } from "../subscription-usage-overview";
 import type { GetSubscriptionStatusQuery } from "@/graphql/definitions";
@@ -176,16 +176,6 @@ vi.mock("@/common/hooks/use-translations", () => ({
     i18n: { language: mockAppLanguage.current },
   }),
 }));
-vi.mock("../stripe-config", () => ({
-  stripePlanConfig: {
-    clientId: "test-client",
-    premium: { monthly: "price_premium" },
-    growth: { monthly: "price_growth" },
-    organization: { monthly: "price_org" },
-    monthly: "price_monthly",
-    yearly: "price_yearly",
-  },
-}));
 
 function setUserLimits(
   tier = "FREE" as string,
@@ -240,6 +230,9 @@ beforeEach(() => {
   vi.clearAllMocks();
   setUserLimits();
 });
+
+/** The plan banner, apart from the plan row that names every tier too. */
+const banner = () => within(screen.getByTestId("current-plan-banner"));
 
 describe("Usage Overview", () => {
   it("should show AI tokens and ledgers usage", () => {
@@ -409,7 +402,7 @@ describe("Usage Overview - Detailed", () => {
     render(<SubscriptionSection />);
 
     // Banner should appear, but usage section should not
-    expect(screen.getByText("userSettings.freePlan")).toBeInTheDocument();
+    expect(banner().getByText("userSettings.freePlan")).toBeInTheDocument();
     expect(screen.queryByText("userSettings.usage")).not.toBeInTheDocument();
   });
 });
@@ -485,8 +478,8 @@ describe("Price Formatting", () => {
 
     render(<SubscriptionSection />);
 
-    // 2900 cents = $29.00
-    expect(screen.getByText(/29.00/)).toBeInTheDocument();
+    // 2900 cents = $29.00, stated by the banner and the billing section.
+    expect(screen.getAllByText(/29.00/)).toHaveLength(2);
   });
 
   it("should show price and interval", () => {

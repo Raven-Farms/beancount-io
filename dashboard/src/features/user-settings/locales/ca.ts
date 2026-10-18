@@ -510,10 +510,6 @@ const caUserSettings: Record<string, TranslationEntry> = {
     message: "{used} / {max} llibres",
     description: "Ledger usage count display",
   },
-  "userSettings.upgradeYourPlan": {
-    message: "Milloreu el vostre pla",
-    description: "Section header for upgrade tier cards",
-  },
   "userSettings.billing": {
     message: "Facturació",
     description: "Section header for billing management",
@@ -594,6 +590,61 @@ const caUserSettings: Record<string, TranslationEntry> = {
   "userSettings.fingerprint": {
     message: "empremta digital",
     description: "Label for an SSH key fingerprint",
+  },
+  "userSettings.yearly": {
+    message: "Anual",
+    description: "Yearly billing option in the billing-cycle toggle",
+  },
+  "userSettings.billingCycle": {
+    message: "Cicle de facturació",
+    description: "Accessible label for the monthly/yearly billing-cycle toggle",
+  },
+  "userSettings.plans": {
+    message: "Plans",
+    description: "Section header above every plan on the Billing page",
+  },
+  "userSettings.switchToYearly": {
+    message: "Canvia a anual",
+    description: "Button that moves a monthly subscription to yearly billing",
+  },
+  "userSettings.switchToMonthly": {
+    message: "Canvia a mensual",
+    description: "Button that moves a yearly subscription to monthly billing",
+  },
+  "userSettings.downgrade": {
+    message: "Baixa de pla",
+    description: "Button for moving to a lower plan",
+  },
+  "userSettings.contactUs": {
+    message: "Contacta'ns",
+    description: "Enterprise plan call to action and price label",
+  },
+  "userSettings.renewalChangesComingSoon": {
+    message: "Els canvis que comencen a la renovació arribaran aviat.",
+    description:
+      "Hint under a plan change that takes effect at renewal, which is not available yet",
+  },
+  "userSettings.billedYearly": {
+    message: "{amount} facturats anualment",
+    description: "Total charged once a year; {amount} is a formatted price",
+  },
+  "userSettings.saveYearlyPercent": {
+    message: "Estalvia un {percent}%",
+    description: "Badge with the yearly saving; {percent} is a whole number",
+  },
+  "userSettings.payYearlyOffer": {
+    message:
+      "Paga anualment: {yearly} l'any en lloc de {monthlyTotal}, i estalvia {saving} cada any.",
+    description:
+      "Offer on a monthly plan; {yearly}, {monthlyTotal} and {saving} are formatted prices",
+  },
+  "userSettings.perYear": {
+    message: "/any",
+    description: "Price interval suffix for yearly prices",
+  },
+  "userSettings.legacyPrice": {
+    message: "Preu antic",
+    description: "Label for an older price an existing subscriber keeps",
   },
 };
 

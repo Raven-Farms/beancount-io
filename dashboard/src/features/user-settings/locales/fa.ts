@@ -507,10 +507,6 @@ const faUserSettings: Record<string, TranslationEntry> = {
     message: "{used} / {max} دفتر",
     description: "Ledger usage count display",
   },
-  "userSettings.upgradeYourPlan": {
-    message: "طرح خود را ارتقا دهید",
-    description: "Section header for upgrade tier cards",
-  },
   "userSettings.billing": {
     message: "صورتحساب",
     description: "Section header for billing management",
@@ -581,6 +577,62 @@ const faUserSettings: Record<string, TranslationEntry> = {
   "userSettings.fingerprint": {
     message: "اثر انگشت",
     description: "Label for an SSH key fingerprint",
+  },
+  "userSettings.yearly": {
+    message: "سالانه",
+    description: "Yearly billing option in the billing-cycle toggle",
+  },
+  "userSettings.billingCycle": {
+    message: "دوره صورت‌حساب",
+    description: "Accessible label for the monthly/yearly billing-cycle toggle",
+  },
+  "userSettings.plans": {
+    message: "طرح‌ها",
+    description: "Section header above every plan on the Billing page",
+  },
+  "userSettings.switchToYearly": {
+    message: "تغییر به پرداخت سالانه",
+    description: "Button that moves a monthly subscription to yearly billing",
+  },
+  "userSettings.switchToMonthly": {
+    message: "تغییر به پرداخت ماهانه",
+    description: "Button that moves a yearly subscription to monthly billing",
+  },
+  "userSettings.downgrade": {
+    message: "کاهش طرح",
+    description: "Button for moving to a lower plan",
+  },
+  "userSettings.contactUs": {
+    message: "تماس با ما",
+    description: "Enterprise plan call to action and price label",
+  },
+  "userSettings.renewalChangesComingSoon": {
+    message:
+      "تغییراتی که از زمان تمدید شروع می‌شوند به‌زودی در دسترس خواهند بود.",
+    description:
+      "Hint under a plan change that takes effect at renewal, which is not available yet",
+  },
+  "userSettings.billedYearly": {
+    message: "{amount} با پرداخت سالانه",
+    description: "Total charged once a year; {amount} is a formatted price",
+  },
+  "userSettings.saveYearlyPercent": {
+    message: "{percent}٪ صرفه‌جویی",
+    description: "Badge with the yearly saving; {percent} is a whole number",
+  },
+  "userSettings.payYearlyOffer": {
+    message:
+      "پرداخت سالانه: {yearly} در سال به‌جای {monthlyTotal} — سالانه {saving} صرفه‌جویی کنید.",
+    description:
+      "Offer on a monthly plan; {yearly}, {monthlyTotal} and {saving} are formatted prices",
+  },
+  "userSettings.perYear": {
+    message: "/سال",
+    description: "Price interval suffix for yearly prices",
+  },
+  "userSettings.legacyPrice": {
+    message: "قیمت قدیمی",
+    description: "Label for an older price an existing subscriber keeps",
   },
 };
 

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { SubscriptionSection } from "../subscription-section";
 import {
   MOCK_TIER_QUOTAS,
@@ -174,16 +174,6 @@ vi.mock("@/common/hooks/use-translations", () => ({
     i18n: { language: "en" },
   }),
 }));
-vi.mock("../stripe-config", () => ({
-  stripePlanConfig: {
-    clientId: "test-client",
-    premium: { monthly: "price_premium" },
-    growth: { monthly: "price_growth" },
-    organization: { monthly: "price_org" },
-    monthly: "price_monthly",
-    yearly: "price_yearly",
-  },
-}));
 
 function setUserLimits(
   tier = "FREE" as string,
@@ -239,6 +229,9 @@ beforeEach(() => {
   setUserLimits();
 });
 
+/** The plan banner, apart from the plan row that names every tier too. */
+const banner = () => within(screen.getByTestId("current-plan-banner"));
+
 describe("Billing Section", () => {
   it("should show billing section only when Stripe subscription exists", () => {
     setUserLimits("PREMIUM", {
@@ -259,7 +252,8 @@ describe("Billing Section", () => {
 
     expect(screen.getByText("userSettings.billing")).toBeInTheDocument();
     expect(screen.getByText("Pro Plan")).toBeInTheDocument();
-    expect(screen.getByText(/29\.00/)).toBeInTheDocument();
+    // The banner and the billing section both state the price.
+    expect(screen.getAllByText(/29\.00/)).toHaveLength(2);
   });
 
   it("should not show billing section when no Stripe subscription", () => {
@@ -309,8 +303,8 @@ describe("Billing Section", () => {
     expect(
       screen.queryByText("userSettings.noActiveSubscription"),
     ).not.toBeInTheDocument();
-    expect(screen.getByText("aiAgent.premiumTier")).toBeInTheDocument();
-    expect(screen.getByText("userSettings.currentPlan")).toBeInTheDocument();
+    expect(banner().getByText("aiAgent.premiumTier")).toBeInTheDocument();
+    expect(banner().getByText("userSettings.currentPlan")).toBeInTheDocument();
   });
 });
 
@@ -333,7 +327,8 @@ describe("Active Subscription Display", () => {
     render(<SubscriptionSection />);
 
     expect(screen.getByText("Pro Plan")).toBeInTheDocument();
-    expect(screen.getByText(/29\.00/)).toBeInTheDocument();
+    // The banner and the billing section both state the price.
+    expect(screen.getAllByText(/29\.00/)).toHaveLength(2);
   });
 
   it("should show subscription status", () => {

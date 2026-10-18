@@ -3,6 +3,7 @@ import { ArrowLeft } from "lucide-react";
 import { Button } from "@/common/components/ui/button";
 import { cn } from "@/common/lib/utils/utils";
 import { useTranslations } from "@/common/hooks/use-translations";
+import { useReactNativeContext } from "@/common/providers/react-native-bridge-provider/react-native-bridge-context";
 // import { SidebarProvider } from "@/components/ui/sidebar";
 
 /**
@@ -41,8 +42,13 @@ function TopBarNavigation() {
   const location = useLocation();
   const currentPath = location.pathname;
 
+  const { isReactNative } = useReactNativeContext();
   const navItems = [
     { label: t("userSettings.general"), path: "/settings/general" },
+    // The native app's web view never shows billing.
+    ...(isReactNative
+      ? []
+      : [{ label: t("userSettings.billing"), path: "/settings/billing" }]),
     { label: t("userSettings.sshKeys"), path: "/settings/ssh-keys" },
     { label: t("userSettings.apiKeys"), path: "/settings/api-keys" },
     { label: t("userSettings.dangerZone"), path: "/settings/danger-zone" },

@@ -28,6 +28,10 @@ query GetSubscriptionStatus {
           images
         }
       }
+      paymentMethod {
+        brand
+        last4
+      }
     }
     hasActiveSubscription
   }

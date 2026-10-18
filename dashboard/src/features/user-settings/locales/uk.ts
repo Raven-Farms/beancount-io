@@ -509,10 +509,6 @@ const ukUserSettings: Record<string, TranslationEntry> = {
     message: "{used} / {max} книг",
     description: "Ledger usage count display",
   },
-  "userSettings.upgradeYourPlan": {
-    message: "Покращте свій план",
-    description: "Section header for upgrade tier cards",
-  },
   "userSettings.billing": {
     message: "Оплата",
     description: "Section header for billing management",
@@ -603,6 +599,61 @@ const ukUserSettings: Record<string, TranslationEntry> = {
   "userSettings.fingerprint": {
     message: "відбиток пальця",
     description: "Label for an SSH key fingerprint",
+  },
+  "userSettings.yearly": {
+    message: "Щороку",
+    description: "Yearly billing option in the billing-cycle toggle",
+  },
+  "userSettings.billingCycle": {
+    message: "Період оплати",
+    description: "Accessible label for the monthly/yearly billing-cycle toggle",
+  },
+  "userSettings.plans": {
+    message: "Тарифні плани",
+    description: "Section header above every plan on the Billing page",
+  },
+  "userSettings.switchToYearly": {
+    message: "Перейти на річну оплату",
+    description: "Button that moves a monthly subscription to yearly billing",
+  },
+  "userSettings.switchToMonthly": {
+    message: "Перейти на щомісячну оплату",
+    description: "Button that moves a yearly subscription to monthly billing",
+  },
+  "userSettings.downgrade": {
+    message: "Знизити тариф",
+    description: "Button for moving to a lower plan",
+  },
+  "userSettings.contactUs": {
+    message: "Зв'язатися з нами",
+    description: "Enterprise plan call to action and price label",
+  },
+  "userSettings.renewalChangesComingSoon": {
+    message: "Зміни з дати поновлення скоро стануть доступні.",
+    description:
+      "Hint under a plan change that takes effect at renewal, which is not available yet",
+  },
+  "userSettings.billedYearly": {
+    message: "{amount} при оплаті за рік",
+    description: "Total charged once a year; {amount} is a formatted price",
+  },
+  "userSettings.saveYearlyPercent": {
+    message: "Заощадьте {percent}%",
+    description: "Badge with the yearly saving; {percent} is a whole number",
+  },
+  "userSettings.payYearlyOffer": {
+    message:
+      "Платіть за рік: {yearly} на рік замість {monthlyTotal} — заощаджуєте {saving} щороку.",
+    description:
+      "Offer on a monthly plan; {yearly}, {monthlyTotal} and {saving} are formatted prices",
+  },
+  "userSettings.perYear": {
+    message: "/рік",
+    description: "Price interval suffix for yearly prices",
+  },
+  "userSettings.legacyPrice": {
+    message: "Попередня ціна",
+    description: "Label for an older price an existing subscriber keeps",
   },
 };
 

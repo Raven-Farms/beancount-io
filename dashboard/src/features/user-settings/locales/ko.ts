@@ -502,10 +502,6 @@ const koUserSettings: Record<string, TranslationEntry> = {
     message: "{used} / {max} 원장",
     description: "Ledger usage count display",
   },
-  "userSettings.upgradeYourPlan": {
-    message: "플랜 업그레이드",
-    description: "Section header for upgrade tier cards",
-  },
   "userSettings.billing": {
     message: "청구",
     description: "Section header for billing management",
@@ -566,6 +562,61 @@ const koUserSettings: Record<string, TranslationEntry> = {
   "userSettings.fingerprint": {
     message: "지문",
     description: "Label for an SSH key fingerprint",
+  },
+  "userSettings.yearly": {
+    message: "매년",
+    description: "Yearly billing option in the billing-cycle toggle",
+  },
+  "userSettings.billingCycle": {
+    message: "결제 주기",
+    description: "Accessible label for the monthly/yearly billing-cycle toggle",
+  },
+  "userSettings.plans": {
+    message: "플랜",
+    description: "Section header above every plan on the Billing page",
+  },
+  "userSettings.switchToYearly": {
+    message: "연간 결제로 전환",
+    description: "Button that moves a monthly subscription to yearly billing",
+  },
+  "userSettings.switchToMonthly": {
+    message: "월간 결제로 전환",
+    description: "Button that moves a yearly subscription to monthly billing",
+  },
+  "userSettings.downgrade": {
+    message: "다운그레이드",
+    description: "Button for moving to a lower plan",
+  },
+  "userSettings.contactUs": {
+    message: "문의하기",
+    description: "Enterprise plan call to action and price label",
+  },
+  "userSettings.renewalChangesComingSoon": {
+    message: "갱신일부터 적용되는 변경은 곧 지원됩니다.",
+    description:
+      "Hint under a plan change that takes effect at renewal, which is not available yet",
+  },
+  "userSettings.billedYearly": {
+    message: "연 {amount} 청구",
+    description: "Total charged once a year; {amount} is a formatted price",
+  },
+  "userSettings.saveYearlyPercent": {
+    message: "{percent}% 절약",
+    description: "Badge with the yearly saving; {percent} is a whole number",
+  },
+  "userSettings.payYearlyOffer": {
+    message:
+      "연간 결제: 월간 결제 시 {monthlyTotal} 대신 연 {yearly} — 매년 {saving} 절약됩니다.",
+    description:
+      "Offer on a monthly plan; {yearly}, {monthlyTotal} and {saving} are formatted prices",
+  },
+  "userSettings.perYear": {
+    message: "/년",
+    description: "Price interval suffix for yearly prices",
+  },
+  "userSettings.legacyPrice": {
+    message: "이전 요금",
+    description: "Label for an older price an existing subscriber keeps",
   },
 };
 

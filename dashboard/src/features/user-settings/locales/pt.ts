@@ -509,10 +509,6 @@ const ptUserSettings: Record<string, TranslationEntry> = {
     message: "{used} / {max} livros-razão",
     description: "Ledger usage count display",
   },
-  "userSettings.upgradeYourPlan": {
-    message: "Faça upgrade do seu plano",
-    description: "Section header for upgrade tier cards",
-  },
   "userSettings.billing": {
     message: "Faturamento",
     description: "Section header for billing management",
@@ -593,6 +589,62 @@ const ptUserSettings: Record<string, TranslationEntry> = {
   "userSettings.fingerprint": {
     message: "impressão digital",
     description: "Label for an SSH key fingerprint",
+  },
+  "userSettings.yearly": {
+    message: "Anual",
+    description: "Yearly billing option in the billing-cycle toggle",
+  },
+  "userSettings.billingCycle": {
+    message: "Ciclo de cobrança",
+    description: "Accessible label for the monthly/yearly billing-cycle toggle",
+  },
+  "userSettings.plans": {
+    message: "Planos",
+    description: "Section header above every plan on the Billing page",
+  },
+  "userSettings.switchToYearly": {
+    message: "Mudar para anual",
+    description: "Button that moves a monthly subscription to yearly billing",
+  },
+  "userSettings.switchToMonthly": {
+    message: "Mudar para mensal",
+    description: "Button that moves a yearly subscription to monthly billing",
+  },
+  "userSettings.downgrade": {
+    message: "Mudar para um plano inferior",
+    description: "Button for moving to a lower plan",
+  },
+  "userSettings.contactUs": {
+    message: "Fale conosco",
+    description: "Enterprise plan call to action and price label",
+  },
+  "userSettings.renewalChangesComingSoon": {
+    message:
+      "Mudanças que começam na sua renovação estarão disponíveis em breve.",
+    description:
+      "Hint under a plan change that takes effect at renewal, which is not available yet",
+  },
+  "userSettings.billedYearly": {
+    message: "{amount} cobrados anualmente",
+    description: "Total charged once a year; {amount} is a formatted price",
+  },
+  "userSettings.saveYearlyPercent": {
+    message: "Economize {percent}%",
+    description: "Badge with the yearly saving; {percent} is a whole number",
+  },
+  "userSettings.payYearlyOffer": {
+    message:
+      "Pague anualmente: {yearly} por ano em vez de {monthlyTotal} — economize {saving} por ano.",
+    description:
+      "Offer on a monthly plan; {yearly}, {monthlyTotal} and {saving} are formatted prices",
+  },
+  "userSettings.perYear": {
+    message: "/ano",
+    description: "Price interval suffix for yearly prices",
+  },
+  "userSettings.legacyPrice": {
+    message: "Preço antigo",
+    description: "Label for an older price an existing subscriber keeps",
   },
 };
 

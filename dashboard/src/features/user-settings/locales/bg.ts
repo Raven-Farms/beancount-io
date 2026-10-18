@@ -509,10 +509,6 @@ const bgUserSettings: Record<string, TranslationEntry> = {
     message: "{used} / {max} книги",
     description: "Ledger usage count display",
   },
-  "userSettings.upgradeYourPlan": {
-    message: "Надградете плана си",
-    description: "Section header for upgrade tier cards",
-  },
   "userSettings.billing": {
     message: "Фактуриране",
     description: "Section header for billing management",
@@ -583,6 +579,62 @@ const bgUserSettings: Record<string, TranslationEntry> = {
   "userSettings.fingerprint": {
     message: "пръстов отпечатък",
     description: "Label for an SSH key fingerprint",
+  },
+  "userSettings.yearly": {
+    message: "Годишно",
+    description: "Yearly billing option in the billing-cycle toggle",
+  },
+  "userSettings.billingCycle": {
+    message: "Период на плащане",
+    description: "Accessible label for the monthly/yearly billing-cycle toggle",
+  },
+  "userSettings.plans": {
+    message: "Планове",
+    description: "Section header above every plan on the Billing page",
+  },
+  "userSettings.switchToYearly": {
+    message: "Премини към годишно плащане",
+    description: "Button that moves a monthly subscription to yearly billing",
+  },
+  "userSettings.switchToMonthly": {
+    message: "Премини към месечно плащане",
+    description: "Button that moves a yearly subscription to monthly billing",
+  },
+  "userSettings.downgrade": {
+    message: "Понижи плана",
+    description: "Button for moving to a lower plan",
+  },
+  "userSettings.contactUs": {
+    message: "Свържете се с нас",
+    description: "Enterprise plan call to action and price label",
+  },
+  "userSettings.renewalChangesComingSoon": {
+    message:
+      "Промените, които започват при подновяване, ще бъдат налични скоро.",
+    description:
+      "Hint under a plan change that takes effect at renewal, which is not available yet",
+  },
+  "userSettings.billedYearly": {
+    message: "{amount} при годишно плащане",
+    description: "Total charged once a year; {amount} is a formatted price",
+  },
+  "userSettings.saveYearlyPercent": {
+    message: "Спестете {percent}%",
+    description: "Badge with the yearly saving; {percent} is a whole number",
+  },
+  "userSettings.payYearlyOffer": {
+    message:
+      "Плащайте годишно: {yearly} на година вместо {monthlyTotal} — спестявате {saving} годишно.",
+    description:
+      "Offer on a monthly plan; {yearly}, {monthlyTotal} and {saving} are formatted prices",
+  },
+  "userSettings.perYear": {
+    message: "/година",
+    description: "Price interval suffix for yearly prices",
+  },
+  "userSettings.legacyPrice": {
+    message: "Предишна цена",
+    description: "Label for an older price an existing subscriber keeps",
   },
 };
 

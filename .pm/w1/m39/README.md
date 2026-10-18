@@ -2,7 +2,7 @@
 
 **Worker:** worker1
 **Goal:** A subscriber can preview and confirm any upgrade or monthly-to-yearly switch from Billing settings, pay exactly the amount shown, approve bank authentication without leaving the page, and land on a confirmation after Checkout.
-**Status:** todo (t001–t002 done; t004 blocked on the operator)
+**Status:** todo (t001, t002, t006 done; t004 blocked on the operator)
 
 ## Source + Goal linkage
 
@@ -48,7 +48,7 @@ This milestone ships before that page changes, so every task keeps that contract
 | t003 | Return Checkout to the dashboard and pin the billing portal configuration | 30m | t001, t008 |
 | t004 | Operator: create the $143.88 Premium yearly price and the billing portal configuration | 20m | — |
 | t005 | Offer the $143.88 Premium yearly price in the dashboard, and keep every price the pricing page sells working | 25m | t001, t004 |
-| t006 | Billing settings tab: plan summary, "Pay yearly" line and every-tier plan row | 45m | t001 |
+| t006 | Billing settings tab: plan summary, "Pay yearly" line and every-tier plan row — **DONE** | 45m | t001 |
 | t007 | Change sheet for upgrades and switches to yearly, with in-place bank authentication | 50m | t002, t006 |
 | t008 | Confirmation after Checkout | 30m | t006 |
 | t009 | Deep links and in-product upgrade prompts open a prefilled change sheet | 35m | t007 |
