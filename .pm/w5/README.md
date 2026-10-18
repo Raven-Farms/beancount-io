@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [700 — An IDNA-invalid BEA_API_URL passes the URL check; logout deletes the credential without sending anything](./700.md)
 - [701 — Logout drops the request ID on a lost or unreadable answer; USAGE still gives the old exit codes (gap in w5/521)](./701.md)
 - [702 — A proxy that drops the CONNECT makes cloud writes and logout exit 4 "outcome unknown" (gap in w5/519)](./702.md)
 - [703 — A malformed BEA_TOKEN is told to run cloud login; logout exits 3 instead of the BEA_TOKEN no-op](./703.md)
