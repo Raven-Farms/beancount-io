@@ -481,24 +481,77 @@ def unknown_write_outcome(operation: str, exc: BaseException) -> ConflictError:
     )
 
 
-_PROXY_VARIABLES = ("ALL_PROXY", "all_proxy", "HTTPS_PROXY", "https_proxy", "HTTP_PROXY", "http_proxy")
+_PROXY_VARIABLES = frozenset({"all_proxy", "https_proxy", "http_proxy"})
 
 
-def socks_proxy_refusal(exc: ImportError) -> UsageError | None:
-    """The usage error for httpx's missing-`socksio` failure, or None for any other import error.
+def proxy_refusal(exc: Exception) -> UsageError | None:
+    """Name unusable proxy settings without exposing their credential-bearing URLs.
 
-    httpx builds a transport for every proxy in the environment when a client
-    is created and raises `ImportError` for a SOCKS one without `socksio`,
-    even for a host `no_proxy` excludes; its "pip install httpx[socks]" advice
-    cannot fix a Homebrew or `uv tool` install (w5/518). The cloud client and
-    `bea ask`'s model client both fail this way. Only the variable is named: a
-    proxy URL can carry credentials.
+    Match httpx's effective proxy selection and parsing before attributing a
+    constructor failure to proxies. Shadowed settings and NO_PROXY=* must not
+    disguise unrelated errors. The remedy clears every unusable spelling so
+    removing one does not reveal another (w5/518, w5/699).
     """
-    if "socks" not in str(exc).lower():
+    from importlib.util import find_spec
+    from urllib.request import getproxies
+
+    from httpx import InvalidURL, Proxy
+
+    missing_socks = isinstance(exc, ImportError) and "socksio" in str(exc).lower()
+    if not missing_socks and not isinstance(exc, (ValueError, InvalidURL)):
         return None
-    named = [name for name in _PROXY_VARIABLES if os.environ.get(name, "").lower().startswith("socks")]
-    setting = " and ".join(named) or "a proxy variable"
+    effective = getproxies()
+    if "*" in {host.strip() for host in effective.get("no", "").split(",")}:
+        return None
+
+    def parsed(value: str) -> Proxy:
+        return Proxy(value if "://" in value else f"http://{value}")
+
+    caused = False
+    for scheme in ("http", "https", "all"):
+        if not (value := effective.get(scheme)):
+            continue
+        try:
+            proxy = parsed(value)
+        except (ValueError, InvalidURL) as problem:
+            caused |= type(exc) is type(problem) and str(exc) == str(problem)
+        else:
+            caused |= missing_socks and proxy.url.scheme in {"socks5", "socks5h"}
+    if not caused:
+        return None
+
+    no_socks = missing_socks or find_spec("socksio") is None
+    named = []
+    socks_only = True
+    for name, value in sorted(os.environ.items()):
+        if name.lower() not in _PROXY_VARIABLES or not value:
+            continue
+        try:
+            proxy = parsed(value)
+        except (ValueError, InvalidURL):
+            pass
+        else:
+            if not (no_socks and proxy.url.scheme in {"socks5", "socks5h"}):
+                continue
+        named.append(name)
+        socks_only &= value.lower().startswith("socks")
+    if not named:
+        return UsageError(
+            "The system proxy configuration is unsupported or invalid. Correct it, or use an HTTP(S) proxy for bea."
+        )
+    plural = len(named) > 1
+    setting = " and ".join(named)
+    if socks_only:
+        reason = (
+            f"{setting} {'name SOCKS proxies' if plural else 'names a SOCKS proxy'}, "
+            "which bea's HTTP client does not support."
+        )
+    else:
+        reason = (
+            f"{setting} {'name unsupported or invalid proxies' if plural else 'names an unsupported or invalid proxy'}."
+        )
+    clearing = " ".join(f"{name}=" for name in named)
     return UsageError(
-        f"{setting} names a SOCKS proxy, which bea's HTTP client does not support. Unset it for bea "
-        f"(for example {named[0] if named else 'ALL_PROXY'}= bea …), or use an HTTP(S) proxy instead."
+        f"{reason} Unset {'them' if plural else 'it'} for bea "
+        f"(for example {clearing} bea …), or use an HTTP(S) proxy instead."
     )

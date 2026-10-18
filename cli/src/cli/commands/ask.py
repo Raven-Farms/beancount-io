@@ -77,6 +77,8 @@ def ask(
 
     creds = require_credentials()
 
+    from httpx import InvalidURL
+
     from cli.ask.skills import load_skills, project_skills_notice
     from cli.config import settings
 
@@ -90,11 +92,11 @@ def ask(
             api_key=creds.token,
             skills=skills,
         )
-    except ImportError as exc:
-        # A SOCKS proxy in the environment, as for the cloud commands (w5/518).
-        from cli.errors import socks_proxy_refusal
+    except (ImportError, ValueError, InvalidURL) as exc:
+        # Proxy configuration fails before a model request, as for cloud.
+        from cli.errors import proxy_refusal
 
-        refusal = socks_proxy_refusal(exc)
+        refusal = proxy_refusal(exc)
         if refusal is None:
             raise
         raise refusal from None

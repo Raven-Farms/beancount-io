@@ -78,13 +78,13 @@ def make_client() -> AuthenticatedClient:
 
 
 def _httpx_client(client: Any) -> Any:
-    """The generated client's httpx client, with a SOCKS proxy refused in bea's words (w5/518)."""
-    from cli.errors import socks_proxy_refusal
+    """The generated transport, with unusable proxy settings refused in bea's words."""
+    from cli.errors import proxy_refusal
 
     try:
         return client.get_httpx_client()
-    except ImportError as exc:
-        refusal = socks_proxy_refusal(exc)
+    except (ImportError, ValueError, httpx.InvalidURL) as exc:
+        refusal = proxy_refusal(exc)
         if refusal is None:
             raise
         raise refusal from None

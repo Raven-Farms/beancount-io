@@ -2205,6 +2205,14 @@ select targets, endpoints, and state directories:
 | `MANAGED_PRICE_OFFLINE` | — | Truthy resolves managed includes from the cache only, like `--offline` |
 | `MANAGED_PRICE_STRICT` | — | Truthy fails loads on stale or unavailable sources, like `--strict-prices` |
 
+Hosted commands and `ask` also use HTTP(S) proxies from `HTTP_PROXY`,
+`HTTPS_PROXY`, and `ALL_PROXY` (including lowercase and mixed-case spellings).
+Unsupported schemes, malformed proxy URLs, and SOCKS proxies without the
+client's optional SOCKS support are refused with usage exit **2**. The refusal
+names the variables, omits their URL values, and shows how to clear every
+unusable setting for one invocation. Use a valid HTTP(S) proxy instead.
+`NO_PROXY=*` bypasses these proxy settings.
+
 A relative `XDG_CONFIG_HOME`, `XDG_DATA_HOME`, or `XDG_CACHE_HOME` is ignored,
 as the XDG Base Directory spec requires, and the default applies.
 `BEA_CONFIG_DIR` names bea's own state directory, so a relative value is a
