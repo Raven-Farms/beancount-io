@@ -239,6 +239,9 @@ def _native_env(ledger: Path | str | None = None) -> dict[str, str]:
     # under a Latin-1 or cp1252 locale `treeify` and `doctor context` crashed on
     # `İstanbul` with a UnicodeEncodeError (w5/404).
     env["PYTHONIOENCODING"] = "utf-8"
+    # Importing a local plugin during a read must not add __pycache__ beside
+    # the ledger, including through an upstream executable (w5/655).
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
     return env
 
 
@@ -876,14 +879,15 @@ def _helper_env(source_root: Path | None = None) -> dict[str, str] | None:
     The global managed-price modes travel here too, so every load-bearing
     helper call honors `--offline` / `--strict-prices` without threading
     them through each command's argv. Flags win over the process environment;
-    without them the child's environment is exactly what was inherited.
+    without them the managed-price settings are inherited. Bytecode writing
+    stays disabled so importing local plugins never adds files beside books.
     """
     root = source_root if source_root is not None else paths.helper_source_root()
     if root is None:
         return None
     inherited = os.environ.get("PYTHONPATH", "")
     search_path = os.pathsep.join([str(root), inherited]) if inherited else str(root)
-    env = {**os.environ, "PYTHONPATH": search_path}
+    env = {**os.environ, "PYTHONPATH": search_path, "PYTHONDONTWRITEBYTECODE": "1"}
     current = context.current()
     if current.offline:
         env["MANAGED_PRICE_OFFLINE"] = "1"
