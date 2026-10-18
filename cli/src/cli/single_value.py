@@ -25,7 +25,9 @@ class _SingleValueParser(_OptionParser):
 
     def _get_value_from_state(self, option_name: str, option: Any, state: Any) -> Any:
         value = super()._get_value_from_state(option_name, option, state)
-        if option.action != "store" or option.dest is None:
+        # Shell completion parses resiliently and must never raise: a TAB after
+        # `-f a -f b` printed an 11 MB traceback instead of candidates (w5/646).
+        if option.action != "store" or option.dest is None or (self.ctx is not None and self.ctx.resilient_parsing):
             return value
         earlier_name, earlier = self._given.setdefault(option.dest, (option_name, value))
         if earlier != value:
