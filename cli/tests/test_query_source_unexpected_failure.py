@@ -64,7 +64,7 @@ def test_a_trillion_unit_balance_fails_in_one_line(ledger: Path) -> None:
     assert result.returncode == 1
     lines = result.stderr.strip().splitlines()
     assert len(lines) == 1, result.stderr
-    assert lines[0].startswith("error: Decimal arithmetic failed while running or printing this query")
+    assert lines[0].startswith("error: Decimal arithmetic failed while printing this query")
     assert "--file" in lines[0] and lines[0].endswith(HINT)
     assert "Traceback" not in result.stderr and "╭" not in result.stderr
 
@@ -96,7 +96,7 @@ def test_the_source_prompt_reports_it_and_carries_on(ledger: Path) -> None:
         shell.read("beanquery>")
         shell.send(GROUPED)
         reply = shell.read("beanquery>")
-        assert "error: Decimal arithmetic failed while running or printing this query" in reply
+        assert "error: Decimal arithmetic failed while printing this query" in reply
         assert "Traceback" not in reply
 
         shell.send("SELECT 1 + 1 AS two")

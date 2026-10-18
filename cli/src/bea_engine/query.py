@@ -37,7 +37,7 @@ import unicodedata
 import warnings
 from collections.abc import Callable, Hashable, Iterator, Mapping
 from contextlib import contextmanager
-from decimal import Decimal, localcontext
+from decimal import Decimal, DecimalException, InvalidOperation, localcontext
 from functools import cache, partial
 from pathlib import Path
 from typing import Any, TextIO, get_origin
@@ -510,7 +510,7 @@ def _native_shell(source: str, *, interactive: bool, format: str, numberify: boo
             if statement:
                 _refuse_statement_tail(statement)
             context = None if self.interactive else self.context
-            return _compiled(partial(super().execute, query, **kwargs), statement, list, context)
+            return _compiled(partial(super().execute, query, **kwargs), statement, list, context, native=True)
 
         def onecmd(self, line: str) -> Any:
             return _recovering(self, self._dispatch, line)
@@ -892,14 +892,53 @@ def unexpected_failure(exc: Exception) -> str:
     `InvalidOperation` there and printed a 200-line traceback, where `--file`
     answers (w5/472).
     """
-    from decimal import DecimalException
-
     if isinstance(exc, DecimalException):
-        return (
-            f"Decimal arithmetic failed while running or printing this query ({type(exc).__name__}). Upstream's "
-            "rendering holds an amount to twelve integer digits; query the ledger with --file to print larger ones."
-        )
+        return decimal_failure(exc, native=True)
     return f"{type(exc).__name__}: {exc}".rstrip(".") + "."
+
+
+def decimal_failure(exc: ArithmeticError, *, native: bool) -> str:
+    """One sentence for a decimal signal a query raised, said by what raised it (w5/628).
+
+    Two things raise one. Upstream's renderer quantizes each amount to its
+    display precision, which holds twelve integer digits — the `--source`
+    path's limit, which `--file` does not share. Anything else is a NaN or an
+    infinity met by an operation that needs a number: ordering, comparing,
+    subtracting. w5/472 gave every signal the first explanation, so a NaN
+    sorted under `--file` was told to query with `--file`.
+    """
+    name = type(exc).__name__
+    if _display_overflow(exc):
+        if native:
+            return (
+                f"Decimal arithmetic failed while printing this query ({name}). Upstream's rendering holds an "
+                "amount to twelve integer digits; query the ledger with --file to print larger ones."
+            )
+        return f"Decimal arithmetic failed while printing this query ({name}): an amount outgrew its display precision."
+    if isinstance(exc, InvalidOperation):
+        return (
+            f"Decimal arithmetic failed while running this query ({name}): a NaN or infinite value cannot be "
+            "ordered, compared or used in arithmetic. Filter it out with WHERE, for example "
+            "WHERE str(<value>) NOT IN ('NaN', 'Infinity', '-Infinity')."
+        )
+    return f"Decimal arithmetic failed while running or printing this query ({name})."
+
+
+def _display_overflow(exc: BaseException) -> bool:
+    """Whether a decimal signal is a finite amount too wide for the precision it was quantized to.
+
+    The C decimal module raises from inside `quantize`, so the innermost
+    Python frame is the caller's `quantize` — Beancount's display context —
+    and its `number` is the amount. An infinity fails there too, but it is
+    not an amount too wide to print.
+    """
+    tb = exc.__traceback__
+    if tb is None:
+        return False
+    while tb.tb_next is not None:
+        tb = tb.tb_next
+    number = tb.tb_frame.f_locals.get("number")
+    return tb.tb_frame.f_code.co_name == "quantize" and isinstance(number, Decimal) and number.is_finite()
 
 
 def _debug_traceback(shell: Any, exc: BaseException) -> None:
@@ -1748,7 +1787,12 @@ def _executed(conn: Any, query_string: str, run: Any, ledger_errors: list[str], 
 
 
 def _compiled(
-    run: Callable[[], Any], statement: str, ledger_errors: Callable[[], list[str]], context: Any = None
+    run: Callable[[], Any],
+    statement: str,
+    ledger_errors: Callable[[], list[str]],
+    context: Any = None,
+    *,
+    native: bool = False,
 ) -> Any:
     """Run one BQL statement, naming the compile failures Beanquery lets escape raw.
 
@@ -1807,6 +1851,11 @@ def _compiled(
         if context is None:
             raise
         raise _usage_error(exc, statement, context, ledger_errors()) from None
+    except DecimalException as exc:
+        if native:
+            # `query --source` keeps upstream's raw failure for its `--debug` stack (w5/472).
+            raise
+        raise protocol.EngineError(decimal_failure(exc, native=False), ledger_errors=ledger_errors()) from None
     except OverflowError as exc:
         evaluation = _evaluation_error(exc, statement, ledger_errors())
         if evaluation is None:
