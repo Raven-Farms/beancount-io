@@ -76,3 +76,20 @@ def test_a_working_override_reports_as_before(tmp_path: Path) -> None:
     data = json.loads(_status(tmp_path, sys.executable, "--json").stdout)["data"]
     assert data["usable"] is True
     assert "unusable" not in data
+
+
+def test_an_override_without_native_tools_beside_it_is_reported(tmp_path: Path) -> None:
+    """Loading the engine is not enough: `check` runs bean-check from beside the interpreter (w5/647)."""
+    wrap = tmp_path / "wrap"
+    wrap.mkdir()
+    python = wrap / "python"
+    python.write_text(f'#!/bin/sh\nexec "{sys.executable}" "$@"\n')
+    python.chmod(0o755)
+
+    data = json.loads(_status(tmp_path, str(python), "--json").stdout)["data"]
+    assert data["usable"] is False
+    assert data["unusable"] == f"no bean-check, bean-doctor, bean-example, treeify beside {python} ({wrap})"
+
+    text = _status(tmp_path, str(python))
+    assert f"Usable: no — no bean-check, bean-doctor, bean-example, treeify beside {python}" in text.stdout
+    assert "cannot load the engine" not in text.stdout

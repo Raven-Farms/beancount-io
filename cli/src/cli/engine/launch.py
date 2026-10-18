@@ -446,6 +446,17 @@ def native_command(name: str) -> Path:
     return executable
 
 
+#: The upstream executables local commands run beside the engine interpreter.
+NATIVE_TOOLS = ("bean-check", "bean-doctor", "bean-example", "treeify")
+
+
+def missing_native_tools(python: Path) -> list[str]:
+    """The native tools absent beside `python`, where `native_command` looks for them under an override."""
+    directory = paths.bin_dir_for(python)
+    suffix = ".exe" if sys.platform == "win32" else ""
+    return [name for name in NATIVE_TOOLS if not (directory / f"{name}{suffix}").exists()]
+
+
 def _candidate_bin_dirs() -> list[Path]:
     """Where an upstream executable may already be, without provisioning anything."""
     override = paths.python_override()
