@@ -1184,7 +1184,7 @@ def _parse_metadata(items: list[str]) -> dict[str, Any]:
         if not _may_be_typed(raw):
             # Text either way; the stand-in still lets Beancount judge the key.
             parsed_raw = '"x"'
-        entries, errors, _ = parser.parse_string(f'2000-01-01 * ""\n  {key}: {parsed_raw}\n')
+        entries, errors, _ = parse_exact(f'2000-01-01 * ""\n  {key}: {parsed_raw}\n')
         errors = without_root_name_errors(errors)
         if not errors and len(entries) == 1 and isinstance(entries[0], Transaction) and key in entries[0].meta:
             value = entries[0].meta[key]
