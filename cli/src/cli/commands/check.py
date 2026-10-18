@@ -121,18 +121,24 @@ def check(ctx: typer.Context) -> None:
             root_hint = loaded.get("root_hint")
             failed = [str(line) for line in loaded.get("plugin_failures") or []]
             unbookable = [str(line) for line in loaded.get("booking_failures") or []]
-            if (failed or unbookable) and not current.debug:
+            # Metadata overwriting an entry's location: bean-check accepts it
+            # under any option, `--debug` included (w5/630).
+            reserved = [str(line) for line in loaded.get("reserved_keys") or []]
+            if current.debug:
+                failed, unbookable = [], []
+            if failed or unbookable or reserved:
                 # bean-check reports a plugin that cannot load as a traceback at
                 # `<load>:0`, and a transaction booking cannot do the arithmetic
                 # for as an uncaught `DivisionByZero` or `InvalidOperation` (w5/538);
                 # the helper names the directive's file and line, as `--json check`
                 # and every other read do. The other load errors are listed only
                 # when no option could have changed them (w5/256).
-                crashed = [*failed, *unbookable]
+                crashed = [*failed, *unbookable, *reserved]
                 if as_json:
                     _emit_json_errors(file, crashed, 1)
                 if args:
-                    summary = f"{len(crashed)} error(s)" if unbookable else f"{len(failed)} plugin(s) failed to load"
+                    only_plugins = len(failed) == len(crashed)
+                    summary = f"{len(failed)} plugin(s) failed to load" if only_plugins else f"{len(crashed)} error(s)"
                     raise LedgerError(f"{file}: {summary}.", details=crashed)
                 errors = [str(line) for line in loaded.get("errors") or crashed]
                 raise LedgerError(f"{file}: {len(errors)} error(s).", details=errors)

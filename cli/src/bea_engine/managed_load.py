@@ -506,7 +506,7 @@ def _load_with_sources(
 
 
 #: Bumped when what a managed load returns changes shape, so no older cache answers.
-_MANAGED_CACHE_FORMAT = 1
+_MANAGED_CACHE_FORMAT = 2
 
 
 def _managed_cache_file(entry: Path) -> Path | None:
@@ -881,8 +881,10 @@ def _changed_since(snapshot: LedgerSnapshot) -> bool:
 
 #: What ends a load cache `_load_fresh` wrote. Unpickling stops at the pickle's
 #: own end, so upstream tools read a marked cache exactly as they did, and one
-#: they write themselves replaces the file, mark included.
-_ENGINE_CACHE_MARK = b"\nbea-engine-load\n"
+#: they write themselves replaces the file, mark included. Its revision moves
+#: when the engine parses differently, so no older cache answers: one kept the
+#: location a `filename:` key overwrote (w5/630).
+_ENGINE_CACHE_MARK = b"\nbea-engine-load 2\n"
 
 
 def _engine_wrote(cache: Path) -> bool:

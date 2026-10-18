@@ -927,6 +927,7 @@ def _validate(file: Path, *, documents_only: bool = False) -> dict[str, Any]:
 
     from beancount.core.data import Document
 
+    from bea_engine.compat import is_reserved_location
     from bea_engine.managed_load import is_booking_failure
     from bea_engine.query import format_error, is_plugin_failure
     from fava.core.loader import load_file
@@ -955,15 +956,18 @@ def _validate(file: Path, *, documents_only: bool = False) -> dict[str, Any]:
         )
     failed = [format_error(error, ledger_file=file) for error in errors if is_plugin_failure(error)]
     unbookable = [format_error(error, ledger_file=file) for error in errors if is_booking_failure(error)]
-    if failed or unbookable:
-        # bean-check prints these as a traceback at `<load>:0`, or raises on the
-        # transaction booking cannot do the arithmetic for (w5/538); the caller,
+    reserved = [format_error(error, ledger_file=file) for error in errors if is_reserved_location(error)]
+    if failed or unbookable or reserved:
+        # bean-check prints these as a traceback at `<load>:0`, raises on the
+        # transaction booking cannot do the arithmetic for (w5/538), or accepts
+        # metadata that overwrites an entry's location (w5/630); the caller,
         # which knows the options bean-check was given, picks the lines to show (w5/256).
         return {
             "valid": False,
             "errors": [format_error(error, ledger_file=file) for error in errors],
             "plugin_failures": failed,
             "booking_failures": unbookable,
+            "reserved_keys": reserved,
             "root_hint": hint,
             "clean": False,
         }

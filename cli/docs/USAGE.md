@@ -495,6 +495,12 @@ Beancount cannot book this transaction: …`, where bean-check raises an
 uncaught `DivisionByZero` or `InvalidOperation`; every other read reports it
 at that line too, and leaves that transaction out.
 `bea --debug check` runs bean-check as is and keeps its traceback.
+Metadata named `filename` or `lineno`, on a directive or in a `pushmeta`, is
+an error at its line under every option, `--debug` included: `Metadata key
+'filename' is reserved for Beancount's source location; choose another key.`
+Beancount writes such a value over the entry's location without a word, so
+every read would place the entry in a file that does not exist. Reads keep the
+real location; rename the key, for example to `receipt:` or `statement:`.
 
 `bea check` loads the ledger once in its helper, which applies bean-check's own
 validations. With no bean-check options, a ledger that passes is answered from

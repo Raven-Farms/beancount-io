@@ -8,9 +8,11 @@ what makes one installation point cover every helper command.
 
 from __future__ import annotations
 
+import functools
 import io
 import os
 import unicodedata
+from collections.abc import Callable
 from typing import Any
 
 UTF8_BOM = b"\xef\xbb\xbf"
@@ -52,6 +54,7 @@ def install() -> None:
     parse_file.__bea_bom_wrapped__ = True  # type: ignore[attr-defined]
     beancount_parser.parse_file = parse_file
     _install_lexer()
+    _install_source_locations()
 
 
 def _install_lexer() -> None:
@@ -75,6 +78,96 @@ def _install_lexer() -> None:
         return original(file, *args, **kwargs)
 
     lexer.lex_iter = lex_iter
+
+
+#: The metadata keys Beancount fills with where a directive is written.
+LOCATION_KEYS = ("filename", "lineno")
+
+_DIRECTIVES = (
+    "open",
+    "close",
+    "commodity",
+    "pad",
+    "balance",
+    "event",
+    "query",
+    "price",
+    "note",
+    "document",
+    "custom",
+    "transaction",
+)
+
+
+def _install_source_locations() -> None:
+    """Keep each directive's `filename` and `lineno`, and report metadata that names either.
+
+    Beancount fills both keys with where the directive is written, then merges
+    the directive's own metadata, or a `pushmeta`, over them without a word.
+    `filename: "scan-0042.pdf"` is a natural note for a receipt, and it moved
+    the entry to a file that does not exist: `list --on-disk` hid it, `list`
+    called it generated, `import` and `add balance` wrote it again, and a date
+    there failed every `list` (w5/630). The location stays, and the key is an
+    error at its directive, as bulk input already refuses it (w3/284). Every
+    parse goes through the builder, so one patch covers every reader.
+    """
+    from beancount.parser import grammar
+
+    builder: Any = grammar.Builder
+    if getattr(builder, "_bea_keeps_locations", False):
+        return
+    for name in _DIRECTIVES:
+        setattr(builder, name, _keeping_location(getattr(builder, name)))
+    builder.pushmeta = _refusing_location(builder.pushmeta, report=True)
+    builder.popmeta = _refusing_location(builder.popmeta, report=False)
+    builder._bea_keeps_locations = True
+
+
+_RESERVED = "is reserved for Beancount's source location; choose another key."
+
+
+def is_reserved_location(error: Any) -> bool:
+    """Whether a load error is metadata naming a location key, which native bean-check accepts."""
+    message = str(getattr(error, "message", ""))
+    return message.startswith("Metadata key ") and message.endswith(_RESERVED)
+
+
+def _reserved(builder: Any, filename: str, lineno: int, key: str) -> None:
+    # Upstream's own error type, so Beancount's load cache stays readable by upstream tools.
+    from beancount.parser.grammar import ParserError
+
+    builder.errors.append(ParserError({"filename": filename, "lineno": lineno}, f"Metadata key {key!r} {_RESERVED}"))
+
+
+def _keeping_location(method: Callable[..., Any]) -> Callable[..., Any]:
+    @functools.wraps(method)
+    def directive(self: Any, filename: str, lineno: int, *args: Any) -> Any:
+        entry = method(self, filename, lineno, *args)
+        meta = getattr(entry, "meta", None)
+        if isinstance(meta, dict):
+            for key, value in zip(LOCATION_KEYS, (filename, lineno), strict=True):
+                written = meta.get(key)
+                if written is not value and (type(written) is not type(value) or written != value):
+                    _reserved(self, filename, lineno, key)
+                    meta[key] = value
+        return entry
+
+    return directive
+
+
+def _refusing_location(method: Callable[..., Any], *, report: bool) -> Callable[..., Any]:
+    """`pushmeta` reports a location key once, at its own line, and never pushes it; `popmeta` drops it."""
+
+    @functools.wraps(method)
+    def stack(self: Any, filename: str, lineno: int, key: Any) -> Any:
+        name = key if isinstance(key, str) else key[0]
+        if name in LOCATION_KEYS:
+            if report:
+                _reserved(self, filename, lineno, name)
+            return None
+        return method(self, filename, lineno, key)
+
+    return stack
 
 
 def _restore_include_paths(raw: bytes, options: dict[str, Any]) -> None:
