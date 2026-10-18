@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [697 — Zero-sum opening balances write Equity:OpeningBalances -0 USD (regression from w5/310)](./697.md)
 - [698 — Three slips in USAGE "Creating a ledger"](./698.md)
 - [699 — Other SOCKS spellings and unknown proxy schemes still fail as unexpected; refusal names the wrong variable (incomplete fix of w5/518)](./699.md)
 - [700 — An IDNA-invalid BEA_API_URL passes the URL check; logout deletes the credential without sending anything](./700.md)
