@@ -291,6 +291,40 @@ Ledger scope is settled in ADR 0007: [every credential reaches all the ledgers i
 
 ## Amendments
 
+### 2026-10-18 — One MCP tool per operation (w1/m38)
+
+The OpenAI Plugins dashboard scanned the Beancount.io draft on 2026-10-18. Seven tools (`editLedgerFiles`, `editEntrySource`, `manageBankImport`, `manageBankConnection`, `managePullRequests`, `manageLedgers`, `manageLedgerCollaborators`) each received: "This tool appears to execute operations that are not individually exposed. Please expose each model-callable operation upfront as a separate tool with a clear description, input schema, and annotations." `manageLedgers` also received "This new tool definition needs further review before it can be published."
+
+Each grouped tool splits into one tool per `VERB_TABLE` verb. Under the 2026-10-09 amendment's rules, annotations follow OpenAI's definitions: deletion, overwriting, cancellation, and access revocation are destructive. This reverses ADR 0008 D3; see its 2026-10-18 amendment.
+
+| Old tool → branch | New tool | Verb row | Annotations |
+| --- | --- | --- | --- |
+| `editLedgerFiles` → create | `createLedgerFiles` | `ledger.editFiles.create` | write, not destructive |
+| `editLedgerFiles` → update, replace | `updateLedgerFiles` | `ledger.editFiles.update` | destructive (overwrites) |
+| `editLedgerFiles` → delete | `deleteLedgerFiles` | `ledger.editFiles.delete` | destructive |
+| `editEntrySource` → update | `updateEntrySource` | `Mutation.updateLedgerEntrySourceSlice` | destructive (overwrites) |
+| `editEntrySource` → delete | `deleteEntrySource` | `Mutation.deleteLedgerEntrySourceSlice` | destructive |
+| `editEntrySource` → delete_many | `deleteEntrySources` | `Mutation.deleteMultipleLedgerEntrySourceSlices` | destructive |
+| `manageBankImport` → sync | `syncBankTransactions` | `Mutation.syncPlaidTransactions` | write, open world |
+| `manageBankImport` → submit | `importStagedBankTransactions` | `Mutation.submitPlaidTransactionsToLedger` | write, not destructive |
+| `manageBankImport` → discard | `discardStagedBankTransactions` | `Mutation.deletePlaidTransactions` | destructive |
+| `manageBankConnection` → reconcile | `reconcileBankAccounts` | `Mutation.reconcilePlaidAccounts` | destructive (may delete stale accounts), open world |
+| `manageBankConnection` → map_account | `mapBankAccount` | `Mutation.updatePlaidAccountMapping` | destructive (overwrites the mapping) |
+| `manageBankConnection` → set_currency | `setBankAccountCurrency` | `Mutation.updatePlaidAccountCurrency` | destructive (overwrites) |
+| `manageBankConnection` → refresh | `refreshBankConnection` | `Mutation.refreshPlaidItemStatus` | idempotent, open world |
+| `manageBankConnection` → unlink | `unlinkBankConnection` | `Mutation.unlinkPlaidItem` | destructive, open world |
+| `managePullRequests` → create | `createPullRequest` | `Mutation.createPullRequestFromPatch` | write, not destructive |
+| `managePullRequests` → approve | `approvePullRequest` | `Mutation.approvePullRequest` | destructive (merges into main) |
+| `managePullRequests` → reject | `rejectPullRequest` | `Mutation.rejectPullRequest` | destructive (closes) |
+| `manageLedgers` → create | `createLedger` | `Mutation.createLedger` | write, not destructive |
+| `manageLedgers` → update | `updateLedger` | `Mutation.updateLedger` | destructive (overwrites) |
+| `manageLedgers` → delete | `deleteLedger` | `Mutation.deleteLedger` | destructive |
+| `manageLedgerCollaborators` → update | `setLedgerCollaborator` | `Mutation.addOrUpdateLedgerCollaborator` | destructive (can lower access) |
+| `manageLedgerCollaborators` → delete | `removeLedgerCollaborator` | `Mutation.deleteLedgerCollaborator` | destructive (revokes access) |
+| `manageLedgerCollaborators` → leave | `leaveLedger` | `Mutation.leaveLedger` | destructive (revokes access) |
+
+`updateLedgerFiles` takes, per file, either an exact-text edit (`old_string`/`new_string`) or a full replacement (`content`). Both are the `update` verb, so it carries no `operation` field. `reconcileBankAccounts` is destructive because reconciling can hard-delete accounts Plaid no longer shares, which cascades to their staged transactions.
+
 ### 2026-10-16 — OpenClaw and Hermes Agent are named hosts, and a missing `prompt=consent` no longer costs the refresh token (w6/m7)
 
 Two open-source agents join the hosts D8 names. Both use the single endpoint of D1; neither needed host-specific code. No submission directory exists for either: OpenClaw adds servers by hand, and Hermes's MCP catalog is curated by Nous. Being listed on them means a fixture, a verified sign-in, and a row in `docs/mcp.md`.
