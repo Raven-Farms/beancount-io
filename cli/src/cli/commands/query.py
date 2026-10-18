@@ -123,6 +123,8 @@ def _require_source_ledger(source: str) -> None:
         raise UsageError(f"No {kind} file at '{path}' (from --source{named}).")
     if path.is_dir():
         raise UsageError(f"{label} path '{path}' (from --source{named}) is a directory; expected a {kind} file.")
+    if parts.scheme == "beancount":
+        output.refuse_cache_over_ledger(path)
 
 
 def _refuse_source_alias(source: str, destination: Path) -> None:

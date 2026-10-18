@@ -460,6 +460,14 @@ def _native_shell(source: str, *, interactive: bool, format: str, numberify: boo
 
         def do_reload(self, arg: Any = None) -> None:
             """Reload the Beancount input file."""
+            if parts.scheme == "beancount" and file is not None and os.getenv("BEANCOUNT_LOAD_CACHE_FILENAME"):
+                # Native sources bypass managed_load. Guard every reload,
+                # including the constructor's, before upstream can discard a
+                # supposed cache that is actually a ledger file (w5/670).
+                from bea_engine.ledger.write import LedgerSnapshot, refuse_cache_over_ledger
+
+                snapshot = LedgerSnapshot.capture(file)
+                refuse_cache_over_ledger(file, snapshot.contents, snapshot.patterns)
             # Upstream loads the source itself; a Ctrl-C mid-parse waits for it.
             with stopping.deferring_interrupt():
                 super().do_reload(arg)
