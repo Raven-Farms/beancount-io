@@ -343,7 +343,7 @@ def list_transactions(
     shared: frozenset[tuple[str, int]] = frozenset(),
 ) -> list[TransactionHeader]:
     # The same fold account filters use, so Turkish `İ`/`ı` match `i` (w1/132).
-    terms = [fold_account(term or "") for term in search or []]
+    terms = [_search_key(term or "") for term in search or []]
     wanted_tags = {_nfc(tag.lstrip("#")) for tag in tags or []}
     wanted_links = {_nfc(link.lstrip("^")) for link in links or []}
     results = []
@@ -357,7 +357,7 @@ def list_transactions(
         if account and not any(fold_account(account) in fold_account(p.account) for p in entry.postings):
             continue
         if terms and not all(
-            term in fold_account(entry.payee or "") or term in fold_account(entry.narration or "") for term in terms
+            term in _search_key(entry.payee or "") or term in _search_key(entry.narration or "") for term in terms
         ):
             continue
         if wanted_tags and not wanted_tags.issubset({_nfc(tag) for tag in entry.tags or ()}):
@@ -368,6 +368,19 @@ def list_transactions(
         if len(results) >= limit:
             break
     return results
+
+
+def _search_key(text: str) -> str:
+    """Text as `--search` compares it: folded, with each line break one space.
+
+    The table shows a narration's line breaks as spaces, and import's
+    duplicate matching reads them so, but the search compared the raw text:
+    `Rent for January`, as the table prints it, matched nothing (w5/631).
+    """
+    return fold_account(_LINE_BREAKS.sub(" ", text))
+
+
+_LINE_BREAKS = re.compile(r"[ \t]*[\r\n]+[ \t]*")
 
 
 def list_notes(
