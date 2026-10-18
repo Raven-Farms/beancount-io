@@ -28,7 +28,7 @@ export const updateSliceResult = deleteSliceResult.extend({
     ),
 });
 const description =
-  "Modify entry source using the current sha256sum from entry context. Ledger content-write authority is checked before delegation. Stale source hashes are refused by the ledger service. An update returns the entry's new hash — the request's entryHash is stale after the commit. No preview.";
+  "Modify entry source using the current sha256sum from entry context. Ledger content-write authority is checked before delegation. Stale source hashes are refused by the ledger service. An update returns the entry's new hash — the request's entryHash is stale after the commit. An update that would take a free ledger past its directive limit is refused with RESOURCE_LIMIT_REACHED, naming the limit and the projected count; deletes always pass. No preview.";
 export const SOURCE_SLICE_ROUTES = [
   v1Route({
     method: "post",

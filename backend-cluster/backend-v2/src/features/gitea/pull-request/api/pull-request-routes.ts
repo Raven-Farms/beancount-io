@@ -110,8 +110,11 @@ export const PULL_REQUEST_ROUTES = [
         operation === "approve"
           ? "Merge a pull request"
           : "Close a pull request",
-      description:
-        "Applies immediately using current repository write authority. Repository failures retain the GraphQL success/message result; a pull request number that does not exist is NOT_FOUND.",
+      description: `Applies immediately using current repository write authority. Repository failures retain the GraphQL success/message result; a pull request number that does not exist is NOT_FOUND.${
+        operation === "approve"
+          ? " A merge that would take a free ledger past its directive limit is refused with RESOURCE_LIMIT_REACHED, naming the limit and the projected count."
+          : ""
+      }`,
       params: path,
       body: z.object({}).strict(),
       responses: { 200: json("Review result", pullRequestResultSchema) },

@@ -38,6 +38,13 @@ export default function PRReviewPage() {
     RejectPullRequestDocument,
   );
 
+  // A thrown refusal the app has words for (a plan limit, missing permission,
+  // an outage) is named; anything else keeps the action's own failure text.
+  const refusalMessage = (error: unknown, fallbackKey: string) => {
+    const key = getErrorMessageKey(error);
+    return t(key === "common.errors.generic" ? fallbackKey : key);
+  };
+
   const handleApprove = async () => {
     try {
       const result = await approvePR({
@@ -53,8 +60,8 @@ export default function PRReviewPage() {
             t("pullRequests.approveError"),
         );
       }
-    } catch {
-      toast.error(t("pullRequests.approveError"));
+    } catch (error) {
+      toast.error(refusalMessage(error, "pullRequests.approveError"));
     }
   };
 
@@ -73,8 +80,8 @@ export default function PRReviewPage() {
             t("pullRequests.rejectError"),
         );
       }
-    } catch {
-      toast.error(t("pullRequests.rejectError"));
+    } catch (error) {
+      toast.error(refusalMessage(error, "pullRequests.rejectError"));
     }
   };
 

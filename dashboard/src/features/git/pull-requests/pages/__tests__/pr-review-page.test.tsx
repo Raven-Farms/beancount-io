@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import PRReviewPage from "../pr-review-page";
 import * as apolloClient from "@apollo/client/react";
 import { toast } from "sonner";
+import { CombinedGraphQLErrors } from "@apollo/client/errors";
 import {
   createMockQueryResult,
   createMockMutationTuple,
@@ -390,6 +391,60 @@ describe("PRReviewPage", () => {
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
         "Failed to approve pull request",
+      );
+    });
+  });
+
+  it("names a merge refused by the plan's directive limit", async () => {
+    const user = userEvent.setup();
+
+    const mockPR = {
+      __typename: "PullRequest" as const,
+      number: 42,
+      title: "Test PR",
+      state: "open" as const,
+      author: {
+        __typename: "PRAuthor" as const,
+        name: "John Doe",
+        email: "john@example.com",
+      },
+      headBranch: "feature",
+      baseBranch: "main",
+      description: null,
+      files: [],
+      diff: "",
+    };
+
+    const mockQueryResult: GetPullRequestDetailsQueryResult =
+      createMockQueryResult({
+        data: { getPullRequestDetails: mockPR },
+        loading: false,
+        error: undefined,
+        refetch: mockRefetch,
+      });
+    vi.mocked(apolloClient.useQuery).mockReturnValue(mockQueryResult);
+
+    // The merge would take a free ledger past its directive limit (w0/m6).
+    mockApproveMutation.mockRejectedValue(
+      new CombinedGraphQLErrors({
+        errors: [
+          {
+            message:
+              "Merging this pull request would bring the ledger to about 110 directives, over the 100 the free plan allows.",
+            extensions: { code: "RESOURCE_LIMIT_REACHED" },
+          },
+        ],
+      }),
+    );
+
+    render(<PRReviewPage />);
+
+    const approveButton = screen.getByRole("button", { name: "Approve" });
+    await user.click(approveButton);
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        "You've reached your plan's limit. Upgrade to continue.",
       );
     });
   });

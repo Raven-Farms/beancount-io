@@ -548,7 +548,7 @@ export const MCP_TOOLS: readonly McpToolDescriptor[] = [
     title: "Update Entry Source",
     annotations: DESTRUCTIVE,
     description:
-      "Replace one entry's source text with newContent, addressed by entryHash (listLedgerEntries' entry_hash) and sha256sum from getEntryContext. Returns the entry's new hash as newEntryHash; the request's entryHash is stale after the commit.",
+      "Replace one entry's source text with newContent, addressed by entryHash (listLedgerEntries' entry_hash) and sha256sum from getEntryContext. Returns the entry's new hash as newEntryHash; the request's entryHash is stale after the commit. A replacement that would take a free ledger past its directive limit is RESOURCE_LIMIT_REACHED.",
     inputSchema: SOURCE_SLICE_OPERATION_SCHEMAS.update,
     outputSchema: SOURCE_SLICE_OPERATION_OUTPUTS.update,
     execute: SOURCE_SLICE_EXECUTORS.update,
@@ -731,7 +731,7 @@ export const MCP_TOOLS: readonly McpToolDescriptor[] = [
     title: "Merge Pull Request",
     annotations: DESTRUCTIVE,
     description:
-      "Merge a pull request into its base branch; the merge applies immediately. A repository server failure is SERVICE_UNAVAILABLE naming the failed step.",
+      "Merge a pull request into its base branch; the merge applies immediately. A merge that would take a free ledger past its directive limit is RESOURCE_LIMIT_REACHED. A repository server failure is SERVICE_UNAVAILABLE naming the failed step.",
     inputSchema: PULL_REQUEST_OPERATION_SCHEMAS.approve,
     outputSchema: pullRequestToolOutput,
     execute: PULL_REQUEST_EXECUTORS.approve,
