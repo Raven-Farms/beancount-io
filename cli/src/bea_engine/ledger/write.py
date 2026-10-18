@@ -1971,9 +1971,10 @@ def validate_candidate(
         message = format_error(error, ledger_file=file)
         for staged, original in filenames.items():
             message = message.replace(str(staged), str(original))
-        source = Path(error.source.get("filename", str(candidate)))
+        metadata = error.source or {}
+        source = Path(metadata.get("filename", str(candidate)))
         source = filenames.get(source, source)
-        lineno = error.source.get("lineno")
+        lineno = metadata.get("lineno")
         # A staged pad's `Unused Pad` is the documented carve-out — the
         # two-step pad-then-balance flow cannot start without it. A staged
         # open's `Unused account` is the other, for the same reason.
@@ -2015,7 +2016,7 @@ def validate_candidate(
             # check_commodity reports against no line, so the location test
             # above cannot tell the write's own currency from one the books
             # already lacked; the ledger before the write can (w5/398).
-            message = message.removeprefix(f"{error.source.get('filename')}:{lineno}: ")
+            message = message.removeprefix(f"{metadata.get('filename')}:{lineno}: ")
             if missing_before is None:
                 if before_errors is None:
                     root = snapshot.root if snapshot else file
@@ -2140,7 +2141,7 @@ def validate_candidate(
             opened = next((e for e in lifecycles.get(error.entry.account, []) if isinstance(e, Open)), None)
             if closing_hint := _plugin_close_hint(error.entry, lifecycles, filenames, original_lines):
                 description, _ = closing_hint
-                message = message.removeprefix(f"{error.source.get('filename')}:{lineno}: ")
+                message = message.removeprefix(f"{metadata.get('filename')}:{lineno}: ")
                 message += (
                     f". Account {description}. Open {error.entry.account} on or before {error.entry.date}, "
                     "or open it under another parent."
@@ -2318,9 +2319,7 @@ def validate_candidate(
                         filenames,
                     )
                 )
-        records.append(
-            _ErrorRecord(getattr(error, "message", str(error)), message, error.source.get("lineno"), hints, source)
-        )
+        records.append(_ErrorRecord(getattr(error, "message", str(error)), message, lineno, hints, source))
         locations.append((source, lineno if isinstance(lineno, int) else None))
     messages = _collapse_repeats(records)
     syntax_errors = [err for err in errors if isinstance(err, ParserSyntaxError | LexerError)]
@@ -2768,7 +2767,8 @@ def _error_key(error: Any, filenames: dict[Path, Path]) -> tuple[str, int | None
     """
     from beancount.core.data import Balance
 
-    source = Path(error.source.get("filename", ""))
+    metadata = error.source or {}
+    source = Path(metadata.get("filename", ""))
     try:
         name = str(filenames.get(source, source).resolve())
     except OSError:
@@ -2783,7 +2783,7 @@ def _error_key(error: Any, filenames: dict[Path, Path]) -> tuple[str, int | None
         # back too or every such pre-existing error reads as new.
         for staged, original in filenames.items():
             message = message.replace(str(staged), str(original))
-    return (name, error.source.get("lineno"), message)
+    return (name, metadata.get("lineno"), message)
 
 
 def _preexisting_errors(
@@ -2875,7 +2875,7 @@ def _error_kind(error: Any) -> str:
 
 def _unanchored(error: Any) -> bool:
     """Whether a plugin reported this error against no ledger line at all (`<check_commodity>:0`)."""
-    lineno = error.source.get("lineno")
+    lineno = (error.source or {}).get("lineno")
     return not isinstance(lineno, int) or lineno <= 0
 
 
@@ -2895,9 +2895,13 @@ def _moved_error_key(error: Any) -> tuple[str, str]:
     if str(getattr(error, "message", "")).startswith("Invalid data types:"):
         kind = _error_kind(error)
     if _unanchored(error):
-        source = str(error.source.get("filename", ""))
+        source = str((error.source or {}).get("filename", ""))
         if missing := _MISSING_COMMODITY.search(str(getattr(error, "message", ""))):
             return (kind, f"{source}: {missing.group(1)}")
+        if not source:
+            # With no source at all, the message is the only distinction
+            # between this old failure and an unrelated new one (w5/667).
+            return (kind, str(getattr(error, "message", error)))
         return (kind, source)
     return (kind, " ".join(sorted(re.split(r"[\s,]+", getattr(error, "message", str(error))))))
 
