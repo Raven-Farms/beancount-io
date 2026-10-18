@@ -4,7 +4,6 @@ import {
   getDevelopmentPremiumUserIds,
   getMcpRegistryAuthProof,
   getOAuthPublicUrl,
-  getOpenAiAppsChallenge,
 } from "./config";
 
 describe("config", () => {
@@ -190,30 +189,6 @@ describe("config", () => {
       expect(typeof config.plaid.secret).toBe("string");
       expect(typeof config.plaid.environment).toBe("string");
       expect(typeof config.plaid.webhookUrl).toBe("string");
-    });
-  });
-
-  describe("OpenAI apps challenge token", () => {
-    it("is unset by default so a self-host serves no challenge", () => {
-      expect(config.openAiApps.challengeToken).toBeNull();
-      expect(getOpenAiAppsChallenge(undefined)).toBeNull();
-      expect(getOpenAiAppsChallenge("  ")).toBeNull();
-    });
-
-    it("keeps the token and drops env-file whitespace around it", () => {
-      expect(getOpenAiAppsChallenge("  tok_123-abc\n")).toBe("tok_123-abc");
-    });
-
-    it("refuses a value with whitespace inside or an absurd length", () => {
-      expect(() => getOpenAiAppsChallenge("tok one")).toThrow(
-        /OPENAI_APPS_CHALLENGE must be the single token/,
-      );
-      expect(() => getOpenAiAppsChallenge("a\nb")).toThrow(
-        /OPENAI_APPS_CHALLENGE/,
-      );
-      expect(() => getOpenAiAppsChallenge("x".repeat(513))).toThrow(
-        /OPENAI_APPS_CHALLENGE/,
-      );
     });
   });
 

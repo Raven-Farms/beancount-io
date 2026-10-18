@@ -8,6 +8,14 @@ import {
 } from "@/features/ai-agent/api/mcp-resources";
 import { API_SCOPES } from "@/server/api/identity";
 
+/**
+ * The token OpenAI's Plugins dashboard issued for beancount.io (2026-10-17).
+ * Public by design: OpenAI fetches it anonymously, so it is not a credential.
+ */
+export const OPENAI_APPS_CHALLENGE_TOKEN =
+  "0HlDMC8M4gFl6ZswOTS-La1Hr8vlT7wrf_W-e1v5wmY"; // gitleaks:allow
+const BEANCOUNT_IO_ORIGIN = "https://beancount.io";
+
 const SECURITY_TXT = `Contact: mailto:hello@beancount.io
 Contact: https://beancount.io/security#report-a-vulnerability
 Expires: 2027-08-01T00:00:00.000Z
@@ -141,15 +149,16 @@ export function setWellKnownRoutes(router: Router, config: AppConfig): void {
   });
 
   // Domain proof OpenAI's Plugins dashboard checks during an app submission:
-  // the issued token, verbatim. Unset → 404, like the registry proof.
+  // the issued token, verbatim. It is not a secret, so it lives here rather
+  // than in the environment. Only Beancount.io's own deployment serves it, so
+  // a self-host never vouches for Beancount.io's submission.
   router.get("/.well-known/openai-apps-challenge", (ctx) => {
-    const token = config.openAiApps.challengeToken;
-    if (!token) {
+    if (new URL(config.dashboard.url).origin !== BEANCOUNT_IO_ORIGIN) {
       ctx.status = 404;
       return;
     }
     ctx.type = "text/plain";
     ctx.set("Cache-Control", "no-store");
-    ctx.body = token;
+    ctx.body = OPENAI_APPS_CHALLENGE_TOKEN;
   });
 }

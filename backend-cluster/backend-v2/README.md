@@ -241,11 +241,11 @@ uses `APP_LINKS_APPLE_TEAM_ID=PTLM7BZQMM`.
 
 ### OpenAI apps domain proof
 
-Optional. `OPENAI_APPS_CHALLENGE` holds the token the OpenAI Plugins dashboard
-issues while it verifies the domain of an app submission. When set, this server
-answers `GET /.well-known/openai-apps-challenge` with exactly that token as
-`text/plain`. A value with whitespace inside it fails startup. Unset → 404;
-leave it unset on a self-host.
+`GET /.well-known/openai-apps-challenge` answers with the token the OpenAI
+Plugins dashboard issued for Beancount.io's app submission, as `text/plain`.
+The token is not a secret, so it is a constant in `well-known-route.ts`, not an
+environment variable. Only a deployment whose `DASHBOARD_URL` is
+`https://beancount.io` serves it; every other deployment answers 404.
 
 ### MCP Registry domain proof
 

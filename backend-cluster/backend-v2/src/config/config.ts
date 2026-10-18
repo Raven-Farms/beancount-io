@@ -65,17 +65,6 @@ interface McpRegistryConfig {
   authProof: string | null;
 }
 
-/**
- * Domain proof for OpenAI's app (plugin) directory: the token the OpenAI
- * Plugins dashboard issues during submission, served verbatim at
- * `/.well-known/openai-apps-challenge`. Unset on a self-host, so no other
- * deployment vouches for Beancount.io's submission.
- */
-interface OpenAiAppsConfig {
-  /** The dashboard-issued challenge token, or null. */
-  challengeToken: string | null;
-}
-
 export interface GiteaConfig {
   hostname: string;
   internalHostname: string;
@@ -215,7 +204,6 @@ export interface AppConfig {
   dashboard: DashboardConfig;
   appLinks: AppLinksConfig;
   mcpRegistry: McpRegistryConfig;
-  openAiApps: OpenAiAppsConfig;
   gitea: GiteaConfig;
   blockeden: BlockEdenConfig;
   claudeCodeSandbox: ClaudeCodeSandboxConfig;
@@ -292,21 +280,6 @@ export function getMcpRegistryAuthProof(
     );
   }
   return record;
-}
-
-export function getOpenAiAppsChallenge(
-  value: string | undefined,
-): string | null {
-  const token = value?.trim();
-  if (!token) return null;
-  // One opaque token, served verbatim: whitespace inside it would mean a
-  // pasted multi-value or a wrapped line, which the verifier would reject.
-  if (/\s/.test(token) || token.length > 512) {
-    throw new Error(
-      "OPENAI_APPS_CHALLENGE must be the single token the OpenAI Plugins dashboard issued, with no spaces or line breaks",
-    );
-  }
-  return token;
 }
 
 export function assertOAuthInteractionHost(
@@ -408,9 +381,6 @@ export const config: AppConfig = {
   },
   mcpRegistry: {
     authProof: getMcpRegistryAuthProof(process.env.MCP_REGISTRY_AUTH_PROOF),
-  },
-  openAiApps: {
-    challengeToken: getOpenAiAppsChallenge(process.env.OPENAI_APPS_CHALLENGE),
   },
   gitea: {
     hostname: process.env.EXTERNAL_GITEA_HOST_NAME || "git.beancount.io",
