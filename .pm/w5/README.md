@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [630 — Entry metadata `filename:`/`lineno:` makes a written entry look plugin-made: hidden from `--on-disk`, re-imported as new, `list` crash](./630.md)
 - [631 — `list --search` cannot find a multi-line narration by the text the table shows](./631.md)
 - [632 — Hosted ledger: shadowing a feed point with an indented comment leaves orphaned lines (follow-up of w5/477)](./632.md)
 - [633 — Trivial follow-ups to w5/475, 479, 480: "disabled" for ignored origins, stale `--allow-errors` help, BOM option location](./633.md)
