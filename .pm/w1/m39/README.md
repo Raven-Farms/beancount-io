@@ -2,7 +2,7 @@
 
 **Worker:** worker1
 **Goal:** A subscriber can preview and confirm any upgrade or monthly-to-yearly switch from Billing settings, pay exactly the amount shown, approve bank authentication without leaving the page, and land on a confirmation after Checkout.
-**Status:** todo (t001, t002, t006, t008 done; t004 blocked on the operator)
+**Status:** todo (t001, t002, t006, t008 done; t003 part 1 shipped and blocked on an analytics question; t004 blocked on the operator)
 
 ## Source + Goal linkage
 
@@ -76,5 +76,7 @@ This milestone ships before that page changes, so every task keeps that contract
 - The deployed revision passes a read-only hosted check with authorized or synthetic accounts, without a purchase. Task statuses and links agree, and completed work is moved into `done/` through `/pm`.
 
 ## Blocked
+
+**t003 is blocked (part 1 shipped):** the portal is pinned and returns to Billing, and a cancelled Checkout keeps the chosen plan and cycle. Moving `success_url` from the pricing page to the dashboard confirmation waits on one question. **Unblock:** the user says whether a Google Analytics key event or report keys on `/pricing?success=true`. Cleared by the user.
 
 **t004 is blocked:** creating a live Stripe price and a billing portal configuration needs the Stripe account owner, and the worker has no Stripe credentials. **Unblock:** the user creates both. They then state the new price ID (price IDs are already public in billing configuration) and set the portal configuration variable introduced by t003 in production. Unless the worker has live Stripe access, they also hand over t015's two 100%-off production promotion codes privately. Cleared by the user.

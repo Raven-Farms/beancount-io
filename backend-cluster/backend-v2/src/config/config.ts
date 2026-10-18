@@ -105,6 +105,12 @@ interface StripeConfig {
   webhookSecret: string;
   publicKey: string;
   privateKey: string;
+  /**
+   * The billing portal configuration every portal session uses: payment
+   * methods, invoices and billing details only, so plan changes go through
+   * changePlan. Empty means the Stripe account's default portal settings.
+   */
+  portalConfigurationId: string;
 }
 
 interface RedisConfig {
@@ -444,6 +450,7 @@ export const config: AppConfig = {
     webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || "",
     publicKey: process.env.STRIPE_PUBLIC_KEY || "",
     privateKey: process.env.STRIPE_PRIVATE_KEY || "",
+    portalConfigurationId: process.env.STRIPE_PORTAL_CONFIGURATION_ID || "",
   },
   tempAssetS3: {
     endpoint: process.env.TEMP_ASSETS_AWS_S3_ENDPOINT || "",

@@ -1510,6 +1510,43 @@ describe("SubscriptionResolver", () => {
       expect(mockModels.user.getById).not.toHaveBeenCalled();
     });
 
+    it("returns a cancelled Checkout to the pricing page with the plan and cycle still chosen", async () => {
+      const mockStripeCheckoutSessions = {
+        create: jest.fn().mockResolvedValue({
+          id: "cs_1",
+          url: "https://checkout.stripe.com/session/1",
+        }),
+      };
+      mockStripeService.getStripeInstance.mockReturnValue({
+        checkout: { sessions: mockStripeCheckoutSessions },
+      });
+      mockModels.paidCustomer.findByUserIdAndClientId.mockResolvedValue(null);
+
+      await resolver.createSubscriptionSession(
+        "beancount-web-prod",
+        "price_1L9ccEEqsEqs2tLVbeBgHm9p",
+        mockContext,
+      );
+      await resolver.createSubscriptionSession(
+        "beancount-web-prod",
+        "price_1SyPdaEqsEqs2tLViLPUDoVi",
+        mockContext,
+      );
+
+      const [yearly, monthly] = mockStripeCheckoutSessions.create.mock.calls;
+      expect(yearly[0].cancel_url).toBe(
+        "https://beancount.io/pricing?plan=premium&billing=yearly&checkout=canceled",
+      );
+      expect(monthly[0].cancel_url).toBe(
+        "https://beancount.io/pricing?plan=growth&billing=monthly&checkout=canceled",
+      );
+      // The success return stays where the pricing page expects it until the
+      // dashboard confirmation takes over (w1/m39/t003).
+      expect(yearly[0].success_url).toBe(
+        "https://beancount.io/pricing/?success=true",
+      );
+    });
+
     it("refuses a second Checkout to a customer who already pays, so nobody is billed twice", async () => {
       const mockStripeCheckoutSessions = { create: jest.fn() };
       mockStripeService.getStripeInstance.mockReturnValue({

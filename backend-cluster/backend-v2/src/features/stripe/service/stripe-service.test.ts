@@ -1212,8 +1212,37 @@ describe("StripeService", () => {
       expect(result.sessionUrl).toBe("https://billing.stripe.com/session/123");
       expect(mockStripeBillingPortal.sessions.create).toHaveBeenCalledWith({
         customer: "cus_123",
-        return_url: expect.any(String),
+        return_url: "https://beancount.io/settings/billing",
       });
+    });
+
+    it("pins every portal session to the configured portal configuration", async () => {
+      const plan = SUBSCRIPTION_CONFIG[BILLING_CLIENT_ID];
+      const previous = plan.portalConfigurationId;
+      plan.portalConfigurationId = "bpc_billing_only";
+      try {
+        mockIPaidCustomerModel.findByUserIdAndClientId.mockResolvedValue({
+          userId,
+          clientId,
+          stripeCustomerId: "cus_123",
+        } as unknown as Awaited<
+          ReturnType<typeof mockIPaidCustomerModel.findByUserIdAndClientId>
+        >);
+        mockStripeBillingPortal.sessions.create.mockResolvedValue({
+          id: "session_123",
+          url: "https://billing.stripe.com/session/123",
+        });
+
+        await stripeUseCase.createCustomerPortalSession(userId, clientId);
+
+        expect(mockStripeBillingPortal.sessions.create).toHaveBeenCalledWith({
+          customer: "cus_123",
+          return_url: "https://beancount.io/settings/billing",
+          configuration: "bpc_billing_only",
+        });
+      } finally {
+        plan.portalConfigurationId = previous;
+      }
     });
 
     it("should handle portal session with null url", async () => {

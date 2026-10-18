@@ -13,7 +13,11 @@ The backend is built with Node.js and TypeScript using Koa and GraphQL. It power
 ## Billing
 
 The supported application client is `beancount-web-prod`, configured by
-`STRIPE_PRIVATE_KEY`, `STRIPE_PUBLIC_KEY`, and `STRIPE_WEBHOOK_SECRET`. Billing
+`STRIPE_PRIVATE_KEY`, `STRIPE_PUBLIC_KEY`, and `STRIPE_WEBHOOK_SECRET`.
+`STRIPE_PORTAL_CONFIGURATION_ID` pins every billing-portal session to a
+configuration that allows payment methods, invoices and billing details only;
+plan changes go through `changePlan`. Unset, the portal follows the Stripe
+account's default settings and the API logs a warning. Billing
 uses live subscriptions and recognized current/legacy prices; an old cached period
 or unknown price cannot identify a purchased plan. Only verified live webhooks
 may refresh a customer's cache. Stripe failures do not clear stored periods.

@@ -17,6 +17,21 @@ import { IModels } from "@/foundation/models";
 import { logger } from "@/shared/logger";
 import { NodePgDatabase } from "drizzle-orm/node-postgres";
 
+let warnedUnpinnedPortal = false;
+
+/**
+ * Without a pinned configuration the portal follows the Stripe account's
+ * defaults, which may let a customer switch to a price this service does not
+ * recognize. Say so once per process rather than on every session.
+ */
+function warnUnpinnedPortalOnce(): void {
+  if (warnedUnpinnedPortal) return;
+  warnedUnpinnedPortal = true;
+  logger.warn(
+    "Billing portal sessions use the account's default configuration; set STRIPE_PORTAL_CONFIGURATION_ID",
+  );
+}
+
 function isNoSuchSubscriptionError(error: unknown): boolean {
   return (
     (error as { name?: string }).name === "StripeInvalidRequestError" &&
@@ -665,9 +680,13 @@ export class StripeService implements IStripeService {
 
       const stripe = this.getStripeInstance(clientId);
 
+      if (!clientConfig.portalConfigurationId) warnUnpinnedPortalOnce();
       const session = await stripe.billingPortal.sessions.create({
         customer: customer.stripeCustomerId,
         return_url: returnUrl,
+        ...(clientConfig.portalConfigurationId
+          ? { configuration: clientConfig.portalConfigurationId }
+          : {}),
       });
 
       logger.debug("Created Stripe customer portal session", {

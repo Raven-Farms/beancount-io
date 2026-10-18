@@ -119,6 +119,8 @@ export interface StripeClientConfig {
   cancelUrl: string;
   /** URL to return to after leaving the Stripe customer portal */
   portalReturnUrl: string;
+  /** Billing portal configuration passed on every portal session, if set. */
+  portalConfigurationId?: string;
   /** Webhook URL for Stripe events */
   webhook: string;
 }
@@ -211,9 +213,9 @@ export const SUBSCRIPTION_CONFIG: SubscriptionConfigMap = {
     stripePriKey: config.stripe.privateKey,
     successUrl: "https://beancount.io/pricing/?success=true",
     cancelUrl: "https://beancount.io/pricing",
-    // The dashboard's subscription-management page — /profile/settings was a
-    // legacy-dashboard route that now 404s.
-    portalReturnUrl: "https://beancount.io/settings/general",
+    // The dashboard's Billing tab, where the plan is managed.
+    portalReturnUrl: "https://beancount.io/settings/billing",
+    portalConfigurationId: config.stripe.portalConfigurationId,
     webhook: "https://beancount.io/api-gateway/stripe/webhook",
   },
 };

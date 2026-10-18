@@ -136,6 +136,25 @@ export interface ISubscriptionService {
 }
 
 /**
+ * Where a cancelled Checkout returns: the pricing page with the plan and cycle
+ * still chosen. The pricing page already reads `billing`; `plan` and
+ * `checkout=canceled` are ignored until it reads them too.
+ */
+function checkoutCancelUrl(
+  base: string,
+  plan: { tier: SubscriptionTier; interval: "month" | "year" },
+): string {
+  const url = new URL(base);
+  url.searchParams.set("plan", plan.tier.toLowerCase());
+  url.searchParams.set(
+    "billing",
+    plan.interval === "year" ? "yearly" : "monthly",
+  );
+  url.searchParams.set("checkout", "canceled");
+  return url.toString();
+}
+
+/**
  * The application boundary for self-service billing.
  *
  * Protected methods make one final PDP decision before reading local billing
@@ -385,7 +404,7 @@ export class SubscriptionService implements ISubscriptionService {
         allow_promotion_codes: true,
         mode: planConfig.type,
         success_url: clientConfig.successUrl,
-        cancel_url: clientConfig.cancelUrl,
+        cancel_url: checkoutCancelUrl(clientConfig.cancelUrl, planConfig),
         metadata: { userId, clientId },
         ...(planConfig.type === "subscription"
           ? { subscription_data: { metadata: { userId, clientId } } }
