@@ -561,6 +561,71 @@ def ledger_closure(root: Path) -> list[Path]:
     return members
 
 
+def _output_ledger_members(ledger: Path) -> list[Path]:
+    """Protect nearby including ledgers as well as the input's descendants.
+
+    Search beside both the named input and its resolved target, climbing
+    again from each includer. Every includer matters, even reporting-only
+    overlays and multiple roots sharing a leaf. The search shares a budget
+    of 64 candidate include graphs across the entire climb.
+    """
+    members = ledger_closure(ledger)
+    target = ledger.resolve()
+    pending = [ledger.absolute(), target]
+    searched: set[Path] = set()
+    known = {path.resolve() for path in members}
+    opened = 0
+    while pending:
+        source = pending.pop()
+        for directory in _nearby_ledger_directories(source):
+            if directory in searched:
+                continue
+            searched.add(directory)
+            for candidate in sorted(directory.glob("*.bean")) + sorted(directory.glob("*.beancount")):
+                if opened >= 64:
+                    return members
+                try:
+                    info = candidate.stat()
+                    if (
+                        not stat.S_ISREG(info.st_mode)
+                        or info.st_size > 16 * 1024 * 1024
+                        or candidate.resolve() in known
+                    ):
+                        continue
+                    text = candidate.read_text(encoding="utf-8", errors="replace").removeprefix("\ufeff")
+                    if not _INCLUDE_DIRECTIVE.search(text):
+                        continue
+                    opened += 1
+                    included = ledger_closure(candidate)
+                    if not any(same_file(path, target) for path in included):
+                        continue
+                    pending.extend((candidate.absolute(), candidate.resolve()))
+                    for path in included:
+                        key = path.resolve()
+                        if key not in known:
+                            members.append(path)
+                            known.add(key)
+                except OSError:
+                    continue
+    return members
+
+
+def _nearby_ledger_directories(source: Path) -> list[Path]:
+    """The write-side search area: four ancestor levels and immediate children."""
+    directories: list[Path] = []
+    for directory in [source.parent, *source.parent.parents][:4]:
+        directories.append(directory)
+        try:
+            directories.extend(
+                child for child in sorted(directory.iterdir()) if not child.name.startswith(".") and child.is_dir()
+            )
+        except OSError:
+            pass
+        if (directory / ".git").exists():
+            break
+    return directories
+
+
 def missing_includes(root: Path) -> list[MissingInclude]:
     """The `include` strings in the root's reachable graph that match no file."""
     _, missing = walk_closure(root)
@@ -660,7 +725,7 @@ def refuse_ledger_alias(destination: Path, ledger: Path) -> None:
     still says success. Call this before any temp file is created or any
     stream is opened, so a refusal leaves the destination byte-identical.
     """
-    members = ledger_closure(ledger)
+    members = _output_ledger_members(ledger)
     for member in members:
         if same_file(destination, member):
             raise UsageError(
@@ -678,7 +743,7 @@ def refuse_include_claim(destination: Path, ledger: Path) -> None:
     a `PRINT` backup saved under `include "txns/*.bean"` doubled every exported
     transaction on the next load, with `check` still passing (w5/072).
     """
-    _refuse_include_claim(destination, ledger_closure(ledger))
+    _refuse_include_claim(destination, _output_ledger_members(ledger))
 
 
 def _refuse_include_claim(destination: Path, members: Sequence[Path]) -> None:

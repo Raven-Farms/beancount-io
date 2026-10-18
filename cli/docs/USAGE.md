@@ -192,6 +192,11 @@ destination is refused with exit **2**, before anything is written, when it
   through a symlink), and any pre-existing file at a path `price export`
   would write inside the destination directory.
 
+When the input is an included file, the guard also checks nearby ledgers
+that include it: `format txns/2026.bean -o txns/backup.bean` cannot add a
+copy to a root's `include "txns/*.bean"`. Formatting stdin checks the working
+ledger selected by `--file`, `BEA_FILE`, or the usual `main.bean` discovery.
+
 A refusal names the colliding path and leaves the destination byte-identical,
 its file list included. `--force` is the only way past the second case
 (`treeify -o`, `price export`, `example -o`); nothing gets past the first.

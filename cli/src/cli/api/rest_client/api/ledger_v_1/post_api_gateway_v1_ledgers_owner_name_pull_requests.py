@@ -123,7 +123,9 @@ def sync_detailed(
      Create a branch from baseBranch (default main — say so when the target is not main), apply complete
     file contents under clearCommitMessage, verify the branch differs from base unless fastForward skips
     verification, and open a pull request using the existing workflow. Empty title/description and a
-    missing commit message are refused.
+    missing commit message are refused. A repository refusal is a success:false result naming the failed
+    step; a repository server failure is SERVICE_UNAVAILABLE naming the step, and no pull request or
+    branch is left behind.
 
     Args:
         owner (str): Ledger owner's username Example: alice.
@@ -163,7 +165,9 @@ def sync(
      Create a branch from baseBranch (default main — say so when the target is not main), apply complete
     file contents under clearCommitMessage, verify the branch differs from base unless fastForward skips
     verification, and open a pull request using the existing workflow. Empty title/description and a
-    missing commit message are refused.
+    missing commit message are refused. A repository refusal is a success:false result naming the failed
+    step; a repository server failure is SERVICE_UNAVAILABLE naming the step, and no pull request or
+    branch is left behind.
 
     Args:
         owner (str): Ledger owner's username Example: alice.
@@ -198,7 +202,9 @@ async def asyncio_detailed(
      Create a branch from baseBranch (default main — say so when the target is not main), apply complete
     file contents under clearCommitMessage, verify the branch differs from base unless fastForward skips
     verification, and open a pull request using the existing workflow. Empty title/description and a
-    missing commit message are refused.
+    missing commit message are refused. A repository refusal is a success:false result naming the failed
+    step; a repository server failure is SERVICE_UNAVAILABLE naming the step, and no pull request or
+    branch is left behind.
 
     Args:
         owner (str): Ledger owner's username Example: alice.
@@ -236,7 +242,9 @@ async def asyncio(
      Create a branch from baseBranch (default main — say so when the target is not main), apply complete
     file contents under clearCommitMessage, verify the branch differs from base unless fastForward skips
     verification, and open a pull request using the existing workflow. Empty title/description and a
-    missing commit message are refused.
+    missing commit message are refused. A repository refusal is a success:false result naming the failed
+    step; a repository server failure is SERVICE_UNAVAILABLE naming the step, and no pull request or
+    branch is left behind.
 
     Args:
         owner (str): Ledger owner's username Example: alice.

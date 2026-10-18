@@ -100,6 +100,13 @@ def format_beans(
         context.refuse_terminal_stdin(
             "A ledger is required with --no-input. Name the files to format or pipe the ledger on stdin."
         )
+        if output_file is not None:
+            try:
+                ledger = ctx.entry_file()
+            except UsageError:
+                ledger = None
+            if ledger is not None:
+                output.refuse_ledger_alias(output_file, ledger)
         _render(None, alignment, output_file)
         if ctx.json_output and output_file is not None:
             output.emit(_wrote(0, output_file), target={"stdin": STDIN})
