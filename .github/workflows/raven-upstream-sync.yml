@@ -31,6 +31,7 @@ jobs:
     timeout-minutes: 90
     env:
       GH_TOKEN: ${{ github.token }}
+      # In a fork, gh defaults to the parent repo; every gh call passes --repo.
       UPSTREAM: https://github.com/bex-co/beancount-io.git
     steps:
       - uses: actions/checkout@v4
@@ -110,12 +111,12 @@ jobs:
             echo "2. On the VPS: \`sudo beancount-update\` (backs up, pulls raven, rebuilds, checks, rolls back on failure)."
             echo; echo "_Opened by raven-upstream-sync. Nothing is merged or deployed automatically._"
           } > body.md
-          pr=$(gh pr list --head upstream-sync --base raven --state open --json number --jq '.[0].number')
+          pr=$(gh pr list --repo "$GITHUB_REPOSITORY" --head upstream-sync --base raven --state open --json number --jq '.[0].number')
           if [ -n "$pr" ]; then
-            gh pr edit "$pr" --body-file body.md --title "Upstream sync: bex-co/beancount-io ${head:0:10}"
+            gh pr edit "$pr" --repo "$GITHUB_REPOSITORY" --body-file body.md --title "Upstream sync: bex-co/beancount-io ${head:0:10}"
             echo "Updated PR #$pr"
           else
-            gh pr create --base raven --head upstream-sync --title "Upstream sync: bex-co/beancount-io ${head:0:10}" --body-file body.md
+            gh pr create --repo "$GITHUB_REPOSITORY" --base raven --head upstream-sync --title "Upstream sync: bex-co/beancount-io ${head:0:10}" --body-file body.md
           fi
 
       - name: Nothing to do
