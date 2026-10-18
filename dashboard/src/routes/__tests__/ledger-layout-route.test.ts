@@ -115,3 +115,120 @@ describe("ledger layout route loader", () => {
     await expect(runLoader(query)).rejects.toBe(denied);
   });
 });
+
+describe("ledger route slugs (w3/628)", () => {
+  function run(
+    params: { ledgerOwner: string; ledgerName: string },
+    href: string,
+    query: (options: QueryOptions) => Promise<unknown> = vi.fn(() =>
+      Promise.resolve({
+        data: { getLedger: { fullName: "open_ledger/example" } },
+      }),
+    ),
+  ) {
+    const loader = Route.options.loader as unknown as (input: {
+      params: typeof params;
+      context: RouterContext;
+      location: { href: string };
+    }) => Promise<unknown>;
+    return loader({
+      params,
+      context: { client: { query } } as unknown as RouterContext,
+      location: { href },
+    }).then(
+      () => undefined,
+      (error: unknown) => error,
+    );
+  }
+
+  it.each([
+    ["Example", "/ledger/open_ledger/Example/journal?time=2026-07#top"],
+    ["example.git", "/ledger/open_ledger/example.git/journal?time=2026-07#top"],
+  ])(
+    "permanently redirects %s to the ledger's URL, keeping path, search and hash",
+    async (ledgerName, href) => {
+      const query = vi.fn();
+      const thrown = await run(
+        { ledgerOwner: "open_ledger", ledgerName },
+        href,
+        query,
+      );
+
+      expect(isRedirect(thrown)).toBe(true);
+      expect(thrown).toMatchObject({
+        options: {
+          href: "/ledger/open_ledger/example/journal?time=2026-07#top",
+          statusCode: 301,
+        },
+      });
+      expect(query).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([["ex/ample"], ["..."], ["a".repeat(101)]])(
+    "answers not found for a name no ledger can have: %s",
+    async (ledgerName) => {
+      const query = vi.fn();
+      const thrown = await run(
+        { ledgerOwner: "open_ledger", ledgerName },
+        `/ledger/open_ledger/${encodeURIComponent(ledgerName)}`,
+        query,
+      );
+
+      expect(isNotFound(thrown)).toBe(true);
+      expect(query).not.toHaveBeenCalled();
+    },
+  );
+
+  it("answers not found when the API refuses the slug outright", async () => {
+    const thrown = await run(
+      { ledgerOwner: "open_ledger", ledgerName: "example" },
+      "/ledger/open_ledger/example",
+      vi.fn(() =>
+        Promise.reject(
+          graphqlDenied(
+            "BAD_USER_INPUT",
+            "Ledger name slug must contain 1-100 lowercase letters, digits, underscores, or hyphens",
+          ),
+        ),
+      ),
+    );
+
+    expect(isNotFound(thrown)).toBe(true);
+  });
+
+  it("redirects an owner spelled in another case to the ledger's own spelling", async () => {
+    const thrown = await run(
+      { ledgerOwner: "OPEN_LEDGER", ledgerName: "example" },
+      "/ledger/OPEN_LEDGER/example/accounts?time=2026",
+    );
+
+    expect(thrown).toMatchObject({
+      options: {
+        href: "/ledger/open_ledger/example/accounts?time=2026",
+        statusCode: 301,
+      },
+    });
+  });
+
+  it("loads the canonical spelling without redirecting", async () => {
+    expect(
+      await run(
+        { ledgerOwner: "open_ledger", ledgerName: "example" },
+        "/ledger/open_ledger/example",
+      ),
+    ).toBeUndefined();
+  });
+
+  it("leaves a ledger the API resolves under another owner to the API", async () => {
+    expect(
+      await run(
+        { ledgerOwner: "alice", ledgerName: "example" },
+        "/ledger/alice/example",
+        vi.fn(() =>
+          Promise.resolve({ data: { getLedger: { fullName: "bob/example" } } }),
+        ),
+      ),
+    ).toBeUndefined();
+  });
+});
