@@ -30,3 +30,18 @@ export function describeLedgerRefusal(
   const detail = newLedgerErrorDetail(error);
   return detail ? i18n.t("ledgerWouldBreak", { detail }) : null;
 }
+
+/**
+ * The inline error for a failed write on a screen that shows its own: the
+ * refusal in the app's words, else the error's message, else null so the
+ * screen falls back to its generic copy. Open Account and Add Budget share it.
+ */
+export function ledgerWriteFailureMessage(
+  error: unknown,
+  i18n: Parameters<typeof describeLedgerRefusal>[1],
+): string | null {
+  return (
+    describeLedgerRefusal(error, i18n) ??
+    (error instanceof Error ? error.message : null)
+  );
+}

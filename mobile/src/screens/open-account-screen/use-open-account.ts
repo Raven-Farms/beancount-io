@@ -3,7 +3,7 @@ import { useApolloClient } from "@apollo/client";
 import { useBulkEntriesMutation } from "@/generated-graphql/graphql";
 import { invalidateLedgerData } from "@/common/apollo/invalidate-ledger";
 import { haptics } from "@/common/haptics";
-import { describeLedgerRefusal } from "@/common/ledger-refusal";
+import { ledgerWriteFailureMessage } from "@/common/ledger-refusal";
 import { i18n } from "@/translations";
 import {
   buildOpenAccountEntry,
@@ -47,10 +47,7 @@ export function useOpenAccount(ledgerId: string) {
         return { ok: false, message };
       } catch (caught) {
         haptics.error();
-        const message =
-          describeLedgerRefusal(caught, i18n) ??
-          (caught instanceof Error ? caught.message : null);
-        return { ok: false, message };
+        return { ok: false, message: ledgerWriteFailureMessage(caught, i18n) };
       }
     },
     [bulkEntries, client, ledgerId],

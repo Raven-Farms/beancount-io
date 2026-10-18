@@ -150,6 +150,32 @@ describe("envelopeFromThrown", () => {
     expect(envelope.code).toBe("VALIDATION_FAILED");
     expect(envelope.hint).toMatch(/allowInvalid/);
     expect(envelope.hint).toMatch(/names each new error/);
+    // Apps read the named errors from metadata (GraphQL extensions, REST
+    // error.metadata) rather than parsing the message.
+    expect(domain).toMatchObject({
+      metadata: {
+        field: "entries",
+        newLedgerErrors:
+          "Duplicate open directive for Assets:Cash (main.bean:3)",
+      },
+    });
+  });
+
+  it("takes a would-break refusal's count and named errors from the ledger's details", () => {
+    const named = "A (main.bean:1); B (main.bean:2)";
+    const domain = favaApiErrorToDomainError(
+      new FavaApiError("refused", 400, {
+        success: false,
+        error: `adding these entries would introduce 2 new bean-check errors: ${named}`,
+        code: "NEW_LEDGER_ERRORS",
+        details: { count: 2, detail: named },
+      }),
+      "add entries",
+    );
+    expect(domain.message).toBe(
+      `Validation failed for entries: adding these entries would introduce 2 new bean-check errors: ${named}`,
+    );
+    expect(domain).toMatchObject({ metadata: { newLedgerErrors: named } });
   });
 
   it("carries retryAfter for a rate-limit refusal", () => {

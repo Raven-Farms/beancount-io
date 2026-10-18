@@ -1,4 +1,7 @@
-import { describeLedgerRefusal } from "../ledger-refusal";
+import {
+  describeLedgerRefusal,
+  ledgerWriteFailureMessage,
+} from "../ledger-refusal";
 import { runLedgerWrite, type LedgerWriteDeps } from "../ledger-write";
 
 // A write that would add bean-check errors is refused as VALIDATION_FAILED,
@@ -111,5 +114,25 @@ describe("runLedgerWrite with a refusal it can describe", () => {
       failureMessageFor: () => "Delete failed: entry changed",
     });
     expect(toasts).toEqual(["Delete failed: entry changed"]);
+  });
+});
+
+// Open Account and Add Budget show the failure inline rather than through
+// runLedgerWrite's toast.
+describe("ledgerWriteFailureMessage", () => {
+  it("describes a would-break refusal", () => {
+    expect(ledgerWriteFailureMessage(wouldBreak(DUPLICATE_OPEN), i18n)).toBe(
+      `Would break: ${DUPLICATE_OPEN}`,
+    );
+  });
+
+  it("keeps any other error's own message", () => {
+    expect(
+      ledgerWriteFailureMessage(new Error("Network request failed"), i18n),
+    ).toBe("Network request failed");
+  });
+
+  it("returns null when there is nothing to say, so the screen's copy shows", () => {
+    expect(ledgerWriteFailureMessage("boom", i18n)).toBe(null);
   });
 });

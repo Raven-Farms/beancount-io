@@ -1,6 +1,6 @@
 # w0 · m2 — Structured ledger writes refuse changes that would break the ledger
 
-**Worker:** worker1 **Goal:** no client can commit a structured entry that introduces a bean-check error without saying so: GraphQL, REST and MCP refuse it the way the text-append route already does, unless the caller passes `allowInvalid` **Status:** todo (t001–t005 done)
+**Worker:** worker1 **Goal:** no client can commit a structured entry that introduces a bean-check error without saying so: GraphQL, REST and MCP refuse it the way the text-append route already does, unless the caller passes `allowInvalid` **Status:** todo (t001–t006 done)
 
 ## Tasks (in order)
 
@@ -11,7 +11,7 @@
 | t003 | Mobile and dashboard write forms show the refusal message | 30m | t001 | — **DONE**
 | t004 | Adoption surface | 20m | t002, t003 | — **DONE**
 | t005 | Simplify | 15m | t004 | — **DONE**
-| t006 | Test coverage | 30m | t004, t005 |
+| t006 | Test coverage | 30m | t004, t005 | — **DONE**
 | t007 | Closeout | 10m | t006 |
 
 ## Definition of done
