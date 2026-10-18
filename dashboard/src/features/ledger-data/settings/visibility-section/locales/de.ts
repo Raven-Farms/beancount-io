@@ -4,6 +4,20 @@ export interface TranslationEntry {
 }
 
 const deVisibilitySection: Record<string, TranslationEntry> = {
+  "page.settings.makePublicTitle": {
+    message: "Dieses Hauptbuch öffentlich machen?",
+    description:
+      "Title of the confirmation before a private ledger becomes public",
+  },
+  "page.settings.makePublicDescription": {
+    message:
+      "Alle mit dem Link sowie Suchmaschinen können dann die Buchungen, Salden, Dateien und den Verlauf dieses Hauptbuchs sehen.",
+    description: "What becomes visible when a private ledger is made public",
+  },
+  "page.settings.makePublic": {
+    message: "Öffentlich machen",
+    description: "Button that confirms making a private ledger public",
+  },
   "page.settings.publicLedger": {
     message: "Öffentliches Hauptbuch",
     description: "Label when ledger is public",

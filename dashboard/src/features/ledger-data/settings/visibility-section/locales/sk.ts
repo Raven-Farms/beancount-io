@@ -4,6 +4,20 @@ export interface TranslationEntry {
 }
 
 const skVisibilitySection: Record<string, TranslationEntry> = {
+  "page.settings.makePublicTitle": {
+    message: "Zverejniť túto knihu?",
+    description:
+      "Title of the confirmation before a private ledger becomes public",
+  },
+  "page.settings.makePublicDescription": {
+    message:
+      "Ktokoľvek s odkazom aj vyhľadávače budú môcť vidieť transakcie, zostatky, súbory a históriu tejto knihy.",
+    description: "What becomes visible when a private ledger is made public",
+  },
+  "page.settings.makePublic": {
+    message: "Zverejniť",
+    description: "Button that confirms making a private ledger public",
+  },
   "page.settings.publicLedger": {
     message: "Verejná kniha",
     description: "Label when ledger is public",

@@ -4,6 +4,20 @@ export interface TranslationEntry {
 }
 
 const zhVisibilitySection: Record<string, TranslationEntry> = {
+  "page.settings.makePublicTitle": {
+    message: "要公开此账本吗？",
+    description:
+      "Title of the confirmation before a private ledger becomes public",
+  },
+  "page.settings.makePublicDescription": {
+    message:
+      "任何拥有链接的人以及搜索引擎都将能够查看此账本的交易、余额、文件和历史记录。",
+    description: "What becomes visible when a private ledger is made public",
+  },
+  "page.settings.makePublic": {
+    message: "公开",
+    description: "Button that confirms making a private ledger public",
+  },
   "page.settings.publicLedger": {
     message: "公开账本",
     description: "Label when ledger is public",

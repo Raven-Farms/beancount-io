@@ -4,6 +4,20 @@ export interface TranslationEntry {
 }
 
 const nlVisibilitySection: Record<string, TranslationEntry> = {
+  "page.settings.makePublicTitle": {
+    message: "Dit grootboek openbaar maken?",
+    description:
+      "Title of the confirmation before a private ledger becomes public",
+  },
+  "page.settings.makePublicDescription": {
+    message:
+      "Iedereen met de link, en zoekmachines, kan dan de transacties, saldi, bestanden en geschiedenis van dit grootboek zien.",
+    description: "What becomes visible when a private ledger is made public",
+  },
+  "page.settings.makePublic": {
+    message: "Openbaar maken",
+    description: "Button that confirms making a private ledger public",
+  },
   "page.settings.publicLedger": {
     message: "Openbaar grootboek",
     description: "Label when ledger is public",

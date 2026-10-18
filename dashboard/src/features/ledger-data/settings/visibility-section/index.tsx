@@ -12,6 +12,15 @@ import { Button } from "@/common/components/ui/button";
 import { Input } from "@/common/components/ui/input";
 import { Label } from "@/common/components/ui/label";
 import { Switch } from "@/common/components/ui/switch";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/common/components/ui/alert-dialog";
 import { Textarea } from "@/common/components/ui/textarea";
 import { Copy, Check } from "lucide-react";
 import {
@@ -121,6 +130,15 @@ export function VisibilitySection({
     }
   };
 
+  // Publishing exposes every transaction, balance, file and its history, so
+  // private → public asks first; making a ledger private stays one click.
+  const [confirmingPublish, setConfirmingPublish] = useState(false);
+  const switchRef = useRef<HTMLButtonElement>(null);
+  const handleSwitch = (checked: boolean) => {
+    if (!checked && isPrivate) setConfirmingPublish(true);
+    else void handleVisibilityChange(checked);
+  };
+
   const shareableUrl = `${origin}/ledger/${ledger.fullName}`;
   const embedCode = buildEmbedCode(
     shareableUrl,
@@ -195,11 +213,12 @@ export function VisibilitySection({
             {/* Named for what "on" means and constant across states, so the
                 switch reads "Private ledger, on/off" (w0/013). */}
             <Switch
+              ref={switchRef}
               id="visibility-toggle"
               aria-label={t("page.settings.privateLedger")}
               aria-describedby="visibility-description"
               checked={isPrivate}
-              onCheckedChange={handleVisibilityChange}
+              onCheckedChange={handleSwitch}
               disabled={updatingVisibility}
               className={
                 !isPrivate ? "data-[state=unchecked]:bg-destructive" : undefined
@@ -207,6 +226,38 @@ export function VisibilitySection({
             />
           </LedgerAdminPermission>
         </div>
+        <AlertDialog
+          open={confirmingPublish}
+          onOpenChange={setConfirmingPublish}
+        >
+          <AlertDialogContent
+            onCloseAutoFocus={(event) => {
+              event.preventDefault();
+              switchRef.current?.focus();
+            }}
+          >
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {t("page.settings.makePublicTitle")}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {t("page.settings.makePublicDescription")}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  setConfirmingPublish(false);
+                  void handleVisibilityChange(false);
+                }}
+              >
+                {t("page.settings.makePublic")}
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
         {!isPrivate && (
           <div className="border-t pt-6 space-y-6">
             <div>

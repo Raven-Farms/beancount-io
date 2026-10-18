@@ -4,6 +4,20 @@ export interface TranslationEntry {
 }
 
 const koVisibilitySection: Record<string, TranslationEntry> = {
+  "page.settings.makePublicTitle": {
+    message: "이 원장을 공개할까요?",
+    description:
+      "Title of the confirmation before a private ledger becomes public",
+  },
+  "page.settings.makePublicDescription": {
+    message:
+      "링크가 있는 누구나, 그리고 검색 엔진이 이 원장의 거래, 잔액, 파일 및 기록을 볼 수 있게 됩니다.",
+    description: "What becomes visible when a private ledger is made public",
+  },
+  "page.settings.makePublic": {
+    message: "공개하기",
+    description: "Button that confirms making a private ledger public",
+  },
   "page.settings.publicLedger": {
     message: "공개 장부",
     description: "Label when ledger is public",

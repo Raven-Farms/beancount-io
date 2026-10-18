@@ -4,6 +4,20 @@ export interface TranslationEntry {
 }
 
 const jaVisibilitySection: Record<string, TranslationEntry> = {
+  "page.settings.makePublicTitle": {
+    message: "この元帳を公開しますか？",
+    description:
+      "Title of the confirmation before a private ledger becomes public",
+  },
+  "page.settings.makePublicDescription": {
+    message:
+      "リンクを知っている人と検索エンジンが、この元帳の取引、残高、ファイル、履歴を閲覧できるようになります。",
+    description: "What becomes visible when a private ledger is made public",
+  },
+  "page.settings.makePublic": {
+    message: "公開する",
+    description: "Button that confirms making a private ledger public",
+  },
   "page.settings.publicLedger": {
     message: "公開元帳",
     description: "Label when ledger is public",
