@@ -58,7 +58,6 @@ Milestones m1–m23 are complete; no pending ADR014 follow-up milestones remain 
 
 ## Inbox
 
-- [171](./171.md) — The website's MCP pages name tools that no longer exist (from w1/m38/t008)
 
 The three MCP QA findings filed on 2026-09-21/22 were drained on 2026-09-23: [035](./done/035.md), [036](./done/036.md), and [037](./done/037.md) shipped with regression coverage.
 
@@ -68,6 +67,7 @@ The four mobile QA findings filed on 2026-09-16 were drained the same day: [031]
 
 Blocked notes live under [`blocked/`](./blocked/) with their reason and **Unblock:** condition; they keep their IDs and return to the open tree when work can resume.
 
+- [171](./blocked/171.md) — The website's MCP pages name tools that no longer exist — **blocked:** the pages live in the website's repository and must wait for the w1/m38 backend deploy. **Unblock:** the user routes the change there once the deploy is live.
 - [033](./blocked/033.md) — Slice-delete success precedes removal by minutes; a refetch resurrects the row — **blocked:** no async-apply code exists in this monorepo and the acceptance cannot be proven here. **Unblock:** hosted diagnosis naming the lagging layer, or a local full-stack repro. Cleared by the user (hosted access plus QA credentials).
 
 ## Absorbed CLI QA notes (m23–m27)
