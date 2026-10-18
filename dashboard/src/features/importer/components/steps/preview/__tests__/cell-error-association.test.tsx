@@ -29,6 +29,8 @@ async function openCell(props: Partial<Parameters<typeof EditableCell>[0]>) {
   const user = userEvent.setup();
   render(
     <EditableCell
+      label="Amount"
+      rowNumber={1}
       value="ACME"
       onChange={vi.fn()}
       error="Amount is required"
@@ -43,6 +45,8 @@ describe("a cell that is showing an error", () => {
   it("names the message from the collapsed control", () => {
     render(
       <EditableCell
+        label="Amount"
+        rowNumber={1}
         value="ACME"
         onChange={vi.fn()}
         error="Amount is required"
@@ -74,6 +78,8 @@ describe("a cell that is showing an error", () => {
   it("announces the message rather than only drawing it", () => {
     render(
       <EditableCell
+        label="Amount"
+        rowNumber={1}
         value="ACME"
         onChange={vi.fn()}
         error="Amount is required"
@@ -87,7 +93,14 @@ describe("a cell that is showing an error", () => {
 
 describe("a cell with nothing wrong", () => {
   it("describes nothing from the collapsed control", () => {
-    render(<EditableCell value="ACME" onChange={vi.fn()} />);
+    render(
+      <EditableCell
+        label="Amount"
+        rowNumber={1}
+        value="ACME"
+        onChange={vi.fn()}
+      />,
+    );
 
     const cell = screen.getByRole("button");
     expect(cell).not.toHaveAttribute("aria-invalid");
@@ -96,7 +109,15 @@ describe("a cell with nothing wrong", () => {
 
   it("still points a multiline editor at its hint", async () => {
     const user = userEvent.setup();
-    render(<EditableCell value="ACME" onChange={vi.fn()} multiline />);
+    render(
+      <EditableCell
+        label="Amount"
+        rowNumber={1}
+        value="ACME"
+        onChange={vi.fn()}
+        multiline
+      />,
+    );
     await user.click(screen.getByRole("button"));
 
     expect(describedText(screen.getByRole("textbox"))).toContain(

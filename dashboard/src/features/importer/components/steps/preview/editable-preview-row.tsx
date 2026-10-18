@@ -103,6 +103,8 @@ export function EditablePreviewRow({
             control={control}
             render={({ field }) => (
               <EditableCell
+                label={t("importer.preview.date")}
+                rowNumber={index + 1}
                 value={field.value}
                 displayValue={formatImportDateForDisplay(
                   field.value,
@@ -128,6 +130,8 @@ export function EditablePreviewRow({
             control={control}
             render={({ field }) => (
               <EditableCell
+                label={t("importer.preview.payee")}
+                rowNumber={index + 1}
                 value={field.value}
                 onChange={(value) => {
                   field.onChange(value);
@@ -148,6 +152,8 @@ export function EditablePreviewRow({
             control={control}
             render={({ field }) => (
               <EditableCell
+                label={t("importer.preview.description_column")}
+                rowNumber={index + 1}
                 value={field.value}
                 onChange={(value) => {
                   field.onChange(value);
@@ -171,6 +177,8 @@ export function EditablePreviewRow({
             control={control}
             render={({ field }) => (
               <EditableCell
+                label={t("importer.preview.amount")}
+                rowNumber={index + 1}
                 value={field.value}
                 onChange={(value) => {
                   field.onChange(value);
@@ -192,7 +200,7 @@ export function EditablePreviewRow({
             variant="ghost"
             size="icon"
             onClick={() => onDelete(index)}
-            aria-label={t("importer.preview.deleteRow")}
+            aria-label={t("importer.preview.deleteRow", { row: index + 1 })}
             className="h-8 w-8 text-muted-foreground hover:text-destructive"
           >
             <Trash2 className="h-4 w-4" />

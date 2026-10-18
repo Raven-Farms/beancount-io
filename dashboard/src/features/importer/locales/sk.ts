@@ -234,7 +234,7 @@ const skImporter: Record<string, TranslationEntry> = {
     description: "Table header for actions column",
   },
   "importer.preview.deleteRow": {
-    message: "Odstrániť riadok",
+    message: "Odstrániť riadok {row}",
     description: "Aria label for delete row button",
   },
   "importer.preview.emptyFileTitle": {
@@ -555,12 +555,12 @@ const skImporter: Record<string, TranslationEntry> = {
     description: "Count of additional import errors",
   },
   "importer.preview.editCellLabel": {
-    message: "Upraviť {field}. Aktuálna hodnota: {value}",
+    message: "Upraviť {field}, riadok {row}. Aktuálna hodnota: {value}",
     description: "Accessible label for an editable import cell",
   },
-  "importer.preview.field": {
-    message: "pole",
-    description: "Fallback name for an editable import field",
+  "importer.preview.editFieldLabel": {
+    message: "{field}, riadok {row}",
+    description: "Accessible label for the open editor of an import cell",
   },
   "importer.validation.dateRequired": {
     message: "Vyžaduje sa dátum",

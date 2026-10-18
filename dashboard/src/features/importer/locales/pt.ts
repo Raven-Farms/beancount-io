@@ -235,7 +235,7 @@ const ptImporter: Record<string, TranslationEntry> = {
     description: "Table header for actions column",
   },
   "importer.preview.deleteRow": {
-    message: "Excluir linha",
+    message: "Excluir linha {row}",
     description: "Aria label for delete row button",
   },
   "importer.preview.emptyFileTitle": {
@@ -535,12 +535,12 @@ const ptImporter: Record<string, TranslationEntry> = {
     description: "Count of additional import errors",
   },
   "importer.preview.editCellLabel": {
-    message: "Editar {field}. Valor atual: {value}",
+    message: "Editar {field}, linha {row}. Valor atual: {value}",
     description: "Accessible label for an editable import cell",
   },
-  "importer.preview.field": {
-    message: "campo",
-    description: "Fallback name for an editable import field",
+  "importer.preview.editFieldLabel": {
+    message: "{field}, linha {row}",
+    description: "Accessible label for the open editor of an import cell",
   },
   "importer.validation.dateRequired": {
     message: "A data é obrigatória",

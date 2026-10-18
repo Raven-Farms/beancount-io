@@ -234,7 +234,7 @@ const ukImporter: Record<string, TranslationEntry> = {
     description: "Table header for actions column",
   },
   "importer.preview.deleteRow": {
-    message: "Видалити рядок",
+    message: "Видалити рядок {row}",
     description: "Aria label for delete row button",
   },
   "importer.preview.emptyFileTitle": {
@@ -556,12 +556,12 @@ const ukImporter: Record<string, TranslationEntry> = {
     description: "Count of additional import errors",
   },
   "importer.preview.editCellLabel": {
-    message: "Редагувати {field}. Поточне значення: {value}",
+    message: "Редагувати {field}, рядок {row}. Поточне значення: {value}",
     description: "Accessible label for an editable import cell",
   },
-  "importer.preview.field": {
-    message: "поле",
-    description: "Fallback name for an editable import field",
+  "importer.preview.editFieldLabel": {
+    message: "{field}, рядок {row}",
+    description: "Accessible label for the open editor of an import cell",
   },
   "importer.validation.dateRequired": {
     message: "Дата обов'язкова",

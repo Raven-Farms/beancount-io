@@ -227,7 +227,7 @@ const zhImporter: Record<string, TranslationEntry> = {
     description: "Table header for actions column",
   },
   "importer.preview.deleteRow": {
-    message: "删除行",
+    message: "删除第 {row} 行",
     description: "Aria label for delete row button",
   },
   "importer.preview.emptyFileTitle": {
@@ -481,12 +481,12 @@ const zhImporter: Record<string, TranslationEntry> = {
     description: "Count of additional import errors",
   },
   "importer.preview.editCellLabel": {
-    message: "编辑 {field}。当前值：{value}",
+    message: "编辑 {field}，第 {row} 行。当前值：{value}",
     description: "Accessible label for an editable import cell",
   },
-  "importer.preview.field": {
-    message: "领域",
-    description: "Fallback name for an editable import field",
+  "importer.preview.editFieldLabel": {
+    message: "{field}，第 {row} 行",
+    description: "Accessible label for the open editor of an import cell",
   },
   "importer.validation.dateRequired": {
     message: "日期为必填项",

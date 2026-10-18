@@ -236,7 +236,7 @@ const faImporter: Record<string, TranslationEntry> = {
     description: "Table header for actions column",
   },
   "importer.preview.deleteRow": {
-    message: "حذف ردیف",
+    message: "حذف ردیف {row}",
     description: "Aria label for delete row button",
   },
   "importer.preview.emptyFileTitle": {
@@ -513,12 +513,12 @@ const faImporter: Record<string, TranslationEntry> = {
     description: "Count of additional import errors",
   },
   "importer.preview.editCellLabel": {
-    message: "ویرایش {field}. مقدار فعلی: {value}\nزمینه",
+    message: "ویرایش {field}، ردیف {row}. مقدار فعلی: {value}",
     description: "Accessible label for an editable import cell",
   },
-  "importer.preview.field": {
-    message: "فیلد",
-    description: "Fallback name for an editable import field",
+  "importer.preview.editFieldLabel": {
+    message: "{field}، ردیف {row}",
+    description: "Accessible label for the open editor of an import cell",
   },
   "importer.validation.dateRequired": {
     message: "تاریخ لازم است",

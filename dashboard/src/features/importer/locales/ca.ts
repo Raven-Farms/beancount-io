@@ -238,7 +238,7 @@ const caImporter: Record<string, TranslationEntry> = {
     description: "Table header for actions column",
   },
   "importer.preview.deleteRow": {
-    message: "Elimina la fila",
+    message: "Elimina la fila {row}",
     description: "Aria label for delete row button",
   },
   "importer.preview.emptyFileTitle": {
@@ -538,12 +538,12 @@ const caImporter: Record<string, TranslationEntry> = {
     description: "Count of additional import errors",
   },
   "importer.preview.editCellLabel": {
-    message: "Edita {field}. Valor actual: {value}",
+    message: "Edita {field}, fila {row}. Valor actual: {value}",
     description: "Accessible label for an editable import cell",
   },
-  "importer.preview.field": {
-    message: "camp",
-    description: "Fallback name for an editable import field",
+  "importer.preview.editFieldLabel": {
+    message: "{field}, fila {row}",
+    description: "Accessible label for the open editor of an import cell",
   },
   "importer.validation.dateRequired": {
     message: "La data és necessària",

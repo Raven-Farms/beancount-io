@@ -231,7 +231,7 @@ const koImporter: Record<string, TranslationEntry> = {
     description: "Table header for actions column",
   },
   "importer.preview.deleteRow": {
-    message: "행 삭제",
+    message: "{row}행 삭제",
     description: "Aria label for delete row button",
   },
   "importer.preview.emptyFileTitle": {
@@ -487,12 +487,12 @@ const koImporter: Record<string, TranslationEntry> = {
     description: "Count of additional import errors",
   },
   "importer.preview.editCellLabel": {
-    message: "{field}을(를) 편집합니다. 현재 값: {value}",
+    message: "{row}행의 {field}을(를) 편집합니다. 현재 값: {value}",
     description: "Accessible label for an editable import cell",
   },
-  "importer.preview.field": {
-    message: "필드",
-    description: "Fallback name for an editable import field",
+  "importer.preview.editFieldLabel": {
+    message: "{field}, {row}행",
+    description: "Accessible label for the open editor of an import cell",
   },
   "importer.validation.dateRequired": {
     message: "날짜가 필요합니다",

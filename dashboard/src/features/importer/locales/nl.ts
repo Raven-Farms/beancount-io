@@ -236,7 +236,7 @@ const nlImporter: Record<string, TranslationEntry> = {
     description: "Table header for actions column",
   },
   "importer.preview.deleteRow": {
-    message: "Rij verwijderen",
+    message: "Rij {row} verwijderen",
     description: "Aria label for delete row button",
   },
   "importer.preview.emptyFileTitle": {
@@ -514,12 +514,12 @@ const nlImporter: Record<string, TranslationEntry> = {
     description: "Count of additional import errors",
   },
   "importer.preview.editCellLabel": {
-    message: "Bewerk {field}. Huidige waarde: {value}",
+    message: "Bewerk {field}, rij {row}. Huidige waarde: {value}",
     description: "Accessible label for an editable import cell",
   },
-  "importer.preview.field": {
-    message: "veld",
-    description: "Fallback name for an editable import field",
+  "importer.preview.editFieldLabel": {
+    message: "{field}, rij {row}",
+    description: "Accessible label for the open editor of an import cell",
   },
   "importer.validation.dateRequired": {
     message: "Datum is vereist",

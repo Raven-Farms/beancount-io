@@ -238,7 +238,7 @@ const deImporter: Record<string, TranslationEntry> = {
     description: "Table header for actions column",
   },
   "importer.preview.deleteRow": {
-    message: "Zeile löschen",
+    message: "Zeile {row} löschen",
     description: "Aria label for delete row button",
   },
   "importer.preview.emptyFileTitle": {
@@ -516,12 +516,12 @@ const deImporter: Record<string, TranslationEntry> = {
     description: "Count of additional import errors",
   },
   "importer.preview.editCellLabel": {
-    message: "Bearbeiten Sie {field}. Aktueller Wert: {value}",
+    message: "Bearbeiten Sie {field}, Zeile {row}. Aktueller Wert: {value}",
     description: "Accessible label for an editable import cell",
   },
-  "importer.preview.field": {
-    message: "Feld",
-    description: "Fallback name for an editable import field",
+  "importer.preview.editFieldLabel": {
+    message: "{field}, Zeile {row}",
+    description: "Accessible label for the open editor of an import cell",
   },
   "importer.validation.dateRequired": {
     message: "Datum ist erforderlich",
