@@ -15,15 +15,3 @@
 - ~~**044**~~ — Money flow shrinks accounts to ten characters at the largest text size — dropped 2026-10-15: reproduces only at AX5; at AX2 postings stay identifiable ("Assets:US…:Checking", "Income:US…le:Salary"), which is [w4/014](../w4/done/014.md)'s acceptance. Out of scope per the AX2 ceiling.
 
 ## Inbox
-
-Mobile QA findings from 2026-10-15, triaged the same day. Order is suggested, highest impact first. Every note is sub-hour and owned by `mobile`, except 036, which also needs backend-v2.
-
-**Majors: each can commit an invalid ledger in one tap**
-
-
-**Minors: wrong or misleading output**
-
-- [045 — In Persian (RTL), text inputs stay pinned to the physical left (Profile, Payee)](./045.md) — mobile QA 2026-10-15
-
-**Minors: polish**
-

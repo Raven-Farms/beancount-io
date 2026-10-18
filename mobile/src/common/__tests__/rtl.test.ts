@@ -237,5 +237,13 @@ describe("rtl", () => {
       );
       expect(load(true).rtl.LEADING_TEXT_ALIGN).toBe("left");
     });
+
+    it("branches an input's alignment on direction, unlike a Text's", () => {
+      // An iOS TextInput gets no left/right swap: styled "left" (or natural),
+      // Persian inputs stayed on the physical left while their labels
+      // mirrored (w0/045). So the input value is the explicit branch.
+      expect(load(true).rtl.leadingInputTextAlign()).toBe("right");
+      expect(load(false).rtl.leadingInputTextAlign()).toBe("left");
+    });
   });
 });

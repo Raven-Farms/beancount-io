@@ -19,7 +19,7 @@ import { fontSizes, fontWeights, space, useTheme } from "@/common/theme";
 import { useThemeStyle } from "@/common/hooks";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { LedgerGuard } from "@/components/ledger-guard";
-import { LEADING_TEXT_ALIGN } from "@/common/rtl";
+import { LEADING_TEXT_ALIGN, leadingInputTextAlign } from "@/common/rtl";
 import { useAgentChat } from "./use-agent-chat";
 import { MessageBubble } from "./message-bubble";
 import { messageText } from "./message-text";
@@ -111,7 +111,7 @@ const getStyles = (theme: ColorTheme) =>
       borderColor: theme.controlBorder,
       color: theme.black,
       fontSize: fontSizes.lg,
-      textAlign: LEADING_TEXT_ALIGN,
+      textAlign: leadingInputTextAlign(),
     },
     sendButton: {
       width: 40,

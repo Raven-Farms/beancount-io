@@ -33,7 +33,7 @@ import {
   space,
   useTheme,
 } from "@/common/theme";
-import { LEADING_TEXT_ALIGN } from "@/common/rtl";
+import { LEADING_TEXT_ALIGN, leadingInputTextAlign } from "@/common/rtl";
 import { isGravatarUrl } from "@/common/user-display";
 import type { ColorTheme } from "@/types/theme-props";
 import { Button } from "@/components/button";
@@ -94,14 +94,20 @@ const getStyles = (theme: ColorTheme) =>
       lineHeight: 22,
       color: theme.text01,
       paddingVertical: space.xxs,
-      textAlign: LEADING_TEXT_ALIGN,
+      textAlign: leadingInputTextAlign(),
     },
     readOnlyRow: {
       flexDirection: "row",
       alignItems: "center",
       gap: space.sm,
     },
-    readOnlyValue: { flex: 1, color: theme.black80 },
+    // A Text reusing the input style: it needs the Text rule back, or iOS
+    // flips the input-only "right" to the wrong edge (w0/045).
+    readOnlyValue: {
+      flex: 1,
+      color: theme.black80,
+      textAlign: LEADING_TEXT_ALIGN,
+    },
     hint: {
       fontSize: fontSizes.sm,
       lineHeight: 18,

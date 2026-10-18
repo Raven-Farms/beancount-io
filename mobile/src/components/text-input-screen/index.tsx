@@ -23,7 +23,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LoadingTile } from "@/components/loading-tile";
 import { FadeInView } from "@/components/crossfade";
-import { LEADING_TEXT_ALIGN } from "@/common/rtl";
+import { LEADING_TEXT_ALIGN, leadingInputTextAlign } from "@/common/rtl";
 import { useStackKeyboardOffset } from "@/common/hooks/use-stack-keyboard-offset";
 
 const MAX_SUGGESTIONS = 30;
@@ -45,6 +45,7 @@ const getStyles = (theme: ColorTheme) =>
       color: theme.text01,
       fontSize: fontSizes.xl,
       paddingVertical: 8,
+      textAlign: leadingInputTextAlign(),
     },
     inputMultiline: {
       flex: 1,

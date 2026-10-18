@@ -135,9 +135,25 @@ export function isRtlLayout(): boolean {
  * all: every depth starts at the same edge.
  *
  * So: UI copy needs nothing; a `Text` that holds ledger data and is wider than
- * its content needs this.
+ * its content needs this. A `TextInput` needs `leadingInputTextAlign()`
+ * instead — see there.
  */
 export const LEADING_TEXT_ALIGN = "left" as const;
+
+/**
+ * `textAlign` for a `TextInput` whose text, placeholder and caret start at the
+ * layout's leading edge.
+ *
+ * The opposite rule from `LEADING_TEXT_ALIGN`, on purpose: an iOS `TextInput`
+ * does not get the left/right swap `Text` does. Styled `"left"` — or left at
+ * the natural default — Persian inputs stayed on the physical left while their
+ * labels and the screen around them mirrored (w0/045). So an input takes the
+ * explicit branch a `Text` must never take. Read when styles are built; a
+ * direction change restarts the app, so it cannot go stale.
+ */
+export function leadingInputTextAlign(): "left" | "right" {
+  return isRtlLayout() ? "right" : "left";
+}
 
 /**
  * Pins a subtree to left-to-right, whatever the app's direction.

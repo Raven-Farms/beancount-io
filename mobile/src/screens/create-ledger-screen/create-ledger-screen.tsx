@@ -32,7 +32,7 @@ import {
 } from "@/common/theme";
 import { useLedgerDirectory } from "@/common/ledger-directory/ledger-directory-provider";
 import { ledgerVar } from "@/common/vars";
-import { LEADING_TEXT_ALIGN } from "@/common/rtl";
+import { LEADING_TEXT_ALIGN, leadingInputTextAlign } from "@/common/rtl";
 import type { ColorTheme } from "@/types/theme-props";
 import {
   classifyCreateLedgerError,
@@ -91,7 +91,7 @@ const getStyles = (theme: ColorTheme) =>
       color: theme.text01,
       fontSize: fontSizes.md,
       paddingVertical: space.xs,
-      textAlign: LEADING_TEXT_ALIGN,
+      textAlign: leadingInputTextAlign(),
     },
     hint: {
       color: theme.black80,
