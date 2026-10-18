@@ -72,6 +72,6 @@ Bex login refresh succeeded, but its separate inventory endpoint returned HTTP 5
 ## Final local/hosted verification
 
 - Backend typecheck and 5,514 unit tests pass; five PostgreSQL/CLI integration tests pass. Dashboard typecheck, full unit suite, 175-test settings retest, 17 translation checks, full `yarn format:check`, full `yarn lint` (including Knip), and production build pass.
-- Staged gitleaks scan and GitHub Secret scan pass. GitHub backend/dashboard CI was still running at this record; no pending job is counted as passed.
+- Staged gitleaks scan and GitHub Secret scan pass. [Backend CI](https://github.com/bex-co/beancount-io/actions/runs/39080597909) completed successfully, including its unit suite and OpenAPI drift gate. [Dashboard CI](https://github.com/bex-co/beancount-io/actions/runs/39080597901) has passed format/lint and is still running tests; no pending job is counted as passed.
 - Backend deployment logs explicitly resolved `9dfc62757faff9e8d1ae427d6b13ebed9b983fe2`; dashboard checkout/build used the same revision. Both report SUCCESS. The hosted verification confirms the reported paid-tier mismatch is fixed, but does not replace full cohort execution.
 - Completed tasks are under this milestone's `done/`. This milestone remains unchecked and is parked under `blocked/` until the actual backfill and final aggregate read-back hold.
