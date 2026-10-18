@@ -531,6 +531,25 @@ const frJournal: Record<string, TranslationEntry> = {
     description:
       "Shown under a New Entry account field naming an account opened after the entry; {date} is its open date",
   },
+  "journal.discardEntryEditTitle": {
+    message: "Abandonner la modification ?",
+    description:
+      "Title of the confirmation shown when leaving Entry Context with unsaved source edits",
+  },
+  "journal.discardEntryEditDescription": {
+    message:
+      "Vos modifications de la source de cette écriture n'ont pas été enregistrées.",
+    description: "Body of the Entry Context discard confirmation",
+  },
+  "journal.keepEditing": {
+    message: "Continuer la modification",
+    description:
+      "Button that returns to the Entry Context editor with the edit intact",
+  },
+  "journal.discardEntryEdit": {
+    message: "Abandonner",
+    description: "Button that discards the Entry Context edit and leaves",
+  },
   "journal.autoAmount": {
     message: "automatique",
     description: "Label for an automatically balanced amount",

@@ -497,6 +497,24 @@ const koJournal: Record<string, TranslationEntry> = {
     description:
       "Shown under a New Entry account field naming an account opened after the entry; {date} is its open date",
   },
+  "journal.discardEntryEditTitle": {
+    message: "편집 내용을 버릴까요?",
+    description:
+      "Title of the confirmation shown when leaving Entry Context with unsaved source edits",
+  },
+  "journal.discardEntryEditDescription": {
+    message: "이 항목의 원본에 대한 변경 사항이 저장되지 않았습니다.",
+    description: "Body of the Entry Context discard confirmation",
+  },
+  "journal.keepEditing": {
+    message: "계속 편집",
+    description:
+      "Button that returns to the Entry Context editor with the edit intact",
+  },
+  "journal.discardEntryEdit": {
+    message: "버리기",
+    description: "Button that discards the Entry Context edit and leaves",
+  },
   "journal.autoAmount": {
     message: "자동",
     description: "Label for an automatically balanced amount",

@@ -546,6 +546,24 @@ const ruJournal: Record<string, TranslationEntry> = {
     description:
       "Shown under a New Entry account field naming an account opened after the entry; {date} is its open date",
   },
+  "journal.discardEntryEditTitle": {
+    message: "Отменить правку?",
+    description:
+      "Title of the confirmation shown when leaving Entry Context with unsaved source edits",
+  },
+  "journal.discardEntryEditDescription": {
+    message: "Изменения исходного текста этой записи не сохранены.",
+    description: "Body of the Entry Context discard confirmation",
+  },
+  "journal.keepEditing": {
+    message: "Продолжить правку",
+    description:
+      "Button that returns to the Entry Context editor with the edit intact",
+  },
+  "journal.discardEntryEdit": {
+    message: "Отменить",
+    description: "Button that discards the Entry Context edit and leaves",
+  },
   "journal.autoAmount": {
     message: "авто",
     description: "Label for an automatically balanced amount",

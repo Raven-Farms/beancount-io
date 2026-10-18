@@ -531,6 +531,25 @@ const esJournal: Record<string, TranslationEntry> = {
     description:
       "Shown under a New Entry account field naming an account opened after the entry; {date} is its open date",
   },
+  "journal.discardEntryEditTitle": {
+    message: "¿Descartar la edición?",
+    description:
+      "Title of the confirmation shown when leaving Entry Context with unsaved source edits",
+  },
+  "journal.discardEntryEditDescription": {
+    message:
+      "Los cambios en el código fuente de este asiento no se han guardado.",
+    description: "Body of the Entry Context discard confirmation",
+  },
+  "journal.keepEditing": {
+    message: "Seguir editando",
+    description:
+      "Button that returns to the Entry Context editor with the edit intact",
+  },
+  "journal.discardEntryEdit": {
+    message: "Descartar",
+    description: "Button that discards the Entry Context edit and leaves",
+  },
   "journal.autoAmount": {
     message: "automático",
     description: "Label for an automatically balanced amount",

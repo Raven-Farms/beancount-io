@@ -500,6 +500,24 @@ const zhJournal: Record<string, TranslationEntry> = {
     description:
       "Shown under a New Entry account field naming an account opened after the entry; {date} is its open date",
   },
+  "journal.discardEntryEditTitle": {
+    message: "放弃编辑？",
+    description:
+      "Title of the confirmation shown when leaving Entry Context with unsaved source edits",
+  },
+  "journal.discardEntryEditDescription": {
+    message: "对此分录源文本的更改尚未保存。",
+    description: "Body of the Entry Context discard confirmation",
+  },
+  "journal.keepEditing": {
+    message: "继续编辑",
+    description:
+      "Button that returns to the Entry Context editor with the edit intact",
+  },
+  "journal.discardEntryEdit": {
+    message: "放弃",
+    description: "Button that discards the Entry Context edit and leaves",
+  },
   "journal.autoAmount": {
     message: "汽车",
     description: "Label for an automatically balanced amount",

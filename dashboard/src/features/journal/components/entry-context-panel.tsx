@@ -65,6 +65,13 @@ export interface EntryContextPanelProps {
    * owning dialog can skip opener focus restoration.
    */
   onSourceNavigate?: () => void;
+  /** Told whenever the source editor gains or loses unsaved changes. */
+  onDirtyChange?: (dirty: boolean) => void;
+  /**
+   * Asked before leaving for the source file; calls `proceed` when it may
+   * go, so an owner can confirm discarding unsaved changes first.
+   */
+  confirmLeave?: (proceed: () => void) => void;
 }
 
 function EntryContextLoading() {
@@ -94,7 +101,9 @@ function EntryContextMain({
   entry,
   onGoToFile,
   canWrite,
+  onDirtyChange,
 }: {
+  onDirtyChange?: (dirty: boolean) => void;
   data: GetLedgerEntryContextQuery["getLedgerEntryContext"];
   entryHash: string;
   entry: JournalDirectiveType | null | undefined;
@@ -142,6 +151,10 @@ function EntryContextMain({
   useEffect(() => {
     setHasChanges(sourceText !== originalSource);
   }, [sourceText, originalSource]);
+
+  useEffect(() => {
+    onDirtyChange?.(editable && hasChanges);
+  }, [editable, hasChanges, onDirtyChange]);
 
   const handleSave = async () => {
     if (!editable || !entryHash || !hasChanges || isSaving) return;
@@ -449,6 +462,8 @@ export function EntryContextPanel({
   onSuccess,
   onDeleted,
   onSourceNavigate,
+  onDirtyChange,
+  confirmLeave,
 }: EntryContextPanelProps) {
   const { t } = useTranslations();
   const formatError = useErrorMessage();
@@ -524,11 +539,15 @@ export function EntryContextPanel({
   };
 
   const handleGoToFile = (filename: string, lineNumber: number) => {
-    onSourceNavigate?.();
-    fileNavigate(ledgerId, "file", filename, {
-      lineNumber,
-      editMode: canWrite,
-    });
+    const go = () => {
+      onSourceNavigate?.();
+      fileNavigate(ledgerId, "file", filename, {
+        lineNumber,
+        editMode: canWrite,
+      });
+    };
+    if (confirmLeave) confirmLeave(go);
+    else go();
   };
 
   if (loading) {
@@ -547,6 +566,7 @@ export function EntryContextPanel({
         entry={entry}
         onGoToFile={handleGoToFile}
         canWrite={canWrite}
+        onDirtyChange={onDirtyChange}
       />
     );
   }
