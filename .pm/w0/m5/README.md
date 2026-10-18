@@ -1,6 +1,6 @@
 # w0 · m5 — Directive counting runs on the worker pool, not the request thread
 
-**Worker:** worker1 **Goal:** the ledger service's directive-limit precheck and `GET …/directive-count` parse on the rustledger worker pool, under its queue bound and timeout, and reuse the current count for an unchanged commit, so one large ledger's writes no longer stall requests for every other ledger **Status:** todo (t001–t002 done)
+**Worker:** worker1 **Goal:** the ledger service's directive-limit precheck and `GET …/directive-count` parse on the rustledger worker pool, under its queue bound and timeout, and reuse the current count for an unchanged commit, so one large ledger's writes no longer stall requests for every other ledger **Status:** todo (t001–t003 done)
 
 ## Tasks (in order)
 
@@ -8,7 +8,7 @@
 | ---- | ----- | --- | ---------- |
 | t001 | Worker-pool `directive-count` task | 45m | — | — **DONE**
 | t002 | Route both directive counts through it, and reuse the current count per commit | 45m | t001 | — **DONE**
-| t003 | Inventory the remaining request-thread `Ledger.fromFiles` calls | 20m | t002 |
+| t003 | Inventory the remaining request-thread `Ledger.fromFiles` calls | 20m | t002 | — **DONE**
 | t004 | Simplify | 15m | t003 |
 | t005 | Test coverage | 30m | t003, t004 |
 | t006 | Closeout | 10m | t005 |
