@@ -11,6 +11,8 @@ from __future__ import annotations
 import ast
 import os
 import re
+import shlex
+import unicodedata
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Annotated
@@ -90,8 +92,38 @@ def _forward(operation: str, ctx: typer.Context, config: Path | None) -> None:
         # Beangulp loads `-e` with Beancount, which answers an include it
         # cannot open with a traceback; the helper names it (w5/120, w5/438).
         launch.helper_json(["check", "--file", placed["ledger"]])
+    if placed:
+        _refuse_noncanonical_existing(Path(placed["ledger"]))
     code = launch.run_optional_script("beangulp", script, [operation, *ctx.args], **placed)
     raise typer.Exit(code)
+
+
+def _refuse_noncanonical_existing(root: Path) -> None:
+    """Do not let Beangulp silently deduplicate against a misread ledger.
+
+    The user's script loads `-e` through stock Beancount, outside the helper's
+    BOM/NFC compatibility layer. Refuse before running it or opening `-o`;
+    importing the script here could itself extract or archive documents.
+    """
+    for member in output.ledger_closure(root):
+        if output.is_encrypted(member):
+            continue
+        try:
+            raw = member.read_bytes()
+        except OSError:
+            continue  # Existing unreadable-include handling and native errors still apply.
+        if raw.startswith(b"\xef\xbb\xbf"):
+            remedy = shlex.join(["bea", "format", "-i", str(member)])
+            raise UsageError(
+                f"Existing ledger file {member} starts with a UTF-8 BOM, which Beangulp cannot read reliably "
+                f"for duplicate detection. Run {remedy} to strip the mark, then retry. Nothing was extracted."
+            )
+        if not unicodedata.is_normalized("NFC", raw.decode("utf-8", errors="surrogateescape")):
+            raise UsageError(
+                f"Existing ledger file {member} is not Unicode NFC. Beangulp reads it without bea's "
+                "normalization, so duplicate detection may miss entries. Re-save that file in Unicode NFC, "
+                "then retry; 'bea format -i' does not normalize Unicode. Nothing was extracted."
+            )
 
 
 def _extract_ledgers(ctx: typer.Context) -> list[Path]:

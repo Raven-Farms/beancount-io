@@ -616,6 +616,15 @@ inside `try`/`if`/`with` is the same module and is refused the same way, and an
 `Ingest(` in a comment or docstring calls nothing; a script with an `if __name__ == "__main__":` block runs, whatever it names its
 importer list and wherever its `Ingest` call lives.
 
+`ingest extract -e/--existing LEDGER` uses Beangulp's own loader for duplicate
+detection. It refuses a plaintext root or included file with a UTF-8 BOM or text outside
+Unicode NFC (exit **2**, naming the file), before running the ingest script or
+writing output. Run the printed `bea format -i FILE` command to remove a BOM.
+For Unicode normalization, re-save the named file in NFC; `format -i` does not
+renormalize existing text. Retry extraction after correcting the file. This
+guard applies to all text in those plaintext files, including comments and strings;
+encrypted files pass through to Beangulp without this preflight inspection.
+
 ### `bea format` writes to stdout unless you ask for a file
 
 Formatting used to rewrite whatever path it was given. It now prints the
