@@ -140,7 +140,13 @@ An `include` that reaches a file without read permission, a directory, or a
 broken symbolic link also exits **2** on every command, `bea check` included,
 in one line naming the include and the file that includes it; `--allow-errors`
 does not skip it. An include that matches nothing stays an ordinary ledger
-error. One file reached under two names (a symbolic or hard link, or another
+error. A glob include in plaintext source also exits **2** naming any
+directory it needs to list but cannot read, rather than loading a partial
+ledger; this applies to cached loads too. Unmatched directories and hidden directories the pattern skips do
+not need read permission. `format` reports the same traversal failures in its
+missing-include results (`--check` and `-i` fail; `--dry-run` keeps its usual
+report-only status).
+One file reached under two names (a symbolic or hard link, or another
 letter case or Unicode form on a volume that ignores them) is loaded once, from
 its first include, and each repeat is a `Duplicate include` ledger error naming
 both names; `price export` copies it once and comments out the repeat.

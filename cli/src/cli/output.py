@@ -28,6 +28,7 @@ import typer
 from cli import context
 from cli.config import package_version
 from cli.errors import AuthError, BeaError, LedgerError, UsageError, to_bea_error
+from cli.include_glob import check_glob
 from cli.paths import expand_path
 from cli.utils import atomic_write, inert_text, single_line
 
@@ -425,6 +426,7 @@ def _include_matches(source: Path, raw: str) -> tuple[list[Path], list[Path]]:
     not a regular file resolves nothing, and the loader cannot read it.
     """
     pattern = raw if Path(raw).is_absolute() else str(source.parent / raw)
+    check_glob(pattern)
     # Named as the loader names them: it `normpath`s each match, so
     # `link/../other.bean` through a symlinked `link` is the `other.bean`
     # beside the includer, not the one beside the link's target (w5/451).
@@ -544,7 +546,19 @@ def _walk_closure(*roots: Path) -> tuple[list[Path], list[MissingInclude], list[
                 # A managed price feed: the loader fetches it, so there is no
                 # file here to read, format, alias, or report as missing.
                 continue
-            matches, others = _include_matches(current, _unescape(raw))
+            try:
+                matches, others = _include_matches(current, _unescape(raw))
+            except OSError as exc:
+                failed = Path(os.fsdecode(exc.filename)) if exc.filename else current
+                unreadable.append(failed)
+                missing.append(
+                    MissingInclude(
+                        include=raw,
+                        source=current,
+                        reason=f"{failed} cannot be read: {exc.strerror or type(exc).__name__}",
+                    )
+                )
+                continue
             if matches:
                 for found in matches:
                     named_by.setdefault(found, (raw, current))

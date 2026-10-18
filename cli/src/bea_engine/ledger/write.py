@@ -27,6 +27,7 @@ from pathlib import Path
 from typing import Any
 
 from bea_engine import stopping
+from bea_engine.include_glob import check_glob
 from bea_engine.ledger.text import (
     bea_command,
     escape_format_characters,
@@ -424,6 +425,15 @@ class LedgerSnapshot:
 
 def _glob_members(pattern: str) -> tuple[Path, ...]:
     """The files an include pattern matches now, each named as the loader names it."""
+    try:
+        check_glob(pattern)
+    except OSError as exc:
+        failed = os.fsdecode(exc.filename) if exc.filename else pattern
+        reason = exc.strerror or type(exc).__name__
+        raise UsageError(
+            f"Cannot expand include glob {pattern!r}: {failed} cannot be read: {reason}. "
+            "Correct its permissions, then retry."
+        ) from None
     return tuple(sorted(Path(os.path.normpath(os.path.abspath(p))) for p in glob.glob(pattern, recursive=True)))
 
 
