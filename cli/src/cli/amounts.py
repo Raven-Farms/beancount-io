@@ -40,7 +40,9 @@ def parse_decimal_number(value: str) -> Decimal:
     return Decimal(text)
 
 
-_ZERO_DIVISOR = re.compile(r"/\s*[-+]?(?:0+(?:\.0*)?|\.0+)(?![\d.A-Z'_-])")
+# A slash currency needs a letter somewhere in its token: /0-J is a currency,
+# while /0-5 holds a zero divisor followed by subtraction.
+_ZERO_DIVISOR = re.compile(r"/\s*[-+]?(?:0+(?:\.0*)?|\.0+)(?![\d.]|[A-Z0-9'._-]*[A-Z])")
 """A literal zero divisor in amount arithmetic, which segfaults Beancount's parser."""
 
 #: Ledger text no amount arithmetic is in: strings, `;` comments, and the

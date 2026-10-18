@@ -137,9 +137,10 @@ def refuse_zero_divisor(text: str) -> None:
     The frontend's `check_decimal_notation` makes the same check for flag
     input; a bulk row's amount fragment reaches the engine without passing
     it. Quoted labels and comments are text, and anything computed
-    (`100/(2-2)`) is still upstream's to answer.
+    (`100/(2-2)`) is still upstream's to answer. Slash currencies such as
+    /0-J need a letter in their token; /0-5 instead divides by zero.
     """
-    if re.search(r"/\s*[-+]?(?:0+(?:\.0*)?|\.0+)(?![\d.A-Z'_-])", _QUOTED_OR_COMMENT.sub("", text)):
+    if re.search(r"/\s*[-+]?(?:0+(?:\.0*)?|\.0+)(?![\d.]|[A-Z0-9'._-]*[A-Z])", _QUOTED_OR_COMMENT.sub("", text)):
         raise ValueError(
             f"Division by zero in {text.strip()!r}. Beancount evaluates amount arithmetic while parsing, "
             "and a zero divisor crashes it outright, so bea refuses the expression instead of sending it."
