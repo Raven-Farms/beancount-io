@@ -8,7 +8,13 @@ vi.mock("@/common/root-route/shell-component", () => ({
 vi.mock("@/common/root-route/root-component", () => ({
   RootComponent: () => null,
 }));
-vi.mock("@/common/server-fn", () => ({ fetchUserProfile: vi.fn() }));
+vi.mock("@/common/server-fn", () => ({
+  fetchUserProfile: vi.fn(async () => ({ status: "signed-out" as const })),
+  toAuthContext: () => ({
+    userProfile: null,
+    authStatus: "signed-out" as const,
+  }),
+}));
 vi.mock("@/i18n/detect-language", () => ({ detectLanguage: () => "en" }));
 
 import { Route } from "../__root";

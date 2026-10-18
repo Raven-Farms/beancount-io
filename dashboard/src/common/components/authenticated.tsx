@@ -1,4 +1,5 @@
 import { useIsAuthenticated } from "@/common/hooks/use-is-authenticated";
+import { useAuthStatus } from "@/common/hooks/use-auth-status";
 
 type AuthenticatedProps = {
   children: React.ReactNode;
@@ -12,7 +13,13 @@ type AuthenticatedProps = {
  */
 export const Authenticated = ({ children, fallback }: AuthenticatedProps) => {
   const isAuthenticated = useIsAuthenticated();
-  // During SSR and initial client render, always show fallback to match server
+  const authStatus = useAuthStatus();
+  // While the identity probe is unavailable (an API outage, not a sign-out),
+  // show neither side: the fallback is signed-out UI such as "Log In", which
+  // would tell a signed-in user their session is gone (w3/646).
+  if (authStatus === "unavailable") {
+    return null;
+  }
   if (!isAuthenticated) {
     return fallback ?? null;
   }

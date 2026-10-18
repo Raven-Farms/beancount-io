@@ -48,6 +48,15 @@ const ADVANCED_FILTER_ERROR =
   /^(?:Illegal character|Trailing tokens|Unexpected end of filter|Unexpected token|Expected .+, got|Expected : or comparison|Filter pattern exceeds)/;
 
 export function getErrorMessageKey(error: unknown): string {
+  // requireAuth's outage throw (w3/646), recognized by name so it survives
+  // SSR error serialization; it carries the probe failure's own key.
+  if (error instanceof Error && error.name === "AuthUnavailableError") {
+    const key = (error as { messageKey?: unknown }).messageKey;
+    return typeof key === "string" && key.startsWith("common.errors.")
+      ? key
+      : "common.errors.serviceUnavailable";
+  }
+
   if (CombinedGraphQLErrors.is(error)) {
     for (const gqlError of error.errors) {
       if (gqlError.extensions?.code !== "BAD_USER_INPUT") continue;
