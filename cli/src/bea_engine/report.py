@@ -882,6 +882,9 @@ def _display_precision(filtered: Any) -> dict[str, int]:
     """
     from beancount.core.data import Balance, Transaction
 
+    from bea_engine.ledger.reader import forget_source_lines
+
+    forget_source_lines()
     precision: dict[str, int] = {}
     # A leg Beancount interpolated holds units times cost or price, with that
     # rate's digits: an amount nobody wrote. Once the ledger writes fractional
@@ -892,22 +895,55 @@ def _display_precision(filtered: Any) -> dict[str, int]:
     # is the one evidence of its subunits: rounding a 31.5 cash leg to 32
     # would misstate the balance, so it still counts.
     inferred: dict[str, int] = {}
+    pending: list[tuple[Any, Any]] = []
 
-    def learn(number: Any, currency: Any, into: dict[str, int]) -> None:
+    def learn(number: Any, currency: Any, into: dict[str, int], limit: int | None = None) -> None:
         if not isinstance(number, Decimal) or not number.is_finite() or not isinstance(currency, str):
             return
         exponent = number.as_tuple().exponent
         digits = max(0, -exponent) if isinstance(exponent, int) else 0
+        if limit is not None:
+            digits = min(digits, limit)
         into[currency] = max(digits, into.get(currency, 0))
 
     for entry in filtered.ledger.all_entries:
         if isinstance(entry, Transaction):
             for posting in entry.postings:
                 if posting.units is not None:
-                    interpolated = bool((posting.meta or {}).get("__automatic__"))
-                    learn(posting.units.number, posting.units.currency, inferred if interpolated else precision)
+                    if (posting.meta or {}).get("__automatic__"):
+                        pending.append((entry, posting))
+                    else:
+                        learn(posting.units.number, posting.units.currency, precision)
         elif isinstance(entry, Balance):
             learn(entry.amount.number, entry.amount.currency, precision)
+    # Only a fractional inferred amount in a currency without written
+    # subunits needs source evidence. The parser records the written @@ total
+    # in its display context before dividing it into a repeating unit price.
+    sources: dict[str, tuple[tuple[str, ...], list[int]]] = {}
+    limits: dict[tuple[str, int], dict[str, int] | None] = {}
+    for entry, posting in pending:
+        if precision.get(posting.units.currency):
+            continue
+        number = posting.units.number
+        limit = None
+        exponent = number.as_tuple().exponent if isinstance(number, Decimal) else 0
+        meta = entry.meta or {}
+        filename, lineno = meta.get("filename"), meta.get("lineno")
+        if (
+            isinstance(number, Decimal)
+            and number.is_finite()
+            and isinstance(exponent, int)
+            and exponent < 0
+            and isinstance(filename, str)
+            and isinstance(lineno, int)
+            and lineno > 0
+        ):
+            key = (filename, lineno)
+            if key not in limits:
+                limits[key] = _written_transaction_precision(*key, sources)
+            written = limits[key]
+            limit = written.get(posting.units.currency) if written is not None else None
+        learn(number, posting.units.currency, inferred, limit)
     for currency, digits in inferred.items():
         if not precision.get(currency):
             precision[currency] = digits
@@ -915,6 +951,74 @@ def _display_precision(filtered: Any) -> dict[str, int]:
         exponent = example.as_tuple().exponent
         precision[str(currency)] = max(0, -exponent) if isinstance(exponent, int) else 0
     return precision
+
+
+def _written_transaction_precision(
+    filename: str, lineno: int, sources: dict[str, tuple[tuple[str, ...], list[int]]]
+) -> dict[str, int] | None:
+    """Precision supported by written totals or by units times per-unit rates."""
+    from bisect import bisect_left, bisect_right
+
+    from beancount.core.data import Transaction
+    from beancount.core.display_context import Precision
+    from beancount.core.position import CostSpec
+    from beancount.parser import lexer, parser
+
+    from bea_engine.ledger.reader import _source_lines, _spelled_entries
+
+    if filename not in sources:
+        lines = _source_lines(filename)
+        if lines is None:
+            return None
+        sources[filename] = (lines, sorted(_spelled_entries(filename)))
+    lines, starts = sources[filename]
+    if not 1 <= lineno <= len(lines) or not isinstance(_spelled_entries(filename).get(lineno), Transaction):
+        return None
+    index = bisect_right(starts, lineno)
+    end = starts[index] - 1 if index < len(starts) else len(lines)
+    text = "\n".join(lines[lineno - 1 : end]) + "\n"
+    entries, _, options = parser.parse_string(text)
+    written = {
+        currency: digits
+        for currency, context in options["dcontext"].ccontexts.items()
+        if (digits := context.get_fractional(Precision.MAXIMUM)) is not None
+    }
+    # @@ has already become a per-unit price in the parser's Posting. The
+    # lexer preserves which original posting carried a total price, without
+    # mistaking a quoted/commented @@ for notation.
+    lex: Callable[[str], Iterator[tuple[str, int, bytes, object]]] = lexer.lex_iter_string
+    totals = sorted(line for kind, line, _, _ in lex(text) if kind == "ATAT")
+
+    def places(number: Any) -> int:
+        exponent = number.as_tuple().exponent if isinstance(number, Decimal) else 0
+        return max(0, -exponent) if isinstance(exponent, int) else 0
+
+    for transaction in entries:
+        if not isinstance(transaction, Transaction):
+            continue
+        for index, posting in enumerate(transaction.postings):
+            if posting.units is None:
+                continue
+            if isinstance(posting.cost, CostSpec):
+                cost = posting.cost
+                if isinstance(cost.number_per, Decimal) and (cost.number_per or cost.number_total is None):
+                    written[cost.currency] = max(
+                        written.get(cost.currency, 0), places(posting.units.number) + places(cost.number_per)
+                    )
+            elif posting.price is not None:
+                start = (posting.meta or {}).get("lineno", 0)
+                stop = (
+                    (transaction.postings[index + 1].meta or {}).get("lineno", 0)
+                    if index + 1 < len(transaction.postings)
+                    else end + 1
+                )
+                total = bisect_left(totals, start)
+                if total == len(totals) or totals[total] >= stop:
+                    currency = posting.price.currency
+                    written[currency] = max(
+                        written.get(currency, 0), places(posting.units.number) + places(posting.price.number)
+                    )
+    return written
 
 
 def _substring_match(accounts: Iterable[str]) -> Callable[[str], bool]:
