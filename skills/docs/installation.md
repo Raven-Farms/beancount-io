@@ -7,7 +7,7 @@ Rehearsed on macOS with Claude Code and Codex (see [tested with](first-query.md#
 ## Prerequisites
 
 - Git and Python 3.
-- [`bea`](../../cli/README.md) (`brew install bex-co/tap/bea` or `uv tool install beancount-io`). The skills use it for checks, queries, and ledger writes.
+- [`bea`](../../cli/README.md) 0.3.1 or later (`brew install bex-co/tap/bea` or `uv tool install beancount-io`; `bea upgrade` updates an older one). The skills use it for checks, queries, and ledger writes.
 - [Claude Code](https://code.claude.com/docs/en/skills) and/or [Codex](https://developers.openai.com/codex/skills).
 
 ## 1. Get the skills
@@ -59,7 +59,7 @@ codex exec --skip-git-repo-check "List the names of the skills available to you 
 
 In an interactive session, Claude Code lists skills with `/skills` and runs one with `/beancount-ask`. In Codex, mention a skill as `$beancount-ask`. Both agents also pick a skill on their own when your request matches its description.
 
-Next: get a first answer from a sample ledger with the [first-query walkthrough](first-query.md), then complete a synthetic month with the [first-month guide](first-month.md). The latter requires bea 0.3.0 or later and includes [verified Claude Code and Codex rehearsals](first-month-rehearsal.md).
+Next: get a first answer from a sample ledger with the [first-query walkthrough](first-query.md), then complete a synthetic month with the [first-month guide](first-month.md). The latter uses the same `bea` and includes [verified Claude Code and Codex rehearsals](first-month-rehearsal.md).
 
 ### When a skill does not appear
 

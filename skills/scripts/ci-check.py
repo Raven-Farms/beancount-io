@@ -217,6 +217,32 @@ def check_routing() -> None:
     print(f"OK routing {rel} ({len(entries)} entries)")
 
 
+BEA_MINIMUM = re.compile(r"needs\s+`bea`\s+(\d+\.\d+\.\d+)\s+or\s+later")
+BEA_MINIMUM_NOTE = re.compile(r"\*\*Minimum\s+(\d+\.\d+\.\d+)\.\*\*")
+BEA_STATED_VERSION = re.compile(r"bea`(?:\*\*|\]\([^)]*\))?\s+(\d+\.\d+\.\d+)\s+or\s+later")
+
+
+def check_bea_minimum() -> None:
+    """The shared contract declares one minimum `bea`; the catalog and the
+    install guide state the same one."""
+    contract = SKILLS_DIR / "beancount-init" / "references" / "bea-cli.md"
+    text = contract.read_text(encoding="utf-8")
+    declared = set(BEA_MINIMUM.findall(text))
+    if len(declared) != 1:
+        fail(f"{contract.relative_to(REPO_ROOT)} must declare one minimum (`needs `bea` X.Y.Z or later`)")
+    minimum = declared.pop()
+    surfaces = {contract: BEA_MINIMUM_NOTE.findall(text)}
+    for doc in (SKILLS_ROOT / "README.md", SKILLS_ROOT / "docs" / "installation.md"):
+        surfaces[doc] = BEA_STATED_VERSION.findall(doc.read_text(encoding="utf-8"))
+    for path, versions in surfaces.items():
+        rel = path.relative_to(REPO_ROOT)
+        if not versions:
+            fail(f"{rel} does not state the minimum bea {minimum}")
+        if any(version != minimum for version in versions):
+            fail(f"{rel} states bea {', '.join(sorted(set(versions)))}; the minimum in bea-cli.md is {minimum}")
+    print(f"OK minimum bea {minimum} stated consistently")
+
+
 def check_python() -> None:
     for path in skill_files("**/*.py"):
         try:
@@ -414,6 +440,7 @@ def main() -> None:
     check_skill_md()
     check_evals()
     check_routing()
+    check_bea_minimum()
     check_python()
     check_ledgers()
     check_bea_first()

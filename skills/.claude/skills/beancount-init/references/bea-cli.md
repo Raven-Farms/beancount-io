@@ -2,9 +2,11 @@
 
 Read the sections needed for the current workflow. Prefer `bea` for ledger
 operations; the skill owns interpretation, review, and the user's confirmation.
-Check `command -v bea` once. If it is absent, suggest
-`brew install bex-co/tap/bea` or `uv tool install beancount-io`; the explicit
-developer fallback is in beancount-init's `references/compatibility.md`.
+Check `command -v bea` and `bea --version` once. The suite needs `bea` 0.3.1
+or later. If it is absent, suggest `brew install bex-co/tap/bea` or
+`uv tool install beancount-io`; if it is older, suggest `bea upgrade`. The
+explicit developer fallback is in beancount-init's `references/compatibility.md`.
+Behavior that depends on the `bea` version is listed under [Version notes](#version-notes).
 If an installed `bea` cannot run its managed engine — provisioning fails, or
 the error names the engine rather than the ledger — surface that error and
 repair/retry the engine. A nonzero exit carrying bea's JSON error envelope (an
@@ -46,7 +48,7 @@ two ways forward: connect the MCP server, or work on a local clone
   exit status, error envelope, notes, and `truncated` indicator; a truncated
   listing is not complete input for deduplication or reconciliation. Query the
   full date window, or increase the listing limit until it is complete.
-- `bea ingest` uses native output and rejects `--json`; inspect its actual
+- `bea ingest` uses native output (Version notes); inspect its actual
   identification and extraction results even when the exit status is 0.
 
 ## Read and check
@@ -70,8 +72,8 @@ failure: pass `-x at_cost` for book value (lots at cost, unpriced commodities in
 their own units), or disclose the missing prices; spending in the currency paid
 comes from beancount-ask's `weight` recipes.
 
-Use BQL to enumerate all relevant postings/accounts; `list` defaults to only
-50 results. For a human-readable transaction, use `list transaction --details`.
+Use BQL to enumerate all relevant postings/accounts; `list` returns a limited
+page (Version notes). For a human-readable transaction, use `list transaction --details`.
 Run the final check against the root, including after writing an included file:
 
 <!-- recipe: check -->
@@ -159,9 +161,9 @@ Several transactions at once use the `batch` recipe instead.
 bea --file "$ledger" --json --no-input add transaction --date "$entry_date" --payee "$payee" --narration "$narration" --posting "$posting_1" --posting "$posting_2" --into "$target"
 ```
 
-`bea add close` writes even when the account still holds a balance, so read
-the balance through `close_date` first and close only an empty account. A
-posting dated on the close date is still allowed; a later one is refused.
+Close only an empty account: read its balance through `close_date` first,
+because `bea add close` does not check (Version notes). A posting dated on the
+close date is still allowed; a later one is refused.
 
 <!-- recipe: close -->
 ```sh
@@ -206,9 +208,9 @@ $150 gross premium and $0.65 fee is:
 
 For a disposal with an explicitly selected held lot, carry its actual cost
 and optional acquisition date in `cost`. For native booking syntax such as
-`{}` or total costs `{{...}}`, use `add transaction --posting`; older `bea`
-batch schemas require explicit cost number/currency and accept only plain
-amounts in `amount` shorthand. Do not guess a cost to satisfy that schema.
+`{}` or total costs `{{...}}`, use `add transaction --posting`, because the
+batch schema needs an explicit cost (Version notes). Do not guess a cost to
+satisfy that schema.
 
 For example, to expire the held short put, set `option_posting` to
 `Assets:Brokerage:Options 1 AAPL_PUT_20260620_00150000 {} @ 0 USD`,
@@ -245,6 +247,28 @@ same root and destination. Open both accounts on/before the pad date and
 place the opening assertion before the period's movements. Reuse the ledger's
 existing opening-equity account (`bea init` creates `Equity:OpeningBalances`).
 Never use padding to conceal an unresolved transaction mismatch.
+
+## Version notes
+
+Each note gives the `bea` versions it describes. Delete a note once the
+suite's minimum version no longer needs it.
+
+- **Minimum 0.3.1.** Migration overlap imports rely on `bea import` matching
+  `import-id-2`, which first ships in 0.3.1.
+- **Batch cost (0.3.1).** A batch row's `cost` needs an explicit per-unit
+  `number` and `currency`; `{}` lot selection and total costs are rejected,
+  so use `add transaction --posting` for them.
+- **`list` pages (0.3.1).** `list` returns 50 rows by default; check
+  `truncated` before treating a listing as complete.
+- **`bea ingest` output (0.3.1).** It prints native output and rejects
+  `--json`, and an unclaimed file can exit 0.
+- **Beangulp and libmagic (0.3.1).** For `bea engine enable beangulp` the
+  system libmagic library is optional: only importers that call python-magic
+  themselves need it.
+- **CSV import memory (0.3.1).** `bea import` remembers column mappings and
+  the rules path for a source, but not the sign convention.
+- **`add close` (0.3.1).** It writes a close even when the account still
+  holds a balance, without a warning.
 
 ## Failure and resume
 
