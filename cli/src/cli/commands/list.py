@@ -600,7 +600,7 @@ def transactions(
         ListSort, typer.Option("--sort", help="Transaction date order, applied before the limit")
     ] = ListSort.newest,
 ) -> None:
-    """List recent transactions and their amounts; --details adds metadata and source."""
+    """List recent transactions and their amounts."""
     if flag == "txn":
         # `add --flag txn` writes it and Beancount reads it as `*`: the shared
         # flag grammar includes it, so the filter does too (w5/526).

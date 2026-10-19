@@ -47,6 +47,9 @@ class Command:
     columns: list[Column] = field(default_factory=list)
     # Query-parameter defaults the CLI applies (the server may have its own).
     defaults: dict[str, int] = field(default_factory=dict)
+    # Row text for the group listing: the spec summary is still the --help
+    # body, but a summary past the 80-column row truncates there (w5/752).
+    row: str | None = None
     # Message templates; `{full_name}` is the collapsed path argument.
     confirm: str | None = None
     success: str | None = None
@@ -65,6 +68,7 @@ COMMANDS: list[Command] = [
             Column("CREATED", "createdAt", kind="date"),
         ],
         defaults={"limit": 50, "page": 1},
+        row="List accessible ledgers",
     ),
     Command(operation_id="getLedger", group="ledger", name="show"),
     Command(
@@ -142,9 +146,8 @@ def emit_command(cmd: Command, spec: dict[str, Any]) -> str:
         )
 
     module = snake(cmd.operation_id)
-    help_text = (
-        esc(f"{op['summary']}.\n\n{op['description']}") if op["summary"] != op["description"] else esc(op["summary"])
-    )
+    headline = cmd.row or op["summary"]
+    help_text = esc(f"{headline}.\n\n{op['description']}") if headline != op["description"] else esc(headline)
 
     signature: list[str] = []
     call_args: list[str] = []

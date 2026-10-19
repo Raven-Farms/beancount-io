@@ -602,7 +602,7 @@ def import_entries(
         str | None,
         typer.Option(
             "--csv",
-            help="Column mapping (date=Date,amount=Amount,narration=Description,...; delimiter=';' overrides "
+            help="Column mapping (date=Date, amount=Amount, narration=Description, ...; delimiter=';' overrides "
             "detection, encoding=cp1252 overrides UTF-8), or 'auto' to read the header row; "
             "no Python importer needed",
         ),

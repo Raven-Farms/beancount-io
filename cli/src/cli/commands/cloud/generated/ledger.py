@@ -19,7 +19,8 @@ from cli.utils import owner_and_name, snake_keys
 def register_ledger_commands(ledger_app: typer.Typer) -> None:
 
     @ledger_app.command(
-        "list", help="List the caller's accessible ledgers, restricted to the credential's ledger pin when present"
+        "list",
+        help="List accessible ledgers.\n\nList the caller's accessible ledgers, restricted to the credential's ledger pin when present",
     )
     def ledger_list(
         page: Annotated[int, typer.Option("--page", help="1-based page number", min=1)] = 1,

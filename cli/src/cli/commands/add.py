@@ -265,7 +265,7 @@ def add_close(
         typer.Option("--force", help="Close the account even though it still holds a balance on the close date"),
     ] = False,
 ) -> None:
-    """Append a close directive; an account that still holds a balance is refused."""
+    """Append a close directive."""
     request = {"date": parse_date(date).isoformat(), "account": account, "force": force}
     file, data = _write("close", request, allow_errors=allow_errors, into=into)
     _appended("close", file, data)
@@ -290,7 +290,7 @@ def add_balance(
         str | None, typer.Option("--pad-date", help="Pad date; defaults to the day before the balance assertion")
     ] = None,
 ) -> None:
-    """Append a strict balance assertion, or explicitly pad from another account.
+    """Append a balance assertion, or pad from another account.
 
     --pad-from writes both directives atomically. It creates an adjustment;
     review missing transactions before using it to reconcile a discrepancy.
@@ -424,7 +424,10 @@ def add_price(
         typer.Option("--force", help="Record another quote when the ledger already has one for the date/commodity"),
     ] = False,
 ) -> None:
-    """Append a price, or report an exact ledger-authored date/commodity/amount match."""
+    """Append a price directive.
+
+    An exact ledger-authored date/commodity/amount match is reported instead of duplicated.
+    """
     number, price_currency = _parse_amount(_single_amount(amount, "price"))
     request = {
         "date": parse_date(date).isoformat(),

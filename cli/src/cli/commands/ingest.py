@@ -304,13 +304,16 @@ def _is_main_guard(node: ast.stmt) -> bool:
 
 @ingest_app.command("identify", cls=ForwardingCommand, epilog=native_help("ingest identify"), context_settings=_EXTRA)
 def identify(ctx: typer.Context, config: _CONFIG = None) -> None:
-    """Identify which importer matches each document (Beangulp identify)."""
+    """Identify which importer matches each document."""
     _forward("identify", ctx, config)
 
 
 @ingest_app.command("extract", cls=ForwardingCommand, epilog=native_help("ingest extract"), context_settings=_EXTRA)
 def extract(ctx: typer.Context, config: _CONFIG = None) -> None:
-    """Extract raw entries from documents (Beangulp extract; not bea import --apply)."""
+    """Extract raw entries from documents.
+
+    The Beangulp extract step. This is not bea import --apply.
+    """
     _forward("extract", ctx, config)
 
 

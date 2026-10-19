@@ -23,7 +23,10 @@ cloud_app.add_typer(ledger_app, name="ledger")
 
 @cloud_app.command("login")
 def cloud_login() -> None:
-    """Log in by device flow; credentials.json goes in $BEA_CONFIG_DIR, $XDG_CONFIG_HOME/bea or ~/.config/bea."""
+    """Log in by device flow.
+
+    credentials.json goes in $BEA_CONFIG_DIR, $XDG_CONFIG_HOME/bea or ~/.config/bea.
+    """
     context.current().require_network("cloud login")
     import os
 
@@ -172,7 +175,10 @@ def _failure_name(exc: BaseException) -> str:
 
 @cloud_app.command("status")
 def cloud_status() -> None:
-    """Show who is logged in, where the credential came from, and when it expires."""
+    """Show the current login.
+
+    Who is logged in, where the credential came from, and when it expires.
+    """
     ctx = context.current()
     ctx.require_network("cloud status")
     from cli.api.client import bearer_client, call, unwrap_or_none

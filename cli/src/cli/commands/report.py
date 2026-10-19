@@ -291,7 +291,7 @@ def income_statement(
     interval: IntervalOpt = ReportInterval.monthly,
     allow_errors: AllowErrorsOpt = False,
 ) -> None:
-    """Income, expenses, and profit, with an interval breakdown."""
+    """Income, expenses, and profit by interval."""
     file, data = _ask(
         "income-statement",
         conversion=conversion,
@@ -335,7 +335,10 @@ def balance_sheet(
     interval: IntervalOpt = ReportInterval.monthly,
     allow_errors: AllowErrorsOpt = False,
 ) -> None:
-    """Assets, liabilities, and equity including current earnings and valuation adjustments."""
+    """Assets, liabilities, and equity.
+
+    Includes current earnings and valuation adjustments.
+    """
     file, data = _ask(
         "balance-sheet",
         conversion=conversion,
@@ -381,7 +384,7 @@ def trial_balance(
     account: AccountOpt = None,
     allow_errors: AllowErrorsOpt = False,
 ) -> None:
-    """All five account types, retaining signed ledger balances."""
+    """All five account types, with signed balances."""
     file, data = _ask("trial-balance", conversion=conversion, time=time, account=account, allow_errors=allow_errors)
     if context.current().json_output:
         _emit_json(file, data)

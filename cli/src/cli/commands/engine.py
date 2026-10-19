@@ -30,7 +30,10 @@ _TIER_LABELS = {
 
 @engine_app.command("status")
 def engine_status() -> None:
-    """Show which engine serves local commands, whether it is provisioned, and optional features."""
+    """Show which engine serves local commands.
+
+    Reports whether the engine is provisioned and which optional features are enabled.
+    """
     output.utf8_stdout()
     source = launch.resolve_engine()
     status = {
@@ -107,7 +110,10 @@ def engine_enable(
         ),
     ],
 ) -> None:
-    """Install a reviewed optional package into the managed engine (not the frontend)."""
+    """Install a reviewed optional package.
+
+    The package goes into the managed engine, never into the bea frontend.
+    """
     name = feature.strip().lower()
     changed, enabled = provision.enable_feature(name)
     payload = {
