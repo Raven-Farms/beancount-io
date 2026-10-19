@@ -64,14 +64,33 @@ def destination(root: Path, into: Path | None = None) -> Path:
     A file `--into` creates takes the NFC spelling of its name, as new
     directives do: one typed NFD (pasted from Finder) was created NFD, and the
     next keyboard-typed `--into` was refused as a respelling (w5/536).
-    Directories keep the spelling they have on disk.
+    Directories keep the spelling they have on disk. On a volume that answers
+    an NFD lookup with the NFC file, the NFD spelling that created the file
+    keeps writing to it: when the typed leaf is not NFC, its NFC form is the
+    name on disk, and both spellings reach the same file, the NFC name is
+    used (w5/721). A spelling already exact on disk keeps its meaning: a
+    case-only respelling, and the include line's other form, are still
+    refused.
     """
     if into is None:
         return root.resolve()
     target = root.parent / expand_path(into, "--into")
+    nfc = target.with_name(unicodedata.normalize("NFC", target.name))
     if not (target.exists() or target.is_symlink()):
-        target = target.with_name(unicodedata.normalize("NFC", target.name))
+        target = nfc
+    elif nfc.name != target.name:
+        names = _directory_names(target.parent)
+        if nfc.name in names and target.name not in names and same_file(nfc, target):
+            target = nfc
     return target.resolve()
+
+
+def _directory_names(directory: Path) -> list[str]:
+    """The names as they are on disk, or nothing when the directory cannot be listed."""
+    try:
+        return os.listdir(directory)
+    except OSError:
+        return []
 
 
 def _includes(content: bytes) -> Iterator[tuple[int, int, str]]:

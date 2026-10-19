@@ -3,7 +3,8 @@
 A file `--into` created took the NFD name pasted from Finder, and the next
 keyboard-typed `--into` was refused with wording about an include line that
 the glob `Ausgaben/*.bean` never had. (Text keeps the bytes typed, as w5/130
-decided; USAGE now says only account names are written NFC.)
+decided; USAGE now says only account names are written NFC.) The NFD spelling
+that created the file keeps writing to it on a later run (w5/721).
 """
 
 from __future__ import annotations
@@ -60,6 +61,24 @@ def test_a_new_into_file_takes_the_nfc_name_and_takes_later_writes(tmp_path: Pat
 
     second = _add(tmp_path, "transaction", "Y", "--date", "2026-02-03", *posting, "--into", "Ausgaben/März.bean")
     assert second.returncode == 0, second.stderr
+    assert (tmp_path / "Ausgaben" / "März.bean").read_text().count('"') >= 4
+
+
+def test_the_nfd_spelling_that_created_the_file_keeps_writing_to_it(tmp_path: Path) -> None:
+    """The second run with the same NFD `--into` writes the NFC file it created (w5/721)."""
+    (tmp_path / "Ausgaben").mkdir()
+    (tmp_path / "Ausgaben" / "Jan.bean").write_text(OPENS)
+    (tmp_path / "main.bean").write_text('option "operating_currency" "EUR"\ninclude "Ausgaben/*.bean"\n')
+    posting = ("-p", "Expenses:Food 1 EUR", "-p", "Assets:Checking")
+
+    first = _add(tmp_path, "transaction", "X", "--date", "2026-02-02", *posting, "--into", _nfd("Ausgaben/März.bean"))
+    assert first.returncode == 0, first.stderr
+    assert "März.bean" in os.listdir(tmp_path / "Ausgaben")
+
+    second = _add(tmp_path, "transaction", "Y", "--date", "2026-02-03", *posting, "--into", _nfd("Ausgaben/März.bean"))
+    assert second.returncode == 0, second.stderr
+    names = os.listdir(tmp_path / "Ausgaben")
+    assert names.count("März.bean") == 1 and len(names) == 2
     assert (tmp_path / "Ausgaben" / "März.bean").read_text().count('"') >= 4
 
 

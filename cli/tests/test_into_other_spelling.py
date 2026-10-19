@@ -3,7 +3,9 @@
 On a case- and normalization-insensitive volume the differently spelled name
 reaches the same file. It matched no snapshot member as text, the include glob
 took it for a new file, and its existing on disk was reported as a concurrent
-edit — exit 4, "retry" — that no retry could clear.
+edit — exit 4, "retry" — that no retry could clear. w5/721 keeps the refusal
+for a case-only respelling and for a composed spelling of an NFD file; a
+decomposed spelling of an NFC file now writes it, as creation does.
 """
 
 from __future__ import annotations
@@ -48,9 +50,8 @@ def _reaches(tmp_path: Path, other: str) -> bool:
     [
         ("jan.bean", "Jan.bean"),
         (unicodedata.normalize("NFD", "café.bean"), unicodedata.normalize("NFC", "café.bean")),
-        (unicodedata.normalize("NFC", "café.bean"), unicodedata.normalize("NFD", "café.bean")),
     ],
-    ids=["letter-case", "typed-composed", "typed-decomposed"],
+    ids=["letter-case", "typed-composed"],
 )
 def test_another_spelling_of_an_included_file_is_a_usage_error(
     tmp_path: Path, bea_config_dir: Path, on_disk: str, typed: str
@@ -68,6 +69,21 @@ def test_another_spelling_of_an_included_file_is_a_usage_error(
     assert "Nothing was written" in flat
     assert json.loads(as_json.stderr)["error"]["category"] == "usage"
     assert member.read_text() == ENTRY
+    assert len(list((tmp_path / "txns").iterdir())) == 1
+
+
+def test_a_decomposed_spelling_of_an_nfc_file_writes_it(tmp_path: Path, bea_config_dir: Path) -> None:
+    """The NFD spelling pasted from Finder writes the NFC file, as creation does (w5/721)."""
+    nfc = unicodedata.normalize("NFC", "café.bean")
+    root, member = _books(tmp_path, nfc)
+    typed = unicodedata.normalize("NFD", "café.bean")
+    if not _reaches(tmp_path, typed):
+        pytest.skip("this volume keeps the two spellings apart")
+
+    result = _add(root, f"txns/{typed}")
+
+    assert result.exit_code == 0, result.output
+    assert '2026-01-03 * "Dinner"' in member.read_text()
     assert len(list((tmp_path / "txns").iterdir())) == 1
 
 
