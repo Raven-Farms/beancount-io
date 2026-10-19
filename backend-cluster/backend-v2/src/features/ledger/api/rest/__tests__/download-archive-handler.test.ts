@@ -49,7 +49,7 @@ const layers = {
 } as unknown as AppLayers;
 
 const config = {
-  favaApi: { baseUrl: "http://ledger.invalid/" },
+  gitea: { internalBaseUrl: "http://gitea.invalid" },
 } as unknown as AppConfig;
 
 let baseUrl: string;
@@ -115,11 +115,8 @@ describe("legacy archive download", () => {
     expect(response.status).toBe(200);
     expect(await response.text()).toBe("ZIPBYTES");
     expect(fetchMock).toHaveBeenCalledWith(
-      "http://ledger.invalid/ledgers/alice/public/archive/main.zip",
-      {
-        method: "GET",
-        headers: { Authorization: "Anonymous" },
-      },
+      "http://gitea.invalid/api/v1/repos/alice/public/archive/main.zip",
+      expect.objectContaining({ method: "GET", headers: {} }),
     );
   });
 

@@ -41,7 +41,7 @@ const layers = {
 const config = {
   env: "test",
   api: { scopeEnforcement: "shadow" },
-  favaApi: { baseUrl: "http://ledger.invalid/" },
+  gitea: { internalBaseUrl: "http://gitea.invalid" },
 } as unknown as AppConfig;
 
 const apiKeyIdentity: Identity = {
@@ -109,7 +109,7 @@ describe("v1 archive download", () => {
       }),
     );
     expect(fetchMock).toHaveBeenCalledWith(
-      "http://ledger.invalid/ledgers/alice/main/archive/gitea-main.zip",
+      "http://gitea.invalid/api/v1/repos/alice/main/archive/gitea-main.zip",
       expect.objectContaining({ method: "GET" }),
     );
     expect(response.headers.get("content-disposition")).toBe(
@@ -162,7 +162,7 @@ describe("v1 archive download", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("reports an archive the ledger service does not have as 404", async () => {
+  it("reports an archive Gitea does not have as 404", async () => {
     fetchMock.mockResolvedValueOnce({
       ok: false,
       status: 404,

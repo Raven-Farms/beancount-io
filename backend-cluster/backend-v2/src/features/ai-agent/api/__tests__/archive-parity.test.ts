@@ -85,7 +85,7 @@ async function fixture(identity = readOnlyToken) {
   };
   const config = {
     api: { scopeEnforcement: "enforce" },
-    favaApi: { baseUrl },
+    gitea: { internalBaseUrl: baseUrl },
   } as AppConfig;
   const service = new LedgerArchiveService(
     models as never,

@@ -52,7 +52,7 @@ async function fixture(identity: Identity = readOnlyToken) {
       return;
     }
     if (
-      url.pathname === "/ledgers/alice/main/archive/main.zip" &&
+      url.pathname === "/api/v1/repos/alice/main/archive/main.zip" &&
       req.headers.authorization ===
         `Basic ${Buffer.from("alice:fixture-only").toString("base64")}`
     ) {
@@ -70,7 +70,7 @@ async function fixture(identity: Identity = readOnlyToken) {
   const config = {
     api: { scopeEnforcement: "enforce" },
     server: { url: "" },
-    favaApi: { baseUrl: originUrl },
+    gitea: { internalBaseUrl: originUrl },
   } as AppConfig;
   const check = jest.fn().mockResolvedValue(true);
   const authorization = new AuthorizationService({ check }, jest.fn());

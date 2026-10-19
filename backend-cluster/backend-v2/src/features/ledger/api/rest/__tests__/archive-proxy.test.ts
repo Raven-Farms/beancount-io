@@ -37,7 +37,7 @@ function layers() {
   result.services.ledgerArchive = new LedgerArchiveService(
     result.database.models,
     result.database.db,
-    { favaApi: { baseUrl: "http://ledger.internal" } } as never,
+    { gitea: { internalBaseUrl: "http://gitea.internal" } } as never,
     result.services.authorization,
   );
   return result;
@@ -64,11 +64,8 @@ describe("streamLedgerArchive", () => {
     });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "http://ledger.internal/ledgers/alice/public-ledger/archive/gitea-main.zip",
-      {
-        method: "GET",
-        headers: { Authorization: "Anonymous" },
-      },
+      "http://gitea.internal/api/v1/repos/alice/public-ledger/archive/gitea-main.zip",
+      expect.objectContaining({ method: "GET", headers: {} }),
     );
     expect(appLayers.database.models.user.getById).not.toHaveBeenCalled();
     expect(
