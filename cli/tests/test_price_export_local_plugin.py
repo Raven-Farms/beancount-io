@@ -93,6 +93,42 @@ def test_an_existing_module_at_the_destination_is_not_overwritten_without_force(
     assert not (out / "main.bean").exists()
 
 
+def test_a_plugin_found_through_an_include_travels_too(books: Path) -> None:
+    """`insert_pythonpath` in an included file puts its directory on the path (w5/762)."""
+    (books / "myplug.py").write_text(PLUGIN)
+    (books / "settings.bean").write_text('option "insert_pythonpath" "TRUE"\n')
+    (books / "main.bean").write_text(
+        LEDGER.replace('option "insert_pythonpath" "TRUE"\n', 'include "settings.bean"\n').format(plugin="myplug")
+    )
+
+    result = _export(books)
+
+    assert result.exit_code == 0, result.output
+    exported = books / "main-export"
+    assert sorted(str(path.relative_to(exported)) for path in exported.rglob("*") if path.is_file()) == sorted(
+        ["main.bean", "settings.bean", "myplug.py"]
+    )
+    assert _stock_check(exported / "main.bean").returncode == 0
+
+
+def test_a_plugin_outside_the_tree_is_named_not_dropped(books: Path) -> None:
+    """A module no copy can carry refuses the export naming it (w5/762)."""
+    outer = books.parent / "outer"
+    outer.mkdir()
+    (outer / "inc.bean").write_text('option "insert_pythonpath" "TRUE"\n')
+    (outer / "plug.py").write_text(PLUGIN)
+    (books / "main.bean").write_text(
+        LEDGER.replace('option "insert_pythonpath" "TRUE"\n', 'include "../outer/inc.bean"\n').format(plugin="plug")
+    )
+
+    result = _export(books)
+
+    assert result.exit_code == 2, result.output
+    assert "plugin module 'plug' loads from" in result.output
+    assert "outside the ledger tree" in result.output
+    assert not (books / "main-export").exists()
+
+
 def test_a_plugin_installed_elsewhere_is_left_alone(books: Path) -> None:
     (books / "main.bean").write_text(LEDGER.format(plugin="beancount.plugins.auto_accounts"))
 

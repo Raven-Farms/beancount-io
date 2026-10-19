@@ -2028,46 +2028,68 @@ def _export_attachments(
 def _export_plugin_modules(loaded: LoadedLedger, snapshot: LedgerSnapshot, target: Path) -> dict[Path, Path]:
     """Where each plugin module that lives beside the ledger goes in the export.
 
-    `option "insert_pythonpath"` puts the root's directory on the module path,
-    so `plugin "myplug"` may name a `myplug.py` — or a package — sitting next
-    to `main.bean`. The export copied the ledger text and not the module, so
-    it reported success for a snapshot stock `bean-check` could not load
-    (w5/094). Such a module travels to the same relative place, where the
-    copied option finds it again; a plugin installed elsewhere is not the
-    export's to carry. Keyed by destination like the document attachments,
-    so the same collision and overwrite rules apply.
+    `option "insert_pythonpath"` puts the setting file's directory on the
+    module path, so `plugin "myplug"` may name a `myplug.py` — or a package —
+    sitting next to any ledger file that sets it, not only the root. The
+    export copied the ledger text and not the module, so it reported success
+    for a snapshot stock `bean-check` could not load (w5/094). Beancount
+    merges those directories into `options["pythonpath"]`, while the merged
+    `insert_pythonpath` flag stays the root's own; every listed directory is
+    searched, first hit wins as the load resolves it, and a module travels to
+    the same relative place, where the copied option finds it again. A module
+    outside the ledger tree cannot travel, so the export refuses naming it;
+    a plugin installed elsewhere is not the export's to carry. Keyed by
+    destination like the document attachments, so the same collision and
+    overwrite rules apply.
     """
-    if not loaded.options.get("insert_pythonpath"):
+    from bea_engine.protocol import UsageError
+
+    homes = list(dict.fromkeys(Path(entry).resolve() for entry in loaded.options.get("pythonpath") or ()))
+    if not homes:
         return {}
-    home = snapshot.root.parent
+    home = snapshot.root.parent.resolve()
     modules: dict[Path, Path] = {}
     plugins = [str(name) for name, _config in loaded.options.get("plugin") or []]
-    for top in sorted({name.split(".", 1)[0] for name in plugins} | _sibling_imports(home, plugins)):
-        module, package = home / f"{top}.py", home / top
+    wanted = {name.split(".", 1)[0] for name in plugins} | _sibling_imports(homes, plugins)
+    for top in sorted(wanted):
+        holder = next(
+            (directory for directory in homes if (directory / f"{top}.py").is_file() or (directory / top).is_dir()),
+            None,
+        )
+        if holder is None:
+            continue
+        package = holder / top
         if package.is_dir():
             sources = [path for path in sorted(package.rglob("*.py")) if "__pycache__" not in path.parts]
-        elif module.is_file():
-            sources = [module]
         else:
-            continue
+            sources = [holder / f"{top}.py"]
         for source in sources:
-            modules[target / source.relative_to(home)] = source
+            try:
+                modules[target / source.resolve().relative_to(home)] = source
+            except ValueError:
+                raise UsageError(
+                    f"Cannot export: plugin module {top!r} loads from {source}, outside the ledger tree, "
+                    "so the snapshot could not load it. Keep the module beside the root ledger so it "
+                    "travels with the export. Nothing was written."
+                ) from None
     return modules
 
 
-def _sibling_imports(home: Path, plugins: list[str]) -> set[str]:
-    """Top-level modules beside the root that the local plugins import.
+def _sibling_imports(homes: list[Path], plugins: list[str]) -> set[str]:
+    """Top-level modules under the ledger's module path that the local plugins import.
 
     A plugin importing `helper.py` from its own directory exported without
     it, and the snapshot failed with `No module named 'helper'` (w5/327).
-    Importing each plugin as the load does (a cached load ran none of them)
+    Importing each plugin as the load does (a cached load ran none of them,
+    with every `insert_pythonpath` directory on the path in load order)
     leaves its imports in `sys.modules`; those whose file sits at the top of
-    the root's directory travel too.
+    one of those directories travel too.
     """
     import importlib
 
     saved = list(sys.path)
-    sys.path.insert(0, str(home))
+    for directory in reversed(homes):
+        sys.path.insert(0, str(directory))
     try:
         for name in plugins:
             try:
@@ -2076,19 +2098,25 @@ def _sibling_imports(home: Path, plugins: list[str]) -> set[str]:
                 continue
     finally:
         sys.path[:] = saved
-    base = home.resolve()
+    bases = [directory.resolve() for directory in homes]
     tops: set[str] = set()
     for name, module in list(sys.modules.items()):
         location = getattr(module, "__file__", None)
         if not location:
             continue
         try:
-            relative = Path(location).resolve().relative_to(base)
-        except (OSError, ValueError):
+            absolute = Path(location).resolve()
+        except OSError:
             continue
         top = name.split(".", 1)[0]
-        if relative.parts[0] in (f"{top}.py", top):
-            tops.add(top)
+        for base in bases:
+            try:
+                relative = absolute.relative_to(base)
+            except ValueError:
+                continue
+            if relative.parts and relative.parts[0] in (f"{top}.py", top):
+                tops.add(top)
+            break
     return tops
 
 
