@@ -89,7 +89,9 @@ describe("collaborator limit (PRFAQ005 question 21 item 6)", () => {
     await expect(refusal).rejects.toMatchObject({
       category: "RESOURCE_LIMIT_REACHED",
       metadata: { resource: "Collaborator", limit: 1, current: 1 },
-      message: expect.stringContaining("owner's Free plan"),
+      message: expect.stringContaining(
+        "owner is on the Free plan, which allows 1 collaborator per ledger, and it already has 1.",
+      ),
     });
     expect(getUserByUsername).toHaveBeenCalledWith(expect.anything(), "owner");
     expect(addOrUpdateLedgerCollaborator).not.toHaveBeenCalled();

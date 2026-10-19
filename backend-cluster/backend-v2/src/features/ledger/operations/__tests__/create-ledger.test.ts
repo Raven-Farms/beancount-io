@@ -387,7 +387,7 @@ describe("createLedger operation", () => {
           metadata: { resource: "Ledger", limit: max, current: max },
           // Names the plan the user is on, not "Premium" for everyone.
           message: expect.stringContaining(
-            `your ${tier.charAt(0)}${tier.slice(1).toLowerCase()} plan allows`,
+            `Your ${tier.charAt(0)}${tier.slice(1).toLowerCase()} plan allows ${max} ledgers, and you own ${max}.`,
           ),
         });
         expect(mockFavaApiClient.ledgers.createLedger).not.toHaveBeenCalled();
@@ -410,6 +410,22 @@ describe("createLedger operation", () => {
         "testuser",
         { page: 2, limit: 50 },
       );
+    });
+
+    it("states the limit truthfully when a downgrade left more ledgers than it allows", async () => {
+      mockGetUserTier.mockResolvedValue(SubscriptionTier.FREE);
+      pages(3);
+
+      await expect(
+        createLedger({
+          ...deps,
+          ledgerCreate: createValidLedgerInput(),
+          userId,
+        }),
+      ).rejects.toMatchObject({
+        message:
+          "Your Free plan allows 1 ledger, and you own 3. Upgrade for more, or delete one you no longer need.",
+      });
     });
 
     it("never refuses an unlimited Enterprise owner, and does not list to find out", async () => {

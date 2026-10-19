@@ -188,7 +188,7 @@ export class LedgerCollaboratorsWorkflow implements ILedgerCollaboratorsWorkflow
           "Collaborator",
           max,
           count,
-          `This ledger already has ${count} ${count === 1 ? "collaborator" : "collaborators"}, the most its owner's ${TIER_DISPLAY_NAMES[ownerTier]} plan allows. The ledger owner can upgrade for more.`,
+          `This ledger's owner is on the ${TIER_DISPLAY_NAMES[ownerTier]} plan, which allows ${max} ${max === 1 ? "collaborator" : "collaborators"} per ledger, and it already has ${count}. The ledger owner can upgrade for more.`,
         );
       }
     }

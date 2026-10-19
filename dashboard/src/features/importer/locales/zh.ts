@@ -103,17 +103,17 @@ const zhImporter: Record<string, TranslationEntry> = {
   },
   "importer.aiOffer.description": {
     message:
-      "智能导入可免费读取包含日期、收款人、描述和金额列的 CSV 文件。此文件也可以用 AI 读取，但会消耗你的 AI 令牌。",
+      "智能导入可免费读取包含日期、收款人、描述和金额列的 CSV 文件。此文件也可以用 AI 读取，但会消耗你的 AI 词元。",
     description:
       "Explains the free CSV format and that AI parsing spends AI tokens",
   },
   "importer.aiOffer.parseWithAi": {
-    message: "用 AI 解析（消耗 AI 令牌）",
+    message: "用 AI 解析（消耗 AI 词元）",
     description:
       "Button that parses the unreadable CSV with AI, spending AI tokens",
   },
   "importer.error.aiQuotaReached": {
-    message: "你已用完本月的 AI 令牌",
+    message: "你已用完本月的 AI 词元",
     description:
       "Title when AI parsing of a CSV is refused because the month's AI tokens are used up",
   },

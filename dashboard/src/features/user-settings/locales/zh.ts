@@ -442,15 +442,15 @@ const zhUserSettings: Record<string, TranslationEntry> = {
     description: "Description for user profile section",
   },
   "userSettings.aiCfoUsage": {
-    message: "AI 令牌",
+    message: "AI 词元",
     description: "Label for AI CFO usage section",
   },
   "userSettings.aiCfoUsageCount": {
-    message: "本月已使用 {used} / {max} 令牌",
+    message: "本月已使用 {used} / {max} 词元",
     description: "AI CFO usage count display",
   },
   "userSettings.aiCfoUsageUnlimited": {
-    message: "本月已使用 {used} 令牌（无限制）",
+    message: "本月已使用 {used} 词元（无限制）",
     description: "AI CFO usage display for unlimited tier",
   },
   "userSettings.currentPlan": {
@@ -490,7 +490,7 @@ const zhUserSettings: Record<string, TranslationEntry> = {
     description: "Price interval suffix",
   },
   "userSettings.aiTokensPerMonth": {
-    message: "{count} AI 代币/月",
+    message: "{count} AI 词元/月",
     description: "AI token allowance for a subscription tier",
   },
   "userSettings.unlimitedLedgers": {
@@ -530,7 +530,7 @@ const zhUserSettings: Record<string, TranslationEntry> = {
       "Collaborator allowance for each ledger - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form - the only form; this language has no plural inflection",
   },
   "userSettings.aiUsageUpgradeNudge": {
-    message: "你正在使用每月 AI 代币的 {percentage}%。升级以避免中断。",
+    message: "你正在使用每月 AI 词元的 {percentage}%。升级以避免中断。",
     description: "Upgrade suggestion when AI token usage is high",
   },
   "userSettings.fingerprint": {
@@ -723,7 +723,7 @@ const zhUserSettings: Record<string, TranslationEntry> = {
     description: "Row label: collaborators allowed per ledger",
   },
   "userSettings.planChangeLimitAiTokens": {
-    message: "每月 AI 代币",
+    message: "每月 AI 词元",
     description: "Row label: AI tokens allowed per month",
   },
   "userSettings.planChangeYouHave": {

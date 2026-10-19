@@ -4,6 +4,7 @@ import {
   type CancelScheduledPlanChangeMutation,
   type CancelScheduledPlanChangeMutationVariables,
   ChangePlanDocument,
+  GetAiCfoUsageDocument,
   GetCurrentUserDocument,
   GetSubscriptionStatusDocument,
   PreviewPlanChangeDocument,
@@ -34,9 +35,11 @@ export const useChangePlan = () =>
   useMutation<ChangePlanMutation, ChangePlanMutationVariables>(
     ChangePlanDocument,
     {
+      // The AI allowance lives in its own query, and it moves with the plan.
       refetchQueries: [
         { query: GetCurrentUserDocument },
         { query: GetSubscriptionStatusDocument },
+        { query: GetAiCfoUsageDocument },
       ],
       awaitRefetchQueries: true,
       update(cache, { data }) {
