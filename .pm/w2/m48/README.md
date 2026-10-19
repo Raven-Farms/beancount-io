@@ -15,6 +15,10 @@
 | t007 | Test coverage | 45m | t005, t006 |
 | t008 | Closeout | 15m | t007 |
 
+## Blocked
+
+- **t004 (2026-10-19)** — all 31 reconcile/close evals run on one client (20 pass + 2 partial reconcile, 7 pass + 2 partial close; evidence in [t004](./t004.md)); the second client's 31 runs all ended at its account usage limit before any work. **Unblock:** Codex usage returns (2026-11-17); rerun the set there and close t004. t005 onward wait behind it. **Who can clear it:** the operator (Codex usage).
+
 ## Definition of done
 
 - A reconcile proposal opens with a coverage section, before the mismatch report. It gives the target account and the statement's own account label or number, the currency, the statement period, the source row count and signed total, the ledger's posting count and total for the same window (from an executed recipe), and every excluded row with its reason. Included plus excluded rows equal the source rows.

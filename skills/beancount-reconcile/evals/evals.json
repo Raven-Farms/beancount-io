@@ -181,6 +181,10 @@
       "name": "first-reconcile-opening-adjustment",
       "prompt": "Reconcile Assets:Bank:Checking in ./ledger.beancount against ./statement.csv (May 2026). This account has no prior balance assertion; the ledger opens it at 0.00 but the statement's running balances imply 250.00 already in the account on 2026-05-01. All statement lines otherwise match. `bea` is on PATH.",
       "expected_output": "The skill reports all lines matched and a 250.00 opening gap with no prior assertion to anchor to. After confirmation it books the gap explicitly with `bea add balance --pad-from` and then asserts the statement ending balance with `bea add balance`; `bea check` passes and nothing is appended by hand.",
+      "files": [
+        "evals/files/eval11_ledger.beancount",
+        "evals/files/eval11_statement.csv"
+      ],
       "expectations": [
         "The opening gap is booked with `bea add balance --pad-from`, not a hand-written pad/balance pair and not silently absorbed",
         "The period-end assertion uses `bea add balance` dated the day after the statement's last day",
