@@ -1,4 +1,4 @@
-# w6 · m6 — Publish the eight ledger skills to ClawHub for OpenClaw and Hermes Agent
+# w6 · m6 — Publish the ledger skills to ClawHub for OpenClaw and Hermes Agent
 
 **Worker:** worker1 **Goal:** An OpenClaw or Hermes Agent user installs any `beancount-*` skill by name from ClawHub, and it works on its own without a Git checkout or this repository's link installer. **Status:** blocked (t001 needs the owner; t002–t004 done)
 
@@ -27,7 +27,7 @@ Two tasks need someone with authority this repository does not have: t001 is the
 ## Blocked
 
 - **Milestone (2026-10-16)** — every open task now waits on t001. t005 (dry run) depends on t001 directly, and t006–t013 follow from t005 or t001, so nothing in this milestone can proceed until the owner decides. Shipped baseline: t002 `beancount-skills.py bundle` (`6a3e99a4`), t003 sibling hand-off lines (`313fe145`), t004 registry metadata and the hardened frontmatter check (`155e3135`). **Unblock:** t001's condition below. Then `/pm unblock w6/m6` and continue at t005. **Who can clear it:** the repository owner.
-- **t001 (2026-10-16)** — needs the repository owner's decision, which this repository cannot make. ClawHub publishes every skill under `MIT-0` with no per-skill override, and `LICENSE` here is MIT. MIT-0 drops the requirement to keep the copyright and permission notice. The owner must also choose which ClawHub handle (and so which install scope, `@<handle>/beancount-*`) publishes the suite. No decision on either is recorded on the board, in an ADR, or in a commit. t002–t004 proceed without it; t005 onward depend on it. **Unblock:** the owner states (1) whether the eight skills may be published under MIT-0 and (2) the publishing handle, and t001 records both under `## Decisions`. If the owner declines MIT-0, block the milestone with that reason. **Who can clear it:** the repository owner.
+- **t001 (2026-10-16)** — needs the repository owner's decision, which this repository cannot make. ClawHub publishes every skill under `MIT-0` with no per-skill override, and `LICENSE` here is MIT. MIT-0 drops the requirement to keep the copyright and permission notice. The owner must also choose which ClawHub handle (and so which install scope, `@<handle>/beancount-*`) publishes the suite. No decision on either is recorded on the board, in an ADR, or in a commit. t002–t004 proceed without it; t005 onward depend on it. **Unblock:** the owner states (1) whether the suite's skills may be published under MIT-0 and (2) the publishing handle, and t001 records both under `## Decisions`. If the owner declines MIT-0, block the milestone with that reason. **Who can clear it:** the repository owner.
 
 ## What the hosts need (checked 2026-10-16)
 
@@ -40,12 +40,12 @@ Two tasks need someone with authority this repository does not have: t001 is the
 
 ## Definition of done
 
-- All eight `beancount-*` skills are live on ClawHub under the handle chosen in t001. Each listing's latest version matches the bundle built from `main`, and its scan state allows install.
+- Every `beancount-*` skill in the suite is live on ClawHub under the handle chosen in t001. Each listing's latest version matches the bundle built from `main`, and its scan state allows install.
 - In a clean OpenClaw installation, `openclaw skills install @<handle>/beancount-ask` (alone) and the full suite both install. A first-query journey on a synthetic ledger answers from `bea --json query`, and the result is recorded with dates and versions.
 - In a clean Hermes Agent installation, `hermes skills search beancount` finds the ClawHub listings, and an install passes Hermes's scanner without `--force`. Hermes's direct GitHub-path install either works or is documented as unsupported, with the reason.
 - A skill installed alone states which sibling it hands off to and how to install it. It never reads a file that its bundle does not contain.
 - The `Publish (clawhub)` workflow validates bundles on every pull request touching `skills/**`, and publishes only on an explicit dispatch from `main`, with a token from a protected environment. It never commits a token or prints it.
-- Claude Code and Codex still list all eight skills from the existing link installer (`skills/docs/installation.md` step 3), and `python3 skills/scripts/ci-check.py` passes.
+- Claude Code and Codex still list every suite skill from the existing link installer (`skills/docs/installation.md` step 3), and `python3 skills/scripts/ci-check.py` passes.
 - `skills/docs/installation.md`, `skills/README.md`, `skills/AGENTS.md`, and the root `AGENTS.md` tooling list describe the ClawHub install, the workflow, and its secret.
 
 ## Source + Goal linkage
