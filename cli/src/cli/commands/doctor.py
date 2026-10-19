@@ -532,16 +532,19 @@ def _private_roundtrip_artifacts(ledger: str) -> list[Path]:
         try:
             os.close(os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600))
         except OSError as exc:
+            # Upstream raised, then crashed in its own cleanup: a 34-line
+            # double traceback, exit 1 (w5/572). A permission failure is 3;
+            # any other (a too-long name, no space) names the scratch file (w5/770).
+            for made in created:
+                made.unlink(missing_ok=True)
             if exc.errno in (errno.EACCES, errno.EPERM, errno.EROFS):
-                # Upstream raised, then crashed in its own cleanup: a 34-line
-                # double traceback, exit 1 (w5/572). A permission failure is 3.
-                for made in created:
-                    made.unlink(missing_ok=True)
                 raise AuthError(
                     f"doctor roundtrip writes scratch copies beside the ledger, and {path.parent} is not "
                     "writable. Nothing was written."
                 ) from None
-            continue
+            raise UsageError(
+                f"doctor roundtrip cannot create its scratch file {path}: {exc.strerror or exc}. Nothing was written."
+            ) from None
         created.append(path)
     return created
 
@@ -570,6 +573,11 @@ def _forward_roundtrip(ctx: typer.Context) -> None:
     if errors:
         _replay_without_congratulations(completed)
         raise LedgerError(f"doctor roundtrip cannot compare {positionals[0]}: {errors[0]}")
+    duplicate = _duplicate_entry_refusal(completed, positionals[0]) if positionals else None
+    if duplicate is not None:
+        # Upstream's set comparison throws a 30-line traceback on two
+        # identical entries; bea names them in one line instead (w5/770).
+        raise LedgerError(duplicate)
     # Captured rather than streamed so the verdict can be read: upstream logs
     # `Entries differ!` and returns 0 regardless, so a real failed comparison
     # exited 0 and nothing automated could tell it from a clean one.
@@ -579,6 +587,53 @@ def _forward_roundtrip(ctx: typer.Context) -> None:
             f"doctor roundtrip found that {positionals[0]} does not survive a print/parse cycle (see above).",
         )
     raise typer.Exit(0)
+
+
+_DUPLICATE_ENTRY = re.compile(r"Duplicate entry: (\w+)\(")
+
+
+def _duplicate_entry_refusal(completed: subprocess.CompletedProcess[str], ledger: str) -> str | None:
+    """One line naming identical entries roundtrip cannot compare, else None.
+
+    Upstream compares entry *sets*, so two identical entries — valid for
+    `check` — die in `compare_entries` with a 30-line traceback. The
+    `ValueError` line carries both entries' reprs on one line: the kind, the
+    two `(meta=` linenos, and a date with a narration or comment. Anything
+    unparseable falls through to the replay, never to a crash here.
+    """
+    for stream in (completed.stderr or "", completed.stdout or ""):
+        for line in stream.splitlines():
+            kinds = _DUPLICATE_ENTRY.search(line)
+            if kinds is None:
+                continue
+            try:
+                return _duplicate_entry_line(line, kinds.group(1), ledger)
+            except ValueError:
+                continue
+    return None
+
+
+def _duplicate_entry_line(line: str, kind: str, ledger: str) -> str:
+    """The refusal for one `Duplicate entry` line; ValueError unless it parses."""
+    linenos = sorted({int(found) for found in re.findall(r"\(meta=\{[^}]*?'lineno': (\d+)", line)})
+    if len(linenos) < 2:
+        raise ValueError("entry lines unreadable")
+    first, second = linenos[0], linenos[1]
+    dated = re.search(r"date=datetime\.date\((\d+), (\d+), (\d+)\)", line)
+    date = f"{dated.group(1)}-{dated.group(2):0>2}-{dated.group(3):0>2}" if dated else None
+    words = {"Transaction": "transactions", "Note": "notes"}.get(kind, f"{kind} entries")
+    if kind == "Transaction":
+        said = re.search(r"narration=(['\"])(.*?)\1", line)
+        detail = f' ("{said.group(2)}" on {date})' if said and date else ""
+        remedy = "add a link or tag to one to make the file roundtrip-clean"
+    else:
+        said = re.search(r"comment=(['\"])(.*?)\1", line)
+        detail = f' ("{said.group(2)}" on {date})' if said and date else ""
+        remedy = "change one so they differ"
+    return (
+        f"doctor roundtrip cannot compare {ledger}: lines {first} and {second} hold identical "
+        f"{words}{detail}. Roundtrip compares entry sets, so it cannot tell them apart; {remedy}."
+    )
 
 
 def _entries_differ(stderr: str) -> bool:
