@@ -40,7 +40,9 @@ import { createLedgerId, parseLedgerId } from "@/shared/str";
 import { VOCABULARY_READS } from "@/features/ledger/api/rest/v1/vocabulary-handler";
 import { LEDGER_OPTIONS_READ } from "@/features/ledger/api/rest/v1/options-handler";
 import { ANALYSIS_READS } from "@/features/ledger/api/rest/v1/analysis-handler";
-import { NotFoundError } from "@/shared/errors";
+import { NotFoundError, OperationNotAllowedError } from "@/shared/errors";
+import type { Readable } from "node:stream";
+import type { Response } from "node-fetch";
 
 /**
  * The MCP surface's resource fragment (ADR 0008 D2).
@@ -99,6 +101,48 @@ export interface McpResourceDescriptor {
   >;
 }
 
+/**
+ * The largest archive the MCP resource returns. A resource read answers in one
+ * JSON-RPC message, so the archive is held whole in memory — and grows by a
+ * third as base64 — where REST streams it. Past this the read is refused and
+ * the agent is pointed at the download URL, which streams at any size.
+ */
+export const MCP_ARCHIVE_BLOB_MAX_BYTES = 8 * 1024 * 1024;
+const MCP_ARCHIVE_BLOB_MAX_MIB = MCP_ARCHIVE_BLOB_MAX_BYTES / (1024 * 1024);
+
+function archiveTooLarge(ledgerId: string, archive: string) {
+  return new OperationNotAllowedError(
+    "readArchive",
+    `${archive} is larger than the ${MCP_ARCHIVE_BLOB_MAX_MIB} MiB an MCP resource returns`,
+    `Read \`beancount://${ledgerId}/archive-download-url\` for an HTTP URL that streams the archive at any size, and fetch it with this same credential.`,
+  );
+}
+
+/** The archive's bytes, refused once they pass the blob cap. */
+async function readCappedArchive(
+  response: Response,
+  ledgerId: string,
+  archive: string,
+): Promise<Buffer> {
+  const body = response.body as Readable;
+  if (
+    Number(response.headers.get("content-length")) > MCP_ARCHIVE_BLOB_MAX_BYTES
+  ) {
+    body.destroy();
+    throw archiveTooLarge(ledgerId, archive);
+  }
+  const chunks: Buffer[] = [];
+  let size = 0;
+  // Leaving the loop early destroys the body, which aborts the upstream read.
+  for await (const chunk of body) {
+    size += (chunk as Buffer).length;
+    if (size > MCP_ARCHIVE_BLOB_MAX_BYTES)
+      throw archiveTooLarge(ledgerId, archive);
+    chunks.push(chunk as Buffer);
+  }
+  return Buffer.concat(chunks, size);
+}
+
 async function readArchive(
   context: McpRequestContext,
   ledgerId: string,
@@ -111,7 +155,9 @@ async function readArchive(
   });
   const disposition = response.headers.get("content-disposition");
   return {
-    blob: (await response.buffer()).toString("base64"),
+    blob: (await readCappedArchive(response, ledgerId, archive)).toString(
+      "base64",
+    ),
     mimeType:
       response.headers.get("content-type") ?? "application/octet-stream",
     ...(disposition && {
@@ -494,8 +540,7 @@ export const MCP_RESOURCES: readonly McpResourceDescriptor[] = [
   {
     name: "ledgerArchive",
     title: "Ledger Archive",
-    description:
-      "Download archive bytes as an MCP base64 blob. `archive` is a Git reference and its format, `<ref>.zip` or `<ref>.tar.gz` (for example `main.zip`), as on REST. Every call rechecks ledger read authority and spends the shared archive-download budget.",
+    description: `Download archive bytes as an MCP base64 blob, up to ${MCP_ARCHIVE_BLOB_MAX_MIB} MiB. \`archive\` is a Git reference and its format, \`<ref>.zip\` or \`<ref>.tar.gz\` (for example \`main.zip\`), as on REST. A larger archive is refused; read \`beancount://{owner}/{name}/archive-download-url\` for an HTTP URL that streams it at any size. Every call rechecks ledger read authority and spends the shared archive-download budget.`,
     mimeType: "application/octet-stream",
     uriTemplate: "beancount://{owner}/{name}/archive/{archive}",
     read: async (context, variables) =>
