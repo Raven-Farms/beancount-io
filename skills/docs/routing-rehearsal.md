@@ -158,3 +158,17 @@ single-run misses, `none-what-is-bea-ask` → beancount-ask and
 `author-ally-headers-broke` → none, are unrelated to this skill and routed
 correctly in four further Codex runs each; the third miss is the known
 `none-hosted-reconcile`.
+
+## Sibling hand-offs to `beancount-add` — 2026-10-19
+
+The import, reconcile, options, ask, and close descriptions now name
+`beancount-add` for single entries; ask also skips option pricing and greeks.
+Claude Code routed 53/53 in both final runs. Codex routed 51/53 in the first
+(`none-what-is-bea-ask` and `none-hosted-close-month`, both seen before). The
+second Codex run stopped at the account's usage limit after 45 prompts, with
+only the known `migrate-new-ledger-from-monarch` and `none-hosted-reconcile`
+misses among them. In targeted Codex reruns, `none-what-is-bea-ask` and
+`none-fix-payee-typo` routed correctly 4/4. `none-options-greeks` opened
+`beancount-ask` in three of nine runs across the hand-off change and the
+ask skip clause that followed, against none in ten earlier runs, so it is
+recorded as Codex-variable rather than settled.

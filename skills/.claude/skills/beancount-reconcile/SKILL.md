@@ -1,6 +1,6 @@
 ---
 name: beancount-reconcile
-description: Reconcile one account in a local Beancount ledger against a CSV or PDF statement. Report missing entries, duplicates, amount mismatches and date drift; confirm missing-entry writes and a passing period-end balance assertion through bea. Use for checking whether an account matches its statement. Skip bulk imports, analytics, multi-account close orchestration, edits to existing entries, and ledgers hosted on Beancount.io.
+description: Reconcile one account in a local Beancount ledger against a CSV or PDF statement. Report missing entries, duplicates, amount mismatches and date drift; confirm missing-entry writes and a passing period-end balance assertion through bea. Use for checking whether an account matches its statement. Skip bulk imports, single manual entries (beancount-add), analytics, multi-account close orchestration, edits to existing entries, and ledgers hosted on Beancount.io.
 metadata: {"openclaw": {"homepage": "https://github.com/bex-co/beancount-io/tree/main/skills", "requires": {"anyBins": ["bea", "bean-check"]}, "install": [{"id": "brew", "kind": "brew", "formula": "bex-co/tap/bea", "bins": ["bea"], "label": "Install bea (Homebrew)"}, {"id": "uv", "kind": "uv", "package": "beancount-io", "bins": ["bea"], "label": "Install bea (uv)"}]}, "hermes": {"category": "finance", "tags": ["beancount", "accounting", "reconciliation", "bank-statement"]}}
 ---
 
