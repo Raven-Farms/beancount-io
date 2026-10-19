@@ -196,6 +196,28 @@ describe("LimitIndicator", () => {
       },
     );
 
+    it.each([
+      ["FREE", "premium"],
+      ["PREMIUM", "growth"],
+    ] as const)(
+      "opens the next tier up from a %s owner's collaborators limit on Billing",
+      (tier, plan) => {
+        render(
+          <LimitIndicator
+            tier={tier}
+            used={5}
+            max={5}
+            limitType="collaborators"
+          />,
+        );
+
+        expect(screen.getByRole("link", { name: /upgrade/i })).toHaveAttribute(
+          "href",
+          `/settings/billing?plan=${plan}&billing=yearly&from=collaborators_limit&return=${encodeURIComponent(TEST_LOCATION_HREF)}`,
+        );
+      },
+    );
+
     it("opens Billing without a plan when no tier is above", () => {
       render(
         <LimitIndicator

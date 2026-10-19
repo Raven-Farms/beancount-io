@@ -346,9 +346,10 @@ export function SubscriptionSection({
               />
             )}
 
-            {currentInterval === "month" && currentTierKey && (
+            {currentInterval === "month" && currentTierKey && currentPrice && (
               <PayYearlyOffer
                 tier={currentTierKey}
+                monthlyAmount={currentPrice.amount}
                 t={t}
                 busy={checkoutLoading}
                 onSwitch={() =>

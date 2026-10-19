@@ -96,8 +96,8 @@ export interface PlanConfig {
   /** Billing cycle, so plan changes classify without a Stripe call. */
   interval: BillingInterval;
   /**
-   * Still billed to the subscribers on it, but never a plan-change target.
-   * Checkout still accepts it while it is in `planIds`.
+   * Still billed to, and resolved for, the subscribers on it, but never sold
+   * again: Checkout and plan changes both refuse it.
    */
   retired?: true;
 }
@@ -178,8 +178,7 @@ export const SUBSCRIPTION_CONFIG: SubscriptionConfigMap = {
         description: "Beancount.io Basic - Yearly - $99.99/year (Legacy)",
         interval: "year",
         tier: SubscriptionTier.PREMIUM,
-        // Grandfathered (PRFAQ005 decision 3), and still sold by the pricing
-        // page until it switches to $143.88.
+        // Grandfathered (PRFAQ005 decision 3): its subscribers keep renewing.
         retired: true,
       },
       {

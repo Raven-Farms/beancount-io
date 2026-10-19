@@ -48,9 +48,8 @@ export const stripePlanConfig: StripePlanConfig = {
 };
 
 /**
- * Older prices still billed to existing subscribers. The dashboard never
- * offers them and a plan change never targets them; the backend's Checkout
- * may still accept one while the pricing page sells it.
+ * Older prices still billed to existing subscribers. Nothing sells them
+ * again: the backend's Checkout and plan changes both refuse them.
  */
 const LEGACY_PLANS: Record<
   string,

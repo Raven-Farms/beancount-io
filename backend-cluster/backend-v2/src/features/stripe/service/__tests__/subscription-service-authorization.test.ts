@@ -24,6 +24,15 @@ const oauth: Identity = {
   scopes: new Set(["ledger.read", "ledger.write", "ledger.admin"]),
 };
 
+const apikey: Identity = {
+  userId: "usr_alice",
+  method: "apikey",
+  scopes: new Set(["ledger.read", "ledger.write", "ledger.admin"]),
+};
+
+/** Every delegated credential billing must refuse, however broadly scoped. */
+const DELEGATED_CREDENTIALS = [oauth, apikey] as const;
+
 function makeDeps() {
   const stripe = {
     listSubscriptions: jest.fn(async () => []),
@@ -168,15 +177,33 @@ describe("SubscriptionService authorization boundary", () => {
     },
   );
 
-  it.each(BILLING_CASES)(
-    "performs no billing work when $action is denied",
-    async ({ call }) => {
+  it("covers every billing action in the registry", () => {
+    const registered = Object.values(AUTHORIZATION_ACTIONS).filter((action) =>
+      action.startsWith("user.billing."),
+    );
+    expect(registered.length).toBeGreaterThanOrEqual(9);
+    expect(BILLING_CASES.map(({ action }) => action).sort()).toEqual(
+      [...registered].sort(),
+    );
+  });
+
+  it.each(
+    BILLING_CASES.flatMap((billingCase) =>
+      DELEGATED_CREDENTIALS.map((identity) => ({
+        ...billingCase,
+        identity,
+        method: identity.method,
+      })),
+    ),
+  )(
+    "performs no billing work when $action is denied to a $method credential",
+    async ({ call, identity }) => {
       const authorization = new AuthorizationService({
         check: async () => true,
       });
       const { service, deps } = makeService(authorization);
 
-      await expect(call(service, oauth)).rejects.toMatchObject({
+      await expect(call(service, identity)).rejects.toMatchObject({
         category: ErrorCategory.FORBIDDEN,
         message: "Managing billing requires a full signed-in session",
       });

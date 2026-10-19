@@ -40,14 +40,11 @@ const selfService = () =>
     check: async ({ user, object }) => user === object,
   });
 
-const BILLING_ACTIONS = [
-  AUTHORIZATION_ACTIONS.USER_BILLING_STATUS_READ,
-  AUTHORIZATION_ACTIONS.USER_BILLING_CHECKOUT_CREATE,
-  AUTHORIZATION_ACTIONS.USER_BILLING_PORTAL_CREATE,
-  AUTHORIZATION_ACTIONS.USER_BILLING_SUBSCRIPTION_CANCEL,
-  AUTHORIZATION_ACTIONS.USER_BILLING_SUBSCRIPTION_RESUME,
-  AUTHORIZATION_ACTIONS.USER_BILLING_SUBSCRIPTION_UPGRADE,
-] as const;
+// Derived from the registry, so a billing action added later is covered by
+// every billing case below without anyone remembering to list it here.
+const BILLING_ACTIONS: readonly AuthorizationAction[] = Object.values(
+  AUTHORIZATION_ACTIONS,
+).filter((action) => action.startsWith("user.billing."));
 
 const SESSION_SOCIAL_ACTIONS = [
   AUTHORIZATION_ACTIONS.USER_SOCIAL_FOLLOW_CREATE,
@@ -731,6 +728,18 @@ describe("AuthorizationService", () => {
       reason: "credential_not_permitted",
     });
     expect(relationships.check).not.toHaveBeenCalled();
+  });
+
+  it("enumerates every billing action, plan changes included", () => {
+    // Anti-vacuity floor: a broken prefix filter must not empty the cases.
+    expect(BILLING_ACTIONS.length).toBeGreaterThanOrEqual(9);
+    expect(BILLING_ACTIONS).toEqual(
+      expect.arrayContaining([
+        AUTHORIZATION_ACTIONS.USER_BILLING_PLAN_CHANGE_PREVIEW,
+        AUTHORIZATION_ACTIONS.USER_BILLING_PLAN_CHANGE_APPLY,
+        AUTHORIZATION_ACTIONS.USER_BILLING_PLAN_CHANGE_CANCEL,
+      ]),
+    );
   });
 
   it.each(BILLING_ACTIONS)(

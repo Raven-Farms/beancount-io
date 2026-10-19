@@ -310,6 +310,25 @@ describe("previewPlanChange", () => {
     expect(stripe.subscriptions.list).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ["$9.99 monthly", "price_1L9ccEEqsEqs2tLVKPRV17wb"],
+    ["$99.99 yearly", "price_1L9ccEEqsEqs2tLVbeBgHm9p"],
+  ])(
+    "rejects the retired %s Premium price as a target before any Stripe call",
+    async (_label, retired) => {
+      const { stripe, preview } = setup({
+        subscriptions: [subscription(GROWTH_MONTHLY)],
+      });
+
+      await expect(preview(retired)).rejects.toMatchObject({
+        category: ErrorCategory.VALIDATION_FAILED,
+      });
+      expect(stripe.subscriptions.list).not.toHaveBeenCalled();
+      expect(stripe.prices.retrieve).not.toHaveBeenCalled();
+      expect(stripe.invoices.createPreview).not.toHaveBeenCalled();
+    },
+  );
+
   it("refuses to preview a change while a renewal is past due", async () => {
     const { stripe, preview } = setup({
       subscriptions: [

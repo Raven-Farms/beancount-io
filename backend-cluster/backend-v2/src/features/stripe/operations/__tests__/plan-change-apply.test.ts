@@ -453,20 +453,32 @@ describe("applyPlanChange", () => {
     },
   );
 
-  it("refuses an end-of-period change for the immediate-only legacy mutation, with no Stripe write", async () => {
-    const { stripe, apply } = setup({
-      subscriptions: [subscription(GROWTH_MONTHLY)],
-      immediateOnly: true,
-    });
+  it.each([
+    // A lower tier, on the same cycle.
+    ["DOWNGRADE", GROWTH_MONTHLY, PREMIUM_MONTHLY],
+    // Yearly to monthly on the same tier.
+    ["TO_MONTHLY", PREMIUM_YEARLY, PREMIUM_MONTHLY],
+    // A higher tier while leaving yearly.
+    ["SPLIT", PREMIUM_YEARLY, GROWTH_MONTHLY],
+  ])(
+    "refuses an end-of-period %s for the immediate-only legacy mutation, with no Stripe write",
+    async (kind, currentPriceId, targetPriceId) => {
+      const { stripe, apply } = setup({
+        subscriptions: [subscription(currentPriceId)],
+        immediateOnly: true,
+      });
 
-    await expect(apply(PREMIUM_MONTHLY, NOW_SECONDS)).resolves.toMatchObject({
-      status: "REFUSED",
-      refusal: "SCHEDULED_CHANGE",
-      kind: "DOWNGRADE",
-    });
-    expect(stripe.subscriptions.update).not.toHaveBeenCalled();
-    expect(stripe.subscriptionSchedules.create).not.toHaveBeenCalled();
-  });
+      await expect(apply(targetPriceId, NOW_SECONDS)).resolves.toMatchObject({
+        status: "REFUSED",
+        refusal: "SCHEDULED_CHANGE",
+        kind,
+      });
+      expect(stripe.subscriptions.update).not.toHaveBeenCalled();
+      expect(stripe.subscriptionSchedules.create).not.toHaveBeenCalled();
+      expect(stripe.subscriptionSchedules.update).not.toHaveBeenCalled();
+      expect(stripe.subscriptionSchedules.release).not.toHaveBeenCalled();
+    },
+  );
 
   it("sends a customer without a subscription to Checkout", async () => {
     const { apply } = setup({ subscriptions: [] });

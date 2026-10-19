@@ -69,7 +69,6 @@ m39–m40 were materialized on 2026-10-18 from [PRFAQ005](../../docs/prfaqs/PRFA
 ## Inbox
 
 - [175](./175.md) — In-place bank approval for plan changes with Stripe.js; needs the user's approval of the dependency (follow-up to w1/m39/t007).
-- [176](./176.md) — Stop selling the $99.99 Premium yearly price through Checkout once the pricing page sells $143.88 (follow-up to w1/m39/t005).
 - [177](./177.md) — The importer paywall says "Upgrade to Premium" while recommending Growth (found by w1/m39/t011).
 - [178](./178.md) — Give the server-side `purchase` its traffic source; decide after t016 turns it on (found by w1/m39/t011).
 - [179](./179.md) — Two dashboard events are missing from the event taxonomy (found by w1/m39/t011).

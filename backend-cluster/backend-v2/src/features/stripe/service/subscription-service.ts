@@ -389,6 +389,14 @@ export class SubscriptionService implements ISubscriptionService {
           message: `Plan configuration not found for price ID: ${priceId}`,
         };
       }
+      // Still billed to the subscribers on it, never sold again.
+      if (planConfig.retired) {
+        return {
+          success: false,
+          message:
+            "This price is no longer offered. Choose a plan again on the pricing page.",
+        };
+      }
 
       const stripe = this.stripe.getStripeInstance(clientId);
       const existingCustomer =

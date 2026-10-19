@@ -1631,7 +1631,7 @@ describe("SubscriptionResolver", () => {
 
       const result = await resolver.createSubscriptionSession(
         "beancount-web-prod",
-        "price_1L9ccEEqsEqs2tLVKPRV17wb", // Valid price ID
+        "price_1RrSOGEqsEqs2tLVFnyB34qG", // Valid price ID
         mockContext,
       );
 
@@ -1644,7 +1644,7 @@ describe("SubscriptionResolver", () => {
         expect.objectContaining({
           line_items: [
             {
-              price: "price_1L9ccEEqsEqs2tLVKPRV17wb",
+              price: "price_1RrSOGEqsEqs2tLVFnyB34qG",
               quantity: 1,
             },
           ],
@@ -1678,7 +1678,7 @@ describe("SubscriptionResolver", () => {
 
       const result = await resolver.createSubscriptionSession(
         "beancount-web-prod",
-        "price_1L9ccEEqsEqs2tLVKPRV17wb",
+        "price_1RrSOGEqsEqs2tLVFnyB34qG",
         mockContext,
       );
 
@@ -1707,7 +1707,7 @@ describe("SubscriptionResolver", () => {
 
       await resolver.createSubscriptionSession(
         "beancount-web-prod",
-        "price_1L9ccEEqsEqs2tLVbeBgHm9p",
+        "price_1US5htEqsEqs2tLVENCzLaZB",
         mockContext,
       );
       await resolver.createSubscriptionSession(
@@ -1729,6 +1729,78 @@ describe("SubscriptionResolver", () => {
         "https://beancount.io/pricing/?success=true",
       );
     });
+
+    // The pricing page's contract (w1/m39 README): every price it sells, under
+    // the client it sends, must open Checkout. Written out rather than read
+    // from SUBSCRIPTION_CONFIG, so dropping a sold price from the server's
+    // catalog fails here instead of passing by construction.
+    it.each([
+      ["Premium monthly", "price_1RrSOGEqsEqs2tLVFnyB34qG"],
+      ["Premium yearly", "price_1US5htEqsEqs2tLVENCzLaZB"],
+      ["Growth monthly", "price_1SyPdaEqsEqs2tLViLPUDoVi"],
+      ["Growth yearly", "price_1SyPdbEqsEqs2tLV7PJyWZed"],
+      ["Organization monthly", "price_1SyPdcEqsEqs2tLVCWEgU1PZ"],
+      ["Organization yearly", "price_1SyPdfEqsEqs2tLVmK6zCrP6"],
+    ])(
+      "opens Checkout through GraphQL for the pricing page's %s price",
+      async (_label, priceId) => {
+        const create = jest.fn().mockResolvedValue({
+          id: "cs_pricing",
+          url: "https://checkout.stripe.com/c/pay/cs_pricing",
+        });
+        mockStripeService.getStripeInstance.mockReturnValue({
+          checkout: { sessions: { create } },
+        });
+        mockModels.paidCustomer.findByUserIdAndClientId.mockResolvedValue(null);
+        const identity = mockContext.getCurrentIdentity();
+
+        const result = await graphql({
+          schema: await graphqlSchema,
+          source: `mutation Checkout($clientId: String!, $priceId: String!) {
+            createSubscriptionSession(clientId: $clientId, priceId: $priceId) {
+              success message sessionUrl
+            }
+          }`,
+          variableValues: { clientId: "beancount-web-prod", priceId },
+          contextValue: { ...mockContext, identity },
+        });
+
+        expect(result.errors).toBeUndefined();
+        expect(result.data?.createSubscriptionSession).toEqual({
+          success: true,
+          message: null,
+          sessionUrl: "https://checkout.stripe.com/c/pay/cs_pricing",
+        });
+        expect(create).toHaveBeenCalledTimes(1);
+        const [session] = create.mock.calls[0];
+        expect(session.line_items[0].price).toBe(priceId);
+        expect(session.allow_promotion_codes).toBe(true);
+      },
+    );
+
+    it.each([
+      ["$9.99 monthly", "price_1L9ccEEqsEqs2tLVKPRV17wb"],
+      ["$99.99 yearly", "price_1L9ccEEqsEqs2tLVbeBgHm9p"],
+    ])(
+      "never sells the retired %s Premium price, though its subscribers keep it",
+      async (_label, priceId) => {
+        const create = jest.fn();
+        mockStripeService.getStripeInstance.mockReturnValue({
+          checkout: { sessions: { create } },
+        });
+        mockModels.paidCustomer.findByUserIdAndClientId.mockResolvedValue(null);
+
+        const result = await resolver.createSubscriptionSession(
+          "beancount-web-prod",
+          priceId,
+          mockContext,
+        );
+
+        expect(result.success).toBe(false);
+        expect(result.message).toContain("no longer offered");
+        expect(create).not.toHaveBeenCalled();
+      },
+    );
 
     it("refuses a second Checkout to a customer who already pays, so nobody is billed twice", async () => {
       const mockStripeCheckoutSessions = { create: jest.fn() };
@@ -1758,7 +1830,7 @@ describe("SubscriptionResolver", () => {
 
       const result = await resolver.createSubscriptionSession(
         "beancount-web-prod",
-        "price_1L9ccEEqsEqs2tLVbeBgHm9p",
+        "price_1US5htEqsEqs2tLVENCzLaZB",
         mockContext,
       );
 
@@ -1784,7 +1856,7 @@ describe("SubscriptionResolver", () => {
 
       const result = await resolver.createSubscriptionSession(
         "beancount-web-prod",
-        "price_1L9ccEEqsEqs2tLVKPRV17wb",
+        "price_1RrSOGEqsEqs2tLVFnyB34qG",
         mockContext,
       );
 
@@ -1808,7 +1880,7 @@ describe("SubscriptionResolver", () => {
 
       const result = await resolver.createSubscriptionSession(
         "beancount-web-prod",
-        "price_1L9ccEEqsEqs2tLVKPRV17wb",
+        "price_1RrSOGEqsEqs2tLVFnyB34qG",
         mockContext,
       );
 

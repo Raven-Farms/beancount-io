@@ -1,30 +1,32 @@
 import { Button } from "@/common/components/ui/button";
-import {
-  cyclePrice,
-  yearlySaving,
-  type SubscriptionTier,
-} from "./stripe-config";
+import { cyclePrice, type SubscriptionTier } from "./stripe-config";
 import { useMoneyFormat } from "./use-money-format";
 
 /**
  * The yearly offer on a monthly plan: the one line that makes the cheaper
  * cycle visible where a subscriber manages billing (PRFAQ005 question 1).
+ * It compares twelve of what this subscriber pays, not the list price, so a
+ * legacy monthly price that already beats yearly gets no offer at all.
  */
 export function PayYearlyOffer({
   tier,
+  monthlyAmount,
   t,
   busy,
   onSwitch,
 }: {
   tier: SubscriptionTier;
+  /** The subscriber's own monthly price, in cents. */
+  monthlyAmount: number;
   t: (key: string, params?: Record<string, string | number>) => string;
   busy: boolean;
   onSwitch: () => void;
 }) {
   const formatMoney = useMoneyFormat();
   const yearly = cyclePrice(tier, "yearly").amount;
-  const monthlyTotal = cyclePrice(tier, "monthly").amount * 12;
-  const { saving } = yearlySaving(tier);
+  const monthlyTotal = monthlyAmount * 12;
+  const saving = monthlyTotal - yearly;
+  if (saving <= 0) return null;
   return (
     <div
       data-testid="pay-yearly-offer"
