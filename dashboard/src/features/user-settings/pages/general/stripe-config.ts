@@ -20,6 +20,8 @@ export interface TierPricing {
 
 export interface StripePlanConfig {
   clientId: string;
+  /** Public by design: it lets Stripe.js run a bank approval in the page. */
+  publishableKey: string;
   premium: TierPricing;
   growth: TierPricing;
   organization: TierPricing;
@@ -27,6 +29,8 @@ export interface StripePlanConfig {
 
 export const stripePlanConfig: StripePlanConfig = {
   clientId: "beancount-web-prod",
+  publishableKey:
+    "pk_live_51Ivbc5EqsEqs2tLVhdzJfepAVVPEhSBqsJYhASLLsbxM6vn8zQ0qQuR8Jk9Mx4PDFShjCQ10LAno2YDyRsLQ5xRY00AQN2Sz9j",
   premium: {
     monthly: "price_1RrSOGEqsEqs2tLVFnyB34qG", // $14.99/month
     yearly: "price_1US5htEqsEqs2tLVENCzLaZB", // $11.99/month billed yearly ($143.88/year)

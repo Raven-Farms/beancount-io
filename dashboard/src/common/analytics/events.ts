@@ -248,9 +248,14 @@ export interface AnalyticsEvents {
    * preview → confirm rate per kind.
    */
   plan_change_confirmed: PlanChangeParams;
-  /** The bank must approve the change's payment; the sheet links to Stripe. */
+  /**
+   * The bank must approve the change's payment. The sheet asks for it with
+   * Stripe.js, or links to Stripe's page when Stripe.js cannot run.
+   */
   payment_action_required: PlanChangeParams;
-  /** The change's payment was declined; nothing changed. */
+  /** The bank approved the payment in the sheet, so the change landed. */
+  payment_action_completed: PlanChangeParams;
+  /** The change's payment was declined, at once or by the bank; nothing changed. */
   payment_action_failed: PlanChangeParams;
   /** A change that waits for the end of the paid period was scheduled. */
   plan_change_scheduled: PlanChangeParams;

@@ -966,6 +966,11 @@ const ruUserSettings: Record<string, TranslationEntry> = {
       "Ваш банк должен подтвердить этот платёж. До этого ничего не изменится; после подтверждения обновите страницу.",
     description: "The bank must approve the payment before the change applies",
   },
+  "userSettings.planChangeApproving": {
+    message: "Ждём, пока банк подтвердит платёж…",
+    description:
+      "Shown while Stripe asks the bank to approve a plan change's payment",
+  },
   "userSettings.planChangeApprovePayment": {
     message: "Подтвердить платёж",
     description: "Button that opens Stripe's page to approve the payment",

@@ -68,7 +68,6 @@ m39–m40 were materialized on 2026-10-18 from [PRFAQ005](../../docs/prfaqs/PRFA
 
 ## Inbox
 
-- [175](./175.md) — In-place bank approval for plan changes with Stripe.js; needs the user's approval of the dependency (follow-up to w1/m39/t007).
 - [178](./178.md) — Give the server-side `purchase` its traffic source; decide after t016 turns it on (found by w1/m39/t011).
 
 

@@ -946,6 +946,11 @@ const nlUserSettings: Record<string, TranslationEntry> = {
       "Je bank moet deze betaling goedkeuren. Tot dan verandert er niets; vernieuw deze pagina na de goedkeuring.",
     description: "The bank must approve the payment before the change applies",
   },
+  "userSettings.planChangeApproving": {
+    message: "Wachten tot je bank de betaling goedkeurt…",
+    description:
+      "Shown while Stripe asks the bank to approve a plan change's payment",
+  },
   "userSettings.planChangeApprovePayment": {
     message: "Betaling goedkeuren",
     description: "Button that opens Stripe's page to approve the payment",

@@ -964,6 +964,11 @@ const ukUserSettings: Record<string, TranslationEntry> = {
       "Ваш банк має підтвердити цей платіж. До того нічого не зміниться; після підтвердження оновіть сторінку.",
     description: "The bank must approve the payment before the change applies",
   },
+  "userSettings.planChangeApproving": {
+    message: "Чекаємо, поки банк підтвердить платіж…",
+    description:
+      "Shown while Stripe asks the bank to approve a plan change's payment",
+  },
   "userSettings.planChangeApprovePayment": {
     message: "Підтвердити платіж",
     description: "Button that opens Stripe's page to approve the payment",

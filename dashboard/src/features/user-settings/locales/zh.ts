@@ -918,6 +918,11 @@ const zhUserSettings: Record<string, TranslationEntry> = {
       "你的银行需要批准此付款。批准前不会有任何变更；批准后请刷新此页面。",
     description: "The bank must approve the payment before the change applies",
   },
+  "userSettings.planChangeApproving": {
+    message: "正在等待你的银行批准此付款…",
+    description:
+      "Shown while Stripe asks the bank to approve a plan change's payment",
+  },
   "userSettings.planChangeApprovePayment": {
     message: "批准付款",
     description: "Button that opens Stripe's page to approve the payment",

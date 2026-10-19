@@ -34,6 +34,25 @@ describe("useChangePlan", () => {
     ]);
     expect(options.awaitRefetchQueries).toBe(true);
   });
+
+  it("refetches the same queries once a bank approves the payment later", async () => {
+    const refetchQueries = vi.fn(async () => []);
+    mockUseMutation.mockReturnValueOnce([
+      vi.fn(),
+      { loading: false, client: { refetchQueries } },
+    ] as never);
+    const { result } = renderHook(() => useChangePlan());
+
+    await result.current[1].refetchPlan();
+
+    expect(refetchQueries).toHaveBeenCalledWith({
+      include: [
+        GetCurrentUserDocument,
+        GetSubscriptionStatusDocument,
+        GetAiCfoUsageDocument,
+      ],
+    });
+  });
 });
 
 describe("useCancelScheduledPlanChange", () => {

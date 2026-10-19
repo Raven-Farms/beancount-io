@@ -926,6 +926,11 @@ const koUserSettings: Record<string, TranslationEntry> = {
       "은행에서 이 결제를 승인해야 합니다. 승인 전에는 아무것도 바뀌지 않습니다. 승인한 후 이 페이지를 새로고침하세요.",
     description: "The bank must approve the payment before the change applies",
   },
+  "userSettings.planChangeApproving": {
+    message: "은행의 결제 승인을 기다리는 중…",
+    description:
+      "Shown while Stripe asks the bank to approve a plan change's payment",
+  },
   "userSettings.planChangeApprovePayment": {
     message: "결제 승인",
     description: "Button that opens Stripe's page to approve the payment",

@@ -957,6 +957,11 @@ const frUserSettings: Record<string, TranslationEntry> = {
       "Votre banque doit approuver ce paiement. Rien ne change d'ici là ; après l'approbation, actualisez cette page.",
     description: "The bank must approve the payment before the change applies",
   },
+  "userSettings.planChangeApproving": {
+    message: "En attente de l'approbation du paiement par votre banque…",
+    description:
+      "Shown while Stripe asks the bank to approve a plan change's payment",
+  },
   "userSettings.planChangeApprovePayment": {
     message: "Approuver le paiement",
     description: "Button that opens Stripe's page to approve the payment",

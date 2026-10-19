@@ -930,6 +930,11 @@ const jaUserSettings: Record<string, TranslationEntry> = {
       "このお支払いには銀行の承認が必要です。承認されるまで何も変更されません。承認後、このページを更新してください。",
     description: "The bank must approve the payment before the change applies",
   },
+  "userSettings.planChangeApproving": {
+    message: "銀行によるお支払いの承認を待っています…",
+    description:
+      "Shown while Stripe asks the bank to approve a plan change's payment",
+  },
   "userSettings.planChangeApprovePayment": {
     message: "お支払いを承認する",
     description: "Button that opens Stripe's page to approve the payment",

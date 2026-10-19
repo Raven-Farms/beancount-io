@@ -960,6 +960,11 @@ const skUserSettings: Record<string, TranslationEntry> = {
       "Vaša banka musí túto platbu schváliť. Dovtedy sa nič nezmení; po schválení obnovte túto stránku.",
     description: "The bank must approve the payment before the change applies",
   },
+  "userSettings.planChangeApproving": {
+    message: "Čaká sa, kým vaša banka platbu schváli…",
+    description:
+      "Shown while Stripe asks the bank to approve a plan change's payment",
+  },
   "userSettings.planChangeApprovePayment": {
     message: "Schváliť platbu",
     description: "Button that opens Stripe's page to approve the payment",

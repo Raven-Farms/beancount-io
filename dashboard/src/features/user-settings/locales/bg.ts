@@ -946,6 +946,11 @@ const bgUserSettings: Record<string, TranslationEntry> = {
       "Банката ви трябва да одобри това плащане. Нищо не се променя преди това; след одобрението обновете страницата.",
     description: "The bank must approve the payment before the change applies",
   },
+  "userSettings.planChangeApproving": {
+    message: "Изчакваме банката ви да одобри плащането…",
+    description:
+      "Shown while Stripe asks the bank to approve a plan change's payment",
+  },
   "userSettings.planChangeApprovePayment": {
     message: "Одобрете плащането",
     description: "Button that opens Stripe's page to approve the payment",

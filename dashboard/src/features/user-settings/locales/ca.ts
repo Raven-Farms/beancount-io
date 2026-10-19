@@ -957,6 +957,11 @@ const caUserSettings: Record<string, TranslationEntry> = {
       "El vostre banc ha d'aprovar aquest pagament. No canvia res fins aleshores; després d'aprovar-lo, actualitzeu aquesta pàgina.",
     description: "The bank must approve the payment before the change applies",
   },
+  "userSettings.planChangeApproving": {
+    message: "S'està esperant que el vostre banc aprovi el pagament…",
+    description:
+      "Shown while Stripe asks the bank to approve a plan change's payment",
+  },
   "userSettings.planChangeApprovePayment": {
     message: "Aprova el pagament",
     description: "Button that opens Stripe's page to approve the payment",

@@ -4,27 +4,41 @@ import userEvent from "@testing-library/user-event";
 import { PlanChangeSheet } from "../plan-change-sheet";
 import { MOCK_TIER_QUOTAS } from "./subscription-test-utils";
 
-const { mockRunPreview, mockChangePlan, mockPreview, mockTrack, mockToast } =
-  vi.hoisted(() => ({
-    mockTrack: vi.fn(),
-    mockToast: { success: vi.fn(), error: vi.fn() },
-    mockRunPreview: vi.fn(),
-    mockChangePlan: vi.fn(),
-    mockPreview: {
-      state: { data: undefined, loading: false, error: undefined } as {
-        data: unknown;
-        loading: boolean;
-        error: unknown;
-      },
-      // A split's second preview: the higher tier now, on yearly.
-      alternative: { data: undefined, loading: false, error: undefined } as {
-        data: unknown;
-        loading: boolean;
-        error: unknown;
-      },
-      instances: 0,
+const {
+  mockRunPreview,
+  mockChangePlan,
+  mockRefetchPlan,
+  mockApproveBankPayment,
+  mockPreview,
+  mockTrack,
+  mockToast,
+} = vi.hoisted(() => ({
+  mockTrack: vi.fn(),
+  mockToast: {
+    success: vi.fn(),
+    error: vi.fn(),
+    loading: vi.fn(() => "waiting"),
+    dismiss: vi.fn(),
+  },
+  mockRunPreview: vi.fn(),
+  mockChangePlan: vi.fn(),
+  mockRefetchPlan: vi.fn(),
+  mockApproveBankPayment: vi.fn(),
+  mockPreview: {
+    state: { data: undefined, loading: false, error: undefined } as {
+      data: unknown;
+      loading: boolean;
+      error: unknown;
     },
-  }));
+    // A split's second preview: the higher tier now, on yearly.
+    alternative: { data: undefined, loading: false, error: undefined } as {
+      data: unknown;
+      loading: boolean;
+      error: unknown;
+    },
+    instances: 0,
+  },
+}));
 
 vi.mock("@/features/user-settings/hooks/use-plan-change", async () => {
   const React = await import("react");
@@ -38,9 +52,15 @@ vi.mock("@/features/user-settings/hooks/use-plan-change", async () => {
         index % 2 === 0 ? mockPreview.state : mockPreview.alternative,
       ];
     },
-    useChangePlan: () => [mockChangePlan, { loading: false }],
+    useChangePlan: () => [
+      mockChangePlan,
+      { loading: false, refetchPlan: mockRefetchPlan },
+    ],
   };
 });
+vi.mock("../bank-approval", () => ({
+  approveBankPayment: mockApproveBankPayment,
+}));
 vi.mock("sonner", () => ({ toast: mockToast }));
 vi.mock("@/common/analytics", () => ({ track: mockTrack }));
 vi.mock("@/common/lib/errors/error-message", () => ({
@@ -120,6 +140,7 @@ beforeEach(() => {
   mockRunPreview.mockImplementation(async () => ({
     data: mockPreview.state.data,
   }));
+  mockRefetchPlan.mockResolvedValue({});
 });
 
 describe("PlanChangeSheet", () => {
@@ -384,6 +405,138 @@ describe("PlanChangeSheet", () => {
         ).toEqual(outcomeEvents);
       },
     );
+  });
+
+  describe("a payment the bank must approve", () => {
+    const requiresAction = (overrides: Record<string, unknown> = {}) => ({
+      data: {
+        changePlan: {
+          status: "REQUIRES_ACTION",
+          clientSecret: "pi_secret",
+          hostedInvoiceUrl: "https://invoice.stripe.com/i/in_1",
+          ...overrides,
+        },
+      },
+    });
+    const confirm = async () => {
+      const user = userEvent.setup();
+      await user.click(
+        screen.getByRole("button", {
+          name: "userSettings.planChangePayAndSwitch $950.00",
+        }),
+      );
+    };
+    const paymentEvents = () =>
+      mockTrack.mock.calls
+        .map(([event]) => event as string)
+        .filter((event) => event.startsWith("payment_action"));
+
+    it("approves it in place, then refetches the plan and reports the change", async () => {
+      mockChangePlan.mockResolvedValue(requiresAction());
+      mockApproveBankPayment.mockResolvedValue("approved");
+      const { onClose } = renderSheet({ returnTo: "/ledger" });
+
+      await confirm();
+
+      expect(mockApproveBankPayment).toHaveBeenCalledWith(
+        "pi_secret",
+        `${window.location.origin}/settings/billing`,
+      );
+      await waitFor(() => expect(onClose).toHaveBeenCalled());
+      expect(mockRefetchPlan).toHaveBeenCalled();
+      expect(mockToast.success).toHaveBeenCalledWith(
+        "userSettings.subscriptionUpgraded",
+        expect.objectContaining({
+          action: expect.objectContaining({
+            label: "userSettings.backToWork",
+          }),
+        }),
+      );
+      expect(paymentEvents()).toEqual([
+        "payment_action_required",
+        "payment_action_completed",
+      ]);
+    });
+
+    it("steps aside while the bank's challenge is open, so Stripe can take the pointer", async () => {
+      mockChangePlan.mockResolvedValue(requiresAction());
+      let settle: (approval: string) => void = () => {};
+      mockApproveBankPayment.mockReturnValue(
+        new Promise((resolve) => {
+          settle = resolve;
+        }),
+      );
+      renderSheet();
+
+      await confirm();
+
+      await waitFor(() =>
+        expect(screen.queryByTestId("plan-change-sheet")).toBeNull(),
+      );
+      expect(mockToast.loading).toHaveBeenCalledWith(
+        "userSettings.planChangeApproving",
+      );
+      settle("declined");
+      expect(
+        await screen.findByText("userSettings.planChangeFailed"),
+      ).toBeInTheDocument();
+      expect(mockToast.dismiss).toHaveBeenCalledWith("waiting");
+    });
+
+    it("says nothing changed when the bank refuses, and offers another card", async () => {
+      mockChangePlan.mockResolvedValue(requiresAction());
+      mockApproveBankPayment.mockResolvedValue("declined");
+      renderSheet();
+
+      await confirm();
+
+      expect(
+        await screen.findByText("userSettings.planChangeFailed"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", {
+          name: "userSettings.planChangeUseAnotherCard",
+        }),
+      ).toBeInTheDocument();
+      expect(mockRefetchPlan).not.toHaveBeenCalled();
+      expect(mockToast.success).not.toHaveBeenCalled();
+      expect(paymentEvents()).toEqual([
+        "payment_action_required",
+        "payment_action_failed",
+      ]);
+    });
+
+    it.each(["unavailable", "pending"])(
+      "falls back to Stripe's page when the approval is %s",
+      async (approval) => {
+        mockChangePlan.mockResolvedValue(requiresAction());
+        mockApproveBankPayment.mockResolvedValue(approval);
+        renderSheet();
+
+        await confirm();
+
+        expect(
+          await screen.findByRole("link", {
+            name: "userSettings.planChangeApprovePayment",
+          }),
+        ).toHaveAttribute("href", "https://invoice.stripe.com/i/in_1");
+        expect(mockToast.success).not.toHaveBeenCalled();
+      },
+    );
+
+    it("goes straight to Stripe's page without a client secret", async () => {
+      mockChangePlan.mockResolvedValue(requiresAction({ clientSecret: null }));
+      renderSheet();
+
+      await confirm();
+
+      expect(
+        await screen.findByRole("link", {
+          name: "userSettings.planChangeApprovePayment",
+        }),
+      ).toBeInTheDocument();
+      expect(mockApproveBankPayment).not.toHaveBeenCalled();
+    });
   });
 
   describe("changes that wait for the end of the paid period", () => {

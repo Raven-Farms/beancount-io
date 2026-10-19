@@ -47,6 +47,7 @@ import {
 } from "./stripe-config";
 import { useBillingDateFormat, useMoneyFormat } from "./use-money-format";
 import { useQuotaNumberFormat } from "./use-quota-number-format";
+import { approveBankPayment } from "./bank-approval";
 import {
   nextChargeLine,
   planLabel,
@@ -84,6 +85,7 @@ const REFUSAL_KEYS: Record<PlanChangeRefusal, string> = {
 };
 
 type Outcome =
+  | { type: "approving" }
   | { type: "action"; hostedInvoiceUrl: string | null }
   | { type: "failed" }
   | { type: "refused"; refusal: PlanChangeRefusal | null };
@@ -93,8 +95,9 @@ type Outcome =
  * Billing (PRFAQ005 question 15). It shows what the server previewed — the
  * charge today, the credit, the next charge, the card and what the plan adds —
  * and confirms at the previewed proration time, so the charge equals the
- * preview. A payment the bank must approve goes to Stripe's hosted invoice
- * page; nothing here reports a pending change as done.
+ * preview. A payment the bank must approve is approved here with Stripe.js,
+ * or on Stripe's hosted invoice page when Stripe.js cannot run; nothing here
+ * reports a pending change as done.
  */
 export function PlanChangeSheet({
   target,
@@ -131,7 +134,7 @@ export function PlanChangeSheet({
   ledgersUsed?: number | null;
 }) {
   const [runPreview, { data, loading, error }] = usePreviewPlanChange();
-  const [changePlan, { loading: changing }] = useChangePlan();
+  const [changePlan, { loading: changing, refetchPlan }] = useChangePlan();
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const formatError = useErrorMessage();
   const formatMoney = useMoneyFormat();
@@ -230,6 +233,37 @@ export function PlanChangeSheet({
   const [splitChoice, setSplitChoice] = useState<SplitChoice>("later");
   const targetLabel = target ? planLabel(t, target.tier, target.cycle) : "";
 
+  const landed = () => {
+    toast.success(
+      t("userSettings.subscriptionUpgraded"),
+      returnTo
+        ? {
+            action: {
+              label: t("userSettings.backToWork"),
+              // A full load, so every query reads the new plan's limits.
+              onClick: () => window.location.assign(returnTo),
+            },
+          }
+        : undefined,
+    );
+    onClose();
+  };
+
+  const approveInPlace = async (clientSecret: string) => {
+    // Stripe draws the bank's challenge over the page, where a modal dialog
+    // would trap focus and swallow the pointer, so the sheet steps aside.
+    setOutcome({ type: "approving" });
+    const waiting = toast.loading(t("userSettings.planChangeApproving"));
+    try {
+      return await approveBankPayment(
+        clientSecret,
+        new URL("/settings/billing", window.location.origin).href,
+      );
+    } finally {
+      toast.dismiss(waiting);
+    }
+  };
+
   /** Confirm the previewed change, or a split's "now" alternative. */
   const confirm = async (chosen = planChange) => {
     if (!target || !planChange || !chosen) return;
@@ -261,25 +295,26 @@ export function PlanChangeSheet({
         );
         onClose();
       } else if (result?.status === "ACTIVE") {
-        toast.success(
-          t("userSettings.subscriptionUpgraded"),
-          returnTo
-            ? {
-                action: {
-                  label: t("userSettings.backToWork"),
-                  // A full load, so every query reads the new plan's limits.
-                  onClick: () => window.location.assign(returnTo),
-                },
-              }
-            : undefined,
-        );
-        onClose();
+        landed();
       } else if (result?.status === "REQUIRES_ACTION") {
         if (params) track("payment_action_required", params);
-        setOutcome({
-          type: "action",
-          hostedInvoiceUrl: result.hostedInvoiceUrl ?? null,
-        });
+        const approval = result.clientSecret
+          ? await approveInPlace(result.clientSecret)
+          : "unavailable";
+        if (approval === "approved") {
+          if (params) track("payment_action_completed", params);
+          // Paid either way: a failed refetch only delays what Billing shows.
+          await refetchPlan().catch(() => {});
+          landed();
+        } else if (approval === "declined") {
+          if (params) track("payment_action_failed", params);
+          setOutcome({ type: "failed" });
+        } else {
+          setOutcome({
+            type: "action",
+            hostedInvoiceUrl: result.hostedInvoiceUrl ?? null,
+          });
+        }
       } else if (result?.status === "REFUSED") {
         setOutcome({ type: "refused", refusal: result.refusal ?? null });
       } else {
@@ -314,7 +349,10 @@ export function PlanChangeSheet({
   if (!target || !targetInfo) return null;
 
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
+    <Dialog
+      open={outcome?.type !== "approving"}
+      onOpenChange={(open) => !open && onClose()}
+    >
       <DialogContent data-testid="plan-change-sheet">
         <DialogHeader>
           <DialogTitle>

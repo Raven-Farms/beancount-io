@@ -950,6 +950,11 @@ const deUserSettings: Record<string, TranslationEntry> = {
       "Ihre Bank muss diese Zahlung bestätigen. Bis dahin ändert sich nichts; aktualisieren Sie diese Seite nach der Bestätigung.",
     description: "The bank must approve the payment before the change applies",
   },
+  "userSettings.planChangeApproving": {
+    message: "Warten, bis Ihre Bank die Zahlung bestätigt …",
+    description:
+      "Shown while Stripe asks the bank to approve a plan change's payment",
+  },
   "userSettings.planChangeApprovePayment": {
     message: "Zahlung bestätigen",
     description: "Button that opens Stripe's page to approve the payment",

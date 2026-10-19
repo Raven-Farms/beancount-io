@@ -942,6 +942,11 @@ const faUserSettings: Record<string, TranslationEntry> = {
       "بانک شما باید این پرداخت را تأیید کند. تا آن زمان چیزی تغییر نمی‌کند؛ پس از تأیید، این صفحه را تازه کنید.",
     description: "The bank must approve the payment before the change applies",
   },
+  "userSettings.planChangeApproving": {
+    message: "در انتظار تأیید پرداخت توسط بانک شما…",
+    description:
+      "Shown while Stripe asks the bank to approve a plan change's payment",
+  },
   "userSettings.planChangeApprovePayment": {
     message: "تأیید پرداخت",
     description: "Button that opens Stripe's page to approve the payment",

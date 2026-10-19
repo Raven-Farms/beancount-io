@@ -3753,6 +3753,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@stripe/stripe-js@npm:^10.1.0":
+  version: 10.1.0
+  resolution: "@stripe/stripe-js@npm:10.1.0"
+  checksum: 10c0/30af2ddacc9da2b8419dec0391a442cf18eb6580a743541784cf8f0b51701e51cd481099a93d768d51f4fec1086b0d94fb3af14e9bf613748d230b812ec74b2b
+  languageName: node
+  linkType: hard
+
 "@swc/core-darwin-arm64@npm:1.15.8":
   version: 1.15.8
   resolution: "@swc/core-darwin-arm64@npm:1.15.8"
@@ -5459,6 +5466,7 @@ __metadata:
     "@radix-ui/react-switch": "npm:^1.2.6"
     "@radix-ui/react-tabs": "npm:^1.1.13"
     "@radix-ui/react-tooltip": "npm:^1.2.8"
+    "@stripe/stripe-js": "npm:^10.1.0"
     "@tailwindcss/vite": "npm:^4.1.18"
     "@tanstack/devtools-vite": "npm:^0.5.3"
     "@tanstack/eslint-plugin-query": "npm:^5.86.0"
