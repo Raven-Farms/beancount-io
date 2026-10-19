@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [766 — Three option gaps: pedantic price --force, plugin_processing_mode raw in exports, invalid name_* value blocks adds](./766.md)
 - [767 — doctor context/region with a bare line find nothing through a symlinked path (regression from w5/568)](./767.md)
 - [768 — doctor linked/region print inferred-only legs at max precision and 26 decimals under --conversion (w5/571 follow-ups)](./768.md)
 - [769 — treeify: renamed roots still lose to a narration colon; the new lookahead is quadratic (incomplete fix of w5/570)](./769.md)
