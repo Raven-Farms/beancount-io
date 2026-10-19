@@ -24,14 +24,13 @@ Read `references/beangulp-api.md` before writing any code. Prefer enabling
 Beangulp in the managed engine when `bea` is installed:
 
 ```bash
-bea engine enable beangulp   # once; system libmagic is optional (python-magic importers only)
+bea engine enable beangulp   # once; system libraries: bea-cli.md Version notes
 bea engine status
 ```
 
-Do **not** `pip install beangulp` into the agent/frontend process or into bea's
-frontend environment. Authoring still needs a project that can `import beangulp`
-for the golden harness — use a local uv/venv in the ledger repo (developer
-path). `bea ingest` exposes identify/extract/archive, **not generate/test**,
+Authoring needs a project that can `import beangulp` for the golden harness:
+use a local uv project or venv in the ledger repository rather than `pip install beangulp` into the agent's or `bea`'s own environment.
+`bea ingest` exposes identify/extract/archive, **not generate/test**,
 so it does not replace the golden harness. Match the authoring Beangulp
 version to the managed engine and verify the wired runner through `bea ingest`. **Verify the
 installed API before trusting it or this reference**:
@@ -76,10 +75,10 @@ The golden-file eyeball is the human gate: generated goldens encode whatever the
 After wiring, run `bea --file "$ledger" ingest identify --config "$runner" SAMPLE`
 and `bea --file "$ledger" ingest extract --config "$runner" SAMPLE`, where
 `runner` is the actual file just wired (`import.py` in this skill's default
-layout). Do not point at a nonexistent `ingest.py`. Extraction usually has
-only the source posting, so its raw output alone is not a balanced ledger.
-`bea ingest` uses native output and rejects `--json`. Inspect identification
-and extracted entries: an unclaimed file can be skipped with exit status 0.
+layout). Extraction usually has only the source posting, so its raw output
+alone is not a balanced ledger. Read the native output (beancount-init's
+`references/bea-cli.md`, Version notes) and inspect identification and the
+extracted entries, since an unclaimed file can still exit 0.
 For an end-to-end check, categorize and validate a complete scratch ledger
 through `bea --file "$scratch_ledger" check`; leave the user's ledger alone.
 
@@ -96,13 +95,3 @@ When an existing importer fails on a new file:
 3. **Patch minimally** — don't rewrite a working importer to fix a header rename.
 4. Add the new sample to the test corpus, regenerate its golden (eyeball it), keep the old samples' goldens passing too — drift repair must not break historical re-imports.
 5. Green harness on old + new samples, then show the patch for confirmation.
-
-## What NOT to do
-
-- Don't write an importer without a sample file, and don't hand over a red or untested one.
-- Don't guess signs/dates/columns — config block first, provable data second, ask third.
-- Don't over-match in `identify()`.
-- Don't hardcode counter-account categorization into the importer.
-- Don't bless golden files without eyeballing rows against the raw sample with the user.
-- Don't rewrite on a drift-repair when a minimal patch does, and don't let old goldens go red.
-- Don't wire into `import.py` without explicit confirmation.

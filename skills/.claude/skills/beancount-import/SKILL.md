@@ -24,18 +24,19 @@ Read beancount-init's `references/bea-cli.md` before running ledger commands: it
   recipe, preserving `import-id` and flags. This also handles mixed per-row
   duplicate decisions that a single `--duplicates` policy cannot express.
 - **Tested Beangulp workflows:** enable with `bea engine enable beangulp`
-  (the system libmagic library is optional: only importers that call
-  python-magic themselves need it), then `bea ingest identify|extract|archive` with
-  the actual runner supplied via `--config`. Ordinary CSV needs no Beangulp.
+  (system-library needs are in beancount-init's `references/bea-cli.md`,
+  Version notes), then `bea ingest identify|extract|archive` with the actual
+  runner supplied via `--config`. Ordinary CSV needs no Beangulp.
 
 The agent interprets the source and reviews the rows; `bea` validates and
-writes the approved directives. Do not append directive text on this path.
+writes the approved directives, so on this path the skill writes no directive
+text itself.
 
 ## Scope — what this skill does and does not touch
 
 **Does:** parse one export file per run; stage, dedup, and categorize its rows; **append** confirmed transactions (with `import-id` metadata) and any needed `open` directives to one existing file.
 
-**Does not:** edit or delete existing entries; create the target file (it must already exist and be reachable from the main file — a file nothing `include`s silently swallows entries); fetch data from banks (see `references/getting-data.md` for how users export, incl. SimpleFIN); reconcile balances (that is `beancount-reconcile` — suggest running it after a large import); touch `option`, `plugin`, or `include` directives.
+**Does not:** edit or delete existing entries; create the target file (it must already exist and be included by the root, and `bea` refuses any other destination); fetch data from banks (see `references/getting-data.md` for how users export, incl. SimpleFIN); reconcile balances (`beancount-reconcile` — suggest it after a large import); migrate full finance-app history (`beancount-migrate`); build reusable importers (`beancount-importer-author`); record single manual entries (`beancount-add`); touch `option`, `plugin`, or `include` directives.
 
 Read `references/formats.md` before parsing any new or format-changed source (repeat imports with a stored config stanza apply the stored mapping directly) and `references/dedup.md` before the dedup pass. Both encode edge cases that are easy to get wrong.
 
@@ -85,7 +86,7 @@ Config block format — one `source` stanza per export source:
 ;;   imports: 1
 ```
 
-Bump `imports:` only when entries are written (a fully-deduped no-op changes nothing). For sources requiring custom normalization, **when it reaches 3+, suggest once**: "you've imported this source N times — want me to codify it as a tested beangulp importer via `beancount-importer-author`?" Simple CSV mappings already provide repeatable imports and need no graduation nudge. For CSV, also record the exact `csv_mapping:` including `sign=bank|ledger`, `date_format:` as a strptime format, and durable `rules:` path. These supplement the human-readable source settings; `bea`'s cache does not preserve sign.
+Bump `imports:` only when entries are written (a fully-deduped no-op changes nothing). For sources requiring custom normalization, **when it reaches 3+, suggest once**: "you've imported this source N times — want me to codify it as a tested beangulp importer via `beancount-importer-author`?" Simple CSV mappings already provide repeatable imports and need no graduation nudge. For CSV, also record the exact `csv_mapping:` including `sign=bank|ledger`, `date_format:` as a strptime format, and durable `rules:` path. These supplement the human-readable source settings, because `bea` does not remember the sign (beancount-init's `references/bea-cli.md`, Version notes).
 
 ### 2. Normalize
 
@@ -173,12 +174,3 @@ undo a successful transaction batch. Never report an unvalidated success.
 
 The no-`bea` write/check procedure is in beancount-init's
 `references/compatibility.md`; keep the same proposal and dedup semantics.
-
-## What NOT to do
-
-- Don't write anything without an explicit yes, and never to a file that doesn't already exist.
-- Don't guess column semantics, sign conventions, or date formats — ask once, persist to the config block.
-- Don't invent account names — existing accounts or `Expenses:Uncategorized`, nothing else.
-- Don't silently skip or silently import a suspected duplicate — the user decides.
-- Don't edit existing entries, and don't import the same file's rows twice (import-id is the guarantee).
-- Don't reconcile, migrate full SaaS history, or build reusable importers — route to `beancount-reconcile`, `beancount-migrate`, `beancount-importer-author`.
