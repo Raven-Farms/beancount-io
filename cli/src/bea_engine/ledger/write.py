@@ -882,6 +882,35 @@ def _lock_key(file: Path) -> str:
     return hashlib.sha256(identity.encode()).hexdigest()
 
 
+#: Descriptors a write needs besides its locks: the standard streams, the
+#: file being read, its staging copy, a directory listing, lazy imports.
+DESCRIPTOR_HEADROOM = 64
+
+
+def descriptors_allow(locks: int) -> bool:
+    """Whether `locks` lock files can be open at once, raising the soft limit when that is all it takes.
+
+    macOS starts a process with a soft limit of 256 descriptors, well under
+    what a directory of ledger files can ask for, and a hard limit far above.
+    """
+    if sys.platform == "win32":
+        return True
+    import resource
+
+    needed = locks + DESCRIPTOR_HEADROOM
+    soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+    if soft == resource.RLIM_INFINITY or needed <= soft:
+        return True
+    if hard != resource.RLIM_INFINITY and needed > hard:
+        return False
+    try:
+        resource.setrlimit(resource.RLIMIT_NOFILE, (needed, hard))
+    except (OSError, ValueError):
+        # An "unlimited" hard limit is still capped by the kernel's per-process maximum.
+        return False
+    return True
+
+
 @contextmanager
 def lock_files(files: Iterable[Path], *, deciding: bool = False) -> Iterator[None]:
     """Lock every file, each once, in one global order so writers queue instead of deadlocking.
@@ -897,6 +926,52 @@ def lock_files(files: Iterable[Path], *, deciding: bool = False) -> Iterator[Non
             stack.enter_context(lock_file(file, deciding=deciding))
         stack.enter_context(lock_directories(files))
         yield
+
+
+#: Times `locked_graph` re-probes a graph whose membership changed mid-locking.
+_GRAPH_LOCK_ATTEMPTS = 3
+
+
+@contextmanager
+def locked_graph(file: Path, target: Path, *, deciding: bool = False) -> Iterator[LedgerSnapshot]:
+    """Hold every lock a write's snapshot needs, taken before the snapshot is read for the write.
+
+    `lock_files` covers only the files named, so a snapshot read under it
+    still races a `bea` write to an include in another directory, whose
+    commit then trips `verify` with exit 4 (w5/718). Probe the graph first,
+    lock root, target, and every file it holds in one global-ordered pass,
+    and re-read under the locks: a membership change in between releases
+    everything and retries, so locks are never stacked out of order and
+    writers queue instead of deadlocking. Must be outermost — a caller
+    already holding locks widened before deciding.
+
+    Whatever committed in the probe window is absorbed into the re-read:
+    under the locks no `bea` writer can commit, so the yielded snapshot is
+    ordered after it. An edit that takes no lock (an editor, a script) is
+    still caught by the final compare-before-replace check.
+    """
+    probe = LedgerSnapshot.capture(file)
+    files = [file, target, *probe.contents]
+    if not descriptors_allow(2 * len(lock_order(files))):
+        # More files than descriptors to hold open: serialize on root and
+        # target as before; a raced include still refuses with exit 4.
+        with lock_files([file, target], deciding=deciding):
+            yield probe
+        return
+    with ExitStack() as stack:
+        for _ in range(_GRAPH_LOCK_ATTEMPTS):
+            probe = LedgerSnapshot.capture(file)
+            stack.enter_context(lock_files([file, target, *probe.contents], deciding=deciding))
+            fresh = LedgerSnapshot.capture(file)
+            if set(fresh.contents) <= set(probe.contents):
+                break
+            # A file joined the graph in the probe window, unlocked: release
+            # everything and retry with the new graph. The stack is reusable
+            # after close, and the with-block closes it again harmlessly.
+            stack.close()
+        else:
+            raise ConflictError("The ledger changed while taking the write locks. Nothing was written; retry.")
+        yield fresh
 
 
 @contextmanager
@@ -3523,7 +3598,27 @@ def append(
     file = Path(os.path.abspath(file))
     target = destination(file, into)
     with ExitStack() as stack:
-        stack.enter_context(lock_files([file, target]))
+        if not _HELD_LOCKS and not _HELD_DIRECTORIES:
+            # Outermost writer: no deciding lock above us. Lock the whole
+            # graph this write reads in one ordered pass, so a `bea` write
+            # to an include in another directory queues instead of tripping
+            # the verify below with exit 4 (w5/718). A snapshot handed in
+            # may predate the locks: re-verify it, adopting the fresh one
+            # when this call still owns validation, and refusing like
+            # before when the caller pre-validated (import re-decides
+            # under its own lock).
+            fresh = stack.enter_context(locked_graph(file, target, deciding=True))
+            if snapshot is not None:
+                try:
+                    snapshot.verify()
+                except ConflictError:
+                    if validated is not None:
+                        raise
+                    snapshot = fresh
+            else:
+                snapshot = fresh
+        else:
+            stack.enter_context(lock_files([file, target]))
         sweep_abandoned_candidates(target.parent)
         snapshot = snapshot or LedgerSnapshot.capture(file)
         original = snapshot.require_target(target, into=into)

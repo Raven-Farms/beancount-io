@@ -39,10 +39,6 @@ BOM_CHARACTER = "\ufeff"
 # Match the frontend's explicit-width ceiling without importing frontend code.
 _MAX_ALIGNMENT_WIDTH = 200
 
-#: Descriptors an in-place run needs besides its locks: the standard streams,
-#: the file being read, its staging copy, a directory listing, lazy imports.
-_DESCRIPTOR_HEADROOM = 64
-
 #: Characters `str.splitlines` treats as line breaks besides `\n`.
 #: Beancount's lexer counts only `\n`, and upstream's aligner splits with
 #: `splitlines`, so a line holding one of these is numbered differently by
@@ -119,7 +115,7 @@ def format_files(
         with ExitStack() as stack:
             locks = write.lock_order(targets)
             # Each file's directory is locked as well, always after its lock file (w5/181).
-            together = _descriptors_allow(2 * len(locks))
+            together = write.descriptors_allow(2 * len(locks))
             for file in locks if together else ():
                 stack.enter_context(write.lock_file(file))
             if together:
@@ -156,30 +152,6 @@ def format_files(
             raise
         raise error from exc
     return {"changed": changed}
-
-
-def _descriptors_allow(locks: int) -> bool:
-    """Whether `locks` lock files can be open at once, raising the soft limit when that is all it takes.
-
-    macOS starts a process with a soft limit of 256 descriptors, well under
-    what a directory of ledger files can ask for, and a hard limit far above.
-    """
-    if sys.platform == "win32":
-        return True
-    import resource
-
-    needed = locks + _DESCRIPTOR_HEADROOM
-    soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
-    if soft == resource.RLIM_INFINITY or needed <= soft:
-        return True
-    if hard != resource.RLIM_INFINITY and needed > hard:
-        return False
-    try:
-        resource.setrlimit(resource.RLIMIT_NOFILE, (needed, hard))
-    except (OSError, ValueError):
-        # An "unlimited" hard limit is still capped by the kernel's per-process maximum.
-        return False
-    return True
 
 
 def render_file(file: Path, widths: tuple[int | None, int | None, int | None]) -> str:
