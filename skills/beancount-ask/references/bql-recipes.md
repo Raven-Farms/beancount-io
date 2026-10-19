@@ -97,6 +97,68 @@ WHERE account ~ '^Assets:|^Liabilities:' GROUP BY account ORDER BY account
 
 Point-in-time: add `AND date < 2026-07-01`. For "does this match my bank" → that's `beancount-reconcile`, not a query.
 
+## 8. Holdings, market value, and unrealized gains (open lots)
+
+"What do I hold, what is it worth, how is it allocated?" Open lots first — every lot still held, at its own cost:
+
+<!-- recipe: holdings-lots -->
+```sql
+SELECT account, currency AS commodity, cost_number, cost_date, sum(number) AS units,
+  sum(number * cost_number) AS cost, cost_currency
+WHERE cost_number IS NOT NULL
+GROUP BY account, commodity, cost_number, cost_date, cost_currency
+HAVING sum(number) != 0 ORDER BY account, commodity, cost_date
+```
+
+Market value needs a `price` directive per commodity, and `value(position)` has a trap: with no price it quietly returns the raw units (`10 ACME` values as the number 10). The guard is `currency(value(position))` — it equals the cost currency only when a price converted the lot. List what cannot be valued before valuing anything:
+
+<!-- recipe: holdings-unpriced -->
+```sql
+SELECT account, currency AS commodity, sum(number) AS units
+WHERE cost_number IS NOT NULL AND currency(value(position)) != cost_currency
+GROUP BY account, commodity HAVING sum(number) != 0
+```
+
+Name every row of that output as unpriced (units and cost from `holdings-lots`, no market figure), and value only the rest — per lot, so the unrealized gain is the engine's subtraction, never prose arithmetic:
+
+<!-- recipe: holdings-lots-market -->
+```sql
+SELECT account, currency AS commodity, cost_date, cost_currency, sum(number) AS units,
+  sum(number * cost_number) AS cost, sum(number(value(position))) AS market,
+  sum(number(value(position))) - sum(number * cost_number) AS unrealized
+WHERE cost_number IS NOT NULL AND currency(value(position)) = cost_currency
+GROUP BY account, commodity, cost_date, cost_currency
+HAVING sum(number) != 0 ORDER BY account, commodity, cost_date
+```
+
+`value()` reads the latest `price` on or before today, so also quote which price each figure rests on — the last row per commodity:
+
+<!-- recipe: holdings-prices -->
+```sql
+SELECT date, currency, amount FROM #prices ORDER BY currency, date
+```
+
+Allocation: bind `<total_market>` to the engine's own total for the same cost currency, then let the engine divide. Never sum or divide across cost currencies; run the pair once per cost currency present.
+
+<!-- recipe: holdings-market-total -->
+```sql
+SELECT cost_currency, sum(number(value(position))) AS total_market
+WHERE cost_number IS NOT NULL AND currency(value(position)) = cost_currency
+GROUP BY cost_currency
+```
+
+<!-- recipe: holdings-allocation -->
+```sql
+SELECT commodity, cost_currency, market, 100 * market / <total_market> AS share_pct
+FROM (SELECT currency AS commodity, cost_currency,
+        sum(number(value(position))) AS market
+      WHERE cost_number IS NOT NULL AND currency(value(position)) = cost_currency
+      GROUP BY commodity, cost_currency)
+ORDER BY market DESC
+```
+
+Cash in investment accounts is not a lot and appears in none of these; say whether the allocation is over invested lots only. Realized gains (closed lots) are beancount-trade's `references/realized-gains.md`; recording a trade is `beancount-trade`, and refreshing stale prices is the price workflow, not a query.
+
 ## Fava pointers
 
-Top expenses / burn → Income Statement (filtered by time); net worth → Balance Sheet / Net Worth chart; per-payee history → Journal with `payee:"NETFLIX"` filter; account balances → Trial Balance. Give the user the Fava path when they want to browse rather than ask again.
+Top expenses / burn → Income Statement (filtered by time); net worth → Balance Sheet / Net Worth chart; holdings → Holdings; per-payee history → Journal with `payee:"NETFLIX"` filter; account balances → Trial Balance. Give the user the Fava path when they want to browse rather than ask again.

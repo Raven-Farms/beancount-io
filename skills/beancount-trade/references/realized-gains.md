@@ -42,7 +42,8 @@ difference means a gain was booked somewhere the lot rows do not explain
 adjust a row or a total to force the tie.
 
 **Not covered:** open lots and unrealized gains (nothing here prices a
-position still held), positions without prices, wash sales, FX gains on
+position still held — those are beancount-ask's holdings recipes in its
+`references/bql-recipes.md`), positions without prices, wash sales, FX gains on
 cash balances, and any tax form or jurisdiction rule. A reduction whose
 posting carries no price is not a sale here; if the user says one was,
 that is a fact to surface, not to price by guessing.

@@ -1491,6 +1491,49 @@ class TestBeaRecipes(unittest.TestCase):
         net_worth = self.query_recipe("net-worth")
         self.assertEqual(usd(net_worth[0][0]), Decimal("-391.00"))
 
+    def test_holdings_recipes_value_priced_lots_and_name_unpriced_ones(self):
+        self.ledger.write_text(
+            'option "operating_currency" "USD"\n'
+            "2025-01-01 open Assets:Brokerage USD,VTI,ACME\n"
+            "2025-01-01 open Assets:Crypto:Wallet BTC\n"
+            "2025-01-01 open Equity:OpeningBalances\n"
+            '2025-01-02 * "Cash in"\n  Assets:Brokerage 20000.00 USD\n  Equity:OpeningBalances\n'
+            '2025-01-15 * "Buy VTI"\n  Assets:Brokerage 10 VTI {100.00 USD}\n  Assets:Brokerage -1000.00 USD\n'
+            '2025-02-15 * "Buy VTI"\n  Assets:Brokerage 10 VTI {120.00 USD}\n  Assets:Brokerage -1200.00 USD\n'
+            '2025-03-10 * "Buy ACME"\n  Assets:Brokerage 10 ACME {50.00 USD}\n  Assets:Brokerage -500.00 USD\n'
+            '2025-01-10 * "Buy BTC"\n  Assets:Crypto:Wallet 0.500000 BTC {40000.00 USD}\n  Equity:OpeningBalances -20000.00 USD\n'
+            '2026-03-01 * "Sell some VTI"\n  Assets:Brokerage -4 VTI {100.00 USD, 2025-01-15} @ 300.00 USD\n  Assets:Brokerage 1200.00 USD\n  Equity:OpeningBalances -800.00 USD\n'
+            "2026-10-01 price VTI 300.00 USD\n"
+            "2026-10-01 price BTC 60000.00 USD\n"
+        )
+
+        def dec(value):
+            return Decimal(str(value))
+
+        lots = {(row[0], row[1], row[3]): (dec(row[4]), dec(row[5])) for row in self.query_recipe("holdings-lots")}
+        self.assertEqual(lots[("Assets:Brokerage", "VTI", "2025-01-15")], (Decimal("6"), Decimal("600.00")))
+        self.assertEqual(lots[("Assets:Brokerage", "VTI", "2025-02-15")], (Decimal("10"), Decimal("1200.00")))
+        self.assertEqual(lots[("Assets:Brokerage", "ACME", "2025-03-10")], (Decimal("10"), Decimal("500.00")))
+        self.assertEqual(lots[("Assets:Crypto:Wallet", "BTC", "2025-01-10")][0], Decimal("0.500000"))
+        # ACME has no price directive: it is named unpriced and never valued
+        # as its raw unit count (10) by the market recipes.
+        unpriced = [(row[0], row[1]) for row in self.query_recipe("holdings-unpriced")]
+        self.assertEqual(unpriced, [("Assets:Brokerage", "ACME")])
+        market = {(row[0], row[1], row[2]): (dec(row[5]), dec(row[6]), dec(row[7]))
+                  for row in self.query_recipe("holdings-lots-market")}
+        self.assertNotIn(("Assets:Brokerage", "ACME", "2025-03-10"), market)
+        self.assertEqual(market[("Assets:Brokerage", "VTI", "2025-01-15")],
+                         (Decimal("600.00"), Decimal("1800.00"), Decimal("1200.00")))
+        self.assertEqual(market[("Assets:Crypto:Wallet", "BTC", "2025-01-10")][2], Decimal("10000"))
+        prices = {(row[1]): row[0] for row in self.query_recipe("holdings-prices")}
+        self.assertEqual(prices, {"VTI": "2026-10-01", "BTC": "2026-10-01"})
+        total = self.query_recipe("holdings-market-total")
+        self.assertEqual([(row[0], dec(row[1])) for row in total], [("USD", Decimal("34800.00"))])
+        allocation = {row[0]: dec(row[3]) for row in self.query_recipe(
+            "holdings-allocation", **{"<total_market>": "34800.00"})}
+        self.assertEqual(allocation["VTI"], Decimal("13.79310344827586206896551724"))
+        self.assertEqual(sum(allocation.values()), Decimal("100.0000000000000000000000000"))
+
 
 def load_tests(loader, tests, pattern):
     """Keep the focused journey and routing-runner checks in the existing skills CI entrypoint."""
