@@ -508,6 +508,10 @@ def import_entries(
     encoding: Annotated[
         str | None, typer.Option("--encoding", help="CSV text encoding for --csv: utf-8, cp1252, or latin-1.")
     ] = None,
+    decimal: Annotated[
+        str | None,
+        typer.Option("--decimal", help="Decimal convention for --csv amounts: 'comma' or 'point'."),
+    ] = None,
     rules_file: Annotated[
         Path | None, typer.Option("--rules", help="TOML categorization rules for --csv rows.", readable=False)
     ] = None,
@@ -563,6 +567,7 @@ def import_entries(
                 date_format=date_format,
                 delimiter=delimiter,
                 encoding=encoding,
+                decimal=decimal,
                 rules_file=rules_file,
                 default_account=default_account,
                 config=config,

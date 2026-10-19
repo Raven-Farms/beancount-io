@@ -34,6 +34,14 @@ _THOUSAND_SEPARATOR_FILLER = re.compile(r"[\s'\u2019]")
 _ZERO_WIDTH = re.compile("[\u200b\u2060\ufeff]")
 _NON_FINITE_AMOUNT = re.compile(r"[+-]?(?:nan|inf(?:inity)?)\Z", re.IGNORECASE)
 _EU_GROUPING = re.compile(r"\d{1,3}(?:\.\d{3})+")
+# Two or more strictly valid dot groups: no decimal convention writes two
+# decimal points, so the cell can only be dot-grouped thousands (w5/753). The
+# first group is never zero-led, as with comma grouping; `0.000.000` stays
+# refused, and `--csv decimal=comma` reads it as zero.
+_DOT_GROUPING_TWO = re.compile(r"[1-9]\d{0,2}(?:\.\d{3}){2,}")
+# One dot and a three-digit tail: dot-grouped thousands or three decimals,
+# genuinely ambiguous until the column or a currency decides (w5/753).
+_DOT_THREE_TAIL = re.compile(r"\d+\.\d{3}")
 # One comma followed by any digit count but three: never a thousands group
 # (`-0,5`, `-0,50`, `-0,1234`), so it can only be a decimal comma.
 _COMMA_DECIMAL_TAIL = re.compile(r"\A[^,]*,(?:\d{1,2}|\d{4,})\Z")
@@ -43,6 +51,30 @@ _COMMA_GROUPING = re.compile(r"[1-9]\d{0,2}(?:,\d{3})+|[1-9]\d?(?:,\d{2})*,\d{3}
 # One comma and exactly three digits after it: a thousands group only when the
 # whole part is a valid first group, so `0,125` and `1613,030` are decimals.
 _SINGLE_COMMA_THREE = re.compile(r"\d+,\d{3}")
+# ISO 4217 commodities with no minor unit: a three-decimal reading in one of
+# these is almost certainly dot-grouped thousands instead (w5/753).
+_ZERO_DECIMAL_CURRENCIES = frozenset(
+    {
+        "BIF",
+        "CLP",
+        "DJF",
+        "GNF",
+        "ISK",
+        "JPY",
+        "KMF",
+        "KRW",
+        "PYG",
+        "RWF",
+        "UGX",
+        "UYI",
+        "VND",
+        "VUV",
+        "XAF",
+        "XCD",
+        "XOF",
+        "XPF",
+    }
+)
 _ACCEPTED_AMOUNTS = (
     "Accepted: plain decimals (1000.50), $/€ symbols, thousands separators, "
     "(parentheses) or trailing-minus negatives; comma decimals like 1.000,00 "
@@ -162,6 +194,10 @@ def _separator_vote(core: str) -> str | None:
         # `0,125` or `1613,030`: three decimals that no grouping can explain,
         # so the cell proves comma decimals as firmly as `1.613,030` does.
         return "eu"
+    if _DOT_GROUPING_TWO.fullmatch(core):
+        # `1.650.000`: two decimal points no convention writes, so the cell
+        # proves dot grouping as firmly as `1.650.000,00` does.
+        return "eu"
     return None
 
 
@@ -200,6 +236,49 @@ def _resolve_decimal_comma(cells: list[tuple[int, str]]) -> bool:
     if first_eu is not None:
         return True
     return first_us is None and only_weak_eu
+
+
+def _dot_ambiguous_example(values: list[str]) -> str | None:
+    """First cell that reads as dot-grouped thousands or decimals, if the column decides nothing.
+
+    A comma anywhere, or a cell proving either convention, settles the
+    column; otherwise a `\\d+\\.\\d{3}` cell is genuinely ambiguous. The vote
+    stays strict (only provable grouping changes a reading) while the note
+    stays loose (anything suspicious raises an eyebrow).
+    """
+    example: str | None = None
+    for value in values:
+        if not value.strip():
+            continue
+        _sign, core, _negations = _split_amount_sign(value)
+        if "," in core or _separator_vote(core) is not None:
+            return None
+        if example is None and _DOT_THREE_TAIL.fullmatch(core):
+            example = value.strip()
+    return example
+
+
+def _dot_ambiguity_note(examples: list[tuple[str, str]], currency: str) -> str:
+    """Why a dot-only column's decimal reading is suspect in a zero-decimal currency."""
+    if len(examples) == 1:
+        header, example = examples[0]
+        sign, core, negations = _split_amount_sign(example)
+        point = Decimal(f"{sign}{core}")
+        if negations:
+            point = _negated(point)
+        grouped = int(core.replace(".", ""))
+        if point.is_signed():
+            grouped = -grouped
+        return (
+            f"Column {header!r} reads {example!r} as {point} {currency}, but {currency} has no minor "
+            f"unit and the dots likely group thousands ({grouped}). Pass --csv decimal=comma if these "
+            "are whole amounts."
+        )
+    cells = ", ".join(f"{header} ({example})" for header, example in examples)
+    return (
+        f"Columns {cells} read as decimals, but {currency} has no minor unit and the dots likely "
+        "group thousands. Pass --csv decimal=comma if these are whole amounts."
+    )
 
 
 def _at(row_number: int, line: int) -> str:
@@ -394,9 +473,9 @@ def _missing_pair(part: str) -> str:
 def parse_mapping(spec: str) -> CsvMapping:
     """Parse `--csv field=Column,...` into a validated mapping (exit 2 on misuse).
 
-    Unlike the frontend copy, this rejects `delimiter=` and `encoding=`: the
-    frontend strips both before forwarding, and that rejection is the safety
-    net proving the strip happened.
+    Unlike the frontend copy, this rejects `delimiter=`, `encoding=`, and
+    `decimal=`: the frontend strips all three before forwarding, and that
+    rejection is the safety net proving the strip happened.
     """
     columns: dict[str, str] = {}
     sign = "bank"
@@ -863,6 +942,14 @@ def parse_delimiter(value: str) -> str:
     raise UsageError(f"Bad --delimiter {value!r}: use ',', ';', '|', or 'tab'.")
 
 
+def parse_decimal(value: str) -> str:
+    """Normalize a `--decimal` value to `comma` or `point`."""
+    folded = value.strip().casefold()
+    if folded in {"comma", "point"}:
+        return folded
+    raise UsageError(f"Bad --decimal {value!r}: use 'comma' or 'point'.")
+
+
 def _refuse_surplus_fields(source: Path, line: int, headers: list[str], record: list[str]) -> None:
     """Refuse a row carrying more fields than the header declares.
 
@@ -1061,6 +1148,7 @@ class CsvImporter:
         delimiter: str | None = None,
         encoding: str = "utf-8",
         account_roots: Collection[str] | None = None,
+        forced_decimal_comma: bool | None = None,
     ) -> None:
         self._account = account
         # The ledger's root names; a category under any other root is a label.
@@ -1078,6 +1166,12 @@ class CsvImporter:
         # rather than a column the file has.
         self._constant_currency: str | None = None
         self._decimal_comma = False
+        # A `--csv decimal=` choice: skips the column vote, and an explicit
+        # choice is never second-guessed with an ambiguity note.
+        self._forced_decimal_comma = forced_decimal_comma
+        # A dot-only column read as decimals in a zero-decimal currency, for
+        # the caller to report once.
+        self.ambiguous_dot_amounts: str | None = None
         self.skipped_blank_rows = 0
         # Rows a mapped status column marks pending, each summarized for the
         # note; and, with none mapped, a column that marks some pending (w5/614).
@@ -1098,6 +1192,31 @@ class CsvImporter:
 
     def account(self, filepath: str) -> str:
         return self._account
+
+    def _dot_ambiguity(
+        self, numbered: list[tuple[int, int, dict[str, str]]], amount_columns: list[str], columns: dict[str, str]
+    ) -> str | None:
+        """A note when dot-grouped-looking amounts read as decimals in a zero-decimal currency.
+
+        Only the unresolved point reading is suspect: comma mode already read
+        the dots as groups. A mapped currency column posts each row in its own
+        commodity, so no one currency can indict the column.
+        """
+        if self._decimal_comma:
+            return None
+        if columns.get("currency") and not self._constant_currency:
+            return None
+        currency = self._constant_currency or self._currency
+        if currency not in _ZERO_DECIMAL_CURRENCIES:
+            return None
+        examples = [
+            (header, example)
+            for header in amount_columns
+            if (example := _dot_ambiguous_example([row.get(header, "") for _, _, row in numbered])) is not None
+        ]
+        if not examples:
+            return None
+        return _dot_ambiguity_note(examples, currency)
 
     def _cell(self, row: dict[str, str], where: str, field: str) -> str:
         column = self._mapping.column(field)
@@ -1287,9 +1406,13 @@ class CsvImporter:
                 self.pending_column = _pending_column(headers, [row for _, row in materialized], columns)
             # Blank cells never voted on the decimal convention anyway, so
             # skipping blank rows here changes only which number it names.
-            self._decimal_comma = _resolve_decimal_comma(
-                [(number, row.get(header, "")) for number, _line, row in numbered for header in amount_columns]
-            )
+            if self._forced_decimal_comma is not None:
+                self._decimal_comma = self._forced_decimal_comma
+            else:
+                self._decimal_comma = _resolve_decimal_comma(
+                    [(number, row.get(header, "")) for number, _line, row in numbered for header in amount_columns]
+                )
+                self.ambiguous_dot_amounts = self._dot_ambiguity(numbered, amount_columns, columns)
             if "amount" not in columns:
                 self._check_pair_signs(numbered)
             for row_number, line, row in numbered:

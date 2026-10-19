@@ -97,7 +97,12 @@ U+2212, reads as `-`; the marker may stand on either side of the symbol, so
 the point-vs-comma convention is resolved from the whole column, and a column
 mixing `1,000.00` with `1.000,00` is refused rather than guessed. A lone
 `1,234` stays a thousands group, but `0,125` and `1613,030` cannot be one,
-so they import as `0.125` and `1613.030`. `NaN` and
+so they import as `0.125` and `1613.030`. A cell with two dot groups
+(`1.650.000`) can only be dot grouping — no convention writes two decimal
+points — so it settles the column to comma decimals. A dot-only column that
+could be either (`650.000` against an ISK account, whose currency has no
+minor unit) imports as decimals with a note naming both readings; pass
+`decimal=comma` (or `decimal=point`) inside `--csv` to force one. `NaN` and
 `Infinity` are blocked at preview time with the row named, so `--apply` can
 never write them. A failed parse names the cell, the row, and the accepted
 spellings.
@@ -143,8 +148,9 @@ offered only on the condition that the export really uses that encoding;
 successful decoding alone cannot identify its code page. A file that
 neither UTF-8 nor cp1252 decodes is named as such: only latin-1, which reads
 any byte, would accept it, so pass `encoding=latin-1` only if that is the
-export's encoding. An `encoding=` or `delimiter=` value outside the supported
-set is refused before the file is read, whatever its bytes. UTF-16 text (Excel's
+export's encoding. An `encoding=`, `delimiter=`, or `decimal=` value outside
+the supported set is refused before the file is read, whatever its bytes.
+UTF-16 text (Excel's
 "Unicode Text", recognized by its byte-order mark or NUL bytes) is refused
 under any `encoding=` with a request to re-save it as UTF-8, and a `--rules`
 file may start with a UTF-8 BOM. Unknown fields, missing columns, bad dates, and bad amounts fail
@@ -294,9 +300,10 @@ marks some rows pending is named in a note suggesting `status=` for it.
 
 The mapping is remembered per root ledger, CSV header row, and source account,
 along with the `--rules` path, `--default-account`, an explicit
-`--date-format`, and a delimiter you passed (`--delimiter` or `delimiter=`; a
+`--date-format`, a delimiter you passed (`--delimiter` or `delimiter=`; a
 detected one is re-detected for each file, and a remembered one that no longer
-reads the header gives way to detection with a note) — but never `sign=`, which a different file
+reads the header gives way to detection with a note), and a `decimal=` you
+passed — but never `sign=`, which a different file
 always needs passed explicitly. The one exception keeps a preview honest: after
 `sign=ledger`, a flag-free `--apply` of the byte-identical file re-applies it
 and says so; another file sharing the header is read bank-signed, with a note
@@ -304,7 +311,8 @@ naming the file that used `sign=ledger`. Each file keeps its own sign, so
 previewing next month's export with the same header leaves this month's
 `sign=ledger` in place. Previewing a file again without it drops only that
 file's. A `--csv` that carries only keys —
-`--csv sign=ledger`, `--csv encoding=cp1252`, `--csv delimiter=';'` — applies them
+`--csv sign=ledger`, `--csv encoding=cp1252`, `--csv delimiter=';'`,
+`--csv decimal=comma` — applies them
 on top of the mapping remembered for that header and account, keeping its
 columns, rules, default account and date format; it infers from the header only
 when nothing is remembered. When only one account uses those headers, the next import needs

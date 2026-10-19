@@ -253,7 +253,7 @@ def _check_delimiter_conflict(flag: str | None, key: str | None) -> None:
 
 
 def _strip_spec_keys(spec: str, keys: set[str]) -> str:
-    """A `--csv` spec without its `key=` control parts (delimiter/encoding/sign)."""
+    """A `--csv` spec without its `key=` control parts (delimiter/encoding/decimal/sign)."""
     from cli.csv_mapper import split_spec
 
     return ",".join(part for part in split_spec(spec) if part.partition("=")[0].strip() not in keys)
@@ -603,8 +603,8 @@ def import_entries(
         typer.Option(
             "--csv",
             help="Column mapping (date=Date, amount=Amount, narration=Description, ...; delimiter=';' overrides "
-            "detection, encoding=cp1252 overrides UTF-8), or 'auto' to read the header row; "
-            "no Python importer needed",
+            "detection, encoding=cp1252 overrides UTF-8, decimal=comma|point forces the convention), or 'auto' "
+            "to read the header row; no Python importer needed",
         ),
     ] = None,
     csv_account: Annotated[str | None, typer.Option("--account", help="Source account for --csv rows")] = None,
@@ -702,6 +702,7 @@ def import_entries(
     flag_delimiter: str | None = parse_delimiter(delimiter) if delimiter is not None else None
     csv_delimiter: str | None = flag_delimiter
     csv_encoding = "utf-8"
+    csv_decimal: str | None = None
     if csv_mapping is not None and config is not None:
         raise UsageError("Pass --csv or --config, not both.")
     if not source.is_file():
@@ -758,12 +759,14 @@ def import_entries(
             return []
         frontend_notes: list[str] = [*config_notes]
         if remembered_run:
-            columns_only = _strip_spec_keys(csv_request or "", {"delimiter", "encoding", "sign"})
+            columns_only = _strip_spec_keys(csv_request or "", {"delimiter", "encoding", "decimal", "sign"})
             if recalled_sign_ledger:
                 columns_only = f"{columns_only},sign=ledger"
             if csv_encoding != "utf-8":
                 # One --csv keeps the echoed columns when the line is pasted.
                 columns_only = f"{columns_only},encoding={csv_encoding}"
+            if csv_decimal is not None:
+                columns_only = f"{columns_only},decimal={csv_decimal}"
             settings = [f"--csv {_shell_spec(columns_only)}"]
             if csv_run_account is not None:
                 settings.append(shlex.join(["--account", csv_run_account]))
@@ -794,7 +797,8 @@ def import_entries(
                 else ""
             )
             encoding_note = f", encoding {csv_encoding}" if csv_encoding != "utf-8" else ""
-            frontend_notes.append(f"Using column mapping (--csv{delimiter_note}{encoding_note}).")
+            decimal_note = f", decimal {csv_decimal}" if csv_decimal is not None else ""
+            frontend_notes.append(f"Using column mapping (--csv{delimiter_note}{encoding_note}{decimal_note}).")
         frontend_notes.extend(recall_notes)
         frontend_notes.extend(inferred_notes)
         return frontend_notes
@@ -837,6 +841,10 @@ def import_entries(
                 # The decoding key applies before any read, so detection itself
                 # decodes with it; the merge below re-applies it idempotently.
                 csv_encoding = peek.encoding
+            if peek.decimal is not None:
+                # A typed convention wins over a remembered one, for this run
+                # and — saved below — for the next flag-free one.
+                csv_decimal = peek.decimal
             if not peek.columns:
                 # Keys without columns (`encoding=`, `delimiter=`, `sign=` alone)
                 # apply on top of the mapping remembered for this header and
@@ -864,6 +872,8 @@ def import_entries(
                         )
                     if peek.sign != "bank" and csv_request is not None:
                         csv_request = f"{csv_request},sign={peek.sign}"
+                    if peek.decimal is not None and csv_request is not None:
+                        csv_request = f"{csv_request},decimal={peek.decimal}"
                     csv_origin = "inferred --csv"
     if csv_request is None and config is None:
         remembered = _recall_csv(file, source, csv_account, notes=recall_notes)
@@ -915,6 +925,13 @@ def import_entries(
                         notice := _legacy_encoding_notice(source, csv_encoding)
                     ):
                         recall_notes.append(notice)
+                if "decimal" in typed_key_names:
+                    # A typed convention wins over the remembered one, for
+                    # this run and — saved below — for the next flag-free one.
+                    csv_decimal = typed_keys.decimal
+                    csv_request = f"{_strip_spec_keys(csv_request, {'decimal'})},decimal={csv_decimal}"
+                elif recalled_spec.decimal is not None:
+                    csv_decimal = recalled_spec.decimal
             csv_request = _strip_spec_keys(csv_request, {"delimiter"})
             if csv_delimiter is None and isinstance(stored_delimiter, str):
                 # Re-validated per file: the header matched under detection, so
@@ -1108,12 +1125,14 @@ def import_entries(
         frontend_notes = settings_notes(date_format)
         for line in frontend_notes:
             output.note(line)
-        # The engine's parser rejects `delimiter=` and `encoding=` by design:
-        # the frontend owns the merge above and forwards columns only.
-        forward_spec = _strip_spec_keys(csv_request, {"delimiter", "encoding"})
+        # The engine's parser rejects `delimiter=`, `encoding=`, and `decimal=`
+        # by design: the frontend owns the merge above and forwards columns only.
+        forward_spec = _strip_spec_keys(csv_request, {"delimiter", "encoding", "decimal"})
         argv += ["--csv", forward_spec, "--account", csv_run_account, "--config-source", csv_origin]
         if csv_encoding != "utf-8":
             argv += ["--encoding", csv_encoding]
+        if csv_decimal is not None:
+            argv += ["--decimal", csv_decimal]
         argv += ["--date-format", date_format]
         if default_account is not None:
             # Unset, the engine derives it from the ledger's expenses root,
@@ -1231,6 +1250,7 @@ def import_entries(
             "date_format": date_format,
             "delimiter": carried_delimiter,
             "encoding": csv_encoding,
+            "decimal": csv_decimal,
             "rules": str(csv_rules_arg) if csv_rules_arg is not None else None,
             "default_account": default_account,
         }

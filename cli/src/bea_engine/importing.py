@@ -138,6 +138,7 @@ def answer(
     date_format: str | None = None,
     delimiter: str | None = None,
     encoding: str | None = None,
+    decimal: str | None = None,
     rules_file: Path | None = None,
     default_account: str | None = None,
     config: Path | None = None,
@@ -158,7 +159,14 @@ def answer(
     from beancount.core.data import Open, Price, Transaction
 
     from bea_engine import managed_load
-    from bea_engine.csv_mapper import CsvImporter, load_rules, parse_delimiter, parse_encoding, parse_mapping
+    from bea_engine.csv_mapper import (
+        CsvImporter,
+        load_rules,
+        parse_decimal,
+        parse_delimiter,
+        parse_encoding,
+        parse_mapping,
+    )
     from bea_engine.ledger.reader import entry_generated, forget_source_lines, shared_locations
 
     if duplicates not in {"review", "skip", "include"}:
@@ -229,6 +237,7 @@ def answer(
         resolved_date_format = "%Y-%m-%d" if date_format is None else date_format
         resolved_delimiter = parse_delimiter(delimiter) if delimiter is not None else None
         resolved_encoding = parse_encoding(encoding) if encoding is not None else "utf-8"
+        resolved_decimal = parse_decimal(decimal) if decimal is not None else None
         operating = options.get("operating_currency") or []
         importer: Any = CsvImporter(
             account=csv_account,
@@ -241,6 +250,7 @@ def answer(
             delimiter=resolved_delimiter,
             encoding=resolved_encoding,
             account_roots=roots,
+            forced_decimal_comma=(resolved_decimal == "comma") if resolved_decimal is not None else None,
         )
         preview_config = csv_mapping
         try:
@@ -273,6 +283,8 @@ def answer(
                 f"currency={importer.constant_currency} names no column of {source.name}, so every row "
                 f"posts in {importer.constant_currency}."
             )
+        if importer.ambiguous_dot_amounts is not None:
+            notes.append(importer.ambiguous_dot_amounts)
         if importer.rejected_categories:
             examples = ", ".join(repr(name) for name in list(importer.rejected_categories)[:3])
             count = sum(importer.rejected_categories.values())

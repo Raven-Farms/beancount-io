@@ -36,6 +36,7 @@ _MAPPING_FIELDS = frozenset(
         "sign",
         "delimiter",
         "encoding",
+        "decimal",
     }
 )
 
@@ -48,6 +49,7 @@ class CsvMapping:
     sign: str = "bank"
     delimiter: str | None = None
     encoding: str | None = None
+    decimal: str | None = None
 
     def column(self, name: str) -> str | None:
         return self.columns.get(name)
@@ -154,15 +156,17 @@ def _missing_pair(part: str) -> str:
 def parse_mapping(spec: str) -> CsvMapping:
     """Parse `--csv field=Column,...` into a validated mapping (exit 2 on misuse).
 
-    `delimiter=` is a parsing directive, not a column: the frontend strips it
-    before forwarding the spec, and the engine's copy of this parser rejects
-    it — that rejection is the safety net proving the strip happened.
+    `delimiter=`, `encoding=`, and `decimal=` are parsing directives, not
+    columns: the frontend strips them before forwarding the spec, and the
+    engine's copy of this parser rejects them — that rejection is the safety
+    net proving the strip happened.
     """
     columns: dict[str, str] = {}
     sign = "bank"
     signed = False
     delimiter: str | None = None
     encoding: str | None = None
+    decimal: str | None = None
     for part in split_spec(spec):
         name, separator, column = part.partition("=")
         name = name.strip()
@@ -193,6 +197,10 @@ def parse_mapping(spec: str) -> CsvMapping:
             if encoding is not None:
                 raise UsageError("Duplicate --csv field 'encoding'.")
             encoding = _parse_encoding_value(column)
+        elif name == "decimal":
+            if decimal is not None:
+                raise UsageError("Duplicate --csv field 'decimal'.")
+            decimal = _parse_decimal_value(column)
         elif name in columns:
             raise UsageError(f"Duplicate --csv field {name!r}.")
         else:
@@ -201,7 +209,7 @@ def parse_mapping(spec: str) -> CsvMapping:
             # match the stored spelling (w5/716).
             columns[name] = _normalize_header(column)
     if columns:
-        # Keys without columns (`encoding=`/`delimiter=`/`sign=` alone) parse:
+        # Keys without columns (`encoding=`/`delimiter=`/`decimal=`/`sign=` alone) parse:
         # the caller infers the mapping instead of failing it.
         if "date" not in columns:
             raise UsageError(f"--csv needs date=Column; got {spec!r}.")
@@ -219,13 +227,13 @@ def parse_mapping(spec: str) -> CsvMapping:
             raise UsageError("--csv needs amount=Column or debit=A,credit=B (exactly one of the two).")
         if has_pair and ("debit" not in columns or "credit" not in columns):
             raise UsageError("--csv needs both debit=A and credit=B together.")
-    return CsvMapping(columns=columns, sign=sign, delimiter=delimiter, encoding=encoding)
+    return CsvMapping(columns=columns, sign=sign, delimiter=delimiter, encoding=encoding, decimal=decimal)
 
 
 def validate_reading_keys(spec: str) -> None:
-    """Refuse a bad `encoding=` or `delimiter=` in a `--csv` spec, whatever else it holds.
+    """Refuse a bad `encoding=`, `delimiter=`, or `decimal=` in a `--csv` spec, whatever else it holds.
 
-    They apply before the file is read, so a spec that is otherwise
+    They decide how the file is read, so a spec that is otherwise
     incomplete must still not let a typo through: on a non-UTF-8 export the
     dropped `encoding=sjis` became a generic decode refusal that told the user
     to force an encoding — what they had just tried (w5/332).
@@ -238,6 +246,8 @@ def validate_reading_keys(spec: str) -> None:
             _parse_encoding_value(column.strip())
         elif name.strip() == "delimiter":
             _parse_delimiter_value(column.strip(" "))
+        elif name.strip() == "decimal":
+            _parse_decimal_value(column.strip())
 
 
 def _parse_encoding_value(column: str) -> str:
@@ -271,6 +281,16 @@ def _parse_delimiter_value(column: str) -> str:
     raise UsageError(
         f"Bad --csv delimiter {column!r}: write comma, semicolon, tab, or pipe (or ';', '|', a literal tab)."
     )
+
+
+def _parse_decimal_value(column: str) -> str:
+    """Normalize a `--csv decimal=` value to `comma` or `point`."""
+    value = column.strip()
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in "'\"":
+        value = value[1:-1]
+    if value.strip().casefold() in {"comma", "point"}:
+        return value.strip().casefold()
+    raise UsageError(f"Bad --csv decimal {column!r}: use decimal=comma or decimal=point.")
 
 
 def load_rules(path: Path) -> list[CsvRule]:
