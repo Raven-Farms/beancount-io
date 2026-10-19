@@ -53,7 +53,7 @@ export GIT_AUTHOR_NAME="Synthetic Ledger User" GIT_COMMITTER_NAME="Synthetic Led
 export GIT_AUTHOR_EMAIL="synthetic@example.invalid" GIT_COMMITTER_EMAIL="synthetic@example.invalid"
 mkdir -p "$BOOKS" "$MIGRATION_INPUTS" "$RUN/evidence"
 for f in monarch-export.csv balances.md checking-overlap.csv savings-overlap.csv checking-april.csv; do
-  cp "$SKILLS_SRC/skills/docs/examples/migration/$f" "$MIGRATION_INPUTS/"
+  cp "$SKILLS_SRC/docs/skills/examples/migration/$f" "$MIGRATION_INPUTS/"
 done
 git -C "$BOOKS" init -q
 python3 "$SKILLS_SRC/scripts/skills/beancount-skills.py" install "$BOOKS/.claude/skills" "$BOOKS/.agents/skills"
@@ -208,7 +208,7 @@ Then replace the balances file:
 
 ```sh
 rm "$MIGRATION_INPUTS/balances.md"
-cp "$SKILLS_SRC/skills/docs/examples/migration/balances-conflicting.md" "$MIGRATION_INPUTS/"
+cp "$SKILLS_SRC/docs/skills/examples/migration/balances-conflicting.md" "$MIGRATION_INPUTS/"
 ```
 
 Send the runtime, init, and init-approve prompts, with `balances-conflicting.md`

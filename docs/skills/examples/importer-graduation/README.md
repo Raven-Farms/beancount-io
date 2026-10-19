@@ -32,7 +32,7 @@ scenario input, not a claimed independent bank statement.
 `renamed-headers.csv` copies `eval3_new_sample.csv`. `activity.csv` combines the
 old rows with the May 6 row from the renamed-header sample and the payroll row
 from `eval1_sample.csv`. The invoice sample is new synthetic data. The original
-evals remain in `.claude/skills/beancount-importer-author/evals/files/`.
+evals remain in `skills/beancount-importer-author/evals/files/`.
 
 The drift changes only `Date,Description,Amount` to `Post Date,Details,Value`.
 Dates remain MDY, signs retain their meaning, and raw descriptions remain
@@ -54,7 +54,7 @@ category in the existing rules file.
 | `repair-fuel` | 2026-05-19 | -42.30 | `Expenses:Transport:Fuel` | `9625a767cf66bf6d` |
 
 IDs use the canonical normalization in
-[`beancount-import/references/dedup.md`](../../../.claude/skills/beancount-import/references/dedup.md).
+[`beancount-import/references/dedup.md`](../../../../skills/beancount-import/references/dedup.md).
 `expectations.json` records each complete hash input as well as its expected
 ID, so a reviewer can check SHA-256 independently of an importer or its golden
 files. For example:

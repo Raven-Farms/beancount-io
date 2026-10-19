@@ -33,8 +33,9 @@ from unittest import mock
 SCRIPTS_DIR = Path(__file__).resolve().parent
 SKILLS_ROOT = SCRIPTS_DIR.parents[1] / "skills"
 SUITE = SKILLS_ROOT
-INSTALL_DOC = SKILLS_ROOT / "docs" / "installation.md"
-FIRST_QUERY_DOC = SKILLS_ROOT / "docs" / "first-query.md"
+DOCS = SCRIPTS_DIR.parents[1] / "docs" / "skills"
+INSTALL_DOC = DOCS / "installation.md"
+FIRST_QUERY_DOC = DOCS / "first-query.md"
 FIXTURE = SUITE / "beancount-ask" / "evals" / "files" / "eval1_ledger.beancount"
 
 

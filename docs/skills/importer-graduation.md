@@ -49,10 +49,10 @@ export GIT_OPTIONAL_LOCKS=0
 export GIT_AUTHOR_NAME="Synthetic Ledger User" GIT_COMMITTER_NAME="Synthetic Ledger User"
 export GIT_AUTHOR_EMAIL="synthetic@example.invalid" GIT_COMMITTER_EMAIL="synthetic@example.invalid"
 mkdir -p "$BOOKS" "$GRADUATION_INPUTS" "$RUN/evidence" "$XDG_CACHE_HOME"
-cp "$SKILLS_SRC/skills/docs/examples/importer-graduation/"*.csv "$GRADUATION_INPUTS/"
-cp "$SKILLS_SRC/skills/docs/examples/importer-graduation/prior-ledger.beancount" "$BOOKS/ledger.beancount"
-cp "$SKILLS_SRC/skills/docs/examples/importer-graduation/import-rules.toml" "$BOOKS/"
-cp "$SKILLS_SRC/skills/docs/examples/importer-graduation/seed-import.py" "$BOOKS/import.py"
+cp "$SKILLS_SRC/docs/skills/examples/importer-graduation/"*.csv "$GRADUATION_INPUTS/"
+cp "$SKILLS_SRC/docs/skills/examples/importer-graduation/prior-ledger.beancount" "$BOOKS/ledger.beancount"
+cp "$SKILLS_SRC/docs/skills/examples/importer-graduation/import-rules.toml" "$BOOKS/"
+cp "$SKILLS_SRC/docs/skills/examples/importer-graduation/seed-import.py" "$BOOKS/import.py"
 uv venv "$RUN/authoring"
 uv pip install --python "$AUTHOR_PYTHON" 'beangulp==0.2.0'
 "$AUTHOR_PYTHON" -c 'from importlib.metadata import version; import beangulp; print(version("beangulp"))'
@@ -84,8 +84,8 @@ bank integration.
 
 ```sh
 mkdir -p "$RUN/reference/tests"
-cp "$SKILLS_SRC/skills/docs/examples/importer-graduation/reference_importer.py" "$RUN/reference/"
-cp "$SKILLS_SRC/skills/docs/examples/importer-graduation/reference_runner.py" "$RUN/reference/"
+cp "$SKILLS_SRC/docs/skills/examples/importer-graduation/reference_importer.py" "$RUN/reference/"
+cp "$SKILLS_SRC/docs/skills/examples/importer-graduation/reference_runner.py" "$RUN/reference/"
 cp "$GRADUATION_INPUTS/prior-history.csv" "$GRADUATION_INPUTS/activity.csv" "$RUN/reference/tests/"
 "$AUTHOR_PYTHON" "$RUN/reference/reference_importer.py" generate "$RUN/reference/tests"
 ```

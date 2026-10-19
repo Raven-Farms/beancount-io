@@ -40,8 +40,8 @@ bea engine enable beanprice   # then: bea price …  (not bea add price)
 `bea import --csv` and `bea add price` work without those features. The eight
 `beancount-*` ledger skills for Claude Code and Codex run on this single `bea`
 installation and never ask you to install Beancount separately — see the
-[skills installation guide](https://github.com/bex-co/beancount-io/blob/main/skills/docs/installation.md)
-and the [first-query walkthrough](https://github.com/bex-co/beancount-io/blob/main/skills/docs/first-query.md).
+[skills installation guide](https://github.com/bex-co/beancount-io/blob/main/docs/skills/installation.md)
+and the [first-query walkthrough](https://github.com/bex-co/beancount-io/blob/main/docs/skills/first-query.md).
 
 | Channel | When the engine appears | After that |
 | --- | --- | --- |

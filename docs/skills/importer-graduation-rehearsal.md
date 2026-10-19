@@ -42,8 +42,10 @@ claude -p "$PROMPT" --resume "$SESSION" --output-format stream-json --verbose \
   --allowedTools Skill Read Bash Write Edit Glob Grep \
   --strict-mcp-config --mcp-config '{"mcpServers":{}}' \
   --setting-sources project \
-  --add-dir "$RUN" "$SKILLS_SRC/skills/.claude/skills"
+  --add-dir "$RUN" "$SKILLS_SRC/skills"
 ```
+
+The run passed the suite's location at the time, a hidden folder inside `skills/`; the command shows its current location (w2/m42).
 
 Codex ignored user configuration and rules, used the normal `workspace-write`
 sandbox, and added only the run and its configuration directory to writable

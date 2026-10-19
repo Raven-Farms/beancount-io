@@ -1,6 +1,6 @@
 # w2 · m42 — Put each customer skill directly under `skills/`
 
-**Worker:** worker2 **Goal:** the customer suite lives at `skills/<name>/SKILL.md`, the conventional skill layout, instead of `skills/.claude/skills/<name>/`. `skills/` holds only the skill folders, a `README.md` catalog, and the `AGENTS.md` authoring guide. Guides and examples move to `docs/skills/`, and the installer, checks, verifiers, routing set, and tests move to `scripts/skills/`. Every existing install survives the move. **Status:** todo (t001–t002 done)
+**Worker:** worker2 **Goal:** the customer suite lives at `skills/<name>/SKILL.md`, the conventional skill layout, instead of `skills/.claude/skills/<name>/`. `skills/` holds only the skill folders, a `README.md` catalog, and the `AGENTS.md` authoring guide. Guides and examples move to `docs/skills/`, and the installer, checks, verifiers, routing set, and tests move to `scripts/skills/`. Every existing install survives the move. **Status:** todo (t001–t003 done)
 
 ## Tasks (in order)
 
@@ -8,7 +8,7 @@
 | ---- | ----- | --- | ---------- |
 | [t001](./done/t001.md) | Move every skill folder to `skills/<name>/` — **DONE** | 45m | — |
 | [t002](./done/t002.md) | Move the suite's tooling to `scripts/skills/` — **DONE** | 60m | t001 |
-| t003 | Move the guides and examples to `docs/skills/` | 45m | t002 |
+| [t003](./done/t003.md) | Move the guides and examples to `docs/skills/` — **DONE** | 45m | t002 |
 | t004 | Keep existing installs working across the move | 60m | t002, t003 |
 | t005 | Guard the layout in CI and restate the rules | 45m | t001, t002, t003 |
 | t006 | Repoint every remaining citation of the old paths | 45m | t001, t003 |

@@ -242,7 +242,7 @@ Use a canonical catalog and common conformance fixtures with package-local consu
 
 Extend eligible REST, GraphQL, and MCP creation/preview capabilities together, preserving credentials, scopes, authorization, limits, failure behavior, and retry semantics. Regenerate the OpenAPI snapshot and CLI clients. New dashboard-only configuration would recreate the current problem. Follow the repository's [API parity requirements](../../backend-cluster/backend-v2/AGENTS.md#required-api-parity-workflow).
 
-Coordinate updates to tutorials and the agent-facing [beancount-init skill](../../skills/.claude/skills/beancount-init/SKILL.md), which also describes a fixed personal scaffold and fallback. They should teach the released behavior and expose the same customer decisions.
+Coordinate updates to tutorials and the agent-facing [beancount-init skill](../../skills/beancount-init/SKILL.md), which also describes a fixed personal scaffold and fallback. They should teach the released behavior and expose the same customer decisions.
 
 ### 19. How will we know the experience improved?
 

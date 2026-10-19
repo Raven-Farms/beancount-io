@@ -22,7 +22,7 @@
 
 ## Definition of done
 
-- `bea-cli.md` states the suite's minimum `bea` version and how to check it once per session. `skills/README.md` and `skills/docs/installation.md` state the same version, and a CI check fails when they disagree.
+- `bea-cli.md` states the suite's minimum `bea` version and how to check it once per session. `skills/README.md` and `docs/skills/installation.md` state the same version, and a CI check fails when they disagree.
 - Version-specific caveats (older batch schemas, the default `list` limit, optional libmagic, `bea ingest` rejecting `--json`, and others the tasks find) sit in one `bea-cli.md` section, each marked with the version range it applies to. Skill bodies point there instead of carrying the caveat inline.
 - Each skill body is rewritten as steps and rules stated positively. A prohibition stays only when it guards a real failure, and it is then stated once.
 - Every rule removed or merged is listed in the task that changed it, with where it moved or why it no longer applies (for example, fixed at or below the minimum `bea`).

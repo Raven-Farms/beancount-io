@@ -10,7 +10,7 @@ bea 0.1.0
 exit=0
 ```
 
-## Core — init + check (no Fava, no pip install beancount)
+## Core — init + check (no Fava, never `pip install beancount`)
 - `bea init` exit=0
 - `bea check` exit=0
 - main.bean lines=24; Equity:OpeningBalances present=True
@@ -60,7 +60,7 @@ Engine 0.1.0 at /Users/tianpan/.local/share/bea/engine/0.1.0
 Provisioned: yes
 Optional features:
   beangulp: disabled, absent (GPL-2.0-only)
-    Needs the system libmagic library (python-magic). CSV import via --csv does not need this feature.
+    [libmagic line elided: this release called it required; later releases print that it is optional (w5/168)] CSV import via --csv does not need this feature.
   beanprice: disabled, absent (GPL-2.0-only)
     Quote fetching only; bea add price still records a supplied quote without this feature.
 
@@ -72,11 +72,11 @@ Error: Engine feature 'beanprice' is not enabled. Run: bea engine enable beanpri
 ```
 
 ## Agent guidance consistency
-- Claude Code and Codex both load `skills/.claude/skills/*/SKILL.md` (customer) and `.agents/skills` via root `.claude/skills` symlink for development.
+- Claude Code and Codex both load `skills/*/SKILL.md` (customer) and `.agents/skills` via root `.claude/skills` symlink for development.
 - Shared files updated once; no platform-specific copies.
 - This rehearsal exercises the public `bea` command contracts those skills document; it is not a live multi-turn agent transcript.
 
 ## Isolation
 - `command -v bean-check` under scrubbed PATH: `(empty)`
-- Customer workflows above did not require `pip install beancount` or private `BEA_ENGINE` configuration.
+- Customer workflows above never required `pip install beancount` or private `BEA_ENGINE` configuration.
 

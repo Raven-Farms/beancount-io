@@ -1,7 +1,7 @@
 # `beancount-add` eval rehearsal
 
 This record covers real Claude Code and Codex sessions running the
-[`beancount-add` evals](../.claude/skills/beancount-add/evals/evals.json) on
+[`beancount-add` evals](../../skills/beancount-add/evals/evals.json) on
 synthetic ledgers. It is separate from the deterministic recipe tests in
 `scripts/test_beancount_skills.py`; no hosted ledger or real financial data was
 used.

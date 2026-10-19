@@ -6,7 +6,7 @@ Examples (keep snapshots and agent logs outside the workspace):
   python3 verify-migration.py verify --workspace /tmp/books --checkpoint migrated
   python3 verify-migration.py verify --workspace /tmp/books --checkpoint checking_overlap --before /tmp/before.json
 
-Checkpoints and branches come from docs/examples/migration/expectations.json.
+Checkpoints and branches come from docs/skills/examples/migration/expectations.json.
 Every source row must appear exactly once, through `import-id` or, for a merged
 transfer's second row, `import-id-2`. Transactions are compared by date, import
 IDs, and postings; payee, narration, and flag are the agent's choice. Pad
@@ -28,8 +28,7 @@ import subprocess
 import sys
 
 SCRIPTS = Path(__file__).resolve().parent
-SKILLS = SCRIPTS.parents[1] / 'skills'
-EXPECTATIONS = SKILLS / 'docs/examples/migration/expectations.json'
+EXPECTATIONS = SCRIPTS.parents[1] / 'docs/skills/examples/migration/expectations.json'
 _spec = importlib.util.spec_from_file_location('verify_first_month', SCRIPTS / 'verify-first-month.py')
 assert _spec is not None and _spec.loader is not None
 first_month = importlib.util.module_from_spec(_spec)

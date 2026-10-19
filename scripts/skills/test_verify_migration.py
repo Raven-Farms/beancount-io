@@ -27,7 +27,8 @@ verify = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(verify)
 CHECKOUT_BEA = SCRIPTS.parents[1] / 'cli/.venv/bin/bea'
 BEA = os.environ.get('BEA') or (str(CHECKOUT_BEA) if CHECKOUT_BEA.is_file() else shutil.which('bea'))
-FIXTURES = SKILLS / 'docs/examples/migration'
+DOCS = SCRIPTS.parents[1] / 'docs/skills'
+FIXTURES = DOCS / 'examples/migration'
 EVAL_EXPORT = SKILLS / 'beancount-migrate/evals/files/eval2_monarch.csv'
 
 
@@ -81,7 +82,7 @@ class MigrationGuideTests(unittest.TestCase):
     """The guide's commands and approvals agree with the fixture it walks through."""
 
     def setUp(self):
-        self.guide = (SKILLS / 'docs/migration.md').read_text()
+        self.guide = (DOCS / 'migration.md').read_text()
         self.expected = json.loads(verify.EXPECTATIONS.read_text())
 
     def test_every_checkpoint_is_run_by_the_guide(self):

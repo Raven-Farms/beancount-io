@@ -6,7 +6,7 @@
 - Scope: why the default `bea` installation does not depend on beangulp, and
   how `bea import` handles a bank CSV with no Python importer: column
   mapping, pattern categorization, the unmatched queue, remembered mappings,
-  and duplicate identity. Related: the [`import-id` convention](../../skills/.claude/skills/beancount-import/references/dedup.md)
+  and duplicate identity. Related: the [`import-id` convention](../../skills/beancount-import/references/dedup.md)
   shared with the ledger skills.
 
 ## Context

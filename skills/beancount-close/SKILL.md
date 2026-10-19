@@ -36,7 +36,7 @@ Resolve the period (the user's words or the last complete month) and state it. F
 
 For each active account, ask for the period statement (CSV or pasted text). Per account **with** a statement, run the `beancount-reconcile` flow (its own confirm gate applies): the outcome is **tied**, or **partial** when reconcile withholds the assertion over unresolved suspects or mismatches (a reported finding with its residual, not a failure to retry). Per account **without** one, the status is **unverified** and the account is listed in the report.
 
-If beancount-reconcile is not installed beside this skill (a registry can install one skill alone), say so and point the user to https://github.com/bex-co/beancount-io/blob/main/skills/docs/installation.md to add it. Without it, every account is **unverified**.
+If beancount-reconcile is not installed beside this skill (a registry can install one skill alone), say so and point the user to https://github.com/bex-co/beancount-io/blob/main/docs/skills/installation.md to add it. Without it, every account is **unverified**.
 
 ### 3. Assert
 

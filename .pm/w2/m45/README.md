@@ -25,7 +25,7 @@
 - Every write follows the suite's rails: a proposal showing the target file and exact entries, an explicit yes, existing accounts only, `bea add` with `--file` and `--into`, and a passing root `bea check` before success is reported. An ambiguous lot reduction is resolved with the user and never guessed.
 - A realized-gains report for a year lists each closed lot with acquisition date, sale date, holding period (one year or less, or more), quantity, proceeds, cost, and gain, from `bea --json query` statements shown with the answer. Its total ties to the period's gain postings.
 - The skill states the booking methods `bea` accepts. It does not pretend to average cost when the engine lacks it ([beancount#940](https://github.com/beancount/beancount/issues/940)).
-- The skill's evals pass on Claude Code and Codex, recorded with versions and dates. The installer inventory, `skills/README.md`, `skills/AGENTS.md`, `skills/docs/installation.md`, and the root `README.md` describe the resulting suite.
+- The skill's evals pass on Claude Code and Codex, recorded with versions and dates. The installer inventory, `skills/README.md`, `skills/AGENTS.md`, `docs/skills/installation.md`, and the root `README.md` describe the resulting suite.
 
 ## Source + Goal linkage
 

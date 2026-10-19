@@ -4,7 +4,7 @@
 Stdlib only. The suite is linked, not copied: each owned `beancount-*`
 directory in a destination is a symlink into this checkout, so Claude Code
 (`~/.claude/skills`) and Codex (`~/.agents/skills`) share one copy and
-`git pull --ff-only` updates both. See skills/docs/installation.md.
+`git pull --ff-only` updates both. See docs/skills/installation.md.
 
     beancount-skills.py install   DEST [DEST ...]
     beancount-skills.py verify    DEST [DEST ...]

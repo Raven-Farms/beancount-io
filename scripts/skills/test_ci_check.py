@@ -323,7 +323,7 @@ class TestOracleAndIsolation(unittest.TestCase):
             with self.subTest(text=text), tempfile.TemporaryDirectory() as tmp:
                 repo = Path(tmp)
                 skills_dir = repo / "skills"
-                docs = repo / "skills/docs"
+                docs = repo / "docs/skills"
                 (docs / "guide.md").parent.mkdir(parents=True)
                 (docs / "guide.md").write_text(text)
                 skills_dir.mkdir(parents=True, exist_ok=True)
@@ -337,7 +337,7 @@ class TestOracleAndIsolation(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
             skills_dir = repo / "skills"
-            docs = repo / "skills/docs"
+            docs = repo / "docs/skills"
             (docs / "guide.md").parent.mkdir(parents=True)
             (docs / "guide.md").write_text(
                 "The system libmagic library is optional: only importers that call\n"

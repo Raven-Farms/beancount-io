@@ -143,9 +143,11 @@ claude -p "$PROMPT" --output-format stream-json --verbose \
   --allowedTools Skill Read Bash Write Edit Glob Grep \
   --strict-mcp-config --mcp-config '{"mcpServers":{}}' \
   --setting-sources project \
-  --add-dir "$FIRST_MONTH_INPUTS" "$SKILLS_SRC/skills/.claude/skills" \
+  --add-dir "$FIRST_MONTH_INPUTS" "$SKILLS_SRC/skills" \
   > "$RUN/evidence/claude-first.jsonl"
 ```
+
+The run passed the suite's location at the time, a hidden folder inside `skills/`; the command shows its current location (w2/m42).
 
 Read `session_id` from the final result record and append
 `--resume "$CLAUDE_SESSION"` to subsequent Claude calls. Each statement branch

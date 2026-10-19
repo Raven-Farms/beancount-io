@@ -153,7 +153,7 @@ The dashboard and mobile app are clients for the Beancount.io API served by `bac
 
 Beancount.io is built for the agent era: your ledger is text an agent can read, and every write is validated and reversible.
 
-- **Coding-agent skills (local ledger)** — nine `beancount-*` workflows for Claude Code and Codex: scaffold a ledger, record everyday entries, import bank exports without duplicates, reconcile against statements, migrate from Mint/Monarch/QuickBooks, query finances in plain language, and run a confirm-gated month-end close. [Install the skills](./skills/docs/installation.md) → [ask your first question](./skills/docs/first-query.md) → [first-month guide](./skills/docs/first-month.md) → [migration guide](./skills/docs/migration.md).
+- **Coding-agent skills (local ledger)** — nine `beancount-*` workflows for Claude Code and Codex: scaffold a ledger, record everyday entries, import bank exports without duplicates, reconcile against statements, migrate from Mint/Monarch/QuickBooks, query finances in plain language, and run a confirm-gated month-end close. [Install the skills](./docs/skills/installation.md) → [ask your first question](./docs/skills/first-query.md) → [first-month guide](./docs/skills/first-month.md) → [migration guide](./docs/skills/migration.md).
 - **MCP server** — point any MCP client at a deployment to query and edit a ledger from an agent. Also listed on the official [MCP Registry](https://registry.modelcontextprotocol.io) as `io.beancount/beancount` (OAuth sign-in).
 
 <details>
@@ -194,7 +194,7 @@ Beancount.io builds on both (Fava ships inside the CLI). It adds native mobile a
 <details>
 <summary><strong>Can I migrate from Mint, Monarch, or QuickBooks?</strong></summary>
 
-Yes — the [migration guide](./skills/docs/migration.md) converts an export and keeps importing without duplicating transfers.
+Yes — the [migration guide](./docs/skills/migration.md) converts an export and keeps importing without duplicating transfers.
 
 </details>
 

@@ -36,7 +36,7 @@
 - A dirty working tree or a ledger outside Git is handled the way t001's contract says, and never silently.
 - New `<!-- recipe -->` blocks are executed by `test_beancount_skills.py` against isolated ledgers.
 - The skill's evals pass on Claude Code and Codex, recorded with versions and dates.
-- The installer inventory, `skills/README.md`, `skills/AGENTS.md`, `skills/docs/installation.md`, and the root `README.md` list the skill.
+- The installer inventory, `skills/README.md`, `skills/AGENTS.md`, `docs/skills/installation.md`, and the root `README.md` list the skill.
 
 ## Source + Goal linkage
 

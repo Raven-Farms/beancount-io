@@ -1,14 +1,14 @@
 # Skill routing rehearsal
 
 This record covers real Claude Code and Codex sessions choosing a skill for each
-prompt in the suite routing set ([`evals/routing.json`](../evals/routing.json)).
+prompt in the suite routing set ([`evals/routing.json`](../../scripts/skills/routing.json)).
 It is separate from the deterministic checks: `scripts/ci-check.py` validates
 the set itself, and no client runs in CI. Every prompt and the ledger are
 synthetic, and no hosted ledger was used.
 
 ## Method
 
-- Runner: [`scripts/run-routing.py`](../scripts/run-routing.py). Each client
+- Runner: [`scripts/run-routing.py`](../../scripts/skills/run-routing.py). Each client
   gets a scratch Git repository in the system temp directory, outside this
   repository, with a small synthetic ledger and every `beancount-*` skill linked
   into `.claude/skills` and `.agents/skills`, as the installer links them.

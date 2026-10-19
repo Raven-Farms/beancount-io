@@ -4,7 +4,7 @@ Internal workflows for developing and maintaining this monorepo. Follow the [roo
 
 The canonical implementations live in the real directory `.agents/skills/` relative to the repository root. Codex reads that directory; Claude Code reads the same files through `.claude/skills -> ../.agents/skills`. Edit the canonical files and keep the link relative.
 
-Customer-facing `beancount-*` ledger skills belong in [`skills/.claude/skills/`](../skills/.claude/skills), documented in [`skills/AGENTS.md`](../skills/AGENTS.md). Keep them separate from this development suite.
+Customer-facing `beancount-*` ledger skills belong in [`skills/.claude/skills/`](../skills), documented in [`skills/AGENTS.md`](../skills/AGENTS.md). Keep them separate from this development suite.
 
 ## Skills
 

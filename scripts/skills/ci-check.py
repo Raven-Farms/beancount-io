@@ -65,7 +65,7 @@ LIBMAGIC_REQUIRED = re.compile(
     r"\b(?:needs?|requires?)\s+(?:the\s+)?system\s+libmagic",
     re.IGNORECASE,
 )
-CUSTOMER_DOCS = SKILLS_ROOT / "docs"
+CUSTOMER_DOCS = REPO_ROOT / "docs" / "skills"
 ROUTING_ENTRY_KEYS = ("id", "prompt", "expected", "confusable", "why")
 
 
@@ -240,7 +240,7 @@ def check_bea_minimum() -> None:
     install guide state the same one."""
     contract, text, minimum = bea_minimum()
     surfaces = {contract: BEA_MINIMUM_NOTE.findall(text)}
-    for doc in (SKILLS_ROOT / "README.md", SKILLS_ROOT / "docs" / "installation.md"):
+    for doc in (SKILLS_ROOT / "README.md", CUSTOMER_DOCS / "installation.md"):
         surfaces[doc] = BEA_STATED_VERSION.findall(doc.read_text(encoding="utf-8"))
     for path, versions in surfaces.items():
         rel = path.relative_to(REPO_ROOT)
@@ -419,7 +419,10 @@ def check_bea_first() -> None:
 
 def check_no_redundant_installs() -> None:
     """Customer skill text must not push a second Beancount CLI install."""
-    docs = sorted(CUSTOMER_DOCS.rglob("*.md")) if CUSTOMER_DOCS.is_dir() else []
+    # A moved or renamed guides directory must fail, not skip the guides silently.
+    if not CUSTOMER_DOCS.is_dir():
+        fail(f"{CUSTOMER_DOCS.relative_to(REPO_ROOT)} is missing; the customer guides must be checked")
+    docs = sorted(CUSTOMER_DOCS.rglob("*.md"))
     for path in [*sorted(SKILLS_DIR.glob("beancount-*/**/*.md")), *docs]:
         rel = path.relative_to(REPO_ROOT).as_posix()
         text = path.read_text(encoding="utf-8")
@@ -440,7 +443,7 @@ def check_no_redundant_installs() -> None:
                 line,
             ):
                 fail(f"{rel}:{lineno} documents a private engine path for agents to configure")
-        print(f"OK one-install guidance {path.relative_to(SKILLS_ROOT)}")
+        print(f"OK one-install guidance {path.relative_to(REPO_ROOT)}")
 
 
 def main() -> None:

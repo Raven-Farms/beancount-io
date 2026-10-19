@@ -17,7 +17,7 @@ Fetch only the `skills/` directory of this repository into a stable location:
 ```sh
 SKILLS_SRC="${XDG_DATA_HOME:-$HOME/.local/share}/beancount-io"
 git clone --depth 1 --filter=blob:none --sparse https://github.com/bex-co/beancount-io.git "$SKILLS_SRC"
-git -C "$SKILLS_SRC" sparse-checkout set skills scripts/skills
+git -C "$SKILLS_SRC" sparse-checkout set skills scripts/skills docs/skills
 ```
 
 The checkout contains the customer suite only. The repository's development skills live elsewhere and are not fetched.
@@ -38,7 +38,7 @@ SKILLS_SRC="${XDG_DATA_HOME:-$HOME/.local/share}/beancount-io"
 python3 "$SKILLS_SRC/scripts/skills/beancount-skills.py" install ~/.claude/skills ~/.agents/skills
 ```
 
-For each directory, `install` creates one link per skill (`beancount-ask -> $SKILLS_SRC/skills/.claude/skills/beancount-ask`, and so on), prints the source revision, and runs `verify`. It leaves every other entry in the directory alone. Both agents follow symlinked skill folders.
+For each directory, `install` creates one link per skill (`beancount-ask -> $SKILLS_SRC/skills/beancount-ask`, and so on), prints the source revision, and runs `verify`. It leaves every other entry in the directory alone. Both agents follow symlinked skill folders.
 
 Links for a single workspace are absolute paths on your machine. Keep them out of a shared ledger repository, for example by adding `.claude/skills/beancount-*` and `.agents/skills/beancount-*` to its `.gitignore`.
 
@@ -50,7 +50,7 @@ Check the files first. `verify` only reads, and it exits nonzero with one line p
 python3 "$SKILLS_SRC/scripts/skills/beancount-skills.py" verify ~/.claude/skills ~/.agents/skills
 ```
 
-Then ask each agent from your ledger directory. Both should name the same nine skills listed in the [skills catalog](../README.md).
+Then ask each agent from your ledger directory. Both should name the same nine skills listed in the [skills catalog](../../skills/README.md).
 
 ```sh
 claude -p "List the names of the skills available to you that start with beancount-, one per line, nothing else."

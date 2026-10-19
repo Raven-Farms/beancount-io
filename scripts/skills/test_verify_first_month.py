@@ -31,7 +31,7 @@ if not BEA:
     candidate = SCRIPTS.parents[1] / 'cli/.venv/bin/bea'
     if candidate.is_file():
         BEA = str(candidate)
-FIXTURES = SKILLS / 'docs/examples/first-month'
+FIXTURES = SCRIPTS.parents[1] / 'docs/skills/examples/first-month'
 SUITE = SKILLS
 
 

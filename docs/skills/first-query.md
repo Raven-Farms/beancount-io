@@ -12,7 +12,7 @@ Follow [Install the Beancount skills](installation.md) through step 3. You need 
 SKILLS_SRC="${XDG_DATA_HOME:-$HOME/.local/share}/beancount-io"
 mkdir -p ~/beancount-first-query && cd ~/beancount-first-query
 git init -q
-cp "$SKILLS_SRC/skills/.claude/skills/beancount-ask/evals/files/eval1_ledger.beancount" ledger.beancount
+cp "$SKILLS_SRC/skills/beancount-ask/evals/files/eval1_ledger.beancount" ledger.beancount
 shasum -a 256 ledger.beancount > ledger.sha256
 ```
 
