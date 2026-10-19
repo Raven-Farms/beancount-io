@@ -75,7 +75,8 @@ A read on a ledger that already fails its check is refused under `--json`
 (`Ledger has N error(s). Pass --allow-errors to report anyway.`). When the read
 diagnoses that failure — reconciling a failing assertion — pass
 `--allow-errors` to the read, and report its `ledger_valid` and
-`ledger_errors` to the user. Never pass it to a write to get past a red check.
+`ledger_errors` to the user (on 0.3.1, run the `check` recipe for them;
+Version notes). Never pass it to a write to get past a red check.
 
 A report values every row at market in the operating currency, so under
 `--json` it exits 1 with `result.missing_prices` when a commodity has no price
@@ -110,7 +111,9 @@ refuses a new open until something posts to the account: `Unused account
 '…'`. That refusal, and only that one, is a documented two-step:
 
 1. Stage the open with the `open-staged` recipe below. Any other error in its
-   refusal still means fix the proposal, not stage it.
+   refusal still means fix the proposal, not stage it. On 0.3.1 the staged
+   open is refused as well (Version notes): tell the user the new account
+   cannot be added through `bea` 0.3.1 on this ledger, and stop.
 2. In the same workflow, write the confirmed batch that first posts to the
    account (the `batch` recipe, without `--allow-errors`), then run `check`.
 
@@ -279,6 +282,12 @@ suite's minimum version no longer needs it.
   themselves need it.
 - **CSV import memory (0.3.1).** `bea import` remembers column mappings and
   the rules path for a source, but not the sign convention.
+- **Red-ledger reads (0.3.1).** An `--allow-errors` read answers without
+  `ledger_valid` and `ledger_errors`; the `check` recipe reports the errors.
+  Later releases include them in the answer.
+- **Staged opens under `nounused` (0.3.1).** `add open --allow-errors` is
+  refused like any new error, so the two-step above cannot run; later
+  releases stage the open.
 - **`add close` (0.3.1).** It writes a close even when the account still
   holds a balance, without a warning. Later releases refuse that close
   (naming the balance) unless `--force` is passed.

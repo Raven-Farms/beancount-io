@@ -222,15 +222,20 @@ BEA_MINIMUM_NOTE = re.compile(r"\*\*Minimum\s+(\d+\.\d+\.\d+)\.\*\*")
 BEA_STATED_VERSION = re.compile(r"bea`(?:\*\*|\]\([^)]*\))?\s+(\d+\.\d+\.\d+)\s+or\s+later")
 
 
-def check_bea_minimum() -> None:
-    """The shared contract declares one minimum `bea`; the catalog and the
-    install guide state the same one."""
+def bea_minimum() -> tuple[Path, str, str]:
+    """The shared contract, its text, and the one minimum `bea` it declares."""
     contract = SKILLS_DIR / "beancount-init" / "references" / "bea-cli.md"
     text = contract.read_text(encoding="utf-8")
     declared = set(BEA_MINIMUM.findall(text))
     if len(declared) != 1:
         fail(f"{contract.relative_to(REPO_ROOT)} must declare one minimum (`needs `bea` X.Y.Z or later`)")
-    minimum = declared.pop()
+    return contract, text, declared.pop()
+
+
+def check_bea_minimum() -> None:
+    """The shared contract declares one minimum `bea`; the catalog and the
+    install guide state the same one."""
+    contract, text, minimum = bea_minimum()
     surfaces = {contract: BEA_MINIMUM_NOTE.findall(text)}
     for doc in (SKILLS_ROOT / "README.md", SKILLS_ROOT / "docs" / "installation.md"):
         surfaces[doc] = BEA_STATED_VERSION.findall(doc.read_text(encoding="utf-8"))
@@ -449,4 +454,8 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    if sys.argv[1:] == ["--print-bea-minimum"]:
+        # For CI's published-minimum leg (ci-skills.yml).
+        print(bea_minimum()[2])
+        raise SystemExit(0)
     main()

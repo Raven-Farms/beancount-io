@@ -15,6 +15,7 @@ import hashlib
 import importlib.util
 import io
 import json
+import os
 import re
 import shlex
 import shutil
@@ -549,6 +550,9 @@ class TestBeaRecipes(unittest.TestCase):
         cls.bea = cls.ci_check.find_bea()
         # Keep the executable available even if its directory also has bean-*.
         cls.bea[0] = shutil.which(cls.bea[0]) or cls.bea[0]
+        # The CI leg against the published minimum release sets this; the
+        # default leg runs the checkout's bea, which also reports that version.
+        cls.published = os.environ.get("SKILLS_BEA") == "published"
         # Every suite document that carries an executable recipe; names are
         # unique across them (test_recipe_names_are_unique_across_the_suite).
         cls.documents = "\n".join(
@@ -783,6 +787,12 @@ class TestBeaRecipes(unittest.TestCase):
         rows = self.recipe("balance-before-close", account="Expenses:Dining", close_date="2026-05-31")["rows"]
         self.assertEqual(rows, [["USD", "12.50"]])
         before = self.ledger.read_bytes()
+        if self.published:
+            # 0.3.1 writes the close over the balance, which is why the skill
+            # reads the balance itself (bea-cli.md, Version notes).
+            self.assertEqual(self.recipe("close")["written"], 1)
+            self.assertIn("2026-05-31 close Expenses:Dining", self.ledger.read_text())
+            return
         refused = self.recipe("close", succeeds=False)
         self.assertIn("still holds 12.50 USD on 2026-05-31", refused.stdout + refused.stderr)
         self.assertEqual(self.ledger.read_bytes(), before)
@@ -841,6 +851,12 @@ class TestBeaRecipes(unittest.TestCase):
         refused = self.recipe("open", succeeds=False)
         self.assertIn("Unused account 'Expenses:Uncategorized'", refused.stdout + refused.stderr)
         self.assertEqual(self.ledger.read_bytes(), before)
+        if self.published:
+            # 0.3.1 refuses the staged open too (bea-cli.md, Version notes).
+            staged = self.recipe("open-staged", succeeds=False)
+            self.assertIn("Unused account 'Expenses:Uncategorized'", staged.stdout + staged.stderr)
+            self.assertEqual(self.ledger.read_bytes(), before)
+            return
         self.recipe("open-staged")
         self.recipe("check", succeeds=False)
         self.batch([{
@@ -914,8 +930,14 @@ class TestBeaRecipes(unittest.TestCase):
         self.assertIn("Pass --allow-errors", refused.stdout + refused.stderr)
         answer = self.recipe("tie-out-on-a-red-ledger", envelope=True)
         self.assertEqual(answer["data"]["rows"], [["2945.80", "2902.70", "0.00"]])
-        self.assertFalse(answer["ledger_valid"])
-        self.assertTrue(any("Balance failed for 'Assets:Bank:Checking'" in str(e) for e in answer["ledger_errors"]))
+        if self.published:
+            # 0.3.1 omits the errors from the answer; the check recipe names them.
+            self.assertNotIn("ledger_errors", answer)
+            errors = self.recipe("check", succeeds=False)
+            self.assertIn("Balance failed for 'Assets:Bank:Checking'", errors.stdout + errors.stderr)
+        else:
+            self.assertFalse(answer["ledger_valid"])
+            self.assertTrue(any("Balance failed for 'Assets:Bank:Checking'" in str(e) for e in answer["ledger_errors"]))
         self.assertEqual(ledger.read_bytes(), before)
         # The confirmed write needs no flag: the missing rows clear the assertion.
         self.values["target"] = ledger.name
