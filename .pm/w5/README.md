@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [761 — check --auto --cache-filename leaks bean-check's raw WARNING:root line](./761.md)
 - [762 — price export leaves out a plugin found via an included insert_pythonpath; the snapshot fails check (gap in w5/094)](./762.md)
 - [763 — beancount-options skill: "{} matches any held lot" is false under STRICT; template refused under sellgains/pedantic](./763.md)
 - [764 — Under option booking_method AVERAGE, add open makes an unsellable account; the sale hint blames the open (gap in w5/162)](./764.md)
