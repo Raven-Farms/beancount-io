@@ -69,6 +69,10 @@ export function buildServiceLayer(input: {
     input.database.models,
     input.database.db,
     authorization,
+    {
+      sendgrid: input.clients.sendgrid,
+      sentBillingEmail: input.database.models.sentBillingEmail,
+    },
   );
   const apiKey = new ApiKeyService({
     db: input.database.db,

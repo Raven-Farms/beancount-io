@@ -23,9 +23,25 @@ import type {
 } from "../operations/plan-change-preview";
 import type { PlanChangeResultView } from "../operations/plan-change-apply";
 import {
+  emailScheduledChange,
+  type PlanChangeEmailDeps,
+} from "../operations/plan-change-email";
+import {
   pendingChange,
+  type ScheduledChangeNotice,
   type ScheduledChangeView,
 } from "../operations/plan-change-schedule";
+
+function sameChange(
+  a: ScheduledChangeView | null | undefined,
+  b: ScheduledChangeView,
+): boolean {
+  return (
+    !!a &&
+    a.priceId === b.priceId &&
+    a.effectiveAt.getTime() === b.effectiveAt.getTime()
+  );
+}
 
 interface SubscriptionPriceView {
   id: string;
@@ -182,7 +198,40 @@ export class SubscriptionService implements ISubscriptionService {
     private readonly models: Pick<IModels, "paidCustomer" | "user">,
     private readonly db: DbExecutor,
     private readonly authorization: IAuthorizationService,
+    /** Without it, a scheduled change sends no confirmation email. */
+    private readonly planChangeEmail?: Pick<PlanChangeEmailDeps, "sendgrid"> &
+      Pick<IModels, "sentBillingEmail">,
   ) {}
+
+  /**
+   * Confirm a scheduled change by email. The change is already stored in
+   * Stripe, so a lost email is logged and never fails the change.
+   */
+  private async confirmScheduledChange(
+    userId: string,
+    clientId: string,
+    notice: ScheduledChangeNotice,
+  ): Promise<void> {
+    if (!this.planChangeEmail) return;
+    const { sendgrid, sentBillingEmail } = this.planChangeEmail;
+    try {
+      await emailScheduledChange(
+        {
+          sendgrid,
+          models: { user: this.models.user, sentBillingEmail },
+          db: this.db,
+        },
+        "scheduled",
+        userId,
+        clientId,
+        notice,
+      );
+    } catch (error) {
+      logger.warn("Plan change scheduled, but its confirmation email failed", {
+        errorType: error instanceof Error ? error.name : typeof error,
+      });
+    }
+  }
 
   private async authorize(
     identity: Identity,
@@ -547,12 +596,25 @@ export class SubscriptionService implements ISubscriptionService {
       identity,
       AUTHORIZATION_ACTIONS.USER_BILLING_PLAN_CHANGE_APPLY,
     );
-    return this.stripe.changePlan(
+    const { scheduledNotice, ...result } = await this.stripe.changePlan(
       identity.userId,
       clientId,
       priceId,
       prorationDate,
     );
+    // A confirm that leaves the schedule as it was (a double click) announces
+    // nothing new.
+    if (
+      scheduledNotice &&
+      !sameChange(scheduledNotice.previous, scheduledNotice.change)
+    ) {
+      await this.confirmScheduledChange(
+        identity.userId,
+        clientId,
+        scheduledNotice,
+      );
+    }
+    return result;
   }
 
   public async cancelScheduledPlanChange(

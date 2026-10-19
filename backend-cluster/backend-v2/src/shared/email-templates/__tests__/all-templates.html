@@ -95,6 +95,8 @@
       <a href="#template-0">Welcome Email</a>
       <a href="#template-1">Signup OTP Email</a>
       <a href="#template-2">Password Reset Email</a>
+      <a href="#template-3">Plan Change Scheduled Email</a>
+      <a href="#template-4">Plan Change Reminder Email</a>
     </nav>
 
     <section class="template-section" id="template-0">
@@ -828,6 +830,562 @@
     &lt;p class=&quot;email-muted email-breakable&quot; style=&quot;margin: 0 0 16px; color: #60665d; font-size: 13px; line-height: 1.5; word-break: break-all; overflow-wrap: anywhere;&quot;&gt;
       https://dashboard.beancount.io/reset-password?token=public-preview-token
     &lt;/p&gt;
+
+                  &lt;/td&gt;
+                &lt;/tr&gt;
+
+    &lt;tr&gt;
+      &lt;td class=&quot;email-footer&quot; style=&quot;text-align: center; padding: 22px 40px; background-color: #f6f6f3; border-top: 1px solid #e4e4e1;&quot;&gt;
+        &lt;p class=&quot;email-muted&quot; style=&quot;margin: 0; color: #60665d; font-size: 14px; line-height: 1.6; font-size: 12px;&quot;&gt;
+          Powered by Beancount.io
+        &lt;/p&gt;
+      &lt;/td&gt;
+    &lt;/tr&gt;
+
+              &lt;/table&gt;
+            &lt;/td&gt;
+          &lt;/tr&gt;
+        &lt;/table&gt;
+      &lt;/body&gt;
+    &lt;/html&gt;"></iframe>
+    </div>
+
+      </div>
+    </section>
+
+    <section class="template-section" id="template-3">
+      <h2 class="template-title">Plan Change Scheduled Email</h2>
+      <pre class="template-params">{
+  "kind": "scheduled",
+  "currentPlan": "Growth · Yearly",
+  "newPlan": "Premium · Yearly",
+  "effectiveDate": "October 17, 2027",
+  "limitChanges": [
+    {
+      "label": "Ledgers",
+      "from": "20",
+      "to": "5"
+    },
+    {
+      "label": "Collaborators per ledger",
+      "from": "10",
+      "to": "5"
+    },
+    {
+      "label": "AI Assistant tokens per month",
+      "from": "2,000,000",
+      "to": "500,000"
+    }
+  ],
+  "billingUrl": "https://beancount.io/settings/billing"
+}</pre>
+      <div class="preview-grid">
+
+    <div class="preview-column preview-column--desktop">
+      <h3>Desktop · 640px</h3>
+      <iframe title="Plan Change Scheduled Email Desktop · 640px" srcdoc="&lt;!DOCTYPE html&gt;
+    &lt;html&gt;
+      &lt;head&gt;
+        &lt;meta charset=&quot;utf-8&quot;&gt;
+        &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;
+        &lt;meta name=&quot;color-scheme&quot; content=&quot;light dark&quot;&gt;
+        &lt;meta name=&quot;supported-color-schemes&quot; content=&quot;light dark&quot;&gt;
+        &lt;title&gt;Your plan change is scheduled - Beancount.io&lt;/title&gt;
+        &lt;style&gt;
+          :root { color-scheme: light dark; supported-color-schemes: light dark; }
+    .email-action:focus, .email-link:focus { outline: 2px solid #2b7e00; outline-offset: 2px; }
+    @media only screen and (max-width: 600px) {
+      .email-canvas-cell { padding: 12px 8px !important; }
+      .email-header { padding: 24px 20px !important; }
+      .email-content { padding: 28px 20px !important; }
+      .email-footer { padding: 20px !important; }
+      .email-heading { font-size: 22px !important; }
+      .email-action { display: block !important; width: 100% !important; }
+      .email-code-value { font-size: 28px !important; letter-spacing: 4px !important; }
+      .email-breakable { word-break: break-all !important; overflow-wrap: anywhere !important; }
+    }
+    @media (prefers-color-scheme: dark) {
+      .email-body, .email-canvas { background-color: #171b17 !important; }
+      .email-card, .email-header, .email-content { background-color: #202520 !important; border-color: #3b423b !important; }
+      .email-brand, .email-heading, .email-body-copy, .email-code-value { color: #ecece8 !important; }
+      .email-muted, .email-code-label, .email-breakable { color: #a9ada2 !important; }
+      .email-link { color: #5fc535 !important; }
+      .email-brand-mark { background-color: #5fc535 !important; }
+      .email-action:focus, .email-link:focus { outline-color: #5fc535 !important; }
+      .email-action { background-color: #5fc535 !important; border-color: #5fc535 !important; color: #1b3017 !important; }
+      .email-callout, .email-code-box { background-color: #333b33 !important; border-color: #3b423b !important; }
+      .email-code-box { border-color: #5fc535 !important; }
+      .email-callout-title { color: #e3e5df !important; }
+      .email-secondary-links, .email-footer { background-color: #323732 !important; border-color: #3b423b !important; }
+      .email-divider { border-color: #3b423b !important; }
+    }
+    [data-ogsc] .email-body, [data-ogsc] .email-canvas { background-color: #171b17 !important; }
+    [data-ogsc] .email-card, [data-ogsc] .email-header, [data-ogsc] .email-content { background-color: #202520 !important; border-color: #3b423b !important; }
+    [data-ogsc] .email-brand, [data-ogsc] .email-heading, [data-ogsc] .email-body-copy, [data-ogsc] .email-code-value { color: #ecece8 !important; }
+    [data-ogsc] .email-muted, [data-ogsc] .email-code-label, [data-ogsc] .email-breakable { color: #a9ada2 !important; }
+    [data-ogsc] .email-link { color: #5fc535 !important; }
+    [data-ogsc] .email-brand-mark { background-color: #5fc535 !important; }
+    [data-ogsc] .email-action { background-color: #5fc535 !important; border-color: #5fc535 !important; color: #1b3017 !important; }
+    [data-ogsc] .email-callout, [data-ogsc] .email-code-box { background-color: #333b33 !important; border-color: #3b423b !important; }
+    [data-ogsc] .email-code-box { border-color: #5fc535 !important; }
+    [data-ogsc] .email-callout-title { color: #e3e5df !important; }
+    [data-ogsc] .email-secondary-links, [data-ogsc] .email-footer { background-color: #323732 !important; border-color: #3b423b !important; }
+    [data-ogsc] .email-divider { border-color: #3b423b !important; }
+        &lt;/style&gt;
+      &lt;/head&gt;
+      &lt;body class=&quot;email-body&quot; style=&quot;margin: 0; padding: 0; min-width: 100%; width: 100%; font-family: -apple-system, BlinkMacSystemFont, &#039;Segoe UI&#039;, Roboto, &#039;Helvetica Neue&#039;, Arial, sans-serif; color: #292d28; background-color: #f8f8f6;&quot;&gt;
+        &lt;table role=&quot;presentation&quot; class=&quot;email-canvas&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; border=&quot;0&quot; style=&quot;width: 100%; border-collapse: collapse; background-color: #f8f8f6;&quot;&gt;
+          &lt;tr&gt;
+            &lt;td class=&quot;email-canvas-cell&quot; align=&quot;center&quot; style=&quot;padding: 24px 12px;&quot;&gt;
+              &lt;table role=&quot;presentation&quot; class=&quot;email-card&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; border=&quot;0&quot; style=&quot;width: 100%; max-width: 600px; border-collapse: separate; border-spacing: 0; background-color: #ffffff; border: 1px solid #e4e4e1; border-radius: 10px; overflow: hidden;&quot;&gt;
+
+    &lt;tr&gt;
+      &lt;td class=&quot;email-header&quot; style=&quot;background-color: #ffffff; padding: 30px 40px; text-align: center; border-bottom: 1px solid #e4e4e1;&quot;&gt;
+        &lt;h1 class=&quot;email-brand&quot; style=&quot;color: #292d28; margin: 0; font-size: 26px; line-height: 1.25; font-weight: 700; letter-spacing: -0.5px;&quot;&gt;Beancount.io&lt;/h1&gt;
+        &lt;div class=&quot;email-brand-mark&quot; aria-hidden=&quot;true&quot; style=&quot;width: 40px; height: 3px; margin: 12px auto 0; background-color: #2b7e00; border-radius: 999px;&quot;&gt;&lt;/div&gt;
+      &lt;/td&gt;
+    &lt;/tr&gt;
+
+                &lt;tr&gt;
+                  &lt;td class=&quot;email-content&quot; style=&quot;background-color: #ffffff; padding: 36px 40px;&quot;&gt;
+
+    &lt;h2 class=&quot;email-heading&quot; style=&quot;margin: 0 0 16px; color: #292d28; font-size: 24px; line-height: 1.3; font-weight: 700; letter-spacing: -0.3px;&quot;&gt;Your plan change is scheduled&lt;/h2&gt;
+
+    &lt;p class=&quot;email-body-copy&quot; style=&quot;margin: 0 0 16px; color: #292d28; font-size: 16px; line-height: 1.65;&quot;&gt;
+      On October 17, 2027, your plan changes from Growth · Yearly to Premium · Yearly. You keep everything in Growth · Yearly until then, and nothing is charged today.
+    &lt;/p&gt;
+
+    &lt;div class=&quot;email-callout&quot; style=&quot;background-color: #f1f3ed; border: 1px solid #e4e4e1; border-radius: 8px; padding: 18px; margin: 22px 0;&quot;&gt;
+      &lt;p class=&quot;email-callout-title&quot; style=&quot;margin: 0 0 8px; color: #333a32; font-size: 14px; line-height: 1.5; font-weight: 700;&quot;&gt;
+        What changes on October 17, 2027
+      &lt;/p&gt;
+
+      &lt;p class=&quot;email-muted&quot; style=&quot;margin: 0 0 6px; color: #60665d; font-size: 14px; line-height: 1.6;&quot;&gt;
+        Ledgers: 20 → 5
+      &lt;/p&gt;
+      &lt;p class=&quot;email-muted&quot; style=&quot;margin: 0 0 6px; color: #60665d; font-size: 14px; line-height: 1.6;&quot;&gt;
+        Collaborators per ledger: 10 → 5
+      &lt;/p&gt;
+      &lt;p class=&quot;email-muted&quot; style=&quot;margin: 0 0 6px; color: #60665d; font-size: 14px; line-height: 1.6;&quot;&gt;
+        AI Assistant tokens per month: 2,000,000 → 500,000
+      &lt;/p&gt;
+      &lt;p class=&quot;email-muted&quot; style=&quot;margin: 8px 0 0; color: #60665d; font-size: 14px; line-height: 1.6;&quot;&gt;
+        Nothing is deleted. A lower limit only stops you going past it.
+      &lt;/p&gt;
+    &lt;/div&gt;
+    &lt;p class=&quot;email-body-copy&quot; style=&quot;margin: 0 0 16px; color: #292d28; font-size: 16px; line-height: 1.65;&quot;&gt;
+      Changed your mind? Keep Growth · Yearly from Billing settings any time before the change, and nothing changes.
+    &lt;/p&gt;
+
+    &lt;table role=&quot;presentation&quot; class=&quot;email-action-row&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; border=&quot;0&quot; style=&quot;width: 100%; border-collapse: collapse; margin: 28px 0;&quot;&gt;
+      &lt;tr&gt;
+        &lt;td align=&quot;center&quot;&gt;
+          &lt;a class=&quot;email-action&quot; href=&quot;https://beancount.io/settings/billing&quot; style=&quot;display: inline-block; box-sizing: border-box; background-color: #2b7e00; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 16px; line-height: 1.2; padding: 14px 28px; border: 1px solid #2b7e00; border-radius: 8px;&quot;&gt;Keep Growth · Yearly&lt;/a&gt;
+        &lt;/td&gt;
+      &lt;/tr&gt;
+    &lt;/table&gt;
+
+                  &lt;/td&gt;
+                &lt;/tr&gt;
+
+    &lt;tr&gt;
+      &lt;td class=&quot;email-footer&quot; style=&quot;text-align: center; padding: 22px 40px; background-color: #f6f6f3; border-top: 1px solid #e4e4e1;&quot;&gt;
+        &lt;p class=&quot;email-muted&quot; style=&quot;margin: 0; color: #60665d; font-size: 14px; line-height: 1.6; font-size: 12px;&quot;&gt;
+          Powered by Beancount.io
+        &lt;/p&gt;
+      &lt;/td&gt;
+    &lt;/tr&gt;
+
+              &lt;/table&gt;
+            &lt;/td&gt;
+          &lt;/tr&gt;
+        &lt;/table&gt;
+      &lt;/body&gt;
+    &lt;/html&gt;"></iframe>
+    </div>
+
+
+    <div class="preview-column preview-column--mobile">
+      <h3>Mobile · 375px</h3>
+      <iframe title="Plan Change Scheduled Email Mobile · 375px" srcdoc="&lt;!DOCTYPE html&gt;
+    &lt;html&gt;
+      &lt;head&gt;
+        &lt;meta charset=&quot;utf-8&quot;&gt;
+        &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;
+        &lt;meta name=&quot;color-scheme&quot; content=&quot;light dark&quot;&gt;
+        &lt;meta name=&quot;supported-color-schemes&quot; content=&quot;light dark&quot;&gt;
+        &lt;title&gt;Your plan change is scheduled - Beancount.io&lt;/title&gt;
+        &lt;style&gt;
+          :root { color-scheme: light dark; supported-color-schemes: light dark; }
+    .email-action:focus, .email-link:focus { outline: 2px solid #2b7e00; outline-offset: 2px; }
+    @media only screen and (max-width: 600px) {
+      .email-canvas-cell { padding: 12px 8px !important; }
+      .email-header { padding: 24px 20px !important; }
+      .email-content { padding: 28px 20px !important; }
+      .email-footer { padding: 20px !important; }
+      .email-heading { font-size: 22px !important; }
+      .email-action { display: block !important; width: 100% !important; }
+      .email-code-value { font-size: 28px !important; letter-spacing: 4px !important; }
+      .email-breakable { word-break: break-all !important; overflow-wrap: anywhere !important; }
+    }
+    @media (prefers-color-scheme: dark) {
+      .email-body, .email-canvas { background-color: #171b17 !important; }
+      .email-card, .email-header, .email-content { background-color: #202520 !important; border-color: #3b423b !important; }
+      .email-brand, .email-heading, .email-body-copy, .email-code-value { color: #ecece8 !important; }
+      .email-muted, .email-code-label, .email-breakable { color: #a9ada2 !important; }
+      .email-link { color: #5fc535 !important; }
+      .email-brand-mark { background-color: #5fc535 !important; }
+      .email-action:focus, .email-link:focus { outline-color: #5fc535 !important; }
+      .email-action { background-color: #5fc535 !important; border-color: #5fc535 !important; color: #1b3017 !important; }
+      .email-callout, .email-code-box { background-color: #333b33 !important; border-color: #3b423b !important; }
+      .email-code-box { border-color: #5fc535 !important; }
+      .email-callout-title { color: #e3e5df !important; }
+      .email-secondary-links, .email-footer { background-color: #323732 !important; border-color: #3b423b !important; }
+      .email-divider { border-color: #3b423b !important; }
+    }
+    [data-ogsc] .email-body, [data-ogsc] .email-canvas { background-color: #171b17 !important; }
+    [data-ogsc] .email-card, [data-ogsc] .email-header, [data-ogsc] .email-content { background-color: #202520 !important; border-color: #3b423b !important; }
+    [data-ogsc] .email-brand, [data-ogsc] .email-heading, [data-ogsc] .email-body-copy, [data-ogsc] .email-code-value { color: #ecece8 !important; }
+    [data-ogsc] .email-muted, [data-ogsc] .email-code-label, [data-ogsc] .email-breakable { color: #a9ada2 !important; }
+    [data-ogsc] .email-link { color: #5fc535 !important; }
+    [data-ogsc] .email-brand-mark { background-color: #5fc535 !important; }
+    [data-ogsc] .email-action { background-color: #5fc535 !important; border-color: #5fc535 !important; color: #1b3017 !important; }
+    [data-ogsc] .email-callout, [data-ogsc] .email-code-box { background-color: #333b33 !important; border-color: #3b423b !important; }
+    [data-ogsc] .email-code-box { border-color: #5fc535 !important; }
+    [data-ogsc] .email-callout-title { color: #e3e5df !important; }
+    [data-ogsc] .email-secondary-links, [data-ogsc] .email-footer { background-color: #323732 !important; border-color: #3b423b !important; }
+    [data-ogsc] .email-divider { border-color: #3b423b !important; }
+        &lt;/style&gt;
+      &lt;/head&gt;
+      &lt;body class=&quot;email-body&quot; style=&quot;margin: 0; padding: 0; min-width: 100%; width: 100%; font-family: -apple-system, BlinkMacSystemFont, &#039;Segoe UI&#039;, Roboto, &#039;Helvetica Neue&#039;, Arial, sans-serif; color: #292d28; background-color: #f8f8f6;&quot;&gt;
+        &lt;table role=&quot;presentation&quot; class=&quot;email-canvas&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; border=&quot;0&quot; style=&quot;width: 100%; border-collapse: collapse; background-color: #f8f8f6;&quot;&gt;
+          &lt;tr&gt;
+            &lt;td class=&quot;email-canvas-cell&quot; align=&quot;center&quot; style=&quot;padding: 24px 12px;&quot;&gt;
+              &lt;table role=&quot;presentation&quot; class=&quot;email-card&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; border=&quot;0&quot; style=&quot;width: 100%; max-width: 600px; border-collapse: separate; border-spacing: 0; background-color: #ffffff; border: 1px solid #e4e4e1; border-radius: 10px; overflow: hidden;&quot;&gt;
+
+    &lt;tr&gt;
+      &lt;td class=&quot;email-header&quot; style=&quot;background-color: #ffffff; padding: 30px 40px; text-align: center; border-bottom: 1px solid #e4e4e1;&quot;&gt;
+        &lt;h1 class=&quot;email-brand&quot; style=&quot;color: #292d28; margin: 0; font-size: 26px; line-height: 1.25; font-weight: 700; letter-spacing: -0.5px;&quot;&gt;Beancount.io&lt;/h1&gt;
+        &lt;div class=&quot;email-brand-mark&quot; aria-hidden=&quot;true&quot; style=&quot;width: 40px; height: 3px; margin: 12px auto 0; background-color: #2b7e00; border-radius: 999px;&quot;&gt;&lt;/div&gt;
+      &lt;/td&gt;
+    &lt;/tr&gt;
+
+                &lt;tr&gt;
+                  &lt;td class=&quot;email-content&quot; style=&quot;background-color: #ffffff; padding: 36px 40px;&quot;&gt;
+
+    &lt;h2 class=&quot;email-heading&quot; style=&quot;margin: 0 0 16px; color: #292d28; font-size: 24px; line-height: 1.3; font-weight: 700; letter-spacing: -0.3px;&quot;&gt;Your plan change is scheduled&lt;/h2&gt;
+
+    &lt;p class=&quot;email-body-copy&quot; style=&quot;margin: 0 0 16px; color: #292d28; font-size: 16px; line-height: 1.65;&quot;&gt;
+      On October 17, 2027, your plan changes from Growth · Yearly to Premium · Yearly. You keep everything in Growth · Yearly until then, and nothing is charged today.
+    &lt;/p&gt;
+
+    &lt;div class=&quot;email-callout&quot; style=&quot;background-color: #f1f3ed; border: 1px solid #e4e4e1; border-radius: 8px; padding: 18px; margin: 22px 0;&quot;&gt;
+      &lt;p class=&quot;email-callout-title&quot; style=&quot;margin: 0 0 8px; color: #333a32; font-size: 14px; line-height: 1.5; font-weight: 700;&quot;&gt;
+        What changes on October 17, 2027
+      &lt;/p&gt;
+
+      &lt;p class=&quot;email-muted&quot; style=&quot;margin: 0 0 6px; color: #60665d; font-size: 14px; line-height: 1.6;&quot;&gt;
+        Ledgers: 20 → 5
+      &lt;/p&gt;
+      &lt;p class=&quot;email-muted&quot; style=&quot;margin: 0 0 6px; color: #60665d; font-size: 14px; line-height: 1.6;&quot;&gt;
+        Collaborators per ledger: 10 → 5
+      &lt;/p&gt;
+      &lt;p class=&quot;email-muted&quot; style=&quot;margin: 0 0 6px; color: #60665d; font-size: 14px; line-height: 1.6;&quot;&gt;
+        AI Assistant tokens per month: 2,000,000 → 500,000
+      &lt;/p&gt;
+      &lt;p class=&quot;email-muted&quot; style=&quot;margin: 8px 0 0; color: #60665d; font-size: 14px; line-height: 1.6;&quot;&gt;
+        Nothing is deleted. A lower limit only stops you going past it.
+      &lt;/p&gt;
+    &lt;/div&gt;
+    &lt;p class=&quot;email-body-copy&quot; style=&quot;margin: 0 0 16px; color: #292d28; font-size: 16px; line-height: 1.65;&quot;&gt;
+      Changed your mind? Keep Growth · Yearly from Billing settings any time before the change, and nothing changes.
+    &lt;/p&gt;
+
+    &lt;table role=&quot;presentation&quot; class=&quot;email-action-row&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; border=&quot;0&quot; style=&quot;width: 100%; border-collapse: collapse; margin: 28px 0;&quot;&gt;
+      &lt;tr&gt;
+        &lt;td align=&quot;center&quot;&gt;
+          &lt;a class=&quot;email-action&quot; href=&quot;https://beancount.io/settings/billing&quot; style=&quot;display: inline-block; box-sizing: border-box; background-color: #2b7e00; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 16px; line-height: 1.2; padding: 14px 28px; border: 1px solid #2b7e00; border-radius: 8px;&quot;&gt;Keep Growth · Yearly&lt;/a&gt;
+        &lt;/td&gt;
+      &lt;/tr&gt;
+    &lt;/table&gt;
+
+                  &lt;/td&gt;
+                &lt;/tr&gt;
+
+    &lt;tr&gt;
+      &lt;td class=&quot;email-footer&quot; style=&quot;text-align: center; padding: 22px 40px; background-color: #f6f6f3; border-top: 1px solid #e4e4e1;&quot;&gt;
+        &lt;p class=&quot;email-muted&quot; style=&quot;margin: 0; color: #60665d; font-size: 14px; line-height: 1.6; font-size: 12px;&quot;&gt;
+          Powered by Beancount.io
+        &lt;/p&gt;
+      &lt;/td&gt;
+    &lt;/tr&gt;
+
+              &lt;/table&gt;
+            &lt;/td&gt;
+          &lt;/tr&gt;
+        &lt;/table&gt;
+      &lt;/body&gt;
+    &lt;/html&gt;"></iframe>
+    </div>
+
+      </div>
+    </section>
+
+    <section class="template-section" id="template-4">
+      <h2 class="template-title">Plan Change Reminder Email</h2>
+      <pre class="template-params">{
+  "kind": "reminder",
+  "currentPlan": "Growth · Yearly",
+  "newPlan": "Premium · Yearly",
+  "effectiveDate": "October 17, 2027",
+  "limitChanges": [
+    {
+      "label": "Ledgers",
+      "from": "20",
+      "to": "5"
+    },
+    {
+      "label": "Collaborators per ledger",
+      "from": "10",
+      "to": "5"
+    },
+    {
+      "label": "AI Assistant tokens per month",
+      "from": "2,000,000",
+      "to": "500,000"
+    }
+  ],
+  "billingUrl": "https://beancount.io/settings/billing"
+}</pre>
+      <div class="preview-grid">
+
+    <div class="preview-column preview-column--desktop">
+      <h3>Desktop · 640px</h3>
+      <iframe title="Plan Change Reminder Email Desktop · 640px" srcdoc="&lt;!DOCTYPE html&gt;
+    &lt;html&gt;
+      &lt;head&gt;
+        &lt;meta charset=&quot;utf-8&quot;&gt;
+        &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;
+        &lt;meta name=&quot;color-scheme&quot; content=&quot;light dark&quot;&gt;
+        &lt;meta name=&quot;supported-color-schemes&quot; content=&quot;light dark&quot;&gt;
+        &lt;title&gt;Your plan changes soon - Beancount.io&lt;/title&gt;
+        &lt;style&gt;
+          :root { color-scheme: light dark; supported-color-schemes: light dark; }
+    .email-action:focus, .email-link:focus { outline: 2px solid #2b7e00; outline-offset: 2px; }
+    @media only screen and (max-width: 600px) {
+      .email-canvas-cell { padding: 12px 8px !important; }
+      .email-header { padding: 24px 20px !important; }
+      .email-content { padding: 28px 20px !important; }
+      .email-footer { padding: 20px !important; }
+      .email-heading { font-size: 22px !important; }
+      .email-action { display: block !important; width: 100% !important; }
+      .email-code-value { font-size: 28px !important; letter-spacing: 4px !important; }
+      .email-breakable { word-break: break-all !important; overflow-wrap: anywhere !important; }
+    }
+    @media (prefers-color-scheme: dark) {
+      .email-body, .email-canvas { background-color: #171b17 !important; }
+      .email-card, .email-header, .email-content { background-color: #202520 !important; border-color: #3b423b !important; }
+      .email-brand, .email-heading, .email-body-copy, .email-code-value { color: #ecece8 !important; }
+      .email-muted, .email-code-label, .email-breakable { color: #a9ada2 !important; }
+      .email-link { color: #5fc535 !important; }
+      .email-brand-mark { background-color: #5fc535 !important; }
+      .email-action:focus, .email-link:focus { outline-color: #5fc535 !important; }
+      .email-action { background-color: #5fc535 !important; border-color: #5fc535 !important; color: #1b3017 !important; }
+      .email-callout, .email-code-box { background-color: #333b33 !important; border-color: #3b423b !important; }
+      .email-code-box { border-color: #5fc535 !important; }
+      .email-callout-title { color: #e3e5df !important; }
+      .email-secondary-links, .email-footer { background-color: #323732 !important; border-color: #3b423b !important; }
+      .email-divider { border-color: #3b423b !important; }
+    }
+    [data-ogsc] .email-body, [data-ogsc] .email-canvas { background-color: #171b17 !important; }
+    [data-ogsc] .email-card, [data-ogsc] .email-header, [data-ogsc] .email-content { background-color: #202520 !important; border-color: #3b423b !important; }
+    [data-ogsc] .email-brand, [data-ogsc] .email-heading, [data-ogsc] .email-body-copy, [data-ogsc] .email-code-value { color: #ecece8 !important; }
+    [data-ogsc] .email-muted, [data-ogsc] .email-code-label, [data-ogsc] .email-breakable { color: #a9ada2 !important; }
+    [data-ogsc] .email-link { color: #5fc535 !important; }
+    [data-ogsc] .email-brand-mark { background-color: #5fc535 !important; }
+    [data-ogsc] .email-action { background-color: #5fc535 !important; border-color: #5fc535 !important; color: #1b3017 !important; }
+    [data-ogsc] .email-callout, [data-ogsc] .email-code-box { background-color: #333b33 !important; border-color: #3b423b !important; }
+    [data-ogsc] .email-code-box { border-color: #5fc535 !important; }
+    [data-ogsc] .email-callout-title { color: #e3e5df !important; }
+    [data-ogsc] .email-secondary-links, [data-ogsc] .email-footer { background-color: #323732 !important; border-color: #3b423b !important; }
+    [data-ogsc] .email-divider { border-color: #3b423b !important; }
+        &lt;/style&gt;
+      &lt;/head&gt;
+      &lt;body class=&quot;email-body&quot; style=&quot;margin: 0; padding: 0; min-width: 100%; width: 100%; font-family: -apple-system, BlinkMacSystemFont, &#039;Segoe UI&#039;, Roboto, &#039;Helvetica Neue&#039;, Arial, sans-serif; color: #292d28; background-color: #f8f8f6;&quot;&gt;
+        &lt;table role=&quot;presentation&quot; class=&quot;email-canvas&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; border=&quot;0&quot; style=&quot;width: 100%; border-collapse: collapse; background-color: #f8f8f6;&quot;&gt;
+          &lt;tr&gt;
+            &lt;td class=&quot;email-canvas-cell&quot; align=&quot;center&quot; style=&quot;padding: 24px 12px;&quot;&gt;
+              &lt;table role=&quot;presentation&quot; class=&quot;email-card&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; border=&quot;0&quot; style=&quot;width: 100%; max-width: 600px; border-collapse: separate; border-spacing: 0; background-color: #ffffff; border: 1px solid #e4e4e1; border-radius: 10px; overflow: hidden;&quot;&gt;
+
+    &lt;tr&gt;
+      &lt;td class=&quot;email-header&quot; style=&quot;background-color: #ffffff; padding: 30px 40px; text-align: center; border-bottom: 1px solid #e4e4e1;&quot;&gt;
+        &lt;h1 class=&quot;email-brand&quot; style=&quot;color: #292d28; margin: 0; font-size: 26px; line-height: 1.25; font-weight: 700; letter-spacing: -0.5px;&quot;&gt;Beancount.io&lt;/h1&gt;
+        &lt;div class=&quot;email-brand-mark&quot; aria-hidden=&quot;true&quot; style=&quot;width: 40px; height: 3px; margin: 12px auto 0; background-color: #2b7e00; border-radius: 999px;&quot;&gt;&lt;/div&gt;
+      &lt;/td&gt;
+    &lt;/tr&gt;
+
+                &lt;tr&gt;
+                  &lt;td class=&quot;email-content&quot; style=&quot;background-color: #ffffff; padding: 36px 40px;&quot;&gt;
+
+    &lt;h2 class=&quot;email-heading&quot; style=&quot;margin: 0 0 16px; color: #292d28; font-size: 24px; line-height: 1.3; font-weight: 700; letter-spacing: -0.3px;&quot;&gt;Your plan changes soon&lt;/h2&gt;
+
+    &lt;p class=&quot;email-body-copy&quot; style=&quot;margin: 0 0 16px; color: #292d28; font-size: 16px; line-height: 1.65;&quot;&gt;
+      On October 17, 2027, your plan changes from Growth · Yearly to Premium · Yearly, and that renewal is billed at the Premium · Yearly price. You keep everything in Growth · Yearly until then.
+    &lt;/p&gt;
+
+    &lt;div class=&quot;email-callout&quot; style=&quot;background-color: #f1f3ed; border: 1px solid #e4e4e1; border-radius: 8px; padding: 18px; margin: 22px 0;&quot;&gt;
+      &lt;p class=&quot;email-callout-title&quot; style=&quot;margin: 0 0 8px; color: #333a32; font-size: 14px; line-height: 1.5; font-weight: 700;&quot;&gt;
+        What changes on October 17, 2027
+      &lt;/p&gt;
+
+      &lt;p class=&quot;email-muted&quot; style=&quot;margin: 0 0 6px; color: #60665d; font-size: 14px; line-height: 1.6;&quot;&gt;
+        Ledgers: 20 → 5
+      &lt;/p&gt;
+      &lt;p class=&quot;email-muted&quot; style=&quot;margin: 0 0 6px; color: #60665d; font-size: 14px; line-height: 1.6;&quot;&gt;
+        Collaborators per ledger: 10 → 5
+      &lt;/p&gt;
+      &lt;p class=&quot;email-muted&quot; style=&quot;margin: 0 0 6px; color: #60665d; font-size: 14px; line-height: 1.6;&quot;&gt;
+        AI Assistant tokens per month: 2,000,000 → 500,000
+      &lt;/p&gt;
+      &lt;p class=&quot;email-muted&quot; style=&quot;margin: 8px 0 0; color: #60665d; font-size: 14px; line-height: 1.6;&quot;&gt;
+        Nothing is deleted. A lower limit only stops you going past it.
+      &lt;/p&gt;
+    &lt;/div&gt;
+    &lt;p class=&quot;email-body-copy&quot; style=&quot;margin: 0 0 16px; color: #292d28; font-size: 16px; line-height: 1.65;&quot;&gt;
+      Changed your mind? Keep Growth · Yearly from Billing settings any time before the change, and nothing changes.
+    &lt;/p&gt;
+
+    &lt;table role=&quot;presentation&quot; class=&quot;email-action-row&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; border=&quot;0&quot; style=&quot;width: 100%; border-collapse: collapse; margin: 28px 0;&quot;&gt;
+      &lt;tr&gt;
+        &lt;td align=&quot;center&quot;&gt;
+          &lt;a class=&quot;email-action&quot; href=&quot;https://beancount.io/settings/billing&quot; style=&quot;display: inline-block; box-sizing: border-box; background-color: #2b7e00; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 16px; line-height: 1.2; padding: 14px 28px; border: 1px solid #2b7e00; border-radius: 8px;&quot;&gt;Keep Growth · Yearly&lt;/a&gt;
+        &lt;/td&gt;
+      &lt;/tr&gt;
+    &lt;/table&gt;
+
+                  &lt;/td&gt;
+                &lt;/tr&gt;
+
+    &lt;tr&gt;
+      &lt;td class=&quot;email-footer&quot; style=&quot;text-align: center; padding: 22px 40px; background-color: #f6f6f3; border-top: 1px solid #e4e4e1;&quot;&gt;
+        &lt;p class=&quot;email-muted&quot; style=&quot;margin: 0; color: #60665d; font-size: 14px; line-height: 1.6; font-size: 12px;&quot;&gt;
+          Powered by Beancount.io
+        &lt;/p&gt;
+      &lt;/td&gt;
+    &lt;/tr&gt;
+
+              &lt;/table&gt;
+            &lt;/td&gt;
+          &lt;/tr&gt;
+        &lt;/table&gt;
+      &lt;/body&gt;
+    &lt;/html&gt;"></iframe>
+    </div>
+
+
+    <div class="preview-column preview-column--mobile">
+      <h3>Mobile · 375px</h3>
+      <iframe title="Plan Change Reminder Email Mobile · 375px" srcdoc="&lt;!DOCTYPE html&gt;
+    &lt;html&gt;
+      &lt;head&gt;
+        &lt;meta charset=&quot;utf-8&quot;&gt;
+        &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;
+        &lt;meta name=&quot;color-scheme&quot; content=&quot;light dark&quot;&gt;
+        &lt;meta name=&quot;supported-color-schemes&quot; content=&quot;light dark&quot;&gt;
+        &lt;title&gt;Your plan changes soon - Beancount.io&lt;/title&gt;
+        &lt;style&gt;
+          :root { color-scheme: light dark; supported-color-schemes: light dark; }
+    .email-action:focus, .email-link:focus { outline: 2px solid #2b7e00; outline-offset: 2px; }
+    @media only screen and (max-width: 600px) {
+      .email-canvas-cell { padding: 12px 8px !important; }
+      .email-header { padding: 24px 20px !important; }
+      .email-content { padding: 28px 20px !important; }
+      .email-footer { padding: 20px !important; }
+      .email-heading { font-size: 22px !important; }
+      .email-action { display: block !important; width: 100% !important; }
+      .email-code-value { font-size: 28px !important; letter-spacing: 4px !important; }
+      .email-breakable { word-break: break-all !important; overflow-wrap: anywhere !important; }
+    }
+    @media (prefers-color-scheme: dark) {
+      .email-body, .email-canvas { background-color: #171b17 !important; }
+      .email-card, .email-header, .email-content { background-color: #202520 !important; border-color: #3b423b !important; }
+      .email-brand, .email-heading, .email-body-copy, .email-code-value { color: #ecece8 !important; }
+      .email-muted, .email-code-label, .email-breakable { color: #a9ada2 !important; }
+      .email-link { color: #5fc535 !important; }
+      .email-brand-mark { background-color: #5fc535 !important; }
+      .email-action:focus, .email-link:focus { outline-color: #5fc535 !important; }
+      .email-action { background-color: #5fc535 !important; border-color: #5fc535 !important; color: #1b3017 !important; }
+      .email-callout, .email-code-box { background-color: #333b33 !important; border-color: #3b423b !important; }
+      .email-code-box { border-color: #5fc535 !important; }
+      .email-callout-title { color: #e3e5df !important; }
+      .email-secondary-links, .email-footer { background-color: #323732 !important; border-color: #3b423b !important; }
+      .email-divider { border-color: #3b423b !important; }
+    }
+    [data-ogsc] .email-body, [data-ogsc] .email-canvas { background-color: #171b17 !important; }
+    [data-ogsc] .email-card, [data-ogsc] .email-header, [data-ogsc] .email-content { background-color: #202520 !important; border-color: #3b423b !important; }
+    [data-ogsc] .email-brand, [data-ogsc] .email-heading, [data-ogsc] .email-body-copy, [data-ogsc] .email-code-value { color: #ecece8 !important; }
+    [data-ogsc] .email-muted, [data-ogsc] .email-code-label, [data-ogsc] .email-breakable { color: #a9ada2 !important; }
+    [data-ogsc] .email-link { color: #5fc535 !important; }
+    [data-ogsc] .email-brand-mark { background-color: #5fc535 !important; }
+    [data-ogsc] .email-action { background-color: #5fc535 !important; border-color: #5fc535 !important; color: #1b3017 !important; }
+    [data-ogsc] .email-callout, [data-ogsc] .email-code-box { background-color: #333b33 !important; border-color: #3b423b !important; }
+    [data-ogsc] .email-code-box { border-color: #5fc535 !important; }
+    [data-ogsc] .email-callout-title { color: #e3e5df !important; }
+    [data-ogsc] .email-secondary-links, [data-ogsc] .email-footer { background-color: #323732 !important; border-color: #3b423b !important; }
+    [data-ogsc] .email-divider { border-color: #3b423b !important; }
+        &lt;/style&gt;
+      &lt;/head&gt;
+      &lt;body class=&quot;email-body&quot; style=&quot;margin: 0; padding: 0; min-width: 100%; width: 100%; font-family: -apple-system, BlinkMacSystemFont, &#039;Segoe UI&#039;, Roboto, &#039;Helvetica Neue&#039;, Arial, sans-serif; color: #292d28; background-color: #f8f8f6;&quot;&gt;
+        &lt;table role=&quot;presentation&quot; class=&quot;email-canvas&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; border=&quot;0&quot; style=&quot;width: 100%; border-collapse: collapse; background-color: #f8f8f6;&quot;&gt;
+          &lt;tr&gt;
+            &lt;td class=&quot;email-canvas-cell&quot; align=&quot;center&quot; style=&quot;padding: 24px 12px;&quot;&gt;
+              &lt;table role=&quot;presentation&quot; class=&quot;email-card&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; border=&quot;0&quot; style=&quot;width: 100%; max-width: 600px; border-collapse: separate; border-spacing: 0; background-color: #ffffff; border: 1px solid #e4e4e1; border-radius: 10px; overflow: hidden;&quot;&gt;
+
+    &lt;tr&gt;
+      &lt;td class=&quot;email-header&quot; style=&quot;background-color: #ffffff; padding: 30px 40px; text-align: center; border-bottom: 1px solid #e4e4e1;&quot;&gt;
+        &lt;h1 class=&quot;email-brand&quot; style=&quot;color: #292d28; margin: 0; font-size: 26px; line-height: 1.25; font-weight: 700; letter-spacing: -0.5px;&quot;&gt;Beancount.io&lt;/h1&gt;
+        &lt;div class=&quot;email-brand-mark&quot; aria-hidden=&quot;true&quot; style=&quot;width: 40px; height: 3px; margin: 12px auto 0; background-color: #2b7e00; border-radius: 999px;&quot;&gt;&lt;/div&gt;
+      &lt;/td&gt;
+    &lt;/tr&gt;
+
+                &lt;tr&gt;
+                  &lt;td class=&quot;email-content&quot; style=&quot;background-color: #ffffff; padding: 36px 40px;&quot;&gt;
+
+    &lt;h2 class=&quot;email-heading&quot; style=&quot;margin: 0 0 16px; color: #292d28; font-size: 24px; line-height: 1.3; font-weight: 700; letter-spacing: -0.3px;&quot;&gt;Your plan changes soon&lt;/h2&gt;
+
+    &lt;p class=&quot;email-body-copy&quot; style=&quot;margin: 0 0 16px; color: #292d28; font-size: 16px; line-height: 1.65;&quot;&gt;
+      On October 17, 2027, your plan changes from Growth · Yearly to Premium · Yearly, and that renewal is billed at the Premium · Yearly price. You keep everything in Growth · Yearly until then.
+    &lt;/p&gt;
+
+    &lt;div class=&quot;email-callout&quot; style=&quot;background-color: #f1f3ed; border: 1px solid #e4e4e1; border-radius: 8px; padding: 18px; margin: 22px 0;&quot;&gt;
+      &lt;p class=&quot;email-callout-title&quot; style=&quot;margin: 0 0 8px; color: #333a32; font-size: 14px; line-height: 1.5; font-weight: 700;&quot;&gt;
+        What changes on October 17, 2027
+      &lt;/p&gt;
+
+      &lt;p class=&quot;email-muted&quot; style=&quot;margin: 0 0 6px; color: #60665d; font-size: 14px; line-height: 1.6;&quot;&gt;
+        Ledgers: 20 → 5
+      &lt;/p&gt;
+      &lt;p class=&quot;email-muted&quot; style=&quot;margin: 0 0 6px; color: #60665d; font-size: 14px; line-height: 1.6;&quot;&gt;
+        Collaborators per ledger: 10 → 5
+      &lt;/p&gt;
+      &lt;p class=&quot;email-muted&quot; style=&quot;margin: 0 0 6px; color: #60665d; font-size: 14px; line-height: 1.6;&quot;&gt;
+        AI Assistant tokens per month: 2,000,000 → 500,000
+      &lt;/p&gt;
+      &lt;p class=&quot;email-muted&quot; style=&quot;margin: 8px 0 0; color: #60665d; font-size: 14px; line-height: 1.6;&quot;&gt;
+        Nothing is deleted. A lower limit only stops you going past it.
+      &lt;/p&gt;
+    &lt;/div&gt;
+    &lt;p class=&quot;email-body-copy&quot; style=&quot;margin: 0 0 16px; color: #292d28; font-size: 16px; line-height: 1.65;&quot;&gt;
+      Changed your mind? Keep Growth · Yearly from Billing settings any time before the change, and nothing changes.
+    &lt;/p&gt;
+
+    &lt;table role=&quot;presentation&quot; class=&quot;email-action-row&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; border=&quot;0&quot; style=&quot;width: 100%; border-collapse: collapse; margin: 28px 0;&quot;&gt;
+      &lt;tr&gt;
+        &lt;td align=&quot;center&quot;&gt;
+          &lt;a class=&quot;email-action&quot; href=&quot;https://beancount.io/settings/billing&quot; style=&quot;display: inline-block; box-sizing: border-box; background-color: #2b7e00; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 16px; line-height: 1.2; padding: 14px 28px; border: 1px solid #2b7e00; border-radius: 8px;&quot;&gt;Keep Growth · Yearly&lt;/a&gt;
+        &lt;/td&gt;
+      &lt;/tr&gt;
+    &lt;/table&gt;
 
                   &lt;/td&gt;
                 &lt;/tr&gt;

@@ -55,6 +55,8 @@ const SCHEDULE = {
   id: "sub_sched_1",
   status: "active",
   current_phase: { start_date: PERIOD_START, end_date: PERIOD_END },
+  // Attached by an earlier change, with nothing pending after this period.
+  phases: [{ start_date: PERIOD_START, items: [] }],
 };
 
 function setup(

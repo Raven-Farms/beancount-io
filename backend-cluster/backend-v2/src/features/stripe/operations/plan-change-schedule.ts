@@ -86,15 +86,15 @@ async function attachSchedule(
  * to `target` with nothing charged now. Every other item, its quantity and
  * the discounts stay as they are. A schedule already attached (an earlier
  * pending change) has its phases replaced, so there is never more than one.
- * Returns when the new price takes effect: the period end, the same date the
- * preview reports.
+ * Returns the schedule and when the new price takes effect: the period end,
+ * the same date the preview reports.
  */
 export async function scheduleChange(
   stripe: Stripe,
   subscription: Stripe.Subscription,
   item: Stripe.SubscriptionItem,
   target: PlanConfig,
-): Promise<Date> {
+): Promise<{ scheduleId: string; effectiveAt: Date }> {
   const schedule = await attachSchedule(stripe, subscription);
   const current = schedule.current_phase;
   if (!current) throw new Error("Subscription schedule has no current phase");
@@ -125,12 +125,25 @@ export async function scheduleChange(
       },
     ],
   });
-  return new Date(periodEnd * 1000);
+  return { scheduleId: schedule.id, effectiveAt: new Date(periodEnd * 1000) };
 }
 
 export interface ScheduledChangeView {
   priceId: string;
   effectiveAt: Date;
+}
+
+/**
+ * A plan change Stripe holds on a subscription's schedule, as the plan-change
+ * emails describe it. `previous` is the change it replaced, if any, so a
+ * confirm that leaves the schedule as it was announces nothing.
+ */
+export interface ScheduledChangeNotice {
+  subscriptionId: string;
+  scheduleId: string;
+  currentPriceId: string;
+  change: ScheduledChangeView;
+  previous?: ScheduledChangeView | null;
 }
 
 /**

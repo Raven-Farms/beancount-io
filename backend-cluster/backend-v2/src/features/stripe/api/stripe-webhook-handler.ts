@@ -1,6 +1,10 @@
 import Router from "@koa/router";
 import { BILLING_CLIENT_ID, SUBSCRIPTION_CONFIG } from "../service/stripe";
-import { customerId } from "../service/subscription-plan";
+import { customerId, expandableId } from "../service/subscription-plan";
+import {
+  changeAtRenewal,
+  emailScheduledChange,
+} from "../operations/plan-change-email";
 import { refreshSubscriptionPeriods } from "../operations/refresh-subscription-periods";
 import { isPurchase, reportPurchase } from "../operations/report-purchase";
 import type { AppConfig } from "@/config/config";
@@ -132,6 +136,53 @@ export function setStripeWebhookHandler(
           // Answer with an error so Stripe redelivers; the claim was given back.
           if (report === "failed") throw new Error("Purchase report failed");
           processed = report !== "unconfigured";
+          break;
+        }
+        case "invoice.upcoming": {
+          // Stripe's notice before a renewal: if a scheduled plan change
+          // lands at it, remind the subscriber (PRFAQ005 question 17).
+          const invoice = event.data.object;
+          const { plans } = SUBSCRIPTION_CONFIG[clientId];
+          // The account serves other products too: leave their renewals
+          // before any lookup.
+          const ours = invoice.lines.data.some((line) => {
+            const price = line.pricing?.price_details?.price;
+            return (
+              !!price &&
+              plans.some((plan) => plan.priceId === expandableId(price))
+            );
+          });
+          const subscriptionRef =
+            invoice.parent?.subscription_details?.subscription;
+          if (!ours || !subscriptionRef || !invoice.customer) break;
+          const binding =
+            await layers.database.models.paidCustomer.findByStripeCustomerIdAndClientId(
+              layers.database.db,
+              customerId(invoice.customer),
+              clientId,
+            );
+          if (!binding) break;
+          const subscription = await stripe
+            .getStripeInstance(clientId)
+            .subscriptions.retrieve(expandableId(subscriptionRef), {
+              expand: ["schedule"],
+            });
+          const notice = changeAtRenewal(subscription, plans);
+          if (!notice) break;
+          // A failed send throws: the webhook answers with an error and
+          // Stripe redelivers, and the claim was given back.
+          const sent = await emailScheduledChange(
+            {
+              models: layers.database.models,
+              db: layers.database.db,
+              sendgrid: layers.clients.sendgrid,
+            },
+            "reminder",
+            binding.userId,
+            clientId,
+            notice,
+          );
+          processed = sent === "sent";
           break;
         }
         case "checkout.session.completed":

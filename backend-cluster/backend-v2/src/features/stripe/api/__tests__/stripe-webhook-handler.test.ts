@@ -26,6 +26,13 @@ jest.mock("../../operations/report-purchase", () => ({
   reportPurchase: (...args: unknown[]) => mockReportPurchase(...(args as [])),
 }));
 
+const mockEmailScheduledChange = jest.fn(async () => "sent");
+jest.mock("../../operations/plan-change-email", () => ({
+  ...jest.requireActual("../../operations/plan-change-email"),
+  emailScheduledChange: (...args: unknown[]) =>
+    mockEmailScheduledChange(...(args as [])),
+}));
+
 const ANALYTICS = {
   gaMeasurementId: "G-SYNTHETIC",
   measurementProtocolSecret: "mp_secret_synthetic",
@@ -33,8 +40,16 @@ const ANALYTICS = {
 
 function setup(event: any) {
   const constructEvent = jest.fn(() => event);
+  const retrieveSubscription = jest.fn(async (id: string) => ({
+    id,
+    schedule: null,
+    items: { data: [] },
+  }));
   const stripe = {
-    getStripeInstance: jest.fn(() => ({ webhooks: { constructEvent } })),
+    getStripeInstance: jest.fn(() => ({
+      webhooks: { constructEvent },
+      subscriptions: { retrieve: retrieveSubscription },
+    })),
     handleCustomerEvent: jest.fn(),
     handleCheckoutSessionCompleted: jest.fn(),
     listSubscriptions: jest.fn(async () => []),
@@ -51,6 +66,7 @@ function setup(event: any) {
     router,
     {
       services: { stripe },
+      clients: { sendgrid: {} },
       database: { db: {}, models: { paidCustomer } },
     } as unknown as AppLayers,
     ANALYTICS,
@@ -67,6 +83,7 @@ function setup(event: any) {
     stripe,
     paidCustomer,
     constructEvent,
+    retrieveSubscription,
     ctx,
     run: () => handler(ctx, async () => {}),
   };
@@ -344,5 +361,111 @@ describe("paid invoices", () => {
     );
     await t.run();
     expect(mockReportPurchase).not.toHaveBeenCalled();
+  });
+});
+
+describe("upcoming invoices", () => {
+  const GROWTH_YEARLY = "price_1SyPdbEqsEqs2tLV7PJyWZed";
+  const PREMIUM_YEARLY = "price_1US5htEqsEqs2tLVENCzLaZB";
+  const RENEWAL = 1_823_774_400;
+  const upcoming = (price = PREMIUM_YEARLY) => ({
+    id: "evt_synthetic",
+    livemode: true,
+    type: "invoice.upcoming",
+    data: {
+      object: {
+        customer: "cus_synthetic",
+        metadata: {},
+        lines: { data: [{ pricing: { price_details: { price } } }] },
+        parent: { subscription_details: { subscription: "sub_synthetic" } },
+      },
+    },
+  });
+  /** Growth yearly, scheduled to become Premium yearly at this renewal. */
+  const withChange = (changeAt = RENEWAL) => ({
+    id: "sub_synthetic",
+    schedule: {
+      id: "sub_sched_synthetic",
+      status: "active",
+      current_phase: { start_date: RENEWAL - 31_536_000, end_date: changeAt },
+      phases: [
+        { start_date: RENEWAL - 31_536_000, items: [{ price: GROWTH_YEARLY }] },
+        { start_date: changeAt, items: [{ price: PREMIUM_YEARLY }] },
+      ],
+    },
+    items: {
+      data: [{ price: { id: GROWTH_YEARLY }, current_period_end: RENEWAL }],
+    },
+  });
+
+  beforeEach(() => mockEmailScheduledChange.mockClear());
+
+  it("reminds the bound subscriber about the plan change this renewal brings", async () => {
+    const t = setup(upcoming());
+    t.retrieveSubscription.mockResolvedValue(withChange() as never);
+    await t.run();
+
+    expect(t.retrieveSubscription).toHaveBeenCalledWith("sub_synthetic", {
+      expand: ["schedule"],
+    });
+    expect(mockEmailScheduledChange).toHaveBeenCalledWith(
+      expect.objectContaining({ sendgrid: {} }),
+      "reminder",
+      "usr_synthetic",
+      BILLING_CLIENT_ID,
+      expect.objectContaining({
+        scheduleId: "sub_sched_synthetic",
+        change: {
+          priceId: PREMIUM_YEARLY,
+          effectiveAt: new Date(RENEWAL * 1000),
+        },
+      }),
+    );
+    expect(t.ctx.status).toBe(200);
+    expect(t.ctx.body.processed).toBe(true);
+  });
+
+  it("sends nothing for a renewal with no change, or one set for a later renewal", async () => {
+    const plain = setup(upcoming());
+    await plain.run();
+    const later = setup(upcoming());
+    later.retrieveSubscription.mockResolvedValue(
+      withChange(RENEWAL + 31_536_000) as never,
+    );
+    await later.run();
+
+    expect(mockEmailScheduledChange).not.toHaveBeenCalled();
+    expect(later.ctx.body.processed).toBe(false);
+  });
+
+  it("answers with an error when the reminder cannot be sent, so Stripe redelivers", async () => {
+    mockEmailScheduledChange.mockRejectedValueOnce(new Error("SendGrid down"));
+    const t = setup(upcoming());
+    t.retrieveSubscription.mockResolvedValue(withChange() as never);
+    await t.run();
+
+    expect(t.ctx.status).toBe(400);
+  });
+
+  it("leaves another product's renewal before any lookup", async () => {
+    const t = setup(upcoming("price_other_product"));
+    await t.run();
+
+    expect(
+      t.paidCustomer.findByStripeCustomerIdAndClientId,
+    ).not.toHaveBeenCalled();
+    expect(t.retrieveSubscription).not.toHaveBeenCalled();
+  });
+
+  it("ignores an upcoming invoice for a customer no account binds", async () => {
+    const t = setup(upcoming());
+    t.paidCustomer.findByStripeCustomerIdAndClientId.mockResolvedValue(
+      null as never,
+    );
+    await t.run();
+
+    expect(t.retrieveSubscription).not.toHaveBeenCalled();
+    expect(mockEmailScheduledChange).not.toHaveBeenCalled();
+    expect(t.ctx.body.processed).toBe(false);
   });
 });

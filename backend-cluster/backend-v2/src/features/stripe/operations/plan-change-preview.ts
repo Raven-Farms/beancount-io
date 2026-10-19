@@ -70,7 +70,7 @@ const LIMIT_KEYS: readonly (keyof TierLimits)[] = [
   "maxDirectives",
 ];
 
-function limitChanges(
+export function limitChanges(
   from: SubscriptionTier,
   to: SubscriptionTier,
 ): PlanLimitChangeView[] {

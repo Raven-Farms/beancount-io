@@ -9,6 +9,7 @@ Centralized HTML and plain-text templates for Beancount.io transactional email.
 | Welcome        | Account registration | `firstName?`, `dashboardUrl`, `mobileAppUrl`, `helpCenterUrl` | `renderWelcomeHtml`, `renderWelcomeText`             |
 | Signup OTP     | Email verification   | `otp`                                                         | `renderSignupOtpHtml`, `renderSignupOtpText`         |
 | Password reset | Password recovery    | `resetLink`                                                   | `renderPasswordResetHtml`, `renderPasswordResetText` |
+| Plan change    | A downgrade or switch to monthly is scheduled (`kind: "scheduled"`), and Stripe's `invoice.upcoming` before it lands (`kind: "reminder"`) | `kind`, `currentPlan`, `newPlan`, `effectiveDate`, `limitChanges`, `billingUrl` | `renderPlanChangeHtml`, `renderPlanChangeText`, `planChangeEmailSubject` |
 
 All public renderers and parameter types are exported from `index.ts`.
 

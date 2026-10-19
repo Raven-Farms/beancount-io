@@ -15,7 +15,12 @@ import {
   SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
 } from "../service/subscription-plan";
 import { loadActivePlans, type PlanChangeDeps } from "./current-plan";
-import { releaseSchedule, scheduleChange } from "./plan-change-schedule";
+import {
+  pendingChange,
+  releaseSchedule,
+  scheduleChange,
+  type ScheduledChangeNotice,
+} from "./plan-change-schedule";
 
 const applyLogger = logger.child({ module: "plan-change-apply" });
 
@@ -45,6 +50,11 @@ export interface PlanChangeResultView {
   currentPeriodEnd: Date | null;
   /** With SCHEDULED: when the new price takes over; nothing is charged now. */
   effectiveAt: Date | null;
+  /**
+   * With SCHEDULED: what was scheduled, for the confirmation email. Not part
+   * of the API; the service takes it off before answering.
+   */
+  scheduledNotice?: ScheduledChangeNotice;
 }
 
 export interface PlanChangeApplyOptions {
@@ -173,7 +183,13 @@ export async function applyPlanChange(
   if (PLAN_CHANGE_EFFECT[kind] === "SCHEDULED") {
     if (immediateOnly) return refused("SCHEDULED_CHANGE", { kind });
     // Losses wait for the end of the paid period, and nothing is charged.
-    const effectiveAt = await scheduleChange(
+    // Unexpanded, the replaced change is unknown; the email's claim still
+    // keeps a repeated confirm to one message.
+    const previous =
+      typeof current.subscription.schedule === "string"
+        ? null
+        : pendingChange(current.subscription, plans);
+    const { scheduleId, effectiveAt } = await scheduleChange(
       stripe,
       current.subscription,
       current.item,
@@ -185,6 +201,13 @@ export async function applyPlanChange(
       newTier: target.tier,
       currentPeriodEnd: effectiveAt,
       effectiveAt,
+      scheduledNotice: {
+        subscriptionId: current.subscription.id,
+        scheduleId,
+        currentPriceId: current.plan.priceId,
+        change: { priceId: target.priceId, effectiveAt },
+        previous,
+      },
     });
   }
 

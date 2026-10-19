@@ -56,6 +56,7 @@ describe("StripeService.upgradeSubscription", () => {
     mockModels = {
       paidCustomer: mockIPaidCustomerModel,
       reportedPurchase: {} as any,
+      sentBillingEmail: {} as any,
       jwt: {} as any,
       oauthGrant: {} as any,
       emailToken: {} as any,
@@ -427,7 +428,9 @@ describe("StripeService.upgradeSubscription", () => {
 
     expect(result.success).toBe(false);
     expect(result.message).toContain("plan was not changed");
-    expect(mockIPaidCustomerModel.updatePeriodIfUnchanged).not.toHaveBeenCalled();
+    expect(
+      mockIPaidCustomerModel.updatePeriodIfUnchanged,
+    ).not.toHaveBeenCalled();
   });
 
   it("should handle Stripe API error", async () => {
