@@ -41,15 +41,20 @@ export function parseCorsAllowedOrigins(
   for (const entry of (value ?? "").split(",")) {
     const trimmed = entry.trim();
     if (!trimmed) continue;
-    const url = new URL(trimmed); // throws on a malformed entry: fail at boot, not per request
-    if (url.protocol !== "https:" && url.protocol !== "http:") {
+    if (!/^[a-z][a-z0-9+.-]*:/i.test(trimmed) || !/^https?:/i.test(trimmed)) {
       throw new Error(`CORS_ALLOWED_ORIGINS: unsupported origin ${trimmed}`);
     }
-    // Exact origins only: a path, query or credentials would be silently dropped.
-    if (url.username || url.password || url.search || url.hash || url.pathname !== "/") {
+    // Exact origins only, checked on the raw text before URL normalization
+    // (which would quietly turn "/path/..", "?" or "#" into a bare origin):
+    // scheme://host[:port] with an optional trailing "/", no wildcards.
+    if (
+      !/^https?:\/\/([a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)*|\[[0-9a-f:.]+\])(:\d{1,5})?\/?$/i.test(
+        trimmed,
+      )
+    ) {
       throw new Error(`CORS_ALLOWED_ORIGINS: not a bare origin ${trimmed}`);
     }
-    origins.add(url.origin);
+    origins.add(new URL(trimmed).origin);
   }
   return origins;
 }

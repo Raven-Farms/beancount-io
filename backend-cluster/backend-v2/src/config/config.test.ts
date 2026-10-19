@@ -265,16 +265,20 @@ describe("config", () => {
 
     it("normalizes entries to origins", () => {
       const origins = parseCorsAllowedOrigins(
-        "https://books.example.com/, https://app.example.com:8443",
+        "https://Books.Example.com/, https://app.example.com:8443, http://[::1]:3000",
       );
       expect([...origins]).toEqual([
         "https://books.example.com",
         "https://app.example.com:8443",
+        "http://[::1]:3000",
       ]);
     });
 
     it("rejects malformed or non-http entries at boot", () => {
       expect(() => parseCorsAllowedOrigins("not a url")).toThrow();
+      expect(() => parseCorsAllowedOrigins("books.example.com")).toThrow(
+        /unsupported origin/,
+      );
       expect(() => parseCorsAllowedOrigins("ftp://example.com")).toThrow(
         /unsupported origin/,
       );
@@ -282,6 +286,11 @@ describe("config", () => {
         "https://example.com/path",
         "https://user:pw@example.com",
         "https://example.com/?q=1",
+        "https://example.com/path/..",
+        "https://example.com/?",
+        "https://example.com/#",
+        "https://*.example.com",
+        "https://example.com:99999x",
       ]) {
         expect(() => parseCorsAllowedOrigins(bad)).toThrow(/not a bare origin/);
       }

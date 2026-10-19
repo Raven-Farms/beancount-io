@@ -122,7 +122,11 @@ export const CLI_AUTH_V1_ROUTES = [
     handler: async ({ layers, config }, { ctx }) => {
       const token = getTokenFromCtx(ctx);
       if (token) await layers.services.auth.logout(token);
-      clearAuthCookie(ctx, config.env === "production", config.jwt.cookieDomain);
+      clearAuthCookie(
+        ctx,
+        config.env === "production",
+        config.jwt.cookieDomain,
+      );
       return { success: true };
     },
   }),
