@@ -158,7 +158,11 @@ bea --file "$ledger" --json --no-input add transactions --from "$batch" --into "
 
 The batch is validated before writing. Do not use `--partial` or
 `--allow-errors` to get an ordinary confirmed batch through a failed check;
-the staged open above is the one exception, and it applies to the open only.
+the staged open above is one exception, and it applies to the open only.
+The other is a reconcile batch landing confirmed missing rows on a ledger
+red only on the assertion it diagnoses (see the `beancount-reconcile`
+skill): run it strict first, and re-run once with the flag only when the
+refusal names that assertion alone.
 `add transactions` **does not deduplicate**, even when `meta.import-id` is
 present. Perform the workflow's dedup before writing and before any retry.
 Keep `import-id-2` on merged transfers, and preserve pending/uncertain `!` flags.

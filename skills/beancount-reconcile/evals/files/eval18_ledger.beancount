@@ -1,0 +1,28 @@
+;; fixture — beancount-reconcile eval18 (nonzero residual on a red ledger)
+option "operating_currency" "USD"
+
+2026-04-01 open Assets:Bank:Checking USD
+2026-04-01 open Income:Salary USD
+2026-04-01 open Expenses:Food:Groceries USD
+2026-04-01 open Expenses:Uncategorized USD
+2026-04-01 open Equity:Opening-Balances
+
+2026-04-30 * "Opening deposit"
+  Assets:Bank:Checking   1000.00 USD
+  Equity:Opening-Balances
+
+2026-05-01 balance Assets:Bank:Checking   1000.00 USD
+
+2026-05-03 * "PAYROLL DEPOSIT"
+  Assets:Bank:Checking   2000.00 USD
+  Income:Salary
+
+2026-05-07 * "TRADER JOES #123"
+  Assets:Bank:Checking    -54.20 USD
+  Expenses:Food:Groceries
+
+2026-05-12 * "TRADER JOES #123"
+  Assets:Bank:Checking    -30.00 USD
+  Expenses:Food:Groceries
+
+2026-06-01 balance Assets:Bank:Checking   2902.70 USD

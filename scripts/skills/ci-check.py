@@ -36,6 +36,7 @@ CLI_PROJECT = REPO_ROOT / "cli"
 EXPECTED_BEAN_CHECK_FAILURES = {
     "skills/beancount-close/evals/files/eval5_ledger.beancount",
     "skills/beancount-reconcile/evals/files/eval16_ledger.beancount",
+    "skills/beancount-reconcile/evals/files/eval18_ledger.beancount",
 }
 
 RAW_APPEND = re.compile(

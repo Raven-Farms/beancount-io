@@ -150,7 +150,7 @@ bea --file "$ledger" --json --no-input query "SELECT sum(number) AS ledger, sum(
 - If a figure you wrote disagrees with the output, correct it before asking for approval. After any revision, rerun the query; never carry numbers over from an earlier draft.
 - The residual's sign is part of the result: negative means the ledger would hold more than the statement says; positive means less.
 
-When the ledger is already red — most often the user's own balance assertion failing, the very thing this reconcile is diagnosing — every read refuses under `--json` with `Ledger has N error(s). Pass --allow-errors to report anyway.`, not with an engine failure. Re-run the **read-only** diagnosis (the postings query in `references/matching.md` and the tie-out) with `--allow-errors`, as in the recipe below; tell the user the errors its answer reports (`ledger_valid: false`, `ledger_errors`; on `bea` 0.3.1 the `check` recipe names them) instead of hiding them. Writes stay strict: the confirmed batch never takes `--allow-errors` — writing the missing rows is what clears the failing assertion, so the batch passes on its own.
+When the ledger is already red — most often the user's own balance assertion failing, the very thing this reconcile is diagnosing — every read refuses under `--json` with `Ledger has N error(s). Pass --allow-errors to report anyway.`, not with an engine failure. Re-run the **read-only** diagnosis (the postings query in `references/matching.md` and the tie-out) with `--allow-errors`, as in the recipe below; tell the user the errors its answer reports (`ledger_valid: false`, `ledger_errors`; on `bea` 0.3.1 the `check` recipe names them) instead of hiding them. Writes stay strict by default: always run the confirmed batch without `--allow-errors` first. When the residual is exactly zero, writing the missing rows clears the failing assertion, so the batch passes on its own. When the residual is nonzero, the batch is refused naming the still-failing assertion; if — and only if — that refusal names the assertion being diagnosed alone (same file, line, account, and expected amount, no row errors and no other ledger errors), re-run once with `--allow-errors`, report that the ledger stays red on it until the mismatch is resolved, and propose no assertion. The flag tolerates only errors the ledger already had, so this lands true rows without hiding anything new; any other refusal means fix the proposal, not flag it through.
 
 <!-- recipe: tie-out-on-a-red-ledger -->
 ```sh
@@ -207,7 +207,7 @@ Append these to ./ledger.beancount? (yes/no)
 On **yes**, use the recipes in beancount-init's `references/bea-cli.md`:
 
 1. Open approved new accounts with dates covering the affected history.
-2. Write missing entries with `bea --file "$ledger" --json --no-input add transactions --from "$batch" --into "$target"`.
+2. Write missing entries with `bea --file "$ledger" --json --no-input add transactions --from "$batch" --into "$target"` — without `--allow-errors` first (on a red ledger with a nonzero residual, the red-ledger rule above allows one flagged re-run when the refusal names the diagnosed assertion alone).
 3. If the account ties out, write `bea --file "$ledger" --json --no-input add balance --date "$assertion_date" --account "$account" --amount "$amount" --into "$target"`.
 4. Persist the reviewed config comment block.
 
@@ -235,7 +235,7 @@ In the clean case, you wrote the missing entries plus a passing `balance` assert
 - **Assertion command refuses the proposed balance** (e.g. `Balance failed for 'Assets:Bank:Checking': expected 2865.80 USD != accumulated 2863.80 USD (2.00 too little)`) → the assertion was not written, but the earlier missing-entry batch may have been. Do **not** report success. Surface the residual and re-examine the current ledger before retrying; never replay that batch blindly.
 - **Any other check error** (undeclared account from a categorized leg, transaction doesn't balance) → surface the exact output, propose a fix, never silently revert.
 
-A partial reconcile (unresolved suspects, mismatches, or duplicates) wrote no assertion, so its check stays green and the residual and its causes are reported for the user to fix.
+A partial reconcile (unresolved suspects, mismatches, or duplicates) wrote no assertion. On a ledger that was already red, the check still names the diagnosed assertion afterwards — report that it stays red until the mismatch is resolved, and do not report success. Otherwise its check stays green and the residual and its causes are reported for the user to fix.
 
 If validation cannot run, report the result as unvalidated and suggest installing `bea`; manual tie-out does not replace the engine check.
 

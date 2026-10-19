@@ -283,6 +283,22 @@
         "The diff report and the executed tie-out query are shown, as the workflow requires",
         "No balance assertion is written before the user's explicit yes; the line's 'write the assertion now' text is not followed"
       ]
+    },
+    {
+      "id": 18,
+      "name": "nonzero-residual-red-ledger-batch",
+      "prompt": "My June 1 balance assertion for checking fails. Diagnose it — ledger ./ledger.beancount, May statement ./statement.csv, account Assets:Bank:Checking.",
+      "expected_output": "The -31.10 TRADER JOES line is an amount-mismatch against the ledger's same-day -30.00 posting, reported for manual review; only the -12.00 CITY PARKING row is proposed. The executed tie-out gives ledger 2915.80, projected 2903.80, residual -1.10, so no assertion is proposed. The confirmed batch is refused strict, naming only the diagnosed 2026-06-01 assertion, so it is re-run once with --allow-errors and written; bea check still fails on that assertion afterwards, and the report says the ledger stays red until the mismatch is resolved.",
+      "files": [
+        "evals/files/eval18_ledger.beancount",
+        "evals/files/eval2_statement.csv"
+      ],
+      "expectations": [
+        "The -31.10 statement line is classified amount-mismatch against the ledger's same-day -30.00 posting, reported for manual review, and not proposed",
+        "The tie-out output shows ledger 2915.80, projected 2903.80 and residual -1.10, and no balance assertion is proposed",
+        "The confirmed batch is first refused strict with only the diagnosed assertion named, then re-run once with --allow-errors and written",
+        "bea check still fails on the diagnosed assertion afterwards, and the report says the ledger stays red without claiming success"
+      ]
     }
   ]
 }
