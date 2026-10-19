@@ -19,7 +19,8 @@
 
 ## Blocked
 
-- **t003 (2026-10-19)** — its manifests shipped (`f790f265a`) and installed correctly from GitHub on the second client; only the live prompt showing it reading the shared `bea-cli.md` from the plugin cache remains, which needs a model turn the usage-limited account cannot run until 2026-11-17 (recorded in [t003](./t003.md)). t004 and t005 needed only the shipped manifests, so their `depends_on` was repointed to t002 in the same ship; t006 still waits behind them and will need the same live runs.
+- **t003 (2026-10-19)** — its manifests shipped (`f790f265a`) and installed correctly from GitHub on the second client; only the live prompt showing it reading the shared `bea-cli.md` from the plugin cache remains, which needs a model turn the usage-limited account cannot run until 2026-11-17 (recorded in [t003](./t003.md)). t004 and t005 needed only the shipped manifests, so their `depends_on` was repointed to t002 in the same ship.
+- **t006 (2026-10-19)** — rehearsed end to end on one client (install, exact first-query figures, update, uninstall) and mechanically on the other; only its first-query answer remains (evidence in [t006](./t006.md)). t007 onward wait behind it. **Unblock:** Codex usage returns; one session closes both t003 and t006. **Who can clear it:** the operator (Codex usage).
 
 ## Definition of done
 
