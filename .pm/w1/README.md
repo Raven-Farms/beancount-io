@@ -74,7 +74,6 @@ m39–m40 were materialized on 2026-10-18 from [PRFAQ005](../../docs/prfaqs/PRFA
 - [179](./179.md) — Two dashboard events are missing from the event taxonomy (found by w1/m39/t011).
 - [180](./180.md) — Billing shows Stripe's raw subscription status, untranslated (found by w1/m39/t012).
 - [181](./181.md) — `bea` and the dashboard misread the plan-limit errors (found by w1/m40/t010).
-- [182](./182.md) — The change sheet's "Then $X" ignores ongoing discounts (found by w1/m39/t015's production run).
 
 
 The three MCP QA findings filed on 2026-09-21/22 were drained on 2026-09-23: [035](./done/035.md), [036](./done/036.md), and [037](./done/037.md) shipped with regression coverage.

@@ -52,6 +52,7 @@ function setup(
     binding?: boolean;
     subscriptions?: Stripe.Subscription[];
     invoice?: Partial<Stripe.Invoice>;
+    couponProducts?: string[];
   } = {},
 ) {
   const stripe = {
@@ -63,6 +64,7 @@ function setup(
         id,
         unit_amount: LIST_PRICES[id],
         currency: "usd",
+        product: "prod_beancount",
       })),
     },
     invoices: {
@@ -76,6 +78,13 @@ function setup(
     paymentMethods: {
       retrieve: jest.fn(async () => ({
         card: { brand: "visa", last4: "4242" },
+      })),
+    },
+    coupons: {
+      retrieve: jest.fn(async () => ({
+        applies_to: options.couponProducts
+          ? { products: options.couponProducts }
+          : null,
       })),
     },
     customers: {
@@ -427,5 +436,75 @@ describe("previewPlanChange", () => {
         replacesScheduledChange: null,
       });
     });
+  });
+});
+
+describe("previewPlanChange next charge after discounts (w1/182)", () => {
+  /** A discount as the listing expands it. */
+  const discount = (
+    coupon: Record<string, unknown>,
+    end: number | null = null,
+  ) => ({
+    object: "discount",
+    end,
+    source: { type: "coupon", coupon: { id: "coupon_1", ...coupon } },
+  });
+  const upgrade = (discounts: unknown[], couponProducts?: string[]) =>
+    setup({
+      subscriptions: [subscription(PREMIUM_MONTHLY, { discounts })],
+      couponProducts,
+    }).preview(PREMIUM_YEARLY);
+
+  it.each([
+    [
+      "a 100%-off coupon that runs forever",
+      [discount({ percent_off: 100, duration: "forever" })],
+      0,
+    ],
+    [
+      "a 50%-off coupon that runs forever",
+      [discount({ percent_off: 50, duration: "forever" })],
+      7194,
+    ],
+    [
+      "an amount off in the price's currency",
+      [discount({ amount_off: 1000, currency: "usd", duration: "forever" })],
+      13388,
+    ],
+    [
+      "an amount off in another currency",
+      [discount({ amount_off: 1000, currency: "eur", duration: "forever" })],
+      14388,
+    ],
+    [
+      "a repeating coupon that ends before the next charge",
+      [discount({ percent_off: 50, duration: "repeating" }, 1)],
+      14388,
+    ],
+    ["no discount", [], 14388],
+  ])("previews the next charge after %s", async (_label, discounts, next) => {
+    await expect(upgrade(discounts)).resolves.toMatchObject({
+      nextAmount: next,
+    });
+  });
+
+  it("ignores a coupon restricted to other products", async () => {
+    await expect(
+      upgrade(
+        [discount({ percent_off: 100, duration: "forever" })],
+        ["prod_other"],
+      ),
+    ).resolves.toMatchObject({ nextAmount: 14388 });
+  });
+
+  it("applies the discount to a scheduled downgrade's first charge too", async () => {
+    const result = await setup({
+      subscriptions: [
+        subscription(GROWTH_YEARLY, {
+          discounts: [discount({ percent_off: 100, duration: "forever" })],
+        }),
+      ],
+    }).preview(PREMIUM_YEARLY);
+    expect(result).toMatchObject({ effect: "SCHEDULED", nextAmount: 0 });
   });
 });

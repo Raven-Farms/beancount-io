@@ -15,7 +15,7 @@ import {
   type PlanConfig,
   type TierLimits,
 } from "../service/stripe";
-import { customerId } from "../service/subscription-plan";
+import { customerId, expandableId } from "../service/subscription-plan";
 import { loadActivePlans, type PlanChangeDeps } from "./current-plan";
 import {
   pendingChange,
@@ -141,9 +141,51 @@ function sameTierOnCycle(
 async function listPrice(
   stripe: Stripe,
   priceId: string,
-): Promise<{ amount: number; currency: string }> {
+): Promise<{ amount: number; currency: string; productId: string }> {
   const price = await stripe.prices.retrieve(priceId);
-  return { amount: price.unit_amount ?? 0, currency: price.currency };
+  return {
+    amount: price.unit_amount ?? 0,
+    currency: price.currency,
+    productId: expandableId(price.product),
+  };
+}
+
+/**
+ * What `amount` comes to at `at` once the subscription's discounts still
+ * running then are applied, so "Then $X" is what will be charged (w1/182).
+ * A discount it cannot read is skipped, so the worst case is the list price.
+ */
+async function afterDiscounts(
+  stripe: Stripe,
+  subscription: Stripe.Subscription,
+  { amount, currency, productId }: Awaited<ReturnType<typeof listPrice>>,
+  at: Date,
+): Promise<number> {
+  let result = amount;
+  for (const discount of subscription.discounts ?? []) {
+    if (typeof discount === "string") continue;
+    if (discount.end != null && discount.end * 1000 <= at.getTime()) continue;
+    const coupon = discount.source?.coupon;
+    if (!coupon || typeof coupon === "string") continue;
+    try {
+      // `applies_to` comes only when expanded, deeper than a listing can.
+      const { applies_to } = await stripe.coupons.retrieve(coupon.id, {
+        expand: ["applies_to"],
+      });
+      if (applies_to && !applies_to.products.includes(productId)) continue;
+    } catch (error) {
+      previewLogger.warn("Could not read a discount's products", {
+        errorMessage: error instanceof Error ? error.message : String(error),
+      });
+      continue;
+    }
+    if (coupon.percent_off != null) {
+      result *= 1 - coupon.percent_off / 100;
+    } else if (coupon.amount_off != null && coupon.currency === currency) {
+      result -= coupon.amount_off;
+    }
+  }
+  return Math.max(0, Math.round(result));
 }
 
 function base(
@@ -192,10 +234,11 @@ export async function previewPlanChange(
 
   const { stripe } = deps;
   const now = deps.now?.() ?? new Date();
-  const [{ active }, { amount: targetAmount, currency }] = await Promise.all([
+  const [{ active }, targetPrice] = await Promise.all([
     loadActivePlans(deps, userId, clientId, plans),
     listPrice(stripe, targetPriceId),
   ]);
+  const { amount: targetAmount, currency } = targetPrice;
 
   if (active.length > 1) {
     // Two paid subscriptions on one customer is a duplicate purchase; never
@@ -249,11 +292,16 @@ export async function previewPlanChange(
   const periodEnd = new Date(current.item.current_period_end * 1000);
 
   if (effect === "SCHEDULED") {
+    const [paymentMethod, nextAmount] = await Promise.all([
+      defaultCard(stripe, current.subscription),
+      afterDiscounts(stripe, current.subscription, targetPrice, periodEnd),
+    ]);
     return {
       ...change,
       effectiveAt: periodEnd,
       nextChargeAt: periodEnd,
-      paymentMethod: await defaultCard(stripe, current.subscription),
+      nextAmount,
+      paymentMethod,
       alternativePriceId:
         kind === "SPLIT"
           ? sameTierOnCycle(plans, target.tier, current.plan.interval)
@@ -262,8 +310,14 @@ export async function previewPlanChange(
   }
 
   const prorationDate = Math.floor(now.getTime() / 1000);
-  const [paymentMethod, invoice] = await Promise.all([
+  const cycleChanges = current.plan.interval !== target.interval;
+  // A new billing cycle starts now; otherwise the renewal date holds.
+  const nextChargeAt = cycleChanges
+    ? addInterval(now, target.interval)
+    : periodEnd;
+  const [paymentMethod, nextAmount, invoice] = await Promise.all([
     defaultCard(stripe, current.subscription),
+    afterDiscounts(stripe, current.subscription, targetPrice, nextChargeAt),
     stripe.invoices.createPreview({
       customer: customerId(current.subscription.customer),
       subscription: current.subscription.id,
@@ -277,7 +331,6 @@ export async function previewPlanChange(
   const creditApplied = invoice.lines.data
     .filter((line) => line.amount < 0)
     .reduce((total, line) => total - line.amount, 0);
-  const cycleChanges = current.plan.interval !== target.interval;
 
   return {
     ...change,
@@ -286,8 +339,8 @@ export async function previewPlanChange(
     creditApplied,
     effectiveAt: now,
     prorationDate,
-    // A new billing cycle starts now; otherwise the renewal date holds.
-    nextChargeAt: cycleChanges ? addInterval(now, target.interval) : periodEnd,
+    nextChargeAt,
+    nextAmount,
     paymentMethod,
   };
 }

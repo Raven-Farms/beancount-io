@@ -44,9 +44,14 @@ export async function loadActivePlans(
   const page = await stripe.subscriptions.list({
     customer: binding.stripeCustomerId,
     limit: 100,
-    // A pending plan change lives on the schedule and a past-due grace on
-    // the latest invoice; both come with the listing.
-    expand: ["data.schedule", "data.latest_invoice"],
+    // A pending plan change lives on the schedule, a past-due grace on the
+    // latest invoice, and what the next charge comes to on the discounts;
+    // all three come with the listing.
+    expand: [
+      "data.schedule",
+      "data.latest_invoice",
+      "data.discounts.source.coupon",
+    ],
   });
   for (const subscription of page.data) {
     if (
