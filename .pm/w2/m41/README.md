@@ -33,6 +33,6 @@
 
 ## Out of scope
 
-- Descriptions and routing ([m38](../m38/README.md)).
+- Descriptions and routing ([m38](../done/m38/README.md)).
 - Changing any workflow's behavior, confirmation gates, or trust rails.
 - Dropping the no-`bea` fallback (a separate decision, [w2/080](../080.md)).

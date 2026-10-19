@@ -1,6 +1,6 @@
 # w2 · m38 — Route every ledger request to the right beancount skill
 
-**Worker:** worker2 **Goal:** a labeled routing set shows which `beancount-*` skill (or none) Claude Code and Codex choose for common ledger requests, and the eight descriptions are tuned against that evidence instead of by eye. **Status:** todo (t001–t010 done)
+**Worker:** worker2 **Goal:** a labeled routing set shows which `beancount-*` skill (or none) Claude Code and Codex choose for common ledger requests, and the eight descriptions are tuned against that evidence instead of by eye. **Status:** done
 
 ## Tasks (in order)
 
@@ -16,7 +16,7 @@
 | [t008](./done/t008.md) | Adoption surface — **DONE** | 20m | t007 |
 | [t009](./done/t009.md) | Simplify — **DONE** | 15m | t008 |
 | [t010](./done/t010.md) | Test coverage — **DONE** | 30m | t008, t009 |
-| t011 | Closeout | 15m | t010 |
+| [t011](./done/t011.md) | Closeout — **DONE** | 15m | t010 |
 
 ## Definition of done
 
@@ -33,7 +33,7 @@ Near-miss pairs the set must cover:
 - "Set my ledger's operating currency option" (a Beancount `option`) vs recording an options trade (`beancount-options`). The dashboard uses "Beancount options" for exactly these settings (`dashboard/src/features/ledger-data/settings/beancount-options-section`).
 - "What does `bea ask` do?" vs a ledger question (`beancount-ask`).
 - Import vs migrate vs reconcile vs close, e.g. "bring my Monarch history over" vs "import this Chase CSV" vs "does my June statement match" vs "reconcile everything for June".
-- One manual entry ("I paid $42 for dinner on the Amex"), which is `none` until a skill owns it ([m40](../m40/README.md) adds that label).
+- One manual entry ("I paid $42 for dinner on the Amex"), which is `none` until a skill owns it ([m40](../../m40/README.md) adds that label).
 - General Beancount or BQL documentation questions, which are `none`.
 - A hosted Beancount.io ledger with the MCP server connected, which is `none` for the local skills.
 
@@ -42,10 +42,23 @@ Near-miss pairs the set must cover:
 - **Source:** agentic-skill review of `skills/` at the user's request, 2026-10-18. The 71 per-skill evals all assume the skill was already chosen; none checks which of the eight siblings an agent picks. Skill names and descriptions overlap with Beancount's own `close` and `option` directives and with the `bea ask` command, and no measurement exists to tell whether that misroutes requests.
 - **Goal linkage:** **A1 — Agent-native accounting.** The description is the only thing an agent reads before it picks a skill. Routing quality is instruction-file quality, measured. Secondary **A3**: registry hosts list skills by name and description.
 - **Expected outcome:** a ledger request in Claude Code or Codex reaches the skill built for it, and a maintainer can show it with recorded numbers before and after any description change.
-- **Why now:** [m39](../m39/README.md) (renames) and [m40](../m40/README.md) (a ninth skill) both need this evidence first, and [ADR 020](../../../docs/adrs/ADR020-skills-accounting-workflow-candidates.md) proposes more skills (roll-forward, accruals) that will crowd the routing further. Names and descriptions should be settled before [w6/m6](../../w6/blocked/m6/README.md) publishes immutable ClawHub versions. Adoption surface is included because the milestone changes every skill's frontmatter, which is what agents and registries read.
+- **Why now:** [m39](../../m39/README.md) (renames) and [m40](../../m40/README.md) (a ninth skill) both need this evidence first, and [ADR 020](../../../../docs/adrs/ADR020-skills-accounting-workflow-candidates.md) proposes more skills (roll-forward, accruals) that will crowd the routing further. Names and descriptions should be settled before [w6/m6](../../../w6/blocked/m6/README.md) publishes immutable ClawHub versions. Adoption surface is included because the milestone changes every skill's frontmatter, which is what agents and registries read.
 
 ## Out of scope
 
-- Renaming skills ([m39](../m39/README.md)).
+- Renaming skills ([m39](../../m39/README.md)).
 - Changing what any skill does once it is chosen.
 - Running paid client calls in CI.
+
+## Closeout
+
+Closed 2026-10-19 with every definition-of-done item verified on `main`:
+
+- `skills/evals/routing.json` labels 48 prompts (31 positives, 17 `none`) and covers every near-miss pair above; each skill has positives and near-miss negatives.
+- `check_routing()` in `skills/scripts/ci-check.py` fails on unknown labels, duplicate prompts, and a skill with no positive or no near-miss entry (`TestRoutingSet`); `CI (skills)` passed on `64e37d2a6`.
+- `skills/scripts/run-routing.py` records each client's choice per prompt in a scratch workspace outside the repository and never runs in CI; its detection, scoring, and watchdog are tested with fake clients (`test_run_routing.py`).
+- `skills/docs/routing-rehearsal.md` records two baseline and two after runs per client with versions and dates: Claude Code 47/48 → 48/48, Codex 43–45/48 → 46–47/48. No prompt that routed correctly at baseline regresses. The remaining Codex misses are hosted-ledger prompts where Codex opens the local skill and then hands off to the MCP server, as recorded.
+- Every description says local and names its confusable skips; every body's first step carries the hosted-ledger hand-off (`bea-cli.md`, Hosted ledgers).
+- `skills/AGENTS.md` requires the routing check for description changes and new skills.
+
+Evidence that bears on [m39](../../m39/README.md): the predicted `close` and `option` collisions did not misroute on either client in any run, before or after the skip clauses.

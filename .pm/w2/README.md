@@ -41,7 +41,7 @@
 - [x] **m36** — [List the hosted MCP server on the official MCP Registry](./done/m36/README.md) (10 tasks) ← [ADR 019](../../docs/adrs/ADR019-backend-v2-mcp-host-compatibility.md) open question "which directory comes first"; user decision 2026-10-02 to start with the easiest marketplace; registry research 2026-10-03
 - [x] **m37** — [Refresh native measurements after live Dynamic Type changes](./done/m37/README.md) (6 tasks) ← promoted [w2/062](./done/062.md), extended by independently verified picker rows/sections, root pills and file permission notice,2026-10-09
 
-- [ ] **m38** — [Route every ledger request to the right beancount skill](./m38/README.md) (11 tasks) ← agentic-skill review of `skills/`, user request 2026-10-18; user routed to w2
+- [x] **m38** — [Route every ledger request to the right beancount skill](./done/m38/README.md) (11 tasks) ← agentic-skill review of `skills/`, user request 2026-10-18; user routed to w2
 - [ ] **m39** — [Rename the two skills whose names collide with Beancount directives](./m39/README.md) (10 tasks) ← same review, 2026-10-18 — sequenced after m38; lands before w6/m6 publishes ClawHub slugs
 - [ ] **m40** — [Record everyday ledger changes through a `beancount-add` skill](./m40/README.md) (10 tasks) ← same review, 2026-10-18 — sequenced after m38
 - [ ] **m41** — [Rewrite the accumulated skill fixes as plain procedures](./m41/README.md) (9 tasks) ← same review, 2026-10-18 — best after m39
