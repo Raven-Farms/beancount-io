@@ -1,12 +1,12 @@
 # w2 · m39 — Rename the two skills whose names collide with Beancount directives
 
-**Worker:** worker2 **Goal:** `beancount-options` becomes `beancount-options-trades` and `beancount-close` becomes `beancount-close-month`. Existing installs upgrade without dangling links, and ledgers that already carry a `;; beancount-options config` block keep working unchanged. **Status:** todo
+**Worker:** worker2 **Goal:** `beancount-options` becomes `beancount-options-trades` and `beancount-close` becomes `beancount-close-month`. Existing installs upgrade without dangling links, and ledgers that already carry a `;; beancount-options config` block keep working unchanged. **Status:** todo (t001 done)
 
 ## Tasks (in order)
 
 | id   | title | est | depends_on |
 | ---- | ----- | --- | ---------- |
-| t001 | Confirm the renames with routing evidence | 30m | w2/m38/t011 |
+| [t001](./done/t001.md) | Confirm the renames with routing evidence — **DONE** | 30m | w2/m38/t011 |
 | t002 | Keep the persisted config header stable | 20m | t001 |
 | t003 | Rename directories, frontmatter, and in-suite references | 45m | t002 |
 | t004 | Retire the old names in the link installer | 45m | t003 |

@@ -104,3 +104,28 @@ here, but the outcome is the hand-off the skill prescribes.
 
 No prompt that routed correctly in both baseline runs misroutes in the after
 runs on either client.
+
+## Proposed renames — 2026-10-19
+
+A scratch copy of the suite at `434d05084` renamed `beancount-options` →
+`beancount-options-trades`, `beancount-close` → `beancount-close-month`, and
+`beancount-ask` → `beancount-query` (directories, `name:`, and cross-references;
+the persisted `;; beancount-options config` header unchanged), with the routing
+set relabeled to match. Two runs per client, 2026-10-19T01:05Z and 01:09Z UTC,
+compared with the two after runs above under the current names:
+
+| Prompt group | Claude Code, current → renamed | Codex, current → renamed |
+| --- | --- | --- |
+| `close`/`option` collisions (7) | 7/7, 7/7 → 7/7, 7/7 | 7/7, 7/7 → 7/7, 7/7 |
+| close and options positives (6) | 6/6, 6/6 → 6/6, 6/6 | 6/6, 6/6 → 6/6, 6/6 |
+| ask/query positives (5) | 5/5, 5/5 → 5/5, 5/5 | 5/5, 5/5 → 5/5, 5/5 |
+| ask/query near-misses (4) | 4/4, 4/4 → 4/4, 4/4 | 4/4, 4/4 → 4/4, 4/4 |
+| all 48 | 48, 48 → 48, 48 | 47, 46 → 44, 46 |
+
+The new names change nothing measurable for the prompts they were meant to
+help: every collision prompt already routes correctly under the current names
+on both clients. Codex's lower renamed total comes from prompts unrelated to
+the renamed skills (`reconcile-one-account-june` → none and
+`none-dinner-on-amex` → beancount-import, one run each, plus the known hosted
+prompts), which is within its run-to-run variation. A rename would therefore be
+for readability in `/` menus and catalogs, not for routing.
