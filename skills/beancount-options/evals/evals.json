@@ -140,6 +140,46 @@
         "The ledger.beancount file passes bea check (all transactions balance, no errors)",
         "The stock disposal price reflects the premium reduction (138.50, NOT just 140)"
       ]
+    },
+    {
+      "id": 8,
+      "name": "covered-call-assigned-two-lots",
+      "prompt": "My AAPL 160 call got assigned on 2026-06-20 — 100 AAPL left my account at the strike. I sold that call on 2026-05-01 for $2.00 premium with $0.65 fees (already in my ledger). I hold two AAPL lots: 100 bought 2026-03-20 at $148.50 and 100 bought 2026-04-17 at $143.20 (both already in ledger). On Robinhood. Record the assignment in ./ledger.beancount.",
+      "expected_output": "An assignment transaction dated 2026-06-20 that closes the short call at $0 and sells 100 AAPL naming one held lot's cost ({148.50 USD} or {143.20 USD}, with the lot date when costs collide) — never the bare {} selector, which is ambiguous under STRICT with two lots. Disposal price = strike + premium per share = $162.00/share. NO Income:Trading:OptionPremium posting. File passes bea check.",
+      "files": [
+        "evals/files/eval8_ledger.beancount"
+      ],
+      "expectations": [
+        "A new transaction dated 2026-06-20 (the assignment date) is appended",
+        "The transaction has a posting with +1 AAPL_CALL_20260620_00160000 at {200.00 USD} @ 0.00 USD (closing the short call)",
+        "The stock posting names one lot's cost ({148.50 USD} or {143.20 USD}, optionally with its lot date) instead of the bare {} selector",
+        "The stock posting is priced at 162.00 USD per share (strike + premium per share)",
+        "The transaction's cash leg is +16000.00 USD (strike × 100 shares received)",
+        "The transaction does NOT include a posting to Income:Trading:OptionPremium",
+        "The transaction includes Income:Trading:CapitalGains (auto-balanced or with the correct explicit amount)",
+        "The transaction's ^link tag matches the original opening transaction's ^link (^aapl-160c-20260620)",
+        "The ledger.beancount file passes bea check (all transactions balance, no errors)"
+      ]
+    },
+    {
+      "id": 9,
+      "name": "covered-call-assigned-sellgains",
+      "prompt": "My AAPL 160 call got assigned on 2026-06-20 — 100 AAPL left my account at the strike. I sold that call on 2026-05-01 for $2.00 premium with $0.65 fees (already in my ledger). The 100 AAPL shares were bought 2026-03-20 with basis $148/share (already in ledger). My ledger loads the sellgains plugin. On Robinhood. Record the assignment in ./ledger.beancount.",
+      "expected_output": "An assignment transaction dated 2026-06-20 that closes the short call at $0 and sells 100 AAPL priced at the strike ($160.00/share, NOT strike + premium), because sellgains refuses a disposal price above the cash proceeds. The user's plugin lines are untouched. File passes bea check.",
+      "files": [
+        "evals/files/eval9_ledger.beancount"
+      ],
+      "expectations": [
+        "A new transaction dated 2026-06-20 (the assignment date) is appended",
+        "The transaction has a posting with +1 AAPL_CALL_20260620_00160000 at {200.00 USD} @ 0.00 USD (closing the short call)",
+        "The stock posting disposes 100 AAPL priced at 160.00 USD per share (the strike, NOT 162.00)",
+        "The transaction's cash leg is +16000.00 USD (strike × 100 shares received)",
+        "The transaction does NOT include a posting to Income:Trading:OptionPremium",
+        "The transaction includes Income:Trading:CapitalGains (auto-balanced or with the correct explicit amount)",
+        "The ledger's plugin lines are unchanged (no plugin added, removed, or edited)",
+        "The transaction's ^link tag matches the original opening transaction's ^link (^aapl-160c-20260620)",
+        "The ledger.beancount file passes bea check (all transactions balance, no errors)"
+      ]
     }
   ]
 }

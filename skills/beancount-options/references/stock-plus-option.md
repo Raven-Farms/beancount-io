@@ -73,7 +73,7 @@ If the protective put is in the money at expiry and you exercise, you sell 100 s
   Income:Trading:CapitalGains
 ```
 
-`{}` matches any held lot. `@ 138.50 USD` = strike − premium per share. CapitalGains auto-balances.
+`{}` matches only when exactly one lot can match — name the lot when several are held (see the lot-selection step in `references/assignment.md`). `@ 138.50 USD` = strike − premium per share. CapitalGains auto-balances. On a `sellgains`/`pedantic` ledger, price at the strike (`@ 140.00 USD`) instead, as `references/assignment.md` explains.
 
 ### If expires worthless
 

@@ -49,11 +49,13 @@ Example: held 100 AAPL at $148/share basis, sold 160C for $2.00 ($200 basis), as
   Income:Trading:CapitalGains
 ```
 
-The `{}` empty cost selector tells beancount to match against any held lot of AAPL. The `@ 162.00 USD` (strike + premium per share) sets the effective disposal price. `Income:Trading:CapitalGains` auto-balances.
+The `{}` empty cost selector matches only when exactly one lot can match — a single held lot, or the whole position. Under Beancount's default STRICT booking, two assigned lots make `{}` ambiguous (`Ambiguous matches for "-100 AAPL {}"`), so list the stock account's held lots first and name the one being sold: `{148.50 USD}`, or `{148.50 USD, 2026-03-20}` with the lot's date when two lots share a cost. (A `booking_method` of FIFO or LIFO on the account auto-selects instead; STRICT never does.) The `@ 162.00 USD` (strike + premium per share) sets the effective disposal price. `Income:Trading:CapitalGains` auto-balances.
 
 Math: 16000 + 200 + (-100 × 148 from inventory match) + Income = 0 → Income = -1400.00 (credit, gain).
 
 Do NOT post `Income:Trading:OptionPremium` separately. The premium is folded into the disposal price.
+
+If the ledger loads `beancount.plugins.sellgains` (or `pedantic`, which bundles it), the strike+premium price is refused — `Invalid price vs. proceeds/gains` — because the cash leg is strike × 100. Price the stock leg at the strike instead (`-100 AAPL {148.00 USD} @ 160.00 USD`); the premium is then recognized on the option-close leg, and the `Income:Trading:CapitalGains` total is unchanged. Never edit the user's `plugin` lines to dodge this.
 
 ### Naked call assignment (now short stock)
 
