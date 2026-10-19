@@ -133,9 +133,15 @@ const jaImporter: Record<string, TranslationEntry> = {
     message: "現在のファイル形式にはAI解析が必要です",
     description: "Description of why premium is required",
   },
-  "importer.error.upgradeToPremium": {
-    message: "プレミアムにアップグレード",
-    description: "Label for premium upgrade option",
+  "importer.error.upgradeToPlan": {
+    message: "{plan}にアップグレード",
+    description:
+      "Heading over the paywall's upgrade button; {plan} is the plan the button recommends (the next tier up).",
+  },
+  "importer.error.upgradePlan": {
+    message: "プランをアップグレード",
+    description:
+      "Heading over the paywall's upgrade button when no higher self-serve plan exists.",
   },
   "importer.error.upgradeDescription": {
     message: "AIでPDF、OFX、画像ファイルを自動解析",

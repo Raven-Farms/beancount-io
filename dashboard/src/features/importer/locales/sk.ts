@@ -136,9 +136,15 @@ const skImporter: Record<string, TranslationEntry> = {
     message: "Aktuálny typ súboru vyžaduje AI analýzu",
     description: "Description of why premium is required",
   },
-  "importer.error.upgradeToPremium": {
-    message: "Prejsť na prémium",
-    description: "Label for premium upgrade option",
+  "importer.error.upgradeToPlan": {
+    message: "Prejsť na {plan}",
+    description:
+      "Heading over the paywall's upgrade button; {plan} is the plan the button recommends (the next tier up).",
+  },
+  "importer.error.upgradePlan": {
+    message: "Prejsť na vyšší plán",
+    description:
+      "Heading over the paywall's upgrade button when no higher self-serve plan exists.",
   },
   "importer.error.upgradeDescription": {
     message: "Analyzujte PDF, OFX a obrázky automaticky pomocou AI",

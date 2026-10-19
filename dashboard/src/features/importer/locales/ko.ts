@@ -132,9 +132,15 @@ const koImporter: Record<string, TranslationEntry> = {
     message: "현재 파일 형식에는 AI 기반 파싱이 필요합니다",
     description: "Description of why premium is required",
   },
-  "importer.error.upgradeToPremium": {
-    message: "프리미엄으로 업그레이드",
-    description: "Label for premium upgrade option",
+  "importer.error.upgradeToPlan": {
+    message: "{plan}(으)로 업그레이드",
+    description:
+      "Heading over the paywall's upgrade button; {plan} is the plan the button recommends (the next tier up).",
+  },
+  "importer.error.upgradePlan": {
+    message: "플랜 업그레이드",
+    description:
+      "Heading over the paywall's upgrade button when no higher self-serve plan exists.",
   },
   "importer.error.upgradeDescription": {
     message: "AI로 PDF, OFX, 이미지 파일을 자동 파싱",

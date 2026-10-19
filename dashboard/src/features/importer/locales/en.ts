@@ -140,9 +140,15 @@ const enImporter: Record<string, TranslationEntry> = {
     message: "Current file type requires AI-powered parsing",
     description: "Description of why premium is required",
   },
-  "importer.error.upgradeToPremium": {
-    message: "Upgrade to Premium",
-    description: "Label for premium upgrade option",
+  "importer.error.upgradeToPlan": {
+    message: "Upgrade to {plan}",
+    description:
+      "Heading over the paywall's upgrade button; {plan} is the plan the button recommends (the next tier up).",
+  },
+  "importer.error.upgradePlan": {
+    message: "Upgrade your plan",
+    description:
+      "Heading over the paywall's upgrade button when no higher self-serve plan exists.",
   },
   "importer.error.upgradeDescription": {
     message: "Parse PDF, OFX, and image files automatically with AI",

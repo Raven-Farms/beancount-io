@@ -131,9 +131,15 @@ const zhImporter: Record<string, TranslationEntry> = {
     message: "当前文件类型需要AI分析",
     description: "Description of why premium is required",
   },
-  "importer.error.upgradeToPremium": {
-    message: "升级到高级版",
-    description: "Label for premium upgrade option",
+  "importer.error.upgradeToPlan": {
+    message: "升级到{plan}",
+    description:
+      "Heading over the paywall's upgrade button; {plan} is the plan the button recommends (the next tier up).",
+  },
+  "importer.error.upgradePlan": {
+    message: "升级你的计划",
+    description:
+      "Heading over the paywall's upgrade button when no higher self-serve plan exists.",
   },
   "importer.error.upgradeDescription": {
     message: "使用AI自动解析PDF、OFX和图像文件",

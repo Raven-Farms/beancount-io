@@ -352,8 +352,12 @@ describe("Active Subscription Display", () => {
 
     render(<SubscriptionSection />);
 
-    // Status is shown as a badge — check the status value is present
-    expect(screen.getByText("active")).toBeInTheDocument();
+    // The badge names the status in the app language, not Stripe's raw
+    // `active` (w1/180).
+    expect(
+      screen.getByText("userSettings.subscriptionStatus.active"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("active")).not.toBeInTheDocument();
   });
 
   it("should show renewal date", () => {

@@ -6,6 +6,18 @@ import type { CancelTarget } from "@/features/user-settings/hooks/use-subscripti
 import { isPendingCancellation } from "./subscription-state";
 import { useBillingDateFormat, useMoneyFormat } from "./use-money-format";
 
+/** Stripe's subscription statuses, as the billing badge names them. */
+const STATUS_LABEL_KEYS: Record<string, string> = {
+  active: "userSettings.subscriptionStatus.active",
+  trialing: "userSettings.subscriptionStatus.trialing",
+  past_due: "userSettings.subscriptionStatus.past_due",
+  unpaid: "userSettings.subscriptionStatus.unpaid",
+  incomplete: "userSettings.subscriptionStatus.incomplete",
+  incomplete_expired: "userSettings.subscriptionStatus.incomplete_expired",
+  canceled: "userSettings.subscriptionStatus.canceled",
+  paused: "userSettings.subscriptionStatus.paused",
+};
+
 export function BillingSection({
   subscriptions,
   t,
@@ -69,9 +81,12 @@ export function BillingSection({
                 <p className="text-sm text-muted-foreground">{amount}</p>
                 <Badge
                   variant={statusVariant}
-                  className={`text-xs capitalize ${statusClass}`}
+                  className={`text-xs ${statusClass}`}
                 >
-                  {subscription.status}
+                  {/* A status Stripe adds later still shows, untranslated. */}
+                  {STATUS_LABEL_KEYS[subscription.status]
+                    ? t(STATUS_LABEL_KEYS[subscription.status])
+                    : subscription.status}
                 </Badge>
               </div>
               <div className="flex flex-col gap-2 shrink-0">

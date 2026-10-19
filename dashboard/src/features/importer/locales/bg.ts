@@ -137,9 +137,15 @@ const bgImporter: Record<string, TranslationEntry> = {
     message: "Текущият тип файл изисква AI анализ",
     description: "Description of why premium is required",
   },
-  "importer.error.upgradeToPremium": {
-    message: "Надградете до премиум",
-    description: "Label for premium upgrade option",
+  "importer.error.upgradeToPlan": {
+    message: "Надградете до {plan}",
+    description:
+      "Heading over the paywall's upgrade button; {plan} is the plan the button recommends (the next tier up).",
+  },
+  "importer.error.upgradePlan": {
+    message: "Надградете плана си",
+    description:
+      "Heading over the paywall's upgrade button when no higher self-serve plan exists.",
   },
   "importer.error.upgradeDescription": {
     message: "Анализирайте PDF, OFX и изображения автоматично с AI",

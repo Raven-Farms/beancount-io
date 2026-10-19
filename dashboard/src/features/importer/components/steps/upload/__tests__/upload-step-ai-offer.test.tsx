@@ -12,7 +12,10 @@ vi.mock("../../../../hooks/use-llm-parser", () => ({
 }));
 
 vi.mock("@/common/hooks/use-translations", () => ({
-  useTranslations: () => ({ t: (key: string) => key }),
+  useTranslations: () => ({
+    t: (key: string, params?: Record<string, string>) =>
+      params ? `${key}(${Object.values(params).join(",")})` : key,
+  }),
 }));
 
 vi.mock("@/common/analytics", () => ({ track: vi.fn() }));
@@ -149,11 +152,11 @@ describe("UploadStep CSV parsing and the AI choice", () => {
   });
 
   it.each([
-    ["FREE", "premium"],
-    ["PREMIUM", "growth"],
+    ["FREE", "premium", "aiAgent.premiumTier"],
+    ["PREMIUM", "growth", "aiAgent.growthTier"],
   ])(
-    "offers a %s user the next plan up, with the way back",
-    async (tier, plan) => {
+    "offers a %s user the next plan up, named in the heading, with the way back",
+    async (tier, plan, label) => {
       mockTier.current = tier;
       parseLLMFile.mockRejectedValue(QUOTA_ERROR);
       vi.spyOn(console, "error").mockImplementation(() => {});
@@ -172,6 +175,10 @@ describe("UploadStep CSV parsing and the AI choice", () => {
         "href",
         `/settings/billing?plan=${plan}&billing=yearly&from=importer_paywall&return=${encodeURIComponent(TEST_LOCATION_HREF)}`,
       );
+      // The heading names the plan the button opens (w1/177).
+      expect(
+        screen.getByText(`importer.error.upgradeToPlan(${label})`),
+      ).toBeInTheDocument();
     },
   );
 });

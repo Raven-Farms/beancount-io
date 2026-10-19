@@ -136,9 +136,15 @@ const nlImporter: Record<string, TranslationEntry> = {
     message: "Het huidige bestandstype vereist AI-analyse",
     description: "Description of why premium is required",
   },
-  "importer.error.upgradeToPremium": {
-    message: "Upgrade naar premium",
-    description: "Label for premium upgrade option",
+  "importer.error.upgradeToPlan": {
+    message: "Upgrade naar {plan}",
+    description:
+      "Heading over the paywall's upgrade button; {plan} is the plan the button recommends (the next tier up).",
+  },
+  "importer.error.upgradePlan": {
+    message: "Upgrade je abonnement",
+    description:
+      "Heading over the paywall's upgrade button when no higher self-serve plan exists.",
   },
   "importer.error.upgradeDescription": {
     message: "Analyseer PDF-, OFX- en afbeeldingsbestanden automatisch met AI",

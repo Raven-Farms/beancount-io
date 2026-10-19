@@ -67,6 +67,9 @@ function PremiumRequiredError({
 }) {
   const { t } = useTranslations();
   const { tier } = useUserLimits();
+  // A Premium user who spent the AI allowance needs Growth, so the heading
+  // names whatever plan the button recommends.
+  const next = getNextTier(tier);
   // A CSV only reaches AI parsing because the user chose it, so name the
   // spent quota rather than a file type that "requires" AI.
   const isCsv = fileFormat === "csv";
@@ -94,18 +97,16 @@ function PremiumRequiredError({
           <div className="flex items-center justify-center gap-2">
             <Sparkles className="w-4 h-4 text-primary" />
             <p className="text-sm font-medium">
-              {t("importer.error.upgradeToPremium")}
+              {next
+                ? t("importer.error.upgradeToPlan", { plan: t(next.labelKey) })
+                : t("importer.error.upgradePlan")}
             </p>
           </div>
           <p className="text-xs text-muted-foreground">
             {t("importer.error.upgradeDescription")}
           </p>
-          {/* A Premium user who spent the AI allowance needs Growth. */}
           <Button asChild className="w-full" size="sm">
-            <UpgradePromptLink
-              surface="importer_paywall"
-              plan={getNextTier(tier)}
-            >
+            <UpgradePromptLink surface="importer_paywall" plan={next}>
               {t("importer.error.upgradeNow")}
             </UpgradePromptLink>
           </Button>

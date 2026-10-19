@@ -136,9 +136,15 @@ const esImporter: Record<string, TranslationEntry> = {
     message: "El tipo de archivo actual requiere análisis con IA",
     description: "Description of why premium is required",
   },
-  "importer.error.upgradeToPremium": {
-    message: "Actualizar a premium",
-    description: "Label for premium upgrade option",
+  "importer.error.upgradeToPlan": {
+    message: "Actualizar a {plan}",
+    description:
+      "Heading over the paywall's upgrade button; {plan} is the plan the button recommends (the next tier up).",
+  },
+  "importer.error.upgradePlan": {
+    message: "Actualizar tu plan",
+    description:
+      "Heading over the paywall's upgrade button when no higher self-serve plan exists.",
   },
   "importer.error.upgradeDescription": {
     message: "Analiza archivos PDF, OFX e imágenes automáticamente con IA",

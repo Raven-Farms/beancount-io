@@ -136,9 +136,15 @@ const faImporter: Record<string, TranslationEntry> = {
     message: "نوع فایل فعلی نیاز به تجزیه با هوش مصنوعی دارد",
     description: "Description of why premium is required",
   },
-  "importer.error.upgradeToPremium": {
-    message: "ارتقا به ممتاز",
-    description: "Label for premium upgrade option",
+  "importer.error.upgradeToPlan": {
+    message: "ارتقا به {plan}",
+    description:
+      "Heading over the paywall's upgrade button; {plan} is the plan the button recommends (the next tier up).",
+  },
+  "importer.error.upgradePlan": {
+    message: "ارتقای طرح",
+    description:
+      "Heading over the paywall's upgrade button when no higher self-serve plan exists.",
   },
   "importer.error.upgradeDescription": {
     message:

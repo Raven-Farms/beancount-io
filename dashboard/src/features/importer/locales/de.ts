@@ -138,9 +138,15 @@ const deImporter: Record<string, TranslationEntry> = {
     message: "Der aktuelle Dateityp erfordert KI-gestützte Analyse",
     description: "Description of why premium is required",
   },
-  "importer.error.upgradeToPremium": {
-    message: "Auf Premium upgraden",
-    description: "Label for premium upgrade option",
+  "importer.error.upgradeToPlan": {
+    message: "Auf {plan} upgraden",
+    description:
+      "Heading over the paywall's upgrade button; {plan} is the plan the button recommends (the next tier up).",
+  },
+  "importer.error.upgradePlan": {
+    message: "Tarif upgraden",
+    description:
+      "Heading over the paywall's upgrade button when no higher self-serve plan exists.",
   },
   "importer.error.upgradeDescription": {
     message: "PDF-, OFX- und Bilddateien automatisch mit KI analysieren",

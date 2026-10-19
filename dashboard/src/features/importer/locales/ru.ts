@@ -137,9 +137,15 @@ const ruImporter: Record<string, TranslationEntry> = {
     message: "Текущий тип файла требует анализа с помощью ИИ",
     description: "Description of why premium is required",
   },
-  "importer.error.upgradeToPremium": {
-    message: "Перейти на премиум",
-    description: "Label for premium upgrade option",
+  "importer.error.upgradeToPlan": {
+    message: "Перейти на {plan}",
+    description:
+      "Heading over the paywall's upgrade button; {plan} is the plan the button recommends (the next tier up).",
+  },
+  "importer.error.upgradePlan": {
+    message: "Повысить тариф",
+    description:
+      "Heading over the paywall's upgrade button when no higher self-serve plan exists.",
   },
   "importer.error.upgradeDescription": {
     message: "Автоматически анализируйте PDF, OFX и изображения с помощью ИИ",

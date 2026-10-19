@@ -138,9 +138,15 @@ const caImporter: Record<string, TranslationEntry> = {
     message: "El tipus de fitxer actual requereix anàlisi amb IA",
     description: "Description of why premium is required",
   },
-  "importer.error.upgradeToPremium": {
-    message: "Actualitzar a premium",
-    description: "Label for premium upgrade option",
+  "importer.error.upgradeToPlan": {
+    message: "Actualitzar a {plan}",
+    description:
+      "Heading over the paywall's upgrade button; {plan} is the plan the button recommends (the next tier up).",
+  },
+  "importer.error.upgradePlan": {
+    message: "Actualitzar el pla",
+    description:
+      "Heading over the paywall's upgrade button when no higher self-serve plan exists.",
   },
   "importer.error.upgradeDescription": {
     message: "Analitzeu fitxers PDF, OFX i imatges automàticament amb IA",
