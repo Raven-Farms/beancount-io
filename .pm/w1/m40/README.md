@@ -2,7 +2,7 @@
 
 **Worker:** worker1
 **Goal:** Downgrades and switches from yearly to monthly are scheduled for the end of the paid period and can be undone. Cancelling offers one cheaper alternative. A failed renewal keeps paid limits while Stripe retries. Ledger-count and collaborator limits are enforced as PRFAQ005 decided.
-**Status:** todo (t001–t012, t014 and t015 done; t013, the deployed check and archive, remains)
+**Status:** todo (t001–t012 and t014–t016 done; t013, the deployed check and archive, remains)
 
 ## Source + Goal linkage
 
@@ -60,6 +60,7 @@ m39's README records what `beancount.io/pricing` relies on, and m40 keeps all of
 | t012 | Prove scheduling, recovery and limit behaviour with meaningful tests — **DONE** | 40m | t010, t011 |
 | t014 | Production payment test with the QA account and two 100%-off coupons — **DONE** | 50m | t006, t012 |
 | t015 | Beancount sends its own failed-renewal and yearly-renewal emails — **DONE** | 40m | t005, t006 |
+| t016 | A failed renewal gets a month (yearly: two) before the plan ends, with less email — **DONE** | 30m | t015 |
 | t013 | Verify the deployed outcome and archive the milestone | 20m | t012, t014 |
 
 **Total estimate:** ~8h15m. t003 and t004 are independent of m39 and of each other. t006 is the user's Stripe work and gates t005 and the closeout.
