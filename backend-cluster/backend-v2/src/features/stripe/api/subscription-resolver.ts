@@ -82,6 +82,18 @@ class PaymentMethodSummary {
   last4!: string;
 }
 
+@ObjectType("ScheduledPlanChange", {
+  description:
+    "A plan change that takes effect at the end of the paid period. Nothing is charged until then.",
+})
+class ScheduledPlanChange {
+  @Field()
+  priceId!: string;
+
+  @Field()
+  effectiveAt!: Date;
+}
+
 @ObjectType("Subscription")
 class Subscription {
   @Field(() => ID)
@@ -116,6 +128,13 @@ class Subscription {
     description: "The card renewals and plan changes charge, when known.",
   })
   paymentMethod?: PaymentMethodSummary | null;
+
+  @Field(() => ScheduledPlanChange, {
+    nullable: true,
+    description:
+      "The change scheduled for the end of the paid period; cancelScheduledPlanChange undoes it.",
+  })
+  scheduledChange?: ScheduledPlanChange | null;
 }
 
 @ObjectType("CustomerSubscriptionStatus")
@@ -264,6 +283,15 @@ class PlanChangePreview {
 
   @Field(() => PaymentMethodSummary, { nullable: true })
   paymentMethod!: PaymentMethodSummary | null;
+
+  @Field(() => ScheduledPlanChange, {
+    nullable: true,
+    description: "The scheduled change this choice would replace.",
+  })
+  replacesScheduledChange!: ScheduledPlanChange | null;
+
+  @Field({ description: "Whether this choice withdraws a pending cancellation." })
+  withdrawsCancellation!: boolean;
 }
 
 const PlanChangeStatusValues: { [K in PlanChangeStatus]: K } = {
@@ -397,7 +425,7 @@ export class SubscriptionResolver {
   @Authenticated()
   @Mutation(() => PlanChangeResult, {
     description:
-      "Applies an upgrade or a switch to yearly at the previewed proration time. Requires a full signed-in session.",
+      "Applies an upgrade or a switch to yearly at the previewed proration time, and schedules a downgrade or a switch to monthly for the end of the paid period. Requires a full signed-in session.",
   })
   async changePlan(
     @Arg("clientId") clientId: string,
@@ -414,6 +442,21 @@ export class SubscriptionResolver {
       clientId,
       priceId,
       prorationDate,
+    );
+  }
+
+  @Authenticated()
+  @Mutation(() => SubscriptionActionResult, {
+    description:
+      "Cancels the plan change scheduled for the end of the paid period; the current plan continues unchanged. Requires a full signed-in session.",
+  })
+  async cancelScheduledPlanChange(
+    @Arg("clientId") clientId: string,
+    @Ctx() context: IContext,
+  ): Promise<SubscriptionActionResult> {
+    return this.subscriptions.cancelScheduledPlanChange(
+      context.getCurrentIdentity(),
+      clientId,
     );
   }
 

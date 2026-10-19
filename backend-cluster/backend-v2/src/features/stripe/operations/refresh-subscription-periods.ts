@@ -1,6 +1,9 @@
 import type { DbExecutor } from "@/drizzle/drizzle";
 import type { IModels } from "@/foundation/models";
-import type { IStripeService } from "../service/stripe-service";
+import type {
+  IStripeService,
+  SubscriptionListOptions,
+} from "../service/stripe-service";
 import { SUBSCRIPTION_CONFIG } from "../service/stripe";
 import {
   customerId,
@@ -14,12 +17,16 @@ export async function refreshSubscriptionPeriods(
   models: Pick<IModels, "paidCustomer">,
   db: DbExecutor,
   userId: string,
-  status: "active" | "all" = "active",
+  {
+    status = "active",
+    expandSchedule = false,
+  }: Pick<SubscriptionListOptions, "status" | "expandSchedule"> = {},
 ) {
   const bindings = await models.paidCustomer.findByUserId(db, userId);
   const subscriptions = await stripe.listSubscriptions(userId, {
     bindings,
     status,
+    expandSchedule,
   });
   for (const binding of bindings) {
     if (!SUBSCRIPTION_CONFIG[binding.clientId]) continue;

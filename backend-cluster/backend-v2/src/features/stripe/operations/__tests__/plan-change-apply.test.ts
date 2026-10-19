@@ -34,6 +34,7 @@ function subscription(
     pending_update: null,
     schedule: null,
     discounts: [],
+    cancel_at_period_end: false,
     clientId: BILLING_CLIENT_ID,
     items: {
       data: [
@@ -135,6 +136,7 @@ describe("applyPlanChange", () => {
       "sub_1",
       {
         items: [{ id: "si_1", price: PREMIUM_YEARLY }],
+        cancel_at_period_end: false,
         payment_behavior: "pending_if_incomplete",
         proration_behavior: "always_invoice",
         proration_date: NOW_SECONDS - 30,
@@ -391,6 +393,28 @@ describe("applyPlanChange", () => {
     expect(
       stripe.subscriptionSchedules.release.mock.invocationCallOrder[0],
     ).toBeLessThan(stripe.subscriptions.update.mock.invocationCallOrder[0]);
+  });
+
+  it("withdraws a pending cancellation in the same update as an immediate change, which Stripe holds until the payment succeeds", async () => {
+    const { stripe, apply } = setup({
+      subscriptions: [
+        subscription(PREMIUM_MONTHLY, { cancel_at_period_end: true }),
+      ],
+      updated: subscription(PREMIUM_YEARLY),
+    });
+
+    await apply(PREMIUM_YEARLY, NOW_SECONDS);
+
+    expect(stripe.subscriptions.update).toHaveBeenCalledTimes(1);
+    expect(stripe.subscriptions.update).toHaveBeenCalledWith(
+      "sub_1",
+      expect.objectContaining({
+        items: [{ id: "si_1", price: PREMIUM_YEARLY }],
+        cancel_at_period_end: false,
+        payment_behavior: "pending_if_incomplete",
+      }),
+      expect.anything(),
+    );
   });
 
   it("refuses a retired price as a target before any Stripe call", async () => {

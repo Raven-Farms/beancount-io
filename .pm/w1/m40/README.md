@@ -2,7 +2,7 @@
 
 **Worker:** worker1
 **Goal:** Downgrades and switches from yearly to monthly are scheduled for the end of the paid period and can be undone. Cancelling offers one cheaper alternative. A failed renewal keeps paid limits while Stripe retries. Ledger-count and collaborator limits are enforced as PRFAQ005 decided.
-**Status:** todo (t001 done; t006 blocked on the operator)
+**Status:** todo (t001, t002 done; t006 blocked on the operator)
 
 ## Source + Goal linkage
 
@@ -47,7 +47,7 @@ m39's README records what `beancount.io/pricing` relies on, and m40 keeps all of
 | id | title | est | depends_on |
 | --- | --- | --- | --- |
 | t001 | Schedule downgrades and switches to monthly for the end of the paid period — **DONE** | 50m | w1/m39/t002 |
-| t002 | Keep one pending change at a time: status, replacement and undo | 40m | t001 |
+| t002 | Keep one pending change at a time: status, replacement and undo — **DONE** | 40m | t001 |
 | t003 | Keep paid limits while a renewal is past due, and never fall back to Free on a Stripe error | 40m | — |
 | t004 | Count every owned ledger, and check collaborators against the ledger owner's plan | 35m | — |
 | t005 | Email when a plan change is scheduled and before it takes effect | 40m | t002, t006 |

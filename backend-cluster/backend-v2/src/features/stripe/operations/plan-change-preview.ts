@@ -19,6 +19,10 @@ import {
 } from "../service/stripe";
 import { customerId } from "../service/subscription-plan";
 import { loadActivePlans } from "./current-plan";
+import {
+  pendingChange,
+  type ScheduledChangeView,
+} from "./plan-change-schedule";
 
 const previewLogger = logger.child({ module: "plan-change-preview" });
 
@@ -55,6 +59,10 @@ export interface PlanChangePreviewView {
   alternativePriceId: string | null;
   limitChanges: PlanLimitChangeView[];
   paymentMethod: PaymentMethodSummaryView | null;
+  /** The pending scheduled change this choice would replace, if any. */
+  replacesScheduledChange: ScheduledChangeView | null;
+  /** Whether this choice withdraws a pending cancellation. */
+  withdrawsCancellation: boolean;
 }
 
 export interface PlanChangePreviewDeps {
@@ -164,6 +172,8 @@ function base(
     alternativePriceId: null,
     limitChanges: [],
     paymentMethod: null,
+    replacesScheduledChange: null,
+    withdrawsCancellation: false,
   };
 }
 
@@ -184,14 +194,7 @@ export async function previewPlanChange(
 
   const { stripe } = deps;
   const now = deps.now?.() ?? new Date();
-  const { active } = await loadActivePlans(
-    stripe,
-    deps.models,
-    deps.db,
-    userId,
-    clientId,
-    plans,
-  );
+  const { active } = await loadActivePlans(deps, userId, clientId, plans);
 
   const { amount: targetAmount, currency } = await listPrice(
     stripe,
@@ -230,13 +233,22 @@ export async function previewPlanChange(
       effect: null,
     };
   }
+  // A change leaves one pending change at most: it replaces a scheduled one
+  // and withdraws a pending cancellation, and the preview says so.
+  const pending = current ? pendingChange(current.subscription, plans) : null;
+  const change = {
+    ...shared,
+    replacesScheduledChange:
+      pending && pending.priceId !== targetPriceId ? pending : null,
+    withdrawsCancellation: current?.subscription.cancel_at_period_end ?? false,
+  };
 
   const { kind } = classification;
   const effect = PLAN_CHANGE_EFFECT[kind];
 
   if (!current) {
     return {
-      ...shared,
+      ...change,
       kind,
       refusal: null,
       effect,
@@ -251,7 +263,7 @@ export async function previewPlanChange(
 
   if (effect === "SCHEDULED") {
     return {
-      ...shared,
+      ...change,
       kind,
       refusal: null,
       effect,
@@ -281,7 +293,7 @@ export async function previewPlanChange(
   const cycleChanges = current.plan.interval !== target.interval;
 
   return {
-    ...shared,
+    ...change,
     kind,
     refusal: null,
     effect,
@@ -295,4 +307,3 @@ export async function previewPlanChange(
     paymentMethod,
   };
 }
-

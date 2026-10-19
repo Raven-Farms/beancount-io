@@ -130,6 +130,7 @@ describe("budgets", () => {
       "GQL Mutation.upgradeSubscription",
       "GQL Query.previewPlanChange",
       "GQL Mutation.changePlan",
+      "GQL Mutation.cancelScheduledPlanChange",
     ]) {
       expect(budgetFor(opId, classifyOp(opId))).toEqual({
         windowMs: 60_000,

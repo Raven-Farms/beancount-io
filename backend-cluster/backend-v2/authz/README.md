@@ -192,6 +192,7 @@ beside `AuthorizationService`:
 | `user.billing.subscription.upgrade`    | `GQL Mutation.upgradeSubscription`             | browser session only                                 | exact-self `user#can_write_billing`              |
 | `user.billing.plan_change.preview`     | `GQL Query.previewPlanChange`                  | browser session only                                 | exact-self `user#can_read_billing`               |
 | `user.billing.plan_change.apply`       | `GQL Mutation.changePlan`                      | browser session only                                 | exact-self `user#can_write_billing`              |
+| `user.billing.plan_change.cancel`      | `GQL Mutation.cancelScheduledPlanChange`       | browser session only                                 | exact-self `user#can_write_billing`              |
 | `user.ai_usage.read`                   | `GQL Query.aiCfoUsage`                         | session, or OAuth/API key with `ledger.read`         | exact-self `user#owner`                          |
 | `user.social.feed.read`                | `GQL Query.getFeed`                            | browser session only                                 | exact-self `user#can_read_social`                |
 | `user.social.follow.create`            | `GQL Mutation.followUser`                      | browser session only                                 | exact-self `user#can_write_social`               |

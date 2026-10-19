@@ -150,6 +150,7 @@ describe("StripeService.upgradeSubscription", () => {
       "sub_123",
       {
         items: [{ id: "si_123", price: growthPriceId }],
+        cancel_at_period_end: false,
         payment_behavior: "pending_if_incomplete",
         proration_behavior: "always_invoice",
         proration_date: expect.any(Number),

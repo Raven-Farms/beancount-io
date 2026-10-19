@@ -1,7 +1,10 @@
 import Stripe from "stripe";
 import { logger } from "@/shared/logger";
-import type { PlanConfig } from "../service/stripe";
+import { ValidationError } from "@/shared/errors";
+import { REFUSAL_MESSAGES } from "../service/plan-change";
+import { SUBSCRIPTION_CONFIG, type PlanConfig } from "../service/stripe";
 import { expandableId } from "../service/subscription-plan";
+import { loadActivePlans } from "./current-plan";
 
 const scheduleLogger = logger.child({ module: "plan-change-schedule" });
 
@@ -123,4 +126,75 @@ export async function scheduleChange(
     ],
   });
   return new Date(periodEnd * 1000);
+}
+
+export interface ScheduledChangeView {
+  priceId: string;
+  effectiveAt: Date;
+}
+
+/**
+ * The plan change a subscription's schedule will make, or null: the first
+ * phase after the current one that moves the subscription to another price.
+ * A schedule in its last phase (the change already took effect) has nothing
+ * pending. The schedule must be expanded; an id cannot say what it holds.
+ */
+export function pendingChange(
+  subscription: Stripe.Subscription,
+  plans: readonly PlanConfig[],
+): ScheduledChangeView | null {
+  const schedule = subscription.schedule;
+  if (!schedule) return null;
+  if (typeof schedule === "string") {
+    throw new Error("Read the subscription with its schedule expanded");
+  }
+  const current = schedule.current_phase;
+  if (schedule.status !== "active" || !current) return null;
+  const currentPrices = new Set(
+    subscription.items.data.map((item) => item.price.id),
+  );
+  for (const phase of schedule.phases) {
+    if (phase.start_date < current.end_date) continue;
+    const added = phase.items
+      .map((item) => expandableId(item.price))
+      .filter((id) => !currentPrices.has(id));
+    // Name the plan the phase moves to, else whatever price it adds.
+    const priceId =
+      added.find((id) => plans.some((plan) => plan.priceId === id)) ?? added[0];
+    if (priceId) {
+      return { priceId, effectiveAt: new Date(phase.start_date * 1000) };
+    }
+  }
+  return null;
+}
+
+/**
+ * Undo a pending plan change: release the schedule holding it. The
+ * subscription keeps its current price, discounts and period. Nothing pending
+ * is a success, so a repeated undo is harmless.
+ */
+export async function cancelScheduledChange(
+  deps: Parameters<typeof loadActivePlans>[0],
+  userId: string,
+  clientId: string,
+): Promise<{ success: boolean; message: string }> {
+  const plans = SUBSCRIPTION_CONFIG[clientId]?.plans;
+  if (!plans) throw new ValidationError("clientId", "Unknown client");
+  const { active } = await loadActivePlans(deps, userId, clientId, plans);
+  if (active.length > 1) {
+    return {
+      success: false,
+      message: REFUSAL_MESSAGES.MULTIPLE_SUBSCRIPTIONS,
+    };
+  }
+  const subscription = active[0]?.subscription;
+  if (!subscription || !pendingChange(subscription, plans)) {
+    return { success: true, message: "No plan change is scheduled." };
+  }
+  await releaseSchedule(deps.stripe, subscription);
+  return {
+    success: true,
+    message:
+      "Your scheduled plan change was cancelled. Your current plan continues.",
+  };
 }

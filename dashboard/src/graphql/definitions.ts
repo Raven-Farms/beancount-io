@@ -992,9 +992,11 @@ export type Mutation = {
   approvePullRequest: PullRequestResult;
   /** Add one or more entries to a specific ledger (atomic) */
   bulkEntries: AddLedgerEntryResponse;
+  /** Cancels the plan change scheduled for the end of the paid period; the current plan continues unchanged. Requires a full signed-in session. */
+  cancelScheduledPlanChange: SubscriptionActionResult;
   /** Schedules your subscription to cancel. Requires a full signed-in session. */
   cancelSubscription: SubscriptionActionResult;
-  /** Applies an upgrade or a switch to yearly at the previewed proration time. Requires a full signed-in session. */
+  /** Applies an upgrade or a switch to yearly at the previewed proration time, and schedules a downgrade or a switch to monthly for the end of the paid period. Requires a full signed-in session. */
   changePlan: PlanChangeResult;
   /** Authorize the pending CLI session a user code names. Issues a JWT for the CLI and stores it for the matching device code to collect. */
   confirmCliAuthSession: ConfirmCliAuthSessionResponse;
@@ -1139,6 +1141,11 @@ export type MutationBulkEntriesArgs = {
   allowInvalid?: InputMaybe<Scalars['Boolean']['input']>;
   entries: Array<AddEntryInput>;
   ledgerId: Scalars['String']['input'];
+};
+
+
+export type MutationCancelScheduledPlanChangeArgs = {
+  clientId: Scalars['String']['input'];
 };
 
 
@@ -1715,7 +1722,11 @@ export type PlanChangePreview = {
   /** Unix seconds. Pass it to changePlan so the charge matches this preview. */
   prorationDate: Maybe<Scalars['Int']['output']>;
   refusal: Maybe<PlanChangeRefusal>;
+  /** The scheduled change this choice would replace. */
+  replacesScheduledChange: Maybe<ScheduledPlanChange>;
   targetPriceId: Scalars['String']['output'];
+  /** Whether this choice withdraws a pending cancellation. */
+  withdrawsCancellation: Scalars['Boolean']['output'];
 };
 
 export enum PlanChangeRefusal {
@@ -2580,6 +2591,13 @@ export type ResetPasswordResponse = {
   success: Scalars['Boolean']['output'];
 };
 
+/** A plan change that takes effect at the end of the paid period. Nothing is charged until then. */
+export type ScheduledPlanChange = {
+  __typename: 'ScheduledPlanChange';
+  effectiveAt: Scalars['DateTimeISO']['output'];
+  priceId: Scalars['String']['output'];
+};
+
 export type SearchUser = {
   __typename: 'SearchUser';
   /** The match's email, returned only when the keyword was that email */
@@ -2628,6 +2646,8 @@ export type Subscription = {
   items: Array<SubscriptionItem>;
   /** The card renewals and plan changes charge, when known. */
   paymentMethod: Maybe<PaymentMethodSummary>;
+  /** The change scheduled for the end of the paid period; cancelScheduledPlanChange undoes it. */
+  scheduledChange: Maybe<ScheduledPlanChange>;
   status: Scalars['String']['output'];
 };
 

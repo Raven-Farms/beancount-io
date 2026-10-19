@@ -31,6 +31,7 @@ function subscription(
     id: "sub_1",
     customer: "cus_1",
     livemode: true,
+    cancel_at_period_end: false,
     default_payment_method: "pm_1",
     items: {
       data: [
@@ -90,7 +91,11 @@ function setup(
   const findByUserIdAndClientId = jest.fn(async () =>
     options.binding === false
       ? null
-      : { userId: "usr_1", clientId: BILLING_CLIENT_ID, stripeCustomerId: "cus_1" },
+      : {
+          userId: "usr_1",
+          clientId: BILLING_CLIENT_ID,
+          stripeCustomerId: "cus_1",
+        },
   );
   const deps = {
     stripe: stripe as unknown as Stripe,
@@ -302,5 +307,85 @@ describe("previewPlanChange", () => {
       category: ErrorCategory.VALIDATION_FAILED,
     });
     expect(stripe.subscriptions.list).not.toHaveBeenCalled();
+  });
+
+  describe("one pending change at a time", () => {
+    const PERIOD_END_SECONDS = Math.floor(PERIOD_END.getTime() / 1000);
+    const pendingDowngrade = {
+      id: "sub_sched_1",
+      status: "active",
+      current_phase: {
+        start_date: NOW_SECONDS - 86_400,
+        end_date: PERIOD_END_SECONDS,
+      },
+      phases: [
+        {
+          start_date: NOW_SECONDS - 86_400,
+          items: [{ price: GROWTH_MONTHLY }],
+        },
+        { start_date: PERIOD_END_SECONDS, items: [{ price: PREMIUM_MONTHLY }] },
+      ],
+    };
+
+    it("says which scheduled change a different choice replaces", async () => {
+      const { preview } = setup({
+        subscriptions: [
+          subscription(GROWTH_MONTHLY, { schedule: pendingDowngrade }),
+        ],
+      });
+
+      await expect(preview(GROWTH_YEARLY)).resolves.toMatchObject({
+        kind: "TO_YEARLY",
+        replacesScheduledChange: {
+          priceId: PREMIUM_MONTHLY,
+          effectiveAt: PERIOD_END,
+        },
+        withdrawsCancellation: false,
+      });
+    });
+
+    it("replaces nothing when the choice is the change already scheduled", async () => {
+      const { preview } = setup({
+        subscriptions: [
+          subscription(GROWTH_MONTHLY, { schedule: pendingDowngrade }),
+        ],
+      });
+
+      await expect(preview(PREMIUM_MONTHLY)).resolves.toMatchObject({
+        kind: "DOWNGRADE",
+        replacesScheduledChange: null,
+      });
+    });
+
+    it("says a change withdraws a pending cancellation", async () => {
+      const { preview } = setup({
+        subscriptions: [
+          subscription(GROWTH_MONTHLY, { cancel_at_period_end: true }),
+        ],
+      });
+
+      await expect(preview(PREMIUM_MONTHLY)).resolves.toMatchObject({
+        kind: "DOWNGRADE",
+        withdrawsCancellation: true,
+        replacesScheduledChange: null,
+      });
+    });
+
+    it("withdraws and replaces nothing for a refused choice", async () => {
+      const { preview } = setup({
+        subscriptions: [
+          subscription(GROWTH_MONTHLY, {
+            cancel_at_period_end: true,
+            schedule: pendingDowngrade,
+          }),
+        ],
+      });
+
+      await expect(preview(GROWTH_MONTHLY)).resolves.toMatchObject({
+        refusal: "CURRENT_PLAN",
+        withdrawsCancellation: false,
+        replacesScheduledChange: null,
+      });
+    });
   });
 });

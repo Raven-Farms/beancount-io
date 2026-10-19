@@ -99,10 +99,11 @@ describe("op-class coverage", () => {
     // 63 since w2/m28:t005 added `appendLedgerText`, the Beancount-text
     // dialect of `bulkEntries`, on all three surfaces; 64 since w2/m32 added
     // `refreshLedgerManagedPrices`; 65 since w1/m39 added `changePlan`
-    // (PRFAQ005), browser-session billing.
+    // (PRFAQ005), browser-session billing; 66 since w1/m40 added
+    // `cancelScheduledPlanChange`, its undo.
     expect(
       graphqlOps.filter((op) => op.startsWith("GQL Mutation.")).length,
-    ).toBe(65);
+    ).toBe(66);
   });
 
   it("gives every GraphQL root field exactly one explicit access mode", () => {

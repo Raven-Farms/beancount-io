@@ -19,9 +19,15 @@ export interface ActivePlan {
  * subscription it would move. More than one entry is a duplicate purchase.
  */
 export async function loadActivePlans(
-  stripe: Stripe,
-  models: Pick<IModels, "paidCustomer">,
-  db: DbExecutor,
+  {
+    stripe,
+    models,
+    db,
+  }: {
+    stripe: Stripe;
+    models: Pick<IModels, "paidCustomer">;
+    db: DbExecutor;
+  },
   userId: string,
   clientId: string,
   plans: PlanConfig[],
@@ -38,7 +44,7 @@ export async function loadActivePlans(
     customer: binding.stripeCustomerId,
     status: "active",
     limit: 100,
-    // A pending plan change lives on the schedule; apply reads it inline.
+    // A pending plan change lives on the schedule, read without a request.
     expand: ["data.schedule"],
   });
   for (const subscription of page.data) {

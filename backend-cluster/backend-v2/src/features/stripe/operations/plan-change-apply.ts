@@ -8,6 +8,7 @@ import {
   PLAN_CHANGE_EFFECT,
   type PlanChangeKind,
   type PlanChangeRefusal,
+  REFUSAL_MESSAGES,
   resolveTargetPlan,
 } from "../service/plan-change";
 import {
@@ -84,17 +85,6 @@ function result(
   };
 }
 
-const REFUSAL_MESSAGES: Record<PlanChangeRefusal, string> = {
-  CURRENT_PLAN: "You are already on this plan.",
-  SAME_TIER_AND_CYCLE:
-    "You are already on this plan at your current price; switching would only raise it.",
-  MULTIPLE_SUBSCRIPTIONS:
-    "Your account has more than one active subscription. Contact support to change plans.",
-  NO_SUBSCRIPTION: "You have no subscription to change. Check out instead.",
-  SCHEDULED_CHANGE:
-    "This change takes effect at the end of your billing period and cannot be applied immediately.",
-};
-
 function refused(
   refusal: PlanChangeRefusal,
   fields: Partial<Omit<PlanChangeResultView, "status">> = {},
@@ -155,9 +145,7 @@ export async function applyPlanChange(
 
   const { stripe } = deps;
   const { binding, active } = await loadActivePlans(
-    stripe,
-    deps.models,
-    deps.db,
+    deps,
     userId,
     clientId,
     plans,
@@ -216,6 +204,12 @@ export async function applyPlanChange(
     current.subscription.id,
     {
       items: [{ id: current.item.id, price: targetPriceId }],
+      // A change keeps the subscription, so it withdraws a pending
+      // cancellation. Stripe holds the flag in the pending update until the
+      // payment succeeds (checked in test mode with declined and
+      // bank-approval cards), so a failed change keeps the cancellation. It
+      // is always sent, keeping the body stable for the idempotency key.
+      cancel_at_period_end: false,
       payment_behavior: "pending_if_incomplete",
       proration_behavior: "always_invoice",
       proration_date: proration,

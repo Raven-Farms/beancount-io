@@ -110,9 +110,11 @@ describe("live Stripe webhook boundary", () => {
     expect(
       t.paidCustomer.findByStripeCustomerIdAndClientId,
     ).toHaveBeenCalledWith({}, "cus_synthetic", BILLING_CLIENT_ID);
+    // Webhooks refresh periods only; they never pay to expand schedules.
     expect(t.stripe.listSubscriptions).toHaveBeenCalledWith("usr_synthetic", {
       bindings: [],
       status: "active",
+      expandSchedule: false,
     });
     expect(t.ctx.body.processed).toBe(true);
   });

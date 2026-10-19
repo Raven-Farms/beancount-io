@@ -26,6 +26,10 @@ import type {
   PlanChangePreviewView,
 } from "../operations/plan-change-preview";
 import type { PlanChangeResultView } from "../operations/plan-change-apply";
+import {
+  pendingChange,
+  type ScheduledChangeView,
+} from "../operations/plan-change-schedule";
 
 interface SubscriptionPriceView {
   id: string;
@@ -61,6 +65,7 @@ interface SubscriptionView {
   cancelAtPeriodEnd: boolean;
   items: SubscriptionItemView[];
   paymentMethod: PaymentMethodSummaryView | null;
+  scheduledChange: ScheduledChangeView | null;
 }
 
 export interface CustomerSubscriptionStatusView {
@@ -133,6 +138,10 @@ export interface ISubscriptionService {
     priceId: string,
     prorationDate?: number | null,
   ): Promise<PlanChangeResultView>;
+  cancelScheduledPlanChange(
+    identity: Identity,
+    clientId: string,
+  ): Promise<SubscriptionActionResultView>;
 }
 
 /**
@@ -222,7 +231,10 @@ export class SubscriptionService implements ISubscriptionService {
       this.models,
       this.db,
       userId,
-      onlyActiveStatus ? "active" : "all",
+      // Only the full view reports a pending plan change, from the schedule.
+      onlyActiveStatus
+        ? { status: "active" }
+        : { status: "all", expandSchedule: true },
     );
     const filteredSubscriptions = stripeSubscriptions.filter(
       (subscription) =>
@@ -320,6 +332,10 @@ export class SubscriptionService implements ISubscriptionService {
           paymentMethod: await this.stripe.defaultCard(
             subscription.clientId,
             subscription,
+          ),
+          scheduledChange: pendingChange(
+            subscription,
+            SUBSCRIPTION_CONFIG[subscription.clientId]?.plans ?? [],
           ),
         } satisfies SubscriptionView;
       }),
@@ -523,5 +539,16 @@ export class SubscriptionService implements ISubscriptionService {
       priceId,
       prorationDate,
     );
+  }
+
+  public async cancelScheduledPlanChange(
+    identity: Identity,
+    clientId: string,
+  ): Promise<SubscriptionActionResultView> {
+    await this.authorize(
+      identity,
+      AUTHORIZATION_ACTIONS.USER_BILLING_PLAN_CHANGE_CANCEL,
+    );
+    return this.stripe.cancelScheduledPlanChange(identity.userId, clientId);
   }
 }

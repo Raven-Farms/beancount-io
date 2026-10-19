@@ -22,6 +22,7 @@ export const AUTHORIZATION_ACTIONS = {
   USER_BILLING_SUBSCRIPTION_UPGRADE: "user.billing.subscription.upgrade",
   USER_BILLING_PLAN_CHANGE_PREVIEW: "user.billing.plan_change.preview",
   USER_BILLING_PLAN_CHANGE_APPLY: "user.billing.plan_change.apply",
+  USER_BILLING_PLAN_CHANGE_CANCEL: "user.billing.plan_change.cancel",
   USER_AI_USAGE_READ: "user.ai_usage.read",
   USER_SOCIAL_FEED_READ: "user.social.feed.read",
   USER_SOCIAL_FOLLOW_CREATE: "user.social.follow.create",

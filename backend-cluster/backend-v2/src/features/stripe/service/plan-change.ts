@@ -93,3 +93,14 @@ export function resolveTargetPlan(clientId: string, priceId: string) {
   }
   return { plans: clientConfig.plans, target };
 }
+
+export const REFUSAL_MESSAGES: Record<PlanChangeRefusal, string> = {
+  CURRENT_PLAN: "You are already on this plan.",
+  SAME_TIER_AND_CYCLE:
+    "You are already on this plan at your current price; switching would only raise it.",
+  MULTIPLE_SUBSCRIPTIONS:
+    "Your account has more than one active subscription. Contact support to change plans.",
+  NO_SUBSCRIPTION: "You have no subscription to change. Check out instead.",
+  SCHEDULED_CHANGE:
+    "This change takes effect at the end of your billing period and cannot be applied immediately.",
+};

@@ -11,7 +11,10 @@ import {
   type PaymentMethodSummaryView,
   type PlanChangePreviewView,
 } from "../operations/plan-change-preview";
-import { releaseSchedule } from "../operations/plan-change-schedule";
+import {
+  cancelScheduledChange,
+  releaseSchedule,
+} from "../operations/plan-change-schedule";
 import { ValidationError } from "@/shared/errors";
 import type { PaidCustomer } from "../data/paid-customer-model/types";
 import { IModels } from "@/foundation/models";
@@ -45,6 +48,11 @@ function isNoSuchSubscriptionError(error: unknown): boolean {
 export interface SubscriptionListOptions {
   status?: "active" | "all";
   bindings?: PaidCustomer[];
+  /**
+   * Expand each subscription's schedule, which holds a pending plan change.
+   * Only Billing status reads it, so tier checks and webhooks skip the cost.
+   */
+  expandSchedule?: boolean;
 }
 
 export interface IStripeService {
@@ -64,6 +72,10 @@ export interface IStripeService {
     priceId: string,
     prorationDate?: number | null,
   ): Promise<PlanChangeResultView>;
+  cancelScheduledPlanChange(
+    userId: string,
+    clientId: string,
+  ): Promise<{ success: boolean; message?: string }>;
   handleCheckoutSessionCompleted(
     session: Stripe.Checkout.Session,
     clientId: string,
@@ -289,6 +301,27 @@ export class StripeService implements IStripeService {
       priceId,
       { prorationDate },
     );
+  }
+
+  async cancelScheduledPlanChange(
+    userId: string,
+    clientId: string,
+  ): Promise<{ success: boolean; message?: string }> {
+    const deps = this.planChangeDeps(clientId);
+    try {
+      return await cancelScheduledChange(deps, userId, clientId);
+    } catch (error) {
+      logger.error("Error cancelling a scheduled plan change", {
+        userId,
+        clientId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return {
+        success: false,
+        message:
+          "An error occurred while cancelling your scheduled plan change. Please try again or contact support.",
+      };
+    }
   }
 
   /**
@@ -628,6 +661,7 @@ export class StripeService implements IStripeService {
           status: options.status ?? "all",
           limit: 100,
           starting_after: startingAfter,
+          ...(options.expandSchedule ? { expand: ["data.schedule"] } : {}),
         });
         for (const subscription of page.data) {
           if (

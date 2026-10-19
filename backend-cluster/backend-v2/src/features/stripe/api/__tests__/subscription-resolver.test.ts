@@ -185,8 +185,75 @@ describe("SubscriptionResolver", () => {
       expect(mockStripeService.listSubscriptions).toHaveBeenCalledTimes(1);
       expect(mockStripeService.listSubscriptions).toHaveBeenCalledWith(
         "user-123",
-        expect.objectContaining({ status: "active" }),
+        expect.objectContaining({ status: "active", expandSchedule: false }),
       );
+    });
+
+    it("reports a subscription's scheduled plan change", async () => {
+      const end = Math.floor(Date.now() / 1000) + 86_400;
+      mockStripeService.listSubscriptions.mockResolvedValue([
+        {
+          id: "sub_123",
+          status: "active",
+          livemode: true,
+          customer: "cus_live",
+          clientId: "beancount-web-prod",
+          start_date: end - 86_400 * 30,
+          cancel_at: null,
+          canceled_at: null,
+          cancel_at_period_end: false,
+          schedule: {
+            id: "sub_sched_1",
+            status: "active",
+            current_phase: { start_date: end - 86_400 * 30, end_date: end },
+            phases: [
+              {
+                start_date: end - 86_400 * 30,
+                items: [{ price: "price_1SyPdaEqsEqs2tLViLPUDoVi" }],
+              },
+              {
+                start_date: end,
+                items: [{ price: "price_1RrSOGEqsEqs2tLVFnyB34qG" }],
+              },
+            ],
+          },
+          items: {
+            data: [
+              {
+                id: "item_123",
+                quantity: 1,
+                current_period_start: end - 86_400 * 30,
+                current_period_end: end,
+                price: {
+                  id: "price_1SyPdaEqsEqs2tLViLPUDoVi",
+                  unit_amount: 9999,
+                  currency: "usd",
+                  recurring: { interval: "month", interval_count: 1 },
+                  product: { id: "prod_1", name: "Growth", deleted: false },
+                },
+              },
+            ],
+          },
+        },
+      ]);
+      const info = {
+        fieldNodes: [
+          {
+            selectionSet: {
+              selections: [
+                { kind: Kind.FIELD, name: { value: "subscriptions" } },
+              ],
+            },
+          },
+        ],
+      } as unknown as GraphQLResolveInfo;
+
+      const result = await resolver.subscriptionStatus(mockContext, info);
+
+      expect(result.subscriptions[0]?.scheduledChange).toEqual({
+        priceId: "price_1RrSOGEqsEqs2tLVFnyB34qG",
+        effectiveAt: new Date(end * 1000),
+      });
     });
 
     it("queries Stripe for full billing details even with a valid live cache", async () => {
@@ -221,7 +288,7 @@ describe("SubscriptionResolver", () => {
       ).not.toHaveBeenCalled();
       expect(mockStripeService.listSubscriptions).toHaveBeenCalledWith(
         "user-123",
-        expect.objectContaining({ status: "all" }),
+        expect.objectContaining({ status: "all", expandSchedule: true }),
       );
     });
 
@@ -295,7 +362,7 @@ describe("SubscriptionResolver", () => {
 
       expect(mockStripeService.listSubscriptions).toHaveBeenCalledWith(
         "user-123",
-        expect.objectContaining({ status: "active" }),
+        expect.objectContaining({ status: "active", expandSchedule: false }),
       );
       expect(result.hasActiveSubscription).toBe(true);
     });

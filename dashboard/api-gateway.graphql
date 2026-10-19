@@ -651,6 +651,19 @@ type Subscription {
   items: [SubscriptionItem!]!
   """The card renewals and plan changes charge, when known."""
   paymentMethod: PaymentMethodSummary
+
+  """
+  The change scheduled for the end of the paid period; cancelScheduledPlanChange undoes it.
+  """
+  scheduledChange: ScheduledPlanChange
+}
+
+"""
+A plan change that takes effect at the end of the paid period. Nothing is charged until then.
+"""
+type ScheduledPlanChange {
+  priceId: String!
+  effectiveAt: DateTimeISO!
 }
 
 type PaymentMethodSummary {
@@ -683,6 +696,12 @@ type PlanChangePreview {
   alternativePriceId: String
   limitChanges: [PlanLimitChange!]!
   paymentMethod: PaymentMethodSummary
+
+  """The scheduled change this choice would replace."""
+  replacesScheduledChange: ScheduledPlanChange
+
+  """Whether this choice withdraws a pending cancellation."""
+  withdrawsCancellation: Boolean!
 }
 
 enum PlanChangeKind {
@@ -1437,7 +1456,7 @@ type Mutation {
   unstarLedger(ledgerId: String!): StarLedgerResponse!
 
   """
-  Applies an upgrade or a switch to yearly at the previewed proration time. Requires a full signed-in session.
+  Applies an upgrade or a switch to yearly at the previewed proration time, and schedules a downgrade or a switch to monthly for the end of the paid period. Requires a full signed-in session.
   """
   changePlan(
     """The prorationDate from previewPlanChange."""
@@ -1445,6 +1464,11 @@ type Mutation {
     priceId: String!
     clientId: String!
   ): PlanChangeResult!
+
+  """
+  Cancels the plan change scheduled for the end of the paid period; the current plan continues unchanged. Requires a full signed-in session.
+  """
+  cancelScheduledPlanChange(clientId: String!): SubscriptionActionResult!
 
   """
   Creates a Stripe-hosted checkout session. Requires a full signed-in session.
