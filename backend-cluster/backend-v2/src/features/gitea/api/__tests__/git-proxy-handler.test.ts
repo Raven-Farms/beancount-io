@@ -150,6 +150,7 @@ describe("setGitProxyHandler", () => {
         set: jest.fn(),
         headers: {},
         req: {},
+        res: { once: jest.fn() },
         status: 0,
         body: null,
       } as unknown as Router.RouterContext;
@@ -233,19 +234,20 @@ describe("setGitProxyHandler", () => {
       const mockHeaders = new Map<string, string>([
         ["content-type", "application/x-git-upload-pack-advertisement"],
       ]);
+      const upstreamBody = Readable.from(["mock-response-body"]);
       mockFetch.mockResolvedValue({
         status: 200,
         headers: {
           forEach: (cb: (value: string, key: string) => void) =>
             mockHeaders.forEach(cb),
         },
-        body: "mock-response-body",
+        body: upstreamBody,
       });
 
       await registeredRoute!.handler(ctx);
 
       expect(ctx.status).toBe(200);
-      expect(ctx.body).toBe("mock-response-body");
+      expect(ctx.body).toBe(upstreamBody);
 
       // Verify fetch was called with translated credentials
       const expectedLedgerAuth = Buffer.from("gitea-user:gitea-pass").toString(
@@ -280,7 +282,7 @@ describe("setGitProxyHandler", () => {
       mockFetch.mockResolvedValue({
         status: 200,
         headers: { forEach: jest.fn() },
-        body: "mock-response-body",
+        body: Readable.from(["mock-response-body"]),
       });
 
       await registeredRoute!.handler(ctx);
@@ -334,7 +336,7 @@ describe("setGitProxyHandler", () => {
       mockFetch.mockResolvedValue({
         status: 404,
         headers: { forEach: jest.fn() },
-        body: "Not Found",
+        body: Readable.from(["Not Found"]),
       });
 
       await registeredRoute!.handler(ctx);
@@ -355,19 +357,20 @@ describe("setGitProxyHandler", () => {
         const mockHeaders = new Map<string, string>([
           ["content-type", "application/x-git-upload-pack-advertisement"],
         ]);
+        const upstreamBody = Readable.from(["mock-response-body"]);
         mockFetch.mockResolvedValue({
           status: 200,
           headers: {
             forEach: (cb: (value: string, key: string) => void) =>
               mockHeaders.forEach(cb),
           },
-          body: "mock-response-body",
+          body: upstreamBody,
         });
 
         await registeredRoute!.handler(ctx);
 
         expect(ctx.status).toBe(200);
-        expect(ctx.body).toBe("mock-response-body");
+        expect(ctx.body).toBe(upstreamBody);
 
         // Should NOT look up user by email or verify password
         expect(
@@ -416,7 +419,7 @@ describe("setGitProxyHandler", () => {
         mockFetch.mockResolvedValue({
           status: 401,
           headers: { forEach: jest.fn() },
-          body: "Unauthorized",
+          body: Readable.from(["Unauthorized"]),
         });
 
         await registeredRoute!.handler(ctx);
@@ -441,6 +444,7 @@ describe("setGitProxyHandler", () => {
         set: jest.fn(),
         headers: {},
         req: {},
+        res: { once: jest.fn() },
         status: 0,
         body: null,
       } as unknown as Router.RouterContext;
@@ -626,6 +630,7 @@ describe("setGitProxyHandler", () => {
         set: jest.fn(),
         headers: {},
         req: path.endsWith("git-receive-pack") ? mainOnlyPushBody() : {},
+        res: { once: jest.fn() },
         ip: "127.0.0.1",
         status: 0,
         body: null,
@@ -637,7 +642,7 @@ describe("setGitProxyHandler", () => {
       mockFetch.mockResolvedValue({
         status: 200,
         headers: { forEach: jest.fn() },
-        body: "ok",
+        body: Readable.from(["ok"]),
       });
     });
 
@@ -846,6 +851,7 @@ describe("setGitProxyHandler", () => {
         set: jest.fn(),
         headers: {},
         req: Readable.from([Buffer.from(body)]),
+        res: { once: jest.fn() },
         ip: "127.0.0.1",
         status: 0,
         body: null,
@@ -857,7 +863,7 @@ describe("setGitProxyHandler", () => {
       mockFetch.mockResolvedValue({
         status: 200,
         headers: { forEach: jest.fn() },
-        body: "ok",
+        body: Readable.from(["ok"]),
       });
     });
 

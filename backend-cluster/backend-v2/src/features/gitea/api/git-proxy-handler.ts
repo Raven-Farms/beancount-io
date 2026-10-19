@@ -13,7 +13,7 @@ import {
   HookResponseScanner,
   type DirectiveLimitVerdict,
 } from "@/features/gitea/policy/directive-limit-gate";
-import fetch from "node-fetch";
+import fetch, { type RequestInit } from "node-fetch";
 import { logger } from "@/shared/logger";
 import { createRateLimiter } from "@/shared/rate-limiter";
 import {
@@ -603,13 +603,26 @@ export function setGitProxyHandler(
       const queryString = ctx.querystring ? `?${ctx.querystring}` : "";
       const giteaUrl = `${giteaBaseUrl}${path}${queryString}`;
 
+      // A client that hangs up must end the Gitea request too. Destroying
+      // node-fetch's body, which is all Koa does, leaves the upstream socket
+      // open while Gitea keeps building a pack nobody reads (w0/056).
+      const upstream = new AbortController();
+      ctx.res.once("close", () => {
+        if (!ctx.res.writableFinished) upstream.abort();
+      });
+
       // Make the request to Gitea
       const response = await fetch(giteaUrl, {
         method: ctx.method,
         headers: forwardHeaders,
         body:
           ctx.method !== "GET" && ctx.method !== "HEAD" ? ctx.req : undefined,
+        // @types/node-fetch predates AbortSignal's `reason`; the runtime accepts Node's.
+        signal: upstream.signal as RequestInit["signal"],
       });
+      // node-fetch reports that abort as an `error` on a body the client is no
+      // longer reading, which may have no listener left.
+      response.body.on("error", () => {});
 
       // Forward response status
       ctx.status = response.status;
@@ -669,6 +682,8 @@ export function setGitProxyHandler(
         return;
       }
       const err = error as Error;
+      // The client hung up before Gitea answered; there is nobody to tell.
+      if (err.name === "AbortError") return;
       proxyLogger.error("Git proxy error", { error: err.message, path });
       ctx.status = 502;
       ctx.body = "Bad Gateway";
