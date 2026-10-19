@@ -255,9 +255,18 @@ def model_answer(text: str) -> dict[str, object]:
     return {"index": 0, "finish_reason": "stop", "message": {"role": "assistant", "content": text}}
 
 
-#: A choice to answer with, a status to fail with, a status with its body, or
-#: raw bytes to answer 200 with.
-StubReply = dict[str, object] | int | tuple[int, dict[str, object]] | bytes
+@dataclass
+class RawReply:
+    """A body sent as it is, with control of the status and headers (w5/745)."""
+
+    body: bytes
+    headers: dict[str, str] = field(default_factory=dict)
+    status: int = 200
+
+
+#: A choice to answer with, a status to fail with, a status with its body,
+#: raw bytes to answer 200 with, or a raw reply with its own status/headers.
+StubReply = dict[str, object] | int | tuple[int, dict[str, object]] | bytes | RawReply
 
 
 @dataclass
@@ -306,6 +315,16 @@ class _ModelHandler(BaseHTTPRequestHandler):
         except ValueError:
             stub.requests.append({})
         outcome = stub.reply(len(stub.requests))
+        if isinstance(outcome, RawReply):
+            # A body sent as it is, with the test's own status and headers.
+            self.send_response(outcome.status)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(outcome.body)))
+            for name, value in outcome.headers.items():
+                self.send_header(name, value)
+            self.end_headers()
+            self.wfile.write(outcome.body)
+            return
         if isinstance(outcome, bytes):
             # A body sent as it is, for a test about one the client cannot read.
             self.send_response(200)

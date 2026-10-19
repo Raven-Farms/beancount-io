@@ -246,11 +246,10 @@ def run_repl(agent: Agent[BqlDeps, str], deps: BqlDeps, *, default_input: str | 
     from pydantic_ai import capture_run_messages
 
     from cli.ask.agent import (
-        CUT_OFF_NOTICE,
         WritePermission,
         _naming_writes,
         begin_turn,
-        cut_off,
+        cut_off_notice,
         translated_failures,
         usage_limits,
         written_so_far,
@@ -372,8 +371,9 @@ def run_repl(agent: Agent[BqlDeps, str], deps: BqlDeps, *, default_input: str | 
             messages = list(result.all_messages())
             console.print()
             console.print(answer_markdown(result.output))
-            if cut_off(result):
-                console.print(Text(CUT_OFF_NOTICE, style="yellow"))
+            notice = cut_off_notice(result)
+            if notice is not None:
+                console.print(Text(notice, style="yellow"))
     finally:
         turn_loop.close()
 

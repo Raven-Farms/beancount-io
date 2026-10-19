@@ -2015,6 +2015,9 @@ write), and costs no more.
 Each answer also carries an explicit output cap rather than reserving the
 model's default allowance. An answer that reaches it is printed with a notice
 that it was cut off, and `--print` then exits **1**: ask a narrower question.
+An answer the provider's content filter stops partway prints its partial text
+with a notice naming the filter instead, and `--print` exits **1** the same
+way: rephrase the question and retry.
 
 A query's result reaches the assistant as rows with a row count, the relation
 they came from, and a zero written as `0` — a total that nets to zero is a zero,

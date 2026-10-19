@@ -69,7 +69,7 @@ def ask(
     # The missing extra is checked before the credential: without it the
     # command cannot run at all, and "log in first" would be misleading advice.
     try:
-        from cli.ask.agent import CUT_OFF_NOTICE, BqlDeps, cut_off, make_agent, translated_failures, usage_limits
+        from cli.ask.agent import BqlDeps, cut_off_notice, make_agent, translated_failures, usage_limits
     except ImportError as exc:
         raise UsageError(_MISSING_EXTRA) from exc
 
@@ -111,9 +111,10 @@ def ask(
         with console.status("[dim]Thinking…[/dim]", spinner="dots"), translated_failures(deps):
             result = agent.run_sync(question, deps=deps, usage_limits=usage_limits())
         console.print(answer_markdown(result.output))
-        if cut_off(result):
+        notice = cut_off_notice(result)
+        if notice is not None:
             # Part of an answer is not the answer: a nonzero exit says so (w5/546).
-            raise BeaError(CUT_OFF_NOTICE)
+            raise BeaError(notice)
     else:
         from cli.ask.repl import print_welcome, run_repl
 

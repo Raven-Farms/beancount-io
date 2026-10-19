@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import re
 import threading
+import warnings
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -11,7 +13,7 @@ from pathlib import Path
 
 from pydantic_ai import Agent, AgentRunResult, ModelRetry, RunContext
 from pydantic_ai.exceptions import AgentRunError, ModelAPIError, ModelHTTPError, UsageLimitExceeded
-from pydantic_ai.messages import ModelMessage, ModelResponse
+from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart
 from pydantic_ai.models import ModelRequestParameters
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
@@ -125,13 +127,33 @@ MAX_OUTPUT_TOKENS = 1500
 #: the cap fell, mid-figure included, and printed as if complete (w5/546).
 CUT_OFF_NOTICE = "The answer reached the per-answer limit and was cut off; ask a narrower question."
 
+#: Said when the provider's content filter stopped an answer partway: the text
+#: printed above is its beginning only, and the length wording would mislead
+#: about what to try instead (w5/745).
+FILTER_NOTICE = (
+    "The answer was stopped by the provider's content filter and is incomplete; rephrase the question and retry."
+)
 
-def cut_off(result: AgentRunResult[str]) -> bool:
-    """Whether a run's final answer stopped at the output cap instead of finishing."""
+
+def cut_off_notice(result: AgentRunResult[str]) -> str | None:
+    """The notice a run's final answer needs, when part of it is not the whole.
+
+    An answer cut at the output cap and one stopped by the content filter both
+    print their partial text; only the notice keeps either from reading as
+    complete. A fully filtered answer carries no text to mistake, so it needs
+    no notice.
+    """
     for message in reversed(result.all_messages()):
         if isinstance(message, ModelResponse):
-            return getattr(message, "finish_reason", None) == "length"
-    return False
+            reason = getattr(message, "finish_reason", None)
+            if reason == "length":
+                return CUT_OFF_NOTICE
+            if reason == "content_filter" and any(
+                isinstance(part, TextPart) and part.content for part in message.parts
+            ):
+                return FILTER_NOTICE
+            return None
+    return None
 
 
 def usage_limits() -> UsageLimits:
@@ -296,10 +318,7 @@ def _model_api_error(exc: BaseException) -> BeaError:
 
     from cli.errors import to_bea_error
 
-    cause: BaseException | None = exc
-    seen: set[int] = set()
-    while cause is not None and id(cause) not in seen:
-        seen.add(id(cause))
+    for cause in _causes(exc):
         response = getattr(cause, "response", None)
         if isinstance(response, httpx.Response):
             if 300 <= response.status_code < 400:
@@ -315,7 +334,6 @@ def _model_api_error(exc: BaseException) -> BeaError:
             )
         if isinstance(cause, httpx.TransportError):
             return to_bea_error(cause)
-        cause = cause.__cause__ or cause.__context__
     return BeaError(f"Could not reach the server ({type(exc).__name__}).")
 
 
@@ -384,6 +402,73 @@ class UnreadableModelReply(Exception):
         self.status = status
 
 
+#: Model attempts per request: the first try plus two retries, the count the
+#: SDK client's own default made. Retries live here instead of in that setting
+#: so a failure that cannot heal is reported after one request instead of
+#: billed three times (w5/745).
+_MODEL_ATTEMPTS = 3
+
+
+def _causes(exc: BaseException) -> Iterator[BaseException]:
+    """The exception and its causes, without looping on a cycle."""
+    seen: set[int] = set()
+    cause: BaseException | None = exc
+    while cause is not None and id(cause) not in seen:
+        seen.add(id(cause))
+        yield cause
+        cause = cause.__cause__ or cause.__context__
+
+
+def _decode_status(exc: BaseException) -> int | None:
+    """The status whose body claims an encoding it was not sent in, if any.
+
+    A 200 labelled gzip but not gzipped reaches bea as a connection error with
+    an `httpx.DecodingError` in its cause chain: the bytes arrived, they just
+    cannot be read. That is an unreadable reply, not an unreachable server —
+    and sending it again bills the same question for the same failure.
+    """
+    import httpx
+
+    status: int | None = None
+    found = False
+    for cause in _causes(exc):
+        if isinstance(cause, httpx.DecodingError):
+            found = True
+        if status is None:
+            response = getattr(cause, "response", None)
+            code = getattr(cause, "status_code", None)
+            if isinstance(response, httpx.Response):
+                status = response.status_code
+            elif isinstance(code, int):
+                status = code
+    if not found:
+        return None
+    return status if status is not None else 200
+
+
+def _answered(exc: BaseException) -> bool:
+    """Whether the cause chain carries the server's HTTP response.
+
+    A response means the server was reached and spoke — a redirect, refused at
+    once and never followed (w5/679). Only a failure with no response at all —
+    refused, reset, timed out — is a connection worth retrying.
+    """
+    import httpx
+
+    return any(isinstance(getattr(cause, "response", None), httpx.Response) for cause in _causes(exc))
+
+
+def _retryable_status(exc: ModelHTTPError) -> bool:
+    """Whether an HTTP failure may heal on another attempt.
+
+    The client's own retry set, which this loop carries: a timeout, a lock, a
+    rate limit, or a 5xx — unless the server itself says not to retry.
+    """
+    if exc.status_code not in (408, 409, 429) and exc.status_code < 500:
+        return False
+    return (exc.headers or {}).get("x-should-retry") != "false"
+
+
 class _ProxyChatModel(OpenAIChatModel):
     """The chat model, with a reply its SDK cannot read raised as one exception.
 
@@ -396,6 +481,12 @@ class _ProxyChatModel(OpenAIChatModel):
     and a `"type": "custom"` tool call the SDK's own `RuntimeError` (w5/547).
     Only the model call is wrapped, so a fault in bea's own tools is never
     reported as the server's.
+
+    The wrap also carries the request retries the client's own setting used
+    to: transient failures get their attempts, while a body in an encoding it
+    was not sent in is reported after the first (w5/745). And warnings stay
+    inside the wrap — a wrong-typed field warns from within the reply's parse,
+    and the warning would otherwise print ahead of bea's own sentence.
     """
 
     async def request(
@@ -406,21 +497,42 @@ class _ProxyChatModel(OpenAIChatModel):
     ) -> ModelResponse:
         from openai import APIResponseValidationError
 
-        try:
-            return await super().request(messages, model_settings, model_request_parameters)
-        except APIResponseValidationError as exc:
-            raise UnreadableModelReply(exc.response.status_code) from exc
-        except (ValueError, IndexError, KeyError, TypeError, RecursionError) as exc:
-            # The SDK parses only a successful body; any other status raises its
-            # status error, which arrives as `ModelHTTPError`. `ValueError`
-            # covers `JSONDecodeError` and `UnicodeDecodeError`.
-            raise UnreadableModelReply(200) from exc
-        except RuntimeError as exc:
-            # Only the SDK's refusal of a custom tool call: its own run failures
-            # (`AgentRunError`) are `RuntimeError`s too, and are reported apart.
-            if type(exc) is not RuntimeError or not str(exc).startswith("Custom tool calls"):
+        for attempt in range(_MODEL_ATTEMPTS):
+            try:
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    return await super().request(messages, model_settings, model_request_parameters)
+            except APIResponseValidationError as exc:
+                raise UnreadableModelReply(exc.response.status_code) from exc
+            except ModelHTTPError as exc:
+                # `ModelHTTPError` subclasses `ModelAPIError`, so this arm is
+                # first: a refused credential or bad request reports at once.
+                if _retryable_status(exc) and attempt + 1 < _MODEL_ATTEMPTS:
+                    await asyncio.sleep(0.5 * 2**attempt)
+                    continue
                 raise
-            raise UnreadableModelReply(200) from exc
+            except ModelAPIError as exc:
+                status = _decode_status(exc)
+                if status is not None:
+                    raise UnreadableModelReply(status) from exc
+                if _answered(exc):
+                    raise
+                if attempt + 1 < _MODEL_ATTEMPTS:
+                    await asyncio.sleep(0.5 * 2**attempt)
+                    continue
+                raise
+            except (ValueError, IndexError, KeyError, TypeError, RecursionError) as exc:
+                # The SDK parses only a successful body; any other status raises its
+                # status error, which arrives as `ModelHTTPError`. `ValueError`
+                # covers `JSONDecodeError` and `UnicodeDecodeError`.
+                raise UnreadableModelReply(200) from exc
+            except RuntimeError as exc:
+                # Only the SDK's refusal of a custom tool call: its own run failures
+                # (`AgentRunError`) are `RuntimeError`s too, and are reported apart.
+                if type(exc) is not RuntimeError or not str(exc).startswith("Custom tool calls"):
+                    raise
+                raise UnreadableModelReply(200) from exc
+        raise AssertionError("unreachable: the loop returns, raises, or retries")
 
 
 def make_agent(
@@ -429,9 +541,24 @@ def make_agent(
     api_key: str,
     skills: list[AgentSkill] | None = None,
 ) -> Agent[BqlDeps, str]:
+    from openai import AsyncOpenAI
+    from pydantic_ai.models import create_async_http_client
+
     model = _ProxyChatModel(
         model_name,
-        provider=OpenAIProvider(base_url=base_url, api_key=api_key),
+        # The client's own retries are off: `_ProxyChatModel.request` retries
+        # transient failures itself, so a body in the wrong encoding is
+        # reported after one request instead of billed three times (w5/745).
+        # The transport stays the provider's own, which never follows a
+        # redirect (w5/679): only the retry count changes.
+        provider=OpenAIProvider(
+            openai_client=AsyncOpenAI(
+                base_url=base_url,
+                api_key=api_key,
+                max_retries=0,
+                http_client=create_async_http_client(),
+            )
+        ),
     )
     system_prompt = _SYSTEM_PROMPT
     if skills:
