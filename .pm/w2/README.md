@@ -54,7 +54,6 @@
 ## Inbox
 
 - [080 — Decide whether the suite keeps its no-`bea` developer fallback](./blocked/080.md) (owner decision) — **blocked:** the owner picks keep, read-only, or require-`bea`
-- [081 — Decide whether `beancount-ask` becomes `beancount-query`](./081.md) (after m39 t001's routing evidence)
 - [082 — Offer the skill suite as a Claude Code plugin too](./082.md) (needs sizing)
 - [083 — Codex cannot find beancount-init's `bea-cli.md` in a linked install, so the shared command contract goes unread](./083.md)
 
