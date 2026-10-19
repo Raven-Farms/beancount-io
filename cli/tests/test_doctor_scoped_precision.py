@@ -191,6 +191,68 @@ def test_an_inferred_leg_does_not_widen_the_tree(tmp_path: Path) -> None:
     assert "Net Income: (-12.50 USD)" in result.stdout
 
 
+PRICED_SCOPE = """2024-01-01 open Assets:Broker
+2024-01-01 open Assets:Cash USD
+2024-01-01 open Expenses:Food USD
+
+2024-01-02 * "lunch"
+  Expenses:Food  12.50 USD
+  Assets:Cash
+
+2024-01-03 * "Buy VTI" ^b
+  Assets:Broker  10 VTI {245.12 USD}
+  Assets:Cash
+
+2024-01-31 price VTI 251.3378 USD
+"""
+
+SPLIT_COST = """2024-01-01 open Assets:Broker
+2024-01-01 open Assets:Cash USD
+
+2024-01-03 * "Buy" ^x
+  Assets:Broker  3 HOOL {{100.00 USD}}
+  Assets:Cash
+
+2024-01-05 price HOOL 40.00 USD
+"""
+
+
+def _tree_amount(stdout: str, account: str) -> list[str]:
+    line = next(line for line in stdout.splitlines() if re.search(rf"[|`]-- {account}\b", line))
+    return line.split()[-2:]
+
+
+def test_an_inferred_only_currency_uses_the_ledger_usual_precision(tmp_path: Path) -> None:
+    """Copying the ledger context let a price's 4 places set the column (w5/768)."""
+    result = _bea(tmp_path, "doctor", "linked", str(_ledger(tmp_path, PRICED_SCOPE)), "^b")
+
+    assert result.returncode == 0, result.stderr
+    assert _tree_amount(result.stdout, "Cash") == ["-2451.20", "USD"], result.stdout
+    assert ".2000" not in result.stdout
+
+
+@pytest.mark.parametrize(
+    ("conversion", "shown"),
+    [
+        ("cost", {"Broker": ["100.00", "USD"], "Cash": ["-100.00", "USD"]}),
+        (
+            "value",
+            {"Broker": ["120.00", "USD"], "Cash": ["-100.00", "USD"], "Unrealized": ["-20.00", "USD"]},
+        ),
+    ],
+    ids=["cost", "value"],
+)
+def test_converted_division_artifacts_round_to_the_usual_precision(
+    tmp_path: Path, conversion: str, shown: dict[str, list[str]]
+) -> None:
+    """A total-cost split's 26 digits are learned rounded, not raw (w5/768)."""
+    result = _bea(tmp_path, "doctor", "region", str(_ledger(tmp_path, SPLIT_COST)), "4:6", "--conversion", conversion)
+
+    assert result.returncode == 0, result.stderr
+    for account, amount in shown.items():
+        assert _tree_amount(result.stdout, account) == amount, result.stdout
+
+
 def test_a_fixed_display_precision_is_kept(tmp_path: Path) -> None:
     ledger = _ledger(tmp_path, 'option "display_precision" "USD:0.001"\n' + INFERRED_LEG)
 

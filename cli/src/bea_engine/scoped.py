@@ -245,6 +245,7 @@ def _context_of(entries: Any, options_map: Any, conversion: Any = None, price_ma
                 continue
             context.update(posting.units.number, posting.units.currency)
             seen = True
+    ledger_context = options_map.get("dcontext")
     if conversion in ("cost", "value"):
         root = realization.realize(entries)  # type: ignore[no-untyped-call]
         for real_account in realization.iter_children(root):  # type: ignore[no-untyped-call]
@@ -253,12 +254,20 @@ def _context_of(entries: Any, options_map: Any, conversion: Any = None, price_ma
                 converted.append(real_account.balance.reduce(convert.get_value, price_map))
             for balance in converted:
                 for position in balance:
-                    if position.units.number is not None:
-                        context.update(position.units.number, position.units.currency)
-                        seen = True
+                    number = position.units.number
+                    if number is None:
+                        continue
+                    if _is_division_artifact(number):
+                        # A total-cost split or an interpolation divided here:
+                        # learn the rounded value at the ledger's usual
+                        # precision, not the 26 artifact digits (w5/768).
+                        rounded = _at_ledger_precision(number, position.units.currency, ledger_context)
+                        if rounded is not None:
+                            number = rounded
+                    context.update(number, position.units.currency)
+                    seen = True
     if not seen:
         return options_map["dcontext"]
-    ledger_context = options_map.get("dcontext")
     if ledger_context is not None:
         context.set_commas(ledger_context.commas)
         for currency, known in ledger_context.ccontexts.items():
@@ -266,6 +275,31 @@ def _context_of(entries: Any, options_map: Any, conversion: Any = None, price_ma
             if isinstance(fixed, int):
                 context.set_fixed_precision(currency, fixed)
             elif currency in inferred and currency not in context.ccontexts:
-                # Only an inferred leg carries it here: format it as the ledger does.
-                context.ccontexts[currency] = known
+                # Only an inferred leg carries it here: the ledger's usual
+                # precision, not its maximum (a price's 4 places became the
+                # column's in w5/768's fixture).
+                context.set_fixed_precision(currency, known.get_fractional_digits_common())
     return context
+
+
+#: Significant digits at which a converted balance stops being a typed number.
+#: Beancount computes with the default 28-digit decimal context, so a number
+#: using all of it came out of a division — a total-cost split or an
+#: interpolation — not out of the ledger text.
+_DIVISION_DIGITS = 28
+
+
+def _is_division_artifact(number: Any) -> bool:
+    """Whether this converted balance is division output rather than a typed number."""
+    digits = getattr(number.as_tuple(), "digits", None)
+    return isinstance(digits, tuple) and len(digits) >= _DIVISION_DIGITS
+
+
+def _at_ledger_precision(number: Any, currency: str, ledger_context: Any) -> Any | None:
+    """This number rounded to the ledger's usual precision for its currency, if known."""
+    from decimal import Decimal
+
+    known = (getattr(ledger_context, "ccontexts", None) or {}).get(currency)
+    if known is None:
+        return None
+    return number.quantize(Decimal(1).scaleb(-known.get_fractional_digits_common()))
