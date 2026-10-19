@@ -513,6 +513,236 @@
         "beancount-add"
       ],
       "why": "A hosted ledger."
+    },
+    {
+      "id": "i18n-zh-ask-groceries",
+      "prompt": "我上个月在食品杂货上花了多少钱？",
+      "expected": "beancount-ask",
+      "confusable": [
+        "beancount-close"
+      ],
+      "why": "Non-English spending question; mirrors ask-groceries-last-month."
+    },
+    {
+      "id": "i18n-zh-import-csv",
+      "prompt": "把这个银行 CSV 导入我的账本：./chase-may.csv",
+      "expected": "beancount-import",
+      "confusable": [
+        "beancount-reconcile"
+      ],
+      "why": "Non-English bank-CSV import; mirrors import-chase-csv."
+    },
+    {
+      "id": "i18n-zh-add-groceries",
+      "prompt": "记录昨天在 Trader Joe's 用支票账户支付的 54.20 美元食品杂货。",
+      "expected": "beancount-add",
+      "confusable": [
+        "beancount-import"
+      ],
+      "why": "Non-English single purchase to record, not a file import."
+    },
+    {
+      "id": "i18n-zh-reconcile-statement",
+      "prompt": "把我的支票账户和这份对账单核对一下：./may-statement.csv",
+      "expected": "beancount-reconcile",
+      "confusable": [
+        "beancount-import",
+        "beancount-close"
+      ],
+      "why": "Non-English account-vs-statement comparison; mirrors reconcile-checking-may."
+    },
+    {
+      "id": "i18n-zh-hosted-dining",
+      "prompt": "我的账本托管在 Beancount.io 上，并通过它的 MCP 服务器连接。我上个月在餐饮上花了多少？",
+      "expected": "none",
+      "confusable": [
+        "beancount-ask"
+      ],
+      "why": "Non-English hosted-ledger question; local skills do not apply."
+    },
+    {
+      "id": "i18n-ja-ask-groceries",
+      "prompt": "先月、食料品にいくら使いましたか？",
+      "expected": "beancount-ask",
+      "confusable": [
+        "beancount-close"
+      ],
+      "why": "Non-English spending question; mirrors ask-groceries-last-month."
+    },
+    {
+      "id": "i18n-ja-import-csv",
+      "prompt": "この銀行の CSV を台帳にインポートしてください：./chase-may.csv",
+      "expected": "beancount-import",
+      "confusable": [
+        "beancount-reconcile"
+      ],
+      "why": "Non-English bank-CSV import; mirrors import-chase-csv."
+    },
+    {
+      "id": "i18n-ja-add-groceries",
+      "prompt": "昨日 Trader Joe's で当座預金口座から支払った 54.20 ドルの食料品を記録してください。",
+      "expected": "beancount-add",
+      "confusable": [
+        "beancount-import"
+      ],
+      "why": "Non-English single purchase to record, not a file import."
+    },
+    {
+      "id": "i18n-ja-reconcile-statement",
+      "prompt": "この明細書と私の当座預金口座を照合してください：./may-statement.csv",
+      "expected": "beancount-reconcile",
+      "confusable": [
+        "beancount-import",
+        "beancount-close"
+      ],
+      "why": "Non-English account-vs-statement comparison; mirrors reconcile-checking-may."
+    },
+    {
+      "id": "i18n-ja-hosted-dining",
+      "prompt": "台帳は Beancount.io にホストされ、その MCP サーバーに接続しています。先月、外食にいくら使いましたか？",
+      "expected": "none",
+      "confusable": [
+        "beancount-ask"
+      ],
+      "why": "Non-English hosted-ledger question; local skills do not apply."
+    },
+    {
+      "id": "i18n-de-ask-groceries",
+      "prompt": "Wie viel habe ich letzten Monat für Lebensmittel ausgegeben?",
+      "expected": "beancount-ask",
+      "confusable": [
+        "beancount-close"
+      ],
+      "why": "Non-English spending question; mirrors ask-groceries-last-month."
+    },
+    {
+      "id": "i18n-de-import-csv",
+      "prompt": "Importiere diese Bank-CSV in mein Hauptbuch: ./chase-may.csv",
+      "expected": "beancount-import",
+      "confusable": [
+        "beancount-reconcile"
+      ],
+      "why": "Non-English bank-CSV import; mirrors import-chase-csv."
+    },
+    {
+      "id": "i18n-de-add-groceries",
+      "prompt": "Erfasse gestern einen Einkauf bei Trader Joe's über $54.20, bezahlt vom Girokonto.",
+      "expected": "beancount-add",
+      "confusable": [
+        "beancount-import"
+      ],
+      "why": "Non-English single purchase to record, not a file import."
+    },
+    {
+      "id": "i18n-de-reconcile-statement",
+      "prompt": "Stimme mein Girokonto mit diesem Auszug ab: ./may-statement.csv",
+      "expected": "beancount-reconcile",
+      "confusable": [
+        "beancount-import",
+        "beancount-close"
+      ],
+      "why": "Non-English account-vs-statement comparison; mirrors reconcile-checking-may."
+    },
+    {
+      "id": "i18n-de-hosted-dining",
+      "prompt": "Mein Hauptbuch liegt auf Beancount.io und ich bin über dessen MCP-Server verbunden. Wie viel habe ich letzten Monat für Essengehen ausgegeben?",
+      "expected": "none",
+      "confusable": [
+        "beancount-ask"
+      ],
+      "why": "Non-English hosted-ledger question; local skills do not apply."
+    },
+    {
+      "id": "i18n-es-ask-groceries",
+      "prompt": "¿Cuánto gasté en supermercado el mes pasado?",
+      "expected": "beancount-ask",
+      "confusable": [
+        "beancount-close"
+      ],
+      "why": "Non-English spending question; mirrors ask-groceries-last-month."
+    },
+    {
+      "id": "i18n-es-import-csv",
+      "prompt": "Importa este CSV del banco a mi libro mayor: ./chase-may.csv",
+      "expected": "beancount-import",
+      "confusable": [
+        "beancount-reconcile"
+      ],
+      "why": "Non-English bank-CSV import; mirrors import-chase-csv."
+    },
+    {
+      "id": "i18n-es-add-groceries",
+      "prompt": "Registra una compra de supermercado de $54.20 en Trader Joe's ayer, pagada desde la cuenta corriente.",
+      "expected": "beancount-add",
+      "confusable": [
+        "beancount-import"
+      ],
+      "why": "Non-English single purchase to record, not a file import."
+    },
+    {
+      "id": "i18n-es-reconcile-statement",
+      "prompt": "Concilia mi cuenta corriente con este extracto: ./may-statement.csv",
+      "expected": "beancount-reconcile",
+      "confusable": [
+        "beancount-import",
+        "beancount-close"
+      ],
+      "why": "Non-English account-vs-statement comparison; mirrors reconcile-checking-may."
+    },
+    {
+      "id": "i18n-es-hosted-dining",
+      "prompt": "Mi libro está alojado en Beancount.io y estoy conectado a través de su servidor MCP. ¿Cuánto gasté en restaurantes el mes pasado?",
+      "expected": "none",
+      "confusable": [
+        "beancount-ask"
+      ],
+      "why": "Non-English hosted-ledger question; local skills do not apply."
+    },
+    {
+      "id": "i18n-fr-ask-groceries",
+      "prompt": "Combien ai-je dépensé en courses le mois dernier ?",
+      "expected": "beancount-ask",
+      "confusable": [
+        "beancount-close"
+      ],
+      "why": "Non-English spending question; mirrors ask-groceries-last-month."
+    },
+    {
+      "id": "i18n-fr-import-csv",
+      "prompt": "Importe ce CSV de ma banque dans mon grand livre : ./chase-may.csv",
+      "expected": "beancount-import",
+      "confusable": [
+        "beancount-reconcile"
+      ],
+      "why": "Non-English bank-CSV import; mirrors import-chase-csv."
+    },
+    {
+      "id": "i18n-fr-add-groceries",
+      "prompt": "Enregistre un achat de courses de 54,20 $ chez Trader Joe's hier, payé depuis le compte courant.",
+      "expected": "beancount-add",
+      "confusable": [
+        "beancount-import"
+      ],
+      "why": "Non-English single purchase to record, not a file import."
+    },
+    {
+      "id": "i18n-fr-reconcile-statement",
+      "prompt": "Rapproche mon compte courant avec ce relevé : ./may-statement.csv",
+      "expected": "beancount-reconcile",
+      "confusable": [
+        "beancount-import",
+        "beancount-close"
+      ],
+      "why": "Non-English account-vs-statement comparison; mirrors reconcile-checking-may."
+    },
+    {
+      "id": "i18n-fr-hosted-dining",
+      "prompt": "Mon grand livre est hébergé sur Beancount.io et je suis connecté via son serveur MCP. Combien ai-je dépensé au restaurant le mois dernier ?",
+      "expected": "none",
+      "confusable": [
+        "beancount-ask"
+      ],
+      "why": "Non-English hosted-ledger question; local skills do not apply."
     }
   ]
 }

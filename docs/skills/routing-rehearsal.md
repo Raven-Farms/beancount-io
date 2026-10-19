@@ -172,3 +172,17 @@ misses among them. In targeted Codex reruns, `none-what-is-bea-ask` and
 `beancount-ask` in three of nine runs across the hand-off change and the
 ask skip clause that followed, against none in ten earlier runs, so it is
 recorded as Codex-variable rather than settled.
+
+## Non-English prompts — 2026-10-19
+
+The set gained 25 prompts (`i18n-*`): one ask, one import, one add, one
+reconcile, and one hosted hand-off (`none`) each in Chinese, Japanese,
+German, Spanish, and French, mirroring the English entries they parallel.
+One run at `f060180cd` against the live suite: Claude Code 2.1.289
+(`claude-opus-5-5[1m]`) routed 25/25 as labeled, including all five hosted
+prompts to no skill, so no description gained non-English trigger words.
+Codex 0.163.0 (`gpt-6-luna`) returned errors for all 25 — its account
+usage limit ("try again at Nov 17th, 2026") plus connection failures under
+parallel jobs — so Codex has not routed these prompts yet. Rerun the
+`i18n-*` entries on Codex when usage returns before treating non-English
+routing as settled on both clients (tracked in w2/086).

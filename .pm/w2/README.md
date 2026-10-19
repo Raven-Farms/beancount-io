@@ -63,7 +63,7 @@
 - [080 — Decide whether the suite keeps its no-`bea` developer fallback](./blocked/080.md) (owner decision) — **blocked:** the owner picks keep, read-only, or require-`bea`
 - [083 — Codex cannot find beancount-init's `bea-cli.md` in a linked install, so the shared command contract goes unread](./blocked/083.md) — **blocked:** fix shipped; the Codex probe rerun waits for Codex usage
 - [084 — Say plainly where ledger data goes, and how the suite relates to upstream Beancount](./blocked/084.md) — **blocked:** the "Your data" draft is written in the note; the owner approves the affiliation wording
-- [086 — Check that non-English ledger requests route to the right skill](./086.md)
+- [086 — Check that non-English ledger requests route to the right skill](./blocked/086.md) — **blocked:** 25 prompts added and routed 25/25 on one client; the Codex rerun waits for Codex usage
 - [087 — Decide whether to publish the skill suite from a slim public mirror repository](./087.md) (owner decision)
 - [088 — Glama shows the hosted MCP connector at 0.0% uptime over 15 days](./088.md) (operator step)
 
