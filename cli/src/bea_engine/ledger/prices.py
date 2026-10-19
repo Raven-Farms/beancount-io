@@ -30,6 +30,33 @@ if TYPE_CHECKING:  # pragma: no cover
 ONE = Decimal(1)
 ZERO = Decimal()
 
+
+def reciprocal_agrees(typed: Decimal | None, other: Decimal | None) -> bool:
+    """Whether a new quote agrees with a same-day reciprocal, at the typed precision.
+
+    Two quotes name the same rate when the inverse of one rounds to the
+    other at the other's typed precision: `0.3333` agrees with `3`, as
+    `0.9211` agrees with `1.0857`, though neither product is exactly 1
+    (w5/741). Shared by `add price` and import, which must refuse the same
+    pairs.
+    """
+    from decimal import InvalidOperation, localcontext
+
+    if not typed or not other:
+        return False
+    digits = typed.as_tuple().digits
+    exponent = typed.as_tuple().exponent
+    if not isinstance(exponent, int):
+        return False
+    quantum = Decimal((0, (1,), exponent))
+    with localcontext() as context:
+        context.prec = max(28, len(digits) + len(other.as_tuple().digits) + 12)
+        try:
+            return (ONE / other).quantize(quantum) == typed
+        except InvalidOperation:
+            return False
+
+
 Quote = tuple[date, str, str, Decimal]
 """One price point in entry order: day, base, quote, rate."""
 

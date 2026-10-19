@@ -596,7 +596,8 @@ skills deduplicate against each other: the ledger itself is the dedup database.
   day, so a price equal in value to a recorded one (`110.0` against `110.00`)
   is a duplicate, and a different amount for that day — recorded in the
   ledger or in an earlier row of the import — is a conflict naming both
-  values, which `--apply` refuses with exit **4**. A price a plugin such as
+  values, which `--apply` refuses with exit **4**. A same-day quote in the
+  other direction that disagrees is a conflict too. A price a plugin such as
   `implicit_prices` generates counts as neither. Import does not change the
   meaning of existing transactions or delete them, and never modifies existing
   lines: appended entries are written where `bea format` would put them, and

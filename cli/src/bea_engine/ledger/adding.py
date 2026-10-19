@@ -798,8 +798,11 @@ def _price(
     # A same-day quote in the other direction is the same rate for the day, and
     # one that disagrees made `balance` and `query` value the pair differently
     # by line order; with both, Beancount values by the inverse of the
-    # direction quoted less often (w5/556).
-    crossing = next((entry for entry in reciprocal_prices if (entry.amount.number or 0) * number != 1), None)
+    # direction quoted less often (w5/556). Agreement is judged at the typed
+    # precision, as import judges it (w5/741).
+    from bea_engine.ledger.prices import reciprocal_agrees
+
+    crossing = next((entry for entry in reciprocal_prices if not reciprocal_agrees(number, entry.amount.number)), None)
     if crossing is not None and not request.get("force"):
         where = f"{crossing.meta.get('filename')}:{crossing.meta.get('lineno')}"
         raise protocol.ConflictError(
@@ -809,8 +812,54 @@ def _price(
             "values the pair by the inverse of the direction quoted less often."
         )
 
+    # A generated same-day reciprocal (implicit_prices) is no conflict, but the
+    # new quote can still lose the day to it; a write no read will use says
+    # so, naming the implied price's location (w5/741). The settlement is
+    # simulated with the new quote appended last, as the ledger will sort it
+    # once written; a written quote that disagrees owns the refusal above, so
+    # only a generated winner warns here.
+    generated = [
+        item
+        for item in entries
+        if isinstance(item, Price)
+        and item.date == directive.date
+        and (item.currency, item.amount.currency) == (amount_currency, currency)
+        and entry_generated(item, "price")
+    ]
+    written_disagree = any(not reciprocal_agrees(number, item.amount.number) for item in reciprocal_prices)
+    generated_warning = None
+    if generated and not written_disagree:
+        from bea_engine.ledger.prices import settle_price_days
+
+        day_quotes = [
+            (item.date, item.currency, item.amount.currency, item.amount.number)
+            for item in entries
+            if isinstance(item, Price) and item.amount.number is not None
+        ]
+        day_quotes.append((directive.date, currency, amount_currency, number))
+        canonical = (currency, amount_currency) if currency < amount_currency else (amount_currency, currency)
+        point = next(
+            (
+                (forward, reverse)
+                for day, forward, reverse in settle_price_days(day_quotes).get(canonical, [])
+                if day == directive.date
+            ),
+            (None, None),
+        )
+        mine = point[0] if (currency, amount_currency) == canonical else point[1]
+        if mine != number:
+            winner = generated[-1]
+            where = f"{winner.meta.get('filename')}:{winner.meta.get('lineno')}"
+            generated_warning = (
+                f"{amount_currency} already has a {directive.date.isoformat()} price of "
+                f"{_plain(winner.amount.number)} {currency} implied at {where}; every read keeps valuing "
+                "the pair by it, so the new quote is never used."
+            )
+
     entry = Price({}, directive.date, currency, BcAmount(number, amount_currency))
     warnings = write.append(file, [writer.format_entry(entry)], allow_errors=allow_errors, into=into, snapshot=snapshot)
+    if generated_warning is not None:
+        warnings.append(generated_warning)
     warnings.extend(f"Ledger price shadows the managed quote from {source}." for source in sorted(managed_sources))
     return {
         "written": 1,

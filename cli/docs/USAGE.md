@@ -1441,7 +1441,7 @@ date and commodity is refused with conflict exit **4**, naming both values;
 pass `--force` to record a
 corrected quote. So is a same-day quote that disagrees with one written in the
 other direction (`EUR 1.20 USD` beside `USD 0.80 EUR`, which says 1.25); with
-both on record, every read settles each day from the quotes up to that day, as `bea query` does, whatever their line order: the pair is valued by the inverse of the direction quoted less often, and a tie is broken in favor of the quote from the alphabetically later currency. Only written price directives count: a price a plugin such as
+both on record, every read settles each day from the quotes up to that day, as `bea query` does, whatever their line order: the pair is valued by the inverse of the direction quoted less often, and a tie is broken in favor of the quote from the alphabetically later currency. Two quotes agree when the inverse of one rounds to the other at the typed precision (`0.3333` beside `3`). A quote that loses its day to a price a plugin implied is still written, with a warning naming the implied price, since no read will use it. Only written price directives count: a price a plugin such as
 `implicit_prices` generates is neither a duplicate nor a conflict. `add balance` is idempotent the same way: re-running an
 identical assertion reports the existing location and writes nothing, including
 with `--pad-from` (no new pad is written). A different value for the same date,

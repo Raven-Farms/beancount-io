@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Any
 
 from bea_engine.ledger import write as ledger_write
+from bea_engine.ledger.prices import reciprocal_agrees
 from bea_engine.ledger.text import (
     bea_command,
     checked_operating_currencies,
@@ -572,8 +573,29 @@ def answer(
                     f"{_quote_origin(other, batch_rows)}; refusing {_plain_amount(entry.amount)}."
                 )
             else:
-                recorded.append(entry)
-                batch_rows[id(entry)] = index + 1
+                # A disagreeing same-day quote in the other direction is the
+                # conflict `add price` refuses; an agreeing one is written,
+                # as `add price` writes it (w5/741). Recorded quotes and
+                # earlier rows of this import both count.
+                crossed = next(
+                    (
+                        quote
+                        for quote in quotes.get((entry.date, entry.amount.currency, entry.currency), [])
+                        if not reciprocal_agrees(entry.amount.number, quote.amount.number)
+                    ),
+                    None,
+                )
+                if crossed is not None:
+                    status, conflicts, price_conflicts = "conflict", True, True
+                    match = crossed
+                    reason = (
+                        f"{entry.amount.currency} already has a {entry.date} price of "
+                        f"{_plain_amount(crossed.amount)} at {_quote_origin(crossed, batch_rows)}, the other "
+                        f"direction of this pair; refusing {_plain_amount(entry.amount)}."
+                    )
+                else:
+                    recorded.append(entry)
+                    batch_rows[id(entry)] = index + 1
         elif not isinstance(entry, Transaction):
             if text in other_entries:
                 status, reason = "duplicate", "Identical directive already exists."
