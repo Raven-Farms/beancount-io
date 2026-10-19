@@ -2,7 +2,7 @@
 
 **Worker:** worker1
 **Goal:** Downgrades and switches from yearly to monthly are scheduled for the end of the paid period and can be undone. Cancelling offers one cheaper alternative. A failed renewal keeps paid limits while Stripe retries. Ledger-count and collaborator limits are enforced as PRFAQ005 decided.
-**Status:** todo (t001, t002, t003, t004, t005, t007, t008, t009, t010, t011, t012, t014, t015 done; t006 blocked on the user for two Stripe Dashboard settings)
+**Status:** todo (t001–t012, t014 and t015 done; t013, the deployed check and archive, remains)
 
 ## Source + Goal linkage
 
@@ -51,7 +51,7 @@ m39's README records what `beancount.io/pricing` relies on, and m40 keeps all of
 | t003 | Keep paid limits while a renewal is past due, and never fall back to Free on a Stripe error — **DONE** | 40m | — |
 | t004 | Count every owned ledger, and check collaborators against the ledger owner's plan — **DONE** | 35m | — |
 | t005 | Email when a plan change is scheduled and before it takes effect — **DONE** | 40m | t002, t006 |
-| t006 | Operator: Stripe retry, upcoming-invoice and renewal-reminder settings | 15m | — |
+| t006 | Operator: Stripe retry, upcoming-invoice and renewal-reminder settings — **DONE** | 15m | — |
 | t007 | Downgrade sheet: limits against usage, plan features and the split choice — **DONE** | 50m | t001, t002, w1/m39/t007 |
 | t008 | Scheduled-change panel and the cancel sheet — **DONE** | 40m | t002, t007 |
 | t009 | Failed-renewal banner on every dashboard page — **DONE** | 30m | t003 |
@@ -78,7 +78,3 @@ m39's README records what `beancount.io/pricing` relies on, and m40 keeps all of
 - **Gates:** backend typecheck, tests, parity and OpenAPI drift gates pass, as do dashboard format, lint, tests, translations and build.
 - **Production payment test:** the QA account passes t014 with two 100%-off coupons, covering scheduling, undo, split, cancel, resume, emails and limit errors, with everything cleaned up afterwards.
 - **Deployed check:** the deployed revision passes the remaining read-only hosted check. Completed work is moved into `done/` through `/pm`.
-
-## Blocked
-
-**t006 is blocked:** Stripe's retry schedule, its upcoming-invoice timing and its renewal reminder emails are account settings only the account owner can change or read. **Unblock:** the user applies the settings in t006 and records the retry outcome (unpaid or canceled after the last retry) without identifiers. Unless the worker has live Stripe access, they also hand over t014's two 100%-off production promotion codes privately. Cleared by the user.
