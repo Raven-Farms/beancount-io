@@ -69,6 +69,52 @@ Next: get a first answer from a sample ledger with the [first-query walkthrough]
 4. For a single-workspace install, launch the agent inside that workspace. Codex reads `.agents/skills` from the working directory up to the Git repository root.
 5. If `install` reported a conflict, see [Existing copies and name conflicts](#existing-copies-and-name-conflicts).
 
+## Install from a standard channel instead
+
+The checkout-and-link install above is one way in. The standard skill channels also carry the suite, because it lives at the conventional `skills/<name>/SKILL.md` layout. A channel install **copies** the nine skills into the agent's directory instead of linking a checkout, so there is no `verify` script afterwards: confirm with the client skill listing in step 3 and the [first-query walkthrough](first-query.md). Install the whole suite every time — the skills hand off to siblings and share one command contract. Each channel below was checked against the tool's current help (2026-10-19); the exact forms matter, for the reasons given.
+
+### `npx skills` (skills.sh)
+
+```sh
+# every ledger on this machine (drop -g inside one ledger workspace)
+npx skills add bex-co/beancount-io -g -a claude-code codex -y
+npx skills update -g -y   # later updates
+```
+
+Do **not** add `--skill '*'` or `--all`: in the current release (1.5.18, checked 2026-10-19) an explicit skill selection also installs this repository's internal development skills (28 skills instead of 9). The no-flag form above installs exactly the nine `beancount-*` skills. To remove: `npx skills remove -g` and select the nine `beancount-*` names (or pass them as arguments).
+
+### `gh skill`
+
+```sh
+gh skill install bex-co/beancount-io --all --pin main --agent claude-code --scope user
+gh skill install bex-co/beancount-io --all --pin main --agent codex --scope user
+```
+
+`--pin main` is required today, not decoration: without it, `gh` resolves this repository's *latest release* (a mobile-app tag from before the flat `skills/` layout) and reports "no standard skills found". Pinned skills are skipped by `gh skill update`, so update by re-running the install commands with `--force` added. There is no `gh skill remove`: run `gh skill list` to see the install directories, then delete the nine `beancount-*` folders from them.
+
+### Hermes
+
+Hermes installs one skill per command, by repository path:
+
+```sh
+for s in beancount-init beancount-add beancount-import beancount-importer-author beancount-reconcile beancount-migrate beancount-ask beancount-close beancount-options; do
+  hermes skills install "bex-co/beancount-io/skills/$s"
+done
+hermes skills update      # later updates (all outdated skills)
+hermes skills list        # confirm
+```
+
+Remove with `hermes skills uninstall <name>` per skill. (Commands checked against the Hermes source, 2026-10-19.)
+
+### Choosing a method
+
+- **Link installer (steps 1–3):** one checkout shared by both agents, updated by one `git pull`, with `verify` and conflict detection. Best default, and the only method that keeps local skill edits in Git.
+- **A channel:** one command, no checkout to keep. You trade `verify` and the single update point for per-agent copies that each channel updates its own way.
+
+### Switching methods
+
+Remove the old install **before** installing by another method — two copies of one skill name leave the agent choosing between duplicates, and the link installer refuses a name a copy already holds. Removal per method: link installer — `python3 "$SKILLS_SRC/scripts/skills/beancount-skills.py" uninstall <dirs>` (see [Remove](#remove)); `npx skills` — `remove` above; `gh skill` — delete the folders `gh skill list` shows; Hermes — `uninstall` per name. Then install by the new method and re-run step 3's listing.
+
 ## Update
 
 ```sh
