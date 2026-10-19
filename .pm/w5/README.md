@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [752 — import --help splits the --csv example mid-word; 13 sub-command help rows end in ...](./752.md)
 - [753 — Whole amounts with dot thousands (ISK, CLP, VND) are refused, or imported 1000x too small with exit 0](./753.md)
 - [754 — Editing the previewed CSV drops its sign=ledger on a flag-free --apply, flipping every amount](./754.md)
 - [755 — A DEBIT/CREDIT Type column cannot be mapped and is ignored, booking debits as money in](./755.md)
