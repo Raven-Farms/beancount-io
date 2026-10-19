@@ -1,12 +1,12 @@
 # w2 · m47 — Turn PDF statements and receipt photos into checked entries with documents attached
 
-**Worker:** worker2 **Goal:** a user whose bank offers only PDF statements, or who has a photo or PDF of a receipt, gets the same reviewed, deduplicated entries a CSV export produces, with the source file attached to the ledger. Extracted rows never count as imported until a `balance` assertion ties them to the statement's closing balance. **Status:** todo
+**Worker:** worker2 **Goal:** a user whose bank offers only PDF statements, or who has a photo or PDF of a receipt, gets the same reviewed, deduplicated entries a CSV export produces, with the source file attached to the ledger. Extracted rows never count as imported until a `balance` assertion ties them to the statement's closing balance. **Status:** todo (t001 done)
 
 ## Tasks (in order)
 
 | id   | title | est | depends_on |
 | ---- | ----- | --- | ---------- |
-| t001 | Decide where a PDF statement imports, how its rows are identified, and how they dedup against a later CSV | 45m | w2/079 |
+| [t001](./done/t001.md) | Decide where a PDF statement imports, how its rows are identified, and how they dedup against a later CSV — **DONE** | 45m | w2/079 |
 | t002 | Import a PDF statement as checked entries, with the statement attached | 75m | t001 |
 | t003 | Turn a receipt image or PDF into a proposed entry, with the receipt attached | 45m | t001, w2/m40/t010 |
 | t004 | Write evals with synthetic PDF statements and receipts | 60m | t002, t003 |
@@ -23,6 +23,13 @@
 - A receipt image or PDF becomes a proposed `beancount-add` entry. After a yes, the transaction and its `document` directive share a link, and the file sits where the ledger keeps documents. `bea check` passes, and it fails when the file is missing.
 - An instruction embedded in a statement or receipt is recorded or flagged, and never followed ([079](../done/079.md)'s rule).
 - The routing set includes PDF-statement and receipt-file prompts, and they route correctly on both clients. The new evals pass on Claude Code and Codex, recorded with versions and dates.
+
+## Decisions
+
+- **Placement (t001, 2026-10-19):** `beancount-import` owns "import this PDF statement". It reuses `beancount-reconcile`'s extraction reference (`references/statement-formats.md`, shared not copied — t002 adds the pointer) and finishes with reconcile's tie-out: propose only when opening + movements = closing, then the day-after `balance` assertion. `beancount-reconcile` keeps "compare my account to this statement". Routing evidence: two probe prompts ("Import my June statement PDF into my ledger — my bank has no CSV export", "Record the transactions in ./may-statement.pdf in my ledger") run through `run-routing.py` at `980bfd353` against the local suite — Claude Code 2.1.289 (`claude-opus-5-5[1m]`) opened `beancount-reconcile` for **both**, because today only reconcile's text mentions PDF statements; that is the gap t002 closes by widening import's triggers, not evidence that reconcile should own importing. Codex 0.163.0 (`gpt-6-luna`) returned its account usage-limit error for both prompts and has **not** routed them yet; t005 must rerun these prompts on Codex after t002, before this milestone's both-clients claim can be made.
+- **PDF row identity (t001):** `pdf:sha256:<16-hex>` over the same normalized hash input as the CSV form, description = the statement line as printed (wraps joined, then the shared normalization), occurrence suffix within one statement in printed order. Normative text and a worked example are in `beancount-import/references/dedup.md` ("PDF statement rows"). Sharing the hash input means identically worded PDF/CSV rows exact-match across sources; `beancount-reconcile`'s PDF proposals use the `pdf:` form from now on (its text already defers to `dedup.md`).
+- **Cross-source review (t001):** new Layer 2c in `dedup.md` — same amount to the source account within ±3 days across different `import-id` source kinds is a suspected-duplicate pair to present, no description similarity required. This confirms the Why-now inference: before Layer 2c, a later CSV could double-book PDF-recorded rows (Layer 1 misses on wording, Layer 2 skips id-bearing entries).
+- **CLI (t001):** no `bea import` change is needed for the skill path — the CLI already indexes the bare digest of any `<prefix>:sha256:` id, and the skills run Layer 2c themselves like Layers 2/2b. Drafted follow-up for `/pm add` (not filed here): "`bea import` run directly on a CSV does not flag same-purchase rows recorded earlier from a PDF (different wording, ±3 days); consider widening its possible-duplicate report across source kinds, or document that mixed-source months should import through the skill."
 
 ## Source + Goal linkage
 

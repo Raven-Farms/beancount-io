@@ -639,6 +639,14 @@ class TestDedupConvention(unittest.TestCase):
         self.assertEqual(hashlib.sha256(hashed.encode()).hexdigest()[:16], written)
         self.assertEqual(written, "d11701f46efbd599")
 
+    def test_the_pdf_example_hashes_to_its_documented_id(self):
+        text = (SUITE / "beancount-import" / "references" / "dedup.md").read_text(encoding="utf-8")
+        example = re.search(r'input `([^`]+)` → `import-id: "pdf:sha256:([0-9a-f]{16})"`', text)
+        self.assertIsNotNone(example, "dedup.md must show a PDF worked example")
+        hashed, written = example.groups()
+        self.assertEqual(hashed, "2026-06-03|-12.4 USD|STARBUCKS STORE 12345|Assets:Bank:Checking")
+        self.assertEqual(hashlib.sha256(hashed.encode()).hexdigest()[:16], written)
+
 
 RECIPE_MARK = re.compile(r"<!-- recipe: ([a-z0-9-]+) -->")
 

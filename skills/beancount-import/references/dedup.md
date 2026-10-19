@@ -12,6 +12,7 @@ import-id: "<source>:<stable-id>"
 |---|---|---|
 | A native unique ID (OFX `FITID`, any bank/exporter txn id) | `<kind>:<native-id>` | `import-id: "ofx:2026050701"` |
 | No native ID (typical CSV/QIF) | `csv:sha256:<16-hex>` | `import-id: "csv:sha256:a3f19c02d4e8b711"` |
+| No native ID, read from a PDF statement | `pdf:sha256:<16-hex>` | `import-id: "pdf:sha256:273e1fe28b2668d9"` |
 
 Other tools may use their own source prefixes (e.g. a bank-feed integration writing `plaid:<txn-id>`); the exact-match layer treats every `import-id` value as an opaque string, so foreign prefixes dedup correctly without this skill knowing them. `bea import` follows this convention: native bank IDs become `bank:<id>` (`fitid` becomes `ofx:<id>`), rows without one become `csv:sha256:<16-hex>` with the normalization above, and pre-release `bea_import_id` entries still match.
 
@@ -54,6 +55,16 @@ A canonical generated hash identifies the original source row. Keep it when revi
 
 **Same-day identical rows** (two identical coffees on one card, same date/amount/description): they produce the same hash. Disambiguate by suffixing an occurrence counter to the hash input for the second and later duplicates within one file: `…|Assets:Bank:Checking|2`. This keeps N identical rows ↔ N entries while re-imports still match 1:1 (occurrence order is stable within a file).
 
+## PDF statement rows (the `pdf:sha256` form)
+
+A row extracted from a PDF statement — by `beancount-import`, or proposed by `beancount-reconcile` from a PDF — carries `pdf:sha256:<16-hex>`. The hash input is the **same** normalized string as the `csv:sha256` form above (four fields, or five when the statement prints a separate payee), with `description` taken from the statement line **as printed**: copy the line's text, join a wrapped description's lines with one space, then apply exactly the normalization above (uppercase, collapse whitespace, strip, NFC). Never paraphrase, translate, or clean the wording first — the printed text is the raw description, the same bargain the CSV form makes with the raw export.
+
+That is what makes the id stable across re-reads of one file: the date, amount, and account are printed facts, and the normalization erases the differences a second read realistically introduces (line wraps, spacing, case). A re-read that changes actual words is an extraction difference, not an identity difference — the statement tie-out (opening + movements = closing) and the review still stand between it and a write. The occurrence rule is the same as for CSV: second and later identical rows **within one statement**, in printed order, suffix `|2`, `|3`, ….
+
+Example: a statement line dated 2026-06-03 posting `-12.40 USD` to `Assets:Bank:Checking`, printed `Starbucks Store 12345` → input `2026-06-03|-12.4 USD|STARBUCKS STORE 12345|Assets:Bank:Checking` → `import-id: "pdf:sha256:273e1fe28b2668d9"`.
+
+Sharing the hash input is deliberate: when a later CSV export's raw description for the same purchase normalizes to the same string, the two digests are equal, and the row exact-matches across sources (`bea import` already indexes the bare digest of any `<prefix>:sha256:` id). When the bank words the two sources differently, Layer 2c below is the net. The prefix still records provenance — which source kind first recorded the row — and Layer 2c keys off it.
+
 ## The two dedup layers
 
 **Layer 1 — exact (import-id match).** Collect every `import-id` value already in the ledger (scan entry metadata; also collect `import-id-2` — beancount-migrate's merged transfer pairs record the counterparty row's id there). A candidate whose ID is present under either key is *already imported*: drop it, count it in the review summary. This layer is mechanical — no user decision needed.
@@ -62,7 +73,9 @@ A canonical generated hash identifies the original source row. Keep it when revi
 
 **Layer 2b — the other side of a transfer.** A transfer imported from one account already sits in the ledger with that account's `import-id`, and posts to the source account only as its counter posting (the first posting is the other account). Each bank words its side differently (`TRANSFER TO SAVINGS` / `TRANSFER FROM CHECKING`), so neither the description pass nor Layer 1 sees the pair. For each surviving candidate, look for such entries, with or without import-id metadata, that post the **same amount** to the source account within **±3 days**, whatever the description. Each hit is a suspected duplicate, presented and decided like the ones above; *skip* is the usual answer, since the transfer is already booked.
 
-If the user chooses *skip*, offer to add the candidate's `import-id` onto the **existing** manual entry (one metadata line — the only edit-of-existing-entries this skill ever proposes, and only with explicit consent). This makes the next re-import exact-match it in layer 1 instead of re-asking.
+**Layer 2c — the same purchase from another source kind.** Layer 2 skips entries that carry an `import-id`, so a purchase first recorded from a PDF statement is invisible to it when the same month later arrives as CSV (and the reverse). For each surviving candidate, also look for existing entries that post the **same amount** to the **source account** within **±3 days** and whose `import-id` source kind **differs** from the candidate's — kinds are the prefix families: native (`ofx:`/`bank:`/…), `csv:`, `pdf:`, and each migration prefix. Description similarity is **not** required: two sources word one purchase differently, which is the whole problem. Each hit is a suspected duplicate, presented and decided like the layers above; a pair already shown under Layer 2b is not shown twice. Example: the ledger holds the 2026-06-03 Starbucks entry above (`pdf:sha256:273e1fe28b2668d9`, narration from the statement); a July CSV export offers `2026-06-04, -12.40, SQ *STARBUCKS #12345` for the same account. The hashes differ (different raw wording, posting date one day later), Layer 1 misses, Layer 2 skips the id-bearing entry — Layer 2c pairs them (same amount and account, one day apart, `csv:` candidate vs `pdf:` entry) and asks. *Skip* is the usual answer; *import* when they are genuinely two coffees.
+
+If the user chooses *skip*, offer to add the candidate's `import-id` onto the **existing** manual entry (one metadata line — the only edit-of-existing-entries this skill ever proposes, and only with explicit consent). This makes the next re-import exact-match it in layer 1 instead of re-asking. The same offer applies to a Layer 2c skip: adding the candidate's id as a second metadata line (`import-id-2`) makes both sources exact-match next time.
 
 ## Ordering
 
@@ -76,7 +89,11 @@ no payee) and source amount/currency. It may also note a transfer's other side
 ("… this row may be its other side"); do not depend on that note. Run Layer 2b
 and the ±3-day, similar-description pass above yourself on every import, even
 when the CLI reports zero possible duplicates; see
-`references/bea-import.md` for the query and write procedure.
+`references/bea-import.md` for the query and write procedure. Layer 2c pairs
+(different source kinds, differently worded) are likewise yours to run: the
+CLI exact-matches a `pdf:`/`csv:` pair only when their digests happen to be
+equal, and its possible-duplicate report does not look ±3 days across source
+kinds.
 
 The CLI's `--duplicates skip/include` applies to every possible duplicate in
 one invocation. Mixed decisions or a user-skipped fuzzy match require an
