@@ -64,6 +64,37 @@ def test_conflict_under_unique_prices_names_the_plugin_and_the_existing_line(
     assert "Disagreeing price entries" not in flat
 
 
+PEDANTIC = """option "operating_currency" "USD"
+plugin "beancount.plugins.pedantic"
+2026-01-01 commodity USD
+2026-01-01 commodity EUR
+2026-01-01 open Assets:Cash USD
+2026-01-01 open Expenses:Food USD
+2026-01-02 * "use"
+  Assets:Cash  -1.00 USD
+  Expenses:Food
+2026-01-05 price EUR 1.1 USD
+"""
+
+
+@pytest.mark.parametrize("force", [(), ("--force",)], ids=["plain", "forced"])
+def test_conflict_under_pedantic_names_the_bundle_and_the_existing_line(tmp_path: Path, force: tuple[str, ...]) -> None:
+    """pedantic bundles unique_prices, so --force advice would fail the same way (w5/766)."""
+    ledger = tmp_path / "main.bean"
+    ledger.write_text(PEDANTIC)
+    before = ledger.read_bytes()
+    result = _bea(tmp_path, "-f", str(ledger), *PRICE, *force)
+
+    assert result.returncode == 4, result.stderr
+    assert ledger.read_bytes() == before
+    flat = " ".join(result.stderr.split())
+    assert "EUR already has a 2026-01-05 price of 1.1 USD" in flat
+    assert "the pedantic plugin (which bundles unique_prices)" in flat
+    assert "edit the existing price at" in flat
+    assert "Pass --force to record another quote." not in flat
+    assert "Disagreeing price entries" not in flat
+
+
 def test_without_the_plugin_force_still_records_another_quote(tmp_path: Path) -> None:
     ledger = tmp_path / "main.bean"
     ledger.write_text(LEDGER)

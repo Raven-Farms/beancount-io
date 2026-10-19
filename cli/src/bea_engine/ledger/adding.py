@@ -555,6 +555,14 @@ def _balance(
     # What the pad inserts was never said: a sign error padded twice the
     # balance with exit 0, found only by listing the padding entry (w5/611).
     inserted = {"number": _plain(number - held), "currency": currency}
+    if before_options.get("plugin_processing_mode") == "raw":
+        # Raw mode skips pad processing with the balance checks, so the pad
+        # is recorded but inserts nothing and the balance never moves (w5/766).
+        warnings = [
+            *warnings,
+            'option "plugin_processing_mode" "raw" skips Beancount\u2019s pad processing, so the pad '
+            "is recorded but inserts nothing; drop the raw mode to pad balances.",
+        ]
     return {
         "written": 2,
         "directive": directive.model_dump(mode="json"),
@@ -779,16 +787,21 @@ def _price(
         }
     conflict = next((entry for entry in local_prices if entry.amount.number != number), None)
     # unique_prices rejects a second quote for the day, so --force could only
-    # end in its bare "Disagreeing price entries" (w5/397).
-    unique = any(str(name).endswith("unique_prices") for name, _ in options.get("plugin") or ())
-    if conflict is not None and (unique or not request.get("force")):
+    # end in its bare "Disagreeing price entries" (w5/397). pedantic bundles
+    # unique_prices, so it counts too (w5/766).
+    loaded = [str(name) for name, _ in options.get("plugin") or ()]
+    unique = any(name.endswith("unique_prices") for name in loaded)
+    pedantic = any(name == "pedantic" or name.endswith(".pedantic") for name in loaded)
+    if conflict is not None and (unique or pedantic or not request.get("force")):
         where = f"{conflict.meta.get('filename')}:{conflict.meta.get('lineno')}"
-        remedy = (
-            f"This ledger loads the unique_prices plugin, which allows one {currency} price in {amount_currency} "
-            f"per day; edit the existing price at {where} instead."
-            if unique
-            else "Pass --force to record another quote."
-        )
+        if unique or pedantic:
+            loader = "the pedantic plugin (which bundles unique_prices)" if pedantic else "the unique_prices plugin"
+            remedy = (
+                f"This ledger loads {loader}, which allows one {currency} price in {amount_currency} "
+                f"per day; edit the existing price at {where} instead."
+            )
+        else:
+            remedy = "Pass --force to record another quote."
         raise protocol.ConflictError(
             f"{currency} already has a {directive.date.isoformat()} price of "
             f"{_plain(conflict.amount.number)} {amount_currency} (at {where}); "

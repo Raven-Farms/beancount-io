@@ -1607,6 +1607,7 @@ _EXPORTED_OPTIONS = (
     *_ROOT_OPTIONS,
     "account_rounding",
     "booking_method",
+    "plugin_processing_mode",
     "tolerance_multiplier",
     "infer_tolerance_from_cost",
 )
