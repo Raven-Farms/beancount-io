@@ -698,7 +698,7 @@ def _parse_balance_amount(text: str) -> tuple[Decimal, str, Decimal | None]:
     if errors or len(entries) != 1 or not isinstance(entries[0], Balance):
         raise protocol.UsageError(
             "Balance amount must be 'NUMBER [~ TOLERANCE] CURRENCY', for example '1538 ~ 1 EUR'.",
-            details=[f"--amount: {readable_parser_message(error.message)}" for error in errors],
+            details=[f"--amount: {readable_parser_message(error.message, text=text)}" for error in errors],
         )
     entry = entries[0]
     if entry.amount.number is None:
@@ -908,8 +908,10 @@ def _transaction(
             if "unexpected EOL" in error.message:
                 line -= 1
             posting_number = line - header_lines
-            location = f"--posting {posting_number}" if 0 < posting_number <= len(postings) else "Transaction options"
-            details.append(f"{location}: {readable_parser_message(error.message)}")
+            blamed = 0 < posting_number <= len(postings)
+            location = f"--posting {posting_number}" if blamed else "Transaction options"
+            scope = postings[posting_number - 1] if blamed else ""
+            details.append(f"{location}: {readable_parser_message(error.message, text=scope)}")
         if details and all(detail.startswith("Transaction options:") for detail in details):
             message = _HEADER_ERROR
         else:

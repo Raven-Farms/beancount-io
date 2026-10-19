@@ -196,14 +196,24 @@ def _option_location(options: Mapping[str, Any], name: str, value: str) -> str:
     return ""
 
 
-def require_tag_or_link(value: str) -> str:
-    """One tag or link body, or a ValueError naming the allowed characters."""
-    if not _TAG_OR_LINK.fullmatch(value):
+def require_tag(value: str) -> str:
+    """One tag with or without `#`, stored bare, or a ValueError quoting the typed value."""
+    return _require_tag_or_link(value, "#", "tag")
+
+
+def require_link(value: str) -> str:
+    """One link with or without `^`, stored bare, or a ValueError quoting the typed value."""
+    return _require_tag_or_link(value, "^", "link")
+
+
+def _require_tag_or_link(value: str, sigil: str, noun: str) -> str:
+    body = value[1:] if value.startswith(sigil) else value
+    if not _TAG_OR_LINK.fullmatch(body):
         raise ValueError(
-            f"{value!r} is not one tag or link; use only ASCII letters, digits and - _ / . "
-            "after an optional leading # or ^ (no spaces, sigils or line breaks inside)."
+            f"{value!r} is not one {noun}; use only ASCII letters, digits and - _ / . "
+            f"after an optional leading {sigil} (no spaces, sigils or line breaks inside)."
         )
-    return value
+    return body
 
 
 def require_commodity(value: str) -> str:

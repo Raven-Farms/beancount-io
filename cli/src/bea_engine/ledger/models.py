@@ -18,8 +18,14 @@ from pydantic import (
     model_validator,
 )
 
-from bea_engine.amounts import parse_exact, refuse_zero_divisor, require_plain_decimal, split_total_price
-from bea_engine.ledger.text import parse_iso_date, require_commodity, require_flag, require_tag_or_link
+from bea_engine.amounts import (
+    parse_exact,
+    refuse_scientific_notation,
+    refuse_zero_divisor,
+    require_plain_decimal,
+    split_total_price,
+)
+from bea_engine.ledger.text import parse_iso_date, require_commodity, require_flag, require_link, require_tag
 
 
 def _strip_sigil(sigil: str) -> Callable[[Any], Any]:
@@ -34,6 +40,28 @@ def _strip_sigil(sigil: str) -> Callable[[Any], Any]:
         return value[1:] if isinstance(value, str) and value.startswith(sigil) else value
 
     return strip
+
+
+def _tag_or_link(sigil: str, check: Callable[[str], str]) -> Callable[[Any, ValidationInfo], Any]:
+    """Accept one tag or link with or without its sigil, storing it bare.
+
+    On a write, anything else is refused with this kind's message quoting the
+    typed value: the shared refusal named both sigils and, running after the
+    sigil was stripped, quoted `##c` back as `'#c'` (w5/722). A read strips
+    as before and checks nothing.
+    """
+
+    strip = _strip_sigil(sigil)
+
+    def parse(value: Any, info: ValidationInfo) -> Any:
+        if not isinstance(value, str):
+            return value
+        context = info.context
+        if isinstance(context, dict) and context.get("write_input"):
+            return check(value)
+        return strip(value)
+
+    return parse
 
 
 #: Validation context for a directive built from a write request — `bea add`,
@@ -54,8 +82,8 @@ def _on_write(check: Callable[[str], str]) -> Callable[[Any, ValidationInfo], An
 # Each is written as one bare token, so a write must supply exactly one: a
 # value such as `a ^b` or one with a line break would otherwise print as extra
 # tags, links or whole directives the caller never asked for.
-Tag = Annotated[str, BeforeValidator(_strip_sigil("#")), AfterValidator(_on_write(require_tag_or_link))]
-Link = Annotated[str, BeforeValidator(_strip_sigil("^")), AfterValidator(_on_write(require_tag_or_link))]
+Tag = Annotated[str, BeforeValidator(_tag_or_link("#", require_tag))]
+Link = Annotated[str, BeforeValidator(_tag_or_link("^", require_link))]
 Commodity = Annotated[str, AfterValidator(_on_write(require_commodity))]
 Flag = Annotated[str, AfterValidator(_on_write(require_flag))]
 
@@ -245,14 +273,19 @@ def _posting_fragment(amount: str) -> dict[str, Any]:
     """
     from beancount.core.number import MISSING
 
+    from bea_engine.query import readable_parser_message
+
     def refuse(reason: str) -> NoReturn:
-        raise ValueError(f"Could not parse amount {amount!r} as a posting fragment: {reason}. {_FRAGMENT_HELP}")
+        readable = readable_parser_message(reason, text=amount)
+        stop = "" if readable.endswith(".") else "."
+        raise ValueError(f"Could not parse amount {amount!r} as a posting fragment: {readable}{stop} {_FRAGMENT_HELP}")
 
     if "\n" in amount or "\r" in amount:
         raise ValueError(f"amount {amount!r} must be one posting fragment without line breaks. {_FRAGMENT_HELP}")
     if comment_start(amount) is not None:
         raise ValueError(f"amount {amount!r} contains a ';'. {COMMENT_HELP}")
     refuse_zero_divisor(amount)
+    refuse_scientific_notation(amount)
     entries, errors, _ = parse_exact(f'2026-01-02 * "probe"\n  Assets:Probe {amount}\n  Equity:Probe\n')
     entry: Any = entries[0] if len(entries) == 1 and not errors else None
     posting: Any = entry.postings[0] if entry is not None else None

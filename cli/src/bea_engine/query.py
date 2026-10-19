@@ -2453,7 +2453,7 @@ _PARSER_REPRS = (
 )
 
 
-def readable_parser_message(message: str) -> str:
+def readable_parser_message(message: str, *, text: str = "") -> str:
     """A parser diagnostic with the grammar value it quotes written as Beancount text.
 
     Upstream's grammar formats a `CompoundAmount`, `KeyValue`, `TagsLinks` or a
@@ -2469,6 +2469,14 @@ def readable_parser_message(message: str) -> str:
         from bea_engine.amounts import DECIMAL_COMMA_HELP
 
         return f"Invalid amount {comma[1]!r}. {DECIMAL_COMMA_HELP}"
+    if "unexpected COMMA" in message:
+        # `1.234,56` never lexes as one number, so the parser cannot quote
+        # it; the comma beside digits in the input is the amount (w5/722).
+        from bea_engine.amounts import DECIMAL_COMMA_HELP
+
+        found = re.search(r"[0-9][0-9.,]*,[0-9.,]*", text)
+        if found is not None:
+            return f"Invalid amount {found[0]!r}. {DECIMAL_COMMA_HELP}"
     for pattern, kind in _PARSER_REPRS:
         match = pattern.match(message)
         if match is None:

@@ -164,6 +164,23 @@ def refuse_zero_divisor(text: str) -> None:
         )
 
 
+_EXPONENT_TOKEN = re.compile(r"(?<![\w.:#^'\-])[-+]?(?:\d+(?:\.\d*)?|\.\d+)[eE][+-]?\d+(?![\w.])")
+
+
+def refuse_scientific_notation(text: str) -> None:
+    """Refuse an exponent-looking numeric token with the shared message.
+
+    The frontend's `check_decimal_notation` makes the same check for flag
+    input; a bulk row's amount fragment reaches the engine without passing
+    it, and the grammar only reports the token's tail (`Invalid token:
+    'e2'`) (w5/722). Quoted labels and comments are text, and the token rule
+    leaves native arithmetic alone, exactly as the frontend's does.
+    """
+    match = _EXPONENT_TOKEN.search(_QUOTED_OR_COMMENT.sub("", text))
+    if match is not None:
+        require_decimal_notation(match[0])
+
+
 def decimal_string_hint(value: float, noun: str) -> str:
     """What to send instead of a JSON float: a string this same input accepts.
 
