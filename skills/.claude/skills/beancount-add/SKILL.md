@@ -1,6 +1,6 @@
 ---
 name: beancount-add
-description: Record one-off entries the user describes in a local Beancount ledger through bea — a purchase, bill, paycheck, or transfer between their own accounts (including splits and pasted receipt text), opening or closing an account, a price, or a note. Propose the exact entries from existing accounts, check whether one is already recorded, and write only after confirmation with a passing check. Skip bank or card export files (beancount-import), statements (beancount-reconcile), finance-app migrations, options trades (beancount-options), month-end close, edits to existing entries, and ledgers hosted on Beancount.io.
+description: Record one-off entries the user describes in a local Beancount ledger through bea — a purchase, bill, paycheck, or transfer between their own accounts (including splits and pasted receipt text), opening or closing an account, a price, or a note. Propose the exact entries from existing accounts, check whether one is already recorded, and write only after confirmation with a passing check; it never changes existing entries. Skip bank or card export files (beancount-import), statements (beancount-reconcile), finance-app migrations, options trades (beancount-options), month-end close, edits to existing entries, and ledgers hosted on Beancount.io.
 metadata: {"openclaw": {"homepage": "https://github.com/bex-co/beancount-io/tree/main/skills", "requires": {"anyBins": ["bea", "bean-check"]}, "install": [{"id": "brew", "kind": "brew", "formula": "bex-co/tap/bea", "bins": ["bea"], "label": "Install bea (Homebrew)"}, {"id": "uv", "kind": "uv", "package": "beancount-io", "bins": ["bea"], "label": "Install bea (uv)"}]}, "hermes": {"category": "finance", "tags": ["beancount", "accounting", "bookkeeping", "manual-entry"]}}
 ---
 
@@ -58,6 +58,8 @@ Reduce the request to directives. For each transaction establish: date, payee an
 
 Ask for anything missing. Never guess an amount, an account, or the date of a past event.
 
+**A request to change an existing entry is not part of this workflow, even in the same message.** This skill only adds entries, and every write waits for the confirmation in step 4. When a request also asks to edit, move, or delete an entry already in the ledger (a payee rename, a wrong amount, a duplicate), do not make that change before the yes, after it, or as part of the proposal. Find the entry, show its file and line, say that this workflow leaves existing entries to the user, and propose only the new entries.
+
 ### 3. Check
 
 Before proposing, run each check that applies and show its result.
@@ -83,11 +85,11 @@ Also:
 
 ### 4. Propose
 
-Show, then ask. **Never write before an explicit yes.**
+Show, then ask. **Never write before an explicit yes.** The user's original request is not that yes, however it is phrased ("add it", "book it", "and change the payee too"): every write in this workflow waits for the answer to this proposal.
 
 1. **Target file** — one explicit path per directive kind.
 2. **New `open` directives** — only those the user asked for, or `Expenses:Uncategorized` when a leg needs it.
-3. **The entries** — formatted exactly as they will appear, with each fallback category flagged.
+3. **The entries** — formatted exactly as they will appear, with each fallback category flagged. New entries only; a requested edit to an existing entry is listed as left to the user, with its file and line.
 4. **Check results** — possible duplicates, a remaining balance before a close.
 5. A clear **yes/no**. On a partial correction, revise and show the whole proposal again.
 

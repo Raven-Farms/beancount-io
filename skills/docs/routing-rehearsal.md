@@ -148,3 +148,13 @@ options, a reconcile, a close, and an edit prompt. Two runs per client,
 
 Every manual-entry prompt routed to the draft on both clients, including
 both `close`-directive prompts, and no sibling lost a prompt it owned.
+
+## `beancount-add` description after its evals — 2026-10-19
+
+The eval round added "it never changes existing entries" to the description.
+Two runs per client against the live suite: Claude Code 53/53 twice (draft:
+53/53 twice); Codex 52/53 and 51/53 (draft: 53/53 and 52/53). Codex's new
+single-run misses, `none-what-is-bea-ask` → beancount-ask and
+`author-ally-headers-broke` → none, are unrelated to this skill and routed
+correctly in four further Codex runs each; the third miss is the known
+`none-hosted-reconcile`.

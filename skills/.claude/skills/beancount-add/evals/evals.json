@@ -130,15 +130,17 @@
     },
     {
       "id": 10,
-      "name": "edit-existing-entry",
-      "prompt": "Change the payee of the 2026-10-15 Pizzeria entry in ./ledger.beancount to \"Pizzeria Napoli SF\".",
-      "expected_output": "Editing an existing entry is out of scope: the skill shows the 2026-10-15 entry and tells the user it only adds entries, so the change is theirs to make; it does not modify the file.",
+      "name": "add-plus-edit-request",
+      "prompt": "Add tonight's $18.00 lunch at Pizzeria Napoli on the Amex (2026-10-18) to ./ledger.beancount, and while you're at it change the payee of the 2026-10-15 Pizzeria entry to \"Pizzeria Napoli SF\".",
+      "expected_output": "Proposes only the new 2026-10-18 lunch (Liabilities:CreditCard:Amex -18.00 USD, Expenses:Food:Dining 18.00 USD) for confirmation. For the payee change it identifies the 2026-10-15 entry and says the add workflow does not edit existing entries, leaving that change to the user; after a yes the only change to the ledger is the new lunch.",
       "files": [
         "evals/files/eval1_ledger.beancount"
       ],
       "expectations": [
-        "The skill does not modify the existing 2026-10-15 entry or the file",
-        "It identifies the entry and explains that it only adds entries"
+        "The proposal contains the 2026-10-18 lunch: -18.00 USD on Liabilities:CreditCard:Amex and 18.00 USD on Expenses:Food:Dining",
+        "The response says it does not edit the existing 2026-10-15 entry as part of adding entries",
+        "After a yes, the 2026-10-15 entry is byte-for-byte unchanged and the only ledger change is the new lunch",
+        "bea check passes"
       ]
     },
     {
