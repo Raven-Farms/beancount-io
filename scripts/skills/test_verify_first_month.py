@@ -269,7 +269,7 @@ class VerifyFirstMonthTests(unittest.TestCase):
     def test_close_rejects_incomplete_and_wrong_amount_reports(self):
         self.write_checkpoint('reconciled')
         before = self.snapshot()
-        report = ('close: 2026-08 — 1 reconciled, 0 unverified\n\n'
+        report = ('close: 2026-08 — 1 tied, 0 not tied\n\n'
                   'Assets:Checking reconciled\nAssertions: 1 pinned, 0 unpinned\n'
                   'Income: 2000 USD\nExpenses: 58 USD\nNet: 1942 USD\n'
                   'Checking: 2942 USD\nUnverified: 0\nFlags carried: 0\n'
@@ -388,7 +388,7 @@ class VerifyFirstMonthTests(unittest.TestCase):
         self.assertEqual(totals, {'Expenses:Dining': Decimal('5'), 'Expenses:Fees': Decimal('3'), 'Expenses:Groceries': Decimal('50')})
         checkpoint('asked', before)
         checkpoint('declined_commit', before)
-        self.commit('close: 2026-08 — 1 reconciled, 0 unverified\n\n'
+        self.commit('close: 2026-08 — 1 tied, 0 not tied\n\n'
                     'Assets:Checking reconciled\nChecking: 2942 USD\nIncome: 2000 USD\n'
                     'Expenses: 58 USD\nNet: 1942 USD\nUnverified: 0\n'
                     'Assertions: 1 pinned, 0 unpinned\nFlags carried: 0\n'

@@ -60,13 +60,21 @@ Resolve the period (the user's words or the last complete month) and state it. F
 
 ### 2. Reconcile
 
-For each active account, ask for the period statement (CSV or pasted text). Per account **with** a statement, run the `beancount-reconcile` flow (its own confirm gate applies): the outcome is **tied**, or **partial** when reconcile withholds the assertion over unresolved suspects or mismatches (a reported finding with its residual, not a failure to retry). Per account **without** one, the status is **unverified** and the account is listed in the report.
+For each active account, ask for the period statement (CSV or pasted text). Per account **with** a statement, run the `beancount-reconcile` flow (its own confirm gate applies). Record the account's **evidence** — the statement file or files, the statement period, the coverage counts from reconcile's Coverage phase (source / included / excluded rows), and the residual — and exactly one **state**:
 
-If beancount-reconcile is not installed beside this skill (a registry can install one skill alone), say so and point the user to https://github.com/bex-co/beancount-io/blob/main/docs/skills/installation.md to add it. Without it, every account is **unverified**.
+- **tied** — a passing assertion over the whole close period.
+- **partial** — reconcile withheld the assertion over unresolved suspects or mismatches (a reported finding with its residual, not a failure to retry).
+- **partly covered** — the statement period does not span the close period, even if it ties over its own span.
+- **unverified** — no statement.
+- **blocked** — the step could not run, with the reason (for example, reconcile is not installed, or the user stopped).
+
+If beancount-reconcile is not installed beside this skill (a registry can install one skill alone), say so and point the user to https://github.com/bex-co/beancount-io/blob/main/docs/skills/installation.md to add it. Without it, every account is **blocked** with that reason — never quietly downgraded to unverified.
+
+An owner or a due date may be attached to a step or an account **only when the user supplies them**; when they do not, those fields do not appear anywhere in the report.
 
 ### 3. Assert
 
-Every reconciled account now has a period-end `balance` assertion (reconcile appends them). Check that each active account has an assertion dated on or after period end; accounts without one are **unpinned** in the report.
+Every tied account now has a period-end `balance` assertion (reconcile appends them). Check that each active account has an assertion dated on or after period end; accounts without one are **unpinned** in the report. An assertion that pins only part of the close period (a partly covered account) does not pin the close — the account stays partly covered, not tied.
 
 ### 4. Recurring completeness
 
@@ -81,14 +89,18 @@ List every `!`-flagged entry dated in or before the period. Each is either resol
 Generate the period's numbers with the `close-income-statement` and `close-balance-sheet` recipes in `references/close-checklist.md`, both at book value (`-x at_cost`) — the valuation the checklist's period-end balances use — so a cost-basis lot counts at cost and an unpriced commodity (an `@`-priced foreign charge, an option lot) appears in its own units. State that valuation in the report. Expense totals in the operating currency come from beancount-ask's `weight` recipes (`top-expenses` counts `300 EUR @ 1.10 USD` as the 330 USD paid); without beancount-ask installed, report the two statements only. A report that exits 1 with `result.missing_prices` is a valuation gap (beancount-init's `references/bea-cli.md`, Read and check): list the missing prices in the close report. Assemble the close report:
 
 ```
-Close: 2026-06 (2026-06-01 … 2026-06-30)
-Reconciled: Assets:Bank:Checking ✓ (ties to 7,874.60)     Unverified: Liabilities:CreditCard:Amex (no statement)
+Close: 2026-06 (2026-06-01 … 2026-06-30) — 1 tied, 1 not tied
+Accounts:
+  Assets:Bank:Checking — tied (june-checking.csv, 2026-06-01…06-30; coverage 42 source / 42 included / 0 excluded; residual 0.00; ties to 7,874.60)
+  Liabilities:CreditCard:Amex — unverified (no statement)
 Assertions: 1 pinned, 1 unpinned
 Recurring gaps: NETFLIX (present Apr, May — absent Jun)   Flags carried: 1 (2026-06-21 ! WHOLE FOODS)
 Income: 3,000.00        Expenses: 203.60        Net: +2,796.40
-check: PASS (`bea check`)
+check (ledger validity): PASS — the ledger is valid; that alone does not verify this close
 ```
+
+The headline counts **tied accounts only** as reconciled and names the not-tied count; the account lines list every account that is not tied with its state. Never call the close "verified", "complete", or "clean" — in the headline, the report, or the commit message — unless every active account is tied over the whole period. A green `check` line is ledger validity only.
 
 ### 7. Commit
 
-Re-run `bea --file "$ledger" --json --no-input check` after all reconciliation writes. A red check blocks the commit proposal. When it passes, show what will be staged (the ledger files the close touched) and the commit message — subject `close: <period> — <n> reconciled, <m> unverified`, body = the close report — and **commit only on an explicit yes**. On no, leave the working tree exactly as it is; the report stays in the conversation. Pushing stays with the user.
+Re-run `bea --file "$ledger" --json --no-input check` after all reconciliation writes. A red check blocks the commit proposal. When it passes, show what will be staged (the ledger files the close touched) and the commit message — subject `close: <period> — <n> tied, <m> not tied` (n counts tied accounts only), body = the close report — and **commit only on an explicit yes**. On no, leave the working tree exactly as it is; the report stays in the conversation. Pushing stays with the user.

@@ -16,11 +16,15 @@ The `date < <period-end+1>` bound is what makes these period-end balances: witho
 
 ## Reconciliation delegation
 
-Per account with a statement: run the **beancount-reconcile** skill's full flow (Discover → Normalize → Match → Propose → Verify), one account per pass, its confirm gate intact. Statuses:
+Per account with a statement: run the **beancount-reconcile** skill's full flow (Discover → Normalize → Coverage → Match → Propose → Verify), one account per pass, its confirm gate intact. For every active account, record the **evidence** — statement file or files, statement period, coverage counts (source / included / excluded), residual — and one state:
 
-- **tied** — reconcile wrote its period-end assertion and `bea --file "$ledger" check` passes against the root.
+- **tied** — reconcile wrote its period-end assertion spanning the whole close period and `bea --file "$ledger" check` passes against the root.
 - **partial** — reconcile reported suspects/mismatches and (correctly) withheld the assertion; carry its residual into the close report.
+- **partly covered** — the statement period does not span the close period, even where it ties over its own span.
 - **unverified** — no statement available. Listed, never silently passed. (Cash accounts are perpetually unverified — note "cash, no statement source" so the line doesn't read as an error.)
+- **blocked** — the step could not run (reconcile not installed, the user stopped); the reason travels with the state.
+
+An owner or due date is recorded only when the user supplies one; otherwise the fields do not exist in the report. The close is never called verified, complete, or clean while any active account is not tied, and the `check` line is labeled ledger validity — a green check alone is never proof of a verified close.
 
 ## Assertion check
 
@@ -68,6 +72,6 @@ bea --file "$ledger" --json --no-input report balance-sheet --time "$month" -x a
 ## Commit convention
 
 - Stage only the files the close touched (ledger + any statement archive the user keeps in-repo).
-- Subject: `close: <YYYY-MM> — <n> reconciled, <m> unverified` — greppable close history.
-- Body: the close report verbatim.
+- Subject: `close: <YYYY-MM> — <n> tied, <m> not tied` — greppable close history; *tied* counts only accounts tied over the whole period.
+- Body: the close report verbatim, listing every account that is not tied with its state and evidence.
 - Refuse to propose the commit while the root-ledger check is red; on user decline, leave the tree untouched — a declined close commit must be losslessly resumable.

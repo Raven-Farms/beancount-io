@@ -261,11 +261,11 @@ python3 "$VERIFY" snapshot --workspace "$BOOKS" --output "$RUN/evidence/before-c
 ```text
 Use beancount-close for August 2026 on this workspace's ./main.bean. The supplied complete statement is FIRST_MONTH_INPUTS/statement.md. Checking is already reconciled and asserted; inspect existing entries and do not duplicate them or rewrite config. No other asset/liability account has activity or a nonzero balance. Review all close phases and actual bea reports. No prior months are supplied, so recurring-history completeness is unavailable, not certified complete. Run bea check. Propose a commit containing only main.bean; do not stage or commit until I explicitly approve. Never push.
 
-For a reproducible checkpoint, use these labeled fields in the proposed commit body, deriving each value from the actual ledger checks and reports: Checking: <amount> USD; Income: <amount> USD; Expenses: <amount> USD; Net: <amount> USD; Unverified: <count>; Assertions: <count> pinned, <count> unpinned; Flags carried: <count>; Recurring gaps: <count>; Recurring history: unavailable; check: <result>. Name the reconciled account and state the August period. Use the skill's close subject with the actual reconciled/unverified counts. Show the proposed message and exact files first.
+For a reproducible checkpoint, use these labeled fields in the proposed commit body, deriving each value from the actual ledger checks and reports: Checking: <amount> USD; Income: <amount> USD; Expenses: <amount> USD; Net: <amount> USD; Unverified: <count>; Assertions: <count> pinned, <count> unpinned; Flags carried: <count>; Recurring gaps: <count>; Recurring history: unavailable; check: <result>. Name the reconciled account and state the August period. Use the skill's close subject with the actual tied/not-tied counts. Show the proposed message and exact files first.
 ```
 
 Review the report, `bea check`, and file list. The expected subject is
-`close: 2026-08 — 1 reconciled, 0 unverified`; checking is 2942, income 2000,
+`close: 2026-08 — 1 tied, 0 not tied`; checking is 2942, income 2000,
 expenses 58, net +1942 USD. Expect one pinned assertion, zero unpinned, zero
 unverified accounts, and zero carried flags. Zero detected recurring gaps must
 still disclose unavailable history. The durable import rules and skill

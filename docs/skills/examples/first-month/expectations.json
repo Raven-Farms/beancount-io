@@ -256,7 +256,7 @@
       "main.bean"
     ],
     "commit_count_delta": 1,
-    "subject": "close: 2026-08 \u2014 1 reconciled, 0 unverified",
+    "subject": "close: 2026-08 — 1 tied, 0 not tied",
     "push": false,
     "flags_carried": 0,
     "recurring_gaps": 0,

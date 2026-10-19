@@ -6,7 +6,7 @@
       "id": 1,
       "name": "full-close-four-findings",
       "prompt": "Close June 2026 for me. Ledger ./ledger.beancount; my checking statement is ./statement.csv. I don't have the Amex statement handy.",
-      "expected_output": "The close runs all phases: checking reconciles via the beancount-reconcile flow (finds the missing 2026-06-25 CITY PARKING -12.00, appends it after confirm, assertion 2026-07-01 balance 7874.60 passes), Amex is reported unverified, the NETFLIX recurring gap (Apr+May present, June absent) is surfaced as a question, the ! flag on 2026-06-21 is listed. The close report shows Income 3000.00 / Expenses 203.60, bea check PASS, and a confirm-gated commit with subject 'close: 2026-06 — 1 reconciled, 1 unverified' and the report in the body.",
+      "expected_output": "The close runs all phases: checking reconciles via the beancount-reconcile flow (finds the missing 2026-06-25 CITY PARKING -12.00, appends it after confirm, assertion 2026-07-01 balance 7874.60 passes), Amex is reported unverified, the NETFLIX recurring gap (Apr+May present, June absent) is surfaced as a question, the ! flag on 2026-06-21 is listed. The close report shows Income 3000.00 / Expenses 203.60, bea check PASS, and a confirm-gated commit with subject 'close: 2026-06 — 1 tied, 1 not tied' and the report in the body.",
       "files": [
         "evals/files/eval1_ledger.beancount",
         "evals/files/eval1_statement.csv"
@@ -19,7 +19,10 @@
         "The 2026-06-21 ! WHOLE FOODS entry is listed in the flag sweep",
         "The report states Income 3000.00 and Expenses 203.60 for June (post-reconcile), figures from shown queries",
         "The commit happens only after explicit yes, with the close report in the commit body",
-        "Nothing is pushed to any remote"
+        "Nothing is pushed to any remote",
+        "Every active account is listed with a state (tied/partial/partly covered/unverified/blocked) and its evidence (statement file, statement period, coverage counts, residual)",
+        "The report labels the check line as ledger validity and nowhere calls the close verified, complete, or clean while Amex is not tied",
+        "The report contains no owner or due-date fields (none were supplied)"
       ]
     },
     {
