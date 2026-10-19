@@ -31,7 +31,7 @@ git -C "$SKILLS_SRC" sparse-checkout set skills scripts/skills docs/skills
 python3 "$SKILLS_SRC/scripts/skills/beancount-skills.py" install ~/.claude/skills ~/.agents/skills
 ```
 
-- [Installation guide](../docs/skills/installation.md): workspace-only installs, discovery checks, `verify`, updates, local edits and name conflicts, and removal.
+- [Installation guide](../docs/skills/installation.md): workspace-only installs, discovery checks, `verify`, updates, local edits and name conflicts, and removal. Installed before 2026-10-19? Follow its [one-time upgrade](../docs/skills/installation.md#upgrading-from-the-old-layout).
 - [First query](../docs/skills/first-query.md): ask a synthetic ledger a question through `beancount-ask` and check the known answer. No account needed.
 - [First month](../docs/skills/first-month.md): initialize, import, reconcile, ask, and close one synthetic month with explicit approvals and independent ledger/Git checkpoints. See the [real-client rehearsal results](../docs/skills/first-month-rehearsal.md).
 - [Migrate, then keep importing](../docs/skills/migration.md): convert a synthetic Monarch export with approved mappings and balance anchors, then import overlapping bank exports without double-booking either side of a transfer. See the [real-client rehearsal results](../docs/skills/migration-rehearsal.md).

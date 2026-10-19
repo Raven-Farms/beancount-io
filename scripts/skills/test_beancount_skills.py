@@ -100,6 +100,56 @@ class Workspace(unittest.TestCase):
             shutil.copytree(SUITE / name, dest / name)
 
 
+class TestOldLayoutUpgrade(Workspace):
+    """Installs made before w2/m42 link into this checkout's skills/.claude/skills."""
+
+    def old_links(self, layout: Path) -> None:
+        self.dest.mkdir(parents=True, exist_ok=True)
+        for name in skills.expected_skills():
+            (self.dest / name).symlink_to(layout / name, target_is_directory=True)
+
+    def test_verify_names_the_old_layout_and_the_repair_without_writing(self):
+        self.old_links(skills.OLD_LAYOUT)
+        before = snapshot(self.dest)
+        code, _, err = run("verify", self.dest)
+        self.assertEqual(code, 1)
+        self.assertEqual(err.count("links to the old skills/.claude/skills layout; repair with: python3"), len(skills.expected_skills()))
+        self.assertNotIn("link to missing", err)
+        self.assertEqual(snapshot(self.dest), before)
+
+    def test_install_relinks_old_layout_links_and_the_suite_verifies(self):
+        self.old_links(skills.OLD_LAYOUT)
+        sentinel_before = self.sentinel.read_bytes()
+        code, out, err = run("install", self.dest)
+        self.assertEqual(code, 0, err)
+        self.assertEqual(out.count("(moved from skills/.claude/skills)"), len(skills.expected_skills()))
+        for name in skills.expected_skills():
+            self.assertTrue(skills.is_linked(self.dest / name), name)
+        self.assertIn(f"OK {len(skills.expected_skills())} customer skills complete", out)
+        self.assertEqual(self.sentinel.read_bytes(), sentinel_before)
+
+    def test_another_checkouts_old_layout_is_still_a_conflict(self):
+        other = self.root / "other-checkout" / "skills" / ".claude" / "skills"
+        self.old_links(other)
+        before = snapshot(self.dest)
+        code, _, err = run("install", self.dest)
+        self.assertEqual(code, 1)
+        self.assertIn(f"{self.dest / 'beancount-ask'} links to {other / 'beancount-ask'} (target missing), not this checkout", err)
+        self.assertEqual(snapshot(self.dest), before)
+
+    def test_uninstall_removes_this_checkouts_old_links_only(self):
+        self.old_links(skills.OLD_LAYOUT)
+        theirs = self.root / "other-checkout" / "skills" / ".claude" / "skills" / "beancount-ask"
+        (self.dest / "beancount-ask").unlink()
+        (self.dest / "beancount-ask").symlink_to(theirs, target_is_directory=True)
+        code, out, _ = run("uninstall", self.dest)
+        self.assertEqual(code, 0)
+        self.assertTrue((self.dest / "beancount-ask").is_symlink())
+        for name in skills.expected_skills():
+            if name != "beancount-ask":
+                self.assertFalse(os.path.lexists(self.dest / name), name)
+
+
 class TestInstall(Workspace):
     def test_inventory_is_the_customer_skills(self):
         # The one deliberate list of the suite; other tests count from it.
@@ -430,6 +480,51 @@ class TestGitUpdatePath(Workspace):
     def commit_upstream(self, rel: str, text: str) -> None:
         (self.origin / rel).write_text(text)
         self.git_ok(self.origin, "commit", "-qam", f"update {rel}")
+
+    def test_the_documented_upgrade_relinks_an_install_from_the_old_layout(self):
+        doc = INSTALL_DOC.read_text(encoding="utf-8")
+        upgrade = re.search(r"<!-- upgrade -->\n```sh\n(.*?)\n```", doc, re.DOTALL)
+        self.assertIsNotNone(upgrade, "installation.md must show the upgrade commands")
+        # Upstream before w2/m42: the suite sat in skills/.claude/skills, and
+        # the documented sparse checkout fetched `skills` only.
+        origin = self.root / "old-origin"
+        for name in skills.expected_skills():
+            shutil.copytree(SUITE / name, origin / "skills" / ".claude" / "skills" / name)
+        for args in (("init", "-q", "-b", "main"), ("add", "."), ("commit", "-qm", "old layout")):
+            self.git_ok(origin, *args)
+        self.git_ok(origin, "config", "uploadpack.allowFilter", "true")
+        home, data = self.root / "home", self.root / "data"
+        src = data / "beancount-io"
+        self.git_ok(self.root, "clone", "-q", "--depth", "1", "--filter=blob:none", "--sparse", f"file://{origin}", str(src))
+        self.git_ok(src, "sparse-checkout", "set", "skills")
+        dests = [self.dest, home / ".agents" / "skills"]
+        for dest in dests:
+            dest.mkdir(parents=True, exist_ok=True)
+            for name in skills.expected_skills():
+                (dest / name).symlink_to(src.resolve() / "skills" / ".claude" / "skills" / name, target_is_directory=True)
+
+        for name in skills.expected_skills():
+            self.git_ok(origin, "mv", f"skills/.claude/skills/{name}", f"skills/{name}")
+        (origin / "scripts" / "skills").mkdir(parents=True)
+        shutil.copy2(SCRIPTS_DIR / "beancount-skills.py", origin / "scripts" / "skills")
+        self.git_ok(origin, "add", "scripts")
+        self.git_ok(origin, "commit", "-qm", "move the suite")
+
+        result = subprocess.run(
+            ["sh", "-c", upgrade.group(1)],
+            env={**os.environ, "HOME": str(home), "XDG_DATA_HOME": str(data)},
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        count = len(skills.expected_skills())
+        self.assertEqual(result.stdout.count("(moved from skills/.claude/skills)"), 2 * count)
+        self.assertEqual(result.stdout.count(f"OK {count} customer skills complete"), 2)
+        for dest in dests:
+            for name in skills.expected_skills():
+                self.assertEqual((dest / name).resolve(), (src / "skills" / name).resolve())
+        self.assertTrue(self.sentinel.exists())
 
     def test_sparse_checkout_holds_the_customer_suite_only(self):
         self.assertFalse((self.src / ".agents").exists())

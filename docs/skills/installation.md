@@ -80,6 +80,20 @@ python3 "$SKILLS_SRC/scripts/skills/beancount-skills.py" install ~/.claude/skill
 
 The pull updates every linked agent at once. Running `install` again keeps existing links, links any skill added to the suite since your last install, and prints the revision you are now on (`source … at <commit> <date>`).
 
+### Upgrading from the old layout
+
+Installs made before 2026-10-19 link into the checkout's old `skills/.claude/skills/<name>` folders, and their sparse checkout fetches `skills` only. After a pull those links point at nothing, so the skills disappear from both agents without an error. Upgrade once, from Git:
+
+<!-- upgrade -->
+```sh
+SKILLS_SRC="${XDG_DATA_HOME:-$HOME/.local/share}/beancount-io"
+git -C "$SKILLS_SRC" pull --ff-only
+git -C "$SKILLS_SRC" sparse-checkout set skills scripts/skills docs/skills
+python3 "$SKILLS_SRC/scripts/skills/beancount-skills.py" install ~/.claude/skills ~/.agents/skills
+```
+
+`install` replaces each old link that points into this checkout with a link to `skills/<name>` (`relinked … (moved from skills/.claude/skills)`), then runs `verify`. A link into a different checkout is left alone and reported as a conflict. List your workspace skill directories too if you installed into any.
+
 ### Local edits
 
 `status` shows any edits you made to the checkout, and `install` lists them too, because every linked agent uses them. `git pull --ff-only` keeps edits that the update does not touch. If the update changes a file you edited, Git stops with `Your local changes to the following files would be overwritten` and changes nothing. Then choose one:

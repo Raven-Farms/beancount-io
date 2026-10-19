@@ -31,6 +31,8 @@ from pathlib import Path
 
 SCRIPT = Path(__file__).resolve()
 SOURCE_DIR = SCRIPT.parents[2] / "skills"
+# Where this checkout kept the suite before w2/m42; installs made then link here.
+OLD_LAYOUT = SOURCE_DIR / ".claude" / "skills"
 
 # Supporting documents are named `references/<name>.md` or by bare lowercase
 # file name; URLs, uppercase outputs (MIGRATION.md), and example ledger or
@@ -61,6 +63,11 @@ def frontmatter(path: Path) -> dict[str, str]:
 
 def is_linked(entry: Path) -> bool:
     return entry.is_symlink() and entry.resolve() == (SOURCE_DIR / entry.name).resolve()
+
+
+def is_old_layout_link(entry: Path) -> bool:
+    """A link this checkout's installer made before the suite moved to `skills/<name>`."""
+    return entry.is_symlink() and entry.resolve() == (OLD_LAYOUT / entry.name).resolve()
 
 
 def destination_problem(dest: Path) -> str | None:
@@ -95,7 +102,11 @@ def verify(dest: Path) -> int:
     for name in names:
         entry = dest / name
         skill_md = entry / "SKILL.md"
-        if not entry.exists():
+        if is_old_layout_link(entry):
+            problems.append(
+                f"{name}: links to the old skills/.claude/skills layout; repair with: python3 {SCRIPT} install {dest}"
+            )
+        elif not entry.exists():
             detail = f"link to missing {os.readlink(entry)}" if entry.is_symlink() else "not installed"
             problems.append(f"{name}: {detail}")
         elif not skill_md.is_file():
@@ -202,7 +213,11 @@ def install(dest: Path) -> int:
         print(f"FAIL {problem}. Nothing was installed there.", file=sys.stderr)
         return 1
     entries = [dest / name for name in expected_skills()]
-    conflicts = [describe_conflict(entry) for entry in entries if os.path.lexists(entry) and not is_linked(entry)]
+    conflicts = [
+        describe_conflict(entry)
+        for entry in entries
+        if os.path.lexists(entry) and not is_linked(entry) and not is_old_layout_link(entry)
+    ]
     if conflicts:
         for conflict in conflicts:
             print(f"CONFLICT {conflict}", file=sys.stderr)
@@ -220,6 +235,10 @@ def install(dest: Path) -> int:
     for entry in entries:
         if is_linked(entry):
             print(f"kept   {entry}")
+        elif is_old_layout_link(entry):
+            entry.unlink()
+            entry.symlink_to(SOURCE_DIR / entry.name, target_is_directory=True)
+            print(f"relinked {entry} -> {SOURCE_DIR / entry.name} (moved from skills/.claude/skills)")
         else:
             entry.symlink_to(SOURCE_DIR / entry.name, target_is_directory=True)
             print(f"linked {entry} -> {SOURCE_DIR / entry.name}")
@@ -247,7 +266,7 @@ def report_source() -> None:
 
 def uninstall(dest: Path) -> int:
     for entry in (dest / name for name in expected_skills()):
-        if is_linked(entry):
+        if is_linked(entry) or is_old_layout_link(entry):
             entry.unlink()
             print(f"removed {entry}")
         elif os.path.lexists(entry):
