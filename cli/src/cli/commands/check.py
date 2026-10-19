@@ -100,6 +100,12 @@ def check(ctx: typer.Context) -> None:
     # options, so it loads afresh unless the user named a cache file.
     fresh = _enables_auto(args) or not _names_cache_file(args)
     isolate = ["--no-cache"] if fresh and not _disables_cache(args) else []
+    if isolate and _names_cache_file(args):
+        # bea's own `--no-cache`: `--auto` loads with its own plugins, so a
+        # named cache file would be ignored with a raw `WARNING:root:` line,
+        # as under a typed `--no-cache` (w5/761).
+        output.note("--auto turns the shared load cache off, so --cache-filename is ignored.")
+        args = _without_cache_file(args)
     # bean-check does not cover document paths that resolve outside the ledger tree;
     # the helper check does, so copies that still resolve against another tree fail.
     # Only that rule: this second load knows none of bean-check's options, so
