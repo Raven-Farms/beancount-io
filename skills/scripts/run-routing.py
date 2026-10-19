@@ -24,7 +24,9 @@ How a choice is detected, verified against Claude Code 2.1.289 and Codex 0.163.0
 - Codex (`codex exec --json --sandbox read-only`): Codex has no skill tool; it
   opens a skill by running a shell command that reads `<skill>/SKILL.md`. The
   first completed command that names `<skill>/SKILL.md` and prints that
-  skill's `name:` frontmatter is the choice.
+  skill's `name:` frontmatter is the choice. When that command opens several
+  skills at once (a skill and the sibling it composes), all are recorded and
+  the prompt scores as routed if the expected skill is among them.
 
 The client is stopped as soon as a choice is seen. A run that finishes without
 one chose no skill. A skill outside the suite (a user-level skill or plugin)
@@ -148,11 +150,15 @@ def codex_event(event: dict, meta: dict) -> tuple[str | None, str | None]:
     item = event.get("item", {})
     if event.get("type") == "item.completed" and item.get("type") == "command_execution":
         output = str(item.get("aggregated_output", ""))
-        for found in CODEX_SKILL_READ.finditer(item.get("command", "")):
-            name = found.group(1)
-            if re.search(rf"^name:\s*['\"]?{re.escape(name)}['\"]?\s*$", output, re.M):
-                meta["evidence"] = item.get("command", "")[:300]
-                return name, None
+        opened = [
+            found.group(1)
+            for found in CODEX_SKILL_READ.finditer(item.get("command", ""))
+            if re.search(rf"^name:\s*['\"]?{re.escape(found.group(1))}['\"]?\s*$", output, re.M)
+        ]
+        if opened:
+            meta["evidence"] = item.get("command", "")[:300]
+            meta["opened"] = list(dict.fromkeys(opened))
+            return opened[0], None
     if event.get("type") in ("turn.failed", "error"):
         message = event.get("message") or event.get("error", {}).get("message")
         return None, str(message)[:300]
@@ -203,6 +209,7 @@ def run_one(client: str, entry: dict, workspace: Path, model: str | None, timeou
         "seconds": round(time.monotonic() - started, 1),
         **({"model": meta["model"]} if meta.get("model") else {}),
         **({"evidence": meta["evidence"]} if meta.get("evidence") else {}),
+        **({"opened": meta["opened"]} if len(meta.get("opened", [])) > 1 else {}),
     }
 
 
@@ -214,6 +221,16 @@ def normalize(choice: str | None, suite: set[str]) -> str | None:
     return name if name in suite else "none"
 
 
+def result_label(result: dict, expected: str, suite: set[str]) -> str | None:
+    """The suite label a result chose. When one command opened several skills
+    at once (Codex reading a skill and the sibling it composes), the choice is
+    the expected skill if it is among them."""
+    opened = {normalize(name, suite) for name in result.get("opened", [])}
+    if expected != "none" and expected in opened:
+        return expected
+    return normalize(result["chosen"], suite)
+
+
 def score(entries: list[dict], results: list[dict], suite: set[str]) -> dict:
     """Per client: accuracy, per-skill precision/recall, and confusion pairs.
 
@@ -223,7 +240,7 @@ def score(entries: list[dict], results: list[dict], suite: set[str]) -> dict:
     summary: dict = {}
     for client in sorted({r["client"] for r in results}):
         rows = [r for r in results if r["client"] == client and r["id"] in expected]
-        chosen = {r["id"]: normalize(r["chosen"], suite) for r in rows}
+        chosen = {r["id"]: result_label(r, expected[r["id"]], suite) for r in rows}
         labels = sorted(suite | {"none"})
         per_label = {}
         for label in labels:
@@ -337,7 +354,7 @@ def main(argv: list[str] | None = None) -> int:
             for future in futures:
                 result = future.result()
                 results.append(result)
-                mark = "ok " if normalize(result["chosen"], suite) == result["expected"] else "MISS"
+                mark = "ok " if result_label(result, result["expected"], suite) == result["expected"] else "MISS"
                 print(f"{mark} {result['client']:6} {result['id']:36} -> {result['chosen'] or result['error']}")
     finally:
         for workspace in workspaces.values():

@@ -68,3 +68,39 @@ The first attempt at this baseline counted any Codex command naming a
 `SKILL.md` as a choice, including searches for a guessed sibling path. It
 reported misses that did not reproduce, so it was discarded, and the detector
 now requires the skill's frontmatter in the command output.
+
+## After description changes — 2026-10-19
+
+- Revision `780c8094d`: the skip clauses and phrasings of `41d8298f2`, and
+  the local-only scope and hosted-ledger hand-off of `780c8094d`. Same
+  machine, clients, and models as the baseline.
+- Two full runs: 2026-10-19T00:21Z and 00:25Z UTC.
+
+| Client | Baseline runs | After runs |
+| --- | --- | --- |
+| Claude Code | 47/48, 47/48 | 48/48, 48/48 |
+| Codex | 43/48, 45/48 | 47/48, 46/48 |
+
+Fixed in both after runs: `none-hosted-reconcile` on Claude Code;
+`none-hosted-dining-spend`, `none-operating-currency-option`, and
+`author-schwab-importer` on Codex.
+
+Remaining Codex misses, each in one of the two runs:
+
+| Prompt id | Expected | Codex chose | Cause |
+| --- | --- | --- | --- |
+| `none-hosted-close-month` | none | beancount-close | Codex opens the local skill, which then hands the hosted ledger off (below). |
+| `none-hosted-reconcile` | none | beancount-reconcile | Same. |
+| `migrate-new-ledger-from-monarch` | beancount-migrate | beancount-init | One command opened `beancount-init` and then `beancount-migrate`, the skill it composes. The runner now records every skill such a command opens and scores the expected one among them, so this is not a regression. |
+
+Three more Codex runs of these four prompts, after the scoring change: the
+migration prompt routed 3/3, and the hosted prompts routed to no suite skill
+in 6 of 9 results. Followed to the end, a Codex session that opened
+`beancount-reconcile` for "My books live on Beancount.io (MCP connected)"
+replied that the skill excludes hosted ledgers. With no Beancount.io tools in
+the session, it asked the user to reconnect the MCP server and did not use
+the local synthetic ledger. Opening a skill to read its scope counts as a miss
+here, but the outcome is the hand-off the skill prescribes.
+
+No prompt that routed correctly in both baseline runs misroutes in the after
+runs on either client.

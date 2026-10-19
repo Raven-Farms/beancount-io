@@ -26,6 +26,7 @@ skills/
         references/           Statement-format + matching guidance loaded on demand
         evals/                Statement+ledger fixtures per mismatch class
   docs/                       Installation, first-query, first-month, migration, and importer graduation guides, fixtures, rehearsal evidence
+  evals/routing.json          Suite routing set: which skill (or none) each ledger request belongs to
   scripts/                    CI checks, suite installer, journey checkpoint verifiers, and tests
   tmp/                        Scratch space — gitignored, safe for experiments
 ```
@@ -100,6 +101,10 @@ This checks both customer and development skill trees: SKILL.md frontmatter, `ev
 
 Use the `skill-creator` skill (`/skill-creator`) for the build → eval → review loop. Outputs land in `tmp/<skill-name>-workspace/` (gitignored).
 
+### Routing check
+
+A description is the only thing an agent reads before it picks a skill, so description changes are measured, not judged by eye. `evals/routing.json` labels the skill (or `none`) for each of about fifty ledger requests, with the siblings each could be confused with; `scripts/ci-check.py` keeps its labels in step with the skill directories. Whenever a description changes or a skill is added, run `python3 skills/scripts/run-routing.py` on Claude Code and Codex before and after the change (results land in `tmp/routing/`; Codex varies between runs, so run each side twice). Record both in [docs/routing-rehearsal.md](docs/routing-rehearsal.md), and fix any prompt that routed correctly before and misroutes after before shipping. The runner makes paid client calls, so CI never runs it.
+
 ### Scratch space
 
 `skills/tmp/` is gitignored. Drop ledgers, eval outputs, throwaway scripts there while iterating. Don't put scratch at the repo root or inside `.claude/`.
@@ -109,5 +114,6 @@ Use the `skill-creator` skill (`/skill-creator`) for the build → eval → revi
 1. For a customer ledger workflow, create `.claude/skills/beancount-<name>/SKILL.md` with `name` and `description` frontmatter. Put internal repository workflows in `../.agents/skills/` instead.
 2. Be explicit in `description` about both when to trigger AND when to skip — Claude tends to undertrigger, but false positives are equally bad.
 3. Build a few realistic test prompts in `evals/evals.json`, run them with and without the skill (via `skill-creator` workflow), iterate.
-4. Update this AGENTS.md's Skills table and the customer catalog in README.md.
-5. `install` links the new directory automatically. Update the expected inventory in `scripts/test_beancount_skills.py`, plus the suite count in `docs/installation.md`, `README.md`, and the root `README.md`.
+4. Add the skill's positive prompts and near-miss prompts to `evals/routing.json`, relabel any `none` prompt it now owns, and run the [routing check](#routing-check).
+5. Update this AGENTS.md's Skills table and the customer catalog in README.md.
+6. `install` links the new directory automatically. Update the expected inventory in `scripts/test_beancount_skills.py`, plus the suite count in `docs/installation.md`, `README.md`, and the root `README.md`.
