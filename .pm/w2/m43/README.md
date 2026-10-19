@@ -19,6 +19,7 @@
 ## Blocked
 
 - **t003 (2026-10-19)** — waits for the owner's dependency decision recorded in [t003](./t003.md): a pinned `skills-ref` in CI, or the specification's frontmatter rules in `ci-check.py`. **Who can clear it:** the repository owner.
+- **t005 (2026-10-19)** — both working channels (`npx`, `gh`) rehearsed end to end on one client with the exact first-query figures, and Hermes removed from the guide because its scanner refuses `beancount-init` outright (evidence in [t005](./t005.md)). What remains is the Codex first-query answer per channel. **Unblock:** Codex usage returns (2026-11-17); run it, record it, close t005. t006 onward wait behind it and t003. **Who can clear it:** the operator (Codex usage).
 - **t004's m42 dependency — cleared 2026-10-19.** It named m42's closeout (t011) for one reason: the channels need the flat `skills/<name>/` layout. That layout shipped in m42/t001–t006 and is live on `main`; only m42's adoption/closeout chain remains. At the owner's direction to keep draining w2, t004's `depends_on` was repointed to `w2/m42/t006` and the milestone unblocked; t003 stays blocked above.
 
 ## Definition of done

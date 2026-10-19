@@ -92,19 +92,9 @@ gh skill install bex-co/beancount-io --all --pin main --agent codex --scope user
 
 `--pin main` is required today, not decoration: without it, `gh` resolves this repository's *latest release* (a mobile-app tag from before the flat `skills/` layout) and reports "no standard skills found". Pinned skills are skipped by `gh skill update`, so update by re-running the install commands with `--force` added. There is no `gh skill remove`: run `gh skill list` to see the install directories, then delete the nine `beancount-*` folders from them.
 
-### Hermes
+### Hermes — not yet
 
-Hermes installs one skill per command, by repository path:
-
-```sh
-for s in beancount-init beancount-add beancount-import beancount-importer-author beancount-reconcile beancount-migrate beancount-ask beancount-close beancount-options; do
-  hermes skills install "bex-co/beancount-io/skills/$s"
-done
-hermes skills update      # later updates (all outdated skills)
-hermes skills list        # confirm
-```
-
-Remove with `hermes skills uninstall <name>` per skill. (Commands checked against the Hermes source, 2026-10-19.)
+Hermes cannot install the whole suite today (rehearsed 2026-10-19): its security scanner blocks `beancount-init` with a dangerous verdict that even `--force` does not override — the flagged patterns are the skill's own documented behaviors (writing the new ledger's `AGENTS.md`, and the `curl … | sh` fallback for installing `uv`) — and `beancount-import` installs only with `--force`. Eight of the nine skills do install (`hermes skills install bex-co/beancount-io/skills/<name> --yes`, plus `--force` for `beancount-import`), but a suite without `beancount-init` lacks the shared command contract its siblings read, so treat that as unsupported for now. Hermes reads project skills from `./.agents/skills` in a trusted project (`hermes skills trust`), so the link installer and the `npx`/`gh` project installs above are the way in from a ledger workspace today.
 
 ### Choosing a method
 
