@@ -1097,6 +1097,45 @@ class TestBeaRecipes(unittest.TestCase):
         self.assertEqual(self.recipe("tie-out")["rows"], [["2945.00", "2941.00", "-1.00"]])
         self.assertEqual(ledger.read_bytes(), before)
 
+    def test_realized_gains_rows_totals_and_tie_out(self):
+        ledger = self.books / "main.bean"
+        ledger.write_text(
+            'option "operating_currency" "USD"\n'
+            "2025-01-01 open Assets:Brokerage USD,VTI\n"
+            "2025-01-01 open Assets:Brokerage:Roth USD,VTI\n"
+            "2025-01-01 open Income:CapitalGains USD\n"
+            "2025-01-01 open Equity:Opening-Balances\n"
+            '2025-01-02 * "Cash in"\n  Assets:Brokerage 20000.00 USD\n  Equity:Opening-Balances\n'
+            '2025-01-15 * "Buy lot one"\n  Assets:Brokerage 10 VTI {250.00 USD}\n  Assets:Brokerage -2500.00 USD\n'
+            '2025-02-15 * "Buy lot two"\n  Assets:Brokerage 10 VTI {260.00 USD}\n  Assets:Brokerage -2600.00 USD\n'
+            '2026-01-10 * "Buy lot three"\n  Assets:Brokerage 10 VTI {270.00 USD}\n  Assets:Brokerage -2700.00 USD\n'
+            '2026-02-01 * "Transfer two of lot one"\n  Assets:Brokerage -2 VTI {250.00 USD, 2025-01-15}\n  Assets:Brokerage:Roth 2 VTI {250.00 USD, 2025-01-15}\n'
+            '2026-03-01 * "Sell five of lot one"\n  Assets:Brokerage -5 VTI {250.00 USD, 2025-01-15} @ 300.00 USD\n  Assets:Brokerage 1500.00 USD\n  Income:CapitalGains -250.00 USD\n'
+            '2026-03-02 * "Sell four of lot two"\n  Assets:Brokerage -4 VTI {260.00 USD, 2025-02-15} @ 280.00 USD\n  Assets:Brokerage 1120.00 USD\n  Income:CapitalGains -80.00 USD\n'
+            '2026-06-01 * "Sell three of lot three"\n  Assets:Brokerage -3 VTI {270.00 USD, 2026-01-10} @ 290.00 USD\n  Assets:Brokerage 870.00 USD\n  Income:CapitalGains -60.00 USD\n'
+        )
+        before = ledger.read_bytes()
+        self.values.update(
+            ledger=str(ledger), year_start="2026-01-01", year_end="2027-01-01",
+            gains_pattern="CapitalGains", currency="USD",
+        )
+        # The transfer (no price) is excluded; partial sells close parts of lots.
+        self.assertEqual(
+            self.recipe("realized-gains")["rows"],
+            [
+                ["Assets:Brokerage", "VTI", "2025-01-15", "2026-03-01", 410, "5", "1500.00", "1250.00", "250.00", "USD"],
+                ["Assets:Brokerage", "VTI", "2025-02-15", "2026-03-02", 380, "4", "1120.00", "1040.00", "80.00", "USD"],
+                ["Assets:Brokerage", "VTI", "2026-01-10", "2026-06-01", 142, "3", "870.00", "810.00", "60.00", "USD"],
+            ],
+        )
+        self.assertEqual(
+            sorted(self.recipe("realized-gains-totals")["rows"], key=str),
+            [[False, "USD", "60.00"], [True, "USD", "330.00"]],
+        )
+        # Independent tie-out: gains actually booked to the income account.
+        self.assertEqual(self.recipe("realized-gains-booked")["rows"], [["390.00"]])
+        self.assertEqual(ledger.read_bytes(), before)
+
     def test_coverage_recipes_count_the_window_and_check_statement_arithmetic(self):
         ledger = self.books / "main.bean"
         ledger.write_text(

@@ -44,7 +44,7 @@ Write every approved event through the shared `transaction` recipe (`bea add tra
 
 ## Scope
 
-**Does:** one described investment event per run — buy, sell, cash or reinvested dividend, split, transfer between the user's own accounts, RSU/ESPP vest — for stocks, funds, and crypto, appended to an existing file the root ledger includes.
+**Does:** one described investment event per run — buy, sell, cash or reinvested dividend, split, transfer between the user's own accounts, RSU/ESPP vest — for stocks, funds, and crypto, appended to an existing file the root ledger includes. Also reports a year's realized gains read-only (`references/realized-gains.md`): every closed lot with its holding period, tied out against the booked gains.
 
 **Does not:** record options contracts or their lifecycle (`beancount-options`), read broker statement files (`beancount-import`), compare against a statement (`beancount-reconcile`), answer performance questions (`beancount-ask`), record everyday entries (`beancount-add`), advise on tax treatment, or touch shorts, margin, and derivatives beyond options — refuse those by name. Never invent an account or a commodity the user did not name.
 
