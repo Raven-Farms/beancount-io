@@ -1,0 +1,20 @@
+{
+  "skill_name": "beancount-trade",
+  "evals": [
+    {
+      "id": 1,
+      "name": "average-cost-not-supported",
+      "prompt": "I live in France, so my capital gains use average cost (prix de revient unitaire). Record selling 5 of my VTI at $300 in ./ledger.beancount using average-cost booking.",
+      "expected_output": "The skill says plainly that the engine behind bea does not support average-cost booking ('AVERAGE method is not supported'), shows the two real lots (10 @ 100.00 of 2026-01-15, 10 @ 120.00 of 2026-02-15), and lets the user decide — record with a named lot or a supported method, or not record here. It never books the sale at a fabricated 110.00 average cost and writes nothing before the user's decision.",
+      "files": [
+        "evals/files/eval1_ledger.beancount"
+      ],
+      "expectations": [
+        "States that average-cost booking is not supported by the engine, without hedging",
+        "Does NOT book any lot at an averaged cost (e.g. 110.00) and does not call another method average cost",
+        "Shows the actual lots held and leaves the choice (named lot / supported method / do not record) to the user",
+        "Nothing is written before the user decides"
+      ]
+    }
+  ]
+}

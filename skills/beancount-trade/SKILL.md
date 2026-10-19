@@ -120,6 +120,19 @@ bea --file "$ledger" --json --no-input check
 
 Report the entry as written, the lot it consumed or created, and the gain the booking produced. Each command validates its own write and refuses an entry that would break the ledger, writing nothing; on a refusal (an ambiguous lot, a commodity the account may not hold), report the exact error and read the ledger before retrying — `bea add` does not deduplicate. Never report success without a passing check.
 
+## Booking methods
+
+Which lot an unnamed reduction (`{}`) takes is the account's booking method, declared in its `open` line. The engine behind `bea` accepts exactly these (verified against `bea 0.3.1` with `bea check` on a synthetic two-lot ledger, 2026-10-19): **STRICT** (the default when the open names none), **STRICT_WITH_SIZE**, **NONE**, **FIFO**, **LIFO**, **HIFO**.
+
+- **STRICT** — `{}` matches only when exactly one lot can mean it; with two candidate lots the write is refused as ambiguous. Name the lot by cost and date, or ask (the sell procedure above).
+- **STRICT_WITH_SIZE** — like STRICT, except a reduction whose size equals exactly one lot's size matches that lot.
+- **FIFO / LIFO / HIFO** — the engine selects the oldest / newest / highest-cost lot. The proposal still names the lot the method will take (read it off the `lots-held` order) so the user confirms the real outcome, not just the method's name.
+- **NONE** — no booking: reductions carry no cost and the engine computes no gain, so every leg needs an explicit amount. Show proceeds and the named lot's cost and let the user confirm the gain figure in the proposal; never fill it in silently.
+
+Choose the method when the account is opened (`bea add open --booking FIFO` writes it into the `open` line, on request — this skill does not edit existing `open` directives, so changing a method later is the user's own edit with gain-history consequences to say out loud).
+
+**Average cost is not supported.** Naming it fails the check with `AVERAGE method is not supported`. Some tax regimes require it (France's PRU, for one). Tell the user exactly that — the engine cannot book average cost — and let them decide: record sells with named lots under another method and keep their average-cost figures outside the ledger, or do not record the sell here. Never silently approximate: do not re-cost lots to an average, and do not book FIFO while calling it average cost.
+
 ## What NOT to do
 
 - Don't write anything without an explicit yes.
