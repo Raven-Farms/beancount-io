@@ -9,6 +9,7 @@ import {
   parseSignupAllowedDomains,
   parseSignupAllowedEmails,
 } from "./config";
+import { isSignupAllowed } from "@/features/auth/utils/signup-policy";
 
 describe("config", () => {
   const originalEnv = process.env;
@@ -315,6 +316,28 @@ describe("config", () => {
         "example.com",
         "b.co",
       ]);
+    });
+
+    it("are read from the environment into config.signup", () => {
+      process.env.SIGNUP_ALLOWED_EMAILS = "CPA@Firm.Example";
+      process.env.SIGNUP_ALLOWED_DOMAINS = "example.com";
+      jest.isolateModules(() => {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { config: fresh } = require("./config");
+        expect([...fresh.signup.allowedEmails]).toEqual(["cpa@firm.example"]);
+        expect(isSignupAllowed("staff@example.com", fresh.signup)).toBe(true);
+        expect(isSignupAllowed("outsider@elsewhere.test", fresh.signup)).toBe(
+          false,
+        );
+      });
+    });
+
+    it("fail module initialization on a malformed environment value", () => {
+      process.env.SIGNUP_ALLOWED_DOMAINS = "*.example.com";
+      jest.isolateModules(() => {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        expect(() => require("./config")).toThrow(/SIGNUP_ALLOWED_DOMAINS/);
+      });
     });
 
     it("reject a value that is set but lists nothing", () => {
