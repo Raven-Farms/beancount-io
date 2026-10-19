@@ -43,7 +43,7 @@
 
 - [x] **m38** — [Route every ledger request to the right beancount skill](./done/m38/README.md) (11 tasks) ← agentic-skill review of `skills/`, user request 2026-10-18; user routed to w2
 - [ ] **m39** — [Rename the two skills whose names collide with Beancount directives](./blocked/m39/README.md) (10 tasks) ← same review, 2026-10-18 — sequenced after m38; lands before w6/m6 publishes ClawHub slugs — **blocked:** routing shows no benefit from the rename (t001); the owner decides whether readability alone justifies the migration
-- [ ] **m40** — [Record everyday ledger changes through a `beancount-add` skill](./m40/README.md) (10 tasks) ← same review, 2026-10-18 — sequenced after m38
+- [ ] **m40** — [Record everyday ledger changes through a `beancount-add` skill](./blocked/m40/README.md) (10 tasks) ← same review, 2026-10-18 — sequenced after m38 — **blocked:** closeout needs Codex to pass eval 10 (w2/089) once Codex usage is available, or the owner to accept the recorded exception
 - [ ] **m41** — [Rewrite the accumulated skill fixes as plain procedures](./m41/README.md) (9 tasks) ← same review, 2026-10-18 — best after m39
 
 ## Dropped

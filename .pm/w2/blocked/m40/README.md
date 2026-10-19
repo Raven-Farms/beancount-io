@@ -1,6 +1,6 @@
 # w2 · m40 — Record everyday ledger changes through a `beancount-add` skill
 
-**Worker:** worker2 **Goal:** a user who tells their coding agent "I paid $42 for dinner on the Amex", "open a savings account", or "close my old card" gets a proposed entry that uses existing accounts. It is written through `bea` only after a yes and checked against the root ledger, with the same safeguards the other skills use. **Status:** todo (t001–t009 done)
+**Worker:** worker2 **Goal:** a user who tells their coding agent "I paid $42 for dinner on the Amex", "open a savings account", or "close my old card" gets a proposed entry that uses existing accounts. It is written through `bea` only after a yes and checked against the root ledger, with the same safeguards the other skills use. **Status:** blocked (t001–t009 done; closeout waits on Codex eval 10)
 
 ## Tasks (in order)
 
@@ -15,7 +15,11 @@
 | [t007](./done/t007.md) | Adoption surface — **DONE** | 30m | t005, t006 |
 | [t008](./done/t008.md) | Simplify — **DONE** | 15m | t007 |
 | [t009](./done/t009.md) | Test coverage — **DONE** | 30m | t007, t008 |
-| t010 | Closeout | 15m | t009 |
+| t010 | Closeout — **BLOCKED** | 15m | t009 |
+
+## Blocked
+
+- **t010 Closeout (2026-10-19)** — one definition-of-done item does not hold: "The skill's evals pass on Claude Code and Codex." Claude Code passes all 11. Codex passes 10 and fails eval 10 (a request that mixes an add with an edit) in every run: it renames the existing entry the skill leaves to the user, and three of four times writes before the yes ([rehearsal](../../../../skills/docs/add-rehearsal.md), tracked as [w2/089](../../089.md)). Two skill-text rounds did not change it, and a fix cannot be verified here: the Codex account reported its usage limit on 2026-10-19 ("try again at Nov 17th, 2026"). Everything else is shipped: t001–t009 (`013df4dd9` … `776136276`). **Unblock:** either (a) w2/089 lands and eval 10 passes on a Codex rerun, which needs Codex usage (the limit resets 2026-11-17, or an account with quota), or (b) the owner amends this definition of done to accept the recorded Codex exception. Then `/pm unblock w2/m40` and run t010. **Who can clear it:** the operator, for Codex usage, or the repository owner, for the scope decision.
 
 ## Definition of done
 
@@ -32,7 +36,7 @@
 - **Source:** agentic-skill review of `skills/` at the user's request, 2026-10-18. The eight skills cover imports, statements, migration, questions, options trades, and closes. None owns the most common bookkeeping request, recording one thing the user just did. An agent therefore either picks a sibling built for something else or edits the ledger freehand, without the proposal, account, and check safeguards. `bea` already exposes the primitives (`bea add transaction|open|close|price|note|…`, `cli/src/cli/commands/add.py`).
 - **Goal linkage:** **A1 — Agent-native accounting:** an agent can maintain a ledger day to day, not only in batch workflows. **A2 — Frictionless onboarding:** after `beancount-init`, the next thing a newcomer does is record a purchase.
 - **Expected outcome:** a user records a purchase, transfer, new account, or account closure by describing it. The entry lands in the right file through `bea` and passes the check. Signals: routing-set recall for manual-entry prompts, and skill invocations once the registry listing exists.
-- **Why now:** [ADR 020](../../../docs/adrs/ADR020-skills-accounting-workflow-candidates.md) requires a new top-level skill to have "a distinct trigger, input contract, deliverable, and evaluation set". [m38](../done/m38/README.md) supplies the routing evidence that shows the trigger is distinct. Shipping before [w6/m6](../../w6/blocked/m6/README.md)'s first ClawHub publish lets the listing go out as a complete suite. Sequence after [m39](../blocked/m39/README.md) when possible, so both milestones do not edit the same catalog lines at once. Adoption surface is included because this adds a customer-facing skill.
+- **Why now:** [ADR 020](../../../../docs/adrs/ADR020-skills-accounting-workflow-candidates.md) requires a new top-level skill to have "a distinct trigger, input contract, deliverable, and evaluation set". [m38](../../done/m38/README.md) supplies the routing evidence that shows the trigger is distinct. Shipping before [w6/m6](../../../w6/blocked/m6/README.md)'s first ClawHub publish lets the listing go out as a complete suite. Sequence after [m39](../m39/README.md) when possible, so both milestones do not edit the same catalog lines at once. Adoption surface is included because this adds a customer-facing skill.
 
 ## Out of scope
 
