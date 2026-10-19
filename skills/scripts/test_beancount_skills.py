@@ -234,6 +234,17 @@ class TestVerify(Workspace):
         self.assertIn("beancount-reconcile/SKILL.md:", err)
         self.assertNotIn("FAIL beancount-reconcile/references/bea-cli.md", err)
 
+    def test_add_skill_names_the_shared_contract_and_sibling_it_cannot_run_without(self):
+        self.copy_suite(self.dest)
+        (self.dest / "beancount-init" / "references" / "bea-cli.md").unlink()
+        code, _, err = run("verify", self.dest)
+        self.assertEqual(code, 1)
+        self.assertRegex(err, r"FAIL beancount-init/references/bea-cli\.md is missing \(beancount-add/SKILL\.md:\d+ needs it\)")
+        shutil.rmtree(self.dest / "beancount-init")
+        code, _, err = run("verify", self.dest)
+        self.assertEqual(code, 1)
+        self.assertRegex(err, r"FAIL beancount-add refers to beancount-init \(beancount-add/SKILL\.md:\d+\), which is not installed")
+
     def test_missing_composed_sibling_is_reported_by_the_skill_that_needs_it(self):
         self.copy_suite(self.dest)
         shutil.rmtree(self.dest / "beancount-reconcile")
@@ -743,6 +754,18 @@ class TestBeaRecipes(unittest.TestCase):
         destination = self.recipe("entry-destination")["rows"]
         self.assertEqual(len(destination), 1)
         self.assertTrue(destination[0][0].endswith(self.values["target"]))
+
+    def test_one_off_write_outside_the_included_files_is_refused_and_creates_nothing(self):
+        orphan = self.books / "transactions" / "orphan.bean"
+        orphan.write_text("; not included by the root\n")
+        before = (self.ledger.read_bytes(), self.target.read_bytes(), orphan.read_bytes())
+        for destination in ("transactions/orphan.bean", "transactions/missing.bean"):
+            with self.subTest(destination=destination):
+                self.values["target"] = destination
+                refused = self.one_off(succeeds=False)
+                self.assertIn("is not included by", refused.stdout + refused.stderr)
+                self.assertEqual((self.ledger.read_bytes(), self.target.read_bytes(), orphan.read_bytes()), before)
+        self.assertFalse((self.books / "transactions" / "missing.bean").exists())
 
     def test_open_accounts_lists_unused_accounts_and_drops_closed_ones(self):
         rows = self.recipe("open-accounts")["rows"]
