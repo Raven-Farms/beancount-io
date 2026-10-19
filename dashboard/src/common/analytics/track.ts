@@ -42,6 +42,32 @@ export interface RouteViewParams {
   route_pattern: string;
 }
 
+export interface PageViewParams {
+  /** Normalized route pattern, e.g. "/auth/reset-password/". */
+  route_pattern: string;
+  page_title?: string;
+}
+
+/**
+ * Send the one `page_view` per navigation (docs/event-taxonomy.md §6.1), and
+ * make `origin + pattern` the location every later event reports. The raw URL
+ * never reaches GA4: it can carry usernames, ledger names and, on the auth
+ * routes, live reset and one-time sign-in tokens (w0/053).
+ */
+export function trackPageView(params: PageViewParams): void {
+  if (!isAnalyticsAvailable()) return;
+  const pageLocation = window.location.origin + params.route_pattern;
+  callGtag("set", {
+    page_location: pageLocation,
+    page_path: params.route_pattern,
+  });
+  callGtag("event", "page_view", {
+    page_location: pageLocation,
+    page_path: params.route_pattern,
+    page_title: params.page_title,
+  });
+}
+
 /** Fire a custom `route_view` event on every SPA navigation and initial load. */
 export function trackRouteView(params: RouteViewParams): void {
   if (!isAnalyticsAvailable()) return;

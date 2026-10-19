@@ -9,11 +9,15 @@ import { config } from "@/config/config";
  * Renders nothing when no measurement ID is configured, so analytics is
  * disabled gracefully (e.g. local dev without a stream, or misconfigured envs).
  *
- * GA4 auto-collects `page_view` normally for built-in reports (Pages and
- * Screens, session attribution, etc.). Enable Enhanced Measurement "Page views"
- * in GA4 Admin → Data Streams so history-based SPA navigations are captured too.
- * Alongside this, AnalyticsProvider fires a custom `route_view` event with
- * normalized, PII-free parameters for product analytics (see track.ts).
+ * GA4 never sees a raw URL (docs/event-taxonomy.md §6.1, w0/053). The
+ * automatic `page_view` is off and `page_location` starts as the bare origin;
+ * AnalyticsProvider then sets it to `origin + route pattern` and sends the one
+ * `page_view` per navigation (see track.ts). Raw URLs carry credentials: the
+ * password-reset link's `?token=` and the one-time sign-in link's
+ * `?oneTimeToken=`. `page_referrer` is cut to its origin for the same reason,
+ * since the page after a reset is referred by the token URL. Enhanced
+ * Measurement "Page views" must stay OFF in GA4 Admin → Data Streams: it
+ * reads the raw URL on every history change.
  */
 export function GoogleAnalytics() {
   const { gaMeasurementId, gaDebugMode } = config;
@@ -21,18 +25,19 @@ export function GoogleAnalytics() {
   if (!gaMeasurementId) return null;
 
   // debug_mode surfaces events in GA4 DebugView for non-production streams.
-  const configOptions: Record<string, unknown> = {};
+  const configOptions: Record<string, unknown> = { send_page_view: false };
   if (gaDebugMode) configOptions.debug_mode = true;
 
   // Build the bootstrap inline so the measurement ID and flags are resolved at
-  // build time per environment.
+  // build time per environment. The location and referrer are the browser's,
+  // reduced to origins before gtag can read them.
   const initScript = [
     "window.dataLayer = window.dataLayer || [];",
     "function gtag(){dataLayer.push(arguments);}",
     'gtag("js", new Date());',
-    `gtag("config", ${JSON.stringify(gaMeasurementId)}, ${JSON.stringify(
+    `gtag("config", ${JSON.stringify(gaMeasurementId)}, Object.assign(${JSON.stringify(
       configOptions,
-    )});`,
+    )}, { page_location: location.origin + "/", page_referrer: document.referrer ? new URL(document.referrer).origin + "/" : "" }));`,
   ].join("\n");
 
   return (
