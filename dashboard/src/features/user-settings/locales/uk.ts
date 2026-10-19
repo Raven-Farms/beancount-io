@@ -538,6 +538,10 @@ const ukUserSettings: Record<string, TranslationEntry> = {
     message: "{count} токенів AI / місяць",
     description: "AI token allowance for a subscription tier",
   },
+  "userSettings.unlimitedAiTokens": {
+    message: "Необмежена кількість токенів AI",
+    description: "Unlimited AI token allowance",
+  },
   "userSettings.unlimitedLedgers": {
     message: "Необмежена кількість книг",
     description: "Unlimited ledger allowance",

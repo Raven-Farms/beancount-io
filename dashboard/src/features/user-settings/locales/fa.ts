@@ -536,6 +536,10 @@ const faUserSettings: Record<string, TranslationEntry> = {
     message: "{count} نشانه های هوش مصنوعی / ماه",
     description: "AI token allowance for a subscription tier",
   },
+  "userSettings.unlimitedAiTokens": {
+    message: "نشانه‌های هوش مصنوعی نامحدود",
+    description: "Unlimited AI token allowance",
+  },
   "userSettings.unlimitedLedgers": {
     message: "دفتر کل نامحدود",
     description: "Unlimited ledger allowance",
@@ -556,7 +560,7 @@ const faUserSettings: Record<string, TranslationEntry> = {
       "Ledger allowance for a subscription tier - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form - plural form",
   },
   "userSettings.unlimitedDirectives": {
-    message: "دستورالعمل های نامحدود\nدستورالعمل های",
+    message: "دستورالعمل‌های نامحدود",
     description: "Unlimited directive allowance",
   },
   "userSettings.includedDirectives": {

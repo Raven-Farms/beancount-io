@@ -531,6 +531,10 @@ const koUserSettings: Record<string, TranslationEntry> = {
     message: "{count} AI 토큰/월",
     description: "AI token allowance for a subscription tier",
   },
+  "userSettings.unlimitedAiTokens": {
+    message: "무제한 AI 토큰",
+    description: "Unlimited AI token allowance",
+  },
   "userSettings.unlimitedLedgers": {
     message: "무제한 원장",
     description: "Unlimited ledger allowance",

@@ -537,6 +537,10 @@ const skUserSettings: Record<string, TranslationEntry> = {
     message: "{count} AI tokenov / mesiac",
     description: "AI token allowance for a subscription tier",
   },
+  "userSettings.unlimitedAiTokens": {
+    message: "Neobmedzené AI tokeny",
+    description: "Unlimited AI token allowance",
+  },
   "userSettings.unlimitedLedgers": {
     message: "Neobmedzené účtovné knihy",
     description: "Unlimited ledger allowance",

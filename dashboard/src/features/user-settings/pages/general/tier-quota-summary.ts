@@ -38,7 +38,9 @@ export function aiTokensLine(
   t: Translate,
   formatCount: FormatCount,
 ) {
-  return t("userSettings.aiTokensPerMonth", { count: formatCount(max) });
+  return max === -1
+    ? t("userSettings.unlimitedAiTokens")
+    : t("userSettings.aiTokensPerMonth", { count: formatCount(max) });
 }
 
 /**

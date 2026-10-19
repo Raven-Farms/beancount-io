@@ -539,6 +539,10 @@ const frUserSettings: Record<string, TranslationEntry> = {
     message: "{count} jetons IA / mois",
     description: "AI token allowance for a subscription tier",
   },
+  "userSettings.unlimitedAiTokens": {
+    message: "Jetons IA illimités",
+    description: "Unlimited AI token allowance",
+  },
   "userSettings.unlimitedLedgers": {
     message: "Grands livres illimités",
     description: "Unlimited ledger allowance",

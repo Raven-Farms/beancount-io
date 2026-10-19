@@ -538,6 +538,10 @@ const ruUserSettings: Record<string, TranslationEntry> = {
     message: "{count} токенов AI/месяц",
     description: "AI token allowance for a subscription tier",
   },
+  "userSettings.unlimitedAiTokens": {
+    message: "Неограниченное количество токенов AI",
+    description: "Unlimited AI token allowance",
+  },
   "userSettings.unlimitedLedgers": {
     message: "Неограниченное количество регистров",
     description: "Unlimited ledger allowance",

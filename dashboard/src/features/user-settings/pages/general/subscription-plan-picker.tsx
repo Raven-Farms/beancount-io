@@ -191,11 +191,7 @@ export function PlanPicker({
                       formatCount,
                     )}
                   </li>
-                  <li>
-                    {quota.aiCfoTokensMax === -1
-                      ? t("userSettings.unlimited")
-                      : aiTokensLine(quota.aiCfoTokensMax, t, formatCount)}
-                  </li>
+                  <li>{aiTokensLine(quota.aiCfoTokensMax, t, formatCount)}</li>
                 </ul>
               )}
 

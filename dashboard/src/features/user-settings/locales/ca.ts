@@ -539,6 +539,10 @@ const caUserSettings: Record<string, TranslationEntry> = {
     message: "{count} fitxes d'IA/mes",
     description: "AI token allowance for a subscription tier",
   },
+  "userSettings.unlimitedAiTokens": {
+    message: "Fitxes d'IA il·limitades",
+    description: "Unlimited AI token allowance",
+  },
   "userSettings.unlimitedLedgers": {
     message: "Llibres il·limitats",
     description: "Unlimited ledger allowance",

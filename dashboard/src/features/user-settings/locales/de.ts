@@ -540,6 +540,10 @@ const deUserSettings: Record<string, TranslationEntry> = {
     message: "{count} KI-Tokens / Monat",
     description: "AI token allowance for a subscription tier",
   },
+  "userSettings.unlimitedAiTokens": {
+    message: "Unbegrenzte KI-Tokens",
+    description: "Unlimited AI token allowance",
+  },
   "userSettings.unlimitedLedgers": {
     message: "Unbegrenzte Hauptbücher",
     description: "Unlimited ledger allowance",

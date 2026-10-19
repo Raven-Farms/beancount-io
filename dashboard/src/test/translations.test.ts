@@ -475,6 +475,31 @@ describe("Translation Files Validation", () => {
 
       expect(errors).toHaveLength(0);
     });
+
+    // A line break English lacks is a translation artifact: zh's "Unlimited
+    // collaborators" shipped as "无限合作者\n每个账本最多" on the plan cards.
+    it("should not add line breaks the English message does not have", async () => {
+      const locales = await loadAllLocales();
+      const enTranslations = locales.get("en")!;
+      const breaks = (message: string) => message.split("\n").length - 1;
+      const errors: string[] = [];
+      let compared = 0;
+
+      for (const [lang, translations] of locales) {
+        if (lang === "en") continue;
+        for (const [key, entry] of Object.entries(translations)) {
+          const en = enTranslations[key];
+          if (!en) continue;
+          compared++;
+          if (breaks(entry.message) > breaks(en.message)) {
+            errors.push(`[${lang}] ${key}: ${JSON.stringify(entry.message)}`);
+          }
+        }
+      }
+
+      expect(compared).toBeGreaterThan(10_000);
+      expect(errors).toEqual([]);
+    });
   });
 
   describe("Namespace Validation", () => {

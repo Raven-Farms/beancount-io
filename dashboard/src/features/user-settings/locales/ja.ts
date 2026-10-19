@@ -532,6 +532,10 @@ const jaUserSettings: Record<string, TranslationEntry> = {
     message: "{count} AI トークン / 月",
     description: "AI token allowance for a subscription tier",
   },
+  "userSettings.unlimitedAiTokens": {
+    message: "無制限の AI トークン",
+    description: "Unlimited AI token allowance",
+  },
   "userSettings.unlimitedLedgers": {
     message: "無制限の台帳",
     description: "Unlimited ledger allowance",

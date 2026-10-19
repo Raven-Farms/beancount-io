@@ -533,6 +533,10 @@ const zhUserSettings: Record<string, TranslationEntry> = {
     message: "{count} AI 词元/月",
     description: "AI token allowance for a subscription tier",
   },
+  "userSettings.unlimitedAiTokens": {
+    message: "无限 AI 词元",
+    description: "Unlimited AI token allowance",
+  },
   "userSettings.unlimitedLedgers": {
     message: "无限账本",
     description: "Unlimited ledger allowance",
@@ -556,7 +560,7 @@ const zhUserSettings: Record<string, TranslationEntry> = {
     description: "Directive allowance for a subscription tier",
   },
   "userSettings.unlimitedCollaborators": {
-    message: "无限合作者\n每个账本最多",
+    message: "协作者人数不限",
     description: "Unlimited collaborator allowance",
   },
   "userSettings.collaboratorsPerLedger": {

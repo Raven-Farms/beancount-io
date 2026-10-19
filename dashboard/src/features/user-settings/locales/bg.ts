@@ -538,6 +538,10 @@ const bgUserSettings: Record<string, TranslationEntry> = {
     message: "{count} AI токени / месец",
     description: "AI token allowance for a subscription tier",
   },
+  "userSettings.unlimitedAiTokens": {
+    message: "Неограничени AI токени",
+    description: "Unlimited AI token allowance",
+  },
   "userSettings.unlimitedLedgers": {
     message: "Неограничени счетоводни книги",
     description: "Unlimited ledger allowance",

@@ -534,6 +534,10 @@ const enUserSettings: Record<string, TranslationEntry> = {
     message: "{count} AI tokens / month",
     description: "AI token allowance for a subscription tier",
   },
+  "userSettings.unlimitedAiTokens": {
+    message: "Unlimited AI tokens",
+    description: "Unlimited AI token allowance",
+  },
   "userSettings.unlimitedLedgers": {
     message: "Unlimited ledgers",
     description: "Unlimited ledger allowance",

@@ -537,6 +537,10 @@ const nlUserSettings: Record<string, TranslationEntry> = {
     message: "{count} AI-tokens/maand",
     description: "AI token allowance for a subscription tier",
   },
+  "userSettings.unlimitedAiTokens": {
+    message: "Onbeperkte AI-tokens",
+    description: "Unlimited AI token allowance",
+  },
   "userSettings.unlimitedLedgers": {
     message: "Onbeperkte grootboeken",
     description: "Unlimited ledger allowance",
