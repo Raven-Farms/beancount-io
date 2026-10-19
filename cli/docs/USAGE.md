@@ -558,11 +558,12 @@ the plugin, its `SystemExit` value, and what it printed. This stops the load
 on reads and writes, including doctor, native-source queries, `--debug`, and
 `--allow-errors`; the plugin did not finish transforming the ledger.
 A transaction Beancount's booking cannot do the arithmetic for — zero units
-at a total cost (`0 HOOL {{310 USD}}`), or an amount it must infer wider than
+at a total cost (`0 HOOL {{310 USD}}`), units elided beside a zero cost or
+price (`HOOL {0 USD}`, `EUR @ 0 USD`), or an amount it must infer wider than
 the 28 significant digits it keeps — is reported the same way, as `FILE:LINE:
 Beancount cannot book this transaction: …`, where bean-check raises an
-uncaught `DivisionByZero` or `InvalidOperation`; every other read reports it
-at that line too, and leaves that transaction out.
+uncaught error; every other read reports it at that line too, and leaves
+that transaction out.
 `bea --debug check` keeps bean-check's traceback for ordinary exceptions;
 a terminating plugin is refused before bean-check can run it again.
 Metadata named `filename` or `lineno`, on a directive or in a `pushmeta`, is
@@ -1567,7 +1568,8 @@ bea add transaction "Buy AAPL" --date 2026-08-02 \
 
 Per-unit and total prices (`@`, `@@`) and total costs (`{{...}}`) are supported;
 a total cost needs units to divide among, so zero units at one is refused
-(exit **2** for `--posting`, `Row N, postings.<i>` in bulk input).
+(exit **2** for `--posting`, `Row N, postings.<i>` in bulk input), as is a
+`--posting` that elides its units beside a zero cost or price.
 A `@@` total is written back with `@@` and its exact total, never divided
 into a repeating unit price. A cost is written whole: a total cost keeps its
 total (`{0 # 250.00 USD}`, the same lot as `{{250.00 USD}}`), a currency-only

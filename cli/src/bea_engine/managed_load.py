@@ -379,7 +379,7 @@ def _load_with_sources(
 
     keep_load_cache_private()
     _record_plugin_configs(loader)
-    _book_past_arithmetic_failures()
+    _book_past_unbookable()
 
     at = time.time() if now is None else now
     want_offline = _env_flag(OFFLINE_ENV) if offline is None else offline
@@ -793,7 +793,7 @@ def is_plugin_exit(error: Any) -> bool:
     return bool((getattr(error, "source", None) or {}).get(PLUGIN_EXIT_KEY))
 
 
-#: How every booking failure `_book_past_arithmetic_failures` reports begins;
+#: How every booking failure `_book_past_unbookable` reports begins;
 #: bean-check raises on the same transaction, so `check` reports these itself.
 CANNOT_BOOK = "Beancount cannot book this transaction: "
 
@@ -810,9 +810,23 @@ TOO_WIDE_TO_INFER = (
     "explicit amount, or use a number of at most 28 significant digits."
 )
 
+#: Units elided beside a zero rate, refused at input and reported on read.
+ELIDED_UNITS_ZERO_COST = (
+    "holds no units beside a zero per-unit cost ({…}), and booking cannot infer units from a zero cost. "
+    "Give the posting its units, or a nonzero cost."
+)
+ELIDED_UNITS_ZERO_TOTAL = (
+    "holds no units beside a zero total cost ({{…}}), and booking cannot infer units from a zero total. "
+    "Give the posting its units, or a nonzero total."
+)
+ELIDED_UNITS_ZERO_PRICE = (
+    "holds no units beside a zero price (@ …), and booking cannot infer units from a zero price. "
+    "Give the posting its units, or a nonzero price."
+)
+
 
 def is_booking_failure(error: Any) -> bool:
-    """Whether a loader error is a transaction `_book_past_arithmetic_failures` reported."""
+    """Whether a loader error is a transaction `_book_past_unbookable` reported."""
     message = getattr(error, "message", None)
     return isinstance(message, str) and message.startswith(CANNOT_BOOK)
 
@@ -832,8 +846,44 @@ def zero_units_at_total_cost(posting: Any) -> bool:
     )
 
 
-def _book_past_arithmetic_failures() -> None:
-    """Have booking report a transaction its decimal arithmetic fails on, at that transaction (w5/538).
+def elided_units_zero_rate_tail(posting: Any) -> str | None:
+    """The booking-failure tail when a posting elides its units beside a zero cost or price.
+
+    Units present — even zero — book, or fail with their own error, and a
+    nonzero rate infers; None when the posting is neither unbookable shape
+    (w5/732).
+    """
+    from beancount.core.number import MISSING
+    from beancount.core.position import CostSpec
+
+    units = posting.units
+    if units is not None and units is not MISSING and units.number is not MISSING:
+        return None
+    cost = posting.cost
+    if isinstance(cost, CostSpec):
+        # A total cost fills both numbers (`{{0 USD}}` parses per-unit zero
+        # too), so the total is asked first.
+        if cost.number_total == 0:
+            return ELIDED_UNITS_ZERO_TOTAL
+        if cost.number_per == 0:
+            return ELIDED_UNITS_ZERO_COST
+    price = posting.price
+    if price is not None and getattr(price, "number", MISSING) == 0:
+        return ELIDED_UNITS_ZERO_PRICE
+    return None
+
+
+def _culprit_zero_rate(posting_owner: Any) -> tuple[Any, str] | None:
+    """The first posting eliding its units beside a zero rate, with its tail, if any."""
+    for posting in posting_owner.postings:
+        tail = elided_units_zero_rate_tail(posting)
+        if tail is not None:
+            return posting, tail
+    return None
+
+
+def _book_past_unbookable() -> None:
+    """Have booking report a transaction it cannot book, at that transaction (w5/538).
 
     Beancount's booking raises instead of reporting when an amount it infers
     does not fit its 28-digit context, or a zero-unit posting divides a total
@@ -846,37 +896,120 @@ def _book_past_arithmetic_failures() -> None:
     failure anywhere else still raises as before. The error is upstream's own
     `InterpolationError`, so Beancount's load cache stays readable by
     upstream tools.
+
+    A units-elided posting beside a zero price asserts inside booking the
+    same way (w5/732); a type or assertion failure booking raises is only
+    reported when the culprit has that shape, so a genuine upstream bug
+    stays loud. A units-elided posting beside a zero cost instead survives
+    booking with MISSING units — booking reports it cannot infer them, then
+    the balance validation dies on them — so the balance check is wrapped
+    the same way: the entry becomes a booking failure at its line and
+    validation resumes after it.
     """
     from decimal import DecimalException
 
     from beancount.parser import booking_full
 
-    if getattr(booking_full._book, "_bea_books_past_arithmetic", False):
-        return
-    original: Any = booking_full._book
+    if getattr(booking_full._book, "_bea_books_past_unbookable", False):
+        pass
+    else:
+        original: Any = booking_full._book
 
-    def _book(entries: Any, options_map: Any, methods: Any, initial_balances: Any = None) -> Any:
-        booked: list[Any] = []
+        def _book(entries: Any, options_map: Any, methods: Any, initial_balances: Any = None) -> Any:
+            booked: list[Any] = []
+            errors: list[Any] = []
+            balances = initial_balances
+            while True:
+                try:
+                    done, found, balances = original(entries, options_map, methods, balances)
+                except (DecimalException, TypeError, AssertionError) as exc:
+                    state = _interrupted_booking(exc, original.__code__)
+                    index = None if state is None else next((n for n, e in enumerate(entries) if e is state[3]), None)
+                    if state is None or index is None:
+                        raise
+                    so_far, so_far_errors, balances, culprit = state
+                    if isinstance(exc, (TypeError, AssertionError)) and _culprit_zero_rate(culprit) is None:
+                        raise
+                    booked.extend(so_far)
+                    errors.extend(so_far_errors)
+                    errors.append(
+                        booking_full.InterpolationError(culprit.meta, _booking_failure(culprit, exc), culprit)
+                    )
+                    entries = entries[index + 1 :]
+                else:
+                    return [*booked, *done], [*errors, *found], balances
+
+        _book._bea_books_past_unbookable = True  # type: ignore[attr-defined]
+        booking_full._book = _book
+    _validate_past_unbookable()
+
+
+def _validate_past_unbookable() -> None:
+    """Have the balance validation report a transaction booking left uninferred, at that transaction (w5/732)."""
+    from beancount.ops import validation
+
+    if getattr(validation.validate_check_transaction_balances, "_bea_validates_past_unbookable", False):
+        return
+    original: Any = validation.validate_check_transaction_balances
+
+    def _validate_balances(entries: Any, options_map: Any) -> Any:
+        from beancount.parser import booking_full
+
         errors: list[Any] = []
-        balances = initial_balances
+        rest = list(entries)
         while True:
             try:
-                done, found, balances = original(entries, options_map, methods, balances)
-            except DecimalException as exc:
-                state = _interrupted_booking(exc, original.__code__)
-                index = None if state is None else next((n for n, e in enumerate(entries) if e is state[3]), None)
+                found = original(rest, options_map)
+            except TypeError as exc:
+                state = _interrupted_validation(exc, original.__code__)
+                index = None if state is None else next((n for n, e in enumerate(rest) if e is state[1]), None)
                 if state is None or index is None:
                     raise
-                so_far, so_far_errors, balances, culprit = state
-                booked.extend(so_far)
-                errors.extend(so_far_errors)
+                so_far, culprit = state
+                if _culprit_zero_rate(culprit) is None:
+                    raise
+                errors.extend(so_far)
                 errors.append(booking_full.InterpolationError(culprit.meta, _booking_failure(culprit, exc), culprit))
-                entries = entries[index + 1 :]
+                rest = rest[index + 1 :]
             else:
-                return [*booked, *done], [*errors, *found], balances
+                return [*errors, *found]
 
-    _book._bea_books_past_arithmetic = True  # type: ignore[attr-defined]
-    booking_full._book = _book
+    _validate_balances._bea_validates_past_unbookable = True  # type: ignore[attr-defined]
+    validation.validate_check_transaction_balances = _validate_balances
+    # `validate` iterates a list built at import time, not the module
+    # attribute, so the wrapper must take the original's seat there too.
+    for name in ("BASIC_VALIDATIONS", "VALIDATIONS"):
+        listed = getattr(validation, name, None)
+        if listed is not None:
+            listed[:] = [_validate_balances if function is original else function for function in listed]
+
+
+def _interrupted_validation(exc: BaseException, code: Any) -> tuple[list[Any], Any] | None:
+    """Upstream balance validation's progress when `exc` left it: errors so far, the raising entry."""
+    trace = exc.__traceback__
+    while trace is not None:
+        if trace.tb_frame.f_code is code:
+            local = trace.tb_frame.f_locals
+            try:
+                return local["errors"], local["entry"]
+            except KeyError:
+                return None
+        trace = trace.tb_next
+    return None
+
+
+def _without_unbookable(entries: list[Any], errors: list[Any]) -> list[Any]:
+    """Entries minus the transactions booking could not do, which validation still lists (w5/732).
+
+    A transaction `_book` reports never joins the booked entries, but one the
+    balance validation reports was already booked — with MISSING units that
+    every downstream read dies on. Each booking failure names its entry, so
+    those are dropped here, as the booking ones are.
+    """
+    dropped = {id(getattr(error, "entry", None)) for error in errors if is_booking_failure(error)}
+    if not dropped:
+        return entries
+    return [entry for entry in entries if id(entry) not in dropped]
 
 
 def _interrupted_booking(exc: BaseException, code: Any) -> tuple[list[Any], list[Any], Any, Any] | None:
@@ -900,6 +1033,10 @@ def _booking_failure(entry: Any, exc: BaseException) -> str:
     for posting in entry.postings:
         if zero_units_at_total_cost(posting):
             return f"{CANNOT_BOOK}{posting.account} {ZERO_UNITS_TOTAL_COST}"
+    for posting in entry.postings:
+        tail = elided_units_zero_rate_tail(posting)
+        if tail is not None:
+            return f"{CANNOT_BOOK}{posting.account} {tail}"
     if isinstance(exc, InvalidOperation):
         return f"{CANNOT_BOOK}{TOO_WIDE_TO_INFER}"
     return f"{CANNOT_BOOK}its decimal arithmetic failed ({type(exc).__name__}). Check its amounts, costs and prices."
@@ -953,7 +1090,7 @@ def _load_fresh(entry: Path, snapshot: LedgerSnapshot) -> tuple[Any, Any, Any]:
     if _changed_since(snapshot) or _plugin_defined(errors):
         _drop(cache)
     _mark_engine_cache(cache, options)
-    return entries, errors, options
+    return _without_unbookable(entries, errors), errors, options
 
 
 def _drop(cache: Path) -> None:

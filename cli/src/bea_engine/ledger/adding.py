@@ -924,6 +924,11 @@ def _transaction(
         if managed_load.zero_units_at_total_cost(posting):
             # Booking divides the total by the units, and raised (w5/538).
             raise protocol.UsageError(f"--posting {number} {managed_load.ZERO_UNITS_TOTAL_COST} Nothing was written.")
+        tail = managed_load.elided_units_zero_rate_tail(posting)
+        if tail is not None:
+            # Booking cannot infer the elided units from a zero rate, and
+            # died naming no posting (w5/732).
+            raise protocol.UsageError(f"--posting {number} {tail} Nothing was written.")
     # The ledger loads NFC-normalized; the parsed postings must match it before
     # currency inference compares them against the opened accounts below.
     entry = entry._replace(postings=[posting._replace(account=_nfc(posting.account)) for posting in entry.postings])
