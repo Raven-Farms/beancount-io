@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [726 — The BQL error caret ignores the display width of wide characters](./726.md)
 - [727 — A quoted --meta value followed by "; comment" drops the comment and applies C-style escapes (incomplete fix of w5/128/232)](./727.md)
 - [728 — An importer's dict or Inventory metadata value is silently dropped on import --apply](./728.md)
 - [729 — add custom refuses a negative-zero amount or number value](./729.md)
