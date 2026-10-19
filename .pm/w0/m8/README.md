@@ -1,6 +1,6 @@
 # w0 · m8 — Ledger archive downloads stream straight from Gitea
 
-**Worker:** worker1 **Goal:** a ledger archive download never holds the whole archive in a service's memory: backend-v2 streams the Gitea archive straight to the caller, the ledger service's buffering hop is gone, and the MCP archive blob (which must be held in memory) has a size cap that points to the streaming URL **Status:** todo (t001–t005 done)
+**Worker:** worker1 **Goal:** a ledger archive download never holds the whole archive in a service's memory: backend-v2 streams the Gitea archive straight to the caller, the ledger service's buffering hop is gone, and the MCP archive blob (which must be held in memory) has a size cap that points to the streaming URL **Status:** todo (t001–t006 done)
 
 ## Tasks (in order)
 
@@ -11,7 +11,7 @@
 | t003 | Cap the MCP `ledgerArchive` blob and point past it to the download URL | 30m | t001 | — **DONE**
 | t004 | Adoption surface | 15m | t002, t003 | — **DONE**
 | t005 | Simplify | 15m | t004 | — **DONE**
-| t006 | Test coverage | 30m | t004, t005 |
+| t006 | Test coverage | 30m | t004, t005 | — **DONE**
 | t007 | Closeout | 10m | t006 |
 
 ## Definition of done

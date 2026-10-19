@@ -1,5 +1,6 @@
 import { LedgerArchiveService } from "@/features/ledger/service/ledger-archive-service";
 import {
+  closed,
   startArchiveOrigin,
   type ArchiveOrigin,
 } from "@/features/ledger/service/__tests__/archive-origin";
@@ -105,6 +106,22 @@ describe("v1 archive download", () => {
       'attachment; filename="main.zip"',
     );
     expect(response.headers.get("cache-control")).toBe("private, no-store");
+  });
+
+  it("ends the Gitea request when the caller hangs up mid-download", async () => {
+    origin.serve((_req, res) => {
+      // A large archive: one chunk now, the rest never — only the caller ends it.
+      res.setHeader("Content-Type", "application/zip");
+      res.write(Buffer.alloc(64 * 1024));
+    });
+    const caller = new AbortController();
+    const response = await fetch(`${server.url}${ARCHIVE}`, {
+      signal: caller.signal,
+    });
+    await response.body!.getReader().read();
+    const upstream = closed(origin.requests[0]);
+    caller.abort();
+    expect(await upstream).toBe("closed");
   });
 
   it("refuses an anonymous caller", async () => {
