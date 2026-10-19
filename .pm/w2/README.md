@@ -45,6 +45,13 @@
 - [ ] **m39** — [Rename the two skills whose names collide with Beancount directives](./blocked/m39/README.md) (10 tasks) ← same review, 2026-10-18 — sequenced after m38; lands before w6/m6 publishes ClawHub slugs — **blocked:** routing shows no benefit from the rename (t001); the owner decides whether readability alone justifies the migration
 - [ ] **m40** — [Record everyday ledger changes through a `beancount-add` skill](./blocked/m40/README.md) (10 tasks) ← same review, 2026-10-18 — sequenced after m38 — **blocked:** closeout needs Codex to pass eval 10 (w2/089) once Codex usage is available, or the owner to accept the recorded exception
 - [ ] **m41** — [Rewrite the accumulated skill fixes as plain procedures](./blocked/m41/README.md) (9 tasks) ← same review, 2026-10-18 — best after m39 — **blocked:** t005 needs one eval per skill on Codex, which is at its usage limit until 2026-11-17
+- [ ] **m42** — [Put each customer skill directly under `skills/`](./m42/README.md) (11 tasks) ← user request 2026-10-18 to flatten `skills/` and move its non-skills out — sequenced after m40; lands before w6/m6 publishes
+- [ ] **m43** — [Install the suite from the standard skill channels without the development skills](./m43/README.md) (9 tasks) ← skills-research brainstorm (skills.sh, vercel-labs/skills, agentskills.io), 2026-10-18 — t001–t003 can start now; t004 onward waits for m42
+- [ ] **m44** — [Install the suite as a Claude Code plugin and a Codex plugin](./m44/README.md) (10 tasks) ← promoted [w2/082](./done/082.md) 2026-10-18 after that day's skills-distribution research — sequenced after m42; its install-guide section lands after m43's
+- [ ] **m45** — [Record stock, fund, and crypto trades with correct lots, and report realized gains](./m45/README.md) (11 tasks) ← /pm-brainstorm 2026-10-18 (online skills research: beancount#940, #564, #614) — sequenced after m40; follows m41's compact style
+- [ ] **m46** — [Fix, recategorize, and reorganize an existing ledger through a reviewed diff with one-step undo](./m46/README.md) (11 tasks) ← /pm-brainstorm research into published Beancount skills and community requests, 2026-10-18 — t001 needs the owner's confirmation that one skill may change existing entries; t007 waits for m40; best after m41
+- [ ] **m47** — [Turn PDF statements and receipt photos into checked entries with documents attached](./m47/README.md) (9 tasks) ← /pm-brainstorm 2026-10-18 (online skills research) — after w2/079 and m40; t001 settles whether import or reconcile owns PDF statements
+- [ ] **m48** — [Reconciliation coverage and close review state (ADR 020 P0)](./m48/README.md) (8 tasks) ← ADR 020 P0 rows, from the skills brainstorm 2026-10-18 — sequenced after m41, so the reconcile and close rewrites do not collide
 
 ## Dropped
 
@@ -54,8 +61,12 @@
 ## Inbox
 
 - [080 — Decide whether the suite keeps its no-`bea` developer fallback](./blocked/080.md) (owner decision) — **blocked:** the owner picks keep, read-only, or require-`bea`
-- [082 — Offer the skill suite as a Claude Code plugin too](./082.md) (needs sizing)
 - [083 — Codex cannot find beancount-init's `bea-cli.md` in a linked install, so the shared command contract goes unread](./blocked/083.md) — **blocked:** fix shipped; the Codex probe rerun waits for Codex usage
+- [084 — Say plainly where ledger data goes, and how the suite relates to upstream Beancount](./084.md) (owner approves the affiliation wording)
+- [085 — beancount-init writes a short AGENTS.md into the new ledger](./085.md)
+- [086 — Check that non-English ledger requests route to the right skill](./086.md)
+- [087 — Decide whether to publish the skill suite from a slim public mirror repository](./087.md) (owner decision)
+- [088 — Glama shows the hosted MCP connector at 0.0% uptime over 15 days](./088.md) (operator step)
 
 ## Cross-queue promotions and follow-ups
 
