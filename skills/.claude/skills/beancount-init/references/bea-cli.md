@@ -146,6 +146,42 @@ the staged open above is the one exception, and it applies to the open only.
 present. Perform the workflow's dedup before writing and before any retry.
 Keep `import-id-2` on merged transfers, and preserve pending/uncertain `!` flags.
 
+## One-off entries
+
+For one approved transaction, pass each leg as a native posting and repeat
+`--posting` per leg; at most one leg may omit its amount so `bea` balances
+it. Set `entry_date`, `payee`, `narration`, and the postings, for example
+`posting_1` = `Expenses:Dining 12.50 USD` and `posting_2` = `Assets:Checking`.
+Several transactions at once use the `batch` recipe instead.
+
+<!-- recipe: transaction -->
+```sh
+bea --file "$ledger" --json --no-input add transaction --date "$entry_date" --payee "$payee" --narration "$narration" --posting "$posting_1" --posting "$posting_2" --into "$target"
+```
+
+`bea add close` writes even when the account still holds a balance, so read
+the balance through `close_date` first and close only an empty account. A
+posting dated on the close date is still allowed; a later one is refused.
+
+<!-- recipe: close -->
+```sh
+bea --file "$ledger" --json --no-input add close --date "$close_date" --account "$account" --into "$open_target"
+```
+
+Set `price` to the quote with its currency (e.g. `285.40 USD`). An exact
+repeat of a recorded price writes nothing and reports `written: 0`; a second
+quote for the same date and commodity needs the user's say-so and `--force`.
+
+<!-- recipe: price -->
+```sh
+bea --file "$ledger" --json --no-input add price --date "$price_date" --commodity "$commodity" --amount "$price" --into "$target"
+```
+
+<!-- recipe: note -->
+```sh
+bea --file "$ledger" --json --no-input add note --date "$note_date" --account "$account" --message "$note" --into "$target"
+```
+
 ## Options and investment lots
 
 For explicit per-unit costs, use structured `units` and `cost` in a batch.

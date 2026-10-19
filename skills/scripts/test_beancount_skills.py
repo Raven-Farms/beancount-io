@@ -543,6 +543,7 @@ class TestBeaRecipes(unittest.TestCase):
                 "beancount-reconcile/references/statement-formats.md",
                 "beancount-close/references/close-checklist.md",
                 "beancount-ask/references/bql-recipes.md",
+                "beancount-add/SKILL.md",
             )
         )
 
@@ -705,6 +706,76 @@ class TestBeaRecipes(unittest.TestCase):
         self.assertIn('import-id: "ofx:2026050701"', self.target.read_text())
         self.recipe("balance")
         self.assertIn("2026-06-01 balance Assets:Checking", self.target.read_text())
+        self.recipe("check")
+
+    def one_off(self, date: str = "2026-05-07", amount: str = "12.50") -> dict:
+        self.values.update(
+            entry_date=date, payee="Pizzeria", narration="Dinner",
+            posting_1=f"Expenses:Dining {amount} USD", posting_2="Assets:Checking",
+        )
+        return self.recipe("transaction")
+
+    def test_one_off_transaction_lands_in_the_included_destination_and_is_found_again(self):
+        before = self.ledger.read_bytes()
+        self.one_off()
+        self.assertEqual(self.ledger.read_bytes(), before)
+        self.assertIn('2026-05-07 * "Pizzeria" "Dinner"', self.target.read_text())
+        self.recipe("check")
+        # The add skill's duplicate read finds it within three days, by signed
+        # amount on the account, and not at another amount.
+        self.values.update(number="-12.50", currency="USD", window_start="2026-05-04", window_end="2026-05-10")
+        rows = self.recipe("already-recorded")["rows"]
+        self.assertEqual([(r[0], r[3]) for r in rows], [("2026-05-07", "-12.50")])
+        self.assertTrue(rows[0][5].endswith("transactions/2026.bean"))
+        self.values["number"] = "-12.51"
+        self.assertEqual(self.recipe("already-recorded")["rows"], [])
+        self.values.update(number="-12.50", window_start="2026-05-11", window_end="2026-05-17")
+        self.assertEqual(self.recipe("already-recorded")["rows"], [])
+        # Its destination read names the included file that holds the posting.
+        destination = self.recipe("entry-destination")["rows"]
+        self.assertEqual(len(destination), 1)
+        self.assertTrue(destination[0][0].endswith("transactions/2026.bean"))
+
+    def test_open_accounts_lists_unused_accounts_and_drops_closed_ones(self):
+        rows = self.recipe("open-accounts")["rows"]
+        self.assertEqual([r[0] for r in rows], ["Assets:Checking", "Equity:OpeningBalances", "Expenses:Dining"])
+        self.values.update(account="Equity:OpeningBalances", close_date="2026-05-01")
+        self.recipe("close")
+        self.assertEqual(
+            [r[0] for r in self.recipe("open-accounts")["rows"]], ["Assets:Checking", "Expenses:Dining"]
+        )
+
+    def test_close_writes_over_a_balance_so_the_balance_read_must_come_first(self):
+        self.one_off()
+        self.values.update(account="Expenses:Dining", close_date="2026-05-31")
+        self.assertEqual(self.recipe("balance-before-close")["rows"], [["USD", "12.50"]])
+        before = self.ledger.read_bytes()
+        written = self.recipe("close")
+        self.assertEqual(written["written"], 1)
+        self.assertIn("2026-05-31 close Expenses:Dining", self.ledger.read_text())
+        self.assertNotEqual(self.ledger.read_bytes(), before)
+        self.recipe("check")
+        # A posting on the close date is still allowed; a later one is refused
+        # and writes nothing.
+        self.one_off(date="2026-05-31", amount="1.00")
+        target = self.target.read_bytes()
+        self.values["entry_date"] = "2026-06-01"
+        self.recipe("transaction", succeeds=False)
+        self.assertEqual(self.target.read_bytes(), target)
+
+    def test_price_repeat_writes_nothing_and_note_lands_in_destination(self):
+        self.values.update(price_date="2026-05-07", commodity="VTI", price="285.40 USD")
+        self.assertEqual(self.recipe("price")["written"], 1)
+        self.assertEqual(self.recipe("price")["written"], 0)
+        # A different quote for the same day is refused unless the user asks
+        # for another one (`--force`, which the recipe deliberately omits).
+        self.values["price"] = "286.00 USD"
+        refused = self.recipe("price", succeeds=False)
+        self.assertIn("Pass --force to record another quote", refused.stdout + refused.stderr)
+        self.assertEqual(self.target.read_text().count("2026-05-07 price VTI"), 1)
+        self.values.update(note_date="2026-05-08", account="Assets:Checking", note="Account number changed")
+        self.recipe("note")
+        self.assertIn('2026-05-08 note Assets:Checking "Account number changed"', self.target.read_text())
         self.recipe("check")
 
     def test_failed_assertion_leaves_prior_batch_and_resume_does_not_replay_it(self):
