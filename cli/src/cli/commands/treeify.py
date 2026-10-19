@@ -121,37 +121,62 @@ def _check_regexes(parsed: argparse.Namespace) -> None:
             ) from None
 
 
-def _check_input(name: str | None) -> None:
-    """Refuse an input path upstream can only fail on, the way `format` does.
+def _check_input(name: str | None) -> str | None:
+    """Refuse an input path upstream can only fail on, the way `format` does; return a file's text.
 
     A missing path or a directory exited 1 (`validation`) and an unreadable
     file was not exit 3, each behind upstream's exception class (w5/352).
-    stdin and a held `/dev/fd/N` pass through untouched.
+    A regular file is read here, so its text reaches upstream decoded: a BOM
+    split the tree, and Latin-1 failed with a bare `UnicodeDecodeError`
+    (w5/723). stdin, a FIFO and a held `/dev/fd/N` read at dispatch.
     """
     if name is None or name == "-" or _held_descriptor(name):
-        return
+        return None
     path = expand_path(Path(name), "treeify input")
     if not os.path.lexists(path):
         raise UsageError(f"treeify input '{path}' does not exist. Pass a text file, or omit it to read stdin.")
     if path.is_dir():
         raise UsageError(f"treeify input '{path}' is a directory. Pass a text file, or omit it to read stdin.")
-    if path.is_file() and not os.access(path, os.R_OK):
+    if not path.is_file():
+        return None
+    if not os.access(path, os.R_OK):
         raise AuthError(f"Cannot read treeify input '{path}': permission denied.")
-    if path.is_file():
-        _require_utf8(path.read_bytes(), path)
+    return _require_utf8(path.read_bytes(), path)
 
 
 def _require_utf8(data: bytes, name: object) -> str:
-    """The input as text, or the shared refusal for bytes that are not UTF-8.
+    """The input as text, a BOM skipped, or the shared refusal for bytes that are not UTF-8.
 
     Upstream decodes strictly since w5/404 and crashed on Latin-1 text with
     a bare `UnicodeDecodeError`, where `format -` names the input and the
-    byte (w5/535).
+    byte (w5/535); it also rendered a BOM file's invisible second root, as
+    `format -` never does (w5/723).
     """
     try:
-        return data.decode("utf-8")
+        return data.decode("utf-8-sig")
     except UnicodeDecodeError as exc:
         raise UsageError(decode_error_message(name, exc)) from None
+
+
+def _read_redirected_input(parsed: argparse.Namespace) -> str | None:
+    """Stdin, a FIFO or a held descriptor as text, or None when upstream reads the path itself.
+
+    Upstream reads a named pipe raw, so Latin-1 through `/dev/stdin`,
+    `<(…)` or a FIFO failed with a bare `UnicodeDecodeError`; bea reads
+    those here instead and passes the text on stdin (w5/723).
+    """
+    if parsed.input in (None, "-"):
+        if sys.stdin is None:
+            return None
+        return _require_utf8(sys.stdin.buffer.read(), "stdin")
+    descriptors = _held_descriptor(parsed.input)
+    if descriptors:
+        with os.fdopen(os.dup(descriptors[0]), "rb") as stream:
+            return _require_utf8(stream.read(), parsed.input)
+    path = expand_path(Path(parsed.input), "treeify input")
+    if path.is_fifo():
+        return _require_utf8(path.read_bytes(), path)
+    return None
 
 
 def _held_descriptor(name: str | None) -> tuple[int, ...]:
@@ -190,6 +215,7 @@ def treeify(ctx: typer.Context) -> None:
         output.guard_forwarded_output(
             forwarded, _ledgers(), refuse_existing_ledger_file=True, force=_FORCE in args[:stop], flags="FA"
         )
+    checked_text: str | None = None
     if parsed is not None and not parsed.help:
         if parsed.input == "-" or parsed.output == "-":
             # Upstream treats '-' as a literal file, unlike bea's stream
@@ -205,7 +231,7 @@ def treeify(ctx: typer.Context) -> None:
             # empty one was a ZeroDivisionError (w5/388).
             raise UsageError("--filler '' is empty; it needs at least one character, such as --filler '.'.")
         _check_regexes(parsed)
-        _check_input(parsed.input)
+        checked_text = _check_input(parsed.input)
     if parsed is not None and parsed.output is not None and not parsed.help:
         # Upstream opens `-o` for writing before it reads the input, so a run
         # that then fails — or reads the same file — has already truncated
@@ -222,21 +248,28 @@ def treeify(ctx: typer.Context) -> None:
         output.require_writable_destination(destination)
         forwarded = _without_output(parsed)
     if parsed is not None and not (parsed.help or parsed.pattern or parsed.filenames or parsed.loose_accounts):
+        # On `parsed` too: dropping the input at dispatch rebuilds the
+        # arguments from it, which would otherwise lose this pattern and
+        # render non-ASCII components flat (w5/723).
+        parsed.pattern = _ACCOUNT_PATTERN
         forwarded = [f"--pattern={_ACCOUNT_PATTERN}", *forwarded]
     if parsed is not None and not parsed.help and not parsed.input:
         # Upstream reads stdin when no file is named, a terminal included.
         context.refuse_terminal_stdin(
             "Input is required with --no-input. Name the file to treeify or pipe the text on stdin."
         )
-    descriptors = _held_descriptor(parsed.input if parsed is not None else None)
-    if descriptors:
-        completed = launch.capture_native("treeify", forwarded, pass_fds=descriptors)
-    elif parsed is not None and not parsed.help and parsed.input in (None, "-") and sys.stdin is not None:
-        # Read here so a non-UTF-8 pipe is refused in bea's words, as a file is.
-        text = _require_utf8(sys.stdin.buffer.read(), "stdin")
-        completed = launch.capture_native("treeify", forwarded, input_text=text)
-    else:
+    text = checked_text
+    if text is None and parsed is not None and not parsed.help:
+        text = _read_redirected_input(parsed)
+    if text is None:
         completed = launch.capture_native("treeify", forwarded)
+    else:
+        if parsed is not None and parsed.input is not None:
+            # Upstream reads only the text now; the path stays out so it
+            # cannot re-read the raw bytes behind bea's back (w5/723).
+            parsed.input = None
+            forwarded = _without_output(parsed)
+        completed = launch.capture_native("treeify", forwarded, input_text=text)
     if completed.returncode == 0 and _NO_COLUMN in (completed.stderr or ""):
         # Upstream echoes the input unchanged and calls that success; the
         # echo is not a tree, so it is not printed.

@@ -129,8 +129,9 @@ def test_existing_output_spellings_still_reach_the_destination(
     result = runner.invoke(app, ["treeify", *native, "input.txt"])
 
     assert result.exit_code == 0, result.output
-    # No `-r`/`-F`/`-A` was given, so bea's account pattern leads the argv (w5/137).
-    recorded_engine["capture_native"].assert_called_once_with("treeify", [ANY, "--", "input.txt"])
+    # No `-r`/`-F`/`-A` was given, so bea's account pattern leads the argv (w5/137);
+    # the file's text reaches upstream on stdin, not as a path (w5/723).
+    recorded_engine["capture_native"].assert_called_once_with("treeify", [ANY], input_text="Assets:Cash 1\n")
     assert recorded_engine["capture_native"].call_args.args[1][0].startswith("--pattern=")
     assert (books / written).read_text() == "native result\n"
 
