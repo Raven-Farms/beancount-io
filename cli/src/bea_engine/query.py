@@ -187,6 +187,38 @@ def connect(file: Path) -> Any:
     return connection
 
 
+class _Orderable:
+    """A sort key that compares natively, and across types by `str()`.
+
+    Metadata mixes types (`ref: "A-12"` beside `ref: 5`), and `ORDER BY` on
+    it raised a bare TypeError once same-type rows stopped proving the
+    column uniform (w5/760). Same-type pairs keep their native order; only a
+    pair Python cannot compare falls back to its text, which is the
+    `ORDER BY str(...)` control's order.
+    """
+
+    __slots__ = ("value",)
+
+    def __init__(self, value: Any) -> None:
+        self.value = value
+
+    def __eq__(self, other: Any) -> bool:
+        if not isinstance(other, _Orderable):
+            return NotImplemented
+        try:
+            return bool(self.value == other.value)
+        except TypeError:
+            return str(self.value) == str(other.value)
+
+    def __lt__(self, other: Any) -> bool:
+        if not isinstance(other, _Orderable):
+            return NotImplemented
+        try:
+            return bool(self.value < other.value)
+        except TypeError:
+            return str(self.value) < str(other.value)
+
+
 def _null_safe_ordering() -> None:
     """Sort a NULL first without comparing it to a value (w5/562).
 
@@ -203,7 +235,7 @@ def _null_safe_ordering() -> None:
         return
 
     def present(value: Any) -> tuple[bool, Any]:
-        return (False, 0) if value is None else (True, value)
+        return (False, 0) if value is None else (True, _Orderable(value))
 
     def nullitemgetter(item: int, *items: int) -> Callable[[Any], Any]:
         if items:
@@ -2238,7 +2270,7 @@ def _compiled(
             named = ", ".join(grouped)
             raise protocol.UsageError(
                 f"BQL cannot use DISTINCT or GROUP BY on {named}: a set is not a value it can compare.",
-                details=_SET_COLUMN_ADVICE,
+                details=_set_column_advice(grouped),
                 ledger_errors=ledger_errors(),
             ) from None
         # A subquery joined by AND or OR is called as a row predicate, which
@@ -2251,8 +2283,20 @@ def _compiled(
         ungroupable = _ungroupable_columns(exc)
         if ungroupable is not None:
             raise _implicit_group_error(ungroupable, ledger_errors()) from None
+        # `SELECT DISTINCT meta` hashes result rows after `execute_select`
+        # builds them, so the same unhashable column fails one frame deeper.
+        distinct = _distinct_unhashable(exc)
+        if distinct is not None:
+            raise _distinct_error(distinct, ledger_errors()) from None
         raise
     except AttributeError as exc:
+        # The function lookup reads `__mro__` off the operand's dtype, which
+        # the parameterized set behind `accounts` does not have: no function
+        # applies to it (w5/760).
+        if "__mro__" in str(exc):
+            applied = _function_over_set(exc)
+            if applied is not None:
+                raise _function_over_set_error(applied, ledger_errors()) from None
         # A scalar subquery in the SELECT list reaches scalar evaluation as an
         # EvalQuery node, which has no childnodes to evaluate.
         if "childnodes" in str(exc):
@@ -2303,6 +2347,149 @@ def _ungroupable_columns(exc: TypeError) -> list[tuple[str, str]] | None:
         if isinstance(name, str) and not isinstance(value, Hashable) and (name, type(value).__name__) not in found:
             found.append((name, type(value).__name__))
     return found
+
+
+def _kind_of(value: Any) -> str:
+    """The word a refusal uses for an unhashable value: `dict`, `set`, `list`, or its type name."""
+    if isinstance(value, dict):
+        return "dict"
+    if isinstance(value, (set, frozenset)):
+        return "set"
+    if isinstance(value, list):
+        return "list"
+    return type(value).__name__
+
+
+def _distinct_unhashable(exc: TypeError) -> list[tuple[str, str]] | None:
+    """The `(column, kind)` pairs DISTINCT could not hash, or None unless that failure.
+
+    DISTINCT wraps the result rows after `execute_select` builds them, so the
+    TypeError rises while hashing the wrapper — deepest in generated code —
+    from Beanquery's `Unique.__call__`, which holds the row, while the
+    `execute_select` frame up the chain holds the query and the result
+    indexes that name each position.
+    """
+    if "unhashable type" not in str(exc):
+        return None
+    frames: list[Any] = []
+    tb = exc.__traceback__
+    while tb is not None:
+        frames.append(tb.tb_frame)
+        tb = tb.tb_next
+    inner = next(
+        (
+            frame
+            for frame in frames
+            if frame.f_code.co_name == "__call__"
+            and Path(frame.f_code.co_filename).name == "query_execute.py"
+            and isinstance(frame.f_locals.get("obj"), tuple)
+        ),
+        None,
+    )
+    if inner is None:
+        return None
+    row = inner.f_locals["obj"]
+    select = next(
+        (
+            frame
+            for frame in frames
+            if frame.f_code.co_name == "execute_select" and Path(frame.f_code.co_filename).parent.name == "beanquery"
+        ),
+        None,
+    )
+    if select is None:
+        return None
+    targets = getattr(select.f_locals.get("query"), "c_targets", None) or []
+    indexes = select.f_locals.get("result_indexes") or []
+    found: list[tuple[str, str]] = []
+    for position, value in enumerate(row):
+        index = indexes[position] if position < len(indexes) else None
+        name = getattr(targets[index], "name", None) if isinstance(index, int) and index < len(targets) else None
+        kind = _kind_of(value)
+        if isinstance(name, str) and not isinstance(value, Hashable) and (name, kind) not in found:
+            found.append((name, kind))
+    return found or None
+
+
+def _distinct_error(columns: list[tuple[str, str]], ledger_errors: list[str]) -> protocol.UsageError:
+    """The explained refusal for a DISTINCT over a column BQL cannot hash."""
+    named = ", ".join(f"{name} ({kind})" for name, kind in columns) or "a selected column"
+    details = []
+    for name, kind in columns:
+        # No function reads a set (w5/260), so there is no text form to offer.
+        if kind == "set":
+            continue
+        wrapped = f"joinstr({name})" if kind == "list" else f"str({name})"
+        details.append(f"Select its text instead: SELECT DISTINCT {wrapped}")
+    details.append("Or select it without DISTINCT.")
+    return protocol.UsageError(
+        f"Cannot run this BQL query: BQL cannot use DISTINCT on {named}, which it cannot hash.",
+        details=details,
+        ledger_errors=ledger_errors,
+    )
+
+
+def _function_over_set(exc: AttributeError) -> tuple[str, str] | None:
+    """The `(function, column)` whose operand dtype Beanquery's lookup choked on.
+
+    The lookup reads `__mro__` off each operand's dtype, which the
+    parameterized set behind `accounts` does not have. The `function_lookup`
+    frame names the function and holds the compiled operands; the `_function`
+    frame that called it still has the parsed node, whose operands name the
+    columns in the same positions.
+    """
+    frames: list[Any] = []
+    tb = exc.__traceback__
+    while tb is not None:
+        frames.append(tb.tb_frame)
+        tb = tb.tb_next
+    lookup = next(
+        (
+            frame
+            for frame in frames
+            if frame.f_code.co_name == "function_lookup" and Path(frame.f_code.co_filename).parent.name == "beanquery"
+        ),
+        None,
+    )
+    if lookup is None:
+        return None
+    name = lookup.f_locals.get("name")
+    operands = lookup.f_locals.get("operands") or []
+    broken = next(
+        (index for index, operand in enumerate(operands) if not hasattr(getattr(operand, "dtype", None), "__mro__")),
+        None,
+    )
+    if not isinstance(name, str) or broken is None:
+        return None
+    # The lookup's own caller: the nearest `_function` frame before it, since
+    # the query may call the same function twice.
+    caller = None
+    for frame in frames:
+        if frame is lookup:
+            break
+        node = frame.f_locals.get("node")
+        if (
+            frame.f_code.co_name == "_function"
+            and Path(frame.f_code.co_filename).parent.name == "beanquery"
+            and getattr(node, "fname", None) == name
+        ):
+            caller = node
+    if caller is None:
+        return None
+    parsed = getattr(caller, "operands", None) or []
+    column = getattr(parsed[broken], "name", None) if broken < len(parsed) else None
+    return (name, column) if isinstance(column, str) else None
+
+
+def _function_over_set_error(applied: tuple[str, str], ledger_errors: list[str]) -> protocol.UsageError:
+    """The explained refusal for a function applied to a set-dtype column."""
+    func, column = applied
+    return protocol.UsageError(
+        f"Cannot run this BQL query: BQL cannot apply {func} to {column}: it holds a set, "
+        "which no BQL function can read.",
+        details=[f"Select {column} without the function to see the sets."],
+        ledger_errors=ledger_errors,
+    )
 
 
 def _implicit_group_error(columns: list[tuple[str, str]], ledger_errors: list[str]) -> protocol.UsageError:
@@ -2389,7 +2576,7 @@ def _pattern_error(pattern: str, exc: re.error, statement: str, ledger_errors: l
     )
 
 
-_SET_COLUMNS = ("tags", "links", "other_accounts")
+_SET_COLUMNS = ("tags", "links", "other_accounts", "accounts")
 
 _SET_COLUMNS_PLUS_ACCOUNTS = ("tags", "links", "accounts")
 
@@ -2409,18 +2596,37 @@ _OTHER_ACCOUNTS_ADVICE = [
     "Counts per combination: SELECT joinstr(other_accounts), count(*) GROUP BY joinstr(other_accounts)",
 ]
 
+#: `accounts` is a set per entry no function reads: joining its text is not
+#: offered because `joinstr(accounts)` itself fails the function lookup (w5/760).
+_ACCOUNTS_ADVICE = [
+    "`accounts` holds a set per entry (every account it posts to), so BQL cannot hash it, "
+    "and no BQL function reads a set.",
+    "Select accounts without DISTINCT, GROUP BY, or an aggregate to see the sets.",
+]
+
 
 def _set_column_advice(columns: list[str]) -> list[str]:
-    """The recipes for the unhashable columns a query names: the set advice unless only `other_accounts`."""
-    advice = [] if columns == ["other_accounts"] else list(_SET_COLUMN_ADVICE)
-    return advice + (_OTHER_ACCOUNTS_ADVICE if "other_accounts" in columns else [])
+    """The recipes for the unhashable columns a query names, one section per column kind."""
+    if columns == ["other_accounts"]:
+        return list(_OTHER_ACCOUNTS_ADVICE)
+    if columns == ["accounts"]:
+        return list(_ACCOUNTS_ADVICE)
+    advice = list(_SET_COLUMN_ADVICE)
+    if "other_accounts" in columns:
+        advice += _OTHER_ACCOUNTS_ADVICE
+    if "accounts" in columns:
+        advice += _ACCOUNTS_ADVICE
+    return advice
 
 
 def _set_columns(query_string: str) -> list[str]:
     """The bare set-valued columns this query selects, which is what cannot be compared.
 
     Only a bare column is a problem — `joinstr(tags)` is a string and behaves
-    like any other, which is why it is the recipe we point at.
+    like any other, which is why it is the recipe we point at. An alias
+    through a subquery reports its underlying column: `SELECT DISTINCT o FROM
+    (SELECT other_accounts AS o)` fails on the list, so the list's advice
+    fits, not the tags' (w5/760).
     """
     try:
         from beanquery.parser import parse
@@ -2433,6 +2639,20 @@ def _set_columns(query_string: str) -> list[str]:
         name = getattr(getattr(target, "expression", None), "name", None)
         if name in _SET_COLUMNS and name not in found:
             found.append(name)
+    if not found:
+        # A subquery arrives as a Select in the FROM clause, its aliases on
+        # `.name` over the underlying column's expression.
+        subquery = getattr(parsed, "from_clause", None)
+        aliased: dict[str, str] = {}
+        for target in getattr(subquery, "targets", None) or []:
+            underlying = getattr(getattr(target, "expression", None), "name", None)
+            alias = getattr(target, "name", None)
+            if underlying in _SET_COLUMNS and isinstance(alias, str):
+                aliased[alias] = underlying
+        for target in getattr(parsed, "targets", None) or []:
+            name = getattr(getattr(target, "expression", None), "name", None)
+            if name in aliased and aliased[name] not in found:
+                found.append(aliased[name])
     return found
 
 
