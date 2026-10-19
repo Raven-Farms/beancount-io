@@ -10,7 +10,7 @@
 - [x] **m4** — [A password reset ends every session the old password issued](./done/m4/README.md) (6 tasks) ← from security review 2026-10-18
 - [x] **m5** — [Directive counting runs on the worker pool, not the request thread](./done/m5/README.md) (6 tasks) ← from security review 2026-10-18
 - [x] **m6** — [Every app-mediated ledger write enforces the directive limit at one boundary](./done/m6/README.md) (7 tasks) ← from security review 2026-10-18; after m5
-- [ ] **m7** — [Login limits key on a trusted client address and on the account](./m7/README.md) (6 tasks) ← from security review 2026-10-18
+- [x] **m7** — [Login limits key on a trusted client address and on the account](./done/m7/README.md) (6 tasks) ← from security review 2026-10-18
 
 ## Dropped
 

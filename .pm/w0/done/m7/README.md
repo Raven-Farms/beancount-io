@@ -1,6 +1,6 @@
 # w0 · m7 — Login limits key on a trusted client address and on the account
 
-**Worker:** worker1 **Goal:** every rate limiter reads the client address from one helper that trusts only the deployment's own proxy hop, and repeated wrong passwords for one account are limited across addresses and across dashboard and Git sign-in **Status:** todo (t001–t005 done)
+**Worker:** worker1 **Goal:** every rate limiter reads the client address from one helper that trusts only the deployment's own proxy hop, and repeated wrong passwords for one account are limited across addresses and across dashboard and Git sign-in **Status:** done
 
 ## Tasks (in order)
 
@@ -11,7 +11,7 @@
 | t003 | Adoption surface | 20m | t002 | — **DONE**
 | t004 | Simplify | 15m | t003 | — **DONE**
 | t005 | Test coverage | 30m | t003, t004 | — **DONE**
-| t006 | Closeout | 10m | t005 |
+| t006 | Closeout | 10m | t005 | — **DONE**
 
 ## Definition of done
 
