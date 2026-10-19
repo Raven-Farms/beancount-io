@@ -512,6 +512,23 @@ def _mixed_lines(source: Path) -> tuple[int, int] | None:
     return None
 
 
+def _absolute_offset(source: Path, exc: UnicodeDecodeError, encoding: str) -> int:
+    """The file offset of a decode failure, not the offset in its 8 KiB chunk.
+
+    Text-mode iteration decodes chunk by chunk, so past the first chunk the
+    exception's `start` is chunk-relative. One decode over the raw bytes
+    fails at the same first bad byte with the absolute offset; when the file
+    is gone or changed under us, the chunk offset still stands (w5/717).
+    """
+    try:
+        source.read_bytes().decode(_read_codec(encoding))
+    except UnicodeDecodeError as full:
+        return full.start
+    except OSError:
+        pass
+    return exc.start
+
+
 def _decode_usage_error(source: Path, exc: UnicodeDecodeError, encoding: str) -> UsageError:
     """Name a decode failure instead of pretending the CSV had no columns.
 
@@ -519,8 +536,9 @@ def _decode_usage_error(source: Path, exc: UnicodeDecodeError, encoding: str) ->
     the bytes, not the export's actual encoding. Legacy-codec advice stays
     conditional; an explicitly chosen codec reports its own failure.
     """
+    offset = _absolute_offset(source, exc, encoding)
     if encoding != "utf-8":
-        return UsageError(f"{source.name} is not valid {encoding} ({exc.reason} at byte {exc.start}).")
+        return UsageError(f"{source.name} is not valid {encoding} ({exc.reason} at byte {offset}).")
     try:
         winner = probe_decoding(source)
     except OSError:
@@ -532,21 +550,21 @@ def _decode_usage_error(source: Path, exc: UnicodeDecodeError, encoding: str) ->
         utf8, other = mixed
         return UsageError(
             f"{source.name} mixes encodings: line {utf8} is UTF-8 with accented characters, while line {other} "
-            f"is not UTF-8 ({exc.reason} at byte {exc.start}). No single --csv encoding reads both correctly; "
+            f"is not UTF-8 ({exc.reason} at byte {offset}). No single --csv encoding reads both correctly; "
             "re-save the export in one encoding (UTF-8) and import it again."
         )
     if winner == "cp1252":
         # Many unrelated code pages decode as cp1252. Their text cannot be
         # reliably distinguished from Western text by its letter patterns.
         return UsageError(
-            f"{source.name} is not valid UTF-8 ({exc.reason} at byte {exc.start}). "
+            f"{source.name} is not valid UTF-8 ({exc.reason} at byte {offset}). "
             "Re-save the export as UTF-8 and import it again, or pass --csv encoding=cp1252 only if the export "
             "really uses Western European Windows-1252 (cp1252)."
         )
     # latin-1 reads every byte, so it cannot have failed: saying it was tried
     # sent a Shift_JIS export to the one decoding that garbles it (w5/332).
     return UsageError(
-        f"Cannot decode {source.name} as UTF-8 or cp1252 ({exc.reason} at byte {exc.start}); only latin-1, "
+        f"Cannot decode {source.name} as UTF-8 or cp1252 ({exc.reason} at byte {offset}); only latin-1, "
         "which reads any byte, accepts it. Pass --csv encoding=latin-1 if that is the export's encoding."
     )
 
