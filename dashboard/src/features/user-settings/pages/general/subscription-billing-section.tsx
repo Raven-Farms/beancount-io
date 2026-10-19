@@ -4,6 +4,7 @@ import { Badge } from "@/common/components/ui/badge";
 import type { GetSubscriptionStatusQuery } from "@/graphql/definitions";
 import type { CancelTarget } from "@/features/user-settings/hooks/use-subscription-cancel";
 import { isPendingCancellation } from "./subscription-state";
+import { useBillingDateFormat, useMoneyFormat } from "./use-money-format";
 
 export function BillingSection({
   subscriptions,
@@ -20,6 +21,8 @@ export function BillingSection({
   onManageBilling: (clientId: string) => void;
   onCancelClick: (target: CancelTarget) => void;
 }) {
+  const formatMoney = useMoneyFormat();
+  const formatDate = useBillingDateFormat();
   return (
     <div className="space-y-4">
       <h3 className="text-sm font-semibold text-foreground">
@@ -29,14 +32,13 @@ export function BillingSection({
         const product =
           subscription.items[0]?.product?.name || t("userSettings.unknownPlan");
         const price = subscription.items[0]?.price;
-        const amount = price?.amount ? (price.amount / 100).toFixed(2) : "0.00";
-        const currency =
-          price?.currency === "usd"
-            ? "$"
-            : (price?.currency?.toUpperCase() ?? "$");
-        const interval = price?.interval || "month";
+        const amount = `${formatMoney(price?.amount ?? 0, price?.currency)}${t(
+          price?.interval === "year"
+            ? "userSettings.perYear"
+            : "userSettings.perMonth",
+        )}`;
         const endDate = subscription.currentPeriodEnd
-          ? new Date(subscription.currentPeriodEnd).toLocaleDateString()
+          ? formatDate(subscription.currentPeriodEnd)
           : "";
         const isCanceled =
           isPendingCancellation(subscription) || !!subscription.canceledAt;
@@ -64,10 +66,7 @@ export function BillingSection({
                   <Crown className="h-4 w-4 text-yellow-500" />
                   {product}
                 </p>
-                <p className="text-sm text-muted-foreground">
-                  {currency}
-                  {amount} / {interval}
-                </p>
+                <p className="text-sm text-muted-foreground">{amount}</p>
                 <Badge
                   variant={statusVariant}
                   className={`text-xs capitalize ${statusClass}`}

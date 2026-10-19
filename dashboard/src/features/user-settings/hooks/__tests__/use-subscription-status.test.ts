@@ -154,8 +154,11 @@ describe("useSubscriptionStatus", () => {
         refetch: mockRefetch,
       } as never);
       const { result } = renderHook(() => useSubscriptionStatus());
+      // In the app language, not the browser's locale.
       expect(result.current.renewalDate).toBe(
-        new Date("2025-12-31T00:00:00Z").toLocaleDateString(),
+        new Intl.DateTimeFormat("en", { dateStyle: "medium" }).format(
+          new Date("2025-12-31T00:00:00Z"),
+        ),
       );
     });
   });

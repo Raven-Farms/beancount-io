@@ -27,6 +27,7 @@ import {
 } from "./stripe-config";
 import {
   getTierInfo,
+  planLabelKey,
   getUpgradeTiers,
   tierInfoByKey,
 } from "@/common/lib/subscription/tier-config";
@@ -233,9 +234,8 @@ export function SubscriptionSection({
       void refetchUserLimits();
     },
   );
-  const tierInfo = getTierInfo(tier);
   const planLabel = [
-    tierInfo ? t(tierInfo.labelKey) : t("userSettings.freePlan"),
+    t(planLabelKey(tier)),
     currentInterval
       ? t(
           currentInterval === "year"
@@ -442,9 +442,7 @@ export function SubscriptionSection({
 
       {cancelTarget && (
         <CancelSheet
-          planName={
-            tierInfo ? t(tierInfo.labelKey) : t("userSettings.freePlan")
-          }
+          planName={t(planLabelKey(tier))}
           tier={currentTierKey}
           cycle={currentCycle}
           endsAt={cancelTarget.endsAt}

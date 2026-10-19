@@ -503,7 +503,10 @@ describe("Price Formatting", () => {
 
     render(<SubscriptionSection />);
 
-    // Billing price line shows the formatted amount with interval
-    expect(screen.getByText(/\$29\.00 \/ month/)).toBeInTheDocument();
+    // The amount in the app locale and a translated interval, not Stripe's
+    // raw "month".
+    // The plan banner and the billing details now read the same.
+    expect(screen.getAllByText("$29.00userSettings.perMonth")).toHaveLength(2);
+    expect(screen.queryByText(/\/ month/)).toBeNull();
   });
 });

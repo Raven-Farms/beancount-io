@@ -4,6 +4,7 @@ import {
   GetSubscriptionStatusDocument,
   type GetSubscriptionStatusQuery,
 } from "@/graphql/definitions";
+import { useBillingDateFormat } from "@/features/user-settings/pages/general/use-money-format";
 
 export const useSubscriptionStatus = () => {
   const { data, loading, error, refetch } =
@@ -12,12 +13,13 @@ export const useSubscriptionStatus = () => {
   const hasActiveStripeSubscription =
     data?.subscriptionStatus?.hasActiveSubscription ?? false;
 
+  const formatDate = useBillingDateFormat();
   const renewalDate = useMemo(() => {
     if (!hasActiveStripeSubscription) return null;
     const sub = data?.subscriptionStatus?.subscriptions?.[0];
     if (!sub?.currentPeriodEnd || sub.cancelAt || sub.canceledAt) return null;
-    return new Date(sub.currentPeriodEnd).toLocaleDateString();
-  }, [data, hasActiveStripeSubscription]);
+    return formatDate(sub.currentPeriodEnd);
+  }, [data, hasActiveStripeSubscription, formatDate]);
 
   return {
     loading,
