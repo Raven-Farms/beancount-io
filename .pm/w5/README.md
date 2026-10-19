@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [738 — Four input-refusal messages are wrong (BOM offset, NUL as UTF-16, --from empty advice, tagged meta TypeError)](./738.md)
 - [739 — ask answers turn &#x202E; character references into raw bidi overrides; link reference definitions vanish (gap in w5/548)](./739.md)
 - [740 — A later quote changes an earlier valuation; ties settled by line number; double-inversion residue (incomplete fix of w5/556)](./740.md)
 - [741 — Import writes a reciprocal add price refuses; add price silent against implicit_prices; exact-1 agreement (incomplete fix of w5/556)](./741.md)
