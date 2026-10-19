@@ -22,7 +22,7 @@ Match on **amount first** (the number rarely lies; dates and descriptions drift)
 
 When two candidates tie (same amount, same gap), or an amount appears an unequal number of times on each side, **do not force a pairing** — surface it and ask. A wrong pairing hides a real discrepancy.
 
-**Pass 3 — near-miss (amounts differ).** For what remains, pair a statement line with a ledger posting when the **descriptions are similar** (same merchant tokens) and the dates are within WINDOW, **but the amounts differ**. Each such pair is an **amount-mismatch** — report it, never auto-edit. Also check multiplicity here: one statement line whose amount matches **two or more** ledger postings within the window (and amounts are equal) is a **duplicate** in the ledger — report both postings with their file positions. Pass 3 exists because Passes 1–2 require amount equality, so mismatches and duplicates can never surface without it.
+**Pass 3 — near-miss (amounts differ).** For what remains, pair a statement line with a ledger posting when the **descriptions are similar** (same merchant tokens) and the dates are within WINDOW, **but the amounts differ**. Each such pair is an **amount-mismatch** — report it, never auto-edit. Also check multiplicity here, as an **ambiguity**, never as a verdict: one statement line whose amount matches **two or more** ledger postings within the window is reported with every candidate's file position, and the user says which posting is the row, which is a duplicate, or which belongs to an adjacent period. The reverse is a question too: a row whose amount equals the **sum** of two near-dated postings (or two rows summing to one posting) may be a split settlement — ask, and never pair it automatically. Pass 3 exists because Passes 1–2 require amount equality, so mismatches and multiplicities can never surface without it.
 
 Everything still unpaired after Pass 3 is a discrepancy. Classify it.
 
@@ -35,7 +35,8 @@ Everything still unpaired after Pass 3 is a discrepancy. Classify it.
 | **missing-in-ledger** | statement line with no ledger posting | **propose a new transaction** (Propose phase) |
 | **missing-on-statement** | ledger posting with no statement line — a *suspect* | **report for manual review** — do not delete |
 | **amount-mismatch** | same payee, dates within window, amounts differ | **report for manual review** — do not edit |
-| **duplicate** | one real statement line, two+ ledger postings matching it | **report for manual review** — do not delete |
+| **duplicate** | the user confirmed two+ ledger postings are one real transaction | **report for manual review** — do not delete |
+| **ambiguous** | two+ equal postings could be one row, or a row could be a split settlement | **ask** — never label it a duplicate unasked |
 
 ### missing-in-ledger
 
@@ -49,9 +50,9 @@ The ledger has a posting the statement doesn't. Causes: a transaction entered in
 
 A line pairs on payee and date but the numbers differ (ledger $40.00, statement $42.00): a typo, an added tip/fee, or a partial capture. **Report both amounts and the delta; do not auto-edit** — the skill is append-only and can't know which figure is right. The mismatch's delta will show up in the balance-assertion residual.
 
-### duplicate
+### ambiguous, then duplicate only when confirmed
 
-The same real transaction appears twice in the ledger (double-entered import, or a manual entry plus an imported one). Detect it as two ledger postings both matching one statement line on amount and near-date. **Report both with their file positions; do not delete** — the user picks which to remove.
+Two or more equal ledger postings matching one statement line on amount and near-date *might* be the same real transaction recorded twice (double-entered import, or a manual entry plus an imported one) — or one of them might belong to an adjacent period, or both might be real (two identical charges the bank settled as one line, or the reverse split). Amount equality cannot tell these apart, so **preserve the ambiguity**: report every candidate with its file position and the statement row's identity, and ask. Only what the user confirms as recorded-twice becomes **duplicate** (report for manual removal; never delete here). A row equal to the sum of two near-dated postings, or two rows summing to one posting, is the same question in the other direction — a possible split settlement, asked about and never paired automatically.
 
 ## Tolerances and rules
 

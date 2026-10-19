@@ -1096,6 +1096,43 @@ class TestBeaRecipes(unittest.TestCase):
         self.assertEqual(self.recipe("tie-out")["rows"], [["2945.00", "2941.00", "-1.00"]])
         self.assertEqual(ledger.read_bytes(), before)
 
+    def test_coverage_recipes_count_the_window_and_check_statement_arithmetic(self):
+        ledger = self.books / "main.bean"
+        ledger.write_text(
+            'option "operating_currency" "USD"\n'
+            "2023-01-01 open Assets:Checking USD,EUR\n"
+            "2023-01-01 open Expenses:Dining USD\n"
+            "2023-01-01 open Equity:OpeningBalances\n"
+            '2026-05-01 * "Opening"\n  Assets:Checking 1000.00 USD\n  Equity:OpeningBalances\n'
+            '2026-05-07 * "Groceries"\n  Assets:Checking -54.20 USD\n  Expenses:Dining\n'
+            '2026-05-09 * "Parking"\n  Assets:Checking -12.00 USD\n  Expenses:Dining\n'
+            '2026-05-20 * "Foreign"\n  Assets:Checking -7.00 EUR\n  Equity:OpeningBalances\n'
+            '2026-06-05 * "After window"\n  Assets:Checking -9.00 USD\n  Expenses:Dining\n'
+        )
+        before = ledger.read_bytes()
+        self.values.update(
+            ledger=str(ledger), account="Assets:Checking", currency="USD",
+            start="2026-05-01", end_plus_1="2026-06-01",
+            opening="1000.00", included_total="(-54.20 + -12.00)", printed_ending="933.80",
+        )
+        # One row per currency; the after-window posting is excluded.
+        self.assertEqual(
+            self.recipe("coverage-ledger-side")["rows"],
+            [["EUR", 1, "-7.00"], ["USD", 3, "933.80"]],
+        )
+        # Statement ties against itself: computed ending equals printed, gap zero.
+        self.assertEqual(
+            self.recipe("statement-arithmetic")["rows"],
+            [["933.80", "0.00", "933.80"]],
+        )
+        # A printed ending the rows do not reach is an extraction gap, signed.
+        self.values.update(printed_ending="930.00")
+        self.assertEqual(
+            self.recipe("statement-arithmetic")["rows"],
+            [["933.80", "-3.80", "933.80"]],
+        )
+        self.assertEqual(ledger.read_bytes(), before)
+
     def test_liability_tie_out_negates_the_printed_ending_balance(self):
         # A card statement prints the amount owed as a positive running
         # balance; the documented rule negates it into ledger sign (w5/359).

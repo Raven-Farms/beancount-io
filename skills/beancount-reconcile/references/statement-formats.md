@@ -1,6 +1,6 @@
 # Statement normalization
 
-Turn a bank or broker statement into **normalized lines** the Match phase can diff against the ledger. A normalized line is:
+Turn a bank or broker statement into **normalized lines** the Coverage and Match phases can account for and diff against the ledger. A normalized line is:
 
 ```
 { date: YYYY-MM-DD, amount: signed Decimal (ledger sign), description: str, raw: str }
@@ -78,9 +78,13 @@ Credit-card CSVs frequently list **purchases as positive numbers** ("Amount = 54
 - Use the **posting/transaction date**, not any "posted vs. effective" second date, and be consistent with whichever the ledger already uses. Pending-vs-settled date differences are expected and handled by the Match phase's date window — don't try to correct them here.
 - Emit ISO `YYYY-MM-DD`.
 
+## Amount precision and tolerance
+
+Normalize every amount at the precision the statement prints for its commodity — never round to two decimals, and never copy an upstream tool's fixed tolerance. A matching tolerance exists only when the user sets one, per commodity; every difference at or below it is still listed in the report, never silently absorbed.
+
 ## Output of this phase
 
-Hand the Match phase: the normalized line list, the period start/end, and the ending balance. Carry the opening balance too when available — it lets Match confirm it is starting from the same point as the ledger's prior balance assertion.
+Hand the Coverage phase: the normalized line list, the period start/end, the ending balance, the opening balance when printed, and every row set aside during extraction with its reason (pending, another account, another currency, a subtotal or summary line, the same row in two files). Nothing is dropped silently.
 
 ## Out of scope
 
