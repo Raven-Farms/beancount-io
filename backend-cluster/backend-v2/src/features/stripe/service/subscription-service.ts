@@ -22,10 +22,8 @@ import type {
   PlanChangePreviewView,
 } from "../operations/plan-change-preview";
 import type { PlanChangeResultView } from "../operations/plan-change-apply";
-import {
-  emailScheduledChange,
-  type PlanChangeEmailDeps,
-} from "../operations/plan-change-email";
+import type { BillingEmailDeps } from "../operations/billing-email";
+import { emailScheduledChange } from "../operations/plan-change-email";
 import {
   pendingChange,
   type ScheduledChangeNotice,
@@ -199,7 +197,7 @@ export class SubscriptionService implements ISubscriptionService {
     private readonly db: DbExecutor,
     private readonly authorization: IAuthorizationService,
     /** Without it, a scheduled change sends no confirmation email. */
-    private readonly planChangeEmail?: Pick<PlanChangeEmailDeps, "sendgrid"> &
+    private readonly planChangeEmail?: Pick<BillingEmailDeps, "sendgrid"> &
       Pick<IModels, "sentBillingEmail">,
   ) {}
 

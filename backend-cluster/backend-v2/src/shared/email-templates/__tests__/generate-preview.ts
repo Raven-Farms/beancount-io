@@ -8,13 +8,17 @@ import {
   renderPlanChangeHtml,
   type PlanChangeEmailParams,
 } from "../templates/plan-change.template";
+import {
+  renderRenewalHtml,
+  type RenewalEmailParams,
+} from "../templates/renewal.template";
 import { renderSignupOtpHtml } from "../templates/signup-otp.template";
 import { renderWelcomeHtml } from "../templates/welcome.template";
 import { escapeHtml } from "../utils/url-validator";
 
 export interface TemplatePreview {
   title: string;
-  params: Record<string, unknown>;
+  params: object;
   html: string;
 }
 
@@ -46,6 +50,22 @@ export function buildTemplatePreviews(): TemplatePreview[] {
     ],
     billingUrl: "https://beancount.io/settings/billing",
   };
+  const renewal = {
+    plan: "Premium · Yearly",
+    amount: "$143.88",
+    billingUrl: "https://beancount.io/settings/billing",
+  };
+  const renewalFailedParams: RenewalEmailParams = {
+    ...renewal,
+    kind: "failed",
+    nextAttemptDate: "October 22, 2026",
+  };
+  const renewalFinalParams: RenewalEmailParams = { ...renewal, kind: "final" };
+  const renewalUpcomingParams: RenewalEmailParams = {
+    ...renewal,
+    kind: "upcoming",
+    renewalDate: "October 17, 2027",
+  };
 
   return [
     {
@@ -72,6 +92,21 @@ export function buildTemplatePreviews(): TemplatePreview[] {
       title: "Plan Change Reminder Email",
       params: { ...planChangeParams, kind: "reminder" },
       html: renderPlanChangeHtml({ ...planChangeParams, kind: "reminder" }),
+    },
+    {
+      title: "Renewal Failed Email",
+      params: renewalFailedParams,
+      html: renderRenewalHtml(renewalFailedParams),
+    },
+    {
+      title: "Renewal Final Notice Email",
+      params: renewalFinalParams,
+      html: renderRenewalHtml(renewalFinalParams),
+    },
+    {
+      title: "Yearly Renewal Reminder Email",
+      params: renewalUpcomingParams,
+      html: renderRenewalHtml(renewalUpcomingParams),
     },
   ];
 }

@@ -9,6 +9,9 @@ describe("Email template preview", () => {
       "Password Reset Email",
       "Plan Change Scheduled Email",
       "Plan Change Reminder Email",
+      "Renewal Failed Email",
+      "Renewal Final Notice Email",
+      "Yearly Renewal Reminder Email",
     ]);
     expect(previews.every(({ html }) => html.includes("<!DOCTYPE html>"))).toBe(
       true,
@@ -18,8 +21,8 @@ describe("Email template preview", () => {
 
   it("renders desktop and mobile frames plus dark-mode review guidance", () => {
     const html = renderPreviewPage();
-    expect(html.match(/Desktop · 640px/g)).toHaveLength(10);
-    expect(html.match(/Mobile · 375px/g)).toHaveLength(10);
+    expect(html.match(/Desktop · 640px/g)).toHaveLength(16);
+    expect(html.match(/Mobile · 375px/g)).toHaveLength(16);
     expect(html).toContain("@media (prefers-color-scheme: dark)");
     expect(html).toContain(
       "Generated deterministically from public fixture values",

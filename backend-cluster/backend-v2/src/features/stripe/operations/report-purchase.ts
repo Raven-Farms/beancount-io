@@ -48,7 +48,7 @@ export function isPurchase(
 }
 
 /** Stripe amounts are in the currency's minor unit; GA4 wants major units. */
-function majorUnits(amount: number, currency: string): number {
+export function majorUnits(amount: number, currency: string): number {
   const digits =
     new Intl.NumberFormat("en", {
       style: "currency",

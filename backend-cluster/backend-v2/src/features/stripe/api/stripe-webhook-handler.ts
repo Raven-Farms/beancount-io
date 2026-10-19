@@ -6,6 +6,12 @@ import {
   emailScheduledChange,
 } from "../operations/plan-change-email";
 import { refreshSubscriptionPeriods } from "../operations/refresh-subscription-periods";
+import {
+  emailFailedRenewal,
+  emailRenewalReminder,
+  failedRenewal,
+  invoicePlan,
+} from "../operations/renewal-email";
 import { isPurchase, reportPurchase } from "../operations/report-purchase";
 import type { AppConfig } from "@/config/config";
 import { type AppLayers } from "@/foundation/composition";
@@ -59,6 +65,11 @@ export function setStripeWebhookHandler(
         return;
       }
       let processed = false;
+      const emailDeps = {
+        models: layers.database.models,
+        db: layers.database.db,
+        sendgrid: layers.clients.sendgrid,
+      };
       switch (event.type) {
         case "customer.subscription.created":
         case "customer.subscription.updated":
@@ -139,22 +150,22 @@ export function setStripeWebhookHandler(
           break;
         }
         case "invoice.upcoming": {
-          // Stripe's notice before a renewal: if a scheduled plan change
-          // lands at it, remind the subscriber (PRFAQ005 question 17).
+          // Stripe's notice before a renewal: remind the subscriber of the
+          // scheduled plan change it brings (PRFAQ005 question 17), or of a
+          // yearly plan's renewal charge.
           const invoice = event.data.object;
           const { plans } = SUBSCRIPTION_CONFIG[clientId];
           // The account serves other products too: leave their renewals
           // before any lookup.
-          const ours = invoice.lines.data.some((line) => {
-            const price = line.pricing?.price_details?.price;
-            return (
-              !!price &&
-              plans.some((plan) => plan.priceId === expandableId(price))
-            );
-          });
           const subscriptionRef =
             invoice.parent?.subscription_details?.subscription;
-          if (!ours || !subscriptionRef || !invoice.customer) break;
+          if (
+            !invoicePlan(invoice, plans) ||
+            !subscriptionRef ||
+            !invoice.customer
+          ) {
+            break;
+          }
           const binding =
             await layers.database.models.paidCustomer.findByStripeCustomerIdAndClientId(
               layers.database.db,
@@ -168,19 +179,51 @@ export function setStripeWebhookHandler(
               expand: ["schedule"],
             });
           const notice = changeAtRenewal(subscription, plans);
-          if (!notice) break;
           // A failed send throws: the webhook answers with an error and
           // Stripe redelivers, and the claim was given back.
-          const sent = await emailScheduledChange(
-            {
-              models: layers.database.models,
-              db: layers.database.db,
-              sendgrid: layers.clients.sendgrid,
-            },
-            "reminder",
+          const sent = notice
+            ? await emailScheduledChange(
+                emailDeps,
+                "reminder",
+                binding.userId,
+                clientId,
+                notice,
+              )
+            : await emailRenewalReminder(
+                emailDeps,
+                binding.userId,
+                clientId,
+                invoice,
+                subscription,
+              );
+          processed = sent === "sent";
+          break;
+        }
+        case "invoice.payment_failed": {
+          // Stripe's own failed-payment email stays off: its card-update
+          // link is account-wide and would not lead to Beancount.io.
+          const invoice = event.data.object;
+          const plan = invoicePlan(
+            invoice,
+            SUBSCRIPTION_CONFIG[clientId].plans,
+          );
+          const failure = failedRenewal(invoice);
+          if (!plan || !failure || !invoice.customer) break;
+          const binding =
+            await layers.database.models.paidCustomer.findByStripeCustomerIdAndClientId(
+              layers.database.db,
+              customerId(invoice.customer),
+              clientId,
+            );
+          if (!binding) break;
+          // A failed send throws, so Stripe redelivers; the claim was given back.
+          const sent = await emailFailedRenewal(
+            emailDeps,
             binding.userId,
             clientId,
-            notice,
+            invoice,
+            plan,
+            failure,
           );
           processed = sent === "sent";
           break;

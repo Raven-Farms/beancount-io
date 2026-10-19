@@ -1,7 +1,4 @@
 import type Stripe from "stripe";
-import type { DbExecutor } from "@/drizzle/drizzle";
-import type { IModels } from "@/foundation/models";
-import type { ISendGrid } from "@/foundation/sendgrid";
 import {
   planChangeEmailSubject,
   renderPlanChangeHtml,
@@ -10,21 +7,20 @@ import {
 } from "@/shared/email-templates";
 import {
   SUBSCRIPTION_CONFIG,
-  TIER_DISPLAY_NAMES,
   type PlanConfig,
   type TierLimits,
 } from "../service/stripe";
+import {
+  longDate,
+  planName,
+  sendBillingEmailOnce,
+  type BillingEmailDeps,
+} from "./billing-email";
 import { limitChanges } from "./plan-change-preview";
 import {
   pendingChange,
   type ScheduledChangeNotice,
 } from "./plan-change-schedule";
-
-export interface PlanChangeEmailDeps {
-  models: Pick<IModels, "user" | "sentBillingEmail">;
-  db: DbExecutor;
-  sendgrid: ISendGrid;
-}
 
 export type PlanChangeEmailKind = PlanChangeEmailParams["kind"];
 export type PlanChangeEmailOutcome =
@@ -39,10 +35,6 @@ const LIMIT_LABELS: Record<keyof TierLimits, string> = {
   aiCfoTokensMax: "AI Assistant tokens per month",
   maxDirectives: "Ledger entries",
 };
-
-function planName(plan: PlanConfig): string {
-  return `${TIER_DISPLAY_NAMES[plan.tier]} · ${plan.interval === "year" ? "Yearly" : "Monthly"}`;
-}
 
 function limitValue(value: number): string {
   return value === -1 ? "Unlimited" : value.toLocaleString("en-US");
@@ -98,7 +90,7 @@ export function changeAtRenewal(
  * rethrows, so a retry can send it.
  */
 export async function emailScheduledChange(
-  deps: PlanChangeEmailDeps,
+  deps: BillingEmailDeps,
   kind: PlanChangeEmailKind,
   userId: string,
   clientId: string,
@@ -108,17 +100,12 @@ export async function emailScheduledChange(
   const current = plans.find((plan) => plan.priceId === notice.currentPriceId);
   const target = plans.find((plan) => plan.priceId === notice.change.priceId);
   if (!current || !target) return "nothing-scheduled";
-  const user = await deps.models.user.getById(deps.db, userId);
-  if (!user?.email) return "no-recipient";
 
   const params: PlanChangeEmailParams = {
     kind,
     currentPlan: planName(current),
     newPlan: planName(target),
-    effectiveDate: notice.change.effectiveAt.toLocaleDateString("en-US", {
-      dateStyle: "long",
-      timeZone: "UTC",
-    }),
+    effectiveDate: longDate(notice.change.effectiveAt),
     limitChanges: limitChanges(current.tier, target.tier)
       .filter((line) => line.from !== line.to)
       .map((line) => ({
@@ -128,23 +115,9 @@ export async function emailScheduledChange(
       })),
     billingUrl: portalReturnUrl,
   };
-  // Rendered before claiming, so nothing that can throw sits between the
-  // claim and the send.
-  const mail = {
-    to: user.email,
+  return sendBillingEmailOnce(deps, userId, emailKey(kind, notice), {
     subject: planChangeEmailSubject(params),
     html: renderPlanChangeHtml(params),
     text: renderPlanChangeText(params),
-  };
-  const key = emailKey(kind, notice);
-  if (!(await deps.models.sentBillingEmail.claim(deps.db, key))) {
-    return "already-sent";
-  }
-  try {
-    await deps.sendgrid.sendMail(mail);
-  } catch (error) {
-    await deps.models.sentBillingEmail.release(deps.db, key);
-    throw error;
-  }
-  return "sent";
+  });
 }

@@ -4,12 +4,13 @@ Centralized HTML and plain-text templates for Beancount.io transactional email.
 
 ## Available templates
 
-| Template       | Trigger              | Parameters                                                    | Renderers                                            |
-| -------------- | -------------------- | ------------------------------------------------------------- | ---------------------------------------------------- |
-| Welcome        | Account registration | `firstName?`, `dashboardUrl`, `mobileAppUrl`, `helpCenterUrl` | `renderWelcomeHtml`, `renderWelcomeText`             |
-| Signup OTP     | Email verification   | `otp`                                                         | `renderSignupOtpHtml`, `renderSignupOtpText`         |
-| Password reset | Password recovery    | `resetLink`                                                   | `renderPasswordResetHtml`, `renderPasswordResetText` |
-| Plan change    | A downgrade or switch to monthly is scheduled (`kind: "scheduled"`), and Stripe's `invoice.upcoming` before it lands (`kind: "reminder"`) | `kind`, `currentPlan`, `newPlan`, `effectiveDate`, `limitChanges`, `billingUrl` | `renderPlanChangeHtml`, `renderPlanChangeText`, `planChangeEmailSubject` |
+| Template       | Trigger                                                                                                                                                                   | Parameters                                                                                   | Renderers                                                                |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Welcome        | Account registration                                                                                                                                                      | `firstName?`, `dashboardUrl`, `mobileAppUrl`, `helpCenterUrl`                                | `renderWelcomeHtml`, `renderWelcomeText`                                 |
+| Signup OTP     | Email verification                                                                                                                                                        | `otp`                                                                                        | `renderSignupOtpHtml`, `renderSignupOtpText`                             |
+| Password reset | Password recovery                                                                                                                                                         | `resetLink`                                                                                  | `renderPasswordResetHtml`, `renderPasswordResetText`                     |
+| Plan change    | A downgrade or switch to monthly is scheduled (`kind: "scheduled"`), and Stripe's `invoice.upcoming` before it lands (`kind: "reminder"`)                                 | `kind`, `currentPlan`, `newPlan`, `effectiveDate`, `limitChanges`, `billingUrl`              | `renderPlanChangeHtml`, `renderPlanChangeText`, `planChangeEmailSubject` |
+| Renewal        | A renewal's first failed charge (`kind: "failed"`), its last failed retry (`kind: "final"`), and Stripe's `invoice.upcoming` before a yearly renewal (`kind: "upcoming"`) | `kind`, `plan`, `amount`, `nextAttemptDate` (failed), `renewalDate` (upcoming), `billingUrl` | `renderRenewalHtml`, `renderRenewalText`, `renewalEmailSubject`          |
 
 All public renderers and parameter types are exported from `index.ts`.
 

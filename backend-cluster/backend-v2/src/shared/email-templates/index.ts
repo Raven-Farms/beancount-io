@@ -27,3 +27,10 @@ export {
   renderPlanChangeText,
   type PlanChangeEmailParams,
 } from "./templates/plan-change.template";
+
+export {
+  renewalEmailSubject,
+  renderRenewalHtml,
+  renderRenewalText,
+  type RenewalEmailParams,
+} from "./templates/renewal.template";
