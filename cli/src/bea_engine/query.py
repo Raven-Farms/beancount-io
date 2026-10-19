@@ -538,8 +538,7 @@ def _native_shell(source: str, *, interactive: bool, format: str, numberify: boo
 
         def do_describe(self, arg: str) -> None:
             """Describe table or structured type."""
-            _split_dot_arguments("describe", arg)
-            super().do_describe(arg)
+            _describe_table(self, arg)
 
         def do_set(self, arg: str) -> None:
             """Set shell settings variables."""
@@ -874,6 +873,54 @@ def _stored_body_is_empty(body: str) -> bool:
     whitespace, neither of which says which directive to fix (w5/276).
     """
     return not _code_mask(body, literals=False).strip("; \t\r\n")
+
+
+def _describe_table(shell: Any, arg: str) -> None:
+    """`.describe`: what upstream prints, matched as `FROM` matches it.
+
+    Upstream looks `tables.get(name)` up case-sensitively and skips a miss in
+    silence — exit 0, no output — which reads as "no columns" (w5/749). A
+    name is matched against tables and structured types case-insensitively,
+    and one matching neither is a usage error naming it, like `.run` with a
+    missing name. Every name is checked before anything prints.
+    """
+    from beanquery import types
+
+    names = _split_dot_arguments("describe", arg)
+    tables = shell.context.tables
+    # The context also keys placeholders no name can spell; only real names
+    # fold or list.
+    table_names = [key for key in tables if isinstance(key, str) and key]
+    type_names = [key for key in types.TYPES if isinstance(key, str) and key]
+    lowered_tables = {key.lower(): key for key in table_names}
+    lowered_types = {key.lower(): key for key in type_names}
+    resolved = []
+    for name in names:
+        table = name if name in tables else lowered_tables.get(name.lower())
+        datatype = name if name in types.TYPES else lowered_types.get(name.lower())
+        if table is None and datatype is None:
+            raise protocol.UsageError(
+                f'cannot describe "{name}": no table or structured type by that name.',
+                details=[
+                    f"Tables: {', '.join(sorted(table_names))}.",
+                    f"Structured types: {', '.join(sorted(type_names))}.",
+                ],
+            )
+        resolved.append((name, table, datatype))
+    for name, table, datatype in resolved:
+        if table is not None:
+            print(f"table {name}:", file=shell.outfile)
+            print(_describe_columns(tables[table]), file=shell.outfile)
+        if datatype is not None:
+            print(f"structured type {name}:", file=shell.outfile)
+            print(_describe_columns(types.TYPES[datatype]), file=shell.outfile)
+
+
+def _describe_columns(obj: Any) -> str:
+    """The `name (dtype)` lines upstream's `.describe` prints for one object."""
+    from beanquery import types
+
+    return "\n".join(f"  {name} ({types.name(column.dtype)})" for name, column in obj.columns.items())
 
 
 def _split_dot_arguments(command: str, arg: str) -> list[str]:
@@ -1280,8 +1327,7 @@ def build_shell(
 
         def do_describe(self, arg: str) -> None:
             """Describe table or structured type."""
-            _split_dot_arguments("describe", arg)
-            super().do_describe(arg)
+            _describe_table(self, arg)
 
         def do_set(self, arg: str) -> None:
             """Set shell settings variables."""
