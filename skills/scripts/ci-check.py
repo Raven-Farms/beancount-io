@@ -197,8 +197,8 @@ def check_routing() -> None:
         fail(f"{rel}: missing 'entries' array")
     skills = sorted(p.parent.name for p in SKILLS_DIR.glob("beancount-*/SKILL.md"))
     labels = {*skills, "none"}
-    positives = dict.fromkeys(skills, 0)
-    near_misses = dict.fromkeys(skills, 0)
+    expected_seen: set[str] = set()
+    confusable_seen: set[str] = set()
     ids: set[str] = set()
     prompts: dict[str, str] = {}
     for entry in entries:
@@ -219,13 +219,12 @@ def check_routing() -> None:
                 fail(f"{rel}: {name!r} lists confusable {other!r}, which is not a customer skill")
             if other == expected:
                 fail(f"{rel}: {name!r} lists its own expected skill as confusable")
-            near_misses[other] += 1
-        if expected != "none":
-            positives[expected] += 1
+            confusable_seen.add(other)
+        expected_seen.add(expected)
     for skill in skills:
-        if not positives[skill]:
+        if skill not in expected_seen:
             fail(f"{rel}: no entry expects {skill}")
-        if not near_misses[skill]:
+        if skill not in confusable_seen:
             fail(f"{rel}: no near-miss entry lists {skill} as confusable")
     print(f"OK routing {rel} ({len(entries)} entries)")
 

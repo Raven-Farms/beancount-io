@@ -44,9 +44,10 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from collections import Counter
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -55,7 +56,6 @@ REPO_ROOT = SKILLS_ROOT.parent
 ROUTING_SET = SKILLS_ROOT / "evals" / "routing.json"
 SUITE_DIR = SKILLS_ROOT / ".claude" / "skills"
 OUT_ROOT = SKILLS_ROOT / "tmp" / "routing"
-CLIENTS = ("claude", "codex")
 
 LEDGER = """\
 option "title" "Synthetic routing ledger"
@@ -92,10 +92,11 @@ def make_workspace(suite: Path) -> Path:
     workspace = Path(tempfile.mkdtemp(prefix="beancount-routing-"))
     subprocess.run(["git", "init", "-q", str(workspace)], check=True)
     (workspace / "main.bean").write_text(LEDGER, encoding="utf-8")
+    names = sorted(suite_names(suite))
     for skills_dir in (workspace / ".claude" / "skills", workspace / ".agents" / "skills"):
         skills_dir.mkdir(parents=True)
-        for skill in sorted(suite.glob("beancount-*/SKILL.md")):
-            (skills_dir / skill.parent.name).symlink_to(skill.parent.resolve())
+        for name in names:
+            (skills_dir / name).symlink_to((suite / name).resolve())
     return workspace
 
 
@@ -104,7 +105,8 @@ def client_version(client: str) -> str:
         out = subprocess.run([client, "--version"], capture_output=True, text=True, timeout=30)
     except (OSError, subprocess.TimeoutExpired):
         return "unknown"
-    return (out.stdout or out.stderr).strip().splitlines()[0] if (out.stdout or out.stderr) else "unknown"
+    text = (out.stdout or out.stderr).strip()
+    return text.splitlines()[0] if text else "unknown"
 
 
 def claude_command(prompt: str, model: str | None) -> list[str]:
@@ -123,24 +125,23 @@ def codex_command(prompt: str, model: str | None) -> list[str]:
     return command + (["-m", model] if model else []) + [prompt]
 
 
-def claude_event(event: dict, meta: dict) -> tuple[str | None, str | None]:
-    """Return (choice, error) for one Claude Code stream-json event."""
+def claude_event(event: dict, meta: dict) -> tuple[list[str] | None, str | None]:
+    """Return (skills opened, error) for one Claude Code stream-json event."""
     if event.get("type") == "system" and event.get("subtype") == "init":
         meta.setdefault("model", event.get("model"))
     if event.get("type") == "assistant":
         for part in event.get("message", {}).get("content", []):
             if part.get("type") == "tool_use" and part.get("name") == "Skill":
-                meta["evidence"] = json.dumps(part.get("input", {}))[:300]
-                return str(part.get("input", {}).get("skill", "")), None
-    if event.get("type") == "result" and event.get("is_error") and event.get("subtype") not in (
-        "error_max_turns",
-    ):
+                tool_input = part.get("input", {})
+                meta["evidence"] = json.dumps(tool_input)[:300]
+                return [str(tool_input.get("skill", ""))], None
+    if event.get("type") == "result" and event.get("is_error") and event.get("subtype") != "error_max_turns":
         return None, str(event.get("result") or event.get("subtype"))
     return None, None
 
 
-def codex_event(event: dict, meta: dict) -> tuple[str | None, str | None]:
-    """Return (choice, error) for one Codex `exec --json` event.
+def codex_event(event: dict, meta: dict) -> tuple[list[str] | None, str | None]:
+    """Return (skills opened, error) for one Codex `exec --json` event.
 
     A command counts as opening a skill only when it names `<skill>/SKILL.md`
     and its output contains that skill's `name: <skill>` frontmatter line. A
@@ -157,21 +158,23 @@ def codex_event(event: dict, meta: dict) -> tuple[str | None, str | None]:
         ]
         if opened:
             meta["evidence"] = item.get("command", "")[:300]
-            meta["opened"] = list(dict.fromkeys(opened))
-            return opened[0], None
+            return list(dict.fromkeys(opened)), None
     if event.get("type") in ("turn.failed", "error"):
         message = event.get("message") or event.get("error", {}).get("message")
         return None, str(message)[:300]
     return None, None
 
 
+# Each client: how to start it, and how to read a choice from its event stream.
+CLIENTS = {"claude": (claude_command, claude_event), "codex": (codex_command, codex_event)}
+
+
 def run_one(client: str, entry: dict, workspace: Path, model: str | None, timeout: float) -> dict:
-    command = claude_command if client == "claude" else codex_command
-    handle = claude_event if client == "claude" else codex_event
+    command, handle = CLIENTS[client]
     meta: dict = {}
-    started = time.monotonic()
-    choice: str | None = None
+    opened: list[str] = []
     error: str | None = None
+    started = time.monotonic()
     process = subprocess.Popen(
         command(entry["prompt"], model),
         cwd=workspace,
@@ -180,55 +183,71 @@ def run_one(client: str, entry: dict, workspace: Path, model: str | None, timeou
         stderr=subprocess.DEVNULL,
         text=True,
     )
+    # A client can go silent (a long shell command, a stalled request), so the
+    # deadline is a timer that kills it rather than a check per output line.
+    watchdog = threading.Timer(timeout, process.kill)
+    watchdog.start()
     try:
         assert process.stdout is not None
         for line in process.stdout:
-            if time.monotonic() - started > timeout:
-                error = f"timeout after {timeout:.0f}s"
-                break
             try:
                 event = json.loads(line)
             except json.JSONDecodeError:
                 continue
-            choice, error = handle(event, meta)
-            if choice is not None or error is not None:
+            found, error = handle(event, meta)
+            if found is not None or error is not None:
+                opened = found or []
                 break
     finally:
+        watchdog.cancel()
         if process.poll() is None:
             process.terminate()
             try:
                 process.wait(timeout=10)
             except subprocess.TimeoutExpired:
                 process.kill()
-    return {
+    if not opened and error is None and time.monotonic() - started >= timeout:
+        error = f"timeout after {timeout:.0f}s"
+    result = {
         "id": entry["id"],
         "client": client,
         "expected": entry["expected"],
-        "chosen": choice if choice is not None else ("none" if error is None else None),
+        "opened": opened,
         "error": error,
         "seconds": round(time.monotonic() - started, 1),
-        **({"model": meta["model"]} if meta.get("model") else {}),
-        **({"evidence": meta["evidence"]} if meta.get("evidence") else {}),
-        **({"opened": meta["opened"]} if len(meta.get("opened", [])) > 1 else {}),
     }
+    result.update({key: meta[key] for key in ("model", "evidence") if meta.get(key)})
+    return result
 
 
-def normalize(choice: str | None, suite: set[str]) -> str | None:
-    """Map a raw choice to a suite label: a skill outside the suite is `none`."""
-    if choice is None:
-        return None
+def normalize(choice: str, suite: set[str]) -> str:
+    """Map a raw skill name to a suite label: a skill outside the suite is `none`."""
     name = choice.split(":")[-1]
     return name if name in suite else "none"
 
 
-def result_label(result: dict, expected: str, suite: set[str]) -> str | None:
-    """The suite label a result chose. When one command opened several skills
-    at once (Codex reading a skill and the sibling it composes), the choice is
-    the expected skill if it is among them."""
-    opened = {normalize(name, suite) for name in result.get("opened", [])}
-    if expected != "none" and expected in opened:
+def result_label(result: dict, suite: set[str]) -> str | None:
+    """The suite label a result chose, or None when no choice was observed.
+
+    The choice is the first skill opened. When one command opened several at
+    once (Codex reading a skill and the sibling it composes), the expected
+    skill counts if it is among them. Results recorded before `opened`
+    existed carry a single `chosen` name instead.
+    """
+    opened = result.get("opened")
+    if opened is None:
+        opened = [] if result.get("chosen") in (None, "none") else [result["chosen"]]
+    labels = [normalize(name, suite) for name in opened]
+    expected = result["expected"]
+    if expected != "none" and expected in labels:
         return expected
-    return normalize(result["chosen"], suite)
+    if labels:
+        return labels[0]
+    return None if result.get("error") else "none"
+
+
+def fmt_ratio(value: float | None) -> str:
+    return "—" if value is None else f"{value:.2f}"
 
 
 def score(entries: list[dict], results: list[dict], suite: set[str]) -> dict:
@@ -237,11 +256,11 @@ def score(entries: list[dict], results: list[dict], suite: set[str]) -> dict:
     A result with an error (no choice observed) counts as a miss and is listed.
     """
     expected = {entry["id"]: entry["expected"] for entry in entries}
+    labels = sorted(suite | {"none"})
     summary: dict = {}
     for client in sorted({r["client"] for r in results}):
         rows = [r for r in results if r["client"] == client and r["id"] in expected]
-        chosen = {r["id"]: result_label(r, expected[r["id"]], suite) for r in rows}
-        labels = sorted(suite | {"none"})
+        chosen = {r["id"]: result_label(r, suite) for r in rows}
         per_label = {}
         for label in labels:
             true_positive = sum(1 for i, c in chosen.items() if c == label and expected[i] == label)
@@ -252,9 +271,7 @@ def score(entries: list[dict], results: list[dict], suite: set[str]) -> dict:
                 "recall": round(true_positive / actual, 3) if actual else None,
                 "support": actual,
             }
-        misses = sorted(
-            (i, expected[i], chosen[i] if chosen[i] is not None else "error") for i in chosen if chosen[i] != expected[i]
-        )
+        misses = sorted((i, expected[i], chosen[i] or "error") for i in chosen if chosen[i] != expected[i])
         summary[client] = {
             "correct": len(rows) - len(misses),
             "total": len(rows),
@@ -272,8 +289,7 @@ def report(summary: dict) -> str:
         lines.append("| label | precision | recall | support |")
         lines.append("| --- | --- | --- | --- |")
         for label, row in data["per_label"].items():
-            fmt = lambda v: "—" if v is None else f"{v:.2f}"  # noqa: E731
-            lines.append(f"| {label} | {fmt(row['precision'])} | {fmt(row['recall'])} | {row['support']} |")
+            lines.append(f"| {label} | {fmt_ratio(row['precision'])} | {fmt_ratio(row['recall'])} | {row['support']} |")
         lines.append("")
         if data["misses"]:
             lines.append("| prompt id | expected | chosen |")
@@ -294,7 +310,7 @@ def revision() -> str:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    parser.add_argument("--clients", default=",".join(CLIENTS), help="comma-separated: claude,codex")
+    parser.add_argument("--clients", default="claude,codex", help="comma-separated: claude,codex")
     parser.add_argument("--set", type=Path, default=ROUTING_SET, help="routing set JSON")
     parser.add_argument("--suite", type=Path, default=SUITE_DIR, help="directory holding beancount-* skills")
     parser.add_argument("--only", default="", help="comma-separated entry ids to run")
@@ -333,32 +349,46 @@ def main(argv: list[str] | None = None) -> int:
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     out = args.out or OUT_ROOT / stamp
     out.mkdir(parents=True, exist_ok=True)
+    models = {"claude": args.claude_model, "codex": args.codex_model}
     meta = {
         "date": stamp,
         "revision": revision(),
         "suite": str(args.suite),
         "clients": {
-            client: {"version": client_version(client), "model": getattr(args, f"{client}_model") or "client default"}
+            client: {"version": client_version(client), "model": models[client] or "client default"}
             for client in clients
         },
     }
     results: list[dict] = []
     workspaces = {client: make_workspace(args.suite) for client in clients}
+    pool = ThreadPoolExecutor(max_workers=max(1, args.jobs))
     try:
-        jobs = [(client, entry) for client in clients for entry in entries]
-        with ThreadPoolExecutor(max_workers=max(1, args.jobs)) as pool:
-            futures = [
-                pool.submit(run_one, client, entry, workspaces[client], getattr(args, f"{client}_model"), args.timeout)
-                for client, entry in jobs
-            ]
-            for future in futures:
+        futures = {
+            pool.submit(run_one, client, entry, workspaces[client], models[client], args.timeout): (client, entry)
+            for client in clients
+            for entry in entries
+        }
+        for future in as_completed(futures):
+            client, entry = futures[future]
+            try:
                 result = future.result()
-                results.append(result)
-                mark = "ok " if result_label(result, result["expected"], suite) == result["expected"] else "MISS"
-                print(f"{mark} {result['client']:6} {result['id']:36} -> {result['chosen'] or result['error']}")
+            except Exception as exc:  # one broken run must not discard the paid ones
+                result = {"id": entry["id"], "client": client, "expected": entry["expected"], "opened": [],
+                          "error": f"{type(exc).__name__}: {exc}", "seconds": 0.0}
+            results.append(result)
+            label = result_label(result, suite)
+            mark = "ok " if label == result["expected"] else "MISS"
+            raw = ",".join(result["opened"]) or result["error"] or "no skill"
+            print(f"{mark} {client:6} {result['id']:36} -> {label or 'error'} ({raw})", flush=True)
+    except KeyboardInterrupt:
+        print("interrupted: writing the results collected so far", file=sys.stderr)
+        meta["interrupted"] = True
     finally:
+        pool.shutdown(wait=True, cancel_futures=True)
         for workspace in workspaces.values():
             shutil.rmtree(workspace, ignore_errors=True)
+    order = {(client, entry["id"]): n for n, (client, entry) in enumerate((c, e) for c in clients for e in entries)}
+    results.sort(key=lambda r: order[(r["client"], r["id"])])
 
     for client in clients:
         observed = Counter(r["model"] for r in results if r["client"] == client and r.get("model"))
