@@ -248,6 +248,7 @@ def run_repl(agent: Agent[BqlDeps, str], deps: BqlDeps, *, default_input: str | 
     from cli.ask.agent import (
         CUT_OFF_NOTICE,
         WritePermission,
+        begin_turn,
         cut_off,
         translated_failures,
         usage_limits,
@@ -301,13 +302,17 @@ def run_repl(agent: Agent[BqlDeps, str], deps: BqlDeps, *, default_input: str | 
             if user_input.lower() in {"?", "/help", "help"}:
                 _print_help()
                 continue
-            status = console.status("", spinner="dots")
-            active_status[0] = status
-            status.start()
+            # Both bound before the turn starts, so a Ctrl-C inside the spinner
+            # startup still reports (w5/734).
+            status: Any = None
+            turn: list[Any] = []
             try:
+                begin_turn(deps)
+                status = console.status("", spinner="dots")
+                active_status[0] = status
+                status.start()
                 # The spinner is stopped before any arm below prints: a live display
                 # left running would overwrite the line it is reporting on.
-                turn: list[Any] = []
                 try:
                     with capture_run_messages() as turn, translated_failures(deps):
                         asyncio.set_event_loop(turn_loop)
@@ -326,7 +331,13 @@ def run_repl(agent: Agent[BqlDeps, str], deps: BqlDeps, *, default_input: str | 
             except KeyboardInterrupt:
                 # A turn costs one Ctrl-C, not the session. `messages` is left as it
                 # was before the turn, so the next question still carries the history
-                # — and keeps this turn too if it wrote to the ledger.
+                # — and keeps this turn too if it wrote to the ledger. The spinner
+                # startup sits inside the turn for the same reason: a Ctrl-C there
+                # cancelled the session with exit 130 (w5/734). Stopping what never
+                # started is a no-op; a start interrupted halfway still unwinds.
+                if status is not None:
+                    status.stop()
+                active_status[0] = None
                 deps.cancel_event.set()
                 # An approved write landing now still records first: the report
                 # below must name it. Queued workers see the flag and return

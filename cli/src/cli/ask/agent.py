@@ -162,7 +162,7 @@ class BqlDeps:
     #: What this question has written: one (directive count, file) per approved
     #: write that landed. A failure report must not deny a write that happened —
     #: told "nothing was written", a user retries and duplicates the entry
-    #: (w1/095). `translated_failures` resets it at the start of every turn.
+    #: (w1/095). `begin_turn` resets it at the start of every turn.
     writes: list[tuple[int, str]] = field(default_factory=list)
     #: Set when the turn is interrupted: a write that has not shown its panel
     #: returns "Write cancelled" instead of prompting or writing (w5/731).
@@ -186,6 +186,20 @@ def written_so_far(deps: BqlDeps | None) -> str:
         per_file[target] = per_file.get(target, 0) + count
     landed = ", ".join(f"{count} directive(s) to {target}" for target, count in per_file.items())
     return f"this question had already written {landed}, which stay in your ledger"
+
+
+def begin_turn(deps: BqlDeps) -> None:
+    """Reset the turn's write record and interrupt flag for a new question.
+
+    The REPL resets when the turn begins, so a turn cancelled before its run
+    — inside the spinner startup — reports only what it wrote: nothing
+    (w5/734). `translated_failures` resets again at the run, which keeps
+    `--print` (and any caller that never began a turn) correct; the second
+    reset is harmless, and a worker its turn outlived still reads the flag
+    snapshot it took when its call started.
+    """
+    deps.writes.clear()
+    deps.cancel_event = threading.Event()
 
 
 @contextmanager
@@ -219,8 +233,7 @@ def translated_failures(deps: BqlDeps | None = None) -> Iterator[None]:
     Ctrl-C never cancels this turn's writes (w5/731).
     """
     if deps is not None:
-        deps.writes.clear()
-        deps.cancel_event = threading.Event()
+        begin_turn(deps)
     try:
         yield
     except ModelHTTPError as exc:
