@@ -2349,13 +2349,36 @@ def _usage_error(exc: Exception, query_string: str, conn: Any, ledger_errors: li
     return protocol.UsageError(f"Cannot run this BQL query: {exc}.", details=details, ledger_errors=ledger_errors)
 
 
+def _display_width(text: str) -> int:
+    """How many terminal columns this text occupies, as the frontend's tables count them.
+
+    The frontend's `display_width` cannot be imported across the engine
+    boundary, so the rule is repeated here: East Asian Wide or Fullwidth
+    takes two columns, a combining mark, format character or emoji modifier
+    takes none, and the soft hyphen keeps its cell (w5/726).
+    """
+    return sum(_columns(character) for character in text)
+
+
+def _columns(character: str) -> int:
+    if character == "\u00ad":
+        return 1
+    if unicodedata.combining(character) or unicodedata.category(character) in {"Mn", "Me", "Cf"}:
+        return 0
+    if "\U0001f3fb" <= character <= "\U0001f3ff":
+        return 0
+    return 2 if unicodedata.east_asian_width(character) in "WF" else 1
+
+
 def _caret_lines(statement: str, position: int) -> list[str]:
     """The statement a line per detail, with a caret under the character at `position`.
 
     The parser's offset is absolute, so for a query spanning lines it has to
     become a column of the line it falls on; indented by the whole offset the
     caret sat alone, far to the right of every line shown. A tab is shown as
-    one space so the caret's column is the token's.
+    one space so the caret's column is the token's. The indent counts display
+    columns, not characters, so a wide character before the token does not
+    pull the caret left (w5/726).
     """
     lines = statement.splitlines(keepends=True) or [""]
     details = []
@@ -2365,7 +2388,8 @@ def _caret_lines(statement: str, position: int) -> list[str]:
         details.append(f"  {text}")
         end = start + len(raw)
         if start <= position and (position < end or index == len(lines) - 1):
-            details.append(f"  {' ' * min(position - start, len(text))}^")
+            prefix = text[: max(0, min(position - start, len(text)))]
+            details.append(f"  {' ' * _display_width(prefix)}^")
         start = end
     return details
 
