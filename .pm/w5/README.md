@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [720 — --partial is still superlinear with several bad rows, and slower than before on a mixed batch (incomplete fix of w5/537)](./720.md)
 - [721 — The NFD --into spelling that created a file is refused the second time (regression from w5/536)](./721.md)
 - [722 — 1.234,56 and bulk amounts still get raw parser text; tag/link refusal wording (incomplete fix of w5/534)](./722.md)
 - [723 — treeify: a BOM splits the tree; /dev/stdin and FIFOs still give a raw UnicodeDecodeError (incomplete fix of w5/535)](./723.md)
