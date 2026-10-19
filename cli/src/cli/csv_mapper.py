@@ -37,6 +37,7 @@ _MAPPING_FIELDS = frozenset(
         "delimiter",
         "encoding",
         "decimal",
+        "direction",
     }
 )
 
@@ -227,6 +228,13 @@ def parse_mapping(spec: str) -> CsvMapping:
             raise UsageError("--csv needs amount=Column or debit=A,credit=B (exactly one of the two).")
         if has_pair and ("debit" not in columns or "credit" not in columns):
             raise UsageError("--csv needs both debit=A and credit=B together.")
+        if "direction" in columns and has_pair:
+            raise UsageError(
+                "--csv direction=Column combines with amount=Column, not with debit=A,credit=B, "
+                "which already decides each row's direction."
+            )
+        if "direction" in columns and sign == "ledger":
+            raise UsageError("--csv direction=Column already decides each row's direction; drop sign=ledger.")
     return CsvMapping(columns=columns, sign=sign, delimiter=delimiter, encoding=encoding, decimal=decimal)
 
 

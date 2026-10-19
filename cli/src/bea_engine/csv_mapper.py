@@ -25,7 +25,20 @@ from bea_engine.ledger.text import is_commodity, regex_reads_otherwise, require_
 from bea_engine.protocol import UsageError
 
 _MAPPING_FIELDS = frozenset(
-    {"date", "amount", "payee", "narration", "id", "currency", "debit", "credit", "category", "status", "sign"}
+    {
+        "date",
+        "amount",
+        "payee",
+        "narration",
+        "id",
+        "currency",
+        "debit",
+        "credit",
+        "direction",
+        "category",
+        "status",
+        "sign",
+    }
 )
 
 _THOUSAND_SEPARATOR_FILLER = re.compile(r"[\s'\u2019]")
@@ -51,6 +64,15 @@ _COMMA_GROUPING = re.compile(r"[1-9]\d{0,2}(?:,\d{3})+|[1-9]\d?(?:,\d{2})*,\d{3}
 # One comma and exactly three digits after it: a thousands group only when the
 # whole part is a valid first group, so `0,125` and `1613,030` are decimals.
 _SINGLE_COMMA_THREE = re.compile(r"\d+,\d{3}")
+# Direction words a `direction=` column may hold, case-insensitive (w5/755):
+# English full words and abbreviations, plus ING's Dutch Af/Bij.
+_DEBIT_WORDS = frozenset({"debit", "d", "dr", "af"})
+_CREDIT_WORDS = frozenset({"credit", "c", "cr", "bij"})
+_DIRECTION_WORDS = _DEBIT_WORDS | _CREDIT_WORDS
+# Full words unambiguous enough to indict a column whatever its header.
+_FULL_DIRECTION_WORDS = frozenset({"debit", "credit"})
+# Headers (alphanumerics only, casefolded) that name a direction column.
+_DIRECTION_HEADERS = frozenset({"type", "transactiontype", "direction", "debitcredit", "drcr", "dc", "afbij"})
 # ISO 4217 commodities with no minor unit: a three-decimal reading in one of
 # these is almost certainly dot-grouped thousands instead (w5/753).
 _ZERO_DECIMAL_CURRENCIES = frozenset(
@@ -351,6 +373,57 @@ def _parse_amount_cell(where: str, column: str, value: str, *, decimal_comma: bo
     return _negated(number) if negations else number
 
 
+def _directed_number(number: Decimal, cell: str, where: str, column: str) -> Decimal:
+    """The signed amount of a row whose direction a word column decides.
+
+    As with the debit/credit pair, the column decides the direction and the
+    cell supplies only the magnitude: `4.50` under DEBIT posts `-4.50`
+    however the bank signed the cell.
+    """
+    word = cell.strip().casefold()
+    if word in _DEBIT_WORDS:
+        return _negated(number.copy_abs())
+    if word in _CREDIT_WORDS:
+        return number.copy_abs()
+    if not word:
+        raise UsageError(
+            f"{where}: empty direction in column {column!r}; every row needs one of DEBIT/CREDIT, D/C, Dr/Cr, Af/Bij."
+        )
+    raise UsageError(
+        f"{where}: unknown direction {cell.strip()!r} in column {column!r}; "
+        "use one of DEBIT/CREDIT, D/C, Dr/Cr, Af/Bij."
+    )
+
+
+def _refuse_unmapped_direction(headers: list[str], rows: list[dict[str, str]], columns: dict[str, str]) -> None:
+    """Refuse an unmapped direction-shaped column when the amounts carry no sign.
+
+    Unsigned magnitudes beside a DEBIT/CREDIT column would otherwise book
+    every debit as money in, exit 0. Full DEBIT/CREDIT words indict a column
+    whatever its header; abbreviations need a direction-shaped header too, so
+    a Grade column of C/D stays silent. Signed amounts carry their own
+    direction, making the column redundant.
+    """
+    for row in rows:
+        sign, _core, negations = _split_amount_sign(row.get(columns["amount"], ""))
+        if sign == "-" or negations:
+            return
+    mapped = set(columns.values())
+    for header in headers:
+        if header in mapped:
+            continue
+        words = [cell.strip() for cell in (row.get(header, "") for row in rows) if cell.strip()]
+        if not words or any(word.casefold() not in _DIRECTION_WORDS for word in words):
+            continue
+        named = "".join(char for char in header.casefold() if char.isalnum()) in _DIRECTION_HEADERS
+        if named or any(word.casefold() in _FULL_DIRECTION_WORDS for word in words):
+            raise UsageError(
+                f"Column {header!r} looks like a direction column ({words[0]!r}, ...): its values are only "
+                "DEBIT/CREDIT words, and the amounts carry no sign, so every debit would book as money in. "
+                f"Add direction={header} to the --csv mapping (DEBIT/CREDIT, D/C, Dr/Cr, Af/Bij)."
+            )
+
+
 @dataclass(frozen=True)
 class CsvMapping:
     """A parsed `--csv` mapping: CSV column names per ledger field."""
@@ -518,6 +591,13 @@ def parse_mapping(spec: str) -> CsvMapping:
         raise UsageError("--csv needs amount=Column or debit=A,credit=B (exactly one of the two).")
     if has_pair and ("debit" not in columns or "credit" not in columns):
         raise UsageError("--csv needs both debit=A and credit=B together.")
+    if "direction" in columns and has_pair:
+        raise UsageError(
+            "--csv direction=Column combines with amount=Column, not with debit=A,credit=B, "
+            "which already decides each row's direction."
+        )
+    if "direction" in columns and sign == "ledger":
+        raise UsageError("--csv direction=Column already decides each row's direction; drop sign=ledger.")
     return CsvMapping(columns=columns, sign=sign)
 
 
@@ -1415,6 +1495,8 @@ class CsvImporter:
                 self.ambiguous_dot_amounts = self._dot_ambiguity(numbered, amount_columns, columns)
             if "amount" not in columns:
                 self._check_pair_signs(numbered)
+            elif "direction" not in columns:
+                _refuse_unmapped_direction(headers, [row for _, _, row in numbered], columns)
             for row_number, line, row in numbered:
                 where = _at(row_number, line)
                 date_column = columns["date"]
@@ -1428,6 +1510,9 @@ class CsvImporter:
                 if "amount" in columns:
                     amount_column = columns["amount"]
                     number = self._parse_decimal(where, amount_column, self._cell(row, where, "amount"))
+                    if "direction" in columns:
+                        direction_column = columns["direction"]
+                        number = _directed_number(number, self._cell(row, where, "direction"), where, direction_column)
                 else:
                     number = self._pair_number(row, where)
                 if self._mapping.sign == "ledger":

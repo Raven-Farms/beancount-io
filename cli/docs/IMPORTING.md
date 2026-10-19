@@ -85,7 +85,15 @@ only the magnitude: a debit posts negative and a credit positive however the
 bank signed the cell, so a `Money Out` column printed `-4.50` still posts
 `-4.50`. A column that mixes non-zero signs is refused naming the column and
 the two disagreeing rows — map it as `amount=` instead, where the sign *is* the
-direction. Exactly one cell per row must be filled, and a cell that parses to
+direction. When the export carries unsigned magnitudes with a direction column
+(`Type` holding DEBIT/CREDIT, D/C, Dr/Cr, or Af/Bij), map it with
+`direction=Column`: the column decides each row's sign and the cell supplies
+only the magnitude, as with the pair. Unknown or blank direction cells are
+refused with the row named. `direction=` combines with `amount=` only — not
+with the pair, which already decides the direction, and never with
+`sign=ledger`. An unmapped column whose values are only direction words is
+refused while the amounts carry no sign, naming the column and the mapping
+that reads it. Exactly one cell per row must be filled, and a cell that parses to
 zero counts as empty, so the `Debit=30.00,Credit=0.00` shape banks zero-fill
 imports as `-30.00`. Amount, debit, and credit cells must use decimal notation (`1000`,
 not `1e3`); a notation error names the row and column before anything is written.
