@@ -903,8 +903,8 @@ describe("MCP tool annotations", () => {
 
   it("gives each per-operation tool the hints ADR 019 decided on 2026-10-18", () => {
     // The amendment's table: overwriting, deleting, merging, closing, and
-    // revoking access are destructive; a tool that reaches the bank is open
-    // world. Directory reviewers check these against the behavior, so a hint
+    // revoking access are destructive; a tool that reaches the bank, or can
+    // publish a ledger to anyone (w1/174), is open world. Directory reviewers check these against the behavior, so a hint
     // changes only with the decision.
     const decided: [string, { destructive: boolean; openWorld: boolean }][] = [
       ["createLedgerFiles", { destructive: false, openWorld: false }],
@@ -930,8 +930,8 @@ describe("MCP tool annotations", () => {
       ["createPullRequest", { destructive: false, openWorld: false }],
       ["mergePullRequest", { destructive: true, openWorld: false }],
       ["rejectPullRequest", { destructive: true, openWorld: false }],
-      ["createLedger", { destructive: false, openWorld: false }],
-      ["updateLedger", { destructive: true, openWorld: false }],
+      ["createLedger", { destructive: false, openWorld: true }],
+      ["updateLedger", { destructive: true, openWorld: true }],
       ["deleteLedger", { destructive: true, openWorld: false }],
       ["setLedgerCollaborator", { destructive: true, openWorld: false }],
       ["removeLedgerCollaborator", { destructive: true, openWorld: false }],

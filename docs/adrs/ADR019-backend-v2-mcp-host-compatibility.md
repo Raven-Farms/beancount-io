@@ -327,6 +327,8 @@ Each grouped tool splits into one tool per `VERB_TABLE` verb. Under the 2026-10-
 
 The first rescan after the deploy (2026-10-18) cleared the "not individually exposed" finding on every tool. It flagged `approvePullRequest`'s name as "inconsistent with its behavior": the tool merges, and "approve" reads as a review verdict. The MCP tool is now `mergePullRequest` (w1/172); GraphQL and REST keep `approvePullRequest`, since parity is per verb.
 
+On the next rescan (18:08), with ledgers private unless `private: false` (w1/173), the "needs further review" finding on `createLedger` and `updateLedger` cleared. Both tools were then flagged for declaring `openWorldHint: false` while able to publish a ledger to anyone. Both are now open world (w1/174).
+
 ### 2026-10-16 — OpenClaw and Hermes Agent are named hosts, and a missing `prompt=consent` no longer costs the refresh token (w6/m7)
 
 Two open-source agents join the hosts D8 names. Both use the single endpoint of D1; neither needed host-specific code. No submission directory exists for either: OpenClaw adds servers by hand, and Hermes's MCP catalog is curated by Nous. Being listed on them means a fixture, a verified sign-in, and a row in `docs/mcp.md`.

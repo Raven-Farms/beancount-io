@@ -749,7 +749,8 @@ export const MCP_TOOLS: readonly McpToolDescriptor[] = [
   {
     name: "createLedger",
     title: "Create Ledger",
-    annotations: APPEND,
+    // Open world: `private: false` publishes the ledger to anyone (w1/174).
+    annotations: { ...APPEND, openWorldHint: true },
     description:
       "Create a ledger owned by the authenticated user. Requires name; accepts description, private, and template: STARTER (default, including null) has options and accounts without transactions or opening balances; SAMPLE has demonstration transactions.",
     inputSchema: LIFECYCLE_OPERATION_SCHEMAS.create,
@@ -759,7 +760,8 @@ export const MCP_TOOLS: readonly McpToolDescriptor[] = [
   {
     name: "updateLedger",
     title: "Update Ledger Settings",
-    annotations: IDEMPOTENT_DESTRUCTIVE,
+    // Open world: `private: false` publishes the ledger to anyone (w1/174).
+    annotations: { ...IDEMPOTENT_DESTRUCTIVE, openWorldHint: true },
     description:
       "Change a ledger's name, description, or privacy; omitted fields stay as they are.",
     inputSchema: LIFECYCLE_OPERATION_SCHEMAS.update,
