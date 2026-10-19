@@ -622,11 +622,6 @@ const ruUserSettings: Record<string, TranslationEntry> = {
     message: "Связаться с нами",
     description: "Enterprise plan call to action and price label",
   },
-  "userSettings.renewalChangesComingSoon": {
-    message: "Изменения с даты продления скоро станут доступны.",
-    description:
-      "Hint under a plan change that takes effect at renewal, which is not available yet",
-  },
   "userSettings.billedYearly": {
     message: "{amount} при оплате за год",
     description: "Total charged once a year; {amount} is a formatted price",
@@ -766,6 +761,98 @@ const ruUserSettings: Record<string, TranslationEntry> = {
     message:
       "Нет активной подписки для изменения. Обновите страницу, чтобы выбрать тариф.",
     description: "The subscription ended before the change was confirmed",
+  },
+  "userSettings.planChangeStartsOn": {
+    message: "Начнётся {date}. До тех пор у вас остаётся {plan}.",
+    description:
+      "When a scheduled change takes effect and the plan kept until then",
+  },
+  "userSettings.planChangeNothingToday": {
+    message: "Сегодня платить ничего не нужно.",
+    description: "A scheduled change charges nothing today",
+  },
+  "userSettings.planChangeWhatChanges": {
+    message: "Что изменится {date}",
+    description:
+      "Heading for the limits and features that change on the effective date",
+  },
+  "userSettings.planChangeLimitCollaborators": {
+    message: "Соавторы на книгу",
+    description: "Row label: collaborators allowed per ledger",
+  },
+  "userSettings.planChangeLimitAiTokens": {
+    message: "Токены ИИ в месяц",
+    description: "Row label: AI tokens allowed per month",
+  },
+  "userSettings.planChangeYouHave": {
+    message: "у вас {count}",
+    description: "The reader's current usage beside a limit row",
+  },
+  "userSettings.planChangeOverLimit": {
+    message:
+      "Все ваши книги остаются вашими и продолжают работать. Создать новую можно будет, только когда их станет меньше нового лимита в {max}.",
+    description:
+      "Explains what happens when usage is above the lower plan's ledger limit",
+  },
+  "userSettings.planChangeScheduleDowngrade": {
+    message: "Запланировать понижение",
+    description:
+      "Button that schedules a downgrade for the end of the paid period",
+  },
+  "userSettings.planChangeScheduleSwitch": {
+    message: "Запланировать переход",
+    description:
+      "Button that schedules a billing-cycle switch for the end of the paid period",
+  },
+  "userSettings.planChangeKeep": {
+    message: "Оставить {plan}",
+    description: "Button that keeps the current plan and closes the sheet",
+  },
+  "userSettings.planChangeScheduled": {
+    message: "Запланировано на {date}. До тех пор ничего не меняется.",
+    description: "Toast after a change was scheduled",
+  },
+  "userSettings.planChangeReplacesScheduled": {
+    message: "Это заменит ваш запланированный переход на {plan} {date}.",
+    description: "Note that this choice replaces an already scheduled change",
+  },
+  "userSettings.planChangeWithdrawsCancellation": {
+    message: "Это также отзывает отмену подписки: подписка продолжится.",
+    description: "Note that this choice withdraws a pending cancellation",
+  },
+  "userSettings.planChangeLegacyEnds": {
+    message:
+      "Ваша текущая цена больше не предлагается, поэтому она закончится с этим изменением.",
+    description: "Note for a subscriber on a price that is no longer offered",
+  },
+  "userSettings.planChangeSplitIntro": {
+    message:
+      "{plan} с ежемесячной оплатой может начаться при продлении {date}. Хотите {plan} уже сегодня?",
+    description:
+      "Introduces the two options when choosing a higher tier on monthly while on yearly",
+  },
+  "userSettings.planChangeSplitNow": {
+    message: "Получить {plan} сегодня с годовой оплатой — {amount} сейчас",
+    description:
+      "Option: the higher tier today on yearly billing, with the amount due now",
+  },
+  "userSettings.planChangeSplitLater": {
+    message: "Перейти на {plan} помесячно {date} — сегодня ничего",
+    description: "Option: the higher tier on monthly from the renewal date",
+  },
+  "userSettings.planChangeAtRenewal": {
+    message: "Вступит в силу при продлении",
+    description:
+      "Under a plan card whose change waits for the end of the paid period",
+  },
+  "userSettings.planChangeFeaturesEnd": {
+    message: "Больше не входит",
+    description:
+      "Heading above the plan features the lower plan does not include",
+  },
+  "userSettings.planChangeLimitDirectives": {
+    message: "Директивы",
+    description: "Row label: entries (Beancount directives) allowed in total",
   },
   "userSettings.planChangeRequiresAction": {
     message:

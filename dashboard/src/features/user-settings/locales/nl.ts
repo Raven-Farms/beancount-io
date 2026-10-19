@@ -601,11 +601,6 @@ const nlUserSettings: Record<string, TranslationEntry> = {
     message: "Neem contact op",
     description: "Enterprise plan call to action and price label",
   },
-  "userSettings.renewalChangesComingSoon": {
-    message: "Wijzigingen die ingaan op je verlengingsdatum komen binnenkort.",
-    description:
-      "Hint under a plan change that takes effect at renewal, which is not available yet",
-  },
   "userSettings.billedYearly": {
     message: "{amount} per jaar gefactureerd",
     description: "Total charged once a year; {amount} is a formatted price",
@@ -746,6 +741,98 @@ const nlUserSettings: Record<string, TranslationEntry> = {
     message:
       "Er is geen actief abonnement om te wijzigen. Vernieuw de pagina om een abonnement te kiezen.",
     description: "The subscription ended before the change was confirmed",
+  },
+  "userSettings.planChangeStartsOn": {
+    message: "Gaat in op {date}. Tot dan houd je {plan}.",
+    description:
+      "When a scheduled change takes effect and the plan kept until then",
+  },
+  "userSettings.planChangeNothingToday": {
+    message: "Vandaag hoef je niets te betalen.",
+    description: "A scheduled change charges nothing today",
+  },
+  "userSettings.planChangeWhatChanges": {
+    message: "Wat er verandert op {date}",
+    description:
+      "Heading for the limits and features that change on the effective date",
+  },
+  "userSettings.planChangeLimitCollaborators": {
+    message: "Medewerkers per grootboek",
+    description: "Row label: collaborators allowed per ledger",
+  },
+  "userSettings.planChangeLimitAiTokens": {
+    message: "AI-tokens per maand",
+    description: "Row label: AI tokens allowed per month",
+  },
+  "userSettings.planChangeYouHave": {
+    message: "je hebt er {count}",
+    description: "The reader's current usage beside a limit row",
+  },
+  "userSettings.planChangeOverLimit": {
+    message:
+      "Al je grootboeken blijven van jou en blijven werken. Je kunt pas een nieuwe maken als je onder de nieuwe limiet van {max} zit.",
+    description:
+      "Explains what happens when usage is above the lower plan's ledger limit",
+  },
+  "userSettings.planChangeScheduleDowngrade": {
+    message: "Downgrade inplannen",
+    description:
+      "Button that schedules a downgrade for the end of the paid period",
+  },
+  "userSettings.planChangeScheduleSwitch": {
+    message: "Wissel inplannen",
+    description:
+      "Button that schedules a billing-cycle switch for the end of the paid period",
+  },
+  "userSettings.planChangeKeep": {
+    message: "{plan} houden",
+    description: "Button that keeps the current plan and closes the sheet",
+  },
+  "userSettings.planChangeScheduled": {
+    message: "Gepland voor {date}. Tot dan verandert er niets.",
+    description: "Toast after a change was scheduled",
+  },
+  "userSettings.planChangeReplacesScheduled": {
+    message: "Dit vervangt je geplande wijziging naar {plan} op {date}.",
+    description: "Note that this choice replaces an already scheduled change",
+  },
+  "userSettings.planChangeWithdrawsCancellation": {
+    message: "Dit trekt ook je opzegging in, dus je abonnement loopt door.",
+    description: "Note that this choice withdraws a pending cancellation",
+  },
+  "userSettings.planChangeLegacyEnds": {
+    message:
+      "Je huidige prijs wordt niet meer aangeboden en stopt met deze wijziging.",
+    description: "Note for a subscriber on a price that is no longer offered",
+  },
+  "userSettings.planChangeSplitIntro": {
+    message:
+      "{plan} met maandelijkse facturering kan ingaan bij je verlenging op {date}. Wil je {plan} vandaag al?",
+    description:
+      "Introduces the two options when choosing a higher tier on monthly while on yearly",
+  },
+  "userSettings.planChangeSplitNow": {
+    message: "{plan} vandaag met jaarlijkse facturering — nu {amount}",
+    description:
+      "Option: the higher tier today on yearly billing, with the amount due now",
+  },
+  "userSettings.planChangeSplitLater": {
+    message: "Op {date} overstappen naar {plan} maandelijks — vandaag niets",
+    description: "Option: the higher tier on monthly from the renewal date",
+  },
+  "userSettings.planChangeAtRenewal": {
+    message: "Gaat in bij je verlenging",
+    description:
+      "Under a plan card whose change waits for the end of the paid period",
+  },
+  "userSettings.planChangeFeaturesEnd": {
+    message: "Niet meer inbegrepen",
+    description:
+      "Heading above the plan features the lower plan does not include",
+  },
+  "userSettings.planChangeLimitDirectives": {
+    message: "Richtlijnen",
+    description: "Row label: entries (Beancount directives) allowed in total",
   },
   "userSettings.planChangeRequiresAction": {
     message:

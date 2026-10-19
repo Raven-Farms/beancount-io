@@ -604,11 +604,6 @@ const deUserSettings: Record<string, TranslationEntry> = {
     message: "Kontakt aufnehmen",
     description: "Enterprise plan call to action and price label",
   },
-  "userSettings.renewalChangesComingSoon": {
-    message: "Änderungen zum Verlängerungsdatum sind bald verfügbar.",
-    description:
-      "Hint under a plan change that takes effect at renewal, which is not available yet",
-  },
   "userSettings.billedYearly": {
     message: "{amount} jährlich abgerechnet",
     description: "Total charged once a year; {amount} is a formatted price",
@@ -749,6 +744,99 @@ const deUserSettings: Record<string, TranslationEntry> = {
     message:
       "Es gibt kein aktives Abonnement, das geändert werden kann. Laden Sie die Seite neu, um einen Plan zu wählen.",
     description: "The subscription ended before the change was confirmed",
+  },
+  "userSettings.planChangeStartsOn": {
+    message: "Gilt ab {date}. Bis dahin behalten Sie {plan}.",
+    description:
+      "When a scheduled change takes effect and the plan kept until then",
+  },
+  "userSettings.planChangeNothingToday": {
+    message: "Heute ist nichts zu zahlen.",
+    description: "A scheduled change charges nothing today",
+  },
+  "userSettings.planChangeWhatChanges": {
+    message: "Was sich am {date} ändert",
+    description:
+      "Heading for the limits and features that change on the effective date",
+  },
+  "userSettings.planChangeLimitCollaborators": {
+    message: "Mitarbeiter pro Hauptbuch",
+    description: "Row label: collaborators allowed per ledger",
+  },
+  "userSettings.planChangeLimitAiTokens": {
+    message: "KI-Tokens pro Monat",
+    description: "Row label: AI tokens allowed per month",
+  },
+  "userSettings.planChangeYouHave": {
+    message: "Sie haben {count}",
+    description: "The reader's current usage beside a limit row",
+  },
+  "userSettings.planChangeOverLimit": {
+    message:
+      "Alle Hauptbücher bleiben Ihre und funktionieren weiter. Neue können Sie erst anlegen, wenn Sie unter dem neuen Limit von {max} liegen.",
+    description:
+      "Explains what happens when usage is above the lower plan's ledger limit",
+  },
+  "userSettings.planChangeScheduleDowngrade": {
+    message: "Herabstufung planen",
+    description:
+      "Button that schedules a downgrade for the end of the paid period",
+  },
+  "userSettings.planChangeScheduleSwitch": {
+    message: "Wechsel planen",
+    description:
+      "Button that schedules a billing-cycle switch for the end of the paid period",
+  },
+  "userSettings.planChangeKeep": {
+    message: "{plan} behalten",
+    description: "Button that keeps the current plan and closes the sheet",
+  },
+  "userSettings.planChangeScheduled": {
+    message: "Geplant für {date}. Bis dahin ändert sich nichts.",
+    description: "Toast after a change was scheduled",
+  },
+  "userSettings.planChangeReplacesScheduled": {
+    message: "Dies ersetzt Ihren geplanten Wechsel zu {plan} am {date}.",
+    description: "Note that this choice replaces an already scheduled change",
+  },
+  "userSettings.planChangeWithdrawsCancellation": {
+    message:
+      "Damit wird auch Ihre Kündigung zurückgenommen; Ihr Abonnement läuft weiter.",
+    description: "Note that this choice withdraws a pending cancellation",
+  },
+  "userSettings.planChangeLegacyEnds": {
+    message:
+      "Ihr aktueller Preis wird nicht mehr angeboten und endet mit diesem Wechsel.",
+    description: "Note for a subscriber on a price that is no longer offered",
+  },
+  "userSettings.planChangeSplitIntro": {
+    message:
+      "{plan} mit monatlicher Abrechnung kann zu Ihrer Verlängerung am {date} beginnen. Möchten Sie {plan} schon heute?",
+    description:
+      "Introduces the two options when choosing a higher tier on monthly while on yearly",
+  },
+  "userSettings.planChangeSplitNow": {
+    message: "{plan} heute mit jährlicher Abrechnung – jetzt {amount}",
+    description:
+      "Option: the higher tier today on yearly billing, with the amount due now",
+  },
+  "userSettings.planChangeSplitLater": {
+    message: "Am {date} zu {plan} monatlich wechseln – heute nichts",
+    description: "Option: the higher tier on monthly from the renewal date",
+  },
+  "userSettings.planChangeAtRenewal": {
+    message: "Gilt ab Ihrer Verlängerung",
+    description:
+      "Under a plan card whose change waits for the end of the paid period",
+  },
+  "userSettings.planChangeFeaturesEnd": {
+    message: "Nicht mehr enthalten",
+    description:
+      "Heading above the plan features the lower plan does not include",
+  },
+  "userSettings.planChangeLimitDirectives": {
+    message: "Direktiven",
+    description: "Row label: entries (Beancount directives) allowed in total",
   },
   "userSettings.planChangeRequiresAction": {
     message:

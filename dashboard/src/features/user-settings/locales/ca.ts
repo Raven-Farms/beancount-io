@@ -613,11 +613,6 @@ const caUserSettings: Record<string, TranslationEntry> = {
     message: "Contacta'ns",
     description: "Enterprise plan call to action and price label",
   },
-  "userSettings.renewalChangesComingSoon": {
-    message: "Els canvis que comencen a la renovació arribaran aviat.",
-    description:
-      "Hint under a plan change that takes effect at renewal, which is not available yet",
-  },
   "userSettings.billedYearly": {
     message: "{amount} facturats anualment",
     description: "Total charged once a year; {amount} is a formatted price",
@@ -758,6 +753,98 @@ const caUserSettings: Record<string, TranslationEntry> = {
     message:
       "No hi ha cap subscripció activa per canviar. Actualitza la pàgina per triar un pla.",
     description: "The subscription ended before the change was confirmed",
+  },
+  "userSettings.planChangeStartsOn": {
+    message: "Comença el {date}. Conserves {plan} fins aleshores.",
+    description:
+      "When a scheduled change takes effect and the plan kept until then",
+  },
+  "userSettings.planChangeNothingToday": {
+    message: "Avui no has de pagar res.",
+    description: "A scheduled change charges nothing today",
+  },
+  "userSettings.planChangeWhatChanges": {
+    message: "Què canvia el {date}",
+    description:
+      "Heading for the limits and features that change on the effective date",
+  },
+  "userSettings.planChangeLimitCollaborators": {
+    message: "Col·laboradors per llibre major",
+    description: "Row label: collaborators allowed per ledger",
+  },
+  "userSettings.planChangeLimitAiTokens": {
+    message: "Tokens d'IA al mes",
+    description: "Row label: AI tokens allowed per month",
+  },
+  "userSettings.planChangeYouHave": {
+    message: "en tens {count}",
+    description: "The reader's current usage beside a limit row",
+  },
+  "userSettings.planChangeOverLimit": {
+    message:
+      "Tots els teus llibres segueixen sent teus i funcionant. No en podràs crear un de nou fins que estiguis per sota del nou límit de {max}.",
+    description:
+      "Explains what happens when usage is above the lower plan's ledger limit",
+  },
+  "userSettings.planChangeScheduleDowngrade": {
+    message: "Programa la baixada de pla",
+    description:
+      "Button that schedules a downgrade for the end of the paid period",
+  },
+  "userSettings.planChangeScheduleSwitch": {
+    message: "Programa el canvi",
+    description:
+      "Button that schedules a billing-cycle switch for the end of the paid period",
+  },
+  "userSettings.planChangeKeep": {
+    message: "Mantén {plan}",
+    description: "Button that keeps the current plan and closes the sheet",
+  },
+  "userSettings.planChangeScheduled": {
+    message: "Programat per al {date}. No canvia res fins aleshores.",
+    description: "Toast after a change was scheduled",
+  },
+  "userSettings.planChangeReplacesScheduled": {
+    message: "Això substitueix el canvi programat a {plan} del {date}.",
+    description: "Note that this choice replaces an already scheduled change",
+  },
+  "userSettings.planChangeWithdrawsCancellation": {
+    message: "També retira la cancel·lació, així que la subscripció continua.",
+    description: "Note that this choice withdraws a pending cancellation",
+  },
+  "userSettings.planChangeLegacyEnds": {
+    message:
+      "El teu preu actual ja no s'ofereix, així que s'acaba amb aquest canvi.",
+    description: "Note for a subscriber on a price that is no longer offered",
+  },
+  "userSettings.planChangeSplitIntro": {
+    message:
+      "{plan} amb facturació mensual pot començar a la renovació del {date}. Vols {plan} avui?",
+    description:
+      "Introduces the two options when choosing a higher tier on monthly while on yearly",
+  },
+  "userSettings.planChangeSplitNow": {
+    message: "Obtén {plan} avui amb facturació anual — {amount} ara",
+    description:
+      "Option: the higher tier today on yearly billing, with the amount due now",
+  },
+  "userSettings.planChangeSplitLater": {
+    message: "Canvia a {plan} mensual el {date} — res avui",
+    description: "Option: the higher tier on monthly from the renewal date",
+  },
+  "userSettings.planChangeAtRenewal": {
+    message: "Entra en vigor a la renovació",
+    description:
+      "Under a plan card whose change waits for the end of the paid period",
+  },
+  "userSettings.planChangeFeaturesEnd": {
+    message: "Ja no s'inclou",
+    description:
+      "Heading above the plan features the lower plan does not include",
+  },
+  "userSettings.planChangeLimitDirectives": {
+    message: "Directives",
+    description: "Row label: entries (Beancount directives) allowed in total",
   },
   "userSettings.planChangeRequiresAction": {
     message:

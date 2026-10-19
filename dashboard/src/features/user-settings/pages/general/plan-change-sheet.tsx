@@ -20,7 +20,14 @@ import {
 } from "@/common/components/ui/dialog";
 import type { UserTier } from "@/common/hooks/use-user-limits";
 import { useErrorMessage } from "@/common/lib/errors/error-message";
-import { featuresGained } from "@/common/lib/subscription/plan-features";
+import {
+  featuresGained,
+  featuresLost,
+} from "@/common/lib/subscription/plan-features";
+import {
+  getTierInfo,
+  tierInfoByKey,
+} from "@/common/lib/subscription/tier-config";
 import type { TierQuota } from "@/common/hooks/use-all-tier-quotas";
 import {
   useChangePlan,
@@ -30,22 +37,27 @@ import {
   PlanChangeEffect,
   PlanChangeRefusal,
   type PlanChangeKind,
-  type PreviewPlanChangeQuery,
 } from "@/graphql/definitions";
 import {
   cyclePrice,
+  planForPrice,
   stripePlanConfig,
   type BillingCycle,
   type SubscriptionTier,
 } from "./stripe-config";
 import { useBillingDateFormat, useMoneyFormat } from "./use-money-format";
 import { useQuotaNumberFormat } from "./use-quota-number-format";
-
-type Translate = (
-  key: string,
-  params?: Record<string, string | number>,
-) => string;
-type Preview = PreviewPlanChangeQuery["previewPlanChange"];
+import {
+  nextChargeLine,
+  planLabel,
+  type Preview,
+  type Translate,
+} from "./plan-change-format";
+import {
+  PendingChangeNotes,
+  ScheduledChangeBody,
+  type SplitChoice,
+} from "./scheduled-change-body";
 
 export interface PlanChangeTarget {
   tier: SubscriptionTier;
@@ -54,16 +66,6 @@ export interface PlanChangeTarget {
   surface: BillingSurface;
 }
 
-const TIER_LABEL_KEYS: Record<SubscriptionTier, string> = {
-  premium: "aiAgent.premiumTier",
-  growth: "aiAgent.growthTier",
-  organization: "aiAgent.organizationTier",
-};
-const USER_TIERS: Record<SubscriptionTier, UserTier> = {
-  premium: "PREMIUM",
-  growth: "GROWTH",
-  organization: "ORGANIZATION",
-};
 const REFUSAL_KEYS: Record<PlanChangeRefusal, string> = {
   [PlanChangeRefusal.CurrentPlan]: "userSettings.planChangeRefusalCurrent",
   [PlanChangeRefusal.SameTierAndCycle]:
@@ -72,7 +74,7 @@ const REFUSAL_KEYS: Record<PlanChangeRefusal, string> = {
     "userSettings.planChangeRefusalMultiple",
   [PlanChangeRefusal.NoSubscription]:
     "userSettings.planChangeRefusalNoSubscription",
-  [PlanChangeRefusal.ScheduledChange]: "userSettings.renewalChangesComingSoon",
+  [PlanChangeRefusal.ScheduledChange]: "userSettings.planChangeAtRenewal",
 };
 
 type Outcome =
@@ -101,6 +103,7 @@ export function PlanChangeSheet({
   onChanged,
   returnTo,
   checkoutPending = false,
+  ledgersUsed = null,
 }: {
   target: PlanChangeTarget | null;
   /** A safe path back to where the prompt was, offered once the change lands. */
@@ -117,6 +120,8 @@ export function PlanChangeSheet({
   onChanged: () => void;
   /** A Checkout session is being created; confirming again would open two. */
   checkoutPending?: boolean;
+  /** Owned ledgers today, set against a lower limit. */
+  ledgersUsed?: number | null;
 }) {
   const [runPreview, { data, loading, error }] = usePreviewPlanChange();
   const [changePlan, { loading: changing }] = useChangePlan();
@@ -129,12 +134,15 @@ export function PlanChangeSheet({
   const targetPriceId = target
     ? cyclePrice(target.tier, target.cycle).priceId
     : null;
-  const changeParams = (kind: PlanChangeKind | null) =>
-    target && kind
+  const changeParams = (
+    kind: PlanChangeKind | null,
+    cycle: BillingCycle | undefined = target?.cycle,
+  ) =>
+    target && kind && cycle
       ? {
           kind,
           from: planValue(currentTier, currentCycle),
-          to: `${target.tier}_${target.cycle}` as const,
+          to: `${target.tier}_${cycle}` as const,
           surface: target.surface,
         }
       : null;
@@ -168,25 +176,62 @@ export function PlanChangeSheet({
   const preview = () => {
     setOutcome(null);
     requestPreview();
+    requestAlternative();
   };
 
   const planChange: Preview | undefined =
     data?.previewPlanChange.targetPriceId === targetPriceId
       ? data?.previewPlanChange
       : undefined;
-  const targetLabel = target
-    ? `${t(TIER_LABEL_KEYS[target.tier])} · ${t(
-        target.cycle === "yearly"
-          ? "userSettings.yearly"
-          : "userSettings.monthly",
-      )}`
-    : "";
+  // A higher tier while leaving yearly also offers that tier now on yearly,
+  // priced by its own preview.
+  const [
+    runAlternative,
+    {
+      data: alternativeData,
+      error: alternativeError,
+      loading: alternativeLoading,
+    },
+  ] = usePreviewPlanChange();
+  const alternativePriceId =
+    planChange?.kind === "SPLIT" ? planChange.alternativePriceId : null;
+  const requestAlternative = useCallback(() => {
+    if (!alternativePriceId) return;
+    runAlternative({
+      variables: {
+        clientId: stripePlanConfig.clientId,
+        priceId: alternativePriceId,
+      },
+      // The hook's error state renders the failure.
+    }).catch(() => {});
+  }, [alternativePriceId, runAlternative]);
+  useEffect(requestAlternative, [requestAlternative]);
+  const alternativeResponse =
+    alternativeData?.previewPlanChange.targetPriceId === alternativePriceId
+      ? alternativeData?.previewPlanChange
+      : undefined;
+  const alternative = {
+    preview: alternativeResponse?.kind ? alternativeResponse : null,
+    // A refused alternative cannot be applied either.
+    failed:
+      !alternativeLoading &&
+      (!!alternativeError ||
+        (!!alternativeResponse && !alternativeResponse.kind)),
+  };
+  // Kept here, not in the body, so a retry after a failed payment keeps it.
+  const [splitChoice, setSplitChoice] = useState<SplitChoice>("later");
+  const targetLabel = target ? planLabel(t, target.tier, target.cycle) : "";
 
-  const confirm = async () => {
-    if (!target || !planChange) return;
-    const params = changeParams(planChange.kind);
+  /** Confirm the previewed change, or a split's "now" alternative. */
+  const confirm = async (chosen = planChange) => {
+    if (!target || !planChange || !chosen) return;
+    // A split stays a split in analytics; only the plan it lands on differs.
+    const params = changeParams(
+      planChange.kind,
+      planForPrice(chosen.targetPriceId)?.cycle,
+    );
     if (params) track("plan_change_confirmed", params);
-    if (planChange.kind === "NEW") {
+    if (chosen.kind === "NEW") {
       onCheckout(target);
       return;
     }
@@ -194,12 +239,20 @@ export function PlanChangeSheet({
       const response = await changePlan({
         variables: {
           clientId: stripePlanConfig.clientId,
-          priceId: planChange.targetPriceId,
-          prorationDate: planChange.prorationDate,
+          priceId: chosen.targetPriceId,
+          prorationDate: chosen.prorationDate,
         },
       });
       const result = response.data?.changePlan;
-      if (result?.status === "ACTIVE") {
+      if (result?.status === "SCHEDULED") {
+        toast.success(
+          t("userSettings.planChangeScheduled", {
+            date: formatDate(result.effectiveAt ?? chosen.effectiveAt ?? ""),
+          }),
+        );
+        onChanged();
+        onClose();
+      } else if (result?.status === "ACTIVE") {
         toast.success(
           t("userSettings.subscriptionUpgraded"),
           returnTo
@@ -233,28 +286,25 @@ export function PlanChangeSheet({
     }
   };
 
-  // Nothing can wait for the renewal date until those changes are scheduled,
-  // so a scheduled preview is shown like a refusal.
   const refusal =
     outcome?.type === "refused"
       ? (outcome.refusal ?? PlanChangeRefusal.CurrentPlan)
-      : (planChange?.refusal ??
-        (planChange?.effect === PlanChangeEffect.Scheduled
-          ? PlanChangeRefusal.ScheduledChange
-          : null));
+      : (planChange?.refusal ?? null);
 
   const gained = target
     ? gainedLines(
         quotaByUserTier[currentTier],
-        quotaByUserTier[USER_TIERS[target.tier]],
+        quotaByUserTier[tierInfoByKey(target.tier).userTier],
         t,
         formatCount,
       ).concat(
-        featuresGained(currentTier, USER_TIERS[target.tier]).map((key) =>
-          t(key),
+        featuresGained(currentTier, tierInfoByKey(target.tier).userTier).map(
+          (key) => t(key),
         ),
       )
     : [];
+
+  const currentInfo = getTierInfo(currentTier);
 
   if (!target) return null;
 
@@ -325,9 +375,30 @@ export function PlanChangeSheet({
               </Button>
             </DialogFooter>
           </div>
+        ) : planChange.effect === PlanChangeEffect.Scheduled ? (
+          <ScheduledChangeBody
+            planChange={planChange}
+            alternative={alternative}
+            splitChoice={splitChoice}
+            onSplitChoice={setSplitChoice}
+            currentName={currentInfo ? t(currentInfo.labelKey) : ""}
+            targetName={t(tierInfoByKey(target.tier).labelKey)}
+            targetCycle={target.cycle}
+            lostFeatureKeys={featuresLost(
+              currentTier,
+              tierInfoByKey(target.tier).userTier,
+            )}
+            ledgersUsed={ledgersUsed}
+            busy={changing}
+            t={t}
+            onConfirm={(chosen) => void confirm(chosen)}
+            onRetryAlternative={requestAlternative}
+            onKeep={onClose}
+          />
         ) : (
           <div className="space-y-4">
             <p className="text-sm">{t("userSettings.planChangeStartsToday")}</p>
+            <PendingChangeNotes planChange={planChange} t={t} />
             <div className="rounded-md border p-3">
               <div className="flex items-baseline justify-between text-sm font-semibold">
                 <span>{t("userSettings.planChangeDueToday")}</span>
@@ -347,14 +418,13 @@ export function PlanChangeSheet({
               )}
               {planChange.nextChargeAt && (
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {t("userSettings.planChangeNext", {
-                    amount: `${formatMoney(planChange.nextAmount, planChange.currency)}${t(
-                      target?.cycle === "yearly"
-                        ? "userSettings.perYear"
-                        : "userSettings.perMonth",
-                    )}`,
-                    date: formatDate(planChange.nextChargeAt),
-                  })}
+                  {nextChargeLine(
+                    t,
+                    formatMoney,
+                    formatDate,
+                    planChange,
+                    target.cycle,
+                  )}
                 </p>
               )}
               {planChange.paymentMethod && (

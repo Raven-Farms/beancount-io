@@ -150,8 +150,7 @@ export function PlanPicker({
             },
           );
           const isCurrent = choice === "CURRENT";
-          const actionable =
-            !!card.key && IMMEDIATE_CHOICES.has(choice) && !busy;
+          const actionable = !!card.key && !isCurrent && !busy;
           return (
             <div
               key={card.userTier}
@@ -237,7 +236,7 @@ export function PlanPicker({
               )}
               {!isCurrent && !IMMEDIATE_CHOICES.has(choice) && card.key && (
                 <p className="mt-2 text-[11px] text-muted-foreground">
-                  {t("userSettings.renewalChangesComingSoon")}
+                  {t("userSettings.planChangeAtRenewal")}
                 </p>
               )}
             </div>

@@ -260,6 +260,7 @@ const PRICES = {
   premiumYearly: "price_1L9ccEEqsEqs2tLVbeBgHm9p",
   growthMonthly: "price_1SyPdaEqsEqs2tLViLPUDoVi",
   growthYearly: "price_1SyPdbEqsEqs2tLV7PJyWZed",
+  organizationMonthly: "price_1SyPdcEqsEqs2tLVCWEgU1PZ",
 };
 
 const PRORATION_DATE = 1792238400;
@@ -529,7 +530,7 @@ describe("Plan row", () => {
     expect(mockCreateSubscriptionSession).not.toHaveBeenCalled();
   });
 
-  it("keeps a higher tier that would leave yearly billing for later", async () => {
+  it("opens the sheet for changes that wait for renewal, saying so on the card", async () => {
     const user = userEvent.setup();
     setUserLimits("GROWTH", {
       aiCfoTokensUsed: 200,
@@ -541,6 +542,7 @@ describe("Plan row", () => {
     const yearly = structuredClone(mockActiveSubscriptionData);
     yearly.subscriptionStatus.subscriptions[0].items[0].price.interval = "year";
     showSubscription(yearly);
+    mockPreviewFor.fn = (priceId) => previewData(priceId, "SPLIT");
 
     render(<SubscriptionSection />);
     await user.click(
@@ -548,16 +550,22 @@ describe("Plan row", () => {
     );
 
     expect(
-      card("ORGANIZATION").getByRole("button", { name: "aiAgent.upgradeCta" }),
-    ).toBeDisabled();
-    expect(
       card("GROWTH").getByRole("button", {
         name: "userSettings.switchToMonthly",
       }),
-    ).toBeDisabled();
+    ).toBeEnabled();
     expect(
-      card("ORGANIZATION").getByText("userSettings.renewalChangesComingSoon"),
+      card("ORGANIZATION").getByText("userSettings.planChangeAtRenewal"),
     ).toBeInTheDocument();
+    await user.click(
+      card("ORGANIZATION").getByRole("button", { name: "aiAgent.upgradeCta" }),
+    );
+    expect(mockRunPreview).toHaveBeenCalledWith({
+      variables: {
+        clientId: "beancount-web-prod",
+        priceId: PRICES.organizationMonthly,
+      },
+    });
   });
 
   it("shows checkout errors to a free user", async () => {

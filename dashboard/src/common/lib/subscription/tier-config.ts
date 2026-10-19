@@ -56,3 +56,10 @@ export function getUpgradeTiers(tier: UserTier): TierInfo[] {
 export function getNextTier(tier: UserTier): TierInfo | null {
   return getUpgradeTiers(tier)[0] ?? null;
 }
+
+/** The paid tier a subscription key names; every key has one. */
+export function tierInfoByKey(key: SubscriptionTier): TierInfo {
+  const info = TIERS.find((tier) => tier.key === key);
+  if (!info) throw new Error(`Unknown subscription tier ${key}`);
+  return info;
+}

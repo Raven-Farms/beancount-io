@@ -600,12 +600,6 @@ const faUserSettings: Record<string, TranslationEntry> = {
     message: "تماس با ما",
     description: "Enterprise plan call to action and price label",
   },
-  "userSettings.renewalChangesComingSoon": {
-    message:
-      "تغییراتی که از زمان تمدید شروع می‌شوند به‌زودی در دسترس خواهند بود.",
-    description:
-      "Hint under a plan change that takes effect at renewal, which is not available yet",
-  },
   "userSettings.billedYearly": {
     message: "{amount} با پرداخت سالانه",
     description: "Total charged once a year; {amount} is a formatted price",
@@ -744,6 +738,98 @@ const faUserSettings: Record<string, TranslationEntry> = {
     message:
       "اشتراک فعالی برای تغییر وجود ندارد. صفحه را تازه\u200cسازی کنید تا طرحی انتخاب کنید.",
     description: "The subscription ended before the change was confirmed",
+  },
+  "userSettings.planChangeStartsOn": {
+    message: "از {date} شروع می‌شود. تا آن زمان {plan} را نگه می‌دارید.",
+    description:
+      "When a scheduled change takes effect and the plan kept until then",
+  },
+  "userSettings.planChangeNothingToday": {
+    message: "امروز چیزی برای پرداخت نیست.",
+    description: "A scheduled change charges nothing today",
+  },
+  "userSettings.planChangeWhatChanges": {
+    message: "آنچه در {date} تغییر می‌کند",
+    description:
+      "Heading for the limits and features that change on the effective date",
+  },
+  "userSettings.planChangeLimitCollaborators": {
+    message: "همکاران در هر دفتر",
+    description: "Row label: collaborators allowed per ledger",
+  },
+  "userSettings.planChangeLimitAiTokens": {
+    message: "توکن‌های هوش مصنوعی در ماه",
+    description: "Row label: AI tokens allowed per month",
+  },
+  "userSettings.planChangeYouHave": {
+    message: "{count} دارید",
+    description: "The reader's current usage beside a limit row",
+  },
+  "userSettings.planChangeOverLimit": {
+    message:
+      "همهٔ دفترهای شما متعلق به شما می‌مانند و کار می‌کنند. تا زمانی که زیر سقف جدید {max} نباشید، نمی‌توانید دفتر تازه‌ای بسازید.",
+    description:
+      "Explains what happens when usage is above the lower plan's ledger limit",
+  },
+  "userSettings.planChangeScheduleDowngrade": {
+    message: "زمان‌بندی کاهش طرح",
+    description:
+      "Button that schedules a downgrade for the end of the paid period",
+  },
+  "userSettings.planChangeScheduleSwitch": {
+    message: "زمان‌بندی تغییر",
+    description:
+      "Button that schedules a billing-cycle switch for the end of the paid period",
+  },
+  "userSettings.planChangeKeep": {
+    message: "نگه‌داشتن {plan}",
+    description: "Button that keeps the current plan and closes the sheet",
+  },
+  "userSettings.planChangeScheduled": {
+    message: "برای {date} زمان‌بندی شد. تا آن زمان چیزی تغییر نمی‌کند.",
+    description: "Toast after a change was scheduled",
+  },
+  "userSettings.planChangeReplacesScheduled": {
+    message: "این جایگزین تغییر زمان‌بندی‌شدهٔ شما به {plan} در {date} می‌شود.",
+    description: "Note that this choice replaces an already scheduled change",
+  },
+  "userSettings.planChangeWithdrawsCancellation": {
+    message:
+      "این کار لغو اشتراک شما را هم پس می‌گیرد، پس اشتراک ادامه می‌یابد.",
+    description: "Note that this choice withdraws a pending cancellation",
+  },
+  "userSettings.planChangeLegacyEnds": {
+    message: "قیمت فعلی شما دیگر ارائه نمی‌شود و با این تغییر به پایان می‌رسد.",
+    description: "Note for a subscriber on a price that is no longer offered",
+  },
+  "userSettings.planChangeSplitIntro": {
+    message:
+      "{plan} با پرداخت ماهانه می‌تواند از تمدید شما در {date} شروع شود. {plan} را از امروز می‌خواهید؟",
+    description:
+      "Introduces the two options when choosing a higher tier on monthly while on yearly",
+  },
+  "userSettings.planChangeSplitNow": {
+    message: "دریافت {plan} از امروز با پرداخت سالانه — اکنون {amount}",
+    description:
+      "Option: the higher tier today on yearly billing, with the amount due now",
+  },
+  "userSettings.planChangeSplitLater": {
+    message: "تغییر به {plan} ماهانه در {date} — امروز هیچ",
+    description: "Option: the higher tier on monthly from the renewal date",
+  },
+  "userSettings.planChangeAtRenewal": {
+    message: "از زمان تمدید اعمال می‌شود",
+    description:
+      "Under a plan card whose change waits for the end of the paid period",
+  },
+  "userSettings.planChangeFeaturesEnd": {
+    message: "دیگر شامل نمی‌شود",
+    description:
+      "Heading above the plan features the lower plan does not include",
+  },
+  "userSettings.planChangeLimitDirectives": {
+    message: "دستورالعمل‌ها",
+    description: "Row label: entries (Beancount directives) allowed in total",
   },
   "userSettings.planChangeRequiresAction": {
     message:

@@ -73,3 +73,15 @@ export function yearlySaving(tier: SubscriptionTier): {
   const saving = twelveMonths - yearlyAmount;
   return { saving, percent: Math.round((saving / twelveMonths) * 100) };
 }
+
+/** The tier and cycle a current price sells, or null for any other price. */
+export function planForPrice(
+  priceId: string,
+): { tier: SubscriptionTier; cycle: BillingCycle } | null {
+  for (const tier of SUBSCRIPTION_TIERS) {
+    for (const cycle of BILLING_CYCLES) {
+      if (cyclePrice(tier, cycle).priceId === priceId) return { tier, cycle };
+    }
+  }
+  return null;
+}

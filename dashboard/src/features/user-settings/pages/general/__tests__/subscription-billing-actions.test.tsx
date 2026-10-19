@@ -495,7 +495,8 @@ describe("Plan change through the sheet", () => {
     );
   });
 
-  it("says a change that waits for renewal is coming soon instead of confirming it", () => {
+  it("schedules a downgrade for the period end, warning about ledgers over the lower limit", async () => {
+    const user = userEvent.setup();
     mockPreviewState.value = {
       data: {
         previewPlanChange: {
@@ -504,17 +505,35 @@ describe("Plan change through the sheet", () => {
           effect: "SCHEDULED",
           targetPriceId: stripePlanConfig.premium.yearly,
           amountDueToday: 0,
+          creditApplied: 0,
+          prorationDate: null,
+          effectiveAt: "2026-11-03T12:00:00Z",
+          nextChargeAt: "2026-11-03T12:00:00Z",
+          limitChanges: [
+            { limit: "maxLedgers", from: 20, to: 5 },
+            { limit: "maxCollaboratorsPerLedger", from: 10, to: 5 },
+            { limit: "aiCfoTokensMax", from: 2_000_000, to: 500_000 },
+            { limit: "maxDirectives", from: -1, to: -1 },
+          ],
         },
       },
       loading: false,
       error: undefined,
     };
+    mockChangePlan.mockResolvedValue({
+      data: {
+        changePlan: {
+          status: "SCHEDULED",
+          effectiveAt: "2026-11-03T12:00:00Z",
+        },
+      },
+    });
     setUserLimits("GROWTH", {
       aiCfoTokensUsed: 50,
       aiCfoTokensMax: 100,
-      ledgersUsed: 2,
-      ledgersMax: 5,
-      collaboratorsPerLedgerMax: 5,
+      ledgersUsed: 12,
+      ledgersMax: 20,
+      collaboratorsPerLedgerMax: 10,
     });
 
     render(
@@ -527,18 +546,29 @@ describe("Plan change through the sheet", () => {
       />,
     );
 
-    const sheet = screen
-      .getByText("userSettings.planChangeTitle")
-      .closest<HTMLElement>('[data-testid="dialog-content"]');
-    if (!sheet) throw new Error("change sheet missing");
+    const sheet = within(screen.getByTestId("plan-change-scheduled"));
     expect(
-      within(sheet).getByText("userSettings.renewalChangesComingSoon"),
+      sheet.getByText("userSettings.planChangeOverLimit"),
     ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", {
-        name: "userSettings.planChangePayAndSwitch",
+    await user.click(
+      sheet.getByRole("button", {
+        name: "userSettings.planChangeScheduleDowngrade",
       }),
-    ).not.toBeInTheDocument();
+    );
+
+    expect(mockChangePlan).toHaveBeenCalledWith({
+      variables: {
+        clientId: "beancount-web-prod",
+        priceId: stripePlanConfig.premium.yearly,
+        prorationDate: null,
+      },
+    });
+    await waitFor(() =>
+      expect(mockToastSuccess).toHaveBeenCalledWith(
+        "userSettings.planChangeScheduled",
+      ),
+    );
+    expect(refetchSubscription).toHaveBeenCalled();
   });
 
   it("sends a payment the bank must approve to Stripe's page instead of calling it done", async () => {

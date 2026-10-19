@@ -71,5 +71,10 @@ query PreviewPlanChange($clientId: String!, $priceId: String!) {
       brand
       last4
     }
+    replacesScheduledChange {
+      priceId
+      effectiveAt
+    }
+    withdrawsCancellation
   }
 }

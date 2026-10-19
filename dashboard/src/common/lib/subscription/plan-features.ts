@@ -25,3 +25,8 @@ export function featuresGained(from: UserTier, to: UserTier): string[] {
       TIER_RANK[minTier] <= TIER_RANK[to],
   ).map(({ labelKey }) => labelKey);
 }
+
+/** Features `from` includes that `to` does not. */
+export function featuresLost(from: UserTier, to: UserTier): string[] {
+  return featuresGained(to, from);
+}

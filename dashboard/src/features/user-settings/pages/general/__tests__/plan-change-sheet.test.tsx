@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { PlanChangeSheet } from "../plan-change-sheet";
 import { MOCK_TIER_QUOTAS } from "./subscription-test-utils";
 
-const { mockRunPreview, mockChangePlan, mockPreview, mockTrack } = vi.hoisted(
-  () => ({
+const { mockRunPreview, mockChangePlan, mockPreview, mockTrack, mockToast } =
+  vi.hoisted(() => ({
     mockTrack: vi.fn(),
+    mockToast: { success: vi.fn(), error: vi.fn() },
     mockRunPreview: vi.fn(),
     mockChangePlan: vi.fn(),
     mockPreview: {
@@ -15,15 +16,32 @@ const { mockRunPreview, mockChangePlan, mockPreview, mockTrack } = vi.hoisted(
         loading: boolean;
         error: unknown;
       },
+      // A split's second preview: the higher tier now, on yearly.
+      alternative: { data: undefined, loading: false, error: undefined } as {
+        data: unknown;
+        loading: boolean;
+        error: unknown;
+      },
+      instances: 0,
     },
-  }),
-);
+  }));
 
-vi.mock("@/features/user-settings/hooks/use-plan-change", () => ({
-  usePreviewPlanChange: () => [mockRunPreview, mockPreview.state],
-  useChangePlan: () => [mockChangePlan, { loading: false }],
-}));
-vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+vi.mock("@/features/user-settings/hooks/use-plan-change", async () => {
+  const React = await import("react");
+  return {
+    // The sheet's first preview hook is the change; its second, the
+    // alternative a split offers.
+    usePreviewPlanChange: () => {
+      const [index] = React.useState(() => mockPreview.instances++);
+      return [
+        mockRunPreview,
+        index % 2 === 0 ? mockPreview.state : mockPreview.alternative,
+      ];
+    },
+    useChangePlan: () => [mockChangePlan, { loading: false }],
+  };
+});
+vi.mock("sonner", () => ({ toast: mockToast }));
 vi.mock("@/common/analytics", () => ({ track: mockTrack }));
 vi.mock("@/common/lib/errors/error-message", () => ({
   useErrorMessage: () => () => "error",
@@ -91,6 +109,12 @@ function renderSheet(
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockPreview.instances = 0;
+  mockPreview.alternative = {
+    data: undefined,
+    loading: false,
+    error: undefined,
+  };
   mockPreview.state = { data: preview(), loading: false, error: undefined };
   // Like Apollo's lazy query: the promise resolves with the response.
   mockRunPreview.mockImplementation(async () => ({
@@ -359,5 +383,356 @@ describe("PlanChangeSheet", () => {
         ).toEqual(outcomeEvents);
       },
     );
+  });
+
+  describe("changes that wait for the end of the paid period", () => {
+    const PREMIUM_YEARLY = "price_1L9ccEEqsEqs2tLVbeBgHm9p";
+    const PREMIUM_MONTHLY = "price_1RrSOGEqsEqs2tLVFnyB34qG";
+    const GROWTH_MONTHLY = "price_1SyPdaEqsEqs2tLViLPUDoVi";
+    const scheduled = (overrides: Record<string, unknown> = {}) =>
+      preview({
+        kind: "DOWNGRADE",
+        effect: "SCHEDULED",
+        currentPriceId: GROWTH_YEARLY,
+        targetPriceId: PREMIUM_YEARLY,
+        amountDueToday: 0,
+        creditApplied: 0,
+        nextAmount: 9999,
+        prorationDate: null,
+        effectiveAt: "2027-10-17T12:00:00Z",
+        nextChargeAt: "2027-10-17T12:00:00Z",
+        limitChanges: [
+          { limit: "maxLedgers", from: 20, to: 5 },
+          { limit: "maxCollaboratorsPerLedger", from: 10, to: 5 },
+          { limit: "aiCfoTokensMax", from: 2_000_000, to: 500_000 },
+          { limit: "maxDirectives", from: -1, to: -1 },
+        ],
+        ...overrides,
+      });
+    const show = (data: unknown) => {
+      mockPreview.state = { data, loading: false, error: undefined };
+    };
+    const downgrade = (ledgersUsed: number | null) =>
+      renderSheet({
+        target: {
+          tier: "premium",
+          cycle: "yearly",
+          surface: "settings_billing",
+        },
+        currentTier: "GROWTH",
+        currentCycle: "yearly",
+        ledgersUsed,
+      });
+
+    it("shows the date, nothing due, and each limit against usage, warning when over", () => {
+      show(scheduled());
+      downgrade(12);
+
+      const body = within(screen.getByTestId("plan-change-scheduled"));
+      expect(
+        body.getByText(/^userSettings\.planChangeStartsOn/),
+      ).toBeInTheDocument();
+      expect(
+        body.getByText(/userSettings\.planChangeNothingToday/),
+      ).toBeInTheDocument();
+      // Ledgers 20 → 5 with 12 used, collaborators 10 → 5, tokens 2M → 500K.
+      expect(body.getByText("20 → 5")).toBeInTheDocument();
+      expect(body.getByText("10 → 5")).toBeInTheDocument();
+      expect(body.getByText("2,000,000 → 500,000")).toBeInTheDocument();
+      expect(
+        body.getByText("userSettings.featureAutomationIntegrations"),
+      ).toBeInTheDocument();
+      expect(body.getByRole("note")).toHaveTextContent(
+        "userSettings.planChangeOverLimit",
+      );
+      expect(
+        body.getByRole("button", {
+          name: "userSettings.planChangeScheduleDowngrade",
+        }),
+      ).toBeInTheDocument();
+      expect(
+        body.getByRole("button", { name: /^userSettings\.planChangeKeep/ }),
+      ).toBeInTheDocument();
+    });
+
+    it("warns about nothing when usage fits the lower plan", () => {
+      show(scheduled());
+      downgrade(3);
+      expect(
+        within(screen.getByTestId("plan-change-scheduled")).queryByRole("note"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("schedules the change with nothing charged, then says when it lands", async () => {
+      const user = userEvent.setup();
+      show(scheduled());
+      mockChangePlan.mockResolvedValue({
+        data: {
+          changePlan: {
+            status: "SCHEDULED",
+            effectiveAt: "2027-10-17T12:00:00Z",
+          },
+        },
+      });
+      const { onChanged, onClose } = downgrade(3);
+
+      await user.click(
+        screen.getByRole("button", {
+          name: "userSettings.planChangeScheduleDowngrade",
+        }),
+      );
+
+      expect(mockChangePlan).toHaveBeenCalledWith({
+        variables: {
+          clientId: "beancount-web-prod",
+          priceId: PREMIUM_YEARLY,
+          prorationDate: null,
+        },
+      });
+      await waitFor(() =>
+        expect(mockToast.success).toHaveBeenCalledWith(
+          expect.stringMatching(/^userSettings\.planChangeScheduled/),
+        ),
+      );
+      expect(onChanged).toHaveBeenCalled();
+      expect(onClose).toHaveBeenCalled();
+    });
+
+    it("lists no limits for a switch to monthly on the same tier", () => {
+      show(
+        scheduled({
+          kind: "TO_MONTHLY",
+          currentPriceId: PREMIUM_YEARLY,
+          targetPriceId: PREMIUM_MONTHLY,
+          limitChanges: [{ limit: "maxLedgers", from: 5, to: 5 }],
+        }),
+      );
+      renderSheet({
+        target: {
+          tier: "premium",
+          cycle: "monthly",
+          surface: "settings_billing",
+        },
+        currentTier: "PREMIUM",
+        currentCycle: "yearly",
+        ledgersUsed: 3,
+      });
+
+      const body = within(screen.getByTestId("plan-change-scheduled"));
+      expect(
+        body.queryByText("userSettings.planChangeWhatChanges"),
+      ).not.toBeInTheDocument();
+      expect(
+        body.getByRole("button", {
+          name: "userSettings.planChangeScheduleSwitch",
+        }),
+      ).toBeInTheDocument();
+    });
+
+    it("offers a split's two options with server amounts, and applies the one chosen", async () => {
+      const user = userEvent.setup();
+      show(
+        scheduled({
+          kind: "SPLIT",
+          currentPriceId: PREMIUM_YEARLY,
+          targetPriceId: GROWTH_MONTHLY,
+          alternativePriceId: GROWTH_YEARLY,
+        }),
+      );
+      mockPreview.alternative = {
+        data: preview({
+          kind: "TO_YEARLY",
+          currentPriceId: PREMIUM_YEARLY,
+          targetPriceId: GROWTH_YEARLY,
+          amountDueToday: 40_800,
+          prorationDate: 1792238400,
+        }),
+        loading: false,
+        error: undefined,
+      };
+      mockChangePlan.mockResolvedValue({
+        data: { changePlan: { status: "ACTIVE" } },
+      });
+      renderSheet({
+        target: {
+          tier: "growth",
+          cycle: "monthly",
+          surface: "settings_billing",
+        },
+        currentTier: "PREMIUM",
+        currentCycle: "yearly",
+        ledgersUsed: 3,
+      });
+
+      expect(mockRunPreview).toHaveBeenCalledWith({
+        variables: { clientId: "beancount-web-prod", priceId: GROWTH_YEARLY },
+      });
+      const body = within(screen.getByTestId("plan-change-scheduled"));
+      expect(
+        body.getByText(/userSettings\.planChangeSplitLater/),
+      ).toBeInTheDocument();
+      await user.click(
+        body.getByRole("radio", { name: /userSettings\.planChangeSplitNow/ }),
+      );
+      await user.click(
+        body.getByRole("button", {
+          name: /^userSettings\.planChangePayAndSwitch/,
+        }),
+      );
+
+      expect(mockChangePlan).toHaveBeenCalledWith({
+        variables: {
+          clientId: "beancount-web-prod",
+          priceId: GROWTH_YEARLY,
+          prorationDate: 1792238400,
+        },
+      });
+    });
+
+    const split = () => {
+      show(
+        scheduled({
+          kind: "SPLIT",
+          currentPriceId: PREMIUM_YEARLY,
+          targetPriceId: GROWTH_MONTHLY,
+          alternativePriceId: GROWTH_YEARLY,
+        }),
+      );
+      renderSheet({
+        target: {
+          tier: "growth",
+          cycle: "monthly",
+          surface: "settings_billing",
+        },
+        currentTier: "PREMIUM",
+        currentCycle: "yearly",
+        ledgersUsed: 3,
+      });
+      return within(screen.getByTestId("plan-change-scheduled"));
+    };
+    const pricedAlternative = () => {
+      mockPreview.alternative = {
+        data: preview({
+          kind: "TO_YEARLY",
+          currentPriceId: PREMIUM_YEARLY,
+          targetPriceId: GROWTH_YEARLY,
+          amountDueToday: 40_800,
+          prorationDate: 1792238400,
+        }),
+        loading: false,
+        error: undefined,
+      };
+    };
+
+    it("drops the renewal-date copy once the split's 'now' option is chosen, and reports it as the split", async () => {
+      const user = userEvent.setup();
+      pricedAlternative();
+      mockChangePlan.mockResolvedValue({
+        data: { changePlan: { status: "ACTIVE" } },
+      });
+      const body = split();
+      expect(
+        body.getByText(/^userSettings\.planChangeStartsOn/),
+      ).toBeInTheDocument();
+
+      await user.click(
+        body.getByRole("radio", { name: /userSettings\.planChangeSplitNow/ }),
+      );
+      expect(
+        body.queryByText(/^userSettings\.planChangeStartsOn/),
+      ).not.toBeInTheDocument();
+      await user.click(
+        body.getByRole("button", {
+          name: /^userSettings\.planChangePayAndSwitch/,
+        }),
+      );
+
+      expect(
+        mockTrack.mock.calls.find(
+          ([event]) => event === "plan_change_confirmed",
+        ),
+      ).toEqual([
+        "plan_change_confirmed",
+        expect.objectContaining({ kind: "SPLIT", to: "growth_yearly" }),
+      ]);
+    });
+
+    it("offers a retry when the 'now' option cannot be priced", async () => {
+      const user = userEvent.setup();
+      mockPreview.alternative = {
+        data: undefined,
+        loading: false,
+        error: new Error("boom"),
+      };
+      const body = split();
+
+      expect(
+        body.getByRole("radio", {
+          name: "userSettings.planChangePreviewFailed",
+        }),
+      ).toBeDisabled();
+      mockRunPreview.mockClear();
+      await user.click(body.getByRole("button", { name: "common.tryAgain" }));
+      expect(mockRunPreview).toHaveBeenCalledWith({
+        variables: { clientId: "beancount-web-prod", priceId: GROWTH_YEARLY },
+      });
+    });
+
+    it("keeps the split choice when retrying after a declined payment", async () => {
+      const user = userEvent.setup();
+      pricedAlternative();
+      mockChangePlan.mockResolvedValue({
+        data: { changePlan: { status: "FAILED" } },
+      });
+      const body = split();
+      await user.click(
+        body.getByRole("radio", { name: /userSettings\.planChangeSplitNow/ }),
+      );
+      await user.click(
+        body.getByRole("button", {
+          name: /^userSettings\.planChangePayAndSwitch/,
+        }),
+      );
+      await user.click(
+        await screen.findByRole("button", { name: "common.tryAgain" }),
+      );
+
+      expect(
+        within(screen.getByTestId("plan-change-scheduled")).getByRole("radio", {
+          name: /userSettings\.planChangeSplitNow/,
+        }),
+      ).toBeChecked();
+    });
+
+    it("notes a replaced scheduled change, a withdrawn cancellation and a legacy price", () => {
+      show(
+        scheduled({
+          currentPriceId: "price_1L9ccEEqsEqs2tLVKPRV17wb",
+          replacesScheduledChange: {
+            priceId: PREMIUM_MONTHLY,
+            effectiveAt: "2027-10-17T12:00:00Z",
+          },
+          withdrawsCancellation: true,
+        }),
+      );
+      downgrade(3);
+
+      const notes = within(screen.getByTestId("plan-change-notes"));
+      expect(
+        notes.getByText(/^userSettings\.planChangeReplacesScheduled/),
+      ).toBeInTheDocument();
+      expect(
+        notes.getByText("userSettings.planChangeWithdrawsCancellation"),
+      ).toBeInTheDocument();
+      expect(
+        notes.getByText("userSettings.planChangeLegacyEnds"),
+      ).toBeInTheDocument();
+    });
+
+    it("shows no notes on an ordinary change", () => {
+      show(scheduled());
+      downgrade(3);
+      expect(screen.queryByTestId("plan-change-notes")).not.toBeInTheDocument();
+    });
   });
 });

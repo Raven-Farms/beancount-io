@@ -585,11 +585,6 @@ const koUserSettings: Record<string, TranslationEntry> = {
     message: "문의하기",
     description: "Enterprise plan call to action and price label",
   },
-  "userSettings.renewalChangesComingSoon": {
-    message: "갱신일부터 적용되는 변경은 곧 지원됩니다.",
-    description:
-      "Hint under a plan change that takes effect at renewal, which is not available yet",
-  },
   "userSettings.billedYearly": {
     message: "연 {amount} 청구",
     description: "Total charged once a year; {amount} is a formatted price",
@@ -728,6 +723,97 @@ const koUserSettings: Record<string, TranslationEntry> = {
     message:
       "변경할 활성 구독이 없습니다. 페이지를 새로고침한 후 플랜을 선택하세요.",
     description: "The subscription ended before the change was confirmed",
+  },
+  "userSettings.planChangeStartsOn": {
+    message: "{date}부터 적용됩니다. 그때까지 {plan}을(를) 유지합니다.",
+    description:
+      "When a scheduled change takes effect and the plan kept until then",
+  },
+  "userSettings.planChangeNothingToday": {
+    message: "오늘 결제할 금액은 없습니다.",
+    description: "A scheduled change charges nothing today",
+  },
+  "userSettings.planChangeWhatChanges": {
+    message: "{date}에 바뀌는 내용",
+    description:
+      "Heading for the limits and features that change on the effective date",
+  },
+  "userSettings.planChangeLimitCollaborators": {
+    message: "원장당 협업자",
+    description: "Row label: collaborators allowed per ledger",
+  },
+  "userSettings.planChangeLimitAiTokens": {
+    message: "월별 AI 토큰",
+    description: "Row label: AI tokens allowed per month",
+  },
+  "userSettings.planChangeYouHave": {
+    message: "현재 {count}개",
+    description: "The reader's current usage beside a limit row",
+  },
+  "userSettings.planChangeOverLimit": {
+    message:
+      "모든 원장은 그대로 남아 계속 작동합니다. 새 한도인 {max} 미만이 될 때까지 새 원장을 만들 수 없습니다.",
+    description:
+      "Explains what happens when usage is above the lower plan's ledger limit",
+  },
+  "userSettings.planChangeScheduleDowngrade": {
+    message: "다운그레이드 예약",
+    description:
+      "Button that schedules a downgrade for the end of the paid period",
+  },
+  "userSettings.planChangeScheduleSwitch": {
+    message: "전환 예약",
+    description:
+      "Button that schedules a billing-cycle switch for the end of the paid period",
+  },
+  "userSettings.planChangeKeep": {
+    message: "{plan} 유지",
+    description: "Button that keeps the current plan and closes the sheet",
+  },
+  "userSettings.planChangeScheduled": {
+    message: "{date}로 예약되었습니다. 그때까지는 아무것도 바뀌지 않습니다.",
+    description: "Toast after a change was scheduled",
+  },
+  "userSettings.planChangeReplacesScheduled": {
+    message: "{date}에 예정된 {plan}(으)로의 변경을 대체합니다.",
+    description: "Note that this choice replaces an already scheduled change",
+  },
+  "userSettings.planChangeWithdrawsCancellation": {
+    message: "구독 해지도 철회되어 구독이 계속됩니다.",
+    description: "Note that this choice withdraws a pending cancellation",
+  },
+  "userSettings.planChangeLegacyEnds": {
+    message: "현재 가격은 더 이상 제공되지 않아 이번 변경과 함께 종료됩니다.",
+    description: "Note for a subscriber on a price that is no longer offered",
+  },
+  "userSettings.planChangeSplitIntro": {
+    message:
+      "월간 결제 {plan}은(는) {date} 갱신 시점부터 시작할 수 있습니다. 오늘부터 {plan}을(를) 원하시나요?",
+    description:
+      "Introduces the two options when choosing a higher tier on monthly while on yearly",
+  },
+  "userSettings.planChangeSplitNow": {
+    message: "연간 결제로 오늘부터 {plan} — 지금 {amount}",
+    description:
+      "Option: the higher tier today on yearly billing, with the amount due now",
+  },
+  "userSettings.planChangeSplitLater": {
+    message: "{date}에 월간 {plan}(으)로 전환 — 오늘은 결제 없음",
+    description: "Option: the higher tier on monthly from the renewal date",
+  },
+  "userSettings.planChangeAtRenewal": {
+    message: "갱신 시 적용",
+    description:
+      "Under a plan card whose change waits for the end of the paid period",
+  },
+  "userSettings.planChangeFeaturesEnd": {
+    message: "더 이상 포함되지 않음",
+    description:
+      "Heading above the plan features the lower plan does not include",
+  },
+  "userSettings.planChangeLimitDirectives": {
+    message: "지시어",
+    description: "Row label: entries (Beancount directives) allowed in total",
   },
   "userSettings.planChangeRequiresAction": {
     message:

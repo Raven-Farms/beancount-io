@@ -408,6 +408,7 @@ export function SubscriptionSection({
         currentCycle={currentCycle}
         currentPlanLabel={planLabel}
         checkoutPending={checkoutLoading}
+        ledgersUsed={limits?.ledgersUsed ?? null}
         quotaByUserTier={quotaByUserTier}
         t={t}
         returnTo={returnTo}

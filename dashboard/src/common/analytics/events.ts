@@ -238,8 +238,9 @@ export interface AnalyticsEvents {
   plan_change_previewed: PlanChangeParams;
   /**
    * The reader confirmed a previewed change: the sheet's pay-and-switch
-   * button, or its checkout button for a `NEW` subscription (which then also
-   * sends `checkout_started`). Paired with `plan_change_previewed` it gives the
+   * button, its schedule button for a change at the period end, or its
+   * checkout button for a `NEW` subscription (which then also sends
+   * `checkout_started`). Paired with `plan_change_previewed` it gives the
    * preview → confirm rate per kind.
    */
   plan_change_confirmed: PlanChangeParams;

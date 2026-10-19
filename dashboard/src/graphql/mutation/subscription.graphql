@@ -49,5 +49,6 @@ mutation ChangePlan(
     subscriptionId
     newTier
     currentPeriodEnd
+    effectiveAt
   }
 }
