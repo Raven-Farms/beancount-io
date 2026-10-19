@@ -1525,7 +1525,9 @@ def _transactions(
     # Validate the entire batch first: an earlier sale may depend on a buy that
     # appears later in the input. Partial recovery drops the rows that load's
     # errors name; only errors it cannot place need a bisection of the batch.
-    valid = _same_day_purchases_first(valid)
+    # Rows that book in input order keep it; only a sale with no position to
+    # book against moves after its same-day purchase (w5/730).
+    valid = _same_day_purchases_first(valid, file=file)
     batch_texts = [writer.format_transaction(d) for _, d in valid]
     try:
         write.validate_append(file, batch_texts, allow_errors=allow_errors, into=into)
@@ -1617,7 +1619,25 @@ def _transactions(
     return {"written": len(valid), "rejected": [], "warnings": warnings, "target": target}
 
 
-def _same_day_purchases_first(valid: list[tuple[int, Any]]) -> list[tuple[int, Any]]:
+def _batch_holdings(file: Path | None) -> list[Any]:
+    """Ledger entries a bulk add's sales book against, or none when unreadable.
+
+    A missing ledger holds no lots to match, so the reorder then behaves as
+    it did before the gate (w5/543). A ledger that fails to load fails the
+    batch's own validation next; the gate must not fail first (w5/730).
+    """
+    if file is None:
+        return []
+    from bea_engine import managed_load
+
+    try:
+        entries, _, _ = managed_load.load_file(file)
+    except (OSError, ValueError):
+        return []
+    return entries
+
+
+def _same_day_purchases_first(valid: list[tuple[int, Any]], *, file: Path | None = None) -> list[tuple[int, Any]]:
     """`valid` with each day's sales at cost after that day's purchases of the same lots (w5/543).
 
     Beancount books one date's entries in file order, and rows are appended
@@ -1627,6 +1647,12 @@ def _same_day_purchases_first(valid: list[tuple[int, Any]]) -> list[tuple[int, A
     commodity at cost that another row of the same date buys at cost into
     the same account moves after that date's other rows, keeping the slots
     each date held; nothing else changes order.
+
+    A sale that already books in input order stays where it is: the ledger
+    holds the lot through its date, or an earlier row bought it — the same
+    date listed before it, or any earlier date anywhere in the input, since
+    rows book chronologically. Only a sale with no position to book
+    against moves after its same-day purchase (w5/730).
     """
     from collections import Counter, defaultdict
 
@@ -1643,6 +1669,27 @@ def _same_day_purchases_first(valid: list[tuple[int, Any]]) -> list[tuple[int, A
     slots: dict[Any, list[int]] = defaultdict(list)
     for position, (_, directive) in enumerate(valid):
         slots[directive.date].append(position)
+    by_date: dict[Any, list[Any]] = defaultdict(list)
+    for _, directive in valid:
+        by_date[directive.date].append(directive)
+    earlier: dict[Any, set[tuple[str, str]]] = {}
+    accumulated: set[tuple[str, str]] = set()
+    for date in sorted(by_date):
+        earlier[date] = set(accumulated)
+        for directive in by_date[date]:
+            accumulated |= lots(directive, negative=False)
+    entries: list[Any] | None = None
+    held_cache: dict[tuple[str, Any], dict[str, Decimal]] = {}
+
+    def file_holds(account: str, currency: str, date: Any) -> bool:
+        nonlocal entries
+        key = (account, date)
+        if key not in held_cache:
+            if entries is None:
+                entries = _batch_holdings(file)
+            held_cache[key] = _held_through(entries, account, date)
+        return held_cache[key].get(currency, Decimal(0)) != 0
+
     ordered = list(valid)
     for positions in slots.values():
         rows = [valid[position] for position in positions]
@@ -1654,8 +1701,22 @@ def _same_day_purchases_first(valid: list[tuple[int, Any]]) -> list[tuple[int, A
         ]
         if not any(selling):
             continue
-        rearranged = [row for row, sells in zip(rows, selling, strict=True) if not sells]
-        rearranged += [row for row, sells in zip(rows, selling, strict=True) if sells]
+        date = rows[0][1].date
+        before = set(earlier[date])
+        gated = []
+        for (_, directive), own, moves in zip(rows, bought, selling, strict=True):
+            gated.append(
+                moves
+                and any(
+                    buyers[lot] > (lot in own) and lot not in before and not file_holds(*lot, date)
+                    for lot in lots(directive, negative=True)
+                )
+            )
+            before |= own
+        if not any(gated):
+            continue
+        rearranged = [row for row, sells in zip(rows, gated, strict=True) if not sells]
+        rearranged += [row for row, sells in zip(rows, gated, strict=True) if sells]
         for position, row in zip(positions, rearranged, strict=True):
             ordered[position] = row
     return ordered
