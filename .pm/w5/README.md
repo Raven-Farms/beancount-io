@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [768 — doctor linked/region print inferred-only legs at max precision and 26 decimals under --conversion (w5/571 follow-ups)](./768.md)
 - [769 — treeify: renamed roots still lose to a narration colon; the new lookahead is quadratic (incomplete fix of w5/570)](./769.md)
 - [770 — doctor roundtrip still prints tracebacks for identical entries and an over-long scratch name](./770.md)
 - [771 — check_drained close hint blames the parent for a subaccount's money; following it leaves wrong books](./771.md)
