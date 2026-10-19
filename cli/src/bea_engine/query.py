@@ -2152,9 +2152,15 @@ def _implicit_group_error(columns: list[tuple[str, str]], ledger_errors: list[st
     )
 
 
-#: The string literal on the right of BQL's regex operators, quotes included.
+#: The constant regex operand in code, quotes included: the literal right of
+#: `~`/`!~`, or left of `?~`, whose pattern is its left operand.
 _PATTERN_LITERAL = re.compile(
-    r"""!?~\s*('[^']*'|"[^"]*")"""
+    # The right of `~` is the pattern, but the right of `?~` is the subject
+    # (`re.search` takes the pattern first), so `?~` is not this branch's.
+    # And a literal is the whole pattern only when `+` does not follow it: a
+    # concatenated pattern is first known when it runs (w5/747).
+    r"""(?<!\?)!?~\s*('[^']*'|"[^"]*")(?!\s*\+)"""
+    r"""|('[^']*'|"[^"]*")\s*\?~"""
     # The constant pattern of beanquery's regex functions, and a `JOURNAL`
     # account pattern, compile the same way and were unchecked (w5/509).
     # A literal is the whole argument only when `,` or `)` follows it: a

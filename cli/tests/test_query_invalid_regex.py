@@ -102,3 +102,52 @@ def test_a_real_operand_after_a_literal_holding_a_tilde_is_still_checked(book: P
 
     assert result.exit_code == 2, result.output
     assert "'(partial' is not a valid regular expression" in result.output
+
+
+def test_a_question_tilde_subject_is_not_checked_as_a_pattern(tmp_path: Path, bea_config_dir: Path) -> None:
+    """`?~` takes its pattern on the left; the right literal is the subject (w5/747)."""
+    ledger = tmp_path / "qm.bean"
+    ledger.write_text(
+        'option "operating_currency" "USD"\n'
+        "2026-01-01 open Assets:Cash\n"
+        "2026-01-01 open Expenses:Books\n"
+        '2026-01-05 txn "Primer"\n'
+        "  Expenses:Books 10.00 USD\n"
+        "  Assets:Cash\n"
+        '2026-01-06 txn "Cookbook"\n'
+        "  Expenses:Books 20.00 USD\n"
+        "  Assets:Cash\n"
+    )
+
+    result = _query(
+        ledger,
+        "SELECT date, narration WHERE account = 'Expenses:Books' AND narration ?~ 'POS 1234 Primer (Bookshop'",
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Primer" in result.output and "Cookbook" not in result.output
+
+
+def test_a_concatenated_tilde_pattern_runs(book: Path) -> None:
+    """Only the whole `+` chain is the pattern; its fragments are not (w5/747)."""
+    result = _query(book, "SELECT DISTINCT account WHERE account ~ '^(' + 'Assets|Expenses' + '):'")
+
+    assert result.exit_code == 0, result.output
+    assert "Assets:Cash" in result.output and "Expenses:Food" in result.output
+
+
+def test_a_concatenated_pattern_that_stays_invalid_fails_when_it_runs(book: Path) -> None:
+    """Skipping the fragments must not lose the refusal: the whole still compiles (w5/747)."""
+    result = _query(book, "SELECT DISTINCT account WHERE account ~ '^(' + '(['")
+
+    assert result.exit_code == 2, result.output
+    assert "not a valid regular expression" in result.output
+
+
+@pytest.mark.parametrize("window", ["", "FROM year = 2025 "], ids=["rows-scanned", "empty-window"])
+def test_a_literal_pattern_left_of_question_tilde_is_checked(book: Path, window: str) -> None:
+    """A constant `?~` pattern is refused before anything runs, rows or none (w5/747)."""
+    result = _query(book, f"SELECT date {window}WHERE '(' ?~ narration")
+
+    assert result.exit_code == 2, result.output
+    assert "'(' is not a valid regular expression" in result.output
