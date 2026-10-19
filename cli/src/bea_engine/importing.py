@@ -139,6 +139,7 @@ def answer(
     delimiter: str | None = None,
     encoding: str | None = None,
     decimal: str | None = None,
+    skip: int = 0,
     rules_file: Path | None = None,
     default_account: str | None = None,
     config: Path | None = None,
@@ -251,6 +252,7 @@ def answer(
             encoding=resolved_encoding,
             account_roots=roots,
             forced_decimal_comma=(resolved_decimal == "comma") if resolved_decimal is not None else None,
+            skip=skip,
         )
         preview_config = csv_mapping
         try:
@@ -285,6 +287,12 @@ def answer(
             )
         if importer.ambiguous_dot_amounts is not None:
             notes.append(importer.ambiguous_dot_amounts)
+        if importer.skipped_repeated_headers:
+            lines = "; ".join(str(line) for line in importer.skipped_repeated_headers[:3])
+            if len(importer.skipped_repeated_headers) > 3:
+                lines += "; …"
+            count = len(importer.skipped_repeated_headers)
+            notes.append(f"Skipped {count} repeated header line(s) ({lines}); they are page breaks, not data.")
         if importer.rejected_categories:
             examples = ", ".join(repr(name) for name in list(importer.rejected_categories)[:3])
             count = sum(importer.rejected_categories.values())

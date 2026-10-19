@@ -136,7 +136,12 @@ accepted as before, and `£` (GBP, GIP, FKP, SHP, EGP) and `₩` (KRW, KPW)
 are accepted when the row posts in one of the commodities they name.
 `--account` names the source account and
 is required. The file may start with a BOM and with blank lines before the
-header (error line numbers still count them); header cells are stripped before
+header (error line numbers still count them); when title lines push the header
+down, `--csv skip=N` starts the header after N leading records, and the
+refusals name the header's line with the skip that reaches it. A data row that
+repeats the header exactly — a page break in a paged export — is skipped with
+a note, while a row whose date cell no known format reads is refused as not a
+data row. Header cells are stripped before
 matching, invisible format characters (zero-width spaces, direction marks,
 soft hyphens, BOMs) are dropped, Unicode spaces fold to a plain space, and
 the comparison is NFC-normalized — `--csv` names and remembered headers are
@@ -158,7 +163,7 @@ offered only on the condition that the export really uses that encoding;
 successful decoding alone cannot identify its code page. A file that
 neither UTF-8 nor cp1252 decodes is named as such: only latin-1, which reads
 any byte, would accept it, so pass `encoding=latin-1` only if that is the
-export's encoding. An `encoding=`, `delimiter=`, or `decimal=` value outside
+export's encoding. An `encoding=`, `delimiter=`, `decimal=`, or `skip=` value outside
 the supported set is refused before the file is read, whatever its bytes.
 UTF-16 text (Excel's
 "Unicode Text", recognized by its byte-order mark or NUL bytes) is refused
@@ -312,8 +317,8 @@ The mapping is remembered per root ledger, CSV header row, and source account,
 along with the `--rules` path, `--default-account`, an explicit
 `--date-format`, a delimiter you passed (`--delimiter` or `delimiter=`; a
 detected one is re-detected for each file, and a remembered one that no longer
-reads the header gives way to detection with a note), and a `decimal=` you
-passed — but never `sign=`, which a different file
+reads the header gives way to detection with a note), a `decimal=` you
+passed, and a `skip=` you passed — but never `sign=`, which a different file
 always needs passed explicitly. The one exception keeps a preview honest: after
 `sign=ledger`, a flag-free `--apply` of the byte-identical file re-applies it
 and says so; another file sharing the header is read bank-signed, with a note
@@ -325,7 +330,7 @@ when a pending row is deleted — and a flag-free run then refuses until the
 sign is passed again, rather than replay a sign chosen for other bytes or
 read the file bank-signed. A `--csv` that carries only keys —
 `--csv sign=ledger`, `--csv encoding=cp1252`, `--csv delimiter=';'`,
-`--csv decimal=comma` — applies them
+`--csv decimal=comma`, `--csv skip=3` — applies them
 on top of the mapping remembered for that header and account, keeping its
 columns, rules, default account and date format; it infers from the header only
 when nothing is remembered. When only one account uses those headers, the next import needs

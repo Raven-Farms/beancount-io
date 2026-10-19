@@ -548,9 +548,9 @@ def _missing_pair(part: str) -> str:
 def parse_mapping(spec: str) -> CsvMapping:
     """Parse `--csv field=Column,...` into a validated mapping (exit 2 on misuse).
 
-    Unlike the frontend copy, this rejects `delimiter=`, `encoding=`, and
-    `decimal=`: the frontend strips all three before forwarding, and that
-    rejection is the safety net proving the strip happened.
+    Unlike the frontend copy, this rejects `delimiter=`, `encoding=`,
+    `decimal=`, and `skip=`: the frontend strips all four before forwarding,
+    and that rejection is the safety net proving the strip happened.
     """
     columns: dict[str, str] = {}
     sign = "bank"
@@ -936,8 +936,8 @@ def _field_count(line: str, delim: str) -> int | None:
         return None
 
 
-def detect_delimiter(source: Path, encoding: str = "utf-8") -> str:
-    """Pick comma, semicolon, tab, or pipe from the first non-empty lines.
+def detect_delimiter(source: Path, encoding: str = "utf-8", skip: int = 0) -> str:
+    """Pick comma, semicolon, tab, or pipe from the first non-empty lines after ``skip``.
 
     Bank exports often use ``;`` (EU), tabs, or ``|`` (brokers). Prefer the
     separator on which the header and every sampled body row agree on one
@@ -952,6 +952,9 @@ def detect_delimiter(source: Path, encoding: str = "utf-8") -> str:
     _refuse_utf16(source)
     try:
         with open(source, encoding=_read_codec(encoding), newline="") as stream:
+            for _ in range(skip):
+                if next(stream, None) is None:
+                    break
             sample = []
             for line in stream:
                 if line.strip():
@@ -1075,9 +1078,14 @@ def _normalize_header(cell: str) -> str:
     return unicodedata.normalize("NFC", folded.strip())
 
 
+def _is_header_repeat(row: dict[str, str], headers: list[str]) -> bool:
+    """Whether a record repeats the header exactly (a bank's page break)."""
+    return bool(headers) and all((row.get(header) or "").strip() == header for header in headers)
+
+
 @contextmanager
 def open_records(
-    source: Path, *, delimiter: str | None = None, encoding: str = "utf-8"
+    source: Path, *, delimiter: str | None = None, encoding: str = "utf-8", skip: int = 0
 ) -> Iterator[tuple[list[str], Iterator[tuple[int, dict[str, str]]]]]:
     """The stripped header row, and each data row with the line it starts on.
 
@@ -1086,23 +1094,36 @@ def open_records(
     the BOM dropped) exactly as `IMPORTING.md` promises. Quoting is strict —
     a quote left open at end of file fails with its line instead of silently
     folding every later row into one field. When ``delimiter`` is omitted the
-    sampled rows choose among comma, semicolon, tab, and pipe.
+    sampled rows choose among comma, semicolon, tab, and pipe. ``skip`` drops
+    that many leading records (`--csv skip=N`) before the header is read.
     """
     _refuse_utf16(source)
-    delim = detect_delimiter(source, encoding=encoding) if delimiter is None else delimiter
+    delim = detect_delimiter(source, encoding=encoding, skip=skip) if delimiter is None else delimiter
     with open(source, encoding=_read_codec(encoding), newline="") as stream:
         reader = csv.reader(stream, delimiter=delim, strict=True)
         # A malformed record is reported where it starts: `line_num` has by
         # then run to the end of the file when an unclosed quote swallowed it.
         header_start = 1
+        consumed = 0
         try:
+            for _ in range(skip):
+                if next(reader, None) is None:
+                    break
+                consumed += 1
+                header_start = reader.line_num + 1
             first = next(reader, None)
             # Blank lines before the header (some bank exports start with
             # one) are not the header; `detect_delimiter` skips them too, and
             # `line_num` keeps counting them, so file lines stay right.
             while first is not None and not any(cell.strip() for cell in first):
+                consumed += 1
                 header_start = reader.line_num + 1
                 first = next(reader, None)
+            if first is None and skip:
+                raise UsageError(
+                    f"--csv skip={skip} skips every record of {source.name} ({consumed} read); "
+                    "the header is past the end of the file."
+                )
         except csv.Error as exc:
             raise _malformed(source, header_start, exc) from None
         except UnicodeDecodeError as exc:
@@ -1136,7 +1157,7 @@ def open_records(
 
 
 def infer_date_format(
-    source: Path, column: str, *, delimiter: str | None = None, encoding: str = "utf-8"
+    source: Path, column: str, *, delimiter: str | None = None, encoding: str = "utf-8", skip: int = 0
 ) -> tuple[str | None, bool]:
     """The one date format that parses this column, and whether others also did.
 
@@ -1152,10 +1173,12 @@ def infer_date_format(
     working = list(_DATE_FORMATS)
     seen = False
     try:
-        with open_records(source, delimiter=delimiter, encoding=encoding) as (headers, rows):
+        with open_records(source, delimiter=delimiter, encoding=encoding, skip=skip) as (headers, rows):
             if column not in headers:
                 return None, False
             for _line, row in rows:
+                if _is_header_repeat(row, headers):
+                    continue
                 value = row[column].strip()
                 if not value:
                     continue
@@ -1188,14 +1211,16 @@ def header_signature(headers: list[str] | None) -> str | None:
     return hashlib.sha256(joined.encode("utf-8")).hexdigest()
 
 
-def read_header(source: Path, *, delimiter: str | None = None, encoding: str = "utf-8") -> list[str] | None:
+def read_header(
+    source: Path, *, delimiter: str | None = None, encoding: str = "utf-8", skip: int = 0
+) -> list[str] | None:
     """Read a CSV header row, or None when the file is not a readable CSV.
 
     Decode failures raise ``UsageError`` so import does not claim the header
     had zero columns and suggest a ``--csv`` mapping that cannot help.
     """
     try:
-        with open_records(source, delimiter=delimiter, encoding=encoding) as (headers, _rows):
+        with open_records(source, delimiter=delimiter, encoding=encoding, skip=skip) as (headers, _rows):
             return headers or None
     except UnicodeDecodeError as exc:
         raise _decode_usage_error(source, exc, encoding) from None
@@ -1210,6 +1235,31 @@ def _lookalike_header(column: str, headers: list[str]) -> str | None:
     folded = fold_account(column)
     matches = [header for header in headers if header != column and fold_account(header) == folded]
     return matches[0] if len(matches) == 1 else None
+
+
+def _header_line_for(source: Path, column: str, delimiter: str | None, encoding: str) -> tuple[int, int] | None:
+    """First of the head records holding `column` as a field, as (line, record index).
+
+    Only the refusal for a mapped column the header lacks calls this: when a
+    preamble pushed the header down, the index is the `--csv skip=` value that
+    starts the header there. Anything unreadable misses, and the refusal stands
+    without its hint.
+    """
+    try:
+        delim = delimiter if delimiter is not None else detect_delimiter(source, encoding=encoding)
+        with open(source, encoding=_read_codec(encoding), newline="") as stream:
+            reader = csv.reader(stream, delimiter=delim, strict=True)
+            start = 1
+            for index in range(10):
+                record = next(reader, None)
+                if record is None:
+                    return None
+                if any(_normalize_header(cell) == column for cell in record):
+                    return start, index
+                start = reader.line_num + 1
+    except (OSError, UnicodeDecodeError, csv.Error, UsageError):
+        return None
+    return None
 
 
 class CsvImporter:
@@ -1231,6 +1281,7 @@ class CsvImporter:
         encoding: str = "utf-8",
         account_roots: Collection[str] | None = None,
         forced_decimal_comma: bool | None = None,
+        skip: int = 0,
     ) -> None:
         self._account = account
         # The ledger's root names; a category under any other root is a label.
@@ -1238,6 +1289,7 @@ class CsvImporter:
         self._mapping = mapping
         self._delimiter = delimiter
         self._encoding = encoding
+        self._skip = skip
         self._date_format = date_format
         self._rules = rules or []
         self._default_account = default_account
@@ -1255,6 +1307,9 @@ class CsvImporter:
         # the caller to report once.
         self.ambiguous_dot_amounts: str | None = None
         self.skipped_blank_rows = 0
+        # Physical lines that repeat the header exactly (page breaks), for
+        # the caller to report once.
+        self.skipped_repeated_headers: list[int] = []
         # Rows a mapped status column marks pending, each summarized for the
         # note; and, with none mapped, a column that marks some pending (w5/614).
         self.skipped_pending: list[str] = []
@@ -1344,6 +1399,14 @@ class CsvImporter:
                         f"{source.name}'s header was read as one column ({headers[0]!r}) with delimiter "
                         f"{_shown_delimiter(self._delimiter)}, but it looks {_SEPARATOR_NAMES[other]}-separated. "
                         f"Pass --delimiter {_shown_delimiter(other)}, or omit --delimiter so bea detects it."
+                    )
+                found = _header_line_for(source, column, self._delimiter, self._encoding)
+                if found is not None and found[1] != self._skip:
+                    line, index = found
+                    raise UsageError(
+                        f"The mapping names column {column!r} for {role}, which {source.name}'s header lacks — "
+                        f"but {source.name} has {column!r} on line {line}. "
+                        f"Pass --csv skip={index} to start the header there."
                     )
                 lookalike = _lookalike_header(column, headers)
                 hint = f" Did you mean {lookalike!r}? Column names are case-sensitive." if lookalike else ""
@@ -1463,7 +1526,10 @@ class CsvImporter:
         category_header = columns.get("category")
         rows: list[Any] = []
         source = Path(filepath)
-        with open_records(source, delimiter=self._delimiter, encoding=self._encoding) as (headers, records):
+        with open_records(source, delimiter=self._delimiter, encoding=self._encoding, skip=self._skip) as (
+            headers,
+            records,
+        ):
             if category_header is None:
                 category_header = next((h for h in headers if h.casefold() == "category"), None)
             self._check_columns(source, headers, category_header)
@@ -1487,6 +1553,11 @@ class CsvImporter:
                 if self._is_blank_row(row, blank_headers):
                     self.skipped_blank_rows += 1
                     continue
+                if _is_header_repeat(row, headers):
+                    # A bank's page break: it could never be a data row (its
+                    # date cell does not parse), so it is skipped, not refused.
+                    self.skipped_repeated_headers.append(line)
+                    continue
                 if status_header is not None and is_pending(row.get(status_header)):
                     # A pending charge often posts later at another amount (a
                     # tip, a hold), and both were booked (w5/614). It waits
@@ -1495,7 +1566,9 @@ class CsvImporter:
                     continue
                 numbered.append((len(numbered) + 1, line, row))
             if status_header is None:
-                self.pending_column = _pending_column(headers, [row for _, row in materialized], columns)
+                self.pending_column = _pending_column(
+                    headers, [row for _, row in materialized if not _is_header_repeat(row, headers)], columns
+                )
             # Blank cells never voted on the decimal convention anyway, so
             # skipping blank rows here changes only which number it names.
             if self._forced_decimal_comma is not None:

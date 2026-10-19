@@ -38,6 +38,7 @@ _MAPPING_FIELDS = frozenset(
         "encoding",
         "decimal",
         "direction",
+        "skip",
     }
 )
 
@@ -51,6 +52,7 @@ class CsvMapping:
     delimiter: str | None = None
     encoding: str | None = None
     decimal: str | None = None
+    skip: int | None = None
 
     def column(self, name: str) -> str | None:
         return self.columns.get(name)
@@ -157,8 +159,8 @@ def _missing_pair(part: str) -> str:
 def parse_mapping(spec: str) -> CsvMapping:
     """Parse `--csv field=Column,...` into a validated mapping (exit 2 on misuse).
 
-    `delimiter=`, `encoding=`, and `decimal=` are parsing directives, not
-    columns: the frontend strips them before forwarding the spec, and the
+    `delimiter=`, `encoding=`, `decimal=`, and `skip=` are parsing directives,
+    not columns: the frontend strips them before forwarding the spec, and the
     engine's copy of this parser rejects them — that rejection is the safety
     net proving the strip happened.
     """
@@ -168,6 +170,7 @@ def parse_mapping(spec: str) -> CsvMapping:
     delimiter: str | None = None
     encoding: str | None = None
     decimal: str | None = None
+    skip: int | None = None
     for part in split_spec(spec):
         name, separator, column = part.partition("=")
         name = name.strip()
@@ -202,6 +205,10 @@ def parse_mapping(spec: str) -> CsvMapping:
             if decimal is not None:
                 raise UsageError("Duplicate --csv field 'decimal'.")
             decimal = _parse_decimal_value(column)
+        elif name == "skip":
+            if skip is not None:
+                raise UsageError("Duplicate --csv field 'skip'.")
+            skip = _parse_skip_value(column)
         elif name in columns:
             raise UsageError(f"Duplicate --csv field {name!r}.")
         else:
@@ -210,7 +217,7 @@ def parse_mapping(spec: str) -> CsvMapping:
             # match the stored spelling (w5/716).
             columns[name] = _normalize_header(column)
     if columns:
-        # Keys without columns (`encoding=`/`delimiter=`/`decimal=`/`sign=` alone) parse:
+        # Keys without columns (`encoding=`/`delimiter=`/`decimal=`/`skip=`/`sign=` alone) parse:
         # the caller infers the mapping instead of failing it.
         if "date" not in columns:
             raise UsageError(f"--csv needs date=Column; got {spec!r}.")
@@ -235,11 +242,11 @@ def parse_mapping(spec: str) -> CsvMapping:
             )
         if "direction" in columns and sign == "ledger":
             raise UsageError("--csv direction=Column already decides each row's direction; drop sign=ledger.")
-    return CsvMapping(columns=columns, sign=sign, delimiter=delimiter, encoding=encoding, decimal=decimal)
+    return CsvMapping(columns=columns, sign=sign, delimiter=delimiter, encoding=encoding, decimal=decimal, skip=skip)
 
 
 def validate_reading_keys(spec: str) -> None:
-    """Refuse a bad `encoding=`, `delimiter=`, or `decimal=` in a `--csv` spec, whatever else it holds.
+    """Refuse a bad `encoding=`, `delimiter=`, `decimal=`, or `skip=` in a `--csv` spec, whatever else it holds.
 
     They decide how the file is read, so a spec that is otherwise
     incomplete must still not let a typo through: on a non-UTF-8 export the
@@ -256,6 +263,8 @@ def validate_reading_keys(spec: str) -> None:
             _parse_delimiter_value(column.strip(" "))
         elif name.strip() == "decimal":
             _parse_decimal_value(column.strip())
+        elif name.strip() == "skip":
+            _parse_skip_value(column.strip())
 
 
 def _parse_encoding_value(column: str) -> str:
@@ -299,6 +308,21 @@ def _parse_decimal_value(column: str) -> str:
     if value.strip().casefold() in {"comma", "point"}:
         return value.strip().casefold()
     raise UsageError(f"Bad --csv decimal {column!r}: use decimal=comma or decimal=point.")
+
+
+def _parse_skip_value(column: str) -> int:
+    """Normalize a `--csv skip=` value to a whole number of leading rows.
+
+    Zero is a no-op the header hints can name back (a skip that overshoots
+    is corrected with the header's own line), so only negatives refuse.
+    """
+    try:
+        skip = int(spec_value(column))
+    except ValueError:
+        raise UsageError(f"Bad --csv skip {column!r}: use a whole number of leading rows.") from None
+    if skip < 0:
+        raise UsageError(f"Bad --csv skip {column!r}: use a whole number of leading rows.")
+    return skip
 
 
 def load_rules(path: Path) -> list[CsvRule]:
@@ -610,8 +634,8 @@ def _field_count(line: str, delim: str) -> int | None:
         return None
 
 
-def detect_delimiter(source: Path, encoding: str = "utf-8") -> str:
-    """Pick comma, semicolon, tab, or pipe from the first non-empty lines.
+def detect_delimiter(source: Path, encoding: str = "utf-8", skip: int = 0) -> str:
+    """Pick comma, semicolon, tab, or pipe from the first non-empty lines after ``skip``.
 
     Bank exports often use ``;`` (EU), tabs, or ``|`` (brokers). Prefer the
     separator on which the header and every sampled body row agree on one
@@ -626,6 +650,9 @@ def detect_delimiter(source: Path, encoding: str = "utf-8") -> str:
     _refuse_utf16(source)
     try:
         with open(source, encoding=_read_codec(encoding), newline="") as stream:
+            for _ in range(skip):
+                if next(stream, None) is None:
+                    break
             sample = []
             for line in stream:
                 if line.strip():
@@ -703,9 +730,14 @@ def shown_header(cell: str) -> str:
     return "".join(char if char.isprintable() else ascii(char)[1:-1] for char in cell)
 
 
+def _is_header_repeat(row: dict[str, str], headers: list[str]) -> bool:
+    """Whether a record repeats the header exactly (a bank's page break)."""
+    return bool(headers) and all((row.get(header) or "").strip() == header for header in headers)
+
+
 @contextmanager
 def open_records(
-    source: Path, *, delimiter: str | None = None, encoding: str = "utf-8"
+    source: Path, *, delimiter: str | None = None, encoding: str = "utf-8", skip: int = 0
 ) -> Iterator[tuple[list[str], Iterator[tuple[int, dict[str, str]]]]]:
     """The stripped header row, and each data row with the line it starts on.
 
@@ -714,23 +746,36 @@ def open_records(
     the BOM dropped) exactly as `IMPORTING.md` promises. Quoting is strict —
     a quote left open at end of file fails with its line instead of silently
     folding every later row into one field. When ``delimiter`` is omitted the
-    sampled rows choose among comma, semicolon, tab, and pipe.
+    sampled rows choose among comma, semicolon, tab, and pipe. ``skip`` drops
+    that many leading records (`--csv skip=N`) before the header is read.
     """
     _refuse_utf16(source)
-    delim = detect_delimiter(source, encoding=encoding) if delimiter is None else delimiter
+    delim = detect_delimiter(source, encoding=encoding, skip=skip) if delimiter is None else delimiter
     with open(source, encoding=_read_codec(encoding), newline="") as stream:
         reader = csv.reader(stream, delimiter=delim, strict=True)
         # A malformed record is reported where it starts: `line_num` has by
         # then run to the end of the file when an unclosed quote swallowed it.
         header_start = 1
+        consumed = 0
         try:
+            for _ in range(skip):
+                if next(reader, None) is None:
+                    break
+                consumed += 1
+                header_start = reader.line_num + 1
             first = next(reader, None)
             # Blank lines before the header (some bank exports start with
             # one) are not the header; `detect_delimiter` skips them too, and
             # `line_num` keeps counting them, so file lines stay right.
             while first is not None and not any(cell.strip() for cell in first):
+                consumed += 1
                 header_start = reader.line_num + 1
                 first = next(reader, None)
+            if first is None and skip:
+                raise UsageError(
+                    f"--csv skip={skip} skips every record of {source.name} ({consumed} read); "
+                    "the header is past the end of the file."
+                )
         except csv.Error as exc:
             raise _malformed(source, header_start, exc) from None
         except UnicodeDecodeError as exc:
@@ -770,10 +815,12 @@ class DateRejection:
 
 
 def infer_date_format(
-    source: Path, column: str, *, delimiter: str | None = None, encoding: str = "utf-8"
+    source: Path, column: str, *, delimiter: str | None = None, encoding: str = "utf-8", skip: int = 0
 ) -> tuple[str | None, bool]:
     """The one date format that parses this column, and whether others also did."""
-    date_format, ambiguous, _rejection = inspect_date_column(source, column, delimiter=delimiter, encoding=encoding)
+    date_format, ambiguous, _rejection = inspect_date_column(
+        source, column, delimiter=delimiter, encoding=encoding, skip=skip
+    )
     return date_format, ambiguous
 
 
@@ -784,6 +831,7 @@ def inspect_date_column(
     delimiter: str | None = None,
     encoding: str = "utf-8",
     mapped_columns: dict[str, str] | None = None,
+    skip: int = 0,
 ) -> tuple[str | None, bool, DateRejection | None]:
     """The one date format that parses this column, whether others also did,
     and — when none fits — the cell that ruled out the last candidate.
@@ -805,7 +853,7 @@ def inspect_date_column(
     working = list(_DATE_FORMATS)
     seen = False
     try:
-        with open_records(source, delimiter=delimiter, encoding=encoding) as (headers, rows):
+        with open_records(source, delimiter=delimiter, encoding=encoding, skip=skip) as (headers, rows):
             if column not in headers:
                 return None, False, None
             counted = set((mapped_columns or {"date": column}).values())
@@ -813,6 +861,8 @@ def inspect_date_column(
                 counted.update(header for header in headers if header.casefold() == "category")
             row_number = 0
             for line, row in rows:
+                if _is_header_repeat(row, headers):
+                    continue
                 if any((row.get(header) or "").strip() for header in counted):
                     row_number += 1
                 value = row[column].strip()
@@ -838,6 +888,67 @@ def _parses(value: str, date_format: str) -> bool:
     return True
 
 
+def _shape_of(date_format: str) -> re.Pattern[str]:
+    """A ``strptime`` format with its fields widened to any digits or word.
+
+    `31/02/2026` parses under no format but is plainly a mistyped date, not
+    a footer; the shape is what tells the two apart.
+    """
+    shape = re.escape(date_format)
+    # A two-digit year is still a date to a human (`15.03.26`), even where
+    # the format wants four digits.
+    shape = shape.replace("%Y", r"\d{2,4}").replace("%y", r"\d{2}")
+    shape = shape.replace("%m", r"\d{1,2}").replace("%d", r"\d{1,2}")
+    shape = shape.replace("%b", r"[^\W\d_]+")
+    return re.compile(f"(?:{shape})\\Z")
+
+
+#: Every known date format widened to its shape, for the refusal's advice.
+_DATE_SHAPES = tuple(_shape_of(candidate) for candidate in _DATE_FORMATS)
+
+
+def matches_known_date(value: str) -> bool:
+    """Whether any known date format parses this cell, or it has one's shape.
+
+    A cell with no date shape at all is not a wrongly-formatted date but a
+    non-data row — a footer — and `--date-format` advice would send the user
+    in circles (w5/758).
+    """
+    cell = value.strip()
+    return any(_parses(cell, candidate) for candidate in _DATE_FORMATS) or any(
+        shape.match(cell) for shape in _DATE_SHAPES
+    )
+
+
+def find_header_record(source: Path, *, delimiter: str | None, encoding: str) -> tuple[int, int] | None:
+    """First head record that reads as a full header, as (line, record index).
+
+    Only the unread-header refusals call this: when a preamble pushed the
+    header down, the index is the `--csv skip=` value that starts the header
+    there. A record counts only when it infers a complete mapping, so a data
+    row that happens to hold one synonym never qualifies. Anything unreadable
+    misses, and the refusal stands without its hint.
+    """
+    try:
+        delim = delimiter if delimiter is not None else detect_delimiter(source, encoding=encoding)
+        with open(source, encoding=_read_codec(encoding), newline="") as stream:
+            reader = csv.reader(stream, delimiter=delim, strict=True)
+            start = 1
+            for index in range(10):
+                record = next(reader, None)
+                if record is None:
+                    return None
+                cells = [_normalize_header(cell) for cell in record]
+                if any(cells):
+                    inferred = infer_mapping(cells)
+                    if inferred is not None and inferred.spec is not None:
+                        return start, index
+                start = reader.line_num + 1
+    except (OSError, UnicodeDecodeError, csv.Error, UsageError):
+        return None
+    return None
+
+
 def header_signature(headers: list[str] | None) -> str | None:
     """Identify a CSV source by its header row without storing file contents."""
     if not headers:
@@ -848,14 +959,16 @@ def header_signature(headers: list[str] | None) -> str | None:
     return hashlib.sha256(joined.encode("utf-8")).hexdigest()
 
 
-def read_header(source: Path, *, delimiter: str | None = None, encoding: str = "utf-8") -> list[str] | None:
+def read_header(
+    source: Path, *, delimiter: str | None = None, encoding: str = "utf-8", skip: int = 0
+) -> list[str] | None:
     """Read a CSV header row, or None when the file is not a readable CSV.
 
     Decode failures raise ``UsageError`` so import does not claim the header
     had zero columns and suggest a ``--csv`` mapping that cannot help.
     """
     try:
-        with open_records(source, delimiter=delimiter, encoding=encoding) as (headers, _rows):
+        with open_records(source, delimiter=delimiter, encoding=encoding, skip=skip) as (headers, _rows):
             return headers or None
     except UnicodeDecodeError as exc:
         raise _decode_usage_error(source, exc, encoding) from None

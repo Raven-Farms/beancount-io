@@ -512,6 +512,7 @@ def import_entries(
         str | None,
         typer.Option("--decimal", help="Decimal convention for --csv amounts: 'comma' or 'point'."),
     ] = None,
+    skip: Annotated[int, typer.Option("--skip", help="Leading rows to skip before the --csv header.")] = 0,
     rules_file: Annotated[
         Path | None, typer.Option("--rules", help="TOML categorization rules for --csv rows.", readable=False)
     ] = None,
@@ -568,6 +569,7 @@ def import_entries(
                 delimiter=delimiter,
                 encoding=encoding,
                 decimal=decimal,
+                skip=skip,
                 rules_file=rules_file,
                 default_account=default_account,
                 config=config,
