@@ -1098,26 +1098,62 @@ def _source_postings(entry: Any, account: str) -> list[Any]:
 _Lot = tuple[Decimal | None, str | None, str | None]
 
 
-def _lot(posting: Any) -> _Lot | None:
-    """The per-unit number, currency and label a source posting's cost states.
+def _lot_stated(posting: Any) -> tuple[Decimal | None, Decimal | None, Decimal | None, str | None, str | None] | None:
+    """A source posting's cost as stated: per-unit, total, units, currency, label.
 
-    None for a posting held at no cost. A field the cost leaves open is None:
-    an importer's `{}` or `{USD}` states less than the ledger's copy of the
-    same entry, whose booking filled the rest in. The lot date is left out,
-    since booking always fills it in.
+    None for a posting held at no cost. Each field is None unless stated in
+    that type; Cost and CostSpec spell the per-unit field differently.
     """
     cost = posting.cost
     if cost is None:
         return None
     per = getattr(cost, "number_per", None) if hasattr(cost, "number_per") else getattr(cost, "number", None)
     total = getattr(cost, "number_total", None)
-    if not isinstance(per, Decimal) and isinstance(total, Decimal) and isinstance(posting.units.number, Decimal):
-        per = total / abs(posting.units.number) if posting.units.number else None
+    units = posting.units.number
     return (
         per if isinstance(per, Decimal) else None,
+        total if isinstance(total, Decimal) else None,
+        units if isinstance(units, Decimal) else None,
         cost.currency if isinstance(cost.currency, str) else None,
         getattr(cost, "label", None) or None,
     )
+
+
+def _lot(posting: Any) -> _Lot | None:
+    """The per-unit number, currency and label a source posting's cost states.
+
+    None for a posting held at no cost. A field the cost leaves open is None:
+    an importer's `{}` or `{USD}` states less than the ledger's copy of the
+    same entry, whose booking filled the rest in. The lot date is left out,
+    since booking always fills it in. A compound cost states per-unit and
+    total, and the lot it names is their sum: `{100 # 5 USD}` on 5 units is
+    101 per unit, as booking books it (w5/742).
+    """
+    stated = _lot_stated(posting)
+    if stated is None:
+        return None
+    per, total, units, currency, label = stated
+    if per is not None and total is not None and units:
+        per = per + total / abs(units)
+    elif per is None and total is not None and units:
+        per = total / abs(units)
+    return (per, currency, label)
+
+
+def _lot_per_only(posting: Any) -> _Lot | None:
+    """The pre-w5/742 lot: number_per alone, or the total split when per is missing.
+
+    Compound rows imported before the fix carry ids hashed this way; the
+    spelling stays a lookup-only key so re-imports still match (lot-gated,
+    like the units-only spellings).
+    """
+    stated = _lot_stated(posting)
+    if stated is None:
+        return None
+    per, total, units, currency, label = stated
+    if per is None and total is not None and units:
+        per = total / abs(units)
+    return (per, currency, label)
 
 
 def _price_text(posting: Any) -> str:
@@ -1127,7 +1163,7 @@ def _price_text(posting: Any) -> str:
     return ""
 
 
-def _lot_text(posting: Any) -> str:
+def _lot_text(posting: Any, *, per_only: bool = False) -> str:
     """A source posting's cost or price, as it bears on which source row this is.
 
     Two same-day buys of `10 AAPL` at 100 and 120 USD are two rows; hashing
@@ -1135,7 +1171,7 @@ def _lot_text(posting: Any) -> str:
     duplicate with exit 0 (w5/349). A cost is written only when it states
     both its number and currency, so an open `{}` adds nothing.
     """
-    lot = _lot(posting)
+    lot = _lot_per_only(posting) if per_only else _lot(posting)
     cost = ""
     if lot is not None and lot[0] is not None and lot[1] is not None:
         label = f', "{lot[2]}"' if lot[2] else ""
@@ -2062,6 +2098,9 @@ def _hash_import_ids(entry: Any, account: str, seen: dict[str, int]) -> _HashedR
     returned for the group-wide claim instead of as plain lookups.
     """
     legs = sorted((p.units.number, p.units.currency, _lot_text(p)) for p in _source_postings(entry, account))
+    per_legs = sorted(
+        (p.units.number, p.units.currency, _lot_text(p, per_only=True)) for p in _source_postings(entry, account)
+    )
     amounts = [(number, currency) for number, currency, _ in legs]
     raw_description = " ".join(str(entry.narration or entry.payee or "").upper().split())
     # Normalize after upper(): uppercasing NFD text can itself emit a
@@ -2071,6 +2110,7 @@ def _hash_import_ids(entry: Any, account: str, seen: dict[str, int]) -> _HashedR
     date = entry.date.isoformat()
     units_only = _amounts_exact(amounts)
     exact = "+".join(_exact_amount(number, currency) + lot for number, currency, lot in legs)
+    per_only = "+".join(_exact_amount(number, currency) + lot for number, currency, lot in per_legs)
 
     single_base = _hash_base(date, exact, description, nfc_account)
     seen[single_base] = seen.get(single_base, 0) + 1
@@ -2103,6 +2143,17 @@ def _hash_import_ids(entry: Any, account: str, seen: dict[str, int]) -> _HashedR
         counter = f"units\0{units_base}"
         seen[counter] = seen.get(counter, 0) + 1
         older.append(_digest_import_id(units_base, seen[counter]))
+    per_base = _hash_base(date, per_only, description, nfc_account)
+    # Numbered over every row sharing the per-only base, as the releases that
+    # wrote it numbered it — including rows whose spelling did not change — so
+    # a mixed export reproduces the stored occurrence.
+    per_counter = f"per\0{per_base}"
+    seen[per_counter] = seen.get(per_counter, 0) + 1
+    if per_only != exact:
+        # Written before a compound cost counted its total: lookup-only, and
+        # lot-gated like every older spelling, so it matches the same lot
+        # and never a different one (w5/742).
+        older.append(_digest_import_id(per_base, seen[per_counter]))
     single = _digest_import_id(single_base, occurrence)
 
     payee = unicodedata.normalize("NFC", " ".join(str(entry.payee or "").upper().split()))
@@ -2116,6 +2167,11 @@ def _hash_import_ids(entry: Any, account: str, seen: dict[str, int]) -> _HashedR
             units_counter = f"paired-units\0{units_paired}"
             seen[units_counter] = seen.get(units_counter, 0) + 1
             older.append(_digest_import_id(units_paired, seen[units_counter]))
+        per_paired = _hash_base(date, per_only, f"{payee}|{description}", nfc_account)
+        per_paired_counter = f"paired-per\0{per_paired}"
+        seen[per_paired_counter] = seen.get(per_paired_counter, 0) + 1
+        if per_only != exact:
+            older.append(_digest_import_id(per_paired, seen[per_paired_counter]))
     else:
         # Numbered apart from payee-bearing rows. Releases that counted those
         # too wrote `single`, which stays one of the spellings to look for.
