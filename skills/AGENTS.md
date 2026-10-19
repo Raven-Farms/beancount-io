@@ -2,35 +2,39 @@
 
 Cross-compatible Claude Code and Codex skills that automate Beancount workflows for [Beancount.io](https://beancount.io/) users (see root `AGENTS.md` for repo-wide rules).
 
-This package contains only the nine customer-facing `beancount-*` ledger skills, each in its own `beancount-<name>/` folder directly under this package. See [README.md](README.md) for the user-facing catalog. Repository development skills live separately in [`../.agents/skills/`](../.agents/skills), with conventions in [`../.agents/AGENTS.md`](../.agents/AGENTS.md). The repository-root `.claude/skills` links to that internal tree.
+`skills/` holds the nine customer-facing `beancount-*` ledger skills, each at `skills/<name>/SKILL.md`, plus this guide and the user-facing [README.md](README.md) catalog. The suite's guides and examples live in [`docs/skills/`](../docs/skills) and its installer, checks, and tests in [`scripts/skills/`](../scripts/skills); both belong to this package. Repository development skills live separately in [`../.agents/skills/`](../.agents/skills), with conventions in [`../.agents/AGENTS.md`](../.agents/AGENTS.md). The repository-root `.claude/skills` links to that internal tree.
 
 ## Layout
 
+The package spans `skills/` and two directories beside it at the repository root:
+
 ```
 skills/
-  .claude/
-    skills/
-      beancount-add/          Record one-off entries the user describes (transactions, opens, closes, prices, notes)
-      beancount-ask/          Answer ledger questions with shown, re-runnable BQL (read-only)
-      beancount-close/        Month-end close ritual: reconcile all, assert, report, commit
-      beancount-import/       Import a bank/card export (CSV/OFX/QIF) as categorized, deduplicated entries
-      beancount-importer-author/  Write/repair tested beangulp importers from a sample file
-      beancount-init/         Scaffold a new ledger (bea init + check; optional Fava)
-        SKILL.md
-      beancount-migrate/      Migrate Mint/Monarch/QBO export history into a fresh ledger
-      beancount-options/      Convert natural-language options trades into beancount transactions
-        SKILL.md
-        references/           Per-strategy guidance loaded on demand
-        evals/                Test prompts + fixtures for skill-creator iteration
-      beancount-reconcile/    Reconcile one account against a bank/broker statement
-        SKILL.md
-        references/           Statement-format + matching guidance loaded on demand
-        evals/                Statement+ledger fixtures per mismatch class
-  docs/                       Installation, first-query, first-month, migration, and importer graduation guides, fixtures, rehearsal evidence
-  evals/routing.json          Suite routing set: which skill (or none) each ledger request belongs to
-  scripts/                    CI checks, suite installer, journey checkpoint verifiers, and tests
+  AGENTS.md                   This guide
+  README.md                   Customer catalog and install summary
+  beancount-add/              Record one-off entries the user describes (transactions, opens, closes, prices, notes)
+  beancount-ask/              Answer ledger questions with shown, re-runnable BQL (read-only)
+  beancount-close/            Month-end close ritual: reconcile all, assert, report, commit
+  beancount-import/           Import a bank/card export (CSV/OFX/QIF) as categorized, deduplicated entries
+  beancount-importer-author/  Write/repair tested beangulp importers from a sample file
+  beancount-init/             Scaffold a new ledger (bea init + check; optional Fava)
+    SKILL.md
+  beancount-migrate/          Migrate Mint/Monarch/QBO export history into a fresh ledger
+  beancount-options/          Convert natural-language options trades into beancount transactions
+    SKILL.md
+    references/               Per-strategy guidance loaded on demand
+    evals/                    Test prompts + fixtures for skill-creator iteration
+  beancount-reconcile/        Reconcile one account against a bank/broker statement
+    SKILL.md
+    references/               Statement-format + matching guidance loaded on demand
+    evals/                    Statement+ledger fixtures per mismatch class
+docs/skills/                  Installation, first-query, first-month, migration, and importer graduation guides; rehearsal evidence
+  examples/                   Synthetic journey inputs and expected results
+scripts/skills/               Suite installer, CI checks, routing runner and routing.json, journey checkpoint verifiers, and tests
   tmp/                        Scratch space — gitignored, safe for experiments
 ```
+
+`ci-check.py` fails when a `.claude/` folder reappears in `skills/`, when any file other than `README.md` or `AGENTS.md` sits directly in `skills/`, when a folder there has no `SKILL.md`, or when a guide cites a `$SKILLS_SRC/<path>` the customer's sparse checkout does not contain.
 
 Customers install the suite by linking each `beancount-*` directory from a sparse Git checkout into their agent's skill directory with `scripts/skills/beancount-skills.py` ([docs/skills/installation.md](../docs/skills/installation.md)). The helper is stdlib-only, owns exactly the `beancount-*` directories, and must never install development skills. When skill text starts depending on a new supporting file or sibling, keep the reference in the forms its `verify` resolves: `references/<name>.md` or a bare lowercase `<name>.md`, with the owning sibling named on the same line.
 
@@ -42,9 +46,9 @@ The shared execution contract lives in `beancount-init/references/bea-cli.md`; e
 
 CSV details live in `beancount-import/references/bea-import.md`: pass confirmed sign, account, mapping, date format, durable rules path and destination on every run. The CLI does not remember sign and remembers only the rules path. Its same-date duplicate detector does not replace the suite's ±3-day manual-entry review; mixed keep/skip decisions require a reviewed batch preserving the original source IDs.
 
-The installed-suite [first-month guide](../docs/skills/first-month.md) composes init → import → reconcile → ask → close on one synthetic ledger. Its read-only `scripts/verify-first-month.py` checks exact ledger and Git effects against `docs/examples/first-month/expectations.json`; [real-client evidence](../docs/skills/first-month-rehearsal.md) remains separate from deterministic tests. The [migration guide](../docs/skills/migration.md) runs beancount-migrate on a Monarch export, then beancount-import on overlapping bank exports; `scripts/verify-migration.py` checks it against `docs/examples/migration/expectations.json`, with [real-client evidence](../docs/skills/migration-rehearsal.md) kept separately. Its overlap steps rely on `bea import` matching migrated `monarch:sha256:` digests and `import-id-2`, which first ships in `beancount-io` 0.3.1.
+The installed-suite [first-month guide](../docs/skills/first-month.md) composes init → import → reconcile → ask → close on one synthetic ledger. Its read-only `scripts/skills/verify-first-month.py` checks exact ledger and Git effects against `docs/skills/examples/first-month/expectations.json`; [real-client evidence](../docs/skills/first-month-rehearsal.md) remains separate from deterministic tests. The [migration guide](../docs/skills/migration.md) runs beancount-migrate on a Monarch export, then beancount-import on overlapping bank exports; `scripts/skills/verify-migration.py` checks it against `docs/skills/examples/migration/expectations.json`, with [real-client evidence](../docs/skills/migration-rehearsal.md) kept separately. Its overlap steps rely on `bea import` matching migrated `monarch:sha256:` digests and `import-id-2`, which first ships in `beancount-io` 0.3.1.
 
-The [importer graduation guide](../docs/skills/importer-graduation.md) composes importer-author → import from existing CSV history, then repairs renamed headers. It uses a separate Beangulp 0.2.0 authoring environment and public `bea ingest` execution; source-only extraction remains separate from approved balanced writes. Its read-only `scripts/verify-importer-graduation.py` checks independent source identities, exact ledger effects, original goldens, and workspace/Git preservation against `docs/examples/importer-graduation/expectations.json`. The [two-client rehearsal evidence](../docs/skills/importer-graduation-rehearsal.md) records macOS runs on published `bea` 0.3.1 and a targeted Codex sandbox-cache correction; it does not establish native Windows or arbitrary importer dependency support.
+The [importer graduation guide](../docs/skills/importer-graduation.md) composes importer-author → import from existing CSV history, then repairs renamed headers. It uses a separate Beangulp 0.2.0 authoring environment and public `bea ingest` execution; source-only extraction remains separate from approved balanced writes. Its read-only `scripts/skills/verify-importer-graduation.py` checks independent source identities, exact ledger effects, original goldens, and workspace/Git preservation against `docs/skills/examples/importer-graduation/expectations.json`. The [two-client rehearsal evidence](../docs/skills/importer-graduation-rehearsal.md) records macOS runs on published `bea` 0.3.1 and a targeted Codex sandbox-cache correction; it does not establish native Windows or arbitrary importer dependency support.
 
 ## Skills
 
@@ -98,25 +102,25 @@ python3 scripts/skills/test_beancount_skills.py   # installer, first query/month
 python3 scripts/check-agent-guidance.py
 ```
 
-This checks both customer and development skill trees: SKILL.md frontmatter, `evals.json` validity and fixture paths, Python syntax, the separate skill directories and Claude Code link, `bea check` with global `bean-*` scrubbed from PATH, and a deliberate oracle `uv run --project cli bean-check` on every `*ledger.beancount` (with known failure-mode fixtures listed in the script). One-install guidance is gated across customer entrypoints and supporting Markdown. Behavioral tests execute marked command recipes from the shared references against isolated ledgers, covering CSV sign/rules on repeat imports, reconcile's decimal tie-out read, close's and ask's recurring-merchant reads over a payee-less import, close's date-bounded period-end balances, the wider duplicate-query window, included-file destinations, failed batches/assertions, and historical initialization. The same test entrypoint loads the first-month, migration, and importer graduation verifier tests and their deterministic journeys, and the routing runner's choice-detection and scoring tests (fake clients); no paid client calls run in CI. A second CI leg installs the published `beancount-io` at the minimum `bea-cli.md` declares (`ci-check.py --print-bea-minimum`) and reruns `TestBeaRecipes` with `SKILLS_BEA=published`, because the checkout's `bea` reports the same version while carrying unreleased fixes; tests branch on that flag where the release behaves differently, and the Version notes say what customers on the release should do. Run it locally with `PATH=<venv with the published bea>/bin:$PATH SKILLS_BEA=published python3 -m unittest test_beancount_skills.TestBeaRecipes` from `scripts/skills`.
+This checks both customer and development skill trees: SKILL.md frontmatter, `evals.json` validity and fixture paths, Python syntax, the `skills/` layout and the `$SKILLS_SRC` paths customer guides cite, the separate skill directories and Claude Code link, `bea check` with global `bean-*` scrubbed from PATH, and a deliberate oracle `uv run --project cli bean-check` on every `*ledger.beancount` (with known failure-mode fixtures listed in the script). One-install guidance is gated across customer entrypoints and supporting Markdown. Behavioral tests execute marked command recipes from the shared references against isolated ledgers, covering CSV sign/rules on repeat imports, reconcile's decimal tie-out read, close's and ask's recurring-merchant reads over a payee-less import, close's date-bounded period-end balances, the wider duplicate-query window, included-file destinations, failed batches/assertions, and historical initialization. The same test entrypoint loads the first-month, migration, and importer graduation verifier tests and their deterministic journeys, and the routing runner's choice-detection and scoring tests (fake clients); no paid client calls run in CI. A second CI leg installs the published `beancount-io` at the minimum `bea-cli.md` declares (`ci-check.py --print-bea-minimum`) and reruns `TestBeaRecipes` with `SKILLS_BEA=published`, because the checkout's `bea` reports the same version while carrying unreleased fixes; tests branch on that flag where the release behaves differently, and the Version notes say what customers on the release should do. Run it locally with `PATH=<venv with the published bea>/bin:$PATH SKILLS_BEA=published python3 -m unittest test_beancount_skills.TestBeaRecipes` from `scripts/skills`.
 
 ### Iterating on a skill
 
-Use the `skill-creator` skill (`/skill-creator`) for the build → eval → review loop. Outputs land in `tmp/<skill-name>-workspace/` (gitignored).
+Use the `skill-creator` skill (`/skill-creator`) for the build → eval → review loop. Outputs land in `scripts/skills/tmp/<skill-name>-workspace/` (gitignored).
 
 ### Routing check
 
-A description is the only thing an agent reads before it picks a skill, so description changes are measured, not judged by eye. `evals/routing.json` labels the skill (or `none`) for each of about fifty ledger requests, with the siblings each could be confused with; `scripts/ci-check.py` keeps its labels in step with the skill directories. Whenever a description changes or a skill is added, run `python3 scripts/skills/run-routing.py` on Claude Code and Codex before and after the change (results land in `tmp/routing/`; Codex varies between runs, so run each side twice). Record both in [docs/routing-rehearsal.md](../docs/skills/routing-rehearsal.md), and fix any prompt that routed correctly before and misroutes after before shipping. The runner makes paid client calls, so CI never runs it.
+A description is the only thing an agent reads before it picks a skill, so description changes are measured, not judged by eye. `scripts/skills/routing.json` labels the skill (or `none`) for each of about fifty ledger requests, with the siblings each could be confused with; `ci-check.py` keeps its labels in step with the skill directories. Whenever a description changes or a skill is added, run `python3 scripts/skills/run-routing.py` on Claude Code and Codex before and after the change (results land in `scripts/skills/tmp/routing/`; Codex varies between runs, so run each side twice). Record both in [docs/skills/routing-rehearsal.md](../docs/skills/routing-rehearsal.md), and fix any prompt that routed correctly before and misroutes after before shipping. The runner makes paid client calls, so CI never runs it.
 
 ### Scratch space
 
-`skills/tmp/` is gitignored. Drop ledgers, eval outputs, throwaway scripts there while iterating. Don't put scratch at the repo root or inside `.claude/`.
+`scripts/skills/tmp/` is gitignored. Drop ledgers, eval outputs, throwaway scripts there while iterating. Don't put scratch in `skills/`, at the repo root, or inside `.claude/`.
 
 ### Adding a new skill
 
 1. For a customer ledger workflow, create `beancount-<name>/SKILL.md` with `name` and `description` frontmatter. Put internal repository workflows in `../.agents/skills/` instead.
 2. Be explicit in `description` about both when to trigger AND when to skip — Claude tends to undertrigger, but false positives are equally bad.
 3. Build a few realistic test prompts in `evals/evals.json`, run them with and without the skill (via `skill-creator` workflow), iterate.
-4. Add the skill's positive prompts and near-miss prompts to `evals/routing.json`, relabel any `none` prompt it now owns, and run the [routing check](#routing-check).
+4. Add the skill's positive prompts and near-miss prompts to `scripts/skills/routing.json`, relabel any `none` prompt it now owns, and run the [routing check](#routing-check).
 5. Update this AGENTS.md's Skills table and the customer catalog in README.md.
-6. `install` links the new directory automatically. Update the expected inventory in `scripts/test_beancount_skills.py`, plus the suite count in `docs/installation.md`, `README.md`, and the root `README.md`.
+6. `install` links the new directory automatically. Update the expected inventory in `scripts/skills/test_beancount_skills.py`, plus the suite count in `docs/skills/installation.md`, `README.md`, and the root `README.md`.

@@ -67,6 +67,11 @@ LIBMAGIC_REQUIRED = re.compile(
 )
 CUSTOMER_DOCS = REPO_ROOT / "docs" / "skills"
 ROUTING_ENTRY_KEYS = ("id", "prompt", "expected", "confusable", "why")
+SKILLS_TOP_FILES = {"README.md", "AGENTS.md"}
+SPARSE_SET = re.compile(r'git -C "\$SKILLS_SRC" sparse-checkout set (.+)')
+# A path a guide tells customers to use inside their checkout; stops at a
+# placeholder (`<name>`), a shell variable, quoting, or prose.
+CHECKOUT_PATH = re.compile(r"\$\{?SKILLS_SRC\}?/([\w./-]*)")
 
 
 def fail(msg: str) -> None:
@@ -91,11 +96,60 @@ def check_symlinks() -> None:
         fail(".claude/skills must be a relative symlink to ../.agents/skills")
 
 
+def repo_files(*paths: str) -> list[str]:
+    """Repository-relative files under PATHS that git tracks or would add (ignored ones excluded)."""
+    out = subprocess.run(
+        ["git", "-C", str(REPO_ROOT), "ls-files", "-z", "--cached", "--others", "--exclude-standard", "--", *paths],
+        capture_output=True, text=True, check=True,
+    ).stdout
+    return [path for path in out.split("\0") if path]
+
+
+def check_layout() -> None:
+    """`skills/` holds skill folders plus README.md and AGENTS.md (w2/m42)."""
+    if (SKILLS_ROOT / ".claude").exists():
+        fail("skills/ must not hold a .claude/ folder; each customer skill lives at skills/<name>/SKILL.md")
+    for rel in repo_files("skills"):
+        parts = Path(rel).parts
+        if len(parts) == 2 and parts[1] not in SKILLS_TOP_FILES:
+            fail(f"{rel}: only README.md and AGENTS.md sit directly in skills/; guides belong in docs/skills/, tooling in scripts/skills/")
+        if len(parts) > 2 and not (SKILLS_ROOT / parts[1] / "SKILL.md").is_file():
+            fail(f"skills/{parts[1]}/ has no SKILL.md; only skill folders belong in skills/")
+    # git cannot track an empty folder, but `install` would still link one.
+    for folder in sorted(SKILLS_ROOT.glob("beancount-*/")):
+        if not (folder / "SKILL.md").is_file():
+            fail(f"skills/{folder.name}/ has no SKILL.md")
+    print("OK layout skills/")
+
+
+def check_checkout_paths() -> None:
+    """Every `$SKILLS_SRC/<path>` a guide gives customers exists in their sparse checkout."""
+    install_doc = CUSTOMER_DOCS / "installation.md"
+    sparse = SPARSE_SET.search(install_doc.read_text(encoding="utf-8"))
+    if sparse is None:
+        fail(f"{install_doc.relative_to(REPO_ROOT)}: no `sparse-checkout set` command to check guide paths against")
+    fetched = sparse.group(1).split()
+    files = repo_files(*fetched)
+    present = {*files, *(str(parent) for path in files for parent in Path(path).parents)}
+    guides = [*sorted(CUSTOMER_DOCS.glob("*.md")), SKILLS_ROOT / "README.md", SKILLS_ROOT / "AGENTS.md"]
+    for guide in guides:
+        rel = guide.relative_to(REPO_ROOT)
+        for number, line in enumerate(guide.read_text(encoding="utf-8").splitlines(), 1):
+            for match in CHECKOUT_PATH.finditer(line):
+                path = match.group(1).rstrip("./")
+                if path and path not in present:
+                    fail(
+                        f"{rel}:{number}: $SKILLS_SRC/{path} is not in the customer's checkout "
+                        f"(it fetches: {' '.join(fetched)})"
+                    )
+    print("OK checkout paths in customer guides")
+
+
 def skill_files(pattern: str) -> list[Path]:
     """PATTERN inside each customer skill folder and each development skill.
 
-    The customer suite shares `skills/` with its guide files, so only its
-    `beancount-*` folders count as skill content here."""
+    `skills/` also holds README.md and AGENTS.md, so only its `beancount-*`
+    folders count as skill content here."""
     customer = SKILLS_DIR.glob(f"beancount-*/{pattern.removeprefix('*/')}")
     return sorted([*customer, *DEV_SKILLS_DIR.glob(pattern)])
 
@@ -448,6 +502,8 @@ def check_no_redundant_installs() -> None:
 
 def main() -> None:
     check_symlinks()
+    check_layout()
+    check_checkout_paths()
     check_skill_md()
     check_evals()
     check_routing()
