@@ -1195,7 +1195,9 @@ writable `--into` file.
 Payees, narrations, lot labels, string metadata, and the string fields of
 `note`, `event`, and `custom` are written on one line: runs of CR/LF line breaks become spaces
 in single adds, bulk JSON, and imports, so a pasted multi-line value can never
-write a directive that breaks the file. Every other control character —
+write a directive that breaks the file. A sale's lot label is the exception:
+it selects an existing lot, so it is matched — and written — exactly as
+typed. Every other control character —
 `ESC`, the rest of the C0 range including tab, `DEL`, and C1 — is replaced by
 a visible `\xNN` rather than passed through, so text from an untrusted source
 such as an imported bank export cannot drive your terminal. The Unicode

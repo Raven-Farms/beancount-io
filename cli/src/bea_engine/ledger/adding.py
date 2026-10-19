@@ -984,6 +984,10 @@ def _transaction(
     if elided == 1 and _inferred_leg_is_zero(normalized):
         raise protocol.UsageError(f"{_ZERO_NET_INFERRED} Nothing was written.")
     entry = entry._replace(postings=normalized, meta=write.metadata_for_write(entry.meta))
+    # The answer below is built from this entry, so it is normalized first:
+    # reporting the raw label while the file holds the escaped one cannot be
+    # fed back (w5/733). Rendering normalizes again, harmlessly.
+    entry = writer.normalize_entry_strings(entry)
     rendered = writer.format_entry(entry)
     totals = [(posting.meta or {}).get(writer.TOTAL_PRICE_META) for posting in entry.postings]
     # The `@@` stash served the render; the JSON answer must not carry it.

@@ -2592,7 +2592,20 @@ def _booking_message(error: Any, message: str) -> str:
     )
     cost = getattr(posting, "cost", None)
     requested = f"{units} {{{_cost_spec_text(cost, DisplayContext().build())}}}" if cost is not None else units
-    return f"No position matches {requested} in {account}; it holds {no_lot['held'].strip()}"
+    message = f"No position matches {requested} in {account}; it holds {no_lot['held'].strip()}"
+    label = getattr(cost, "label", None)
+    if isinstance(label, str):
+        from bea_engine.ledger.text import CONTROL_CHARACTERS, single_line
+
+        if CONTROL_CHARACTERS.search(label):
+            # The sought label prints the same escaped or raw — a tab reads as
+            # a tab either way — so the mismatch above cannot be seen. Name
+            # the characters and offer the way around them (w5/733).
+            message += (
+                f'; the label holds control characters (escaped: "{single_line(label)}"), '
+                "which look the same raw or escaped: select the lot by its cost or date instead."
+            )
+    return message
 
 
 def _plugin_message(message: str, ledger_file: Path | str | None, source: Any) -> str | None:

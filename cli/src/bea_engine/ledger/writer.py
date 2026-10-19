@@ -238,8 +238,18 @@ def normalize_entry_strings(entry: Any) -> Any:
     def posting_strings(posting: Posting) -> Posting:
         # A lot label sits right before `@ price`, where a bidi override would
         # reorder how the rest of the row reads; it was written raw (w5/542).
+        # A reduction's label is the exception: it selects an existing lot,
+        # so escaping it would select nothing — it is matched, and written,
+        # exactly as typed (w5/733).
         cost: Any = posting.cost
-        if isinstance(getattr(cost, "label", None), str):
+        units: Any = posting.units
+        reduction = (
+            units is not None
+            and units is not MISSING
+            and getattr(units, "number", MISSING) is not MISSING
+            and units.number < 0
+        )
+        if not reduction and isinstance(getattr(cost, "label", None), str):
             posting = posting._replace(cost=cost._replace(label=single_line(cost.label)))
         return posting._replace(meta=metadata(posting.meta))
 
