@@ -919,6 +919,10 @@ def _helper_env(source_root: Path | None = None) -> dict[str, str] | None:
     inherited = os.environ.get("PYTHONPATH", "")
     search_path = os.pathsep.join([str(root), inherited]) if inherited else str(root)
     env = {**os.environ, "PYTHONPATH": search_path, "PYTHONDONTWRITEBYTECODE": "1"}
+    # Helper output is UTF-8 whatever the parent exports: under utf-16 the
+    # engine probe read gibberish and called a healthy engine damaged
+    # (w5/724), as upstream output already is (w5/404).
+    env["PYTHONIOENCODING"] = "utf-8"
     current = context.current()
     if current.offline:
         env["MANAGED_PRICE_OFFLINE"] = "1"

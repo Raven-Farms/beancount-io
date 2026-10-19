@@ -31,6 +31,7 @@ _TIER_LABELS = {
 @engine_app.command("status")
 def engine_status() -> None:
     """Show which engine serves local commands, whether it is provisioned, and optional features."""
+    output.utf8_stdout()
     source = launch.resolve_engine()
     status = {
         **provision.feature_status(),

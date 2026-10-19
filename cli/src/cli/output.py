@@ -129,8 +129,35 @@ def engine_output(text: str) -> None:
         note(text)
 
 
+def _use_utf8_for_errors() -> None:
+    """Report errors in UTF-8 when the inherited `PYTHONIOENCODING` is not UTF-8.
+
+    Under `utf-16` the frontend's own `Error: …` printed spaced-out and a
+    `--json` envelope came out undecodable (w5/724). Locale-derived
+    encodings are left alone; only an explicitly inherited non-UTF-8 codec
+    is ignored, since bea's error contract is UTF-8.
+    """
+    stream = sys.stderr
+    if stream is None:
+        return
+    try:
+        inherited = codecs.lookup(os.environ.get("PYTHONIOENCODING", "").split(":")[0]).name
+        current = codecs.lookup(stream.encoding).name
+    except (AttributeError, LookupError, TypeError):
+        return
+    if inherited == "utf-8" or current == "utf-8":
+        return
+    reconfigure = getattr(stream, "reconfigure", None)
+    if reconfigure is not None:
+        try:
+            reconfigure(encoding="utf-8")
+        except (OSError, ValueError):
+            pass
+
+
 def error(exc: BaseException | str) -> NoReturn:
     """Fail with a documented category and exit code, rendered for the active mode."""
+    _use_utf8_for_errors()
     err = to_bea_error(exc)
     exit_code = err.exit_code
     trace = None
@@ -199,6 +226,7 @@ def failure(exc: BaseException | str) -> None:
     take the conversation with it. Text only, because the surfaces that recover
     this way have no JSON mode.
     """
+    _use_utf8_for_errors()
     err = to_bea_error(exc)
     trace = None
     if context.current().debug and isinstance(exc, BaseException):
