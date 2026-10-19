@@ -58,7 +58,8 @@
       "prompt": "Wrap up the books for last month and commit the result.",
       "expected": "beancount-close",
       "confusable": [
-        "beancount-reconcile"
+        "beancount-reconcile",
+        "beancount-add"
       ],
       "why": "Closing a period and committing it."
     },
@@ -95,7 +96,8 @@
       "prompt": "Record the transactions from my Amex export ./amex.csv",
       "expected": "beancount-import",
       "confusable": [
-        "beancount-reconcile"
+        "beancount-reconcile",
+        "beancount-add"
       ],
       "why": "Card export import."
     },
@@ -210,7 +212,9 @@
       "id": "options-sell-csp",
       "prompt": "I sold a cash-secured put on AAPL, 150 strike expiring June 20, for 1.50. Record it.",
       "expected": "beancount-options",
-      "confusable": [],
+      "confusable": [
+        "beancount-add"
+      ],
       "why": "An options trade to record."
     },
     {
@@ -262,7 +266,8 @@
       "prompt": "Here is my June checking statement. Add whatever transactions are missing and assert the ending balance. ./june.csv",
       "expected": "beancount-reconcile",
       "confusable": [
-        "beancount-import"
+        "beancount-import",
+        "beancount-add"
       ],
       "why": "Missing entries plus a balance assertion is reconcile, not a bulk import."
     },
@@ -276,22 +281,22 @@
       "why": "One account, not the whole close."
     },
     {
-      "id": "none-close-amex-account",
+      "id": "add-close-amex-account",
       "prompt": "Close my old Amex card account in the ledger. I cancelled the card.",
-      "expected": "none",
+      "expected": "beancount-add",
       "confusable": [
         "beancount-close"
       ],
       "why": "Closing one account is a `close` directive, not a period close."
     },
     {
-      "id": "none-mark-account-closed",
+      "id": "add-mark-account-closed",
       "prompt": "Mark Assets:Bank:OldSavings as closed as of today.",
-      "expected": "none",
+      "expected": "beancount-add",
       "confusable": [
         "beancount-close"
       ],
-      "why": "A `close` directive."
+      "why": "A `close` directive, not a period close."
     },
     {
       "id": "none-operating-currency-option",
@@ -368,28 +373,28 @@
       "why": "General Beancount documentation."
     },
     {
-      "id": "none-dinner-on-amex",
+      "id": "add-dinner-on-amex",
       "prompt": "I paid $42 for dinner on the Amex tonight. Add it to my ledger.",
-      "expected": "none",
+      "expected": "beancount-add",
       "confusable": [
         "beancount-import",
         "beancount-options"
       ],
-      "why": "One manual entry; no export, statement, or options trade."
+      "why": "One manual purchase."
     },
     {
-      "id": "none-rent-transaction",
+      "id": "add-rent-transaction",
       "prompt": "Add a transaction: $1,200 rent paid from checking on the 1st.",
-      "expected": "none",
+      "expected": "beancount-add",
       "confusable": [
         "beancount-import"
       ],
-      "why": "One manual entry."
+      "why": "One manual bill payment."
     },
     {
-      "id": "none-open-savings-account",
+      "id": "add-open-savings-account",
       "prompt": "Open a new account Assets:Bank:HighYieldSavings in my ledger.",
-      "expected": "none",
+      "expected": "beancount-add",
       "confusable": [
         "beancount-init"
       ],
@@ -401,7 +406,8 @@
       "expected": "none",
       "confusable": [
         "beancount-import",
-        "beancount-reconcile"
+        "beancount-reconcile",
+        "beancount-add"
       ],
       "why": "Editing an existing entry; every skill appends only."
     },
@@ -429,6 +435,53 @@
       "expected": "none",
       "confusable": [
         "beancount-reconcile"
+      ],
+      "why": "A hosted ledger."
+    },
+    {
+      "id": "add-transfer-to-savings",
+      "prompt": "Record a $250 transfer from checking to savings today.",
+      "expected": "beancount-add",
+      "confusable": [
+        "beancount-import",
+        "beancount-reconcile"
+      ],
+      "why": "A transfer between the user's own accounts, entered by hand."
+    },
+    {
+      "id": "add-split-receipt",
+      "prompt": "Here's my receipt: Costco 2026-10-12, groceries 84.10, household 31.55, paid with the Amex. Book it.",
+      "expected": "beancount-add",
+      "confusable": [
+        "beancount-import"
+      ],
+      "why": "A split purchase from pasted receipt text, not an export file."
+    },
+    {
+      "id": "add-price",
+      "prompt": "Add a price to my ledger: 1 VTI = 285.40 USD as of today.",
+      "expected": "beancount-add",
+      "confusable": [
+        "beancount-ask",
+        "beancount-options"
+      ],
+      "why": "A price directive."
+    },
+    {
+      "id": "add-paycheck",
+      "prompt": "I got paid $3,200 salary into checking on Friday. Record it.",
+      "expected": "beancount-add",
+      "confusable": [
+        "beancount-import"
+      ],
+      "why": "One income entry."
+    },
+    {
+      "id": "none-hosted-add-dinner",
+      "prompt": "Add a $42 dinner to my ledger on Beancount.io through the MCP connection.",
+      "expected": "none",
+      "confusable": [
+        "beancount-add"
       ],
       "why": "A hosted ledger."
     }

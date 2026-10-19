@@ -94,10 +94,11 @@ class Workspace(unittest.TestCase):
 
 
 class TestInstall(Workspace):
-    def test_inventory_is_the_eight_customer_skills(self):
+    def test_inventory_is_the_nine_customer_skills(self):
         self.assertEqual(
             skills.expected_skills(),
             [
+                "beancount-add",
                 "beancount-ask",
                 "beancount-close",
                 "beancount-import",
@@ -113,7 +114,7 @@ class TestInstall(Workspace):
         sentinel_before = self.sentinel.read_bytes()
         code, out, _ = run("install", self.dest)
         self.assertEqual(code, 0)
-        self.assertIn("OK 8 customer skills complete", out)
+        self.assertIn("OK 9 customer skills complete", out)
         entries = sorted(p.name for p in self.dest.iterdir())
         self.assertEqual(entries, sorted([*skills.expected_skills(), "find-skills"]))
         for name in skills.expected_skills():
@@ -127,8 +128,8 @@ class TestInstall(Workspace):
         code, out, _ = run("install", self.dest)
         self.assertEqual(code, 0)
         self.assertEqual(snapshot(self.dest), before)
-        self.assertEqual(out.count("kept   "), 8)
-        self.assertEqual(len(list(self.dest.glob("beancount-*"))), 8)
+        self.assertEqual(out.count("kept   "), 9)
+        self.assertEqual(len(list(self.dest.glob("beancount-*"))), 9)
 
     def test_conflicting_copies_block_install_without_changing_anything(self):
         self.dest.mkdir(parents=True, exist_ok=True)
@@ -198,7 +199,7 @@ class TestVerify(Workspace):
         before = state()
         code, out, err = run("verify", self.dest, copy)
         self.assertEqual((code, err), (0, ""))
-        self.assertEqual(out.count("OK 8 customer skills complete"), 2)
+        self.assertEqual(out.count("OK 9 customer skills complete"), 2)
         self.assertEqual(state(), before)
 
     def test_missing_reference_names_the_file_and_the_line_that_needs_it(self):
@@ -454,7 +455,7 @@ class TestGitUpdatePath(Workspace):
 
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("linked", result.stdout)
-        self.assertIn("OK 9 customer skills complete", result.stdout)
+        self.assertIn("OK 10 customer skills complete", result.stdout)
 
 
 def june_expenses(ledger: Path) -> dict[str, Decimal]:
