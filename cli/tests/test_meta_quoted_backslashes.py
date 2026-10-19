@@ -94,6 +94,25 @@ def test_an_unclosed_quoted_value_is_still_refused(book: Path) -> None:
     assert book.read_text() == LEDGER
 
 
+def test_a_quoted_value_followed_by_a_comment_is_refused(book: Path) -> None:
+    """A `; …` after the closing quote is named, not silently dropped (w5/727)."""
+    result = _add(book, r'receipt:"C:\Users\tian\new.pdf" ; scanned copy', r'memo:"lunch" ; split with Sam')
+
+    assert result.exit_code == 2, result.output
+    assert "the quoted string is closed but '; scanned copy' follows it" in result.output
+    assert book.read_text() == LEDGER
+
+
+def test_a_second_literal_after_the_quoted_value_is_named(book: Path) -> None:
+    result = _add(book, r'memo:"a" "b"')
+
+    assert result.exit_code == 2, result.output
+    assert json.loads(result.output)["error"]["message"].endswith(
+        "the quoted string is closed but '\"b\"' follows it. Remove the extra text, or store the value unquoted."
+    )
+    assert book.read_text() == LEDGER
+
+
 def test_add_commodity_keeps_a_quoted_path(book: Path) -> None:
     result = runner.invoke(
         app,

@@ -1222,6 +1222,21 @@ def _parse_metadata(items: list[str]) -> dict[str, Any]:
             parsed_raw = '"x"'
         entries, errors, _ = parse_exact(f'2000-01-01 * ""\n  {key}: {parsed_raw}\n')
         errors = without_root_name_errors(errors)
+        if raw.startswith('"') and not re.fullmatch(r'"((?:[^"\\]|\\.)*)"', raw):
+            # A quoted literal followed by more text: the parser reads `; …`
+            # as a comment and C-escapes the quotes' content, so keeping its
+            # value stores text nobody typed (w5/727).
+            match = re.match(r'"(?:[^"\\]|\\.)*"', raw)
+            if match is None:
+                raise protocol.UsageError(
+                    f"Invalid --meta {key!r}; close the quoted string or supply a bare value such as '{key}:hello'.",
+                    details=[str(error.message) for error in errors],
+                )
+            extra = raw[match.end() :].strip()
+            raise protocol.UsageError(
+                f"Invalid --meta {key!r}; the quoted string is closed but {extra!r} follows it. "
+                "Remove the extra text, or store the value unquoted.",
+            )
         if not errors and len(entries) == 1 and isinstance(entries[0], Transaction) and key in entries[0].meta:
             value = entries[0].meta[key]
             # Only the documented kinds keep the parser's reading. Unquoted
@@ -1237,12 +1252,7 @@ def _parse_metadata(items: list[str]) -> dict[str, Any]:
                 # other backslash (w5/232); only `\"` and `\\` are escapes.
                 metadata[key] = re.sub(r'\\(["\\])', r"\1", literal.group(1))
             else:
-                metadata[key] = value if raw.startswith('"') or _is_typed_literal(raw, value) else raw
-        elif raw.startswith('"'):
-            raise protocol.UsageError(
-                f"Invalid --meta {key!r}; close the quoted string or supply a bare value such as '{key}:hello'.",
-                details=[str(error.message) for error in errors],
-            )
+                metadata[key] = value if _is_typed_literal(raw, value) else raw
         elif errors and (key_errors := parser.parse_string(f'2000-01-01 * ""\n  {key}: "x"\n')[1]):
             # Judged on the key alone, with a value that cannot fail: testing
             # for `key:` inside the message blamed the key `name` for any
@@ -1250,6 +1260,13 @@ def _parse_metadata(items: list[str]) -> dict[str, Any]:
             raise protocol.UsageError(
                 f"Invalid --meta key {key!r}; Beancount rejected it ({key_errors[0].message}).",
                 details=[str(error.message) for error in key_errors],
+            )
+        elif raw.startswith('"'):
+            # A whole literal the parser still rejects, such as an escape it
+            # cannot read; every other quoted shape refused above (w5/727).
+            raise protocol.UsageError(
+                f"Invalid --meta {key!r}; close the quoted string or supply a bare value such as '{key}:hello'.",
+                details=[str(error.message) for error in errors],
             )
         elif re.fullmatch(_META_DATE, raw):
             # Beancount's date grammar: a slash or unpadded spelling of an
