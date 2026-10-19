@@ -121,22 +121,52 @@ describe("plaid-webhook-handler", () => {
     expect(ctx.body).toEqual({ received: true });
   });
 
-  it("should store failed event and still return 200 on invalid signature", async () => {
-    mockValidatePlaidWebhook.mockRejectedValue(
-      new UnauthenticatedError("Invalid signature"),
-    );
-    mockWebhookEventCreate.mockResolvedValue({ id: "whevt_failed" });
+  // An unsigned post used to be stored as a pending "unknown" event and
+  // answered 200, so anyone could queue rows ahead of real Plaid events
+  // (w0/052). It is now refused and nothing is stored.
+  it.each([
+    [
+      "a missing",
+      new UnauthenticatedError("Missing webhook verification header"),
+    ],
+    ["an invalid", new UnauthenticatedError("Invalid webhook signature")],
+    ["a malformed", new UnauthenticatedError("Invalid verification payload")],
+  ])(
+    "refuses %s signature with 401 and stores nothing",
+    async (_kind, error) => {
+      mockValidatePlaidWebhook.mockRejectedValue(error);
 
-    const ctx = createMockCtx({ webhook_type: "TRANSACTIONS" }, "bad-jwt");
+      const ctx = createMockCtx({ webhook_type: "TRANSACTIONS" }, "bad-jwt");
+
+      await invokeWebhookHandler(ctx);
+
+      expect(mockWebhookEventCreate).not.toHaveBeenCalled();
+      expect(ctx.status).toBe(401);
+      expect(ctx.body).toEqual({ received: false });
+    },
+  );
+
+  it("retries a verified event whose first insert fails", async () => {
+    mockValidatePlaidWebhook.mockResolvedValue(undefined);
+    mockSafeParseWebhookEvent.mockReturnValue({
+      webhookType: "ITEM",
+      webhookCode: "ERROR",
+      itemId: "plaid-item-ext-id",
+    });
+    mockWebhookEventCreate
+      .mockRejectedValueOnce(new Error("connection reset"))
+      .mockResolvedValueOnce({ id: "whevt_2" });
+
+    const ctx = createMockCtx({ webhook_type: "ITEM" }, "jwt-token");
 
     await invokeWebhookHandler(ctx);
 
-    expect(mockWebhookEventCreate).toHaveBeenCalledWith(
+    expect(mockWebhookEventCreate).toHaveBeenCalledTimes(2);
+    expect(mockWebhookEventCreate).toHaveBeenLastCalledWith(
       mockPostgresDb,
-      expect.objectContaining({ webhookType: "unknown" }),
+      expect.objectContaining({ webhookType: "ITEM", webhookCode: "ERROR" }),
     );
     expect(ctx.status).toBe(200);
-    expect(ctx.body).toEqual({ received: true });
   });
 
   it("should store failed event and return 200 on parse error", async () => {
