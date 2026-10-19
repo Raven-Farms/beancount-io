@@ -77,7 +77,7 @@ describe("well-known routes", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toMatch(/^text\/plain/);
-    expect(body).toContain("Contact: mailto:hello@beancount.io");
+    expect(body).toContain("Contact: mailto:security@beancount.io");
     expect(body).toContain(
       "Canonical: https://beancount.io/.well-known/security.txt",
     );

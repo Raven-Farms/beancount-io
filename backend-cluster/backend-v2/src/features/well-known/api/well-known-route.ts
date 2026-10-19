@@ -16,7 +16,7 @@ export const OPENAI_APPS_CHALLENGE_TOKEN =
   "0HlDMC8M4gFl6ZswOTS-La1Hr8vlT7wrf_W-e1v5wmY"; // gitleaks:allow
 const BEANCOUNT_IO_ORIGIN = "https://beancount.io";
 
-const SECURITY_TXT = `Contact: mailto:hello@beancount.io
+const SECURITY_TXT = `Contact: mailto:security@beancount.io
 Contact: https://beancount.io/security#report-a-vulnerability
 Expires: 2027-08-01T00:00:00.000Z
 Preferred-Languages: en
