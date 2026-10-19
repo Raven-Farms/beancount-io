@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [734 — In bea ask, Ctrl-C right after Enter can end the session with exit 130](./734.md)
 - [735 — A refused JSON float's hint quotes repr(float), not the number typed; following it can unbalance a transaction](./735.md)
 - [736 — add transactions --from ./- and format ./- read stdin instead of the file named -](./736.md)
 - [737 — --from /dev/stdin waits on the terminal under --json/--no-input (gap in w5/210)](./737.md)
