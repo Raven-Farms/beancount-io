@@ -2405,10 +2405,9 @@ def validate_candidate(
                     f"Repeat the root's options at the top of {source.name}: {'; '.join(renamed)}."
                 )
         if "AVERAGE method is not supported" in message:
-            message += (
-                '. Beancount cannot reduce a position in an account opened with "AVERAGE" booking;'
-                " edit that account's open directive to use FIFO, LIFO, HIFO, STRICT or NONE."
-            )
+            if lifecycles is None:
+                lifecycles = _lifecycles(entries, original_lines)
+            message += _average_booking_suffix(error, options, lifecycles)
         if "inactive account '" in message:
             account = message.split("inactive account '", 1)[1].split("'", 1)[0]
             if lifecycles is None:
@@ -2723,6 +2722,7 @@ def validate_candidate(
             records=[records[index] for index in blocking],
             ledger_errors=_collapse_repeats(tolerated_records),
         )
+    messages = [*messages, *_average_inheritance_warnings(entries, options, filenames, original_lines)]
     return messages
 
 
@@ -2895,6 +2895,71 @@ def _drained_close_hint(balance: Any, closing: Any, message: str, options: dict[
         f"account {holding} then. Move that balance out of {balance.account} with a transaction dated on or "
         f"before {closing.date}, then close it."
     )
+
+
+def _average_booking_suffix(error: Any, options: Any, lifecycles: dict[str, list[Any]]) -> str:
+    """The remedy for a reduction Beancount's unimplemented AVERAGE booking refused.
+
+    An account opened with an explicit `AVERAGE` booking is told to change
+    it; one inheriting it from `option "booking_method"` is told where it
+    comes from, since its open has no booking keyword to edit (w5/764). The
+    failing account is the reduction's: the first posting that names a cost
+    lot, else the first bare reduction.
+    """
+    from beancount.core.data import Booking, Open, Transaction
+
+    explicit = (
+        '. Beancount cannot reduce a position in an account opened with "AVERAGE" booking;'
+        " edit that account's open directive to use FIFO, LIFO, HIFO, STRICT or NONE."
+    )
+    entry = getattr(error, "entry", None)
+    postings = list(entry.postings) if isinstance(entry, Transaction) else []
+
+    def reduces(posting: Any) -> bool:
+        # An interpolated leg holds MISSING, not an amount.
+        number = getattr(posting.units, "number", None)
+        return number is not None and number < 0
+
+    candidates = [posting for posting in postings if reduces(posting) and posting.cost is not None]
+    candidates = candidates or [posting for posting in postings if reduces(posting)]
+    for posting in candidates:
+        opened = next((e for e in lifecycles.get(posting.account, []) if isinstance(e, Open)), None)
+        if opened is not None and opened.booking is None and options.get("booking_method") == Booking.AVERAGE:
+            return (
+                f'. Beancount cannot reduce a position in {posting.account}, which inherits "AVERAGE" '
+                'booking from option "booking_method"; add an explicit booking '
+                "(FIFO, LIFO, HIFO, STRICT or NONE) to that account's open directive, or change the option."
+            )
+    return explicit
+
+
+def _average_inheritance_warnings(
+    entries: list[Any], options: Any, filenames: dict[Path, Path], original_lines: dict[Path, list[bytes]]
+) -> list[str]:
+    """Warn for each staged open that inherits an unusable AVERAGE booking (w5/764).
+
+    An explicit `--booking AVERAGE` is refused up front; an open that merely
+    inherits the option's AVERAGE may never hold lots, so it warns instead.
+    """
+    from beancount.core.data import Booking, Open
+
+    if options.get("booking_method") != Booking.AVERAGE:
+        return []
+    inherited: list[str] = []
+    for entry in entries:
+        if (
+            isinstance(entry, Open)
+            and entry.booking is None
+            and _proposed_entry(entry, filenames, original_lines)
+            and entry.account not in inherited
+        ):
+            inherited.append(entry.account)
+    return [
+        f'{account} inherits booking method AVERAGE from option "booking_method"; Beancount cannot '
+        "reduce a position booked that way, so add an explicit booking (FIFO, LIFO, HIFO, STRICT or "
+        "NONE) to its open if it will ever hold lots."
+        for account in inherited
+    ]
 
 
 def _proposed_entry(entry: Any, filenames: dict[Path, Path], original_lines: dict[Path, list[bytes]]) -> bool:
