@@ -6,6 +6,8 @@ import {
   getOAuthPublicUrl,
   parseCookieDomain,
   parseCorsAllowedOrigins,
+  parseSignupAllowedDomains,
+  parseSignupAllowedEmails,
 } from "./config";
 
 describe("config", () => {
@@ -293,6 +295,50 @@ describe("config", () => {
         "https://example.com:99999x",
       ]) {
         expect(() => parseCorsAllowedOrigins(bad)).toThrow(/not a bare origin/);
+      }
+    });
+  });
+
+  describe("parseSignupAllowedEmails / parseSignupAllowedDomains", () => {
+    it("are empty when unset (open signup)", () => {
+      expect(parseSignupAllowedEmails(undefined).size).toBe(0);
+      expect(parseSignupAllowedDomains(" ").size).toBe(0);
+      expect(config.signup.allowedEmails.size).toBe(0);
+      expect(config.signup.allowedDomains.size).toBe(0);
+    });
+
+    it("lowercase and trim entries", () => {
+      expect([
+        ...parseSignupAllowedEmails(" CPA@Firm.Example , a@b.co"),
+      ]).toEqual(["cpa@firm.example", "a@b.co"]);
+      expect([...parseSignupAllowedDomains("Example.com, b.co")]).toEqual([
+        "example.com",
+        "b.co",
+      ]);
+    });
+
+    it("reject malformed entries at boot", () => {
+      for (const bad of [
+        "not-an-email",
+        "@example.com",
+        "a@",
+        "a b@example.com",
+        "a@localhost",
+      ]) {
+        expect(() => parseSignupAllowedEmails(bad)).toThrow(
+          /SIGNUP_ALLOWED_EMAILS/,
+        );
+      }
+      for (const bad of [
+        "@example.com",
+        "*.example.com",
+        "example",
+        "https://example.com",
+        "a@example.com",
+      ]) {
+        expect(() => parseSignupAllowedDomains(bad)).toThrow(
+          /SIGNUP_ALLOWED_DOMAINS/,
+        );
       }
     });
   });

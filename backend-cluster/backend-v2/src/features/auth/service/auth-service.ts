@@ -28,6 +28,7 @@ import { checkRateLimit } from "@/shared/rate-limiter";
 import { incrementInWindow } from "@/foundation/redis/redis-counter";
 import { CACHE_KEYS } from "@/shared/cache";
 import { secureStringEqual } from "@/features/auth/utils/secure-string-equal";
+import { isSignupAllowed } from "@/features/auth/utils/signup-policy";
 import bcrypt from "bcryptjs";
 import {
   renderWelcomeHtml,
@@ -155,13 +156,26 @@ export class AuthService implements IAuthService {
     private readonly sendgrid: ISendGrid,
     private readonly stripe: IStripeService,
     private readonly favaClientFactory: IFavaClientFactory,
-    private readonly config: Pick<AppConfig, "favaApi" | "dashboard" | "gitea">,
+    private readonly config: Pick<
+      AppConfig,
+      "favaApi" | "dashboard" | "gitea" | "signup"
+    >,
   ) {}
+
+  // SIGNUP_ALLOWED_EMAILS / SIGNUP_ALLOWED_DOMAINS (see signup-policy.ts).
+  private assertSignupAllowed(email: string): void {
+    if (!isSignupAllowed(email, this.config.signup)) {
+      throw new ForbiddenError(
+        "Sign-up on this server is limited to approved email addresses",
+      );
+    }
+  }
 
   public registerUser = async (
     params: RegisterUserParams,
   ): Promise<AuthResponse> => {
     const { email, password, firstName, lastName, username } = params;
+    this.assertSignupAllowed(email);
     const locale = "en";
     if (username) assertValidUsername(username);
     const ledger_username =
@@ -453,6 +467,8 @@ export class AuthService implements IAuthService {
     if (!z.email().safeParse(normalizedEmail).success) {
       throw new BadUserInputError("Email is invalid");
     }
+
+    this.assertSignupAllowed(normalizedEmail);
 
     // Rate limit: 5 signup requests per hour per email
     checkRateLimit(`signup:${normalizedEmail}`, {
