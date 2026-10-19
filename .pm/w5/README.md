@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [754 — Editing the previewed CSV drops its sign=ledger on a flag-free --apply, flipping every amount](./754.md)
 - [755 — A DEBIT/CREDIT Type column cannot be mapped and is ignored, booking debits as money in](./755.md)
 - [756 — The csv:sha256 import-id hashes a tab as \X09, not collapsed whitespace](./756.md)
 - [757 — £ and ₩ are treated as GBP/KRW only; GIP, FKP, SHP, EGP and KPW exports are refused](./757.md)
