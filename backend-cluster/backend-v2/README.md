@@ -81,6 +81,28 @@ DASHBOARD_URL=http://localhost:5173
 # AUTH_JWT_EXP_MINUTES=5
 ```
 
+### Self-hosting on your own domain
+
+Managed beancount.io shares the session cookie across `*.beancount.io` and
+allows CORS from those hosts. A self-host on another domain sets:
+
+- `AUTH_COOKIE_DOMAIN`: the session cookie's Domain attribute. Unset keeps
+  `.beancount.io` in production (host-only elsewhere), which browsers reject on
+  any other domain. Two layouts work:
+  - The dashboard's host also serves `/api-gateway/` (reverse proxy to the
+    backend) and the dashboard is built with
+    `VITE_API_URL=https://<dashboard host>/api-gateway/`. Use `host-only`; no
+    CORS entry is needed.
+  - The dashboard calls a separate API host. Use the shared parent domain, e.g.
+    `.example.com`, and list the dashboard in `CORS_ALLOWED_ORIGINS`.
+
+  Values other than `host-only` must be a bare domain; anything else fails at
+  startup.
+- `CORS_ALLOWED_ORIGINS`: comma-separated exact origins
+  (`scheme://host[:port]`) allowed to call the API with credentials, on top of
+  beancount.io and localhost. Paths, queries, credentials and wildcards are
+  rejected at startup.
+
 Production OAuth requires `OAUTH_JWKS`, a complete private P-256/ES256 signing
 JWKS provided by the deployment secret manager. It must never be committed or
 copied into `.env.example`. When it is absent or malformed, OAuth endpoints

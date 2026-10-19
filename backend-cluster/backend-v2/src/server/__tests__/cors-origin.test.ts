@@ -1,8 +1,7 @@
 import http from "node:http";
 import type { AddressInfo } from "node:net";
 import Koa from "koa";
-import cors from "@koa/cors";
-import { resolveCorsOrigin } from "../cors-origin";
+import { apiCorsMiddleware, resolveCorsOrigin } from "../cors-origin";
 
 const SELF_HOST = new Set(["https://books.example.com"]);
 
@@ -39,17 +38,14 @@ describe("resolveCorsOrigin", () => {
   });
 });
 
-describe("CORS middleware with resolveCorsOrigin", () => {
+describe("apiCorsMiddleware (as mounted by start-server)", () => {
   let server: http.Server;
   let base: string;
 
   beforeAll(async () => {
     const app = new Koa();
     app.use(
-      cors({
-        origin: (ctx) => resolveCorsOrigin(ctx.get("Origin"), SELF_HOST),
-        credentials: true,
-      }),
+      apiCorsMiddleware({ server: { corsAllowedOrigins: SELF_HOST } } as never),
     );
     app.use((ctx) => {
       ctx.body = { ok: true };
@@ -90,5 +86,31 @@ describe("CORS middleware with resolveCorsOrigin", () => {
   ])("sends no allow-origin header for %j", async (origin) => {
     const res = await preflight(origin);
     expect(res.headers.get("access-control-allow-origin")).toBeNull();
+  });
+});
+
+describe("apiCorsMiddleware with CORS_ALLOWED_ORIGINS unset", () => {
+  it("refuses a self-host origin but still allows beancount.io", async () => {
+    const app = new Koa();
+    app.use(
+      apiCorsMiddleware({ server: { corsAllowedOrigins: new Set() } } as never),
+    );
+    app.use((ctx) => {
+      ctx.body = "ok";
+    });
+    const server = http.createServer(app.callback());
+    await new Promise<void>((resolve) =>
+      server.listen(0, "127.0.0.1", resolve),
+    );
+    const { port } = server.address() as AddressInfo;
+    const get = (origin: string) =>
+      fetch(`http://127.0.0.1:${port}/`, { headers: { Origin: origin } });
+    const selfHost = await get("https://books.example.com");
+    const managed = await get("https://beancount.io");
+    await new Promise((resolve) => server.close(resolve));
+    expect(selfHost.headers.get("access-control-allow-origin")).toBeNull();
+    expect(managed.headers.get("access-control-allow-origin")).toBe(
+      "https://beancount.io",
+    );
   });
 });

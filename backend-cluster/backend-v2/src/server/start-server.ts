@@ -7,8 +7,7 @@ import Router from "@koa/router";
 import http from "http";
 
 import cookie from "koa-cookie";
-import cors from "@koa/cors";
-import { resolveCorsOrigin } from "./cors-origin";
+import { apiCorsMiddleware } from "./cors-origin";
 import { restMetricsMiddleware } from "@/metrics/koa-middleware";
 import { logger } from "@/shared/logger";
 import { asyncContextMiddleware } from "./middleware/async-context-middleware";
@@ -68,13 +67,7 @@ export async function startServer(): Promise<void> {
   app.use(cookie());
 
   // Credentialed CORS for cookie-based auth; policy in ./cors-origin.ts
-  app.use(
-    cors({
-      origin: (ctx) =>
-        resolveCorsOrigin(ctx.get("Origin"), config.server.corsAllowedOrigins),
-      credentials: true,
-    }),
-  );
+  app.use(apiCorsMiddleware(config));
 
   // Add metrics middleware for REST API
   app.use(restMetricsMiddleware());

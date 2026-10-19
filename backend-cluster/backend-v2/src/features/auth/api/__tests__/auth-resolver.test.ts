@@ -491,3 +491,49 @@ describe("AuthResolver", () => {
     });
   });
 });
+
+describe("AuthResolver session cookie Domain (AUTH_COOKIE_DOMAIN)", () => {
+  it.each([
+    ["unset", undefined, ".beancount.io"],
+    ["host-only", null, undefined],
+    ["explicit", ".example.com", ".example.com"],
+  ] as const)(
+    "production, %s: signIn sets and logout clears with the same Domain",
+    async (_label, cookieDomain, expected) => {
+      const set = jest.fn();
+      const ctx = {
+        token: "old-token",
+        config: { env: "production", jwt: { cookieDomain } },
+        koaCtx: {
+          cookies: { set, get: jest.fn() },
+          URL: new URL("https://books.example.com"),
+        },
+        getCurrentUserId: jest.fn().mockReturnValue("user-123"),
+      } as unknown as IContext;
+      const authService = {
+        logout: jest.fn(),
+      } as unknown as jest.Mocked<IAuthService>;
+      const workflow = {
+        loginUser: jest.fn().mockResolvedValue({
+          token: "t",
+          expireAt: new Date(Date.now() + 60_000),
+        }),
+        signInWithMagicLinkToken: jest.fn(),
+        verifySignUpOtp: jest.fn(),
+      } as unknown as jest.Mocked<IAuthSessionWorkflow>;
+      const resolver = new AuthResolver(authService, workflow);
+
+      await resolver.signIn(ctx, { email: "a@example.com", password: "pw" } as never);
+      await resolver.logout(ctx);
+
+      expect(set).toHaveBeenCalledTimes(2);
+      expect(set.mock.calls[0][2].domain).toBe(expected);
+      expect(set.mock.calls[1][1]).toBe("");
+      expect(set.mock.calls[1][2]).toEqual({
+        maxAge: 0,
+        path: "/",
+        ...(expected ? { domain: expected } : {}),
+      });
+    },
+  );
+});
