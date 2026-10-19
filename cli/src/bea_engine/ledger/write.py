@@ -1818,10 +1818,14 @@ class CandidateRejected(LedgerError):
         locations: list[tuple[Path, int | None]],
         records: list[_ErrorRecord],
         ledger_errors: list[str] | None = None,
+        preexisting_only: bool = False,
     ) -> None:
         super().__init__(message, details=details, ledger_errors=ledger_errors)
         self.locations = locations
         self._records = records
+        # True when the write adds nothing wrong and the books were already
+        # broken: no row is the cause, so `--partial` cannot help (w5/725).
+        self.preexisting_only = preexisting_only
 
     def details_at(self, positions: Iterable[int]) -> list[str]:
         """The detail lines for the errors at these positions in `locations` alone."""
@@ -2663,6 +2667,7 @@ def validate_candidate(
                     details=messages,
                     locations=locations,
                     records=records,
+                    preexisting_only=True,
                 )
         # An error on an appended line is the write's own; only books whose
         # every error sits elsewhere are worth a load of the version before.
@@ -2687,6 +2692,7 @@ def validate_candidate(
                     details=_collapse_repeats(plain),
                     locations=locations,
                     records=plain,
+                    preexisting_only=True,
                 )
         if not allow_errors:
             raise CandidateRejected(

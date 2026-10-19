@@ -1536,10 +1536,24 @@ def _transactions(
                 if recoverable:
                     noun = "row" if recoverable == 1 else "rows"
                     message = f"{message} Pass --partial to append the {recoverable} valid {noun}."
-            elif len(valid) > 1:
+            elif len(valid) > 1 and not _only_preexisting(batch_error):
                 message = f"{message} Pass --partial to append the rows that validate."
             raise protocol.LedgerError(
                 message, details=details, ledger_errors=list(batch_error.ledger_errors), result=result
+            ) from batch_error
+        if _only_preexisting(batch_error):
+            # The ledger refuses every write by itself; no row is the cause,
+            # so the failure is reported once, as the ledger's (w5/725).
+            rejected_rows.extend(index for index, _ in valid)
+            raise protocol.LedgerError(
+                str(batch_error),
+                details=[*rejected, *batch_error.details],
+                ledger_errors=list(batch_error.ledger_errors),
+                result={
+                    "written": 0,
+                    "written_rows": [],
+                    "rejected_rows": rejected_rows,
+                },
             ) from batch_error
         named = _named_rows(file, batch_texts, batch_error, allow_errors=allow_errors, into=into)
         if named is None:
@@ -1630,6 +1644,11 @@ def _same_day_purchases_first(valid: list[tuple[int, Any]]) -> list[tuple[int, A
     return ordered
 
 
+def _only_preexisting(batch_error: protocol.LedgerError) -> bool:
+    """Whether the refused batch adds nothing wrong: the books were already broken (w5/725)."""
+    return isinstance(batch_error, write.CandidateRejected) and batch_error.preexisting_only
+
+
 def _named_rows(
     file: Path, texts: list[str], batch_error: protocol.LedgerError, *, allow_errors: bool, into: Path | None
 ) -> dict[int, list[str]] | None:
@@ -1669,10 +1688,10 @@ def _refused_in_order(
     load per halving while bad rows are few (w5/537); the loads spent past
     the rows decided accumulate, and once they pass one round's worth —
     bisection then costs more per row than judging in order, k·log n past n
-    in aggregate — the rest are judged in order (w5/720). A ledger that
-    refuses any write by itself (an error it
-    already has, without --allow-errors) would bisect down to every row, so it
-    keeps one trial per row.
+    in aggregate — the rest are judged in order (w5/720). A batch that
+    adds nothing wrong to already-broken books never reaches the search
+    (w5/725); a batch that adds its own errors to them would bisect down
+    to every row, so it keeps one trial per row.
     """
     spent = 0
 

@@ -113,18 +113,49 @@ def test_several_refused_rows_are_each_found_in_order(tmp_path: Path, loads: lis
     assert len(loads) <= 3 * _halvings(200), len(loads)
 
 
-def test_a_ledger_refusing_every_write_keeps_one_trial_per_row(tmp_path: Path, loads: list[Path]) -> None:
-    """Without --allow-errors an error the ledger already has refuses each row; bisecting would cost more."""
+def test_a_ledger_refusing_every_write_reports_once_not_per_row(tmp_path: Path, loads: list[Path]) -> None:
+    """Without --allow-errors a batch that adds nothing wrong reports the ledger's failure once (w5/725).
+
+    w5/537 judged each row with its own trial; the rows that changed nothing
+    were still named with the pre-existing error. The combined total still
+    shows the batch's effect; no row is judged.
+    """
     ledger = tmp_path / "main.bean"
     ledger.write_text(LEDGER.replace("Checking 0 USD", "Checking 5 USD"))
     count = 12
+    loads.clear()
 
     error = _partial(ledger, _rows(count, {3}))
 
+    assert str(error).startswith("The ledger already has 1 error(s); nothing was written.")
+    assert [detail.startswith("Row ") for detail in error.details] == [False] * len(error.details)
+    assert any("accumulated -1 USD" in detail for detail in error.details)
+    assert error.result == {"written": 0, "written_rows": [], "rejected_rows": list(range(count))}
+    assert ledger.read_text().count(" * ") == 0
+    assert len(loads) <= 6, len(loads)
+
+
+def test_a_batch_with_its_own_errors_on_broken_books_judges_each_row(tmp_path: Path, loads: list[Path]) -> None:
+    """The per-row guard survives for errors the batch introduces (w5/537); bisecting would cost more.
+
+    The row with its own error keeps its own words. The other rows repeat
+    the ledger's error although they cause nothing: attributing a combined
+    failure per row is beyond w5/725, which covers the batch that adds
+    nothing wrong.
+    """
+    ledger = tmp_path / "main.bean"
+    ledger.write_text(LEDGER.replace("Checking 0 USD", "Checking 5 USD"))
+    count = 12
+    rows = _rows(count, set())
+    rows[3]["postings"][0]["account"] = "Expenses:Nope"
+    loads.clear()
+
+    error = _partial(ledger, rows)
+
     assert str(error) == f"Added 0 of {count} transactions; {count} rows were rejected."
     assert [detail.split(":", 1)[0] for detail in error.details] == [f"Row {n + 1}" for n in range(count)]
-    # Each row keeps the words of its own trial: only the checking row changes the total.
-    assert ["accumulated -1 USD" in detail for detail in error.details] == [n == 3 for n in range(count)]
+    assert "Expenses:Nope" in error.details[3]
+    assert error.result == {"written": 0, "written_rows": [], "rejected_rows": list(range(count))}
     assert ledger.read_text().count(" * ") == 0
     # Two loads per refused trial; bisecting each row would cost several times that.
     assert len(loads) <= 2 * count + _halvings(count), len(loads)
