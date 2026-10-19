@@ -8,8 +8,6 @@ import {
 import { incrementInWindow } from "@/foundation/redis/redis-counter";
 
 jest.mock("@/foundation/redis/redis-counter", () => ({
-  peekCount: jest.fn(async () => ({ count: 0, resetInMs: 0 })),
-  resetCount: jest.fn(async () => undefined),
   incrementInWindow: jest.fn(),
 }));
 

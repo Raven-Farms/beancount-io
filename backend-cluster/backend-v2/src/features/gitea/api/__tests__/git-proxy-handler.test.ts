@@ -1,3 +1,7 @@
+import {
+  fakeRedisCounter as mockFakeRedisCounter,
+  fakeRedisCounterState,
+} from "@/foundation/redis/__tests__/fake-redis-counter";
 import Router from "@koa/router";
 import { Readable } from "node:stream";
 import type { AppLayers } from "@/foundation/composition";
@@ -20,25 +24,12 @@ jest.mock("@/shared/logger", () => ({
 const mockFetch = jest.fn();
 jest.mock("node-fetch", () => mockFetch);
 
-// The per-account wrong-password budget lives in Redis (w0/m7); an in-memory
-// stand-in with the same fixed-window semantics.
-const mockCounters = new Map<string, number>();
-jest.mock("@/foundation/redis/redis-counter", () => ({
-  incrementInWindow: jest.fn(async (key: string) => {
-    const count = (mockCounters.get(key) ?? 0) + 1;
-    mockCounters.set(key, count);
-    return { count, resetInMs: 60_000 };
-  }),
-  peekCount: jest.fn(async (key: string) => ({
-    count: mockCounters.get(key) ?? 0,
-    resetInMs: 60_000,
-  })),
-  resetCount: jest.fn(async (key: string) => {
-    mockCounters.delete(key);
-  }),
-}));
+// The per-account wrong-password budget lives in Redis (w0/m7).
+jest.mock("@/foundation/redis/redis-counter", () => mockFakeRedisCounter);
 
 // Import after mocking
+import { AuthService } from "@/features/auth/service/auth-service";
+
 import {
   buildRejectionReport,
   disallowedRefs,
@@ -104,6 +95,15 @@ describe("setGitProxyHandler", () => {
       services: { stripe: {} } as any,
       clients: { cacheHelper: {} } as any,
     };
+    // Git email + password sign-in is AuthService's, over the models above.
+    (mockServices.services as any).auth = new AuthService(
+      mockServices.database.models as any,
+      mockServices.database.db,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
 
     // Create mock config
     mockConfig = {
@@ -495,7 +495,7 @@ describe("setGitProxyHandler", () => {
       return c;
     };
 
-    beforeEach(() => mockCounters.clear());
+    beforeEach(() => fakeRedisCounterState.reset());
 
     it("refuses an unknown account's 11th wrong password, from any address", async () => {
       setGitProxyHandler(router, mockServices, mockConfig);

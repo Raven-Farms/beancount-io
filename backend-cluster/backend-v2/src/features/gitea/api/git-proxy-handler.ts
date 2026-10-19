@@ -17,11 +17,10 @@ import fetch from "node-fetch";
 import { logger } from "@/shared/logger";
 import { createRateLimiter } from "@/shared/rate-limiter";
 import {
-  assertPasswordAttemptAllowed,
-  clearPasswordFailures,
-  recordPasswordFailure,
-} from "@/features/auth/operations/password-failure-budget";
-import { CATEGORY_HTTP_STATUS, RateLimitedError } from "@/shared/errors";
+  BadUserInputError,
+  CATEGORY_HTTP_STATUS,
+  RateLimitedError,
+} from "@/shared/errors";
 
 const proxyLogger = logger.child({ module: "git-proxy" });
 
@@ -521,43 +520,23 @@ export function setGitProxyHandler(
       }
 
       if (username.includes("@")) {
-        // App email + password: look up user and translate to Gitea credentials.
-        // The same per-account budget as dashboard sign-in (w0/m7); a spent one
-        // is a 429 from the catch below, before the password is checked.
-        await assertPasswordAttemptAllowed(username);
-        const user = await layers.database.models.user.getByMail(
-          layers.database.db,
-          username,
-        );
-        if (!user) {
-          proxyLogger.warn("Git proxy auth failed: user not found", {
-            email: username,
-          });
-          await recordPasswordFailure(username);
+        // App email + password, verified the way dashboard sign-in verifies it
+        // and against the same per-account budget (w0/m7). A spent budget is a
+        // RateLimitedError, answered as a 429 by the catch below.
+        let user;
+        try {
+          user = await layers.services.auth.verifyPasswordCredentials(
+            username,
+            password,
+          );
+        } catch (error) {
+          if (!(error instanceof BadUserInputError)) throw error;
+          proxyLogger.warn("Git proxy auth failed", { email: username });
           ctx.status = 401;
           ctx.set("WWW-Authenticate", 'Basic realm="Git"');
           ctx.body = "Invalid credentials";
           return;
         }
-
-        const passwordValid = await layers.database.models.user.verifyPassword(
-          layers.database.db,
-          user.id,
-          password,
-        );
-        if (!passwordValid) {
-          proxyLogger.warn("Git proxy auth failed: invalid password", {
-            email: username,
-            userId: user.id,
-          });
-          await recordPasswordFailure(username);
-          ctx.status = 401;
-          ctx.set("WWW-Authenticate", 'Basic realm="Git"');
-          ctx.body = "Invalid credentials";
-          return;
-        }
-
-        await clearPasswordFailures(username);
 
         const ledgerAuth = Buffer.from(
           `${user.ledger_username}:${user.ledger_password}`,

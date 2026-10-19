@@ -15,6 +15,7 @@ import { IContext } from "@/server/graphql/context";
 import type { ICliAuthService } from "@/features/auth/service/cli-auth-service";
 import type { CliAuthSessionStatus } from "@/features/auth/data/cli-auth-session-model/types";
 import { toCliAuthWireStatus } from "@/features/auth/api/cli-auth-wire";
+import { UNKNOWN_CLIENT_ADDRESS } from "@/server/client-address";
 
 enum CliAuthStatus {
   PENDING = "PENDING",
@@ -270,5 +271,5 @@ export class CliAuthResolver {
  * consent screen as a hint and never used to decide anything.
  */
 function requesterIp(ctx: IContext): string | undefined {
-  return ctx.clientIp === "unknown" ? undefined : ctx.clientIp;
+  return ctx.clientIp === UNKNOWN_CLIENT_ADDRESS ? undefined : ctx.clientIp;
 }

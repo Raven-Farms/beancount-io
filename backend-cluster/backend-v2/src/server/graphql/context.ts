@@ -7,6 +7,7 @@ import { getTokenFromCtx } from "@/features/auth/utils/auth";
 import { type Identity, resolveIdentity } from "@/server/api/identity";
 import { GraphQLLoaders, createLoaders } from "./loaders";
 import { logger } from "@/shared/logger";
+import { clientAddress } from "@/server/client-address";
 
 const lastSeenThrottle = new Map<string, number>();
 const LAST_SEEN_THROTTLE_MS = 5 * 60 * 1000;
@@ -113,7 +114,7 @@ export async function createContext(
     // cookie fallback even though authentication no longer goes through it.
     token: getTokenFromCtx(ctx as Parameters<typeof getTokenFromCtx>[0]),
     reqHeaders,
-    clientIp: ctx.ip || "unknown",
+    clientIp: clientAddress(ctx),
     platform,
     config,
     koaCtx: ctx,

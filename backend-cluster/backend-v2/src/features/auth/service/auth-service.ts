@@ -27,10 +27,11 @@ import { lock, LOCK_KEYS } from "@/shared/lock";
 import { checkRateLimit } from "@/shared/rate-limiter";
 import { incrementInWindow } from "@/foundation/redis/redis-counter";
 import {
-  assertPasswordAttemptAllowed,
   clearPasswordFailures,
-  recordPasswordFailure,
+  verifyPasswordWithinBudget,
 } from "@/features/auth/operations/password-failure-budget";
+import type { User } from "@/features/auth/data/user-model/types";
+import { UNKNOWN_CLIENT_ADDRESS } from "@/server/client-address";
 import { CACHE_KEYS } from "@/shared/cache";
 import { secureStringEqual } from "@/features/auth/utils/secure-string-equal";
 import bcrypt from "bcryptjs";
@@ -129,6 +130,14 @@ const DISPOSABLE_EMAIL_DOMAINS = new Set([
 export interface IAuthService {
   registerUser(params: RegisterUserParams): Promise<AuthResponse>;
   loginUser(params: LoginUserParams): Promise<AuthResponse>;
+  /**
+   * The account an email + password names, held to the account's
+   * wrong-password budget. Every password sign-in goes through it (dashboard,
+   * Git basic auth), so they share the budget and cannot drift. Throws
+   * `BadUserInputError` for wrong credentials and `RateLimitedError` for a
+   * spent budget.
+   */
+  verifyPasswordCredentials(email: string, password: string): Promise<User>;
   signInWithMagicLinkToken(
     params: SignInWithOneTimeTokenParams,
   ): Promise<AuthResponse>;
@@ -245,32 +254,36 @@ export class AuthService implements IAuthService {
     return result;
   };
 
-  public loginUser = async (params: LoginUserParams): Promise<AuthResponse> => {
-    const { email, password } = params;
+  public verifyPasswordCredentials = async (
+    email: string,
+    password: string,
+  ): Promise<User> => {
     // Reject overlong passwords before touching the database or bcrypt.
     // Use the same generic error as wrong password to avoid leaking signal.
     if (password.length > MAX_PASSWORD_LENGTH) {
       throw new BadUserInputError("Invalid email or password");
     }
-    // Per account, across addresses and shared with Git sign-in (w0/m7).
-    await assertPasswordAttemptAllowed(email);
-    const user = await this.models.user.getByMail(this.db, email);
-    if (!user) {
-      // Counted and answered like a wrong password, so neither the refusal nor
-      // the budget says whether the account exists.
-      await recordPasswordFailure(email);
+    let user: User | null = null;
+    // Per account, across addresses (w0/m7). An unknown account is counted and
+    // answered like a wrong password, so neither says whether it exists.
+    const verified = await verifyPasswordWithinBudget(email, async () => {
+      user = await this.models.user.getByMail(this.db, email);
+      return (
+        user !== null &&
+        (await this.models.user.verifyPassword(this.db, user.id, password))
+      );
+    });
+    if (!verified || !user) {
       throw new BadUserInputError("Invalid email or password");
     }
-    const isPasswordVerified = await this.models.user.verifyPassword(
-      this.db,
-      user.id,
-      password,
+    return user;
+  };
+
+  public loginUser = async (params: LoginUserParams): Promise<AuthResponse> => {
+    const user = await this.verifyPasswordCredentials(
+      params.email,
+      params.password,
     );
-    if (!isPasswordVerified) {
-      await recordPasswordFailure(email);
-      throw new BadUserInputError("Invalid email or password");
-    }
-    await clearPasswordFailures(email);
     if (user.isBlocked) {
       throw new ForbiddenError(
         "User is banned. If you need help, please contact https://beancount.io/tg.",
@@ -352,7 +365,7 @@ export class AuthService implements IAuthService {
     });
 
     // Also rate limit by IP if provided (2 requests per minute per IP)
-    if (ip && ip !== "unknown") {
+    if (ip && ip !== UNKNOWN_CLIENT_ADDRESS) {
       checkRateLimit(`forgot-password-ip:${ip}`, {
         windowMs: 60000,
         max: 2,
@@ -480,7 +493,7 @@ export class AuthService implements IAuthService {
     });
 
     // Rate limit: 10 signup requests per hour per IP
-    if (ip && ip !== "unknown") {
+    if (ip && ip !== UNKNOWN_CLIENT_ADDRESS) {
       checkRateLimit(`signup-ip:${ip}`, {
         windowMs: 60 * 60 * 1000,
         max: 10,

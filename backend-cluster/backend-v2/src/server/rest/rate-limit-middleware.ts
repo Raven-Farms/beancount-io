@@ -7,6 +7,7 @@ import {
 import { RateLimitedError } from "@/shared/errors";
 import { identityFromState } from "./identity-middleware";
 import { requestOpId } from "@/server/api/rest-op-id";
+import { clientAddress } from "@/server/client-address";
 
 /**
  * The REST half of the rate limiter.
@@ -70,7 +71,7 @@ export function restRateLimitMiddleware(): Router.Middleware {
  * when nothing is trusted. A bucket key, never an authorization input.
  */
 function clientIp(ctx: RouterContext): string {
-  return ctx.ip || "unknown";
+  return clientAddress(ctx);
 }
 
 function matchedOpId(ctx: RouterContext): string | undefined {

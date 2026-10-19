@@ -1,3 +1,7 @@
+import {
+  fakeRedisCounter as mockFakeRedisCounter,
+  fakeRedisCounterState,
+} from "@/foundation/redis/__tests__/fake-redis-counter";
 import "reflect-metadata";
 import { AuthService } from "../auth-service";
 import { BadUserInputError, RateLimitedError } from "@/shared/errors";
@@ -7,24 +11,7 @@ import { PASSWORD_FAILURE_BUDGET } from "@/features/auth/operations/password-fai
 // addresses never stopped (w0/m7). Each account now has a wrong-password
 // budget, shared with Git basic auth, that no address change resets.
 
-const counters = new Map<string, number>();
-let redisDown = false;
-jest.mock("@/foundation/redis/redis-counter", () => ({
-  incrementInWindow: jest.fn(async (key: string) => {
-    if (redisDown) return undefined;
-    const count = (counters.get(key) ?? 0) + 1;
-    counters.set(key, count);
-    return { count, resetInMs: 60_000 };
-  }),
-  peekCount: jest.fn(async (key: string) =>
-    redisDown
-      ? undefined
-      : { count: counters.get(key) ?? 0, resetInMs: 60_000 },
-  ),
-  resetCount: jest.fn(async (key: string) => {
-    counters.delete(key);
-  }),
-}));
+jest.mock("@/foundation/redis/redis-counter", () => mockFakeRedisCounter);
 
 const ALICE = {
   id: "user-1",
@@ -75,10 +62,7 @@ async function spendBudget(service: AuthService, email: string) {
   }
 }
 
-beforeEach(() => {
-  counters.clear();
-  redisDown = false;
-});
+beforeEach(() => fakeRedisCounterState.reset());
 
 describe("loginUser and the per-account password budget", () => {
   it("refuses the account once its budget is spent, even the right password", async () => {
@@ -149,7 +133,7 @@ describe("loginUser and the per-account password budget", () => {
 
   it("signs in as before when Redis is unreachable", async () => {
     const { service } = createService();
-    redisDown = true;
+    fakeRedisCounterState.down = true;
     for (let i = 0; i < PASSWORD_FAILURE_BUDGET.max + 2; i += 1) {
       await expect(
         signIn(service, ALICE.email, "wrong"),

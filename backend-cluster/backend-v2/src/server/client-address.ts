@@ -11,3 +11,11 @@ export function trustProxyHops(app: Koa, hops: number): void {
   app.proxy = hops > 0;
   app.maxIpsCount = hops;
 }
+
+/** What every limiter keys on when no address is known. */
+export const UNKNOWN_CLIENT_ADDRESS = "unknown";
+
+/** `ctx.ip` under {@link trustProxyHops}, or {@link UNKNOWN_CLIENT_ADDRESS}. */
+export function clientAddress(ctx: { ip?: string }): string {
+  return ctx.ip || UNKNOWN_CLIENT_ADDRESS;
+}

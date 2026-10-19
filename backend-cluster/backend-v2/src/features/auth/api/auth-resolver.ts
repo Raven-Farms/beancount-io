@@ -245,10 +245,9 @@ export class AuthResolver {
     @Ctx() ctx: IContext,
     @Args() args: SendForgotPasswordLinkInput,
   ): Promise<SendForgotPasswordLinkResponse> {
-    const ip = ctx.clientIp;
     await this.authService.sendForgotPasswordLink(
       args.email.toLowerCase().trim(),
-      ip,
+      ctx.clientIp,
     );
     return { success: true };
   }
@@ -287,7 +286,6 @@ export class AuthResolver {
     @Ctx() ctx: IContext,
     @Args() args: SignUpInput,
   ): Promise<SignUpResponse> {
-    const ip = ctx.clientIp;
     // inviteSrc and inviteBy are accepted for backward compatibility but no longer used
     const sessionId = await this.authService.createSignUpSession({
       email: args.email.toLowerCase().trim(),
@@ -295,7 +293,7 @@ export class AuthResolver {
       firstName: args.firstName,
       lastName: args.lastName,
       username: args.username ?? null,
-      ip,
+      ip: ctx.clientIp,
       withDefaultLedger: args.withDefaultLedger ?? false,
     });
     const session = await this.authService.getSignupOtpSession(sessionId);
