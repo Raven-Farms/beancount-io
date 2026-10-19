@@ -108,27 +108,29 @@ def _is_currency_symbol(text: str) -> bool:
     return len(text) == 1 and unicodedata.category(text) == "Sc"
 
 
-# Symbols that name exactly one commodity. `$` (dollars of a dozen countries)
+# Symbols that name the commodity a row must post, most exactly one. `£` is
+# also GIP, FKP, SHP and EGP, and `₩` is also KPW, so those accept any
+# commodity they name (w5/757). `$` (dollars of a dozen countries)
 # and `¥` (JPY and CNY) are deliberately absent: they say nothing a row can be
 # refused over, and every existing `$` column must keep importing unchanged.
-_UNAMBIGUOUS_SYMBOLS = {
-    "€": "EUR",
-    "£": "GBP",
-    "₹": "INR",
-    "₽": "RUB",
-    "₩": "KRW",
-    "₪": "ILS",
-    "₺": "TRY",
-    "₫": "VND",
-    "₴": "UAH",
-    "฿": "THB",
-    "₱": "PHP",
-    "₦": "NGN",
+_SYMBOL_CURRENCIES: dict[str, tuple[str, ...]] = {
+    "€": ("EUR",),
+    "£": ("GBP", "GIP", "FKP", "SHP", "EGP"),
+    "₹": ("INR",),
+    "₽": ("RUB",),
+    "₩": ("KRW", "KPW"),
+    "₪": ("ILS",),
+    "₺": ("TRY",),
+    "₫": ("VND",),
+    "₴": ("UAH",),
+    "฿": ("THB",),
+    "₱": ("PHP",),
+    "₦": ("NGN",),
 }
 
 
-def _cell_symbol_currency(value: str) -> tuple[str, str] | None:
-    """The commodity an amount cell's own symbol names, with the symbol.
+def _cell_symbol_currency(value: str) -> tuple[str, tuple[str, ...]] | None:
+    """The commodities an amount cell's own symbol names, with the symbol.
 
     A cell is written by the bank, and `4,50 €` says euros no matter what the
     mapping or the ledger says. The symbol is still stripped before parsing —
@@ -137,9 +139,9 @@ def _cell_symbol_currency(value: str) -> tuple[str, str] | None:
     relabelling of the money.
     """
     for character in value:
-        currency = _UNAMBIGUOUS_SYMBOLS.get(character)
-        if currency is not None:
-            return character, currency
+        currencies = _SYMBOL_CURRENCIES.get(character)
+        if currencies is not None:
+            return character, currencies
     return None
 
 
@@ -1395,17 +1397,27 @@ class CsvImporter:
             found = _cell_symbol_currency(row.get(column, ""))
             if found is None:
                 continue
-            symbol, symbol_currency = found
-            if symbol_currency != currency:
-                unknown = self._known_currencies is not None and symbol_currency not in self._known_currencies
-                declare = (
-                    f" (after bea add commodity --date YYYY-MM-DD --currency {symbol_currency})" if unknown else ""
-                )
+            symbol, currencies = found
+            if currency in currencies:
+                continue
+            if len(currencies) == 1:
+                (named,) = currencies
+                unknown = self._known_currencies is not None and named not in self._known_currencies
+                declare = f" (after bea add commodity --date YYYY-MM-DD --currency {named})" if unknown else ""
                 raise UsageError(
-                    f"{where}: column {column!r} carries {symbol!r} ({symbol_currency}), but the row would post "
-                    f"{currency}. Name the commodity with --csv currency={symbol_currency}{declare}, or open the "
-                    f"source account for {symbol_currency}. Nothing was written."
+                    f"{where}: column {column!r} carries {symbol!r} ({named}), but the row would post "
+                    f"{currency}. Name the commodity with --csv currency={named}{declare}, or open the "
+                    f"source account for {named}. Nothing was written."
                 )
+            if len(currencies) == 2:
+                listing = f"{currencies[0]} or {currencies[1]}"
+            else:
+                listing = f"{', '.join(currencies[:-1])}, or {currencies[-1]}"
+            raise UsageError(
+                f"{where}: column {column!r} carries {symbol!r} ({listing}), but the row would post "
+                f"{currency}. Open the source account for one of {listing}, or map the file's currency "
+                "column with --csv currency=Column. Nothing was written."
+            )
 
     def _check_pair_signs(self, numbered: list[tuple[int, int, dict[str, str]]]) -> None:
         """Refuse a debit or credit column whose rows disagree about the sign.

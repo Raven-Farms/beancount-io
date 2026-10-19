@@ -2142,6 +2142,64 @@ class TestCsvRowCurrency:
         assert "Row 1" in result.stderr and "(EUR)" in result.stderr and "currency=EUR" in result.stderr
         assert book.read_bytes() == before
 
+    @pytest.mark.parametrize("currency", ["GBP", "GIP", "FKP", "SHP", "EGP"])
+    def test_a_pound_symbol_posts_to_any_pound_currency(self, book: Path, isolated_config: Path, currency: str) -> None:
+        """w5/757: `£` is every sterling-pegged pound, not GBP only."""
+        book.write_text(
+            book.read_text() + f"2026-08-01 open Assets:Pound {currency}\n2026-08-01 open Expenses:Foreign\n"
+        )
+        body = "Date,Description,Amount\n2026-08-02,Coffee,-£12.50\n"
+
+        result = csv_result(
+            book,
+            body,
+            "--default-account",
+            "Expenses:Foreign",
+            "--apply",
+            mapping=self.MAPPING,
+            account="Assets:Pound",
+        )
+
+        assert result.exit_code == 0, result.output
+        assert self._units(book, "Assets:Pound") == [f"-12.50 {currency}"]
+
+    @pytest.mark.parametrize("currency", ["KRW", "KPW"])
+    def test_a_won_symbol_posts_to_either_won(self, book: Path, isolated_config: Path, currency: str) -> None:
+        """w5/757: `₩` is both Korean won."""
+        book.write_text(book.read_text() + f"2026-08-01 open Assets:Won {currency}\n2026-08-01 open Expenses:Foreign\n")
+        body = "Date,Description,Amount\n2026-08-02,Rice,-₩1200\n"
+
+        result = csv_result(
+            book,
+            body,
+            "--default-account",
+            "Expenses:Foreign",
+            "--apply",
+            mapping=self.MAPPING,
+            account="Assets:Won",
+        )
+
+        assert result.exit_code == 0, result.output
+        assert self._units(book, "Assets:Won") == [f"-1200 {currency}"]
+
+    @pytest.mark.parametrize(
+        ("cell", "listing"),
+        [("-£3.50", "(GBP, GIP, FKP, SHP, or EGP)"), ("-₩1200", "(KRW or KPW)")],
+    )
+    def test_a_shared_symbol_outside_its_currencies_names_them_all(
+        self, book: Path, isolated_config: Path, cell: str, listing: str
+    ) -> None:
+        """w5/757: the refusal lists every commodity, never one relabelling guess."""
+        body = f"Date,Description,Amount\n2026-08-02,Tea,{cell}\n"
+        before = book.read_bytes()
+
+        result = csv_result(book, body, mapping=self.MAPPING)
+
+        assert result.exit_code == 2, result.output
+        assert listing in result.stderr and "Open the source account for one of" in result.stderr
+        assert "currency=GBP" not in result.stderr and "currency=KRW" not in result.stderr
+        assert book.read_bytes() == before
+
     def test_a_constant_currency_needs_no_column_in_the_bank_file(self, book: Path, isolated_config: Path) -> None:
         self._euro_account(book)
         body = 'Date,Description,Amount\n2026-08-02,Cafe Paris,"-4,50 €"\n2026-08-03,London Pub,"-12,00"\n'

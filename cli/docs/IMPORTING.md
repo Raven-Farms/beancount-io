@@ -129,10 +129,12 @@ with the header it probably meant, as is any other mistyped column. A
 currency cell must be exactly one commodity name (`USD`, `VFIAX`, `NT.TO`);
 anything else — a space, a comma, a line break — is refused naming the row and
 column before the preview, and nothing is written. A cell
-carrying a symbol that names exactly one commodity (`€`, `£`, `₹`, …) and
+carrying a symbol that names exactly one commodity (`€`, `₹`, …) and
 contradicts the resolved currency is refused naming the row and the symbol,
 rather than relabelled; `$` and `¥` name several commodities each and are
-accepted as before. `--account` names the source account and
+accepted as before, and `£` (GBP, GIP, FKP, SHP, EGP) and `₩` (KRW, KPW)
+are accepted when the row posts in one of the commodities they name.
+`--account` names the source account and
 is required. The file may start with a BOM and with blank lines before the
 header (error line numbers still count them); header cells are stripped before
 matching, invisible format characters (zero-width spaces, direction marks,
