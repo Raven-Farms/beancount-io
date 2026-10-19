@@ -21,7 +21,7 @@ describe("AuthResolver", () => {
       reqHeaders: {
         "x-forwarded-for": "127.0.0.1",
       },
-      config: { env: "development" },
+      config: { env: "development", jwt: { cookieDomain: undefined } },
       koaCtx: {
         cookies: {
           set: jest.fn(),
@@ -71,7 +71,7 @@ describe("AuthResolver", () => {
       expect((mockContext.koaCtx as any).cookies.set).toHaveBeenCalledWith(
         "authSess:beancount.io",
         "",
-        { maxAge: 0 },
+        { maxAge: 0, path: "/" },
       );
     });
 
@@ -85,7 +85,7 @@ describe("AuthResolver", () => {
       expect((mockContext.koaCtx as any).cookies.set).toHaveBeenCalledWith(
         "authSess:beancount.io",
         "",
-        { maxAge: 0 },
+        { maxAge: 0, path: "/" },
       );
     });
 

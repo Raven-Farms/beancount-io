@@ -143,6 +143,10 @@ services:
       # Official MCP Registry domain proof. Unset → /.well-known/mcp-registry-auth 404.
       MCP_REGISTRY_AUTH_PROOF: ${MCP_REGISTRY_AUTH_PROOF:-}
       AUTH_JWT_EXP_MINUTES: ${AUTH_JWT_EXP_MINUTES:-525600}
+      # Self-hosts: session cookie Domain (host-only | .example.com) and extra
+      # CORS origins (comma-separated). Unset keeps the beancount.io defaults.
+      AUTH_COOKIE_DOMAIN: ${AUTH_COOKIE_DOMAIN:-}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-}
       POSTGRES_BACKEND_URI: postgresql://${BACKEND_DB_USER:-beancount}:${BACKEND_DB_PASSWORD:?Set BACKEND_DB_PASSWORD in .env}@postgres-backend:5432/${BACKEND_DB_NAME:-beancount}
       REDIS_URI: redis://redis:6379
       FAVA_API_URL: http://ledger:8000

@@ -6,6 +6,52 @@ interface ServerConfig {
   proxy: boolean;
   port: number;
   url: string;
+  /**
+   * Extra browser origins allowed by CORS with credentials (CORS_ALLOWED_ORIGINS,
+   * comma-separated), in addition to beancount.io and localhost. For self-hosts
+   * whose dashboard calls the API on another host.
+   */
+  corsAllowedOrigins: ReadonlySet<string>;
+}
+
+export function parseCookieDomain(
+  value: string | undefined,
+): string | null | undefined {
+  const trimmed = value?.trim();
+  if (!trimmed) return undefined;
+  if (trimmed === "host-only") return null;
+  // A bare hostname with an optional leading dot; anything else (scheme, port,
+  // path, ";") would break or extend the Set-Cookie header. Fail at boot.
+  if (
+    !/^\.?(?=.{1,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)(\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/i.test(
+      trimmed,
+    )
+  ) {
+    throw new Error(
+      `AUTH_COOKIE_DOMAIN: expected "host-only" or a domain like .example.com, got ${JSON.stringify(trimmed)}`,
+    );
+  }
+  return trimmed.toLowerCase();
+}
+
+export function parseCorsAllowedOrigins(
+  value: string | undefined,
+): ReadonlySet<string> {
+  const origins = new Set<string>();
+  for (const entry of (value ?? "").split(",")) {
+    const trimmed = entry.trim();
+    if (!trimmed) continue;
+    const url = new URL(trimmed); // throws on a malformed entry: fail at boot, not per request
+    if (url.protocol !== "https:" && url.protocol !== "http:") {
+      throw new Error(`CORS_ALLOWED_ORIGINS: unsupported origin ${trimmed}`);
+    }
+    // Exact origins only: a path, query or credentials would be silently dropped.
+    if (url.username || url.password || url.search || url.hash || url.pathname !== "/") {
+      throw new Error(`CORS_ALLOWED_ORIGINS: not a bare origin ${trimmed}`);
+    }
+    origins.add(url.origin);
+  }
+  return origins;
 }
 
 interface LoggerConfig {
@@ -29,6 +75,14 @@ interface JwtConfig {
   secret: string;
   /** Token lifetime in minutes. Default 525600 (365 days); override via AUTH_JWT_EXP_MINUTES for local testing. */
   expMins: number;
+  /**
+   * Domain attribute of the session cookie (AUTH_COOKIE_DOMAIN).
+   * - `undefined` (unset): `.beancount.io` in production, host-only elsewhere.
+   * - `null` (`host-only`): no Domain attribute, for self-hosts that serve the
+   *   API on the dashboard's own host.
+   * - a string (e.g. `.example.com`): shared across that domain's subdomains.
+   */
+  cookieDomain: string | null | undefined;
 }
 
 interface FavaAPIConfig {
@@ -363,6 +417,7 @@ export const config: AppConfig = {
   jwt: {
     secret: process.env.AUTH_SECRET || "",
     expMins: parseInt(process.env.AUTH_JWT_EXP_MINUTES || "525600", 10),
+    cookieDomain: parseCookieDomain(process.env.AUTH_COOKIE_DOMAIN),
   },
   favaApi: {
     baseUrl: process.env.FAVA_API_URL || "",
@@ -423,6 +478,9 @@ export const config: AppConfig = {
     proxy: true,
     port: parseInt(process.env.PORT || "4104", 10),
     url: process.env.SERVER_URL || "https://api.v3.beancount.io",
+    corsAllowedOrigins: parseCorsAllowedOrigins(
+      process.env.CORS_ALLOWED_ORIGINS,
+    ),
   },
   logger: {
     enabled: true,
