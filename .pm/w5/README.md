@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [721 — The NFD --into spelling that created a file is refused the second time (regression from w5/536)](./721.md)
 - [722 — 1.234,56 and bulk amounts still get raw parser text; tag/link refusal wording (incomplete fix of w5/534)](./722.md)
 - [723 — treeify: a BOM splits the tree; /dev/stdin and FIFOs still give a raw UnicodeDecodeError (incomplete fix of w5/535)](./723.md)
 - [724 — PYTHONIOENCODING=utf-16 makes bea call a healthy engine damaged and say to delete it](./724.md)
