@@ -574,6 +574,8 @@ def _native_shell(source: str, *, interactive: bool, format: str, numberify: boo
 
         def execute(self, query: Any, **kwargs: Any) -> Any:
             self.ran_query = True
+            # Bea-only, so popped before upstream sees it (see PreciseShell).
+            kwargs.pop("stored_name", None)
             statement = query if isinstance(query, str) else ""
             if statement:
                 _refuse_statement_tail(statement)
@@ -808,8 +810,27 @@ def _run_stored(shell: Any, arg: str) -> None:
                 # One placeholder must not stop every other stored query answering.
                 protocol.note(f'Skipped stored query "{name}": its body is empty.')
                 continue
+            if shell.source_file is not None:
+                # The same window check `execute` runs, before the "name:"
+                # header: a skipped query leaves no header behind. Anything
+                # else — a broken query, a bare CLOSE — still stops the run,
+                # like a bad statement anywhere else.
+                try:
+                    _refuse_empty_window(
+                        _quote_reserved_tables(unicodedata.normalize("NFC", query.query_string)),
+                        [],
+                        file=shell.source_file,
+                        stored_on=query.date,
+                        stored_name=name,
+                    )
+                except protocol.EmptyStoredWindow:
+                    protocol.note(
+                        f'Skipped stored query "{name}": its window covers no days '
+                        f"(query directive dated {query.date})."
+                    )
+                    continue
             print(f"{name}:", file=shell.outfile)
-            shell.execute(query.query_string, default_close_date=query.date)
+            shell.execute(query.query_string, default_close_date=query.date, stored_name=name)
             print(file=shell.outfile)
             print(file=shell.outfile)
         return
@@ -843,7 +864,7 @@ def _run_stored(shell: Any, arg: str) -> None:
             f'stored query "{name}" has an empty body.',
             details=["Write its BQL between the second pair of quotes of the query directive."],
         )
-    shell.execute(query.query_string, default_close_date=query.date)
+    shell.execute(query.query_string, default_close_date=query.date, stored_name=name)
 
 
 def _stored_body_is_empty(body: str) -> bool:
@@ -1168,6 +1189,7 @@ def build_shell(
 
     class PreciseShell(BQLShell):  # type: ignore[misc]  # beanquery does not ship type annotations
         outfile: TextIO
+        source_file = file
         # The read policy for queries after a `.reload`. One-shot callers gate
         # the load themselves before executing, so only `interactive()` turns
         # this off, once the startup load has passed its own gate.
@@ -1299,7 +1321,12 @@ def build_shell(
             if isinstance(query, str):
                 _refuse_statement_tail(query)
                 query = statement = _quote_reserved_tables(unicodedata.normalize("NFC", query))
-                _refuse_empty_window(query, [], file=file, stored_on=kwargs.get("default_close_date"))
+                # Bea-only, so popped before upstream sees it: `default_close_date`
+                # is upstream's own spelling, `stored_name` is not.
+                stored_name = kwargs.pop("stored_name", None)
+                _refuse_empty_window(
+                    query, [], file=file, stored_on=kwargs.get("default_close_date"), stored_name=stored_name
+                )
             return _compiled(
                 partial(super().execute, query, **kwargs),
                 statement,
@@ -2256,7 +2283,14 @@ def _grouped_columns(query_string: str) -> list[str]:
     return [name for name in names if isinstance(name, str)]
 
 
-def _refuse_empty_window(query_string: str, ledger_errors: list[str], *, file: Path, stored_on: Any = None) -> None:
+def _refuse_empty_window(
+    query_string: str,
+    ledger_errors: list[str],
+    *,
+    file: Path,
+    stored_on: Any = None,
+    stored_name: str | None = None,
+) -> None:
     """Refuse a `FROM OPEN ON … CLOSE ON …` window that can hold no entries.
 
     `CLOSE ON D` is exclusive, so `OPEN ON D CLOSE ON D` spans zero days while
@@ -2267,7 +2301,9 @@ def _refuse_empty_window(query_string: str, ledger_errors: list[str], *, file: P
     `stored_on` is a stored query's directive date, which Beanquery applies as
     the outer window's `CLOSE ON` when the query names none: a stored query
     opening on that date answered `(no rows)`, and one opening later failed
-    over a CLOSE nobody wrote (w5/559).
+    over a CLOSE nobody wrote (w5/559). `stored_name` names it in the refusal,
+    so `.run NAME` says which query failed and `.run *` can skip it by name
+    (w5/746).
     """
     try:
         from beanquery.parser import ast, parse
@@ -2281,12 +2317,34 @@ def _refuse_empty_window(query_string: str, ledger_errors: list[str], *, file: P
     for clause in ast.walk(parsed):
         if isinstance(clause, ast.From):
             if stored_on is not None and clause is outer and not clause.close:
-                _refuse_window(clause.open, stored_on, ledger_errors, file=file, stored=True)
+                _refuse_window(clause.open, stored_on, ledger_errors, file=file, stored=True, stored_name=stored_name)
+            elif stored_on is not None and clause is outer and clause.close is True:
+                # A bare CLOSE beside the directive date: the "drop CLOSE"
+                # advice below would point at the end of the ledger, which a
+                # stored query's window never reaches (w5/746).
+                _refuse_window(
+                    clause.open,
+                    True,
+                    ledger_errors,
+                    file=file,
+                    stored=True,
+                    stored_on=stored_on,
+                    stored_name=stored_name,
+                )
             else:
                 _refuse_window(clause.open, clause.close, ledger_errors, file=file)
 
 
-def _refuse_window(begin: Any, end: Any, ledger_errors: list[str], *, file: Path, stored: bool = False) -> None:
+def _refuse_window(
+    begin: Any,
+    end: Any,
+    ledger_errors: list[str],
+    *,
+    file: Path,
+    stored: bool = False,
+    stored_on: Any = None,
+    stored_name: str | None = None,
+) -> None:
     """Refuse one `OPEN ON begin CLOSE ON end` window that spans no days, or has no end date.
 
     `stored` says `end` is a stored query's directive date rather than a
@@ -2296,10 +2354,22 @@ def _refuse_window(begin: Any, end: Any, ledger_errors: list[str], *, file: Path
 
     from bea_engine.ledger.text import bea_command
 
+    who = f'Stored query "{stored_name}"' if stored_name else "This stored query"
     # A bare `CLOSE` is `True`, not a date, and closes at the end of the ledger.
     # Beside a dated `OPEN` Beanquery orders the two as dates and escapes with
     # a raw TypeError, which read as a ledger failure (exit 1) (w5/177).
     if isinstance(begin, date) and end is True:
+        if stored:
+            raise protocol.UsageError(
+                f"{who} cannot run OPEN ON {begin} with a bare CLOSE: Beanquery needs the closing date here.",
+                details=[
+                    "Add the date: CLOSE ON YYYY-MM-DD is exclusive, so name the day after the last one you want.",
+                    f"Or drop CLOSE — but the window then closes at the query directive's date, {stored_on}. "
+                    "To keep later entries, use CLOSE ON <date> or re-date the "
+                    "directive after the last day it should cover.",
+                ],
+                ledger_errors=ledger_errors,
+            )
         raise protocol.UsageError(
             f"BQL cannot run OPEN ON {begin} with a bare CLOSE: Beanquery needs the closing date here.",
             details=[
@@ -2312,8 +2382,8 @@ def _refuse_window(begin: Any, end: Any, ledger_errors: list[str], *, file: Path
         return
     if stored:
         where = "on that same day" if begin == end else f"after it, on {begin}"
-        raise protocol.UsageError(
-            f"This stored query's window covers no days: its query directive's date, {end}, closes the window "
+        raise protocol.EmptyStoredWindow(
+            f"{who}'s window covers no days: its query directive's date, {end}, closes the window "
             f"(exclusive), and OPEN ON starts {where}.",
             details=[
                 f"Add CLOSE ON {begin + timedelta(days=1)} or later to the query, or re-date its query directive "

@@ -88,6 +88,15 @@ class UsageError(EngineError):
     exit_code = EXIT_USAGE
 
 
+class EmptyStoredWindow(UsageError):
+    """A stored query whose window covers no days: `.run *` skips it by name.
+
+    Still a usage error under `.run NAME` (exit 2, naming the query) — only
+    the `*` loop treats it as skippable, so one empty window stops no other
+    stored query answering (w5/746).
+    """
+
+
 class AuthError(EngineError):
     """The filesystem refused: a read-only ledger, an unwritable destination."""
 

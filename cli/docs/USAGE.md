@@ -883,7 +883,9 @@ the interactive prompt, where the refusal is an ordinary error and the shell
 stays usable. `.run *` still runs several separate stored queries. A stored
 `query` directive whose body is empty, blank or only a comment is refused by
 name under `.run NAME`; `.run *` skips it with a line on stderr and answers the
-rest.
+rest. A stored query whose window covers no days is refused by name the same
+way, and a stored `OPEN ON` beside a bare `CLOSE` is told the window closes at
+the query directive's date, not the end of the ledger.
 Native `--source` one-shots keep upstream's rendering but not its exit status:
 `.run` naming a missing stored query, and BQL that does not parse or compile,
 exit 2 with the reason on stderr, and an existing `--output` export is replaced
