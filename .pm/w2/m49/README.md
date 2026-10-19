@@ -1,13 +1,13 @@
 # w2 · m49 — See what a portfolio holds and what it is worth
 
-**Worker:** worker2 **Goal:** a user who asks "what do I hold, what is it worth, and how is it allocated" gets per-lot holdings at cost and — when prices exist — at market value with unrealized gains, from shown queries; missing prices are named, never silently replaced by cost. **Status:** todo (t001 done)
+**Worker:** worker2 **Goal:** a user who asks "what do I hold, what is it worth, and how is it allocated" gets per-lot holdings at cost and — when prices exist — at market value with unrealized gains, from shown queries; missing prices are named, never silently replaced by cost. **Status:** todo (t001–t002 done)
 
 ## Tasks (in order)
 
 | id   | title | est | depends_on |
 | ---- | ----- | --- | ---------- |
 | [t001](./done/t001.md) | Add holdings, allocation, and unrealized-gain recipes to beancount-ask — **DONE** | 60m | — |
-| t002 | Give price refresh an owner and a documented path | 45m | t001 |
+| [t002](./done/t002.md) | Give price refresh an owner and a documented path — **DONE** | 45m | t001 |
 | t003 | Write evals for holdings questions and run them on both clients | 45m | t001, t002 |
 | t004 | Adoption surface | 30m | t003 |
 | t005 | Simplify | 15m | t004 |

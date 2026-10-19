@@ -146,6 +146,16 @@ bea --file "$ledger" --json --no-input check
 
 Report what was written and where, and any flagged category to refine. Each command validates its own write and refuses an entry that would break the ledger, writing nothing. When a later command fails, report which earlier ones succeeded and read the ledger before retrying; `bea add` does not deduplicate. Never report success without a passing check.
 
+## Refreshing prices
+
+Holdings valuation (beancount-ask's holdings recipes) reads the latest `price` per commodity; keeping those current is this skill's job. First read what exists: the latest authored price per commodity (beancount-ask's `holdings-prices` query in its `references/bql-recipes.md`) and managed-source freshness (the `price-status` recipe). Then propose one path — no price is written and nothing is fetched before the user picks one:
+
+1. **Managed price include (preferred when the pair exists).** One line — `include "https://beancount.io/prices/BTC-USD"` — values the holding in every `bea` load with no recurring writes; pairs are listed at <https://beancount.io/live-prices> and fetching needs `bea cloud login` (or `BEA_TOKEN`). This skill never edits `include` directives: show the exact line and let the user add it, then read `price-status` again to confirm the source resolves. `price-refresh` re-resolves the cache on request; it never writes the ledger.
+2. **Fetched quotes.** With the user's go-ahead, enable the optional engine feature once (`bea engine enable beanprice`), fetch as text — `bea --file "$ledger" --no-input price -e 'USD:yahoo/VTI'` (no `--json`; the format is `CCY:module/SYMBOL`) — and show the printed quotes with their source module in the proposal. After the yes, write each with the `price` recipe. A quote that fails to fetch is reported per commodity, never replaced by a remembered or estimated one.
+3. **User-supplied quote.** A single price the user states, through the `price` recipe as today.
+
+A fetched or managed price that disagrees with an authored one for the same date follows the `price` recipe's duplicate/`--force` rule — the user's say-so, never a silent overwrite.
+
 ## What NOT to do
 
 - Don't write anything without an explicit yes.

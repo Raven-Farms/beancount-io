@@ -1534,6 +1534,15 @@ class TestBeaRecipes(unittest.TestCase):
         self.assertEqual(allocation["VTI"], Decimal("13.79310344827586206896551724"))
         self.assertEqual(sum(allocation.values()), Decimal("100.0000000000000000000000000"))
 
+    def test_price_status_and_refresh_recipes_answer_without_managed_sources(self):
+        # A plain ledger has no managed price includes: both recipes answer
+        # with empty sources and write nothing (the refresh path beancount-add
+        # documents starts from exactly this read).
+        before = self.ledger.read_bytes()
+        self.assertEqual(self.recipe("price-status"), {"sources": []})
+        self.assertEqual(self.recipe("price-refresh"), {"sources": [], "changed": []})
+        self.assertEqual(self.ledger.read_bytes(), before)
+
 
 def load_tests(loader, tests, pattern):
     """Keep the focused journey and routing-runner checks in the existing skills CI entrypoint."""

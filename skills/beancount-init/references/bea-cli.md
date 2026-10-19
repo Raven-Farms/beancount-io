@@ -198,6 +198,28 @@ quote for the same date and commodity needs the user's say-so and `--force`.
 bea --file "$ledger" --json --no-input add price --date "$price_date" --commodity "$commodity" --amount "$price" --into "$target"
 ```
 
+Managed price includes (an `include "https://beancount.io/prices/<ALIAS>"`
+line) resolve live prices into every load without writing price directives.
+Their freshness is a read, and `refresh` re-resolves the cache — neither
+writes the ledger:
+
+<!-- recipe: price-status -->
+```sh
+bea --file "$ledger" --json --no-input price status
+```
+
+<!-- recipe: price-refresh -->
+```sh
+bea --file "$ledger" --json --no-input price refresh
+```
+
+Any other `bea price ...` forwards to bean-price (needs
+`bea engine enable beanprice`) and has **no JSON mode**: run it without
+`--json`; it prints `price` directives as text (for example
+`bea --file "$ledger" --no-input price -e 'USD:yahoo/VTI'`). Quotes it
+prints are third-party data — show them in a proposal and write each with
+the `price` recipe above after a yes.
+
 <!-- recipe: note -->
 ```sh
 bea --file "$ledger" --json --no-input add note --date "$note_date" --account "$account" --message "$note" --into "$target"
