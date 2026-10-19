@@ -686,18 +686,29 @@ def _routed_since(
     return first if all(when is not None and when < first for when in unvalued) else None
 
 
-def _cost_currencies(entries: Iterable[Any]) -> dict[str, set[str]]:
-    """Each commodity's cost currencies: those of the lots postings hold it at."""
+def _held_cost_currencies(entries: Iterable[Any], currency: str, when: date | None) -> set[str]:
+    """The cost currencies of `currency` lots held at `when`.
+
+    Netted per cost currency over postings dated then or earlier: a lot sold
+    before the row, or bought after it, is not one the row values, so its
+    cost currency routes nothing (w5/748).
+    """
     from beancount.core.data import Transaction
 
-    found: dict[str, set[str]] = {}
+    nets: dict[str, Decimal] = {}
     for entry in entries:
-        if isinstance(entry, Transaction):
-            for posting in entry.postings:
-                currency = getattr(posting.cost, "currency", None)
-                if isinstance(currency, str) and posting.units is not None:
-                    found.setdefault(posting.units.currency, set()).add(currency)
-    return found
+        if not isinstance(entry, Transaction):
+            continue
+        if when is not None and entry.date > when:
+            continue
+        for posting in entry.postings:
+            if posting.units is None or posting.units.currency != currency:
+                continue
+            cost = getattr(posting.cost, "currency", None)
+            if not isinstance(cost, str) or posting.units.number is None:
+                continue
+            nets[cost] = nets.get(cost, Decimal(0)) + posting.units.number
+    return {cost for cost, net in nets.items() if net != 0}
 
 
 def _price_summary_lines(
@@ -705,7 +716,6 @@ def _price_summary_lines(
 ) -> list[str]:
     """One line per unconverted commodity: never one line per interval date."""
     lines = []
-    costs: dict[str, set[str]] | None = None
     for currency in missing:
         if ledger is not None:
             prices = ledger.prices
@@ -713,10 +723,11 @@ def _price_summary_lines(
             if all_prices:
                 earliest = min(point[0] for point in all_prices)
             else:
-                if costs is None:
-                    costs = _cost_currencies(ledger.all_entries)
                 unvalued = [item["date"] for item in dated if item["from"] == currency]
-                earliest = _routed_since(currency, conversion, prices, unvalued, costs.get(currency, set()))
+                held: set[str] = set()
+                for when in unvalued:
+                    held |= _held_cost_currencies(ledger.all_entries, currency, when)
+                earliest = _routed_since(currency, conversion, prices, unvalued, held)
             if earliest is None:
                 lines.append(f"{currency} has no {conversion} price at any date; shown in units")
                 continue

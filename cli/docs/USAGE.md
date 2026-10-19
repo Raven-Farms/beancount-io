@@ -1778,6 +1778,8 @@ line per commodity, for example `VACHR has no USD price at any date; shown in
 units` or `EUR → USD has no price before 2026-08-31; earlier rows shown in
 EUR`. A holding valued through its cost currency (a USD-cost stock in a EUR
 ledger) gets the dated wording from the first date both legs are quoted.
+A cost currency routes only rows holding a lot at that cost: one sold
+before the row, or bought after it, leaves the undated wording.
 Under `--json`, with piped stdout, under `CI`, or with `--strict`, a
 missing price exits **1** unless `--allow-errors` is passed; the error's
 `details` carry the same per-commodity summary, and `error.result` keeps the
