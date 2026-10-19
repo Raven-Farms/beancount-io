@@ -1,6 +1,6 @@
 # w2 · m38 — Route every ledger request to the right beancount skill
 
-**Worker:** worker2 **Goal:** a labeled routing set shows which `beancount-*` skill (or none) Claude Code and Codex choose for common ledger requests, and the eight descriptions are tuned against that evidence instead of by eye. **Status:** todo (t001–t007 done)
+**Worker:** worker2 **Goal:** a labeled routing set shows which `beancount-*` skill (or none) Claude Code and Codex choose for common ledger requests, and the eight descriptions are tuned against that evidence instead of by eye. **Status:** todo (t001–t008 done)
 
 ## Tasks (in order)
 
@@ -13,7 +13,7 @@
 | [t005](./done/t005.md) | Tune descriptions: skip clauses and the words users type — **DONE** | 45m | t004 |
 | [t006](./done/t006.md) | State local-only scope and the hosted-ledger hand-off — **DONE** | 30m | t004 |
 | [t007](./done/t007.md) | Re-measure, record, and require the check for description changes — **DONE** | 30m | t005, t006 |
-| t008 | Adoption surface | 20m | t007 |
+| [t008](./done/t008.md) | Adoption surface — **DONE** | 20m | t007 |
 | t009 | Simplify | 15m | t008 |
 | t010 | Test coverage | 30m | t008, t009 |
 | t011 | Closeout | 15m | t010 |
