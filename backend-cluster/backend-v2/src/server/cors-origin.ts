@@ -1,3 +1,6 @@
+import cors from "@koa/cors";
+import type { AppConfig } from "@/config/config";
+
 /**
  * CORS origin policy for the API (credentials are allowed, so only trusted
  * origins may be echoed back).
@@ -39,4 +42,15 @@ export function resolveCorsOrigin(
   }
 
   return "";
+}
+
+/** The API's credentialed CORS middleware, as mounted by start-server. */
+export function apiCorsMiddleware(
+  config: Pick<AppConfig, "server">,
+): ReturnType<typeof cors> {
+  return cors({
+    origin: (ctx) =>
+      resolveCorsOrigin(ctx.get("Origin"), config.server.corsAllowedOrigins),
+    credentials: true,
+  });
 }

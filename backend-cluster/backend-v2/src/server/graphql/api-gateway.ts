@@ -6,7 +6,6 @@ import type { GraphQLSchema } from "graphql";
 import { printSchema } from "graphql";
 import Router from "@koa/router";
 import http from "http";
-import type { Middleware } from "koa";
 import { config as appConfig, type AppConfig } from "@/config/config";
 import { apolloMetricsPlugin } from "@/metrics/apollo-plugin";
 import { type AppLayers } from "@/foundation/composition";
@@ -17,8 +16,7 @@ import { createContext } from "./context";
 import { graphqlScopeMiddleware } from "./scope-middleware";
 import { errorLoggingPlugin } from "./plugins/error-logging";
 import { formatError } from "./format-error";
-import { setAuthCookie, getAuthCookieFromCtx } from "@/shared/cookie-utils";
-import { verifyJwt } from "@/features/auth/utils/jwt-crypto-utils";
+import { bearerCookieMiddleware } from "./bearer-cookie-middleware";
 import type { ScopeEnforcementMode } from "@/server/api/op-class";
 import { graphqlRateLimitMiddleware } from "./rate-limit-middleware";
 
@@ -87,30 +85,9 @@ export async function registerGraphqlTransport(
 
   await server.start();
 
-  const cookieMiddleware: Middleware = async (ctx, next) => {
-    const authHeader = ctx.headers.authorization;
-    const existingCookie = getAuthCookieFromCtx(ctx);
-
-    if (authHeader && !existingCookie) {
-      const token = String(authHeader).replace(/^Bearer\s+/, "");
-      const decoded = await verifyJwt(token, config.jwt.secret);
-      if (decoded) {
-        setAuthCookie(
-          ctx,
-          token,
-          new Date(decoded.exp * 1000),
-          config.env === "production",
-          config.jwt.cookieDomain,
-        );
-      }
-    }
-
-    await next();
-  };
-
   router.all(
     "/api-gateway/",
-    cookieMiddleware,
+    bearerCookieMiddleware(config),
     koaMiddleware(server, {
       context: async ({ ctx }): Promise<IContext> => {
         return createContext(ctx, layers.database, config);
