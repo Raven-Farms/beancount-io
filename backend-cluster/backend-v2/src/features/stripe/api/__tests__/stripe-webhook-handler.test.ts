@@ -513,17 +513,23 @@ describe("upcoming invoices", () => {
 describe("failed renewal charges", () => {
   const PREMIUM_YEARLY = "price_1US5htEqsEqs2tLVENCzLaZB";
   const NEXT_ATTEMPT = 1_824_000_000;
-  const failed = (invoice: Record<string, unknown> = {}) => ({
+  const FINALIZED = 1_823_000_000;
+  const DAY = 24 * 60 * 60;
+  /** A failed charge `days` after the renewal invoice was finalized. */
+  const failed = (invoice: Record<string, unknown> = {}, days = 7) => ({
     id: "evt_synthetic",
     livemode: true,
     type: "invoice.payment_failed",
+    created: FINALIZED + days * DAY,
     data: {
       object: {
         id: "in_synthetic",
         customer: "cus_synthetic",
         metadata: {},
         billing_reason: "subscription_cycle",
-        attempt_count: 1,
+        attempt_count: 2,
+        created: FINALIZED - 3600,
+        status_transitions: { finalized_at: FINALIZED },
         next_payment_attempt: NEXT_ATTEMPT,
         amount_due: 14388,
         currency: "usd",
@@ -537,7 +543,7 @@ describe("failed renewal charges", () => {
 
   beforeEach(() => mockEmailFailedRenewal.mockClear());
 
-  it("emails the bound subscriber after a renewal's first failed charge", async () => {
+  it("emails the bound subscriber once a renewal has been failing for a week", async () => {
     const t = setup(failed());
     await t.run();
 
@@ -556,23 +562,35 @@ describe("failed renewal charges", () => {
     expect(t.ctx.body.processed).toBe(true);
   });
 
-  it("emails after the first failure even when Stripe schedules no retry", async () => {
+  it("emails a week in even when the failure does not say when Stripe retries", async () => {
     const t = setup(failed({ next_payment_attempt: null }));
     await t.run();
 
     expect(mockEmailFailedRenewal).toHaveBeenCalledTimes(1);
   });
 
-  it("stays quiet on every retry, the last included: the cancellation says the plan ended", async () => {
-    for (const invoice of [
-      { attempt_count: 2 },
-      { attempt_count: 5, next_payment_attempt: null },
-    ]) {
-      const t = setup(failed(invoice));
+  it("stays quiet through the first week, before any lookup: most renewals recover", async () => {
+    for (const days of [0, 3, 5.9]) {
+      const t = setup(failed({ attempt_count: 1 }, days));
       await t.run();
 
       expect(t.ctx.body.processed).toBe(false);
+      expect(
+        t.paidCustomer.findByStripeCustomerIdAndClientId,
+      ).not.toHaveBeenCalled();
     }
+    expect(mockEmailFailedRenewal).not.toHaveBeenCalled();
+  });
+
+  it("times the failure by the event, not by when it is delivered", async () => {
+    jest.useFakeTimers({ now: (FINALIZED + 60 * DAY) * 1000 });
+    try {
+      const t = setup(failed({ attempt_count: 1 }, 1));
+      await t.run();
+    } finally {
+      jest.useRealTimers();
+    }
+
     expect(mockEmailFailedRenewal).not.toHaveBeenCalled();
   });
 

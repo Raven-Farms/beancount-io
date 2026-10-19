@@ -58,7 +58,8 @@ export function buildTemplatePreviews(): TemplatePreview[] {
     ...renewal,
     kind: "failed",
     amount: "$143.88",
-    nextAttemptDate: "October 22, 2026",
+    // What subscribers get: Stripe automations leave the retry time out.
+    nextAttemptDate: null,
   };
   const renewalFinalParams: RenewalEmailParams = { ...renewal, kind: "final" };
   const renewalUpcomingParams: RenewalEmailParams = {

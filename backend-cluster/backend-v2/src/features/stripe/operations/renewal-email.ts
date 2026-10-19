@@ -45,18 +45,23 @@ export function invoicePlan(
   return undefined;
 }
 
+// Most failed renewals succeed on a retry within days, plan held; sooner is noise.
+const FAILED_RENEWAL_NOTICE_AFTER_SECONDS = 6 * 24 * 60 * 60;
+
 /**
- * A renewal's first failed charge, the one failure worth an email: later
- * retries repeat the news, and plan changes are paid inside the change sheet.
+ * Whether a failed charge, at `at` (the event's time, in unix seconds), is a
+ * renewal that has been failing long enough to tell its subscriber. Plan
+ * changes are paid inside the change sheet and never qualify.
  */
-export function isFirstFailedRenewal(
+export function isLongFailingRenewal(
   invoice: Stripe.Invoice,
+  at: number,
 ): invoice is Stripe.Invoice & { id: string } {
-  return (
-    !!invoice.id &&
-    invoice.billing_reason === "subscription_cycle" &&
-    invoice.attempt_count === 1
-  );
+  if (!invoice.id || invoice.billing_reason !== "subscription_cycle") {
+    return false;
+  }
+  const since = invoice.status_transitions?.finalized_at ?? invoice.created;
+  return at - since >= FAILED_RENEWAL_NOTICE_AFTER_SECONDS;
 }
 
 /**
@@ -91,7 +96,7 @@ export async function awaitsAuthentication(
   }
 }
 
-/** Tell the subscriber a renewal's first charge failed. */
+/** Tell the subscriber a renewal's charge keeps failing, once per invoice. */
 export function emailFailedRenewal(
   deps: BillingEmailDeps,
   userId: string,

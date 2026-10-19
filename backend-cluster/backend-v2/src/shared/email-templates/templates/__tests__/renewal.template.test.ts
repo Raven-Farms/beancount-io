@@ -40,7 +40,7 @@ describe("renewal email", () => {
   it("gives what matters and the way to Billing, in HTML and text", () => {
     for (const [params, facts, action] of [
       [failed, ["$143.88", "October 22, 2026"], "Update your card"],
-      [unscheduled, ["$143.88", "so we can collect it"], "Update your card"],
+      [unscheduled, ["$143.88", "over the coming weeks"], "Update your card"],
       [final, ["the plan has ended", "Free plan"], "Choose a plan"],
       [upcoming, ["$143.88", "October 17, 2027"], "Manage your plan"],
     ] as const) {
@@ -55,10 +55,12 @@ describe("renewal email", () => {
     }
   });
 
-  it("promises no retry when Stripe has scheduled none", () => {
+  it("names no retry date when the failure gives none", () => {
     const text = renderRenewalText(unscheduled);
 
-    expect(text).not.toContain("retry");
+    expect(text).toContain(
+      "We'll keep retrying automatically over the coming weeks, and you keep Premium · Yearly meanwhile.",
+    );
     expect(text).not.toContain("next attempt");
   });
 

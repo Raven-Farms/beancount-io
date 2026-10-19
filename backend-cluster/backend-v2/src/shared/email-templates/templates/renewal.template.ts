@@ -10,8 +10,8 @@ interface RenewalEmailBase {
 }
 
 /**
- * `failed`: a renewal's first charge failed; `nextAttemptDate` is null when
- * Stripe has scheduled no retry.
+ * `failed`: a renewal's charge has kept failing for about a week;
+ * `nextAttemptDate` is null when the failure did not say when Stripe retries.
  * `final`: the subscription was canceled because the renewal went unpaid.
  * `upcoming`: a yearly plan renews soon.
  * `amount` is a formatted charge, such as "$143.88".
@@ -43,8 +43,8 @@ function copy(params: RenewalEmailParams) {
               next: "Update your card in Billing settings before then to keep your plan. If every retry fails, the plan ends and your account moves to the Free plan.",
             }
           : {
-              lead: `${charge} You keep ${plan} for now.`,
-              next: "Update your card in Billing settings so we can collect it and keep your plan.",
+              lead: `${charge} We'll keep retrying automatically over the coming weeks, and you keep ${plan} meanwhile.`,
+              next: "Update your card in Billing settings so the next retry goes through.",
             }),
         action: "Update your card",
       };

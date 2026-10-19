@@ -12,7 +12,7 @@ import {
   emailPlanEnded,
   emailRenewalReminder,
   invoicePlan,
-  isFirstFailedRenewal,
+  isLongFailingRenewal,
 } from "../operations/renewal-email";
 import { isPurchase, reportPurchase } from "../operations/report-purchase";
 import type { AppConfig } from "@/config/config";
@@ -215,7 +215,11 @@ export function setStripeWebhookHandler(
             invoice,
             SUBSCRIPTION_CONFIG[clientId].plans,
           );
-          if (!plan || !isFirstFailedRenewal(invoice) || !invoice.customer) {
+          if (
+            !plan ||
+            !isLongFailingRenewal(invoice, event.created) ||
+            !invoice.customer
+          ) {
             break;
           }
           const binding =

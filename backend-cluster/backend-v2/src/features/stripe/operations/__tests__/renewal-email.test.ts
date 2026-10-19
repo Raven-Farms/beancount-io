@@ -6,7 +6,7 @@ import {
   emailPlanEnded,
   emailRenewalReminder,
   invoicePlan,
-  isFirstFailedRenewal,
+  isLongFailingRenewal,
 } from "../renewal-email";
 
 const PLANS = SUBSCRIPTION_CONFIG[BILLING_CLIENT_ID].plans;
@@ -14,6 +14,8 @@ const PREMIUM_YEARLY = "price_1US5htEqsEqs2tLVENCzLaZB";
 const PREMIUM_MONTHLY = "price_1RrSOGEqsEqs2tLVFnyB34qG";
 const RENEWAL = 1_823_774_400; // 2027-10-17T12:00:00Z
 const NEXT_ATTEMPT = 1_792_670_400; // 2026-10-22T12:00:00Z
+const FINALIZED = 1_792_065_600; // 2026-10-15T12:00:00Z
+const DAY = 24 * 60 * 60;
 const PREMIUM_YEARLY_PLAN = PLANS.find(
   (plan) => plan.priceId === PREMIUM_YEARLY,
 )!;
@@ -23,6 +25,8 @@ const invoice = (overrides: Partial<Stripe.Invoice> = {}) =>
     id: "in_1",
     billing_reason: "subscription_cycle",
     attempt_count: 1,
+    created: FINALIZED - 3600,
+    status_transitions: { finalized_at: FINALIZED },
     next_payment_attempt: NEXT_ATTEMPT,
     amount_due: 14388,
     currency: "usd",
@@ -117,22 +121,44 @@ describe("invoicePlan", () => {
   });
 });
 
-describe("isFirstFailedRenewal", () => {
-  it("is a renewal's first failed charge, whether or not a retry is scheduled", () => {
-    expect(isFirstFailedRenewal(invoice())).toBe(true);
-    expect(isFirstFailedRenewal(invoice({ next_payment_attempt: null }))).toBe(
+describe("isLongFailingRenewal", () => {
+  it("waits a week before a failing renewal is worth an email", () => {
+    for (const days of [0, 1, 5, 5.9]) {
+      expect(isLongFailingRenewal(invoice(), FINALIZED + days * DAY)).toBe(
+        false,
+      );
+    }
+    for (const days of [6, 7, 14, 28]) {
+      expect(isLongFailingRenewal(invoice(), FINALIZED + days * DAY)).toBe(
+        true,
+      );
+    }
+  });
+
+  it("counts from finalization, else from creation", () => {
+    const unfinalized = invoice({
+      status_transitions: { finalized_at: null } as never,
+    });
+
+    expect(isLongFailingRenewal(unfinalized, FINALIZED + 6 * DAY - 3600)).toBe(
       true,
+    );
+    expect(isLongFailingRenewal(invoice(), FINALIZED + 6 * DAY - 3600)).toBe(
+      false,
     );
   });
 
-  it("is not a retry, whether or not another follows", () => {
-    for (const attempt_count of [2, 3, 5]) {
-      expect(isFirstFailedRenewal(invoice({ attempt_count }))).toBe(false);
-      expect(
-        isFirstFailedRenewal(
-          invoice({ attempt_count, next_payment_attempt: null }),
-        ),
-      ).toBe(false);
+  it("goes by the event's time, whatever the attempt or retry schedule", () => {
+    const at = FINALIZED + 7 * DAY;
+    for (const attempt_count of [1, 2, 5]) {
+      for (const next_payment_attempt of [NEXT_ATTEMPT, null]) {
+        expect(
+          isLongFailingRenewal(
+            invoice({ attempt_count, next_payment_attempt }),
+            at,
+          ),
+        ).toBe(true);
+      }
     }
   });
 
@@ -142,7 +168,9 @@ describe("isFirstFailedRenewal", () => {
       "subscription_create",
       "manual",
     ] as const) {
-      expect(isFirstFailedRenewal(invoice({ billing_reason }))).toBe(false);
+      expect(
+        isLongFailingRenewal(invoice({ billing_reason }), FINALIZED + 7 * DAY),
+      ).toBe(false);
     }
   });
 });
@@ -224,21 +252,29 @@ describe("emailFailedRenewal", () => {
     expect(mail.html).toContain("Update your card");
   });
 
-  it("promises no retry when Stripe has scheduled none", async () => {
+  it("promises no date when the failure does not say when Stripe retries", async () => {
     const { fail, sendMail } = setup();
 
     await fail(invoice({ next_payment_attempt: null }));
 
     const { text } = mailOf(sendMail);
-    expect(text).toContain("so we can collect it and keep your plan");
-    expect(text).not.toContain("next attempt");
+    expect(text).toContain(
+      "We'll keep retrying automatically over the coming weeks, and you keep Premium · Yearly meanwhile.",
+    );
+    expect(text).toContain("so the next retry goes through");
+    expect(text).not.toContain("next attempt is on");
   });
 
-  it("sends once per invoice, whatever Stripe redelivers", async () => {
+  it("sends once per invoice, through redeliveries and later failed retries", async () => {
     const { fail, sendMail } = setup();
 
-    await fail();
-    await expect(fail()).resolves.toBe("already-sent");
+    await fail(invoice({ attempt_count: 2 }));
+    await expect(fail(invoice({ attempt_count: 2 }))).resolves.toBe(
+      "already-sent",
+    );
+    await expect(
+      fail(invoice({ attempt_count: 3, next_payment_attempt: null })),
+    ).resolves.toBe("already-sent");
     await fail(invoice({ id: "in_2" }));
 
     expect(sendMail).toHaveBeenCalledTimes(2);
