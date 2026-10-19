@@ -1,6 +1,6 @@
 # w2 · m48 — Reconciliation coverage and close review state (ADR 020 P0)
 
-**Worker:** worker2 **Goal:** before `beancount-reconcile` reports a single match, it states what the supplied statement covers: the account it belongs to, its currency and period, how many rows it holds and what they total, and every row left out and why. `beancount-close` records each step's evidence and state, so an account no statement covered, a period a statement covers only partly, or a blocked step is never presented as verified. **Status:** todo (t001–t002 done)
+**Worker:** worker2 **Goal:** before `beancount-reconcile` reports a single match, it states what the supplied statement covers: the account it belongs to, its currency and period, how many rows it holds and what they total, and every row left out and why. `beancount-close` records each step's evidence and state, so an account no statement covered, a period a statement covers only partly, or a blocked step is never presented as verified. **Status:** todo (t001–t003 done)
 
 ## Tasks (in order)
 
@@ -8,7 +8,7 @@
 | ---- | ----- | --- | ---------- |
 | [t001](./done/t001.md) | Add a coverage preflight to `beancount-reconcile` — **DONE** | 75m | w2/m41/t004 |
 | [t002](./done/t002.md) | Record each close step's evidence and state — **DONE** | 45m | t001 |
-| t003 | Write evals from ADR 020's fixtures | 60m | t001, t002 |
+| [t003](./done/t003.md) | Write evals from ADR 020's fixtures — **DONE** | 60m | t001, t002 |
 | t004 | Run the evals on Claude Code and Codex | 45m | t003 |
 | t005 | Adoption surface | 30m | t004 |
 | t006 | Simplify | 15m | t005 |

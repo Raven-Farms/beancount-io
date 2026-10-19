@@ -1,0 +1,16 @@
+;; fixture — beancount-reconcile eval22 (commodity printed beyond two decimals)
+option "operating_currency" "USD"
+
+2026-04-01 open Assets:Crypto:Wallet BTC
+2026-04-01 open Expenses:Food:Groceries
+2026-04-01 open Equity:Opening-Balances
+
+2026-04-30 * "Opening"
+  Assets:Crypto:Wallet   0.010000 BTC
+  Equity:Opening-Balances
+
+2026-05-01 balance Assets:Crypto:Wallet   0.010000 BTC
+
+2026-05-11 * "COFFEE BY LIGHTNING"
+  Assets:Crypto:Wallet   -0.000425 BTC
+  Expenses:Food:Groceries  0.000425 BTC
