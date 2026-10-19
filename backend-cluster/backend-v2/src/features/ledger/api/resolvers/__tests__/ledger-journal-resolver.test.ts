@@ -375,7 +375,7 @@ describe("LedgerJournalResolver", () => {
           sha256sum: "abc123",
           newContent: "2024-01-01 * Updated",
         },
-        mockContext as IContext,
+        { ...mockContext, platform: "mobile" } as IContext,
       );
 
       expect(mockJournalService.updateSourceSlice).toHaveBeenCalledWith({
@@ -384,6 +384,7 @@ describe("LedgerJournalResolver", () => {
         entryHash: "test-entry-hash",
         sha256sum: "abc123",
         newContent: "2024-01-01 * Updated",
+        platform: "mobile",
       });
       expect(result).toEqual(expected);
     });

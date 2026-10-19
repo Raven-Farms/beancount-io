@@ -16,6 +16,7 @@ import {
   type AuthorizationAction,
 } from "@/server/api/authorization/authorization-contract";
 import { BadUserInputError } from "@/shared/errors";
+import { directiveLimitExemptParams } from "@/features/ledger/operations/directive-limit-bypass";
 
 /**
  * The page a journal read asks for: limit 1–1000 (default 20), offset 0 or
@@ -169,6 +170,8 @@ export interface ILedgerJournalService {
     entryHash: string;
     sha256sum: string;
     newContent: string;
+    /** Mobile writes are exempt from the directive limit; the default is web. */
+    platform?: "web" | "mobile";
   }): Promise<UpdateSliceResult>;
 }
 
@@ -371,8 +374,16 @@ export class LedgerJournalService
     entryHash: string;
     sha256sum: string;
     newContent: string;
+    platform?: "web" | "mobile";
   }): Promise<UpdateSliceResult> {
-    const { ledgerId, identity, entryHash, sha256sum, newContent } = params;
+    const {
+      ledgerId,
+      identity,
+      entryHash,
+      sha256sum,
+      newContent,
+      platform = "web",
+    } = params;
     const { favaApiClient, ledgerOwner, ledgerName } = await this.getClient(
       ledgerId,
       identity,
@@ -380,11 +391,16 @@ export class LedgerJournalService
     );
 
     const data = await unwrapFavaResponse(
-      favaApiClient.journal.updateSourceSlice(ledgerOwner, ledgerName, {
-        entry_hash: entryHash,
-        sha256sum,
-        new_content: newContent,
-      }),
+      favaApiClient.journal.updateSourceSlice(
+        ledgerOwner,
+        ledgerName,
+        {
+          entry_hash: entryHash,
+          sha256sum,
+          new_content: newContent,
+        },
+        directiveLimitExemptParams(platform),
+      ),
       "update source slice",
     );
     return {

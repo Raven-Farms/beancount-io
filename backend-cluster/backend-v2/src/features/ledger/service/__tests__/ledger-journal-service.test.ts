@@ -468,6 +468,39 @@ describe("LedgerJournalService", () => {
         "testowner",
         "testledger",
         { entry_hash: "hash-old", sha256sum: "oldsum", new_content: "2024-01-02 * \"new\"\n" },
+        {},
+      );
+    });
+
+    // A slice edit can add directives, so the ledger service holds it to the
+    // limit — and the mobile app, exempt by product policy, must say so.
+    it("forwards the directive-limit exemption for a mobile edit", async () => {
+      mockUpdateSourceSlice.mockResolvedValue({
+        data: {
+          success: true,
+          data: {
+            message: "Updated",
+            entry_hash: "hash-new",
+            new_sha256sum: "newsum",
+            new_entry_hash: "hash-new",
+          },
+        },
+      });
+
+      await service.updateSourceSlice({
+        ledgerId: LEDGER_ID,
+        identity: IDENTITY,
+        entryHash: "hash-old",
+        sha256sum: "oldsum",
+        newContent: "x",
+        platform: "mobile",
+      });
+
+      expect(mockUpdateSourceSlice).toHaveBeenLastCalledWith(
+        "testowner",
+        "testledger",
+        expect.anything(),
+        { headers: { "x-directive-limit-exempt": "1" } },
       );
     });
 

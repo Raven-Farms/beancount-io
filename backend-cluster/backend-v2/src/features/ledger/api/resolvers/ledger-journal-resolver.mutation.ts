@@ -141,6 +141,7 @@ export class LedgerJournalMutationResolver {
       entryHash: input.entryHash,
       sha256sum: input.sha256sum,
       newContent: input.newContent,
+      platform: ctx.platform,
     });
   }
 }
