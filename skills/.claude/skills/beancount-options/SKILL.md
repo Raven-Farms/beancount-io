@@ -20,6 +20,12 @@ explicit lots and the shared native `add transaction --posting` recipe for
 `{}` lot selection or total-cost syntax. Keep the strategy-specific reasoning
 and confirmation below.
 
+## Scope
+
+**Does:** turn a described options trade or lifecycle event into new transactions, appended to the user's ledger after confirmation and validated through the root check.
+
+**Does not:** modify or bulk-rewrite existing transactions; touch `option`, `plugin`, or `include` directives; compute wash sales, greeks, P&L curves, or other analytics; import broker statements (a different workflow); record other manual entries (`beancount-add`).
+
 ## Workflow
 
 Five phases, in order: **Discover → Parse → Generate → Confirm + Write → Verify**.
@@ -148,10 +154,9 @@ bea --file "$ledger" --json --no-input check
 Use beancount-init's `references/compatibility.md` only when `bea` is absent.
 
 If the check reports **any** errors (transaction does not balance, lot booking
-failure, undeclared account, etc.), do NOT report success. Instead:
-1. Surface the exact check output to the user.
-2. If you can identify the cause from the error, propose a fix.
-3. Do not silently revert. The user needs to see the error to investigate.
+failure, undeclared account, etc.), report the exact check output instead of
+success, propose a fix when the error identifies the cause, and leave the
+written entries in place so the user can see what failed.
 
 This step exists because the cost-basis arithmetic is subtle, especially for assignment, exercise, and multi-leg trades. Catching an error now is much cheaper than discovering it later during 1099-B reconciliation.
 
@@ -255,13 +260,3 @@ If a description doesn't fit cleanly into one of these, default to single-leg or
 - **Index options**: trigger Section 1256 reference; note 60/40 treatment and Form 6781 implications; this skill does not compute them.
 - **Dividends during a covered call holding period**: dividends post separately to `Income:Dividends`. Qualified-CC rules can affect tax treatment of the dividend itself — see stock-plus-option reference.
 - **LEAPS held >1 year then closed**: only options case where long-term capital gains apply for **long** positions. Short positions are always short-term regardless of holding period.
-
-## What NOT to do
-
-- Don't write transactions without explicit user confirmation.
-- Don't modify existing transactions; only append.
-- Don't touch the user's `option`, `plugin`, or `include` directives.
-- Don't compute wash sales, greeks, P&L curves, or anything analytics-flavored.
-- Don't import broker statements (different workflow).
-- Don't bulk-rewrite historical entries.
-- Don't guess missing fields (premium, strike, expiry). Ask.

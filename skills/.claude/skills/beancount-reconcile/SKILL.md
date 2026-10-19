@@ -191,7 +191,7 @@ atomic operation. If the assertion fails, keep track of the successful batch
 and re-read the ledger before retrying. On **no**, revise the proposal.
 Without `bea`, use beancount-init's `references/compatibility.md`.
 
-Do not append the suspect / duplicate / amount-mismatch items — those are reported only. They are exactly what an amount-off assertion will flag next.
+Suspect, duplicate, and amount-mismatch items stay in the report only; they are exactly what an amount-off assertion would flag next.
 
 ### 5. Verify
 
@@ -209,7 +209,7 @@ In the clean case, you wrote the missing entries plus a passing `balance` assert
 - **Assertion command refuses the proposed balance** (e.g. `Balance failed for 'Assets:Bank:Checking': expected 2865.80 USD != accumulated 2863.80 USD (2.00 too little)`) → the assertion was not written, but the earlier missing-entry batch may have been. Do **not** report success. Surface the residual and re-examine the current ledger before retrying; never replay that batch blindly.
 - **Any other check error** (undeclared account from a categorized leg, transaction doesn't balance) → surface the exact output, propose a fix, never silently revert.
 
-Recall from Propose that when the account does **not** tie out (unresolved suspect / mismatch / duplicate), you never wrote an assertion at all — you reported the residual instead. So a well-run partial reconcile leaves the check green (no failing assertion), with the residual and its causes reported in prose for the user to fix.
+A partial reconcile (unresolved suspects, mismatches, or duplicates) wrote no assertion, so its check stays green and the residual and its causes are reported for the user to fix.
 
 If validation cannot run, report the result as unvalidated and suggest installing `bea`; manual tie-out does not replace the engine check.
 
@@ -221,12 +221,3 @@ A beancount `balance` assertion checks the account balance at the **start of its
 - Dating it `2026-05-31` would wrongly exclude every transaction that actually happened on 2026-05-31.
 
 State this reasoning to the user when proposing the assertion, so the off-by-one-day choice is visible and reviewable.
-
-## What NOT to do
-
-- Don't write anything without an explicit yes.
-- Don't edit or delete existing entries — append only. Report suspects, duplicates, and amount mismatches for manual fixing.
-- Don't reconcile more than one account per run.
-- Don't guess a statement's sign or date convention, or a payee's category — ask or use `Expenses:Uncategorized` and flag it.
-- Don't append an assertion that won't tie out, and don't claim success on any `bea check` failure — surface the residual instead.
-- Don't touch `option`, `plugin`, or `include` directives.

@@ -22,7 +22,7 @@ source identities, and the migration report remain this skill's work.
 
 **Does:** convert one export (possibly covering many source accounts) into a fresh ledger; propose and confirm the account hierarchy before converting; pair transfers; construct opening balances; emit a migration report; run the root-ledger `bea check`.
 
-**Does not:** talk to any app's API (exports only); backfill investment lots/prices (holdings rows are surfaced as follow-up work, not converted); merge into an existing populated ledger (offer `beancount-import` for that); invent category mappings the user didn't confirm.
+**Does not:** write outside the fresh ledger repository (the confirmed beancount-init scaffold is part of it); talk to any app's API (exports only); backfill investment lots/prices (holdings rows are surfaced as follow-up work, not converted); merge into an existing populated ledger (offer `beancount-import` for that); invent category mappings the user didn't confirm.
 
 Read `references/mapping.md` before proposing any hierarchy, and the per-source reference (`references/mint.md`, `references/monarch.md`, `references/qbo.md`) before parsing. Unknown source? Inspect the header, then follow `mapping.md`'s generic path.
 
@@ -87,12 +87,3 @@ Balances: Assets:Bank:Checking ✓ ties to 3,412.55   Liabilities:CC:Amex ✓ ti
 bea check: PASS
 Next steps: refine Expenses:Uncategorized rows; optional `make start` for Fava if scaffolded; use beancount-import for ongoing weekly imports.
 ```
-
-## What NOT to do
-
-- Don't convert before the account and category mappings are explicitly confirmed.
-- Don't guess a mapping — unmapped means `Expenses:Uncategorized`, visibly reported.
-- Don't double-book transfers, and don't silently drop unpaired transfer rows.
-- Don't hide a count or balance delta — surface it; never force a tie-out.
-- Don't convert investment holdings/lots — flag as follow-up.
-- Don't write anything outside the fresh ledger repo (the user-approved beancount-init scaffold excepted), and no transactions before the mapping confirm.
