@@ -5,7 +5,7 @@
       "id": 1,
       "name": "average-cost-not-supported",
       "prompt": "I live in France, so my capital gains use average cost (prix de revient unitaire). Record selling 5 of my VTI at $300 in ./ledger.beancount using average-cost booking.",
-      "expected_output": "The skill says plainly that the engine behind bea does not support average-cost booking ('AVERAGE method is not supported'), shows the two real lots (10 @ 100.00 of 2026-01-15, 10 @ 120.00 of 2026-02-15), and lets the user decide — record with a named lot or a supported method, or not record here. It never books the sale at a fabricated 110.00 average cost and writes nothing before the user's decision.",
+      "expected_output": "The skill says plainly that the engine behind bea does not support average-cost booking ('AVERAGE method is not supported'), shows the two real lots (10 @ 100.00 of 2026-01-15, 10 @ 120.00 of 2026-02-15), and lets the user decide \u2014 record with a named lot or a supported method, or not record here. It never books the sale at a fabricated 110.00 average cost and writes nothing before the user's decision.",
       "files": [
         "evals/files/eval1_ledger.beancount"
       ],
@@ -14,6 +14,105 @@
         "Does NOT book any lot at an averaged cost (e.g. 110.00) and does not call another method average cost",
         "Shows the actual lots held and leaves the choice (named lot / supported method / do not record) to the user",
         "Nothing is written before the user decides"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "partial-sell-strict-asks-lot",
+      "prompt": "Record selling 5 of my VTI at $300 in ./ledger.beancount.",
+      "expected_output": "Two lots could supply the 5 shares (10 @ 100.00 of 2026-01-15, 10 @ 120.00 of 2026-02-15) under the default STRICT booking. The skill lists both lots and asks which to reduce; it does not guess, and writes nothing before the answer.",
+      "files": [
+        "evals/files/eval1_ledger.beancount"
+      ],
+      "expectations": [
+        "Both candidate lots are shown with cost and acquisition date",
+        "The user is asked which lot to reduce; no lot is picked silently",
+        "Nothing is written before the user answers"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "transfer-keeps-cost-and-date",
+      "prompt": "Move 4 of my VTI from Assets:Brokerage to Assets:Brokerage:Roth in ./ledger.beancount.",
+      "expected_output": "One transfer entry: -4 VTI out of Assets:Brokerage and +4 VTI into Assets:Brokerage:Roth, both at the original lot (100.00 USD, 2026-01-15). No price, no gain leg, no cash leg.",
+      "files": [
+        "evals/files/eval3_ledger.beancount"
+      ],
+      "expectations": [
+        "The proposed entry carries the same cost (100.00 USD) and acquisition date (2026-01-15) on both sides",
+        "No gain or income leg and no price appear in the entry",
+        "Nothing is written before confirmation"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "split-keeps-total-cost",
+      "prompt": "ACME split 4-for-1 today (2026-03-01). Record it in ./ledger.beancount.",
+      "expected_output": "The 10-share lot at 200.00 becomes 40 shares carrying the same 2000.00 total cost and the 2026-01-15 acquisition date (total-cost form or exact per-unit 50.00). Total cost is unchanged; no gain appears.",
+      "files": [
+        "evals/files/eval4_ledger.beancount"
+      ],
+      "expectations": [
+        "Old lot reduced in full and new lot is 40 units at the same 2000.00 USD total cost and 2026-01-15 date",
+        "No gain, income, or cash leg is proposed",
+        "Nothing is written before confirmation"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "reinvested-dividend",
+      "prompt": "VTI paid a $45.00 dividend on 2026-03-16 that was reinvested at $300 a share. Record it in ./ledger.beancount.",
+      "expected_output": "One entry: 0.15 VTI at {300.00 USD} against Income:Dividends (the 45.00 shown as dividend income), with no cash leg. The new lot's date is the reinvestment date.",
+      "files": [
+        "evals/files/eval5_ledger.beancount"
+      ],
+      "expectations": [
+        "The entry adds 0.15 VTI at 300.00 cost against dividend income of 45.00",
+        "No cash posting is proposed",
+        "Nothing is written before confirmation"
+      ]
+    },
+    {
+      "id": 6,
+      "name": "rsu-vest-at-fmv",
+      "prompt": "Record my RSU vest in ./ledger.beancount: 8 ACME shares vested today (2026-05-01) at a $200 fair-market value, into Assets:Compensation.",
+      "expected_output": "One entry: 8 ACME at {200.00 USD} against Income:Compensation, showing 1600.00 of compensation income. Tax treatment is explicitly left to the user; no withholding or tax entry is invented.",
+      "files": [
+        "evals/files/eval6_ledger.beancount"
+      ],
+      "expectations": [
+        "The lot is booked at the 200.00 fair-market value with 1600.00 of compensation income shown",
+        "Tax treatment is left to the user; no tax posting is invented",
+        "Nothing is written before confirmation"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "crypto-wallet-transfer",
+      "prompt": "Move 0.2 BTC from Assets:Crypto:Exchange to Assets:Crypto:Wallet in ./ledger.beancount.",
+      "expected_output": "One transfer entry: -0.2 BTC out of the exchange account and +0.2 BTC into the wallet, both at the original lot (40000.00 USD, 2026-01-10). No price, no gain leg, full printed precision kept.",
+      "files": [
+        "evals/files/eval7_ledger.beancount"
+      ],
+      "expectations": [
+        "Both sides carry the original 40000.00 USD cost and 2026-01-10 date",
+        "No gain or price appears; the move between own wallets is not treated as a sale",
+        "Nothing is written before confirmation"
+      ]
+    },
+    {
+      "id": 8,
+      "name": "realized-gains-report-ties-out",
+      "prompt": "What were my realized gains in 2026? Ledger is ./ledger.beancount.",
+      "expected_output": "One closed lot: 5 VTI acquired 2025-01-15, sold 2026-03-01, held more than one year, proceeds 750.00, cost 500.00, gain 250.00 USD \u2014 from shown bea queries, tied out against the 250.00 booked to Income:CapitalGains. Read-only: the ledger file is unchanged.",
+      "files": [
+        "evals/files/eval8_ledger.beancount"
+      ],
+      "expectations": [
+        "The row shows acquisition 2025-01-15, sale 2026-03-01, quantity 5, proceeds 750.00, cost 500.00, gain 250.00",
+        "The holding bucket is more-than-one-year and the total ties to the booked 250.00 gains figure from a shown query",
+        "Open lots/unrealized gains are stated as not covered",
+        "The ledger file is not modified"
       ]
     }
   ]

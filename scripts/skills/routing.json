@@ -242,7 +242,8 @@
       "prompt": "I sold a cash-secured put on AAPL, 150 strike expiring June 20, for 1.50. Record it.",
       "expected": "beancount-options",
       "confusable": [
-        "beancount-add"
+        "beancount-add",
+        "beancount-trade"
       ],
       "why": "An options trade to record."
     },
@@ -781,6 +782,24 @@
         "beancount-trade"
       ],
       "why": "A performance question about holdings, not an event to record."
+    },
+    {
+      "id": "trade-add-dinner",
+      "prompt": "I paid $42 for dinner",
+      "expected": "beancount-add",
+      "confusable": [
+        "beancount-trade"
+      ],
+      "why": "An everyday purchase, not an investment event."
+    },
+    {
+      "id": "trade-import-broker-csv",
+      "prompt": "Import my brokerage CSV into my ledger: ./fidelity-2026.csv",
+      "expected": "beancount-import",
+      "confusable": [
+        "beancount-trade"
+      ],
+      "why": "A statement file to import, not a described trade."
     }
   ]
 }

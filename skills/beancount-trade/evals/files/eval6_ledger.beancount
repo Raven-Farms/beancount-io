@@ -1,0 +1,6 @@
+;; fixture — beancount-trade eval6 (RSU vest)
+option "operating_currency" "USD"
+
+2026-01-01 open Assets:Compensation
+2026-01-01 open Income:Compensation USD
+2026-01-01 open Equity:Opening-Balances

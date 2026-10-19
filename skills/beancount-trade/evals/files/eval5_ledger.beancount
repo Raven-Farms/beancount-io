@@ -1,0 +1,14 @@
+;; fixture — beancount-trade eval5 (reinvested dividend)
+option "operating_currency" "USD"
+
+2026-01-01 open Assets:Brokerage USD,VTI
+2026-01-01 open Income:Dividends USD
+2026-01-01 open Equity:Opening-Balances
+
+2026-01-02 * "Cash in"
+  Assets:Brokerage  5000.00 USD
+  Equity:Opening-Balances
+
+2026-01-15 * "Buy VTI"
+  Assets:Brokerage  10 VTI {250.00 USD}
+  Assets:Brokerage -2500.00 USD
