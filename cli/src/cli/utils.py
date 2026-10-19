@@ -248,6 +248,22 @@ class NonEmptyPath(ParamType):
         return Path(value)
 
 
+class RawPath(ParamType):
+    """A path parameter whose raw text reaches the command, for stdin checks.
+
+    `Path("./-")` normalizes to `Path("-")`, which would read stdin instead
+    of the file named `-` (w5/736): the stdin decision needs the raw token,
+    so this converts to `str`, refusing an empty value first like
+    `NonEmptyPath`.
+    """
+
+    name = "path"
+
+    def convert(self, value: Any, param: Any, ctx: Any) -> str:
+        refuse_empty_path(value, param)
+        return str(value)
+
+
 class IntoPath(ParamType):
     """`--into`: a local file relative to the root ledger; a URL is refused.
 

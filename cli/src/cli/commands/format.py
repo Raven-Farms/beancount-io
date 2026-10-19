@@ -34,7 +34,7 @@ from cli.amounts import zero_divisor_line
 from cli.engine import launch
 from cli.errors import BeaError, LedgerError, UsageError
 from cli.paths import expand_path
-from cli.utils import atomic_write, decode_error_message, single_line
+from cli.utils import RawPath, atomic_write, decode_error_message, single_line
 
 SUFFIXES = {".bean", ".beancount"}
 STDIN = "-"
@@ -48,8 +48,11 @@ def _require_output_file(path: Path) -> None:
 
 def format_beans(
     paths: Annotated[
-        list[Path] | None,
-        typer.Argument(help="Ledger files, directories to expand recursively, or - for stdin (default: stdin)"),
+        list[str] | None,
+        typer.Argument(
+            click_type=RawPath(),
+            help="Ledger files, directories to expand recursively, or - for stdin (default: stdin)",
+        ),
     ] = None,
     in_place: Annotated[
         bool, typer.Option("--in-place", "-i", help="Rewrite each file instead of writing stdout")
@@ -390,13 +393,13 @@ def _text(file: Path) -> str:
         raise LedgerError(f"Could not read {file}: {exc.strerror or exc}.") from exc
 
 
-def _named(paths: list[Path] | None, default: Path | None) -> list[Path]:
+def _named(paths: list[str] | None, default: Path | None) -> list[Path]:
     """The paths on the command line, or the global `--file` when none were given."""
-    return [path for path in (paths or []) if str(path)] or ([default] if default is not None else [])
+    return [Path(path) for path in (paths or []) if path] or ([default] if default is not None else [])
 
 
 def _targets(
-    paths: list[Path] | None, default: Path | None, asked: list[str], alignment: list[str], *, expand_includes: bool
+    paths: list[str] | None, default: Path | None, asked: list[str], alignment: list[str], *, expand_includes: bool
 ) -> tuple[list[Path] | None, list[output.MissingInclude], list[dict[str, str]]]:
     """The files to format (None for stdin), missing includes, and intentional encrypted skips.
 
@@ -426,7 +429,11 @@ def _targets(
             f"Ledger path '{directory}' (from --file) is a directory; expected a ledger file. "
             f"Name the directory as an argument instead: {positional}."
         )
-    if any(str(path) == STDIN for path in named):
+    # Stdin is the raw token `-`: Path("./-") normalizes to Path("-"), which
+    # would read stdin instead of the file named `-` (w5/736). The global
+    # `--file` arrives already parsed, so only the exact parsed `-` still
+    # means stdin there.
+    if any(raw == STDIN for raw in (paths or [])) or (not paths and default is not None and str(default) == STDIN):
         if len(named) > 1:
             raise UsageError(f"Read either stdin ('{STDIN}') or named files, not both.")
         return None, [], []
@@ -712,8 +719,8 @@ def _result(
     }
 
 
-def _target(paths: list[Path] | None, files: list[Path]) -> dict[str, str | list[str]]:
-    named = [path for path in (paths or []) if str(path)]
+def _target(paths: list[str] | None, files: list[Path]) -> dict[str, str | list[str]]:
+    named = [Path(path) for path in (paths or []) if path]
     if len(named) == 1 and expand_path(named[0], "format").resolve().is_dir():
         return {"directory": str(expand_path(named[0], "format").resolve())}
     if len(files) == 1:

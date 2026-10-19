@@ -25,7 +25,7 @@ from cli.amounts import JsonFloat, check_decimal_notation, json_float_default, p
 from cli.completion import fixed_values
 from cli.errors import UsageError
 from cli.single_value import SingleValueCommand
-from cli.utils import IntoPath, decode_error_message, parse_date
+from cli.utils import IntoPath, RawPath, decode_error_message, parse_date
 
 add_app = typer.Typer(
     help="Add beancount directives to a local .bean file", no_args_is_help=True, rich_markup_mode=None
@@ -583,15 +583,17 @@ def _nesting_depth(value: Any) -> int:
     return deepest
 
 
-def _load_transactions_json(from_file: Path) -> Any:
+def _load_transactions_json(from_file: str) -> Any:
     """Read and parse `--from`; unreadable input is a usage error, phrased like `--file`'s.
 
     Stdin is read as bytes and decoded exactly like a file: the text stream
     would decode with the locale's codec (and its error handler), so the same
     bytes could pass on one machine and fail with a raw codec error on another.
     """
-    stdin = str(from_file) == "-"
-    name = "stdin" if stdin else str(from_file)
+    # Raw text, not a Path: Path("./-") normalizes to Path("-"), which would
+    # read stdin instead of the file named `-` (w5/736).
+    stdin = from_file == "-"
+    name = "stdin" if stdin else from_file
     if stdin:
         context.refuse_terminal_stdin(
             "Transactions are required with --no-input. Pipe the JSON array on stdin or name a file with --from PATH."
@@ -600,7 +602,7 @@ def _load_transactions_json(from_file: Path) -> Any:
         data = buffer.read() if buffer is not None else sys.stdin.read().encode("utf-8")
     else:
         try:
-            data = from_file.read_bytes()
+            data = Path(from_file).read_bytes()
         except FileNotFoundError as exc:
             raise UsageError(
                 f"No transactions file at '{from_file}' (from --from). "
@@ -662,7 +664,9 @@ def _json_value_problem(exc: ValueError) -> str:
 
 @add_app.command("transactions", cls=_SingleValueCommand)
 def add_transactions(
-    from_file: Annotated[Path, typer.Option("--from", help="JSON file with a list of transactions; - reads stdin")],
+    from_file: Annotated[
+        str, typer.Option("--from", click_type=RawPath(), help="JSON file with a list of transactions; - reads stdin")
+    ],
     partial: Annotated[
         bool, typer.Option("--partial", help="Append the valid rows even when some rows are rejected")
     ] = False,
