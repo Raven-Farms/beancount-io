@@ -163,12 +163,28 @@ def load(file: Path) -> dict[str, Any]:
     return {"entries": entries, "errors": errors, "options": options}
 
 
+def _settle_price_map(connection: Any) -> None:
+    """Replace the connection's price map with the shared settlement rule.
+
+    `beanquery` builds it with Beancount's whole-ledger counts, so a later
+    quote valued an earlier conversion there even once the reports stopped
+    doing it (w5/740). The prices table keeps its raw entries; only the map
+    conversions read is replaced.
+    """
+    from bea_engine.ledger.prices import settled_bql_price_map
+
+    table = connection.tables["prices"]
+    table.price_map = settled_bql_price_map(table.entries)
+
+
 def connect(file: Path) -> Any:
     """A beanquery connection on the exact ledger file, includes and load errors intact."""
     import beanquery
 
     _null_safe_ordering()
-    return beanquery.connect(LEDGER_DSN, **load(file))
+    connection = beanquery.connect(LEDGER_DSN, **load(file))
+    _settle_price_map(connection)
+    return connection
 
 
 def _null_safe_ordering() -> None:
@@ -1207,6 +1223,7 @@ def build_shell(
             self.context.errors.clear()
             self.context.options.clear()
             self.context.attach(LEDGER_DSN, **loaded)
+            _settle_price_map(self.context)
             self._extract_queries(self.context.tables["entries"].entries)
             if self.context.errors and self.show_load_errors:
                 _print_load_errors(self.context.errors, sys.stderr)
