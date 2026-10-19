@@ -317,6 +317,15 @@ describe("config", () => {
       ]);
     });
 
+    it("reject a value that is set but lists nothing", () => {
+      expect(() => parseSignupAllowedEmails(", ,")).toThrow(
+        /SIGNUP_ALLOWED_EMAILS: set but lists no addresses/,
+      );
+      expect(() => parseSignupAllowedDomains(" , ")).toThrow(
+        /SIGNUP_ALLOWED_DOMAINS: set but lists no domains/,
+      );
+    });
+
     it("reject malformed entries at boot", () => {
       for (const bad of [
         "not-an-email",
@@ -324,6 +333,9 @@ describe("config", () => {
         "a@",
         "a b@example.com",
         "a@localhost",
+        "a@@example.com",
+        ".a@example.com",
+        "a..b@example.com",
       ]) {
         expect(() => parseSignupAllowedEmails(bad)).toThrow(
           /SIGNUP_ALLOWED_EMAILS/,
