@@ -179,6 +179,12 @@ const nlAuth: Record<string, TranslationEntry> = {
     message: "Inloggen mislukt",
     description: "Error title when login fails",
   },
+  "auth.loginRateLimited": {
+    message:
+      "Te veel inlogpogingen. Wacht een paar minuten en probeer het opnieuw, of reset uw wachtwoord.",
+    description:
+      "Shown on any password sign-in form when sign-in is rate limited, by address or by too many wrong passwords for the account",
+  },
   "auth.logout": {
     message: "Uitloggen",
     description: "Button label to log out",

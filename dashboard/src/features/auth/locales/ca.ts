@@ -180,6 +180,12 @@ const caAuth: Record<string, TranslationEntry> = {
     message: "L'inici de sessió ha fallat",
     description: "Error title when login fails",
   },
+  "auth.loginRateLimited": {
+    message:
+      "Massa intents d'inici de sessió. Espereu uns minuts i torneu-ho a provar, o restabliu la contrasenya.",
+    description:
+      "Shown on any password sign-in form when sign-in is rate limited, by address or by too many wrong passwords for the account",
+  },
   "auth.logout": {
     message: "Tancar sessió",
     description: "Button label to log out",

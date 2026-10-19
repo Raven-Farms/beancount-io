@@ -179,6 +179,12 @@ const ruAuth: Record<string, TranslationEntry> = {
     message: "Ошибка входа",
     description: "Error title when login fails",
   },
+  "auth.loginRateLimited": {
+    message:
+      "Слишком много попыток входа. Подождите несколько минут и попробуйте снова или сбросьте пароль.",
+    description:
+      "Shown on any password sign-in form when sign-in is rate limited, by address or by too many wrong passwords for the account",
+  },
   "auth.logout": {
     message: "Выход",
     description: "Button label to log out",

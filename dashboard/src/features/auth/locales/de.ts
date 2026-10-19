@@ -180,6 +180,12 @@ const deAuth: Record<string, TranslationEntry> = {
     message: "Anmeldung fehlgeschlagen",
     description: "Error title when login fails",
   },
+  "auth.loginRateLimited": {
+    message:
+      "Zu viele Anmeldeversuche. Warten Sie einige Minuten und versuchen Sie es erneut, oder setzen Sie Ihr Passwort zurück.",
+    description:
+      "Shown on any password sign-in form when sign-in is rate limited, by address or by too many wrong passwords for the account",
+  },
   "auth.logout": {
     message: "Abmelden",
     description: "Button label to log out",

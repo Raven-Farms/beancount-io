@@ -179,6 +179,12 @@ const ptAuth: Record<string, TranslationEntry> = {
     message: "Login falhou",
     description: "Error title when login fails",
   },
+  "auth.loginRateLimited": {
+    message:
+      "Muitas tentativas de login. Aguarde alguns minutos e tente novamente, ou redefina sua senha.",
+    description:
+      "Shown on any password sign-in form when sign-in is rate limited, by address or by too many wrong passwords for the account",
+  },
   "auth.logout": {
     message: "Sair",
     description: "Button label to log out",

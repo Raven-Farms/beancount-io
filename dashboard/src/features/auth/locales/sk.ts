@@ -179,6 +179,12 @@ const skAuth: Record<string, TranslationEntry> = {
     message: "Prihlásenie zlyhalo",
     description: "Error title when login fails",
   },
+  "auth.loginRateLimited": {
+    message:
+      "Príliš veľa pokusov o prihlásenie. Počkajte niekoľko minút a skúste to znova, alebo si resetujte heslo.",
+    description:
+      "Shown on any password sign-in form when sign-in is rate limited, by address or by too many wrong passwords for the account",
+  },
   "auth.logout": {
     message: "Odhlásiť",
     description: "Button label to log out",

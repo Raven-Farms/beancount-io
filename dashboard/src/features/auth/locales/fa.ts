@@ -179,6 +179,12 @@ const faAuth: Record<string, TranslationEntry> = {
     message: "ورود ناموفق بود",
     description: "Error title when login fails",
   },
+  "auth.loginRateLimited": {
+    message:
+      "تعداد تلاش‌های ورود بیش از حد است. چند دقیقه صبر کنید و دوباره امتحان کنید، یا رمز عبور خود را بازنشانی کنید.",
+    description:
+      "Shown on any password sign-in form when sign-in is rate limited, by address or by too many wrong passwords for the account",
+  },
   "auth.logout": {
     message: "خروج",
     description: "Button label to log out",

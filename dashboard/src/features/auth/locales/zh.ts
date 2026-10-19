@@ -177,6 +177,11 @@ const zhAuth: Record<string, TranslationEntry> = {
     message: "登录失败",
     description: "Error title when login fails",
   },
+  "auth.loginRateLimited": {
+    message: "登录尝试次数过多。请等待几分钟后重试，或重置密码。",
+    description:
+      "Shown on any password sign-in form when sign-in is rate limited, by address or by too many wrong passwords for the account",
+  },
   "auth.logout": {
     message: "登出",
     description: "Button label to log out",

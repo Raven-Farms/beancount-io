@@ -158,6 +158,12 @@ const koAuth: Record<string, TranslationEntry> = {
     message: "로그인에 실패했습니다",
     description: "Error title when login fails",
   },
+  "auth.loginRateLimited": {
+    message:
+      "로그인 시도가 너무 많습니다. 몇 분 후에 다시 시도하거나 비밀번호를 재설정하세요.",
+    description:
+      "Shown on any password sign-in form when sign-in is rate limited, by address or by too many wrong passwords for the account",
+  },
   "auth.logout": {
     message: "로그아웃",
     description: "Button label to log out",

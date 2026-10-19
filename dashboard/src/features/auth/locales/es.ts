@@ -180,6 +180,12 @@ const esAuth: Record<string, TranslationEntry> = {
     message: "Falló el inicio de sesión",
     description: "Error title when login fails",
   },
+  "auth.loginRateLimited": {
+    message:
+      "Demasiados intentos de inicio de sesión. Espere unos minutos e inténtelo de nuevo, o restablezca su contraseña.",
+    description:
+      "Shown on any password sign-in form when sign-in is rate limited, by address or by too many wrong passwords for the account",
+  },
   "auth.logout": {
     message: "Cerrar sesión",
     description: "Button label to log out",

@@ -181,6 +181,12 @@ const frAuth: Record<string, TranslationEntry> = {
     message: "Échec de la connexion",
     description: "Error title when login fails",
   },
+  "auth.loginRateLimited": {
+    message:
+      "Trop de tentatives de connexion. Patientez quelques minutes et réessayez, ou réinitialisez votre mot de passe.",
+    description:
+      "Shown on any password sign-in form when sign-in is rate limited, by address or by too many wrong passwords for the account",
+  },
   "auth.logout": {
     message: "Déconnexion",
     description: "Button label to log out",

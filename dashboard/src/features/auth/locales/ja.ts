@@ -160,6 +160,12 @@ const jaAuth: Record<string, TranslationEntry> = {
     message: "ログインに失敗しました",
     description: "Error title when login fails",
   },
+  "auth.loginRateLimited": {
+    message:
+      "ログインの試行回数が多すぎます。数分待ってから再度お試しいただくか、パスワードをリセットしてください。",
+    description:
+      "Shown on any password sign-in form when sign-in is rate limited, by address or by too many wrong passwords for the account",
+  },
   "auth.logout": {
     message: "ログアウト",
     description: "Button label to log out",

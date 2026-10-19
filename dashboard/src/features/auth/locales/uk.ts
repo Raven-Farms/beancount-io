@@ -179,6 +179,12 @@ const ukAuth: Record<string, TranslationEntry> = {
     message: "Не вдалося увійти",
     description: "Error title when login fails",
   },
+  "auth.loginRateLimited": {
+    message:
+      "Забагато спроб входу. Зачекайте кілька хвилин і спробуйте ще раз або скиньте пароль.",
+    description:
+      "Shown on any password sign-in form when sign-in is rate limited, by address or by too many wrong passwords for the account",
+  },
   "auth.logout": {
     message: "Вихід",
     description: "Button label to log out",

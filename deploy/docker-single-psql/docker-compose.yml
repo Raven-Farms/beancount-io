@@ -127,6 +127,8 @@ services:
     environment:
       NODE_ENV: production
       PORT: 4104
+      # Caddy is the one proxy in front of the backend. (w0/m7)
+      TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS:-1}
       SERVER_URL: https://${API_DOMAIN:?Set API_DOMAIN in .env}
       DASHBOARD_URL: https://${APP_DOMAIN:?Set APP_DOMAIN in .env}
       AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET in .env}

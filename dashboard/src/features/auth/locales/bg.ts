@@ -179,6 +179,12 @@ const bgAuth: Record<string, TranslationEntry> = {
     message: "Неуспешен вход",
     description: "Error title when login fails",
   },
+  "auth.loginRateLimited": {
+    message:
+      "Твърде много опити за вход. Изчакайте няколко минути и опитайте отново или нулирайте паролата си.",
+    description:
+      "Shown on any password sign-in form when sign-in is rate limited, by address or by too many wrong passwords for the account",
+  },
   "auth.logout": {
     message: "Изход",
     description: "Button label to log out",

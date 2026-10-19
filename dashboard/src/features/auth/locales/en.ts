@@ -162,6 +162,12 @@ const enAuth: Record<string, TranslationEntry> = {
     message: "Login failed",
     description: "Error title when login fails",
   },
+  "auth.loginRateLimited": {
+    message:
+      "Too many sign-in attempts. Wait a few minutes and try again, or reset your password.",
+    description:
+      "Shown on any password sign-in form when sign-in is rate limited, by address or by too many wrong passwords for the account",
+  },
   "auth.logout": {
     message: "Logout",
     description: "Button label to log out",
