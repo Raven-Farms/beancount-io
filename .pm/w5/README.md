@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [753 — Whole amounts with dot thousands (ISK, CLP, VND) are refused, or imported 1000x too small with exit 0](./753.md)
 - [754 — Editing the previewed CSV drops its sign=ledger on a flag-free --apply, flipping every amount](./754.md)
 - [755 — A DEBIT/CREDIT Type column cannot be mapped and is ignored, booking debits as money in](./755.md)
 - [756 — The csv:sha256 import-id hashes a tab as \X09, not collapsed whitespace](./756.md)
