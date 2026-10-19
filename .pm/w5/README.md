@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [769 — treeify: renamed roots still lose to a narration colon; the new lookahead is quadratic (incomplete fix of w5/570)](./769.md)
 - [770 — doctor roundtrip still prints tracebacks for identical entries and an over-long scratch name](./770.md)
 - [771 — check_drained close hint blames the parent for a subaccount's money; following it leaves wrong books](./771.md)
 - [772 — A backdated close (or late open) blames the existing entry, cites a line past EOF, and suggests --allow-errors](./772.md)
