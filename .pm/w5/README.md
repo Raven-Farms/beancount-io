@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [755 — A DEBIT/CREDIT Type column cannot be mapped and is ignored, booking debits as money in](./755.md)
 - [756 — The csv:sha256 import-id hashes a tab as \X09, not collapsed whitespace](./756.md)
 - [757 — £ and ₩ are treated as GBP/KRW only; GIP, FKP, SHP, EGP and KPW exports are refused](./757.md)
 - [758 — Bank-export framing (preamble, sep=, repeated header, footer) cannot be imported; refusal advice cannot work](./758.md)
