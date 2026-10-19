@@ -9,13 +9,17 @@
 | [t001](./done/t001.md) | Choose the manifest layout and the plugin name, verified against current docs — **DONE** | 45m | w2/m42/t006 |
 | [t002](./done/t002.md) | Add the Claude Code marketplace and plugin entry — **DONE** | 45m | t001 |
 | t003 | Add the Codex plugin manifest for the same `skills/` | 45m | t001 |
-| t004 | Decide how a skill change reaches plugin users, and enforce it in CI | 30m | t002, t003 |
-| t005 | Document the plugin install beside the other install paths | 30m | t002, t003 |
+| t004 | Decide how a skill change reaches plugin users, and enforce it in CI | 30m | t002 |
+| t005 | Document the plugin install beside the other install paths | 30m | t002 |
 | t006 | Rehearse install, update, and first query on both clients | 45m | t004, t005 |
 | t007 | Adoption surface | 30m | t006 |
 | t008 | Simplify | 15m | t007 |
 | t009 | Test coverage | 45m | t007, t008 |
 | t010 | Closeout | 15m | t009 |
+
+## Blocked
+
+- **t003 (2026-10-19)** — its manifests shipped (`f790f265a`) and installed correctly from GitHub on the second client; only the live prompt showing it reading the shared `bea-cli.md` from the plugin cache remains, which needs a model turn the usage-limited account cannot run until 2026-11-17 (recorded in [t003](./t003.md)). t004 and t005 needed only the shipped manifests, so their `depends_on` was repointed to t002 in the same ship; t006 still waits behind them and will need the same live runs.
 
 ## Definition of done
 
