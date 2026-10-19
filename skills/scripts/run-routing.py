@@ -23,7 +23,8 @@ How a choice is detected, verified against Claude Code 2.1.289 and Codex 0.163.0
   no MCP server is loaded (`--strict-mcp-config`).
 - Codex (`codex exec --json --sandbox read-only`): Codex has no skill tool; it
   opens a skill by running a shell command that reads `<skill>/SKILL.md`. The
-  first command that reads a `SKILL.md` names the choice.
+  first completed command that names `<skill>/SKILL.md` and prints that
+  skill's `name:` frontmatter is the choice.
 
 The client is stopped as soon as a choice is seen. A run that finishes without
 one chose no skill. A skill outside the suite (a user-level skill or plugin)
@@ -127,6 +128,7 @@ def claude_event(event: dict, meta: dict) -> tuple[str | None, str | None]:
     if event.get("type") == "assistant":
         for part in event.get("message", {}).get("content", []):
             if part.get("type") == "tool_use" and part.get("name") == "Skill":
+                meta["evidence"] = json.dumps(part.get("input", {}))[:300]
                 return str(part.get("input", {}).get("skill", "")), None
     if event.get("type") == "result" and event.get("is_error") and event.get("subtype") not in (
         "error_max_turns",
@@ -136,12 +138,21 @@ def claude_event(event: dict, meta: dict) -> tuple[str | None, str | None]:
 
 
 def codex_event(event: dict, meta: dict) -> tuple[str | None, str | None]:
-    """Return (choice, error) for one Codex `exec --json` event."""
+    """Return (choice, error) for one Codex `exec --json` event.
+
+    A command counts as opening a skill only when it names `<skill>/SKILL.md`
+    and its output contains that skill's `name: <skill>` frontmatter line. A
+    search for a guessed path prints no frontmatter, and the exit status is
+    no guide: Codex often chains the read with a search that exits 1.
+    """
     item = event.get("item", {})
-    if item.get("type") == "command_execution":
-        found = CODEX_SKILL_READ.search(item.get("command", ""))
-        if found:
-            return found.group(1), None
+    if event.get("type") == "item.completed" and item.get("type") == "command_execution":
+        output = str(item.get("aggregated_output", ""))
+        for found in CODEX_SKILL_READ.finditer(item.get("command", "")):
+            name = found.group(1)
+            if re.search(rf"^name:\s*['\"]?{re.escape(name)}['\"]?\s*$", output, re.M):
+                meta["evidence"] = item.get("command", "")[:300]
+                return name, None
     if event.get("type") in ("turn.failed", "error"):
         message = event.get("message") or event.get("error", {}).get("message")
         return None, str(message)[:300]
@@ -191,6 +202,7 @@ def run_one(client: str, entry: dict, workspace: Path, model: str | None, timeou
         "error": error,
         "seconds": round(time.monotonic() - started, 1),
         **({"model": meta["model"]} if meta.get("model") else {}),
+        **({"evidence": meta["evidence"]} if meta.get("evidence") else {}),
     }
 
 
