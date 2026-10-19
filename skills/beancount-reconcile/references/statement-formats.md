@@ -30,7 +30,9 @@ Read the PDF directly when your agent can open it; otherwise ask the user to pas
 
 - **Period**: look for "Statement period", "Billing cycle", "From … to …", "Opening/Closing date" lines.
 - **Opening balance** and **ending/closing balance**: labelled lines ("Beginning balance", "Ending balance", "New balance", "Closing balance").
-- **Transaction lines**: rows that begin (or end) with a date and contain an amount. Multi-line descriptions happen — join continuation lines to the row whose date they follow.
+- **Transaction lines**: rows that begin (or end) with a date and contain an amount. Multi-line descriptions happen — join continuation lines to the row whose date they follow. Record each row's page and line, so a proposal can be spot-checked against the paper.
+
+This extraction is shared: `beancount-import` imports a PDF statement through it (its `references/formats.md` adds the import-only rules — `pdf:sha256` ids, the skip list, the documents layout), while this skill uses it to compare. Change extraction behavior here, once.
 
 If period bounds or ending balance are missing from the statement, ask the user for them explicitly. Do not infer an ending balance by summing — a statement you can't anchor to a stated ending balance can't be reconciled with a trustworthy assertion.
 

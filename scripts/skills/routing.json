@@ -111,6 +111,35 @@
       "why": "A repeat import uses the stored config; no importer needs writing."
     },
     {
+      "id": "import-pdf-no-csv",
+      "prompt": "Import my June statement PDF into my ledger — my bank has no CSV export.",
+      "expected": "beancount-import",
+      "confusable": [
+        "beancount-reconcile",
+        "beancount-add"
+      ],
+      "why": "Recording a PDF statement's rows is an import; reconcile compares against a statement the ledger should already match."
+    },
+    {
+      "id": "import-pdf-record-rows",
+      "prompt": "Record the transactions in ./may-statement.pdf in my ledger.",
+      "expected": "beancount-import",
+      "confusable": [
+        "beancount-reconcile",
+        "beancount-add"
+      ],
+      "why": "A whole statement file to record, not one manual entry and not a comparison."
+    },
+    {
+      "id": "import-pdf-credit-union",
+      "prompt": "My credit union only gives PDF statements. Import this one and attach the file to the account.",
+      "expected": "beancount-import",
+      "confusable": [
+        "beancount-reconcile"
+      ],
+      "why": "PDF-only source importing with the document attached; reconcile would diff against existing entries instead."
+    },
+    {
       "id": "author-schwab-importer",
       "prompt": "Write a beangulp importer for my Schwab checking CSV exports so I can rerun it every month. Sample: ./schwab-sample.csv",
       "expected": "beancount-importer-author",

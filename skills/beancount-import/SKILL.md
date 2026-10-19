@@ -1,6 +1,6 @@
 ---
 name: beancount-import
-description: Import a bank or card CSV, OFX/QFX, or QIF export into an existing local Beancount ledger. Normalize signs, suggest categories from existing accounts, review duplicates and confirm before writing through bea. Use for recording an export; skip statement reconciliation, full finance-app migrations, reusable importer authoring, individual options trades, single manual entries (beancount-add), ledger `option` settings, and ledgers hosted on Beancount.io.
+description: Import a bank or card CSV, OFX/QFX, QIF, or PDF statement export into an existing local Beancount ledger. Normalize signs, suggest categories from existing accounts, review duplicates and confirm before writing through bea; a PDF statement must tie out and ends with a balance assertion. Use for recording an export or a statement PDF; skip comparing an account against a statement (beancount-reconcile), full finance-app migrations, reusable importer authoring, individual options trades, single manual entries (beancount-add), ledger `option` settings, and ledgers hosted on Beancount.io.
 metadata:
   openclaw:
     homepage: 'https://github.com/bex-co/beancount-io/tree/main/skills'
@@ -50,6 +50,13 @@ Read beancount-init's `references/bea-cli.md` (from this skill's folder, `../bea
   suggestion and confirmation stages below, then use the shared JSON batch
   recipe, preserving `import-id` and flags. This also handles mixed per-row
   duplicate decisions that a single `--duplicates` policy cannot express.
+- **PDF statement (no machine-readable export):** extract the rows yourself
+  following beancount-reconcile's `references/statement-formats.md`
+  (`../beancount-reconcile/references/statement-formats.md` from this
+  skill's folder) — the extraction is shared, not copied — then run the same
+  stages and JSON batch write, with the sanity walk as a gate and a closing
+  `balance` assertion as the success condition (see **PDF statements** under
+  Normalize and Write + Verify).
 - **Tested Beangulp workflows:** enable with `bea engine enable beangulp`
   (system-library needs are in beancount-init's `references/bea-cli.md`,
   Version notes), then `bea ingest identify|extract|archive` with the actual
@@ -61,7 +68,7 @@ text itself.
 
 ## Scope — what this skill does and does not touch
 
-**Does:** parse one export file per run; stage, dedup, and categorize its rows; **append** confirmed transactions (with `import-id` metadata) and any needed `open` directives to one existing file.
+**Does:** parse one export file per run; stage, dedup, and categorize its rows; **append** confirmed transactions (with `import-id` metadata) and any needed `open` directives to one existing file. For a PDF statement it also appends the closing `balance` assertion and, on a separate yes, a `document` directive attaching the statement file.
 
 **Does not:** edit or delete existing entries; create the target file (it must already exist and be included by the root, and `bea` refuses any other destination); fetch data from banks (see `references/getting-data.md` for how users export, incl. SimpleFIN); reconcile balances (`beancount-reconcile` — suggest it after a large import); migrate full finance-app history (`beancount-migrate`); build reusable importers (`beancount-importer-author`); record single manual entries (`beancount-add`); touch `option`, `plugin`, or `include` directives.
 
@@ -124,16 +131,19 @@ Turn the file into normalized rows: `date, amount (ledger sign), payee/descripti
 - First time seeing a source: propose the column mapping, **confirm it with the user, persist it after the write confirmation** to the config block. Repeat imports: apply the stored mapping silently.
 - Map amounts to the ledger's sign convention for the source account — the full sign rules live in `references/formats.md` (canonical; same convention as beancount-reconcile). Debit/credit split columns, all-positive amounts with a type column, DMY vs MDY — when ambiguous, **ask, never guess**. A wrong guess here corrupts every row.
 
+**PDF statements.** A `.pdf` the user names as a bank/card statement takes the agent-extraction path (`references/formats.md`, PDF): period, opening and closing balances, and dated transaction lines, skipping page subtotals, carried-forward lines, and balance lines. Record each row's **page and line** as you extract it — the review shows them, so the user can spot-check any row against the paper. Run the sanity walk (opening + movements = closing) before staging anything: if it does not tie, stop, show the gap and the figures you read, and write nothing. A PDF source records one `format: pdf` stanza line in the config block with the sign and date conventions learned, like other non-mapper sources.
+
 ### 3. Stage
 
-Build candidate transactions in memory — **nothing touches the ledger yet**. One candidate per normalized row: date, flag (`!` if the source marks it pending, else `*`), payee, source-account posting at the exact row amount, counter-account left for Suggest, `import-id` computed per `references/dedup.md`.
+Build candidate transactions in memory — **nothing touches the ledger yet**. One candidate per normalized row: date, flag (`!` if the source marks it pending, else `*`), payee, source-account posting at the exact row amount, counter-account left for Suggest, `import-id` computed per `references/dedup.md` (PDF rows take the `pdf:sha256` form and keep their page and line for the review table).
 
 ### 4. Dedup
 
-**Read `references/dedup.md` first.** Two layers, in order:
+**Read `references/dedup.md` first.** Layers, in order:
 
 1. **Exact** — scan existing entries for `import-id` metadata matching a candidate's ID. Match → drop the candidate, count it as *already imported*.
 2. **Fuzzy** — for surviving candidates, look for existing entries **without** import-id metadata (manual or pre-convention entries) posting the same amount to the source account within ±3 days with a similar description. Each hit becomes a *suspected duplicate*: shown in the review table for the user to decide keep/skip — never silently skipped, never silently double-entered.
+3. **Transfer other side, then cross-source** (dedup.md Layers 2b and 2c) — same amount to the source account within ±3 days regardless of description: first the counter-posting side of a transfer, then entries whose `import-id` source kind differs from the candidate's (the same purchase arriving from a PDF and later a CSV, or the reverse). Same handling: suspected duplicates, shown once, user decides.
 
 Use the same confirmed sign, account, and source identities on every run. Exact reimports yield **zero** new entries; unresolved or previously skipped fuzzy matches still need review. Read `references/bea-import.md` before treating a CLI preview as complete deduplication.
 
@@ -181,6 +191,8 @@ New account opens:
 Append these 7 transactions to ./transactions/2026.beancount? (yes/no)
 ```
 
+For a PDF statement the proposal also shows the tie-out line (`opening 1,240.00 + movements −812.35 = closing 427.65 ✓`), each row's page and line (`p.2 · line 14`), and the closing assertion it will write (date = the day after the statement period ends, amount = the closing balance). Attaching the statement file is offered only after the write succeeds, as its own yes (Write + Verify).
+
 ### 7. Write + Verify
 
 After the user's yes:
@@ -193,6 +205,20 @@ After the user's yes:
    Preserve every external row's `import-id`; batch writes do not deduplicate.
 3. Update only the reviewed config comment block, then run
    `bea --file "$ledger" --json --no-input check` on the **root**.
+
+**PDF statements** write in this order, with the same shared recipes: the
+approved batch (`add transactions`), then the closing assertion —
+`add balance` dated the day after the statement period ends, for the source
+account at the statement's closing balance — then the root `bea check`. The
+import succeeds only when that check passes with the assertion in place; a
+failing assertion is reported as a failed import with the exact error, never
+as success. Then offer to attach the statement: propose where the file goes —
+under the ledger's `option "documents"` root in the account-named folder when
+that option is declared, otherwise referenced in place — and never move or
+copy the user's file without a separate explicit yes. On that yes, append
+`add document --date <period end> --account <source account> --filename <path
+relative to the destination file's directory>` and re-run the root check,
+which fails when the named file is missing.
 
 On success report imported/skipped counts, duplicate decisions, and flagged
 uncategorized rows. Suggest beancount-reconcile after a large import.

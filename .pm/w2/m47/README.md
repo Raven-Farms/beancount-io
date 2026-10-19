@@ -1,13 +1,13 @@
 # w2 · m47 — Turn PDF statements and receipt photos into checked entries with documents attached
 
-**Worker:** worker2 **Goal:** a user whose bank offers only PDF statements, or who has a photo or PDF of a receipt, gets the same reviewed, deduplicated entries a CSV export produces, with the source file attached to the ledger. Extracted rows never count as imported until a `balance` assertion ties them to the statement's closing balance. **Status:** todo (t001 done)
+**Worker:** worker2 **Goal:** a user whose bank offers only PDF statements, or who has a photo or PDF of a receipt, gets the same reviewed, deduplicated entries a CSV export produces, with the source file attached to the ledger. Extracted rows never count as imported until a `balance` assertion ties them to the statement's closing balance. **Status:** todo (t001–t002 done)
 
 ## Tasks (in order)
 
 | id   | title | est | depends_on |
 | ---- | ----- | --- | ---------- |
 | [t001](./done/t001.md) | Decide where a PDF statement imports, how its rows are identified, and how they dedup against a later CSV — **DONE** | 45m | w2/079 |
-| t002 | Import a PDF statement as checked entries, with the statement attached | 75m | t001 |
+| [t002](./done/t002.md) | Import a PDF statement as checked entries, with the statement attached — **DONE** | 75m | t001 |
 | t003 | Turn a receipt image or PDF into a proposed entry, with the receipt attached | 45m | t001, w2/m40/t010 |
 | t004 | Write evals with synthetic PDF statements and receipts | 60m | t002, t003 |
 | t005 | Run the evals and the routing set on Claude Code and Codex | 45m | t004 |

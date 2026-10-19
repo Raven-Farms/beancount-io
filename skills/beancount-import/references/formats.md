@@ -7,6 +7,7 @@
 | Starts with `OFXHEADER:` or contains `<OFX>` | OFX (or QFX — same parsing) |
 | Lines starting `!Type:`, fields prefixed `D`/`T`/`P`/`^` | QIF |
 | Delimited rows, first line usually a header | CSV |
+| A `.pdf` the user names as a bank/card statement | PDF statement (agent extraction, below) |
 
 ## CSV
 
@@ -54,6 +55,17 @@ Line-tagged records terminated by `^`: `D` date, `T` amount, `P` payee, `M` memo
 ## Pending rows
 
 Sources mark pending as a status column (`Pending`/`Posted`), OFX by omission (pending usually absent), or a separate file section. Pending rows: flag `!`, import normally — but warn the user that when the transaction settles, the bank may re-export it with a different date/amount (and for OFX a different FITID), which will surface as a fuzzy suspected duplicate; resolving those is exactly what the suspected-duplicates review is for. `beancount-reconcile`'s balance assertion later proves the account's total; it does not clear `!` flags — the user does.
+
+## PDF statement
+
+No delimiter structure and usually no machine-readable alternative — the bank offers only this. Extraction (period, opening/closing balances, dated transaction lines, sign tables, the sanity walk) is **shared with beancount-reconcile**: follow its `references/statement-formats.md` (`../../beancount-reconcile/references/statement-formats.md`), do not keep a second copy here. The import-specific rules:
+
+- Capture each row's **page and line** while extracting; the review table shows them.
+- Skip lines that are not transactions: page subtotals, "balance brought/carried forward", interest-summary and fee-summary totals, and the opening/closing balance lines themselves.
+- The sanity walk is a **gate**, not a warning: opening + movements must equal the printed closing balance before any row is staged. On a gap, stop and show the figures read — a misread digit is the usual cause.
+- The description hashed for `import-id` is the line **as printed** (`pdf:sha256`, see `dedup.md`) — copy it, joining wrapped lines with one space; never paraphrase.
+- A statement covering several accounts at once, or brokerage holdings/lots, is out of scope: say so and stop rather than splitting it by guesswork.
+- When your client cannot open the PDF, ask the user to paste its text or export CSV instead; the pasted text follows the same rules, minus page numbers (use pasted-line numbers).
 
 ## Multi-currency
 
