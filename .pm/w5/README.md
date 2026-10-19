@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [740 — A later quote changes an earlier valuation; ties settled by line number; double-inversion residue (incomplete fix of w5/556)](./740.md)
 - [741 — Import writes a reciprocal add price refuses; add price silent against implicit_prices; exact-1 agreement (incomplete fix of w5/556)](./741.md)
 - [742 — Compound-cost buys share an import-id; dedup.md's "sorted order" differs from bea's (incomplete fix of w5/349/555)](./742.md)
 - [743 — Reconcile skill: the red-ledger batch "passes on its own" is false while a mismatch remains (incomplete fix of w5/554)](./743.md)
