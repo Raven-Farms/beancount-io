@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [765 — A documents-folder file dated before an open makes add open fail with main.bean:0 and no file named](./765.md)
 - [766 — Three option gaps: pedantic price --force, plugin_processing_mode raw in exports, invalid name_* value blocks adds](./766.md)
 - [767 — doctor context/region with a bare line find nothing through a symlinked path (regression from w5/568)](./767.md)
 - [768 — doctor linked/region print inferred-only legs at max precision and 26 decimals under --conversion (w5/571 follow-ups)](./768.md)
