@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import datetime
 import json
+import os
 import re
 import sys
 from decimal import Decimal
@@ -594,15 +595,23 @@ def _load_transactions_json(from_file: str) -> Any:
     # read stdin instead of the file named `-` (w5/736).
     stdin = from_file == "-"
     name = "stdin" if stdin else from_file
+    unattended = (
+        "Transactions are required with --no-input. Pipe the JSON array on stdin or name a file with --from PATH."
+    )
     if stdin:
-        context.refuse_terminal_stdin(
-            "Transactions are required with --no-input. Pipe the JSON array on stdin or name a file with --from PATH."
-        )
+        context.refuse_terminal_stdin(unattended)
         buffer = getattr(sys.stdin, "buffer", None)
         data = buffer.read() if buffer is not None else sys.stdin.read().encode("utf-8")
     else:
         try:
-            data = Path(from_file).read_bytes()
+            with Path(from_file).open("rb") as handle:
+                # A named terminal (`--from /dev/stdin`) waits for a human
+                # exactly like `-` does, so it is refused the same way when
+                # unattended; pipes and regular files are read as before
+                # (w5/737).
+                if os.isatty(handle.fileno()) and context.current().no_input:
+                    raise UsageError(unattended)
+                data = handle.read()
         except FileNotFoundError as exc:
             raise UsageError(
                 f"No transactions file at '{from_file}' (from --from). "
