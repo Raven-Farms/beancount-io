@@ -1,6 +1,6 @@
 # w2 · m40 — Record everyday ledger changes through a `beancount-add` skill
 
-**Worker:** worker2 **Goal:** a user who tells their coding agent "I paid $42 for dinner on the Amex", "open a savings account", or "close my old card" gets a proposed entry that uses existing accounts. It is written through `bea` only after a yes and checked against the root ledger, with the same safeguards the other skills use. **Status:** todo (t001–t006 done)
+**Worker:** worker2 **Goal:** a user who tells their coding agent "I paid $42 for dinner on the Amex", "open a savings account", or "close my old card" gets a proposed entry that uses existing accounts. It is written through `bea` only after a yes and checked against the root ledger, with the same safeguards the other skills use. **Status:** todo (t001–t007 done)
 
 ## Tasks (in order)
 
@@ -12,7 +12,7 @@
 | [t004](./done/t004.md) | Write evals and fixtures — **DONE** | 45m | t002, t003 |
 | [t005](./done/t005.md) | Run the evals on Claude Code and Codex — **DONE** | 45m | t004 |
 | [t006](./done/t006.md) | Wire sibling hand-offs, inventory, and the suite count — **DONE** | 30m | t002 |
-| t007 | Adoption surface | 30m | t005, t006 |
+| [t007](./done/t007.md) | Adoption surface — **DONE** | 30m | t005, t006 |
 | t008 | Simplify | 15m | t007 |
 | t009 | Test coverage | 30m | t007, t008 |
 | t010 | Closeout | 15m | t009 |
