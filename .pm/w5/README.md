@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [760 — Four query shapes still leak raw Python errors (ORDER BY mixed meta, DISTINCT subquery set, joinstr(accounts), DISTINCT meta)](./760.md)
 - [761 — check --auto --cache-filename leaks bean-check's raw WARNING:root line](./761.md)
 - [762 — price export leaves out a plugin found via an included insert_pythonpath; the snapshot fails check (gap in w5/094)](./762.md)
 - [763 — beancount-options skill: "{} matches any held lot" is false under STRICT; template refused under sellgains/pedantic](./763.md)
