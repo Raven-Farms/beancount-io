@@ -14,6 +14,10 @@
 | t006 | Test coverage | 45m | t004, t005 |
 | t007 | Closeout | 15m | t006 |
 
+## Blocked
+
+- **t003 onward (2026-10-19)** — t001 (holdings recipes) and t002 (price-refresh ownership) are shipped, and t003's Claude Code half passes (evals 4/4, routing 92/92; evidence in [t003](./t003.md), including one real failure found and fixed). t003's acceptance requires both clients, and Codex returns its account usage-limit error until 2026-11-17, so t004–t007 wait behind it. **Unblock:** Codex usage returns (2026-11-17); rerun evals 10–13 and the 92-prompt routing set on Codex, close t003, then t004 (adoption) starts. **Who can clear it:** the operator (Codex usage).
+
 ## Definition of done
 
 - "What do I hold and what is it worth" is answered per open lot (units, cost, acquisition date) from shown `bea` queries; market value and unrealized gain appear only where a `price` directive exists, and unpriced commodities are named as gaps.
@@ -25,4 +29,4 @@
 - **Source:** user walkthrough as a personal investor (real estate, crypto, stocks, daily spending), 2026-10-19.
 - **Goal linkage:** **A1 — Agent-native accounting:** the most common investor question ("what's my portfolio worth") currently has no skill owner; trade covers closed lots, ask covers spending.
 - **Expected outcome:** investors can see holdings, allocation, and unrealized gains without leaving the agent workflow, and know exactly which prices are stale. Signals: holdings-question routing recall, eval pass on both clients.
-- **Why now:** [m45](../blocked/m45/README.md) shipped correct lots and realized gains; open-lot valuation is the read side it explicitly left uncovered, and it needs no new write path.
+- **Why now:** [m45](../m45/README.md) shipped correct lots and realized gains; open-lot valuation is the read side it explicitly left uncovered, and it needs no new write path.
