@@ -129,3 +129,22 @@ the renamed skills (`reconcile-one-account-june` → none and
 `none-dinner-on-amex` → beancount-import, one run each, plus the known hosted
 prompts), which is within its run-to-run variation. A rename would therefore be
 for readability in `/` menus and catalogs, not for routing.
+
+## Draft `beancount-add` — 2026-10-19
+
+A scratch copy of the suite at `1ef07d812` plus a draft `beancount-add`
+(description only), with the routing set extended to 53 prompts: the five
+manual-entry prompts that were `none` (a dinner, rent, opening an account,
+and closing one account two ways) relabeled to `beancount-add`, four new
+positives (a transfer, a split receipt, a price, a paycheck), one hosted
+near-miss, and `beancount-add` added as a confusable sibling of an import, an
+options, a reconcile, a close, and an edit prompt. Two runs per client,
+2026-10-19 UTC.
+
+| Client | Run 1 | Run 2 |
+| --- | --- | --- |
+| Claude Code | 53/53 | 53/53 |
+| Codex | 53/53 | 52/53 (`none-hosted-reconcile`, the known hosted miss) |
+
+Every manual-entry prompt routed to the draft on both clients, including
+both `close`-directive prompts, and no sibling lost a prompt it owned.

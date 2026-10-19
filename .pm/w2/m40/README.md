@@ -1,12 +1,12 @@
 # w2 · m40 — Record everyday ledger changes through a `beancount-add` skill
 
-**Worker:** worker2 **Goal:** a user who tells their coding agent "I paid $42 for dinner on the Amex", "open a savings account", or "close my old card" gets a proposed entry that uses existing accounts. It is written through `bea` only after a yes and checked against the root ledger, with the same safeguards the other skills use. **Status:** todo
+**Worker:** worker2 **Goal:** a user who tells their coding agent "I paid $42 for dinner on the Amex", "open a savings account", or "close my old card" gets a proposed entry that uses existing accounts. It is written through `bea` only after a yes and checked against the root ledger, with the same safeguards the other skills use. **Status:** todo (t001 done)
 
 ## Tasks (in order)
 
 | id   | title | est | depends_on |
 | ---- | ----- | --- | ---------- |
-| t001 | Define the trigger, input contract, and name | 30m | w2/m38/t011 |
+| [t001](./done/t001.md) | Define the trigger, input contract, and name — **DONE** | 30m | w2/m38/t011 |
 | t002 | Write the `beancount-add` SKILL.md | 60m | t001 |
 | t003 | Add executable recipes for close, price, and note | 45m | t001 |
 | t004 | Write evals and fixtures | 45m | t002, t003 |
