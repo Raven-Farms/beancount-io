@@ -740,6 +740,12 @@ const ukUserSettings: Record<string, TranslationEntry> = {
       "Немає активної підписки для зміни. Оновіть сторінку, щоб вибрати тариф.",
     description: "The subscription ended before the change was confirmed",
   },
+  "userSettings.planChangeRefusalPastDue": {
+    message:
+      "Останній платіж за продовження не пройшов. Оновіть спосіб оплати в розділі «Керувати платежами», а потім змініть тариф.",
+    description:
+      "A plan change is refused until a failed renewal payment is fixed",
+  },
   "userSettings.planChangeStartsOn": {
     message: "Почнеться {date}. До того у вас залишається {plan}.",
     description:

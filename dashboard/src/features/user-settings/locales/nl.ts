@@ -721,6 +721,12 @@ const nlUserSettings: Record<string, TranslationEntry> = {
       "Er is geen actief abonnement om te wijzigen. Vernieuw de pagina om een abonnement te kiezen.",
     description: "The subscription ended before the change was confirmed",
   },
+  "userSettings.planChangeRefusalPastDue": {
+    message:
+      "Je laatste verlengingsbetaling is niet gelukt. Werk je betaalmethode bij onder Facturering beheren en wijzig daarna je abonnement.",
+    description:
+      "A plan change is refused until a failed renewal payment is fixed",
+  },
   "userSettings.planChangeStartsOn": {
     message: "Gaat in op {date}. Tot dan houd je {plan}.",
     description:

@@ -733,6 +733,12 @@ const caUserSettings: Record<string, TranslationEntry> = {
       "No hi ha cap subscripció activa per canviar. Actualitza la pàgina per triar un pla.",
     description: "The subscription ended before the change was confirmed",
   },
+  "userSettings.planChangeRefusalPastDue": {
+    message:
+      "L'últim pagament de renovació no s'ha completat. Actualitza el mètode de pagament a Gestiona la facturació i després canvia de pla.",
+    description:
+      "A plan change is refused until a failed renewal payment is fixed",
+  },
   "userSettings.planChangeStartsOn": {
     message: "Comença el {date}. Conserves {plan} fins aleshores.",
     description:

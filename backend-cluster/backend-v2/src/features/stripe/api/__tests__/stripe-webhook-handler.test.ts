@@ -96,6 +96,7 @@ describe("live Stripe webhook boundary", () => {
       binding,
       null,
       SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
+      null,
     );
     expect(t.ctx.body.processed).toBe(true);
   });
@@ -113,8 +114,8 @@ describe("live Stripe webhook boundary", () => {
     // Webhooks refresh periods only; they never pay to expand schedules.
     expect(t.stripe.listSubscriptions).toHaveBeenCalledWith("usr_synthetic", {
       bindings: [],
-      status: "active",
-      expandSchedule: false,
+      status: "current",
+      expandForStatus: false,
     });
     expect(t.ctx.body.processed).toBe(true);
   });
@@ -248,6 +249,7 @@ describe("a scheduled plan change taking effect", () => {
       binding,
       new Date(PERIOD_END * 1000),
       SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
+      "PREMIUM",
     );
   });
 });

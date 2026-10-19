@@ -185,8 +185,122 @@ describe("SubscriptionResolver", () => {
       expect(mockStripeService.listSubscriptions).toHaveBeenCalledTimes(1);
       expect(mockStripeService.listSubscriptions).toHaveBeenCalledWith(
         "user-123",
-        expect.objectContaining({ status: "active", expandSchedule: false }),
+        expect.objectContaining({ status: "current", expandForStatus: false }),
       );
+    });
+
+    const liveSubscription = (status: string, overrides = {}) => {
+      const end = Math.floor(Date.now() / 1000) + 86_400;
+      return {
+        id: "sub_123",
+        status,
+        livemode: true,
+        customer: "cus_live",
+        clientId: "beancount-web-prod",
+        start_date: end - 86_400 * 30,
+        cancel_at: null,
+        canceled_at: null,
+        cancel_at_period_end: false,
+        items: {
+          data: [
+            {
+              id: "item_123",
+              quantity: 1,
+              current_period_start: end - 86_400 * 30,
+              current_period_end: end,
+              price: {
+                id: "price_1SyPdaEqsEqs2tLViLPUDoVi",
+                unit_amount: 9999,
+                currency: "usd",
+                recurring: { interval: "month", interval_count: 1 },
+                product: { id: "prod_1", name: "Growth", deleted: false },
+              },
+            },
+          ],
+        },
+        ...overrides,
+      };
+    };
+    const selecting = (...fields: string[]) =>
+      ({
+        fieldNodes: [
+          {
+            selectionSet: {
+              selections: fields.map((value) => ({
+                kind: Kind.FIELD,
+                name: { value },
+              })),
+            },
+          },
+        ],
+      }) as unknown as GraphQLResolveInfo;
+
+    it.each([
+      ["past_due", true],
+      ["unpaid", false],
+      ["canceled", false],
+    ])("counts a %s subscription as paid: %s", async (status, expected) => {
+      mockModels.paidCustomer.findByUserIdWithActivePeriod.mockResolvedValue(
+        null,
+      );
+      mockStripeService.listSubscriptions.mockResolvedValue([
+        liveSubscription(status, {
+          latest_invoice: {
+            id: "in_1",
+            status: "open",
+            next_payment_attempt: Math.floor(Date.now() / 1000) + 86_400,
+          },
+        }),
+      ]);
+
+      const result = await resolver.subscriptionStatus(
+        mockContext,
+        selecting("hasActiveSubscription"),
+      );
+
+      expect(result.hasActiveSubscription).toBe(expected);
+    });
+
+    it("gives a past-due subscription's next payment attempt for the banner", async () => {
+      const retry = Math.floor(Date.now() / 1000) + 3 * 86_400;
+      mockStripeService.listSubscriptions.mockResolvedValue([
+        liveSubscription("past_due", {
+          latest_invoice: {
+            id: "in_1",
+            status: "open",
+            next_payment_attempt: retry,
+          },
+        }),
+      ]);
+
+      const result = await resolver.subscriptionStatus(
+        mockContext,
+        selecting("subscriptions"),
+      );
+
+      expect(result.subscriptions[0]).toMatchObject({
+        status: "past_due",
+        nextPaymentAttempt: new Date(retry * 1000),
+      });
+    });
+
+    it("gives no next attempt to a subscription that is paid up", async () => {
+      mockStripeService.listSubscriptions.mockResolvedValue([
+        liveSubscription("active", {
+          latest_invoice: {
+            id: "in_1",
+            status: "paid",
+            next_payment_attempt: null,
+          },
+        }),
+      ]);
+
+      const result = await resolver.subscriptionStatus(
+        mockContext,
+        selecting("subscriptions"),
+      );
+
+      expect(result.subscriptions[0]?.nextPaymentAttempt).toBeNull();
     });
 
     it("reports a subscription's scheduled plan change", async () => {
@@ -288,7 +402,7 @@ describe("SubscriptionResolver", () => {
       ).not.toHaveBeenCalled();
       expect(mockStripeService.listSubscriptions).toHaveBeenCalledWith(
         "user-123",
-        expect.objectContaining({ status: "all", expandSchedule: true }),
+        expect.objectContaining({ status: "all", expandForStatus: true }),
       );
     });
 
@@ -362,7 +476,7 @@ describe("SubscriptionResolver", () => {
 
       expect(mockStripeService.listSubscriptions).toHaveBeenCalledWith(
         "user-123",
-        expect.objectContaining({ status: "active", expandSchedule: false }),
+        expect.objectContaining({ status: "current", expandForStatus: false }),
       );
       expect(result.hasActiveSubscription).toBe(true);
     });
@@ -573,6 +687,7 @@ describe("SubscriptionResolver", () => {
         }),
         new Date(newPeriodEnd * 1000),
         SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
+        expect.any(String),
       );
     });
 
@@ -641,6 +756,7 @@ describe("SubscriptionResolver", () => {
           clientId: "beancount-web-prod",
           currentPeriodEnd: exactDate,
           periodVerificationVersion: SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
+          periodTier: "PREMIUM",
           createdAt: new Date(),
           updatedAt: new Date(),
         },
@@ -1651,7 +1767,7 @@ describe("SubscriptionResolver", () => {
       expect(mockStripeCheckoutSessions.create).not.toHaveBeenCalled();
       expect(mockStripeService.listSubscriptions).toHaveBeenCalledWith(
         "user-123",
-        { status: "active", bindings: [binding] },
+        { status: "current", bindings: [binding] },
       );
     });
 

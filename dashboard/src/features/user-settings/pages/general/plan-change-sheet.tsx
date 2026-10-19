@@ -75,6 +75,7 @@ const REFUSAL_KEYS: Record<PlanChangeRefusal, string> = {
   [PlanChangeRefusal.NoSubscription]:
     "userSettings.planChangeRefusalNoSubscription",
   [PlanChangeRefusal.ScheduledChange]: "userSettings.planChangeAtRenewal",
+  [PlanChangeRefusal.PastDue]: "userSettings.planChangeRefusalPastDue",
 };
 
 type Outcome =

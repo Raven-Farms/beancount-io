@@ -732,6 +732,12 @@ const esUserSettings: Record<string, TranslationEntry> = {
       "No hay ninguna suscripción activa que cambiar. Actualiza la página para elegir un plan.",
     description: "The subscription ended before the change was confirmed",
   },
+  "userSettings.planChangeRefusalPastDue": {
+    message:
+      "Tu último pago de renovación no se completó. Actualiza tu método de pago en Administrar facturación y después cambia de plan.",
+    description:
+      "A plan change is refused until a failed renewal payment is fixed",
+  },
   "userSettings.planChangeStartsOn": {
     message: "Empieza el {date}. Mantienes {plan} hasta entonces.",
     description:

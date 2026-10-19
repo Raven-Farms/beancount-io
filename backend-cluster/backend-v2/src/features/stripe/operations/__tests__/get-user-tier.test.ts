@@ -1,3 +1,4 @@
+import Stripe from "stripe";
 import { getUserTier, getUserTierLimits } from "../get-user-tier";
 import { BILLING_CLIENT_ID, SubscriptionTier } from "../../service/stripe";
 import { subscriptionPeriodEnd } from "../../service/subscription-plan";
@@ -65,7 +66,7 @@ describe("subscription-bound tier", () => {
     [sub(["unknown"])],
     [sub([])],
     [sub([org], { status: "canceled" })],
-    [sub([org], { status: "past_due" })],
+    [sub([org], { status: "unpaid" })],
     [],
   ])(
     "does not invent a paid entitlement for unsupported subscriptions",
@@ -75,6 +76,59 @@ describe("subscription-bound tier", () => {
       ).toBe(SubscriptionTier.FREE);
     },
   );
+  it("keeps the paid tier while a renewal is past due and Stripe retries", async () => {
+    const retrying = {
+      status: "past_due",
+      latest_invoice: { status: "open", next_payment_attempt: 2000000000 },
+    };
+    const params = deps([sub([org], retrying)]);
+    expect(await getUserTier(params)).toBe(SubscriptionTier.ORGANIZATION);
+    expect(params.stripe.listSubscriptions).toHaveBeenCalledWith(
+      "usr_synthetic",
+      { status: "current" },
+    );
+  });
+  it("drops the paid tier once Stripe stops retrying a past-due renewal", async () => {
+    const exhausted = {
+      status: "past_due",
+      latest_invoice: { status: "open", next_payment_attempt: null },
+    };
+    expect(await getUserTier(deps([sub([org], exhausted)]))).toBe(
+      SubscriptionTier.FREE,
+    );
+  });
+  const outage = () =>
+    new Stripe.errors.StripeConnectionError({
+      type: "api_error",
+      message: "Stripe down",
+    });
+  it("falls back to the last verified tier while Stripe is unavailable", async () => {
+    const params = deps([]);
+    params.stripe.listSubscriptions.mockRejectedValue(outage());
+    params.stripe.lastVerifiedTier = jest.fn(
+      async () => SubscriptionTier.GROWTH,
+    );
+    expect(await getUserTier(params)).toBe(SubscriptionTier.GROWTH);
+  });
+  it("never falls back for a failure that is not an outage, such as a binding mismatch", async () => {
+    const params = deps([]);
+    params.stripe.listSubscriptions.mockRejectedValue(
+      new Error("Stripe subscription does not match its live customer binding"),
+    );
+    params.stripe.lastVerifiedTier = jest.fn(
+      async () => SubscriptionTier.GROWTH,
+    );
+    expect(await getUserTier(params)).toBe(SubscriptionTier.FREE);
+    expect(params.stripe.lastVerifiedTier).not.toHaveBeenCalled();
+  });
+  it("stays fail-closed when the cached tier cannot be read either", async () => {
+    const params = deps([]);
+    params.stripe.listSubscriptions.mockRejectedValue(outage());
+    params.stripe.lastVerifiedTier = jest.fn(async () => {
+      throw new Error("database down");
+    });
+    expect(await getUserTier(params)).toBe(SubscriptionTier.FREE);
+  });
   it("retains fail-closed error behavior", async () => {
     const params = deps([]);
     params.stripe.listSubscriptions.mockRejectedValue(

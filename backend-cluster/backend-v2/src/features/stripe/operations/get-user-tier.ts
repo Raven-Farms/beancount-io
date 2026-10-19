@@ -1,6 +1,11 @@
+import Stripe from "stripe";
 import { logger } from "@/shared/logger";
 import { SubscriptionTier, TierLimits, getTierLimits } from "../service/stripe";
-import { highestTier, subscriptionTier } from "../service/subscription-plan";
+import {
+  highestTier,
+  holdsPaidTier,
+  subscriptionTier,
+} from "../service/subscription-plan";
 import type { IStripeService } from "../service/stripe-service";
 
 /** Stripe owns customer binding verification; tier selection is shared across consumers. */
@@ -19,13 +24,15 @@ export async function getUserTier({
 }: GetUserTierParams): Promise<SubscriptionTier> {
   try {
     // listSubscriptions verifies the user's exact configured customer binding.
+    // Not canceled: a past-due subscription keeps its tier while Stripe
+    // retries the renewal.
     const subscriptions = await stripe.listSubscriptions(userId, {
-      status: "active",
+      status: "current",
     });
     const tiers = subscriptions.map(subscriptionTier);
     const unidentified = subscriptions.filter(
       (sub, index) =>
-        sub.status === "active" && tiers[index] === SubscriptionTier.FREE,
+        holdsPaidTier(sub) && tiers[index] === SubscriptionTier.FREE,
     ).length;
     if (unidentified)
       logger.warn("Active subscriptions have no recognized live plan", {
@@ -33,11 +40,32 @@ export async function getUserTier({
       });
     return highestTier(tiers);
   } catch (error) {
+    const transient =
+      error instanceof Stripe.errors.StripeConnectionError ||
+      error instanceof Stripe.errors.StripeAPIError ||
+      error instanceof Stripe.errors.StripeRateLimitError;
     logger.error("Error determining user tier", {
       userId,
       errorType: error instanceof Error ? error.name : typeof error,
       errorMessage: error instanceof Error ? error.message : String(error),
     });
+    // A Stripe outage is not evidence the customer stopped paying: keep the
+    // tier the last verified period paid for, when one is still current.
+    // Any other failure, such as a binding that does not match, stays Free.
+    if (!transient) return SubscriptionTier.FREE;
+    let verified: SubscriptionTier | null = null;
+    try {
+      verified = await stripe.lastVerifiedTier(userId);
+    } catch {
+      // A failed cache read keeps today's fail-closed result.
+    }
+    if (verified) {
+      logger.warn("Using the last verified tier while Stripe is unavailable", {
+        userId,
+        tier: verified,
+      });
+      return verified;
+    }
     return SubscriptionTier.FREE;
   }
 }

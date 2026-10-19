@@ -1,6 +1,14 @@
 import Stripe from "stripe";
-import { customerId } from "./subscription-plan";
-import { SUBSCRIPTION_CONFIG } from "@/features/stripe/service/stripe";
+import {
+  customerId,
+  highestTier,
+  SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
+} from "./subscription-plan";
+import {
+  BILLING_CLIENT_ID,
+  SUBSCRIPTION_CONFIG,
+  SubscriptionTier,
+} from "@/features/stripe/service/stripe";
 import {
   applyPlanChange,
   type PlanChangeResultView,
@@ -59,13 +67,18 @@ const CANCELLATION_FEEDBACK = {
 export type CancellationReason = keyof typeof CANCELLATION_FEEDBACK;
 
 export interface SubscriptionListOptions {
-  status?: "active" | "all";
+  /**
+   * `current` is every subscription not canceled (Stripe's default listing),
+   * which includes a past-due one that still holds its paid tier.
+   */
+  status?: "active" | "all" | "current";
   bindings?: PaidCustomer[];
   /**
-   * Expand each subscription's schedule, which holds a pending plan change.
-   * Only Billing status reads it, so tier checks and webhooks skip the cost.
+   * Expand each subscription's schedule (a pending plan change) and latest
+   * invoice (a failed renewal's next attempt). Only Billing status reads
+   * them, so tier checks and webhooks skip the cost.
    */
-  expandSchedule?: boolean;
+  expandForStatus?: boolean;
 }
 
 export interface IStripeService {
@@ -89,6 +102,8 @@ export interface IStripeService {
     userId: string,
     clientId: string,
   ): Promise<{ success: boolean; message?: string }>;
+  /** The tier a still-current verified period paid for, from our cache. */
+  lastVerifiedTier(userId: string): Promise<SubscriptionTier | null>;
   handleCheckoutSessionCompleted(
     session: Stripe.Checkout.Session,
     clientId: string,
@@ -315,6 +330,28 @@ export class StripeService implements IStripeService {
       priceId,
       { prorationDate },
     );
+  }
+
+  async lastVerifiedTier(userId: string): Promise<SubscriptionTier | null> {
+    const now = Date.now();
+    const bindings = await this.models.paidCustomer.findByUserId(
+      this.postgresDb,
+      userId,
+    );
+    const tiers = bindings.flatMap((binding) =>
+      binding.clientId === BILLING_CLIENT_ID &&
+      binding.periodVerificationVersion ===
+        SUBSCRIPTION_PERIOD_VERIFICATION_VERSION &&
+      binding.currentPeriodEnd &&
+      binding.currentPeriodEnd.getTime() > now &&
+      binding.periodTier &&
+      Object.values(SubscriptionTier).includes(
+        binding.periodTier as SubscriptionTier,
+      )
+        ? [binding.periodTier as SubscriptionTier]
+        : [],
+    );
+    return tiers.length ? highestTier(tiers) : null;
   }
 
   async cancelScheduledPlanChange(
@@ -680,10 +717,18 @@ export class StripeService implements IStripeService {
         // Provider failures propagate; an outage is not evidence of no subscription.
         const page = await stripe.subscriptions.list({
           customer: binding.stripeCustomerId,
-          status: options.status ?? "all",
+          ...(options.status === "current"
+            ? {}
+            : { status: options.status ?? "all" }),
           limit: 100,
           starting_after: startingAfter,
-          ...(options.expandSchedule ? { expand: ["data.schedule"] } : {}),
+          // A past-due subscription's grace is read from its latest invoice,
+          // so every tier lookup needs it.
+          ...(options.expandForStatus
+            ? { expand: ["data.schedule", "data.latest_invoice"] }
+            : options.status === "current"
+              ? { expand: ["data.latest_invoice"] }
+              : {}),
         });
         for (const subscription of page.data) {
           if (

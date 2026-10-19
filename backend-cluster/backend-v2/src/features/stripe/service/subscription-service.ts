@@ -1,5 +1,6 @@
 import { refreshSubscriptionPeriods } from "../operations/refresh-subscription-periods";
 import {
+  pastDueRetry,
   subscriptionTier,
   SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
 } from "./subscription-plan";
@@ -66,6 +67,8 @@ interface SubscriptionView {
   items: SubscriptionItemView[];
   paymentMethod: PaymentMethodSummaryView | null;
   scheduledChange: ScheduledChangeView | null;
+  /** With `past_due`: when Stripe next retries the failed renewal. */
+  nextPaymentAttempt: Date | null;
 }
 
 export interface CustomerSubscriptionStatusView {
@@ -95,6 +98,12 @@ export interface TierQuotaView {
   maxLedgers: number;
   maxCollaboratorsPerLedger: number;
   maxDirectives: number;
+}
+
+/** A past-due renewal's next retry, for the failed-renewal banner. */
+function retryDate(subscription: Stripe.Subscription): Date | null {
+  const retry = pastDueRetry(subscription);
+  return retry === null ? null : new Date(retry * 1000);
 }
 
 export interface ISubscriptionService {
@@ -232,10 +241,10 @@ export class SubscriptionService implements ISubscriptionService {
       this.models,
       this.db,
       userId,
-      // Only the full view reports a pending plan change, from the schedule.
+      // Only the full view reports a pending change and a failed renewal.
       onlyActiveStatus
-        ? { status: "active" }
-        : { status: "all", expandSchedule: true },
+        ? { status: "current" }
+        : { status: "all", expandForStatus: true },
     );
     const filteredSubscriptions = stripeSubscriptions.filter(
       (subscription) =>
@@ -338,6 +347,7 @@ export class SubscriptionService implements ISubscriptionService {
             subscription,
             SUBSCRIPTION_CONFIG[subscription.clientId]?.plans ?? [],
           ),
+          nextPaymentAttempt: retryDate(subscription),
         } satisfies SubscriptionView;
       }),
     );
@@ -400,7 +410,7 @@ export class SubscriptionService implements ISubscriptionService {
         // visitors without a subscription, so this catches races and stale
         // pages rather than an ordinary path.
         const current = await this.stripe.listSubscriptions(userId, {
-          status: "active",
+          status: "current",
           bindings: [existingCustomer],
         });
         if (

@@ -1,3 +1,4 @@
+import { SUBSCRIPTION_PERIOD_VERIFICATION_VERSION } from "./subscription-plan";
 import { StripeService } from "./stripe-service";
 import type { IPaidCustomerModel } from "@/features/stripe/data/paid-customer-model";
 import type { IModels } from "@/foundation/models";
@@ -353,6 +354,49 @@ describe("StripeService", () => {
     });
   });
 
+  describe("lastVerifiedTier", () => {
+    const future = new Date(Date.now() + 86_400_000);
+    const binding = (overrides: Record<string, unknown>) => ({
+      id: "pc",
+      userId: "user_123",
+      clientId: BILLING_CLIENT_ID,
+      stripeCustomerId: "cus_123",
+      currentPeriodEnd: future,
+      periodVerificationVersion: SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
+      periodTier: "GROWTH",
+      ...overrides,
+    });
+
+    beforeEach(() => {
+      (
+        mockIPaidCustomerModel as unknown as { findByUserId: jest.Mock }
+      ).findByUserId = jest.fn();
+    });
+    const withBindings = (...rows: unknown[]) =>
+      (
+        mockIPaidCustomerModel as unknown as { findByUserId: jest.Mock }
+      ).findByUserId.mockResolvedValue(rows);
+
+    it("returns the tier a current verified period paid for", async () => {
+      withBindings(binding({}));
+      await expect(stripeUseCase.lastVerifiedTier("user_123")).resolves.toBe(
+        "GROWTH",
+      );
+    });
+
+    it.each([
+      ["an expired period", { currentPeriodEnd: new Date(0) }],
+      ["an older verification", { periodVerificationVersion: 1 }],
+      ["no recorded tier", { periodTier: undefined }],
+      ["an unknown tier", { periodTier: "PLATINUM" }],
+    ])("trusts nothing with %s", async (_label, overrides) => {
+      withBindings(binding(overrides));
+      await expect(
+        stripeUseCase.lastVerifiedTier("user_123"),
+      ).resolves.toBeNull();
+    });
+  });
+
   describe("cancelScheduledPlanChange", () => {
     const userId = "user_123";
     const clientId = BILLING_CLIENT_ID;
@@ -371,6 +415,7 @@ describe("StripeService", () => {
       id: "sub_1",
       customer: "cus_123",
       livemode: true,
+      status: "active",
       schedule,
       items: { data: [{ id: "si_1", price: { id: GROWTH_MONTHLY } }] },
     });

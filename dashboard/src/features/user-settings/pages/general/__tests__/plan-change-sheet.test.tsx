@@ -183,6 +183,7 @@ describe("PlanChangeSheet", () => {
     ["CURRENT_PLAN", "userSettings.planChangeRefusalCurrent"],
     ["SAME_TIER_AND_CYCLE", "userSettings.planChangeRefusalSameTier"],
     ["MULTIPLE_SUBSCRIPTIONS", "userSettings.planChangeRefusalMultiple"],
+    ["PAST_DUE", "userSettings.planChangeRefusalPastDue"],
   ])("explains the %s refusal and offers no confirm", (refusal, message) => {
     mockPreview.state = {
       data: preview({ kind: null, effect: null, refusal }),

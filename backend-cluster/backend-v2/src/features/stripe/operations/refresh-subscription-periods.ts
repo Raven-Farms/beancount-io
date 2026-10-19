@@ -7,7 +7,9 @@ import type {
 import { SUBSCRIPTION_CONFIG } from "../service/stripe";
 import {
   customerId,
+  highestTier,
   subscriptionPeriodEnd,
+  subscriptionTier,
   SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
 } from "../service/subscription-plan";
 
@@ -18,15 +20,16 @@ export async function refreshSubscriptionPeriods(
   db: DbExecutor,
   userId: string,
   {
-    status = "active",
-    expandSchedule = false,
-  }: Pick<SubscriptionListOptions, "status" | "expandSchedule"> = {},
+    // Non-canceled subscriptions: a past-due one still holds its paid period.
+    status = "current",
+    expandForStatus = false,
+  }: Pick<SubscriptionListOptions, "status" | "expandForStatus"> = {},
 ) {
   const bindings = await models.paidCustomer.findByUserId(db, userId);
   const subscriptions = await stripe.listSubscriptions(userId, {
     bindings,
     status,
-    expandSchedule,
+    expandForStatus,
   });
   for (const binding of bindings) {
     if (!SUBSCRIPTION_CONFIG[binding.clientId]) continue;
@@ -36,9 +39,11 @@ export async function refreshSubscriptionPeriods(
         customerId(sub.customer) === binding.stripeCustomerId,
     );
     const period = subscriptionPeriodEnd(own);
+    const tier = period ? highestTier(own.map(subscriptionTier)) : null;
     if (
       (binding.currentPeriodEnd?.getTime() ?? null) !==
         (period?.getTime() ?? null) ||
+      (binding.periodTier ?? null) !== tier ||
       binding.periodVerificationVersion !==
         SUBSCRIPTION_PERIOD_VERIFICATION_VERSION
     ) {
@@ -47,6 +52,7 @@ export async function refreshSubscriptionPeriods(
         binding,
         period,
         SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
+        tier,
       );
     }
   }

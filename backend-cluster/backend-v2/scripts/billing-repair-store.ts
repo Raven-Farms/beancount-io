@@ -30,7 +30,7 @@ export function createRepairStore(pool: Pool): RepairStore {
           throw new Error("Concurrent billing update; preview again");
         for (const change of repair.changes)
           await client.query(
-            "UPDATE paid_customers SET current_period_end = $1, period_verification_version = NULL, updated_at = clock_timestamp() WHERE id = $2 AND user_id = $3",
+            "UPDATE paid_customers SET current_period_end = $1, period_verification_version = NULL, period_tier = NULL, updated_at = clock_timestamp() WHERE id = $2 AND user_id = $3",
             [change.period, change.id, repair.userId],
           );
         const after = await read(repair.userId, client);

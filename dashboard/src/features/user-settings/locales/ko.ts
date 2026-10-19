@@ -703,6 +703,12 @@ const koUserSettings: Record<string, TranslationEntry> = {
       "변경할 활성 구독이 없습니다. 페이지를 새로고침한 후 플랜을 선택하세요.",
     description: "The subscription ended before the change was confirmed",
   },
+  "userSettings.planChangeRefusalPastDue": {
+    message:
+      "마지막 갱신 결제가 처리되지 않았습니다. 청구 관리에서 결제 수단을 업데이트한 후 플랜을 변경하세요.",
+    description:
+      "A plan change is refused until a failed renewal payment is fixed",
+  },
   "userSettings.planChangeStartsOn": {
     message: "{date}부터 적용됩니다. 그때까지 {plan}을(를) 유지합니다.",
     description:

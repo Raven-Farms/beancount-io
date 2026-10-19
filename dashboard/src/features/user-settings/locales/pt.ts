@@ -731,6 +731,12 @@ const ptUserSettings: Record<string, TranslationEntry> = {
       "Não há uma assinatura ativa para alterar. Atualize a página para escolher um plano.",
     description: "The subscription ended before the change was confirmed",
   },
+  "userSettings.planChangeRefusalPastDue": {
+    message:
+      "Seu último pagamento de renovação não foi concluído. Atualize sua forma de pagamento em Gerenciar faturamento e depois mude de plano.",
+    description:
+      "A plan change is refused until a failed renewal payment is fixed",
+  },
   "userSettings.planChangeStartsOn": {
     message: "Começa em {date}. Você mantém {plan} até lá.",
     description:

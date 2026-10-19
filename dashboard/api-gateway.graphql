@@ -656,6 +656,11 @@ type Subscription {
   The change scheduled for the end of the paid period; cancelScheduledPlanChange undoes it.
   """
   scheduledChange: ScheduledPlanChange
+
+  """
+  With past_due: when Stripe next retries the failed renewal. The plan is kept until it stops retrying.
+  """
+  nextPaymentAttempt: DateTimeISO
 }
 
 """
@@ -719,6 +724,7 @@ enum PlanChangeRefusal {
   MULTIPLE_SUBSCRIPTIONS
   NO_SUBSCRIPTION
   SCHEDULED_CHANGE
+  PAST_DUE
 }
 
 enum PlanChangeEffect {

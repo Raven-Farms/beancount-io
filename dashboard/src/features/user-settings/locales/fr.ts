@@ -732,6 +732,12 @@ const frUserSettings: Record<string, TranslationEntry> = {
       "Aucun abonnement actif à modifier. Actualisez la page pour choisir un forfait.",
     description: "The subscription ended before the change was confirmed",
   },
+  "userSettings.planChangeRefusalPastDue": {
+    message:
+      "Votre dernier paiement de renouvellement n'a pas abouti. Mettez à jour votre moyen de paiement dans Gérer la facturation, puis changez de forfait.",
+    description:
+      "A plan change is refused until a failed renewal payment is fixed",
+  },
   "userSettings.planChangeStartsOn": {
     message: "À partir du {date}. Vous conservez {plan} jusque-là.",
     description:

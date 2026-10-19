@@ -3,7 +3,7 @@ import type { DbExecutor } from "@/drizzle/drizzle";
 import type { IModels } from "@/foundation/models";
 import type { PaidCustomer } from "../data/paid-customer-model/types";
 import type { PlanConfig } from "../service/stripe";
-import { customerId } from "../service/subscription-plan";
+import { customerId, holdsPaidTier } from "../service/subscription-plan";
 
 export interface ActivePlan {
   subscription: Stripe.Subscription;
@@ -40,16 +40,17 @@ export async function loadActivePlans(
   const active: ActivePlan[] = [];
   if (!binding?.stripeCustomerId) return { binding, active };
 
+  // Not canceled; holdsPaidTier then keeps active and past-due ones.
   const page = await stripe.subscriptions.list({
     customer: binding.stripeCustomerId,
-    status: "active",
     limit: 100,
-    // A pending plan change lives on the schedule, read without a request.
-    expand: ["data.schedule"],
+    // A pending plan change lives on the schedule and a past-due grace on
+    // the latest invoice; both come with the listing.
+    expand: ["data.schedule", "data.latest_invoice"],
   });
   for (const subscription of page.data) {
     if (
-      !subscription.livemode ||
+      !holdsPaidTier(subscription) ||
       customerId(subscription.customer) !== binding.stripeCustomerId
     ) {
       continue;

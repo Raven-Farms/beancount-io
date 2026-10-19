@@ -165,6 +165,7 @@ describe("StripeService.upgradeSubscription", () => {
       mockCustomer,
       new Date(1700000000 * 1000),
       expect.any(Number),
+      "GROWTH",
     );
     expect(mockIPaidCustomerModel.updateCustomerById).not.toHaveBeenCalled();
   });

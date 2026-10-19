@@ -698,6 +698,12 @@ const zhUserSettings: Record<string, TranslationEntry> = {
     message: "没有可更改的有效订阅。请刷新页面并选择一个计划。",
     description: "The subscription ended before the change was confirmed",
   },
+  "userSettings.planChangeRefusalPastDue": {
+    message:
+      "你上次的续订付款未成功。请先在“管理账单”中更新付款方式，再更改计划。",
+    description:
+      "A plan change is refused until a failed renewal payment is fixed",
+  },
   "userSettings.planChangeStartsOn": {
     message: "{date} 起生效。在此之前你仍保留 {plan}。",
     description:

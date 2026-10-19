@@ -724,6 +724,12 @@ const deUserSettings: Record<string, TranslationEntry> = {
       "Es gibt kein aktives Abonnement, das geändert werden kann. Laden Sie die Seite neu, um einen Plan zu wählen.",
     description: "The subscription ended before the change was confirmed",
   },
+  "userSettings.planChangeRefusalPastDue": {
+    message:
+      "Ihre letzte Verlängerungszahlung ist fehlgeschlagen. Aktualisieren Sie Ihre Zahlungsmethode unter „Abrechnung verwalten“ und wechseln Sie dann den Plan.",
+    description:
+      "A plan change is refused until a failed renewal payment is fixed",
+  },
   "userSettings.planChangeStartsOn": {
     message: "Gilt ab {date}. Bis dahin behalten Sie {plan}.",
     description:

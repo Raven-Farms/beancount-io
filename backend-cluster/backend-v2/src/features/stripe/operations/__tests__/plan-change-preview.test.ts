@@ -31,6 +31,7 @@ function subscription(
     id: "sub_1",
     customer: "cus_1",
     livemode: true,
+    status: "active",
     cancel_at_period_end: false,
     default_payment_method: "pm_1",
     items: {
@@ -307,6 +308,26 @@ describe("previewPlanChange", () => {
       category: ErrorCategory.VALIDATION_FAILED,
     });
     expect(stripe.subscriptions.list).not.toHaveBeenCalled();
+  });
+
+  it("refuses to preview a change while a renewal is past due", async () => {
+    const { stripe, preview } = setup({
+      subscriptions: [
+        subscription(PREMIUM_MONTHLY, {
+          status: "past_due",
+          latest_invoice: {
+            status: "open",
+            next_payment_attempt: NOW_SECONDS + 86_400,
+          },
+        }),
+      ],
+    });
+
+    await expect(preview(GROWTH_MONTHLY)).resolves.toMatchObject({
+      kind: null,
+      refusal: "PAST_DUE",
+    });
+    expect(stripe.invoices.createPreview).not.toHaveBeenCalled();
   });
 
   describe("one pending change at a time", () => {

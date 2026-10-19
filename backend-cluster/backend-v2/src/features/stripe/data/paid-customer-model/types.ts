@@ -10,6 +10,8 @@ export interface PaidCustomer {
   currentPeriodEnd?: Date;
   /** Null/absent for historical or otherwise unverified subscription periods. */
   periodVerificationVersion?: number;
+  /** The tier the verified period paid for; absent when unverified. */
+  periodTier?: string;
   createdAt: Date;
   updatedAt: Date;
   /** Opaque persistence version, retaining database timestamp precision. */
@@ -64,12 +66,13 @@ export interface IPaidCustomerModel {
     id: string,
     input: UpdatePaidCustomerInput,
   ): Promise<PaidCustomer | null>;
-  /** Atomically record a provider-verified period and its verification version. */
+  /** Atomically record a provider-verified period, its tier and verification version. */
   updatePeriodIfUnchanged(
     db: DbExecutor,
     customer: PaidCustomer,
     currentPeriodEnd: Date | null,
     verificationVersion: number,
+    tier: string | null,
   ): Promise<boolean>;
   updateByUserIdAndClientId(
     db: DbExecutor,

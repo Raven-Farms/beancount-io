@@ -27,14 +27,17 @@ export type PlanChangeKind =
  * Why a choice is refused before any Stripe work. `NO_SUBSCRIPTION` only comes
  * from applying a change: a customer without a subscription checks out
  * instead. `SCHEDULED_CHANGE` comes only from the legacy immediate-only
- * `upgradeSubscription`; `changePlan` schedules such changes.
+ * `upgradeSubscription`; `changePlan` schedules such changes. `PAST_DUE`:
+ * a failed renewal is settled first, because a change would charge the
+ * failing card or credit a period that was never paid.
  */
 export type PlanChangeRefusal =
   | "CURRENT_PLAN"
   | "SAME_TIER_AND_CYCLE"
   | "MULTIPLE_SUBSCRIPTIONS"
   | "NO_SUBSCRIPTION"
-  | "SCHEDULED_CHANGE";
+  | "SCHEDULED_CHANGE"
+  | "PAST_DUE";
 
 /** When a change takes effect, and through which Stripe mechanism. */
 export type PlanChangeEffect = "CHECKOUT" | "IMMEDIATE" | "SCHEDULED";
@@ -103,4 +106,6 @@ export const REFUSAL_MESSAGES: Record<PlanChangeRefusal, string> = {
   NO_SUBSCRIPTION: "You have no subscription to change. Check out instead.",
   SCHEDULED_CHANGE:
     "This change takes effect at the end of your billing period and cannot be applied immediately.",
+  PAST_DUE:
+    "Your last renewal payment didn't go through. Update your payment method, then change plans.",
 };

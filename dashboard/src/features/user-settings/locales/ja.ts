@@ -704,6 +704,12 @@ const jaUserSettings: Record<string, TranslationEntry> = {
       "変更できる有効なサブスクリプションがありません。ページを再読み込みしてプランを選択してください。",
     description: "The subscription ended before the change was confirmed",
   },
+  "userSettings.planChangeRefusalPastDue": {
+    message:
+      "前回の更新のお支払いが完了しませんでした。「請求を管理」でお支払い方法を更新してから、プランを変更してください。",
+    description:
+      "A plan change is refused until a failed renewal payment is fixed",
+  },
   "userSettings.planChangeStartsOn": {
     message:
       "{date} から適用されます。それまでは {plan} をご利用いただけます。",

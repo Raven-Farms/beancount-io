@@ -1743,6 +1743,7 @@ export enum PlanChangeRefusal {
   CurrentPlan = 'CURRENT_PLAN',
   MultipleSubscriptions = 'MULTIPLE_SUBSCRIPTIONS',
   NoSubscription = 'NO_SUBSCRIPTION',
+  PastDue = 'PAST_DUE',
   SameTierAndCycle = 'SAME_TIER_AND_CYCLE',
   ScheduledChange = 'SCHEDULED_CHANGE'
 }
@@ -2654,6 +2655,8 @@ export type Subscription = {
   currentPeriodStart: Scalars['DateTimeISO']['output'];
   id: Scalars['ID']['output'];
   items: Array<SubscriptionItem>;
+  /** With past_due: when Stripe next retries the failed renewal. The plan is kept until it stops retrying. */
+  nextPaymentAttempt: Maybe<Scalars['DateTimeISO']['output']>;
   /** The card renewals and plan changes charge, when known. */
   paymentMethod: Maybe<PaymentMethodSummary>;
   /** The change scheduled for the end of the paid period; cancelScheduledPlanChange undoes it. */

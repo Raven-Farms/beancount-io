@@ -136,6 +136,13 @@ class Subscription {
       "The change scheduled for the end of the paid period; cancelScheduledPlanChange undoes it.",
   })
   scheduledChange?: ScheduledPlanChange | null;
+
+  @Field(() => Date, {
+    nullable: true,
+    description:
+      "With past_due: when Stripe next retries the failed renewal. The plan is kept until it stops retrying.",
+  })
+  nextPaymentAttempt?: Date | null;
 }
 
 @ObjectType("CustomerSubscriptionStatus")
@@ -205,6 +212,7 @@ const PlanChangeRefusalValues: { [K in PlanChangeRefusal]: K } = {
   MULTIPLE_SUBSCRIPTIONS: "MULTIPLE_SUBSCRIPTIONS",
   NO_SUBSCRIPTION: "NO_SUBSCRIPTION",
   SCHEDULED_CHANGE: "SCHEDULED_CHANGE",
+  PAST_DUE: "PAST_DUE",
 };
 registerEnumType(PlanChangeRefusalValues, { name: "PlanChangeRefusal" });
 

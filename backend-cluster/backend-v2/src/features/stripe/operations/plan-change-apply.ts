@@ -158,6 +158,9 @@ export async function applyPlanChange(
   }
   const current = active[0];
   if (!current || !binding) return refused("NO_SUBSCRIPTION");
+  if (current.subscription.status === "past_due") {
+    return refused("PAST_DUE", { subscriptionId: current.subscription.id });
+  }
 
   const classification = classifyPlanChange(current.plan, target);
   if ("refusal" in classification) {
@@ -240,6 +243,7 @@ export async function applyPlanChange(
         binding,
         periodEnd,
         SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
+        target.tier,
       );
       if (!recorded) {
         applyLogger.info("Paid period changed concurrently; left as found", {

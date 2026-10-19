@@ -721,6 +721,12 @@ const bgUserSettings: Record<string, TranslationEntry> = {
       "Няма активен абонамент за промяна. Презаредете страницата, за да изберете план.",
     description: "The subscription ended before the change was confirmed",
   },
+  "userSettings.planChangeRefusalPastDue": {
+    message:
+      "Последното плащане за подновяване не мина. Обновете метода на плащане в „Управление на плащания“ и после сменете плана.",
+    description:
+      "A plan change is refused until a failed renewal payment is fixed",
+  },
   "userSettings.planChangeStartsOn": {
     message: "Започва на {date}. Дотогава запазвате {plan}.",
     description:

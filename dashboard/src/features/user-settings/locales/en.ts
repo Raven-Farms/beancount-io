@@ -714,6 +714,12 @@ const enUserSettings: Record<string, TranslationEntry> = {
       "There is no active subscription to change. Refresh the page to choose a plan.",
     description: "The subscription ended before the change was confirmed",
   },
+  "userSettings.planChangeRefusalPastDue": {
+    message:
+      "Your last renewal payment didn't go through. Update your payment method in Manage Billing, then change plans.",
+    description:
+      "A plan change is refused until a failed renewal payment is fixed",
+  },
   "userSettings.planChangeStartsOn": {
     message: "Starts {date}. You keep {plan} until then.",
     description:

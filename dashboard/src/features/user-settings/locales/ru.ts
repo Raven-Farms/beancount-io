@@ -741,6 +741,12 @@ const ruUserSettings: Record<string, TranslationEntry> = {
       "Нет активной подписки для изменения. Обновите страницу, чтобы выбрать тариф.",
     description: "The subscription ended before the change was confirmed",
   },
+  "userSettings.planChangeRefusalPastDue": {
+    message:
+      "Последний платёж за продление не прошёл. Обновите способ оплаты в разделе «Управление платежами», затем смените тариф.",
+    description:
+      "A plan change is refused until a failed renewal payment is fixed",
+  },
   "userSettings.planChangeStartsOn": {
     message: "Начнётся {date}. До тех пор у вас остаётся {plan}.",
     description:

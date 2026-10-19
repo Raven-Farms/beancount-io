@@ -718,6 +718,12 @@ const faUserSettings: Record<string, TranslationEntry> = {
       "اشتراک فعالی برای تغییر وجود ندارد. صفحه را تازه\u200cسازی کنید تا طرحی انتخاب کنید.",
     description: "The subscription ended before the change was confirmed",
   },
+  "userSettings.planChangeRefusalPastDue": {
+    message:
+      "آخرین پرداخت تمدید شما انجام نشد. روش پرداخت را در «مدیریت صورت‌حساب» به‌روز کنید و سپس طرح را تغییر دهید.",
+    description:
+      "A plan change is refused until a failed renewal payment is fixed",
+  },
   "userSettings.planChangeStartsOn": {
     message: "از {date} شروع می‌شود. تا آن زمان {plan} را نگه می‌دارید.",
     description:

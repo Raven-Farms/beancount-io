@@ -737,6 +737,12 @@ const skUserSettings: Record<string, TranslationEntry> = {
       "Nemáte aktívne predplatné, ktoré by sa dalo zmeniť. Obnovte stránku a vyberte si plán.",
     description: "The subscription ended before the change was confirmed",
   },
+  "userSettings.planChangeRefusalPastDue": {
+    message:
+      "Posledná platba za obnovenie neprešla. Aktualizujte spôsob platby v časti Spravovať fakturáciu a potom zmeňte plán.",
+    description:
+      "A plan change is refused until a failed renewal payment is fixed",
+  },
   "userSettings.planChangeStartsOn": {
     message: "Začína {date}. Dovtedy si ponecháte {plan}.",
     description:

@@ -157,6 +157,7 @@ describe("applyPlanChange", () => {
       BINDING,
       new Date(NEW_PERIOD_END * 1000),
       SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
+      "PREMIUM",
     );
   });
 
@@ -415,6 +416,24 @@ describe("applyPlanChange", () => {
       }),
       expect.anything(),
     );
+  });
+
+  it("refuses any change while a renewal is past due, with no Stripe write", async () => {
+    const { stripe, apply } = setup({
+      subscriptions: [
+        subscription(PREMIUM_MONTHLY, {
+          status: "past_due",
+          latest_invoice: { status: "open", next_payment_attempt: PERIOD_END },
+        }),
+      ],
+    });
+
+    await expect(apply(GROWTH_MONTHLY, NOW_SECONDS)).resolves.toMatchObject({
+      status: "REFUSED",
+      refusal: "PAST_DUE",
+    });
+    expect(stripe.subscriptions.update).not.toHaveBeenCalled();
+    expect(stripe.subscriptionSchedules.create).not.toHaveBeenCalled();
   });
 
   it("refuses a retired price as a target before any Stripe call", async () => {

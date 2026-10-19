@@ -225,6 +225,9 @@ export async function previewPlanChange(
     limitChanges: limitChanges(fromTier, target.tier),
   };
 
+  if (current?.subscription.status === "past_due") {
+    return { ...shared, kind: null, refusal: "PAST_DUE", effect: null };
+  }
   if ("refusal" in classification) {
     return {
       ...shared,
