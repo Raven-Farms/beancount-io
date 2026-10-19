@@ -30,14 +30,61 @@ _ENGLISH_ROOT = r"(?:Assets|Liabilities|Equity|Income|Expenses)"
 # Any root the grammar allows, not only the five English names: a ledger with
 # `option "name_assets" "Aktiva"` found "no hierarchical column" (w5/414). A
 # root needs a component after it, so a capitalized word or a currency is not
-# taken for an account. Upstream takes the leftmost column that matches, so
-# that wider match is a fallback: it is not tried where an English-root
-# account follows on the line, and a narration such as `NYSE:IBM dividend`
-# beside `Assets:Broker:Cash` no longer wins the column (w5/570).
+# taken for an account. Upstream takes the leftmost column that matches, so a
+# narration such as `NYSE:IBM dividend` beside the accounts would win it;
+# bea decides the column once per input instead (see `_decide_pattern`).
+_ACCOUNT_ANY = rf"(?:{_ENGLISH_ROOT}(?::{_COMPONENT})*|(?:[A-Z]|[^\x00-\x7F\s]){_LETTERS}(?::{_COMPONENT})+)"
+# The w5/570 per-position form, kept for input bea cannot pre-scan (a held
+# descriptor upstream reads itself): its lookahead rescans to the end of the
+# line at every start position, which is quadratic in line length (w5/769).
 _ACCOUNT_PATTERN = (
     rf"(?:(?!.*(?<!\S){_ENGLISH_ROOT}:)(?:[A-Z]|[^\x00-\x7F\s]){_LETTERS}(?::{_COMPONENT})+"
     rf"|{_ENGLISH_ROOT}(?::{_COMPONENT})*)"
 )
+_DEFAULT_DELIMITER = r"[ \t]+"
+
+
+def _decide_pattern(text: str, delimiter: str | None) -> str:
+    """Upstream's pattern with the account column decided once for this input.
+
+    Upstream groups pattern matches by start position and treeifies the
+    leftmost valid column, so the narration beside the accounts won it; the
+    w5/570 lookahead suppressed the narration only when an English-root
+    account followed, and rescanned every line from every position. bea
+    runs upstream's own grouping and validity rule here, in linear time,
+    then anchors the match to the winning column: an English-root column
+    first, else the one with the most components, else the leftmost (w5/769).
+    """
+    try:
+        joined = delimiter if delimiter is not None else _DEFAULT_DELIMITER
+        spliced = re.compile(rf"({_ACCOUNT_ANY})(?P<ws>{joined}.|$)")
+    except re.error:
+        # Upstream splices the same expression and reports it in its own
+        # words; bea only stays out of the way.
+        return _ACCOUNT_ANY
+    beginnings: dict[int, list[re.Match[str]]] = {}
+    for line in text.splitlines(keepends=True):
+        for match in spliced.finditer(line):
+            beginnings.setdefault(match.start(), []).append(match)
+    best: tuple[bool, int, int] | None = None
+    winner = -1
+    for left in sorted(beginnings):
+        column = beginnings[left]
+        rightmost = max(match.end(1) for match in column)
+        following = min(match.end() if match.group("ws") else 10000 for match in column)
+        if not rightmost < following:
+            continue
+        names = [match.group(1) for match in column]
+        english = any(re.match(rf"{_ENGLISH_ROOT}:", name) for name in names)
+        components = max(name.count(":") + 1 for name in names)
+        key = (not english, -components, left)
+        if best is None or key < best:
+            best, winner = key, left
+    if winner <= 0:
+        # Leftmost or nothing: upstream agrees without an anchor, and a miss
+        # reaches its no-column report.
+        return _ACCOUNT_ANY
+    return rf"(?<=^.{{{winner}}}){_ACCOUNT_ANY}"
 
 
 class _Unparsed(Exception):
@@ -247,12 +294,6 @@ def treeify(ctx: typer.Context) -> None:
         output.check_output_destination(destination)
         output.require_writable_destination(destination)
         forwarded = _without_output(parsed)
-    if parsed is not None and not (parsed.help or parsed.pattern or parsed.filenames or parsed.loose_accounts):
-        # On `parsed` too: dropping the input at dispatch rebuilds the
-        # arguments from it, which would otherwise lose this pattern and
-        # render non-ASCII components flat (w5/723).
-        parsed.pattern = _ACCOUNT_PATTERN
-        forwarded = [f"--pattern={_ACCOUNT_PATTERN}", *forwarded]
     if parsed is not None and not parsed.help and not parsed.input:
         # Upstream reads stdin when no file is named, a terminal included.
         context.refuse_terminal_stdin(
@@ -261,6 +302,14 @@ def treeify(ctx: typer.Context) -> None:
     text = checked_text
     if text is None and parsed is not None and not parsed.help:
         text = _read_redirected_input(parsed)
+    if parsed is not None and not (parsed.help or parsed.pattern or parsed.filenames or parsed.loose_accounts):
+        # On `parsed` too: dropping the input at dispatch rebuilds the
+        # arguments from it, which would otherwise lose this pattern and
+        # render non-ASCII components flat (w5/723). The text is in hand by
+        # now, so the column is decided from it; the unscannable corner
+        # keeps the per-position form (w5/769).
+        parsed.pattern = _decide_pattern(text, parsed.delimiter) if text is not None else _ACCOUNT_PATTERN
+        forwarded = [f"--pattern={parsed.pattern}", *forwarded]
     if text is None:
         completed = launch.capture_native("treeify", forwarded)
     else:
