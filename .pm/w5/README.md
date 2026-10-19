@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [731 — In bea ask, Ctrl-C between approval panels leaves queued writes running; a write lands after cancel and Ctrl-D hangs (incomplete fix of w5/544)](./731.md)
 - [732 — Other booking failures (HOOL {0 USD}, EUR @ 0 USD) still fail with a bare Python error (incomplete fix of w5/538)](./732.md)
 - [733 — A sale's escaped lot label no longer selects a control-character lot; JSON echo shows the raw label (incomplete fix of w5/542)](./733.md)
 - [734 — In bea ask, Ctrl-C right after Enter can end the session with exit 130](./734.md)
