@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [717 — A CSV decode error past 8 KiB names the wrong byte offset](./717.md)
 - [718 — A bea write to an include in another directory makes add/import exit 4 instead of queueing](./718.md)
 - [719 — Staging copies left by a killed engine are not cleared by the next write (one-hour sweep, target directory only)](./719.md)
 - [720 — --partial is still superlinear with several bad rows, and slower than before on a mixed batch (incomplete fix of w5/537)](./720.md)
