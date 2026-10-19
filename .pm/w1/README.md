@@ -68,6 +68,7 @@ m39–m40 were materialized on 2026-10-18 from [PRFAQ005](../../docs/prfaqs/PRFA
 
 ## Inbox
 
+- [174](./174.md) — `createLedger` and `updateLedger` are flagged as open-world tools marked closed (OpenAI rescan 2026-10-18)
 - [174](./174.md) — In-place bank approval for plan changes with Stripe.js; needs the user's approval of the dependency (follow-up to w1/m39/t007).
 
 
