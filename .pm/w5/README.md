@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [744 — ask BQL tool: a NUL kills the question; a dash-leading query is parsed as an engine option (gap in w5/549)](./744.md)
 - [745 — ask: content_filter partial answers print as complete; false gzip sent 3x; raw Pydantic warning (incomplete fix of w5/546/547)](./745.md)
 - [746 — .run * stops at an empty-window stored query without naming it; bare-CLOSE advice drops rows (incomplete fix of w5/559)](./746.md)
 - [747 — Query regex pre-check refuses ?~ subjects and concatenated ~ patterns (adjacent to w5/558)](./747.md)
