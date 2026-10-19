@@ -2,6 +2,7 @@
 name: pm-brainstorm
 description: Propose milestones and tasks for the repository's public .pm adoption board — decompose a topic through the TPM adoption lens, size and gate the work, and emit a text-only proposal for /pm to materialize. Use only when the user explicitly invokes $pm-brainstorm or asks to brainstorm, plan, or break down roadmap work for the .pm board. Do not use to write board files (that is pm) or for ordinary code edits.
 allowed-tools: Read, Bash(ls:*), Bash(find:*), Bash(cat:*), Bash(git fetch:*), Bash(git pull:*), Bash(git status:*)
+metadata: {"internal": true}
 ---
 
 # Task: Propose milestones and tasks

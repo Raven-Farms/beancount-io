@@ -5,6 +5,7 @@ description: >-
   QA_PASSWORD for login, reproduce bugs, trace fixes to source, and deduplicate
   findings. Use for dashboard QA or a browser bug hunt. Skip ordinary code review,
   bug implementation, and native-mobile QA (use qa-find-bugs-mobile).
+metadata: {"internal": true}
 ---
 
 # Dashboard QA bug hunt

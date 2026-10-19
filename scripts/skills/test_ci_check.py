@@ -62,7 +62,9 @@ class TestSkillTrees(unittest.TestCase):
     def write_skill(self, directory: Path, name: str) -> Path:
         path = directory / name / "SKILL.md"
         path.parent.mkdir(parents=True)
-        path.write_text(f"---\nname: {name}\ndescription: A fixture skill.\n---\n")
+        # A valid development fixture carries the internal flag, like the real tree.
+        flag = 'metadata: {"internal": true}\n' if directory == self.development else ""
+        path.write_text(f"---\nname: {name}\ndescription: A fixture skill.\n{flag}---\n")
         return path
 
     def test_separate_trees_are_validated(self):
@@ -154,6 +156,26 @@ class TestSkillTrees(unittest.TestCase):
                     self.assertEqual(err, "")
                 else:
                     self.assertIn("frontmatter 'metadata' must be a single-line JSON object", err)
+
+    def test_a_development_skill_without_the_internal_flag_is_rejected(self):
+        for frontmatter in (
+            "---\nname: ship\ndescription: d\n---\n",
+            '---\nname: ship\ndescription: d\nmetadata: {"internal": "true"}\n---\n',
+        ):
+            with self.subTest(frontmatter=frontmatter):
+                (self.development / "ship/SKILL.md").write_text(frontmatter)
+                error = io.StringIO()
+                with (
+                    contextlib.redirect_stdout(io.StringIO()),
+                    contextlib.redirect_stderr(error),
+                    self.assertRaises(SystemExit),
+                ):
+                    ci_check.check_skill_md()
+                self.assertIn("a development skill must set metadata", error.getvalue())
+
+    def test_a_customer_skill_with_the_internal_flag_is_rejected(self):
+        err = self.check_frontmatter('name: beancount-ask\ndescription: d\nmetadata: {"internal": true}\n')
+        self.assertIn("a customer skill must not set metadata internal", err)
 
     def test_development_eval_fixtures_are_checked(self):
         evals = self.development / "ship/evals/evals.json"

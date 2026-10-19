@@ -9,6 +9,7 @@ description: Autonomous maintenance routine that finds one convoluted unit of
   indirection layers (routine-abstraction-improver), and fixing wrong behavior
   (routine-logic-bugfixer). The core trigger is "make this convoluted logic read
   simply without changing what it does".
+metadata: {"internal": true}
 ---
 
 # Task: Simplify convoluted business logic, behavior-preserving

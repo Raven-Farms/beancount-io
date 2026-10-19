@@ -10,6 +10,7 @@ description: Autonomous maintenance routine that picks one tricky logic unit in 
   (routine-flaky-test-fixer) and for merely convoluted-but-correct code
   (routine-logic-simplifier). The core trigger is "model this tricky logic and
   fix what's provably wrong".
+metadata: {"internal": true}
 ---
 
 # Task: Model tricky logic to find and fix provable bugs

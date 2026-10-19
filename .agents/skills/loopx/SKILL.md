@@ -1,6 +1,7 @@
 ---
 name: loopx
 description: Autonomously drain a `.pm` workstream item by item — triage every pending milestone, task, and inbox note, then implement and ship it, close it as already done, block it with an unblock condition, or delete it as invalid, and keep going until nothing actionable remains (do not stop early to ask the user to resume). Use when the user explicitly invokes $loopx or asks to loop, drain, or work through a whole workstream's backlog (e.g. `$loopx w1`). Sequential, not interval-based; do not use for a timed poll, a single task, or ordinary code edits.
+metadata: {"internal": true}
 ---
 
 # Task: Drain a `.pm` workstream item by item

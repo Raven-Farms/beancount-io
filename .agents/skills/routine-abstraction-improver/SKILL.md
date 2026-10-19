@@ -10,6 +10,7 @@ description: Autonomous maintenance routine that flattens over-engineered
   (routine-abstraction-police), and duplicated implementations
   (routine-dup-unifier). The core trigger is "remove indirection that has
   exactly one thing behind it".
+metadata: {"internal": true}
 ---
 
 # Task: Flatten over-engineered abstractions

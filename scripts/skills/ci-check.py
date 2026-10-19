@@ -189,12 +189,18 @@ def check_skill_md() -> None:
         for key in ("name", "description"):
             if not meta.get(key):
                 fail(f"{rel}: frontmatter missing '{key}'")
-        if "metadata" in meta:
-            check_metadata(rel, meta["metadata"])
+        data = check_metadata(rel, meta["metadata"]) if "metadata" in meta else {}
+        # Public skill installers (vercel-labs/skills) hide a skill whose
+        # metadata sets `internal` to the boolean true, which the JSON form
+        # above yields. Development skills must hide; customer skills must not.
+        if customer_facing and data.get("internal") is True:
+            fail(f"{rel}: a customer skill must not set metadata internal; public installers would hide it")
+        if not customer_facing and data.get("internal") is not True:
+            fail(f"{rel}: a development skill must set metadata: {{\"internal\": true}} so public installers skip it")
         print(f"OK frontmatter {rel}")
 
 
-def check_metadata(rel: Path, value: str) -> None:
+def check_metadata(rel: Path, value: str) -> dict:
     # OpenClaw re-reads `metadata` as JSON5; Claude Code, Codex, and Hermes read
     # YAML. One line of JSON is valid to every one of them and to the top-level
     # parsers here and in beancount-skills.py, which skip indented lines.
@@ -204,6 +210,7 @@ def check_metadata(rel: Path, value: str) -> None:
         fail(f"{rel}: frontmatter 'metadata' must be a single-line JSON object ({error})")
     if not isinstance(data, dict):
         fail(f"{rel}: frontmatter 'metadata' must be a single-line JSON object")
+    return data
 
 
 def check_evals() -> None:

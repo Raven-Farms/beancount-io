@@ -5,6 +5,7 @@ description: >-
   iPhone 17e simulator, sign in with QA_EMAIL and QA_PASSWORD, reproduce failures,
   trace root causes, and deduplicate findings. Use for native mobile QA. Skip
   browser-only dashboard QA, ordinary code review, and store releases.
+metadata: {"internal": true}
 ---
 
 # Mobile QA bug hunt
