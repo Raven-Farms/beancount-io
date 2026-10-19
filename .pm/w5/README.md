@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [746 — .run * stops at an empty-window stored query without naming it; bare-CLOSE advice drops rows (incomplete fix of w5/559)](./746.md)
 - [747 — Query regex pre-check refuses ?~ subjects and concatenated ~ patterns (adjacent to w5/558)](./747.md)
 - [748 — Dated missing-price wording from a sold or later USD-cost lot (incomplete fix of w5/557)](./748.md)
 - [749 — .describe Accounts (wrong case or unknown name) exits 0 with no output](./749.md)
