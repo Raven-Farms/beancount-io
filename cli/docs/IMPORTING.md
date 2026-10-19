@@ -310,7 +310,10 @@ and says so; another file sharing the header is read bank-signed, with a note
 naming the file that used `sign=ledger`. Each file keeps its own sign, so
 previewing next month's export with the same header leaves this month's
 `sign=ledger` in place. Previewing a file again without it drops only that
-file's. A `--csv` that carries only keys —
+file's. Editing the file re-hashes it — the same name with changed bytes, as
+when a pending row is deleted — and a flag-free run then refuses until the
+sign is passed again, rather than replay a sign chosen for other bytes or
+read the file bank-signed. A `--csv` that carries only keys —
 `--csv sign=ledger`, `--csv encoding=cp1252`, `--csv delimiter=';'`,
 `--csv decimal=comma` — applies them
 on top of the mapping remembered for that header and account, keeping its

@@ -994,12 +994,23 @@ def import_entries(
                 # one of them keeps it, so `--apply` writes what the preview
                 # showed; any other file sharing the header must say its sign.
                 seeded_from = list(sign_files.values())[-1]
-                if _source_sha256(source) in sign_files:
+                current = _source_sha256(source)
+                if current in sign_files:
                     recalled_sign_ledger = True
                     csv_request = f"{csv_request},sign=ledger"
                     recall_notes.append(
                         f"Re-applied sign=ledger: {source.name} is the file it was chosen for. "
                         "Pass --csv sign=bank to override."
+                    )
+                elif current is not None and source.name in sign_files.values():
+                    # The same name with changed bytes — a pending row deleted,
+                    # next month's export over the old path. Replaying the old
+                    # sign would flip every amount, and reading it bank-signed
+                    # already did (w5/754): refuse until the sign is said again.
+                    raise UsageError(
+                        f"{source.name} changed since sign=ledger was chosen for it, so its sign is no longer "
+                        "known. Pass --csv sign=ledger to confirm it is still ledger-signed, or sign=bank; "
+                        "nothing was written."
                     )
                 else:
                     recall_notes.append(
