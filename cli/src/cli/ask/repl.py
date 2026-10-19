@@ -26,7 +26,7 @@ from cli import output
 from cli.ask.render import answer_markdown
 from cli.config import history_path
 from cli.context import env_flag
-from cli.errors import AuthError
+from cli.errors import AuthError, BeaError
 from cli.utils import inert_text
 
 _STYLE = Style.from_dict(
@@ -248,6 +248,7 @@ def run_repl(agent: Agent[BqlDeps, str], deps: BqlDeps, *, default_input: str | 
     from cli.ask.agent import (
         CUT_OFF_NOTICE,
         WritePermission,
+        _naming_writes,
         begin_turn,
         cut_off,
         translated_failures,
@@ -362,6 +363,10 @@ def run_repl(agent: Agent[BqlDeps, str], deps: BqlDeps, *, default_input: str | 
                 # one such failure ended the process and discarded the conversation.
                 messages = _history_after_a_failed_turn(messages, turn, deps)
                 console.print()
+                if not isinstance(exc, BeaError):
+                    # Translated failures already name this turn's writes; one no
+                    # arm translates reaches here bare (w5/744).
+                    exc = _naming_writes(exc, deps)
                 output.failure(exc)
                 continue
             messages = list(result.all_messages())

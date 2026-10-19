@@ -270,12 +270,13 @@ def translated_failures(deps: BqlDeps | None = None) -> Iterator[None]:
         ) from exc
 
 
-def _naming_writes(error: BeaError, deps: BqlDeps | None) -> BeaError:
-    """The status table's sentence, plus the write it would otherwise leave out.
+def _naming_writes[T: BaseException](error: T, deps: BqlDeps | None) -> T:
+    """The failure's sentence, plus the write it would otherwise leave out.
 
-    Those sentences make no claim about the ledger, so nothing is added when the
-    question wrote nothing; after a write, silence reads as "nothing happened"
-    and invites the retry that duplicates the entry.
+    Translated sentences make no claim about the ledger, and failures no arm
+    translates make none either, so nothing is added when the question wrote
+    nothing; after a write, silence reads as "nothing happened" and invites
+    the retry that duplicates the entry.
     """
     if deps is not None and deps.writes:
         clause = written_so_far(deps)
@@ -459,10 +460,15 @@ def make_agent(
         """
         if not query.strip():
             raise ModelRetry("The query is empty. Send a BQL SELECT statement.")
+        if "\x00" in query:
+            # A NUL cannot cross into the helper's argv (`Popen` raises
+            # `ValueError`), and BQL could not parse it anyway (w5/744).
+            raise ModelRetry("The query contains a NUL byte, which Beancount cannot parse. Send the query without it.")
         try:
             # Rows and columns, not the rendered table: the row count, a visible
             # zero and a bounded result all need the typed shape (`ask.results`).
-            data = launch.helper_json(["query", "--file", str(ctx.deps.file), query, "--format", "json"])
+            # After `--`, so a query that begins with a dash stays a query.
+            data = launch.helper_json(["query", "--file", str(ctx.deps.file), "--format", "json", "--", query])
         except BeaError as exc:
             raise ModelRetry(_query_failure(exc)) from exc
         return format_result(query, data)
