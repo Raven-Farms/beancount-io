@@ -50,7 +50,7 @@
 - [ ] **m44** — [Install the suite as a Claude Code plugin and a Codex plugin](./m44/README.md) (10 tasks) ← promoted [w2/082](./done/082.md) 2026-10-18 after that day's skills-distribution research — sequenced after m42; its install-guide section lands after m43's
 - [ ] **m45** — [Record stock, fund, and crypto trades with correct lots, and report realized gains](./m45/README.md) (11 tasks) ← /pm-brainstorm 2026-10-18 (online skills research: beancount#940, #564, #614) — sequenced after m40; follows m41's compact style
 - [ ] **m46** — [Fix, recategorize, and reorganize an existing ledger through a reviewed diff with one-step undo](./blocked/m46/README.md) (11 tasks) ← /pm-brainstorm research into published Beancount skills and community requests, 2026-10-18 — **blocked:** t001's `beancount-edit` contract is drafted; the owner confirms (or declines) that one skill may change existing entries
-- [ ] **m47** — [Turn PDF statements and receipt photos into checked entries with documents attached](./m47/README.md) (9 tasks) ← /pm-brainstorm 2026-10-18 (online skills research) — after w2/079 and m40; t001 settles whether import or reconcile owns PDF statements
+- [ ] **m47** — [Turn PDF statements and receipt photos into checked entries with documents attached](./blocked/m47/README.md) (9 tasks) ← /pm-brainstorm 2026-10-18 (online skills research) — **blocked:** t001–t002 shipped (PDF import owns statements); t003 onward waits for m40's closeout
 - [ ] **m48** — [Reconciliation coverage and close review state (ADR 020 P0)](./m48/README.md) (8 tasks) ← ADR 020 P0 rows, from the skills brainstorm 2026-10-18 — sequenced after m41, so the reconcile and close rewrites do not collide
 
 ## Dropped
