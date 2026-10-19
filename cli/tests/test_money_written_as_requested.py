@@ -118,6 +118,39 @@ class TestCustomNegativeValues:
         values = _reloaded_values(ledger)[0]
         assert [str(value) for value in values] == ["Expenses:Food", "100", "-20 USD"]
 
+    @pytest.mark.parametrize(
+        ("value", "line", "shown"),
+        [
+            ("amount:-0.00 USD", '2024-02-07 custom "budget" Expenses:Food 0.00 USD', "0.00 USD"),
+            ("number:-0", '2024-02-07 custom "budget" Expenses:Food 0', "0"),
+        ],
+        ids=["amount", "number"],
+    )
+    def test_a_negative_zero_is_written_unsigned(self, tmp_path: Path, value: str, line: str, shown: str) -> None:
+        """`-0.00` parenthesized reloads as `0.00` and was refused; the zero is written unsigned (w5/729)."""
+        ledger = tmp_path / "main.bean"
+        ledger.write_text(CUSTOM_LEDGER)
+
+        result = _bea(
+            tmp_path,
+            "--file",
+            str(ledger),
+            "add",
+            "custom",
+            "--date",
+            "2024-02-07",
+            "--type",
+            "budget",
+            "-v",
+            "account:Expenses:Food",
+            "-v",
+            value,
+        )
+
+        assert result.returncode == 0, result.stderr
+        assert line in ledger.read_text()
+        assert [str(value) for value in _reloaded_values(ledger)[0]] == ["Expenses:Food", shown]
+
     def test_positive_values_are_written_exactly_as_before(self, tmp_path: Path) -> None:
         ledger = tmp_path / "main.bean"
         ledger.write_text(CUSTOM_LEDGER)

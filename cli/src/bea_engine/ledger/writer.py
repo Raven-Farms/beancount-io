@@ -162,18 +162,25 @@ class _CustomValueDecimal(Decimal):
 
     def __str__(self) -> str:
         text = Decimal.__format__(self, "f")
-        return f"({text})" if self.is_signed() and text != "-0" else text
+        return f"({text})" if self.is_signed() else text
 
     def __format__(self, spec: str, context: Context | None = None, /) -> str:
         del spec, context  # Every custom value is written at its own exact precision.
         return self.__str__()
 
 
+def _unsigned_zero(value: Decimal) -> Decimal:
+    """Zero without a sign: `-0.00` renders parenthesized but reloads as `0.00` (w5/729)."""
+    return value.copy_abs() if value.is_zero() else value
+
+
 def _custom_value(value: Any) -> Any:
     """One custom value, rendered so the written line reloads as the same value."""
     if isinstance(value, BcAmount) and isinstance(value.number, Decimal):
-        return value._replace(number=_CustomValueDecimal(value.number))
-    return _CustomValueDecimal(value) if isinstance(value, Decimal) else value
+        return value._replace(number=_CustomValueDecimal(_unsigned_zero(value.number)))
+    if isinstance(value, Decimal):
+        return _CustomValueDecimal(_unsigned_zero(value))
+    return value
 
 
 def _cost_spec_text(cost: Any, dformat: Any) -> str:
@@ -505,9 +512,9 @@ def write_custom(
         if isinstance(v, CustomDirectiveValueText):
             values.append(_ValueType(value=v.value, dtype=str))
         elif isinstance(v, CustomDirectiveValueNumber):
-            values.append(_ValueType(value=v.value, dtype=Decimal))
+            values.append(_ValueType(value=_unsigned_zero(v.value), dtype=Decimal))
         elif isinstance(v, CustomDirectiveValueAmount):
-            values.append(_ValueType(value=BcAmount(v.number, v.currency), dtype=BcAmount))
+            values.append(_ValueType(value=BcAmount(_unsigned_zero(v.number), v.currency), dtype=BcAmount))
         elif isinstance(v, CustomDirectiveValueAccount):
             values.append(_ValueType(value=v.value, dtype=beancount_account.TYPE))  # type: ignore[arg-type]
         elif isinstance(v, CustomDirectiveValueBoolean):
