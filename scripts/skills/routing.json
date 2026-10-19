@@ -800,6 +800,33 @@
         "beancount-trade"
       ],
       "why": "A statement file to import, not a described trade."
+    },
+    {
+      "id": "trade-cash-dividend",
+      "prompt": "VTI paid me a $45 cash dividend in my brokerage account — record it",
+      "expected": "beancount-trade",
+      "confusable": [
+        "beancount-add"
+      ],
+      "why": "A dividend on a holding is an investment event, not an everyday entry."
+    },
+    {
+      "id": "trade-stock-split",
+      "prompt": "ACME did a 4-for-1 stock split today; update my holding",
+      "expected": "beancount-trade",
+      "confusable": [
+        "beancount-add"
+      ],
+      "why": "A split rewrites lot units at unchanged total cost — a trade procedure."
+    },
+    {
+      "id": "trade-lot-transfer",
+      "prompt": "Move 4 of my VTI shares from my brokerage account to my Roth IRA account, keeping their cost basis",
+      "expected": "beancount-trade",
+      "confusable": [
+        "beancount-add"
+      ],
+      "why": "Moving lots between own accounts must keep cost and acquisition date."
     }
   ]
 }

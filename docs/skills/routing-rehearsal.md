@@ -200,3 +200,17 @@ prompts — now routing entries `trade-buy-vti-roth`,
 2.1.289 (`claude-opus-5-5[1m]`). Codex has not run them (account usage
 limit until 2026-11-17); w2/m45/t006 reruns the set there before the
 milestone claims both-client routing.
+
+## Full set after `beancount-trade` wiring — 2026-10-19
+
+The set gained the three remaining positive trade prompts
+(`trade-cash-dividend`, `trade-stock-split`, `trade-lot-transfer`), 90
+prompts in all, against the live suite at `372ecea20` (sibling
+descriptions naming `beancount-trade`). One run,
+2026-10-19T21:17:06Z: Claude Code 2.1.289 routed 90/90 as labeled —
+every label at precision and recall 1.00, `beancount-trade` 6/6, no
+sibling lost a prompt. Codex 0.163.0 (`gpt-6-luna`) errored on the one
+attempted trade prompt: "You've hit your usage limit… try again at Nov
+17th, 2026 3:36 PM" (same verbatim error from a bare `codex exec`
+probe). Codex has still routed none of the trade prompts; w2/m45/t006
+reruns the full set there when usage returns.
