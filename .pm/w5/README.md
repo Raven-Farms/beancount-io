@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [742 — Compound-cost buys share an import-id; dedup.md's "sorted order" differs from bea's (incomplete fix of w5/349/555)](./742.md)
 - [743 — Reconcile skill: the red-ledger batch "passes on its own" is false while a mismatch remains (incomplete fix of w5/554)](./743.md)
 - [744 — ask BQL tool: a NUL kills the question; a dash-leading query is parsed as an engine option (gap in w5/549)](./744.md)
 - [745 — ask: content_filter partial answers print as complete; false gzip sent 3x; raw Pydantic warning (incomplete fix of w5/546/547)](./745.md)
