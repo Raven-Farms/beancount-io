@@ -68,7 +68,7 @@ from typing import Any, Literal, TextIO
 from cli import config, context, output
 from cli.auth.credentials import load_credentials
 from cli.engine import paths, provision
-from cli.errors import BY_CATEGORY, BeaError, ConflictError, UsageError
+from cli.errors import BY_CATEGORY, BeaError, ConflictError, SignalError, UsageError
 
 
 def run_engine_argv(argv: Sequence[str], *, interactive: bool = False) -> int:
@@ -813,10 +813,13 @@ def _parse(completed: subprocess.CompletedProcess[str], args: Sequence[str], *, 
                 details=printed,
             ) from None
         if number > 0:
-            raise BeaError(
+            hint = _signal_hint(number)
+            raise SignalError(
                 f"The Beancount engine was killed by {name} answering "
                 f"'bea-engine {' '.join(args)}' and produced no result.",
-                details=[*printed, _signal_hint(number)],
+                signal_name=name,
+                hint=hint,
+                details=[*printed, hint],
             ) from None
         raise BeaError(
             f"The Beancount engine did not answer 'bea-engine {' '.join(args)}' (exit {completed.returncode}).",

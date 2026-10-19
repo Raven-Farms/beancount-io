@@ -92,6 +92,28 @@ class AuthError(BeaError):
     exit_code = EXIT_AUTH
 
 
+class SignalError(BeaError):
+    """The engine was killed by a signal and produced no result.
+
+    A `BeaError` by category and exit code; the subclass exists so a batched
+    call can tell a signal death — which a per-file rerun can isolate — from
+    any other engine failure.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        signal_name: str,
+        hint: str,
+        request_id: str | None = None,
+        details: list[str] | None = None,
+    ) -> None:
+        super().__init__(message, request_id=request_id, details=details)
+        self.signal_name = signal_name
+        self.hint = hint
+
+
 class ConflictError(BeaError):
     """The server rejected a stale change, or a write's outcome is unknown."""
 

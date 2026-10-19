@@ -81,13 +81,14 @@ def parse_decimal_number(value: str) -> Decimal:
 _ZERO_DIVISOR = re.compile(r"/\s*[-+]?(?:0+(?:\.0*)?|\.0+)(?![\d.]|[A-Z0-9'._-]*[A-Z])")
 """A literal zero divisor in amount arithmetic, which segfaults Beancount's parser."""
 
-#: Ledger text no amount arithmetic is in: strings, `;` comments, and the
-#: org-mode and other lines Beancount skips at a line start.
-_NOT_ARITHMETIC = re.compile(r'"(?:[^"\\]|\\.)*"|;[^\n]*|^[*:#!&?%][^\n]*', re.MULTILINE)
+#: Ledger text no amount arithmetic is in: strings, `;` comments, `#tag`
+#: and `^link` tokens (a hierarchical `#proj/0` holds a `/0` that is not a
+#: divisor), and the org-mode and other lines Beancount skips at a line start.
+_NOT_ARITHMETIC = re.compile(r'"(?:[^"\\]|\\.)*"|;[^\n]*|#[^\s;"\']*|\^[^\s;"\']*|^[*:#!&?%][^\n]*', re.MULTILINE)
 
 
 def zero_divisor_line(text: str) -> int | None:
-    """The first line of ledger text holding a literal zero divisor outside strings and comments."""
+    """The first line of ledger text holding a literal zero divisor outside strings, comments, and tags."""
     code = _NOT_ARITHMETIC.sub(lambda found: re.sub(r"[^\n]", " ", found.group()), text)
     for number, line in enumerate(code.split("\n"), start=1):
         if _ZERO_DIVISOR.search(line):

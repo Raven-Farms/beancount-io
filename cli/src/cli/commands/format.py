@@ -32,7 +32,7 @@ import typer
 from cli import context, output
 from cli.amounts import zero_divisor_line
 from cli.engine import launch
-from cli.errors import BeaError, LedgerError, UsageError
+from cli.errors import BeaError, LedgerError, SignalError, UsageError
 from cli.paths import expand_path
 from cli.utils import RawPath, atomic_write, decode_error_message, single_line
 
@@ -529,10 +529,28 @@ def _syntax_failures(files: list[Path]) -> dict[str, list[str]]:
                 "zero divisor, so this file was not parsed."
             ]
     parsed = [str(file) for file in files if str(file) not in divided]
-    reported = launch.helper_json(["syntax", *parsed]).get("files", {}) if parsed else {}
+    crashed: dict[str, list[str]] = {}
+    try:
+        reported = launch.helper_json(["syntax", *parsed]).get("files", {}) if parsed else {}
+    except SignalError:
+        # The batch died on a signal — a zero divisor the literal scan
+        # cannot see, like `100/(0)` — so isolate it per file: the one that
+        # kills the engine is named, and the rest still format (w5/759). One
+        # call per file only on this path; the batch stays a single call.
+        reported = {}
+        for single in parsed:
+            try:
+                reported.update(launch.helper_json(["syntax", single]).get("files", {}))
+            except SignalError as exc:
+                crashed[single] = [
+                    f"{single}: Beancount's parser crashed reading this file "
+                    f"(the engine was killed by {exc.signal_name}), so it was not parsed. {exc.hint}"
+                ]
     failures: dict[str, list[str]] = {}
     for file in files:
-        errors = divided.get(str(file)) or [str(error) for error in reported.get(str(file), [])]
+        errors = (
+            divided.get(str(file)) or crashed.get(str(file)) or [str(error) for error in reported.get(str(file), [])]
+        )
         if not errors:
             continue
         if len(errors) == 1 and errors[0].startswith(f"{file}: cannot read file"):
