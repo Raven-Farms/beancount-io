@@ -36,6 +36,12 @@ const skCollaboration: Record<string, TranslationEntry> = {
     message: "Chyba pri načítaní spolupracovníkov",
     description: "Error title when collaborators fail to load",
   },
+  "collaboration.ownerPlanLimitReached": {
+    message:
+      "Plán vlastníka tejto knihy nepovoľuje ďalších spolupracovníkov. Len vlastník môže prejsť na vyšší plán.",
+    description:
+      "Shown when adding a collaborator to someone else's ledger hits the owner's plan limit; only the owner can upgrade.",
+  },
   "collaboration.failedToAddCollaborator": {
     message: "Pridanie spolupracovníka zlyhalo",
     description: "Error message when adding collaborator fails",

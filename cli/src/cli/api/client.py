@@ -199,6 +199,7 @@ def call[T](
                 response.status_code,
                 _error_message(None, response.content),
                 request_id=request_id_from(response.headers),
+                code=_error_code(None, response.content),
             ) from exc
         raise UnreadableSuccess(
             f"Unexpected server response (HTTP {response.status_code}).",
@@ -248,7 +249,20 @@ def unwrap_or_none[T](response: Response[T | V1Error], *, model: type | None = N
         response.status_code,
         _error_message(parsed, response.content),
         request_id=request_id_from(response.headers),
+        code=_error_code(parsed, response.content),
     )
+
+
+def _error_code(parsed: object, content: bytes) -> str | None:
+    """The v1 error code, from the parsed envelope or the raw body."""
+    from cli.errors import error_code
+
+    if isinstance(parsed, V1Error):
+        return parsed.error.code
+    try:
+        return error_code(json.loads(content))
+    except (ValueError, RecursionError):
+        return None
 
 
 def _error_message(parsed: object, content: bytes) -> str | None:

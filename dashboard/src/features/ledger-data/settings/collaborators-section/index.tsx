@@ -30,7 +30,10 @@ import {
 } from "@/graphql/definitions";
 import { toast } from "sonner";
 import { useTranslations } from "@/common/hooks/use-translations";
-import { useErrorMessage } from "@/common/lib/errors/error-message";
+import {
+  getErrorMessageKey,
+  useErrorMessage,
+} from "@/common/lib/errors/error-message";
 import { useUserLimits } from "@/common/hooks/use-user-limits";
 import { LedgerAdminPermission } from "@/common/components/ledger-permission/admin";
 import { LimitIndicator } from "@/common/components/limit-indicator";
@@ -79,8 +82,16 @@ export function CollaboratorsSection({ ledgerId }: { ledgerId: string }) {
       });
       toast.success(t("collaboration.collaboratorAddedSuccess"));
     } catch (error) {
+      // The owner's plan sets the limit: telling anyone else to upgrade
+      // would not help (w1/181).
+      const ownersLimit =
+        getErrorMessageKey(error) === "common.errors.resourceLimitReached" &&
+        ledgerId.split("/")[0]?.toLowerCase() !==
+          currentUserLogin?.toLowerCase();
       toast.error(t("collaboration.failedToAddCollaborator"), {
-        description: formatError(error),
+        description: ownersLimit
+          ? t("collaboration.ownerPlanLimitReached")
+          : formatError(error),
       });
     }
   };

@@ -36,6 +36,12 @@ const zhCollaboration: Record<string, TranslationEntry> = {
     message: "加载协作者时出错",
     description: "Error title when collaborators fail to load",
   },
+  "collaboration.ownerPlanLimitReached": {
+    message:
+      "此账本所有者的计划不允许再添加协作者。只有所有者升级后才能添加更多。",
+    description:
+      "Shown when adding a collaborator to someone else's ledger hits the owner's plan limit; only the owner can upgrade.",
+  },
   "collaboration.failedToAddCollaborator": {
     message: "添加协作者失败",
     description: "Error message when adding collaborator fails",

@@ -185,13 +185,30 @@ def server_message(body: object) -> str | None:
 _RAW_SENTENCE_LIMIT = 200
 
 
-def error_from_status(status: int, message: str | None, *, request_id: str | None = None) -> BeaError:
+def error_code(body: object) -> str | None:
+    """The v1 envelope's `error.code`, when the body carries one."""
+    error = body.get("error") if isinstance(body, Mapping) else None
+    code = error.get("code") if isinstance(error, Mapping) else None
+    return code if isinstance(code, str) else None
+
+
+def error_from_status(
+    status: int,
+    message: str | None,
+    *,
+    request_id: str | None = None,
+    code: str | None = None,
+) -> BeaError:
     """Map a v1 HTTP status to the documented category, keeping the server's words.
 
     One deterministic table, so a script can branch on the exit code and a
     person reads the server's own message rather than a paraphrase.
     """
     detail = message or f"HTTP {status}"
+    # A plan limit answers 403, but it is not a credential problem: the
+    # server's sentence already names the plan and what to do.
+    if code == "RESOURCE_LIMIT_REACHED":
+        return BeaError(detail, request_id=request_id)
     if status == 401:
         return AuthError(f"Not authorized ({detail}). {_auth_remedy()}", request_id=request_id)
     if status == 403:

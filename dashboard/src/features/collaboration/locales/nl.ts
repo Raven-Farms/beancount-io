@@ -36,6 +36,12 @@ const nlCollaboration: Record<string, TranslationEntry> = {
     message: "Fout bij laden medewerkers",
     description: "Error title when collaborators fail to load",
   },
+  "collaboration.ownerPlanLimitReached": {
+    message:
+      "Het abonnement van de eigenaar van dit grootboek staat geen extra medewerkers toe. Alleen de eigenaar kan upgraden voor meer.",
+    description:
+      "Shown when adding a collaborator to someone else's ledger hits the owner's plan limit; only the owner can upgrade.",
+  },
   "collaboration.failedToAddCollaborator": {
     message: "Medewerker toevoegen mislukt",
     description: "Error message when adding collaborator fails",

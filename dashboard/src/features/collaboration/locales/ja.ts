@@ -33,6 +33,12 @@ const jaCollaboration: Record<string, TranslationEntry> = {
     message: "コラボレーターの読み込みエラー",
     description: "Error title when collaborators fail to load",
   },
+  "collaboration.ownerPlanLimitReached": {
+    message:
+      "この台帳の所有者のプランでは、これ以上コラボレーターを追加できません。追加するには所有者がアップグレードする必要があります。",
+    description:
+      "Shown when adding a collaborator to someone else's ledger hits the owner's plan limit; only the owner can upgrade.",
+  },
   "collaboration.failedToAddCollaborator": {
     message: "コラボレーターの追加に失敗しました",
     description: "Error message when adding collaborator fails",

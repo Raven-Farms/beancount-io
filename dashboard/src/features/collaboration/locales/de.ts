@@ -36,6 +36,12 @@ const deCollaboration: Record<string, TranslationEntry> = {
     message: "Fehler beim Laden der Mitarbeiter",
     description: "Error title when collaborators fail to load",
   },
+  "collaboration.ownerPlanLimitReached": {
+    message:
+      "Der Tarif des Eigentümers dieses Hauptbuchs erlaubt keine weiteren Mitarbeiter. Nur der Eigentümer kann für mehr upgraden.",
+    description:
+      "Shown when adding a collaborator to someone else's ledger hits the owner's plan limit; only the owner can upgrade.",
+  },
   "collaboration.failedToAddCollaborator": {
     message: "Mitarbeiter konnte nicht hinzugefügt werden",
     description: "Error message when adding collaborator fails",
