@@ -2,7 +2,7 @@
 
 **Worker:** worker1
 **Goal:** A subscriber can preview and confirm any upgrade or monthly-to-yearly switch from Billing settings, pay exactly the amount shown, approve bank authentication without leaving the page, and land on a confirmation after Checkout.
-**Status:** todo (t001, t002, t004, t005, t006, t007, t008, t009, t010, t011, t012, t013 done; t003 part 1 shipped and blocked on an analytics question; t016 blocked on the user's GA4 and production access)
+**Status:** todo (t001, t002, t004, t005, t006, t007, t008, t009, t010, t011, t012, t013 done; t003 part 1 shipped and blocked on an analytics question; t015 blocked on a deploy and a QA card; t016 blocked on the user's GA4 and production access)
 
 ## Source + Goal linkage
 
@@ -77,6 +77,8 @@ This milestone ships before that page changes, so every task keeps that contract
 - The deployed revision passes a read-only hosted check with authorized or synthetic accounts, without a purchase. Task statuses and links agree, and completed work is moved into `done/` through `/pm`.
 
 ## Blocked
+
+**t015 is blocked:** the production payment test needs the latest `main` deployed, and a card in Checkout, because Stripe collects one even at $0. **Unblock:** the user deploys, then enters a card in the two $0 Checkouts or provides one for the QA account. Cleared by the user.
 
 **t016 is blocked:** the server-side `purchase` event needs a GA4 Measurement Protocol secret and the stream ID set in production. The worker has no GA4 admin access or production environment. **Unblock:** the user sets both variables, or grants that access. Cleared by the user.
 
