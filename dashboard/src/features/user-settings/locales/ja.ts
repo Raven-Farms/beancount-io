@@ -3,10 +3,6 @@ import { apiKeyTranslations } from "../pages/api-keys/translations";
 
 const jaUserSettings: Record<string, TranslationEntry> = {
   ...apiKeyTranslations.ja,
-  "userSettings.accessUntil": {
-    message: "アクセス期限",
-    description: "Label for access remaining until date",
-  },
   "userSettings.accountDeleted": {
     message: "アカウントが正常に削除されました",
     description: "Success message when account is deleted",
@@ -232,22 +228,9 @@ const jaUserSettings: Record<string, TranslationEntry> = {
     message: "サブスクリプションをキャンセル",
     description: "Button text to cancel subscription",
   },
-  "userSettings.cancelSubscriptionDescription": {
-    message:
-      "サブスクリプションをキャンセルしてよろしいですか？現在の請求期間が終了するまでアクセスを継続できます。",
-    description: "Confirmation dialog description for canceling subscription",
-  },
-  "userSettings.cancelSubscriptionTitle": {
-    message: "サブスクリプションをキャンセルしますか？",
-    description: "Confirmation dialog title for canceling subscription",
-  },
   "userSettings.canceling": {
     message: "キャンセル中...",
     description: "Button text while canceling subscription",
-  },
-  "userSettings.confirmCancel": {
-    message: "はい、キャンセルする",
-    description: "Button text to confirm subscription cancellation",
   },
   "userSettings.failedToCancelSubscription": {
     message: "サブスクリプションのキャンセルに失敗しました",
@@ -372,10 +355,6 @@ const jaUserSettings: Record<string, TranslationEntry> = {
   "userSettings.subscription": {
     message: "サブスクリプション",
     description: "Subscription section title",
-  },
-  "userSettings.subscriptionCanceled": {
-    message: "サブスクリプションがキャンセルされました",
-    description: "Message when subscription is already canceled",
   },
   "userSettings.subscriptionCanceledSuccess": {
     message: "サブスクリプションが正常にキャンセルされました",
@@ -817,6 +796,84 @@ const jaUserSettings: Record<string, TranslationEntry> = {
   "userSettings.planChangeLimitDirectives": {
     message: "ディレクティブ",
     description: "Row label: entries (Beancount directives) allowed in total",
+  },
+  "userSettings.scheduledHeading": {
+    message: "予定",
+    description:
+      "Heading of the panel listing what happens at the end of the paid period",
+  },
+  "userSettings.scheduledChangesTo": {
+    message: "{date} に {plan} に変更されます。",
+    description: "A scheduled plan change and its date",
+  },
+  "userSettings.scheduledEnds": {
+    message: "{plan} は {date} に終了します。",
+    description: "A pending cancellation and the date the plan ends",
+  },
+  "userSettings.scheduledKeepCurrent": {
+    message: "現在のプランを継続",
+    description: "Button that undoes a scheduled plan change",
+  },
+  "userSettings.scheduledKept": {
+    message: "プランはそのままです。",
+    description: "Toast after undoing a scheduled plan change",
+  },
+  "userSettings.scheduledKeepFailed": {
+    message:
+      "予定されている変更を取り消せませんでした。もう一度お試しください。",
+    description: "Toast when undoing a scheduled plan change fails",
+  },
+  "userSettings.cancelSheetTitle": {
+    message: "{plan} を解約しますか？",
+    description: "Title of the sheet shown before cancelling",
+  },
+  "userSettings.cancelSheetKeepUntil": {
+    message:
+      "{date} まで {plan} をご利用いただけます。その後は無料プランになります：{limits}。",
+    description:
+      "What the reader keeps until the period ends, and the Free limits afterwards",
+  },
+  "userSettings.cancelSheetPlainText": {
+    message:
+      "帳簿はプレーンテキストなので、いつでもエクスポートできます。何も削除されません。",
+    description: "Reassurance that cancelling deletes nothing",
+  },
+  "userSettings.cancelSheetOtherOptions": {
+    message: "ほかの選択肢",
+    description: "Heading above the cheaper alternative to cancelling",
+  },
+  "userSettings.cancelSheetSwitchToYearly": {
+    message: "年払いに切り替え — 月あたり {price}",
+    description:
+      "Alternative to cancelling: switch to yearly at the per-month price",
+  },
+  "userSettings.cancelSheetDowngradeTo": {
+    message: "{plan} にダウングレード",
+    description: "Alternative to cancelling: the next lower plan",
+  },
+  "userSettings.cancelSheetReason": {
+    message: "主な理由は何ですか？（任意）",
+    description: "Optional question about why the reader cancels",
+  },
+  "userSettings.cancelReasonTooExpensive": {
+    message: "高すぎる",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonMissingFeatures": {
+    message: "機能が足りない",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonUnused": {
+    message: "使っていない",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonSwitchedService": {
+    message: "別のツールに移る",
+    description: "Cancellation reason: moving to another tool",
+  },
+  "userSettings.cancelReasonOther": {
+    message: "その他",
+    description: "Cancellation reason",
   },
   "userSettings.planChangeRequiresAction": {
     message:

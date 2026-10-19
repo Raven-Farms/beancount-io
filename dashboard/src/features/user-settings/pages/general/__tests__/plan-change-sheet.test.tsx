@@ -496,6 +496,21 @@ describe("PlanChangeSheet", () => {
       );
       expect(onChanged).toHaveBeenCalled();
       expect(onClose).toHaveBeenCalled();
+      expect(
+        mockTrack.mock.calls.filter(
+          ([event]) => event === "plan_change_scheduled",
+        ),
+      ).toEqual([
+        [
+          "plan_change_scheduled",
+          {
+            kind: "DOWNGRADE",
+            from: "growth_yearly",
+            to: "premium_yearly",
+            surface: "settings_billing",
+          },
+        ],
+      ]);
     });
 
     it("lists no limits for a switch to monthly on the same tier", () => {

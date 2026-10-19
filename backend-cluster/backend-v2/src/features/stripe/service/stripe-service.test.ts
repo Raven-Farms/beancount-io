@@ -176,9 +176,44 @@ describe("StripeService", () => {
       expect(result.message).toContain("end of the current billing period");
       expect(mockStripeSubscriptions.update).toHaveBeenCalledWith(
         subscriptionId,
-        { cancel_at_period_end: true },
+        {
+          cancel_at_period_end: true,
+          cancellation_details: { feedback: "" },
+        },
       );
       expect(mockStripeSubscriptions.cancel).not.toHaveBeenCalled();
+    });
+
+    it("records the subscriber's reason with Stripe's cancellation details", async () => {
+      mockIPaidCustomerModel.findByUserIdAndClientId.mockResolvedValue({
+        id: "customer_doc_id",
+        userId,
+        clientId,
+        stripeCustomerId: "cus_123",
+      } as unknown as Awaited<
+        ReturnType<typeof mockIPaidCustomerModel.findByUserIdAndClientId>
+      >);
+      mockStripeSubscriptions.retrieve.mockResolvedValue({
+        id: subscriptionId,
+        customer: "cus_123",
+        livemode: true,
+      } as unknown as Stripe.Subscription);
+      mockStripeSubscriptions.update.mockResolvedValue({});
+
+      await stripeUseCase.cancelSubscription(
+        subscriptionId,
+        userId,
+        clientId,
+        "MISSING_FEATURES",
+      );
+
+      expect(mockStripeSubscriptions.update).toHaveBeenCalledWith(
+        subscriptionId,
+        {
+          cancel_at_period_end: true,
+          cancellation_details: { feedback: "missing_features" },
+        },
+      );
     });
 
     it("releases a pending scheduled change before cancelling, which Stripe would otherwise refuse", async () => {
@@ -621,7 +656,10 @@ describe("StripeService", () => {
       expect(result.message).toContain("resumed successfully");
       expect(mockStripeSubscriptions.update).toHaveBeenCalledWith(
         subscriptionId,
-        { cancel_at_period_end: false },
+        {
+          cancel_at_period_end: false,
+          cancellation_details: { feedback: "" },
+        },
       );
     });
 

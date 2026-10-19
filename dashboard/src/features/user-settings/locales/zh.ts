@@ -7,10 +7,6 @@ export interface TranslationEntry {
 
 const zhUserSettings: Record<string, TranslationEntry> = {
   ...apiKeyTranslations.zh,
-  "userSettings.accessUntil": {
-    message: "访问截止日期",
-    description: "Label for access remaining until date",
-  },
   "userSettings.accountDeleted": {
     message: "账户已成功删除",
     description: "Success message when account is deleted",
@@ -47,14 +43,6 @@ const zhUserSettings: Record<string, TranslationEntry> = {
     message: "取消订阅",
     description: "Button text to cancel subscription",
   },
-  "userSettings.cancelSubscriptionDescription": {
-    message: "你确定要取消订阅吗？你将继续拥有访问权限直到当前计费周期结束。",
-    description: "Confirmation dialog description for canceling subscription",
-  },
-  "userSettings.cancelSubscriptionTitle": {
-    message: "取消订阅？",
-    description: "Confirmation dialog title for canceling subscription",
-  },
   "userSettings.canceling": {
     message: "正在取消...",
     description: "Button text while canceling subscription",
@@ -70,10 +58,6 @@ const zhUserSettings: Record<string, TranslationEntry> = {
   "userSettings.changeUsername": {
     message: "更改用户名",
     description: "Dialog title for changing username",
-  },
-  "userSettings.confirmCancel": {
-    message: "是的，取消订阅",
-    description: "Button text to confirm subscription cancellation",
   },
   "userSettings.createKey": {
     message: "创建密钥",
@@ -392,10 +376,6 @@ const zhUserSettings: Record<string, TranslationEntry> = {
   "userSettings.subscription": {
     message: "订阅",
     description: "Subscription section title",
-  },
-  "userSettings.subscriptionCanceled": {
-    message: "订阅已取消",
-    description: "Message when subscription is already canceled",
   },
   "userSettings.subscriptionCanceledSuccess": {
     message: "订阅已成功取消",
@@ -807,6 +787,81 @@ const zhUserSettings: Record<string, TranslationEntry> = {
   "userSettings.planChangeLimitDirectives": {
     message: "指令",
     description: "Row label: entries (Beancount directives) allowed in total",
+  },
+  "userSettings.scheduledHeading": {
+    message: "已安排",
+    description:
+      "Heading of the panel listing what happens at the end of the paid period",
+  },
+  "userSettings.scheduledChangesTo": {
+    message: "将于 {date} 更改为 {plan}。",
+    description: "A scheduled plan change and its date",
+  },
+  "userSettings.scheduledEnds": {
+    message: "{plan} 将于 {date} 结束。",
+    description: "A pending cancellation and the date the plan ends",
+  },
+  "userSettings.scheduledKeepCurrent": {
+    message: "保持当前计划",
+    description: "Button that undoes a scheduled plan change",
+  },
+  "userSettings.scheduledKept": {
+    message: "你的计划保持不变。",
+    description: "Toast after undoing a scheduled plan change",
+  },
+  "userSettings.scheduledKeepFailed": {
+    message: "无法撤销你已安排的更改。请重试。",
+    description: "Toast when undoing a scheduled plan change fails",
+  },
+  "userSettings.cancelSheetTitle": {
+    message: "取消 {plan}？",
+    description: "Title of the sheet shown before cancelling",
+  },
+  "userSettings.cancelSheetKeepUntil": {
+    message: "你可以使用 {plan} 至 {date}。之后将转为免费计划：{limits}。",
+    description:
+      "What the reader keeps until the period ends, and the Free limits afterwards",
+  },
+  "userSettings.cancelSheetPlainText": {
+    message: "你的账本是纯文本——随时可以导出。不会删除任何内容。",
+    description: "Reassurance that cancelling deletes nothing",
+  },
+  "userSettings.cancelSheetOtherOptions": {
+    message: "其他选择",
+    description: "Heading above the cheaper alternative to cancelling",
+  },
+  "userSettings.cancelSheetSwitchToYearly": {
+    message: "改为年付——每月 {price}",
+    description:
+      "Alternative to cancelling: switch to yearly at the per-month price",
+  },
+  "userSettings.cancelSheetDowngradeTo": {
+    message: "降级到 {plan}",
+    description: "Alternative to cancelling: the next lower plan",
+  },
+  "userSettings.cancelSheetReason": {
+    message: "主要原因是什么？（可选）",
+    description: "Optional question about why the reader cancels",
+  },
+  "userSettings.cancelReasonTooExpensive": {
+    message: "太贵了",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonMissingFeatures": {
+    message: "缺少某个功能",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonUnused": {
+    message: "没有在用",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonSwitchedService": {
+    message: "换用其他工具",
+    description: "Cancellation reason: moving to another tool",
+  },
+  "userSettings.cancelReasonOther": {
+    message: "其他",
+    description: "Cancellation reason",
   },
   "userSettings.planChangeRequiresAction": {
     message:

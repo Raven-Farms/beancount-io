@@ -737,6 +737,15 @@ type PlanLimitChange {
   to: Int!
 }
 
+"""Why a subscriber cancels, when they say."""
+enum CancellationReason {
+  TOO_EXPENSIVE
+  MISSING_FEATURES
+  UNUSED
+  SWITCHED_SERVICE
+  OTHER
+}
+
 enum PlanChangeStatus {
   ACTIVE
   SCHEDULED
@@ -1483,7 +1492,12 @@ type Mutation {
   """
   Schedules your subscription to cancel. Requires a full signed-in session.
   """
-  cancelSubscription(clientId: String!, subscriptionId: String!): SubscriptionActionResult!
+  cancelSubscription(
+    """The subscriber's optional reason, recorded with Stripe."""
+    reason: CancellationReason
+    clientId: String!
+    subscriptionId: String!
+  ): SubscriptionActionResult!
 
   """Resumes your subscription. Requires a full signed-in session."""
   resumeSubscription(clientId: String!, subscriptionId: String!): SubscriptionActionResult!

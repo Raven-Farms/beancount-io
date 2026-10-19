@@ -7,10 +7,6 @@ export interface TranslationEntry {
 
 const caUserSettings: Record<string, TranslationEntry> = {
   ...apiKeyTranslations.ca,
-  "userSettings.accessUntil": {
-    message: "Accés fins al",
-    description: "Label for access remaining until date",
-  },
   "userSettings.accountDeleted": {
     message: "Compte eliminat correctament",
     description: "Success message when account is deleted",
@@ -47,15 +43,6 @@ const caUserSettings: Record<string, TranslationEntry> = {
     message: "Cancel·la la subscripció",
     description: "Button text to cancel subscription",
   },
-  "userSettings.cancelSubscriptionDescription": {
-    message:
-      "Segur que voleu cancel·lar la subscripció? Continuareu tenint accés fins al final del període de facturació actual.",
-    description: "Confirmation dialog description for canceling subscription",
-  },
-  "userSettings.cancelSubscriptionTitle": {
-    message: "Voleu cancel·lar la subscripció?",
-    description: "Confirmation dialog title for canceling subscription",
-  },
   "userSettings.canceling": {
     message: "S'està cancel·lant...",
     description: "Button text while canceling subscription",
@@ -71,10 +58,6 @@ const caUserSettings: Record<string, TranslationEntry> = {
   "userSettings.changeUsername": {
     message: "Canviar nom d'usuari",
     description: "Dialog title for changing username",
-  },
-  "userSettings.confirmCancel": {
-    message: "Sí, cancel·la la subscripció",
-    description: "Button text to confirm subscription cancellation",
   },
   "userSettings.createKey": {
     message: "Crear clau",
@@ -398,10 +381,6 @@ const caUserSettings: Record<string, TranslationEntry> = {
   "userSettings.subscription": {
     message: "Subscripció",
     description: "Subscription section title",
-  },
-  "userSettings.subscriptionCanceled": {
-    message: "S'ha cancel·lat la subscripció",
-    description: "Message when subscription is already canceled",
   },
   "userSettings.subscriptionCanceledSuccess": {
     message: "La subscripció s'ha cancel·lat correctament",
@@ -845,6 +824,83 @@ const caUserSettings: Record<string, TranslationEntry> = {
   "userSettings.planChangeLimitDirectives": {
     message: "Directives",
     description: "Row label: entries (Beancount directives) allowed in total",
+  },
+  "userSettings.scheduledHeading": {
+    message: "Programat",
+    description:
+      "Heading of the panel listing what happens at the end of the paid period",
+  },
+  "userSettings.scheduledChangesTo": {
+    message: "Canvia a {plan} el {date}.",
+    description: "A scheduled plan change and its date",
+  },
+  "userSettings.scheduledEnds": {
+    message: "{plan} acaba el {date}.",
+    description: "A pending cancellation and the date the plan ends",
+  },
+  "userSettings.scheduledKeepCurrent": {
+    message: "Mantén l'actual",
+    description: "Button that undoes a scheduled plan change",
+  },
+  "userSettings.scheduledKept": {
+    message: "El teu pla es queda com està.",
+    description: "Toast after undoing a scheduled plan change",
+  },
+  "userSettings.scheduledKeepFailed": {
+    message: "No s'ha pogut desfer el canvi programat. Torna-ho a provar.",
+    description: "Toast when undoing a scheduled plan change fails",
+  },
+  "userSettings.cancelSheetTitle": {
+    message: "Vols cancel·lar {plan}?",
+    description: "Title of the sheet shown before cancelling",
+  },
+  "userSettings.cancelSheetKeepUntil": {
+    message:
+      "Conserves {plan} fins al {date}. Després passes al pla gratuït: {limits}.",
+    description:
+      "What the reader keeps until the period ends, and the Free limits afterwards",
+  },
+  "userSettings.cancelSheetPlainText": {
+    message:
+      "Els teus llibres són text pla: exporta'ls quan vulguis. No s'esborra res.",
+    description: "Reassurance that cancelling deletes nothing",
+  },
+  "userSettings.cancelSheetOtherOptions": {
+    message: "Altres opcions",
+    description: "Heading above the cheaper alternative to cancelling",
+  },
+  "userSettings.cancelSheetSwitchToYearly": {
+    message: "Canvia a anual — {price}/mes",
+    description:
+      "Alternative to cancelling: switch to yearly at the per-month price",
+  },
+  "userSettings.cancelSheetDowngradeTo": {
+    message: "Baixa a {plan}",
+    description: "Alternative to cancelling: the next lower plan",
+  },
+  "userSettings.cancelSheetReason": {
+    message: "Quin és el motiu principal? (opcional)",
+    description: "Optional question about why the reader cancels",
+  },
+  "userSettings.cancelReasonTooExpensive": {
+    message: "Massa car",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonMissingFeatures": {
+    message: "Hi falta una funció",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonUnused": {
+    message: "No el faig servir",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonSwitchedService": {
+    message: "Canvio d'eina",
+    description: "Cancellation reason: moving to another tool",
+  },
+  "userSettings.cancelReasonOther": {
+    message: "Un altre",
+    description: "Cancellation reason",
   },
   "userSettings.planChangeRequiresAction": {
     message:

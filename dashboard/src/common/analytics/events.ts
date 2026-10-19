@@ -20,7 +20,7 @@
  *    prefer bucketed/derived attributes.
  */
 import type { UserTier } from "@/common/hooks/use-user-limits";
-import type { PlanChangeKind } from "@/graphql/definitions";
+import type { CancellationReason, PlanChangeKind } from "@/graphql/definitions";
 import type {
   BillingCycle,
   SubscriptionTier,
@@ -72,6 +72,7 @@ export type BillingSurface =
   | UpgradeSurface
   | "settings_billing"
   | "pay_yearly_offer"
+  | "cancel_sheet"
   | "deep_link";
 
 /**
@@ -82,6 +83,9 @@ export type BillingSurface =
 export type PlanValue =
   | Lowercase<PlanTier>
   | `${SubscriptionTier}_${BillingCycle}`;
+
+/** Why a subscriber cancels, as the cancel sheet offers it. */
+export type CancelReason = Lowercase<`${CancellationReason}`>;
 
 /** One plan change, as every plan-change event describes it. */
 interface PlanChangeParams {
@@ -248,6 +252,19 @@ export interface AnalyticsEvents {
   payment_action_required: PlanChangeParams;
   /** The change's payment was declined; nothing changed. */
   payment_action_failed: PlanChangeParams;
+  /** A change that waits for the end of the paid period was scheduled. */
+  plan_change_scheduled: PlanChangeParams;
+  /** The reader kept their plan, undoing a scheduled change to `to`. */
+  plan_change_reverted: { from: PlanValue; to: PlanValue };
+  /** The cancel sheet opened. */
+  cancel_started: { from: PlanValue };
+  /**
+   * The subscription was set to end at the period's end, with the reader's
+   * optional reason. Recorded on the server's success.
+   */
+  cancel_confirmed: { from: PlanValue; reason?: CancelReason };
+  /** A pending cancellation was withdrawn with Resume. */
+  subscription_resumed: { from: PlanValue };
 }
 
 export type AnalyticsEventName = keyof AnalyticsEvents;

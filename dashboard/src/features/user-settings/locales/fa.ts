@@ -7,10 +7,6 @@ export interface TranslationEntry {
 
 const faUserSettings: Record<string, TranslationEntry> = {
   ...apiKeyTranslations.fa,
-  "userSettings.accessUntil": {
-    message: "دسترسی تا",
-    description: "Label for access remaining until date",
-  },
   "userSettings.accountDeleted": {
     message: "حساب با موفقیت حذف شد",
     description: "Success message when account is deleted",
@@ -47,15 +43,6 @@ const faUserSettings: Record<string, TranslationEntry> = {
     message: "لغو اشتراک",
     description: "Button text to cancel subscription",
   },
-  "userSettings.cancelSubscriptionDescription": {
-    message:
-      "آیا مطمئن هستید که می‌خواهید اشتراک خود را لغو کنید؟ شما تا پایان دوره فعلی صورت‌حساب به دسترسی ادامه خواهید داد.",
-    description: "Confirmation dialog description for canceling subscription",
-  },
-  "userSettings.cancelSubscriptionTitle": {
-    message: "لغو اشتراک؟",
-    description: "Confirmation dialog title for canceling subscription",
-  },
   "userSettings.canceling": {
     message: "در حال لغو...",
     description: "Button text while canceling subscription",
@@ -71,10 +58,6 @@ const faUserSettings: Record<string, TranslationEntry> = {
   "userSettings.changeUsername": {
     message: "تغییر نام کاربری",
     description: "Dialog title for changing username",
-  },
-  "userSettings.confirmCancel": {
-    message: "بله، اشتراک را لغو کنید",
-    description: "Button text to confirm subscription cancellation",
   },
   "userSettings.createKey": {
     message: "ایجاد کلید",
@@ -395,10 +378,6 @@ const faUserSettings: Record<string, TranslationEntry> = {
   "userSettings.subscription": {
     message: "اشتراک",
     description: "Subscription section title",
-  },
-  "userSettings.subscriptionCanceled": {
-    message: "اشتراک لغو شده است",
-    description: "Message when subscription is already canceled",
   },
   "userSettings.subscriptionCanceledSuccess": {
     message: "اشتراک با موفقیت لغو شد",
@@ -830,6 +809,83 @@ const faUserSettings: Record<string, TranslationEntry> = {
   "userSettings.planChangeLimitDirectives": {
     message: "دستورالعمل‌ها",
     description: "Row label: entries (Beancount directives) allowed in total",
+  },
+  "userSettings.scheduledHeading": {
+    message: "زمان‌بندی‌شده",
+    description:
+      "Heading of the panel listing what happens at the end of the paid period",
+  },
+  "userSettings.scheduledChangesTo": {
+    message: "در {date} به {plan} تغییر می‌کند.",
+    description: "A scheduled plan change and its date",
+  },
+  "userSettings.scheduledEnds": {
+    message: "{plan} در {date} به پایان می‌رسد.",
+    description: "A pending cancellation and the date the plan ends",
+  },
+  "userSettings.scheduledKeepCurrent": {
+    message: "نگه‌داشتن طرح فعلی",
+    description: "Button that undoes a scheduled plan change",
+  },
+  "userSettings.scheduledKept": {
+    message: "طرح شما همان‌طور که هست می‌ماند.",
+    description: "Toast after undoing a scheduled plan change",
+  },
+  "userSettings.scheduledKeepFailed": {
+    message: "تغییر زمان‌بندی‌شدهٔ شما لغو نشد. دوباره تلاش کنید.",
+    description: "Toast when undoing a scheduled plan change fails",
+  },
+  "userSettings.cancelSheetTitle": {
+    message: "{plan} لغو شود؟",
+    description: "Title of the sheet shown before cancelling",
+  },
+  "userSettings.cancelSheetKeepUntil": {
+    message:
+      "{plan} را تا {date} نگه می‌دارید. پس از آن روی طرح رایگان هستید: {limits}.",
+    description:
+      "What the reader keeps until the period ends, and the Free limits afterwards",
+  },
+  "userSettings.cancelSheetPlainText": {
+    message:
+      "دفترهای شما متن ساده‌اند — هر زمان خواستید خروجی بگیرید. چیزی حذف نمی‌شود.",
+    description: "Reassurance that cancelling deletes nothing",
+  },
+  "userSettings.cancelSheetOtherOptions": {
+    message: "گزینه‌های دیگر",
+    description: "Heading above the cheaper alternative to cancelling",
+  },
+  "userSettings.cancelSheetSwitchToYearly": {
+    message: "تغییر به سالانه — {price} در ماه",
+    description:
+      "Alternative to cancelling: switch to yearly at the per-month price",
+  },
+  "userSettings.cancelSheetDowngradeTo": {
+    message: "کاهش به {plan}",
+    description: "Alternative to cancelling: the next lower plan",
+  },
+  "userSettings.cancelSheetReason": {
+    message: "دلیل اصلی چیست؟ (اختیاری)",
+    description: "Optional question about why the reader cancels",
+  },
+  "userSettings.cancelReasonTooExpensive": {
+    message: "خیلی گران است",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonMissingFeatures": {
+    message: "یک قابلیت کم است",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonUnused": {
+    message: "از آن استفاده نمی‌کنم",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonSwitchedService": {
+    message: "به ابزار دیگری می‌روم",
+    description: "Cancellation reason: moving to another tool",
+  },
+  "userSettings.cancelReasonOther": {
+    message: "دیگر",
+    description: "Cancellation reason",
   },
   "userSettings.planChangeRequiresAction": {
     message:

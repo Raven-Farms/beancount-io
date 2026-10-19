@@ -142,7 +142,7 @@ export function PlanChangeSheet({
       ? {
           kind,
           from: planValue(currentTier, currentCycle),
-          to: `${target.tier}_${cycle}` as const,
+          to: planValue(tierInfoByKey(target.tier).userTier, cycle),
           surface: target.surface,
         }
       : null;
@@ -245,6 +245,7 @@ export function PlanChangeSheet({
       });
       const result = response.data?.changePlan;
       if (result?.status === "SCHEDULED") {
+        if (params) track("plan_change_scheduled", params);
         toast.success(
           t("userSettings.planChangeScheduled", {
             date: formatDate(result.effectiveAt ?? chosen.effectiveAt ?? ""),

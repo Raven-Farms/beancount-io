@@ -7,10 +7,6 @@ export interface TranslationEntry {
 
 const skUserSettings: Record<string, TranslationEntry> = {
   ...apiKeyTranslations.sk,
-  "userSettings.accessUntil": {
-    message: "Prístup do",
-    description: "Label for access remaining until date",
-  },
   "userSettings.accountDeleted": {
     message: "Účet bol úspešne vymazaný",
     description: "Success message when account is deleted",
@@ -47,15 +43,6 @@ const skUserSettings: Record<string, TranslationEntry> = {
     message: "Zrušiť predplatné",
     description: "Button text to cancel subscription",
   },
-  "userSettings.cancelSubscriptionDescription": {
-    message:
-      "Ste si istí, že chcete zrušiť predplatné? Prístup budete mať až do konca aktuálneho fakturačného obdobia.",
-    description: "Confirmation dialog description for canceling subscription",
-  },
-  "userSettings.cancelSubscriptionTitle": {
-    message: "Zrušiť predplatné?",
-    description: "Confirmation dialog title for canceling subscription",
-  },
   "userSettings.canceling": {
     message: "Zrušovanie...",
     description: "Button text while canceling subscription",
@@ -71,10 +58,6 @@ const skUserSettings: Record<string, TranslationEntry> = {
   "userSettings.changeUsername": {
     message: "Zmeniť používateľské meno",
     description: "Dialog title for changing username",
-  },
-  "userSettings.confirmCancel": {
-    message: "Áno, zrušiť predplatné",
-    description: "Button text to confirm subscription cancellation",
   },
   "userSettings.createKey": {
     message: "Vytvoriť klúč",
@@ -397,10 +380,6 @@ const skUserSettings: Record<string, TranslationEntry> = {
   "userSettings.subscription": {
     message: "Predplatné",
     description: "Subscription section title",
-  },
-  "userSettings.subscriptionCanceled": {
-    message: "Predplatné bolo zrušené",
-    description: "Message when subscription is already canceled",
   },
   "userSettings.subscriptionCanceledSuccess": {
     message: "Predplatné úspešne zrušené",
@@ -848,6 +827,83 @@ const skUserSettings: Record<string, TranslationEntry> = {
   "userSettings.planChangeLimitDirectives": {
     message: "Direktívy",
     description: "Row label: entries (Beancount directives) allowed in total",
+  },
+  "userSettings.scheduledHeading": {
+    message: "Naplánované",
+    description:
+      "Heading of the panel listing what happens at the end of the paid period",
+  },
+  "userSettings.scheduledChangesTo": {
+    message: "{date} sa zmení na {plan}.",
+    description: "A scheduled plan change and its date",
+  },
+  "userSettings.scheduledEnds": {
+    message: "{plan} končí {date}.",
+    description: "A pending cancellation and the date the plan ends",
+  },
+  "userSettings.scheduledKeepCurrent": {
+    message: "Ponechať súčasný",
+    description: "Button that undoes a scheduled plan change",
+  },
+  "userSettings.scheduledKept": {
+    message: "Váš plán zostáva taký, aký je.",
+    description: "Toast after undoing a scheduled plan change",
+  },
+  "userSettings.scheduledKeepFailed": {
+    message: "Naplánovanú zmenu sa nepodarilo vrátiť. Skúste to znova.",
+    description: "Toast when undoing a scheduled plan change fails",
+  },
+  "userSettings.cancelSheetTitle": {
+    message: "Zrušiť {plan}?",
+    description: "Title of the sheet shown before cancelling",
+  },
+  "userSettings.cancelSheetKeepUntil": {
+    message:
+      "{plan} si ponecháte do {date}. Potom budete na bezplatnom pláne: {limits}.",
+    description:
+      "What the reader keeps until the period ends, and the Free limits afterwards",
+  },
+  "userSettings.cancelSheetPlainText": {
+    message:
+      "Vaše knihy sú obyčajný text — exportujte ich kedykoľvek. Nič sa nevymaže.",
+    description: "Reassurance that cancelling deletes nothing",
+  },
+  "userSettings.cancelSheetOtherOptions": {
+    message: "Ďalšie možnosti",
+    description: "Heading above the cheaper alternative to cancelling",
+  },
+  "userSettings.cancelSheetSwitchToYearly": {
+    message: "Prejsť na ročné — {price}/mesiac",
+    description:
+      "Alternative to cancelling: switch to yearly at the per-month price",
+  },
+  "userSettings.cancelSheetDowngradeTo": {
+    message: "Znížiť na {plan}",
+    description: "Alternative to cancelling: the next lower plan",
+  },
+  "userSettings.cancelSheetReason": {
+    message: "Aký je hlavný dôvod? (nepovinné)",
+    description: "Optional question about why the reader cancels",
+  },
+  "userSettings.cancelReasonTooExpensive": {
+    message: "Príliš drahé",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonMissingFeatures": {
+    message: "Chýba funkcia",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonUnused": {
+    message: "Nepoužívam to",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonSwitchedService": {
+    message: "Prechádzam na iný nástroj",
+    description: "Cancellation reason: moving to another tool",
+  },
+  "userSettings.cancelReasonOther": {
+    message: "Iné",
+    description: "Cancellation reason",
   },
   "userSettings.planChangeRequiresAction": {
     message:

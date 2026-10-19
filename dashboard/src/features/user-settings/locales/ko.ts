@@ -224,30 +224,13 @@ const koUserSettings: Record<string, TranslationEntry> = {
     message: "테마 환경 설정을 로드하는 중...",
     description: "Loading message for theme settings",
   },
-  "userSettings.accessUntil": {
-    message: "액세스 기한",
-    description: "Label for access remaining until date",
-  },
   "userSettings.cancelSubscription": {
     message: "구독 취소",
     description: "Button text to cancel subscription",
   },
-  "userSettings.cancelSubscriptionDescription": {
-    message:
-      "구독을 취소하시겠습니까? 현재 청구 기간이 끝날 때까지 계속 액세스할 수 있습니다.",
-    description: "Confirmation dialog description for canceling subscription",
-  },
-  "userSettings.cancelSubscriptionTitle": {
-    message: "구독을 취소하시겠습니까?",
-    description: "Confirmation dialog title for canceling subscription",
-  },
   "userSettings.canceling": {
     message: "취소 중...",
     description: "Button text while canceling subscription",
-  },
-  "userSettings.confirmCancel": {
-    message: "예, 구독 취소",
-    description: "Button text to confirm subscription cancellation",
   },
   "userSettings.failedToCancelSubscription": {
     message: "구독 취소에 실패했습니다",
@@ -371,10 +354,6 @@ const koUserSettings: Record<string, TranslationEntry> = {
   "userSettings.subscription": {
     message: "구독",
     description: "Subscription section title",
-  },
-  "userSettings.subscriptionCanceled": {
-    message: "구독이 취소되었습니다",
-    description: "Message when subscription is already canceled",
   },
   "userSettings.subscriptionCanceledSuccess": {
     message: "구독이 성공적으로 취소되었습니다",
@@ -814,6 +793,83 @@ const koUserSettings: Record<string, TranslationEntry> = {
   "userSettings.planChangeLimitDirectives": {
     message: "지시어",
     description: "Row label: entries (Beancount directives) allowed in total",
+  },
+  "userSettings.scheduledHeading": {
+    message: "예정됨",
+    description:
+      "Heading of the panel listing what happens at the end of the paid period",
+  },
+  "userSettings.scheduledChangesTo": {
+    message: "{date}에 {plan}(으)로 변경됩니다.",
+    description: "A scheduled plan change and its date",
+  },
+  "userSettings.scheduledEnds": {
+    message: "{plan}이(가) {date}에 종료됩니다.",
+    description: "A pending cancellation and the date the plan ends",
+  },
+  "userSettings.scheduledKeepCurrent": {
+    message: "현재 플랜 유지",
+    description: "Button that undoes a scheduled plan change",
+  },
+  "userSettings.scheduledKept": {
+    message: "플랜이 그대로 유지됩니다.",
+    description: "Toast after undoing a scheduled plan change",
+  },
+  "userSettings.scheduledKeepFailed": {
+    message: "예정된 변경을 취소하지 못했습니다. 다시 시도하세요.",
+    description: "Toast when undoing a scheduled plan change fails",
+  },
+  "userSettings.cancelSheetTitle": {
+    message: "{plan}을(를) 해지할까요?",
+    description: "Title of the sheet shown before cancelling",
+  },
+  "userSettings.cancelSheetKeepUntil": {
+    message:
+      "{date}까지 {plan}을(를) 이용할 수 있습니다. 그 후에는 무료 플랜으로 전환됩니다: {limits}.",
+    description:
+      "What the reader keeps until the period ends, and the Free limits afterwards",
+  },
+  "userSettings.cancelSheetPlainText": {
+    message:
+      "장부는 일반 텍스트이므로 언제든 내보낼 수 있습니다. 아무것도 삭제되지 않습니다.",
+    description: "Reassurance that cancelling deletes nothing",
+  },
+  "userSettings.cancelSheetOtherOptions": {
+    message: "다른 선택지",
+    description: "Heading above the cheaper alternative to cancelling",
+  },
+  "userSettings.cancelSheetSwitchToYearly": {
+    message: "연간 결제로 전환 — 월 {price}",
+    description:
+      "Alternative to cancelling: switch to yearly at the per-month price",
+  },
+  "userSettings.cancelSheetDowngradeTo": {
+    message: "{plan}(으)로 다운그레이드",
+    description: "Alternative to cancelling: the next lower plan",
+  },
+  "userSettings.cancelSheetReason": {
+    message: "주된 이유는 무엇인가요? (선택)",
+    description: "Optional question about why the reader cancels",
+  },
+  "userSettings.cancelReasonTooExpensive": {
+    message: "너무 비쌈",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonMissingFeatures": {
+    message: "필요한 기능이 없음",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonUnused": {
+    message: "사용하지 않음",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonSwitchedService": {
+    message: "다른 도구로 옮김",
+    description: "Cancellation reason: moving to another tool",
+  },
+  "userSettings.cancelReasonOther": {
+    message: "기타",
+    description: "Cancellation reason",
   },
   "userSettings.planChangeRequiresAction": {
     message:

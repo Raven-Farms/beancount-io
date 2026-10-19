@@ -7,10 +7,6 @@ export interface TranslationEntry {
 
 const ukUserSettings: Record<string, TranslationEntry> = {
   ...apiKeyTranslations.uk,
-  "userSettings.accessUntil": {
-    message: "Доступ до",
-    description: "Label for access remaining until date",
-  },
   "userSettings.accountDeleted": {
     message: "Обліковий запис успішно видалено",
     description: "Success message when account is deleted",
@@ -47,15 +43,6 @@ const ukUserSettings: Record<string, TranslationEntry> = {
     message: "Скасувати підписку",
     description: "Button text to cancel subscription",
   },
-  "userSettings.cancelSubscriptionDescription": {
-    message:
-      "Ви впевнені, що хочете скасувати підписку? У вас залишиться доступ до кінця поточного платіжного періоду.",
-    description: "Confirmation dialog description for canceling subscription",
-  },
-  "userSettings.cancelSubscriptionTitle": {
-    message: "Скасувати підписку?",
-    description: "Confirmation dialog title for canceling subscription",
-  },
   "userSettings.canceling": {
     message: "Скасування...",
     description: "Button text while canceling subscription",
@@ -71,10 +58,6 @@ const ukUserSettings: Record<string, TranslationEntry> = {
   "userSettings.changeUsername": {
     message: "Зміна імені користувача",
     description: "Dialog title for changing username",
-  },
-  "userSettings.confirmCancel": {
-    message: "Так, скасувати підписку",
-    description: "Button text to confirm subscription cancellation",
   },
   "userSettings.createKey": {
     message: "Створити ключ",
@@ -397,10 +380,6 @@ const ukUserSettings: Record<string, TranslationEntry> = {
   "userSettings.subscription": {
     message: "Підписка",
     description: "Subscription section title",
-  },
-  "userSettings.subscriptionCanceled": {
-    message: "Підписку скасовано",
-    description: "Message when subscription is already canceled",
   },
   "userSettings.subscriptionCanceledSuccess": {
     message: "Підписку успішно скасовано",
@@ -852,6 +831,83 @@ const ukUserSettings: Record<string, TranslationEntry> = {
   "userSettings.planChangeLimitDirectives": {
     message: "Директиви",
     description: "Row label: entries (Beancount directives) allowed in total",
+  },
+  "userSettings.scheduledHeading": {
+    message: "Заплановано",
+    description:
+      "Heading of the panel listing what happens at the end of the paid period",
+  },
+  "userSettings.scheduledChangesTo": {
+    message: "{date} тариф зміниться на {plan}.",
+    description: "A scheduled plan change and its date",
+  },
+  "userSettings.scheduledEnds": {
+    message: "{plan} завершиться {date}.",
+    description: "A pending cancellation and the date the plan ends",
+  },
+  "userSettings.scheduledKeepCurrent": {
+    message: "Залишити поточний",
+    description: "Button that undoes a scheduled plan change",
+  },
+  "userSettings.scheduledKept": {
+    message: "Ваш тариф залишається без змін.",
+    description: "Toast after undoing a scheduled plan change",
+  },
+  "userSettings.scheduledKeepFailed": {
+    message: "Не вдалося скасувати заплановану зміну. Спробуйте ще раз.",
+    description: "Toast when undoing a scheduled plan change fails",
+  },
+  "userSettings.cancelSheetTitle": {
+    message: "Скасувати {plan}?",
+    description: "Title of the sheet shown before cancelling",
+  },
+  "userSettings.cancelSheetKeepUntil": {
+    message:
+      "{plan} залишається у вас до {date}. Потім ви перейдете на безкоштовний план: {limits}.",
+    description:
+      "What the reader keeps until the period ends, and the Free limits afterwards",
+  },
+  "userSettings.cancelSheetPlainText": {
+    message:
+      "Ваші книги — звичайний текст: експортуйте їх будь-коли. Нічого не видаляється.",
+    description: "Reassurance that cancelling deletes nothing",
+  },
+  "userSettings.cancelSheetOtherOptions": {
+    message: "Інші варіанти",
+    description: "Heading above the cheaper alternative to cancelling",
+  },
+  "userSettings.cancelSheetSwitchToYearly": {
+    message: "Перейти на річну оплату — {price}/місяць",
+    description:
+      "Alternative to cancelling: switch to yearly at the per-month price",
+  },
+  "userSettings.cancelSheetDowngradeTo": {
+    message: "Знизити до {plan}",
+    description: "Alternative to cancelling: the next lower plan",
+  },
+  "userSettings.cancelSheetReason": {
+    message: "Яка головна причина? (необов'язково)",
+    description: "Optional question about why the reader cancels",
+  },
+  "userSettings.cancelReasonTooExpensive": {
+    message: "Задорого",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonMissingFeatures": {
+    message: "Бракує функції",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonUnused": {
+    message: "Не користуюся",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonSwitchedService": {
+    message: "Переходжу на інший інструмент",
+    description: "Cancellation reason: moving to another tool",
+  },
+  "userSettings.cancelReasonOther": {
+    message: "Інше",
+    description: "Cancellation reason",
   },
   "userSettings.planChangeRequiresAction": {
     message:

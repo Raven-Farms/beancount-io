@@ -87,6 +87,7 @@ vi.mock(
 vi.mock("@/features/user-settings/hooks/use-plan-change", () => ({
   usePreviewPlanChange: () => [mockRunPreview, mockPreviewState.value],
   useChangePlan: () => [mockChangePlan, { loading: false }],
+  useCancelScheduledPlanChange: () => [vi.fn(), { loading: false }],
 }));
 vi.mock("sonner", () => ({
   toast: {

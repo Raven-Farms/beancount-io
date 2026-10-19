@@ -45,6 +45,19 @@ function isNoSuchSubscriptionError(error: unknown): boolean {
   );
 }
 
+/** Why a subscriber cancels, as the cancel sheet offers it, in Stripe's terms. */
+const CANCELLATION_FEEDBACK = {
+  TOO_EXPENSIVE: "too_expensive",
+  MISSING_FEATURES: "missing_features",
+  UNUSED: "unused",
+  SWITCHED_SERVICE: "switched_service",
+  OTHER: "other",
+} as const satisfies Record<
+  string,
+  Stripe.SubscriptionUpdateParams.CancellationDetails.Feedback
+>;
+export type CancellationReason = keyof typeof CANCELLATION_FEEDBACK;
+
 export interface SubscriptionListOptions {
   status?: "active" | "all";
   bindings?: PaidCustomer[];
@@ -96,6 +109,7 @@ export interface IStripeService {
     subscriptionId: string,
     userId: string,
     clientId: string,
+    reason?: CancellationReason | null,
   ): Promise<{ success: boolean; message?: string }>;
   deleteSubscription(
     subscriptionId: string,
@@ -463,6 +477,7 @@ export class StripeService implements IStripeService {
     subscriptionId: string,
     userId: string,
     clientId: string,
+    reason?: CancellationReason | null,
   ): Promise<{ success: boolean; message?: string }> {
     try {
       const stripe = this.getStripeInstance(clientId);
@@ -482,6 +497,11 @@ export class StripeService implements IStripeService {
       await releaseSchedule(stripe, ownership.subscription);
       await stripe.subscriptions.update(subscriptionId, {
         cancel_at_period_end: true,
+        // The reader's optional reason, kept where Stripe reports churn. No
+        // reason clears one left by an earlier cancellation.
+        cancellation_details: {
+          feedback: reason ? CANCELLATION_FEEDBACK[reason] : "",
+        },
       });
 
       logger.debug("Subscription scheduled for cancellation at period end", {
@@ -601,6 +621,8 @@ export class StripeService implements IStripeService {
 
       await stripe.subscriptions.update(subscriptionId, {
         cancel_at_period_end: false,
+        // A resumed subscription carries no cancellation reason.
+        cancellation_details: { feedback: "" },
       });
 
       logger.debug("Subscription resumed", {

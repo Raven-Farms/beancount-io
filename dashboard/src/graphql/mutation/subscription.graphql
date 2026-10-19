@@ -1,5 +1,13 @@
-mutation CancelSubscription($clientId: String!, $subscriptionId: String!) {
-  cancelSubscription(clientId: $clientId, subscriptionId: $subscriptionId) {
+mutation CancelSubscription(
+  $clientId: String!
+  $subscriptionId: String!
+  $reason: CancellationReason
+) {
+  cancelSubscription(
+    clientId: $clientId
+    subscriptionId: $subscriptionId
+    reason: $reason
+  ) {
     success
     message
   }
@@ -50,5 +58,12 @@ mutation ChangePlan(
     newTier
     currentPeriodEnd
     effectiveAt
+  }
+}
+
+mutation CancelScheduledPlanChange($clientId: String!) {
+  cancelScheduledPlanChange(clientId: $clientId) {
+    success
+    message
   }
 }

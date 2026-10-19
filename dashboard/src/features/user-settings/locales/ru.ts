@@ -7,10 +7,6 @@ export interface TranslationEntry {
 
 const ruUserSettings: Record<string, TranslationEntry> = {
   ...apiKeyTranslations.ru,
-  "userSettings.accessUntil": {
-    message: "Доступ до",
-    description: "Label for access remaining until date",
-  },
   "userSettings.accountDeleted": {
     message: "Учётная запись успешно удалена",
     description: "Success message when account is deleted",
@@ -47,15 +43,6 @@ const ruUserSettings: Record<string, TranslationEntry> = {
     message: "Отменить подписку",
     description: "Button text to cancel subscription",
   },
-  "userSettings.cancelSubscriptionDescription": {
-    message:
-      "Вы уверены, что хотите отменить подписку? У вас сохранится доступ до конца текущего платежного периода.",
-    description: "Confirmation dialog description for canceling subscription",
-  },
-  "userSettings.cancelSubscriptionTitle": {
-    message: "Отменить подписку?",
-    description: "Confirmation dialog title for canceling subscription",
-  },
   "userSettings.canceling": {
     message: "Отмена...",
     description: "Button text while canceling subscription",
@@ -71,10 +58,6 @@ const ruUserSettings: Record<string, TranslationEntry> = {
   "userSettings.changeUsername": {
     message: "Изменить имя пользователя",
     description: "Dialog title for changing username",
-  },
-  "userSettings.confirmCancel": {
-    message: "Да, отменить подписку",
-    description: "Button text to confirm subscription cancellation",
   },
   "userSettings.createKey": {
     message: "Создать ключ",
@@ -397,10 +380,6 @@ const ruUserSettings: Record<string, TranslationEntry> = {
   "userSettings.subscription": {
     message: "Подписка",
     description: "Subscription section title",
-  },
-  "userSettings.subscriptionCanceled": {
-    message: "Подписка отменена",
-    description: "Message when subscription is already canceled",
   },
   "userSettings.subscriptionCanceledSuccess": {
     message: "Подписка успешно отменена",
@@ -853,6 +832,84 @@ const ruUserSettings: Record<string, TranslationEntry> = {
   "userSettings.planChangeLimitDirectives": {
     message: "Директивы",
     description: "Row label: entries (Beancount directives) allowed in total",
+  },
+  "userSettings.scheduledHeading": {
+    message: "Запланировано",
+    description:
+      "Heading of the panel listing what happens at the end of the paid period",
+  },
+  "userSettings.scheduledChangesTo": {
+    message: "{date} тариф сменится на {plan}.",
+    description: "A scheduled plan change and its date",
+  },
+  "userSettings.scheduledEnds": {
+    message: "{plan} закончится {date}.",
+    description: "A pending cancellation and the date the plan ends",
+  },
+  "userSettings.scheduledKeepCurrent": {
+    message: "Оставить текущий",
+    description: "Button that undoes a scheduled plan change",
+  },
+  "userSettings.scheduledKept": {
+    message: "Ваш тариф остаётся прежним.",
+    description: "Toast after undoing a scheduled plan change",
+  },
+  "userSettings.scheduledKeepFailed": {
+    message:
+      "Не удалось отменить запланированное изменение. Попробуйте ещё раз.",
+    description: "Toast when undoing a scheduled plan change fails",
+  },
+  "userSettings.cancelSheetTitle": {
+    message: "Отменить {plan}?",
+    description: "Title of the sheet shown before cancelling",
+  },
+  "userSettings.cancelSheetKeepUntil": {
+    message:
+      "{plan} остаётся у вас до {date}. Затем вы перейдёте на бесплатный тариф: {limits}.",
+    description:
+      "What the reader keeps until the period ends, and the Free limits afterwards",
+  },
+  "userSettings.cancelSheetPlainText": {
+    message:
+      "Ваши книги — обычный текст: экспортируйте их когда угодно. Ничего не удаляется.",
+    description: "Reassurance that cancelling deletes nothing",
+  },
+  "userSettings.cancelSheetOtherOptions": {
+    message: "Другие варианты",
+    description: "Heading above the cheaper alternative to cancelling",
+  },
+  "userSettings.cancelSheetSwitchToYearly": {
+    message: "Перейти на годовую оплату — {price}/месяц",
+    description:
+      "Alternative to cancelling: switch to yearly at the per-month price",
+  },
+  "userSettings.cancelSheetDowngradeTo": {
+    message: "Понизить до {plan}",
+    description: "Alternative to cancelling: the next lower plan",
+  },
+  "userSettings.cancelSheetReason": {
+    message: "Какова основная причина? (необязательно)",
+    description: "Optional question about why the reader cancels",
+  },
+  "userSettings.cancelReasonTooExpensive": {
+    message: "Слишком дорого",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonMissingFeatures": {
+    message: "Не хватает функции",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonUnused": {
+    message: "Не пользуюсь",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonSwitchedService": {
+    message: "Перехожу на другой инструмент",
+    description: "Cancellation reason: moving to another tool",
+  },
+  "userSettings.cancelReasonOther": {
+    message: "Другое",
+    description: "Cancellation reason",
   },
   "userSettings.planChangeRequiresAction": {
     message:

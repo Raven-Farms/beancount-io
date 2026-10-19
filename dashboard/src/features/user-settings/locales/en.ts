@@ -227,30 +227,13 @@ const enUserSettings: Record<string, TranslationEntry> = {
     message: "Loading theme preferences...",
     description: "Loading message for theme settings",
   },
-  "userSettings.accessUntil": {
-    message: "Access until",
-    description: "Label for access remaining until date",
-  },
   "userSettings.cancelSubscription": {
     message: "Cancel Subscription",
     description: "Button text to cancel subscription",
   },
-  "userSettings.cancelSubscriptionDescription": {
-    message:
-      "Are you sure you want to cancel your subscription? You'll continue to have access until the end of your current billing period.",
-    description: "Confirmation dialog description for canceling subscription",
-  },
-  "userSettings.cancelSubscriptionTitle": {
-    message: "Cancel Subscription?",
-    description: "Confirmation dialog title for canceling subscription",
-  },
   "userSettings.canceling": {
     message: "Canceling...",
     description: "Button text while canceling subscription",
-  },
-  "userSettings.confirmCancel": {
-    message: "Yes, Cancel Subscription",
-    description: "Button text to confirm subscription cancellation",
   },
   "userSettings.failedToCancelSubscription": {
     message: "Failed to cancel subscription",
@@ -374,10 +357,6 @@ const enUserSettings: Record<string, TranslationEntry> = {
   "userSettings.subscription": {
     message: "Subscription",
     description: "Subscription section title",
-  },
-  "userSettings.subscriptionCanceled": {
-    message: "Subscription has been canceled",
-    description: "Message when subscription is already canceled",
   },
   "userSettings.subscriptionCanceledSuccess": {
     message: "Subscription canceled successfully",
@@ -827,6 +806,81 @@ const enUserSettings: Record<string, TranslationEntry> = {
   "userSettings.planChangeLimitDirectives": {
     message: "Directives",
     description: "Row label: entries (Beancount directives) allowed in total",
+  },
+  "userSettings.scheduledHeading": {
+    message: "Scheduled",
+    description:
+      "Heading of the panel listing what happens at the end of the paid period",
+  },
+  "userSettings.scheduledChangesTo": {
+    message: "Changes to {plan} on {date}.",
+    description: "A scheduled plan change and its date",
+  },
+  "userSettings.scheduledEnds": {
+    message: "{plan} ends {date}.",
+    description: "A pending cancellation and the date the plan ends",
+  },
+  "userSettings.scheduledKeepCurrent": {
+    message: "Keep current",
+    description: "Button that undoes a scheduled plan change",
+  },
+  "userSettings.scheduledKept": {
+    message: "Your plan stays as it is.",
+    description: "Toast after undoing a scheduled plan change",
+  },
+  "userSettings.scheduledKeepFailed": {
+    message: "Your scheduled change couldn't be undone. Try again.",
+    description: "Toast when undoing a scheduled plan change fails",
+  },
+  "userSettings.cancelSheetTitle": {
+    message: "Cancel {plan}?",
+    description: "Title of the sheet shown before cancelling",
+  },
+  "userSettings.cancelSheetKeepUntil": {
+    message: "You keep {plan} until {date}. Then you're on Free: {limits}.",
+    description:
+      "What the reader keeps until the period ends, and the Free limits afterwards",
+  },
+  "userSettings.cancelSheetPlainText": {
+    message: "Your books are plain text — export anytime. Nothing is deleted.",
+    description: "Reassurance that cancelling deletes nothing",
+  },
+  "userSettings.cancelSheetOtherOptions": {
+    message: "Other options",
+    description: "Heading above the cheaper alternative to cancelling",
+  },
+  "userSettings.cancelSheetSwitchToYearly": {
+    message: "Switch to yearly — {price}/mo",
+    description:
+      "Alternative to cancelling: switch to yearly at the per-month price",
+  },
+  "userSettings.cancelSheetDowngradeTo": {
+    message: "Downgrade to {plan}",
+    description: "Alternative to cancelling: the next lower plan",
+  },
+  "userSettings.cancelSheetReason": {
+    message: "What's the main reason? (optional)",
+    description: "Optional question about why the reader cancels",
+  },
+  "userSettings.cancelReasonTooExpensive": {
+    message: "Too expensive",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonMissingFeatures": {
+    message: "Missing a feature",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonUnused": {
+    message: "Not using it",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonSwitchedService": {
+    message: "Switching tools",
+    description: "Cancellation reason: moving to another tool",
+  },
+  "userSettings.cancelReasonOther": {
+    message: "Other",
+    description: "Cancellation reason",
   },
   "userSettings.planChangeRequiresAction": {
     message:

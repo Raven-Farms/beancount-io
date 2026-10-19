@@ -85,3 +85,8 @@ export function planForPrice(
   }
   return null;
 }
+
+/** What a price costs per month: a yearly price is spread over twelve. */
+export function monthlyEquivalent(amount: number, cycle: BillingCycle): number {
+  return cycle === "yearly" ? Math.round(amount / 12) : amount;
+}

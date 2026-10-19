@@ -1721,6 +1721,7 @@ describe("SubscriptionResolver", () => {
         resolver.cancelSubscription(
           "sub_123",
           "beancount-web-prod",
+          undefined,
           scopedContext,
         ),
       ).rejects.toMatchObject({ category: ErrorCategory.FORBIDDEN });
@@ -1743,6 +1744,7 @@ describe("SubscriptionResolver", () => {
         resolver.cancelSubscription(
           "sub_123",
           "beancount-web-prod",
+          undefined,
           contextWithoutUserId,
         ),
       ).rejects.toThrow("User ID not found in context");
@@ -1757,6 +1759,7 @@ describe("SubscriptionResolver", () => {
       const result = await resolver.cancelSubscription(
         "sub_123",
         "beancount-web-prod",
+        undefined,
         mockContext,
       );
 
@@ -1764,8 +1767,27 @@ describe("SubscriptionResolver", () => {
         "sub_123",
         "user-123",
         "beancount-web-prod",
+        undefined,
       );
       expect(result.success).toBe(true);
+    });
+
+    it("passes the subscriber's reason through", async () => {
+      mockStripeService.cancelSubscription.mockResolvedValue({ success: true });
+
+      await resolver.cancelSubscription(
+        "sub_123",
+        "beancount-web-prod",
+        "TOO_EXPENSIVE",
+        mockContext,
+      );
+
+      expect(mockStripeService.cancelSubscription).toHaveBeenCalledWith(
+        "sub_123",
+        "user-123",
+        "beancount-web-prod",
+        "TOO_EXPENSIVE",
+      );
     });
 
     it("should return error when cancellation fails", async () => {
@@ -1777,6 +1799,7 @@ describe("SubscriptionResolver", () => {
       const result = await resolver.cancelSubscription(
         "sub_nonexistent",
         "beancount-web-prod",
+        undefined,
         mockContext,
       );
 

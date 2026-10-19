@@ -16,6 +16,7 @@ import {
   BILLING_CYCLES,
   cyclePrice,
   DEFAULT_BILLING_CYCLE,
+  monthlyEquivalent,
   yearlySaving,
   type BillingCycle,
   type SubscriptionTier,
@@ -276,7 +277,7 @@ function PlanPrice({
     );
   }
   const { amount } = cyclePrice(card.key, cycle);
-  const perMonth = cycle === "yearly" ? Math.round(amount / 12) : amount;
+  const perMonth = monthlyEquivalent(amount, cycle);
   return (
     <div>
       <div className="flex items-baseline gap-1">

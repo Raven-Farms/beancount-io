@@ -7,10 +7,6 @@ export interface TranslationEntry {
 
 const esUserSettings: Record<string, TranslationEntry> = {
   ...apiKeyTranslations.es,
-  "userSettings.accessUntil": {
-    message: "Acceso hasta",
-    description: "Label for access remaining until date",
-  },
   "userSettings.accountDeleted": {
     message: "Cuenta eliminada exitosamente",
     description: "Success message when account is deleted",
@@ -47,15 +43,6 @@ const esUserSettings: Record<string, TranslationEntry> = {
     message: "Cancelar suscripción",
     description: "Button text to cancel subscription",
   },
-  "userSettings.cancelSubscriptionDescription": {
-    message:
-      "¿Está seguro de que desea cancelar su suscripción? Seguirá teniendo acceso hasta el final de su período de facturación actual.",
-    description: "Confirmation dialog description for canceling subscription",
-  },
-  "userSettings.cancelSubscriptionTitle": {
-    message: "¿Cancelar suscripción?",
-    description: "Confirmation dialog title for canceling subscription",
-  },
   "userSettings.canceling": {
     message: "Cancelando...",
     description: "Button text while canceling subscription",
@@ -71,10 +58,6 @@ const esUserSettings: Record<string, TranslationEntry> = {
   "userSettings.changeUsername": {
     message: "Cambiar Nombre de Usuario",
     description: "Dialog title for changing username",
-  },
-  "userSettings.confirmCancel": {
-    message: "Sí, cancelar suscripción",
-    description: "Button text to confirm subscription cancellation",
   },
   "userSettings.createKey": {
     message: "Crear Clave",
@@ -398,10 +381,6 @@ const esUserSettings: Record<string, TranslationEntry> = {
   "userSettings.subscription": {
     message: "Suscripción",
     description: "Subscription section title",
-  },
-  "userSettings.subscriptionCanceled": {
-    message: "La suscripción ha sido cancelada",
-    description: "Message when subscription is already canceled",
   },
   "userSettings.subscriptionCanceledSuccess": {
     message: "Suscripción cancelada exitosamente",
@@ -844,6 +823,83 @@ const esUserSettings: Record<string, TranslationEntry> = {
   "userSettings.planChangeLimitDirectives": {
     message: "Directivas",
     description: "Row label: entries (Beancount directives) allowed in total",
+  },
+  "userSettings.scheduledHeading": {
+    message: "Programado",
+    description:
+      "Heading of the panel listing what happens at the end of the paid period",
+  },
+  "userSettings.scheduledChangesTo": {
+    message: "Cambia a {plan} el {date}.",
+    description: "A scheduled plan change and its date",
+  },
+  "userSettings.scheduledEnds": {
+    message: "{plan} termina el {date}.",
+    description: "A pending cancellation and the date the plan ends",
+  },
+  "userSettings.scheduledKeepCurrent": {
+    message: "Mantener el actual",
+    description: "Button that undoes a scheduled plan change",
+  },
+  "userSettings.scheduledKept": {
+    message: "Tu plan se queda como está.",
+    description: "Toast after undoing a scheduled plan change",
+  },
+  "userSettings.scheduledKeepFailed": {
+    message: "No se pudo deshacer tu cambio programado. Inténtalo de nuevo.",
+    description: "Toast when undoing a scheduled plan change fails",
+  },
+  "userSettings.cancelSheetTitle": {
+    message: "¿Cancelar {plan}?",
+    description: "Title of the sheet shown before cancelling",
+  },
+  "userSettings.cancelSheetKeepUntil": {
+    message:
+      "Mantienes {plan} hasta el {date}. Después pasas al plan gratuito: {limits}.",
+    description:
+      "What the reader keeps until the period ends, and the Free limits afterwards",
+  },
+  "userSettings.cancelSheetPlainText": {
+    message:
+      "Tus libros son texto plano: expórtalos cuando quieras. No se borra nada.",
+    description: "Reassurance that cancelling deletes nothing",
+  },
+  "userSettings.cancelSheetOtherOptions": {
+    message: "Otras opciones",
+    description: "Heading above the cheaper alternative to cancelling",
+  },
+  "userSettings.cancelSheetSwitchToYearly": {
+    message: "Cambiar a anual — {price}/mes",
+    description:
+      "Alternative to cancelling: switch to yearly at the per-month price",
+  },
+  "userSettings.cancelSheetDowngradeTo": {
+    message: "Bajar a {plan}",
+    description: "Alternative to cancelling: the next lower plan",
+  },
+  "userSettings.cancelSheetReason": {
+    message: "¿Cuál es el motivo principal? (opcional)",
+    description: "Optional question about why the reader cancels",
+  },
+  "userSettings.cancelReasonTooExpensive": {
+    message: "Demasiado caro",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonMissingFeatures": {
+    message: "Falta una función",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonUnused": {
+    message: "No lo uso",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonSwitchedService": {
+    message: "Me cambio de herramienta",
+    description: "Cancellation reason: moving to another tool",
+  },
+  "userSettings.cancelReasonOther": {
+    message: "Otro",
+    description: "Cancellation reason",
   },
   "userSettings.planChangeRequiresAction": {
     message:

@@ -20,7 +20,7 @@ import {
   TIER_LIMITS,
   SubscriptionTier,
 } from "./stripe";
-import type { IStripeService } from "./stripe-service";
+import type { CancellationReason, IStripeService } from "./stripe-service";
 import type {
   PaymentMethodSummaryView,
   PlanChangePreviewView,
@@ -116,6 +116,7 @@ export interface ISubscriptionService {
     identity: Identity,
     subscriptionId: string,
     clientId: string,
+    reason?: CancellationReason | null,
   ): Promise<SubscriptionActionResultView>;
   resumeSubscription(
     identity: Identity,
@@ -471,6 +472,7 @@ export class SubscriptionService implements ISubscriptionService {
     identity: Identity,
     subscriptionId: string,
     clientId: string,
+    reason?: CancellationReason | null,
   ): Promise<SubscriptionActionResultView> {
     await this.authorize(
       identity,
@@ -480,6 +482,7 @@ export class SubscriptionService implements ISubscriptionService {
       subscriptionId,
       identity.userId,
       clientId,
+      reason,
     );
   }
 

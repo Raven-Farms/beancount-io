@@ -7,10 +7,6 @@ export interface TranslationEntry {
 
 const nlUserSettings: Record<string, TranslationEntry> = {
   ...apiKeyTranslations.nl,
-  "userSettings.accessUntil": {
-    message: "Toegang tot",
-    description: "Label for access remaining until date",
-  },
   "userSettings.accountDeleted": {
     message: "Account succesvol verwijderd",
     description: "Success message when account is deleted",
@@ -47,15 +43,6 @@ const nlUserSettings: Record<string, TranslationEntry> = {
     message: "Abonnement annuleren",
     description: "Button text to cancel subscription",
   },
-  "userSettings.cancelSubscriptionDescription": {
-    message:
-      "Weet u zeker dat u uw abonnement wilt annuleren? U behoudt toegang tot het einde van uw huidige factureringsperiode.",
-    description: "Confirmation dialog description for canceling subscription",
-  },
-  "userSettings.cancelSubscriptionTitle": {
-    message: "Abonnement annuleren?",
-    description: "Confirmation dialog title for canceling subscription",
-  },
   "userSettings.canceling": {
     message: "Annuleren...",
     description: "Button text while canceling subscription",
@@ -71,10 +58,6 @@ const nlUserSettings: Record<string, TranslationEntry> = {
   "userSettings.changeUsername": {
     message: "Gebruikersnaam wijzigen",
     description: "Dialog title for changing username",
-  },
-  "userSettings.confirmCancel": {
-    message: "Ja, abonnement annuleren",
-    description: "Button text to confirm subscription cancellation",
   },
   "userSettings.createKey": {
     message: "Sleutel aanmaken",
@@ -397,10 +380,6 @@ const nlUserSettings: Record<string, TranslationEntry> = {
   "userSettings.subscription": {
     message: "Abonnement",
     description: "Subscription section title",
-  },
-  "userSettings.subscriptionCanceled": {
-    message: "Abonnement is geannuleerd",
-    description: "Message when subscription is already canceled",
   },
   "userSettings.subscriptionCanceledSuccess": {
     message: "Abonnement succesvol geannuleerd",
@@ -833,6 +812,84 @@ const nlUserSettings: Record<string, TranslationEntry> = {
   "userSettings.planChangeLimitDirectives": {
     message: "Richtlijnen",
     description: "Row label: entries (Beancount directives) allowed in total",
+  },
+  "userSettings.scheduledHeading": {
+    message: "Gepland",
+    description:
+      "Heading of the panel listing what happens at the end of the paid period",
+  },
+  "userSettings.scheduledChangesTo": {
+    message: "Wordt op {date} {plan}.",
+    description: "A scheduled plan change and its date",
+  },
+  "userSettings.scheduledEnds": {
+    message: "{plan} eindigt op {date}.",
+    description: "A pending cancellation and the date the plan ends",
+  },
+  "userSettings.scheduledKeepCurrent": {
+    message: "Huidige houden",
+    description: "Button that undoes a scheduled plan change",
+  },
+  "userSettings.scheduledKept": {
+    message: "Je abonnement blijft zoals het is.",
+    description: "Toast after undoing a scheduled plan change",
+  },
+  "userSettings.scheduledKeepFailed": {
+    message:
+      "Je geplande wijziging kon niet ongedaan worden gemaakt. Probeer het opnieuw.",
+    description: "Toast when undoing a scheduled plan change fails",
+  },
+  "userSettings.cancelSheetTitle": {
+    message: "{plan} opzeggen?",
+    description: "Title of the sheet shown before cancelling",
+  },
+  "userSettings.cancelSheetKeepUntil": {
+    message:
+      "Je houdt {plan} tot {date}. Daarna zit je op het gratis abonnement: {limits}.",
+    description:
+      "What the reader keeps until the period ends, and the Free limits afterwards",
+  },
+  "userSettings.cancelSheetPlainText": {
+    message:
+      "Je boeken zijn platte tekst — exporteer ze wanneer je wilt. Er wordt niets verwijderd.",
+    description: "Reassurance that cancelling deletes nothing",
+  },
+  "userSettings.cancelSheetOtherOptions": {
+    message: "Andere mogelijkheden",
+    description: "Heading above the cheaper alternative to cancelling",
+  },
+  "userSettings.cancelSheetSwitchToYearly": {
+    message: "Overstappen naar jaarlijks — {price}/maand",
+    description:
+      "Alternative to cancelling: switch to yearly at the per-month price",
+  },
+  "userSettings.cancelSheetDowngradeTo": {
+    message: "Downgraden naar {plan}",
+    description: "Alternative to cancelling: the next lower plan",
+  },
+  "userSettings.cancelSheetReason": {
+    message: "Wat is de belangrijkste reden? (optioneel)",
+    description: "Optional question about why the reader cancels",
+  },
+  "userSettings.cancelReasonTooExpensive": {
+    message: "Te duur",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonMissingFeatures": {
+    message: "Er ontbreekt een functie",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonUnused": {
+    message: "Ik gebruik het niet",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonSwitchedService": {
+    message: "Ik stap over naar een ander programma",
+    description: "Cancellation reason: moving to another tool",
+  },
+  "userSettings.cancelReasonOther": {
+    message: "Anders",
+    description: "Cancellation reason",
   },
   "userSettings.planChangeRequiresAction": {
     message:

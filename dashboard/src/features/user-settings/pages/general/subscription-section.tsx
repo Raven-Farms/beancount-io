@@ -28,6 +28,7 @@ import {
 import {
   getTierInfo,
   getUpgradeTiers,
+  tierInfoByKey,
 } from "@/common/lib/subscription/tier-config";
 import {
   useAllTierQuotas,
@@ -37,7 +38,7 @@ import { CurrentPlanBanner } from "./subscription-plan-banner";
 import { describeTierQuota } from "./tier-quota-summary";
 import { CheckoutConfirmation } from "./checkout-confirmation";
 import { useCheckoutConfirmation } from "./use-checkout-confirmation";
-import { useMoneyFormat } from "./use-money-format";
+import { useBillingDateFormat, useMoneyFormat } from "./use-money-format";
 import { useQuotaNumberFormat } from "./use-quota-number-format";
 import {
   rememberReturnPath,
@@ -47,14 +48,15 @@ import { UsageOverview } from "./subscription-usage-overview";
 import { PlanPicker } from "./subscription-plan-picker";
 import { PayYearlyOffer } from "./subscription-pay-yearly";
 import { PlanChangeSheet, type PlanChangeTarget } from "./plan-change-sheet";
-import { track } from "@/common/analytics";
+import { CancelSheet } from "./cancel-sheet";
+import { ScheduledPanel } from "./scheduled-panel";
+import { useKeepCurrentPlan } from "@/features/user-settings/hooks/use-keep-current-plan";
+import { planValue } from "@/common/lib/subscription/plan-change";
+import { track, type CancelReason } from "@/common/analytics";
 import type { PlanInterval } from "@/common/lib/subscription/plan-change";
 import type { UserTier } from "@/common/hooks/use-user-limits";
 import { BillingSection } from "./subscription-billing-section";
-import {
-  CancelSubscriptionDialog,
-  ResumeSubscriptionDialog,
-} from "./subscription-dialogs";
+import { ResumeSubscriptionDialog } from "./subscription-dialogs";
 
 const TIER_KEYS: Partial<Record<UserTier, SubscriptionTier>> = {
   PREMIUM: "premium",
@@ -145,10 +147,9 @@ export function SubscriptionSection({
     useSubscriptionPortal();
   const {
     loading: cancelLoading,
-    showCancelDialog,
-    setShowCancelDialog,
-    selectedSubscription,
-    handleCancelClick,
+    cancelTarget,
+    openCancelSheet,
+    closeCancelSheet,
     handleCancelConfirm,
   } = useSubscriptionCancel();
   const {
@@ -220,6 +221,10 @@ export function SubscriptionSection({
       : currentInterval === "month"
         ? "monthly"
         : null;
+  const currentPlanValue = planValue(tier, currentCycle);
+
+  const { keepCurrent, loading: keepingCurrent } = useKeepCurrentPlan();
+  const formatDate = useBillingDateFormat();
 
   // Every immediate choice confirms in the sheet, which previews the charge.
   const handleChoose = (tierKey: SubscriptionTier, cycle: BillingCycle) =>
@@ -333,6 +338,35 @@ export function SubscriptionSection({
               }
             />
 
+            {currentSubscription && (
+              <ScheduledPanel
+                subscription={currentSubscription}
+                currentName={planLabel}
+                busy={resumeLoading || keepingCurrent}
+                t={t}
+                onResume={() =>
+                  handleResumeClick(
+                    currentSubscription.id,
+                    currentSubscription.clientId,
+                    formatDate(currentSubscription.currentPeriodEnd),
+                  )
+                }
+                onKeepCurrent={(scheduledPlan) =>
+                  void keepCurrent().then((kept) => {
+                    if (kept && scheduledPlan) {
+                      track("plan_change_reverted", {
+                        from: currentPlanValue,
+                        to: planValue(
+                          tierInfoByKey(scheduledPlan.tier).userTier,
+                          scheduledPlan.cycle,
+                        ),
+                      });
+                    }
+                  })
+                }
+              />
+            )}
+
             {currentInterval === "month" && currentTierKey && (
               <PayYearlyOffer
                 tier={currentTierKey}
@@ -390,10 +424,11 @@ export function SubscriptionSection({
                   t={t}
                   portalLoading={portalLoading}
                   cancelLoading={cancelLoading}
-                  resumeLoading={resumeLoading}
                   onManageBilling={handleManageBilling}
-                  onCancelClick={handleCancelClick}
-                  onResumeClick={handleResumeClick}
+                  onCancelClick={(target) => {
+                    track("cancel_started", { from: currentPlanValue });
+                    openCancelSheet(target);
+                  }}
                 />
               </>
             )}
@@ -424,14 +459,36 @@ export function SubscriptionSection({
         }}
       />
 
-      <CancelSubscriptionDialog
-        open={showCancelDialog}
-        onOpenChange={setShowCancelDialog}
-        selectedSubscription={selectedSubscription}
-        cancelLoading={cancelLoading}
-        t={t}
-        onConfirm={handleCancelConfirm}
-      />
+      {cancelTarget && (
+        <CancelSheet
+          planName={
+            tierInfo ? t(tierInfo.labelKey) : t("userSettings.freePlan")
+          }
+          tier={currentTierKey}
+          cycle={currentCycle}
+          endsAt={cancelTarget.endsAt}
+          freeQuota={quotaByUserTier.FREE}
+          busy={cancelLoading}
+          t={t}
+          onConfirm={(reason) =>
+            void handleCancelConfirm(reason).then((cancelled) => {
+              if (cancelled) {
+                track("cancel_confirmed", {
+                  from: currentPlanValue,
+                  ...(reason
+                    ? { reason: reason.toLowerCase() as CancelReason }
+                    : {}),
+                });
+              }
+            })
+          }
+          onKeep={closeCancelSheet}
+          onAlternative={(target) => {
+            closeCancelSheet();
+            setSheetTarget({ ...target, surface: "cancel_sheet" });
+          }}
+        />
+      )}
 
       <ResumeSubscriptionDialog
         open={showResumeDialog}
@@ -439,7 +496,13 @@ export function SubscriptionSection({
         selectedSubscription={selectedResumeSubscription}
         resumeLoading={resumeLoading}
         t={t}
-        onConfirm={handleResumeConfirm}
+        onConfirm={() =>
+          void handleResumeConfirm().then((resumed) => {
+            if (resumed) {
+              track("subscription_resumed", { from: currentPlanValue });
+            }
+          })
+        }
       />
     </Card>
   );

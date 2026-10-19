@@ -1,5 +1,8 @@
 import { useLazyQuery, useMutation } from "@apollo/client/react";
 import {
+  CancelScheduledPlanChangeDocument,
+  type CancelScheduledPlanChangeMutation,
+  type CancelScheduledPlanChangeMutationVariables,
   ChangePlanDocument,
   GetCurrentUserDocument,
   GetSubscriptionStatusDocument,
@@ -52,3 +55,16 @@ export const useChangePlan = () =>
       },
     },
   );
+
+/**
+ * Undo a scheduled plan change: the current plan continues. Status is
+ * refetched so the Scheduled panel and the plan row reflect it.
+ */
+export const useCancelScheduledPlanChange = () =>
+  useMutation<
+    CancelScheduledPlanChangeMutation,
+    CancelScheduledPlanChangeMutationVariables
+  >(CancelScheduledPlanChangeDocument, {
+    refetchQueries: [{ query: GetSubscriptionStatusDocument }],
+    awaitRefetchQueries: true,
+  });

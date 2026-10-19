@@ -2,7 +2,7 @@
 
 **Worker:** worker1
 **Goal:** Downgrades and switches from yearly to monthly are scheduled for the end of the paid period and can be undone. Cancelling offers one cheaper alternative. A failed renewal keeps paid limits while Stripe retries. Ledger-count and collaborator limits are enforced as PRFAQ005 decided.
-**Status:** todo (t001, t002, t007 done; t006 blocked on the operator)
+**Status:** todo (t001, t002, t007, t008 done; t006 blocked on the operator)
 
 ## Source + Goal linkage
 
@@ -53,7 +53,7 @@ m39's README records what `beancount.io/pricing` relies on, and m40 keeps all of
 | t005 | Email when a plan change is scheduled and before it takes effect | 40m | t002, t006 |
 | t006 | Operator: Stripe retry, upcoming-invoice and renewal-reminder settings | 15m | — |
 | t007 | Downgrade sheet: limits against usage, plan features and the split choice — **DONE** | 50m | t001, t002, w1/m39/t007 |
-| t008 | Scheduled-change panel and the cancel sheet | 40m | t002, t007 |
+| t008 | Scheduled-change panel and the cancel sheet — **DONE** | 40m | t002, t007 |
 | t009 | Failed-renewal banner on every dashboard page | 30m | t003 |
 | t010 | Verify adoption surfaces for downgrades, recovery and limit errors | 20m | t004, t005, t008, t009 |
 | t011 | Run `/simplify` over the milestone diff | 25m | t010 |

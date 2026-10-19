@@ -32,6 +32,10 @@ query GetSubscriptionStatus {
         brand
         last4
       }
+      scheduledChange {
+        priceId
+        effectiveAt
+      }
     }
     hasActiveSubscription
   }

@@ -100,6 +100,7 @@ vi.mock("@/features/user-settings/hooks/use-plan-change", async () => {
       return [run, { data, loading: false, error: undefined }];
     },
     useChangePlan: () => [mockChangePlan, { loading: false }],
+    useCancelScheduledPlanChange: () => [vi.fn(), { loading: false }],
   };
 });
 vi.mock("sonner", () => ({

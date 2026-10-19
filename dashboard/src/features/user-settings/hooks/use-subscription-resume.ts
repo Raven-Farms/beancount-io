@@ -1,10 +1,9 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "@apollo/client/react";
+import { useMutation } from "@apollo/client/react";
 import {
   ResumeSubscriptionDocument,
   type ResumeSubscriptionMutation,
   GetSubscriptionStatusDocument,
-  type GetSubscriptionStatusQuery,
 } from "@/graphql/definitions";
 import { toast } from "sonner";
 import { useTranslations } from "@/common/hooks/use-translations";
@@ -13,9 +12,6 @@ import { useErrorMessage } from "@/common/lib/errors/error-message";
 export const useSubscriptionResume = () => {
   const { t } = useTranslations();
   const formatError = useErrorMessage();
-  const { refetch: refetchSubscription } = useQuery<GetSubscriptionStatusQuery>(
-    GetSubscriptionStatusDocument,
-  );
   const [showResumeDialog, setShowResumeDialog] = useState(false);
   const [selectedResumeSubscription, setSelectedResumeSubscription] = useState<{
     id: string;
@@ -23,8 +19,12 @@ export const useSubscriptionResume = () => {
     renewalDate: string;
   } | null>(null);
 
+  // Status refetches as part of the mutation, so `loading` covers it.
   const [resumeSubscription, { loading }] =
-    useMutation<ResumeSubscriptionMutation>(ResumeSubscriptionDocument);
+    useMutation<ResumeSubscriptionMutation>(ResumeSubscriptionDocument, {
+      refetchQueries: [{ query: GetSubscriptionStatusDocument }],
+      awaitRefetchQueries: true,
+    });
 
   const handleResumeClick = (
     subscriptionId: string,
@@ -39,8 +39,9 @@ export const useSubscriptionResume = () => {
     setShowResumeDialog(true);
   };
 
-  const handleResumeConfirm = async () => {
-    if (!selectedResumeSubscription) return;
+  /** Returns whether the pending cancellation was withdrawn. */
+  const handleResumeConfirm = async (): Promise<boolean> => {
+    if (!selectedResumeSubscription) return false;
     try {
       const response = await resumeSubscription({
         variables: {
@@ -51,14 +52,15 @@ export const useSubscriptionResume = () => {
       const result = response.data?.resumeSubscription;
       if (result?.success) {
         toast.success(t("userSettings.subscriptionResumedSuccess"));
-        await refetchSubscription();
-      } else {
-        toast.error(
-          result?.message || t("userSettings.failedToResumeSubscription"),
-        );
+        return true;
       }
+      toast.error(
+        result?.message || t("userSettings.failedToResumeSubscription"),
+      );
+      return false;
     } catch (error) {
       toast.error(formatError(error));
+      return false;
     } finally {
       setShowResumeDialog(false);
       setSelectedResumeSubscription(null);

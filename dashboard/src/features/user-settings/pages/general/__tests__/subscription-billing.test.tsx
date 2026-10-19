@@ -439,9 +439,13 @@ describe("Canceled Subscription Display", () => {
 
     const { container } = render(<SubscriptionSection />);
 
-    expect(container.textContent).toContain(
-      "userSettings.subscriptionCanceled",
-    );
+    // A pending cancellation is reported, with Resume, in the Scheduled panel.
+    expect(
+      within(screen.getByTestId("scheduled-panel")).getByText(
+        /userSettings\.scheduledEnds/,
+      ),
+    ).toBeInTheDocument();
+    expect(container.textContent).toContain("userSettings.resumeSubscription");
   });
 
   it("should show access until date", () => {
@@ -461,7 +465,11 @@ describe("Canceled Subscription Display", () => {
 
     render(<SubscriptionSection />);
 
-    expect(screen.getByText(/userSettings.accessUntil/)).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId("scheduled-panel")).getByText(
+        /userSettings\.scheduledEnds/,
+      ),
+    ).toBeInTheDocument();
   });
 
   it("should not show cancel button for canceled subscription", () => {

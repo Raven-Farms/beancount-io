@@ -7,10 +7,6 @@ export interface TranslationEntry {
 
 const bgUserSettings: Record<string, TranslationEntry> = {
   ...apiKeyTranslations.bg,
-  "userSettings.accessUntil": {
-    message: "Достъп до",
-    description: "Label for access remaining until date",
-  },
   "userSettings.accountDeleted": {
     message: "Акаунтът е изтрит успешно",
     description: "Success message when account is deleted",
@@ -47,15 +43,6 @@ const bgUserSettings: Record<string, TranslationEntry> = {
     message: "Отказ на абонамент",
     description: "Button text to cancel subscription",
   },
-  "userSettings.cancelSubscriptionDescription": {
-    message:
-      "Сигурни ли сте, че искате да откажете абонамента си? Ще продължите да имате достъп до края на текущия си платежен период.",
-    description: "Confirmation dialog description for canceling subscription",
-  },
-  "userSettings.cancelSubscriptionTitle": {
-    message: "Отказ на абонамент?",
-    description: "Confirmation dialog title for canceling subscription",
-  },
   "userSettings.canceling": {
     message: "Отказване...",
     description: "Button text while canceling subscription",
@@ -71,10 +58,6 @@ const bgUserSettings: Record<string, TranslationEntry> = {
   "userSettings.changeUsername": {
     message: "Промяна на потребителското име",
     description: "Dialog title for changing username",
-  },
-  "userSettings.confirmCancel": {
-    message: "Да, откажи абонамента",
-    description: "Button text to confirm subscription cancellation",
   },
   "userSettings.createKey": {
     message: "Създаване на ключ",
@@ -397,10 +380,6 @@ const bgUserSettings: Record<string, TranslationEntry> = {
   "userSettings.subscription": {
     message: "Абонамент",
     description: "Subscription section title",
-  },
-  "userSettings.subscriptionCanceled": {
-    message: "Абонаментът е отказан",
-    description: "Message when subscription is already canceled",
   },
   "userSettings.subscriptionCanceledSuccess": {
     message: "Абонаментът е отказан успешно",
@@ -833,6 +812,84 @@ const bgUserSettings: Record<string, TranslationEntry> = {
   "userSettings.planChangeLimitDirectives": {
     message: "Директиви",
     description: "Row label: entries (Beancount directives) allowed in total",
+  },
+  "userSettings.scheduledHeading": {
+    message: "Планирано",
+    description:
+      "Heading of the panel listing what happens at the end of the paid period",
+  },
+  "userSettings.scheduledChangesTo": {
+    message: "Сменя се на {plan} на {date}.",
+    description: "A scheduled plan change and its date",
+  },
+  "userSettings.scheduledEnds": {
+    message: "{plan} приключва на {date}.",
+    description: "A pending cancellation and the date the plan ends",
+  },
+  "userSettings.scheduledKeepCurrent": {
+    message: "Запази текущия",
+    description: "Button that undoes a scheduled plan change",
+  },
+  "userSettings.scheduledKept": {
+    message: "Планът ви остава такъв, какъвто е.",
+    description: "Toast after undoing a scheduled plan change",
+  },
+  "userSettings.scheduledKeepFailed": {
+    message:
+      "Планираната ви промяна не можа да бъде отменена. Опитайте отново.",
+    description: "Toast when undoing a scheduled plan change fails",
+  },
+  "userSettings.cancelSheetTitle": {
+    message: "Да откажете ли {plan}?",
+    description: "Title of the sheet shown before cancelling",
+  },
+  "userSettings.cancelSheetKeepUntil": {
+    message:
+      "Запазвате {plan} до {date}. След това сте на безплатния план: {limits}.",
+    description:
+      "What the reader keeps until the period ends, and the Free limits afterwards",
+  },
+  "userSettings.cancelSheetPlainText": {
+    message:
+      "Книгите ви са обикновен текст — експортирайте ги по всяко време. Нищо не се изтрива.",
+    description: "Reassurance that cancelling deletes nothing",
+  },
+  "userSettings.cancelSheetOtherOptions": {
+    message: "Други възможности",
+    description: "Heading above the cheaper alternative to cancelling",
+  },
+  "userSettings.cancelSheetSwitchToYearly": {
+    message: "Преминаване към годишно — {price}/месец",
+    description:
+      "Alternative to cancelling: switch to yearly at the per-month price",
+  },
+  "userSettings.cancelSheetDowngradeTo": {
+    message: "Понижаване до {plan}",
+    description: "Alternative to cancelling: the next lower plan",
+  },
+  "userSettings.cancelSheetReason": {
+    message: "Каква е основната причина? (по желание)",
+    description: "Optional question about why the reader cancels",
+  },
+  "userSettings.cancelReasonTooExpensive": {
+    message: "Твърде скъпо",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonMissingFeatures": {
+    message: "Липсва функция",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonUnused": {
+    message: "Не го използвам",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonSwitchedService": {
+    message: "Преминавам към друг инструмент",
+    description: "Cancellation reason: moving to another tool",
+  },
+  "userSettings.cancelReasonOther": {
+    message: "Друго",
+    description: "Cancellation reason",
   },
   "userSettings.planChangeRequiresAction": {
     message:

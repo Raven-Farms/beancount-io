@@ -19,6 +19,7 @@ import type {
   PlanChangeRefusal,
 } from "@/features/stripe/service/plan-change";
 import type { PlanChangeStatus } from "@/features/stripe/operations/plan-change-apply";
+import type { CancellationReason } from "@/features/stripe/service/stripe-service";
 import type { IContext } from "@/server/graphql/context";
 import { AllowAnonymous, Authenticated } from "@/server/graphql/authenticated";
 
@@ -214,6 +215,18 @@ const PlanChangeEffectValues: { [K in PlanChangeEffect]: K } = {
 };
 registerEnumType(PlanChangeEffectValues, { name: "PlanChangeEffect" });
 
+const CancellationReasonValues: { [K in CancellationReason]: K } = {
+  TOO_EXPENSIVE: "TOO_EXPENSIVE",
+  MISSING_FEATURES: "MISSING_FEATURES",
+  UNUSED: "UNUSED",
+  SWITCHED_SERVICE: "SWITCHED_SERVICE",
+  OTHER: "OTHER",
+};
+registerEnumType(CancellationReasonValues, {
+  name: "CancellationReason",
+  description: "Why a subscriber cancels, when they say.",
+});
+
 @ObjectType("PlanLimitChange")
 class PlanLimitChange {
   @Field()
@@ -290,7 +303,9 @@ class PlanChangePreview {
   })
   replacesScheduledChange!: ScheduledPlanChange | null;
 
-  @Field({ description: "Whether this choice withdraws a pending cancellation." })
+  @Field({
+    description: "Whether this choice withdraws a pending cancellation.",
+  })
   withdrawsCancellation!: boolean;
 }
 
@@ -500,12 +515,18 @@ export class SubscriptionResolver {
   async cancelSubscription(
     @Arg("subscriptionId") subscriptionId: string,
     @Arg("clientId") clientId: string,
+    @Arg("reason", () => CancellationReasonValues, {
+      nullable: true,
+      description: "The subscriber's optional reason, recorded with Stripe.",
+    })
+    reason: CancellationReason | null | undefined,
     @Ctx() context: IContext,
   ): Promise<SubscriptionActionResult> {
     return this.subscriptions.cancelSubscription(
       context.getCurrentIdentity(),
       subscriptionId,
       clientId,
+      reason,
     );
   }
 
