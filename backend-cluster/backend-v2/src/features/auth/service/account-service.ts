@@ -85,7 +85,12 @@ export class AccountService implements IAccountService {
   constructor(
     private readonly models: Pick<
       IModels,
-      "user" | "paidCustomer" | "jwt" | "emailToken" | "plaidItem"
+      | "user"
+      | "paidCustomer"
+      | "jwt"
+      | "oauthGrant"
+      | "emailToken"
+      | "plaidItem"
     >,
     private readonly db: DbExecutor,
     private readonly stripe: IStripeService,
@@ -383,6 +388,9 @@ export class AccountService implements IAccountService {
       await this.models.plaidItem.deleteByUserId(tx, userId);
       await this.models.paidCustomer.deleteByUserId(tx, userId);
       await this.models.jwt.deleteByUserId(tx, userId);
+      // Sessions and OAuth grants alike: the provider would otherwise keep
+      // minting access tokens from a deleted account's refresh token (w0/054).
+      await this.models.oauthGrant.revokeAllForUser(tx, userId);
       await this.models.user.deleteByUserId(tx, userId);
       const favaAdminApiClient = this.favaClientFactory.getAdminClient();
       if (user?.ledger_username) {

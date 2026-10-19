@@ -108,6 +108,9 @@ describe("AccountService", () => {
       jwt: {
         deleteByUserId: jest.fn(),
       },
+      oauthGrant: {
+        revokeAllForUser: jest.fn().mockResolvedValue(undefined),
+      },
       emailToken: {
         deleteByUserId: jest.fn(),
       },
@@ -475,6 +478,25 @@ describe("AccountService", () => {
         expect.any(Object),
         userId,
       );
+    });
+
+    // A deleted account's OAuth refresh tokens used to keep minting access
+    // tokens: the provider's findAccount answers for a user that is gone
+    // (w0/054). They are now revoked with the sessions.
+    it("revokes the user's OAuth grants in the deletion transaction", async () => {
+      const userId = "user-123";
+      mockModels.user.getById = jest
+        .fn()
+        .mockResolvedValue({ email: "test@example.com", ledger_username: "t" });
+
+      await accountService.deleteAccount(identity(userId));
+
+      const [tx] = mockModels.jwt.deleteByUserId.mock.calls[0];
+      expect(mockModels.oauthGrant.revokeAllForUser).toHaveBeenCalledWith(
+        tx,
+        userId,
+      );
+      expect(mockModels.user.deleteByUserId).toHaveBeenCalledWith(tx, userId);
     });
 
     it("should throw error if user not found", async () => {

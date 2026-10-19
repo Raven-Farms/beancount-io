@@ -31,7 +31,15 @@ let schemaPromise: ReturnType<typeof buildSchema>;
 registerEnumType(ReportStatus, { name: "ReportStatus" });
 
 async function fixture(identity = caller, failure?: "billing" | "ledger") {
-  const rows = new Set(["user", "paid", "jwt", "plaid", "email", "other-user"]);
+  const rows = new Set([
+    "user",
+    "paid",
+    "jwt",
+    "oauth",
+    "plaid",
+    "email",
+    "other-user",
+  ]);
   const effects: string[] = [];
   const remove = (table: string) => async (_tx: unknown, userId: string) => {
     expect(userId).toBe("usr_ada");
@@ -49,6 +57,7 @@ async function fixture(identity = caller, failure?: "billing" | "ledger") {
       deleteByUserId: remove("paid"),
     },
     jwt: { deleteByUserId: remove("jwt") },
+    oauthGrant: { revokeAllForUser: remove("oauth") },
     plaidItem: { getByUserId: async () => [], deleteByUserId: remove("plaid") },
     emailToken: {
       deleteByUserId: async (userId: string) => remove("email")(null, userId),
@@ -156,6 +165,7 @@ describe("account deletion through real transports and the existing cleanup serv
           "plaid",
           "paid",
           "jwt",
+          "oauth",
           "user",
           "ledger",
           "email",
@@ -184,6 +194,7 @@ describe("account deletion through real transports and the existing cleanup serv
           "user",
           "paid",
           "jwt",
+          "oauth",
           "plaid",
           "email",
           "other-user",
@@ -204,6 +215,7 @@ describe("account deletion through real transports and the existing cleanup serv
           "user",
           "paid",
           "jwt",
+          "oauth",
           "plaid",
           "email",
           "other-user",
@@ -223,6 +235,7 @@ describe("account deletion through real transports and the existing cleanup serv
           "user",
           "paid",
           "jwt",
+          "oauth",
           "plaid",
           "email",
           "other-user",
@@ -232,6 +245,7 @@ describe("account deletion through real transports and the existing cleanup serv
           "plaid",
           "paid",
           "jwt",
+          "oauth",
           "user",
           "ledger",
         ]);
