@@ -2016,7 +2016,7 @@ def _hash_rows(entries: list[Any], account: str, keys: list[str], transaction: t
             continue
         if entry.meta.get("import-id") or _native_import_id(entry.meta, keys) is not None:
             continue
-        hashed[index] = _hash_import_ids(entry, account, seen)
+        hashed[index] = _hash_import_ids(entry, account, seen, raw_narration=raw.narration, raw_payee=raw.payee)
     return hashed
 
 
@@ -2082,7 +2082,9 @@ def _claim_payeeless_ids(
     return claimed, owners
 
 
-def _hash_import_ids(entry: Any, account: str, seen: dict[str, int]) -> _HashedRow:
+def _hash_import_ids(
+    entry: Any, account: str, seen: dict[str, int], *, raw_narration: str | None, raw_payee: str | None
+) -> _HashedRow:
     """The canonical import id, plus every older spelling to also match on.
 
     The canonical digest hashes the exact amount with its commodity, and hashes
@@ -2093,9 +2095,10 @@ def _hash_import_ids(entry: Any, account: str, seen: dict[str, int]) -> _HashedR
     Older releases wrote different digests, so those are returned alongside as
     lookup-only keys and no re-hash pass is needed. They are listed newest
     first, and only formats that a released `bea` actually wrote are listed:
-    NFC normalization shipped before exact amounts, so a ledger may predate
-    exactness, or predate both, but there is no exact-amount/un-normalized
-    combination in the wild to look for.
+    releases since 0.3.1 hashed the description after control-character
+    escaping, so those spellings lead; NFC normalization shipped before exact
+    amounts, so a ledger may predate exactness, or predate both, but there is
+    no exact-amount/un-normalized combination in the wild to look for.
 
     Older spellings stay numbered over every row sharing the narration-only
     base, as the releases that wrote them numbered it: the older spelling of
@@ -2114,10 +2117,15 @@ def _hash_import_ids(entry: Any, account: str, seen: dict[str, int]) -> _HashedR
         (p.units.number, p.units.currency, _lot_text(p, per_only=True)) for p in _source_postings(entry, account)
     )
     amounts = [(number, currency) for number, currency, _ in legs]
-    raw_description = " ".join(str(entry.narration or entry.payee or "").upper().split())
+    # The digest hashes the description before `single_line` escapes it: a tab
+    # is whitespace to collapse (as IMPORTING.md and dedup.md define), not the
+    # literal `\x09` the ledger stores (w5/756).
+    raw_description = " ".join(str(raw_narration or raw_payee or "").upper().split())
     # Normalize after upper(): uppercasing NFD text can itself emit a
     # non-canonical form, and the digest has to be stable byte-for-byte.
     description = unicodedata.normalize("NFC", raw_description)
+    escaped = unicodedata.normalize("NFC", " ".join(str(entry.narration or entry.payee or "").upper().split()))
+    escaped_payee = unicodedata.normalize("NFC", " ".join(str(entry.payee or "").upper().split()))
     nfc_account = unicodedata.normalize("NFC", account)
     date = entry.date.isoformat()
     units_only = _amounts_exact(amounts)
@@ -2131,6 +2139,14 @@ def _hash_import_ids(entry: Any, account: str, seen: dict[str, int]) -> _HashedR
     two_decimal = _amounts_two_decimal(amounts)
     known = {single_base}
     older: list[str] = []
+    escaped_base = _hash_base(date, exact, escaped, nfc_account)
+    if escaped_base != single_base:
+        # Numbered over the escaped base as the releases that wrote it
+        # numbered it, so the K-th such row reproduces its stored id.
+        counter = f"escaped\\0{escaped_base}"
+        seen[counter] = seen.get(counter, 0) + 1
+        known.add(escaped_base)
+        older.append(_digest_import_id(escaped_base, seen[counter]))
     rounded_base = _hash_base(date, _amounts_rounded(amounts), description, nfc_account)
     if rounded_base != single_base:
         # Amounts past 28 significant digits were hashed rounded, and those
@@ -2168,9 +2184,14 @@ def _hash_import_ids(entry: Any, account: str, seen: dict[str, int]) -> _HashedR
         older.append(_digest_import_id(per_base, seen[per_counter]))
     single = _digest_import_id(single_base, occurrence)
 
-    payee = unicodedata.normalize("NFC", " ".join(str(entry.payee or "").upper().split()))
-    if payee and str(entry.narration or "").strip():
+    payee = unicodedata.normalize("NFC", " ".join(str(raw_payee or "").upper().split()))
+    if payee and str(raw_narration or "").strip():
         base = _hash_base(date, exact, f"{payee}|{description}", nfc_account)
+        paired_escaped = _hash_base(date, exact, f"{escaped_payee}|{escaped}", nfc_account)
+        if paired_escaped != base:
+            paired_counter = f"escaped-paired\\0{paired_escaped}"
+            seen[paired_counter] = seen.get(paired_counter, 0) + 1
+            older.append(_digest_import_id(paired_escaped, seen[paired_counter]))
         # Keyed apart from the narration-only counter, so a paired base can never
         # share an occurrence count with a narration that happens to contain `|`.
         counter = f"paired\0{base}"
