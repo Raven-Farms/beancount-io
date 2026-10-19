@@ -1443,10 +1443,12 @@ def build_shell(
                         Column(column.name, str) if column.datatype in (dict, Metadata) else column
                         for column in description
                     ]
-                renderer = FORMATS[self.settings.format]
                 if self.settings.format == "text":
                     with _fixed_point_text():
-                        return renderer(description, rows, out, dcontext=dcontext, **self.settings.todict())
+                        return _render_text_display_width(
+                            description, rows, out, dcontext=dcontext, **self.settings.todict()
+                        )
+                renderer = FORMATS[self.settings.format]
                 return renderer(description, rows, out, dcontext=dcontext, **self.settings.todict())
 
         def on_Print(self, statement: Any) -> Any:  # noqa: N802 - beanquery dispatch name
@@ -1830,6 +1832,128 @@ def _fixed_point_text() -> Iterator[None]:
         yield
     finally:
         query_render.RENDERERS.update(saved)
+
+
+def _renderer_for(datatype: Any, ctx: Any) -> Any:
+    """Upstream's renderer lookup: the nearest registered class up the MRO."""
+    import typing
+
+    from beanquery import query_render
+
+    datatype = typing.get_origin(datatype) or datatype
+    for klass in datatype.__mro__:
+        renderer = query_render.RENDERERS.get(klass)
+        if renderer is not None:
+            return renderer(ctx)
+    raise AssertionError(f"no renderer for {datatype!r}")  # `object` always registers
+
+
+def _rjust_columns(text: str, width: int) -> str:
+    """`str.rjust` measured in columns rather than code points."""
+    from cli.output import display_width
+
+    return " " * max(0, width - display_width(text)) + text
+
+
+def _render_text_display_width(
+    columns: Any,
+    rows: Any,
+    file: Any,
+    *,
+    dcontext: Any,
+    expand: bool = False,
+    boxed: bool = False,
+    spaced: bool = False,
+    listsep: str = "  ",
+    nullvalue: str = "",
+    narrow: bool = True,
+    unicode: bool = False,
+    **kwargs: Any,
+) -> None:
+    """Upstream's text table, measured and padded by display width (w5/751).
+
+    Upstream counts characters: a CJK payee drew twice the columns it
+    measured, so its row's numbers sat under the next column and the row ran
+    past the table. Widths come from the columns cells draw, and padding
+    fills to those widths; headers keep upstream's exact spelling, the
+    decimal renderer keeps aligning on the point, and every option
+    (`boxed`, `unicode`, `spaced`, `expand`) behaves as upstream. Only the
+    `--file` text table renders here; the `--source` shell keeps upstream's.
+    """
+    from beanquery.query_render import Align, RenderContext, render_rows
+
+    from cli.output import display_width
+    from cli.output import pad as _pad_columns
+
+    if not rows:
+        return
+    ctx = RenderContext(dcontext, expand=expand, spaced=spaced, listsep=listsep, null=nullvalue)
+    renderers = [_renderer_for(column.datatype, ctx) for column in columns]
+    headers = [column.name for column in columns]
+    alignment = [renderer.align for renderer in renderers]
+
+    # Prime the renderers.
+    for row in rows:
+        for value, renderer in zip(row, renderers, strict=True):
+            if value is not None:
+                renderer.update(value)
+
+    # Compute columns widths.
+    widths = [
+        max(1, narrow or display_width(header), display_width(nullvalue), render.prepare())
+        for header, render in zip(headers, renderers, strict=True)
+    ]
+    # Widen for what the renderers counted as one column per character: a
+    # second format pass costs no rows held.
+    for row in rows:
+        for index, (value, renderer) in enumerate(zip(row, renderers, strict=True)):
+            if value is None:
+                continue
+            formatted = renderer.format(value)
+            lines = formatted if isinstance(formatted, list) else [formatted]
+            for line in lines:
+                widths[index] = max(widths[index], display_width(line))
+
+    # Initialize table style. For unicode box drawing characters,
+    # see https://www.unicode.org/charts/PDF/U2500.pdf
+    if boxed:
+        if unicode:
+            frmt = "\u2502 {} \u2502\n"
+            colsep = " \u2502 "
+            lines = ["".rjust(width, "\u2500") for width in widths]
+            top = "\u250c\u2500{}\u2500\u2510\n".format("\u2500\u252c\u2500".join(lines))
+            hline = "\u251c\u2500{}\u2500\u2524\n".format("\u2500\u253c\u2500".join(lines))
+            bottom = "\u2514\u2500{}\u2500\u2518\n".format("\u2500\u2534\u2500".join(lines))
+        else:
+            frmt = "| {} |\n"
+            colsep = " | "
+            top = hline = bottom = "+-{}-+\n".format("-+-".join("".rjust(width, "-") for width in widths))
+    else:
+        frmt = "{}\n"
+        colsep = "  "
+        top = bottom = ""
+        hline = "{}\n".format(colsep.join("".rjust(width, "\u2500" if unicode else "-") for width in widths))
+
+    # Header.
+    file.write(top)
+    file.write(
+        frmt.format(colsep.join(header[:width].center(width) for header, width in zip(headers, widths, strict=True)))
+    )
+    file.write(hline)
+
+    # Rows.
+    for row in render_rows(rows, renderers, ctx):
+        file.write(
+            frmt.format(
+                colsep.join(
+                    _pad_columns(x, w) if a == Align.LEFT else _rjust_columns(x, w)
+                    for x, w, a in zip(row, widths, alignment, strict=True)
+                )
+            )
+        )
+
+    # Footer.
+    file.write(bottom)
 
 
 def _whole(value: Decimal) -> Decimal:

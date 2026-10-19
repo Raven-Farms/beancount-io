@@ -787,8 +787,9 @@ it parses as JSON and never shows a Python `Decimal('1E-8')` or
 `datetime.date(...)`; a text or CSV directive cell is the directive's
 Beancount text, one line per table row in text. Text-table numbers, `-m`
 included, are fixed-point (`0.00000001` and `1500`, never `1E-8` or
-`1.5E+3`), aligned on the decimal point, and a NaN or an infinity prints as
-`NaN` or `Infinity`, as in CSV and JSON. Native `--source` queries keep
+`1.5E+3`), aligned on the decimal point, with columns padded by display
+width so CJK text keeps its row aligned, and a NaN or an infinity prints
+as `NaN` or `Infinity`, as in CSV and JSON. Native `--source` queries keep
 upstream's rendering.
 
 CSV cells hold the ledger's values verbatim, as `bean-query` writes them, so a
