@@ -1,6 +1,6 @@
 # Beancount Skills
 
-Skills for Beancount users working with a ledger through a coding agent. The nine workflows below support Claude Code and Codex; their source files live in [`.claude/skills/`](.).
+Skills for Beancount users working with a ledger through a coding agent. The ten workflows below support Claude Code and Codex; their source files live in [`skills/`](.).
 
 The skills work on ledger files on your machine. For a ledger hosted on Beancount.io, connect the Beancount.io MCP server instead; the skills hand hosted requests to its tools and prompts.
 
@@ -12,6 +12,7 @@ The suite shares [command recipes](beancount-init/references/bea-cli.md) that se
 | ----- | --------- |
 | [beancount-init](beancount-init/SKILL.md) | Create a ledger with `bea init` (optional Fava browser setup). |
 | [beancount-add](beancount-add/SKILL.md) | Record a purchase, transfer, new or closed account, price, or note you describe. |
+| [beancount-trade](beancount-trade/SKILL.md) | Record stock, fund, and crypto trades with correct lots, and report realized gains. |
 | [beancount-import](beancount-import/SKILL.md) | Import and categorize bank exports with duplicate detection. |
 | [beancount-importer-author](beancount-importer-author/SKILL.md) | Write or repair a reusable, tested bank importer. |
 | [beancount-reconcile](beancount-reconcile/SKILL.md) | Compare an account with a bank or broker statement. |

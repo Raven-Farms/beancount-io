@@ -1,6 +1,6 @@
 ---
 name: beancount-add
-description: Record one-off entries the user describes in a local Beancount ledger through bea — a purchase, bill, paycheck, or transfer between their own accounts (including splits and pasted receipt text), opening or closing an account, a price, or a note. Propose the exact entries from existing accounts, check whether one is already recorded, and write only after confirmation with a passing check; it never changes existing entries. Skip bank or card export files (beancount-import), statements (beancount-reconcile), finance-app migrations, options trades (beancount-options), month-end close, edits to existing entries, and ledgers hosted on Beancount.io.
+description: Record one-off entries the user describes in a local Beancount ledger through bea — a purchase, bill, paycheck, or transfer between their own accounts (including splits and pasted receipt text), opening or closing an account, a price, or a note. Propose the exact entries from existing accounts, check whether one is already recorded, and write only after confirmation with a passing check; it never changes existing entries. Skip bank or card export files (beancount-import), statements (beancount-reconcile), finance-app migrations, options trades (beancount-options), investment trades, dividends, splits, and vests (beancount-trade), month-end close, edits to existing entries, and ledgers hosted on Beancount.io.
 metadata:
   openclaw:
     homepage: 'https://github.com/bex-co/beancount-io/tree/main/skills'
@@ -46,7 +46,7 @@ Write every approved directive through `bea add`: the shared `transaction`, `ope
 
 **Does:** one or a few entries the user describes in words or pastes as receipt text: transactions (purchases, bills, income, refunds, transfers between the user's own accounts, split purchases), opening an account, closing an account, a price, a note. Appends them to an existing file the root ledger includes.
 
-**Does not:** read bank or card export files (`beancount-import`), reconcile against a statement (`beancount-reconcile`), migrate app history (`beancount-migrate`), record options lifecycle events (`beancount-options`), close a period (`beancount-close`), or edit, move, or delete existing entries — report the existing entry and let the user change it. Never invent an account the user did not ask for.
+**Does not:** read bank or card export files (`beancount-import`), reconcile against a statement (`beancount-reconcile`), migrate app history (`beancount-migrate`), record options lifecycle events (`beancount-options`), record investment trades, dividends, splits, or vests (`beancount-trade`), close a period (`beancount-close`), or edit, move, or delete existing entries — report the existing entry and let the user change it. Never invent an account the user did not ask for.
 
 ## Workflow
 

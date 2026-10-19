@@ -1,6 +1,6 @@
 ---
 name: beancount-options
-description: Record a described options trade or lifecycle event as validated transactions in a local Beancount ledger through bea, after review and confirmation. Use for single-leg or multi-leg opens, closes, rolls, assignment, exercise and expiration, including pasted broker confirmations. Skip options education, pricing/greeks, tax planning, analytics, broker statement imports, other manual entries (beancount-add), ledger `option` settings such as operating_currency, and ledgers hosted on Beancount.io.
+description: Record a described options trade or lifecycle event as validated transactions in a local Beancount ledger through bea, after review and confirmation. Use for single-leg or multi-leg opens, closes, rolls, assignment, exercise and expiration, including pasted broker confirmations. Skip options education, pricing/greeks, tax planning, analytics, broker statement imports, other manual entries (beancount-add), share, fund, and crypto trades and realized-gains reports (beancount-trade), ledger `option` settings such as operating_currency, and ledgers hosted on Beancount.io.
 metadata:
   openclaw:
     homepage: 'https://github.com/bex-co/beancount-io/tree/main/skills'
@@ -50,7 +50,7 @@ and confirmation below.
 
 **Does:** turn a described options trade or lifecycle event into new transactions, appended to the user's ledger after confirmation and validated through the root check.
 
-**Does not:** modify or bulk-rewrite existing transactions; touch `option`, `plugin`, or `include` directives; compute wash sales, greeks, P&L curves, or other analytics; import broker statements (a different workflow); record other manual entries (`beancount-add`).
+**Does not:** modify or bulk-rewrite existing transactions; touch `option`, `plugin`, or `include` directives; compute wash sales, greeks, P&L curves, or other analytics; import broker statements (a different workflow); record other manual entries (`beancount-add`); record share, fund, or crypto trades or report realized gains (`beancount-trade`).
 
 ## Workflow
 

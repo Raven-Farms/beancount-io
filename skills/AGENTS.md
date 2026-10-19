@@ -2,7 +2,7 @@
 
 Cross-compatible Claude Code and Codex skills that automate Beancount workflows for [Beancount.io](https://beancount.io/) users (see root `AGENTS.md` for repo-wide rules).
 
-`skills/` holds the nine customer-facing `beancount-*` ledger skills, each at `skills/<name>/SKILL.md`, plus this guide and the user-facing [README.md](README.md) catalog. The suite's guides and examples live in [`docs/skills/`](../docs/skills) and its installer, checks, and tests in [`scripts/skills/`](../scripts/skills); both belong to this package. Repository development skills live separately in [`../.agents/skills/`](../.agents/skills), with conventions in [`../.agents/AGENTS.md`](../.agents/AGENTS.md). The repository-root `.claude/skills` links to that internal tree.
+`skills/` holds the ten customer-facing `beancount-*` ledger skills, each at `skills/<name>/SKILL.md`, plus this guide and the user-facing [README.md](README.md) catalog. The suite's guides and examples live in [`docs/skills/`](../docs/skills) and its installer, checks, and tests in [`scripts/skills/`](../scripts/skills); both belong to this package. Repository development skills live separately in [`../.agents/skills/`](../.agents/skills), with conventions in [`../.agents/AGENTS.md`](../.agents/AGENTS.md). The repository-root `.claude/skills` links to that internal tree.
 
 ## Layout
 
@@ -25,6 +25,7 @@ skills/
     references/               Per-strategy guidance loaded on demand
     evals/                    Test prompts + fixtures for skill-creator iteration
   beancount-reconcile/        Reconcile one account against a bank/broker statement
+  beancount-trade/            Record stock/fund/crypto trades with lots; report realized gains
     SKILL.md
     references/               Statement-format + matching guidance loaded on demand
     evals/                    Statement+ledger fixtures per mismatch class
@@ -63,6 +64,7 @@ The [importer graduation guide](../docs/skills/importer-graduation.md) composes 
 | `beancount-migrate`               | Migrate full history from a finance-app export (Mint, Monarch, QuickBooks Online, or any category-tagged CSV) into a fresh ledger: confirm-gated account/category mapping, transfer-pair dedup, opening balances + endpoint `balance` assertions that tie to stated balances, and a migration report that reconciles row counts and balances against the source — deltas surfaced, never forced. Composes `beancount-init`; entries carry `import-id` so later imports dedup against migrated history.                                |
 | `beancount-options`               | Turn human-language descriptions of options trades (CSP, covered call, vertical, condor, roll, assignment, exercise, expiration, …) into balanced beancount transactions. Uses per-contract cost basis, IRS-aligned assignment treatment, and verifies with `bea check` (or `bean-check` without `bea`) before reporting success. Ledger `option` settings (e.g. `operating_currency`) are not this skill.                                                                                                                                                                                                                                   |
 | `beancount-reconcile`             | Reconcile one account against a bank/broker statement (CSV, PDF, or pasted statement text). Diffs statement vs ledger into mismatch classes (missing, duplicate, amount-mismatch, date-drift), and — only after confirmation — writes the missing transactions plus a period-end `balance` assertion that ties the account out, through `bea` when installed (`bea add transactions --from -`, `bea add balance`, `--pad-from` for opening adjustments) or appended text otherwise. Reports suspects/duplicates/mismatches for manual fixing; never writes a failing assertion; check-gated. Triggers on "reconcile my checking account" / "does my ledger match my statement". |
+| `beancount-trade`                   | Record described stock, fund, and crypto investment events — buys, sells that name the lot (ambiguous reductions are resolved with the user, never guessed), cash and reinvested dividends, splits that keep total cost, own-account transfers that keep cost and acquisition date, RSU/ESPP vests at fair-market value — through `bea` after a confirmed proposal, and report a year's realized gains per closed lot tied to the booked gain postings. States the booking methods `bea` accepts and never approximates average cost. Triggers on "I bought 10 VTI at 251.30" / "my RSUs vested" / "what were my realized gains". |
 
 ## Conventions
 

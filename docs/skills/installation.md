@@ -1,6 +1,6 @@
 # Install the Beancount skills
 
-Install the nine `beancount-*` ledger skills for Claude Code, Codex, or both, from any directory. You keep one Git checkout of the skills and link it into each agent's skill directory. Updating the checkout updates every agent, and the helper script never touches skills it did not install.
+Install the ten `beancount-*` ledger skills for Claude Code, Codex, or both, from any directory. You keep one Git checkout of the skills and link it into each agent's skill directory. Updating the checkout updates every agent, and the helper script never touches skills it did not install.
 
 Rehearsed on macOS with Claude Code and Codex (see [tested with](first-query.md#tested-with)). Linux uses the same commands but has not been rehearsed. Windows is not covered.
 
@@ -50,7 +50,7 @@ Check the files first. `verify` only reads, and it exits nonzero with one line p
 python3 "$SKILLS_SRC/scripts/skills/beancount-skills.py" verify ~/.claude/skills ~/.agents/skills
 ```
 
-Then ask each agent from your ledger directory. Both should name the same nine skills listed in the [skills catalog](../../skills/README.md).
+Then ask each agent from your ledger directory. Both should name the same ten skills listed in the [skills catalog](../../skills/README.md).
 
 ```sh
 claude -p "List the names of the skills available to you that start with beancount-, one per line, nothing else."
@@ -71,7 +71,7 @@ Next: get a first answer from a sample ledger with the [first-query walkthrough]
 
 ## Install from a standard channel instead
 
-The checkout-and-link install above is one way in. The standard skill channels also carry the suite, because it lives at the conventional `skills/<name>/SKILL.md` layout. A channel install **copies** the nine skills into the agent's directory instead of linking a checkout, so there is no `verify` script afterwards: confirm with the client skill listing in step 3 and the [first-query walkthrough](first-query.md). Install the whole suite every time — the skills hand off to siblings and share one command contract. Each channel below was checked against the tool's current help (2026-10-19); the exact forms matter, for the reasons given.
+The checkout-and-link install above is one way in. The standard skill channels also carry the suite, because it lives at the conventional `skills/<name>/SKILL.md` layout. A channel install **copies** the ten skills into the agent's directory instead of linking a checkout, so there is no `verify` script afterwards: confirm with the client skill listing in step 3 and the [first-query walkthrough](first-query.md). Install the whole suite every time — the skills hand off to siblings and share one command contract. Each channel below was checked against the tool's current help (2026-10-19); the exact forms matter, for the reasons given.
 
 ### `npx skills` (skills.sh)
 
@@ -81,7 +81,7 @@ npx skills add bex-co/beancount-io -g -a claude-code codex -y
 npx skills update -g -y   # later updates
 ```
 
-Do **not** add `--skill '*'` or `--all`: in the current release (1.5.18, checked 2026-10-19) an explicit skill selection also installs this repository's internal development skills (28 skills instead of 9). The no-flag form above installs exactly the nine `beancount-*` skills. To remove: `npx skills remove -g` and select the nine `beancount-*` names (or pass them as arguments).
+Do **not** add `--skill '*'` or `--all`: in the current release (1.5.18, checked 2026-10-19) an explicit skill selection also installs this repository's internal development skills (29 skills instead of 10, recounted 2026-10-19 after `beancount-trade` joined the suite). The no-flag form above installs exactly the ten `beancount-*` skills. To remove: `npx skills remove -g` and select the ten `beancount-*` names (or pass them as arguments).
 
 ### `gh skill`
 
@@ -90,7 +90,7 @@ gh skill install bex-co/beancount-io --all --pin main --agent claude-code --scop
 gh skill install bex-co/beancount-io --all --pin main --agent codex --scope user
 ```
 
-`--pin main` is required today, not decoration: without it, `gh` resolves this repository's *latest release* (a mobile-app tag from before the flat `skills/` layout) and reports "no standard skills found". Pinned skills are skipped by `gh skill update`, so update by re-running the install commands with `--force` added. There is no `gh skill remove`: run `gh skill list` to see the install directories, then delete the nine `beancount-*` folders from them.
+`--pin main` is required today, not decoration: without it, `gh` resolves this repository's *latest release* (a mobile-app tag from before the flat `skills/` layout) and reports "no standard skills found". Pinned skills are skipped by `gh skill update`, so update by re-running the install commands with `--force` added. There is no `gh skill remove`: run `gh skill list` to see the install directories, then delete the ten `beancount-*` folders from them.
 
 ### Plugin (both clients)
 
@@ -113,11 +113,11 @@ codex plugin add beancount-io@beancount-io
 codex plugin remove beancount-io@beancount-io     # remove
 ```
 
-Both manifests carry one shared suite version; a client delivers a new copy only when that version changes, and every shipped skill change bumps it. Confirm with each client's skill listing (step 3): the nine skills appear under the `beancount-io:` namespace.
+Both manifests carry one shared suite version; a client delivers a new copy only when that version changes, and every shipped skill change bumps it. Confirm with each client's skill listing (step 3): the ten skills appear under the `beancount-io:` namespace.
 
 ### Hermes — not yet
 
-Hermes cannot install the whole suite today (rehearsed 2026-10-19): its security scanner blocks `beancount-init` with a dangerous verdict that even `--force` does not override — the flagged patterns are the skill's own documented behaviors (writing the new ledger's `AGENTS.md`, and the `curl … | sh` fallback for installing `uv`) — and `beancount-import` installs only with `--force`. Eight of the nine skills do install (`hermes skills install bex-co/beancount-io/skills/<name> --yes`, plus `--force` for `beancount-import`), but a suite without `beancount-init` lacks the shared command contract its siblings read, so treat that as unsupported for now. Hermes reads project skills from `./.agents/skills` in a trusted project (`hermes skills trust`), so the link installer and the `npx`/`gh` project installs above are the way in from a ledger workspace today.
+Hermes cannot install the whole suite today (rehearsed 2026-10-19): its security scanner blocks `beancount-init` with a dangerous verdict that even `--force` does not override — the flagged patterns are the skill's own documented behaviors (writing the new ledger's `AGENTS.md`, and the `curl … | sh` fallback for installing `uv`) — and `beancount-import` installs only with `--force`. In that rehearsal eight of the nine skills then in the suite installed (`hermes skills install bex-co/beancount-io/skills/<name> --yes`, plus `--force` for `beancount-import`); `beancount-trade`, added since, is untested there. A suite without `beancount-init` lacks the shared command contract its siblings read, so treat that as unsupported for now. Hermes reads project skills from `./.agents/skills` in a trusted project (`hermes skills trust`), so the link installer and the `npx`/`gh` project installs above are the way in from a ledger workspace today.
 
 ### Choosing a method
 
