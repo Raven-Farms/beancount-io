@@ -2450,7 +2450,20 @@ def validate_candidate(
             noun = type(error.entry).__name__.lower() if error.entry is not None else "directive"
             if isinstance(error.entry, Transaction) and error.entry.flag == FLAG_PADDING:
                 noun = "pad"
-            message += f" Correct the {noun} date or {remedy}; for new books use bea init --date YYYY-MM-DD."
+            discovered = _discovered_document(error.entry)
+            if discovered is not None:
+                # No directive to edit: the file was auto-discovered, so name
+                # it and the option, and offer moving it instead of dating it (w5/765).
+                dirs = " ".join(f'"{name}"' for name in options.get("documents") or [])
+                through = f'option "documents" {dirs}'.rstrip()
+                message += (
+                    f" {discovered} is auto-discovered through {through}, so the account must "
+                    "be open on the file's date."
+                )
+                fix = "Move the file out of the documents folder"
+            else:
+                fix = f"Correct the {noun} date"
+            message += f" {fix} or {remedy}; for new books use bea init --date YYYY-MM-DD."
         if isinstance(error.entry, Close) and error.message.endswith(" is being closed"):
             # Upstream calls the account unopened whether it never was or
             # opens after the close; say which, as every other directive's
@@ -3003,6 +3016,20 @@ def _plugin_close_hint(
             remedy = f"edit the close of {parent.account}"
             break
     return description, remedy
+
+
+def _discovered_document(entry: Any) -> str | None:
+    """The file behind a `Document` the `documents` option auto-discovered, else None.
+
+    A written `document` directive always carries its own line; a discovered
+    file points at the root with line 0 and names the file itself (w5/765).
+    """
+    from beancount.core.data import Document
+
+    if not isinstance(entry, Document) or (entry.meta or {}).get("lineno") != 0:
+        return None
+    found = getattr(entry, "filename", None)
+    return str(found) if found else None
 
 
 def _plugin_origin(
