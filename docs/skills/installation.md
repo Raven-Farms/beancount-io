@@ -92,6 +92,29 @@ gh skill install bex-co/beancount-io --all --pin main --agent codex --scope user
 
 `--pin main` is required today, not decoration: without it, `gh` resolves this repository's *latest release* (a mobile-app tag from before the flat `skills/` layout) and reports "no standard skills found". Pinned skills are skipped by `gh skill update`, so update by re-running the install commands with `--force` added. There is no `gh skill remove`: run `gh skill list` to see the install directories, then delete the nine `beancount-*` folders from them.
 
+### Plugin (both clients)
+
+The suite also ships as one plugin, `beancount-io`, from this repository's marketplace manifests. Plugin skills are namespaced: invoke one as `/beancount-io:beancount-ask`, against `/beancount-ask` from a linked install (in Codex, `$beancount-io:beancount-ask`).
+
+```sh
+# Claude Code — fetch only the manifest and skills/, never the whole repo
+claude plugin marketplace add bex-co/beancount-io --sparse .claude-plugin skills
+claude plugin install beancount-io@beancount-io
+claude plugin update beancount-io@beancount-io   # later updates
+claude plugin uninstall beancount-io@beancount-io # remove
+```
+
+```sh
+# Codex
+codex plugin marketplace add bex-co/beancount-io --sparse .agents/plugins --sparse plugin.json --sparse skills
+codex plugin add beancount-io@beancount-io
+codex plugin marketplace upgrade beancount-io     # refresh, then re-run the add to update
+codex plugin add beancount-io@beancount-io
+codex plugin remove beancount-io@beancount-io     # remove
+```
+
+Both manifests carry one shared suite version; a client delivers a new copy only when that version changes, and every shipped skill change bumps it. Confirm with each client's skill listing (step 3): the nine skills appear under the `beancount-io:` namespace.
+
 ### Hermes — not yet
 
 Hermes cannot install the whole suite today (rehearsed 2026-10-19): its security scanner blocks `beancount-init` with a dangerous verdict that even `--force` does not override — the flagged patterns are the skill's own documented behaviors (writing the new ledger's `AGENTS.md`, and the `curl … | sh` fallback for installing `uv`) — and `beancount-import` installs only with `--force`. Eight of the nine skills do install (`hermes skills install bex-co/beancount-io/skills/<name> --yes`, plus `--force` for `beancount-import`), but a suite without `beancount-init` lacks the shared command contract its siblings read, so treat that as unsupported for now. Hermes reads project skills from `./.agents/skills` in a trusted project (`hermes skills trust`), so the link installer and the `npx`/`gh` project installs above are the way in from a ledger workspace today.
@@ -99,7 +122,10 @@ Hermes cannot install the whole suite today (rehearsed 2026-10-19): its security
 ### Choosing a method
 
 - **Link installer (steps 1–3):** one checkout shared by both agents, updated by one `git pull`, with `verify` and conflict detection. Best default, and the only method that keeps local skill edits in Git.
-- **A channel:** one command, no checkout to keep. You trade `verify` and the single update point for per-agent copies that each channel updates its own way.
+- **Plugin:** the client's own managed install — marketplace discovery, namespaced skills, versioned updates. Best when you do not want to keep a checkout and do not edit skills.
+- **A channel (`npx`/`gh`):** one command, no checkout to keep. You trade `verify` and the single update point for per-agent copies that each channel updates its own way.
+
+Keep **one method per client**. A client holding the suite twice (say, linked into `~/.claude/skills` and installed as the plugin) lists both copies with the same descriptions; which one answers a given request is the client's choice, not something either installer controls. `verify` prints a note (not a failure) when it can tell the plugin also provides the suite. Moving from a linked install to the plugin: `uninstall` the links (see [Remove](#remove), keep the checkout only if you want it), then install the plugin.
 
 ### Switching methods
 

@@ -260,6 +260,17 @@ class TestVerify(Workspace):
         self.assertEqual(out.count(f"OK {len(skills.expected_skills())} customer skills complete"), 2)
         self.assertEqual(state(), before)
 
+    def test_verify_notes_a_plugin_install_without_failing(self):
+        run("install", self.dest)
+        cached = self.root / "home/.codex/plugins/cache/beancount-io/beancount-io/0.1.0/skills/beancount-ask/SKILL.md"
+        cached.parent.mkdir(parents=True)
+        cached.write_text("x")
+        with mock.patch.dict(os.environ, {"HOME": str(self.root / "home")}):
+            code, out, err = run("verify", self.dest)
+        self.assertEqual((code, err), (0, ""))
+        self.assertIn("note: the beancount-io plugin also provides this suite to Codex", out)
+        self.assertNotIn("Claude Code", out)
+
     def test_missing_reference_names_the_file_and_the_line_that_needs_it(self):
         self.copy_suite(self.dest)
         (self.dest / "beancount-close" / "references" / "close-checklist.md").unlink()

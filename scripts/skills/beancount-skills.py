@@ -89,6 +89,22 @@ def destination_problem(dest: Path) -> str | None:
     return None
 
 
+def plugin_install_clients() -> list[str]:
+    """Clients where the beancount-io plugin also provides this suite.
+
+    Best-effort: looks for beancount-* skills in each client's plugin cache
+    under the home directory. Detection only — verify stays read-only."""
+    found = []
+    for client, cache in (
+        ("Claude Code", Path.home() / ".claude/plugins/cache/beancount-io"),
+        ("Codex", Path.home() / ".codex/plugins/cache/beancount-io"),
+    ):
+        hits = list(cache.glob("**/beancount-*/SKILL.md")) if cache.is_dir() else []
+        if {p.parent.name for p in hits} & set(expected_skills()):
+            found.append(client)
+    return found
+
+
 def verify(dest: Path) -> int:
     """Report whether DEST holds a complete, usable suite. Read-only."""
     names = expected_skills()
@@ -124,6 +140,11 @@ def verify(dest: Path) -> int:
     for entry in sorted(dest.glob("beancount-*")):
         if entry.name not in names:
             print(f"note {entry}: not part of this suite; left untouched")
+    for client in plugin_install_clients():
+        print(
+            f"note: the beancount-io plugin also provides this suite to {client}; "
+            "keep one install method per client so its skills do not appear twice"
+        )
     if not shutil.which("bea"):
         print("note: `bea` is not on PATH; the skills use it for checks, queries, and writes")
 
