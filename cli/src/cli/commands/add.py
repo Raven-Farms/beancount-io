@@ -584,6 +584,17 @@ def _nesting_depth(value: Any) -> int:
     return deepest
 
 
+def _alternating_nuls(data: bytes) -> bool:
+    """Whether NULs sit on one byte parity densely, as BOM-less UTF-16 ASCII does.
+
+    The parity half of import's UTF-16 rule (`csv_mapper._refuse_utf16`),
+    with a floor: a lone stray NUL does not alternate, however short the
+    file (w5/738).
+    """
+    even, odd = data[0::2].count(0), data[1::2].count(0)
+    return min(even, odd) == 0 and max(even, odd) >= 2 and 4 * max(even, odd) >= len(data) // 2
+
+
 def _load_transactions_json(from_file: str) -> Any:
     """Read and parse `--from`; unreadable input is a usage error, phrased like `--file`'s.
 
@@ -628,14 +639,17 @@ def _load_transactions_json(from_file: str) -> Any:
         # utf-8-sig matches CSV import: editors that emit a BOM stay valid.
         text = data.decode("utf-8-sig")
     except UnicodeDecodeError as exc:
-        message = decode_error_message(name, exc)
+        message = decode_error_message(name, exc, data)
         if data.startswith((b"\xff\xfe", b"\xfe\xff")):
             message = f"{message} {utf16}"
         raise UsageError(message) from exc
     if "\x00" in text:
         # BOM-less UTF-16 decodes as UTF-8 with a NUL beside every ASCII byte;
         # JSON text can never hold a raw NUL.
-        raise UsageError(utf16)
+        if _alternating_nuls(data):
+            raise UsageError(utf16)
+        offset = data.index(b"\x00")
+        raise UsageError(f"'{name}' (from --from) contains a NUL byte at byte {offset}; remove it and retry.")
     too_deep = f"'{name}' (from --from) nests JSON too deeply; send a flat array of rows."
     try:
         loaded = json.loads(text, object_pairs_hook=_unique_keys, parse_float=JsonFloat)

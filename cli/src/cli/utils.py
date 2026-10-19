@@ -84,15 +84,22 @@ def has_bom(path: Path) -> bool:
         return False
 
 
-def decode_error_message(path: object, exc: UnicodeDecodeError) -> str:
+def decode_error_message(path: object, exc: UnicodeDecodeError, data: bytes | None = None) -> str:
     """A decode failure as path, byte offset, attempted encoding, and remedy.
 
     The engine twin (`bea_engine.ledger.text.decode_error_message`) carries
     the same wording; neither side may import the other, so the helper is
     repeated, not shared. Callers choose the category: a caller's input file
     is a usage error, an undecodable ledger is a validation error.
+
+    Pass the raw bytes when the failing decode used `utf-8-sig`: the codec
+    strips a leading BOM, so the offset is quoted against the raw bytes
+    (w5/738). Callers decoding plain `utf-8` pass nothing — a BOM decodes
+    there as an ordinary character, so their offsets are already raw.
     """
-    return f"Cannot decode '{path}' as UTF-8: {exc.reason} at byte {exc.start}. Re-save the file as UTF-8 and retry."
+    base = len(UTF8_BOM) if data is not None and data.startswith(UTF8_BOM) else 0
+    offset = exc.start + base
+    return f"Cannot decode '{path}' as UTF-8: {exc.reason} at byte {offset}. Re-save the file as UTF-8 and retry."
 
 
 def refuse_blank_filter(flag: str, value: str | None) -> None:
@@ -235,6 +242,10 @@ def refuse_empty_path(value: Any, param: Any) -> None:
         name = str(getattr(param, "human_readable_name", "PATH")).upper()
         raise UsageError(f"The {name} argument is empty ({str(value)!r}); name a file or directory.")
     name = param.opts[0] if param is not None and getattr(param, "opts", None) else "The path"
+    if getattr(param, "required", False):
+        # Omitting a required option fails as missing, so advising it sends
+        # the user from one refusal into the next (w5/738).
+        raise UsageError(f"{name} {str(value)!r} is empty; name a path.")
     raise UsageError(f"{name} {str(value)!r} is empty; name a path, or omit {name}.")
 
 

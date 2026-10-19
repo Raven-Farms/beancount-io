@@ -155,7 +155,7 @@ def _require_utf8(data: bytes, name: object) -> str:
     try:
         return data.decode("utf-8-sig")
     except UnicodeDecodeError as exc:
-        raise UsageError(decode_error_message(name, exc)) from None
+        raise UsageError(decode_error_message(name, exc, data)) from None
 
 
 def _read_redirected_input(parsed: argparse.Namespace) -> str | None:

@@ -301,15 +301,24 @@ def regex_reads_otherwise(pattern: str, flags: int = 0) -> str | None:
     )
 
 
-def decode_error_message(path: object, exc: UnicodeDecodeError) -> str:
+def decode_error_message(path: object, exc: UnicodeDecodeError, data: bytes | None = None) -> str:
     """A decode failure as path, byte offset, attempted encoding, and remedy.
 
     The frontend keeps its own copy (`cli.utils.decode_error_message`):
     neither side may import the other, and both have to report the same
     failure. Callers choose the category: a caller's input file is a usage
     error, an undecodable ledger is a validation error.
+
+    Pass the raw bytes when the failing decode used `utf-8-sig`: the codec
+    strips a leading BOM, so the offset is quoted against the raw bytes
+    (w5/738). Callers decoding plain `utf-8` pass nothing — a BOM decodes
+    there as an ordinary character, so their offsets are already raw.
     """
-    return f"Cannot decode '{path}' as UTF-8: {exc.reason} at byte {exc.start}. Re-save the file as UTF-8 and retry."
+    from bea_engine.compat import UTF8_BOM
+
+    base = len(UTF8_BOM) if data is not None and data.startswith(UTF8_BOM) else 0
+    offset = exc.start + base
+    return f"Cannot decode '{path}' as UTF-8: {exc.reason} at byte {offset}. Re-save the file as UTF-8 and retry."
 
 
 def syntax_errors(path: Path) -> list[str]:

@@ -3922,7 +3922,12 @@ def metadata_for_write(meta: dict[str, Any]) -> dict[str, Any]:
                 raise LedgerError(
                     f"Invalid {kind!r} metadata for {key!r}: expected a decimal string such as '1.25'."
                 ) from exc
-            except (KeyError, TypeError, ValueError) as exc:
+            except TypeError as exc:
+                # A non-string where a string belongs: the raw TypeError names
+                # Python types, not the tagged shape (w5/738).
+                expected = "'YYYY-MM-DD' string" if kind == "date" else "decimal string such as '1.25'"
+                raise LedgerError(f"Invalid {kind!r} metadata for {key!r}: expected a {expected}.") from exc
+            except (KeyError, ValueError) as exc:
                 raise LedgerError(f"Invalid {kind!r} metadata for {key!r}: {exc}") from exc
         elif isinstance(value, bool):
             pass

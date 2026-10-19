@@ -65,7 +65,7 @@ def _stdin_query() -> str:
     try:
         text = data.decode("utf-8-sig")
     except UnicodeDecodeError as exc:
-        message = decode_error_message("stdin", exc)
+        message = decode_error_message("stdin", exc, data)
         if data.startswith((b"\xff\xfe", b"\xfe\xff")):
             message = f"{message} {utf16}"
         raise UsageError(message) from exc

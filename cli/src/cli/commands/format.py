@@ -668,10 +668,11 @@ def _stdin_text() -> str:
     stream = getattr(sys.stdin, "buffer", None)
     if stream is None:
         return sys.stdin.read()
+    data = bytes(stream.read())
     try:
-        return bytes(stream.read()).decode("utf-8-sig")
+        return data.decode("utf-8-sig")
     except UnicodeDecodeError as exc:
-        raise LedgerError(decode_error_message("stdin", exc)) from exc
+        raise LedgerError(decode_error_message("stdin", exc, data)) from exc
 
 
 def _require_json_destination(in_place: bool, output_file: Path | None) -> None:
