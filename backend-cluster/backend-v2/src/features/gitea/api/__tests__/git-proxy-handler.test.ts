@@ -538,6 +538,30 @@ describe("setGitProxyHandler", () => {
       expect(verify).not.toHaveBeenCalled();
     });
 
+    it("shares one budget between dashboard sign-in and Git", async () => {
+      setGitProxyHandler(router, mockServices, mockConfig);
+      (
+        mockServices.database.models.user.getByMail as jest.Mock
+      ).mockResolvedValue(null);
+      const auth = (mockServices.services as any).auth;
+
+      // Five wrong passwords on the dashboard, five over Git: ten for the
+      // account, so the next attempt is refused on either surface.
+      for (let i = 0; i < 5; i++) {
+        await expect(
+          auth.loginUser({ email: "bad@example.com", password: "wrong" }),
+        ).rejects.toThrow("Invalid email or password");
+      }
+      for (let i = 0; i < 5; i++) {
+        expect((await attempt("bad@example.com")).status).toBe(401);
+      }
+
+      expect((await attempt("bad@example.com")).status).toBe(429);
+      await expect(
+        auth.loginUser({ email: "bad@example.com", password: "wrong" }),
+      ).rejects.toThrow("Too many failed sign-in attempts for this account");
+    });
+
     it("keeps each account's budget its own", async () => {
       setGitProxyHandler(router, mockServices, mockConfig);
       (
