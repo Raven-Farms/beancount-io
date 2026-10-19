@@ -14,6 +14,46 @@ interface ServerConfig {
   corsAllowedOrigins: ReadonlySet<string>;
 }
 
+const DOMAIN_NAME =
+  /^(?=.{1,253}$)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/;
+
+/** SIGNUP_ALLOWED_EMAILS: comma-separated addresses, lowercased. Fails at boot on a malformed entry. */
+export function parseSignupAllowedEmails(
+  value: string | undefined,
+): ReadonlySet<string> {
+  const emails = new Set<string>();
+  for (const entry of (value ?? "").split(",")) {
+    const email = entry.trim().toLowerCase();
+    if (!email) continue;
+    const at = email.lastIndexOf("@");
+    if (at <= 0 || /\s/.test(email) || !DOMAIN_NAME.test(email.slice(at + 1))) {
+      throw new Error(
+        `SIGNUP_ALLOWED_EMAILS: not an email address ${JSON.stringify(entry.trim())}`,
+      );
+    }
+    emails.add(email);
+  }
+  return emails;
+}
+
+/** SIGNUP_ALLOWED_DOMAINS: comma-separated bare domains (no "@", no wildcards), lowercased. */
+export function parseSignupAllowedDomains(
+  value: string | undefined,
+): ReadonlySet<string> {
+  const domains = new Set<string>();
+  for (const entry of (value ?? "").split(",")) {
+    const domain = entry.trim().toLowerCase();
+    if (!domain) continue;
+    if (!DOMAIN_NAME.test(domain)) {
+      throw new Error(
+        `SIGNUP_ALLOWED_DOMAINS: not a bare domain ${JSON.stringify(entry.trim())}`,
+      );
+    }
+    domains.add(domain);
+  }
+  return domains;
+}
+
 export function parseCookieDomain(
   value: string | undefined,
 ): string | null | undefined {
@@ -247,8 +287,16 @@ export function getDevelopmentPremiumUserIds(
   );
 }
 
+/** Who may create an account; both sets empty = open signup. */
+export interface SignupPolicy {
+  allowedEmails: ReadonlySet<string>;
+  allowedDomains: ReadonlySet<string>;
+}
+
 export interface AppConfig {
   api: ApiConfig;
+  /** SIGNUP_ALLOWED_EMAILS / SIGNUP_ALLOWED_DOMAINS; both empty = open signup. */
+  signup: SignupPolicy;
   sshProxy: SshProxyConfig;
   env: Environment;
   project: string;
@@ -415,6 +463,12 @@ export const config: AppConfig = {
     developmentPremiumUserIds: getDevelopmentPremiumUserIds(
       process.env.DEV_PREMIUM_USER_IDS,
       environment,
+    ),
+  },
+  signup: {
+    allowedEmails: parseSignupAllowedEmails(process.env.SIGNUP_ALLOWED_EMAILS),
+    allowedDomains: parseSignupAllowedDomains(
+      process.env.SIGNUP_ALLOWED_DOMAINS,
     ),
   },
   env: environment,

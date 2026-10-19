@@ -102,6 +102,12 @@ allows CORS from those hosts. A self-host on another domain sets:
   (`scheme://host[:port]`) allowed to call the API with credentials, on top of
   beancount.io and localhost. Paths, queries, credentials and wildcards are
   rejected at startup.
+- `SIGNUP_ALLOWED_EMAILS` / `SIGNUP_ALLOWED_DOMAINS`: restrict who may create
+  an account (comma-separated). With both empty, signup is open, as on managed
+  beancount.io. Otherwise only a listed address, or an address whose domain is
+  exactly a listed domain (subdomains excluded), may sign up. The check runs
+  when a signup starts and again when the account is created, so it covers
+  every signup method. Malformed entries fail at startup.
 
 Production OAuth requires `OAUTH_JWKS`, a complete private P-256/ES256 signing
 JWKS provided by the deployment secret manager. It must never be committed or

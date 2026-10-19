@@ -147,6 +147,9 @@ services:
       # CORS origins (comma-separated). Unset keeps the beancount.io defaults.
       AUTH_COOKIE_DOMAIN: ${AUTH_COOKIE_DOMAIN:-}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-}
+      # Who may sign up (comma-separated). Both empty = open signup.
+      SIGNUP_ALLOWED_EMAILS: ${SIGNUP_ALLOWED_EMAILS:-}
+      SIGNUP_ALLOWED_DOMAINS: ${SIGNUP_ALLOWED_DOMAINS:-}
       POSTGRES_BACKEND_URI: postgresql://${BACKEND_DB_USER:-beancount}:${BACKEND_DB_PASSWORD:?Set BACKEND_DB_PASSWORD in .env}@postgres-backend:5432/${BACKEND_DB_NAME:-beancount}
       REDIS_URI: redis://redis:6379
       FAVA_API_URL: http://ledger:8000
