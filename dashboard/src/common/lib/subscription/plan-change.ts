@@ -37,10 +37,9 @@ export function planChoice(
   if (delta < 0) return "DOWNGRADE";
   // Free and Enterprise have no billing cycle; neither does a paid tier the
   // customer holds without a Stripe subscription.
-  if (current.interval === null) {
+  if (current.interval === null || target.interval === null) {
     return delta === 0 ? "CURRENT" : "NEW";
   }
-  if (target.interval === null) return delta === 0 ? "CURRENT" : "NEW";
   if (delta === 0) {
     if (current.interval === target.interval) return "CURRENT";
     return target.interval === "year" ? "TO_YEARLY" : "TO_MONTHLY";

@@ -23,6 +23,11 @@ import {
 } from "./stripe-config";
 import { useMoneyFormat } from "./use-money-format";
 import { useQuotaNumberFormat } from "./use-quota-number-format";
+import {
+  aiTokensLine,
+  collaboratorsLine,
+  ledgersLine,
+} from "./tier-quota-summary";
 
 /** Where the Enterprise card sends people: the plan is arranged with us. */
 const ENTERPRISE_CONTACT_URL = "https://beancount.io/tg";
@@ -88,11 +93,7 @@ export function PlanPicker({
   quotaByUserTier: Record<string, TierQuota>;
   t: Translate;
   busy: boolean;
-  onChoose: (
-    tier: SubscriptionTier,
-    cycle: BillingCycle,
-    choice: PlanChoice,
-  ) => void;
+  onChoose: (tier: SubscriptionTier, cycle: BillingCycle) => void;
 }) {
   // Yearly first: it is the cheaper way to hold any paid plan (PRFAQ005).
   const [cycle, setCycle] = useState<BillingCycle>(DEFAULT_BILLING_CYCLE);
@@ -182,30 +183,18 @@ export function PlanPicker({
 
               {quota && (
                 <ul className="mb-4 mt-3 flex-1 space-y-1 text-xs text-muted-foreground">
+                  <li>{ledgersLine(quota.maxLedgers, t, formatCount)}</li>
                   <li>
-                    {quota.maxLedgers === -1
-                      ? t("userSettings.unlimitedLedgers")
-                      : t("userSettings.includedLedgers", {
-                          count: quota.maxLedgers,
-                          formattedCount: formatCount(quota.maxLedgers),
-                        })}
-                  </li>
-                  <li>
-                    {quota.maxCollaboratorsPerLedger === -1
-                      ? t("userSettings.unlimitedCollaborators")
-                      : t("userSettings.collaboratorsPerLedger", {
-                          count: quota.maxCollaboratorsPerLedger,
-                          formattedCount: formatCount(
-                            quota.maxCollaboratorsPerLedger,
-                          ),
-                        })}
+                    {collaboratorsLine(
+                      quota.maxCollaboratorsPerLedger,
+                      t,
+                      formatCount,
+                    )}
                   </li>
                   <li>
                     {quota.aiCfoTokensMax === -1
                       ? t("userSettings.unlimited")
-                      : t("userSettings.aiTokensPerMonth", {
-                          count: formatCount(quota.aiCfoTokensMax),
-                        })}
+                      : aiTokensLine(quota.aiCfoTokensMax, t, formatCount)}
                   </li>
                 </ul>
               )}
@@ -228,8 +217,7 @@ export function PlanPicker({
                   disabled={!actionable}
                   aria-disabled={!actionable}
                   onClick={() => {
-                    if (actionable && card.key)
-                      onChoose(card.key, cycle, choice);
+                    if (actionable && card.key) onChoose(card.key, cycle);
                   }}
                 >
                   {t(CHOICE_LABEL_KEYS[choice])}

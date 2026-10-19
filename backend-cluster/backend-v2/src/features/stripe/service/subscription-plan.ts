@@ -1,11 +1,37 @@
 import type Stripe from "stripe";
-import { SUBSCRIPTION_CONFIG, SubscriptionTier } from "./stripe";
+import {
+  BILLING_CLIENT_ID,
+  SUBSCRIPTION_CONFIG,
+  SubscriptionTier,
+} from "./stripe";
 
 export type ClientSubscription = Stripe.Subscription & { clientId: string };
 
 // Bump when period verification rules change; older cached values must be re-read.
 // 2: a past-due subscription counts as paid, and the tier is stored with it.
 export const SUBSCRIPTION_PERIOD_VERIFICATION_VERSION = 2;
+
+/**
+ * A billing binding whose cached period this version verified and that has
+ * not ended yet. Both cached-tier paths use this one test, so a version bump
+ * invalidates them together.
+ */
+export function holdsVerifiedPeriod(
+  binding: {
+    clientId: string;
+    periodVerificationVersion?: number | null;
+    currentPeriodEnd?: Date | null;
+  },
+  now = Date.now(),
+): boolean {
+  return (
+    binding.clientId === BILLING_CLIENT_ID &&
+    binding.periodVerificationVersion ===
+      SUBSCRIPTION_PERIOD_VERIFICATION_VERSION &&
+    !!binding.currentPeriodEnd &&
+    binding.currentPeriodEnd.getTime() > now
+  );
+}
 
 /**
  * When Stripe next retries a past-due renewal (unix seconds), read from the

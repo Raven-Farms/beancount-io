@@ -5,6 +5,14 @@ import type { PaidCustomer } from "../data/paid-customer-model/types";
 import type { PlanConfig } from "../service/stripe";
 import { customerId, holdsPaidTier } from "../service/subscription-plan";
 
+/** What every plan-change operation reads: Stripe, the billing bindings and the clock. */
+export interface PlanChangeDeps {
+  stripe: Stripe;
+  models: Pick<IModels, "paidCustomer">;
+  db: DbExecutor;
+  now?: () => Date;
+}
+
 export interface ActivePlan {
   subscription: Stripe.Subscription;
   item: Stripe.SubscriptionItem;
@@ -19,15 +27,7 @@ export interface ActivePlan {
  * subscription it would move. More than one entry is a duplicate purchase.
  */
 export async function loadActivePlans(
-  {
-    stripe,
-    models,
-    db,
-  }: {
-    stripe: Stripe;
-    models: Pick<IModels, "paidCustomer">;
-    db: DbExecutor;
-  },
+  { stripe, models, db }: PlanChangeDeps,
   userId: string,
   clientId: string,
   plans: PlanConfig[],
@@ -56,7 +56,9 @@ export async function loadActivePlans(
       continue;
     }
     for (const item of subscription.items.data) {
-      const plan = plans.find((candidate) => candidate.priceId === item.price.id);
+      const plan = plans.find(
+        (candidate) => candidate.priceId === item.price.id,
+      );
       if (plan) active.push({ subscription, item, plan });
     }
   }

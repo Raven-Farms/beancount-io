@@ -58,6 +58,11 @@ import {
   ScheduledChangeBody,
   type SplitChoice,
 } from "./scheduled-change-body";
+import {
+  aiTokensLine,
+  collaboratorsLine,
+  ledgersLine,
+} from "./tier-quota-summary";
 
 export interface PlanChangeTarget {
   tier: SubscriptionTier;
@@ -118,6 +123,7 @@ export function PlanChangeSheet({
   onClose: () => void;
   onCheckout: (target: PlanChangeTarget) => void;
   onManageBilling: () => void;
+  /** Refetch the plan: the Refresh button after a bank approval elsewhere. */
   onChanged: () => void;
   /** A Checkout session is being created; confirming again would open two. */
   checkoutPending?: boolean;
@@ -135,15 +141,16 @@ export function PlanChangeSheet({
   const targetPriceId = target
     ? cyclePrice(target.tier, target.cycle).priceId
     : null;
+  const targetInfo = target ? tierInfoByKey(target.tier) : null;
   const changeParams = (
     kind: PlanChangeKind | null,
     cycle: BillingCycle | undefined = target?.cycle,
   ) =>
-    target && kind && cycle
+    target && targetInfo && kind && cycle
       ? {
           kind,
           from: planValue(currentTier, currentCycle),
-          to: planValue(tierInfoByKey(target.tier).userTier, cycle),
+          to: planValue(targetInfo.userTier, cycle),
           surface: target.surface,
         }
       : null;
@@ -252,7 +259,6 @@ export function PlanChangeSheet({
             date: formatDate(result.effectiveAt ?? chosen.effectiveAt ?? ""),
           }),
         );
-        onChanged();
         onClose();
       } else if (result?.status === "ACTIVE") {
         toast.success(
@@ -267,7 +273,6 @@ export function PlanChangeSheet({
               }
             : undefined,
         );
-        onChanged();
         onClose();
       } else if (result?.status === "REQUIRES_ACTION") {
         if (params) track("payment_action_required", params);
@@ -293,22 +298,20 @@ export function PlanChangeSheet({
       ? (outcome.refusal ?? PlanChangeRefusal.CurrentPlan)
       : (planChange?.refusal ?? null);
 
-  const gained = target
+  const gained = targetInfo
     ? gainedLines(
         quotaByUserTier[currentTier],
-        quotaByUserTier[tierInfoByKey(target.tier).userTier],
+        quotaByUserTier[targetInfo.userTier],
         t,
         formatCount,
       ).concat(
-        featuresGained(currentTier, tierInfoByKey(target.tier).userTier).map(
-          (key) => t(key),
-        ),
+        featuresGained(currentTier, targetInfo.userTier).map((key) => t(key)),
       )
     : [];
 
   const currentInfo = getTierInfo(currentTier);
 
-  if (!target) return null;
+  if (!target || !targetInfo) return null;
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -384,12 +387,9 @@ export function PlanChangeSheet({
             splitChoice={splitChoice}
             onSplitChoice={setSplitChoice}
             currentName={currentInfo ? t(currentInfo.labelKey) : ""}
-            targetName={t(tierInfoByKey(target.tier).labelKey)}
+            targetName={t(targetInfo.labelKey)}
             targetCycle={target.cycle}
-            lostFeatureKeys={featuresLost(
-              currentTier,
-              tierInfoByKey(target.tier).userTier,
-            )}
+            lostFeatureKeys={featuresLost(currentTier, targetInfo.userTier)}
             ledgersUsed={ledgersUsed}
             busy={changing}
             t={t}
@@ -494,31 +494,13 @@ function gainedLines(
     after === -1 ? before !== -1 : before !== undefined && after > before;
   const lines: string[] = [];
   if (grows(from?.maxLedgers, to.maxLedgers)) {
-    lines.push(
-      to.maxLedgers === -1
-        ? t("userSettings.unlimitedLedgers")
-        : t("userSettings.includedLedgers", {
-            count: to.maxLedgers,
-            formattedCount: formatCount(to.maxLedgers),
-          }),
-    );
+    lines.push(ledgersLine(to.maxLedgers, t, formatCount));
   }
   if (grows(from?.maxCollaboratorsPerLedger, to.maxCollaboratorsPerLedger)) {
-    lines.push(
-      to.maxCollaboratorsPerLedger === -1
-        ? t("userSettings.unlimitedCollaborators")
-        : t("userSettings.collaboratorsPerLedger", {
-            count: to.maxCollaboratorsPerLedger,
-            formattedCount: formatCount(to.maxCollaboratorsPerLedger),
-          }),
-    );
+    lines.push(collaboratorsLine(to.maxCollaboratorsPerLedger, t, formatCount));
   }
   if (grows(from?.aiCfoTokensMax, to.aiCfoTokensMax)) {
-    lines.push(
-      t("userSettings.aiTokensPerMonth", {
-        count: formatCount(to.aiCfoTokensMax),
-      }),
-    );
+    lines.push(aiTokensLine(to.aiCfoTokensMax, t, formatCount));
   }
   return lines;
 }

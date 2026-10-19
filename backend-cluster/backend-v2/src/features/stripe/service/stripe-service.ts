@@ -2,10 +2,9 @@ import Stripe from "stripe";
 import {
   customerId,
   highestTier,
-  SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
+  holdsVerifiedPeriod,
 } from "./subscription-plan";
 import {
-  BILLING_CLIENT_ID,
   SUBSCRIPTION_CONFIG,
   SubscriptionTier,
 } from "@/features/stripe/service/stripe";
@@ -318,17 +317,12 @@ export class StripeService implements IStripeService {
   }
 
   async lastVerifiedTier(userId: string): Promise<SubscriptionTier | null> {
-    const now = Date.now();
     const bindings = await this.models.paidCustomer.findByUserId(
       this.postgresDb,
       userId,
     );
     const tiers = bindings.flatMap((binding) =>
-      binding.clientId === BILLING_CLIENT_ID &&
-      binding.periodVerificationVersion ===
-        SUBSCRIPTION_PERIOD_VERIFICATION_VERSION &&
-      binding.currentPeriodEnd &&
-      binding.currentPeriodEnd.getTime() > now &&
+      holdsVerifiedPeriod(binding) &&
       binding.periodTier &&
       Object.values(SubscriptionTier).includes(
         binding.periodTier as SubscriptionTier,

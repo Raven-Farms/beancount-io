@@ -43,6 +43,12 @@ export function getTierInfo(tier: UserTier): TierInfo | null {
   return TIERS.find((t) => t.userTier === tier) ?? null;
 }
 
+/** The message key naming a tier's plan, Free and Enterprise included. */
+export function planLabelKey(tier: UserTier): string {
+  if (tier === "ENTERPRISE") return "userSettings.enterprisePlan";
+  return getTierInfo(tier)?.labelKey ?? "userSettings.freePlan";
+}
+
 export function getUpgradeTiers(tier: UserTier): TierInfo[] {
   const currentRank = TIER_RANK[tier] ?? 0;
   return TIERS.filter((t) => t.rank > currentRank);

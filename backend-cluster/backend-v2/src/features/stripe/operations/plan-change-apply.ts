@@ -1,6 +1,4 @@
 import type Stripe from "stripe";
-import type { DbExecutor } from "@/drizzle/drizzle";
-import type { IModels } from "@/foundation/models";
 import { ValidationError } from "@/shared/errors";
 import { logger } from "@/shared/logger";
 import {
@@ -16,7 +14,7 @@ import {
   subscriptionPeriodEnd,
   SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
 } from "../service/subscription-plan";
-import { loadActivePlans } from "./current-plan";
+import { loadActivePlans, type PlanChangeDeps } from "./current-plan";
 import { releaseSchedule, scheduleChange } from "./plan-change-schedule";
 
 const applyLogger = logger.child({ module: "plan-change-apply" });
@@ -47,13 +45,6 @@ export interface PlanChangeResultView {
   currentPeriodEnd: Date | null;
   /** With SCHEDULED: when the new price takes over; nothing is charged now. */
   effectiveAt: Date | null;
-}
-
-export interface PlanChangeApplyDeps {
-  stripe: Stripe;
-  models: Pick<IModels, "paidCustomer">;
-  db: DbExecutor;
-  now?: () => Date;
 }
 
 export interface PlanChangeApplyOptions {
@@ -121,7 +112,7 @@ async function invoicePaymentIntent(
  * success — the item must actually carry the new price with nothing pending.
  */
 export async function applyPlanChange(
-  deps: PlanChangeApplyDeps,
+  deps: PlanChangeDeps,
   userId: string,
   clientId: string,
   targetPriceId: string,

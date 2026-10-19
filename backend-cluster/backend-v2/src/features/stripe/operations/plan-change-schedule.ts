@@ -4,7 +4,7 @@ import { ValidationError } from "@/shared/errors";
 import { REFUSAL_MESSAGES } from "../service/plan-change";
 import { SUBSCRIPTION_CONFIG, type PlanConfig } from "../service/stripe";
 import { expandableId } from "../service/subscription-plan";
-import { loadActivePlans } from "./current-plan";
+import { loadActivePlans, type PlanChangeDeps } from "./current-plan";
 
 const scheduleLogger = logger.child({ module: "plan-change-schedule" });
 
@@ -174,7 +174,7 @@ export function pendingChange(
  * is a success, so a repeated undo is harmless.
  */
 export async function cancelScheduledChange(
-  deps: Parameters<typeof loadActivePlans>[0],
+  deps: PlanChangeDeps,
   userId: string,
   clientId: string,
 ): Promise<{ success: boolean; message: string }> {

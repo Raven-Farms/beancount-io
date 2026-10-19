@@ -1,7 +1,7 @@
 import { Crown } from "lucide-react";
 import { Badge } from "@/common/components/ui/badge";
 import { type UserTier } from "@/common/hooks/use-user-limits";
-import { getTierInfo } from "@/common/lib/subscription/tier-config";
+import { planLabelKey } from "@/common/lib/subscription/tier-config";
 import { type TierQuota } from "@/common/hooks/use-all-tier-quotas";
 import { useQuotaNumberFormat } from "./use-quota-number-format";
 import { describeTierQuota } from "./tier-quota-summary";
@@ -33,17 +33,9 @@ export function CurrentPlanBanner({
 }) {
   const formatCount = useQuotaNumberFormat();
   const formatMoney = useMoneyFormat();
-  const tierInfo = getTierInfo(tier);
   const isFree = tier === "FREE";
   const isEnterprise = tier === "ENTERPRISE";
-
-  const tierName = isFree
-    ? t("userSettings.freePlan")
-    : isEnterprise
-      ? t("userSettings.enterprisePlan")
-      : tierInfo
-        ? t(tierInfo.labelKey)
-        : t("userSettings.freePlan");
+  const tierName = t(planLabelKey(tier));
 
   const featureSummary = tierQuota
     ? describeTierQuota(tierQuota, t, formatCount)

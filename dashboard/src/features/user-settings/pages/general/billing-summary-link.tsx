@@ -3,7 +3,7 @@ import { ArrowRight, CreditCard } from "lucide-react";
 import { Card, CardContent } from "@/common/components/ui/card";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { useUserLimits } from "@/common/hooks/use-user-limits";
-import { getTierInfo } from "@/common/lib/subscription/tier-config";
+import { planLabelKey } from "@/common/lib/subscription/tier-config";
 
 /**
  * The plan in one line on Settings → General, linking to Billing. Pages that
@@ -13,13 +13,7 @@ import { getTierInfo } from "@/common/lib/subscription/tier-config";
 export function BillingSummaryLink() {
   const { t } = useTranslations();
   const { tier } = useUserLimits();
-  const tierInfo = getTierInfo(tier);
-  const planName =
-    tier === "ENTERPRISE"
-      ? t("userSettings.enterprisePlan")
-      : tierInfo
-        ? t(tierInfo.labelKey)
-        : t("userSettings.freePlan");
+  const planName = t(planLabelKey(tier));
   return (
     <Card>
       <CardContent className="flex items-center justify-between gap-4 py-4">

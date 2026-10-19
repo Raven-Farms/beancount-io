@@ -2,7 +2,7 @@ import { refreshSubscriptionPeriods } from "../operations/refresh-subscription-p
 import {
   pastDueRetry,
   subscriptionTier,
-  SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
+  holdsVerifiedPeriod,
 } from "./subscription-plan";
 import type Stripe from "stripe";
 import type { DbExecutor } from "@/drizzle/drizzle";
@@ -15,12 +15,7 @@ import {
   userResource,
 } from "@/server/api/authorization";
 import { logger } from "@/shared/logger";
-import {
-  BILLING_CLIENT_ID,
-  SUBSCRIPTION_CONFIG,
-  TIER_LIMITS,
-  SubscriptionTier,
-} from "./stripe";
+import { SUBSCRIPTION_CONFIG, TIER_LIMITS, SubscriptionTier } from "./stripe";
 import type { CancellationReason, IStripeService } from "./stripe-service";
 import type {
   PaymentMethodSummaryView,
@@ -225,12 +220,8 @@ export class SubscriptionService implements ISubscriptionService {
         );
       if (
         cached?.userId === userId &&
-        cached.clientId === BILLING_CLIENT_ID &&
         cached.stripeCustomerId &&
-        cached.periodVerificationVersion ===
-          SUBSCRIPTION_PERIOD_VERIFICATION_VERSION &&
-        cached.currentPeriodEnd &&
-        cached.currentPeriodEnd.getTime() > Date.now()
+        holdsVerifiedPeriod(cached)
       ) {
         return { hasActiveSubscription: true, subscriptions: [] };
       }
@@ -279,6 +270,11 @@ export class SubscriptionService implements ISubscriptionService {
     };
     const subscriptionsResults = await Promise.allSettled(
       filteredSubscriptions.map(async (subscription) => {
+        // Never throws, so it can run alongside the item lookups.
+        const paymentMethod = this.stripe.defaultCard(
+          subscription.clientId,
+          subscription,
+        );
         const itemsResults = await Promise.allSettled(
           subscription.items.data.map(async (item) => {
             const { price } = item;
@@ -339,10 +335,7 @@ export class SubscriptionService implements ISubscriptionService {
             : undefined,
           cancelAtPeriodEnd: subscription.cancel_at_period_end,
           items,
-          paymentMethod: await this.stripe.defaultCard(
-            subscription.clientId,
-            subscription,
-          ),
+          paymentMethod: await paymentMethod,
           scheduledChange: pendingChange(
             subscription,
             SUBSCRIPTION_CONFIG[subscription.clientId]?.plans ?? [],

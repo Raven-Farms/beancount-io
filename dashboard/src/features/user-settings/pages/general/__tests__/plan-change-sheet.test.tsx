@@ -495,7 +495,8 @@ describe("PlanChangeSheet", () => {
           expect.stringMatching(/^userSettings\.planChangeScheduled/),
         ),
       );
-      expect(onChanged).toHaveBeenCalled();
+      // useChangePlan refetches the plan itself; a second refetch is waste.
+      expect(onChanged).not.toHaveBeenCalled();
       expect(onClose).toHaveBeenCalled();
       expect(
         mockTrack.mock.calls.filter(

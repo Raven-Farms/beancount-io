@@ -1,6 +1,4 @@
 import type Stripe from "stripe";
-import type { DbExecutor } from "@/drizzle/drizzle";
-import type { IModels } from "@/foundation/models";
 import { logger } from "@/shared/logger";
 import {
   classifyPlanChange,
@@ -18,7 +16,7 @@ import {
   type TierLimits,
 } from "../service/stripe";
 import { customerId } from "../service/subscription-plan";
-import { loadActivePlans } from "./current-plan";
+import { loadActivePlans, type PlanChangeDeps } from "./current-plan";
 import {
   pendingChange,
   type ScheduledChangeView,
@@ -63,13 +61,6 @@ export interface PlanChangePreviewView {
   replacesScheduledChange: ScheduledChangeView | null;
   /** Whether this choice withdraws a pending cancellation. */
   withdrawsCancellation: boolean;
-}
-
-export interface PlanChangePreviewDeps {
-  stripe: Stripe;
-  models: Pick<IModels, "paidCustomer">;
-  db: DbExecutor;
-  now?: () => Date;
 }
 
 const LIMIT_KEYS: readonly (keyof TierLimits)[] = [
@@ -177,6 +168,13 @@ function base(
   };
 }
 
+function refused(
+  view: Omit<PlanChangePreviewView, "kind" | "refusal" | "effect">,
+  refusal: PlanChangeRefusal,
+): PlanChangePreviewView {
+  return { ...view, kind: null, refusal, effect: null };
+}
+
 /**
  * Preview a plan change for one user against one billing client.
  *
@@ -185,7 +183,7 @@ function base(
  * time the caller hands back to `changePlan`.
  */
 export async function previewPlanChange(
-  deps: PlanChangePreviewDeps,
+  deps: PlanChangeDeps,
   userId: string,
   clientId: string,
   targetPriceId: string,
@@ -194,12 +192,10 @@ export async function previewPlanChange(
 
   const { stripe } = deps;
   const now = deps.now?.() ?? new Date();
-  const { active } = await loadActivePlans(deps, userId, clientId, plans);
-
-  const { amount: targetAmount, currency } = await listPrice(
-    stripe,
-    targetPriceId,
-  );
+  const [{ active }, { amount: targetAmount, currency }] = await Promise.all([
+    loadActivePlans(deps, userId, clientId, plans),
+    listPrice(stripe, targetPriceId),
+  ]);
 
   if (active.length > 1) {
     // Two paid subscriptions on one customer is a duplicate purchase; never
@@ -207,12 +203,7 @@ export async function previewPlanChange(
     previewLogger.warn("Plan change refused: several active subscriptions", {
       count: active.length,
     });
-    return {
-      ...base(targetPriceId, currency),
-      kind: null,
-      refusal: "MULTIPLE_SUBSCRIPTIONS",
-      effect: null,
-    };
+    return refused(base(targetPriceId, currency), "MULTIPLE_SUBSCRIPTIONS");
   }
 
   const current = active[0] ?? null;
@@ -226,35 +217,29 @@ export async function previewPlanChange(
   };
 
   if (current?.subscription.status === "past_due") {
-    return { ...shared, kind: null, refusal: "PAST_DUE", effect: null };
+    return refused(shared, "PAST_DUE");
   }
   if ("refusal" in classification) {
-    return {
-      ...shared,
-      kind: null,
-      refusal: classification.refusal,
-      effect: null,
-    };
+    return refused(shared, classification.refusal);
   }
+  const { kind } = classification;
+  const effect = PLAN_CHANGE_EFFECT[kind];
   // A change leaves one pending change at most: it replaces a scheduled one
   // and withdraws a pending cancellation, and the preview says so.
   const pending = current ? pendingChange(current.subscription, plans) : null;
   const change = {
     ...shared,
+    kind,
+    refusal: null,
+    effect,
     replacesScheduledChange:
       pending && pending.priceId !== targetPriceId ? pending : null,
     withdrawsCancellation: current?.subscription.cancel_at_period_end ?? false,
   };
 
-  const { kind } = classification;
-  const effect = PLAN_CHANGE_EFFECT[kind];
-
   if (!current) {
     return {
       ...change,
-      kind,
-      refusal: null,
-      effect,
       amountDueToday: targetAmount,
       effectiveAt: now,
       nextChargeAt: addInterval(now, target.interval),
@@ -262,17 +247,13 @@ export async function previewPlanChange(
   }
 
   const periodEnd = new Date(current.item.current_period_end * 1000);
-  const paymentMethod = await defaultCard(stripe, current.subscription);
 
   if (effect === "SCHEDULED") {
     return {
       ...change,
-      kind,
-      refusal: null,
-      effect,
       effectiveAt: periodEnd,
       nextChargeAt: periodEnd,
-      paymentMethod,
+      paymentMethod: await defaultCard(stripe, current.subscription),
       alternativePriceId:
         kind === "SPLIT"
           ? sameTierOnCycle(plans, target.tier, current.plan.interval)
@@ -281,15 +262,18 @@ export async function previewPlanChange(
   }
 
   const prorationDate = Math.floor(now.getTime() / 1000);
-  const invoice = await stripe.invoices.createPreview({
-    customer: customerId(current.subscription.customer),
-    subscription: current.subscription.id,
-    subscription_details: {
-      items: [{ id: current.item.id, price: targetPriceId }],
-      proration_behavior: "always_invoice",
-      proration_date: prorationDate,
-    },
-  });
+  const [paymentMethod, invoice] = await Promise.all([
+    defaultCard(stripe, current.subscription),
+    stripe.invoices.createPreview({
+      customer: customerId(current.subscription.customer),
+      subscription: current.subscription.id,
+      subscription_details: {
+        items: [{ id: current.item.id, price: targetPriceId }],
+        proration_behavior: "always_invoice",
+        proration_date: prorationDate,
+      },
+    }),
+  ]);
   const creditApplied = invoice.lines.data
     .filter((line) => line.amount < 0)
     .reduce((total, line) => total - line.amount, 0);
@@ -297,9 +281,6 @@ export async function previewPlanChange(
 
   return {
     ...change,
-    kind,
-    refusal: null,
-    effect,
     currency: invoice.currency,
     amountDueToday: invoice.amount_due,
     creditApplied,

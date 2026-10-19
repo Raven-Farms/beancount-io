@@ -438,16 +438,16 @@ describe("Plan change through the sheet", () => {
     return user;
   }
 
-  it("charges at the previewed proration time and refreshes plan and limits once it applies", async () => {
+  it("charges at the previewed proration time and says so once it applies", async () => {
     mockChangePlan.mockResolvedValue({
       data: { changePlan: { status: "ACTIVE", newTier: "GROWTH" } },
     });
 
     await confirmGrowthMonthly();
 
+    // The plan and limits refresh through useChangePlan's refetchQueries
+    // (use-plan-change.test.ts), not a second refetch from the page.
     await waitFor(() => {
-      expect(refetchSubscription).toHaveBeenCalled();
-      expect(refetchUserLimits).toHaveBeenCalled();
       expect(mockToastSuccess).toHaveBeenCalledWith(
         "userSettings.subscriptionUpgraded",
         undefined,
@@ -569,7 +569,6 @@ describe("Plan change through the sheet", () => {
         "userSettings.planChangeScheduled",
       ),
     );
-    expect(refetchSubscription).toHaveBeenCalled();
   });
 
   it("sends a payment the bank must approve to Stripe's page instead of calling it done", async () => {

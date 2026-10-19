@@ -4,7 +4,7 @@ import { Badge } from "@/common/components/ui/badge";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { useUserLimits } from "@/common/hooks/use-user-limits";
 import { useAiCfoUsage } from "@/common/hooks/use-ai-cfo-usage";
-import { TIER_RANK, TIERS } from "@/common/lib/subscription/tier-config";
+import { getUpgradeTiers } from "@/common/lib/subscription/tier-config";
 import { UpgradePromptLink } from "@/common/components/upgrade-prompt-link";
 import { cn } from "@/common/lib/utils/utils";
 import { useAllTierQuotas } from "@/common/hooks/use-all-tier-quotas";
@@ -29,8 +29,7 @@ export function AiCfoUpgradePanel({ className }: { className?: string } = {}) {
   // Hide for unlimited (enterprise) users
   if (isUnlimited) return null;
 
-  const currentRank = TIER_RANK[tier] ?? 0;
-  const availableTiers = TIERS.filter((t) => t.rank > currentRank);
+  const availableTiers = getUpgradeTiers(tier);
 
   const percentage = Math.min((aiCfoTokensUsed / aiCfoTokensMax) * 100, 100);
   if (percentage < 80) return null;

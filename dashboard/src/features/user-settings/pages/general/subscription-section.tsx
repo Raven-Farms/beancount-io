@@ -54,20 +54,8 @@ import { useKeepCurrentPlan } from "@/features/user-settings/hooks/use-keep-curr
 import { planValue } from "@/common/lib/subscription/plan-change";
 import { track, type CancelReason } from "@/common/analytics";
 import type { PlanInterval } from "@/common/lib/subscription/plan-change";
-import type { UserTier } from "@/common/hooks/use-user-limits";
 import { BillingSection } from "./subscription-billing-section";
 import { ResumeSubscriptionDialog } from "./subscription-dialogs";
-
-const TIER_KEYS: Partial<Record<UserTier, SubscriptionTier>> = {
-  PREMIUM: "premium",
-  GROWTH: "growth",
-  ORGANIZATION: "organization",
-};
-const USER_TIERS: Record<SubscriptionTier, UserTier> = {
-  premium: "PREMIUM",
-  growth: "GROWTH",
-  organization: "ORGANIZATION",
-};
 
 function SubscriptionSkeleton() {
   return (
@@ -167,8 +155,6 @@ export function SubscriptionSection({
     initialTarget,
   );
 
-  const stripeConfig = stripePlanConfig;
-
   const upgradeTiers = useMemo(() => getUpgradeTiers(tier), [tier]);
 
   const quotaByUserTier = useMemo(() => {
@@ -179,15 +165,16 @@ export function SubscriptionSection({
     return map;
   }, [tierQuotas]);
 
-  const handleUpgradeCheckout = async (
-    tierKey: SubscriptionTier,
-    cycle: BillingCycle,
-  ) => {
+  const startCheckout = async (target: PlanChangeTarget) => {
+    track("checkout_started", {
+      surface: target.surface,
+      target_tier: tierInfoByKey(target.tier).userTier,
+    });
     try {
       const response = await createSubscriptionSession({
         variables: {
-          clientId: stripeConfig.clientId,
-          priceId: cyclePrice(tierKey, cycle).priceId,
+          clientId: stripePlanConfig.clientId,
+          priceId: cyclePrice(target.tier, target.cycle).priceId,
         },
       });
       const result = response.data?.createSubscriptionSession;
@@ -214,7 +201,7 @@ export function SubscriptionSection({
       : currentPrice?.interval === "month"
         ? "month"
         : null;
-  const currentTierKey = TIER_KEYS[tier] ?? null;
+  const currentTierKey = getTierInfo(tier)?.key ?? null;
   const currentCycle: BillingCycle | null =
     currentInterval === "year"
       ? "yearly"
@@ -229,14 +216,6 @@ export function SubscriptionSection({
   // Every immediate choice confirms in the sheet, which previews the charge.
   const handleChoose = (tierKey: SubscriptionTier, cycle: BillingCycle) =>
     setSheetTarget({ tier: tierKey, cycle, surface: "settings_billing" });
-
-  const startCheckout = (target: PlanChangeTarget) => {
-    track("checkout_started", {
-      surface: target.surface,
-      target_tier: USER_TIERS[target.tier],
-    });
-    return handleUpgradeCheckout(target.tier, target.cycle);
-  };
 
   const isLoading =
     limitsLoading || subscriptionLoading || aiCfoLoading || quotasLoading;
@@ -452,7 +431,9 @@ export function SubscriptionSection({
           onSheetClose?.();
         }}
         onCheckout={(target) => void startCheckout(target)}
-        onManageBilling={() => void handleManageBilling(stripeConfig.clientId)}
+        onManageBilling={() =>
+          void handleManageBilling(stripePlanConfig.clientId)
+        }
         onChanged={() => {
           void refetchSubscription();
           void refetchUserLimits();

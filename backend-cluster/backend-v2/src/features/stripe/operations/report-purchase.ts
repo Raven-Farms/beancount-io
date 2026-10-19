@@ -5,6 +5,7 @@ import type { DbExecutor } from "@/drizzle/drizzle";
 import type { IModels } from "@/foundation/models";
 import { logger } from "@/shared/logger";
 import type { PlanConfig } from "../service/stripe";
+import { expandableId } from "../service/subscription-plan";
 
 const reportLogger = logger.child({ module: "report-purchase" });
 
@@ -66,7 +67,7 @@ export function purchasePayload(
   // A plan invoice has one or two lines, well inside the webhook's first page.
   const items = invoice.lines.data.flatMap((line) => {
     const price = line.pricing?.price_details?.price;
-    const priceId = typeof price === "string" ? price : price?.id;
+    const priceId = price ? expandableId(price) : undefined;
     const plan = plans.find((candidate) => candidate.priceId === priceId);
     // The credit for the old plan is negative; the item is what was bought.
     if (!plan || line.amount <= 0) return [];

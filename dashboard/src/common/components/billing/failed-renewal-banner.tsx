@@ -5,7 +5,7 @@ import { Button } from "@/common/components/ui/button";
 import { useRootContext } from "@/common/hooks/use-root-context";
 import { useTranslations } from "@/common/hooks/use-translations";
 import type { UserTier } from "@/common/hooks/use-user-limits";
-import { getTierInfo } from "@/common/lib/subscription/tier-config";
+import { planLabelKey } from "@/common/lib/subscription/tier-config";
 import { useReactNativeContext } from "@/common/providers/react-native-bridge-provider/react-native-bridge-context";
 import { useSubscriptionPortal } from "@/features/user-settings/hooks/use-subscription-portal";
 import { useBillingDateFormat } from "@/features/user-settings/pages/general/use-money-format";
@@ -54,10 +54,7 @@ export function FailedRenewalBanner() {
   );
   if (skip || !pastDue?.nextPaymentAttempt) return null;
 
-  const tierInfo = getTierInfo(tier);
-  const plan = tierInfo
-    ? t(tierInfo.labelKey)
-    : t("userSettings.enterprisePlan");
+  const plan = t(planLabelKey(tier));
   const card = pastDue.paymentMethod
     ? `${pastDue.paymentMethod.brand} •••• ${pastDue.paymentMethod.last4}`
     : t("common.failedRenewalYourCard");
