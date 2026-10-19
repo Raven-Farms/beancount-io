@@ -43,12 +43,53 @@ def run(op: str, argv: list[str]) -> int:
             return original(entries, scoped, conversion, price_map)
 
         upstream.render_mini_balances = in_scope
+        named = _named_search(upstream, argv)
         try:
             return _invoke(upstream, op, argv)
         finally:
             upstream.render_mini_balances = original
+            for attribute, original_fn in named:
+                setattr(upstream, attribute, original_fn)
     finally:
         upstream.loader = plain_loader
+
+
+def _named_search(upstream: Any, argv: list[str]) -> list[tuple[str, Any]]:
+    """Search locations under the ledger path as the command line named it.
+
+    The loader reads the named path (a symlink stays a symlink), so entries
+    carry it — but `context` and `region` build a bare line's location from
+    click's resolved FILENAME, the real path, and the text compare fails
+    (w5/767). `linked` never broke: it searches `options_map["filename"]`,
+    which is the named path already. Each search is remapped the way the
+    load was; an explicit `file:line` passes through remapped too, which can
+    only help it agree with the entries.
+    """
+    import functools
+
+    patched: list[tuple[str, Any]] = []
+    render = getattr(upstream, "render_file_context", None)
+    if render is not None:
+
+        @functools.wraps(render)
+        def render_named(entries: Any, options_map: Any, search_filename: Any, lineno: Any) -> Any:
+            return render(entries, options_map, _as_named(search_filename, argv), lineno)
+
+        upstream.render_file_context = render_named
+        patched.append(("render_file_context", render))
+    resolve = getattr(upstream, "resolve_region_to_entries", None)
+    if resolve is not None:
+
+        @functools.wraps(resolve)
+        def resolve_named(entries: Any, filename: Any, region: Any) -> Any:
+            search_filename, first_lineno, last_lineno = region
+            if search_filename is None:
+                region = (_as_named(filename, argv), first_lineno, last_lineno)
+            return resolve(entries, filename, region)
+
+        upstream.resolve_region_to_entries = resolve_named
+        patched.append(("resolve_region_to_entries", resolve))
+    return patched
 
 
 class _ManagedLoader:
