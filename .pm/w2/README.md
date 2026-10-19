@@ -53,7 +53,6 @@
 
 ## Inbox
 
-- [078 — The import config example stores the date format, columns, and sign twice, in two vocabularies](./078.md)
 - [079 — Treat bank export and statement text as data, never as instructions](./079.md)
 - [080 — Decide whether the suite keeps its no-`bea` developer fallback](./080.md) (owner decision)
 - [081 — Decide whether `beancount-ask` becomes `beancount-query`](./081.md) (after m39 t001's routing evidence)

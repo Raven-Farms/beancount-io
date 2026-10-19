@@ -68,7 +68,6 @@ Config block format — one `source` stanza per export source:
 ;; beancount-import config
 ;; source: chase-checking
 ;;   account: Assets:Bank:Checking
-;;   format: csv  columns: date=1,desc=2,amount=3  date_format: MDY  sign: negative=outflow
 ;;   csv_mapping: date=Date,narration=Description,amount=Amount,sign=bank
 ;;   date_format: %m/%d/%Y
 ;;   rules: ./import-rules/chase-checking.toml
@@ -76,7 +75,9 @@ Config block format — one `source` stanza per export source:
 ;;   imports: 3
 ;; source: amex-card
 ;;   account: Liabilities:CreditCard:Amex
-;;   format: csv  columns: date=1,desc=2,debit=3,credit=4  date_format: MDY  sign: debit=outflow
+;;   csv_mapping: date=Date,narration=Description,debit=Debit,credit=Credit
+;;   date_format: %m/%d/%Y
+;;   rules: ./import-rules/amex-card.toml
 ;;   append_target: ./transactions/2026.beancount
 ;;   imports: 1
 ;; source: other-bank
@@ -86,7 +87,7 @@ Config block format — one `source` stanza per export source:
 ;;   imports: 1
 ```
 
-Bump `imports:` only when entries are written (a fully-deduped no-op changes nothing). For sources requiring custom normalization, **when it reaches 3+, suggest once**: "you've imported this source N times — want me to codify it as a tested beangulp importer via `beancount-importer-author`?" Simple CSV mappings already provide repeatable imports and need no graduation nudge. For CSV, also record the exact `csv_mapping:` including `sign=bank|ledger`, `date_format:` as a strptime format, and durable `rules:` path. These supplement the human-readable source settings, because `bea` does not remember the sign (beancount-init's `references/bea-cli.md`, Version notes).
+Bump `imports:` only when entries are written (a fully-deduped no-op changes nothing). For sources requiring custom normalization, **when it reaches 3+, suggest once**: "you've imported this source N times — want me to codify it as a tested beangulp importer via `beancount-importer-author`?" Simple CSV mappings already provide repeatable imports and need no graduation nudge. Each fact is stored once. A source the `bea` CSV mapper handles (chase-checking and amex-card above) records exactly what every `bea import` run is passed: `csv_mapping:` (with `sign=bank|ledger` for a single amount column; a `debit=…,credit=…` pair needs none), `date_format:` as a strptime format, and the durable `rules:` path, because `bea` does not remember the sign (beancount-init's `references/bea-cli.md`, Version notes). Every other source — OFX/QFX, QIF, or CSV the mapper cannot represent — records one `format:` line with its `columns`, date order (`MDY`/`DMY`), and `sign` rule (other-bank above, whose type column sets the sign). A stanza written before this convention may carry both forms; its `csv_mapping:` and `date_format:` win.
 
 ### 2. Normalize
 

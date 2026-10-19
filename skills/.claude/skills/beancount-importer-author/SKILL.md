@@ -48,7 +48,7 @@ Local ledger files only. If the ledger is hosted on Beancount.io and its MCP ser
 Need three things:
 
 1. **A sample export file** — no importer gets written without one; ask for a real (redacted is fine) sample.
-2. **The target account** — which ledger account this source feeds (`account()`'s return). If a `;; beancount-import config` block exists for this source (the graduation path), **read it as the spec** — schema defined in beancount-import's SKILL.md Discover section: it already holds the confirmed column mapping, sign convention, date format, and account — do not re-ask what the user already confirmed there.
+2. **The target account** — which ledger account this source feeds (`account()`'s return). If a `;; beancount-import config` block exists for this source (the graduation path), **read it as the spec** — schema defined in beancount-import's SKILL.md Discover section: it already holds the confirmed column mapping, sign convention, date format, and account (as `csv_mapping:` and `date_format:` for a source the CSV mapper handles, or the `format:` line otherwise) — do not re-ask what the user already confirmed there.
 3. **Where importers live** — existing `import.py` / `importers/` layout in the user's ledger repo; match its conventions. None yet? Propose `importers/<source>.py` + a minimal `import.py`.
 
 Inspect the sample's header + rows. Anything the config block doesn't already answer and the data can't prove (sign convention, MDY/DMY): **ask, never guess** — a guessed sign becomes a silently wrong importer.
