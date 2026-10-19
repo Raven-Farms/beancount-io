@@ -32,13 +32,13 @@
 
 ## Source + Goal linkage
 
-- **Source:** agentic-skill review of `skills/` at the user's request, 2026-10-18. "Options" in Beancount means `option` directives such as `operating_currency`, and the dashboard's settings section is literally `beancount-options-section`. `close` is also the directive that closes one account. `beancount-ask` (collides with `bea ask`) and `beancount-importer-author` were reviewed and are not renamed here: see [w2/081](../../081.md) for `ask`; `importer-author`'s rename would cost more than it gains.
+- **Source:** agentic-skill review of `skills/` at the user's request, 2026-10-18. "Options" in Beancount means `option` directives such as `operating_currency`, and the dashboard's settings section is literally `beancount-options-section`. `close` is also the directive that closes one account. `beancount-ask` (collides with `bea ask`) and `beancount-importer-author` were reviewed and are not renamed here: see [w2/081](../../done/081.md) for `ask`; `importer-author`'s rename would cost more than it gains.
 - **Goal linkage:** **A1 — Agent-native accounting.** A name that says what the skill does reduces misroutes and makes explicit `/` invocation guessable. **A3 — Community & distribution:** registry slugs are permanent once published.
 - **Expected outcome:** a user typing `/beancount-` sees `beancount-options-trades` and `beancount-close-month` and knows what each does. "Set my operating currency option" and "close my old card" stop reaching the wrong skill. Existing users upgrade with `git pull` plus `install` and nothing breaks.
 - **Why now:** ClawHub versions are immutable. [w6/m6](../../../w6/blocked/m6/README.md) will publish slugs `beancount-<name>` (its t005/t007) once its owner decision clears, and a slug published under the old names would stay forever. Renaming later also means migrating more installs. [m38](../../done/m38/README.md) supplies the evidence first. Adoption surface is included because skill names are what users and agents see in every client and catalog.
 
 ## Out of scope
 
-- Renaming `beancount-ask` (tracked in [w2/081](../../081.md)) or `beancount-importer-author`.
+- Renaming `beancount-ask` (tracked in [w2/081](../../done/081.md)) or `beancount-importer-author`.
 - Changing the `beancount-` prefix.
 - Rewriting dated rehearsal evidence or ADR history; add a note where an old name would confuse a reader.
