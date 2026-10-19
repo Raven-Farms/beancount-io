@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [724 — PYTHONIOENCODING=utf-16 makes bea call a healthy engine damaged and say to delete it](./724.md)
 - [725 — A ledger with its own error is told "Pass --partial", which then blames every row](./725.md)
 - [726 — The BQL error caret ignores the display width of wide characters](./726.md)
 - [727 — A quoted --meta value followed by "; comment" drops the comment and applies C-style escapes (incomplete fix of w5/128/232)](./727.md)
