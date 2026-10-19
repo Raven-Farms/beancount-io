@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [728 — An importer's dict or Inventory metadata value is silently dropped on import --apply](./728.md)
 - [729 — add custom refuses a negative-zero amount or number value](./729.md)
 - [730 — Bulk add moves every same-day sale after every purchase: valid batches refused, wrong lot closed under LIFO/FIFO (regression from w5/543)](./730.md)
 - [731 — In bea ask, Ctrl-C between approval panels leaves queued writes running; a write lands after cancel and Ctrl-D hangs (incomplete fix of w5/544)](./731.md)
