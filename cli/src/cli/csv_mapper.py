@@ -196,8 +196,10 @@ def parse_mapping(spec: str) -> CsvMapping:
         elif name in columns:
             raise UsageError(f"Duplicate --csv field {name!r}.")
         else:
-            # NFC, like the header names `open_records` returns.
-            columns[name] = unicodedata.normalize("NFC", column)
+            # Normalized, like the header names `open_records` returns: a
+            # mapping that names a zero-width header exactly as written must
+            # match the stored spelling (w5/716).
+            columns[name] = _normalize_header(column)
     if columns:
         # Keys without columns (`encoding=`/`delimiter=`/`sign=` alone) parse:
         # the caller infers the mapping instead of failing it.
@@ -636,7 +638,23 @@ def parse_delimiter(value: str) -> str:
     raise UsageError(f"Bad --delimiter {value!r}: use ',', ';', '|', or 'tab'.")
 
 
-_ZERO_WIDTH_HEADER = re.compile("[\u200b\u2060\ufeff]")
+def _normalize_header(cell: str) -> str:
+    """One spelling for header cells, mapping names, and remembered signatures.
+
+    Invisible format characters (category Cf: zero-width spaces, direction
+    marks, soft hyphens, BOMs) are dropped and Unicode spaces fold to a
+    plain space before the NFC comparison both sides share — otherwise the
+    column list prints a name no `--csv` mapping can type back (w5/716).
+    """
+    folded = "".join(
+        " " if unicodedata.category(char) == "Zs" else char for char in cell if unicodedata.category(char) != "Cf"
+    )
+    return unicodedata.normalize("NFC", folded.strip())
+
+
+def shown_header(cell: str) -> str:
+    """A header cell for diagnostics: readable text kept, unprintables escaped (w5/716)."""
+    return "".join(char if char.isprintable() else ascii(char)[1:-1] for char in cell)
 
 
 @contextmanager
@@ -671,12 +689,13 @@ def open_records(
             raise _malformed(source, header_start, exc) from None
         except UnicodeDecodeError as exc:
             raise _decode_usage_error(source, exc, encoding) from None
-        # NFC, like the mapping that names them: a header typed composed must
-        # find a bank's decomposed spelling of the same name, and vice versa.
-        # Zero-width characters and BOMs dropped too, as amount cells drop them:
-        # a doubled BOM or a U+200B left `Date` unmatchable while the column
-        # list showed it plain (w5/531).
-        headers = [unicodedata.normalize("NFC", _ZERO_WIDTH_HEADER.sub("", cell).strip()) for cell in first or []]
+        # Normalized, like the mapping that names them: a header typed
+        # composed must find a bank's decomposed spelling of the same name,
+        # and vice versa. Invisible format characters are dropped and Unicode
+        # spaces folded too: a doubled BOM or a U+200B left `Date`
+        # unmatchable while the column list showed it plain (w5/531), and
+        # direction marks and soft hyphens did the same (w5/716).
+        headers = [_normalize_header(cell) for cell in first or []]
 
         def rows() -> Iterator[tuple[int, dict[str, str]]]:
             # As in the engine's reader: a record starts one line past wherever
@@ -777,8 +796,9 @@ def header_signature(headers: list[str] | None) -> str | None:
     """Identify a CSV source by its header row without storing file contents."""
     if not headers:
         return None
-    # NFC here too: a record stored before headers were read NFC keeps matching.
-    joined = unicodedata.normalize("NFC", "\0".join(headers))
+    # Normalized here too: a record stored before headers were read NFC —
+    # or with zero-width characters still in them — keeps matching (w5/716).
+    joined = "\0".join(_normalize_header(header) for header in headers)
     return hashlib.sha256(joined.encode("utf-8")).hexdigest()
 
 

@@ -190,7 +190,7 @@ def _unread_header_hint(source: Path, account: str | None, *, delimiter: str | N
     pasted command's savings rows into checking, on columns no file had
     (w5/470). The typed account is kept, and the header bea read is listed.
     """
-    from cli.csv_mapper import detect_delimiter, read_header
+    from cli.csv_mapper import detect_delimiter, read_header, shown_header
 
     try:
         headers = read_header(source, delimiter=delimiter, encoding=encoding)
@@ -213,7 +213,10 @@ def _unread_header_hint(source: Path, account: str | None, *, delimiter: str | N
             f"{_display_delimiter(used)}, but it looks {_SEPARATOR_NAMES[unsplit[1]]}-separated: pass --delimiter "
             f"{_display_delimiter(unsplit[1])}, or omit --delimiter so bea detects it."
         )
-    columns = f" Its columns are: {', '.join(headers)}." if headers and len(headers) > 1 else ""
+    # Headers print escaped: anything normalization left unprintable must
+    # still be visible enough to type back or report (w5/716).
+    shown = ", ".join(shown_header(header) for header in headers) if headers else ""
+    columns = f" Its columns are: {shown}." if headers and len(headers) > 1 else ""
     return (
         f"For a CSV export whose header row bea could not read, map the columns directly.{columns} "
         "Name them with --csv date=COLUMN,amount=COLUMN,narration=COLUMN "
@@ -282,7 +285,7 @@ def _inferred_mapping(
     `--csv auto` fails for any unreadable header. The automatic attempt falls
     back to Python importers only when no columns were recognized at all.
     """
-    from cli.csv_mapper import detect_delimiter, infer_mapping, read_header
+    from cli.csv_mapper import detect_delimiter, infer_mapping, read_header, shown_header
 
     headers = read_header(source, delimiter=delimiter, encoding=encoding)
     inferred = infer_mapping(headers)
@@ -295,7 +298,9 @@ def _inferred_mapping(
     if inferred is None or inferred.spec is None:
         if inferred is None and not explicit:
             return None
-        columns = ", ".join(headers) if headers else "(none)"
+        # Escaped like the unread-header hint: a control character in a
+        # header must print visibly (w5/716).
+        columns = ", ".join(shown_header(header) for header in headers) if headers else "(none)"
         used = delimiter if delimiter is not None else detect_delimiter(source, encoding=encoding)
         unsplit = _unsplit_header(headers, used)
         if unsplit is not None:
