@@ -27,7 +27,7 @@ spec.loader.exec_module(verify)
 CHECKOUT_BEA = SCRIPTS.parents[1] / 'cli/.venv/bin/bea'
 BEA = os.environ.get('BEA') or (str(CHECKOUT_BEA) if CHECKOUT_BEA.is_file() else shutil.which('bea'))
 FIXTURES = SCRIPTS.parent / 'docs/examples/migration'
-EVAL_EXPORT = SCRIPTS.parent / '.claude/skills/beancount-migrate/evals/files/eval2_monarch.csv'
+EVAL_EXPORT = SCRIPTS.parent / 'beancount-migrate/evals/files/eval2_monarch.csv'
 
 
 def digest(prefix, date, amount, description, account):

@@ -31,7 +31,7 @@ if not BEA:
     if candidate.is_file():
         BEA = str(candidate)
 FIXTURES = SCRIPTS.parent / 'docs/examples/first-month'
-SUITE = SCRIPTS.parent / '.claude/skills'
+SUITE = SCRIPTS.parent
 
 
 class VerifyFirstMonthTests(unittest.TestCase):

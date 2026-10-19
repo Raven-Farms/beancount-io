@@ -40,7 +40,7 @@ class TestSkillTrees(unittest.TestCase):
         temporary = tempfile.TemporaryDirectory(dir=scratch)
         self.addCleanup(temporary.cleanup)
         self.repo = Path(temporary.name)
-        self.customer = self.repo / "skills/.claude/skills"
+        self.customer = self.repo / "skills"
         self.development = self.repo / ".agents/skills"
         self.customer.mkdir(parents=True)
         self.development.mkdir(parents=True)
@@ -72,20 +72,20 @@ class TestSkillTrees(unittest.TestCase):
             ci_check.check_skill_md()
         self.assertIn("OK frontmatter .agents/skills/ship/SKILL.md", output.getvalue())
         self.assertIn(
-            "OK frontmatter skills/.claude/skills/beancount-ask/SKILL.md",
+            "OK frontmatter skills/beancount-ask/SKILL.md",
             output.getvalue(),
         )
 
     def test_old_shared_customer_symlink_is_rejected(self):
         self.development.rename(self.development.with_name("old-skills"))
-        self.development.symlink_to("../skills/.claude/skills")
+        self.development.symlink_to("../skills")
         with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
             ci_check.check_symlinks()
 
     def test_claude_must_load_development_skills(self):
         link = self.repo / ".claude/skills"
         link.unlink()
-        link.symlink_to("../skills/.claude/skills")
+        link.symlink_to("../skills")
         with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
             ci_check.check_symlinks()
 
@@ -172,7 +172,7 @@ class TestRoutingSet(unittest.TestCase):
         temporary = tempfile.TemporaryDirectory(dir=scratch)
         self.addCleanup(temporary.cleanup)
         self.repo = Path(temporary.name)
-        self.customer = self.repo / "skills/.claude/skills"
+        self.customer = self.repo / "skills"
         for name in ("beancount-ask", "beancount-close"):
             (self.customer / name).mkdir(parents=True)
             (self.customer / name / "SKILL.md").write_text(f"---\nname: {name}\ndescription: d\n---\n")
@@ -285,7 +285,7 @@ class TestOracleAndIsolation(unittest.TestCase):
     def test_pip_install_beancount_instruction_is_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
-            skills_dir = repo / "skills/.claude/skills"
+            skills_dir = repo / "skills"
             skill = skills_dir / "beancount-ask" / "SKILL.md"
             skill.parent.mkdir(parents=True)
             skill.write_text(
@@ -303,7 +303,7 @@ class TestOracleAndIsolation(unittest.TestCase):
     def test_redundant_install_in_a_supporting_reference_is_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
-            skills_dir = repo / "skills/.claude/skills"
+            skills_dir = repo / "skills"
             reference = skills_dir / "beancount-init/references/compatibility.md"
             reference.parent.mkdir(parents=True)
             reference.write_text("If missing, pip install beanquery.\n")
@@ -318,11 +318,11 @@ class TestOracleAndIsolation(unittest.TestCase):
         ):
             with self.subTest(text=text), tempfile.TemporaryDirectory() as tmp:
                 repo = Path(tmp)
-                skills_dir = repo / "skills/.claude/skills"
+                skills_dir = repo / "skills"
                 docs = repo / "skills/docs"
                 (docs / "guide.md").parent.mkdir(parents=True)
                 (docs / "guide.md").write_text(text)
-                skills_dir.mkdir(parents=True)
+                skills_dir.mkdir(parents=True, exist_ok=True)
                 with mock.patch.multiple(
                     ci_check, REPO_ROOT=repo, SKILLS_ROOT=repo / "skills", SKILLS_DIR=skills_dir, CUSTOMER_DOCS=docs
                 ):
@@ -332,14 +332,14 @@ class TestOracleAndIsolation(unittest.TestCase):
     def test_optional_libmagic_wording_passes(self):
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
-            skills_dir = repo / "skills/.claude/skills"
+            skills_dir = repo / "skills"
             docs = repo / "skills/docs"
             (docs / "guide.md").parent.mkdir(parents=True)
             (docs / "guide.md").write_text(
                 "The system libmagic library is optional: only importers that call\n"
                 "python-magic themselves need it.\n"
             )
-            skills_dir.mkdir(parents=True)
+            skills_dir.mkdir(parents=True, exist_ok=True)
             with mock.patch.multiple(
                 ci_check, REPO_ROOT=repo, SKILLS_ROOT=repo / "skills", SKILLS_DIR=skills_dir, CUSTOMER_DOCS=docs
             ), contextlib.redirect_stdout(io.StringIO()):

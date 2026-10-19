@@ -54,7 +54,7 @@ from pathlib import Path
 SKILLS_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = SKILLS_ROOT.parent
 ROUTING_SET = SKILLS_ROOT / "evals" / "routing.json"
-SUITE_DIR = SKILLS_ROOT / ".claude" / "skills"
+SUITE_DIR = SKILLS_ROOT
 OUT_ROOT = SKILLS_ROOT / "tmp" / "routing"
 
 LEDGER = """\

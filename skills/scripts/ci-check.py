@@ -26,15 +26,15 @@ from pathlib import Path
 
 
 SKILLS_ROOT = Path(__file__).resolve().parents[1]
-SKILLS_DIR = SKILLS_ROOT / ".claude" / "skills"
+SKILLS_DIR = SKILLS_ROOT
 REPO_ROOT = SKILLS_ROOT.parent
 DEV_SKILLS_DIR = REPO_ROOT / ".agents" / "skills"
 CLI_PROJECT = REPO_ROOT / "cli"
 
 # Ledger fixtures that must fail bean-check (failure-mode evals).
 EXPECTED_BEAN_CHECK_FAILURES = {
-    "skills/.claude/skills/beancount-close/evals/files/eval5_ledger.beancount",
-    "skills/.claude/skills/beancount-reconcile/evals/files/eval16_ledger.beancount",
+    "skills/beancount-close/evals/files/eval5_ledger.beancount",
+    "skills/beancount-reconcile/evals/files/eval16_ledger.beancount",
 }
 
 RAW_APPEND = re.compile(
@@ -91,11 +91,12 @@ def check_symlinks() -> None:
 
 
 def skill_files(pattern: str) -> list[Path]:
-    return sorted(
-        path
-        for directory in (SKILLS_DIR, DEV_SKILLS_DIR)
-        for path in directory.glob(pattern)
-    )
+    """PATTERN inside each customer skill folder and each development skill.
+
+    The customer suite shares `skills/` with its guide files, so only its
+    `beancount-*` folders count as skill content here."""
+    customer = SKILLS_DIR.glob(f"beancount-*/{pattern.removeprefix('*/')}")
+    return sorted([*customer, *DEV_SKILLS_DIR.glob(pattern)])
 
 
 def parse_frontmatter(path: Path) -> dict[str, str]:
@@ -122,7 +123,8 @@ def check_skill_md() -> None:
     for directory in (SKILLS_DIR, DEV_SKILLS_DIR):
         if not any(directory.glob("*/SKILL.md")):
             fail(f"no SKILL.md files found under {directory.relative_to(REPO_ROOT)}")
-    for path in skill_files("*/SKILL.md"):
+    # Every top-level folder with a SKILL.md, so a stray skill is caught.
+    for path in sorted([*SKILLS_DIR.glob("*/SKILL.md"), *DEV_SKILLS_DIR.glob("*/SKILL.md")]):
         customer_facing = path.parent.name.startswith("beancount-")
         if customer_facing != (path.parent.parent == SKILLS_DIR):
             destination = SKILLS_DIR if customer_facing else DEV_SKILLS_DIR
@@ -399,7 +401,7 @@ def check_bea_first() -> None:
         skill = path.parent.name
         text = path.read_text(encoding="utf-8")
         if "prefer `bea`" not in text.lower():
-            fail(f".claude/skills/{skill}/SKILL.md states no bea preference")
+            fail(f"skills/{skill}/SKILL.md states no bea preference")
         in_fallback = False
         for lineno, line in enumerate(text.splitlines(), 1):
             if line.startswith("## "):
@@ -408,7 +410,7 @@ def check_bea_first() -> None:
                 in_fallback = True
             if not in_fallback and RAW_APPEND.search(line) and not APPEND_EXCUSED.search(line):
                 fail(
-                    f".claude/skills/{skill}/SKILL.md:{lineno} appends to the ledger "
+                    f"skills/{skill}/SKILL.md:{lineno} appends to the ledger "
                     f"outside the fallback block: {line.strip()[:100]}"
                 )
         print(f"OK bea-first {skill}")
@@ -417,7 +419,7 @@ def check_bea_first() -> None:
 def check_no_redundant_installs() -> None:
     """Customer skill text must not push a second Beancount CLI install."""
     docs = sorted(CUSTOMER_DOCS.rglob("*.md")) if CUSTOMER_DOCS.is_dir() else []
-    for path in [*sorted(SKILLS_DIR.rglob("*.md")), *docs]:
+    for path in [*sorted(SKILLS_DIR.glob("beancount-*/**/*.md")), *docs]:
         rel = path.relative_to(REPO_ROOT).as_posix()
         text = path.read_text(encoding="utf-8")
         # Joined so a claim wrapped across lines is still one sentence.

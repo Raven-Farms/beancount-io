@@ -32,7 +32,7 @@ from unittest import mock
 
 SCRIPTS_DIR = Path(__file__).resolve().parent
 SKILLS_ROOT = SCRIPTS_DIR.parent
-SUITE = SKILLS_ROOT / ".claude" / "skills"
+SUITE = SKILLS_ROOT
 INSTALL_DOC = SKILLS_ROOT / "docs" / "installation.md"
 FIRST_QUERY_DOC = SKILLS_ROOT / "docs" / "first-query.md"
 FIXTURE = SUITE / "beancount-ask" / "evals" / "files" / "eval1_ledger.beancount"
@@ -67,6 +67,11 @@ def snapshot(root: Path) -> dict[str, str]:
         else:
             state[rel] = "dir"
     return state
+
+
+def suite_snapshot() -> dict[str, str]:
+    """The customer skill folders only; `skills/` also holds scratch `tmp/`."""
+    return {name: snapshot(SUITE / name) for name in skills.expected_skills()}
 
 
 def run(command: str, *dests: Path) -> tuple[int, str, str]:
@@ -197,7 +202,7 @@ class TestVerify(Workspace):
         run("install", self.dest)
         copy = self.root / "copy"
         self.copy_suite(copy)
-        state = lambda: (snapshot(self.dest), snapshot(copy), snapshot(SUITE), self.ledger.read_bytes())  # noqa: E731
+        state = lambda: (snapshot(self.dest), snapshot(copy), suite_snapshot(), self.ledger.read_bytes())  # noqa: E731
         before = state()
         code, out, err = run("verify", self.dest, copy)
         self.assertEqual((code, err), (0, ""))
@@ -305,10 +310,10 @@ class TestVerify(Workspace):
 class TestBundle(Workspace):
     def test_each_bundle_installed_alone_has_every_reference_it_names(self):
         out = self.root / "bundles"
-        before = snapshot(SUITE)
+        before = suite_snapshot()
         code, _, err = run("bundle", out)
         self.assertEqual((code, err), (0, ""))
-        self.assertEqual(snapshot(SUITE), before, "bundling must not touch the checkout")
+        self.assertEqual(suite_snapshot(), before, "bundling must not touch the checkout")
         names = skills.expected_skills()
         self.assertEqual(sorted(p.name for p in out.iterdir()), names)
         for name in names:
@@ -402,7 +407,8 @@ class TestGitUpdatePath(Workspace):
         self.assertIsNotNone(sparse, "installation.md must show the sparse-checkout command")
 
         self.origin = self.root / "origin"
-        shutil.copytree(SUITE, self.origin / "skills" / ".claude" / "skills")
+        for name in skills.expected_skills():
+            shutil.copytree(SUITE / name, self.origin / "skills" / name)
         (self.origin / "skills" / "scripts").mkdir()
         shutil.copy2(SCRIPTS_DIR / "beancount-skills.py", self.origin / "skills" / "scripts")
         dev = self.origin / ".agents" / "skills" / "ship" / "SKILL.md"
@@ -433,8 +439,8 @@ class TestGitUpdatePath(Workspace):
 
     def test_update_keeps_local_edits_and_stops_on_overlapping_changes(self):
         self.assertEqual(self.cli("install", str(self.dest)).returncode, 0)
-        ask = "skills/.claude/skills/beancount-ask/SKILL.md"
-        init = "skills/.claude/skills/beancount-init/SKILL.md"
+        ask = "skills/beancount-ask/SKILL.md"
+        init = "skills/beancount-init/SKILL.md"
         local = (self.src / ask).read_text() + "\nMy local tweak.\n"
         (self.src / ask).write_text(local)
 
@@ -457,7 +463,7 @@ class TestGitUpdatePath(Workspace):
 
     def test_install_links_skills_added_upstream(self):
         self.assertEqual(self.cli("install", str(self.dest)).returncode, 0)
-        new = self.origin / "skills" / ".claude" / "skills" / "beancount-budget" / "SKILL.md"
+        new = self.origin / "skills" / "beancount-budget" / "SKILL.md"
         new.parent.mkdir()
         new.write_text("---\nname: beancount-budget\ndescription: new\n---\n")
         self.git_ok(self.origin, "add", ".")

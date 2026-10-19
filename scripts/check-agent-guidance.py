@@ -77,7 +77,7 @@ def main() -> int:
 
     # Development skills are real files in .agents/skills; Claude Code uses
     # a relative alias. Customer ledger skills remain a separate package.
-    for directory in (".agents/skills", "skills/.claude/skills"):
+    for directory in (".agents/skills", "skills"):
         skills = REPO_ROOT / directory
         if skills.is_symlink() or not skills.is_dir():
             errors.append(f"{directory} must be a real directory")
