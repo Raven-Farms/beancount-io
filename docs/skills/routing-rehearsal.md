@@ -186,3 +186,17 @@ usage limit ("try again at Nov 17th, 2026") plus connection failures under
 parallel jobs — so Codex has not routed these prompts yet. Rerun the
 `i18n-*` entries on Codex when usage returns before treating non-English
 routing as settled on both clients (tracked in w2/086).
+
+## `beancount-trade` added — 2026-10-19
+
+Before (w2/m45/t001 probe, no trade skill): "Record that I bought 10
+shares of VTI at $250 in my Roth", "I sold some bitcoin, record the
+gain", and "Record my RSU vest" all opened `beancount-add` on Claude
+Code. After `beancount-trade` landed (w2/m45/t002), the same three
+prompts — now routing entries `trade-buy-vti-roth`,
+`trade-sell-bitcoin-gain`, `trade-rsu-vest` — plus three neighbors
+(`trade-ask-performance` → ask, `options-sell-csp` → options,
+`add-close-amex-account` → add) routed 6/6 as labeled on Claude Code
+2.1.289 (`claude-opus-5-5[1m]`). Codex has not run them (account usage
+limit until 2026-11-17); w2/m45/t006 reruns the set there before the
+milestone claims both-client routing.

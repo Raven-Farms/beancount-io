@@ -743,6 +743,44 @@
         "beancount-ask"
       ],
       "why": "Non-English hosted-ledger question; local skills do not apply."
+    },
+    {
+      "id": "trade-buy-vti-roth",
+      "prompt": "Record that I bought 10 shares of VTI at $250 in my Roth",
+      "expected": "beancount-trade",
+      "confusable": [
+        "beancount-add",
+        "beancount-options"
+      ],
+      "why": "A described securities purchase with a lot to book."
+    },
+    {
+      "id": "trade-sell-bitcoin-gain",
+      "prompt": "I sold some bitcoin, record the gain",
+      "expected": "beancount-trade",
+      "confusable": [
+        "beancount-add",
+        "beancount-ask"
+      ],
+      "why": "A crypto sale whose gain comes from lot booking."
+    },
+    {
+      "id": "trade-rsu-vest",
+      "prompt": "Record my RSU vest",
+      "expected": "beancount-trade",
+      "confusable": [
+        "beancount-add"
+      ],
+      "why": "An equity-compensation vest recorded at fair-market value."
+    },
+    {
+      "id": "trade-ask-performance",
+      "prompt": "What has VTI returned for me this year?",
+      "expected": "beancount-ask",
+      "confusable": [
+        "beancount-trade"
+      ],
+      "why": "A performance question about holdings, not an event to record."
     }
   ]
 }

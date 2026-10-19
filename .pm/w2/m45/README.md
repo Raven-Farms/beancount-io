@@ -1,13 +1,13 @@
 # w2 · m45 — Record stock, fund, and crypto trades with correct lots, and report realized gains
 
-**Worker:** worker2 **Goal:** a user who tells their coding agent "I bought 10 VTI at 251.30", "sold 5 shares of AAPL from the 2023 lot", "my RSUs vested", or "moved my BTC to a hardware wallet" gets a proposed entry with the right cost basis and lot. It is written through `bea` only after a yes, and checked. At year end, the agent reports realized gains per lot, with holding period, from shown queries. **Status:** todo (t001 done)
+**Worker:** worker2 **Goal:** a user who tells their coding agent "I bought 10 VTI at 251.30", "sold 5 shares of AAPL from the 2023 lot", "my RSUs vested", or "moved my BTC to a hardware wallet" gets a proposed entry with the right cost basis and lot. It is written through `bea` only after a yes, and checked. At year end, the agent reports realized gains per lot, with holding period, from shown queries. **Status:** todo (t001–t002 done)
 
 ## Tasks (in order)
 
 | id   | title | est | depends_on |
 | ---- | ----- | --- | ---------- |
 | [t001](./done/t001.md) | Define the trigger, input contract, and placement — **DONE** | 45m | w2/m40/t009 |
-| t002 | Write the trade procedures | 90m | t001 |
+| [t002](./done/t002.md) | Write the trade procedures — **DONE** | 90m | t001 |
 | t003 | Report realized gains for a year from BQL | 60m | t002 |
 | t004 | Pin the booking methods `bea` accepts, and what to do when a user needs another | 30m | t002 |
 | t005 | Write evals, fixtures, and routing entries | 60m | t002, t003 |
