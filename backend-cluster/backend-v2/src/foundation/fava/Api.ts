@@ -4411,28 +4411,6 @@ export class Api<
         format: "json",
         ...params,
       }),
-
-    /**
-     * @description Download a repository archive (e.g., main.zip, main.tar.gz).
-     *
-     * @tags ledger-files
-     * @name GetLedgerArchive
-     * @summary Get Ledger Archive
-     * @request GET:/ledgers/{owner}/{repo_name}/archive/{archive}
-     * @secure
-     */
-    getLedgerArchive: (
-      owner: string,
-      repoName: string,
-      archive: string,
-      params: RequestParams = {},
-    ) =>
-      this.request<void, ErrorResponse>({
-        path: `/ledgers/${encodeURIComponent(owner)}/${encodeURIComponent(repoName)}/archive/${archive}`,
-        method: "GET",
-        secure: true,
-        ...params,
-      }),
   };
   reports = {
     /**

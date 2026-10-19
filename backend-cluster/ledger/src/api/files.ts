@@ -3,23 +3,12 @@ import type { ContentsResponse } from "@/features/gitea/client/gitea-api";
 import {
   authMiddleware,
   giteaClientForRequest,
-  type RequestAuth,
   directiveLimitExempt,
 } from "@/server/auth";
 import { successResponse } from "@/server/envelope";
 import { checkDirectiveLimitForFileChanges } from "@/core/directive-limit";
-import { config } from "@/config";
-import { DomainError, ErrorCategory, NotFoundError } from "@/shared/errors";
 import { NotFoundDetailError } from "@/server/py-errors";
 import { assertSafeRepoPath, toSafeRepoUrlPath } from "@/shared/safe-repo-path";
-import { assertSafeArchiveName } from "@/shared/safe-archive-name";
-
-/** Gitea archive failure forwarded with its upstream status (Python parity). */
-class ArchiveDownloadError extends DomainError {
-  constructor(message: string, status: number) {
-    super(ErrorCategory.INTERNAL_SERVER_ERROR, message, undefined, status);
-  }
-}
 
 /** Python `LedgerFileContentPublic` — fixed projection, nulls included. */
 interface LedgerFileContentPublic {
@@ -308,42 +297,4 @@ export function setFilesHandler(router: Router): void {
     }
     ctx.body = successResponse(content.map(toFileContentPublic));
   });
-
-  // operationId: getLedgerArchive — GET /ledgers/{o}/{r}/archive/{archive}
-  // Streams raw bytes with the caller's credentials, or no credential for a
-  // public-ledger request carrying backend-v2's private Anonymous marker.
-  router.get(
-    "/ledgers/:owner/:repo_name/archive/:archive",
-    authMiddleware,
-    async (ctx) => {
-      const auth = ctx.state.auth as RequestAuth;
-      assertSafeArchiveName(ctx.params.archive);
-      const url = `${config.gitea.baseUrl}/api/v1/repos/${encodeURIComponent(ctx.params.owner)}/${encodeURIComponent(ctx.params.repo_name)}/archive/${encodeURIComponent(ctx.params.archive)}`;
-      const upstream = await fetch(url, {
-        ...(auth.authType === "anonymous"
-          ? {}
-          : { headers: { Authorization: auth.header } }),
-      });
-      if (upstream.status !== 200) {
-        if (upstream.status === 404) {
-          throw new NotFoundError("Archive");
-        }
-        throw new ArchiveDownloadError(
-          `Failed to download archive: ${upstream.statusText}`,
-          upstream.status,
-        );
-      }
-      ctx.status = 200;
-      ctx.set(
-        "content-type",
-        upstream.headers.get("content-type") ?? "application/octet-stream",
-      );
-      const disposition = upstream.headers.get("content-disposition");
-      if (disposition) {
-        ctx.set("content-disposition", disposition);
-      }
-      const buffer = Buffer.from(await upstream.arrayBuffer());
-      ctx.body = buffer;
-    },
-  );
 }

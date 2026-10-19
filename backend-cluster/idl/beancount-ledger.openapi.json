@@ -1898,68 +1898,6 @@
         }
       }
     },
-    "/ledgers/{owner}/{repo_name}/archive/{archive}": {
-      "get": {
-        "tags": [
-          "ledger-files"
-        ],
-        "summary": "Get Ledger Archive",
-        "description": "Download a repository archive (e.g., main.zip, main.tar.gz).",
-        "operationId": "getLedgerArchive",
-        "security": [
-          {
-            "HTTPBasic": []
-          },
-          {
-            "APIKeyHeader": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "owner",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Owner"
-            }
-          },
-          {
-            "name": "repo_name",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Repo Name"
-            }
-          },
-          {
-            "name": "archive",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Archive"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response"
-          },
-          "422": {
-            "description": "Validation error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/reports/{owner}/{repo_name}/attributes": {
       "get": {
         "tags": [
