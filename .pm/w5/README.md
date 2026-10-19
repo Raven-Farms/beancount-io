@@ -186,6 +186,7 @@
 - [866 — A plugin that normalizes payee or narration disables import dedupe: importing the identical CSV twice writes the same payment twice, exit 0 (regression from w5/662)](./866.md)
 - [867 — A planned _SHARED file and relocated _shared/ include evade export's ancestor collision check, leaving two files behind before failure (gap in w5/191 and w5/652)](./867.md)
 - [868 — price export copies a local plugin package's Python files but drops its required package resources, reporting success for a snapshot that cannot load](./868.md)
+- [869 — import --apply raced by a write to an include in another directory still exits 4 instead of queueing (remainder of w5/718)](./869.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
