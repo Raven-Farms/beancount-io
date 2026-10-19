@@ -70,7 +70,6 @@ m39–m40 were materialized on 2026-10-18 from [PRFAQ005](../../docs/prfaqs/PRFA
 
 - [175](./175.md) — In-place bank approval for plan changes with Stripe.js; needs the user's approval of the dependency (follow-up to w1/m39/t007).
 - [178](./178.md) — Give the server-side `purchase` its traffic source; decide after t016 turns it on (found by w1/m39/t011).
-- [179](./179.md) — Two dashboard events are missing from the event taxonomy (found by w1/m39/t011).
 
 
 The three MCP QA findings filed on 2026-09-21/22 were drained on 2026-09-23: [035](./done/035.md), [036](./done/036.md), and [037](./done/037.md) shipped with regression coverage.
