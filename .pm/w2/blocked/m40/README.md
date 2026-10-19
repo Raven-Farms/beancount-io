@@ -23,7 +23,7 @@
 
 ## Definition of done
 
-- `skills/.claude/skills/beancount-add/` exists, with a description whose triggers and skips route correctly in m38's routing set on both clients. The routing set gains its positive prompts, and the manual-entry prompts that were `none` now name it.
+- `skills/beancount-add/` exists, with a description whose triggers and skips route correctly in m38's routing set on both clients. The routing set gains its positive prompts, and the manual-entry prompts that were `none` now name it.
 - The skill handles, for a local ledger: one or a few transactions described in words or pasted receipt text (including splits and transfers between the user's own accounts), opening an account, closing an account, a price, and a note. It routes bank exports, statements, migrations, and options trades to their siblings.
 - Every write follows the suite's rules: a proposal showing the target file and exact entries, an explicit yes, existing accounts only (a new account only when the user asks for one), `Expenses:Uncategorized` when no confident account exists, a ±3-day same-amount check against entries that may already record it, writes through `bea add` with `--file` and `--into`, and a passing root `bea check` before success is reported.
 - Closing an account with a nonzero balance is surfaced and never forced.

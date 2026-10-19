@@ -15,7 +15,7 @@ import { LEDGER_ID_PATTERN, ledgerSelection } from "./mcp-ledger-selection";
  * Prompts are the protocol's answer: user-initiated, explicitly selected, and
  * free of the selection-attention cost that makes a tool expensive to add
  * (ADR 0008 D2 draws the same line between tools and resources). So the bodies
- * here are the `skills/.claude/skills/beancount-*` playbooks rewritten against
+ * here are the `skills/beancount-*` playbooks rewritten against
  * the MCP tools — the same phases, the same refusals, the same confirm gates,
  * with `bea` invocations replaced by the tool that does the equivalent work.
  *
@@ -131,7 +131,7 @@ const GROUND_RULES = [
 
 /** Where a playbook comes from, so its text can be checked against the local skill it rewrites. */
 const sourceLine = (skill: string) =>
-  `Playbook source: skills/.claude/skills/${skill}/SKILL.md in the beancount-io repository.`;
+  `Playbook source: skills/${skill}/SKILL.md in the beancount-io repository.`;
 
 const closeMonth = (
   args: Record<string, string | undefined>,

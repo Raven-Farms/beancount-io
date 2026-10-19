@@ -20,7 +20,7 @@
 
 ## Definition of done
 
-- A new `skills/.claude/skills/<name>/` skill exists (name settled in t001; after [m42](../m42/README.md), `skills/<name>/`). Its description routes the edit prompts correctly in the routing set on both clients. The entry "Fix the typo in the payee of yesterday's Starbucks transaction", which is `none` today, names it, and the set gains positives plus near-misses against `beancount-add`, `beancount-import`, and `beancount-reconcile`.
+- A new `skills/<name>/` skill exists (name settled in t001). Its description routes the edit prompts correctly in the routing set on both clients. The entry "Fix the typo in the payee of yesterday's Starbucks transaction", which is `none` today, names it, and the set gains positives plus near-misses against `beancount-add`, `beancount-import`, and `beancount-reconcile`.
 - For a local ledger, the skill handles:
   - fixing one entry's payee, narration, amount, date, or account;
   - recategorizing a matched set of entries, optionally adding the matching rule to the user's import rules;

@@ -47,7 +47,7 @@
 
 ## Boundaries and dependencies
 
-- Implementation belongs in skills/, plus the package-owned .github/workflows/ci-skills.yml job and root discovery pointers as needed. Keep synthetic workspaces and raw logs under skills/tmp/ or the equivalent job-owned temporary directory on Windows.
+- Implementation belongs in skills/, plus the package-owned .github/workflows/ci-skills.yml job and root discovery pointers as needed. Keep synthetic workspaces and raw logs under scripts/skills/tmp/ or the equivalent job-owned temporary directory on Windows.
 - Retain one source checkout and directory symlinks; do not add junction/copy fallback modes, a plugin distribution system, new dependencies, or changes to the repository's shared development-skill link.
 - Document required symlink capability and verify it on the target host. Do not silently enable Developer Mode, change machine policy, or elevate agent sessions. A host that lacks permission should receive a clear remedy and no false success.
 - The approved deliverable is native Windows onboarding through PowerShell. WSL is a distinct environment and cannot substitute for native acceptance. Reuse the existing first-query fixture rather than building a new accounting journey.

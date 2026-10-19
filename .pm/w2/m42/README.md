@@ -1,6 +1,6 @@
 # w2 · m42 — Put each customer skill directly under `skills/`
 
-**Worker:** worker2 **Goal:** the customer suite lives at `skills/<name>/SKILL.md`, the conventional skill layout, instead of `skills/.claude/skills/<name>/`. `skills/` holds only the skill folders, a `README.md` catalog, and the `AGENTS.md` authoring guide. Guides and examples move to `docs/skills/`, and the installer, checks, verifiers, routing set, and tests move to `scripts/skills/`. Every existing install survives the move. **Status:** todo (t001–t005 done)
+**Worker:** worker2 **Goal:** the customer suite lives at `skills/<name>/SKILL.md`, the conventional skill layout, instead of `skills/.claude/skills/<name>/`. `skills/` holds only the skill folders, a `README.md` catalog, and the `AGENTS.md` authoring guide. Guides and examples move to `docs/skills/`, and the installer, checks, verifiers, routing set, and tests move to `scripts/skills/`. Every existing install survives the move. **Status:** todo (t001–t006 done)
 
 ## Tasks (in order)
 
@@ -11,7 +11,7 @@
 | [t003](./done/t003.md) | Move the guides and examples to `docs/skills/` — **DONE** | 45m | t002 |
 | [t004](./done/t004.md) | Keep existing installs working across the move — **DONE** | 60m | t002, t003 |
 | [t005](./done/t005.md) | Guard the layout in CI and restate the rules — **DONE** | 45m | t001, t002, t003 |
-| t006 | Repoint every remaining citation of the old paths | 45m | t001, t003 |
+| [t006](./done/t006.md) | Repoint every remaining citation of the old paths — **DONE** | 45m | t001, t003 |
 | t007 | Rehearse a fresh install and an upgrade on both clients | 45m | t004, t005, t006 |
 | t008 | Adoption surface | 30m | t007 |
 | t009 | Simplify | 15m | t008 |

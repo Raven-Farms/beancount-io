@@ -290,7 +290,7 @@ describe("MCP prompts", () => {
         descriptor
           .build({}, pinned)
           .match(
-            /Playbook source: (skills\/\.claude\/skills\/[\w-]+\/SKILL\.md)/,
+            /Playbook source: (skills\/[\w-]+\/SKILL\.md)/,
           ) ?? [];
       expect(source).toBeDefined();
       expect(existsSync(path.join(repoRoot, source as string))).toBe(true);

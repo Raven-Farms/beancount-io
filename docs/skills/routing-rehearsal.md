@@ -25,7 +25,7 @@ synthetic, and no hosted ledger was used.
   baseline is two runs.
 
 Reproduce with `python3 scripts/skills/run-routing.py --codex-model <model>`.
-Results land in `skills/tmp/routing/<UTC stamp>/` (gitignored).
+Results land in `scripts/skills/tmp/routing/<UTC stamp>/` (gitignored).
 
 ## Baseline — 2026-10-18
 
