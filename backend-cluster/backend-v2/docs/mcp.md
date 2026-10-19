@@ -481,10 +481,20 @@ For direct archive delivery, read
 The original Content-Disposition value is retained in
 `_meta["beancount/contentDisposition"]`. Decode `blob` to save the archive.
 
+The blob is capped at 8 MiB of archive bytes. A resource read is one JSON-RPC
+message, so the archive is held whole in memory, and base64 adds a third. A
+larger archive is refused with `OPERATION_NOT_ALLOWED` (JSON-RPC `-32003`) as
+soon as its `Content-Length` or the bytes read so far pass the cap, and the
+error's `hint` names `beancount://{owner}/{name}/archive-download-url`. Fetch
+the URL that resource returns with the same credential; it streams at any
+size. It names `main.zip`, and its last path segment takes any other
+`<ref>.zip` or `<ref>.tar.gz`.
+
 MCP and both REST spellings share the existing 30-downloads-per-minute
-credential bucket. Every download checks current ledger access. REST
-streams the response; MCP buffers it to produce a base64 resource payload.
-GraphQL's deliberate raw-byte exclusion remains unchanged.
+credential bucket; a refused read still spends one. Every download checks
+current ledger access. REST streams the response from Gitea; MCP buffers it,
+up to the cap, to produce a base64 resource payload. GraphQL's deliberate
+raw-byte exclusion remains unchanged.
 
 ### Pull requests
 

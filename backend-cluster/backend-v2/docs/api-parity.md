@@ -369,8 +369,13 @@ asset URLs retain their configured lifetime after issue. MCP archive-byte operat
 alone do not close those coverage rows.
 
 Canonical and legacy archive downloads now use `LedgerArchiveService` across
-REST and MCP. REST streams the protected response; MCP returns the same bytes
-as a base64 blob with upstream MIME type and Content-Disposition metadata.
+REST and MCP, which reads Gitea's archive API directly (w0/m8). REST streams the
+protected response; MCP returns the same bytes as a base64 blob with upstream
+MIME type and Content-Disposition metadata, up to 8 MiB. That cap is a protocol
+constraint, recorded in the `ledger.downloadArchive` row's `mcpExempt` note: a
+resource read is one JSON-RPC message held whole in memory, so a larger archive
+is refused as `OPERATION_NOT_ALLOWED` with a hint to the `archive-download-url`
+resource, whose REST URL streams at any size (`archive-blob-cap.test.ts`).
 The canonical MCP resource joins the existing REST archive counter and 30/minute budget (the legacy alias left MCP in w2/m27; its REST twin keeps the counter).
 The archive adapter tests consume real HTTP fixture responses and MCP SDK
 resources, comparing ZIP bytes and extracted tar content, checking revocation,
