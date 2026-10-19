@@ -3,6 +3,7 @@ import {
   setAuthCookie,
   clearAuthCookie,
   getAuthCookieFromCtx,
+  resolveCookieDomain,
 } from "../cookie-utils";
 
 const mockCtx = {
@@ -27,7 +28,7 @@ describe("cookie-utils", () => {
   describe("setAuthCookie", () => {
     it("should set cookie with secure=true for https context in production", () => {
       const expireAt = new Date(Date.now() + 60 * 60 * 1000);
-      setAuthCookie(mockCtx, "mytoken", expireAt, true);
+      setAuthCookie(mockCtx, "mytoken", expireAt, true, undefined);
       expect(mockCtx.cookies.set).toHaveBeenCalledWith(
         COOKIE_NAME,
         "mytoken",
@@ -47,7 +48,7 @@ describe("cookie-utils", () => {
         URL: new URL("http://localhost:4104"),
       } as any;
       const expireAt = new Date(Date.now() + 60 * 60 * 1000);
-      setAuthCookie(httpCtx, "mytoken", expireAt, false);
+      setAuthCookie(httpCtx, "mytoken", expireAt, false, undefined);
       expect(httpCtx.cookies.set).toHaveBeenCalledWith(
         COOKIE_NAME,
         "mytoken",
@@ -60,19 +61,54 @@ describe("cookie-utils", () => {
 
     it("should derive maxAge from the token's own expireAt", () => {
       const expireAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
-      setAuthCookie(mockCtx, "mytoken", expireAt, true);
+      setAuthCookie(mockCtx, "mytoken", expireAt, true, undefined);
       const options = mockCtx.cookies.set.mock.calls[0][2];
       expect(options.maxAge).toBeGreaterThan(4 * 60 * 1000);
       expect(options.maxAge).toBeLessThanOrEqual(5 * 60 * 1000);
     });
   });
 
+  describe("resolveCookieDomain (AUTH_COOKIE_DOMAIN)", () => {
+    it("keeps the managed default when unset", () => {
+      expect(resolveCookieDomain(true, undefined)).toBe(".beancount.io");
+      expect(resolveCookieDomain(false, undefined)).toBeUndefined();
+    });
+
+    it("omits the Domain attribute for host-only", () => {
+      expect(resolveCookieDomain(true, null)).toBeUndefined();
+      expect(resolveCookieDomain(false, null)).toBeUndefined();
+    });
+
+    it("uses an explicit domain as given", () => {
+      expect(resolveCookieDomain(true, ".example.com")).toBe(".example.com");
+      expect(resolveCookieDomain(false, ".example.com")).toBe(".example.com");
+    });
+
+    it("is applied by setAuthCookie", () => {
+      const expireAt = new Date(Date.now() + 60 * 60 * 1000);
+      setAuthCookie(mockCtx, "mytoken", expireAt, true, null);
+      expect(mockCtx.cookies.set.mock.calls[0][2].domain).toBeUndefined();
+      setAuthCookie(mockCtx, "mytoken", expireAt, true, ".example.com");
+      expect(mockCtx.cookies.set.mock.calls[1][2].domain).toBe(".example.com");
+    });
+  });
+
   describe("clearAuthCookie", () => {
     it("should call ctx.cookies.set with empty string and maxAge 0", () => {
-      clearAuthCookie(mockCtx);
+      clearAuthCookie(mockCtx, false, undefined);
       expect(mockCtx.cookies.set).toHaveBeenCalledWith(COOKIE_NAME, "", {
         maxAge: 0,
+        path: "/",
       });
+    });
+
+    it("clears with the same Domain the cookie was set with", () => {
+      clearAuthCookie(mockCtx, true, undefined);
+      expect(mockCtx.cookies.set.mock.calls[0][2].domain).toBe(".beancount.io");
+      clearAuthCookie(mockCtx, true, null);
+      expect(mockCtx.cookies.set.mock.calls[1][2].domain).toBeUndefined();
+      clearAuthCookie(mockCtx, false, ".example.com");
+      expect(mockCtx.cookies.set.mock.calls[2][2].domain).toBe(".example.com");
     });
   });
 

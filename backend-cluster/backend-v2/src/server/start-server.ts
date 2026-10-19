@@ -67,7 +67,7 @@ export async function startServer(): Promise<void> {
   app.use(cookie());
 
   // Update CORS to support credentials for cookie-based auth
-  // Pattern-based origin matching (no env vars needed)
+  // Pattern-based origin matching, plus exact origins from CORS_ALLOWED_ORIGINS
   app.use(
     cors({
       origin: (ctx) => {
@@ -87,6 +87,11 @@ export async function startServer(): Promise<void> {
             hostname === "beancount.io" ||
             hostname.endsWith(".beancount.io")
           ) {
+            return origin;
+          }
+
+          // Self-hosted dashboards on other hosts (CORS_ALLOWED_ORIGINS)
+          if (config.server.corsAllowedOrigins.has(url.origin)) {
             return origin;
           }
 

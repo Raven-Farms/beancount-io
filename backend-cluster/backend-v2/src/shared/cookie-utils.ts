@@ -16,18 +16,34 @@ export function setAuthCookie(
   token: string,
   expireAt: Date,
   isProduction: boolean,
+  // Required (pass config.jwt.cookieDomain) so no caller silently falls back to .beancount.io.
+  cookieDomain: string | null | undefined,
 ): void {
   ctx.cookies.set(
     COOKIE_NAME,
     token,
-    getCookieOptions(ctx, expireAt, isProduction),
+    getCookieOptions(ctx, expireAt, isProduction, cookieDomain),
   );
+}
+
+/**
+ * `undefined` keeps the managed default (`.beancount.io` in production);
+ * `null` means host-only; a string is used as given. See AUTH_COOKIE_DOMAIN.
+ */
+export function resolveCookieDomain(
+  isProduction: boolean,
+  cookieDomain: string | null | undefined,
+): string | undefined {
+  if (cookieDomain === null) return undefined;
+  if (cookieDomain !== undefined) return cookieDomain;
+  return isProduction ? ".beancount.io" : undefined;
 }
 
 function getCookieOptions(
   context: Context,
   expireAt: Date,
   isProduction: boolean,
+  cookieDomain: string | null | undefined,
 ): CookieOptions {
   return {
     // Mirrors the JWT's own expiry so the cookie never outlives the token it carries.
@@ -36,19 +52,36 @@ function getCookieOptions(
     secure: context.URL.protocol === "https:", // HTTPS only in production
     sameSite: "lax", // CSRF protection
     path: "/",
-    // Set domain for cross-subdomain access in production
-    // .beancount.io allows cookie to be shared across api.v3.beancount.io, dashboard.v3.beancount.io, etc.
-    domain: isProduction ? ".beancount.io" : undefined,
+    // Managed production shares the cookie across *.beancount.io (api.v3,
+    // dashboard.v3, ...); self-hosts override it with AUTH_COOKIE_DOMAIN.
+    domain: resolveCookieDomain(isProduction, cookieDomain),
   };
 }
 
 // Duck-typed on the one call made: Koa and @koa/router contexts carry
 // structurally identical cookie jars whose fluent `set` return type (`this`)
 // defeats nominal assignability between the two type graphs.
-export function clearAuthCookie(ctx: {
-  cookies: { set(name: string, value: string, opts: { maxAge: number }): unknown };
-}): void {
-  ctx.cookies.set(COOKIE_NAME, "", { maxAge: 0 });
+// Pass the same isProduction/cookieDomain used to set the cookie: a cookie set
+// with a Domain attribute is only deleted by a Set-Cookie with that Domain.
+export function clearAuthCookie(
+  ctx: {
+    cookies: {
+      set(
+        name: string,
+        value: string,
+        opts: { maxAge: number; path?: string; domain?: string },
+      ): unknown;
+    };
+  },
+  isProduction: boolean,
+  cookieDomain: string | null | undefined,
+): void {
+  const domain = resolveCookieDomain(isProduction, cookieDomain);
+  ctx.cookies.set(COOKIE_NAME, "", {
+    maxAge: 0,
+    path: "/",
+    ...(domain ? { domain } : {}),
+  });
 }
 
 /**

@@ -163,7 +163,11 @@ export class AuthResolver {
     if (ctx.token) {
       await this.authService.logout(ctx.token);
     }
-    clearAuthCookie(ctx.koaCtx as any);
+    clearAuthCookie(
+      ctx.koaCtx as any,
+      ctx.config.env === "production",
+      ctx.config.jwt.cookieDomain,
+    );
     return { success: true };
   }
 
@@ -182,6 +186,7 @@ export class AuthResolver {
       result.token,
       result.expireAt,
       ctx.config.env === "production",
+      ctx.config.jwt.cookieDomain,
     );
     return { token: result.token, expireAt: result.expireAt };
   }
@@ -204,6 +209,7 @@ export class AuthResolver {
       result.token,
       result.expireAt,
       ctx.config.env === "production",
+      ctx.config.jwt.cookieDomain,
     );
     return { token: result.token, expireAt: result.expireAt };
   }
@@ -222,6 +228,7 @@ export class AuthResolver {
       result.token,
       result.expireAt,
       ctx.config.env === "production",
+      ctx.config.jwt.cookieDomain,
     );
     return { token: result.token, expireAt: result.expireAt };
   }
@@ -330,6 +337,7 @@ export class AuthResolver {
       result.token,
       result.expireAt,
       ctx.config.env === "production",
+      ctx.config.jwt.cookieDomain,
     );
     return { token: result.token, expireAt: result.expireAt };
   }

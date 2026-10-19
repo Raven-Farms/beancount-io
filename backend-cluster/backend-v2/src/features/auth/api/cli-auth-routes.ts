@@ -119,10 +119,10 @@ export const CLI_AUTH_V1_ROUTES = [
     description:
       "Revokes the presented session token server-side and clears the browser cookie when one was used. Session-only: an API key or OAuth access token cannot log out, because a delegated credential does not own the session it rides on.",
     responses: { 200: json("Logout confirmation", z.object({ success: z.boolean() })) },
-    handler: async ({ layers }, { ctx }) => {
+    handler: async ({ layers, config }, { ctx }) => {
       const token = getTokenFromCtx(ctx);
       if (token) await layers.services.auth.logout(token);
-      clearAuthCookie(ctx);
+      clearAuthCookie(ctx, config.env === "production", config.jwt.cookieDomain);
       return { success: true };
     },
   }),

@@ -4,6 +4,8 @@ import {
   getDevelopmentPremiumUserIds,
   getMcpRegistryAuthProof,
   getOAuthPublicUrl,
+  parseCookieDomain,
+  parseCorsAllowedOrigins,
 } from "./config";
 
 describe("config", () => {
@@ -224,6 +226,65 @@ describe("config", () => {
       expectRefused(ed25519.replace("ed25519", "rsa"));
       expectRefused("v=MCPv1; k=ed25519; p=not base64!");
       expectRefused(`${ed25519}; extra=1`);
+    });
+  });
+
+  describe("parseCookieDomain (AUTH_COOKIE_DOMAIN)", () => {
+    it("is undefined when unset or blank (managed default)", () => {
+      expect(parseCookieDomain(undefined)).toBeUndefined();
+      expect(parseCookieDomain("  ")).toBeUndefined();
+    });
+
+    it("is null for host-only", () => {
+      expect(parseCookieDomain("host-only")).toBeNull();
+    });
+
+    it("passes an explicit domain through", () => {
+      expect(parseCookieDomain(" .Example.com ")).toBe(".example.com");
+      expect(parseCookieDomain("books.example.com")).toBe("books.example.com");
+    });
+
+    it("rejects anything that is not a bare domain at boot", () => {
+      for (const bad of [
+        "https://example.com",
+        "example.com:443",
+        "example.com/path",
+        ".example.com; SameSite=None",
+        "localhost",
+        "..example.com",
+      ]) {
+        expect(() => parseCookieDomain(bad)).toThrow(/AUTH_COOKIE_DOMAIN/);
+      }
+    });
+  });
+
+  describe("parseCorsAllowedOrigins (CORS_ALLOWED_ORIGINS)", () => {
+    it("is empty when unset", () => {
+      expect(parseCorsAllowedOrigins(undefined).size).toBe(0);
+    });
+
+    it("normalizes entries to origins", () => {
+      const origins = parseCorsAllowedOrigins(
+        "https://books.example.com/, https://app.example.com:8443",
+      );
+      expect([...origins]).toEqual([
+        "https://books.example.com",
+        "https://app.example.com:8443",
+      ]);
+    });
+
+    it("rejects malformed or non-http entries at boot", () => {
+      expect(() => parseCorsAllowedOrigins("not a url")).toThrow();
+      expect(() => parseCorsAllowedOrigins("ftp://example.com")).toThrow(
+        /unsupported origin/,
+      );
+      for (const bad of [
+        "https://example.com/path",
+        "https://user:pw@example.com",
+        "https://example.com/?q=1",
+      ]) {
+        expect(() => parseCorsAllowedOrigins(bad)).toThrow(/not a bare origin/);
+      }
     });
   });
 });

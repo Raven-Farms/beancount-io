@@ -117,7 +117,7 @@ async function createFixture(withDefaultLedger: boolean) {
           }
         }`,
         contextValue: {
-          config: { env: "test" },
+          config: { env: "test", jwt: { cookieDomain: undefined } },
           koaCtx: {
             URL: new URL("https://api.example/graphql"),
             cookies: { set: setCookie },
