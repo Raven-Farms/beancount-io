@@ -1,6 +1,7 @@
 import { SUBSCRIPTION_PERIOD_VERIFICATION_VERSION } from "./subscription-plan";
 import { StripeService } from "./stripe-service";
 import type { IPaidCustomerModel } from "@/features/stripe/data/paid-customer-model";
+import type { PaidCustomer } from "@/features/stripe/data/paid-customer-model/types";
 import type { IModels } from "@/foundation/models";
 import type Stripe from "stripe";
 import { BILLING_CLIENT_ID, SUBSCRIPTION_CONFIG } from "./stripe";
@@ -920,6 +921,57 @@ describe("StripeService", () => {
         expect.objectContaining({ status: "active" }),
       );
     });
+    // Stripe's default listing (no `status`) is every subscription that is
+    // not canceled, which is how a past-due one reaches the tier check; its
+    // grace is read from latest_invoice.next_payment_attempt.
+    it.each([
+      [
+        "a tier lookup",
+        { status: "current" },
+        undefined,
+        ["data.latest_invoice"],
+      ],
+      [
+        "a current read for Billing status",
+        { status: "current", expandForStatus: true },
+        undefined,
+        ["data.schedule", "data.latest_invoice"],
+      ],
+      [
+        "the full Billing view",
+        { status: "all", expandForStatus: true },
+        "all",
+        ["data.schedule", "data.latest_invoice"],
+      ],
+    ] as const)(
+      "asks Stripe for %s with the latest invoice a past-due grace needs",
+      async (_label, options, status, expand) => {
+        const binding = {
+          userId,
+          clientId: BILLING_CLIENT_ID,
+          stripeCustomerId: "cus_123",
+        } as unknown as PaidCustomer;
+        mockStripeSubscriptions.list.mockResolvedValue({
+          has_more: false,
+          data: [],
+        });
+
+        await stripeUseCase.listSubscriptions(userId, {
+          ...options,
+          bindings: [binding],
+        });
+
+        expect(mockStripeSubscriptions.list).toHaveBeenCalledTimes(1);
+        const [params] = mockStripeSubscriptions.list.mock.calls[0];
+        expect(params.customer).toBe("cus_123");
+        if (status) expect(params.status).toBe(status);
+        else expect(params).not.toHaveProperty("status");
+        expect(params.expand).toEqual(expect.arrayContaining([...expand]));
+        expect(
+          mockIPaidCustomerModel.findByUserIdAndClientId,
+        ).not.toHaveBeenCalled();
+      },
+    );
     it.each([
       { customer: "cus_foreign", livemode: true },
       { customer: "cus_123", livemode: false },

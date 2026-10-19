@@ -674,6 +674,91 @@ describe("PlanChangeSheet", () => {
       ]);
     });
 
+    it("schedules the split's monthly change, with no proration, when 'later' is chosen back", async () => {
+      const user = userEvent.setup();
+      pricedAlternative();
+      mockChangePlan.mockResolvedValue({
+        data: {
+          changePlan: {
+            status: "SCHEDULED",
+            effectiveAt: "2027-10-17T12:00:00Z",
+          },
+        },
+      });
+      const body = split();
+
+      await user.click(
+        body.getByRole("radio", { name: /userSettings\.planChangeSplitNow/ }),
+      );
+      await user.click(
+        body.getByRole("radio", { name: /userSettings\.planChangeSplitLater/ }),
+      );
+      expect(
+        body.getByRole("radio", { name: /userSettings\.planChangeSplitLater/ }),
+      ).toBeChecked();
+      await user.click(
+        body.getByRole("button", {
+          name: "userSettings.planChangeScheduleSwitch",
+        }),
+      );
+
+      expect(mockChangePlan).toHaveBeenCalledTimes(1);
+      expect(mockChangePlan).toHaveBeenCalledWith({
+        variables: {
+          clientId: "beancount-web-prod",
+          priceId: GROWTH_MONTHLY,
+          prorationDate: null,
+        },
+      });
+      expect(
+        mockTrack.mock.calls.find(
+          ([event]) => event === "plan_change_confirmed",
+        ),
+      ).toEqual([
+        "plan_change_confirmed",
+        expect.objectContaining({ kind: "SPLIT", to: "growth_monthly" }),
+      ]);
+    });
+
+    it("prices the split's 'now' option with the alternative's own amount, and confirms at its proration time", async () => {
+      const user = userEvent.setup();
+      mockPreview.alternative = {
+        data: preview({
+          kind: "TO_YEARLY",
+          currentPriceId: PREMIUM_YEARLY,
+          targetPriceId: GROWTH_YEARLY,
+          amountDueToday: 40_800,
+          prorationDate: 1792240000,
+        }),
+        loading: false,
+        error: undefined,
+      };
+      mockChangePlan.mockResolvedValue({
+        data: { changePlan: { status: "ACTIVE" } },
+      });
+      const body = split();
+
+      const now = body.getByRole("radio", {
+        name: "userSettings.planChangeSplitNow aiAgent.growthTier $408.00",
+      });
+      expect(now).toBeEnabled();
+      await user.click(now);
+      await user.click(
+        body.getByRole("button", {
+          name: "userSettings.planChangePayAndSwitch $408.00",
+        }),
+      );
+
+      expect(mockChangePlan).toHaveBeenCalledTimes(1);
+      expect(mockChangePlan).toHaveBeenCalledWith({
+        variables: {
+          clientId: "beancount-web-prod",
+          priceId: GROWTH_YEARLY,
+          prorationDate: 1792240000,
+        },
+      });
+    });
+
     it("offers a retry when the 'now' option cannot be priced", async () => {
       const user = userEvent.setup();
       mockPreview.alternative = {

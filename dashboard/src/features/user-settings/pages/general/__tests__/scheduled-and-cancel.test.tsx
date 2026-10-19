@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { CancellationReason } from "@/graphql/definitions";
 import { ScheduledPanel } from "../scheduled-panel";
@@ -105,6 +105,17 @@ describe("CancelSheet", () => {
     );
     return handlers;
   };
+  /** Every sheet button besides Cancel, Keep and the dialog's close. */
+  const alternativeButtons = () =>
+    within(screen.getByTestId("cancel-sheet"))
+      .getAllByRole("button")
+      .filter(
+        (button) =>
+          button.dataset.slot !== "dialog-close" &&
+          button.textContent !== "userSettings.cancelSubscription" &&
+          !button.textContent?.startsWith("userSettings.planChangeKeep"),
+      )
+      .map((button) => button.textContent);
 
   it("says what is kept until when, the Free limits after, and that nothing is deleted", () => {
     renderSheet();
@@ -144,11 +155,63 @@ describe("CancelSheet", () => {
     });
   });
 
+  it("offers the next tier down to Organization on yearly: Growth, yearly", async () => {
+    const user = userEvent.setup();
+    const { onAlternative } = renderSheet({
+      planName: "Organization",
+      tier: "organization",
+      cycle: "yearly",
+    });
+    await user.click(
+      screen.getByRole("button", {
+        name: "userSettings.cancelSheetDowngradeTo aiAgent.growthTier",
+      }),
+    );
+    expect(onAlternative).toHaveBeenCalledWith({
+      tier: "growth",
+      cycle: "yearly",
+    });
+  });
+
+  it("offers Premium on monthly its own yearly price, per month", async () => {
+    const user = userEvent.setup();
+    const { onAlternative } = renderSheet({
+      planName: "Premium",
+      tier: "premium",
+      cycle: "monthly",
+    });
+    // $143.88 a year is $11.99 a month.
+    await user.click(
+      screen.getByRole("button", {
+        name: "userSettings.cancelSheetSwitchToYearly $11.99",
+      }),
+    );
+    expect(onAlternative).toHaveBeenCalledWith({
+      tier: "premium",
+      cycle: "yearly",
+    });
+  });
+
+  it("offers a monthly plan exactly one alternative, yearly, and never the tier below", () => {
+    renderSheet({
+      planName: "Organization",
+      tier: "organization",
+      cycle: "monthly",
+    });
+    expect(alternativeButtons()).toEqual([
+      "userSettings.cancelSheetSwitchToYearly $399.99",
+    ]);
+    expect(
+      screen.queryByRole("button", { name: /cancelSheetDowngradeTo/ }),
+    ).not.toBeInTheDocument();
+  });
+
   it("offers no alternative to Premium on yearly", () => {
-    renderSheet({ tier: "premium", cycle: "yearly" });
+    renderSheet({ planName: "Premium", tier: "premium", cycle: "yearly" });
     expect(
       screen.queryByText("userSettings.cancelSheetOtherOptions"),
     ).not.toBeInTheDocument();
+    expect(alternativeButtons()).toEqual([]);
   });
 
   it("confirms with the optional reason, or none", async () => {

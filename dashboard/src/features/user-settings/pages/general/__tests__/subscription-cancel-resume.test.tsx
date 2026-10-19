@@ -23,6 +23,7 @@ const {
   mockUseAllTierQuotas,
   mockTrack,
   mockCancelScheduled,
+  mockRunPreview,
 } = vi.hoisted(() => ({
   mockUseQuery: vi.fn(),
   mockCancelSubscription: vi.fn(),
@@ -38,13 +39,15 @@ const {
   mockUseAllTierQuotas: vi.fn(),
   mockTrack: vi.fn(),
   mockCancelScheduled: vi.fn(),
+  // Like Apollo's lazy query: the promise resolves with the response.
+  mockRunPreview: vi.fn(async () => ({ data: undefined as unknown })),
 }));
 
 vi.mock("@/common/analytics", () => ({ track: mockTrack }));
 
 vi.mock("@apollo/client/react", () => ({
   useLazyQuery: () => [
-    vi.fn(),
+    mockRunPreview,
     { data: undefined, loading: false, error: undefined },
   ],
   useQuery: () => mockUseQuery(),
@@ -685,5 +688,114 @@ describe("Billing lifecycle events", () => {
       ]),
     );
     expect(mockToastSuccess).toHaveBeenCalledWith("userSettings.scheduledKept");
+  });
+
+  it("reports no undo, and says so, when the server refuses to keep the current plan", async () => {
+    const user = userEvent.setup();
+    const scheduled = structuredClone(mockActiveSubscriptionData);
+    scheduled.subscriptionStatus.subscriptions[0].scheduledChange = {
+      __typename: "ScheduledPlanChange",
+      priceId: "price_1RrSOGEqsEqs2tLVFnyB34qG",
+      effectiveAt: "2026-11-03T12:00:00Z",
+    };
+    mockUseQuery.mockReturnValue({
+      data: scheduled,
+      loading: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+    mockCancelScheduled.mockResolvedValue({
+      data: { cancelScheduledPlanChange: { success: false, message: null } },
+    });
+
+    render(<SubscriptionSection />);
+    await user.click(screen.getByText("userSettings.scheduledKeepCurrent"));
+
+    expect(mockCancelScheduled).toHaveBeenCalledWith({
+      variables: { clientId: "beancount-web-prod" },
+    });
+    await waitFor(() =>
+      expect(mockToastError).toHaveBeenCalledWith(
+        "userSettings.scheduledKeepFailed",
+      ),
+    );
+    // The section reports once the undo settles, a turn after the toast.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(events("plan_change_reverted")).toEqual([]);
+    expect(mockToastSuccess).not.toHaveBeenCalled();
+  });
+});
+
+describe("Cancel sheet alternative", () => {
+  it("closes the cancel sheet and opens the plan change sheet on the alternative plan", async () => {
+    const user = userEvent.setup();
+    setUserLimits("PREMIUM", {
+      aiCfoTokensUsed: 50,
+      aiCfoTokensMax: 100,
+      ledgersUsed: 2,
+      ledgersMax: 5,
+      collaboratorsPerLedgerMax: 5,
+    });
+    mockUseQuery.mockReturnValue({
+      data: mockActiveSubscriptionData,
+      loading: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+    mockRunPreview.mockResolvedValue({
+      data: {
+        previewPlanChange: {
+          kind: "TO_YEARLY",
+          targetPriceId: "price_1US5htEqsEqs2tLVENCzLaZB",
+        },
+      },
+    });
+
+    render(<SubscriptionSection />);
+    expect(
+      screen.queryByText("userSettings.planChangeTitle"),
+    ).not.toBeInTheDocument();
+    await user.click(screen.getByText("userSettings.cancelSubscription"));
+    // Premium on monthly is offered Premium on yearly.
+    await user.click(
+      within(cancelSheet()).getByRole("button", {
+        name: "userSettings.cancelSheetSwitchToYearly",
+      }),
+    );
+
+    expect(
+      screen.queryByText("userSettings.cancelSheetTitle"),
+    ).not.toBeInTheDocument();
+    const sheet = screen
+      .getByText("userSettings.planChangeTitle")
+      .closest<HTMLElement>('[data-testid="dialog-content"]');
+    if (!sheet) throw new Error("plan change sheet missing");
+    expect(within(sheet).getByTestId("dialog-description")).toHaveTextContent(
+      "aiAgent.premiumTier · userSettings.monthly → aiAgent.premiumTier · userSettings.yearly",
+    );
+    expect(mockRunPreview).toHaveBeenCalledWith({
+      variables: {
+        clientId: "beancount-web-prod",
+        priceId: "price_1US5htEqsEqs2tLVENCzLaZB",
+      },
+    });
+    expect(mockCancelSubscription).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(
+        mockTrack.mock.calls.filter(
+          ([event]) => event === "plan_change_previewed",
+        ),
+      ).toEqual([
+        [
+          "plan_change_previewed",
+          {
+            kind: "TO_YEARLY",
+            from: "premium_monthly",
+            to: "premium_yearly",
+            surface: "cancel_sheet",
+          },
+        ],
+      ]),
+    );
   });
 });

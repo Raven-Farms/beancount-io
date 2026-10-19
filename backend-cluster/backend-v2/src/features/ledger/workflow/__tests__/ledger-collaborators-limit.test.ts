@@ -95,6 +95,38 @@ describe("collaborator limit (PRFAQ005 question 21 item 6)", () => {
     expect(addOrUpdateLedgerCollaborator).not.toHaveBeenCalled();
   });
 
+  // The admin is on Organization (50), so only the owner's plan can explain
+  // the limit.
+  describe.each([
+    [SubscriptionTier.PREMIUM, 5],
+    [SubscriptionTier.GROWTH, 10],
+  ])("for a ledger whose owner is on %s", (ownerTier, limit) => {
+    beforeEach(() => {
+      tiers.usr_owner = ownerTier;
+      tiers.usr_admin = SubscriptionTier.ORGANIZATION;
+    });
+
+    it(`refuses a new collaborator at the owner's limit of ${limit}`, async () => {
+      collaborators(limit);
+
+      const refusal = add("newcomer");
+
+      await expect(refusal).rejects.toBeInstanceOf(ResourceLimitReachedError);
+      await expect(refusal).rejects.toMatchObject({
+        category: "RESOURCE_LIMIT_REACHED",
+        metadata: { resource: "Collaborator", limit, current: limit },
+      });
+      expect(addOrUpdateLedgerCollaborator).not.toHaveBeenCalled();
+    });
+
+    it(`adds a new collaborator one under the owner's limit of ${limit}`, async () => {
+      collaborators(limit - 1);
+
+      await expect(add("newcomer")).resolves.toMatchObject({ success: true });
+      expect(addOrUpdateLedgerCollaborator).toHaveBeenCalledTimes(1);
+    });
+  });
+
   it("lets an existing collaborator's permission change at the limit", async () => {
     collaborators(1);
 

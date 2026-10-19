@@ -112,6 +112,15 @@ describe("subscription-bound tier", () => {
     );
     expect(await getUserTier(params)).toBe(SubscriptionTier.GROWTH);
   });
+  it("stays Free while Stripe is unavailable when no verified tier is cached", async () => {
+    const params = deps([]);
+    params.stripe.listSubscriptions.mockRejectedValue(outage());
+    params.stripe.lastVerifiedTier = jest.fn(async () => null);
+    expect(await getUserTier(params)).toBe(SubscriptionTier.FREE);
+    expect(params.stripe.lastVerifiedTier).toHaveBeenCalledWith(
+      "usr_synthetic",
+    );
+  });
   it("never falls back for a failure that is not an outage, such as a binding mismatch", async () => {
     const params = deps([]);
     params.stripe.listSubscriptions.mockRejectedValue(
