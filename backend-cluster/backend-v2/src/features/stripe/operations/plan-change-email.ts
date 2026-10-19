@@ -10,11 +10,13 @@ import {
   type PlanConfig,
   type TierLimits,
 } from "../service/stripe";
+import { planItem } from "../service/subscription-plan";
 import {
   longDate,
   planName,
   sendBillingEmailOnce,
   type BillingEmailDeps,
+  type BillingEmailOutcome,
 } from "./billing-email";
 import { limitChanges } from "./plan-change-preview";
 import {
@@ -23,11 +25,6 @@ import {
 } from "./plan-change-schedule";
 
 export type PlanChangeEmailKind = PlanChangeEmailParams["kind"];
-export type PlanChangeEmailOutcome =
-  | "sent"
-  | "already-sent"
-  | "nothing-scheduled"
-  | "no-recipient";
 
 const LIMIT_LABELS: Record<keyof TierLimits, string> = {
   maxLedgers: "Ledgers",
@@ -65,9 +62,7 @@ export function changeAtRenewal(
   plans: readonly PlanConfig[],
 ): ScheduledChangeNotice | null {
   const change = pendingChange(subscription, plans);
-  const item = subscription.items.data.find((each) =>
-    plans.some((plan) => plan.priceId === each.price.id),
-  );
+  const item = planItem(subscription, plans)?.item;
   const schedule = subscription.schedule;
   if (!change || !item || !schedule || typeof schedule === "string") {
     return null;
@@ -95,11 +90,11 @@ export async function emailScheduledChange(
   userId: string,
   clientId: string,
   notice: ScheduledChangeNotice,
-): Promise<PlanChangeEmailOutcome> {
+): Promise<BillingEmailOutcome> {
   const { plans, portalReturnUrl } = SUBSCRIPTION_CONFIG[clientId];
   const current = plans.find((plan) => plan.priceId === notice.currentPriceId);
   const target = plans.find((plan) => plan.priceId === notice.change.priceId);
-  if (!current || !target) return "nothing-scheduled";
+  if (!current || !target) return "not-applicable";
 
   const params: PlanChangeEmailParams = {
     kind,

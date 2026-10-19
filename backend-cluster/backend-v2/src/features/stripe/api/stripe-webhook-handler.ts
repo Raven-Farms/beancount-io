@@ -7,10 +7,12 @@ import {
 } from "../operations/plan-change-email";
 import { refreshSubscriptionPeriods } from "../operations/refresh-subscription-periods";
 import {
+  awaitsAuthentication,
   emailFailedRenewal,
+  emailPlanEnded,
   emailRenewalReminder,
-  failedRenewal,
   invoicePlan,
+  isFirstFailedRenewal,
 } from "../operations/renewal-email";
 import { isPurchase, reportPurchase } from "../operations/report-purchase";
 import type { AppConfig } from "@/config/config";
@@ -91,6 +93,14 @@ export function setStripeWebhookHandler(
               layers.database.db,
               binding.userId,
             );
+            if (event.type === "customer.subscription.deleted") {
+              await emailPlanEnded(
+                emailDeps,
+                binding.userId,
+                clientId,
+                event.data.object,
+              );
+            }
             processed = true;
           }
           break;
@@ -179,8 +189,6 @@ export function setStripeWebhookHandler(
               expand: ["schedule"],
             });
           const notice = changeAtRenewal(subscription, plans);
-          // A failed send throws: the webhook answers with an error and
-          // Stripe redelivers, and the claim was given back.
           const sent = notice
             ? await emailScheduledChange(
                 emailDeps,
@@ -207,23 +215,30 @@ export function setStripeWebhookHandler(
             invoice,
             SUBSCRIPTION_CONFIG[clientId].plans,
           );
-          const failure = failedRenewal(invoice);
-          if (!plan || !failure || !invoice.customer) break;
+          if (!plan || !isFirstFailedRenewal(invoice) || !invoice.customer) {
+            break;
+          }
           const binding =
             await layers.database.models.paidCustomer.findByStripeCustomerIdAndClientId(
               layers.database.db,
               customerId(invoice.customer),
               clientId,
             );
-          if (!binding) break;
-          // A failed send throws, so Stripe redelivers; the claim was given back.
+          if (
+            !binding ||
+            (await awaitsAuthentication(
+              stripe.getStripeInstance(clientId),
+              invoice.id,
+            ))
+          ) {
+            break;
+          }
           const sent = await emailFailedRenewal(
             emailDeps,
             binding.userId,
             clientId,
             invoice,
             plan,
-            failure,
           );
           processed = sent === "sent";
           break;

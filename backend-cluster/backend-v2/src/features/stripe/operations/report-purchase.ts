@@ -6,6 +6,7 @@ import type { IModels } from "@/foundation/models";
 import { logger } from "@/shared/logger";
 import type { PlanConfig } from "../service/stripe";
 import { expandableId } from "../service/subscription-plan";
+import { majorUnits } from "./minor-units";
 
 const reportLogger = logger.child({ module: "report-purchase" });
 
@@ -45,16 +46,6 @@ export function isPurchase(
     PURCHASE_REASONS.has(invoice.billing_reason) &&
     invoice.amount_paid > 0
   );
-}
-
-/** Stripe amounts are in the currency's minor unit; GA4 wants major units. */
-export function majorUnits(amount: number, currency: string): number {
-  const digits =
-    new Intl.NumberFormat("en", {
-      style: "currency",
-      currency,
-    }).resolvedOptions().maximumFractionDigits ?? 2;
-  return amount / 10 ** digits;
 }
 
 /** GA4 Measurement Protocol body for a purchase invoice. */

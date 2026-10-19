@@ -52,18 +52,19 @@ export function buildTemplatePreviews(): TemplatePreview[] {
   };
   const renewal = {
     plan: "Premium · Yearly",
-    amount: "$143.88",
     billingUrl: "https://beancount.io/settings/billing",
   };
   const renewalFailedParams: RenewalEmailParams = {
     ...renewal,
     kind: "failed",
+    amount: "$143.88",
     nextAttemptDate: "October 22, 2026",
   };
   const renewalFinalParams: RenewalEmailParams = { ...renewal, kind: "final" };
   const renewalUpcomingParams: RenewalEmailParams = {
     ...renewal,
     kind: "upcoming",
+    amount: "$143.88",
     renewalDate: "October 17, 2027",
   };
 

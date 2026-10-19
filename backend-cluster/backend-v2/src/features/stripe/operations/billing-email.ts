@@ -2,13 +2,20 @@ import type { DbExecutor } from "@/drizzle/drizzle";
 import type { IModels } from "@/foundation/models";
 import type { ISendGrid } from "@/foundation/sendgrid";
 import { TIER_DISPLAY_NAMES, type PlanConfig } from "../service/stripe";
-import { majorUnits } from "./report-purchase";
+import { majorUnits } from "./minor-units";
 
 export interface BillingEmailDeps {
   models: Pick<IModels, "user" | "sentBillingEmail">;
   db: DbExecutor;
   sendgrid: ISendGrid;
 }
+
+/** What sending a billing email came to; `not-applicable` means none was due. */
+export type BillingEmailOutcome =
+  | "sent"
+  | "already-sent"
+  | "no-recipient"
+  | "not-applicable";
 
 export interface BillingMail {
   subject: string;
@@ -45,7 +52,7 @@ export async function sendBillingEmailOnce(
   userId: string,
   key: string,
   mail: BillingMail,
-): Promise<"sent" | "already-sent" | "no-recipient"> {
+): Promise<Exclude<BillingEmailOutcome, "not-applicable">> {
   const user = await deps.models.user.getById(deps.db, userId);
   if (!user?.email) return "no-recipient";
   if (!(await deps.models.sentBillingEmail.claim(deps.db, key))) {

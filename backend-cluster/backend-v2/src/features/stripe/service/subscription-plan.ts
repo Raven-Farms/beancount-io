@@ -3,6 +3,7 @@ import {
   BILLING_CLIENT_ID,
   SUBSCRIPTION_CONFIG,
   SubscriptionTier,
+  type PlanConfig,
 } from "./stripe";
 
 export type ClientSubscription = Stripe.Subscription & { clientId: string };
@@ -66,6 +67,21 @@ export function expandableId(value: string | { id: string }): string {
 
 export function customerId(customer: Stripe.Subscription["customer"]): string {
   return expandableId(customer);
+}
+
+/**
+ * The subscription item billing one of `plans`, with that plan; undefined
+ * when none is ours, as on the other products the Stripe account bills.
+ */
+export function planItem(
+  subscription: Stripe.Subscription,
+  plans: readonly PlanConfig[],
+): { item: Stripe.SubscriptionItem; plan: PlanConfig } | undefined {
+  for (const item of subscription.items.data) {
+    const plan = plans.find((each) => each.priceId === item.price.id);
+    if (plan) return { item, plan };
+  }
+  return undefined;
 }
 
 // The same recognized prices and paid-status policy drive tier and cache.

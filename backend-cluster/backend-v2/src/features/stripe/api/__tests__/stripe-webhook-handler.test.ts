@@ -34,11 +34,13 @@ jest.mock("../../operations/plan-change-email", () => ({
 }));
 
 const mockEmailFailedRenewal = jest.fn(async () => "sent");
+const mockEmailPlanEnded = jest.fn(async () => "not-applicable");
 const mockEmailRenewalReminder = jest.fn(async () => "not-applicable");
 jest.mock("../../operations/renewal-email", () => ({
   ...jest.requireActual("../../operations/renewal-email"),
   emailFailedRenewal: (...args: unknown[]) =>
     mockEmailFailedRenewal(...(args as [])),
+  emailPlanEnded: (...args: unknown[]) => mockEmailPlanEnded(...(args as [])),
   emailRenewalReminder: (...args: unknown[]) =>
     mockEmailRenewalReminder(...(args as [])),
 }));
@@ -55,10 +57,12 @@ function setup(event: any) {
     schedule: null,
     items: { data: [] },
   }));
+  const listInvoicePayments = jest.fn(async () => ({ data: [] as unknown[] }));
   const stripe = {
     getStripeInstance: jest.fn(() => ({
       webhooks: { constructEvent },
       subscriptions: { retrieve: retrieveSubscription },
+      invoicePayments: { list: listInvoicePayments },
     })),
     handleCustomerEvent: jest.fn(),
     handleCheckoutSessionCompleted: jest.fn(),
@@ -94,6 +98,7 @@ function setup(event: any) {
     paidCustomer,
     constructEvent,
     retrieveSubscription,
+    listInvoicePayments,
     ctx,
     run: () => handler(ctx, async () => {}),
   };
@@ -542,32 +547,40 @@ describe("failed renewal charges", () => {
       BILLING_CLIENT_ID,
       expect.objectContaining({ id: "in_synthetic" }),
       expect.objectContaining({ priceId: PREMIUM_YEARLY }),
-      {
-        invoiceId: "in_synthetic",
-        kind: "failed",
-        nextAttemptAt: new Date(NEXT_ATTEMPT * 1000),
-      },
     );
+    expect(t.listInvoicePayments).toHaveBeenCalledWith({
+      invoice: "in_synthetic",
+      expand: ["data.payment.payment_intent"],
+    });
     expect(t.ctx.status).toBe(200);
     expect(t.ctx.body.processed).toBe(true);
   });
 
-  it("sends the final notice when Stripe has no retry left", async () => {
-    const t = setup(failed({ attempt_count: 5, next_payment_attempt: null }));
+  it("emails after the first failure even when Stripe schedules no retry", async () => {
+    const t = setup(failed({ next_payment_attempt: null }));
     await t.run();
 
-    expect(mockEmailFailedRenewal).toHaveBeenCalledWith(
-      expect.anything(),
-      "usr_synthetic",
-      BILLING_CLIENT_ID,
-      expect.anything(),
-      expect.anything(),
-      { invoiceId: "in_synthetic", kind: "final" },
-    );
+    expect(mockEmailFailedRenewal).toHaveBeenCalledTimes(1);
   });
 
-  it("stays quiet between the first failure and the last", async () => {
-    const t = setup(failed({ attempt_count: 2 }));
+  it("stays quiet on every retry, the last included: the cancellation says the plan ended", async () => {
+    for (const invoice of [
+      { attempt_count: 2 },
+      { attempt_count: 5, next_payment_attempt: null },
+    ]) {
+      const t = setup(failed(invoice));
+      await t.run();
+
+      expect(t.ctx.body.processed).toBe(false);
+    }
+    expect(mockEmailFailedRenewal).not.toHaveBeenCalled();
+  });
+
+  it("leaves a charge waiting on the bank to Stripe's confirm-payment email", async () => {
+    const t = setup(failed());
+    t.listInvoicePayments.mockResolvedValue({
+      data: [{ payment: { payment_intent: { status: "requires_action" } } }],
+    });
     await t.run();
 
     expect(mockEmailFailedRenewal).not.toHaveBeenCalled();
@@ -590,6 +603,7 @@ describe("failed renewal charges", () => {
       expect(
         t.paidCustomer.findByStripeCustomerIdAndClientId,
       ).not.toHaveBeenCalled();
+      expect(t.listInvoicePayments).not.toHaveBeenCalled();
     }
     expect(mockEmailFailedRenewal).not.toHaveBeenCalled();
   });
@@ -601,12 +615,64 @@ describe("failed renewal charges", () => {
     );
     await t.run();
 
+    expect(t.listInvoicePayments).not.toHaveBeenCalled();
     expect(mockEmailFailedRenewal).not.toHaveBeenCalled();
   });
 
   it("answers with an error when the email cannot be sent, so Stripe redelivers", async () => {
     mockEmailFailedRenewal.mockRejectedValueOnce(new Error("SendGrid down"));
     const t = setup(failed());
+    await t.run();
+
+    expect(t.ctx.status).toBe(400);
+  });
+});
+
+describe("a plan ending", () => {
+  const ended = (type = "customer.subscription.deleted") =>
+    subscriptionEvent({
+      type,
+      data: {
+        object: {
+          id: "sub_synthetic",
+          customer: "cus_synthetic",
+          metadata: {},
+          status: "canceled",
+          cancellation_details: { reason: "payment_failed" },
+        },
+      },
+    });
+
+  beforeEach(() => mockEmailPlanEnded.mockClear());
+
+  it("tells the bound subscriber, after the cached plan is refreshed", async () => {
+    const t = setup(ended());
+    t.stripe.listSubscriptions.mockImplementation(async () => {
+      expect(mockEmailPlanEnded).not.toHaveBeenCalled();
+      return [];
+    });
+    await t.run();
+
+    expect(t.stripe.listSubscriptions).toHaveBeenCalled();
+    expect(mockEmailPlanEnded).toHaveBeenCalledWith(
+      expect.objectContaining({ sendgrid: {} }),
+      "usr_synthetic",
+      BILLING_CLIENT_ID,
+      expect.objectContaining({ id: "sub_synthetic" }),
+    );
+    expect(t.ctx.body.processed).toBe(true);
+  });
+
+  it("tells nobody on a subscription that was only updated", async () => {
+    const t = setup(ended("customer.subscription.updated"));
+    await t.run();
+
+    expect(mockEmailPlanEnded).not.toHaveBeenCalled();
+  });
+
+  it("answers with an error when the email cannot be sent, so Stripe redelivers", async () => {
+    mockEmailPlanEnded.mockRejectedValueOnce(new Error("SendGrid down"));
+    const t = setup(ended());
     await t.run();
 
     expect(t.ctx.status).toBe(400);
