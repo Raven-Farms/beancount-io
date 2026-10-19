@@ -1472,7 +1472,7 @@ const CROSS_SURFACE_VERBS: readonly VerbEntry[] = [
     gqlExempt: G.bytesNotFields,
     mcpResource: "ledgerArchive",
     mcpExempt:
-      "Archive bytes are delivered by the MCP resource as a base64 blob with per-call authorization, archive selection, and the shared download budget. A blob is one JSON-RPC message held whole in memory, so it is capped at 8 MiB (`MCP_ARCHIVE_BLOB_MAX_BYTES`); a larger archive is refused with a hint to the `ledgerArchiveDownloadUrl` resource, whose REST URL streams.",
+      "Archive bytes are delivered by the MCP resource as a base64 blob with per-call authorization, archive selection, and the shared download budget. A blob is one JSON-RPC message held whole in memory, so it is capped at `MCP_ARCHIVE_BLOB_MAX_BYTES`; a larger archive is refused with a hint to the `ledgerArchiveDownloadUrl` resource, whose REST URL streams.",
   },
   {
     // The pre-v1 spelling, superseded and marked deprecated in the spec. Kept

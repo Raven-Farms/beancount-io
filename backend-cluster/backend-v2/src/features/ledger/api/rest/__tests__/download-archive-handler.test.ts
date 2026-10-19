@@ -1,10 +1,8 @@
 import { LedgerArchiveService } from "@/features/ledger/service/ledger-archive-service";
-const fetchMock = jest.fn();
-jest.mock("node-fetch", () => ({
-  __esModule: true,
-  default: (...args: unknown[]) => fetchMock(...args),
-}));
-
+import {
+  startArchiveOrigin,
+  type ArchiveOrigin,
+} from "@/features/ledger/service/__tests__/archive-origin";
 import http from "node:http";
 import Koa from "koa";
 import Router from "@koa/router";
@@ -48,14 +46,15 @@ const layers = {
   },
 } as unknown as AppLayers;
 
-const config = {
-  gitea: { internalBaseUrl: "http://gitea.invalid" },
-} as unknown as AppConfig;
-
 let baseUrl: string;
 let server: http.Server;
+let origin: ArchiveOrigin;
 
 beforeAll(async () => {
+  origin = await startArchiveOrigin();
+  const config = {
+    gitea: { internalBaseUrl: origin.url },
+  } as unknown as AppConfig;
   layers.services.ledgerArchive = new LedgerArchiveService(
     layers.database.models,
     layers.database.db,
@@ -75,18 +74,13 @@ beforeAll(async () => {
   baseUrl = `http://127.0.0.1:${address.port}`;
 });
 
-afterAll(() => {
+afterAll(async () => {
   server.close();
+  await origin.close();
 });
 
 beforeEach(() => {
-  fetchMock.mockReset();
-  fetchMock.mockResolvedValue({
-    ok: true,
-    status: 200,
-    headers: { get: () => null },
-    body: "ZIPBYTES",
-  });
+  origin.reset();
 });
 
 describe("legacy archive download", () => {
@@ -100,7 +94,7 @@ describe("legacy archive download", () => {
     );
 
     expect(response.status).toBe(401);
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(origin.requests).toHaveLength(0);
   });
 
   it("streams a public ledger's archive to an anonymous caller with no credential", async () => {
@@ -114,10 +108,10 @@ describe("legacy archive download", () => {
 
     expect(response.status).toBe(200);
     expect(await response.text()).toBe("ZIPBYTES");
-    expect(fetchMock).toHaveBeenCalledWith(
-      "http://gitea.invalid/api/v1/repos/alice/public/archive/main.zip",
-      expect.objectContaining({ method: "GET", headers: {} }),
-    );
+    expect(origin.requests.map((r) => r.url)).toEqual([
+      "/api/v1/repos/alice/public/archive/main.zip",
+    ]);
+    expect(origin.requests[0].headers).not.toHaveProperty("authorization");
   });
 
   it("reports an unknown ledger as 404 without an upstream request", async () => {
@@ -128,7 +122,7 @@ describe("legacy archive download", () => {
     );
 
     expect(response.status).toBe(404);
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(origin.requests).toHaveLength(0);
   });
 
   it("still rejects a traversal archive name before anything downstream", async () => {
@@ -137,6 +131,6 @@ describe("legacy archive download", () => {
     );
 
     expect(response.status).toBe(400);
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(origin.requests).toHaveLength(0);
   });
 });

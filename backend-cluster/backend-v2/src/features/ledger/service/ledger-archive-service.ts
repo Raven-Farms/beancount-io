@@ -1,5 +1,4 @@
 import { Readable } from "node:stream";
-import fetch, { type RequestInit, type Response } from "node-fetch";
 import type { AppConfig } from "@/config/config";
 import type { IModels } from "@/foundation/models";
 import type { DbExecutor } from "@/drizzle/drizzle";
@@ -8,6 +7,7 @@ import {
   AUTHORIZATION_ACTIONS,
   type IAuthorizationService,
 } from "@/server/api/authorization";
+import { getBasicAuthHeader } from "@/features/auth/utils/auth";
 import {
   NotFoundError,
   UnauthenticatedError,
@@ -30,13 +30,19 @@ export interface ArchiveRequest {
   archive: string;
   identity?: Identity;
 }
-export interface ILedgerArchiveService {
-  download(args: ArchiveRequest): Promise<Response>;
+/** An authorized archive download, still streaming from Gitea. */
+export interface LedgerArchive {
+  /** Gitea's body, never buffered here; destroying it ends the Gitea request. */
+  body: Readable;
+  contentType: string;
+  contentDisposition?: string;
+  /** Declared byte length, when Gitea sends one. */
+  contentLength?: number;
 }
-/**
- * One authorized Gitea download shared by REST streams and MCP blobs. The body
- * is Gitea's own stream, never buffered here.
- */
+export interface ILedgerArchiveService {
+  download(args: ArchiveRequest): Promise<LedgerArchive>;
+}
+/** One authorized Gitea download shared by REST streams and MCP blobs. */
 export class LedgerArchiveService implements ILedgerArchiveService {
   constructor(
     private readonly models: Pick<IModels, "user">,
@@ -44,7 +50,7 @@ export class LedgerArchiveService implements ILedgerArchiveService {
     private readonly config: Pick<AppConfig, "gitea">,
     private readonly authorization: IAuthorizationService,
   ) {}
-  async download(args: ArchiveRequest): Promise<Response> {
+  async download(args: ArchiveRequest): Promise<LedgerArchive> {
     assertSafeArchiveName(args.archive);
     const { ledgerOwner, ledgerName } = parseLedgerId(args.ledgerId);
     await authorizeLedger(
@@ -55,14 +61,14 @@ export class LedgerArchiveService implements ILedgerArchiveService {
     );
     // An authorized public read sends no credential, so it cannot reach a
     // private repository even if authorization were wrong.
-    const headers: Record<string, string> = {};
+    let headers: Record<string, string> = {};
     if (args.identity) {
       const user = await this.models.user.getById(
         this.db,
         args.identity.userId,
       );
       if (!user) throw new UnauthenticatedError("User not found");
-      headers.Authorization = `Basic ${Buffer.from(`${user.ledger_username}:${user.ledger_password}`).toString("base64")}`;
+      headers = getBasicAuthHeader(user.ledger_username, user.ledger_password);
     }
     const controller = new AbortController();
     const deadline = setTimeout(
@@ -73,36 +79,29 @@ export class LedgerArchiveService implements ILedgerArchiveService {
     try {
       response = await fetch(
         `${this.config.gitea.internalBaseUrl}/api/v1/repos/${encodeURIComponent(ledgerOwner)}/${encodeURIComponent(ledgerName)}/archive/${encodeURIComponent(args.archive)}`,
-        {
-          method: "GET",
-          headers,
-          // @types/node-fetch predates AbortSignal's `reason`; the runtime accepts Node's.
-          signal: controller.signal as RequestInit["signal"],
-        },
+        { headers, signal: controller.signal },
       );
     } catch {
       throw new ServiceUnavailableError("Ledger archive");
     } finally {
       clearTimeout(deadline);
     }
-    const body = response.body;
-    if (body instanceof Readable) {
-      // node-fetch's body is a PassThrough fed by the upstream socket, and
-      // destroying it leaves that socket open. A body closed before its end —
-      // the caller hung up, or a reader stopped early — therefore aborts the
-      // Gitea request itself. node-fetch reports that abort as an `error` on
-      // the already-closed body, which may have no reader left to hear it.
-      body.on("error", () => {});
-      body.once("close", () => {
-        if (!body.readableEnded) controller.abort();
-      });
-    }
-    if (!response.ok) {
-      if (body instanceof Readable) body.destroy();
+    if (!response.ok || !response.body) {
+      await response.body?.cancel();
       if (response.status === 404)
         throw new NotFoundError("Archive", args.archive);
       throw new ServiceUnavailableError("Ledger archive");
     }
-    return response;
+    const length = response.headers.get("content-length");
+    return {
+      body: Readable.fromWeb(
+        response.body as Parameters<typeof Readable.fromWeb>[0],
+      ),
+      contentType:
+        response.headers.get("content-type") ?? "application/octet-stream",
+      contentDisposition:
+        response.headers.get("content-disposition") ?? undefined,
+      contentLength: length === null ? undefined : Number(length),
+    };
   }
 }

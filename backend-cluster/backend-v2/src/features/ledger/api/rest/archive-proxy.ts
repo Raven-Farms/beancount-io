@@ -8,11 +8,10 @@ export async function streamLedgerArchive(
   layers: AppLayers,
   args: ArchiveRequest,
 ): Promise<void> {
-  const response = await layers.services.ledgerArchive.download(args);
-  for (const header of ["content-type", "content-disposition"]) {
-    const value = response.headers.get(header);
-    if (value) ctx.set(header, value);
-  }
+  const archive = await layers.services.ledgerArchive.download(args);
+  ctx.set("content-type", archive.contentType);
+  if (archive.contentDisposition)
+    ctx.set("content-disposition", archive.contentDisposition);
   ctx.set("Cache-Control", "private, no-store");
-  ctx.body = response.body;
+  ctx.body = archive.body;
 }

@@ -1,9 +1,8 @@
 import { LedgerArchiveService } from "@/features/ledger/service/ledger-archive-service";
-const fetchMock = jest.fn();
-jest.mock("node-fetch", () => ({
-  __esModule: true,
-  default: (...args: unknown[]) => fetchMock(...args),
-}));
+import {
+  startArchiveOrigin,
+  type ArchiveOrigin,
+} from "@/features/ledger/service/__tests__/archive-origin";
 
 import type { AppConfig } from "@/config/config";
 import type { AppLayers } from "@/foundation/composition";
@@ -41,7 +40,7 @@ const layers = {
 const config = {
   env: "test",
   api: { scopeEnforcement: "shadow" },
-  gitea: { internalBaseUrl: "http://gitea.invalid" },
+  gitea: { internalBaseUrl: "" },
 } as unknown as AppConfig;
 
 const apiKeyIdentity: Identity = {
@@ -52,10 +51,13 @@ const apiKeyIdentity: Identity = {
 };
 
 let server: V1TestServer;
+let origin: ArchiveOrigin;
 const LEDGER = "/api-gateway/v1/ledgers/alice/main";
 const ARCHIVE = `${LEDGER}/archive/gitea-main.zip`;
 
 beforeAll(async () => {
+  origin = await startArchiveOrigin();
+  config.gitea.internalBaseUrl = origin.url;
   layers.services.ledgerArchive = new LedgerArchiveService(
     layers.database.models,
     layers.database.db,
@@ -67,26 +69,14 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await server.close();
+  await origin.close();
 });
 
 beforeEach(() => {
   jest.clearAllMocks();
   server.setIdentity(readOnlyToken);
   authorizeOrThrow.mockResolvedValue({ allowed: true });
-  fetchMock.mockResolvedValue({
-    ok: true,
-    status: 200,
-    headers: {
-      get: (name: string) => {
-        if (name === "content-type") return "application/zip";
-        if (name === "content-disposition") {
-          return 'attachment; filename="main.zip"';
-        }
-        return null;
-      },
-    },
-    body: "ZIPBYTES",
-  });
+  origin.reset();
 });
 
 describe("v1 archive download", () => {
@@ -108,10 +98,9 @@ describe("v1 archive download", () => {
         resource: "ledger:alice/main",
       }),
     );
-    expect(fetchMock).toHaveBeenCalledWith(
-      "http://gitea.invalid/api/v1/repos/alice/main/archive/gitea-main.zip",
-      expect.objectContaining({ method: "GET" }),
-    );
+    expect(origin.requests.map((r) => r.url)).toEqual([
+      "/api/v1/repos/alice/main/archive/gitea-main.zip",
+    ]);
     expect(response.headers.get("content-disposition")).toBe(
       'attachment; filename="main.zip"',
     );
@@ -123,7 +112,7 @@ describe("v1 archive download", () => {
     const response = await fetch(`${server.url}${ARCHIVE}`);
 
     expect(response.status).toBe(401);
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(origin.requests).toHaveLength(0);
   });
 
   it("refuses a token without read scope", async () => {
@@ -133,7 +122,7 @@ describe("v1 archive download", () => {
 
     expect(response.status).toBe(403);
     expect(authorizeOrThrow).toHaveBeenCalled();
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(origin.requests).toHaveLength(0);
   });
 
   it("refuses a caller without ledger read access", async () => {
@@ -141,7 +130,7 @@ describe("v1 archive download", () => {
     const response = await fetch(`${server.url}${ARCHIVE}`);
 
     expect(response.status).toBe(403);
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(origin.requests).toHaveLength(0);
   });
 
   it("rejects a traversal archive name before reading upstream", async () => {
@@ -151,7 +140,7 @@ describe("v1 archive download", () => {
 
     expect(response.status).toBe(400);
     expect(authorizeOrThrow).not.toHaveBeenCalled();
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(origin.requests).toHaveLength(0);
   });
 
   it("does not accept a credential from the query string", async () => {
@@ -159,14 +148,13 @@ describe("v1 archive download", () => {
     const response = await fetch(`${server.url}${ARCHIVE}?token=a.jwt.value`);
 
     expect(response.status).toBe(401);
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(origin.requests).toHaveLength(0);
   });
 
   it("reports an archive Gitea does not have as 404", async () => {
-    fetchMock.mockResolvedValueOnce({
-      ok: false,
-      status: 404,
-      headers: { get: () => null },
+    origin.serve((_req, res) => {
+      res.statusCode = 404;
+      res.end();
     });
     const response = await fetch(`${server.url}${ARCHIVE}`);
 
@@ -182,6 +170,6 @@ describe("v1 archive download", () => {
 
     expect(response.status).toBe(404);
     expect(authorizeOrThrow).not.toHaveBeenCalled();
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(origin.requests).toHaveLength(0);
   });
 });

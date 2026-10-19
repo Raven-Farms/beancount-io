@@ -41,8 +41,7 @@ import { VOCABULARY_READS } from "@/features/ledger/api/rest/v1/vocabulary-handl
 import { LEDGER_OPTIONS_READ } from "@/features/ledger/api/rest/v1/options-handler";
 import { ANALYSIS_READS } from "@/features/ledger/api/rest/v1/analysis-handler";
 import { NotFoundError, OperationNotAllowedError } from "@/shared/errors";
-import type { Readable } from "node:stream";
-import type { Response } from "node-fetch";
+import type { LedgerArchive } from "@/features/ledger/service/ledger-archive-service";
 
 /**
  * The MCP surface's resource fragment (ADR 0008 D2).
@@ -110,35 +109,21 @@ export interface McpResourceDescriptor {
 export const MCP_ARCHIVE_BLOB_MAX_BYTES = 8 * 1024 * 1024;
 const MCP_ARCHIVE_BLOB_MAX_MIB = MCP_ARCHIVE_BLOB_MAX_BYTES / (1024 * 1024);
 
-function archiveTooLarge(ledgerId: string, archive: string) {
-  return new OperationNotAllowedError(
-    "readArchive",
-    `${archive} is larger than the ${MCP_ARCHIVE_BLOB_MAX_MIB} MiB an MCP resource returns`,
-    `Read \`beancount://${ledgerId}/archive-download-url\` for an HTTP URL that streams the archive at any size, and fetch it with this same credential.`,
-  );
-}
-
-/** The archive's bytes, refused once they pass the blob cap. */
+/** The archive's bytes, or `undefined` once they pass the blob cap. */
 async function readCappedArchive(
-  response: Response,
-  ledgerId: string,
-  archive: string,
-): Promise<Buffer> {
-  const body = response.body as Readable;
-  if (
-    Number(response.headers.get("content-length")) > MCP_ARCHIVE_BLOB_MAX_BYTES
-  ) {
-    body.destroy();
-    throw archiveTooLarge(ledgerId, archive);
+  archive: LedgerArchive,
+): Promise<Buffer | undefined> {
+  if ((archive.contentLength ?? 0) > MCP_ARCHIVE_BLOB_MAX_BYTES) {
+    archive.body.destroy();
+    return undefined;
   }
   const chunks: Buffer[] = [];
   let size = 0;
-  // Leaving the loop early destroys the body, which aborts the upstream read.
-  for await (const chunk of body) {
-    size += (chunk as Buffer).length;
-    if (size > MCP_ARCHIVE_BLOB_MAX_BYTES)
-      throw archiveTooLarge(ledgerId, archive);
-    chunks.push(chunk as Buffer);
+  // Leaving the loop early destroys the body, which ends the Gitea request.
+  for await (const chunk of archive.body as AsyncIterable<Buffer>) {
+    size += chunk.length;
+    if (size > MCP_ARCHIVE_BLOB_MAX_BYTES) return undefined;
+    chunks.push(chunk);
   }
   return Buffer.concat(chunks, size);
 }
@@ -148,20 +133,23 @@ async function readArchive(
   ledgerId: string,
   archive: string,
 ) {
-  const response = await context.ledgerArchiveService.download({
+  const download = await context.ledgerArchiveService.download({
     identity: context.identity,
     ledgerId,
     archive,
   });
-  const disposition = response.headers.get("content-disposition");
+  const bytes = await readCappedArchive(download);
+  if (!bytes)
+    throw new OperationNotAllowedError(
+      "readArchive",
+      `${archive} is larger than the ${MCP_ARCHIVE_BLOB_MAX_MIB} MiB an MCP resource returns`,
+      `Read \`beancount://${ledgerId}/archive-download-url\` for an HTTP URL that streams the archive at any size, and fetch it with this same credential.`,
+    );
   return {
-    blob: (await readCappedArchive(response, ledgerId, archive)).toString(
-      "base64",
-    ),
-    mimeType:
-      response.headers.get("content-type") ?? "application/octet-stream",
-    ...(disposition && {
-      _meta: { "beancount/contentDisposition": disposition },
+    blob: bytes.toString("base64"),
+    mimeType: download.contentType,
+    ...(download.contentDisposition && {
+      _meta: { "beancount/contentDisposition": download.contentDisposition },
     }),
   };
 }
