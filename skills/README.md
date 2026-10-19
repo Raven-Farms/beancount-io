@@ -27,8 +27,8 @@ Install the whole suite, not individual skills: migration and month-end close de
 ```sh
 SKILLS_SRC="${XDG_DATA_HOME:-$HOME/.local/share}/beancount-io"
 git clone --depth 1 --filter=blob:none --sparse https://github.com/bex-co/beancount-io.git "$SKILLS_SRC"
-git -C "$SKILLS_SRC" sparse-checkout set skills
-python3 "$SKILLS_SRC/skills/scripts/beancount-skills.py" install ~/.claude/skills ~/.agents/skills
+git -C "$SKILLS_SRC" sparse-checkout set skills scripts/skills
+python3 "$SKILLS_SRC/scripts/skills/beancount-skills.py" install ~/.claude/skills ~/.agents/skills
 ```
 
 - [Installation guide](docs/installation.md): workspace-only installs, discovery checks, `verify`, updates, local edits and name conflicts, and removal.

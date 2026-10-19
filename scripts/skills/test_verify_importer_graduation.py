@@ -52,7 +52,7 @@ class VerifyImporterGraduationTests(unittest.TestCase):
             raise RuntimeError('bea is required: set BEA to an installed executable or run uv sync in cli/.')
 
     def setUp(self):
-        scratch = SCRIPTS.parent / 'tmp'
+        scratch = SCRIPTS / 'tmp'
         scratch.mkdir(exist_ok=True)
         temporary = tempfile.TemporaryDirectory(dir=scratch)
         self.addCleanup(temporary.cleanup)

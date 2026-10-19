@@ -2,7 +2,7 @@
 """Behavioral tests for installation, shared bea recipes, and customer journeys.
 
 Stdlib unittest only (the skills CI has no pytest): run with
-`python3 skills/scripts/test_beancount_skills.py` from the repository root.
+`python3 scripts/skills/test_beancount_skills.py` from the repository root.
 Tests install the real suite into temporary destinations and assert file
 effects; the Git tests rehearse the documented clone and update commands.
 """
@@ -31,7 +31,7 @@ from string import Template
 from unittest import mock
 
 SCRIPTS_DIR = Path(__file__).resolve().parent
-SKILLS_ROOT = SCRIPTS_DIR.parent
+SKILLS_ROOT = SCRIPTS_DIR.parents[1] / "skills"
 SUITE = SKILLS_ROOT
 INSTALL_DOC = SKILLS_ROOT / "docs" / "installation.md"
 FIRST_QUERY_DOC = SKILLS_ROOT / "docs" / "first-query.md"
@@ -50,7 +50,7 @@ skills = load("beancount_skills", "beancount-skills.py")
 
 
 def scratch_dir() -> tempfile.TemporaryDirectory:
-    scratch = SKILLS_ROOT / "tmp"
+    scratch = SCRIPTS_DIR / "tmp"
     scratch.mkdir(exist_ok=True)
     return tempfile.TemporaryDirectory(dir=scratch)
 
@@ -70,7 +70,7 @@ def snapshot(root: Path) -> dict[str, str]:
 
 
 def suite_snapshot() -> dict[str, str]:
-    """The customer skill folders only; `skills/` also holds scratch `tmp/`."""
+    """The customer skill folders only; `skills/` also holds the catalog and guides."""
     return {name: snapshot(SUITE / name) for name in skills.expected_skills()}
 
 
@@ -409,8 +409,8 @@ class TestGitUpdatePath(Workspace):
         self.origin = self.root / "origin"
         for name in skills.expected_skills():
             shutil.copytree(SUITE / name, self.origin / "skills" / name)
-        (self.origin / "skills" / "scripts").mkdir()
-        shutil.copy2(SCRIPTS_DIR / "beancount-skills.py", self.origin / "skills" / "scripts")
+        (self.origin / "scripts" / "skills").mkdir(parents=True)
+        shutil.copy2(SCRIPTS_DIR / "beancount-skills.py", self.origin / "scripts" / "skills")
         dev = self.origin / ".agents" / "skills" / "ship" / "SKILL.md"
         dev.parent.mkdir(parents=True)
         dev.write_text("---\nname: ship\ndescription: development only\n---\n")
@@ -421,7 +421,7 @@ class TestGitUpdatePath(Workspace):
         self.src = self.root / "src"
         self.git_ok(self.root, "clone", "-q", *clone.group(1).split(), f"file://{self.origin}", str(self.src))
         self.git_ok(self.src, "sparse-checkout", "set", *sparse.group(1).split())
-        self.script = self.src / "skills" / "scripts" / "beancount-skills.py"
+        self.script = self.src / "scripts" / "skills" / "beancount-skills.py"
 
     def cli(self, *args: str) -> subprocess.CompletedProcess:
         return subprocess.run([sys.executable, str(self.script), *args], capture_output=True, text=True)

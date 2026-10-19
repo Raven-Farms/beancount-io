@@ -28,7 +28,8 @@ import subprocess
 import sys
 
 SCRIPTS = Path(__file__).resolve().parent
-EXPECTATIONS = SCRIPTS.parent / 'docs/examples/migration/expectations.json'
+SKILLS = SCRIPTS.parents[1] / 'skills'
+EXPECTATIONS = SKILLS / 'docs/examples/migration/expectations.json'
 _spec = importlib.util.spec_from_file_location('verify_first_month', SCRIPTS / 'verify-first-month.py')
 assert _spec is not None and _spec.loader is not None
 first_month = importlib.util.module_from_spec(_spec)

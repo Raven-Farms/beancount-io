@@ -24,7 +24,7 @@ synthetic, and no hosted ledger was used.
 - Each prompt runs once per run. Codex results vary between runs, so the
   baseline is two runs.
 
-Reproduce with `python3 skills/scripts/run-routing.py --codex-model <model>`.
+Reproduce with `python3 scripts/skills/run-routing.py --codex-model <model>`.
 Results land in `skills/tmp/routing/<UTC stamp>/` (gitignored).
 
 ## Baseline — 2026-10-18

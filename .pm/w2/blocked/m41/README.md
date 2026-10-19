@@ -26,7 +26,7 @@
 - Version-specific caveats (older batch schemas, the default `list` limit, optional libmagic, `bea ingest` rejecting `--json`, and others the tasks find) sit in one `bea-cli.md` section, each marked with the version range it applies to. Skill bodies point there instead of carrying the caveat inline.
 - Each skill body is rewritten as steps and rules stated positively. A prohibition stays only when it guards a real failure, and it is then stated once.
 - Every rule removed or merged is listed in the task that changed it, with where it moved or why it no longer applies (for example, fixed at or below the minimum `bea`).
-- `python3 skills/scripts/ci-check.py`, `test_ci_check.py`, and `test_beancount_skills.py` pass. The first-month journey passes `scripts/verify-first-month.py` on at least one client after the change. One high-risk eval per skill passes on both clients, recorded with versions and dates.
+- `python3 scripts/skills/ci-check.py`, `test_ci_check.py`, and `test_beancount_skills.py` pass. The first-month journey passes `scripts/verify-first-month.py` on at least one client after the change. One high-risk eval per skill passes on both clients, recorded with versions and dates.
 
 ## Source + Goal linkage
 

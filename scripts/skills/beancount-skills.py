@@ -30,7 +30,7 @@ import tempfile
 from pathlib import Path
 
 SCRIPT = Path(__file__).resolve()
-SOURCE_DIR = SCRIPT.parents[1]
+SOURCE_DIR = SCRIPT.parents[2] / "skills"
 
 # Supporting documents are named `references/<name>.md` or by bare lowercase
 # file name; URLs, uppercase outputs (MIGRATION.md), and example ledger or

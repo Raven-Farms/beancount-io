@@ -22,4 +22,4 @@ run_yarn backend-cluster/idl/backend-v2-admin-cli
 run_yarn backend-cluster/idl/beancount-ledger-cli
 run_yarn backend-cluster/idl/gitea-cli
 (cd "$repo_root/cli" && make deadcode)
-(cd "$repo_root/cli" && uv run vulture ../scripts/check-agent-guidance.py ../skills/scripts/ci-check.py --min-confidence 100)
+(cd "$repo_root/cli" && uv run vulture ../scripts/check-agent-guidance.py ../scripts/skills/ci-check.py --min-confidence 100)

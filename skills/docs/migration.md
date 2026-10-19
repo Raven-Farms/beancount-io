@@ -45,7 +45,7 @@ export SKILLS_SRC="${XDG_DATA_HOME:-$HOME/.local/share}/beancount-io"
 export RUN="$(mktemp -d "${TMPDIR:-/tmp}/beancount-migration.XXXXXX")"
 export BOOKS="$RUN/books"
 export MIGRATION_INPUTS="$RUN/inputs"
-export VERIFY="$SKILLS_SRC/skills/scripts/verify-migration.py"
+export VERIFY="$SKILLS_SRC/scripts/skills/verify-migration.py"
 export BEA="$(command -v bea)"
 export BEA_CONFIG_DIR="$RUN/bea-config"
 export GIT_OPTIONAL_LOCKS=0
@@ -56,8 +56,8 @@ for f in monarch-export.csv balances.md checking-overlap.csv savings-overlap.csv
   cp "$SKILLS_SRC/skills/docs/examples/migration/$f" "$MIGRATION_INPUTS/"
 done
 git -C "$BOOKS" init -q
-python3 "$SKILLS_SRC/skills/scripts/beancount-skills.py" install "$BOOKS/.claude/skills" "$BOOKS/.agents/skills"
-python3 "$SKILLS_SRC/skills/scripts/beancount-skills.py" verify "$BOOKS/.claude/skills" "$BOOKS/.agents/skills"
+python3 "$SKILLS_SRC/scripts/skills/beancount-skills.py" install "$BOOKS/.claude/skills" "$BOOKS/.agents/skills"
+python3 "$SKILLS_SRC/scripts/skills/beancount-skills.py" verify "$BOOKS/.claude/skills" "$BOOKS/.agents/skills"
 printf '.claude/\n.agents/\n' > "$BOOKS/.gitignore"
 git -C "$BOOKS" add .gitignore && git -C "$BOOKS" commit -q -m "Empty synthetic workspace"
 "$BEA" --version

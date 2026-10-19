@@ -23,7 +23,7 @@
 - Two equal ledger postings against one statement row are reported as an ambiguity, with both file positions, and the user is asked. A statement row that equals two ledger postings (a split settlement) is asked about, never paired automatically.
 - Amounts keep the precision the commodity is printed with, for example three-decimal fund units or eight-decimal crypto. A tolerance exists only as stated user policy, per commodity, and every difference below it is listed.
 - A close records, for each active account, its evidence (statement file, period, coverage counts, residual) and a state: tied, partial, partly covered, unverified, or blocked. Owner and due date appear only when the user supplies them, so the personal close report is no longer than today's. The headline and commit message never call the period verified while any active account is not tied over the whole period, and `check: PASS` is labelled as ledger validity.
-- Evals for each ADR 020 fixture pass on Claude Code and Codex, recorded with versions and dates. The existing reconcile and close evals still pass. New recipes run in `skills/scripts/test_beancount_skills.py`.
+- Evals for each ADR 020 fixture pass on Claude Code and Codex, recorded with versions and dates. The existing reconcile and close evals still pass. New recipes run in `scripts/skills/test_beancount_skills.py`.
 
 ## Source + Goal linkage
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Exercise the first-month verifier against real bea and isolated Git ledgers.
 
-BEA=/absolute/path/to/bea python3 skills/scripts/test_verify_first_month.py
+BEA=/absolute/path/to/bea python3 scripts/skills/test_verify_first_month.py
 """
 import contextlib
 import csv
@@ -21,6 +21,7 @@ import unittest
 from unittest import mock
 
 SCRIPTS = Path(__file__).resolve().parent
+SKILLS = SCRIPTS.parents[1] / 'skills'
 spec = importlib.util.spec_from_file_location('verify_first_month', SCRIPTS / 'verify-first-month.py')
 verify = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(verify)
@@ -30,8 +31,8 @@ if not BEA:
     candidate = SCRIPTS.parents[1] / 'cli/.venv/bin/bea'
     if candidate.is_file():
         BEA = str(candidate)
-FIXTURES = SCRIPTS.parent / 'docs/examples/first-month'
-SUITE = SCRIPTS.parent
+FIXTURES = SKILLS / 'docs/examples/first-month'
+SUITE = SKILLS
 
 
 class VerifyFirstMonthTests(unittest.TestCase):
@@ -41,7 +42,7 @@ class VerifyFirstMonthTests(unittest.TestCase):
             raise RuntimeError('bea is required: set BEA to an installed executable or run uv sync in cli/.')
 
     def setUp(self):
-        scratch = SCRIPTS.parent / 'tmp'
+        scratch = SCRIPTS / 'tmp'
         scratch.mkdir(exist_ok=True)
         temporary = tempfile.TemporaryDirectory(dir=scratch)
         self.addCleanup(temporary.cleanup)

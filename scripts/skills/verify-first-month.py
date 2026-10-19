@@ -30,7 +30,7 @@ import stat
 import subprocess
 import sys
 
-EXPECTATIONS = Path(__file__).resolve().parents[1] / 'docs/examples/first-month/expectations.json'
+EXPECTATIONS = Path(__file__).resolve().parents[2] / 'skills/docs/examples/first-month/expectations.json'
 UNCHANGED = {'reimported', 'asked', 'declined_import', 'declined_reconcile',
              'declined_commit', 'unresolved_statement', 'missing_statement'}
 

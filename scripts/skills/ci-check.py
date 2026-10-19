@@ -25,7 +25,8 @@ import sys
 from pathlib import Path
 
 
-SKILLS_ROOT = Path(__file__).resolve().parents[1]
+SKILLS_ROOT = Path(__file__).resolve().parents[2] / "skills"
+ROUTING_SET = Path(__file__).resolve().parent / "routing.json"
 SKILLS_DIR = SKILLS_ROOT
 REPO_ROOT = SKILLS_ROOT.parent
 DEV_SKILLS_DIR = REPO_ROOT / ".agents" / "skills"
@@ -174,7 +175,7 @@ def check_evals() -> None:
 def check_routing() -> None:
     """The suite routing set must name only skills that exist, never repeat a
     prompt, and give every customer skill positives and near-miss negatives."""
-    path = SKILLS_ROOT / "evals" / "routing.json"
+    path = ROUTING_SET
     rel = path.relative_to(REPO_ROOT)
     if not path.is_file():
         fail(f"{rel} is missing")

@@ -21,7 +21,7 @@ export SKILLS_SRC="${XDG_DATA_HOME:-$HOME/.local/share}/beancount-io"
 export RUN="$(mktemp -d "${TMPDIR:-/tmp}/beancount-first-month.XXXXXX")"
 export BOOKS="$RUN/books"
 export FIRST_MONTH_INPUTS="$RUN/inputs"
-export VERIFY="$SKILLS_SRC/skills/scripts/verify-first-month.py"
+export VERIFY="$SKILLS_SRC/scripts/skills/verify-first-month.py"
 export BEA="$(command -v bea)"
 export GIT_OPTIONAL_LOCKS=0
 export GIT_AUTHOR_NAME="Synthetic Ledger User" GIT_COMMITTER_NAME="Synthetic Ledger User"
@@ -34,8 +34,8 @@ cp "$SKILLS_SRC/skills/docs/examples/first-month/statement-unresolved.md" "$FIRS
 git -C "$BOOKS" init -q
 git -C "$BOOKS" config user.name "Synthetic Ledger User"
 git -C "$BOOKS" config user.email "synthetic@example.invalid"
-python3 "$SKILLS_SRC/skills/scripts/beancount-skills.py" install "$BOOKS/.claude/skills" "$BOOKS/.agents/skills"
-python3 "$SKILLS_SRC/skills/scripts/beancount-skills.py" verify "$BOOKS/.claude/skills" "$BOOKS/.agents/skills"
+python3 "$SKILLS_SRC/scripts/skills/beancount-skills.py" install "$BOOKS/.claude/skills" "$BOOKS/.agents/skills"
+python3 "$SKILLS_SRC/scripts/skills/beancount-skills.py" verify "$BOOKS/.claude/skills" "$BOOKS/.agents/skills"
 "$BEA" --version
 cd "$BOOKS"
 ```

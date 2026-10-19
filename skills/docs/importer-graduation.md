@@ -39,7 +39,7 @@ export SKILLS_SRC="${XDG_DATA_HOME:-$HOME/.local/share}/beancount-io"
 export RUN="$(mktemp -d "${TMPDIR:-/tmp}/beancount-graduation.XXXXXX")"
 export BOOKS="$RUN/books"
 export GRADUATION_INPUTS="$RUN/inputs"
-export VERIFY="$SKILLS_SRC/skills/scripts/verify-importer-graduation.py"
+export VERIFY="$SKILLS_SRC/scripts/skills/verify-importer-graduation.py"
 export BEA="$(command -v bea)"
 export BEA_CONFIG_DIR="$RUN/bea-config"
 export XDG_CACHE_HOME="$RUN/cache"
@@ -60,8 +60,8 @@ uv pip install --python "$AUTHOR_PYTHON" 'beangulp==0.2.0'
 "$BEA" engine enable beangulp
 "$BEA" engine status
 git -C "$BOOKS" init -q
-python3 "$SKILLS_SRC/skills/scripts/beancount-skills.py" install "$BOOKS/.claude/skills" "$BOOKS/.agents/skills"
-python3 "$SKILLS_SRC/skills/scripts/beancount-skills.py" verify "$BOOKS/.claude/skills" "$BOOKS/.agents/skills"
+python3 "$SKILLS_SRC/scripts/skills/beancount-skills.py" install "$BOOKS/.claude/skills" "$BOOKS/.agents/skills"
+python3 "$SKILLS_SRC/scripts/skills/beancount-skills.py" verify "$BOOKS/.claude/skills" "$BOOKS/.agents/skills"
 printf '.claude/\n.agents/\n__pycache__/\n' > "$BOOKS/.gitignore"
 git -C "$BOOKS" add -- ledger.beancount import-rules.toml import.py .gitignore
 git -C "$BOOKS" commit -q -m "Existing synthetic CSV workflow"

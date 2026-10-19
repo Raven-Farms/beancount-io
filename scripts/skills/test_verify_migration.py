@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Exercise the migration verifier against real bea and isolated Git ledgers.
 
-BEA=/absolute/path/to/bea python3 skills/scripts/test_verify_migration.py
+BEA=/absolute/path/to/bea python3 scripts/skills/test_verify_migration.py
 
 The overlap tests run `bea import` itself, so BEA must include the
 migrated-history matching from w5/020; the checkout's `cli/.venv/bin/bea`
@@ -21,13 +21,14 @@ import tempfile
 import unittest
 
 SCRIPTS = Path(__file__).resolve().parent
+SKILLS = SCRIPTS.parents[1] / 'skills'
 spec = importlib.util.spec_from_file_location('verify_migration', SCRIPTS / 'verify-migration.py')
 verify = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(verify)
 CHECKOUT_BEA = SCRIPTS.parents[1] / 'cli/.venv/bin/bea'
 BEA = os.environ.get('BEA') or (str(CHECKOUT_BEA) if CHECKOUT_BEA.is_file() else shutil.which('bea'))
-FIXTURES = SCRIPTS.parent / 'docs/examples/migration'
-EVAL_EXPORT = SCRIPTS.parent / 'beancount-migrate/evals/files/eval2_monarch.csv'
+FIXTURES = SKILLS / 'docs/examples/migration'
+EVAL_EXPORT = SKILLS / 'beancount-migrate/evals/files/eval2_monarch.csv'
 
 
 def digest(prefix, date, amount, description, account):
@@ -80,7 +81,7 @@ class MigrationGuideTests(unittest.TestCase):
     """The guide's commands and approvals agree with the fixture it walks through."""
 
     def setUp(self):
-        self.guide = (SCRIPTS.parent / 'docs/migration.md').read_text()
+        self.guide = (SKILLS / 'docs/migration.md').read_text()
         self.expected = json.loads(verify.EXPECTATIONS.read_text())
 
     def test_every_checkpoint_is_run_by_the_guide(self):
@@ -106,7 +107,7 @@ class VerifyMigrationTests(unittest.TestCase):
             raise RuntimeError('bea is required: set BEA to an installed executable or run uv sync in cli/.')
 
     def setUp(self):
-        scratch = SCRIPTS.parent / 'tmp'
+        scratch = SCRIPTS / 'tmp'
         scratch.mkdir(exist_ok=True)
         temporary = tempfile.TemporaryDirectory(dir=scratch)
         self.addCleanup(temporary.cleanup)

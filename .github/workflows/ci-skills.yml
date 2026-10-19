@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "skills/**"
+      - "scripts/skills/**"
       - ".agents/**"
       - ".claude/skills"
       - ".github/workflows/ci-skills.yml"
@@ -12,6 +13,7 @@ on:
     branches: [main]
     paths:
       - "skills/**"
+      - "scripts/skills/**"
       - ".agents/**"
       - ".claude/skills"
       - ".github/workflows/ci-skills.yml"
@@ -39,20 +41,20 @@ jobs:
       - name: Run skills checks
         # Customer leg: bea check with bean-* scrubbed from PATH.
         # Oracle leg: uv run --project cli bean-check (locked upstream).
-        run: python3 skills/scripts/ci-check.py
+        run: python3 scripts/skills/ci-check.py
       - name: Run ci-check unit tests
-        run: python3 skills/scripts/test_ci_check.py
+        run: python3 scripts/skills/test_ci_check.py
       - name: Run customer-suite installer and first-query tests
-        run: python3 skills/scripts/test_beancount_skills.py
+        run: python3 scripts/skills/test_beancount_skills.py
       - name: Run bea recipe tests against the published minimum bea
         # The step above runs the checkout's bea; customers run a release.
         # Install the minimum bea-cli.md declares and run the recipes on it.
         run: |
-          minimum="$(python3 skills/scripts/ci-check.py --print-bea-minimum)"
+          minimum="$(python3 scripts/skills/ci-check.py --print-bea-minimum)"
           uv venv "$RUNNER_TEMP/published-bea"
           uv pip install --python "$RUNNER_TEMP/published-bea/bin/python" "beancount-io==$minimum"
           "$RUNNER_TEMP/published-bea/bin/bea" --version
-          cd skills/scripts
+          cd scripts/skills
           PATH="$RUNNER_TEMP/published-bea/bin:$PATH" SKILLS_BEA=published python3 -m unittest -v test_beancount_skills.TestBeaRecipes
       - name: Run development QA helper tests
         run: node --test .agents/skills/qa-shared/scripts/qa-login.test.mjs .agents/skills/qa-shared/scripts/qa-mcp.test.mjs

@@ -56,8 +56,8 @@ From the repository root, using the existing CLI environment for Beancount fixtu
 
 ```zsh
 python3 scripts/check-agent-guidance.py
-python3 skills/scripts/ci-check.py
-python3 skills/scripts/test_ci_check.py
+python3 scripts/skills/ci-check.py
+python3 scripts/skills/test_ci_check.py
 node --test .agents/skills/qa-shared/scripts/qa-login.test.mjs .agents/skills/qa-shared/scripts/qa-mcp.test.mjs
 ```
 

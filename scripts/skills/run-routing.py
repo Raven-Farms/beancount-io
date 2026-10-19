@@ -4,9 +4,9 @@
 Local only: every prompt is a paid client call, so CI never runs this script
 (`ci-check.py` validates the routing set itself). Stdlib only.
 
-    python3 skills/scripts/run-routing.py                    # every installed client
-    python3 skills/scripts/run-routing.py --clients codex --only none-close-amex-account
-    python3 skills/scripts/run-routing.py --score skills/tmp/routing/<run>/results.json
+    python3 scripts/skills/run-routing.py                    # every installed client
+    python3 scripts/skills/run-routing.py --clients codex --only none-close-amex-account
+    python3 scripts/skills/run-routing.py --score scripts/skills/tmp/routing/<run>/results.json
 
 Each client runs in a scratch workspace created in the system temp directory,
 outside this repository, so neither client loads this repository's own
@@ -14,7 +14,7 @@ instructions or development skills. The workspace is a fresh Git repository
 holding a small synthetic ledger and links to every `beancount-*` directory
 of `--suite` (default: this checkout's customer suite), linked into
 `.claude/skills` and `.agents/skills` the same way the installer links them.
-Results go to `skills/tmp/routing/` (gitignored).
+Results go to `scripts/skills/tmp/routing/` (gitignored).
 
 How a choice is detected, verified against Claude Code 2.1.289 and Codex 0.163.0:
 
@@ -51,11 +51,11 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 
-SKILLS_ROOT = Path(__file__).resolve().parents[1]
-REPO_ROOT = SKILLS_ROOT.parent
-ROUTING_SET = SKILLS_ROOT / "evals" / "routing.json"
-SUITE_DIR = SKILLS_ROOT
-OUT_ROOT = SKILLS_ROOT / "tmp" / "routing"
+HERE = Path(__file__).resolve().parent
+REPO_ROOT = HERE.parents[1]
+ROUTING_SET = HERE / "routing.json"
+SUITE_DIR = REPO_ROOT / "skills"
+OUT_ROOT = HERE / "tmp" / "routing"
 
 LEDGER = """\
 option "title" "Synthetic routing ledger"

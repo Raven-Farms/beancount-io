@@ -17,7 +17,7 @@ Fetch only the `skills/` directory of this repository into a stable location:
 ```sh
 SKILLS_SRC="${XDG_DATA_HOME:-$HOME/.local/share}/beancount-io"
 git clone --depth 1 --filter=blob:none --sparse https://github.com/bex-co/beancount-io.git "$SKILLS_SRC"
-git -C "$SKILLS_SRC" sparse-checkout set skills
+git -C "$SKILLS_SRC" sparse-checkout set skills scripts/skills
 ```
 
 The checkout contains the customer suite only. The repository's development skills live elsewhere and are not fetched.
@@ -35,7 +35,7 @@ Then link the suite into those directories (omit the one you don't use):
 
 ```sh
 SKILLS_SRC="${XDG_DATA_HOME:-$HOME/.local/share}/beancount-io"
-python3 "$SKILLS_SRC/skills/scripts/beancount-skills.py" install ~/.claude/skills ~/.agents/skills
+python3 "$SKILLS_SRC/scripts/skills/beancount-skills.py" install ~/.claude/skills ~/.agents/skills
 ```
 
 For each directory, `install` creates one link per skill (`beancount-ask -> $SKILLS_SRC/skills/.claude/skills/beancount-ask`, and so on), prints the source revision, and runs `verify`. It leaves every other entry in the directory alone. Both agents follow symlinked skill folders.
@@ -47,7 +47,7 @@ Links for a single workspace are absolute paths on your machine. Keep them out o
 Check the files first. `verify` only reads, and it exits nonzero with one line per missing skill, supporting reference, or sibling workflow:
 
 ```sh
-python3 "$SKILLS_SRC/skills/scripts/beancount-skills.py" verify ~/.claude/skills ~/.agents/skills
+python3 "$SKILLS_SRC/scripts/skills/beancount-skills.py" verify ~/.claude/skills ~/.agents/skills
 ```
 
 Then ask each agent from your ledger directory. Both should name the same nine skills listed in the [skills catalog](../README.md).
@@ -75,7 +75,7 @@ Next: get a first answer from a sample ledger with the [first-query walkthrough]
 SKILLS_SRC="${XDG_DATA_HOME:-$HOME/.local/share}/beancount-io"
 git -C "$SKILLS_SRC" status --short skills
 git -C "$SKILLS_SRC" pull --ff-only
-python3 "$SKILLS_SRC/skills/scripts/beancount-skills.py" install ~/.claude/skills ~/.agents/skills
+python3 "$SKILLS_SRC/scripts/skills/beancount-skills.py" install ~/.claude/skills ~/.agents/skills
 ```
 
 The pull updates every linked agent at once. Running `install` again keeps existing links, links any skill added to the suite since your last install, and prints the revision you are now on (`source … at <commit> <date>`).
@@ -102,7 +102,7 @@ mv ~/.claude/skills/beancount-ask ~/beancount-skill-backups/
 
 ```sh
 SKILLS_SRC="${XDG_DATA_HOME:-$HOME/.local/share}/beancount-io"
-python3 "$SKILLS_SRC/skills/scripts/beancount-skills.py" uninstall ~/.claude/skills ~/.agents/skills
+python3 "$SKILLS_SRC/scripts/skills/beancount-skills.py" uninstall ~/.claude/skills ~/.agents/skills
 git -C "$SKILLS_SRC" status --short skills
 rm -rf "$SKILLS_SRC"
 ```

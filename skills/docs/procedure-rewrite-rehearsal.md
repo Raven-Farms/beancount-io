@@ -17,7 +17,7 @@ synthetic and no hosted ledger was used.
 
 ## Deterministic checks
 
-`python3 skills/scripts/ci-check.py`, `test_ci_check.py`, and
+`python3 scripts/skills/ci-check.py`, `test_ci_check.py`, and
 `test_beancount_skills.py` (110 tests, including the three journey verifiers'
 own tests) pass, and `beancount-skills.py verify` reports nine complete skills
 on a copy of the suite.

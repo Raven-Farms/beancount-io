@@ -2,7 +2,7 @@
 """Unit tests for skill separation, validation, and `bea` preferences.
 
 Stdlib unittest only (the skills CI has no pytest): run with
-`python3 skills/scripts/test_ci_check.py` from the repository root.
+`python3 scripts/skills/test_ci_check.py` from the repository root.
 """
 
 from __future__ import annotations
@@ -35,7 +35,7 @@ ci_check = load_ci_check()
 
 class TestSkillTrees(unittest.TestCase):
     def setUp(self):
-        scratch = SCRIPTS_DIR.parent / "tmp"
+        scratch = SCRIPTS_DIR / "tmp"
         scratch.mkdir(exist_ok=True)
         temporary = tempfile.TemporaryDirectory(dir=scratch)
         self.addCleanup(temporary.cleanup)
@@ -167,7 +167,7 @@ class TestSkillTrees(unittest.TestCase):
 
 class TestRoutingSet(unittest.TestCase):
     def setUp(self):
-        scratch = SCRIPTS_DIR.parent / "tmp"
+        scratch = SCRIPTS_DIR / "tmp"
         scratch.mkdir(exist_ok=True)
         temporary = tempfile.TemporaryDirectory(dir=scratch)
         self.addCleanup(temporary.cleanup)
@@ -177,7 +177,11 @@ class TestRoutingSet(unittest.TestCase):
             (self.customer / name).mkdir(parents=True)
             (self.customer / name / "SKILL.md").write_text(f"---\nname: {name}\ndescription: d\n---\n")
         patches = mock.patch.multiple(
-            ci_check, REPO_ROOT=self.repo, SKILLS_ROOT=self.repo / "skills", SKILLS_DIR=self.customer
+            ci_check,
+            REPO_ROOT=self.repo,
+            SKILLS_ROOT=self.repo / "skills",
+            SKILLS_DIR=self.customer,
+            ROUTING_SET=self.repo / "scripts/skills/routing.json",
         )
         patches.start()
         self.addCleanup(patches.stop)
@@ -192,7 +196,7 @@ class TestRoutingSet(unittest.TestCase):
         return {"id": name, "prompt": prompt, "expected": expected, "confusable": confusable, "why": "w"}
 
     def check(self, entries) -> str:
-        path = self.repo / "skills/evals/routing.json"
+        path = self.repo / "scripts/skills/routing.json"
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps({"entries": entries}))
         error = io.StringIO()

@@ -41,7 +41,7 @@
 ## Source + Goal linkage
 
 - **Source:** `/pm-brainstorm` research into published Beancount skills and community requests, at the user's request, 2026-10-18. Evidence:
-  - The suite's own routing set (`skills/evals/routing.json`) has no skill for "Fix the typo in the payee of yesterday's Starbucks transaction", because every skill appends only. [m40](../blocked/m40/README.md) keeps that boundary for `beancount-add`.
+  - The suite's own routing set (`scripts/skills/routing.json`) has no skill for "Fix the typo in the payee of yesterday's Starbucks transaction", because every skill appends only. [m40](../blocked/m40/README.md) keeps that boundary for `beancount-add`.
   - Programmatic ledger rewriting is a long-standing upstream request ([beancount#586](https://github.com/beancount/beancount/issues/586)).
   - A user moved a whole setup to v3 with Claude Code after putting it off for a long time ([mailing list, 2026-03](https://groups.google.com/g/beancount/c/-lD0jnQkGIc/m/KA1znDpMCQAJ)).
   - Another user bulk-tagged trip spending with an agent and warned that skipping review "would silently corrupt the journal over months" ([Mandalivia, 2026-04](https://www.mandalivia.com/obsidian/hledger-obsidian-personal-finance-with-claude-code/)).

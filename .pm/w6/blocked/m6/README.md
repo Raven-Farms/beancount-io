@@ -45,7 +45,7 @@ Two tasks need someone with authority this repository does not have: t001 is the
 - In a clean Hermes Agent installation, `hermes skills search beancount` finds the ClawHub listings, and an install passes Hermes's scanner without `--force`. Hermes's direct GitHub-path install either works or is documented as unsupported, with the reason.
 - A skill installed alone states which sibling it hands off to and how to install it. It never reads a file that its bundle does not contain.
 - The `Publish (clawhub)` workflow validates bundles on every pull request touching `skills/**`, and publishes only on an explicit dispatch from `main`, with a token from a protected environment. It never commits a token or prints it.
-- Claude Code and Codex still list every suite skill from the existing link installer (`skills/docs/installation.md` step 3), and `python3 skills/scripts/ci-check.py` passes.
+- Claude Code and Codex still list every suite skill from the existing link installer (`skills/docs/installation.md` step 3), and `python3 scripts/skills/ci-check.py` passes.
 - `skills/docs/installation.md`, `skills/README.md`, `skills/AGENTS.md`, and the root `AGENTS.md` tooling list describe the ClawHub install, the workflow, and its secret.
 
 ## Source + Goal linkage

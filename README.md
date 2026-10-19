@@ -247,7 +247,7 @@ cd cli && uv sync --all-groups && uv run bea --help
 | Dashboard | `cd dashboard && yarn format:check && yarn lint && yarn test && yarn build` |
 | Mobile | `cd mobile && yarn format:check && yarn lint && yarn typecheck && yarn test:unit` |
 | CLI | `cd cli && make check-all` |
-| Skills | `python3 skills/scripts/ci-check.py` |
+| Skills | `python3 scripts/skills/ci-check.py` |
 
 Every active package has path-filtered CI, and a repository-wide secret scan gates every push and pull request. Run `scripts/lint-deadcode.sh` from the repository root to check for unused files and symbols (`scripts/fix-deadcode.sh` applies removals; review the diff and rerun full checks).
 
