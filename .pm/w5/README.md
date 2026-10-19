@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [718 — A bea write to an include in another directory makes add/import exit 4 instead of queueing](./718.md)
 - [719 — Staging copies left by a killed engine are not cleared by the next write (one-hour sweep, target directory only)](./719.md)
 - [720 — --partial is still superlinear with several bad rows, and slower than before on a mixed batch (incomplete fix of w5/537)](./720.md)
 - [721 — The NFD --into spelling that created a file is refused the second time (regression from w5/536)](./721.md)
