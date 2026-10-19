@@ -42,11 +42,11 @@ Near-miss pairs the set must cover:
 - **Source:** agentic-skill review of `skills/` at the user's request, 2026-10-18. The 71 per-skill evals all assume the skill was already chosen; none checks which of the eight siblings an agent picks. Skill names and descriptions overlap with Beancount's own `close` and `option` directives and with the `bea ask` command, and no measurement exists to tell whether that misroutes requests.
 - **Goal linkage:** **A1 — Agent-native accounting.** The description is the only thing an agent reads before it picks a skill. Routing quality is instruction-file quality, measured. Secondary **A3**: registry hosts list skills by name and description.
 - **Expected outcome:** a ledger request in Claude Code or Codex reaches the skill built for it, and a maintainer can show it with recorded numbers before and after any description change.
-- **Why now:** [m39](../../m39/README.md) (renames) and [m40](../../m40/README.md) (a ninth skill) both need this evidence first, and [ADR 020](../../../../docs/adrs/ADR020-skills-accounting-workflow-candidates.md) proposes more skills (roll-forward, accruals) that will crowd the routing further. Names and descriptions should be settled before [w6/m6](../../../w6/blocked/m6/README.md) publishes immutable ClawHub versions. Adoption surface is included because the milestone changes every skill's frontmatter, which is what agents and registries read.
+- **Why now:** [m39](../../blocked/m39/README.md) (renames) and [m40](../../m40/README.md) (a ninth skill) both need this evidence first, and [ADR 020](../../../../docs/adrs/ADR020-skills-accounting-workflow-candidates.md) proposes more skills (roll-forward, accruals) that will crowd the routing further. Names and descriptions should be settled before [w6/m6](../../../w6/blocked/m6/README.md) publishes immutable ClawHub versions. Adoption surface is included because the milestone changes every skill's frontmatter, which is what agents and registries read.
 
 ## Out of scope
 
-- Renaming skills ([m39](../../m39/README.md)).
+- Renaming skills ([m39](../../blocked/m39/README.md)).
 - Changing what any skill does once it is chosen.
 - Running paid client calls in CI.
 
@@ -61,4 +61,4 @@ Closed 2026-10-19 with every definition-of-done item verified on `main`:
 - Every description says local and names its confusable skips; every body's first step carries the hosted-ledger hand-off (`bea-cli.md`, Hosted ledgers).
 - `skills/AGENTS.md` requires the routing check for description changes and new skills.
 
-Evidence that bears on [m39](../../m39/README.md): the predicted `close` and `option` collisions did not misroute on either client in any run, before or after the skip clauses.
+Evidence that bears on [m39](../../blocked/m39/README.md): the predicted `close` and `option` collisions did not misroute on either client in any run, before or after the skip clauses.
