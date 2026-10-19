@@ -5,7 +5,7 @@ initialize, import, reimport, reconcile, ask, and close. The same prompts work i
 Claude Code and Codex. Review each proposal before confirming it; the verifier
 checks the resulting files and Git state independently.
 
-This guide needs Git, Python 3.9+, **bea 0.3.0 or later**, and the customer suite
+This guide needs Git, Python 3.9+, **bea 0.3.1 or later**, and the customer suite
 from [the installation guide](installation.md). It uses one published `bea`
 installation and the skills-only checkout. No account, hosted service, CLI source
 checkout, or personal financial data is involved. See the [sample-data contract](examples/first-month/README.md)
@@ -43,7 +43,7 @@ cd "$BOOKS"
 Start `claude` or `codex` from this terminal, so it inherits the paths and
 `GIT_OPTIONAL_LOCKS=0`. The latter prevents Git status reads from refreshing
 index bytes during unchanged-state checks. Pick one agent per run; use a new
-`RUN` for the other. Confirm that the agent discovers the eight installed
+`RUN` for the other. Confirm that the agent discovers the nine installed
 `beancount-*` skills. Keep any saved transcripts or tool logs under
 `$RUN/evidence`, outside `books`.
 
