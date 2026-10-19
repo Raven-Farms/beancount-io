@@ -1,0 +1,30 @@
+{
+  "name": "beancount-io",
+  "description": "Beancount.io ledger skills for coding agents",
+  "owner": {
+    "name": "Beancount.io"
+  },
+  "plugins": [
+    {
+      "name": "beancount-io",
+      "source": "./skills",
+      "description": "Skills for working with local Beancount ledgers through a coding agent: init, add, import, importer-author, reconcile, migrate, ask, close, options. Needs `bea` 0.3.1 or later for checks, queries, and writes.",
+      "version": "0.1.0",
+      "license": "MIT",
+      "homepage": "https://github.com/bex-co/beancount-io/tree/main/skills",
+      "repository": "https://github.com/bex-co/beancount-io",
+      "keywords": ["beancount", "accounting", "ledger"],
+      "skills": [
+        "./beancount-add",
+        "./beancount-ask",
+        "./beancount-close",
+        "./beancount-import",
+        "./beancount-importer-author",
+        "./beancount-init",
+        "./beancount-migrate",
+        "./beancount-options",
+        "./beancount-reconcile"
+      ]
+    }
+  ]
+}
