@@ -1,5 +1,6 @@
 import { getOptionalJwks } from "./jwks";
 import type { ScopeEnforcementMode } from "@/server/api/op-class";
+import { z } from "zod";
 
 // Type definitions for configuration
 interface ServerConfig {
@@ -25,13 +26,20 @@ export function parseSignupAllowedEmails(
   for (const entry of (value ?? "").split(",")) {
     const email = entry.trim().toLowerCase();
     if (!email) continue;
-    const at = email.lastIndexOf("@");
-    if (at <= 0 || /\s/.test(email) || !DOMAIN_NAME.test(email.slice(at + 1))) {
+    // Same validator signup applies to the address, plus a real domain name.
+    if (
+      !z.email().safeParse(email).success ||
+      !DOMAIN_NAME.test(email.slice(email.indexOf("@") + 1))
+    ) {
       throw new Error(
         `SIGNUP_ALLOWED_EMAILS: not an email address ${JSON.stringify(entry.trim())}`,
       );
     }
     emails.add(email);
+  }
+  // A non-blank value with no entries (e.g. ", ,") would silently mean "open".
+  if (value?.trim() && emails.size === 0) {
+    throw new Error("SIGNUP_ALLOWED_EMAILS: set but lists no addresses");
   }
   return emails;
 }
@@ -50,6 +58,9 @@ export function parseSignupAllowedDomains(
       );
     }
     domains.add(domain);
+  }
+  if (value?.trim() && domains.size === 0) {
+    throw new Error("SIGNUP_ALLOWED_DOMAINS: set but lists no domains");
   }
   return domains;
 }

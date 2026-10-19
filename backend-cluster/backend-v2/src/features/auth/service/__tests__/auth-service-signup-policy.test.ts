@@ -58,6 +58,23 @@ describe("AuthService signup allowlist", () => {
     expect(sendgrid.sendMail).not.toHaveBeenCalled();
   });
 
+  it("counts refused attempts against the per-IP signup rate limit", async () => {
+    const { service } = createService(restricted);
+    const ip = `203.0.113.${++n % 250}`;
+    for (let i = 0; i < 10; i++) {
+      await expect(
+        service.createSignUpSession({
+          ...params(`stranger${++n}@elsewhere.test`),
+          ip,
+        }),
+      ).rejects.toBeInstanceOf(ForbiddenError);
+    }
+    // The 11th attempt from that address hits the rate limit, even for a listed one.
+    await expect(
+      service.createSignUpSession({ ...params(`staff${++n}@example.com`), ip }),
+    ).rejects.not.toBeInstanceOf(ForbiddenError);
+  });
+
   it("starts a signup for a listed email or a listed domain", async () => {
     const { service, signupOtpSession } = createService(restricted);
     await service.createSignUpSession(params("cpa@firm.example"));

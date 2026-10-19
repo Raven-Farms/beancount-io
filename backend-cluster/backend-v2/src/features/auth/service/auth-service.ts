@@ -468,8 +468,6 @@ export class AuthService implements IAuthService {
       throw new BadUserInputError("Email is invalid");
     }
 
-    this.assertSignupAllowed(normalizedEmail);
-
     // Rate limit: 5 signup requests per hour per email
     checkRateLimit(`signup:${normalizedEmail}`, {
       windowMs: 60 * 60 * 1000,
@@ -487,6 +485,9 @@ export class AuthService implements IAuthService {
           "Too many signup attempts from your network. Please try again later.",
       });
     }
+
+    // After the rate limits, so refused addresses count against them too.
+    this.assertSignupAllowed(normalizedEmail);
 
     // Block disposable / throwaway email domains
     if (domainPart && DISPOSABLE_EMAIL_DOMAINS.has(domainPart)) {
