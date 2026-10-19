@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [737 — --from /dev/stdin waits on the terminal under --json/--no-input (gap in w5/210)](./737.md)
 - [738 — Four input-refusal messages are wrong (BOM offset, NUL as UTF-16, --from empty advice, tagged meta TypeError)](./738.md)
 - [739 — ask answers turn &#x202E; character references into raw bidi overrides; link reference definitions vanish (gap in w5/548)](./739.md)
 - [740 — A later quote changes an earlier valuation; ties settled by line number; double-inversion residue (incomplete fix of w5/556)](./740.md)
