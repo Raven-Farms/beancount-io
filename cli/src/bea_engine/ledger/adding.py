@@ -1487,6 +1487,10 @@ def _transactions(
                 message, details=details, ledger_errors=list(batch_error.ledger_errors), result=result
             ) from batch_error
         named = _named_rows(file, batch_texts, batch_error, allow_errors=allow_errors, into=into)
+        if named is None:
+            # Errors the batch error names are still dropped first when sibling
+            # errors cannot be placed; only their remainder is bisected (w5/720).
+            named = _refused_with_placed(file, batch_texts, batch_error, allow_errors=allow_errors, into=into)
         accepted: list[tuple[int, Any]] = []
         # Human labels count from 1, like the schema rejections above;
         # `rejected_rows` stays a zero-based index for scripts.
@@ -1583,8 +1587,8 @@ def _named_rows(
     """
     if not isinstance(batch_error, write.CandidateRejected):
         return None
-    rows = _rows_with_errors(file, texts, batch_error, into=into)
-    if rows is None:
+    rows, unplaced = _partitioned_rows(file, texts, batch_error, into=into)
+    if unplaced:
         return None
     kept = [text for number, text in enumerate(texts) if number not in rows]
     if kept:
@@ -1598,19 +1602,28 @@ def _named_rows(
 def _refused_in_order(
     file: Path, texts: list[str], batch_error: protocol.LedgerError, *, allow_errors: bool, into: Path | None
 ) -> dict[int, protocol.LedgerError]:
-    """Positions in `texts` the rows kept before them refuse, each with the refusal it met.
+    """Positions in `texts` the forward scan refuses, each with the refusal it met.
 
-    A row is kept when it loads after the rows kept before it, as a trial per
-    row decided; but those trials cost a full load per row over a growing
-    batch, so an error no row can be named for (an existing balance assertion
-    the batch breaks) made `--partial` quadratic. Bisecting for the first
-    refused row instead costs a load per halving: k bad rows take O(k log n)
-    loads (w5/537). A ledger that refuses any write by itself (an error it
+    Scanning in input order, every leading run that loads is kept and the row
+    that breaks it is refused — which keeps a row a later kept row offsets
+    even when it fails alone (row 1 of w5/720's four-row case). A trial per
+    row would instead judge each row alone after the rows kept before it, but
+    those trials cost a full load per row over a growing batch, so an error no
+    row can be named for (an existing balance assertion the batch breaks) made
+    `--partial` quadratic. Bisecting for the first refused row instead costs a
+    load per halving while bad rows are few (w5/537); the loads spent past
+    the rows decided accumulate, and once they pass one round's worth —
+    bisection then costs more per row than judging in order, k·log n past n
+    in aggregate — the rest are judged in order (w5/720). A ledger that
+    refuses any write by itself (an error it
     already has, without --allow-errors) would bisect down to every row, so it
     keeps one trial per row.
     """
+    spent = 0
 
     def refusal(candidate: list[str]) -> protocol.LedgerError | None:
+        nonlocal spent
+        spent += 1
         try:
             write.validate_append(file, candidate, allow_errors=allow_errors, into=into)
         except protocol.LedgerError as err:
@@ -1622,8 +1635,20 @@ def _refused_in_order(
     rest = list(range(len(texts)))
     error: protocol.LedgerError | None = batch_error
     ledger_loads: bool | None = None
+    halvings = math.ceil(math.log2(max(len(texts), 2)))
+    overspend = 0
+
+    def judge_rest() -> None:
+        for number in rest:
+            found = refusal([*kept, texts[number]])
+            if found is None:
+                kept.append(texts[number])
+            else:
+                refused[number] = found
+
     while rest and error is not None:
         # `kept` with rest[:low] loads; `kept` with rest[:high] meets `error`.
+        round_start = spent
         low, high = 0, len(rest)
         while high - low > 1:
             middle = (low + high) // 2
@@ -1636,36 +1661,43 @@ def _refused_in_order(
             if ledger_loads is None:
                 ledger_loads = refusal([]) is None
             if not ledger_loads:
-                for number in rest:
-                    found = refusal([*kept, texts[number]])
-                    if found is None:
-                        kept.append(texts[number])
-                    else:
-                        refused[number] = found
+                judge_rest()
                 return refused
+        decided = low + 1
+        round_loads = spent - round_start
         refused[rest[low]] = error
         kept.extend(texts[number] for number in rest[:low])
         rest = rest[low + 1 :]
         error = refusal([*kept, *(texts[number] for number in rest)]) if rest else None
+        # Loads spent past the rows decided, floored: a sparse head must not
+        # subsidize a dense tail's halving searches (w5/720).
+        overspend = max(0, overspend + round_loads + 1 - decided)
+        if rest and error is not None and overspend > halvings + 1:
+            judge_rest()
+            return refused
     return refused
 
 
-def _rows_with_errors(
+def _partitioned_rows(
     file: Path, texts: list[str], batch_error: write.CandidateRejected, *, into: Path | None
-) -> dict[int, list[int]] | None:
-    """Positions in `texts` whose appended lines carry an error, or None when one cannot be placed.
+) -> tuple[dict[int, list[int]], bool]:
+    """Positions in `texts` whose appended lines carry an error, and whether any error went unplaced.
 
-    Each maps to the positions of its errors in the batch error's `locations`.
+    Each position maps to the positions of its errors in the batch error's
+    `locations`. An error the spans cannot place (a balance assertion the
+    batch breaks, or a location outside the appended blocks) no longer sinks
+    the placed ones: the caller drops the named rows and searches only the
+    remainder (w5/720).
     """
     locations = batch_error.locations
     if not locations:
-        return None
+        return {}, True
     target = write.destination(file, into)
     try:
         original = target.read_bytes() if target.exists() else b""
         content = write.appended_content(original, texts)
     except (OSError, UnicodeDecodeError):
-        return None
+        return {}, True
     # Blocks are appended one after another, each after one separating line;
     # walking back from the end gives every block's line span.
     spans: list[tuple[int, int]] = []
@@ -1676,14 +1708,47 @@ def _rows_with_errors(
         end -= size + 1
     spans.reverse()
     rows: dict[int, list[int]] = {}
+    unplaced = False
     for position, (source, lineno) in enumerate(locations):
         if lineno is None or Path(source).resolve() != target:
-            return None
+            unplaced = True
+            continue
         hits = [number for number, (first, last) in enumerate(spans) if first <= lineno <= last]
         if not hits:
-            return None
+            unplaced = True
+            continue
         rows.setdefault(hits[0], []).append(position)
-    return rows
+    return rows, unplaced
+
+
+def _refused_with_placed(
+    file: Path, texts: list[str], batch_error: protocol.LedgerError, *, allow_errors: bool, into: Path | None
+) -> dict[int, list[str]] | None:
+    """Refused positions in `texts` with detail lines, or None when no error names a row.
+
+    The rows the batch error names are dropped and their remainder is
+    confirmed with one load; when the remainder still fails it is bisected
+    with the remainder's own refusal, and the dropped rows rejoin the refused
+    with the batch error's lines for them (w5/720).
+    """
+    if not isinstance(batch_error, write.CandidateRejected):
+        return None
+    placed, _ = _partitioned_rows(file, texts, batch_error, into=into)
+    if not placed:
+        return None
+    kept_numbers = [number for number in range(len(texts)) if number not in placed]
+    if not kept_numbers:
+        return None
+    kept_texts = [texts[number] for number in kept_numbers]
+    try:
+        write.validate_append(file, kept_texts, allow_errors=allow_errors, into=into)
+    except protocol.LedgerError as kept_error:
+        found = _refused_in_order(file, kept_texts, kept_error, allow_errors=allow_errors, into=into)
+        merged = {number: batch_error.details_at(placed[number]) for number in sorted(placed)}
+        for number, err in found.items():
+            merged[kept_numbers[number]] = ["; ".join(err.details) or str(err)]
+        return merged
+    return {number: batch_error.details_at(placed[number]) for number in sorted(placed)}
 
 
 # --------------------------------------------------------------------------- #

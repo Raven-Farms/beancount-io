@@ -1542,8 +1542,14 @@ commodity at cost that another row buys at cost into the same account that day
 is written after that day's other rows — a broker export listing a same-day
 sale first still books it against the purchase; rows otherwise keep their input
 order. Partial
-recovery tries rows in input order and validates each accepted subset. When
-some rows are written, the JSON error includes `result.written`, `written_rows`,
+recovery tries rows in input order and validates each accepted subset. Rows
+the failure names are dropped first; what remains is scanned forward, keeping
+every leading run that loads and refusing the row that breaks it, judging the
+rest in order once bisection would cost more than row-by-row trials. The kept
+rows always load together, and which rows are kept is deterministic for a given
+row order — but around a balance assertion a kept row can fail on its own when
+a later kept row offsets it, so reorder the rows when a surprising row is
+refused. When some rows are written, the JSON error includes `result.written`, `written_rows`,
 and `rejected_rows` (zero-based indexes); a failed atomic batch reports zero
 written and `unwritten_rows` when the failure concerns the combined ledger.
 This command appends supplied transactions and does not deduplicate them. Use
