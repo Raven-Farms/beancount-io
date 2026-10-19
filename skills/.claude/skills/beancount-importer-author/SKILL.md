@@ -18,7 +18,7 @@ This skill exists because importers are the most-complained-about chore in beanc
 
 ## Prefer `bea` for the wired importer
 
-Read beancount-init's `references/bea-cli.md` before running ledger commands: it defines explicit root/destination paths, JSON batches, checks, and safe retries. Without `bea`, use beancount-init's `references/compatibility.md`.
+Read beancount-init's `references/bea-cli.md` (from this skill's folder, `../beancount-init/references/bea-cli.md`; a copy at `references/bea-cli.md` when this skill was installed alone) before running ledger commands: it defines explicit root/destination paths, JSON batches, checks, and safe retries. Without `bea`, use beancount-init's `references/compatibility.md`.
 
 Read `references/beangulp-api.md` before writing any code. Prefer enabling
 Beangulp in the managed engine when `bea` is installed:

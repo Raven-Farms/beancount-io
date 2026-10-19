@@ -12,7 +12,7 @@ This skill exists because every app shutdown (Mint, Bench, …) strands users wi
 
 ## Prefer `bea`
 
-Read beancount-init's `references/bea-cli.md` before running ledger commands: it defines explicit root/destination paths, JSON batches, checks, and safe retries. Without `bea`, use beancount-init's `references/compatibility.md`.
+Read beancount-init's `references/bea-cli.md` (from this skill's folder, `../beancount-init/references/bea-cli.md`; a copy at `references/bea-cli.md` when this skill was installed alone) before running ledger commands: it defines explicit root/destination paths, JSON batches, checks, and safe retries. Without `bea`, use beancount-init's `references/compatibility.md`.
 
 Compose beancount-init, then write approved accounts, transaction batches and
 endpoint assertions through `bea`. Fava is optional. Mapping, transfer pairing,

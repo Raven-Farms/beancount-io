@@ -12,7 +12,7 @@ This skill exists because a manual entry is the most common bookkeeping request 
 
 ## Prefer `bea`
 
-Read beancount-init's `references/bea-cli.md` before running ledger commands: it defines explicit root/destination paths, JSON batches, checks, and safe retries. Without `bea`, use beancount-init's `references/compatibility.md`.
+Read beancount-init's `references/bea-cli.md` (from this skill's folder, `../beancount-init/references/bea-cli.md`; a copy at `references/bea-cli.md` when this skill was installed alone) before running ledger commands: it defines explicit root/destination paths, JSON batches, checks, and safe retries. Without `bea`, use beancount-init's `references/compatibility.md`.
 
 Write every approved directive through `bea add`: the shared `transaction`, `open`, `close`, `price`, and `note` recipes for one directive, and the `batch` recipe for several transactions at once. The skill owns interpretation, the duplicate and balance checks, and the user's confirmation.
 
