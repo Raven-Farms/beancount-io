@@ -96,8 +96,8 @@ export interface PlanConfig {
   /** Billing cycle, so plan changes classify without a Stripe call. */
   interval: BillingInterval;
   /**
-   * Still billed to the subscribers on it, but never offered again: a plan
-   * change cannot move anyone onto it.
+   * Still billed to the subscribers on it, but never a plan-change target.
+   * Checkout still accepts it while it is in `planIds`.
    */
   retired?: true;
 }
@@ -124,8 +124,12 @@ export interface StripeClientConfig {
   cancelUrl: string;
   /** URL to return to after leaving the Stripe customer portal */
   portalReturnUrl: string;
-  /** Billing portal configuration passed on every portal session, if set. */
-  portalConfigurationId?: string;
+  /**
+   * The billing portal configuration every portal session uses: payment
+   * methods, invoices and billing details only, so plan changes go through
+   * changePlan. Account-specific like the price IDs, and not a secret.
+   */
+  portalConfigurationId: string;
   /** Webhook URL for Stripe events */
   webhook: string;
 }
@@ -153,6 +157,7 @@ export const SUBSCRIPTION_CONFIG: SubscriptionConfigMap = {
       "price_1L9ccEEqsEqs2tLVKPRV17wb", // $9.99/month (legacy)
       "price_1L9ccEEqsEqs2tLVbeBgHm9p", // $99.99/year (legacy)
       "price_1RrSOGEqsEqs2tLVFnyB34qG", // $14.99/month (Premium)
+      "price_1US5htEqsEqs2tLVENCzLaZB", // $143.88/year (Premium)
       "price_1SyPdaEqsEqs2tLViLPUDoVi", // $99.99/month (Growth)
       "price_1SyPdbEqsEqs2tLV7PJyWZed", // $959.88/year (Growth)
       "price_1SyPdcEqsEqs2tLVCWEgU1PZ", // $499.99/month (Organization)
@@ -173,12 +178,23 @@ export const SUBSCRIPTION_CONFIG: SubscriptionConfigMap = {
         description: "Beancount.io Basic - Yearly - $99.99/year (Legacy)",
         interval: "year",
         tier: SubscriptionTier.PREMIUM,
+        // Grandfathered (PRFAQ005 decision 3), and still sold by the pricing
+        // page until it switches to $143.88.
+        retired: true,
       },
       {
         priceId: "price_1RrSOGEqsEqs2tLVFnyB34qG",
         type: PaymentType.RECURRING,
         description: "Beancount.io Premium - Monthly - $14.99/month",
         interval: "month",
+        tier: SubscriptionTier.PREMIUM,
+      },
+      {
+        priceId: "price_1US5htEqsEqs2tLVENCzLaZB",
+        type: PaymentType.RECURRING,
+        description:
+          "Beancount.io Premium - Yearly - $11.99/month billed yearly ($143.88/year)",
+        interval: "year",
         tier: SubscriptionTier.PREMIUM,
       },
       {
@@ -221,7 +237,7 @@ export const SUBSCRIPTION_CONFIG: SubscriptionConfigMap = {
     cancelUrl: "https://beancount.io/pricing",
     // The dashboard's Billing tab, where the plan is managed.
     portalReturnUrl: "https://beancount.io/settings/billing",
-    portalConfigurationId: config.stripe.portalConfigurationId,
+    portalConfigurationId: "bpc_1US5i0EqsEqs2tLVVF907WfA",
     webhook: "https://beancount.io/api-gateway/stripe/webhook",
   },
 };

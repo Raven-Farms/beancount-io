@@ -258,7 +258,7 @@ beforeEach(() => {
 
 const PRICES = {
   premiumMonthly: "price_1RrSOGEqsEqs2tLVFnyB34qG",
-  premiumYearly: "price_1L9ccEEqsEqs2tLVbeBgHm9p",
+  premiumYearly: "price_1US5htEqsEqs2tLVENCzLaZB",
   growthMonthly: "price_1SyPdaEqsEqs2tLViLPUDoVi",
   growthYearly: "price_1SyPdbEqsEqs2tLV7PJyWZed",
   organizationMonthly: "price_1SyPdcEqsEqs2tLVCWEgU1PZ",

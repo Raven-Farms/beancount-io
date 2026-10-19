@@ -29,9 +29,9 @@ export const stripePlanConfig: StripePlanConfig = {
   clientId: "beancount-web-prod",
   premium: {
     monthly: "price_1RrSOGEqsEqs2tLVFnyB34qG", // $14.99/month
-    yearly: "price_1L9ccEEqsEqs2tLVbeBgHm9p", // $99.99/year (legacy)
+    yearly: "price_1US5htEqsEqs2tLVENCzLaZB", // $11.99/month billed yearly ($143.88/year)
     monthlyAmount: 1499,
-    yearlyAmount: 9999,
+    yearlyAmount: 14388,
   },
   growth: {
     monthly: "price_1SyPdaEqsEqs2tLViLPUDoVi", // $99.99/month
@@ -47,10 +47,21 @@ export const stripePlanConfig: StripePlanConfig = {
   },
 };
 
-/** Older prices still billed to existing subscribers but never offered again. */
-export const LEGACY_PRICE_IDS: ReadonlySet<string> = new Set([
-  "price_1L9ccEEqsEqs2tLVKPRV17wb", // $9.99/month Premium
-]);
+/**
+ * Older prices still billed to existing subscribers. The dashboard never
+ * offers them and a plan change never targets them; the backend's Checkout
+ * may still accept one while the pricing page sells it.
+ */
+const LEGACY_PLANS: Record<
+  string,
+  { tier: SubscriptionTier; cycle: BillingCycle }
+> = {
+  price_1L9ccEEqsEqs2tLVKPRV17wb: { tier: "premium", cycle: "monthly" }, // $9.99/month
+  price_1L9ccEEqsEqs2tLVbeBgHm9p: { tier: "premium", cycle: "yearly" }, // $99.99/year
+};
+export const LEGACY_PRICE_IDS: ReadonlySet<string> = new Set(
+  Object.keys(LEGACY_PLANS),
+);
 
 /** A tier's price on one cycle. */
 export function cyclePrice(
@@ -74,7 +85,7 @@ export function yearlySaving(tier: SubscriptionTier): {
   return { saving, percent: Math.round((saving / twelveMonths) * 100) };
 }
 
-/** The tier and cycle a current price sells, or null for any other price. */
+/** The tier and cycle a price bills, legacy prices included, or null for any other price. */
 export function planForPrice(
   priceId: string,
 ): { tier: SubscriptionTier; cycle: BillingCycle } | null {
@@ -83,7 +94,7 @@ export function planForPrice(
       if (cyclePrice(tier, cycle).priceId === priceId) return { tier, cycle };
     }
   }
-  return null;
+  return LEGACY_PLANS[priceId] ?? null;
 }
 
 /** What a price costs per month: a yearly price is spread over twelve. */

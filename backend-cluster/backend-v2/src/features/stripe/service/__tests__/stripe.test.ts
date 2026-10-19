@@ -1,5 +1,6 @@
 import {
   PaymentType,
+  SubscriptionTier,
   SUBSCRIPTION_CONFIG,
   StripeClientConfig,
 } from "../stripe";
@@ -40,6 +41,7 @@ describe("Stripe Configuration", () => {
           "price_1L9ccEEqsEqs2tLVKPRV17wb", // Legacy $9.99
           "price_1L9ccEEqsEqs2tLVbeBgHm9p", // Legacy $99.99 yearly
           "price_1RrSOGEqsEqs2tLVFnyB34qG", // Premium $14.99
+          "price_1US5htEqsEqs2tLVENCzLaZB", // Premium yearly $143.88
           "price_1SyPdaEqsEqs2tLViLPUDoVi", // Growth monthly $99.99
           "price_1SyPdbEqsEqs2tLV7PJyWZed", // Growth yearly $959.88
           "price_1SyPdcEqsEqs2tLVCWEgU1PZ", // Organization monthly $499.99
@@ -47,8 +49,40 @@ describe("Stripe Configuration", () => {
         ]);
       });
 
-      it("should have seven subscription plans", () => {
-        expect(prodConfig.plans).toHaveLength(7);
+      it("should have eight subscription plans", () => {
+        expect(prodConfig.plans).toHaveLength(8);
+      });
+
+      it("offers Premium yearly at $143.88 and keeps both older Premium prices billable but retired", () => {
+        const plan = (priceId: string) =>
+          prodConfig.plans.find((p) => p.priceId === priceId);
+        expect(plan("price_1US5htEqsEqs2tLVENCzLaZB")).toMatchObject({
+          tier: SubscriptionTier.PREMIUM,
+          interval: "year",
+        });
+        expect(plan("price_1US5htEqsEqs2tLVENCzLaZB")).not.toHaveProperty(
+          "retired",
+        );
+        for (const legacy of [
+          "price_1L9ccEEqsEqs2tLVKPRV17wb",
+          "price_1L9ccEEqsEqs2tLVbeBgHm9p",
+        ]) {
+          expect(plan(legacy)).toMatchObject({
+            tier: SubscriptionTier.PREMIUM,
+            retired: true,
+          });
+        }
+        // One offered price per tier and cycle, so a change has one target.
+        const offered = prodConfig.plans
+          .filter((p) => !p.retired)
+          .map((p) => `${p.tier}:${p.interval}`);
+        expect(new Set(offered).size).toBe(offered.length);
+      });
+
+      it("pins every portal session to the billing-only portal configuration", () => {
+        expect(prodConfig.portalConfigurationId).toBe(
+          "bpc_1US5i0EqsEqs2tLVVF907WfA",
+        );
       });
 
       it("should have monthly basic plan", () => {

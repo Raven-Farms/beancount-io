@@ -13,7 +13,6 @@ export interface TierInfo {
   key: SubscriptionTier;
   userTier: UserTier;
   rank: number;
-  price: string;
   labelKey: string;
   popular?: boolean;
 }
@@ -23,14 +22,12 @@ export const TIERS: TierInfo[] = [
     key: "premium",
     userTier: "PREMIUM",
     rank: 1,
-    price: "$14.99",
     labelKey: "aiAgent.premiumTier",
   },
   {
     key: "growth",
     userTier: "GROWTH",
     rank: 2,
-    price: "$99.99",
     labelKey: "aiAgent.growthTier",
     popular: true,
   },
@@ -38,7 +35,6 @@ export const TIERS: TierInfo[] = [
     key: "organization",
     userTier: "ORGANIZATION",
     rank: 3,
-    price: "$499.99",
     labelKey: "aiAgent.organizationTier",
   },
 ];

@@ -47,6 +47,7 @@ vi.mock("@/common/hooks/use-translations", () => ({
       };
       return translations[key] || key;
     },
+    i18n: { language: "en" },
   }),
 }));
 

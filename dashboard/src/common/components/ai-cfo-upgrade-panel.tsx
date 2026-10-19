@@ -8,9 +8,12 @@ import { TIER_RANK, TIERS } from "@/common/lib/subscription/tier-config";
 import { UpgradePromptLink } from "@/common/components/upgrade-prompt-link";
 import { cn } from "@/common/lib/utils/utils";
 import { useAllTierQuotas } from "@/common/hooks/use-all-tier-quotas";
+import { cyclePrice } from "@/features/user-settings/pages/general/stripe-config";
+import { useMoneyFormat } from "@/features/user-settings/pages/general/use-money-format";
 
 export function AiCfoUpgradePanel({ className }: { className?: string } = {}) {
   const { t } = useTranslations();
+  const formatMoney = useMoneyFormat();
   const { tier, isLoading: limitsLoading } = useUserLimits();
   const {
     aiCfoTokensUsed,
@@ -96,7 +99,7 @@ export function AiCfoUpgradePanel({ className }: { className?: string } = {}) {
           className={`grid grid-cols-1 ${availableTiers.length >= 3 ? "sm:grid-cols-3" : availableTiers.length === 2 ? "sm:grid-cols-2" : ""} gap-2.5 px-4 pb-4 pt-1`}
         >
           {availableTiers.map((plan) => {
-            const { key, price, labelKey, userTier, popular } = plan;
+            const { key, labelKey, userTier, popular } = plan;
             const quota = tierQuotas?.find((q) => q.tier === userTier);
             const tokens = quota?.aiCfoTokensMax ?? 0;
             return (
@@ -121,7 +124,7 @@ export function AiCfoUpgradePanel({ className }: { className?: string } = {}) {
 
                 <div className="flex items-baseline gap-0.5 mb-1.5">
                   <span className="text-xl font-bold tracking-tight">
-                    {price}
+                    {formatMoney(cyclePrice(key, "monthly").amount)}
                   </span>
                   <span className="text-[11px] text-muted-foreground">
                     {t("aiAgent.perMonth")}

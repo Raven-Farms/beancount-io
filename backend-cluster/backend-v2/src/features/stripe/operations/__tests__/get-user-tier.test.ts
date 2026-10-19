@@ -42,6 +42,8 @@ describe("subscription-bound tier", () => {
     [premium, SubscriptionTier.PREMIUM],
     [org, SubscriptionTier.ORGANIZATION],
     ["price_1L9ccEEqsEqs2tLVbeBgHm9p", SubscriptionTier.PREMIUM],
+    ["price_1L9ccEEqsEqs2tLVKPRV17wb", SubscriptionTier.PREMIUM],
+    ["price_1US5htEqsEqs2tLVENCzLaZB", SubscriptionTier.PREMIUM],
   ])("maps recognized price %s", async (price, tier) => {
     const params = deps([sub([price])]);
     expect(await getUserTier(params)).toBe(tier);

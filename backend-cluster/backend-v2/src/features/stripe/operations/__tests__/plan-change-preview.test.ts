@@ -7,14 +7,14 @@ import { previewPlanChange } from "../plan-change-preview";
 
 const LEGACY_PREMIUM_MONTHLY = "price_1L9ccEEqsEqs2tLVKPRV17wb";
 const PREMIUM_MONTHLY = "price_1RrSOGEqsEqs2tLVFnyB34qG";
-const PREMIUM_YEARLY = "price_1L9ccEEqsEqs2tLVbeBgHm9p";
+const PREMIUM_YEARLY = "price_1US5htEqsEqs2tLVENCzLaZB";
 const GROWTH_MONTHLY = "price_1SyPdaEqsEqs2tLViLPUDoVi";
 const GROWTH_YEARLY = "price_1SyPdbEqsEqs2tLV7PJyWZed";
 
 const LIST_PRICES: Record<string, number> = {
   [LEGACY_PREMIUM_MONTHLY]: 999,
   [PREMIUM_MONTHLY]: 1499,
-  [PREMIUM_YEARLY]: 9999,
+  [PREMIUM_YEARLY]: 14388,
   [GROWTH_MONTHLY]: 9999,
   [GROWTH_YEARLY]: 95988,
 };
@@ -122,8 +122,8 @@ describe("previewPlanChange", () => {
       effect: "CHECKOUT",
       refusal: null,
       currentPriceId: null,
-      amountDueToday: 9999,
-      nextAmount: 9999,
+      amountDueToday: 14388,
+      nextAmount: 14388,
       nextChargeAt: new Date("2027-10-17T12:00:00Z"),
     });
     expect(result.limitChanges).toContainEqual({
@@ -139,9 +139,9 @@ describe("previewPlanChange", () => {
     const { stripe, preview } = setup({
       subscriptions: [subscription(PREMIUM_MONTHLY)],
       invoice: {
-        amount_due: 9000,
+        amount_due: 13389,
         lines: {
-          data: [{ amount: -999 }, { amount: 9999 }],
+          data: [{ amount: -999 }, { amount: 14388 }],
         } as unknown as Stripe.Invoice["lines"],
       },
     });
@@ -161,9 +161,9 @@ describe("previewPlanChange", () => {
       kind: "TO_YEARLY",
       effect: "IMMEDIATE",
       currentPriceId: PREMIUM_MONTHLY,
-      amountDueToday: 9000,
+      amountDueToday: 13389,
       creditApplied: 999,
-      nextAmount: 9999,
+      nextAmount: 14388,
       prorationDate: NOW_SECONDS,
       effectiveAt: NOW,
       // A new yearly cycle starts at the switch.

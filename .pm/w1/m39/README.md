@@ -2,7 +2,7 @@
 
 **Worker:** worker1
 **Goal:** A subscriber can preview and confirm any upgrade or monthly-to-yearly switch from Billing settings, pay exactly the amount shown, approve bank authentication without leaving the page, and land on a confirmation after Checkout.
-**Status:** todo (t001, t002, t006, t007, t008, t009, t010 done; t003 part 1 shipped and blocked on an analytics question; t004 blocked on the operator)
+**Status:** todo (t001, t002, t004, t005, t006, t007, t008, t009, t010 done; t003 part 1 shipped and blocked on an analytics question; t016 blocked on the user's GA4 and production access)
 
 ## Source + Goal linkage
 
@@ -46,8 +46,8 @@ This milestone ships before that page changes, so every task keeps that contract
 | t001 | Classify plan changes and preview them on the server — **DONE** | 45m | — |
 | t002 | Apply immediate plan changes at the previewed amount and report bank authentication — **DONE** | 45m | t001 |
 | t003 | Return Checkout to the dashboard and pin the billing portal configuration | 30m | t001, t008 |
-| t004 | Operator: create the $143.88 Premium yearly price and the billing portal configuration | 20m | — |
-| t005 | Offer the $143.88 Premium yearly price in the dashboard, and keep every price the pricing page sells working | 25m | t001, t004 |
+| t004 | Operator: create the $143.88 Premium yearly price and the billing portal configuration — **DONE** | 20m | — |
+| t005 | Offer the $143.88 Premium yearly price in the dashboard, and keep every price the pricing page sells working — **DONE** | 25m | t001, t004 |
 | t006 | Billing settings tab: plan summary, "Pay yearly" line and every-tier plan row — **DONE** | 45m | t001 |
 | t007 | Change sheet for upgrades and switches to yearly, with in-place bank authentication — **DONE** | 50m | t002, t006 |
 | t008 | Confirmation after Checkout — **DONE** | 30m | t006 |
@@ -58,8 +58,9 @@ This milestone ships before that page changes, so every task keeps that contract
 | t013 | Prove classification, charging, authentication and return paths with meaningful tests | 40m | t011, t012 |
 | t015 | Production payment test with the QA account and two 100%-off coupons | 50m | t004, t013 |
 | t014 | Verify the deployed outcome and archive the milestone | 20m | t013, t015 |
+| t016 | Operator: GA4 Measurement Protocol secret and stream ID in production | 10m | t004 |
 
-**Total estimate:** ~8h40m. t002 and t006 can proceed in parallel after t001. t003 switches Checkout's return URLs only after t008's confirmation exists, so a paying customer is never sent to a missing page. t004 is the user's Stripe work and gates only t005 and the closeout.
+**Total estimate:** ~8h50m. t002 and t006 can proceed in parallel after t001. t003 switches Checkout's return URLs only after t008's confirmation exists, so a paying customer is never sent to a missing page. The worker did t004 through the Stripe CLI. t016 is the part that needs the user, and it gates only the server-side `purchase` event, not the closeout.
 
 ## Definition of done
 
@@ -76,6 +77,8 @@ This milestone ships before that page changes, so every task keeps that contract
 - The deployed revision passes a read-only hosted check with authorized or synthetic accounts, without a purchase. Task statuses and links agree, and completed work is moved into `done/` through `/pm`.
 
 ## Blocked
+
+**t016 is blocked:** the server-side `purchase` event needs a GA4 Measurement Protocol secret and the stream ID set in production. The worker has no GA4 admin access or production environment. **Unblock:** the user sets both variables, or grants that access. Cleared by the user.
 
 **t003 is blocked (part 1 shipped):** the portal is pinned and returns to Billing, and a cancelled Checkout keeps the chosen plan and cycle. Moving `success_url` from the pricing page to the dashboard confirmation waits on one question. **Unblock:** the user says whether a Google Analytics key event or report keys on `/pricing?success=true`. Cleared by the user.
 

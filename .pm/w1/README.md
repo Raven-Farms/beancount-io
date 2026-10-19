@@ -12,7 +12,7 @@ m39–m40 were materialized on 2026-10-18 from [PRFAQ005](../../docs/prfaqs/PRFA
 
 - **The pricing page must not break.** `beancount.io/pricing` already checks out against this backend, so both milestones keep everything it relies on working until it changes: `createSubscriptionSession` and every price it sells (including the $99.99 Premium yearly price), `subscriptionStatus.hasActiveSubscription`, `/settings/general` as its "Manage subscription" destination, and the sign-up `next` round trip.
 - **Suggested order:** m39 → m40, after m38's top-priority directory work. m40/t003 and t004 can start alongside m39.
-- **Waiting on the user:** one task in each milestone needs the user's Stripe account (m39/t004, m40/t006). That includes the 100%-off production coupons for the QA payment tests (m39/t015, m40/t014), unless the worker has live Stripe access.
+- **Stripe operator work:** the worker has had live Stripe access through the CLI since 2026-10-18 and did m39/t004 itself. That included the 100%-off production coupons for the QA payment tests (m39/t015, m40/t014). m39/t016 still needs the user, for GA4 admin and the production environment.
 - **Production payment tests:** by user decision on 2026-10-18, each milestone ends with a real payment test in production. It uses the QA account from `beancount-io/.env` and two 100%-off coupons, before closeout.
 - **Not on the board:** PRFAQ005's stage 3, its growth experiments, waits for four weeks of stage 1–2 metrics.
 
@@ -68,7 +68,8 @@ m39–m40 were materialized on 2026-10-18 from [PRFAQ005](../../docs/prfaqs/PRFA
 
 ## Inbox
 
-- [174](./174.md) — In-place bank approval for plan changes with Stripe.js; needs the user's approval of the dependency (follow-up to w1/m39/t007).
+- [175](./175.md) — In-place bank approval for plan changes with Stripe.js; needs the user's approval of the dependency (follow-up to w1/m39/t007).
+- [176](./176.md) — Stop selling the $99.99 Premium yearly price through Checkout once the pricing page sells $143.88 (follow-up to w1/m39/t005).
 
 
 The three MCP QA findings filed on 2026-09-21/22 were drained on 2026-09-23: [035](./done/035.md), [036](./done/036.md), and [037](./done/037.md) shipped with regression coverage.

@@ -387,7 +387,7 @@ describe("PlanChangeSheet", () => {
   });
 
   describe("changes that wait for the end of the paid period", () => {
-    const PREMIUM_YEARLY = "price_1L9ccEEqsEqs2tLVbeBgHm9p";
+    const PREMIUM_YEARLY = "price_1US5htEqsEqs2tLVENCzLaZB";
     const PREMIUM_MONTHLY = "price_1RrSOGEqsEqs2tLVFnyB34qG";
     const GROWTH_MONTHLY = "price_1SyPdaEqsEqs2tLViLPUDoVi";
     const scheduled = (overrides: Record<string, unknown> = {}) =>

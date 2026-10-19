@@ -7,7 +7,7 @@ import { SUBSCRIPTION_PERIOD_VERIFICATION_VERSION } from "../../service/subscrip
 import { applyPlanChange } from "../plan-change-apply";
 
 const PREMIUM_MONTHLY = "price_1RrSOGEqsEqs2tLVFnyB34qG";
-const PREMIUM_YEARLY = "price_1L9ccEEqsEqs2tLVbeBgHm9p";
+const PREMIUM_YEARLY = "price_1US5htEqsEqs2tLVENCzLaZB";
 const GROWTH_MONTHLY = "price_1SyPdaEqsEqs2tLViLPUDoVi";
 
 const NOW = new Date("2026-10-17T12:00:00Z");
@@ -436,16 +436,22 @@ describe("applyPlanChange", () => {
     expect(stripe.subscriptionSchedules.create).not.toHaveBeenCalled();
   });
 
-  it("refuses a retired price as a target before any Stripe call", async () => {
-    const { stripe, apply } = setup({
-      subscriptions: [subscription(GROWTH_MONTHLY)],
-    });
+  it.each([
+    ["$9.99 monthly", "price_1L9ccEEqsEqs2tLVKPRV17wb"],
+    ["$99.99 yearly", "price_1L9ccEEqsEqs2tLVbeBgHm9p"],
+  ])(
+    "refuses the retired %s Premium price as a target before any Stripe call",
+    async (_label, retired) => {
+      const { stripe, apply } = setup({
+        subscriptions: [subscription(GROWTH_MONTHLY)],
+      });
 
-    await expect(
-      apply("price_1L9ccEEqsEqs2tLVKPRV17wb", NOW_SECONDS),
-    ).rejects.toMatchObject({ category: ErrorCategory.VALIDATION_FAILED });
-    expect(stripe.subscriptions.list).not.toHaveBeenCalled();
-  });
+      await expect(apply(retired, NOW_SECONDS)).rejects.toMatchObject({
+        category: ErrorCategory.VALIDATION_FAILED,
+      });
+      expect(stripe.subscriptions.list).not.toHaveBeenCalled();
+    },
+  );
 
   it("refuses an end-of-period change for the immediate-only legacy mutation, with no Stripe write", async () => {
     const { stripe, apply } = setup({
