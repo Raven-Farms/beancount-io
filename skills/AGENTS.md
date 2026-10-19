@@ -112,6 +112,10 @@ Use the `skill-creator` skill (`/skill-creator`) for the build → eval → revi
 
 A description is the only thing an agent reads before it picks a skill, so description changes are measured, not judged by eye. `scripts/skills/routing.json` labels the skill (or `none`) for each of about fifty ledger requests, with the siblings each could be confused with; `ci-check.py` keeps its labels in step with the skill directories. Whenever a description changes or a skill is added, run `python3 scripts/skills/run-routing.py` on Claude Code and Codex before and after the change (results land in `scripts/skills/tmp/routing/`; Codex varies between runs, so run each side twice). Record both in [docs/skills/routing-rehearsal.md](../docs/skills/routing-rehearsal.md), and fix any prompt that routed correctly before and misroutes after before shipping. The runner makes paid client calls, so CI never runs it.
 
+### Plugin version
+
+The suite also ships as one `beancount-io` plugin (`.claude-plugin/marketplace.json` at the repo root for one client, `plugin.json` plus `.agents/plugins/marketplace.json` for the other). Both manifests carry **one shared suite version**: whenever a change under a customer skill folder (`skills/beancount-*/`) ships, bump `version` in both manifests in the same change. A client only delivers a new plugin copy to installed users when the computed version changes, so an unbumped skill fix silently never reaches plugin users. `ci-check.py` (`check_plugin_manifests`) fails when the manifests disagree on name, version, description, or license, when the version is not semver, or when the marketplace entry's skill list drifts from the folders on disk.
+
 ### Scratch space
 
 `scripts/skills/tmp/` is gitignored. Drop ledgers, eval outputs, throwaway scripts there while iterating. Don't put scratch in `skills/`, at the repo root, or inside `.claude/`.

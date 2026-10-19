@@ -206,6 +206,73 @@ class TestSkillTrees(unittest.TestCase):
         self.assertIn("referenced file missing: missing.csv", error.getvalue())
 
 
+class TestPluginManifests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.skills = self.root / "skills"
+        for name in ("beancount-add", "beancount-ask"):
+            skill = self.skills / name / "SKILL.md"
+            skill.parent.mkdir(parents=True)
+            skill.write_text("x")
+        (self.root / ".claude-plugin").mkdir()
+        (self.root / ".agents/plugins").mkdir(parents=True)
+        self.entry = {
+            "name": "beancount-io",
+            "source": "./skills",
+            "description": "Ledger skills.",
+            "version": "0.1.0",
+            "license": "MIT",
+            "skills": ["./beancount-add", "./beancount-ask"],
+        }
+        for patch in (
+            unittest.mock.patch.object(ci_check, "REPO_ROOT", self.root),
+            unittest.mock.patch.object(ci_check, "SKILLS_DIR", self.skills),
+        ):
+            patch.start()
+            self.addCleanup(patch.stop)
+        self.write_manifests()
+
+    def write_manifests(self, entry=None, plugin=None):
+        entry = dict(self.entry, **(entry or {}))
+        plugin = dict(
+            {"name": "beancount-io", "version": "0.1.0", "description": "Ledger skills.", "license": "MIT"},
+            **(plugin or {}),
+        )
+        (self.root / ".claude-plugin/marketplace.json").write_text(
+            json.dumps({"name": "beancount-io", "plugins": [entry]})
+        )
+        (self.root / "plugin.json").write_text(json.dumps(plugin))
+        (self.root / ".agents/plugins/marketplace.json").write_text(
+            json.dumps({"name": "beancount-io", "plugins": [{"name": "beancount-io", "source": {"path": "./"}}]})
+        )
+
+    def check(self):
+        error = io.StringIO()
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(error):
+            try:
+                ci_check.check_plugin_manifests()
+            except SystemExit:
+                pass
+        return error.getvalue()
+
+    def test_agreeing_manifests_pass(self):
+        self.assertEqual(self.check(), "")
+
+    def test_version_disagreement_is_rejected(self):
+        self.write_manifests(plugin={"version": "0.1.1"})
+        self.assertIn("plugin manifests disagree on version", self.check())
+
+    def test_stale_skill_list_is_rejected(self):
+        self.write_manifests(entry={"skills": ["./beancount-add"]})
+        self.assertIn("skills must list every customer skill on disk", self.check())
+
+    def test_non_semver_is_rejected(self):
+        self.write_manifests(entry={"version": "1.0"}, plugin={"version": "1.0"})
+        self.assertIn("is not semver", self.check())
+
+
 class TestRoutingSet(unittest.TestCase):
     def setUp(self):
         scratch = SCRIPTS_DIR / "tmp"

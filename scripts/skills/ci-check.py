@@ -600,6 +600,51 @@ def check_no_redundant_installs() -> None:
         print(f"OK one-install guidance {path.relative_to(REPO_ROOT)}")
 
 
+SEMVER = re.compile(r"^\d+\.\d+\.\d+$")
+
+
+def check_plugin_manifests() -> None:
+    # One shared suite version reaches plugin users (skills/AGENTS.md holds
+    # the rule): the Claude marketplace entry and the Codex plugin manifest
+    # must agree on name, version, description, and license, and the Claude
+    # entry must list exactly the customer skills on disk.
+    def load(rel: str) -> dict:
+        path = REPO_ROOT / rel
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except FileNotFoundError:
+            fail(f"{rel}: plugin manifest is missing")
+        except json.JSONDecodeError as error:
+            fail(f"{rel}: invalid JSON ({error})")
+
+    marketplace = load(".claude-plugin/marketplace.json")
+    plugin = load("plugin.json")
+    codex_marketplace = load(".agents/plugins/marketplace.json")
+    entries = marketplace.get("plugins") or []
+    if marketplace.get("name") != "beancount-io" or len(entries) != 1:
+        fail(".claude-plugin/marketplace.json: expected one plugin in a marketplace named beancount-io")
+    entry = entries[0]
+    if entry.get("name") != "beancount-io" or entry.get("source") != "./skills":
+        fail('.claude-plugin/marketplace.json: the entry must be beancount-io with source "./skills"')
+    on_disk = sorted(f"./{p.parent.name}" for p in SKILLS_DIR.glob("*/SKILL.md"))
+    if entry.get("skills") != on_disk:
+        fail(f".claude-plugin/marketplace.json: skills must list every customer skill on disk ({on_disk})")
+    for field in ("name", "version", "description", "license"):
+        if entry.get(field) != plugin.get(field):
+            fail(f"plugin manifests disagree on {field}: marketplace entry {entry.get(field)!r} vs plugin.json {plugin.get(field)!r} (one shared suite version — bump both together)")
+    if not SEMVER.match(str(entry.get("version", ""))):
+        fail(f"plugin manifests: version {entry.get('version')!r} is not semver X.Y.Z")
+    codex_entries = codex_marketplace.get("plugins") or []
+    if (
+        codex_marketplace.get("name") != "beancount-io"
+        or len(codex_entries) != 1
+        or codex_entries[0].get("name") != "beancount-io"
+        or (codex_entries[0].get("source") or {}).get("path") != "./"
+    ):
+        fail('.agents/plugins/marketplace.json: expected one beancount-io entry with source path "./"')
+    print(f"OK plugin manifests (suite version {entry['version']})")
+
+
 def main() -> None:
     check_symlinks()
     check_layout()
@@ -612,6 +657,7 @@ def main() -> None:
     check_ledgers()
     check_bea_first()
     check_no_redundant_installs()
+    check_plugin_manifests()
     print("All skills CI checks passed.")
 
 
