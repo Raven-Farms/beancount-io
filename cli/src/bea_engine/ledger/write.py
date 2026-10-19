@@ -3871,13 +3871,23 @@ def append(
     return warnings + respelled_account_notes(texts, snapshot)
 
 
+def _is_marked_float(value: Any) -> bool:
+    from bea_engine.amounts import JsonFloat
+
+    return isinstance(value, JsonFloat)
+
+
 def _exact_metadata_number(number: Any) -> Any:
     """Refuse a JSON float in typed metadata: `Decimal(0.1)` would persist its binary expansion."""
     if isinstance(number, bool):
         raise ValueError(f"expected a decimal string, got {number!r}")
-    if isinstance(number, float):
-        from bea_engine.amounts import decimal_string_hint
+    from bea_engine.amounts import decimal_string_hint
 
+    if _is_marked_float(number):
+        raise ValueError(
+            f"JSON float {number.literal} cannot represent a decimal exactly. {decimal_string_hint(number, 'number')}"
+        )
+    if isinstance(number, float):
         raise ValueError(
             f"JSON float {number!r} cannot represent a decimal exactly. {decimal_string_hint(number, 'number')}"
         )
@@ -3916,6 +3926,11 @@ def metadata_for_write(meta: dict[str, Any]) -> dict[str, Any]:
                 raise LedgerError(f"Invalid {kind!r} metadata for {key!r}: {exc}") from exc
         elif isinstance(value, bool):
             pass
+        elif _is_marked_float(value):
+            # A marked float refused as one: quoting the literal, not the
+            # double's expansion (w5/735). Plain floats keep the historical
+            # coercion below; only parsed JSON carries the mark.
+            _exact_metadata_number(value)
         elif isinstance(value, int | float):
             # JSON numbers arrive as int/float; Beancount's printer only accepts Decimal.
             value = Decimal(str(value))

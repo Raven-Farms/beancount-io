@@ -880,7 +880,9 @@ def _request(value: str) -> dict[str, Any]:
     """
     text = _text(value)
     try:
-        request = json.loads(text)
+        from bea_engine.amounts import JsonFloat, restore_json_float
+
+        request = json.loads(text, parse_float=JsonFloat, object_hook=restore_json_float)
     except ValueError as exc:
         raise protocol.UsageError(f"--request is not valid JSON: {exc}.") from None
     if not isinstance(request, dict):

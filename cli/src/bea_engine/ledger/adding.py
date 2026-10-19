@@ -25,7 +25,7 @@ from pathlib import Path
 from typing import Any
 
 from bea_engine import protocol
-from bea_engine.amounts import parse_decimal_number, parse_exact
+from bea_engine.amounts import JsonFloat, parse_decimal_number, parse_exact
 from bea_engine.ledger import write, writer
 from bea_engine.ledger.text import (
     checked_operating_currencies,
@@ -1306,8 +1306,13 @@ _META_VALUE_HELP = (
 )
 
 
-def _untagged_float_problem(value: float) -> str:
+def _untagged_float_problem(value: float | JsonFloat) -> str:
     """Why an untagged JSON float is no metadata value, and the tagged number to send."""
+    if isinstance(value, JsonFloat):
+        return (
+            f"JSON float {value.literal} cannot represent a decimal exactly. Send a tagged number instead, "
+            f'such as {{"kind":"number","value":"{value.literal}"}}.'
+        )
     if not math.isfinite(value):
         return f"{value!r} is not a finite number, so it has no decimal form; send it as text or leave it out."
     exact = format(Decimal(repr(value)), "f")
@@ -1374,7 +1379,7 @@ def _bulk_meta_problems(location: str, meta: dict[str, Any]) -> list[str]:
                         f"ASCII digits and no exponent or underscores, such as '1.25'; got {number!r}."
                     )
                     continue
-        elif isinstance(value, float):
+        elif isinstance(value, (float, JsonFloat)):
             # Written through `Decimal(str(value))` (w3/230), a float recorded
             # its binary value: 12345678901234567890.123 became
             # 12345678901234567000, and 0.3-style values kept their noise

@@ -4,8 +4,44 @@ from __future__ import annotations
 
 import re
 from decimal import Decimal
+from typing import Any
 
 from cli.errors import UsageError
+
+
+class JsonFloat:
+    """A JSON float's source text, kept so the engine's refusal quotes what was typed.
+
+    The engine twin in `bea_engine.amounts` refuses it; the two execution
+    environments cannot import each other's modules, so a marked float
+    crosses the request pipe as `{JSON_FLOAT_MARKER: <literal>}` (see
+    `json_float_default`) and the engine restores it there. Deliberately not
+    a `str` or `float`, so `json.dumps` has no native spelling for it and
+    must come through the default.
+    """
+
+    __slots__ = ("literal",)
+
+    def __init__(self, literal: str) -> None:
+        self.literal = literal
+
+    def __repr__(self) -> str:
+        return f"JsonFloat({self.literal!r})"
+
+    def __eq__(self, other: Any) -> bool:
+        return isinstance(other, JsonFloat) and other.literal == self.literal
+
+
+#: Transport marker for a `JsonFloat`; must match `bea_engine.amounts.JSON_FLOAT_MARKER`.
+JSON_FLOAT_MARKER = "__json_float__"
+
+
+def json_float_default(value: Any) -> Any:
+    """The `json.dumps` default that carries a marked float's literal to the engine (w5/735)."""
+    if isinstance(value, JsonFloat):
+        return {JSON_FLOAT_MARKER: value.literal}
+    raise TypeError(f"Object of type {type(value).__name__} is not JSON serializable")
+
 
 _SCIENTIFIC_NOTATION_MESSAGE = (
     "Scientific notation {!r} is not supported in Beancount amounts. "

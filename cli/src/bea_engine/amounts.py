@@ -37,6 +37,47 @@ DECIMAL_COMMA_HELP = (
 )
 
 
+class JsonFloat:
+    """A JSON float's source text, kept so the refusal quotes what was typed.
+
+    Parsing into a `float` first loses the literal: `1.10` becomes `1.1`,
+    long decimals lose digits, and `1E400` becomes `inf` — and the hint then
+    names a different amount, precision or tolerance than the user sent
+    (w5/735). JSON entry points parse floats into this instead, and refuse it
+    quoting the literal. Deliberately not a `str` or `float`, so nothing
+    coerces or serializes it by accident.
+    """
+
+    __slots__ = ("literal",)
+
+    def __init__(self, literal: str) -> None:
+        self.literal = literal
+
+    def __repr__(self) -> str:
+        return f"JsonFloat({self.literal!r})"
+
+    def __eq__(self, other: Any) -> bool:
+        return isinstance(other, JsonFloat) and other.literal == self.literal
+
+
+#: The transport marker for a `JsonFloat` between the frontend and the engine.
+#: The frontend cannot import this module (and the engine cannot import the
+#: frontend's twin), so a marked float crosses the request pipe as
+#: `{"__json_float__": <literal>}`, and the engine's request parser restores
+#: it with `restore_json_float`. A user object of exactly that shape in a
+#: numeric position is refused as the float it claims to be.
+JSON_FLOAT_MARKER = "__json_float__"
+
+
+def restore_json_float(mapping: Any) -> Any:
+    """The `object_hook` half of the `JsonFloat` transport: the marker dict back to a marked float."""
+    if isinstance(mapping, dict) and set(mapping) == {JSON_FLOAT_MARKER}:
+        literal = mapping[JSON_FLOAT_MARKER]
+        if isinstance(literal, str):
+            return JsonFloat(literal)
+    return mapping
+
+
 def parse_decimal_number(value: str, *, grouping: bool = True) -> Decimal:
     """The frontend's finite ASCII decimal rule, repeated across the engine boundary.
 
@@ -181,13 +222,17 @@ def refuse_scientific_notation(text: str) -> None:
         require_decimal_notation(match[0])
 
 
-def decimal_string_hint(value: float, noun: str) -> str:
+def decimal_string_hint(value: float | JsonFloat, noun: str) -> str:
     """What to send instead of a JSON float: a string this same input accepts.
 
     `str()` of a float is scientific for large or tiny values (`1e+20`,
     `1e-08`) and `nan`/`inf` for the rest, each refused on the next run; an
-    agent following the hint looped between two errors (w5/335).
+    agent following the hint looped between two errors (w5/335). A marked
+    float quotes its literal instead, so following it never changes the
+    amount, its precision or the tolerance (w5/735).
     """
+    if isinstance(value, JsonFloat):
+        return f"Send the {noun} as a decimal string, such as '{value.literal}'."
     if not math.isfinite(value):
         return f"{value!r} is not a finite number, so it has no decimal form."
     return f"Send the {noun} as a decimal string, such as '{format(Decimal(repr(value)), 'f')}'."
@@ -200,6 +245,11 @@ def require_decimal_notation(value: Any) -> Any:
     wrong value (0.1 + 0.2 arrives as 0.30000000000000004), so accepting it
     would record binary error as accounting fact. Integers are exact and stay.
     """
+    if isinstance(value, JsonFloat):
+        raise ValueError(
+            f"JSON number {value.literal} is not supported in Beancount amounts; "
+            f"floats cannot represent decimals exactly. {decimal_string_hint(value, 'amount')}"
+        )
     if isinstance(value, float):
         raise ValueError(
             f"JSON number {value!r} is not supported in Beancount amounts; "

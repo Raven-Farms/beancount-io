@@ -21,7 +21,7 @@ from typing import Annotated, Any
 import typer
 
 from cli import context, output
-from cli.amounts import check_decimal_notation, parse_decimal_number
+from cli.amounts import JsonFloat, check_decimal_notation, json_float_default, parse_decimal_number
 from cli.completion import fixed_values
 from cli.errors import UsageError
 from cli.single_value import SingleValueCommand
@@ -98,7 +98,7 @@ def _write(
         argv.append("--allow-errors")
     if strict_read:
         argv.append("--strict-read")
-    data = launch.helper_json(argv, stdin=json.dumps(request), writes=True)
+    data = launch.helper_json(argv, stdin=json.dumps(request, default=json_float_default), writes=True)
     # A write through an included leaf is the root's write: `target.file`
     # named the leaf, and the same write with `--into` named the root (w5/613).
     root = data.pop("root", None)
@@ -627,7 +627,7 @@ def _load_transactions_json(from_file: Path) -> Any:
         raise UsageError(utf16)
     too_deep = f"'{name}' (from --from) nests JSON too deeply; send a flat array of rows."
     try:
-        loaded = json.loads(text, object_pairs_hook=_unique_keys)
+        loaded = json.loads(text, object_pairs_hook=_unique_keys, parse_float=JsonFloat)
     except json.JSONDecodeError as exc:
         raise UsageError(f"Invalid JSON at line {exc.lineno}, column {exc.colno}: {exc.msg}.") from exc
     except RecursionError as exc:

@@ -19,6 +19,7 @@ from pydantic import (
 )
 
 from bea_engine.amounts import (
+    JsonFloat,
     parse_exact,
     refuse_scientific_notation,
     refuse_zero_divisor,
@@ -94,7 +95,7 @@ def _require_calendar_date(value: Any) -> Any:
         return value
     if isinstance(value, datetime.date):
         return value
-    if isinstance(value, bool) or isinstance(value, int | float):
+    if isinstance(value, bool) or isinstance(value, int | float | JsonFloat):
         raise ValueError("date must be a string in YYYY-MM-DD form, not a number.")
     if isinstance(value, str):
         # Strictly `YYYY-MM-DD`: Pydantic would read "1769904000" as a Unix

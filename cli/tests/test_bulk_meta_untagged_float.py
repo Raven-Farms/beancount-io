@@ -58,15 +58,19 @@ def _row(meta: str, posting_meta: str = "") -> str:
     [
         (
             _row('"rate":12345678901234567890.123'),
-            "Row 1, meta.rate: JSON float 1.2345678901234567e+19 cannot represent a decimal exactly. "
-            'Send a tagged number instead, such as {"kind":"number","value":"12345678901234567000"}.',
+            "Row 1, meta.rate: JSON float 12345678901234567890.123 cannot represent a decimal exactly. "
+            'Send a tagged number instead, such as {"kind":"number","value":"12345678901234567890.123"}.',
         ),
         (
             _row('"rr":0.30000000000000004'),
             "Row 1, meta.rr: JSON float 0.30000000000000004 cannot represent a decimal exactly. "
             'Send a tagged number instead, such as {"kind":"number","value":"0.30000000000000004"}.',
         ),
-        (_row('"nn":5', '"pp":1e2'), "Row 1, postings.0.meta.pp: JSON float 100.0 cannot represent a decimal exactly."),
+        (
+            _row('"nn":5', '"pp":1e2'),
+            "Row 1, postings.0.meta.pp: JSON float 1e2 cannot represent a decimal exactly. "
+            'Send a tagged number instead, such as {"kind":"number","value":"1e2"}.',
+        ),
         (_row('"xx":NaN'), "Row 1, meta.xx: nan is not a finite number, so it has no decimal form"),
     ],
     ids=["large", "noise", "posting-meta", "nan"],

@@ -2,6 +2,10 @@
 
 The hint quoted the float's `str()`: `'1e+20'` and `'1e-08'` were then refused
 as scientific notation, and `'nan'`/`'-inf'` as invalid, so following it looped.
+
+w5/735 quotes the literal as typed instead, so an exponent literal is quoted
+verbatim and refused as scientific notation when followed — the exchange
+still terminates, and nothing is corrupted in between.
 """
 
 from __future__ import annotations
@@ -84,5 +88,18 @@ def test_the_hint_is_accepted_or_withheld(tmp_path: Path, field: str, value: flo
         assert suggestion is None and "is not a finite number" in message
         return
     assert suggestion is not None, message
+    if "e" in suggestion[1].lower():
+        # An exponent literal is quoted verbatim (w5/735): following it is
+        # refused as scientific notation, which names decimal notation, so
+        # the exchange terminates instead of looping.
+        assert suggestion[1] == f"{value}"
+        followed = _add(tmp_path, _row(field, suggestion[1]))
+        assert followed.returncode != 0
+        if field == "meta":
+            assert "no exponent or underscores" in followed.stderr
+        else:
+            assert "Scientific notation" in followed.stderr
+            assert "Use decimal notation" in followed.stderr
+        return
     accepted = _add(tmp_path, _row(field, suggestion[1]))
     assert accepted.returncode == 0, accepted.stderr
