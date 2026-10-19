@@ -23,7 +23,7 @@
 ## Inbox
 
 - [051 — Account deletion accepts an application-API OAuth token of any scope (latent; decision first, see w2/m12)](./blocked/051.md) — **blocked:** needs the owner's choice between requiring `ledger.admin`, a full-access token, or recording the current design.
-- [055 — On a host with fewer than three cores, a small ledger's parse waits behind a large ledger's](./055.md)
+- [055 — On a host with fewer than three cores, a small ledger's parse waits behind a large ledger's](./blocked/055.md) — **blocked:** the hosted worker count needs the plan's memory and cores; `RUSTLEDGER_WORKERS` and the startup count shipped.
 
 Resolved notes are in [`done/`](./done/).
 
