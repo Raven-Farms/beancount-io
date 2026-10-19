@@ -3,7 +3,11 @@
 from __future__ import annotations
 
 import re
+import shutil
+import sys
 from typing import Any
+
+from rich.markdown import Markdown, TableElement
 
 from cli.utils import inert_text
 
@@ -94,6 +98,65 @@ def _fenced(lines: list[str]) -> str:
     return f"\n{fence}text\n" + "\n".join(lines) + f"\n{fence}\n"
 
 
+class _FoldingTableElement(TableElement):
+    """A Markdown table whose cells fold instead of cutting with `…` (w5/750)."""
+
+    def __rich_console__(self, console: Any, options: Any) -> Any:
+        from rich.table import Table
+
+        for renderable in super().__rich_console__(console, options):
+            if isinstance(renderable, Table):
+                for column in renderable.columns:
+                    column.overflow = "fold"
+            yield renderable
+
+
+class _AnswerMarkdown(Markdown):
+    """Rich Markdown that never drops a table cell's characters (w5/750)."""
+
+    elements = {**Markdown.elements, "table_open": _FoldingTableElement}
+
+
+def _table_slack(text: str) -> int:
+    """The chrome the answer's widest pipe table adds around its cells."""
+    widest = 0
+    for line in text.splitlines():
+        cells = line.strip().strip("|").split("|")
+        if len(cells) > 1:
+            widest = max(widest, len(cells))
+    # A boundary between cells, plus the edges; an overcount only ever
+    # widens, and a line that merely holds pipes is not a table.
+    return 3 * widest + 1 if widest else 0
+
+
+def _content_width(text: str) -> int:
+    """The width a piped answer needs to never hard-wrap (w5/750)."""
+    from cli.output import display_width
+
+    wide = max((display_width(line) for line in text.splitlines()), default=0)
+    return max(wide + _table_slack(text), 1)
+
+
+def answer_console(text: str) -> Any:
+    """A console that shows every character of an answer (w5/750).
+
+    On a terminal, the terminal's width — with a non-positive `COLUMNS`
+    ignored the way `shutil.get_terminal_size` ignores it everywhere else
+    in bea, instead of Rich reading it literally and printing nothing.
+    Off a terminal, sized to the answer itself, so a saved answer is never
+    hard-wrapped: table chrome included.
+    """
+    from rich.console import Console
+
+    try:
+        terminal = sys.stdout.isatty()
+    except ValueError:
+        terminal = False
+    if terminal:
+        return Console(width=shutil.get_terminal_size().columns)
+    return Console(width=_content_width(text))
+
+
 def answer_markdown(text: str) -> Any:
     """The model's answer as Rich Markdown, every character of it shown.
 
@@ -106,7 +169,6 @@ def answer_markdown(text: str) -> Any:
     parser here reads HTML as the literal text it is.
     """
     from markdown_it import MarkdownIt
-    from rich.markdown import Markdown
 
     def parse(source: str) -> tuple[Any, dict[str, Any]]:
         parser = MarkdownIt("commonmark", {"html": False}).enable("strikethrough").enable("table")
@@ -120,6 +182,6 @@ def answer_markdown(text: str) -> Any:
         tokens, _ = parse(safe + _fenced(unused))
     _neutralize(tokens)
     _splice_titles(tokens)
-    rendered = Markdown(safe, hyperlinks=False)
+    rendered = _AnswerMarkdown(safe, hyperlinks=False)
     rendered.parsed = tokens
     return rendered

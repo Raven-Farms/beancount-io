@@ -105,12 +105,12 @@ def ask(
     if print_mode or ctx.no_input:
         from rich.console import Console
 
-        from cli.ask.render import answer_markdown
+        from cli.ask.render import answer_console, answer_markdown
 
         console = Console()
         with console.status("[dim]Thinking…[/dim]", spinner="dots"), translated_failures(deps):
             result = agent.run_sync(question, deps=deps, usage_limits=usage_limits())
-        console.print(answer_markdown(result.output))
+        answer_console(result.output).print(answer_markdown(result.output))
         notice = cut_off_notice(result)
         if notice is not None:
             # Part of an answer is not the answer: a nonzero exit says so (w5/546).

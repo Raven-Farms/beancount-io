@@ -1999,7 +1999,8 @@ tool accepts dated directives; configure plugins, options and includes
 separately. Noninteractive
 sessions do not write ledger entries. The interactive session draws its prompt
 and approval panel on the terminal, so with stdout redirected it exits **2**
-instead; save one answer with `bea ask QUESTION --print > FILE`. AI write permission is separate from
+instead; save one answer with `bea ask QUESTION --print > FILE` — the saved
+text keeps every character, never wrapped or cut. AI write permission is separate from
 global `--yes`: one-answer and non-interactive mode cannot obtain it and never
 apply AI-proposed writes.
 

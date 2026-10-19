@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from cli.ask.agent import BqlDeps
 
 from cli import output
-from cli.ask.render import answer_markdown
+from cli.ask.render import answer_console, answer_markdown
 from cli.config import history_path
 from cli.context import env_flag
 from cli.errors import AuthError, BeaError
@@ -370,7 +370,7 @@ def run_repl(agent: Agent[BqlDeps, str], deps: BqlDeps, *, default_input: str | 
                 continue
             messages = list(result.all_messages())
             console.print()
-            console.print(answer_markdown(result.output))
+            answer_console(result.output).print(answer_markdown(result.output))
             notice = cut_off_notice(result)
             if notice is not None:
                 console.print(Text(notice, style="yellow"))
