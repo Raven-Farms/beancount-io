@@ -1054,6 +1054,25 @@ const jaCommon: Record<string, TranslationEntry> = {
     description:
       "Description under the What's new heading when every release has been read",
   },
+  "common.failedRenewal": {
+    message:
+      "{card} で {plan} のお支払いができませんでした。{plan} を継続するには、{date} までに更新してください。",
+    description:
+      "Banner while a renewal payment is past due: the card, the plan and the next retry date",
+  },
+  "common.failedRenewalUpdate": {
+    message: "お支払い方法を更新",
+    description: "Button that opens the billing portal to fix a failed renewal",
+  },
+  "common.failedRenewalYourCard": {
+    message: "お使いのカード",
+    description: "Stands in for the card name when it is unknown",
+  },
+  "common.failedRenewalDismiss": {
+    message: "今は閉じる",
+    description:
+      "Accessible name of the button that hides the failed-renewal banner for this session",
+  },
 };
 
 export default jaCommon;

@@ -14,6 +14,11 @@ const { useRouterState, useParams, useLocation, useNavigate, useQuery } =
     useQuery: vi.fn(),
   }));
 
+// The failed-renewal banner reads billing state the shell under test does
+// not provide; it has its own tests.
+vi.mock("@/common/components/billing/failed-renewal-banner", () => ({
+  FailedRenewalBanner: () => null,
+}));
 vi.mock("@tanstack/react-router", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@tanstack/react-router")>()),
   useRouterState,

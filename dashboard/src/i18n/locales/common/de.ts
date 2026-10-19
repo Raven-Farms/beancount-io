@@ -1068,6 +1068,25 @@ const deCommon: Record<string, TranslationEntry> = {
     description:
       "Description under the What's new heading when every release has been read",
   },
+  "common.failedRenewal": {
+    message:
+      "Wir konnten {card} für {plan} nicht belasten. Aktualisieren Sie sie bis {date}, um {plan} zu behalten.",
+    description:
+      "Banner while a renewal payment is past due: the card, the plan and the next retry date",
+  },
+  "common.failedRenewalUpdate": {
+    message: "Zahlungsmethode aktualisieren",
+    description: "Button that opens the billing portal to fix a failed renewal",
+  },
+  "common.failedRenewalYourCard": {
+    message: "Ihre Karte",
+    description: "Stands in for the card name when it is unknown",
+  },
+  "common.failedRenewalDismiss": {
+    message: "Vorerst ausblenden",
+    description:
+      "Accessible name of the button that hides the failed-renewal banner for this session",
+  },
 };
 
 export default deCommon;

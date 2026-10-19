@@ -52,6 +52,7 @@ export const mockActiveSubscriptionData: GetSubscriptionStatusQuery = {
         canceledAt: null,
         cancelAtPeriodEnd: false,
         scheduledChange: null,
+        nextPaymentAttempt: null,
         paymentMethod: {
           __typename: "PaymentMethodSummary",
           brand: "visa",
@@ -109,6 +110,7 @@ export const mockCanceledSubscriptionData: GetSubscriptionStatusQuery = {
         canceledAt: null,
         cancelAtPeriodEnd: true,
         scheduledChange: null,
+        nextPaymentAttempt: null,
         paymentMethod: {
           __typename: "PaymentMethodSummary",
           brand: "visa",

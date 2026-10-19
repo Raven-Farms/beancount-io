@@ -1073,6 +1073,25 @@ const caCommon: Record<string, TranslationEntry> = {
     description:
       "Description under the What's new heading when every release has been read",
   },
+  "common.failedRenewal": {
+    message:
+      "No hem pogut cobrar {plan} a {card}. Actualitza-la abans del {date} per conservar {plan}.",
+    description:
+      "Banner while a renewal payment is past due: the card, the plan and the next retry date",
+  },
+  "common.failedRenewalUpdate": {
+    message: "Actualitza el mètode de pagament",
+    description: "Button that opens the billing portal to fix a failed renewal",
+  },
+  "common.failedRenewalYourCard": {
+    message: "la teva targeta",
+    description: "Stands in for the card name when it is unknown",
+  },
+  "common.failedRenewalDismiss": {
+    message: "Amaga de moment",
+    description:
+      "Accessible name of the button that hides the failed-renewal banner for this session",
+  },
 };
 
 export default caCommon;

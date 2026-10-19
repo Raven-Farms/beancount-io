@@ -1,3 +1,4 @@
+import { FailedRenewalBanner } from "@/common/components/billing/failed-renewal-banner";
 import {
   SidebarProvider,
   SidebarTrigger,
@@ -55,6 +56,7 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
           className="flex flex-1 flex-col min-w-0 w-full outline-none"
         >
           <DashboardHeader />
+          <FailedRenewalBanner />
           {children}
         </main>
       </div>

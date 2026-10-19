@@ -1,3 +1,4 @@
+import { FailedRenewalBanner } from "@/common/components/billing/failed-renewal-banner";
 import { Outlet, Link, useLocation, useRouter } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/common/components/ui/button";
@@ -99,6 +100,7 @@ export function SettingsLayout() {
       {/* <SettingsSidebar currentPath={location.pathname} /> */}
       <main className="flex flex-1 flex-col max-w-7xl mx-auto ">
         <LayoutHeader onBackToDashboard={handleBackToDashboard} />
+        <FailedRenewalBanner />
         <TopBarNavigation />
         <div className="flex-1 overflow-auto p-4">
           <Outlet />

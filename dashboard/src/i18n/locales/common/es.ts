@@ -1070,6 +1070,25 @@ const esCommon: Record<string, TranslationEntry> = {
     description:
       "Description under the What's new heading when every release has been read",
   },
+  "common.failedRenewal": {
+    message:
+      "No pudimos cobrar {plan} en {card}. Actualízala antes del {date} para conservar {plan}.",
+    description:
+      "Banner while a renewal payment is past due: the card, the plan and the next retry date",
+  },
+  "common.failedRenewalUpdate": {
+    message: "Actualizar método de pago",
+    description: "Button that opens the billing portal to fix a failed renewal",
+  },
+  "common.failedRenewalYourCard": {
+    message: "tu tarjeta",
+    description: "Stands in for the card name when it is unknown",
+  },
+  "common.failedRenewalDismiss": {
+    message: "Ocultar por ahora",
+    description:
+      "Accessible name of the button that hides the failed-renewal banner for this session",
+  },
 };
 
 export default esCommon;

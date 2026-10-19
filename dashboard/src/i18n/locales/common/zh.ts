@@ -1032,6 +1032,25 @@ const zhCommon: Record<string, TranslationEntry> = {
     description:
       "Description under the What's new heading when every release has been read",
   },
+  "common.failedRenewal": {
+    message:
+      "我们无法从 {card} 扣取 {plan} 的费用。请在 {date} 前更新，以保留 {plan}。",
+    description:
+      "Banner while a renewal payment is past due: the card, the plan and the next retry date",
+  },
+  "common.failedRenewalUpdate": {
+    message: "更新付款方式",
+    description: "Button that opens the billing portal to fix a failed renewal",
+  },
+  "common.failedRenewalYourCard": {
+    message: "你的卡",
+    description: "Stands in for the card name when it is unknown",
+  },
+  "common.failedRenewalDismiss": {
+    message: "暂时关闭",
+    description:
+      "Accessible name of the button that hides the failed-renewal banner for this session",
+  },
 };
 
 export default zhCommon;

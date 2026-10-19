@@ -40,6 +40,11 @@ import {
 } from "@/graphql/definitions";
 import LedgerQueryPage from "../index";
 
+// The failed-renewal banner reads billing state the shell under test does
+// not provide; it has its own tests.
+vi.mock("@/common/components/billing/failed-renewal-banner", () => ({
+  FailedRenewalBanner: () => null,
+}));
 vi.mock("@/common/components/ledger-layout/ledger-sidebar", () => ({
   LedgerSidebar: () => null,
 }));

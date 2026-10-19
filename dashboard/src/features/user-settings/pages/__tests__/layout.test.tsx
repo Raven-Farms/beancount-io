@@ -6,6 +6,11 @@ import { SettingsLayout } from "../layout";
 const mockBack = vi.fn();
 const mockReactNative = vi.hoisted(() => ({ isReactNative: false }));
 
+// The failed-renewal banner reads billing state the shell under test does
+// not provide; it has its own tests.
+vi.mock("@/common/components/billing/failed-renewal-banner", () => ({
+  FailedRenewalBanner: () => null,
+}));
 vi.mock(
   "@/common/providers/react-native-bridge-provider/react-native-bridge-context",
   () => ({ useReactNativeContext: () => mockReactNative }),

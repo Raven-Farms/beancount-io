@@ -32,6 +32,7 @@ query GetSubscriptionStatus {
         brand
         last4
       }
+      nextPaymentAttempt
       scheduledChange {
         priceId
         effectiveAt
