@@ -1,6 +1,6 @@
 ---
 name: beancount-import
-description: Import a bank or card CSV, OFX/QFX, or QIF export into an existing Beancount ledger. Normalize signs, suggest categories from existing accounts, review duplicates and confirm before writing through bea. Use for recording an export; skip statement reconciliation, full finance-app migrations, reusable importer authoring, individual options trades, single manual entries, and ledger `option` settings.
+description: Import a bank or card CSV, OFX/QFX, or QIF export into an existing local Beancount ledger. Normalize signs, suggest categories from existing accounts, review duplicates and confirm before writing through bea. Use for recording an export; skip statement reconciliation, full finance-app migrations, reusable importer authoring, individual options trades, single manual entries, ledger `option` settings, and ledgers hosted on Beancount.io.
 metadata: {"openclaw": {"homepage": "https://github.com/bex-co/beancount-io/tree/main/skills", "requires": {"anyBins": ["bea", "bean-check"]}, "install": [{"id": "brew", "kind": "brew", "formula": "bex-co/tap/bea", "bins": ["bea"], "label": "Install bea (Homebrew)"}, {"id": "uv", "kind": "uv", "package": "beancount-io", "bins": ["bea"], "label": "Install bea (uv)"}]}, "hermes": {"category": "finance", "tags": ["beancount", "accounting", "bank-import", "csv", "ofx"]}}
 ---
 
@@ -44,6 +44,8 @@ Read `references/formats.md` before parsing any new or format-changed source (re
 Seven stages, in order: **Discover → Normalize → Stage → Dedup → Suggest → Confirm → Write + Verify.**
 
 ### 1. Discover
+
+Local ledger files only. If the ledger is hosted on Beancount.io and its MCP server is connected, use that server's `categorize-imports` prompt and tools instead (beancount-init's `references/bea-cli.md`, Hosted ledgers).
 
 Find beancount files in the working directory:
 

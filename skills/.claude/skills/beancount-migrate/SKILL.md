@@ -1,6 +1,6 @@
 ---
 name: beancount-migrate
-description: Migrate full transaction history from Mint, Monarch, QuickBooks Online or another category-tagged finance-app export into a fresh Beancount ledger. Confirm account/category mappings, pair transfers, preserve source IDs, write through bea and reconcile source counts and balances. Skip ongoing bank imports, populated-ledger merges and investment lot reconstruction.
+description: Migrate full transaction history from Mint, Monarch, QuickBooks Online or another category-tagged finance-app export into a fresh local Beancount ledger. Confirm account/category mappings, pair transfers, preserve source IDs, write through bea and reconcile source counts and balances. Skip ongoing bank imports, populated-ledger merges investment lot reconstruction, and ledgers hosted on Beancount.io.
 metadata: {"openclaw": {"homepage": "https://github.com/bex-co/beancount-io/tree/main/skills", "requires": {"anyBins": ["bea", "bean-check"]}, "install": [{"id": "brew", "kind": "brew", "formula": "bex-co/tap/bea", "bins": ["bea"], "label": "Install bea (Homebrew)"}, {"id": "uv", "kind": "uv", "package": "beancount-io", "bins": ["bea"], "label": "Install bea (uv)"}]}, "hermes": {"category": "finance", "tags": ["beancount", "accounting", "migration", "mint", "monarch", "quickbooks"]}}
 ---
 
@@ -31,6 +31,8 @@ Read `references/mapping.md` before proposing any hierarchy, and the per-source 
 Six phases, in order: **Identify → Scaffold → Map → Convert → Verify → Report.**
 
 ### 1. Identify
+
+Local ledger files only. If the ledger is hosted on Beancount.io and its MCP server is connected, use that server's tools instead (beancount-init's `references/bea-cli.md`, Hosted ledgers).
 
 Inspect the export's header row and a few data rows. Recognize the source (Mint / Monarch / QBO — see references) or fall back to the generic category-tagged-CSV path. Establish: the distinct **source accounts** in the file, the **distinct categories**, the **date range**, the **row count**, and the sign/type convention. Ask for anything ambiguous — never guess signs or dates.
 

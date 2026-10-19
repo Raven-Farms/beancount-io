@@ -12,6 +12,25 @@ invalid ledger, missing prices, a bad argument) is bea's answer about the
 ledger or the request: act on its `message`, `details` and `result`, not on
 the engine. Do not install another Beancount CLI or configure private engine paths.
 
+## Hosted ledgers
+
+These skills work on ledger files on this machine. When the user's ledger is
+hosted on Beancount.io and its MCP server is connected, do not search for or
+create local files: use that server's tools, with the matching server prompt
+when one exists.
+
+| Skill | Beancount.io MCP prompt |
+| --- | --- |
+| beancount-ask | `spending-report` |
+| beancount-close | `close-month` |
+| beancount-import | `categorize-imports` |
+| beancount-reconcile | `reconcile-account` |
+
+The other skills have no hosted prompt; use the server's tools directly. If
+the ledger is hosted and the server is not connected, say so and offer the
+two ways forward: connect the MCP server, or work on a local clone
+(`bea cloud ledger clone`, which needs the account's SSH key).
+
 ## Bind the ledger and destination
 
 - Set `ledger` to the discovered **root** ledger's absolute path, including

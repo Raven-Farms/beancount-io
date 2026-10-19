@@ -1,6 +1,6 @@
 ---
 name: beancount-options
-description: Record a described options trade or lifecycle event as validated Beancount transactions through bea, after review and confirmation. Use for single-leg or multi-leg opens, closes, rolls, assignment, exercise and expiration, including pasted broker confirmations. Skip options education, pricing/greeks, tax planning, analytics, broker statement imports, and ledger `option` settings such as operating_currency.
+description: Record a described options trade or lifecycle event as validated transactions in a local Beancount ledger through bea, after review and confirmation. Use for single-leg or multi-leg opens, closes, rolls, assignment, exercise and expiration, including pasted broker confirmations. Skip options education, pricing/greeks, tax planning, analytics, broker statement imports, and ledger `option` settings such as operating_currency, and ledgers hosted on Beancount.io.
 metadata: {"openclaw": {"homepage": "https://github.com/bex-co/beancount-io/tree/main/skills", "requires": {"anyBins": ["bea", "bean-check"]}, "install": [{"id": "brew", "kind": "brew", "formula": "bex-co/tap/bea", "bins": ["bea"], "label": "Install bea (Homebrew)"}, {"id": "uv", "kind": "uv", "package": "beancount-io", "bins": ["bea"], "label": "Install bea (uv)"}]}, "hermes": {"category": "finance", "tags": ["beancount", "accounting", "options-trading", "investments"]}}
 ---
 
@@ -25,6 +25,8 @@ and confirmation below.
 Five phases, in order: **Discover → Parse → Generate → Confirm + Write → Verify**.
 
 ### 1. Discover
+
+Local ledger files only. If the ledger is hosted on Beancount.io and its MCP server is connected, use that server's tools instead (beancount-init's `references/bea-cli.md`, Hosted ledgers).
 
 Before generating anything, learn the user's ledger. Look for beancount files in the working directory:
 

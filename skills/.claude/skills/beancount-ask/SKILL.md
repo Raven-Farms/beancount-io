@@ -1,6 +1,6 @@
 ---
 name: beancount-ask
-description: Answer questions about a local Beancount ledger using shown, reproducible bea queries and reports for spending, trends, net worth, subscriptions and anomalies. Strictly read-only; figures come from executed queries. Skip recording transactions, reconciliation, migration, ledger edits, and general Beancount, BQL, or `bea` documentation questions (including what `bea ask` does).
+description: Answer questions about a local Beancount ledger using shown, reproducible bea queries and reports for spending, trends, net worth, subscriptions and anomalies. Strictly read-only; figures come from executed queries. Skip ledgers hosted on Beancount.io, recording transactions, reconciliation, migration, ledger edits, and general Beancount, BQL, or `bea` documentation questions (including what `bea ask` does).
 metadata: {"openclaw": {"homepage": "https://github.com/bex-co/beancount-io/tree/main/skills", "requires": {"anyBins": ["bea", "bean-check"]}, "install": [{"id": "brew", "kind": "brew", "formula": "bex-co/tap/bea", "bins": ["bea"], "label": "Install bea (Homebrew)"}, {"id": "uv", "kind": "uv", "package": "beancount-io", "bins": ["bea"], "label": "Install bea (uv)"}]}, "hermes": {"category": "finance", "tags": ["beancount", "accounting", "bql", "reports"]}}
 ---
 
@@ -19,6 +19,8 @@ This skill exists because a fluent-but-unverifiable answer about money is worse 
 ## Workflow
 
 ### 1. Discover
+
+Local ledger files only. If the ledger is hosted on Beancount.io and its MCP server is connected, use that server's `spending-report` prompt and tools instead (beancount-init's `references/bea-cli.md`, Hosted ledgers).
 
 Find the main ledger file (same procedure as the sibling skills: `fd -e beancount -e bean .`, main = the file with `option`/`include` directives). Confirm which file when ambiguous.
 
