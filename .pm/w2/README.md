@@ -52,6 +52,11 @@
 - [ ] **m46** — [Fix, recategorize, and reorganize an existing ledger through a reviewed diff with one-step undo](./blocked/m46/README.md) (11 tasks) ← /pm-brainstorm research into published Beancount skills and community requests, 2026-10-18 — **blocked:** t001's `beancount-edit` contract is drafted; the owner confirms (or declines) that one skill may change existing entries
 - [ ] **m47** — [Turn PDF statements and receipt photos into checked entries with documents attached](./blocked/m47/README.md) (9 tasks) ← /pm-brainstorm 2026-10-18 (online skills research) — **blocked:** t001–t002 shipped (PDF import owns statements); t003 onward waits for m40's closeout
 - [ ] **m48** — [Reconciliation coverage and close review state (ADR 020 P0)](./blocked/m48/README.md) (8 tasks) ← ADR 020 P0 rows, from the skills brainstorm 2026-10-18 — sequenced after m41, so the reconcile and close rewrites do not collide — **blocked:** t004's 31 reconcile/close evals run on Claude Code; the Codex rerun waits for Codex usage (resets 2026-11-17); t005 onward wait behind it
+- [ ] **m49** — [See what a portfolio holds and what it is worth](./m49/README.md) (7 tasks) ← user walkthrough as a personal investor (real estate, crypto, stocks, daily spending), 2026-10-19 — sequenced after m45's lots
+- [ ] **m50** — [Import investment activity in bulk, with lots intact](./m50/README.md) (9 tasks) ← user walkthrough as a personal investor (real estate, crypto, stocks, daily spending), 2026-10-19 — builds on m45's single-event correctness
+- [ ] **m51** — [Track a home, its mortgage, and a rental in the same ledger](./m51/README.md) (10 tasks) ← user walkthrough as a personal investor (real estate, crypto, stocks, daily spending), 2026-10-19 — the suite's first real-estate model
+- [ ] **m52** — [Record crypto-native events: swaps, staking, and network fees](./m52/README.md) (8 tasks) ← user walkthrough as a personal investor (real estate, crypto, stocks, daily spending), 2026-10-19 — extends m45's trade procedures
+- [ ] **m53** — [Onboard an investor household, and prove it with a first-year journey](./m53/README.md) (7 tasks) ← user walkthrough as a personal investor (real estate, crypto, stocks, daily spending), 2026-10-19 — integration proof for m49–m52, sequenced last
 
 ## Dropped
 
@@ -66,6 +71,7 @@
 - [086 — Check that non-English ledger requests route to the right skill](./blocked/086.md) — **blocked:** 25 prompts added and routed 25/25 on one client; the Codex rerun waits for Codex usage
 - [087 — Decide whether to publish the skill suite from a slim public mirror repository](./blocked/087.md) — **blocked:** owner decision (repository, credential, portal identities)
 - [088 — Glama shows the hosted MCP connector at 0.0% uptime over 15 days](./blocked/088.md) — **blocked:** endpoint verified correct (ADR 007 401 + discovery); operator adds a QA test profile on Glama
+- [096 — Let beancount-close propose the recurring entry it already detects as missing](./096.md)
 
 ## Cross-queue promotions and follow-ups
 
