@@ -32,7 +32,7 @@ _loading = 0
 #: Inside the replace that commits a write, and after it: a stop is noted, not obeyed.
 _committing = False
 _committed = False
-_staged: set[Path] = set()
+_staged: dict[Path, int | None] = {}
 #: The frontend that launched us, while we are watching for it to go.
 _parent: int | None = None
 _PARENT_POLL_SECONDS = 0.2
@@ -185,17 +185,27 @@ def loading() -> Iterator[None]:
 
 
 @contextmanager
-def staged(path: Path) -> Iterator[None]:
-    """Register a staging copy, or its pickle-cache sidecar, for removal on a signal."""
-    _staged.add(path)
+def staged(path: Path, fd: int | None = None) -> Iterator[None]:
+    """Register a staging copy, or its pickle-cache sidecar, for removal on a signal.
+
+    `fd` is a descriptor the cleanup closes first: a candidate stays open
+    for its lifetime, and Windows refuses to remove a file with an open
+    handle (w5/719).
+    """
+    _staged[path] = fd
     try:
         yield
     finally:
-        _staged.discard(path)
+        _staged.pop(path, None)
 
 
 def _discard_staged() -> None:
-    for path in list(_staged):
+    for path, fd in list(_staged.items()):
+        if fd is not None:
+            try:
+                os.close(fd)
+            except OSError:
+                pass
         try:
             path.unlink(missing_ok=True)
         except OSError:

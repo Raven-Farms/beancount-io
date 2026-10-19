@@ -13,7 +13,10 @@ in every directory the run writes to.
 from __future__ import annotations
 
 import os
+import sys
 import time
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
@@ -24,6 +27,24 @@ from bea_engine.ledger import write as ledger_write
 from cli.main import app
 
 runner = CliRunner()
+
+
+@contextmanager
+def _held(path: Path) -> Iterator[None]:
+    """Hold a candidate the way its writer would, on any platform (w5/719)."""
+    if sys.platform == "win32":
+        with open(path, "rb"):
+            yield
+    else:
+        import fcntl
+
+        fd = os.open(path, os.O_RDWR)
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX)
+            yield
+        finally:
+            os.close(fd)
+
 
 HEADER = "2000-01-01 open Assets:Bank USD\n2000-01-01 open Expenses:Food USD\n"
 ALIGNED = '2020-01-01 * "t{index}"\n  Expenses:Food  1 USD\n  Assets:Bank\n\n'
@@ -101,17 +122,22 @@ def test_format_in_place_still_clears_abandoned_candidates_in_every_directory(tm
     rewritten.write_text(MISALIGNED.format(index=0), encoding="utf-8")
     stale_beside_main = _aged(tmp_path / ".bea-0123456789abcdef.tmp")
     stale_beside_include = _aged(tmp_path / "inc" / ".bea-0123456789abcdef.tmp")
-    fresh = tmp_path / "inc" / ".bea-fedcba9876543210.tmp"
+    fresh = tmp_path / ".bea-aaaaaaaaaaaaaaaa.tmp"
     fresh.touch()
+    held = tmp_path / "inc" / ".bea-fedcba9876543210.tmp"
+    held.touch()
 
-    result = runner.invoke(app, ["format", "-i", str(tmp_path)])
+    with _held(held):
+        result = runner.invoke(app, ["format", "-i", str(tmp_path)])
 
     assert result.exit_code == 0, result.output
     assert "1/4 file(s) formatted." in result.output
     assert rewritten.read_text(encoding="utf-8") == ALIGNED.format(index=0)
     assert not stale_beside_main.exists()
     assert not stale_beside_include.exists()
-    assert fresh.exists()
+    # Fresh but unlocked is an orphan however young; held is a live write (w5/719).
+    assert not fresh.exists()
+    assert held.exists()
 
 
 def test_check_leaves_abandoned_candidates_alone(tmp_path: Path) -> None:

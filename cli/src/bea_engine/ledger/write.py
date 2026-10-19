@@ -580,11 +580,19 @@ _ABANDONED_CANDIDATE_SECONDS = 3600
 
 _CANDIDATE_NAME = re.compile(r"\.bea-[0-9a-f]{16}\.tmp")
 
-#: What the sweep may remove: a candidate, or the pickle-cache sidecar Beancount
-#: writes beside one. The sidecar name *prepends* a dot to the file it caches,
-#: so `.bea-xxxx.tmp` gets `..bea-xxxx.tmp.picklecache` — two leading dots.
-#: Nothing looser will do: `.bea-rules.yaml` is the user's file, not ours.
-_SWEEPABLE_NAME = re.compile(rf"{_CANDIDATE_NAME.pattern}|\.{_CANDIDATE_NAME.pattern}\.picklecache")
+#: A candidate that never became one: `candidate_file` fills and locks a
+#: scratch file first and only then renames it to the sweepable name, so a
+#: sweepable name always means a complete, locked file (w5/719).
+_STAGING_NAME = re.compile(r"\.bea-[0-9a-f]{16}\.staging")
+
+#: What the sweep may remove: a candidate, a scratch file orphaned before its
+#: rename, or the pickle-cache sidecar Beancount writes beside one. The
+#: sidecar name *prepends* a dot to the file it caches, so `.bea-xxxx.tmp`
+#: gets `..bea-xxxx.tmp.picklecache` — two leading dots. Nothing looser will
+#: do: `.bea-rules.yaml` is the user's file, not ours.
+_SWEEPABLE_NAME = re.compile(
+    rf"{_CANDIDATE_NAME.pattern}|{_STAGING_NAME.pattern}|\.{_CANDIDATE_NAME.pattern}\.picklecache"
+)
 
 
 def is_candidate_file(path: Path) -> bool:
@@ -833,10 +841,15 @@ def sweep_abandoned_candidates(directory: Path) -> None:
     guards it. Each abandoned file is a full copy of the ledger, so they are
     worth clearing rather than leaving to accumulate beside a user's books.
 
-    Only files old enough that no live write could still own them are removed,
-    which is what makes this safe to do while another `bea` may be running in
-    the same directory. Only names `candidate_file` itself generates are
-    considered, so a user's own `.bea-notes.md` is never taken for one.
+    A candidate whose writer is alive stays locked (POSIX) or open (Windows)
+    for its whole lifetime, so one the sweep can take is an orphan however
+    young: it goes at once, as USAGE promises. Scratch files that never
+    became candidates, Beancount's pickle-cache sidecars, and candidates on
+    filesystems without `flock` keep the age rule — old enough that no live
+    write could still own them — which is what makes this safe to do while
+    another `bea` may be running in the same directory. Only names
+    `candidate_file` itself generates are considered, so a user's own
+    `.bea-notes.md` is never taken for one.
     Sweeping is best effort: a file someone else removes first, or one this
     user may not delete, must not fail the write that was actually asked for.
     """
@@ -847,12 +860,22 @@ def sweep_abandoned_candidates(directory: Path) -> None:
         return
     for path in stale:
         try:
-            if path.is_file() and path.stat().st_mtime < cutoff:
-                path.unlink(missing_ok=True)
+            if not path.is_file():
+                continue
+            if is_candidate_file(path):
+                removed = _remove_abandoned_candidate(path)
+                if removed is None:
+                    if path.stat().st_mtime >= cutoff:
+                        continue
+                    path.unlink(missing_ok=True)
+                elif not removed:
+                    continue
                 # Its load cache is kept under the cache home rather than beside it (w5/175).
-                relocated = _sidecar_of(path) if is_candidate_file(path) else None
+                relocated = _sidecar_of(path)
                 if relocated is not None and relocated.parent != directory:
                     relocated.unlink(missing_ok=True)
+            elif path.stat().st_mtime < cutoff:
+                path.unlink(missing_ok=True)
         except (OSError, ImportError):
             continue
 
@@ -1246,21 +1269,138 @@ def lock_file(file: Path, *, deciding: bool = False) -> Iterator[None]:
                 fcntl.flock(stream.fileno(), fcntl.LOCK_UN)
 
 
+#: `flock` failures that mean locks do not exist here, not that locking failed.
+_NO_FLOCK = frozenset(code for name in ("ENOTSUP", "EOPNOTSUPP", "ENOSYS") if (code := getattr(errno, name, None)))
+
+
+def _hold_candidate(fd: int) -> None:
+    """Lock a staged candidate for its lifetime, so the sweep can tell it from an orphan.
+
+    The descriptor stays open (and locked) until the candidate is discarded;
+    a killed writer's copies release their locks with its death. Windows
+    needs no call: the open descriptor itself blocks deletion, which is the
+    sweep's liveness check there. Where `flock` does not exist the candidate
+    stays unlocked and the sweep keeps the age rule for it, as before.
+    """
+    if sys.platform == "win32":
+        return
+    import fcntl
+
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX)
+    except OSError as exc:
+        if exc.errno not in _NO_FLOCK:
+            raise
+
+
+def _remove_abandoned_candidate(path: Path) -> bool | None:
+    """Unlink a candidate no live write can still own.
+
+    True when it unlinked one (or found it already gone); False when the
+    candidate is locked or open and stays; None where liveness cannot be
+    told (POSIX without `flock`), in which case the caller keeps the age
+    rule.
+    """
+    if sys.platform == "win32":
+        # No handle API: deletion itself is the liveness check — it fails
+        # while the writer's descriptor is open.
+        try:
+            path.unlink()
+        except FileNotFoundError:
+            return True
+        except OSError:
+            return False
+        return True
+    import fcntl
+
+    try:
+        fd = os.open(path, os.O_RDONLY)
+    except OSError:
+        return False
+    try:
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            return False
+        except OSError:
+            return None
+        try:
+            same = os.path.samestat(os.fstat(fd), path.stat())
+        except OSError:
+            return False
+        if not same:
+            return False
+        try:
+            os.unlink(path)
+        except FileNotFoundError:
+            return True
+        except OSError:
+            return False
+        return True
+    finally:
+        os.close(fd)
+
+
+class _RenameDenied(Exception):
+    """Renaming is forbidden here (a directory that denies deletion)."""
+
+
+def _publish_candidate(scratch: Path, candidate: Path, file: Path) -> bool:
+    """Give a filled, locked scratch file its sweepable name.
+
+    A rename, not a replace: the destination must not exist, so on systems
+    where renaming refuses an existing name a token collision retries
+    instead of clobbering. False asks the caller to retry with fresh names.
+    """
+    try:
+        os.rename(scratch, candidate)
+    except FileExistsError:
+        return False
+    except PermissionError:
+        raise _RenameDenied from None
+    except OSError as exc:
+        raise StagingFailed(_stage_failed(file, exc)) from exc
+    return True
+
+
+def _fill_candidate(fd: int, content: str, file: Path) -> None:
+    """Write and sync candidate content through a duplicate descriptor."""
+    try:
+        # Binary over a duplicate: text mode would translate newlines on
+        # Windows, turning CRLF into CRCRLF, and the original stays open for
+        # the candidate's lifetime.
+        with os.fdopen(os.dup(fd), "wb") as stream:
+            stream.write(content.encode("utf-8"))
+            stream.flush()
+            os.fsync(stream.fileno())
+    except OSError as exc:
+        raise StagingFailed(_stage_failed(file, exc)) from exc
+
+
 @contextmanager
-def candidate_file(file: Path, content: str, *, mode: int = 0o600) -> Iterator[Path]:
+def candidate_file(file: Path, content: str, *, mode: int = 0o600, _direct: bool = False) -> Iterator[Path]:
     """Stage beside the original, privately unless an export requests a mode.
 
     Exclusive creation lets the OS apply the umask without changing the
     process-wide mask, which would also affect other threads' file writes.
+
+    The sweepable name appears only when the file is complete and held for
+    its lifetime: the copy is filled under a scratch name first and then
+    renamed, so the sweep never sees a candidate no lock yet protects, and a
+    killed writer's copies are recognizable at once (w5/719). Where renaming
+    is forbidden the candidate is created in place instead, and the sweep
+    may catch it between creation and locking — the existence check turns
+    that into a retryable failure rather than a confusing one.
     """
     while True:
+        scratch = file.parent / f".bea-{secrets.token_hex(8)}.staging"
         candidate = file.parent / f".bea-{secrets.token_hex(8)}.tmp"
         # Registered before it exists, so a termination signal at any point
         # from creation on removes it at once — even while a parse it cannot
         # interrupt is still running (w1/074).
-        with stopping.staged(candidate):
+        with stopping.staged(scratch):
             try:
-                fd = os.open(candidate, os.O_RDWR | os.O_CREAT | os.O_EXCL, mode)
+                fd = os.open(candidate if _direct else scratch, os.O_RDWR | os.O_CREAT | os.O_EXCL, mode)
             except FileExistsError:
                 continue
             except PermissionError as exc:
@@ -1273,28 +1413,72 @@ def candidate_file(file: Path, content: str, *, mode: int = 0o600) -> Iterator[P
                 ) from exc
             except OSError as exc:
                 raise StagingFailed(_stage_failed(file, exc)) from exc
-            sidecar: Path | None = None
+            fallback = False
             try:
-                # The sidecar's name may import Beancount, so it is registered second.
-                sidecar = _sidecar_of(candidate)
-                with stopping.staged(sidecar) if sidecar else nullcontext():
-                    # Preserve the supplied bytes: Windows newline translation would turn
-                    # existing CRLF into CRCRLF on every append.
+                _fill_candidate(fd, content, file)
+                if _direct:
                     try:
-                        with os.fdopen(fd, "w", encoding="utf-8", newline="") as stream:
-                            stream.write(content)
-                            stream.flush()
-                            os.fsync(stream.fileno())
+                        _hold_candidate(fd)
                     except OSError as exc:
                         raise StagingFailed(_stage_failed(file, exc)) from exc
-                    yield candidate
+                    if not candidate.exists():
+                        raise StagingFailed(_stage_failed(file, FileNotFoundError("removed by a concurrent sweep")))
+                elif sys.platform == "win32":
+                    # An open handle blocks renaming there, so the descriptor
+                    # is closed and reopened around it; the sweep deletes,
+                    # which an open handle blocks, so no flock call is needed.
+                    # A sweep winning the nanosecond gap fails the reopen,
+                    # which surfaces as a retryable staging failure.
+                    os.close(fd)
+                    try:
+                        if not _publish_candidate(scratch, candidate, file):
+                            continue
+                    except _RenameDenied:
+                        fallback = True
+                    else:
+                        try:
+                            fd = os.open(candidate, os.O_RDWR)
+                        except OSError as exc:
+                            raise StagingFailed(_stage_failed(file, exc)) from exc
+                else:
+                    try:
+                        _hold_candidate(fd)
+                    except OSError as exc:
+                        raise StagingFailed(_stage_failed(file, exc)) from exc
+                    if candidate.exists():
+                        # A 64-bit token collision; the finally below cleans the scratch.
+                        continue
+                    try:
+                        if not _publish_candidate(scratch, candidate, file):
+                            continue
+                    except _RenameDenied:
+                        fallback = True
+                if not fallback:
+                    sidecar: Path | None = None
+                    try:
+                        # The sidecar's name may import Beancount, so it is registered second.
+                        sidecar = _sidecar_of(candidate)
+                        with stopping.staged(candidate, fd):
+                            with stopping.staged(sidecar) if sidecar else nullcontext():
+                                yield candidate
+                    finally:
+                        if sidecar:
+                            # In an unreachable load-cache directory there is no
+                            # sidecar to remove; the load ran uncached (w5/312).
+                            with suppress(OSError):
+                                sidecar.unlink(missing_ok=True)
             finally:
+                # Closed first: Windows cannot remove a file with an open handle.
+                with suppress(OSError):
+                    os.close(fd)
                 _discard_candidate(candidate)
-                if sidecar:
-                    # In an unreachable load-cache directory there is no
-                    # sidecar to remove; the load ran uncached (w5/312).
-                    with suppress(OSError):
-                        sidecar.unlink(missing_ok=True)
+                _discard_candidate(scratch)
+            if fallback:
+                # Directories that deny deletion forbid renaming: create the
+                # candidate in place instead, once — the direct call never
+                # falls back again (w5/719).
+                with candidate_file(file, content, mode=mode, _direct=True) as placed:
+                    yield placed
             return
 
 
@@ -3619,8 +3803,12 @@ def append(
                 snapshot = fresh
         else:
             stack.enter_context(lock_files([file, target]))
-        sweep_abandoned_candidates(target.parent)
         snapshot = snapshot or LedgerSnapshot.capture(file)
+        # Every directory the write stages into, not just the target's: the
+        # validation stages a copy beside each includer too, and orphaned
+        # copies in an unswept directory would never be cleared (w5/719).
+        for directory in dict.fromkeys([target.parent, *(path.parent for path in snapshot.contents)]):
+            sweep_abandoned_candidates(directory)
         original = snapshot.require_target(target, into=into)
         snapshot.verify()
         original_stat = target.stat() if target.exists() else None
