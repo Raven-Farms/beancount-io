@@ -15,7 +15,10 @@ import {
   FavaLedgerPublic,
   mapFavaPermission,
 } from "@/features/ledger/types/fava-api.types";
-import { getTierLimits } from "@/features/stripe/service/stripe";
+import {
+  getTierLimits,
+  TIER_DISPLAY_NAMES,
+} from "@/features/stripe/service/stripe";
 import { getUserTier } from "@/features/stripe/operations/get-user-tier";
 import { countOwnedLedgers } from "@/features/ledger/operations/owned-ledgers";
 import {
@@ -71,7 +74,8 @@ export async function createLedger({
 
   // The mobile app is exempt from the ledger limit (PRFAQ005).
   if (platform !== "mobile") {
-    const { maxLedgers } = getTierLimits(await getUserTier({ stripe, userId }));
+    const tier = await getUserTier({ stripe, userId });
+    const { maxLedgers } = getTierLimits(tier);
     if (maxLedgers !== -1) {
       const owned = await countOwnedLedgers(
         favaApiClient,
@@ -82,7 +86,12 @@ export async function createLedger({
         },
       );
       if (owned >= maxLedgers) {
-        throw new ResourceLimitReachedError("Ledger", maxLedgers, owned);
+        throw new ResourceLimitReachedError(
+          "Ledger",
+          maxLedgers,
+          owned,
+          `You own ${owned} ${owned === 1 ? "ledger" : "ledgers"}, the most your ${TIER_DISPLAY_NAMES[tier]} plan allows. Upgrade for more, or delete one you no longer need.`,
+        );
       }
     }
   }

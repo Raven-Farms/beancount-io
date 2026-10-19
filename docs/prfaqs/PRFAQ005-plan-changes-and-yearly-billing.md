@@ -1,6 +1,6 @@
 # PRFAQ005 — Change plans and pay yearly from inside the product
 
-Status: Stage 1 shipped and deployed on 2026-10-18 (w1/m39, through `bcb5462c7`). It covers server-side previews, immediate changes, the Billing tab, the Checkout confirmation and the $143.88 Premium yearly price, which the marketing pricing page sells too. Stage 2 is in progress (w1/m40). All pricing and policy decisions were recorded on 2026-10-17 ([question 21](#21-what-has-been-decided)).
+Status: Stage 1 shipped and deployed on 2026-10-18 (w1/m39, through `bcb5462c7`). It covers server-side previews, immediate changes, the Billing tab, the Checkout confirmation and the $143.88 Premium yearly price, which the marketing pricing page sells too. Stage 2's code is on `main` (w1/m40, through `87eac2708`). It covers scheduled downgrades and switches to monthly with undo, the cancel sheet, paid limits while past due with the failed-renewal banner, the ledger-count and collaborator-limit fixes, and the scheduled-change emails. Its deploy, two Stripe Dashboard settings and the production payment test are pending. All pricing and policy decisions were recorded on 2026-10-17 ([question 21](#21-what-has-been-decided)).
 
 Date: 2026-10-17
 

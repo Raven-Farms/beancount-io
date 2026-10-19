@@ -385,6 +385,10 @@ describe("createLedger operation", () => {
         ).rejects.toMatchObject({
           category: "RESOURCE_LIMIT_REACHED",
           metadata: { resource: "Ledger", limit: max, current: max },
+          // Names the plan the user is on, not "Premium" for everyone.
+          message: expect.stringContaining(
+            `your ${tier.charAt(0)}${tier.slice(1).toLowerCase()} plan allows`,
+          ),
         });
         expect(mockFavaApiClient.ledgers.createLedger).not.toHaveBeenCalled();
       },
