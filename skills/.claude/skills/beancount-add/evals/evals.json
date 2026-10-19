@@ -1,0 +1,158 @@
+{
+  "skill_name": "beancount-add",
+  "evals": [
+    {
+      "id": 1,
+      "name": "card-dinner-with-prior",
+      "prompt": "I paid $42.80 for dinner at Pizzeria Napoli on the Amex on 2026-10-18. Add it to ./ledger.beancount.",
+      "expected_output": "Proposes one transaction dated 2026-10-18: Liabilities:CreditCard:Amex -42.80 USD and Expenses:Food:Dining 42.80 USD, citing the prior PIZZERIA NAPOLI entries. Runs the already-recorded read for -42.80 on the Amex from 2026-10-15 to 2026-10-21 (no match at that amount). Shows the target file and asks yes/no; after a yes writes through bea add and the root check passes.",
+      "files": [
+        "evals/files/eval1_ledger.beancount"
+      ],
+      "expectations": [
+        "The proposal posts -42.80 USD to Liabilities:CreditCard:Amex and 42.80 USD to Expenses:Food:Dining, dated 2026-10-18",
+        "The category reason cites prior PIZZERIA NAPOLI entries",
+        "The duplicate check runs against the Amex for the signed amount within ±3 days and is reported",
+        "Nothing is written before an explicit yes",
+        "After a yes the write goes through bea (not appended text) and bea check passes"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "split-receipt",
+      "prompt": "Costco receipt from 2026-10-12: groceries 84.10, household supplies 31.55, total 115.65, paid with the Amex. Book it in ./ledger.beancount.",
+      "expected_output": "One transaction: Liabilities:CreditCard:Amex -115.65 USD, Expenses:Food:Groceries 84.10 USD, Expenses:Household 31.55 USD, dated 2026-10-12, proposed before writing.",
+      "files": [
+        "evals/files/eval1_ledger.beancount"
+      ],
+      "expectations": [
+        "Exactly one transaction is proposed, not two",
+        "The card leg is -115.65 USD and the two category legs sum to 115.65 USD",
+        "Groceries maps to Expenses:Food:Groceries and household supplies to Expenses:Household (existing accounts)",
+        "No account is invented"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "split-does-not-add-up",
+      "prompt": "Costco on 2026-10-12: groceries 84.10 and household 31.55, and I paid 120.00 on the Amex. Add it to ./ledger.beancount.",
+      "expected_output": "The parts sum to 115.65 but 120.00 was paid; the skill asks what the 4.35 difference is (tax, a fee, another item) instead of inventing a leg or forcing the total. Nothing is written.",
+      "files": [
+        "evals/files/eval1_ledger.beancount"
+      ],
+      "expectations": [
+        "The 4.35 USD difference between 120.00 and the parts is surfaced",
+        "The skill asks the user about the difference rather than adding a guessed leg",
+        "Nothing is written to the ledger"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "transfer-between-own-accounts",
+      "prompt": "Move $250 from checking to savings on 2026-10-18 in ./ledger.beancount.",
+      "expected_output": "One transaction with two postings: Assets:Bank:Checking -250.00 USD and Assets:Bank:Savings 250.00 USD; no Expenses or Income leg.",
+      "files": [
+        "evals/files/eval1_ledger.beancount"
+      ],
+      "expectations": [
+        "The proposal has exactly two postings: Assets:Bank:Checking -250.00 USD and Assets:Bank:Savings 250.00 USD",
+        "No Expenses or Income account appears in the transaction"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "new-account-under-nounused",
+      "prompt": "Open Expenses:Pets and record a $30 vet bill paid from checking on 2026-10-10. Ledger is ./ledger.beancount.",
+      "expected_output": "Proposes the open of Expenses:Pets dated on or before 2026-10-10 and the transaction Assets:Bank:Checking -30.00 / Expenses:Pets 30.00. Because the ledger loads nounused, a plain open is refused as unused; the skill uses the staged open then writes the transaction in the same workflow, and the final check passes.",
+      "files": [
+        "evals/files/eval2_ledger.beancount"
+      ],
+      "expectations": [
+        "The proposal includes `open Expenses:Pets` dated on or before 2026-10-10, because the user asked for the account",
+        "The transaction posts -30.00 USD to Assets:Bank:Checking and 30.00 USD to Expenses:Pets",
+        "Under nounused the open is staged and the first posting written in the same workflow; the workflow does not stop with the ledger red",
+        "The final bea check passes"
+      ]
+    },
+    {
+      "id": 6,
+      "name": "close-account-with-balance",
+      "prompt": "I closed my old savings account at the bank. Close Assets:Bank:OldSavings in ./ledger.beancount as of 2026-10-18.",
+      "expected_output": "Runs the balance-before-close read and finds 100.00 USD still in Assets:Bank:OldSavings. Does not write the close; shows the balance and offers to record the transfer that empties it (e.g. to checking) first, then the close.",
+      "files": [
+        "evals/files/eval1_ledger.beancount"
+      ],
+      "expectations": [
+        "The remaining 100.00 USD balance in Assets:Bank:OldSavings is reported",
+        "No close directive is written while the balance is nonzero",
+        "The skill offers a transfer that empties the account before the close"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "record-a-price",
+      "prompt": "Add a price to ./ledger.beancount: 1 VTI = 285.40 USD on 2026-10-16.",
+      "expected_output": "Proposes `2026-10-16 price VTI 285.40 USD` and writes it through bea add price after a yes.",
+      "files": [
+        "evals/files/eval1_ledger.beancount"
+      ],
+      "expectations": [
+        "The proposed directive is a price for VTI at 285.40 USD dated 2026-10-16",
+        "It is written through bea add price only after an explicit yes"
+      ]
+    },
+    {
+      "id": 8,
+      "name": "missing-amount",
+      "prompt": "Add my electric bill, paid from checking yesterday, to ./ledger.beancount.",
+      "expected_output": "The amount is missing: the skill asks for it (and states the resolved date), does not guess, and writes nothing.",
+      "files": [
+        "evals/files/eval1_ledger.beancount"
+      ],
+      "expectations": [
+        "The skill asks for the amount",
+        "No amount is guessed and nothing is written"
+      ]
+    },
+    {
+      "id": 9,
+      "name": "possible-duplicate",
+      "prompt": "I had a $42 dinner at Pizzeria Napoli on the Amex on 2026-10-16. Add it to ./ledger.beancount.",
+      "expected_output": "The already-recorded read finds the 2026-10-15 PIZZERIA NAPOLI -42.00 USD Amex entry inside the ±3-day window; the skill shows it and asks whether this is the same dinner before proposing a write.",
+      "files": [
+        "evals/files/eval1_ledger.beancount"
+      ],
+      "expectations": [
+        "The existing 2026-10-15 PIZZERIA NAPOLI -42.00 USD entry is shown as a possible duplicate",
+        "The user is asked whether it is the same event",
+        "No transaction is written without that decision"
+      ]
+    },
+    {
+      "id": 10,
+      "name": "edit-existing-entry",
+      "prompt": "Change the payee of the 2026-10-15 Pizzeria entry in ./ledger.beancount to \"Pizzeria Napoli SF\".",
+      "expected_output": "Editing an existing entry is out of scope: the skill shows the 2026-10-15 entry and tells the user it only adds entries, so the change is theirs to make; it does not modify the file.",
+      "files": [
+        "evals/files/eval1_ledger.beancount"
+      ],
+      "expectations": [
+        "The skill does not modify the existing 2026-10-15 entry or the file",
+        "It identifies the entry and explains that it only adds entries"
+      ]
+    },
+    {
+      "id": 11,
+      "name": "bank-export-routes-to-import",
+      "prompt": "Here is my Amex CSV export, ./amex-october.csv. Record everything in it in ./ledger.beancount.",
+      "expected_output": "An export file belongs to beancount-import; this skill names that skill and does not write entries itself.",
+      "files": [
+        "evals/files/eval1_ledger.beancount"
+      ],
+      "expectations": [
+        "The response routes the export to beancount-import",
+        "No entries are written by beancount-add"
+      ]
+    }
+  ]
+}

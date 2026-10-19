@@ -1,0 +1,43 @@
+;; Personal beancount ledger
+;; Test fixture for beancount-add — card, checking, savings, prior dining history
+
+option "title" "Household"
+option "operating_currency" "USD"
+
+2026-01-01 open Assets:Bank:Checking USD
+2026-01-01 open Assets:Bank:Savings USD
+2026-01-01 open Assets:Bank:OldSavings USD
+2026-01-01 open Liabilities:CreditCard:Amex USD
+2026-01-01 open Expenses:Food:Dining USD
+2026-01-01 open Expenses:Food:Groceries USD
+2026-01-01 open Expenses:Household USD
+2026-01-01 open Expenses:Housing:Rent USD
+2026-01-01 open Expenses:Utilities USD
+2026-01-01 open Income:Salary USD
+2026-01-01 open Equity:OpeningBalances USD
+
+2026-01-01 * "Opening balances"
+  Assets:Bank:Checking     4200.00 USD
+  Assets:Bank:Savings      1500.00 USD
+  Assets:Bank:OldSavings    100.00 USD
+  Equity:OpeningBalances
+
+2026-07-11 * "PIZZERIA NAPOLI" "Dinner"
+  Liabilities:CreditCard:Amex  -38.50 USD
+  Expenses:Food:Dining          38.50 USD
+
+2026-08-22 * "PIZZERIA NAPOLI" "Dinner"
+  Liabilities:CreditCard:Amex  -45.00 USD
+  Expenses:Food:Dining          45.00 USD
+
+2026-09-19 * "PIZZERIA NAPOLI" "Dinner"
+  Liabilities:CreditCard:Amex  -41.20 USD
+  Expenses:Food:Dining          41.20 USD
+
+2026-10-01 * "LANDLORD" "October rent"
+  Assets:Bank:Checking       -1200.00 USD
+  Expenses:Housing:Rent       1200.00 USD
+
+2026-10-15 * "PIZZERIA NAPOLI" "Dinner"
+  Liabilities:CreditCard:Amex  -42.00 USD
+  Expenses:Food:Dining          42.00 USD
