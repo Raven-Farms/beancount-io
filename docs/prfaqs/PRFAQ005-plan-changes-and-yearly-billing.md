@@ -1,6 +1,6 @@
 # PRFAQ005 — Change plans and pay yearly from inside the product
 
-Status: Proposal for review. All pricing and policy decisions recorded on 2026-10-17 ([question 21](#21-what-has-been-decided)); no product changes implemented
+Status: Stage 1 shipped and deployed on 2026-10-18 (w1/m39, through `bcb5462c7`). It covers server-side previews, immediate changes, the Billing tab, the Checkout confirmation and the $143.88 Premium yearly price, which the marketing pricing page sells too. Stage 2 is in progress (w1/m40). All pricing and policy decisions were recorded on 2026-10-17 ([question 21](#21-what-has-been-decided)).
 
 Date: 2026-10-17
 

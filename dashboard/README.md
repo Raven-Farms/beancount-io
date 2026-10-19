@@ -35,12 +35,23 @@ Part of the [`beancount-io`](https://github.com/bex-co/beancount-io) monorepo.
 
 ## Billing settings
 
-`/settings/general` uses the single live billing catalog. Old `?env=dev` links
-show the same supported plans and cannot switch to test prices. The current plan
-and limits come from the account profile; billing details show the subscription.
-Both are resolved from the same recognized live price by the backend. Choose
-English or Chinese through the normal language selector; there are no separate
-locale-prefixed settings routes. Checkout continues to accept promotion codes.
+Billing lives at `/settings/billing`. It shows the plan summary, a "Pay yearly"
+line on monthly plans, and every tier on Monthly or Yearly, with Yearly
+selected. Every change goes through a sheet that previews it on the server
+before the customer confirms. In-product upgrade prompts and the marketing
+pricing page link to it with `?plan=<tier>&billing=<monthly|yearly>&from=<surface>`
+(the contract is documented in `src/routes/settings.billing.tsx`).
+`/settings/general` keeps a one-line plan summary that links to Billing, which
+the pricing page's "Manage subscription" still uses.
+
+Prices come from the single live catalog in
+`src/features/user-settings/pages/general/stripe-config.ts`, and a test pins it
+to the backend's `SUBSCRIPTION_CONFIG`. Old `?env=dev` links show the same plans
+and cannot switch to test prices. The current plan and limits come from the
+account profile; billing details show the subscription. Both are resolved from
+the same recognized live price by the backend. Choose the language through the
+normal language selector; there are no separate locale-prefixed settings
+routes. Checkout continues to accept promotion codes.
 
 Deploy with the backend billing update.
 
