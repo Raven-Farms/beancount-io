@@ -280,7 +280,8 @@ suite's minimum version no longer needs it.
 - **CSV import memory (0.3.1).** `bea import` remembers column mappings and
   the rules path for a source, but not the sign convention.
 - **`add close` (0.3.1).** It writes a close even when the account still
-  holds a balance, without a warning.
+  holds a balance, without a warning. Later releases refuse that close
+  (naming the balance) unless `--force` is passed.
 
 ## Failure and resume
 

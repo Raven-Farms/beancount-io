@@ -102,7 +102,8 @@ def test_an_account_the_ledger_opens_can_be_posted_to(ledger: Path, name: str) -
         ("balance", "--date", "2024-03-02", "-a", "Assets:Bank", "--amount", "0 USD", "--pad-from", THAI),
         ("document", "--date", "2024-02-01", "-a", THAI, "--path", "receipt.pdf"),
         ("custom", "--date", "2024-02-01", "-t", "budget", "-v", f"account:{THAI}"),
-        ("close", "--date", "2025-01-01", "-a", THAI),
+        # The fixture account holds a balance; this case is about the name.
+        ("close", "--date", "2025-01-01", "-a", THAI, "--force"),
     ],
     ids=["note", "balance", "pad-from", "document", "custom", "close"],
 )

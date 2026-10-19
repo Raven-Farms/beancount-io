@@ -68,6 +68,7 @@ def answer(
         "transaction": _transaction,
         "transactions": _transactions,
         "balance": _balance,
+        "close": _close,
         "price": _price,
     }
     from pydantic import ValidationError
@@ -295,6 +296,58 @@ def _appended(
         "warnings": warnings,
         "target": str(write.destination(file, into)),
     }
+
+
+# --------------------------------------------------------------------------- #
+# close: refuse an account that still holds a balance
+# --------------------------------------------------------------------------- #
+
+
+def _held_through(entries: list[Any], account: str, date: datetime.date) -> dict[str, Decimal]:
+    """Units per currency in exactly `account` at the end of `date`.
+
+    A posting dated on the close date is still allowed, so it counts; child
+    accounts are separate accounts with their own close.
+    """
+    from beancount.core.data import Transaction
+
+    held: dict[str, Decimal] = {}
+    for entry in entries:
+        if not isinstance(entry, Transaction) or entry.date > date:
+            continue
+        for posting in entry.postings:
+            if posting.account == account and posting.units is not None and posting.units.number is not None:
+                currency = posting.units.currency
+                held[currency] = held.get(currency, Decimal(0)) + posting.units.number
+    return {currency: number for currency, number in held.items() if number != 0}
+
+
+def _close(
+    file: Path, request: dict[str, Any], *, into: Path | None, allow_errors: bool, strict_read: bool
+) -> dict[str, Any]:
+    from bea_engine import managed_load
+    from bea_engine.ledger.models import CloseDirective
+
+    roots = root_names_of(file) if into is None else None
+    directive = CloseDirective(date=_date(request), account=parse_account(_text(request, "account"), roots))
+    snapshot = write.LedgerSnapshot.capture(file)
+    snapshot.require_target(write.destination(file, into), into=into)
+    entries, _errors, options = managed_load.load_file(file, snapshot=snapshot, check_types=True)
+    # A close over a balance strands it: later postings to the account are
+    # refused and reports keep counting it (w2/092). A ledger that loads
+    # check_drained refuses it in validation already, with its own hint.
+    drained = any(str(name).endswith("check_drained") for name, _ in options.get("plugin") or ())
+    held = {} if drained else _held_through(entries, directive.account, directive.date)
+    if held and not request.get("force"):
+        amounts = ", ".join(f"{_plain(number)} {currency}" for currency, number in sorted(held.items()))
+        day = directive.date.isoformat()
+        raise protocol.LedgerError(
+            f"{directive.account} still holds {amounts} on {day}. Move that balance out of "
+            f"{directive.account} with a transaction dated on or before {day}, then close it, or pass "
+            "--force to close it with the balance. Nothing was written."
+        )
+    # Write against the ledger this decision read (w5/115).
+    return _appended(file, directive, allow_errors=allow_errors, into=into, snapshot=snapshot)
 
 
 # --------------------------------------------------------------------------- #

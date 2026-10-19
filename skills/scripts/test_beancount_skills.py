@@ -776,15 +776,22 @@ class TestBeaRecipes(unittest.TestCase):
             [r[0] for r in self.recipe("open-accounts")["rows"]], ["Assets:Checking", "Expenses:Dining"]
         )
 
-    def test_close_writes_over_a_balance_so_the_balance_read_must_come_first(self):
+    def test_close_over_a_balance_is_read_first_and_refused(self):
+        # The skill reads the balance itself, because bea 0.3.1 writes the close
+        # anyway; the checkout's bea refuses it until the account is empty.
         self.dinner("2026-05-07", "12.50")
         rows = self.recipe("balance-before-close", account="Expenses:Dining", close_date="2026-05-31")["rows"]
         self.assertEqual(rows, [["USD", "12.50"]])
+        before = self.ledger.read_bytes()
+        refused = self.recipe("close", succeeds=False)
+        self.assertIn("still holds 12.50 USD on 2026-05-31", refused.stdout + refused.stderr)
+        self.assertEqual(self.ledger.read_bytes(), before)
+        # Emptied by a posting on the close date, which still counts, it closes;
+        # a later posting is refused and writes nothing.
+        self.one_off(date="2026-05-31", amount="-12.50")
+        self.assertEqual(self.recipe("balance-before-close")["rows"], [["USD", "0.00"]])
         self.assertEqual(self.recipe("close")["written"], 1)
         self.assertIn("2026-05-31 close Expenses:Dining", self.ledger.read_text())
-        # A posting on the close date is still allowed; a later one is refused
-        # and writes nothing.
-        self.one_off(date="2026-05-31", amount="1.00")
         target = self.target.read_bytes()
         self.one_off(date="2026-06-01", amount="1.00", succeeds=False)
         self.assertEqual(self.target.read_bytes(), target)

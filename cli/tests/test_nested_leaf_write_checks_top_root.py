@@ -76,7 +76,10 @@ def _bea(books: Path, *args: str) -> subprocess.CompletedProcess[str]:
             ("add", "balance", "--date", "2026-03-01", "--account", "Assets:Bank", "--amount", "0 USD"),
             "Balance failed",
         ),
-        (("add", "close", "--account", "Assets:Bank", "--date", "2026-01-20"), "inactive account 'Assets:Bank'"),
+        (
+            ("add", "close", "--account", "Assets:Bank", "--date", "2026-01-20", "--force"),
+            "inactive account 'Assets:Bank'",
+        ),
     ],
     ids=["balance", "close"],
 )

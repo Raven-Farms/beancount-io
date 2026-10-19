@@ -409,10 +409,15 @@ def write_open(
 
 
 def write_close(
-    file_path: Path, directive: CloseDirective, *, allow_errors: bool = False, into: Path | None = None
+    file_path: Path,
+    directive: CloseDirective,
+    *,
+    allow_errors: bool = False,
+    into: Path | None = None,
+    snapshot: ledger_write.LedgerSnapshot | None = None,
 ) -> list[str]:
     entry = Close(meta={}, date=directive.date, account=directive.account)
-    return _append(file_path, format_entry(entry), allow_errors=allow_errors, into=into)
+    return _append(file_path, format_entry(entry), allow_errors=allow_errors, into=into, snapshot=snapshot)
 
 
 def write_balance(

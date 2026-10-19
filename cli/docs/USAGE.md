@@ -1334,7 +1334,7 @@ bea add transaction \
 
 ```bash
 bea add open --date 2026-01-01 --account Assets:Reserve --currency USD
-bea add close --date 2026-12-31 --account Assets:OldAccount
+bea add close --date 2026-12-31 --account Assets:OldAccount   # refused while it still holds a balance; --force closes anyway
 bea add balance --date 2026-04-30 --account Assets:Cash --amount "1000 USD"
 # Advanced two-step pad: complete the pair before adding anything else
 bea add pad --date 2026-01-01 --account Assets:Savings --source Equity:OpeningBalances --allow-errors

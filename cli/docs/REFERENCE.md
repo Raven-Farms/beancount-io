@@ -486,7 +486,7 @@ Usage: bea add open [OPTIONS]
 
 ### `bea add close`
 
-Append a close directive.
+Append a close directive; an account that still holds a balance is refused.
 
 ```text
 Usage: bea add close [OPTIONS]
@@ -498,6 +498,7 @@ Usage: bea add close [OPTIONS]
 | `--account, -a` | str | required | Account name |
 | `--allow-errors` | flag |  | Allow semantic ledger errors; syntax and pad account references must be valid |
 | `--into` | path |  | Write to an included file, relative to the root ledger |
+| `--force` | flag |  | Close the account even though it still holds a balance on the close date |
 
 ### `bea add balance`
 

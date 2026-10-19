@@ -259,11 +259,14 @@ def add_close(
     account: Annotated[str, typer.Option("--account", "-a", help="Account name")],
     allow_errors: AllowErrorsOpt = False,
     into: IntoOpt = None,
+    force: Annotated[
+        bool,
+        typer.Option("--force", help="Close the account even though it still holds a balance on the close date"),
+    ] = False,
 ) -> None:
-    """Append a close directive."""
-    file, data = _write(
-        "close", {"date": parse_date(date).isoformat(), "account": account}, allow_errors=allow_errors, into=into
-    )
+    """Append a close directive; an account that still holds a balance is refused."""
+    request = {"date": parse_date(date).isoformat(), "account": account, "force": force}
+    file, data = _write("close", request, allow_errors=allow_errors, into=into)
     _appended("close", file, data)
 
 
