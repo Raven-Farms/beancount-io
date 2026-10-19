@@ -79,7 +79,11 @@ let schemaPromise: ReturnType<typeof buildSchema> | undefined;
 type Surface = "rest" | "mcp" | "gql";
 const surfaces: Surface[] = ["rest", "mcp", "gql"];
 
-async function fixture(initialIdentity = token()) {
+async function fixture(
+  initialIdentity = token(),
+  // Make "alice" an account on Free, so her ledger's collaborator limit is 1.
+  { ownerOnFree = false } = {},
+) {
   let identity = initialIdentity;
   const members = new Map<string, string>([
     ["bob", "admin"],
@@ -194,19 +198,31 @@ async function fixture(initialIdentity = token()) {
   const workflow = new LedgerCollaboratorsWorkflow(
     fava as never,
     {
-      listSubscriptions: async () => [
-        {
-          status: "active",
-          livemode: true,
-          clientId: "beancount-web-prod",
-          customer: "cus_synthetic",
-          items: {
-            data: [{ price: { id: "price_1RrSOGEqsEqs2tLVFnyB34qG" } }],
-          },
-        },
-      ],
+      listSubscriptions: async (userId: string) =>
+        ownerOnFree && userId === "usr_alice"
+          ? []
+          : [
+              {
+                status: "active",
+                livemode: true,
+                clientId: "beancount-web-prod",
+                customer: "cus_synthetic",
+                items: {
+                  data: [{ price: { id: "price_1RrSOGEqsEqs2tLVFnyB34qG" } }],
+                },
+              },
+            ],
     } as never,
     authorization,
+    // By default no account owns the synthetic ledger, so the acting user's
+    // plan applies.
+    {
+      user: {
+        getUserByUsername: async (_db: unknown, name: string) =>
+          ownerOnFree && name === "alice" ? { id: "usr_alice" } : null,
+      },
+    } as never,
+    {} as never,
   );
   resolvers = new Map<unknown, object>([
     [
@@ -634,6 +650,44 @@ describe("collaborators through actual adapters, workflow, PDP, and relationship
       }
     },
   );
+  it("refuses a collaborator past the ledger owner's plan as a resource-limit error on every surface, without mutation", async () => {
+    // Alice is on Free (1 collaborator) and already has two; the admin adding
+    // a third pays for Premium, which does not lift her ledger's limit.
+    const f = await fixture(token(), { ownerOnFree: true });
+    try {
+      const rest = await f.request("collaborators/newcomer", "PUT", {
+        permission: "read",
+      });
+      expect(rest.status).toBe(403);
+      expect(await rest.json()).toMatchObject({
+        error: { code: "RESOURCE_LIMIT_REACHED" },
+      });
+      const mcp = await f.client.callTool(
+        perOperation({
+          operation: "update",
+          ledger: "alice/main",
+          collaborator: "newcomer",
+          permission: "read",
+        }),
+      );
+      expect(mcp.isError).toBe(true);
+      expect(mcp.structuredContent).toMatchObject({
+        error: { code: "RESOURCE_LIMIT_REACHED" },
+      });
+      const gql = await f.gql(
+        'mutation { addOrUpdateLedgerCollaborator(ledgerId: "alice/main", collaborator: "newcomer", permission: "read") { success } }',
+      );
+      expect(gql.errors).toHaveLength(1);
+      expect(gql.errors?.[0].originalError).toMatchObject({
+        category: "RESOURCE_LIMIT_REACHED",
+      });
+      expect(f.update).not.toHaveBeenCalled();
+      expect(f.members.size).toBe(2);
+    } finally {
+      await f.close();
+    }
+  });
+
   it("answers deleting an unknown user as bad input, without upstream internals, on every surface", async () => {
     const f = await fixture();
     try {

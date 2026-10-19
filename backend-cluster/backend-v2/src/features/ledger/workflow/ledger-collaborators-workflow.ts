@@ -1,14 +1,20 @@
 import { type IStripeService } from "@/features/stripe/service/stripe-service";
 import { type IFavaClientFactory } from "@/foundation/clients/fava-client-factory";
 import {
-  SubscriptionTier,
-  TIER_LIMITS,
   getTierLimits,
+  TIER_DISPLAY_NAMES,
 } from "@/features/stripe/service/stripe";
 import { getUserTier } from "@/features/stripe/operations/get-user-tier";
 import { parseLedgerId } from "@/shared/str";
-import { BadUserInputError, InternalServerError } from "@/shared/errors";
-import { UserPublic } from "@/foundation/fava";
+import {
+  BadUserInputError,
+  InternalServerError,
+  ResourceLimitReachedError,
+} from "@/shared/errors";
+import type { DbExecutor } from "@/drizzle/drizzle";
+import type { IModels } from "@/foundation/models";
+import { readGiteaPages } from "@/shared/gitea-pages";
+import { UserPublic, unwrapFavaResponse } from "@/foundation/fava";
 import { logger } from "@/shared/logger";
 import type { Identity } from "@/server/api/identity";
 import {
@@ -111,7 +117,30 @@ export class LedgerCollaboratorsWorkflow implements ILedgerCollaboratorsWorkflow
     private readonly favaClientFactory: IFavaClientFactory,
     private readonly stripe: IStripeService,
     private readonly authorization: IAuthorizationService,
+    private readonly models: Pick<IModels, "user">,
+    private readonly db: DbExecutor,
   ) {}
+
+  /**
+   * The collaborator limit is the ledger owner's plan, whoever adds the
+   * collaborator (PRFAQ005). A ledger owned by an organization with no
+   * account behind it falls back to the acting user's plan.
+   */
+  private async ownerTier(ledgerOwner: string, actingUserId: string) {
+    const owner = await this.models.user.getUserByUsername(
+      this.db,
+      ledgerOwner,
+    );
+    if (!owner) {
+      moduleLogger.info("No account owns the ledger; using the actor's plan", {
+        ledgerOwner,
+      });
+    }
+    return getUserTier({
+      stripe: this.stripe,
+      userId: owner?.id ?? actingUserId,
+    });
+  }
 
   async addOrUpdateCollaborator(params: {
     identity: Identity;
@@ -127,38 +156,39 @@ export class LedgerCollaboratorsWorkflow implements ILedgerCollaboratorsWorkflow
       resource: ledgerResource(ledgerId),
     });
     const userId = identity.userId;
-    const favaApiClient = await this.favaClientFactory.getPublicApiClient(
-      ledgerId,
-      userId,
-    );
     const { ledgerOwner, ledgerName } = parseLedgerId(ledgerId);
+    const [favaApiClient, ownerTier] = await Promise.all([
+      this.favaClientFactory.getPublicApiClient(ledgerId, userId),
+      this.ownerTier(ledgerOwner, userId),
+    ]);
+    const { maxCollaboratorsPerLedger: max } = getTierLimits(ownerTier);
 
-    const userTier = await getUserTier({
-      stripe: this.stripe,
-      userId,
-    });
-    const tierLimits = getTierLimits(userTier);
-
-    const existingResponse =
-      await favaApiClient.collaborators.listLedgerCollaborators(
-        ledgerOwner,
-        ledgerName,
-        { page: 1, limit: 100 },
+    if (max !== -1) {
+      // A list that cannot be read refuses the change rather than skipping
+      // the limit.
+      const existing = await readGiteaPages((query) =>
+        unwrapFavaResponse(
+          favaApiClient.collaborators.listLedgerCollaborators(
+            ledgerOwner,
+            ledgerName,
+            query,
+          ),
+          "list collaborators",
+        ),
       );
+      // Gitea logins are case-insensitive.
+      const is = (login: string | null | undefined, name: string) =>
+        login?.toLowerCase() === name.toLowerCase();
+      const isNew = !existing.some((c) => is(c.login, collaborator));
+      const count = existing.filter((c) => !is(c.login, ledgerOwner)).length;
 
-    if (existingResponse.data?.success && existingResponse.data.data) {
-      const existing = existingResponse.data.data;
-      const isNew = !existing.some((c: UserPublic) => c.login === collaborator);
-      const count = existing.filter(
-        (c: UserPublic) => c.login !== ledgerOwner,
-      ).length;
-
-      if (isNew && count >= tierLimits.maxCollaboratorsPerLedger) {
-        const premiumLimit =
-          TIER_LIMITS[SubscriptionTier.PREMIUM].maxCollaboratorsPerLedger;
-        throw new InternalServerError(
-          `Maximum number of collaborators (${tierLimits.maxCollaboratorsPerLedger}) reached for ${userTier} tier. ` +
-            `Upgrade to PREMIUM for ${premiumLimit} collaborators per ledger.`,
+      // Changing an existing collaborator's permission never counts.
+      if (isNew && count >= max) {
+        throw new ResourceLimitReachedError(
+          "Collaborator",
+          max,
+          count,
+          `This ledger already has ${count} collaborators, the most its owner's ${TIER_DISPLAY_NAMES[ownerTier]} plan allows (${max}). The ledger owner can upgrade for more.`,
         );
       }
     }

@@ -24,6 +24,15 @@ export enum SubscriptionTier {
   ENTERPRISE = "ENTERPRISE",
 }
 
+/** Each tier's plan name, as people read it in a message. */
+export const TIER_DISPLAY_NAMES: Record<SubscriptionTier, string> = {
+  [SubscriptionTier.FREE]: "Free",
+  [SubscriptionTier.PREMIUM]: "Premium",
+  [SubscriptionTier.GROWTH]: "Growth",
+  [SubscriptionTier.ORGANIZATION]: "Organization",
+  [SubscriptionTier.ENTERPRISE]: "Enterprise",
+};
+
 /**
  * Global tier limits configuration
  * Defines resource limits for each subscription tier

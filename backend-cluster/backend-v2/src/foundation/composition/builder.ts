@@ -257,6 +257,8 @@ export function buildWorkflowLayer(input: {
     input.clients.favaClientFactory,
     input.services.stripe,
     input.services.authorization,
+    input.database.models,
+    input.database.db,
   );
   const ledgerReceipt = new LedgerReceiptWorkflow(
     input.clients.favaClientFactory,

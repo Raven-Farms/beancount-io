@@ -7,6 +7,7 @@ import {
   ConflictError,
   InternalServerError,
 } from "@/shared/errors";
+import { countOwnedLedgers } from "@/features/ledger/operations/owned-ledgers";
 import type Stripe from "stripe";
 import { lock, LOCK_KEYS } from "@/shared/lock";
 import { ReportStatus } from "@/features/auth/utils/report-status";
@@ -119,7 +120,7 @@ export class AccountService implements IAccountService {
       return null;
     }
 
-    const [tier, paidCustomers] = await Promise.all([
+    const [tier, paidCustomers, ledgersUsed] = await Promise.all([
       getUserTier({
         stripe: this.stripe,
         userId,
@@ -127,22 +128,23 @@ export class AccountService implements IAccountService {
       // A paidCustomer row is created on checkout completion and persists after
       // cancellation, so its existence marks that the user has ever subscribed.
       this.models.paidCustomer.findByUserId(this.db, userId),
+      this.favaClientFactory.getApiContext(userId).then(({ favaApiClient }) =>
+        countOwnedLedgers(favaApiClient, user.ledger_username).catch(
+          // A profile still loads when the ledger service cannot list.
+          (error: unknown) => {
+            accountLogger.warn(
+              "Could not count owned ledgers for the profile",
+              {
+                errorType: error instanceof Error ? error.name : typeof error,
+              },
+            );
+            return 0;
+          },
+        ),
+      ),
     ]);
     const tierLimits = getTierLimits(tier);
     const hasEverSubscribed = paidCustomers.length > 0;
-
-    const { favaApiClient } =
-      await this.favaClientFactory.getApiContext(userId);
-    const listLedgersResponse = await favaApiClient.ledgers.listLedgers({
-      page: 1,
-      limit: 100,
-    });
-    const ledgersUsed =
-      listLedgersResponse.data?.success && listLedgersResponse.data?.data
-        ? listLedgersResponse.data.data.filter((ledger) =>
-            ledger.full_name?.startsWith(`${user.ledger_username}/`),
-          ).length
-        : 0;
 
     return {
       id: user.id,

@@ -196,6 +196,14 @@ async function fixture(caller = identity, appId?: string) {
   };
   const ledgers = {
     listLedgers: list,
+    // The owner's own list, which the ledger limit counts.
+    listUserLedgers: jest.fn(async (owner: string) =>
+      envelope(
+        [...records.values()].filter((ledger) =>
+          ledger.full_name.startsWith(`${owner}/`),
+        ),
+      ),
+    ),
     createLedger: create,
     updateLedger: update,
     getLedger: get,

@@ -71,6 +71,7 @@ import { operationNotAllowedFromCause } from "@/features/ledger/utils/operation-
 import { filterNullish } from "@/shared/tools";
 import { processBatch } from "@/shared/batch-processor";
 import { logger } from "@/shared/logger";
+import { GITEA_PAGE_SIZE, readGiteaPages } from "@/shared/gitea-pages";
 import { systemIdentity, type Identity } from "@/server/api/identity";
 import {
   AUTHORIZATION_ACTIONS,
@@ -85,14 +86,6 @@ import { decodeFileContent } from "@/shared/file-content";
 
 const workflowLogger = logger.child({ module: "ledger-workflow" });
 
-// The ledger service relays Gitea's repository lists, and Gitea serves them in
-// pages of at most API.MAX_RESPONSE_ITEMS (50): a larger `limit` is clamped
-// without a word, and an omitted one falls back to DEFAULT_PAGING_NUM (30). A
-// read that must not lose ledgers pages through at this size (w2/m34).
-const CATALOG_PAGE_SIZE = 50;
-// A runaway guard for an upstream that never returns a short page, not a
-// product limit: 10,000 ledgers.
-const MAX_CATALOG_PAGES = 200;
 // Each miss is a real git clone + beancount parse (see beancount-ledger-v2's
 // load-cached-ledger-file-map.ts), so directive-count fan-out stays deliberately narrow.
 const DIRECTIVE_COUNT_CONCURRENCY = 3;
@@ -283,7 +276,7 @@ interface CatalogWindow {
 /**
  * The window a caller's `page`/`limit` asks for when one upstream call cannot
  * serve it: no paging at all means the whole catalog, and a `limit` above
- * CATALOG_PAGE_SIZE spans several upstream pages. `null` means one call with
+ * GITEA_PAGE_SIZE spans several upstream pages. `null` means one call with
  * the caller's own arguments, so page-only and small-page reads keep exactly
  * the ledger service's semantics.
  */
@@ -292,7 +285,7 @@ function catalogWindow({
   limit,
 }: ListLedgersParams): CatalogWindow | null {
   if (page == null && limit == null) return { offset: 0, count: Infinity };
-  if (limit == null || limit <= CATALOG_PAGE_SIZE) return null;
+  if (limit == null || limit <= GITEA_PAGE_SIZE) return null;
   // The ledger service parseInt()s both values, and Gitea reads a page below 1
   // as page 1.
   const count = Math.trunc(limit);
@@ -303,33 +296,16 @@ function catalogWindow({
   return Number.isSafeInteger(offset) ? { offset, count } : null;
 }
 
-/** A page shorter than CATALOG_PAGE_SIZE is the end of the catalog. */
 async function readCatalogWindow(
   readPage: CatalogPageReader,
   { offset, count }: CatalogWindow,
 ): Promise<LedgerData[]> {
-  const firstPage = Math.floor(offset / CATALOG_PAGE_SIZE) + 1;
-  const skip = offset % CATALOG_PAGE_SIZE;
+  const skip = offset % GITEA_PAGE_SIZE;
   const end = skip + count;
-  const ledgers: LedgerData[] = [];
-  for (let read = 0; ledgers.length < end; read++) {
-    if (read === MAX_CATALOG_PAGES) {
-      workflowLogger.warn(
-        "Catalog read hit the page cap and may be truncated",
-        {
-          firstPage,
-          ledgers: ledgers.length,
-        },
-      );
-      break;
-    }
-    const batch = await readPage({
-      page: firstPage + read,
-      limit: CATALOG_PAGE_SIZE,
-    });
-    ledgers.push(...batch);
-    if (batch.length < CATALOG_PAGE_SIZE) break;
-  }
+  const ledgers = await readGiteaPages(readPage, {
+    firstPage: Math.floor(offset / GITEA_PAGE_SIZE) + 1,
+    enough: (read) => read.length >= end,
+  });
   return ledgers.slice(skip, end);
 }
 

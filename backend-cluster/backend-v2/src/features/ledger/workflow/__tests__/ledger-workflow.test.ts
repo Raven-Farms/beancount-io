@@ -347,7 +347,7 @@ describe("LedgerWorkflow", () => {
     });
 
     it("should create ledger and return correct data", async () => {
-      mockFavaApiClient.ledgers.listLedgers.mockResolvedValue({
+      mockFavaApiClient.ledgers.listUserLedgers.mockResolvedValue({
         data: { success: true, data: [] },
       });
       mockFavaApiClient.ledgers.createLedger.mockResolvedValue({
@@ -385,7 +385,7 @@ describe("LedgerWorkflow", () => {
     });
 
     it("should create a ledger from the selected sample template", async () => {
-      mockFavaApiClient.ledgers.listLedgers.mockResolvedValue({
+      mockFavaApiClient.ledgers.listUserLedgers.mockResolvedValue({
         data: { success: true, data: [] },
       });
       mockFavaApiClient.ledgers.createLedger.mockResolvedValue({
@@ -1589,7 +1589,11 @@ describe("LedgerWorkflow", () => {
       const result = await workflow.renameLedgerFile({
         identity: IDENTITY,
         ledgerId,
-        input: { oldPath: "old.bean", newPath: "new.bean", updateIncludes: true },
+        input: {
+          oldPath: "old.bean",
+          newPath: "new.bean",
+          updateIncludes: true,
+        },
       });
 
       expect(result.updatedIncludes).toEqual(["main.bean"]);

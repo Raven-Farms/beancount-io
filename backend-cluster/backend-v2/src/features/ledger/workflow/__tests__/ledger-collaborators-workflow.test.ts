@@ -58,6 +58,10 @@ describe("LedgerCollaboratorsWorkflow authorization", () => {
       { getPublicApiClient, getApiContext, getAdminClient } as never,
       {} as never,
       { authorizeOrThrow } as never,
+      {
+        user: { getUserByUsername: jest.fn().mockResolvedValue(null) },
+      } as never,
+      {} as never,
     );
   });
 

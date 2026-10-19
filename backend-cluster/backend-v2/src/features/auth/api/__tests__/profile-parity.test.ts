@@ -55,15 +55,13 @@ async function fixture(
       findByUserIdWithActivePeriod: async () => null,
     },
   };
+  // The owner's own list: shared ledgers are not in it.
   const ledgers = jest.fn(async () => ({
-    data: {
-      success: true,
-      data: [{ full_name: "ada/personal" }, { full_name: "someone/shared" }],
-    },
+    data: { success: true, data: [{ full_name: "ada/personal" }] },
   }));
   const factory = {
     getApiContext: async () => ({
-      favaApiClient: { ledgers: { listLedgers: ledgers } },
+      favaApiClient: { ledgers: { listUserLedgers: ledgers } },
     }),
   };
   const service = new AccountService(

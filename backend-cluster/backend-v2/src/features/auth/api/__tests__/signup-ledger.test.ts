@@ -68,7 +68,7 @@ async function createFixture(withDefaultLedger: boolean) {
     getApiContext: jest.fn(async () => ({
       favaApiClient: {
         ledgers: {
-          listLedgers: jest.fn(async () => ({
+          listUserLedgers: jest.fn(async () => ({
             data: { success: true, data: [] },
           })),
           createLedger,

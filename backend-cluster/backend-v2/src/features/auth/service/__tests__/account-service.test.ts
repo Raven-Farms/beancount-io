@@ -65,7 +65,7 @@ describe("AccountService", () => {
       getApiContext: jest.fn().mockResolvedValue({
         favaApiClient: {
           ledgers: {
-            listLedgers: jest.fn().mockResolvedValue({
+            listUserLedgers: jest.fn().mockResolvedValue({
               data: { success: true, data: [] },
             }),
           },
@@ -244,7 +244,7 @@ describe("AccountService", () => {
       (mockFavaClientFactory.getApiContext as jest.Mock).mockResolvedValue({
         favaApiClient: {
           ledgers: {
-            listLedgers: jest.fn().mockResolvedValue({
+            listUserLedgers: jest.fn().mockResolvedValue({
               data: { success: true, data: [] },
             }),
           },
@@ -293,7 +293,7 @@ describe("AccountService", () => {
       (mockFavaClientFactory.getApiContext as jest.Mock).mockResolvedValue({
         favaApiClient: {
           ledgers: {
-            listLedgers: jest.fn().mockResolvedValue({
+            listUserLedgers: jest.fn().mockResolvedValue({
               data: { success: true, data: [] },
             }),
           },
@@ -384,7 +384,7 @@ describe("AccountService", () => {
       (mockFavaClientFactory.getApiContext as jest.Mock).mockResolvedValue({
         favaApiClient: {
           ledgers: {
-            listLedgers: jest.fn().mockResolvedValue({
+            listUserLedgers: jest.fn().mockResolvedValue({
               data: { success: false, data: null },
             }),
           },
@@ -418,7 +418,7 @@ describe("AccountService", () => {
       (mockFavaClientFactory.getApiContext as jest.Mock).mockResolvedValue({
         favaApiClient: {
           ledgers: {
-            listLedgers: jest.fn().mockResolvedValue({
+            listUserLedgers: jest.fn().mockResolvedValue({
               data: {
                 success: true,
                 data: [
@@ -427,12 +427,6 @@ describe("AccountService", () => {
                     name: "my-ledger",
                     full_name: "johndoe/my-ledger",
                     permissions: { admin: true, pull: true, push: true },
-                  },
-                  {
-                    id: 2,
-                    name: "other-ledger",
-                    full_name: "otheruser/other-ledger",
-                    permissions: { admin: false, pull: true, push: false },
                   },
                 ],
               },
@@ -448,6 +442,46 @@ describe("AccountService", () => {
       );
 
       expect(result!.limits.ledgersUsed).toBe(1);
+    });
+
+    it("counts the owner's own ledgers on every page, not only the first", async () => {
+      const userId = "user-123";
+      mockModels.user.getById = jest.fn().mockResolvedValue({
+        _id: "507f1f77bcf86cd799439011",
+        id: userId,
+        email: "test@example.com",
+        ledger_username: "johndoe",
+        ledger_password: "password",
+      });
+      // 145 owned ledgers: pages of 50, 50 and 45.
+      const all = Array.from({ length: 145 }, (_, i) => ({
+        full_name: `johndoe/books-${i}`,
+      }));
+      const listUserLedgers = jest.fn(
+        (_owner: string, { page, limit }: { page: number; limit: number }) =>
+          Promise.resolve({
+            data: {
+              success: true,
+              data: all.slice((page - 1) * limit, page * limit),
+            },
+          }),
+      );
+      (mockFavaClientFactory.getApiContext as jest.Mock).mockResolvedValue({
+        favaApiClient: { ledgers: { listUserLedgers } },
+        favaUser: { username: "johndoe", password: "password" },
+      });
+
+      const result = await accountService.getUserProfile(
+        identity(userId),
+        userId,
+      );
+
+      expect(result!.limits.ledgersUsed).toBe(145);
+      expect(listUserLedgers).toHaveBeenCalledTimes(3);
+      expect(listUserLedgers).toHaveBeenCalledWith("johndoe", {
+        page: 3,
+        limit: 50,
+      });
     });
   });
 

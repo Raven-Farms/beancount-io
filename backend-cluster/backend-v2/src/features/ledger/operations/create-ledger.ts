@@ -17,6 +17,7 @@ import {
 } from "@/features/ledger/types/fava-api.types";
 import { getTierLimits } from "@/features/stripe/service/stripe";
 import { getUserTier } from "@/features/stripe/operations/get-user-tier";
+import { countOwnedLedgers } from "@/features/ledger/operations/owned-ledgers";
 import {
   NotFoundError,
   ResourceLimitReachedError,
@@ -68,30 +69,21 @@ export async function createLedger({
     throw new NotFoundError("User", userId);
   }
 
+  // The mobile app is exempt from the ledger limit (PRFAQ005).
   if (platform !== "mobile") {
-    const listLedgersData = await unwrapFavaResponse(
-      favaApiClient.ledgers.listLedgers({
-        page: 1,
-        limit: 10,
-      }),
-      "list ledgers",
-      (cause) => ledgerApiError("list ledgers", cause),
-    );
-
-    const userLedgers = listLedgersData.filter((ledger) =>
-      ledger.full_name?.startsWith(`${user.ledger_username}/`),
-    );
-
-    // Check tier-based ledger limit
-    const userTier = await getUserTier({ stripe, userId });
-    const tierLimits = getTierLimits(userTier);
-
-    if (userLedgers.length >= tierLimits.maxLedgers) {
-      throw new ResourceLimitReachedError(
-        "Ledger",
-        tierLimits.maxLedgers,
-        userLedgers.length,
+    const { maxLedgers } = getTierLimits(await getUserTier({ stripe, userId }));
+    if (maxLedgers !== -1) {
+      const owned = await countOwnedLedgers(
+        favaApiClient,
+        user.ledger_username,
+        {
+          stopAt: maxLedgers,
+          makeError: (cause) => ledgerApiError("list ledgers", cause),
+        },
       );
+      if (owned >= maxLedgers) {
+        throw new ResourceLimitReachedError("Ledger", maxLedgers, owned);
+      }
     }
   }
 
