@@ -37,18 +37,6 @@ EXPECTED_BEAN_CHECK_FAILURES = {
     "skills/.claude/skills/beancount-reconcile/evals/files/eval16_ledger.beancount",
 }
 
-# Skills that must state a bea preference once and keep raw appends in fallbacks.
-BEA_FIRST_SKILLS = (
-    "beancount-init",
-    "beancount-import",
-    "beancount-reconcile",
-    "beancount-close",
-    "beancount-ask",
-    "beancount-options",
-    "beancount-migrate",
-    "beancount-importer-author",
-)
-
 RAW_APPEND = re.compile(
     r"\bappend\w*\b.{0,80}?\bto\b.{0,20}?(ledger file|main file|\./[\w./-]+)",
     re.IGNORECASE,
@@ -375,8 +363,9 @@ def check_ledgers() -> None:
 
 
 def check_bea_first() -> None:
-    for skill in BEA_FIRST_SKILLS:
-        path = SKILLS_DIR / skill / "SKILL.md"
+    """Every customer skill states a bea preference once and keeps raw appends in fallbacks."""
+    for path in sorted(SKILLS_DIR.glob("beancount-*/SKILL.md")):
+        skill = path.parent.name
         text = path.read_text(encoding="utf-8")
         if "prefer `bea`" not in text.lower():
             fail(f".claude/skills/{skill}/SKILL.md states no bea preference")

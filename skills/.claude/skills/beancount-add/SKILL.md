@@ -71,7 +71,7 @@ Before proposing, run each check that applies and show its result.
 bea --file "$ledger" --json --no-input query "SELECT date, payee, narration, number, currency, filename WHERE account = '$account' AND number = $number AND currency = '$currency' AND date >= $window_start AND date <= $window_end"
 ```
 
-**Closing an account:** read its balance through the close date (a posting dated on the close date is still allowed). `bea add close` writes even when money remains, and a remaining balance is then stranded in a closed account. Any nonzero row: show it and stop; offer to propose the transfer that empties the account first, then the close. Postings dated after the close date will be refused by the check, so ask about any the user still expects.
+**Closing an account:** `bea add close` writes over a remaining balance (beancount-init's `references/bea-cli.md`, One-off entries), which would strand it in a closed account, so read the balance through the close date first. Any nonzero row: show it and stop; offer to propose the transfer that empties the account first, then the close. Ask about any posting the user still expects after the close date; the check would refuse it.
 
 <!-- recipe: balance-before-close -->
 ```sh
@@ -81,7 +81,7 @@ bea --file "$ledger" --json --no-input query "SELECT currency, sum(number) AS ba
 Also:
 
 - **Opening an account:** already in the open-accounts read → do not open it again. Date the `open` on or before its first posting.
-- **Price:** an exact repeat of a recorded price is a no-op (`bea` reports `written: 0`); a second quote for the same date and commodity needs the user's say-so and `--force`.
+- **Price:** a second, different quote for the same date and commodity needs the user's say-so and `--force` (the `price` recipe's notes).
 
 ### 4. Propose
 

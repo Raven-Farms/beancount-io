@@ -22,7 +22,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
@@ -94,7 +94,8 @@ class Workspace(unittest.TestCase):
 
 
 class TestInstall(Workspace):
-    def test_inventory_is_the_nine_customer_skills(self):
+    def test_inventory_is_the_customer_skills(self):
+        # The one deliberate list of the suite; other tests count from it.
         self.assertEqual(
             skills.expected_skills(),
             [
@@ -114,7 +115,7 @@ class TestInstall(Workspace):
         sentinel_before = self.sentinel.read_bytes()
         code, out, _ = run("install", self.dest)
         self.assertEqual(code, 0)
-        self.assertIn("OK 9 customer skills complete", out)
+        self.assertIn(f"OK {len(skills.expected_skills())} customer skills complete", out)
         entries = sorted(p.name for p in self.dest.iterdir())
         self.assertEqual(entries, sorted([*skills.expected_skills(), "find-skills"]))
         for name in skills.expected_skills():
@@ -128,8 +129,8 @@ class TestInstall(Workspace):
         code, out, _ = run("install", self.dest)
         self.assertEqual(code, 0)
         self.assertEqual(snapshot(self.dest), before)
-        self.assertEqual(out.count("kept   "), 9)
-        self.assertEqual(len(list(self.dest.glob("beancount-*"))), 9)
+        self.assertEqual(out.count("kept   "), len(skills.expected_skills()))
+        self.assertEqual(len(list(self.dest.glob("beancount-*"))), len(skills.expected_skills()))
 
     def test_conflicting_copies_block_install_without_changing_anything(self):
         self.dest.mkdir(parents=True, exist_ok=True)
@@ -199,7 +200,7 @@ class TestVerify(Workspace):
         before = state()
         code, out, err = run("verify", self.dest, copy)
         self.assertEqual((code, err), (0, ""))
-        self.assertEqual(out.count("OK 9 customer skills complete"), 2)
+        self.assertEqual(out.count(f"OK {len(skills.expected_skills())} customer skills complete"), 2)
         self.assertEqual(state(), before)
 
     def test_missing_reference_names_the_file_and_the_line_that_needs_it(self):
@@ -455,7 +456,8 @@ class TestGitUpdatePath(Workspace):
 
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("linked", result.stdout)
-        self.assertIn("OK 10 customer skills complete", result.stdout)
+        self.assertIn(f"OK {len(skills.expected_skills()) + 1} customer skills complete", result.stdout)
+        self.assertTrue((self.dest / "beancount-budget").is_symlink())
 
 
 def june_expenses(ledger: Path) -> dict[str, Decimal]:
@@ -524,6 +526,9 @@ class TestDedupConvention(unittest.TestCase):
         self.assertEqual(written, "d11701f46efbd599")
 
 
+RECIPE_MARK = re.compile(r"<!-- recipe: ([a-z0-9-]+) -->")
+
+
 class TestBeaRecipes(unittest.TestCase):
     """Execute the shipped Markdown recipes against isolated synthetic books."""
 
@@ -533,18 +538,12 @@ class TestBeaRecipes(unittest.TestCase):
         cls.bea = cls.ci_check.find_bea()
         # Keep the executable available even if its directory also has bean-*.
         cls.bea[0] = shutil.which(cls.bea[0]) or cls.bea[0]
+        # Every suite document that carries an executable recipe; names are
+        # unique across them (test_recipe_names_are_unique_across_the_suite).
         cls.documents = "\n".join(
-            (SUITE / path).read_text(encoding="utf-8")
-            for path in (
-                "beancount-init/SKILL.md",
-                "beancount-init/references/bea-cli.md",
-                "beancount-import/references/bea-import.md",
-                "beancount-reconcile/SKILL.md",
-                "beancount-reconcile/references/statement-formats.md",
-                "beancount-close/references/close-checklist.md",
-                "beancount-ask/references/bql-recipes.md",
-                "beancount-add/SKILL.md",
-            )
+            text
+            for path in sorted(SUITE.glob("beancount-*/**/*.md"))
+            if RECIPE_MARK.search(text := path.read_text(encoding="utf-8"))
         )
 
     def setUp(self):
@@ -595,7 +594,9 @@ class TestBeaRecipes(unittest.TestCase):
         self.assertIsNotNone(match, f"Missing executable recipe {name}")
         return match.group(1)
 
-    def recipe(self, name: str, *, succeeds: bool = True, envelope: bool = False):
+    def recipe(self, name: str, *, succeeds: bool = True, envelope: bool = False, **values: str):
+        """Run a shipped shell recipe; `values` update its `$placeholders` first."""
+        self.values.update(values)
         tokens = shlex.split(self.block(name))
         self.assertEqual(tokens[0], "bea")
         args = [Template(token).substitute(self.values) for token in tokens[1:]]
@@ -708,73 +709,73 @@ class TestBeaRecipes(unittest.TestCase):
         self.assertIn("2026-06-01 balance Assets:Checking", self.target.read_text())
         self.recipe("check")
 
-    def one_off(self, date: str = "2026-05-07", amount: str = "12.50") -> dict:
-        self.values.update(
-            entry_date=date, payee="Pizzeria", narration="Dinner",
+    def test_recipe_names_are_unique_across_the_suite(self):
+        names = RECIPE_MARK.findall(self.documents)
+        self.assertEqual([n for n, count in Counter(names).items() if count > 1], [])
+
+    def one_off(self, date: str = "2026-05-07", amount: str = "12.50", *, succeeds: bool = True):
+        return self.recipe(
+            "transaction", succeeds=succeeds, entry_date=date, payee="Pizzeria", narration="Dinner",
             posting_1=f"Expenses:Dining {amount} USD", posting_2="Assets:Checking",
         )
-        return self.recipe("transaction")
+
+    def dinner(self, date: str, amount: str) -> None:
+        """An entry already in the books, written as text for the reads under test."""
+        with self.target.open("a", encoding="utf-8") as books:
+            books.write(f'{date} * "Pizzeria" "Dinner"\n  Expenses:Dining {amount} USD\n  Assets:Checking\n')
 
     def test_one_off_transaction_lands_in_the_included_destination_and_is_found_again(self):
+        # Decoys at another amount and outside the three-day window.
+        self.dinner("2026-05-07", "12.51")
+        self.dinner("2026-05-11", "12.50")
         before = self.ledger.read_bytes()
         self.one_off()
         self.assertEqual(self.ledger.read_bytes(), before)
-        self.assertIn('2026-05-07 * "Pizzeria" "Dinner"', self.target.read_text())
-        self.recipe("check")
-        # The add skill's duplicate read finds it within three days, by signed
-        # amount on the account, and not at another amount.
-        self.values.update(number="-12.50", currency="USD", window_start="2026-05-04", window_end="2026-05-10")
-        rows = self.recipe("already-recorded")["rows"]
+        self.assertEqual(self.target.read_text().count('2026-05-07 * "Pizzeria" "Dinner"'), 2)
+        # The add skill's duplicate read: the same signed amount on the account,
+        # within ±3 days, and nothing else.
+        rows = self.recipe(
+            "already-recorded", number="-12.50", currency="USD", window_start="2026-05-04", window_end="2026-05-10"
+        )["rows"]
         self.assertEqual([(r[0], r[3]) for r in rows], [("2026-05-07", "-12.50")])
-        self.assertTrue(rows[0][5].endswith("transactions/2026.bean"))
-        self.values["number"] = "-12.51"
-        self.assertEqual(self.recipe("already-recorded")["rows"], [])
-        self.values.update(number="-12.50", window_start="2026-05-11", window_end="2026-05-17")
-        self.assertEqual(self.recipe("already-recorded")["rows"], [])
-        # Its destination read names the included file that holds the posting.
+        self.assertTrue(rows[0][5].endswith(self.values["target"]))
+        # Its destination read names the included file that holds the postings.
         destination = self.recipe("entry-destination")["rows"]
         self.assertEqual(len(destination), 1)
-        self.assertTrue(destination[0][0].endswith("transactions/2026.bean"))
+        self.assertTrue(destination[0][0].endswith(self.values["target"]))
 
     def test_open_accounts_lists_unused_accounts_and_drops_closed_ones(self):
         rows = self.recipe("open-accounts")["rows"]
         self.assertEqual([r[0] for r in rows], ["Assets:Checking", "Equity:OpeningBalances", "Expenses:Dining"])
-        self.values.update(account="Equity:OpeningBalances", close_date="2026-05-01")
-        self.recipe("close")
+        with self.ledger.open("a", encoding="utf-8") as root:
+            root.write("2026-05-01 close Equity:OpeningBalances\n")
         self.assertEqual(
             [r[0] for r in self.recipe("open-accounts")["rows"]], ["Assets:Checking", "Expenses:Dining"]
         )
 
     def test_close_writes_over_a_balance_so_the_balance_read_must_come_first(self):
-        self.one_off()
-        self.values.update(account="Expenses:Dining", close_date="2026-05-31")
-        self.assertEqual(self.recipe("balance-before-close")["rows"], [["USD", "12.50"]])
-        before = self.ledger.read_bytes()
-        written = self.recipe("close")
-        self.assertEqual(written["written"], 1)
+        self.dinner("2026-05-07", "12.50")
+        rows = self.recipe("balance-before-close", account="Expenses:Dining", close_date="2026-05-31")["rows"]
+        self.assertEqual(rows, [["USD", "12.50"]])
+        self.assertEqual(self.recipe("close")["written"], 1)
         self.assertIn("2026-05-31 close Expenses:Dining", self.ledger.read_text())
-        self.assertNotEqual(self.ledger.read_bytes(), before)
-        self.recipe("check")
         # A posting on the close date is still allowed; a later one is refused
         # and writes nothing.
         self.one_off(date="2026-05-31", amount="1.00")
         target = self.target.read_bytes()
-        self.values["entry_date"] = "2026-06-01"
-        self.recipe("transaction", succeeds=False)
+        self.one_off(date="2026-06-01", amount="1.00", succeeds=False)
         self.assertEqual(self.target.read_bytes(), target)
 
     def test_price_repeat_writes_nothing_and_note_lands_in_destination(self):
-        self.values.update(price_date="2026-05-07", commodity="VTI", price="285.40 USD")
-        self.assertEqual(self.recipe("price")["written"], 1)
+        quote = {"price_date": "2026-05-07", "commodity": "VTI", "price": "285.40 USD"}
+        self.assertEqual(self.recipe("price", **quote)["written"], 1)
         self.assertEqual(self.recipe("price")["written"], 0)
         # A different quote for the same day is refused unless the user asks
         # for another one (`--force`, which the recipe deliberately omits).
-        self.values["price"] = "286.00 USD"
-        refused = self.recipe("price", succeeds=False)
+        refused = self.recipe("price", succeeds=False, price="286.00 USD")
         self.assertIn("Pass --force to record another quote", refused.stdout + refused.stderr)
         self.assertEqual(self.target.read_text().count("2026-05-07 price VTI"), 1)
-        self.values.update(note_date="2026-05-08", account="Assets:Checking", note="Account number changed")
-        self.recipe("note")
+        self.recipe("note", note_date="2026-05-08", note="Account number changed")
         self.assertIn('2026-05-08 note Assets:Checking "Account number changed"', self.target.read_text())
         self.recipe("check")
 
