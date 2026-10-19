@@ -164,18 +164,17 @@ vi.mock("@/common/components/ui/separator", () => ({
   Separator: () => <hr data-testid="separator" />,
 }));
 const mockAppLanguage = vi.hoisted(() => ({ current: "en" }));
+const mockT = vi.hoisted(() =>
+  vi.fn((key: string, params?: Record<string, string>) => {
+    let result = key;
+    for (const [k, v] of Object.entries(params ?? {}))
+      result = result.replace(`{${k}}`, v);
+    return result;
+  }),
+);
 vi.mock("@/common/hooks/use-translations", () => ({
   useTranslations: () => ({
-    t: (key: string, params?: Record<string, string>) => {
-      if (params) {
-        let result = key;
-        for (const [k, v] of Object.entries(params))
-          result = result.replace(`{${k}}`, v);
-        if (result === key) return key;
-        return result;
-      }
-      return key;
-    },
+    t: mockT,
     // The app-locale number formatter reads `i18n.language`.
     i18n: { language: mockAppLanguage.current },
   }),
@@ -232,6 +231,7 @@ function setUserLimits(
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockAppLanguage.current = "en";
   setUserLimits();
 });
 
@@ -259,6 +259,23 @@ describe("Usage Overview", () => {
     expect(screen.getByText("userSettings.usage")).toBeInTheDocument();
     expect(screen.getByText("userSettings.aiCfoUsage")).toBeInTheDocument();
     expect(screen.getByText("userSettings.ledgers")).toBeInTheDocument();
+  });
+
+  it("writes the AI usage nudge's percentage in the app language", () => {
+    mockAppLanguage.current = "fa";
+    setUserLimits("PREMIUM", { aiCfoTokensUsed: 90, aiCfoTokensMax: 100 });
+    mockUseQuery.mockReturnValue({
+      data: mockActiveSubscriptionData,
+      loading: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    render(<SubscriptionSection />);
+
+    expect(mockT).toHaveBeenCalledWith("userSettings.aiUsageUpgradeNudge", {
+      percentage: "۹۰",
+    });
   });
 
   it("should show unlimited text for enterprise users", () => {

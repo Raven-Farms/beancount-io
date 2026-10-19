@@ -179,6 +179,7 @@ export function PlanPicker({
                 cycle={cycle}
                 t={t}
                 formatMoney={formatMoney}
+                formatCount={formatCount}
               />
 
               {quota && (
@@ -237,11 +238,13 @@ function PlanPrice({
   cycle,
   t,
   formatMoney,
+  formatCount,
 }: {
   card: PlanCard;
   cycle: BillingCycle;
   t: Translate;
   formatMoney: (cents: number) => string;
+  formatCount: (value: number) => string;
 }) {
   if (card.userTier === "FREE") {
     return (
@@ -279,7 +282,7 @@ function PlanPrice({
           </span>
           <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
             {t("userSettings.saveYearlyPercent", {
-              percent: yearlySaving(card.key).percent,
+              percent: formatCount(yearlySaving(card.key).percent),
             })}
           </Badge>
         </div>

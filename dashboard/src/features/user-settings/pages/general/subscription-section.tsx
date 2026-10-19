@@ -382,7 +382,7 @@ export function SubscriptionSection({
                   {ledgerPercentage >= 100
                     ? t("page.dashboard.ledgerLimitReached")
                     : t("userSettings.aiUsageUpgradeNudge", {
-                        percentage: Math.round(aiPercentage),
+                        percentage: formatCount(Math.round(aiPercentage)),
                       })}
                 </span>
               </div>

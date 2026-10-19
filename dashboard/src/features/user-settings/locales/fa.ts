@@ -533,11 +533,11 @@ const faUserSettings: Record<string, TranslationEntry> = {
     description: "Price interval suffix",
   },
   "userSettings.aiTokensPerMonth": {
-    message: "{count} نشانه های هوش مصنوعی / ماه",
+    message: "{count} توکن هوش مصنوعی / ماه",
     description: "AI token allowance for a subscription tier",
   },
   "userSettings.unlimitedAiTokens": {
-    message: "نشانه‌های هوش مصنوعی نامحدود",
+    message: "توکن‌های هوش مصنوعی نامحدود",
     description: "Unlimited AI token allowance",
   },
   "userSettings.unlimitedLedgers": {
@@ -564,7 +564,7 @@ const faUserSettings: Record<string, TranslationEntry> = {
     description: "Unlimited directive allowance",
   },
   "userSettings.includedDirectives": {
-    message: "{count}",
+    message: "{count} دستورالعمل",
     description: "Directive allowance for a subscription tier",
   },
   "userSettings.unlimitedCollaborators": {
@@ -588,7 +588,7 @@ const faUserSettings: Record<string, TranslationEntry> = {
   },
   "userSettings.aiUsageUpgradeNudge": {
     message:
-      "شما از {percentage}٪ از نشانه های ماهانه هوش مصنوعی خود استفاده می کنید. برای جلوگیری از وقفه، ارتقا دهید.",
+      "شما از {percentage}٪ از توکن‌های ماهانه هوش مصنوعی خود استفاده می‌کنید. برای جلوگیری از وقفه، ارتقا دهید.",
     description: "Upgrade suggestion when AI token usage is high",
   },
   "userSettings.fingerprint": {
