@@ -852,6 +852,42 @@ def _type_name(value: Any) -> str:
     return "None" if value is None else f"a {type(value).__name__}"
 
 
+def _refuse_skipped_metadata(entry: Any, unwritable: str, logs: io.StringIO) -> None:
+    """Refuse the metadata values Beancount's printer passes over without raising.
+
+    A `dict` or `Inventory` value printed fine and vanished from the written
+    entry, so the import reported success while losing data (w5/728).
+    Dunder keys are the loader's own bookkeeping (`__tolerances__` is a
+    dict on entries that round-trip fine), so only payload keys refuse.
+    """
+    from beancount.core.inventory import Inventory
+
+    def skipped(key: Any, value: Any) -> str | None:
+        if isinstance(key, str) and key.startswith("__"):
+            return None
+        # Inventory subclasses dict, so it is named first.
+        if isinstance(value, Inventory):
+            return "an Inventory"
+        if isinstance(value, dict):
+            return "a dict"
+        return None
+
+    for key, value in (entry.meta or {}).items():
+        if (kind := skipped(key, value)) is not None:
+            raise _with_output(
+                LedgerError(f"{unwritable}: metadata {key!r} is {kind}, which Beancount cannot print."), logs
+            )
+    for number, posting in enumerate(getattr(entry, "postings", None) or []):
+        for key, value in (posting.meta or {}).items():
+            if (kind := skipped(key, value)) is not None:
+                raise _with_output(
+                    LedgerError(
+                        f"{unwritable}: posting {number + 1} metadata {key!r} is {kind}, which Beancount cannot print."
+                    ),
+                    logs,
+                )
+
+
 def _writable(entry: Any, row: int, importer: Any, logs: io.StringIO) -> Any:
     """One importer row with integer metadata as numbers, proven printable.
 
@@ -861,7 +897,9 @@ def _writable(entry: Any, row: int, importer: Any, logs: io.StringIO) -> Any:
     integer is the number it says, as `bea add transactions` already reads it.
     Whatever still cannot be printed — a float, an object, a `custom` whose
     values are plain tuples — is the importer's to fix, so the failure names
-    the importer and the row instead of reaching the generic handler.
+    the importer and the row instead of reaching the generic handler. A
+    `dict` or `Inventory` metadata value never reaches the printer's error:
+    it passes over them, so they are refused by name (w5/728).
     """
 
     def numbers(meta: Any) -> Any:
@@ -894,6 +932,7 @@ def _writable(entry: Any, row: int, importer: Any, logs: io.StringIO) -> Any:
             LedgerError(f"{unwritable}: its date is {_type_name(entry.date)} ({entry.date!r}), not a datetime.date."),
             logs,
         )
+    _refuse_skipped_metadata(entry, unwritable, logs)
     try:
         # Accounts as the ledger reads them, NFC: an NFD `Expenses:Café` from a
         # PDF or a macOS file name was "not open", with a duplicate `add open`
