@@ -1,7 +1,33 @@
 ---
 name: beancount-add
 description: Record one-off entries the user describes in a local Beancount ledger through bea — a purchase, bill, paycheck, or transfer between their own accounts (including splits and pasted receipt text), opening or closing an account, a price, or a note. Propose the exact entries from existing accounts, check whether one is already recorded, and write only after confirmation with a passing check; it never changes existing entries. Skip bank or card export files (beancount-import), statements (beancount-reconcile), finance-app migrations, options trades (beancount-options), month-end close, edits to existing entries, and ledgers hosted on Beancount.io.
-metadata: {"openclaw": {"homepage": "https://github.com/bex-co/beancount-io/tree/main/skills", "requires": {"anyBins": ["bea", "bean-check"]}, "install": [{"id": "brew", "kind": "brew", "formula": "bex-co/tap/bea", "bins": ["bea"], "label": "Install bea (Homebrew)"}, {"id": "uv", "kind": "uv", "package": "beancount-io", "bins": ["bea"], "label": "Install bea (uv)"}]}, "hermes": {"category": "finance", "tags": ["beancount", "accounting", "bookkeeping", "manual-entry"]}}
+metadata:
+  openclaw:
+    homepage: 'https://github.com/bex-co/beancount-io/tree/main/skills'
+    requires:
+      anyBins:
+        - bea
+        - bean-check
+    install:
+      - id: brew
+        kind: brew
+        formula: bex-co/tap/bea
+        bins:
+          - bea
+        label: Install bea (Homebrew)
+      - id: uv
+        kind: uv
+        package: beancount-io
+        bins:
+          - bea
+        label: Install bea (uv)
+  hermes:
+    category: finance
+    tags:
+      - beancount
+      - accounting
+      - bookkeeping
+      - manual-entry
 ---
 
 # beancount-add

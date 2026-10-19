@@ -189,23 +189,115 @@ def check_skill_md() -> None:
         for key in ("name", "description"):
             if not meta.get(key):
                 fail(f"{rel}: frontmatter missing '{key}'")
-        data = check_metadata(rel, meta["metadata"]) if "metadata" in meta else {}
+        data = check_metadata(rel, meta, path, customer_facing)
         # Public skill installers (vercel-labs/skills) hide a skill whose
         # metadata sets `internal` to the boolean true, which the JSON form
         # above yields. Development skills must hide; customer skills must not.
-        if customer_facing and data.get("internal") is True:
+        # The block parser yields strings; YAML hosts read `true` as a boolean.
+        if customer_facing and data.get("internal") in (True, "true", "True", "TRUE"):
             fail(f"{rel}: a customer skill must not set metadata internal; public installers would hide it")
         if not customer_facing and data.get("internal") is not True:
             fail(f"{rel}: a development skill must set metadata: {{\"internal\": true}} so public installers skip it")
         print(f"OK frontmatter {rel}")
 
 
-def check_metadata(rel: Path, value: str) -> dict:
-    # OpenClaw re-reads `metadata` as JSON5; Claude Code, Codex, and Hermes read
-    # YAML. One line of JSON is valid to every one of them and to the top-level
-    # parsers here and in beancount-skills.py, which skip indented lines.
+def metadata_block(path: Path) -> list[str] | None:
+    """The indented lines under a top-level `metadata:` key, or None."""
+    lines = path.read_text(encoding="utf-8").splitlines()
+    for index, line in enumerate(lines[1:], 1):
+        if line == "---":
+            return None
+        if line.rstrip() == "metadata:":
+            block = []
+            for following in lines[index + 1:]:
+                if following and following[0] in " \t":
+                    block.append(following)
+                elif following.strip():
+                    break
+            return block
+    return None
+
+
+def parse_yaml_subset(rel: Path, lines: list[str]):
+    """Parse the small YAML subset customer `metadata:` blocks use.
+
+    Nested mappings, lists (of scalars or mappings), and plain or quoted
+    string scalars — no flow syntax, anchors, or multi-line values. ci-check
+    is stdlib-only, and this is the whole shape the suite writes."""
+    rows = [(len(line) - len(line.lstrip(" ")), line.strip()) for line in lines if line.strip()]
+    if not rows or any("\t" in line for line in lines):
+        fail(f"{rel}: frontmatter 'metadata' block must use space indentation")
+
+    def scalar(text: str) -> str:
+        if text.startswith(("{", "[", "&", "*", "|", ">", "!")):
+            fail(f"{rel}: frontmatter 'metadata' block uses YAML this checker does not read: {text!r}")
+        if len(text) >= 2 and text[0] == text[-1] == "'":
+            return text[1:-1].replace("''", "'")
+        if len(text) >= 2 and text[0] == text[-1] == '"':
+            try:
+                return json.loads(text)
+            except json.JSONDecodeError:
+                fail(f"{rel}: frontmatter 'metadata' block has a bad quoted scalar: {text!r}")
+        return text
+
+    def parse(index: int, indent: int):
+        is_list = rows[index][1].startswith("- ")
+        result: dict | list = [] if is_list else {}
+        while index < len(rows):
+            row_indent, text = rows[index]
+            if row_indent != indent:
+                break
+            if is_list:
+                if not text.startswith("- "):
+                    break
+                item = text[2:]
+                if ": " in item or item.endswith(":"):
+                    rows[index] = (indent + 2, item)
+                    value, index = parse(index, indent + 2)
+                    result.append(value)
+                else:
+                    result.append(scalar(item))
+                    index += 1
+            else:
+                key, sep, rest = text.partition(":")
+                if not sep or not key.strip():
+                    fail(f"{rel}: frontmatter 'metadata' block has a non-mapping line: {text!r}")
+                rest = rest.strip()
+                if rest:
+                    result[key.strip()] = scalar(rest)
+                    index += 1
+                elif index + 1 < len(rows) and rows[index + 1][0] > indent:
+                    value, index = parse(index + 1, rows[index + 1][0])
+                    result[key.strip()] = value
+                else:
+                    fail(f"{rel}: frontmatter 'metadata' block key {key.strip()!r} has no value")
+        return result, index
+
+    data, consumed = parse(0, rows[0][0])
+    if consumed != len(rows):
+        fail(f"{rel}: frontmatter 'metadata' block has inconsistent indentation")
+    return data
+
+
+def check_metadata(rel: Path, meta: dict[str, str], path: Path, customer_facing: bool) -> dict:
+    if "metadata" not in meta:
+        return {}
+    # Customer skills carry the registry metadata as a block YAML mapping:
+    # the Agent Skills validator (skills-ref, strictyaml) rejects flow
+    # mappings, and OpenClaw documents multi-line YAML mappings as parsed
+    # YAML first, then flattened and re-read as JSON5. Development skills
+    # keep one line of JSON — their only key is the internal flag, which
+    # public installers compare against the boolean true.
+    if customer_facing:
+        block = metadata_block(path)
+        if meta["metadata"] or not block:
+            fail(f"{rel}: customer 'metadata' must be a block YAML mapping, not one line of JSON (the Agent Skills validator rejects flow mappings)")
+        data = parse_yaml_subset(rel, block)
+        if not isinstance(data, dict):
+            fail(f"{rel}: customer 'metadata' must be a block YAML mapping")
+        return data
     try:
-        data = json.loads(value)
+        data = json.loads(meta["metadata"])
     except json.JSONDecodeError as error:
         fail(f"{rel}: frontmatter 'metadata' must be a single-line JSON object ({error})")
     if not isinstance(data, dict):

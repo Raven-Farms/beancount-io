@@ -1,7 +1,33 @@
 ---
 name: beancount-options
 description: Record a described options trade or lifecycle event as validated transactions in a local Beancount ledger through bea, after review and confirmation. Use for single-leg or multi-leg opens, closes, rolls, assignment, exercise and expiration, including pasted broker confirmations. Skip options education, pricing/greeks, tax planning, analytics, broker statement imports, other manual entries (beancount-add), ledger `option` settings such as operating_currency, and ledgers hosted on Beancount.io.
-metadata: {"openclaw": {"homepage": "https://github.com/bex-co/beancount-io/tree/main/skills", "requires": {"anyBins": ["bea", "bean-check"]}, "install": [{"id": "brew", "kind": "brew", "formula": "bex-co/tap/bea", "bins": ["bea"], "label": "Install bea (Homebrew)"}, {"id": "uv", "kind": "uv", "package": "beancount-io", "bins": ["bea"], "label": "Install bea (uv)"}]}, "hermes": {"category": "finance", "tags": ["beancount", "accounting", "options-trading", "investments"]}}
+metadata:
+  openclaw:
+    homepage: 'https://github.com/bex-co/beancount-io/tree/main/skills'
+    requires:
+      anyBins:
+        - bea
+        - bean-check
+    install:
+      - id: brew
+        kind: brew
+        formula: bex-co/tap/bea
+        bins:
+          - bea
+        label: Install bea (Homebrew)
+      - id: uv
+        kind: uv
+        package: beancount-io
+        bins:
+          - bea
+        label: Install bea (uv)
+  hermes:
+    category: finance
+    tags:
+      - beancount
+      - accounting
+      - options-trading
+      - investments
 ---
 
 # beancount-options

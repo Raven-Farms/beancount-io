@@ -70,7 +70,7 @@ The [importer graduation guide](../docs/skills/importer-graduation.md) composes 
 
 Each customer-facing skill lives at `beancount-<name>/` within this package, with:
 
-- `SKILL.md` — frontmatter (`name`, `description` for triggering) + body instructions. Keep under ~500 lines; spill into `references/` for deep nuance. Customer skills also carry a `metadata` object for registry hosts: `openclaw` (OpenClaw and ClawHub: `bea` or `bean-check` as the required binary, with Homebrew and uv installs of `bea`) and `hermes` (Hermes Agent category and tags). Keep it one line of JSON, which every host parses; `ci-check.py` rejects a multi-line block.
+- `SKILL.md` — frontmatter (`name`, `description` for triggering) + body instructions. Keep under ~500 lines; spill into `references/` for deep nuance. Customer skills also carry a `metadata` object for registry hosts: `openclaw` (OpenClaw and ClawHub: `bea` or `bean-check` as the required binary, with Homebrew and uv installs of `bea`) and `hermes` (Hermes Agent category and tags). Write it as a block YAML mapping, never one line of JSON: the Agent Skills validator (`skills-ref`) rejects flow mappings, while OpenClaw parses the YAML first and re-reads the flattened result as JSON5, so the block form reaches every host. `ci-check.py` parses the block with a small YAML subset (nested mappings, lists, plain or quoted scalars) and rejects the JSON line.
 - `references/` — optional files loaded on demand when the body points to them.
 - `evals/` — optional `evals.json` + fixtures for `skill-creator` iteration.
 - `scripts/` / `agents/` — optional executable helpers or platform metadata when the skill needs them.

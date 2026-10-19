@@ -1,13 +1,13 @@
 # w2 · m43 — Install the suite from the standard skill channels without the development skills
 
-**Worker:** worker2 **Goal:** someone who installs Beancount.io's skills the way agents now find skills (`npx skills`, `gh skill`, a Hermes tap) gets exactly the customer `beancount-*` suite, never the repository's development skills. Every customer `SKILL.md` meets the Agent Skills specification, and the install guide documents each channel as rehearsed on Claude Code and Codex. **Status:** todo (t001 done)
+**Worker:** worker2 **Goal:** someone who installs Beancount.io's skills the way agents now find skills (`npx skills`, `gh skill`, a Hermes tap) gets exactly the customer `beancount-*` suite, never the repository's development skills. Every customer `SKILL.md` meets the Agent Skills specification, and the install guide documents each channel as rehearsed on Claude Code and Codex. **Status:** todo (t001–t002 done)
 
 ## Tasks (in order)
 
 | id   | title | est | depends_on |
 | ---- | ----- | --- | ---------- |
 | [t001](./done/t001.md) | Hide the 19 development skills from public skill installers — **DONE** | 30m | — |
-| t002 | Make every customer SKILL.md meet the Agent Skills specification without losing ClawHub's metadata | 45m | — |
+| [t002](./done/t002.md) | Make every customer SKILL.md meet the Agent Skills specification without losing ClawHub's metadata — **DONE** | 45m | — |
 | t003 | Enforce the specification's frontmatter rules in `CI (skills)` | 30m | t002 |
 | t004 | Document the `npx skills`, `gh skill`, and Hermes installs beside the link installer | 45m | t001, w2/m42/t011 |
 | t005 | Rehearse each channel on Claude Code and Codex | 45m | t004 |

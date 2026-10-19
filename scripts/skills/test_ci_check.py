@@ -143,19 +143,38 @@ class TestSkillTrees(unittest.TestCase):
         meta = ci_check.parse_frontmatter(path)
         self.assertEqual((meta["name"], meta["description"]), ("beancount-ask", "d"))
 
-    def test_metadata_must_be_one_line_of_json_object(self):
-        for metadata, accepted in (
-            ('{"openclaw": {"requires": {"anyBins": ["bea"]}}, "hermes": {"tags": ["beancount"]}}', True),
-            ("\n  openclaw:\n    requires: {}", False),
-            ('{"openclaw": {"requires": }}', False),
-            ('["bea"]', False),
+    def test_customer_metadata_must_be_a_block_yaml_mapping(self):
+        block = (
+            "name: beancount-ask\ndescription: d\nmetadata:\n"
+            "  openclaw:\n    homepage: 'https://example.com/skills'\n"
+            "    requires:\n      anyBins:\n        - bea\n    install:\n"
+            "      - id: uv\n        bins:\n          - bea\n"
+            "  hermes:\n    tags:\n      - beancount\n"
+        )
+        self.assertEqual(self.check_frontmatter(block), "")
+        path = self.customer / "beancount-ask/SKILL.md"
+        self.assertEqual(
+            ci_check.parse_yaml_subset(path, ci_check.metadata_block(path)),
+            {
+                "openclaw": {
+                    "homepage": "https://example.com/skills",
+                    "requires": {"anyBins": ["bea"]},
+                    "install": [{"id": "uv", "bins": ["bea"]}],
+                },
+                "hermes": {"tags": ["beancount"]},
+            },
+        )
+        for metadata, why in (
+            ('{"openclaw": {"requires": {"anyBins": ["bea"]}}}', "customer 'metadata' must be a block YAML mapping"),
+            ("", "customer 'metadata' must be a block YAML mapping"),
         ):
             with self.subTest(metadata=metadata):
                 err = self.check_frontmatter(f"name: beancount-ask\ndescription: d\nmetadata: {metadata}\n")
-                if accepted:
-                    self.assertEqual(err, "")
-                else:
-                    self.assertIn("frontmatter 'metadata' must be a single-line JSON object", err)
+                self.assertIn(why, err)
+        flow = self.check_frontmatter(
+            "name: beancount-ask\ndescription: d\nmetadata:\n  openclaw: {requires: {}}\n"
+        )
+        self.assertIn("uses YAML this checker does not read", flow)
 
     def test_a_development_skill_without_the_internal_flag_is_rejected(self):
         for frontmatter in (
@@ -174,7 +193,7 @@ class TestSkillTrees(unittest.TestCase):
                 self.assertIn("a development skill must set metadata", error.getvalue())
 
     def test_a_customer_skill_with_the_internal_flag_is_rejected(self):
-        err = self.check_frontmatter('name: beancount-ask\ndescription: d\nmetadata: {"internal": true}\n')
+        err = self.check_frontmatter("name: beancount-ask\ndescription: d\nmetadata:\n  internal: true\n")
         self.assertIn("a customer skill must not set metadata internal", err)
 
     def test_development_eval_fixtures_are_checked(self):

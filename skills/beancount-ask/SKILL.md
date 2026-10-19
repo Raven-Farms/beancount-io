@@ -1,7 +1,33 @@
 ---
 name: beancount-ask
 description: Answer questions about a local Beancount ledger using shown, reproducible bea queries and reports for spending, trends, net worth, subscriptions and anomalies. Strictly read-only; figures come from executed queries. Skip ledgers hosted on Beancount.io, recording transactions (beancount-add), reconciliation, migration, ledger edits, option pricing or greeks, and general Beancount, BQL, or `bea` documentation questions (including what `bea ask` does).
-metadata: {"openclaw": {"homepage": "https://github.com/bex-co/beancount-io/tree/main/skills", "requires": {"anyBins": ["bea", "bean-check"]}, "install": [{"id": "brew", "kind": "brew", "formula": "bex-co/tap/bea", "bins": ["bea"], "label": "Install bea (Homebrew)"}, {"id": "uv", "kind": "uv", "package": "beancount-io", "bins": ["bea"], "label": "Install bea (uv)"}]}, "hermes": {"category": "finance", "tags": ["beancount", "accounting", "bql", "reports"]}}
+metadata:
+  openclaw:
+    homepage: 'https://github.com/bex-co/beancount-io/tree/main/skills'
+    requires:
+      anyBins:
+        - bea
+        - bean-check
+    install:
+      - id: brew
+        kind: brew
+        formula: bex-co/tap/bea
+        bins:
+          - bea
+        label: Install bea (Homebrew)
+      - id: uv
+        kind: uv
+        package: beancount-io
+        bins:
+          - bea
+        label: Install bea (uv)
+  hermes:
+    category: finance
+    tags:
+      - beancount
+      - accounting
+      - bql
+      - reports
 ---
 
 # beancount-ask
