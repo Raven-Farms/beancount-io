@@ -1,0 +1,29 @@
+;; fixture — beancount-ask eval10-13 (holdings: priced lots + one unpriced)
+option "operating_currency" "USD"
+
+2025-01-01 open Assets:Brokerage USD,VTI,ACME
+2025-01-01 open Assets:Crypto:Wallet BTC
+2025-01-01 open Equity:Opening-Balances
+
+2025-01-02 * "Cash in"
+  Assets:Brokerage  20000.00 USD
+  Equity:Opening-Balances
+
+2025-01-15 * "Buy VTI"
+  Assets:Brokerage  10 VTI {100.00 USD}
+  Assets:Brokerage -1000.00 USD
+
+2025-02-15 * "Buy VTI"
+  Assets:Brokerage  10 VTI {120.00 USD}
+  Assets:Brokerage -1200.00 USD
+
+2025-03-10 * "Buy ACME"
+  Assets:Brokerage  10 ACME {50.00 USD}
+  Assets:Brokerage -500.00 USD
+
+2025-01-10 * "Buy BTC"
+  Assets:Crypto:Wallet  0.500000 BTC {40000.00 USD}
+  Equity:Opening-Balances -20000.00 USD
+
+2026-10-01 price VTI 300.00 USD
+2026-10-01 price BTC 60000.00 USD

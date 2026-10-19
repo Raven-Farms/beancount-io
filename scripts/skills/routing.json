@@ -827,6 +827,25 @@
         "beancount-add"
       ],
       "why": "Moving lots between own accounts must keep cost and acquisition date."
+    },
+    {
+      "id": "ask-holdings-worth",
+      "prompt": "What do I hold and what is it worth at market?",
+      "expected": "beancount-ask",
+      "confusable": [
+        "beancount-trade"
+      ],
+      "why": "A read-only holdings/valuation question, not a trade to record."
+    },
+    {
+      "id": "none-sell-for-tax-benefit",
+      "prompt": "Should I sell my VTI before year end for the tax benefit?",
+      "expected": "none",
+      "confusable": [
+        "beancount-ask",
+        "beancount-trade"
+      ],
+      "why": "Investment/tax advice; no skill gives it and nothing is to be recorded."
     }
   ]
 }

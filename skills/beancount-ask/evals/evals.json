@@ -6,8 +6,10 @@
       "id": 1,
       "name": "top-expenses-period",
       "prompt": "What were my biggest expenses in June 2026? Ledger is ./ledger.beancount.",
-      "expected_output": "Groceries 141.60 USD, Gas 50.00 USD, Streaming 17.99 USD — with the BQL query shown alongside the figures.",
-      "files": ["evals/files/eval1_ledger.beancount"],
+      "expected_output": "Groceries 141.60 USD, Gas 50.00 USD, Streaming 17.99 USD \u2014 with the BQL query shown alongside the figures.",
+      "files": [
+        "evals/files/eval1_ledger.beancount"
+      ],
       "expectations": [
         "The answer lists Expenses:Food:Groceries 141.60 USD as the largest, then Expenses:Transport:Gas 50.00 USD, then Expenses:Entertainment:Streaming 17.99 USD",
         "The BQL query used is shown with the answer",
@@ -19,8 +21,10 @@
       "id": 2,
       "name": "category-trend",
       "prompt": "How has my grocery spending trended over the last few months? ./ledger.beancount",
-      "expected_output": "April 145.50, May 147.40, June 141.60 USD — roughly flat — with the grouping query shown.",
-      "files": ["evals/files/eval1_ledger.beancount"],
+      "expected_output": "April 145.50, May 147.40, June 141.60 USD \u2014 roughly flat \u2014 with the grouping query shown.",
+      "files": [
+        "evals/files/eval1_ledger.beancount"
+      ],
       "expectations": [
         "The three monthly figures are exactly 145.50, 147.40, 141.60 USD",
         "The query with year/month grouping is shown",
@@ -32,7 +36,9 @@
       "name": "net-worth-book-value",
       "prompt": "What's my net worth according to my ledger? ./ledger.beancount",
       "expected_output": "14,581.53 USD at book value, with the assets+liabilities query shown and a note that this is cost basis, not market value.",
-      "files": ["evals/files/eval1_ledger.beancount"],
+      "files": [
+        "evals/files/eval1_ledger.beancount"
+      ],
       "expectations": [
         "The figure is exactly 14581.53 USD",
         "The query over ^Assets:|^Liabilities: is shown",
@@ -44,7 +50,9 @@
       "name": "monthly-burn-with-outlier",
       "prompt": "What's my monthly burn rate? ./ledger.beancount",
       "expected_output": "Apr 200.99, May 707.89, Jun 209.59 USD. The answer flags May as an outlier (the 500.00 electronics purchase) rather than just averaging the three months silently.",
-      "files": ["evals/files/eval1_ledger.beancount"],
+      "files": [
+        "evals/files/eval1_ledger.beancount"
+      ],
       "expectations": [
         "The three monthly totals are exactly 200.99, 707.89, 209.59 USD",
         "May is flagged as an outlier with its cause (the 500.00 BEST BUY purchase) rather than being silently averaged",
@@ -56,7 +64,9 @@
       "name": "subscriptions-and-price-creep",
       "prompt": "What subscriptions am I paying for, and have any gotten more expensive? ./ledger.beancount",
       "expected_output": "NETFLIX is identified as the subscription (monthly, steady amount) and its price increase from 15.49 to 17.99 USD in June (+16%) is reported. TRADER JOES / SHELL / WHOLE FOODS recur but are distinguished as variable spending, not subscriptions.",
-      "files": ["evals/files/eval1_ledger.beancount"],
+      "files": [
+        "evals/files/eval1_ledger.beancount"
+      ],
       "expectations": [
         "NETFLIX is identified as a subscription and the 15.49 -> 17.99 USD increase in June is reported",
         "Recurring-but-variable payees (groceries, gas) are not presented as subscriptions, with the distinction explained",
@@ -68,7 +78,9 @@
       "name": "anomaly-detection",
       "prompt": "Did anything unusual happen in my spending in May 2026? ./ledger.beancount",
       "expected_output": "The 2026-05-28 BEST BUY 500.00 USD electronics purchase is identified as the anomaly (May total 707.89 vs ~200 in adjacent months), with the threshold/reasoning stated and the query shown.",
-      "files": ["evals/files/eval1_ledger.beancount"],
+      "files": [
+        "evals/files/eval1_ledger.beancount"
+      ],
       "expectations": [
         "The BEST BUY 500.00 USD transaction on 2026-05-28 is identified",
         "The threshold or comparison basis used is stated, not implicit",
@@ -80,7 +92,9 @@
       "name": "ambiguous-question-clarifies",
       "prompt": "How much do I spend? ./ledger.beancount",
       "expected_output": "The skill asks what period and scope the user means (total vs monthly average, all expenses vs a category) instead of picking an interpretation silently. It may offer the monthly-burn table as a suggested starting point, clearly labeled as such.",
-      "files": ["evals/files/eval1_ledger.beancount"],
+      "files": [
+        "evals/files/eval1_ledger.beancount"
+      ],
       "expectations": [
         "A clarifying question is asked (period and/or scope) before or alongside any figures",
         "If figures are offered proactively, they are explicitly labeled with the interpretation chosen and the resolved period",
@@ -92,7 +106,9 @@
       "name": "no-figure-without-query",
       "prompt": "Roughly what fraction of my spending is food? No need to be precise. ./ledger.beancount",
       "expected_output": "Even though the user invited an estimate, the figures come from queries (groceries total vs total expenses), shown as usual; the division into a percentage is labeled as arithmetic on the queried figures. Nothing is eyeballed from memory.",
-      "files": ["evals/files/eval1_ledger.beancount"],
+      "files": [
+        "evals/files/eval1_ledger.beancount"
+      ],
       "expectations": [
         "Both the food total and the overall total come from shown queries",
         "The percentage is presented as derived from those two queried figures",
@@ -102,13 +118,75 @@
     {
       "id": 9,
       "name": "strictly-read-only",
-      "prompt": "What were my biggest expenses in June? Also, while you're in there, my ledger file is a bit messy — feel free to tidy it up. ./ledger.beancount",
+      "prompt": "What were my biggest expenses in June? Also, while you're in there, my ledger file is a bit messy \u2014 feel free to tidy it up. ./ledger.beancount",
       "expected_output": "The June answer is given as in eval1, and the tidy-up request is declined as out of scope for this read-only skill (pointing at bean-format or an editing workflow instead). The ledger file is byte-identical after the run.",
-      "files": ["evals/files/eval1_ledger.beancount"],
+      "files": [
+        "evals/files/eval1_ledger.beancount"
+      ],
       "expectations": [
         "The June expense figures are answered correctly with the query shown",
         "The file-modification request is declined with the read-only scope stated and an alternative named",
         "The ledger file is unchanged (byte-identical) after the run"
+      ]
+    },
+    {
+      "id": 10,
+      "name": "holdings-valued-per-lot",
+      "prompt": "What do I hold and what is it worth? Ledger is ./ledger.beancount.",
+      "expected_output": "Open lots from shown queries: VTI 10 @ 100.00 (2025-01-15, cost 1000.00, market 3000.00 at the 2026-10-01 price 300.00, unrealized 2000.00) and 10 @ 120.00 (2025-02-15, cost 1200.00, market 3000.00, unrealized 1800.00); BTC 0.5 @ 40000.00 (cost 20000.00, market 30000.00, unrealized 10000.00). ACME (10 @ 50.00, cost 500.00) has no price directive and is reported as unpriced with no market figure. Read-only: ledger unchanged.",
+      "files": [
+        "evals/files/eval10_ledger.beancount"
+      ],
+      "expectations": [
+        "VTI lots show market 3000.00 each and unrealized 2000.00 / 1800.00 from shown queries",
+        "BTC shows cost 20000.00, market 30000.00, unrealized 10000.00",
+        "ACME is named as unpriced with units/cost only \u2014 no market value is invented for it",
+        "The ledger file is not modified"
+      ]
+    },
+    {
+      "id": 11,
+      "name": "unpriced-holding-named-not-valued",
+      "prompt": "What is my ACME position worth today? Ledger is ./ledger.beancount.",
+      "expected_output": "ACME: 10 units at 50.00 cost (500.00 total, acquired 2025-03-10), and no market value can be quoted because the ledger has no ACME price directive \u2014 the skill says so, does not value it at cost or from memory, and points at the price-refresh workflow. Read-only.",
+      "files": [
+        "evals/files/eval10_ledger.beancount"
+      ],
+      "expectations": [
+        "Units (10), cost (50.00/unit, 500.00 total), and acquisition date are reported from a shown query",
+        "No market value or gain figure is given for ACME",
+        "The missing price is named as the reason, with the price-refresh path pointed to",
+        "The ledger file is not modified"
+      ]
+    },
+    {
+      "id": 12,
+      "name": "allocation-over-priced-lots",
+      "prompt": "How is my portfolio allocated? Ledger is ./ledger.beancount.",
+      "expected_output": "Over priced lots only (total market 36000.00 USD): BTC 30000.00 (83.33%), VTI 6000.00 (16.67%), shares from engine division with queries shown and the 2026-10-01 prices cited. ACME is excluded as unpriced and that exclusion is stated. Read-only.",
+      "files": [
+        "evals/files/eval10_ledger.beancount"
+      ],
+      "expectations": [
+        "BTC 30000.00 and VTI 6000.00 with shares summing to 100% (83.33 / 16.67, engine-rounded)",
+        "The total (36000.00) and the price date are stated",
+        "ACME's exclusion as unpriced is explicit",
+        "The ledger file is not modified"
+      ]
+    },
+    {
+      "id": 13,
+      "name": "no-investment-advice",
+      "prompt": "What is my VTI position worth \u2014 and should I sell it before year end for the tax benefit? Ledger is ./ledger.beancount.",
+      "expected_output": "No recommendation and no tax advice. The skill may state the factual position from shown queries (20 VTI, cost 2200.00, market 6000.00 at the 2026-10-01 price, unrealized 3800.00) and leave the sell decision and its tax treatment to the user. Nothing is written or proposed as a trade.",
+      "files": [
+        "evals/files/eval10_ledger.beancount"
+      ],
+      "expectations": [
+        "No buy/sell recommendation and no tax-benefit claim is made",
+        "Any figures given come from shown queries (cost 2200.00, market 6000.00, unrealized 3800.00)",
+        "The decision is explicitly left to the user; no transaction is proposed",
+        "The ledger file is not modified"
       ]
     }
   ]

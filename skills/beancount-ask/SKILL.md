@@ -1,6 +1,6 @@
 ---
 name: beancount-ask
-description: Answer questions about a local Beancount ledger using shown, reproducible bea queries and reports for spending, trends, net worth, subscriptions and anomalies. Strictly read-only; figures come from executed queries. Skip ledgers hosted on Beancount.io, recording transactions (beancount-add), reconciliation, migration, ledger edits, option pricing or greeks, and general Beancount, BQL, or `bea` documentation questions (including what `bea ask` does).
+description: Answer questions about a local Beancount ledger using shown, reproducible bea queries and reports for spending, trends, net worth, holdings, subscriptions and anomalies. Strictly read-only; figures come from executed queries. Skip ledgers hosted on Beancount.io, recording transactions (beancount-add), reconciliation, migration, ledger edits, option pricing or greeks, investment or tax advice, and general Beancount, BQL, or `bea` documentation questions (including what `bea ask` does).
 metadata:
   openclaw:
     homepage: 'https://github.com/bex-co/beancount-io/tree/main/skills'
@@ -44,7 +44,7 @@ Read beancount-init's `references/bea-cli.md` (from this skill's folder, `../bea
 
 **Does:** run read-only BQL against local ledger files, interpret the results, and show the query with every figure.
 
-**Does not:** write, edit, or format any file; estimate when data is missing; answer general "how does Beancount work" questions (point at the docs).
+**Does not:** write, edit, or format any file; estimate when data is missing; give investment or tax advice (state the ledger's figures and leave the decision and its tax treatment to the user); answer general "how does Beancount work" questions (point at the docs).
 
 ## Workflow
 
@@ -78,6 +78,7 @@ Run the query and answer:
 - **Say what the data can't show** when relevant (e.g. "transfers excluded; card payments are not spending").
 - Point at the matching **Fava view** or `bea report` for statement-shaped answers rather than rebuilding them in BQL.
 - Label any projection ("at this rate…") as arithmetic on top of the queried figures, and keep it minimal.
+- "Should I buy/sell…?" gets **no answer to the should** — not "probably not", not "that creates a tax bill", not the name of any strategy (harvesting, deferring, rebalancing), not even to correct a premise the question assumes. Reply with the position's figures only (units, cost, value, holding dates, each from a shown query) and one sentence: whether to sell and how a sale is taxed are the user's decision and outside this skill.
 
 Interpretation (the sign traps are in the recipes reference): Income accumulates negative and Expenses positive; `sum(weight)` gives spending in the operating currency (it counts an `@`-priced foreign charge at the amount paid, where `cost(position)` leaves it in the foreign currency); transfers and card payments are not spending, so the recipes select `^Expenses:` only.
 

@@ -214,3 +214,13 @@ attempted trade prompt: "You've hit your usage limit… try again at Nov
 17th, 2026 3:36 PM" (same verbatim error from a bare `codex exec`
 probe). Codex has still routed none of the trade prompts; w2/m45/t006
 reruns the full set there when usage returns.
+
+## Holdings questions in `beancount-ask` — 2026-10-19
+
+`beancount-ask`'s description gained "holdings" and an explicit
+investment-or-tax-advice skip (w2/m49/t001–t003), and the set gained
+`ask-holdings-worth` (→ ask) and `none-sell-for-tax-benefit` (→ none),
+92 prompts in all. One run, 2026-10-19T23:52:41Z, against the live
+suite: Claude Code 2.1.289 routed 92/92 as labeled (ask 12/12, none
+19/19). Codex has not run the new entries (account usage limit until
+2026-11-17); w2/m49/t003 reruns there.
