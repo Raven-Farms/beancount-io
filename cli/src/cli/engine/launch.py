@@ -565,7 +565,9 @@ def _run_helper(
     while it is being rendered. Dying by the signal instead made a
     supervisor's retry record the entry twice (w5/606). Any other stopped
     child still takes this process down with it: a read before a write must
-    not let the write run.
+    not let the write run. A worker-thread write is the exception: nothing
+    can forward a stop to it, so it runs shielded to completion and the
+    approved write always commits and reports (w5/731).
     """
     stopped: list[int] = []
     committed = False
@@ -578,8 +580,14 @@ def _run_helper(
             stderr=subprocess.PIPE,
             text=True,
             # Group delivery plus forwarding could otherwise interrupt cleanup twice.
-            # Worker threads cannot forward signals, so their helpers stay in the group.
-            start_new_session=sys.platform != "win32" and threading.current_thread() is threading.main_thread(),
+            # Worker threads cannot forward signals, so their reads stay in the
+            # group and die with the terminal's Ctrl-C. Their writes cannot be
+            # told to stop at all, so those run shielded instead: an approved
+            # write outlives the stop, commits, and reports, and the caller —
+            # an ask worker the turn outlived — joins it before reporting
+            # (w5/731). Only ask writes off the main thread.
+            start_new_session=sys.platform != "win32"
+            and (threading.current_thread() is threading.main_thread() or writes),
         ) as child:
             attach(child)
             # Read stderr here rather than in `communicate`, which hands it over
@@ -706,9 +714,10 @@ def _forwarding_teardown(
     ledger and drops it in a `finally`. That cleanup only runs if the child is
     told to stop. Main-thread calls give the helper a separate session, making
     this the only signal-delivery path: a terminal's group-wide Ctrl-C cannot
-    interrupt cleanup again after forwarding. Worker-thread calls keep their
-    helpers in the terminal's group because Python cannot install handlers
-    there. Signals aimed at the frontend alone, such as a supervisor's
+    interrupt cleanup again after forwarding. Worker-thread calls cannot
+    install handlers, so their reads keep their helpers in the terminal's
+    group; their writes run shielded to completion instead (w5/731).
+    Signals aimed at the frontend alone, such as a supervisor's
     termination request, also reach main-thread helpers through this path.
 
     Install before spawning and defer signals until the child handle is ready,
@@ -716,7 +725,9 @@ def _forwarding_teardown(
     restored after the child exits. Once the child is done we re-raise the signal
     with its default disposition, keeping the status the shell reports. A
     caller passing `stopped` gets the signal recorded there instead, and
-    decides once it has read the child's answer.
+    decides once it has read the child's answer. Worker-thread writes skip
+    this path's protection: no handlers install there, and their helpers run
+    shielded to completion instead (w5/731).
     """
     child: subprocess.Popen[str] | None = None
     pending: int | None = None

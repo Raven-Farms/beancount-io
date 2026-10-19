@@ -327,6 +327,13 @@ def run_repl(agent: Agent[BqlDeps, str], deps: BqlDeps, *, default_input: str | 
                 # A turn costs one Ctrl-C, not the session. `messages` is left as it
                 # was before the turn, so the next question still carries the history
                 # — and keeps this turn too if it wrote to the ledger.
+                deps.cancel_event.set()
+                # An approved write landing now still records first: the report
+                # below must name it. Queued workers see the flag and return
+                # without a panel or a write, and none outlives the turn to
+                # draw over the next prompt or hold the process open (w5/731).
+                with deps.write_lock:
+                    pass
                 messages = _history_after_a_failed_turn(messages, turn, deps)
                 done = f": {inert_text(written_so_far(deps))}" if deps.writes else ""
                 # Text, not markup: the file name is not ours to have interpreted.

@@ -164,6 +164,17 @@ class BqlDeps:
     #: told "nothing was written", a user retries and duplicates the entry
     #: (w1/095). `translated_failures` resets it at the start of every turn.
     writes: list[tuple[int, str]] = field(default_factory=list)
+    #: Set when the turn is interrupted: a write that has not shown its panel
+    #: returns "Write cancelled" instead of prompting or writing (w5/731).
+    #: Replaced every turn, and read through the snapshot a worker took when
+    #: its call started, so a worker the turn outlived still sees its own
+    #: turn's cancellation.
+    cancel_event: threading.Event = field(default_factory=threading.Event)
+    #: One write at a time: the SDK runs a reply's sync tools at once in
+    #: worker threads, and two consent selectors must never share the
+    #: terminal (w5/544). The REPL also takes it after an interrupt, so an
+    #: approved write landing then records before it is reported (w5/731).
+    write_lock: threading.Lock = field(default_factory=threading.Lock)
 
 
 def written_so_far(deps: BqlDeps | None) -> str:
@@ -204,10 +215,12 @@ def translated_failures(deps: BqlDeps | None = None) -> Iterator[None]:
     `deps` is the turn's state: its record of writes is cleared on entry, so
     every arm can say what this question actually wrote — "nothing" only when
     that is true — instead of a claim written for `--print`, where writes are
-    impossible (w1/095).
+    impossible (w1/095). The interrupt flag is replaced too, so last turn's
+    Ctrl-C never cancels this turn's writes (w5/731).
     """
     if deps is not None:
         deps.writes.clear()
+        deps.cancel_event = threading.Event()
     try:
         yield
     except ModelHTTPError as exc:
@@ -447,8 +460,6 @@ def make_agent(
     # and both dry runs predated either write (w5/544). One write at a time,
     # each dry run after the last write; a lock, not `sequential=True`, since
     # the ask extra accepts pydantic-ai releases older than that option.
-    write_lock = threading.Lock()
-
     @agent.tool()
     def write_directive(ctx: RunContext[BqlDeps], directive: str) -> str:
         """Append Beancount directive text (one or more directives) to the ledger file.
@@ -458,7 +469,15 @@ def make_agent(
         declines it; in non-interactive mode writes are skipped. Returns one line: how many
         directives were added and to which file, or why nothing was written.
         """
-        with write_lock:
+        # The turn's own flag, not the live one: the REPL replaces it every
+        # turn, and a worker the turn outlived must still see its own turn's
+        # cancellation (w5/731).
+        cancelled = ctx.deps.cancel_event
+        if cancelled.is_set():
+            return "Write cancelled"
+        with ctx.deps.write_lock:
+            if cancelled.is_set():
+                return "Write cancelled"
             perm = ctx.deps.write_permission
             if perm.deny_all:
                 return "Write denied (you denied all writes this session)."
@@ -468,7 +487,13 @@ def make_agent(
             try:
                 preview = launch.helper_json([*argv, "--dry-run"], stdin=directive)
             except BeaError as exc:
+                if cancelled.is_set():
+                    # The stop killed the dry run, not the directive (w5/731).
+                    return "Write cancelled"
                 return _write_rejection(exc)
+            if cancelled.is_set():
+                # The turn died during the dry run: no panel after it (w5/731).
+                return "Write cancelled"
             if not perm.approve_all:
                 if perm.confirm_fn is None:
                     return "Write skipped (non-interactive mode does not support writes)."
@@ -490,6 +515,9 @@ def make_agent(
                     return "Write denied."
                 elif answer == "n":
                     return "Write cancelled by user."
+            if cancelled.is_set():
+                # Answered, then the turn died before the write landed (w5/731).
+                return "Write cancelled"
             try:
                 result = launch.helper_json(
                     [*argv, "--token", json.dumps(preview["token"])],
@@ -497,6 +525,10 @@ def make_agent(
                     writes=True,
                 )
             except BeaError as exc:
+                if cancelled.is_set():
+                    # The turn is gone and its report is already decided; the
+                    # failure dies with it instead of misnaming it (w5/731).
+                    return "Write cancelled"
                 return _write_rejection(exc)
             ctx.deps.writes.append((int(result["written"]), str(result["target"])))
             return f"Added {result['written']} directive(s) to {result['target']}."
