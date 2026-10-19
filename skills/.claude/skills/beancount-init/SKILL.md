@@ -6,9 +6,8 @@ metadata: {"openclaw": {"homepage": "https://github.com/bex-co/beancount-io/tree
 
 # beancount-init
 
-Scaffold a fresh ledger in the current working directory. Prefer a single
-`bea` installation for create + validate. Fava's browser UI is optional and
-has its own runtime — it is not a prerequisite for `bea` ledger work.
+Scaffold a fresh ledger in the current working directory with one `bea`
+installation for create and validate.
 
 Run the steps in order. Stop if a preflight check fails — partial scaffolding
 is worse than no scaffolding.
@@ -22,7 +21,7 @@ Fava is a separate, optional browser runtime; run Step 4 only when requested.
 
 ## Step 1 — Preflight
 
-Local ledger files only. If the ledger is hosted on Beancount.io and its MCP server is connected, use that server's tools instead (beancount-init's `references/bea-cli.md`, Hosted ledgers).
+Local ledger files only. If the ledger is hosted on Beancount.io and its MCP server is connected, use that server's tools instead (`references/bea-cli.md`, Hosted ledgers).
 
 Run `pwd && ls -A` to see the working directory.
 
@@ -32,7 +31,8 @@ Run `pwd && ls -A` to see the working directory.
 If the directory contains other files but none of those markers, warn once and
 ask for confirmation before continuing.
 
-Check `command -v bea` and remember BEA (yes/no). Ask for the operating
+Check `bea` as `references/bea-cli.md` describes (installed, and at the
+suite's minimum version) and remember BEA (yes/no). Ask for the operating
 currency (default `USD`) and an optional checking opening balance; call the
 answers CURRENCY and OPENING (empty when none). Detect FAVA: yes when the
 user asked for Fava / `make start` / "bootstrap fava", otherwise ask once
@@ -48,7 +48,8 @@ them to install it (`brew install uv` on macOS, or
 Use the historical start date supplied by the user or beancount-migrate when
 present. It must be on/before the earliest entry, including any opening-balance
 transaction. Otherwise run `date +%Y-%m-%d` and use today. Call it `OPEN_DATE`.
-Do not scaffold with today's opens and then rewrite them for old history.
+Settle the date before writing: the opens are written once, not rewritten
+later for older history.
 
 ## Step 3 — Write `main.bean`
 
@@ -64,9 +65,9 @@ Add `--opening-balance "Assets:Checking OPENING"` to that command only when
 OPENING is non-empty. Then bind `ledger` to the new root's absolute path and
 run the check recipe in `references/bea-cli.md`.
 
-`bea init .` writes `./main.bean`. Do not write any template on this path — the
-file equals `bea init` byte-for-byte. Skip to Step 4 when FAVA is yes; otherwise
-Step 5.
+`bea init .` writes `./main.bean`, so on this path the file is exactly what
+`bea init` produced and no template is written by hand. Skip to Step 4 when
+FAVA is yes; otherwise Step 5.
 
 When BEA is no, use the fourteen-account template in
 `references/compatibility.md`, with the same currency, open date and optional
@@ -95,8 +96,7 @@ uv add fava
 
 `--bare` skips hello-world boilerplate. `uv add fava` pulls Fava's own runtime
 deps (including Beancount for the browser) into `.venv/` — that is Fava's
-environment, not a second customer CLI. Do **not** also `uv add beancount` for
-`bea` operations.
+environment, not a second customer CLI; `bea` operations need nothing more in it.
 
 ### Makefile
 
@@ -128,7 +128,7 @@ Print:
   `uv.lock`, `.venv/` when FAVA ran).
 - When BEA validated: `bea check` passed.
 - When FAVA: the port and `make start` → `http://localhost:<PORT>`.
-- When BEA only: next steps such as `bea check`, `bea import`, or
-  `bea --json query`.
+- Next steps: record an entry (beancount-add), import a bank export
+  (beancount-import), or ask a question (beancount-ask).
 
 Keep the report tight — one short line per item.

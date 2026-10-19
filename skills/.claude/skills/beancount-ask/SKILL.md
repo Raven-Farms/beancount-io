@@ -8,13 +8,17 @@ metadata: {"openclaw": {"homepage": "https://github.com/bex-co/beancount-io/tree
 
 Answer ledger questions with **shown, re-runnable BQL** — never with model arithmetic.
 
-This skill exists because a fluent-but-unverifiable answer about money is worse than no answer: the entire credibility of plain-text accounting is that every number is reproducible. So the contract is: every figure cited comes from a shown query execution, the query is shown with the answer, and the ledger is never modified. Prefer `bea` for reads. Read beancount-init's `references/bea-cli.md` before running ledger commands: it defines explicit root/destination paths, JSON batches, checks, and safe retries. Without `bea`, use beancount-init's `references/compatibility.md`.
+This skill exists because a fluent-but-unverifiable answer about money is worse than no answer: the entire credibility of plain-text accounting is that every number is reproducible. So every figure comes from a query run against the ledger, the query is shown with the answer, and the ledger is never modified.
+
+## Prefer `bea`
+
+Read beancount-init's `references/bea-cli.md` before running ledger commands: it binds the root ledger, lists the read recipes, explains valuation and missing prices, and records version notes. Without `bea`, use beancount-init's `references/compatibility.md`. Run the queries yourself: `bea ask` hands the question to another model, and its figures are not queries you can show.
 
 ## Scope
 
-**Does:** run read-only BQL against local ledger files; interpret results; show the query with every figure.
+**Does:** run read-only BQL against local ledger files, interpret the results, and show the query with every figure.
 
-**Does not:** write, edit, or format any file; guess or estimate when data is missing; answer general "how does beancount work" questions (point at docs); compute figures in-model (the query engine computes, the skill interprets).
+**Does not:** write, edit, or format any file; estimate when data is missing; answer general "how does Beancount work" questions (point at the docs).
 
 ## Workflow
 
@@ -22,9 +26,7 @@ This skill exists because a fluent-but-unverifiable answer about money is worse 
 
 Local ledger files only. If the ledger is hosted on Beancount.io and its MCP server is connected, use that server's `spending-report` prompt and tools instead (beancount-init's `references/bea-cli.md`, Hosted ledgers).
 
-Find the main ledger file (same procedure as the sibling skills: `fd -e beancount -e bean .`, main = the file with `option`/`include` directives). Confirm which file when ambiguous.
-
-Bind the discovered root as `ledger` and use the shared read recipes:
+Find the root ledger with the suite's discovery convention (`fd -e beancount -e bean .`; the root has `option`/`include` directives) and confirm it when ambiguous. Bind it as `ledger` for the shared read recipes:
 
 ```sh
 bea --file "$ledger" --json --no-input query "$query"
@@ -32,44 +34,26 @@ bea --file "$ledger" --json --no-input balance
 bea --file "$ledger" --json --no-input report income-statement --time "$month"
 ```
 
-`balance` and `report` value rows at market in the operating currency: under
-`--json` they exit 1 with `result.missing_prices` when a commodity has no
-price. Answer spending with the `weight` recipes, pass `-x at_cost` for book
-value, and disclose missing prices — that exit is not an engine failure.
-
-For entry searches, use root-scoped `list transaction --search/--tag/--link`;
-check truncation before treating a listing as complete. Use `report` for
-polished statements. Keep query execution here rather than delegating the
-question to another LLM via `bea ask`.
-
-For market values, existing managed price includes resolve during a `bea`
-load; `bea --file "$ledger" price status` reports freshness. Missing quotes
-or includes require a separate write workflow; this skill does not run
-`add price`, price refresh/export, or edit includes to answer a question.
+- **Spending** comes from the `weight` recipes. `balance` and `report` value at market, and a commodity without a price makes them exit 1 with `result.missing_prices` (a valuation gap, not an engine failure); pass `-x at_cost` for book value and disclose the missing prices.
+- **Entry searches** use root-scoped `list transaction --search/--tag/--link`, read to completion (beancount-init's `references/bea-cli.md`, Version notes, on `list` pages).
+- **Market values** come from the ledger's price directives and managed price includes, which resolve during a `bea` load; `bea --file "$ledger" price status` reports their freshness.
 
 ### 2. Translate the question
 
-Map the question to a recipe in `references/bql-recipes.md` — **read it first; every query there is tested**. Establish the period explicitly: "last month" etc. resolves against today's date; state the resolved date range in the answer. If the question is ambiguous ("how much do I spend?" — period? category? average or total?), **ask, don't assume** — a precise answer to the wrong question reads as authoritative and misleads.
+Map the question to a recipe in `references/bql-recipes.md` — **read it first; every query there is tested**. Resolve the period against today's date ("last month") and state the resolved range in the answer. When the question is ambiguous ("how much do I spend?" — which period, which categories, total or average?), ask which one the user means: a precise answer to the wrong question reads as authoritative.
 
 ### 3. Run, then answer
 
-Run the query. Answer format:
+Run the query and answer:
 
-- **Lead with the figure(s)**, in a sentence or small table.
-- **Show the query** underneath (collapsed/quoted is fine) so the user can re-run or refine it.
+- **Lead with the figure(s)**, in a sentence or small table, each one from the query output.
+- **Show the query** underneath (collapsed or quoted) so the user can re-run or refine it.
 - **Say what the data can't show** when relevant (e.g. "transfers excluded; card payments are not spending").
-- Point at the matching **Fava view** for browsing (Income Statement / Balance Sheet / Journal with a filter) when one exists.
+- Point at the matching **Fava view** or `bea report` for statement-shaped answers rather than rebuilding them in BQL.
+- Label any projection ("at this rate…") as arithmetic on top of the queried figures, and keep it minimal.
 
-Interpretation rules (the classic sign traps are in the recipes reference): Income accounts accumulate negative; Expenses positive; `sum(weight)` for USD spending totals (it counts an `@`-priced foreign charge at the USD paid; `cost(position)` leaves it in the foreign currency); transfers and credit-card payments are **not** spending — recipes exclude them by selecting `^Expenses:` only.
+Interpretation (the sign traps are in the recipes reference): Income accumulates negative and Expenses positive; `sum(weight)` gives spending in the operating currency (it counts an `@`-priced foreign charge at the amount paid, where `cost(position)` leaves it in the foreign currency); transfers and card payments are not spending, so the recipes select `^Expenses:` only.
 
 ### 4. When the data can't answer
 
-Missing period, no such account/payee, ledger doesn't track it (e.g. market values without price directives or a managed include): say exactly what's missing and what would make it answerable. **Never estimate.** If the answer needs a write (adding price directives, opening accounts), that's another skill's job — name it and stop.
-
-## What NOT to do
-
-- Don't state any figure that didn't come out of the query you show.
-- Don't modify, format, or "fix" any file — read-only, no exceptions.
-- Don't answer an ambiguous question by picking an interpretation silently.
-- Don't rebuild Fava's statements in BQL when pointing at Fava/`bea report` serves better.
-- Don't extrapolate ("at this rate you'll…") without labeling it as arithmetic on top of queried figures — and keep even that minimal.
+A missing period, no such account or payee, or something the ledger doesn't track (market values without prices): say exactly what is missing and what would make it answerable. Never estimate. When the answer needs a write — adding prices, opening an account, refreshing a price include — name the skill or workflow that does it and stop; this skill only reads.

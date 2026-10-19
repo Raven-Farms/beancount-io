@@ -1,9 +1,8 @@
 # Explicit compatibility paths
 
 Use these only when `bea` is absent, or for the separate runtimes below.
-An installed but failing `bea` needs repair; do not silently switch engines.
-Suggest installing `bea` first. Do not prescribe `pip install beancount` as recovery.
-Do not prescribe `pip install beanquery` as recovery either.
+An installed but failing `bea` is repaired, not swapped for another engine.
+When `bea` is missing, suggest installing it rather than `pip install beancount` or `pip install beanquery`.
 
 ## Existing developer tools without `bea`
 
