@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [757 — £ and ₩ are treated as GBP/KRW only; GIP, FKP, SHP, EGP and KPW exports are refused](./757.md)
 - [758 — Bank-export framing (preamble, sep=, repeated header, footer) cannot be imported; refusal advice cannot work](./758.md)
 - [759 — format refuses #tag/0 and ^link/0 as division by zero; 100/(0) still kills the batch (regression/incomplete fix of w5/565)](./759.md)
 - [760 — Four query shapes still leak raw Python errors (ORDER BY mixed meta, DISTINCT subquery set, joinstr(accounts), DISTINCT meta)](./760.md)
