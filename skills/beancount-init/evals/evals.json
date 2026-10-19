@@ -12,7 +12,9 @@
         "main.bean opens exactly the fourteen template accounts (Checking, Savings, Cash, CreditCard, Salary, Interest, Groceries, Dining, Rent, Transport, Utilities, Fees, Uncategorized, OpeningBalances)",
         "The equity account is spelled `Equity:OpeningBalances`",
         "`bea check` passes with no errors",
-        "No `pip install beancount` / `uv add beancount` and no private engine-path configuration"
+        "No `pip install beancount` / `uv add beancount` and no private engine-path configuration",
+        "AGENTS.md exists, names main.bean as the root file, lists the opened accounts, and requires a passing root `bea check` before work counts as done",
+        "CLAUDE.md exists and contains only the `@AGENTS.md` import line"
       ]
     },
     {
@@ -36,6 +38,20 @@
         "main.bean comes from bea init; validated with bea check",
         "uv add fava runs; uv add beancount does not",
         "Makefile start recipe runs `uv run fava main.bean -p $(PORT)`"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "init-keeps-existing-agents-md",
+      "prompt": "Set up a new beancount ledger here (USD, no opening balance, no Fava) — yes, use this directory even though my AGENTS.md is already here. `bea` is on PATH.",
+      "files": [
+        "evals/files/eval4_AGENTS.md"
+      ],
+      "expected_output": "The skill scaffolds main.bean with bea init and validates it, but the pre-existing AGENTS.md is byte-identical afterwards; it is never overwritten or appended to. The report does not claim the user's file as created.",
+      "expectations": [
+        "AGENTS.md is byte-identical to the fixture after the run",
+        "main.bean exists and `bea check` passes",
+        "The skill does not replace the user's AGENTS.md contents with the ledger template"
       ]
     }
   ]

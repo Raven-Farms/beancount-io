@@ -141,16 +141,26 @@ Overwrite whatever `uv init --bare` wrote with a `.gitignore` covering `.venv/`,
 `.fava/`, Python build and cache artifacts, and common OS/editor files
 (`.DS_Store`, `.idea/`, `.vscode/`).
 
-## Step 5 — `git init` (only if needed)
+## Step 5 — Write the ledger instructions
+
+Write `AGENTS.md` from `references/agents-template.md`, substituting the
+currency and the account names read back from `main.bean`, plus the one-line
+`CLAUDE.md` (`@AGENTS.md`) — each only when that file does not already exist.
+Never overwrite an existing `AGENTS.md` or `CLAUDE.md`; if `AGENTS.md`
+pre-existed, leave it and offer the bridge instead of writing unasked. The
+template reference holds the exact text and rules.
+
+## Step 6 — `git init` (only if needed)
 
 If `.git/` does not already exist, run `git init`. Don't stage anything.
 
-## Step 6 — Report
+## Step 7 — Report
 
 Print:
 
-- Files created (`main.bean`; plus `Makefile`, `.gitignore`, `pyproject.toml`,
-  `uv.lock`, `.venv/` when FAVA ran).
+- Files created (`main.bean`, `AGENTS.md`, `CLAUDE.md` when written; plus
+  `Makefile`, `.gitignore`, `pyproject.toml`, `uv.lock`, `.venv/` when FAVA
+  ran).
 - When BEA validated: `bea check` passed.
 - When FAVA: the port and `make start` → `http://localhost:<PORT>`.
 - Next steps: record an entry (beancount-add), import a bank export
