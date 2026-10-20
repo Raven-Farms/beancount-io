@@ -1887,6 +1887,10 @@ validated. This measures observation age, not exchange trading hours.
 `observed-at` stamps compare as instants; a stamp without an offset (or a bare
 date) reads as UTC, and one more than five minutes ahead of the clock reads
 `stale`.
+A URL include the origin policy refuses (managed price includes disabled, an
+origin not in `MANAGED_PRICE_ORIGINS`) is no source and is never fetched;
+`price status` lists it under `Refused URL includes` with its reason (JSON:
+`refused`, one `{url, reason}` each) beside the load error that names its line.
 A failed refresh never replaces the last good revision. `--offline` never writes
 the price cache. A cache that cannot be written still loads its prices, with a
 `price cache not writable` warning and source error. Explicit `price refresh`

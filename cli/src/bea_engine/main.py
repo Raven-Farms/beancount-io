@@ -767,19 +767,25 @@ def price_status(
 ) -> None:
     """Report every managed price include in the ledger with its freshness.
 
-    Answers `{"sources": [...], "errors": [...]}`: one record per resolved
-    URL with alias, revision, observed-at, fetched-at, next refresh,
-    freshness computed at read time, shadowed count, and the last error when
-    any, plus the load's own errors for the frontend to banner. Status never
-    fails on ledger errors; only strict mode fails it, on stale sources.
+    Answers `{"sources": [...], "refused": [...], "errors": [...]}`: one
+    record per resolved URL with alias, revision, observed-at, fetched-at,
+    next refresh, freshness computed at read time, shadowed count, and the
+    last error when any; one `{url, reason}` per URL include the origin policy
+    refused, which is never fetched; plus the load's own errors for the
+    frontend to banner. Status never fails on ledger errors; only strict mode
+    fails it, on stale sources.
     """
     with protocol.answering("price-status") as answer:
         from bea_engine import managed_load
+        from bea_engine.ledger.write import LedgerSnapshot
         from bea_engine.query import format_error
 
-        loaded = managed_load.load_with_sources(_ledger(file))
+        ledger = _ledger(file)
+        loaded = managed_load.load_with_sources(ledger)
+        refused = managed_load.refused_includes(LedgerSnapshot.capture(ledger))
         answer.data = {
             "sources": [managed_load.source_json(source) for source in loaded.sources],
+            "refused": [{"url": url, "reason": reason} for url, reason in refused.items()],
             "errors": [format_error(error) for error in loaded.errors],
         }
 

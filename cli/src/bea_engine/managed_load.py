@@ -1289,6 +1289,17 @@ class _PendingSource:
     includes: list[IncludeRef]
 
 
+def refused_includes(snapshot: LedgerSnapshot, origins: tuple[str, ...] | None = None) -> dict[str, str]:
+    """Each URL include the origin policy refuses, with why.
+
+    A refused include is no source, so the load's sources never list it; status
+    said there were no managed includes right below the refusal (w5/861).
+    """
+    refused: dict[str, str] = {}
+    _collect_managed(snapshot, _allowed_origins(origins), refused)
+    return refused
+
+
 def _collect_managed(
     snapshot: Any, origins: tuple[str, ...], refused: dict[str, str] | None = None
 ) -> list[_PendingSource]:
@@ -1712,8 +1723,7 @@ def export_portable(
     # A refused URL include is no source, so the check above never saw it, and
     # the "self-contained" snapshot kept the URL for stock tools to fail on
     # (w5/479). Refused alike; `--allow-errors` comments it out as the load does.
-    refused: dict[str, str] = {}
-    _collect_managed(snapshot, _allowed_origins(origins), refused)
+    refused = refused_includes(snapshot, origins)
     if refused and not allow_errors:
         refusals = "; ".join(f'include "{url}" was refused: {why}' for url, why in refused.items())
         raise UsageError(

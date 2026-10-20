@@ -98,15 +98,22 @@ def _status(extra: list[str]) -> None:
     file = current.entry_file()
     data = _answer(["price-status", "--file", str(file)], table_covers_sources=True)
     sources: list[dict[str, Any]] = data["sources"]
+    refused: list[dict[str, str]] = data.get("refused") or []
     if current.json_output:
         output.emit(
-            {"sources": sources},
+            {"sources": sources, "refused": refused},
             target=output.file_target(file),
             ledger_errors=[output.format_ledger_error(error) for error in data.get("errors") or []],
         )
         return
+    # A refused URL include is still an include: "no managed price includes"
+    # right below its refusal denied what the line above reported (w5/861).
+    if refused:
+        typer.echo(f"Refused URL includes ({len(refused)}), never fetched:")
+        for include in refused:
+            typer.echo(f"  {include['url']}: {include['reason']}")
     if not sources:
-        typer.echo("No managed price includes in this ledger.")
+        typer.echo("No usable managed price sources." if refused else "No managed price includes in this ledger.")
         return
     output.table(
         ["ALIAS", "FRESHNESS", "REVISION", "OBSERVED AT", "NEXT REFRESH", "SHADOWED", "ERROR"],
