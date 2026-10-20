@@ -272,10 +272,27 @@ _SEPARATOR_NAMES = {",": "comma", ";": "semicolon", "\t": "tab", "|": "pipe"}
 
 
 def _unsplit_header(headers: list[str] | None, used: str) -> tuple[str, str] | None:
-    """A one-cell header and the separator it holds that the delimiter in force is not (w5/622)."""
+    """A one-cell header and the separator splitting it into the most cells, when the one in force did not (w5/622).
+
+    The first separator present was named, so `Date;Payee, Name;Amount` was
+    called comma-separated and the advice failed when followed (w5/845).
+    """
+    import csv
+
     single = headers[0] if headers and len(headers) == 1 else None
-    other = next((sep for sep in _SEPARATOR_NAMES if single and sep != used and sep in single), None)
-    return (single, other) if single is not None and other is not None else None
+    if single is None:
+        return None
+    best, cells = None, 1
+    for sep in _SEPARATOR_NAMES:
+        if sep == used:
+            continue
+        try:
+            count = len(next(csv.reader([single], delimiter=sep, strict=True), []))
+        except csv.Error:
+            continue
+        if count > cells:
+            best, cells = sep, count
+    return (single, best) if best is not None else None
 
 
 def _display_delimiter(delim: str) -> str:
@@ -1354,6 +1371,9 @@ def import_entries(
             argv += ["--default-account", default_account]
         if csv_delimiter is not None:
             argv += ["--delimiter", "tab" if csv_delimiter == "\t" else csv_delimiter]
+            if flag_delimiter is None and spec_delimiter is not None and csv_origin == "--csv":
+                # Its advice names `delimiter=` in --csv, where it was given (w5/845).
+                argv += ["--delimiter-source", "--csv"]
         if csv_rules_arg is not None:
             argv += ["--rules", str(csv_rules_arg)]
         if not remembered_run:

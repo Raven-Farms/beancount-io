@@ -553,6 +553,9 @@ def import_entries(
     config_source: Annotated[
         str, typer.Option("--config-source", help="Label for how the importer/mapping was chosen (for the preview).")
     ] = "--config",
+    delimiter_source: Annotated[
+        str, typer.Option("--delimiter-source", help="Where the delimiter was given: --delimiter or --csv.")
+    ] = "--delimiter",
 ) -> None:
     """Extract bank-export entries, review duplicates, optionally append.
 
@@ -597,6 +600,7 @@ def import_entries(
                 into=into,
                 allow_errors=allow_errors,
                 config_source=config_source,
+                delimiter_source=delimiter_source,
             )
 
 

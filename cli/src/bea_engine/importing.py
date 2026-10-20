@@ -164,6 +164,7 @@ def answer(
     into: Path | None = None,
     allow_errors: bool = False,
     config_source: str = "--config",
+    delimiter_source: str = "--delimiter",
 ) -> dict[str, Any]:
     """Extract, review, optionally write, and answer with the preview payload.
 
@@ -267,6 +268,7 @@ def answer(
             account_roots=roots,
             forced_decimal_comma=(resolved_decimal == "comma") if resolved_decimal is not None else None,
             skip=skip,
+            delimiter_source=delimiter_source,
         )
         preview_config = csv_mapping
         try:

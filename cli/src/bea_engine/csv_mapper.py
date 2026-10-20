@@ -998,10 +998,19 @@ _SEPARATOR_NAMES = {",": "comma", ";": "semicolon", "\t": "tab", "|": "pipe"}
 
 
 def unsplit_header(headers: list[str], used: str | None) -> str | None:
-    """The separator a one-column header holds when the delimiter in force did not split it, or None."""
+    """The separator that splits a one-column header into the most cells, when the one in force did not.
+
+    The first one present was named, so `Date;Payee, Name;Amount` was called
+    comma-separated, and following that advice failed on "lacks" (w5/845).
+    """
     if len(headers) != 1:
         return None
-    return next((sep for sep in _SEPARATOR_NAMES if sep != used and sep in headers[0]), None)
+    best, cells = None, 1
+    for sep in _SEPARATOR_NAMES:
+        count = _field_count(headers[0], sep) if sep != used else None
+        if count is not None and count > cells:
+            best, cells = sep, count
+    return best
 
 
 def _shown_delimiter(delimiter: str | None) -> str:
@@ -1287,7 +1296,9 @@ class CsvImporter:
         account_roots: Collection[str] | None = None,
         forced_decimal_comma: bool | None = None,
         skip: int = 0,
+        delimiter_source: str = "--delimiter",
     ) -> None:
+        self._delimiter_source = delimiter_source
         if not _has_year_directive(date_format):
             raise UsageError(
                 f"--date-format {date_format!r} has no year directive (%Y, %y or %G), so every row would be read "
@@ -1406,10 +1417,17 @@ class CsvImporter:
                 if other is not None:
                     # A forced delimiter that does not split the header read as
                     # a missing `Date` column, plainly present (w5/622).
+                    # In the spelling the delimiter was given in: `--delimiter`
+                    # beside a `--csv …,delimiter=` refuses as conflicting (w5/845).
+                    remedy = (
+                        f"Change delimiter= in --csv to {_shown_delimiter(other)}, or remove it so bea detects it."
+                        if self._delimiter_source == "--csv"
+                        else f"Pass --delimiter {_shown_delimiter(other)}, or omit --delimiter so bea detects it."
+                    )
                     raise UsageError(
                         f"{source.name}'s header was read as one column ({headers[0]!r}) with delimiter "
                         f"{_shown_delimiter(self._delimiter)}, but it looks {_SEPARATOR_NAMES[other]}-separated. "
-                        f"Pass --delimiter {_shown_delimiter(other)}, or omit --delimiter so bea detects it."
+                        + remedy
                     )
                 found = _header_line_for(source, column, self._delimiter, self._encoding)
                 if found is not None and found[1] != self._skip:
