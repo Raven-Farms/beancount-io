@@ -9,6 +9,7 @@ import {
 import { isUnauthenticatedError } from "@/common/apollo/links/auth-error-link";
 import { track } from "@/common/analytics";
 import type { Token } from "@/common/types/token";
+import { readAuthRetry } from "@/features/auth/lib/auth-retry";
 
 /**
  * The sign-in-specific message for a refused password sign-in, or null for one
@@ -36,10 +37,14 @@ export function useLoginForm({ onSuccess }: UseLoginFormOptions) {
   const formatError = useErrorMessage();
   const [serverError, setServerError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [refusal, setRefusal] = useState<ReturnType<typeof readAuthRetry>>({
+    isRateLimited: false,
+  });
   const [signIn] = useMutation(SignInDocument);
 
   const onSubmit = async (data: { email: string; password: string }) => {
     setServerError("");
+    setRefusal({ isRateLimited: false });
     setIsLoading(true);
     try {
       const result = await signIn({
@@ -56,6 +61,7 @@ export function useLoginForm({ onSuccess }: UseLoginFormOptions) {
         setServerError(t("auth.loginFailed"));
       }
     } catch (err: unknown) {
+      setRefusal(readAuthRetry(err));
       const key = signInRefusalKey(err);
       setServerError(key ? t(key) : formatError(err));
     } finally {
@@ -63,5 +69,5 @@ export function useLoginForm({ onSuccess }: UseLoginFormOptions) {
     }
   };
 
-  return { onSubmit, isLoading, serverError };
+  return { onSubmit, isLoading, serverError, ...refusal };
 }

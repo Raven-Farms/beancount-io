@@ -719,6 +719,77 @@ const skAuth: Record<string, TranslationEntry> = {
     message: "Spravujte účtovné knihy a spolupracovníkov",
     description: "Description of the ledger admin mobile permission",
   },
+  "auth.recoveryTitle": {
+    message: "Overte e-mail a prihláste sa",
+    description:
+      "Title of the email ownership verification step for sign-in recovery",
+  },
+  "auth.recoveryDescription": {
+    message:
+      "Otvorte odkaz v e-maile na obnovenie prístupu a zadajte kód z e-mailu a svoje aktuálne heslo.",
+    description: "Instructions for continuing from the sign-in recovery email",
+  },
+  "auth.recoverySendEmail": {
+    message: "Odoslať e-mail na obnovenie prístupu",
+    description: "Button requesting a sign-in recovery email",
+  },
+  "auth.recoverySending": {
+    message: "Odosiela sa e-mail na obnovenie prístupu...",
+    description: "Pending state while requesting a sign-in recovery email",
+  },
+  "auth.recoverySent": {
+    message:
+      "Ak k tejto adrese existuje účet, čoskoro dostanete e-mail na obnovenie prístupu. Pokračujte otvorením odkazu v e-maile. Nedávno doručený e-mail na obnovenie prístupu je stále platný.",
+    description:
+      "Uniform confirmation after requesting recovery; previous valid recovery emails remain usable",
+  },
+  "auth.recoveryResend": {
+    message: "Odoslať ďalší e-mail na obnovenie prístupu",
+    description: "Button requesting another sign-in recovery email",
+  },
+  "auth.recoveryRetryAt": {
+    message: "Skúste to znova o {time}.",
+    description:
+      "Absolute local retry time after throttling; {time} is formatted using the active locale",
+  },
+  "auth.recoveryCode": {
+    message: "Šesťmiestny overovací kód",
+    description: "Accessible label for the sign-in recovery email code",
+  },
+  "auth.recoveryCodeInvalid": {
+    message: "Zadajte šesťmiestny kód z e-mailu na obnovenie prístupu.",
+    description:
+      "Validation error when the recovery code is not exactly six digits",
+  },
+  "auth.recoveryFailed": {
+    message:
+      "E-mail, kód alebo heslo je nesprávne, alebo platnosť kódu vypršala. Môžete požiadať o nový e-mail na obnovenie prístupu.",
+    description:
+      "Uniform invalid-credentials or expired-code error during sign-in recovery",
+  },
+  "auth.recoveryRequestFailed": {
+    message:
+      "Nepodarilo sa vyžiadať e-mail na obnovenie prístupu. Skúste to znova.",
+    description: "Error when requesting a sign-in recovery email fails",
+  },
+  "auth.recoveryUnavailable": {
+    message: "Prihlásenie je dočasne nedostupné. Skúste to znova.",
+    description: "Temporary service outage during sign-in recovery",
+  },
+  "auth.recoveryExpiry": {
+    message:
+      "Platnosť kódu vyprší po 10 minútach a umožňuje jeden pokus o zadanie hesla.",
+    description:
+      "Explains the expiry and single password-attempt limit of a recovery code",
+  },
+  "auth.recoverySubmit": {
+    message: "Overiť a prihlásiť sa",
+    description: "Button submitting the recovery code and current password",
+  },
+  "auth.recoveryVerifying": {
+    message: "Overuje sa...",
+    description: "Pending state while verifying the recovery code and password",
+  },
 };
 
 export default skAuth;

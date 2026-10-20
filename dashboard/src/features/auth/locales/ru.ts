@@ -722,6 +722,77 @@ const ruAuth: Record<string, TranslationEntry> = {
     message: "Управление реестрами и соавторами",
     description: "Description of the ledger admin mobile permission",
   },
+  "auth.recoveryTitle": {
+    message: "Подтвердите почту для входа",
+    description:
+      "Title of the email ownership verification step for sign-in recovery",
+  },
+  "auth.recoveryDescription": {
+    message:
+      "Откройте ссылку в письме для восстановления входа, затем введите код из письма и текущий пароль.",
+    description: "Instructions for continuing from the sign-in recovery email",
+  },
+  "auth.recoverySendEmail": {
+    message: "Отправить письмо для восстановления входа",
+    description: "Button requesting a sign-in recovery email",
+  },
+  "auth.recoverySending": {
+    message: "Отправка письма для восстановления входа...",
+    description: "Pending state while requesting a sign-in recovery email",
+  },
+  "auth.recoverySent": {
+    message:
+      "Если для этого адреса есть аккаунт, скоро придёт письмо для восстановления входа. Откройте ссылку из письма, чтобы продолжить. Недавно полученное письмо всё ещё действительно.",
+    description:
+      "Uniform confirmation after requesting recovery; previous valid recovery emails remain usable",
+  },
+  "auth.recoveryResend": {
+    message: "Отправить ещё одно письмо для восстановления входа",
+    description: "Button requesting another sign-in recovery email",
+  },
+  "auth.recoveryRetryAt": {
+    message: "Повторите попытку в {time}.",
+    description:
+      "Absolute local retry time after throttling; {time} is formatted using the active locale",
+  },
+  "auth.recoveryCode": {
+    message: "Шестизначный код подтверждения",
+    description: "Accessible label for the sign-in recovery email code",
+  },
+  "auth.recoveryCodeInvalid": {
+    message: "Введите шестизначный код из письма для восстановления входа.",
+    description:
+      "Validation error when the recovery code is not exactly six digits",
+  },
+  "auth.recoveryFailed": {
+    message:
+      "Неверный адрес почты, код или пароль либо срок действия кода истёк. Вы можете запросить новое письмо для восстановления входа.",
+    description:
+      "Uniform invalid-credentials or expired-code error during sign-in recovery",
+  },
+  "auth.recoveryRequestFailed": {
+    message:
+      "Не удалось запросить письмо для восстановления входа. Попробуйте ещё раз.",
+    description: "Error when requesting a sign-in recovery email fails",
+  },
+  "auth.recoveryUnavailable": {
+    message: "Вход временно недоступен. Попробуйте ещё раз.",
+    description: "Temporary service outage during sign-in recovery",
+  },
+  "auth.recoveryExpiry": {
+    message:
+      "Код действует 10 минут и позволяет выполнить одну попытку ввода пароля.",
+    description:
+      "Explains the expiry and single password-attempt limit of a recovery code",
+  },
+  "auth.recoverySubmit": {
+    message: "Подтвердить и войти",
+    description: "Button submitting the recovery code and current password",
+  },
+  "auth.recoveryVerifying": {
+    message: "Проверка...",
+    description: "Pending state while verifying the recovery code and password",
+  },
 };
 
 export default ruAuth;

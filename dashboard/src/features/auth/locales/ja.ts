@@ -719,6 +719,77 @@ const jaAuth: Record<string, TranslationEntry> = {
     message: "台帳と共同作業者を管理する",
     description: "Description of the ledger admin mobile permission",
   },
+  "auth.recoveryTitle": {
+    message: "メールアドレスを確認してログイン",
+    description:
+      "Title of the email ownership verification step for sign-in recovery",
+  },
+  "auth.recoveryDescription": {
+    message:
+      "ログイン復旧メールのリンクを開き、メールに記載されたコードと現在のパスワードを入力してください。",
+    description: "Instructions for continuing from the sign-in recovery email",
+  },
+  "auth.recoverySendEmail": {
+    message: "ログイン復旧メールを送信",
+    description: "Button requesting a sign-in recovery email",
+  },
+  "auth.recoverySending": {
+    message: "ログイン復旧メールを送信中...",
+    description: "Pending state while requesting a sign-in recovery email",
+  },
+  "auth.recoverySent": {
+    message:
+      "このメールアドレスのアカウントがある場合は、まもなくログイン復旧メールが届きます。メールのリンクを開いて続けてください。最近届いた復旧メールも引き続き利用できます。",
+    description:
+      "Uniform confirmation after requesting recovery; previous valid recovery emails remain usable",
+  },
+  "auth.recoveryResend": {
+    message: "ログイン復旧メールを再送信",
+    description: "Button requesting another sign-in recovery email",
+  },
+  "auth.recoveryRetryAt": {
+    message: "{time} にもう一度お試しください。",
+    description:
+      "Absolute local retry time after throttling; {time} is formatted using the active locale",
+  },
+  "auth.recoveryCode": {
+    message: "6 桁の確認コード",
+    description: "Accessible label for the sign-in recovery email code",
+  },
+  "auth.recoveryCodeInvalid": {
+    message: "ログイン復旧メールに記載された 6 桁のコードを入力してください。",
+    description:
+      "Validation error when the recovery code is not exactly six digits",
+  },
+  "auth.recoveryFailed": {
+    message:
+      "メールアドレス、コード、パスワードのいずれかが正しくないか、コードの有効期限が切れています。新しいログイン復旧メールをリクエストできます。",
+    description:
+      "Uniform invalid-credentials or expired-code error during sign-in recovery",
+  },
+  "auth.recoveryRequestFailed": {
+    message:
+      "ログイン復旧メールをリクエストできませんでした。もう一度お試しください。",
+    description: "Error when requesting a sign-in recovery email fails",
+  },
+  "auth.recoveryUnavailable": {
+    message: "現在、一時的にログインできません。もう一度お試しください。",
+    description: "Temporary service outage during sign-in recovery",
+  },
+  "auth.recoveryExpiry": {
+    message:
+      "コードは 10 分で有効期限が切れ、パスワードの確認に一度だけ使用できます。",
+    description:
+      "Explains the expiry and single password-attempt limit of a recovery code",
+  },
+  "auth.recoverySubmit": {
+    message: "確認してログイン",
+    description: "Button submitting the recovery code and current password",
+  },
+  "auth.recoveryVerifying": {
+    message: "確認中...",
+    description: "Pending state while verifying the recovery code and password",
+  },
 };
 
 export default jaAuth;

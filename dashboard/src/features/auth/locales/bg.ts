@@ -719,6 +719,76 @@ const bgAuth: Record<string, TranslationEntry> = {
     message: "Управлявайте счетоводни книги и сътрудници",
     description: "Description of the ledger admin mobile permission",
   },
+  "auth.recoveryTitle": {
+    message: "Потвърдете имейла си, за да влезете",
+    description:
+      "Title of the email ownership verification step for sign-in recovery",
+  },
+  "auth.recoveryDescription": {
+    message:
+      "Отворете връзката в имейла за възстановяване на достъпа, след което въведете кода от него и текущата си парола.",
+    description: "Instructions for continuing from the sign-in recovery email",
+  },
+  "auth.recoverySendEmail": {
+    message: "Изпращане на имейл за възстановяване",
+    description: "Button requesting a sign-in recovery email",
+  },
+  "auth.recoverySending": {
+    message: "Изпращане на имейл за възстановяване...",
+    description: "Pending state while requesting a sign-in recovery email",
+  },
+  "auth.recoverySent": {
+    message:
+      "Ако има акаунт с този адрес, скоро ще получите имейл за възстановяване на достъпа. Отворете връзката в него, за да продължите. Скорошен имейл за възстановяване все още е валиден.",
+    description:
+      "Uniform confirmation after requesting recovery; previous valid recovery emails remain usable",
+  },
+  "auth.recoveryResend": {
+    message: "Изпращане на нов имейл за възстановяване",
+    description: "Button requesting another sign-in recovery email",
+  },
+  "auth.recoveryRetryAt": {
+    message: "Опитайте отново в {time}.",
+    description:
+      "Absolute local retry time after throttling; {time} is formatted using the active locale",
+  },
+  "auth.recoveryCode": {
+    message: "Шестцифрен код за потвърждение",
+    description: "Accessible label for the sign-in recovery email code",
+  },
+  "auth.recoveryCodeInvalid": {
+    message: "Въведете шестцифрения код от имейла за възстановяване.",
+    description:
+      "Validation error when the recovery code is not exactly six digits",
+  },
+  "auth.recoveryFailed": {
+    message:
+      "Имейлът, кодът или паролата са неправилни или кодът е изтекъл. Можете да поискате нов имейл за възстановяване.",
+    description:
+      "Uniform invalid-credentials or expired-code error during sign-in recovery",
+  },
+  "auth.recoveryRequestFailed": {
+    message: "Неуспешна заявка за имейл за възстановяване. Опитайте отново.",
+    description: "Error when requesting a sign-in recovery email fails",
+  },
+  "auth.recoveryUnavailable": {
+    message: "Влизането временно не е достъпно. Опитайте отново.",
+    description: "Temporary service outage during sign-in recovery",
+  },
+  "auth.recoveryExpiry": {
+    message:
+      "Кодът изтича след 10 минути и важи за един опит за въвеждане на парола.",
+    description:
+      "Explains the expiry and single password-attempt limit of a recovery code",
+  },
+  "auth.recoverySubmit": {
+    message: "Потвърждаване и вход",
+    description: "Button submitting the recovery code and current password",
+  },
+  "auth.recoveryVerifying": {
+    message: "Потвърждаване...",
+    description: "Pending state while verifying the recovery code and password",
+  },
 };
 
 export default bgAuth;

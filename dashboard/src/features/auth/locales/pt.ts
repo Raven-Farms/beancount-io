@@ -721,6 +721,77 @@ const ptAuth: Record<string, TranslationEntry> = {
     message: "Gerenciar livros contábeis e colaboradores",
     description: "Description of the ledger admin mobile permission",
   },
+  "auth.recoveryTitle": {
+    message: "Verifique seu e-mail para entrar",
+    description:
+      "Title of the email ownership verification step for sign-in recovery",
+  },
+  "auth.recoveryDescription": {
+    message:
+      "Abra o link do e-mail de recuperação e informe o código recebido e sua senha atual.",
+    description: "Instructions for continuing from the sign-in recovery email",
+  },
+  "auth.recoverySendEmail": {
+    message: "Enviar e-mail de recuperação",
+    description: "Button requesting a sign-in recovery email",
+  },
+  "auth.recoverySending": {
+    message: "Enviando e-mail de recuperação...",
+    description: "Pending state while requesting a sign-in recovery email",
+  },
+  "auth.recoverySent": {
+    message:
+      "Se houver uma conta com este endereço, um e-mail de recuperação chegará em breve. Abra o link para continuar. Um e-mail de recuperação recente continua válido.",
+    description:
+      "Uniform confirmation after requesting recovery; previous valid recovery emails remain usable",
+  },
+  "auth.recoveryResend": {
+    message: "Enviar outro e-mail de recuperação",
+    description: "Button requesting another sign-in recovery email",
+  },
+  "auth.recoveryRetryAt": {
+    message: "Tente novamente às {time}.",
+    description:
+      "Absolute local retry time after throttling; {time} is formatted using the active locale",
+  },
+  "auth.recoveryCode": {
+    message: "Código de verificação de seis dígitos",
+    description: "Accessible label for the sign-in recovery email code",
+  },
+  "auth.recoveryCodeInvalid": {
+    message: "Informe o código de seis dígitos do e-mail de recuperação.",
+    description:
+      "Validation error when the recovery code is not exactly six digits",
+  },
+  "auth.recoveryFailed": {
+    message:
+      "O e-mail, o código ou a senha está incorreto, ou o código expirou. Você pode solicitar um novo e-mail de recuperação.",
+    description:
+      "Uniform invalid-credentials or expired-code error during sign-in recovery",
+  },
+  "auth.recoveryRequestFailed": {
+    message:
+      "Não foi possível solicitar o e-mail de recuperação. Tente novamente.",
+    description: "Error when requesting a sign-in recovery email fails",
+  },
+  "auth.recoveryUnavailable": {
+    message: "O acesso está temporariamente indisponível. Tente novamente.",
+    description: "Temporary service outage during sign-in recovery",
+  },
+  "auth.recoveryExpiry": {
+    message:
+      "O código expira após 10 minutos e permite uma única tentativa de senha.",
+    description:
+      "Explains the expiry and single password-attempt limit of a recovery code",
+  },
+  "auth.recoverySubmit": {
+    message: "Verificar e entrar",
+    description: "Button submitting the recovery code and current password",
+  },
+  "auth.recoveryVerifying": {
+    message: "Verificando...",
+    description: "Pending state while verifying the recovery code and password",
+  },
 };
 
 export default ptAuth;

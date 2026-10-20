@@ -722,6 +722,76 @@ const ukAuth: Record<string, TranslationEntry> = {
     message: "Керуйте бухгалтерськими книгами та співавторами",
     description: "Description of the ledger admin mobile permission",
   },
+  "auth.recoveryTitle": {
+    message: "Підтвердьте пошту для входу",
+    description:
+      "Title of the email ownership verification step for sign-in recovery",
+  },
+  "auth.recoveryDescription": {
+    message:
+      "Відкрийте посилання в листі для відновлення входу, а потім введіть код із листа та поточний пароль.",
+    description: "Instructions for continuing from the sign-in recovery email",
+  },
+  "auth.recoverySendEmail": {
+    message: "Надіслати лист для відновлення входу",
+    description: "Button requesting a sign-in recovery email",
+  },
+  "auth.recoverySending": {
+    message: "Надсилання листа для відновлення входу...",
+    description: "Pending state while requesting a sign-in recovery email",
+  },
+  "auth.recoverySent": {
+    message:
+      "Якщо з цією адресою пов’язаний обліковий запис, незабаром надійде лист для відновлення входу. Відкрийте посилання в ньому, щоб продовжити. Нещодавно отриманий лист усе ще дійсний.",
+    description:
+      "Uniform confirmation after requesting recovery; previous valid recovery emails remain usable",
+  },
+  "auth.recoveryResend": {
+    message: "Надіслати ще один лист для відновлення входу",
+    description: "Button requesting another sign-in recovery email",
+  },
+  "auth.recoveryRetryAt": {
+    message: "Спробуйте знову о {time}.",
+    description:
+      "Absolute local retry time after throttling; {time} is formatted using the active locale",
+  },
+  "auth.recoveryCode": {
+    message: "Шестизначний код підтвердження",
+    description: "Accessible label for the sign-in recovery email code",
+  },
+  "auth.recoveryCodeInvalid": {
+    message: "Введіть шестизначний код із листа для відновлення входу.",
+    description:
+      "Validation error when the recovery code is not exactly six digits",
+  },
+  "auth.recoveryFailed": {
+    message:
+      "Неправильна адреса пошти, код або пароль, або термін дії коду минув. Ви можете запросити новий лист для відновлення входу.",
+    description:
+      "Uniform invalid-credentials or expired-code error during sign-in recovery",
+  },
+  "auth.recoveryRequestFailed": {
+    message:
+      "Не вдалося запросити лист для відновлення входу. Спробуйте ще раз.",
+    description: "Error when requesting a sign-in recovery email fails",
+  },
+  "auth.recoveryUnavailable": {
+    message: "Вхід тимчасово недоступний. Спробуйте ще раз.",
+    description: "Temporary service outage during sign-in recovery",
+  },
+  "auth.recoveryExpiry": {
+    message: "Код діє 10 хвилин і дозволяє одну спробу введення пароля.",
+    description:
+      "Explains the expiry and single password-attempt limit of a recovery code",
+  },
+  "auth.recoverySubmit": {
+    message: "Підтвердити й увійти",
+    description: "Button submitting the recovery code and current password",
+  },
+  "auth.recoveryVerifying": {
+    message: "Перевірка...",
+    description: "Pending state while verifying the recovery code and password",
+  },
 };
 
 export default ukAuth;

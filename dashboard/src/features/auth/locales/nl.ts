@@ -720,6 +720,76 @@ const nlAuth: Record<string, TranslationEntry> = {
     message: "Beheer grootboeken en medewerkers",
     description: "Description of the ledger admin mobile permission",
   },
+  "auth.recoveryTitle": {
+    message: "Bevestig je e-mailadres om in te loggen",
+    description:
+      "Title of the email ownership verification step for sign-in recovery",
+  },
+  "auth.recoveryDescription": {
+    message:
+      "Open de link in je herstelmail en voer daarna de code uit die mail en je huidige wachtwoord in.",
+    description: "Instructions for continuing from the sign-in recovery email",
+  },
+  "auth.recoverySendEmail": {
+    message: "Herstelmail versturen",
+    description: "Button requesting a sign-in recovery email",
+  },
+  "auth.recoverySending": {
+    message: "Herstelmail wordt verstuurd...",
+    description: "Pending state while requesting a sign-in recovery email",
+  },
+  "auth.recoverySent": {
+    message:
+      "Als er een account met dit adres bestaat, ontvang je binnenkort een herstelmail. Open de link daarin om door te gaan. Een recente herstelmail blijft geldig.",
+    description:
+      "Uniform confirmation after requesting recovery; previous valid recovery emails remain usable",
+  },
+  "auth.recoveryResend": {
+    message: "Nog een herstelmail versturen",
+    description: "Button requesting another sign-in recovery email",
+  },
+  "auth.recoveryRetryAt": {
+    message: "Probeer het opnieuw om {time}.",
+    description:
+      "Absolute local retry time after throttling; {time} is formatted using the active locale",
+  },
+  "auth.recoveryCode": {
+    message: "Verificatiecode van zes cijfers",
+    description: "Accessible label for the sign-in recovery email code",
+  },
+  "auth.recoveryCodeInvalid": {
+    message: "Voer de zescijferige code uit je herstelmail in.",
+    description:
+      "Validation error when the recovery code is not exactly six digits",
+  },
+  "auth.recoveryFailed": {
+    message:
+      "Het e-mailadres, de code of het wachtwoord is onjuist, of de code is verlopen. Je kunt een nieuwe herstelmail aanvragen.",
+    description:
+      "Uniform invalid-credentials or expired-code error during sign-in recovery",
+  },
+  "auth.recoveryRequestFailed": {
+    message: "De herstelmail kon niet worden aangevraagd. Probeer het opnieuw.",
+    description: "Error when requesting a sign-in recovery email fails",
+  },
+  "auth.recoveryUnavailable": {
+    message: "Inloggen is tijdelijk niet beschikbaar. Probeer het opnieuw.",
+    description: "Temporary service outage during sign-in recovery",
+  },
+  "auth.recoveryExpiry": {
+    message:
+      "De code verloopt na 10 minuten en geldt voor één wachtwoordpoging.",
+    description:
+      "Explains the expiry and single password-attempt limit of a recovery code",
+  },
+  "auth.recoverySubmit": {
+    message: "Bevestigen en inloggen",
+    description: "Button submitting the recovery code and current password",
+  },
+  "auth.recoveryVerifying": {
+    message: "Bezig met verifiëren...",
+    description: "Pending state while verifying the recovery code and password",
+  },
 };
 
 export default nlAuth;

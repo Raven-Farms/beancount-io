@@ -34,14 +34,17 @@ describe("shouldRedirectForUnauthenticatedError", () => {
     ).toBe(true);
   });
 
-  it("keeps expected authentication-flow failures on their current page", () => {
-    expect(
-      shouldRedirectForUnauthenticatedError(
-        graphQLError("UNAUTHENTICATED"),
-        "SignIn",
-      ),
-    ).toBe(false);
-  });
+  it.each(["SignIn", "RequestSignInRecovery", "SignInWithEmailCode"])(
+    "keeps expected %s failures on their current page",
+    (operationName) => {
+      expect(
+        shouldRedirectForUnauthenticatedError(
+          graphQLError("UNAUTHENTICATED"),
+          operationName,
+        ),
+      ).toBe(false);
+    },
+  );
 
   it("ignores errors that are not authentication failures", () => {
     expect(

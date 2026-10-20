@@ -8,6 +8,14 @@ import { loginBeforeLoad } from "@/features/auth/pages/login-page/loader";
 const loginSearchSchema = z.object({
   next: searchString(),
   reason: searchEnum(["expired"]),
+  recovery: z
+    .unknown()
+    .transform((value) =>
+      typeof value === "string" && /^rcv_[a-f0-9]{64}$/.test(value)
+        ? value
+        : undefined,
+    )
+    .optional(),
 });
 
 export const Route = createFileRoute("/auth/login/")({

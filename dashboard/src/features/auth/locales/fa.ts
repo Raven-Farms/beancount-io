@@ -719,6 +719,76 @@ const faAuth: Record<string, TranslationEntry> = {
     message: "دفتر کل و همکاران را مدیریت کنید",
     description: "Description of the ledger admin mobile permission",
   },
+  "auth.recoveryTitle": {
+    message: "برای ورود، ایمیل خود را تأیید کنید",
+    description:
+      "Title of the email ownership verification step for sign-in recovery",
+  },
+  "auth.recoveryDescription": {
+    message:
+      "پیوند موجود در ایمیل بازیابی را باز کنید، سپس کد آن و گذرواژهٔ فعلی خود را وارد کنید.",
+    description: "Instructions for continuing from the sign-in recovery email",
+  },
+  "auth.recoverySendEmail": {
+    message: "ارسال ایمیل بازیابی",
+    description: "Button requesting a sign-in recovery email",
+  },
+  "auth.recoverySending": {
+    message: "در حال ارسال ایمیل بازیابی...",
+    description: "Pending state while requesting a sign-in recovery email",
+  },
+  "auth.recoverySent": {
+    message:
+      "اگر حسابی با این نشانی وجود داشته باشد، به‌زودی ایمیل بازیابی دریافت می‌کنید. برای ادامه، پیوند آن را باز کنید. ایمیل بازیابی که به‌تازگی دریافت کرده‌اید همچنان معتبر است.",
+    description:
+      "Uniform confirmation after requesting recovery; previous valid recovery emails remain usable",
+  },
+  "auth.recoveryResend": {
+    message: "ارسال دوبارهٔ ایمیل بازیابی",
+    description: "Button requesting another sign-in recovery email",
+  },
+  "auth.recoveryRetryAt": {
+    message: "در ساعت {time} دوباره تلاش کنید.",
+    description:
+      "Absolute local retry time after throttling; {time} is formatted using the active locale",
+  },
+  "auth.recoveryCode": {
+    message: "کد تأیید شش‌رقمی",
+    description: "Accessible label for the sign-in recovery email code",
+  },
+  "auth.recoveryCodeInvalid": {
+    message: "کد شش‌رقمی ایمیل بازیابی را وارد کنید.",
+    description:
+      "Validation error when the recovery code is not exactly six digits",
+  },
+  "auth.recoveryFailed": {
+    message:
+      "ایمیل، کد یا گذرواژه نادرست است، یا کد منقضی شده است. می‌توانید ایمیل بازیابی جدیدی درخواست کنید.",
+    description:
+      "Uniform invalid-credentials or expired-code error during sign-in recovery",
+  },
+  "auth.recoveryRequestFailed": {
+    message: "درخواست ایمیل بازیابی انجام نشد. دوباره تلاش کنید.",
+    description: "Error when requesting a sign-in recovery email fails",
+  },
+  "auth.recoveryUnavailable": {
+    message: "ورود به حساب موقتاً در دسترس نیست. دوباره تلاش کنید.",
+    description: "Temporary service outage during sign-in recovery",
+  },
+  "auth.recoveryExpiry": {
+    message:
+      "کد پس از ۱۰ دقیقه منقضی می‌شود و فقط برای یک بار وارد کردن گذرواژه معتبر است.",
+    description:
+      "Explains the expiry and single password-attempt limit of a recovery code",
+  },
+  "auth.recoverySubmit": {
+    message: "تأیید و ورود",
+    description: "Button submitting the recovery code and current password",
+  },
+  "auth.recoveryVerifying": {
+    message: "در حال تأیید...",
+    description: "Pending state while verifying the recovery code and password",
+  },
 };
 
 export default faAuth;

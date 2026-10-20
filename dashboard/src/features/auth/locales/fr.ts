@@ -728,6 +728,79 @@ const frAuth: Record<string, TranslationEntry> = {
     message: "Gérer les grands livres et les collaborateurs",
     description: "Description of the ledger admin mobile permission",
   },
+  "auth.recoveryTitle": {
+    message: "Vérifiez votre adresse e-mail pour vous connecter",
+    description:
+      "Title of the email ownership verification step for sign-in recovery",
+  },
+  "auth.recoveryDescription": {
+    message:
+      "Ouvrez le lien de votre e-mail de récupération, puis saisissez le code qu’il contient et votre mot de passe actuel.",
+    description: "Instructions for continuing from the sign-in recovery email",
+  },
+  "auth.recoverySendEmail": {
+    message: "Envoyer un e-mail de récupération",
+    description: "Button requesting a sign-in recovery email",
+  },
+  "auth.recoverySending": {
+    message: "Envoi de l’e-mail de récupération...",
+    description: "Pending state while requesting a sign-in recovery email",
+  },
+  "auth.recoverySent": {
+    message:
+      "Si cette adresse est associée à un compte, vous recevrez bientôt un e-mail de récupération. Ouvrez son lien pour continuer. Un e-mail de récupération récent reste valable.",
+    description:
+      "Uniform confirmation after requesting recovery; previous valid recovery emails remain usable",
+  },
+  "auth.recoveryResend": {
+    message: "Envoyer un autre e-mail de récupération",
+    description: "Button requesting another sign-in recovery email",
+  },
+  "auth.recoveryRetryAt": {
+    message: "Réessayez à {time}.",
+    description:
+      "Absolute local retry time after throttling; {time} is formatted using the active locale",
+  },
+  "auth.recoveryCode": {
+    message: "Code de vérification à six chiffres",
+    description: "Accessible label for the sign-in recovery email code",
+  },
+  "auth.recoveryCodeInvalid": {
+    message:
+      "Saisissez le code à six chiffres de votre e-mail de récupération.",
+    description:
+      "Validation error when the recovery code is not exactly six digits",
+  },
+  "auth.recoveryFailed": {
+    message:
+      "L’adresse e-mail, le code ou le mot de passe est incorrect, ou le code a expiré. Vous pouvez demander un nouvel e-mail de récupération.",
+    description:
+      "Uniform invalid-credentials or expired-code error during sign-in recovery",
+  },
+  "auth.recoveryRequestFailed": {
+    message:
+      "Impossible de demander un e-mail de récupération. Veuillez réessayer.",
+    description: "Error when requesting a sign-in recovery email fails",
+  },
+  "auth.recoveryUnavailable": {
+    message:
+      "La connexion est temporairement indisponible. Veuillez réessayer.",
+    description: "Temporary service outage during sign-in recovery",
+  },
+  "auth.recoveryExpiry": {
+    message:
+      "Le code expire au bout de 10 minutes et permet une seule tentative de mot de passe.",
+    description:
+      "Explains the expiry and single password-attempt limit of a recovery code",
+  },
+  "auth.recoverySubmit": {
+    message: "Vérifier et se connecter",
+    description: "Button submitting the recovery code and current password",
+  },
+  "auth.recoveryVerifying": {
+    message: "Vérification...",
+    description: "Pending state while verifying the recovery code and password",
+  },
 };
 
 export default frAuth;

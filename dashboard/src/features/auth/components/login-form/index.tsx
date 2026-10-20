@@ -25,6 +25,7 @@ export type LoginFormProps = {
   showSignUpLink?: boolean;
   onForgotPasswordClick?: () => void;
   onRegisterClick?: () => void;
+  onRecoveryClick?: (email: string) => void;
 };
 
 export function LoginForm({
@@ -35,6 +36,7 @@ export function LoginForm({
   showSignUpLink = true,
   onForgotPasswordClick,
   onRegisterClick,
+  onRecoveryClick,
 }: LoginFormProps) {
   const { t } = useTranslations();
 
@@ -58,6 +60,8 @@ export function LoginForm({
   const {
     register,
     handleSubmit,
+    trigger,
+    getValues,
     formState: { errors, isSubmitting },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -147,6 +151,20 @@ export function LoginForm({
         <Alert variant="destructive">
           <AlertDescription>{serverError}</AlertDescription>
         </Alert>
+      )}
+
+      {onRecoveryClick && (
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full"
+          disabled={!hydrated || isSubmitting || isLoading}
+          onClick={async () => {
+            if (await trigger("email")) onRecoveryClick(getValues("email"));
+          }}
+        >
+          {t("auth.recoveryTitle")}
+        </Button>
       )}
 
       <ScriptRequiredNotice />

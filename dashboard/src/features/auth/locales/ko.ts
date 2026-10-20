@@ -711,6 +711,76 @@ const koAuth: Record<string, TranslationEntry> = {
     message: "원장 및 협력자 관리",
     description: "Description of the ledger admin mobile permission",
   },
+  "auth.recoveryTitle": {
+    message: "이메일을 확인하고 로그인하세요",
+    description:
+      "Title of the email ownership verification step for sign-in recovery",
+  },
+  "auth.recoveryDescription": {
+    message:
+      "로그인 복구 이메일의 링크를 연 다음, 이메일에 있는 코드와 현재 비밀번호를 입력하세요.",
+    description: "Instructions for continuing from the sign-in recovery email",
+  },
+  "auth.recoverySendEmail": {
+    message: "로그인 복구 이메일 보내기",
+    description: "Button requesting a sign-in recovery email",
+  },
+  "auth.recoverySending": {
+    message: "로그인 복구 이메일을 보내는 중...",
+    description: "Pending state while requesting a sign-in recovery email",
+  },
+  "auth.recoverySent": {
+    message:
+      "이 주소로 등록된 계정이 있으면 곧 로그인 복구 이메일이 도착합니다. 이메일의 링크를 열어 계속하세요. 최근에 받은 복구 이메일도 계속 사용할 수 있습니다.",
+    description:
+      "Uniform confirmation after requesting recovery; previous valid recovery emails remain usable",
+  },
+  "auth.recoveryResend": {
+    message: "로그인 복구 이메일 다시 보내기",
+    description: "Button requesting another sign-in recovery email",
+  },
+  "auth.recoveryRetryAt": {
+    message: "{time}에 다시 시도하세요.",
+    description:
+      "Absolute local retry time after throttling; {time} is formatted using the active locale",
+  },
+  "auth.recoveryCode": {
+    message: "6자리 인증 코드",
+    description: "Accessible label for the sign-in recovery email code",
+  },
+  "auth.recoveryCodeInvalid": {
+    message: "로그인 복구 이메일에 있는 6자리 코드를 입력하세요.",
+    description:
+      "Validation error when the recovery code is not exactly six digits",
+  },
+  "auth.recoveryFailed": {
+    message:
+      "이메일, 코드 또는 비밀번호가 올바르지 않거나 코드가 만료되었습니다. 새 로그인 복구 이메일을 요청할 수 있습니다.",
+    description:
+      "Uniform invalid-credentials or expired-code error during sign-in recovery",
+  },
+  "auth.recoveryRequestFailed": {
+    message: "로그인 복구 이메일을 요청하지 못했습니다. 다시 시도하세요.",
+    description: "Error when requesting a sign-in recovery email fails",
+  },
+  "auth.recoveryUnavailable": {
+    message: "일시적으로 로그인할 수 없습니다. 다시 시도하세요.",
+    description: "Temporary service outage during sign-in recovery",
+  },
+  "auth.recoveryExpiry": {
+    message:
+      "코드는 10분 후 만료되며 비밀번호 확인에 한 번만 사용할 수 있습니다.",
+    description:
+      "Explains the expiry and single password-attempt limit of a recovery code",
+  },
+  "auth.recoverySubmit": {
+    message: "확인하고 로그인",
+    description: "Button submitting the recovery code and current password",
+  },
+  "auth.recoveryVerifying": {
+    message: "확인 중...",
+    description: "Pending state while verifying the recovery code and password",
+  },
 };
 
 export default koAuth;

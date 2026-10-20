@@ -705,6 +705,74 @@ const zhAuth: Record<string, TranslationEntry> = {
     message: "管理账本和协作者",
     description: "Description of the ledger admin mobile permission",
   },
+  "auth.recoveryTitle": {
+    message: "验证邮箱以登录",
+    description:
+      "Title of the email ownership verification step for sign-in recovery",
+  },
+  "auth.recoveryDescription": {
+    message: "打开登录恢复邮件中的链接，然后输入邮件中的验证码和当前密码。",
+    description: "Instructions for continuing from the sign-in recovery email",
+  },
+  "auth.recoverySendEmail": {
+    message: "发送登录恢复邮件",
+    description: "Button requesting a sign-in recovery email",
+  },
+  "auth.recoverySending": {
+    message: "正在发送登录恢复邮件...",
+    description: "Pending state while requesting a sign-in recovery email",
+  },
+  "auth.recoverySent": {
+    message:
+      "如果此邮箱已注册账户，你将很快收到登录恢复邮件。请打开邮件中的链接继续。最近收到的恢复邮件仍然有效。",
+    description:
+      "Uniform confirmation after requesting recovery; previous valid recovery emails remain usable",
+  },
+  "auth.recoveryResend": {
+    message: "重新发送登录恢复邮件",
+    description: "Button requesting another sign-in recovery email",
+  },
+  "auth.recoveryRetryAt": {
+    message: "请在 {time} 重试。",
+    description:
+      "Absolute local retry time after throttling; {time} is formatted using the active locale",
+  },
+  "auth.recoveryCode": {
+    message: "六位验证码",
+    description: "Accessible label for the sign-in recovery email code",
+  },
+  "auth.recoveryCodeInvalid": {
+    message: "请输入登录恢复邮件中的六位验证码。",
+    description:
+      "Validation error when the recovery code is not exactly six digits",
+  },
+  "auth.recoveryFailed": {
+    message:
+      "邮箱、验证码或密码不正确，或验证码已过期。你可以重新请求登录恢复邮件。",
+    description:
+      "Uniform invalid-credentials or expired-code error during sign-in recovery",
+  },
+  "auth.recoveryRequestFailed": {
+    message: "无法请求登录恢复邮件，请重试。",
+    description: "Error when requesting a sign-in recovery email fails",
+  },
+  "auth.recoveryUnavailable": {
+    message: "登录服务暂时不可用，请重试。",
+    description: "Temporary service outage during sign-in recovery",
+  },
+  "auth.recoveryExpiry": {
+    message: "验证码将在 10 分钟后过期，且仅可用于一次密码验证。",
+    description:
+      "Explains the expiry and single password-attempt limit of a recovery code",
+  },
+  "auth.recoverySubmit": {
+    message: "验证并登录",
+    description: "Button submitting the recovery code and current password",
+  },
+  "auth.recoveryVerifying": {
+    message: "正在验证...",
+    description: "Pending state while verifying the recovery code and password",
+  },
 };
 
 export default zhAuth;

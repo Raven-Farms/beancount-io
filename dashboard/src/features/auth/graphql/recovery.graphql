@@ -1,0 +1,22 @@
+mutation RequestSignInRecovery($email: String!, $returnTo: String) {
+  requestSignInRecovery(email: $email, returnTo: $returnTo) {
+    success
+  }
+}
+
+mutation SignInWithEmailCode(
+  $email: String!
+  $challengeId: String!
+  $code: String!
+  $password: String!
+) {
+  signInWithEmailCode(
+    email: $email
+    challengeId: $challengeId
+    code: $code
+    password: $password
+  ) {
+    token
+    expireAt
+  }
+}

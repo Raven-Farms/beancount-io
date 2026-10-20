@@ -725,6 +725,78 @@ const deAuth: Record<string, TranslationEntry> = {
     message: "Hauptbücher und Mitarbeiter verwalten",
     description: "Description of the ledger admin mobile permission",
   },
+  "auth.recoveryTitle": {
+    message: "E-Mail-Adresse zum Anmelden bestätigen",
+    description:
+      "Title of the email ownership verification step for sign-in recovery",
+  },
+  "auth.recoveryDescription": {
+    message:
+      "Öffne den Link in deiner E-Mail zur Anmeldehilfe und gib anschließend den darin enthaltenen Code und dein aktuelles Passwort ein.",
+    description: "Instructions for continuing from the sign-in recovery email",
+  },
+  "auth.recoverySendEmail": {
+    message: "Anmeldehilfe per E-Mail senden",
+    description: "Button requesting a sign-in recovery email",
+  },
+  "auth.recoverySending": {
+    message: "E-Mail zur Anmeldehilfe wird gesendet...",
+    description: "Pending state while requesting a sign-in recovery email",
+  },
+  "auth.recoverySent": {
+    message:
+      "Falls für diese Adresse ein Konto besteht, erhältst du in Kürze eine E-Mail zur Anmeldehilfe. Öffne den Link darin, um fortzufahren. Eine kürzlich erhaltene E-Mail zur Anmeldehilfe ist weiterhin gültig.",
+    description:
+      "Uniform confirmation after requesting recovery; previous valid recovery emails remain usable",
+  },
+  "auth.recoveryResend": {
+    message: "Weitere E-Mail zur Anmeldehilfe senden",
+    description: "Button requesting another sign-in recovery email",
+  },
+  "auth.recoveryRetryAt": {
+    message: "Versuche es um {time} erneut.",
+    description:
+      "Absolute local retry time after throttling; {time} is formatted using the active locale",
+  },
+  "auth.recoveryCode": {
+    message: "Sechsstelliger Bestätigungscode",
+    description: "Accessible label for the sign-in recovery email code",
+  },
+  "auth.recoveryCodeInvalid": {
+    message: "Gib den sechsstelligen Code aus der E-Mail zur Anmeldehilfe ein.",
+    description:
+      "Validation error when the recovery code is not exactly six digits",
+  },
+  "auth.recoveryFailed": {
+    message:
+      "E-Mail-Adresse, Code oder Passwort sind falsch oder der Code ist abgelaufen. Du kannst eine neue E-Mail zur Anmeldehilfe anfordern.",
+    description:
+      "Uniform invalid-credentials or expired-code error during sign-in recovery",
+  },
+  "auth.recoveryRequestFailed": {
+    message:
+      "Die E-Mail zur Anmeldehilfe konnte nicht angefordert werden. Versuche es erneut.",
+    description: "Error when requesting a sign-in recovery email fails",
+  },
+  "auth.recoveryUnavailable": {
+    message:
+      "Die Anmeldung ist vorübergehend nicht verfügbar. Versuche es erneut.",
+    description: "Temporary service outage during sign-in recovery",
+  },
+  "auth.recoveryExpiry": {
+    message:
+      "Der Code läuft nach 10 Minuten ab und gilt für einen Passwortversuch.",
+    description:
+      "Explains the expiry and single password-attempt limit of a recovery code",
+  },
+  "auth.recoverySubmit": {
+    message: "Bestätigen und anmelden",
+    description: "Button submitting the recovery code and current password",
+  },
+  "auth.recoveryVerifying": {
+    message: "Wird bestätigt...",
+    description: "Pending state while verifying the recovery code and password",
+  },
 };
 
 export default deAuth;

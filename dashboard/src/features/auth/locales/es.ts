@@ -727,6 +727,78 @@ const esAuth: Record<string, TranslationEntry> = {
     message: "Administrar libros de contabilidad y colaboradores.",
     description: "Description of the ledger admin mobile permission",
   },
+  "auth.recoveryTitle": {
+    message: "Verifica tu correo para iniciar sesión",
+    description:
+      "Title of the email ownership verification step for sign-in recovery",
+  },
+  "auth.recoveryDescription": {
+    message:
+      "Abre el enlace del correo de recuperación e introduce su código y tu contraseña actual.",
+    description: "Instructions for continuing from the sign-in recovery email",
+  },
+  "auth.recoverySendEmail": {
+    message: "Enviar correo de recuperación",
+    description: "Button requesting a sign-in recovery email",
+  },
+  "auth.recoverySending": {
+    message: "Enviando correo de recuperación...",
+    description: "Pending state while requesting a sign-in recovery email",
+  },
+  "auth.recoverySent": {
+    message:
+      "Si existe una cuenta con esta dirección, recibirás un correo de recuperación en breve. Abre su enlace para continuar. Un correo de recuperación reciente sigue siendo válido.",
+    description:
+      "Uniform confirmation after requesting recovery; previous valid recovery emails remain usable",
+  },
+  "auth.recoveryResend": {
+    message: "Enviar otro correo de recuperación",
+    description: "Button requesting another sign-in recovery email",
+  },
+  "auth.recoveryRetryAt": {
+    message: "Vuelve a intentarlo a las {time}.",
+    description:
+      "Absolute local retry time after throttling; {time} is formatted using the active locale",
+  },
+  "auth.recoveryCode": {
+    message: "Código de verificación de seis dígitos",
+    description: "Accessible label for the sign-in recovery email code",
+  },
+  "auth.recoveryCodeInvalid": {
+    message: "Introduce el código de seis dígitos del correo de recuperación.",
+    description:
+      "Validation error when the recovery code is not exactly six digits",
+  },
+  "auth.recoveryFailed": {
+    message:
+      "El correo, el código o la contraseña son incorrectos, o el código ha caducado. Puedes solicitar otro correo de recuperación.",
+    description:
+      "Uniform invalid-credentials or expired-code error during sign-in recovery",
+  },
+  "auth.recoveryRequestFailed": {
+    message:
+      "No se ha podido solicitar el correo de recuperación. Vuelve a intentarlo.",
+    description: "Error when requesting a sign-in recovery email fails",
+  },
+  "auth.recoveryUnavailable": {
+    message:
+      "El inicio de sesión no está disponible temporalmente. Vuelve a intentarlo.",
+    description: "Temporary service outage during sign-in recovery",
+  },
+  "auth.recoveryExpiry": {
+    message:
+      "El código caduca en 10 minutos y sirve para un solo intento de contraseña.",
+    description:
+      "Explains the expiry and single password-attempt limit of a recovery code",
+  },
+  "auth.recoverySubmit": {
+    message: "Verificar e iniciar sesión",
+    description: "Button submitting the recovery code and current password",
+  },
+  "auth.recoveryVerifying": {
+    message: "Verificando...",
+    description: "Pending state while verifying the recovery code and password",
+  },
 };
 
 export default esAuth;
