@@ -1153,6 +1153,11 @@ def _transaction(
         allowed = {e.account: e.currencies for e in existing if isinstance(e, Open)}
     normalized = []
     elided = 0
+    # Postings whose currency fell back to the operating currency, with what
+    # the account allows: validation hints name them when a guessed currency
+    # causes the failure, instead of advising an exchange never made (w5/804).
+    # A forced single-currency default is not a guess and stays out.
+    operating_defaults: dict[int, list[str] | None] = {}
     for number, posting in enumerate(entry.postings, start=1):
         _refuse_missing_price(postings, number, posting)
         # Beancount annotates booked postings; the parser also returns MISSING.
@@ -1161,8 +1166,10 @@ def _transaction(
             elided += 1
         if units is not MISSING and units.currency is MISSING:
             choices = allowed.get(posting.account) or []
+            from_operating = False
             if len(choices) != 1 and len(currencies) == 1 and (not choices or currencies[0] in choices):
                 choices = currencies
+                from_operating = True
             if len(choices) != 1:
                 raise protocol.UsageError(
                     f"Currency is ambiguous for {posting.account}; specify NUMBER CURRENCY explicitly.",
@@ -1197,6 +1204,8 @@ def _transaction(
                     f"'{posting.account} NUMBER COMMODITY {{…}}' or '… NUMBER COMMODITY @ …'. Nothing was written."
                 )
             units = units._replace(currency=choices[0])
+            if from_operating:
+                operating_defaults[number] = allowed.get(posting.account) or None
         # Parsed postings keep the input order, so the raw line with the `@@`
         # spelling sits at the same index; incomplete prices raised above.
         meta: dict[str, Any] = {}
@@ -1229,7 +1238,9 @@ def _transaction(
         posting["price_total"] = None if total is None else protocol.jsonable(total)
         if total is not None:
             posting["price"] = None
-    warnings = write.append(file, [rendered], allow_errors=allow_errors, into=into, snapshot=snapshot)
+    warnings = write.append(
+        file, [rendered], allow_errors=allow_errors, into=into, snapshot=snapshot, operating_defaults=operating_defaults
+    )
     return {
         "written": 1,
         "directive": directive,

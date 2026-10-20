@@ -2287,6 +2287,7 @@ def validate_candidate(
     stages_open: bool = False,
     pad_from: bool = False,
     pad_date_explicit: bool = False,
+    operating_defaults: dict[int, list[str] | None] | None = None,
 ) -> list[str]:
     """Refuse a candidate that fails validation, naming what it would break.
 
@@ -2312,6 +2313,9 @@ def validate_candidate(
     it is open. `stages_open` says the request appends nothing but opens, and
     only an `Unused account` on one of those is exempt (w5/221). `pad_from`
     says the pad is `add balance --pad-from`'s, not a directive the user wrote.
+    `operating_defaults` names the proposed postings whose currency is a guess
+    from the operating currency, so hints blame the guess instead of advising
+    an exchange never made (w5/804).
     """
     from beancount.core import interpolate
     from beancount.core.data import Balance, Close, Document, Open, Pad, Transaction
@@ -2670,7 +2674,13 @@ def validate_candidate(
                 if pad_leg is not None:
                     hints.append(pad_leg)
                 else:
-                    interpolated = _interpolated_leg_hint(error.entry, invalid["account"], invalid["currency"], opened)
+                    interpolated = _interpolated_leg_hint(
+                        error.entry,
+                        invalid["account"],
+                        invalid["currency"],
+                        opened,
+                        operating_defaults=operating_defaults if appended else None,
+                    )
                     hints.append(
                         interpolated or _currency_widen_hint(invalid["currency"], opened, filenames, original_lines)
                     )
@@ -2763,35 +2773,43 @@ def validate_candidate(
         if isinstance(error.entry, Transaction) and "does not balance" in error.message:
             residual = interpolate.compute_residual(error.entry.postings)  # type: ignore[no-untyped-call]
             if len(residual.currencies()) > 1:
-                # Which entries hold each commodity at cost, so "held by an
-                # entry other than this one" is a lookup.
-                if cost_holders is None:
-                    cost_holders = {}
-                    for prior in entries:
-                        for posting in getattr(prior, "postings", []) or []:
-                            if posting.cost is not None and posting.units is not None:
-                                cost_holders.setdefault(posting.units.currency, set()).add(id(prior))
-                held_with_cost = {
-                    currency for currency, holders in cost_holders.items() if holders != {id(error.entry)}
-                }
-                reducing_held_lot = any(
-                    posting.units is not None
-                    and posting.units.currency in held_with_cost
-                    and posting.cost is None
-                    and posting.price is None
-                    for posting in error.entry.postings
+                redirect = (
+                    _operating_default_balance_hint(error.entry, residual, operating_defaults)
+                    if appended and operating_defaults
+                    else None
                 )
-                if reducing_held_lot:
-                    hints.append(
-                        "For a commodity or stock reduction, attach a cost lot or a market price: "
-                        "for example, 'Assets:Broker -1 HOOL {100 USD}' or "
-                        "'Assets:Broker -1 HOOL @ 100 USD' against cash."
-                    )
+                if redirect is not None:
+                    hints.append(redirect)
                 else:
-                    hints.append(
-                        "For a currency exchange, use a price annotation with the actual exchange rate: "
-                        "for example, '100 EUR @ 1.08 USD' balances against '-108 USD'."
+                    # Which entries hold each commodity at cost, so "held by an
+                    # entry other than this one" is a lookup.
+                    if cost_holders is None:
+                        cost_holders = {}
+                        for prior in entries:
+                            for posting in getattr(prior, "postings", []) or []:
+                                if posting.cost is not None and posting.units is not None:
+                                    cost_holders.setdefault(posting.units.currency, set()).add(id(prior))
+                    held_with_cost = {
+                        currency for currency, holders in cost_holders.items() if holders != {id(error.entry)}
+                    }
+                    reducing_held_lot = any(
+                        posting.units is not None
+                        and posting.units.currency in held_with_cost
+                        and posting.cost is None
+                        and posting.price is None
+                        for posting in error.entry.postings
                     )
+                    if reducing_held_lot:
+                        hints.append(
+                            "For a commodity or stock reduction, attach a cost lot or a market price: "
+                            "for example, 'Assets:Broker -1 HOOL {100 USD}' or "
+                            "'Assets:Broker -1 HOOL @ 100 USD' against cash."
+                        )
+                    else:
+                        hints.append(
+                            "For a currency exchange, use a price annotation with the actual exchange rate: "
+                            "for example, '100 EUR @ 1.08 USD' balances against '-108 USD'."
+                        )
         if isinstance(error.entry, Document) and "File does not exist" in error.message:
             hints.append(
                 f"Relative document paths resolve from {source.parent}, the directory containing {source.name}."
@@ -3512,13 +3530,62 @@ def _duplicate_close_hint(existing: Any, duplicate: Any, filenames: dict[Path, P
     )
 
 
-def _interpolated_leg_hint(entry: Any, account: str, currency: str, opened: Any) -> str | None:
+def _operating_default_balance_hint(
+    entry: Any, residual: Any, operating_defaults: dict[int, list[str] | None] | None
+) -> str | None:
+    """Redirect a balance failure caused by an operating-currency default (w5/804).
+
+    `Expenses:Food 10` beside `-10 EUR` reads as `10 USD`, and the stock hint
+    advises a currency exchange the user never made. When exactly one posting
+    was defaulted, every leg is plain, and rewriting it in the residual's
+    other currency zeroes the residual — the account must allow it — the fix
+    is spelling that currency out. None otherwise — the existing hints stand.
+    """
+    from beancount.core.number import MISSING
+
+    if not operating_defaults or len(operating_defaults) != 1:
+        return None
+    ((number, allowed),) = operating_defaults.items()
+    if number < 1 or number > len(entry.postings):
+        return None
+    if not all(posting.cost is None and posting.price is None for posting in entry.postings):
+        return None
+    leg = entry.postings[number - 1]
+    if leg.units is None or leg.units.number is MISSING:
+        return None
+    others = set(residual.currencies()) - {leg.units.currency}
+    if len(others) != 1:
+        return None
+    (suggest,) = others
+    if allowed is not None and suggest not in allowed:
+        return None
+    have = residual.get_currency_units(leg.units.currency)
+    want = residual.get_currency_units(suggest)
+    if have is None or want is None or have.number != leg.units.number or want.number != -leg.units.number:
+        return None
+    bare = f"{leg.account} {format(leg.units.number, 'f')}"
+    read = f"{format(leg.units.number, 'f')} {leg.units.currency}"
+    return (
+        f"{bare} was read as {read} (the operating currency). If that posting "
+        f"was meant in {suggest}, write '{bare} {suggest}' instead."
+    )
+
+
+def _interpolated_leg_hint(
+    entry: Any,
+    account: str,
+    currency: str,
+    opened: Any,
+    *,
+    operating_defaults: dict[int, list[str] | None] | None = None,
+) -> str | None:
     """Advice for a leg Beancount filled in, in a currency its account does not take.
 
     A card charged for a meal priced in EUR is the usual case: the card leg had
     no amount, so the EUR came from the other legs, and widening the card's
     open is the wrong fix. The right one is a price on the leg the user wrote
-    (w5/488).
+    (w5/488). When the fill came from a leg whose own currency is an operating
+    default, naming that guess beats pricing advice (w5/804).
     """
     from beancount.core.convert import get_weight
     from beancount.utils.misc_utils import escape_string
@@ -3526,6 +3593,28 @@ def _interpolated_leg_hint(entry: Any, account: str, currency: str, opened: Any)
     legs = [p for p in entry.postings if p.account == account and p.units is not None and p.units.currency == currency]
     if not legs or not all((p.meta or {}).get("__automatic__") for p in legs):
         return None
+    if len(opened.currencies) == 1 and operating_defaults:
+        carriers = [
+            (number, posting)
+            for number, posting in enumerate(entry.postings, start=1)
+            if all(posting is not own for own in legs)
+            and posting.units is not None
+            and posting.units.currency == currency
+            and isinstance(posting.units.number, Decimal)
+        ]
+        if len(carriers) == 1 and carriers[0][0] in operating_defaults:
+            number, source = carriers[0]
+            allowed = operating_defaults[number]
+            target = opened.currencies[0]
+            if source.cost is None and source.price is None and (allowed is None or target in allowed):
+                bare = f"{source.account} {format(source.units.number, 'f')}"
+                read = f"{format(source.units.number, 'f')} {currency}"
+                return (
+                    f"{account} was given no amount, so Beancount filled in {currency} from the other legs. "
+                    f"That {currency} came from '{bare}', read as {read} "
+                    f"(the operating currency). If that posting was meant in {target}, "
+                    f"write '{bare} {target}' instead."
+                )
     target = opened.currencies[0] if len(opened.currencies) == 1 else "CURRENCY"
     prefix = (
         f"{account} was given no amount, so Beancount filled in {currency} from the other legs. If it was charged "
@@ -4269,10 +4358,14 @@ def append(
     pad_date_explicit: bool = False,
     validated: list[str] | None = None,
     stages_pad: bool = False,
+    operating_defaults: dict[int, list[str] | None] | None = None,
 ) -> list[str]:
     """Append `texts` to the ledger, validated and written under the lock.
 
     `stages_pad` is the staged-pad carve-out, passed only by `add pad` (w5/798).
+    `operating_defaults` maps 1-based posting numbers to what their account
+    allows (None when unconstrained), for postings whose currency fell back
+    to the operating currency; hints name them when the guess fails (w5/804).
 
     `validated` is the answer `validate_append` already gave for these texts
     against this same `snapshot`. The snapshot is verified unchanged here, so
@@ -4332,6 +4425,7 @@ def append(
                     stages_open=_only_opens(texts),
                     pad_from=pad_from,
                     pad_date_explicit=pad_date_explicit,
+                    operating_defaults=operating_defaults,
                 )
             snapshot.verify()
             if original_stat is None:
