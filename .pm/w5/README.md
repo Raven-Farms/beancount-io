@@ -80,7 +80,6 @@
 - [840 — The "already has N errors" refusal suggests the account being added and cites an unwritten line](./840.md)
 - [841 — On a ledger with no commodity, import advises --csv currency=CODE, which the next run refuses](./841.md)
 - [842 — A period starting 0001-01-01 is refused (-t 0001, BQL OPEN ON 0001-01-01), unlike the 9999 boundary](./842.md)
-- [843 — list prints its empty notice on stdout; a BOM-only file gets two leading newlines on first append](./843.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
