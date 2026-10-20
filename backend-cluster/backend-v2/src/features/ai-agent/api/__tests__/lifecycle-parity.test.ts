@@ -1,6 +1,11 @@
 import { requestPlatform } from "@/server/api/request-platform";
 import "reflect-metadata";
+import {
+  fakeRedisCounter as mockFakeRedisCounter,
+  fakeRedisCounterState,
+} from "@/foundation/redis/__tests__/fake-redis-counter";
 import { request } from "node:http";
+jest.mock("@/foundation/redis/redis-counter", () => mockFakeRedisCounter);
 jest.mock("@ai-sdk/harness/agent", () => ({ HarnessAgent: class {} }));
 jest.mock("@ai-sdk/harness-acp", () => ({ createACP: () => ({}) }));
 jest.mock("@/features/plaid/utils/encryption", () => ({
@@ -24,6 +29,7 @@ import {
   AUTHORIZATION_ACTIONS,
 } from "@/server/api/authorization";
 import { graphqlScopeMiddleware } from "@/server/graphql/scope-middleware";
+import { graphqlRateLimitMiddleware } from "@/server/graphql/rate-limit-middleware";
 import { clearRateLimitShadows } from "@/server/api/rate-limit";
 import { formatError } from "@/server/graphql/format-error";
 import { FavaApiError } from "@/foundation/fava";
@@ -82,8 +88,11 @@ let resolvers: Map<unknown, object>;
 let schemaPromise: ReturnType<typeof buildSchema> | undefined;
 type Surface = "rest" | "mcp" | "gql";
 const surfaces: Surface[] = ["rest", "mcp", "gql"];
-beforeEach(() => clearRateLimitShadows());
-async function fixture(caller = identity, appId?: string) {
+beforeEach(() => {
+  clearRateLimitShadows();
+  fakeRedisCounterState.reset();
+});
+async function fixture(caller = identity, appId?: string, rateLimited = false) {
   const headers: Record<string, string> = appId ? { "x-app-id": appId } : {};
   const platform = requestPlatform(headers);
   const records = new Map<string, typeof seed>([["alice/main", { ...seed }]]);
@@ -285,7 +294,13 @@ async function fixture(caller = identity, appId?: string) {
   schemaPromise ??= buildSchema({
     resolvers: [LedgerMutationResolver, LedgerQueryResolver],
     container: { get: (ctor) => resolvers.get(ctor) },
-    globalMiddlewares: [graphqlScopeMiddleware("enforce")],
+    globalMiddlewares: [
+      (data, next) =>
+        data.context.rateLimited
+          ? graphqlRateLimitMiddleware()(data, next)
+          : next(),
+      graphqlScopeMiddleware("enforce"),
+    ],
     validate: true,
   });
   const schema = await schemaPromise;
@@ -293,6 +308,7 @@ async function fixture(caller = identity, appId?: string) {
     { workflows: { ledger: workflow }, services } as unknown as AppLayers,
     config,
     { apiKeys: false },
+    rateLimited,
   );
   rest.setIdentity(caller);
   const server = assembleMcpRegistry(
@@ -383,6 +399,7 @@ async function fixture(caller = identity, appId?: string) {
           failed: boolean;
           data: unknown;
           status: number;
+          retryAfter?: string;
           error?: { code: string; message: string };
         }>((resolve, reject) => {
           const r = request(
@@ -411,6 +428,7 @@ async function fixture(caller = identity, appId?: string) {
                     failed: status >= 400,
                     data,
                     status,
+                    retryAfter: response.headers["retry-after"],
                     error: data.error,
                   });
                 } catch (error) {
@@ -464,6 +482,11 @@ async function fixture(caller = identity, appId?: string) {
               | { error?: { code: string; message: string } }
               | undefined
           )?.error,
+          retryAfter: (
+            r.structuredContent as
+              | { error?: { retryAfter?: number } }
+              | undefined
+          )?.error?.retryAfter,
         };
       }
       const args = { ...(operation !== "create" && { ledgerId }), ...input };
@@ -479,6 +502,7 @@ async function fixture(caller = identity, appId?: string) {
         source: `${operation === "read" ? "query" : "mutation"}{${field}(${formatted}){${operation === "delete" ? "ledgerId" : fields}}}`,
         contextValue: {
           identity: caller,
+          rateLimited,
           getCurrentIdentity: () => caller,
           platform,
         },
@@ -492,6 +516,7 @@ async function fixture(caller = identity, appId?: string) {
           code: formattedError.extensions?.code,
           message: formattedError.message,
         },
+        retryAfter: formattedError?.extensions?.retryAfter,
       };
     },
     close: async () => {
@@ -518,6 +543,42 @@ function expected(name: string, description: string, privateValue: boolean) {
   };
 }
 describe("ledger lifecycle through actual adapters and workflow", () => {
+  it("shares the user budget across real adapters and rotating credentials before mutation", async () => {
+    const caller = { ...identity };
+    const f = await fixture(caller, undefined, true);
+    try {
+      // Neither credential spends its own 30-call admin allowance. Together,
+      // all three canonical aliases must spend one user's 30-call allowance.
+      for (let index = 0; index < 30; index++) {
+        caller.tokenId = `tok_rotation_${index % 2}`;
+        const description = `accepted ${index}`;
+        const result = await f.call(surfaces[index % 3], "update", {
+          description,
+        });
+        expect(result.failed).toBe(false);
+        expect(f.records.get("alice/main")?.description).toBe(description);
+      }
+      expect(f.update).toHaveBeenCalledTimes(30);
+      caller.tokenId = "tok_fresh_after_limit";
+      for (const surface of surfaces) {
+        const result = await f.call(surface, "update", {
+          description: "refused",
+        });
+        expect(result.failed).toBe(true);
+        expect(result.error).toMatchObject({ code: "RATE_LIMITED" });
+        expect(Number(result.retryAfter)).toBeGreaterThan(0);
+        expect(Number(result.retryAfter)).toBeLessThanOrEqual(60);
+        if (surface === "rest") expect(result).toMatchObject({ status: 429 });
+      }
+      expect(f.update).toHaveBeenCalledTimes(30);
+      expect(f.records.get("alice/main")?.description).toBe("accepted 29");
+      // A spent write/admin operation must not consume an unrelated read.
+      for (const surface of surfaces)
+        expect((await f.call(surface, "read")).failed).toBe(false);
+    } finally {
+      await f.close();
+    }
+  });
   describe.each(surfaces)("ledger denial contract via %s", (surface) => {
     it.each(["missing", "inaccessible"] as const)(
       "conceals %s ledgers identically for reads and deletion",
