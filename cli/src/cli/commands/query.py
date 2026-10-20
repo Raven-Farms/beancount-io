@@ -108,6 +108,10 @@ def _require_source_ledger(source: str) -> None:
     directory, or no path at all (`--source ""` from an unset shell variable)
     ended in a traceback through the engine instead (w5/250); those are refused
     here in the same words.
+
+    A `$VAR` the loader would expand is refused before the existence check: it
+    silently read another ledger with exit 0, or answered from an empty
+    database and replaced an `--output` export with a header row (w5/791).
     """
     import re
     from urllib.parse import urlparse
@@ -119,6 +123,8 @@ def _require_source_ledger(source: str) -> None:
         raise UsageError(f"--source '{source}' names no file; pass a ledger path, beancount:<path> or csv:<path>.")
     path = Path(parts.path)
     named = "" if parts.path == source else f" {source}"
+    if parts.scheme == "beancount":
+        context.refuse_expanding_ledger_path(parts.path, f" (from --source{named})")
     kind, label = ("ledger", "Ledger") if parts.scheme == "beancount" else ("CSV", "CSV")
     if not path.exists():
         raise UsageError(f"No {kind} file at '{path}' (from --source{named}).")

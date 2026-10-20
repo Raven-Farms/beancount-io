@@ -502,6 +502,17 @@ def _native_shell(source: str, *, interactive: bool, format: str, numberify: boo
             raise protocol.UsageError(
                 f"{kind[0].upper()}{kind[1:]} path '{file}' (from --source) is a directory; expected a {kind} file."
             )
+        if parts.scheme == "beancount":
+            # The loader runs `expandvars` on the root path, so a `$VAR` here
+            # silently read another ledger (w5/791). The frontend refuses
+            # first; this is the path the loader really gets.
+            expanded = os.path.expandvars(str(file))
+            if expanded != str(file):
+                raise protocol.UsageError(
+                    f"Ledger path '{file}' (from --source) contains an environment variable that Beancount "
+                    f"would expand, reading '{expanded}' instead. "
+                    "Rename the file or directory without '$', or unset that variable."
+                )
     if parts.scheme == "beancount":
         from beancount import loader
 
