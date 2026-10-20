@@ -82,6 +82,30 @@ export function parsePasswordAuthEnabled(value: string | undefined): boolean {
   );
 }
 
+/** Subscription tiers a self-host can grant (mirrors SubscriptionTier; config cannot import it). */
+export const SELF_HOSTED_TIERS = [
+  "FREE",
+  "PREMIUM",
+  "GROWTH",
+  "ORGANIZATION",
+  "ENTERPRISE",
+] as const;
+export type SelfHostedTier = (typeof SELF_HOSTED_TIERS)[number];
+
+/** SELF_HOSTED_TIER: unset = tiers come from Stripe; a tier name = every user has it. Anything else fails at boot. */
+export function parseSelfHostedTier(
+  value: string | undefined,
+): SelfHostedTier | null {
+  const v = value?.trim().toUpperCase() ?? "";
+  if (v === "") return null;
+  if ((SELF_HOSTED_TIERS as readonly string[]).includes(v)) {
+    return v as SelfHostedTier;
+  }
+  throw new Error(
+    `SELF_HOSTED_TIER: expected one of ${SELF_HOSTED_TIERS.join(", ")}, got ${JSON.stringify(value)}`,
+  );
+}
+
 /** Both GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET, or neither. */
 export function parseGoogleAuthConfig(env: {
   GOOGLE_CLIENT_ID?: string;
@@ -375,6 +399,11 @@ export interface AppConfig {
    * access are refused; accounts sign in another way (e.g. Google).
    */
   passwordAuthEnabled: boolean;
+  /**
+   * SELF_HOSTED_TIER (default unset). When set, every user has this
+   * subscription tier and Stripe is not consulted for it.
+   */
+  selfHostedTier: SelfHostedTier | null;
   sshProxy: SshProxyConfig;
   env: Environment;
   project: string;
@@ -546,6 +575,7 @@ export const config: AppConfig = {
   passwordAuthEnabled: parsePasswordAuthEnabled(
     process.env.AUTH_PASSWORD_ENABLED,
   ),
+  selfHostedTier: parseSelfHostedTier(process.env.SELF_HOSTED_TIER),
   googleAuth: parseGoogleAuthConfig({
     GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,

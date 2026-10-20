@@ -135,6 +135,12 @@ allows CORS from those hosts. A self-host on another domain sets:
   credentials (each ledger's generated git password, or a Gitea access token,
   sent with a Gitea username) are a separate per-ledger git credential and
   keep working.
+- `SELF_HOSTED_TIER` (default unset): a subscription tier (`FREE`, `PREMIUM`,
+  `GROWTH`, `ORGANIZATION`, `ENTERPRISE`) that every user has. Stripe is not
+  consulted, so every tier check (ledger, collaborator and directive limits,
+  AI quota, personal API keys) uses it. Unset keeps the Stripe-derived tier,
+  which is `FREE` without a Stripe key. Build the dashboard with
+  `VITE_BILLING_ENABLED=false` to hide the subscription section in settings.
 
 Production OAuth requires `OAUTH_JWKS`, a complete private P-256/ES256 signing
 JWKS provided by the deployment secret manager. It must never be committed or

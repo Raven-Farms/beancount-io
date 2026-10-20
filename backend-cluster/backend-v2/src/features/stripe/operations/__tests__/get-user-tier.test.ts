@@ -102,3 +102,29 @@ describe("subscription-bound tier", () => {
     ).toBeNull();
   });
 });
+
+describe("SELF_HOSTED_TIER", () => {
+  const originalEnv = process.env;
+  afterEach(() => {
+    process.env = originalEnv;
+  });
+
+  it("gives every user the configured tier without asking Stripe", async () => {
+    process.env = { ...originalEnv, SELF_HOSTED_TIER: "ENTERPRISE" };
+    let fresh!: typeof import("../get-user-tier");
+    jest.isolateModules(() => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      fresh = require("../get-user-tier");
+    });
+    const params = deps([]);
+    expect(await fresh.getUserTier(params)).toBe(SubscriptionTier.ENTERPRISE);
+    expect((await fresh.getUserTierLimits(params)).maxLedgers).toBe(-1);
+    expect(params.stripe.listSubscriptions).not.toHaveBeenCalled();
+  });
+
+  it("leaves Stripe in charge when unset", async () => {
+    const params = deps([]);
+    expect(await getUserTier(params)).toBe(SubscriptionTier.FREE);
+    expect(params.stripe.listSubscriptions).toHaveBeenCalledTimes(1);
+  });
+});
