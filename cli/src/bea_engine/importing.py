@@ -171,7 +171,7 @@ def answer(
     always skipped. Nothing is written unless `--apply` is set and the preview
     is free of conflicts / unresolved possible duplicates / validation errors.
     """
-    from beancount.core.data import Open, Price, Transaction
+    from beancount.core.data import Balance, Open, Price, Transaction
 
     from bea_engine import managed_load
     from bea_engine.csv_mapper import (
@@ -463,6 +463,8 @@ def answer(
     stage_opens = reports_unused_accounts(options)
     # Blocked rows with what they were before the block, for the second look below.
     held: list[tuple[dict[str, Any], Any, str, str | None]] = []
+    # The rows this import writes so far, which an assertion after them counts.
+    included: list[Any] = []
     for index, entry in enumerate(entries):
         entry = normalize_entry_strings(entry)
         status, reason, match = "new", None, None
@@ -671,8 +673,17 @@ def answer(
             )
             if blocked_reason is not None:
                 status, reason, include = "blocked", blocked_reason, False
+        padded = None
+        if include and isinstance(entry, Balance):
+            # Written through the batch validation, which a pad passes: a
+            # wrong statement amount in a currency an already used pad has not
+            # padded was filled with a backdated adjustment, exit 0 (w5/871).
+            padded = _padded_balance_reason(entry, [*existing, *included], options)
+            if padded is not None:
+                status, reason, include = "blocked", padded, False
         if include:
             texts.append(text)
+            included.append(entry)
         row_dict: dict[str, Any] = {
             "row": index + 1,
             "status": status,
@@ -697,7 +708,8 @@ def answer(
         if csv_mode:
             row_dict["rule"] = rule
         rows.append(row_dict)
-        if status == "blocked":
+        # A padded assertion stays blocked: opening an account fixes nothing about it.
+        if status == "blocked" and padded is None:
             held.append((row_dict, entry, *unblocked))
 
     # The ledger before the import is not the whole answer to "is this account
@@ -1808,6 +1820,39 @@ def _entries_after(
                 entry = entry._replace(meta={**meta, _IMPORT_ROW: row})
         result.append(entry)
     return result
+
+
+def _padded_balance_reason(balance: Any, entries: list[Any], options: Any) -> str | None:
+    """Why a used pad would silently fill this imported assertion's gap, or None.
+
+    The rule `add balance` refuses by (w5/796): a pad an earlier assertion
+    already used still pads a currency it has not padded yet. A staged pad,
+    no assertion on the account between it and this one, completes silently
+    as the two-step intends.
+    """
+    from beancount.core.data import Balance
+
+    from bea_engine.ledger.adding import _balance_tolerance, _covering_pad, _plain
+
+    account, date = balance.account, balance.date
+    number, currency = balance.amount.number, balance.amount.currency
+    cover = _covering_pad(entries, account, date, currency)
+    if cover is None:
+        return None
+    held = ledger_write.book_units(entries, account, currency, date)
+    if abs(number - held) <= _balance_tolerance(balance, options):
+        return None
+    if not any(
+        isinstance(entry, Balance) and entry.account == account and cover.date < entry.date < date for entry in entries
+    ):
+        return None
+    pad_at = f"{cover.meta.get('filename')}:{cover.meta.get('lineno')}"
+    return (
+        f"{account} holds {_plain(held)} {currency} on {date} but this row asserts {_plain(number)}; the pad at "
+        f"{pad_at} ({cover.date} from {cover.source_account}) would silently insert the {_plain(number - held)} "
+        f"{currency} difference. Fix the statement amount or record the missing transaction; "
+        f"bea add balance --pad-from {cover.source_account} pads it explicitly."
+    )
 
 
 def _entry_accounts(entry: Any, *, active_only: bool = False) -> list[tuple[str, str | None]]:

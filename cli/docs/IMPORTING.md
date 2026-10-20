@@ -219,7 +219,10 @@ currency the account allows. An account under a root the ledger
 does not use (`Foo:Bar`; the roots are its `name_*` options) can never be
 opened: `--account`, `--default-account`, and rule accounts naming one exit
 **2**, a category cell naming one queues the row for review, and an importer
-posting to one is blocked without an `add open` suggestion. The same holds
+posting to one is blocked without an `add open` suggestion. An importer's
+`balance` row is blocked, naming the pad and the amount, when a pad an earlier
+assertion already used would silently fill its gap — the rule `bea add balance`
+refuses by; a staged pad still completes as the two-step intends. The same holds
 for the `--account` itself: a row posted against its own source cancels
 out, so a rule or `--default-account` naming it exits **2** and a category
 cell naming it queues the row for review.
