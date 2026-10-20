@@ -1,6 +1,6 @@
 # ClawHub publication and host rehearsal
 
-Checked on macOS on 2026-10-19 PDT (2026-10-20 UTC). This records registry submission, public installation, and the remaining host/query limits separately.
+Checked on macOS on 2026-10-19 PDT and updated on 2026-10-20 PDT. This records registry submission, public installation, real agent queries, and the remaining host limits separately.
 
 ## Release
 
@@ -55,11 +55,13 @@ The strict `/verify` API is also distinct from native installation policy. Its i
 
 ## Hermes search discovery
 
-After every listing is public, `hermes skills search beancount --source clawhub --json --limit 30` returns no results in the fresh profile. Searching with `--source all` returns three older ClawHub entries, none from this suite. A direct control request to [ClawHub's search API](https://clawhub.ai/api/v1/search?q=beancount&limit=30) returns fourteen results, including all eleven `puncsky` skills. The explicit owner-qualified installs above succeed.
+In the 2026-10-19 rehearsal, after every listing is public, `hermes skills search beancount --source clawhub --json --limit 30` returns no results in the fresh profile. Searching with `--source all` returns three older ClawHub entries, none from this suite. A direct control request to [ClawHub's search API](https://clawhub.ai/api/v1/search?q=beancount&limit=30) returns fourteen results, including all eleven `puncsky` skills. The explicit owner-qualified installs above succeed.
 
 Source inspection distinguishes this from an unpublished skill: Hermes's [source-filtered adapter](https://github.com/NousResearch/hermes-agent/blob/d923a5eb487a17c0a68801bba9ef0f56c81040a8/tools/skills_hub_clawhub.py) walks the catalog before its lightweight fallback, while the [unfiltered router](https://github.com/NousResearch/hermes-agent/blob/d923a5eb487a17c0a68801bba9ef0f56c81040a8/tools/skills_hub_search.py) can answer from the centralized index without querying the live sources when that index has matches. This suggests a host catalog/index gap; it does not prove which cache or timeout is responsible. No local host-source patch, fabricated cache, or upstream issue was used to change the result. Recheck search after the host/index is updated; use explicit publisher-qualified installs meanwhile.
 
-## First-query control and remaining acceptance
+**Update 2026-10-20:** in a new isolated profile, the exact default command `hermes skills search beancount` now returns fourteen entries including all eleven suite skills. `hermes skills search beancount --source all --json --limit 30` confirms the complete set. The source-filtered command above still returns `[]`, while the registry control still includes all eleven. Default discovery has recovered; the narrower source-filtered gap remains tracked in [w6/040](../../.pm/w6/blocked/040.md). No host or cache patch was applied.
+
+## First-query control and host acceptance
 
 Installed the published **beancount-io 0.3.1** in a separate venv. The machine's existing `bea` reports 0.1.0, so it was not used for the control. Against the public synthetic `beancount-ask/evals/files/eval1_ledger.beancount` fixture, the [first-query guide](first-query.md)'s exact BQL returns:
 
@@ -69,6 +71,27 @@ Installed the published **beancount-io 0.3.1** in a separate venv. The machine's
 | Expenses:Transport:Gas | 50.00 USD |
 | Expenses:Entertainment:Streaming | 17.99 USD |
 
-The fixture checksum remains unchanged. This is a direct CLI control, not an agent answer. No model credential is configured in the fresh host profiles. The checked `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, and `OPENROUTER_API_KEY` variables are absent from the process and the release operator's supplied environment. Temporary use of an existing model login is awaiting the operator's choice; no credential was imported during this rehearsal.
+The fixture checksum remains unchanged. This is a direct CLI control, not an agent answer. During the initial installation rehearsal no model credential was configured in the fresh host profiles, and no credential was imported.
 
-Remaining acceptance is Hermes search discovery, a compatible Hermes policy for init, and an actual model-backed first-query turn in each host. Publication task w6/m6/t007 is complete; this rehearsal does not yet establish complete cross-host workflow support or close w6/m6.
+### Real host turns — 2026-10-20
+
+The operator authorized temporary reuse of the existing Codex login. OpenClaw's official `@openclaw/codex@2026.10.5` plugin and selective `migrate apply codex --include-secrets --item auth:openai --yes` path imported only the credential item into isolated host state (one migrated item, 58 skipped). Hermes's `model` flow offered the existing CLI login, and its import prompt was accepted. No new OAuth grant or provider key was created. The original login file was byte-identical at cleanup; both temporary host profiles and their credential copies were deleted after testing.
+
+Both hosts freshly installed `@puncsky/beancount-ask@1.0.0` from ClawHub on its own. OpenClaw reported Safe; Hermes reported SAFE and allowed installation without force. Each host received the first-query question, a request to use the installed skill and show its executed command, and explicit read-only/synthetic-data constraints.
+
+| Host | Tested model and runtime | Observed result |
+| --- | --- | --- |
+| OpenClaw 2026.10.5 | `openai/gpt-6.1-sol`, explicitly selected OpenClaw embedded runtime, low reasoning | Loaded the installed skill and its bundled CLI contract, executed `bea` 0.3.1 through its tool bridge, and returned all three expected amounts. Exit 0; twelve tool calls, zero tool failures. |
+| Hermes v0.22.2 | `gpt-6.1-sol`, `openai-codex` provider, low reasoning; `--skills beancount-ask`, `--toolsets terminal,file,skills` | Loaded the installed skill references, checked the actual CLI version, executed the query through `terminal`, and returned all three expected amounts. Exit 0. |
+
+The executed query in each host was:
+
+```sh
+bea --file "$ledger" --json --no-input query "SELECT account, sum(weight) as total WHERE account ~ '^Expenses:' AND date >= 2026-06-01 AND date < 2026-07-01 GROUP BY account ORDER BY total DESC"
+```
+
+`$ledger` represents the absolute synthetic fixture path in that host's workspace. Both actual tool results contain the three rows above with `truncated: false`; the final answers show the executed command. Transfers and credit-card payments are excluded. Both ledger files retain SHA-256 `0676a52a1aaa8e80134a5a9aaf3b5fb659880732144a477d376c8b1e735322b6`.
+
+OpenClaw's initial default Codex-harness attempt stopped before inference with `Codex native skill discovery returned errors`. A read-only native discovery probe identified an unrelated installed skill outside this worktree that lacks a description. That attempt is not counted as successful. The successful run explicitly used the [documented embedded runtime](https://docs.openclaw.ai/providers/openai/runtimes), with `agents.defaults.models["openai/gpt-6.1-sol"].agentRuntime.id` set to `openclaw`. It made a real authenticated model turn; neither the host nor skill source was patched. The skill optionally checked the absent sibling contract, then loaded its own bundled copy successfully.
+
+The installation and first-query rehearsal is complete under t008's provision for recording compatibility gaps with follow-ups. Hermes init remains unsupported under the retained workflow ([w6/039](../../.pm/w6/blocked/039.md)); source-filtered search remains incomplete ([w6/040](../../.pm/w6/blocked/040.md)). Default Hermes search, standalone installs and real queries are verified. These results do not claim complete Hermes suite support or successful default Codex-harness execution.

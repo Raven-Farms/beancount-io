@@ -1,6 +1,6 @@
 # w6 · m6 — Publish the ledger skills to ClawHub for OpenClaw and Hermes Agent
 
-**Worker:** worker1 **Goal:** An OpenClaw or Hermes Agent user installs any `beancount-*` skill by name from ClawHub, and it works on its own without a Git checkout or this repository's link installer. **Status:** blocked (t001–t007 done; all eleven 1.0.0 listings public; eleven OpenClaw/ten Hermes installs pass; Hermes init/search and agent-query authentication remain)
+**Worker:** worker1 **Goal:** An OpenClaw or Hermes Agent user installs any `beancount-*` skill by name from ClawHub, and it works on its own without a Git checkout or this repository's link installer. **Status:** todo (t001–t008 done; registry documentation and standing closing tasks remain; Hermes compatibility follow-ups are w6/039 and w6/040)
 
 **Research date:** 2026-10-16. Sources: ClawHub's quickstart, how-it-works, and skill-format pages at `docs.openclaw.ai/clawhub/`; Hermes Agent's skills page at `hermes-agent.nousresearch.com/docs/user-guide/features/skills`. Re-check the CLI flags against `clawhub --help` and `hermes skills --help` before relying on them.
 
@@ -15,7 +15,7 @@
 | [t005](done/t005.md) | Dry-run publish every bundle — **DONE** | 30m | t002, t003, t004 |
 | [t006](done/t006.md) | Add the `Publish (clawhub)` workflow — **DONE** | 45m | t005 |
 | [t007](done/t007.md) | Operator: ClawHub handle, token, and first publish — **DONE** | 30m | t001, t006 |
-| t008 | Rehearse installs in OpenClaw and Hermes Agent — **BLOCKED** (partial preflight recorded) | 45m | t007 |
+| [t008](done/t008.md) | Rehearse installs in OpenClaw and Hermes Agent — **DONE** | 45m | t007 |
 | t009 | Document the registry installs | 30m | t001, t006, t008 |
 | t010 | Adoption surface | 30m | t009 |
 | t011 | Simplify | 30m | t010 |
@@ -29,11 +29,11 @@
 - **Names:** retain current skill names for this release. w2/m39's measured routing evidence found no benefit from the proposed renames; a future explicitly requested readability rename can carry its own migration.
 - **Hermes init:** preserve the existing consent-gated ledger-instruction scaffolding. Do not remove or obscure this feature to pass the host scanner; defer Hermes init support until the host has a compatible policy or the user later requests a workflow change. The remaining ten bundles are rechecked against the current inventory in this change.
 
-## Blocked
+## Block history
 
 - **Publication / t007 cleared (2026-10-19)** — All eleven 1.0.0 listings are public and the full suite installs together in OpenClaw. [Run 39372550698](https://github.com/bex-co/beancount-io/actions/runs/39372550698), the supplied protected token, required environment review, and credential cleanup are verified. t007 is archived under `done/`; no publication, token, or merge prerequisite remains.
 
-- **t008 (2026-10-19)** — Real registry installs pass for all eleven skills in OpenClaw and ten in Hermes. Hermes v0.22.2 rejects init's intentional ledger instruction-file creation, and its search does not yet find this suite even though ClawHub's search API returns all eleven. Fresh host profiles have no model authentication; a choice about temporary use of an existing login is pending. **Unblock:** Hermes supports the retained init workflow, its search exposes the published suite, and the operator authorizes/configures model authentication for real host query turns. **Who can clear it:** the Hermes host/index maintainers and the model-account operator. The direct published-CLI control passes, but is not agent acceptance.
+- **t008 cleared (2026-10-20)** — Authorized temporary authentication enabled real first-query turns in both hosts; both executed published bea 0.3.1 and returned the expected amounts without changing the synthetic ledgers. Default Hermes search now finds all eleven listings. The original login was unchanged and the temporary credential copies were removed. The task's acceptance expressly permits compatibility gaps with filed follow-ups: w6/039 retains the init policy gap and w6/040 retains source-filtered search. Default search plus a scanner-approved install satisfy the written milestone requirement; complete Hermes suite support is not claimed. The milestone is live again for t009 and its standing closing tasks.
 
 ## What the hosts need (checked 2026-10-16)
 
@@ -57,15 +57,15 @@
 ## Source + Goal linkage
 
 - **Source:** user request 2026-10-16 to list Beancount.io on OpenClaw and Hermes Agent, after a search found no such work on the board. Research the same day into ClawHub's publishing, skill-format, and moderation docs, and into Hermes Agent's skills-hub docs.
-- **Goal linkage:** **A3 — Community & distribution.** ClawHub is the public registry both hosts search, as PyPI and the Homebrew tap are for `bea` and the official MCP Registry is for the hosted endpoint ([w2/m36](../../../w2/done/m36/README.md)). Secondary **A1 — Agent-native accounting**: two agent hosts beyond Claude Code and Codex can run the ledger workflows.
+- **Goal linkage:** **A3 — Community & distribution.** ClawHub is the public registry both hosts search, as PyPI and the Homebrew tap are for `bea` and the official MCP Registry is for the hosted endpoint ([w2/m36](../../w2/done/m36/README.md)). Secondary **A1 — Agent-native accounting**: two agent hosts beyond Claude Code and Codex can run the ledger workflows.
 - **Expected outcome:** an OpenClaw or Hermes user types one install command and gets a working skill without cloning this repository. Signals: ClawHub install counts per skill, and `bea` installs that follow.
-- **Why now:** the suite is rehearsed and stable on Claude Code and Codex ([w5/m3](../../../w5/done/m3/README.md), [w5/m9](../../../w5/done/m9/README.md), [w5/m10](../../../w5/done/m10/README.md)), and the only install path today is a sparse Git checkout plus a Python link script. Both hosts read ClawHub, so one listing reaches both. The single-folder gap (t002, t003) has to close before any registry publish, or the first installs read missing files. Adoption surface is included because the milestone changes the customer install guide, the skills catalog, and the skill frontmatter that agents read.
+- **Why now:** the suite is rehearsed and stable on Claude Code and Codex ([w5/m3](../../w5/done/m3/README.md), [w5/m9](../../w5/done/m9/README.md), [w5/m10](../../w5/done/m10/README.md)), and the only install path today is a sparse Git checkout plus a Python link script. Both hosts read ClawHub, so one listing reaches both. The single-folder gap (t002, t003) has to close before any registry publish, or the first installs read missing files. Adoption surface is included because the milestone changes the customer install guide, the skills catalog, and the skill frontmatter that agents read.
 
 ## Out of scope
 
-- Hermes Agent's curated MCP catalog (`optional-mcps/` in its repository). Nous approves entries there, and the docs describe no community submission, so this milestone does not open a pull request against it ([DO_NOT_DO](../../../DO_NOT_DO.md): no unsolicited PRs to other repos).
+- Hermes Agent's curated MCP catalog (`optional-mcps/` in its repository). Nous approves entries there, and the docs describe no community submission, so this milestone does not open a pull request against it ([DO_NOT_DO](../../DO_NOT_DO.md): no unsolicited PRs to other repos).
 - skills.sh, LobeHub, and other directories. A `/.well-known` skills index on `beancount.io`: Hermes documents `/.well-known/skills/index.json`, while the draft discovery RFC uses `/.well-known/agent-skills/index.json`. Revisit once the convention settles.
-- An OpenClaw plugin package, and the hosted MCP endpoint on either host ([w6/m7](../../done/m7/README.md)).
+- An OpenClaw plugin package, and the hosted MCP endpoint on either host ([w6/m7](../done/m7/README.md)).
 - Development skills under `.agents/skills/`. Only the customer `beancount-*` suite is published.
 
 ## Unblocked 2026-10-18; refreshed 2026-10-19
@@ -75,7 +75,7 @@ The milestone was parked on 2026-10-16 because dry-run task t005 depended on the
 ## Publication sequencing
 
 - t007 now depends explicitly on t001. The owner records MIT-0 approval and the publisher handle; the operator supplies the protected environment and token.
-- Use the current skill names selected above for the first release; [w2/m39](../../../w2/blocked/m39/README.md)'s readability proposal is not a prerequisite for publication.
+- Use the current skill names selected above for the first release; [w2/m39](../../w2/blocked/m39/README.md)'s readability proposal is not a prerequisite for publication.
 - Rebuild the suite and repeat the dry runs on the release commit. The inventory includes newly shipped skills automatically. t009 waits for t008 so printed install commands have actual host rehearsal evidence.
 - Dry runs do not establish server moderation or clean OpenClaw/Hermes scanner acceptance; t007/t008 retain those checks.
 
@@ -91,7 +91,7 @@ Created the `clawhub-publish` GitHub environment with the same required reviewer
 
 ## Initial ten-skill Hermes preflight 2026-10-19
 
-The independent portion of t008 now has real host evidence: direct GitHub ask installs under Hermes v0.22.2 but is incomplete on its own, and the full generated bundle trees have been scanned with Hermes's actual community-source policy. Three accidental inline-shell findings are corrected without changing the pending-transaction behavior. Nine bundles pass locally without force. Init's remaining critical finding is its intended ledger-instruction scaffolding; that feature is preserved pending the owner's compatibility decision. See [t008](t008.md) for versions, commands, limits, and the exact unblock condition.
+The independent portion of t008 now has real host evidence: direct GitHub ask installs under Hermes v0.22.2 but is incomplete on its own, and the full generated bundle trees have been scanned with Hermes's actual community-source policy. Three accidental inline-shell findings are corrected without changing the pending-transaction behavior. Nine bundles pass locally without force. Init's remaining critical finding is its intended ledger-instruction scaffolding; that feature is preserved pending the owner's compatibility decision. See [t008](done/t008.md) for versions, commands, limits, and the exact unblock condition.
 
 ## Current-suite dry-run evidence 2026-10-19
 
@@ -146,7 +146,7 @@ Fresh environment and account read-backs still show no GitHub publishing secret 
 
 The owner supplied an existing token through local ignored configuration. It was passed directly to GitHub's environment secret setter without printing or committing its value; no token was created by the assistant. Read-back verifies the secret metadata. The main-only environment approval was completed for the owner-authorized release, and [run 39372550698](https://github.com/bex-co/beancount-io/actions/runs/39372550698) succeeds, including credential cleanup.
 
-All eleven submissions return 1.0.0, initially `pending-publication`. Real clean-host installs subsequently pass for nine skills in OpenClaw 2026.10.5 and eight in Hermes v0.22.2. Options and property remain pending; Hermes additionally rejects init. The [public rehearsal](../../../../docs/skills/clawhub-rehearsal.md) records per-skill outcomes, exact commands, standalone references/licenses, strict verification limits, and the successful published `bea` 0.3.1 control. New install guidance names only exercised commands and states the current incomplete-suite limits. No model credential was imported and no agent first-query turn has run yet.
+All eleven submissions return 1.0.0, initially `pending-publication`. Real clean-host installs subsequently pass for nine skills in OpenClaw 2026.10.5 and eight in Hermes v0.22.2. Options and property remain pending; Hermes additionally rejects init. The [public rehearsal](../../../docs/skills/clawhub-rehearsal.md) records per-skill outcomes, exact commands, standalone references/licenses, strict verification limits, and the successful published `bea` 0.3.1 control. New install guidance names only exercised commands and states the current incomplete-suite limits. No model credential was imported and no agent first-query turn has run yet.
 
 **Subsequent promotion:** by 05:35 UTC on Oct 20, options is public at 1.0.0 and both host installs pass without force (OpenClaw audit Review, Hermes SAFE). Verified totals are now ten/nine; property alone remains pending. [Complete skills CI](https://github.com/bex-co/beancount-io/actions/runs/39374976210) passes on the shipped documentation baseline `dec916039`. The task and milestone stay blocked on the remaining explicit conditions above.
 
