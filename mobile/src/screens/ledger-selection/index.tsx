@@ -16,7 +16,7 @@ import {
   GetLedgerDocument,
   type GetLedgerQuery,
 } from "@/generated-graphql/graphql";
-import { prefersStackedLayout, useTheme } from "@/common/theme";
+import { prefersStackedLayout, space, useTheme } from "@/common/theme";
 import { useThemeStyle } from "@/common/hooks";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { useToast } from "@/common/hooks/use-toast";
@@ -61,6 +61,9 @@ const getStyles = (theme: ColorTheme) =>
       paddingHorizontal: 12,
       flexDirection: "row",
       alignItems: "center",
+      // The magnifier sat flush against the text; the shared SearchBar and
+      // Merchants keep this gap (w21/002). A row gap mirrors under RTL.
+      gap: space.sm,
       borderRadius: 12,
       backgroundColor: theme.controlFill,
     },
