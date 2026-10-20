@@ -15,11 +15,26 @@
    - `BAD_USER_INPUT` for missing required tool arguments
 
    `yarn mcp:agent-eval` reports the deployed `close-month` and `categorize-imports` prompts as differing from the working tree.
-   **Unblock:** deploy backend-v2, rerun the prompt journeys until the drift note disappears, and record the results.
+   **Update 2026-10-20:** the user reports backend-v2 deployed. The repository cannot confirm it yet. The drift check and the journeys need the eval API keys, and the 2026-09-15 keys expired on 2026-09-22. The hosted endpoint answers 401 without one, and this machine's `bea cloud` session has expired. Two `close-month` journeys were added for t002 and are ready to run (see [Validation evidence](#validation-evidence-2026-10-20)).
+   **Unblock:** the QA account owner mints a short-lived read/write key and a read-only key, both pinned to `<owner>/mcp-agent-eval` ([Personal API key](../../../../backend-cluster/backend-v2/docs/mcp.md#personal-api-key)). Put them, with `BEANCOUNT_MCP_LEDGER`, as `BEANCOUNT_MCP_TOKEN` and `BEANCOUNT_MCP_READONLY_TOKEN` in the gitignored `backend-cluster/backend-v2/.env.mcp-eval.local`. Then rerun the prompt journeys until the drift note disappears, and record the results.
 2. **Staged bank data for `categorize-imports` (t004).** Suggestions, previews, confirmed submission, and repeat-import deduplication all need staged transactions on the QA account's eval ledger. Staged transactions require a linked bank, and linking happens in the browser. `.pm/DO_NOT_DO.md` rules out a duplicate stack for MCP testing.
    **Unblock:** link a test bank to the QA account's eval ledger, then add staged-import journeys.
 
 t002 also leaves some `close-month` cases unexercised: statements, dated assertions, and a confirmed final write. Add those journeys when unblocked. When work can resume, move this directory back to `.pm/w5/m5/`.
+
+## Validation evidence (2026-10-20)
+
+- **t002 journeys, partial work:** `evals/mcp-agent/journeys.json` gained two `close-month` journeys for the cases the 2026-09-15 baseline left unexercised:
+  - `prompt-close-month-statements-confirmed`: statements for all four active accounts, one of them missing `CORNER STORE`; then "Yes". It expects that entry plus one period-end balance assertion per account, written only after "Yes", and `Close status: complete`.
+  - `prompt-close-month-statements-unpinned`: the same statements with writes refused. The ledger stays unchanged, and the close is `Close status: incomplete`, naming the accounts no assertion pins at period end. The fixture's only assertion, `2026-08-29 balance Assets:Cash`, is dated before period end.
+- **Oracle tests:** `scripts/__tests__/mcp-agent-eval.test.ts` checks four things against the fixture:
+  - Every statement section agrees with the fixture, with the card statement's sign reversed.
+  - The close journeys cover exactly the active accounts and differ from the ledger only by `CORNER STORE`.
+  - Each expected assertion matches the fixture balance.
+  - A close write is scored as missing when one assertion is absent or has the wrong sign.
+  Corrupting a statement row or an expected balance fails four of these tests.
+- **Native checks (backend-v2):** `yarn typecheck` passes. `yarn test` passes: 367 suites, 6252 tests. `yarn lint:deadcode` is clean. Prettier and ESLint are clean on the changed files.
+- **Not yet measured:** the journeys need the eval keys (Blocked item 1). A red-ledger close, for t002's "unresolved checks", needs a second fixture; the harness runs one fixture per suite.
 
 ## Validation evidence (2026-09-15)
 
