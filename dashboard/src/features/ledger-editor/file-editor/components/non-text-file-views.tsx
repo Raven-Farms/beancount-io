@@ -134,8 +134,12 @@ export const FileActionButtons = ({
                 size="sm"
                 onClick={onEdit}
                 className="flex items-center gap-2"
+                // The visible label and shortcut hide at narrow widths; the
+                // name must not depend on CSS breakpoints (w4/240).
+                aria-label={t("common.edit")}
+                aria-keyshortcuts={isMac ? "Meta+E" : "Control+E"}
               >
-                <Edit className="h-4 w-4" />
+                <Edit aria-hidden="true" className="h-4 w-4" />
                 <span className="hidden md:inline">{t("common.edit")}</span>
                 <span className="ml-auto text-xs tracking-widest text-primary-foreground/70 hidden sm:inline">
                   {isMac ? "⌘E" : "Ctrl+E"}
