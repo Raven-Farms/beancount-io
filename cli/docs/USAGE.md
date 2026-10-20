@@ -2026,8 +2026,12 @@ says how many directives it approves (`these 60 directives`), and so does the
 **Yes** option. A destination the write creates is marked `(new file, created
 by this write)`, with the `option "name_*"` lines it starts with shown above the
 directives, since they are written too. Text still
-carrying a control character in a string is escaped to a visible `\xNN`, so
-what is on screen is what will be written. The panel starts on **No**, so Enter alone
+carrying a control character in a string is escaped to a visible `\xNN`, and an
+invisible format character (a zero-width space, a soft hyphen, a BOM) to
+`\uNNNN`, so what is on screen is what will be written. An account the text
+opens or posts to that carries a format character is refused before any panel,
+unless the ledger already opens that exact name, so an approval can never
+create a lookalike of an existing account. The panel starts on **No**, so Enter alone
 declines. Arrows, `j`/`k`, the option numbers `1`–`4` and the letters `y`, `n`,
 `a` (yes to all) and `d` (deny all) move the selection, Enter confirms it, and
 Ctrl-C declines. When one model reply proposes several writes, their panels

@@ -20,7 +20,7 @@ from typing import Any
 
 from bea_engine import protocol
 from bea_engine.ledger import write as ledger_write
-from bea_engine.ledger.text import refuse_control_characters, without_root_name_errors
+from bea_engine.ledger.text import new_account_format_problem, refuse_control_characters, without_root_name_errors
 from bea_engine.query import format_error
 
 
@@ -37,6 +37,7 @@ def answer(
     entries = _parse_directives(text)
     _refuse_documents_outside(text, entries, file, into)
     snapshot = _snapshot_for(file, token)
+    _refuse_invisible_new_accounts(entries, file, snapshot)
     target = ledger_write.destination(file, into)
     warnings = ledger_write.validate_append(
         file, [text], allow_errors=allow_errors, into=into, snapshot=snapshot, one_entry_each=False
@@ -105,6 +106,31 @@ def _parse_directives(text: str) -> list[Any]:
         detail = "; ".join(format_error(error) for error in errors) or "No dated directives were supplied."
         raise protocol.LedgerError(f"Write rejected: {detail}")
     return list(entries)
+
+
+def _refuse_invisible_new_accounts(entries: list[Any], file: Path, snapshot: ledger_write.LedgerSnapshot) -> None:
+    """Refuse a format character in an account the text opens or posts to, unless the ledger already opens it.
+
+    A zero-width space in `Assets:Ca\u200bsh` showed invisibly on the
+    approval panel, and approving it split the balance across two
+    identical-looking accounts (w5/847). `add` refuses such a new name already;
+    an existing one (a ZWNJ a script needs) is still written to. The ledger is
+    loaded only when a name carries such a character.
+    """
+    from beancount.core.data import Open
+    from beancount.core.getters import get_entry_accounts
+
+    from bea_engine import managed_load
+
+    names = {name for entry in entries for name in get_entry_accounts(entry)}
+    suspect = sorted(name for name in names if new_account_format_problem(name) is not None)
+    if not suspect:
+        return
+    existing, _, _ = managed_load.load_file(file, snapshot=snapshot)
+    opened = {entry.account for entry in existing if isinstance(entry, Open)}
+    for name in suspect:
+        if name not in opened:
+            raise protocol.UsageError(f"Write rejected: {new_account_format_problem(name)}")
 
 
 def _snapshot_for(file: Path, token: dict[str, str] | None) -> ledger_write.LedgerSnapshot:

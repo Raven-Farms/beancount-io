@@ -5,6 +5,7 @@ import os
 import random
 import shutil
 import stat
+import unicodedata
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
@@ -195,6 +196,15 @@ def _ask_write_permission(count: int = 1) -> str:
     return app.run()
 
 
+def _visible_format(text: str) -> str:
+    """Show each invisible format character (`Cf`: zero-width space, soft hyphen, BOM, …) as `\\uNNNN`.
+
+    The panel is the only gate between AI-proposed text and the books: a
+    zero-width space in an account name was on screen as nothing (w5/847).
+    """
+    return "".join(f"\\u{ord(ch):04x}" if unicodedata.category(ch) == "Cf" else ch for ch in text)
+
+
 def make_confirm_fn(active_status: list[Any]) -> Callable[[str, str, list[str], dict[str, Any]], str]:
     """Return a callback that stops the spinner, shows the panel, and runs arrow-key selection.
 
@@ -226,7 +236,7 @@ def make_confirm_fn(active_status: list[Any]) -> Callable[[str, str, list[str], 
         content.append("\n\n")
         # A new include starts with the root's `name_*` options; they are
         # written too, so they are shown with what follows them.
-        content.append(inert_text(str(proposal.get("seed") or "")) + inert_text(directive), style="green")
+        content.append(_visible_format(inert_text(str(proposal.get("seed") or "") + directive)), style="green")
         for warning in warnings:
             content.append(f"\n\nWarning: {inert_text(warning)}", style="yellow")
         console.print(
