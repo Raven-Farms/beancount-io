@@ -96,8 +96,9 @@ export function favaApiErrorToDomainError(
     const named =
       (typeof details?.detail === "string" && details.detail) || message;
     const count = typeof details?.count === "number" ? details.count : 1;
-    // Source-slice edits and deletes name themselves (w21/m1); a structured
-    // add predates the field.
+    // The ledger names the write: "add" for structured entries, "update" or
+    // "delete" for source-slice writes (w21/m1). Anything else — an older
+    // ledger service sends none — reads as the structured add it used to be.
     const action = details?.action;
     return new NewLedgerErrorsError(
       action === "update" || action === "delete" ? action : "entries",

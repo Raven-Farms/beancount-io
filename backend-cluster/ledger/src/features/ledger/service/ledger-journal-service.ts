@@ -2,7 +2,6 @@ import { parseLedgerId } from "@/shared/str";
 import {
   BadUserInputError,
   ConflictError,
-  NewLedgerErrorsError,
   NotFoundError,
   OperationNotAllowedError,
   type LedgerWriteAction,
@@ -64,7 +63,7 @@ import {
 } from "@/features/ledger/operations/commit-ledger-files";
 import type { DirectiveLimitOptions } from "@/core/directive-limit";
 import { toBeancountErrorsPublic } from "@/features/ledger/service/ledger-data-mappers";
-import { newLedgerErrors } from "@/features/ledger/utils/new-ledger-errors";
+import { refuseNewLedgerErrors } from "@/features/ledger/utils/new-ledger-errors";
 import type { CacheHelper } from "@/shared/cache";
 import { logger } from "@/shared/logger";
 
@@ -486,13 +485,15 @@ export class LedgerJournalService implements ILedgerJournalService {
    * errors it did not have, as structured adds are refused (w0/m2, w21/m1).
    * The transforms run over the loaded files, so nothing is committed; the
    * commit re-applies them to fresh content under CAS. Errors the ledger
-   * already had never block, and a clean projection skips the second parse.
+   * already had never block.
    */
   private async assertNoNewErrors(
     loaded: LoadedLedgerWithManagedPrices,
     transforms: Map<string, LedgerFileTransform>,
     action: LedgerWriteAction,
+    allowInvalid: boolean | undefined,
   ): Promise<void> {
+    if (allowInvalid) return;
     const { files, entryPoint, repoPaths } = loaded;
     const projected: FileMap = { ...files };
     for (const [path, transform] of transforms) {
@@ -502,12 +503,11 @@ export class LedgerJournalService implements ILedgerJournalService {
       toBeancountErrorsPublic(
         (await parseLedgerFiles(fileMap, entryPoint, { repoPaths })).errors,
       );
-    const after = await errorsOf(projected);
-    if (after.length === 0) return;
-    const introduced = newLedgerErrors(await errorsOf(files), after);
-    if (introduced.length > 0) {
-      throw new NewLedgerErrorsError(introduced, action);
-    }
+    await refuseNewLedgerErrors(
+      await errorsOf(projected),
+      () => errorsOf(files),
+      action,
+    );
   }
 
   /**
@@ -859,9 +859,7 @@ export class LedgerJournalService implements ILedgerJournalService {
         ]),
       ],
     ]);
-    if (!allowInvalid) {
-      await this.assertNoNewErrors(loaded, transforms, "delete");
-    }
+    await this.assertNoNewErrors(loaded, transforms, "delete", allowInvalid);
     await this.commitTransforms(ledgerId, userId, transforms, "Delete entry");
     return { message: "Entry deleted successfully", entryHash };
   }
@@ -930,9 +928,7 @@ export class LedgerJournalService implements ILedgerJournalService {
       ),
     );
 
-    if (!allowInvalid) {
-      await this.assertNoNewErrors(loaded, transforms, "delete");
-    }
+    await this.assertNoNewErrors(loaded, transforms, "delete", allowInvalid);
     await this.commitTransforms(ledgerId, userId, transforms, "Delete entries");
     return {
       message: `Deleted ${deletedHashes.length} entries successfully`,
@@ -986,10 +982,8 @@ export class LedgerJournalService implements ILedgerJournalService {
         ),
       ],
     ]);
-    // The projection's application is overwritten by the commit's own run.
-    if (!allowInvalid) {
-      await this.assertNoNewErrors(loaded, transforms, "update");
-    }
+    // The projection also reports to `applied`; the commit's run overwrites it.
+    await this.assertNoNewErrors(loaded, transforms, "update", allowInvalid);
     await this.commitTransforms(ledgerId, userId, transforms, "Update entry");
     // The entry's identity is content-derived, so the edit almost always
     // changed it. Resolve the NEW hash from the committed content so a client

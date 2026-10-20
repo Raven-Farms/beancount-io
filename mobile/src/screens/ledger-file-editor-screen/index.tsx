@@ -394,8 +394,6 @@ function LedgerFileEditorSession({
   // renders those), and the full sweep waits until the user leaves.
   const savedThisSessionRef = useRef(false);
   const { errors: allErrors, loaded: errorsLoaded } = useLedgerErrors(ledgerId);
-  const errorsBeforeSaveRef = useRef<typeof allErrors | null>(null);
-  errorsBeforeSaveRef.current = errorsLoaded ? allErrors : null;
 
   // A raw save is never refused — this editor is how a broken ledger gets
   // repaired, and repair can pass through invalid states — but it must not
@@ -488,7 +486,7 @@ function LedgerFileEditorSession({
 
       saveInFlightRef.current = true;
       // Read before sending: the refresh after the save replaces it.
-      const before = errorsBeforeSaveRef.current;
+      const before = errorsLoaded ? allErrors : null;
       try {
         const result = await updateLedgerFile({
           variables: {
@@ -542,7 +540,9 @@ function LedgerFileEditorSession({
       }
     },
     [
+      allErrors,
       canWrite,
+      errorsLoaded,
       handleReload,
       ledgerId,
       path,

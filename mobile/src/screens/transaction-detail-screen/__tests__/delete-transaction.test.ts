@@ -5,7 +5,10 @@
  *
  * Relative requires: the runner has no `@/` alias for value imports.
  */
-import { describeLedgerRefusal } from "../../../common/ledger-refusal";
+import {
+  describeLedgerRefusal,
+  ledgerWriteFailureMessage,
+} from "../../../common/ledger-refusal";
 import {
   runLedgerWrite,
   type LedgerWriteSpec,
@@ -60,9 +63,7 @@ function harness(perform: () => Promise<unknown>) {
         spec,
       ),
     perform,
-    describeFailure: (error) =>
-      describeLedgerRefusal(error, i18n) ??
-      (error instanceof Error ? error.message : null),
+    describeFailure: (error) => ledgerWriteFailureMessage(error, i18n),
     showRefusal: (title, message) => record.dialogs.push({ title, message }),
     messages: {
       success: "Transaction deleted",

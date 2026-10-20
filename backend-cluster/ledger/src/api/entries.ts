@@ -8,13 +8,9 @@ import { successResponse } from "@/server/envelope";
 import { checkDirectiveLimitForFileChanges } from "@/core/directive-limit";
 import { entryInputToText, isDecimalNumber } from "@/foundation/rustledger";
 import type { LedgerEntryInput } from "@/foundation/ledger-api-types/ledger-entry-input";
-import {
-  BadUserInputError,
-  NewLedgerErrorsError,
-  UnbalancedTransactionError,
-} from "@/shared/errors";
+import { BadUserInputError, UnbalancedTransactionError } from "@/shared/errors";
 import { ledgerIdOf, servicesForRequest } from "./service-context";
-import { newLedgerErrors } from "@/features/ledger/utils/new-ledger-errors";
+import { refuseNewLedgerErrors } from "@/features/ledger/utils/new-ledger-errors";
 import {
   checkTransactionBalance,
   scanInferredToleranceDefault,
@@ -234,18 +230,11 @@ export function setEntriesHandler(router: Router): void {
             overlays: updates,
             enforceInputLimits: false,
           });
-          // A clean projection adds nothing; only a ledger left with errors
-          // needs today's to tell old from new.
-          if (after.length > 0) {
-            const before = await data.getErrors({
-              ledgerId,
-              userId: undefined,
-            });
-            const introduced = newLedgerErrors(before, after);
-            if (introduced.length > 0) {
-              throw new NewLedgerErrorsError(introduced);
-            }
-          }
+          await refuseNewLedgerErrors(
+            after,
+            () => data.getErrors({ ledgerId, userId: undefined }),
+            "add",
+          );
         }
         await checkDirectiveLimitForFileChanges(
           client,

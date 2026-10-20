@@ -1,7 +1,8 @@
-type LedgerError = {
+/** One entry of `getLedgerErrors`, as `useLedgerErrors` returns it. */
+export type LedgerError = {
+  filename: string | null | undefined;
+  lineno: number | null | undefined;
   message: string;
-  filename?: string | null;
-  lineno?: number | null;
 };
 
 /**

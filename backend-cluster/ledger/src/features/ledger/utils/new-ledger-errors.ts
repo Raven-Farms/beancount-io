@@ -1,37 +1,44 @@
 import type { BeancountErrorPublic } from "@/foundation/ledger-api-types";
+import { NewLedgerErrorsError, type LedgerWriteAction } from "@/shared/errors";
 
 /**
- * Errors in `after` that `before` did not have. An error the ledger already
- * had is matched at its exact file:line first; what is left is matched by
- * message and file alone, because editing or deleting a block shifts every
- * later line — an existing error below the edit moves without being new
- * (w21/m1). Each `before` error excuses at most one `after` error, so a second
- * copy of a known message still counts as introduced.
+ * Errors in `after` that `before` did not have, matched by message and file
+ * but not line: editing or deleting a block shifts every later line, so an
+ * existing error below the edit moves without being new (w21/m1). Each
+ * `before` error excuses one `after` error, in order, so a second copy of a
+ * known message still counts as introduced.
  */
 export function newLedgerErrors(
   before: readonly BeancountErrorPublic[],
   after: readonly BeancountErrorPublic[],
 ): BeancountErrorPublic[] {
-  const file = (error: BeancountErrorPublic) =>
+  const key = (error: BeancountErrorPublic) =>
     `${error.message}\u0000${error.source?.filename ?? ""}`;
-  const at = (error: BeancountErrorPublic) =>
-    `${file(error)}:${error.source?.lineno ?? ""}`;
-  const take = (counts: Map<string, number>, key: string) => {
-    const left = counts.get(key) ?? 0;
-    if (left > 0) counts.set(key, left - 1);
-    return left > 0;
-  };
-  const exact = new Map<string, number>();
-  before.forEach((error) =>
-    exact.set(at(error), (exact.get(at(error)) ?? 0) + 1),
-  );
-  const unmatched = after.filter((error) => !take(exact, at(error)));
-  // The before errors no exact match claimed are the ones that may have moved.
-  const moved = new Map<string, number>();
-  before.forEach((error) => {
-    if (take(exact, at(error))) {
-      moved.set(file(error), (moved.get(file(error)) ?? 0) + 1);
-    }
+  const left = new Map<string, number>();
+  for (const error of before) {
+    left.set(key(error), (left.get(key(error)) ?? 0) + 1);
+  }
+  return after.filter((error) => {
+    const count = left.get(key(error)) ?? 0;
+    if (count > 0) left.set(key(error), count - 1);
+    return count === 0;
   });
-  return unmatched.filter((error) => !take(moved, file(error)));
+}
+
+/**
+ * Refuse a write whose projection (`after`) has errors the ledger did not
+ * have. Every structured write — add, edit, delete — goes through here (w0/m2,
+ * w21/m1). `before` is read only when the projection has errors at all: a
+ * clean projection adds nothing, and today's errors cost a second parse.
+ */
+export async function refuseNewLedgerErrors(
+  after: readonly BeancountErrorPublic[],
+  before: () => Promise<readonly BeancountErrorPublic[]>,
+  action: LedgerWriteAction,
+): Promise<void> {
+  if (after.length === 0) return;
+  const introduced = newLedgerErrors(await before(), after);
+  if (introduced.length > 0) {
+    throw new NewLedgerErrorsError(introduced, action);
+  }
 }

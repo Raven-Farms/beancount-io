@@ -1,12 +1,7 @@
 import { useReactiveVar } from "@apollo/client";
 import { ledgerVar } from "@/common/vars";
 import { useGetLedgerErrorsQuery } from "@/generated-graphql/graphql";
-
-type LedgerError = {
-  filename: string | null | undefined;
-  lineno: number | null | undefined;
-  message: string;
-};
+import type { LedgerError } from "@/common/new-ledger-error";
 
 export const useLedgerErrors = (selectedLedgerId?: string) => {
   const accountLedgerId = useReactiveVar(ledgerVar);
