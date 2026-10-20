@@ -56,7 +56,7 @@
 
 ## Milestones
 
-- [ ] **m37** — [Resolve README file and image references from their source path](./m37/README.md) (7 tasks) ← dashboard QA, 2026-10-20; minor, rendered file/image context and native hrefs.
+- [ ] **m37** — [Resolve README file and image references from their source path](./blocked/m37/README.md) (7 tasks) ← dashboard QA, 2026-10-20; minor, rendered file/image context and native hrefs. — **blocked:** fix shipped; awaiting deployed README journey check
 
 - [ ] **m36** — [Preserve commit and profile activity timestamps through hydration](./blocked/m36/README.md) (7 tasks) ← dashboard QA, 2026-10-20; minor, commit/profile focus and exact browser-zone attributes. — **blocked:** fix shipped; awaiting deployed SSR browser check
 
