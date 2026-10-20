@@ -13,11 +13,6 @@ let boundedClient: RedisCommands | null = null;
 const COMMAND_TIMEOUT_MS = 1000;
 const MAX_PENDING_COMMANDS = 128;
 type RedisCommands = {
-  incr(key: string): Promise<number>;
-  pExpire(key: string, ms: number): Promise<unknown>;
-  pTTL(key: string): Promise<number>;
-  get(key: string): Promise<string | null>;
-  del(key: string): Promise<number>;
   eval(
     script: string,
     options: { keys: string[]; arguments: string[] },
@@ -63,11 +58,6 @@ function boundCommands(
     });
   }
   return {
-    incr: (key) => run(() => client.incr(key)),
-    pExpire: (key, ms) => run(() => client.pExpire(key, ms)),
-    pTTL: (key) => run(() => client.pTTL(key)),
-    get: (key) => run(() => client.get(key)),
-    del: (key) => run(() => client.del(key)),
     eval: (script, options) => run(() => client.eval(script, options)),
   };
 }

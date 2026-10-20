@@ -4,11 +4,10 @@ import {
   completeFailureBudget,
   clearFailureBudget,
 } from "@/foundation/redis/redis-admission";
-import type { Budget } from "@/server/api/rate-limit";
 import { CACHE_KEYS, TTL } from "@/shared/cache";
 import { RateLimitedError, ServiceUnavailableError } from "@/shared/errors";
 
-export const PASSWORD_FAILURE_BUDGET: Budget = {
+export const PASSWORD_FAILURE_BUDGET = {
   max: 10,
   windowMs: TTL.MIN_15,
 };

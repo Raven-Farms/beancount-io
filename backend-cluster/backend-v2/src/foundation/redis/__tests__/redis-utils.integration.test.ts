@@ -163,11 +163,13 @@ it("increments atomically under concurrency, preserves an existing expiry, and r
 
 it("times out written commands while retaining a bounded backlog until their replies arrive", async () => {
   const redis = getRedisClient()!;
-  const get = jest.spyOn(native, "get");
+  const evaluate = jest.spyOn(native, "eval");
   await control.sendCommand(["CLIENT", "PAUSE", "5000", "ALL"]);
   try {
     const results = await Promise.allSettled(
-      Array.from({ length: 128 }, () => redis.get("paused")),
+      Array.from({ length: 128 }, () =>
+        redis.eval("return false", { keys: ["paused"], arguments: [] }),
+      ),
     );
     expect(
       results.every(
@@ -177,15 +179,22 @@ it("times out written commands while retaining a bounded backlog until their rep
       ),
     ).toBe(true);
     for (let attempt = 0; attempt < 100; attempt++)
-      await expect(redis.get("saturated")).rejects.toThrow("capacity");
-    expect(get).toHaveBeenCalledTimes(128);
+      await expect(
+        redis.eval("return false", { keys: ["saturated"], arguments: [] }),
+      ).rejects.toThrow("capacity");
+    expect(evaluate).toHaveBeenCalledTimes(128);
   } finally {
     await control.sendCommand(["CLIENT", "UNPAUSE"]);
-    get.mockRestore();
+    evaluate.mockRestore();
   }
   await until(async () => {
     try {
-      return (await redis.get("recovered")) === null;
+      return (
+        (await redis.eval("return false", {
+          keys: ["recovered"],
+          arguments: [],
+        })) === null
+      );
     } catch {
       return false;
     }
@@ -199,14 +208,18 @@ it("releases stalled commands through the native socket timeout and reconnects",
   );
   await control.sendCommand(["CLIENT", "PAUSE", "10000", "ALL"]);
   try {
-    await expect(redis.get("socket-timeout")).rejects.toThrow("timed out");
+    await expect(
+      redis.eval("return false", { keys: ["socket-timeout"], arguments: [] }),
+    ).rejects.toThrow("timed out");
     await reconnecting;
     expect(native.isReady).toBe(false);
   } finally {
     await control.sendCommand(["CLIENT", "UNPAUSE"]);
   }
   await until(() => native.isReady);
-  await expect(redis.get("socket-recovered")).resolves.toBeNull();
+  await expect(
+    redis.eval("return false", { keys: ["socket-recovered"], arguments: [] }),
+  ).resolves.toBeNull();
 }, 15_000);
 
 it("fails offline calls without buffering, keeps proof admission closed, and recovers after Redis restarts", async () => {
@@ -226,11 +239,13 @@ it("fails offline calls without buffering, keeps proof admission closed, and rec
   await expect(
     helper.getOrSet("offline-read", 1000, async () => "source"),
   ).resolves.toBe("source");
-  const get = jest.spyOn(native, "get");
+  const evaluate = jest.spyOn(native, "eval");
   for (let attempt = 0; attempt < 100; attempt++)
-    await expect(redis.get("offline")).rejects.toThrow("unavailable");
-  expect(get).not.toHaveBeenCalled();
-  get.mockRestore();
+    await expect(
+      redis.eval("return false", { keys: ["offline"], arguments: [] }),
+    ).rejects.toThrow("unavailable");
+  expect(evaluate).not.toHaveBeenCalled();
+  evaluate.mockRestore();
   await expect(incrementInWindow("offline", 1000)).resolves.toBeUndefined();
   await expect(
     consumeSlidingWindows([{ key: "offline-proof", max: 1, windowMs: 1000 }]),
@@ -268,6 +283,9 @@ it("bounds connection initialization retries and leaves no half-initialized clie
     );
   }
   await expect(
-    getRedisClient()!.get("clean-initialization"),
+    getRedisClient()!.eval("return false", {
+      keys: ["clean-initialization"],
+      arguments: [],
+    }),
   ).resolves.toBeNull();
 }, 10_000);

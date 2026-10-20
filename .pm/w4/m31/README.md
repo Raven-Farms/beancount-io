@@ -1,6 +1,6 @@
 # w4 · m31 — Bound authentication abuse without losing account recovery
 
-**Worker:** worker1 **Goal:** human and agent callers receive predictable request limits before credential work, while account owners retain a verified recovery path **Status:** todo (t001, t002, t003, t004, t005, t006, t010, t011 done)
+**Worker:** worker1 **Goal:** human and agent callers receive predictable request limits before credential work, while account owners retain a verified recovery path **Status:** todo (t001, t002, t003, t004, t005, t006, t007, t010, t011 done)
 
 ## Tasks (in order)
 
@@ -14,7 +14,7 @@
 | t005 | Enforce both user and credential API budgets with bounded outage fallback — **DONE** | 60m | t001, t010 |
 | t011 | Keep private authentication links out of copied diagnostic reports — **DONE** | 30m | t005 |
 | t006 | Adoption surface — **DONE** | 25m | t004, t005, t010, t011 |
-| t007 | Simplify | 30m | t006 |
+| t007 | Simplify — **DONE** | 30m | t006 |
 | t008 | Test coverage | 45m | t006, t007 |
 | t009 | Closeout | 15m | t008 |
 

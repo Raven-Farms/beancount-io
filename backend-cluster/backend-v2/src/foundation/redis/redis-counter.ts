@@ -36,7 +36,9 @@ export async function incrementInWindow(
   windowMs: number,
 ): Promise<CounterResult | undefined> {
   if (!Number.isSafeInteger(windowMs) || windowMs <= 0) return undefined;
-  return withCounterClient(async (client) => {
+  const client = getRedisClient();
+  if (!client) return undefined;
+  try {
     const result = (await client.eval(
       `
       local count = redis.call('INCR', KEYS[1])
@@ -50,38 +52,6 @@ export async function incrementInWindow(
       { keys: [key], arguments: [String(windowMs)] },
     )) as [number, number];
     return { count: Number(result[0]), resetInMs: Number(result[1]) };
-  });
-}
-
-/**
- * Read `key`'s current count without incrementing it, for budgets checked
- * before the attempt they count. `{ count: 0 }` when the counter does not exist;
- * `undefined` when Redis is unreachable.
- */
-export async function peekCount(
-  key: string,
-): Promise<CounterResult | undefined> {
-  return withCounterClient(async (client) => {
-    const value = await client.get(key);
-    if (value === null) return { count: 0, resetInMs: 0 };
-    const ttl = await client.pTTL(key);
-    return { count: Number(value) || 0, resetInMs: ttl > 0 ? ttl : 0 };
-  });
-}
-
-/** Delete `key`'s counter, ending its window early. Best effort. */
-export async function resetCount(key: string): Promise<void> {
-  await withCounterClient((client) => client.del(key));
-}
-
-/** Run `fn` against Redis, or answer `undefined` when it is unreachable. */
-async function withCounterClient<T>(
-  fn: (client: NonNullable<ReturnType<typeof getRedisClient>>) => Promise<T>,
-): Promise<T | undefined> {
-  const client = getRedisClient();
-  if (!client) return undefined;
-  try {
-    return await fn(client);
   } catch {
     counterLogger.error("Redis counter unavailable");
     return undefined;

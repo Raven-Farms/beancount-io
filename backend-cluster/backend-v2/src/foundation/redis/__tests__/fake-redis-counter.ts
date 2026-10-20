@@ -27,16 +27,6 @@ export const fakeRedisCounter = {
     fakeRedisCounterState.counters.set(key, count);
     return { count, resetInMs: RESET_IN_MS };
   },
-  peekCount: async (key: string) =>
-    fakeRedisCounterState.down
-      ? undefined
-      : {
-          count: fakeRedisCounterState.counters.get(key) ?? 0,
-          resetInMs: RESET_IN_MS,
-        },
-  resetCount: async (key: string) => {
-    fakeRedisCounterState.counters.delete(key);
-  },
 };
 
 type WindowBucket = { key: string; max: number; windowMs: number };

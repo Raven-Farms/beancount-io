@@ -10,9 +10,6 @@ import { AuthService } from "@/features/auth/service/auth-service";
 import { graphqlScopeMiddleware } from "@/server/graphql/scope-middleware";
 import { formatError } from "@/server/graphql/format-error";
 
-jest.mock("@/foundation/redis/redis-counter", () => ({
-  resetCount: jest.fn(async () => undefined),
-}));
 jest.mock("@/foundation/redis/redis-admission", () => mockFakeRedisAdmission);
 
 // The dashboard says which rule a refused new password broke by reading

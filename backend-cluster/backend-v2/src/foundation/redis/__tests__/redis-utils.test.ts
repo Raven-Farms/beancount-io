@@ -28,7 +28,7 @@ describe("redis-utils", () => {
   };
   let mockKeyvRedisInstance: {
     disconnect: jest.Mock;
-    client: { isReady: boolean; get: jest.Mock };
+    client: { isReady: boolean; eval: jest.Mock };
   };
 
   beforeEach(() => {
@@ -42,7 +42,7 @@ describe("redis-utils", () => {
 
     mockKeyvRedisInstance = {
       disconnect: jest.fn().mockResolvedValue(undefined),
-      client: { isReady: true, get: jest.fn().mockResolvedValue("value") },
+      client: { isReady: true, eval: jest.fn().mockResolvedValue("value") },
     };
 
     MockKeyvRedis.mockImplementation(() => mockKeyvRedisInstance as never);
@@ -178,7 +178,7 @@ describe("redis-utils", () => {
         resolve: (value: string) => void;
         reject: (error: Error) => void;
       }[] = [];
-      mockKeyvRedisInstance.client.get.mockImplementation(
+      mockKeyvRedisInstance.client.eval.mockImplementation(
         () =>
           new Promise<string>((resolve, reject) =>
             pending.push({ resolve, reject }),
@@ -187,22 +187,30 @@ describe("redis-utils", () => {
       await createRedisCache("redis://localhost:6379");
       const redis = getRedisClient()!;
       const results = Promise.allSettled(
-        Array.from({ length: 128 }, () => redis.get("synthetic")),
+        Array.from({ length: 128 }, () =>
+          redis.eval("synthetic", { keys: [], arguments: [] }),
+        ),
       );
-      await expect(redis.get("overflow")).rejects.toThrow("capacity");
-      expect(mockKeyvRedisInstance.client.get).toHaveBeenCalledTimes(128);
+      await expect(
+        redis.eval("overflow", { keys: [], arguments: [] }),
+      ).rejects.toThrow("capacity");
+      expect(mockKeyvRedisInstance.client.eval).toHaveBeenCalledTimes(128);
       await jest.advanceTimersByTimeAsync(1000);
       expect(
         (await results).every((result) => result.status === "rejected"),
       ).toBe(true);
       for (let attempt = 0; attempt < 100; attempt++)
-        await expect(redis.get("still full")).rejects.toThrow("capacity");
-      expect(mockKeyvRedisInstance.client.get).toHaveBeenCalledTimes(128);
+        await expect(
+          redis.eval("still full", { keys: [], arguments: [] }),
+        ).rejects.toThrow("capacity");
+      expect(mockKeyvRedisInstance.client.eval).toHaveBeenCalledTimes(128);
 
       pending[0].resolve("late reply");
       await Promise.resolve();
-      mockKeyvRedisInstance.client.get.mockResolvedValueOnce("recovered");
-      await expect(redis.get("available slot")).resolves.toBe("recovered");
+      mockKeyvRedisInstance.client.eval.mockResolvedValueOnce("recovered");
+      await expect(
+        redis.eval("available slot", { keys: [], arguments: [] }),
+      ).resolves.toBe("recovered");
       for (const command of pending.slice(1))
         command.reject(new Error("late socket failure"));
       await Promise.resolve();
@@ -213,10 +221,14 @@ describe("redis-utils", () => {
       await createRedisCache("redis://localhost:6379");
       const redis = getRedisClient()!;
       mockKeyvRedisInstance.client.isReady = false;
-      await expect(redis.get("offline")).rejects.toThrow("unavailable");
-      expect(mockKeyvRedisInstance.client.get).not.toHaveBeenCalled();
+      await expect(
+        redis.eval("offline", { keys: [], arguments: [] }),
+      ).rejects.toThrow("unavailable");
+      expect(mockKeyvRedisInstance.client.eval).not.toHaveBeenCalled();
       mockKeyvRedisInstance.client.isReady = true;
-      await expect(redis.get("online")).resolves.toBe("value");
+      await expect(
+        redis.eval("online", { keys: [], arguments: [] }),
+      ).resolves.toBe("value");
       await closeRedisCache();
       expect(mockKeyvRedisInstance.disconnect).toHaveBeenCalledWith(true);
       expect(getRedisClient()).toBeNull();
@@ -225,14 +237,16 @@ describe("redis-utils", () => {
     it("clears a deadline and releases its slot when a command throws synchronously", async () => {
       jest.useFakeTimers();
       await createRedisCache("redis://localhost:6379");
-      mockKeyvRedisInstance.client.get.mockImplementationOnce(() => {
+      mockKeyvRedisInstance.client.eval.mockImplementationOnce(() => {
         throw new Error("synchronous driver failure");
       });
-      await expect(getRedisClient()!.get("failure")).rejects.toThrow(
-        "synchronous driver failure",
-      );
+      await expect(
+        getRedisClient()!.eval("failure", { keys: [], arguments: [] }),
+      ).rejects.toThrow("synchronous driver failure");
       expect(jest.getTimerCount()).toBe(0);
-      await expect(getRedisClient()!.get("next")).resolves.toBe("value");
+      await expect(
+        getRedisClient()!.eval("next", { keys: [], arguments: [] }),
+      ).resolves.toBe("value");
     });
   });
 
