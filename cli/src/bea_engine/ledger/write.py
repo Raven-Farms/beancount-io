@@ -1973,32 +1973,67 @@ def _same_file(left: Path, right: Path) -> bool:
         return False
 
 
-def top_root(file: Path) -> Path | None:
-    """The ledger nothing includes, above `file` through its includers, or None for a root.
+def defining_root(file: Path) -> Path | None:
+    """The highest includer that defines what `file` reads, or None for a root.
 
-    A climb that comes back to `file` (an include cycle through it) has no
-    other root to name: the hint told the user to run the command they had
-    just run (w5/566).
+    Each step up must define what the file below it reads, and the first
+    overlay ends the climb: climbing past the nearest includer to the topmost
+    one put a leaf under a working ledger below a forecast overlay through the
+    overlay, whose forecast entries then counted (w5/774). A step that defines
+    nothing and adds no entries is a pass-through intermediate, which the
+    climb continues past to the root above it (w5/346). A climb that comes
+    back to `file` (an include cycle through it) has no other root to name:
+    the hint told the user to run the command they had just run (w5/566).
     """
-    root = including_root(file)
+    root: Path | None = None
+    current = file
     seen = {file.resolve()}
-    while root is not None and root.resolve() not in seen:
-        seen.add(root.resolve())
-        above = including_root(root)
-        if above is None:
+    while (above := including_root(current)) is not None and above.resolve() not in seen:
+        seen.add(above.resolve())
+        try:
+            around = LedgerSnapshot.capture(above).contents
+            own = LedgerSnapshot.capture(current).contents
+        except Exception:  # noqa: BLE001 - unreadable here is reported by the load itself
             break
-        root = above
-    if root is not None and root.resolve() == file.resolve():
-        return None
+        if not _defines_in(around, own):
+            if _step_adds_entries(around, own):
+                break
+            current = above
+            continue
+        root, current = above, above
     return root
 
 
-#: What a leaf reads from the ledger that includes it: an account opened, a
-#: plugin, or an option that changes how entries read (a title does not).
-_DEFINITION = re.compile(
-    rb'^(?:\d{4}[-/]\d{2}[-/]\d{2}[ \t]+open[ \t]|plugin[ \t]|option[ \t]+"(?!title"|render_commas")[a-z_]+")',
-    re.MULTILINE,
+#: An account opened outside the file's own closure: a per-year file reads
+#: the accounts its root opens.
+_OPEN_LINE = re.compile(rb"^\d{4}[-/]\d{2}[-/]\d{2}[ \t]+open[ \t]", re.MULTILINE)
+#: Option and plugin names, to tell a repeated setting from a new definition.
+_OPTION_NAME = re.compile(rb'^option[ \t]+"([a-z_]+)"', re.MULTILINE)
+_PLUGIN_NAME = re.compile(rb'^plugin[ \t]+(?:"([^"]+)"|([A-Za-z_][\w.]*))', re.MULTILINE)
+#: Options that never define what a file reads.
+_REPEATED_OK = {b"title", b"render_commas"}
+#: A dated line: a transaction or directive, the entries an overlay adds.
+_ENTRY_LINE = re.compile(rb"^\d{4}[-/]\d{2}[-/]\d{2}[ \t]+\S", re.MULTILINE)
+#: Accounts the closure opens, and accounts its entries post to.
+_OPEN_ACCOUNT = re.compile(rb"^\d{4}[-/]\d{2}[-/]\d{2}[ \t]+open[ \t]+(\S+)", re.MULTILINE)
+_POSTED_ACCOUNT = re.compile(rb"^[ \t]+([A-Z][A-Za-z0-9_-]*(?::[^:\s]+)+)(?=[ \t]|$)", re.MULTILINE)
+_DIRECTIVE_ACCOUNT = re.compile(
+    rb"^\d{4}[-/]\d{2}[-/]\d{2}[ \t]+(?:balance|note|document|close)[ \t]+(\S+)", re.MULTILINE
 )
+_PAD_ACCOUNTS = re.compile(rb"^\d{4}[-/]\d{2}[-/]\d{2}[ \t]+pad[ \t]+(\S+)[ \t]+(\S+)", re.MULTILINE)
+
+
+def _posts_unopened(own: dict[Path, bytes]) -> bool:
+    """Whether the closure posts to an account it never opens, needing a plugin's opens."""
+    opened = {account for content in own.values() for account in _OPEN_ACCOUNT.findall(content)}
+    for content in own.values():
+        posted = list(_POSTED_ACCOUNT.findall(content))
+        posted.extend(_DIRECTIVE_ACCOUNT.findall(content))
+        for first, second in _PAD_ACCOUNTS.findall(content):
+            posted.extend((first, second))
+        if any(account not in opened for account in posted):
+            return True
+    return False
 
 
 def defines_for(file: Path, root: Path) -> bool:
@@ -2008,15 +2043,45 @@ def defines_for(file: Path, root: Path) -> bool:
     Fava or forecast overlay includes reads nothing from the overlay, which
     only adds to it: taken for its root, the overlay's forecast entries
     counted in validation and dedupe, a wrong balance was written and a real
-    bank row skipped as a duplicate (w5/578). When the closures cannot be
-    read, the leaf answer stands.
+    bank row skipped as a duplicate (w5/578). Only what the file needs counts:
+    an option or plugin the file already sets is a repeat, not a definition,
+    and a plugin counts only when the file posts to an account it never opens
+    (w5/774). When the closures cannot be read, the leaf answer stands.
     """
     try:
         around = LedgerSnapshot.capture(root).contents
         own = LedgerSnapshot.capture(file).contents
     except Exception:  # noqa: BLE001 - unreadable here is reported by the load itself
         return True
-    return any(_DEFINITION.search(content) for path, content in around.items() if path not in own)
+    return _defines_in(around, own)
+
+
+def _defines_in(around: dict[Path, bytes], own: dict[Path, bytes]) -> bool:
+    """Whether the files around a closure define what it reads (see `defines_for`)."""
+    extra = [content for path, content in around.items() if path not in own]
+    if any(_OPEN_LINE.search(content) for content in extra):
+        return True
+    own_options = {name for content in own.values() for name in _OPTION_NAME.findall(content)}
+    for content in extra:
+        if any(name not in _REPEATED_OK and name not in own_options for name in _OPTION_NAME.findall(content)):
+            return True
+    own_plugins = {quoted or bare for content in own.values() for quoted, bare in _PLUGIN_NAME.findall(content)}
+    for content in extra:
+        fresh = {
+            quoted or bare for quoted, bare in _PLUGIN_NAME.findall(content) if (quoted or bare) not in own_plugins
+        }
+        if fresh and _posts_unopened(own):
+            return True
+    return False
+
+
+def _step_adds_entries(around: dict[Path, bytes], own: dict[Path, bytes]) -> bool:
+    """Whether the higher closure adds entries or a plugin of its own (an overlay, not a pass-through)."""
+    return any(
+        _ENTRY_LINE.search(content) or _PLUGIN_NAME.search(content)
+        for path, content in around.items()
+        if path not in own
+    )
 
 
 def root_read_hint(file: Path) -> str | None:
@@ -2027,8 +2092,8 @@ def root_read_hint(file: Path) -> str | None:
     the accounts it uses (w5/348). A file that reads nothing from its
     includer is no leaf (w5/578).
     """
-    root = top_root(file)
-    if root is None or not defines_for(file, root):
+    root = defining_root(file)
+    if root is None:
         return None
     return (
         f"{file.name} is included by {root}; on its own it lacks the accounts and options that root provides. "
@@ -2055,9 +2120,10 @@ def write_through_root(file: Path, into: Path | None) -> tuple[Path, Path | None
     # The nearest includer may itself be included: a leaf under `sub/extra.bean`
     # was checked against `extra.bean` alone, and the root's own entries —
     # what a balance or a close contradicts, what import dedupes against —
-    # stayed out of the check (w5/346). Climb to the file nothing includes.
-    root = top_root(file)
-    if root is None or not defines_for(file, root):
+    # stayed out of the check (w5/346). Climb past pass-through intermediates
+    # to the highest defining root, stopping below an overlay (w5/774).
+    root = defining_root(file)
+    if root is None:
         return file, into, None
     redirect = (
         f"{file.name} is included by {root}; the write goes to {file.name} and is checked against that whole ledger."
@@ -2068,7 +2134,7 @@ def write_through_root(file: Path, into: Path | None) -> tuple[Path, Path | None
 def root_ledger_hints(file: Path) -> list[str]:
     """The `--into` recipe when the invoked entry file is an included leaf."""
     root = including_root(file)
-    if root is None:
+    if root is None or not defines_for(file, root):
         return []
     relative = os.path.relpath(file.resolve(), root.parent)
     return [

@@ -1162,9 +1162,12 @@ is validated and deduplicated against the whole ledger, and a note says so (in
 `target.file` names the root, as the same write with `--file` on the root and
 `--into` does, and import memory is kept under the root, so both spellings
 share one remembered mapping. That holds only when the including ledger defines what the file
-reads (an account it opens, a plugin, an option other than its title): a Fava
+reads: an account it opens, a plugin for entries the file posts to accounts it
+never opens, or an option the file does not already set (beyond its title). A Fava
 or forecast overlay that includes a working ledger and only adds entries is
-not its root, so writes and failing reads stay with the ledger named.
+not its root even when it repeats an option or names the forecast plugin, so
+writes and failing reads stay with the ledger named, and a leaf below the
+working ledger stops its climb there rather than at the overlay above.
 
 Beancount applies `option "name_assets"` and the other root-renaming options
 only while it parses the file that sets them, so an included file reads the
