@@ -592,6 +592,17 @@ def _balance(
             'option "plugin_processing_mode" "raw" skips Beancount\u2019s pad processing, so the pad '
             "is recorded but inserts nothing; drop the raw mode to pad balances.",
         ]
+    owed = write.credit_root(account, before_options)
+    if owed is not None and held == 0 and number > 0:
+        # No balance to compare with, so the negated-balance refusal cannot
+        # fire, and a loan padded to +5000 added to net worth in silence,
+        # where the same assertion without --pad-from flags the sign (w5/827).
+        warnings = [
+            *warnings,
+            f"{owed} balances are negative in Beancount, so an amount owed of {_plain(number)} {currency} is "
+            f"asserted as -{_plain(number)} {currency}; {account} was padded to +{_plain(number)} {currency} "
+            "as asserted, which counts toward net worth.",
+        ]
     return {
         "written": 2,
         "directive": directive.model_dump(mode="json"),

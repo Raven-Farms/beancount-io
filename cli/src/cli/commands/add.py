@@ -281,7 +281,11 @@ def add_balance(
     into: IntoOpt = None,
     force: Annotated[
         bool,
-        typer.Option("--force", help="Record another assertion when the date/account already has one"),
+        typer.Option(
+            "--force",
+            help="Record another assertion when the date/account already has one, or pad to an amount whose "
+            "sign is refused",
+        ),
     ] = False,
     pad_from: Annotated[
         str | None,
