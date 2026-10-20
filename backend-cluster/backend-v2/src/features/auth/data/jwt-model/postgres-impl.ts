@@ -85,9 +85,7 @@ export class JwtPostgresModel implements IJwtModel {
   ): Promise<SessionJwtVerification | null> {
     const decoded = await verifyJwt(token, this.secret);
     if (!decoded) {
-      jwtLogger.debug("JWT signature verification failed", {
-        secretPrefix: this.secret.substring(0, 10),
-      });
+      jwtLogger.debug("JWT signature verification failed");
       return null;
     }
 
@@ -107,6 +105,7 @@ export class JwtPostgresModel implements IJwtModel {
     // introspection describe a token nobody else sees.
     return {
       userId: found.userId,
+      tokenId: decoded.jti,
       issuedAt: decoded.iat,
       expiresAt: decoded.exp,
     };

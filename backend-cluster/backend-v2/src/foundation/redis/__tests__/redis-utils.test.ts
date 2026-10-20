@@ -1,4 +1,8 @@
-import { createRedisCache, closeRedisCache } from "../redis-utils";
+import {
+  createRedisCache,
+  closeRedisCache,
+  getRedisClient,
+} from "../redis-utils";
 
 // Mock dependencies before they are used by the module
 jest.mock("@keyv/redis");
@@ -22,7 +26,10 @@ describe("redis-utils", () => {
     get: jest.Mock;
     del: jest.Mock;
   };
-  let mockKeyvRedisInstance: { disconnect: jest.Mock };
+  let mockKeyvRedisInstance: {
+    disconnect: jest.Mock;
+    client: { isReady: boolean; get: jest.Mock };
+  };
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -35,6 +42,7 @@ describe("redis-utils", () => {
 
     mockKeyvRedisInstance = {
       disconnect: jest.fn().mockResolvedValue(undefined),
+      client: { isReady: true, get: jest.fn().mockResolvedValue("value") },
     };
 
     MockKeyvRedis.mockImplementation(() => mockKeyvRedisInstance as never);
@@ -50,6 +58,7 @@ describe("redis-utils", () => {
   afterEach(async () => {
     // Reset singleton state after each test
     await closeRedisCache();
+    jest.useRealTimers();
   });
 
   describe("createRedisCache", () => {
@@ -63,9 +72,21 @@ describe("redis-utils", () => {
       const cache = await createRedisCache("redis://localhost:6379");
 
       expect(cache).toBeDefined();
-      expect(MockKeyvRedis).toHaveBeenCalledWith("redis://localhost:6379", {
-        connectionTimeout: 10000,
-      });
+      expect(MockKeyvRedis).toHaveBeenCalledWith(
+        {
+          url: "redis://localhost:6379",
+          disableOfflineQueue: true,
+          commandsQueueMaxLength: 256,
+          commandOptions: { timeout: 1000 },
+          socket: {
+            connectTimeout: 2000,
+            socketTimeout: 2000,
+            reconnectStrategy: expect.any(Function),
+          },
+          pingInterval: 1000,
+        },
+        { throwOnErrors: true, connectionTimeout: 2000 },
+      );
       expect(mockCreateCache).toHaveBeenCalled();
     });
 
@@ -82,7 +103,10 @@ describe("redis-utils", () => {
       await createRedisCache("redis://localhost:6379", "my-namespace");
 
       expect(MockKeyv).toHaveBeenCalledWith(
-        expect.objectContaining({ namespace: "my-namespace" }),
+        expect.objectContaining({
+          namespace: "my-namespace",
+          throwOnErrors: true,
+        }),
       );
     });
 
@@ -131,7 +155,7 @@ describe("redis-utils", () => {
       mockCacheInstance.set.mockRejectedValue(new Error("ECONNREFUSED"));
 
       await expect(createRedisCache("redis://localhost:6379")).rejects.toThrow(
-        "Redis connection validation failed: ECONNREFUSED",
+        "Redis connection validation failed",
       );
 
       expect(mockKeyvRedisInstance.disconnect).toHaveBeenCalled();
@@ -144,6 +168,71 @@ describe("redis-utils", () => {
         expect.any(String),
         expect.any(Function),
       );
+    });
+  });
+
+  describe("bounded atomic commands", () => {
+    it("retains slots after caller deadlines until underlying commands settle", async () => {
+      jest.useFakeTimers();
+      const pending: {
+        resolve: (value: string) => void;
+        reject: (error: Error) => void;
+      }[] = [];
+      mockKeyvRedisInstance.client.get.mockImplementation(
+        () =>
+          new Promise<string>((resolve, reject) =>
+            pending.push({ resolve, reject }),
+          ),
+      );
+      await createRedisCache("redis://localhost:6379");
+      const redis = getRedisClient()!;
+      const results = Promise.allSettled(
+        Array.from({ length: 128 }, () => redis.get("synthetic")),
+      );
+      await expect(redis.get("overflow")).rejects.toThrow("capacity");
+      expect(mockKeyvRedisInstance.client.get).toHaveBeenCalledTimes(128);
+      await jest.advanceTimersByTimeAsync(1000);
+      expect(
+        (await results).every((result) => result.status === "rejected"),
+      ).toBe(true);
+      for (let attempt = 0; attempt < 100; attempt++)
+        await expect(redis.get("still full")).rejects.toThrow("capacity");
+      expect(mockKeyvRedisInstance.client.get).toHaveBeenCalledTimes(128);
+
+      pending[0].resolve("late reply");
+      await Promise.resolve();
+      mockKeyvRedisInstance.client.get.mockResolvedValueOnce("recovered");
+      await expect(redis.get("available slot")).resolves.toBe("recovered");
+      for (const command of pending.slice(1))
+        command.reject(new Error("late socket failure"));
+      await Promise.resolve();
+      expect(jest.getTimerCount()).toBe(0);
+    });
+
+    it("fails offline calls immediately without queuing, then permits recovery", async () => {
+      await createRedisCache("redis://localhost:6379");
+      const redis = getRedisClient()!;
+      mockKeyvRedisInstance.client.isReady = false;
+      await expect(redis.get("offline")).rejects.toThrow("unavailable");
+      expect(mockKeyvRedisInstance.client.get).not.toHaveBeenCalled();
+      mockKeyvRedisInstance.client.isReady = true;
+      await expect(redis.get("online")).resolves.toBe("value");
+      await closeRedisCache();
+      expect(mockKeyvRedisInstance.disconnect).toHaveBeenCalledWith(true);
+      expect(getRedisClient()).toBeNull();
+    });
+
+    it("clears a deadline and releases its slot when a command throws synchronously", async () => {
+      jest.useFakeTimers();
+      await createRedisCache("redis://localhost:6379");
+      mockKeyvRedisInstance.client.get.mockImplementationOnce(() => {
+        throw new Error("synchronous driver failure");
+      });
+      await expect(getRedisClient()!.get("failure")).rejects.toThrow(
+        "synchronous driver failure",
+      );
+      expect(jest.getTimerCount()).toBe(0);
+      await expect(getRedisClient()!.get("next")).resolves.toBe("value");
     });
   });
 

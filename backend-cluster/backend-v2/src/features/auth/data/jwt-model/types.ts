@@ -17,6 +17,8 @@ type AuthJwt = {
  */
 type SessionJwtVerification = {
   userId: UserId;
+  /** Stable session row id from the verified JWT's `jti`, never the raw JWT. */
+  tokenId: string;
   /** Seconds since the Unix epoch, from the token's `iat`. */
   issuedAt: number;
   /** Seconds since the Unix epoch, from the token's `exp`. */
@@ -46,10 +48,7 @@ export interface IJwtModel {
    * Check signature *and* that the session row still exists — logout deletes
    * it, so a structurally valid token whose row is gone is not valid here.
    */
-  verify(
-    db: DbExecutor,
-    token: string,
-  ): Promise<SessionJwtVerification | null>;
+  verify(db: DbExecutor, token: string): Promise<SessionJwtVerification | null>;
   revoke(db: DbExecutor, token: string): Promise<void>;
   deleteByUserId(db: DbExecutor, userId: string): Promise<void>;
   deleteExpired(db: DbExecutor): Promise<void>;

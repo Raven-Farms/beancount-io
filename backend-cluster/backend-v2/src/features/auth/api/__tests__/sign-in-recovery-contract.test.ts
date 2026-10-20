@@ -20,6 +20,7 @@ import type { AuthMail } from "@/features/auth/data/auth-mail-model";
 import { createContext, type IContext } from "@/server/graphql/context";
 import { graphqlRateLimitMiddleware } from "@/server/graphql/rate-limit-middleware";
 import { graphqlScopeMiddleware } from "@/server/graphql/scope-middleware";
+import { clearRateLimitShadows } from "@/server/api/rate-limit";
 import { formatError } from "@/server/graphql/format-error";
 import { trustProxyHops } from "@/server/client-address";
 import { COOKIE_NAME } from "@/shared/cookie-utils";
@@ -98,7 +99,7 @@ function createFixture() {
   const rows = new Map<string, AuthMail>();
   const sessions = new Map<
     string,
-    { userId: string; issuedAt: number; expiresAt: number }
+    { userId: string; tokenId: string; issuedAt: number; expiresAt: number }
   >();
   let lease = 0;
   const owns = (mail: AuthMail) =>
@@ -166,6 +167,7 @@ function createFixture() {
       const token = `synthetic-session-${sessions.size + 1}`;
       sessions.set(token, {
         userId,
+        tokenId: `synthetic-session-id-${sessions.size + 1}`,
         issuedAt: Math.floor(Date.now() / 1000),
         expiresAt: Math.floor(Date.now() / 1000) + 3600,
       });
@@ -325,6 +327,7 @@ beforeEach(() => {
   jest.spyOn(Date, "now").mockImplementation(() => now);
   fakeRedisAdmissionState.reset();
   fakeRedisCounterState.reset();
+  clearRateLimitShadows();
   mockProofRedis.records.clear();
   mockProofRedis.down = false;
   fixture = createFixture();

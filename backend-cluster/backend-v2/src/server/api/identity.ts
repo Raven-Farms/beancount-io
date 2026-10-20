@@ -165,8 +165,8 @@ export interface Identity {
    */
   ledgerScope?: string;
   /**
-   * Stable identifier of the credential itself (OAuth `jti`, API key id) for
-   * audit and revocation. Never the credential's secret material.
+   * Stable identifier of the credential itself (session/OAuth `jti`, API key
+   * id) for budgets, audit and revocation. Never its secret material.
    */
   tokenId?: string;
   /**
@@ -476,6 +476,7 @@ export async function resolveSessionIdentity(
     scopes: EMPTY_SCOPES,
     capabilities: ALL_OPERATION_CAPABILITIES,
     assurance: { type: "interactive" },
+    tokenId: session.tokenId,
     issuedAt: session.issuedAt,
     expiresAt: session.expiresAt,
   };

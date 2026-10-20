@@ -76,6 +76,7 @@ function createFixture() {
       verify: jest.fn(
         async (): Promise<SessionJwtVerification | null> => ({
           userId: user.id as string,
+          tokenId: "synthetic-session-id",
           issuedAt: 1_700_000_000,
           expiresAt: 1_800_000_000,
         }),

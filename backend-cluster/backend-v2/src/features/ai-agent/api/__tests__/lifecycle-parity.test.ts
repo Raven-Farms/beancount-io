@@ -24,6 +24,7 @@ import {
   AUTHORIZATION_ACTIONS,
 } from "@/server/api/authorization";
 import { graphqlScopeMiddleware } from "@/server/graphql/scope-middleware";
+import { clearRateLimitShadows } from "@/server/api/rate-limit";
 import { formatError } from "@/server/graphql/format-error";
 import { FavaApiError } from "@/foundation/fava";
 import { assembleMcpRegistry } from "@/server/api/composition-root";
@@ -81,6 +82,7 @@ let resolvers: Map<unknown, object>;
 let schemaPromise: ReturnType<typeof buildSchema> | undefined;
 type Surface = "rest" | "mcp" | "gql";
 const surfaces: Surface[] = ["rest", "mcp", "gql"];
+beforeEach(() => clearRateLimitShadows());
 async function fixture(caller = identity, appId?: string) {
   const headers: Record<string, string> = appId ? { "x-app-id": appId } : {};
   const platform = requestPlatform(headers);

@@ -16,9 +16,10 @@ const limitLogger = logger.child({ module: "rate-limit" });
  * which made "rate limited" a property of which surface you asked rather than
  * of who was asking.
  *
- * Keys are the caller, not the request: a credential's budget follows it across
- * surfaces, so a client cannot get three budgets by spreading load over
- * GraphQL, REST, and MCP.
+ * User totals and credential sub-budgets follow the caller across surfaces.
+ * Changing a token or protocol cannot buy another user allowance. A bounded
+ * local shadow keeps charging through a Redis outage; it is conservative per
+ * process, not a replacement for Redis's cross-instance coordination.
  */
 
 /** A window and a count, in one place so every budget is comparable at a glance. */
@@ -197,11 +198,17 @@ export const ANONYMOUS_BUDGETS: Record<string, Budget> = {
   archive: ARCHIVE_DOWNLOAD_BUDGET,
   oauth: { windowMs: MINUTE, max: 60 },
   webhook: { windowMs: MINUTE, max: 120 },
+  "device-poll": { windowMs: MINUTE, max: 120 },
   default: { windowMs: MINUTE, max: 120 },
 };
 
 /** Which anonymous family a path belongs to. */
 export function anonymousFamily(path: string): keyof typeof ANONYMOUS_BUDGETS {
+  // @koa/router accepts static path case variants and one trailing slash.
+  // Family classification must agree or those aliases earn another budget.
+  path = path.toLowerCase().replace(/\/$/, "");
+  if (/^\/api-gateway\/v1\/cli-sessions\/[^/]+$/.test(path))
+    return "device-poll";
   if (
     /^\/api-gateway\/(?:v1\/ledgers\/[^/]+\/[^/]+|ledgers\/[^/]+)\/archive\/[^/]+$/.test(
       path,
@@ -217,15 +224,15 @@ export function anonymousFamily(path: string): keyof typeof ANONYMOUS_BUDGETS {
 /**
  * Who is being charged.
  *
- * A token has its own budget as well as its user's, so one compromised or
- * runaway key cannot spend the user's whole allowance — and revoking it
- * restores the user immediately.
+ * Every authenticated caller spends the user's total, plus a credential
+ * sub-budget when it has one. Revocation and successful authentication never
+ * clear request volume; replacing a credential cannot buy a fresh allowance.
  */
-function subjectKey(identity: Identity | undefined, ip: string): string {
-  if (!identity) return `ip:${ip}`;
-  return identity.tokenId
-    ? `tok:${identity.tokenId}`
-    : `usr:${identity.userId}`;
+function subjectKeys(identity: Identity | undefined, ip: string): string[] {
+  if (!identity) return [`ip:${ip}`];
+  const keys = [`usr:${identity.userId}`];
+  if (identity.tokenId) keys.push(`tok:${identity.tokenId}`);
+  return keys;
 }
 
 /**
@@ -293,10 +300,121 @@ export interface RateLimitDecision {
   readonly count: number;
 }
 
+type Shadow = { count: number; remoteCount: number; expiresAt: number };
+const MAX_SHADOWS = 10_000;
+const SHADOW_SWEEP_MS = 1_000;
+const shadows = new Map<string, Shadow>();
+let sweepAfter = 0;
+let earliestExpiry = Infinity;
+
+/** Test seam: a fresh process has no local request history. */
+export function clearRateLimitShadows(): void {
+  shadows.clear();
+  sweepAfter = 0;
+  earliestExpiry = Infinity;
+}
+
+function precharge(keys: readonly string[], budget: Budget, now: number) {
+  // Request-driven and amortized: a saturated map is not scanned for each new
+  // attacker-controlled subject. Live entries are never evicted to make room.
+  if (now >= sweepAfter) {
+    earliestExpiry = Infinity;
+    for (const [key, shadow] of shadows) {
+      if (shadow.expiresAt <= now) shadows.delete(key);
+      else earliestExpiry = Math.min(earliestExpiry, shadow.expiresAt);
+    }
+    sweepAfter = now + SHADOW_SWEEP_MS;
+  }
+  for (const key of keys) {
+    const shadow = shadows.get(key);
+    if (shadow && shadow.expiresAt <= now) shadows.delete(key);
+  }
+  const attempts = [];
+  for (const key of keys) {
+    let shadow = shadows.get(key);
+    if (!shadow) {
+      if (shadows.size >= MAX_SHADOWS) return undefined;
+      shadow = { count: 0, remoteCount: 0, expiresAt: now + budget.windowMs };
+      shadows.set(key, shadow);
+      earliestExpiry = Math.min(earliestExpiry, shadow.expiresAt);
+    }
+    // Saturate numeric state too; rejected traffic cannot grow it forever.
+    shadow.count = Math.min(budget.max + 1, shadow.count + 1);
+    attempts.push({ key, shadow, count: shadow.count });
+    // The user total is first. Once spent, rotating credentials must not
+    // allocate thousands of fresh sub-budgets or evict other users from RAM.
+    if (shadow.count > budget.max) break;
+  }
+  return attempts;
+}
+
+async function charge(
+  keys: readonly string[],
+  budget: Budget,
+): Promise<RateLimitDecision> {
+  const now = Date.now();
+  // This is synchronous before the first Redis await. Concurrent requests and
+  // an outage/recovery transition cannot all start with an empty local quota.
+  const attempts = precharge(keys, budget, now);
+  if (!attempts) {
+    return {
+      allowed: false,
+      count: budget.max + 1,
+      budget,
+      retryAfterSeconds: Math.max(
+        1,
+        Math.ceil(Math.min(budget.windowMs, earliestExpiry - now) / 1000),
+      ),
+    };
+  }
+  const results = await Promise.all(
+    attempts.map(async ({ key, shadow, count }) => {
+      const result =
+        count > budget.max
+          ? undefined
+          : await incrementInWindow(key, budget.windowMs);
+      // A delayed reply belongs only to the generation it charged. Never extend
+      // that generation's fixed deadline: ordinary traffic must eventually reset
+      // it even when Redis's windows and this process's first request differ.
+      if (
+        result &&
+        shadows.get(key) === shadow &&
+        shadow.expiresAt > Date.now()
+      ) {
+        shadow.remoteCount = Math.min(
+          budget.max + 1,
+          Math.max(shadow.remoteCount, result.count),
+        );
+        shadow.count = Math.min(
+          budget.max + 1,
+          Math.max(shadow.count, result.count),
+        );
+      }
+      return {
+        count: Math.max(count, shadow.remoteCount, result?.count ?? 0),
+        resetInMs: Math.max(
+          1,
+          shadow.expiresAt - Date.now(),
+          result?.resetInMs ?? 0,
+        ),
+      };
+    }),
+  );
+  return {
+    allowed: results.every((result) => result.count <= budget.max),
+    count: Math.max(...results.map((result) => result.count)),
+    budget,
+    retryAfterSeconds: Math.max(
+      1,
+      Math.ceil(Math.max(...results.map((result) => result.resetInMs)) / 1000),
+    ),
+  };
+}
+
 /**
- * Charge one request against the caller's budget for this op.
- *
- * Fails open when Redis is unreachable — see `incrementInWindow`.
+ * Charge independent user and credential budgets for this operation. Local
+ * history is charged even while Redis is healthy, and merged conservatively
+ * on recovery so unpersisted requests cannot receive a second allowance.
  */
 export async function consume(args: {
   opId: string;
@@ -306,19 +424,13 @@ export async function consume(args: {
   // One classification per request; budget and bucket both derive from it.
   const classification = classifyOp(args.opId);
   const budget = budgetFor(args.opId, classification);
-  const key = `ratelimit:${subjectKey(args.identity, args.ip)}:${operationBucket(args.opId, classification)}`;
-
-  const result = await incrementInWindow(key, budget.windowMs);
-  if (!result) {
-    return { allowed: true, retryAfterSeconds: 0, budget, count: 0 };
-  }
-
-  return {
-    allowed: result.count <= budget.max,
-    retryAfterSeconds: Math.max(1, Math.ceil(result.resetInMs / 1000)),
+  const bucket = operationBucket(args.opId, classification);
+  return charge(
+    subjectKeys(args.identity, args.ip).map(
+      (subject) => `ratelimit:${subject}:${bucket}`,
+    ),
     budget,
-    count: result.count,
-  };
+  );
 }
 
 /** Charge an anonymous request against its intake family's IP budget. */
@@ -328,19 +440,7 @@ export async function consumeAnonymous(args: {
 }): Promise<RateLimitDecision> {
   const family = anonymousFamily(args.path);
   const budget = ANONYMOUS_BUDGETS[family];
-  const result = await incrementInWindow(
-    `ratelimit:anon:${family}:${args.ip}`,
-    budget.windowMs,
-  );
-  if (!result) {
-    return { allowed: true, retryAfterSeconds: 0, budget, count: 0 };
-  }
-  return {
-    allowed: result.count <= budget.max,
-    retryAfterSeconds: Math.max(1, Math.ceil(result.resetInMs / 1000)),
-    budget,
-    count: result.count,
-  };
+  return charge([`ratelimit:anon:${family}:${args.ip}`], budget);
 }
 
 /**
@@ -368,8 +468,5 @@ export async function enforceRateLimit(args: {
     max: decision.budget.max,
   });
 
-  throw new RateLimitedError(
-    decision.retryAfterSeconds,
-    `Rate limit exceeded for ${args.opId}. Retry in ${decision.retryAfterSeconds}s.`,
-  );
+  throw new RateLimitedError(decision.retryAfterSeconds);
 }

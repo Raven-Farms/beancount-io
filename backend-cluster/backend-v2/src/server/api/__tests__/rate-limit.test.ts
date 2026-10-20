@@ -15,6 +15,7 @@ import {
   MCP_HANDSHAKE_OP_ID,
   MCP_TRANSPORT_OP_ID,
   clearRouteRateLimitPolicies,
+  clearRateLimitShadows,
   rateLimitOpIdFor,
   setRouteRateLimitPolicy,
 } from "../rate-limit";
@@ -49,7 +50,9 @@ const respond = (count: number, resetInMs = 60_000) =>
 
 beforeEach(() => {
   counter.mockReset();
+  clearRateLimitShadows();
 });
+afterEach(() => jest.restoreAllMocks());
 
 describe("budgets", () => {
   it("gives writes a much smaller budget than reads", () => {
@@ -181,6 +184,22 @@ describe("budgets", () => {
   });
 
   it("keeps the anonymous intakes on separate budgets", () => {
+    expect(anonymousFamily("/API-GATEWAY/V1/CLI-SESSIONS/code/")).toBe(
+      "device-poll",
+    );
+    expect(anonymousFamily("/api-gateway/v1/cli-sessions/code/extra")).toBe(
+      "default",
+    );
+    expect(
+      anonymousFamily("/API-GATEWAY/V1/LEDGERS/owner/books/ARCHIVE/main.zip/"),
+    ).toBe("archive");
+    expect(
+      anonymousFamily(
+        "/api-gateway/v1/ledgers/owner/books/archive/main.zip/extra",
+      ),
+    ).toBe("default");
+    expect(anonymousFamily("/API-GATEWAY/OAUTH/authorize/")).toBe("oauth");
+    expect(anonymousFamily("/API-GATEWAY/STRIPE/WEBHOOK/")).toBe("webhook");
     expect(anonymousFamily("/api-gateway/oauth/token")).toBe("oauth");
     expect(anonymousFamily("/.well-known/oauth-protected-resource")).toBe(
       "oauth",
@@ -194,7 +213,7 @@ describe("budgets", () => {
     ).toBe("archive");
     expect(anonymousFamily("/api-gateway/v1/ledgers")).toBe("default");
     // A flood against one must not be able to exhaust another.
-    expect(new Set(Object.keys(ANONYMOUS_BUDGETS)).size).toBe(4);
+    expect(new Set(Object.keys(ANONYMOUS_BUDGETS)).size).toBe(5);
   });
 });
 
@@ -260,13 +279,18 @@ describe("route rate-limit policies", () => {
 });
 
 describe("charging", () => {
-  it("charges a token against its own key, not just its user's", async () => {
+  it("charges a token against both its user's total and its own sub-budget", async () => {
     respond(1);
     await consume({ opId: "GQL Query.x", identity: token, ip: "1.2.3.4" });
     expect(counter).toHaveBeenCalledWith(
       expect.stringContaining("tok:tok_1"),
       expect.any(Number),
     );
+    expect(counter).toHaveBeenCalledWith(
+      expect.stringContaining("usr:usr_1"),
+      expect.any(Number),
+    );
+    expect(counter).toHaveBeenCalledTimes(2);
   });
 
   it("charges a session against its user", async () => {
@@ -293,7 +317,7 @@ describe("charging", () => {
     await consume({ opId: "GQL Query.a", identity: token, ip: "ip" });
     await consume({ opId: "GQL Query.b", identity: token, ip: "ip" });
     const [first] = counter.mock.calls[0];
-    const [second] = counter.mock.calls[1];
+    const [second] = counter.mock.calls[2];
     expect(first).not.toEqual(second);
   });
 
@@ -313,7 +337,7 @@ describe("charging", () => {
       ip: "ip",
     });
     const keys = new Set(counter.mock.calls.map(([key]) => key));
-    expect(keys.size).toBe(1);
+    expect(keys.size).toBe(2);
   });
 
   it("follows a per-op override to aliases that never spelled it", async () => {
@@ -347,7 +371,7 @@ describe("charging", () => {
       ip: "ip",
     });
     const [first] = counter.mock.calls[0];
-    const [second] = counter.mock.calls[1];
+    const [second] = counter.mock.calls[2];
     expect(first).toEqual(second);
     expect(first).toContain("REST archive-download");
   });
@@ -399,7 +423,7 @@ describe("refusal", () => {
     await expect(
       enforceRateLimit({ opId: READ_OP, identity: token, ip: "ip" }),
     ).rejects.toMatchObject({
-      metadata: { retryAfter: 30 },
+      metadata: { retryAfter: 60 },
     });
   });
 
@@ -422,7 +446,7 @@ describe("refusal", () => {
 });
 
 describe("store outage", () => {
-  it("fails open rather than turning a Redis blip into an outage", async () => {
+  it("keeps valid sessions usable within bounded local budgets during an outage", async () => {
     counter.mockResolvedValue(undefined);
     await expect(
       consume({ opId: "GQL Query.x", identity: token, ip: "ip" }),
@@ -457,5 +481,5 @@ it("alternating REST and MCP archive aliases cannot reset the shared budget", as
     expect(
       (await consume({ opId, identity: token, ip: "fixture" })).allowed,
     ).toBe(false);
-  expect(counts.size).toBe(1);
+  expect(counts.size).toBe(2);
 });

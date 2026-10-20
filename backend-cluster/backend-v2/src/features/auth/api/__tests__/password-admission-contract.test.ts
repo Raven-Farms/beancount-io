@@ -11,6 +11,7 @@ import { AuthResolver } from "../auth-resolver";
 import { AuthService } from "@/features/auth/service/auth-service";
 import { AuthSessionWorkflow } from "@/features/auth/workflow/auth-session-workflow";
 import { graphqlRateLimitMiddleware } from "@/server/graphql/rate-limit-middleware";
+import { clearRateLimitShadows } from "@/server/api/rate-limit";
 import { graphqlScopeMiddleware } from "@/server/graphql/scope-middleware";
 import type { Identity } from "@/server/api/identity";
 import {
@@ -145,6 +146,7 @@ async function createFixture() {
 }
 
 beforeEach(() => {
+  clearRateLimitShadows();
   fakeRedisCounterState.reset();
   fakeRedisAdmissionState.reset();
 });

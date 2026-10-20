@@ -109,6 +109,7 @@ function fixture(
           session && token === SESSION_TOKEN
             ? {
                 userId: session.userId,
+                tokenId: "synthetic-session-id",
                 issuedAt: 1_700_000_000,
                 expiresAt: 1_800_000_000,
               }
@@ -199,6 +200,7 @@ describe("introspecting a live credential", () => {
     ).resolves.toMatchObject({
       active: true,
       sub: "usr_1",
+      jti: "synthetic-session-id",
       bio_credential_kind: "session",
       bio_assurance: "interactive",
       iat: 1_700_000_000,

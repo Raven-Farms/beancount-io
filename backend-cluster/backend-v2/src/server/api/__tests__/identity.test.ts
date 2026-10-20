@@ -82,6 +82,7 @@ function databaseAccepting(
           validSessionToken && token === validSessionToken
             ? {
                 userId,
+                tokenId: "synthetic-session-id",
                 issuedAt: SESSION_ISSUED_AT,
                 expiresAt: SESSION_EXPIRES_AT,
               }
@@ -151,6 +152,7 @@ describe("resolveIdentity — session credential", () => {
       userId: "user-session",
       principal: { type: "user", id: "user-session" },
       method: "session",
+      tokenId: "synthetic-session-id",
       assurance: { type: "interactive" },
     });
     expect([...(identity?.capabilities ?? [])].sort()).toEqual([
