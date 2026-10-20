@@ -1951,9 +1951,12 @@ def _scan_includers(file: Path) -> Iterator[Path]:
     opened = 0
     for directory in dict.fromkeys(near):
         try:
-            files = sorted(directory.glob("*.bean")) + sorted(directory.glob("*.beancount"))
+            entries = sorted(directory.iterdir())
         except OSError:
             continue
+        # `glob` matches case-sensitively on POSIX, even on a case-insensitive
+        # volume, so a `main.BEAN` root was never found (w5/870).
+        files = [path for suffix in (".bean", ".beancount") for path in entries if path.suffix.lower() == suffix]
         for candidate in files:
             if opened >= _INCLUDER_CANDIDATES:
                 return

@@ -82,3 +82,16 @@ def test_a_fifo_nearby_does_not_stall_the_search(books: Path) -> None:
     os.mkfifo(books.parent / "pipe.bean")
     result = _add(books, books / "years" / "2026" / "q1" / "jan.bean")
     assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.parametrize("root_name", ["main.BEAN", "main.Beancount", "main.BeAn"])
+def test_a_root_with_an_uppercase_suffix_is_found(books: Path, root_name: str) -> None:
+    """`glob("*.bean")` matched case-sensitively, so a `main.BEAN` root was never found (w5/870)."""
+    (books / "main.bean").rename(books / root_name)
+    leaf = books / "years" / "2026" / "q1" / "jan.bean"
+
+    result = _add(books, leaf)
+
+    assert result.returncode == 0, result.stderr
+    assert f"is included by {books / root_name}" in " ".join(result.stderr.split())
+    assert '2026-01-05 * "T"' in leaf.read_text()
