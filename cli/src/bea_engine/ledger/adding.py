@@ -527,10 +527,14 @@ def _balance(
             return result
         # The book does not match, so the new pad went unused because an
         # existing pad fills this assertion instead (Beancount pads every
-        # currency of the next assertion after the latest pad).
-        cover = _covering_pad(loaded, account, date)
+        # currency of the next assertion after the latest pad) — or the new
+        # pad is needed and an existing pad would go unused instead.
+        cover = _covering_pad(loaded, account, date, currency)
         if cover is None:
-            raise
+            stranded = _unused_existing_pads(exc, loaded)
+            if not stranded:
+                raise
+            raise _stranded_pad_refusal(stranded, loaded, account) from exc
         pad_at = f"{cover.meta.get('filename')}:{cover.meta.get('lineno')}"
         if cover.source_account != source_account:
             used = any(
@@ -698,13 +702,12 @@ def _refuse_used_pad_fill(
     so a pad consumed by an earlier assertion still pads a new currency's
     gap without a word. A staged pad — none of the account's balances
     between it and this assertion yet — completes silently, as the two-step
-    intends. A balance in this currency between them already consumed it,
-    so the assertion fails on its own and needs no refusal.
+    intends.
     """
     from beancount.core.amount import Amount as BcAmount
     from beancount.core.data import Balance
 
-    cover = _covering_pad(entries, account, date)
+    cover = _covering_pad(entries, account, date, currency)
     if cover is None:
         return
     held = write.book_units(entries, account, currency, date)
@@ -717,8 +720,6 @@ def _refuse_used_pad_fill(
         if isinstance(entry, Balance) and entry.account == account and cover.date < entry.date < date
     ]
     if not between:
-        return
-    if any(entry.amount.currency == currency for entry in between):
         return
     pad_at = f"{cover.meta.get('filename')}:{cover.meta.get('lineno')}"
     difference = number - held
@@ -733,17 +734,78 @@ def _refuse_used_pad_fill(
     )
 
 
-def _covering_pad(entries: list[Any], account: str, date: datetime.date) -> Any | None:
-    """The pad Beancount would apply to an assertion on `account` at `date`: the latest before it."""
+def _covering_pad(entries: list[Any], account: str, date: datetime.date, currency: str) -> Any | None:
+    """The latest pad before `date` still unconsumed for `currency`, if any.
+
+    A pad is consumed for a currency by the first assertion in it after the
+    pad — even an exact one — so a consumed pad never offers to cover (w5/797).
+    """
+    from beancount.core.data import Balance, Pad
+
+    for entry in reversed(entries):
+        if not (isinstance(entry, Pad) and entry.account == account and entry.date < date):
+            continue
+        consumed = any(
+            isinstance(other, Balance)
+            and other.account == account
+            and other.amount.currency == currency
+            and entry.date < other.date < date
+            for other in entries
+        )
+        if not consumed:
+            return entry
+    return None
+
+
+def _unused_existing_pads(exc: protocol.LedgerError, entries: list[Any]) -> list[Any]:
+    """Loaded pads an `Unused Pad` failure names (w5/797).
+
+    The failure carries display strings, not entries, but a pad the failed
+    write would have added is on no loaded line: anything matching a loaded
+    pad's file and line is an existing pad the write would strand.
+    """
     from beancount.core.data import Pad
 
-    return next(
+    found: dict[tuple[str, int], Any] = {}
+    for detail in exc.details or []:
+        if "Unused Pad" not in detail:
+            continue
+        filename, _, lineno = detail.partition(": Unused Pad")[0].rpartition(":")
+        try:
+            line = int(lineno)
+        except ValueError:
+            continue
+        for entry in entries:
+            if isinstance(entry, Pad) and entry.meta.get("filename") == filename and entry.meta.get("lineno") == line:
+                found[(filename, line)] = entry
+    return list(found.values())
+
+
+def _stranded_pad_refusal(stranded: list[Any], entries: list[Any], account: str) -> protocol.LedgerError:
+    """The refusal when the new pad would strand an existing one (w5/797)."""
+    from beancount.core.data import Balance
+
+    first = min(stranded, key=lambda entry: entry.date)
+    pad_at = f"{first.meta.get('filename')}:{first.meta.get('lineno')}"
+    following = next(
         (
             entry
-            for entry in reversed(entries)
-            if isinstance(entry, Pad) and entry.account == account and entry.date < date
+            for entry in entries
+            if isinstance(entry, Balance) and entry.account == account and entry.date > first.date
         ),
         None,
+    )
+    why = (
+        f"the book balance already matches the {following.date} assertion"
+        if following is not None
+        else ("nothing after it needs padding")
+    )
+    others = f" (and {len(stranded) - 1} more)" if len(stranded) > 1 else ""
+    remove = "those pads" if len(stranded) > 1 else "that pad"
+    return protocol.LedgerError(
+        f"Adding this assertion would strand the existing pad at {pad_at} ({first.date} from "
+        f"{first.source_account}){others}: {why}. Nothing was written.",
+        details=[f"Remove {remove} first, then retry — or fix the amount if the statement is wrong."],
     )
 
 
