@@ -203,11 +203,10 @@ def _simple(directive_type: str, request: dict[str, Any], roots: tuple[str, ...]
     if directive_type == "close":
         return CloseDirective(date=date, account=parse_account(_text(request, "account"), roots))
     if directive_type == "pad":
-        return PadDirective(
-            date=date,
-            account=parse_account(_text(request, "account"), roots),
-            source_account=parse_account(_text(request, "source_account"), roots),
-        )
+        account = parse_account(_text(request, "account"), roots)
+        source = parse_account(_text(request, "source_account"), roots)
+        _refuse_self_pad(account, source)
+        return PadDirective(date=date, account=account, source_account=source)
     if directive_type == "note":
         return NoteDirective(
             date=date,
@@ -355,6 +354,14 @@ def _close(
 # --------------------------------------------------------------------------- #
 
 
+def _refuse_self_pad(account: str, source: str) -> None:
+    """Refuse a pad whose source is the padded account: no balance can complete it (w5/799)."""
+    if source == account:
+        raise protocol.UsageError(
+            f"The pad source must be another account: {account} cannot pad itself. Nothing was written."
+        )
+
+
 def _conflict_refusal(
     conflict: Any, account: str, date: Any, number: Any, currency: str, tolerance: Any
 ) -> protocol.ConflictError:
@@ -383,6 +390,8 @@ def _balance(
         date=date, account=account, amount=Amount(number=number, currency=currency), tolerance=tolerance
     )
     pad_from = request.get("pad_from")
+    if pad_from is not None:
+        _refuse_self_pad(account, parse_account(str(pad_from)))
     snapshot = write.LedgerSnapshot.capture(file)
     target = write.destination(file, into)
     snapshot.require_target(target, into=into)

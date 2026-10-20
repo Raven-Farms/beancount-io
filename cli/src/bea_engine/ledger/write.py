@@ -2648,10 +2648,23 @@ def validate_candidate(
                 # the proposed one, so the existing postings fail (w5/488).
                 hints.append(f"This follows from the duplicate open of {invalid['account']} above.")
             elif opened is not None and opened.currencies:
-                interpolated = _interpolated_leg_hint(error.entry, invalid["account"], invalid["currency"], opened)
-                hints.append(
-                    interpolated or _currency_widen_hint(invalid["currency"], opened, filenames, original_lines)
+                pad_leg = _pad_leg_currency_hint(
+                    error.entry,
+                    invalid["account"],
+                    invalid["currency"],
+                    opened,
+                    entries,
+                    filenames,
+                    original_lines,
+                    pad_from=pad_from,
                 )
+                if pad_leg is not None:
+                    hints.append(pad_leg)
+                else:
+                    interpolated = _interpolated_leg_hint(error.entry, invalid["account"], invalid["currency"], opened)
+                    hints.append(
+                        interpolated or _currency_widen_hint(invalid["currency"], opened, filenames, original_lines)
+                    )
         if isinstance(error.entry, Open) and error.message.startswith("Duplicate open directive for "):
             if lifecycles is None:
                 lifecycles = _lifecycles(entries, original_lines)
@@ -2794,7 +2807,16 @@ def validate_candidate(
             pad_entry = error.entry if isinstance(error.entry, Pad) else None
             # Beancount's "Unused Pad entry" has no full stop; every hint starts with a space.
             message = (
-                message.rstrip(".") + "." + _unused_pad_hint(pad_entry, entries, errors, filenames, appended=appended)
+                message.rstrip(".")
+                + "."
+                + _unused_pad_hint(
+                    pad_entry,
+                    entries,
+                    errors,
+                    filenames,
+                    appended=appended,
+                    staged=not appended or (allow_errors and not is_new),
+                )
             )
         elif isinstance(error.entry, Balance) and "Balance failed" in error.message:
             if not allow_errors and closes_by_location is None:
@@ -2994,7 +3016,13 @@ def _opened_after(account: str, date: Any, entries: list[Any]) -> Any:
 
 
 def _unused_pad_hint(
-    pad: Any, entries: list[Any], errors: list[Any], filenames: dict[Path, Path], *, appended: bool = True
+    pad: Any,
+    entries: list[Any],
+    errors: list[Any],
+    filenames: dict[Path, Path],
+    *,
+    appended: bool = True,
+    staged: bool = False,
 ) -> str:
     """Why Beancount found nothing for this pad to fill, as a next step.
 
@@ -3005,7 +3033,10 @@ def _unused_pad_hint(
     only that last case means the book balance already matches. An earlier
     assertion that holds still consumes the pad, leaving a later failing one
     unpadded; claiming "already matches" there contradicted the failure
-    printed beside it.
+    printed beside it. `staged` says the pad is already in the books with its
+    balance still missing — the warning on a staged pad, or a refusal detail
+    while one waits — where the atomic hint would send the user to a
+    `--pad-from` the staged pad itself blocks (w5/799).
     """
     from beancount.core.data import Balance, Pad
 
@@ -3031,6 +3062,8 @@ def _unused_pad_hint(
                 f" The later pad at {_location(superseded_by, filenames)} takes over the assertions after it, "
                 "leaving this pad nothing to fill; keep one of the two pads."
             )
+        if staged:
+            return " Staged: add its balance with bea add balance (without --pad-from), or remove the pad."
         return atomic
     # Keyed by source line: the balance check replaces a failing entry with a
     # copy carrying its difference, so identity does not survive.
@@ -3312,6 +3345,76 @@ def _currency_widen_hint(
         f"{opened.account} is opened {where} for {allowed} only. To post {currency} there, edit that open to "
         f"'{_open_line(opened, [*opened.currencies, currency])}' (bea add open cannot change an existing open); "
         f"otherwise record this posting in {allowed}, converted at the rate paid."
+    )
+
+
+def _pad_leg_currency_hint(
+    entry: Any,
+    account: str,
+    currency: str,
+    opened: Any,
+    entries: list[Any],
+    filenames: dict[Path, Path],
+    original_lines: dict[Path, list[bytes]],
+    *,
+    pad_from: bool,
+) -> str | None:
+    """Advice for a pad-synthesized leg in a currency its account does not take.
+
+    A pad leg is generated from the pad, so the generic widen hint's "record
+    this posting in ..." never applies: only the pad's source can change
+    (w5/799). None unless the failing leg is the pad's source leg; the padded
+    account's own leg keeps the generic advice.
+    """
+    from beancount.core.data import Pad
+    from beancount.core.flags import FLAG_PADDING
+
+    if entry.flag != FLAG_PADDING:
+        return None
+    pad = None
+    atomic = False
+    if pad_from:
+        pad = next(
+            (
+                candidate
+                for candidate in entries
+                if isinstance(candidate, Pad) and _proposed_entry(candidate, filenames, original_lines)
+            ),
+            None,
+        )
+        if pad is not None and pad.source_account == account:
+            atomic = True
+        else:
+            pad = None
+    if pad is None:
+        # A pad already in the books: the padding transaction carries its
+        # pad's own location.
+        meta = entry.meta or {}
+        pad = next(
+            (
+                candidate
+                for candidate in entries
+                if isinstance(candidate, Pad)
+                and (candidate.meta or {}).get("filename") == meta.get("filename")
+                and (candidate.meta or {}).get("lineno") == meta.get("lineno")
+            ),
+            None,
+        )
+    if pad is None or pad.source_account != account:
+        return None
+    allowed = ", ".join(opened.currencies)
+    origin = _plugin_origin(opened, "open", filenames, original_lines)
+    where = f"by {origin}" if origin else f"at {_location(opened, filenames)}"
+    edit = _open_line(opened, [*opened.currencies, currency])
+    if atomic:
+        return (
+            f"{account} is opened {where} for {allowed} only, and a pad leg cannot be written in another "
+            f"currency. Choose a --pad-from account that allows {currency}, or edit that open to '{edit}'."
+        )
+    return (
+        f"That {currency} leg is synthesized from the pad at {_location(pad, filenames)}, whose source {account} "
+        f"is opened {where} for {allowed} only. Remove that pad and pad from an account that allows {currency}, "
+        f"or edit that open to '{edit}'."
     )
 
 
