@@ -151,6 +151,11 @@ def provision(root: Path) -> None:
     except BaseException:
         shutil.rmtree(partial, ignore_errors=True)
         raise
+    # A writer that died since the pre-build sweep left a partial no future
+    # provision will see; remove it while provisioning still runs (w5/786).
+    # One still running can still rebuild its directory afterwards — SIGKILL
+    # cannot be forwarded — but it must now outlive the whole build to do so.
+    _sweep_abandoned(root)
     output.note(f"Beancount engine {version} ready.")
 
 
@@ -513,9 +518,14 @@ def _run(command: list[str], *, failure: str) -> None:
 
     Captured rather than inherited: in JSON mode the frontend's stderr must
     stay a single parseable object, and uv is chatty. On failure the output is
-    what explains it, so it becomes the error's details.
+    what explains it, so it becomes the error's details. A stop aimed at bea
+    alone still stops uv: a bare `subprocess.run` orphaned it, and a retry in
+    that window left a partial directory that survived forever (w5/786).
     """
-    completed = subprocess.run(command, capture_output=True, text=True, check=False)
+    # Deferred: launch imports this module.
+    from cli.engine.launch import run_captured
+
+    completed = run_captured(command)
     if completed.returncode != 0:
         details = [line for line in (completed.stderr or completed.stdout or "").splitlines() if line.strip()]
         raise EngineError(f"{failure} (uv exited {completed.returncode}).", details=details[-20:])
