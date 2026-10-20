@@ -195,12 +195,14 @@ def call[T](
             # makes `V1Error.from_dict` raise; keep the status mapping anyway.
             from cli.errors import error_from_status
 
-            raise error_from_status(
+            error = error_from_status(
                 response.status_code,
                 _error_message(None, response.content),
                 request_id=request_id_from(response.headers),
                 code=_error_code(None, response.content),
-            ) from exc
+            )
+            error.http_status = response.status_code
+            raise error from exc
         raise UnreadableSuccess(
             f"Unexpected server response (HTTP {response.status_code}).",
             status=response.status_code,

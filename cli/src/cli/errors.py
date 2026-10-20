@@ -42,6 +42,8 @@ class BeaError(Exception):
     #: Not one of bea's own refusals: a Python exception the frontend did not
     #: expect, whose traceback only `--debug` shows.
     unexpected = False
+    #: The HTTP status of the server answer this error reports, when there was one.
+    http_status: int | None = None
 
     def __init__(
         self,

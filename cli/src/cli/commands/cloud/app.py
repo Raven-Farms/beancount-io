@@ -136,11 +136,15 @@ def cloud_logout() -> None:
         raise
     except Exception as exc:
         reason = to_bea_error(exc)
-        failure = (
-            BeaError,
-            f"server revocation failed: {str(reason).rstrip('.')}. {_STILL_VALID}",
-            reason.request_id,
-        )
+        # A 401 whose body lacks the `{ok, error}` envelope (a proxy's or a
+        # framework's `{"message": "Unauthorized"}`) is still a 401: already
+        # revoked, not a failure (w5/812).
+        if reason.http_status != 401:
+            failure = (
+                BeaError,
+                f"server revocation failed: {str(reason).rstrip('.')}. {_STILL_VALID}",
+                reason.request_id,
+            )
     # The local credential goes either way: a server that cannot be reached
     # must not leave a token sitting on this disk.
     try:
