@@ -32,3 +32,9 @@
 ## Blocked
 
 - **t003** — the shipped demo separation (creation choice + in-ledger identity) is done; the remaining list-identification criterion waits on an API-visible demo flag on the ledger directory surfaces. Unblock condition is written in t003.
+
+## Blocked (2026-10-20)
+
+Closeout (t007) cannot run: the milestone's definition of done is not fully met. t003's remaining criterion — a demo ledger identifiable as fictional in ledger lists — waits on an API-visible demo flag on the ledger directory surfaces, and the Starter-copy correction lives in inbox note 648.
+
+**Unblock:** the ledger directory surfaces (REST/GraphQL/MCP in parity) expose a demo flag sourced from the ledger's `bcio_demo` identity or recorded at creation, and w3/648 has shipped. Who can clear it: whoever next extends the ledger directory read in backend-v2 (for the flag) and any worker (for 648).

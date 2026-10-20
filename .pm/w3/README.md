@@ -80,7 +80,7 @@
 
 - [x] **m53** — [Ledger creation: setup specification, catalog, and builder across hosted surfaces and `bea init`](./done/m53/README.md) (9 tasks) ← `/pm-brainstorm w3` 2026-10-20 candidate 1, from PRFAQ001 + ADR021
 
-- [ ] **m54** — [Ledger creation: staged creation flow on dashboard and mobile](./m54/README.md) (7 tasks) ← `/pm-brainstorm w3` 2026-10-20 candidate 2, from PRFAQ001 + ADR021 — sequenced after m53
+- [ ] **m54** — [Ledger creation: staged creation flow on dashboard and mobile](./blocked/m54/README.md) (7 tasks) ← `/pm-brainstorm w3` 2026-10-20 candidate 2, from PRFAQ001 + ADR021 — sequenced after m53 — **blocked:** demo list flag needs an API contract; closeout waits on it and on 648
 
 - [ ] **m55** — [`beancount-roll-forward`: explain how a balance-sheet account moved](./m55/README.md) (6 tasks) ← `/pm-brainstorm w3` 2026-10-20 candidate 3, from ADR020 P1
 
