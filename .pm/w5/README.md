@@ -83,7 +83,6 @@
 - [842 — A period starting 0001-01-01 is refused (-t 0001, BQL OPEN ON 0001-01-01), unlike the 9999 boundary](./842.md)
 - [843 — list prints its empty notice on stdout; a BOM-only file gets two leading newlines on first append](./843.md)
 - [845 — Delimiter advice names the first separator, not the splitting one, and the wrong spelling (incomplete fix of w5/622)](./845.md)
-- [846 — Four gaps: doctor/treeify usage names, QIF/OFX under --csv auto, NaN-blamed decimal errors, repeated cloud list options](./846.md)
 - [871 — An importer's statement balance with a wrong amount is silently padded by a used pad (follow-up to w5/796)](./871.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
