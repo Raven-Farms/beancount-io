@@ -51,9 +51,15 @@ function OutOfDateIndicatorInner({ ledgerId }: { ledgerId: string }) {
           size="icon"
           onClick={handleClick}
           className="relative"
+          // The tooltip only describes the button; the action needs a name
+          // of its own for screen readers and voice control (w4/236).
+          aria-label={t("common.outOfDateRefresh")}
         >
-          <RefreshCw className="h-4 w-4" />
-          <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-orange-500" />
+          <RefreshCw aria-hidden="true" className="h-4 w-4" />
+          <span
+            aria-hidden="true"
+            className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-orange-500"
+          />
         </Button>
       </TooltipTrigger>
       <TooltipContent>{t("common.outOfDateRefresh")}</TooltipContent>
