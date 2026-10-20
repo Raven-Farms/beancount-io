@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [775 — Two roots including one leaf: writes are judged by whichever sorts first (w5/578 addendum not implemented)](./775.md)
 - [776 — With a managed price include, BEANCOUNT_DISABLE_LOAD_CACHE and check --no-cache cannot bypass a stale cache (new with w5/576)](./776.md)
 - [777 — beancount-migrate derives the opening from today's balance but asserts it at the export's end; post-export activity is absorbed silently](./777.md)
 - [778 — beancount-migrate endpoint assertion fails on a lagged card payment; review/residual accounts never opened](./778.md)
