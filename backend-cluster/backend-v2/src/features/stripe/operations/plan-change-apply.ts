@@ -11,6 +11,7 @@ import {
 } from "../service/plan-change";
 import {
   customerId,
+  expandedLatestInvoice,
   subscriptionPeriodEnd,
   SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
 } from "../service/subscription-plan";
@@ -52,10 +53,11 @@ export interface PlanChangeResultView {
   effectiveAt: Date | null;
   /**
    * With ACTIVE or REQUIRES_ACTION: the invoice the change charges and its
-   * amount (minor units), so a client counts the purchase once.
+   * amount (minor units), so a client counts the purchase once. Paid with
+   * ACTIVE; what the bank is asked to approve with REQUIRES_ACTION.
    */
   invoiceId: string | null;
-  amountPaid: number | null;
+  amountCharged: number | null;
   currency: string | null;
   /**
    * With SCHEDULED: what was scheduled, for the confirmation email. Not part
@@ -90,7 +92,7 @@ function result(
     currentPeriodEnd: null,
     effectiveAt: null,
     invoiceId: null,
-    amountPaid: null,
+    amountCharged: null,
     currency: null,
     ...fields,
   };
@@ -259,19 +261,19 @@ export async function applyPlanChange(
     !updated.pending_update &&
     updated.status === "active" &&
     updated.items.data.some((item) => item.price.id === targetPriceId);
-  const invoice =
-    updated.latest_invoice && typeof updated.latest_invoice === "object"
-      ? updated.latest_invoice
-      : null;
-  // `always_invoice` makes the proration the latest invoice; its amount due is
-  // what was paid once applied, and what the bank is asked to approve.
-  const charge = invoice?.id
-    ? {
-        invoiceId: invoice.id,
-        amountPaid: invoice.amount_due,
-        currency: invoice.currency,
-      }
-    : {};
+  const invoice = expandedLatestInvoice(updated);
+  // A change that made no invoice leaves the previous one latest (a renewal,
+  // say), which this change did not charge.
+  const changeInvoice =
+    invoice?.billing_reason === "subscription_update" ? invoice : null;
+  const charge = (amount: "amount_paid" | "amount_due") =>
+    changeInvoice?.id
+      ? {
+          invoiceId: changeInvoice.id,
+          amountCharged: changeInvoice[amount],
+          currency: changeInvoice.currency,
+        }
+      : {};
   if (applied) {
     const periodEnd = subscriptionPeriodEnd([{ ...updated, clientId }]);
     if (periodEnd) {
@@ -293,7 +295,7 @@ export async function applyPlanChange(
       subscriptionId: updated.id,
       newTier: target.tier,
       currentPeriodEnd: periodEnd,
-      ...charge,
+      ...charge("amount_paid"),
     });
   }
 
@@ -312,7 +314,7 @@ export async function applyPlanChange(
       hostedInvoiceUrl,
       subscriptionId: updated.id,
       newTier: target.tier,
-      ...charge,
+      ...charge("amount_due"),
     });
   }
   return result("FAILED", {

@@ -13,7 +13,7 @@ const load = async () => {
 
 const paid = {
   invoiceId: "in_first",
-  amountPaid: 14388,
+  amount: 14388,
   currency: "usd",
   priceId: PREMIUM_YEARLY_PRICE_ID,
 };
@@ -85,13 +85,63 @@ describe("recordPaidTransaction", () => {
   it.each([
     ["no invoice", { invoiceId: null }],
     ["an empty invoice id", { invoiceId: "" }],
-    ["nothing paid", { amountPaid: 0 }],
-    ["an unknown amount", { amountPaid: null }],
+    ["nothing paid", { amount: 0 }],
+    ["an unknown amount", { amount: null }],
     ["no currency", { currency: null }],
   ])("sends nothing for %s", async (_label, change) => {
     const { recordPaidTransaction } = await load();
 
     expect(recordPaidTransaction({ ...paid, ...change })).toBe(false);
     expect(mockTrack).not.toHaveBeenCalled();
+  });
+
+  it("reports no billing cycle for a price this app does not know", async () => {
+    const { recordPaidTransaction } = await load();
+
+    recordPaidTransaction({
+      ...paid,
+      invoiceId: "in_unknown",
+      priceId: "price_unknown",
+    });
+
+    const [, params] = mockTrack.mock.calls[0];
+    expect(params.items[0]).toEqual({
+      item_id: "price_unknown",
+      item_name: "unknown",
+      price: 143.88,
+      quantity: 1,
+    });
+  });
+
+  it("converts a zero-decimal currency without dividing by 100", async () => {
+    const { recordPaidTransaction } = await load();
+
+    recordPaidTransaction({
+      ...paid,
+      invoiceId: "in_yen",
+      amount: 1500,
+      currency: "jpy",
+    });
+
+    expect(mockTrack).toHaveBeenCalledWith(
+      "purchase",
+      expect.objectContaining({ value: 1500, currency: "JPY" }),
+    );
+  });
+});
+
+describe("isFreshCheckoutInvoice", () => {
+  const now = Date.parse("2026-10-20T12:00:00Z");
+  const hours = (h: number) => new Date(now - h * 60 * 60 * 1000);
+
+  it.each([
+    ["just created", hours(0), true],
+    ["created 23 hours ago", hours(23), true],
+    ["created 25 hours ago, an old bookmark", hours(25), false],
+    ["dated in the future, a skewed clock", hours(-1), false],
+  ])("treats an invoice %s as %s", async (_label, created, fresh) => {
+    const { isFreshCheckoutInvoice } = await load();
+
+    expect(isFreshCheckoutInvoice(created.toISOString(), now)).toBe(fresh);
   });
 });

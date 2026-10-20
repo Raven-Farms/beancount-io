@@ -1,9 +1,19 @@
 import { useCallback } from "react";
 import { useTranslations } from "@/common/hooks/use-translations";
 
+/** Stripe amounts are in the currency's minor unit; this is the major unit. */
+export function majorUnits(amount: number, currency: string): number {
+  const digits =
+    new Intl.NumberFormat("en", {
+      style: "currency",
+      currency: currency.toUpperCase(),
+    }).resolvedOptions().maximumFractionDigits ?? 2;
+  return amount / 10 ** digits;
+}
+
 /**
- * Formats an amount in cents in the **app** language, like
- * `useQuotaNumberFormat` does for counts. Billing is in USD everywhere.
+ * Formats an amount in the currency's minor unit in the **app** language,
+ * like `useQuotaNumberFormat` does for counts.
  */
 export function useMoneyFormat(): (cents: number, currency?: string) => string {
   const { i18n } = useTranslations();
@@ -13,7 +23,7 @@ export function useMoneyFormat(): (cents: number, currency?: string) => string {
       new Intl.NumberFormat(language, {
         style: "currency",
         currency: currency.toUpperCase(),
-      }).format(cents / 100),
+      }).format(majorUnits(cents, currency)),
     [language],
   );
 }

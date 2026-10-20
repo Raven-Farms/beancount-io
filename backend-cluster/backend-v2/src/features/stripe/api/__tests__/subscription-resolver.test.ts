@@ -360,6 +360,7 @@ describe("SubscriptionResolver", () => {
             currency: "usd",
             billing_reason: "subscription_create",
             next_payment_attempt: null,
+            created: 1_800_000_000,
           },
         }),
       ]);
@@ -374,6 +375,8 @@ describe("SubscriptionResolver", () => {
         amountPaid: 0,
         currency: "usd",
         billingReason: "subscription_create",
+        // So the client can tell a fresh Checkout from an old bookmark.
+        created: new Date(1_800_000_000 * 1000),
       });
     });
 

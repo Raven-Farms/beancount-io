@@ -188,6 +188,8 @@ GA4 gives special reporting treatment (and Google Ads / predictive-audience elig
 | `share` | Ledger made public / invite sent | `visibility-section`, collaborators |
 | `exception` | Errors (already defined, wire it) | `error-boundary.tsx`, toasts |
 
+> **Update 2026-10-20:** the shipped design sends `purchase` from the browser, once per paid Stripe invoice, by product decision (w2/m54); the server-side Measurement Protocol reporter recommended below was retired. See `event-taxonomy.md` for what that does and does not count.
+
 Using `purchase` with `value` and `currency` is what unlocks GA4 revenue reporting (§12). **Critically, fire `purchase` server-side via the Measurement Protocol from the Stripe webhook**, not from the client redirect — client-side checkout completion is unreliable (users close the tab, ad blockers, redirect drop-off).
 
 ---

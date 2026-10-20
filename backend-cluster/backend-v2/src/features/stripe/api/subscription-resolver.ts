@@ -113,6 +113,9 @@ class SubscriptionInvoice {
 
   @Field(() => String, { nullable: true })
   billingReason!: string | null;
+
+  @Field({ description: "When Stripe created the invoice." })
+  created!: Date;
 }
 
 @ObjectType("Subscription")
@@ -416,9 +419,9 @@ class PlanChangeResult {
   @Field(() => Int, {
     nullable: true,
     description:
-      "With ACTIVE or REQUIRES_ACTION: what that invoice charges, in the currency's minor unit (cents). Paid with ACTIVE; paid once the bank approves with REQUIRES_ACTION.",
+      "With ACTIVE or REQUIRES_ACTION: what the change's invoice charges, in the currency's minor unit (cents). Paid with ACTIVE; to be approved by the bank with REQUIRES_ACTION.",
   })
-  amountPaid!: number | null;
+  amountCharged!: number | null;
 
   @Field(() => String, {
     nullable: true,

@@ -294,7 +294,8 @@ export interface PurchaseItem {
   item_id: string;
   /** The plan, e.g. "premium". */
   item_name: string;
-  item_variant: "month" | "year";
+  /** The billing cycle; omitted for a price this app does not know. */
+  item_variant?: "month" | "year";
   price: number;
   quantity: 1;
 }

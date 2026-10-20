@@ -495,7 +495,7 @@ describe("PlanChangeSheet", () => {
       mockChangePlan.mockResolvedValue(
         requiresAction({
           invoiceId: "in_approved",
-          amountPaid: 95000,
+          amountCharged: 95000,
           currency: "usd",
         }),
       );
@@ -522,7 +522,7 @@ describe("PlanChangeSheet", () => {
       mockChangePlan.mockResolvedValue(
         requiresAction({
           invoiceId: "in_refused",
-          amountPaid: 95000,
+          amountCharged: 95000,
           currency: "usd",
         }),
       );

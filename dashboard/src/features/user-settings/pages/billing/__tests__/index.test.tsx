@@ -19,6 +19,10 @@ vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => mockNavigate,
 }));
 vi.mock("@/common/components/seo/page-seo", () => ({ PageSEO: () => null }));
+const mockTakeReturnPath = vi.hoisted(() => vi.fn(() => null));
+vi.mock("@/features/user-settings/lib/billing-return", () => ({
+  takeReturnPath: mockTakeReturnPath,
+}));
 const mockToast = vi.hoisted(() => ({ info: vi.fn() }));
 vi.mock("sonner", () => ({ toast: mockToast }));
 vi.mock("@/common/hooks/use-translations", () => ({
@@ -58,6 +62,7 @@ describe("BillingSettingsPage", () => {
   beforeEach(() => {
     mockToast.info.mockClear();
     mockNavigate.mockClear();
+    mockTakeReturnPath.mockClear();
   });
 
   it("says once that an abandoned Checkout charged nothing, then drops the flag", () => {
@@ -82,6 +87,9 @@ describe("BillingSettingsPage", () => {
         checkout: undefined,
         from: "deep_link",
       });
+      // The abandoned Checkout's way back is forgotten, so a later Checkout
+      // in this tab does not offer it.
+      expect(mockTakeReturnPath).toHaveBeenCalledTimes(1);
     } finally {
       mockSearch.value = {};
     }
@@ -92,6 +100,7 @@ describe("BillingSettingsPage", () => {
 
     expect(mockToast.info).not.toHaveBeenCalled();
     expect(mockNavigate).not.toHaveBeenCalled();
+    expect(mockTakeReturnPath).not.toHaveBeenCalled();
   });
 
   it("shows the billing heading and the subscription section on the web", () => {

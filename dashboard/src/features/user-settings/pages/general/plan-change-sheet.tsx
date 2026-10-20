@@ -10,10 +10,7 @@ import { toast } from "sonner";
 import { Button } from "@/common/components/ui/button";
 import { track, type BillingSurface } from "@/common/analytics";
 import { celebrate } from "@/features/user-settings/lib/celebrate";
-import {
-  recordPaidTransaction,
-  type PaidTransaction,
-} from "@/features/user-settings/lib/paid-transaction";
+import { recordPaidTransaction } from "@/features/user-settings/lib/paid-transaction";
 import { planValue } from "@/common/lib/subscription/plan-change";
 import {
   Dialog,
@@ -70,7 +67,12 @@ import {
   ledgersLine,
 } from "./tier-quota-summary";
 
-type PaidCharge = Omit<PaidTransaction, "priceId">;
+/** What `changePlan` reports about the invoice it charged. */
+interface ChangeCharge {
+  invoiceId?: string | null;
+  amountCharged?: number | null;
+  currency?: string | null;
+}
 
 export interface PlanChangeTarget {
   tier: SubscriptionTier;
@@ -241,8 +243,14 @@ export function PlanChangeSheet({
   const targetLabel = target ? planLabel(t, target.tier, target.cycle) : "";
 
   /** A paid change landed: count and celebrate the charge, then close. */
-  const landed = (charge: PaidCharge, priceId: string) => {
-    if (recordPaidTransaction({ ...charge, priceId })) void celebrate();
+  const landed = (charge: ChangeCharge, priceId: string) => {
+    const paid = recordPaidTransaction({
+      invoiceId: charge.invoiceId,
+      amount: charge.amountCharged,
+      currency: charge.currency,
+      priceId,
+    });
+    if (paid) void celebrate();
     toast.success(
       t("userSettings.subscriptionUpgraded"),
       returnTo

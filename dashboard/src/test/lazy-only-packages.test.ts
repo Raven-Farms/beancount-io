@@ -18,7 +18,7 @@ describe("packages that only a rare moment needs stay out of the page bundles", 
     // Importing it injects Stripe's script from js.stripe.com; only a payment
     // that needs the bank's approval should fetch it (w1/175).
     ["@stripe/stripe-js"],
-    // Only a confirmed payment celebrates (w2/m54).
+    // Only a confirmed payment celebrates.
     ["canvas-confetti"],
   ])("%s is only ever imported dynamically or for types", (pkg) => {
     const files = sources(join(process.cwd(), "src"));

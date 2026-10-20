@@ -1,1 +1,1 @@
-DROP TABLE "reported_purchases" CASCADE;
+DROP TABLE IF EXISTS "reported_purchases" CASCADE;

@@ -34,15 +34,23 @@ export function holdsVerifiedPeriod(
   );
 }
 
+/** The latest invoice when the request expanded it; null for a bare id or none. */
+export function expandedLatestInvoice(
+  subscription: Pick<Stripe.Subscription, "latest_invoice">,
+): Stripe.Invoice | null {
+  const invoice = subscription.latest_invoice;
+  return invoice && typeof invoice === "object" ? invoice : null;
+}
+
 /**
  * When Stripe next retries a past-due renewal (unix seconds), read from the
  * expanded latest invoice; null once it has stopped retrying, or when the
  * invoice was not expanded.
  */
 export function pastDueRetry(subscription: Stripe.Subscription): number | null {
-  const invoice = subscription.latest_invoice;
-  if (subscription.status !== "past_due" || !invoice) return null;
-  if (typeof invoice === "string") return null;
+  if (subscription.status !== "past_due") return null;
+  const invoice = expandedLatestInvoice(subscription);
+  if (!invoice) return null;
   return invoice.status === "open" && invoice.next_payment_attempt
     ? invoice.next_payment_attempt
     : null;

@@ -6,6 +6,7 @@ import { useTranslations } from "@/common/hooks/use-translations";
 import { useReactNativeContext } from "@/common/providers/react-native-bridge-provider/react-native-bridge-context";
 import { SubscriptionSection } from "../general/subscription-section";
 import { DEFAULT_BILLING_CYCLE } from "../general/stripe-config";
+import { takeReturnPath } from "@/features/user-settings/lib/billing-return";
 
 /**
  * Settings → Billing: the plan summary, the yearly offer, every plan, and the
@@ -20,10 +21,12 @@ export default function BillingSettingsPage() {
   const canceled = search.checkout === "canceled";
   const canceledShown = useRef(false);
   // An abandoned Checkout: say nothing was charged once, then drop the flag
-  // so a refresh does not repeat it.
+  // so a refresh does not repeat it, and the way back it remembered so a
+  // later Checkout does not offer it.
   useEffect(() => {
     if (!canceled || canceledShown.current) return;
     canceledShown.current = true;
+    takeReturnPath();
     toast.info(t("userSettings.checkoutCanceled"));
     void navigate({
       to: "/settings/billing",

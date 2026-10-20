@@ -38,6 +38,7 @@ query GetSubscriptionStatus {
         amountPaid
         currency
         billingReason
+        created
       }
       scheduledChange {
         priceId

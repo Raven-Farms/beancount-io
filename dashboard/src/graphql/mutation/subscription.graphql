@@ -67,7 +67,7 @@ mutation ChangePlan(
     currentPeriodEnd
     effectiveAt
     invoiceId
-    amountPaid
+    amountCharged
     currency
   }
 }

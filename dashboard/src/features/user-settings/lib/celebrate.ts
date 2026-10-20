@@ -5,6 +5,7 @@
  */
 export async function celebrate(): Promise<void> {
   if (typeof window === "undefined") return;
+  // Checked before the import too, so such a reader never downloads it.
   if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
   try {
     const { default: confetti } = await import("canvas-confetti");

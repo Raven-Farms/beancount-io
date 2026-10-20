@@ -664,12 +664,14 @@ describe("Checkout return", () => {
     id: string;
     amountPaid: number;
     billingReason: string;
+    created?: string;
   }) {
     premiumSubscriber();
     const data = structuredClone(mockActiveSubscriptionData);
     data.subscriptionStatus.subscriptions[0].latestInvoice = {
       __typename: "SubscriptionInvoice",
       currency: "usd",
+      created: new Date().toISOString(),
       ...latestInvoice,
     };
     showSubscription(data);
@@ -708,6 +710,21 @@ describe("Checkout return", () => {
       id: `in_${reason}_${amountPaid}`,
       amountPaid,
       billingReason: reason,
+    });
+
+    render(<SubscriptionSection checkoutReturned />);
+
+    expect(purchases()).toEqual([]);
+    expect(mockCelebrate).not.toHaveBeenCalled();
+  });
+
+  it("counts and celebrates nothing when the confirmation link is opened a day later", () => {
+    // A bookmark or another browser: the purchase was counted when it happened.
+    returnedWith({
+      id: "in_old",
+      amountPaid: 1499,
+      billingReason: "subscription_create",
+      created: new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString(),
     });
 
     render(<SubscriptionSection checkoutReturned />);

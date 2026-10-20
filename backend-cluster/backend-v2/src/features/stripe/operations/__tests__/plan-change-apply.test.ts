@@ -107,7 +107,9 @@ function pendingUpdate(priceId: string): Stripe.Subscription {
     pending_update: { subscription_items: [{ price: { id: PREMIUM_YEARLY } }] },
     latest_invoice: {
       id: "in_1",
+      billing_reason: "subscription_update",
       amount_due: 8480,
+      amount_paid: 0,
       currency: "usd",
       hosted_invoice_url: "https://invoice.stripe.com/i/in_1",
       payments: {
@@ -133,7 +135,9 @@ describe("applyPlanChange", () => {
         },
         latest_invoice: {
           id: "in_change",
+          billing_reason: "subscription_update",
           amount_due: 12890,
+          amount_paid: 12890,
           currency: "usd",
           status: "paid",
         },
@@ -163,7 +167,7 @@ describe("applyPlanChange", () => {
       currentPeriodEnd: new Date(NEW_PERIOD_END * 1000),
       // The charge, so the client can count the purchase once.
       invoiceId: "in_change",
-      amountPaid: 12890,
+      amountCharged: 12890,
       currency: "usd",
     });
     expect(paidCustomer.updatePeriodIfUnchanged).toHaveBeenCalledWith(
@@ -173,6 +177,61 @@ describe("applyPlanChange", () => {
       SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
       "PREMIUM",
     );
+  });
+
+  it.each([
+    ["collected", 12890],
+    // Below Stripe's minimum charge the invoice is marked paid and the amount
+    // moves to the customer's balance: nothing was collected.
+    ["moved to the balance", 0],
+  ])(
+    "counts what an applied change %s, not what was due",
+    async (_label, collected) => {
+      const { apply } = setup({
+        subscriptions: [subscription(PREMIUM_MONTHLY)],
+        updated: subscription(PREMIUM_YEARLY, {
+          latest_invoice: {
+            id: "in_change",
+            billing_reason: "subscription_update",
+            amount_due: 12890,
+            amount_paid: collected,
+            currency: "usd",
+            status: "paid",
+          },
+        }),
+      });
+
+      await expect(apply(PREMIUM_YEARLY, NOW_SECONDS)).resolves.toMatchObject({
+        status: "ACTIVE",
+        invoiceId: "in_change",
+        amountCharged: collected,
+      });
+    },
+  );
+
+  it("reports no charge when the change made no invoice of its own", async () => {
+    const { apply } = setup({
+      subscriptions: [subscription(PREMIUM_MONTHLY)],
+      // The latest invoice is still the last renewal, which this change did
+      // not charge.
+      updated: subscription(PREMIUM_YEARLY, {
+        latest_invoice: {
+          id: "in_renewal",
+          billing_reason: "subscription_cycle",
+          amount_due: 1499,
+          amount_paid: 1499,
+          currency: "usd",
+          status: "paid",
+        },
+      }),
+    });
+
+    await expect(apply(PREMIUM_YEARLY, NOW_SECONDS)).resolves.toMatchObject({
+      status: "ACTIVE",
+      invoiceId: null,
+      amountCharged: null,
+      currency: null,
+    });
   });
 
   it("reports a change waiting on the customer's bank instead of calling it done or failed", async () => {
@@ -191,7 +250,7 @@ describe("applyPlanChange", () => {
       hostedInvoiceUrl: "https://invoice.stripe.com/i/in_1",
       // What the bank is asked to approve, counted once it does.
       invoiceId: "in_1",
-      amountPaid: 8480,
+      amountCharged: 8480,
       currency: "usd",
     });
     expect(paidCustomer.updatePeriodIfUnchanged).not.toHaveBeenCalled();
@@ -211,7 +270,7 @@ describe("applyPlanChange", () => {
       status: "FAILED",
       clientSecret: null,
       invoiceId: null,
-      amountPaid: null,
+      amountCharged: null,
     });
     expect(paidCustomer.updatePeriodIfUnchanged).not.toHaveBeenCalled();
   });
@@ -255,7 +314,7 @@ describe("applyPlanChange", () => {
         kind,
         effectiveAt: new Date(PERIOD_END * 1000),
         invoiceId: null,
-        amountPaid: null,
+        amountCharged: null,
       });
       expect(stripe.subscriptionSchedules.create).toHaveBeenCalledWith({
         from_subscription: "sub_1",
