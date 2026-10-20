@@ -12,14 +12,14 @@ m39–m40 were materialized on 2026-10-18 from [PRFAQ005](../../docs/prfaqs/PRFA
 
 - **The pricing page must not break.** `beancount.io/pricing` already checks out against this backend, so both milestones keep everything it relies on working until it changes: `createSubscriptionSession` and every price it sells (including the $99.99 Premium yearly price), `subscriptionStatus.hasActiveSubscription`, `/settings/general` as its "Manage subscription" destination, and the sign-up `next` round trip.
 - **Suggested order:** m39 → m40, after m38's top-priority directory work. m40/t003 and t004 can start alongside m39.
-- **Stripe operator work:** the worker has had live Stripe access through the CLI since 2026-10-18 and did m39/t004 itself. That included the 100%-off production coupons for the QA payment tests (m39/t015, m40/t014). m39/t016 still needs the user, for GA4 admin and the production environment.
+- **Stripe operator work:** the worker has had live Stripe access through the CLI since 2026-10-18 and did m39/t004 itself. That included the 100%-off production coupons for the QA payment tests (m39/t015, m40/t014).
 - **Production payment tests:** by user decision on 2026-10-18, each milestone ends with a real payment test in production. It uses the QA account from `beancount-io/.env` and two 100%-off coupons, before closeout.
 - **Not on the board:** PRFAQ005's stage 3, its growth experiments, waits for four weeks of stage 1–2 metrics.
 
 ### Open
 
 - [x] **m38** — [One MCP tool per operation, so the ChatGPT app directory accepts every tool](./done/m38/README.md) (11 tasks) ← OpenAI Plugins dashboard scan 2026-10-18: seven grouped tools flagged for operations "not individually exposed"; reverses ADR 0008 D3 — **top priority** (directory listing)
-- [ ] **m39** — [Reach yearly billing from inside the product](./m39/README.md) (15 tasks) ← PRFAQ005 stage 1, user request 2026-10-17: server-side change preview, charging at the previewed amount, in-place bank authentication, a Billing tab with "Pay yearly", the Checkout confirmation and the $143.88 Premium yearly price, without breaking the pricing page's checkout
+- [ ] **m39** — [Reach yearly billing from inside the product](./m39/README.md) (14 tasks) ← PRFAQ005 stage 1, user request 2026-10-17: server-side change preview, charging at the previewed amount, in-place bank authentication, a Billing tab with "Pay yearly", the Checkout confirmation and the $143.88 Premium yearly price, without breaking the pricing page's checkout
 - [ ] **m40** — [Downgrade, switch to monthly and survive a failed renewal without losing paid time](./m40/README.md) (14 tasks) ← PRFAQ005 stage 2, user request 2026-10-17: scheduled downgrades with undo, the cancel sheet, paid limits while past due, the ledger-count and collaborator-limit fixes; after m39
 - [ ] **m37** — [Retire the Stripe test tenant and resolve each paid plan from its own subscription](./blocked/m37/README.md) (11 tasks) ← user request 2026-10-17; remove the built-in test billing tenant, correct tier/customer binding and renewal-cache writes, backfill existing users, and verify dashboard/CLI quotas — **blocked:** code shipped/deployed; t011 needs a verified production execution entry for the actual cohort repair
 - [x] **m36** — [Trim the MCP surface to what the Claude and ChatGPT directories accept](./done/m36/README.md) (10 tasks) ← user decision 2026-10-09: a public listing in Claude's and ChatGPT's directories outranks every other goal; ADR 019 follow-up — **top priority**
@@ -35,6 +35,8 @@ m39–m40 were materialized on 2026-10-18 from [PRFAQ005](../../docs/prfaqs/PRFA
 - [x] **m29** — [`bea` resolves managed price includes locally](./done/m29/README.md) (10 tasks) ← promoted [w2/027](../w2/done/027.md); ADR 015 + PRFAQ002
 
 ## Dropped
+
+- ~~**178**~~ — Give the server-side `purchase` its traffic source — dropped 2026-10-20: purchases are recorded in the browser, which carries the traffic source natively, and the server-side reporter is retired ([w2/m54](../w2/m54/README.md)).
 
 - ~~**m28**~~ — Read-after-delete consistency for hosted slice deletes — dropped 2026-09-16: proposed by `/pm-brainstorm for w1` as a promotion of `w1/033`, but never materialized as open work. Triage the same day established that every layer of the delete path in this monorepo already applies synchronously — backend-v2 awaits the ledger-service call, the ledger service awaits a Gitea CAS commit with bounded retry, reads resolve live HEAD per load, and backend-v2 caches no journal or context read — so there is no async-apply code here to fix and no in-monorepo change can be proven against the acceptance. The work is still wanted and waits with its full record and **Unblock:** condition at [blocked/033](./blocked/033.md), which needs hosted diagnosis naming the lagging layer. Promoting it into a milestone would have duplicated that note and put unbuildable work in the open tree.
 
@@ -68,7 +70,6 @@ m39–m40 were materialized on 2026-10-18 from [PRFAQ005](../../docs/prfaqs/PRFA
 
 ## Inbox
 
-- [178](./178.md) — Give the server-side `purchase` its traffic source; decide after t016 turns it on (found by w1/m39/t011).
 
 
 The three MCP QA findings filed on 2026-09-21/22 were drained on 2026-09-23: [035](./done/035.md), [036](./done/036.md), and [037](./done/037.md) shipped with regression coverage.
