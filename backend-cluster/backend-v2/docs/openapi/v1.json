@@ -1371,9 +1371,6 @@
                             "name": {
                               "type": "string"
                             },
-                            "kind": {
-                              "type": "string"
-                            },
                             "currency": {
                               "type": "string",
                               "pattern": "^[A-Z]{3}$"
@@ -5415,9 +5412,6 @@
                           "type": "object",
                           "properties": {
                             "name": {
-                              "type": "string"
-                            },
-                            "kind": {
                               "type": "string"
                             },
                             "currency": {
