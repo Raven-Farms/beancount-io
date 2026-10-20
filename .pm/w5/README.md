@@ -103,7 +103,6 @@
 - [859 — Loading doctor operations bypass the booking-arithmetic diagnostic and print a raw DivisionByZero traceback where check names the transaction](./859.md)
 - [860 — Four usage claims overstate supported input or omit important qualifications: root discovery, lot-label newlines, mixed cost/price fields, and reused bank IDs](./860.md)
 - [861 — price status says there are no managed includes immediately after reporting a refused URL include](./861.md)
-- [862 — ETag "HEAD" or "Head" still overwrites the managed-price revision record on a case-insensitive filesystem, so a successful check cannot be repeated offline (incomplete fix of w5/645)](./862.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
