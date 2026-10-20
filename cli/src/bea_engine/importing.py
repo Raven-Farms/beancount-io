@@ -988,6 +988,7 @@ def _writable(entry: Any, row: int, importer: Any, logs: io.StringIO) -> Any:
     import datetime
 
     from beancount.core.data import ALL_DIRECTIVES, Transaction
+    from beancount.core.number import MISSING
 
     if not isinstance(entry, ALL_DIRECTIVES):
         raise _with_output(
@@ -1006,6 +1007,18 @@ def _writable(entry: Any, row: int, importer: Any, logs: io.StringIO) -> Any:
             logs,
         )
     _refuse_skipped_metadata(entry, unwritable, logs)
+    # Beancount prints no cost beside missing units, so the lot was dropped
+    # and the cash booked into the stock account, exit 0 (w5/855). `add
+    # transactions` refuses the same posting (w5/212).
+    for posting in getattr(entry, "postings", None) or []:
+        if posting.cost is not None and (posting.units is None or posting.units is MISSING):
+            raise _with_output(
+                LedgerError(
+                    f"{unwritable}: its {posting.account} posting has a cost but no units, and a cost cannot be "
+                    "written without them; give that posting its units."
+                ),
+                logs,
+            )
     try:
         # Accounts as the ledger reads them, NFC: an NFD `Expenses:Café` from a
         # PDF or a macOS file name was "not open", with a duplicate `add open`
