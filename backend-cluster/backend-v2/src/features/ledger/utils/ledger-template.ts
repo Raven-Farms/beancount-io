@@ -55,6 +55,7 @@ export const ledgerWithMultipleFilesTemplate: Record<string, string> = {
 ;; Birth: 1980-05-12
 ;; Dates: 2023-01-01 - 2025-10-12
 ;; THIS FILE HAS BEEN AUTO-GENERATED.
+;; Demo ledger: fictional example data for learning. It is not a real ledger.
 * Options
 
 option "title" "Example Beancount file"
@@ -66,6 +67,7 @@ include "./commodities.bean"
 * Equity Accounts
 
 1980-05-12 open Equity:Opening-Balances
+  bcio_demo: "true"
 1980-05-12 open Liabilities:AccountsPayable
 
 

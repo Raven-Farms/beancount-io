@@ -412,11 +412,6 @@ export function CreateLedgerScreen(): JSX.Element {
                     "createLedgerTemplateStarterHint",
                   ],
                   [
-                    "sample",
-                    "createLedgerTemplateSample",
-                    "createLedgerTemplateSampleHint",
-                  ],
-                  [
                     "preset",
                     "createLedgerStartPreset",
                     "createLedgerReviewDescription",
@@ -438,6 +433,25 @@ export function CreateLedgerScreen(): JSX.Element {
                   <Text style={styles.hint}>{t(hintKey)}</Text>
                 </Pressable>
               ))}
+            </View>
+            <View style={styles.card} testID="setup-demo-option">
+              <Pressable
+                onPress={() => setStartKind("sample")}
+                style={[
+                  styles.templateRow,
+                  startKind === "sample" ? styles.templateSelected : null,
+                ]}
+                accessibilityRole="button"
+                accessibilityState={{ selected: startKind === "sample" }}
+                accessibilityLabel={t("createLedgerTemplateSample")}
+              >
+                <Text style={styles.templateTitle}>
+                  {t("createLedgerTemplateSample")}
+                </Text>
+                <Text style={styles.hint}>
+                  {t("createLedgerTemplateSampleHint")}
+                </Text>
+              </Pressable>
             </View>
             {startKind === "preset" ? (
               <View style={styles.card} testID="setup-preset-list">

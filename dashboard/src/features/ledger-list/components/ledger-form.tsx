@@ -313,18 +313,18 @@ export function LedgerForm({
       Icon: BookOpen,
     },
     {
-      value: "sample" as StartKind,
-      title: t("page.dashboard.sampleTemplate"),
-      description: t("page.dashboard.sampleTemplateDescription"),
-      Icon: Files,
-    },
-    {
       value: "preset" as StartKind,
       title: t("page.dashboard.ledgerTemplate"),
       description: t("page.dashboard.setupReviewDescription"),
       Icon: Layers,
     },
   ];
+  const demoOption = {
+    value: "sample" as StartKind,
+    title: t("page.dashboard.sampleTemplate"),
+    description: t("page.dashboard.sampleTemplateDescription"),
+    Icon: Files,
+  };
 
   return (
     <>
@@ -351,7 +351,7 @@ export function LedgerForm({
           {(!isCreate || step === 0) && isCreate ? (
             <div className="space-y-4">
               <div
-                className="grid gap-3 sm:grid-cols-3"
+                className="grid gap-3 sm:grid-cols-2"
                 role="radiogroup"
                 aria-label={t("page.dashboard.ledgerTemplate")}
               >
@@ -386,6 +386,37 @@ export function LedgerForm({
                     </span>
                   </label>
                 ))}
+              </div>
+              <div className="border-t border-border pt-3">
+                <label
+                  className={`flex cursor-pointer gap-3 rounded-lg border p-3 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring ${
+                    startKind === demoOption.value
+                      ? "border-primary bg-primary/5 ring-1 ring-primary"
+                      : "border-input hover:bg-muted/50"
+                  } ${isLoading ? "cursor-not-allowed opacity-60" : ""}`}
+                  data-testid="setup-demo-option"
+                >
+                  <input
+                    type="radio"
+                    name="start-kind"
+                    value={demoOption.value}
+                    checked={startKind === demoOption.value}
+                    onChange={() => setStartKind(demoOption.value)}
+                    disabled={isLoading}
+                    className="sr-only"
+                  />
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                    <demoOption.Icon className="size-4" aria-hidden="true" />
+                  </span>
+                  <span className="space-y-1">
+                    <span className="block text-sm font-medium text-foreground">
+                      {demoOption.title}
+                    </span>
+                    <span className="block text-xs leading-relaxed text-muted-foreground">
+                      {demoOption.description}
+                    </span>
+                  </span>
+                </label>
               </div>
               {startKind === "preset" ? (
                 <div
