@@ -1,6 +1,6 @@
 # w4 · m34 — Resolve multiline entry sources without splitting quoted strings
 
-**Worker:** worker1 **Goal:** Every valid source-backed multiline Note can be opened through its current Journal identity, with its entire source span and neighboring bytes intact. **Status:** todo (t001, t002, t004, t005 done)
+**Worker:** worker1 **Goal:** Every valid source-backed multiline Note can be opened through its current Journal identity, with its entire source span and neighboring bytes intact. **Status:** blocked (t001, t002, t004, t005 done; t003 needs a deployed live check)
 
 **Severity:** minor (valid entries cannot be opened for source editing). **Estimate:** 150m across six tasks; implementation owned by ledger.
 
@@ -73,3 +73,11 @@ Live REST/MCP, other directive types, source mutations on multiline entries, oth
 - [ ] Single-line, indented, escaped-string, duplicate-entry, include and provenance controls still work.
 - [ ] Eligible REST/GraphQL/MCP outcomes agree; meaningful real-engine regressions and package checks pass.
 - [ ] Dashboard reopening is verified with disposable fixtures restored, and completed tasks/archive links agree.
+
+## Blocked
+
+**Blocked 2026-10-20** — t003's live dashboard reopen (and therefore t006 Closeout) cannot run here.
+
+- **Shipped baseline:** `a0fa2e619` — `splitIntoBlocks` is quoted-string aware and records `headerEndLine`; the source-details probe places its marker after the full header. Pure tests cover unindented/blank/date-like/indented literals, multiline narration with postings, escapes, comments, CRLF, the unterminated-quote fallback, probe placement and neighbor-preserving delete/replace; `yarn verify:rustledger` resolves every multiline Note and a multiline-narration transaction through the real WASM engine with probe source details at the right line. Both fail against the previous scanner. Ledger lint, typecheck, build and 1380 tests pass. REST/GraphQL/MCP entry context share `LedgerJournalService` and need no adapter change; their adapters were not exercised separately.
+- **Blocker:** the DoD's dashboard reopen needs the ledger service at `a0fa2e619` or later deployed and an authorized disposable ledger; this worker has neither.
+- **Unblock:** after deploy, a QA run creates the recorded multiline Note through New Entry, reloads Journal, opens it via the row's Open entry action at 1440 and 390 widths, sees the complete editable source at the right line with no NOT_FOUND, repeats the single-line control, and restores the fixture bytes. **Who:** the user (deploy) and the dashboard QA loop.
