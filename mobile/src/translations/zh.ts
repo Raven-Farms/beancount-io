@@ -426,6 +426,10 @@ export const zh: Translations = {
   ledgerEditorSaving: "正在保存...",
   ledgerEditorSaveSuccess: "文件已保存",
   ledgerEditorSaveFailed: "保存失败",
+  ledgerEditorSaveLeftErrorsTitle: "已保存，但账本出现新错误",
+  ledgerEditorSaveLeftErrors:
+    "文件已保存，但账本现在有一个之前没有的错误：{{error}}",
+  ledgerEditorViewErrors: "查看错误",
   ledgerEditorLoadFailed: "加载文件失败",
   ledgerEditorFileUnavailable: "该文件已不在账本中。",
   ledgerEditorBackToFiles: "返回文件",

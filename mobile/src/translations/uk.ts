@@ -468,6 +468,10 @@ export const uk: Translations = {
   ledgerEditorSaving: "Зберігаємо...",
   ledgerEditorSaveSuccess: "Файл збережено",
   ledgerEditorSaveFailed: "Не вдалося зберегти",
+  ledgerEditorSaveLeftErrorsTitle: "Збережено, але в книзі нова помилка",
+  ledgerEditorSaveLeftErrors:
+    "Файл збережено, але у вашій книзі тепер є помилка, якої раніше не було: {{error}}",
+  ledgerEditorViewErrors: "Переглянути помилки",
   ledgerEditorLoadFailed: "Не вдалося завантажити файл",
   ledgerEditorFileUnavailable: "Цього файлу більше немає в книзі.",
   ledgerEditorBackToFiles: "Назад до файлів",

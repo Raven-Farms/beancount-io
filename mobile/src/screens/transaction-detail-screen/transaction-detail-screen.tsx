@@ -58,6 +58,9 @@ import {
   type TransactionMenuAction,
 } from "./selectors/select-transaction-detail";
 import { shouldShowTransactionWriteActions } from "./selectors/select-transaction-write-actions";
+import { deleteTransaction } from "./delete-transaction";
+import { ledgerWriteFailureMessage } from "@/common/ledger-refusal";
+import { i18n } from "@/translations";
 import { PostingRow } from "./components/posting-row";
 import { buildLedgerUrl } from "@/common/app-links/build-ledger-url";
 import {
@@ -308,7 +311,8 @@ const TransactionDetailImpl = ({
         text: t("deleteTransaction"),
         style: "destructive",
         onPress: async () => {
-          await confirmWrite({
+          await deleteTransaction({
+            confirmWrite,
             perform: () =>
               deleteMutation({
                 variables: {
@@ -316,11 +320,13 @@ const TransactionDetailImpl = ({
                   ledgerId,
                 },
               }),
-            successMessage: t("deleteSuccess"),
-            failureMessage: t("deleteFailed"),
             // The server's reason is more useful than "delete failed".
-            failureMessageFor: (e) =>
-              e instanceof Error ? e.message : t("deleteFailed"),
+            describeFailure: (e) => ledgerWriteFailureMessage(e, i18n),
+            showRefusal: (title, message) => Alert.alert(title, message),
+            messages: {
+              success: t("deleteSuccess"),
+              failure: t("deleteFailed"),
+            },
             afterSuccess: () => invalidateLedgerData(client, "entries"),
           });
         },

@@ -474,6 +474,10 @@ export const ca: Translations = {
   ledgerEditorSaving: "S'està desant...",
   ledgerEditorSaveSuccess: "Fitxer desat",
   ledgerEditorSaveFailed: "No s'ha pogut desar",
+  ledgerEditorSaveLeftErrorsTitle: "Desat, amb un error nou al llibre",
+  ledgerEditorSaveLeftErrors:
+    "El fitxer s'ha desat, però el teu llibre ara té un error que abans no tenia: {{error}}",
+  ledgerEditorViewErrors: "Mostra els errors",
   ledgerEditorLoadFailed: "No s'ha pogut carregar el fitxer",
   ledgerEditorFileUnavailable: "Aquest fitxer ja no és al llibre.",
   ledgerEditorBackToFiles: "Torna als fitxers",

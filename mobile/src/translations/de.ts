@@ -476,6 +476,10 @@ export const de: Translations = {
   ledgerEditorSaving: "Speichern...",
   ledgerEditorSaveSuccess: "Datei gespeichert",
   ledgerEditorSaveFailed: "Speichern fehlgeschlagen",
+  ledgerEditorSaveLeftErrorsTitle: "Gespeichert, mit neuem Fehler im Hauptbuch",
+  ledgerEditorSaveLeftErrors:
+    "Die Datei ist gespeichert, aber dein Hauptbuch hat jetzt einen Fehler, den es vorher nicht hatte: {{error}}",
+  ledgerEditorViewErrors: "Fehler anzeigen",
   ledgerEditorLoadFailed: "Datei konnte nicht geladen werden",
   ledgerEditorFileUnavailable: "Diese Datei ist nicht mehr im Hauptbuch.",
   ledgerEditorBackToFiles: "Zurück zu Dateien",

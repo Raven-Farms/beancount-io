@@ -471,6 +471,10 @@ export const en = {
   ledgerEditorSaving: "Saving...",
   ledgerEditorSaveSuccess: "File saved",
   ledgerEditorSaveFailed: "Failed to save",
+  ledgerEditorSaveLeftErrorsTitle: "Saved, with a new ledger error",
+  ledgerEditorSaveLeftErrors:
+    "The file is saved, but your ledger now has an error it didn't have before: {{error}}",
+  ledgerEditorViewErrors: "View errors",
   ledgerEditorLoadFailed: "Failed to load file",
   ledgerEditorFileUnavailable: "This file is no longer in the ledger.",
   ledgerEditorBackToFiles: "Back to Files",

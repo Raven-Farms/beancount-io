@@ -474,6 +474,10 @@ export const sk: Translations = {
   ledgerEditorSaving: "Ukladá sa...",
   ledgerEditorSaveSuccess: "Súbor uložený",
   ledgerEditorSaveFailed: "Uloženie zlyhalo",
+  ledgerEditorSaveLeftErrorsTitle: "Uložené, s novou chybou v knihe",
+  ledgerEditorSaveLeftErrors:
+    "Súbor je uložený, ale vaša kniha má teraz chybu, ktorú predtým nemala: {{error}}",
+  ledgerEditorViewErrors: "Zobraziť chyby",
   ledgerEditorLoadFailed: "Súbor sa nepodarilo načítať",
   ledgerEditorFileUnavailable: "Tento súbor už v knihe nie je.",
   ledgerEditorBackToFiles: "Späť na súbory",

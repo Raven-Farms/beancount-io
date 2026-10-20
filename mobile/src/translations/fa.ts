@@ -458,6 +458,10 @@ export const fa: Translations = {
   ledgerEditorSaving: "در حال ذخیره...",
   ledgerEditorSaveSuccess: "فایل ذخیره شد",
   ledgerEditorSaveFailed: "ذخیره ناموفق بود",
+  ledgerEditorSaveLeftErrorsTitle: "ذخیره شد، با یک خطای تازه در دفتر",
+  ledgerEditorSaveLeftErrors:
+    "فایل ذخیره شد، اما دفتر شما اکنون خطایی دارد که پیش‌تر نداشت: {{error}}",
+  ledgerEditorViewErrors: "مشاهدهٔ خطاها",
   ledgerEditorLoadFailed: "بارگذاری فایل ناموفق بود",
   ledgerEditorFileUnavailable: "این فایل دیگر در دفتر کل نیست.",
   ledgerEditorBackToFiles: "بازگشت به فایل‌ها",

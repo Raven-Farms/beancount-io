@@ -465,6 +465,11 @@ export const nl: Translations = {
   ledgerEditorSaving: "Opslaan...",
   ledgerEditorSaveSuccess: "Bestand opgeslagen",
   ledgerEditorSaveFailed: "Opslaan mislukt",
+  ledgerEditorSaveLeftErrorsTitle:
+    "Opgeslagen, met een nieuwe fout in het grootboek",
+  ledgerEditorSaveLeftErrors:
+    "Het bestand is opgeslagen, maar je grootboek heeft nu een fout die het eerst niet had: {{error}}",
+  ledgerEditorViewErrors: "Fouten bekijken",
   ledgerEditorLoadFailed: "Laden van bestand mislukt",
   ledgerEditorFileUnavailable: "Dit bestand staat niet meer in het grootboek.",
   ledgerEditorBackToFiles: "Terug naar bestanden",

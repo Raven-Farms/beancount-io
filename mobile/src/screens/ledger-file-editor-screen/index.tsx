@@ -51,6 +51,7 @@ import {
 } from "@/common/ledger-file-content";
 import { isBeancountFile } from "@/common/ledger-file-types";
 import {
+  GetLedgerErrorsDocument,
   useGetLedgerFileQuery,
   useUpdateLedgerFileMutation,
 } from "@/generated-graphql/graphql";
@@ -66,6 +67,7 @@ import {
   resetRevisionTracker,
 } from "@/components/code-editor/revision-tracker";
 import { isConflictError } from "@/common/ledger-conflict";
+import { firstNewLedgerError } from "@/common/new-ledger-error";
 import { filterFileErrors, readOnlyNoticeColors } from "./utils";
 import { selectLedgerFileEditorState } from "./select-editor-state";
 import { LEADING_TEXT_ALIGN, directionalIcon } from "@/common/rtl";
@@ -391,6 +393,45 @@ function LedgerFileEditorSession({
   // affordable. So the save fires only the cheap `errors` scope (this screen
   // renders those), and the full sweep waits until the user leaves.
   const savedThisSessionRef = useRef(false);
+  const { errors: allErrors, loaded: errorsLoaded } = useLedgerErrors(ledgerId);
+  const errorsBeforeSaveRef = useRef<typeof allErrors | null>(null);
+  errorsBeforeSaveRef.current = errorsLoaded ? allErrors : null;
+
+  // A raw save is never refused — this editor is how a broken ledger gets
+  // repaired, and repair can pass through invalid states — but it must not
+  // pass for a clean save either (w21/m1). Refresh the errors this screen and
+  // the Home bell render, and warn with the first one the save added, as the
+  // dashboard's write outcome does.
+  const reportNewErrors = useCallback(
+    async (before: typeof allErrors | null) => {
+      await invalidateLedgerData(client, "errors");
+      let after: typeof allErrors | undefined;
+      try {
+        const { data } = await client.query({
+          query: GetLedgerErrorsDocument,
+          variables: { ledgerId },
+          fetchPolicy: "cache-first",
+        });
+        after = data?.getLedgerErrors;
+      } catch {
+        return;
+      }
+      const first = firstNewLedgerError(before, after);
+      if (!first) return;
+      Alert.alert(
+        t("ledgerEditorSaveLeftErrorsTitle"),
+        t("ledgerEditorSaveLeftErrors", { error: first.message }),
+        [
+          { text: t("close"), style: "cancel" },
+          {
+            text: t("ledgerEditorViewErrors"),
+            onPress: () => router.push("/(app)/notifications"),
+          },
+        ],
+      );
+    },
+    [client, ledgerId, router, t],
+  );
 
   useEffect(
     () => () => {
@@ -446,6 +487,8 @@ function LedgerFileEditorSession({
       }
 
       saveInFlightRef.current = true;
+      // Read before sending: the refresh after the save replaces it.
+      const before = errorsBeforeSaveRef.current;
       try {
         const result = await updateLedgerFile({
           variables: {
@@ -472,7 +515,7 @@ function LedgerFileEditorSession({
         // before the save — it is fetched once at mount, and this screen never
         // remounts while the user edits.
         savedThisSessionRef.current = true;
-        void invalidateLedgerData(client, "errors");
+        void reportNewErrors(before);
         return true;
       } catch (err: unknown) {
         haptics.error();
@@ -498,7 +541,15 @@ function LedgerFileEditorSession({
         saveInFlightRef.current = false;
       }
     },
-    [canWrite, client, handleReload, ledgerId, path, t, updateLedgerFile],
+    [
+      canWrite,
+      handleReload,
+      ledgerId,
+      path,
+      reportNewErrors,
+      t,
+      updateLedgerFile,
+    ],
   );
 
   // ── Unsaved changes guard ────────────────────────────────────────────────
@@ -575,7 +626,6 @@ function LedgerFileEditorSession({
 
   const fileName = path.split("/").pop() ?? path;
 
-  const { errors: allErrors } = useLedgerErrors(ledgerId);
   const fileErrors: FileError[] = filterFileErrors(allErrors, path).map(
     (e) => ({ message: e.message, lineno: e.lineno }),
   );

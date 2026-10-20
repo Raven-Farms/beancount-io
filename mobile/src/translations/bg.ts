@@ -465,6 +465,10 @@ export const bg: Translations = {
   ledgerEditorSaving: "Запазва се...",
   ledgerEditorSaveSuccess: "Файлът е запазен",
   ledgerEditorSaveFailed: "Запазването е неуспешно",
+  ledgerEditorSaveLeftErrorsTitle: "Запазено, с нова грешка в книгата",
+  ledgerEditorSaveLeftErrors:
+    "Файлът е запазен, но книгата ви вече има грешка, която нямаше преди: {{error}}",
+  ledgerEditorViewErrors: "Виж грешките",
   ledgerEditorLoadFailed: "Файлът не беше зареден",
   ledgerEditorFileUnavailable: "Този файл вече не е в книгата.",
   ledgerEditorBackToFiles: "Назад към файловете",

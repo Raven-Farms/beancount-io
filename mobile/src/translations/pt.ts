@@ -474,6 +474,10 @@ export const pt: Translations = {
   ledgerEditorSaving: "Salvando...",
   ledgerEditorSaveSuccess: "Arquivo salvo",
   ledgerEditorSaveFailed: "Falha ao salvar",
+  ledgerEditorSaveLeftErrorsTitle: "Salvo, com um novo erro no livro",
+  ledgerEditorSaveLeftErrors:
+    "O arquivo foi salvo, mas seu livro agora tem um erro que não tinha antes: {{error}}",
+  ledgerEditorViewErrors: "Ver erros",
   ledgerEditorLoadFailed: "Falha ao carregar o arquivo",
   ledgerEditorFileUnavailable: "Este arquivo não está mais no livro-razão.",
   ledgerEditorBackToFiles: "Voltar para arquivos",

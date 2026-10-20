@@ -471,6 +471,10 @@ export const ru: Translations = {
   ledgerEditorSaving: "Сохраняем...",
   ledgerEditorSaveSuccess: "Файл сохранён",
   ledgerEditorSaveFailed: "Не удалось сохранить",
+  ledgerEditorSaveLeftErrorsTitle: "Сохранено, но в книге новая ошибка",
+  ledgerEditorSaveLeftErrors:
+    "Файл сохранён, но в вашей книге теперь есть ошибка, которой раньше не было: {{error}}",
+  ledgerEditorViewErrors: "Показать ошибки",
   ledgerEditorLoadFailed: "Не удалось загрузить файл",
   ledgerEditorFileUnavailable: "Этого файла больше нет в книге.",
   ledgerEditorBackToFiles: "Назад к файлам",

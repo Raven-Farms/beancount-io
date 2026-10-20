@@ -50,6 +50,8 @@ import {
 } from "@/components/code-editor/revision-tracker";
 import { applySavedIdentity, resolveSaveExit } from "./save-exit";
 import { selectSaveFailure } from "./save-failure";
+import { ledgerWriteFailureMessage } from "@/common/ledger-refusal";
+import { i18n } from "@/translations";
 
 const SKELETON_WIDTHS = [220, 160, 280, 120, 200, 260, 140];
 
@@ -282,10 +284,10 @@ export const EditTransactionScreen = (): JSX.Element => {
         });
 
         if (!outcome.ok) {
+          // A refusal reads as what the edit would break (w21/m1), not the
+          // server's "Validation failed for entry: …" prose.
           const failure = selectSaveFailure(
-            outcome.error instanceof Error
-              ? outcome.error.message
-              : outcome.message,
+            ledgerWriteFailureMessage(outcome.error, i18n) ?? outcome.message,
           );
           if (failure.kind === "conflict") {
             // A draft is never discarded without asking: reload is a choice.

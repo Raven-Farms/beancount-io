@@ -474,6 +474,11 @@ export const fr: Translations = {
   ledgerEditorSaving: "Enregistrement...",
   ledgerEditorSaveSuccess: "Fichier enregistré",
   ledgerEditorSaveFailed: "Échec de l'enregistrement",
+  ledgerEditorSaveLeftErrorsTitle:
+    "Enregistré, avec une nouvelle erreur dans le registre",
+  ledgerEditorSaveLeftErrors:
+    "Le fichier est enregistré, mais votre registre contient maintenant une erreur qu'il n'avait pas : {{error}}",
+  ledgerEditorViewErrors: "Voir les erreurs",
   ledgerEditorLoadFailed: "Échec du chargement du fichier",
   ledgerEditorFileUnavailable: "Ce fichier n'est plus dans le grand livre.",
   ledgerEditorBackToFiles: "Retour aux fichiers",
