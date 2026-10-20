@@ -279,9 +279,27 @@ describe("precedence helpers", () => {
       '; she said "hold\n2026-01-10 price BTC 90000 USD\n',
       ["2026-01-10\0BTC\0USD"],
     ],
+    // rustledger 0.24 opens a string at a `"` on an org heading or a `#`
+    // line, so the price after it is never seen and must not shadow the feed;
+    // it skips a `%` line whole (w5/844, revising w5/625).
     [
-      "a quote on an org heading the lexer ignores (w5/625)",
+      "a quote on an org heading, which opens a string to the hosted engine (w5/844)",
       '* Prices for the 12" binder\n2026-09-10 price BTC 70000 USD\n2026-09-12 * "Later"\n',
+      [],
+    ],
+    [
+      "a quote on a # line (w5/844)",
+      '# Prices for the 12" binder\n2026-09-10 price BTC 70000 USD\n2026-09-12 * "Later"\n',
+      [],
+    ],
+    [
+      "a quote on a % line the hosted engine skips (w5/844)",
+      '% Prices for the 12" binder\n2026-09-10 price BTC 70000 USD\n2026-09-12 * "Later"\n',
+      ["2026-09-10\0BTC\0USD"],
+    ],
+    [
+      "an org heading without a quote (w5/844)",
+      "* Prices\n2026-09-10 price BTC 70000 USD\n",
       ["2026-09-10\0BTC\0USD"],
     ],
     [
@@ -297,6 +315,24 @@ describe("precedence helpers", () => {
   ])("reads only directives around %s", (_label, text, expected) => {
     const pairs = collectLedgerPricePairs({ "a.bean": text }, ["a.bean"]);
     expect([...pairs]).toEqual(expected);
+  });
+
+  // The feed's point for a date the hosted engine sees no authored price on
+  // must survive: withheld, that date had no price at all (w5/844).
+  it("keeps the feed's point when the authored price sits after a quoted heading", () => {
+    const ledger =
+      'include "feed.bean"\n* Prices for the 12" binder\n2026-09-10 price BTC 70000 USD\n' +
+      '* Transactions\n2026-09-12 * "Later"\n  Assets:A  1 USD\n  Assets:B\n';
+    const feed = "2026-09-10 price BTC 69000 USD\n2026-09-11 price BTC 69500 USD\n";
+    const validation = validateManagedPriceText(feed);
+    if (!validation.ok) throw new Error(validation.reason);
+
+    const pairs = collectLedgerPricePairs({ "main.bean": ledger }, ["main.bean"]);
+    const result = applyLedgerPricePrecedence(feed, validation.feed, pairs);
+
+    expect(result.shadowedCount).toBe(0);
+    expect(result.effectiveDates).toEqual(["2026-09-10", "2026-09-11"]);
+    expect(result.text).toBe(feed);
   });
 
   it("normalises slash and unpadded ledger dates and skips impossible ones (w1/163)", () => {

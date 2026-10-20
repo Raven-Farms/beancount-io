@@ -74,14 +74,15 @@ const SHADOWED_LINE = "; shadowed by a ledger-authored price for the same date";
 // runs up to the quote commodity rather than to the first space (w5/378).
 const LEDGER_PRICE_RE =
   /^([0-9]{4})[-/]([0-9]{1,2})[-/]([0-9]{1,2})[ \t]+price[ \t]+([A-Z](?:[A-Z0-9'._-]*[A-Z0-9])?)[ \t]+[-+*/(),.0-9 \t]+?([A-Z](?:[A-Z0-9'._-]*[A-Z0-9])?)(?![A-Za-z0-9'._-])/gmu;
-// What Beancount's lexer reads as one token before a line could start: a
-// string, which may span lines, and a comment, which may hold a `"`. A
-// price-shaped line inside a multi-line note is not a price (w5/378). A line
-// the lexer ignores outright (an org heading `*`, `:`, `#` or a flag
-// character first) is matched whole first: a `"` there opens no string, and
-// pairing it with the next quote in the file hid every price in between
-// (w5/625, as the CLI's w5/476).
-const STRING_OR_COMMENT_RE = /^[*:#!&?%][^\n]*|"(?:[^"\\]|\\.)*"|;[^\n]*/gmu;
+// What the hosted engine's lexer reads as one token before a line could
+// start: a string, which may span lines, and a comment, which may hold a `"`.
+// A price-shaped line inside a multi-line note is not a price (w5/378). Only
+// what rustledger 0.24 skips whole is matched whole first: a `%` line. On an
+// org heading `*` or a `#` line a `"` opens a string there, and the price
+// after it is never seen; counting it anyway (w5/625) withheld the feed's
+// point for that date, and the date lost its price (w5/844). A `:`, `!`, `&`
+// or `?` line is a parse error to it, which loses the price as well.
+const STRING_OR_COMMENT_RE = /^%[^\n]*|"(?:[^"\\]|\\.)*"|;[^\n]*/gmu;
 
 const pairKey = (date: string, base: string, quote: string): string =>
   `${date}\0${base}\0${quote}`;
@@ -123,7 +124,9 @@ export function applyLedgerPricePrecedence(
   feed: ManagedPriceFeedSummary,
   ledgerPairs: ReadonlySet<string>,
 ): { text: string; shadowedCount: number; effectiveDates: string[] } {
-  const lines = text.split(/\r\n|\r|\n/u);
+  // Lines as the engine counts them: a bare CR ends none (w5/844), and the
+  // validator refuses a body holding one.
+  const lines = text.split(/\r?\n/u);
   const effectiveDates: string[] = [];
   let shadowedCount = 0;
   for (const price of feed.prices) {
