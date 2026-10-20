@@ -4,6 +4,8 @@
 
 ## Milestones
 
+- [ ] **m31** — [Bound authentication abuse without losing account recovery](./m31/README.md) (9 tasks) ← user-approved rate-limit review and `$pm` / `$loopx w4`, 2026-10-19
+
 - [x] **m29** — [Explore public examples before signing in](./done/m29/README.md) (9 tasks) ← approved `/pm-brainstorm for w4` candidate 1, 2026-09-27; mobile, ~4–5h implementation plus standing closing tasks
 
 - [x] **m28** — [Locale-aware plurals on both clients](./done/m28/README.md) (8 tasks) ← promoted w4/187, filed from m27's wording deviation, 2026-09-26

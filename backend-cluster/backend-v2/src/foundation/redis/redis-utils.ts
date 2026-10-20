@@ -82,9 +82,9 @@ export async function createRedisCache(
  *
  * Almost nothing should want this — the cache helper is the interface for
  * storing values. It exists for the operations Keyv cannot express because they
- * must be atomic across instances (`INCR` for rate-limit counters). Anything
- * reached through here fails open: it is by definition not on the correctness
- * path for reading or writing user data.
+ * must be atomic across instances (counters and admission scripts). Callers
+ * decide whether Redis unavailability may fail open; authentication admission
+ * must fail closed.
  */
 export function getRedisClient(): {
   incr(key: string): Promise<number>;
@@ -92,6 +92,10 @@ export function getRedisClient(): {
   pTTL(key: string): Promise<number>;
   get(key: string): Promise<string | null>;
   del(key: string): Promise<number>;
+  eval(
+    script: string,
+    options: { keys: string[]; arguments: string[] },
+  ): Promise<unknown>;
 } | null {
   const client = (keyvRedisStore as unknown as { client?: unknown } | null)
     ?.client;

@@ -11,6 +11,8 @@
  * await cacheHelper.set(key, value, TTL.MIN_5);
  */
 export const TTL = {
+  /** 30 seconds */
+  SEC_30: 30 * 1000,
   /** 45 seconds */
   SEC_45: 45 * 1000,
   /** 1 minute */
@@ -19,6 +21,8 @@ export const TTL = {
   MIN_5: 5 * 60 * 1000,
   /** 10 minutes */
   MIN_10: 10 * 60 * 1000,
+  /** 15 minutes */
+  MIN_15: 15 * 60 * 1000,
   /** 30 minutes */
   MIN_30: 30 * 60 * 1000,
   /** 1 hour */

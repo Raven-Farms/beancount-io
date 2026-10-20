@@ -1,5 +1,11 @@
 import "reflect-metadata";
 import {
+  fakeRedisCounter as mockFakeRedisCounter,
+  fakeRedisCounterState,
+  fakeRedisAdmission as mockFakeRedisAdmission,
+  fakeRedisAdmissionState,
+} from "@/foundation/redis/__tests__/fake-redis-counter";
+import {
   AuthSessionWorkflow,
   type IAuthSessionWorkflow,
 } from "../auth-session-workflow";
@@ -20,11 +26,8 @@ import {
 } from "@/shared/errors";
 import type { SessionJwtVerification } from "@/features/auth/data/jwt-model/types";
 
-jest.mock("@/foundation/redis/redis-counter", () => ({
-  peekCount: jest.fn(async () => ({ count: 0, resetInMs: 0 })),
-  resetCount: jest.fn(async () => undefined),
-  incrementInWindow: jest.fn(async () => ({ count: 1, resetInMs: 60_000 })),
-}));
+jest.mock("@/foundation/redis/redis-counter", () => mockFakeRedisCounter);
+jest.mock("@/foundation/redis/redis-admission", () => mockFakeRedisAdmission);
 jest.mock("@/shared/execute", () => ({ delayRun: jest.fn() }));
 
 const credentials = { email: "person@example.com", password: "password123" };
@@ -38,6 +41,7 @@ function createFixture() {
   const user = {
     id: "usr_person",
     email: credentials.email,
+    password: "$2b$10$5mBgP06bwKPcyhp0Fg7sqeIACeCt.enWK4cu2U7FJjlUzB9as/vQS",
     ledger_username: "person",
     isBlocked: false,
   };
@@ -61,6 +65,7 @@ function createFixture() {
     user: {
       getByMail: jest.fn(async () => user as typeof user | null),
       getById: jest.fn(async () => user as typeof user | null),
+      getByIdForUpdate: jest.fn(async () => user as typeof user | null),
       verifyPassword: jest.fn(async () => true),
       create: jest.fn(async () => user),
     },
@@ -167,6 +172,10 @@ function authenticate(fixture: Fixture, path: (typeof authPaths)[number]) {
 }
 
 describe("AuthSessionWorkflow default community follow", () => {
+  beforeEach(() => {
+    fakeRedisCounterState.reset();
+    fakeRedisAdmissionState.reset();
+  });
   it.each(authPaths)("follows open_ledger after %s", async (path) => {
     const fixture = createFixture();
 

@@ -1,10 +1,16 @@
 import {
   fakeRedisCounter as mockFakeRedisCounter,
   fakeRedisCounterState,
+  fakeRedisAdmission as mockFakeRedisAdmission,
+  fakeRedisAdmissionState,
 } from "@/foundation/redis/__tests__/fake-redis-counter";
 import "reflect-metadata";
 import { AuthService } from "../auth-service";
-import { BadUserInputError, RateLimitedError } from "@/shared/errors";
+import {
+  BadUserInputError,
+  RateLimitedError,
+  ServiceUnavailableError,
+} from "@/shared/errors";
 import { PASSWORD_FAILURE_BUDGET } from "@/features/auth/operations/password-failure-budget";
 import bcrypt from "bcryptjs";
 
@@ -13,24 +19,34 @@ import bcrypt from "bcryptjs";
 // budget, shared with Git basic auth, that no address change resets.
 
 jest.mock("@/foundation/redis/redis-counter", () => mockFakeRedisCounter);
+jest.mock("@/foundation/redis/redis-admission", () => mockFakeRedisAdmission);
 
 const ALICE = {
   id: "user-1",
   email: "alice@example.com",
+  password: "$2b$10$5mBgP06bwKPcyhp0Fg7sqeIACeCt.enWK4cu2U7FJjlUzB9as/vQS",
   isBlocked: false,
 };
 
 function createService() {
+  const currentAccount = { ...ALICE };
+  let currentPassword = "right-password";
   const user = {
     getByMail: jest.fn(async (_db: unknown, email: string) =>
-      email.toLowerCase() === ALICE.email ? ALICE : null,
+      email.toLowerCase() === ALICE.email ? { ...currentAccount } : null,
     ),
-    getById: jest.fn(async () => ALICE),
+    getById: jest.fn(async () => ({ ...currentAccount })),
+    getByIdForUpdate: jest.fn(async () => ({ ...currentAccount })),
     verifyPassword: jest.fn(
       async (_db: unknown, _id: string, password: string) =>
-        password === "right-password",
+        password === currentPassword,
     ),
-    updatePassword: jest.fn(async () => undefined),
+    updatePassword: jest.fn(
+      async (_db: unknown, _id: string, password: string) => {
+        currentPassword = password;
+        currentAccount.password = "updated-synthetic-password-hash";
+      },
+    ),
   };
   const jwt = {
     create: jest.fn(async () => ({ token: "t", expireAt: "x" })),
@@ -53,8 +69,9 @@ function createService() {
   return { service, user };
 }
 
+let nextAddress = 0;
 const signIn = (service: AuthService, email: string, password: string) =>
-  service.loginUser({ email, password } as never);
+  service.loginUser({ email, password, ip: `198.51.100.${nextAddress++}` });
 
 async function spendBudget(service: AuthService, email: string) {
   for (let i = 0; i < PASSWORD_FAILURE_BUDGET.max; i += 1) {
@@ -64,7 +81,11 @@ async function spendBudget(service: AuthService, email: string) {
   }
 }
 
-beforeEach(() => fakeRedisCounterState.reset());
+beforeEach(() => {
+  fakeRedisCounterState.reset();
+  fakeRedisAdmissionState.reset();
+  nextAddress = 0;
+});
 
 describe("loginUser and the per-account password budget", () => {
   it("refuses the account once its budget is spent, even the right password", async () => {
@@ -84,9 +105,7 @@ describe("loginUser and the per-account password budget", () => {
 
     const refusal = signIn(service, "nobody@example.com", "wrong");
     await expect(refusal).rejects.toBeInstanceOf(RateLimitedError);
-    await expect(refusal).rejects.toThrow(
-      "Too many failed sign-in attempts for this account",
-    );
+    await expect(refusal).rejects.toThrow("Too many failed sign-in attempts");
   });
 
   it("counts the account however its email is cased or padded", async () => {
@@ -128,23 +147,19 @@ describe("loginUser and the per-account password budget", () => {
 
     await service.resetPassword("reset-token", "new-password");
 
-    await expect(
-      signIn(service, ALICE.email, "right-password"),
-    ).resolves.toEqual({ token: "t", expireAt: "x" });
+    await expect(signIn(service, ALICE.email, "new-password")).resolves.toEqual(
+      { token: "t", expireAt: "x" },
+    );
   });
 
-  it("signs in as before when Redis is unreachable", async () => {
-    const { service } = createService();
-    fakeRedisCounterState.down = true;
-    for (let i = 0; i < PASSWORD_FAILURE_BUDGET.max + 2; i += 1) {
-      await expect(
-        signIn(service, ALICE.email, "wrong"),
-      ).rejects.toBeInstanceOf(BadUserInputError);
-    }
-
+  it("refuses password work when Redis cannot confirm admission", async () => {
+    const { service, user } = createService();
+    fakeRedisAdmissionState.down = true;
     await expect(
       signIn(service, ALICE.email, "right-password"),
-    ).resolves.toEqual({ token: "t", expireAt: "x" });
+    ).rejects.toBeInstanceOf(ServiceUnavailableError);
+    expect(user.getByMail).not.toHaveBeenCalled();
+    expect(user.verifyPassword).not.toHaveBeenCalled();
   });
 });
 

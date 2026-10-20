@@ -106,8 +106,8 @@ export const CLASS_BUDGETS: Record<OpClass, Budget> = {
   read: { windowMs: MINUTE, max: 300 },
   write: { windowMs: MINUTE, max: 60 },
   admin: { windowMs: MINUTE, max: 30 },
-  // A class no scope can satisfy is reached by sessions only; the browser is
-  // not the abuse vector these budgets are for.
+  // Ordinary first-party operations. Password ceremonies have dedicated
+  // overrides and domain admission regardless of the request's identity.
   "session-only": { windowMs: MINUTE, max: 300 },
   public: { windowMs: MINUTE, max: 600 },
 };
@@ -121,6 +121,7 @@ export const CLASS_BUDGETS: Record<OpClass, Budget> = {
  * property of whichever resolver remembered to construct a limiter.
  */
 export const OP_BUDGETS: Record<string, Budget> = {
+  "GQL Mutation.signIn": { windowMs: MINUTE, max: 60 },
   // The MCP endpoint is a *transport*, not an operation: one agent session is
   // dozens of JSON-RPC POSTs to this one path, and almost all of them are
   // reads. Unclassified it fell to the write-class default, so a session of

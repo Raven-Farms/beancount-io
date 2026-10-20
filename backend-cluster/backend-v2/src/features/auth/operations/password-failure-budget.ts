@@ -1,22 +1,16 @@
 import { createHash } from "node:crypto";
 import {
-  incrementInWindow,
-  peekCount,
-  resetCount,
-} from "@/foundation/redis/redis-counter";
+  reserveFailureBudget,
+  completeFailureBudget,
+  clearFailureBudget,
+} from "@/foundation/redis/redis-admission";
 import type { Budget } from "@/server/api/rate-limit";
-import { CACHE_KEYS } from "@/shared/cache";
-import { RateLimitedError } from "@/shared/errors";
+import { CACHE_KEYS, TTL } from "@/shared/cache";
+import { RateLimitedError, ServiceUnavailableError } from "@/shared/errors";
 
-/**
- * How many wrong passwords one account may take in a window, from any address,
- * before password sign-in refuses it (w0/m7). Generous, so that a third party
- * cannot cheaply lock someone out; existing sessions, OAuth tokens and SSH
- * keys are unaffected, and a completed password reset clears it.
- */
 export const PASSWORD_FAILURE_BUDGET: Budget = {
   max: 10,
-  windowMs: 15 * 60 * 1000,
+  windowMs: TTL.MIN_15,
 };
 
 function budgetKey(email: string): string {
@@ -26,36 +20,51 @@ function budgetKey(email: string): string {
   return CACHE_KEYS.auth.passwordFailuresByAccount(digest);
 }
 
-/**
- * Run one password attempt against the account's budget: refuse it before
- * `verify` runs when the budget is spent, count it when `verify` says no
- * (a wrong password or no such account, alike), and start the account afresh
- * when it says yes. Keyed by the email the caller typed, so a known and an
- * unknown account get the same answer. Fails open when Redis is unreachable:
- * the per-address limiters still apply.
- */
+/** Failures and in-flight attempts share an atomic, cross-address budget. */
 export async function verifyPasswordWithinBudget(
   email: string,
   verify: () => Promise<boolean>,
 ): Promise<boolean> {
   const key = budgetKey(email);
-  const spent = await peekCount(key);
-  if (spent && spent.count >= PASSWORD_FAILURE_BUDGET.max) {
+  const reservation = await reserveFailureBudget(
+    key,
+    PASSWORD_FAILURE_BUDGET.max,
+    PASSWORD_FAILURE_BUDGET.windowMs,
+  );
+  if (!reservation)
+    throw new ServiceUnavailableError("Password verification", 5);
+  if (!reservation.allowed || !reservation.reservationId) {
     throw new RateLimitedError(
-      Math.max(1, Math.ceil(spent.resetInMs / 1000)),
-      "Too many failed sign-in attempts for this account. Try again later, or reset your password.",
+      Math.max(1, Math.ceil(reservation.retryAfterMs / 1000)),
+      "Too many failed sign-in attempts. Try again later, or verify your email.",
+      { recoveryAvailable: true },
     );
   }
-  const verified = await verify();
-  if (!verified) {
-    await incrementInWindow(key, PASSWORD_FAILURE_BUDGET.windowMs);
-  } else if (spent && spent.count > 0) {
-    await resetCount(key);
+  const id = reservation.reservationId;
+  let verified: boolean;
+  try {
+    verified = await verify();
+  } catch (error) {
+    await completeFailureBudget(
+      key,
+      PASSWORD_FAILURE_BUDGET.windowMs,
+      id,
+      "cancel",
+    );
+    throw error;
   }
+  const settled = await completeFailureBudget(
+    key,
+    PASSWORD_FAILURE_BUDGET.windowMs,
+    id,
+    verified ? "success" : "failure",
+  );
+  // A reset or expired lease invalidates this attempt, even a correct password.
+  if (!settled) throw new ServiceUnavailableError("Password verification", 5);
   return verified;
 }
 
-/** A completed password reset starts the account afresh. */
+/** A completed ownership-verified password reset ends pending attempts too. */
 export async function clearPasswordFailures(email: string): Promise<void> {
-  await resetCount(budgetKey(email));
+  await clearFailureBudget(budgetKey(email));
 }

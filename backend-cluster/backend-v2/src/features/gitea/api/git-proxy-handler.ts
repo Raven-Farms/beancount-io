@@ -20,7 +20,9 @@ import {
   BadUserInputError,
   CATEGORY_HTTP_STATUS,
   RateLimitedError,
+  ServiceUnavailableError,
 } from "@/shared/errors";
+import { clientAddress } from "@/server/client-address";
 
 const proxyLogger = logger.child({ module: "git-proxy" });
 
@@ -528,6 +530,7 @@ export function setGitProxyHandler(
           user = await layers.services.auth.verifyPasswordCredentials(
             username,
             password,
+            clientAddress(ctx),
           );
         } catch (error) {
           if (!(error instanceof BadUserInputError)) throw error;
@@ -674,11 +677,17 @@ export function setGitProxyHandler(
         ctx.body = response.body;
       }
     } catch (error) {
-      if (error instanceof RateLimitedError) {
+      if (
+        error instanceof RateLimitedError ||
+        error instanceof ServiceUnavailableError
+      ) {
         // Respond in git's plain-text idiom rather than the JSON the shared REST
         // error middleware would produce.
         ctx.status = CATEGORY_HTTP_STATUS[error.category];
         ctx.body = error.message;
+        if (error.metadata?.retryAfter) {
+          ctx.set("Retry-After", String(error.metadata.retryAfter));
+        }
         return;
       }
       const err = error as Error;

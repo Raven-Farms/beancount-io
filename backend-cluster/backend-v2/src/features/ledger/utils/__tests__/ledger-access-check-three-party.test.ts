@@ -41,6 +41,7 @@ describe("assertLedgerAccess - Three-Party Authorization", () => {
 
     mockUserModel = {
       getById: jest.fn(),
+      getByIdForUpdate: jest.fn(),
       getByMail: jest.fn(),
       getUserByUsername: jest.fn(),
       create: jest.fn(),

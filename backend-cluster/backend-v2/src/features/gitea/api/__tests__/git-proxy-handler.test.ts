@@ -1,6 +1,8 @@
 import {
   fakeRedisCounter as mockFakeRedisCounter,
   fakeRedisCounterState,
+  fakeRedisAdmission as mockFakeRedisAdmission,
+  fakeRedisAdmissionState,
 } from "@/foundation/redis/__tests__/fake-redis-counter";
 import Router from "@koa/router";
 import { Readable } from "node:stream";
@@ -26,6 +28,7 @@ jest.mock("node-fetch", () => mockFetch);
 
 // The per-account wrong-password budget lives in Redis (w0/m7).
 jest.mock("@/foundation/redis/redis-counter", () => mockFakeRedisCounter);
+jest.mock("@/foundation/redis/redis-admission", () => mockFakeRedisAdmission);
 
 // Import after mocking
 import { AuthService } from "@/features/auth/service/auth-service";
@@ -38,6 +41,7 @@ import {
   setGitProxyHandler,
 } from "../git-proxy-handler";
 import { clearRateLimitStores } from "@/shared/rate-limiter";
+import { BadUserInputError } from "@/shared/errors";
 
 describe("setGitProxyHandler", () => {
   let router: Router;
@@ -59,6 +63,8 @@ describe("setGitProxyHandler", () => {
     registeredRoute = null;
     // Clear rate limit stores between tests
     clearRateLimitStores();
+    fakeRedisCounterState.reset();
+    fakeRedisAdmissionState.reset();
 
     // Create a mock router that captures the registered route (with middleware)
     router = {
@@ -133,6 +139,7 @@ describe("setGitProxyHandler", () => {
     let ctx: Router.RouterContext;
     let mockUser: {
       id: string;
+      password: string;
       ledger_username: string;
       ledger_password: string;
     };
@@ -140,6 +147,8 @@ describe("setGitProxyHandler", () => {
     beforeEach(() => {
       mockUser = {
         id: "user-123",
+        password:
+          "$2b$10$5mBgP06bwKPcyhp0Fg7sqeIACeCt.enWK4cu2U7FJjlUzB9as/vQS",
         ledger_username: "gitea-user",
         ledger_password: "gitea-pass",
       };
@@ -169,6 +178,51 @@ describe("setGitProxyHandler", () => {
         'Basic realm="Git"',
       );
       expect(ctx.body).toBe("Authentication required");
+    });
+
+    it("passes Koa's trusted IP to the shared password verifier despite a spoofed forwarding header", async () => {
+      setGitProxyHandler(router, mockServices, mockConfig);
+      const auth = mockServices.services.auth;
+      const verify = jest
+        .spyOn(auth, "verifyPasswordCredentials")
+        .mockRejectedValue(new BadUserInputError("Invalid email or password"));
+      ctx.ip = "198.51.100.44";
+      ctx.headers["x-forwarded-for"] = "203.0.113.99";
+      (ctx.get as jest.Mock).mockReturnValue(
+        `Basic ${Buffer.from("PERSON@example.com:password").toString("base64")}`,
+      );
+
+      try {
+        await registeredRoute!.handler(ctx);
+        expect(verify).toHaveBeenCalledWith(
+          "PERSON@example.com",
+          "password",
+          "198.51.100.44",
+        );
+        expect(ctx.status).toBe(401);
+      } finally {
+        verify.mockRestore();
+      }
+    });
+
+    it("returns retryable 503 without checking credentials when Redis is unavailable", async () => {
+      setGitProxyHandler(router, mockServices, mockConfig);
+      fakeRedisAdmissionState.down = true;
+      (ctx.get as jest.Mock).mockReturnValue(
+        `Basic ${Buffer.from("person@example.com:password").toString("base64")}`,
+      );
+
+      await registeredRoute!.handler(ctx);
+
+      expect(ctx.status).toBe(503);
+      expect(ctx.set).toHaveBeenCalledWith("Retry-After", "5");
+      expect(
+        mockServices.database.models.user.getByMail,
+      ).not.toHaveBeenCalled();
+      expect(
+        mockServices.database.models.user.verifyPassword,
+      ).not.toHaveBeenCalled();
+      expect(mockFetch).not.toHaveBeenCalled();
     });
 
     it("should return 401 when user not found", async () => {
@@ -500,7 +554,10 @@ describe("setGitProxyHandler", () => {
       return c;
     };
 
-    beforeEach(() => fakeRedisCounterState.reset());
+    beforeEach(() => {
+      fakeRedisCounterState.reset();
+      fakeRedisAdmissionState.reset();
+    });
 
     it("refuses an unknown account's 11th wrong password, from any address", async () => {
       setGitProxyHandler(router, mockServices, mockConfig);
@@ -517,7 +574,7 @@ describe("setGitProxyHandler", () => {
       const refused = await attempt("bad@example.com", "203.0.113.9");
       expect(refused.status).toBe(429);
       expect(refused.body).toBe(
-        "Too many failed sign-in attempts for this account. Try again later, or reset your password.",
+        "Too many failed sign-in attempts. Try again later, or verify your email.",
       );
     });
 
@@ -527,6 +584,8 @@ describe("setGitProxyHandler", () => {
         mockServices.database.models.user.getByMail as jest.Mock
       ).mockResolvedValue({
         id: "user-123",
+        password:
+          "$2b$10$5mBgP06bwKPcyhp0Fg7sqeIACeCt.enWK4cu2U7FJjlUzB9as/vQS",
         ledger_username: "gitea-user",
         ledger_password: "gitea-pass",
       });
@@ -564,7 +623,7 @@ describe("setGitProxyHandler", () => {
       expect((await attempt("bad@example.com")).status).toBe(429);
       await expect(
         auth.loginUser({ email: "bad@example.com", password: "wrong" }),
-      ).rejects.toThrow("Too many failed sign-in attempts for this account");
+      ).rejects.toThrow("Too many failed sign-in attempts");
     });
 
     it("keeps each account's budget its own", async () => {
@@ -584,19 +643,24 @@ describe("setGitProxyHandler", () => {
         mockServices.database.models.user.getByMail as jest.Mock
       ).mockResolvedValue({
         id: "user-123",
+        password:
+          "$2b$10$5mBgP06bwKPcyhp0Fg7sqeIACeCt.enWK4cu2U7FJjlUzB9as/vQS",
         ledger_username: "gitea-user",
         ledger_password: "gitea-pass",
       });
       const verify = mockServices.database.models.user
         .verifyPassword as jest.Mock;
       verify.mockResolvedValue(false);
-      for (let i = 0; i < 9; i++) await attempt("test@example.com");
+      for (let i = 0; i < 9; i++)
+        await attempt("test@example.com", `198.51.100.${i}`);
 
       verify.mockResolvedValueOnce(true);
-      await attempt("test@example.com");
+      await attempt("test@example.com", "198.51.100.9");
 
       for (let i = 0; i < 10; i++) {
-        expect((await attempt("test@example.com")).status).toBe(401);
+        expect(
+          (await attempt("test@example.com", `203.0.113.${i}`)).status,
+        ).toBe(401);
       }
     });
   });

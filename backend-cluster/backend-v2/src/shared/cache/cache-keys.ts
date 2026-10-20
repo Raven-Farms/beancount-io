@@ -63,6 +63,12 @@ export const CACHE_KEYS = {
      */
     passwordFailuresByAccount: (emailDigest: string) =>
       `auth:password_failures:account:${emailDigest}`,
+    /** Rolling password-request quotas; subjects are normalized digests. */
+    passwordRequests: (
+      dimension: "ip" | "email" | "pair",
+      subject: string,
+      windowMs: number,
+    ) => `auth:password_requests:${dimension}:${subject}:${windowMs}`,
     /** Atomic single-approval claim for one CLI auth session. */
     cliAuthApprovalClaim: (id: string) => `auth:cli_auth_approval_claim:${id}`,
     /** Atomic single-redemption claim for one CLI auth session. */

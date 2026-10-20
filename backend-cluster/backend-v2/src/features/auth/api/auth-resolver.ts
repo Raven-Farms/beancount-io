@@ -176,6 +176,7 @@ export class AuthResolver {
     const result = await this.authSessionWorkflow.loginUser({
       email: args.email.toLowerCase().trim(),
       password: args.password,
+      ip: ctx.clientIp,
     });
     setAuthCookie(
       ctx.koaCtx as unknown as Context,

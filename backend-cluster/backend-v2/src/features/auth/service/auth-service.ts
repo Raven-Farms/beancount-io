@@ -35,6 +35,8 @@ import {
   clearPasswordFailures,
   verifyPasswordWithinBudget,
 } from "@/features/auth/operations/password-failure-budget";
+import { enforcePasswordRequestLimits } from "@/features/auth/operations/password-request-limits";
+import { verifyPasswordWithCapacity } from "@/features/auth/utils/password-verifier";
 import type { User } from "@/features/auth/data/user-model/types";
 import { UNKNOWN_CLIENT_ADDRESS } from "@/server/client-address";
 import { CACHE_KEYS } from "@/shared/cache";
@@ -78,6 +80,7 @@ export type FinishSignupSessionParams = {
 export type LoginUserParams = {
   email: string;
   password: string;
+  ip?: string;
 };
 
 export type SignInWithOneTimeTokenParams = {
@@ -138,12 +141,16 @@ export interface IAuthService {
   loginUser(params: LoginUserParams): Promise<AuthResponse>;
   /**
    * The account an email + password names, held to the account's
-   * wrong-password budget. Every password sign-in goes through it (dashboard,
-   * Git basic auth), so they share the budget and cannot drift. Throws
+   * request limits and wrong-password budget. Every password sign-in goes
+   * through it (dashboard, Git basic auth), sharing both budgets. Throws
    * `BadUserInputError` for wrong credentials and `RateLimitedError` for a
    * spent budget.
    */
-  verifyPasswordCredentials(email: string, password: string): Promise<User>;
+  verifyPasswordCredentials(
+    email: string,
+    password: string,
+    ip?: string,
+  ): Promise<User>;
   signInWithMagicLinkToken(
     params: SignInWithOneTimeTokenParams,
   ): Promise<AuthResponse>;
@@ -276,7 +283,12 @@ export class AuthService implements IAuthService {
   public verifyPasswordCredentials = async (
     email: string,
     password: string,
+    ip = UNKNOWN_CLIENT_ADDRESS,
   ): Promise<User> => {
+    email = email.trim().toLowerCase();
+    // Count every attempt, including successful and malformed credentials,
+    // before any account lookup or expensive comparison work.
+    await enforcePasswordRequestLimits(email, ip);
     // Reject overlong passwords before touching the database or bcrypt.
     // Use the same generic error as wrong password to avoid leaking signal.
     if (password.length > MAX_LOGIN_PASSWORD_LENGTH) {
@@ -287,9 +299,12 @@ export class AuthService implements IAuthService {
     // answered like a wrong password, so neither says whether it exists.
     const verified = await verifyPasswordWithinBudget(email, async () => {
       user = await this.models.user.getByMail(this.db, email);
-      return (
-        user !== null &&
-        (await this.models.user.verifyPassword(this.db, user.id, password))
+      const account = user;
+      return verifyPasswordWithCapacity(
+        password,
+        account?.password
+          ? () => this.models.user.verifyPassword(this.db, account.id, password)
+          : undefined,
       );
     });
     if (!verified || !user) {
@@ -302,14 +317,27 @@ export class AuthService implements IAuthService {
     const user = await this.verifyPasswordCredentials(
       params.email,
       params.password,
+      params.ip,
     );
-    if (user.isBlocked) {
-      throw new ForbiddenError(
-        "User is banned. If you need help, please contact https://beancount.io/tg.",
-      );
-    }
-    const { token, expireAt } = await this.models.jwt.create(this.db, user.id);
-    return { token, expireAt };
+    // Resetting the password locks this same row before revoking sessions.
+    // Keep revalidation and issuance together so a delayed old-password proof
+    // cannot create a session after that reset has completed.
+    return this.db.transaction(async (tx) => {
+      const current = await this.models.user.getByIdForUpdate(tx, user.id);
+      if (
+        !current?.password ||
+        !user.password ||
+        !secureStringEqual(current.password, user.password)
+      ) {
+        throw new BadUserInputError("Invalid email or password");
+      }
+      if (current.isBlocked) {
+        throw new ForbiddenError(
+          "User is banned. If you need help, please contact https://beancount.io/tg.",
+        );
+      }
+      return this.models.jwt.create(tx, current.id);
+    });
   };
 
   public signInWithMagicLinkToken = async (

@@ -66,6 +66,8 @@ type DbExecutor = any;
  */
 export interface IUserModel {
   getById(db: DbExecutor, id: string): Promise<User | null>;
+  /** Read the current credential row with a lock held until the caller's transaction ends. */
+  getByIdForUpdate(tx: DbExecutor, id: string): Promise<User | null>;
   getByMail(db: DbExecutor, email: string): Promise<User | null>;
   getUserByUsername(db: DbExecutor, username: string): Promise<User | null>;
   create(db: DbExecutor, user: CreateUserInput): Promise<User>;

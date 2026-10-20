@@ -57,6 +57,20 @@ export class UserPostgresModel implements IUserModel {
     return result[0] ? this.toPlainObject(result[0]) : null;
   }
 
+  public async getByIdForUpdate(
+    tx: DbExecutor,
+    id: string,
+  ): Promise<User | null> {
+    const result = await tx
+      .select()
+      .from(users)
+      .where(eq(users.id, id))
+      .limit(1)
+      .for("update");
+
+    return result[0] ? this.toPlainObject(result[0]) : null;
+  }
+
   public async getByMail(db: DbExecutor, email: string): Promise<User | null> {
     const result = await db
       .select()

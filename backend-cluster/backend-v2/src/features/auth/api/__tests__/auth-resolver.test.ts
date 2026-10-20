@@ -110,6 +110,7 @@ describe("AuthResolver", () => {
       expect(mockAuthSessionWorkflow.loginUser).toHaveBeenCalledWith({
         email: "user@example.com",
         password: "password123",
+        ip: "127.0.0.1",
       });
     });
 
@@ -124,6 +125,7 @@ describe("AuthResolver", () => {
       expect(mockAuthSessionWorkflow.loginUser).toHaveBeenCalledWith({
         email: "user@example.com",
         password: "password123",
+        ip: "127.0.0.1",
       });
     });
 
