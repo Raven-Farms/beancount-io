@@ -9,3 +9,4 @@
 ## Inbox
 
 - [013](./013.md) — A transaction deleted elsewhere still opens as if it exists, with "Error: Ledger resource not found" inside it
+- [014](./014.md) — New Ledger File disables Create without saying why, and refuses folders the server accepts
