@@ -17,6 +17,12 @@ interface Config {
    * reaches the production stream.
    */
   gaDebugMode: boolean;
+  /**
+   * Whether the subscription (plan and billing) section is shown in user
+   * settings. VITE_BILLING_ENABLED=false hides it, e.g. on a self-host where
+   * SELF_HOSTED_TIER gives every user a fixed tier. Default shown.
+   */
+  billingEnabled: boolean;
 }
 
 // Add runtime validation (only in development mode)
@@ -24,6 +30,7 @@ const apiUrl = import.meta.env.VITE_API_URL;
 const gaMeasurementId = import.meta.env.VITE_GA_MEASUREMENT_ID || undefined;
 // const gaMeasurementId = "G-Y0WGKFHE3E";
 const gaDebugMode = !import.meta.env.PROD;
+const billingEnabled = import.meta.env.VITE_BILLING_ENABLED !== "false";
 
 if (import.meta.env.MODE === "development" && !apiUrl) {
   console.error("[Config] VITE_API_URL is not set!");
@@ -34,4 +41,5 @@ export const config: Config = {
   gaMeasurementId,
   analyticsEnabled: Boolean(gaMeasurementId),
   gaDebugMode,
+  billingEnabled,
 };

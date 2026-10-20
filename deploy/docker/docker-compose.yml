@@ -77,6 +77,8 @@ services:
         # SSR stays on the private Compose network.
         VITE_SSR_API_URL: http://backend-v2:4104/api-gateway/
         VITE_GA_MEASUREMENT_ID: ${VITE_GA_MEASUREMENT_ID:-}
+        # "false" hides the subscription section in user settings.
+        VITE_BILLING_ENABLED: ${VITE_BILLING_ENABLED:-}
     image: beancount-io/dashboard:${BEANCOUNT_IMAGE_TAG:-selfhosted}
     restart: unless-stopped
     logging: *default-logging
@@ -158,6 +160,9 @@ services:
       # AUTH_PASSWORD_ENABLED=false turns off password sign-in, sign-up with an
       # emailed code, password reset and email+password git access.
       AUTH_PASSWORD_ENABLED: ${AUTH_PASSWORD_ENABLED:-}
+      # SELF_HOSTED_TIER (FREE, PREMIUM, GROWTH, ORGANIZATION, ENTERPRISE) gives
+      # every user that subscription tier; unset = tiers come from Stripe.
+      SELF_HOSTED_TIER: ${SELF_HOSTED_TIER:-}
       POSTGRES_BACKEND_URI: postgresql://${BACKEND_DB_USER:-beancount}:${BACKEND_DB_PASSWORD:?Set BACKEND_DB_PASSWORD in .env}@postgres-backend:5432/${BACKEND_DB_NAME:-beancount}
       REDIS_URI: redis://redis:6379
       FAVA_API_URL: http://ledger:8000

@@ -29,8 +29,9 @@ export function useUserLimits() {
   const limits: UserLimits | null = userProfile?.limits || null;
 
   // Helper booleans
+  // -1 = unlimited
   const isAtLedgerLimit = limits
-    ? limits.ledgersUsed >= limits.ledgersMax
+    ? limits.ledgersMax !== -1 && limits.ledgersUsed >= limits.ledgersMax
     : false;
   const isPremium = tier === "PREMIUM";
   const isFree = tier === "FREE";

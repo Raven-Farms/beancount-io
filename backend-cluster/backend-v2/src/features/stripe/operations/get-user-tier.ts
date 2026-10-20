@@ -1,3 +1,4 @@
+import { config } from "@/config/config";
 import { logger } from "@/shared/logger";
 import { SubscriptionTier, TierLimits, getTierLimits } from "../service/stripe";
 import { highestTier, subscriptionTier } from "../service/subscription-plan";
@@ -11,12 +12,16 @@ export type GetUserTierParams = TierDeps & { userId: string };
 /**
  * Cross-service operation: determine a user's subscription tier.
  *
- * Resolves verified live subscriptions against recognized prices.
+ * Resolves verified live subscriptions against recognized prices, unless
+ * SELF_HOSTED_TIER gives every user a fixed tier.
  */
 export async function getUserTier({
   stripe,
   userId,
 }: GetUserTierParams): Promise<SubscriptionTier> {
+  if (config.selfHostedTier) {
+    return config.selfHostedTier as SubscriptionTier;
+  }
   try {
     // listSubscriptions verifies the user's exact configured customer binding.
     const subscriptions = await stripe.listSubscriptions(userId, {

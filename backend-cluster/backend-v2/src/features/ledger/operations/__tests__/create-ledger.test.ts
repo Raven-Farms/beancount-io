@@ -188,6 +188,43 @@ describe("createLedger operation", () => {
       ).rejects.toThrow(ResourceLimitReachedError);
     });
 
+    it("treats a -1 ledger limit as unlimited", async () => {
+      mockGetUserTier.mockResolvedValue(SubscriptionTier.ENTERPRISE);
+      mockFavaApiClient.ledgers.listLedgers.mockResolvedValue({
+        data: {
+          success: true,
+          data: [
+            { name: "a", full_name: "testuser/a" },
+            { name: "b", full_name: "testuser/b" },
+          ],
+        },
+      });
+      mockFavaApiClient.ledgers.createLedger.mockResolvedValue({
+        data: {
+          success: true,
+          data: {
+            id: 3,
+            name: "new-ledger",
+            full_name: "testuser/new-ledger",
+            description: "Test ledger",
+            private: true,
+            empty: true,
+            size: 0,
+            created_at: "2024-01-01T00:00:00Z",
+            updated_at: "2024-01-01T00:00:00Z",
+            permissions: { admin: true, pull: true, push: true },
+          },
+        },
+      });
+
+      const ledger = await createLedger({
+        ...deps,
+        ledgerCreate: createValidLedgerInput(),
+        userId,
+      });
+      expect(ledger.fullName).toBe("testuser/new-ledger");
+    });
+
     it("should throw error when create ledger API fails", async () => {
       mockFavaApiClient.ledgers.listLedgers.mockResolvedValue({
         data: { success: true, data: [] },

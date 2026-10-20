@@ -7,6 +7,7 @@ import {
   parseCookieDomain,
   parseGoogleAuthConfig,
   parsePasswordAuthEnabled,
+  parseSelfHostedTier,
   parseCorsAllowedOrigins,
   parseSignupAllowedDomains,
   parseSignupAllowedEmails,
@@ -425,6 +426,31 @@ describe("config", () => {
           GOOGLE_HOSTED_DOMAINS: "*.example.com",
         }),
       ).toThrow(/GOOGLE_HOSTED_DOMAINS/);
+    });
+  });
+
+  describe("parseSelfHostedTier (SELF_HOSTED_TIER)", () => {
+    it("defaults to unset", () => {
+      expect(parseSelfHostedTier(undefined)).toBeNull();
+      expect(parseSelfHostedTier(" ")).toBeNull();
+      expect(config.selfHostedTier).toBeNull();
+    });
+    it("accepts a tier name in any case", () => {
+      expect(parseSelfHostedTier("ENTERPRISE")).toBe("ENTERPRISE");
+      expect(parseSelfHostedTier(" organization ")).toBe("ORGANIZATION");
+    });
+    it("rejects anything else at boot", () => {
+      for (const bad of ["true", "unlimited", "PRO", "-1"]) {
+        expect(() => parseSelfHostedTier(bad)).toThrow(/SELF_HOSTED_TIER/);
+      }
+    });
+    it("is read from the environment into config.selfHostedTier", () => {
+      process.env.SELF_HOSTED_TIER = "enterprise";
+      jest.isolateModules(() => {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { config: fresh } = require("./config");
+        expect(fresh.selfHostedTier).toBe("ENTERPRISE");
+      });
     });
   });
 

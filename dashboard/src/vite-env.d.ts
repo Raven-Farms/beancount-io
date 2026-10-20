@@ -13,6 +13,8 @@ interface ImportMetaEnv {
    * When unset, analytics is disabled.
    */
   readonly VITE_GA_MEASUREMENT_ID?: string;
+  /** "false" hides the subscription section in user settings. */
+  readonly VITE_BILLING_ENABLED?: string;
 }
 
 interface ImportMeta {
