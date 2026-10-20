@@ -1,6 +1,6 @@
 # w3 · m55 — `beancount-roll-forward`: explain how a balance-sheet account moved
 
-**Worker:** worker3 **Goal:** a new read-only customer skill explains an account's movement from opening to closing with every component tied to an executed query and no balancing plug. **Status:** todo
+**Worker:** worker3 **Goal:** a new read-only customer skill explains an account's movement from opening to closing with every component tied to an executed query and no balancing plug. **Status:** blocked (t002 waits on Codex quota)
 
 ## Tasks (in order)
 
@@ -26,3 +26,7 @@
 - **Goal linkage:** A1 — Agent-native accounting: an agent can maintain a ledger end-to-end with workpapers a user can trust.
 - **Expected outcome:** users closing a month get a movement explanation they can re-run instead of model arithmetic in chat. Signals: skill invocations, eval pass rate on both clients.
 - **Why now:** it depends only on shipped `bea` query primitives, not on any blocked workstream, and it supplies the movement evidence m57's accruals reuse. Adoption surface is included (t003) because a new customer skill ships.
+
+## Blocked
+
+- **t002** — evals pass 6/6 on Claude Code; the Codex runs are quota-blocked at the account level. Unblock condition is written in t002.
