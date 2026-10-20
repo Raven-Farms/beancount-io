@@ -1,6 +1,6 @@
 # w3 · m53 — Ledger creation: setup specification, catalog, and builder across hosted surfaces and `bea init`
 
-**Worker:** worker3 **Goal:** one versioned setup specification and catalog turn into the same ledger files on every hosted surface and in local `bea init`, so a first ledger fits its owner's life and currency instead of the USD Starter. **Status:** todo (t001–t004 done)
+**Worker:** worker3 **Goal:** one versioned setup specification and catalog turn into the same ledger files on every hosted surface and in local `bea init`, so a first ledger fits its owner's life and currency instead of the USD Starter. **Status:** todo (t001–t005 done)
 
 ## Tasks (in order)
 
@@ -10,7 +10,7 @@
 | t002 | Build the backend pure builder and wire hosted creation to it — **DONE** | 90m | t001 |
 | t003 | Add setup, idempotent create, and preview to REST, GraphQL, and MCP — **DONE** | 90m | t002 |
 | t004 | Consume the same catalog in `bea init` and hosted CLI create — **DONE** | 60m | t001, t003 |
-| t005 | Run cross-engine conformance for every listed preset | 45m | t002, t004 |
+| t005 | Run cross-engine conformance for every listed preset — **DONE** | 45m | t002, t004 |
 | t006 | Adoption surface | 30m | t005 |
 | t007 | Simplify | 20m | t006 |
 | t008 | Test coverage | 45m | t006 |

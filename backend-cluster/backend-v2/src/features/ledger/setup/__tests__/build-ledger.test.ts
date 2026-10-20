@@ -1,5 +1,10 @@
 import { ValidationError } from "@/shared/errors";
-import { buildLedgerFiles } from "../build-ledger";
+import {
+  buildLedgerFiles,
+  previewLedgerSetup,
+  type LedgerSetup,
+} from "../build-ledger";
+import fixturesJson from "../fixtures.json";
 
 describe("buildLedgerFiles (w3/m53/t002)", () => {
   it("builds the personal preset with a known opening balance", () => {
@@ -112,6 +117,41 @@ describe("buildLedgerFiles (w3/m53/t002)", () => {
         "2026-01-01",
       ),
     ).toThrow(ValidationError);
+  });
+
+  it("matches every clean conformance fixture (w3/m53/t005)", () => {
+    const clean = fixturesJson.fixtures.filter((fixture) =>
+      fixture.id.endsWith("-clean"),
+    );
+    expect(clean).toHaveLength(8);
+    for (const fixture of clean) {
+      const preview = previewLedgerSetup(fixture.spec as LedgerSetup, "2026-01-01");
+      expect(preview.accounts).toEqual(
+        [...(fixture.expected.openedAccounts ?? [])].sort(),
+      );
+      for (const optional of fixture.expected.optionalAccountsNotOpened ?? []) {
+        expect(preview.accounts).not.toContain(optional);
+      }
+      expect(preview.files["main.bean"]).not.toContain(" balance ");
+    }
+  });
+
+  it("matches the opening conformance fixtures", () => {
+    const known = previewLedgerSetup(
+      {
+        preset: "personal@1",
+        operatingCurrency: "EUR",
+        historyStart: "2026-02-01",
+        accounts: [
+          { name: "Assets:Cash", openingState: "known", amount: "100" },
+        ],
+      },
+      "2026-01-01",
+    );
+    expect(known.files["main.bean"]).toContain('2026-01-31 * "Opening balance"');
+    expect(known.files["main.bean"]).toContain(
+      "2026-02-01 balance Assets:Cash 100 EUR",
+    );
   });
 
   it("builds a blank ledger with no accounts", () => {
