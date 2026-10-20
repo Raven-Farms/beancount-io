@@ -47,6 +47,7 @@
 - [880 — Include runtime-imported plugin helpers in exports served from a load cache](./880.md) — minor CLI snapshot-integrity follow-up to 327; reproduced 2026-10-20.
 - [881 — Deduplicate stable import IDs on source transactions omitted by a view plugin](./881.md) — major CLI duplicate-booking finding; reproduced 2026-10-20.
 - [882 — Pair transfer counterparts one-to-one across ID and date matchers](./882.md) — major CLI duplicate-booking / skipped-deposit follow-up to 821; reproduced 2026-10-20.
+- [883 — Render valid account components containing non-ASCII spaces in treeify](./883.md) — minor CLI grammar follow-up to 137; reproduced 2026-10-20.
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
