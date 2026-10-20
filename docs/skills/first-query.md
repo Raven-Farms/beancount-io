@@ -67,6 +67,8 @@ On 2026-09-14 on macOS, Claude Code 2.1.270 (workspace install) and Codex 0.154.
 
 On 2026-10-20 on macOS, standalone ClawHub `beancount-ask@1.0.0` also returned these figures through real OpenClaw 2026.10.5 and Hermes v0.22.2 agent turns using published `bea` 0.3.1 and `gpt-6.1-sol`. Both agents showed the command they executed and preserved the ledger checksum. OpenClaw used its explicitly selected embedded runtime; Hermes used its `openai-codex` provider. See the [registry rehearsal](clawhub-rehearsal.md#real-host-turns--2026-10-20) for the tested setup and remaining host compatibility limits.
 
+Workspace discovery was also rechecked on 2026-10-20 with the current eleven-skill suite: Claude Code 2.1.304's startup catalog and Codex 0.163.0's `skills/list` both expose all eleven linked source skills. Codex's loaded descriptions match the source. These are discovery checks, separate from the dated query rehearsals above.
+
 ## Continue through a first month
 
 The [first-month guide](first-month.md) starts from a fresh ledger and walks through approved imports, duplicate checks, reconciliation, read-only analysis, and a confirmed close. It includes synthetic statements, decline branches, and an independent checkpoint verifier. [Real-client rehearsals](first-month-rehearsal.md) record results and interventions for both Claude Code and Codex.

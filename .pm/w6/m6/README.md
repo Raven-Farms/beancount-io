@@ -1,6 +1,6 @@
 # w6 · m6 — Publish the ledger skills to ClawHub for OpenClaw and Hermes Agent
 
-**Worker:** worker1 **Goal:** An OpenClaw or Hermes Agent user installs any `beancount-*` skill by name from ClawHub, and it works on its own without a Git checkout or this repository's link installer. **Status:** todo (t001–t009 done; standing closing tasks remain; Hermes compatibility follow-ups are w6/039 and w6/040)
+**Worker:** worker1 **Goal:** An OpenClaw or Hermes Agent user installs any `beancount-*` skill by name from ClawHub, and it works on its own without a Git checkout or this repository's link installer. **Status:** todo (t001–t010 done; simplify, coverage and closeout remain; Hermes compatibility follow-ups are w6/039 and w6/040)
 
 **Research date:** 2026-10-16. Sources: ClawHub's quickstart, how-it-works, and skill-format pages at `docs.openclaw.ai/clawhub/`; Hermes Agent's skills page at `hermes-agent.nousresearch.com/docs/user-guide/features/skills`. Re-check the CLI flags against `clawhub --help` and `hermes skills --help` before relying on them.
 
@@ -17,7 +17,7 @@
 | [t007](done/t007.md) | Operator: ClawHub handle, token, and first publish — **DONE** | 30m | t001, t006 |
 | [t008](done/t008.md) | Rehearse installs in OpenClaw and Hermes Agent — **DONE** | 45m | t007 |
 | [t009](done/t009.md) | Document the registry installs — **DONE** | 30m | t001, t006, t008 |
-| t010 | Adoption surface | 30m | t009 |
+| [t010](done/t010.md) | Adoption surface — **DONE** | 30m | t009 |
 | t011 | Simplify | 30m | t010 |
 | t012 | Test coverage | 45m | t010, t011 |
 | t013 | Closeout after the listings are live | 15m | t008, t012 |
