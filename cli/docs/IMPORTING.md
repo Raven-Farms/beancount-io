@@ -636,7 +636,10 @@ skills deduplicate against each other: the ledger itself is the dedup database.
   first posting) that posts this row's amount to `--account` within three days
   is named as "A transfer from … already posts …; this row may be its other
   side". So `TRANSFER TO SAVINGS` imported from checking and `TRANSFER FROM
-  CHECKING` from savings are booked once, after `--duplicates skip`.
+  CHECKING` from savings are booked once, after `--duplicates skip`. A transfer
+  has one other side: it is offered only to the row of this import dated
+  nearest it (the earlier row when two are as near), so a deposit of the same
+  amount a day later is new and `--duplicates skip` keeps it.
 - Identical nontransaction directives are skipped. They are compared, and
   written, as the ledger reads them back: text in Unicode NFC, and a balance
   assertion without the difference a failing one reports. A `price` directive

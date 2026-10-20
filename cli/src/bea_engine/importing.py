@@ -17,7 +17,7 @@ import runpy
 import shlex
 import sys
 import unicodedata
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
 from decimal import Context, Decimal
 from pathlib import Path
@@ -471,6 +471,15 @@ def answer(
     claimed, owners = _claim_payeeless_ids(hashed, identities, account)
     batch_rows: dict[int, int] = {}
     first_uses = _first_uses(entries, Transaction)
+    # Each transfer another account's import wrote has one other side here:
+    # the row of this import dated nearest it (w5/821).
+    pairs: dict[int, int | None] = {}
+
+    def paired(found: Any) -> int | None:
+        if id(found) not in pairs:
+            pairs[id(found)] = _counterpart_row(found, entries, account)
+        return pairs[id(found)]
+
     stage_opens = reports_unused_accounts(options)
     # Blocked rows with what they were before the block, for the second look below.
     held: list[tuple[dict[str, Any], Any, str, str | None]] = []
@@ -615,7 +624,9 @@ def answer(
                     _twin_reason(entry, twin, batch_rows.get(id(twin)), keys=keys),
                     twin,
                 )
-            elif (counterpart := _transfer_counterpart(counterparts, entry, account, fingerprint)) is not None:
+            elif (
+                counterpart := _transfer_counterpart(counterparts, entry, account, fingerprint, paired, index)
+            ) is not None:
                 status, reason, match = (
                     "possible_duplicate",
                     f"A transfer from {counterpart.postings[0].account} dated "
@@ -1650,24 +1661,55 @@ def _amounts_key(fingerprint: tuple[Any, ...]) -> tuple[str, ...]:
 
 
 def _transfer_counterpart(
-    counterparts: dict[tuple[str, ...], list[Any]], entry: Any, account: str, fingerprint: tuple[Any, ...]
+    counterparts: dict[tuple[str, ...], list[Any]],
+    entry: Any,
+    account: str,
+    fingerprint: tuple[Any, ...],
+    paired: Callable[[Any], int | None],
+    index: int,
 ) -> Any:
     """A transfer another account's import wrote that posts this row's amount here, days apart at most.
 
     "TRANSFER TO SAVINGS" and "TRANSFER FROM CHECKING" share no word, so the
     second side of every transfer imported from both banks was booked again
     with exit 0 (w5/600). For review only: the same amount near the same day
-    can be a separate payment.
+    can be a separate payment. A transfer has one other side, so it is offered
+    only to row `index` when `paired` names that row: one transfer taken for
+    every same-amount row near it cost a deposit beside it under `--duplicates
+    skip` (w5/821). The nearest transfer comes first.
     """
-    return next(
-        (
-            found
-            for found in reversed(counterparts.get(_amounts_key(fingerprint), []))
-            if abs((found.date - entry.date).days) <= _COUNTERPART_DAYS
-            and _legs_agree(fingerprint[3], _fingerprint(found, account)[3])
-        ),
-        None,
-    )
+    near = [
+        found
+        for found in reversed(counterparts.get(_amounts_key(fingerprint), []))
+        if abs((found.date - entry.date).days) <= _COUNTERPART_DAYS
+        and _legs_agree(fingerprint[3], _fingerprint(found, account)[3])
+    ]
+    near.sort(key=lambda found: abs((found.date - entry.date).days))
+    return next((found for found in near if paired(found) == index), None)
+
+
+def _counterpart_row(found: Any, rows: Sequence[Any], account: str) -> int | None:
+    """The index of the row of this import a transfer's other side is: the one dated nearest it.
+
+    Same-day before a day apart, and the earlier row when two are as near.
+    """
+    from beancount.core.data import Transaction
+
+    legs = _fingerprint(found, account)
+    nearest: tuple[int, int] | None = None
+    for index, row in enumerate(rows):
+        if not isinstance(row, Transaction) or not _source_legs(row, account):
+            continue
+        try:
+            printed = _fingerprint(row, account)
+        except LedgerError:
+            continue
+        days = abs((found.date - row.date).days)
+        if days > _COUNTERPART_DAYS or _amounts_key(printed) != _amounts_key(legs):
+            continue
+        if _legs_agree(printed[3], legs[3]) and (nearest is None or days < nearest[0]):
+            nearest = (days, index)
+    return None if nearest is None else nearest[1]
 
 
 def _relative_days(written: Any, row: Any) -> str:
