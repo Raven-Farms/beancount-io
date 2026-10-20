@@ -1,6 +1,6 @@
 # w3 · m54 — Ledger creation: staged creation flow on dashboard and mobile
 
-**Worker:** worker3 **Goal:** the m53 setup specification becomes a staged, resumable creation flow on web and native, where accepting every default still reaches a valid private ledger unasked. **Status:** todo (t001–t002 done; t003 blocked — see Blocked)
+**Worker:** worker3 **Goal:** the m53 setup specification becomes a staged, resumable creation flow on web and native, where accepting every default still reaches a valid private ledger unasked. **Status:** todo (t001–t002, t004 done; t003 blocked — see Blocked)
 
 ## Tasks (in order)
 
@@ -9,7 +9,7 @@
 | t001 | Build the staged dashboard creation flow — **DONE** | 120m | w3/m53/t005 |
 | t002 | Build the same staged flow on mobile — **DONE** | 90m | w3/m53/t005, t001 |
 | t003 | Separate the fictional demo from real starters | 45m | t001 |
-| t004 | Adoption surface | 30m | t002, t003 |
+| t004 | Adoption surface — **DONE** | 30m | t002, t003 |
 | t005 | Simplify | 20m | t004 |
 | t006 | Test coverage | 45m | t004 |
 | t007 | Closeout | 10m | t005, t006 |
