@@ -106,7 +106,7 @@ export const SOURCE_SLICE_EXECUTORS = {
     );
   },
   delete_many: (context: McpRequestContext, input: unknown) => {
-    const { ledger, entries } =
+    const { ledger, entries, allowInvalid } =
       SOURCE_SLICE_OPERATION_SCHEMAS.delete_many.parse(input);
     const ledgerId = resolveMcpLedger(context, ledger);
     return validated(
@@ -117,6 +117,7 @@ export const SOURCE_SLICE_EXECUTORS = {
           identity: context.identity,
           ledgerId,
           entries,
+          allowInvalid,
         }),
       (written) =>
         `Deleted ${written.deletedCount} ${written.deletedCount === 1 ? "entry" : "entries"}`,

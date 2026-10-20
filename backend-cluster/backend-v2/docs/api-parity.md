@@ -499,6 +499,12 @@ ledger fixture to exercise successful changes, stale hashes including a stale
 second batch item, denied write access, and unsupported preview arguments.
 These tests verify adapter delegation and normalized effects; live ledger-service
 atomicity and concurrency behavior remain deployment/integration verification.
+All three surfaces accept optional `allowInvalid` on the three operations: the
+ledger service refuses an edit or delete that would add a bean-check error
+(w21/m1), and every surface reports it as `VALIDATION_FAILED` with the new
+errors in `newLedgerErrors`, the structured-add refusal's shape (w0/m2). The
+parity suite proves the refusal, the unchanged source, and the opt-out on each
+adapter.
 
 `addLedgerEntries` now exposes structured bulk insertion through MCP, and REST's
 existing entries endpoint accepts budget and document directives. All ten types

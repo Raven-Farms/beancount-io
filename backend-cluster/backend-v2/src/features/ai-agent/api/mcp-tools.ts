@@ -549,7 +549,7 @@ export const MCP_TOOLS: readonly McpToolDescriptor[] = [
     title: "Update Entry Source",
     annotations: DESTRUCTIVE,
     description:
-      "Replace one entry's source text with newContent, addressed by entryHash (listLedgerEntries' entry_hash) and sha256sum from getEntryContext. Returns the entry's new hash as newEntryHash; the request's entryHash is stale after the commit. A replacement that would take a free ledger past its directive limit is RESOURCE_LIMIT_REACHED.",
+      "Replace one entry's source text with newContent, addressed by entryHash (listLedgerEntries' entry_hash) and sha256sum from getEntryContext. Returns the entry's new hash as newEntryHash; the request's entryHash is stale after the commit. A replacement that would take a free ledger past its directive limit is RESOURCE_LIMIT_REACHED. A write that would add a bean-check error the ledger did not have — deleting an entry a balance assertion depends on, re-dating it past one — is refused with VALIDATION_FAILED naming each new error; pass allowInvalid: true to commit it anyway.",
     inputSchema: SOURCE_SLICE_OPERATION_SCHEMAS.update,
     outputSchema: SOURCE_SLICE_OPERATION_OUTPUTS.update,
     execute: SOURCE_SLICE_EXECUTORS.update,
@@ -559,7 +559,7 @@ export const MCP_TOOLS: readonly McpToolDescriptor[] = [
     title: "Delete Entry Source",
     annotations: DESTRUCTIVE,
     description:
-      "Delete one entry's source text, addressed by entryHash (listLedgerEntries' entry_hash) and sha256sum from getEntryContext.",
+      "Delete one entry's source text, addressed by entryHash (listLedgerEntries' entry_hash) and sha256sum from getEntryContext. A write that would add a bean-check error the ledger did not have — deleting an entry a balance assertion depends on, re-dating it past one — is refused with VALIDATION_FAILED naming each new error; pass allowInvalid: true to commit it anyway.",
     inputSchema: SOURCE_SLICE_OPERATION_SCHEMAS.delete,
     outputSchema: SOURCE_SLICE_OPERATION_OUTPUTS.delete,
     execute: SOURCE_SLICE_EXECUTORS.delete,
@@ -569,7 +569,7 @@ export const MCP_TOOLS: readonly McpToolDescriptor[] = [
     title: "Delete Several Entry Sources",
     annotations: DESTRUCTIVE,
     description:
-      "Delete several entries' source text in one commit; entries is a list of {entryHash, sha256sum}. Returns the deleted count.",
+      "Delete several entries' source text in one commit; entries is a list of {entryHash, sha256sum}. Returns the deleted count. A write that would add a bean-check error the ledger did not have — deleting an entry a balance assertion depends on, re-dating it past one — is refused with VALIDATION_FAILED naming each new error; pass allowInvalid: true to commit it anyway.",
     inputSchema: SOURCE_SLICE_OPERATION_SCHEMAS.delete_many,
     outputSchema: SOURCE_SLICE_OPERATION_OUTPUTS.delete_many,
     execute: SOURCE_SLICE_EXECUTORS.delete_many,

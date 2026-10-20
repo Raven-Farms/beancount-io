@@ -900,6 +900,8 @@ export interface DeleteMultiSourceSlicesRequest {
    * List of entries to delete
    */
   entries: DeleteMultiSourceSliceItem[];
+  /** Delete the entries even when that would add bean-check errors (NEW_LEDGER_ERRORS), instead of refusing it. */
+  allowInvalid?: boolean;
 }
 
 /**
@@ -934,6 +936,8 @@ export interface DeleteSourceSliceRequest {
    * SHA256 hash of the current entry source for validation
    */
   sha256sum: string;
+  /** Delete the entry even when that would add bean-check errors (NEW_LEDGER_ERRORS), instead of refusing it. */
+  allowInvalid?: boolean;
 }
 
 /**
@@ -3155,6 +3159,8 @@ export interface UpdateSourceSliceRequest {
    * New content for the entry
    */
   new_content: string;
+  /** Commit the edit even when it would add bean-check errors (NEW_LEDGER_ERRORS), instead of refusing it. */
+  allowInvalid?: boolean;
 }
 
 /**

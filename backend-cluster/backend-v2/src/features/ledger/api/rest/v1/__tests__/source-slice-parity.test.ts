@@ -46,6 +46,8 @@ beforeAll(async () => {
   });
 });
 
+const BALANCE_FAILED =
+  "Balance failed for Assets:Cash: expected 49.75 USD, got 73.25 USD (main.bean:84)";
 const hash = (text: string) => createHash("sha256").update(text).digest("hex");
 const original = '2026-09-01 * "Café" "Breakfast"\n';
 const operations = {
@@ -77,22 +79,39 @@ async function fixture(caller = identity) {
     ["entry1", original],
     ["entry2", "; second\n"],
   ]);
-  const state = { writable: true, limited: false };
+  const state = { writable: true, limited: false, breaks: false };
   const envelope = (data: unknown) => ({ data: { success: true, data } });
-  type Ref = { entry_hash: string; sha256sum: string };
+  type Ref = { entry_hash: string; sha256sum: string; allowInvalid?: boolean };
   function validate(ref: Ref) {
     const text = slices.get(ref.entry_hash);
     if (text === undefined || hash(text) !== ref.sha256sum)
       throw new BadUserInputError("Stale source fixture");
   }
+  // The ledger service's pre-commit projection (w21/m1): an edit or delete
+  // that adds a bean-check error is refused unless the caller allows it.
+  function refuseBreaking(
+    body: { allowInvalid?: boolean },
+    action: "update" | "delete",
+  ) {
+    if (!state.breaks || body.allowInvalid === true) return;
+    const subject = action === "update" ? "this edit" : "this deletion";
+    const error = `${subject} would introduce 1 new bean-check error: ${BALANCE_FAILED}`;
+    throw new FavaApiError(error, 400, {
+      error,
+      code: "NEW_LEDGER_ERRORS",
+      details: { count: 1, detail: BALANCE_FAILED, action },
+    });
+  }
   const deleteSourceSlice = jest.fn(async (_owner, _name, ref: Ref) => {
     validate(ref);
+    refuseBreaking(ref, "delete");
     slices.delete(ref.entry_hash);
     return envelope({ message: "Deleted", entry_hash: ref.entry_hash });
   });
   const deleteMultiSourceSlices = jest.fn(
-    async (_owner, _name, body: { entries: Ref[] }) => {
+    async (_owner, _name, body: { entries: Ref[]; allowInvalid?: boolean }) => {
       body.entries.forEach(validate);
+      refuseBreaking(body, "delete");
       body.entries.forEach((ref) => slices.delete(ref.entry_hash));
       return envelope({
         message: "Deleted",
@@ -103,6 +122,7 @@ async function fixture(caller = identity) {
   const updateSourceSlice = jest.fn(
     async (_owner, _name, body: Ref & { new_content: string }) => {
       validate(body);
+      refuseBreaking(body, "update");
       // The ledger service's commit-boundary check (w0/m6): the replacement
       // would take a free ledger past its directive limit.
       if (state.limited) {
@@ -417,6 +437,81 @@ describe.each(["rest", "gql", "mcp"])(
       } finally {
         await f.close();
       }
+    });
+  },
+);
+
+// The ledger service refuses an edit or delete that would add a bean-check
+// error (w21/m1). Every surface must refuse it as structured adds are refused
+// (w0/m2) — VALIDATION_FAILED naming the new error in newLedgerErrors — change
+// nothing, and commit the same request when it carries allowInvalid.
+describe.each(["rest", "gql", "mcp"])(
+  "a source edit that would break the ledger via %s",
+  (surface) => {
+    describe.each(Object.keys(operations) as Operation[])("%s", (operation) => {
+      const subject = operation === "update" ? "this edit" : "this deletion";
+
+      it("is refused with the new error named, changing nothing", async () => {
+        const f = await fixture();
+        f.state.breaks = true;
+        const before = [...f.slices];
+        try {
+          const result = await f.call(surface, operation, args(operation));
+          expect(result.success).toBe(false);
+          expect([...f.slices]).toEqual(before);
+          const message = expect.stringContaining(
+            `${subject} would introduce 1 new bean-check error: ${BALANCE_FAILED}`,
+          );
+          const metadata = {
+            field: "entry",
+            newLedgerErrors: BALANCE_FAILED,
+          };
+          if (surface === "rest") {
+            expect(result.result).toMatchObject({
+              ok: false,
+              error: { code: "VALIDATION_FAILED", message, metadata },
+            });
+          } else if (surface === "gql") {
+            // Raw `graphql()` bypasses Apollo's formatError, which copies
+            // the category and metadata into `extensions`.
+            expect(result.errors?.[0]?.originalError).toMatchObject({
+              category: "VALIDATION_FAILED",
+              message,
+              metadata,
+            });
+          } else {
+            expect(result.full).toMatchObject({
+              ok: false,
+              error: {
+                code: "VALIDATION_FAILED",
+                message,
+                hint: expect.stringContaining("allowInvalid: true"),
+              },
+            });
+          }
+        } finally {
+          await f.close();
+        }
+      });
+
+      it("commits the same request with allowInvalid", async () => {
+        const f = await fixture();
+        f.state.breaks = true;
+        try {
+          const result = await f.call(surface, operation, {
+            ...args(operation),
+            allowInvalid: true,
+          });
+          expect(result.success).toBe(true);
+          if (operation === "update") {
+            expect(f.slices.get("entry1")).toBe("; replacement café\n");
+          } else {
+            expect(f.slices.has("entry1")).toBe(false);
+          }
+        } finally {
+          await f.close();
+        }
+      });
     });
   },
 );

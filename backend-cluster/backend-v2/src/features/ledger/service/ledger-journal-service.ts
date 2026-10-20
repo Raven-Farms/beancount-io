@@ -156,12 +156,16 @@ export interface ILedgerJournalService {
     identity: Identity;
     entryHash: string;
     sha256sum: string;
+    /** Commit even when the delete adds bean-check errors (w21/m1). */
+    allowInvalid?: boolean;
   }): Promise<DeleteSliceResult>;
 
   deleteMultiSourceSlices(params: {
     ledgerId: string;
     identity: Identity;
     entries: { entryHash: string; sha256sum: string }[];
+    /** Commit even when the deletes add bean-check errors (w21/m1). */
+    allowInvalid?: boolean;
   }): Promise<DeleteMultiSlicesResult>;
 
   updateSourceSlice(params: {
@@ -172,6 +176,8 @@ export interface ILedgerJournalService {
     newContent: string;
     /** Mobile writes are exempt from the directive limit; the default is web. */
     platform?: "web" | "mobile";
+    /** Commit even when the edit adds bean-check errors (w21/m1). */
+    allowInvalid?: boolean;
   }): Promise<UpdateSliceResult>;
 }
 
@@ -326,8 +332,9 @@ export class LedgerJournalService
     identity: Identity;
     entryHash: string;
     sha256sum: string;
+    allowInvalid?: boolean;
   }): Promise<DeleteSliceResult> {
-    const { ledgerId, identity, entryHash, sha256sum } = params;
+    const { ledgerId, identity, entryHash, sha256sum, allowInvalid } = params;
     const { favaApiClient, ledgerOwner, ledgerName } = await this.getClient(
       ledgerId,
       identity,
@@ -338,6 +345,7 @@ export class LedgerJournalService
       favaApiClient.journal.deleteSourceSlice(ledgerOwner, ledgerName, {
         entry_hash: entryHash,
         sha256sum,
+        ...(allowInvalid && { allowInvalid: true }),
       }),
       "delete source slice",
     );
@@ -348,8 +356,9 @@ export class LedgerJournalService
     ledgerId: string;
     identity: Identity;
     entries: { entryHash: string; sha256sum: string }[];
+    allowInvalid?: boolean;
   }): Promise<DeleteMultiSlicesResult> {
-    const { ledgerId, identity, entries } = params;
+    const { ledgerId, identity, entries, allowInvalid } = params;
     const { favaApiClient, ledgerOwner, ledgerName } = await this.getClient(
       ledgerId,
       identity,
@@ -362,6 +371,7 @@ export class LedgerJournalService
           entry_hash: e.entryHash,
           sha256sum: e.sha256sum,
         })),
+        ...(allowInvalid && { allowInvalid: true }),
       }),
       "delete source slices",
     );
@@ -375,6 +385,7 @@ export class LedgerJournalService
     sha256sum: string;
     newContent: string;
     platform?: "web" | "mobile";
+    allowInvalid?: boolean;
   }): Promise<UpdateSliceResult> {
     const {
       ledgerId,
@@ -383,6 +394,7 @@ export class LedgerJournalService
       sha256sum,
       newContent,
       platform = "web",
+      allowInvalid,
     } = params;
     const { favaApiClient, ledgerOwner, ledgerName } = await this.getClient(
       ledgerId,
@@ -398,6 +410,7 @@ export class LedgerJournalService
           entry_hash: entryHash,
           sha256sum,
           new_content: newContent,
+          ...(allowInvalid && { allowInvalid: true }),
         },
         directiveLimitExemptParams(platform),
       ),

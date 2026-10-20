@@ -146,26 +146,62 @@ export class ValidationError extends DomainError {
 }
 
 /**
- * A write that would add bean-check errors the ledger did not have, on either
- * write path: Beancount text (`text`) or structured entries (`entries`, w0/m2).
- * Each new error is named in the reason and, for clients, in
- * `newLedgerErrors` (`message (file:line); …`), as UNBALANCED carries its
- * `residual` — so an app shows what the write would break without parsing the
- * message.
+ * Which write a {@link NewLedgerErrorsError} refused: Beancount text, structured
+ * entries (w0/m2), or a source-slice edit or delete (w21/m1). The ledger
+ * service names the last two in `details.action`.
+ */
+export type NewLedgerErrorsWrite = "text" | "entries" | "update" | "delete";
+
+const NEW_LEDGER_ERRORS_WORDING: Record<
+  NewLedgerErrorsWrite,
+  { field: string; subject: string; valid: string; fix: string }
+> = {
+  text: {
+    field: "text",
+    subject: "appending it",
+    valid: "text is valid Beancount",
+    fix: "Fix the directives, or pass `allowInvalid: true` to record them anyway.",
+  },
+  entries: {
+    field: "entries",
+    subject: "adding these entries",
+    valid: "entries are valid",
+    fix: "Fix the entries, or pass `allowInvalid: true` to record them anyway.",
+  },
+  update: {
+    field: "entry",
+    subject: "this edit",
+    valid: "edit is valid Beancount",
+    fix: "Change the edit, or pass `allowInvalid: true` to commit it anyway.",
+  },
+  delete: {
+    field: "entry",
+    subject: "this deletion",
+    valid: "entry can be deleted",
+    fix: "Fix what depends on the entry first, or pass `allowInvalid: true` to delete it anyway.",
+  },
+};
+
+/**
+ * A write that would add bean-check errors the ledger did not have, on any
+ * write path ({@link NewLedgerErrorsWrite}). Each new error is named in the
+ * reason and, for clients, in `newLedgerErrors` (`message (file:line); …`), as
+ * UNBALANCED carries its `residual` — so an app shows what the write would
+ * break without parsing the message.
  *
  * Category: VALIDATION_FAILED (HTTP 400)
  */
 export class NewLedgerErrorsError extends ValidationError {
   constructor(
-    field: "text" | "entries",
+    write: NewLedgerErrorsWrite,
     count: number,
     newLedgerErrors: string,
   ) {
-    const text = field === "text";
+    const { field, subject, valid, fix } = NEW_LEDGER_ERRORS_WORDING[write];
     super(
       field,
-      `${text ? "appending it" : "adding these entries"} would introduce ${count} new bean-check error${count === 1 ? "" : "s"}: ${newLedgerErrors}`,
-      `The ${text ? "text is valid Beancount" : "entries are valid"} but would break the ledger — the message names each new error. Fix the ${text ? "directives" : "entries"}, or pass \`allowInvalid: true\` to record them anyway.`,
+      `${subject} would introduce ${count} new bean-check error${count === 1 ? "" : "s"}: ${newLedgerErrors}`,
+      `The ${valid} but would break the ledger — the message names each new error. ${fix}`,
       { newLedgerErrors },
     );
   }

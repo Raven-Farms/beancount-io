@@ -96,7 +96,14 @@ export function favaApiErrorToDomainError(
     const named =
       (typeof details?.detail === "string" && details.detail) || message;
     const count = typeof details?.count === "number" ? details.count : 1;
-    return new NewLedgerErrorsError("entries", count, named);
+    // Source-slice edits and deletes name themselves (w21/m1); a structured
+    // add predates the field.
+    const action = details?.action;
+    return new NewLedgerErrorsError(
+      action === "update" || action === "delete" ? action : "entries",
+      count,
+      named,
+    );
   }
 
   if (code === UNBALANCED) {

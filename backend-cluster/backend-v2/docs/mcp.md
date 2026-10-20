@@ -1325,6 +1325,13 @@ only its own arguments and optional `ledger`; a pinned credential may omit the
 ledger. Current content-write access is required. Each delegates source
 validation and mutation to the ledger service and does not support preview.
 
+An edit or delete that would leave the ledger with a bean-check error it did
+not have — deleting an entry a balance assertion depends on, or re-dating it
+past one — is refused before anything is committed, with `VALIDATION_FAILED`
+and each new error named in `newLedgerErrors`, the same refusal
+`addLedgerEntries` gives (w21/m1). Errors the ledger already had never block.
+Pass `allowInvalid: true` to commit the write anyway.
+
 ### Insert structured directives
 
 `addLedgerEntries` accepts `entries: [{type, entry}]` and optional `ledger`.
