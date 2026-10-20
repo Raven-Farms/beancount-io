@@ -1,6 +1,5 @@
 import { useState, useCallback } from "react";
 import { useMutation } from "@apollo/client/react";
-import { format } from "date-fns";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { useErrorMessage } from "@/common/lib/errors/error-message";
 import {
@@ -24,7 +23,8 @@ export interface ParsedReceipt {
 }
 
 export interface ReviewFormData {
-  date: Date;
+  /** `yyyy-MM-dd` civil day. */
+  date: string;
   payee: string;
   description: string;
   amount: string;
@@ -114,7 +114,7 @@ export function useReceiptWorkflow(ledgerId: string) {
             ledgerId,
             receiptObjectKey: objectKey,
             input: {
-              date: format(formData.date, "yyyy-MM-dd"),
+              date: formData.date,
               payee: formData.payee,
               description: formData.description,
               postings: [

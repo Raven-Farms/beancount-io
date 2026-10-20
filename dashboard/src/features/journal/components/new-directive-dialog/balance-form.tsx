@@ -15,7 +15,7 @@ import {
   FormMessage,
 } from "@/common/components/ui/form";
 import { DatePicker } from "@/common/components/ui/date-picker";
-import { format } from "date-fns";
+import { todayIsoDate } from "@/common/components/ui/date-picker-utils";
 import {
   BulkEntriesDocument,
   LedgerEntryType,
@@ -34,7 +34,7 @@ import {
 import { useLedger } from "@/common/hooks/use-ledger";
 import { track } from "@/common/analytics";
 import { AccountAvailabilityNotice } from "./account-availability-notice";
-import { entryDay, useAccountAvailability } from "./use-account-availability";
+import { useAccountAvailability } from "./use-account-availability";
 
 interface BalanceFormProps {
   ledgerId: string;
@@ -44,7 +44,7 @@ interface BalanceFormProps {
 // Zod validation schema factory
 const createBalanceSchema = (t: (key: string) => string) =>
   z.object({
-    date: z.date(),
+    date: z.iso.date(),
     account: z.string().min(1, t("journal.accountRequired")).trim(),
     amount: z
       .string()
@@ -74,7 +74,7 @@ export function BalanceForm({ ledgerId, onSuccess }: BalanceFormProps) {
   const form = useForm<BalanceFormData>({
     resolver: zodResolver(balanceSchema),
     defaultValues: {
-      date: new Date(),
+      date: todayIsoDate(),
       account: "",
       amount: "",
       currency: primaryCurrency,
@@ -83,15 +83,14 @@ export function BalanceForm({ ledgerId, onSuccess }: BalanceFormProps) {
   });
 
   const accounts = useAccountAvailability(ledgerId);
-  const day = entryDay(form.watch("date"));
+  const day = form.watch("date") || null;
   const account = form.watch("account");
 
   const onSubmit = async (data: BalanceFormData) => {
     setError(null);
 
     try {
-      const entryDate = entryDay(data.date);
-      if (accounts.blocks([data.account], entryDate)) return;
+      if (accounts.blocks([data.account], data.date)) return;
 
       // The digits as typed: Beancount infers the assertion's tolerance from
       // them, so `49.70` must not become `49.7` through a double.
@@ -102,7 +101,7 @@ export function BalanceForm({ ledgerId, onSuccess }: BalanceFormProps) {
 
       // Create balance input
       const balanceInput: LedgerBalanceInput = {
-        date: format(data.date, "yyyy-MM-dd"),
+        date: data.date,
         account: data.account,
         amount: amountInput,
       };
@@ -110,7 +109,7 @@ export function BalanceForm({ ledgerId, onSuccess }: BalanceFormProps) {
       const variables: BulkEntriesMutationVariables = {
         ledgerId,
         entries: [
-          ...accounts.openEntries([data.account], entryDate),
+          ...accounts.openEntries([data.account], data.date),
           { type: LedgerEntryType.Balance, balance: balanceInput },
         ],
       };
@@ -120,7 +119,7 @@ export function BalanceForm({ ledgerId, onSuccess }: BalanceFormProps) {
       if (result.data?.bulkEntries.success) {
         // Reset form
         form.reset({
-          date: new Date(),
+          date: todayIsoDate(),
           account: "",
           amount: "",
           currency: primaryCurrency,

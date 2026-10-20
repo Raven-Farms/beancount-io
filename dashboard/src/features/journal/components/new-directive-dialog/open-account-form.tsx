@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@apollo/client/react";
-import { format } from "date-fns";
 import { BulkEntriesDocument, LedgerEntryType } from "@/graphql/definitions";
 import { Button } from "@/common/components/ui/button";
 import { Input } from "@/common/components/ui/input";
@@ -16,6 +15,7 @@ import {
   FormMessage,
 } from "@/common/components/ui/form";
 import { DatePicker } from "@/common/components/ui/date-picker";
+import { todayIsoDate } from "@/common/components/ui/date-picker-utils";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { track } from "@/common/analytics";
 import { useErrorMessage } from "@/common/lib/errors/error-message";
@@ -35,13 +35,13 @@ export function OpenAccountForm({ ledgerId, onSuccess }: OpenAccountFormProps) {
   const { accountPrefixes, schema } = useOpenAccountSchema(ledgerId);
 
   type FormData = {
-    date: Date;
+    date: string;
     account: string;
   };
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { date: new Date(), account: "" },
+    defaultValues: { date: todayIsoDate(), account: "" },
     mode: "onChange",
   });
 
@@ -55,7 +55,7 @@ export function OpenAccountForm({ ledgerId, onSuccess }: OpenAccountFormProps) {
             {
               type: LedgerEntryType.Open,
               open: {
-                date: format(data.date, "yyyy-MM-dd"),
+                date: data.date,
                 account: data.account,
                 currencies: [],
               },
@@ -64,7 +64,7 @@ export function OpenAccountForm({ ledgerId, onSuccess }: OpenAccountFormProps) {
         },
       });
       if (result.data?.bulkEntries.success) {
-        form.reset({ date: new Date(), account: "" });
+        form.reset({ date: todayIsoDate(), account: "" });
         track("directive_added", { directive_type: "open" });
         onSuccess?.();
       } else {

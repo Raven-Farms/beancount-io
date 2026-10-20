@@ -1,5 +1,4 @@
-import { describe, expect, it } from "vitest";
-import { format } from "date-fns";
+import { afterEach, describe, expect, it } from "vitest";
 import { enUS } from "date-fns/locale/en-US";
 import { fr } from "date-fns/locale/fr";
 import { de } from "date-fns/locale/de";
@@ -7,10 +6,14 @@ import { ja } from "date-fns/locale/ja";
 import { zhCN } from "date-fns/locale/zh-CN";
 import {
   ISO_PATTERN,
+  calendarToIsoDate,
+  formatIsoDate,
   getDisplayPattern,
   getPatternHint,
   parseStrictCalendarDate,
   rollingCalendarBounds,
+  isoDateToCalendar,
+  todayIsoDate,
 } from "../date-picker-utils";
 
 /**
@@ -71,10 +74,6 @@ const LOCALES = [
   },
 ] as const;
 
-function iso(date: Date | undefined): string | undefined {
-  return date === undefined ? undefined : format(date, "yyyy-MM-dd");
-}
-
 describe("getDisplayPattern", () => {
   it.each(LOCALES)("derives $pattern for $name", ({ locale, pattern }) => {
     expect(getDisplayPattern(locale)).toBe(pattern);
@@ -99,30 +98,28 @@ describe("parseStrictCalendarDate", () => {
   it.each(LOCALES)(
     "reads $name input in $name order: $typed is 15 June 2025",
     ({ pattern, typed }) => {
-      expect(iso(parseStrictCalendarDate(typed, pattern))).toBe("2025-06-15");
+      expect(parseStrictCalendarDate(typed, pattern)).toBe("2025-06-15");
     },
   );
 
   it.each(LOCALES)("accepts the ISO fallback under $name", ({ pattern }) => {
-    expect(iso(parseStrictCalendarDate("2025-06-15", pattern))).toBe(
-      "2025-06-15",
-    );
+    expect(parseStrictCalendarDate("2025-06-15", pattern)).toBe("2025-06-15");
   });
 
   it("reads the milestone string per-locale instead of guessing", () => {
     // The milestone's literal `12/09/2026`: 9 December in month-first
     // English, 12 September in day-first French. Each locale applies only
     // its own pattern; neither reinterpretation is attempted.
-    expect(iso(parseStrictCalendarDate("12/09/2026", "MM/dd/yyyy"))).toBe(
+    expect(parseStrictCalendarDate("12/09/2026", "MM/dd/yyyy")).toBe(
       "2026-12-09",
     );
-    expect(iso(parseStrictCalendarDate("12/09/2026", "dd/MM/yyyy"))).toBe(
+    expect(parseStrictCalendarDate("12/09/2026", "dd/MM/yyyy")).toBe(
       "2026-09-12",
     );
   });
 
   it("produces 9 December from the French writing of 9 December", () => {
-    expect(iso(parseStrictCalendarDate("09/12/2026", "dd/MM/yyyy"))).toBe(
+    expect(parseStrictCalendarDate("09/12/2026", "dd/MM/yyyy")).toBe(
       "2026-12-09",
     );
   });
@@ -158,10 +155,10 @@ describe("parseStrictCalendarDate", () => {
   });
 
   it("accepts surrounding whitespace exactly like the bare input", () => {
-    expect(iso(parseStrictCalendarDate("  06/15/2025  ", "MM/dd/yyyy"))).toBe(
+    expect(parseStrictCalendarDate("  06/15/2025  ", "MM/dd/yyyy")).toBe(
       "2025-06-15",
     );
-    expect(iso(parseStrictCalendarDate("  15/06/2025  ", "dd/MM/yyyy"))).toBe(
+    expect(parseStrictCalendarDate("  15/06/2025  ", "dd/MM/yyyy")).toBe(
       "2025-06-15",
     );
   });
@@ -170,17 +167,87 @@ describe("parseStrictCalendarDate", () => {
 describe("rollingCalendarBounds", () => {
   it("spans 100 years before and after the anchor year", () => {
     const { startMonth, endMonth } = rollingCalendarBounds(
-      new Date(2026, 11, 1),
+      isoDateToCalendar("2026-12-01"),
     );
-    expect(format(startMonth, "yyyy-MM-dd")).toBe("1926-01-01");
-    expect(format(endMonth, "yyyy-MM-dd")).toBe("2126-12-31");
+    expect(calendarToIsoDate(startMonth)).toBe("1926-01-01");
+    expect(calendarToIsoDate(endMonth)).toBe("2126-12-31");
   });
 
   it("rolls when the displayed month moves into a future year", () => {
     const { startMonth, endMonth } = rollingCalendarBounds(
-      new Date(2027, 0, 15),
+      isoDateToCalendar("2027-01-01"),
     );
-    expect(format(startMonth, "yyyy-MM-dd")).toBe("1927-01-01");
-    expect(format(endMonth, "yyyy-MM-dd")).toBe("2127-12-31");
+    expect(calendarToIsoDate(startMonth)).toBe("1927-01-01");
+    expect(calendarToIsoDate(endMonth)).toBe("2127-12-31");
   });
+});
+
+/**
+ * Pacific/Apia skipped 2011-12-30 entirely, so a local Date for that day
+ * normalizes to the 31st. The civil-day contract must not depend on it (m32).
+ */
+describe.each(["UTC", "Pacific/Apia", "America/Los_Angeles"])(
+  "civil days under TZ=%s",
+  (zone) => {
+    const originalTz = process.env.TZ;
+    afterEach(() => {
+      process.env.TZ = originalTz;
+    });
+    const inZone = () => {
+      process.env.TZ = zone;
+    };
+
+    it("keeps 2011-12-29, 30 and 31 exact in ISO and display order", () => {
+      inZone();
+      for (const day of ["29", "30", "31"]) {
+        expect(parseStrictCalendarDate(`2011-12-${day}`, "MM/dd/yyyy")).toBe(
+          `2011-12-${day}`,
+        );
+        expect(parseStrictCalendarDate(`12/${day}/2011`, "MM/dd/yyyy")).toBe(
+          `2011-12-${day}`,
+        );
+        expect(formatIsoDate(`2011-12-${day}`, "MM/dd/yyyy")).toBe(
+          `12/${day}/2011`,
+        );
+        expect(calendarToIsoDate(isoDateToCalendar(`2011-12-${day}`))).toBe(
+          `2011-12-${day}`,
+        );
+      }
+    });
+
+    it("still refuses impossible days and accepts leap days", () => {
+      inZone();
+      expect(
+        parseStrictCalendarDate("2011-02-29", "MM/dd/yyyy"),
+      ).toBeUndefined();
+      expect(
+        parseStrictCalendarDate("2011-12-32", "MM/dd/yyyy"),
+      ).toBeUndefined();
+      expect(parseStrictCalendarDate("2012-02-29", "MM/dd/yyyy")).toBe(
+        "2012-02-29",
+      );
+    });
+
+    it("reads Today from the local clock", () => {
+      inZone();
+      const now = new Date();
+      const local = [
+        String(now.getFullYear()).padStart(4, "0"),
+        String(now.getMonth() + 1).padStart(2, "0"),
+        String(now.getDate()).padStart(2, "0"),
+      ].join("-");
+      expect(todayIsoDate()).toBe(local);
+    });
+  },
+);
+
+it("reproduces the Apia skipped day the civil contract guards against", () => {
+  const originalTz = process.env.TZ;
+  process.env.TZ = "Pacific/Apia";
+  try {
+    // A local-midnight Date for the 30th rolls to the 31st in this zone.
+    expect(new Date(2011, 11, 30).getDate()).toBe(31);
+  } finally {
+    process.env.TZ = originalTz;
+  }
 });

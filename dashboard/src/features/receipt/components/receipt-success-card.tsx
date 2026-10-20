@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { CheckCircle2 } from "lucide-react";
-import { format } from "date-fns";
+import { formatIsoDate } from "@/common/components/ui/date-picker-utils";
 import { Button } from "@/common/components/ui/button";
 import { Card } from "@/common/components/ui/card";
 import { useTranslations } from "@/common/hooks/use-translations";
@@ -51,7 +51,7 @@ export function ReceiptSuccessCard({
               {t("receipt.success.date")}
             </dt>
             <dd className="font-medium">
-              {format(formData.date, "PP", { locale: dateLocale })}
+              {formatIsoDate(formData.date, "PP", dateLocale)}
             </dd>
           </div>
           <div className="flex justify-between gap-4">

@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { format } from "date-fns";
 import {
   Form,
   FormControl,
@@ -22,6 +21,11 @@ import {
 } from "@/common/components/ui/card";
 import { DatePicker } from "@/common/components/ui/date-picker";
 import {
+  ISO_PATTERN,
+  parseStrictCalendarDate,
+  todayIsoDate,
+} from "@/common/components/ui/date-picker-utils";
+import {
   AccountCombobox,
   CurrencyCombobox,
 } from "@/common/components/ledger-comboboxes";
@@ -32,14 +36,13 @@ import type {
   ReviewFormData,
 } from "../hooks/use-receipt-workflow";
 
-// Parse the receipt's date, defaulting to today when it's missing or invalid
-// (e.g. the receipt had no printed date, so the backend returned null).
-function toReviewDate(value: string | null): Date {
-  if (value) {
-    const parsed = new Date(value + "T00:00:00");
-    if (!Number.isNaN(parsed.getTime())) return parsed;
-  }
-  return new Date();
+// Keep the receipt's `yyyy-MM-dd` date as that exact day, defaulting to today
+// when it's missing or invalid (e.g. the receipt had no printed date, so the
+// backend returned null). It never round-trips through a local midnight.
+function toReviewDate(value: string | null): string {
+  return (
+    (value && parseStrictCalendarDate(value, ISO_PATTERN)) || todayIsoDate()
+  );
 }
 
 interface ReceiptReviewFormProps {
@@ -66,7 +69,7 @@ export function ReceiptReviewForm({
   const reviewFormSchema = useMemo(
     () =>
       z.object({
-        date: z.date({ message: t("receipt.review.dateRequired") }),
+        date: z.iso.date({ message: t("receipt.review.dateRequired") }),
         payee: z.string().min(1, t("receipt.review.payeeRequired")),
         description: z.string().min(1, t("receipt.review.descriptionRequired")),
         amount: z
@@ -119,9 +122,7 @@ export function ReceiptReviewForm({
 
   // Beancount preview
   const watched = useWatch({ control: form.control });
-  const previewDate = watched.date
-    ? format(watched.date, "yyyy-MM-dd")
-    : "YYYY-MM-DD";
+  const previewDate = watched.date || "YYYY-MM-DD";
   const previewText = [
     `${previewDate} * "${watched.payee || "Payee"}" "${watched.description || "Description"}"`,
     `  ${watched.expenseAccount || "Expenses:Account"}  ${watched.amount || "0.00"} ${watched.currency || primaryCurrency}`,

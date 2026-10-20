@@ -25,7 +25,7 @@ describe("ReceiptSuccessCard date", () => {
       >
         <ReceiptSuccessCard
           formData={{
-            date: new Date(2026, 1, 13),
+            date: "2026-02-13",
             payee: "Café",
             description: "Coffee",
             amount: "4.50",

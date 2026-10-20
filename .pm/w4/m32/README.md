@@ -1,6 +1,6 @@
 # w4 · m32 — Preserve valid ledger dates across browser timezones
 
-**Worker:** worker1 **Goal:** a valid Gregorian ledger date remains enterable regardless of whether the browser timezone ever observed that civil day **Status:** todo
+**Worker:** worker1 **Goal:** a valid Gregorian ledger date remains enterable regardless of whether the browser timezone ever observed that civil day **Status:** todo (t001–t004 done)
 
 ## Reproduced problem
 
@@ -32,10 +32,10 @@ The seven searched integrations are Journal Transaction, Balance, Note and Accou
 
 | id | title | est | depends_on |
 | --- | --- | --- | --- |
-| t001 | Preserve civil-day identity in the shared picker | 65m | — |
-| t002 | Carry exact date-only values through all seven forms | 55m | t001 |
-| t003 | Adoption surface — check date-entry promises and guides | 15m | t002 |
-| t004 | Simplify the changed date flow | 15m | t003 |
+| t001 | Preserve civil-day identity in the shared picker — **DONE** | 65m | — |
+| t002 | Carry exact date-only values through all seven forms — **DONE** | 55m | t001 |
+| t003 | Adoption surface — check date-entry promises and guides — **DONE** | 15m | t002 |
+| t004 | Simplify the changed date flow — **DONE** | 15m | t003 |
 | t005 | Verify real timezone and form regressions | 55m | t003 |
 | t006 | Close out and archive the milestone | 15m | t004, t005 |
 

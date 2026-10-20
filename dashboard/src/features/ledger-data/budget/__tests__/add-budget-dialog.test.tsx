@@ -52,13 +52,13 @@ vi.mock("@/common/components/ui/date-picker", () => ({
     value,
     onChange,
   }: {
-    value: Date;
-    onChange: (d: Date | undefined) => void;
+    value: string | undefined;
+    onChange: (d: string | undefined) => void;
   }) => (
     <input
       data-testid="date-picker"
-      value={value?.toISOString()}
-      onChange={(e) => onChange(new Date(e.target.value))}
+      value={value ?? ""}
+      onChange={(e) => onChange(e.target.value)}
       readOnly
     />
   ),

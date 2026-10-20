@@ -14,7 +14,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/common/components/ui/form";
-import { format } from "date-fns";
 
 import {
   BulkEntriesDocument,
@@ -26,10 +25,11 @@ import { useTranslations } from "@/common/hooks/use-translations";
 import { useErrorMessage } from "@/common/lib/errors/error-message";
 
 import { DatePicker } from "@/common/components/ui/date-picker";
+import { todayIsoDate } from "@/common/components/ui/date-picker-utils";
 import { AccountCombobox } from "@/common/components/ledger-comboboxes";
 import { track } from "@/common/analytics";
 import { AccountAvailabilityNotice } from "./account-availability-notice";
-import { entryDay, useAccountAvailability } from "./use-account-availability";
+import { useAccountAvailability } from "./use-account-availability";
 
 interface NoteFormProps {
   ledgerId: string;
@@ -39,7 +39,7 @@ interface NoteFormProps {
 // Zod validation schema factory
 const createNoteSchema = (t: (key: string) => string) =>
   z.object({
-    date: z.date(),
+    date: z.iso.date(),
     account: z.string().min(1, t("journal.accountRequired")).trim(),
     content: z.string().min(1, t("journal.noteContentRequired")).trim(),
   });
@@ -60,7 +60,7 @@ export function NoteForm({ ledgerId, onSuccess }: NoteFormProps) {
   const form = useForm<NoteFormData>({
     resolver: zodResolver(noteSchema),
     defaultValues: {
-      date: new Date(),
+      date: todayIsoDate(),
       account: "",
       content: "",
     },
@@ -68,19 +68,18 @@ export function NoteForm({ ledgerId, onSuccess }: NoteFormProps) {
   });
 
   const accounts = useAccountAvailability(ledgerId);
-  const day = entryDay(form.watch("date"));
+  const day = form.watch("date") || null;
   const account = form.watch("account");
 
   const onSubmit = async (data: NoteFormData) => {
     setError(null);
 
     try {
-      const entryDate = entryDay(data.date);
-      if (accounts.blocks([data.account], entryDate)) return;
+      if (accounts.blocks([data.account], data.date)) return;
 
       // Create note input
       const noteInput: LedgerNoteInput = {
-        date: format(data.date, "yyyy-MM-dd"),
+        date: data.date,
         account: data.account,
         content: data.content,
       };
@@ -88,7 +87,7 @@ export function NoteForm({ ledgerId, onSuccess }: NoteFormProps) {
       const variables: BulkEntriesMutationVariables = {
         ledgerId,
         entries: [
-          ...accounts.openEntries([data.account], entryDate),
+          ...accounts.openEntries([data.account], data.date),
           { type: LedgerEntryType.Note, note: noteInput },
         ],
       };
@@ -98,7 +97,7 @@ export function NoteForm({ ledgerId, onSuccess }: NoteFormProps) {
       if (result.data?.bulkEntries.success) {
         // Reset form
         form.reset({
-          date: new Date(),
+          date: todayIsoDate(),
           account: "",
           content: "",
         });

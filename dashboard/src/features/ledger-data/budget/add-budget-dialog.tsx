@@ -6,7 +6,6 @@ import { useTranslations } from "@/common/hooks/use-translations";
 import { useErrorMessage } from "@/common/lib/errors/error-message";
 import { restoreFocusOnDialogClose } from "@/common/lib/focus/restore-focus-on-dialog-close";
 import { useMutation } from "@apollo/client/react";
-import { format } from "date-fns";
 import {
   BulkEntriesDocument,
   BudgetInterval,
@@ -45,10 +44,11 @@ import {
   CurrencyCombobox,
 } from "@/common/components/ledger-comboboxes";
 import { DatePicker } from "@/common/components/ui/date-picker";
+import { todayIsoDate } from "@/common/components/ui/date-picker-utils";
 
 const createBudgetSchema = (t: (key: string) => string) =>
   z.object({
-    date: z.date(),
+    date: z.iso.date(),
     account: z.string().min(1, t("page.budget.budgetAccountRequired")),
     interval: z.nativeEnum(BudgetInterval),
     number: z.string().min(1, t("page.budget.budgetAmountRequired")),
@@ -117,7 +117,7 @@ export function AddBudgetDialog({
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
-      date: new Date(),
+      date: todayIsoDate(),
       account: lockedAccount ?? "",
       interval: lockedInterval ?? defaultInterval ?? BudgetInterval.Monthly,
       number: "",
@@ -128,7 +128,7 @@ export function AddBudgetDialog({
 
   const resetForm = () => {
     form.reset({
-      date: new Date(),
+      date: todayIsoDate(),
       account: lockedAccount ?? "",
       interval: lockedInterval ?? defaultInterval ?? BudgetInterval.Monthly,
       number: "",
@@ -147,7 +147,7 @@ export function AddBudgetDialog({
             {
               type: LedgerEntryType.Budget,
               budget: {
-                date: format(data.date, "yyyy-MM-dd"),
+                date: data.date,
                 account: data.account,
                 interval: data.interval,
                 amount: {

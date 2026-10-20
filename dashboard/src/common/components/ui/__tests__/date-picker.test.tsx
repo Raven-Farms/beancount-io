@@ -1,9 +1,8 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
-import { format } from "date-fns";
 import { enUS } from "react-day-picker/locale/en-US";
 import { fr } from "react-day-picker/locale/fr";
 import type { Locale } from "react-day-picker";
@@ -25,10 +24,10 @@ function ControlledDatePicker({
   initial,
   onValue,
 }: {
-  initial?: Date;
-  onValue: (date: Date | undefined) => void;
+  initial?: string;
+  onValue: (date: string | undefined) => void;
 }) {
-  const [value, setValue] = useState<Date | undefined>(initial);
+  const [value, setValue] = useState<string | undefined>(initial);
   return (
     <DatePicker
       id="date"
@@ -52,21 +51,13 @@ describe("DatePicker typing contract", () => {
     await user.type(input, "06/15/2025");
 
     expect(input).toHaveValue("06/15/2025");
-    expect(onValue).toHaveBeenLastCalledWith(expect.any(Date));
-    expect(format(onValue.mock.calls.at(-1)![0] as Date, "yyyy-MM-dd")).toBe(
-      "2025-06-15",
-    );
+    expect(onValue).toHaveBeenLastCalledWith("2025-06-15");
   });
 
   it("publishes undefined for cleared or invalid text without wiping the draft", async () => {
     const user = userEvent.setup();
     const onValue = vi.fn();
-    render(
-      <ControlledDatePicker
-        initial={new Date(2025, 5, 15)}
-        onValue={onValue}
-      />,
-    );
+    render(<ControlledDatePicker initial={"2025-06-15"} onValue={onValue} />);
 
     const input = screen.getByRole("textbox");
     expect(input).toHaveValue("06/15/2025");
@@ -93,7 +84,7 @@ describe("DatePicker typing contract", () => {
     expect(onValue).toHaveBeenLastCalledWith(undefined);
   });
 
-  it("preserves ISO yyyy-MM-dd as a local calendar date", async () => {
+  it("preserves ISO yyyy-MM-dd as the same civil day", async () => {
     const user = userEvent.setup();
     const onValue = vi.fn();
     render(<ControlledDatePicker onValue={onValue} />);
@@ -102,10 +93,7 @@ describe("DatePicker typing contract", () => {
     await user.clear(input);
     await user.paste("2025-06-15");
 
-    expect(onValue).toHaveBeenLastCalledWith(expect.any(Date));
-    expect(format(onValue.mock.calls.at(-1)![0] as Date, "yyyy-MM-dd")).toBe(
-      "2025-06-15",
-    );
+    expect(onValue).toHaveBeenLastCalledWith("2025-06-15");
   });
 });
 
@@ -113,12 +101,7 @@ describe("DatePicker calendar year range", () => {
   it("opens on a next-year value with that month selected", async () => {
     const user = userEvent.setup();
     const onValue = vi.fn();
-    render(
-      <ControlledDatePicker
-        initial={new Date(2027, 0, 15)}
-        onValue={onValue}
-      />,
-    );
+    render(<ControlledDatePicker initial={"2027-01-15"} onValue={onValue} />);
 
     await user.click(screen.getByRole("button", { name: "Select date" }));
 
@@ -136,12 +119,7 @@ describe("DatePicker calendar year range", () => {
   it("navigates from December into the next calendar year", async () => {
     const user = userEvent.setup();
     const onValue = vi.fn();
-    render(
-      <ControlledDatePicker
-        initial={new Date(2026, 11, 1)}
-        onValue={onValue}
-      />,
-    );
+    render(<ControlledDatePicker initial={"2026-12-01"} onValue={onValue} />);
 
     await user.click(screen.getByRole("button", { name: "Select date" }));
 
@@ -160,10 +138,7 @@ describe("DatePicker calendar year range", () => {
     const dayButton = day15.querySelector("button");
     expect(dayButton).toBeTruthy();
     await user.click(dayButton!);
-    expect(onValue).toHaveBeenLastCalledWith(expect.any(Date));
-    expect(format(onValue.mock.calls.at(-1)![0] as Date, "yyyy-MM-dd")).toBe(
-      "2027-01-15",
-    );
+    expect(onValue).toHaveBeenLastCalledWith("2027-01-15");
   });
 });
 
@@ -194,30 +169,20 @@ describe("DatePicker locale ordering", () => {
 
     await user.clear(input);
     await user.type(input, "15/06/2025");
-    expect(format(onValue.mock.calls.at(-1)![0] as Date, "yyyy-MM-dd")).toBe(
-      "2025-06-15",
-    );
+    expect(onValue).toHaveBeenLastCalledWith("2025-06-15");
   });
 
   it("re-renders the same date on language change without republishing (m22)", () => {
     const onValue = vi.fn();
     const { rerender } = render(
-      <ControlledDatePicker
-        initial={new Date(2025, 5, 15)}
-        onValue={onValue}
-      />,
+      <ControlledDatePicker initial={"2025-06-15"} onValue={onValue} />,
     );
     expect(screen.getByRole("textbox")).toHaveValue("06/15/2025");
 
     mocks.dateLocale = fr;
-    rerender(
-      <ControlledDatePicker
-        initial={new Date(2025, 5, 15)}
-        onValue={onValue}
-      />,
-    );
+    rerender(<ControlledDatePicker initial={"2025-06-15"} onValue={onValue} />);
 
-    // Same selected Date in French clothes; the stored date is untouched.
+    // Same selected day in French clothes; the stored date is untouched.
     expect(screen.getByRole("textbox")).toHaveValue("15/06/2025");
     expect(onValue).not.toHaveBeenCalled();
   });
@@ -245,8 +210,8 @@ describe("DatePicker locale ordering", () => {
  * stored value is `undefined`, so after invalid text the picker is handed the
  * default date back (w0/005). Mirrors the journal forms' wiring.
  */
-function FormDatePicker({ defaultDate }: { defaultDate: Date }) {
-  const form = useForm<{ date: Date | undefined }>({
+function FormDatePicker({ defaultDate }: { defaultDate: string }) {
+  const form = useForm<{ date: string | undefined }>({
     defaultValues: { date: defaultDate },
   });
   return (
@@ -268,7 +233,7 @@ function FormDatePicker({ defaultDate }: { defaultDate: Date }) {
 describe("DatePicker inside react-hook-form", () => {
   it("keeps an invalid draft visible after blur instead of reverting to the default", async () => {
     const user = userEvent.setup();
-    render(<FormDatePicker defaultDate={new Date(2026, 9, 15)} />);
+    render(<FormDatePicker defaultDate="2026-10-15" />);
 
     const input = screen.getByRole("textbox");
     expect(input).toHaveValue("10/15/2026");
@@ -282,7 +247,7 @@ describe("DatePicker inside react-hook-form", () => {
 
   it("still normalizes a valid ISO draft on blur", async () => {
     const user = userEvent.setup();
-    render(<FormDatePicker defaultDate={new Date(2026, 9, 15)} />);
+    render(<FormDatePicker defaultDate="2026-10-15" />);
 
     const input = screen.getByRole("textbox");
     await user.clear(input);
@@ -291,5 +256,71 @@ describe("DatePicker inside react-hook-form", () => {
 
     expect(input).toHaveValue("02/28/2026");
     expect(input).not.toHaveAttribute("aria-invalid");
+  });
+});
+
+/** Pacific/Apia skipped 2011-12-30; the picker must still hold it (w4/m32). */
+describe("DatePicker in a timezone that skipped a day", () => {
+  const originalTz = process.env.TZ;
+  beforeEach(() => {
+    process.env.TZ = "Pacific/Apia";
+  });
+  afterEach(() => {
+    process.env.TZ = originalTz;
+  });
+
+  it("accepts the skipped day typed in either order", async () => {
+    const user = userEvent.setup();
+    const onValue = vi.fn();
+    render(<ControlledDatePicker onValue={onValue} />);
+
+    const input = screen.getByRole("textbox");
+    for (const typed of ["2011-12-30", "12/30/2011"]) {
+      await user.clear(input);
+      await user.type(input, typed);
+      expect(onValue).toHaveBeenLastCalledWith("2011-12-30");
+      await user.tab();
+      expect(input).toHaveValue("12/30/2011");
+      expect(input).not.toHaveAttribute("aria-invalid");
+    }
+  });
+
+  it("selects the skipped day in the calendar and picks its neighbours", async () => {
+    const user = userEvent.setup();
+    const onValue = vi.fn();
+    render(<ControlledDatePicker initial="2011-12-30" onValue={onValue} />);
+
+    await user.click(screen.getByRole("button", { name: "Select date" }));
+    expect(
+      screen.getByRole("combobox", { name: "Choose the Year" }),
+    ).toHaveTextContent("2011");
+    expect(
+      screen.getByRole("gridcell", { name: "30", selected: true }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Saturday, December 31st, 2011" }),
+    ).toBeInTheDocument();
+    // Cell labels read the civil day too, not the zone's local rendering.
+    expect(
+      screen.getByRole("button", { name: /December 30th, 2011/ }),
+    ).toHaveAttribute("data-day", "12/30/2011");
+
+    await user.click(
+      screen.getByRole("button", { name: "Thursday, December 29th, 2011" }),
+    );
+    expect(onValue).toHaveBeenLastCalledWith("2011-12-29");
+    expect(screen.getByRole("textbox")).toHaveValue("12/29/2011");
+  });
+
+  it("commits the local Today", async () => {
+    const user = userEvent.setup();
+    const onValue = vi.fn();
+    render(<ControlledDatePicker onValue={onValue} />);
+
+    await user.click(screen.getByRole("button", { name: "Select date" }));
+    await user.click(screen.getByRole("button", { name: "Today" }));
+    const now = new Date();
+    const local = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    expect(onValue).toHaveBeenLastCalledWith(local);
   });
 });

@@ -5,7 +5,6 @@ import { restoreFocusOnDialogClose } from "@/common/lib/focus/restore-focus-on-d
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@apollo/client/react";
-import { format } from "date-fns";
 import { BulkEntriesDocument, LedgerEntryType } from "@/graphql/definitions";
 import {
   Dialog,
@@ -25,11 +24,12 @@ import {
   FormMessage,
 } from "@/common/components/ui/form";
 import { DatePicker } from "@/common/components/ui/date-picker";
+import { todayIsoDate } from "@/common/components/ui/date-picker-utils";
 import { useOpenAccountSchema } from "@/common/hooks/use-open-account-schema";
 import { useWriteOutcome } from "@/common/hooks/use-write-outcome";
 
 type OpenAccountFormData = {
-  date: Date;
+  date: string;
   account: string;
 };
 
@@ -59,14 +59,14 @@ export function OpenAccountDialog({
   const form = useForm<OpenAccountFormData>({
     resolver: zodResolver(schema),
     defaultValues: {
-      date: new Date(),
+      date: todayIsoDate(),
       account: "",
     },
     mode: "onChange",
   });
 
   const resetForm = () => {
-    form.reset({ date: new Date(), account: "" });
+    form.reset({ date: todayIsoDate(), account: "" });
     setError(null);
   };
 
@@ -81,7 +81,7 @@ export function OpenAccountDialog({
             {
               type: LedgerEntryType.Open,
               open: {
-                date: format(data.date, "yyyy-MM-dd"),
+                date: data.date,
                 account: data.account,
                 currencies: [],
               },

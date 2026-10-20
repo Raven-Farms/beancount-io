@@ -22,8 +22,8 @@ import {
   SelectValue,
 } from "@/common/components/ui/select";
 import { DatePicker } from "@/common/components/ui/date-picker";
+import { todayIsoDate } from "@/common/components/ui/date-picker-utils";
 import { Plus, Trash2 } from "lucide-react";
-import { format } from "date-fns";
 import {
   BulkEntriesDocument,
   LedgerEntryType,
@@ -56,7 +56,7 @@ import {
 } from "./transaction-auto-balance";
 import { parseDecimalNumber } from "@/common/lib/beancount/decimal-number";
 import { AccountAvailabilityNotice } from "./account-availability-notice";
-import { entryDay, useAccountAvailability } from "./use-account-availability";
+import { useAccountAvailability } from "./use-account-availability";
 
 interface TransactionFormProps {
   ledgerId: string;
@@ -64,7 +64,7 @@ interface TransactionFormProps {
 }
 
 type TransactionFormData = {
-  date: Date;
+  date: string;
   flag: string;
   payee?: string;
   narration?: string;
@@ -108,7 +108,7 @@ export function TransactionForm({ ledgerId, onSuccess }: TransactionFormProps) {
   const transactionSchema = useMemo(
     () =>
       z.object({
-        date: z.date(),
+        date: z.iso.date(),
         flag: z.string().trim(),
         payee: z.string().trim().optional(),
         narration: z.string().trim().optional(),
@@ -120,7 +120,7 @@ export function TransactionForm({ ledgerId, onSuccess }: TransactionFormProps) {
   const form = useForm<TransactionFormData>({
     resolver: zodResolver(transactionSchema),
     defaultValues: {
-      date: new Date(),
+      date: todayIsoDate(),
       flag: "*",
       postings: [
         {
@@ -186,7 +186,7 @@ export function TransactionForm({ ledgerId, onSuccess }: TransactionFormProps) {
   }, [watchedPostings, append, primaryCurrency]);
 
   const accounts = useAccountAvailability(ledgerId);
-  const day = entryDay(form.watch("date"));
+  const day = form.watch("date") || null;
   const postingAccounts = (watchedPostings ?? []).map(
     (posting) => posting.account,
   );
@@ -203,9 +203,8 @@ export function TransactionForm({ ledgerId, onSuccess }: TransactionFormProps) {
     setError(null);
 
     try {
-      const entryDate = entryDay(data.date);
       const named = data.postings.map((posting) => posting.account);
-      if (accounts.blocks(named, entryDate)) return;
+      if (accounts.blocks(named, data.date)) return;
 
       const { balances, incomplete } = computeAutoBalance(
         data.postings,
@@ -262,7 +261,7 @@ export function TransactionForm({ ledgerId, onSuccess }: TransactionFormProps) {
 
       // Create transaction input
       const transactionInput: LedgerTransactionInput = {
-        date: format(data.date, "yyyy-MM-dd"),
+        date: data.date,
         flag: data.flag,
         payee: data.payee,
         narration: data.narration,
@@ -272,7 +271,7 @@ export function TransactionForm({ ledgerId, onSuccess }: TransactionFormProps) {
       const variables: BulkEntriesMutationVariables = {
         ledgerId,
         entries: [
-          ...accounts.openEntries(named, entryDate),
+          ...accounts.openEntries(named, data.date),
           { type: LedgerEntryType.Transaction, transaction: transactionInput },
         ],
       };
@@ -282,7 +281,7 @@ export function TransactionForm({ ledgerId, onSuccess }: TransactionFormProps) {
       if (result.data?.bulkEntries.success) {
         // Reset form
         form.reset({
-          date: new Date(),
+          date: todayIsoDate(),
           flag: "*",
           payee: "",
           narration: "",

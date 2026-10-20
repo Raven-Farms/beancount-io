@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { CalendarIcon } from "lucide-react";
-import { format, isValid } from "date-fns";
 
 import { Button } from "@/common/components/ui/button";
 import { Calendar } from "@/common/components/ui/calendar";
@@ -17,31 +16,33 @@ import { useTranslations } from "@/common/hooks/use-translations";
 import { useDateLocale } from "@/common/hooks/use-date-locale";
 import {
   ISO_PATTERN,
+  calendarToIsoDate,
+  calendarToday,
+  civilCalendarDateLib,
+  formatIsoDate,
   getDisplayPattern,
   getPatternHint,
+  isoDateToCalendar,
   parseStrictCalendarDate,
   rollingCalendarBounds,
+  todayIsoDate,
 } from "./date-picker-utils";
-
-function formatDate(date: Date | undefined, pattern: string) {
-  if (!date || !isValid(date)) {
-    return "";
-  }
-  return format(date, pattern);
-}
 
 interface DatePickerProps {
   id?: string;
   label?: string;
-  value: Date | undefined;
-  onChange: (date: Date | undefined) => void;
+  /** A canonical `yyyy-MM-dd` civil day, never a local instant (m32). */
+  value: string | undefined;
+  onChange: (date: string | undefined) => void;
   required?: boolean;
   className?: string;
 }
 
 /**
  * Reusable date picker component using shadcn/ui Calendar and Popover
- * Provides both input field and calendar popup for date selection
+ * Provides both input field and calendar popup for date selection.
+ * Values are `yyyy-MM-dd` days, so a day the browser timezone skipped (e.g.
+ * 2011-12-30 in Pacific/Apia) stays enterable, in the calendar too.
  */
 export function DatePicker({
   id,
@@ -60,10 +61,15 @@ export function DatePicker({
   const hint = getPatternHint(displayPattern);
   const isoHint = getPatternHint(ISO_PATTERN);
   const [open, setOpen] = React.useState(false);
-  const [month, setMonth] = React.useState<Date | undefined>(value);
-  const [inputValue, setInputValue] = React.useState(
-    formatDate(value, displayPattern),
+  const [month, setMonth] = React.useState<Date | undefined>(
+    value ? isoDateToCalendar(value) : undefined,
   );
+  const [inputValue, setInputValue] = React.useState(
+    formatIsoDate(value, displayPattern),
+  );
+  const showMonthOf = (day: string | undefined) => {
+    if (day) setMonth(isoDateToCalendar(day));
+  };
   // Keep the typed draft while the parent echoes an invalid/empty value.
   const [isEditing, setIsEditing] = React.useState(false);
 
@@ -97,13 +103,11 @@ export function DatePicker({
     ) {
       return;
     }
-    // A language change re-renders the same selected Date in the new
+    // A language change re-renders the same selected day in the new
     // pattern; the stored date is never reinterpreted (m22), and a
     // mid-edit draft is left untouched until blur or commit.
-    setInputValue(formatDate(value, displayPattern));
-    if (value && isValid(value)) {
-      setMonth(value);
-    }
+    setInputValue(formatIsoDate(value, displayPattern));
+    showMonthOf(value);
   }, [value, displayPattern, isEditing]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -113,35 +117,30 @@ export function DatePicker({
 
     const parsed = parseStrictCalendarDate(next, displayPattern);
     onChange(parsed);
-    if (parsed) {
-      setMonth(parsed);
-    }
+    showMonthOf(parsed);
   };
 
-  const commitDate = (date: Date | undefined) => {
+  const commitDate = (date: string | undefined) => {
     setIsEditing(false);
     onChange(date);
-    setInputValue(formatDate(date, displayPattern));
-    if (date) {
-      setMonth(date);
-    }
+    setInputValue(formatIsoDate(date, displayPattern));
+    showMonthOf(date);
   };
 
   const handleCalendarSelect = (date: Date | undefined) => {
-    commitDate(date);
+    commitDate(date ? calendarToIsoDate(date) : undefined);
     setOpen(false);
   };
 
   const handleTodayClick = () => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    commitDate(today);
+    commitDate(todayIsoDate());
     setOpen(false);
   };
 
-  const boundsAnchor =
-    month ?? (value && isValid(value) ? value : undefined) ?? new Date();
-  const { startMonth, endMonth } = rollingCalendarBounds(boundsAnchor);
+  const selected = value ? isoDateToCalendar(value) : undefined;
+  const { startMonth, endMonth } = rollingCalendarBounds(
+    month ?? selected ?? calendarToday(),
+  );
 
   return (
     <div className={`space-y-2 ${className}`}>
@@ -162,12 +161,8 @@ export function DatePicker({
             setIsEditing(false);
             // Normalize only a draft that parses; invalid text stays for the
             // user to correct.
-            if (
-              value &&
-              isValid(value) &&
-              parseStrictCalendarDate(inputValue, displayPattern)
-            ) {
-              setInputValue(formatDate(value, displayPattern));
+            if (value && parseStrictCalendarDate(inputValue, displayPattern)) {
+              setInputValue(formatIsoDate(value, displayPattern));
             }
           }}
           onKeyDown={(e) => {
@@ -214,7 +209,8 @@ export function DatePicker({
             </div>
             <Calendar
               mode="single"
-              selected={value}
+              dateLib={civilCalendarDateLib}
+              selected={selected}
               captionLayout="dropdown"
               month={month}
               startMonth={startMonth}
