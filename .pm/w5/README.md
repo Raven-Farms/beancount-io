@@ -43,6 +43,7 @@
 - [876 — Retain confirmed zero opening balances in preset creation](./876.md) — minor CLI gap against completed m53's opening-state contract; reproduced 2026-10-20.
 - [877 — Match preset creation summaries to actual account counts and opening dates](./877.md) — minor CLI success-output finding; reproduced 2026-10-20.
 - [878 — Validate preset currencies before unrelated prompts and retry invalid answers](./878.md) — minor CLI PTY onboarding finding; reproduced 2026-10-20.
+- [879 — Refuse portable exports that cannot enumerate required plugin resource directories](./879.md) — minor CLI snapshot-integrity follow-up to 868; reproduced 2026-10-20.
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
