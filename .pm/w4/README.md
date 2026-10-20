@@ -5,7 +5,6 @@
 ## Inbox
 
 - [243 — Keep narrow Documents columns readable](./blocked/243.md) — minor; dashboard QA, 2026-10-20. — **blocked:** fix shipped in `19547f970`; awaiting live 390px geometry check
-- [244 — Preserve fragments in native guest sign-in links](./244.md) — minor; dashboard QA, 2026-10-20.
 - [245 — Name imported amounts with their normalized preview value](./245.md) — minor; dashboard QA, 2026-10-20.
 - [246 — Keep loaded history pages while selecting a commit](./246.md) — minor; dashboard QA, 2026-10-20.
 - [247 — Keep Create File from discarding edits accepted while pending](./247.md) — major; dashboard QA, 2026-10-20.
