@@ -235,6 +235,11 @@ export interface SourceBlock {
   text: string;
   /** Whether the block starts with a date (a parseable directive). */
   isDated: boolean;
+  /**
+   * 0-based line on which the directive's header line logically ends — the
+   * start line unless a quoted string in the header spans physical lines.
+   */
+  headerEndLine: number;
 }
 
 /**
@@ -255,12 +260,43 @@ function isTopLevelStart(line: string): boolean {
 }
 
 /**
+ * Whether a quoted string is still open at the end of `line`, given whether
+ * one was open at its start. Beancount strings escape `"` and `\\` with a
+ * backslash; outside a string, `;` starts a comment that runs to line end.
+ */
+function endsInsideString(line: string, startsInside: boolean): boolean {
+  let inside = startsInside;
+  for (let i = 0; i < line.length; i += 1) {
+    const ch = line[i];
+    if (inside) {
+      if (ch === "\\") i += 1;
+      else if (ch === '"') inside = false;
+    } else if (ch === '"') {
+      inside = true;
+    } else if (ch === ";") {
+      break;
+    }
+  }
+  return inside;
+}
+
+/** Whether `line` continues the block above it outside a string. */
+function isContinuation(line: string): boolean {
+  return line.trim().length > 0 && (line[0] === " " || line[0] === "\t");
+}
+
+/**
  * Split a file's text into top-level blocks, mirroring fava's
  * `_find_entry_lines`: a block is a column-0 directive line plus its
  * immediately-following indented continuation lines, stopping at the first
  * blank or non-indented line. Blank lines and non-directive column-0 lines
  * between blocks are NOT part of any block (they are the whitespace fava's
  * delete/update preserve).
+ *
+ * Lines inside a quoted string are content, not layout: a multiline Note
+ * or narration keeps its unindented, blank and date-like lines in its block
+ * (w4/m34). A string that never closes falls back to the plain line rule,
+ * so one stray quote cannot swallow the rest of an invalid file.
  */
 export function splitIntoBlocks(fileText: string): SourceBlock[] {
   const lines = fileText.split("\n");
@@ -273,20 +309,29 @@ export function splitIntoBlocks(fileText: string): SourceBlock[] {
       continue;
     }
     let end = index + 1;
-    while (end < lines.length) {
-      const next = lines[end];
-      if (next.trim().length === 0) break;
-      if (next[0] === " " || next[0] === "\t") {
-        end += 1;
-        continue;
+    let headerEndLine = index;
+    let inString = endsInsideString(line, false);
+    let headerOpen = inString;
+    while (end < lines.length && (inString || isContinuation(lines[end]))) {
+      inString = endsInsideString(lines[end], inString);
+      if (headerOpen) {
+        headerEndLine = end;
+        headerOpen = inString;
       }
-      break;
+      end += 1;
     }
+    if (inString) {
+      end = index + 1;
+      while (end < lines.length && isContinuation(lines[end])) end += 1;
+      headerEndLine = index;
+    }
+
     blocks.push({
       startLine: index,
       endLine: end,
       text: lines.slice(index, end).join("\n"),
       isDated: DATE_PREFIX.test(line),
+      headerEndLine,
     });
     index = end;
   }
@@ -328,12 +373,14 @@ export function buildSourceDetailsProbe(
         block,
       ]),
     );
+    // Keyed by the header's last physical line: the marker must follow the
+    // whole header, never land inside a multiline string literal (w4/m34).
     const markerByLine = new Map<number, string>();
     for (const block of splitIntoBlocks(source)) {
       if (!block.isDated) continue;
       const marker = String(nextMarker);
       nextMarker += 1;
-      markerByLine.set(block.startLine, marker);
+      markerByLine.set(block.headerEndLine, marker);
       const original = sourceBlocks.get(block.startLine) ?? block;
       const documentSyntax = DOCUMENT_LINE_RE.test(
         original.text.split("\n", 1)[0],

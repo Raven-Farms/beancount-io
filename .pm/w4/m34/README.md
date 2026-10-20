@@ -1,6 +1,6 @@
 # w4 · m34 — Resolve multiline entry sources without splitting quoted strings
 
-**Worker:** worker1 **Goal:** Every valid source-backed multiline Note can be opened through its current Journal identity, with its entire source span and neighboring bytes intact. **Status:** todo
+**Worker:** worker1 **Goal:** Every valid source-backed multiline Note can be opened through its current Journal identity, with its entire source span and neighboring bytes intact. **Status:** todo (t001, t002, t004, t005 done)
 
 **Severity:** minor (valid entries cannot be opened for source editing). **Estimate:** 150m across six tasks; implementation owned by ledger.
 
@@ -12,11 +12,11 @@ Continuous dashboard QA requested for w4, 2026-10-20. **A2 — Frictionless onbo
 
 | id | title | est | depends_on |
 | --- | --- | --- | --- |
-| [t001](./t001.md) | Respect quoted-string boundaries in source blocks | 45m | — |
-| [t002](./t002.md) | Keep source probes and slice consumers on complete directives | 35m | t001 |
+| [t001](./done/t001.md) | Respect quoted-string boundaries in source blocks — **DONE** | 45m | — |
+| [t002](./done/t002.md) | Keep source probes and slice consumers on complete directives — **DONE** | 35m | t001 |
 | [t003](./t003.md) | Verify valid multiline entries through the dashboard | 10m | t002 |
-| [t004](./t004.md) | Simplify the source boundary handling | 15m | t003 |
-| [t005](./t005.md) | Prove complete source spans and validate eligible API surfaces | 35m | t003 |
+| [t004](./done/t004.md) | Simplify the source boundary handling — **DONE** | 15m | t003 |
+| [t005](./done/t005.md) | Prove complete source spans and validate eligible API surfaces — **DONE** | 35m | t003 |
 | [t006](./t006.md) | Close out and archive the milestone | 10m | t004, t005 |
 
 ## Fresh live reproduction and working control

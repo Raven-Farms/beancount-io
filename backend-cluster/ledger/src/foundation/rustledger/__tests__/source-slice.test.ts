@@ -117,7 +117,144 @@ describe("splitIntoBlocks", () => {
   });
 });
 
+/** Lines inside a quoted string are content, not block layout (w4/m34). */
+describe("splitIntoBlocks — multiline strings", () => {
+  const texts = (source: string) =>
+    splitIntoBlocks(source).map((block) => block.text);
+
+  it.each([
+    ["an unindented line", '2024-03-01 note Assets:Cash "one\ntwo\nthree"'],
+    ["a blank line", '2024-03-01 note Assets:Cash "one\n\ntwo"'],
+    [
+      "a date-like line",
+      '2024-03-01 note Assets:Cash "one\n2024-03-02 open Assets:Phantom"',
+    ],
+    ["an indented line", '2024-03-01 note Assets:Cash "one\n  two"'],
+  ])("keeps %s inside the literal in its block", (_case, note) => {
+    const source = `${note}\n\n2024-03-05 note Assets:Cash "after"\n`;
+    expect(texts(source)).toEqual([
+      note,
+      '2024-03-05 note Assets:Cash "after"',
+    ]);
+  });
+
+  it("ends the header after a multiline narration and keeps its postings", () => {
+    const txn = [
+      '2024-03-09 * "Payee" "two-line',
+      'narration"',
+      "  Expenses:Food   1.25 USD",
+      "  Assets:Cash",
+    ].join("\n");
+    const [block] = splitIntoBlocks(`${txn}\n`);
+    expect(block.text).toBe(txn);
+    expect(block.headerEndLine).toBe(1);
+    expect(block.endLine).toBe(4);
+  });
+
+  it("honors escaped quotes and backslashes", () => {
+    const note = '2024-03-01 note Assets:Cash "say \\"hi\\"\nC:\\\\dir\\\\"';
+    expect(texts(`${note}\n2024-03-02 note Assets:Cash "next"`)).toEqual([
+      note,
+      '2024-03-02 note Assets:Cash "next"',
+    ]);
+  });
+
+  it("ignores a quote inside a comment", () => {
+    const source =
+      '2024-03-01 open Assets:Cash ; an "unclosed comment\n2024-03-02 note Assets:Cash "x"';
+    expect(texts(source)).toHaveLength(2);
+  });
+
+  it("keeps CRLF line endings inside the block text", () => {
+    const note = '2024-03-01 note Assets:Cash "one\r\ntwo"\r';
+    expect(texts(`${note}\n\r\n2024-03-02 note Assets:Cash "x"`)[0]).toBe(note);
+  });
+
+  it("falls back to the line rule when a quote never closes", () => {
+    const source = [
+      '2024-03-01 note Assets:Cash "never closed',
+      "",
+      '2024-03-02 note Assets:Cash "fine"',
+    ].join("\n");
+    expect(texts(source)).toEqual([
+      '2024-03-01 note Assets:Cash "never closed',
+      '2024-03-02 note Assets:Cash "fine"',
+    ]);
+  });
+
+  it("deletes and replaces the whole multiline block, keeping neighbors", () => {
+    const source = [
+      '2024-03-01 note Assets:Cash "keep before"',
+      "",
+      '2024-03-02 note Assets:Cash "one',
+      "",
+      'two"',
+      "",
+      '2024-03-03 note Assets:Cash "keep after"',
+      "",
+    ].join("\n");
+    const block = splitIntoBlocks(source)[1];
+    expect(deleteSliceFromFile(source, block.startLine, block.endLine)).toBe(
+      [
+        '2024-03-01 note Assets:Cash "keep before"',
+        "",
+        "",
+        '2024-03-03 note Assets:Cash "keep after"',
+        "",
+      ].join("\n"),
+    );
+    expect(
+      replaceSliceInFile(
+        source,
+        block.startLine,
+        block.endLine,
+        '2024-03-02 note Assets:Cash "edited"',
+      ),
+    ).toBe(
+      [
+        '2024-03-01 note Assets:Cash "keep before"',
+        "",
+        '2024-03-02 note Assets:Cash "edited"',
+        "",
+        '2024-03-03 note Assets:Cash "keep after"',
+        "",
+      ].join("\n"),
+    );
+  });
+});
+
 describe("single-parse source details probe", () => {
+  it("places the marker after a multiline header, outside the literal", () => {
+    const source = [
+      '2024-03-01 note Assets:Cash "one',
+      "",
+      'two"',
+      '2024-03-02 * "Payee" "multi',
+      'line"',
+      "  Assets:Cash  1 USD",
+      "  Expenses:Food",
+      "",
+    ].join("\n");
+    const probe = buildSourceDetailsProbe({ "main.bean": source });
+    const marker = (n: number) => `  ${probe.markerKey}: "${n}"`;
+    expect(probe.files["main.bean"].split("\n")).toEqual([
+      '2024-03-01 note Assets:Cash "one',
+      "",
+      'two"',
+      marker(0),
+      '2024-03-02 * "Payee" "multi',
+      'line"',
+      marker(1),
+      "  Assets:Cash  1 USD",
+      "  Expenses:Food",
+      "",
+    ]);
+    expect(probe.detailsByMarker.get("1")).toEqual({
+      filename: "main.bean",
+      lineno: 4,
+    });
+  });
+
   it("preserves line provenance and duplicate occurrence ids", () => {
     const files = {
       "main.bean": [

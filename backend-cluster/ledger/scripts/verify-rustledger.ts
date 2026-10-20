@@ -27,6 +27,7 @@ import {
   getRustledgerVersion,
   hashEntry,
   parseLedgerFiles,
+  parseLedgerFilesInProcess,
   queryLedgerFiles,
   queryLedgerFilesResult,
   withLedger,
@@ -572,6 +573,85 @@ async function verifyWindowedPlaintextExport(): Promise<void> {
       content.includes("2016-03-01 pad Assets:Cash Equity:Opening"),
     "the export carries the window's opening lots and its pad directives",
   );
+}
+
+/**
+ * A quoted string may span physical lines — unindented, blank and date-like
+ * lines inside it are content (w4/m34). Each such entry must resolve its
+ * complete source block, and the source-details marker probe must not land
+ * inside the literal.
+ */
+async function verifyMultilineSources(): Promise<void> {
+  const notes = [
+    'qa "quoted" C:\\qa\\receipts\nsecond line\nthird line',
+    "first\n\nafter a blank line",
+    "first\n2024-03-02 open Assets:Phantom",
+    "indented\n  second line",
+  ];
+  const noteBlocks = notes.map(
+    (comment, index) =>
+      `2024-03-0${index + 1} note Assets:Cash "${comment.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`,
+  );
+  const txnBlock = [
+    '2024-03-09 * "Payee" "two-line',
+    'narration"',
+    "  Expenses:Food   1.25 USD",
+    "  Assets:Cash",
+  ].join("\n");
+  const tail = "2024-03-10 note Assets:Cash \"after\"";
+  const source = [
+    "2024-01-01 open Assets:Cash",
+    "2024-01-01 open Expenses:Food",
+    "",
+    ...noteBlocks.flatMap((block) => [block, ""]),
+    txnBlock,
+    "",
+    tail,
+    "",
+  ].join("\n");
+  const files: FileMap = { "main.beancount": source };
+
+  const plain = await parseLedgerFiles(files, "main.beancount");
+  assert(plain.valid, "multiline-string ledger is valid");
+  const probed = await parseLedgerFilesInProcess(files, "main.beancount", {
+    includeSourceDetails: true,
+  });
+  const comments = probed.directives
+    .filter((directive) => directive.type === "note")
+    .map((directive) => (directive as { comment: string }).comment);
+  deepStrictEqual(comments, [...notes, "after"]);
+  console.log("✓ multiline literals parse exactly as written");
+  assert(
+    probed.directives.length === plain.directives.length,
+    "source-details probe adds no phantom directive",
+  );
+
+  const ids = buildEntryIdMap(plain.directives);
+  const expected = [...noteBlocks, txnBlock, tail];
+  const resolvable = plain.directives.filter(
+    (directive) => directive.type === "note" || directive.type === "transaction",
+  );
+  for (const [index, directive] of resolvable.entries()) {
+    const id = ids.get(directive);
+    assert(id !== undefined, `multiline entry ${index} has an entry ID`);
+    // The probe's marker must follow the whole header, outside the literal,
+    // or the entry gets no source details at all.
+    const startLine = source.split("\n").indexOf(expected[index].split("\n")[0]);
+    assert(
+      probed.sourceDetails?.[id]?.lineno === startLine + 1,
+      `multiline entry ${index} carries probe source details at its line`,
+    );
+    const found = await findEntrySliceWithFullLedger(
+      files,
+      "main.beancount",
+      id,
+    );
+    assert(
+      found?.slice === expected[index] &&
+        source.split("\n")[found.startLine] === expected[index].split("\n")[0],
+      `multiline entry ${index} resolves its complete source block`,
+    );
+  }
 }
 
 async function main(): Promise<void> {
@@ -1512,6 +1592,8 @@ async function main(): Promise<void> {
     scopedIncluded.valid,
     "included option/plugin is neutralized so a valid ledger stays valid (#4)",
   );
+
+  await verifyMultilineSources();
 
   console.log("\nAll rustledger engine checks passed.");
 }
