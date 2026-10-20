@@ -524,7 +524,10 @@ describe("AuthResolver session cookie Domain (AUTH_COOKIE_DOMAIN)", () => {
       } as unknown as jest.Mocked<IAuthSessionWorkflow>;
       const resolver = new AuthResolver(authService, workflow);
 
-      await resolver.signIn(ctx, { email: "a@example.com", password: "pw" } as never);
+      await resolver.signIn(ctx, {
+        email: "a@example.com",
+        password: "pw",
+      } as never);
       await resolver.logout(ctx);
 
       expect(set).toHaveBeenCalledTimes(2);
