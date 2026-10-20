@@ -77,10 +77,13 @@ function createStore() {
     ),
   };
   const emailToken = {
+    deleteByUserId: jest.fn(async (_userId: string) => undefined),
     findOne: jest.fn(async (token: string) =>
       token === "reset-token" ? { userId: "user-1" } : null,
     ),
-    findOneAndDelete: jest.fn(async () => undefined),
+    findOneAndDelete: jest.fn(
+      async () => ({ userId: "user-1" }) as { userId: string } | null,
+    ),
   };
   const isPwnedPassword = jest.fn<ReturnType<IsPwnedPassword>, [string]>(
     async () => false,
@@ -234,4 +237,32 @@ describe("resetPassword password policy", () => {
     ).rejects.toMatchObject(refusedFor(rule));
     expect(isPwnedPassword).not.toHaveBeenCalled();
   });
+});
+
+it("does not change a password when another request already spent its token", async () => {
+  const { service, emailToken, user, jwt } = createStore();
+  emailToken.findOneAndDelete.mockResolvedValueOnce(null);
+  await expect(
+    service.resetPassword("reset-token", "acceptable-new-secret"),
+  ).rejects.toBeInstanceOf(BadUserInputError);
+  expect(user.updatePassword).not.toHaveBeenCalled();
+  expect(jwt.deleteByUserId).not.toHaveBeenCalled();
+});
+
+it("revokes sibling reset links before committing the new password", async () => {
+  const { service, emailToken, passwordOf } = createStore();
+  await service.resetPassword("reset-token", "acceptable-new-secret");
+  expect(emailToken.deleteByUserId).toHaveBeenCalledWith("user-1");
+  expect(passwordOf("user-1")).toBe("acceptable-new-secret");
+});
+
+it("rolls back the password change if sibling reset links could not be revoked", async () => {
+  const { service, emailToken, passwordOf } = createStore();
+  emailToken.deleteByUserId.mockRejectedValueOnce(
+    new Error("synthetic unavailable storage"),
+  );
+  await expect(
+    service.resetPassword("reset-token", "acceptable-new-secret"),
+  ).rejects.toThrow();
+  expect(passwordOf("user-1")).toBe("old-password");
 });

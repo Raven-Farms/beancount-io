@@ -54,7 +54,8 @@ function createService() {
   };
   const emailToken = {
     findOne: jest.fn(async () => ({ userId: ALICE.id })),
-    findOneAndDelete: jest.fn(async () => undefined),
+    findOneAndDelete: jest.fn(async () => ({ userId: ALICE.id })),
+    deleteByUserId: jest.fn(async () => undefined),
   };
   const oauthGrant = { revokeAllForUser: jest.fn(async () => undefined) };
   const service = new AuthService(

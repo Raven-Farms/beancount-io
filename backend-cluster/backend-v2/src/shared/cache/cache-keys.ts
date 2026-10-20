@@ -33,6 +33,10 @@ export const CACHE_KEYS = {
     emailTokenByToken: (token: string) => `auth:email_token:token:${token}`,
     /** Email verification tokens owned by a user (array of token values). */
     emailTokensByUser: (userId: string) => `auth:email_token:user:${userId}`,
+    /** Raw Redis records retain consumption tombstones until absolute expiry. */
+    emailTokenIssued: (digest: string) => `auth:email_token:issued:${digest}`,
+    emailTokensIssuedByUser: (userId: string) =>
+      `auth:email_token:issued_user:${userId}`,
     /** Magic link token by id. */
     magicLinkTokenById: (id: string) => `auth:magic_link_token:id:${id}`,
     /** Magic link tokens owned by a user (array of ids). */
@@ -69,6 +73,13 @@ export const CACHE_KEYS = {
       subject: string,
       windowMs: number,
     ) => `auth:password_requests:${dimension}:${subject}:${windowMs}`,
+    /** Shared ceremony/delivery budgets; subjects contain digests only. */
+    ceremonyRequests: (purpose: string, subject: string, windowMs: number) =>
+      `auth:ceremony_requests:${purpose}:${subject}:${windowMs}`,
+    signInRecoveryProof: (challengeDigest: string) =>
+      `auth:sign_in_recovery:proof:${challengeDigest}`,
+    signInRecoverySpent: (challengeDigest: string) =>
+      `auth:sign_in_recovery:spent:${challengeDigest}`,
     /** Atomic single-approval claim for one CLI auth session. */
     cliAuthApprovalClaim: (id: string) => `auth:cli_auth_approval_claim:${id}`,
     /** Atomic single-redemption claim for one CLI auth session. */

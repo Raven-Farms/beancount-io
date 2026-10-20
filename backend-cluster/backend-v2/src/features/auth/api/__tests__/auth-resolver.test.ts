@@ -459,6 +459,7 @@ describe("AuthResolver", () => {
       expect(mockAuthSessionWorkflow.verifySignUpOtp).toHaveBeenCalledWith({
         sessionId: "session-123",
         otp: "1234",
+        ip: "127.0.0.1",
       });
       expect((mockContext.koaCtx as any).cookies.set).toHaveBeenCalledWith(
         "authSess:beancount.io",

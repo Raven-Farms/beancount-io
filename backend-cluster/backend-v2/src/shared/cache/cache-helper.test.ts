@@ -1,8 +1,14 @@
 import { type Cache } from "cache-manager";
 
 jest.mock("@/shared/lock");
+jest.mock("@/shared/logger", () => {
+  const logger = { warn: jest.fn(), error: jest.fn(), child: jest.fn() };
+  logger.child.mockReturnValue(logger);
+  return { logger };
+});
 
 import { lock } from "@/shared/lock";
+import { logger } from "@/shared/logger";
 import { createCacheHelper, type CacheHelper } from "./cache-helper";
 
 const mockLock = lock as jest.Mocked<typeof lock>;
@@ -188,5 +194,84 @@ describe("cache-helper", () => {
         await expect(helper.delStrict("k")).rejects.toThrow("ECONNREFUSED");
       });
     });
+  });
+
+  it.each([
+    "get",
+    "set",
+    "del",
+    "getStrict",
+    "setStrict",
+    "delStrict",
+  ] as const)(
+    "%s never logs auth keys, values or provider errors while retaining its failure semantics",
+    async (operation) => {
+      const secret = "synthetic-private-auth-token";
+      const key = `auth:password-reset:${secret}`;
+      const value = { email: `${secret}@example.com`, otp: secret };
+      const error = Object.assign(
+        new Error(`SET ${key} ${JSON.stringify(value)}`),
+        {
+          name: secret,
+          command: { name: "set", args: [key, value] },
+        },
+      );
+      mockCache.get.mockRejectedValue(error);
+      mockCache.set.mockRejectedValue(error);
+      mockCache.del.mockRejectedValue(error);
+      const operations = {
+        get: () => helper.get(key),
+        set: () => helper.set(key, value, 1000),
+        del: () => helper.del(key),
+        getStrict: () => helper.getStrict(key),
+        setStrict: () => helper.setStrict(key, value, 1000),
+        delStrict: () => helper.delStrict(key),
+      };
+
+      const result = operations[operation]();
+      const strict = operation.endsWith("Strict");
+      if (strict) await expect(result).rejects.toBe(error);
+      else await expect(result).resolves.toBeUndefined();
+
+      const logs = (strict ? logger.error : logger.warn) as jest.Mock;
+      expect(logs.mock.calls).toEqual([
+        [
+          "Cache operation failed",
+          { operation, errorCategory: "CACHE_FAILURE" },
+        ],
+      ]);
+      expect(JSON.stringify(logs.mock.calls)).not.toContain(secret);
+    },
+  );
+
+  it("keeps read-through cache failures private while returning the loader's value", async () => {
+    const secret = "synthetic-private-otp";
+    const error = new Error(secret);
+    mockCache.get.mockRejectedValue(error);
+    mockCache.set.mockRejectedValue(error);
+
+    await expect(
+      helper.getOrSet(`auth:otp:${secret}`, 1000, async () => ({
+        otp: secret,
+      })),
+    ).resolves.toEqual({ otp: secret });
+
+    expect((logger.warn as jest.Mock).mock.calls).toEqual([
+      [
+        "Cache operation failed",
+        { operation: "get", errorCategory: "CACHE_FAILURE" },
+      ],
+      [
+        "Cache operation failed",
+        { operation: "get", errorCategory: "CACHE_FAILURE" },
+      ],
+      [
+        "Cache operation failed",
+        { operation: "set", errorCategory: "CACHE_FAILURE" },
+      ],
+    ]);
+    expect(JSON.stringify((logger.warn as jest.Mock).mock.calls)).not.toContain(
+      secret,
+    );
   });
 });

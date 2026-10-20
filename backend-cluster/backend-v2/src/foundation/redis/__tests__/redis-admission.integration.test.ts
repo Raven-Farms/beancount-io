@@ -5,6 +5,12 @@ import path from "node:path";
 import { createClient } from "@keyv/redis";
 import { getRedisClient } from "../redis-utils";
 import {
+  issueSignInRecoveryProof,
+  consumeSignInRecoveryProof,
+} from "@/features/auth/operations/sign-in-recovery-proof";
+import { CACHE_KEYS } from "@/shared/cache";
+import { createHash } from "node:crypto";
+import {
   clearFailureBudget,
   completeFailureBudget,
   consumeSlidingWindows,
@@ -341,4 +347,112 @@ it("denied failure-budget requests do not renew either lease or failure expirati
   expect(await client.pTTL("account:pending")).toBeLessThanOrEqual(
     pendingTtl - 20,
   );
+});
+
+const recoverySecret = "synthetic-recovery-integration-secret";
+it("binds recovery code to action, mailbox and challenge, then consumes once under contention", async () => {
+  const proof = await issueSignInRecoveryProof(
+    "person@example.com",
+    "usr_owner",
+    "challenge-a",
+    recoverySecret,
+  );
+  expect(proof!.code).toMatch(/^\d{6}$/);
+  // A requester's public receipt cannot target the mailed ownership challenge.
+  expect(proof!.challengeId).not.toBe("challenge-a");
+  expect(
+    await consumeSignInRecoveryProof(
+      "person@example.com",
+      "challenge-a",
+      proof!.code,
+      recoverySecret,
+    ),
+  ).toBeNull();
+  expect(
+    await consumeSignInRecoveryProof(
+      "other@example.com",
+      proof!.challengeId,
+      proof!.code,
+      recoverySecret,
+    ),
+  ).toBeNull();
+  expect(
+    await consumeSignInRecoveryProof(
+      "person@example.com",
+      "challenge-b",
+      proof!.code,
+      recoverySecret,
+    ),
+  ).toBeNull();
+  const results = await Promise.all(
+    Array.from({ length: 20 }, () =>
+      consumeSignInRecoveryProof(
+        "person@example.com",
+        proof!.challengeId,
+        proof!.code,
+        recoverySecret,
+      ),
+    ),
+  );
+  expect(results.filter(Boolean)).toEqual(["usr_owner"]);
+  expect(
+    await issueSignInRecoveryProof(
+      "person@example.com",
+      "usr_owner",
+      "challenge-a",
+      recoverySecret,
+    ),
+  ).toBeNull();
+});
+
+it("recovery delivery retries keep code and expiry, and an expired proof cannot sign in", async () => {
+  const proof = await issueSignInRecoveryProof(
+    "person@example.com",
+    "usr_owner",
+    "challenge-a",
+    recoverySecret,
+  );
+  const key = CACHE_KEYS.auth.signInRecoveryProof(
+    createHash("sha256").update(proof!.challengeId).digest("hex"),
+  );
+  await client.pExpire(key, 1000);
+  expect(
+    await issueSignInRecoveryProof(
+      "person@example.com",
+      "usr_owner",
+      "challenge-a",
+      recoverySecret,
+    ),
+  ).toEqual(proof);
+  expect(await client.pTTL(key)).toBeLessThanOrEqual(1000);
+  await client.pExpire(key, 1);
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  expect(
+    await consumeSignInRecoveryProof(
+      "person@example.com",
+      proof!.challengeId,
+      proof!.code,
+      recoverySecret,
+    ),
+  ).toBeNull();
+});
+
+it("recovery proofs require the signing secret and available Redis", async () => {
+  await expect(
+    issueSignInRecoveryProof(
+      "person@example.com",
+      "usr_owner",
+      "challenge-a",
+      "",
+    ),
+  ).rejects.toMatchObject({ category: "SERVICE_UNAVAILABLE" });
+  jest.mocked(getRedisClient).mockReturnValueOnce(null);
+  await expect(
+    consumeSignInRecoveryProof(
+      "person@example.com",
+      "challenge-a",
+      "123456",
+      recoverySecret,
+    ),
+  ).rejects.toMatchObject({ category: "SERVICE_UNAVAILABLE" });
 });

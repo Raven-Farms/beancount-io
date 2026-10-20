@@ -71,6 +71,7 @@ describe("StripeService.upgradeSubscription", () => {
       featureUsage: {} as any,
       apiKey: {} as any,
       auditEvent: {} as any,
+      authMail: {} as any,
     } as jest.Mocked<IModels>;
 
     mockPostgresDb = {} as NodePgDatabase;

@@ -169,6 +169,13 @@
       "when": 1792391156458,
       "tag": "0023_sent_billing_emails",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1792468640655,
+      "tag": "0024_auth_mail",
+      "breakpoints": true
     }
   ]
 }

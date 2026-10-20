@@ -5,6 +5,7 @@ import type { IApiKeyModel } from "@/features/apikeys/data/api-key-model";
 import type { IAuditEventModel } from "@/features/audit/data/audit-event-model";
 import { IJwtModel } from "@/features/auth/data/jwt-model";
 import { IEmailTokenModel } from "@/features/auth/data/email-token-model";
+import type { IAuthMailModel } from "@/features/auth/data/auth-mail-model";
 import { IMagicLinkTokenModel } from "@/features/auth/data/magic-link-token-model";
 import { ISignupOtpSessionModel } from "@/features/auth/data/signup-otp-session-model";
 import { IUserModel } from "@/features/auth/data/user-model";
@@ -33,6 +34,7 @@ export interface IModels {
   jwt: IJwtModel;
   oauthGrant: IOauthGrantModel;
   emailToken: IEmailTokenModel;
+  authMail: IAuthMailModel;
   magicLinkToken: IMagicLinkTokenModel;
   signupOtpSession: ISignupOtpSessionModel;
   user: IUserModel;

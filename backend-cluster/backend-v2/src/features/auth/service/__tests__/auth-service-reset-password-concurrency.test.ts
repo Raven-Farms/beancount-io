@@ -144,6 +144,7 @@ async function createStore(options: {
   const emailToken = {
     findOne: async () => ({ userId }),
     findOneAndDelete: async () => ({ userId }),
+    deleteByUserId: async () => undefined,
   };
   const oauthGrant = {
     revokeAllForUser: async (tx: Tx) => {

@@ -1,13 +1,13 @@
 # w4 · m31 — Bound authentication abuse without losing account recovery
 
-**Worker:** worker1 **Goal:** human and agent callers receive predictable request limits before credential work, while account owners retain a verified recovery path **Status:** todo (t001 done)
+**Worker:** worker1 **Goal:** human and agent callers receive predictable request limits before credential work, while account owners retain a verified recovery path **Status:** todo (t001, t002 done)
 
 ## Tasks (in order)
 
 | id | title | est | depends_on |
 | --- | --- | --- | --- |
 | t001 | Atomic authentication admission and bounded password verification — **DONE** | 90m | — |
-| t002 | Shared mail and OTP budgets with durable asynchronous recovery delivery | 90m | t001 |
+| t002 | Shared mail and OTP budgets with durable asynchronous recovery delivery — **DONE** | 90m | t001 |
 | t003 | Expose email-verified sign-in recovery through the shared GraphQL ceremony | 60m | t002 |
 | t004 | Add a localized recovery path to the login form | 60m | t003 |
 | t005 | Enforce both user and credential API budgets with bounded outage fallback | 60m | t001 |

@@ -8,6 +8,7 @@ import { ApiKeyPostgresModel } from "@/features/apikeys/data/api-key-model";
 import { AuditEventPostgresModel } from "@/features/audit/data/audit-event-model";
 import { JwtPostgresModel } from "@/features/auth/data/jwt-model";
 import { EmailTokenRedisModel } from "@/features/auth/data/email-token-model";
+import { AuthMailPostgresModel } from "@/features/auth/data/auth-mail-model";
 import { MagicLinkTokenRedisModel } from "@/features/auth/data/magic-link-token-model";
 import { SignupOtpSessionRedisModel } from "@/features/auth/data/signup-otp-session-model";
 import { UserPostgresModel } from "@/features/auth/data/user-model";
@@ -32,6 +33,7 @@ export class PostgresRedisImpl implements IModels {
   public oauthGrant: OauthGrantPostgresModel;
 
   public emailToken: EmailTokenRedisModel;
+  public authMail: AuthMailPostgresModel;
 
   public magicLinkToken: MagicLinkTokenRedisModel;
 
@@ -63,6 +65,7 @@ export class PostgresRedisImpl implements IModels {
     this.featureUsage = new FeatureUsagePostgresModel();
 
     this.user = new UserPostgresModel();
+    this.authMail = new AuthMailPostgresModel();
     this.paidCustomer = new PaidCustomerPostgresModel();
     this.reportedPurchase = new ReportedPurchasePostgresModel();
     this.sentBillingEmail = new SentBillingEmailPostgresModel();

@@ -1,9 +1,16 @@
 import "reflect-metadata";
+import {
+  fakeRedisAdmission as mockFakeRedisAdmission,
+  fakeRedisAdmissionState,
+} from "@/foundation/redis/__tests__/fake-redis-counter";
 import { AuthService } from "../auth-service";
 import { BadUserInputError, ConflictError } from "@/shared/errors";
 import { usernameFromEmail } from "@/features/auth/utils/username-rule";
 import { PasswordPolicyError } from "@/features/auth/utils/password-policy";
 import type { IsPwnedPassword } from "@/features/auth/operations/is-pwned-password";
+
+jest.mock("@/foundation/redis/redis-admission", () => mockFakeRedisAdmission);
+beforeEach(() => fakeRedisAdmissionState.reset());
 
 // Sign-up holds a username to the rule renames already follow (w0/036): 1–20
 // lowercase letters, digits and underscores. Only the dashboard form checked

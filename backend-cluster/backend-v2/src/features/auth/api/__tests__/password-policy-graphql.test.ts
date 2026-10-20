@@ -1,4 +1,8 @@
 import "reflect-metadata";
+import {
+  fakeRedisAdmission as mockFakeRedisAdmission,
+  fakeRedisAdmissionState,
+} from "@/foundation/redis/__tests__/fake-redis-counter";
 import { graphql, type GraphQLError } from "graphql";
 import { buildSchema } from "type-graphql";
 import { AuthResolver } from "../auth-resolver";
@@ -9,6 +13,7 @@ import { formatError } from "@/server/graphql/format-error";
 jest.mock("@/foundation/redis/redis-counter", () => ({
   resetCount: jest.fn(async () => undefined),
 }));
+jest.mock("@/foundation/redis/redis-admission", () => mockFakeRedisAdmission);
 
 // The dashboard says which rule a refused new password broke by reading
 // `extensions.passwordPolicy`. Pin that contract where clients meet it: the
@@ -16,7 +21,7 @@ jest.mock("@/foundation/redis/redis-counter", () => ({
 
 const isPwnedPassword = jest.fn(async (_password: string) => false);
 const createSession = jest.fn(async () => ({ id: "s-1", otp: "1234" }));
-const findOneAndDelete = jest.fn(async () => undefined);
+const findOneAndDelete = jest.fn(async () => ({ userId: "usr_pat" }));
 
 const service = new AuthService(
   {
@@ -39,6 +44,7 @@ const service = new AuthService(
     emailToken: {
       findOne: async () => ({ userId: "usr_pat" }),
       findOneAndDelete,
+      deleteByUserId: async () => undefined,
     },
   } as never,
   { transaction: async (run: (tx: unknown) => unknown) => run({}) } as never,
@@ -56,7 +62,10 @@ const schemaPromise = buildSchema({
   validate: true,
 });
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  fakeRedisAdmissionState.reset();
+});
 
 /** The first error, formatted as a client receives it, or undefined. */
 async function firstError(source: string, password: string) {

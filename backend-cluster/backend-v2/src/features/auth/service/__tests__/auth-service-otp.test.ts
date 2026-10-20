@@ -1,21 +1,19 @@
 import "reflect-metadata";
+import {
+  fakeRedisAdmission as mockFakeRedisAdmission,
+  fakeRedisAdmissionState,
+} from "@/foundation/redis/__tests__/fake-redis-counter";
 import { AuthService } from "../auth-service";
 import {
   BadUserInputError,
   RateLimitedError,
   ServiceUnavailableError,
 } from "@/shared/errors";
-import { incrementInWindow } from "@/foundation/redis/redis-counter";
+import type { SignupOtpSession } from "@/features/auth/data/signup-otp-session-model";
 
-jest.mock("@/foundation/redis/redis-counter", () => ({
-  incrementInWindow: jest.fn(),
-}));
+jest.mock("@/foundation/redis/redis-admission", () => mockFakeRedisAdmission);
 
-const mockIncrementInWindow = incrementInWindow as jest.MockedFunction<
-  typeof incrementInWindow
->;
-
-const session = {
+const session: SignupOtpSession = {
   id: "session-a",
   email: "person@example.com",
   password: "hashed-password",
@@ -27,104 +25,187 @@ const session = {
   otp: "1234",
   expireAt: new Date(Date.now() + 60_000).toISOString(),
 };
+const authResponse = {
+  token: "signed-jwt",
+  expireAt: new Date("2030-01-01"),
+};
+const verificationPaths = ["verifySignUpOtp", "finishSignupSession"] as const;
 
 function createService() {
   const signupOtpSession = {
-    getSessionById: jest.fn().mockImplementation(async (id: string) => ({
-      ...session,
-      id,
-    })),
+    getSessionById: jest.fn(
+      async (id: string): Promise<SignupOtpSession | null> => ({
+        ...session,
+        id,
+      }),
+    ),
     deleteSessionById: jest.fn(),
   };
-
   const service = new AuthService(
-    { signupOtpSession } as any,
-    {} as any,
-    {} as any,
-    {} as any,
-    {} as any,
-    {} as any,
+    { signupOtpSession } as never,
+    {} as never,
+    {} as never,
+    {} as never,
+    {} as never,
+    {} as never,
     async () => false,
   );
-
-  return { service, signupOtpSession };
+  const registerUser = jest
+    .spyOn(service, "registerUser")
+    .mockResolvedValue(authResponse);
+  return { service, signupOtpSession, registerUser };
 }
 
-describe("AuthService signup OTP verification", () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    mockIncrementInWindow.mockResolvedValue({
-      count: 1,
-      resetInMs: 10 * 60 * 1000,
-    });
-  });
+beforeEach(() => fakeRedisAdmissionState.reset());
+afterEach(() => jest.restoreAllMocks());
 
-  it("shares the attempt budget across replacement session ids", async () => {
-    const { service } = createService();
+it("shares five account attempts across processes, source addresses, and replacement sessions", async () => {
+  const first = createService();
+  const second = createService();
+  for (let index = 0; index < 5; index += 1) {
+    const { service } = index % 2 ? first : second;
+    await expect(
+      service.verifySignUpOtp({
+        sessionId: `replacement-${index}`,
+        otp: "0000",
+        ip: `198.51.100.${index + 1}`,
+      }),
+    ).rejects.toBeInstanceOf(BadUserInputError);
+  }
 
+  await expect(
+    second.service.verifySignUpOtp({
+      sessionId: "fresh-replacement",
+      otp: session.otp,
+      ip: "203.0.113.1",
+    }),
+  ).rejects.toBeInstanceOf(RateLimitedError);
+  expect(first.registerUser).not.toHaveBeenCalled();
+  expect(second.registerUser).not.toHaveBeenCalled();
+  expect(second.signupOtpSession.deleteSessionById).not.toHaveBeenCalled();
+});
+
+it("shares the account budget between the current and legacy completion paths", async () => {
+  const { service, registerUser } = createService();
+  for (let index = 0; index < 5; index += 1) {
     await expect(
       service.verifySignUpOtp({ sessionId: "session-a", otp: "0000" }),
     ).rejects.toBeInstanceOf(BadUserInputError);
-    await expect(
-      service.verifySignUpOtp({ sessionId: "session-b", otp: "0000" }),
-    ).rejects.toBeInstanceOf(BadUserInputError);
+  }
 
-    expect(mockIncrementInWindow).toHaveBeenNthCalledWith(
-      1,
-      "auth:signup_otp_attempts:email:person@example.com",
-      10 * 60 * 1000,
-    );
-    expect(mockIncrementInWindow).toHaveBeenNthCalledWith(
-      2,
-      "auth:signup_otp_attempts:email:person@example.com",
-      10 * 60 * 1000,
-    );
-  });
+  await expect(
+    service.finishSignupSession({ sessionId: "session-b", otp: session.otp }),
+  ).rejects.toBeInstanceOf(RateLimitedError);
+  expect(registerUser).not.toHaveBeenCalled();
+});
 
-  it("enforces the same budget on the legacy finish path", async () => {
-    const { service } = createService();
-
-    await expect(
-      service.finishSignupSession({ sessionId: "session-a", otp: "0000" }),
-    ).rejects.toBeInstanceOf(BadUserInputError);
-
-    expect(mockIncrementInWindow).toHaveBeenCalledWith(
-      "auth:signup_otp_attempts:email:person@example.com",
-      10 * 60 * 1000,
-    );
-  });
-
-  it("rejects attempts over the shared limit", async () => {
-    mockIncrementInWindow.mockResolvedValue({ count: 6, resetInMs: 42_000 });
-    const { service } = createService();
+it.each(verificationPaths)(
+  "%s limits trusted source IP before looking up even nonexistent sessions",
+  async (path) => {
+    const first = createService();
+    const second = createService();
+    first.signupOtpSession.getSessionById.mockResolvedValue(null);
+    second.signupOtpSession.getSessionById.mockResolvedValue(null);
+    for (let index = 0; index < 30; index += 1) {
+      const { service } = index % 2 ? first : second;
+      await expect(
+        service[path]({
+          sessionId: `nonexistent-${index}`,
+          otp: "0000",
+          ip: "198.51.100.7",
+        }),
+      ).rejects.toBeInstanceOf(BadUserInputError);
+    }
+    second.signupOtpSession.getSessionById.mockClear();
 
     await expect(
-      service.verifySignUpOtp({ sessionId: "session-a", otp: "0000" }),
+      second.service[path]({
+        sessionId: "another-nonexistent",
+        otp: session.otp,
+        ip: "198.51.100.7",
+      }),
     ).rejects.toBeInstanceOf(RateLimitedError);
-  });
-
-  it("fails closed when the atomic attempt counter is unavailable", async () => {
-    mockIncrementInWindow.mockResolvedValue(undefined);
-    const { service } = createService();
+    expect(second.signupOtpSession.getSessionById).not.toHaveBeenCalled();
 
     await expect(
-      service.verifySignUpOtp({ sessionId: "session-a", otp: "0000" }),
+      second.service[path]({
+        sessionId: "another-nonexistent",
+        otp: "0000",
+        ip: "203.0.113.8",
+      }),
+    ).rejects.toBeInstanceOf(BadUserInputError);
+    expect(second.signupOtpSession.getSessionById).toHaveBeenCalledTimes(1);
+  },
+);
+
+it("bounds callers with no available source address instead of exempting them", async () => {
+  const { service, signupOtpSession } = createService();
+  signupOtpSession.getSessionById.mockResolvedValue(null);
+  for (let index = 0; index < 30; index += 1) {
+    await expect(
+      service.verifySignUpOtp({ sessionId: `missing-${index}`, otp: "0000" }),
+    ).rejects.toBeInstanceOf(BadUserInputError);
+  }
+  signupOtpSession.getSessionById.mockClear();
+
+  await expect(
+    service.finishSignupSession({ sessionId: "missing", otp: "0000" }),
+  ).rejects.toBeInstanceOf(RateLimitedError);
+  expect(signupOtpSession.getSessionById).not.toHaveBeenCalled();
+});
+
+it.each(verificationPaths)(
+  "%s fails closed before session lookup when admission is unavailable",
+  async (path) => {
+    const { service, signupOtpSession, registerUser } = createService();
+    fakeRedisAdmissionState.down = true;
+
+    await expect(
+      service[path]({ sessionId: session.id, otp: session.otp }),
     ).rejects.toBeInstanceOf(ServiceUnavailableError);
-  });
+    expect(signupOtpSession.getSessionById).not.toHaveBeenCalled();
+    expect(registerUser).not.toHaveBeenCalled();
+  },
+);
 
-  it("accepts a valid four-digit code and completes signup", async () => {
-    const { service, signupOtpSession } = createService();
-    const authResponse = {
-      token: "signed-jwt",
-      expireAt: new Date(Date.now() + 60_000),
-    };
-    jest.spyOn(service, "registerUser").mockResolvedValue(authResponse);
+it("admits at most five concurrent OTP guesses across different sessions and sources", async () => {
+  const { service, registerUser } = createService();
+  const results = await Promise.allSettled(
+    Array.from({ length: 25 }, (_, index) =>
+      service.verifySignUpOtp({
+        sessionId: `replacement-${index}`,
+        otp: "0000",
+        ip: `198.51.100.${index + 1}`,
+      }),
+    ),
+  );
+
+  const errors = results.map((result) =>
+    result.status === "rejected" ? result.reason : undefined,
+  );
+  expect(
+    errors.filter((error) => error instanceof BadUserInputError),
+  ).toHaveLength(5);
+  expect(
+    errors.filter((error) => error instanceof RateLimitedError),
+  ).toHaveLength(20);
+  expect(registerUser).not.toHaveBeenCalled();
+});
+
+it.each(verificationPaths)(
+  "%s accepts a valid four-digit code and completes the original signup",
+  async (path) => {
+    const { service, signupOtpSession, registerUser } = createService();
 
     await expect(
-      service.verifySignUpOtp({ sessionId: "session-a", otp: "1234" }),
+      service[path]({
+        sessionId: session.id,
+        otp: session.otp,
+        ip: "198.51.100.12",
+      }),
     ).resolves.toEqual(authResponse);
 
-    expect(service.registerUser).toHaveBeenCalledWith({
+    expect(registerUser).toHaveBeenCalledWith({
       email: session.email,
       password: session.password,
       firstName: session.firstName,
@@ -132,8 +213,6 @@ describe("AuthService signup OTP verification", () => {
       username: null,
       ip: session.ip,
     });
-    expect(signupOtpSession.deleteSessionById).toHaveBeenCalledWith(
-      "session-a",
-    );
-  });
-});
+    expect(signupOtpSession.deleteSessionById).toHaveBeenCalledWith(session.id);
+  },
+);

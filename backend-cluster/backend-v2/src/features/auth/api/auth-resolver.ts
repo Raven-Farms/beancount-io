@@ -315,6 +315,7 @@ export class AuthResolver {
     const result = await this.authSessionWorkflow.verifySignUpOtp({
       sessionId: args.sessionId,
       otp: args.otp,
+      ip: ctx.clientIp,
     });
     setAuthCookie(
       ctx.koaCtx as unknown as Context,
