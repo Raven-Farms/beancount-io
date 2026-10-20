@@ -4,7 +4,6 @@
 
 ## Inbox
 
-- [237 — Keep public-page context through header sign-in](./237.md) — minor; dashboard QA, 2026-10-20.
 - [238 — Return Accounts and Journal focus after successful writes](./238.md) — minor; dashboard QA, 2026-10-20.
 - [239 — Keep invalid date drafts after valid edits](./239.md) — minor; dashboard QA, 2026-10-20.
 - [240 — Name file-view Edit at narrow widths](./240.md) — minor; dashboard QA, 2026-10-20.
