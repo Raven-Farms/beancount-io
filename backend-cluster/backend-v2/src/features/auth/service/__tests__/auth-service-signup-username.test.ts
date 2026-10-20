@@ -1,7 +1,9 @@
 import "reflect-metadata";
 import { AuthService } from "../auth-service";
-import { BadUserInputError } from "@/shared/errors";
+import { BadUserInputError, ConflictError } from "@/shared/errors";
 import { usernameFromEmail } from "@/features/auth/utils/username-rule";
+import { PasswordPolicyError } from "@/features/auth/utils/password-policy";
+import type { IsPwnedPassword } from "@/features/auth/operations/is-pwned-password";
 
 // Sign-up holds a username to the rule renames already follow (w0/036): 1–20
 // lowercase letters, digits and underscores. Only the dashboard form checked
@@ -26,6 +28,9 @@ function createService(taken: string[] = []) {
   };
   const createUser = jest.fn().mockResolvedValue({});
   const sendgrid = { sendMail: jest.fn().mockResolvedValue(undefined) };
+  const isPwnedPassword = jest.fn<ReturnType<IsPwnedPassword>, [string]>(
+    async () => false,
+  );
   const service = new AuthService(
     { user, signupOtpSession, jwt } as any,
     { transaction: (run: (tx: unknown) => unknown) => run({}) } as any,
@@ -33,8 +38,16 @@ function createService(taken: string[] = []) {
     {} as any,
     { getAdminClient: () => ({ admin: { createUser } }) } as any,
     { favaApi: { adminUser: "admin", adminPassword: "pw" } } as any,
+    isPwnedPassword,
   );
-  return { service, user, signupOtpSession, createUser, sendgrid };
+  return {
+    service,
+    user,
+    signupOtpSession,
+    createUser,
+    sendgrid,
+    isPwnedPassword,
+  };
 }
 
 let emailCounter = 0;
@@ -149,5 +162,64 @@ describe("usernameFromEmail", () => {
         async (name) => taken.has(name),
       ),
     ).toBe("a_very_long_local_p3");
+  });
+});
+
+// A new password is held to the Kratos-style policy (password-policy.ts)
+// before a code is sent or anything is stored.
+describe("createSignUpSession password policy", () => {
+  it("refuses a breached password before sending a code", async () => {
+    const { service, signupOtpSession, sendgrid, isPwnedPassword } =
+      createService();
+    isPwnedPassword.mockResolvedValueOnce(true);
+
+    const refusal = service.createSignUpSession(signUpParams("ana_99"));
+    await expect(refusal).rejects.toBeInstanceOf(PasswordPolicyError);
+    await expect(refusal).rejects.toMatchObject({
+      metadata: { field: "password", passwordPolicy: "BREACHED" },
+    });
+    expect(signupOtpSession.createSession).not.toHaveBeenCalled();
+    expect(sendgrid.sendMail).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["the email", (email: string) => email.split("@")[0] + "!!"],
+    ["the username", () => "ana_99_ana"],
+  ])(
+    "refuses a password built from %s without a breach lookup",
+    async (_what, password) => {
+      const { service, signupOtpSession, isPwnedPassword } = createService();
+      const params = signUpParams("ana_99");
+      const refusal = service.createSignUpSession({
+        ...params,
+        password: password(params.email),
+      });
+      await expect(refusal).rejects.toMatchObject({
+        metadata: { passwordPolicy: "TOO_SIMILAR" },
+      });
+      expect(isPwnedPassword).not.toHaveBeenCalled();
+      expect(signupOtpSession.createSession).not.toHaveBeenCalled();
+    },
+  );
+
+  it("refuses a password bcrypt would truncate", async () => {
+    const { service, signupOtpSession } = createService();
+    const refusal = service.createSignUpSession({
+      ...signUpParams(null),
+      password: "é".repeat(37), // 74 bytes in 37 characters
+    });
+    await expect(refusal).rejects.toMatchObject({
+      metadata: { passwordPolicy: "MAX_LENGTH" },
+    });
+    expect(signupOtpSession.createSession).not.toHaveBeenCalled();
+  });
+
+  it("does not look a password up for a sign-up refused for something else", async () => {
+    const { service, user, isPwnedPassword } = createService();
+    user.getByMail.mockResolvedValueOnce({ id: "someone" });
+    await expect(
+      service.createSignUpSession(signUpParams(null)),
+    ).rejects.toBeInstanceOf(ConflictError);
+    expect(isPwnedPassword).not.toHaveBeenCalled();
   });
 });

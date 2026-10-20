@@ -6,6 +6,7 @@ import "reflect-metadata";
 import { AuthService } from "../auth-service";
 import { BadUserInputError, RateLimitedError } from "@/shared/errors";
 import { PASSWORD_FAILURE_BUDGET } from "@/features/auth/operations/password-failure-budget";
+import bcrypt from "bcryptjs";
 
 // Password sign-in used to be limited only per address, so guesses spread over
 // addresses never stopped (w0/m7). Each account now has a wrong-password
@@ -47,6 +48,7 @@ function createService() {
     {} as never,
     {} as never,
     {} as never,
+    async () => false,
   );
   return { service, user };
 }
@@ -143,5 +145,23 @@ describe("loginUser and the per-account password budget", () => {
     await expect(
       signIn(service, ALICE.email, "right-password"),
     ).resolves.toEqual({ token: "t", expireAt: "x" });
+  });
+});
+
+// New passwords are capped at bcrypt's 72 bytes (password-policy.ts); sign-in
+// is not, so a longer password set before the rule still opens the account.
+describe("loginUser with a password longer than 72 bytes", () => {
+  it("signs in with the full password bcrypt stored truncated", async () => {
+    const { service, user } = createService();
+    const longPassword = "a-long-passphrase-".repeat(5) + "kept"; // 94 bytes
+    const stored = await bcrypt.hash(longPassword, 4);
+    user.verifyPassword.mockImplementation(async (_db, _id, password) =>
+      bcrypt.compare(password, stored),
+    );
+
+    await expect(signIn(service, ALICE.email, longPassword)).resolves.toEqual({
+      token: "t",
+      expireAt: "x",
+    });
   });
 });

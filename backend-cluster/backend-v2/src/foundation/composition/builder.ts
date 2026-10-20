@@ -32,6 +32,7 @@ import { LedgerReceiptWorkflow } from "@/features/ledger/workflow/ledger-receipt
 import { DirectiveAppendWorkflow } from "@/features/ledger/workflow/directive-append-workflow";
 import { AccountService } from "@/features/auth/service/account-service";
 import { AuthService } from "@/features/auth/service/auth-service";
+import { isPwnedPassword } from "@/features/auth/operations/is-pwned-password";
 import { AuthSessionWorkflow } from "@/features/auth/workflow/auth-session-workflow";
 import { CliAuthService } from "@/features/auth/service/cli-auth-service";
 import { UserProfileService } from "@/features/gitea/user-profile/service/user-profile-service";
@@ -205,6 +206,7 @@ export function buildServiceLayer(input: {
       stripe,
       input.clients.favaClientFactory,
       input.config,
+      isPwnedPassword,
     ),
     cliAuth: new CliAuthService(input.database.models, input.database.db),
     userProfile: new UserProfileService(

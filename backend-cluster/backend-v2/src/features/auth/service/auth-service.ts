@@ -17,6 +17,11 @@ import { getBasicAuthHeader } from "@/features/auth/utils/auth";
 import { delayRun } from "@/shared/execute";
 import { generateLedgerPassword } from "@/features/auth/utils/ledger-password";
 import {
+  PasswordPolicyError,
+  passwordPolicyViolation,
+} from "@/features/auth/utils/password-policy";
+import type { IsPwnedPassword } from "@/features/auth/operations/is-pwned-password";
+import {
   assertValidUsername,
   usernameFromEmail,
 } from "@/features/auth/utils/username-rule";
@@ -84,7 +89,8 @@ export type AuthResponse = {
   expireAt: Date;
 };
 
-const MAX_PASSWORD_LENGTH = 128;
+/** Sign-in's input cap; new passwords are held to `password-policy.ts`. */
+const MAX_LOGIN_PASSWORD_LENGTH = 128;
 const SIGNUP_OTP_ATTEMPT_WINDOW_MS = 10 * 60 * 1000;
 const SIGNUP_OTP_MAX_ATTEMPTS = 5;
 
@@ -171,7 +177,20 @@ export class AuthService implements IAuthService {
     private readonly stripe: IStripeService,
     private readonly favaClientFactory: IFavaClientFactory,
     private readonly config: Pick<AppConfig, "favaApi" | "dashboard" | "gitea">,
+    private readonly isPwnedPassword: IsPwnedPassword,
   ) {}
+
+  /** The breach lookup goes last, so a locally refused password never leaves. */
+  private assertAcceptableNewPassword = async (
+    password: string,
+    identifiers: readonly (string | null | undefined)[],
+  ): Promise<void> => {
+    const violation = passwordPolicyViolation(password, identifiers);
+    if (violation) throw new PasswordPolicyError(violation);
+    if (await this.isPwnedPassword(password)) {
+      throw new PasswordPolicyError("BREACHED");
+    }
+  };
 
   public registerUser = async (
     params: RegisterUserParams,
@@ -260,7 +279,7 @@ export class AuthService implements IAuthService {
   ): Promise<User> => {
     // Reject overlong passwords before touching the database or bcrypt.
     // Use the same generic error as wrong password to avoid leaking signal.
-    if (password.length > MAX_PASSWORD_LENGTH) {
+    if (password.length > MAX_LOGIN_PASSWORD_LENGTH) {
       throw new BadUserInputError("Invalid email or password");
     }
     let user: User | null = null;
@@ -412,21 +431,15 @@ export class AuthService implements IAuthService {
       throw new BadUserInputError("Invalid or expired token");
     }
 
-    if (newPassword.length < 8) {
-      throw new BadUserInputError(
-        "Please use at least 8 characters as the password",
-      );
-    }
-    if (newPassword.length > MAX_PASSWORD_LENGTH) {
-      throw new BadUserInputError(
-        `Password must be at most ${MAX_PASSWORD_LENGTH} characters long`,
-      );
-    }
-
     const user = await this.models.user.getById(this.db, emailToken.userId);
     if (!user) {
       throw new NotFoundError("User", emailToken.userId);
     }
+    // Before the token is spent, so a refused password can be retried.
+    await this.assertAcceptableNewPassword(newPassword, [
+      user.email,
+      user.ledger_username,
+    ]);
 
     // Consume the token FIRST to prevent reuse (security: if password update fails, token is already consumed)
     await this.models.emailToken.findOneAndDelete(token);
@@ -509,17 +522,6 @@ export class AuthService implements IAuthService {
       );
     }
 
-    if (password.length < 8) {
-      throw new BadUserInputError(
-        "Password must be at least 8 characters long",
-      );
-    }
-    if (password.length > MAX_PASSWORD_LENGTH) {
-      throw new BadUserInputError(
-        `Password must be at most ${MAX_PASSWORD_LENGTH} characters long`,
-      );
-    }
-
     if (!firstName || firstName.trim().length === 0) {
       throw new BadUserInputError("First name is required");
     }
@@ -547,6 +549,12 @@ export class AuthService implements IAuthService {
         throw new ConflictError("Username", usernameToUse);
       }
     }
+
+    // After the cheap checks, so a sign-up refused for them never looks it up.
+    await this.assertAcceptableNewPassword(password, [
+      normalizedEmail,
+      usernameToUse,
+    ]);
 
     // Hash before storing in Redis so plaintext password never leaves the service layer
     const hashedPassword = await bcrypt.hash(password, 10);

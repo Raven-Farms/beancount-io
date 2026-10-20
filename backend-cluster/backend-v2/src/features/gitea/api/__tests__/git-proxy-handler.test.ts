@@ -103,6 +103,7 @@ describe("setGitProxyHandler", () => {
       {} as any,
       {} as any,
       {} as any,
+      async () => false,
     );
 
     // Create mock config

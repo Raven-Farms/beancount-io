@@ -111,6 +111,7 @@ function createFixture() {
     {} as never,
     favaFactory as never,
     { favaApi: { adminUser: "admin", adminPassword: "" } } as never,
+    async () => false,
   );
   // Exercise the real credential and exact-self policies with the real services.
   const authorization = new AuthorizationService(

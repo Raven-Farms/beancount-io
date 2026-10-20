@@ -44,6 +44,7 @@ function createService() {
     {} as any,
     {} as any,
     {} as any,
+    async () => false,
   );
 
   return { service, signupOtpSession };

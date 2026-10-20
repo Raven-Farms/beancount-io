@@ -1,6 +1,8 @@
 import "reflect-metadata";
 import { AuthService } from "../auth-service";
 import { BadUserInputError } from "@/shared/errors";
+import { PasswordPolicyError } from "@/features/auth/utils/password-policy";
+import type { IsPwnedPassword } from "@/features/auth/operations/is-pwned-password";
 
 // A password reset ends every session and OAuth grant the old password issued
 // (w0/m4). Before, it changed the password and left year-long sessions and
@@ -66,6 +68,7 @@ function createStore() {
     getById: jest.fn(async (_db: unknown, id: string) => ({
       id,
       email: `${id}@example.com`,
+      ledger_username: "kestrel",
     })),
     updatePassword: jest.fn(
       async (db: unknown, userId: string, password: string) => {
@@ -79,6 +82,9 @@ function createStore() {
     ),
     findOneAndDelete: jest.fn(async () => undefined),
   };
+  const isPwnedPassword = jest.fn<ReturnType<IsPwnedPassword>, [string]>(
+    async () => false,
+  );
 
   const service = new AuthService(
     { user, jwt, oauthGrant, emailToken } as any,
@@ -87,6 +93,7 @@ function createStore() {
     {} as any,
     {} as any,
     {} as any,
+    isPwnedPassword,
   );
   const verifies = (token: string) =>
     committed.some((session) => session.token === token);
@@ -99,6 +106,7 @@ function createStore() {
     oauthGrant,
     user,
     emailToken,
+    isPwnedPassword,
     verifies,
     passwordOf,
     grantsOf,
@@ -188,5 +196,42 @@ describe("resetPassword", () => {
 
     expect(verifies(browser)).toBe(true);
     expect(grantsOf("user-1")).toEqual(["mobile", "connector"]);
+  });
+});
+
+// New passwords are held to the Kratos-style policy (password-policy.ts); a
+// refusal leaves the link usable so the user can pick another.
+describe("resetPassword password policy", () => {
+  const refusedFor = (passwordPolicy: string) => ({
+    metadata: { field: "password", passwordPolicy },
+  });
+
+  it("refuses a breached password and keeps the token for a retry", async () => {
+    const { service, emailToken, user, isPwnedPassword, passwordOf } =
+      createStore();
+    isPwnedPassword.mockResolvedValueOnce(true);
+
+    const refusal = service.resetPassword("reset-token", "password1");
+    await expect(refusal).rejects.toBeInstanceOf(PasswordPolicyError);
+    await expect(refusal).rejects.toMatchObject(refusedFor("BREACHED"));
+    expect(emailToken.findOneAndDelete).not.toHaveBeenCalled();
+    expect(user.updatePassword).not.toHaveBeenCalled();
+
+    await service.resetPassword("reset-token", "plinth-orbit-mangle");
+    expect(passwordOf("user-1")).toBe("plinth-orbit-mangle");
+  });
+
+  it.each([
+    ["User-1@Example", "TOO_SIMILAR"], // the email
+    ["kestrel2024", "TOO_SIMILAR"], // the username
+    ["short1!", "MIN_LENGTH"],
+    ["x".repeat(73), "MAX_LENGTH"],
+  ])("refuses %j as %s without a breach lookup", async (password, rule) => {
+    const { service, isPwnedPassword } = createStore();
+
+    await expect(
+      service.resetPassword("reset-token", password),
+    ).rejects.toMatchObject(refusedFor(rule));
+    expect(isPwnedPassword).not.toHaveBeenCalled();
   });
 });

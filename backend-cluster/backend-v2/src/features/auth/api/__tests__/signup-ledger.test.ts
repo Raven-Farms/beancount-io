@@ -86,6 +86,7 @@ async function createFixture(withDefaultLedger: boolean) {
       favaApi: { adminUser: "admin", adminPassword: "" },
       gitea: { hostname: "gitea.example", externalHttpPort: 443, sshPort: 22 },
     } as never,
+    async () => false,
   );
   const workflow = new AuthSessionWorkflow(
     service,
