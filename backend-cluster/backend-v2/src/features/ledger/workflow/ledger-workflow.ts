@@ -72,6 +72,8 @@ import {
 import {
   buildLedgerFiles,
   previewLedgerSetup,
+  type LedgerSetup,
+  type LedgerSetupPreview,
 } from "@/features/ledger/setup/build-ledger";
 import { CACHE_KEYS } from "@/shared/cache";
 import { operationNotAllowedFromCause } from "@/features/ledger/utils/operation-not-allowed-from-cause";
@@ -166,8 +168,8 @@ export interface ILedgerWorkflow {
   }): Promise<LedgerData>;
   previewLedgerSetup(params: {
     identity: Identity;
-    setup: import("@/features/ledger/setup/build-ledger").LedgerSetup;
-  }): Promise<import("@/features/ledger/setup/build-ledger").LedgerSetupPreview>;
+    setup: LedgerSetup;
+  }): Promise<LedgerSetupPreview>;
   updateLedger(params: {
     identity: Identity;
     ledgerId: string;
@@ -589,10 +591,8 @@ export class LedgerWorkflow implements ILedgerWorkflow {
     setup,
   }: {
     identity: Identity;
-    setup: import("@/features/ledger/setup/build-ledger").LedgerSetup;
-  }): Promise<
-    import("@/features/ledger/setup/build-ledger").LedgerSetupPreview
-  > {
+    setup: LedgerSetup;
+  }): Promise<LedgerSetupPreview> {
     await this.authorization.authorizeOrThrow({
       principal: identity,
       action: AUTHORIZATION_ACTIONS.LEDGER_CREATE,

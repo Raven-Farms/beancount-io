@@ -1,3 +1,5 @@
+import type { LedgerSetup } from "@/features/ledger/setup/build-ledger";
+
 /**
  * Domain input/output types for the ledger workflow. These are plain,
  * transport-agnostic types the workflow OWNS — deliberately decoupled from the
@@ -20,7 +22,7 @@ export interface CreateLedgerCommand {
   private?: boolean | null;
   template?: LedgerTemplate | null;
   /** Setup specification (ADR021); mutually exclusive with `template`. */
-  setup?: import("@/features/ledger/setup/build-ledger").LedgerSetup | null;
+  setup?: LedgerSetup | null;
   /** Client-generated idempotency identifier for creation retries (ADR021). */
   requestId?: string | null;
 }
