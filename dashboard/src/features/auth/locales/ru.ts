@@ -746,6 +746,12 @@ const ruAuth: Record<string, TranslationEntry> = {
     description:
       "Sign-up page notice when password sign-up is turned off on the server",
   },
+  "auth.passwordAuthDisabled": {
+    message:
+      "Вход по паролю на этом сервере отключён. Продолжите через Google.",
+    description:
+      "Shown instead of a password form when password sign-in is turned off on the server",
+  },
 };
 
 export default ruAuth;

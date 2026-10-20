@@ -15,6 +15,8 @@ import {
   type SendForgotPasswordLinkMutationVariables,
 } from "@/graphql/definitions";
 import { useTranslations } from "@/common/hooks/use-translations";
+import { PasswordAuthDisabled } from "@/features/auth/components/google-sign-in-button/password-auth-disabled";
+import { useAuthProviders } from "@/features/auth/hooks/use-auth-providers";
 import { useErrorMessage } from "@/common/lib/errors/error-message";
 
 type ForgotPasswordFormProps = {
@@ -56,6 +58,7 @@ function BackToSignIn({ onClick }: { onClick?: () => void }) {
 export function ForgotPasswordForm({
   onBackToSignIn,
 }: ForgotPasswordFormProps) {
+  const { password: passwordEnabled } = useAuthProviders();
   const { t } = useTranslations();
   const formatError = useErrorMessage();
   const [success, setSuccess] = useState(false);
@@ -105,6 +108,10 @@ export function ForgotPasswordForm({
       setError(formatError(err));
     }
   };
+
+  if (!passwordEnabled) {
+    return <PasswordAuthDisabled messageKey="auth.passwordAuthDisabled" />;
+  }
 
   if (success) {
     return (

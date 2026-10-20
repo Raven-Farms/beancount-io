@@ -25,6 +25,8 @@ import {
   type ResetPasswordMutationVariables,
 } from "@/graphql/definitions";
 import { useTranslations } from "@/common/hooks/use-translations";
+import { PasswordAuthDisabled } from "@/features/auth/components/google-sign-in-button/password-auth-disabled";
+import { useAuthProviders } from "@/features/auth/hooks/use-auth-providers";
 import { useErrorMessage } from "@/common/lib/errors/error-message";
 import { PageSEO } from "@/common/components/seo/page-seo";
 
@@ -38,6 +40,7 @@ type ResetPasswordFormData = {
  * Validates email token and allows user to reset their password
  */
 export default function ResetPasswordPage() {
+  const { password: passwordEnabled } = useAuthProviders();
   const { t } = useTranslations();
   const formatError = useErrorMessage();
   const navigate = useNavigate();
@@ -148,6 +151,30 @@ export default function ResetPasswordPage() {
   };
 
   // Show skeleton while validating token
+  if (!passwordEnabled) {
+    return (
+      <>
+        <PageSEO
+          titleKey="seo.resetPassword.title"
+          descriptionKey="seo.resetPassword.description"
+          noIndex
+        />
+        <main className="min-h-screen flex items-center justify-center bg-background py-12 px-4 sm:px-6 lg:px-8">
+          <div className="w-full max-w-md">
+            <Card>
+              <CardContent className="pt-6">
+                <PasswordAuthDisabled
+                  messageKey="auth.passwordAuthDisabled"
+                  next="/"
+                />
+              </CardContent>
+            </Card>
+          </div>
+        </main>
+      </>
+    );
+  }
+
   if (isValidating) {
     return (
       <>

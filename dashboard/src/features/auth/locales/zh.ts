@@ -728,6 +728,11 @@ const zhAuth: Record<string, TranslationEntry> = {
     description:
       "Sign-up page notice when password sign-up is turned off on the server",
   },
+  "auth.passwordAuthDisabled": {
+    message: "此服务器已关闭密码登录。请改用 Google 继续。",
+    description:
+      "Shown instead of a password form when password sign-in is turned off on the server",
+  },
 };
 
 export default zhAuth;

@@ -751,6 +751,12 @@ const caAuth: Record<string, TranslationEntry> = {
     description:
       "Sign-up page notice when password sign-up is turned off on the server",
   },
+  "auth.passwordAuthDisabled": {
+    message:
+      "L'inici de sessió amb contrasenya està desactivat en aquest servidor. Continua amb Google.",
+    description:
+      "Shown instead of a password form when password sign-in is turned off on the server",
+  },
 };
 
 export default caAuth;

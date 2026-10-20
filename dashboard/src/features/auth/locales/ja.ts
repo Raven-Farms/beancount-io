@@ -745,6 +745,12 @@ const jaAuth: Record<string, TranslationEntry> = {
     description:
       "Sign-up page notice when password sign-up is turned off on the server",
   },
+  "auth.passwordAuthDisabled": {
+    message:
+      "このサーバーではパスワードでのログインが無効になっています。代わりに Google で続行してください。",
+    description:
+      "Shown instead of a password form when password sign-in is turned off on the server",
+  },
 };
 
 export default jaAuth;

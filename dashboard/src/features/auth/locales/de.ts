@@ -750,6 +750,12 @@ const deAuth: Record<string, TranslationEntry> = {
     description:
       "Sign-up page notice when password sign-up is turned off on the server",
   },
+  "auth.passwordAuthDisabled": {
+    message:
+      "Die Anmeldung mit Passwort ist auf diesem Server deaktiviert. Fahre stattdessen mit Google fort.",
+    description:
+      "Shown instead of a password form when password sign-in is turned off on the server",
+  },
 };
 
 export default deAuth;
