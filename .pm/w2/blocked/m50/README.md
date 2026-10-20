@@ -16,6 +16,10 @@
 | t008 | Test coverage | 45m | t006, t007 |
 | t009 | Closeout | 15m | t008 |
 
+## Blocked
+
+- **t005 onward (2026-10-20)** — t001–t004 are shipped, and t005's Claude Code half passes (evals 7/7, routing 95/95; evidence in [t005](./t005.md)). t005's acceptance requires both clients, and Codex returns its account usage-limit error until 2026-11-17, so t006–t009 wait behind it. **Unblock:** Codex usage returns (2026-11-17); rerun trade evals 9–10, import evals 16–20, and the 95-prompt routing set on Codex, close t005, then t006 (adoption) starts. **Who can clear it:** the operator (Codex usage).
+
 ## Definition of done
 
 - A batch of described investment events is proposed once, confirmed once, and written check-gated, with lot ambiguity resolved per event and partial failures reported event-by-event.
