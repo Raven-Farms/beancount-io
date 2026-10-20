@@ -1542,9 +1542,18 @@ def _twin_reason(entry: Any, twin: Any, earlier: int | None, *, keys: list[str])
         ids = "only one of them carries a bank ID"
     else:
         ids = "neither row has a bank ID" if earlier is not None else "neither has a bank ID"
-    named = "payee" if _match_text(entry.payee) else "narration"
     where = f" row {earlier} of this import" if earlier is not None else ""
-    return f"Date, {named} and source amount match{where}; {ids}."
+    # The fields that met on both sides: a row with a payee meets a
+    # payee-less entry on their narrations, and a narration-only row meets
+    # an entry on its payee, so the row alone cannot name them (w5/824).
+    payee, narration = _match_text(entry.payee), _match_text(entry.narration)
+    if payee and payee == _match_text(twin.payee):
+        return f"Date, payee and source amount match{where}; {ids}."
+    if narration == _match_text(twin.narration):
+        return f"Date, narration and source amount match{where}; {ids}."
+    field, its = ("payee", "narration") if payee and payee == _match_text(twin.narration) else ("narration", "payee")
+    other = where.lstrip() or "the ledger entry"
+    return f"Date and source amount match {other}, and this row's {field} is its {its}; {ids}."
 
 
 def _carries_bank_id(meta: dict[str, Any], keys: list[str]) -> bool:
