@@ -1,6 +1,6 @@
 # Beancount Skills
 
-Skills for Beancount users working with a ledger through a coding agent. The ten workflows below support Claude Code and Codex; their source files live in [`skills/`](.).
+Skills for Beancount users working with a ledger through a coding agent. The eleven workflows below support Claude Code and Codex; their source files live in [`skills/`](.).
 
 The skills work on ledger files on your machine. For a ledger hosted on Beancount.io, connect the Beancount.io MCP server instead; the skills hand hosted requests to its tools and prompts.
 
@@ -13,6 +13,7 @@ The suite shares [command recipes](beancount-init/references/bea-cli.md) that se
 | [beancount-init](beancount-init/SKILL.md) | Create a ledger with `bea init` (optional Fava browser setup). |
 | [beancount-add](beancount-add/SKILL.md) | Record a purchase, transfer, new or closed account, price, or note you describe. |
 | [beancount-trade](beancount-trade/SKILL.md) | Record stock, fund, and crypto trades with correct lots, and report realized gains. |
+| [beancount-property](beancount-property/SKILL.md) | Record property purchases, mortgages, escrow, rent, deposits, and sales from the figures you provide. |
 | [beancount-import](beancount-import/SKILL.md) | Import and categorize bank exports with duplicate detection. |
 | [beancount-importer-author](beancount-importer-author/SKILL.md) | Write or repair a reusable, tested bank importer. |
 | [beancount-reconcile](beancount-reconcile/SKILL.md) | Compare an account with a bank or broker statement. |
@@ -23,7 +24,7 @@ The suite shares [command recipes](beancount-init/references/bea-cli.md) that se
 
 ## Install
 
-Install the whole suite, not individual skills: migration and month-end close depend on sibling workflows, and each skill's `references/` and fixtures belong with its `SKILL.md`. One Git checkout serves Claude Code (`~/.claude/skills`) and Codex (`~/.agents/skills`):
+For a Git checkout, install the whole suite: migration and month-end close depend on sibling workflows, and each skill's `references/` and fixtures belong with its `SKILL.md`. One Git checkout serves Claude Code (`~/.claude/skills`) and Codex (`~/.agents/skills`):
 
 ```sh
 SKILLS_SRC="${XDG_DATA_HOME:-$HOME/.local/share}/beancount-io"
@@ -33,6 +34,7 @@ python3 "$SKILLS_SRC/scripts/skills/beancount-skills.py" install ~/.claude/skill
 ```
 
 - [Installation guide](../docs/skills/installation.md): workspace-only installs, discovery checks, `verify`, updates, local edits and name conflicts, and removal. Installed before 2026-10-19? Follow its [one-time upgrade](../docs/skills/installation.md#upgrading-from-the-old-layout). Prefer a standard channel? The guide also covers [`npx skills`, `gh skill`, and the `beancount-io` plugin for both clients](../docs/skills/installation.md#install-from-a-standard-channel-instead) (Hermes cannot install the whole suite yet — the guide says why), with choosing and switching between methods.
+- [OpenClaw and Hermes Agent](../docs/skills/installation.md#openclaw-and-hermes-agent): standalone ClawHub bundles under `@puncsky`, tested install/update commands, and the current publication and host-policy limits. See the [registry rehearsal](../docs/skills/clawhub-rehearsal.md) before choosing a skill.
 - [First query](../docs/skills/first-query.md): ask a synthetic ledger a question through `beancount-ask` and check the known answer. No account needed.
 - [First month](../docs/skills/first-month.md): initialize, import, reconcile, ask, and close one synthetic month with explicit approvals and independent ledger/Git checkpoints. See the [real-client rehearsal results](../docs/skills/first-month-rehearsal.md).
 - [Migrate, then keep importing](../docs/skills/migration.md): convert a synthetic Monarch export with approved mappings and balance anchors, then import overlapping bank exports without double-booking either side of a transfer. See the [real-client rehearsal results](../docs/skills/migration-rehearsal.md).

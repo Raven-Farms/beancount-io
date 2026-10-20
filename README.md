@@ -142,7 +142,7 @@ Your ledger stays the same plain-text file across all of them — hosted or loca
 | [`dashboard/`](./dashboard) | Active web client: ledgers, journal, reports, Monaco editor, imports, collaboration, AI assistant (React 19 + TanStack Start + Apollo) |
 | [`mobile/`](./mobile) | Active iOS & Android client (Expo + React Native + Apollo) |
 | [`cli/`](./cli) | Active `bea` CLI and Python tooling ([releases](https://github.com/bex-co/beancount-io/releases?q=bea)) |
-| [`skills/`](./skills) | Active agent ledger skills (the ten `beancount-*` workflows; also installable as the `beancount-io` plugin) |
+| [`skills/`](./skills) | Active agent ledger skills (eleven `beancount-*` workflows; also installable as the `beancount-io` plugin) |
 | [`backend-cluster/`](./backend-cluster) | Active backend: GraphQL/REST gateway, ledger service, IDL, and agent sandbox |
 
 The dashboard and mobile app are clients for the Beancount.io API served by `backend-cluster/` — hosted, or self-run. Skills have two audiences: Beancount users get [`skills/`](./skills/README.md); repository contributors get [`.agents/skills/`](./.agents/skills) (see [`.agents/AGENTS.md`](./.agents/AGENTS.md)). The root `.claude/skills` links to `.agents/skills` so Claude Code and Codex share the internal workflows.
@@ -153,7 +153,7 @@ The dashboard and mobile app are clients for the Beancount.io API served by `bac
 
 Beancount.io is built for the agent era: your ledger is text an agent can read, and every write is validated and reversible.
 
-- **Coding-agent skills (local ledger)** — ten `beancount-*` workflows for Claude Code and Codex: scaffold a ledger, record everyday entries and investment trades with correct lots, import bank exports without duplicates, reconcile against statements, migrate from Mint/Monarch/QuickBooks, query finances in plain language, and run a confirm-gated month-end close. [Install the skills](./docs/skills/installation.md) → [ask your first question](./docs/skills/first-query.md) → [first-month guide](./docs/skills/first-month.md) → [migration guide](./docs/skills/migration.md).
+- **Coding-agent skills (local ledger)** — eleven `beancount-*` workflows for Claude Code and Codex: scaffold a ledger, record everyday entries, investment trades and property events, import bank exports without duplicates, reconcile against statements, migrate from Mint/Monarch/QuickBooks, query finances in plain language, and run a confirm-gated month-end close. [Install the skills](./docs/skills/installation.md) → [ask your first question](./docs/skills/first-query.md) → [first-month guide](./docs/skills/first-month.md) → [migration guide](./docs/skills/migration.md). [OpenClaw/Hermes registry installs](./docs/skills/installation.md#openclaw-and-hermes-agent) include their current availability and compatibility limits.
 - **MCP server** — point any MCP client at a deployment to query and edit a ledger from an agent. Also listed on the official [MCP Registry](https://registry.modelcontextprotocol.io) as `io.beancount/beancount` (OAuth sign-in).
 
 <details>

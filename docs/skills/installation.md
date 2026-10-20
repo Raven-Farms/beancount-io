@@ -1,6 +1,6 @@
 # Install the Beancount skills
 
-Install the ten `beancount-*` ledger skills for Claude Code, Codex, or both, from any directory. You keep one Git checkout of the skills and link it into each agent's skill directory. Updating the checkout updates every agent, and the helper script never touches skills it did not install.
+Install the eleven `beancount-*` ledger skills for Claude Code, Codex, or both, from any directory. You keep one Git checkout of the skills and link it into each agent's skill directory. Updating the checkout updates every agent, and the helper script never touches skills it did not install. [OpenClaw and Hermes Agent](#openclaw-and-hermes-agent) use standalone ClawHub bundles, with the availability and host limits below.
 
 Rehearsed on macOS with Claude Code and Codex (see [tested with](first-query.md#tested-with)). Linux uses the same commands but has not been rehearsed. Windows is not covered.
 
@@ -113,11 +113,11 @@ codex plugin add beancount-io@beancount-io
 codex plugin remove beancount-io@beancount-io     # remove
 ```
 
-Both manifests carry one shared suite version; a client delivers a new copy only when that version changes, and every shipped skill change bumps it. Confirm with each client's skill listing (step 3): the ten skills appear under the `beancount-io:` namespace.
+Both manifests carry one shared suite version; a client delivers a new copy only when that version changes, and every shipped skill change bumps it. Confirm with each client's skill listing (step 3): the eleven skills appear under the `beancount-io:` namespace.
 
-### Hermes — not yet
+### Hermes and raw GitHub folders
 
-Hermes cannot install the whole suite today (rehearsed 2026-10-19): its security scanner blocks `beancount-init` with a dangerous verdict that even `--force` does not override — the flagged patterns are the skill's own documented behaviors (writing the new ledger's `AGENTS.md`, and the `curl … | sh` fallback for installing `uv`) — and `beancount-import` installs only with `--force`. In that rehearsal eight of the nine skills then in the suite installed (`hermes skills install bex-co/beancount-io/skills/<name> --yes`, plus `--force` for `beancount-import`); `beancount-trade`, added since, is untested there. A suite without `beancount-init` lacks the shared command contract its siblings read, so treat that as unsupported for now. Hermes reads project skills from `./.agents/skills` in a trusted project (`hermes skills trust`), so the link installer and the `npx`/`gh` project installs above are the way in from a ledger workspace today.
+Hermes supports the direct GitHub skill path, but a single raw folder can omit the shared references its instructions read. A direct `beancount-ask` install was SAFE yet lacked its CLI contract. Use the self-contained [ClawHub bundle](#openclaw-and-hermes-agent) for a standalone install. Hermes v0.22.2 still rejects `beancount-init`'s intended creation of a new ledger's instruction files; that restriction does not prevent a bundled `beancount-ask` from working independently. The accidental import scanner finding and the shell installer example from the earlier rehearsal are fixed; no force install is needed for the currently verified non-init registry bundles. See the [dated results](clawhub-rehearsal.md).
 
 ### Choosing a method
 
@@ -130,6 +130,35 @@ Keep **one method per client**. A client holding the suite twice (say, linked in
 ### Switching methods
 
 Remove the old install **before** installing by another method — two copies of one skill name leave the agent choosing between duplicates, and the link installer refuses a name a copy already holds. Removal per method: link installer — `python3 "$SKILLS_SRC/scripts/skills/beancount-skills.py" uninstall <dirs>` (see [Remove](#remove)); `npx skills` — `remove` above; `gh skill` — delete the folders `gh skill list` shows; Hermes — `uninstall` per name. Then install by the new method and re-run step 3's listing.
+
+## OpenClaw and Hermes Agent
+
+The publisher is [`puncsky` on ClawHub](https://clawhub.ai/puncsky). Registry bundles include their shared command references and the MIT-0 license, so `beancount-ask` can be installed alone without cloning this repository. Workflows such as migration and close name the sibling skills they hand off to; install those separately when needed.
+
+Install the host using its official [OpenClaw guide](https://docs.openclaw.ai/install) or [Hermes guide](https://hermes-agent.nousresearch.com/docs/getting-started/installation), keep `bea` 0.3.1 or later on `PATH`, and configure a model provider in that host before an agent conversation.
+
+From your ledger workspace, install the verified read-only skill:
+
+```sh
+openclaw skills install @puncsky/beancount-ask
+```
+
+Or, in Hermes:
+
+```sh
+hermes skills install clawhub/@puncsky/beancount-ask --yes
+```
+
+Update the registry skills already installed in the selected host/workspace:
+
+```sh
+openclaw skills update --all
+hermes skills update
+```
+
+These commands were run on macOS with OpenClaw 2026.10.5 and Hermes v0.22.2. Both installed the standalone `beancount-ask@1.0.0` with its CLI contract and license; Hermes's scanner allowed it without `--force`. Installation evidence and the direct `bea` control are recorded in the [registry rehearsal](clawhub-rehearsal.md); agent-driven first-query acceptance is tracked separately there.
+
+**Rollout status, 2026-10-19:** all eleven 1.0.0 releases have been submitted. Nine are installable in OpenClaw; eight are installable in Hermes. `beancount-options` and `beancount-property` still await ClawHub publication checks. Hermes additionally blocks `beancount-init` for its intended ledger-instruction creation. The full registry suite is not yet supported on both hosts. The [per-skill table](clawhub-rehearsal.md#install-results) records exactly what passed; keep the Git/link route above for the complete Claude Code/Codex suite.
 
 ## Update
 
