@@ -1,7 +1,5 @@
-import {
-  isJournalTransaction,
-  JournalDirectiveType,
-} from "../../transactions-screen/types";
+import { resolveCurrencyBalance } from "../../../common/balance-util";
+import { formatTimeFilter } from "../../transactions-screen/filters/select-filter-query";
 
 export type SpendingCompare = {
   thisMonth: number;
@@ -10,70 +8,61 @@ export type SpendingCompare = {
   lastMonthKey: string;
 };
 
+/** One month of the Expenses root's activity, as `getLedgerIntervalTotals` returns it. */
+export type MonthTotal = {
+  /** A date inside the month. */
+  date: string;
+  balance: Record<string, number | string> | null | undefined;
+};
+
 /** Format a year + 1-based month as a "YYYY-MM" key. */
 function toMonthKey(year: number, month: number): string {
   return `${year}-${String(month).padStart(2, "0")}`;
 }
 
-/** Sum of Expenses-account posting amounts (spending) for a transaction in the active currency. */
-function expenseTotal(entry: JournalDirectiveType, currency: string): number {
-  if (!isJournalTransaction(entry)) {
-    return 0;
-  }
-  let total = 0;
-  for (const posting of entry.postings ?? []) {
-    const units = posting.units;
-    if (!units || units.currency !== currency) {
-      continue;
-    }
-    if (!posting.account.startsWith("Expenses")) {
-      continue;
-    }
-    const amount = Number(units.number);
-    if (!isNaN(amount)) {
-      total += amount;
-    }
-  }
-  return total;
+function monthKeys(referenceDate: Date) {
+  const year = referenceDate.getFullYear();
+  const month = referenceDate.getMonth() + 1; // 1-based
+  return {
+    thisMonthKey: toMonthKey(year, month),
+    lastMonthKey:
+      month === 1 ? toMonthKey(year - 1, 12) : toMonthKey(year, month - 1),
+  };
 }
 
 /**
- * Total spending (Expenses postings) for the current month vs. the previous
- * month, derived client-side from journal transactions in the active currency.
- *
- * NOTE (backend gap): there is no expenses-only monthly time series in the API
- * today — the server's `homeCharts` field returns net profit (income −
- * expenses), which is why the client stopped querying it, and
- * `accountHierarchy` is a current snapshot. This is an honest, clearly-labelled
- * interim computation; a proper per-month expenses series should come from a
- * backend/schema change. `referenceDate` is injectable for deterministic tests.
+ * The `time` window the card asks for: the first of last month through today.
+ * Both months come back whole however many transactions they hold (w21/011).
+ */
+export function spendingWindow(referenceDate: Date = new Date()): string {
+  const { lastMonthKey, thisMonthKey } = monthKeys(referenceDate);
+  const day = String(referenceDate.getDate()).padStart(2, "0");
+  return formatTimeFilter({
+    start: `${lastMonthKey}-01`,
+    end: `${thisMonthKey}-${day}`,
+  });
+}
+
+/**
+ * Spending this month vs. last month in the active currency, from the
+ * Expenses root's monthly totals (sub-accounts rolled up server-side). The
+ * card used to sum the newest 200 journal rows, so a month with more
+ * transactions than that hid last month's spending entirely and capped this
+ * month's (w21/011). `referenceDate` is injectable for deterministic tests.
  */
 export function selectSpendingCompare(
-  entries: JournalDirectiveType[],
+  months: readonly MonthTotal[],
   currency: string,
   referenceDate: Date = new Date(),
 ): SpendingCompare {
-  const year = referenceDate.getFullYear();
-  const month = referenceDate.getMonth() + 1; // 1-based
-  const thisMonthKey = toMonthKey(year, month);
-  const lastMonthKey =
-    month === 1 ? toMonthKey(year - 1, 12) : toMonthKey(year, month - 1);
-
+  const { thisMonthKey, lastMonthKey } = monthKeys(referenceDate);
   let thisMonth = 0;
   let lastMonth = 0;
-
-  for (const entry of entries) {
-    const key = (entry.date ?? "").slice(0, 7);
-    if (key !== thisMonthKey && key !== lastMonthKey) {
-      continue;
-    }
-    const spent = expenseTotal(entry, currency);
-    if (key === thisMonthKey) {
-      thisMonth += spent;
-    } else {
-      lastMonth += spent;
-    }
+  for (const month of months) {
+    const key = month.date.slice(0, 7);
+    const spent = resolveCurrencyBalance(month.balance, currency);
+    if (key === thisMonthKey) thisMonth += spent;
+    else if (key === lastMonthKey) lastMonth += spent;
   }
-
   return { thisMonth, lastMonth, thisMonthKey, lastMonthKey };
 }

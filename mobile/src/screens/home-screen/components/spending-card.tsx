@@ -9,20 +9,17 @@ import { LoadingTile } from "@/components/loading-tile";
 import { DashboardCard } from "@/components";
 import { FadeInView } from "@/components/crossfade";
 import { BAR_CHART_HEIGHT, BarChartD3 } from "@/common/d3/bar-chart-d3";
-import { useGetLedgerJournalQuery } from "@/generated-graphql/graphql";
 import {
-  DirectiveType,
-  JournalDirectiveType,
-} from "@/screens/transactions-screen/types";
-import { selectSpendingCompare } from "@/screens/home-screen/selectors/select-spending-compare";
+  useGetLedgerIntervalTotalsQuery,
+  useLedgerReadContextQuery,
+} from "@/generated-graphql/graphql";
+import {
+  selectSpendingCompare,
+  spendingWindow,
+} from "@/screens/home-screen/selectors/select-spending-compare";
 import { CardLoadFailure } from "@/components/card-load-failure";
 import { selectCardLoadState } from "@/common/apollo/card-load-state";
 import { useGuest } from "@/common/guest/guest-context";
-
-// Pull enough recent transactions to cover this + last month client-side.
-// TODO: replace with a proper expenses-only monthly series once the backend
-// exposes one (see select-spending-compare.ts).
-const SPENDING_WINDOW = 200;
 
 // Static x-axis labels (translation keys) for the two comparison bars.
 const SPENDING_LABELS = ["lastMonth", "thisMonth"];
@@ -45,8 +42,7 @@ type SpendingCardProps = {
 
 /**
  * "Spending" card comparing this month's total spending against last month's,
- * derived client-side from journal transactions (see the backend-gap note in
- * `select-spending-compare.ts`).
+ * from the Expenses root's monthly totals over those two months.
  */
 export function SpendingCard({
   ledgerId,
@@ -68,16 +64,28 @@ export function SpendingCard({
     router.navigate({ pathname: "/reports" });
   };
 
-  const { data, loading, error, refetch } = useGetLedgerJournalQuery({
+  // The ledger may rename its roots (`option "name_expenses"`); the shared
+  // read context carries the real name. Wait for it rather than query a root
+  // the ledger may not have.
+  const context = useLedgerReadContextQuery({
+    variables: { ledgerId: ledgerId! },
+    skip: !ledgerId,
+  });
+  const contextSettled = context.data !== undefined || Boolean(context.error);
+  const expensesRoot =
+    context.data?.getLedger.options.nameExpenses || "Expenses";
+
+  // Both months whole, however many transactions they hold: the newest 200
+  // journal rows used to stand in for them (w21/011).
+  const { data, loading, error, refetch } = useGetLedgerIntervalTotalsQuery({
     variables: {
       ledgerId: ledgerId!,
-      query: {
-        offset: 0,
-        limit: SPENDING_WINDOW,
-        directiveTypes: [DirectiveType.TRANSACTION],
-      },
+      accountName: expensesRoot,
+      interval: "month",
+      conversion: "units",
+      time: spendingWindow(),
     },
-    skip: !ledgerId,
+    skip: !ledgerId || !contextSettled,
     fetchPolicy: "cache-and-network",
   });
 
@@ -87,9 +95,8 @@ export function SpendingCard({
     }
   }, [refreshSignal, ledgerId, refetch]);
 
-  const entries = (data?.getLedgerJournal.data ??
-    []) as unknown as JournalDirectiveType[];
-  const { thisMonth, lastMonth } = selectSpendingCompare(entries, currency);
+  const months = data?.getLedgerIntervalTotals ?? [];
+  const { thisMonth, lastMonth } = selectSpendingCompare(months, currency);
 
   return (
     <DashboardCard
@@ -100,14 +107,14 @@ export function SpendingCard({
     >
       <Text style={styles.subtitle}>{t("spendingSubtitle")}</Text>
       {selectCardLoadState({
-        loading: loading,
+        loading: loading || !contextSettled,
         hasData: data !== undefined,
         error: error,
       }) === "failed" ? (
         <CardLoadFailure
           onRetry={() => void refetch().catch(() => undefined)}
         />
-      ) : loading && entries.length === 0 ? (
+      ) : (loading || !contextSettled) && data === undefined ? (
         <LoadingTile height={BAR_CHART_HEIGHT} mx={16} />
       ) : (
         <FadeInView>
