@@ -1049,7 +1049,10 @@ def require_writable_destination(destination: Path, flag: str = "--output") -> N
     staging file the user never named. It is the filesystem refusing (exit 3),
     reported before anything runs. A device or FIFO is left to the open call.
     """
-    if str(destination) == "-":
+    if str(destination) in STDOUT_PATHS:
+        # The stdout spellings all mean the stream, whatever it currently
+        # is: under a file redirect they stat as regular files, and with
+        # stdout closed the stat fails and `/dev` takes the blame (w5/795).
         return
     try:
         existing = destination.stat()

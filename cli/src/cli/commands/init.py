@@ -146,9 +146,9 @@ def init(
         directory = expand_path(directory, "init directory").absolute()
         try:
             directory_is_dir = directory.is_dir()
-        except PermissionError:
+        except OSError:
             # Unstatable, so uncreatable under: the engine's creation check
-            # reports it (w5/793).
+            # reports it (w5/793, w5/795).
             directory_is_dir = False
         file = (
             directory
@@ -179,11 +179,11 @@ def init(
                         f"would prefer main.bean over main.beancount — choose a new path; init never "
                         f"shadows an existing root ledger."
                     )
-    except PermissionError:
-        # An ancestor without search permission: nothing here can be
-        # stat-ed, and nothing can be created under it either, so the
-        # engine's creation check reports it as it does a read-only
-        # parent (w5/793).
+    except OSError:
+        # Unstatable (an ancestor without search permission, a symlink
+        # loop, an overlong or illegal name): nothing here can be checked,
+        # and nothing can be created under it either, so the engine's
+        # creation check reports it (w5/793, w5/795).
         pass
     # Every option is checked before the first question, naming itself: a bad
     # `--date` or `--opening-balance` was refused only after the prompts were

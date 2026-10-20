@@ -96,7 +96,7 @@ def format_beans(
         *(["-i"] if in_place else []),
         *(["-o", str(output_file)] if output_file is not None else []),
     ]
-    files, missing, skipped = _targets(paths, ctx.file, asked, alignment, expand_includes=walking)
+    files, missing, skipped, lexical = _targets(paths, ctx.file, asked, alignment, expand_includes=walking)
     if files is None:
         if reporting or in_place:
             raise UsageError("Name the files to format: reading stdin has nothing to compare or rewrite.")
@@ -117,7 +117,7 @@ def format_beans(
             output.emit(_wrote(0, output_file), target={"stdin": STDIN})
         return
 
-    target = _target(paths, files)
+    target = _target(paths, files, lexical)
     # The walk modes scan the include closure together so invalid files can be
     # skipped while valid ones are formatted. Single-file rendering checks its
     # own text in the engine before returning anything to stdout or --output.
@@ -400,7 +400,7 @@ def _named(paths: list[str] | None, default: Path | None) -> list[Path]:
 
 def _targets(
     paths: list[str] | None, default: Path | None, asked: list[str], alignment: list[str], *, expand_includes: bool
-) -> tuple[list[Path] | None, list[output.MissingInclude], list[dict[str, str]]]:
+) -> tuple[list[Path] | None, list[output.MissingInclude], list[dict[str, str]], dict[Path, Path]]:
     """The files to format (None for stdin), missing includes, and intentional encrypted skips.
 
     An explicit path wins; otherwise the global `--file` names the ledger. A
@@ -436,12 +436,16 @@ def _targets(
     if any(raw == STDIN for raw in (paths or [])) or (not paths and default is not None and str(default) == STDIN):
         if len(named) > 1:
             raise UsageError(f"Read either stdin ('{STDIN}') or named files, not both.")
-        return None, [], []
+        return None, [], [], {}
     if not named:
-        return None, [], []
+        return None, [], [], {}
 
     files: set[Path] = set()
     roots: list[Path] = []
+    # Each named root as it was spelled, for reporting: the scan and the
+    # writes run on the resolved paths, but `target` keeps the name the
+    # command used, as every other command does (w5/581, w5/795).
+    lexical: dict[Path, Path] = {}
     for path in named:
         expanded = expand_path(path, "format")
         if is_descriptor_path(expanded):
@@ -487,11 +491,12 @@ def _targets(
             # includes sit beside the link, as the loader and every other
             # command read them, not beside its target (w5/087). The resolved
             # path stays the write target and the deduplication key.
+            lexical[resolved] = Path(os.path.abspath(expanded))
             roots.append(Path(os.path.abspath(expand_path(path, "format"))))
         else:
             raise UsageError(f"Not a regular file or directory: {resolved}")
     if not expand_includes:
-        return sorted(files), [], []
+        return sorted(files), [], [], lexical
     # Every member, whatever its suffix: `SUFFIXES` says which files a
     # directory walk treats as ledgers, but an `include` already made
     # `entries.inc` part of this ledger (w1/041). One shared walk per set of
@@ -511,7 +516,7 @@ def _targets(
     # walk skips a file it has already seen through another spelling.
     for item in output.walk_closure(*roots, *sorted(files))[1]:
         missing[(item.include, item.source)] = item
-    return sorted(files), list(missing.values()), skipped
+    return sorted(files), list(missing.values()), skipped, lexical
 
 
 def _syntax_failures(files: list[Path]) -> dict[str, list[str]]:
@@ -743,10 +748,11 @@ def _result(
     }
 
 
-def _target(paths: list[str] | None, files: list[Path]) -> dict[str, str | list[str]]:
+def _target(paths: list[str] | None, files: list[Path], lexical: dict[Path, Path]) -> dict[str, str | list[str]]:
     named = [Path(path) for path in (paths or []) if path]
     if len(named) == 1 and expand_path(named[0], "format").resolve().is_dir():
         return {"directory": str(expand_path(named[0], "format").resolve())}
-    if len(files) == 1:
-        return {"file": str(files[0])}
-    return {"files": [str(file) for file in files]}
+    shown = [str(lexical.get(file, file)) for file in files]
+    if len(shown) == 1:
+        return {"file": shown[0]}
+    return {"files": shown}

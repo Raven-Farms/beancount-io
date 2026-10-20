@@ -115,12 +115,13 @@ def _appended(name: str, file: Path, data: dict[str, Any]) -> None:
     """Report one appended directive — the same way for every type."""
     target = data.pop("target")
     warnings = data.pop("warnings", [])
+    dest = output.write_target(file, target)
     if context.current().json_output:
-        output.emit({**data, "warnings": warnings}, target=output.write_target(file, target))
+        output.emit({**data, "warnings": warnings}, target=dest)
     else:
         for warning in warnings:
             output.note(warning)
-        output.success(f"Added 1 {name} to {target}.")
+        output.success(f"Added 1 {name} to {dest['into']}.")
 
 
 # Positional narrations that are almost certainly something else (w5/443):
@@ -348,26 +349,27 @@ def add_balance(
     data.setdefault("source", None)
     written = int(data.get("written") or 0)
     source = data.get("source")
+    dest = output.write_target(file, target)
     if ctx.json_output:
-        output.emit({**data, "warnings": warnings}, target=output.write_target(file, target))
+        output.emit({**data, "warnings": warnings}, target=dest)
     else:
         for warning in warnings:
             output.note(warning)
         if source:
             _already_recorded("Balance", source)
         elif written == 1:
-            output.success(f"Added 1 balance to {target}.")
+            output.success(f"Added 1 balance to {dest['into']}.")
         else:
             pad = data.get("pad") or {}
             inserted = pad.get("amount") or {}
             if inserted:
                 # The amount was never said, so a sign error padded twice the balance unseen (w5/611).
                 output.success(
-                    f"Added 1 pad and 1 balance to {target}; the pad inserts {inserted['number']} "
+                    f"Added 1 pad and 1 balance to {dest['into']}; the pad inserts {inserted['number']} "
                     f"{inserted['currency']} into {pad.get('account')} from {pad.get('source_account')}."
                 )
             else:
-                output.success(f"Added 1 pad and 1 balance to {target}.")
+                output.success(f"Added 1 pad and 1 balance to {dest['into']}.")
 
 
 @add_app.command("pad", cls=_SingleValueCommand)
@@ -452,15 +454,16 @@ def add_price(
         output.render_ledger_errors(ledger_errors, allow=True)
     target = data.pop("target")
     source = data["source"]
+    dest = output.write_target(file, target)
     if ctx.json_output:
-        output.emit(data, target=output.write_target(file, target))
+        output.emit(data, target=dest)
     else:
         for warning in data["warnings"]:
             output.note(warning)
         if source:
             _already_recorded("Price", source)
         else:
-            output.success(f"Added 1 price to {target}.")
+            output.success(f"Added 1 price to {dest['into']}.")
 
 
 @add_app.command("commodity", cls=_SingleValueCommand)
@@ -721,12 +724,13 @@ def add_transactions(
     target = data.pop("target")
     warnings = data.pop("warnings", [])
     written = int(data["written"])
+    dest = output.write_target(file, target)
     if context.current().json_output:
         if warnings:
             data["warnings"] = warnings
-        output.emit(data, target=output.write_target(file, target))
+        output.emit(data, target=dest)
     else:
         for warning in warnings:
             output.note(warning)
         noun = "transaction" if written == 1 else "transactions"
-        output.success(f"Added {written} {noun} to {target}.")
+        output.success(f"Added {written} {noun} to {dest['into']}.")

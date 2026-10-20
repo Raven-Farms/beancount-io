@@ -264,13 +264,16 @@ def treeify(ctx: typer.Context) -> None:
         )
     checked_text: str | None = None
     if parsed is not None and not parsed.help:
-        if parsed.input == "-" or parsed.output == "-":
+        if parsed.input == "-" or parsed.output in output.STDOUT_PATHS:
             # Upstream treats '-' as a literal file, unlike bea's stream
             # convention. Translate both sentinels before forwarding or
             # checking aliases; './-' still names a literal file (w5/705).
+            # The `/dev/stdout` spellings mean stdout too, whatever stdout
+            # currently is: stat-ing them reads a file redirect as a regular
+            # file and a closed stdout as missing (w5/795).
             if parsed.input == "-":
                 parsed.input = None
-            if parsed.output == "-":
+            if parsed.output in output.STDOUT_PATHS:
                 parsed.output = None
             forwarded = _without_output(parsed)
         if parsed.filler is not None and not parsed.filler:

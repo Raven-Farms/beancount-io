@@ -7,6 +7,7 @@ template, aligns it, validates it, and creates the file atomically.
 from __future__ import annotations
 
 import datetime
+import errno
 import os
 from decimal import MAX_PREC, Decimal, localcontext
 from pathlib import Path
@@ -56,9 +57,8 @@ def answer(
         file = file.resolve()
     try:
         present = file.exists() or file.is_symlink()
-    except PermissionError:
-        # Unstatable, so uncreatable: creation below reports it as a
-        # read-only parent does (w5/793).
+    except OSError:
+        # Unstatable, so uncreatable: creation below reports it (w5/793, w5/795).
         present = False
     if present:
         raise ConflictError(f"Already exists: {file}. Choose a new path; init never overwrites a ledger.")
@@ -152,6 +152,14 @@ def _write_new_ledger(file: Path, content: str) -> None:
         # or unwritable directory (w5/793).
         _remove_created(created)
         raise AuthError(f"The filesystem refused to create {file}; nothing was written.") from exc
+    except OSError as exc:
+        _remove_created(created)
+        if exc.errno in _USAGE_ERRNOS:
+            blocker = _blocking_component(file, exc.errno)
+            raise UsageError(
+                f"Cannot create {file}: {_uncreatable_reason(blocker, exc.errno)} Nothing was written."
+            ) from exc
+        raise
     except BaseException:
         # "Nothing was written" left the directories it had made (w5/610).
         _remove_created(created)
@@ -278,6 +286,39 @@ def _quiet_exists(path: Path) -> bool:
         return False
 
 
+#: Creation failures that are bad arguments, not a refusing filesystem (w5/795).
+_USAGE_ERRNOS = frozenset({errno.ELOOP, errno.ENAMETOOLONG, errno.EILSEQ})
+
+
+def _blocking_component(path: Path, number: int | None) -> Path:
+    """The innermost path whose stat fails with this error number.
+
+    A symlink loop, an overlong component and an illegal byte all fail
+    every stat from the target outward to the link or bad name itself; the
+    last failure before the first success names it.
+    """
+    blocker = path
+    for candidate in (path, *path.parents):
+        try:
+            os.stat(candidate)
+        except OSError as exc:
+            if exc.errno != number:
+                break
+            blocker = candidate
+        else:
+            break
+    return blocker
+
+
+def _uncreatable_reason(blocker: Path, number: int | None) -> str:
+    """Why the blocker cannot hold a ledger, as a usage error phrases it."""
+    if number == errno.ELOOP:
+        return f"{blocker} is a symbolic-link loop. Break the loop, or choose another directory."
+    if number == errno.ENAMETOOLONG:
+        return f"{blocker} exceeds the filesystem's name limit. Shorten the name, or choose another directory."
+    return f"{blocker} is not a valid file name. Rename it, or choose another directory."
+
+
 def _make_parent(file: Path) -> list[Path]:
     """Create the new ledger's directory, or say plainly what stands in the way.
 
@@ -317,6 +358,11 @@ def _make_parent(file: Path) -> list[Path]:
         ) from exc
     except OSError as exc:
         _remove_created(created)
+        if exc.errno in _USAGE_ERRNOS:
+            blocker = _blocking_component(parent, exc.errno)
+            raise UsageError(
+                f"Cannot create a ledger in {parent}: {_uncreatable_reason(blocker, exc.errno)} Nothing was written."
+            ) from exc
         # A full disk read as a raw `OSError: [Errno 28]` (w5/610).
         raise LedgerError(
             f"Cannot create {parent} ({exc.strerror or type(exc).__name__}); nothing was written."

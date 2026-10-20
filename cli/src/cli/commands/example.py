@@ -15,6 +15,7 @@ from cli.engine import launch
 from cli.errors import BeaError, ConflictError, UsageError, refuse_json, refuse_misplaced_global
 from cli.native_help import native_options
 from cli.output import (
+    STDOUT_PATHS,
     check_output_destination,
     forwarded_option,
     note,
@@ -58,8 +59,12 @@ def _is_written_through(output: Path) -> bool:
     """Whether `-o` names a device or FIFO, which is written through, not replaced.
 
     `-o /dev/null` exists, but there is no file to overwrite and so nothing for
-    `--force` to consent to (w5/277). A directory stays a conflict.
+    `--force` to consent to (w5/277). A directory stays a conflict. The
+    stdout spellings are always written through: under a file redirect they
+    stat as regular files (w5/795).
     """
+    if str(output) in STDOUT_PATHS:
+        return True
     try:
         mode = output.stat().st_mode
     except OSError:
@@ -160,7 +165,7 @@ def example(ctx: typer.Context) -> None:
             refuse_include_claim(expand_path(output, "--output"), ledger)
     _check_date_order(forwarded)
     destination: Path | None = None
-    if output is not None and str(output) != "-":
+    if output is not None and str(output) not in STDOUT_PATHS:
         # Upstream writes `-o` first and validates afterwards, so a history it
         # rejects is already on disk. bea keeps the destination itself and
         # writes it only once the run and its validation have succeeded.
