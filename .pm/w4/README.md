@@ -42,6 +42,9 @@
 - [283 — Resolve supported early-year statement periods without a 1900 offset](./283.md) — minor; dashboard QA, 2026-10-20.
 - [284 — Protect the Accounts Open Account draft while its write is pending](./284.md) — minor; dashboard QA, 2026-10-20.
 - [285 — Preserve skipped civil days in the shared ISO date display formatter](./285.md) — minor; dashboard QA, 2026-10-20.
+- [286 — Keep IME composition keys from applying Combobox values](./286.md) — minor; dashboard QA, 2026-10-20.
+- [287 — Leave Gallery result navigation inactive during IME composition](./287.md) — minor; dashboard QA, 2026-10-20.
+- [288 — Keep DatePicker's calendar shortcut out of IME composition](./288.md) — minor; dashboard QA, 2026-10-20.
 
 ## Milestones
 
