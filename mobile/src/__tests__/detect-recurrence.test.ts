@@ -73,7 +73,8 @@ describe("detectRecurrence", () => {
     expect(verdict!.cadence).toBe("monthly");
     expect(verdict!.typicalAmountByCurrency.USD).toBe(-15.99);
     expect(verdict!.isApproximate).toBe(false);
-    expect(verdict!.nextExpected).toBe("2024-07-16");
+    // The bill's own day of the month, not last + 31 (w21/007).
+    expect(verdict!.nextExpected).toBe("2024-07-15");
     expect(verdict!.isOverdue).toBe(false);
   });
 
@@ -207,7 +208,7 @@ describe("detectRecurrence", () => {
       ["2024-01-01", "2024-02-01", "2024-03-01", "2024-04-01"],
       -50,
     );
-    // median gap ≈ 30; nextExpected ≈ 2024-05-01; grace ≈ 8 → overdue after ~May 9
+    // nextExpected 2024-05-01; grace ≈ 8 → overdue after May 9
     expect(detectRecurrence(series, "2024-05-05")!.isOverdue).toBe(false);
     expect(detectRecurrence(series, "2024-05-20")!.isOverdue).toBe(true);
   });
@@ -278,11 +279,57 @@ describe("detectRecurrence", () => {
       ["2024-01-01", "2024-02-01", "2024-03-01", "2024-04-01"],
       -50,
     );
-    const onTime = detectRecurrence(series, "2024-05-10");
-    const overdue = detectRecurrence(series, "2024-05-11");
-    // nextExpected ≈ 2024-05-02, grace ≈ 8 → boundary is May 10 inclusive.
+    const onTime = detectRecurrence(series, "2024-05-09");
+    const overdue = detectRecurrence(series, "2024-05-10");
+    // nextExpected 2024-05-01 (the 1st, not last + 31), grace 8 → boundary
+    // is May 9 inclusive.
     expect(onTime!.isOverdue).toBe(false);
     expect(overdue!.isOverdue).toBe(true);
+  });
+});
+
+// A monthly bill was predicted at last payment + round(median gap): usually
+// 31 days, so one to three days late, and a month-end bill rolled into the
+// next month (w21/007).
+describe("next expected date for a bill kept on one day of the month", () => {
+  const next = (dates: string[]) =>
+    detectRecurrence(pointsOn(dates, -30), "2026-10-20")!.nextExpected;
+
+  it("lands on the bill's day of the month", () => {
+    expect(next(["2026-07-25", "2026-08-25", "2026-09-25"])).toBe("2026-10-25");
+    expect(next(["2026-01-10", "2026-02-10", "2026-03-10", "2026-04-10"])).toBe(
+      "2026-05-10",
+    );
+    expect(next(["2025-11-01", "2025-12-01", "2026-01-01", "2026-02-01"])).toBe(
+      "2026-03-01",
+    );
+  });
+
+  it("clamps a month-end bill to a short month's last day", () => {
+    expect(next(["2026-05-31", "2026-06-30", "2026-07-31", "2026-08-31"])).toBe(
+      "2026-09-30",
+    );
+    expect(next(["2025-11-30", "2025-12-31", "2026-01-31"])).toBe("2026-02-28");
+  });
+
+  it("steps quarters by calendar months too", () => {
+    expect(next(["2025-03-31", "2025-06-30", "2025-09-30", "2025-12-31"])).toBe(
+      "2026-03-31",
+    );
+  });
+
+  it("keeps the day-count step for every-four-weeks payments", () => {
+    // Same monthly gap band, but the day of the month drifts.
+    expect(next(["2026-01-01", "2026-01-29", "2026-02-26", "2026-03-26"])).toBe(
+      "2026-04-23",
+    );
+  });
+
+  it("flags overdue from the corrected date", () => {
+    const series = pointsOn(["2026-07-25", "2026-08-25", "2026-09-25"], -30);
+    // Next 2026-10-25, grace 8 days → still on time on Nov 2, late on Nov 3.
+    expect(detectRecurrence(series, "2026-11-02")!.isOverdue).toBe(false);
+    expect(detectRecurrence(series, "2026-11-03")!.isOverdue).toBe(true);
   });
 });
 

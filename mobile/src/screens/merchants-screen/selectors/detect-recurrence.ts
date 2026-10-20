@@ -23,7 +23,10 @@ export interface RecurrenceVerdict {
   typicalAmountByCurrency: Record<string, number>;
   /** True when any currency's amount spread exceeds ~10% of its median. */
   isApproximate: boolean;
-  /** Last event date + median gap, as `YYYY-MM-DD`. */
+  /**
+   * The next event as `YYYY-MM-DD`: for a bill kept on one day of the month,
+   * that day in the next period's month; otherwise last event + median gap.
+   */
   nextExpected: string;
   /** True when `today` is past `nextExpected` by more than the grace window. */
   isOverdue: boolean;
@@ -94,6 +97,65 @@ export function formatLedgerDay(dayNumber: number): string {
   const month = String(date.getUTCMonth() + 1).padStart(2, "0");
   const day = String(date.getUTCDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+/** Calendar months a monthly, quarterly or yearly bill advances by. */
+const CADENCE_MONTHS: Partial<Record<Cadence, number>> = {
+  monthly: 1,
+  quarterly: 3,
+  yearly: 12,
+};
+
+type CalendarDay = { year: number; month: number; day: number };
+
+function calendarDay(dayNumber: number): CalendarDay {
+  const date = new Date(dayNumber * MS_PER_DAY);
+  return {
+    year: date.getUTCFullYear(),
+    month: date.getUTCMonth(),
+    day: date.getUTCDate(),
+  };
+}
+
+function daysInMonth(year: number, month: number): number {
+  return new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+}
+
+/** `months` calendar months after `dayNumber`, on day `anchor` clamped to the month. */
+function addMonthsClamped(
+  dayNumber: number,
+  months: number,
+  anchor = calendarDay(dayNumber).day,
+): number {
+  const { year, month } = calendarDay(dayNumber);
+  const target = new Date(Date.UTC(year, month + months, 1));
+  const lastDay = daysInMonth(target.getUTCFullYear(), target.getUTCMonth());
+  return (
+    Math.floor(target.getTime() / MS_PER_DAY) + Math.min(anchor, lastDay) - 1
+  );
+}
+
+/**
+ * The day of the month a series is kept on, or null when it is not: every
+ * event falls on that day (clamped at a short month's end, so a 31st bill
+ * paid on 30 Jun still counts) and each is `months` after the one before.
+ * Every-four-weeks payments share the monthly gap band but drift through the
+ * month, so they keep the day-count step (w21/007).
+ */
+function monthDayAnchor(
+  eventDays: readonly number[],
+  months: number,
+): number | null {
+  const days = eventDays.map(calendarDay);
+  const anchor = Math.max(...days.map((d) => d.day));
+  const kept = days.every(
+    (d, i) =>
+      d.day === Math.min(anchor, daysInMonth(d.year, d.month)) &&
+      (i === 0 ||
+        (d.year - days[i - 1]!.year) * 12 + d.month - days[i - 1]!.month ===
+          months),
+  );
+  return kept ? anchor : null;
 }
 
 function sortedCopy(values: readonly number[]): number[] {
@@ -264,7 +326,15 @@ export function detectRecurrence(
 
   const gapDays = Math.round(medianGap);
   const lastDay = eventDays[eventDays.length - 1]!;
-  const nextExpectedDay = lastDay + gapDays;
+  // A bill kept on one day of the month is due that day: the median of
+  // 28–31-day gaps rounds to 31 and used to land one to three days late.
+  const months = CADENCE_MONTHS[cadence];
+  const anchor =
+    months === undefined ? null : monthDayAnchor(eventDays, months);
+  const nextExpectedDay =
+    months !== undefined && anchor !== null
+      ? addMonthsClamped(lastDay, months, anchor)
+      : lastDay + gapDays;
   const graceDays = Math.max(1, Math.round(gapDays * OVERDUE_GRACE_FRACTION));
   const isOverdue = todayDay > nextExpectedDay + graceDays;
 
