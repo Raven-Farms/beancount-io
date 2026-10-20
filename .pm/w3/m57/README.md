@@ -1,6 +1,6 @@
 # w3 · m57 — `beancount-accruals`: supported accrual drafts with explicit period policy
 
-**Worker:** worker3 **Goal:** a new customer skill prepares deterministic, idempotent accrual drafts under an explicit period policy, posted only through the suite's existing propose/confirm/check flow. **Status:** todo
+**Worker:** worker3 **Goal:** a new customer skill prepares deterministic, idempotent accrual drafts under an explicit period policy, posted only through the suite's existing propose/confirm/check flow. **Status:** blocked (t003 waits on Codex quota)
 
 ## Tasks (in order)
 
@@ -27,3 +27,7 @@
 - **Goal linkage:** A1 — Agent-native accounting.
 - **Expected outcome:** freelancers and small businesses close months with accruals an agent calculated deterministically and a user approved, instead of estimates stated in chat. Signals: skill invocations, eval pass rate on both clients.
 - **Why now:** sequenced after m55 and m56, whose movement and variance evidence its schedules cite; its policy contract (t001) is the risk to retire first. Adoption surface is included (t004) because a new customer skill ships.
+
+## Blocked
+
+- **t003** — Claude Code evals pass 5/5; the Codex runs are quota-blocked at the account level. Unblock condition is written in t003.
