@@ -637,6 +637,8 @@ def helper_json(
 #: How long the helper gets to unwind once we pass a termination signal on. It
 #: only has to drop a staged candidate file, so this is deliberately generous.
 _CLEANUP_GRACE_SECONDS = 5.0
+#: The status of a helper killed when that grace period runs out.
+_KILLED = -signal.SIGKILL if hasattr(signal, "SIGKILL") else None
 
 
 def _run_helper(
@@ -696,8 +698,13 @@ def _run_helper(
         # defaults before installing the post-commit handlers left a window
         # where the frontend could die silently over a completed write.
         completed = subprocess.CompletedProcess(command, child.returncode, out, "".join(kept))
-        committed = writes and _answered_success(completed)
-    if stopped and not committed:
+        committed = writes and _reports_commit(completed)
+    # A writer SIGKILLed once the grace period ran out never said whether it
+    # wrote: that is the unknown outcome `_parse` reports as exit 4, not a
+    # silent death (w5/825). One that died of the stop itself did so before
+    # its handlers were installed, with nothing started.
+    unknown = writes and completed.returncode == _KILLED and _envelope(completed) is None
+    if stopped and not committed and not unknown:
         _die_by(stopped[0])
     return completed
 
@@ -738,7 +745,34 @@ def _hold_stops_after_commit(stopped: list[int], previous: list[tuple[int, Any]]
         except (OSError, ValueError):
             continue
     report_stop()
+    if _owns_process:
+        # Handed back on close, the default disposition was in place for the
+        # interpreter's shutdown, and a stop there killed bea after it had
+        # printed the result (w5/825). Held to the end instead, and ignored
+        # from the last exit handler on: the interpreter's teardown resets a
+        # Python handler to the default, but leaves an ignored signal alone.
+        atexit.register(_ignore_stops, [number for number, _ in previous])
+        return
     command.find_root().call_on_close(lambda: _restore_handlers(previous))
+
+
+#: Whether this process is `bea` itself rather than a caller embedding the
+#: app, such as `CliRunner`, which keeps its own handlers afterwards.
+_owns_process = False
+
+
+def own_process() -> None:
+    """Mark this process as `bea` itself: a committed write then holds stops until it exits."""
+    global _owns_process
+    _owns_process = True
+
+
+def _ignore_stops(numbers: list[int]) -> None:
+    for number in numbers:
+        try:
+            signal.signal(number, signal.SIG_IGN)
+        except (OSError, ValueError):
+            continue
 
 
 def _restore_handlers(previous: list[tuple[int, Any]]) -> None:
@@ -753,14 +787,30 @@ def _report_late_stop(number: int) -> None:
     output.note(f"Stopped ({signal.Signals(number).name}) after the write had completed; its result stands.")
 
 
-def _answered_success(completed: subprocess.CompletedProcess[str]) -> bool:
-    if completed.returncode != 0:
-        return False
+def _envelope(completed: subprocess.CompletedProcess[str]) -> dict[str, Any] | None:
     try:
         envelope = json.loads(completed.stdout)
     except ValueError:
+        return None
+    return envelope if isinstance(envelope, dict) else None
+
+
+def _reports_commit(completed: subprocess.CompletedProcess[str]) -> bool:
+    """Whether the helper's answer says a write landed, whatever its exit status.
+
+    A success does, and so does a failure whose result names what was already
+    written: a `--partial` add's rows, or the files a stopped `format -i` had
+    rewritten. Requiring exit 0 as well made a stop that killed the engine
+    after it answered look like no write at all (w5/825).
+    """
+    envelope = _envelope(completed)
+    if envelope is None:
         return False
-    return isinstance(envelope, dict) and envelope.get("ok") is True
+    if envelope.get("ok") is True:
+        return True
+    failure = envelope.get("error")
+    result = failure.get("result") if isinstance(failure, dict) else None
+    return isinstance(result, dict) and bool(result.get("written") or result.get("formatted"))
 
 
 def _die_by(number: int) -> None:

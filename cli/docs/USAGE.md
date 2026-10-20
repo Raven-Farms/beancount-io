@@ -1167,9 +1167,13 @@ commits, with or without `--allow-errors`. The atomic replace itself is the
 dividing line. A stop (SIGTERM, SIGINT, SIGHUP) that arrives during the replace
 or after it never undoes the write or silences it. bea prints the write's normal
 result, adds `Stopped (SIGTERM) after the write had completed; its result
-stands.` on stderr, and exits 0, so a retry is never needed. Only a `kill -9`
-of the helper itself in that moment can end it unreported: SIGKILL cannot be
-caught, so after one, check the ledger before retrying.
+stands.` on stderr, and exits 0, so a retry is never needed. A multi-file
+`format -i` stopped after a rewrite ends before the next file and exits **1**,
+listing the files it formatted and the ones it did not attempt; re-running it
+formats the rest. A helper that cannot finish within the grace period after a
+stop is killed, and the write then exits **4**, its outcome unknown. Only a
+`kill -9` of the helper itself in that moment can end it unreported: SIGKILL
+cannot be caught, so after one, check the ledger before retrying.
 
 For split ledgers, keep `--file` pointed at the root and choose the included
 destination with `--into`. Its path is relative to the root ledger's directory

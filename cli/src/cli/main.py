@@ -538,4 +538,7 @@ app.command("upgrade", rich_help_panel=_SELF_PANEL)(upgrade)
 app.add_typer(engine_app, name="engine", rich_help_panel=_SELF_PANEL)
 
 if __name__ == "__main__":
+    from cli.engine.launch import own_process
+
+    own_process()
     app()

@@ -294,6 +294,15 @@ def _partial_message(
 ) -> str:
     """The headline of an `-i` run the engine stopped after rewriting some files."""
     parts = [f"{formatted_count} file(s) formatted"]
+    stopped = progress.get("stopped")
+    if isinstance(stopped, str) and not (write_failed or failed or missing):
+        # A stop ended the run between two files (w5/825): nothing to fix.
+        not_attempted = progress.get("not_attempted")
+        left = len(not_attempted) if isinstance(not_attempted, list) else 0
+        return (
+            f"Stopped ({stopped}) after {formatted_count} file(s) formatted; {left} file(s) not attempted. "
+            "Each file is listed below; re-run to format the rest."
+        )
     if write_failed:
         parts.append(f"{len(write_failed)} file(s) could not be written")
     parts.extend(_problem_parts(failed, missing))

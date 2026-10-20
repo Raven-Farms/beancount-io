@@ -22,6 +22,7 @@ and the rewrite can never disagree about what would change.
 
 from __future__ import annotations
 
+import signal
 import sys
 import unicodedata
 from collections.abc import Callable, Iterator
@@ -109,8 +110,11 @@ def format_files(
     if not in_place:
         return {"changed": [str(file) for file in targets if _would_change(file, widths)]}
 
+    from bea_engine import stopping
+
     changed: list[str] = []
     unchanged: list[str] = []
+    stopped: int | None = None
     try:
         with ExitStack() as stack:
             locks = write.lock_order(targets)
@@ -125,6 +129,13 @@ def format_files(
             for directory in dict.fromkeys(file.parent for file in targets):
                 write.sweep_abandoned_candidates(directory)
             for file in targets:
+                # Once a file is rewritten a stop is only noted, so the run
+                # went on rewriting until the frontend's grace period ended
+                # in SIGKILL, and nothing said which files had changed
+                # (w5/825). A stop now ends it here, reporting both.
+                stopped = stopping.requested()
+                if stopped is not None:
+                    break
                 with ExitStack() as each:
                     if not together:
                         each.enter_context(write.lock_file(file))
@@ -151,6 +162,19 @@ def format_files(
         if error is exc:
             raise
         raise error from exc
+    if stopped is not None:
+        name = signal.Signals(stopped).name
+        completed = {*changed, *unchanged}
+        raise LedgerError(
+            f"Stopped ({name}) before formatting the remaining files.",
+            result={
+                "formatted": changed,
+                "unchanged": unchanged,
+                "failed": [],
+                "not_attempted": [str(target) for target in targets if str(target) not in completed],
+                "stopped": name,
+            },
+        )
     return {"changed": changed}
 
 

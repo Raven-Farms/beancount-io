@@ -41,14 +41,14 @@ from pathlib import Path
 
 if "cli.main" in sys.orig_argv:
     from cli.engine import launch
-    answered_success = launch._answered_success
+    answered_success = launch._reports_commit
     def stop_at_answer(completed):
         marker = Path(os.environ["TEST_HANDOFF_MARKER"])
         if not marker.exists():
             marker.write_text("answer observed\\n")
             os.kill(os.getpid(), signal.SIGTERM)
         return answered_success(completed)
-    launch._answered_success = stop_at_answer
+    launch._reports_commit = stop_at_answer
 """
 
 pytestmark = pytest.mark.skipif(os.name != "posix", reason="POSIX signals")

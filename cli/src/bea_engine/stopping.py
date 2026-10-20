@@ -150,6 +150,15 @@ def check() -> None:
         raise SystemExit(128 + _received)
 
 
+def requested() -> int | None:
+    """The termination signal that arrived, if one did, whether or not it was obeyed.
+
+    After a commit a stop is only noted, so a run that commits more than once
+    asks before each later step (w5/825).
+    """
+    return _received
+
+
 @contextmanager
 def committing() -> Iterator[None]:
     """Commit a write as one step that no termination signal can split from its answer.

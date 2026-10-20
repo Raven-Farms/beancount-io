@@ -35,5 +35,10 @@ except Abort:
     print("Aborted!", file=sys.stderr)
     raise SystemExit(1) from None
 finally:
-    for number, handler in _previous_handlers.items():
-        signal.signal(number, handler)
+    # The answer is out, or the run is already ending by its own status: a
+    # stop from here on is ignored. Restoring the default disposition left
+    # tens of milliseconds of interpreter shutdown in which a forwarded stop
+    # killed an engine that had answered, and the frontend took the write
+    # for uncommitted and died silently (w5/825).
+    for number in _previous_handlers:
+        signal.signal(number, signal.SIG_IGN)

@@ -258,7 +258,10 @@ def _failure(command: str, exc: EngineError) -> dict[str, Any]:
 
 
 def _write(envelope: dict[str, Any]) -> None:
-    print(json.dumps(_jsonable(envelope)))
+    # Flushed at once: buffered to a pipe, the answer waited for interpreter
+    # shutdown, and a stop in the meantime took a committed write's answer
+    # with it (w5/825).
+    print(json.dumps(_jsonable(envelope)), flush=True)
 
 
 def jsonable(value: Any) -> Any:
