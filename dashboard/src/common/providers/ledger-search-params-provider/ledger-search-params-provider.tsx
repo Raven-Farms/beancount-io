@@ -44,16 +44,19 @@ export const LedgerSearchParamsProvider = ({
   );
 
   const setSearchParams = useCallback(
-    (next: LedgerSearchParams) => {
+    (patch: Partial<LedgerSearchParams>) => {
       void navigate({
         // Stay on the current matched route; only the shared filters change.
         to: ".",
         search: (prev) => {
+          // `prev` is the router's latest intended search, including a still
+          // pending navigation. Applying only the edited fields to it keeps a
+          // Clear all that has not settled yet cleared (w4/249).
+          const before = parseLedgerFilterSearch(prev);
           const updated = applyLedgerFilterSearch(
             prev as Record<string, unknown>,
-            next,
+            { ...before, ...patch },
           );
-          const before = parseLedgerFilterSearch(prev);
           const after = parseLedgerFilterSearch(updated);
           if (
             isPaginatedList &&
