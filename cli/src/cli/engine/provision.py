@@ -31,6 +31,7 @@ import os
 import shutil
 import subprocess
 import sys
+import time
 from collections.abc import Iterator
 from contextlib import contextmanager
 from importlib import resources
@@ -39,9 +40,8 @@ from typing import Any
 
 from cli import context, output
 from cli.engine import paths
-from cli.errors import EngineError, UsageError
+from cli.errors import AuthError, ConflictError, EngineError, UsageError
 from cli.paths import expand_path
-from cli.utils import exclusive_lock
 
 UV_ENV = "BEA_UV"
 FEATURES_FILE = "bea-features.json"
@@ -71,6 +71,24 @@ def _refuse_offline_install(root: Path) -> None:
         )
 
 
+#: How long a command queues behind another bea's engine install before it
+#: gives up, when it first says so, and how often it retries. Mirrors the
+#: write lock's notice and limit (w5/182): a stalled install must not hang
+#: every later command behind it without a word (w5/787).
+_PROVISION_LOCK_TIMEOUT = 60.0
+_PROVISION_LOCK_NOTICE_SECONDS = 1.0
+_PROVISION_LOCK_POLL_SECONDS = 0.05
+
+
+def _unwritable_engine_dir(root: Path, exc: OSError) -> AuthError:
+    """The exit-3 refusal for a data directory bea cannot install into."""
+    variable = paths.DIR_ENV if os.environ.get(paths.DIR_ENV) else "XDG_DATA_HOME"
+    return AuthError(
+        f"Cannot install the Beancount engine: the directory {root.parent} cannot be created or is not "
+        f"writable ({exc.strerror or exc}). Make it a writable directory or set {variable} to one before retrying."
+    )
+
+
 @contextmanager
 def provisioning_lock(root: Path) -> Iterator[None]:
     """Hold the exclusive lock for changing the engine at `root`.
@@ -80,9 +98,59 @@ def provisioning_lock(root: Path) -> Iterator[None]:
     from under a command already running it. The lock file sits beside the
     root and is never removed, so every waiter locks the same inode.
     """
-    root.parent.mkdir(parents=True, exist_ok=True)
-    with exclusive_lock(root.with_name(f"{root.name}.lock")):
-        yield
+    lock = root.with_name(f"{root.name}.lock")
+    try:
+        root.parent.mkdir(parents=True, exist_ok=True)
+        fd = os.open(lock, os.O_RDWR | os.O_CREAT, 0o600)
+    except OSError as exc:
+        raise _unwritable_engine_dir(root, exc) from exc
+    with os.fdopen(fd, "r+b") as stream:
+        if sys.platform == "win32":
+            import msvcrt
+
+            if not os.fstat(stream.fileno()).st_size:
+                try:
+                    stream.write(b"\0")
+                    stream.flush()
+                except OSError as exc:
+                    raise _unwritable_engine_dir(root, exc) from exc
+        else:
+            import fcntl
+
+        started = time.monotonic()
+        announced = False
+        while True:
+            try:
+                if sys.platform == "win32":
+                    stream.seek(0)
+                    msvcrt.locking(stream.fileno(), msvcrt.LK_NBLCK, 1)
+                else:
+                    fcntl.flock(stream.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except OSError as exc:
+                if sys.platform != "win32" and not isinstance(exc, BlockingIOError):
+                    raise _unwritable_engine_dir(root, exc) from exc
+            waited = time.monotonic() - started
+            if _PROVISION_LOCK_TIMEOUT <= waited:
+                raise ConflictError(
+                    f"Timed out after {_PROVISION_LOCK_TIMEOUT:g} seconds waiting for another bea to finish "
+                    f"installing the engine at {root}. Retry once that install has finished."
+                )
+            if not announced and waited >= _PROVISION_LOCK_NOTICE_SECONDS:
+                announced = True
+                output.note(
+                    f"Waiting up to {_PROVISION_LOCK_TIMEOUT:g} seconds for another bea to finish installing "
+                    f"the engine at {root} ..."
+                )
+            time.sleep(_PROVISION_LOCK_POLL_SECONDS)
+        try:
+            yield
+        finally:
+            if sys.platform == "win32":
+                stream.seek(0)
+                msvcrt.locking(stream.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                fcntl.flock(stream.fileno(), fcntl.LOCK_UN)
 
 
 def provision(root: Path) -> None:
