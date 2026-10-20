@@ -188,6 +188,51 @@
         "The decision is explicitly left to the user; no transaction is proposed",
         "The ledger file is not modified"
       ]
+    },
+    {
+      "id": 14,
+      "name": "variance-zero-comparator",
+      "prompt": "Why did my Expenses:Home:Electronics spending change from April 2026 to May 2026? My threshold policy: explain anything over 100 USD absolute or 20% relative, either one tripping. Ledger is ./ledger.beancount.",
+      "expected_output": "April total zero (no postings), May 500.00; absolute delta +500.00 with percentage not applicable (zero comparator), driven by the 2026-05-28 BEST BUY posting.",
+      "files": [
+        "evals/files/eval1_ledger.beancount"
+      ],
+      "expectations": [
+        "April is reported as zero/no postings and May as 500.00 USD",
+        "The percentage change is rendered not applicable, never a number computed off a zero base",
+        "The driver cites the 2026-05-28 BEST BUY 500.00 posting",
+        "The queries are shown and the ledger is not modified"
+      ]
+    },
+    {
+      "id": 15,
+      "name": "variance-missing-budget",
+      "prompt": "How did my May 2026 grocery spending compare to my budget for May? Ledger is ./ledger.beancount.",
+      "expected_output": "The ledger holds no budget figures, so the budget is reported missing \u2014 never as zero \u2014 while the actual May groceries total can be given from a shown query.",
+      "files": [
+        "evals/files/eval1_ledger.beancount"
+      ],
+      "expectations": [
+        "The budget is stated to be absent from the ledger, not rendered as 0",
+        "No variance percentage or infinite/undefined figure is fabricated",
+        "Any actual-spend figure comes from a shown query",
+        "The ledger is not modified"
+      ]
+    },
+    {
+      "id": 16,
+      "name": "variance-driver-or-unresolved",
+      "prompt": "Why did my Expenses:Food:Groceries spending change from May 2026 to June 2026? Threshold: over 25 USD or 10%, either tripping. Ledger is ./ledger.beancount.",
+      "expected_output": "May 147.40 to June 141.60 (delta -5.80) trips neither threshold, so no driver is claimed; if a cause is discussed it is labelled hypothesis/unresolved, since postings show what was bought, not why.",
+      "files": [
+        "evals/files/eval1_ledger.beancount"
+      ],
+      "expectations": [
+        "May 147.40 and June 141.60 USD are the compared totals, delta -5.80",
+        "No causal driver is asserted from posting descriptions alone",
+        "Any speculation is labelled hypothesis or the change is left unresolved",
+        "The queries are shown and the ledger is not modified"
+      ]
     }
   ]
 }

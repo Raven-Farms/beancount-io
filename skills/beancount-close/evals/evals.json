@@ -180,6 +180,20 @@
         "The close report marks the gap recorded at the user's confirmation (not silently healed, not left open)",
         "Writing the entry does not by itself stage/commit the close"
       ]
+    },
+    {
+      "id": 12,
+      "name": "close-commentary-uses-variance-recipe",
+      "prompt": "Close May 2026 and in the report explain why Expenses:Home:Electronics changed versus April, using my threshold policy: over 100 USD or 20%, either tripping. Ledger is ./ledger.beancount.",
+      "expected_output": "The close commentary matches beancount-ask's variance answer on the same ledger and period: April zero, May 500.00, percentage not applicable, driver the 2026-05-28 BEST BUY posting \u2014 from the variance recipe, not a restated delta.",
+      "files": [
+        "evals/files/eval12_ledger.beancount"
+      ],
+      "expectations": [
+        "Commentary figures agree with the ask variance answer (0 to 500.00, percentage not applicable)",
+        "The driver cites the 2026-05-28 BEST BUY posting",
+        "No driver is claimed for a change under the stated thresholds"
+      ]
     }
   ]
 }
