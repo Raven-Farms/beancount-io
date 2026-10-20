@@ -1,5 +1,5 @@
 import { render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RegisterForm } from "@/features/auth/components/register-form";
 import { ForgotPasswordForm } from "@/features/auth/components/forgot-password-form";
 import { resetAuthProvidersForTests } from "@/features/auth/hooks/use-auth-providers";
@@ -19,6 +19,10 @@ const providers = (body: unknown) =>
     ok: true,
     json: async () => body,
   } as Response);
+
+beforeEach(() => {
+  resetAuthProvidersForTests();
+});
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -43,6 +47,28 @@ describe("password forms when AUTH_PASSWORD_ENABLED=false", () => {
     const { container } = render(<ForgotPasswordForm />);
     await waitFor(() => expect(container.querySelector("input")).toBeNull());
     expect(container.textContent).toContain("Password sign-in is turned off");
+  });
+
+  it("ForgotPasswordForm sends Google back to the destination it is given", async () => {
+    providers({ google: true, password: false });
+    window.history.pushState({}, "", "/auth/forgot-password");
+    render(<ForgotPasswordForm googleNext="/" />);
+    const link = await screen.findByRole("link", { name: /Google/ });
+    expect(link.getAttribute("href")).toBe(
+      "/api-gateway/auth/google/start?next=%2F",
+    );
+    window.history.pushState({}, "", "/");
+  });
+
+  it("an embedded ForgotPasswordForm keeps the page it is on (e.g. OAuth consent)", async () => {
+    providers({ google: true, password: false });
+    window.history.pushState({}, "", "/oauth/consent?uid=abc");
+    render(<ForgotPasswordForm />);
+    const link = await screen.findByRole("link", { name: /Google/ });
+    expect(link.getAttribute("href")).toBe(
+      "/api-gateway/auth/google/start?next=%2Foauth%2Fconsent%3Fuid%3Dabc",
+    );
+    window.history.pushState({}, "", "/");
   });
 
   it("RegisterForm keeps its fields when password sign-in is on", async () => {

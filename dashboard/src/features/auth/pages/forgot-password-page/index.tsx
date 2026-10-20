@@ -17,7 +17,7 @@ export default function ForgotPasswordPage() {
         <div className="w-full max-w-md">
           <Card>
             <CardContent className="pt-6">
-              <ForgotPasswordForm />
+              <ForgotPasswordForm googleNext="/" />
             </CardContent>
           </Card>
         </div>

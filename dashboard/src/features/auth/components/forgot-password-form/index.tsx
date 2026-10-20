@@ -21,6 +21,11 @@ import { useErrorMessage } from "@/common/lib/errors/error-message";
 
 type ForgotPasswordFormProps = {
   onBackToSignIn?: () => void;
+  /**
+   * Where "Continue with Google" returns to when password sign-in is off.
+   * Defaults to the current page (an OAuth consent page keeps its flow).
+   */
+  googleNext?: string;
 };
 
 const createForgotPasswordSchema = (t: (key: string) => string) =>
@@ -57,6 +62,7 @@ function BackToSignIn({ onClick }: { onClick?: () => void }) {
 
 export function ForgotPasswordForm({
   onBackToSignIn,
+  googleNext,
 }: ForgotPasswordFormProps) {
   const { password: passwordEnabled } = useAuthProviders();
   const { t } = useTranslations();
@@ -110,7 +116,12 @@ export function ForgotPasswordForm({
   };
 
   if (!passwordEnabled) {
-    return <PasswordAuthDisabled messageKey="auth.passwordAuthDisabled" />;
+    return (
+      <PasswordAuthDisabled
+        messageKey="auth.passwordAuthDisabled"
+        next={googleNext}
+      />
+    );
   }
 
   if (success) {
