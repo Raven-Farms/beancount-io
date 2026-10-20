@@ -784,3 +784,42 @@ describe("LedgerForm", () => {
     });
   });
 });
+
+describe("LedgerForm draft resume (w3/m54/t006)", () => {
+  it("resumes the step and requestId after leaving and returning", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    const first = render(
+      <LedgerForm onSubmit={onSubmit} onCancel={vi.fn()} />,
+    );
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    expect(screen.getByTestId("ledger-create-step")).toHaveTextContent(
+      "Step 2 of 3",
+    );
+    first.unmount();
+
+    const second = render(
+      <LedgerForm onSubmit={onSubmit} onCancel={vi.fn()} />,
+    );
+    // The draft restored the details step instead of restarting.
+    expect(screen.getByTestId("ledger-create-step")).toHaveTextContent(
+      "Step 2 of 3",
+    );
+    expect(screen.getByLabelText("Ledger Name")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    await user.click(screen.getByRole("button", { name: "Create Ledger" }));
+    await waitFor(() => expect(onSubmit).toHaveBeenCalled());
+    const resumedRequestId = onSubmit.mock.calls[0][0].requestId;
+    expect(typeof resumedRequestId).toBe("string");
+
+    // A fresh form (draft cleared by the successful submit) mints a new id.
+    onSubmit.mockClear();
+    second.unmount();
+    render(<LedgerForm onSubmit={onSubmit} onCancel={vi.fn()} />);
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    await user.click(screen.getByRole("button", { name: "Create Ledger" }));
+    await waitFor(() => expect(onSubmit).toHaveBeenCalled());
+    expect(onSubmit.mock.calls[0][0].requestId).not.toBe(resumedRequestId);
+  });
+});
