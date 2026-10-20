@@ -1,0 +1,1 @@
+DROP TABLE "reported_purchases" CASCADE;

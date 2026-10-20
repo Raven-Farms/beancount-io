@@ -48,11 +48,7 @@ const mockConfig = {
 const handlers: Array<{ name: string; fn: () => void }> = [
   { name: "healthz", fn: () => setHealthzHandler(router, mockLayers, mockConfig) },
   { name: "admin", fn: () => setAdminApiRoute(router, mockLayers, mockConfig) },
-  {
-    name: "stripe-webhook",
-    fn: () =>
-      setStripeWebhookHandler(router, mockLayers, mockConfig.analytics),
-  },
+  { name: "stripe-webhook", fn: () => setStripeWebhookHandler(router, mockLayers) },
   {
     name: "v1-compat",
     fn: () => setV1CompatRedirectRoutes(router, mockLayers, mockConfig),

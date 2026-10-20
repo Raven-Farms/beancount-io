@@ -39,13 +39,6 @@ interface SendGridConfig {
   apiKey: string;
 }
 
-interface AnalyticsConfig {
-  /** The dashboard's GA4 stream, so server events join its users. */
-  gaMeasurementId: string;
-  /** GA4 Measurement Protocol API secret; unset, nothing is sent. */
-  measurementProtocolSecret: string;
-}
-
 interface JwtConfig {
   secret: string;
   /** Token lifetime in minutes. Default 525600 (365 days); override via AUTH_JWT_EXP_MINUTES for local testing. */
@@ -215,7 +208,6 @@ export interface AppConfig {
   env: Environment;
   project: string;
   server: ServerConfig;
-  analytics: AnalyticsConfig;
   logger: LoggerConfig;
   sendGrid: SendGridConfig;
   postgres: PostgresConfig;
@@ -457,10 +449,6 @@ export const config: AppConfig = {
   },
   sendGrid: {
     apiKey: process.env.SEND_GRID_API_KEY || "",
-  },
-  analytics: {
-    gaMeasurementId: process.env.GA_MEASUREMENT_ID || "",
-    measurementProtocolSecret: process.env.GA_MEASUREMENT_PROTOCOL_SECRET || "",
   },
   stripe: {
     webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || "",

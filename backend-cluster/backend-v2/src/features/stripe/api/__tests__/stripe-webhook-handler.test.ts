@@ -20,12 +20,6 @@ jest.mock("@/features/stripe/service/stripe", () => {
 jest.mock("@/server/rest/openapi-registry", () => ({
   registerRoute: jest.fn(),
 }));
-const mockReportPurchase = jest.fn(async () => "reported");
-jest.mock("../../operations/report-purchase", () => ({
-  ...jest.requireActual("../../operations/report-purchase"),
-  reportPurchase: (...args: unknown[]) => mockReportPurchase(...(args as [])),
-}));
-
 const mockEmailScheduledChange = jest.fn(async () => "sent");
 jest.mock("../../operations/plan-change-email", () => ({
   ...jest.requireActual("../../operations/plan-change-email"),
@@ -44,11 +38,6 @@ jest.mock("../../operations/renewal-email", () => ({
   emailRenewalReminder: (...args: unknown[]) =>
     mockEmailRenewalReminder(...(args as [])),
 }));
-
-const ANALYTICS = {
-  gaMeasurementId: "G-SYNTHETIC",
-  measurementProtocolSecret: "mp_secret_synthetic",
-};
 
 function setup(event: any) {
   const constructEvent = jest.fn(() => event);
@@ -83,7 +72,6 @@ function setup(event: any) {
       clients: { sendgrid: {} },
       database: { db: {}, models: { paidCustomer } },
     } as unknown as AppLayers,
-    ANALYTICS,
   );
   const handler = router.stack.find((layer) => layer.methods.includes("POST"))!
     .stack[0];
@@ -283,99 +271,6 @@ describe("a scheduled plan change taking effect", () => {
       SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
       "PREMIUM",
     );
-  });
-});
-
-describe("paid invoices", () => {
-  const paidInvoice = (
-    metadata: Record<string, string> = {},
-    invoice: Record<string, unknown> = {},
-  ) => ({
-    id: "evt_synthetic",
-    livemode: true,
-    type: "invoice.paid",
-    data: {
-      object: {
-        id: "in_synthetic",
-        billing_reason: "subscription_create",
-        amount_paid: 1499,
-        customer: "cus_synthetic",
-        metadata: {},
-        parent: { subscription_details: { metadata } },
-        ...invoice,
-      },
-    },
-  });
-
-  beforeEach(() => mockReportPurchase.mockClear());
-
-  it("reports the purchase for the bound user", async () => {
-    const t = setup(paidInvoice({ userId: "usr_synthetic" }));
-    await t.run();
-    expect(mockReportPurchase).toHaveBeenCalledWith(
-      expect.objectContaining({ db: {}, analytics: ANALYTICS }),
-      expect.objectContaining({ id: "in_synthetic" }),
-      "usr_synthetic",
-    );
-    expect(t.ctx.body.processed).toBe(true);
-  });
-
-  it("does no lookup for a renewal, which is not a purchase", async () => {
-    const t = setup(
-      paidInvoice(
-        { userId: "usr_synthetic" },
-        { billing_reason: "subscription_cycle" },
-      ),
-    );
-    await t.run();
-    expect(
-      t.paidCustomer.findByStripeCustomerIdAndClientId,
-    ).not.toHaveBeenCalled();
-    expect(mockReportPurchase).not.toHaveBeenCalled();
-    expect(t.ctx.status).toBe(200);
-  });
-
-  it("asks Stripe to redeliver when the report failed", async () => {
-    mockReportPurchase.mockResolvedValueOnce("failed");
-    const t = setup(paidInvoice({ userId: "usr_synthetic" }));
-    await t.run();
-    expect(t.ctx.status).toBe(400);
-  });
-
-  it("reports a first Checkout whose invoice arrives before the customer is bound", async () => {
-    const t = setup(paidInvoice({ userId: "usr_new" }));
-    t.paidCustomer.findByStripeCustomerIdAndClientId.mockResolvedValue(
-      null as never,
-    );
-    await t.run();
-    expect(mockReportPurchase).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.anything(),
-      "usr_new",
-    );
-  });
-
-  it.each([
-    ["names another user than the binding", { userId: "usr_other" }],
-    [
-      "belongs to another billing client",
-      { userId: "usr_synthetic", clientId: "beancount-web-dev" },
-    ],
-  ])("reports nothing when the subscription %s", async (_label, metadata) => {
-    const t = setup(paidInvoice(metadata));
-    await t.run();
-    expect(mockReportPurchase).not.toHaveBeenCalled();
-    expect(t.ctx.status).toBe(200);
-    expect(t.ctx.body.processed).toBe(false);
-  });
-
-  it("reports nothing when no user can be named", async () => {
-    const t = setup(paidInvoice());
-    t.paidCustomer.findByStripeCustomerIdAndClientId.mockResolvedValue(
-      null as never,
-    );
-    await t.run();
-    expect(mockReportPurchase).not.toHaveBeenCalled();
   });
 });
 

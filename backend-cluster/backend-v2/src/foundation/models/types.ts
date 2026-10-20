@@ -1,5 +1,4 @@
 import { IPaidCustomerModel } from "@/features/stripe/data/paid-customer-model";
-import type { IReportedPurchaseModel } from "@/features/stripe/data/reported-purchase-model";
 import type { ISentBillingEmailModel } from "@/features/stripe/data/sent-billing-email-model";
 import type { IApiKeyModel } from "@/features/apikeys/data/api-key-model";
 import type { IAuditEventModel } from "@/features/audit/data/audit-event-model";
@@ -26,7 +25,6 @@ import type { IOauthGrantModel } from "@/features/oauth/data/oauth-grant-model";
  */
 export interface IModels {
   paidCustomer: IPaidCustomerModel;
-  reportedPurchase: IReportedPurchaseModel;
   sentBillingEmail: ISentBillingEmailModel;
   apiKey: IApiKeyModel;
   auditEvent: IAuditEventModel;
