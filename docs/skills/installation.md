@@ -71,7 +71,7 @@ Next: get a first answer from a sample ledger with the [first-query walkthrough]
 
 ## Install from a standard channel instead
 
-The checkout-and-link install above is one way in. The standard skill channels also carry the suite, because it lives at the conventional `skills/<name>/SKILL.md` layout. A channel install **copies** the ten skills into the agent's directory instead of linking a checkout, so there is no `verify` script afterwards: confirm with the client skill listing in step 3 and the [first-query walkthrough](first-query.md). Install the whole suite every time — the skills hand off to siblings and share one command contract. Each channel below was checked against the tool's current help (2026-10-19); the exact forms matter, for the reasons given.
+The checkout-and-link install above is one way in. The standard skill channels also carry the suite, because it lives at the conventional `skills/<name>/SKILL.md` layout. A channel install **copies** the eleven skills into the agent's directory instead of linking a checkout, so there is no `verify` script afterwards: confirm with the client skill listing in step 3 and the [first-query walkthrough](first-query.md). Install the whole suite every time — the skills hand off to siblings and share one command contract. Each channel below was checked against the tool's current help (2026-10-19); the exact forms matter, for the reasons given.
 
 ### `npx skills` (skills.sh)
 
@@ -156,11 +156,17 @@ openclaw skills update --all
 hermes skills update
 ```
 
-These commands were run on macOS with OpenClaw 2026.10.5 and Hermes v0.22.2. Both installed the standalone `beancount-ask@1.0.0` with its CLI contract and license; Hermes's scanner allowed it without `--force`. Installation evidence and the direct `bea` control are recorded in the [registry rehearsal](clawhub-rehearsal.md); agent-driven first-query acceptance is tracked separately there.
+These commands were run on macOS with OpenClaw 2026.10.5 and Hermes v0.22.2. Both installed the standalone `beancount-ask@1.0.0` with its CLI contract and license; Hermes's scanner allowed it without `--force`. On 2026-10-20, each host also completed the synthetic first query through the installed skill and an executed `bea` 0.3.1 command, with the expected figures and unchanged ledger checksum. The [registry rehearsal](clawhub-rehearsal.md#real-host-turns--2026-10-20) records the tested model/runtime configuration and its limits; OpenClaw used its explicitly selected embedded runtime.
 
-**Release status, 2026-10-19:** all eleven 1.0.0 releases are public. The complete suite installs in one OpenClaw workspace. Ten skills install in Hermes; its scanner blocks `beancount-init` for the intended creation of ledger instruction files. Use the supported skills individually in Hermes, and keep the Git/link route above for the complete Claude Code/Codex suite. The [per-skill table](clawhub-rehearsal.md#install-results) separates installation evidence from the model-backed query acceptance still outstanding.
+**Release status, 2026-10-20:** all eleven 1.0.0 releases are public. The complete suite installs in one OpenClaw workspace. Ten skills install in Hermes; its scanner blocks `beancount-init` for the intended creation of ledger instruction files. Use the supported skills individually in Hermes, and keep the Git/link route above for the complete Claude Code/Codex suite. See the [per-skill results](clawhub-rehearsal.md#install-results).
 
-Use the explicit publisher-qualified install identifiers above: Hermes's search did not yet return this new suite during the rehearsal, although ClawHub's own search API returned all eleven listings. The [discovery evidence](clawhub-rehearsal.md#hermes-search-discovery) records that host/index gap.
+Hermes's default search now finds all eleven suite listings:
+
+```sh
+hermes skills search beancount
+```
+
+The source-filtered `--source clawhub` path still returns no results in the tested host. Use default search or the explicit publisher-qualified identifiers above. The [discovery evidence](clawhub-rehearsal.md#hermes-search-discovery) records the difference and the open follow-up.
 
 ## Update
 
