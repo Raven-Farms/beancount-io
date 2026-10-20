@@ -35,10 +35,13 @@ import { useLedger } from "@/common/hooks/use-ledger";
 import { track } from "@/common/analytics";
 import { AccountAvailabilityNotice } from "./account-availability-notice";
 import { useAccountAvailability } from "./use-account-availability";
+import { usePendingSubmit } from "./use-pending-submit";
 
 interface BalanceFormProps {
   ledgerId: string;
   onSuccess?: () => void;
+  /** Reports a write in flight, so the dialog can hold its tabs and close. */
+  onPendingChange?: (pending: boolean) => void;
 }
 
 // Zod validation schema factory
@@ -61,7 +64,11 @@ const createBalanceSchema = (t: (key: string) => string) =>
  * Fields: date, account, amount, currency
  * Used to assert account balances at specific dates
  */
-export function BalanceForm({ ledgerId, onSuccess }: BalanceFormProps) {
+export function BalanceForm({
+  ledgerId,
+  onSuccess,
+  onPendingChange,
+}: BalanceFormProps) {
   const { t } = useTranslations();
   const formatError = useErrorMessage();
   const [addBalance] = useMutation(BulkEntriesDocument);
@@ -140,117 +147,118 @@ export function BalanceForm({ ledgerId, onSuccess }: BalanceFormProps) {
     }
   };
 
+  const { submit, pending } = usePendingSubmit(form, onSubmit, onPendingChange);
+
   return (
     <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(onSubmit)}
-        className="space-y-6 pt-1 px-1"
-      >
-        {error && (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
+      <form onSubmit={submit}>
+        <fieldset disabled={pending} className="min-w-0 space-y-6 pt-1 px-1">
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
-        <div className="grid grid-cols-1 gap-2 md:flex md:items-start md:gap-2">
-          <FormField
-            control={form.control}
-            name="date"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="sr-only">{t("journal.date")}</FormLabel>
-                <FormControl>
-                  <DatePicker
-                    value={field.value}
-                    onChange={(newDate) => field.onChange(newDate)}
-                    required
+          <div className="grid grid-cols-1 gap-2 md:flex md:items-start md:gap-2">
+            <FormField
+              control={form.control}
+              name="date"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="sr-only">{t("journal.date")}</FormLabel>
+                  <FormControl>
+                    <DatePicker
+                      value={field.value}
+                      onChange={(newDate) => field.onChange(newDate)}
+                      required
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="account"
+              render={({ field }) => (
+                <FormItem className="flex-1">
+                  <FormLabel className="sr-only">
+                    {t("journal.accountLabel")}
+                  </FormLabel>
+                  <FormControl>
+                    <AccountCombobox
+                      ledgerId={ledgerId}
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      placeholder={t("journal.accountPlaceholder")}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                  <AccountAvailabilityNotice
+                    check={accounts}
+                    account={account}
+                    day={day}
                   />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+                </FormItem>
+              )}
+            />
 
-          <FormField
-            control={form.control}
-            name="account"
-            render={({ field }) => (
-              <FormItem className="flex-1">
-                <FormLabel className="sr-only">
-                  {t("journal.accountLabel")}
-                </FormLabel>
-                <FormControl>
-                  <AccountCombobox
-                    ledgerId={ledgerId}
-                    value={field.value}
-                    onValueChange={field.onChange}
-                    placeholder={t("journal.accountPlaceholder")}
-                  />
-                </FormControl>
-                <FormMessage />
-                <AccountAvailabilityNotice
-                  check={accounts}
-                  account={account}
-                  day={day}
-                />
-              </FormItem>
-            )}
-          />
+            <FormField
+              control={form.control}
+              name="amount"
+              render={({ field }) => (
+                <FormItem className="w-32">
+                  <FormLabel className="sr-only">
+                    {t("journal.amountLabel")}
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      step="any"
+                      placeholder={t("journal.amountPlaceholder")}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          <FormField
-            control={form.control}
-            name="amount"
-            render={({ field }) => (
-              <FormItem className="w-32">
-                <FormLabel className="sr-only">
-                  {t("journal.amountLabel")}
-                </FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    step="any"
-                    placeholder={t("journal.amountPlaceholder")}
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+            <FormField
+              control={form.control}
+              name="currency"
+              render={({ field }) => (
+                <FormItem className="w-48">
+                  <FormLabel className="sr-only">
+                    {t("journal.currencyLabel")}
+                  </FormLabel>
+                  <FormControl>
+                    <CurrencyCombobox
+                      ledgerId={ledgerId}
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      placeholder={t("journal.currencyPlaceholder")}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
 
-          <FormField
-            control={form.control}
-            name="currency"
-            render={({ field }) => (
-              <FormItem className="w-48">
-                <FormLabel className="sr-only">
-                  {t("journal.currencyLabel")}
-                </FormLabel>
-                <FormControl>
-                  <CurrencyCombobox
-                    ledgerId={ledgerId}
-                    value={field.value}
-                    onValueChange={field.onChange}
-                    placeholder={t("journal.currencyPlaceholder")}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        <div className="flex justify-end">
-          <Button
-            type="submit"
-            disabled={
-              !form.formState.isValid || accounts.blocks([account], day)
-            }
-            loading={form.formState.isSubmitting}
-          >
-            {t("journal.createBalanceEntry")}
-          </Button>
-        </div>
+          <div className="flex justify-end">
+            <Button
+              type="submit"
+              disabled={
+                !form.formState.isValid || accounts.blocks([account], day)
+              }
+              loading={pending}
+            >
+              {t("journal.createBalanceEntry")}
+            </Button>
+          </div>
+        </fieldset>
       </form>
     </Form>
   );

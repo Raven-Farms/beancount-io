@@ -19,8 +19,15 @@ import { useApolloCacheClear } from "@/common/hooks/use-apollo-cache";
 import { useWriteOutcome } from "@/common/hooks/use-write-outcome";
 import { useTranslations } from "@/common/hooks/use-translations";
 import type { JournalDirectiveAction } from "@/common/lib/ledger-action-search";
-import type { RefObject } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { restoreFocusOnDialogClose } from "@/common/lib/focus/restore-focus-on-dialog-close";
+
+const TABS = [
+  { value: "transaction", label: "journal.transaction" },
+  { value: "balance", label: "journal.balance" },
+  { value: "note", label: "journal.note" },
+  { value: "account", label: "journal.account" },
+] as const;
 
 interface NewDirectiveDialogProps {
   open: boolean;
@@ -55,16 +62,40 @@ export function NewDirectiveDialog({
   const clearCache = useApolloCacheClear();
   const writeOutcome = useWriteOutcome(ledgerId);
 
+  // While a form's write is in flight the dialog keeps that draft in front:
+  // no dismissal and no tab switch, which would unmount it (w4/m33).
+  const [pending, setPending] = useState(false);
+
+  // Each opening is its own draft session. A write completes for the session
+  // it was submitted from, so a late success cannot close a later draft.
+  const [session, setSession] = useState(0);
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) setSession((current) => current + 1);
+  }
+  const liveSession = useRef<number | null>(open ? session : null);
+  useEffect(() => {
+    liveSession.current = open ? session : null;
+  }, [open, session]);
+
+  const handleOpenChange = (next: boolean) => {
+    if (!next && pending) return;
+    onOpenChange(next);
+  };
+
+  // Each form submits with the handler of the render it submitted from, so
+  // `session` here is the session that write belongs to.
   const handleSuccess = async () => {
     // Read before the cache clear below drops it: the pre-write errors.
     const before = writeOutcome.snapshot();
-    onOpenChange(false);
+    if (liveSession.current === session) onOpenChange(false);
     clearCache();
     onSuccess?.({ leftErrors: await writeOutcome.report(before) });
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         className="!max-w-full sm:!max-w-[600px] lg:!max-w-[1000px] top-[2%] sm:top-[10%] translate-y-0 max-h-[96vh] sm:max-h-[85vh] flex flex-col"
         onCloseAutoFocus={(event) => {
@@ -89,12 +120,11 @@ export function NewDirectiveDialog({
               {t("journal.newEntry")}
             </DialogTitle>
             <TabsList className="grid w-full grid-cols-4 sm:w-auto sm:shrink-0">
-              <TabsTrigger value="transaction">
-                {t("journal.transaction")}
-              </TabsTrigger>
-              <TabsTrigger value="balance">{t("journal.balance")}</TabsTrigger>
-              <TabsTrigger value="note">{t("journal.note")}</TabsTrigger>
-              <TabsTrigger value="account">{t("journal.account")}</TabsTrigger>
+              {TABS.map(({ value, label }) => (
+                <TabsTrigger key={value} value={value} disabled={pending}>
+                  {t(label)}
+                </TabsTrigger>
+              ))}
             </TabsList>
           </div>
 
@@ -102,25 +132,41 @@ export function NewDirectiveDialog({
             value="transaction"
             className="flex-1 overflow-y-auto min-h-0"
           >
-            <TransactionForm ledgerId={ledgerId} onSuccess={handleSuccess} />
+            <TransactionForm
+              ledgerId={ledgerId}
+              onSuccess={handleSuccess}
+              onPendingChange={setPending}
+            />
           </TabsContent>
 
           <TabsContent
             value="balance"
             className="flex-1 overflow-y-auto min-h-0"
           >
-            <BalanceForm ledgerId={ledgerId} onSuccess={handleSuccess} />
+            <BalanceForm
+              ledgerId={ledgerId}
+              onSuccess={handleSuccess}
+              onPendingChange={setPending}
+            />
           </TabsContent>
 
           <TabsContent value="note" className="flex-1 overflow-y-auto min-h-0">
-            <NoteForm ledgerId={ledgerId} onSuccess={handleSuccess} />
+            <NoteForm
+              ledgerId={ledgerId}
+              onSuccess={handleSuccess}
+              onPendingChange={setPending}
+            />
           </TabsContent>
 
           <TabsContent
             value="account"
             className="flex-1 overflow-y-auto min-h-0"
           >
-            <OpenAccountForm ledgerId={ledgerId} onSuccess={handleSuccess} />
+            <OpenAccountForm
+              ledgerId={ledgerId}
+              onSuccess={handleSuccess}
+              onPendingChange={setPending}
+            />
           </TabsContent>
         </Tabs>
       </DialogContent>

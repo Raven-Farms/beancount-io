@@ -30,10 +30,13 @@ import { AccountCombobox } from "@/common/components/ledger-comboboxes";
 import { track } from "@/common/analytics";
 import { AccountAvailabilityNotice } from "./account-availability-notice";
 import { useAccountAvailability } from "./use-account-availability";
+import { usePendingSubmit } from "./use-pending-submit";
 
 interface NoteFormProps {
   ledgerId: string;
   onSuccess?: () => void;
+  /** Reports a write in flight, so the dialog can hold its tabs and close. */
+  onPendingChange?: (pending: boolean) => void;
 }
 
 // Zod validation schema factory
@@ -48,7 +51,11 @@ const createNoteSchema = (t: (key: string) => string) =>
  * Form component for creating note entries
  * Fields: date, account, note content
  */
-export function NoteForm({ ledgerId, onSuccess }: NoteFormProps) {
+export function NoteForm({
+  ledgerId,
+  onSuccess,
+  onPendingChange,
+}: NoteFormProps) {
   const { t } = useTranslations();
   const formatError = useErrorMessage();
   const [addNote] = useMutation(BulkEntriesDocument);
@@ -115,95 +122,96 @@ export function NoteForm({ ledgerId, onSuccess }: NoteFormProps) {
     }
   };
 
+  const { submit, pending } = usePendingSubmit(form, onSubmit, onPendingChange);
+
   return (
     <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(onSubmit)}
-        className="space-y-6 pt-1 px-1"
-      >
-        {error && (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
+      <form onSubmit={submit}>
+        <fieldset disabled={pending} className="min-w-0 space-y-6 pt-1 px-1">
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
-        <div className="grid grid-cols-1 gap-2 md:flex md:items-start md:gap-2">
+          <div className="grid grid-cols-1 gap-2 md:flex md:items-start md:gap-2">
+            <FormField
+              control={form.control}
+              name="date"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="sr-only">{t("journal.date")}</FormLabel>
+                  <FormControl>
+                    <DatePicker
+                      value={field.value}
+                      onChange={(newDate) => field.onChange(newDate)}
+                      required
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="account"
+              render={({ field }) => (
+                <FormItem className="flex-1">
+                  <FormLabel className="sr-only">
+                    {t("journal.accountLabel")}
+                  </FormLabel>
+                  <FormControl>
+                    <AccountCombobox
+                      ledgerId={ledgerId}
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      placeholder={t("journal.accountPlaceholder")}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                  <AccountAvailabilityNotice
+                    check={accounts}
+                    account={account}
+                    day={day}
+                  />
+                </FormItem>
+              )}
+            />
+          </div>
+
           <FormField
             control={form.control}
-            name="date"
+            name="content"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="sr-only">{t("journal.date")}</FormLabel>
-                <FormControl>
-                  <DatePicker
-                    value={field.value}
-                    onChange={(newDate) => field.onChange(newDate)}
-                    required
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="account"
-            render={({ field }) => (
-              <FormItem className="flex-1">
                 <FormLabel className="sr-only">
-                  {t("journal.accountLabel")}
+                  {t("journal.noteContent")}
                 </FormLabel>
                 <FormControl>
-                  <AccountCombobox
-                    ledgerId={ledgerId}
-                    value={field.value}
-                    onValueChange={field.onChange}
-                    placeholder={t("journal.accountPlaceholder")}
+                  <Textarea
+                    placeholder={t("journal.noteContent")}
+                    rows={4}
+                    {...field}
                   />
                 </FormControl>
                 <FormMessage />
-                <AccountAvailabilityNotice
-                  check={accounts}
-                  account={account}
-                  day={day}
-                />
               </FormItem>
             )}
           />
-        </div>
 
-        <FormField
-          control={form.control}
-          name="content"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="sr-only">
-                {t("journal.noteContent")}
-              </FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder={t("journal.noteContent")}
-                  rows={4}
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <div className="flex justify-end">
-          <Button
-            type="submit"
-            disabled={
-              !form.formState.isValid || accounts.blocks([account], day)
-            }
-            loading={form.formState.isSubmitting}
-          >
-            {t("journal.createNoteEntry")}
-          </Button>
-        </div>
+          <div className="flex justify-end">
+            <Button
+              type="submit"
+              disabled={
+                !form.formState.isValid || accounts.blocks([account], day)
+              }
+              loading={pending}
+            >
+              {t("journal.createNoteEntry")}
+            </Button>
+          </div>
+        </fieldset>
       </form>
     </Form>
   );

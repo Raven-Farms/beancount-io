@@ -1,6 +1,6 @@
 # w4 · m33 — Keep New Entry drafts safe during submission
 
-**Worker:** worker1 **Goal:** A successful entry submission must not erase text accepted afterward or close a later draft. **Status:** todo
+**Worker:** worker1 **Goal:** A successful entry submission must not erase text accepted afterward or close a later draft. **Status:** done
 
 **Severity:** major (browser-local draft loss). **Estimate:** 130m across six tasks, dashboard only.
 
@@ -12,12 +12,12 @@ Continuous dashboard QA requested for w4, 2026-10-20. **A2 — Frictionless onbo
 
 | id | title | est | depends_on |
 | --- | --- | --- | --- |
-| [t001](./t001.md) | Define pending submission ownership and repair the Note path | 35m | — |
-| [t002](./t002.md) | Apply the contract to Transaction, Balance and Open Account | 25m | t001 |
-| [t003](./t003.md) | Verify the user-facing pending and recovery journey | 10m | t002 |
-| [t004](./t004.md) | Simplify the changed submission handling | 15m | t003 |
-| [t005](./t005.md) | Prove pending draft safety and run dashboard checks | 35m | t003 |
-| [t006](./t006.md) | Close out and archive the milestone | 10m | t004, t005 |
+| [t001](./done/t001.md) | Define pending submission ownership and repair the Note path — **DONE** | 35m | — |
+| [t002](./done/t002.md) | Apply the contract to Transaction, Balance and Open Account — **DONE** | 25m | t001 |
+| [t003](./done/t003.md) | Verify the user-facing pending and recovery journey — **DONE** | 10m | t002 |
+| [t004](./done/t004.md) | Simplify the changed submission handling — **DONE** | 15m | t003 |
+| [t005](./done/t005.md) | Prove pending draft safety and run dashboard checks — **DONE** | 35m | t003 |
+| [t006](./done/t006.md) | Close out and archive the milestone — **DONE** | 10m | t004, t005 |
 
 ## Fresh live reproduction
 
@@ -95,3 +95,11 @@ Other form writes, engines/locales, actual server timeouts, native-toolbar navig
 - [ ] Failure retains accepted text and retryability; success books only the submitted snapshot once.
 - [ ] Validation, account/amount contracts, error outcomes and focus remain correct.
 - [ ] Meaningful held-request regressions and dashboard gates pass; the completed work is archived through /pm.
+
+## Closeout
+
+Shipped in the dashboard commit that carries this closeout. `use-pending-submit.ts` gives all four New Entry forms one in-flight guard: every submit path (button, Enter, Cmd/Ctrl+Enter) goes through `submit`, which refuses while a write is pending, and a disabled `<fieldset>` locks the form's fields for that window so no edit is accepted that the success reset would discard. The lock lifts when the write settles; a failure keeps the draft and its error and restores focus for a retry. The dialog holds dismissal (Close, Escape, outside click) and tab switches while any form reports pending, and numbers each opening as a draft session, so a success closes the dialog only for the session it was submitted from.
+
+Regressions in `__tests__/pending-submit.test.tsx` drive the real dialog and forms with held BulkEntries calls: Note lock + dismissal/tab hold + single booking of the submitted text; failure keeps text and retries once; a late success leaves a reopened draft open with its text; Transaction sends once across three Cmd/Ctrl+Enter presses and a click, then exactly once on retry; Balance and Open Account submit once and lock their fields. Five of the six fail against the previous code (the failure-retention control passes on both, as intended). Dashboard format, lint, 6365 tests and build pass.
+
+Adoption surface: the dashboard README and scoped guidance carry no instructions about entry submission timing, so no guidance change was needed. Limits: verified in jsdom, not in a live browser against production; real network timeouts and native-toolbar navigation remain unverified. Focus after a successful write is still the dialog's existing return-focus path (w4/238 is separate).

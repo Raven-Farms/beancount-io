@@ -20,13 +20,20 @@ import { useTranslations } from "@/common/hooks/use-translations";
 import { track } from "@/common/analytics";
 import { useErrorMessage } from "@/common/lib/errors/error-message";
 import { useOpenAccountSchema } from "@/common/hooks/use-open-account-schema";
+import { usePendingSubmit } from "./use-pending-submit";
 
 interface OpenAccountFormProps {
   ledgerId: string;
   onSuccess?: () => void;
+  /** Reports a write in flight, so the dialog can hold its tabs and close. */
+  onPendingChange?: (pending: boolean) => void;
 }
 
-export function OpenAccountForm({ ledgerId, onSuccess }: OpenAccountFormProps) {
+export function OpenAccountForm({
+  ledgerId,
+  onSuccess,
+  onPendingChange,
+}: OpenAccountFormProps) {
   const { t } = useTranslations();
   const formatError = useErrorMessage();
   const [addEntryOpen] = useMutation(BulkEntriesDocument);
@@ -78,70 +85,71 @@ export function OpenAccountForm({ ledgerId, onSuccess }: OpenAccountFormProps) {
     }
   };
 
+  const { submit, pending } = usePendingSubmit(form, onSubmit, onPendingChange);
+
   return (
     <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(onSubmit)}
-        className="space-y-6 pt-1 px-1"
-      >
-        {error && (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
+      <form onSubmit={submit}>
+        <fieldset disabled={pending} className="min-w-0 space-y-6 pt-1 px-1">
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
-        <div className="grid grid-cols-1 gap-2 md:flex md:items-start md:gap-2">
-          <FormField
-            control={form.control}
-            name="date"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="sr-only">{t("journal.date")}</FormLabel>
-                <FormControl>
-                  <DatePicker
-                    value={field.value}
-                    onChange={(d) => field.onChange(d)}
-                    required
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <div className="grid grid-cols-1 gap-2 md:flex md:items-start md:gap-2">
+            <FormField
+              control={form.control}
+              name="date"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="sr-only">{t("journal.date")}</FormLabel>
+                  <FormControl>
+                    <DatePicker
+                      value={field.value}
+                      onChange={(d) => field.onChange(d)}
+                      required
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          <FormField
-            control={form.control}
-            name="account"
-            render={({ field }) => (
-              <FormItem className="flex-1">
-                <FormLabel className="sr-only">
-                  {t("journal.accountLabel")}
-                </FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder={
-                      accountPrefixes.length > 0
-                        ? `${accountPrefixes[0]}:Bank:Checking`
-                        : "Account:SubAccount"
-                    }
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+            <FormField
+              control={form.control}
+              name="account"
+              render={({ field }) => (
+                <FormItem className="flex-1">
+                  <FormLabel className="sr-only">
+                    {t("journal.accountLabel")}
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder={
+                        accountPrefixes.length > 0
+                          ? `${accountPrefixes[0]}:Bank:Checking`
+                          : "Account:SubAccount"
+                      }
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
 
-        <div className="flex justify-end">
-          <Button
-            type="submit"
-            disabled={!form.formState.isValid}
-            loading={form.formState.isSubmitting}
-          >
-            {t("journal.createAccountEntry")}
-          </Button>
-        </div>
+          <div className="flex justify-end">
+            <Button
+              type="submit"
+              disabled={!form.formState.isValid}
+              loading={pending}
+            >
+              {t("journal.createAccountEntry")}
+            </Button>
+          </div>
+        </fieldset>
       </form>
     </Form>
   );
