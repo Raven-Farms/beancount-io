@@ -92,7 +92,6 @@
 - [850 — check with -C, -v or --json shows only a reserved-key error and hides the ledger's other errors (gap in w5/630)](./850.md)
 - [851 — A BOM-saved or star-import CONFIG module escapes the bea ingest refusal (incomplete fix of w5/635)](./851.md)
 - [852 — Four gaps: --search vs table spacing, sys.exit hint in importer methods, price export -oDIR, posting filename: message](./852.md)
-- [853 — query -o /dev/fd/N or >(cmd) fails with Bad file descriptor; -o /dev/fd/3 corrupts the engine reply](./853.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
