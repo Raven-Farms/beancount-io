@@ -2369,6 +2369,23 @@ def validate_candidate(
         tolerated = _preexisting_errors(errors, before_errors, filenames, original_lines, _own_lifecycle_accounts)
         existing_plugin_errors = tolerated
     accounts = [entry.account for entry in entries if isinstance(entry, Open)]
+    on_disk_accounts: list[str] | None = None
+
+    def _accounts_for(on_disk: bool) -> list[str]:
+        # An error on a line already in the ledger is described by the ledger
+        # as it is: "Did you mean" named the refused write's own account, and
+        # "opened at" a line never written (w5/840).
+        nonlocal on_disk_accounts
+        if not on_disk:
+            return accounts
+        if on_disk_accounts is None:
+            on_disk_accounts = [
+                entry.account
+                for entry in entries
+                if isinstance(entry, Open) and not _proposed_entry(entry, filenames, original_lines)
+            ]
+        return on_disk_accounts
+
     # What the per-error hints below look up, each built on first use and then
     # shared (w5/124). One mis-dated `open` makes thousands of errors, and a
     # pass over the whole ledger for each took a refusal from seconds to
@@ -2479,11 +2496,12 @@ def validate_candidate(
             )
         if "unknown account '" in message:
             account = message.split("unknown account '", 1)[1].split("'", 1)[0]
-            suggestion = account_suggestions.get(account)
+            pool = _accounts_for(not appended)
+            suggestion = account_suggestions.get(f"{appended}:{account}")
             if suggestion is None:
-                suggestion = unknown_account_is_normalization(account, accounts)
+                suggestion = unknown_account_is_normalization(account, pool)
                 if suggestion is None:
-                    matches = difflib.get_close_matches(account, accounts, n=3, cutoff=0.6)
+                    matches = difflib.get_close_matches(account, pool, n=3, cutoff=0.6)
                     suggestion = f" Did you mean {', '.join(matches)}?" if matches else ""
                     # An `open` under a root the ledger does not use can never
                     # load, so the remedy is the root, not the directive (w5/154).
@@ -2506,7 +2524,7 @@ def validate_candidate(
                         suggestion += "."
                     else:
                         suggestion += f" {unknown_root_message(account, roots)}"
-                account_suggestions[account] = suggestion
+                account_suggestions[f"{appended}:{account}"] = suggestion
             message += suggestion
             if root_hints is None:
                 root_hints = root_ledger_hints(snapshot.root if snapshot else file)
@@ -2595,7 +2613,14 @@ def validate_candidate(
             # refusal does (w5/394).
             if lifecycles is None:
                 lifecycles = _lifecycles(entries, original_lines)
-            opened = next((e for e in lifecycles.get(error.entry.account, []) if isinstance(e, Open)), None)
+            opened = next(
+                (
+                    e
+                    for e in lifecycles.get(error.entry.account, [])
+                    if isinstance(e, Open) and (appended or not _proposed_entry(e, filenames, original_lines))
+                ),
+                None,
+            )
             if closing_hint := _plugin_close_hint(error.entry, lifecycles, filenames, original_lines):
                 description, _ = closing_hint
                 message = message.removeprefix(f"{metadata.get('filename')}:{lineno}: ")
@@ -2608,7 +2633,9 @@ def validate_candidate(
                     f". Account opened {opened.date} at {_location(opened, filenames)}; "
                     f"date the close on or after {opened.date}."
                 )
-            elif matches := difflib.get_close_matches(error.entry.account, accounts, n=3, cutoff=0.6):
+            elif matches := difflib.get_close_matches(
+                error.entry.account, _accounts_for(not appended), n=3, cutoff=0.6
+            ):
                 message += f". Did you mean {', '.join(matches)}?"
             else:
                 message += f". The ledger never opens {error.entry.account}; check the account name."
