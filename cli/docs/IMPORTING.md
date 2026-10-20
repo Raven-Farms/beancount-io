@@ -556,7 +556,11 @@ skills deduplicate against each other: the ledger itself is the dedup database.
   native ID with the same source amounts, dated a week or more from it, is a
   possible duplicate naming that date, never a silent skip; at different
   amounts it is the conflict above, on any date. A re-import is matched to the entry under that ID
-  dated nearest the row. Payee, narration, date, flag, and counter-account edits to an entry already in the ledger do
+  dated nearest the row among those with its source amounts, so January's row is January's duplicate
+  even when February's amount under the same reference differs; it is a conflict only when no entry
+  under the ID has the row's amounts. When the nearest such entry is a week or more away and another
+  entry repeats the row on its own date, the possible duplicate names that entry instead, since
+  `--duplicates include` would book it twice. Payee, narration, date, flag, and counter-account edits to an entry already in the ledger do
   not change that identity (generated ids: see below). For a native ID, a date
   moved by less than a week still matches. The preview's `ID` column names each row's
   identifier source: `bank` for a bank column, `hash` for a content hash, or

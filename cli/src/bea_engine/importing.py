@@ -517,7 +517,8 @@ def answer(
             hits = [
                 (key, found, same)
                 for key in ids
-                if (found := identities.get(key)) is not None
+                if (found := _under_id(key, identities, dated, entry, account, fingerprint, key in lookup_only))
+                is not None
                 # A stored narration-only id belongs to the row that claimed its
                 # entry, whichever other row's own id happens to spell it.
                 and not (id_source == "hash" and _is_generated_identity(key) and owners.get(id(found), index) != index)
@@ -586,11 +587,20 @@ def answer(
                     days = abs((entry.date - match.date).days)
                     if days >= _REUSED_REFERENCE_DAYS:
                         status = "possible_duplicate"
-                        reason = (
-                            f"Stable ID {matched_value} is already in the ledger on {match.date}, {days} days from "
-                            "this row; a reference reused on other dates, such as a monthly autopay's, is not a "
-                            "unique ID."
+                        reference = (
+                            f"{matched_value} is already in the ledger on {match.date}, {days} days from this row; "
+                            "a reference reused on other dates, such as a monthly autopay's, is not a unique ID."
                         )
+                        reason = f"Stable ID {reference}"
+                        # The ID hit a month away hid the entry this row
+                        # repeats on its own date, and `--duplicates include`
+                        # then booked that one twice (w5/822).
+                        twin = _possible_twin(fingerprints, entry, account, fingerprint, owners, index)
+                        if twin is not None:
+                            match = twin
+                            reason = (
+                                f"{_twin_reason(entry, twin, batch_rows.get(id(twin)), keys=keys)} Its ID {reference}"
+                            )
             elif (other_side := _transfer_side(ids, transfer_ids, entry, account, fingerprint)) is not None:
                 (_, _, matched_value), match = other_side
                 status, reason = (
@@ -1665,6 +1675,30 @@ def _relative_days(written: Any, row: Any) -> str:
     if days == 0:
         return "the same day"
     return f"{abs(days)} day{'s' if abs(days) != 1 else ''} {'earlier' if days > 0 else 'later'}"
+
+
+def _under_id(
+    key: tuple[str, str, str],
+    identities: dict[tuple[str, str, str], Any],
+    dated: dict[tuple[str, str, str], list[Any]],
+    entry: Any,
+    account: str,
+    fingerprint: tuple[Any, ...],
+    lookup_only: bool,
+) -> Any:
+    """The entry a native ID names for this row: the nearest one under it that agrees, else the latest.
+
+    A reused reference names several entries, and judging the row against the
+    latest alone made January's re-import a conflict with February's
+    different amount, which held back every other row of the file (w5/822).
+    """
+    found = identities.get(key)
+    if found is None or not _is_native_identity(key):
+        return found
+    agreeing = [
+        other for other in dated.get(key, []) if _same_row(key, other, account, fingerprint, lookup_only=lookup_only)
+    ]
+    return min(agreeing, key=lambda other: abs((entry.date - other.date).days)) if agreeing else found
 
 
 def _same_row(
