@@ -743,6 +743,12 @@ const ruCommon: Record<string, TranslationEntry> = {
     message: "Счета не найдены",
     description: "Message when no accounts match search",
   },
+  "component.suggestions.unavailable": {
+    message:
+      "Не удалось загрузить подсказки. Вы всё равно можете ввести значение.",
+    description:
+      "Notice under a form field when its suggestions failed to load; the field still accepts typed text",
+  },
   "component.sourceFileCombobox.placeholder": {
     message: "Поиск файлов...",
     description: "Placeholder for ledger file search",

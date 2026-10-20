@@ -779,6 +779,11 @@ const enCommon: Record<string, TranslationEntry> = {
     message: "No accounts found",
     description: "Message when no accounts match search",
   },
+  "component.suggestions.unavailable": {
+    message: "Suggestions couldn't load. You can still type a value.",
+    description:
+      "Notice under a form field when its suggestions failed to load; the field still accepts typed text",
+  },
   "component.sourceFileCombobox.placeholder": {
     message: "Search files...",
     description: "Placeholder for ledger file search",

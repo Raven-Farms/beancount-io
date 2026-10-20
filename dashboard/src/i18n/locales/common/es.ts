@@ -740,6 +740,12 @@ const esCommon: Record<string, TranslationEntry> = {
     message: "No se encontraron cuentas",
     description: "Message when no accounts match search",
   },
+  "component.suggestions.unavailable": {
+    message:
+      "No se pudieron cargar las sugerencias. Aun así puedes escribir un valor.",
+    description:
+      "Notice under a form field when its suggestions failed to load; the field still accepts typed text",
+  },
   "component.sourceFileCombobox.placeholder": {
     message: "Buscar archivos...",
     description: "Placeholder for ledger file search",

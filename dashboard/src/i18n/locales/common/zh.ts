@@ -718,6 +718,11 @@ const zhCommon: Record<string, TranslationEntry> = {
     message: "未找到账户",
     description: "Message when no accounts match search",
   },
+  "component.suggestions.unavailable": {
+    message: "无法加载建议。你仍然可以直接输入。",
+    description:
+      "Notice under a form field when its suggestions failed to load; the field still accepts typed text",
+  },
   "component.sourceFileCombobox.placeholder": {
     message: "搜索文件...",
     description: "Placeholder for ledger file search",

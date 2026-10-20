@@ -742,6 +742,12 @@ const caCommon: Record<string, TranslationEntry> = {
     message: "No s'han trobat comptes",
     description: "Message when no accounts match search",
   },
+  "component.suggestions.unavailable": {
+    message:
+      "No s'han pogut carregar els suggeriments. Encara podeu escriure un valor.",
+    description:
+      "Notice under a form field when its suggestions failed to load; the field still accepts typed text",
+  },
   "component.sourceFileCombobox.placeholder": {
     message: "Cerca fitxers...",
     description: "Placeholder for ledger file search",

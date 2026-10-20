@@ -741,6 +741,12 @@ const frCommon: Record<string, TranslationEntry> = {
     message: "Aucun compte trouvé",
     description: "Message when no accounts match search",
   },
+  "component.suggestions.unavailable": {
+    message:
+      "Impossible de charger les suggestions. Vous pouvez tout de même saisir une valeur.",
+    description:
+      "Notice under a form field when its suggestions failed to load; the field still accepts typed text",
+  },
   "component.sourceFileCombobox.placeholder": {
     message: "Rechercher des fichiers...",
     description: "Placeholder for ledger file search",

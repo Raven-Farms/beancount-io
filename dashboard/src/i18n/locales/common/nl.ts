@@ -737,6 +737,12 @@ const nlCommon: Record<string, TranslationEntry> = {
     message: "Geen rekeningen gevonden",
     description: "Message when no accounts match search",
   },
+  "component.suggestions.unavailable": {
+    message:
+      "Suggesties konden niet worden geladen. Je kunt nog steeds een waarde typen.",
+    description:
+      "Notice under a form field when its suggestions failed to load; the field still accepts typed text",
+  },
   "component.sourceFileCombobox.placeholder": {
     message: "Bestanden zoeken...",
     description: "Placeholder for ledger file search",

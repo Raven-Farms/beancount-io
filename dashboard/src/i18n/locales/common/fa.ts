@@ -735,6 +735,11 @@ const faCommon: Record<string, TranslationEntry> = {
     message: "حسابی یافت نشد",
     description: "Message when no accounts match search",
   },
+  "component.suggestions.unavailable": {
+    message: "پیشنهادها بارگیری نشدند. همچنان می‌توانید مقداری وارد کنید.",
+    description:
+      "Notice under a form field when its suggestions failed to load; the field still accepts typed text",
+  },
   "component.sourceFileCombobox.placeholder": {
     message: "جستجوی فایل‌ها...",
     description: "Placeholder for ledger file search",

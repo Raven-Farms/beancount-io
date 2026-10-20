@@ -1,6 +1,6 @@
 # w4 · m35 — Keep form fields usable when suggestions fail
 
-**Worker:** worker1 **Goal:** A failed suggestions read leaves New Entry fields editable and offers recovery without restarting the draft. **Status:** todo
+**Worker:** worker1 **Goal:** A failed suggestions read leaves New Entry fields editable and offers recovery without restarting the draft. **Status:** blocked (t001, t002, t004, t005 done; t003 needs a deployed live check)
 
 **Severity:** minor. **Estimate:** 120m across six tasks, dashboard only.
 
@@ -12,11 +12,11 @@ Continuous dashboard QA requested for w4, 2026-10-20. **A2 — Frictionless onbo
 
 | id | title | est | depends_on |
 | --- | --- | --- | --- |
-| [t001](./t001.md) | Retain Payee and Narration fields on suggestion failure | 30m | — |
-| [t002](./t002.md) | Retain Account and Currency fields with existing validation | 25m | t001 |
+| [t001](./done/t001.md) | Retain Payee and Narration fields on suggestion failure — **DONE** | 30m | — |
+| [t002](./done/t002.md) | Retain Account and Currency fields with existing validation — **DONE** | 25m | t001 |
 | [t003](./t003.md) | Verify the visible recovery and draft journey | 10m | t002 |
-| [t004](./t004.md) | Simplify the changed field handling | 10m | t003 |
-| [t005](./t005.md) | Prove query failure recovery and run dashboard checks | 35m | t003 |
+| [t004](./done/t004.md) | Simplify the changed field handling — **DONE** | 10m | t003 |
+| [t005](./done/t005.md) | Prove query failure recovery and run dashboard checks — **DONE** | 35m | t003 |
 | [t006](./t006.md) | Close out and archive the milestone | 10m | t004, t005 |
 
 ## Fresh live reproduction
@@ -77,3 +77,11 @@ No ledger writes, product edits, new tests, commit or push. All temporary contex
 - [ ] Existing account availability, exact decimal submission, permissions, disabled state and keyboard selection behavior pass meaningful controls.
 - [ ] Actual query/form regression checks detect the original branches; dashboard native checks pass and evidence states deployment/platform limits.
 - [ ] Tasks and milestone are archived through /pm only when the observable end state holds.
+
+## Blocked
+
+**Blocked 2026-10-20** — t003's live recovery journey (and therefore t006 Closeout) cannot run here.
+
+- **Shipped baseline:** the dashboard commit that carries this block's preceding implementation (`fix(dashboard): keep suggestion fields usable when their read fails (w4/m35)`). Payee, Narration, Account and Currency wrappers keep the controlled Combobox mounted on a failed read, withhold options, and show a localized "Suggestions couldn't load. You can still type a value." notice (linked through `aria-describedby`) with an in-place **Try Again**; the skeleton is limited to the first load so a retry never remounts the field. `ledger-comboboxes/__tests__/suggestions-failure.test.tsx` drives each wrapper through real Apollo `MockedProvider` failure → failed retry → successful retry, asserting the same field node, kept text, no stale options and restored suggestions; all four fail against the old error-only branches. Dashboard format, lint, 6369 tests and build pass. Shared callers (Budget, importer, receipt, Plaid) receive the same contract with unchanged props; `OperatingCurrencyCombobox` and `SourceFileCombobox` keep their similar branches as unverified audit scope (no live failure was recorded for them). New Entry form integration still uses the existing mocked-combobox tests; no form-level failure test was added.
+- **Blocker:** the DoD's 1440/390 live aborts of each operation need the deployed build and a timezone/network-controllable browser; this worker has no Chrome for Playwright and no authenticated stack.
+- **Unblock:** after deploy, QA aborts GetLedgerPayees, GetLedgerNarrations, GetLedgerAccounts (Note) and GetLedgerCurrencies (Balance) one at a time at both widths, types into the still-present field, presses Try Again while failed and after restoring the network, and confirms the draft and focus survive and suggestions return. **Who:** the user (deploy) and the dashboard QA loop.

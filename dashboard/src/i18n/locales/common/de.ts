@@ -737,6 +737,12 @@ const deCommon: Record<string, TranslationEntry> = {
     message: "Keine Konten gefunden",
     description: "Message when no accounts match search",
   },
+  "component.suggestions.unavailable": {
+    message:
+      "Vorschläge konnten nicht geladen werden. Sie können trotzdem einen Wert eingeben.",
+    description:
+      "Notice under a form field when its suggestions failed to load; the field still accepts typed text",
+  },
   "component.sourceFileCombobox.placeholder": {
     message: "Dateien suchen...",
     description: "Placeholder for ledger file search",

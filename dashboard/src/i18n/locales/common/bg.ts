@@ -736,6 +736,12 @@ const bgCommon: Record<string, TranslationEntry> = {
     message: "Няма намерени сметки",
     description: "Message when no accounts match search",
   },
+  "component.suggestions.unavailable": {
+    message:
+      "Предложенията не можаха да се заредят. Все пак можете да въведете стойност.",
+    description:
+      "Notice under a form field when its suggestions failed to load; the field still accepts typed text",
+  },
   "component.sourceFileCombobox.placeholder": {
     message: "Търсене на файлове...",
     description: "Placeholder for ledger file search",

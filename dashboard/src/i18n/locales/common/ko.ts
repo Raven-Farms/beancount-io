@@ -729,6 +729,11 @@ const koCommon: Record<string, TranslationEntry> = {
     message: "계정을 찾을 수 없습니다",
     description: "Message when no accounts match search",
   },
+  "component.suggestions.unavailable": {
+    message: "추천 항목을 불러오지 못했습니다. 값은 직접 입력할 수 있습니다.",
+    description:
+      "Notice under a form field when its suggestions failed to load; the field still accepts typed text",
+  },
   "component.sourceFileCombobox.placeholder": {
     message: "파일 검색...",
     description: "Placeholder for ledger file search",

@@ -744,6 +744,12 @@ const ukCommon: Record<string, TranslationEntry> = {
     message: "Рахунків не знайдено",
     description: "Message when no accounts match search",
   },
+  "component.suggestions.unavailable": {
+    message:
+      "Не вдалося завантажити підказки. Ви все одно можете ввести значення.",
+    description:
+      "Notice under a form field when its suggestions failed to load; the field still accepts typed text",
+  },
   "component.sourceFileCombobox.placeholder": {
     message: "Пошук файлів...",
     description: "Placeholder for ledger file search",

@@ -730,6 +730,11 @@ const jaCommon: Record<string, TranslationEntry> = {
     message: "口座が見つかりません",
     description: "Message when no accounts match search",
   },
+  "component.suggestions.unavailable": {
+    message: "候補を読み込めませんでした。値は直接入力できます。",
+    description:
+      "Notice under a form field when its suggestions failed to load; the field still accepts typed text",
+  },
   "component.sourceFileCombobox.placeholder": {
     message: "ファイルを検索...",
     description: "Placeholder for ledger file search",

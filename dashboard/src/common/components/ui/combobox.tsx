@@ -37,6 +37,8 @@ interface ComboboxProps extends ComboboxFieldProps {
   className?: string;
   disabled?: boolean;
   triggerOn?: "change" | "blur"; // When to trigger onValueChange for custom values
+  /** Rendered under the field, e.g. a failed-suggestions notice. */
+  notice?: React.ReactNode;
 }
 
 export function Combobox({
@@ -49,6 +51,7 @@ export function Combobox({
   className,
   disabled = false,
   triggerOn = "change",
+  notice,
   id,
   "aria-describedby": ariaDescribedBy,
   "aria-invalid": ariaInvalid,
@@ -349,6 +352,7 @@ export function Combobox({
           </div>
         </PopoverContent>
       </Popover>
+      {notice}
     </div>
   );
 }

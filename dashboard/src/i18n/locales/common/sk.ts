@@ -743,6 +743,11 @@ const skCommon: Record<string, TranslationEntry> = {
     message: "Neboli nájdené žiadne účty",
     description: "Message when no accounts match search",
   },
+  "component.suggestions.unavailable": {
+    message: "Návrhy sa nepodarilo načítať. Hodnotu môžete napriek tomu zadať.",
+    description:
+      "Notice under a form field when its suggestions failed to load; the field still accepts typed text",
+  },
   "component.sourceFileCombobox.placeholder": {
     message: "Hľadať súbory...",
     description: "Placeholder for ledger file search",
