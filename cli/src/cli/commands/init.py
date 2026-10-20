@@ -120,34 +120,47 @@ def init(
         file = expand_path(ctx.file, "--file").absolute()
     else:
         directory = expand_path(directory, "init directory").absolute()
+        try:
+            directory_is_dir = directory.is_dir()
+        except PermissionError:
+            # Unstatable, so uncreatable under: the engine's creation check
+            # reports it (w5/793).
+            directory_is_dir = False
         file = (
             directory
-            if directory.suffix in {".bean", ".beancount"} and not directory.is_dir()
+            if directory.suffix in {".bean", ".beancount"} and not directory_is_dir
             else directory / "main.bean"
         )
     # Before anything is created: every later command refuses such a path
     # (w5/315), and `$HOME/books` left an empty `./$HOME/books/` behind (w5/579).
     context.refuse_expanding_ledger_path(str(file))
-    if ctx.file is not None and file.is_dir():
-        raise UsageError(
-            f"Ledger path '{file}' (from --file) is a directory; expected a ledger file. "
-            f"Use bea init {shlex.quote(str(file))} for a directory target, "
-            f"or --file {shlex.quote(str(file / 'main.bean'))} for a file target."
-        )
-    if file.exists() or file.is_symlink():
-        raise ConflictError(f"Already exists: {file}. Choose a new path; init never overwrites a ledger.")
-    # Refuse shadowing a sibling default root ledger (cwd discovery prefers main.bean).
-    if file.name in {name.name for name in DEFAULT_ENTRY_FILE_FALLBACKS}:
-        for sibling_name in DEFAULT_ENTRY_FILE_FALLBACKS:
-            sibling = file.with_name(sibling_name.name)
-            if sibling == file:
-                continue
-            if sibling.exists() or sibling.is_symlink():
-                raise ConflictError(
-                    f"Already exists: {sibling}. Init would create {file} and cwd discovery "
-                    f"would prefer main.bean over main.beancount — choose a new path; init never "
-                    f"shadows an existing root ledger."
-                )
+    try:
+        if ctx.file is not None and file.is_dir():
+            raise UsageError(
+                f"Ledger path '{file}' (from --file) is a directory; expected a ledger file. "
+                f"Use bea init {shlex.quote(str(file))} for a directory target, "
+                f"or --file {shlex.quote(str(file / 'main.bean'))} for a file target."
+            )
+        if file.exists() or file.is_symlink():
+            raise ConflictError(f"Already exists: {file}. Choose a new path; init never overwrites a ledger.")
+        # Refuse shadowing a sibling default root ledger (cwd discovery prefers main.bean).
+        if file.name in {name.name for name in DEFAULT_ENTRY_FILE_FALLBACKS}:
+            for sibling_name in DEFAULT_ENTRY_FILE_FALLBACKS:
+                sibling = file.with_name(sibling_name.name)
+                if sibling == file:
+                    continue
+                if sibling.exists() or sibling.is_symlink():
+                    raise ConflictError(
+                        f"Already exists: {sibling}. Init would create {file} and cwd discovery "
+                        f"would prefer main.bean over main.beancount — choose a new path; init never "
+                        f"shadows an existing root ledger."
+                    )
+    except PermissionError:
+        # An ancestor without search permission: nothing here can be
+        # stat-ed, and nothing can be created under it either, so the
+        # engine's creation check reports it as it does a read-only
+        # parent (w5/793).
+        pass
     # Every option is checked before the first question, naming itself: a bad
     # `--date` or `--opening-balance` was refused only after the prompts were
     # answered, as `Invalid value: …` with no option named (w5/588).

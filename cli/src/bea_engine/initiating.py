@@ -54,7 +54,13 @@ def answer(
     file = expand_path(file, "--file")
     if not file.is_absolute():
         file = file.resolve()
-    if file.exists() or file.is_symlink():
+    try:
+        present = file.exists() or file.is_symlink()
+    except PermissionError:
+        # Unstatable, so uncreatable: creation below reports it as a
+        # read-only parent does (w5/793).
+        present = False
+    if present:
         raise ConflictError(f"Already exists: {file}. Choose a new path; init never overwrites a ledger.")
 
     currency = currency.strip().upper()
@@ -129,6 +135,11 @@ def answer(
                 raise ConflictError(f"Already exists: {file}; nothing was overwritten.") from exc
             except PermissionError as exc:
                 raise AuthError(f"The filesystem refused to create {file}; nothing was written.") from exc
+    except PermissionError as exc:
+        # The candidate itself could not be created, under an unsearchable
+        # or unwritable directory (w5/793).
+        _remove_created(created)
+        raise AuthError(f"The filesystem refused to create {file}; nothing was written.") from exc
     except BaseException:
         # "Nothing was written" left the directories it had made (w5/610).
         _remove_created(created)
@@ -140,6 +151,19 @@ def answer(
         "date": day.isoformat(),
         "accounts": list(ACCOUNTS),
     }
+
+
+def _quiet_exists(path: Path) -> bool:
+    """Whether the path exists, counting an unstatable ancestor as absent.
+
+    `Path.exists` raises `PermissionError` where `os.path.lexists` returns
+    false, so the blocker walk below died raw on a path nested two levels
+    under an unsearchable directory (w5/793).
+    """
+    try:
+        return path.exists()
+    except PermissionError:
+        return False
 
 
 def _make_parent(file: Path) -> list[Path]:
@@ -175,7 +199,7 @@ def _make_parent(file: Path) -> list[Path]:
         ) from exc
     except PermissionError as exc:
         _remove_created(created)
-        existing = next((path for path in parent.parents if path.exists()), parent)
+        existing = next((path for path in parent.parents if _quiet_exists(path)), parent)
         raise AuthError(
             f"Cannot create {parent}: the directory {existing} is not writable. Nothing was written."
         ) from exc
