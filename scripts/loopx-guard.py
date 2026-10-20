@@ -6,16 +6,25 @@ The rule — never stop while a next pick exists — is stated four times in
 end-of-run summary and treated writing it as a turn boundary, naming the next
 pick in the same breath. Prose cannot enforce itself. This can.
 
-Three modes:
+Each mark belongs to the Claude Code session that armed it: `start` reads the
+caller's `CLAUDE_CODE_SESSION_ID`, and the Stop hook consults only the mark of
+the session that is stopping. Several sessions can therefore share one
+checkout, each running its own loop or none, without blocking each other. (An
+earlier version kept one mark per repository and bound it to whichever session
+stopped first, so an unrelated session was held to a loop it never started
+while the real loop lost its guard.)
 
-    loopx-guard.py start <wN>   mark a loop active for this repo
-    loopx-guard.py end          clear the mark (a genuine Exit)
-    loopx-guard.py              Stop-hook mode: reads the hook payload on
-                                stdin, blocks the stop when work remains
+Four modes:
 
-Stop-hook mode is inert unless a loop is active, so the hook costs nothing in
-ordinary sessions. The mark binds to the first session that tries to stop, so a
-mark left behind by a crashed session never blocks a different one.
+    loopx-guard.py start <wN>   arm a loop for the calling Claude Code session
+    loopx-guard.py end          disarm the calling session's loop (a genuine Exit)
+    loopx-guard.py              Stop hook: reads the hook payload on stdin and
+                                blocks the stop while this session's loop has work
+    loopx-guard.py forget       SessionEnd hook: drop the ending session's mark
+
+Outside Claude Code there is no session id and no Stop hook (Codex has
+neither), so `start` arms nothing and says so; the skill's exit rules still
+apply there.
 """
 
 from __future__ import annotations
@@ -23,28 +32,59 @@ from __future__ import annotations
 import json
 import os
 import pathlib
+import re
 import sys
 import time
 
 # A stop attempt that makes no progress may repeat; bound it rather than spin.
 MAX_BLOCKS_WITHOUT_PROGRESS = 25
+# A mark this old belongs to a session that ended without SessionEnd (a crash).
+STALE_SECONDS = 7 * 24 * 3600
+
+SESSION_ID = re.compile(r"[A-Za-z0-9_-]{1,128}")
+WORKSTREAM = re.compile(r"w\d+")
 
 
 def project_dir() -> pathlib.Path:
     return pathlib.Path(os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
 
 
-def state_path() -> pathlib.Path:
+def state_dir() -> pathlib.Path:
     """Runtime state, never project content: `.git/` is inherently untracked."""
     git = project_dir() / ".git"
     if git.is_dir():
-        return git / "loopx-active.json"
-    # Worktrees and odd checkouts: fall back to a per-repo temp file.
+        return git / "loopx"
+    # Worktrees and odd checkouts: fall back to a per-repo temp directory.
     import hashlib
     import tempfile
 
     key = hashlib.sha256(str(project_dir()).encode()).hexdigest()[:16]
-    return pathlib.Path(tempfile.gettempdir()) / f"loopx-active-{key}.json"
+    return pathlib.Path(tempfile.gettempdir()) / f"loopx-{key}"
+
+
+def mark_path(session: object) -> pathlib.Path | None:
+    """The session's mark, or None for a missing or unsafe session id."""
+    if not isinstance(session, str) or not SESSION_ID.fullmatch(session):
+        return None
+    return state_dir() / f"{session}.json"
+
+
+def calling_session() -> pathlib.Path | None:
+    return mark_path(os.environ.get("CLAUDE_CODE_SESSION_ID"))
+
+
+def sweep() -> None:
+    """Drop marks left by crashed sessions, and the old one-per-repo mark."""
+    legacy = project_dir() / ".git" / "loopx-active.json"
+    stale = [legacy]
+    if state_dir().is_dir():
+        cutoff = time.time() - STALE_SECONDS
+        stale += [p for p in state_dir().glob("*.json") if p.stat().st_mtime < cutoff]
+    for path in stale:
+        try:
+            path.unlink()
+        except OSError:
+            pass
 
 
 def actionable(workstream: str) -> tuple[list[str], list[str]]:
@@ -59,18 +99,39 @@ def actionable(workstream: str) -> tuple[list[str], list[str]]:
     return milestones, notes
 
 
-def allow(clear: bool = False) -> None:
-    if clear:
+def allow(path: pathlib.Path | None = None) -> None:
+    """Let the stop through, removing PATH (the session's mark) when given."""
+    if path is not None:
         try:
-            state_path().unlink()
+            path.unlink()
         except OSError:
             pass
     print("{}")
     sys.exit(0)
 
 
+def read_payload() -> dict:
+    try:
+        payload = json.load(sys.stdin)
+    except Exception:
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
 def cmd_start(workstream: str) -> None:
-    state_path().write_text(
+    if not WORKSTREAM.fullmatch(workstream):
+        print(f"loopx guard: {workstream!r} is not a workstream id like w2", file=sys.stderr)
+        sys.exit(2)
+    sweep()
+    path = calling_session()
+    if path is None:
+        print(
+            "loopx guard not armed: no Claude Code session id here, so no Stop hook "
+            "can hold this loop. Follow the skill's exit rules."
+        )
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
         json.dumps(
             {
                 "workstream": workstream,
@@ -80,46 +141,39 @@ def cmd_start(workstream: str) -> None:
             }
         )
     )
-    print(f"loopx guard armed for {workstream}")
+    print(f"loopx guard armed for {workstream} in this session only")
 
 
 def cmd_end() -> None:
-    try:
-        state_path().unlink()
-        print("loopx guard cleared")
-    except OSError:
-        print("loopx guard was not armed")
+    sweep()
+    path = calling_session()
+    if path is not None and path.is_file():
+        path.unlink()
+        print("loopx guard cleared for this session")
+    else:
+        print("loopx guard was not armed in this session")
+
+
+def cmd_forget() -> None:
+    path = mark_path(read_payload().get("session_id"))
+    allow(path)
 
 
 def cmd_hook() -> None:
-    path = state_path()
-    if not path.is_file():
-        allow()
+    path = mark_path(read_payload().get("session_id"))
+    if path is None or not path.is_file():
+        allow()  # this session runs no loop
 
-    try:
-        payload = json.load(sys.stdin)
-    except Exception:
-        payload = {}
     try:
         state = json.loads(path.read_text())
+        workstream = state["workstream"]
     except Exception:
-        allow(clear=True)
-
-    session = payload.get("session_id")
-    owner = state.get("session_id")
-    if owner is None and session:
-        state["session_id"] = session  # bind to the first session that stops
-    elif owner and session and owner != session:
-        allow()  # a different session; not this loop's business
-
-    workstream = state.get("workstream")
-    if not workstream:
-        allow(clear=True)
+        allow(path)
 
     milestones, notes = actionable(workstream)
     remaining = len(milestones) + len(notes)
     if remaining == 0:
-        allow(clear=True)  # genuinely Done
+        allow(path)  # genuinely Done
 
     # Reset the spin counter whenever the queue actually got shorter.
     previous = state.get("remaining")
@@ -171,8 +225,10 @@ def main() -> None:
         cmd_hook()
     elif args[0] == "start" and len(args) == 2:
         cmd_start(args[1])
-    elif args[0] == "end":
+    elif args == ["end"]:
         cmd_end()
+    elif args == ["forget"]:
+        cmd_forget()
     else:
         print(__doc__, file=sys.stderr)
         sys.exit(2)

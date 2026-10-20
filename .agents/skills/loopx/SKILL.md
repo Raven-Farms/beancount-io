@@ -20,7 +20,7 @@ Parse the target workstream from `$ARGUMENTS` (e.g. `w1`). If `$ARGUMENTS` is em
 2. `git status` — note pre-existing uncommitted changes. Do not sweep unrelated changes into an item's ship; if the tree is dirty with work you didn't do, surface it and ask before starting.
 3. The workstream `.pm/<wN>/README.md` exists. If not, STOP and report.
 4. Read `.pm/DO_NOT_DO.md` once. Every item you pick must respect it, and a conflict with it is a delete reason in triage.
-5. Arm the loop guard: `python3 scripts/loopx-guard.py start <wN>`. It is a `Stop` hook that refuses to let the turn end while `<wN>` still holds an actionable item, and it names the next pick when it does. Only a genuine **Exit** clears it, so this is the one mechanism that survives your own judgement that you are finished.
+5. Arm the loop guard: `python3 scripts/loopx-guard.py start <wN>`. In Claude Code it is a `Stop` hook that refuses to let this session's turn end while `<wN>` still holds an actionable item, and it names the next pick when it does. It binds to the session that ran `start`: other sessions in the same checkout are never held to your loop, and the mark is dropped when your session ends. Codex has no `Stop` hook, so there `start` reports that nothing was armed and the exit rules below are the only enforcement. Only a genuine **Exit** clears it, so this is the one mechanism that survives your own judgement that you are finished.
 
 ## The loop
 

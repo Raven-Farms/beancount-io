@@ -12,6 +12,8 @@ on:
       - ".agents/skills/**"
       - "skills/**"
       - "scripts/check-agent-guidance.py"
+      - "scripts/loopx-guard.py"
+      - "scripts/test_loopx_guard.py"
       - ".github/workflows/ci-agent-guidance.yml"
   pull_request:
     branches: [main]
@@ -24,6 +26,8 @@ on:
       - ".agents/skills/**"
       - "skills/**"
       - "scripts/check-agent-guidance.py"
+      - "scripts/loopx-guard.py"
+      - "scripts/test_loopx_guard.py"
       - ".github/workflows/ci-agent-guidance.yml"
 
 concurrency:
@@ -37,3 +41,5 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: python3 scripts/check-agent-guidance.py
+      - name: loopx stop-guard tests
+        run: python3 scripts/test_loopx_guard.py
