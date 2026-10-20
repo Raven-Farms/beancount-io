@@ -1,6 +1,6 @@
 ---
 name: beancount-import
-description: Import a bank or card CSV, OFX/QFX, QIF, or PDF statement export into an existing local Beancount ledger. Normalize signs, suggest categories from existing accounts, review duplicates and confirm before writing through bea; a PDF statement must tie out and ends with a balance assertion. Use for recording an export or a statement PDF; skip comparing an account against a statement (beancount-reconcile), full finance-app migrations, reusable importer authoring, individual options trades, single manual entries (beancount-add), ledger `option` settings, and ledgers hosted on Beancount.io.
+description: Import a bank or card CSV, OFX/QFX, QIF, or PDF statement export — or a broker activity CSV as lot-carrying entries — into an existing local Beancount ledger. Normalize signs, suggest categories from existing accounts, review duplicates and confirm before writing through bea; a PDF statement must tie out and ends with a balance assertion. Use for recording an export or a statement PDF; skip comparing an account against a statement (beancount-reconcile), full finance-app migrations, reusable importer authoring, individual options trades, single manual entries (beancount-add), ledger `option` settings, and ledgers hosted on Beancount.io.
 metadata:
   openclaw:
     homepage: 'https://github.com/bex-co/beancount-io/tree/main/skills'
@@ -68,7 +68,7 @@ text itself.
 
 ## Scope — what this skill does and does not touch
 
-**Does:** parse one export file per run; stage, dedup, and categorize its rows; **append** confirmed transactions (with `import-id` metadata) and any needed `open` directives to one existing file. For a PDF statement it also appends the closing `balance` assertion and, on a separate yes, a `document` directive attaching the statement file.
+**Does:** parse one export file per run; stage, dedup, and categorize its rows; **append** confirmed transactions (with `import-id` metadata) and any needed `open` directives to one existing file. For a PDF statement it also appends the closing `balance` assertion and, on a separate yes, a `document` directive attaching the statement file. A broker activity CSV imports as lots per `references/broker-activity.md`.
 
 **Does not:** edit or delete existing entries; create the target file (it must already exist and be included by the root, and `bea` refuses any other destination); fetch data from banks (see `references/getting-data.md` for how users export, incl. SimpleFIN); reconcile balances (`beancount-reconcile` — suggest it after a large import); migrate full finance-app history (`beancount-migrate`); build reusable importers (`beancount-importer-author`); record single manual entries (`beancount-add`); touch `option`, `plugin`, or `include` directives.
 
@@ -132,6 +132,8 @@ Turn the file into normalized rows: `date, amount (ledger sign), payee/descripti
 - Map amounts to the ledger's sign convention for the source account — the full sign rules live in `references/formats.md` (canonical; same convention as beancount-reconcile). Debit/credit split columns, all-positive amounts with a type column, DMY vs MDY — when ambiguous, **ask, never guess**. A wrong guess here corrupts every row.
 
 **PDF statements.** A `.pdf` the user names as a bank/card statement takes the agent-extraction path (`references/formats.md`, PDF): period, opening and closing balances, and dated transaction lines, skipping page subtotals, carried-forward lines, and balance lines. Record each row's **page and line** as you extract it — the review shows them, so the user can spot-check any row against the paper. Run the sanity walk (opening + movements = closing) before staging anything: if it does not tie, stop, show the gap and the figures you read, and write nothing. A PDF source records one `format: pdf` stanza line in the config block with the sign and date conventions learned, like other non-mapper sources.
+
+**Broker activity CSV.** An export whose rows carry actions (bought/sold/dividend…) with symbol/quantity/price columns follows `references/broker-activity.md` — read it before normalizing: a confirmed column + action mapping stored in the config block, entry shapes per action, sell lot resolution against held lots before staging, and the ordinary `csv:sha256` dedup with the lot posting as the hash amount. Its counter-accounts are fixed by action (the reference's table), so the Suggest stage only confirms those accounts are open; it does not categorize by payee history.
 
 ### 3. Stage
 
