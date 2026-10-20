@@ -121,3 +121,14 @@ The released `bea` 0.3.1 help does not list `--preset` or `--title`. Init now ch
 Fresh native Hermes installs of the promoted 0.3.2 release verify all ten supported skills byte-for-byte; init is rejected with the same documented policy verdict. Default search again finds fourteen entries including the full suite, while explicit `--source clawhub` returns `[]`. No force or model credentials were used.
 
 Before the 0.3.3 synchronization: all 130 installer/recipe/journey tests, 37 checker tests, structural/fixture checks, the skill validator and agent-guidance checks pass. Two focused tests also pass against the published minimum bea 0.3.1 (historical init and empty managed-price reads). The existing price-status test now checks the checkout's empty `refused` field while preserving the published release's older shape. Temporary host profiles and vendor source were removed after retaining the install/scan evidence.
+
+[Hosted skills CI for `ac9510670`](https://github.com/bex-co/beancount-io/actions/runs/39495528150) passes, including the complete journey suite and published-minimum recipes. Hosted agent-guidance and secret-scan checks also pass. The protected [synchronization dispatch](https://github.com/bex-co/beancount-io/actions/runs/39495559079) uses that same commit; all eleven validation plans pass before its publisher job is approved.
+
+The synchronization run completes successfully, including publisher-credential cleanup. All eleven receipts are accepted as `pending-publication`:
+
+| Registry update | Skills |
+| --- | --- |
+| 1.0.2 | add, import, init, migrate, reconcile |
+| 1.0.1 | ask, close, importer-author, options, property, trade |
+
+The post-run public API/download check still returns the previous versions for all eleven listings. No updated version is exposed as public latest yet. This is a registry promotion wait; the accepted uploads must not be repeated. After promotion, verify latest versions and authored-file bytes against this release and complete native supported-host installs before w6/m6/t013 closeout. No model-login approval or owner input remains pending.
