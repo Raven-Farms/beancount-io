@@ -1304,11 +1304,16 @@ def _inferred_leg_is_zero(postings: list[Any]) -> bool:
         cost, price = posting.cost, posting.price
         if cost is not None:
             per = None if cost.number_per is MISSING else cost.number_per
-            if cost.currency is MISSING or (per is None and cost.number_total is None):
+            # A total left for booking to interpolate (`{100 # USD}`) is known
+            # only after it: calling copy_sign on the MISSING sentinel crashed
+            # (w5/803). An empty `{# USD}` then reads as per-None-plus-total-None,
+            # which the guard below already stands aside for.
+            total = None if cost.number_total is MISSING else cost.number_total
+            if cost.currency is MISSING or (per is None and total is None):
                 return False
             weight = units.number * (per or 0)
-            if cost.number_total is not None:
-                weight += cost.number_total.copy_sign(units.number)
+            if total is not None:
+                weight += total.copy_sign(units.number)
             weights[cost.currency] += weight
         elif price is not None:
             total = posting.meta.get(writer.TOTAL_PRICE_META) if posting.meta else None
