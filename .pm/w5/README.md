@@ -66,7 +66,6 @@
 - [828 — A refused or partial write through an included file never shows the checked-against-root note (gap in w5/613)](./828.md)
 - [829 — report -a with a CJK/Thai/emoji leaf also counts sibling accounts that start with it; wrong totals, exit 0](./829.md)
 - [830 — A CSV category cell naming a loader-valid account (Thai, CJK leaf) goes to Uncategorized (gap in w5/203)](./830.md)
-- [831 — Pending rows after w5/614: refusals lack the status= hint, inference reads left-out rows, hold/declined imported](./831.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
