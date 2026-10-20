@@ -161,9 +161,12 @@ def _check_regexes(parsed: argparse.Namespace) -> None:
             raise UsageError(f"Invalid regular expression for {flag} {value!r}: {otherwise}.")
         try:
             re.compile(value)
-        except re.error as exc:
+        except (re.error, OverflowError, RecursionError, MemoryError) as exc:
+            # A repetition too large or nesting too deep to compile is an
+            # invalid expression like any other (w5/806); MemoryError carries
+            # no message.
             raise UsageError(
-                f"Invalid regular expression for {flag} {value!r}: {exc}. "
+                f"Invalid regular expression for {flag} {value!r}: {str(exc) or 'cannot be compiled'}. "
                 "Fix the expression; see 'bea treeify --help' for the defaults."
             ) from None
 

@@ -322,7 +322,10 @@ def regex_reads_otherwise(pattern: str, flags: int = 0) -> str | None:
         re.purge()
         try:
             re.compile(pattern, flags)
-        except re.error:
+        except (re.error, OverflowError, RecursionError, MemoryError):
+            # An invalid pattern is its caller's to report; a repetition too
+            # large or nesting too deep to compile is invalid the same way
+            # (w5/806).
             return None
     changed = next(
         (str(item.message) for item in caught if issubclass(item.category, (FutureWarning, DeprecationWarning))),

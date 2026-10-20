@@ -105,13 +105,21 @@ def answer(
     return _trial_balance(filtered, resolved_conversion, allow_errors, ledger_errors)
 
 
-def too_deep(file: Path) -> protocol.LedgerError:
+# Below this depth the tree cannot have overrun the recursion limit: encoding
+# spends two frames per level and first overruns at 600 (w5/209), so a
+# RecursionError beside shallower accounts came from elsewhere — a
+# pathological regex, say — and must not be reported as deep nesting (w5/806).
+_TOO_DEEP_LEVELS = 100
+
+
+def too_deep(file: Path) -> protocol.LedgerError | None:
     """The refusal for a ledger whose account tree outruns Python's recursion limit.
 
     A report nests one level per account component, and building the tree and
     encoding the answer both walk it recursively, so an account several
     hundred components deep cannot be reported. Loading does not recurse, which
-    is how the deepest account can still be named.
+    is how the deepest account can still be named. None when no account is
+    deep enough to blame: the recursion came from elsewhere.
     """
     from beancount.core.getters import get_accounts
 
@@ -120,6 +128,8 @@ def too_deep(file: Path) -> protocol.LedgerError:
     entries: Any = load_file(str(file))[0]
     deepest = max(sorted(get_accounts(entries)), key=lambda name: name.count(":"), default="")
     parts = deepest.split(":")
+    if len(parts) < _TOO_DEEP_LEVELS:
+        return None
     shown = deepest if len(parts) <= 4 else f"{':'.join(parts[:3])}:…:{parts[-1]}"
     return protocol.LedgerError(f"Account nesting is too deep to report: '{shown}' is {len(parts)} levels deep.")
 
@@ -619,8 +629,10 @@ def _invalid_pattern(value: str) -> str | None:
         return None
     try:
         re.compile(value, re.IGNORECASE)
-    except re.error as exc:
-        return str(exc)
+    except (re.error, OverflowError, RecursionError, MemoryError) as exc:
+        # A repetition too large or nesting too deep to compile is an invalid
+        # pattern like any other (w5/806); MemoryError carries no message.
+        return str(exc) or "cannot be compiled"
     return None
 
 

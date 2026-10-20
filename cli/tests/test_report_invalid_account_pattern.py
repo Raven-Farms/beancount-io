@@ -83,6 +83,22 @@ def test_an_invalid_pattern_is_refused_with_its_own_position(tmp_path: Path, pat
 
 
 @pytest.mark.parametrize(
+    ("pattern", "reason"),
+    [
+        ("Assets:.{4294967296}", "the repetition number is too large"),
+        ("(" * 1000 + ")" * 1000, "maximum recursion depth exceeded"),
+    ],
+    ids=["overflow", "recursion"],
+)
+def test_a_pattern_that_cannot_compile_is_refused_as_invalid(tmp_path: Path, pattern: str, reason: str) -> None:
+    """w5/806: an overflow or deep nesting escaped as a raw exit-1 failure instead of exit 2."""
+    result = _report(tmp_path, pattern)
+
+    assert result.returncode == 2, result.stdout + result.stderr
+    assert f"Invalid account filter {pattern!r}: {reason}" in result.stderr
+
+
+@pytest.mark.parametrize(
     ("pattern", "profit"),
     [(".*Food.*", "-17.00 USD"), ("food", "-17.00 USD"), ("Expenses:Food", "-10.00 USD")],
 )

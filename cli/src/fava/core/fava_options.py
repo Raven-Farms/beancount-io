@@ -112,7 +112,11 @@ class FavaOptions:
         """Set the collapse_pattern option."""
         try:
             pattern = re.compile(value)
-        except re.error as err:
+        # Beancount.io change: a repetition too large for the compile
+        # overflows instead of raising re.error, as do deeply nested groups
+        # and gigantic patterns — each is an invalid regex, collected like
+        # one, so no option value can fail a report bea check accepts (w5/806).
+        except (re.error, OverflowError, RecursionError, MemoryError) as err:
             raise NotARegularExpressionError(value) from err
         # It's typed as Sequence so that it's not externally mutated
         self.collapse_pattern.append(pattern)  # type: ignore[attr-defined]
@@ -139,7 +143,8 @@ class FavaOptions:
         """Set the insert_entry option."""
         try:
             pattern = re.compile(value)
-        except re.error as err:
+        # Beancount.io change: as set_collapse_pattern (w5/806).
+        except (re.error, OverflowError, RecursionError, MemoryError) as err:
             raise NotARegularExpressionError(value) from err
         opt = InsertEntryOption(date, pattern, filename, lineno)
         # It's typed as Sequence so that it's not externally mutated

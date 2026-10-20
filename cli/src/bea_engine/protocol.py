@@ -118,7 +118,9 @@ class Answer:
     data: dict[str, Any] = field(default_factory=dict)
     # The refusal to publish when the answer outruns Python's recursion limit.
     # Only the command knows what was nested — for a report, which account.
-    too_deep: Callable[[], EngineError] | None = None
+    # None when nothing plausibly nested that far: the recursion came from
+    # elsewhere, and the generic failure below reports it honestly (w5/806).
+    too_deep: Callable[[], EngineError | None] | None = None
 
 
 @contextmanager
@@ -163,7 +165,10 @@ def answering(command: str) -> Iterator[Answer]:
         raise SystemExit(exc.exit_code) from None
     except Exception as exc:  # noqa: BLE001 - the protocol owes the caller an envelope
         if isinstance(exc, RecursionError) and answer.too_deep is not None:
-            _refuse_nesting(command, answer)
+            nested = answer.too_deep()
+            if nested is not None:
+                _write(_failure(command, nested))
+                raise SystemExit(nested.exit_code) from None
         # The type and the engine-side traceback travel too: without them a
         # bare "month must be in 1..12" names neither what failed nor where,
         # and `--debug` could only show the frontend's own frames (w1/085).
@@ -181,11 +186,9 @@ def answering(command: str) -> Iterator[Answer]:
 
 def _refuse_nesting(command: str, answer: Answer) -> NoReturn:
     """Publish the failure for an answer too deeply nested to compute or encode."""
-    error = (
-        answer.too_deep()
-        if answer.too_deep is not None
-        else EngineError("The result nests too deeply to encode as an answer.")
-    )
+    error = answer.too_deep() if answer.too_deep is not None else None
+    if error is None:
+        error = EngineError("The result nests too deeply to encode as an answer.")
     _write(_failure(command, error))
     raise SystemExit(error.exit_code)
 
