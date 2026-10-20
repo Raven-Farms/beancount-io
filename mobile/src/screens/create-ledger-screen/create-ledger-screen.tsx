@@ -308,6 +308,7 @@ export function CreateLedgerScreen(): JSX.Element {
   }, [step, startKind]);
 
   const nameValue = watch("name");
+  const openingAccountValue = watch("openingAccount");
   const slugPreview = ledgerSlugPreview(nameValue ?? "");
   const busy = loading || isSubmitting;
 
@@ -597,20 +598,20 @@ export function CreateLedgerScreen(): JSX.Element {
                     onPress={() =>
                       setValue(
                         "openingAccount",
-                        watch("openingAccount") === account.name
+                        openingAccountValue === account.name
                           ? ""
                           : account.name,
                       )
                     }
                     style={[
                       styles.templateRow,
-                      watch("openingAccount") === account.name
+                      openingAccountValue === account.name
                         ? styles.templateSelected
                         : null,
                     ]}
                     accessibilityRole="button"
                     accessibilityState={{
-                      selected: watch("openingAccount") === account.name,
+                      selected: openingAccountValue === account.name,
                     }}
                     accessibilityLabel={account.name}
                   >
