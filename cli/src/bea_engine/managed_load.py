@@ -2095,13 +2095,13 @@ def _export_plugin_modules(loaded: LoadedLedger, snapshot: LedgerSnapshot, targe
         if holder is None:
             continue
         package = holder / top
-        if package.is_dir():
-            sources = [path for path in sorted(package.rglob("*.py")) if "__pycache__" not in path.parts]
-        else:
-            sources = [holder / f"{top}.py"]
+        sources = _package_files(package, top) if package.is_dir() else [holder / f"{top}.py"]
         for source in sources:
+            # The copy keeps the spelling the import finds; the resolved file
+            # decides containment and what bytes travel.
             try:
-                modules[target / source.resolve().relative_to(home)] = source
+                source.resolve().relative_to(home)
+                modules[target / source.relative_to(home)] = source
             except ValueError:
                 raise UsageError(
                     f"Cannot export: plugin module {top!r} loads from {source}, outside the ledger tree, "
@@ -2109,6 +2109,45 @@ def _export_plugin_modules(loaded: LoadedLedger, snapshot: LedgerSnapshot, targe
                     "travels with the export. Nothing was written."
                 ) from None
     return modules
+
+
+def _package_files(package: Path, top: str) -> list[Path]:
+    """Every file a local plugin package carries, its resources as well as its modules.
+
+    Only the `.py` files travelled, so a package reading its own
+    `settings.json` through `importlib.resources` exported with exit 0 and the
+    snapshot failed to load (w5/868). Bytecode caches are rebuilt where the
+    snapshot loads. What cannot travel as a plain file is refused, not
+    dropped: a linked directory, a pipe or device, a file this user cannot read.
+    """
+    from bea_engine.protocol import UsageError
+
+    def refuse(path: Path, reason: str) -> UsageError:
+        return UsageError(
+            f"Cannot export: plugin package {top!r} holds {path}, {reason}, so the snapshot's copy of the "
+            "package would be incomplete. Replace or remove it. Nothing was written."
+        )
+
+    files: list[Path] = []
+    for directory, subdirectories, names in os.walk(package):
+        subdirectories[:] = sorted(name for name in subdirectories if name != "__pycache__")
+        for name in subdirectories:
+            if os.path.islink(os.path.join(directory, name)):
+                raise refuse(Path(directory, name), "a linked directory the export does not follow")
+        for name in sorted(names):
+            path = Path(directory, name)
+            if path.suffix in {".pyc", ".pyo"}:
+                continue
+            try:
+                status = path.stat()
+            except OSError:
+                raise refuse(path, "a link to nothing") from None
+            if not stat.S_ISREG(status.st_mode):
+                raise refuse(path, "which is not a regular file")
+            if not os.access(path, os.R_OK):
+                raise refuse(path, "which this user cannot read")
+            files.append(path)
+    return files
 
 
 def _sibling_imports(homes: list[Path], plugins: list[str]) -> set[str]:

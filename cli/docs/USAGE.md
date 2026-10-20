@@ -1928,9 +1928,13 @@ line, with or without `--allow-errors`.
 With `option "insert_pythonpath"` (in the root or any included file), a plugin
 module or package that sits beside a ledger file setting it is copied to the
 same relative place too, with any module or package under those directories
-that the plugin imports, so the snapshot's `plugin` lines still resolve; a
-plugin installed elsewhere is not copied, while a module outside the ledger
-tree refuses the export naming it. An
+that the plugin imports, so the snapshot's `plugin` lines still resolve. A
+package travels whole — its data files, such as a `settings.json` read through
+`importlib.resources`, as well as its modules — leaving only bytecode caches
+behind; a package entry that cannot be copied as a plain file (a linked
+directory, a named pipe, a file this user cannot read) refuses the export
+naming it. A plugin installed elsewhere is not copied, while a module or
+package file outside the ledger tree refuses the export naming it. An
 unavailable source refuses the export unless `--allow-errors` carries its
 marker alone, and a URL include the load refused (an origin that is not
 allowlisted) refuses it unless `--allow-errors` writes it as a
