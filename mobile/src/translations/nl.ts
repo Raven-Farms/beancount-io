@@ -112,7 +112,7 @@ export const nl: Translations = {
   // layout direction — only a switch that crosses it costs a restart
   restartForLayoutTitle: "Opnieuw starten om de indeling te wijzigen",
   restartForLayoutMessage:
-    "{{language}} leest de andere kant op, dus Beancount moet opnieuw starten om zichzelf correct in te delen. Slaat u dit over, dan wijzigt de taal nu en volgt de indeling de volgende keer dat u de app opent.",
+    "{{language}} leest de andere kant op, dus Beancount moet opnieuw starten om zichzelf correct in te delen. Sla je dit over, dan wijzigt de taal nu en volgt de indeling de volgende keer dat je de app opent.",
   restartNow: "Nu opnieuw starten",
   // logout alert
   logoutAlertMsg: "Weet je zeker dat je wilt uitloggen?",
@@ -650,7 +650,7 @@ export const nl: Translations = {
   createLedgerAmountInvalid: "Voer een bedrag in zoals 100 of -30.50",
   createLedgerPresetPersonal: "Persoonlijk grootboek",
   createLedgerPresetPersonalOutcome:
-    "Leg een aankoop vast en begrijp het effect op uw resterende geld.",
+    "Leg een aankoop vast en begrijp het effect op je resterende geld.",
   createLedgerPresetFreelance: "Freelance grootboek",
   createLedgerPresetFreelanceOutcome:
     "Leg klantinkomsten vast of zie wat een onbetaalde klant nog schuldig is.",

@@ -16,13 +16,13 @@ export const de: Translations = {
   guestExampleDescription1: "Die öffentlichen Finanzberichte von NVIDIA.",
   guestExampleDescription2: "Digitale Vermögenswerte, Preise und Marktwerte.",
   guestConnectionError:
-    "Dieses Beispiel konnte nicht geladen werden. Prüfe die Verbindung und versuche es erneut.",
+    "Dieses Beispiel konnte nicht geladen werden. Prüfen Sie die Verbindung und versuchen Sie es erneut.",
   guestUnavailable:
-    "Dieses Beispiel ist nicht mehr öffentlich oder verfügbar. Wähle ein anderes Beispiel.",
+    "Dieses Beispiel ist nicht mehr öffentlich oder verfügbar. Wählen Sie ein anderes Beispiel.",
   guestNoExamples:
-    "Auf diesem Server sind keine öffentlichen Beispiele verfügbar. Versuche es erneut oder wähle auf dem Willkommensbildschirm einen anderen Server.",
+    "Auf diesem Server sind keine öffentlichen Beispiele verfügbar. Versuchen Sie es erneut oder wählen Sie auf dem Willkommensbildschirm einen anderen Server.",
   discoveryTitle: "Bücher durchsuchen",
-  discoveryTab_yours: "Deine Bücher",
+  discoveryTab_yours: "Ihre Bücher",
   discoveryTab_starred: "Favoriten",
   discoveryTab_explore: "Entdecken",
   discoverySearch: "Bücher suchen",
@@ -36,18 +36,18 @@ export const de: Translations = {
   discoveryLoading: "Bücher werden geladen…",
   discoveryLoadMore: "Mehr laden",
   discoveryRetry: "Erneut versuchen",
-  discoveryNoMatches: "Keine Bücher entsprechen deiner Suche.",
+  discoveryNoMatches: "Keine Bücher entsprechen Ihrer Suche.",
   discoveryEmpty_yours:
-    "Deine Bücher erscheinen hier. Entdecke öffentliche Bücher für den Einstieg.",
+    "Ihre Bücher erscheinen hier. Entdecken Sie öffentliche Bücher für den Einstieg.",
   discoveryEmpty_starred:
-    "Speichere ein Buch als Favorit, um es hier wiederzufinden.",
+    "Speichern Sie ein Buch als Favorit, um es hier wiederzufinden.",
   discoveryEmpty_explore: "Keine öffentlichen Bücher gefunden.",
   discoveryLoadError:
-    "Bücher konnten nicht geladen werden. Versuche es erneut.",
+    "Bücher konnten nicht geladen werden. Versuchen Sie es erneut.",
   discoveryActionError:
-    "Die Aktion konnte nicht abgeschlossen werden. Prüfe die Verbindung und den Zugriff auf das Buch und versuche es erneut.",
+    "Die Aktion konnte nicht abgeschlossen werden. Prüfen Sie die Verbindung und den Zugriff auf das Buch und versuchen Sie es erneut.",
   ledgerReadOnly:
-    "Dieses Buch ist schreibgeschützt. Wähle ein Buch, das du bearbeiten kannst.",
+    "Dieses Buch ist schreibgeschützt. Wählen Sie ein Buch, das Sie bearbeiten können.",
 
   // bottom tab bar
   home: "Startseite",
@@ -102,7 +102,7 @@ export const de: Translations = {
     "Keine Transaktionen stimmen genau mit diesem Händler überein.",
   merchantDetailLoadingMore: "Mehr laden…",
   // mine
-  reviewApp: "Gefällt es dir? Hinterlasse eine Bewertung :)",
+  reviewApp: "Gefällt es Ihnen? Hinterlassen Sie eine Bewertung :)",
   helpCenter: "Hilfezentrum",
   currentLanguage: "Sprache",
   currentVersion: "Version",
@@ -147,18 +147,18 @@ export const de: Translations = {
   signUp: "Registrieren",
   serverSettings: "Servereinstellungen",
   serverSettingsDescription:
-    "Verbinde dich mit einem kompatiblen Beancount.io-Server. Verwende nur einen Server, dem du vertraust; er erhält deine Anmeldedaten.",
+    "Verbinden Sie sich mit einem kompatiblen Beancount.io-Server. Verwenden Sie nur einen Server, dem Sie vertrauen; er erhält Ihre Anmeldedaten.",
   serverUrl: "Server-URL",
   serverUrlHelper:
-    "Gib die Basis-URL ein, zum Beispiel https://ledger.example.com/. Außerhalb der lokalen Entwicklung ist HTTPS erforderlich.",
-  serverUrlEmpty: "Gib eine Server-URL ein.",
-  serverUrlInvalid: "Gib eine vollständige HTTP- oder HTTPS-URL ein.",
+    "Geben Sie die Basis-URL ein, zum Beispiel https://ledger.example.com/. Außerhalb der lokalen Entwicklung ist HTTPS erforderlich.",
+  serverUrlEmpty: "Geben Sie eine Server-URL ein.",
+  serverUrlInvalid: "Geben Sie eine vollständige HTTP- oder HTTPS-URL ein.",
   serverUrlCredentials:
     "Server-URLs dürfen keinen Benutzernamen oder kein Passwort enthalten.",
   serverUrlQuery:
     "Server-URLs dürfen keine Abfrage oder kein Fragment enthalten.",
   serverUrlInsecure:
-    "Verwende HTTPS. HTTP ist nur für localhost in Entwicklungs-Builds verfügbar.",
+    "Verwenden Sie HTTPS. HTTP ist nur für localhost in Entwicklungs-Builds verfügbar.",
   testConnection: "Verbindung testen",
   serverConnectionSuccess:
     "Mit einem kompatiblen Beancount.io-Server verbunden.",
@@ -167,13 +167,13 @@ export const de: Translations = {
   serverConnectionIncompatible:
     "Dieser Server stellt die erforderliche Beancount.io-API nicht bereit.",
   serverConnectionAdvisory:
-    "Du kannst diese URL trotzdem speichern und dich anmelden, wenn der Server verfügbar ist.",
+    "Sie können diese URL trotzdem speichern und sich anmelden, wenn der Server verfügbar ist.",
   restoreDefaultServer: "Beancount.io-Standard wiederherstellen",
   backToSignIn: "Zurück zur Anmeldung",
   signInFailed:
-    "Die Anmeldung konnte nicht abgeschlossen werden. Bitte versuche es erneut.",
+    "Die Anmeldung konnte nicht abgeschlossen werden. Bitte versuchen Sie es erneut.",
   signUpFailed:
-    "Die Registrierung konnte nicht abgeschlossen werden. Bitte versuche es erneut.",
+    "Die Registrierung konnte nicht abgeschlossen werden. Bitte versuchen Sie es erneut.",
   addTransaction: "Transaktion hinzufügen",
   assets: "Vermögen",
   expenses: "Ausgaben",
@@ -478,7 +478,7 @@ export const de: Translations = {
   ledgerEditorSaveFailed: "Speichern fehlgeschlagen",
   ledgerEditorSaveLeftErrorsTitle: "Gespeichert, mit neuem Fehler im Hauptbuch",
   ledgerEditorSaveLeftErrors:
-    "Die Datei ist gespeichert, aber dein Hauptbuch hat jetzt einen Fehler, den es vorher nicht hatte: {{error}}",
+    "Die Datei ist gespeichert, aber Ihr Hauptbuch hat jetzt einen Fehler, den es vorher nicht hatte: {{error}}",
   ledgerEditorViewErrors: "Fehler anzeigen",
   ledgerEditorLoadFailed: "Datei konnte nicht geladen werden",
   ledgerEditorFileUnavailable: "Diese Datei ist nicht mehr im Hauptbuch.",
@@ -511,7 +511,7 @@ export const de: Translations = {
   },
   budgetNoBudgetsFound: "Keine Budgets gefunden",
   budgetNoBudgetsFoundDescription:
-    "Lege für ein beliebiges Konto ein Ziel fest, um es zu verfolgen.",
+    "Legen Sie für ein beliebiges Konto ein Ziel fest, um es zu verfolgen.",
   budgetEmptyStateCta: "Erstes Budget hinzufügen",
   budgetPanelEmpty: "Für ein Konto ein Ziel festlegen",
   budgetPanelRowValue:
@@ -531,7 +531,7 @@ export const de: Translations = {
   budgetInterval: "Intervall",
   budgetSelectInterval: "Intervall auswählen",
   budgetAmount: "Betrag",
-  budgetAmountInvalid: "Gib eine Zahl ein, z. B. 500 oder 49.99.",
+  budgetAmountInvalid: "Geben Sie eine Zahl ein, z. B. 500 oder 49.99.",
   budgetSaveFailed: "Budget konnte nicht gespeichert werden",
   // delete
   budgetDelete: "Löschen",
@@ -543,27 +543,27 @@ export const de: Translations = {
   // Ask Beancount.io — the agent chat
   agentTitle: "Beancount.io fragen",
   agentWelcome:
-    "Frag mich alles über dein Hauptbuch – Salden, Ausgaben oder wie eine Zahl zustande kam.",
-  agentPlaceholder: "Frag zu deinem Hauptbuch",
+    "Fragen Sie mich alles über Ihr Hauptbuch – Salden, Ausgaben oder wie eine Zahl zustande kam.",
+  agentPlaceholder: "Fragen zu Ihrem Hauptbuch",
   agentReadOnlyTitle: "Agent mit Lesezugriff",
   agentReadOnlyBody:
-    "Du kannst Fragen stellen und Dateien analysieren. Änderungen benötigen Schreibzugriff, aber ich kann sie für dich entwerfen.",
+    "Sie können Fragen stellen und Dateien analysieren. Änderungen benötigen Schreibzugriff, aber ich kann sie für Sie entwerfen.",
   agentThinking: "Denkt nach …",
-  agentWorking: "Dein Hauptbuch wird durchsucht …",
+  agentWorking: "Ihr Hauptbuch wird durchsucht …",
   agentSend: "Senden",
   agentStop: "Stoppen",
   agentNewChat: "Neuer Chat",
   agentRetry: "Erneut versuchen",
   agentErrorBody: "Diese Frage ist nicht durchgekommen.",
   agentNoAnswerBody:
-    "Ich habe dein Hauptbuch durchsucht, aber die Schritte waren aufgebraucht, bevor ich antworten konnte. Eine gezieltere Frage führt meist zum Ziel.",
+    "Ich habe Ihr Hauptbuch durchsucht, aber die Schritte waren aufgebraucht, bevor ich antworten konnte. Eine gezieltere Frage führt meist zum Ziel.",
   agentQuotaTitle: "Monatliches KI-Limit erreicht",
   agentQuotaBody:
-    "Du hast das KI-Kontingent dieses Monats aufgebraucht. Es wird nächsten Monat zurückgesetzt.",
+    "Sie haben das KI-Kontingent dieses Monats aufgebraucht. Es wird nächsten Monat zurückgesetzt.",
   agentApprovalTitle: "Im Web bestätigen",
   agentApprovalBody:
-    "Diese Änderung muss geprüft werden, bevor sie in dein Hauptbuch gelangt, und die App kann den vollständigen Diff noch nicht anzeigen. Öffne dieses Hauptbuch auf beancount.io, um sie zu bestätigen.",
-  agentAskCard: "Frag zu deinem Hauptbuch",
+    "Diese Änderung muss geprüft werden, bevor sie in Ihr Hauptbuch gelangt, und die App kann den vollständigen Diff noch nicht anzeigen. Öffnen Sie dieses Hauptbuch auf beancount.io, um sie zu bestätigen.",
+  agentAskCard: "Fragen zu Ihrem Hauptbuch",
   agentPresetNetWorth: "Wie hoch ist mein Nettovermögen?",
   agentPresetTopSpending: "Wofür habe ich diesen Monat am meisten ausgegeben?",
   agentPresetThisMonth: "Wie ist dieser Monat im Vergleich zum letzten?",
@@ -633,10 +633,10 @@ export const de: Translations = {
   profileLastName: "Nachname",
   profileUsername: "Benutzername",
   profileUsernameHint:
-    "Die Webadressen deiner Hauptbücher beginnen mit deinem Benutzernamen – wenn du ihn änderst, ändern sie sich mit.",
-  profileUsernameRequired: "Gib einen Benutzernamen ein",
+    "Die Webadressen Ihrer Hauptbücher beginnen mit Ihrem Benutzernamen – wenn Sie ihn ändern, ändern sie sich mit.",
+  profileUsernameRequired: "Geben Sie einen Benutzernamen ein",
   profileUsernameRule:
-    "Verwende 1–20 Zeichen: Kleinbuchstaben a–z, Ziffern 0–9 oder Unterstriche.",
+    "Verwenden Sie 1–20 Zeichen: Kleinbuchstaben a–z, Ziffern 0–9 oder Unterstriche.",
   profileUsernameTaken: "Dieser Benutzername ist bereits vergeben",
   profileEmail: "E-Mail",
   profileEmailReadOnly: "Die E-Mail-Adresse kann hier nicht geändert werden",

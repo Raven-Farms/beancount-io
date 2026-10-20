@@ -198,7 +198,7 @@ export const es: Translations = {
   saving: "Guardando...",
   saveSuccess: "¡Transacción guardada!",
   saveFailed: "Error al guardar",
-  amountEmptyError: "Por favor ingrese el monto",
+  amountEmptyError: "Introduce el monto",
   accountEmptyError: "Elige la cuenta de origen y la de destino",
   accounts: "Cuentas",
   // Column header for the Accounts tab's account column. The balance column
@@ -235,7 +235,7 @@ export const es: Translations = {
   costBasisLine: "Costo {{cost}} · Resultado no realizado {{gain}}",
   liabilities: "Pasivos",
   equity: "Patrimonio",
-  noDataCharts: "Agregue datos rápidamente para mostrar gráficos",
+  noDataCharts: "Agrega datos para ver gráficos",
   notEnoughChartData: "Aún no hay datos suficientes para el gráfico",
   done: "Hecho",
   payee: "Beneficiario",
@@ -246,7 +246,7 @@ export const es: Translations = {
   to: "A",
   date: "Fecha",
   save: "Guardar",
-  pleaseInput: "Por favor ingrese...",
+  pleaseInput: "Introduce...",
   inviteFriends: "Invitar amigos",
   inviteSummary:
     "Comparte esta herramienta profesional de gestión financiera y ayuda a otros a construir su futuro financiero.",
@@ -652,31 +652,31 @@ export const es: Translations = {
   createLedgerOpeningNone: "Decidir más tarde",
   createLedgerReview: "Revisar",
   createLedgerReviewDescription:
-    "Esto es exactamente lo que se creará. Vuelva atrás para cambiar algo.",
+    "Esto es exactamente lo que se creará. Vuelve atrás para cambiar algo.",
   createLedgerAccounts: "Cuentas",
-  createLedgerAmountInvalid: "Ingrese un monto como 100 o -30.50",
+  createLedgerAmountInvalid: "Introduce un monto como 100 o -30.50",
   createLedgerPresetPersonal: "Libro personal",
   createLedgerPresetPersonalOutcome:
-    "Registre una compra y entienda su efecto en el dinero restante.",
+    "Registra una compra y entiende su efecto en tu dinero restante.",
   createLedgerPresetFreelance: "Libro de autónomo",
   createLedgerPresetFreelanceOutcome:
-    "Registre ingresos de clientes o vea lo que un cliente impago aún debe.",
+    "Registra ingresos de clientes o mira lo que un cliente impago aún debe.",
   createLedgerPresetBusiness: "Libro de empresa",
   createLedgerPresetBusinessOutcome:
-    "Establezca una posición inicial y distinga financiación de ingresos.",
+    "Establece una posición inicial y distingue la financiación de los ingresos.",
   createLedgerPresetPortfolio: "Libro de cartera",
   createLedgerPresetPortfolioOutcome:
-    "Registre una compra y verifique unidades, registros de adquisición y movimiento de efectivo.",
+    "Registra una compra y verifica unidades, registros de adquisición y movimiento de efectivo.",
   createLedgerPresetRental: "Libro de alquiler",
   createLedgerPresetRentalOutcome:
-    "Registre recibos y distinga el alquiler de un depósito reembolsable.",
+    "Registra recibos y distingue el alquiler de un depósito reembolsable.",
   createLedgerPresetShared: "Libro de gastos compartidos",
   createLedgerPresetSharedOutcome:
-    "Registre un anticipo y vea quién debe a quién.",
+    "Registra un anticipo y mira quién debe a quién.",
   createLedgerPresetCommunity: "Libro de comunidad",
   createLedgerPresetCommunityOutcome:
-    "Explique contribuciones, gastos de proyectos y fondos restantes.",
+    "Explica aportaciones, gastos de proyectos y fondos restantes.",
   createLedgerPresetBlank: "Libro en blanco",
   createLedgerPresetBlankOutcome:
-    "Añada una estructura elegida sin eliminar categorías no deseadas.",
+    "Añade una estructura elegida sin eliminar categorías no deseadas.",
 };
