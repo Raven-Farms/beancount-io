@@ -51,7 +51,9 @@ describe("Password Reset Email Template", () => {
     it("should include security note", () => {
       const html = renderPasswordResetHtml(validParams);
       expect(html).toContain("Security Note");
-      expect(html).toContain("This link will expire in 24 hours");
+      expect(html).toContain(
+        "This reset link expires 5 minutes after it is created",
+      );
       expect(html).toContain("Don't share this link with anyone");
     });
 
@@ -100,8 +102,60 @@ describe("Password Reset Email Template", () => {
     it("should include security note", () => {
       const text = renderPasswordResetText(validParams);
       expect(text).toContain("Security Note:");
-      expect(text).toContain("This link will expire in 24 hours");
+      expect(text).toContain(
+        "This reset link expires 5 minutes after it is created",
+      );
     });
+  });
+});
+
+describe("Password reset mail sign-in continuation", () => {
+  const params: PasswordResetParams = {
+    resetLink:
+      "https://dashboard.example.com/auth/reset-password/?token=reset-proof",
+    signInRecovery: {
+      link: "https://dashboard.example.com/auth/login/?recovery=private-proof&next=%2Fledger",
+      code: "123456",
+    },
+  };
+
+  it("offers distinct reset and sign-in actions requiring the current password in both formats", () => {
+    for (const render of [renderPasswordResetHtml, renderPasswordResetText]) {
+      const message = render(params);
+      expect(message).toContain("reset-proof");
+      expect(message).toContain("private-proof");
+      expect(message).toContain("123456");
+      expect(message).toContain("Your correct password is still required");
+      expect(message).toContain("10 minutes and can be used once");
+    }
+    expect(renderPasswordResetHtml(params)).toContain("&amp;next=");
+    expect(renderPasswordResetText(params)).toContain("&next=");
+  });
+
+  it("omits the optional continuation for consumed proofs and legacy callers", () => {
+    for (const render of [renderPasswordResetHtml, renderPasswordResetText]) {
+      const message = render({ resetLink: params.resetLink });
+      expect(message).toContain("reset-proof");
+      expect(message).not.toContain("Continue Signing In");
+      expect(message).not.toContain("recovery code");
+    }
+  });
+
+  it("validates the continuation URL in both formats and escapes HTML values", () => {
+    for (const render of [renderPasswordResetHtml, renderPasswordResetText]) {
+      expect(() =>
+        render({
+          ...params,
+          signInRecovery: { code: "123456", link: "javascript:alert(1)" },
+        }),
+      ).toThrow();
+    }
+    const html = renderPasswordResetHtml({
+      ...params,
+      signInRecovery: { ...params.signInRecovery!, code: '<img src="x">' },
+    });
+    expect(html).not.toContain('<img src="x">');
+    expect(html).toContain("&lt;img src=&quot;x&quot;&gt;");
   });
 });
 

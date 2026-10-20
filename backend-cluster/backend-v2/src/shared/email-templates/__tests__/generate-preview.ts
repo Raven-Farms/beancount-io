@@ -32,7 +32,11 @@ export function buildTemplatePreviews(): TemplatePreview[] {
   const signupOtpParams = { otp: "123456" };
   const passwordResetParams = {
     resetLink:
-      "https://dashboard.beancount.io/reset-password?token=public-preview-token",
+      "https://dashboard.beancount.io/auth/reset-password/?token=public-preview-token",
+    signInRecovery: {
+      link: "https://dashboard.beancount.io/auth/login/?recovery=public-preview-challenge",
+      code: "123456",
+    },
   };
   const planChangeParams: PlanChangeEmailParams = {
     kind: "scheduled",

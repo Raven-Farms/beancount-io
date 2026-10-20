@@ -4,8 +4,14 @@ import { consumeMailDelivery } from "../../operations/auth-mail-limits";
 import { issueSignInRecoveryProof } from "../../operations/sign-in-recovery-proof";
 import { ServiceUnavailableError } from "@/shared/errors";
 import { logger } from "@/shared/logger";
-import { createCipheriv, hkdfSync, randomBytes } from "node:crypto";
+import {
+  createCipheriv,
+  createDecipheriv,
+  hkdfSync,
+  randomBytes,
+} from "node:crypto";
 import { BadUserInputError } from "@/shared/errors";
+import { TTL } from "@/shared/cache";
 
 jest.mock("../../operations/auth-mail-limits", () => ({
   consumeMailDelivery: jest.fn(),
@@ -115,6 +121,28 @@ function fixture(secret = "synthetic-mail-test-secret") {
     emailToken,
     sendgrid,
     service,
+    readPayload: (id: string) => {
+      const mail = rows.get(id)!;
+      const [, iv, tag, data] = mail.payload.split(".");
+      const key = Buffer.from(
+        hkdfSync("sha256", secret, "", "beancount/auth-mail/v1", 32),
+      );
+      const decipher = createDecipheriv(
+        "aes-256-gcm",
+        key,
+        Buffer.from(iv, "base64"),
+      );
+      decipher.setAAD(Buffer.from(`${mail.id}:${mail.kind}:v1`));
+      decipher.setAuthTag(Buffer.from(tag, "base64"));
+      return JSON.parse(
+        Buffer.concat([
+          decipher.update(Buffer.from(data, "base64")),
+          decipher.final(),
+        ]).toString("utf8"),
+      ) as {
+        prepared: { token: string; code?: string; resetExpiresAt: number };
+      };
+    },
     retryNow: () => {
       for (const row of rows.values()) row.availableAt = new Date(0);
     },
@@ -129,6 +157,8 @@ beforeEach(() => {
     challengeId: "rcv_private-challenge",
   });
 });
+
+afterEach(() => jest.restoreAllMocks());
 
 it("enqueues opaque IDs and encrypted recipient data identically before any account lookup", async () => {
   const f = fixture();
@@ -172,6 +202,7 @@ it("suppresses delivery before lookup/token creation and preserves existing vali
   expect(f.user.getByMail).not.toHaveBeenCalled();
   expect(f.emailToken.issueToken).not.toHaveBeenCalled();
   expect(f.emailToken.regenerateToken).not.toHaveBeenCalled();
+  expect(issueSignInRecoveryProof).not.toHaveBeenCalled();
   expect(f.sendgrid.sendMail).not.toHaveBeenCalled();
 });
 
@@ -187,6 +218,13 @@ it("retries stable prepared mail after a process restart without rotating its to
   const token = f.emailToken.issueToken.mock.calls[0][1];
   expect(f.rows.get(id)!.payload).not.toContain(token);
   expect(f.rows.get(id)!.payload).not.toContain("person@example.com");
+  expect(f.rows.get(id)!.payload).not.toContain("123456");
+  expect(f.readPayload(id).prepared.code).toBe("123456");
+  expect(first.text).toContain("code is 123456");
+  expect(first.text).toContain(
+    "https://example.com/auth/login/?recovery=rcv_private-challenge",
+  );
+  expect(first.text).not.toContain(`recovery=${id}`);
   f.retryNow();
 
   await f.service().processBatch();
@@ -199,10 +237,101 @@ it("retries stable prepared mail after a process restart without rotating its to
   expect(consumeMailDelivery).toHaveBeenCalledTimes(1);
   expect(f.user.getByMail).toHaveBeenCalledTimes(1);
   expect(f.rows.size).toBe(0);
+  expect(issueSignInRecoveryProof).toHaveBeenNthCalledWith(
+    2,
+    "person@example.com",
+    "user_mail",
+    id,
+    "synthetic-mail-test-secret",
+  );
   const logs = logger.child({ module: "test" });
   expect(JSON.stringify(jest.mocked(logs.warn).mock.calls)).not.toContain(
     "person@example.com",
   );
+});
+
+it("gives a late-claimed reset five minutes from preparation and preserves that absolute expiry after restart", async () => {
+  const f = fixture();
+  let now = Date.now();
+  jest.spyOn(Date, "now").mockImplementation(() => now);
+  const id = await f.service().enqueue("person@example.com", "reset");
+  const deliveryDeadline = f.rows.get(id)!.expiresAt.getTime();
+  now = deliveryDeadline - 5000;
+  f.sendgrid.sendMail.mockRejectedValueOnce(new Error("provider unavailable"));
+
+  await f.service().processBatch();
+
+  const expiry = now + TTL.MIN_5;
+  expect(f.emailToken.issueToken.mock.calls[0][2].getTime()).toBe(expiry);
+  expect(f.readPayload(id).prepared.resetExpiresAt).toBe(expiry);
+  expect(f.rows.get(id)!.expiresAt.getTime()).toBe(deliveryDeadline);
+  const first = f.sendgrid.sendMail.mock.calls[0][0];
+  now += 1000;
+  f.retryNow();
+  await f.service().processBatch();
+
+  expect(f.emailToken.issueToken.mock.calls[1][2].getTime()).toBe(expiry);
+  expect(f.sendgrid.sendMail.mock.calls[1][0]).toEqual(first);
+  expect(consumeMailDelivery).toHaveBeenCalledTimes(1);
+});
+
+it("retries a reset link without resurrecting an already consumed sign-in proof", async () => {
+  const f = fixture();
+  const id = await f.service().enqueue("person@example.com", "reset");
+  f.sendgrid.sendMail.mockRejectedValueOnce(new Error("acknowledgement lost"));
+  await f.service().processBatch();
+  const first = f.sendgrid.sendMail.mock.calls[0][0];
+  const resetLink = first.text!.match(
+    /https:\/\/example\.com\/auth\/reset-password\/\?token=[a-z0-9]+/,
+  )![0];
+  expect(first.text).toContain("code is 123456");
+  jest.mocked(issueSignInRecoveryProof).mockResolvedValue(null);
+  f.retryNow();
+
+  await f.service().processBatch();
+
+  const retry = f.sendgrid.sendMail.mock.calls[1][0];
+  expect(retry.text).toContain(resetLink);
+  expect(retry.text).not.toContain("/auth/login/");
+  expect(retry.text).not.toContain("123456");
+  expect(retry.html).not.toContain("/auth/login/");
+  expect(f.emailToken.issueToken.mock.calls[1]).toEqual(
+    f.emailToken.issueToken.mock.calls[0],
+  );
+  expect(f.rows.has(id)).toBe(false);
+  expect(consumeMailDelivery).toHaveBeenCalledTimes(1);
+});
+
+it("defers reset delivery on proof storage errors without rotating the prepared token or expiry", async () => {
+  const f = fixture();
+  let now = Date.now();
+  jest.spyOn(Date, "now").mockImplementation(() => now);
+  const id = await f.service().enqueue("person@example.com", "reset");
+  f.retryNow();
+  jest
+    .mocked(issueSignInRecoveryProof)
+    .mockRejectedValueOnce(new ServiceUnavailableError("Authentication", 5));
+
+  await f.service().processBatch();
+
+  expect(f.sendgrid.sendMail).not.toHaveBeenCalled();
+  expect(f.emailToken.issueToken).not.toHaveBeenCalled();
+  expect(f.authMail.retry).toHaveBeenCalledTimes(1);
+  const prepared = f.readPayload(id).prepared;
+  expect(prepared.resetExpiresAt).toBe(now + TTL.MIN_5);
+  now += TTL.SEC_30;
+  f.retryNow();
+  await f.service().processBatch();
+
+  expect(f.emailToken.issueToken).toHaveBeenCalledWith(
+    "user_mail",
+    prepared.token,
+    new Date(prepared.resetExpiresAt),
+  );
+  expect(f.sendgrid.sendMail).toHaveBeenCalledTimes(1);
+  expect(f.sendgrid.sendMail.mock.calls[0][0].text).toContain("code is 123456");
+  expect(consumeMailDelivery).toHaveBeenCalledTimes(1);
+  expect(f.user.getByMail).toHaveBeenCalledTimes(1);
 });
 
 it("survives the crash-after-provider boundary by resending persisted content after lease recovery", async () => {

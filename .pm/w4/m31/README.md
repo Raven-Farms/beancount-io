@@ -1,6 +1,6 @@
 # w4 · m31 — Bound authentication abuse without losing account recovery
 
-**Worker:** worker1 **Goal:** human and agent callers receive predictable request limits before credential work, while account owners retain a verified recovery path **Status:** todo (t001, t002, t003, t004 done)
+**Worker:** worker1 **Goal:** human and agent callers receive predictable request limits before credential work, while account owners retain a verified recovery path **Status:** todo (t001, t002, t003, t004, t010 done)
 
 ## Tasks (in order)
 
@@ -10,7 +10,7 @@
 | t002 | Shared mail and OTP budgets with durable asynchronous recovery delivery — **DONE** | 90m | t001 |
 | t003 | Expose email-verified sign-in recovery through the shared GraphQL ceremony — **DONE** | 60m | t002 |
 | t004 | Add a localized recovery path to the login form — **DONE** | 60m | t003 |
-| t010 | Preserve mailbox-verified sign-in when reset mail exhausts shared delivery limits | 45m | t004 |
+| t010 | Preserve mailbox-verified sign-in when reset mail exhausts shared delivery limits — **DONE** | 45m | t004 |
 | t005 | Enforce both user and credential API budgets with bounded outage fallback | 60m | t001, t010 |
 | t006 | Adoption surface | 25m | t004, t005, t010 |
 | t007 | Simplify | 30m | t006 |

@@ -1,13 +1,20 @@
 import { renderEmailWrapper } from "../components/email-wrapper";
 import { EMAIL_STYLES } from "../components/email-theme";
-import { validateEmailUrl } from "../utils/url-validator";
+import { escapeHtml, validateEmailUrl } from "../utils/url-validator";
 
 export interface PasswordResetParams {
   resetLink: string;
+  signInRecovery?: { link: string; code: string };
 }
 
 export function renderPasswordResetHtml(params: PasswordResetParams): string {
-  const resetLink = validateEmailUrl(params.resetLink);
+  const resetLink = escapeHtml(validateEmailUrl(params.resetLink));
+  const recovery = params.signInRecovery;
+  const recoveryContent = recovery
+    ? `<h2 class="email-heading" style="${EMAIL_STYLES.heading}">Continue Signing In</h2>
+       <p class="email-body-copy" style="${EMAIL_STYLES.paragraph}">If you know your current password, you can sign in without resetting it. Your Beancount.io sign-in recovery code is <strong>${escapeHtml(recovery.code)}</strong>.</p>
+       <p class="email-body-copy" style="${EMAIL_STYLES.paragraph}"><a href="${escapeHtml(validateEmailUrl(recovery.link))}">Continue signing in</a> and enter your email, password and this code. Your correct password is still required. This code expires in 10 minutes and can be used once.</p>`
+    : "";
 
   const content = `
     <h2 class="email-heading" style="${EMAIL_STYLES.heading}">Reset Your Password</h2>
@@ -33,7 +40,7 @@ export function renderPasswordResetHtml(params: PasswordResetParams): string {
         Security Note
       </p>
       <p class="email-muted" style="margin: 0; ${EMAIL_STYLES.mutedText}">
-        This link will expire in 24 hours. Don't share this link with anyone.
+        This reset link expires 5 minutes after it is created. Don't share this link with anyone.
       </p>
     </div>
 
@@ -44,6 +51,7 @@ export function renderPasswordResetHtml(params: PasswordResetParams): string {
     <p class="email-muted email-breakable" style="${EMAIL_STYLES.breakableUrl}">
       ${resetLink}
     </p>
+    ${recoveryContent}
   `;
 
   return renderEmailWrapper({
@@ -54,6 +62,11 @@ export function renderPasswordResetHtml(params: PasswordResetParams): string {
 }
 
 export function renderPasswordResetText(params: PasswordResetParams): string {
+  const resetLink = validateEmailUrl(params.resetLink);
+  const recovery = params.signInRecovery;
+  const recoveryContent = recovery
+    ? `\n\nContinue Signing In\n\nIf you know your current password, you can sign in without resetting it. Your Beancount.io sign-in recovery code is ${recovery.code}. Open ${validateEmailUrl(recovery.link)} and enter your email, password and this code. Your correct password is still required. This code expires in 10 minutes and can be used once.`
+    : "";
   return `
 Beancount.io
 ================
@@ -64,10 +77,10 @@ Hi, we've received a request to reset your password. If you didn't make the requ
 
 Otherwise, you can reset your password using this link:
 
-${params.resetLink}
+${resetLink}
 
 Security Note:
-This link will expire in 24 hours. Don't share this link with anyone.
+This reset link expires 5 minutes after it is created. Don't share this link with anyone.${recoveryContent}
 
 --
 Powered by Beancount.io

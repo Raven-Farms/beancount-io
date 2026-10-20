@@ -25,7 +25,12 @@ type Payload = {
   email: string;
   returnTo?: string;
   admitted?: boolean;
-  prepared?: { userId: string; token?: string; code?: string };
+  prepared?: {
+    userId: string;
+    token?: string;
+    resetExpiresAt?: number;
+    code?: string;
+  };
 };
 
 export interface IAuthMailService {
@@ -121,31 +126,40 @@ export class AuthMailService implements IAuthMailService {
         payload.prepared = {
           userId: user.id,
           token: randomBytes(32).toString("hex"),
+          resetExpiresAt: Date.now() + TTL.MIN_5,
         };
       } else {
-        const proof = await issueSignInRecoveryProof(
-          payload.email,
-          user.id,
-          mail.id,
-          this.secret,
-        );
-        if (!proof) {
-          await this.models.authMail.complete(this.db, mail);
-          return;
-        }
-        payload.prepared = { userId: user.id, code: proof.code };
+        payload.prepared = { userId: user.id };
       }
     }
+    const prepared = payload.prepared;
+    // Older queued jobs may predate the persisted reset expiry. Set it once,
+    // before issuing anything, so retries cannot extend the reset lifetime.
+    if (mail.kind === "reset" && prepared.resetExpiresAt === undefined)
+      prepared.resetExpiresAt = Date.now() + TTL.MIN_5;
     // Commit the stable prepared contents before any delivery. A crash after
     // acceptance may resend this same mail, never rotate its code or token.
     if (!(await this.save(mail, payload))) return;
-    const prepared = payload.prepared;
+    const proof = await issueSignInRecoveryProof(
+      payload.email,
+      prepared.userId,
+      mail.id,
+      this.secret,
+    );
+    if (proof && !prepared.code) prepared.code = proof.code;
+    const signInRecovery =
+      proof && proof.code === prepared.code
+        ? {
+            link: this.recoveryLink(proof.challengeId, payload.returnTo),
+            code: proof.code,
+          }
+        : undefined;
     const dashboard = this.dashboardUrl.replace(/\/$/, "");
     if (mail.kind === "reset") {
       const token = await this.models.emailToken.issueToken(
         prepared.userId,
         prepared.token!,
-        mail.expiresAt,
+        new Date(prepared.resetExpiresAt!),
       );
       if (!token) {
         await this.models.authMail.complete(this.db, mail);
@@ -156,33 +170,31 @@ export class AuthMailService implements IAuthMailService {
       await this.sendgrid.sendMail({
         to: payload.email,
         subject: "Reset your Password",
-        html: renderPasswordResetHtml({ resetLink }),
-        text: renderPasswordResetText({ resetLink }),
+        html: renderPasswordResetHtml({ resetLink, signInRecovery }),
+        text: renderPasswordResetText({ resetLink, signInRecovery }),
       });
     } else {
-      const proof = await issueSignInRecoveryProof(
-        payload.email,
-        prepared.userId,
-        mail.id,
-        this.secret,
-      );
-      if (!proof || proof.code !== prepared.code) {
+      if (!signInRecovery) {
         await this.models.authMail.complete(this.db, mail);
         return;
       }
-      const search = new URLSearchParams({ recovery: proof.challengeId });
-      if (payload.returnTo) search.set("next", payload.returnTo);
-      const link = `${dashboard}/auth/login/?${search.toString()}`;
+      const { link, code } = signInRecovery;
       const htmlLink = link.replace(/&/g, "&amp;");
       if (!(await this.save(mail, payload))) return;
       await this.sendgrid.sendMail({
         to: payload.email,
         subject: "Beancount.io sign-in recovery code",
-        text: `Your Beancount.io sign-in recovery code is ${proof.code}. Open ${link} and enter your email, password and this code. Your correct password is still required. If you did not request this code, ignore this email.`,
-        html: `<p>Your Beancount.io sign-in recovery code is <strong>${proof.code}</strong>.</p><p><a href="${htmlLink}">Continue signing in</a> with your email, password and this code. Your correct password is still required.</p><p>If you did not request this code, ignore this email.</p>`,
+        text: `Your Beancount.io sign-in recovery code is ${code}. Open ${link} and enter your email, password and this code. Your correct password is still required. If you did not request this code, ignore this email.`,
+        html: `<p>Your Beancount.io sign-in recovery code is <strong>${code}</strong>.</p><p><a href="${htmlLink}">Continue signing in</a> with your email, password and this code. Your correct password is still required.</p><p>If you did not request this code, ignore this email.</p>`,
       });
     }
     await this.models.authMail.complete(this.db, mail);
+  }
+
+  private recoveryLink(challengeId: string, returnTo?: string): string {
+    const search = new URLSearchParams({ recovery: challengeId });
+    if (returnTo) search.set("next", returnTo);
+    return `${this.dashboardUrl.replace(/\/$/, "")}/auth/login/?${search.toString()}`;
   }
 
   private save(mail: AuthMail, payload: Payload): Promise<boolean> {

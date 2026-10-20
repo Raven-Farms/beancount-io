@@ -238,6 +238,9 @@ function createFixture() {
 const REQUEST = `mutation($email: String!, $returnTo: String) {
   requestSignInRecovery(email: $email, returnTo: $returnTo) { success }
 }`;
+const REQUEST_RESET = `mutation($email: String!) {
+  sendForgotPasswordLink(email: $email) { success }
+}`;
 const RECOVER = `mutation($email: String!, $challengeId: String!, $code: String!, $password: String!) {
   signInWithEmailCode(email: $email, challengeId: $challengeId, code: $code, password: $password) { token expireAt }
 }`;
@@ -332,28 +335,49 @@ afterAll(async () => {
   await new Promise<void>((resolve) => server.close(() => resolve()));
 });
 
-async function deliveredRecovery(returnTo?: string) {
-  const response = await post(REQUEST, { email: ACCOUNT.email, returnTo });
+function ownershipProofFromMail(sent: { text?: string }, jobId: string) {
+  const code = /\b\d{6}\b/.exec(sent.text ?? "")?.[0];
+  const links = (sent.text?.match(/https:\/\/\S+/g) ?? []).map(
+    (url) => new URL(url),
+  );
+  const link = links.find(
+    (url) =>
+      url.pathname === "/auth/login/" && url.searchParams.has("recovery"),
+  );
+  expect(code).toEqual(expect.stringMatching(/^\d{6}$/));
+  expect(link).toBeDefined();
+  const challengeId = link!.searchParams.get("recovery")!;
+  expect(challengeId).toMatch(/^rcv_[a-f0-9]{64}$/);
+  expect(challengeId).not.toBe(jobId);
+  return {
+    jobId,
+    code: code!,
+    challengeId,
+    link: link!,
+    email: ACCOUNT.email,
+    password: "correct-password",
+  };
+}
+
+async function deliveredRecovery(
+  returnTo?: string,
+  kind: "reset" | "sign-in-recovery" = "sign-in-recovery",
+) {
+  const response = await post(kind === "reset" ? REQUEST_RESET : REQUEST, {
+    email: ACCOUNT.email,
+    returnTo,
+  });
   expect(response.body).toEqual({
-    data: { requestSignInRecovery: { success: true } },
+    data: {
+      [kind === "reset" ? "sendForgotPasswordLink" : "requestSignInRecovery"]: {
+        success: true,
+      },
+    },
   });
   const jobId = fixture.authMail.enqueue.mock.calls.at(-1)![1].id;
   await fixture.mail.processBatch();
   const sent = fixture.sendgrid.sendMail.mock.calls.at(-1)![0];
-  const code = /code is (\d{6})/.exec(sent.text!)![1];
-  const link = new URL(/Open (https:\/\/\S+) and enter/.exec(sent.text!)![1]);
-  const challengeId = link.searchParams.get("recovery")!;
-  expect(challengeId).toMatch(/^rcv_[a-f0-9]{64}$/);
-  expect(challengeId).not.toBe(jobId);
-  return {
-    response,
-    jobId,
-    code,
-    challengeId,
-    link,
-    email: ACCOUNT.email,
-    password: "correct-password",
-  };
+  return { response, ...ownershipProofFromMail(sent, jobId) };
 }
 
 describe("sign-in recovery over HTTP GraphQL", () => {
@@ -452,10 +476,16 @@ describe("sign-in recovery over HTTP GraphQL", () => {
     expect(fixture.ensureFollowing).toHaveBeenCalledTimes(1);
   });
 
-  it.each(["wrong code", "wrong email", "expired", "wrong password"] as const)(
-    "refuses %s without issuing a session",
-    async (kind) => {
-      const proof = await deliveredRecovery();
+  it.each(
+    (["sign-in-recovery", "reset"] as const).flatMap((mailKind) =>
+      (["wrong code", "wrong email", "expired", "wrong password"] as const).map(
+        (kind) => [mailKind, kind] as const,
+      ),
+    ),
+  )(
+    "refuses %s mail with %s without issuing a session",
+    async (mailKind, kind) => {
+      const proof = await deliveredRecovery(undefined, mailKind);
       fixture.user.getByMail.mockClear();
       const input = { ...proof };
       if (kind === "wrong code")
@@ -478,6 +508,65 @@ describe("sign-in recovery over HTTP GraphQL", () => {
       }
     },
   );
+
+  it("recovers from delivered reset mail after shared delivery and ordinary sign-in quotas are exhausted", async () => {
+    let lastJobId = "";
+    for (let delivery = 0; delivery < 5; delivery++) {
+      const response = await post(REQUEST_RESET, { email: ACCOUNT.email });
+      expect(response.body).toEqual({
+        data: { sendForgotPasswordLink: { success: true } },
+      });
+      lastJobId = fixture.authMail.enqueue.mock.calls.at(-1)![1].id;
+      await fixture.mail.processBatch();
+      expect(fixture.sendgrid.sendMail).toHaveBeenCalledTimes(delivery + 1);
+      const mail = fixture.sendgrid.sendMail.mock.calls.at(-1)![0];
+      expect(mail.text).toMatch(
+        /https:\/\/dashboard\.example\.com\/auth\/reset-password\/\?token=[a-f0-9]{64}/,
+      );
+      // Expire the one-minute cooldown after the fifth mail as well, so the
+      // refused sixth delivery proves the hourly cap remains in force.
+      now += 60_000;
+    }
+    for (let attempt = 0; attempt < 30; attempt++) {
+      const result = await post(
+        SIGN_IN,
+        { email: ACCOUNT.email, password: "wrong" },
+        { ip: `192.0.2.${attempt + 1}` },
+      );
+      expect(result.body.errors?.[0].extensions.code).toBe(
+        attempt < 10 ? "BAD_USER_INPUT" : "RATE_LIMITED",
+      );
+    }
+    const alreadyDelivered = fixture.sendgrid.sendMail.mock.calls.at(-1)![0];
+    const request = await post(REQUEST, { email: ACCOUNT.email });
+    expect(request.body).toEqual({
+      data: { requestSignInRecovery: { success: true } },
+    });
+    await fixture.mail.processBatch();
+    expect(fixture.sendgrid.sendMail).toHaveBeenCalledTimes(5);
+    expect(fixture.rows.size).toBe(0);
+
+    const proof = ownershipProofFromMail(alreadyDelivered, lastJobId);
+    const result = await post(RECOVER, proof, { ip: "203.0.113.1" });
+    expect(result.body.errors).toBeUndefined();
+    expect(result.headers.get("set-cookie")).toContain(
+      `${COOKIE_NAME}=synthetic-session-1`,
+    );
+    expect(fixture.jwt.create).toHaveBeenCalledTimes(1);
+    expect(fixture.ensureFollowing).toHaveBeenCalledTimes(1);
+    const ordinary = await post(
+      SIGN_IN,
+      { email: ACCOUNT.email, password: "correct-password" },
+      { ip: "203.0.113.2" },
+    );
+    expect(ordinary.body.errors?.[0].extensions.code).toBe("RATE_LIMITED");
+    const replay = await post(RECOVER, proof, { ip: "203.0.113.3" });
+    expect(replay.body.errors?.[0].extensions.code).toBe("BAD_USER_INPUT");
+    expect(replay.headers.get("set-cookie")).toBeNull();
+    expect(fixture.jwt.create).toHaveBeenCalledTimes(1);
+    expect(fixture.ensureFollowing).toHaveBeenCalledTimes(1);
+    expect(fixture.sendgrid.sendMail).toHaveBeenCalledTimes(5);
+  });
 
   it("keeps the public job receipt from exhausting the mailed ownership challenge", async () => {
     const proof = await deliveredRecovery();
@@ -512,20 +601,23 @@ describe("sign-in recovery over HTTP GraphQL", () => {
     expect(fixture.sendgrid.sendMail).not.toHaveBeenCalled();
   });
 
-  it("fails closed when the proof store becomes unavailable after mail delivery", async () => {
-    const proof = await deliveredRecovery();
-    fixture.user.getByMail.mockClear();
-    mockProofRedis.down = true;
-    const result = await post(RECOVER, proof);
-    expect(result.body.errors?.[0].extensions).toMatchObject({
-      code: "SERVICE_UNAVAILABLE",
-      retryAfter: 5,
-    });
-    expect(fixture.user.getByMail).not.toHaveBeenCalled();
-    expect(fixture.jwt.create).not.toHaveBeenCalled();
-    expect(fixture.ensureFollowing).not.toHaveBeenCalled();
-    expect(result.headers.get("set-cookie")).toBeNull();
-  });
+  it.each(["sign-in-recovery", "reset"] as const)(
+    "fails closed when the proof store becomes unavailable after %s mail delivery",
+    async (mailKind) => {
+      const proof = await deliveredRecovery(undefined, mailKind);
+      fixture.user.getByMail.mockClear();
+      mockProofRedis.down = true;
+      const result = await post(RECOVER, proof);
+      expect(result.body.errors?.[0].extensions).toMatchObject({
+        code: "SERVICE_UNAVAILABLE",
+        retryAfter: 5,
+      });
+      expect(fixture.user.getByMail).not.toHaveBeenCalled();
+      expect(fixture.jwt.create).not.toHaveBeenCalled();
+      expect(fixture.ensureFollowing).not.toHaveBeenCalled();
+      expect(result.headers.get("set-cookie")).toBeNull();
+    },
+  );
 
   it("charges request aliases individually and keeps spoofed forwarding entries out of the source identity", async () => {
     const aliases = Array.from(
