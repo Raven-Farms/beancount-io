@@ -138,7 +138,7 @@ export default function LedgerDocumentsPage() {
         data={documents}
         loadingSlot={
           <div className="rounded-md border">
-            <Table>
+            <Table aria-label={t("page.documents.documents")}>
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-64">
@@ -197,7 +197,7 @@ export default function LedgerDocumentsPage() {
       >
         {(docs) => (
           <div className="rounded-md border">
-            <Table>
+            <Table aria-label={t("page.documents.documents")}>
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-64 px-2 sm:px-3 py-1.5 sm:py-2">

@@ -60,7 +60,7 @@ export default function LedgerErrorsPage() {
         loadingSlot={
           <div className="space-y-4">
             <div className="rounded-md border">
-              <Table>
+              <Table aria-label={t("page.errors.errors")}>
                 <TableHeader>
                   <TableRow>
                     <TableHead>{t("page.errors.errorMessage")}</TableHead>
@@ -107,7 +107,7 @@ export default function LedgerErrorsPage() {
       >
         {(r) => (
           <div className="rounded-md border">
-            <Table>
+            <Table aria-label={t("page.errors.errors")}>
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[60%] px-2 sm:px-3 py-1.5 sm:py-2">

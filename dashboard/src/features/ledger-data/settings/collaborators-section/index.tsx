@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation } from "@apollo/client/react";
 import {
@@ -132,11 +133,13 @@ export function CollaboratorsSection({ ledgerId }: { ledgerId: string }) {
   };
 
   const collaborators = collaboratorsData?.listLedgerCollaborators || [];
+  // Both the loading and the member tables carry the card's own title.
+  const titleId = useId();
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{t("collaboration.collaborators")}</CardTitle>
+        <CardTitle id={titleId}>{t("collaboration.collaborators")}</CardTitle>
         <CardDescription>
           {t("page.settings.collaboratorsDescription")}
         </CardDescription>
@@ -160,7 +163,7 @@ export function CollaboratorsSection({ ledgerId }: { ledgerId: string }) {
               <Skeleton className="h-10 w-45" />
             </div>
             <div className="rounded-md border">
-              <Table>
+              <Table aria-labelledby={titleId}>
                 <TableBody>
                   {Array.from({ length: 3 }).map((_, i) => (
                     <TableRow key={i}>
@@ -229,7 +232,7 @@ export function CollaboratorsSection({ ledgerId }: { ledgerId: string }) {
                 </div>
               </LedgerAdminPermission>
               <div className="rounded-md border">
-                <Table>
+                <Table aria-labelledby={titleId}>
                   <TableHeader>
                     <TableRow>
                       <TableHead>{t("collaboration.user")}</TableHead>
