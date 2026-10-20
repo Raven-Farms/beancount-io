@@ -72,6 +72,34 @@
         "After writing, property/mortgage/escrow balances are zero and accounts remain open",
         "Nothing is written before confirmation"
       ]
+    },
+    {
+      "id": 6,
+      "name": "escrow-disbursement-pays-tax",
+      "prompt": "The OakSt escrow paid the property tax bill: $1,200 out of escrow on 2026-04-01 (the statement shows escrow balance $1,800 after). Record it in ./ledger.beancount.",
+      "expected_output": "One entry: Assets:Escrow:OakSt -1200.00 against Expenses:PropertyTax 1200.00, with the escrow tie shown (ledger escrow 3000.00 - 1200.00 = statement 1800.00). Proposed first; nothing written before confirmation.",
+      "files": [
+        "evals/files/eval6_ledger.beancount"
+      ],
+      "expectations": [
+        "The disbursement reduces escrow (an asset), not the mortgage, and expenses the tax",
+        "The escrow balance tie to the stated 1800.00 is shown",
+        "Nothing is written before confirmation"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "closing-arithmetic-gap-stops",
+      "prompt": "Record buying a house (OakSt/OAKST) on 2026-02-01 in ./ledger.beancount: price $500,000, I paid $100,000 cash from Assets:Checking, mortgage is $390,000, no closing costs, no escrow.",
+      "expected_output": "The closing arithmetic does not tie (500000 price vs 100000 + 390000 = 490000; a 10000 gap \u2014 earnest money already paid, a seller credit, or a misstated figure). The skill stops, shows both sides and the gap, asks what covers it, and writes nothing \u2014 it does not adjust a figure or invent a leg to force the tie.",
+      "files": [
+        "evals/files/eval7_ledger.beancount"
+      ],
+      "expectations": [
+        "The 10000 gap is named with both sides of the arithmetic shown",
+        "The missing figure is asked about rather than plugged",
+        "Nothing is written to the ledger"
+      ]
     }
   ]
 }

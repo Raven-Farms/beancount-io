@@ -893,6 +893,34 @@
         "beancount-property"
       ],
       "why": "Paying rent as a tenant is an everyday expense, not property ownership."
+    },
+    {
+      "id": "property-mortgage-payment",
+      "prompt": "Record this month's mortgage payment: $2,400 — $600 principal, $1,500 interest, $300 escrow",
+      "expected": "beancount-property",
+      "confusable": [
+        "beancount-add"
+      ],
+      "why": "A mortgage split tied to the loan statement balance, not an everyday split entry."
+    },
+    {
+      "id": "property-sell-rental",
+      "prompt": "I sold my rental house for $650,000; the mortgage payoff was $399,400 — record the sale",
+      "expected": "beancount-property",
+      "confusable": [
+        "beancount-trade",
+        "beancount-add"
+      ],
+      "why": "A property sale closes its lot and mortgage with a payoff tie-out."
+    },
+    {
+      "id": "property-rent-received",
+      "prompt": "My tenant paid $1,800 rent for the Oak Street rental",
+      "expected": "beancount-property",
+      "confusable": [
+        "beancount-add"
+      ],
+      "why": "Rental income per property (deposit handling included), not a generic income entry."
     }
   ]
 }
