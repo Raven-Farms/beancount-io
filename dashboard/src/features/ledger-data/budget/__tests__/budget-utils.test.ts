@@ -32,6 +32,55 @@ function historyEntry(
 }
 
 describe("groupBudgetEntries", () => {
+  it("makes the later of two same-date directives current (w4/232)", () => {
+    // Newest first, as the journal returns them; the second write is a cadence change.
+    const groups = groupBudgetEntries(
+      [
+        budgetEntry(
+          "2026-10-20",
+          "Expenses:Food",
+          "weekly",
+          "50",
+          "USD",
+          "newer",
+        ),
+        budgetEntry(
+          "2026-10-20",
+          "Expenses:Food",
+          "monthly",
+          "123.45",
+          "USD",
+          "older",
+        ),
+        budgetEntry(
+          "2026-09-01",
+          "Expenses:Food",
+          "monthly",
+          "100",
+          "USD",
+          "first",
+        ),
+      ],
+      "2026-10-25",
+    );
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0]).toMatchObject({
+      interval: "weekly",
+      amount: "50 USD",
+      entry_hash: "newer",
+    });
+    expect(groups[0].budgetHistory.map((entry) => entry.entry_hash)).toEqual([
+      "first",
+      "older",
+      "newer",
+    ]);
+    // From 2026-10-20 on, the weekly 50 applies, never the older monthly target.
+    expect(
+      calculateBudgetForInterval("2026-10-25", "day", groups[0].budgetHistory),
+    ).toBeCloseTo(50 / 7);
+  });
+
   it("keeps one history per account and currency when cadence changes", () => {
     const groups = groupBudgetEntries([
       budgetEntry(

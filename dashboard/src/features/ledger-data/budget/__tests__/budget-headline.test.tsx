@@ -155,3 +155,55 @@ describe("Budget card headline on 2026-10-15", () => {
     expect(valueAfter("Latest actual")).toBe("0 USD");
   });
 });
+
+/**
+ * Update Budget on the day of the original target: the journal returns both
+ * same-date directives newest first, and the later one must win (w4/232).
+ */
+describe("Budget card with two targets on the same date", () => {
+  const sameDay = (number: string, hash: string): BudgetEntry => ({
+    date: "2026-10-20",
+    entry_hash: hash,
+    directive_type: "custom",
+    type: "budget",
+    values: ["Expenses:Qa-Budget", "monthly", { number, currency: "USD" }],
+  });
+  // Newest first, as getLedgerJournal returns them.
+  const journal = [sameDay("234.56", "newer"), sameDay("123.45", "older")];
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(2026, 9, 20, 12));
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    cleanup();
+  });
+
+  it("headlines the newer target prorated over October 20–31", () => {
+    vi.mocked(apolloClient.useQuery).mockReturnValue({
+      data: {
+        getLedgerIntervalTotals: monthEnds("2026-10", "2026-10").map(
+          (date) => ({ date, balance: {}, accountBalances: {} }),
+        ),
+      },
+      loading: false,
+      error: undefined,
+    } as never);
+    const [group] = groupBudgetEntries(journal, "2026-10-20");
+    expect(group.amount).toBe("234.56 USD");
+    expect(group.entry_hash).toBe("newer");
+    render(
+      <BudgetChartCard
+        time={undefined}
+        group={group}
+        ledgerId="l1"
+        conversion="AT_COST"
+        primaryCurrency="USD"
+        onDelete={vi.fn()}
+      />,
+    );
+    // 234.56 × 12 / 31, not the older 123.45 × 12 / 31 = 47.787.
+    expect(valueAfter("Current budget")).toBe("90.797 USD");
+  });
+});

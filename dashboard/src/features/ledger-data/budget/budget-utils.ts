@@ -68,6 +68,10 @@ function getBudgetFields(entry: BudgetEntry): BudgetFields | null {
 /**
  * Fava keeps one budget history per account and currency. A newer directive
  * replaces the previous directive for that pair, even when its cadence changes.
+ *
+ * `entries` arrive as the journal returns them, newest first. Reversing them
+ * before the stable date sort keeps two directives on the same date in
+ * ledger order, so the later one is the current target (w4/232).
  */
 export function groupBudgetEntries(
   entries: BudgetEntry[],
@@ -78,7 +82,7 @@ export function groupBudgetEntries(
     Array<{ entry: BudgetEntry; fields: BudgetFields }>
   >();
 
-  for (const entry of entries) {
+  for (const entry of [...entries].reverse()) {
     const fields = getBudgetFields(entry);
     if (!fields) continue;
     const key = `${fields.account}::${fields.currency}`;
