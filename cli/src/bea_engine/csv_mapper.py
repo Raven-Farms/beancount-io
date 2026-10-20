@@ -1201,6 +1201,11 @@ def _parses(value: str, date_format: str) -> bool:
     return True
 
 
+def _has_year_directive(date_format: str) -> bool:
+    """Whether a strptime format reads a year; without one every row lands in 1900 (w5/783)."""
+    return any(directive in date_format.replace("%%", "") for directive in ("%Y", "%y", "%G"))
+
+
 def header_signature(headers: list[str] | None) -> str | None:
     """Identify a CSV source by its header row without storing file contents."""
     if not headers:
@@ -1283,6 +1288,12 @@ class CsvImporter:
         forced_decimal_comma: bool | None = None,
         skip: int = 0,
     ) -> None:
+        if not _has_year_directive(date_format):
+            raise UsageError(
+                f"--date-format {date_format!r} has no year directive (%Y, %y or %G), so every row would be read "
+                "as 1900. Pass a format that reads the file's year (for example '%d/%m/%Y'), or add the year to "
+                "the file's dates first."
+            )
         self._account = account
         # The ledger's root names; a category under any other root is a label.
         self._account_roots = account_roots
