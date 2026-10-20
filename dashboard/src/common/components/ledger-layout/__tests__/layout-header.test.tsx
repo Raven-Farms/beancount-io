@@ -9,8 +9,18 @@ const locationMock = vi.hoisted(() => ({
 
 vi.mock("@tanstack/react-router", () => ({
   useLocation: () => locationMock,
-  Link: ({ children, ...props }: React.ComponentProps<"a">) => (
-    <a {...props}>{children}</a>
+  useRouterState: ({ select }: { select: (state: unknown) => unknown }) =>
+    select({
+      location: { href: locationMock.pathname, ...locationMock },
+    }),
+  Link: ({
+    children,
+    search,
+    ...props
+  }: React.ComponentProps<"a"> & { search?: { next?: string } }) => (
+    <a data-next={search?.next} {...props}>
+      {children}
+    </a>
   ),
 }));
 
@@ -63,8 +73,15 @@ vi.mock("@/common/hooks/use-translations.ts", () => ({
   }),
 }));
 
+const auth = vi.hoisted(() => ({ signedIn: true }));
 vi.mock("../../authenticated", () => ({
-  Authenticated: ({ children }: { children: React.ReactNode }) => children,
+  Authenticated: ({
+    children,
+    fallback,
+  }: {
+    children: React.ReactNode;
+    fallback?: React.ReactNode;
+  }) => (auth.signedIn ? children : fallback),
 }));
 
 vi.mock("../../user-nav.tsx", () => ({
@@ -142,5 +159,23 @@ describe("LayoutHeader", () => {
     expect(screen.getByText("Ledger search (inline)")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Filters" })).toBeInTheDocument();
     expect(screen.getByText("1")).toBeInTheDocument();
+  });
+
+  it("returns a signed-out visitor to this page, query and fragment (w4/237)", () => {
+    locationMock.pathname = "/ledger/open_ledger/example/journal";
+    Object.assign(locationMock, {
+      href: "/ledger/open_ledger/example/journal?time=2017-09#main-content",
+    });
+    auth.signedIn = false;
+    try {
+      render(<LayoutHeader ledgerId="open_ledger/example" />);
+      expect(screen.getByLabelText("Log in")).toHaveAttribute(
+        "data-next",
+        "/ledger/open_ledger/example/journal?time=2017-09#main-content",
+      );
+    } finally {
+      auth.signedIn = true;
+      delete (locationMock as { href?: string }).href;
+    }
   });
 });
