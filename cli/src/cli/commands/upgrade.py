@@ -22,6 +22,7 @@ import typer
 
 from cli import context, output, update
 from cli.config import package_version
+from cli.engine.provision import RETRY_ONCE_ONLINE
 from cli.errors import BeaError, UsageError
 
 
@@ -213,7 +214,7 @@ def _refresh_engine(channel: Channel, before: str) -> bool:
             "bea upgraded, but provisioning the new Beancount engine failed; the current engine was kept.",
             details=[
                 *lines[-20:],
-                "Retry with a local command such as 'bea check' once the network and uv are available.",
+                RETRY_ONCE_ONLINE,
             ],
         )
     return True

@@ -224,7 +224,31 @@ def provision(root: Path) -> None:
     # One still running can still rebuild its directory afterwards — SIGKILL
     # cannot be forwarded — but it must now outlive the whole build to do so.
     _sweep_abandoned(root)
+    _prune_other_versions(root)
     output.note(f"Beancount engine {version} ready.")
+
+
+def _prune_other_versions(root: Path) -> None:
+    """Remove engine versions a successful provision just superseded (w5/788).
+
+    Each version lives in its own directory, so an upgrade that provisions a
+    new one would otherwise leave the old tens of megabytes behind forever.
+    Only directories bea marked are removed — never an unmarked one, which
+    predates the marker or is not bea's — and lock files stay: a build of
+    that version still running elsewhere waits on its lock's inode.
+    """
+    try:
+        siblings = list(root.parent.iterdir())
+    except OSError:
+        return
+    for sibling in siblings:
+        if sibling.name == root.name or not sibling.is_dir():
+            continue
+        if not (sibling / ENGINE_MARKER).is_file():
+            continue
+        shutil.rmtree(sibling, ignore_errors=True)
+        if not sibling.exists():
+            output.note(f"Removed superseded Beancount engine {sibling.name}.")
 
 
 def optional_features() -> dict[str, dict[str, Any]]:
@@ -581,6 +605,12 @@ def _find_uv() -> str:
     )
 
 
+#: What a failed install says last: the fix is network and uv, then a retry,
+#: not a manual Beancount install. Shared with `bea upgrade`, which appends
+#: the same line when its own engine refresh fails (w5/788).
+RETRY_ONCE_ONLINE = "Retry with a local command such as 'bea check' once the network and uv are available."
+
+
 def _run(command: list[str], *, failure: str) -> None:
     """Run one provisioning step, keeping its output for the error message.
 
@@ -596,4 +626,4 @@ def _run(command: list[str], *, failure: str) -> None:
     completed = run_captured(command)
     if completed.returncode != 0:
         details = [line for line in (completed.stderr or completed.stdout or "").splitlines() if line.strip()]
-        raise EngineError(f"{failure} (uv exited {completed.returncode}).", details=details[-20:])
+        raise EngineError(f"{failure} (uv exited {completed.returncode}).", details=[*details[-20:], RETRY_ONCE_ONLINE])

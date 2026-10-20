@@ -38,7 +38,7 @@ managed engine environment that `bea` provisions.
 | Channel | Provisioning | Offline reuse | Upgrade |
 | --- | --- | --- | --- |
 | Homebrew (`brew install bex-co/tap/bea`) | Frontend and engine virtualenvs are created during installation | Local commands use the keg-local engine with no further download | `bea upgrade` → `brew upgrade bea` refreshes both |
-| PyPI (`uv tool install beancount-io` or pipx) | First local command that needs the engine downloads the hash-pinned combination (needs network and `uv` on `PATH`) | Later commands reuse `$XDG_DATA_HOME/bea/engine/<version>` (default `~/.local/share/bea/engine/…`) | `bea upgrade` upgrades the frontend and, when the version changed, provisions the matching engine |
+| PyPI (`uv tool install beancount-io` or pipx) | First local command that needs the engine downloads the hash-pinned combination (needs network and `uv` on `PATH`) | Later commands reuse `$XDG_DATA_HOME/bea/engine/<version>` (default `~/.local/share/bea/engine/…`) | `bea upgrade` upgrades the frontend and, when the version changed, provisions the matching engine and prunes superseded engine versions |
 
 If first-use or upgrade provisioning fails, fix network/`uv` availability and
 retry a local command such as `bea check` — do not `pip install beancount`.
@@ -2177,7 +2177,11 @@ $ bea upgrade
 | A checkout (editable install) | Nothing; prints `git pull` and `uv sync --all-groups`, exits 0 | — |
 | Anything else | Nothing; exits **2** naming both install channels | — |
 
-Uninstalling the executable leaves ledgers and user state in place.
+Uninstalling the executable leaves ledgers and user state in place. The
+downloaded Beancount engine (tens of megabytes under
+`$XDG_DATA_HOME/bea/engine/<version>`, or `$BEA_ENGINE_DIR` when set) stays
+too; delete that directory to reclaim it. Any Python `uv` downloaded for the
+install lives in `uv`'s own cache outside `bea`'s directories.
 
 If the manager itself fails, the command exits **1** and says so; nothing about
 the installation is changed. `--check` reports and runs nothing; when the

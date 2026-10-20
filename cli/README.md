@@ -222,6 +222,6 @@ holds the tagging procedure and one-time credentials setup.
 ## License
 
 Frontend: [MIT](https://github.com/bex-co/beancount-io/blob/main/LICENSE) © Beancount.io.
-Bundled ledger helper: [GPL-2.0-only](LICENSE.engine); vendored Fava retains its [MIT notice](NOTICE.fava).
+Bundled ledger helper: [GPL-2.0-only](https://github.com/bex-co/beancount-io/blob/main/cli/LICENSE.engine); vendored Fava retains its [MIT notice](https://github.com/bex-co/beancount-io/blob/main/cli/NOTICE.fava).
 Vendored Fava attribution is preserved in
 [NOTICE.fava](https://github.com/bex-co/beancount-io/blob/main/cli/NOTICE.fava).
