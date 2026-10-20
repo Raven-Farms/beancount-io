@@ -8,7 +8,6 @@
 
 ## Inbox
 
-- [007](./007.md) — A monthly bill's "Next" date drifts one to three days past its day of the month
 - [008](./008.md) — An account created from a back-dated New Transaction opens today, so the transaction is refused
 - [009](./009.md) — The settings wheel picker can open on its first option again, so an untouched Confirm saves "Light"
 - [010](./010.md) — Budget's ALL range stops at the ledger's last posting, so it drops the current period that YTD and 1Y show
