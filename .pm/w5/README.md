@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [802 — @@ 100USD (glued currency) is written as a repeating unit price (gap in w5/059)](./802.md)
 - [803 — {100 # USD} beside an omitted amount crashes with AttributeError MISSING copy_sign](./803.md)
 - [804 — A defaulted currency gets FX advice for an exchange the user never made](./804.md)
 - [805 — Posting slips: {{240}} refused as not one token, empty label dropped, bulk shorthand wording](./805.md)
