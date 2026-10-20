@@ -92,7 +92,7 @@
 
 ## Inbox
 
-- [648](./648.md) — Fix the web Starter copy promising an example transaction and rename the create button from Save (≤1h) ← `/pm-brainstorm w3` 2026-10-20 candidate 7, from ADR021
+- [648](./done/648.md) — Fix the web Starter copy promising an example transaction and rename the create button from Save (≤1h) ← `/pm-brainstorm w3` 2026-10-20 candidate 7, from ADR021 — **done** 2026-10-20 (`2f11faa72`)
 
 ## Dropped
 
