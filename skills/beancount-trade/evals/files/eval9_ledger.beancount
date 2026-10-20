@@ -1,0 +1,9 @@
+;; fixture — beancount-trade eval9 (described batch of paycheck buys)
+option "operating_currency" "USD"
+
+2026-01-01 open Assets:Retirement:401k USD,VTI "FIFO"
+2026-01-01 open Equity:Opening-Balances
+
+2026-01-02 * "Cash in"
+  Assets:Retirement:401k  5000.00 USD
+  Equity:Opening-Balances

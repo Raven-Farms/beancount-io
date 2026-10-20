@@ -1,0 +1,5 @@
+;; fixture — beancount-import eval19 (opening lots onboarding)
+option "operating_currency" "USD"
+
+2026-01-01 open Assets:Brokerage USD,VTI
+2026-01-01 open Equity:Opening-Balances

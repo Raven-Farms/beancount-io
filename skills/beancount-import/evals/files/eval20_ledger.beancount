@@ -1,0 +1,11 @@
+;; fixture — beancount-import eval20 (exchange activity)
+option "operating_currency" "USD"
+
+2026-01-01 open Assets:Crypto:Exchange USD,BTC,ETH
+2026-01-01 open Income:Staking USD
+2026-01-01 open Expenses:Fees USD
+2026-01-01 open Equity:Opening-Balances
+
+2026-01-02 * "Cash in"
+  Assets:Crypto:Exchange  10000.00 USD
+  Equity:Opening-Balances

@@ -1,0 +1,19 @@
+;; fixture — beancount-import eval17 (broker re-import no-op)
+option "operating_currency" "USD"
+
+2026-01-01 open Assets:Brokerage USD,VTI,ACME "FIFO"
+2026-01-01 open Income:Dividends USD
+2026-01-01 open Income:CapitalGains USD
+2026-01-01 open Expenses:Fees USD
+2026-01-01 open Equity:Opening-Balances
+
+2026-01-02 * "Cash in"
+  Assets:Brokerage  20000.00 USD
+  Equity:Opening-Balances
+
+2026-04-01 * "YOU BOUGHT VTI"
+  import-id: "csv:sha256:4dcaf53cdd65f541"
+  Assets:Brokerage  10 VTI {250.00 USD}
+  Assets:Brokerage -2505.00 USD
+  Expenses:Fees 5.00 USD
+

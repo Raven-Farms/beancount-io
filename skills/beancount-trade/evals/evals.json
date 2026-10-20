@@ -114,6 +114,34 @@
         "Open lots/unrealized gains are stated as not covered",
         "The ledger file is not modified"
       ]
+    },
+    {
+      "id": 9,
+      "name": "batch-of-paycheck-buys-one-proposal",
+      "prompt": "Record my last four 401(k) buys in ./ledger.beancount (Assets:Retirement:401k): 2 VTI on 2026-01-15 at $250, 2 on 2026-02-13 at $260, 2 on 2026-03-13 at $255, and 2 on 2026-04-15 at $270. No fees.",
+      "expected_output": "One proposal showing all four buy entries in full (each 2 VTI at its stated cost against cash), one yes/no for the whole set. Nothing written before the yes; on confirmation all four write (one batch) and the check passes, leaving 8 VTI across four lots and 5000 - 2080 = 2920.00 cash.",
+      "files": [
+        "evals/files/eval9_ledger.beancount"
+      ],
+      "expectations": [
+        "All four entries are shown in full in one proposal (not a count or summary), each at its stated price",
+        "Nothing is written before confirmation",
+        "After the yes, all four buys are recorded and the ledger check passes"
+      ]
+    },
+    {
+      "id": 10,
+      "name": "batch-ambiguous-sell-asks-first",
+      "prompt": "In ./ledger.beancount record these two: buy 5 more VTI on 2026-03-01 at $260, and sell 5 VTI on 2026-03-02 at $300.",
+      "expected_output": "The sell could reduce either of two lots (10 @ 100.00 of 2026-01-15 or 10 @ 120.00 of 2026-02-15) under STRICT. The skill lists both lots and asks which the sell reduces before proposing the set, and writes nothing \u2014 including not the unambiguous buy \u2014 before the answer and a yes on the whole proposal.",
+      "files": [
+        "evals/files/eval10_ledger.beancount"
+      ],
+      "expectations": [
+        "Both candidate lots are shown and the user is asked which the sell reduces",
+        "Neither the buy nor the sell is written before the answer and confirmation",
+        "No lot is picked silently for the sell"
+      ]
     }
   ]
 }

@@ -846,6 +846,35 @@
         "beancount-trade"
       ],
       "why": "Investment/tax advice; no skill gives it and nothing is to be recorded."
+    },
+    {
+      "id": "trade-batch-paycheck-buys",
+      "prompt": "Record my last four paycheck 401(k) buys: 2 VTI each month since January at 250, 260, 255, and 270",
+      "expected": "beancount-trade",
+      "confusable": [
+        "beancount-add",
+        "beancount-import"
+      ],
+      "why": "Described trades in a batch, not a file import or everyday entries."
+    },
+    {
+      "id": "import-exchange-activity",
+      "prompt": "Import this Coinbase transaction history CSV into my ledger: ./coinbase-2026.csv",
+      "expected": "beancount-import",
+      "confusable": [
+        "beancount-trade"
+      ],
+      "why": "An activity file to import as lots, not a described trade."
+    },
+    {
+      "id": "import-opening-lots",
+      "prompt": "Here is my broker's cost-basis export — set up my existing holdings in my new ledger",
+      "expected": "beancount-import",
+      "confusable": [
+        "beancount-migrate",
+        "beancount-trade"
+      ],
+      "why": "Seeding opening lots from a holdings export, not a finance-app migration or a new trade."
     }
   ]
 }
