@@ -498,7 +498,12 @@ first; for OFX or QIF, or a CSV the mapping cannot express, use an importer
 for that exact format.
 The sample is a configuration example, not a universal bank parser. Legacy
 Beancount v2 importers that take a `FileMemo` need Beangulp's `Adapter` in the
-configuration; the CLI calls the current interface directly.
+configuration; the CLI calls the current interface directly. `Adapter` accepts
+only a `beangulp.importer.ImporterProtocol` subclass: a `beangulp.Importer`
+whose `name` is a plain method needs `@property` instead, and the refusal says
+which applies. Every `CONFIG` entry must be an importer instance with
+`identify`, `account` and `extract` methods; `None`, a string or a factory
+function is refused by its position before any importer runs.
 
 ## Duplicate decisions
 

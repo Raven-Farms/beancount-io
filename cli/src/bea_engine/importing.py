@@ -17,7 +17,7 @@ import runpy
 import shlex
 import sys
 import unicodedata
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from decimal import Context, Decimal
 from pathlib import Path
@@ -906,7 +906,13 @@ def _extracted(importer: Any, source: Path, existing: Any) -> list[Any]:
     result = importer.extract(str(source), existing)
     # One directive is a namedtuple, so `list()` took its fields for rows:
     # "row 1 is a dict" (w5/639).
-    if result is None or isinstance(result, str | bytes | dict) or isinstance(result, ALL_DIRECTIVES):
+    # Nor is a number a list: `list(0)` escaped as "'int' object is not iterable" (w5/857).
+    if (
+        result is None
+        or isinstance(result, str | bytes | dict)
+        or isinstance(result, ALL_DIRECTIVES)
+        or not isinstance(result, Iterable)
+    ):
         single = "; return [entry] for one" if isinstance(result, ALL_DIRECTIVES) else ""
         raise LedgerError(
             f"Importer {_name(importer)} extract() returned {_type_name(result)} instead of a list of "
@@ -1089,12 +1095,49 @@ def _importer(config: Path, source: Path, name: str | None) -> Any:
 
 def _selectors(configured: Sequence[Any]) -> list[str]:
     names = [_name(importer) for importer in configured]
+    for position, importer in enumerate(configured, start=1):
+        _require_interface(importer, position)
     seen: dict[str, int] = {}
     selectors = []
     for name in names:
         seen[name] = seen.get(name, 0) + 1
         selectors.append(name if names.count(name) == 1 else f"{name}#{seen[name]}")
     return selectors
+
+
+#: The methods `bea import` calls on every configured importer.
+_IMPORTER_METHODS = ("identify", "account", "extract")
+
+
+def _require_interface(importer: Any, position: int) -> None:
+    """Refuse a CONFIG entry that is not an importer before any importer runs.
+
+    `None`, a factory or a string got as far as `identify` and failed as a bare
+    `AttributeError` naming no entry, blocking the working importer beside it
+    (w5/857).
+    """
+    missing = [method for method in _IMPORTER_METHODS if not callable(getattr(importer, method, None))]
+    if not missing:
+        return
+    factory = (
+        " It is callable: if it builds an importer, list what it returns, CONFIG = [factory()]."
+        if callable(importer)
+        else ""
+    )
+    raise UsageError(
+        f"CONFIG entry {position} is {_type_name(importer)}, not an importer: it has no "
+        f"{'/'.join(missing)} method{'s' if len(missing) > 1 else ''}. List importer instances, "
+        f"CONFIG = [Importer(...)].{factory}"
+    )
+
+
+def _importer_classes() -> tuple[Any, Any]:
+    """beangulp's current `Importer` and legacy `ImporterProtocol`, or None where beangulp is absent."""
+    try:
+        from beangulp.importer import Importer, ImporterProtocol
+    except ImportError:
+        return None, None
+    return Importer, ImporterProtocol
 
 
 def _described(selector: str, importer: Any, source: Path) -> str:
@@ -1121,10 +1164,24 @@ def _name(importer: Any) -> str:
     kind = type(importer).__name__
     name = getattr(importer, "name", kind)
     if callable(name):
+        # Adapter asserts it wraps an ImporterProtocol, so suggesting it for
+        # anything else failed as a bare AssertionError (w5/857).
+        modern, legacy = _importer_classes()
+        if modern is not None and isinstance(importer, modern):
+            raise UsageError(
+                f"CONFIG entry {kind} is a beangulp.Importer whose name is a method; beangulp reads it as a "
+                f"property: add @property above {kind}.name."
+            )
+        if legacy is not None and isinstance(importer, legacy):
+            raise UsageError(
+                f"CONFIG entry {kind} is a Beancount v2 importer (its name is a method); wrap it as "
+                f"beangulp.Adapter({kind}(...)), or port it to the current Beangulp Importer interface "
+                "(a name property and file paths)."
+            )
         raise UsageError(
-            f"CONFIG entry {kind} is a Beancount v2 importer (its name is a method); wrap it as "
-            f"beangulp.Adapter({kind}(...)), or port it to the current Beangulp Importer interface "
-            "(a name property and file paths)."
+            f"CONFIG entry {kind} has a name method, as a Beancount v2 importer does; make name a property "
+            "and give it the current Beangulp methods identify/account/extract taking file paths, or subclass "
+            f"beangulp.importer.ImporterProtocol and wrap it as beangulp.Adapter({kind}(...))."
         )
     if not isinstance(name, str):
         raise UsageError(f"CONFIG entry {kind} has a name that is {_type_name(name)}; its name must be a str.")
