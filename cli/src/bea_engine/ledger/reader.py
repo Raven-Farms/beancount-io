@@ -648,12 +648,23 @@ def list_documents(
                 tags=tags,
                 links=links,
                 meta=metadata_to_json(entry.meta),
+                # Two includes' `receipt.pdf` listed alike, the path being
+                # relative to a file the row never named (w5/833).
+                source=_source_of(entry),
                 generated=entry_generated(entry, "document", shared),
             )
         )
         if len(results) >= limit:
             break
     return results
+
+
+def _source_of(entry: Any) -> SourceLocation | None:
+    meta = entry.meta or {}
+    filename, lineno = meta.get("filename"), meta.get("lineno")
+    if isinstance(filename, str) and isinstance(lineno, int) and not isinstance(lineno, bool):
+        return SourceLocation(filename=filename, lineno=lineno)
+    return None
 
 
 def _document_filename_for_json(entry: Any, root: Path | None = None) -> str:

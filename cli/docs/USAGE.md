@@ -1043,6 +1043,10 @@ without a Beancount.io login and never formats or commits them automatically.
 | `--allow-errors` | Return data even though the ledger has loader errors (they still print on stderr) |
 | `--on-disk` | Only directives written in a ledger file; hide rows a plugin synthesized |
 
+A `document` row's `filename` is relative to the file that wrote the directive
+(the form `add document --into` takes back), so each row also names that file:
+`source` (`filename`, `lineno`) in JSON and a `WRITTEN IN` column in the table.
+
 ```bash
 bea list transaction
 bea list transaction --sort newest --details --limit 10

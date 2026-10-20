@@ -13,11 +13,13 @@ Beancount syntax the helper already produced.
 
 from __future__ import annotations
 
+import os
 import re
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass
 from enum import StrEnum
+from pathlib import Path
 from typing import Annotated, Any
 
 import typer
@@ -454,6 +456,11 @@ def _run(name: str, spec: _Spec, limit: int, allow_errors: bool, *, details: boo
         )
     else:
         headers, rows = spec.headers, [spec.row(item) for item in items]
+        if name == "document":
+            # Each filename is relative to the file that wrote it; name that file,
+            # or two includes' `receipt.pdf` read alike (w5/833).
+            headers = [*headers, "WRITTEN IN"]
+            rows = [[*row, _written_in(item, file)] for row, item in zip(rows, items, strict=True)]
         if show_source:
             headers = [*headers, "SOURCE"]
             rows = [[*row, "generated" if marker else ""] for row, marker in zip(rows, generated, strict=True)]
@@ -461,6 +468,25 @@ def _run(name: str, spec: _Spec, limit: int, allow_errors: bool, *, details: boo
     if truncated:
         advice = "raise --limit for more" if _limit_was_given() else "pass --limit for more"
         output.note(f"Showing the first {limit}; {advice}.")
+
+
+def _written_in(item: dict[str, Any], root: Path) -> str:
+    """`FILE:LINE` of the directive behind a row, relative to the root's folder when inside it."""
+    source = item.get("source") or {}
+    filename, lineno = source.get("filename"), source.get("lineno")
+    if not filename:
+        return ""
+    folder, path = Path(os.path.abspath(root)).parent, Path(filename)
+    # As the ledger spells it first, so a symlinked root keeps its own names.
+    shown = next(
+        (
+            str(target.relative_to(base))
+            for base, target in ((folder, path), (folder.resolve(), path.resolve()))
+            if target.is_relative_to(base)
+        ),
+        filename,
+    )
+    return single_line(f"{shown}:{lineno}")
 
 
 def _limit_was_given() -> bool:

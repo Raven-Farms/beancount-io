@@ -450,10 +450,12 @@ class DocumentDirective(BaseModel):
     model_config = ConfigDict(extra="forbid")
     date: LedgerDate
     account: str
+    #: Relative to the file that wrote the directive, which `source` names (w5/833).
     filename: str
     tags: list[Tag] = Field(default_factory=list)
     links: list[Link] = Field(default_factory=list)
     meta: dict[str, Any] = Field(default_factory=dict)
+    source: SourceLocation | None = None
     generated: bool = Field(default=False, exclude=True)
 
 

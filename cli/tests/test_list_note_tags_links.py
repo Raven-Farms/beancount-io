@@ -86,7 +86,8 @@ def test_list_note_table_shows_tags_and_links(tmp_path: Path) -> None:
     assert header.split() == ["DATE", "ACCOUNT", "COMMENT", "TAGS", "LINKS"]
     assert tagged.split()[-4:] == ["#dispute", "#zeta", "^case-02", "^case-17"]
     assert plain.split() == ["2024-01-06", "Assets:Bank", "plain"]
-    # Control: the document table renders the same two cells.
+    # Control: the document table renders the same two cells, before the
+    # WRITTEN IN column that names the directive's file (w5/833).
     control = _bea(tmp_path, "--file", str(ledger), "list", "document")
     assert control.returncode == 0, control.stderr or control.stdout
-    assert control.stdout.splitlines()[2].split()[-4:] == tagged.split()[-4:]
+    assert control.stdout.splitlines()[2].split()[-5:-1] == tagged.split()[-4:]
