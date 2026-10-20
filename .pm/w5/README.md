@@ -47,7 +47,6 @@
 - [813 — bea init asks every question before refusing an impossible target; --currency message unnamed (incomplete fix of w5/588)](./813.md)
 - [814 — `price export -o txns/p.bean` under `include "txns/*.bean"` exports into a directory the glob then loads as an include](./814.md)
 - [815 — engine status calls a healthy engine damaged (and says to remove it) when its probe cannot be spawned](./815.md)
-- [816 — Spawn failures print a bare errno; SIGXCPU is blamed on an OOM killer, timeout or kill](./816.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
