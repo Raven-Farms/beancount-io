@@ -56,6 +56,7 @@
 - [889 — Explain the unavailable prior day for a minimum-date preset opening](./889.md) — minor CLI input-diagnostic finding; reproduced 2026-10-20.
 - [890 — Preserve request IDs on Ask HTTP failures](./890.md) — minor CLI error-translation follow-up to 369 and 679; reproduced 2026-10-20.
 - [891 — Include BOM-first renamed roots in Ask's model context](./891.md) — trivial CLI context follow-up to 403; reproduced 2026-10-20.
+- [892 — Derive Ask query relation labels outside strings and comments](./892.md) — minor CLI tool-annotation follow-up to w3/m51; reproduced 2026-10-20.
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
