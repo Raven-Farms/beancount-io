@@ -20,6 +20,10 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/common/components/billing/failed-renewal-banner", () => ({
   FailedRenewalBanner: () => null,
 }));
+vi.mock("@/common/hooks/use-safe-return-path", () => ({
+  useSafeReturnPath: () => "/ledger/open_ledger/example/import",
+}));
+
 vi.mock("@tanstack/react-router", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@tanstack/react-router")>()),
   useParams: () => ({ ledgerOwner: "open_ledger", ledgerName: "example" }),
