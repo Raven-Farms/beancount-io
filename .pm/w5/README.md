@@ -43,7 +43,6 @@
 - [810 — bea ask follows a symlinked ask_history (chmods and appends to the target); a FIFO there gives no prompt](./810.md)
 - [811 — An invalid stored token reads as not logged in or env-var advice, and logout keeps the file; config-dir loop blamed on credential](./811.md)
 - [812 — cloud logout exits 1 on a 401 without the error envelope (USAGE says a 401 exits 0)](./812.md)
-- [813 — bea init asks every question before refusing an impossible target; --currency message unnamed (incomplete fix of w5/588)](./813.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
