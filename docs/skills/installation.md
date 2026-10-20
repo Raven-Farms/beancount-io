@@ -158,7 +158,9 @@ hermes skills update
 
 These commands were run on macOS with OpenClaw 2026.10.5 and Hermes v0.22.2. Both installed the standalone `beancount-ask@1.0.0` with its CLI contract and license; Hermes's scanner allowed it without `--force`. Installation evidence and the direct `bea` control are recorded in the [registry rehearsal](clawhub-rehearsal.md); agent-driven first-query acceptance is tracked separately there.
 
-**Rollout status, 2026-10-19:** all eleven 1.0.0 releases have been submitted. Nine are installable in OpenClaw; eight are installable in Hermes. `beancount-options` and `beancount-property` still await ClawHub publication checks. Hermes additionally blocks `beancount-init` for its intended ledger-instruction creation. The full registry suite is not yet supported on both hosts. The [per-skill table](clawhub-rehearsal.md#install-results) records exactly what passed; keep the Git/link route above for the complete Claude Code/Codex suite.
+**Release status, 2026-10-19:** all eleven 1.0.0 releases are public. The complete suite installs in one OpenClaw workspace. Ten skills install in Hermes; its scanner blocks `beancount-init` for the intended creation of ledger instruction files. Use the supported skills individually in Hermes, and keep the Git/link route above for the complete Claude Code/Codex suite. The [per-skill table](clawhub-rehearsal.md#install-results) separates installation evidence from the model-backed query acceptance still outstanding.
+
+Use the explicit publisher-qualified install identifiers above: Hermes's search did not yet return this new suite during the rehearsal, although ClawHub's own search API returned all eleven listings. The [discovery evidence](clawhub-rehearsal.md#hermes-search-discovery) records that host/index gap.
 
 ## Update
 

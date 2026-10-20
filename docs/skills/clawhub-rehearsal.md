@@ -21,8 +21,8 @@ Fresh OpenClaw state/workspace directories and fresh `HERMES_HOME` directories w
 | beancount-importer-author | 1.0.0 | Installed; audit Review | Installed; SAFE |
 | beancount-init | 1.0.0 | Installed; audit Review | Blocked; DANGEROUS |
 | beancount-migrate | 1.0.0 | Installed; audit Review | Installed; SAFE |
-| beancount-options | 1.0.0 | Pending publication; not found | Pending publication; download unavailable |
-| beancount-property | 1.0.0 | Pending publication; not found | Pending publication; download unavailable |
+| beancount-options | 1.0.0 | Installed after promotion; audit Review | Installed after promotion; SAFE |
+| beancount-property | 1.0.0 | Installed after promotion; audit Review | Installed after promotion; SAFE |
 | beancount-reconcile | 1.0.0 | Installed after promotion; audit Safe | Installed; SAFE |
 | beancount-trade | 1.0.0 | Installed; audit Review | Installed; SAFE |
 
@@ -41,11 +41,23 @@ The same install commands were attempted once per suite skill, with isolated hos
 
 Hermes's full registry init bundle is quarantined and rejected by `skills-guard-v10`: 18 findings, including the critical `agent_config_mod` rules for creating the ledger's `AGENTS.md` in `SKILL.md:188` and `references/agents-template.md:9`. This is the intended consent-gated workflow, retained by the release decision. The actual CLI exits 1 and does not install init. No override was attempted.
 
-## Registry checks still outstanding
+## Registry verification and promotion
 
 At the 05:18 UTC check, options and property remain unavailable on the public API. Authenticated owner moderation diagnostics for each report `verdict: clean`, `isSuspicious: false`, `isMalwareBlocked: false`, and `legacyReason: pending.publication`. These are pending first submissions, not missing uploads; do not publish them again to clear the wait. The registry must finish publication before their public installs can be repeated.
 
+**Update by 05:35 UTC:** options has become publicly available at 1.0.0. Its native OpenClaw install succeeds with an audit Review outcome; Hermes installs the same public bundle with a SAFE verdict and no force. Both installed folders carry the canonical license and local CLI contract. This brings the verified totals to **ten OpenClaw / nine Hermes**. Property remains unavailable on the subsequent public API check; only its existing first submission is still pending. No new release was uploaded to obtain this promotion.
+
+**Final publication result:** property subsequently becomes public at 1.0.0. Its audit reports Review because the scanner sees a difference between the local-ledger scope and the conditional hosted/MCP handoff. Native OpenClaw installs it under the default policy, and Hermes installs it with a SAFE verdict at 05:41 UTC. The complete eleven-skill suite then installs together in the original OpenClaw suite workspace. Final totals are **eleven OpenClaw / ten Hermes**, with only Hermes init rejected. All eleven listings are public; no publication submission remains pending. Licenses and local CLI contracts are verified in every successful install, and no force or duplicate publish was used.
+
+[Complete skills CI on `dec916039`](https://github.com/bex-co/beancount-io/actions/runs/39374976210) passes, including installer/first-query tests, the published-minimum CLI recipes, and QA-helper tests. That CI coverage is separate from the real OpenClaw/Hermes model-backed turns still pending below.
+
 The strict `/verify` API is also distinct from native installation policy. Its initial snapshot reports `card.missing` for the first seven visible skills, with `security.status_not_clean` on Review outcomes; it does not establish a passing strict verification envelope. The native install successes above are actual client results, not inferred from that envelope. No clean cryptographic/card verification is claimed.
+
+## Hermes search discovery
+
+After every listing is public, `hermes skills search beancount --source clawhub --json --limit 30` returns no results in the fresh profile. Searching with `--source all` returns three older ClawHub entries, none from this suite. A direct control request to [ClawHub's search API](https://clawhub.ai/api/v1/search?q=beancount&limit=30) returns fourteen results, including all eleven `puncsky` skills. The explicit owner-qualified installs above succeed.
+
+Source inspection distinguishes this from an unpublished skill: Hermes's [source-filtered adapter](https://github.com/NousResearch/hermes-agent/blob/d923a5eb487a17c0a68801bba9ef0f56c81040a8/tools/skills_hub_clawhub.py) walks the catalog before its lightweight fallback, while the [unfiltered router](https://github.com/NousResearch/hermes-agent/blob/d923a5eb487a17c0a68801bba9ef0f56c81040a8/tools/skills_hub_search.py) can answer from the centralized index without querying the live sources when that index has matches. This suggests a host catalog/index gap; it does not prove which cache or timeout is responsible. No local host-source patch, fabricated cache, or upstream issue was used to change the result. Recheck search after the host/index is updated; use explicit publisher-qualified installs meanwhile.
 
 ## First-query control and remaining acceptance
 
@@ -59,4 +71,4 @@ Installed the published **beancount-io 0.3.1** in a separate venv. The machine's
 
 The fixture checksum remains unchanged. This is a direct CLI control, not an agent answer. No model credential is configured in the fresh host profiles. The checked `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, and `OPENROUTER_API_KEY` variables are absent from the process and the release operator's supplied environment. Temporary use of an existing model login is awaiting the operator's choice; no credential was imported during this rehearsal.
 
-Remaining acceptance is public installation of options/property, a compatible Hermes policy for init, and an actual model-backed first-query turn in each host. Until those checks pass, this rehearsal does not establish complete cross-host support or close w6/m6.
+Remaining acceptance is Hermes search discovery, a compatible Hermes policy for init, and an actual model-backed first-query turn in each host. Publication task w6/m6/t007 is complete; this rehearsal does not yet establish complete cross-host workflow support or close w6/m6.
