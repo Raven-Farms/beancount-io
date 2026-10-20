@@ -47,6 +47,7 @@
 - [280 — Freeze import configuration while its submitted batch is pending](./280.md) — minor; dashboard QA, 2026-10-20.
 - [281 — Reject unsupported file branch routes instead of serving main](./281.md) — minor; dashboard QA, 2026-10-20.
 - [282 — Keep Markdown fragment links aligned with sanitized authored IDs](./282.md) — minor; dashboard QA, 2026-10-20.
+- [283 — Resolve supported early-year statement periods without a 1900 offset](./283.md) — minor; dashboard QA, 2026-10-20.
 
 ## Milestones
 
