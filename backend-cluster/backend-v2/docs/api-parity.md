@@ -7,7 +7,7 @@ operational classes, existing bindings, and eligible surfaces independently of
 the mutable registry. There are 105 eligible GraphQL operations, 111 REST
 operations, and 107 MCP operations. Initial missing bindings are 0, 53, and 63.
 
-The [milestone coverage map](../../../.pm/w1/m10/COVERAGE.md) assigns the missing
+The [milestone coverage map](../../../.pm/w1/done/m10/COVERAGE.md) assigns the missing
 families. Backend tests do not import the board, which can move when archived.
 `parity-baseline.test.ts` rejects removed operations, changed authorization or
 operational classes, lost client bindings, and unapproved eligibility changes. The existing
@@ -221,7 +221,7 @@ Verified against the `deploy/docker-mac` stack (real Gitea, PostgreSQL ×2,
 Redis, ledger service; disposable user and ledger; no production data, paid
 provider calls, or committed secrets):
 
-- Full signup ceremony over GraphQL (OTP from dev logs), session sign-in,
+- Full signup ceremony over GraphQL, session sign-in,
   paid-plan-gated API-key minting over REST — one unpinned admin key, one
   pinned read-only key.
 - Writes and readback across surfaces on one real repository: REST entry
@@ -238,6 +238,12 @@ provider calls, or committed secrets):
   schemas, refusal dialect, error masking, advertised path), plus a real
   Streamable HTTP SDK client discovering 66 resource templates and running
   the workflows above.
+
+That verification predates the current mail privacy policy. Development
+`ConsoleSendGrid` now suppresses delivery and never prints OTPs or mail contents;
+human signup/recovery verification needs a configured mail deployment.
+Automated contracts capture synthetic mail instead. See
+[Authentication and rate limits](authentication-rate-limits.md).
 
 Not covered live: S3-backed asset flows and Plaid bank flows (no external
 credentials in routine verification — their contracts are held by the

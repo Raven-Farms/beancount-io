@@ -10,6 +10,12 @@ The backend is built with Node.js and TypeScript using Koa and GraphQL. It power
 - Redis for caching
 - Background jobs for data processing
 
+For password admission, API quotas, email recovery and deployment requirements,
+see [Authentication and rate limits](docs/authentication-rate-limits.md).
+Signup's explicit account-existence response remains a deliberate product
+choice. Frequent Git automation should use SSH keys rather than repeatedly
+present an account password over HTTP.
+
 ## Billing
 
 The supported application client is `beancount-web-prod`, configured by
@@ -38,17 +44,19 @@ application billing.
 ## Project Structure
 
 ```
-/backend
-├── config/         # Configuration files
-├── migrations/     # Database migration scripts
+backend-v2/
+├── docs/           # API and operator guides
+├── scripts/        # Deployment migrations and developer tools
 ├── src/
-│   ├── api-gateway/  # API gateway implementation
-│   ├── model/        # Data models and database schemas
-│   ├── scripts/      # Utility scripts
-│   ├── server/       # Server implementation
-│   └── shared/       # Shared utilities and components
-├── server.ts       # Main entry point
-└── package.json    # Project dependencies and scripts
+│   ├── config/     # Environment-backed application configuration
+│   ├── drizzle/    # PostgreSQL setup and tracked migrations
+│   ├── features/   # Domain adapters, workflows, services and models
+│   ├── foundation/ # Composition, external clients and Redis
+│   ├── scheduler/  # Scheduled jobs, including authentication mail
+│   ├── server/     # Koa, GraphQL, REST and MCP transport setup
+│   └── shared/     # Errors, caching, logging and utilities
+├── server.ts       # Application entry point
+└── package.json
 ```
 
 ## Getting Started
@@ -87,7 +95,7 @@ REDIS_URI=redis://localhost:6379
 FAVA_API_URL=http://localhost:8000
 FAVA_API_ADMIN_USER=admin
 FAVA_API_ADMIN_PASSWORD=your_password
-AUTH_SECRET=your_jwt_secret
+AUTH_SECRET=replace_with_a_strong_shared_deployment_secret
 SERVER_URL=http://localhost:4104
 DASHBOARD_URL=http://localhost:5173
 # Optional: login/register JWT lifetime in minutes (default 525600 = 365 days)
@@ -96,6 +104,30 @@ DASHBOARD_URL=http://localhost:5173
 # X-Forwarded-For (default 1; 0 when clients connect directly)
 # TRUSTED_PROXY_HOPS=1
 ```
+
+Keep `AUTH_SECRET` non-empty and consistent across API/worker processes and
+restarts: it signs sessions and derives authentication-mail encryption and
+recovery-proof keys. Never commit its real value.
+
+4. Apply the database migrations before starting the server:
+
+```bash
+node --env-file=.env scripts/migrate-deploy.js
+yarn start
+```
+
+The deployment equivalent is `yarn migrate:deploy` with environment variables
+already injected. This includes the `auth_mail` outbox migration; starting the
+API without it cannot enqueue recovery mail. The normal server starts its
+authentication-mail worker automatically, every five seconds.
+
+Development/test `ConsoleSendGrid` suppresses delivery and never prints email
+contents, addresses, links or OTPs. Human email/signup/recovery verification
+requires a fully configured mail deployment: the production client uses
+`SEND_GRID_API_KEY` and its configured sender. Automated tests capture synthetic
+mail without contacting a provider. See the
+[operator guide](docs/authentication-rate-limits.md#deployment-and-development)
+for the worker, Redis and recovery prerequisites.
 
 Production OAuth requires `OAUTH_JWKS`, a complete private P-256/ES256 signing
 JWKS provided by the deployment secret manager. It must never be committed or
@@ -524,6 +556,7 @@ The server will be available at the port specified in your configuration (defaul
 Background jobs are scheduled using node-cron and run automatically when the server starts:
 
 - **JWT Cleanup**: Runs daily at midnight (00:00) to delete expired tokens from PostgreSQL
+- **Authentication Mail**: Runs every five seconds, processing up to five durable outbox jobs per batch
 - **Dev Test Job**: Runs every 5 minutes in development mode (console.log test)
 
 See `src/scheduler/` for implementation details and `src/scheduler/README.md` for information on adding new jobs.
