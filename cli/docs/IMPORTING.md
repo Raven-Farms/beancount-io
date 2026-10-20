@@ -639,8 +639,11 @@ transaction a plugin generates — a `fava.plugins.forecast` projection, an
 amortization copy — is neither a duplicate nor a possible duplicate, so a real
 payment it predicted imports as new. This includes the projection on the
 template's own date and generated fees sharing a written transaction's line:
-import matching requires the transaction's payee and narration to be declared
-at that source location. `bea add transactions --from FILE.json` remains a plain validated
+content matching requires the transaction's payee and narration to be declared
+at that source location. A stable ID does not: a written transaction whose
+payee or narration a plugin rewrites — a header normalizer — keeps its
+`import-id` and bank ID, so the same export imported again is still skipped.
+`bea add transactions --from FILE.json` remains a plain validated
 append operation and intentionally does not deduplicate.
 
 ## Python dependencies and metadata

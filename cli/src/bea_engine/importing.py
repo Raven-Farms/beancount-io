@@ -387,16 +387,20 @@ def answer(
     forget_source_lines()
     lifecycles = ledger_write._lifecycles(existing, snapshot.contents)
     shared = shared_locations(existing)
-    written = [
-        entry
-        for entry in existing
-        if not entry_generated(
-            entry,
-            type(entry).__name__.lower(),
-            shared,
-            require_declaration=isinstance(entry, Transaction),
-        )
-    ]
+    # A stable ID on a transaction the ledger writes is that transaction's,
+    # whatever a plugin did to its header: requiring the plugin-free payee and
+    # narration for the ID index too made a payee normalizer hide every
+    # written row, and the same export imported twice (w5/866). Content
+    # matches — twins, transfer counterparts — still need the declaration, or
+    # a forecast's rewritten same-date copy reads as a real payment (w5/662).
+    on_disk = [entry for entry in existing if not entry_generated(entry, type(entry).__name__.lower(), shared)]
+    declared = {
+        id(entry)
+        for entry in on_disk
+        if not isinstance(entry, Transaction)
+        or not entry_generated(entry, "transaction", shared, require_declaration=True)
+    }
+    written = [entry for entry in on_disk if id(entry) in declared]
     opening_balances = _opening_balances(written, account, roots[2])
     # Bank ids another account issued, reached here only through a transfer's
     # counter leg: never an exact match for this account's rows (w5/598).
@@ -407,11 +411,11 @@ def answer(
     # Transfers another account's import wrote, by the amounts they post here:
     # each bank words its side differently, so only date and amount pair them (w5/600).
     counterparts: dict[tuple[str, ...], list[Any]] = {}
-    for entry in written:
-        entry = normalize_entry_strings(entry)
+    for loaded in on_disk:
+        entry = normalize_entry_strings(loaded)
         if isinstance(entry, Transaction) and _source_legs(entry, account):
             elsewhere = _issued_elsewhere(entry, account, roots[:2])
-            if elsewhere:
+            if elsewhere and id(loaded) in declared:
                 counterparts.setdefault(_amounts_key(_fingerprint(entry, account)), []).append(entry)
             for identity in _identities(entry, account, keys):
                 if elsewhere and _is_native_identity(identity):
@@ -419,7 +423,8 @@ def answer(
                 else:
                     identities[identity] = entry
                     dated.setdefault(identity, []).append(entry)
-            _index_twin(fingerprints, entry, account, ledger=True)
+            if id(loaded) in declared:
+                _index_twin(fingerprints, entry, account, ledger=True)
     if source.read_bytes() != source_bytes:
         raise ConflictError("The export changed during extraction; nothing was written. Retry.")
     source_hash = hashlib.sha256(source_bytes).hexdigest()
