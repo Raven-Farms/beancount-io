@@ -583,6 +583,8 @@ const MultiPostingsTransactionScreenComponent = () => {
     pushAccountPicker(router, {
       type: "posting",
       current: postings[index]?.account,
+      // A new account opens by this entry's date, not today (w21/008).
+      entryDate: date,
       onSelect: (account) =>
         setPostings((prev) => updatePostingAccount(prev, index, account)),
     });

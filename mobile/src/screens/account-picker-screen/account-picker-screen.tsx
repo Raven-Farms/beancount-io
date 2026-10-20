@@ -251,9 +251,10 @@ function AccountPickerScreenComponent(): JSX.Element {
   const router = useRouter();
   const guest = useGuest();
   const ledgerId = useLedgerGuard();
-  const { type, selectedItem } = useLocalSearchParams<{
+  const { type, selectedItem, entryDate } = useLocalSearchParams<{
     type: string;
     selectedItem?: string;
+    entryDate?: string;
   }>();
   const { t } = useTranslations();
   const theme = useTheme().colorTheme;
@@ -481,11 +482,12 @@ function AccountPickerScreenComponent(): JSX.Element {
       // Destination pickers are choosing where money went, so suggest the
       // Expenses root for a rootless query; source pickers suggest Assets.
       prefillRoot: accountOrderFor(type) === "to" ? "Expenses" : "Assets",
+      openDate: entryDate,
       onCreated: (account) => {
         confirmSelection(account, Date.now());
       },
     });
-  }, [canWrite, trimmedQuery, type, router, confirmSelection]);
+  }, [canWrite, trimmedQuery, type, entryDate, router, confirmSelection]);
 
   if (loading && accounts.length === 0) {
     return (

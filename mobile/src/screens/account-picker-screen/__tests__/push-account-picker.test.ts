@@ -40,6 +40,23 @@ describe("pushAccountPicker", () => {
     expect(SelectedAccount.getFn()).toBe(onSelect);
   });
 
+  it("forwards a dated form's entry date for an account created there", () => {
+    const router = makeRouter();
+
+    pushAccountPicker(router, {
+      type: "posting",
+      current: "Assets:Cash",
+      entryDate: "2026-08-25",
+      onSelect: () => undefined,
+    });
+
+    expect(router.pushes[0].params).toEqual({
+      type: "posting",
+      selectedItem: "Assets:Cash",
+      entryDate: "2026-08-25",
+    });
+  });
+
   it("pushes the picker route with the caller's type and current account", () => {
     const router = makeRouter();
 

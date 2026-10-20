@@ -30,6 +30,11 @@ interface PushAccountPickerOptions {
   /** The field's current account, scrolled into view and check-marked. */
   current?: string;
   preview?: boolean;
+  /**
+   * The picking form's entry date (`YYYY-MM-DD`), handed to Open Account when
+   * the pick is a new account, so it opens by then (w21/008).
+   */
+  entryDate?: string;
   /** Receives the pick. Registered here so it cannot be registered wrongly. */
   onSelect: (account: string) => void;
 }
@@ -50,11 +55,21 @@ interface PushAccountPickerOptions {
  */
 export const pushAccountPicker = (
   router: PickerRouter,
-  { type, current, onSelect, preview = false }: PushAccountPickerOptions,
+  {
+    type,
+    current,
+    onSelect,
+    preview = false,
+    entryDate,
+  }: PushAccountPickerOptions,
 ): void => {
   SelectedAccount.setFn(onSelect);
   router.push({
     pathname: preview ? "/examples/account-picker" : "/(app)/account-picker",
-    params: { type, selectedItem: current },
+    params: {
+      type,
+      selectedItem: current,
+      ...(entryDate ? { entryDate } : {}),
+    },
   });
 };

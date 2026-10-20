@@ -45,6 +45,23 @@ describe("pushOpenAccount", () => {
     });
   });
 
+  it("carries the dated entry's open date when given", () => {
+    const router = makeRouter();
+
+    pushOpenAccount(router, {
+      prefill: "Snacks",
+      prefillRoot: "Expenses",
+      openDate: "2026-08-25",
+      onCreated: () => undefined,
+    });
+
+    expect(router.pushes[0].params).toEqual({
+      prefill: "Snacks",
+      prefillRoot: "Expenses",
+      openDate: "2026-08-25",
+    });
+  });
+
   it("delivers exactly once, then the registration is gone", () => {
     const router = makeRouter();
     const received: string[] = [];

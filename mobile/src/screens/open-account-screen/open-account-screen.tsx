@@ -48,6 +48,7 @@ import {
 } from "./account-name";
 import { useOpenAccount } from "./use-open-account";
 import { getFormatDate } from "@/common/format-util";
+import { initialOpenDate } from "./open-date";
 import { LEADING_TEXT_ALIGN, directionalIcon } from "@/common/rtl";
 
 const VALIDATION_KEYS: Record<AccountNameValidationReason, string> = {
@@ -215,9 +216,10 @@ export function OpenAccountScreenComponent(): JSX.Element {
   // as `prefillRoot`; `pushOpenAccount` registers who receives the account.
   // `prefillRoot` is validated because route params can arrive from any deep
   // link, not just the picker.
-  const { prefill, prefillRoot } = useLocalSearchParams<{
+  const { prefill, prefillRoot, openDate } = useLocalSearchParams<{
     prefill?: string;
     prefillRoot?: string;
+    openDate?: string;
   }>();
   const [seed] = useState(() =>
     splitPrefillAccountName(
@@ -237,7 +239,7 @@ export function OpenAccountScreenComponent(): JSX.Element {
   useEffect(() => () => AccountCreated.deleteFn(), []);
   const [currency, setCurrency] = useState("");
   const [currencyInitialized, setCurrencyInitialized] = useState(false);
-  const [date, setDate] = useState(() => new Date());
+  const [date, setDate] = useState(() => initialOpenDate(openDate, new Date()));
   const [picker, setPicker] = useState<PickerKind>(null);
   const [datePickerVisible, setDatePickerVisible] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
