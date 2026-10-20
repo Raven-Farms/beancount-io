@@ -557,9 +557,11 @@ def import_entries(
             protocol.note(redirect)
         # An apply decides its rows against the ledger it read, so it queues
         # behind other `bea` writers before that read rather than refusing
-        # what one of them committed meanwhile (w5/183). A preview writes
-        # nothing and takes no lock.
-        with write.lock_files([ledger, write.destination(ledger, into)], deciding=True) if apply else nullcontext():
+        # what one of them committed meanwhile (w5/183). The lock covers the
+        # whole graph, not just root and target, so a write to an include in
+        # another directory queues too (w5/869). A preview writes nothing and
+        # takes no lock.
+        with write.locked_graph(ledger, write.destination(ledger, into), deciding=True) if apply else nullcontext():
             answer.data = importing.answer(
                 ledger,
                 source,
