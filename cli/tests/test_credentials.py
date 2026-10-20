@@ -10,6 +10,7 @@ import pytest
 from cli.auth.credentials import (
     ENVIRONMENT,
     Credentials,
+    UnusableCredentials,
     clear_credentials,
     load_credentials,
     require_credentials,
@@ -79,7 +80,8 @@ class TestNonAsciiToken:
     ) -> None:
         monkeypatch.delenv("BEA_TOKEN", raising=False)
         _write_stored(bea_config_dir, token, "2099-01-01T00:00:00Z")
-        with pytest.raises(AuthError, match="Invalid stored credential"):
+        # The file is unusable, which `cloud logout` removes (w5/811).
+        with pytest.raises(UnusableCredentials, match="its token contains whitespace, control or non-ASCII"):
             require_credentials()
 
     @_NON_ASCII_TOKENS
@@ -121,7 +123,7 @@ class TestNonAsciiToken:
             assert "bea cloud login" not in result.output
             assert "stored credential" not in result.output
         else:
-            assert "Invalid stored credential" in result.output
+            assert "is unusable: its token contains whitespace, control or non-ASCII characters" in result.output
             assert "bea cloud login" in result.output
             assert "BEA_TOKEN" not in result.output
         assert "codec" not in result.output

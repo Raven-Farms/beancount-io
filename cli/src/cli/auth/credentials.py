@@ -105,6 +105,13 @@ def _read_stored(path: Path) -> str | None:
             "Point BEA_CONFIG_DIR at a directory."
         ) from exc
     except OSError as exc:
+        if not _searchable(path.parent):
+            # A symbolic-link loop or an unsearchable directory is the
+            # directory's fault, not the credential's (w5/811).
+            raise AuthError(
+                f"The bea configuration directory {path.parent} cannot be used ({exc.strerror}), so no credential "
+                "can be read from it. Point BEA_CONFIG_DIR at a directory you can open."
+            ) from exc
         raise UnusableCredentials(path, f"it cannot be read ({type(exc).__name__})") from exc
     try:
         if not stat.S_ISREG(os.fstat(fd).st_mode):
@@ -122,6 +129,13 @@ def _read_stored(path: Path) -> str | None:
         return data.decode()
     except UnicodeDecodeError as exc:
         raise UnusableCredentials(path, f"it cannot be read ({type(exc).__name__})") from exc
+
+
+def _searchable(directory: Path) -> bool:
+    try:
+        return stat.S_ISDIR(os.stat(directory).st_mode) and os.access(directory, os.X_OK)
+    except OSError:
+        return False
 
 
 def load_credentials() -> Credentials | None:
@@ -158,7 +172,14 @@ def load_credentials() -> Credentials | None:
         # Malformed stored state is treated as expired so require_credentials
         # prompts for a fresh login rather than comparing incompatible types.
         expire_at = "invalid"
-    return Credentials(token=_validate_token(token, source=FILE), expire_at=expire_at, source=FILE)
+    # A stored token bea could not have saved is an unusable file too, which
+    # logout removes: "Not logged in" and "Invalid stored credential" left it
+    # on disk, and logout exited 3 over it (w5/811).
+    if not token:
+        raise UnusableCredentials(path, "its token is empty")
+    if _INVALID_TOKEN.search(token):
+        raise UnusableCredentials(path, "its token contains whitespace, control or non-ASCII characters")
+    return Credentials(token=token, expire_at=expire_at, source=FILE)
 
 
 class UnusableCredentials(AuthError):
