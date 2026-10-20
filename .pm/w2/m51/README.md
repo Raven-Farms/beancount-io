@@ -1,12 +1,12 @@
 # w2 · m51 — Track a home, its mortgage, and a rental in the same ledger
 
-**Worker:** worker2 **Goal:** a homeowner records the purchase, each monthly mortgage payment split from statement figures, escrow flows, rental income per property, and eventually the sale — with the property visible in net worth at cost or at a stated price. **Status:** todo
+**Worker:** worker2 **Goal:** a homeowner records the purchase, each monthly mortgage payment split from statement figures, escrow flows, rental income per property, and eventually the sale — with the property visible in net worth at cost or at a stated price. **Status:** todo (t001 done)
 
 ## Tasks (in order)
 
 | id   | title | est | depends_on |
 | ---- | ----- | --- | ---------- |
-| t001 | Decide the property model and where its procedures live | 45m | — |
+| [t001](./done/t001.md) | Decide the property model and where its procedures live — **DONE** | 45m | — |
 | t002 | Record a home purchase and open its mortgage | 60m | t001 |
 | t003 | Record the monthly mortgage payment split from statement figures | 60m | t002 |
 | t004 | Record rental income per property and a property sale | 60m | t002 |
@@ -16,6 +16,12 @@
 | t008 | Simplify | 15m | t007 |
 | t009 | Test coverage | 45m | t007, t008 |
 | t010 | Closeout | 15m | t009 |
+
+## Decisions
+
+- **Placement (t001, 2026-10-20): new top-level skill `beancount-property`.** It meets [ADR 020](../../../docs/adrs/ADR020-skills-accounting-workflow-candidates.md)'s test: a distinct trigger (property lifecycle — bought a house, mortgage payment, rent received, sell the rental), a distinct input contract (closing-statement figures; loan-statement principal/interest/escrow printouts; a per-property identity), a distinct deliverable (a property lot, its mortgage, and escrow kept in step with statement balances), and its own eval set (t005). Routing probe at `803f3dfae` (scratch workspace, suite linked, Claude Code 2.1.289): "I bought a house…", "Record this month's mortgage payment…", and "My tenant paid rent…" all invoked `beancount-add`, which has no property model and improvises accounts — the same gap shape that justified `beancount-trade` in m45/t001. Splitting the lifecycle across add (payments/rent) and trade (sale) references was rejected: the statement tie-out and per-property accounts are one workflow, and two half-owners would each need the model anyway.
+- **Model (t001): the property is a commodity lot.** One commodity per property, named by the user (e.g. `OAKST`), held as `1 OAKST {basis, purchase-date}` in `Assets:Property:<Name>`; mortgage in `Liabilities:Mortgage:<Name>` (negative while owed; principal postings reduce it toward zero); escrow in `Assets:Escrow:<Name>`; rent in `Income:Rent:<Name>`; interest/tax/costs in the user's existing expense accounts. Closing costs split exactly as the user states — capitalized into basis or expensed — and the skill shows both figures without deciding tax treatment. A `price` directive on the commodity values the property in beancount-ask's holdings recipes (m49) unchanged. Verified against `bea 0.3.1` on a synthetic lifecycle: purchase (510000 basis incl. capitalized costs + 3000 escrow seed + 2000 expensed = 115000 cash + 400000 loan), one payment (balance −399400.00 = statement), escrow disbursement, rent, `price` valuation at 620000 via the holdings query, and a sale (lot out @650000, payoff 399400, costs 10000) producing a booking-computed 140000.00 gain with property, mortgage, and escrow all at zero.
+- **Numbers discipline carries over:** principal splits are read from the loan statement's printed figures, never computed from an amortization schedule; a statement without a printed split is a question, not an entry (t003). Depreciation is recorded only as figures the user states.
 
 ## Definition of done
 
