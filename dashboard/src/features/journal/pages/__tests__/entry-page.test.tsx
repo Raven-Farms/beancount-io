@@ -9,6 +9,7 @@ const mockNavigate = vi.fn();
 vi.mock("@tanstack/react-router", () => ({
   useParams: () => mockUseParams(),
   useNavigate: () => mockNavigate,
+  useBlocker: () => ({ status: "idle" }),
   Link: ({
     children,
     to,
