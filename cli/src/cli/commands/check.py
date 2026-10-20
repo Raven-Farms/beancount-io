@@ -14,7 +14,7 @@ import typer
 
 from cli import context, output
 from cli.engine import launch
-from cli.errors import BeaError, LedgerError, UsageError, refuse_misplaced_global
+from cli.errors import BeaError, EngineError, LedgerError, UsageError, refuse_misplaced_global
 from cli.native_help import native_options
 from cli.paths import expand_path
 
@@ -128,6 +128,13 @@ def check(ctx: typer.Context) -> None:
         try:
             loaded = launch.helper_json(["check", "--file", str(file), "--documents-only"])
         except BeaError as error:
+            if isinstance(error, EngineError):
+                # Provisioning failed: bean-check needs the same engine, so
+                # falling through would install it twice and then report this
+                # stale failure after the retry succeeded (w5/784).
+                if as_json:
+                    _emit_json_errors(file, [str(error), *error.details], error.exit_code)
+                raise
             if str(error).endswith("plugin(s) terminated while loading."):
                 # The plugin terminated the load. Falling through to native
                 # bean-check would execute it again and leak its exit status.

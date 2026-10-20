@@ -121,6 +121,18 @@ class ConflictError(BeaError):
     exit_code = EXIT_CONFLICT
 
 
+class EngineError(BeaError):
+    """The Beancount engine could not be provisioned.
+
+    A `BeaError` by category and exit code; the subclass exists so a fail-open
+    pre-check can tell a missing engine — which its fallback needs too, so
+    falling through would only install it twice — from a ledger finding (w5/784).
+    """
+
+    category = "validation"
+    exit_code = EXIT_VALIDATION
+
+
 BY_CATEGORY: dict[str, type[BeaError]] = {
     "validation": LedgerError,
     "usage": UsageError,

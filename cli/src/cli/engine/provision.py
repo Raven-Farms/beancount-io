@@ -39,7 +39,7 @@ from typing import Any
 
 from cli import context, output
 from cli.engine import paths
-from cli.errors import BeaError, UsageError
+from cli.errors import EngineError, UsageError
 from cli.paths import expand_path
 from cli.utils import exclusive_lock
 
@@ -289,13 +289,13 @@ def _install_feature(root: Path, name: str) -> None:
     else:
         requirements = [str(item) for item in spec.get("requirements") or []]
         if not requirements:
-            raise BeaError(f"Engine feature '{name}' has no requirements in the manifest.")
+            raise EngineError(f"Engine feature '{name}' has no requirements in the manifest.")
         _run(
             [uv, "pip", "install", "--python", python, *requirements],
             failure=f"Could not install engine feature '{name}'",
         )
     if not _feature_present(root, name):
-        raise BeaError(
+        raise EngineError(
             f"Engine feature '{name}' installed but its packages are not importable.",
             details=[f"Expected packages: {', '.join(_feature_packages(name))}"],
         )
@@ -384,7 +384,7 @@ def _find_packaged_file(name: str) -> Path | None:
         staged.write_bytes(data)
         os.replace(staged, cache)
     except OSError as exc:
-        raise BeaError(
+        raise EngineError(
             f"Could not prepare the hash-pinned {name} for the engine install at {cache}: {exc.strerror or exc}.",
             details=["Make that directory writable, or set BEA_ENGINE_DIR to a writable location."],
         ) from exc
@@ -447,11 +447,11 @@ def _refuse_foreign_root(root: Path) -> None:
     else:
         reason = "is not a directory"
     if os.environ.get(paths.DIR_ENV):
-        raise BeaError(
+        raise EngineError(
             f"{paths.DIR_ENV} points at '{root}', which {reason}, so bea will not install an engine over it. "
             f"Point {paths.DIR_ENV} at an empty or new directory, or unset it."
         )
-    raise BeaError(
+    raise EngineError(
         f"The engine location '{root}' {reason}, so bea will not install over it. Move it aside, then rerun."
     )
 
@@ -468,7 +468,7 @@ def _publish(partial: Path, root: Path) -> None:
             shutil.rmtree(discarded, ignore_errors=True)
         os.replace(partial, root)
     except OSError as exc:
-        raise BeaError(f"Could not move the finished engine into place at {root}: {exc.strerror or exc}.") from exc
+        raise EngineError(f"Could not move the finished engine into place at {root}: {exc.strerror or exc}.") from exc
 
 
 def _requirements() -> list[str]:
@@ -490,12 +490,12 @@ def _find_uv() -> str:
         # `paths.python_override()` validates its own variable the same way.
         expanded = expand_path(Path(override), f"${UV_ENV}")
         if not expanded.exists():
-            raise BeaError(f"{UV_ENV} points at '{override}', which does not exist.")
+            raise EngineError(f"{UV_ENV} points at '{override}', which does not exist.")
         return str(expanded)
     found = shutil.which("uv")
     if found:
         return found
-    raise BeaError(
+    raise EngineError(
         "The Beancount engine needs uv to install, and uv was not found on PATH. "
         "Install it from https://docs.astral.sh/uv/ or set BEA_UV to its path."
     )
@@ -511,4 +511,4 @@ def _run(command: list[str], *, failure: str) -> None:
     completed = subprocess.run(command, capture_output=True, text=True, check=False)
     if completed.returncode != 0:
         details = [line for line in (completed.stderr or completed.stdout or "").splitlines() if line.strip()]
-        raise BeaError(f"{failure} (uv exited {completed.returncode}).", details=details[-20:])
+        raise EngineError(f"{failure} (uv exited {completed.returncode}).", details=details[-20:])

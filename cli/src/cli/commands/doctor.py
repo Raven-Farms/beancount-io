@@ -22,6 +22,7 @@ from cli.errors import (
     AuthError,
     BeaError,
     ConflictError,
+    EngineError,
     LedgerError,
     UsageError,
     refuse_json,
@@ -187,12 +188,16 @@ def _syntax_errors_of(filename: str) -> list[str]:
 
     A name that is not a readable file is upstream's to report, and a dead
     engine must not take the diagnostics tool down with it: both fail open to
-    the plain passthrough.
+    the plain passthrough. A failure to provision the engine propagates
+    instead: the passthrough needs the same install and would fail the same
+    way, after doubling the wait (w5/784).
     """
     if not Path(filename).is_file():
         return []
     try:
         data = launch.helper_json(["syntax", filename])
+    except EngineError:
+        raise
     except BeaError:
         return []
     return [str(error) for error in data.get("files", {}).get(filename, [])]
@@ -256,6 +261,8 @@ def _refuse_plugin_failures(op: str, ledger: str) -> None:
         return
     try:
         launch.helper_json(["check", "--file", ledger])
+    except EngineError:
+        raise
     except BeaError as exc:
         failures = [line for line in exc.details if any(mark in line for mark in _PLUGIN_FAILURES)]
         if failures:
@@ -269,7 +276,8 @@ def _closure_syntax_errors_of(filename: str) -> list[str]:
     include fails them just as surely as an unparseable root: the loader logs
     the error and carries on with whatever it recovered. `lex` and `parse`
     read only the named file upstream, and keep using `_syntax_errors_of`.
-    Fails open exactly like that helper does.
+    Fails open exactly like that helper does, and propagates a provisioning
+    failure the same way.
     """
     root = Path(filename)
     if not root.is_file():
@@ -278,6 +286,8 @@ def _closure_syntax_errors_of(filename: str) -> list[str]:
     members = [str(member) for member in output.ledger_closure(root) if not output.is_encrypted(member)]
     try:
         data = launch.helper_json(["syntax", *members])
+    except EngineError:
+        raise
     except BeaError:
         return []
     files = data.get("files", {})
