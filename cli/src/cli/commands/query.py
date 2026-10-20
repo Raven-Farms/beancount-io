@@ -24,7 +24,7 @@ import typer
 from cli import context, output
 from cli.completion import fixed_values
 from cli.engine import launch
-from cli.errors import UsageError, placement_hint
+from cli.errors import BeaError, UsageError, placement_hint
 from cli.paths import expand_path, is_descriptor_path
 from cli.utils import RawPath, decode_error_message, inert_text, writes_through_descriptor
 
@@ -505,7 +505,19 @@ def query(
     # would otherwise parse `--output=main.bean` as its own option.
     args += ["--", query_string]
 
-    data = launch.helper_json(args)
+    try:
+        data = launch.helper_json(args)
+    except BeaError as exc:
+        if ctx.json_output:
+            # A shell utility runs on the text path, so the engine's remedy
+            # does not know the mode it was asked in (w5/838).
+            exc.details = [
+                detail.replace("Run bea ", "Run bea --json ", 1)
+                if detail.lstrip().startswith("Run bea ") and "--json" not in detail
+                else detail
+                for detail in exc.details
+            ]
+        raise
     ledger_errors = [str(error) for error in data.get("errors", [])]
     if not no_errors:
         output.render_ledger_errors(ledger_errors, allow=True)

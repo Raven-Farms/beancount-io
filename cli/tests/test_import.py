@@ -2238,7 +2238,8 @@ class TestCsvRowCurrency:
         result = csv_result(book, body, "--apply", mapping=f"{self.MAPPING},currency=XYZ")
 
         assert result.exit_code == 2, result.output
-        assert "currency=XYZ" in result.stderr and "bea add commodity" in result.stderr
+        # The remedy names the ledger it is about (w5/838).
+        assert "currency=XYZ" in result.stderr and "add commodity --date YYYY-MM-DD --currency XYZ" in result.stderr
         assert book.read_bytes() == before
 
     def test_a_declared_commodity_is_a_valid_constant(self, book: Path, isolated_config: Path) -> None:

@@ -263,9 +263,19 @@ def _refuse_positional_ledger(args: list[str]) -> None:
             index += 2
             continue
         if arg != "--" and not arg.startswith("-") and expand_path(Path(arg), "check argument").is_file():
-            raise UsageError(
-                f"bea check takes the ledger from --file, not as an argument: run bea --file {shlex.quote(arg)} check."
-            )
+            # The whole command, `--json` and the check's own options kept: the
+            # bare form ran without them, and printed no envelope (w5/838).
+            rest = [*args[:index], *args[index + 1 :]]
+            json = context.current().json_output
+            if json and rest and not _only_disables_cache(rest):
+                # `--json` takes no bean-check options, so keeping both is refused next.
+                command = shlex.join(["bea", "--file", arg, "check", *rest])
+                raise UsageError(
+                    "bea check takes the ledger from --file, not as an argument, and bea --json check takes no "
+                    f"bean-check options: run {command}"
+                )
+            command = shlex.join(["bea", *(["--json"] if json else []), "--file", arg, "check", *rest])
+            raise UsageError(f"bea check takes the ledger from --file, not as an argument: run {command}")
         index += 1
 
 

@@ -31,12 +31,14 @@ import difflib
 import json
 import os
 import re
+import shlex
 import stat
 import sys
 import unicodedata
 import warnings
 from collections.abc import Callable, Hashable, Iterator, Mapping
 from contextlib import contextmanager
+from contextvars import ContextVar
 from decimal import Decimal, DecimalException, InvalidOperation, localcontext
 from functools import cache, partial
 from pathlib import Path
@@ -247,6 +249,19 @@ def _null_safe_ordering() -> None:
     query_execute.nullitemgetter = nullitemgetter
 
 
+#: The command a printed `.tables` or `.help` remedy runs: the ledger and mode
+#: the query was about. A bare `bea query .tables` failed "No ledger file"
+#: when pasted, or lost `--json` (w5/838).
+_REMEDY: ContextVar[Callable[[], str]] = ContextVar("bea_query_remedy", default=lambda: "bea query")
+
+
+def _remedy_for(file: Path, *, json_mode: bool) -> str:
+    from bea_engine.ledger.text import bea_command
+
+    prefix = bea_command(file)
+    return f"{prefix.replace('bea', 'bea --json', 1) if json_mode else prefix} query"
+
+
 def rows_answer(
     file: Path, query_string: str, *, allow_errors: bool = False, numberify: bool = False
 ) -> dict[str, Any]:
@@ -255,6 +270,8 @@ def rows_answer(
     The rows are JSON-ready: amounts as strings, a lot keeping the acquisition
     date and label that tell it from another lot at the same price.
     """
+    # Built only when a hint is printed: a query that succeeds asks nothing of the cwd.
+    _REMEDY.set(lambda: _remedy_for(file, json_mode=True))
     conn = connect(file)
     errors = _gate([format_error(error, ledger_file=file) for error in conn.errors], allow_errors, file)
     cursor = _executed(conn, query_string, conn.execute, errors, file=file)
@@ -290,6 +307,7 @@ def text_answer(
     that renders: `bea` decides whether a ledger with errors may answer at all,
     and it cannot unprint a table.
     """
+    _REMEDY.set(lambda: _remedy_for(file, json_mode=False))
     import io
 
     output_spelling = output
@@ -815,6 +833,7 @@ def native_one_shot(
     2. An `--output` export is written only after the query succeeds, so a
     refused query leaves an existing export as it was.
     """
+    _REMEDY.set(lambda: f"bea query --source {shlex.quote(source)}")
     import io
 
     shell = _native_shell(source, interactive=False, format=format, numberify=numberify, show_errors=show_errors)
@@ -1005,7 +1024,7 @@ def _shell_error(shell: Any, message: str, report: Callable[[str], None]) -> Non
         return
     raise protocol.UsageError(
         f"Cannot run this shell command: {message}.",
-        details=["Run bea query .help to list the shell commands."],
+        details=[f"Run {_REMEDY.get()()} .help to list the shell commands."],
     )
 
 
@@ -2906,7 +2925,7 @@ def _usage_error(exc: Exception, query_string: str, conn: Any, ledger_errors: li
         details.extend(_set_column_advice(columns))
     # Not the interactive shell: under `--json` or without a terminal `bea query`
     # with no argument is itself a usage error, and `.tables` runs one-shot (w5/198).
-    details.append("Run bea query .tables to list what you can query.")
+    details.append(f"Run {_REMEDY.get()()} .tables to list what you can query.")
     return protocol.UsageError(f"Cannot run this BQL query: {exc}.", details=details, ledger_errors=ledger_errors)
 
 

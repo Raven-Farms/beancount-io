@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any
 
 from bea_engine.amounts import require_decimal_notation
-from bea_engine.ledger.text import is_commodity, regex_reads_otherwise, require_commodity
+from bea_engine.ledger.text import bea_command, is_commodity, regex_reads_otherwise, require_commodity
 from bea_engine.protocol import UsageError
 
 _MAPPING_FIELDS = frozenset(
@@ -1297,8 +1297,11 @@ class CsvImporter:
         forced_decimal_comma: bool | None = None,
         skip: int = 0,
         delimiter_source: str = "--delimiter",
+        ledger: Path | None = None,
     ) -> None:
         self._delimiter_source = delimiter_source
+        # A remedy to paste names the ledger it is about (w5/838, as w5/619).
+        self._bea = bea_command(ledger) if ledger is not None else "bea"
         if not _has_year_directive(date_format):
             raise UsageError(
                 f"--date-format {date_format!r} has no year directive (%Y, %y or %G), so every row would be read "
@@ -1405,7 +1408,7 @@ class CsvImporter:
                 raise UsageError(
                     f"currency={constant} names no column of {source.name} and no commodity this ledger "
                     f"knows. Map the file's currency column, or declare it first: "
-                    f"bea add commodity --date YYYY-MM-DD --currency {constant}."
+                    f"{self._bea} add commodity --date YYYY-MM-DD --currency {constant}."
                 )
             self._constant_currency = constant
             del wanted["currency"]
@@ -1495,7 +1498,7 @@ class CsvImporter:
             if len(currencies) == 1:
                 (named,) = currencies
                 unknown = self._known_currencies is not None and named not in self._known_currencies
-                declare = f" (after bea add commodity --date YYYY-MM-DD --currency {named})" if unknown else ""
+                declare = f" (after {self._bea} add commodity --date YYYY-MM-DD --currency {named})" if unknown else ""
                 raise UsageError(
                     f"{where}: column {column!r} carries {symbol!r} ({named}), but the row would post "
                     f"{currency}. Name the commodity with --csv currency={named}{declare}, or open the "

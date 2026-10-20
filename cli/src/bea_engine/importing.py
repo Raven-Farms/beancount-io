@@ -269,6 +269,7 @@ def answer(
             forced_decimal_comma=(resolved_decimal == "comma") if resolved_decimal is not None else None,
             skip=skip,
             delimiter_source=delimiter_source,
+            ledger=file,
         )
         preview_config = csv_mapping
         try:
