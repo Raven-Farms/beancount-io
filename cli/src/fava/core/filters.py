@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime
 import re
 from abc import ABC, abstractmethod
 from decimal import Decimal
@@ -396,6 +397,18 @@ class TimeFilter(EntryFilter):
         self.date_range = DateRange(begin, end)
 
     def apply(self, entries: Sequence[Directive]) -> Sequence[Directive]:
+        if self.date_range.begin <= datetime.date.min:
+            # Nothing is dated before the calendar's first day, so there is no
+            # opening to transfer or summarize, and both date theirs a day
+            # earlier: `-t 0001` overflowed into "Invalid time filter" (w5/842).
+            from beancount.parser import options as options_lib
+            from beancount.ops.summarize import conversions, truncate
+
+            _, current_conversions = options_lib.get_current_accounts(self._options)  # type: ignore[arg-type]
+            truncated = truncate(entries, self.date_range.end)  # type: ignore[arg-type]
+            return conversions(  # type: ignore[return-value]
+                truncated, current_conversions, self._options["conversion_currency"], self.date_range.end
+            )
         clamped_entries, _ = clamp_opt(
             entries,  # type: ignore[arg-type]
             self.date_range.begin,

@@ -2611,6 +2611,9 @@ def _pattern_literals(statement: str) -> Iterator[str]:
         yield statement[found.start(group) : found.end(group)]
 
 
+_OPEN_ON_FIRST_DAY = re.compile(r"\bOPEN\s+ON\s+0*1-0?1-0?1\b", re.IGNORECASE)
+
+
 def _evaluation_error(exc: Exception, statement: str, ledger_errors: list[str]) -> protocol.UsageError | None:
     """A value the query's own text asked for that Python refused, as a usage error, or None.
 
@@ -2623,7 +2626,13 @@ def _evaluation_error(exc: Exception, statement: str, ledger_errors: list[str]) 
     """
     details = [f"  {statement}"]
     if isinstance(exc, OverflowError):
-        if "date" in str(exc):
+        if "date" in str(exc) and _OPEN_ON_FIRST_DAY.search(_code_mask(statement)):
+            # The date is in range; the summary OPEN ON writes the day before it is not (w5/842).
+            details.append(
+                "OPEN ON summarizes everything before its date into the day before it, and 0001-01-01 has none. "
+                "Nothing can be dated earlier, so drop OPEN ON."
+            )
+        elif "date" in str(exc):
             details.append("Date arithmetic must stay between 0001-01-01 and 9999-12-31.")
         reason = str(exc)
     elif type(exc).__name__ == "ParserError" and type(exc).__module__.startswith("dateutil"):
