@@ -74,6 +74,21 @@ export default function EntryPage() {
           entryHash={entryHash}
           ledgerId={ledgerId}
           onDirtyChange={setDirty}
+          // The saved source has a new hash; the old address no longer
+          // names it. Move there as the save's own exit (w4/251).
+          onSaved={async (savedHash) => {
+            if (savedHash === entryHash) return;
+            leavingRef.current = true;
+            try {
+              await navigate({
+                to: "/ledger/$ledgerOwner/$ledgerName/entry/$entryHash",
+                params: { ledgerOwner, ledgerName, entryHash: savedHash },
+                replace: true,
+              });
+            } finally {
+              leavingRef.current = false;
+            }
+          }}
           onDeleted={() => {
             leavingRef.current = true;
             void navigate(journalHref);

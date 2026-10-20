@@ -17,12 +17,19 @@ vi.mock("@/common/hooks/use-ledger", () => ({
 vi.mock("@/features/journal/components/entry-context-panel", () => ({
   EntryContextPanel: ({
     onDirtyChange,
+    onSaved,
   }: {
     onDirtyChange?: (dirty: boolean) => void;
+    onSaved?: (hash: string) => void | Promise<void>;
   }) => (
-    <button type="button" onClick={() => onDirtyChange?.(true)}>
-      edit source
-    </button>
+    <>
+      <button type="button" onClick={() => onDirtyChange?.(true)}>
+        edit source
+      </button>
+      <button type="button" onClick={() => void onSaved?.("def456")}>
+        save as new hash
+      </button>
+    </>
   ),
 }));
 
@@ -84,6 +91,21 @@ describe("EntryPage unsaved source guard", () => {
     expect(
       await screen.findByRole("heading", { name: "Journal destination" }),
     ).toBeInTheDocument();
+    expect(screen.queryByText("Discard your edit?")).toBeNull();
+  });
+
+  it("moves to the saved entry's new address without asking (w4/251)", async () => {
+    const { router, user } = await mount();
+    await user.click(
+      await screen.findByRole("button", { name: "edit source" }),
+    );
+    await user.click(screen.getByRole("button", { name: "save as new hash" }));
+
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe(
+        "/ledger/qa/books/entry/def456",
+      ),
+    );
     expect(screen.queryByText("Discard your edit?")).toBeNull();
   });
 });

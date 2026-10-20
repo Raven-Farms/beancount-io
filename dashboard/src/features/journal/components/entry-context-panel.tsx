@@ -63,6 +63,12 @@ export interface EntryContextPanelProps {
   /** After a successful delete, before `onSuccess` (page navigates away). */
   onDeleted?: () => void;
   /**
+   * After a successful save, with the entry's identity as saved — a changed
+   * source gets a new hash. Awaited before the cache is cleared, so an owner
+   * addressing the entry by hash can move to the new one first (w4/251).
+   */
+  onSaved?: (entryHash: string) => void | Promise<void>;
+  /**
    * Fired immediately before navigating to the entry source file so the
    * owning dialog can skip opener focus restoration.
    */
@@ -476,6 +482,7 @@ export function EntryContextPanel({
   onSourceNavigate,
   onDirtyChange,
   confirmLeave,
+  onSaved,
 }: EntryContextPanelProps) {
   const { t } = useTranslations();
   const formatError = useErrorMessage();
@@ -511,7 +518,7 @@ export function EntryContextPanel({
     if (!canWrite) return;
     const before = writeOutcome.snapshot();
     try {
-      await updateEntrySourceSlice({
+      const { data: saved } = await updateEntrySourceSlice({
         variables: {
           ledgerId,
           input: {
@@ -526,6 +533,7 @@ export function EntryContextPanel({
       if (!(await writeOutcome.report(before))) {
         toast.success(t("journal.entrySavedSuccess"));
       }
+      await onSaved?.(saved?.updateLedgerEntrySourceSlice?.entryHash || hash);
       clearCache();
       onSuccess?.();
     } catch (saveError) {
