@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [793 — A ledger in an untraversable directory gives raw Errno 13, exit 1, not the documented exit 2](./793.md)
 - [794 — example -o and price export -o with $VAR create a ledger every later command refuses (incomplete fix of w5/579)](./794.md)
 - [795 — Three path gaps: symlinked-root format/add targets, init loop/illegal-byte OSError, -o /dev/stdout to a file](./795.md)
 - [796 — A wrong second-currency add balance is silently filled by an old, already used pad (backdated), exit 0](./796.md)
