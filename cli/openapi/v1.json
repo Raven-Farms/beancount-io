@@ -1299,15 +1299,18 @@
                   "name": {
                     "type": "string",
                     "maxLength": 100,
-                    "pattern": "^[a-z0-9_-]+$"
+                    "pattern": "^[a-z0-9_-]+$",
+                    "description": "The ledger's name: lowercase letters, numbers, hyphens, and underscores, up to 100 characters."
                   },
                   "description": {
                     "type": "string",
-                    "nullable": true
+                    "nullable": true,
+                    "description": "A short description shown with the ledger."
                   },
                   "private": {
                     "type": "boolean",
-                    "nullable": true
+                    "nullable": true,
+                    "description": "true or omitted keeps the ledger visible only to its owner and collaborators; false makes it public, readable by anyone."
                   },
                   "template": {
                     "type": "string",
@@ -1316,7 +1319,8 @@
                       "STARTER",
                       "SAMPLE",
                       null
-                    ]
+                    ],
+                    "description": "STARTER (the default) has options and accounts without transactions; SAMPLE has demonstration transactions."
                   }
                 },
                 "required": [
@@ -2345,15 +2349,18 @@
                     "type": "string",
                     "nullable": true,
                     "maxLength": 100,
-                    "pattern": "^[a-z0-9_-]+$"
+                    "pattern": "^[a-z0-9_-]+$",
+                    "description": "The ledger's name: lowercase letters, numbers, hyphens, and underscores, up to 100 characters."
                   },
                   "description": {
                     "type": "string",
-                    "nullable": true
+                    "nullable": true,
+                    "description": "A short description shown with the ledger."
                   },
                   "private": {
                     "type": "boolean",
-                    "nullable": true
+                    "nullable": true,
+                    "description": "true makes the ledger visible only to its owner and collaborators; false makes it public, readable by anyone; omitted leaves it as it is."
                   }
                 },
                 "additionalProperties": false
@@ -4534,7 +4541,7 @@
     "/api-gateway/v1/ledgers/{owner}/{name}/pull-requests/{prNumber}/approve": {
       "post": {
         "summary": "Merge a pull request",
-        "description": "Applies immediately using current repository write authority. Repository failures retain the GraphQL success/message result; a pull request number that does not exist is NOT_FOUND.",
+        "description": "Applies immediately using current repository write authority. Repository failures retain the GraphQL success/message result; a pull request number that does not exist is NOT_FOUND. A merge that would take a free ledger past its directive limit is refused with RESOURCE_LIMIT_REACHED, naming the limit and the projected count.",
         "tags": [
           "Ledger v1"
         ],
@@ -10470,7 +10477,7 @@
     "/api-gateway/v1/ledgers/{owner}/{name}/entry-source/delete": {
       "post": {
         "summary": "Delete one entry source slice",
-        "description": "Modify entry source using the current sha256sum from entry context. Ledger content-write authority is checked before delegation. Stale source hashes are refused by the ledger service. An update returns the entry's new hash — the request's entryHash is stale after the commit. No preview.",
+        "description": "Modify entry source using the current sha256sum from entry context. Ledger content-write authority is checked before delegation. Stale source hashes are refused by the ledger service. An update returns the entry's new hash — the request's entryHash is stale after the commit. An update that would take a free ledger past its directive limit is refused with RESOURCE_LIMIT_REACHED, naming the limit and the projected count; deletes always pass. No preview.",
         "tags": [
           "Ledger v1"
         ],
@@ -10649,7 +10656,7 @@
     "/api-gateway/v1/ledgers/{owner}/{name}/entry-source/delete-many": {
       "post": {
         "summary": "Delete multiple entry source slices",
-        "description": "Modify entry source using the current sha256sum from entry context. Ledger content-write authority is checked before delegation. Stale source hashes are refused by the ledger service. An update returns the entry's new hash — the request's entryHash is stale after the commit. No preview.",
+        "description": "Modify entry source using the current sha256sum from entry context. Ledger content-write authority is checked before delegation. Stale source hashes are refused by the ledger service. An update returns the entry's new hash — the request's entryHash is stale after the commit. An update that would take a free ledger past its directive limit is refused with RESOURCE_LIMIT_REACHED, naming the limit and the projected count; deletes always pass. No preview.",
         "tags": [
           "Ledger v1"
         ],
@@ -10840,7 +10847,7 @@
     "/api-gateway/v1/ledgers/{owner}/{name}/entry-source": {
       "put": {
         "summary": "Update an entry source slice",
-        "description": "Modify entry source using the current sha256sum from entry context. Ledger content-write authority is checked before delegation. Stale source hashes are refused by the ledger service. An update returns the entry's new hash — the request's entryHash is stale after the commit. No preview.",
+        "description": "Modify entry source using the current sha256sum from entry context. Ledger content-write authority is checked before delegation. Stale source hashes are refused by the ledger service. An update returns the entry's new hash — the request's entryHash is stale after the commit. An update that would take a free ledger past its directive limit is refused with RESOURCE_LIMIT_REACHED, naming the limit and the projected count; deletes always pass. No preview.",
         "tags": [
           "Ledger v1"
         ],

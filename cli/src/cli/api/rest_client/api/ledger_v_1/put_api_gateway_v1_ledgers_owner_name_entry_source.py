@@ -122,7 +122,9 @@ def sync_detailed(
 
      Modify entry source using the current sha256sum from entry context. Ledger content-write authority
     is checked before delegation. Stale source hashes are refused by the ledger service. An update
-    returns the entry's new hash — the request's entryHash is stale after the commit. No preview.
+    returns the entry's new hash — the request's entryHash is stale after the commit. An update that
+    would take a free ledger past its directive limit is refused with RESOURCE_LIMIT_REACHED, naming the
+    limit and the projected count; deletes always pass. No preview.
 
     Args:
         owner (str): Ledger owner's username Example: alice.
@@ -161,7 +163,9 @@ def sync(
 
      Modify entry source using the current sha256sum from entry context. Ledger content-write authority
     is checked before delegation. Stale source hashes are refused by the ledger service. An update
-    returns the entry's new hash — the request's entryHash is stale after the commit. No preview.
+    returns the entry's new hash — the request's entryHash is stale after the commit. An update that
+    would take a free ledger past its directive limit is refused with RESOURCE_LIMIT_REACHED, naming the
+    limit and the projected count; deletes always pass. No preview.
 
     Args:
         owner (str): Ledger owner's username Example: alice.
@@ -195,7 +199,9 @@ async def asyncio_detailed(
 
      Modify entry source using the current sha256sum from entry context. Ledger content-write authority
     is checked before delegation. Stale source hashes are refused by the ledger service. An update
-    returns the entry's new hash — the request's entryHash is stale after the commit. No preview.
+    returns the entry's new hash — the request's entryHash is stale after the commit. An update that
+    would take a free ledger past its directive limit is refused with RESOURCE_LIMIT_REACHED, naming the
+    limit and the projected count; deletes always pass. No preview.
 
     Args:
         owner (str): Ledger owner's username Example: alice.
@@ -232,7 +238,9 @@ async def asyncio(
 
      Modify entry source using the current sha256sum from entry context. Ledger content-write authority
     is checked before delegation. Stale source hashes are refused by the ledger service. An update
-    returns the entry's new hash — the request's entryHash is stale after the commit. No preview.
+    returns the entry's new hash — the request's entryHash is stale after the commit. An update that
+    would take a free ledger past its directive limit is refused with RESOURCE_LIMIT_REACHED, naming the
+    limit and the projected count; deletes always pass. No preview.
 
     Args:
         owner (str): Ledger owner's username Example: alice.

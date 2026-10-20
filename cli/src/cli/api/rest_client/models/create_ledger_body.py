@@ -17,11 +17,13 @@ T = TypeVar("T", bound="CreateLedgerBody")
 class CreateLedgerBody:
     """
     Attributes:
-        name (str):
-        description (None | str | Unset):
-        private (bool | None | Unset):
+        name (str): The ledger's name: lowercase letters, numbers, hyphens, and underscores, up to 100 characters.
+        description (None | str | Unset): A short description shown with the ledger.
+        private (bool | None | Unset): true or omitted keeps the ledger visible only to its owner and collaborators;
+            false makes it public, readable by anyone.
         template (CreateLedgerBodyTemplateType1 | CreateLedgerBodyTemplateType2Type1 |
-            CreateLedgerBodyTemplateType3Type1 | None | Unset):
+            CreateLedgerBodyTemplateType3Type1 | None | Unset): STARTER (the default) has options and accounts without
+            transactions; SAMPLE has demonstration transactions.
     """
 
     name: str
