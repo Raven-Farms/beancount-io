@@ -10,3 +10,4 @@
 
 - [011](./011.md) — Home's Spending card sums only the newest 200 transactions, so a busy month hides last month's spending
 - [012](./012.md) — German, Dutch and Spanish mix formal and informal "you" across the mobile app
+- [013](./013.md) — A transaction deleted elsewhere still opens as if it exists, with "Error: Ledger resource not found" inside it
