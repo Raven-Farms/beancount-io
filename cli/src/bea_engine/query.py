@@ -1103,13 +1103,43 @@ def decimal_failure(exc: ArithmeticError, *, native: bool) -> str:
                 "amount to twelve integer digits; query the ledger with --file to print larger ones."
             )
         return f"Decimal arithmetic failed while printing this query ({name}): an amount outgrew its display precision."
-    if isinstance(exc, InvalidOperation):
+    if isinstance(exc, InvalidOperation) and _non_finite_operand(exc):
         return (
             f"Decimal arithmetic failed while running this query ({name}): a NaN or infinite value cannot be "
             "ordered, compared or used in arithmetic. Filter it out with WHERE, for example "
             "WHERE str(<value>) NOT IN ('NaN', 'Infinity', '-Infinity')."
         )
+    if isinstance(exc, InvalidOperation):
+        # No NaN in sight: `round(number, 30)` or `decimal('1e30') % 7` needs
+        # more digits than the 28 the arithmetic keeps (w5/846).
+        return (
+            f"Decimal arithmetic failed while running this query ({name}): a result needs more than the 28 "
+            "significant digits the arithmetic keeps. Round to fewer places, or keep the numbers smaller."
+        )
     return f"Decimal arithmetic failed while running or printing this query ({name})."
+
+
+def _non_finite_operand(exc: BaseException) -> bool:
+    """Whether a NaN or an infinity is among the values the failing Python frames held.
+
+    The C decimal module raises from inside the operation, so the frames
+    above it hold its operands.
+    """
+    traceback = exc.__traceback__
+    while traceback is not None:
+        if any(_holds_non_finite(value, 3) for value in traceback.tb_frame.f_locals.values()):
+            return True
+        traceback = traceback.tb_next
+    return False
+
+
+def _holds_non_finite(value: Any, depth: int) -> bool:
+    """A non-finite Decimal in `value`, or in the rows and cells it holds: a sort's operands are cells of rows."""
+    if isinstance(value, Decimal):
+        return not value.is_finite()
+    if depth and isinstance(value, tuple | list):
+        return any(_holds_non_finite(item, depth - 1) for item in value)
+    return False
 
 
 def _display_overflow(exc: BaseException) -> bool:

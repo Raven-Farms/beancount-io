@@ -409,10 +409,11 @@ def _forward(op: str, ctx: typer.Context) -> None:
 
 
 def _replay(completed: subprocess.CompletedProcess[str]) -> None:
-    """Print captured upstream output back to its own streams, verbatim."""
+    """Print captured upstream output back to its own streams, its usage lines naming `bea doctor`."""
     output.utf8_stdout()
     output.replay(completed.stdout, sys.stdout)
-    output.replay(completed.stderr, sys.stderr)
+    # A captured run named `bean-doctor` in its usage error (w5/846).
+    output.replay(launch.renamed_usage(completed.stderr, "bean-doctor"), sys.stderr)
     # A failure line follows on stderr; flush first so redirected streams keep
     # upstream's output ahead of the error that refers to it.
     for stream in (sys.stdout, sys.stderr):

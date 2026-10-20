@@ -241,6 +241,29 @@ def _unread_header_hint(
     )
 
 
+def _not_csv_kind(first: str) -> str | None:
+    """`a QIF` or `an OFX` when an export's first line says it is not CSV at all."""
+    first = first.lstrip("\ufeff").strip()
+    if not _NOT_CSV.match(first):
+        return None
+    return "a QIF" if first.startswith("!") else "an OFX"
+
+
+def _refuse_not_csv(source: Path) -> None:
+    """Refuse a QIF or OFX file under `--csv`, as the no-mapping path already does."""
+    try:
+        with source.open("rb") as stream:
+            first = next((line for line in stream if line.strip()), b"")
+    except OSError:
+        return
+    kind = _not_csv_kind(first.decode("utf-8", errors="replace"))
+    if kind is not None:
+        raise UsageError(
+            f"{source.name} looks like {kind} file, not a CSV export, so it has no columns to map: "
+            "use a Python importer that reads it."
+        )
+
+
 #: The first line of an export that is not CSV at all: QIF's `!Type:`, OFX 1's
 #: SGML header, OFX 2's XML declaration.
 _NOT_CSV = re.compile(r"!(?:Type|Account|Option)\b|OFXHEADER:|<\?xml|<OFX>", re.IGNORECASE)
@@ -952,6 +975,10 @@ def import_entries(
             exc.details = list(dict.fromkeys([*notes, *exc.details]))
             raise
 
+    if csv_request is not None:
+        # `--csv auto` listed a QIF's `!Type:Bank` as "its columns", and a
+        # mapping said the file "lacks" them; no mapping can read it (w5/846).
+        _refuse_not_csv(source)
     if csv_request is not None and csv_request.strip().casefold() == "auto":
         with preserve_settings_notes(failed_inference=True):
             csv_request = _inferred_mapping(

@@ -166,7 +166,7 @@ def ledger_create(
         output.emit(ledger.record, target=output.server_target())
 
 
-@ledger_app.command("clone")
+@ledger_app.command("clone", cls=SingleValueCommand)
 def ledger_clone(
     full_name: Annotated[str, typer.Argument(help="Ledger full name (e.g. username/my-ledger)")],
     directory: DirOpt = None,

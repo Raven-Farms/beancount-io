@@ -180,7 +180,9 @@ def emit_command(cmd: Command, spec: dict[str, Any]) -> str:
         call_args.append(f"{py_name}={py_name}")
 
     fn = f"{cmd.group}_{cmd.name}"
-    lines = [f'@{cmd.group}_app.command("{cmd.name}", help="{help_text}")']
+    # Single-value parsing: `--page 1 --page 3` sent `page=3` with exit 0, the
+    # last value winning (w5/846), where `create` refuses the repeat.
+    lines = [f'@{cmd.group}_app.command("{cmd.name}", cls=SingleValueCommand, help="{help_text}")']
     lines.append(f"def {fn}(")
     lines.extend(signature)
     lines.append(") -> None:")
@@ -284,6 +286,7 @@ from typing import Annotated
 import typer
 
 from cli import context, output
+from cli.single_value import SingleValueCommand
 from cli.utils import owner_and_name, snake_keys
 
 '''

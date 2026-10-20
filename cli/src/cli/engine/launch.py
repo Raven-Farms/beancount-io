@@ -159,17 +159,31 @@ _BEA_NAMES = {
 
 
 def _renamed(text: str, renamed: tuple[str, str] | None) -> str:
-    """Upstream's `Usage:` and `Try '… --help'` lines with the `bea` command in its program's place."""
+    """Upstream's usage lines with the `bea` command in its program's place.
+
+    Click's `Usage:` and `Try '… --help'`, and argparse's `usage:` and
+    `PROGRAM: error:`, which `treeify` prints: only Click's were renamed, so
+    `bea treeify --nosuch` named `treeify` (w5/846).
+    """
     if renamed is None:
         return text
     program, command = renamed
-    lines = text.splitlines(keepends=True)
-    return "".join(
-        line.replace(f"Usage: {program} ", f"Usage: {command} ").replace(f"Try '{program} ", f"Try '{command} ")
-        if line.startswith("Usage: ") or "Try '" in line
-        else line
-        for line in lines
-    )
+
+    def rename(line: str) -> str:
+        if line.startswith("Usage: ") or "Try '" in line:
+            line = line.replace(f"Usage: {program} ", f"Usage: {command} ")
+            return line.replace(f"Try '{program} ", f"Try '{command} ")
+        if line.startswith((f"usage: {program} ", f"usage: {program}\n", f"{program}: error: ")):
+            return line.replace(program, command, 1)
+        return line
+
+    return "".join(rename(line) for line in text.splitlines(keepends=True))
+
+
+def renamed_usage(text: str, program: str) -> str:
+    """`text` with an upstream program's usage lines naming the `bea` command that answers for it."""
+    command = _BEA_NAMES.get(program)
+    return _renamed(text, (program, command) if command else None)
 
 
 LOAD_CACHE_ENV = "BEANCOUNT_LOAD_CACHE_FILENAME"

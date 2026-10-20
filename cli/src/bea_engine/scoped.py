@@ -148,7 +148,8 @@ def _invoke(upstream: Any, op: str, argv: list[str]) -> int:
     from bea_engine import protocol
 
     try:
-        upstream.doctor.main(args=[op, *argv], prog_name="bean-doctor")
+        # Its usage errors name the command the user typed (w5/846).
+        upstream.doctor.main(args=[op, *argv], prog_name="bea doctor")
     except SystemExit as exit_status:
         return _status(exit_status.code)
     except protocol.EngineError as exc:

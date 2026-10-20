@@ -13,6 +13,7 @@ from typing import Annotated
 import typer
 
 from cli import context, output
+from cli.single_value import SingleValueCommand
 from cli.utils import owner_and_name, snake_keys
 
 
@@ -20,6 +21,7 @@ def register_ledger_commands(ledger_app: typer.Typer) -> None:
 
     @ledger_app.command(
         "list",
+        cls=SingleValueCommand,
         help="List accessible ledgers.\n\nList the caller's accessible ledgers, restricted to the credential's ledger pin when present",
     )
     def ledger_list(
@@ -57,6 +59,7 @@ def register_ledger_commands(ledger_app: typer.Typer) -> None:
 
     @ledger_app.command(
         "show",
+        cls=SingleValueCommand,
         help="Get one ledger.\n\nMetadata for a single ledger: description, visibility, clone URLs, timestamps, and the caller's permissions when available.",
     )
     def ledger_show(
@@ -76,6 +79,7 @@ def register_ledger_commands(ledger_app: typer.Typer) -> None:
 
     @ledger_app.command(
         "delete",
+        cls=SingleValueCommand,
         help="Delete a ledger.\n\nDelete the repository and perform the existing linked-bank cleanup. Requires current administrative authority and respects the credential pin. Applies immediately; no preview.",
     )
     def ledger_delete(
