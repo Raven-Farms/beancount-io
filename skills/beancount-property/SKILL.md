@@ -1,6 +1,6 @@
 ---
 name: beancount-property
-description: Record buying a home or rental property in a local Beancount ledger through bea — the property as a priced lot, its mortgage liability, escrow, and closing costs split exactly as the closing statement states — proposed first and written only after confirmation. Skip paying rent as a tenant (beancount-add), bank or loan statement files (beancount-import), statement comparison (beancount-reconcile), tax treatment and depreciation advice, and ledgers hosted on Beancount.io.
+description: Record buying a home or rental property and its monthly mortgage payments in a local Beancount ledger through bea — the property as a priced lot, its mortgage liability, escrow, and closing costs split exactly as the closing statement states, and each payment's principal/interest/escrow split read from the loan statement and tied to its printed new balance — proposed first and written only after confirmation. Skip paying rent as a tenant (beancount-add), bank or loan statement files (beancount-import), statement comparison (beancount-reconcile), tax treatment and depreciation advice, and ledgers hosted on Beancount.io.
 metadata:
   openclaw:
     homepage: 'https://github.com/bex-co/beancount-io/tree/main/skills'
@@ -55,7 +55,7 @@ Accounts that do not exist yet are proposed as `open`s in the same proposal — 
 
 ## Scope
 
-**Does:** one described property purchase per run — price, down payment, loan, closing costs, escrow seed — appended to an existing file the root ledger includes.
+**Does:** one described property purchase per run — price, down payment, loan, closing costs, escrow seed — and described monthly mortgage payments (with escrow disbursements) for a property the ledger already holds, appended to an existing file the root ledger includes.
 
 **Does not:** pay rent as a tenant or record everyday entries (`beancount-add`), read statement or export files (`beancount-import`), compare accounts to statements (`beancount-reconcile`), record stock/crypto trades (`beancount-trade`), advise on tax treatment or depreciation, appraise a property, or compute an amortization schedule. Closing-cost tax roles are split exactly as the user states them.
 
@@ -129,11 +129,38 @@ bea --file "$ledger" --json --no-input check
 
 Report the lot created (basis and date), the mortgage balance now owed, escrow seeded, and cash remaining — each read back or quoted from the write output. Each command validates its own write and refuses an entry that would break the ledger, writing nothing; when a later command fails, report which earlier ones succeeded and read the ledger before retrying — `bea add` does not deduplicate. Never report success without a passing check.
 
+## Monthly mortgage payments
+
+Same rails, per payment the user describes or pastes from the loan statement. **The split is read from the statement, never computed** — this skill does not amortize. If the figures given have no principal/interest/escrow split, ask for the statement's breakdown and write nothing.
+
+**Inputs per payment:** property (its mortgage account), date, total paid and from which account, and the printed split — principal, interest, escrow (each as printed; a printed extra item such as a late fee is its own leg, as stated) — plus the statement's printed **new balance** after the payment.
+
+**Gates (both engine-computed and quoted, both must tie before proposing):**
+
+1. `principal + interest + escrow (+ any other printed item) = total paid`.
+2. The ledger's current mortgage balance (query it: `SELECT sum(number) WHERE account = 'Liabilities:Mortgage:<Name>'`) plus the printed principal equals the statement's new balance, in ledger signs (owed is negative: `-400000 + 600 = -399400`). A mismatch means a payment is missing, double-recorded, or misread — stop, show both balances and the gap, and write nothing. Read the balance as of the payment date when back-filling older statements.
+
+Also run the already-recorded check (same total on the paying account within ±3 days) per payment.
+
+**The entry** (proposed in full, written after the yes with the `transaction` recipe, then the root check):
+
+```
+2026-03-01 * "Mortgage payment (statement: new balance 399400.00)"
+  Assets:Checking             -2400.00 USD
+  Liabilities:Mortgage:OakSt    600.00 USD
+  Expenses:Interest            1500.00 USD
+  Assets:Escrow:OakSt           300.00 USD
+```
+
+**Escrow disbursements** (tax or insurance the servicer paid out of escrow, when the statement or the user states one): its own entry dated the disbursement — escrow down, the user's existing tax/insurance expense account up (`Assets:Escrow:OakSt -1200.00` / `Expenses:PropertyTax 1200.00`). When the statement prints an escrow balance, tie the ledger's escrow balance to it the same way and report any gap instead of writing.
+
+Report the mortgage balance and escrow balance after the write, read back from the ledger.
+
 ## What NOT to do
 
 - Don't write anything without an explicit yes.
 - Don't split a closing cost's role (capitalized vs expensed) for the user, and don't move a figure between roles to make the arithmetic tie.
-- Don't amortize, appraise, or estimate a value; a later valuation is a `price` the user supplies (beancount-add's price refresh).
+- Don't amortize, appraise, or estimate a value; a later valuation is a `price` the user supplies (beancount-add's price refresh). A mortgage split is never derived from a rate and a balance — printed figures or a question.
 - Don't treat escrow as an expense or as already-spent money.
 - Don't invent accounts; only the opens approved in the proposal.
 - Don't edit, move, or delete existing entries, and don't touch `option`, `plugin`, or `include` directives.

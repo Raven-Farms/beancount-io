@@ -15,6 +15,34 @@
         "New accounts are proposed as opens, not silently created or assumed",
         "Nothing is written before confirmation"
       ]
+    },
+    {
+      "id": 2,
+      "name": "mortgage-payment-ties-to-statement",
+      "prompt": "Record the March mortgage payment for OakSt in ./ledger.beancount, paid 2026-03-01 from Assets:Checking. The statement says: total $2,400.00 \u2014 principal $600.00, interest $1,500.00, escrow $300.00, new balance $399,400.00.",
+      "expected_output": "Both gates shown tied (600+1500+300 = 2400; ledger balance -400000.00 + 600 = statement -399400.00), the four-leg entry proposed in full, nothing written before confirmation; after the yes the mortgage balance reads -399400.00 and escrow 3300.00, check passes.",
+      "files": [
+        "evals/files/eval2_ledger.beancount"
+      ],
+      "expectations": [
+        "Principal is taken from the statement figures given, and the balance tie-out to 399400.00 is shown",
+        "The entry has principal +600.00 to the mortgage, interest 1500.00 expensed, escrow +300.00 as an asset",
+        "Nothing is written before confirmation"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "payment-without-split-asks",
+      "prompt": "Record my March mortgage payment for OakSt in ./ledger.beancount: $2,400 paid on 2026-03-01 from checking. The rate is 6% if you need it.",
+      "expected_output": "No entry is proposed from the rate. The skill asks for the statement's printed principal/interest/escrow breakdown (and new balance), explains it does not amortize or derive the split, and writes nothing.",
+      "files": [
+        "evals/files/eval3_ledger.beancount"
+      ],
+      "expectations": [
+        "The printed split is requested instead of any computed breakdown",
+        "No amortization math is presented as the split",
+        "Nothing is written to the ledger"
+      ]
     }
   ]
 }
