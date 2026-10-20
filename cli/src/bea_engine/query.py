@@ -43,7 +43,7 @@ from pathlib import Path
 from typing import Any, TextIO, get_origin
 
 from bea_engine import protocol, stopping
-from bea_engine.paths import expand_path
+from bea_engine.paths import expand_path, is_descriptor_path
 
 LEDGER_DSN = "beancount:"
 """A pathless beanquery DSN: the source attaches the entries handed to it instead of loading a file."""
@@ -501,6 +501,14 @@ def _native_shell(source: str, *, interactive: bool, format: str, numberify: boo
         if file.is_dir():
             raise protocol.UsageError(
                 f"{kind[0].upper()}{kind[1:]} path '{file}' (from --source) is a directory; expected a {kind} file."
+            )
+        if is_descriptor_path(parts.path):
+            # The frontend refuses first; this is the path the loader really
+            # gets, and a descriptor is not one it can open (w5/792).
+            label = "Ledger" if parts.scheme == "beancount" else "CSV"
+            raise protocol.UsageError(
+                f"{label} path '{file}' (from --source) is a file descriptor, not a file. "
+                "Save it to a file and pass that file."
             )
         if parts.scheme == "beancount":
             # The loader runs `expandvars` on the root path, so a `$VAR` here

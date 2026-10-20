@@ -25,7 +25,7 @@ from cli import context, output
 from cli.completion import fixed_values
 from cli.engine import launch
 from cli.errors import UsageError, placement_hint
-from cli.paths import expand_path
+from cli.paths import expand_path, is_descriptor_path
 from cli.utils import decode_error_message, inert_text
 
 FORMATS = ("text", "csv", "beancount")
@@ -112,6 +112,8 @@ def _require_source_ledger(source: str) -> None:
     A `$VAR` the loader would expand is refused before the existence check: it
     silently read another ledger with exit 0, or answered from an empty
     database and replaced an `--output` export with a header row (w5/791).
+    A descriptor spelling (`/dev/fd/N`, `/dev/stdin`) is refused the same
+    way: the engine child cannot open it (w5/792).
     """
     import re
     from urllib.parse import urlparse
@@ -126,6 +128,13 @@ def _require_source_ledger(source: str) -> None:
     if parts.scheme == "beancount":
         context.refuse_expanding_ledger_path(parts.path, f" (from --source{named})")
     kind, label = ("ledger", "Ledger") if parts.scheme == "beancount" else ("CSV", "CSV")
+    if is_descriptor_path(parts.path):
+        # The engine child cannot open our descriptors; refused by name
+        # instead of "not found" mid-query (w5/792).
+        raise UsageError(
+            f"{label} path '{path}' (from --source{named}) is a file descriptor, not a file. "
+            "Save it to a file and pass that file."
+        )
     if not path.exists():
         raise UsageError(f"No {kind} file at '{path}' (from --source{named}).")
     if path.is_dir():

@@ -522,6 +522,7 @@ def helper_json(
     stdin: str | None = None,
     writes: bool = False,
     env_extra: dict[str, str] | None = None,
+    pass_fds: Sequence[int] = (),
 ) -> dict[str, Any]:
     """Run a helper command and return its result, raising what it reports instead.
 
@@ -544,7 +545,7 @@ def helper_json(
     command, env = helper_command()
     if env_extra:
         env = {**(env if env is not None else os.environ), **env_extra}
-    completed = _run_helper([*command, *args], env, stdin, writes=writes)
+    completed = _run_helper([*command, *args], env, stdin, writes=writes, pass_fds=pass_fds)
 
     envelope = _parse(completed, args, writes=writes)
     if not envelope.get("ok"):
@@ -594,7 +595,12 @@ _CLEANUP_GRACE_SECONDS = 5.0
 
 
 def _run_helper(
-    command: list[str], env: dict[str, str] | None, stdin: str | None, *, writes: bool = False
+    command: list[str],
+    env: dict[str, str] | None,
+    stdin: str | None,
+    *,
+    writes: bool = False,
+    pass_fds: Sequence[int] = (),
 ) -> subprocess.CompletedProcess[str]:
     """`subprocess.run`, except the child is told when the frontend is being stopped.
 
@@ -617,6 +623,7 @@ def _run_helper(
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
+            pass_fds=pass_fds,
             # Group delivery plus forwarding could otherwise interrupt cleanup twice.
             # Worker threads cannot forward signals, so their reads stay in the
             # group and die with the terminal's Ctrl-C. Their writes cannot be

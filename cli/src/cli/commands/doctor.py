@@ -30,7 +30,7 @@ from cli.errors import (
 )
 from cli.native_command import ForwardingCommand
 from cli.native_help import native_help, native_options
-from cli.paths import expand_path
+from cli.paths import expand_path, held_descriptor, is_descriptor_path
 from cli.utils import decode_error_message, has_bom
 
 doctor_app = typer.Typer(
@@ -114,6 +114,13 @@ def _refuse_directory_ledger(op: str, args: list[str]) -> None:
         raise UsageError(f"The ledger path for bea doctor {op} is empty; name the ledger file.")
     ledger = Path(positionals[0])
     if not ledger.is_dir():
+        if is_descriptor_path(ledger) and (held_descriptor(ledger) is None or ledger.is_file()):
+            # A held regular file behind `/dev/fd/N` reaches upstream, which
+            # cannot open our descriptor; a held pipe keeps the w5/436
+            # wording below (w5/792).
+            raise UsageError(
+                f"Ledger path {ledger} is a file descriptor, not a file. Save it to a file and pass that file."
+            )
         if os.path.lexists(ledger) and not ledger.is_file():
             # `<(…)` names a pipe this process holds; upstream, which cannot
             # open it, said the path "does not exist" (w5/436).

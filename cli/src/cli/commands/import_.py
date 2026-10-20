@@ -25,7 +25,7 @@ import typer
 from cli import context, output
 from cli.config import config_dir
 from cli.errors import BeaError, UsageError
-from cli.paths import expand_path
+from cli.paths import expand_path, held_descriptor, is_descriptor_path
 from cli.utils import IntoPath, NonEmptyPath, atomic_write, exclusive_lock, inert_text
 
 
@@ -146,14 +146,24 @@ def _config_available(file: Path, notes: list[str]) -> tuple[Path, str] | None:
             )
             if corrupt not in notes:
                 notes.append(corrupt)
-        if remembered is not None and remembered.is_file():
+        if remembered is not None and is_descriptor_path(remembered):
+            # Records written before descriptors stopped being remembered
+            # still hold them; never opened (w5/792).
+            stale = (
+                f"The remembered importer {remembered} names a file descriptor, not a file; ignoring it. "
+                "Pass --config FILE to select a Python importer again."
+            )
+            if stale not in notes:
+                notes.append(stale)
+        elif remembered is not None and remembered.is_file():
             return remembered, "remembered"
-        missing = (
-            f"The remembered importer {remembered} is missing; ignoring it. "
-            "Pass --config FILE to select a Python importer again."
-        )
-        if remembered is not None and missing not in notes:
-            notes.append(missing)
+        elif remembered is not None:
+            missing = (
+                f"The remembered importer {remembered} is missing; ignoring it. "
+                "Pass --config FILE to select a Python importer again."
+            )
+            if missing not in notes:
+                notes.append(missing)
     conventional = file.parent / "importers.py"
     if conventional.is_file():
         return conventional, "default beside root ledger"
@@ -571,6 +581,16 @@ def _recall_csv(
             )
     rules_path = entry.get("rules")
     if isinstance(rules_path, str):
+        if is_descriptor_path(rules_path):
+            # Records written before descriptors stopped being remembered
+            # still hold `/dev/fd/0`: dropped without opening it, which
+            # would read stdin or wait on a terminal (w5/792).
+            notes.append(
+                f"Remembered --rules {shlex.quote(rules_path)} names a file descriptor, not a file; "
+                "importing without rules. Re-pass --rules to restore it."
+            )
+            entry["rules"] = None
+            return entry
         try:
             load_rules(Path(rules_path))
         except UsageError as exc:
@@ -774,6 +794,12 @@ def import_entries(
     csv_skip: int | None = None
     if csv_mapping is not None and config is not None:
         raise UsageError("Pass --csv or --config, not both.")
+    if is_descriptor_path(source) and (held_descriptor(source) is None or source.is_file()):
+        # The export is read here and by the engine child through one shared
+        # offset, so a descriptor cannot pass through like --rules does; it
+        # is refused by name instead of failing mid-import. A held pipe keeps
+        # the w5/436 wording below (w5/792).
+        raise UsageError(f"Export {source} is a file descriptor, not a file. Save it to a file and import that file.")
     if not source.is_file():
         if not os.path.lexists(source):
             raise UsageError(f"Export file not found: {source}")
@@ -781,10 +807,37 @@ def import_entries(
         raise UsageError(f"Export {output.not_a_file(source)}. {remedy}")
     # The engine child reads these, and does not inherit the descriptor a
     # `<(…)` passes as `/dev/fd/N`: "Bad file descriptor", or a config "not
-    # found" right after "Using importers from" it (w5/582).
+    # found" right after "Using importers from" it (w5/582). A held
+    # `--rules` descriptor that names a regular file passes through instead,
+    # and is never remembered: descriptor 0 rides the inherited stdin, the
+    # rest ride `pass_fds` (w5/792). `--config` cannot pass through: the
+    # engine runs it with `runpy`, which opens it twice, and the two opens
+    # share one offset, so the config imports empty.
+    descriptor_fds: list[int] = []
     for flag, named in (("--rules", rules_file), ("--config", config)):
         path = expand_path(named, flag) if named is not None else None
-        if path is not None and os.path.lexists(path) and not path.is_file():
+        if path is None:
+            continue
+        if is_descriptor_path(path):
+            held = held_descriptor(path)
+            if flag == "--config":
+                if held is None or path.is_file():
+                    raise UsageError(
+                        f"{flag} {path} is a file descriptor, not a file. Save it to a file and pass that file."
+                    )
+                # A held pipe keeps the w5/582 refusal: fall through.
+            else:
+                if held is None:
+                    raise UsageError(
+                        f"{flag} {path} is a file descriptor this process does not hold open. "
+                        "Redirect a file into it, or save it to a file and pass that file."
+                    )
+                if held > 0 and not path.is_file():
+                    raise UsageError(f"{flag} {output.not_a_file(path)}. Save it to a file and pass that file.")
+                if held > 0:
+                    descriptor_fds.append(held)
+                continue
+        if os.path.lexists(path) and not path.is_file():
             raise UsageError(f"{flag} {output.not_a_file(path)}. Save it to a file and pass that file.")
 
     csv_request: str | None = csv_mapping
@@ -793,7 +846,15 @@ def import_entries(
     discarded_note: str | None = None
     csv_origin = "--csv"
     csv_run_account: str | None = csv_account
-    csv_rules_arg: Path | None = expand_path(rules_file, "--rules").resolve() if rules_file is not None else None
+    csv_rules_arg: Path | None = None
+    rules_is_descriptor = False
+    if rules_file is not None:
+        expanded_rules = expand_path(rules_file, "--rules")
+        # A descriptor passes through as spelled: resolving it names
+        # nothing stable, and on Linux names the redirect target, which must
+        # not be remembered as the rules (w5/792).
+        rules_is_descriptor = is_descriptor_path(expanded_rules)
+        csv_rules_arg = expanded_rules if rules_is_descriptor else expanded_rules.resolve()
     remembered_run = False
     recalled_sign_ledger = False
     inferred_notes: list[str] = []
@@ -843,7 +904,7 @@ def import_entries(
                 settings.append(shlex.join(["--account", csv_run_account]))
             if date_format is not None:
                 settings.append(shlex.join(["--date-format", date_format]))
-            if csv_rules_arg is not None:
+            if csv_rules_arg is not None and not rules_is_descriptor:
                 settings.append(shlex.join(["--rules", str(csv_rules_arg)]))
             if default_account is not None:
                 settings.append(f"--default-account {default_account}")
@@ -1033,7 +1094,12 @@ def import_entries(
             # recomputes without it and writes rows nobody reviewed (w5/073).
             typed = {
                 "date_format": ("--date-format", chosen_date_format),
-                "rules": ("--rules", str(csv_rules_arg) if rules_file is not None else None),
+                # A typed descriptor run keeps the prior memory: it applies
+                # to this run only (w5/792).
+                "rules": (
+                    "--rules",
+                    str(csv_rules_arg) if rules_file is not None and not rules_is_descriptor else None,
+                ),
                 "default_account": ("--default-account", chosen_default_account),
                 "delimiter": ("--delimiter", chosen_delimiter),
             }
@@ -1236,6 +1302,11 @@ def import_entries(
                 )
 
         frontend_notes = settings_notes(date_format)
+        if rules_is_descriptor:
+            frontend_notes.append(
+                f"--rules {csv_rules_arg} is a file descriptor; it applies to this import only and is not "
+                "remembered. The remembered rules, if any, still apply to later imports."
+            )
         for line in frontend_notes:
             output.note(line)
         # The engine's parser rejects `delimiter=`, `encoding=`, `decimal=`,
@@ -1301,12 +1372,19 @@ def import_entries(
                         f"Discarded remembered settings for {source.name}: "
                         f"{', '.join(discarded)}. Re-pass them to keep them across refreshes."
                     )
+            if rules_is_descriptor:
+                # A descriptor cannot be replayed, so the prior entry's
+                # rules carry forward instead of being wiped (w5/792).
+                carried = prior.get("rules") if prior is not None else None
+                stored_rules = carried if isinstance(carried, str) and not is_descriptor_path(carried) else None
+            else:
+                stored_rules = str(csv_rules_arg) if csv_rules_arg is not None else None
             csv_to_remember = {
                 "headers": headers,
                 "mapping": stored_mapping,
                 "source": source.name,
                 "account": csv_run_account,
-                "rules": str(csv_rules_arg) if csv_rules_arg is not None else None,
+                "rules": stored_rules,
                 "default_account": default_account,
                 "date_format": kept_date_format,
                 "delimiter": chosen_delimiter,
@@ -1369,14 +1447,18 @@ def import_entries(
             "encoding": csv_encoding,
             "decimal": csv_decimal,
             "skip": csv_skip,
-            "rules": str(csv_rules_arg) if csv_rules_arg is not None else None,
+            "rules": (
+                (remembered.get("rules") if isinstance(remembered, dict) else None)
+                if rules_is_descriptor
+                else (str(csv_rules_arg) if csv_rules_arg is not None else None)
+            ),
             "default_account": default_account,
         }
         if remembered_run
         else None
     )
     try:
-        preview = launch.helper_json(argv, writes="--apply" in argv)
+        preview = launch.helper_json(argv, writes="--apply" in argv, pass_fds=sorted(set(descriptor_fds)))
     except BeaError as exc:
         # Extraction finished far enough to build a preview (conflict / invalid
         # apply). Surface the engine's notes the same way a successful preview does.

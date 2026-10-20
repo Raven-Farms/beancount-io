@@ -18,7 +18,7 @@ from typing import Any
 
 from cli.config import DEFAULT_ENTRY_FILE
 from cli.errors import UsageError
-from cli.paths import expand_path
+from cli.paths import expand_path, is_descriptor_path
 
 _TRUE = {"1", "true", "yes", "on"}
 
@@ -151,6 +151,13 @@ class RunContext:
             else:
                 candidate, source = DEFAULT_ENTRY_FILE, "the working directory"
 
+        if is_descriptor_path(candidate):
+            # A ledger needs a stable path for its includes and cache; a
+            # descriptor is refused by name instead of failing mid-load (w5/792).
+            raise UsageError(
+                f"Ledger path '{candidate}' (from {source}) is a file descriptor, not a file. "
+                "Point --file at the ledger file."
+            )
         if candidate.is_symlink() and not candidate.exists():
             raise UsageError(
                 f"Ledger path '{candidate}' (from {source}) is a broken symbolic link to "

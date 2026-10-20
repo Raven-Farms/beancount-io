@@ -33,7 +33,7 @@ from cli import context, output
 from cli.amounts import zero_divisor_line
 from cli.engine import launch
 from cli.errors import BeaError, LedgerError, SignalError, UsageError
-from cli.paths import expand_path
+from cli.paths import expand_path, is_descriptor_path
 from cli.utils import RawPath, atomic_write, decode_error_message, single_line
 
 SUFFIXES = {".bean", ".beancount"}
@@ -443,7 +443,12 @@ def _targets(
     files: set[Path] = set()
     roots: list[Path] = []
     for path in named:
-        resolved = expand_path(path, "format").resolve()
+        expanded = expand_path(path, "format")
+        if is_descriptor_path(expanded):
+            # Stdin is the raw `-`; a descriptor spelling names no file the
+            # formatter can compare or rewrite (w5/792).
+            raise UsageError(f"Formatting target {expanded} is a file descriptor, not a file.")
+        resolved = expanded.resolve()
         if not resolved.exists():
             raise UsageError(f"Formatting target does not exist: {resolved}")
         if resolved.is_dir():
