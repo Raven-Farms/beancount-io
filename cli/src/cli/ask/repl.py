@@ -7,6 +7,7 @@ import shutil
 import stat
 import unicodedata
 from collections.abc import Callable
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from prompt_toolkit import PromptSession
@@ -88,9 +89,29 @@ def _history() -> History:
     directory = history_file.parent
     directory.mkdir(parents=True, exist_ok=True)
     directory.chmod(stat.S_IRWXU)
-    os.close(os.open(history_file, os.O_WRONLY | os.O_CREAT | os.O_APPEND, stat.S_IRUSR | stat.S_IWUSR))
-    history_file.chmod(stat.S_IRUSR | stat.S_IWUSR)
+    # Never through a link or into anything but a regular file: a linked
+    # history had its target chmodded and every question appended to it,
+    # outside the config directory, and a FIFO there hung the prompt (w5/810).
+    flags = os.O_WRONLY | os.O_CREAT | os.O_APPEND | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
+    try:
+        fd = os.open(history_file, flags, stat.S_IRUSR | stat.S_IWUSR)
+    except OSError:
+        return _history_in_memory(history_file)
+    try:
+        if not stat.S_ISREG(os.fstat(fd).st_mode):
+            return _history_in_memory(history_file)
+        os.fchmod(fd, stat.S_IRUSR | stat.S_IWUSR)
+    finally:
+        os.close(fd)
     return FileHistory(str(history_file))
+
+
+def _history_in_memory(history_file: Path) -> History:
+    output.note(
+        f"{history_file} is not a regular file bea can keep, so this session's questions are kept in memory "
+        "only. Remove it to keep history again."
+    )
+    return InMemoryHistory()
 
 
 def _make_session(hint: str, key_bindings: KeyBindings | None = None) -> PromptSession[str]:
