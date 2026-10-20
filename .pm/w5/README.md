@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [805 — Posting slips: {{240}} refused as not one token, empty label dropped, bulk shorthand wording](./805.md)
 - [806 — A Fava collapse-pattern/insert-entry regex raising OverflowError or RecursionError blocks reports (gap in w5/091)](./806.md)
 - [807 — A misspelled fiscal-year-end option silently makes FY2026 the calendar year (gap in w5/147)](./807.md)
 - [808 — Fiscal-quarter refusals: hard-coded FY2027, first declaration cited, refused-period hint (gap in w5/329)](./808.md)
