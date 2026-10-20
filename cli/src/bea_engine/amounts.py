@@ -153,30 +153,37 @@ def split_total_price(text: str) -> tuple[str, str] | None:
 
     The caller has already validated the line through Beancount's parser, so
     a total that cannot be read here means the split misread the text — never
-    a user error — and the caller falls back to the parsed unit price. A total
-    written as native arithmetic (`@@ (40+60) USD`, `@@ 200/2 USD`) is
-    evaluated by that same parser rather than here: the fallback would
-    otherwise record it as a divided, repeating `@` price.
+    a user error — and the caller falls back to the parsed unit price. Past
+    the plain fast path the whole tail is read by that same parser rather
+    than split on whitespace: the currency may be glued to the number
+    (`@@ 100USD`), and a total written as native arithmetic
+    (`@@ (40+60) USD`, `@@ 200/2 USD`) is evaluated by it too — the fallback
+    would otherwise record either as a divided, repeating `@` price (w5/802).
     """
     unquoted = _QUOTED_OR_COMMENT.sub("", text)
     if "@@" not in unquoted:
         return None
     tail = unquoted.rsplit("@@", 1)[1].split()
-    if len(tail) < 2:
-        return None
     if len(tail) == 2 and _PLAIN_DECIMAL.fullmatch(tail[0]):
         return tail[0], tail[1]
-    return _evaluated_amount(" ".join(tail[:-1]), tail[-1])
+    if not tail:
+        return None
+    return _probed_amount(" ".join(tail))
 
 
-def _evaluated_amount(expression: str, currency: str) -> tuple[str, str] | None:
-    """A native arithmetic amount as Beancount evaluates it, or None when it does not parse as one."""
+def _probed_amount(tail: str) -> tuple[str, str] | None:
+    """The tail after `@@` as `(number, currency)`, read by Beancount's own grammar, or None.
+
+    The probe reports what the grammar makes of the exact tail text — a glued
+    currency (`100USD`), grouping (`1,000USD`), or arithmetic (`(40+60)USD`)
+    included — so this accepts exactly what the validated line meant. None
+    means the probe did not read back as one plain amount, and the caller
+    falls back to the parsed unit price.
+    """
     from beancount.core.number import MISSING
     from beancount.parser import parser as beancount_parser
 
-    entries, errors, _ = beancount_parser.parse_string(
-        f'2026-01-02 * "probe"\n  Assets:Probe {expression} {currency}\n  Equity:Probe\n'
-    )
+    entries, errors, _ = beancount_parser.parse_string(f'2026-01-02 * "probe"\n  Assets:Probe {tail}\n  Equity:Probe\n')
     entry: Any = entries[0] if len(entries) == 1 and not errors else None
     if entry is None or len(entry.postings) != 2:
         return None
@@ -184,9 +191,9 @@ def _evaluated_amount(expression: str, currency: str) -> tuple[str, str] | None:
     units: Any = posting.units
     if posting.cost is not None or posting.price is not None or units is None or units is MISSING:
         return None
-    if units.number is MISSING or units.currency != currency:
+    if units.number is MISSING or not isinstance(units.currency, str):
         return None
-    return format(units.number, "f"), currency
+    return format(units.number, "f"), units.currency
 
 
 def refuse_zero_divisor(text: str) -> None:
