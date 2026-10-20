@@ -45,6 +45,7 @@
 - [878 — Validate preset currencies before unrelated prompts and retry invalid answers](./878.md) — minor CLI PTY onboarding finding; reproduced 2026-10-20.
 - [879 — Refuse portable exports that cannot enumerate required plugin resource directories](./879.md) — minor CLI snapshot-integrity follow-up to 868; reproduced 2026-10-20.
 - [880 — Include runtime-imported plugin helpers in exports served from a load cache](./880.md) — minor CLI snapshot-integrity follow-up to 327; reproduced 2026-10-20.
+- [881 — Deduplicate stable import IDs on source transactions omitted by a view plugin](./881.md) — major CLI duplicate-booking finding; reproduced 2026-10-20.
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
