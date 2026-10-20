@@ -31,6 +31,11 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => mocks.navigate,
   useSearch: () => mocks.search,
+  useLocation: () => ({
+    pathname: "/auth/login/",
+    search: mocks.search,
+    href: window.location.href,
+  }),
   Link: ({ to, children }: { to: string; children: ReactNode }) => (
     <a href={to}>{children}</a>
   ),
@@ -51,7 +56,6 @@ vi.mock(
 vi.mock("@/common/analytics", () => ({
   track: (...args: unknown[]) => mocks.track(...args),
 }));
-vi.mock("@/common/components/seo/page-seo", () => ({ PageSEO: () => null }));
 
 const EMAIL = "synthetic-owner@example.com";
 const PASSWORD = "synthetic-private-password";
@@ -133,6 +137,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.search = {};
   mocks.getDefaultLedger.mockResolvedValue(null);
+  document.head.innerHTML = "";
   window.history.replaceState({}, "", "/auth/login/");
 });
 afterEach(() => {
@@ -143,6 +148,60 @@ afterEach(() => {
 });
 
 describe("the real login form and Apollo recovery mutations", () => {
+  it.each([false, true])(
+    "renders private metadata only for a mailed recovery link (recovery=%s)",
+    (privateRecovery) => {
+      mocks.search = {
+        next: "/ledger/owner/book#latest",
+        ...(privateRecovery ? { recovery: CHALLENGE } : {}),
+      };
+      window.history.replaceState(
+        {},
+        "",
+        privateRecovery
+          ? `/auth/login/?recovery=${CHALLENGE}`
+          : "/auth/login/?next=%2Fledger%2Fowner%2Fbook%23latest",
+      );
+      const api = network();
+      const ssr = new DOMParser().parseFromString(
+        renderToString(api.page()),
+        "text/html",
+      );
+      render(api.page());
+      for (const head of [ssr.head, document.head]) {
+        expect(head.querySelector("title")?.textContent).toBe(
+          "Sign In to Beancount — Free Plain-Text Accounting",
+        );
+        expect(
+          head
+            .querySelector('meta[name="description"]')
+            ?.getAttribute("content"),
+        ).toBeTruthy();
+        expect(head.innerHTML).not.toContain(CHALLENGE);
+        if (privateRecovery) {
+          expect(
+            head.querySelector('meta[name="robots"]')?.getAttribute("content"),
+          ).toBe("noindex, follow");
+          expect(
+            head
+              .querySelector('meta[name="referrer"]')
+              ?.getAttribute("content"),
+          ).toBe("no-referrer");
+          expect(head.querySelector('link[rel="canonical"]')).toBeNull();
+          expect(head.querySelector('link[rel="alternate"]')).toBeNull();
+        } else {
+          expect(head.querySelector('meta[name="robots"]')).toBeNull();
+          expect(head.querySelector('meta[name="referrer"]')).toBeNull();
+          expect(
+            head.querySelector('link[rel="canonical"]')?.getAttribute("href"),
+          ).toBe("https://beancount.io/auth/login/");
+          expect(head.querySelector('link[rel="alternate"]')).not.toBeNull();
+        }
+      }
+      expect(api.pending).toHaveLength(0);
+    },
+  );
+
   it("offers recovery after throttling and sends exactly one explicit request with the safe continuation", async () => {
     const next = "/ledger/owner/book?view=journal#latest";
     mocks.search = { next };

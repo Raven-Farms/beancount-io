@@ -51,7 +51,9 @@ export default function LoginPage() {
       <PageSEO
         titleKey="seo.login.title"
         descriptionKey="seo.login.description"
+        noIndex={Boolean(search.recovery)}
       />
+      {search.recovery ? <meta name="referrer" content="no-referrer" /> : null}
       <AuthPageLayout>
         <div className="space-y-8">
           <div className="space-y-2">
