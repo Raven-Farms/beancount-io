@@ -11,6 +11,7 @@ import { Alert, AlertDescription } from "@/common/components/ui/alert";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { ScriptRequiredNotice } from "@/features/auth/components/script-required-notice";
 import { useHydrated } from "@/features/auth/lib/use-hydrated";
+import { GoogleSignInButton } from "@/features/auth/components/google-sign-in-button";
 
 type LoginFormData = {
   email: string;
@@ -23,6 +24,8 @@ export type LoginFormProps = {
   serverError: string;
   showForgotPasswordLink?: boolean;
   showSignUpLink?: boolean;
+  /** Where "Continue with Google" returns to; defaults to the current page. */
+  googleNext?: string;
   onForgotPasswordClick?: () => void;
   onRegisterClick?: () => void;
 };
@@ -33,6 +36,7 @@ export function LoginForm({
   serverError,
   showForgotPasswordLink = true,
   showSignUpLink = true,
+  googleNext,
   onForgotPasswordClick,
   onRegisterClick,
 }: LoginFormProps) {
@@ -160,6 +164,8 @@ export function LoginForm({
           ? `${t("auth.signIn")}...`
           : t("auth.signIn")}
       </Button>
+
+      <GoogleSignInButton next={googleNext} />
 
       {showSignUpLink && (
         <div className="text-sm text-muted-foreground">

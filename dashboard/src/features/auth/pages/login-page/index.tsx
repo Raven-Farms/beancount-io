@@ -12,6 +12,18 @@ import { AuthPageLayout } from "@/features/auth/components/auth-page-layout";
 import { Alert, AlertDescription } from "@/common/components/ui/alert";
 import { postLegacyMobileAuthToken } from "@/common/providers/react-native-bridge-provider/legacy-auth-bridge";
 
+/** Why "Continue with Google" sent the visitor back here (backend reason codes). */
+const GOOGLE_REASON_KEYS = {
+  google_unavailable: "auth.googleReason.unavailable",
+  google_cancelled: "auth.googleReason.cancelled",
+  google_state: "auth.googleReason.state",
+  google_failed: "auth.googleReason.failed",
+  google_unverified: "auth.googleReason.unverified",
+  google_domain: "auth.googleReason.domain",
+  google_not_allowed: "auth.googleReason.notAllowed",
+  google_blocked: "auth.googleReason.blocked",
+} as const;
+
 export default function LoginPage() {
   const navigate = useNavigate();
   const search = useSearch({ from: "/auth/login/" });
@@ -61,10 +73,22 @@ export default function LoginPage() {
               </AlertDescription>
             </Alert>
           )}
+          {search.reason && search.reason in GOOGLE_REASON_KEYS && (
+            <Alert variant="destructive">
+              <AlertDescription>
+                {t(
+                  GOOGLE_REASON_KEYS[
+                    search.reason as keyof typeof GOOGLE_REASON_KEYS
+                  ],
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
           <LoginForm
             onSubmit={onSubmit}
             isLoading={isLoading}
             serverError={serverError}
+            googleNext={getSafeRedirectPath(search.next) ?? "/"}
           />
         </div>
       </AuthPageLayout>

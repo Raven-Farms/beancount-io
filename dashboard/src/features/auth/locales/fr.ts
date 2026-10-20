@@ -704,6 +704,50 @@ const frAuth: Record<string, TranslationEntry> = {
     message: "Gérer les grands livres et les collaborateurs",
     description: "Description of the ledger admin mobile permission",
   },
+  "auth.continueWithGoogle": {
+    message: "Continuer avec Google",
+    description: "Button that starts Sign in with Google",
+  },
+  "auth.googleReason.unavailable": {
+    message: "La connexion avec Google n'est pas disponible pour le moment.",
+    description:
+      "Login notice: Google sign-in is not configured on this server",
+  },
+  "auth.googleReason.cancelled": {
+    message: "La connexion avec Google a été annulée.",
+    description: "Login notice: the user cancelled at Google's consent screen",
+  },
+  "auth.googleReason.state": {
+    message:
+      "La connexion avec Google a expiré ou a été lancée dans un autre navigateur. Veuillez réessayer.",
+    description:
+      "Login notice: the Google sign-in ceremony expired or came back to a different browser",
+  },
+  "auth.googleReason.failed": {
+    message: "La connexion avec Google a échoué. Veuillez réessayer.",
+    description: "Login notice: Google sign-in failed for a technical reason",
+  },
+  "auth.googleReason.unverified": {
+    message: "L'adresse e-mail de ce compte Google n'est pas vérifiée.",
+    description:
+      "Login notice: Google reports the account's email as unverified",
+  },
+  "auth.googleReason.domain": {
+    message:
+      "Ce compte Google n'est pas autorisé ici. Utilisez le compte Google de votre organisation.",
+    description:
+      "Login notice: the Google account is outside the allowed Workspace domain",
+  },
+  "auth.googleReason.notAllowed": {
+    message:
+      "Il n'existe pas encore de compte pour ce compte Google, et son inscription n'a pas été approuvée.",
+    description:
+      "Login notice: no account exists and sign-up for this address is not approved",
+  },
+  "auth.googleReason.blocked": {
+    message: "Ce compte est bloqué.",
+    description: "Login notice: the account is blocked",
+  },
 };
 
 export default frAuth;

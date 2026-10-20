@@ -696,6 +696,50 @@ const jaAuth: Record<string, TranslationEntry> = {
     message: "台帳と共同作業者を管理する",
     description: "Description of the ledger admin mobile permission",
   },
+  "auth.continueWithGoogle": {
+    message: "Google で続行",
+    description: "Button that starts Sign in with Google",
+  },
+  "auth.googleReason.unavailable": {
+    message: "現在、Google でのログインはご利用いただけません。",
+    description:
+      "Login notice: Google sign-in is not configured on this server",
+  },
+  "auth.googleReason.cancelled": {
+    message: "Google でのログインがキャンセルされました。",
+    description: "Login notice: the user cancelled at Google's consent screen",
+  },
+  "auth.googleReason.state": {
+    message:
+      "Google でのログインの有効期限が切れたか、別のブラウザで開始されました。もう一度お試しください。",
+    description:
+      "Login notice: the Google sign-in ceremony expired or came back to a different browser",
+  },
+  "auth.googleReason.failed": {
+    message: "Google でのログインに失敗しました。もう一度お試しください。",
+    description: "Login notice: Google sign-in failed for a technical reason",
+  },
+  "auth.googleReason.unverified": {
+    message: "この Google アカウントのメールアドレスは確認されていません。",
+    description:
+      "Login notice: Google reports the account's email as unverified",
+  },
+  "auth.googleReason.domain": {
+    message:
+      "この Google アカウントはここでは許可されていません。組織の Google アカウントを使用してください。",
+    description:
+      "Login notice: the Google account is outside the allowed Workspace domain",
+  },
+  "auth.googleReason.notAllowed": {
+    message:
+      "この Google アカウントのアカウントはまだなく、登録も承認されていません。",
+    description:
+      "Login notice: no account exists and sign-up for this address is not approved",
+  },
+  "auth.googleReason.blocked": {
+    message: "このアカウントはブロックされています。",
+    description: "Login notice: the account is blocked",
+  },
 };
 
 export default jaAuth;

@@ -700,6 +700,51 @@ const deAuth: Record<string, TranslationEntry> = {
     message: "Hauptbücher und Mitarbeiter verwalten",
     description: "Description of the ledger admin mobile permission",
   },
+  "auth.continueWithGoogle": {
+    message: "Weiter mit Google",
+    description: "Button that starts Sign in with Google",
+  },
+  "auth.googleReason.unavailable": {
+    message: "Die Anmeldung mit Google ist derzeit nicht verfügbar.",
+    description:
+      "Login notice: Google sign-in is not configured on this server",
+  },
+  "auth.googleReason.cancelled": {
+    message: "Die Anmeldung mit Google wurde abgebrochen.",
+    description: "Login notice: the user cancelled at Google's consent screen",
+  },
+  "auth.googleReason.state": {
+    message:
+      "Die Anmeldung mit Google ist abgelaufen oder wurde in einem anderen Browser gestartet. Bitte versuche es erneut.",
+    description:
+      "Login notice: the Google sign-in ceremony expired or came back to a different browser",
+  },
+  "auth.googleReason.failed": {
+    message:
+      "Die Anmeldung mit Google ist fehlgeschlagen. Bitte versuche es erneut.",
+    description: "Login notice: Google sign-in failed for a technical reason",
+  },
+  "auth.googleReason.unverified": {
+    message: "Die E-Mail-Adresse dieses Google-Kontos ist nicht bestätigt.",
+    description:
+      "Login notice: Google reports the account's email as unverified",
+  },
+  "auth.googleReason.domain": {
+    message:
+      "Dieses Google-Konto ist hier nicht zugelassen. Verwende das Google-Konto deiner Organisation.",
+    description:
+      "Login notice: the Google account is outside the allowed Workspace domain",
+  },
+  "auth.googleReason.notAllowed": {
+    message:
+      "Für dieses Google-Konto gibt es noch kein Konto, und die Registrierung wurde nicht freigegeben.",
+    description:
+      "Login notice: no account exists and sign-up for this address is not approved",
+  },
+  "auth.googleReason.blocked": {
+    message: "Dieses Konto ist gesperrt.",
+    description: "Login notice: the account is blocked",
+  },
 };
 
 export default deAuth;

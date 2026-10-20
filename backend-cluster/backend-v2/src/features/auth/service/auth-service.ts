@@ -40,10 +40,12 @@ import {
 } from "@/shared/email-templates";
 import type { MagicLinkToken } from "@/features/auth/data/magic-link-token-model";
 import type { SignupOtpSession } from "@/features/auth/data/signup-otp-session-model";
+import type { VerifiedGoogleIdentity } from "@/features/auth/google/google-oidc";
 
 type RegisterUserParams = {
   email: string;
-  password: string;
+  /** bcrypt hash, or null for a Google-only account. */
+  password: string | null;
   firstName: string;
   lastName: string;
   username?: string | null;
@@ -139,6 +141,10 @@ export interface IAuthService {
   verifySignUpOtp(params: FinishSignupSessionParams): Promise<AuthResponse>;
   getSignupOtpSession(sessionId: string): Promise<SignupOtpSession | null>;
   deleteSignupOtpSession(sessionId: string): Promise<void>;
+  signInWithGoogle(
+    identity: VerifiedGoogleIdentity,
+    ip: string,
+  ): Promise<AuthResponse>;
 }
 
 export class AuthService implements IAuthService {
@@ -162,11 +168,47 @@ export class AuthService implements IAuthService {
     >,
   ) {}
 
+  /**
+   * Sign in with Google, after google-oidc.ts has verified the ID token
+   * (signature, audience, nonce, email authority, hosted domain). Accounts
+   * link by verified email. A new account goes through registerUser, so the
+   * signup allowlist applies exactly as it does to every other signup.
+   */
+  public signInWithGoogle = async (
+    identity: VerifiedGoogleIdentity,
+    ip: string,
+  ): Promise<AuthResponse> => {
+    const existing = await this.models.user.getByMail(this.db, identity.email);
+    if (existing) {
+      if (existing.isBlocked) {
+        throw new ForbiddenError(
+          "User is banned. If you need help, please contact https://beancount.io/tg.",
+          "user",
+        );
+      }
+      const { token, expireAt } = await this.models.jwt.create(
+        this.db,
+        existing.id,
+      );
+      return { token, expireAt };
+    }
+    const localPart = identity.email.slice(0, identity.email.indexOf("@"));
+    return this.registerUser({
+      email: identity.email,
+      password: null,
+      firstName: identity.givenName ?? localPart,
+      lastName: identity.familyName ?? "",
+      username: null,
+      ip,
+    });
+  };
+
   // SIGNUP_ALLOWED_EMAILS / SIGNUP_ALLOWED_DOMAINS (see signup-policy.ts).
   private assertSignupAllowed(email: string): void {
     if (!isSignupAllowed(email, this.config.signup)) {
       throw new ForbiddenError(
         "Sign-up on this server is limited to approved email addresses",
+        "signup",
       );
     }
   }

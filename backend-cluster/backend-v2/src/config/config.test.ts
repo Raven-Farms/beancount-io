@@ -5,6 +5,7 @@ import {
   getMcpRegistryAuthProof,
   getOAuthPublicUrl,
   parseCookieDomain,
+  parseGoogleAuthConfig,
   parseCorsAllowedOrigins,
   parseSignupAllowedDomains,
   parseSignupAllowedEmails,
@@ -375,6 +376,46 @@ describe("config", () => {
           /SIGNUP_ALLOWED_DOMAINS/,
         );
       }
+    });
+  });
+
+  describe("parseGoogleAuthConfig", () => {
+    const id = "1234567890-abcdefghijklmnop.apps.googleusercontent.com";
+    it("is null when nothing is set", () => {
+      expect(parseGoogleAuthConfig({})).toBeNull();
+    });
+    it("reads the client and hosted domains", () => {
+      const g = parseGoogleAuthConfig({
+        GOOGLE_CLIENT_ID: id,
+        GOOGLE_CLIENT_SECRET: "s",
+        GOOGLE_HOSTED_DOMAINS: "Example.com",
+      });
+      expect(g?.clientId).toBe(id);
+      expect([...(g?.hostedDomains ?? [])]).toEqual(["example.com"]);
+    });
+    it("requires both client settings, a real client ID, and a client for hosted domains", () => {
+      expect(() => parseGoogleAuthConfig({ GOOGLE_CLIENT_ID: id })).toThrow(
+        /both/,
+      );
+      expect(() =>
+        parseGoogleAuthConfig({ GOOGLE_CLIENT_SECRET: "s" }),
+      ).toThrow(/both/);
+      expect(() =>
+        parseGoogleAuthConfig({
+          GOOGLE_CLIENT_ID: "nope",
+          GOOGLE_CLIENT_SECRET: "s",
+        }),
+      ).toThrow(/not a Google OAuth client ID/);
+      expect(() =>
+        parseGoogleAuthConfig({ GOOGLE_HOSTED_DOMAINS: "example.com" }),
+      ).toThrow(/GOOGLE_CLIENT_ID/);
+      expect(() =>
+        parseGoogleAuthConfig({
+          GOOGLE_CLIENT_ID: id,
+          GOOGLE_CLIENT_SECRET: "s",
+          GOOGLE_HOSTED_DOMAINS: "*.example.com",
+        }),
+      ).toThrow(/GOOGLE_HOSTED_DOMAINS/);
     });
   });
 });

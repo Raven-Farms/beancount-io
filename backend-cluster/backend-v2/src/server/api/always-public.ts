@@ -38,7 +38,25 @@ const PUBLIC_CONTRACT =
 const MCP_TRANSPORT =
   "The MCP transport. One HTTP request carries a whole JSON-RPC conversation, so the request has no single class; the gate runs per tool call inside the assembled registry, which is also what makes a mid-session revocation bite on the next call.";
 
+const GOOGLE_SIGN_IN_CEREMONY =
+  "Sign in with Google: the browser arrives without a session precisely because this is how it gets one. Bound to the browser by a one-time state cookie, PKCE and the ID token's nonce; refuses unless Google is configured.";
+
 export const ALWAYS_PUBLIC: readonly AlwaysPublicEntry[] = [
+  // --- Sign in with Google -------------------------------------------------
+  {
+    opId: "REST GET /api-gateway/auth/providers",
+    reason:
+      "Which sign-in methods this deployment offers, read by the login page before anyone is signed in. A capability flag, no data.",
+  },
+  {
+    opId: "REST GET /api-gateway/auth/google/start",
+    reason: GOOGLE_SIGN_IN_CEREMONY,
+  },
+  {
+    opId: "REST GET /api-gateway/auth/google/callback",
+    reason: GOOGLE_SIGN_IN_CEREMONY,
+  },
+
   // --- OAuth / OIDC ------------------------------------------------------
   {
     opId: "REST GET /api-gateway/oauth/interaction/{uid}",

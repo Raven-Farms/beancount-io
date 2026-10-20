@@ -48,21 +48,59 @@ export function parseSignupAllowedEmails(
 export function parseSignupAllowedDomains(
   value: string | undefined,
 ): ReadonlySet<string> {
+  return parseDomainList(value, "SIGNUP_ALLOWED_DOMAINS");
+}
+
+function parseDomainList(
+  value: string | undefined,
+  name: string,
+): ReadonlySet<string> {
   const domains = new Set<string>();
   for (const entry of (value ?? "").split(",")) {
     const domain = entry.trim().toLowerCase();
     if (!domain) continue;
     if (!DOMAIN_NAME.test(domain)) {
       throw new Error(
-        `SIGNUP_ALLOWED_DOMAINS: not a bare domain ${JSON.stringify(entry.trim())}`,
+        `${name}: not a bare domain ${JSON.stringify(entry.trim())}`,
       );
     }
     domains.add(domain);
   }
   if (value?.trim() && domains.size === 0) {
-    throw new Error("SIGNUP_ALLOWED_DOMAINS: set but lists no domains");
+    throw new Error(`${name}: set but lists no domains`);
   }
   return domains;
+}
+
+/** Both GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET, or neither. */
+export function parseGoogleAuthConfig(env: {
+  GOOGLE_CLIENT_ID?: string;
+  GOOGLE_CLIENT_SECRET?: string;
+  GOOGLE_HOSTED_DOMAINS?: string;
+}): GoogleAuthConfig | null {
+  const clientId = env.GOOGLE_CLIENT_ID?.trim() ?? "";
+  const clientSecret = env.GOOGLE_CLIENT_SECRET?.trim() ?? "";
+  const hostedDomains = parseDomainList(
+    env.GOOGLE_HOSTED_DOMAINS,
+    "GOOGLE_HOSTED_DOMAINS",
+  );
+  if (!clientId && !clientSecret) {
+    if (hostedDomains.size > 0) {
+      throw new Error(
+        "GOOGLE_HOSTED_DOMAINS is set but GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET are not",
+      );
+    }
+    return null;
+  }
+  if (!clientId || !clientSecret) {
+    throw new Error(
+      "Set both GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET, or neither",
+    );
+  }
+  if (!/^[0-9]+-[a-z0-9]+\.apps\.googleusercontent\.com$/.test(clientId)) {
+    throw new Error("GOOGLE_CLIENT_ID is not a Google OAuth client ID");
+  }
+  return { clientId, clientSecret, hostedDomains };
 }
 
 export function parseCookieDomain(
@@ -298,6 +336,18 @@ export function getDevelopmentPremiumUserIds(
   );
 }
 
+/**
+ * Sign in with Google (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET /
+ * GOOGLE_HOSTED_DOMAINS). `null` = not configured (the default): the routes
+ * report it unavailable and the dashboard shows no button.
+ */
+export interface GoogleAuthConfig {
+  clientId: string;
+  clientSecret: string;
+  /** When non-empty, the ID token's `hd` must be one of these. */
+  hostedDomains: ReadonlySet<string>;
+}
+
 /** Who may create an account; both sets empty = open signup. */
 export interface SignupPolicy {
   allowedEmails: ReadonlySet<string>;
@@ -308,6 +358,7 @@ export interface AppConfig {
   api: ApiConfig;
   /** SIGNUP_ALLOWED_EMAILS / SIGNUP_ALLOWED_DOMAINS; both empty = open signup. */
   signup: SignupPolicy;
+  googleAuth: GoogleAuthConfig | null;
   sshProxy: SshProxyConfig;
   env: Environment;
   project: string;
@@ -476,6 +527,11 @@ export const config: AppConfig = {
       environment,
     ),
   },
+  googleAuth: parseGoogleAuthConfig({
+    GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
+    GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
+    GOOGLE_HOSTED_DOMAINS: process.env.GOOGLE_HOSTED_DOMAINS,
+  }),
   signup: {
     allowedEmails: parseSignupAllowedEmails(process.env.SIGNUP_ALLOWED_EMAILS),
     allowedDomains: parseSignupAllowedDomains(

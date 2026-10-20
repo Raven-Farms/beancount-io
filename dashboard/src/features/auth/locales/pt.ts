@@ -697,6 +697,50 @@ const ptAuth: Record<string, TranslationEntry> = {
     message: "Gerenciar livros contábeis e colaboradores",
     description: "Description of the ledger admin mobile permission",
   },
+  "auth.continueWithGoogle": {
+    message: "Continuar com o Google",
+    description: "Button that starts Sign in with Google",
+  },
+  "auth.googleReason.unavailable": {
+    message: "O login com o Google não está disponível no momento.",
+    description:
+      "Login notice: Google sign-in is not configured on this server",
+  },
+  "auth.googleReason.cancelled": {
+    message: "O login com o Google foi cancelado.",
+    description: "Login notice: the user cancelled at Google's consent screen",
+  },
+  "auth.googleReason.state": {
+    message:
+      "O login com o Google expirou ou foi iniciado em outro navegador. Tente novamente.",
+    description:
+      "Login notice: the Google sign-in ceremony expired or came back to a different browser",
+  },
+  "auth.googleReason.failed": {
+    message: "Não foi possível entrar com o Google. Tente novamente.",
+    description: "Login notice: Google sign-in failed for a technical reason",
+  },
+  "auth.googleReason.unverified": {
+    message: "O endereço de e-mail dessa conta do Google não foi verificado.",
+    description:
+      "Login notice: Google reports the account's email as unverified",
+  },
+  "auth.googleReason.domain": {
+    message:
+      "Essa conta do Google não é permitida aqui. Use a conta do Google da sua organização.",
+    description:
+      "Login notice: the Google account is outside the allowed Workspace domain",
+  },
+  "auth.googleReason.notAllowed": {
+    message:
+      "Ainda não existe uma conta para essa conta do Google, e o cadastro dela não foi aprovado.",
+    description:
+      "Login notice: no account exists and sign-up for this address is not approved",
+  },
+  "auth.googleReason.blocked": {
+    message: "Esta conta está bloqueada.",
+    description: "Login notice: the account is blocked",
+  },
 };
 
 export default ptAuth;

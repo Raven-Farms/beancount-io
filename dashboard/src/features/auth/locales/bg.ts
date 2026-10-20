@@ -696,6 +696,50 @@ const bgAuth: Record<string, TranslationEntry> = {
     message: "Управлявайте счетоводни книги и сътрудници",
     description: "Description of the ledger admin mobile permission",
   },
+  "auth.continueWithGoogle": {
+    message: "Продължете с Google",
+    description: "Button that starts Sign in with Google",
+  },
+  "auth.googleReason.unavailable": {
+    message: "Влизането с Google в момента не е налично.",
+    description:
+      "Login notice: Google sign-in is not configured on this server",
+  },
+  "auth.googleReason.cancelled": {
+    message: "Влизането с Google беше отказано.",
+    description: "Login notice: the user cancelled at Google's consent screen",
+  },
+  "auth.googleReason.state": {
+    message:
+      "Влизането с Google изтече или е започнато в друг браузър. Опитайте отново.",
+    description:
+      "Login notice: the Google sign-in ceremony expired or came back to a different browser",
+  },
+  "auth.googleReason.failed": {
+    message: "Влизането с Google не бе успешно. Опитайте отново.",
+    description: "Login notice: Google sign-in failed for a technical reason",
+  },
+  "auth.googleReason.unverified": {
+    message: "Имейл адресът на този профил в Google не е потвърден.",
+    description:
+      "Login notice: Google reports the account's email as unverified",
+  },
+  "auth.googleReason.domain": {
+    message:
+      "Този профил в Google няма достъп тук. Използвайте профила в Google на вашата организация.",
+    description:
+      "Login notice: the Google account is outside the allowed Workspace domain",
+  },
+  "auth.googleReason.notAllowed": {
+    message:
+      "Все още няма акаунт за този профил в Google и регистрацията му не е одобрена.",
+    description:
+      "Login notice: no account exists and sign-up for this address is not approved",
+  },
+  "auth.googleReason.blocked": {
+    message: "Този акаунт е блокиран.",
+    description: "Login notice: the account is blocked",
+  },
 };
 
 export default bgAuth;

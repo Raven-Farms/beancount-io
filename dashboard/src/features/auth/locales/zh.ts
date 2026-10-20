@@ -682,6 +682,47 @@ const zhAuth: Record<string, TranslationEntry> = {
     message: "管理账本和协作者",
     description: "Description of the ledger admin mobile permission",
   },
+  "auth.continueWithGoogle": {
+    message: "使用 Google 继续",
+    description: "Button that starts Sign in with Google",
+  },
+  "auth.googleReason.unavailable": {
+    message: "目前无法使用 Google 登录。",
+    description:
+      "Login notice: Google sign-in is not configured on this server",
+  },
+  "auth.googleReason.cancelled": {
+    message: "Google 登录已取消。",
+    description: "Login notice: the user cancelled at Google's consent screen",
+  },
+  "auth.googleReason.state": {
+    message: "Google 登录已过期，或是在其他浏览器中发起的。请重试。",
+    description:
+      "Login notice: the Google sign-in ceremony expired or came back to a different browser",
+  },
+  "auth.googleReason.failed": {
+    message: "Google 登录失败。请重试。",
+    description: "Login notice: Google sign-in failed for a technical reason",
+  },
+  "auth.googleReason.unverified": {
+    message: "该 Google 账号的电子邮件地址尚未验证。",
+    description:
+      "Login notice: Google reports the account's email as unverified",
+  },
+  "auth.googleReason.domain": {
+    message: "此处不允许使用该 Google 账号。请使用你所在组织的 Google 账号。",
+    description:
+      "Login notice: the Google account is outside the allowed Workspace domain",
+  },
+  "auth.googleReason.notAllowed": {
+    message: "该 Google 账号尚无对应账户，且其注册未获批准。",
+    description:
+      "Login notice: no account exists and sign-up for this address is not approved",
+  },
+  "auth.googleReason.blocked": {
+    message: "此账户已被封禁。",
+    description: "Login notice: the account is blocked",
+  },
 };
 
 export default zhAuth;

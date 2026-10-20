@@ -1,3 +1,4 @@
+import { setGoogleAuthRoutes } from "@/features/auth/api/google-auth-routes";
 import {
   SOCIAL_V1_ROUTES,
   setSocialRoutes,
@@ -195,6 +196,17 @@ const REST_FRAGMENTS: readonly RestFragment[] = [
     gate: "outside",
     register: (router, { layers, config }) =>
       setOidcRoutes(router, layers, config),
+  },
+  {
+    // Sign in with Google (OIDC relying party). Off unless GOOGLE_CLIENT_ID /
+    // GOOGLE_CLIENT_SECRET are set; /auth/providers always answers.
+    feature: "google-auth",
+    gate: "outside",
+    register: (router, { layers, config }) =>
+      setGoogleAuthRoutes(router, {
+        authSession: layers.workflows.authSession,
+        config,
+      }),
   },
   {
     feature: "well-known",

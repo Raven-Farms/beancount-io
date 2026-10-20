@@ -696,6 +696,50 @@ const nlAuth: Record<string, TranslationEntry> = {
     message: "Beheer grootboeken en medewerkers",
     description: "Description of the ledger admin mobile permission",
   },
+  "auth.continueWithGoogle": {
+    message: "Doorgaan met Google",
+    description: "Button that starts Sign in with Google",
+  },
+  "auth.googleReason.unavailable": {
+    message: "Inloggen met Google is op dit moment niet beschikbaar.",
+    description:
+      "Login notice: Google sign-in is not configured on this server",
+  },
+  "auth.googleReason.cancelled": {
+    message: "Inloggen met Google is geannuleerd.",
+    description: "Login notice: the user cancelled at Google's consent screen",
+  },
+  "auth.googleReason.state": {
+    message:
+      "Inloggen met Google is verlopen of in een andere browser gestart. Probeer het opnieuw.",
+    description:
+      "Login notice: the Google sign-in ceremony expired or came back to a different browser",
+  },
+  "auth.googleReason.failed": {
+    message: "Inloggen met Google is mislukt. Probeer het opnieuw.",
+    description: "Login notice: Google sign-in failed for a technical reason",
+  },
+  "auth.googleReason.unverified": {
+    message: "Het e-mailadres van dat Google-account is niet geverifieerd.",
+    description:
+      "Login notice: Google reports the account's email as unverified",
+  },
+  "auth.googleReason.domain": {
+    message:
+      "Dat Google-account is hier niet toegestaan. Gebruik het Google-account van je organisatie.",
+    description:
+      "Login notice: the Google account is outside the allowed Workspace domain",
+  },
+  "auth.googleReason.notAllowed": {
+    message:
+      "Er is nog geen account voor dat Google-account en de aanmelding is niet goedgekeurd.",
+    description:
+      "Login notice: no account exists and sign-up for this address is not approved",
+  },
+  "auth.googleReason.blocked": {
+    message: "Dit account is geblokkeerd.",
+    description: "Login notice: the account is blocked",
+  },
 };
 
 export default nlAuth;

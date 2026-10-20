@@ -20,7 +20,8 @@ export interface User {
 
 // Input type for creating a new user
 export interface CreateUserInput {
-  password: string;
+  /** bcrypt hash, or null for an account that signs in only with Google. */
+  password: string | null;
   email: string;
   ip: string;
   ledger_username: string;

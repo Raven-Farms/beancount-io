@@ -108,6 +108,21 @@ allows CORS from those hosts. A self-host on another domain sets:
   exactly a listed domain (subdomains excluded), may sign up. The check runs
   when a signup starts and again when the account is created, so it covers
   every signup method. Malformed entries fail at startup.
+- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_HOSTED_DOMAINS`: Sign in
+  with Google (OIDC authorization code flow with PKCE and nonce). Off unless
+  both client values are set.
+  - Register a Web OAuth client with the redirect URI
+    `${DASHBOARD_URL}/api-gateway/auth/google/callback`. The dashboard host must
+    serve `/api-gateway/`, and `AUTH_COOKIE_DOMAIN` must suit that host.
+  - Google accounts link to users **by verified email**, which Google is
+    authoritative for: Workspace (`hd`) and gmail.com accounts only.
+  - `GOOGLE_HOSTED_DOMAINS` restricts sign-in to those Workspace domains.
+  - A first sign-in creates the account through the normal signup path, so
+    `SIGNUP_ALLOWED_*` still decides who may join.
+  - Routes: `GET /api-gateway/auth/providers`,
+    `/api-gateway/auth/google/start` and `/api-gateway/auth/google/callback`
+    (anonymous rate-limit budget). Offboarding: when an address is reassigned
+    in Workspace, block or delete the old user first.
 
 Production OAuth requires `OAUTH_JWKS`, a complete private P-256/ES256 signing
 JWKS provided by the deployment secret manager. It must never be committed or
