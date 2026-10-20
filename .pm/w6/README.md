@@ -64,6 +64,8 @@ Prioritize the major correctness findings (PRINT/FROM/JOURNAL, authored location
 
 ## Inbox
 
+- [039](./blocked/039.md) — Recheck Hermes support for consent-gated ledger instruction scaffolding — **blocked:** needs a compatible Hermes host policy; retain the approved workflow and do not force installation.
+
 
 
 - [016](./blocked/016.md) — Adopt corrected PRINT filtering and cost-preserving rendering (major; ledger; 45–60m after release) — **blocked:** awaiting a published WASM artifact containing upstream 3ad34e07.
