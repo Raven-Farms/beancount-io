@@ -231,7 +231,7 @@ def verify_close(workspace, ledger, before, current):
     parents = git(workspace, 'rev-list', '--parents', '-n', '1', 'HEAD').decode().split()
     wanted = [current['head']] if before['head'] is None else [current['head'], before['head']]
     require(parents == wanted, 'Close must add exactly one non-merge commit to the recorded HEAD.')
-    changed = git(workspace, 'diff-tree', '--no-commit-id', '--name-only', '-r', '-z', 'HEAD').decode().split('\0')
+    changed = git(workspace, 'diff-tree', '--root', '--no-commit-id', '--name-only', '-r', '-z', 'HEAD').decode().split('\0')
     changed = sorted(p for p in changed if p)
     require(changed == [ledger], f'Close committed unexpected paths: {changed!r}.')
     require(git(workspace, 'show', f'HEAD:{ledger}') == (workspace / ledger).read_bytes(),
