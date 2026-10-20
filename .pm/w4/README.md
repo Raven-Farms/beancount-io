@@ -58,7 +58,7 @@
 
 - [ ] **m37** — [Resolve README file and image references from their source path](./m37/README.md) (7 tasks) ← dashboard QA, 2026-10-20; minor, rendered file/image context and native hrefs.
 
-- [ ] **m36** — [Preserve commit and profile activity timestamps through hydration](./m36/README.md) (7 tasks) ← dashboard QA, 2026-10-20; minor, commit/profile focus and exact browser-zone attributes.
+- [ ] **m36** — [Preserve commit and profile activity timestamps through hydration](./blocked/m36/README.md) (7 tasks) ← dashboard QA, 2026-10-20; minor, commit/profile focus and exact browser-zone attributes. — **blocked:** fix shipped; awaiting deployed SSR browser check
 
 - [ ] **m35** — [Keep form fields usable when suggestions fail](./blocked/m35/README.md) (6 tasks) ← dashboard QA, 2026-10-20; minor, four form suggestion wrappers. — **blocked:** fix shipped; awaiting deployed live failure/retry check
 
