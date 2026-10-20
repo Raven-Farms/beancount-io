@@ -71,6 +71,26 @@ describe("password forms when AUTH_PASSWORD_ENABLED=false", () => {
     window.history.pushState({}, "", "/");
   });
 
+  it("asks again after a failed probe instead of caching the failure", async () => {
+    const fetch = vi
+      .spyOn(globalThis, "fetch")
+      .mockRejectedValueOnce(new Error("offline"))
+      .mockResolvedValue({
+        ok: true,
+        json: async () => ({ google: true, password: false }),
+      } as Response);
+    const first = render(<ForgotPasswordForm />);
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(first.container.querySelector("input")).not.toBeNull(),
+    );
+    first.unmount();
+    const second = render(<ForgotPasswordForm />);
+    await screen.findByRole("link", { name: /Google/ });
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(second.container.querySelector("input")).toBeNull();
+  });
+
   it("RegisterForm keeps its fields when password sign-in is on", async () => {
     providers({ google: true, password: true });
     const { container } = render(

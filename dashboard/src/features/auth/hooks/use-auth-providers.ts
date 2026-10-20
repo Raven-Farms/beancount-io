@@ -15,13 +15,22 @@ const DEFAULT: AuthProviders = { google: false, password: true };
 let pending: Promise<AuthProviders> | null = null;
 
 function load(): Promise<AuthProviders> {
+  // Only a real answer is cached: after a failed probe the next form to
+  // mount asks again, so a brief outage cannot strand a Google-only server
+  // behind password forms until a full reload.
   pending ??= fetch("/api-gateway/auth/providers", { credentials: "omit" })
-    .then((res) => (res.ok ? res.json() : null))
+    .then((res) => {
+      if (!res.ok) throw new Error(`providers ${res.status}`);
+      return res.json();
+    })
     .then((body: { google?: unknown; password?: unknown } | null) => ({
       google: body?.google === true,
       password: body?.password !== false,
     }))
-    .catch(() => DEFAULT);
+    .catch(() => {
+      pending = null;
+      return DEFAULT;
+    });
   return pending;
 }
 
