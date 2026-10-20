@@ -3,7 +3,12 @@ import { AuthResolver } from "../auth-resolver";
 import { IContext } from "@/server/graphql/context";
 import type { IAuthService } from "@/features/auth/service/auth-service";
 import type { IAuthSessionWorkflow } from "@/features/auth/workflow/auth-session-workflow";
-import { UnauthenticatedError, BadUserInputError } from "@/shared/errors";
+import {
+  UnauthenticatedError,
+  BadUserInputError,
+  RateLimitedError,
+  ServiceUnavailableError,
+} from "@/shared/errors";
 import type { SignupOtpSession } from "@/features/auth/data/signup-otp-session-model";
 
 describe("AuthResolver", () => {
@@ -34,6 +39,8 @@ describe("AuthResolver", () => {
     mockAuthService = {
       registerUser: jest.fn(),
       loginUser: jest.fn(),
+      requestSignInRecovery: jest.fn(),
+      signInWithEmailCode: jest.fn(),
       signInWithMagicLinkToken: jest.fn(),
       refreshToken: jest.fn(),
       logout: jest.fn(),
@@ -50,6 +57,7 @@ describe("AuthResolver", () => {
 
     mockAuthSessionWorkflow = {
       loginUser: jest.fn(),
+      signInWithEmailCode: jest.fn(),
       signInWithMagicLinkToken: jest.fn(),
       verifySignUpOtp: jest.fn(),
     };
@@ -139,6 +147,118 @@ describe("AuthResolver", () => {
       await expect(resolver.signIn(mockContext, args)).rejects.toThrow(
         BadUserInputError,
       );
+    });
+  });
+
+  describe("requestSignInRecovery", () => {
+    it("acknowledges delivery without exposing the public receipt as a challenge", async () => {
+      mockAuthService.requestSignInRecovery.mockResolvedValue(
+        "aem_public_receipt",
+      );
+      mockContext.reqHeaders = {
+        "x-forwarded-for": "203.0.113.1",
+        "x-real-ip": "192.0.2.1",
+      };
+
+      const result = await resolver.requestSignInRecovery(mockContext, {
+        email: " PERSON@EXAMPLE.COM ",
+        returnTo: "/ledger/person/books?view=journal#entry",
+      });
+
+      expect(result).toEqual({ success: true });
+      expect(mockAuthService.requestSignInRecovery).toHaveBeenCalledWith(
+        "person@example.com",
+        "127.0.0.1",
+        "/ledger/person/books?view=journal#entry",
+      );
+      expect((mockContext.koaCtx as any).cookies.set).not.toHaveBeenCalled();
+    });
+
+    it("accepts an omitted continuation without inventing a destination", async () => {
+      mockAuthService.requestSignInRecovery.mockResolvedValue(
+        "aem_public_receipt",
+      );
+
+      await resolver.requestSignInRecovery(mockContext, {
+        email: "person@example.com",
+      });
+
+      expect(mockAuthService.requestSignInRecovery).toHaveBeenCalledWith(
+        "person@example.com",
+        "127.0.0.1",
+        undefined,
+      );
+    });
+
+    it.each([
+      new RateLimitedError(60),
+      new ServiceUnavailableError("Authentication mail", 5),
+    ])("preserves admission and queue errors", async (error) => {
+      mockAuthService.requestSignInRecovery.mockRejectedValue(error);
+
+      await expect(
+        resolver.requestSignInRecovery(mockContext, {
+          email: "person@example.com",
+        }),
+      ).rejects.toBe(error);
+      expect((mockContext.koaCtx as any).cookies.set).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("signInWithEmailCode", () => {
+    it("normalizes the email, preserves the code and password, and issues a secure session cookie", async () => {
+      mockContext.config.env = "production";
+      (mockContext.koaCtx as any).URL = new URL("https://api.beancount.io");
+      mockContext.reqHeaders = { "x-forwarded-for": "203.0.113.1" };
+      const response = {
+        token: "issued-session",
+        expireAt: new Date("2030-01-01"),
+      };
+      mockAuthSessionWorkflow.signInWithEmailCode.mockResolvedValue(response);
+
+      const result = await resolver.signInWithEmailCode(mockContext, {
+        email: " PERSON@EXAMPLE.COM ",
+        challengeId: "rcv_mail_only_challenge",
+        code: "001234",
+        password: " unchanged password ",
+      });
+
+      expect(result).toEqual(response);
+      expect(mockAuthSessionWorkflow.signInWithEmailCode).toHaveBeenCalledWith({
+        email: "person@example.com",
+        challengeId: "rcv_mail_only_challenge",
+        code: "001234",
+        password: " unchanged password ",
+        ip: "127.0.0.1",
+      });
+      expect((mockContext.koaCtx as any).cookies.set).toHaveBeenCalledWith(
+        "authSess:beancount.io",
+        response.token,
+        expect.objectContaining({
+          httpOnly: true,
+          secure: true,
+          domain: ".beancount.io",
+          maxAge: expect.any(Number),
+        }),
+      );
+      expect(mockAuthService.signInWithEmailCode).not.toHaveBeenCalled();
+    });
+
+    it("does not set a cookie when ownership or password verification fails", async () => {
+      const error = new BadUserInputError(
+        "Invalid email, verification code or password",
+      );
+      mockAuthSessionWorkflow.signInWithEmailCode.mockRejectedValue(error);
+
+      await expect(
+        resolver.signInWithEmailCode(mockContext, {
+          email: "person@example.com",
+          challengeId: "rcv_mail_only_challenge",
+          code: "000000",
+          password: "wrong",
+        }),
+      ).rejects.toBe(error);
+      expect((mockContext.koaCtx as any).cookies.set).not.toHaveBeenCalled();
     });
   });
 

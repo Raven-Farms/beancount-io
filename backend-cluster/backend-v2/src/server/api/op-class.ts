@@ -478,6 +478,18 @@ const AUTH_VERB_ENTRIES: readonly VerbEntry[] = [
     M.sessionCeremony,
   ),
   gqlOnly(
+    "Mutation.requestSignInRecovery",
+    "session-only",
+    R.sessionCeremony,
+    M.sessionCeremony,
+  ),
+  gqlOnly(
+    "Mutation.signInWithEmailCode",
+    "session-only",
+    R.sessionCeremony,
+    M.sessionCeremony,
+  ),
+  gqlOnly(
     "Mutation.refreshToken",
     "session-only",
     R.sessionCeremony,

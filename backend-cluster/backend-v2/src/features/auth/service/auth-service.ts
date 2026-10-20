@@ -54,6 +54,7 @@ import { verifyPasswordWithCapacity } from "@/features/auth/utils/password-verif
 import type { User } from "@/features/auth/data/user-model/types";
 import { UNKNOWN_CLIENT_ADDRESS } from "@/server/client-address";
 import { secureStringEqual } from "@/features/auth/utils/secure-string-equal";
+import { validateAuthReturnPath } from "@/features/auth/utils/auth-return-path";
 import bcrypt from "bcryptjs";
 import {
   renderWelcomeHtml,
@@ -157,7 +158,11 @@ const DISPOSABLE_EMAIL_DOMAINS = new Set([
 export interface IAuthService {
   registerUser(params: RegisterUserParams): Promise<AuthResponse>;
   loginUser(params: LoginUserParams): Promise<AuthResponse>;
-  requestSignInRecovery(email: string, ip?: string): Promise<string>;
+  requestSignInRecovery(
+    email: string,
+    ip?: string,
+    returnTo?: string,
+  ): Promise<string>;
   signInWithEmailCode(params: SignInRecoveryParams): Promise<AuthResponse>;
   /**
    * The account an email + password names, held to the account's
@@ -438,24 +443,29 @@ export class AuthService implements IAuthService {
   public requestSignInRecovery = async (
     email: string,
     ip?: string,
+    returnTo?: string,
   ): Promise<string> => {
-    return this.queueRecoveryMail(email, ip, "sign-in-recovery");
+    return this.queueRecoveryMail(email, ip, "sign-in-recovery", returnTo);
   };
 
   private queueRecoveryMail = async (
     email: string,
     ip: string | undefined,
     kind: "reset" | "sign-in-recovery",
+    returnTo?: string,
   ): Promise<string> => {
     email = email.trim().toLowerCase();
     await enforceMailRequestLimits(email, ip ?? UNKNOWN_CLIENT_ADDRESS);
     if (!z.email().max(254).safeParse(email).success)
       throw new BadUserInputError("Email is invalid");
+    const next = validateAuthReturnPath(returnTo);
     if (!this.enqueueAuthMail)
       throw new ServiceUnavailableError("Email delivery", 5);
     // Durable enqueue is identical for registered and unknown addresses. The
     // worker owns account lookup, delivery suppression and provider retries.
-    return this.enqueueAuthMail(email, kind);
+    return next === undefined
+      ? this.enqueueAuthMail(email, kind)
+      : this.enqueueAuthMail(email, kind, next);
   };
 
   public signInWithEmailCode = async (

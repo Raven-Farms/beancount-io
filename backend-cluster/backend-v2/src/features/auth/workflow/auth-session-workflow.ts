@@ -5,6 +5,7 @@ import type {
   FinishSignupSessionParams,
   IAuthService,
   LoginUserParams,
+  SignInRecoveryParams,
   SignInWithOneTimeTokenParams,
 } from "@/features/auth/service/auth-service";
 import type { IUserProfileService } from "@/features/gitea/user-profile/service/user-profile-service";
@@ -16,6 +17,7 @@ const OPEN_LEDGER_USERNAME = "open_ledger";
 
 export interface IAuthSessionWorkflow {
   loginUser(params: LoginUserParams): Promise<AuthResponse>;
+  signInWithEmailCode(params: SignInRecoveryParams): Promise<AuthResponse>;
   signInWithMagicLinkToken(
     params: SignInWithOneTimeTokenParams,
   ): Promise<AuthResponse>;
@@ -27,7 +29,10 @@ export class AuthSessionWorkflow implements IAuthSessionWorkflow {
   constructor(
     private readonly authService: Pick<
       IAuthService,
-      "loginUser" | "signInWithMagicLinkToken" | "verifySignUpOtp"
+      | "loginUser"
+      | "signInWithEmailCode"
+      | "signInWithMagicLinkToken"
+      | "verifySignUpOtp"
     >,
     private readonly userProfileService: Pick<
       IUserProfileService,
@@ -39,6 +44,14 @@ export class AuthSessionWorkflow implements IAuthSessionWorkflow {
 
   async loginUser(params: LoginUserParams): Promise<AuthResponse> {
     const result = await this.authService.loginUser(params);
+    await this.followOpenLedger(result.token);
+    return result;
+  }
+
+  async signInWithEmailCode(
+    params: SignInRecoveryParams,
+  ): Promise<AuthResponse> {
+    const result = await this.authService.signInWithEmailCode(params);
     await this.followOpenLedger(result.token);
     return result;
   }

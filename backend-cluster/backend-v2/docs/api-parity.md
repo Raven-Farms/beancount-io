@@ -89,6 +89,16 @@ none can dissolve into stale exemption prose:
 7. **Raw-byte and browser-ceremony exclusions.** Archive bytes have no GraphQL
    twin (bytes, not fields); login/OTP/billing/Plaid-Link ceremonies stay on
    their browser surfaces with written reasons in the op-class table.
+   Email sign-in recovery follows this existing ceremony policy:
+   `requestSignInRecovery` returns only a delivery acknowledgement, while
+   `signInWithEmailCode` consumes an email-only ownership challenge and code
+   plus the correct password, then issues the first-party session cookie.
+   Both are anonymous GraphQL mutations; REST and MCP do not mint these
+   browser-session credentials. Recovery retains source request quotas and
+   cannot use the public enqueue receipt as its secret challenge. An optional
+   validated local `returnTo` survives the emailed link as the dashboard's
+   `next` parameter, including its query and fragment; email, code and password
+   are never added to that link.
 8. **Token introspection is not an MCP tool.** `credentials.introspect`
    (ADR 0017, w3/m44) reaches GraphQL and REST; its `mcpExempt` records why it
    stops there. The caller is a token _validator_ — a gateway, a proxy, an
@@ -187,16 +197,16 @@ optional filters and pagination, output representations, domain effects, and
 failure behavior through HTTP REST, GraphQL execution, and an MCP client.
 Shared service mocks alone do not prove the adapter contract. In particular:
 
-| Family                             | Required comparisons                                                                                                                  |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| Reports and journals               | account/filter/time/interval/conversion, page boundaries, ordering, empty results, hierarchy, currencies and exact numeric values.    |
-| BQL                                | Typed columns/rows and text rendering, including nulls and non-table results.                                                         |
-| File and entry writes              | Safe paths, structured validation, source hashes, atomic batches, commit effects, source ranges, and equivalent supported previews.   |
-| API keys                           | Expiry, names, scopes, inherited restriction, public metadata, one-time plaintext and revocation.                                     |
-| Bank operations                    | Every per-operation tool, account filters, explicit ledger target, preview support, staging/submit effects and composite authority.   |
-| Downloads                          | Selection, expiry, authorization of the full download path, content type and actual bytes; a link alone is not proof.                 |
-| Administrative/assisted operations | Exact target, current authority, quotas, ownership, side effects and dependency failure handling.                                     |
-| All families                       | Wrong audience/scope/target, revocation, source outage, rate budget, audit operation/target and concurrent request isolation.         |
+| Family                             | Required comparisons                                                                                                                |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Reports and journals               | account/filter/time/interval/conversion, page boundaries, ordering, empty results, hierarchy, currencies and exact numeric values.  |
+| BQL                                | Typed columns/rows and text rendering, including nulls and non-table results.                                                       |
+| File and entry writes              | Safe paths, structured validation, source hashes, atomic batches, commit effects, source ranges, and equivalent supported previews. |
+| API keys                           | Expiry, names, scopes, inherited restriction, public metadata, one-time plaintext and revocation.                                   |
+| Bank operations                    | Every per-operation tool, account filters, explicit ledger target, preview support, staging/submit effects and composite authority. |
+| Downloads                          | Selection, expiry, authorization of the full download path, content type and actual bytes; a link alone is not proof.               |
+| Administrative/assisted operations | Exact target, current authority, quotas, ownership, side effects and dependency failure handling.                                   |
+| All families                       | Wrong audience/scope/target, revocation, source outage, rate budget, audit operation/target and concurrent request isolation.       |
 
 Each MCP write or admin tool performs one operation through that operation's
 exact protected service; no tool selects among operations by an argument

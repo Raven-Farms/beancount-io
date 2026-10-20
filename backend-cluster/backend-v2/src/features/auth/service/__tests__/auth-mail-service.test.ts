@@ -4,6 +4,8 @@ import { consumeMailDelivery } from "../../operations/auth-mail-limits";
 import { issueSignInRecoveryProof } from "../../operations/sign-in-recovery-proof";
 import { ServiceUnavailableError } from "@/shared/errors";
 import { logger } from "@/shared/logger";
+import { createCipheriv, hkdfSync, randomBytes } from "node:crypto";
+import { BadUserInputError } from "@/shared/errors";
 
 jest.mock("../../operations/auth-mail-limits", () => ({
   consumeMailDelivery: jest.fn(),
@@ -122,12 +124,10 @@ function fixture(secret = "synthetic-mail-test-secret") {
 beforeEach(() => {
   jest.clearAllMocks();
   jest.mocked(consumeMailDelivery).mockResolvedValue(true);
-  jest
-    .mocked(issueSignInRecoveryProof)
-    .mockResolvedValue({
-      code: "123456",
-      challengeId: "rcv_private-challenge",
-    });
+  jest.mocked(issueSignInRecoveryProof).mockResolvedValue({
+    code: "123456",
+    challengeId: "rcv_private-challenge",
+  });
 });
 
 it("enqueues opaque IDs and encrypted recipient data identically before any account lookup", async () => {
@@ -278,4 +278,76 @@ it("rechecks lease ownership after token storage before sending", async () => {
   await f.service().processBatch();
   expect(f.emailToken.issueToken).toHaveBeenCalledTimes(1);
   expect(f.sendgrid.sendMail).not.toHaveBeenCalled();
+});
+
+it("carries the encoded continuation and fragment inside next without adding recipient or code to the URL", async () => {
+  const f = fixture();
+  const next =
+    "/ledger/owner/books/query?q=SELECT%20account%0AFROM%20accounts#results";
+  await f.service().enqueue("person@example.com", "sign-in-recovery", next);
+  await f.service().processBatch();
+  const message = f.sendgrid.sendMail.mock.calls[0][0];
+  const link = message.text!.match(/https:\/\/\S+/)![0];
+  const parsed = new URL(link);
+  expect(parsed.searchParams.get("recovery")).toBe("rcv_private-challenge");
+  expect(parsed.searchParams.get("next")).toBe(next);
+  expect(parsed.hash).toBe("");
+  expect([...parsed.searchParams.keys()]).toEqual(["recovery", "next"]);
+  expect(link).not.toContain("person@example.com");
+  expect(link).not.toContain("123456");
+  expect(message.html).toContain("&amp;next=");
+});
+
+it.each(["//evil.example", "/%2509/evil.example", "/" + "x".repeat(2048)])(
+  "rejects an unsafe continuation before persisting a job: %s",
+  async (next) => {
+    const f = fixture();
+    await expect(
+      f.service().enqueue("person@example.com", "sign-in-recovery", next),
+    ).rejects.toBeInstanceOf(BadUserInputError);
+    expect(f.authMail.enqueue).not.toHaveBeenCalled();
+    expect(f.user.getByMail).not.toHaveBeenCalled();
+  },
+);
+
+it("revalidates an authenticated persisted continuation before constructing an email", async () => {
+  const f = fixture();
+  const id = await f
+    .service()
+    .enqueue("person@example.com", "sign-in-recovery");
+  // Model a pre-existing authenticated payload from before validation changed;
+  // the worker must validate data again even though GCM authentication passes.
+  const key = Buffer.from(
+    hkdfSync(
+      "sha256",
+      "synthetic-mail-test-secret",
+      "",
+      "beancount/auth-mail/v1",
+      32,
+    ),
+  );
+  const iv = randomBytes(12);
+  const cipher = createCipheriv("aes-256-gcm", key, iv);
+  cipher.setAAD(Buffer.from(`${id}:sign-in-recovery:v1`));
+  const encrypted = Buffer.concat([
+    cipher.update(
+      JSON.stringify({
+        email: "person@example.com",
+        returnTo: "//evil.example",
+      }),
+    ),
+    cipher.final(),
+  ]);
+  f.rows.get(id)!.payload = [
+    "v1",
+    iv.toString("base64"),
+    cipher.getAuthTag().toString("base64"),
+    encrypted.toString("base64"),
+  ].join(".");
+
+  await f.service().processBatch();
+
+  expect(f.sendgrid.sendMail).not.toHaveBeenCalled();
+  expect(f.user.getByMail).not.toHaveBeenCalled();
+  expect(f.authMail.retry).toHaveBeenCalledTimes(1);
 });

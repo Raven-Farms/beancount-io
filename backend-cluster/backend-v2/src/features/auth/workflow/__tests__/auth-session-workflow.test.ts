@@ -23,6 +23,8 @@ import {
   BadUserInputError,
   ForbiddenError,
   NotFoundError,
+  RateLimitedError,
+  ServiceUnavailableError,
 } from "@/shared/errors";
 import type { SessionJwtVerification } from "@/features/auth/data/jwt-model/types";
 
@@ -392,5 +394,75 @@ describe("AuthSessionWorkflow default community follow", () => {
     await fixture.authService.refreshToken(fixture.user.id, "old-token");
 
     expect(fixture.fetch).not.toHaveBeenCalled();
+  });
+
+  describe("email ownership recovery", () => {
+    const recovery = {
+      ...credentials,
+      challengeId: "rcv_mail_only_challenge",
+      code: "001234",
+      ip: "198.51.100.7",
+    };
+
+    afterEach(() => jest.restoreAllMocks());
+
+    it("follows using the newly issued recovery session and preserves its source identity", async () => {
+      const fixture = createFixture();
+      const authenticate = jest
+        .spyOn(fixture.authService, "signInWithEmailCode")
+        .mockResolvedValue(authResponse);
+
+      await expect(
+        fixture.workflow.signInWithEmailCode(recovery),
+      ).resolves.toEqual(authResponse);
+
+      expect(authenticate).toHaveBeenCalledWith(recovery);
+      expect(fixture.models.jwt.verify).toHaveBeenCalledWith(
+        fixture.db,
+        authResponse.token,
+      );
+      expect(fixture.isFollowing()).toBe(true);
+      expect(fixture.fetch.mock.calls.map(([, init]) => init.method)).toEqual([
+        "GET",
+        "PUT",
+      ]);
+    });
+
+    it.each([
+      new BadUserInputError("Invalid email, verification code or password"),
+      new RateLimitedError(60),
+      new ServiceUnavailableError("Authentication", 5),
+    ])(
+      "does not perform post-login work after a failed recovery",
+      async (error) => {
+        const fixture = createFixture();
+        jest
+          .spyOn(fixture.authService, "signInWithEmailCode")
+          .mockRejectedValue(error);
+
+        await expect(
+          fixture.workflow.signInWithEmailCode(recovery),
+        ).rejects.toBe(error);
+
+        expect(fixture.models.jwt.verify).not.toHaveBeenCalled();
+        expect(fixture.giteaFactory.getUserApiClient).not.toHaveBeenCalled();
+        expect(fixture.fetch).not.toHaveBeenCalled();
+      },
+    );
+
+    it("keeps an authenticated recovery usable when the community follow is unavailable", async () => {
+      const fixture = createFixture();
+      jest
+        .spyOn(fixture.authService, "signInWithEmailCode")
+        .mockResolvedValue(authResponse);
+      fixture.fetch.mockResolvedValueOnce(new Response(null, { status: 503 }));
+
+      await expect(
+        fixture.workflow.signInWithEmailCode(recovery),
+      ).resolves.toEqual(authResponse);
+
+      expect(fixture.isFollowing()).toBe(false);
+      expect(fixture.fetch).toHaveBeenCalledTimes(1);
+    });
   });
 });

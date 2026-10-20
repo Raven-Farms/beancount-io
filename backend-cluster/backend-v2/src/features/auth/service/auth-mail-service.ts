@@ -10,6 +10,7 @@ import type { ISendGrid } from "@/foundation/sendgrid";
 import type { AuthMail, AuthMailKind } from "../data/auth-mail-model";
 import { consumeMailDelivery } from "../operations/auth-mail-limits";
 import { issueSignInRecoveryProof } from "../operations/sign-in-recovery-proof";
+import { validateAuthReturnPath } from "../utils/auth-return-path";
 import { prefixedNanoidBase58 } from "@/shared/nanoid-base58";
 import { ServiceUnavailableError } from "@/shared/errors";
 import { TTL } from "@/shared/cache";
@@ -22,12 +23,17 @@ import {
 const mailLogger = logger.child({ module: "auth-mail-service" });
 type Payload = {
   email: string;
+  returnTo?: string;
   admitted?: boolean;
   prepared?: { userId: string; token?: string; code?: string };
 };
 
 export interface IAuthMailService {
-  enqueue(email: string, kind: AuthMailKind): Promise<string>;
+  enqueue(
+    email: string,
+    kind: AuthMailKind,
+    returnTo?: string,
+  ): Promise<string>;
   processBatch(): Promise<void>;
 }
 
@@ -45,10 +51,12 @@ export class AuthMailService implements IAuthMailService {
   public enqueue = async (
     email: string,
     kind: AuthMailKind,
+    returnTo?: string,
   ): Promise<string> => {
     const id = prefixedNanoidBase58("aem_");
     const payload = this.encrypt(id, kind, {
       email: email.trim().toLowerCase(),
+      returnTo: validateAuthReturnPath(returnTo),
     });
     try {
       // No account lookup, challenge creation or provider work on this path.
@@ -94,6 +102,7 @@ export class AuthMailService implements IAuthMailService {
       return;
     }
     const payload = this.decrypt(mail);
+    payload.returnTo = validateAuthReturnPath(payload.returnTo);
     if (!payload.admitted) {
       if (!(await consumeMailDelivery(payload.email))) {
         await this.models.authMail.complete(this.db, mail);
@@ -161,13 +170,16 @@ export class AuthMailService implements IAuthMailService {
         await this.models.authMail.complete(this.db, mail);
         return;
       }
-      const link = `${dashboard}/auth/login/?recovery=${encodeURIComponent(proof.challengeId)}`;
+      const search = new URLSearchParams({ recovery: proof.challengeId });
+      if (payload.returnTo) search.set("next", payload.returnTo);
+      const link = `${dashboard}/auth/login/?${search.toString()}`;
+      const htmlLink = link.replace(/&/g, "&amp;");
       if (!(await this.save(mail, payload))) return;
       await this.sendgrid.sendMail({
         to: payload.email,
         subject: "Beancount.io sign-in recovery code",
         text: `Your Beancount.io sign-in recovery code is ${proof.code}. Open ${link} and enter your email, password and this code. Your correct password is still required. If you did not request this code, ignore this email.`,
-        html: `<p>Your Beancount.io sign-in recovery code is <strong>${proof.code}</strong>.</p><p><a href="${link}">Continue signing in</a> with your email, password and this code. Your correct password is still required.</p><p>If you did not request this code, ignore this email.</p>`,
+        html: `<p>Your Beancount.io sign-in recovery code is <strong>${proof.code}</strong>.</p><p><a href="${htmlLink}">Continue signing in</a> with your email, password and this code. Your correct password is still required.</p><p>If you did not request this code, ignore this email.</p>`,
       });
     }
     await this.models.authMail.complete(this.db, mail);

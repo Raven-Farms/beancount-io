@@ -99,6 +99,29 @@ test("queue failure and Redis outage never depend on account lookup", async () =
   expect(user.getByMail).not.toHaveBeenCalled();
 });
 
+test("known and unknown recovery requests enqueue the same safe continuation before account lookup", async () => {
+  const { service, user, enqueue } = fixture();
+  const next = "/ledger/owner/books/query?q=SELECT%0A1#results";
+  await service.requestSignInRecovery(account.email, "192.0.2.1", next);
+  await service.requestSignInRecovery("unknown@example.com", "192.0.2.1", next);
+  expect(enqueue.mock.calls).toEqual([
+    [account.email, "sign-in-recovery", next],
+    ["unknown@example.com", "sign-in-recovery", next],
+  ]);
+  expect(user.getByMail).not.toHaveBeenCalled();
+});
+
+test("rejects unsafe continuations before enqueue for both known and unknown accounts", async () => {
+  const { service, user, enqueue } = fixture();
+  for (const email of [account.email, "unknown@example.com"]) {
+    await expect(
+      service.requestSignInRecovery(email, "192.0.2.1", "/%2f%2fevil.example"),
+    ).rejects.toBeInstanceOf(BadUserInputError);
+  }
+  expect(enqueue).not.toHaveBeenCalled();
+  expect(user.getByMail).not.toHaveBeenCalled();
+});
+
 test("verified ownership can sign in through an exhausted ordinary email budget without clearing volume", async () => {
   const { service, jwt } = fixture();
   for (let n = 0; n < 30; n++) {
