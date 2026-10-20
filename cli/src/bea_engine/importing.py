@@ -327,6 +327,17 @@ def answer(
             if not _is_missing_dependency(exc, config.parent):
                 # A wrong name or a relative import is a mistake in the
                 # configuration; nothing is missing, so nothing is to install.
+                shadow = config.parent / config.stem
+                if shadow.is_dir() and not (shadow / "__init__.py").exists() and config.stem in str(exc):
+                    # A same-named `.py` wins over a folder with no
+                    # `__init__.py`, so the config imports itself (w5/781).
+                    raise LedgerError(
+                        f"Importer failed ({type(exc).__name__}): {exc}. The configuration "
+                        f"{config.name} shadows the {shadow.name}/ folder beside it: Python imports "
+                        "the configuration file itself instead of the folder. Rename the config or "
+                        f"add {shadow.name}/__init__.py.",
+                        traceback=_traceback(exc),
+                    ) from exc
                 raise LedgerError(
                     f"Importer failed ({type(exc).__name__}): {exc}. The configuration runs as a script, so "
                     "a module beside it is imported by its plain name ('import helper'), not relatively.",
