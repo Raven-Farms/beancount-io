@@ -78,7 +78,7 @@
 
 - [ ] **m52** — [Make Ask-AI proxy limits and failures truthful](./blocked/m52/README.md) (7 tasks) ← promoted 446 — **blocked:** provider/operator capacity contract, product decision, and near-limit verification; t001–t002 shipped
 
-- [ ] **m53** — [Ledger creation: setup specification, catalog, and builder across hosted surfaces and `bea init`](./m53/README.md) (9 tasks) ← `/pm-brainstorm w3` 2026-10-20 candidate 1, from PRFAQ001 + ADR021
+- [x] **m53** — [Ledger creation: setup specification, catalog, and builder across hosted surfaces and `bea init`](./done/m53/README.md) (9 tasks) ← `/pm-brainstorm w3` 2026-10-20 candidate 1, from PRFAQ001 + ADR021
 
 - [ ] **m54** — [Ledger creation: staged creation flow on dashboard and mobile](./m54/README.md) (7 tasks) ← `/pm-brainstorm w3` 2026-10-20 candidate 2, from PRFAQ001 + ADR021 — sequenced after m53
 
