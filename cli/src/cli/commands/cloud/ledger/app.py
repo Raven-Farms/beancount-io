@@ -66,6 +66,14 @@ def ledger_create(
     private: Annotated[bool, typer.Option("--private/--public", help="Ledger visibility")] = True,
     clone: Annotated[bool, typer.Option("--clone", help="Clone the new ledger to disk after creating it")] = False,
     directory: DirOpt = None,
+    preset: Annotated[
+        str | None, typer.Option("--preset", help="Setup-catalog preset id, e.g. personal@1 (ADR021)")
+    ] = None,
+    title: Annotated[str | None, typer.Option("--title", help="Ledger title; only with --preset")] = None,
+    currency: Annotated[
+        str | None, typer.Option("--currency", help="Operating currency for the preset, e.g. EUR")
+    ] = None,
+    date: Annotated[str | None, typer.Option("--date", help="History start YYYY-MM-DD for the preset")] = None,
 ) -> None:
     """Create a new ledger, private by default, and optionally clone it.
 
@@ -94,7 +102,26 @@ def ledger_create(
 
     client = authenticated_client()
     try:
-        ledger = manager.create_ledger(client, name, description=description, private=private)
+        if preset is None and (title is not None or currency is not None or date is not None):
+            raise UsageError("--title, --currency, and --date are only meaningful with --preset. Nothing was created.")
+        if preset is not None:
+            from cli.api.rest_client.models.create_ledger_body_setup_type_0_preset import (
+                CreateLedgerBodySetupType0Preset,
+            )
+
+            known = ", ".join(sorted(str(member) for member in CreateLedgerBodySetupType0Preset))
+            if preset not in {str(member) for member in CreateLedgerBodySetupType0Preset}:
+                raise UsageError(f"--preset {preset!r}: Unknown preset. Choose one of: {known}. Nothing was created.")
+        ledger = manager.create_ledger(
+            client,
+            name,
+            description=description,
+            private=private,
+            preset=preset,
+            title=title,
+            currency=currency,
+            date=date,
+        )
     except (httpx.ConnectError, httpx.ConnectTimeout, httpx.ProxyError):
         # No request left the machine (refused, DNS failure), so nothing was
         # created: "could not reach the server", not an unknown outcome (w5/368).

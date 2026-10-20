@@ -476,6 +476,11 @@ def init_ledger(
         list[str] | None,
         typer.Option("--opening-balance", help="'ACCOUNT NUMBER' in the operating currency; repeat for each account."),
     ] = None,
+    preset: Annotated[
+        str | None,
+        typer.Option("--preset", help="Setup-catalog preset id, e.g. personal@1 (ADR021); replaces the fixed chart."),
+    ] = None,
+    title: Annotated[str | None, typer.Option("--title", help="Ledger title for a preset ledger.")] = None,
 ) -> None:
     """Create a starter personal ledger with common accounts.
 
@@ -485,12 +490,22 @@ def init_ledger(
     with protocol.answering("init") as answer:
         from bea_engine import initiating
 
-        answer.data = initiating.answer(
-            expand_path(file, "--file").absolute(),
-            currency=currency,
-            date=date,
-            opening_balances=list(opening_balance) if opening_balance else None,
-        )
+        if preset is not None:
+            answer.data = initiating.answer_preset(
+                expand_path(file, "--file").absolute(),
+                preset=preset,
+                title=title,
+                currency=currency,
+                date=date,
+                opening_balances=list(opening_balance) if opening_balance else None,
+            )
+        else:
+            answer.data = initiating.answer(
+                expand_path(file, "--file").absolute(),
+                currency=currency,
+                date=date,
+                opening_balances=list(opening_balance) if opening_balance else None,
+            )
 
 
 @app.command("import")

@@ -60,6 +60,25 @@ def _currency(value: str) -> str:
     return currency
 
 
+def _preset_accounts(preset: str) -> tuple[str, ...]:
+    """Account names of a setup-catalog preset, from the engine's catalog copy.
+
+    The frontend reads the same JSON the engine builds from, so the two can
+    never disagree about which accounts a preset opens. An unknown preset is
+    the caller's mistake, refused before anything is created.
+    """
+    import json
+
+    from cli.engine.paths import helper_source_root
+
+    catalog = json.loads((helper_source_root() / "bea_engine" / "setup_catalog.json").read_text(encoding="utf-8"))
+    for entry in catalog["presets"]:
+        if entry["id"] == preset:
+            return tuple(account["name"] for account in entry["accounts"])
+    known = ", ".join(sorted(entry["id"] for entry in catalog["presets"]))
+    raise UsageError(f"--preset {preset!r}: Unknown preset. Choose one of: {known}. Nothing was created.")
+
+
 def _opening_amount(value: str) -> Decimal:
     try:
         return parse_decimal_number(value)
@@ -102,6 +121,11 @@ def init(
         list[str] | None,
         typer.Option("--opening-balance", help="'ACCOUNT NUMBER' in the operating currency; repeat for each account"),
     ] = None,
+    preset: Annotated[
+        str | None,
+        typer.Option("--preset", help="Setup-catalog preset id, e.g. personal@1 (ADR021); replaces the fixed chart"),
+    ] = None,
+    title: Annotated[str | None, typer.Option("--title", help="Ledger title; only with --preset")] = None,
 ) -> None:
     """Create main.bean with common accounts.
 
@@ -170,10 +194,16 @@ def init(
             given_day = parse_date(date)
         except typer.BadParameter as exc:
             raise UsageError(f"--date {date!r}: {exc.message}") from None
+    preset_accounts: tuple[str, ...] | None = None
+    if preset is not None:
+        preset_accounts = _preset_accounts(preset)
+    elif title is not None:
+        raise UsageError("--title is only meaningful with --preset. Nothing was created.")
+    allowed_opening = preset_accounts if preset_accounts is not None else _ACCOUNTS
     balances: dict[str, Decimal] = {}
     for balance in opening_balance or []:
         parts = balance.split()
-        if len(parts) != 2 or parts[0] not in _ACCOUNTS or not parts[0].startswith(("Assets:", "Liabilities:")):
+        if len(parts) != 2 or parts[0] not in allowed_opening or not parts[0].startswith(("Assets:", "Liabilities:")):
             raise UsageError(
                 f"--opening-balance {balance!r}: Opening balance must be 'ACCOUNT NUMBER' for one of the "
                 "template's asset/liability accounts."
@@ -209,12 +239,16 @@ def init(
         )
     else:
         day = given_day or datetime.date.today()
-    if ctx.can_prompt and opening_balance is None:
+    if ctx.can_prompt and opening_balance is None and preset is None:
         balances["Assets:Checking"] = ctx.prompt(
             f"Checking opening balance on {day} (negative for an overdraft)", default="0", value_proc=_opening_amount
         )
 
     argv = ["init", "--file", str(file), "--currency", currency, "--date", day.isoformat()]
+    if preset is not None:
+        argv += ["--preset", preset]
+        if title is not None:
+            argv += ["--title", title]
     for account, amount in balances.items():
         if amount:
             argv += ["--opening-balance", f"{account} {amount:f}"]

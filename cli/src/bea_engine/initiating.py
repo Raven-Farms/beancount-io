@@ -120,6 +120,18 @@ def answer(
             f";   Equity:OpeningBalances  -1000.00 {currency}\n"
         )
 
+    _write_new_ledger(file, content)
+
+    return {
+        "created": str(file),
+        "currency": currency,
+        "date": day.isoformat(),
+        "accounts": list(ACCOUNTS),
+    }
+
+
+def _write_new_ledger(file: Path, content: str) -> None:
+    """Align, validate, and atomically create `file` with `content`."""
     from beancount.scripts.format import align_beancount
 
     content = align_beancount(content)  # type: ignore[no-untyped-call]
@@ -145,11 +157,111 @@ def answer(
         _remove_created(created)
         raise
 
+
+_CATALOG_PATH = Path(__file__).with_name("setup_catalog.json")
+_CURRENCIES_PATH = Path(__file__).with_name("setup_currencies.json")
+
+
+def _load_catalog() -> dict[str, Any]:
+    import json
+
+    return json.loads(_CATALOG_PATH.read_text(encoding="utf-8"))  # type: ignore[no-any-return]
+
+
+def preset_ids() -> list[str]:
+    return [preset["id"] for preset in _load_catalog()["presets"]]
+
+
+def answer_preset(
+    file: Path,
+    *,
+    preset: str,
+    title: str | None = None,
+    currency: str,
+    date: str,
+    opening_balances: list[str] | None = None,
+) -> dict[str, Any]:
+    """Write a new ledger from a setup-catalog preset (ADR021).
+
+    Mirrors the hosted builder: preset accounts open with no balance claim,
+    an explicit opening balance posts the day before the history boundary
+    against Equity:OpeningBalances and asserts on the boundary, and the
+    accounts open the day before the boundary when such a posting exists.
+    """
+    import json
+
+    file = expand_path(file, "--file")
+    if not file.is_absolute():
+        file = file.resolve()
+    if file.exists() or file.is_symlink():
+        raise ConflictError(f"Already exists: {file}. Choose a new path; init never overwrites a ledger.")
+
+    catalog = _load_catalog()
+    presets = {entry["id"]: entry for entry in catalog["presets"]}
+    entry = presets.get(preset)
+    if entry is None:
+        raise UsageError(f"Unknown preset {preset!r}. Choose one of: {', '.join(sorted(presets))}.")
+
+    currencies = json.loads(_CURRENCIES_PATH.read_text(encoding="utf-8"))
+    currency = currency.strip().upper()
+    if currency not in currencies["supportedCurrencies"]:
+        raise UsageError(f"Unsupported operating currency {currency!r} for a preset ledger.")
+
+    try:
+        day = datetime.date.fromisoformat(date)
+    except ValueError as exc:
+        raise UsageError(f"--date must be a date in YYYY-MM-DD form, not {date!r}.") from exc
+
+    accounts = [account["name"] for account in entry["accounts"]]
+    balances: dict[str, Decimal] = {}
+    for balance in opening_balances or []:
+        parts = balance.split()
+        if len(parts) != 2 or parts[0] not in accounts or not parts[0].startswith(("Assets:", "Liabilities:")):
+            raise UsageError(
+                "Opening balance must be 'ACCOUNT NUMBER' for one of the preset's asset/liability accounts."
+            )
+        account, number = parts
+        if account in balances:
+            raise UsageError(f"Opening balance specified twice for {account}.")
+        try:
+            balances[account] = parse_decimal_number(number)
+        except ValueError as exc:
+            raise UsageError(str(exc)) from exc
+
+    open_day = day - datetime.timedelta(days=1) if balances else day
+    lines = [
+        f'option "title" "{(title or entry["title"]).replace(chr(34), "")}"',
+        f'option "operating_currency" "{currency}"',
+        'option "inferred_tolerance_default" "*:0.001"',
+        "",
+        'plugin "beancount.plugins.auto_accounts"',
+        "",
+    ]
+    opened = sorted(accounts)
+    if balances and "Equity:OpeningBalances" not in opened:
+        opened.append("Equity:OpeningBalances")
+        opened.sort()
+    for account in opened:
+        lines.append(f"{open_day} open {account} {currency}")
+    if balances:
+        lines.append("")
+        for account in sorted(balances):
+            amount = balances[account]
+            lines.append(f'{day - datetime.timedelta(days=1)} * "Opening balance"')
+            lines.append(f"  {account}  {amount:f} {currency}")
+            lines.append(f"  Equity:OpeningBalances  {-amount:f} {currency}")
+            lines.append("")
+        for account in sorted(balances):
+            lines.append(f"{day} balance {account}  {balances[account]:f} {currency}")
+        lines.append("")
+
+    _write_new_ledger(file, "\n".join(lines) + "\n")
     return {
         "created": str(file),
         "currency": currency,
         "date": day.isoformat(),
-        "accounts": list(ACCOUNTS),
+        "preset": preset,
+        "accounts": opened,
     }
 
 

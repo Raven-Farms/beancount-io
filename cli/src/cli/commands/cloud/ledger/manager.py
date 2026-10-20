@@ -54,8 +54,31 @@ def create_ledger(
     name: str,
     description: str | None = None,
     private: bool = False,
+    preset: str | None = None,
+    title: str | None = None,
+    currency: str | None = None,
+    date: str | None = None,
 ) -> LedgerInfo:
-    body = CreateLedgerBody(name=name, description=description, private=private)
+    # A fresh requestId on every create (ADR021): a retry of this command's
+    # request inside the server's 24-hour window returns the original ledger
+    # instead of creating a second one.
+    from uuid import uuid4
+
+    from cli.api.rest_client.models.create_ledger_body_setup_type_0 import CreateLedgerBodySetupType0
+    from cli.api.rest_client.models.create_ledger_body_setup_type_0_preset import (
+        CreateLedgerBodySetupType0Preset,
+    )
+    from cli.api.rest_client.types import UNSET, Unset
+
+    setup: CreateLedgerBodySetupType0 | Unset = UNSET
+    if preset is not None:
+        setup = CreateLedgerBodySetupType0(
+            preset=CreateLedgerBodySetupType0Preset(preset),
+            title=title if title is not None else UNSET,
+            operating_currency=currency if currency is not None else UNSET,
+            history_start=date if date is not None else UNSET,
+        )
+    body = CreateLedgerBody(name=name, description=description, private=private, setup=setup, request_id=str(uuid4()))
     return _to_info(unwrap(call(create_ledger_op.sync_detailed, client=client, body=body)))
 
 
