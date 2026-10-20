@@ -224,3 +224,12 @@ investment-or-tax-advice skip (w2/m49/t001–t003), and the set gained
 suite: Claude Code 2.1.289 routed 92/92 as labeled (ask 12/12, none
 19/19). Codex has not run the new entries (account usage limit until
 2026-11-17); w2/m49/t003 reruns there.
+
+## Bulk investment intake — 2026-10-20
+
+w2/m50 changed `beancount-import`'s description (broker activity) and
+added `trade-batch-paycheck-buys`, `import-exchange-activity`, and
+`import-opening-lots`; 95 prompts in all. One run,
+2026-10-20T00:36:44Z: Claude Code 2.1.289 routed 95/95 as labeled
+(trade 7/7, import 15/15). Codex has not run the new entries (usage
+limit until 2026-11-17); w2/m50/t005 reruns there.
