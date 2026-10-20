@@ -13,7 +13,12 @@ import type { ILedgerWorkflow } from "@/features/ledger/workflow/ledger-workflow
 import type { ToolContext } from "../tools/types";
 import type { Identity } from "@/server/api/identity";
 import { BadUserInputError, ForbiddenError } from "@/shared/errors";
-import { CLASS_BUDGETS } from "@/server/api/rate-limit";
+import {
+  CLASS_BUDGETS,
+  OP_BUDGETS,
+  MCP_TRANSPORT_OP_ID,
+  MCP_HANDSHAKE_OP_ID,
+} from "@/server/api/rate-limit";
 import { LEDGER_ID_PATTERN } from "./mcp-ledger-selection";
 import { parseLedgerId } from "@/shared/str";
 
@@ -78,7 +83,7 @@ export function buildInstructions(identity: Identity): string {
     // Interpolated, not restated: the instruction string is the contract every
     // session reads, and a retuned budget must not leave it advertising a
     // number the limiter does not enforce.
-    `Budgets per minute: ${CLASS_BUDGETS.read.max} reads, ${CLASS_BUDGETS.write.max} writes, ${CLASS_BUDGETS.admin.max} admin; the handshake is free. Over budget returns code RATE_LIMITED with retryAfter.`,
+    `Per-operation defaults/min: ${CLASS_BUDGETS.read.max} read, ${CLASS_BUDGETS.write.max} write, ${CLASS_BUDGETS.admin.max} admin; overrides apply. User and credential quotas both apply, shared across protocols. Transport/min: ${OP_BUDGETS[MCP_TRANSPORT_OP_ID].max} requests; ${OP_BUDGETS[MCP_HANDSHAKE_OP_ID].max} handshakes separately. RATE_LIMITED includes retryAfter.`,
   ].join("\n");
 }
 

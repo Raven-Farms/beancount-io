@@ -61,4 +61,4 @@ Signup's account-existence disclosure remains the accepted product behavior. New
 
 Verification uses real adapters/services, controlled SQL/provider dependencies, actual Lua on isolated Redis and real React/Apollo in JSDOM/SSR. It does not claim live PostgreSQL crash recovery, actual provider delivery, device E2E, production deployment, measured abuse reduction or statistically identical end-to-end account timing. Full-directory secret scans continue to find pre-existing ignored runtime/dependency artifacts; exact staged exports are clean.
 
-Independent follow-up [w4/231](../../231.md) records stale agent-facing MCP handshake-budget wording discovered during verification. It remains in the workstream for the loop to drain; it does not alter the enforced policy verified here.
+Independent follow-up [w4/231](../231.md) records stale agent-facing MCP handshake-budget wording discovered during verification. It is now resolved in its own shipped outcome; that wording fix does not alter the enforced policy verified here.

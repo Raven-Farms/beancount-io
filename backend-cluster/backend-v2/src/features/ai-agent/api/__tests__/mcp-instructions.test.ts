@@ -1,4 +1,10 @@
 import { buildInstructions } from "../mcp-context";
+import {
+  CLASS_BUDGETS,
+  OP_BUDGETS,
+  MCP_TRANSPORT_OP_ID,
+  MCP_HANDSHAKE_OP_ID,
+} from "@/server/api/rate-limit";
 import { PLAN_WORDING, STEERING_WORDING } from "./directory-wording";
 import type { Identity } from "@/server/api/identity";
 
@@ -47,6 +53,25 @@ describe("buildInstructions", () => {
     expect(
       buildInstructions({ ...base, ledgerScope: "alice/personal" }).length,
     ).toBeLessThan(1500);
+  });
+
+  it("describes per-operation user and credential budgets and separate metered transport", () => {
+    for (const identity of [base, { ...base, ledgerScope: "alice/personal" }]) {
+      const text = buildInstructions(identity);
+      expect(text).toMatch(/per-operation defaults\/min/i);
+      expect(text).toContain(`${CLASS_BUDGETS.read.max} read`);
+      expect(text).toContain(`${CLASS_BUDGETS.write.max} write`);
+      expect(text).toContain(`${CLASS_BUDGETS.admin.max} admin`);
+      expect(text).toMatch(/overrides apply/i);
+      expect(text).toMatch(/user and credential quotas both apply/i);
+      expect(text).toMatch(/shared across protocols/i);
+      expect(text).toContain(`${OP_BUDGETS[MCP_TRANSPORT_OP_ID].max} requests`);
+      expect(text).toContain(
+        `${OP_BUDGETS[MCP_HANDSHAKE_OP_ID].max} handshakes separately`,
+      );
+      expect(text).not.toMatch(/handshake is free/i);
+      expect(text).toMatch(/RATE_LIMITED.*retryAfter/);
+    }
   });
 
   it("describes the server and never directs the model or mentions plans", () => {
