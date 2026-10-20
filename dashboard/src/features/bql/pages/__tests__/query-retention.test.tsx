@@ -217,3 +217,44 @@ describe("LedgerQueryPage concurrent query retention", () => {
     expect(screen.queryByTestId(`error-${QUERY_A}`)).not.toBeInTheDocument();
   });
 });
+
+/**
+ * Running the same query again must read the ledger again: another editor
+ * may have changed it since the first result (w4/234).
+ */
+describe("LedgerQueryPage re-execution", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    searchQuery = undefined;
+    seededHistory = [QUERY_A];
+  });
+
+  it("sends a new request and shows the current result each time", async () => {
+    const { client, pending } = createHoldingClient();
+    render(
+      <ApolloProvider client={client}>
+        <LedgerQueryPage />
+      </ApolloProvider>,
+    );
+    const run = () =>
+      fireEvent.click(screen.getByRole("button", { name: `open ${QUERY_A}` }));
+
+    run();
+    await waitFor(() => expect(pending.has(QUERY_A)).toBe(true));
+    await act(async () => pending.get(QUERY_A)?.resolve([["12"]]));
+    await waitFor(() =>
+      expect(screen.getByTestId(`result-rows-${QUERY_A}`)).toHaveTextContent(
+        "12",
+      ),
+    );
+
+    run();
+    await waitFor(() => expect(pending.has(QUERY_A)).toBe(true));
+    await act(async () => pending.get(QUERY_A)?.resolve([["13"]]));
+    await waitFor(() =>
+      expect(screen.getByTestId(`result-rows-${QUERY_A}`)).toHaveTextContent(
+        "13",
+      ),
+    );
+  });
+});

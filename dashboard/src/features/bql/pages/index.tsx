@@ -62,7 +62,11 @@ export default function LedgerQueryPage() {
   const [executeQuery] = useLazyQuery<
     QueryShellQuery,
     QueryShellQueryVariables
-  >(QueryShellDocument);
+  >(QueryShellDocument, {
+    // An explicit run reads the ledger now; another editor may have changed
+    // it since the last identical query (w4/234).
+    fetchPolicy: "network-only",
+  });
 
   // Track all in-flight queries to prevent double execution and show loading state
   const [executingQueries, setExecutingQueries] = useState<Set<string>>(
