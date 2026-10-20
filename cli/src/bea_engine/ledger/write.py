@@ -2540,7 +2540,35 @@ def validate_candidate(
             if duplicate is None:
                 duplicate = next((e for e in opens if e is not existing), None)
             if existing is not None and duplicate is not None:
-                hints.append(_duplicate_open_hint(existing, duplicate, filenames))
+                closed = next(
+                    (
+                        entry
+                        for entry in lifecycles.get(error.entry.account, [])
+                        if isinstance(entry, Close) and _within_original(entry, filenames, original_line_counts)
+                    ),
+                    None,
+                )
+                hints.append(_duplicate_open_hint(existing, duplicate, filenames, closed))
+        if isinstance(error.entry, Close) and error.message.startswith("Duplicate close directive for "):
+            if lifecycles is None:
+                lifecycles = _lifecycles(entries, original_lines)
+            closes = [e for e in lifecycles.get(error.entry.account, []) if isinstance(e, Close)]
+            existing_close = None
+            duplicate_close = None
+            for closed in closes:
+                # As with opens, Beancount blames the later-dated close, which
+                # can be the existing one (w5/658).
+                if _within_original(closed, filenames, original_line_counts):
+                    if existing_close is None:
+                        existing_close = closed
+                elif duplicate_close is None or closed is error.entry:
+                    duplicate_close = closed
+            if (
+                existing_close is not None
+                and duplicate_close is not None
+                and _proposed_entry(duplicate_close, filenames, original_lines)
+            ):
+                hints.append(_duplicate_close_hint(existing_close, duplicate_close, filenames))
         if isinstance(error, UniquePricesError):
             hints.append(_unique_prices_hint(error.entry, filenames, original_lines))
         if is_invalid_pad_account(error):
@@ -3197,18 +3225,43 @@ def _unique_prices_hint(prices: list[Any], filenames: dict[Path, Path], original
     )
 
 
-def _duplicate_open_hint(existing: Any, duplicate: Any, filenames: dict[Path, Path]) -> str:
+def _within_original(entry: Any, filenames: dict[Path, Path], original_line_counts: dict[Path, int]) -> bool:
+    """Whether the entry sits within the ledger's original bytes, so the user can edit it."""
+    path = Path(entry.meta.get("filename", ""))
+    original = filenames.get(path, path).resolve()
+    line = entry.meta.get("lineno")
+    return isinstance(line, int) and 1 <= line <= original_line_counts.get(original, 0)
+
+
+def _duplicate_open_hint(existing: Any, duplicate: Any, filenames: dict[Path, Path], closed: Any | None = None) -> str:
     """One remedy for a second `open`: the account opens once, so edit the first (w5/488)."""
     where = _location(existing, filenames)
+    # A second open on a closed account fails twice over: the widen advice
+    # alone would leave the account closed (w5/773).
+    shut = (
+        f" It is closed {closed.date} at {_location(closed, filenames)}; remove that close or date it later."
+        if closed is not None
+        else ""
+    )
     if not existing.currencies:
-        return f"{existing.account} is already opened at {where} for any currency; an account opens once."
+        return f"{existing.account} is already opened at {where} for any currency; an account opens once.{shut}"
     added = [currency for currency in duplicate.currencies or [] if currency not in existing.currencies]
     if not added:
-        return f"{existing.account} is already opened at {where}; an account opens once."
+        return f"{existing.account} is already opened at {where}; an account opens once.{shut}"
     return (
         f"{existing.account} is already opened at {where} for {', '.join(existing.currencies)}; an account opens "
         f"once. To allow {', '.join(added)} too, edit that open to "
         f"'{_open_line(existing, [*existing.currencies, *added])}' (bea add open cannot change an existing open)."
+        f"{shut}"
+    )
+
+
+def _duplicate_close_hint(existing: Any, duplicate: Any, filenames: dict[Path, Path]) -> str:
+    """One remedy for a second `close`: the account closes once, so edit the first (w5/773)."""
+    where = _location(existing, filenames)
+    return (
+        f"The proposed close would close {existing.account} on {duplicate.date}, but it is already closed "
+        f"{existing.date} at {where}; an account closes once \u2014 edit that close's date."
     )
 
 

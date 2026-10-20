@@ -734,7 +734,7 @@ def _forward_missing_open(ctx: typer.Context) -> None:
         raise LedgerError(
             f"doctor missing-open found {len(inactive)} reference(s) to {len(accounts) or len(inactive)} "
             "inactive account(s) (posted before the open date or after the close); "
-            "move the open earlier, reopen the account, or fix the postings.",
+            "move the open earlier, move the close later, or fix the postings.",  # no reopen in Beancount (w5/773)
             details=inactive,
         )
     raise typer.Exit(0)
