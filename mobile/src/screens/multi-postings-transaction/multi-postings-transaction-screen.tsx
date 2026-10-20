@@ -72,6 +72,7 @@ import {
   validatePostings,
 } from "./postings-utils";
 import { isTransactionDraftDirty, TransactionDraft } from "./draft-dirty";
+import { inlineSaveError } from "./inline-save-error";
 
 const SIGN_TOGGLE_SIZE = 28;
 const POSTING_ROW_PADDING_V = 14;
@@ -192,6 +193,13 @@ const getStyles = (theme: ColorTheme) =>
       fontSize: fontSizes.lg,
       color: theme.primary,
       fontWeight: fontWeights.medium,
+    },
+    saveError: {
+      fontSize: fontSizes.sm,
+      color: theme.error,
+      lineHeight: 18,
+      marginHorizontal: 20,
+      marginBottom: 12,
     },
     balanceRow: {
       marginHorizontal: 20,
@@ -445,6 +453,12 @@ const MultiPostingsTransactionScreenComponent = () => {
   // A committed save disables Done: a cold-link form that fails to leave must
   // never invite a duplicate resubmit (w1/032).
   const [saved, setSaved] = useState(false);
+  // Why the last save failed, until the draft changes (w21/001): the toast
+  // alone was gone before a refusal could be read.
+  const [saveError, setSaveError] = useState<string | null>(null);
+  useEffect(() => {
+    setSaveError(null);
+  }, [date, payee, narration, postings]);
   const navigation = useNavigation();
   const [isDatePickerVisible, setDatePickerVisible] = useState(false);
 
@@ -550,6 +564,7 @@ const MultiPostingsTransactionScreenComponent = () => {
       afterSuccess: runAddTransactionCallback,
       goBackOnSuccess: false,
     });
+    setSaveError(inlineSaveError(outcome));
     if (outcome.ok) {
       // Mark the draft saved before leaving, so the discard guard stays quiet.
       savedOutRef.current = true;
@@ -711,6 +726,15 @@ const MultiPostingsTransactionScreenComponent = () => {
               : formatRemainder(rem)}
           </AmountText>
         </View>
+        {saveError ? (
+          <Text
+            style={styles.saveError}
+            accessibilityLiveRegion="polite"
+            testID="new-transaction-save-error"
+          >
+            {saveError}
+          </Text>
+        ) : null}
       </ScrollView>
 
       <DatePickerModal

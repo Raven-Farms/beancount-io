@@ -10,9 +10,22 @@ export interface ToastMessage {
 /** How long a toast stays up when its caller does not say. */
 export const DEFAULT_TOAST_DURATION = 2000;
 
-/** A missing (or zero) duration falls back to the default. */
+/** The longest an error toast stays up to be read (w21/001). */
+export const MAX_ERROR_TOAST_DURATION = 8000;
+
+/**
+ * A missing (or zero) duration falls back to the default, and an error toast
+ * gets reading time on top — about 60 ms a character, capped — so a
+ * sentence-long refusal is still up when the user gets to its end (w21/001).
+ */
 export const toastDuration = (message: Omit<ToastMessage, "id">): number =>
-  message.duration || DEFAULT_TOAST_DURATION;
+  message.duration ||
+  (message.type === "error"
+    ? Math.min(
+        MAX_ERROR_TOAST_DURATION,
+        DEFAULT_TOAST_DURATION + 60 * message.message.length,
+      )
+    : DEFAULT_TOAST_DURATION);
 
 /** Queue a toast after the ones already showing. */
 export const withToast = (

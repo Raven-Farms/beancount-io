@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import {
   DEFAULT_TOAST_DURATION,
+  MAX_ERROR_TOAST_DURATION,
   requireToastContext,
   toastDuration,
   withToast,
@@ -27,6 +28,26 @@ describe("toast queue", () => {
       5000,
     );
     expect(toastDuration({ message: "x", type: "text", duration: 0 })).toBe(
+      DEFAULT_TOAST_DURATION,
+    );
+  });
+
+  it("gives an error toast time to be read, within a cap", () => {
+    // A 26-word refusal used to vanish after two seconds (w21/001).
+    expect(toastDuration({ message: "Network down", type: "error" })).toBe(
+      DEFAULT_TOAST_DURATION + 60 * "Network down".length,
+    );
+    expect(toastDuration({ message: "x".repeat(400), type: "error" })).toBe(
+      MAX_ERROR_TOAST_DURATION,
+    );
+    expect(
+      toastDuration({
+        message: "x".repeat(400),
+        type: "error",
+        duration: 3000,
+      }),
+    ).toBe(3000);
+    expect(toastDuration({ message: "x".repeat(400), type: "success" })).toBe(
       DEFAULT_TOAST_DURATION,
     );
   });
