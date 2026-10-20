@@ -28,6 +28,8 @@ import { useIsMobile } from "@/common/hooks/use-mobile.ts";
 import { LayoutHeader } from "./layout-header";
 import { isReactNative } from "@/common/providers/react-native-bridge-provider/react-native-bridge";
 
+const COMMIT_DETAIL_PATH = /\/commit\/[^/]+\/?$/;
+
 /**
  * Ledger layout component
  * Provides consistent sidebar and header layout for all ledger pages
@@ -48,6 +50,15 @@ export function LedgerLayout() {
       const current = state.matches.at(-1);
       const next = state.pendingMatches?.at(-1);
       if (!current || !next) return true;
+      // Choosing another commit in Version History keeps the workspace and
+      // its loaded history pages; it shows its own pending detail (w4/246).
+      if (
+        current.routeId === next.routeId &&
+        COMMIT_DETAIL_PATH.test(current.pathname) &&
+        COMMIT_DETAIL_PATH.test(next.pathname)
+      ) {
+        return false;
+      }
       if (
         current.routeId !== next.routeId ||
         trimPathRight(current.pathname) !== trimPathRight(next.pathname)

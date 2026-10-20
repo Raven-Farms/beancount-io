@@ -261,3 +261,69 @@ describe("LedgerLayout while its ledger reloads", () => {
     expect(screen.getByTestId("ledger-loading")).toBeInTheDocument();
   });
 });
+
+/**
+ * Choosing another commit keeps the Version History workspace mounted with
+ * its loaded pages; leaving it for another page still hides the old outlet
+ * (w4/246).
+ */
+describe("LedgerLayout commit selection", () => {
+  const commit = (sha: string) => ({
+    routeId: "/ledger/$ledgerOwner/$ledgerName/commit/$commitSha",
+    pathname: `/ledger/open_ledger/minimax/commit/${sha}`,
+    search: {},
+  });
+
+  beforeEach(() => {
+    useParams.mockReturnValue({
+      ledgerOwner: "open_ledger",
+      ledgerName: "minimax",
+    });
+    useLocation.mockReturnValue({ pathname: commit("aaa").pathname });
+    useQuery.mockReturnValue({
+      data: {
+        getLedger: {
+          id: "open_ledger/minimax",
+          name: "minimax",
+          fullName: "open_ledger/minimax",
+          options: {},
+          favaOptions: {},
+        },
+      },
+      loading: false,
+      refetch: vi.fn(),
+    });
+  });
+  afterEach(cleanup);
+
+  const pendingTo = (next: {
+    routeId: string;
+    pathname: string;
+    search: object;
+  }) =>
+    useRouterState.mockImplementation(
+      ({ select }: { select: (s: unknown) => unknown }) =>
+        select({
+          isLoading: true,
+          location: next,
+          matches: [commit("aaa")],
+          pendingMatches: [next],
+        }),
+    );
+
+  it("keeps the workspace while another commit loads", () => {
+    pendingTo(commit("bbb"));
+    render(<LedgerLayout />);
+    expect(screen.getByTestId("ledger-outlet")).toBeInTheDocument();
+  });
+
+  it("still hides it when leaving for another page", () => {
+    pendingTo({
+      routeId: "/ledger/$ledgerOwner/$ledgerName/journal",
+      pathname: "/ledger/open_ledger/minimax/journal",
+      search: {},
+    });
+    render(<LedgerLayout />);
+    expect(screen.queryByTestId("ledger-outlet")).not.toBeInTheDocument();
+  });
+});
