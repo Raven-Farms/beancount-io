@@ -235,10 +235,12 @@ export function EditableCell({
         error && "border border-destructive bg-destructive/5",
         disabled && "cursor-not-allowed opacity-50",
       )}
+      // Name the value the cell shows — a normalized amount, a localized
+      // date — not the raw bank token kept for the editor (w4/245).
       aria-label={t("importer.preview.editCellLabel", {
         field: label,
         row: rowNumber,
-        value,
+        value: displayValue ?? value,
       })}
       // The collapsed cell repeats the field's error underneath it; name it
       // here so the reason travels with the control rather than sitting beside
