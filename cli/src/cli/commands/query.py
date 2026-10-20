@@ -26,7 +26,7 @@ from cli.completion import fixed_values
 from cli.engine import launch
 from cli.errors import UsageError, placement_hint
 from cli.paths import expand_path, is_descriptor_path
-from cli.utils import decode_error_message, inert_text
+from cli.utils import RawPath, decode_error_message, inert_text
 
 FORMATS = ("text", "csv", "beancount")
 
@@ -309,7 +309,8 @@ def query(
         ),
     ] = None,
     output_file: Annotated[
-        str | None, typer.Option("--output", "-o", help="Write the result to this file instead of stdout")
+        str | None,
+        typer.Option("--output", "-o", click_type=RawPath(), help="Write the result to this file instead of stdout"),
     ] = None,
     numberify: Annotated[
         bool, typer.Option("--numberify", "-m", help="Split amounts into one column per currency")

@@ -1732,7 +1732,9 @@ def _render_beancount(rows: Any, out: TextIO, file: Path, options: Mapping[str, 
         if not (isinstance(entry, Transaction) and entry.flag == "P" and _source_location(entry) in pads)
     ]
     switches, restore = _export_root_changes(rows, options)
-    preamble = "".join(_option_lines(options))
+    # Only ahead of rows: an empty result is an empty file, as an empty
+    # `SELECT -o` writes, not a lone `option` line (w5/854).
+    preamble = "".join(_option_lines(options)) if rows else ""
     # `write` only: the interactive pager has no `writelines`.
     out.write(preamble)
     previous_type = type(rows[0][0]) if rows else None
@@ -1782,13 +1784,30 @@ def _render_csv(description: Any, rows: Any, out: TextIO, *, spreadsheet_safe: b
     import csv
 
     writer = csv.writer(out)
-    writer.writerow([column.name for column in description or ()])
+    header = [column.name for column in description or ()]
+    # A column name is text too: `-number`, or an alias `AS "=HYPERLINK(1)"` (w5/854).
+    writer.writerow([_inert_formula(name) for name in header] if spreadsheet_safe else header)
     for row in rows:
         cells = [_csv_cell(value) for value in row]
         if spreadsheet_safe:
+            # Every cell but a number or an amount: a tag set's joined cell
+            # (`-neg`) was written as it was, a `str` alone being checked (w5/854).
             pairs = zip(row, cells, strict=True)
-            cells = [_inert_formula(cell) if isinstance(value, str) else cell for value, cell in pairs]
+            cells = [cell if _keeps_its_sign(value) else _inert_formula(cell) for value, cell in pairs]
         writer.writerow(cells)
+
+
+def _keeps_its_sign(value: Any) -> bool:
+    """A number or an amount, whose leading `-` is its sign, not a formula."""
+    from decimal import Decimal
+
+    from beancount.core.amount import Amount
+    from beancount.core.inventory import Inventory
+    from beancount.core.position import Position
+
+    if isinstance(value, bool):
+        return False
+    return isinstance(value, Decimal | int | float | Amount | Position | Inventory)
 
 
 #: What a spreadsheet reads as the start of a formula (OWASP's CSV-injection list).

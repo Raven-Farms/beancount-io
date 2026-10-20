@@ -283,6 +283,9 @@ def treeify(ctx: typer.Context) -> None:
         _check_regexes(parsed)
         checked_text = _check_input(parsed.input)
     if parsed is not None and parsed.output is not None and not parsed.help:
+        if not parsed.output.strip():
+            # `Path('')` is the working directory, which then refused as `(.)` (w5/854).
+            raise UsageError(f"--output {parsed.output!r} is empty; name a path, or omit --output.")
         # Upstream opens `-o` for writing before it reads the input, so a run
         # that then fails — or reads the same file — has already truncated
         # it. bea keeps the destination itself and writes it only on success.
